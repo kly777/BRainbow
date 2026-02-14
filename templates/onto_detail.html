@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}{{ onto.name }} - Brainbow{% endblock %}
+
+{% block content %}
+<h2>本体详情: {{ onto.name }}</h2>
+
+<div class="card">
+    <h3>基本信息</h3>
+    <p><strong>ID:</strong> {{ onto.id }}</p>
+    <p><strong>名称:</strong> {{ onto.name }}</p>
+</div>
+
+<div class="actions">
+    <a href="/html/ontos" class="link">返回列表</a>
+    <a href="/html/onto/{{ onto.id }}/edit" class="link">编辑</a>
+    <a href="/api/onto/{{ onto.id }}" class="link">API 端点</a>
+</div>
+
+<div class="container">
+    <h3>作为能指的关系 (指向其他本体)</h3>
+    {% if signifiers.is_empty() %}
+        <p>暂无作为能指的关系。</p>
+    {% else %}
+        {% for sign in signifiers %}
+        <div class="relation signifier">
+            <p><strong>关系 ID:</strong> {{ sign.id }}</p>
+            <p><strong>能指:</strong> <a href="/html/onto/{{ sign.signifier_id }}" class="link">{{ onto.name }}</a> (当前本体)</p>
+            <p><strong>所指:</strong> <a href="/html/onto/{{ sign.signified_id }}" class="link">本体 {{ sign.signified_id }}</a></p>
+            <p><strong>创建时间:</strong> {{ sign.created_at }}</p>
+            <p>
+                <a href="/html/sign/{{ sign.id }}" class="link">查看关系详情</a> |
+                <a href="/html/sign/signifier/{{ sign.signifier_id }}" class="link">查看所有以此为本体的能指关系</a>
+            </p>
+        </div>
+        {% endfor %}
+    {% endif %}
+    <p><a href="/html/sign/signifier/{{ onto.id }}" class="link">查看所有作为能指的关系</a></p>
+</div>
+
+<div class="container">
+    <h3>作为所指的关系 (被其他本体指向)</h3>
+    {% if signifieds.is_empty() %}
+        <p>暂无作为所指的关系。</p>
+    {% else %}
+        {% for sign in signifieds %}
+        <div class="relation signified">
+            <p><strong>关系 ID:</strong> {{ sign.id }}</p>
+            <p><strong>能指:</strong> <a href="/html/onto/{{ sign.signifier_id }}" class="link">本体 {{ sign.signifier_id }}</a></p>
+            <p><strong>所指:</strong> <a href="/html/onto/{{ sign.signified_id }}" class="link">{{ onto.name }}</a> (当前本体)</p>
+            <p><strong>创建时间:</strong> {{ sign.created_at }}</p>
+            <p>
+                <a href="/html/sign/{{ sign.id }}" class="link">查看关系详情</a> |
+                <a href="/html/sign/signified/{{ sign.signified_id }}" class="link">查看所有以此为本体的所指关系</a>
+            </p>
+        </div>
+        {% endfor %}
+    {% endif %}
+    <p><a href="/html/sign/signified/{{ onto.id }}" class="link">查看所有作为所指的关系</a></p>
+</div>
+
+<div class="container">
+    <h3>相关链接</h3>
+    <ul>
+        <li><a href="/html/sign/new?signifier_id={{ onto.id }}" class="link">创建以此为本体作为能指的新关系</a></li>
+        <li><a href="/html/sign/new?signified_id={{ onto.id }}" class="link">创建以此为本体作为所指的新关系</a></li>
+        <li><a href="/api/onto/{{ onto.id }}" class="link">API 端点 (JSON)</a></li>
+    </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}关系详情 - Brainbow{% endblock %}
+
+{% block content %}
+<h2>关系详情</h2>
+
+<div class="card">
+    <h3>基本信息</h3>
+    <p><strong>关系 ID:</strong> {{ sign.id }}</p>
+    <p><strong>创建时间:</strong> {{ sign.created_at }}</p>
+</div>
+
+<div class="container">
+    <h3>能指 (Signifier)</h3>
+    <div class="relation signifier">
+        <p><strong>本体 ID:</strong> {{ sign.signifier_id }}</p>
+        <p><a href="/html/onto/{{ sign.signifier_id }}" class="link">查看能指本体详情</a></p>
+        <p><a href="/html/sign/signifier/{{ sign.signifier_id }}" class="link">查看所有以此为本体的能指关系</a></p>
+    </div>
+</div>
+
+<div class="container">
+    <h3>所指 (Signified)</h3>
+    <div class="relation signified">
+        <p><strong>本体 ID:</strong> {{ sign.signified_id }}</p>
+        <p><a href="/html/onto/{{ sign.signified_id }}" class="link">查看所指本体详情</a></p>
+        <p><a href="/html/sign/signified/{{ sign.signified_id }}" class="link">查看所有以此为本体的所指关系</a></p>
+    </div>
+</div>
+
+<div class="actions">
+    <a href="/html/signs" class="link">返回列表</a>
+    <a href="/api/sign/{{ sign.id }}" class="link">API 端点</a>
+</div>
+
+<div class="container">
+    <h3>相关链接</h3>
+    <ul>
+        <li><a href="/html/sign/new?signifier_id={{ sign.signifier_id }}" class="link">创建以此能指的新关系</a></li>
+        <li><a href="/html/sign/new?signified_id={{ sign.signified_id }}" class="link">创建以此所指的新关系</a></li>
+        <li><a href="/api/sign/{{ sign.id }}" class="link">API 端点 (JSON)</a></li>
+    </ul>
+</div>
+
+<h3>符号学解释</h3>
+<div class="card">
+    <p>在符号学中，<strong>能指 (Signifier)</strong> 是符号的形式（如词语、图像），而 <strong>所指 (Signified)</strong> 是符号的概念或意义。</p>
+    <p>这个关系表示：<strong>本体 {{ sign.signifier_id }}</strong> 作为能指，指向 <strong>本体 {{ sign.signified_id }}</strong> 作为所指。</p>
+</div>
+{% endblock %}

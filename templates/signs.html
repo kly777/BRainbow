@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}关系列表 - Brainbow{% endblock %}
+
+{% block content %}
+<h2>能指与所指关系列表</h2>
+
+<div class="actions">
+    <a href="/html/sign/new" class="link">创建新关系</a>
+</div>
+
+{% if signs.is_empty() %}
+    <p>暂无关系数据。</p>
+{% else %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>能指 (Signifier)</th>
+                <th>所指 (Signified)</th>
+                <th>创建时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sign in signs %}
+            <tr>
+                <td>{{ sign.id }}</td>
+                <td><a href="/html/onto/{{ sign.signifier_id }}" class="link">本体 {{ sign.signifier_id }}</a></td>
+                <td><a href="/html/onto/{{ sign.signified_id }}" class="link">本体 {{ sign.signified_id }}</a></td>
+                <td>{{ sign.created_at }}</td>
+                <td>
+                    <a href="/html/sign/{{ sign.id }}" class="link">查看</a>
+                    <a href="/html/sign/signifier/{{ sign.signifier_id }}" class="link">能指相关</a>
+                    <a href="/html/sign/signified/{{ sign.signified_id }}" class="link">所指相关</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+
+<h3>统计信息</h3>
+<ul>
+    <li>关系总数: {{ signs.len() }}</li>
+    <li><a href="/html/ontos" class="link">查看所有本体</a></li>
+</ul>
+
+<h3>快速导航</h3>
+<ul>
+    <li><a href="/html/sign/signifier" class="link">按能指查看关系</a></li>
+    <li><a href="/html/sign/signified" class="link">按所指查看关系</a></li>
+</ul>
+{% endblock %}

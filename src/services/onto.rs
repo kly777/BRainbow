@@ -64,11 +64,10 @@ impl OntoService {
             }
 
             // 检查名称是否已被其他本体使用
-            if let Ok(Some(existing_onto)) = self.onto_repository.find_by_name(name).await {
-                if existing_onto.id != id {
+            if let Ok(Some(existing_onto)) = self.onto_repository.find_by_name(name).await
+                && existing_onto.id != id {
                     return Err(format!("本体名称 '{}' 已被其他本体使用", name));
                 }
-            }
         }
 
         // 更新本体
@@ -100,23 +99,23 @@ impl OntoService {
         Ok(())
     }
 
-    /// 获取本体数量
-    pub async fn count_ontos(&self) -> Result<u64, String> {
-        let ontos = self
-            .onto_repository
-            .find_all()
-            .await
-            .map_err(|e| format!("获取本体数量失败: {}", e))?;
+    // /// 获取本体数量
+    // pub async fn count_ontos(&self) -> Result<u64, String> {
+    //     let ontos = self
+    //         .onto_repository
+    //         .find_all()
+    //         .await
+    //         .map_err(|e| format!("获取本体数量失败: {}", e))?;
 
-        Ok(ontos.len() as u64)
-    }
+    //     Ok(ontos.len() as u64)
+    // }
 
-    /// 验证本体ID是否存在
-    pub async fn validate_onto_id(&self, id: i32) -> Result<bool, String> {
-        self.onto_repository
-            .find_by_id(id)
-            .await
-            .map(|opt| opt.is_some())
-            .map_err(|e| format!("验证本体ID失败: {}", e))
-    }
+    // /// 验证本体ID是否存在
+    // pub async fn validate_onto_id(&self, id: i32) -> Result<bool, String> {
+    //     self.onto_repository
+    //         .find_by_id(id)
+    //         .await
+    //         .map(|opt| opt.is_some())
+    //         .map_err(|e| format!("验证本体ID失败: {}", e))
+    // }
 }

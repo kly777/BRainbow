@@ -47,22 +47,20 @@ impl SignService {
         relation_type: Option<String>,
     ) -> Result<signifier_signified::Model, String> {
         // 验证能指和所指是否存在
-        if !self
+        if self
             .onto_repository
             .find_by_id(signifier_id)
             .await
-            .map_err(|e| format!("验证能指本体失败: {}", e))?
-            .is_some()
+            .map_err(|e| format!("验证能指本体失败: {}", e))?.is_none()
         {
             return Err(format!("能指本体 ID {} 不存在", signifier_id));
         }
 
-        if !self
+        if self
             .onto_repository
             .find_by_id(signified_id)
             .await
-            .map_err(|e| format!("验证所指本体失败: {}", e))?
-            .is_some()
+            .map_err(|e| format!("验证所指本体失败: {}", e))?.is_none()
         {
             return Err(format!("所指本体 ID {} 不存在", signified_id));
         }
@@ -86,11 +84,10 @@ impl SignService {
         }
 
         // 验证权重范围（如果提供了权重）
-        if let Some(weight) = weight {
-            if weight < 0.0 || weight > 1.0 {
+        if let Some(weight) = weight
+            && (!(0.0..=1.0).contains(&weight)) {
                 return Err("权重必须在 0.0 到 1.0 之间".to_string());
             }
-        }
 
         // 创建符号关系
         self.sign_repository
@@ -127,12 +124,11 @@ impl SignService {
         signifier_id: i32,
     ) -> Result<Vec<signifier_signified::Model>, String> {
         // 验证能指是否存在
-        if !self
+        if self
             .onto_repository
             .find_by_id(signifier_id)
             .await
-            .map_err(|e| format!("验证能指本体失败: {}", e))?
-            .is_some()
+            .map_err(|e| format!("验证能指本体失败: {}", e))?.is_none()
         {
             return Err(format!("能指本体 ID {} 不存在", signifier_id));
         }
@@ -149,12 +145,11 @@ impl SignService {
         signified_id: i32,
     ) -> Result<Vec<signifier_signified::Model>, String> {
         // 验证所指是否存在
-        if !self
+        if self
             .onto_repository
             .find_by_id(signified_id)
             .await
-            .map_err(|e| format!("验证所指本体失败: {}", e))?
-            .is_some()
+            .map_err(|e| format!("验证所指本体失败: {}", e))?.is_none()
         {
             return Err(format!("所指本体 ID {} 不存在", signified_id));
         }
@@ -165,32 +160,32 @@ impl SignService {
             .map_err(|e| format!("获取所指相关关系失败: {}", e))
     }
 
-    /// 获取符号关系数量
-    pub async fn count_signs(&self) -> Result<u64, String> {
-        self.sign_repository
-            .count()
-            .await
-            .map_err(|e| format!("获取符号关系数量失败: {}", e))
-    }
+    // /// 获取符号关系数量
+    // pub async fn count_signs(&self) -> Result<u64, String> {
+    //     self.sign_repository
+    //         .count()
+    //         .await
+    //         .map_err(|e| format!("获取符号关系数量失败: {}", e))
+    // }
 
-    /// 获取能指相关的符号关系数量
-    pub async fn count_signs_by_signifier(&self, signifier_id: i32) -> Result<u64, String> {
-        let signs = self.get_signs_by_signifier(signifier_id).await?;
-        Ok(signs.len() as u64)
-    }
+    // /// 获取能指相关的符号关系数量
+    // pub async fn count_signs_by_signifier(&self, signifier_id: i32) -> Result<u64, String> {
+    //     let signs = self.get_signs_by_signifier(signifier_id).await?;
+    //     Ok(signs.len() as u64)
+    // }
 
-    /// 获取所指相关的符号关系数量
-    pub async fn count_signs_by_signified(&self, signified_id: i32) -> Result<u64, String> {
-        let signs = self.get_signs_by_signified(signified_id).await?;
-        Ok(signs.len() as u64)
-    }
+    // /// 获取所指相关的符号关系数量
+    // pub async fn count_signs_by_signified(&self, signified_id: i32) -> Result<u64, String> {
+    //     let signs = self.get_signs_by_signified(signified_id).await?;
+    //     Ok(signs.len() as u64)
+    // }
 
-    /// 验证符号关系ID是否存在
-    pub async fn validate_sign_id(&self, id: i32) -> Result<bool, String> {
-        self.sign_repository
-            .find_by_id(id)
-            .await
-            .map(|opt| opt.is_some())
-            .map_err(|e| format!("验证符号关系ID失败: {}", e))
-    }
+    // /// 验证符号关系ID是否存在
+    // pub async fn validate_sign_id(&self, id: i32) -> Result<bool, String> {
+    //     self.sign_repository
+    //         .find_by_id(id)
+    //         .await
+    //         .map(|opt| opt.is_some())
+    //         .map_err(|e| format!("验证符号关系ID失败: {}", e))
+    // }
 }

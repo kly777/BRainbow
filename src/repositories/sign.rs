@@ -1,5 +1,5 @@
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, DeleteResult, EntityTrait, PaginatorTrait,
+    ColumnTrait, DatabaseConnection, DeleteResult, EntityTrait, PaginatorTrait,
     QueryFilter, Set,
 };
 use std::sync::Arc;
@@ -103,8 +103,8 @@ impl SignRepository {
         Ok(count > 0)
     }
 
-    /// 获取符号关系数量
-    pub async fn count(&self) -> Result<u64, sea_orm::DbErr> {
-        signifier_signified::Entity::find().count(&*self.db).await
-    }
+    // /// 获取符号关系数量
+    // pub async fn count(&self) -> Result<u64, sea_orm::DbErr> {
+    //     signifier_signified::Entity::find().count(&*self.db).await
+    // }
 }

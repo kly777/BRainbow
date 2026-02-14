@@ -148,48 +148,48 @@ impl HtmlService {
             .ok_or_else(|| format!("用户 ID {} 不存在", id))
     }
 
-    /// 获取用户数量统计
-    pub async fn get_user_stats(&self) -> Result<u64, String> {
-        self.user_repository
-            .count()
-            .await
-            .map_err(|e| format!("获取用户统计失败: {}", e))
-    }
+    // /// 获取用户数量统计
+    // pub async fn get_user_stats(&self) -> Result<u64, String> {
+    //     self.user_repository
+    //         .count()
+    //         .await
+    //         .map_err(|e| format!("获取用户统计失败: {}", e))
+    // }
 
-    /// 获取本体数量统计
-    pub async fn get_onto_stats(&self) -> Result<u64, String> {
-        let ontos = self
-            .onto_repository
-            .find_all()
-            .await
-            .map_err(|e| format!("获取本体统计失败: {}", e))?;
+    // /// 获取本体数量统计
+    // pub async fn get_onto_stats(&self) -> Result<u64, String> {
+    //     let ontos = self
+    //         .onto_repository
+    //         .find_all()
+    //         .await
+    //         .map_err(|e| format!("获取本体统计失败: {}", e))?;
 
-        Ok(ontos.len() as u64)
-    }
+    //     Ok(ontos.len() as u64)
+    // }
 
-    /// 获取符号关系数量统计
-    pub async fn get_sign_stats(&self) -> Result<u64, String> {
-        self.sign_repository
-            .count()
-            .await
-            .map_err(|e| format!("获取符号关系统计失败: {}", e))
-    }
+    // /// 获取符号关系数量统计
+    // pub async fn get_sign_stats(&self) -> Result<u64, String> {
+    //     self.sign_repository
+    //         .count()
+    //         .await
+    //         .map_err(|e| format!("获取符号关系统计失败: {}", e))
+    // }
 
-    /// 验证本体ID是否存在
-    pub async fn validate_onto_id(&self, id: i32) -> Result<bool, String> {
-        self.onto_repository
-            .find_by_id(id)
-            .await
-            .map(|opt| opt.is_some())
-            .map_err(|e| format!("验证本体ID失败: {}", e))
-    }
+    // /// 验证本体ID是否存在
+    // pub async fn validate_onto_id(&self, id: i32) -> Result<bool, String> {
+    //     self.onto_repository
+    //         .find_by_id(id)
+    //         .await
+    //         .map(|opt| opt.is_some())
+    //         .map_err(|e| format!("验证本体ID失败: {}", e))
+    // }
 
-    /// 验证符号关系ID是否存在
-    pub async fn validate_sign_id(&self, id: i32) -> Result<bool, String> {
-        self.sign_repository
-            .find_by_id(id)
-            .await
-            .map(|opt| opt.is_some())
-            .map_err(|e| format!("验证符号关系ID失败: {}", e))
-    }
+    // /// 验证符号关系ID是否存在
+    // pub async fn validate_sign_id(&self, id: i32) -> Result<bool, String> {
+    //     self.sign_repository
+    //         .find_by_id(id)
+    //         .await
+    //         .map(|opt| opt.is_some())
+    //         .map_err(|e| format!("验证符号关系ID失败: {}", e))
+    // }
 }

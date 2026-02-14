@@ -2,6 +2,8 @@ mod entity;
 mod handlers;
 mod routes;
 mod state;
+mod services;
+mod repositories;
 
 use sea_orm::Database;
 use std::sync::Arc;

@@ -3,10 +3,10 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use serde::{Deserialize, Serialize};
-use sea_orm::{EntityTrait, Set, ActiveModelTrait, DeleteResult};
+
 
 use crate::state::AppState;
-use crate::entity::onto;
+use crate::services::onto::OntoService;
 
 /// 创建本体请求结构体
 #[derive(Debug, Deserialize)]
@@ -38,22 +38,19 @@ pub async fn create_onto_handler(
     State(state): State<AppState>,
     Json(payload): Json<CreateOntoRequest>,
 ) -> impl IntoResponse {
-    let new_onto = onto::ActiveModel {
-        name: Set(payload.name.clone()),
-        ..Default::default()
-    };
+    let onto_service = OntoService::new(state.db.clone());
 
-    match onto::Entity::insert(new_onto).exec(&*state.db).await {
-        Ok(result) => {
+    match onto_service.create_onto(payload.name.clone()).await {
+        Ok(onto) => {
             let response = OntoResponse {
-                id: result.last_insert_id,
-                name: payload.name,
+                id: onto.id,
+                name: onto.name,
             };
             (axum::http::StatusCode::CREATED, Json(response)).into_response()
         }
         Err(e) => {
-            let error_msg = format!("Failed to create onto: {}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            let error_msg = format!("创建本体失败: {}", e);
+            (axum::http::StatusCode::BAD_REQUEST, error_msg).into_response()
         }
     }
 }
@@ -62,7 +59,9 @@ pub async fn create_onto_handler(
 pub async fn get_ontos_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    match onto::Entity::find().all(&*state.db).await {
+    let onto_service = OntoService::new(state.db.clone());
+
+    match onto_service.get_all_ontos().await {
         Ok(ontos) => {
             let onto_responses: Vec<OntoResponse> = ontos
                 .into_iter()
@@ -71,15 +70,15 @@ pub async fn get_ontos_handler(
                     name: onto.name,
                 })
                 .collect();
-            
+
             let response = OntosResponse {
                 ontos: onto_responses,
             };
-            
+
             Json(response).into_response()
         }
         Err(e) => {
-            let error_msg = format!("Failed to get ontos: {}", e);
+            let error_msg = format!("获取本体列表失败: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
         }
     }
@@ -90,7 +89,9 @@ pub async fn get_onto_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    match onto::Entity::find_by_id(id).one(&*state.db).await {
+    let onto_service = OntoService::new(state.db.clone());
+
+    match onto_service.get_onto_by_id(id).await {
         Ok(Some(onto)) => {
             let response = OntoResponse {
                 id: onto.id,
@@ -99,11 +100,11 @@ pub async fn get_onto_handler(
             Json(response).into_response()
         }
         Ok(None) => {
-            let error_msg = format!("Onto with id {} not found", id);
+            let error_msg = format!("本体 ID {} 不存在", id);
             (axum::http::StatusCode::NOT_FOUND, error_msg).into_response()
         }
         Err(e) => {
-            let error_msg = format!("Failed to get onto: {}", e);
+            let error_msg = format!("获取本体失败: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
         }
     }
@@ -115,35 +116,23 @@ pub async fn update_onto_handler(
     Path(id): Path<i32>,
     Json(payload): Json<UpdateOntoRequest>,
 ) -> impl IntoResponse {
-    match onto::Entity::find_by_id(id).one(&*state.db).await {
-        Ok(Some(onto_model)) => {
-            let mut onto: onto::ActiveModel = onto_model.into();
-            
-            if let Some(name) = payload.name {
-                onto.name = Set(name);
-            }
-            
-            match onto.update(&*state.db).await {
-                Ok(updated_onto) => {
-                    let response = OntoResponse {
-                        id: updated_onto.id,
-                        name: updated_onto.name,
-                    };
-                    Json(response).into_response()
-                }
-                Err(e) => {
-                    let error_msg = format!("Failed to update onto: {}", e);
-                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
-                }
-            }
+    let onto_service = OntoService::new(state.db.clone());
+
+    match onto_service.update_onto(id, payload.name).await {
+        Ok(Some(onto)) => {
+            let response = OntoResponse {
+                id: onto.id,
+                name: onto.name,
+            };
+            Json(response).into_response()
         }
         Ok(None) => {
-            let error_msg = format!("Onto with id {} not found", id);
+            let error_msg = format!("本体 ID {} 不存在", id);
             (axum::http::StatusCode::NOT_FOUND, error_msg).into_response()
         }
         Err(e) => {
-            let error_msg = format!("Failed to get onto: {}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            let error_msg = format!("更新本体失败: {}", e);
+            (axum::http::StatusCode::BAD_REQUEST, error_msg).into_response()
         }
     }
 }
@@ -153,21 +142,20 @@ pub async fn delete_onto_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    match onto::Entity::delete_by_id(id).exec(&*state.db).await {
-        Ok(DeleteResult { rows_affected: 1, .. }) => {
-            (axum::http::StatusCode::NO_CONTENT, "Onto deleted successfully").into_response()
-        }
-        Ok(DeleteResult { rows_affected: 0, .. }) => {
-            let error_msg = format!("Onto with id {} not found", id);
-            (axum::http::StatusCode::NOT_FOUND, error_msg).into_response()
-        }
-        Ok(DeleteResult { rows_affected: _, .. }) => {
-            let error_msg = format!("Unexpected number of rows affected");
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+    let onto_service = OntoService::new(state.db.clone());
+
+    match onto_service.delete_onto(id).await {
+        Ok(()) => {
+            (axum::http::StatusCode::NO_CONTENT, "本体删除成功").into_response()
         }
         Err(e) => {
-            let error_msg = format!("Failed to delete onto: {}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            if e.contains("不存在") {
+                let error_msg = format!("本体 ID {} 不存在", id);
+                (axum::http::StatusCode::NOT_FOUND, error_msg).into_response()
+            } else {
+                let error_msg = format!("删除本体失败: {}", e);
+                (axum::http::StatusCode::BAD_REQUEST, error_msg).into_response()
+            }
         }
     }
 }

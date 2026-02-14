@@ -3,10 +3,10 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use serde::{Deserialize, Serialize};
-use sea_orm::{EntityTrait, Set, DeleteResult, ColumnTrait, QueryFilter};
+
 
 use crate::state::AppState;
-use crate::entity::signifier_signified;
+use crate::services::sign::SignService;
 
 /// 创建能指与所指关系请求结构体
 #[derive(Debug, Deserialize)]
@@ -35,25 +35,21 @@ pub async fn create_sign_handler(
     State(state): State<AppState>,
     Json(payload): Json<CreateSignRequest>,
 ) -> impl IntoResponse {
-    let new_sign = signifier_signified::ActiveModel {
-        signifier_id: Set(payload.signifier_id),
-        signified_id: Set(payload.signified_id),
-        ..Default::default()
-    };
+    let sign_service = SignService::new(state.db.clone());
 
-    match signifier_signified::Entity::insert(new_sign).exec(&*state.db).await {
-        Ok(result) => {
+    match sign_service.create_sign(payload.signifier_id, payload.signified_id, None, None).await {
+        Ok(sign) => {
             let response = SignResponse {
-                id: result.last_insert_id,
-                signifier_id: payload.signifier_id,
-                signified_id: payload.signified_id,
-                created_at: chrono::Utc::now().naive_utc().to_string(),
+                id: sign.id,
+                signifier_id: sign.signifier_id,
+                signified_id: sign.signified_id,
+                created_at: sign.created_at.to_string(),
             };
             (axum::http::StatusCode::CREATED, Json(response)).into_response()
         }
         Err(e) => {
-            let error_msg = format!("Failed to create sign relation: {}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            let error_msg = format!("创建符号关系失败: {}", e);
+            (axum::http::StatusCode::BAD_REQUEST, error_msg).into_response()
         }
     }
 }
@@ -62,7 +58,9 @@ pub async fn create_sign_handler(
 pub async fn get_signs_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    match signifier_signified::Entity::find().all(&*state.db).await {
+    let sign_service = SignService::new(state.db.clone());
+
+    match sign_service.get_all_signs().await {
         Ok(signs) => {
             let sign_responses: Vec<SignResponse> = signs
                 .into_iter()
@@ -81,7 +79,7 @@ pub async fn get_signs_handler(
             Json(response).into_response()
         }
         Err(e) => {
-            let error_msg = format!("Failed to get sign relations: {}", e);
+            let error_msg = format!("获取符号关系列表失败: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
         }
     }
@@ -92,7 +90,9 @@ pub async fn get_sign_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    match signifier_signified::Entity::find_by_id(id).one(&*state.db).await {
+    let sign_service = SignService::new(state.db.clone());
+
+    match sign_service.get_sign_by_id(id).await {
         Ok(Some(sign)) => {
             let response = SignResponse {
                 id: sign.id,
@@ -103,11 +103,11 @@ pub async fn get_sign_handler(
             Json(response).into_response()
         }
         Ok(None) => {
-            let error_msg = format!("Sign relation with id {} not found", id);
+            let error_msg = format!("符号关系 ID {} 不存在", id);
             (axum::http::StatusCode::NOT_FOUND, error_msg).into_response()
         }
         Err(e) => {
-            let error_msg = format!("Failed to get sign relation: {}", e);
+            let error_msg = format!("获取符号关系失败: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
         }
     }
@@ -118,35 +118,33 @@ pub async fn delete_sign_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    match signifier_signified::Entity::delete_by_id(id).exec(&*state.db).await {
-        Ok(DeleteResult { rows_affected: 1, .. }) => {
-            (axum::http::StatusCode::NO_CONTENT, "Sign relation deleted successfully").into_response()
-        }
-        Ok(DeleteResult { rows_affected: 0, .. }) => {
-            let error_msg = format!("Sign relation with id {} not found", id);
-            (axum::http::StatusCode::NOT_FOUND, error_msg).into_response()
-        }
-        Ok(DeleteResult { rows_affected: _, .. }) => {
-            let error_msg = format!("Unexpected number of rows affected");
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+    let sign_service = SignService::new(state.db.clone());
+
+    match sign_service.delete_sign(id).await {
+        Ok(()) => {
+            (axum::http::StatusCode::NO_CONTENT, "符号关系删除成功").into_response()
         }
         Err(e) => {
-            let error_msg = format!("Failed to delete sign relation: {}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            if e.contains("不存在") {
+                let error_msg = format!("符号关系 ID {} 不存在", id);
+                (axum::http::StatusCode::NOT_FOUND, error_msg).into_response()
+            } else {
+                let error_msg = format!("删除符号关系失败: {}", e);
+                (axum::http::StatusCode::BAD_REQUEST, error_msg).into_response()
+            }
         }
     }
 }
 
 /// 根据能指ID获取所有关系
+/// 按能指查询关系
 pub async fn get_signs_by_signifier_handler(
     State(state): State<AppState>,
     Path(signifier_id): Path<i32>,
 ) -> impl IntoResponse {
-    match signifier_signified::Entity::find()
-        .filter(signifier_signified::Column::SignifierId.eq(signifier_id))
-        .all(&*state.db)
-        .await
-    {
+    let sign_service = SignService::new(state.db.clone());
+
+    match sign_service.get_signs_by_signifier(signifier_id).await {
         Ok(signs) => {
             let sign_responses: Vec<SignResponse> = signs
                 .into_iter()
@@ -157,51 +155,49 @@ pub async fn get_signs_by_signifier_handler(
                     created_at: sign.created_at.to_string(),
                 })
                 .collect();
-
+            
             let response = SignsResponse {
-                signs: sign_responses,
-            };
-
-            Json(response).into_response()
-        }
-        Err(e) => {
-            let error_msg = format!("Failed to get sign relations by signifier: {}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
-        }
-    }
-}
-
-/// 根据所指ID获取所有关系
-pub async fn get_signs_by_signified_handler(
-    State(state): State<AppState>,
-    Path(signified_id): Path<i32>,
-) -> impl IntoResponse {
-    match signifier_signified::Entity::find()
-        .filter(signifier_signified::Column::SignifiedId.eq(signified_id))
-        .all(&*state.db)
-        .await
-    {
-        Ok(signs) => {
-            let sign_responses: Vec<SignResponse> = signs
-                .into_iter()
-                .map(|sign| SignResponse {
-                    id: sign.id,
-                    signifier_id: sign.signifier_id,
-                    signified_id: sign.signified_id,
-                    created_at: sign.created_at.to_string(),
-                })
-                .collect();
-
-            let response
- = SignsResponse {
                 signs: sign_responses,
             };
             
             Json(response).into_response()
         }
         Err(e) => {
-            let error_msg = format!("Failed to get sign relations by signified: {}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            let error_msg = format!("按能指查询关系失败: {}", e);
+            (axum::http::StatusCode::BAD_REQUEST, error_msg).into_response()
+        }
+    }
+}
+
+/// 根据所指ID获取所有关系
+/// 按所指查询关系
+pub async fn get_signs_by_signified_handler(
+    State(state): State<AppState>,
+    Path(signified_id): Path<i32>,
+) -> impl IntoResponse {
+    let sign_service = SignService::new(state.db.clone());
+
+    match sign_service.get_signs_by_signified(signified_id).await {
+        Ok(signs) => {
+            let sign_responses: Vec<SignResponse> = signs
+                .into_iter()
+                .map(|sign| SignResponse {
+                    id: sign.id,
+                    signifier_id: sign.signifier_id,
+                    signified_id: sign.signified_id,
+                    created_at: sign.created_at.to_string(),
+                })
+                .collect();
+            
+            let response = SignsResponse {
+                signs: sign_responses,
+            };
+            
+            Json(response).into_response()
+        }
+        Err(e) => {
+            let error_msg = format!("按所指查询关系失败: {}", e);
+            (axum::http::StatusCode::BAD_REQUEST, error_msg).into_response()
         }
     }
 }

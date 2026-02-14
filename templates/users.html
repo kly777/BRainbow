@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}用户列表 - Brainbow{% endblock %}
+
+{% block content %}
+<h2>用户</h2>列表</h2>
+
+<div class="actions">
+    <a href="/html/user/new" class="link">创建新用户</a>
+</div>
+
+{% if users.is_empty() %}
+    <p>暂无</p>用户数据。</p>
+{% else %}
+    <table>
+        <thead</table>>
+            <tr></tr>
+                <th></th>ID</th>
+                <th></th>名称</th>
+                <th></th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {%</tbody> for user in users %}
+            <tr></tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.name }}</td>
+                <td>
+                    <a href="/</td>html/user/{{ user.id }}" class="link">查看</a
+>
+                    <a href="/html/user/{{ user.id }}/edit" class="link">编辑</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+
+<h3>统计</h3>信息</h3>
+<ul></ul>
+    <li>用户</li>总数: {{ users.len() }}</li>
+    <li><a href="/html/ontos" class="link">查看本体列表</a></li>
+    <li><a href="/html/signs" class="link">查看关系列表</a></li>
+</ul>
+{% endblock %}

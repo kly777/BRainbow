@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use crate::entity::{onto, signifier_signified};
-use crate::repositories::onto::OntoRepository;
-use crate::repositories::sign::SignRepository;
+use crate::entity::{onto, signifier_signified, user};
+use crate::repositories::{onto::OntoRepository, sign::SignRepository, user::UserRepository};
 
 /// HTML展示服务层
 pub struct HtmlService {
     onto_repository: OntoRepository,
     sign_repository: SignRepository,
+    user_repository: UserRepository,
 }
 
 impl HtmlService {
@@ -15,8 +15,16 @@ impl HtmlService {
     pub fn new(db: Arc<sea_orm::DatabaseConnection>) -> Self {
         Self {
             onto_repository: OntoRepository::new(db.clone()),
-            sign_repository: SignRepository::new(db),
+            sign_repository: SignRepository::new(db.clone()),
+            user_repository: UserRepository::new(db),
         }
+    }
+
+    /// 获取所有用户用于HTML展示
+    pub async fn get_users_for_html(&self) -> Result<Vec<user::Model>, String> {
+        self.user_repository.find_all()
+            .await
+            .map_err(|e| format!("获取用户列表失败: {}", e))
     }
 
     /// 获取所有本体用于HTML展示
@@ -94,12 +102,27 @@ impl HtmlService {
         Ok((onto, signs))
     }
 
+    /// 获取用户详情用于HTML展示
+    pub async fn get_user_detail_for_html(&self, id: i32) -> Result<user::Model, String> {
+        self.user_repository.find_by_id(id)
+            .await
+            .map_err(|e| format!("获取用户详情失败: {}", e))?
+            .ok_or_else(|| format!("用户 ID {} 不存在", id))
+    }
+
+    /// 获取用户数量统计
+    pub async fn get_user_stats(&self) -> Result<u64, String> {
+        self.user_repository.count()
+            .await
+            .map_err(|e| format!("获取用户统计失败: {}", e))
+    }
+
     /// 获取本体数量统计
     pub async fn get_onto_stats(&self) -> Result<u64, String> {
         let ontos = self.onto_repository.find_all()
             .await
             .map_err(|e| format!("获取本体统计失败: {}", e))?;
-        
+
         Ok(ontos.len() as u64)
     }
 

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.name }} - Brainbow{% endblock %}
+
+{% block content %}
+<h2>用户详情: {{ user.name }}</h2>
+
+<div class="card">
+    <h3>基本信息</h3>
+    <p><strong>用户 ID:</strong> {{ user.id }}</p>
+    <p><strong>用户名:</strong> {{ user.name }}</p>
+</div>
+
+<div class="actions">
+    <a href="/html/users" class="link">返回用户列表</a>
+    <a href="/html/user/{{ user.id }}/edit" class="link">编辑用户</a>
+    <a href="/api/user" class="link">用户 API</a>
+</div>
+
+<div class="container">
+    <h3>统计信息</h3>
+    <ul>
+        <li>用户创建时间: 系统暂未记录</li>
+        <li>用户角色: 普通用户</li>
+    </ul>
+</div>
+
+<div class="container">
+    <h3>相关链接</h3>
+    <ul>
+        <li><a href="/html/ontos" class="link">查看本体列表</a></li>
+        <li><a href="/html/signs" class="link">查看关系列表</a></li>
+        <li><a href="/html/user/new" class="link">创建新用户</a></li>
+        <li><a href="/api/user" class="link">用户 API 端点 (JSON)</a></li>
+    </ul>
+</div>
+
+<div class="container">
+    <h3>用户说明</h3>
+    <div class="card">
+        <p>用户是 Brainbow 符号学本体系统的基本实体之一。</p>
+        <p>用户可以创建和管理本体、定义符号关系。</p>
+        <p>当前系统版本中，用户功能较为基础，主要用于身份标识。</p>
+    </div>
+</div>
+{% endblock %}

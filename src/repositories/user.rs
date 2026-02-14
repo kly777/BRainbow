@@ -1,4 +1,4 @@
-use sea_orm::{DatabaseConnection, EntityTrait, Set, ActiveModelTrait, DeleteResult, QueryFilter, ColumnTrait, PaginatorTrait};
+use sea_orm::{DatabaseConnection, EntityTrait, PaginatorTrait,Set,DeleteResult,QueryFilter,ColumnTrait};
 use std::sync::Arc;
 
 use crate::entity::user;
@@ -32,7 +32,7 @@ impl UserRepository {
         };
 
         let result = user::Entity::insert(new_user).exec(&*self.db).await?;
-        
+
         // 获取刚创建的用户
         user::Entity::find_by_id(result.last_insert_id)
             .one(&*self.db)

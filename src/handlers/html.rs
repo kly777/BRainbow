@@ -1,10 +1,7 @@
-use axum::{
-    extract::{Path, State},
-    response::{Html, IntoResponse},
-};
+use axum::{extract::{Path, State}, response::{Html, IntoResponse}};
 use askama::Template;
 
-use crate::entity::{onto, signifier_signified};
+use crate::entity::{onto, signifier_signified, user};
 use crate::state::AppState;
 use crate::services::html::HtmlService;
 
@@ -33,6 +30,44 @@ struct SignsTemplate {
 #[template(path = "sign_detail.html")]
 struct SignDetailTemplate {
     sign: signifier_signified::Model,
+}
+
+// 用户列表模板
+#[derive(Template)]
+#[template(path = "users.html")]
+struct UsersTemplate {
+    users: Vec<user::Model>,
+}
+
+// 用户详情模板
+#[derive(Template)]
+#[template(path = "user_detail.html")]
+struct UserDetailTemplate {
+    user: user::Model,
+}
+
+// 用户列表页面
+pub async fn users_handler(
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let html_service = HtmlService::new(state.db.clone());
+    
+    match html_service.get_users_for_html().await {
+        Ok(users) => {
+            let template = UsersTemplate { users };
+            match template.render() {
+                Ok(html) => Html(html).into_response(),
+                Err(e) => {
+                    eprintln!("模板渲染错误: {}", e);
+                    Html(format!("模板渲染错误: {}", e)).into_response()
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("获取用户列表失败: {}", e);
+            Html(format!("获取用户列表失败: {}", e)).into_response()
+        }
+    }
 }
 
 // 本体列表页面
@@ -73,7 +108,7 @@ pub async fn onto_detail_handler(
                 signifiers,
                 signifieds,
             };
-
+            
             match template.render() {
                 Ok(html) => Html(html).into_response(),
                 Err(e) => {
@@ -138,6 +173,32 @@ pub async fn sign_detail_handler(
     }
 }
 
+// 用户详情页面
+pub async fn user_detail_handler(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+) -> impl IntoResponse {
+    let html_service = HtmlService::new(state.db.clone());
+    
+    match html_service.get_user_detail_for_html(id).await {
+        Ok(user) => {
+            let template = UserDetailTemplate { user };
+            match template.render() {
+                Ok(html) => Html(html).into_response(),
+                Err(e) => {
+                    eprintln!("模板渲染错误: {}", e);
+                    Html(format!("模板渲染错误: {}", e)).into_response()
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("获取用户详情失败: {}", e);
+            Html(format!("获取用户详情失败: {}", e)).into_response()
+        }
+    }
+}
+
+// 本体列表页面
 // 按能指查询关系页面
 pub async fn signs_by_signifier_handler(
     State(state): State<AppState>,
@@ -153,7 +214,7 @@ pub async fn signs_by_signifier_handler(
                 signifiers: signs,
                 signifieds: vec![],
             };
-
+            
             match template.render() {
                 Ok(html) => Html(html).into_response(),
                 Err(e) => {
@@ -184,7 +245,7 @@ pub async fn signs_by_signified_handler(
                 signifiers: vec![],
                 signifieds: signs,
             };
-
+            
             match template.render() {
                 Ok(html) => Html(html).into_response(),
                 Err(e) => {
@@ -199,3 +260,5 @@ pub async fn signs_by_signified_handler(
         }
     }
 }
+
+

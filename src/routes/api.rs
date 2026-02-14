@@ -1,7 +1,4 @@
-use axum::{
-    routing::get,
-    Router,
-};
+use axum::{routing::get, Router};
 
 use crate::handlers;
 use crate::state::AppState;
@@ -27,6 +24,8 @@ pub fn create_router() -> Router<AppState> {
                 .route("/sign/{id}", get(handlers::html::sign_detail_handler))
                 .route("/sign/signifier/{signifier_id}", get(handlers::html::signs_by_signifier_handler))
                 .route("/sign/signified/{signified_id}", get(handlers::html::signs_by_signified_handler))
+                .route("/users", get(handlers::html::users_handler)) // 用户列表页面
+                .route("/user/{id}", get(handlers::html::user_detail_handler)) // 用户详情页面
         )
         
         // API 路由组 - 本体 (onto) 路由

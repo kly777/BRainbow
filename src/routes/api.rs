@@ -1,5 +1,5 @@
 use axum::{
-    routing::get,
+    routing::{get},
     Router,
 };
 
@@ -10,5 +10,8 @@ pub fn create_router() -> Router<AppState> {
     Router::new()
         .route("/", get(handlers::home::handler))
         .route("/header", get(handlers::header::header_handler))
-        .route("/user", get(handlers::user::user_handler))
+        .route("/user",
+            get(handlers::user::user_handler)
+                .post(handlers::create_user::create_user_handler)
+        )
 }

@@ -1,7 +1,4 @@
-use axum::{
-    http::header::HeaderMap,
-    response::Json,
-};
+use axum::{http::header::HeaderMap, response::Json};
 use std::collections::HashMap;
 
 pub async fn header_handler(headers: HeaderMap) -> Json<HashMap<String, String>> {

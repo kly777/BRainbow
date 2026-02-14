@@ -6,12 +6,10 @@ use std::collections::HashMap;
 
 use sea_orm::EntityTrait;
 
-use crate::state::AppState;
 use crate::entity::user;
+use crate::state::AppState;
 
-pub async fn user_handler(
-    State(state): State<AppState>
-) -> impl IntoResponse {
+pub async fn user_handler(State(state): State<AppState>) -> impl IntoResponse {
     match user::Entity::find().all(&*state.db).await {
         Ok(users) => {
             let user_map: HashMap<String, String> = users
@@ -22,7 +20,7 @@ pub async fn user_handler(
                     (id, name)
                 })
                 .collect();
-            
+
             Json(user_map).into_response()
         }
         Err(e) => {

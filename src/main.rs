@@ -1,9 +1,9 @@
 mod entity;
 mod handlers;
-mod routes;
-mod state;
-mod services;
 mod repositories;
+mod routes;
+mod services;
+mod state;
 
 use sea_orm::Database;
 use std::sync::Arc;
@@ -15,12 +15,12 @@ use crate::state::AppState;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 连接数据库
     let db = Database::connect("sqlite://brainbow.db?mode=rwc").await?;
-    db.get_schema_registry("brainbow::entity::*").sync(&db).await?;
+    db.get_schema_registry("brainbow::entity::*")
+        .sync(&db)
+        .await?;
 
     // 创建应用状态
-    let state = AppState {
-        db: Arc::new(db),
-    };
+    let state = AppState { db: Arc::new(db) };
 
     // 创建路由
     let app = create_router(state);

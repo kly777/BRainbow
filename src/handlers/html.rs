@@ -1,9 +1,12 @@
-use axum::{extract::{Path, State}, response::{Html, IntoResponse}};
 use askama::Template;
+use axum::{
+    extract::{Path, State},
+    response::{Html, IntoResponse},
+};
 
 use crate::entity::{onto, signifier_signified, user};
-use crate::state::AppState;
 use crate::services::html::HtmlService;
+use crate::state::AppState;
 
 // 模板结构体
 #[derive(Template)]
@@ -47,11 +50,9 @@ struct UserDetailTemplate {
 }
 
 // 用户列表页面
-pub async fn users_handler(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn users_handler(State(state): State<AppState>) -> impl IntoResponse {
     let html_service = HtmlService::new(state.db.clone());
-    
+
     match html_service.get_users_for_html().await {
         Ok(users) => {
             let template = UsersTemplate { users };
@@ -71,11 +72,9 @@ pub async fn users_handler(
 }
 
 // 本体列表页面
-pub async fn ontos_handler(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn ontos_handler(State(state): State<AppState>) -> impl IntoResponse {
     let html_service = HtmlService::new(state.db.clone());
-    
+
     match html_service.get_ontos_for_html().await {
         Ok(ontos) => {
             let template = OntosTemplate { ontos };
@@ -100,7 +99,7 @@ pub async fn onto_detail_handler(
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let html_service = HtmlService::new(state.db.clone());
-    
+
     match html_service.get_onto_detail_for_html(id).await {
         Ok((onto, signifiers, signifieds)) => {
             let template = OntoDetailTemplate {
@@ -108,7 +107,7 @@ pub async fn onto_detail_handler(
                 signifiers,
                 signifieds,
             };
-            
+
             match template.render() {
                 Ok(html) => Html(html).into_response(),
                 Err(e) => {
@@ -125,11 +124,9 @@ pub async fn onto_detail_handler(
 }
 
 // 关系列表页面
-pub async fn signs_handler(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn signs_handler(State(state): State<AppState>) -> impl IntoResponse {
     let html_service = HtmlService::new(state.db.clone());
-    
+
     match html_service.get_signs_for_html().await {
         Ok(signs) => {
             let template = SignsTemplate { signs };
@@ -154,7 +151,7 @@ pub async fn sign_detail_handler(
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let html_service = HtmlService::new(state.db.clone());
-    
+
     match html_service.get_sign_detail_for_html(id).await {
         Ok(sign) => {
             let template = SignDetailTemplate { sign };
@@ -179,7 +176,7 @@ pub async fn user_detail_handler(
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let html_service = HtmlService::new(state.db.clone());
-    
+
     match html_service.get_user_detail_for_html(id).await {
         Ok(user) => {
             let template = UserDetailTemplate { user };
@@ -205,8 +202,11 @@ pub async fn signs_by_signifier_handler(
     Path(signifier_id): Path<i32>,
 ) -> impl IntoResponse {
     let html_service = HtmlService::new(state.db.clone());
-    
-    match html_service.get_signs_by_signifier_for_html(signifier_id).await {
+
+    match html_service
+        .get_signs_by_signifier_for_html(signifier_id)
+        .await
+    {
         Ok((onto, signs)) => {
             // 使用本体详情模板，但只显示能指关系
             let template = OntoDetailTemplate {
@@ -214,7 +214,7 @@ pub async fn signs_by_signifier_handler(
                 signifiers: signs,
                 signifieds: vec![],
             };
-            
+
             match template.render() {
                 Ok(html) => Html(html).into_response(),
                 Err(e) => {
@@ -236,8 +236,11 @@ pub async fn signs_by_signified_handler(
     Path(signified_id): Path<i32>,
 ) -> impl IntoResponse {
     let html_service = HtmlService::new(state.db.clone());
-    
-    match html_service.get_signs_by_signified_for_html(signified_id).await {
+
+    match html_service
+        .get_signs_by_signified_for_html(signified_id)
+        .await
+    {
         Ok((onto, signs)) => {
             // 使用本体详情模板，但只显示所指关系
             let template = OntoDetailTemplate {
@@ -245,7 +248,7 @@ pub async fn signs_by_signified_handler(
                 signifiers: vec![],
                 signifieds: signs,
             };
-            
+
             match template.render() {
                 Ok(html) => Html(html).into_response(),
                 Err(e) => {
@@ -260,5 +263,3 @@ pub async fn signs_by_signified_handler(
         }
     }
 }
-
-

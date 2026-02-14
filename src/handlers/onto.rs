@@ -4,9 +4,8 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-
-use crate::state::AppState;
 use crate::services::onto::OntoService;
+use crate::state::AppState;
 
 /// 创建本体请求结构体
 #[derive(Debug, Deserialize)]
@@ -56,9 +55,7 @@ pub async fn create_onto_handler(
 }
 
 /// 获取所有本体
-pub async fn get_ontos_handler(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_ontos_handler(State(state): State<AppState>) -> impl IntoResponse {
     let onto_service = OntoService::new(state.db.clone());
 
     match onto_service.get_all_ontos().await {
@@ -145,9 +142,7 @@ pub async fn delete_onto_handler(
     let onto_service = OntoService::new(state.db.clone());
 
     match onto_service.delete_onto(id).await {
-        Ok(()) => {
-            (axum::http::StatusCode::NO_CONTENT, "本体删除成功").into_response()
-        }
+        Ok(()) => (axum::http::StatusCode::NO_CONTENT, "本体删除成功").into_response(),
         Err(e) => {
             if e.contains("不存在") {
                 let error_msg = format!("本体 ID {} 不存在", id);

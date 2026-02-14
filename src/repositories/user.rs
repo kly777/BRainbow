@@ -1,4 +1,6 @@
-use sea_orm::{DatabaseConnection, EntityTrait, PaginatorTrait,Set,DeleteResult,QueryFilter,ColumnTrait};
+use sea_orm::{
+    ColumnTrait, DatabaseConnection, DeleteResult, EntityTrait, PaginatorTrait, QueryFilter, Set,
+};
 use std::sync::Arc;
 
 use crate::entity::user;

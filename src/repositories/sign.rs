@@ -1,4 +1,7 @@
-use sea_orm::{DatabaseConnection, EntityTrait, Set, ActiveModelTrait, DeleteResult, QueryFilter, ColumnTrait, PaginatorTrait};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DeleteResult, EntityTrait, PaginatorTrait,
+    QueryFilter, Set,
+};
 use std::sync::Arc;
 
 use crate::entity::signifier_signified;
@@ -20,14 +23,23 @@ impl SignRepository {
     }
 
     /// 根据ID获取符号关系
-    pub async fn find_by_id(&self, id: i32) -> Result<Option<signifier_signified::Model>, sea_orm::DbErr> {
-        signifier_signified::Entity::find_by_id(id).one(&*self.db).await
+    pub async fn find_by_id(
+        &self,
+        id: i32,
+    ) -> Result<Option<signifier_signified::Model>, sea_orm::DbErr> {
+        signifier_signified::Entity::find_by_id(id)
+            .one(&*self.db)
+            .await
     }
 
     /// 创建符号关系
-    pub async fn create(&self, signifier_id: i32, signified_id: i32, weight: Option<f64>, relation_type: Option<String>) 
-        -> Result<signifier_signified::Model, sea_orm::DbErr> {
-        
+    pub async fn create(
+        &self,
+        signifier_id: i32,
+        signified_id: i32,
+        weight: Option<f64>,
+        relation_type: Option<String>,
+    ) -> Result<signifier_signified::Model, sea_orm::DbErr> {
         let new_sign = signifier_signified::ActiveModel {
             signifier_id: Set(signifier_id),
             signified_id: Set(signified_id),
@@ -36,8 +48,10 @@ impl SignRepository {
             ..Default::default()
         };
 
-        let result = signifier_signified::Entity::insert(new_sign).exec(&*self.db).await?;
-        
+        let result = signifier_signified::Entity::insert(new_sign)
+            .exec(&*self.db)
+            .await?;
+
         // 获取刚创建的符号关系
         signifier_signified::Entity::find_by_id(result.last_insert_id)
             .one(&*self.db)
@@ -47,11 +61,16 @@ impl SignRepository {
 
     /// 删除符号关系
     pub async fn delete(&self, id: i32) -> Result<DeleteResult, sea_orm::DbErr> {
-        signifier_signified::Entity::delete_by_id(id).exec(&*self.db).await
+        signifier_signified::Entity::delete_by_id(id)
+            .exec(&*self.db)
+            .await
     }
 
     /// 根据能指ID获取符号关系
-    pub async fn find_by_signifier_id(&self, signifier_id: i32) -> Result<Vec<signifier_signified::Model>, sea_orm::DbErr> {
+    pub async fn find_by_signifier_id(
+        &self,
+        signifier_id: i32,
+    ) -> Result<Vec<signifier_signified::Model>, sea_orm::DbErr> {
         signifier_signified::Entity::find()
             .filter(signifier_signified::Column::SignifierId.eq(signifier_id))
             .all(&*self.db)
@@ -59,7 +78,10 @@ impl SignRepository {
     }
 
     /// 根据所指ID获取符号关系
-    pub async fn find_by_signified_id(&self, signified_id: i32) -> Result<Vec<signifier_signified::Model>, sea_orm::DbErr> {
+    pub async fn find_by_signified_id(
+        &self,
+        signified_id: i32,
+    ) -> Result<Vec<signifier_signified::Model>, sea_orm::DbErr> {
         signifier_signified::Entity::find()
             .filter(signifier_signified::Column::SignifiedId.eq(signified_id))
             .all(&*self.db)
@@ -67,13 +89,17 @@ impl SignRepository {
     }
 
     /// 检查符号关系是否存在
-    pub async fn exists(&self, signifier_id: i32, signified_id: i32) -> Result<bool, sea_orm::DbErr> {
+    pub async fn exists(
+        &self,
+        signifier_id: i32,
+        signified_id: i32,
+    ) -> Result<bool, sea_orm::DbErr> {
         let count = signifier_signified::Entity::find()
             .filter(signifier_signified::Column::SignifierId.eq(signifier_id))
             .filter(signifier_signified::Column::SignifiedId.eq(signified_id))
             .count(&*self.db)
             .await?;
-        
+
         Ok(count > 0)
     }
 

@@ -1,4 +1,6 @@
-use sea_orm::{DatabaseConnection, EntityTrait, Set, ActiveModelTrait, DeleteResult, QueryFilter, ColumnTrait};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DeleteResult, EntityTrait, QueryFilter, Set,
+};
 use std::sync::Arc;
 
 use crate::entity::onto;
@@ -32,7 +34,7 @@ impl OntoRepository {
         };
 
         let result = onto::Entity::insert(new_onto).exec(&*self.db).await?;
-        
+
         // 获取刚创建的本体
         onto::Entity::find_by_id(result.last_insert_id)
             .one(&*self.db)
@@ -41,7 +43,11 @@ impl OntoRepository {
     }
 
     /// 更新本体
-    pub async fn update(&self, id: i32, name: Option<String>) -> Result<Option<onto::Model>, sea_orm::DbErr> {
+    pub async fn update(
+        &self,
+        id: i32,
+        name: Option<String>,
+    ) -> Result<Option<onto::Model>, sea_orm::DbErr> {
         // 先查找本体
         let onto = match onto::Entity::find_by_id(id).one(&*self.db).await? {
             Some(onto) => onto,

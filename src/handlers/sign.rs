@@ -4,9 +4,8 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-
-use crate::state::AppState;
 use crate::services::sign::SignService;
+use crate::state::AppState;
 
 /// 创建能指与所指关系请求结构体
 #[derive(Debug, Deserialize)]
@@ -37,7 +36,10 @@ pub async fn create_sign_handler(
 ) -> impl IntoResponse {
     let sign_service = SignService::new(state.db.clone());
 
-    match sign_service.create_sign(payload.signifier_id, payload.signified_id, None, None).await {
+    match sign_service
+        .create_sign(payload.signifier_id, payload.signified_id, None, None)
+        .await
+    {
         Ok(sign) => {
             let response = SignResponse {
                 id: sign.id,
@@ -55,9 +57,7 @@ pub async fn create_sign_handler(
 }
 
 /// 获取所有能指与所指关系
-pub async fn get_signs_handler(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_signs_handler(State(state): State<AppState>) -> impl IntoResponse {
     let sign_service = SignService::new(state.db.clone());
 
     match sign_service.get_all_signs().await {
@@ -121,9 +121,7 @@ pub async fn delete_sign_handler(
     let sign_service = SignService::new(state.db.clone());
 
     match sign_service.delete_sign(id).await {
-        Ok(()) => {
-            (axum::http::StatusCode::NO_CONTENT, "符号关系删除成功").into_response()
-        }
+        Ok(()) => (axum::http::StatusCode::NO_CONTENT, "符号关系删除成功").into_response(),
         Err(e) => {
             if e.contains("不存在") {
                 let error_msg = format!("符号关系 ID {} 不存在", id);
@@ -155,11 +153,11 @@ pub async fn get_signs_by_signifier_handler(
                     created_at: sign.created_at.to_string(),
                 })
                 .collect();
-            
+
             let response = SignsResponse {
                 signs: sign_responses,
             };
-            
+
             Json(response).into_response()
         }
         Err(e) => {
@@ -188,11 +186,11 @@ pub async fn get_signs_by_signified_handler(
                     created_at: sign.created_at.to_string(),
                 })
                 .collect();
-            
+
             let response = SignsResponse {
                 signs: sign_responses,
             };
-            
+
             Json(response).into_response()
         }
         Err(e) => {

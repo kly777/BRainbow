@@ -3,132 +3,163 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Json},
 };
-use std::{collections::HashMap, sync::Arc};
+use serde::{Deserialize, Serialize};
 
-use crate::{
-    repositories::card::CardRepository,
-    state::AppState,
-};
+use crate::services::card::CardService;
+use crate::state::AppState;
 
-/// 获取所有卡片的 handler
-pub async fn get_cards_handler(State(state): State<AppState>) -> impl IntoResponse {
-    let repository = CardRepository::new(Arc::clone(&state.db));
-    
-    match repository.find_all().await {
-        Ok(cards) => Json(cards).into_response(),
-        Err(e) => {
-            let error_msg = format!("Database error: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
-        }
-    }
+/// 创建卡片请求结构体
+#[derive(Debug, Deserialize)]
+pub struct CreateCardRequest {
+    pub title: String,
+    pub content: String,
 }
 
-/// 根据ID获取单个卡片的 handler
-pub async fn get_card_handler(
-    Path(id): Path<i32>,
-    State(state): State<AppState>,
-) -> impl IntoResponse {
-    let repository = CardRepository::new(Arc::clone(&state.db));
-    
-    match repository.find_by_id(id).await {
-        Ok(Some(card)) => Json(card).into_response(),
-        Ok(None) => (StatusCode::NOT_FOUND, format!("Card with id {} not found", id)).into_response(),
-        Err(e) => {
-            let error_msg = format!("Database error: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
-        }
-    }
+/// 更新卡片请求结构体
+#[derive(Debug, Deserialize)]
+pub struct UpdateCardRequest {
+    pub title: Option<String>,
+    pub content: Option<String>,
 }
 
-/// 创建新卡片的 handler
+/// 卡片响应结构体
+#[derive(Debug, Serialize)]
+pub struct CardResponse {
+    pub id: i32,
+    pub title: String,
+    pub content: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+
+
+/// 创建卡片
 pub async fn create_card_handler(
     State(state): State<AppState>,
-    Json(payload): Json<HashMap<String, String>>,
+    Json(payload): Json<CreateCardRequest>,
 ) -> impl IntoResponse {
-    let repository = CardRepository::new(Arc::clone(&state.db));
-    
-    // 从 payload 中获取标题和内容
-    let title = payload
-        .get("title")
-        .cloned()
-        .unwrap_or_else(|| "Untitled".to_string());
-    
-    let content = payload
-        .get("content")
-        .cloned()
-        .unwrap_or_else(|| String::new());
-    
-    match repository.create(title, content).await {
+    let card_service = CardService::new(state.db.clone());
+
+    match card_service.create_card(payload.title.clone(), payload.content.clone()).await {
         Ok(card) => {
-            let mut response = HashMap::new();
-            response.insert("id".to_string(), card.id.to_string());
-            response.insert("title".to_string(), card.title);
-            response.insert("content".to_string(), card.content);
-            response.insert("created_at".to_string(), card.created_at.to_string());
-            response.insert("updated_at".to_string(), card.updated_at.to_string());
-            response.insert("message".to_string(), "Card created successfully".to_string());
-            
+            let response = CardResponse {
+                id: card.id,
+                title: card.title,
+                content: card.content,
+                created_at: card.created_at.to_string(),
+                updated_at: card.updated_at.to_string(),
+            };
             (StatusCode::CREATED, Json(response)).into_response()
         }
         Err(e) => {
-            let error_msg = format!("Database error: {}", e);
+            let error_msg = format!("创建卡片失败: {}", e);
+            (StatusCode::BAD_REQUEST, error_msg).into_response()
+        }
+    }
+}
+
+/// 获取所有卡片
+pub async fn get_cards_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let card_service = CardService::new(state.db.clone());
+
+    match card_service.get_all_cards().await {
+        Ok(cards) => {
+            let card_responses: Vec<CardResponse> = cards
+                .into_iter()
+                .map(|card| CardResponse {
+                    id: card.id,
+                    title: card.title,
+                    content: card.content,
+                    created_at: card.created_at.to_string(),
+                    updated_at: card.updated_at.to_string(),
+                })
+                .collect();
+
+            Json(card_responses).into_response()
+        }
+        Err(e) => {
+            let error_msg = format!("获取卡片列表失败: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
         }
     }
 }
 
-/// 更新卡片的 handler
-pub async fn update_card_handler(
-    Path(id): Path<i32>,
+/// 获取单个卡片
+pub async fn get_card_handler(
     State(state): State<AppState>,
-    Json(payload): Json<HashMap<String, String>>,
+    Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let repository = CardRepository::new(Arc::clone(&state.db));
-    
-    // 从 payload 中获取可选的标题和内容
-    let title = payload.get("title").cloned();
-    let content = payload.get("content").cloned();
-    
-    match repository.update(id, title, content).await {
-        Ok(card) => {
-            let mut response = HashMap::new();
-            response.insert("id".to_string(), card.id.to_string());
-            response.insert("title".to_string(), card.title);
-            response.insert("content".to_string(), card.content);
-            response.insert("created_at".to_string(), card.created_at.to_string());
-            response.insert("updated_at".to_string(), card.updated_at.to_string());
-            response.insert("message".to_string(), "Card updated successfully".to_string());
-            
+    let card_service = CardService::new(state.db.clone());
+
+    match card_service.get_card_by_id(id).await {
+        Ok(Some(card)) => {
+            let response = CardResponse {
+                id: card.id,
+                title: card.title,
+                content: card.content,
+                created_at: card.created_at.to_string(),
+                updated_at: card.updated_at.to_string(),
+            };
             Json(response).into_response()
         }
-        Err(sea_orm::DbErr::RecordNotFound(_)) => {
-            (StatusCode::NOT_FOUND, format!("Card with id {} not found", id)).into_response()
+        Ok(None) => {
+            let error_msg = format!("卡片 ID {} 不存在", id);
+            (StatusCode::NOT_FOUND, error_msg).into_response()
         }
         Err(e) => {
-            let error_msg = format!("Database error: {}", e);
+            let error_msg = format!("获取卡片失败: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
         }
     }
 }
 
-/// 删除卡片的 handler
-pub async fn delete_card_handler(
-    Path(id): Path<i32>,
+/// 更新卡片
+pub async fn update_card_handler(
     State(state): State<AppState>,
+    Path(id): Path<i32>,
+    Json(payload): Json<UpdateCardRequest>,
 ) -> impl IntoResponse {
-    let repository = CardRepository::new(Arc::clone(&state.db));
-    
-    match repository.delete(id).await {
-        Ok(result) => {
-            if result.rows_affected > 0 {
-                (StatusCode::NO_CONTENT, "Card deleted successfully").into_response()
-            } else {
-                (StatusCode::NOT_FOUND, format!("Card with id {} not found", id)).into_response()
-            }
+    let card_service = CardService::new(state.db.clone());
+
+    match card_service.update_card(id, payload.title, payload.content).await {
+        Ok(Some(card)) => {
+            let response = CardResponse {
+                id: card.id,
+                title: card.title,
+                content: card.content,
+                created_at: card.created_at.to_string(),
+                updated_at: card.updated_at.to_string(),
+            };
+            Json(response).into_response()
+        }
+        Ok(None) => {
+            let error_msg = format!("卡片 ID {} 不存在", id);
+            (StatusCode::NOT_FOUND, error_msg).into_response()
         }
         Err(e) => {
-            let error_msg = format!("Database error: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            let error_msg = format!("更新卡片失败: {}", e);
+            (StatusCode::BAD_REQUEST, error_msg).into_response()
+        }
+    }
+}
+
+/// 删除卡片
+pub async fn delete_card_handler(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+) -> impl IntoResponse {
+    let card_service = CardService::new(state.db.clone());
+
+    match card_service.delete_card(id).await {
+        Ok(true) => (StatusCode::NO_CONTENT, "卡片删除成功").into_response(),
+        Ok(false) => {
+            let error_msg = format!("卡片 ID {} 不存在", id);
+            (StatusCode::NOT_FOUND, error_msg).into_response()
+        }
+        Err(e) => {
+            let error_msg = format!("删除卡片失败: {}", e);
+            (StatusCode::BAD_REQUEST, error_msg).into_response()
         }
     }
 }

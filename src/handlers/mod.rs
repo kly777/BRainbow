@@ -1,3 +1,4 @@
+pub mod card;
 pub mod create_user;
 pub mod header;
 pub mod home;

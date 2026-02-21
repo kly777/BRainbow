@@ -49,4 +49,20 @@ pub fn create_router() -> Router<AppState> {
                     get(handlers::sign::get_signs_by_signified_handler),
                 ),
         )
+        // API 路由组 - 卡片 (card) 路由
+        .nest(
+            "/card",
+            Router::new()
+                .route(
+                    "/",
+                    get(handlers::card::get_cards_handler)
+                        .post(handlers::card::create_card_handler),
+                )
+                .route(
+                    "/{id}",
+                    get(handlers::card::get_card_handler)
+                        .put(handlers::card::update_card_handler)
+                        .delete(handlers::card::delete_card_handler),
+                ),
+        )
 }

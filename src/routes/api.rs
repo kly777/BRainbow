@@ -1,4 +1,4 @@
-use axum::{Router, routing::get};
+use axum::{Router, routing::{get, post, delete, put}};
 
 use crate::handlers;
 use crate::state::AppState;
@@ -63,6 +63,66 @@ pub fn create_router() -> Router<AppState> {
                     get(handlers::card::get_card_handler)
                         .put(handlers::card::update_card_handler)
                         .delete(handlers::card::delete_card_handler),
+                ),
+        )
+        // API 路由组 - 任务 (task) 路由
+        .nest(
+            "/task",
+            Router::new()
+                .route(
+                    "/",
+                    get(handlers::task::get_tasks_handler)
+                        .post(handlers::task::create_task_handler),
+                )
+                .route(
+                    "/{id}",
+                    get(handlers::task::get_task_handler)
+                        .put(handlers::task::update_task_handler)
+                        .delete(handlers::task::delete_task_handler),
+                )
+                .route(
+                    "/{id}/time-window",
+                    post(handlers::task::add_time_window_handler),
+                )
+                .route(
+                    "/{id}/time-window/{time_window_id}",
+                    delete(handlers::task::remove_time_window_handler),
+                )
+                .route(
+                    "/{id}/sub-task",
+                    post(handlers::task::add_sub_task_handler),
+                )
+                .route(
+                    "/{id}/sub-task/{sub_task_id}",
+                    delete(handlers::task::remove_sub_task_handler),
+                )
+                .route(
+                    "/{id}/dependency",
+                    post(handlers::task::add_dependency_handler),
+                )
+                .route(
+                    "/{id}/dependency/{prerequisite_id}",
+                    delete(handlers::task::remove_dependency_handler),
+                )
+                .route(
+                    "/{id}/parent-tasks",
+                    get(handlers::task::get_parent_tasks_handler),
+                )
+                .route(
+                    "/{id}/sub-tasks",
+                    get(handlers::task::get_sub_tasks_handler),
+                )
+                .route(
+                    "/{id}/time-windows",
+                    get(handlers::task::get_time_windows_handler),
+                )
+                .route(
+                    "/{id}/dependencies",
+                    get(handlers::task::get_dependencies_handler),
+                )
+                .route(
+                    "/{id}/dependents",
+                    get(handlers::task::get_dependents_handler),
                 ),
         )
 }

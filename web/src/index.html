@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brainbow - 任务管理系统</title>
+    <link rel="stylesheet" href="./style.css">
+    <script type="module" src="./app.ts"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        brainbow-app {
+            display: block;
+            min-height: 100vh;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-size: 18px;
+            color: #666;
+        }
+        
+        .loading::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            margin-left: 10px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #0066cc;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <brainbow-app></brainbow-app>
+    
+    <noscript>
+        <div style="text-align: center; padding: 50px;">
+            <h1>需要启用 JavaScript</h1>
+            <p>Brainbow 任务管理系统需要 JavaScript 才能正常运行。</p>
+            <p>请启用浏览器中的 JavaScript 功能，然后刷新页面。</p>
+        </div>
+    </noscript>
+    
+    <script>
+        // 显示加载状态
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = document.querySelector('brainbow-app');
+            if (!app) {
+                document.body.innerHTML = `
+                    <div class="loading">
+                        加载应用程序...
+                    </div>
+                `;
+            }
+        });
+        
+        // 错误处理
+        window.addEventListener('error', (event) => {
+            console.error('应用程序错误:', event.error);
+            const app = document.querySelector('brainbow-app');
+            if (app) {
+                app.innerHTML = `
+                    <div style="text-align: center; padding: 50px;">
+                        <h1>应用程序错误</h1>
+                        <p>抱歉，应用程序遇到了一个错误。</p>
+                        <p>请刷新页面重试。</p>
+                        <button onclick="location.reload()" style="
+                            margin-top: 20px;
+                            padding: 10px 20px;
+                            background-color: #0066cc;
+                            color: white;
+                            border: none;
+                            border-radius: 4px;
+                            cursor: pointer;
+                        ">
+                            刷新页面
+                        </button>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

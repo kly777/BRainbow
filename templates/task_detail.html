@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.title }} - Brainbow{% endblock %}
+
+{% block content %}
+<h2>任务详情: {{ task.title }}</h2>
+
+<div class="card">
+    <h3>基本信息</h3>
+    <p><strong>任务 ID:</strong> {{ task.id }}</p>
+    <p><strong>标题:</strong> {{ task.title }}</p>
+    <p><strong>描述:</strong> {{ task.description.as_ref().unwrap_or(&"暂无描述".to_string()) }}</p>
+    <p><strong>创建时间:</strong> {{ task.created_at }}</p>
+</div>
+
+<div class="actions">
+    <a href="/html/tasks" class="link">返回任务列表</a>
+    <a href="/html/task/{{ task.id }}/edit" class="link">编辑任务</a>
+    <a href="/api/task" class="link">任务 API</a>
+</div>
+
+<div class="container">
+    <h3>任务关系</h3>
+    
+    {% if !time_windows.is_empty() %}
+    <div class="card">
+        <h4>时间窗口分配</h4>
+        <ul>
+            {% for time_window in time_windows %}
+            <li>
+                <a href="/html/time_window/{{ time_window.id }}" class="link">
+                    时间窗口 #{{ time_window.id }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    {% if !parent_tasks.is_empty() %}
+    <div class="card">
+        <h4>父任务</h4>
+        <ul>
+            {% for parent in parent_tasks %}
+            <li>
+                <a href="/html/task/{{ parent.id }}" class="link">
+                    {{ parent.title }} (#{{ parent.id }})
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    {% if !sub_tasks.is_empty() %}
+    <div class="card">
+        <h4>子任务</h4>
+        <ul>
+            {% for sub_task in sub_tasks %}
+            <li>
+                <a href="/html/task/{{ sub_task.id }}" class="link">
+                    {{ sub_task.title }} (#{{ sub_task.id }})
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    {% if !dependencies.is_empty() %}
+    <div class="card">
+        <h4>依赖的任务（需要等待的任务）</h4>
+        <ul>
+            {% for dependency in dependencies %}
+            <li>
+                <a href="/html/task/{{ dependency.id }}" class="link">
+                    {{ dependency.title }} (#{{ dependency.id }})
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    {% if !dependents.is_empty() %}
+    <div class="card">
+        <h4>被依赖的任务（前提任务）</h4>
+        <ul>
+            {% for dependent in dependents %}
+            <li>
+                <a href="/html/task/{{ dependent.id }}" class="link">
+                    {{ dependent.title }} (#{{ dependent.id }})
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+
+</div>
+
+<div class="container">
+    <h3>相关链接</h3>
+    <ul>
+        <li><a href="/html/tasks" class="link">查看所有任务</a></li>
+        <li><a href="/html/task/new" class="link">创建新任务</a></li>
+        <li><a href="/html/ontos" class="link">查看本体列表</a></li>
+        <li><a href="/html/signs" class="link">查看关系列表</a></li>
+        <li><a href="/html/users" class="link">查看用户列表</a></li>
+        <li><a href="/api/task" class="link">任务 API 端点 (JSON)</a></li>
+    </ul>
+</div>
+
+<div class="container">
+    <h3>任务说明</h3>
+    <div class="card">
+        <p>任务是 Brainbow 符号学本体系统中的核心实体，用于管理各种活动和工作。</p>
+        <p>任务可以分解为子任务，形成层级结构。</p>
+        <p>任务之间可以建立依赖关系，表示执行顺序的约束。</p>
+        <p>任务可以分配到特定的时间窗口，用于时间管理和调度。</p>
+    </div>
+</div>
+{% endblock %}

@@ -21,4 +21,8 @@ pub fn create_router() -> Router<AppState> {
         // 用户相关页面
         .route("/users", get(handlers::html::users_handler))
         .route("/user/{id}", get(handlers::html::user_detail_handler))
+        
+        // 任务相关页面
+        .route("/tasks", get(handlers::html::tasks_handler))
+        .route("/task/{id}", get(handlers::html::task_detail_handler))
 }

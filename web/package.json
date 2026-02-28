@@ -1,0 +1,23 @@
+{
+  "name": "brainbow-web",
+  "private": true,
+  "version": "0.0.0",
+  "source": "src/index.html",
+  "scripts": {
+    "start": "parcel src/index.html",
+    "build": "parcel build src/index.html",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lit": "^3.3.2"
+  },
+  "devDependencies": {
+    "parcel": "^2.14.0",
+    "typescript": "^5.0.0"
+  },
+  "targets": {
+    "default": {
+      "distDir": "./dist"
+    }
+  }
+}

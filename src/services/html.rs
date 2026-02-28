@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
-use crate::entity::{onto, signifier_signified, user};
-use crate::repositories::{onto::OntoRepository, sign::SignRepository, user::UserRepository};
+use crate::entity::{onto, signifier_signified, task, time_window, user};
+use crate::repositories::{onto::OntoRepository, sign::SignRepository, task::TaskRepository, user::UserRepository};
 
 /// HTML展示服务层
 pub struct HtmlService {
     onto_repository: OntoRepository,
     sign_repository: SignRepository,
     user_repository: UserRepository,
+    task_repository: TaskRepository,
 }
 
 impl HtmlService {
@@ -16,7 +17,8 @@ impl HtmlService {
         Self {
             onto_repository: OntoRepository::new(db.clone()),
             sign_repository: SignRepository::new(db.clone()),
-            user_repository: UserRepository::new(db),
+            user_repository: UserRepository::new(db.clone()),
+            task_repository: TaskRepository::new(db),
         }
     }
 
@@ -146,6 +148,82 @@ impl HtmlService {
             .await
             .map_err(|e| format!("获取用户详情失败: {}", e))?
             .ok_or_else(|| format!("用户 ID {} 不存在", id))
+    }
+
+    /// 获取所有任务用于HTML展示
+    pub async fn get_tasks_for_html(&self) -> Result<Vec<task::Model>, String> {
+        self.task_repository
+            .find_all()
+            .await
+            .map_err(|e| format!("获取任务列表失败: {}", e))
+    }
+
+    /// 获取任务详情用于HTML展示
+    pub async fn get_task_detail_for_html(
+        &self,
+        id: i32,
+    ) -> Result<
+        (
+            task::Model,
+            Vec<task::Model>,   // parent tasks
+            Vec<task::Model>,   // sub tasks
+            Vec<time_window::Model>, // time windows
+            Vec<task::Model>,   // dependencies (需要等待的任务)
+            Vec<task::Model>,   // dependents (被依赖的任务)
+        ),
+        String,
+    > {
+        // 获取任务信息
+        let task = self
+            .task_repository
+            .find_by_id(id)
+            .await
+            .map_err(|e| format!("获取任务失败: {}", e))?
+            .ok_or_else(|| format!("任务 ID {} 不存在", id))?;
+
+        // 获取父任务
+        let parent_tasks = self
+            .task_repository
+            .find_parent_tasks(id)
+            .await
+            .map_err(|e| format!("获取父任务失败: {}", e))?;
+
+        // 获取子任务
+        let sub_tasks = self
+            .task_repository
+            .find_sub_tasks(id)
+            .await
+            .map_err(|e| format!("获取子任务失败: {}", e))?;
+
+        // 获取时间窗口
+        let time_windows = self
+            .task_repository
+            .find_time_windows(id)
+            .await
+            .map_err(|e| format!("获取时间窗口失败: {}", e))?;
+
+        // 获取依赖的任务（需要等待的任务）
+        let dependencies = self
+            .task_repository
+            .find_dependencies(id)
+            .await
+            .map_err(|e| format!("获取任务依赖失败: {}", e))?;
+
+        // 获取被依赖的任务（前提任务）
+        let dependents = self
+            .task_repository
+            .find_dependents(id)
+            .await
+            .map_err(|e| format!("获取被依赖任务失败: {}", e))?;
+
+        Ok((
+            task,
+            parent_tasks,
+            sub_tasks,
+            time_windows,
+            dependencies,
+            dependents,
+        ))
     }
 
     // /// 获取用户数量统计

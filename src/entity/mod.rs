@@ -1,4 +1,9 @@
 pub mod card;
 pub mod onto;
 pub mod signifier_signified;
+pub mod task;
+pub mod task_dependency;
+pub mod task_decomposition;
+pub mod task_time_allocation;
+pub mod time_window;
 pub mod user;

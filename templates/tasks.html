@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}任务列表 - Brainbow{% endblock %}
+
+{% block content %}
+<h2>任务列表</h2>
+
+<div class="actions">
+    <a href="/html/task/new" class="link">创建新任务</a>
+</div>
+
+{% if tasks.is_empty() %}
+    <p>暂无任务数据。</p>
+{% else %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>标题</th>
+                <th>描述</th>
+                <th>创建时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr>
+                <td>{{ task.id }}</td>
+                <td>{{ task.title }}</td>
+                <td>{{ task.description.as_ref().unwrap_or(&"".to_string()) }}</td>
+                <td>{{ task.created_at }}</td>
+                <td>
+                    <a href="/html/task/{{ task.id }}" class="link">查看</a>
+                    <a href="/html/task/{{ task.id }}/edit" class="link">编辑</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+
+<h3>统计信息</h3>
+<ul>
+    <li>任务总数: {{ tasks.len() }}</li>
+    <li><a href="/html/ontos" class="link">查看本体列表</a></li>
+    <li><a href="/html/signs" class="link">查看关系列表</a></li>
+    <li><a href="/html/users" class="link">查看用户列表</a></li>
+</ul>
+{% endblock %}

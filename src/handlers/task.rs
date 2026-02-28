@@ -34,7 +34,7 @@ impl From<Model> for TaskResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TaskDetailResponse {
     pub task: TaskResponse,
-    pub parent_tasks: Vec<TaskResponse>,
+    pub parent_task: Option<TaskResponse>,
     pub sub_tasks: Vec<TaskResponse>,
     pub time_windows: Vec<TimeWindowResponse>,
     pub dependencies: Vec<TaskResponse>,
@@ -131,7 +131,7 @@ pub async fn get_task_handler(
     match task_repository.find_by_id(id).await {
         Ok(Some(task)) => {
             // 获取相关数据
-            let parent_tasks = task_repository.find_parent_tasks(id).await.unwrap_or_default();
+            let parent_task = task_repository.find_parent_task(id).await.unwrap_or_default();
             let sub_tasks = task_repository.find_sub_tasks(id).await.unwrap_or_default();
             let time_windows = task_repository.find_time_windows(id).await.unwrap_or_default();
             let dependencies = task_repository.find_dependencies(id).await.unwrap_or_default();
@@ -139,7 +139,7 @@ pub async fn get_task_handler(
 
             let response = TaskDetailResponse {
                 task: TaskResponse::from(task),
-                parent_tasks: parent_tasks.into_iter().map(TaskResponse::from).collect(),
+                parent_task: parent_task.map(TaskResponse::from),
                 sub_tasks: sub_tasks.into_iter().map(TaskResponse::from).collect(),
                 time_windows: time_windows.into_iter().map(TimeWindowResponse::from).collect(),
                 dependencies: dependencies.into_iter().map(TaskResponse::from).collect(),
@@ -388,16 +388,16 @@ pub async fn remove_dependency_handler(
     }
 }
 
-// GET /api/task/{id}/parent-tasks - 获取父任务
-pub async fn get_parent_tasks_handler(
+// GET /api/task/{id}/parent-task - 获取父任务（单个）
+pub async fn get_parent_task_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let task_repository = TaskRepository::new(state.db.clone());
 
-    match task_repository.find_parent_tasks(id).await {
-        Ok(tasks) => {
-            let response: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
+    match task_repository.find_parent_task(id).await {
+        Ok(task) => {
+            let response = task.map(TaskResponse::from);
             Json(response).into_response()
         }
         Err(e) => (

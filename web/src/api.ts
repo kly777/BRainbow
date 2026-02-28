@@ -78,8 +78,8 @@ class TaskApiClientImpl implements TaskApiClient {
   }
 
   // Task relationships
-  async getParentTasks(id: number): Promise<Task[]> {
-    return this.request<Task[]>(`/task/${id}/parent-tasks`);
+  async getParentTask(id: number): Promise<Task | null> {
+    return this.request<Task | null>(`/task/${id}/parent-task`);
   }
 
   async getSubTasks(id: number): Promise<Task[]> {

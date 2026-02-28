@@ -417,6 +417,24 @@ export class TaskDetailComponent extends LitElement {
     `;
   }
 
+  private renderSingleTask(task: Task | null, title: string, emptyMessage: string) {
+    return html`
+      <div class="card">
+        <div class="card-title">${title}</div>
+        ${!task ? html`
+          <div class="empty-state">${emptyMessage}</div>
+        ` : html`
+          <div class="task-item">
+            <a class="task-link" @click=${() => this.handleViewTask(task.id)}>
+              ${task.title}
+              <span class="task-id">#${task.id}</span>
+            </a>
+          </div>
+        `}
+      </div>
+    `;
+  }
+
   private renderTimeWindows(timeWindows: TimeWindow[]) {
     return html`
       <div class="card">
@@ -473,7 +491,7 @@ export class TaskDetailComponent extends LitElement {
       `;
     }
 
-    const { task, parent_tasks, sub_tasks, time_windows, dependencies, dependents } = this.taskDetail;
+    const { task, parent_task, sub_tasks, time_windows, dependencies, dependents } = this.taskDetail;
 
     return html`
       <div class="container">
@@ -513,7 +531,7 @@ export class TaskDetailComponent extends LitElement {
         <div class="section">
           <h2 class="section-title">任务关系</h2>
           <div class="cards-grid">
-            ${this.renderTaskList(parent_tasks, '父任务', '暂无父任务')}
+            ${this.renderSingleTask(parent_task, '父任务', '暂无父任务')}
             ${this.renderTaskList(sub_tasks, '子任务', '暂无子任务')}
             ${this.renderTimeWindows(time_windows)}
             ${this.renderTaskList(dependencies, '依赖的任务（需要等待的任务）', '暂无依赖的任务')}

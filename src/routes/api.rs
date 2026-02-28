@@ -105,8 +105,8 @@ pub fn create_router() -> Router<AppState> {
                     delete(handlers::task::remove_dependency_handler),
                 )
                 .route(
-                    "/{id}/parent-tasks",
-                    get(handlers::task::get_parent_tasks_handler),
+                    "/{id}/parent-task",
+                    get(handlers::task::get_parent_task_handler),
                 )
                 .route(
                     "/{id}/sub-tasks",

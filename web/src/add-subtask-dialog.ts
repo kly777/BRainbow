@@ -286,7 +286,17 @@ export class AddSubTaskDialog extends LitElement {
     try {
       // 获取所有任务，排除当前任务本身
       const allTasks = await taskApi.getTasks();
-      this.tasks = allTasks.filter(task => task.id !== this.parentTaskId);
+      // 过滤掉已经有父任务的任务
+      const tasksWithoutParent = [];
+      for (const task of allTasks) {
+        if (task.id === this.parentTaskId) continue;
+        
+        const parentTask = await taskApi.getParentTask(task.id);
+        if (!parentTask) {
+          tasksWithoutParent.push(task);
+        }
+      }
+      this.tasks = tasksWithoutParent;
     } catch (err) {
       this.error = err instanceof Error ? err.message : '加载任务列表失败';
       console.error('Failed to load tasks:', err);
@@ -326,7 +336,14 @@ export class AddSubTaskDialog extends LitElement {
       // 关闭对话框
       this.close();
     } catch (err) {
-      this.error = err instanceof Error ? err.message : '添加子任务失败';
+      const errorMessage = err instanceof Error ? err.message : '添加子任务失败';
+      if (errorMessage.includes('已经有父任务')) {
+        this.error = `任务 #${this.selectedTaskId} 已经有父任务，一个子任务只能有一个父任务`;
+      } else if (errorMessage.includes('形成循环依赖')) {
+        this.error = `不能将任务 #${this.selectedTaskId} 作为子任务，这会形成循环依赖`;
+      } else {
+        this.error = errorMessage;
+      }
       console.error('Failed to add sub-task:', err);
     } finally {
       this.saving = false;
@@ -368,7 +385,7 @@ export class AddSubTaskDialog extends LitElement {
                   <div class="loading">加载任务列表中...</div>
                 ` : this.tasks.length === 0 ? html`
                   <div class="empty-state">
-                    没有可用的任务作为子任务
+                    没有可用的任务作为子任务。请确保所选任务没有父任务。
                   </div>
                 ` : html`
                   <div class="task-list">

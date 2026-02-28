@@ -14,7 +14,7 @@ export interface TimeWindow {
 
 export interface TaskDetail {
   task: Task;
-  parent_tasks: Task[];
+  parent_task: Task | null;
   sub_tasks: Task[];
   time_windows: TimeWindow[];
   dependencies: Task[]; // 依赖的任务（需要等待的任务）
@@ -57,7 +57,7 @@ export type TasksResponse = Task[];
 export type TaskResponse = Task;
 export type TaskDetailResponse = TaskDetail;
 export type TimeWindowsResponse = TimeWindow[];
-export type ParentTasksResponse = Task[];
+export type ParentTaskResponse = Task | null;
 export type SubTasksResponse = Task[];
 export type DependenciesResponse = Task[];
 export type DependentsResponse = Task[];
@@ -72,7 +72,7 @@ export interface TaskApiClient {
   deleteTask(id: number): Promise<void>;
   
   // Task relationships
-  getParentTasks(id: number): Promise<Task[]>;
+  getParentTask(id: number): Promise<Task | null>;
   getSubTasks(id: number): Promise<Task[]>;
   getTimeWindows(id: number): Promise<TimeWindow[]>;
   getDependencies(id: number): Promise<Task[]>;

@@ -57,16 +57,16 @@ struct TasksTemplate {
 }
 
 // 任务详情模板
-#[derive(Template)]
-#[template(path = "task_detail.html")]
-struct TaskDetailTemplate {
-    task: task::Model,
-    parent_tasks: Vec<task::Model>,
-    sub_tasks: Vec<task::Model>,
-    time_windows: Vec<time_window::Model>,
-    dependencies: Vec<task::Model>,   // 依赖的任务（需要等待的任务）
-    dependents: Vec<task::Model>,     // 被依赖的任务（前提任务）
-}
+// #[derive(Template)]
+// #[template(path = "task_detail.html")]
+// struct TaskDetailTemplate {
+//     task: task::Model,
+//     parent_task: Option<task::Model>,
+//     sub_tasks: Vec<task::Model>,
+//     time_windows: Vec<time_window::Model>,
+//     dependencies: Vec<task::Model>,   // 依赖的任务（需要等待的任务）
+//     dependents: Vec<task::Model>,     // 被依赖的任务（前提任务）
+// }
 
 // 用户列表页面
 pub async fn users_handler(State(state): State<AppState>) -> impl IntoResponse {
@@ -306,34 +306,34 @@ pub async fn tasks_handler(State(state): State<AppState>) -> impl IntoResponse {
 }
 
 // 任务详情页面
-pub async fn task_detail_handler(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-) -> impl IntoResponse {
-    let html_service = HtmlService::new(state.db.clone());
+// pub async fn task_detail_handler(
+//     State(state): State<AppState>,
+//     Path(id): Path<i32>,
+// ) -> impl IntoResponse {
+//     let html_service = HtmlService::new(state.db.clone());
 
-    match html_service.get_task_detail_for_html(id).await {
-        Ok((task, parent_tasks, sub_tasks, time_windows, dependencies, dependents)) => {
-            let template = TaskDetailTemplate {
-                task,
-                parent_tasks,
-                sub_tasks,
-                time_windows,
-                dependencies,
-                dependents,
-            };
+//     match html_service.get_task_detail_for_html(id).await {
+//         Ok((task, parent_task, sub_tasks, time_windows, dependencies, dependents)) => {
+//             let template = TaskDetailTemplate {
+//                 task,
+//                 parent_task,
+//                 sub_tasks,
+//                 time_windows,
+//                 dependencies,
+//                 dependents,
+//             };
 
-            match template.render() {
-                Ok(html) => Html(html).into_response(),
-                Err(e) => {
-                    eprintln!("模板渲染错误: {}", e);
-                    Html(format!("模板渲染错误: {}", e)).into_response()
-                }
-            }
-        }
-        Err(e) => {
-            eprintln!("获取任务详情失败: {}", e);
-            Html(format!("获取任务详情失败: {}", e)).into_response()
-        }
-    }
-}
+//             match template.render() {
+//                 Ok(html) => Html(html).into_response(),
+//                 Err(e) => {
+//                     eprintln!("模板渲染错误: {}", e);
+//                     Html(format!("模板渲染错误: {}", e)).into_response()
+//                 }
+//             }
+//         }
+//         Err(e) => {
+//             eprintln!("获取任务详情失败: {}", e);
+//             Html(format!("获取任务详情失败: {}", e)).into_response()
+//         }
+//     }
+// }

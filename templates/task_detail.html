@@ -37,17 +37,15 @@
     </div>
     {% endif %}
     
-    {% if !parent_tasks.is_empty() %}
+    {% if parent_task %}
     <div class="card">
         <h4>父任务</h4>
         <ul>
-            {% for parent in parent_tasks %}
             <li>
-                <a href="/html/task/{{ parent.id }}" class="link">
-                    {{ parent.title }} (#{{ parent.id }})
+                <a href="/html/task/{{ parent_task.id }}" class="link">
+                    {{ parent_task.title }} (#{{ parent_task.id }})
                 </a>
             </li>
-            {% endfor %}
         </ul>
     </div>
     {% endif %}
@@ -96,8 +94,6 @@
         </ul>
     </div>
     {% endif %}
-    
-
 </div>
 
 <div class="container">

@@ -192,17 +192,17 @@ export class TaskForm extends LitElement {
     }
   `;
 
-  @property({ type: Number })
+  @property({ type: Number, reflect: true })
   taskId?: number;
 
-  @property({ type: Boolean })
+  @property({ type: Boolean, reflect: true })
   editMode = false;
 
   @state()
-  private title = '';
+  private formTitle = '';
 
   @state()
-  private description = '';
+  private formDescription = '';
 
   @state()
   private loading = false;
@@ -231,8 +231,8 @@ export class TaskForm extends LitElement {
 
     try {
       const taskDetail = await taskApi.getTask(this.taskId);
-      this.title = taskDetail.task.title;
-      this.description = taskDetail.task.description || '';
+      this.formTitle = taskDetail.task.title;
+      this.formDescription = taskDetail.task.description || '';
     } catch (err) {
       this.error = err instanceof Error ? err.message : '加载任务失败';
       console.error('Failed to load task:', err);
@@ -243,27 +243,27 @@ export class TaskForm extends LitElement {
 
   private handleTitleChange(event: Event) {
     const input = event.target as HTMLInputElement;
-    this.title = input.value;
+    this.formTitle = input.value;
   }
 
   private handleDescriptionChange(event: Event) {
     const textarea = event.target as HTMLTextAreaElement;
-    this.description = textarea.value;
+    this.formDescription = textarea.value;
   }
 
   private validateForm(): boolean {
-    if (!this.title.trim()) {
+    if (!this.formTitle.trim()) {
       this.error = '标题不能为空';
       return false;
     }
 
-    if (this.title.length > 200) {
-      this.error = '标题不能超过200个字符';
+    if (this.formTitle.length > 200) {
+      this.error = '标题不能超过 200 个字符';
       return false;
     }
 
-    if (this.description.length > 5000) {
-      this.error = '描述不能超过5000个字符';
+    if (this.formDescription.length > 5000) {
+      this.error = '描述不能超过 5000 个字符';
       return false;
     }
 
@@ -282,19 +282,22 @@ export class TaskForm extends LitElement {
     this.success = null;
 
     try {
-      const taskData: CreateTaskRequest | UpdateTaskRequest = {
-        title: this.title.trim(),
-        description: this.description.trim() || null
-      };
-
       if (this.editMode && this.taskId) {
-        await taskApi.updateTask(this.taskId, taskData);
+        const updateData: UpdateTaskRequest = {
+          title: this.formTitle.trim(),
+          description: this.formDescription.trim() || null
+        };
+        await taskApi.updateTask(this.taskId, updateData);
         this.success = '任务更新成功！';
       } else {
-        await taskApi.createTask(taskData);
+        const createData: CreateTaskRequest = {
+          title: this.formTitle.trim(),
+          description: this.formDescription.trim() || null
+        };
+        await taskApi.createTask(createData);
         this.success = '任务创建成功！';
-        this.title = '';
-        this.description = '';
+        this.formTitle = '';
+        this.formDescription = '';
       }
 
       // 通知父组件任务已保存
@@ -319,7 +322,7 @@ export class TaskForm extends LitElement {
   }
 
   private get characterCountWarning(): boolean {
-    return this.description.length > 4500;
+    return this.formDescription.length > 4500;
   }
 
   render() {
@@ -360,28 +363,28 @@ export class TaskForm extends LitElement {
               <input
                 type="text"
                 id="title"
-                .value=${this.title}
+                .value=${this.formTitle}
                 @input=${this.handleTitleChange}
                 placeholder="请输入任务标题"
                 required
                 maxlength="200"
                 ?disabled=${this.saving}
               />
-              <div class="help-text">简洁明了地描述任务内容，最多200个字符</div>
+              <div class="help-text">简洁明了地描述任务内容，最多 200 个字符</div>
             </div>
 
             <div class="form-group">
               <label for="description">描述</label>
               <textarea
                 id="description"
-                .value=${this.description}
+                .value=${this.formDescription}
                 @input=${this.handleDescriptionChange}
                 placeholder="请输入任务详细描述（可选）"
                 ?disabled=${this.saving}
                 maxlength="5000"
               ></textarea>
               <div class="character-count ${this.characterCountWarning ? 'warning' : ''}">
-                ${this.description.length}/5000
+                ${this.formDescription.length}/5000
               </div>
               <div class="help-text">详细描述任务要求、目标、注意事项等信息</div>
             </div>

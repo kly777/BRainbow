@@ -293,7 +293,21 @@ export class AddDependencyDialog extends LitElement {
     try {
       // 获取所有任务，排除当前任务本身
       const allTasks = await taskApi.getTasks();
-      this.tasks = allTasks.filter(task => task.id !== this.taskId);
+      const filteredTasks = [];
+      
+      for (const task of allTasks) {
+        if (task.id === this.taskId) continue;
+        
+        // 检查是否已经是当前任务的依赖
+        const dependencies = await taskApi.getDependencies(this.taskId);
+        const isAlreadyDependency = dependencies.some(dep => dep.id === task.id);
+        
+        if (!isAlreadyDependency) {
+          filteredTasks.push(task);
+        }
+      }
+      
+      this.tasks = filteredTasks;
     } catch (err) {
       this.error = err instanceof Error ? err.message : '加载任务列表失败';
       console.error('Failed to load tasks:', err);
@@ -333,7 +347,12 @@ export class AddDependencyDialog extends LitElement {
       // 关闭对话框
       this.close();
     } catch (err) {
-      this.error = err instanceof Error ? err.message : '添加依赖失败';
+      const errorMessage = err instanceof Error ? err.message : '添加依赖失败';
+      if (errorMessage.includes('循环依赖')) {
+        this.error = `不能将任务 #${this.selectedTaskId} 作为依赖，这会形成循环依赖`;
+      } else {
+        this.error = errorMessage;
+      }
       console.error('Failed to add dependency:', err);
     } finally {
       this.saving = false;
@@ -378,7 +397,7 @@ export class AddDependencyDialog extends LitElement {
                   <div class="loading">加载任务列表中...</div>
                 ` : this.tasks.length === 0 ? html`
                   <div class="empty-state">
-                    没有可用的任务作为依赖
+                    没有可用的任务作为依赖。请确保所选任务不是当前任务的依赖。
                   </div>
                 ` : html`
                   <div class="task-list">

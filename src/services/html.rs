@@ -165,7 +165,7 @@ impl HtmlService {
     ) -> Result<
         (
             task::Model,
-            Vec<task::Model>,   // parent tasks
+            Option<task::Model>,   // parent task (单个)
             Vec<task::Model>,   // sub tasks
             Vec<time_window::Model>, // time windows
             Vec<task::Model>,   // dependencies (需要等待的任务)
@@ -181,10 +181,10 @@ impl HtmlService {
             .map_err(|e| format!("获取任务失败: {}", e))?
             .ok_or_else(|| format!("任务 ID {} 不存在", id))?;
 
-        // 获取父任务
-        let parent_tasks = self
+        // 获取父任务（单个）
+        let parent_task = self
             .task_repository
-            .find_parent_tasks(id)
+            .find_parent_task(id)
             .await
             .map_err(|e| format!("获取父任务失败: {}", e))?;
 
@@ -218,7 +218,7 @@ impl HtmlService {
 
         Ok((
             task,
-            parent_tasks,
+            parent_task,
             sub_tasks,
             time_windows,
             dependencies,

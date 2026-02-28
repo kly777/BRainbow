@@ -110,26 +110,20 @@ impl TaskRepository {
             .await
     }
 
-    /// 获取任务的父任务
-    pub async fn find_parent_tasks(&self, task_id: i32) -> Result<Vec<Model>, DbErr> {
-        let sub_tasks = task_decomposition::Entity::find()
+    /// 获取任务的父任务（单个父任务）
+    pub async fn find_parent_task(&self, task_id: i32) -> Result<Option<Model>, DbErr> {
+        let sub_task = task_decomposition::Entity::find()
             .filter(task_decomposition::Column::SubTaskId.eq(task_id))
-            .all(self.db.as_ref())
+            .one(self.db.as_ref())
             .await?;
 
-        let parent_ids: Vec<i32> = sub_tasks
-            .into_iter()
-            .map(|model| model.parent_task_id)
-            .collect();
-
-        if parent_ids.is_empty() {
-            return Ok(vec![]);
+        if let Some(sub_task) = sub_task {
+            Entity::find_by_id(sub_task.parent_task_id)
+                .one(self.db.as_ref())
+                .await
+        } else {
+            Ok(None)
         }
-
-        Entity::find()
-            .filter(task::Column::Id.is_in(parent_ids))
-            .all(self.db.as_ref())
-            .await
     }
 
     /// 获取任务的子任务
@@ -229,8 +223,25 @@ impl TaskRepository {
         Ok(())
     }
 
-    /// 添加子任务
+    /// 添加子任务（确保子任务只有一个父任务）
     pub async fn add_sub_task(&self, parent_task_id: i32, sub_task_id: i32) -> Result<(), DbErr> {
+        // 检查子任务是否已经有父任务
+        let existing_parent = self.find_parent_task(sub_task_id).await?;
+        if existing_parent.is_some() {
+            return Err(DbErr::Custom(format!(
+                "任务 #{} 已经有父任务，一个子任务只能有一个父任务",
+                sub_task_id
+            )));
+        }
+
+        // 检查是否形成循环依赖（子任务不能是父任务的祖先）
+        if self.is_ancestor(sub_task_id, parent_task_id).await? {
+            return Err(DbErr::Custom(format!(
+                "不能将任务 #{} 作为任务 #{} 的子任务，这会形成循环依赖",
+                sub_task_id, parent_task_id
+            )));
+        }
+
         let active_model = task_decomposition::ActiveModel {
             parent_task_id: Set(parent_task_id),
             sub_task_id: Set(sub_task_id),
@@ -253,8 +264,72 @@ impl TaskRepository {
         Ok(())
     }
 
+    /// 检查任务是否是另一个任务的祖先
+    async fn is_ancestor(&self, potential_ancestor_id: i32, task_id: i32) -> Result<bool, DbErr> {
+        if potential_ancestor_id == task_id {
+            return Ok(true);
+        }
+
+        let mut current_task_id = task_id;
+        let mut visited = std::collections::HashSet::new();
+
+        while let Some(parent) = self.find_parent_task(current_task_id).await? {
+            if parent.id == potential_ancestor_id {
+                return Ok(true);
+            }
+            
+            // 防止无限循环
+            if visited.contains(&parent.id) {
+                break;
+            }
+            visited.insert(parent.id);
+            
+            current_task_id = parent.id;
+        }
+
+        Ok(false)
+    }
+
+    /// 检查依赖关系是否会形成循环
+    async fn is_dependency_cycle(&self, task_id: i32, prerequisite_id: i32) -> Result<bool, DbErr> {
+        if task_id == prerequisite_id {
+            return Ok(true);
+        }
+
+        // 使用深度优先搜索检查循环
+        let mut stack = vec![prerequisite_id];
+        let mut visited = std::collections::HashSet::new();
+
+        while let Some(current_id) = stack.pop() {
+            if current_id == task_id {
+                return Ok(true);
+            }
+
+            if visited.contains(&current_id) {
+                continue;
+            }
+            visited.insert(current_id);
+
+            // 获取当前任务依赖的所有任务
+            let dependencies = self.find_dependencies(current_id).await?;
+            for dependency in dependencies {
+                stack.push(dependency.id);
+            }
+        }
+
+        Ok(false)
+    }
+
     /// 添加任务依赖
     pub async fn add_dependency(&self, task_id: i32, prerequisite_id: i32) -> Result<(), DbErr> {
+        // 检查是否形成循环依赖
+        if self.is_dependency_cycle(task_id, prerequisite_id).await? {
+            return Err(DbErr::Custom(format!(
+                "不能将任务 #{} 作为任务 #{} 的依赖，这会形成循环依赖",
+                prerequisite_id, task_id
+            )));
+        }
+
         let active_model = task_dependency::ActiveModel {
             task_id: Set(task_id),
             prerequisite_id: Set(prerequisite_id),

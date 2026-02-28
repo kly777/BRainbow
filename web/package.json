@@ -5,8 +5,9 @@
   "source": "src/index.html",
   "scripts": {
     "start": "parcel src/index.html",
-    "build": "parcel build src/index.html",
-    "type-check": "tsc --noEmit"
+    "build": "pnpm clean && parcel build src/index.html",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist/*"
   },
   "dependencies": {
     "lit": "^3.3.2"

@@ -78,6 +78,9 @@ export interface TaskApiClient {
   getDependencies(id: number): Promise<Task[]>;
   getDependents(id: number): Promise<Task[]>;
   
+  // Time window operations
+  getAllTimeWindows(): Promise<TimeWindow[]>;
+  
   // Relationship management
   addTimeWindow(id: number, request: AddTimeWindowRequest): Promise<void>;
   removeTimeWindow(id: number, timeWindowId: number, allocationType?: number): Promise<void>;

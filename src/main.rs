@@ -5,8 +5,10 @@ mod routes;
 mod services;
 mod state;
 
+use axum::http::Method;
 use sea_orm::Database;
 use std::sync::Arc;
+use tower_http::cors::{Any, CorsLayer};
 
 use crate::routes::create_router;
 use crate::state::AppState;
@@ -24,6 +26,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 创建路由
     let app = create_router(state);
+
+    // 添加 CORS 中间件
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
+        .allow_headers(Any);
+
+    let app = app.layer(cors);
 
     // 运行应用程序，监听端口 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;

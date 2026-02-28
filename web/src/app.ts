@@ -3,6 +3,9 @@ import { customElement, state } from 'lit/decorators.js';
 import './task-list';
 import './task-detail';
 import './task-form';
+import './add-subtask-dialog';
+import './add-dependency-dialog';
+import './add-timewindow-dialog';
 import type { Task } from './types';
 
 @customElement('brainbow-app')
@@ -153,6 +156,15 @@ export class BrainbowApp extends LitElement {
     { label: '任务列表' }
   ];
 
+  @state()
+  private showAddSubTaskDialog = false;
+
+  @state()
+  private showAddDependencyDialog = false;
+
+  @state()
+  private showAddTimeWindowDialog = false;
+
   private updateBreadcrumb() {
     switch (this.currentView) {
       case 'list':
@@ -238,6 +250,60 @@ export class BrainbowApp extends LitElement {
     this.showListView();
   }
 
+  private handleAddSubTask(event: CustomEvent<{ taskId: number }>) {
+    this.currentTaskId = event.detail.taskId;
+    this.showAddSubTaskDialog = true;
+  }
+
+  private handleAddDependency(event: CustomEvent<{ taskId: number }>) {
+    this.currentTaskId = event.detail.taskId;
+    this.showAddDependencyDialog = true;
+  }
+
+  private handleAddTimeWindow(event: CustomEvent<{ taskId: number }>) {
+    this.currentTaskId = event.detail.taskId;
+    this.showAddTimeWindowDialog = true;
+  }
+
+  private handleSubTaskAdded() {
+    this.showAddSubTaskDialog = false;
+    // 刷新任务详情
+    if (this.currentTaskId && this.currentView === 'detail') {
+      const detailComponent = this.shadowRoot?.querySelector('task-detail');
+      if (detailComponent) {
+        (detailComponent as any).loadTaskDetail();
+      }
+    }
+  }
+
+  private handleDependencyAdded() {
+    this.showAddDependencyDialog = false;
+    // 刷新任务详情
+    if (this.currentTaskId && this.currentView === 'detail') {
+      const detailComponent = this.shadowRoot?.querySelector('task-detail');
+      if (detailComponent) {
+        (detailComponent as any).loadTaskDetail();
+      }
+    }
+  }
+
+  private handleTimeWindowAdded() {
+    this.showAddTimeWindowDialog = false;
+    // 刷新任务详情
+    if (this.currentTaskId && this.currentView === 'detail') {
+      const detailComponent = this.shadowRoot?.querySelector('task-detail');
+      if (detailComponent) {
+        (detailComponent as any).loadTaskDetail();
+      }
+    }
+  }
+
+  private handleDialogClose() {
+    this.showAddSubTaskDialog = false;
+    this.showAddDependencyDialog = false;
+    this.showAddTimeWindowDialog = false;
+  }
+
   renderBreadcrumb() {
     return html`
       <div class="breadcrumb">
@@ -273,6 +339,9 @@ export class BrainbowApp extends LitElement {
             @edit=${this.handleEditTask}
             @deleted=${this.handleDeleted}
             @view-task=${this.handleViewTask}
+            @add-sub-task=${this.handleAddSubTask}
+            @add-dependency=${this.handleAddDependency}
+            @add-time-window=${this.handleAddTimeWindow}
           ></task-detail>
         `;
       case 'create':
@@ -322,6 +391,30 @@ export class BrainbowApp extends LitElement {
             ${this.renderContent()}
           </div>
         </main>
+
+        ${this.showAddSubTaskDialog && this.currentTaskId ? html`
+          <add-subtask-dialog
+            .parentTaskId=${this.currentTaskId}
+            @subtask-added=${this.handleSubTaskAdded}
+            @close=${this.handleDialogClose}
+          ></add-subtask-dialog>
+        ` : ''}
+
+        ${this.showAddDependencyDialog && this.currentTaskId ? html`
+          <add-dependency-dialog
+            .taskId=${this.currentTaskId}
+            @dependency-added=${this.handleDependencyAdded}
+            @close=${this.handleDialogClose}
+          ></add-dependency-dialog>
+        ` : ''}
+
+        ${this.showAddTimeWindowDialog && this.currentTaskId ? html`
+          <add-timewindow-dialog
+            .taskId=${this.currentTaskId}
+            @timewindow-added=${this.handleTimeWindowAdded}
+            @close=${this.handleDialogClose}
+          ></add-timewindow-dialog>
+        ` : ''}
 
         <footer class="footer">
           <p>Brainbow 任务管理系统 &copy; 2024</p>

@@ -1,4 +1,4 @@
-use axum::{Router, routing::{get, post, delete, put}};
+use axum::{Router, routing::{get, post, delete}};
 
 use crate::handlers;
 use crate::state::AppState;
@@ -124,5 +124,10 @@ pub fn create_router() -> Router<AppState> {
                     "/{id}/dependents",
                     get(handlers::task::get_dependents_handler),
                 ),
+        )
+        // API 路由组 - 时间窗口 (time-window) 路由
+        .route(
+            "/time-window",
+            get(handlers::task::get_all_time_windows_handler),
         )
 }

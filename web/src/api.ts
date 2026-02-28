@@ -1,6 +1,7 @@
 import {
   Task,
   TaskDetail,
+  TimeWindow,
   CreateTaskRequest,
   UpdateTaskRequest,
   AddTimeWindowRequest,
@@ -11,7 +12,7 @@ import {
   ApiMessage
 } from './types';
 
-const API_BASE_URL = 'localhost:3000/api';
+const API_BASE_URL = 'http://localhost:3000/api';
 
 class TaskApiClientImpl implements TaskApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -87,6 +88,10 @@ class TaskApiClientImpl implements TaskApiClient {
 
   async getTimeWindows(id: number): Promise<TimeWindow[]> {
     return this.request<TimeWindow[]>(`/task/${id}/time-windows`);
+  }
+
+  async getAllTimeWindows(): Promise<TimeWindow[]> {
+    return this.request<TimeWindow[]>('/time-window');
   }
 
   async getDependencies(id: number): Promise<Task[]> {

@@ -3,10 +3,12 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Json},
 };
+use sea_orm::{EntityTrait, QueryOrder};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::entity::task::{self, Model};
+use crate::entity::task::Model;
+use crate::entity::time_window;
 use crate::repositories::task::TaskRepository;
 use crate::state::AppState;
 
@@ -484,6 +486,32 @@ pub async fn get_dependents_handler(
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({ "error": format!("获取被依赖任务失败: {}", e) })),
+        )
+            .into_response(),
+    }
+}
+
+// GET /api/time-window - 获取所有时间窗口
+pub async fn get_all_time_windows_handler(
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    
+    match time_window::Entity::find()
+        .order_by_asc(time_window::Column::Id)
+        .all(db.as_ref())
+        .await
+    {
+        Ok(time_windows) => {
+            let response: Vec<TimeWindowResponse> = time_windows
+                .into_iter()
+                .map(TimeWindowResponse::from)
+                .collect();
+            Json(response).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": format!("获取时间窗口列表失败: {}", e) })),
         )
             .into_response(),
     }

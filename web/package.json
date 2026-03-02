@@ -2,10 +2,10 @@
   "name": "brainbow-web",
   "private": true,
   "version": "0.0.0",
-  "source": "src/index.html",
+  "source": "src/**/*.html",
   "scripts": {
-    "start": "parcel src/index.html",
-    "build": "pnpm clean && parcel build src/index.html",
+    "start": "parcel",
+    "build": "pnpm clean && parcel build",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist/*"
   },

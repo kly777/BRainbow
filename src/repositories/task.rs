@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use sea_orm::{
     prelude::*,
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder,
-    QuerySelect, Set,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set,
 };
 
 use crate::entity::{
@@ -277,13 +276,13 @@ impl TaskRepository {
             if parent.id == potential_ancestor_id {
                 return Ok(true);
             }
-            
+
             // 防止无限循环
             if visited.contains(&parent.id) {
                 break;
             }
             visited.insert(parent.id);
-            
+
             current_task_id = parent.id;
         }
 
@@ -348,10 +347,10 @@ impl TaskRepository {
         Ok(())
     }
 
-    /// 统计任务数量
-    pub async fn count(&self) -> Result<u64, DbErr> {
-        Entity::find().count(self.db.as_ref()).await
-    }
+    // /// 统计任务数量
+    // pub async fn count(&self) -> Result<u64, DbErr> {
+    //     Entity::find().count(self.db.as_ref()).await
+    // }
 
     /// 根据标题搜索任务
     pub async fn search_by_title(&self, title_query: &str) -> Result<Vec<Model>, DbErr> {
@@ -362,12 +361,12 @@ impl TaskRepository {
             .await
     }
 
-    /// 获取最近创建的任务
-    pub async fn find_recent(&self, limit: u64) -> Result<Vec<Model>, DbErr> {
-        Entity::find()
-            .order_by_desc(task::Column::CreatedAt)
-            .limit(limit)
-            .all(self.db.as_ref())
-            .await
-    }
+    // /// 获取最近创建的任务
+    // pub async fn find_recent(&self, limit: u64) -> Result<Vec<Model>, DbErr> {
+    //     Entity::find()
+    //         .order_by_desc(task::Column::CreatedAt)
+    //         .limit(limit)
+    //         .all(self.db.as_ref())
+    //         .await
+    // }
 }

@@ -7,8 +7,9 @@
     "strict": true,
     "skipLibCheck": true,
     "isolatedModules": true,
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false,
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "useDefineForClassFields": true,
     "outDir": "./dist",
     "rootDir": "./src",
     "declaration": true,
@@ -16,8 +17,9 @@
     "sourceMap": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": ["solid-js"]
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["node_modules", "dist"]
 }

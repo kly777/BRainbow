@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brainbow - 任务管理</title>
+    <link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+    <div id="app" />
+
+    <noscript>
+        <div style="text-align: center; padding: 50px;">
+            <h1>需要启用 JavaScript</h1>
+            <p>Brainbow 需要 JavaScript 才能正常运行。</p>
+            <p>请启用浏览器中的 JavaScript 功能，然后刷新页面。</p>
+        </div>
+    </noscript>
+
+    <script type="module" src="src/index.tsx"></script>
+
+    <script>
+        // 错误处理
+        window.addEventListener('error', (event) => {
+            console.error('应用程序错误:', event.error);
+            const app = document.getElementById('app');
+            if (app) {
+                app.innerHTML = `
+                    <div style="text-align: center; padding: 50px;">
+                        <h1>应用程序错误</h1>
+                        <p>抱歉，应用程序遇到了一个错误。</p>
+                        <p>请刷新页面重试。</p>
+                        <button onclick="location.reload()" style="
+                            margin-top: 20px;
+                            padding: 10px 20px;
+                            background-color: #0066cc;
+                            color: white;
+                            border: none;
+                            border-radius: 4px;
+                            cursor: pointer;
+                        ">
+                            刷新页面
+                        </button>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

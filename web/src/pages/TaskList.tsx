@@ -1,4 +1,4 @@
-import { Component, createSignal, createEffect, For, Show, Switch, Match } from "solid-js";
+import { type Component, createSignal, createEffect, For, Show, Switch, Match } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { taskApi } from "../api";
 import type { Task } from "../types";
@@ -21,20 +21,20 @@ const TaskListPage: Component = () => {
       setTasks(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载任务列表失败");
-      console.error("Failed to load tasks:", err);
     } finally {
       setLoading(false);
     }
   };
 
   createEffect(() => {
-    loadTasks();
+    void loadTasks();
   });
 
-  const handleSearch = (e: Event) => {
-    const input = e.target as HTMLInputElement;
-    setSearchQuery(input.value);
-    setCurrentPage(1);
+  const handleSearch = (_event: Event) => {
+    if (_event.target instanceof HTMLInputElement) {
+      setSearchQuery(_event.target.value);
+      setCurrentPage(1);
+    }
   };
 
   const handleCreateTask = () => {
@@ -59,7 +59,6 @@ const TaskListPage: Component = () => {
       setTasks(tasks().filter(task => task.id !== taskId));
     } catch (err) {
       setError(err instanceof Error ? err.message : "删除任务失败");
-      console.error("Failed to delete task:", err);
     }
   };
 
@@ -103,7 +102,7 @@ const TaskListPage: Component = () => {
         <h1>任务列表</h1>
         <div class="actions">
           <button onClick={handleCreateTask}>创建新任务</button>
-          <button class="secondary" onClick={loadTasks}>刷新</button>
+          <button class="secondary" onClick={async () => loadTasks()}>刷新</button>
         </div>
       </div>
 
@@ -155,7 +154,7 @@ const TaskListPage: Component = () => {
                     <tr>
                       <td>{task.id}</td>
                       <td>
-                        <a class="task-title" onClick={() => handleViewTask(task.id)}>
+                        <a class="task-title" onClick={() => { handleViewTask(task.id); }}>
                           {task.title}
                         </a>
                       </td>
@@ -169,9 +168,9 @@ const TaskListPage: Component = () => {
                       </td>
                       <td>
                         <div class="task-actions">
-                          <button onClick={() => handleViewTask(task.id)}>查看</button>
-                          <button class="secondary" onClick={() => handleEditTask(task.id)}>编辑</button>
-                          <button class="delete" onClick={() => handleDeleteTask(task.id)}>删除</button>
+                          <button onClick={() => { handleViewTask(task.id); }}>查看</button>
+                          <button class="secondary" onClick={() => { handleEditTask(task.id); }}>编辑</button>
+                          <button class="delete" onClick={() => { void handleDeleteTask(task.id); }}>删除</button>
                         </div>
                       </td>
                     </tr>

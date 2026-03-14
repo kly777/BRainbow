@@ -4,9 +4,9 @@ import { lazy } from 'solid-js';
 import './style.css';
 
 // 懒加载页面组件
-const TaskListPage = lazy(() => import('./pages/TaskList'));
-const TaskDetailPage = lazy(() => import('./pages/TaskDetail'));
-const TaskFormPage = lazy(() => import('./pages/TaskForm'));
+const TaskListPage = lazy(async () => import('./pages/TaskList'));
+const TaskDetailPage = lazy(async () => import('./pages/TaskDetail'));
+const TaskFormPage = lazy(async () => import('./pages/TaskForm'));
 
 // 布局组件
 function Layout(props: { children: any }) {

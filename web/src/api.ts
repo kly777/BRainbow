@@ -97,34 +97,52 @@ const API_BASE_URL = "http://localhost:3000/api"
 
 const request = <T>(
   endpoint: string,
-  options: RequestInit = {},
-  schema: Schema.Schema<T>
+  schema: Schema.Schema<T>,
+  options: RequestInit = {}
 ): Effect.Effect<T, ApiErrorType> =>
   Effect.gen(function* () {
     const url = `${API_BASE_URL}${endpoint}`
 
     const response = yield* Effect.tryPromise({
-      try: () =>
+      try: async () =>
         fetch(url, {
           ...options,
-          headers: {
-            "Content-Type": "application/json",
-            ...options.headers,
-          },
+          headers: (() => {
+            const headers = new Headers({
+              "Content-Type": "application/json",
+            });
+            if (options.headers) {
+              if (Array.isArray(options.headers)) {
+                for (const [key, value] of options.headers) {
+                  if (value !== undefined) {
+                    headers.append(key, String(value));
+                  }
+                }
+              } else if (typeof options.headers === 'object') {
+                for (const [key, value] of Object.entries(options.headers)) {
+                  if (value !== undefined) {
+                    headers.append(key, String(value));
+                  }
+                }
+              }
+            }
+            return headers;
+          })(),
         }),
-      catch: NetworkError.fromUnknown,
+      catch: (cause: unknown) => new NetworkError({ cause }),
     })
 
     if (!response.ok) {
       if (response.status === 204) {
-        return undefined as unknown as T
+        // Handle void response
+        return undefined as T
       }
 
       let errorMessage = `HTTP ${response.status}`
       try {
         const errorData = yield* Effect.tryPromise({
-          try: () => response.json() as Promise<ApiError>,
-          catch: NetworkError.fromUnknown,
+          try: async (): Promise<ApiError> => response.json(),
+          catch: (cause: unknown) => new NetworkError({ cause }),
         })
         errorMessage = errorData.error || errorMessage
       } catch {
@@ -139,12 +157,12 @@ const request = <T>(
     }
 
     const json = yield* Effect.tryPromise({
-      try: () => response.json(),
-      catch: NetworkError.fromUnknown,
+      try: async () => response.json() as unknown,
+      catch: (cause: unknown) => new NetworkError({ cause }),
     })
 
     const result = yield* Schema.decodeUnknown(schema)(json).pipe(
-      Effect.mapError((issue) => new ValidationError({ error: issue as unknown }))
+      Effect.mapError((issue: unknown) => new ValidationError({ error: issue }))
     )
 
     return result
@@ -155,88 +173,88 @@ const request = <T>(
 // Task operations
 export const getTasks = (search?: string): Effect.Effect<readonly Task[], ApiErrorType> => {
   const endpoint = search ? `/task?search=${encodeURIComponent(search)}` : "/task"
-  return request(endpoint, {}, Schema.Array(TaskSchema))
+  return request(endpoint, Schema.Array(TaskSchema), {})
 }
 
 export const getTask = (id: number): Effect.Effect<TaskDetail, ApiErrorType> =>
-  request(`/task/${id}`, {}, TaskDetailSchema)
+  request(`/task/${id}`, TaskDetailSchema, {})
 
 export const createTask = (task: CreateTaskRequest): Effect.Effect<Task, ApiErrorType> =>
-  request("/task", {
+  request("/task", TaskSchema, {
     method: "POST",
     body: JSON.stringify(task),
-  }, TaskSchema)
+  })
 
 export const updateTask = (id: number, task: UpdateTaskRequest): Effect.Effect<Task, ApiErrorType> =>
-  request(`/task/${id}`, {
+  request(`/task/${id}`, TaskSchema, {
     method: "PUT",
     body: JSON.stringify(task),
-  }, TaskSchema)
+  })
 
 export const deleteTask = (id: number): Effect.Effect<void, ApiErrorType> =>
-  request(`/task/${id}`, {
+  request(`/task/${id}`, Schema.Void, {
     method: "DELETE",
-  }, Schema.Void)
+  })
 
 // Task relationships
 export const getParentTask = (id: number): Effect.Effect<Task | null, ApiErrorType> =>
-  request(`/task/${id}/parent-task`, {}, Schema.NullOr(TaskSchema))
+  request(`/task/${id}/parent-task`, Schema.NullOr(TaskSchema), {})
 
 export const getSubTasks = (id: number): Effect.Effect<readonly Task[], ApiErrorType> =>
-  request(`/task/${id}/sub-tasks`, {}, Schema.Array(TaskSchema))
+  request(`/task/${id}/sub-tasks`, Schema.Array(TaskSchema), {})
 
 export const getTimeWindows = (id: number): Effect.Effect<readonly TimeWindow[], ApiErrorType> =>
-  request(`/task/${id}/time-windows`, {}, Schema.Array(TimeWindowSchema))
+  request(`/task/${id}/time-windows`, Schema.Array(TimeWindowSchema), {})
 
 export const getAllTimeWindows = (): Effect.Effect<readonly TimeWindow[], ApiErrorType> =>
-  request("/time-window", {}, Schema.Array(TimeWindowSchema))
+  request("/time-window", Schema.Array(TimeWindowSchema), {})
 
 export const getDependencies = (id: number): Effect.Effect<readonly Task[], ApiErrorType> =>
-  request(`/task/${id}/dependencies`, {}, Schema.Array(TaskSchema))
+  request(`/task/${id}/dependencies`, Schema.Array(TaskSchema), {})
 
 export const getDependents = (id: number): Effect.Effect<readonly Task[], ApiErrorType> =>
-  request(`/task/${id}/dependents`, {}, Schema.Array(TaskSchema))
+  request(`/task/${id}/dependents`, Schema.Array(TaskSchema), {})
 
 // Relationship management
 export const addTimeWindow = (id: number, requestBody: AddTimeWindowRequest): Effect.Effect<void, ApiErrorType> =>
-  request(`/task/${id}/time-window`, {
+  request(`/task/${id}/time-window`, Schema.Void, {
     method: "POST",
     body: JSON.stringify(requestBody),
-  }, Schema.Void)
+  })
 
 export const removeTimeWindow = (
   id: number,
   timeWindowId: number,
-  allocationType: number = 0
+  allocationType = 0
 ): Effect.Effect<void, ApiErrorType> => {
   const endpoint = `/task/${id}/time-window/${timeWindowId}?allocation_type=${allocationType}`
-  return request(endpoint, { method: "DELETE" }, Schema.Void)
+  return request(endpoint, Schema.Void, { method: "DELETE" })
 }
 
 export const addSubTask = (id: number, requestBody: AddSubTaskRequest): Effect.Effect<void, ApiErrorType> =>
-  request(`/task/${id}/sub-task`, {
+  request(`/task/${id}/sub-task`, Schema.Void, {
     method: "POST",
     body: JSON.stringify(requestBody),
-  }, Schema.Void)
+  })
 
 export const removeSubTask = (id: number, subTaskId: number): Effect.Effect<void, ApiErrorType> =>
-  request(`/task/${id}/sub-task/${subTaskId}`, {
+  request(`/task/${id}/sub-task/${subTaskId}`, Schema.Void, {
     method: "DELETE",
-  }, Schema.Void)
+  })
 
 export const addDependency = (id: number, requestBody: AddDependencyRequest): Effect.Effect<void, ApiErrorType> =>
-  request(`/task/${id}/dependency`, {
+  request(`/task/${id}/dependency`, Schema.Void, {
     method: "POST",
     body: JSON.stringify(requestBody),
-  }, Schema.Void)
+  })
 
 export const removeDependency = (id: number, prerequisiteId: number): Effect.Effect<void, ApiErrorType> =>
-  request(`/task/${id}/dependency/${prerequisiteId}`, {
+  request(`/task/${id}/dependency/${prerequisiteId}`, Schema.Void, {
     method: "DELETE",
-  }, Schema.Void)
+  })
 
 // Helper function to run API effects
-export const runApiEffect = <A>(effect: Effect.Effect<A, ApiErrorType>): Promise<A> =>
+export const runApiEffect = async <A>(effect: Effect.Effect<A, ApiErrorType>): Promise<A> =>
   Effect.runPromise(effect)
 
 // ==================== Utility Functions ====================
@@ -316,7 +334,7 @@ export class TaskApiClient {
     return runApiEffect(addTimeWindow(id, request))
   }
 
-  async removeTimeWindow(id: number, timeWindowId: number, allocationType: number = 0): Promise<void> {
+  async removeTimeWindow(id: number, timeWindowId: number, allocationType = 0): Promise<void> {
     return runApiEffect(removeTimeWindow(id, timeWindowId, allocationType))
   }
 

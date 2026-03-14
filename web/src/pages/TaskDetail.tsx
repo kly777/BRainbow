@@ -1,4 +1,4 @@
-import { Component, createSignal, createEffect, For, Show, Switch, Match } from "solid-js";
+import { type Component, createSignal, createEffect, For, Show, Switch, Match } from "solid-js";
 import { useParams, useNavigate } from "@solidjs/router";
 import { taskApi } from "../api";
 import type { TaskDetail } from "../types";
@@ -32,14 +32,14 @@ const TaskDetailPage: Component = () => {
       setTaskDetail(mutableResult);
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载任务详情失败");
-      console.error("Failed to load task detail:", err);
+
     } finally {
       setLoading(false);
     }
   };
 
   createEffect(() => {
-    loadTaskDetail();
+    void loadTaskDetail();
   });
 
   const handleBack = () => {
@@ -63,7 +63,7 @@ const TaskDetailPage: Component = () => {
       navigate("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "删除任务失败");
-      console.error("Failed to delete task:", err);
+
     } finally {
       setLoading(false);
     }
@@ -116,7 +116,7 @@ const TaskDetailPage: Component = () => {
         <Match when={error()}>
           <div class="error">
             {error()}
-            <button onClick={loadTaskDetail}>重试</button>
+            <button onClick={async () => loadTaskDetail()}>重试</button>
           </div>
         </Match>
         <Match when={!task()}>
@@ -134,8 +134,8 @@ const TaskDetailPage: Component = () => {
             <div class="header">
               <h1>{task()!.title}</h1>
               <div class="actions">
-                <button onClick={handleEdit}>编辑</button>
-                <button class="danger" onClick={handleDelete}>删除</button>
+                <button onClick={() => handleEdit()}>编辑</button>
+                <button class="danger" onClick={() => void handleDelete()}>删除</button>
               </div>
             </div>
 
@@ -158,7 +158,7 @@ const TaskDetailPage: Component = () => {
                 fallback={
                   <div class="empty-state">
                     <p>暂无子任务</p>
-                    <button onClick={handleAddSubTask}>添加子任务</button>
+                    <button onClick={() => handleAddSubTask()}>添加子任务</button>
                   </div>
                 }
               >
@@ -169,7 +169,7 @@ const TaskDetailPage: Component = () => {
                         <div class="card-header">
                           <h3 class="card-title">{subTask.title}</h3>
                           <div class="card-actions">
-                            <button onClick={() => handleViewTask(subTask.id)}>查看</button>
+                            <button onClick={() => { handleViewTask(subTask.id); }}>查看</button>
                           </div>
                         </div>
                         <div class="card-content">
@@ -191,7 +191,7 @@ const TaskDetailPage: Component = () => {
                   <div class="empty-state">
                     <p>暂无依赖任务
 </p>
-                    <button onClick={handleAddDependency}>添加依赖</button>
+                    <button onClick={() => handleAddDependency()}>添加依赖</button>
                   </div>
                 }
               >
@@ -202,7 +202,7 @@ const TaskDetailPage: Component = () => {
                         <div class="card-header">
                           <h3 class="card-title">{dependency.title}</h3>
                           <div class="card-actions">
-                            <button onClick={() => handleViewTask(dependency.id)}>查看</button>
+                            <button onClick={() => { handleViewTask(dependency.id); }}>查看</button>
                           </div>
                         </div>
                         <div class="card-content">
@@ -223,7 +223,7 @@ const TaskDetailPage: Component = () => {
                 fallback={
                   <div class="empty-state">
                     <p>暂无时间窗口</p>
-                    <button onClick={handleAddTimeWindow}>分配时间窗口</button>
+                    <button onClick={() => handleAddTimeWindow()}>分配时间窗口</button>
                   </div>
                 }
               >
@@ -256,9 +256,9 @@ const TaskDetailPage: Component = () => {
             </div>
 
             <div class="relationship-actions">
-              <button onClick={handleAddSubTask}>添加子任务</button>
-              <button onClick={handleAddDependency}>添加依赖</button>
-              <button onClick={handleAddTimeWindow}>分配时间窗口</button>
+              <button onClick={() => handleAddSubTask()}>添加子任务</button>
+              <button onClick={() => handleAddDependency()}>添加依赖</button>
+              <button onClick={() => handleAddTimeWindow()}>分配时间窗口</button>
             </div>
           </>
         </Match>

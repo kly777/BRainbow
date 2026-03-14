@@ -18,6 +18,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    "verbatimModuleSyntax": true,
     "types": ["solid-js"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],

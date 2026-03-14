@@ -10,15 +10,16 @@
         "type-check": "tsc --noEmit"
     },
     "dependencies": {
-        "effect": "^3.19.19",
         "@effect/platform": "^0.94.5",
-        "solid-js": "^1.9.11",
-        "@solidjs/router": "^0.15.4"
+        "@solidjs/router": "^0.15.4",
+        "effect": "^3.19.19",
+        "solid-js": "^1.9.11"
     },
     "devDependencies": {
         "@rsbuild/core": "^1.7.3",
         "@rsbuild/plugin-babel": "^1.1.2",
         "@rsbuild/plugin-solid": "^1.1.1",
+        "@rslint/core": "^0.2.3",
         "@types/node": "^25.3.5",
         "typescript": "^5.0.0"
     }

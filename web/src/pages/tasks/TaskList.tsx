@@ -8,9 +8,9 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { taskApi } from "../api";
-import styles from "../styles/taskList.module.css";
-import type { Task } from "../types";
+import { taskApi } from "@/api";
+import styles from "@/styles/tasks/taskList.module.css";
+import type { Task } from "@/types";
 
 const TaskListPage: Component = () => {
 	const navigate = useNavigate();
@@ -29,7 +29,7 @@ const TaskListPage: Component = () => {
 			const result = await taskApi.getTasks(searchQuery().trim());
 			setTasks(result);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "加载任务列表失败");
+			setError(err instanceof Error ? err.message : "加载列表失败");
 		} finally {
 			setLoading(false);
 		}
@@ -47,19 +47,19 @@ const TaskListPage: Component = () => {
 	};
 
 	const handleCreateTask = () => {
-		navigate("/create");
+		navigate("/t/create");
 	};
 
 	const handleViewTask = (taskId: number) => {
-		navigate(`/task/${taskId}`);
+		navigate(`/t/${taskId}`);
 	};
 
 	const handleEditTask = (taskId: number) => {
-		navigate(`/edit/${taskId}`);
+		navigate(`/t/edit/${taskId}`);
 	};
 
 	const handleDeleteTask = async (taskId: number) => {
-		if (!confirm("确定要删除这个任务吗？此操作不可撤销。")) {
+		if (!confirm("确定要删除这个项目吗？此操作不可撤销。")) {
 			return;
 		}
 
@@ -67,7 +67,7 @@ const TaskListPage: Component = () => {
 			await taskApi.deleteTask(taskId);
 			setTasks(tasks().filter((task) => task.id !== taskId));
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "删除任务失败");
+			setError(err instanceof Error ? err.message : "删除失败");
 		}
 	};
 
@@ -108,14 +108,14 @@ const TaskListPage: Component = () => {
 	return (
 		<div class={styles.container}>
 			<div class={styles.header}>
-				<h1>任务列表</h1>
+				<h1>结构管理</h1>
 				<div class={styles.actions}>
 					<button
 						type="button"
 						class={styles.primaryButton}
 						onClick={handleCreateTask}
 					>
-						创建新任务
+						新建项目
 					</button>
 					<button
 						type="button"
@@ -131,7 +131,7 @@ const TaskListPage: Component = () => {
 				<input
 					type="text"
 					class={styles.searchInput}
-					placeholder="搜索任务标题..."
+					placeholder="搜索项目标题..."
 					value={searchQuery()}
 					onInput={handleSearch}
 				/>

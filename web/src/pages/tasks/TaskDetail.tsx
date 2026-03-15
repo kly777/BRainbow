@@ -8,12 +8,12 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { taskApi } from "../api";
-import AddDependencyModal from "../components/AddDependencyModal";
-import AddSubTaskModal from "../components/AddSubTaskModal";
-import AddTimeWindowModal from "../components/AddTimeWindowModal";
-import styles from "../styles/taskDetail.module.css";
-import type { TaskDetail } from "../types";
+import { taskApi } from "@/api";
+import AddDependencyModal from "@/components/AddDependencyModal";
+import AddSubTaskModal from "@/components/AddSubTaskModal";
+import AddTimeWindowModal from "@/components/AddTimeWindowModal";
+import styles from "@/styles/tasks/taskDetail.module.css";
+import type { TaskDetail } from "@/types";
 
 const TaskDetailPage: Component = () => {
 	const params = useParams();
@@ -61,11 +61,11 @@ const TaskDetailPage: Component = () => {
 	});
 
 	const handleBack = () => {
-		navigate("/");
+		navigate("/t");
 	};
 
 	const handleEdit = () => {
-		navigate(`/edit/${taskId()}`);
+		navigate(`/t/edit/${taskId()}`);
 	};
 
 	const handleDelete = async () => {
@@ -78,7 +78,7 @@ const TaskDetailPage: Component = () => {
 
 		try {
 			await taskApi.deleteTask(taskId());
-			navigate("/");
+			navigate("/t");
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "删除任务失败");
 		} finally {
@@ -87,7 +87,7 @@ const TaskDetailPage: Component = () => {
 	};
 
 	const handleViewTask = (taskId: number) => {
-		navigate(`/task/${taskId}`);
+		navigate(`/t/${taskId}`);
 	};
 
 	const formatDate = (dateString: string): string => {

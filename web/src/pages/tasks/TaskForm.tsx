@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from "@solidjs/router";
 import { type Component, createSignal, Show } from "solid-js";
-import { taskApi } from "../api";
-import styles from "../styles/taskForm.module.css";
+import { taskApi } from "@/api";
+import styles from "@/styles/tasks/taskForm.module.css";
 
 const TaskFormPage: Component<{ editMode?: boolean }> = (props) => {
 	const params = useParams();
@@ -33,7 +33,7 @@ const TaskFormPage: Component<{ editMode?: boolean }> = (props) => {
 				});
 			}
 			setError(null);
-			navigate("/");
+			navigate("/t");
 		} catch (err) {
 			setError(
 				err instanceof Error
@@ -49,7 +49,7 @@ const TaskFormPage: Component<{ editMode?: boolean }> = (props) => {
 	};
 
 	const handleCancel = () => {
-		navigate("/");
+		navigate("/t");
 	};
 
 	return (

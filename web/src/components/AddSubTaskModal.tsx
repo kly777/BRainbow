@@ -5,9 +5,9 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import { taskApi } from "../api";
-import styles from "../styles/addSubTaskModal.module.css";
-import type { Task } from "../types";
+import { taskApi } from "@/api";
+import styles from "@/styles/addSubTaskModal.module.css";
+import type { Task } from "@/types";
 import Modal from "./Modal";
 
 interface AddSubTaskModalProps {

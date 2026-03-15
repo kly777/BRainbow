@@ -1,27 +1,29 @@
 {
-    "name": "brainbow-web",
-    "private": true,
-    "version": "0.0.0",
-    "type": "module",
-    "scripts": {
-        "dev": "rsbuild dev",
-        "build": "rsbuild build",
-        "preview": "rsbuild preview",
-        "type-check": "tsc --noEmit"
-    },
-    "dependencies": {
-        "@effect/platform": "^0.94.5",
-        "@solidjs/router": "^0.15.4",
-        "effect": "^3.19.19",
-        "solid-js": "^1.9.11"
-    },
-    "devDependencies": {
-        "@rsbuild/core": "^1.7.3",
-        "@rsbuild/plugin-babel": "^1.1.2",
-        "@rsbuild/plugin-solid": "^1.1.1",
-        "@rsbuild/plugin-type-check": "^1.3.4",
-        "@rslint/core": "^0.2.3",
-        "@types/node": "^25.5.0",
-        "typescript": "^5.0.0"
-    }
+	"name": "brainbow-web",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "rsbuild dev",
+		"build": "rsbuild build",
+		"preview": "rsbuild preview",
+		"type-check": "tsc --noEmit",
+		"lint": "biome lint",
+		"fmt": "biome format --write"
+	},
+	"dependencies": {
+		"@effect/platform": "^0.94.5",
+		"@solidjs/router": "^0.15.4",
+		"effect": "^3.19.19",
+		"solid-js": "^1.9.11"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.7",
+		"@rsbuild/core": "^1.7.3",
+		"@rsbuild/plugin-babel": "^1.1.2",
+		"@rsbuild/plugin-solid": "^1.1.1",
+		"@rsbuild/plugin-type-check": "^1.3.4",
+		"@types/node": "^25.5.0",
+		"typescript": "^5.0.0"
+	}
 }

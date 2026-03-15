@@ -19,4 +19,7 @@ export default defineConfig({
 			index: "./src/index.tsx",
 		},
 	},
+	server: {
+		port: 3001,
+	},
 });

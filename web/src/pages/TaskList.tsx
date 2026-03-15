@@ -9,6 +9,7 @@ import {
 	Switch,
 } from "solid-js";
 import { taskApi } from "../api";
+import styles from "../styles/taskList.module.css";
 import type { Task } from "../types";
 
 const TaskListPage: Component = () => {
@@ -105,16 +106,20 @@ const TaskListPage: Component = () => {
 	};
 
 	return (
-		<div class="container">
-			<div class="header">
+		<div class={styles.container}>
+			<div class={styles.header}>
 				<h1>任务列表</h1>
-				<div class="actions">
-					<button type="button" onClick={handleCreateTask}>
+				<div class={styles.actions}>
+					<button
+						type="button"
+						class={styles.primaryButton}
+						onClick={handleCreateTask}
+					>
 						创建新任务
 					</button>
 					<button
 						type="button"
-						class="secondary"
+						class={styles.secondaryButton}
 						onClick={async () => loadTasks()}
 					>
 						刷新
@@ -122,10 +127,10 @@ const TaskListPage: Component = () => {
 				</div>
 			</div>
 
-			<div class="search-box">
+			<div class={styles.searchSection}>
 				<input
 					type="text"
-					class="search-input"
+					class={styles.searchInput}
 					placeholder="搜索任务标题..."
 					value={searchQuery()}
 					onInput={handleSearch}
@@ -133,25 +138,29 @@ const TaskListPage: Component = () => {
 			</div>
 
 			<Show when={error()}>
-				<div class="error">{error()}</div>
+				<div class={styles.error}>{error()}</div>
 			</Show>
 
 			<Switch>
 				<Match when={loading()}>
-					<div class="loading">加载中...</div>
+					<div class={styles.loading}>加载中...</div>
 				</Match>
 				<Match when={tasks().length === 0}>
-					<div class="empty-state">
+					<div class={styles.emptyState}>
 						<p>{searchQuery() ? "没有找到匹配的任务" : "暂无任务数据"}</p>
 						<Show when={!searchQuery()}>
-							<button type="button" onClick={handleCreateTask}>
+							<button
+								type="button"
+								class={styles.primaryButton}
+								onClick={handleCreateTask}
+							>
 								创建第一个任务
 							</button>
 						</Show>
 					</div>
 				</Match>
 				<Match when={true}>
-					<table class="tasks-table">
+					<table class={styles.tasksTable}>
 						<thead>
 							<tr>
 								<th>ID</th>
@@ -169,7 +178,7 @@ const TaskListPage: Component = () => {
 										<td>
 											<button
 												type="button"
-												class="task-title"
+												class={styles.taskTitle}
 												onClick={() => {
 													handleViewTask(task.id);
 												}}
@@ -179,17 +188,20 @@ const TaskListPage: Component = () => {
 										</td>
 										<td>
 											<div
-												class="task-description"
+												class={styles.taskDescription}
 												title={task.description || ""}
 											>
 												{task.description || "无描述"}
 											</div>
 										</td>
-										<td class="created-at">{formatDate(task.created_at)}</td>
+										<td class={styles.createdAt}>
+											{formatDate(task.created_at)}
+										</td>
 										<td>
-											<div class="task-actions">
+											<div class={styles.taskActions}>
 												<button
 													type="button"
+													class={styles.primaryButton}
 													onClick={() => {
 														handleViewTask(task.id);
 													}}
@@ -198,7 +210,7 @@ const TaskListPage: Component = () => {
 												</button>
 												<button
 													type="button"
-													class="secondary"
+													class={styles.secondaryButton}
 													onClick={() => {
 														handleEditTask(task.id);
 													}}
@@ -207,7 +219,7 @@ const TaskListPage: Component = () => {
 												</button>
 												<button
 													type="button"
-													class="delete"
+													class={styles.deleteButton}
 													onClick={() => {
 														void handleDeleteTask(task.id);
 													}}
@@ -223,20 +235,22 @@ const TaskListPage: Component = () => {
 					</table>
 
 					<Show when={totalPages() > 1}>
-						<div class="pagination">
+						<div class={styles.pagination}>
 							<button
 								type="button"
+								class={styles.secondaryButton}
 								onClick={handlePreviousPage}
 								disabled={currentPage() === 1}
 							>
 								上一页
 							</button>
 
-							<span class="pagination-info">
+							<span class={styles.paginationInfo}>
 								第 {currentPage()} 页，共 {totalPages()} 页
 							</span>
 							<button
 								type="button"
+								class={styles.secondaryButton}
 								onClick={handleNextPage}
 								disabled={currentPage() === totalPages()}
 							>
@@ -244,21 +258,6 @@ const TaskListPage: Component = () => {
 							</button>
 						</div>
 					</Show>
-
-					<div class="stats">
-						<div class="stat-item">
-							<div class="stat-value">{tasks().length}</div>
-							<div class="stat-label">总任务数</div>
-						</div>
-						<div class="stat-item">
-							<div class="stat-value">{pageSize}</div>
-							<div class="stat-label">每页显示</div>
-						</div>
-						<div class="stat-item">
-							<div class="stat-value">{totalPages()}</div>
-							<div class="stat-label">总页数</div>
-						</div>
-					</div>
 				</Match>
 			</Switch>
 		</div>

@@ -9,7 +9,8 @@
 		"preview": "rsbuild preview",
 		"type-check": "tsc --noEmit",
 		"lint": "biome lint",
-		"fmt": "biome format --write"
+		"fmt": "biome format --write",
+		"check": "biome check --write"
 	},
 	"dependencies": {
 		"@effect/platform": "^0.94.5",

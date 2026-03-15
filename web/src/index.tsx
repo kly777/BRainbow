@@ -2,6 +2,7 @@ import { Route, Router } from "@solidjs/router";
 import { type JSX, lazy } from "solid-js";
 import { render } from "solid-js/web";
 import "./style.css";
+import styles from "./styles/layout.module.css";
 
 // 懒加载页面组件
 const TaskListPage = lazy(async () => import("./pages/TaskList"));
@@ -11,24 +12,24 @@ const TaskFormPage = lazy(async () => import("./pages/TaskForm"));
 // 布局组件
 function Layout(props: { children: JSX.Element }) {
 	return (
-		<div class="app-container">
-			<header class="app-header">
-				<div class="header-content">
-					<h1 class="app-title">
+		<div class={styles.appContainer}>
+			<header class={styles.appHeader}>
+				<div class={styles.headerContent}>
+					<h1 class={styles.appTitle}>
 						Brainbow <span>任务管理</span>
 					</h1>
-					<nav class="nav-links">
-						<a href="/" class="nav-link">
+					<nav class={styles.navLinks}>
+						<a href="/" class={styles.navLink}>
 							任务列表
 						</a>
-						<a href="/create" class="nav-link">
+						<a href="/create" class={styles.navLink}>
 							创建任务
 						</a>
 					</nav>
 				</div>
 			</header>
-			<main class="app-content">{props.children}</main>
-			<footer class="footer">
+			<main class={styles.appContent}>{props.children}</main>
+			<footer class={styles.footer}>
 				<p>© {new Date().getFullYear()} Brainbow 任务管理系统</p>
 			</footer>
 		</div>

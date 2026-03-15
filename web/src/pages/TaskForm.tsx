@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from "@solidjs/router";
 import { type Component, createSignal, Show } from "solid-js";
 import { taskApi } from "../api";
+import styles from "../styles/taskForm.module.css";
 
 const TaskFormPage: Component<{ editMode?: boolean }> = (props) => {
 	const params = useParams();
@@ -52,26 +53,33 @@ const TaskFormPage: Component<{ editMode?: boolean }> = (props) => {
 	};
 
 	return (
-		<div class="container">
-			<div class="header">
+		<div class={styles.container}>
+			<div class={styles.header}>
 				<h1>{props.editMode ? "编辑任务" : "创建新任务"}</h1>
-				<div class="actions">
-					<button type="button" class="secondary" onClick={handleCancel}>
+				<div class={styles.actions}>
+					<button
+						type="button"
+						class={styles.secondaryButton}
+						onClick={handleCancel}
+					>
 						取消
 					</button>
 				</div>
 			</div>
 
 			<Show when={error()}>
-				<div class="error">{error()}</div>
+				<div class={styles.error}>{error()}</div>
 			</Show>
 
-			<form onSubmit={handleSubmit}>
-				<div class="form-group">
-					<label for="title">标题</label>
+			<form class={styles.form} onSubmit={handleSubmit}>
+				<div class={styles.formGroup}>
+					<label for="title" class={styles.formLabel}>
+						标题<span class={styles.required}></span>
+					</label>
 					<input
 						id="title"
 						type="text"
+						class={styles.formInput}
 						value={title()}
 						onInput={(e) => setTitle(e.currentTarget.value)}
 						required
@@ -80,10 +88,13 @@ const TaskFormPage: Component<{ editMode?: boolean }> = (props) => {
 					/>
 				</div>
 
-				<div class="form-group">
-					<label for="description">描述</label>
+				<div class={styles.formGroup}>
+					<label for="description" class={styles.formLabel}>
+						描述
+					</label>
 					<textarea
 						id="description"
+						class={styles.formTextarea}
 						value={description()}
 						onInput={(e) => setDescription(e.currentTarget.value)}
 						disabled={loading()}
@@ -92,8 +103,12 @@ const TaskFormPage: Component<{ editMode?: boolean }> = (props) => {
 					/>
 				</div>
 
-				<div class="form-actions">
-					<button type="submit" disabled={loading()}>
+				<div class={styles.formActions}>
+					<button
+						type="submit"
+						class={styles.primaryButton}
+						disabled={loading()}
+					>
 						<Show
 							when={loading()}
 							fallback={props.editMode ? "更新任务" : "创建任务"}
@@ -103,7 +118,7 @@ const TaskFormPage: Component<{ editMode?: boolean }> = (props) => {
 					</button>
 					<button
 						type="button"
-						class="secondary"
+						class={styles.secondaryButton}
 						onClick={handleCancel}
 						disabled={loading()}
 					>
@@ -111,17 +126,6 @@ const TaskFormPage: Component<{ editMode?: boolean }> = (props) => {
 					</button>
 				</div>
 			</form>
-
-			<div class="help-text">
-				<p>
-					<strong>提示:</strong>
-				</p>
-				<ul>
-					<li>标题为必填项</li>
-					<li>描述可以为空</li>
-					<li>创建后可以添加子任务、依赖和时间窗口</li>
-				</ul>
-			</div>
 		</div>
 	);
 };

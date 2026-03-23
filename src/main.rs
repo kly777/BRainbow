@@ -5,15 +5,19 @@ mod routes;
 mod services;
 mod state;
 
+use std::time::Instant;
+
 use axum::http::Method;
+use axum::extract::{Request};
+use axum::response::Response;
+use axum::middleware::Next;
+use axum::middleware;
 use sea_orm::Database;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::routes::create_router;
 use crate::state::AppState;
-
-
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -35,12 +39,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
         .allow_headers(Any);
 
-    let app = app.layer(cors);
 
-    // 运行应用程序，监听端口 3000
+    let app = app.layer(middleware::from_fn(logger)).layer(cors);
+
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
     println!("Listening on http://{}", listener.local_addr()?);
     axum::serve(listener, app).await?;
 
     Ok(())
+}
+
+
+async fn logger(req: Request,next: Next) -> Result<Response, axum::response::Response> {
+    let start = Instant::now();
+    let method = req.method().clone();
+    let path = req.uri().path().to_string();
+    let res = next.run(req).await;
+
+    let duration = start.elapsed();
+    let status = res.status();
+
+    println!("← {} {} - {} ({:?})", method, path, status, duration);
+
+    Ok(res)
 }

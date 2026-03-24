@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use crate::entity::signifier_signified;
-use crate::repositories::onto::OntoRepository;
-use crate::repositories::sign::SignRepository;
+use crate::repos::onto::OntoRepository;
+use crate::repos::sign::SignRepository;
 
 /// 符号关系服务层
 pub struct SignService {

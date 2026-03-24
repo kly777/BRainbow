@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use crate::entity::task::Model;
 use crate::entity::time_window;
-use crate::repositories::task::TaskRepository;
+use crate::repos::task::TaskRepository;
 use crate::state::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -496,7 +496,7 @@ pub async fn get_all_time_windows_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let db = state.db.clone();
-    
+
     match time_window::Entity::find()
         .order_by_asc(time_window::Column::Id)
         .all(db.as_ref())

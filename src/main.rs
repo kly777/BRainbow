@@ -1,6 +1,6 @@
 mod entity;
 mod handlers;
-mod repositories;
+mod repos;
 mod routes;
 mod services;
 mod state;

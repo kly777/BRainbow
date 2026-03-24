@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::entity::card;
-use crate::repositories::card::CardRepository;
+use crate::repos::card::CardRepository;
 
 /// 卡片服务层
 pub struct CardService {

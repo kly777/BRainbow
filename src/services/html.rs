@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::entity::{onto, signifier_signified, task, user};
-use crate::repositories::{onto::OntoRepository, sign::SignRepository, task::TaskRepository, user::UserRepository};
+use crate::repos::{onto::OntoRepository, sign::SignRepository, task::TaskRepository, user::UserRepository};
 
 /// HTML展示服务层
 pub struct HtmlService {

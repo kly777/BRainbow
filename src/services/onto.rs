@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::entity::onto;
-use crate::repositories::onto::OntoRepository;
+use crate::repos::onto::OntoRepository;
 
 /// 本体服务层
 pub struct OntoService {

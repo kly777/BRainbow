@@ -8,7 +8,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { taskApi } from "@/api";
+import { taskApi } from "@/apis";
 import AddDependencyModal from "@/components/AddDependencyModal";
 import AddSubTaskModal from "@/components/AddSubTaskModal";
 import AddTimeWindowModal from "@/components/AddTimeWindowModal";

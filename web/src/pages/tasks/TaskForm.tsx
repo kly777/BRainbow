@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "@solidjs/router";
 import { type Component, createSignal, Show } from "solid-js";
-import { taskApi } from "@/api";
+import { taskApi } from "@/apis";
 import styles from "@/styles/tasks/taskForm.module.css";
 
 const TaskFormPage: Component<{ editMode?: boolean }> = (props) => {

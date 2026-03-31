@@ -1,6 +1,12 @@
 import { useNavigate, useParams } from "@solidjs/router";
-import { type Component, createEffect, createResource, createSignal, Show } from "solid-js";
-import { cardApi, type UpdateCardRequest } from "@/api";
+import {
+	type Component,
+	createEffect,
+	createResource,
+	createSignal,
+	Show,
+} from "solid-js";
+import { cardApi, type UpdateCardRequest } from "@/apis";
 import styles from "@/styles/notes/cardEdit.module.css";
 
 const CardEditPage: Component = () => {

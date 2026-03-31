@@ -1,6 +1,6 @@
 import { useNavigate } from "@solidjs/router";
 import { type Component, createResource, createSignal, Show } from "solid-js";
-import { type CreateCardRequest, cardApi } from "@/api";
+import { type CreateCardRequest, cardApi } from "@/apis";
 
 import CardsGrid from "@/components/CardsGrid";
 import styles from "@/styles/notes/cardsList.module.css";

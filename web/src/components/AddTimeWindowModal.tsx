@@ -5,7 +5,7 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import { taskApi } from "@/api";
+import { taskApi } from "@/apis";
 import styles from "@/styles/addTimeWindowModal.module.css";
 import type { TimeWindow } from "@/types";
 import Modal from "./Modal";

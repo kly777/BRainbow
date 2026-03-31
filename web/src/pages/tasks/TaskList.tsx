@@ -8,7 +8,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { taskApi } from "@/api";
+import { taskApi } from "@/apis";
 import styles from "@/styles/tasks/taskList.module.css";
 import type { Task } from "@/types";
 

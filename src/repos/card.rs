@@ -2,6 +2,7 @@ use sea_orm::{
     ActiveModelTrait, DatabaseConnection, DeleteResult, EntityTrait, IntoActiveModel, Set,
 };
 use std::sync::Arc;
+use chrono::Utc;
 
 use crate::entity::card;
 
@@ -28,9 +29,12 @@ impl CardRepository {
 
     /// 创建卡片
     pub async fn create(&self, title: String, content: String) -> Result<card::Model, sea_orm::DbErr> {
+        let now = Utc::now();
         let new_card = card::ActiveModel {
             title: Set(title),
             content: Set(content),
+            created_at: Set(now),
+            updated_at: Set(now),
             ..Default::default()
         };
 
@@ -61,6 +65,9 @@ impl CardRepository {
         if let Some(content) = content {
             active_model.content = Set(content);
         }
+
+        // 更新更新时间
+        active_model.updated_at = Set(Utc::now());
 
         // 保存更新
         let updated_card = active_model.update(&*self.db).await?;

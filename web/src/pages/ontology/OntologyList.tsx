@@ -19,7 +19,8 @@ const OntologyListPage: Component = () => {
 		{
 			id: 1,
 			name: "人工智能",
-			description: "研究、开发用于模拟、延伸和扩展人的智能的理论、方法、技术及应用系统的一门新的技术科学",
+			description:
+				"研究、开发用于模拟、延伸和扩展人的智能的理论、方法、技术及应用系统的一门新的技术科学",
 			type: "概念",
 			properties: [
 				{ key: "领域", value: "计算机科学" },
@@ -109,7 +110,10 @@ const OntologyListPage: Component = () => {
 
 	// 获取所有类型
 	const types = () => {
-		const allTypes = ["全部", ...new Set(entities().map((entity) => entity.type))];
+		const allTypes = [
+			"全部",
+			...new Set(entities().map((entity) => entity.type)),
+		];
 		return allTypes;
 	};
 
@@ -204,7 +208,9 @@ const OntologyListPage: Component = () => {
 
 				<div class={styles.filterControls}>
 					<div class={styles.filterGroup}>
-						<label for="type-select" class={styles.filterLabel}>类型:</label>
+						<label for="type-select" class={styles.filterLabel}>
+							类型:
+						</label>
 						<select
 							id="type-select"
 							class={styles.filterSelect}
@@ -281,7 +287,9 @@ const OntologyListPage: Component = () => {
 												<td>
 													<span
 														class={styles.entityType}
-														style={{ "background-color": getTypeColor(entity.type) }}
+														style={{
+															"background-color": getTypeColor(entity.type),
+														}}
 													>
 														{entity.type}
 													</span>
@@ -296,8 +304,12 @@ const OntologyListPage: Component = () => {
 														<For each={entity.properties.slice(0, 2)}>
 															{(prop) => (
 																<div class={styles.propertyItem}>
-																	<span class={styles.propertyKey}>{prop.key}:</span>
-																	<span class={styles.propertyValue}>{prop.value}</span>
+																	<span class={styles.propertyKey}>
+																		{prop.key}:
+																	</span>
+																	<span class={styles.propertyValue}>
+																		{prop.value}
+																	</span>
 																</div>
 															)}
 														</For>
@@ -378,7 +390,9 @@ const OntologyListPage: Component = () => {
 												{(prop) => (
 													<div class={styles.propertyItem}>
 														<span class={styles.propertyKey}>{prop.key}:</span>
-														<span class={styles.propertyValue}>{prop.value}</span>
+														<span class={styles.propertyValue}>
+															{prop.value}
+														</span>
 													</div>
 												)}
 											</For>
@@ -391,9 +405,13 @@ const OntologyListPage: Component = () => {
 											<For each={entity.relationships}>
 												{(rel) => (
 													<div class={styles.relationshipItem}>
-														<span class={styles.relationshipType}>{rel.type}</span>
+														<span class={styles.relationshipType}>
+															{rel.type}
+														</span>
 														<span class={styles.relationshipArrow}>→</span>
-														<span class={styles.relationshipTarget}>{rel.target}</span>
+														<span class={styles.relationshipTarget}>
+															{rel.target}
+														</span>
 													</div>
 												)}
 											</For>

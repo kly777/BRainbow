@@ -7,7 +7,14 @@ fn copy_folder(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
     let dst = dst.as_ref();
 
     // 创建目标目录
-    fs::create_dir_all(dst)?;
+    match fs::create_dir_all(dst) {
+        Ok(_) => {}
+        Err(e) => {
+            if e.kind() != io::ErrorKind::AlreadyExists {
+                return Err(e);
+            }
+        }
+    }
 
     // 遍历源目录
     for entry in fs::read_dir(src)? {

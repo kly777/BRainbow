@@ -1,0 +1,314 @@
+.container {
+	width: 100%;
+	max-width: 1400px;
+	margin: 0 auto;
+	padding: 20px 16px;
+	min-height: 100vh;
+}
+
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 24px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid #eaeaea;
+}
+
+.title {
+	font-size: 1.75rem;
+	font-weight: 600;
+	color: #333;
+	margin: 0;
+}
+
+.actions {
+	display: flex;
+	gap: 12px;
+}
+
+.primaryButton {
+	padding: 10px 20px;
+	font-size: 0.875rem;
+	font-weight: 500;
+	background: #007bff;
+	color: white;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.primaryButton:hover:not(:disabled) {
+	background: #0056b3;
+}
+
+.primaryButton:focus {
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3);
+}
+
+.primaryButton:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.secondaryButton {
+	padding: 10px 20px;
+	font-size: 0.875rem;
+	font-weight: 500;
+	background: white;
+	color: #666;
+	border: 1px solid #ddd;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.secondaryButton:hover:not(:disabled) {
+	background: #f5f5f5;
+	border-color: #ccc;
+}
+
+.secondaryButton:focus {
+	outline: none;
+	border-color: #007bff;
+	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.secondaryButton:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.loading {
+	text-align: center;
+	padding: 60px 20px;
+	background: white;
+	border-radius: 8px;
+	border: 1px solid #eaeaea;
+	margin: 20px 0;
+}
+
+.loading p {
+	font-size: 1rem;
+	color: #666;
+	margin: 0;
+}
+
+.error {
+	text-align: center;
+	padding: 40px 20px;
+	background: #fff5f5;
+	border: 1px solid #feb2b2;
+	border-radius: 8px;
+	margin: 20px 0;
+}
+
+.error p {
+	font-size: 1rem;
+	color: #c53030;
+	margin-bottom: 16px;
+}
+
+/* 模态框样式 */
+.modalOverlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: 20px;
+}
+
+.modal {
+	background: white;
+	border-radius: 8px;
+	width: 100%;
+	max-width: 500px;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+	animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+	from {
+		opacity: 0;
+		transform: translateY(-20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.modalHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 20px 24px;
+	border-bottom: 1px solid #eaeaea;
+}
+
+.modalHeader h2 {
+	font-size: 1.25rem;
+	font-weight: 600;
+	color: #333;
+	margin: 0;
+}
+
+.closeButton {
+	background: none;
+	border: none;
+	font-size: 1.5rem;
+	color: #999;
+	cursor: pointer;
+	padding: 4px;
+	line-height: 1;
+	transition: color 0.2s ease;
+}
+
+.closeButton:hover {
+	color: #333;
+}
+
+.closeButton:focus {
+	outline: none;
+	color: #007bff;
+}
+
+.modalContent {
+	padding: 24px;
+}
+
+.errorMessage {
+	padding: 12px 16px;
+	background: #fff5f5;
+	border: 1px solid #feb2b2;
+	border-radius: 4px;
+	color: #c53030;
+	font-size: 0.875rem;
+	margin-bottom: 20px;
+}
+
+.formGroup {
+	margin-bottom: 20px;
+}
+
+.formLabel {
+	display: block;
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: #333;
+	margin-bottom: 8px;
+}
+
+.formLabel::after {
+	content: " *";
+	color: #dc3545;
+}
+
+.formInput {
+	width: 100%;
+	padding: 10px 12px;
+	font-size: 0.875rem;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	transition: all 0.2s ease;
+}
+
+.formInput:focus {
+	outline: none;
+	border-color: #007bff;
+	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.formInput:disabled {
+	background: #f5f5f5;
+	cursor: not-allowed;
+}
+
+.formTextarea {
+	width: 100%;
+	padding: 10px 12px;
+	font-size: 0.875rem;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	resize: vertical;
+	transition: all 0.2s ease;
+	font-family: inherit;
+	line-height: 1.5;
+}
+
+.formTextarea:focus {
+	outline: none;
+	border-color: #007bff;
+	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.formTextarea:disabled {
+	background: #f5f5f5;
+	cursor: not-allowed;
+}
+
+.modalActions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	padding: 20px 24px;
+	border-top: 1px solid #eaeaea;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+	.container {
+		padding: 16px 12px;
+	}
+
+	.header {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 16px;
+	}
+
+	.title {
+		font-size: 1.5rem;
+	}
+
+	.actions {
+		justify-content: flex-end;
+	}
+
+	.modal {
+		max-width: 100%;
+	}
+
+	.modalHeader {
+		padding: 16px 20px;
+	}
+
+	.modalContent {
+		padding: 20px;
+	}
+
+	.modalActions {
+		padding: 16px 20px;
+	}
+}
+
+@media (max-width: 480px) {
+	.modalActions {
+		flex-direction: column;
+	}
+
+	.primaryButton,
+	.secondaryButton {
+		width: 100%;
+	}
+}

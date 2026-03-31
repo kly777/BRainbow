@@ -2,6 +2,7 @@ import { Route, Router } from "@solidjs/router";
 import { type JSX, lazy } from "solid-js";
 import { render } from "solid-js/web";
 import "@/normalize.css";
+import "@/styles/markdown.css";
 import styles from "@/styles/layout.module.css";
 
 // 懒加载页面组件
@@ -11,6 +12,7 @@ const TaskFormPage = lazy(async () => import("@/pages/tasks/TaskForm"));
 
 const CardsListPage = lazy(async () => import("@/pages/notes/CardsList"));
 const CardDetailPage = lazy(async () => import("@/pages/notes/CardDetail"));
+const CardEditPage = lazy(async () => import("@/pages/notes/CardEdit"));
 
 const OntologyListPage = lazy(
 	async () => import("@/pages/ontology/OntologyList"),
@@ -93,6 +95,14 @@ function App() {
 				component={() => (
 					<Layout>
 						<CardDetailPage />
+					</Layout>
+				)}
+			/>
+			<Route
+				path="/c/edit/:id"
+				component={() => (
+					<Layout>
+						<CardEditPage />
 					</Layout>
 				)}
 			/>

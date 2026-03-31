@@ -1,17 +1,18 @@
 import { useParams } from "@solidjs/router";
 import { type Component, createResource, Show } from "solid-js";
 import { cardApi } from "@/api";
+import Markdown from "@/components/Markdown";
 import styles from "@/styles/notes/cardDetail.module.css";
 
 const CardDetailPage: Component = () => {
 	const params = useParams();
-	  const cardId = () => {
-	    const id = params.id;
-	    if (!id) {
-	      throw new Error("卡片ID不能为空");
-	    }
-	    return parseInt(id, 10);
-	  };
+	const cardId = () => {
+		const id = params.id;
+		if (!id) {
+			throw new Error("卡片ID不能为空");
+		}
+		return parseInt(id, 10);
+	};
 
 	const [card, { refetch }] = createResource(async () => {
 		try {
@@ -41,8 +42,8 @@ const CardDetailPage: Component = () => {
 
 	const handleEdit = () => {
 		console.log("编辑卡片:", cardId());
-		// 这里可以跳转到编辑页面
-		alert(`编辑卡片 ${cardId()} 功能待实现`);
+		// 跳转到编辑页面
+		window.location.href = `/c/edit/${cardId()}`;
 	};
 
 	const handleDelete = async () => {
@@ -138,7 +139,7 @@ const CardDetailPage: Component = () => {
 								<h2 class={styles.contentTitle}>内容</h2>
 							</div>
 							<div class={styles.contentBody}>
-								<pre class={styles.contentText}>{currentCard().content}</pre>
+								<Markdown content={currentCard().content} />
 							</div>
 						</div>
 

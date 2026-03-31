@@ -34,8 +34,8 @@ const CardsListPage: Component = () => {
 	// 处理卡片编辑
 	const handleCardEdit = (id: number) => {
 		console.log("编辑卡片:", id);
-		// 这里可以打开编辑模态框
-		alert(`编辑卡片 ${id} 功能待实现`);
+		// 跳转到卡片编辑页面
+		navigate(`/c/edit/${id}`);
 	};
 
 	// 处理卡片删除

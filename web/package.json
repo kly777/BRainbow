@@ -15,7 +15,9 @@
 	"dependencies": {
 		"@effect/platform": "^0.94.5",
 		"@solidjs/router": "^0.15.4",
+		"dompurify": "^3.3.3",
 		"effect": "^3.19.19",
+		"marked": "^17.0.5",
 		"solid-js": "^1.9.11"
 	},
 	"devDependencies": {

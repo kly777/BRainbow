@@ -207,14 +207,21 @@
 	border: 1px solid #eaeaea;
 }
 
-.contentText {
-	font-size: 1rem;
-	line-height: 1.6;
-	color: #333;
-	margin: 0;
-	white-space: pre-wrap;
-	word-wrap: break-word;
-	font-family: inherit;
+.contentBody .markdown-content {
+	background: transparent;
+	padding: 0;
+}
+
+.contentBody .markdown-content pre {
+	margin: 1em 0;
+}
+
+.contentBody .markdown-content blockquote {
+	margin: 1em 0;
+}
+
+.contentBody .markdown-content table {
+	margin: 1em 0;
 }
 
 .cardActions {

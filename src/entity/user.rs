@@ -1,12 +1,8 @@
-use sea_orm::entity::prelude::*;
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 
-#[sea_orm::model]
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "user")]
-pub struct Model {
-    #[sea_orm(primary_key)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FromRow)]
+pub struct User {
     pub id: i32,
     pub name: String,
 }
-
-impl ActiveModelBehavior for ActiveModel {}

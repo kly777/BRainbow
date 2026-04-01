@@ -1,26 +1,9 @@
-use sea_orm::entity::prelude::*;
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 
-#[sea_orm::model]
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "onto")]
-pub struct Model {
-    #[sea_orm(primary_key)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FromRow)]
+pub struct Onto {
     pub id: i32,
-
     pub name: String,
-
-    /// 作为能指
-    #[sea_orm(
-        self_ref,
-        via = "signifier_signified",
-        from = "Signifier",
-        to = "Signified"
-    )]
-    pub signifiers: HasMany<Entity>,
-
-    /// 作为所指
-    #[sea_orm(self_ref, via = "signifier_signified", reverse)]
-    pub signifieds: HasMany<Entity>,
+    pub description: Option<String>,
 }
-
-impl ActiveModelBehavior for ActiveModel {}

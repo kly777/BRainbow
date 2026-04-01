@@ -11,12 +11,14 @@ use crate::state::AppState;
 #[derive(Debug, Deserialize)]
 pub struct CreateOntoRequest {
     pub name: String,
+    pub description: Option<String>,
 }
 
 /// 更新本体请求结构体
 #[derive(Debug, Deserialize)]
 pub struct UpdateOntoRequest {
     pub name: Option<String>,
+    pub description: Option<String>,
 }
 
 /// 本体响应结构体
@@ -24,13 +26,14 @@ pub struct UpdateOntoRequest {
 pub struct OntoResponse {
     pub id: i32,
     pub name: String,
+    pub description: Option<String>,
 }
 
-/// 本体列表响应结构体
-#[derive(Debug, Serialize)]
-pub struct OntosResponse {
-    pub ontos: Vec<OntoResponse>,
-}
+// /// 本体列表响应结构体
+// #[derive(Debug, Serialize)]
+// pub struct OntosResponse {
+//     pub ontos: Vec<OntoResponse>,
+// }
 
 /// 创建本体
 pub async fn create_onto_handler(
@@ -39,13 +42,17 @@ pub async fn create_onto_handler(
 ) -> impl IntoResponse {
     let onto_service = OntoService::new(state.db.clone());
 
-    match onto_service.create_onto(payload.name.clone()).await {
+    match onto_service
+        .create_onto(payload.name, payload.description)
+        .await
+    {
         Ok(onto) => {
             let response = OntoResponse {
                 id: onto.id,
                 name: onto.name,
+                description: onto.description,
             };
-            (axum::http::StatusCode::CREATED, Json(response)).into_response()
+            Json(response).into_response()
         }
         Err(e) => {
             let error_msg = format!("创建本体失败: {}", e);
@@ -65,14 +72,11 @@ pub async fn get_ontos_handler(State(state): State<AppState>) -> impl IntoRespon
                 .map(|onto| OntoResponse {
                     id: onto.id,
                     name: onto.name,
+                    description: onto.description,
                 })
                 .collect();
 
-            let response = OntosResponse {
-                ontos: onto_responses,
-            };
-
-            Json(response).into_response()
+            Json(onto_responses).into_response()
         }
         Err(e) => {
             let error_msg = format!("获取本体列表失败: {}", e);
@@ -93,6 +97,7 @@ pub async fn get_onto_handler(
             let response = OntoResponse {
                 id: onto.id,
                 name: onto.name,
+                description: onto.description,
             };
             Json(response).into_response()
         }
@@ -115,21 +120,22 @@ pub async fn update_onto_handler(
 ) -> impl IntoResponse {
     let onto_service = OntoService::new(state.db.clone());
 
-    match onto_service.update_onto(id, payload.name).await {
-        Ok(Some(onto)) => {
-            let response = OntoResponse {
+    match onto_service
+        .update_onto(id, payload.name, payload.description)
+        .await
+    {
+        Ok(onto) => {
+            let onto_response = OntoResponse {
                 id: onto.id,
                 name: onto.name,
+                description: onto.description,
             };
-            Json(response).into_response()
-        }
-        Ok(None) => {
-            let error_msg = format!("本体 ID {} 不存在", id);
-            (axum::http::StatusCode::NOT_FOUND, error_msg).into_response()
+
+            Json(onto_response).into_response()
         }
         Err(e) => {
             let error_msg = format!("更新本体失败: {}", e);
-            (axum::http::StatusCode::BAD_REQUEST, error_msg).into_response()
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
         }
     }
 }
@@ -142,15 +148,23 @@ pub async fn delete_onto_handler(
     let onto_service = OntoService::new(state.db.clone());
 
     match onto_service.delete_onto(id).await {
-        Ok(()) => (axum::http::StatusCode::NO_CONTENT, "本体删除成功").into_response(),
-        Err(e) => {
-            if e.contains("不存在") {
-                let error_msg = format!("本体 ID {} 不存在", id);
-                (axum::http::StatusCode::NOT_FOUND, error_msg).into_response()
+        Ok(rows_affected) => {
+            if rows_affected > 0 {
+                let mut response = std::collections::HashMap::new();
+                response.insert("message".to_string(), format!("本体 {} 删除成功", id));
+                response.insert("rows_affected".to_string(), rows_affected.to_string());
+                Json(response).into_response()
             } else {
-                let error_msg = format!("删除本体失败: {}", e);
-                (axum::http::StatusCode::BAD_REQUEST, error_msg).into_response()
+                (
+                    axum::http::StatusCode::NOT_FOUND,
+                    format!("本体 ID {} 不存在", id),
+                )
+                    .into_response()
             }
+        }
+        Err(e) => {
+            let error_msg = format!("删除本体失败: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
         }
     }
 }

@@ -1,16 +1,11 @@
-use sea_orm::entity::prelude::*;
-use serde::{Deserialize, Serialize};
+// use serde::{Deserialize, Serialize};
+// use sqlx::FromRow;
+// use chrono::{DateTime, Utc};
 
-#[sea_orm::model]
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "time_window")]
-pub struct Model {
-    #[sea_orm(primary_key)]
-    pub id: i32,
-    
-    pub starts_at: DateTimeUtc,
-    
-    pub ends_at: DateTimeUtc,
-}
-
-impl ActiveModelBehavior for ActiveModel {}
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FromRow)]
+// pub struct TimeWindow {
+//     pub id: i32,
+//     pub start_time: DateTime<Utc>,
+//     pub end_time: DateTime<Utc>,
+//     pub user_id: Option<i32>,
+// }

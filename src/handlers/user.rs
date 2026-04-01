@@ -4,13 +4,13 @@ use axum::{
 };
 use std::collections::HashMap;
 
-use sea_orm::EntityTrait;
-
-use crate::entity::user;
+use crate::repos::user::UserRepository;
 use crate::state::AppState;
 
 pub async fn user_handler(State(state): State<AppState>) -> impl IntoResponse {
-    match user::Entity::find().all(&*state.db).await {
+    let repo = UserRepository::new(state.db);
+
+    match repo.find_all().await {
         Ok(users) => {
             let user_map: HashMap<String, String> = users
                 .into_iter()

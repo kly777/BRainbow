@@ -32,8 +32,6 @@ pub struct CardResponse {
     pub updated_at: String,
 }
 
-
-
 /// 创建卡片
 pub async fn create_card_handler(
     State(state): State<AppState>,
@@ -41,7 +39,10 @@ pub async fn create_card_handler(
 ) -> impl IntoResponse {
     let card_service = CardService::new(state.db.clone());
 
-    match card_service.create_card(payload.title.clone(), payload.content.clone()).await {
+    match card_service
+        .create_card(payload.title.clone(), payload.content.clone())
+        .await
+    {
         Ok(card) => {
             let response = CardResponse {
                 id: card.id,
@@ -94,14 +95,15 @@ pub async fn get_card_handler(
 
     match card_service.get_card_by_id(id).await {
         Ok(Some(card)) => {
-            let response = CardResponse {
+            let card_response = CardResponse {
                 id: card.id,
                 title: card.title,
                 content: card.content,
                 created_at: card.created_at.to_string(),
                 updated_at: card.updated_at.to_string(),
             };
-            Json(response).into_response()
+
+            Json(card_response).into_response()
         }
         Ok(None) => {
             let error_msg = format!("卡片 ID {} 不存在", id);
@@ -122,8 +124,11 @@ pub async fn update_card_handler(
 ) -> impl IntoResponse {
     let card_service = CardService::new(state.db.clone());
 
-    match card_service.update_card(id, payload.title, payload.content).await {
-        Ok(Some(card)) => {
+    match card_service
+        .update_card(id, payload.title, payload.content, None)
+        .await
+    {
+        Ok(card) => {
             let response = CardResponse {
                 id: card.id,
                 title: card.title,
@@ -133,13 +138,9 @@ pub async fn update_card_handler(
             };
             Json(response).into_response()
         }
-        Ok(None) => {
-            let error_msg = format!("卡片 ID {} 不存在", id);
-            (StatusCode::NOT_FOUND, error_msg).into_response()
-        }
         Err(e) => {
             let error_msg = format!("更新卡片失败: {}", e);
-            (StatusCode::BAD_REQUEST, error_msg).into_response()
+            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
         }
     }
 }
@@ -152,14 +153,19 @@ pub async fn delete_card_handler(
     let card_service = CardService::new(state.db.clone());
 
     match card_service.delete_card(id).await {
-        Ok(true) => (StatusCode::NO_CONTENT, "卡片删除成功").into_response(),
-        Ok(false) => {
-            let error_msg = format!("卡片 ID {} 不存在", id);
-            (StatusCode::NOT_FOUND, error_msg).into_response()
+        Ok(rows_affected) => {
+            if rows_affected > 0 {
+                let mut response = std::collections::HashMap::new();
+                response.insert("message".to_string(), format!("卡片 {} 删除成功", id));
+                response.insert("rows_affected".to_string(), rows_affected.to_string());
+                Json(response).into_response()
+            } else {
+                (StatusCode::NOT_FOUND, format!("卡片 ID {} 不存在", id)).into_response()
+            }
         }
         Err(e) => {
             let error_msg = format!("删除卡片失败: {}", e);
-            (StatusCode::BAD_REQUEST, error_msg).into_response()
+            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
         }
     }
 }

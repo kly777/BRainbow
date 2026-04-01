@@ -1,14 +1,11 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Json},
 };
-use sea_orm::{EntityTrait, QueryOrder};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::entity::task::Model;
-use crate::entity::time_window;
 use crate::repos::task::TaskRepository;
 use crate::state::AppState;
 
@@ -17,502 +14,328 @@ pub struct TaskResponse {
     pub id: i32,
     pub title: String,
     pub description: Option<String>,
+    pub status: Option<String>,
+    pub priority: Option<i32>,
+    pub user_id: Option<i32>,
     pub created_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl From<Model> for TaskResponse {
-    fn from(model: Model) -> Self {
-        Self {
-            id: model.id,
-            title: model.title,
-            description: model.description,
-            created_at: model.created_at,
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TaskDetailResponse {
     pub task: TaskResponse,
-    pub parent_task: Option<TaskResponse>,
-    pub sub_tasks: Vec<TaskResponse>,
-    pub time_windows: Vec<TimeWindowResponse>,
-    pub dependencies: Vec<TaskResponse>,
-    pub dependents: Vec<TaskResponse>,
+    pub dependencies: Vec<TaskDependencyResponse>,
+    pub decompositions: Vec<TaskDecompositionResponse>,
+    pub time_allocations: Vec<TaskTimeAllocationResponse>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct TimeWindowResponse {
+pub struct TaskDependencyResponse {
     pub id: i32,
-    pub starts_at: chrono::DateTime<chrono::Utc>,
-    pub ends_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl From<crate::entity::time_window::Model> for TimeWindowResponse {
-    fn from(model: crate::entity::time_window::Model) -> Self {
-        Self {
-            id: model.id,
-            starts_at: model.starts_at,
-            ends_at: model.ends_at,
-        }
-    }
+    pub task_id: i32,
+    pub depends_on_task_id: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct TaskDecompositionResponse {
+    pub id: i32,
+    pub parent_task_id: i32,
+    pub child_task_id: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TaskTimeAllocationResponse {
+    pub id: i32,
+    pub task_id: i32,
+    pub time_window_id: i32,
+    pub duration_minutes: i32,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct CreateTaskRequest {
     pub title: String,
     pub description: Option<String>,
+    pub user_id: Option<i32>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct UpdateTaskRequest {
     pub title: Option<String>,
-    pub description: Option<Option<String>>,
+    pub description: Option<String>,
+    pub status: Option<String>,
+    pub priority: Option<i32>,
+    pub user_id: Option<i32>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AddTimeWindowRequest {
-    pub time_window_id: i32,
-    pub allocation_type: i32,
-}
+/// 获取所有任务
+pub async fn get_tasks_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let repo = TaskRepository::new(state.db);
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AddSubTaskRequest {
-    pub sub_task_id: i32,
-}
+    match repo.find_all().await {
+        Ok(tasks) => {
+            let response: Vec<TaskResponse> = tasks
+                .into_iter()
+                .map(|task| TaskResponse {
+                    id: task.id,
+                    title: task.title,
+                    description: task.description,
+                    status: task.status,
+                    priority: task.priority,
+                    user_id: task.user_id,
+                    created_at: task.created_at,
+                })
+                .collect();
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AddDependencyRequest {
-    pub prerequisite_id: i32,
-}
-
-// GET /api/task - 获取所有任务
-pub async fn get_tasks_handler(
-    State(state): State<AppState>,
-    Query(params): Query<HashMap<String, String>>,
-) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
-
-    // 检查是否有搜索参数
-    if let Some(title_query) = params.get("search") {
-        match task_repository.search_by_title(title_query).await {
-            Ok(tasks) => {
-                let response: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
-                Json(response).into_response()
-            }
-            Err(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": format!("搜索任务失败: {}", e) })),
-            )
-                .into_response(),
+            Json(response).into_response()
         }
-    } else {
-        match task_repository.find_all().await {
-            Ok(tasks) => {
-                let response: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
-                Json(response).into_response()
-            }
-            Err(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": format!("获取任务列表失败: {}", e) })),
-            )
-                .into_response(),
+        Err(e) => {
+            let error_msg = format!("Failed to fetch tasks: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
         }
     }
 }
 
-// GET /api/task/{id} - 获取任务详情
+/// 根据ID获取任务
 pub async fn get_task_handler(
-    State(state): State<AppState>,
     Path(id): Path<i32>,
+    State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
+    let repo = TaskRepository::new(state.db);
 
-    match task_repository.find_by_id(id).await {
+    match repo.find_by_id(id).await {
         Ok(Some(task)) => {
-            // 获取相关数据
-            let parent_task = task_repository.find_parent_task(id).await.unwrap_or_default();
-            let sub_tasks = task_repository.find_sub_tasks(id).await.unwrap_or_default();
-            let time_windows = task_repository.find_time_windows(id).await.unwrap_or_default();
-            let dependencies = task_repository.find_dependencies(id).await.unwrap_or_default();
-            let dependents = task_repository.find_dependents(id).await.unwrap_or_default();
+            // 获取任务详情
+            let dependencies = match repo.find_dependencies(id).await {
+                Ok(deps) => deps
+                    .into_iter()
+                    .map(|dep| TaskDependencyResponse {
+                        id: dep.id,
+                        task_id: dep.task_id,
+                        depends_on_task_id: dep.depends_on_task_id,
+                    })
+                    .collect(),
+                Err(_) => Vec::new(),
+            };
+
+            let decompositions = match repo.find_decompositions(id).await {
+                Ok(decomps) => decomps
+                    .into_iter()
+                    .map(|decomp| TaskDecompositionResponse {
+                        id: decomp.id,
+                        parent_task_id: decomp.parent_task_id,
+                        child_task_id: decomp.child_task_id,
+                    })
+                    .collect(),
+                Err(_) => Vec::new(),
+            };
+
+            let time_allocations = match repo.find_time_allocations(id).await {
+                Ok(allocs) => allocs
+                    .into_iter()
+                    .map(|alloc| TaskTimeAllocationResponse {
+                        id: alloc.id,
+                        task_id: alloc.task_id,
+                        time_window_id: alloc.time_window_id,
+                        duration_minutes: alloc.duration_minutes,
+                    })
+                    .collect(),
+                Err(_) => Vec::new(),
+            };
 
             let response = TaskDetailResponse {
-                task: TaskResponse::from(task),
-                parent_task: parent_task.map(TaskResponse::from),
-                sub_tasks: sub_tasks.into_iter().map(TaskResponse::from).collect(),
-                time_windows: time_windows.into_iter().map(TimeWindowResponse::from).collect(),
-                dependencies: dependencies.into_iter().map(TaskResponse::from).collect(),
-                dependents: dependents.into_iter().map(TaskResponse::from).collect(),
+                task: TaskResponse {
+                    id: task.id,
+                    title: task.title,
+                    description: task.description,
+                    status: task.status,
+                    priority: task.priority,
+                    user_id: task.user_id,
+                    created_at: task.created_at,
+                },
+                dependencies,
+                decompositions,
+                time_allocations,
             };
 
             Json(response).into_response()
         }
-        Ok(None) => (
-            StatusCode::NOT_FOUND,
-            Json(serde_json::json!({ "error": format!("任务 ID {} 不存在", id) })),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": format!("获取任务详情失败: {}", e) })),
-        )
-            .into_response(),
+        Ok(None) => (StatusCode::NOT_FOUND, "Task not found").into_response(),
+        Err(e) => {
+            let error_msg = format!("Failed to fetch task: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+        }
     }
 }
 
-// POST /api/task - 创建新任务
+/// 创建任务
 pub async fn create_task_handler(
     State(state): State<AppState>,
     Json(payload): Json<CreateTaskRequest>,
 ) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
+    let repo = TaskRepository::new(state.db);
 
-    match task_repository
-        .create(payload.title, payload.description)
+    match repo
+        .create(payload.title, payload.description, payload.user_id)
         .await
     {
-        Ok(task) => (
-            StatusCode::CREATED,
-            Json(TaskResponse::from(task)),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": format!("创建任务失败: {}", e) })),
-        )
-            .into_response(),
+        Ok(task) => {
+            let response = TaskResponse {
+                id: task.id,
+                title: task.title,
+                description: task.description,
+                status: task.status,
+                priority: task.priority,
+                user_id: task.user_id,
+                created_at: task.created_at,
+            };
+
+            Json(response).into_response()
+        }
+        Err(e) => {
+            let error_msg = format!("Failed to create task: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+        }
     }
 }
 
-// PUT /api/task/{id} - 更新任务
+/// 更新任务
 pub async fn update_task_handler(
-    State(state): State<AppState>,
     Path(id): Path<i32>,
+    State(state): State<AppState>,
     Json(payload): Json<UpdateTaskRequest>,
 ) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
+    let repo = TaskRepository::new(state.db);
 
-    match task_repository
-        .update(id, payload.title, payload.description)
+    match repo
+        .update(
+            id,
+            payload.title,
+            payload.description,
+            payload.status,
+            payload.priority,
+            payload.user_id,
+        )
         .await
     {
-        Ok(task) => Json(TaskResponse::from(task)).into_response(),
-        Err(e) => {
-            let status = if e.to_string().contains("not found") {
-                StatusCode::NOT_FOUND
-            } else {
-                StatusCode::INTERNAL_SERVER_ERROR
-            };
-            (
-                status,
-                Json(serde_json::json!({ "error": format!("更新任务失败: {}", e) })),
-            )
-                .into_response()
-        }
-    }
-}
-
-// DELETE /api/task/{id} - 删除任务
-pub async fn delete_task_handler(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
-
-    match task_repository.delete(id).await {
-        Ok(_) => (
-            StatusCode::NO_CONTENT,
-            Json(serde_json::json!({ "message": "任务删除成功" })),
-        )
-            .into_response(),
-        Err(e) => {
-            let status = if e.to_string().contains("not found") {
-                StatusCode::NOT_FOUND
-            } else {
-                StatusCode::INTERNAL_SERVER_ERROR
-            };
-            (
-                status,
-                Json(serde_json::json!({ "error": format!("删除任务失败: {}", e) })),
-            )
-                .into_response()
-        }
-    }
-}
-
-// POST /api/task/{id}/time-window - 添加时间窗口分配
-pub async fn add_time_window_handler(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-    Json(payload): Json<AddTimeWindowRequest>,
-) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
-
-    match task_repository
-        .add_time_window(id, payload.time_window_id, payload.allocation_type)
-        .await
-    {
-        Ok(_) => (
-            StatusCode::CREATED,
-            Json(serde_json::json!({ "message": "时间窗口分配添加成功" })),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": format!("添加时间窗口分配失败: {}", e) })),
-        )
-            .into_response(),
-    }
-}
-
-// DELETE /api/task/{id}/time-window/{time_window_id} - 移除时间窗口分配
-pub async fn remove_time_window_handler(
-    State(state): State<AppState>,
-    Path((task_id, time_window_id)): Path<(i32, i32)>,
-    Query(params): Query<HashMap<String, String>>,
-) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
-
-    let allocation_type = params
-        .get("allocation_type")
-        .and_then(|s| s.parse::<i32>().ok())
-        .unwrap_or(0);
-
-    match task_repository
-        .remove_time_window(task_id, time_window_id, allocation_type)
-        .await
-    {
-        Ok(_) => (
-            StatusCode::NO_CONTENT,
-            Json(serde_json::json!({ "message": "时间窗口分配移除成功" })),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": format!("移除时间窗口分配失败: {}", e) })),
-        )
-            .into_response(),
-    }
-}
-
-// POST /api/task/{id}/sub-task - 添加子任务
-pub async fn add_sub_task_handler(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-    Json(payload): Json<AddSubTaskRequest>,
-) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
-
-    match task_repository.add_sub_task(id, payload.sub_task_id).await {
-        Ok(_) => (
-            StatusCode::CREATED,
-            Json(serde_json::json!({ "message": "子任务添加成功" })),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": format!("添加子任务失败: {}", e) })),
-        )
-            .into_response(),
-    }
-}
-
-// DELETE /api/task/{id}/sub-task/{sub_task_id} - 移除子任务
-pub async fn remove_sub_task_handler(
-    State(state): State<AppState>,
-    Path((task_id, sub_task_id)): Path<(i32, i32)>,
-) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
-
-    match task_repository
-        .remove_sub_task(task_id, sub_task_id)
-        .await
-    {
-        Ok(_) => (
-            StatusCode::NO_CONTENT,
-            Json(serde_json::json!({ "message": "子任务移除成功" })),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": format!("移除子任务失败: {}", e) })),
-        )
-            .into_response(),
-    }
-}
-
-// POST /api/task/{id}/dependency - 添加任务依赖
-pub async fn add_dependency_handler(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-    Json(payload): Json<AddDependencyRequest>,
-) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
-
-    match task_repository.add_dependency(id, payload.prerequisite_id).await {
-        Ok(_) => (
-            StatusCode::CREATED,
-            Json(serde_json::json!({ "message": "任务依赖添加成功" })),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": format!("添加任务依赖失败: {}", e) })),
-        )
-            .into_response(),
-    }
-}
-
-// DELETE /api/task/{id}/dependency/{prerequisite_id} - 移除任务依赖
-pub async fn remove_dependency_handler(
-    State(state): State<AppState>,
-    Path((task_id, prerequisite_id)): Path<(i32, i32)>,
-) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
-
-    match task_repository
-        .remove_dependency(task_id, prerequisite_id)
-        .await
-    {
-        Ok(_) => (
-            StatusCode::NO_CONTENT,
-            Json(serde_json::json!({ "message": "任务依赖移除成功" })),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": format!("移除任务依赖失败: {}", e) })),
-        )
-            .into_response(),
-    }
-}
-
-// GET /api/task/{id}/parent-task - 获取父任务（单个）
-pub async fn get_parent_task_handler(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
-
-    match task_repository.find_parent_task(id).await {
         Ok(task) => {
-            let response = task.map(TaskResponse::from);
+            let response = TaskResponse {
+                id: task.id,
+                title: task.title,
+                description: task.description,
+                status: task.status,
+                priority: task.priority,
+                user_id: task.user_id,
+                created_at: task.created_at,
+            };
+
             Json(response).into_response()
         }
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": format!("获取父任务失败: {}", e) })),
-        )
-            .into_response(),
+        Err(e) => {
+            let error_msg = format!("Failed to update task: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+        }
     }
 }
 
-// GET /api/task/{id}/sub-tasks - 获取子任务
-pub async fn get_sub_tasks_handler(
-    State(state): State<AppState>,
+/// 删除任务
+pub async fn delete_task_handler(
     Path(id): Path<i32>,
+    State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
+    let repo = TaskRepository::new(state.db);
 
-    match task_repository.find_sub_tasks(id).await {
-        Ok(tasks) => {
-            let response: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
-            Json(response).into_response()
+    match repo.delete(id).await {
+        Ok(rows_affected) => {
+            if rows_affected > 0 {
+                let mut response = HashMap::new();
+                response.insert(
+                    "message".to_string(),
+                    format!("Task {} deleted successfully", id),
+                );
+                response.insert("rows_affected".to_string(), rows_affected.to_string());
+                Json(response).into_response()
+            } else {
+                (StatusCode::NOT_FOUND, "Task not found").into_response()
+            }
         }
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": format!("获取子任务失败: {}", e) })),
-        )
-            .into_response(),
+        Err(e) => {
+            let error_msg = format!("Failed to delete task: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+        }
     }
 }
 
-// GET /api/task/{id}/time-windows - 获取时间窗口
-pub async fn get_time_windows_handler(
+/// 添加任务依赖
+pub async fn add_dependency_handler(
+    Path((task_id, depends_on_task_id)): Path<(i32, i32)>,
     State(state): State<AppState>,
-    Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
+    let repo = TaskRepository::new(state.db);
 
-    match task_repository.find_time_windows(id).await {
-        Ok(time_windows) => {
-            let response: Vec<TimeWindowResponse> = time_windows
-                .into_iter()
-                .map(TimeWindowResponse::from)
-                .collect();
+    match repo.add_dependency(task_id, depends_on_task_id).await {
+        Ok(dependency) => {
+            let response = TaskDependencyResponse {
+                id: dependency.id,
+                task_id: dependency.task_id,
+                depends_on_task_id: dependency.depends_on_task_id,
+            };
+
             Json(response).into_response()
         }
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": format!("获取时间窗口失败: {}", e) })),
-        )
-            .into_response(),
+        Err(e) => {
+            let error_msg = format!("Failed to add dependency: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+        }
     }
 }
 
-// GET /api/task/{id}/dependencies - 获取依赖的任务
-pub async fn get_dependencies_handler(
+/// 添加任务分解
+pub async fn add_decomposition_handler(
+    Path((parent_task_id, child_task_id)): Path<(i32, i32)>,
     State(state): State<AppState>,
-    Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
+    let repo = TaskRepository::new(state.db);
 
-    match task_repository.find_dependencies(id).await {
-        Ok(tasks) => {
-            let response: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
+    match repo.add_decomposition(parent_task_id, child_task_id).await {
+        Ok(decomposition) => {
+            let response = TaskDecompositionResponse {
+                id: decomposition.id,
+                parent_task_id: decomposition.parent_task_id,
+                child_task_id: decomposition.child_task_id,
+            };
+
             Json(response).into_response()
         }
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": format!("获取依赖任务失败: {}", e) })),
-        )
-            .into_response(),
+        Err(e) => {
+            let error_msg = format!("Failed to add decomposition: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+        }
     }
 }
 
-// GET /api/task/{id}/dependents - 获取被依赖的任务
-pub async fn get_dependents_handler(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-) -> impl IntoResponse {
-    let task_repository = TaskRepository::new(state.db.clone());
-
-    match task_repository.find_dependents(id).await {
-        Ok(tasks) => {
-            let response: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
-            Json(response).into_response()
-        }
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": format!("获取被依赖任务失败: {}", e) })),
-        )
-            .into_response(),
-    }
-}
-
-// GET /api/time-window - 获取所有时间窗口
-pub async fn get_all_time_windows_handler(
+/// 添加任务时间分配
+pub async fn add_time_allocation_handler(
+    Path((task_id, time_window_id, duration_minutes)): Path<(i32, i32, i32)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let db = state.db.clone();
+    let repo = TaskRepository::new(state.db);
 
-    match time_window::Entity::find()
-        .order_by_asc(time_window::Column::Id)
-        .all(db.as_ref())
+    match repo
+        .add_time_allocation(task_id, time_window_id, duration_minutes)
         .await
     {
-        Ok(time_windows) => {
-            let response: Vec<TimeWindowResponse> = time_windows
-                .into_iter()
-                .map(TimeWindowResponse::from)
-                .collect();
+        Ok(allocation) => {
+            let response = TaskTimeAllocationResponse {
+                id: allocation.id,
+                task_id: allocation.task_id,
+                time_window_id: allocation.time_window_id,
+                duration_minutes: allocation.duration_minutes,
+            };
+
             Json(response).into_response()
         }
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": format!("获取时间窗口列表失败: {}", e) })),
-        )
-            .into_response(),
+        Err(e) => {
+            let error_msg = format!("Failed to add time allocation: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+        }
     }
 }

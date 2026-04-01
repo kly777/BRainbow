@@ -1,20 +1,12 @@
-use sea_orm::entity::prelude::*;
-use serde::Serialize;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 
-#[sea_orm::model]
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize)]
-#[sea_orm(table_name = "card")]
-pub struct Model {
-    #[sea_orm(primary_key)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FromRow)]
+pub struct Card {
     pub id: i32,
-    
     pub title: String,
-    
     pub content: String,
-    
-    pub created_at: DateTimeUtc,
-    
-    pub updated_at: DateTimeUtc,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
-
-impl ActiveModelBehavior for ActiveModel {}

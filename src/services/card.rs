@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::entity::card;
+use crate::entity::Card;
 use crate::repos::card::CardRepository;
 
 /// 卡片服务层
@@ -10,14 +10,14 @@ pub struct CardService {
 
 impl CardService {
     /// 创建新的卡片服务层实例
-    pub fn new(db: Arc<sea_orm::DatabaseConnection>) -> Self {
+    pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
         Self {
             card_repository: CardRepository::new(db),
         }
     }
 
     /// 获取所有卡片
-    pub async fn get_all_cards(&self) -> Result<Vec<card::Model>, String> {
+    pub async fn get_all_cards(&self) -> Result<Vec<Card>, String> {
         self.card_repository
             .find_all()
             .await
@@ -25,7 +25,7 @@ impl CardService {
     }
 
     /// 根据ID获取卡片
-    pub async fn get_card_by_id(&self, id: i32) -> Result<Option<card::Model>, String> {
+    pub async fn get_card_by_id(&self, id: i32) -> Result<Option<Card>, String> {
         self.card_repository
             .find_by_id(id)
             .await
@@ -33,18 +33,7 @@ impl CardService {
     }
 
     /// 创建卡片
-    pub async fn create_card(&self, title: String, content: String) -> Result<card::Model, String> {
-        // 验证标题是否为空
-        if title.trim().is_empty() {
-            return Err("卡片标题不能为空".to_string());
-        }
-
-        // 验证内容是否为空
-        if content.trim().is_empty() {
-            return Err("卡片内容不能为空".to_string());
-        }
-
-        // 创建卡片
+    pub async fn create_card(&self, title: String, content: String) -> Result<Card, String> {
         self.card_repository
             .create(title, content)
             .await
@@ -57,68 +46,43 @@ impl CardService {
         id: i32,
         title: Option<String>,
         content: Option<String>,
-    ) -> Result<Option<card::Model>, String> {
-        // 验证标题是否为空（如果提供了标题）
-        if let Some(ref title) = title {
-            if title.trim().is_empty() {
-                return Err("卡片标题不能为空".to_string());
-            }
-        }
-
-        // 验证内容是否为空（如果提供了内容）
-        if let Some(ref content) = content {
-            if content.trim().is_empty() {
-                return Err("卡片内容不能为空".to_string());
-            }
-        }
-
-        // 检查卡片是否存在
-        if self
-            .card_repository
-            .find_by_id(id)
-            .await
-            .map_err(|e| format!("检查卡片存在性失败: {}", e))?
-            .is_none()
-        {
-            return Ok(None);
-        }
-
-        // 更新卡片
+        user_id: Option<i32>,
+    ) -> Result<Card, String> {
         self.card_repository
-            .update(id, title, content)
+            .update(id, title, content, user_id)
             .await
-            .map(|card| Some(card))
             .map_err(|e| format!("更新卡片失败: {}", e))
     }
 
     /// 删除卡片
-    pub async fn delete_card(&self, id: i32) -> Result<bool, String> {
-        // 检查卡片是否存在
-        if self
-            .card_repository
-            .find_by_id(id)
-            .await
-            .map_err(|e| format!("检查卡片存在性失败: {}", e))?
-            .is_none()
-        {
-            return Ok(false);
-        }
-
-        // 删除卡片
+    pub async fn delete_card(&self, id: i32) -> Result<u64, String> {
         self.card_repository
             .delete(id)
             .await
-            .map_err(|e| format!("删除卡片失败: {}", e))?;
-
-        Ok(true)
+            .map_err(|e| format!("删除卡片失败: {}", e))
     }
 
-    // /// 验证卡片ID是否存在
-    // pub async fn validate_card_id(&self, id: i32) -> Result<bool, String> {
+    // /// 根据用户ID获取卡片
+    // pub async fn get_cards_by_user_id(&self, user_id: i32) -> Result<Vec<Card>, String> {
     //     self.card_repository
-    //         .find_by_id(id)
+    //         .find_by_user_id(user_id)
     //         .await
-    //         .map(|opt| opt.is_some())
-    //         .map_err(|e| format!("验证卡片ID失败: {}", e))
+    //         .map_err(|e| format!("获取用户卡片失败: {}", e))
+    // }
+
+    // /// 获取卡片数量
+    // pub async fn get_card_count(&self) -> Result<i64, String> {
+    //     self.card_repository
+    //         .count()
+    //         .await
+    //         .map_err(|e| format!("获取卡片数量失败: {}", e))
+    // }
+
+    // /// 检查卡片是否存在
+    // pub async fn card_exists(&self, id: i32) -> Result<bool, String> {
+    //     self.card_repository
+    //         .exists(id)
+    //         .await
+    //         .map_err(|e| format!("检查卡片存在失败: {}", e))
     // }
 }

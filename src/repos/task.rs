@@ -1,54 +1,73 @@
+use chrono::Utc;
+use sqlx::{Row, SqlitePool};
 use std::sync::Arc;
 
-use sea_orm::{
-    prelude::*,
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set,
-};
+use crate::entity::{Task, TaskDecomposition, TaskDependency, TaskTimeAllocation};
 
-use crate::entity::{
-    task::{self, Entity, Model},
-    task_decomposition, task_dependency, task_time_allocation, time_window,
-};
-
-/// 任务数据仓库
-#[derive(Clone)]
+/// Task 数据访问层
 pub struct TaskRepository {
-    db: Arc<DatabaseConnection>,
+    db: Arc<SqlitePool>,
 }
 
 impl TaskRepository {
-    /// 创建新的任务仓库实例
-    pub fn new(db: Arc<DatabaseConnection>) -> Self {
+    /// 创建新的 Task 数据访问层实例
+    pub fn new(db: Arc<SqlitePool>) -> Self {
         Self { db }
     }
 
     /// 获取所有任务
-    pub async fn find_all(&self) -> Result<Vec<Model>, DbErr> {
-        Entity::find()
-            .order_by_asc(task::Column::Id)
-            .all(self.db.as_ref())
+    pub async fn find_all(&self) -> Result<Vec<Task>, sqlx::Error> {
+        sqlx::query_as::<_, Task>("SELECT id, title, description, status, priority, user_id, created_at FROM task ORDER BY created_at DESC")
+            .fetch_all(&*self.db)
             .await
     }
 
-    /// 根据ID查找任务
-    pub async fn find_by_id(&self, id: i32) -> Result<Option<Model>, DbErr> {
-        Entity::find_by_id(id).one(self.db.as_ref()).await
+    /// 根据ID获取任务
+    pub async fn find_by_id(&self, id: i32) -> Result<Option<Task>, sqlx::Error> {
+        sqlx::query_as::<_, Task>("SELECT id, title, description, status, priority, user_id, created_at FROM task WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&*self.db)
+            .await
     }
 
-    /// 创建新任务
+    /// 创建任务
     pub async fn create(
         &self,
         title: String,
         description: Option<String>,
-    ) -> Result<Model, DbErr> {
-        let active_model = task::ActiveModel {
-            title: Set(title),
-            description: Set(description),
-            created_at: Set(chrono::Utc::now()),
-            ..Default::default()
-        };
+        user_id: Option<i32>,
+    ) -> Result<Task, sqlx::Error> {
+        let result = sqlx::query(
+            "INSERT INTO task (title, description, status, priority, user_id, created_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id, title, description, status, priority, user_id, created_at"
+        )
+            .bind(&title)
+            .bind(&description)
+            .bind("pending")
+            .bind(0)
+            .bind(user_id)
+            .bind(Utc::now())
+            .fetch_one(&*self.db)
+            .await?;
 
-        active_model.insert(self.db.as_ref()).await
+        Ok(Task {
+            id: result.try_get("id")?,
+            title: result.try_get("title")?,
+            description: result.try_get("description")?,
+            status: result.try_get("status")?,
+            priority: result.try_get("priority")?,
+            user_id: result.try_get("user_id")?,
+            created_at: result.try_get("created_at")?,
+        })
+    }
+
+    /// 删除任务
+    pub async fn delete(&self, id: i32) -> Result<u64, sqlx::Error> {
+        let result = sqlx::query("DELETE FROM task WHERE id = ?")
+            .bind(id)
+            .execute(&*self.db)
+            .await?;
+
+        Ok(result.rows_affected())
     }
 
     /// 更新任务
@@ -56,317 +75,235 @@ impl TaskRepository {
         &self,
         id: i32,
         title: Option<String>,
-        description: Option<Option<String>>,
-    ) -> Result<Model, DbErr> {
-        let task = self.find_by_id(id).await?.ok_or(DbErr::RecordNotFound(
-            format!("Task with id {} not found", id),
-        ))?;
+        description: Option<String>,
+        status: Option<String>,
+        priority: Option<i32>,
+        user_id: Option<i32>,
+    ) -> Result<Task, sqlx::Error> {
+        // 构建更新语句
+        let mut updates = Vec::new();
 
-        let mut active_model: task::ActiveModel = task.into();
-
-        if let Some(title) = title {
-            active_model.title = Set(title);
+        if let Some(_) = &title {
+            updates.push("title = ?");
         }
 
-        if let Some(description) = description {
-            active_model.description = Set(description);
+        if let Some(_) = &description {
+            updates.push("description = ?");
         }
 
-        active_model.update(self.db.as_ref()).await
-    }
-
-    /// 删除任务
-    pub async fn delete(&self, id: i32) -> Result<(), DbErr> {
-        let task = self.find_by_id(id).await?.ok_or(DbErr::RecordNotFound(
-            format!("Task with id {} not found", id),
-        ))?;
-
-        let active_model: task::ActiveModel = task.into();
-        active_model.delete(self.db.as_ref()).await?;
-
-        Ok(())
-    }
-
-    /// 获取任务分配的时间窗口
-    pub async fn find_time_windows(&self, task_id: i32) -> Result<Vec<time_window::Model>, DbErr> {
-        let allocations = task_time_allocation::Entity::find()
-            .filter(task_time_allocation::Column::TaskId.eq(task_id))
-            .all(self.db.as_ref())
-            .await?;
-
-        let time_window_ids: Vec<i32> = allocations
-            .into_iter()
-            .map(|model| model.time_window_id)
-            .collect();
-
-        if time_window_ids.is_empty() {
-            return Ok(vec![]);
+        if let Some(_) = &status {
+            updates.push("status = ?");
         }
 
-        time_window::Entity::find()
-            .filter(time_window::Column::Id.is_in(time_window_ids))
-            .all(self.db.as_ref())
-            .await
-    }
-
-    /// 获取任务的父任务（单个父任务）
-    pub async fn find_parent_task(&self, task_id: i32) -> Result<Option<Model>, DbErr> {
-        let sub_task = task_decomposition::Entity::find()
-            .filter(task_decomposition::Column::SubTaskId.eq(task_id))
-            .one(self.db.as_ref())
-            .await?;
-
-        if let Some(sub_task) = sub_task {
-            Entity::find_by_id(sub_task.parent_task_id)
-                .one(self.db.as_ref())
-                .await
-        } else {
-            Ok(None)
-        }
-    }
-
-    /// 获取任务的子任务
-    pub async fn find_sub_tasks(&self, task_id: i32) -> Result<Vec<Model>, DbErr> {
-        let parent_tasks = task_decomposition::Entity::find()
-            .filter(task_decomposition::Column::ParentTaskId.eq(task_id))
-            .all(self.db.as_ref())
-            .await?;
-
-        let sub_task_ids: Vec<i32> = parent_tasks
-            .into_iter()
-            .map(|model| model.sub_task_id)
-            .collect();
-
-        if sub_task_ids.is_empty() {
-            return Ok(vec![]);
+        if let Some(_) = &priority {
+            updates.push("priority = ?");
         }
 
-        Entity::find()
-            .filter(task::Column::Id.is_in(sub_task_ids))
-            .all(self.db.as_ref())
-            .await
-    }
-
-    /// 获取任务依赖的其他任务（需要等待的任务）
-    pub async fn find_dependencies(&self, task_id: i32) -> Result<Vec<Model>, DbErr> {
-        let dependencies = task_dependency::Entity::find()
-            .filter(task_dependency::Column::TaskId.eq(task_id))
-            .all(self.db.as_ref())
-            .await?;
-
-        let prerequisite_ids: Vec<i32> = dependencies
-            .into_iter()
-            .map(|model| model.prerequisite_id)
-            .collect();
-
-        if prerequisite_ids.is_empty() {
-            return Ok(vec![]);
+        if let Some(_) = &user_id {
+            updates.push("user_id = ?");
         }
 
-        Entity::find()
-            .filter(task::Column::Id.is_in(prerequisite_ids))
-            .all(self.db.as_ref())
-            .await
-    }
-
-    /// 获取依赖此任务的其他任务（被依赖的任务）
-    pub async fn find_dependents(&self, task_id: i32) -> Result<Vec<Model>, DbErr> {
-        let dependents = task_dependency::Entity::find()
-            .filter(task_dependency::Column::PrerequisiteId.eq(task_id))
-            .all(self.db.as_ref())
-            .await?;
-
-        let dependent_ids: Vec<i32> = dependents
-            .into_iter()
-            .map(|model| model.task_id)
-            .collect();
-
-        if dependent_ids.is_empty() {
-            return Ok(vec![]);
+        if updates.is_empty() {
+            // 如果没有更新，直接返回当前任务
+            return self
+                .find_by_id(id)
+                .await?
+                .ok_or_else(|| sqlx::Error::RowNotFound);
         }
 
-        Entity::find()
-            .filter(task::Column::Id.is_in(dependent_ids))
-            .all(self.db.as_ref())
-            .await
+        let update_clause = updates.join(", ");
+        let query = format!(
+            "UPDATE task SET {} WHERE id = ? RETURNING id, title, description, status, priority, user_id, created_at",
+            update_clause
+        );
+
+        // 构建查询
+        let mut query_builder = sqlx::query(&query);
+
+        // 绑定参数
+        if let Some(title) = &title {
+            query_builder = query_builder.bind(title);
+        }
+        if let Some(description) = &description {
+            query_builder = query_builder.bind(description);
+        }
+        if let Some(status) = &status {
+            query_builder = query_builder.bind(status);
+        }
+        if let Some(priority) = &priority {
+            query_builder = query_builder.bind(priority);
+        }
+        if let Some(user_id) = &user_id {
+            query_builder = query_builder.bind(user_id);
+        }
+        query_builder = query_builder.bind(id);
+
+        let result = query_builder.fetch_one(&*self.db).await?;
+
+        Ok(Task {
+            id: result.try_get("id")?,
+            title: result.try_get("title")?,
+            description: result.try_get("description")?,
+            status: result.try_get("status")?,
+            priority: result.try_get("priority")?,
+            user_id: result.try_get("user_id")?,
+            created_at: result.try_get("created_at")?,
+        })
     }
 
-    /// 添加时间窗口分配
-    pub async fn add_time_window(
+    // /// 根据用户ID获取任务
+    // pub async fn find_by_user_id(&self, user_id: i32) -> Result<Vec<Task>, sqlx::Error> {
+    //     sqlx::query_as::<_, Task>("SELECT id, title, description, status, priority, user_id, created_at FROM task WHERE user_id = ? ORDER BY created_at DESC")
+    //         .bind(user_id)
+    //         .fetch_all(&*self.db)
+    //         .await
+    // }
+
+    // /// 获取任务数量
+    // pub async fn count(&self) -> Result<i64, sqlx::Error> {
+    //     sqlx::query_scalar("SELECT COUNT(*) FROM task")
+    //         .fetch_one(&*self.db)
+    //         .await
+    // }
+
+    // /// 检查任务是否存在
+    // pub async fn exists(&self, id: i32) -> Result<bool, sqlx::Error> {
+    //     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE id = ?")
+    //         .bind(id)
+    //         .fetch_one(&*self.db)
+    //         .await?;
+
+    //     Ok(count > 0)
+    // }
+
+    /// 获取任务依赖
+    pub async fn find_dependencies(
         &self,
         task_id: i32,
-        time_window_id: i32,
-        allocation_type: i32,
-    ) -> Result<(), DbErr> {
-        let active_model = task_time_allocation::ActiveModel {
-            task_id: Set(task_id),
-            time_window_id: Set(time_window_id),
-            allocation_type: Set(allocation_type),
-        };
-
-        active_model.insert(self.db.as_ref()).await?;
-        Ok(())
+    ) -> Result<Vec<TaskDependency>, sqlx::Error> {
+        sqlx::query_as::<_, TaskDependency>(
+            "SELECT id, task_id, depends_on_task_id FROM task_dependency WHERE task_id = ?",
+        )
+        .bind(task_id)
+        .fetch_all(&*self.db)
+        .await
     }
 
-    /// 移除时间窗口分配
-    pub async fn remove_time_window(
+    /// 获取任务分解
+    pub async fn find_decompositions(
         &self,
         task_id: i32,
-        time_window_id: i32,
-        allocation_type: i32,
-    ) -> Result<(), DbErr> {
-        task_time_allocation::Entity::delete_by_id((task_id, time_window_id, allocation_type))
-            .exec(self.db.as_ref())
-            .await?;
-
-        Ok(())
+    ) -> Result<Vec<TaskDecomposition>, sqlx::Error> {
+        sqlx::query_as::<_, TaskDecomposition>("SELECT id, parent_task_id, child_task_id FROM task_decomposition WHERE parent_task_id = ?")
+            .bind(task_id)
+            .fetch_all(&*self.db)
+            .await
     }
 
-    /// 添加子任务（确保子任务只有一个父任务）
-    pub async fn add_sub_task(&self, parent_task_id: i32, sub_task_id: i32) -> Result<(), DbErr> {
-        // 检查子任务是否已经有父任务
-        let existing_parent = self.find_parent_task(sub_task_id).await?;
-        if existing_parent.is_some() {
-            return Err(DbErr::Custom(format!(
-                "任务 #{} 已经有父任务，一个子任务只能有一个父任务",
-                sub_task_id
-            )));
-        }
-
-        // 检查是否形成循环依赖（子任务不能是父任务的祖先）
-        if self.is_ancestor(sub_task_id, parent_task_id).await? {
-            return Err(DbErr::Custom(format!(
-                "不能将任务 #{} 作为任务 #{} 的子任务，这会形成循环依赖",
-                sub_task_id, parent_task_id
-            )));
-        }
-
-        let active_model = task_decomposition::ActiveModel {
-            parent_task_id: Set(parent_task_id),
-            sub_task_id: Set(sub_task_id),
-        };
-
-        active_model.insert(self.db.as_ref()).await?;
-        Ok(())
-    }
-
-    /// 移除子任务
-    pub async fn remove_sub_task(
+    /// 获取任务时间分配
+    pub async fn find_time_allocations(
         &self,
-        parent_task_id: i32,
-        sub_task_id: i32,
-    ) -> Result<(), DbErr> {
-        task_decomposition::Entity::delete_by_id((parent_task_id, sub_task_id))
-            .exec(self.db.as_ref())
-            .await?;
-
-        Ok(())
-    }
-
-    /// 检查任务是否是另一个任务的祖先
-    async fn is_ancestor(&self, potential_ancestor_id: i32, task_id: i32) -> Result<bool, DbErr> {
-        if potential_ancestor_id == task_id {
-            return Ok(true);
-        }
-
-        let mut current_task_id = task_id;
-        let mut visited = std::collections::HashSet::new();
-
-        while let Some(parent) = self.find_parent_task(current_task_id).await? {
-            if parent.id == potential_ancestor_id {
-                return Ok(true);
-            }
-
-            // 防止无限循环
-            if visited.contains(&parent.id) {
-                break;
-            }
-            visited.insert(parent.id);
-
-            current_task_id = parent.id;
-        }
-
-        Ok(false)
-    }
-
-    /// 检查依赖关系是否会形成循环
-    async fn is_dependency_cycle(&self, task_id: i32, prerequisite_id: i32) -> Result<bool, DbErr> {
-        if task_id == prerequisite_id {
-            return Ok(true);
-        }
-
-        // 使用深度优先搜索检查循环
-        let mut stack = vec![prerequisite_id];
-        let mut visited = std::collections::HashSet::new();
-
-        while let Some(current_id) = stack.pop() {
-            if current_id == task_id {
-                return Ok(true);
-            }
-
-            if visited.contains(&current_id) {
-                continue;
-            }
-            visited.insert(current_id);
-
-            // 获取当前任务依赖的所有任务
-            let dependencies = self.find_dependencies(current_id).await?;
-            for dependency in dependencies {
-                stack.push(dependency.id);
-            }
-        }
-
-        Ok(false)
+        task_id: i32,
+    ) -> Result<Vec<TaskTimeAllocation>, sqlx::Error> {
+        sqlx::query_as::<_, TaskTimeAllocation>("SELECT id, task_id, time_window_id, duration_minutes FROM task_time_allocation WHERE task_id = ?")
+            .bind(task_id)
+            .fetch_all(&*self.db)
+            .await
     }
 
     /// 添加任务依赖
-    pub async fn add_dependency(&self, task_id: i32, prerequisite_id: i32) -> Result<(), DbErr> {
-        // 检查是否形成循环依赖
-        if self.is_dependency_cycle(task_id, prerequisite_id).await? {
-            return Err(DbErr::Custom(format!(
-                "不能将任务 #{} 作为任务 #{} 的依赖，这会形成循环依赖",
-                prerequisite_id, task_id
-            )));
-        }
-
-        let active_model = task_dependency::ActiveModel {
-            task_id: Set(task_id),
-            prerequisite_id: Set(prerequisite_id),
-        };
-
-        active_model.insert(self.db.as_ref()).await?;
-        Ok(())
-    }
-
-    /// 移除任务依赖
-    pub async fn remove_dependency(&self, task_id: i32, prerequisite_id: i32) -> Result<(), DbErr> {
-        task_dependency::Entity::delete_by_id((task_id, prerequisite_id))
-            .exec(self.db.as_ref())
+    pub async fn add_dependency(
+        &self,
+        task_id: i32,
+        depends_on_task_id: i32,
+    ) -> Result<TaskDependency, sqlx::Error> {
+        let result = sqlx::query(
+            "INSERT INTO task_dependency (task_id, depends_on_task_id) VALUES (?, ?) RETURNING id, task_id, depends_on_task_id"
+        )
+            .bind(task_id)
+            .bind(depends_on_task_id)
+            .fetch_one(&*self.db)
             .await?;
 
-        Ok(())
+        Ok(TaskDependency {
+            id: result.try_get("id")?,
+            task_id: result.try_get("task_id")?,
+            depends_on_task_id: result.try_get("depends_on_task_id")?,
+        })
     }
 
-    // /// 统计任务数量
-    // pub async fn count(&self) -> Result<u64, DbErr> {
-    //     Entity::find().count(self.db.as_ref()).await
+    /// 添加任务分解
+    pub async fn add_decomposition(
+        &self,
+        parent_task_id: i32,
+        child_task_id: i32,
+    ) -> Result<TaskDecomposition, sqlx::Error> {
+        let result = sqlx::query(
+            "INSERT INTO task_decomposition (parent_task_id, child_task_id) VALUES (?, ?) RETURNING id, parent_task_id, child_task_id"
+        )
+            .bind(parent_task_id)
+            .bind(child_task_id)
+            .fetch_one(&*self.db)
+            .await?;
+
+        Ok(TaskDecomposition {
+            id: result.try_get("id")?,
+            parent_task_id: result.try_get("parent_task_id")?,
+            child_task_id: result.try_get("child_task_id")?,
+        })
+    }
+
+    /// 添加任务时间分配
+    pub async fn add_time_allocation(
+        &self,
+        task_id: i32,
+        time_window_id: i32,
+        duration_minutes: i32,
+    ) -> Result<TaskTimeAllocation, sqlx::Error> {
+        let result = sqlx::query(
+            "INSERT INTO task_time_allocation (task_id, time_window_id, duration_minutes) VALUES (?, ?, ?) RETURNING id, task_id, time_window_id, duration_minutes"
+        )
+            .bind(task_id)
+            .bind(time_window_id)
+            .bind(duration_minutes)
+            .fetch_one(&*self.db)
+            .await?;
+
+        Ok(TaskTimeAllocation {
+            id: result.try_get("id")?,
+            task_id: result.try_get("task_id")?,
+            time_window_id: result.try_get("time_window_id")?,
+            duration_minutes: result.try_get("duration_minutes")?,
+        })
+    }
+
+    // /// 删除任务依赖
+    // pub async fn remove_dependency(&self, id: i32) -> Result<u64, sqlx::Error> {
+    //     let result = sqlx::query("DELETE FROM task_dependency WHERE id = ?")
+    //         .bind(id)
+    //         .execute(&*self.db)
+    //         .await?;
+
+    //     Ok(result.rows_affected())
     // }
 
-    /// 根据标题搜索任务
-    pub async fn search_by_title(&self, title_query: &str) -> Result<Vec<Model>, DbErr> {
-        Entity::find()
-            .filter(task::Column::Title.contains(title_query))
-            .order_by_asc(task::Column::Id)
-            .all(self.db.as_ref())
-            .await
-    }
+    // /// 删除任务分解
+    // pub async fn remove_decomposition(&self, id: i32) -> Result<u64, sqlx::Error> {
+    //     let result = sqlx::query("DELETE FROM task_decomposition WHERE id = ?")
+    //         .bind(id)
+    //         .execute(&*self.db)
+    //         .await?;
 
-    // /// 获取最近创建的任务
-    // pub async fn find_recent(&self, limit: u64) -> Result<Vec<Model>, DbErr> {
-    //     Entity::find()
-    //         .order_by_desc(task::Column::CreatedAt)
-    //         .limit(limit)
-    //         .all(self.db.as_ref())
-    //         .await
+    //     Ok(result.rows_affected())
+    // }
+
+    // /// 删除任务时间分配
+    // pub async fn remove_time_allocation(&self, id: i32) -> Result<u64, sqlx::Error> {
+    //     let result = sqlx::query("DELETE FROM task_time_allocation WHERE id = ?")
+    //         .bind(id)
+    //         .execute(&*self.db)
+    //         .await?;
+
+    //     Ok(result.rows_affected())
     // }
 }

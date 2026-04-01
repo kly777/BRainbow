@@ -12,7 +12,7 @@ pub fn create_api_router() -> Router<AppState> {
         .route("/user", get(handlers::user::user_handler))
         .route(
             "/user/create",
-            post(handlers::create_user::create_user_handler),
+            post(handlers::user::create_user_handler),
         )
         // API 路由组 - 卡片 (card) 路由
         .route("/card", get(handlers::card::get_cards_handler))

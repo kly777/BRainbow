@@ -6,8 +6,8 @@ import {
 	Show,
 } from "solid-js";
 import { taskApi } from "@/apis";
+import type { TimeWindow } from "@/apis/types";
 import styles from "@/styles/addTimeWindowModal.module.css";
-import type { TimeWindow } from "@/types";
 import Modal from "./Modal";
 
 interface AddTimeWindowModalProps {
@@ -15,7 +15,7 @@ interface AddTimeWindowModalProps {
 	onClose: () => void;
 	onSuccess: () => void;
 	taskId: number;
-	currentTimeWindows: TimeWindow[];
+	currentTimeWindows: readonly TimeWindow[];
 }
 
 const AddTimeWindowModal: Component<AddTimeWindowModalProps> = (props) => {

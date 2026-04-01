@@ -6,8 +6,8 @@ import {
 	Show,
 } from "solid-js";
 import { taskApi } from "@/apis";
+import type { Task } from "@/apis/types";
 import styles from "@/styles/addDependencyModal.module.css";
-import type { Task } from "@/types";
 import Modal from "./Modal";
 
 interface AddDependencyModalProps {
@@ -15,7 +15,7 @@ interface AddDependencyModalProps {
 	onClose: () => void;
 	onSuccess: () => void;
 	taskId: number;
-	currentDependencies: Task[];
+	currentDependencies: readonly Task[];
 }
 
 const AddDependencyModal: Component<AddDependencyModalProps> = (props) => {

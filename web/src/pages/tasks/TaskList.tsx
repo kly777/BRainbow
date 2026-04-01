@@ -9,8 +9,8 @@ import {
 	Switch,
 } from "solid-js";
 import { taskApi } from "@/apis";
+import type { Task } from "@/apis/types";
 import styles from "@/styles/tasks/taskList.module.css";
-import type { Task } from "@/types";
 
 const TaskListPage: Component = () => {
 	const navigate = useNavigate();

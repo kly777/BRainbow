@@ -93,12 +93,6 @@ const Card: Component<CardProps> = (props) => {
 		return `${previewLines.join("\n")}...`;
 	};
 
-	const handleCardClick = () => {
-		if (props.onClick) {
-			props.onClick(props.id);
-		}
-	};
-
 	const handleEditClick = (e: MouseEvent) => {
 		e.stopPropagation();
 		if (props.onEdit) {
@@ -119,8 +113,8 @@ const Card: Component<CardProps> = (props) => {
 		console.log(`Tag clicked: ${tag}`);
 	};
 
-    return (
-		<div class={styles.card} onClick={handleCardClick} onKeyDown={()=>{}} role="button" tabIndex={0}>
+	return (
+		<div class={styles.card}>
 			<div class={styles.cardHeader}>
 				<h3 class={styles.cardTitle}>{props.title}</h3>
 				<Show when={props.category}>
@@ -175,8 +169,7 @@ const Card: Component<CardProps> = (props) => {
 					删除
 				</button>
 			</div>
-        </div>
-
+		</div>
 	);
 };
 

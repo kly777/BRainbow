@@ -7,6 +7,7 @@ import {
 	Show,
 } from "solid-js";
 import { cardApi, type UpdateCardRequest } from "@/apis";
+import Markdown from "@/components/Markdown";
 import styles from "@/styles/notes/cardEdit.module.css";
 
 const CardEditPage: Component = () => {
@@ -146,7 +147,7 @@ const CardEditPage: Component = () => {
 
 					<div class={styles.formGroup}>
 						<label for="card-title" class={styles.formLabel}>
-							标题 *
+							标题
 						</label>
 						<input
 							id="card-title"
@@ -160,52 +161,36 @@ const CardEditPage: Component = () => {
 						/>
 					</div>
 
-					<div class={styles.formGroup}>
-						<label for="card-content" class={styles.formLabel}>
-							内容 *
-						</label>
-						<div class={styles.editorContainer}>
+					<div class={styles.editorLayout}>
+						<div class={styles.editorSection}>
+							<div class={styles.sectionHeader}>
+								<h2 class={styles.sectionTitle}>编辑内容</h2>
+							</div>
 							<textarea
 								id="card-content"
 								class={styles.editorTextarea}
 								value={content()}
 								onInput={(e) => setContent(e.currentTarget.value)}
-								placeholder="请输入卡片内容（支持Markdown格式）"
+								placeholder="~"
 								rows={15}
 								disabled={isSubmitting()}
 								required
 							/>
-							<div class={styles.editorHelp}>
-								<p>支持Markdown语法：</p>
-								<ul>
-									<li>
-										<code># 标题</code> - 一级标题
-									</li>
-									<li>
-										<code>**粗体**</code> - 粗体文本
-									</li>
-									<li>
-										<code>*斜体*</code> - 斜体文本
-									</li>
-									<li>
-										<code>- 列表项</code> - 无序列表
-									</li>
-									<li>
-										<code>1. 列表项</code> - 有序列表
-									</li>
-									<li>
-										<code>`代码`</code> - 行内代码
-									</li>
-									<li>
-										<code>```代码块```</code> - 代码块
-									</li>
-									<li>
-										<code>[链接](url)</code> - 超链接
-									</li>
-									<li>
-										<code>![图片](url)</code> - 图片
-									</li>
-								</ul>
+						</div>
+
+						<div class={styles.previewSection}>
+							<div class={styles.previewContent}>
+								<Show when={content().trim()}>
+									<Markdown
+										content={content()}
+										class={styles.markdownPreview}
+									/>
+								</Show>
+								<Show when={!content().trim()}>
+									<div class={styles.emptyPreview}>
+										<p>实时预览</p>
+									</div>
+								</Show>
 							</div>
 						</div>
 					</div>

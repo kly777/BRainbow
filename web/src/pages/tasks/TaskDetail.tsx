@@ -9,11 +9,11 @@ import {
 	Switch,
 } from "solid-js";
 import { taskApi } from "@/apis";
+import type { TaskDetail } from "@/apis/types";
 import AddDependencyModal from "@/components/AddDependencyModal";
 import AddSubTaskModal from "@/components/AddSubTaskModal";
 import AddTimeWindowModal from "@/components/AddTimeWindowModal";
 import styles from "@/styles/tasks/taskDetail.module.css";
-import type { TaskDetail } from "@/types";
 
 const TaskDetailPage: Component = () => {
 	const params = useParams();

@@ -6,8 +6,8 @@ import {
 	Show,
 } from "solid-js";
 import { taskApi } from "@/apis";
+import type { Task } from "@/apis/types";
 import styles from "@/styles/addSubTaskModal.module.css";
-import type { Task } from "@/types";
 import Modal from "./Modal";
 
 interface AddSubTaskModalProps {
@@ -15,7 +15,7 @@ interface AddSubTaskModalProps {
 	onClose: () => void;
 	onSuccess: () => void;
 	taskId: number;
-	currentSubTasks: Task[];
+	currentSubTasks: readonly Task[];
 }
 
 const AddSubTaskModal: Component<AddSubTaskModalProps> = (props) => {

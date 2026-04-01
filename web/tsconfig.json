@@ -19,7 +19,7 @@
 		"forceConsistentCasingInFileNames": true,
 		"resolveJsonModule": true,
 		"verbatimModuleSyntax": true,
-		"types": ["solid-js"],
+		"typeRoots": ["node_modules/@types", "src/types"],
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["src/*"]

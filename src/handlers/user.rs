@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use crate::repos::user::UserRepository;
 use crate::state::AppState;
 
-
 pub async fn user_handler(State(state): State<AppState>) -> impl IntoResponse {
     let repo = UserRepository::new(state.db);
 
@@ -30,8 +29,6 @@ pub async fn user_handler(State(state): State<AppState>) -> impl IntoResponse {
         }
     }
 }
-
-
 
 pub async fn create_user_handler(
     State(state): State<AppState>,

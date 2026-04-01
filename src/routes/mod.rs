@@ -14,6 +14,6 @@ pub fn create_router(state: AppState) -> Router {
 
         .nest("/graphql", graphql::create_router())
         .nest("/api", api::create_router())
-        .fallback_service(ServeDir::new("dist").not_found_service(ServeFile::new("dist/index.html")))
+        .fallback_service(ServeDir::new("web/dist").not_found_service(ServeFile::new("web/dist/index.html")))
         .with_state(state)
 }

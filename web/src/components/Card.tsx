@@ -119,8 +119,8 @@ const Card: Component<CardProps> = (props) => {
 		console.log(`Tag clicked: ${tag}`);
 	};
 
-	return (
-		<button class={styles.card} onClick={handleCardClick} type="button">
+    return (
+		<div class={styles.card} onClick={handleCardClick} onKeyDown={()=>{}} role="button" tabIndex={0}>
 			<div class={styles.cardHeader}>
 				<h3 class={styles.cardTitle}>{props.title}</h3>
 				<Show when={props.category}>
@@ -175,7 +175,8 @@ const Card: Component<CardProps> = (props) => {
 					删除
 				</button>
 			</div>
-		</button>
+        </div>
+
 	);
 };
 

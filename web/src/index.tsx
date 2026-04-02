@@ -18,8 +18,7 @@ const OntologyListPage = lazy(
 	async () => import("@/pages/ontology/OntologyList"),
 );
 
-// 布局组件
-function Layout(props: { children: JSX.Element }) {
+const Layout = (props: { children?: JSX.Element }) => {
 	return (
 		<div class={styles.appContainer}>
 			<main class={styles.appContent}>{props.children}</main>
@@ -28,92 +27,29 @@ function Layout(props: { children: JSX.Element }) {
 			</footer>
 		</div>
 	);
-}
+};
 
-// 根组件
 function App() {
 	return (
-		<Router>
+		<Router root={Layout}>
 			<Route
 				path="/"
-				component={() => (
-					<Layout>
-						<div class={styles.landingPage}></div>
-					</Layout>
-				)}
+				component={() => <div class={styles.landingPage}></div>}
 			/>
-			<Route
-				path="/t"
-				component={() => (
-					<Layout>
-						<TaskListPage />
-					</Layout>
-				)}
-			/>
-			<Route
-				path="/t/:id"
-				component={() => (
-					<Layout>
-						<TaskDetailPage />
-					</Layout>
-				)}
-			/>
-			<Route
-				path="/t/create"
-				component={() => (
-					<Layout>
-						<TaskFormPage />
-					</Layout>
-				)}
-			/>
-			<Route
-				path="/t/edit/:id"
-				component={() => (
-					<Layout>
-						<TaskFormPage editMode />
-					</Layout>
-				)}
-			/>
-			<Route
-				path="/o"
-				component={() => (
-					<Layout>
-						<OntologyListPage />
-					</Layout>
-				)}
-			/>
-			<Route
-				path="/c"
-				component={() => (
-					<Layout>
-						<CardsListPage />
-					</Layout>
-				)}
-			/>
-			<Route
-				path="/c/:id"
-				component={() => (
-					<Layout>
-						<CardDetailPage />
-					</Layout>
-				)}
-			/>
-			<Route
-				path="/c/edit/:id"
-				component={() => (
-					<Layout>
-						<CardEditPage />
-					</Layout>
-				)}
-			/>
+			<Route path="/t" component={() => <TaskListPage />} />
+			<Route path="/t/:id" component={() => <TaskDetailPage />} />
+			<Route path="/t/create" component={() => <TaskFormPage />} />
+			<Route path="/t/edit/:id" component={() => <TaskFormPage editMode />} />
+			<Route path="/o" component={() => <OntologyListPage />} />
+			<Route path="/c" component={() => <CardsListPage />} />
+			<Route path="/c/:id" component={() => <CardDetailPage />} />
+			<Route path="/c/edit/:id" component={() => <CardEditPage />} />
 		</Router>
 	);
 }
 
-// 渲染应用
 const root = document.getElementById("app");
 if (!root) {
-	// 如果不存在root元素，创建一个
 	const appDiv = document.createElement("div");
 	appDiv.id = "app";
 	document.body.appendChild(appDiv);

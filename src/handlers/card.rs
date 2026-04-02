@@ -125,7 +125,7 @@ pub async fn update_card_handler(
     let card_service = CardService::new(state.db.clone());
 
     match card_service
-        .update_card(id, payload.title, payload.content, None)
+        .update_card(id, payload.title, payload.content)
         .await
     {
         Ok(card) => {

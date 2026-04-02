@@ -21,13 +21,13 @@ impl UserRepository {
             .await
     }
 
-    // /// 根据ID获取用户
-    // pub async fn find_by_id(&self, id: i32) -> Result<Option<User>, sqlx::Error> {
-    //     sqlx::query_as::<_, User>("SELECT id, name FROM user WHERE id = ?")
-    //         .bind(id)
-    //         .fetch_optional(&*self.db)
-    //         .await
-    // }
+    /// 根据ID获取用户
+    pub async fn find_by_id(&self, id: i32) -> Result<Option<User>, sqlx::Error> {
+        sqlx::query_as::<_, User>("SELECT id, name FROM user WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&*self.db)
+            .await
+    }
 
     /// 创建用户
     pub async fn create(&self, name: String) -> Result<User, sqlx::Error> {

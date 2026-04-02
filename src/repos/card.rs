@@ -62,7 +62,7 @@ impl CardRepository {
         id: i32,
         title: Option<String>,
         content: Option<String>,
-        user_id: Option<i32>,
+
     ) -> Result<Card, sqlx::Error> {
         // 构建更新语句
         let mut updates = Vec::new();
@@ -102,9 +102,7 @@ impl CardRepository {
         if let Some(content) = &content {
             query_builder = query_builder.bind(content);
         }
-        if let Some(user_id) = &user_id {
-            query_builder = query_builder.bind(user_id);
-        }
+
         query_builder = query_builder.bind(now);
         query_builder = query_builder.bind(id);
 

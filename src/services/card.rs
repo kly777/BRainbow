@@ -46,10 +46,9 @@ impl CardService {
         id: i32,
         title: Option<String>,
         content: Option<String>,
-        user_id: Option<i32>,
     ) -> Result<Card, String> {
         self.card_repository
-            .update(id, title, content, user_id)
+            .update(id, title, content)
             .await
             .map_err(|e| format!("更新卡片失败: {}", e))
     }

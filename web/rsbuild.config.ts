@@ -27,5 +27,11 @@ export default defineConfig({
 	},
 	server: {
 		port: 3001,
-	},
+    },
+    output: {
+        distPath: {
+            root: path.resolve(__dirname, "../dist"),
+        },
+        cleanDistPath: true,
+    }
 });

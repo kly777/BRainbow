@@ -1,41 +1,33 @@
-// use std::fs;
-// use std::path::Path;
-// use std::io;
+use std::fs;
+use std::path::Path;
 
-// fn copy_folder(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
-//     let src = src.as_ref();
-//     let dst = dst.as_ref();
+fn main() {
+    // 读取 .env 文件
+    let env_file = {
+        if cfg!(debug_assertions) {
+            Path::new(".env.dev")
+        } else {
+            Path::new(".env.prod")
+        }
+    };
+    if env_file.exists() {
+        let content = fs::read_to_string(env_file).unwrap();
 
-//     // 创建目标目录
-//     match fs::create_dir_all(dst) {
-//         Ok(_) => {}
-//         Err(e) => {
-//             if e.kind() != io::ErrorKind::AlreadyExists {
-//                 return Err(e);
-//             }
-//         }
-//     }
+        for line in content.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
 
-//     // 遍历源目录
-//     for entry in fs::read_dir(src)? {
-//         let entry = entry?;
-//         let file_type = entry.file_type()?;
-//         let src_path = entry.path();
-//         let dst_path = dst.join(entry.file_name());
+            if let Some((key, value)) = line.split_once('=') {
+                let key = key.trim();
+                let value = value.trim().trim_matches('"');
+                // 设置编译时环境变量
+                println!("cargo:rustc-env={}={}", key, value);
+            }
+        }
+    }
 
-//         if file_type.is_dir() {
-//             // 递归复制子目录
-//             copy_folder(&src_path, &dst_path)?;
-//         } else {
-//             // 复制文件
-//             fs::copy(&src_path, &dst_path)?;
-//         }
-//     }
-
-//     Ok(())
-// }
-
-fn main() -> std::io::Result<()> {
-    // copy_folder("web/dist", "./dist")?;
-    Ok(())
+    // 当 .env 改变时重新编译
+    println!("cargo:rerun-if-changed=.env");
 }

@@ -6,6 +6,8 @@ mod services;
 mod state;
 
 use std::time::Instant;
+use std::env;
+use std::net::SocketAddr;
 
 use axum::extract::Request;
 use axum::http::Method;
@@ -47,7 +49,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = app.layer(middleware::from_fn(logger)).layer(cors);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
+    let port = env!("SERVICE_PORT")
+        .parse::<u16>()
+        .unwrap_or(3000);
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+
     println!("Listening on http://{}", listener.local_addr()?);
     axum::serve(listener, app).await?;
 

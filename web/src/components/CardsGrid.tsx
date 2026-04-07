@@ -13,6 +13,7 @@ export interface CardsGridProps {
 	onCardEdit?: (id: number) => void;
 	onCardDelete?: (id: number) => void;
 	emptyMessage?: string;
+	deletingCardId?: number | null;
 }
 
 const CardsGrid: Component<CardsGridProps> = (props) => {
@@ -25,6 +26,11 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 	const [sortOrder, setSortOrder] = createSignal<"asc" | "desc">(
 		props.sortOrder || "desc",
 	);
+
+	// 检查卡片是否正在被删除
+	const isCardDeleting = (cardId: number) => {
+		return props.deletingCardId === cardId;
+	};
 
 	// 过滤和排序卡片
 	const filteredAndSortedCards = () => {
@@ -199,6 +205,7 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 								onClick={handleCardClick}
 								onEdit={handleCardEdit}
 								onDelete={handleCardDelete}
+								isDeleting={isCardDeleting(card.id)}
 							/>
 						)}
 					</For>

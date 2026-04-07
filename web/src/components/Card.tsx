@@ -17,6 +17,7 @@ export interface CardProps extends CardData {
 	onClick?: (id: number) => void;
 	onEdit?: (id: number) => void;
 	onDelete?: (id: number) => void;
+	isDeleting?: boolean;
 }
 
 const Card: Component<CardProps> = (props) => {
@@ -114,7 +115,7 @@ const Card: Component<CardProps> = (props) => {
 	};
 
 	return (
-		<div class={styles.card}>
+		<div class={`${styles.card} ${props.isDeleting ? styles.deleting : ''}`}>
 			<div class={styles.cardHeader}>
 				<h3 class={styles.cardTitle}>{props.title}</h3>
 				<Show when={props.category}>
@@ -171,6 +172,6 @@ const Card: Component<CardProps> = (props) => {
 			</div>
 		</div>
 	);
-};
+	};
 
 export default Card;

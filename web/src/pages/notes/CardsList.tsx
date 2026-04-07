@@ -8,7 +8,7 @@ import styles from "@/styles/notes/cardsList.module.css";
 const CardsListPage: Component = () => {
 	const navigate = useNavigate();
 
-	const [cards, { refetch }] = createResource(async () => {
+	const [cards, { mutate }] = createResource(async () => {
 		try {
 			const data = await cardApi.getCards();
 			return data;
@@ -23,6 +23,8 @@ const CardsListPage: Component = () => {
 	const [newCardContent, setNewCardContent] = createSignal("");
 	const [isCreating, setIsCreating] = createSignal(false);
 	const [error, setError] = createSignal("");
+	// 正在删除的卡片ID，用于防止重复删除
+	const [deletingCardId, setDeletingCardId] = createSignal<number | null>(null);
 
 	// 处理卡片点击
 	const handleCardClick = (id: number) => {
@@ -38,16 +40,33 @@ const CardsListPage: Component = () => {
 		navigate(`/c/edit/${id}`);
 	};
 
-	// 处理卡片删除
+	// 处理卡片删除 - 乐观更新
 	const handleCardDelete = async (id: number) => {
 		if (confirm("确定要删除这个卡片吗？此操作不可撤销。")) {
+			// 防止重复删除
+			if (deletingCardId() === id) return;
+
+			setDeletingCardId(id);
+
+			// 乐观更新：立即从资源状态中移除卡片
+			const currentCards = cards() || [];
+			const cardToDelete = currentCards.find(card => card.id === id);
+			if (cardToDelete) {
+				mutate(currentCards.filter(card => card.id !== id));
+			}
+
 			try {
 				await cardApi.deleteCard(id);
-				refetch(); // 刷新列表
 				console.log("卡片删除成功:", id);
 			} catch (error) {
 				console.error("删除卡片失败:", error);
+				// 如果API调用失败，恢复被删除的卡片
+				if (cardToDelete) {
+					mutate([...currentCards]);
+				}
 				alert("删除卡片失败，请重试");
+			} finally {
+				setDeletingCardId(null);
 			}
 		}
 	};
@@ -73,15 +92,16 @@ const CardsListPage: Component = () => {
 				content: newCardContent().trim(),
 			};
 
-			await cardApi.createCard(request);
+			const newCard = await cardApi.createCard(request);
 
 			// 清空表单并关闭模态框
 			setNewCardTitle("");
 			setNewCardContent("");
 			setShowCreateModal(false);
 
-			// 刷新列表
-			refetch();
+			// 乐观更新：立即将新卡片添加到资源状态
+			const currentCards = cards() || [];
+			mutate([newCard, ...currentCards]);
 
 			console.log("卡片创建成功");
 		} catch (error) {
@@ -133,7 +153,7 @@ const CardsListPage: Component = () => {
 					<button
 						type="button"
 						class={styles.primaryButton}
-						onClick={() => refetch()}
+						onClick={() => window.location.reload()}
 					>
 						重试
 					</button>
@@ -152,6 +172,7 @@ const CardsListPage: Component = () => {
 					onCardEdit={handleCardEdit}
 					onCardDelete={handleCardDelete}
 					emptyMessage="还没有卡片，点击上方按钮创建一个吧！"
+					deletingCardId={deletingCardId()}
 				/>
 			</Show>
 

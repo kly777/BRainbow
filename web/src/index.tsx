@@ -6,9 +6,6 @@ import "@/styles/markdown.css";
 import styles from "@/styles/layout.module.css";
 
 // 懒加载页面组件
-const TaskListPage = lazy(async () => import("@/pages/tasks/TaskList"));
-const TaskDetailPage = lazy(async () => import("@/pages/tasks/TaskDetail"));
-const TaskFormPage = lazy(async () => import("@/pages/tasks/TaskForm"));
 
 const CardsListPage = lazy(async () => import("@/pages/notes/CardsList"));
 const CardDetailPage = lazy(async () => import("@/pages/notes/CardDetail"));
@@ -36,10 +33,6 @@ function App() {
 				path="/"
 				component={() => <div class={styles.landingPage}></div>}
 			/>
-			<Route path="/t" component={() => <TaskListPage />} />
-			<Route path="/t/:id" component={() => <TaskDetailPage />} />
-			<Route path="/t/create" component={() => <TaskFormPage />} />
-			<Route path="/t/edit/:id" component={() => <TaskFormPage editMode />} />
 			<Route path="/o" component={() => <OntologyListPage />} />
 			<Route path="/c" component={() => <CardsListPage />} />
 			<Route path="/c/:id" component={() => <CardDetailPage />} />

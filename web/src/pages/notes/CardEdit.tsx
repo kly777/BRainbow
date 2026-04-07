@@ -6,7 +6,9 @@ import {
 	createSignal,
 	Show,
 } from "solid-js";
-import { cardApi, type UpdateCardRequest } from "@/apis";
+import { Effect } from "effect";
+import { getCard, updateCard, deleteCard } from "@/apis/cardApi";
+import type { UpdateCardRequest } from "@/apis/types";
 import Markdown from "@/components/Markdown";
 import styles from "@/styles/notes/cardEdit.module.css";
 
@@ -25,7 +27,7 @@ const CardEditPage: Component = () => {
 	// 加载卡片数据
 	const [card, { refetch }] = createResource(async () => {
 		try {
-			const data = await cardApi.getCard(cardId());
+			const data = await Effect.runPromise(getCard(cardId()));
 			return data;
 		} catch (error) {
 			console.error("获取卡片详情失败:", error);
@@ -71,7 +73,7 @@ const CardEditPage: Component = () => {
 				content: content().trim(),
 			};
 
-			await cardApi.updateCard(cardId(), request);
+			await Effect.runPromise(updateCard(cardId(), request));
 
 			// 编辑成功后跳转到卡片详情页面
 			navigate(`/c/${cardId()}`);
@@ -93,14 +95,19 @@ const CardEditPage: Component = () => {
 	// 处理删除
 	const handleDelete = async () => {
 		if (confirm("确定要删除这个卡片吗？此操作不可撤销。")) {
-			try {
-				await cardApi.deleteCard(cardId());
-				// 删除成功后跳转到卡片列表
-				navigate("/c");
-			} catch (error) {
-				console.error("删除卡片失败:", error);
-				alert("删除卡片失败，请重试");
-			}
+			await Effect.runPromise(
+				deleteCard(cardId()).pipe(
+					Effect.tap(() => {
+						// 删除成功后跳转到卡片列表
+						navigate("/c");
+					}),
+					Effect.catchAll((error) => {
+						console.error("删除卡片失败:", error);
+						alert("删除卡片失败，请重试");
+						return Effect.void;
+					})
+				)
+			);
 		}
 	};
 

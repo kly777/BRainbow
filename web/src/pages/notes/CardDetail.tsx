@@ -1,6 +1,7 @@
 import { useParams } from "@solidjs/router";
 import { type Component, createResource, Show } from "solid-js";
-import { cardApi } from "@/apis";
+import { Effect } from "effect";
+import { getCard, deleteCard } from "@/apis/cardApi";
 import Markdown from "@/components/Markdown";
 import styles from "@/styles/notes/cardDetail.module.css";
 
@@ -16,7 +17,7 @@ const CardDetailPage: Component = () => {
 
 	const [card, { refetch }] = createResource(async () => {
 		try {
-			const data = await cardApi.getCard(cardId());
+			const data = await Effect.runPromise(getCard(cardId()));
 			return data;
 		} catch (error) {
 			console.error("获取卡片详情失败:", error);
@@ -48,14 +49,19 @@ const CardDetailPage: Component = () => {
 
 	const handleDelete = async () => {
 		if (confirm("确定要删除这个卡片吗？此操作不可撤销。")) {
-			try {
-				await cardApi.deleteCard(cardId());
-				// 删除成功后跳转到卡片列表
-				window.location.href = "/c";
-			} catch (error) {
-				console.error("删除卡片失败:", error);
-				alert("删除卡片失败，请重试");
-			}
+			await Effect.runPromise(
+				deleteCard(cardId()).pipe(
+					Effect.tap(() => {
+						// 删除成功后跳转到卡片列表
+						window.location.href = "/c";
+					}),
+					Effect.catchAll((error) => {
+						console.error("删除卡片失败:", error);
+						alert("删除卡片失败，请重试");
+						return Effect.void;
+					})
+				)
+			);
 		}
 	};
 

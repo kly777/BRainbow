@@ -96,11 +96,4 @@ export const request = <T>(
 		return result;
 	});
 
-/**
- * 运行API Effect的辅助函数
- * @param effect 要运行的Effect
- * @returns Promise包装的结果
- */
-export const runApiEffect = async <A>(
-	effect: Effect.Effect<A, ApiErrorType>,
-): Promise<A> => Effect.runPromise(effect);
+

@@ -1,6 +1,8 @@
 import { useNavigate } from "@solidjs/router";
 import { type Component, createResource, createSignal, Show } from "solid-js";
-import { type CreateCardRequest, cardApi } from "@/apis";
+import { Effect } from "effect";
+import { getCards, createCard, deleteCard } from "@/apis/cardApi";
+import type { CreateCardRequest } from "@/apis/types";
 
 import CardsGrid from "@/components/CardsGrid";
 import styles from "@/styles/notes/cardsList.module.css";
@@ -8,15 +10,16 @@ import styles from "@/styles/notes/cardsList.module.css";
 const CardsListPage: Component = () => {
 	const navigate = useNavigate();
 
-	const [cards, { mutate }] = createResource(async () => {
-		try {
-			const data = await cardApi.getCards();
-			return data;
-		} catch (error) {
-			console.error("获取卡片列表失败:", error);
-			return [];
-		}
-	});
+	const [cards, { mutate }] = createResource(() => 
+		Effect.runPromise(
+			getCards().pipe(
+				Effect.catchAll((error) => {
+					console.error("获取卡片列表失败:", error);
+					return Effect.succeed([]);
+				})
+			)
+		)
+	);
 
 	const [showCreateModal, setShowCreateModal] = createSignal(false);
 	const [newCardTitle, setNewCardTitle] = createSignal("");
@@ -55,19 +58,26 @@ const CardsListPage: Component = () => {
 				mutate(currentCards.filter(card => card.id !== id));
 			}
 
-			try {
-				await cardApi.deleteCard(id);
-				console.log("卡片删除成功:", id);
-			} catch (error) {
-				console.error("删除卡片失败:", error);
-				// 如果API调用失败，恢复被删除的卡片
-				if (cardToDelete) {
-					mutate([...currentCards]);
-				}
-				alert("删除卡片失败，请重试");
-			} finally {
-				setDeletingCardId(null);
-			}
+			// 使用Effect处理删除操作
+			Effect.runPromise(
+				deleteCard(id).pipe(
+					Effect.tap(() => {
+						console.log("卡片删除成功:", id);
+					}),
+					Effect.catchAll((error) => {
+						console.error("删除卡片失败:", error);
+						// 如果API调用失败，恢复被删除的卡片
+						if (cardToDelete) {
+							mutate([...currentCards]);
+						}
+						alert("删除卡片失败，请重试");
+						return Effect.void;
+					}),
+					Effect.ensuring(Effect.sync(() => {
+						setDeletingCardId(null);
+					}))
+				)
+			);
 		}
 	};
 
@@ -86,30 +96,36 @@ const CardsListPage: Component = () => {
 		setIsCreating(true);
 		setError("");
 
-		try {
-			const request: CreateCardRequest = {
-				title: newCardTitle().trim(),
-				content: newCardContent().trim(),
-			};
+		const request: CreateCardRequest = {
+			title: newCardTitle().trim(),
+			content: newCardContent().trim(),
+		};
 
-			const newCard = await cardApi.createCard(request);
+		// 使用Effect处理创建操作
+		Effect.runPromise(
+			createCard(request).pipe(
+				Effect.tap((newCard) => {
+					// 清空表单并关闭模态框
+					setNewCardTitle("");
+					setNewCardContent("");
+					setShowCreateModal(false);
 
-			// 清空表单并关闭模态框
-			setNewCardTitle("");
-			setNewCardContent("");
-			setShowCreateModal(false);
+					// 乐观更新：立即将新卡片添加到资源状态
+					const currentCards = cards() || [];
+					mutate([newCard, ...currentCards]);
 
-			// 乐观更新：立即将新卡片添加到资源状态
-			const currentCards = cards() || [];
-			mutate([newCard, ...currentCards]);
-
-			console.log("卡片创建成功");
-		} catch (error) {
-			console.error("创建卡片失败:", error);
-			setError("创建卡片失败，请重试");
-		} finally {
-			setIsCreating(false);
-		}
+					console.log("卡片创建成功");
+				}),
+				Effect.catchAll((error) => {
+					console.error("创建卡片失败:", error);
+					setError("创建卡片失败，请重试");
+					return Effect.void;
+				}),
+				Effect.ensuring(Effect.sync(() => {
+					setIsCreating(false);
+				}))
+			)
+		);
 	};
 
 	// 打开创建模态框
@@ -162,7 +178,7 @@ const CardsListPage: Component = () => {
 
 			<Show when={!cards.loading && !cards.error}>
 				<CardsGrid
-					cards={cards() || []}
+					cards={[...(cards() || [])]}
 					columns={3}
 					gap={20}
 					sortBy="updated"

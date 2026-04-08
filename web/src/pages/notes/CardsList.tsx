@@ -10,7 +10,7 @@ import styles from "@/styles/notes/cardsList.module.css";
 const CardsListPage: Component = () => {
 	const navigate = useNavigate();
 
-	const [cards, { mutate }] = createResource(() => 
+	const [cards, { mutate }] = createResource(() =>
 		Effect.runPromise(
 			getCards().pipe(
 				Effect.catchAll((error) => {
@@ -237,7 +237,7 @@ const CardsListPage: Component = () => {
 
 							<div class={styles.formGroup}>
 								<label for="card-title" class={styles.formLabel}>
-									标题 *
+									标题
 								</label>
 								<input
 									id="card-title"
@@ -252,7 +252,7 @@ const CardsListPage: Component = () => {
 
 							<div class={styles.formGroup}>
 								<label for="card-content" class={styles.formLabel}>
-									内容 *
+									内容
 								</label>
 								<textarea
 									id="card-content"

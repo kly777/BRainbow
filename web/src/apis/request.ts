@@ -8,7 +8,7 @@ import {
 
 // ==================== API Configuration ====================
 
-const API_BASE_URL = import.meta.env.DEV? "http://localhost:8080/api":"/api";
+const API_BASE_URL = import.meta.env.DEV ? "http://localhost:8080/api" : "/api";
 
 // ==================== Request Helper ====================
 
@@ -95,5 +95,3 @@ export const request = <T>(
 
 		return result;
 	});
-
-

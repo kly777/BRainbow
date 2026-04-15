@@ -59,8 +59,8 @@ const CardDetailPage: Component = () => {
 						console.error("删除卡片失败:", error);
 						alert("删除卡片失败，请重试");
 						return Effect.void;
-					})
-				)
+					}),
+				),
 			);
 		}
 	};

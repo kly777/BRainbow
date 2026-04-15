@@ -16,9 +16,9 @@ const CardsListPage: Component = () => {
 				Effect.catchAll((error) => {
 					console.error("获取卡片列表失败:", error);
 					return Effect.succeed([]);
-				})
-			)
-		)
+				}),
+			),
+		),
 	);
 
 	const [showCreateModal, setShowCreateModal] = createSignal(false);
@@ -53,9 +53,9 @@ const CardsListPage: Component = () => {
 
 			// 乐观更新：立即从资源状态中移除卡片
 			const currentCards = cards() || [];
-			const cardToDelete = currentCards.find(card => card.id === id);
+			const cardToDelete = currentCards.find((card) => card.id === id);
 			if (cardToDelete) {
-				mutate(currentCards.filter(card => card.id !== id));
+				mutate(currentCards.filter((card) => card.id !== id));
 			}
 
 			// 使用Effect处理删除操作
@@ -73,10 +73,12 @@ const CardsListPage: Component = () => {
 						alert("删除卡片失败，请重试");
 						return Effect.void;
 					}),
-					Effect.ensuring(Effect.sync(() => {
-						setDeletingCardId(null);
-					}))
-				)
+					Effect.ensuring(
+						Effect.sync(() => {
+							setDeletingCardId(null);
+						}),
+					),
+				),
 			);
 		}
 	};
@@ -121,10 +123,12 @@ const CardsListPage: Component = () => {
 					setError("创建卡片失败，请重试");
 					return Effect.void;
 				}),
-				Effect.ensuring(Effect.sync(() => {
-					setIsCreating(false);
-				}))
-			)
+				Effect.ensuring(
+					Effect.sync(() => {
+						setIsCreating(false);
+					}),
+				),
+			),
 		);
 	};
 

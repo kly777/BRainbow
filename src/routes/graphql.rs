@@ -69,10 +69,6 @@ pub struct GraphQLSign {
     pub id: i32,
     pub signifier: String,
     pub signified: String,
-    pub onto_id: Option<i32>,
-    pub weight: Option<f64>,
-    pub relation_type: Option<String>,
-    pub created_at: String,
 }
 
 impl From<SignifierSignified> for GraphQLSign {
@@ -81,10 +77,6 @@ impl From<SignifierSignified> for GraphQLSign {
             id: sign.id,
             signifier: sign.signifier,
             signified: sign.signified,
-            onto_id: sign.onto_id,
-            weight: sign.weight,
-            relation_type: sign.relation_type,
-            created_at: sign.created_at.to_string(),
         }
     }
 }
@@ -94,10 +86,13 @@ pub struct GraphQLTask {
     pub id: i32,
     pub title: String,
     pub description: Option<String>,
-    pub status: Option<String>,
-    pub priority: Option<i32>,
+    pub parent_task_id: Option<i32>,
+    pub status: String,
+    pub completed_at: Option<String>,
+    pub effort_estimate_minutes: Option<i32>,
     pub user_id: Option<i32>,
     pub created_at: String,
+    pub updated_at: String,
 }
 
 impl From<Task> for GraphQLTask {
@@ -106,10 +101,13 @@ impl From<Task> for GraphQLTask {
             id: task.id,
             title: task.title,
             description: task.description,
-            status: task.status,
-            priority: task.priority,
+            parent_task_id: task.parent_task_id,
+            status: task.status.to_string(),
+            completed_at: task.completed_at.map(|dt| dt.to_string()),
+            effort_estimate_minutes: task.effort_estimate_minutes,
             user_id: task.user_id,
             created_at: task.created_at.to_string(),
+            updated_at: task.updated_at.to_string(),
         }
     }
 }
@@ -131,18 +129,6 @@ impl Query {
         Ok(users.into_iter().map(GraphQLUser::from).collect())
     }
 
-    /// 根据ID获取用户
-
-    async fn user(&self, ctx: &Context<'_>, id: i32) -> async_graphql::Result<Option<GraphQLUser>> {
-        let state = ctx.data::<Arc<AppState>>()?;
-        let repo = crate::repos::user::UserRepository::new(state.db.clone());
-
-        let user = repo.find_by_id(id).await
-            .map_err(|e| async_graphql::Error::new(format!("获取用户失败: {}", e)))?;
-
-        Ok(user.map(GraphQLUser::from))
-    }
-
     /// 获取所有卡片
     async fn cards(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<GraphQLCard>> {
         let state = ctx.data::<Arc<AppState>>()?;
@@ -152,17 +138,6 @@ impl Query {
             .map_err(|e| async_graphql::Error::new(format!("获取卡片失败: {}", e)))?;
 
         Ok(cards.into_iter().map(GraphQLCard::from).collect())
-    }
-
-    /// 根据ID获取卡片
-    async fn card(&self, ctx: &Context<'_>, id: i32) -> async_graphql::Result<Option<GraphQLCard>> {
-        let state = ctx.data::<Arc<AppState>>()?;
-        let service = CardService::new(state.db.clone());
-
-        let card = service.get_card_by_id(id).await
-            .map_err(|e| async_graphql::Error::new(format!("获取卡片失败: {}", e)))?;
-
-        Ok(card.map(GraphQLCard::from))
     }
 
     /// 获取所有本体
@@ -176,17 +151,6 @@ impl Query {
         Ok(ontos.into_iter().map(GraphQLOnto::from).collect())
     }
 
-    /// 根据ID获取本体
-    async fn onto(&self, ctx: &Context<'_>, id: i32) -> async_graphql::Result<Option<GraphQLOnto>> {
-        let state = ctx.data::<Arc<AppState>>()?;
-        let service = OntoService::new(state.db.clone());
-
-        let onto = service.get_onto_by_id(id).await
-            .map_err(|e| async_graphql::Error::new(format!("获取本体失败: {}", e)))?;
-
-        Ok(onto.map(GraphQLOnto::from))
-    }
-
     /// 获取所有符号关系
     async fn signs(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<GraphQLSign>> {
         let state = ctx.data::<Arc<AppState>>()?;
@@ -194,39 +158,6 @@ impl Query {
 
         let signs = service.get_all_signs().await
             .map_err(|e| async_graphql::Error::new(format!("获取符号关系失败: {}", e)))?;
-
-        Ok(signs.into_iter().map(GraphQLSign::from).collect())
-    }
-
-    /// 根据ID获取符号关系
-    async fn sign(&self, ctx: &Context<'_>, id: i32) -> async_graphql::Result<Option<GraphQLSign>> {
-        let state = ctx.data::<Arc<AppState>>()?;
-        let service = SignService::new(state.db.clone());
-
-        let sign = service.get_sign_by_id(id).await
-            .map_err(|e| async_graphql::Error::new(format!("获取符号关系失败: {}", e)))?;
-
-        Ok(sign.map(GraphQLSign::from))
-    }
-
-    /// 根据能指获取符号关系
-    async fn signs_by_signifier(&self, ctx: &Context<'_>, signifier: String) -> async_graphql::Result<Vec<GraphQLSign>> {
-        let state = ctx.data::<Arc<AppState>>()?;
-        let service = SignService::new(state.db.clone());
-
-        let signs = service.get_signs_by_signifier(&signifier).await
-            .map_err(|e| async_graphql::Error::new(format!("根据能指获取符号关系失败: {}", e)))?;
-
-        Ok(signs.into_iter().map(GraphQLSign::from).collect())
-    }
-
-    /// 根据所指获取符号关系
-    async fn signs_by_signified(&self, ctx: &Context<'_>, signified: String) -> async_graphql::Result<Vec<GraphQLSign>> {
-        let state = ctx.data::<Arc<AppState>>()?;
-        let service = SignService::new(state.db.clone());
-
-        let signs = service.get_signs_by_signified(&signified).await
-            .map_err(|e| async_graphql::Error::new(format!("根据所指获取符号关系失败: {}", e)))?;
 
         Ok(signs.into_iter().map(GraphQLSign::from).collect())
     }
@@ -252,16 +183,6 @@ impl Query {
 
         Ok(task.map(GraphQLTask::from))
     }
-
-    /// 简单的测试查询
-    async fn hello(&self) -> &str {
-        "Hello from Brainbow GraphQL API!"
-    }
-
-    /// 数学运算测试
-    async fn add(&self, a: i32, b: i32) -> i32 {
-        a + b
-    }
 }
 
 // ========== 变更类型 ==========
@@ -270,17 +191,6 @@ pub struct Mutation;
 
 #[Object]
 impl Mutation {
-    /// 创建用户
-    async fn create_user(&self, ctx: &Context<'_>, name: String) -> async_graphql::Result<GraphQLUser> {
-        let state = ctx.data::<Arc<AppState>>()?;
-        let repo = crate::repos::user::UserRepository::new(state.db.clone());
-
-        let user = repo.create(name).await
-            .map_err(|e| async_graphql::Error::new(format!("创建用户失败: {}", e)))?;
-
-        Ok(GraphQLUser::from(user))
-    }
-
     /// 创建卡片
     async fn create_card(
         &self,
@@ -410,7 +320,14 @@ impl Mutation {
         let state = ctx.data::<Arc<AppState>>()?;
         let service = TaskService::new(state.db.clone());
 
-        let task = service.create_task(title, description, user_id).await
+        let request = crate::entity::CreateTaskRequest {
+            title,
+            description,
+            parent_task_id: None,
+            effort_estimate_minutes: None,
+            user_id,
+        };
+        let task = service.create_task(request).await
             .map_err(|e| async_graphql::Error::new(format!("创建任务失败: {}", e)))?;
 
         Ok(GraphQLTask::from(task))
@@ -430,7 +347,28 @@ impl Mutation {
         let state = ctx.data::<Arc<AppState>>()?;
         let service = TaskService::new(state.db.clone());
 
-        let task = service.update_task(id, title, description, status, priority, user_id).await
+        // Convert status string to TaskStatus enum
+        let task_status = match status {
+            Some(s) => match s.to_lowercase().as_str() {
+                "backlog" => Some(crate::entity::TaskStatus::Backlog),
+                "active" => Some(crate::entity::TaskStatus::Active),
+                "completed" => Some(crate::entity::TaskStatus::Completed),
+                "archived" => Some(crate::entity::TaskStatus::Archived),
+                _ => None,
+            },
+            None => None,
+        };
+
+        let request = crate::entity::UpdateTaskRequest {
+            title,
+            description: description.map(Some), // Convert Option<String> to Option<Option<String>>
+            parent_task_id: None,
+            status: task_status,
+            effort_estimate_minutes: priority.map(Some), // Map priority to effort_estimate_minutes
+            user_id: user_id.map(Some),
+        };
+
+        let task = service.update_task(id, request).await
             .map_err(|e| async_graphql::Error::new(format!("更新任务失败: {}", e)))?;
 
         Ok(GraphQLTask::from(task))
@@ -452,27 +390,29 @@ impl Mutation {
 
 pub type AppSchema = Schema<Query, Mutation, EmptySubscription>;
 
-// ========== 处理器函数 ==========
+// ========== GraphQL 路由 ==========
 
-async fn graphql_playground() -> Html<String> {
-    Html(
-        async_graphql::http::GraphiQLSource::build()
-            .endpoint("/graphql")
-            .finish(),
-    )
+/// GraphQL playground 页面
+pub async fn graphql_playground() -> Html<String> {
+    Html(async_graphql::http::playground_source(
+        async_graphql::http::GraphQLPlaygroundConfig::new("/api/graphql"),
+    ))
 }
 
-async fn graphql_handler(
+/// GraphQL 处理器
+pub async fn graphql_handler(
     State(state): State<AppState>,
     req: GraphQLRequest,
 ) -> GraphQLResponse {
-    let schema = AppSchema::build(Query, Mutation, EmptySubscription).finish();
-    let mut query = req.into_inner();
-    query = query.data(Arc::new(state));
-    schema.execute(query).await.into()
+    let schema = Schema::build(Query, Mutation, EmptySubscription)
+        .data(Arc::new(state))
+        .finish();
+
+    schema.execute(req.into_inner()).await.into()
 }
 
+/// 创建 GraphQL 路由
 pub fn create_router() -> Router<AppState> {
     Router::new()
-        .route("/", get(graphql_playground).post(graphql_handler))
+        .route("/api/graphql", get(graphql_playground).post(graphql_handler))
 }

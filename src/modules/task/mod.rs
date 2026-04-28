@@ -7,7 +7,7 @@ use axum::{Router, routing::{get, post, delete}};
 use crate::state::AppState;
 
 pub use handler::{
-    get_tasks_handler, get_task_handler, get_task_detail_handler,
+    get_tasks_handler, get_all_tasks_handler, get_task_handler, get_task_detail_handler,
     create_task_handler, quick_create_task_handler, update_task_handler,
     delete_task_handler, get_tree_handler, get_calendar_handler,
     get_dag_handler, add_dependency_handler, remove_dependency_handler,
@@ -25,6 +25,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         // 基本任务操作
         .route("/", get(get_tasks_handler).post(create_task_handler))
+        .route("/all", get(get_all_tasks_handler))
         .route("/quick", post(quick_create_task_handler))
         .route("/search", get(search_tasks_handler))
         .route("/stats", get(get_stats_handler))

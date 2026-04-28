@@ -1,183 +1,134 @@
-import { type Component, createSignal, For, Show } from "solid-js";
+import { Effect } from "effect";
+import { type Component, createResource, createSignal, For, Show } from "solid-js";
+import { createOnto, deleteOnto, getOntos } from "@/apis/ontoApi";
+import type { Onto } from "@/apis/ontoApi";
 import styles from "@/styles/ontology/ontologyList.module.css";
 
-// 模拟知识实体数据类型
-interface OntologyEntity {
-	id: number;
-	name: string;
-	description: string;
-	type: "概念" | "实体" | "关系" | "属性";
-	properties: { key: string; value: string }[];
-	relationships: { target: string; type: string }[];
-	created_at: string;
-	updated_at: string;
-}
-
 const OntologyListPage: Component = () => {
-	// 模拟知识实体数据
-	const [entities, setEntities] = createSignal<OntologyEntity[]>([
-		{
-			id: 1,
-			name: "人工智能",
-			description:
-				"研究、开发用于模拟、延伸和扩展人的智能的理论、方法、技术及应用系统的一门新的技术科学",
-			type: "概念",
-			properties: [
-				{ key: "领域", value: "计算机科学" },
-				{ key: "创立时间", value: "1956年" },
-				{ key: "主要分支", value: "机器学习、自然语言处理、计算机视觉" },
-			],
-			relationships: [
-				{ target: "机器学习", type: "包含" },
-				{ target: "深度学习", type: "包含" },
-				{ target: "神经网络", type: "使用" },
-			],
-			created_at: "2024-01-15T10:30:00Z",
-			updated_at: "2024-01-16T14:20:00Z",
-		},
-		{
-			id: 2,
-			name: "机器学习",
-			description: "人工智能的一个分支，研究计算机如何模拟或实现人类的学习行为",
-			type: "概念",
-			properties: [
-				{ key: "类型", value: "监督学习、无监督学习、强化学习" },
-				{ key: "应用领域", value: "推荐系统、图像识别、自然语言处理" },
-			],
-			relationships: [
-				{ target: "人工智能", type: "属于" },
-				{ target: "深度学习", type: "包含" },
-				{ target: "神经网络", type: "使用" },
-			],
-			created_at: "2024-01-14T09:15:00Z",
-			updated_at: "2024-01-14T09:15:00Z",
-		},
-		{
-			id: 3,
-			name: "神经网络",
-			description: "模仿生物神经网络结构和功能的计算模型",
-			type: "概念",
-			properties: [
-				{ key: "结构", value: "输入层、隐藏层、输出层" },
-				{ key: "类型", value: "前馈神经网络、循环神经网络、卷积神经网络" },
-			],
-			relationships: [
-				{ target: "机器学习", type: "被使用" },
-				{ target: "深度学习", type: "基础" },
-			],
-			created_at: "2024-01-13T16:45:00Z",
-			updated_at: "2024-01-15T11:10:00Z",
-		},
-		{
-			id: 4,
-			name: "Python",
-			description: "一种广泛使用的高级编程语言",
-			type: "实体",
-			properties: [
-				{ key: "类型", value: "编程语言" },
-				{ key: "设计者", value: "Guido van Rossum" },
-				{ key: "首次发布", value: "1991年" },
-				{ key: "主要用途", value: "Web开发、数据分析、人工智能" },
-			],
-			relationships: [
-				{ target: "人工智能", type: "用于" },
-				{ target: "机器学习", type: "常用语言" },
-			],
-			created_at: "2024-01-12T13:20:00Z",
-			updated_at: "2024-01-12T13:20:00Z",
-		},
-		{
-			id: 5,
-			name: "继承关系",
-			description: "面向对象编程中的一种关系，表示一个类继承另一个类的特性",
-			type: "关系",
-			properties: [
-				{ key: "类型", value: "面向对象关系" },
-				{ key: "特点", value: "代码复用、多态性" },
-			],
-			relationships: [
-				{ target: "面向对象编程", type: "属于" },
-				{ target: "类", type: "连接" },
-			],
-			created_at: "2024-01-11T08:30:00Z",
-			updated_at: "2024-01-13T19:45:00Z",
-		},
-	]);
+	// 使用 createResource 加载本体数据
+	const [ontologies, { mutate, refetch }] = createResource(() =>
+		Effect.runPromise(
+			getOntos().pipe(
+				Effect.catchAll((error) => {
+					console.error("获取本体列表失败:", error);
+					return Effect.succeed([] as readonly Onto[]);
+				}),
+			),
+		),
+	);
 
 	const [searchQuery, setSearchQuery] = createSignal("");
-	const [selectedType, setSelectedType] = createSignal<string>("全部");
 	const [viewMode, setViewMode] = createSignal<"grid" | "list">("grid");
 
-	// 获取所有类型
-	const types = () => {
-		const allTypes = [
-			"全部",
-			...new Set(entities().map((entity) => entity.type)),
-		];
-		return allTypes;
+	// 创建本体相关状态
+	const [showCreateModal, setShowCreateModal] = createSignal(false);
+	const [newName, setNewName] = createSignal("");
+	const [newDescription, setNewDescription] = createSignal("");
+	const [isCreating, setIsCreating] = createSignal(false);
+	const [createError, setCreateError] = createSignal("");
+	// 正在删除的本体ID，用于防止重复删除
+	const [deletingOntoId, setDeletingOntoId] = createSignal<number | null>(null);
+
+	// 过滤本体
+	const filteredOntologies = () => {
+		const data = ontologies() || [];
+		if (!searchQuery()) return data;
+		const query = searchQuery().toLowerCase();
+		return data.filter(
+			(onto) =>
+				onto.name.toLowerCase().includes(query) ||
+				(onto.description ?? "").toLowerCase().includes(query),
+		);
 	};
 
-	// 过滤实体
-	const filteredEntities = () => {
-		return entities().filter((entity) => {
-			const matchesSearch =
-				searchQuery() === "" ||
-				entity.name.toLowerCase().includes(searchQuery().toLowerCase()) ||
-				entity.description.toLowerCase().includes(searchQuery().toLowerCase());
+	const handleCreateOnto = async () => {
+		if (!newName().trim()) {
+			setCreateError("名称不能为空");
+			return;
+		}
 
-			const matchesType =
-				selectedType() === "全部" || entity.type === selectedType();
+		setIsCreating(true);
+		setCreateError("");
 
-			return matchesSearch && matchesType;
-		});
+		const name = newName().trim();
+		const description = newDescription().trim() || undefined;
+
+		Effect.runPromise(
+			createOnto(name, description).pipe(
+				Effect.tap((newOnto) => {
+					// 清空表单并关闭模态框
+					setNewName("");
+					setNewDescription("");
+					setShowCreateModal(false);
+
+					// 乐观更新：立即将新本体添加到资源状态
+					const currentData = ontologies() || [];
+					mutate([newOnto, ...currentData]);
+
+					console.log("本体创建成功");
+				}),
+				Effect.catchAll((error) => {
+					console.error("创建本体失败:", error);
+					setCreateError("创建本体失败，请重试");
+					return Effect.void;
+				}),
+				Effect.ensuring(
+					Effect.sync(() => {
+						setIsCreating(false);
+					}),
+				),
+			),
+		);
 	};
 
-	const formatDate = (dateString: string): string => {
-		try {
-			const date = new Date(dateString);
-			return date.toLocaleDateString("zh-CN", {
-				year: "numeric",
-				month: "2-digit",
-				day: "2-digit",
-				hour: "2-digit",
-				minute: "2-digit",
-			});
-		} catch {
-			return dateString;
+	const handleDeleteOnto = async (id: number) => {
+		if (confirm("确定要删除这个本体吗？此操作不可撤销。")) {
+			// 防止重复删除
+			if (deletingOntoId() === id) return;
+
+			setDeletingOntoId(id);
+
+			// 乐观更新：立即从资源状态中移除
+			const currentData = ontologies() || [];
+			const ontoToDelete = currentData.find((onto) => onto.id === id);
+			if (ontoToDelete) {
+				mutate(currentData.filter((onto) => onto.id !== id));
+			}
+
+			Effect.runPromise(
+				deleteOnto(id).pipe(
+					Effect.tap(() => {
+						console.log("本体删除成功:", id);
+					}),
+					Effect.catchAll((error) => {
+						console.error("删除本体失败:", error);
+						// 如果API调用失败，恢复被删除的本体
+						if (ontoToDelete) {
+							mutate([...currentData]);
+						}
+						alert("删除本体失败，请重试");
+						return Effect.void;
+					}),
+					Effect.ensuring(
+						Effect.sync(() => {
+							setDeletingOntoId(null);
+						}),
+					),
+				),
+			);
 		}
 	};
 
-	const handleCreateEntity = () => {
-		alert("创建知识实体功能待实现");
+	const openCreateModal = () => {
+		setNewName("");
+		setNewDescription("");
+		setCreateError("");
+		setShowCreateModal(true);
 	};
 
-	const handleEditEntity = (entityId: number) => {
-		alert(`编辑知识实体 ${entityId} 功能待实现`);
-	};
-
-	const handleDeleteEntity = (entityId: number) => {
-		if (confirm("确定要删除这个知识实体吗？此操作不可撤销。")) {
-			setEntities(entities().filter((entity) => entity.id !== entityId));
-		}
-	};
-
-	const handleViewEntity = (entityId: number) => {
-		alert(`查看知识实体 ${entityId} 功能待实现`);
-	};
-
-	const getTypeColor = (type: string) => {
-		switch (type) {
-			case "概念":
-				return "#0066cc";
-			case "实体":
-				return "#28a745";
-			case "关系":
-				return "#ffc107";
-			case "属性":
-				return "#dc3545";
-			default:
-				return "#6c757d";
-		}
+	const closeCreateModal = () => {
+		setShowCreateModal(false);
+		setCreateError("");
 	};
 
 	return (
@@ -188,9 +139,9 @@ const OntologyListPage: Component = () => {
 					<button
 						type="button"
 						class={styles.primaryButton}
-						onClick={handleCreateEntity}
+						onClick={openCreateModal}
 					>
-						新建实体
+						新建本体
 					</button>
 				</div>
 			</div>
@@ -200,29 +151,13 @@ const OntologyListPage: Component = () => {
 					<input
 						type="text"
 						class={styles.searchInput}
-						placeholder="搜索实体名称或描述..."
+						placeholder="搜索本体名称或描述..."
 						value={searchQuery()}
 						onInput={(e) => setSearchQuery(e.currentTarget.value)}
 					/>
 				</div>
 
 				<div class={styles.filterControls}>
-					<div class={styles.filterGroup}>
-						<label for="type-select" class={styles.filterLabel}>
-							类型:
-						</label>
-						<select
-							id="type-select"
-							class={styles.filterSelect}
-							value={selectedType()}
-							onChange={(e) => setSelectedType(e.currentTarget.value)}
-						>
-							<For each={types()}>
-								{(type) => <option value={type}>{type}</option>}
-							</For>
-						</select>
-					</div>
-
 					<div class={styles.viewToggle}>
 						<button
 							type="button"
@@ -246,19 +181,40 @@ const OntologyListPage: Component = () => {
 				</div>
 			</div>
 
+			<Show when={ontologies.loading}>
+				<div class={styles.emptyState}>
+					<p>加载中...</p>
+				</div>
+			</Show>
+
+			<Show when={ontologies.error}>
+				<div class={styles.emptyState}>
+					<p>加载失败: {ontologies.error?.toString()}</p>
+					<button
+						type="button"
+						class={styles.primaryButton}
+						onClick={() => refetch()}
+					>
+						重试
+					</button>
+				</div>
+			</Show>
+
 			<Show
-				when={filteredEntities().length > 0}
+				when={!ontologies.loading && !ontologies.error && filteredOntologies().length > 0}
 				fallback={
-					<div class={styles.emptyState}>
-						<p>没有找到匹配的知识实体</p>
-						<button
-							type="button"
-							class={styles.primaryButton}
-							onClick={handleCreateEntity}
-						>
-							创建第一个实体
-						</button>
-					</div>
+					<Show when={!ontologies.loading && !ontologies.error}>
+						<div class={styles.emptyState}>
+							<p>没有找到匹配的本体</p>
+							<button
+								type="button"
+								class={styles.primaryButton}
+								onClick={openCreateModal}
+							>
+								创建第一个本体
+							</button>
+						</div>
+					</Show>
 				}
 			>
 				<Show
@@ -268,92 +224,36 @@ const OntologyListPage: Component = () => {
 							<table class={styles.entitiesTable}>
 								<thead>
 									<tr>
+										<th>ID</th>
 										<th>名称</th>
-										<th>类型</th>
 										<th>描述</th>
-										<th>属性</th>
-										<th>关系</th>
-										<th>更新时间</th>
 										<th>操作</th>
 									</tr>
 								</thead>
 								<tbody>
-									<For each={filteredEntities()}>
-										{(entity) => (
+									<For each={filteredOntologies()}>
+										{(onto) => (
 											<tr>
+												<td>{onto.id}</td>
 												<td>
-													<strong>{entity.name}</strong>
-												</td>
-												<td>
-													<span
-														class={styles.entityType}
-														style={{
-															"background-color": getTypeColor(entity.type),
-														}}
-													>
-														{entity.type}
-													</span>
+													<strong>{onto.name}</strong>
 												</td>
 												<td class={styles.entityDescription}>
-													{entity.description.length > 80
-														? `${entity.description.substring(0, 80)}...`
-														: entity.description}
-												</td>
-												<td>
-													<div class={styles.propertiesList}>
-														<For each={entity.properties.slice(0, 2)}>
-															{(prop) => (
-																<div class={styles.propertyItem}>
-																	<span class={styles.propertyKey}>
-																		{prop.key}:
-																	</span>
-																	<span class={styles.propertyValue}>
-																		{prop.value}
-																	</span>
-																</div>
-															)}
-														</For>
-														{entity.properties.length > 2 && (
-															<div class={styles.moreProperties}>
-																还有 {entity.properties.length - 2} 个属性
-															</div>
-														)}
-													</div>
-												</td>
-												<td>
-													<div class={styles.relationshipsList}>
-														<For each={entity.relationships.slice(0, 2)}>
-															{(rel) => (
-																<div class={styles.relationshipItem}>
-																	{rel.type} → {rel.target}
-																</div>
-															)}
-														</For>
-														{entity.relationships.length > 2 && (
-															<div class={styles.moreRelationships}>
-																还有 {entity.relationships.length - 2} 个关系
-															</div>
-														)}
-													</div>
-												</td>
-												<td class={styles.updatedAt}>
-													{formatDate(entity.updated_at)}
+													{onto.description
+														? onto.description.length > 80
+															? `${onto.description.substring(0, 80)}...`
+															: onto.description
+														: "-"}
 												</td>
 												<td>
 													<div class={styles.entityActions}>
 														<button
 															type="button"
-															class={styles.primaryButton}
-															onClick={() => handleViewEntity(entity.id)}
+															class={styles.deleteButton}
+															onClick={() => handleDeleteOnto(onto.id)}
+															disabled={deletingOntoId() === onto.id}
 														>
-															查看
-														</button>
-														<button
-															type="button"
-															class={styles.secondaryButton}
-															onClick={() => handleEditEntity(entity.id)}
-														>
-															编辑
+															{deletingOntoId() === onto.id ? "删除中..." : "删除"}
 														</button>
 													</div>
 												</td>
@@ -366,90 +266,26 @@ const OntologyListPage: Component = () => {
 					}
 				>
 					<div class={styles.entitiesGrid}>
-						<For each={filteredEntities()}>
-							{(entity) => (
+						<For each={filteredOntologies()}>
+							{(onto) => (
 								<div class={styles.entityCard}>
 									<div class={styles.entityHeader}>
-										<h3 class={styles.entityName}>{entity.name}</h3>
-										<span
-											class={styles.entityType}
-											style={{ "background-color": getTypeColor(entity.type) }}
-										>
-											{entity.type}
-										</span>
+										<h3 class={styles.entityName}>{onto.name}</h3>
+										<span class={styles.entityType}>ID: {onto.id}</span>
 									</div>
 
 									<div class={styles.entityDescription}>
-										<p>{entity.description}</p>
-									</div>
-
-									<div class={styles.entityProperties}>
-										<h4 class={styles.sectionTitle}>属性</h4>
-										<div class={styles.propertiesList}>
-											<For each={entity.properties}>
-												{(prop) => (
-													<div class={styles.propertyItem}>
-														<span class={styles.propertyKey}>{prop.key}:</span>
-														<span class={styles.propertyValue}>
-															{prop.value}
-														</span>
-													</div>
-												)}
-											</For>
-										</div>
-									</div>
-
-									<div class={styles.entityRelationships}>
-										<h4 class={styles.sectionTitle}>关系</h4>
-										<div class={styles.relationshipsList}>
-											<For each={entity.relationships}>
-												{(rel) => (
-													<div class={styles.relationshipItem}>
-														<span class={styles.relationshipType}>
-															{rel.type}
-														</span>
-														<span class={styles.relationshipArrow}>→</span>
-														<span class={styles.relationshipTarget}>
-															{rel.target}
-														</span>
-													</div>
-												)}
-											</For>
-										</div>
-									</div>
-
-									<div class={styles.entityMeta}>
-										<div class={styles.metaItem}>
-											<span class={styles.metaLabel}>创建:</span>
-											<span>{formatDate(entity.created_at)}</span>
-										</div>
-										<div class={styles.metaItem}>
-											<span class={styles.metaLabel}>更新:</span>
-											<span>{formatDate(entity.updated_at)}</span>
-										</div>
+										<p>{onto.description || "暂无描述"}</p>
 									</div>
 
 									<div class={styles.entityActions}>
 										<button
 											type="button"
-											class={styles.primaryButton}
-											onClick={() => handleViewEntity(entity.id)}
-										>
-											查看
-										</button>
-										<button
-											type="button"
-											class={styles.secondaryButton}
-											onClick={() => handleEditEntity(entity.id)}
-										>
-											编辑
-										</button>
-										<button
-											type="button"
 											class={styles.deleteButton}
-											onClick={() => handleDeleteEntity(entity.id)}
+											onClick={() => handleDeleteOnto(onto.id)}
+											disabled={deletingOntoId() === onto.id}
 										>
-											删除
+											{deletingOntoId() === onto.id ? "删除中..." : "删除"}
 										</button>
 									</div>
 								</div>
@@ -461,10 +297,207 @@ const OntologyListPage: Component = () => {
 
 			<div class={styles.stats}>
 				<p>
-					共 {filteredEntities().length} 个知识实体
-					{selectedType() !== "全部" && ` (类型: ${selectedType()})`}
+					共 {filteredOntologies().length} 个本体
 				</p>
 			</div>
+
+			{/* 创建本体模态框 */}
+			<Show when={showCreateModal()}>
+				<div
+					class={styles.modalOverlay}
+					onClick={closeCreateModal}
+					onKeyDown={(e) => {
+						if (e.key === "Escape") {
+							closeCreateModal();
+						}
+					}}
+					role="dialog"
+					aria-modal="true"
+					aria-label="创建新本体"
+					tabIndex={-1}
+				>
+					<div
+						class={styles.modal}
+						onClick={(e) => e.stopPropagation()}
+						onKeyDown={(e) => {
+							if (e.key === "Escape") {
+								closeCreateModal();
+							}
+						}}
+						role="document"
+						tabIndex={-1}
+					>
+						<div class={styles.modalHeader}>
+							<h2>创建新本体</h2>
+							<button
+								type="button"
+								class={styles.closeButton}
+								onClick={closeCreateModal}
+								aria-label="关闭"
+							>
+								×
+							</button>
+						</div>
+
+						<div class={styles.modalContent}>
+							<Show when={createError()}>
+								<div class={styles.errorMessage}>{createError()}</div>
+							</Show>
+
+							<div class={styles.formGroup}>
+								<label for="onto-name" class={styles.formLabel}>
+									名称
+								</label>
+								<input
+									id="onto-name"
+									type="text"
+									class={styles.formInput}
+									value={newName()}
+									onInput={(e) => setNewName(e.currentTarget.value)}
+									placeholder="请输入本体名称"
+									disabled={isCreating()}
+								/>
+							</div>
+
+							<div class={styles.formGroup}>
+								<label for="onto-description" class={styles.formLabel}>
+									描述
+								</label>
+								<textarea
+									id="onto-description"
+									class={styles.formTextarea}
+									value={newDescription()}
+									onInput={(e) => setNewDescription(e.currentTarget.value)}
+									placeholder="请输入本体描述（可选）"
+									rows={4}
+									disabled={isCreating()}
+								/>
+							</div>
+						</div>
+
+						<div class={styles.modalActions}>
+							<button
+								type="button"
+								class={styles.secondaryButton}
+								onClick={closeCreateModal}
+								disabled={isCreating()}
+							>
+								取消
+							</button>
+							<button
+								type="button"
+								class={styles.primaryButton}
+								onClick={handleCreateOnto}
+								disabled={isCreating()}
+							>
+								{isCreating() ? "创建中..." : "创建"}
+							</button>
+						</div>
+					</div>
+				</div>
+			</Show>
+
+			{/* 模态框样式 */}
+			<style>{`
+				.modalOverlay {
+					position: fixed;
+					top: 0;
+					left: 0;
+					right: 0;
+					bottom: 0;
+					background-color: rgba(0, 0, 0, 0.5);
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					z-index: 1000;
+				}
+				.modal {
+					background-color: white;
+					border-radius: 8px;
+					width: 90%;
+					max-width: 500px;
+					box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+				}
+				.modalHeader {
+					display: flex;
+					justify-content: space-between;
+					align-items: center;
+					padding: 20px;
+					border-bottom: 1px solid #e9ecef;
+				}
+				.modalHeader h2 {
+					margin: 0;
+					font-size: 20px;
+					color: #333;
+				}
+				.closeButton {
+					background: none;
+					border: none;
+					font-size: 24px;
+					cursor: pointer;
+					color: #6c757d;
+					padding: 4px 8px;
+				}
+				.closeButton:hover {
+					color: #333;
+				}
+				.modalContent {
+					padding: 20px;
+				}
+				.errorMessage {
+					background-color: #fff3f3;
+					color: #dc3545;
+					padding: 10px;
+					border-radius: 4px;
+					margin-bottom: 15px;
+					font-size: 14px;
+				}
+				.formGroup {
+					margin-bottom: 15px;
+				}
+				.formLabel {
+					display: block;
+					margin-bottom: 6px;
+					font-weight: 500;
+					color: #495057;
+					font-size: 14px;
+				}
+				.formInput {
+					width: 100%;
+					padding: 10px 12px;
+					border: 1px solid #dee2e6;
+					border-radius: 4px;
+					font-size: 14px;
+					box-sizing: border-box;
+				}
+				.formInput:focus {
+					outline: none;
+					border-color: #0066cc;
+					box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+				}
+				.formTextarea {
+					width: 100%;
+					padding: 10px 12px;
+					border: 1px solid #dee2e6;
+					border-radius: 4px;
+					font-size: 14px;
+					resize: vertical;
+					font-family: inherit;
+					box-sizing: border-box;
+				}
+				.formTextarea:focus {
+					outline: none;
+					border-color: #0066cc;
+					box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+				}
+				.modalActions {
+					display: flex;
+					justify-content: flex-end;
+					gap: 10px;
+					padding: 20px;
+					border-top: 1px solid #e9ecef;
+				}
+			`}</style>
 		</div>
 	);
 };

@@ -228,10 +228,7 @@ pub async fn delete_time_window_handler(
     match repo.delete(id).await {
         Ok(rows_affected) => {
             if rows_affected > 0 {
-                Json(MessageResponse {
-                    message: format!("时间窗口 {} 删除成功", id),
-                })
-                .into_response()
+                StatusCode::NO_CONTENT.into_response()
             } else {
                 not_found().into_response()
             }

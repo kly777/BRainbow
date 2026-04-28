@@ -145,21 +145,14 @@ pub async fn delete_sign_handler(
     match sign_service.delete_sign(id).await {
         Ok(rows_affected) => {
             if rows_affected > 0 {
-                let mut response = std::collections::HashMap::new();
-                response.insert("message".to_string(), format!("符号关系 {} 删除成功", id));
-                response.insert("rows_affected".to_string(), rows_affected.to_string());
-                Json(response).into_response()
+                StatusCode::NO_CONTENT.into_response()
             } else {
-                (
-                    axum::http::StatusCode::NOT_FOUND,
-                    format!("符号关系 ID {} 不存在", id),
-                )
-                    .into_response()
+                (StatusCode::NOT_FOUND, format!("符号关系 ID {} 不存在", id)).into_response()
             }
         }
         Err(e) => {
             let error_msg = format!("删除符号关系失败: {}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
         }
     }
 }

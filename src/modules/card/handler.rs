@@ -155,10 +155,7 @@ pub async fn delete_card_handler(
     match card_service.delete_card(id).await {
         Ok(rows_affected) => {
             if rows_affected > 0 {
-                let mut response = std::collections::HashMap::new();
-                response.insert("message".to_string(), format!("卡片 {} 删除成功", id));
-                response.insert("rows_affected".to_string(), rows_affected.to_string());
-                Json(response).into_response()
+                StatusCode::NO_CONTENT.into_response()
             } else {
                 (StatusCode::NOT_FOUND, format!("卡片 ID {} 不存在", id)).into_response()
             }

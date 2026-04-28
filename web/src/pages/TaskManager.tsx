@@ -12,7 +12,7 @@ import {
 	updateTaskStatus,
 } from "@/apis/taskApi";
 import type { CreateTaskRequest, Task } from "@/apis/types";
-import { formatDate, getStatusColorClass } from "@/apis/types";
+import { formatDate } from "@/apis/types";
 import TaskCalendar from "@/components/TaskCalendar";
 import TaskList from "@/components/TaskList";
 import styles from "@/styles/taskManager.module.css";
@@ -61,7 +61,7 @@ export default function TaskManager() {
 			title: request.title,
 			description: request.description ?? null,
 			parent_task_id: null,
-			status: "pending",
+			status: "backlog",
 			completed_at: null,
 			effort_estimate_minutes: request.effort_estimate_minutes ?? null,
 			user_id: null,
@@ -108,7 +108,7 @@ export default function TaskManager() {
 		setTasks(updatedTasks);
 
 		try {
-			let updatedTask;
+			let updatedTask: Task;
 			// 根据新状态调用不同的API
 			switch (newStatus) {
 				case "completed":

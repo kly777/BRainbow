@@ -160,8 +160,24 @@ fn not_found() -> (StatusCode, Json<ErrorResponse>) {
 
 // ==================== 处理器函数 ====================
 
-/// 获取所有任务
+/// 获取所有未归档任务
 pub async fn get_tasks_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let repo = TaskRepository::new(state.db);
+
+    match repo.find_all_excluding_archived().await {
+        Ok(tasks) => {
+            let response: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
+            Json(response).into_response()
+        }
+        Err(e) => {
+            let error = format!("获取任务列表失败: {}", e);
+            internal_error(error).into_response()
+        }
+    }
+}
+
+/// 获取所有任务（包括已归档）
+pub async fn get_all_tasks_handler(State(state): State<AppState>) -> impl IntoResponse {
     let repo = TaskRepository::new(state.db);
 
     match repo.find_all().await {
@@ -170,7 +186,7 @@ pub async fn get_tasks_handler(State(state): State<AppState>) -> impl IntoRespon
             Json(response).into_response()
         }
         Err(e) => {
-            let error = format!("获取任务列表失败: {}", e);
+            let error = format!("获取全部任务列表失败: {}", e);
             internal_error(error).into_response()
         }
     }
@@ -368,14 +384,7 @@ pub async fn delete_task_handler(
     match repo.delete(id).await {
         Ok(rows_affected) => {
             if rows_affected > 0 {
-                Json(MessageResponse {
-                    message: if rows_affected > 0 {
-                        "任务已删除或归档".to_string()
-                    } else {
-                        "任务不存在".to_string()
-                    },
-                })
-                .into_response()
+                StatusCode::NO_CONTENT.into_response()
             } else {
                 not_found().into_response()
             }

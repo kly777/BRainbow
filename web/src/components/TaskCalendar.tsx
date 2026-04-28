@@ -1,18 +1,18 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import type { Task } from "@/apis/types";
-import { getStatusColorClass } from "@/apis/types";
 import styles from "../styles/taskCalendar.module.css";
 
-// 扩展TaskStatus常量
-const TaskStatus = {
-	PENDING: "pending",
-	IN_PROGRESS: "in_progress",
-	COMPLETED: "completed",
-	CANCELLED: "cancelled",
-	BLOCKED: "blocked",
-	BACKLOG: "backlog",
-	ARCHIVED: "archived",
-} as const;
+// 状态对应颜色类名
+const statusColors: Record<string, string> = {
+	backlog: styles.statusBacklog ?? "",
+	active: styles.statusActive ?? "",
+	completed: styles.statusCompleted ?? "",
+	archived: styles.statusArchived ?? "",
+};
+
+function getStatusColor(status: string): string {
+	return statusColors[status] || "";
+}
 
 interface TaskCalendarProps {
 	tasks: Task[];
@@ -39,18 +39,16 @@ export default function TaskCalendar(props: TaskCalendarProps) {
 		const startDayOfWeek = firstDay.getDay();
 
 		const days: (Date | null)[] = [];
-		// 填充月初空白
 		for (let i = 0; i < startDayOfWeek; i++) {
 			days.push(null);
 		}
-		// 填充日期
 		for (let i = 1; i <= daysInMonthCount; i++) {
 			days.push(new Date(year, month, i));
 		}
 		return days;
 	});
 
-	// 获取指定日期的任务（响应式）
+	// 获取指定日期的任务
 	const getTasksForDate = (date: Date) => {
 		return props.tasks.filter((task) => {
 			if (!task.created_at) return false;
@@ -103,7 +101,7 @@ export default function TaskCalendar(props: TaskCalendarProps) {
 									<For each={date ? getTasksForDate(date!) : []}>
 										{(task) => (
 											<div
-												class={`${styles.dayTask} ${getStatusColorClass(task.status || TaskStatus.PENDING)}`}
+												class={`${styles.dayTask} ${getStatusColor(task.status || "backlog")}`}
 											>
 												{task.title}
 											</div>

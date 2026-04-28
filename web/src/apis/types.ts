@@ -27,7 +27,7 @@ export const TaskSchema = Schema.Struct({
 	title: Schema.String,
 	description: Schema.NullOr(Schema.String),
 	parent_task_id: Schema.NullOr(Schema.Number),
-	status: Schema.NullOr(Schema.String),
+	status: Schema.String,
 	completed_at: Schema.NullOr(Schema.String),
 	effort_estimate_minutes: Schema.NullOr(Schema.Number),
 	user_id: Schema.NullOr(Schema.Number),
@@ -179,85 +179,29 @@ export const formatDate = (dateString: string): string => {
 // ==================== Task Constants ====================
 
 export const TaskStatus = {
-	PENDING: "pending",
-	IN_PROGRESS: "in_progress",
+	BACKLOG: "backlog",
+	ACTIVE: "active",
 	COMPLETED: "completed",
-	CANCELLED: "cancelled",
-	BLOCKED: "blocked",
-} as const;
-
-export const TaskPriority = {
-	LOW: 0,
-	MEDIUM: 1,
-	HIGH: 2,
-	URGENT: 3,
+	ARCHIVED: "archived",
 } as const;
 
 export type TaskStatusType = (typeof TaskStatus)[keyof typeof TaskStatus];
-export type TaskPriorityType = (typeof TaskPriority)[keyof typeof TaskPriority];
 
 // ==================== Task Utility Functions ====================
 
-export function getPriorityText(priority: number): string {
-	switch (priority) {
-		case TaskPriority.LOW:
-			return "低";
-		case TaskPriority.MEDIUM:
-			return "中";
-		case TaskPriority.HIGH:
-			return "高";
-		case TaskPriority.URGENT:
-			return "紧急";
-		default:
-			return "未知";
-	}
-}
-
 export function getStatusText(status: string): string {
 	switch (status) {
-		case TaskStatus.PENDING:
+		case "backlog":
 			return "待办";
-		case TaskStatus.IN_PROGRESS:
+		case "active":
 			return "进行中";
-		case TaskStatus.COMPLETED:
+		case "completed":
 			return "已完成";
-		case TaskStatus.CANCELLED:
-			return "已取消";
-		case TaskStatus.BLOCKED:
-			return "已阻塞";
+		case "archived":
+			return "已归档";
 		default:
 			return "未知";
 	}
 }
 
-export function getPriorityColorClass(priority: number): string {
-	switch (priority) {
-		case TaskPriority.LOW:
-			return "priority-low";
-		case TaskPriority.MEDIUM:
-			return "priority-medium";
-		case TaskPriority.HIGH:
-			return "priority-high";
-		case TaskPriority.URGENT:
-			return "priority-urgent";
-		default:
-			return "priority-default";
-	}
-}
 
-export function getStatusColorClass(status: string): string {
-	switch (status) {
-		case TaskStatus.PENDING:
-			return "status-pending";
-		case TaskStatus.IN_PROGRESS:
-			return "status-in-progress";
-		case TaskStatus.COMPLETED:
-			return "status-completed";
-		case TaskStatus.CANCELLED:
-			return "status-cancelled";
-		case TaskStatus.BLOCKED:
-			return "status-blocked";
-		default:
-			return "status-default";
-	}
-}

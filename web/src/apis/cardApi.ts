@@ -29,7 +29,7 @@ export const updateCard = (
 	card: UpdateCardRequest,
 ): Effect.Effect<Card, ApiErrorType> =>
 	request(`/card/${id}`, CardSchema, {
-		method: "PUT",
+		method: "PATCH",
 		body: JSON.stringify(card),
 	});
 

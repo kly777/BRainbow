@@ -18,7 +18,7 @@ impl CardRepository {
     /// 获取所有卡片
     pub async fn find_all(&self) -> Result<Vec<Card>, sqlx::Error> {
         sqlx::query_as::<_, Card>(
-            "SELECT id, title, content, user_id, created_at, updated_at FROM card ORDER BY id",
+            "SELECT id, title, content, created_at, updated_at FROM card ORDER BY id",
         )
         .fetch_all(&*self.db)
         .await
@@ -27,7 +27,7 @@ impl CardRepository {
     /// 根据ID获取卡片
     pub async fn find_by_id(&self, id: i32) -> Result<Option<Card>, sqlx::Error> {
         sqlx::query_as::<_, Card>(
-            "SELECT id, title, content, user_id, created_at, updated_at FROM card WHERE id = ?",
+            "SELECT id, title, content, created_at, updated_at FROM card WHERE id = ?",
         )
         .bind(id)
         .fetch_optional(&*self.db)

@@ -21,13 +21,20 @@ const CardEditPage: Component = () => {
 		if (!id) {
 			throw new Error("卡片ID不能为空");
 		}
+		if (!/^\d+$/.test(id)) {
+			return NaN;
+		}
 		return parseInt(id, 10);
 	};
 
 	// 加载卡片数据
 	const [card, { refetch }] = createResource(async () => {
+		const id = cardId();
+		if (isNaN(id)) {
+			throw new Error("无效的卡片ID");
+		}
 		try {
-			const data = await Effect.runPromise(getCard(cardId()));
+			const data = await Effect.runPromise(getCard(id));
 			return data;
 		} catch (error) {
 			console.error("获取卡片详情失败:", error);

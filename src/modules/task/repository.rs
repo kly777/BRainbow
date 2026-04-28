@@ -19,12 +19,25 @@ impl TaskRepository {
         Self { db }
     }
 
-    /// 获取所有任务
+    /// 获取所有任务（包括已归档）
     pub async fn find_all(&self) -> Result<Vec<Task>, sqlx::Error> {
         sqlx::query_as::<_, Task>(
             "SELECT id, title, description, parent_task_id, status, completed_at,
             effort_estimate_minutes, user_id, created_at, updated_at
             FROM task
+            ORDER BY created_at DESC"
+        )
+        .fetch_all(&*self.db)
+        .await
+    }
+
+    /// 获取所有未归档任务（默认列表）
+    pub async fn find_all_excluding_archived(&self) -> Result<Vec<Task>, sqlx::Error> {
+        sqlx::query_as::<_, Task>(
+            "SELECT id, title, description, parent_task_id, status, completed_at,
+            effort_estimate_minutes, user_id, created_at, updated_at
+            FROM task
+            WHERE status != 'archived'
             ORDER BY created_at DESC"
         )
         .fetch_all(&*self.db)

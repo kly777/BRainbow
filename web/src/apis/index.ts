@@ -7,3 +7,9 @@ export * from "./request";
 
 // ==================== Re-exports from taskApi ====================
 export * from "./taskApi";
+
+// ==================== Re-exports from ontoApi ====================
+export * from "./ontoApi";
+
+// ==================== Re-exports from signApi ====================
+export * from "./signApi";

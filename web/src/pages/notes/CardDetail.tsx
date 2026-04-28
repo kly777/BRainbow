@@ -1,4 +1,4 @@
-import { useParams } from "@solidjs/router";
+import { useNavigate, useParams } from "@solidjs/router";
 import { Effect } from "effect";
 import { type Component, createResource, Show } from "solid-js";
 import { deleteCard, getCard } from "@/apis/cardApi";
@@ -7,17 +7,22 @@ import styles from "@/styles/notes/cardDetail.module.css";
 
 const CardDetailPage: Component = () => {
 	const params = useParams();
+	const navigate = useNavigate();
 	const cardId = () => {
 		const id = params.id;
-		if (!id) {
-			throw new Error("卡片ID不能为空");
+		if (!id || !/^\d+$/.test(id)) {
+			return NaN;
 		}
 		return parseInt(id, 10);
 	};
 
 	const [card, { refetch }] = createResource(async () => {
+		const id = cardId();
+		if (isNaN(id)) {
+			throw new Error("无效的卡片ID");
+		}
 		try {
-			const data = await Effect.runPromise(getCard(cardId()));
+			const data = await Effect.runPromise(getCard(id));
 			return data;
 		} catch (error) {
 			console.error("获取卡片详情失败:", error);
@@ -42,9 +47,10 @@ const CardDetailPage: Component = () => {
 	};
 
 	const handleEdit = () => {
-		console.log("编辑卡片:", cardId());
+		const id = cardId();
+		console.log("编辑卡片:", id);
 		// 跳转到编辑页面
-		window.location.href = `/c/edit/${cardId()}`;
+		navigate(`/c/edit/${id}`);
 	};
 
 	const handleDelete = async () => {
@@ -53,7 +59,7 @@ const CardDetailPage: Component = () => {
 				deleteCard(cardId()).pipe(
 					Effect.tap(() => {
 						// 删除成功后跳转到卡片列表
-						window.location.href = "/c";
+						navigate("/c");
 					}),
 					Effect.catchAll((error) => {
 						console.error("删除卡片失败:", error);

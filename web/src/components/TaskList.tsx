@@ -1,6 +1,6 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import type { Task } from "@/apis/types";
-import { formatDate, getStatusColorClass } from "@/apis/types";
+import { formatDate } from "@/apis/types";
 import styles from "../styles/taskList.module.css";
 import EditTaskModal from "./EditTaskModal";
 
@@ -42,6 +42,18 @@ export default function TaskList(props: TaskListProps) {
 
 		return grouped;
 	});
+
+	// 状态指示器颜色映射
+	const statusColors: Record<string, string> = {
+		backlog: styles.statusBacklog ?? "",
+		active: styles.statusActive ?? "",
+		completed: styles.statusCompleted ?? "",
+		archived: styles.statusArchived ?? "",
+	};
+
+	function getStatusColorClass(status: string): string {
+		return statusColors[status] || "";
+	}
 
 	return (
 		<div class={styles.taskListPanel}>

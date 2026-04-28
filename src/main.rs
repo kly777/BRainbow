@@ -114,28 +114,28 @@ async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             description TEXT,
-            
+
             -- 结构关系
             parent_task_id INTEGER,
-            
+
             -- 状态管理
             status TEXT DEFAULT 'backlog', -- backlog, active, completed, archived
             completed_at TIMESTAMP,
-            
+
             -- 精力估算
             effort_estimate_minutes INTEGER,
-            
+
             -- 关联用户
             user_id INTEGER,
-            
+
             -- 元数据
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            
+
             -- 外键约束
             FOREIGN KEY (parent_task_id) REFERENCES task(id),
             FOREIGN KEY (user_id) REFERENCES user(id),
-            
+
             -- 检查约束
             CHECK (effort_estimate_minutes IS NULL OR effort_estimate_minutes >= 0)
         )
@@ -201,17 +201,17 @@ async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             type TEXT NOT NULL DEFAULT 'feasible', -- feasible, planned, actual
             task_id INTEGER NOT NULL,
             user_id INTEGER,
-            
+
             -- 递归规则字段（可选扩展）
             recurrence_freq TEXT, -- daily, weekly, monthly
             recurrence_interval INTEGER,
             recurrence_until TIMESTAMP,
             recurrence_by_weekdays TEXT, -- JSON数组
-            
+
             -- 外键约束
             FOREIGN KEY (task_id) REFERENCES task(id),
             FOREIGN KEY (user_id) REFERENCES user(id),
-            
+
             -- 检查约束
             CHECK (start_time < end_time),
             CHECK (type IN ('feasible', 'planned', 'actual')),

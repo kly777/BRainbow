@@ -20,9 +20,8 @@
 		"resolveJsonModule": true,
 		"verbatimModuleSyntax": true,
 		"typeRoots": ["node_modules/@types", "src/types"],
-		"baseUrl": ".",
 		"paths": {
-			"@/*": ["src/*"]
+			"@/*": ["./src/*"]
 		}
 	},
 	"include": ["src/**/*.ts", "src/**/*.tsx"],

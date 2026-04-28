@@ -1,4 +1,4 @@
-import { Route, Router } from "@solidjs/router";
+import { A, Route, Router } from "@solidjs/router";
 import { type JSX, lazy } from "solid-js";
 import { render } from "solid-js/web";
 import "@/normalize.css";
@@ -6,6 +6,8 @@ import "@/styles/markdown.css";
 import styles from "@/styles/layout.module.css";
 
 // 懒加载页面组件
+const HomePage = lazy(async () => import("@/pages/HomePage"));
+const TaskManagerPage = lazy(async () => import("@/pages/TaskManager"));
 
 const CardsListPage = lazy(async () => import("@/pages/notes/CardsList"));
 const CardDetailPage = lazy(async () => import("@/pages/notes/CardDetail"));
@@ -18,6 +20,27 @@ const OntologyListPage = lazy(
 const Layout = (props: { children?: JSX.Element }) => {
 	return (
 		<div class={styles.appContainer}>
+			<header class={styles.appHeader}>
+				<div class={styles.headerContent}>
+					<h1 class={styles.appTitle}>
+						Brain<span>bow</span>
+					</h1>
+					<nav class={styles.navLinks}>
+						<A href="/" class={styles.navLink} activeClass={styles.active}>
+							主页
+						</A>
+						<A href="/tasks" class={styles.navLink} activeClass={styles.active}>
+							时间管理
+						</A>
+						<A href="/c" class={styles.navLink} activeClass={styles.active}>
+							卡片
+						</A>
+						<A href="/o" class={styles.navLink} activeClass={styles.active}>
+							本体
+						</A>
+					</nav>
+				</div>
+			</header>
 			<main class={styles.appContent}>{props.children}</main>
 			<footer class={styles.footer}>
 				<p>© {new Date().getFullYear()} Brainbow 任务管理系统</p>
@@ -29,10 +52,8 @@ const Layout = (props: { children?: JSX.Element }) => {
 function App() {
 	return (
 		<Router root={Layout}>
-			<Route
-				path="/"
-				component={() => <div class={styles.landingPage}></div>}
-			/>
+			<Route path="/" component={() => <HomePage />} />
+			<Route path="/tasks" component={() => <TaskManagerPage />} />
 			<Route path="/o" component={() => <OntologyListPage />} />
 			<Route path="/c" component={() => <CardsListPage />} />
 			<Route path="/c/:id" component={() => <CardDetailPage />} />

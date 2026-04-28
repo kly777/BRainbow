@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from "@solidjs/router";
+import { Effect } from "effect";
 import {
 	type Component,
 	createEffect,
@@ -6,8 +7,7 @@ import {
 	createSignal,
 	Show,
 } from "solid-js";
-import { Effect } from "effect";
-import { getCard, updateCard, deleteCard } from "@/apis/cardApi";
+import { deleteCard, getCard, updateCard } from "@/apis/cardApi";
 import type { UpdateCardRequest } from "@/apis/types";
 import Markdown from "@/components/Markdown";
 import styles from "@/styles/notes/cardEdit.module.css";

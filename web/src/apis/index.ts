@@ -6,4 +6,4 @@ export * from "./cardApi";
 export * from "./request";
 
 // ==================== Re-exports from taskApi ====================
-export * from "./types";
+export * from "./taskApi";

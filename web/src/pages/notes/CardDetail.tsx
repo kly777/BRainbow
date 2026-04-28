@@ -1,7 +1,7 @@
 import { useParams } from "@solidjs/router";
-import { type Component, createResource, Show } from "solid-js";
 import { Effect } from "effect";
-import { getCard, deleteCard } from "@/apis/cardApi";
+import { type Component, createResource, Show } from "solid-js";
+import { deleteCard, getCard } from "@/apis/cardApi";
 import Markdown from "@/components/Markdown";
 import styles from "@/styles/notes/cardDetail.module.css";
 

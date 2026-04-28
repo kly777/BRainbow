@@ -14,8 +14,6 @@ pub use handler::{
     get_completed_tasks_handler, get_archived_tasks_handler,
 };
 pub use model::{
-    Task, TaskStatus, TaskDependency, CreateTaskRequest, UpdateTaskRequest,
-    QuickCreateTaskRequest, TaskDetailResponse, TaskErrorCode, ErrorResponse,
+    Task, TaskStatus, CreateTaskRequest, UpdateTaskRequest, TaskErrorCode, ErrorResponse,
 };
 pub use service::TaskService;
-pub use repository::TaskRepository;

@@ -9,4 +9,3 @@ pub use handler::{
 };
 pub use model::Onto;
 pub use service::OntoService;
-pub use repository::OntoRepository;

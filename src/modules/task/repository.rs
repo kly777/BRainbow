@@ -271,7 +271,7 @@ impl TaskRepository {
             FROM task
             WHERE ";
 
-        let condition = if let Some(root_id) = root_task_id {
+        let condition = if let Some(_root_id) = root_task_id {
             format!("{} id = ?", base_query)
         } else {
             format!("{} parent_task_id IS NULL", base_query)

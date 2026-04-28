@@ -1,6 +1,6 @@
 use axum::{
     Router,
-    routing::{get, post, patch, delete},
+    routing::{get, post, delete},
 };
 
 use crate::modules::{card, onto, sign, task, time_window, user};

@@ -5,7 +5,6 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::collections::HashMap;
 use std::pin::Pin;
 
@@ -449,7 +448,7 @@ fn build_tree_node<'a>(repo: &'a TaskRepository, task: Task) -> Pin<Box<dyn std:
 
 /// 获取日历事件
 pub async fn get_calendar_handler(
-    Query(query): Query<CalendarQuery>,
+    Query(_query): Query<CalendarQuery>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let repo = TaskRepository::new(state.db);
@@ -485,10 +484,10 @@ pub async fn get_calendar_handler(
 
 /// 获取依赖图
 pub async fn get_dag_handler(
-    Query(query): Query<DagQuery>,
+    Query(_query): Query<DagQuery>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let repo = TaskRepository::new(state.db);
+    let _repo = TaskRepository::new(state.db);
 
     // TODO: 实现依赖图查询逻辑
     // 目前返回空的结构

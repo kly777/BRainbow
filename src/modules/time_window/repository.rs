@@ -244,7 +244,7 @@ impl TimeWindowRepository {
         let base_query = "SELECT id, start_time, end_time, type, task_id, user_id, recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays
                          FROM time_window WHERE (start_time < ? AND end_time > ?)";
 
-        let query = if let Some(task_id) = task_id {
+        let query = if let Some(_task_id) = task_id {
             format!("{} AND task_id = ?", base_query)
         } else {
             base_query.to_string()
@@ -391,7 +391,7 @@ impl TimeWindowRepository {
     ) -> Result<bool, sqlx::Error> {
         let base_query = "SELECT COUNT(*) as count FROM time_window WHERE task_id = ? AND (start_time < ? AND end_time > ?)";
 
-        let query = if let Some(exclude_id) = exclude_id {
+        let query = if let Some(_exclude_id) = exclude_id {
             format!("{} AND id != ?", base_query)
         } else {
             base_query.to_string()

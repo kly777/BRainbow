@@ -10,4 +10,3 @@ pub use handler::{
 };
 pub use model::SignifierSignified;
 pub use service::SignService;
-pub use repository::SignRepository;

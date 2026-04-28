@@ -1,8 +1,5 @@
-mod entity;
-mod handlers;
-mod repos;
+mod modules;
 mod routes;
-mod services;
 mod state;
 
 use std::time::Instant;

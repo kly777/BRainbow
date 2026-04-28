@@ -4,8 +4,13 @@ use axum::{Router, extract::State, response::Html, routing::get};
 use std::sync::Arc;
 
 use crate::{
-    entity::{Card, Onto, SignifierSignified, Task, User},
-    services::{card::CardService, onto::OntoService, sign::SignService, task::TaskService},
+    modules::{
+        card::{Card, CardService},
+        onto::{Onto, OntoService},
+        sign::{SignService, SignifierSignified},
+        task::{Task, TaskService},
+        user::User,
+    },
     state::AppState,
 };
 
@@ -121,7 +126,7 @@ impl Query {
     /// 获取所有用户
     async fn users(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<GraphQLUser>> {
         let state = ctx.data::<Arc<AppState>>()?;
-        let repo = crate::repos::user::UserRepository::new(state.db.clone());
+        let repo = crate::modules::user::UserRepository::new(state.db.clone());
 
         let users = repo.find_all().await
             .map_err(|e| async_graphql::Error::new(format!("获取用户失败: {}", e)))?;
@@ -320,7 +325,7 @@ impl Mutation {
         let state = ctx.data::<Arc<AppState>>()?;
         let service = TaskService::new(state.db.clone());
 
-        let request = crate::entity::CreateTaskRequest {
+        let request = crate::modules::task::CreateTaskRequest {
             title,
             description,
             parent_task_id: None,
@@ -350,16 +355,16 @@ impl Mutation {
         // Convert status string to TaskStatus enum
         let task_status = match status {
             Some(s) => match s.to_lowercase().as_str() {
-                "backlog" => Some(crate::entity::TaskStatus::Backlog),
-                "active" => Some(crate::entity::TaskStatus::Active),
-                "completed" => Some(crate::entity::TaskStatus::Completed),
-                "archived" => Some(crate::entity::TaskStatus::Archived),
+                "backlog" => Some(crate::modules::task::TaskStatus::Backlog),
+                "active" => Some(crate::modules::task::TaskStatus::Active),
+                "completed" => Some(crate::modules::task::TaskStatus::Completed),
+                "archived" => Some(crate::modules::task::TaskStatus::Archived),
                 _ => None,
             },
             None => None,
         };
 
-        let request = crate::entity::UpdateTaskRequest {
+        let request = crate::modules::task::UpdateTaskRequest {
             title,
             description: description.map(Some), // Convert Option<String> to Option<Option<String>>
             parent_task_id: None,

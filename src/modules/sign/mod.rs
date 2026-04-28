@@ -10,3 +10,26 @@ pub use handler::{
 };
 pub use model::SignifierSignified;
 pub use service::SignService;
+
+use axum::{Router, routing::get};
+use crate::state::AppState;
+
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/",
+            get(get_signs_handler).post(create_sign_handler),
+        )
+        .route(
+            "/{id}",
+            get(get_sign_handler).delete(delete_sign_handler),
+        )
+        .route(
+            "/signifier/{signifier}",
+            get(get_signs_by_signifier_handler),
+        )
+        .route(
+            "/signified/{signified}",
+            get(get_signs_by_signified_handler),
+        )
+}

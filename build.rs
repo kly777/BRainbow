@@ -29,5 +29,6 @@ fn main() {
     }
 
     // 当 .env 改变时重新编译
-    println!("cargo:rerun-if-changed=.env");
+    println!("cargo:rerun-if-changed=.env.prod");
+    println!("cargo:rerun-if-changed=.env.dev");
 }

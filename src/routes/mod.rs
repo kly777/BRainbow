@@ -1,5 +1,4 @@
 pub mod api;
-pub mod graphql;
 
 use crate::state::AppState;
 use axum::{Router, http::header::HeaderMap, response::Json, routing::get};
@@ -29,7 +28,6 @@ async fn header_handler(headers: HeaderMap) -> Json<HashMap<String, String>> {
 pub fn create_router(state: AppState) -> Router {
     Router::new()
         .route("/header", get(header_handler))
-        .nest("/graphql", graphql::create_router())
         .nest("/api", api::create_api_router())
         .fallback_service(
             ServeDir::new("dist").not_found_service(ServeFile::new("dist/index.html")),

@@ -1,8 +1,8 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import type { Task } from "@/apis/types";
-import { formatDate } from "@/apis/types";
 import styles from "./TaskList.module.css"
 import EditTaskModal from "./EditTaskModal";
+import TaskItem from "./TaskItem";
 
 // 扩展TaskStatus常量 - 使用后端实际的状态
 const TaskStatus = {
@@ -17,11 +17,24 @@ interface TaskListProps {
 	onStatusChange: (taskId: number, status: string) => void;
 	onDelete: (taskId: number) => void;
 	onUpdate: (taskId: number, updates: Partial<Task>) => void;
+	onAddSubTask?: (parentId: number, title: string) => Promise<void>;
 }
 
 export default function TaskList(props: TaskListProps) {
 	const [editingTask, setEditingTask] = createSignal<Task | null>(null);
 	const [showEditModal, setShowEditModal] = createSignal(false);
+	// 构建父任务 -> 子任务列表的映射
+	const childrenMap = createMemo(() => {
+		const map = new Map<number, Task[]>();
+		props.tasks.forEach((task) => {
+			if (task.parent_task_id) {
+				const existing = map.get(task.parent_task_id) || [];
+				existing.push(task);
+				map.set(task.parent_task_id, existing);
+			}
+		});
+		return map;
+	});
 
 	// 按状态分组任务（使用createMemo实现响应式）
 	const groupedTasks = createMemo(() => {
@@ -76,6 +89,10 @@ export default function TaskList(props: TaskListProps) {
 										setEditingTask(task);
 										setShowEditModal(true);
 									}}
+									children={childrenMap().get(task.id) || []}
+									onAddSubTask={props.onAddSubTask}
+									feasibleWindows={[]}
+									plannedWindows={[]}
 								/>
 							)}
 						</For>
@@ -102,6 +119,10 @@ export default function TaskList(props: TaskListProps) {
 										setEditingTask(task);
 										setShowEditModal(true);
 									}}
+									children={childrenMap().get(task.id) || []}
+									onAddSubTask={props.onAddSubTask}
+									feasibleWindows={[]}
+									plannedWindows={[]}
 								/>
 							)}
 						</For>
@@ -128,6 +149,10 @@ export default function TaskList(props: TaskListProps) {
 										setEditingTask(task);
 										setShowEditModal(true);
 									}}
+									children={childrenMap().get(task.id) || []}
+									onAddSubTask={props.onAddSubTask}
+									feasibleWindows={[]}
+									plannedWindows={[]}
 								/>
 							)}
 						</For>
@@ -154,6 +179,10 @@ export default function TaskList(props: TaskListProps) {
 										setEditingTask(task);
 										setShowEditModal(true);
 									}}
+									children={childrenMap().get(task.id) || []}
+									onAddSubTask={props.onAddSubTask}
+									feasibleWindows={[]}
+									plannedWindows={[]}
 								/>
 							)}
 						</For>
@@ -176,58 +205,3 @@ export default function TaskList(props: TaskListProps) {
 	);
 }
 
-// 任务项组件
-function TaskItem(props: {
-	task: Task;
-	onStatusChange: (taskId: number, status: string) => void;
-	onDelete: (taskId: number) => void;
-	onEdit: () => void;
-}) {
-	return (
-		<div class={styles.taskItem}>
-			<div class={styles.taskMain}>
-				<h3 class={styles.taskTitle}>{props.task.title}</h3>
-				<Show when={props.task.description}>
-					<p class={styles.taskDescription}>{props.task.description}</p>
-				</Show>
-				<div class={styles.taskMeta}>
-					<Show when={props.task.created_at}>
-						<span class={styles.dateBadge}>
-							📅 {formatDate(props.task.created_at || "")}
-						</span>
-					</Show>
-				</div>
-			</div>
-			<div class={styles.taskActions}>
-				<select
-					value={props.task.status || TaskStatus.BACKLOG}
-					onChange={(e) =>
-						props.onStatusChange(props.task.id || 0, e.currentTarget.value)
-					}
-					class={styles.statusSelect}
-				>
-					<option value={TaskStatus.BACKLOG}>待办列表</option>
-					<option value={TaskStatus.ACTIVE}>进行中</option>
-					<option value={TaskStatus.COMPLETED}>已完成</option>
-					<option value={TaskStatus.ARCHIVED}>已归档</option>
-				</select>
-				<button
-					type="button"
-					onClick={props.onEdit}
-					class={styles.editButton}
-					title="编辑任务"
-				>
-					✏️
-				</button>
-				<button
-					type="button"
-					onClick={() => props.onDelete(props.task.id || 0)}
-					class={styles.deleteButton}
-					title="删除任务"
-				>
-					🗑
-				</button>
-			</div>
-		</div>
-	);
-}

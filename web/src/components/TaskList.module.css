@@ -28,6 +28,22 @@
 	display: inline-block;
 }
 
+.statusBacklog {
+	background: #6b7280;
+}
+
+.statusActive {
+	background: #3b82f6;
+}
+
+.statusCompleted {
+	background: #10b981;
+}
+
+.statusArchived {
+	background: #9ca3af;
+}
+
 .taskList {
 	display: flex;
 	flex-direction: column;
@@ -35,9 +51,6 @@
 }
 
 .taskItem {
-	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
 	padding: 16px;
 	background: #f9fafb;
 	border-radius: 8px;
@@ -48,6 +61,13 @@
 .taskItem:hover {
 	background: #f3f4f6;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.taskRow {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 12px;
 }
 
 .taskMain {
@@ -111,6 +131,107 @@
 
 .editButton:hover {
 	background: #2563eb;
+}
+
+.subTaskButton {
+	padding: 6px 12px;
+	background: #8b5cf6;
+	color: white;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 16px;
+	font-weight: bold;
+	transition: background 0.2s;
+	line-height: 1;
+}
+
+.subTaskButton:hover {
+	background: #7c3aed;
+}
+
+.subTaskForm {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	margin-top: 12px;
+	padding: 8px 12px;
+	background: #f0fdf4;
+	border: 1px solid #bbf7d0;
+	border-radius: 8px;
+}
+
+.subTaskInput {
+	flex: 1;
+	padding: 8px 12px;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	font-size: 14px;
+	background: white;
+	outline: none;
+	transition: border-color 0.2s;
+}
+
+.subTaskInput:focus {
+	border-color: #8b5cf6;
+	box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
+}
+
+.subTaskCancel {
+	padding: 6px 12px;
+	background: #6b7280;
+	color: white;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 13px;
+	white-space: nowrap;
+	transition: background 0.2s;
+}
+
+.subTaskCancel:hover {
+	background: #4b5563;
+}
+
+.childList {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 12px;
+	margin-left: 8px;
+	padding-left: 16px;
+}
+
+.childList > .taskItem {
+	padding: 12px 14px;
+	border-left-color: #c4b5fd;
+	background: #fafafa;
+}
+
+.timeWindowChips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 8px;
+}
+
+.timeWindowChip {
+	font-size: 12px;
+	padding: 2px 8px;
+	border-radius: 4px;
+	background: #f3f4f6;
+	color: #374151;
+	white-space: nowrap;
+}
+
+.subTaskBadge {
+	margin-left: 8px;
+	padding: 2px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	background: #fef3c7;
+	color: #92400e;
+	font-weight: normal;
 }
 
 .deleteButton {

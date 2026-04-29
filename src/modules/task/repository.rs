@@ -146,75 +146,90 @@ impl TaskRepository {
             None => (None, None),
         };
 
-        // 构建更新语句
-        let mut updates = Vec::new();
-        let mut query_builder = sqlx::QueryBuilder::new("UPDATE task SET ");
+        // 构建动态 UPDATE SET 语句
+        let mut qb = sqlx::QueryBuilder::new("UPDATE task SET ");
+        let mut first = true;
 
-        // 添加更新字段
         if let Some(title) = &request.title {
-            updates.push("title = ");
-            query_builder.push_bind(title);
+            if !first { qb.push(", "); } first = false;
+            qb.push("title = ");
+            qb.push_bind(title);
         }
 
         if let Some(description) = &request.description {
-            updates.push("description = ");
-            query_builder.push_bind(description);
+            if !first { qb.push(", "); } first = false;
+            match description {
+                Some(desc) => {
+                    qb.push("description = ");
+                    qb.push_bind(desc);
+                }
+                None => {
+                    qb.push("description = NULL");
+                }
+            }
         }
 
         if let Some(parent_task_id) = &request.parent_task_id {
-            updates.push("parent_task_id = ");
-            query_builder.push_bind(parent_task_id);
+            if !first { qb.push(", "); } first = false;
+            match parent_task_id {
+                Some(pid) => {
+                    qb.push("parent_task_id = ");
+                    qb.push_bind(pid);
+                }
+                None => {
+                    qb.push("parent_task_id = NULL");
+                }
+            }
         }
 
         if let Some(status) = &new_status {
-            updates.push("status = ");
-            query_builder.push_bind(status.as_str());
+            if !first { qb.push(", "); } first = false;
+            qb.push("status = ");
+            qb.push_bind(status.as_str());
         }
 
-        if let Some(completed_at) = &completed_at {
-            updates.push("completed_at = ");
-            query_builder.push_bind(completed_at);
+        if let Some(ct) = &completed_at {
+            if !first { qb.push(", "); } first = false;
+            qb.push("completed_at = ");
+            qb.push_bind(ct);
         }
 
-        if let Some(effort_estimate_minutes) =
- &request.effort_estimate_minutes {
-            updates.push("effort_estimate_minutes = ");
-            query_builder.push_bind(effort_estimate_minutes);
+        if let Some(effort) = &request.effort_estimate_minutes {
+            if !first { qb.push(", "); } first = false;
+            match effort {
+                Some(minutes) => {
+                    qb.push("effort_estimate_minutes = ");
+                    qb.push_bind(minutes);
+                }
+                None => {
+                    qb.push("effort_estimate_minutes = NULL");
+                }
+            }
         }
 
         if let Some(user_id) = &request.user_id {
-            updates.push("user_id = ");
-            query_builder.push_bind(user_id);
+            if !first { qb.push(", "); } first = false;
+            match user_id {
+                Some(uid) => {
+                    qb.push("user_id = ");
+                    qb.push_bind(uid);
+                }
+                None => {
+                    qb.push("user_id = NULL");
+                }
+            }
         }
 
         // 总是更新时间戳
-        updates.push("updated_at = ");
-        query_builder.push_bind(Utc::now());
+        if !first { qb.push(", "); } first = false;
+        qb.push("updated_at = ");
+        qb.push_bind(Utc::now());
 
-        if updates.is_empty() {
-            // 没有更新，返回当前任务
-            return Ok(current_task);
-        }
-
-        // 构建SQL
-        let mut sql = String::new();
-        for (i, update) in updates.iter().enumerate() {
-            if i > 0 {
-                sql.push_str(", ");
-            }
-            sql.push_str(update);
-            sql.push('$');
-            sql.push_str(&(i + 1).to_string());
-        }
-
-        let query = format!(
-            "UPDATE task SET {} WHERE id = ? RETURNING id, title, description, parent_task_id, status, completed_at, effort_estimate_minutes, user_id, created_at, updated_at",
-            sql
-        );
-
-        // 执行更新
-        let result = sqlx::query_as::<_, Task>(&query)
-            .bind(id)
+        let result = qb
+            .push(" WHERE id = ")
+            .push_bind(id)
+            .push(" RETURNING id, title, description, parent_task_id, status, completed_at, effort_estimate_minutes, user_id, created_at, updated_at")
+            .build_query_as::<Task>()
             .fetch_one(&*self.db)
             .await?;
 
@@ -229,8 +244,7 @@ impl TaskRepository {
             None => return Ok(0),
         };
 
-        if task
-.is_completed() {
+        if task.is_completed() {
             // 直接删除
             let result = sqlx::query("DELETE FROM task WHERE id = ?")
                 .bind(id)

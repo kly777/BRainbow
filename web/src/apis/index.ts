@@ -13,3 +13,6 @@ export * from "./ontoApi";
 
 // ==================== Re-exports from signApi ====================
 export * from "./signApi";
+
+// ==================== Re-exports from timeWindowApi ====================
+export * from "./timeWindowApi";

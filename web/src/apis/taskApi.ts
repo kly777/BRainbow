@@ -18,6 +18,24 @@ export const getTasks = (): Effect.Effect<readonly Task[], ApiErrorType> =>
 export const getAllTasks = (): Effect.Effect<readonly Task[], ApiErrorType> =>
 	request("/tasks/all", Schema.Array(TaskSchema), {});
 
+// ==================== Tree API ====================
+
+/** Recursive tree node schema for task hierarchy */
+export const TreeNodeSchema: Schema.Schema<TreeNode> = Schema.Struct({
+	task: TaskSchema,
+	children: Schema.Array(
+		Schema.suspend(() => TreeNodeSchema as unknown as Schema.Schema<TreeNode>),
+	),
+});
+
+export interface TreeNode {
+	readonly task: Task;
+	readonly children: readonly TreeNode[];
+}
+
+export const getTaskTree = (): Effect.Effect<readonly TreeNode[], ApiErrorType> =>
+	request("/tasks/tree", Schema.Array(TreeNodeSchema), {});
+
 export const getTaskDetail = (
 	id: number,
 ): Effect.Effect<TaskDetail, ApiErrorType> =>
@@ -36,7 +54,7 @@ export const updateTask = (
 	task: UpdateTaskRequest,
 ): Effect.Effect<Task, ApiErrorType> =>
 	request(`/tasks/${id}`, TaskSchema, {
-		method: "PUT",
+		method: "PATCH",
 		body: JSON.stringify(task),
 	});
 

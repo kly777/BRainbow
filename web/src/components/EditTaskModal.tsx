@@ -1,5 +1,8 @@
-import { createEffect, createSignal, For, Show } from "solid-js";
+import { createEffect, createSignal, For } from "solid-js";
+import { Effect } from "effect";
 import type { Task } from "@/apis/types";
+import { createTimeWindow, deleteTimeWindow, getTimeWindows } from "@/apis/timeWindowApi";
+import type { CreateTimeWindowRequest, TimeWindow } from "@/apis/types";
 import styles from "../pages/TaskManager.module.css"
 import Modal from "./Modal";
 
@@ -18,6 +21,25 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 	const [effort, setEffort] = createSignal<number | undefined>();
 	const [parentTaskId, setParentTaskId] = createSignal<number | undefined>();
 	const [userId, setUserId] = createSignal<number | undefined>();
+	const [feasibleWindows, setFeasibleWindows] = createSignal<TimeWindow[]>([]);
+	const [plannedWindows, setPlannedWindows] = createSignal<TimeWindow[]>([]);
+	const [newStartTime, setNewStartTime] = createSignal("");
+	const [newEndTime, setNewEndTime] = createSignal("");
+	const [newWindowType, setNewWindowType] = createSignal<"feasible" | "planned">("feasible");
+
+	const loadTimeWindows = async () => {
+		if (!props.task) return;
+		try {
+			const [feasible, planned] = await Promise.all([
+				Effect.runPromise(getTimeWindows(props.task.id, "feasible")),
+				Effect.runPromise(getTimeWindows(props.task.id, "planned")),
+			]);
+			setFeasibleWindows([...feasible]);
+			setPlannedWindows([...planned]);
+		} catch (error) {
+			console.error("加载时间窗口失败:", error);
+		}
+	};
 
 	// 当任务变化时，更新表单值
 	createEffect(() => {
@@ -28,6 +50,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 			setEffort(props.task.effort_estimate_minutes || undefined);
 			setParentTaskId(props.task.parent_task_id || undefined);
 			setUserId(props.task.user_id || undefined);
+			loadTimeWindows();
 		}
 	});
 
@@ -46,6 +69,41 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 
 		props.onSave(props.task.id, updates);
 		props.onClose();
+	};
+
+	const handleAddTimeWindow = async () => {
+		if (!props.task || !newStartTime() || !newEndTime()) return;
+		const req: CreateTimeWindowRequest = {
+			start_time: new Date(newStartTime()).toISOString(),
+			end_time: new Date(newEndTime()).toISOString(),
+			window_type: newWindowType(),
+			task_id: props.task.id,
+		};
+		try {
+			const tw = await Effect.runPromise(createTimeWindow(req));
+			if (tw.window_type === "feasible") {
+				setFeasibleWindows([...feasibleWindows(), tw]);
+			} else {
+				setPlannedWindows([...plannedWindows(), tw]);
+			}
+			setNewStartTime("");
+			setNewEndTime("");
+		} catch (error) {
+			console.error("创建时间窗口失败:", error);
+		}
+	};
+
+	const handleDeleteTimeWindow = async (id: number, type: string) => {
+		try {
+			await Effect.runPromise(deleteTimeWindow(id));
+			if (type === "feasible") {
+				setFeasibleWindows(feasibleWindows().filter(w => w.id !== id));
+			} else {
+				setPlannedWindows(plannedWindows().filter(w => w.id !== id));
+			}
+		} catch (error) {
+			console.error("删除时间窗口失败:", error);
+		}
 	};
 
 	return (
@@ -183,6 +241,57 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 						class={styles.input}
 						placeholder="可选"
 					/>
+				</div>
+
+				{/* 时间窗口管理 */}
+				<div class={styles.formGroup}>
+					<label class={styles.label}>可进行时间段</label>
+					<div class={styles.timeWindowList}>
+						<For each={feasibleWindows()}>
+							{(tw) => (
+								<div class={styles.timeWindowItem}>
+									<span class={styles.timeWindowText}>
+										{new Date(tw.start_time).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+										{" ~ "}
+										{new Date(tw.end_time).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+									</span>
+									<button type="button" onClick={() => handleDeleteTimeWindow(tw.id, "feasible")} class={styles.timeWindowDelete}>×</button>
+								</div>
+							)}
+						</For>
+					</div>
+				</div>
+
+				<div class={styles.formGroup}>
+					<label class={styles.label}>计划进行时间段</label>
+					<div class={styles.timeWindowList}>
+						<For each={plannedWindows()}>
+							{(tw) => (
+								<div class={styles.timeWindowItem}>
+									<span class={styles.timeWindowText}>
+										{new Date(tw.start_time).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+										{" ~ "}
+										{new Date(tw.end_time).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+									</span>
+									<button type="button" onClick={() => handleDeleteTimeWindow(tw.id, "planned")} class={styles.timeWindowDelete}>×</button>
+								</div>
+							)}
+						</For>
+					</div>
+				</div>
+
+				<div class={styles.formGroup}>
+					<label class={styles.label}>添加时间段</label>
+					<div class={styles.timeWindowAddRow}>
+						<select value={newWindowType()} onChange={(e) => setNewWindowType(e.currentTarget.value as "feasible" | "planned")} class={styles.timeWindowTypeSelect}>
+							<option value="feasible">可进行</option>
+							<option value="planned">计划</option>
+						</select>
+						<input type="datetime-local" value={newStartTime()} onInput={(e) => setNewStartTime(e.currentTarget.value)} class={styles.timeWindowInput} />
+						<span class={styles.timeWindowSep}>~</span>
+						<input type="datetime-local" value={newEndTime()} onInput={(e) => setNewEndTime(e.currentTarget.value)} class={styles.timeWindowInput} />
+						<button type="button" onClick={handleAddTimeWindow} disabled={!newStartTime() || !newEndTime()} class={styles.timeWindowAddBtn}>添加</button>
+					</div>
 				</div>
 			</form>
 		</Modal>

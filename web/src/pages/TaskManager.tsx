@@ -1,18 +1,19 @@
 import { Effect } from "effect";
-import { createSignal, For, onMount, Show } from "solid-js";
+import { createSignal, onMount, Show } from "solid-js";
 import {
 	activateTask,
 	archiveTask,
 	completeTask,
 	createTask,
 	deleteTask,
+	getAllTasks,
 	getTasks,
+	getTaskStats,
 	moveToBacklog,
+	searchTasks,
 	updateTask,
-	updateTaskStatus,
 } from "@/apis/taskApi";
 import type { CreateTaskRequest, Task } from "@/apis/types";
-import { formatDate } from "@/apis/types";
 import TaskCalendar from "@/components/TaskCalendar";
 import TaskList from "@/components/TaskList";
 import styles from "./TaskManager.module.css"
@@ -24,6 +25,10 @@ export default function TaskManager() {
 	const [newTaskTitle, setNewTaskTitle] = createSignal("");
 	const [newTaskDescription, setNewTaskDescription] = createSignal("");
 	const [newTaskEffort, setNewTaskEffort] = createSignal<number | undefined>();
+	const [searchQuery, setSearchQuery] = createSignal("");
+	const [stats, setStats] = createSignal({ backlog: 0, active: 0, completed: 0, archived: 0 });
+	const [quickTitle, setQuickTitle] = createSignal("");
+	const [activeFilter, setActiveFilter] = createSignal("all");
 
 	// 加载任务
 	const loadTasks = async () => {
@@ -31,6 +36,14 @@ export default function TaskManager() {
 			setLoading(true);
 			const loadedTasks = await Effect.runPromise(getTasks());
 			setTasks([...loadedTasks]);
+
+			// 加载统计
+			try {
+				const result = await Effect.runPromise(getTaskStats());
+				setStats(result);
+			} catch (e) {
+				console.error("获取统计失败:", e);
+			}
 		} catch (error) {
 			console.error("加载任务失败:", error);
 		} finally {
@@ -41,6 +54,45 @@ export default function TaskManager() {
 	onMount(() => {
 		loadTasks();
 	});
+
+	// 搜索任务
+	const handleSearch = async () => {
+		const q = searchQuery().trim();
+		if (!q) {
+			loadTasks();
+			return;
+		}
+		try {
+			setLoading(true);
+			const results = await Effect.runPromise(searchTasks(q));
+			setTasks([...results]);
+		} catch (error) {
+			console.error("搜索任务失败:", error);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	// 筛选任务
+	const filterByStatus = async (status: string) => {
+		setActiveFilter(status);
+		setLoading(true);
+		try {
+			let results: readonly Task[];
+			switch (status) {
+				case "backlog": results = await Effect.runPromise(getTasks()); break;
+				case "active": results = await Effect.runPromise(getTasks()); break;
+				case "completed": results = await Effect.runPromise(getTasks()); break;
+				default: results = await Effect.runPromise(getAllTasks());
+			}
+			// 根据状态客户端过滤
+			setTasks([...results.filter(t => t.status === status)]);
+		} catch (error) {
+			console.error("筛选失败:", error);
+		} finally {
+			setLoading(false);
+		}
+	};
 
 	// 创建任务（乐观更新）
 	const handleCreateTask = async (e: Event) => {
@@ -186,6 +238,19 @@ export default function TaskManager() {
 		}
 	};
 
+	// 创建子任务
+	const handleAddSubTask = async (parentId: number, title: string) => {
+		try {
+			const request: CreateTaskRequest = { title, parent_task_id: parentId };
+			const newTask = await Effect.runPromise(createTask(request));
+			// 将新子任务添加到列表
+			setTasks([...tasks(), newTask]);
+		} catch (error) {
+			console.error("创建子任务失败:", error);
+			alert("创建子任务失败，请重试");
+		}
+	};
+
 	return (
 		<div class={styles.taskManager}>
 			<div class={styles.header}>
@@ -201,6 +266,82 @@ export default function TaskManager() {
 				</div>
 			</div>
 
+			<div class={styles.searchBar}>
+				<input
+					type="text"
+					placeholder="搜索任务标题..."
+					value={searchQuery()}
+					onInput={(e) => setSearchQuery(e.currentTarget.value)}
+					onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+					class={styles.searchInput}
+				/>
+				<button type="button" onClick={handleSearch} class={styles.searchButton}>搜索</button>
+			</div>
+
+			<div class={styles.statsGrid}>
+				<div class={styles.statCard}>
+					<div class={styles.statValue}>{stats().backlog}</div>
+					<div class={styles.statLabel}>待办</div>
+				</div>
+				<div class={styles.statCard}>
+					<div class={styles.statValue}>{stats().active}</div>
+					<div class={styles.statLabel}>进行中</div>
+				</div>
+				<div class={styles.statCard}>
+					<div class={styles.statValue}>{stats().completed}</div>
+					<div class={styles.statLabel}>已完成</div>
+				</div>
+				<div class={styles.statCard}>
+					<div class={styles.statValue}>{stats().archived}</div>
+					<div class={styles.statLabel}>已归档</div>
+				</div>
+			</div>
+
+			<div class={styles.quickCreate}>
+				<input
+					type="text"
+					placeholder="快速创建任务，按Enter..."
+					value={quickTitle()}
+					onInput={(e) => setQuickTitle(e.currentTarget.value)}
+					onKeyDown={async (e) => {
+						if (e.key === "Enter" && quickTitle().trim()) {
+							const title = quickTitle().trim();
+							setQuickTitle("");
+							try {
+								const task = await Effect.runPromise(createTask({ title }));
+								setTasks([task, ...tasks()]);
+							} catch (error) {
+								console.error("快速创建失败:", error);
+							}
+						}
+					}}
+					class={styles.quickInput}
+				/>
+			</div>
+
+			<div class={styles.filterBar}>
+				<button
+					type="button"
+					class={`${styles.filterBtn} ${activeFilter() === "all" ? styles.filterActive : ""}`}
+					onClick={() => { setActiveFilter("all"); loadTasks(); }}
+				>全部</button>
+				<button
+					type="button"
+					class={`${styles.filterBtn} ${activeFilter() === "backlog" ? styles.filterActive : ""}`}
+					onClick={() => filterByStatus("backlog")}
+				>待办</button>
+				<button
+					type="button"
+					class={`${styles.filterBtn} ${activeFilter() === "active" ? styles.filterActive : ""}`}
+					onClick={() => filterByStatus("active")}
+				>进行中</button>
+				<button
+					type="button"
+					class={`${styles.filterBtn} ${activeFilter() === "completed" ? styles.filterActive : ""}`}
+					onClick={() => filterByStatus("completed")}
+				>已完成</button>
+			</div>
+
 			<Show when={loading()}>
 				<div class={styles.loading}>加载中...</div>
 			</Show>
@@ -212,6 +353,7 @@ export default function TaskManager() {
 						onStatusChange={handleStatusChange}
 						onDelete={handleDeleteTask}
 						onUpdate={handleUpdateTask}
+						onAddSubTask={handleAddSubTask}
 					/>
 					<div class={styles.calendarPanel}>
 						<TaskCalendar tasks={tasks()} />

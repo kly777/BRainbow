@@ -4,6 +4,157 @@
 	padding: 20px;
 }
 
+.statsGrid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 16px;
+	margin-bottom: 24px;
+}
+
+.statCard {
+	background: white;
+	border-radius: 10px;
+	padding: 20px;
+	text-align: center;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	border: 1px solid #e5e7eb;
+	transition: transform 0.2s;
+}
+
+.statCard:hover {
+	transform: translateY(-2px);
+}
+
+.statValue {
+	font-size: 32px;
+	font-weight: 700;
+	color: #3b82f6;
+	line-height: 1.2;
+}
+
+.statLabel {
+	font-size: 13px;
+	color: #6b7280;
+	margin-top: 4px;
+}
+
+.searchBar {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 16px;
+}
+
+.searchInput {
+	flex: 1;
+	padding: 10px 14px;
+	border: 1px solid #d1d5db;
+	border-radius: 8px;
+	font-size: 14px;
+	outline: none;
+	transition: border-color 0.2s;
+}
+
+.searchInput:focus {
+	border-color: #3b82f6;
+}
+
+.searchButton {
+	padding: 10px 20px;
+	background: #3b82f6;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 500;
+	transition: background 0.2s;
+}
+
+.searchButton:hover {
+	background: #2563eb;
+}
+
+.quickCreate {
+	margin-bottom: 16px;
+}
+
+.quickInput {
+	width: 100%;
+	padding: 12px 16px;
+	border: 2px dashed #d1d5db;
+	border-radius: 8px;
+	font-size: 14px;
+	color: #6b7280;
+	outline: none;
+	transition: all 0.2s;
+	box-sizing: border-box;
+}
+
+.quickInput:focus {
+	border-color: #10b981;
+	border-style: solid;
+	color: #1f2937;
+}
+
+.filterBar {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 20px;
+	flex-wrap: wrap;
+}
+
+.filterBtn {
+	padding: 8px 16px;
+	background: #f3f4f6;
+	color: #374151;
+	border: 1px solid #d1d5db;
+	border-radius: 20px;
+	cursor: pointer;
+	font-size: 13px;
+	font-weight: 500;
+	transition: all 0.2s;
+}
+
+.filterBtn:hover {
+	background: #e5e7eb;
+}
+
+.filterActive {
+	background: #3b82f6;
+	color: white;
+	border-color: #3b82f6;
+}
+
+.filterActive:hover {
+	background: #2563eb;
+}
+
+.subTaskBadge {
+	font-size: 11px;
+	padding: 2px 6px;
+	background: #dbeafe;
+	color: #1e40af;
+	border-radius: 4px;
+	margin-left: 8px;
+	font-weight: 400;
+	vertical-align: middle;
+}
+
+.editButton {
+	padding: 6px 10px;
+	background: #f3f4f6;
+	color: #374151;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 14px;
+	transition: all 0.2s;
+}
+
+.editButton:hover {
+	background: #e5e7eb;
+}
+
 .header {
 	display: flex;
 	justify-content: space-between;
@@ -465,6 +616,83 @@
 
 .submitButton:hover {
 	background: #059669;
+}
+
+.timeWindowList {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-top: 4px;
+}
+
+.timeWindowItem {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 6px 10px;
+	background: #f9fafb;
+	border: 1px solid #e5e7eb;
+	border-radius: 6px;
+	font-size: 13px;
+}
+
+.timeWindowText {
+	color: #374151;
+}
+
+.timeWindowDelete {
+	background: none;
+	border: none;
+	color: #ef4444;
+	cursor: pointer;
+	font-size: 16px;
+	padding: 0 4px;
+	line-height: 1;
+}
+
+.timeWindowAddRow {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	margin-top: 4px;
+	flex-wrap: wrap;
+}
+
+.timeWindowTypeSelect {
+	padding: 6px 10px;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	font-size: 13px;
+	background: white;
+}
+
+.timeWindowInput {
+	padding: 6px 10px;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	font-size: 13px;
+	background: white;
+}
+
+.timeWindowSep {
+	color: #9ca3af;
+	font-size: 14px;
+}
+
+.timeWindowAddBtn {
+	padding: 6px 14px;
+	background: #8b5cf6;
+	color: white;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.timeWindowAddBtn:disabled {
+	background: #d1d5db;
+	cursor: not-allowed;
 }
 
 /* 响应式设计 */

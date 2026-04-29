@@ -5,6 +5,7 @@ import Card, { type CardData } from "@/components/Card";
 import TaskList from "@/components/TaskList";
 import {
 	getTasks,
+	getTaskStats,
 	createTask,
 	completeTask,
 	activateTask,
@@ -42,9 +43,10 @@ const HomePage = () => {
 		try {
 			setLoading(true);
 
-			// 并行加载任务和卡片
-			const [allTasks, cards] = await Promise.all([
+			// 并行加载任务、统计和卡片
+			const [allTasks, taskStats, cards] = await Promise.all([
 				Effect.runPromise(getTasks()),
+				Effect.runPromise(getTaskStats()),
 				Effect.runPromise(getCards()),
 			]);
 
@@ -58,18 +60,11 @@ const HomePage = () => {
 			);
 			setRecentCards(sortedCards.slice(0, 4));
 
-			// 计算统计信息
-			const completed = allTasks.filter(
-				(t) => t.status === "completed",
-			).length;
-			const pending = allTasks.filter(
-				(t) => t.status !== "completed",
-			).length;
-
+			// 使用后端统计 API
 			setStats({
-				totalTasks: allTasks.length,
-				completedTasks: completed,
-				pendingTasks: pending,
+				totalTasks: taskStats.backlog + taskStats.active + taskStats.completed + taskStats.archived,
+				completedTasks: taskStats.completed,
+				pendingTasks: taskStats.backlog + taskStats.active,
 				totalCards: cards.length,
 			});
 		} catch (error) {
@@ -241,6 +236,18 @@ const HomePage = () => {
 		}
 	};
 
+	// 创建子任务
+	const handleAddSubTask = async (parentId: number, title: string) => {
+		try {
+			const request: CreateTaskRequest = { title, parent_task_id: parentId };
+			const newTask = await Effect.runPromise(createTask(request));
+			setTodos([...todos(), newTask]);
+		} catch (error) {
+			console.error("创建子任务失败:", error);
+			alert("创建子任务失败，请重试");
+		}
+	};
+
 	// 处理Card编辑
 	const handleCardEdit = (id: number) => {
 		window.location.href = `/c/edit/${id}`;
@@ -358,6 +365,7 @@ const HomePage = () => {
 							onStatusChange={handleStatusChange}
 							onDelete={handleDelete}
 							onUpdate={handleUpdateTask}
+							onAddSubTask={handleAddSubTask}
 						/>
 					</Show>
 				</div>

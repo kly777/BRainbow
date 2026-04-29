@@ -88,8 +88,8 @@ fn not_found() -> (StatusCode, Json<ErrorResponse>) {
     (
         StatusCode::NOT_FOUND,
         Json(ErrorResponse {
-            code: TaskErrorCode::SlotOverlap,
-            message: "资源未找到".to_string(),
+            code: TaskErrorCode::TaskNotFound,
+            message: "时间窗口未找到".to_string(),
             details: None,
         }),
     )
@@ -114,6 +114,7 @@ pub async fn create_time_window_handler(
     Json(payload): Json<CreateTimeWindowRequest>,
 ) -> impl IntoResponse {
     let repo = TimeWindowRepository::new(state.db);
+    let task_id = payload.task_id;
 
     match repo.create(payload).await {
         Ok(time_window) => Json(TimeWindowResponse::from(time_window)).into_response(),
@@ -125,6 +126,14 @@ pub async fn create_time_window_handler(
             .into_response()
         }
         Err(e) => {
+            let msg = format!("{}", e);
+            if msg.contains("FOREIGN KEY") {
+                return bad_request(
+                    TaskErrorCode::TaskNotFound,
+                    format!("任务 ID {} 不存在", task_id),
+                )
+                .into_response();
+            }
             let error = format!("创建时间窗口失败: {}", e);
             internal_error(error).into_response()
         }

@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { type Component, createResource, createSignal, For, Show } from "solid-js";
 import { createOnto, deleteOnto, getOntos } from "@/apis/ontoApi";
 import type { Onto } from "@/apis/ontoApi";
-import styles from "@/styles/ontology/ontologyList.module.css";
+import styles from "./OntologyList.module.css"
 
 const OntologyListPage: Component = () => {
 	// 使用 createResource 加载本体数据

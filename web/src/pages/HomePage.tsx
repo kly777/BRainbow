@@ -2,22 +2,23 @@ import { A } from "@solidjs/router";
 import { Effect } from "effect";
 import { createSignal, For, onMount, Show } from "solid-js";
 import Card, { type CardData } from "@/components/Card";
+import TaskList from "@/components/TaskList";
 import {
-	getBacklogTasks,
+	getTasks,
 	createTask,
 	completeTask,
+	activateTask,
 	moveToBacklog,
 	deleteTask,
-	getTasks,
+	updateTask,
 } from "@/apis/taskApi";
 import { getCards, deleteCard as apiDeleteCard } from "@/apis/cardApi";
 import type { CreateTaskRequest, Task } from "@/apis/types";
-import { formatDate, getStatusText } from "@/apis/types";
-import styles from "@/styles/pages/home.module.css";
+import styles from "./HomePage.module.css"
 
 // 主页组件
 const HomePage = () => {
-	// Todo列表状态（来自后端backlog任务）
+	// 任务列表状态
 	const [todos, setTodos] = createSignal<Task[]>([]);
 	// 最近创建的card状态
 	const [recentCards, setRecentCards] = createSignal<CardData[]>([]);
@@ -42,13 +43,12 @@ const HomePage = () => {
 			setLoading(true);
 
 			// 并行加载任务和卡片
-			const [backlogTasks, allTasks, cards] = await Promise.all([
-				Effect.runPromise(getBacklogTasks()),
+			const [allTasks, cards] = await Promise.all([
 				Effect.runPromise(getTasks()),
 				Effect.runPromise(getCards()),
 			]);
 
-			setTodos([...backlogTasks]);
+			setTodos([...allTasks]);
 
 			// 按 updated_at 降序排列，取前4个
 			const sortedCards = [...cards].sort(
@@ -59,16 +59,15 @@ const HomePage = () => {
 			setRecentCards(sortedCards.slice(0, 4));
 
 			// 计算统计信息
-			const taskList = [...allTasks];
-			const completed = taskList.filter(
+			const completed = allTasks.filter(
 				(t) => t.status === "completed",
 			).length;
-			const pending = taskList.filter(
+			const pending = allTasks.filter(
 				(t) => t.status !== "completed",
 			).length;
 
 			setStats({
-				totalTasks: taskList.length,
+				totalTasks: allTasks.length,
 				completedTasks: completed,
 				pendingTasks: pending,
 				totalCards: cards.length,
@@ -140,68 +139,60 @@ const HomePage = () => {
 		}
 	};
 
-	// 切换Todo完成状态（乐观更新）
-	const toggleTodo = async (id: number) => {
-		const task = todos().find((t) => t.id === id);
-		if (!task) return;
+	// 切换任务状态（乐观更新）
+	const handleStatusChange = async (taskId: number, newStatus: string) => {
+		const currentTodos = todos();
+		const taskIndex = currentTodos.findIndex((t) => t.id === taskId);
+		if (taskIndex === -1) return;
 
-		const isCompleted = task.status === "completed";
-		const newStatus = isCompleted ? "backlog" : "completed";
+		const originalTask = currentTodos[taskIndex];
+		const originalStatus = originalTask.status;
 
-		// 保存原始状态用于回滚
-		const originalStatus = task.status;
-
-		// 乐观更新：先在本地切换状态
+		// 乐观更新：先在本地更新状态
 		setTodos(
-			todos().map((t) => (t.id === id ? { ...t, status: newStatus } : t)),
+			currentTodos.map((t) =>
+				t.id === taskId ? { ...t, status: newStatus } : t,
+			),
 		);
 
-		// 更新本地统计
-		setStats((prev) => ({
-			...prev,
-			completedTasks: isCompleted
-				? prev.completedTasks - 1
-				: prev.completedTasks + 1,
-			pendingTasks: isCompleted
-				? prev.pendingTasks + 1
-				: prev.pendingTasks - 1,
-		}));
-
 		try {
-			// 根据状态调用不同的 API
-			if (isCompleted) {
-				await Effect.runPromise(moveToBacklog(id));
-			} else {
-				await Effect.runPromise(completeTask(id));
+			switch (newStatus) {
+				case "completed":
+					await Effect.runPromise(completeTask(taskId));
+					break;
+				case "active":
+					await Effect.runPromise(activateTask(taskId));
+					break;
+				case "backlog":
+					await Effect.runPromise(moveToBacklog(taskId));
+					break;
+				case "archived":
+					await Effect.runPromise(deleteTask(taskId));
+					break;
 			}
+			// 重新加载以获取最新数据
+			loadData();
 		} catch (error) {
 			console.error("更新任务状态失败:", error);
-			// 如果失败，回滚到原来的状态
+			// 回滚
 			setTodos(
-				todos().map((t) =>
-					t.id === id ? { ...t, status: originalStatus } : t,
+				currentTodos.map((t) =>
+					t.id === taskId ? { ...t, status: originalStatus } : t,
 				),
 			);
-			setStats((prev) => ({
-				...prev,
-				completedTasks: isCompleted
-					? prev.completedTasks + 1
-					: prev.completedTasks - 1,
-				pendingTasks: isCompleted
-					? prev.pendingTasks - 1
-					: prev.pendingTasks + 1,
-			}));
 			alert("更新任务状态失败，请重试");
 		}
 	};
 
-	// 删除Todo（乐观更新）
-	const deleteTodo = async (id: number) => {
-		const task = todos().find((t) => t.id === id);
+	// 删除任务（乐观更新）
+	const handleDelete = async (taskId: number) => {
+		if (!confirm("确定要删除这个任务吗？")) return;
+
+		const task = todos().find((t) => t.id === taskId);
 		const wasCompleted = task?.status === "completed";
 
 		// 乐观更新：先从列表中移除
-		setTodos(todos().filter((t) => t.id !== id));
+		setTodos(todos().filter((t) => t.id !== taskId));
 		setStats((prev) => ({
 			...prev,
 			totalTasks: prev.totalTasks - 1,
@@ -214,24 +205,39 @@ const HomePage = () => {
 		}));
 
 		try {
-			await Effect.runPromise(deleteTask(id));
+			await Effect.runPromise(deleteTask(taskId));
 		} catch (error) {
 			console.error("删除任务失败:", error);
-			// 如果删除失败，重新加载任务列表
 			loadData();
 		}
 	};
 
-	// 获取状态徽章样式
-	const getStatusBadgeClass = (status: string | null) => {
-		switch (status) {
-			case "completed":
-				return styles.priorityLow;
-			case "active":
-				return styles.priorityHigh;
-			case "backlog":
-			default:
-				return styles.priorityMedium;
+	// 更新任务（乐观更新）
+	const handleUpdateTask = async (taskId: number, updates: Partial<Task>) => {
+		const currentTodos = todos();
+		const taskIndex = currentTodos.findIndex((t) => t.id === taskId);
+		if (taskIndex === -1) return;
+
+		const originalTask = currentTodos[taskIndex];
+
+		// 乐观更新
+		setTodos(
+			currentTodos.map((t) =>
+				t.id === taskId ? { ...t, ...updates } : t,
+			),
+		);
+
+		try {
+			await Effect.runPromise(updateTask(taskId, updates));
+			loadData();
+		} catch (error) {
+			console.error("更新任务失败:", error);
+			setTodos(
+				currentTodos.map((t) =>
+					t.id === taskId ? originalTask : t,
+				),
+			);
+			alert("更新任务失败，请重试");
 		}
 	};
 
@@ -255,7 +261,6 @@ const HomePage = () => {
 			await Effect.runPromise(apiDeleteCard(id));
 		} catch (error) {
 			console.error("删除卡片失败:", error);
-			// 如果删除失败，重新加载卡片列表
 			try {
 				const cards = await Effect.runPromise(getCards());
 				const sortedCards = [...cards].sort(
@@ -266,7 +271,7 @@ const HomePage = () => {
 				setRecentCards(sortedCards.slice(0, 4));
 				setStats((prev) => ({ ...prev, totalCards: cards.length }));
 			} catch {
-				// 如果重新加载也失败，保持当前状态
+				// 静默失败
 			}
 		}
 	};
@@ -294,7 +299,7 @@ const HomePage = () => {
 			</div>
 
 			<div class={styles.mainContent}>
-				{/* 左侧Todo列表 */}
+				{/* 左侧任务列表 */}
 				<div class={styles.todoSection}>
 					<div class={styles.sectionHeader}>
 						<h2 class={styles.sectionTitle}>待办事项</h2>
@@ -305,7 +310,7 @@ const HomePage = () => {
 						</div>
 					</div>
 
-					{/* 添加新Todo表单 */}
+					{/* 添加新任务表单 */}
 					<div class={styles.addTodoForm}>
 						<input
 							type="text"
@@ -333,72 +338,28 @@ const HomePage = () => {
 						</div>
 					</div>
 
-					{/* Todo列表 */}
-					<div class={styles.todoList}>
-						<Show
-							when={todos().length > 0}
-							fallback={
-								<div class={styles.emptyState}>
-									<Show when={!loading()}>
-										<p>暂无待办事项</p>
-										<p class={styles.emptyHint}>添加您的第一个任务吧！</p>
-									</Show>
-									<Show when={loading()}>
-										<p>加载中...</p>
-									</Show>
-								</div>
-							}
-						>
-							<For each={todos()}>
-								{(todo) => (
-									<div
-										class={`${styles.todoItem} ${todo.status === "completed" ? styles.completed : ""}`}
-									>
-										<div class={styles.todoCheckbox}>
-											<label
-												class={styles.checkboxLabel}
-												for={`todo-checkbox-${todo.id}`}
-											>
-												<input
-													type="checkbox"
-													id={`todo-checkbox-${todo.id}`}
-													checked={todo.status === "completed"}
-													onChange={() => toggleTodo(todo.id)}
-													class={styles.checkbox}
-												/>
-												<span class={styles.checkboxCustom}></span>
-											</label>
-										</div>
-										<div class={styles.todoContent}>
-											<div class={styles.todoHeader}>
-												<h3 class={styles.todoTitle}>{todo.title}</h3>
-												<span
-													class={`${styles.priorityBadge} ${getStatusBadgeClass(todo.status)}`}
-												>
-													{getStatusText(todo.status ?? "backlog")}
-												</span>
-											</div>
-											<Show when={todo.description}>
-												<p class={styles.todoDescription}>{todo.description}</p>
-											</Show>
-											<div class={styles.todoMeta}>
-												<span class={styles.dueDate}>
-													创建: {formatDate(todo.created_at)}
-												</span>
-												<button
-													type="button"
-													onClick={() => deleteTodo(todo.id)}
-													class={styles.deleteTodoButton}
-												>
-													删除
-												</button>
-											</div>
-										</div>
-									</div>
-								)}
-							</For>
-						</Show>
-					</div>
+					{/* 使用统一的 TaskList 组件 */}
+					<Show
+						when={todos().length > 0}
+						fallback={
+							<div class={styles.emptyState}>
+								<Show when={!loading()}>
+									<p>暂无待办事项</p>
+									<p class={styles.emptyHint}>添加您的第一个任务吧！</p>
+								</Show>
+								<Show when={loading()}>
+									<p>加载中...</p>
+								</Show>
+							</div>
+						}
+					>
+						<TaskList
+							tasks={todos()}
+							onStatusChange={handleStatusChange}
+							onDelete={handleDelete}
+							onUpdate={handleUpdateTask}
+						/>
+					</Show>
 				</div>
 
 				{/* 右侧最近创建的card */}

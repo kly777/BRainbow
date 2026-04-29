@@ -1,5 +1,5 @@
 import { type Component, createSignal, For, Show } from "solid-js";
-import styles from "@/styles/components/cardsGrid.module.css";
+import styles from "./CardsGrid.module.css"
 import Card, { type CardData } from "./Card";
 
 export interface CardsGridProps {

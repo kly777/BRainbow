@@ -3,7 +3,7 @@ import { Effect } from "effect";
 import { type Component, createResource, Show } from "solid-js";
 import { deleteCard, getCard } from "@/apis/cardApi";
 import Markdown from "@/components/Markdown";
-import styles from "@/styles/notes/cardDetail.module.css";
+import styles from "./CardDetail.module.css"
 
 const CardDetailPage: Component = () => {
 	const params = useParams();

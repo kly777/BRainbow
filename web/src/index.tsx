@@ -2,8 +2,8 @@ import { A, Route, Router } from "@solidjs/router";
 import { type JSX, lazy } from "solid-js";
 import { render } from "solid-js/web";
 import "@/normalize.css";
-import "@/styles/markdown.css";
-import styles from "@/styles/layout.module.css";
+import "@/markdown.css";
+import styles from "./App.module.css"
 
 // 懒加载页面组件
 const HomePage = lazy(async () => import("@/pages/HomePage"));

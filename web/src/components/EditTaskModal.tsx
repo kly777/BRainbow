@@ -1,6 +1,6 @@
 import { createEffect, createSignal, For, Show } from "solid-js";
 import type { Task } from "@/apis/types";
-import styles from "@/styles/taskManager.module.css";
+import styles from "../pages/TaskManager.module.css"
 import Modal from "./Modal";
 
 interface EditTaskModalProps {

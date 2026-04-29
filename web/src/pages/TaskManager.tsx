@@ -15,7 +15,7 @@ import type { CreateTaskRequest, Task } from "@/apis/types";
 import { formatDate } from "@/apis/types";
 import TaskCalendar from "@/components/TaskCalendar";
 import TaskList from "@/components/TaskList";
-import styles from "@/styles/taskManager.module.css";
+import styles from "./TaskManager.module.css"
 
 export default function TaskManager() {
 	const [tasks, setTasks] = createSignal<Task[]>([]);

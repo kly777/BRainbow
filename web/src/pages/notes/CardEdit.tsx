@@ -10,7 +10,7 @@ import {
 import { deleteCard, getCard, updateCard } from "@/apis/cardApi";
 import type { UpdateCardRequest } from "@/apis/types";
 import Markdown from "@/components/Markdown";
-import styles from "@/styles/notes/cardEdit.module.css";
+import styles from "./CardEdit.module.css"
 
 const CardEditPage: Component = () => {
 	const params = useParams();

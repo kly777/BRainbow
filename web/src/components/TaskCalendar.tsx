@@ -1,6 +1,6 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import type { Task } from "@/apis/types";
-import styles from "../styles/taskCalendar.module.css";
+import styles from "./TaskCalendar.module.css"
 
 // 状态对应颜色类名
 const statusColors: Record<string, string> = {

@@ -5,7 +5,7 @@ import { createCard, deleteCard, getCards } from "@/apis/cardApi";
 import type { CreateCardRequest } from "@/apis/types";
 
 import CardsGrid from "@/components/CardsGrid";
-import styles from "@/styles/notes/cardsList.module.css";
+import styles from "./CardsList.module.css"
 
 const CardsListPage: Component = () => {
 	const navigate = useNavigate();

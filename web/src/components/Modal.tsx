@@ -1,5 +1,5 @@
 import { type Component, type JSX, Show } from "solid-js";
-import styles from "@/styles/modal.module.css";
+import styles from "./Modal.module.css"
 
 interface ModalProps {
 	isOpen: boolean;

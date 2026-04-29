@@ -1,0 +1,100 @@
+use chrono::Utc;
+
+use super::super::model::{Task, TaskStatus};
+use super::TaskRepository;
+
+impl TaskRepository {
+    pub async fn find_by_status(&self, status: TaskStatus) -> Result<Vec<Task>, sqlx::Error> {
+        sqlx::query_as::<_, Task>(
+            "SELECT id, title, description, parent_task_id, status, completed_at,
+            effort_estimate_minutes, user_id, created_at, updated_at
+            FROM task
+            WHERE status = ?
+            ORDER BY created_at DESC"
+        )
+        .bind(status.as_str())
+        .fetch_all(&*self.db)
+        .await
+    }
+
+    pub async fn complete(&self, id: i32) -> Result<Task, sqlx::Error> {
+        let now = Utc::now();
+        let result = sqlx::query_as::<_, Task>(
+            "UPDATE task SET status = 'completed', completed_at = ?, updated_at = ?
+            WHERE id = ?
+            RETURNING id, title, description, parent_task_id, status, completed_at,
+            effort_estimate_minutes, user_id, created_at, updated_at"
+        )
+        .bind(now)
+        .bind(now)
+        .bind(id)
+        .fetch_one(&*self.db)
+        .await?;
+
+        Ok(result)
+    }
+
+    pub async fn activate(&self, id: i32) -> Result<Task, sqlx::Error> {
+        let now = Utc::now();
+        let result = sqlx::query_as::<_, Task>(
+            "UPDATE task SET status = 'active', updated_at = ?
+            WHERE id = ?
+            RETURNING id, title, description, parent_task_id, status, completed_at,
+            effort_estimate_minutes, user_id, created_at, updated_at"
+        )
+        .bind(now)
+        .bind(id)
+        .fetch_one(&*self.db)
+        .await?;
+
+        Ok(result)
+    }
+
+    pub async fn archive(&self, id: i32) -> Result<Task, sqlx::Error> {
+        let now = Utc::now();
+        let result = sqlx::query_as::<_, Task>(
+            "UPDATE task SET status = 'archived', updated_at = ?
+            WHERE id = ?
+            RETURNING id, title, description, parent_task_id, status, completed_at,
+            effort_estimate_minutes, user_id, created_at, updated_at"
+        )
+        .bind(now)
+        .bind(id)
+        .fetch_one(&*self.db)
+        .await?;
+
+        Ok(result)
+    }
+
+    pub async fn move_to_backlog(&self, id: i32) -> Result<Task, sqlx::Error> {
+        let now = Utc::now();
+        let result = sqlx::query_as::<_, Task>(
+            "UPDATE task SET status = 'backlog', updated_at = ?
+            WHERE id = ?
+            RETURNING id, title, description, parent_task_id, status, completed_at,
+            effort_estimate_minutes, user_id, created_at, updated_at"
+        )
+        .bind(now)
+        .bind(id)
+        .fetch_one(&*self.db)
+        .await?;
+
+        Ok(result)
+    }
+
+    pub async fn find_active_tasks(&self) -> Result<Vec<Task>, sqlx::Error> {
+        self.find_by_status(TaskStatus::Active).await
+    }
+
+    pub async fn find_backlog_tasks(&self) -> Result<Vec<Task>, sqlx::Error> {
+        self.find_by_status(TaskStatus::Backlog).await
+    }
+
+    pub async fn find_completed_tasks(&self) -> Result<Vec<Task>, sqlx::Error> {
+        self.find_by_status(TaskStatus::Completed).await
+    }
+
+    pub async fn find_archived_tasks(&self) -> Result<Vec<Task>, sqlx::Error> {
+        self.find_by_status(TaskStatus::Archived).await
+    }
+}

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use super::model::{Task, CreateTaskRequest, UpdateTaskRequest, TaskStatus};
+use super::dto::{CreateTaskRequest, UpdateTaskRequest};
+use super::model::{Task, TaskStatus};
 use super::repository::TaskRepository;
 
 /// 任务服务层

@@ -1,3 +1,6 @@
+// ==================== Re-exports from authApi ====================
+export * from "./authApi";
+
 // ==================== Re-exports from types ====================
 
 // ==================== Re-exports from cardApi ====================

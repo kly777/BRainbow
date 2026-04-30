@@ -5,4 +5,12 @@ use sqlx::FromRow;
 pub struct User {
     pub id: i32,
     pub name: String,
+    pub password_hash: String,
+    pub role: String,
+}
+
+impl User {
+    pub fn is_admin(&self) -> bool {
+        self.role == "admin"
+    }
 }

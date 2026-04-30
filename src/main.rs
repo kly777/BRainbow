@@ -1,3 +1,4 @@
+mod auth;
 mod db;
 mod modules;
 mod routes;
@@ -31,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState { db: Arc::new(pool) };
 
     // 创建路由
-    let app = create_router(state);
+    let app = create_router(state.clone());
 
     // 添加 CORS 中间件
     let cors = CorsLayer::new()
@@ -46,7 +47,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ])
         .allow_headers(Any);
 
-    let app = app.layer(middleware::from_fn(logger)).layer(cors);
+    let app = app
+        .layer(middleware::from_fn_with_state(state, auth::require_admin))
+        .layer(middleware::from_fn(logger))
+        .layer(cors);
 
     let port = env!("SERVICE_PORT")
         .parse::<u16>()

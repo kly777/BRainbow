@@ -43,7 +43,6 @@ const CardEditPage: Component = () => {
 	});
 
 	// 表单状态
-	const [title, setTitle] = createSignal("");
 	const [content, setContent] = createSignal("");
 	const [isSubmitting, setIsSubmitting] = createSignal(false);
 	const [error, setError] = createSignal("");
@@ -52,7 +51,6 @@ const CardEditPage: Component = () => {
 	createEffect(() => {
 		const currentCard = card();
 		if (currentCard) {
-			setTitle(currentCard.title);
 			setContent(currentCard.content);
 		}
 	});
@@ -60,11 +58,6 @@ const CardEditPage: Component = () => {
 	// 处理表单提交
 	const handleSubmit = async (e: Event) => {
 		e.preventDefault();
-
-		if (!title().trim()) {
-			setError("标题不能为空");
-			return;
-		}
 
 		if (!content().trim()) {
 			setError("内容不能为空");
@@ -76,7 +69,6 @@ const CardEditPage: Component = () => {
 
 		try {
 			const request: UpdateCardRequest = {
-				title: title().trim(),
 				content: content().trim(),
 			};
 
@@ -158,22 +150,6 @@ const CardEditPage: Component = () => {
 					<Show when={error()}>
 						<div class={styles.errorMessage}>{error()}</div>
 					</Show>
-
-					<div class={styles.formGroup}>
-						<label for="card-title" class={styles.formLabel}>
-							标题
-						</label>
-						<input
-							id="card-title"
-							type="text"
-							class={styles.formInput}
-							value={title()}
-							onInput={(e) => setTitle(e.currentTarget.value)}
-							placeholder="请输入卡片标题"
-							disabled={isSubmitting()}
-							required
-						/>
-					</div>
 
 					<div class={styles.editorLayout}>
 						<div class={styles.editorSection}>

@@ -72,7 +72,7 @@ const CardDetailPage: Component = () => {
 	};
 
 	const handleBack = () => {
-		window.history.back();
+		navigate("/c");
 	};
 
 	return (
@@ -128,28 +128,22 @@ const CardDetailPage: Component = () => {
 			<Show when={!card.loading && !card.error && card()}>
 				{(currentCard) => (
 					<div class={styles.cardDetail}>
-						<div class={styles.cardHeader}>
-							<h1 class={styles.cardTitle}>{currentCard().title}</h1>
-							<div class={styles.cardMeta}>
-								<div class={styles.metaItem}>
-									<span class={styles.metaLabel}>创建时间:</span>
-									<span class={styles.metaValue}>
-										{formatDate(currentCard().created_at)}
-									</span>
-								</div>
-								<div class={styles.metaItem}>
-									<span class={styles.metaLabel}>更新时间:</span>
-									<span class={styles.metaValue}>
-										{formatDate(currentCard().updated_at)}
-									</span>
-								</div>
+						<div class={styles.cardMeta}>
+							<div class={styles.metaItem}>
+								<span class={styles.metaLabel}>创建时间:</span>
+								<span class={styles.metaValue}>
+									{formatDate(currentCard().created_at)}
+								</span>
+							</div>
+							<div class={styles.metaItem}>
+								<span class={styles.metaLabel}>更新时间:</span>
+								<span class={styles.metaValue}>
+									{formatDate(currentCard().updated_at)}
+								</span>
 							</div>
 						</div>
 
 						<div class={styles.cardContent}>
-							<div class={styles.contentHeader}>
-								<h2 class={styles.contentTitle}>内容</h2>
-							</div>
 							<div class={styles.contentBody}>
 								<Markdown content={currentCard().content} />
 							</div>

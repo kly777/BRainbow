@@ -1,10 +1,10 @@
 import { type Component, Show } from "solid-js";
+import Markdown from "./Markdown";
 import styles from "./Card.module.css"
 
 // 卡片接口，匹配后端API
 export interface CardData {
 	id: number;
-	title: string;
 	content: string;
 	created_at: string;
 	updated_at: string;
@@ -36,64 +36,6 @@ const Card: Component<CardProps> = (props) => {
 		}
 	};
 
-	const _getContentPreview = (
-		content: string,
-		maxLines: number = 3,
-	): string => {
-		// 按换行符分割内容
-		const lines = content.split("\n").filter((line) => line.trim() !== "");
-
-		// 如果内容行数少于最大行数，返回全部内容
-		if (lines.length <= maxLines) {
-			return content;
-		}
-
-		// 截取前几行并添加省略号
-		const previewLines = lines.slice(0, maxLines);
-		return `${previewLines.join("\n")}...`;
-	};
-
-	const getPlainTextPreview = (
-		content: string,
-		maxLines: number = 3,
-	): string => {
-		// 移除Markdown标记，保留纯文本
-		const plainText = content
-			// 移除标题标记
-			.replace(/^#+\s+/gm, "")
-			// 移除粗体标记
-			.replace(/\*\*(.*?)\*\*/g, "$1")
-			.replace(/__(.*?)__/g, "$1")
-			// 移除斜体标记
-			.replace(/\*(.*?)\*/g, "$1")
-			.replace(/_(.*?)_/g, "$1")
-			// 移除删除线标记
-			.replace(/~~(.*?)~~/g, "$1")
-			// 移除行内代码标记
-			.replace(/`([^`]+)`/g, "$1")
-			// 移除链接标记
-			.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-			// 移除图片标记
-			.replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
-			// 移除引用标记
-			.replace(/^>\s+/gm, "")
-			// 移除列表标记
-			.replace(/^[\s]*[-*+]\s+/gm, "")
-			.replace(/^[\s]*\d+\.\s+/gm, "");
-
-		// 按换行符分割内容
-		const lines = plainText.split("\n").filter((line) => line.trim() !== "");
-
-		// 如果内容行数少于最大行数，返回全部内容
-		if (lines.length <= maxLines) {
-			return plainText;
-		}
-
-		// 截取前几行并添加省略号
-		const previewLines = lines.slice(0, maxLines);
-		return `${previewLines.join("\n")}...`;
-	};
-
 	const handleEditClick = (e: MouseEvent) => {
 		e.stopPropagation();
 		if (props.onEdit) {
@@ -116,17 +58,8 @@ const Card: Component<CardProps> = (props) => {
 
 	return (
 		<div class={`${styles.card} ${props.isDeleting ? styles.deleting : ""}`}>
-			<div class={styles.cardHeader}>
-				<h3 class={styles.cardTitle}>{props.title}</h3>
-				<Show when={props.category}>
-					<span class={styles.cardCategory}>{props.category}</span>
-				</Show>
-			</div>
-
 			<div class={styles.cardContent}>
-				<div class={styles.cardPreview}>
-					{getPlainTextPreview(props.content, props.maxContentLines)}
-				</div>
+				<Markdown content={props.content} />
 			</div>
 
 			<Show when={props.tags && props.tags.length > 0}>

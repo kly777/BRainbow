@@ -6,6 +6,7 @@ mod service;
 pub use handler::{
     create_card_handler, get_cards_handler, get_card_handler,
     update_card_handler, delete_card_handler,
+    search_cards_handler,
 };
 pub use model::Card;
 pub use service::CardService;
@@ -25,4 +26,5 @@ pub fn routes() -> Router<AppState> {
                 .patch(update_card_handler)
                 .delete(delete_card_handler),
         )
+        .route("/search", get(search_cards_handler))
 }

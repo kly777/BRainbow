@@ -1,8 +1,9 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Json},
 };
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use super::service::CardService;
@@ -11,14 +12,12 @@ use crate::state::AppState;
 /// 创建卡片请求结构体
 #[derive(Debug, Deserialize)]
 pub struct CreateCardRequest {
-    pub title: String,
     pub content: String,
 }
 
 /// 更新卡片请求结构体
 #[derive(Debug, Deserialize)]
 pub struct UpdateCardRequest {
-    pub title: Option<String>,
     pub content: Option<String>,
 }
 
@@ -26,7 +25,6 @@ pub struct UpdateCardRequest {
 #[derive(Debug, Serialize)]
 pub struct CardResponse {
     pub id: i32,
-    pub title: String,
     pub content: String,
     pub created_at: String,
     pub updated_at: String,
@@ -40,13 +38,12 @@ pub async fn create_card_handler(
     let card_service = CardService::new(state.db.clone());
 
     match card_service
-        .create_card(payload.title.clone(), payload.content.clone())
+        .create_card(payload.content.clone())
         .await
     {
         Ok(card) => {
             let response = CardResponse {
                 id: card.id,
-                title: card.title,
                 content: card.content,
                 created_at: card.created_at.to_string(),
                 updated_at: card.updated_at.to_string(),
@@ -70,7 +67,6 @@ pub async fn get_cards_handler(State(state): State<AppState>) -> impl IntoRespon
                 .into_iter()
                 .map(|card| CardResponse {
                     id: card.id,
-                    title: card.title,
                     content: card.content,
                     created_at: card.created_at.to_string(),
                     updated_at: card.updated_at.to_string(),
@@ -97,7 +93,6 @@ pub async fn get_card_handler(
         Ok(Some(card)) => {
             let card_response = CardResponse {
                 id: card.id,
-                title: card.title,
                 content: card.content,
                 created_at: card.created_at.to_string(),
                 updated_at: card.updated_at.to_string(),
@@ -125,13 +120,12 @@ pub async fn update_card_handler(
     let card_service = CardService::new(state.db.clone());
 
     match card_service
-        .update_card(id, payload.title, payload.content)
+        .update_card(id, payload.content)
         .await
     {
         Ok(card) => {
             let response = CardResponse {
                 id: card.id,
-                title: card.title,
                 content: card.content,
                 created_at: card.created_at.to_string(),
                 updated_at: card.updated_at.to_string(),
@@ -162,6 +156,42 @@ pub async fn delete_card_handler(
         }
         Err(e) => {
             let error_msg = format!("删除卡片失败: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+        }
+    }
+}
+
+/// 搜索卡片
+pub async fn search_cards_handler(
+    Query(params): Query<HashMap<String, String>>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let query = match params.get("q") {
+        Some(q) if !q.is_empty() => q,
+        _ => {
+            let error_msg = "搜索关键词不能为空".to_string();
+            return (StatusCode::BAD_REQUEST, error_msg).into_response();
+        }
+    };
+
+    let card_service = CardService::new(state.db.clone());
+
+    match card_service.search_cards(query).await {
+        Ok(cards) => {
+            let card_responses: Vec<CardResponse> = cards
+                .into_iter()
+                .map(|card| CardResponse {
+                    id: card.id,
+                    content: card.content,
+                    created_at: card.created_at.to_string(),
+                    updated_at: card.updated_at.to_string(),
+                })
+                .collect();
+
+            Json(card_responses).into_response()
+        }
+        Err(e) => {
+            let error_msg = format!("搜索卡片失败: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
         }
     }

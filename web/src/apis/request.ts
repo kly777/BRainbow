@@ -8,7 +8,7 @@ import {
 
 // ==================== API Configuration ====================
 
-const API_BASE_URL = import.meta.env.MODE === 'development' ? 'http://localhost:8080/api' : '/api';
+const API_BASE_URL = "/api";
 
 // ==================== Request Helper ====================
 
@@ -57,10 +57,6 @@ export const request = <T>(
 		});
 
 		if (!response.ok) {
-			if (response.status === 204) {
-				// Handle void response
-				return undefined as T;
-			}
 
 			let errorMessage = `HTTP ${response.status}`;
 			try {

@@ -1,4 +1,4 @@
-import { A } from "@solidjs/router";
+import { A, useNavigate } from "@solidjs/router";
 import { Effect } from "effect";
 import { createSignal, For, onMount, Show } from "solid-js";
 import Card, { type CardData } from "@/components/Card";
@@ -19,6 +19,7 @@ import styles from "./HomePage.module.css"
 
 // 主页组件
 const HomePage = () => {
+	const navigate = useNavigate();
 	// 任务列表状态
 	const [todos, setTodos] = createSignal<Task[]>([]);
 	// 最近创建的card状态
@@ -253,11 +254,6 @@ const HomePage = () => {
 		}
 	};
 
-	// 处理Card编辑
-	const handleCardEdit = (id: number) => {
-		window.location.href = `/c/edit/${id}`;
-	};
-
 	// 处理Card删除（乐观更新）
 	const handleCardDelete = async (id: number) => {
 		if (!confirm("确定要删除这个卡片吗？")) return;
@@ -381,10 +377,10 @@ const HomePage = () => {
 					<div class={styles.sectionHeader}>
 						<h2 class={styles.sectionTitle}>最近创建的卡片</h2>
 						<div class={styles.sectionActions}>
-							<A href="/cards" class={styles.viewAllLink}>
+							<A href="/c" class={styles.viewAllLink}>
 								查看全部 →
 							</A>
-							<A href="/cards" class={styles.createLink}>
+							<A href="/c" class={styles.createLink}>
 								+ 新建卡片
 							</A>
 						</div>
@@ -410,12 +406,11 @@ const HomePage = () => {
 									<div class={styles.cardWrapper}>
 										<Card
 											id={card.id}
-											title={card.title}
 											content={card.content}
 											created_at={card.created_at}
 											updated_at={card.updated_at}
 											maxContentLines={2}
-											onEdit={handleCardEdit}
+											onEdit={(id) => navigate(`/c/edit/${id}`)}
 											onDelete={handleCardDelete}
 										/>
 									</div>

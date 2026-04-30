@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import { Effect } from "effect";
 import { type Component, createResource, createSignal, Show } from "solid-js";
-import { createCard, deleteCard, getCards } from "@/apis/cardApi";
+import { createCard, deleteCard, getCards, searchCards } from "@/apis/cardApi";
 import { getErrorMessage, type CreateCardRequest } from "@/apis/types";
 
 import CardsGrid from "@/components/CardsGrid";
@@ -23,7 +23,6 @@ const CardsListPage: Component = () => {
 	);
 
 	const [showCreateModal, setShowCreateModal] = createSignal(false);
-	const [newCardTitle, setNewCardTitle] = createSignal("");
 	const [newCardContent, setNewCardContent] = createSignal("");
 	const [isCreating, setIsCreating] = createSignal(false);
 	const [error, setError] = createSignal("");
@@ -86,11 +85,6 @@ const CardsListPage: Component = () => {
 
 	// 处理创建卡片
 	const handleCreateCard = async () => {
-		if (!newCardTitle().trim()) {
-			setError("标题不能为空");
-			return;
-		}
-
 		if (!newCardContent().trim()) {
 			setError("内容不能为空");
 			return;
@@ -100,7 +94,6 @@ const CardsListPage: Component = () => {
 		setError("");
 
 		const request: CreateCardRequest = {
-			title: newCardTitle().trim(),
 			content: newCardContent().trim(),
 		};
 
@@ -109,8 +102,7 @@ const CardsListPage: Component = () => {
 			createCard(request).pipe(
 				Effect.tap((newCard) => {
 					// 清空表单并关闭模态框
-					setNewCardTitle("");
-					setNewCardContent("");
+						setNewCardContent("");
 					setShowCreateModal(false);
 
 					// 乐观更新：立即将新卡片添加到资源状态
@@ -134,9 +126,28 @@ const CardsListPage: Component = () => {
 		);
 	};
 
+	// 搜索
+	const handleSearch = async (query: string) => {
+		if (!query) {
+			// 空查询 = 重新加载全部
+			const loaded = await Effect.runPromise(
+				getCards().pipe(
+					Effect.catchAll(() => Effect.succeed([])),
+				),
+			);
+			mutate([...loaded]);
+			return;
+		}
+		try {
+			const results = await Effect.runPromise(searchCards(query));
+			mutate([...results]);
+		} catch (error) {
+			console.error("搜索失败:", error);
+		}
+	};
+
 	// 打开创建模态框
 	const openCreateModal = () => {
-		setNewCardTitle("");
 		setNewCardContent("");
 		setError("");
 		setShowCreateModal(true);
@@ -185,11 +196,10 @@ const CardsListPage: Component = () => {
 			<Show when={!cards.loading && !cards.error}>
 				<CardsGrid
 					cards={[...(cards() || [])]}
-					columns={3}
-					gap={20}
 					sortBy="updated"
 					sortOrder="desc"
 					showFilters={true}
+					onSearch={handleSearch}
 					onCardClick={handleCardClick}
 					onCardEdit={handleCardEdit}
 					onCardDelete={handleCardDelete}
@@ -240,21 +250,6 @@ const CardsListPage: Component = () => {
 							<Show when={error()}>
 								<div class={styles.errorMessage}>{error()}</div>
 							</Show>
-
-							<div class={styles.formGroup}>
-								<label for="card-title" class={styles.formLabel}>
-									标题
-								</label>
-								<input
-									id="card-title"
-									type="text"
-									class={styles.formInput}
-									value={newCardTitle()}
-									onInput={(e) => setNewCardTitle(e.currentTarget.value)}
-									placeholder="请输入卡片标题"
-									disabled={isCreating()}
-								/>
-							</div>
 
 							<div class={styles.formGroup}>
 								<label for="card-content" class={styles.formLabel}>

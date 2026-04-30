@@ -26,25 +26,22 @@ const Layout = (props: { children?: JSX.Element }) => {
 						Brain<span>bow</span>
 					</h1>
 					<nav class={styles.navLinks}>
-						<A href="/" class={styles.navLink} activeClass={styles.active}>
+						<A href="/" class={styles.navLink} activeClass={styles.active} end>
 							主页
 						</A>
-						<A href="/tasks" class={styles.navLink} activeClass={styles.active}>
+						<A href="/tasks" class={styles.navLink} activeClass={styles.active} end>
 							时间管理
 						</A>
-						<A href="/c" class={styles.navLink} activeClass={styles.active}>
+						<A href="/c" class={styles.navLink} activeClass={styles.active} end>
 							卡片
 						</A>
-						<A href="/o" class={styles.navLink} activeClass={styles.active}>
+						<A href="/o" class={styles.navLink} activeClass={styles.active} end>
 							本体
 						</A>
 					</nav>
 				</div>
 			</header>
 			<main class={styles.appContent}>{props.children}</main>
-			<footer class={styles.footer}>
-				<p>© {new Date().getFullYear()} Brainbow 任务管理系统</p>
-			</footer>
 		</div>
 	);
 };

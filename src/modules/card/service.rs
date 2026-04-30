@@ -33,9 +33,9 @@ impl CardService {
     }
 
     /// 创建卡片
-    pub async fn create_card(&self, title: String, content: String) -> Result<Card, String> {
+    pub async fn create_card(&self, content: String) -> Result<Card, String> {
         self.card_repository
-            .create(title, content)
+            .create(content)
             .await
             .map_err(|e| format!("创建卡片失败: {}", e))
     }
@@ -44,11 +44,10 @@ impl CardService {
     pub async fn update_card(
         &self,
         id: i32,
-        title: Option<String>,
         content: Option<String>,
     ) -> Result<Card, String> {
         self.card_repository
-            .update(id, title, content)
+            .update(id, content)
             .await
             .map_err(|e| format!("更新卡片失败: {}", e))
     }
@@ -59,5 +58,13 @@ impl CardService {
             .delete(id)
             .await
             .map_err(|e| format!("删除卡片失败: {}", e))
+    }
+
+    /// 搜索卡片
+    pub async fn search_cards(&self, query: &str) -> Result<Vec<Card>, String> {
+        self.card_repository
+            .search_by_content(query)
+            .await
+            .map_err(|e| format!("搜索卡片失败: {}", e))
     }
 }

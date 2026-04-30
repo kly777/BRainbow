@@ -4,19 +4,16 @@ import { Schema } from "effect";
 
 export const CardSchema = Schema.Struct({
 	id: Schema.Number,
-	title: Schema.String,
 	content: Schema.String,
 	created_at: Schema.String, // ISO 8601 datetime string
 	updated_at: Schema.String, // ISO 8601 datetime string
 });
 
 export const CreateCardRequestSchema = Schema.Struct({
-	title: Schema.String,
 	content: Schema.String,
 });
 
 export const UpdateCardRequestSchema = Schema.Struct({
-	title: Schema.optional(Schema.String),
 	content: Schema.optional(Schema.String),
 });
 

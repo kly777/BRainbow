@@ -4,14 +4,14 @@ import Card, { type CardData } from "./Card";
 
 export interface CardsGridProps {
 	cards: CardData[];
-	columns?: number;
-	gap?: number;
-	sortBy?: "created" | "updated" | "title";
+	sortBy?: "created" | "updated";
 	sortOrder?: "asc" | "desc";
 	showFilters?: boolean;
 	onCardClick?: (id: number) => void;
 	onCardEdit?: (id: number) => void;
 	onCardDelete?: (id: number) => void;
+	onSearch?: (query: string) => void;
+	searching?: boolean;
 	emptyMessage?: string;
 	deletingCardId?: number | null;
 }
@@ -20,7 +20,7 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 	const [searchQuery, setSearchQuery] = createSignal("");
 	const [selectedCategory, setSelectedCategory] = createSignal<string>("全部");
 	const [selectedTag, setSelectedTag] = createSignal<string>("");
-	const [sortBy, setSortBy] = createSignal<"created" | "updated" | "title">(
+	const [sortBy, setSortBy] = createSignal<"created" | "updated">(
 		props.sortBy || "updated",
 	);
 	const [sortOrder, setSortOrder] = createSignal<"asc" | "desc">(
@@ -34,14 +34,15 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 
 	// 过滤和排序卡片
 	const filteredAndSortedCards = () => {
-		const filtered = props.cards.filter((card) => {
-			const matchesSearch =
-				searchQuery() === "" ||
-				card.title.toLowerCase().includes(searchQuery().toLowerCase()) ||
-				card.content.toLowerCase().includes(searchQuery().toLowerCase());
-
-			return matchesSearch;
-		});
+		// 如果有 onSearch 回调，跳过本地过滤，直接使用后端返回的结果
+		const filtered = props.onSearch
+			? props.cards
+			: props.cards.filter((card) => {
+				const matchesSearch =
+					searchQuery() === "" ||
+					card.content.toLowerCase().includes(searchQuery().toLowerCase());
+				return matchesSearch;
+			});
 
 		// 排序
 		filtered.sort((a, b) => {
@@ -57,10 +58,7 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 					aValue = new Date(a.updated_at).getTime();
 					bValue = new Date(b.updated_at).getTime();
 					break;
-				case "title":
-					aValue = a.title.toLowerCase();
-					bValue = b.title.toLowerCase();
-					break;
+
 				default:
 					aValue = new Date(a.updated_at).getTime();
 					bValue = new Date(b.updated_at).getTime();
@@ -109,18 +107,7 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 		setSelectedTag("");
 	};
 
-	// 网格列样式
-	const gridStyle = () => {
-		const style: Record<string, string> = {};
-		if (props.columns) {
-			style["grid-template-columns"] = `repeat(${props.columns}, 1fr)`;
-		}
-		if (props.gap !== undefined) {
-			style.gap = `${props.gap}px`;
-		}
-		return style;
-	};
-
+	// 清空筛选
 	return (
 		<div class={styles.container}>
 			<Show when={props.showFilters !== false}>
@@ -129,9 +116,14 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 						<input
 							type="text"
 							class={styles.searchInput}
-							placeholder="搜索卡片标题或内容..."
+							placeholder="搜索卡片内容..."
 							value={searchQuery()}
 							onInput={(e) => setSearchQuery(e.currentTarget.value)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" && props.onSearch) {
+									props.onSearch(searchQuery().trim());
+								}
+							}}
 						/>
 						<button
 							type="button"
@@ -159,13 +151,12 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 									value={sortBy()}
 									onChange={(e) =>
 										setSortBy(
-											e.currentTarget.value as "created" | "updated" | "title",
+											e.currentTarget.value as "created" | "updated",
 										)
 									}
 								>
 									<option value="updated">更新时间</option>
 									<option value="created">创建时间</option>
-									<option value="title">标题</option>
 								</select>
 							</div>
 
@@ -197,7 +188,7 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 					</div>
 				}
 			>
-				<div class={styles.cardsGrid} style={gridStyle()}>
+				<div class={styles.cardsGrid}>
 					<For each={filteredAndSortedCards()}>
 						{(card) => (
 							<Card
@@ -217,7 +208,7 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 					共 {filteredAndSortedCards().length} 张卡片
 					{selectedCategory() !== "全部" && ` (分类: ${selectedCategory()})`}
 					{selectedTag() !== "" && ` (标签: ${selectedTag()})`}
-					{` (排序: ${sortBy() === "updated" ? "更新时间" : sortBy() === "created" ? "创建时间" : "标题"} ${sortOrder() === "asc" ? "升序" : "降序"})`}
+					{` (排序: ${sortBy() === "updated" ? "更新时间" : "创建时间"} ${sortOrder() === "asc" ? "升序" : "降序"})`}
 				</p>
 			</div>
 		</div>

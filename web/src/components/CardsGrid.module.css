@@ -1,28 +1,42 @@
 .cardsGrid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-	gap: 20px;
+	column-count: auto;
+	column-width: 300px;
+	column-gap: 20px;
 	width: 100%;
+}
+
+.cardsGrid > * {
+	break-inside: avoid;
+	margin-bottom: 20px;
 }
 
 @media (max-width: 1024px) {
 	.cardsGrid {
-		grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-		gap: 16px;
+		column-width: 260px;
+		column-gap: 16px;
+	}
+	.cardsGrid > * {
+		margin-bottom: 16px;
 	}
 }
 
 @media (max-width: 768px) {
 	.cardsGrid {
-		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-		gap: 14px;
+		column-width: 240px;
+		column-gap: 14px;
+	}
+	.cardsGrid > * {
+		margin-bottom: 14px;
 	}
 }
 
 @media (max-width: 480px) {
 	.cardsGrid {
-		grid-template-columns: 1fr;
-		gap: 12px;
+		column-width: 100%;
+		column-gap: 12px;
+	}
+	.cardsGrid > * {
+		margin-bottom: 12px;
 	}
 }
 

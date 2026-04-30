@@ -13,7 +13,7 @@ import {
 	searchTasks,
 	updateTask,
 } from "@/apis/taskApi";
-import type { CreateTaskRequest, Task } from "@/apis/types";
+import { getErrorMessage, type CreateTaskRequest, type Task } from "@/apis/types";
 import TaskCalendar from "@/components/TaskCalendar";
 import TaskList from "@/components/TaskList";
 import styles from "./TaskManager.module.css"
@@ -43,9 +43,11 @@ export default function TaskManager() {
 				setStats(result);
 			} catch (e) {
 				console.error("获取统计失败:", e);
+				alert(`获取统计失败: ${getErrorMessage(e)}`);
 			}
 		} catch (error) {
 			console.error("加载任务失败:", error);
+			alert(`加载任务失败: ${getErrorMessage(error)}`);
 		} finally {
 			setLoading(false);
 		}
@@ -68,6 +70,7 @@ export default function TaskManager() {
 			setTasks([...results]);
 		} catch (error) {
 			console.error("搜索任务失败:", error);
+			alert(`搜索任务失败: ${getErrorMessage(error)}`);
 		} finally {
 			setLoading(false);
 		}
@@ -76,7 +79,7 @@ export default function TaskManager() {
 	// 筛选任务
 	const filterByStatus = async (status: string) => {
 		setActiveFilter(status);
-		setLoading(true);
+		// setLoading(true);
 		try {
 			let results: readonly Task[];
 			switch (status) {
@@ -89,8 +92,9 @@ export default function TaskManager() {
 			setTasks([...results.filter(t => t.status === status)]);
 		} catch (error) {
 			console.error("筛选失败:", error);
+			alert(`筛选失败: ${getErrorMessage(error)}`);
 		} finally {
-			setLoading(false);
+			// setLoading(false);
 		}
 	};
 
@@ -136,11 +140,12 @@ export default function TaskManager() {
 			// 用服务器返回的真实任务替换临时任务
 			setTasks(tasks().map((t) => (t.id === tempId ? newTask : t)));
 		} catch (error) {
-			console.error("创建任务失败:", error);
+			const msg = getErrorMessage(error);
+			console.error("创建任务失败:", msg);
 			// 如果失败，从列表中移除临时任务
 			setTasks(tasks().filter((t) => t.id !== tempId));
 			// 可选：显示错误提示
-			alert("创建任务失败，请重试");
+			alert(`创建任务失败: ${msg}`);
 		}
 	};
 
@@ -181,7 +186,8 @@ export default function TaskManager() {
 			// 用服务器返回的数据更新
 			setTasks(tasks().map((t) => (t.id === taskId ? updatedTask : t)));
 		} catch (error) {
-			console.error("更新任务状态失败:", error);
+			const msg = getErrorMessage(error);
+			console.error("更新任务状态失败:", msg);
 			// 如果失败，回滚到原来的状态
 			setTasks(
 				tasks().map((t) =>
@@ -189,7 +195,7 @@ export default function TaskManager() {
 				),
 			);
 			// 可选：显示错误提示
-			alert("更新任务状态失败，请重试");
+			alert(`更新任务状态失败: ${msg}`);
 		}
 	};
 
@@ -205,6 +211,7 @@ export default function TaskManager() {
 			await Effect.runPromise(deleteTask(taskId));
 		} catch (error) {
 			console.error("删除任务失败:", error);
+			alert(`删除任务失败: ${getErrorMessage(error)}`);
 			// 如果删除失败，重新加载任务列表
 			loadTasks();
 		}
@@ -230,11 +237,12 @@ export default function TaskManager() {
 			// 用服务器返回的数据更新
 			setTasks(tasks().map((t) => (t.id === taskId ? updatedTask : t)));
 		} catch (error) {
-			console.error("更新任务失败:", error);
+			const msg = getErrorMessage(error);
+			console.error("更新任务失败:", msg);
 			// 如果失败，回滚到原来的状态
 			setTasks(tasks().map((t) => (t.id === taskId ? originalTask : t)));
 			// 可选：显示错误提示
-			alert("更新任务失败，请重试");
+			alert(`更新任务失败: ${msg}`);
 		}
 	};
 
@@ -247,7 +255,7 @@ export default function TaskManager() {
 			setTasks([...tasks(), newTask]);
 		} catch (error) {
 			console.error("创建子任务失败:", error);
-			alert("创建子任务失败，请重试");
+			alert(`创建子任务失败: ${getErrorMessage(error)}`);
 		}
 	};
 
@@ -312,6 +320,7 @@ export default function TaskManager() {
 								setTasks([task, ...tasks()]);
 							} catch (error) {
 								console.error("快速创建失败:", error);
+								alert(`快速创建失败: ${getErrorMessage(error)}`);
 							}
 						}
 					}}

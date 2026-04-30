@@ -1,5 +1,6 @@
 import { createEffect, createSignal, For } from "solid-js";
 import { Effect } from "effect";
+import { getErrorMessage } from "@/apis/types";
 import type { Task } from "@/apis/types";
 import { createTimeWindow, deleteTimeWindow, getTimeWindows } from "@/apis/timeWindowApi";
 import type { CreateTimeWindowRequest, TimeWindow } from "@/apis/types";
@@ -38,6 +39,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 			setPlannedWindows([...planned]);
 		} catch (error) {
 			console.error("加载时间窗口失败:", error);
+			alert(`加载时间窗口失败: ${getErrorMessage(error)}`);
 		}
 	};
 
@@ -90,6 +92,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 			setNewEndTime("");
 		} catch (error) {
 			console.error("创建时间窗口失败:", error);
+			alert(`创建时间窗口失败: ${getErrorMessage(error)}`);
 		}
 	};
 
@@ -103,6 +106,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 			}
 		} catch (error) {
 			console.error("删除时间窗口失败:", error);
+			alert(`删除时间窗口失败: ${getErrorMessage(error)}`);
 		}
 	};
 
@@ -245,7 +249,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 
 				{/* 时间窗口管理 */}
 				<div class={styles.formGroup}>
-					<label class={styles.label}>可进行时间段</label>
+					<span class={styles.label}>可进行时间段</span>
 					<div class={styles.timeWindowList}>
 						<For each={feasibleWindows()}>
 							{(tw) => (
@@ -263,7 +267,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 				</div>
 
 				<div class={styles.formGroup}>
-					<label class={styles.label}>计划进行时间段</label>
+					<span class={styles.label}>计划进行时间段</span>
 					<div class={styles.timeWindowList}>
 						<For each={plannedWindows()}>
 							{(tw) => (
@@ -281,7 +285,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 				</div>
 
 				<div class={styles.formGroup}>
-					<label class={styles.label}>添加时间段</label>
+					<span class={styles.label}>添加时间段</span>
 					<div class={styles.timeWindowAddRow}>
 						<select value={newWindowType()} onChange={(e) => setNewWindowType(e.currentTarget.value as "feasible" | "planned")} class={styles.timeWindowTypeSelect}>
 							<option value="feasible">可进行</option>

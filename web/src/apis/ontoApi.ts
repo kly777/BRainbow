@@ -8,7 +8,7 @@ export const OntoSchema = Schema.Struct({
 	description: Schema.NullOr(Schema.String),
 });
 
-export type Onto = Schema.Schema.Type<typeof OntoSchema>;
+export interface Onto extends Schema.Schema.Type<typeof OntoSchema> {}
 
 export const getOntos = (): Effect.Effect<readonly Onto[], ApiErrorType> =>
 	request("/onto", Schema.Array(OntoSchema), {});

@@ -216,4 +216,22 @@ export function getStatusText(status: string): string {
 	}
 }
 
+// ==================== Error Utility ====================
+
+export function getErrorMessage(error: unknown): string {
+	if (error instanceof HttpError) {
+		return error.message || `服务器错误 (${error.status})`;
+	}
+	if (error instanceof NetworkError) {
+		return "网络连接失败，请检查网络";
+	}
+	if (error instanceof ValidationError) {
+		return "数据格式错误";
+	}
+	if (error instanceof Error) {
+		return error.message;
+	}
+	return "未知错误";
+}
+
 

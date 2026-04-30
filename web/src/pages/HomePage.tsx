@@ -14,7 +14,7 @@ import {
 	updateTask,
 } from "@/apis/taskApi";
 import { getCards, deleteCard as apiDeleteCard } from "@/apis/cardApi";
-import type { CreateTaskRequest, Task } from "@/apis/types";
+import { getErrorMessage, type CreateTaskRequest, type Task } from "@/apis/types";
 import styles from "./HomePage.module.css"
 
 // 主页组件
@@ -69,6 +69,7 @@ const HomePage = () => {
 			});
 		} catch (error) {
 			console.error("加载数据失败:", error);
+			alert(`加载数据失败: ${getErrorMessage(error)}`);
 		} finally {
 			setLoading(false);
 		}
@@ -122,7 +123,8 @@ const HomePage = () => {
 			// 用服务器返回的真实任务替换临时任务
 			setTodos(todos().map((t) => (t.id === tempId ? newTask : t)));
 		} catch (error) {
-			console.error("创建任务失败:", error);
+			const msg = getErrorMessage(error);
+			console.error("创建任务失败:", msg);
 			// 如果失败，从列表中移除临时任务并恢复统计
 			setTodos(todos().filter((t) => t.id !== tempId));
 			setStats((prev) => ({
@@ -130,7 +132,7 @@ const HomePage = () => {
 				totalTasks: prev.totalTasks - 1,
 				pendingTasks: prev.pendingTasks - 1,
 			}));
-			alert("创建任务失败，请重试");
+			alert(`创建任务失败: ${msg}`);
 		}
 	};
 
@@ -168,14 +170,15 @@ const HomePage = () => {
 			// 重新加载以获取最新数据
 			loadData();
 		} catch (error) {
-			console.error("更新任务状态失败:", error);
+			const msg = getErrorMessage(error);
+			console.error("更新任务状态失败:", msg);
 			// 回滚
 			setTodos(
 				currentTodos.map((t) =>
 					t.id === taskId ? { ...t, status: originalStatus } : t,
 				),
 			);
-			alert("更新任务状态失败，请重试");
+			alert(`更新任务状态失败: ${msg}`);
 		}
 	};
 
@@ -203,6 +206,7 @@ const HomePage = () => {
 			await Effect.runPromise(deleteTask(taskId));
 		} catch (error) {
 			console.error("删除任务失败:", error);
+			alert(`删除任务失败: ${getErrorMessage(error)}`);
 			loadData();
 		}
 	};
@@ -226,13 +230,14 @@ const HomePage = () => {
 			await Effect.runPromise(updateTask(taskId, updates));
 			loadData();
 		} catch (error) {
-			console.error("更新任务失败:", error);
+			const msg = getErrorMessage(error);
+			console.error("更新任务失败:", msg);
 			setTodos(
 				currentTodos.map((t) =>
 					t.id === taskId ? originalTask : t,
 				),
 			);
-			alert("更新任务失败，请重试");
+			alert(`更新任务失败: ${msg}`);
 		}
 	};
 
@@ -244,7 +249,7 @@ const HomePage = () => {
 			setTodos([...todos(), newTask]);
 		} catch (error) {
 			console.error("创建子任务失败:", error);
-			alert("创建子任务失败，请重试");
+			alert(`创建子任务失败: ${getErrorMessage(error)}`);
 		}
 	};
 
@@ -268,6 +273,7 @@ const HomePage = () => {
 			await Effect.runPromise(apiDeleteCard(id));
 		} catch (error) {
 			console.error("删除卡片失败:", error);
+			alert(`删除卡片失败: ${getErrorMessage(error)}`);
 			try {
 				const cards = await Effect.runPromise(getCards());
 				const sortedCards = [...cards].sort(

@@ -2,7 +2,7 @@ import { useNavigate } from "@solidjs/router";
 import { Effect } from "effect";
 import { type Component, createResource, createSignal, Show } from "solid-js";
 import { createCard, deleteCard, getCards } from "@/apis/cardApi";
-import type { CreateCardRequest } from "@/apis/types";
+import { getErrorMessage, type CreateCardRequest } from "@/apis/types";
 
 import CardsGrid from "@/components/CardsGrid";
 import styles from "./CardsList.module.css"
@@ -15,6 +15,7 @@ const CardsListPage: Component = () => {
 			getCards().pipe(
 				Effect.catchAll((error) => {
 					console.error("获取卡片列表失败:", error);
+					alert(`获取卡片列表失败: ${getErrorMessage(error)}`);
 					return Effect.succeed([]);
 				}),
 			),
@@ -70,7 +71,7 @@ const CardsListPage: Component = () => {
 						if (cardToDelete) {
 							mutate([...currentCards]);
 						}
-						alert("删除卡片失败，请重试");
+						alert(`删除卡片失败: ${getErrorMessage(error)}`);
 						return Effect.void;
 					}),
 					Effect.ensuring(
@@ -119,8 +120,9 @@ const CardsListPage: Component = () => {
 					console.log("卡片创建成功");
 				}),
 				Effect.catchAll((error) => {
-					console.error("创建卡片失败:", error);
-					setError("创建卡片失败，请重试");
+					const msg = getErrorMessage(error);
+					console.error("创建卡片失败:", msg);
+					setError(`创建卡片失败: ${msg}`);
 					return Effect.void;
 				}),
 				Effect.ensuring(

@@ -1,7 +1,7 @@
 /* Layout Component Styles */
 .appContainer {
-	max-width: 1600px;
-	margin: 0 auto;
+	/*max-width: 1600px;*/
+	/*margin: 0 auto;*/
 	padding: 12px;
 	min-height: 100vh;
 	display: flex;
@@ -60,7 +60,10 @@
 .appContent {
 	background-color: white;
 	flex: 1;
-	min-height: 500px;
+	/*min-height: 0;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;*/
 }
 
 .footer {

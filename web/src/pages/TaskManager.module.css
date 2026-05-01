@@ -1,6 +1,10 @@
 .taskManager {
 	margin: 0 auto;
 	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
 }
 
 .statsGrid {
@@ -222,19 +226,22 @@
 .splitView {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
-	gap: 30px;
+	gap: 20px;
 	align-items: start;
+	flex: 1;
+	min-height: 0;
 }
 
 .taskListPanel {
 	display: flex;
 	flex-direction: column;
 	gap: 20px;
+	overflow-y: auto;
 }
 
 .calendarPanel {
-	position: sticky;
-	top: 20px;
+	min-height: 0;
+	overflow-y: auto;
 }
 
 /* 列表视图样式 */

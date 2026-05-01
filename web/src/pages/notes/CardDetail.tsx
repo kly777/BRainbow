@@ -6,170 +6,64 @@ import Markdown from "@/components/Markdown";
 import styles from "./CardDetail.module.css"
 
 const CardDetailPage: Component = () => {
-	const params = useParams();
-	const navigate = useNavigate();
-	const cardId = () => {
-		const id = params.id;
-		if (!id || !/^\d+$/.test(id)) {
-			return NaN;
-		}
-		return parseInt(id, 10);
-	};
+  const params = useParams();
+  const navigate = useNavigate();
 
-	const [card, { refetch }] = createResource(async () => {
-		const id = cardId();
-		if (isNaN(id)) {
-			throw new Error("无效的卡片ID");
-		}
-		try {
-			const data = await Effect.runPromise(getCard(id));
-			return data;
-		} catch (error) {
-			console.error("获取卡片详情失败:", error);
-			throw error;
-		}
-	});
+  const cardId = () => {
+    const id = params.id;
+    if (!id || !/^\d+$/.test(id)) return NaN;
+    return parseInt(id, 10);
+  };
 
-	const formatDate = (dateString: string): string => {
-		try {
-			const date = new Date(dateString);
-			return date.toLocaleDateString("zh-CN", {
-				year: "numeric",
-				month: "2-digit",
-				day: "2-digit",
-				hour: "2-digit",
-				minute: "2-digit",
-				second: "2-digit",
-			});
-		} catch {
-			return dateString;
-		}
-	};
+  const [card, { refetch }] = createResource(async () => {
+    const id = cardId();
+    if (isNaN(id)) throw new Error("无效ID");
+    return await Effect.runPromise(getCard(id));
+  });
 
-	const handleEdit = () => {
-		const id = cardId();
-		console.log("编辑卡片:", id);
-		// 跳转到编辑页面
-		navigate(`/c/edit/${id}`);
-	};
+  const handleDelete = async () => {
+    if (!confirm("确定要删除？")) return;
+    await Effect.runPromise(deleteCard(cardId()).pipe(
+      Effect.tap(() => navigate("/c")),
+      Effect.catchAll(() => Effect.void),
+    ));
+  };
 
-	const handleDelete = async () => {
-		if (confirm("确定要删除这个卡片吗？此操作不可撤销。")) {
-			await Effect.runPromise(
-				deleteCard(cardId()).pipe(
-					Effect.tap(() => {
-						// 删除成功后跳转到卡片列表
-						navigate("/c");
-					}),
-					Effect.catchAll((error) => {
-						console.error("删除卡片失败:", error);
-						alert("删除卡片失败，请重试");
-						return Effect.void;
-					}),
-				),
-			);
-		}
-	};
+  const formatDate = (s: string) => {
+    try { return new Date(s).toLocaleString("zh-CN", { month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" }) }
+    catch { return s }
+  };
 
-	const handleBack = () => {
-		navigate("/c");
-	};
+  return (
+    <div class={styles.container}>
+      <div class={styles.toolbar}>
+        <button type="button" class={styles.backBtn} onClick={() => navigate("/c")}>← 卡片列表</button>
+        <div class={styles.toolbarActions}>
+          <button type="button" class={styles.editBtn} onClick={() => navigate(`/c/edit/${cardId()}`)}>编辑</button>
+          <button type="button" class={styles.deleteBtn} onClick={handleDelete}>删除</button>
+        </div>
+      </div>
 
-	return (
-		<div class={styles.container}>
-			<div class={styles.header}>
-				<button
-					type="button"
-					class={styles.backButton}
-					onClick={handleBack}
-					aria-label="返回"
-				>
-					← 返回
-				</button>
-				<div class={styles.actions}>
-					<button
-						type="button"
-						class={styles.editButton}
-						onClick={handleEdit}
-						disabled={card.loading || card.error}
-					>
-						编辑
-					</button>
-					<button
-						type="button"
-						class={styles.deleteButton}
-						onClick={handleDelete}
-						disabled={card.loading || card.error}
-					>
-						删除
-					</button>
-				</div>
-			</div>
+      <Show when={card.loading}><div class={styles.loading}>加载中...</div></Show>
+      <Show when={card.error}>
+        <div class={styles.loading}>加载失败 <button type="button" class={styles.retryBtn} onClick={() => refetch()}>重试</button></div>
+      </Show>
 
-			<Show when={card.loading}>
-				<div class={styles.loading}>
-					<p>加载中...</p>
-				</div>
-			</Show>
-
-			<Show when={card.error}>
-				<div class={styles.error}>
-					<p>加载失败: {card.error?.toString()}</p>
-					<button
-						type="button"
-						class={styles.retryButton}
-						onClick={() => refetch()}
-					>
-						重试
-					</button>
-				</div>
-			</Show>
-
-			<Show when={!card.loading && !card.error && card()}>
-				{(currentCard) => (
-					<div class={styles.cardDetail}>
-						<div class={styles.cardMeta}>
-							<div class={styles.metaItem}>
-								<span class={styles.metaLabel}>创建时间:</span>
-								<span class={styles.metaValue}>
-									{formatDate(currentCard().created_at)}
-								</span>
-							</div>
-							<div class={styles.metaItem}>
-								<span class={styles.metaLabel}>更新时间:</span>
-								<span class={styles.metaValue}>
-									{formatDate(currentCard().updated_at)}
-								</span>
-							</div>
-						</div>
-
-						<div class={styles.cardContent}>
-							<div class={styles.contentBody}>
-								<Markdown content={currentCard().content} />
-							</div>
-						</div>
-
-						<div class={styles.cardActions}>
-							<button
-								type="button"
-								class={styles.editButton}
-								onClick={handleEdit}
-							>
-								编辑卡片
-							</button>
-							<button
-								type="button"
-								class={styles.deleteButton}
-								onClick={handleDelete}
-							>
-								删除卡片
-							</button>
-						</div>
-					</div>
-				)}
-			</Show>
-		</div>
-	);
+      <Show when={!card.loading && !card.error && card()}>
+        {c => (
+          <div class={styles.content}>
+            <div class={styles.meta}>
+              <span>创建: {formatDate(c().created_at)}</span>
+              <span>更新: {formatDate(c().updated_at)}</span>
+            </div>
+            <div class={styles.body}>
+              <Markdown content={c().content} />
+            </div>
+          </div>
+        )}
+      </Show>
+    </div>
+  );
 };
 
 export default CardDetailPage;

@@ -1,11 +1,11 @@
 import { useNavigate, useParams } from "@solidjs/router";
 import { Effect } from "effect";
 import {
-	type Component,
-	createEffect,
-	createResource,
-	createSignal,
-	Show,
+  type Component,
+  createEffect,
+  createResource,
+  createSignal,
+  Show,
 } from "solid-js";
 import { deleteCard, getCard, updateCard } from "@/apis/cardApi";
 import type { UpdateCardRequest } from "@/apis/types";
@@ -13,199 +13,97 @@ import Markdown from "@/components/Markdown";
 import styles from "./CardEdit.module.css"
 
 const CardEditPage: Component = () => {
-	const params = useParams();
-	const navigate = useNavigate();
+  const params = useParams();
+  const navigate = useNavigate();
 
-	const cardId = () => {
-		const id = params.id;
-		if (!id) {
-			throw new Error("卡片ID不能为空");
-		}
-		if (!/^\d+$/.test(id)) {
-			return NaN;
-		}
-		return parseInt(id, 10);
-	};
+  const cardId = () => {
+    const id = params.id;
+    if (!id || !/^\d+$/.test(id)) return NaN;
+    return parseInt(id, 10);
+  };
 
-	// 加载卡片数据
-	const [card, { refetch }] = createResource(async () => {
-		const id = cardId();
-		if (isNaN(id)) {
-			throw new Error("无效的卡片ID");
-		}
-		try {
-			const data = await Effect.runPromise(getCard(id));
-			return data;
-		} catch (error) {
-			console.error("获取卡片详情失败:", error);
-			throw error;
-		}
-	});
+  const [card, { refetch }] = createResource(async () => {
+    const id = cardId();
+    if (Number.isNaN(id)) throw new Error("无效ID");
+    return await Effect.runPromise(getCard(id));
+  });
 
-	// 表单状态
-	const [content, setContent] = createSignal("");
-	const [isSubmitting, setIsSubmitting] = createSignal(false);
-	const [error, setError] = createSignal("");
+  const [content, setContent] = createSignal("");
+  const [isSubmitting, setIsSubmitting] = createSignal(false);
+  const [error, setError] = createSignal("");
 
-	// 当卡片数据加载完成后，填充表单
-	createEffect(() => {
-		const currentCard = card();
-		if (currentCard) {
-			setContent(currentCard.content);
-		}
-	});
+  createEffect(() => {
+    const c = card();
+    if (c) setContent(c.content);
+  });
 
-	// 处理表单提交
-	const handleSubmit = async (e: Event) => {
-		e.preventDefault();
+  const doSave = async () => {
+    if (!content().trim()) { setError("内容不能为空"); return; }
+    setIsSubmitting(true);
+    setError("");
+    try {
+      const req: UpdateCardRequest = { content: content().trim() };
+      await Effect.runPromise(updateCard(cardId(), req));
+      navigate(`/c/${cardId()}`);
+    } catch {
+      setError("更新失败，请重试");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-		if (!content().trim()) {
-			setError("内容不能为空");
-			return;
-		}
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+      e.preventDefault();
+      doSave();
+    }
+  };
 
-		setIsSubmitting(true);
-		setError("");
+  const handleDelete = async () => {
+    if (!confirm("确定要删除？")) return;
+    await Effect.runPromise(deleteCard(cardId()).pipe(
+      Effect.tap(() => navigate("/c")),
+      Effect.catchAll(() => Effect.void),
+    ));
+  };
 
-		try {
-			const request: UpdateCardRequest = {
-				content: content().trim(),
-			};
+  return (
+    <div class={styles.container}>
+      <div class={styles.toolbar}>
+        <button type="button" class={styles.backBtn} onClick={() => navigate(`/c/${cardId()}`)}>← 返回</button>
+        <span class={styles.toolbarTitle}>编辑卡片</span>
+        <div class={styles.toolbarActions}>
+          <button type="button" class={styles.deleteBtn} onClick={handleDelete}>删除</button>
+          <button type="button" class={styles.saveBtn} onClick={doSave} disabled={isSubmitting()}>
+            {isSubmitting() ? "保存中..." : "保存"}
+          </button>
+        </div>
+      </div>
 
-			await Effect.runPromise(updateCard(cardId(), request));
+      <Show when={card.loading}><div class={styles.loading}>加载中...</div></Show>
+      <Show when={card.error}>
+        <div class={styles.loading}>加载失败 <button type="button" class={styles.retryBtn} onClick={() => refetch()}>重试</button></div>
+      </Show>
 
-			// 编辑成功后跳转到卡片详情页面
-			navigate(`/c/${cardId()}`);
-
-			console.log("卡片更新成功");
-		} catch (error) {
-			console.error("更新卡片失败:", error);
-			setError("更新卡片失败，请重试");
-		} finally {
-			setIsSubmitting(false);
-		}
-	};
-
-	// 处理取消
-	const handleCancel = () => {
-		navigate(`/c/${cardId()}`);
-	};
-
-	// 处理删除
-	const handleDelete = async () => {
-		if (confirm("确定要删除这个卡片吗？此操作不可撤销。")) {
-			await Effect.runPromise(
-				deleteCard(cardId()).pipe(
-					Effect.tap(() => {
-						// 删除成功后跳转到卡片列表
-						navigate("/c");
-					}),
-					Effect.catchAll((error) => {
-						console.error("删除卡片失败:", error);
-						alert("删除卡片失败，请重试");
-						return Effect.void;
-					}),
-				),
-			);
-		}
-	};
-
-	return (
-		<div class={styles.container}>
-			<div class={styles.header}>
-				<h1 class={styles.title}>编辑卡片</h1>
-				<div class={styles.actions}>
-					<button
-						type="button"
-						class={styles.deleteButton}
-						onClick={handleDelete}
-						disabled={isSubmitting() || card.loading || card.error}
-					>
-						删除卡片
-					</button>
-				</div>
-			</div>
-
-			<Show when={card.loading}>
-				<div class={styles.loading}>
-					<p>加载中...</p>
-				</div>
-			</Show>
-
-			<Show when={card.error}>
-				<div class={styles.error}>
-					<p>加载失败: {card.error?.toString()}</p>
-					<button
-						type="button"
-						class={styles.retryButton}
-						onClick={() => refetch()}
-					>
-						重试
-					</button>
-				</div>
-			</Show>
-
-			<Show when={!card.loading && !card.error && card()}>
-				<form class={styles.form} onSubmit={handleSubmit}>
-					<Show when={error()}>
-						<div class={styles.errorMessage}>{error()}</div>
-					</Show>
-
-					<div class={styles.editorLayout}>
-						<div class={styles.editorSection}>
-							<div class={styles.sectionHeader}>
-								<h2 class={styles.sectionTitle}>编辑内容</h2>
-							</div>
-							<textarea
-								id="card-content"
-								class={styles.editorTextarea}
-								value={content()}
-								onInput={(e) => setContent(e.currentTarget.value)}
-								placeholder="~"
-								rows={15}
-								disabled={isSubmitting()}
-								required
-							/>
-						</div>
-
-						<div class={styles.previewSection}>
-							<div class={styles.previewContent}>
-								<Show when={content().trim()}>
-									<Markdown
-										content={content()}
-										class={styles.markdownPreview}
-									/>
-								</Show>
-								<Show when={!content().trim()}>
-									<div class={styles.emptyPreview}>
-										<p>实时预览</p>
-									</div>
-								</Show>
-							</div>
-						</div>
-					</div>
-
-					<div class={styles.formActions}>
-						<button
-							type="button"
-							class={styles.cancelButton}
-							onClick={handleCancel}
-							disabled={isSubmitting()}
-						>
-							取消
-						</button>
-						<button
-							type="submit"
-							class={styles.submitButton}
-							disabled={isSubmitting()}
-						>
-							{isSubmitting() ? "保存中..." : "保存更改"}
-						</button>
-					</div>
-				</form>
-			</Show>
-		</div>
-	);
+      <Show when={!card.loading && !card.error}>
+        <Show when={error()}><div class={styles.errorMsg}>{error()}</div></Show>
+        <div class={styles.editor}>
+          <textarea
+            class={styles.textarea}
+            value={content()}
+            onInput={(e) => setContent(e.currentTarget.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="输入 Markdown 内容..."
+            disabled={isSubmitting()}
+          />
+          <div class={styles.preview}>
+            <Show when={content().trim()}><Markdown content={content()} /></Show>
+            <Show when={!content().trim()}><div class={styles.emptyPreview}>实时预览</div></Show>
+          </div>
+        </div>
+      </Show>
+    </div>
+  );
 };
 
 export default CardEditPage;

@@ -1,8 +1,8 @@
 /* Layout Component Styles */
 .appContainer {
-	max-width: 1400px;
+	max-width: 1600px;
 	margin: 0 auto;
-	padding: 15px;
+	padding: 12px;
 	min-height: 100vh;
 	display: flex;
 	flex-direction: column;

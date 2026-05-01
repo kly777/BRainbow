@@ -1,8 +1,7 @@
 /* 主页样式 */
 .homePage {
-	max-width: 1400px;
 	margin: 0 auto;
-	padding: 20px;
+	padding: 16px;
 }
 
 /* 头部样式 */
@@ -75,8 +74,8 @@
 .mainContent {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
-	gap: 30px;
-	margin-bottom: 40px;
+	gap: 20px;
+	margin-bottom: 30px;
 }
 
 @media (max-width: 1024px) {

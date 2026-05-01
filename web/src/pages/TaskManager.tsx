@@ -1,19 +1,14 @@
 import { Effect } from "effect";
 import { createSignal, onMount, Show } from "solid-js";
 import {
-	activateTask,
-	archiveTask,
-	completeTask,
 	createTask,
-	deleteTask,
 	getAllTasks,
 	getTasks,
 	getTaskStats,
-	moveToBacklog,
 	searchTasks,
-	updateTask,
 } from "@/apis/taskApi";
 import { getErrorMessage, type CreateTaskRequest, type Task } from "@/apis/types";
+import { useTaskActions } from "@/hooks/useTaskActions";
 import TaskCalendar from "@/components/TaskCalendar";
 import TaskList from "@/components/TaskList";
 import styles from "./TaskManager.module.css"
@@ -149,115 +144,8 @@ export default function TaskManager() {
 		}
 	};
 
-	// 更新任务状态（乐观更新）
-	const handleStatusChange = async (taskId: number, newStatus: string) => {
-		// 找到当前任务
-		const currentTasks = tasks();
-		const taskIndex = currentTasks.findIndex((t) => t.id === taskId);
-		if (taskIndex === -1) return;
-
-		const originalTask = currentTasks[taskIndex];
-		const originalStatus = originalTask.status;
-
-		// 乐观更新：先在本地更新状态
-		const updatedTasks = [...currentTasks];
-		updatedTasks[taskIndex] = { ...originalTask, status: newStatus };
-		setTasks(updatedTasks);
-
-		try {
-			let updatedTask: Task;
-			// 根据新状态调用不同的API
-			switch (newStatus) {
-				case "completed":
-					updatedTask = await Effect.runPromise(completeTask(taskId));
-					break;
-				case "active":
-					updatedTask = await Effect.runPromise(activateTask(taskId));
-					break;
-				case "archived":
-					updatedTask = await Effect.runPromise(archiveTask(taskId));
-					break;
-				case "backlog":
-					updatedTask = await Effect.runPromise(moveToBacklog(taskId));
-					break;
-				default:
-					throw new Error(`未知的状态: ${newStatus}`);
-			}
-			// 用服务器返回的数据更新
-			setTasks(tasks().map((t) => (t.id === taskId ? updatedTask : t)));
-		} catch (error) {
-			const msg = getErrorMessage(error);
-			console.error("更新任务状态失败:", msg);
-			// 如果失败，回滚到原来的状态
-			setTasks(
-				tasks().map((t) =>
-					t.id === taskId ? { ...t, status: originalStatus } : t,
-				),
-			);
-			// 可选：显示错误提示
-			alert(`更新任务状态失败: ${msg}`);
-		}
-	};
-
-	// 删除任务
-	const handleDeleteTask = async (taskId: number) => {
-		if (!confirm("确定要删除这个任务吗？")) return;
-
-		try {
-			// 乐观更新：先从列表中移除该任务
-			setTasks(tasks().filter((t) => t.id !== taskId));
-
-			// 然后调用 API
-			await Effect.runPromise(deleteTask(taskId));
-		} catch (error) {
-			console.error("删除任务失败:", error);
-			alert(`删除任务失败: ${getErrorMessage(error)}`);
-			// 如果删除失败，重新加载任务列表
-			loadTasks();
-		}
-	};
-
-	// 更新任务（乐观更新）
-	const handleUpdateTask = async (taskId: number, updates: Partial<Task>) => {
-		// 找到当前任务
-		const currentTasks = tasks();
-		const taskIndex = currentTasks.findIndex((t) => t.id === taskId);
-		if (taskIndex === -1) return;
-
-		const originalTask = currentTasks[taskIndex];
-
-		// 乐观更新：先在本地更新任务
-		const updatedTasks = [...currentTasks];
-		updatedTasks[taskIndex] = { ...originalTask, ...updates };
-		setTasks(updatedTasks);
-
-		try {
-			// 调用 API 更新任务
-			const updatedTask = await Effect.runPromise(updateTask(taskId, updates));
-			// 用服务器返回的数据更新
-			setTasks(tasks().map((t) => (t.id === taskId ? updatedTask : t)));
-		} catch (error) {
-			const msg = getErrorMessage(error);
-			console.error("更新任务失败:", msg);
-			// 如果失败，回滚到原来的状态
-			setTasks(tasks().map((t) => (t.id === taskId ? originalTask : t)));
-			// 可选：显示错误提示
-			alert(`更新任务失败: ${msg}`);
-		}
-	};
-
-	// 创建子任务
-	const handleAddSubTask = async (parentId: number, title: string) => {
-		try {
-			const request: CreateTaskRequest = { title, parent_task_id: parentId };
-			const newTask = await Effect.runPromise(createTask(request));
-			// 将新子任务添加到列表
-			setTasks([...tasks(), newTask]);
-		} catch (error) {
-			console.error("创建子任务失败:", error);
-			alert(`创建子任务失败: ${getErrorMessage(error)}`);
-		}
-	};
+	const { handleStatusChange, handleDelete: handleDeleteTask, handleUpdateTask, handleAddSubTask } =
+		useTaskActions(tasks, setTasks, loadTasks);
 
 	return (
 		<div class={styles.taskManager}>

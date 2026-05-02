@@ -43,5 +43,5 @@ export default defineConfig({
 			root: path.resolve(__dirname, "./dist"),
 		},
 		cleanDistPath: true,
-	},
+    }
 });

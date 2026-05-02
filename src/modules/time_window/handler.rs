@@ -66,11 +66,6 @@ impl From<TimeWindow> for TimeWindowResponse {
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct MessageResponse {
-    pub message: String,
-}
-
 // ==================== 辅助函数 ====================
 
 fn bad_request(code: TaskErrorCode, message: String) -> (StatusCode, Json<ErrorResponse>) {
@@ -163,6 +158,7 @@ pub async fn get_time_windows_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let repo = TimeWindowRepository::new(state.db);
+    #[allow(unused_assignments)]
     let mut time_windows = Vec::new();
 
     // 根据查询条件获取时间窗口

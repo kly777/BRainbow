@@ -17,8 +17,6 @@ pub use crud::{
     delete_task_handler,
 };
 pub use dto::{ErrorResponse, TaskErrorCode};
-pub use model::{Task, TaskStatus};
-pub use service::TaskService;
 pub use query::{
     get_tree_handler, get_calendar_handler, get_dag_handler,
     get_stats_handler, search_tasks_handler,

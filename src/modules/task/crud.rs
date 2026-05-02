@@ -5,7 +5,7 @@ use axum::{
 };
 
 use super::dto::{
-    CreateTaskRequest, ErrorResponse, QuickCreateTaskRequest, TaskDetailResponse, TaskErrorCode, UpdateTaskRequest,
+    CreateTaskRequest, QuickCreateTaskRequest, TaskErrorCode, UpdateTaskRequest,
 };
 use super::repository::TaskRepository;
 use super::response::{bad_request, internal_error, not_found, TaskResponse};

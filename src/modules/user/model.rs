@@ -10,7 +10,7 @@ pub struct User {
 }
 
 impl User {
-    pub fn is_admin(&self) -> bool {
-        self.role == "admin"
-    }
+    // pub fn is_admin(&self) -> bool {
+    //     self.role == "admin"
+    // }
 }

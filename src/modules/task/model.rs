@@ -120,6 +120,7 @@ pub struct Task {
     pub updated_at: DateTime<Utc>,
 }
 
+#[allow(dead_code)]
 impl Task {
     /// 创建新任务时的默认值
     pub fn new(title: String, user_id: Option<i32>) -> Self {
@@ -189,6 +190,7 @@ pub use crate::modules::time_window::{TimeWindow, TimeWindowType};
 
 /// 任务依赖关系
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FromRow)]
+#[allow(dead_code)]
 pub struct TaskDependency {
     pub id: i32,
     pub task_id: i32,

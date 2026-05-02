@@ -3,7 +3,6 @@ use sqlx::{Row, SqlitePool};
 use std::sync::Arc;
 
 use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTimeWindowRequest};
-use std::str::FromStr;
 
 /// TimeWindow 数据访问层
 pub struct TimeWindowRepository {
@@ -199,87 +198,87 @@ impl TimeWindowRepository {
     }
 
     /// 查找在指定时间范围内的时间窗口
-    pub async fn find_in_time_range(
-        &self,
-        start_time: DateTime<Utc>,
-        end_time: DateTime<Utc>,
-    ) -> Result<Vec<TimeWindow>, sqlx::Error> {
-        let results = sqlx::query(
-            "SELECT id, start_time, end_time, type, task_id, user_id, recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays
-             FROM time_window WHERE start_time >= ? AND end_time <= ? ORDER BY start_time"
-        )
-            .bind(start_time)
-            .bind(end_time)
-            .fetch_all(&*self.db)
-            .await?;
+    // pub async fn find_in_time_range(
+    //     &self,
+    //     start_time: DateTime<Utc>,
+    //     end_time: DateTime<Utc>,
+    // ) -> Result<Vec<TimeWindow>, sqlx::Error> {
+    //     let results = sqlx::query(
+    //         "SELECT id, start_time, end_time, type, task_id, user_id, recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays
+    //          FROM time_window WHERE start_time >= ? AND end_time <= ? ORDER BY start_time"
+    //     )
+    //         .bind(start_time)
+    //         .bind(end_time)
+    //         .fetch_all(&*self.db)
+    //         .await?;
 
-        let mut time_windows = Vec::new();
-        for row in results {
-            let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?).unwrap_or(TimeWindowType::Feasible);
+    //     let mut time_windows = Vec::new();
+    //     for row in results {
+    //         let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?).unwrap_or(TimeWindowType::Feasible);
 
-            time_windows.push(TimeWindow {
-                id: row.try_get("id")?,
-                start_time: row.try_get("start_time")?,
-                end_time: row.try_get("end_time")?,
-                window_type,
-                task_id: row.try_get("task_id")?,
-                user_id: row.try_get("user_id")?,
-                recurrence_freq: row.try_get("recurrence_freq")?,
-                recurrence_interval: row.try_get("recurrence_interval")?,
-                recurrence_until: row.try_get("recurrence_until")?,
-                recurrence_by_weekdays: row.try_get("recurrence_by_weekdays")?,
-            });
-        }
+    //         time_windows.push(TimeWindow {
+    //             id: row.try_get("id")?,
+    //             start_time: row.try_get("start_time")?,
+    //             end_time: row.try_get("end_time")?,
+    //             window_type,
+    //             task_id: row.try_get("task_id")?,
+    //             user_id: row.try_get("user_id")?,
+    //             recurrence_freq: row.try_get("recurrence_freq")?,
+    //             recurrence_interval: row.try_get("recurrence_interval")?,
+    //             recurrence_until: row.try_get("recurrence_until")?,
+    //             recurrence_by_weekdays: row.try_get("recurrence_by_weekdays")?,
+    //         });
+    //     }
 
-        Ok(time_windows)
-    }
+    //     Ok(time_windows)
+    // }
 
     /// 查找与指定时间范围重叠的时间窗口
-    pub async fn find_overlapping_time_windows(
-        &self,
-        start_time: DateTime<Utc>,
-        end_time: DateTime<Utc>,
-        task_id: Option<i32>,
-    ) -> Result<Vec<TimeWindow>, sqlx::Error> {
-        let base_query = "SELECT id, start_time, end_time, type, task_id, user_id, recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays
-                         FROM time_window WHERE (start_time < ? AND end_time > ?)";
+    // pub async fn find_overlapping_time_windows(
+    //     &self,
+    //     start_time: DateTime<Utc>,
+    //     end_time: DateTime<Utc>,
+    //     task_id: Option<i32>,
+    // ) -> Result<Vec<TimeWindow>, sqlx::Error> {
+    //     let base_query = "SELECT id, start_time, end_time, type, task_id, user_id, recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays
+    //                      FROM time_window WHERE (start_time < ? AND end_time > ?)";
 
-        let query = if let Some(_task_id) = task_id {
-            format!("{} AND task_id = ?", base_query)
-        } else {
-            base_query.to_string()
-        };
+    //     let query = if let Some(_task_id) = task_id {
+    //         format!("{} AND task_id = ?", base_query)
+    //     } else {
+    //         base_query.to_string()
+    //     };
 
-        let mut query_builder = sqlx::query(&query)
-            .bind(end_time)
-            .bind(start_time);
+    //     let mut query_builder = sqlx::query(&query)
+    //         .bind(end_time)
+    //         .bind(start_time);
 
-        if let Some(task_id) = task_id {
-            query_builder = query_builder.bind(task_id);
-        }
+    //     if let Some(task_id) = task_id {
+    //         query_builder = query_builder.bind(task_id);
+    //     }
 
-        let results = query_builder.fetch_all(&*self.db).await?;
+    //     let results = query_builder.fetch_all(&*self.db).await?;
 
-        let mut time_windows = Vec::new();
-        for row in results {
-            let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?).unwrap_or(TimeWindowType::Feasible);
+    //     let mut time_windows = Vec::new();
+    //     for row in results {
+    //         let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?).unwrap_or(TimeWindowType::Feasible);
 
-            time_windows.push(TimeWindow {
-                id: row.try_get("id")?,
-                start_time: row.try_get("start_time")?,
-                end_time: row.try_get("end_time")?,
-                window_type,
-                task_id: row.try_get("task_id")?,
-                user_id: row.try_get("user_id")?,
-                recurrence_freq: row.try_get("recurrence_freq")?,
-                recurrence_interval: row.try_get("recurrence_interval")?,
-                recurrence_until: row.try_get("recurrence_until")?,
-                recurrence_by_weekdays: row.try_get("recurrence_by_weekdays")?,
-            });
-        }
+    //         time_windows.push(TimeWindow {
+    //             id: row.try_get("id")?,
+    //             start_time: row.try_get("start_time")?,
+    //             end_time: row.try_get("end_time")?,
+    //             window_type,
+    //             task_id: row.try_get("task_id")?,
+    //             user_id: row.try_get("user_id")?,
+    //             recurrence_freq: row.try_get("recurrence_freq")?,
+    //             recurrence_interval: row.try_get("recurrence_interval")?,
+    //             recurrence_until: row.try_get("recurrence_until")?,
+    //             recurrence_by_weekdays: row.try_get("recurrence_by_weekdays")?,
+    //         });
+    //     }
 
-        Ok(time_windows)
-    }
+    //     Ok(time_windows)
+    // }
 
     /// 更新时间窗口
     pub async fn update(
@@ -353,6 +352,7 @@ impl TimeWindowRepository {
     }
 
     /// 根据任务ID删除所有时间窗口
+    #[allow(dead_code)]
     pub async fn delete_by_task_id(&self, task_id: i32) -> Result<u64, sqlx::Error> {
         let result = sqlx::query("DELETE FROM time_window WHERE task_id = ?")
             .bind(task_id)
@@ -413,6 +413,7 @@ impl TimeWindowRepository {
     }
 
     /// 获取任务的时间窗口类型统计
+    #[allow(dead_code)]
     pub async fn get_task_time_type_stats(
         &self,
         task_id: i32,
@@ -435,6 +436,7 @@ impl TimeWindowRepository {
     }
 
     /// 获取用户的时间窗口统计
+    #[allow(dead_code)]
     pub async fn get_user_time_stats(
         &self,
         user_id: i32,

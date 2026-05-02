@@ -19,6 +19,7 @@ pub struct TreeQuery {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct CalendarQuery {
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
@@ -26,6 +27,7 @@ pub struct CalendarQuery {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct DagQuery {
     pub task_id: Option<i32>,
     pub depth: Option<i32>,

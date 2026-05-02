@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 use sqlx::Row;
-use std::str::FromStr;
 
 use super::super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
 use super::super::model::{Task, TaskStatus};
@@ -190,7 +189,7 @@ impl TaskRepository {
         }
 
         if let Some(user_id) = &request.user_id {
-            if !first { qb.push(", "); } first = false;
+            if !first { qb.push(", "); } // first = false;
             match user_id {
                 Some(uid) => {
                     qb.push("user_id = ");
@@ -203,7 +202,6 @@ impl TaskRepository {
         }
 
         // 总是更新时间戳
-        if !first { qb.push(", "); } first = false;
         qb.push("updated_at = ");
         qb.push_bind(Utc::now());
 

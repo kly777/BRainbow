@@ -8,8 +8,6 @@ pub use handler::{
     update_card_handler, delete_card_handler,
     search_cards_handler,
 };
-pub use model::Card;
-pub use service::CardService;
 
 use axum::{Router, routing::get};
 use crate::state::AppState;

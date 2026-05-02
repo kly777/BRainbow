@@ -5,10 +5,12 @@ use super::model::{Task, TaskStatus};
 use super::repository::TaskRepository;
 
 /// 任务服务层
+#[allow(dead_code)]
 pub struct TaskService {
     task_repository: TaskRepository,
 }
 
+#[allow(dead_code)]
 impl TaskService {
     /// 创建新的任务服务层实例
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {

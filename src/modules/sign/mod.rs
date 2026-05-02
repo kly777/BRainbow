@@ -8,8 +8,6 @@ pub use handler::{
     delete_sign_handler, get_signs_by_signifier_handler,
     get_signs_by_signified_handler,
 };
-pub use model::SignifierSignified;
-pub use service::SignService;
 
 use axum::{Router, routing::get};
 use crate::state::AppState;

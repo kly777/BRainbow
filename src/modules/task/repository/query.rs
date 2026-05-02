@@ -5,18 +5,18 @@ use super::super::model::{Task, TimeWindow, TimeWindowType};
 use super::TaskRepository;
 
 impl TaskRepository {
-    pub async fn find_by_user_id(&self, user_id: i32) -> Result<Vec<Task>, sqlx::Error> {
-        sqlx::query_as::<_, Task>(
-            "SELECT id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, user_id, created_at, updated_at
-            FROM task
-            WHERE user_id = ?
-            ORDER BY created_at DESC"
-        )
-        .bind(user_id)
-        .fetch_all(&*self.db)
-        .await
-    }
+    // pub async fn find_by_user_id(&self, user_id: i32) -> Result<Vec<Task>, sqlx::Error> {
+    //     sqlx::query_as::<_, Task>(
+    //         "SELECT id, title, description, parent_task_id, status, completed_at,
+    //         effort_estimate_minutes, user_id, created_at, updated_at
+    //         FROM task
+    //         WHERE user_id = ?
+    //         ORDER BY created_at DESC"
+    //     )
+    //     .bind(user_id)
+    //     .fetch_all(&*self.db)
+    //     .await
+    // }
 
     pub async fn find_tree(&self, root_task_id: Option<i32>) -> Result<Vec<Task>, sqlx::Error> {
         let base_query = "WITH RECURSIVE task_tree AS (

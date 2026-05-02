@@ -15,6 +15,7 @@ impl UserRepository {
             .fetch_all(&*self.db).await
     }
 
+    #[allow(dead_code)]
     pub async fn find_by_id(&self, id: i32) -> Result<Option<User>, sqlx::Error> {
         sqlx::query_as::<_, User>("SELECT id, name, password_hash, role FROM user WHERE id = ?")
             .bind(id).fetch_optional(&*self.db).await

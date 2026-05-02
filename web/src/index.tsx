@@ -118,9 +118,10 @@ function AuthStatus() {
 				</button>
 			</Show>
 			<Show when={showForm()}>
-				<button
-					type="button"
-					style={{ ...overlayStyle, border: "none" }}
+				<div
+					role="dialog"
+					aria-modal="true"
+					style={{ ...overlayStyle }}
 					onClick={() => setShowForm(false)}
 					onKeyDown={(e) => {
 						if (e.key === "Escape") setShowForm(false);
@@ -166,7 +167,7 @@ function AuthStatus() {
 							取消
 						</button>
 					</form>
-				</button>
+				</div>
 			</Show>
 		</div>
 	);

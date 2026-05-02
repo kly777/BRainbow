@@ -270,7 +270,7 @@
 	}
 
 	.header {
-		align-items: stretch;
+		align-items: center;
 		gap: 16px;
 	}
 

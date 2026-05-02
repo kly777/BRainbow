@@ -197,7 +197,7 @@
 /* 响应式设计 */
 @media (max-width: 768px) {
 	.card {
-		min-height: 240px;
+		/*min-height: 240px;*/
 		padding: 12px;
 	}
 
@@ -206,11 +206,11 @@
 	}
 
 	.cardPreview {
-		-webkit-line-clamp: 3;
+		line-clamp: 3;
 	}
 
 	.cardActions {
-		flex-direction: column;
+		/*flex-direction: column;*/
 		gap: 6px;
 	}
 

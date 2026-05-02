@@ -1,7 +1,8 @@
 import { A, useNavigate } from "@solidjs/router";
 import { Effect } from "effect";
-import { createSignal, For, onMount, Show } from "solid-js";
+import { createSignal, onMount, Show } from "solid-js";
 import Card, { type CardData } from "@/components/Card";
+import CardsGrid from "@/components/CardsGrid";
 import TaskList from "@/components/TaskList";
 import {
 	getTasks,
@@ -213,38 +214,28 @@ const HomePage = () => {
 						</div>
 					</div>
 
-					<div class={styles.cardsGrid}>
-						<Show
-							when={recentCards().length > 0}
-							fallback={
-								<div class={styles.emptyState}>
-									<Show when={!loading()}>
-										<p>暂无知识卡片</p>
-										<p class={styles.emptyHint}>创建您的第一个知识卡片吧！</p>
-									</Show>
-									<Show when={loading()}>
-										<p>加载中...</p>
-									</Show>
-								</div>
-							}
-						>
-							<For each={recentCards()}>
-								{(card) => (
-									<div class={styles.cardWrapper}>
-										<Card
-											id={card.id}
-											content={card.content}
-											created_at={card.created_at}
-											updated_at={card.updated_at}
-											maxContentLines={2}
-											onEdit={(id) => navigate(`/c/edit/${id}`)}
-											onDelete={handleCardDelete}
-										/>
-									</div>
-								)}
-							</For>
-						</Show>
-					</div>
+					<Show
+						when={recentCards().length > 0}
+						fallback={
+							<div class={styles.emptyState}>
+								<Show when={!loading()}>
+									<p>暂无知识卡片</p>
+									<p class={styles.emptyHint}>创建您的第一个知识卡片吧！</p>
+								</Show>
+								<Show when={loading()}>
+									<p>加载中...</p>
+								</Show>
+							</div>
+						}
+					>
+						<CardsGrid
+							cards={recentCards()}
+							showFilters={false}
+							onCardEdit={(id) => navigate(`/c/edit/${id}`)}
+							onCardDelete={handleCardDelete}
+							emptyMessage="暂无知识卡片"
+						/>
+					</Show>
 				</div>
 			</div>
 		</div>

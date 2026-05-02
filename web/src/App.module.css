@@ -1,18 +1,27 @@
 /* Layout Component Styles */
+:root {
+	--bg-page: #fdf6ee;
+	--bg-card: #ffffff;
+	--bg-input: #ffffff;
+	--border: #f0e6d3;
+	--shadow: rgba(0, 0, 0, 0.04);
+}
+
 .appContainer {
-	/*max-width: 1600px;*/
-	/*margin: 0 auto;*/
+	/*max-width: 1600px;
+	margin: 0 auto;*/
 	padding: 12px;
 	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
+	background: var(--bg-page);
 }
 
 .appHeader {
-	background-color: white;
+	background-color: var(--bg-card);
 	padding: 8px 20px;
 	margin-bottom: 0;
-	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .headerContent {
@@ -58,13 +67,12 @@
 }
 
 .appContent {
-	background-color: white;
+	background-color: var(--bg-page);
 	flex: 1;
-	overflow: hidden;
-	/*min-height: 0;
+	min-height: 0;
 	overflow: hidden;
 	display: flex;
-	flex-direction: column;*/
+	flex-direction: column;
 }
 
 .footer {

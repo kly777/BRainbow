@@ -189,14 +189,14 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 
 			</Show>
 
-			<div class={styles.stats}>
+			{/*<div class={styles.stats}>
 				<p>
 					共 {filteredAndSortedCards().length} 张卡片
 					{selectedCategory() !== "全部" && ` (分类: ${selectedCategory()})`}
 					{selectedTag() !== "" && ` (标签: ${selectedTag()})`}
 					{` (排序: ${sortBy() === "updated" ? "更新时间" : "创建时间"} ${sortOrder() === "asc" ? "升序" : "降序"})`}
 				</p>
-			</div>
+			</div>*/}
 		</div>
 	);
 };

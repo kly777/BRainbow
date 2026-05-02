@@ -26,11 +26,11 @@
 /* 区域通用样式 */
 .todoSection,
 .cardsSection {
-	background: white;
+	background: var(--bg-card);
 	border-radius: 12px;
 	padding: 20px;
-	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-	border: 1px solid #e9ecef;
+	box-shadow: 0 1px 8px var(--shadow);
+	border: 1px solid var(--border);
 	display: flex;
 	flex-direction: column;
 	min-height: 0;
@@ -92,11 +92,11 @@
 
 /* 添加任务表单 */
 .addTodoForm {
-	background: #f8f9fa;
+	background: var(--bg-input);
 	border-radius: 10px;
 	padding: 16px;
 	margin-bottom: 16px;
-	border: 1px solid #e9ecef;
+	border: 1px solid var(--border);
 	flex-shrink: 0;
 }
 

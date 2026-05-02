@@ -1,6 +1,6 @@
 use axum::Router;
 
-use crate::modules::{card, onto, sign, task, time_window, user};
+use crate::modules::{card, onto, sign, task, time_window, user, db_viewer};
 use crate::state::AppState;
 
 pub fn create_api_router() -> Router<AppState> {
@@ -11,4 +11,5 @@ pub fn create_api_router() -> Router<AppState> {
         .nest("/sign", sign::routes())
         .nest("/tasks", task::routes())
         .nest("/time-windows", time_window::routes())
+        .nest("/db", db_viewer::routes())
 }

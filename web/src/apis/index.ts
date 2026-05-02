@@ -6,6 +6,7 @@ export * from "./authApi";
 // ==================== Re-exports from cardApi ====================
 export * from "./cardApi";
 // ==================== Re-exports from ontoApi ====================
+export * from "./dbApi";
 export * from "./ontoApi";
 // ==================== Re-exports from request ====================
 export * from "./request";

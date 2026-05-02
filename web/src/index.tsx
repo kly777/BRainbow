@@ -242,6 +242,8 @@ const inputStyle = {
 	"font-size": "14px",
 };
 
+const DbViewerPage = lazy(async () => import("@/pages/DbViewer"));
+
 function App() {
 	return (
 		<AuthProvider>
@@ -252,6 +254,7 @@ function App() {
 				<Route path="/c" component={() => <CardsListPage />} />
 				<Route path="/c/:id" component={() => <CardDetailPage />} />
 				<Route path="/c/edit/:id" component={() => <CardEditPage />} />
+				<Route path="/db" component={() => <DbViewerPage />} />
 			</Router>
 		</AuthProvider>
 	);

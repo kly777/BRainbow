@@ -15,11 +15,16 @@ fn get_user_id(req: &Request) -> Option<i32> {
 }
 
 /// 白名单路径 — 无需认证
-fn is_public(path: &str, method: &Method) -> bool {
+fn is_public(path: &str, _method: &Method) -> bool {
     if path == "/api/user/register" || path == "/api/user/login" {
         return true;
     }
     false
+}
+
+/// 始终需要 admin 的路径（即使 GET 也不放行）
+fn is_admin_only(path: &str) -> bool {
+    path.starts_with("/api/db")
 }
 
 pub async fn require_admin(
@@ -33,6 +38,21 @@ pub async fn require_admin(
     // 公开路径放行
     if is_public(&path, &method) {
         return next.run(request).await;
+    }
+
+    // admin-only 路径：所有方法都需要管理员
+    if is_admin_only(&path) {
+        let user_id = match get_user_id(&request) {
+            Some(id) => id,
+            None => return (StatusCode::UNAUTHORIZED, "请先登录").into_response(),
+        };
+        let repo = UserRepository::new(state.db);
+        return match repo.get_role_by_id(user_id).await {
+            Ok(Some(role)) if role == "admin" => next.run(request).await,
+            Ok(Some(_)) => (StatusCode::FORBIDDEN, "仅管理员可执行此操作").into_response(),
+            Ok(None) => (StatusCode::UNAUTHORIZED, "用户不存在").into_response(),
+            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("鉴权错误: {}", e)).into_response(),
+        };
     }
 
     // GET/HEAD/OPTIONS 放行所有人

@@ -1,5 +1,5 @@
 import { type Component, createSignal } from "solid-js";
-import styles from "./CardsGrid.module.css";
+import styles from "./CardFilter.module.css";
 
 export interface CardFilterProps {
     onSearch?: (query: string) => void;

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::repository::UserRepository;
+use crate::auth::create_token;
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -21,6 +22,7 @@ pub struct LoginResponse {
     pub id: i32,
     pub name: String,
     pub role: String,
+    pub token: String,
 }
 
 /// 注册 / 登录（简化：名字即注册，带密码）
@@ -57,11 +59,15 @@ pub async fn register_handler(
     };
 
     match repo.create(&name, &password_hash, role).await {
-        Ok(user) => Json(LoginResponse {
-            id: user.id,
-            name: user.name,
-            role: user.role,
-        }).into_response(),
+        Ok(user) => {
+            let token = create_token(user.id, &user.role, &state.jwt_secret);
+            Json(LoginResponse {
+                id: user.id,
+                name: user.name,
+                role: user.role,
+                token,
+            }).into_response()
+        }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("创建用户失败: {}", e)).into_response(),
     }
 }
@@ -81,11 +87,15 @@ pub async fn login_handler(
     };
 
     match verify(&payload.password, &user.password_hash) {
-        Ok(true) => Json(LoginResponse {
-            id: user.id,
-            name: user.name,
-            role: user.role,
-        }).into_response(),
+        Ok(true) => {
+            let token = create_token(user.id, &user.role, &state.jwt_secret);
+            Json(LoginResponse {
+                id: user.id,
+                name: user.name,
+                role: user.role,
+                token,
+            }).into_response()
+        }
         Ok(false) => (StatusCode::UNAUTHORIZED, "用户名或密码错误").into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("密码验证失败: {}", e)).into_response(),
     }

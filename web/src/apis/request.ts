@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { getUserId } from "../auth";
+import { getToken } from "../auth";
 import {
 	type ApiErrorType,
 	HttpError,
@@ -51,9 +51,9 @@ export const request = <T>(
 								}
 							}
 						}
-						const userId = getUserId();
-						if (userId) {
-							headers.set("X-User-Id", String(userId));
+						const token = getToken();
+						if (token) {
+							headers.set("Authorization", `Bearer ${token}`);
 						}
 						return headers;
 					})(),

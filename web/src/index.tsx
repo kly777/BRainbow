@@ -21,7 +21,7 @@ const CardEditPage = lazy(async () => import("@/pages/notes/CardEdit"));
 const OntologyListPage = lazy(
 	async () => import("@/pages/ontology/OntologyList"),
 );
-
+const DbViewerPage = lazy(async () => import("@/pages/DbViewer"));
 const Layout = (props: { children?: JSX.Element }) => {
 	const [menuOpen, setMenuOpen] = createSignal(false);
 
@@ -99,7 +99,7 @@ function AuthStatus() {
 		try {
 			const fn = isRegister() ? register : login;
 			const result = await Effect.runPromise(fn(name(), password()));
-			authLogin(result.id, result.name, result.role);
+				authLogin(result.id, result.name, result.role, result.token);
 			setShowForm(false);
 		} catch (err) {
 			setError(getErrorMessage(err));
@@ -242,7 +242,7 @@ const inputStyle = {
 	"font-size": "14px",
 };
 
-const DbViewerPage = lazy(async () => import("@/pages/DbViewer"));
+
 
 function App() {
 	return (

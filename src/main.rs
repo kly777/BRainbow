@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     db::create_tables(&pool).await?;
 
     // 创建应用状态
-    let state = AppState { db: Arc::new(pool) };
+    let state = AppState::new(Arc::new(pool));
 
     // 创建路由
     let app = create_router(state.clone());

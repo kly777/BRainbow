@@ -62,7 +62,6 @@ export const request = <T>(
 		});
 
 		if (!response.ok) {
-
 			let errorMessage = `HTTP ${response.status}`;
 			try {
 				const errorData = yield* Effect.tryPromise({

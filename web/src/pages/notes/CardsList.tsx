@@ -2,10 +2,10 @@ import { useNavigate } from "@solidjs/router";
 import { Effect } from "effect";
 import { type Component, createResource, createSignal, Show } from "solid-js";
 import { createCard, deleteCard, getCards, searchCards } from "@/apis/cardApi";
-import { getErrorMessage, type CreateCardRequest } from "@/apis/types";
+import { type CreateCardRequest, getErrorMessage } from "@/apis/types";
 
 import CardsGrid from "@/components/CardsGrid";
-import styles from "./CardsList.module.css"
+import styles from "./CardsList.module.css";
 
 const CardsListPage: Component = () => {
 	const navigate = useNavigate();
@@ -102,7 +102,7 @@ const CardsListPage: Component = () => {
 			createCard(request).pipe(
 				Effect.tap((newCard) => {
 					// 清空表单并关闭模态框
-						setNewCardContent("");
+					setNewCardContent("");
 					setShowCreateModal(false);
 
 					// 乐观更新：立即将新卡片添加到资源状态
@@ -131,9 +131,7 @@ const CardsListPage: Component = () => {
 		if (!query) {
 			// 空查询 = 重新加载全部
 			const loaded = await Effect.runPromise(
-				getCards().pipe(
-					Effect.catchAll(() => Effect.succeed([])),
-				),
+				getCards().pipe(Effect.catchAll(() => Effect.succeed([]))),
 			);
 			mutate([...loaded]);
 			return;

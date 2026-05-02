@@ -1,17 +1,18 @@
 import { A, useNavigate } from "@solidjs/router";
 import { Effect } from "effect";
 import { createSignal, onMount, Show } from "solid-js";
-import Card, { type CardData } from "@/components/Card";
+import { deleteCard as apiDeleteCard, getCards } from "@/apis/cardApi";
+import { createTask, getTasks } from "@/apis/taskApi";
+import {
+	type CreateTaskRequest,
+	getErrorMessage,
+	type Task,
+} from "@/apis/types";
+import type { CardData } from "@/components/Card";
 import CardsGrid from "@/components/CardsGrid";
 import TaskList from "@/components/TaskList";
-import {
-	getTasks,
-	createTask,
-} from "@/apis/taskApi";
-import { getCards, deleteCard as apiDeleteCard } from "@/apis/cardApi";
-import { getErrorMessage, type CreateTaskRequest, type Task } from "@/apis/types";
 import { useTaskActions } from "@/hooks/useTaskActions";
-import styles from "./HomePage.module.css"
+import styles from "./HomePage.module.css";
 
 // 主页组件
 const HomePage = () => {
@@ -33,18 +34,17 @@ const HomePage = () => {
 			setLoading(true);
 
 			// 并行加载任务和卡片
-				const [allTasks, cards] = await Promise.all([
-					Effect.runPromise(getTasks()),
-					Effect.runPromise(getCards()),
-				]);
+			const [allTasks, cards] = await Promise.all([
+				Effect.runPromise(getTasks()),
+				Effect.runPromise(getCards()),
+			]);
 
 			setTodos([...allTasks]);
 
 			// 按 updated_at 降序排列，取前4个
 			const sortedCards = [...cards].sort(
 				(a, b) =>
-					new Date(b.updated_at).getTime() -
-					new Date(a.updated_at).getTime(),
+					new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
 			);
 			setRecentCards(sortedCards.slice(0, 4));
 		} catch (error) {
@@ -99,13 +99,17 @@ const HomePage = () => {
 			const msg = getErrorMessage(error);
 			console.error("创建任务失败:", msg);
 			// 如果失败，从列表中移除临时任务
-				setTodos(todos().filter((t) => t.id !== tempId));
-				alert(`创建任务失败: ${msg}`);
+			setTodos(todos().filter((t) => t.id !== tempId));
+			alert(`创建任务失败: ${msg}`);
 		}
 	};
 
-	const { handleStatusChange, handleDelete, handleUpdateTask, handleAddSubTask } =
-		useTaskActions(todos, setTodos, loadData);
+	const {
+		handleStatusChange,
+		handleDelete,
+		handleUpdateTask,
+		handleAddSubTask,
+	} = useTaskActions(todos, setTodos, loadData);
 
 	// 处理Card删除（乐观更新）
 	const handleCardDelete = async (id: number) => {
@@ -123,8 +127,7 @@ const HomePage = () => {
 				const cards = await Effect.runPromise(getCards());
 				const sortedCards = [...cards].sort(
 					(a, b) =>
-						new Date(b.updated_at).getTime() -
-						new Date(a.updated_at).getTime(),
+						new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
 				);
 				setRecentCards(sortedCards.slice(0, 4));
 			} catch {

@@ -1,6 +1,6 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import type { Task } from "@/apis/types";
-import styles from "./TaskCalendar.module.css"
+import styles from "./TaskCalendar.module.css";
 
 // 状态对应颜色类名
 const statusColors: Record<string, string> = {
@@ -98,7 +98,7 @@ export default function TaskCalendar(props: TaskCalendarProps) {
 							<Show when={date !== null}>
 								<div class={styles.dayNumber}>{date?.getDate()}</div>
 								<div class={styles.dayTasks}>
-									<For each={date ? getTasksForDate(date!) : []}>
+									<For each={date ? getTasksForDate(date) : []}>
 										{(task) => (
 											<div
 												class={`${styles.dayTask} ${getStatusColor(task.status || "backlog")}`}

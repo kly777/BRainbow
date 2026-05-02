@@ -3,15 +3,19 @@ import { createSignal, onMount, Show } from "solid-js";
 import {
 	createTask,
 	getAllTasks,
-	getTasks,
 	getTaskStats,
+	getTasks,
 	searchTasks,
 } from "@/apis/taskApi";
-import { getErrorMessage, type CreateTaskRequest, type Task } from "@/apis/types";
-import { useTaskActions } from "@/hooks/useTaskActions";
+import {
+	type CreateTaskRequest,
+	getErrorMessage,
+	type Task,
+} from "@/apis/types";
 import TaskCalendar from "@/components/TaskCalendar";
 import TaskList from "@/components/TaskList";
-import styles from "./TaskManager.module.css"
+import { useTaskActions } from "@/hooks/useTaskActions";
+import styles from "./TaskManager.module.css";
 
 export default function TaskManager() {
 	const [tasks, setTasks] = createSignal<Task[]>([]);
@@ -21,7 +25,12 @@ export default function TaskManager() {
 	const [newTaskDescription, setNewTaskDescription] = createSignal("");
 	const [newTaskEffort, setNewTaskEffort] = createSignal<number | undefined>();
 	const [searchQuery, setSearchQuery] = createSignal("");
-	const [stats, setStats] = createSignal({ backlog: 0, active: 0, completed: 0, archived: 0 });
+	const [stats, setStats] = createSignal({
+		backlog: 0,
+		active: 0,
+		completed: 0,
+		archived: 0,
+	});
 	const [quickTitle, setQuickTitle] = createSignal("");
 	const [activeFilter, setActiveFilter] = createSignal("all");
 
@@ -78,13 +87,20 @@ export default function TaskManager() {
 		try {
 			let results: readonly Task[];
 			switch (status) {
-				case "backlog": results = await Effect.runPromise(getTasks()); break;
-				case "active": results = await Effect.runPromise(getTasks()); break;
-				case "completed": results = await Effect.runPromise(getTasks()); break;
-				default: results = await Effect.runPromise(getAllTasks());
+				case "backlog":
+					results = await Effect.runPromise(getTasks());
+					break;
+				case "active":
+					results = await Effect.runPromise(getTasks());
+					break;
+				case "completed":
+					results = await Effect.runPromise(getTasks());
+					break;
+				default:
+					results = await Effect.runPromise(getAllTasks());
 			}
 			// 根据状态客户端过滤
-			setTasks([...results.filter(t => t.status === status)]);
+			setTasks([...results.filter((t) => t.status === status)]);
 		} catch (error) {
 			console.error("筛选失败:", error);
 			alert(`筛选失败: ${getErrorMessage(error)}`);
@@ -144,8 +160,12 @@ export default function TaskManager() {
 		}
 	};
 
-	const { handleStatusChange, handleDelete: handleDeleteTask, handleUpdateTask, handleAddSubTask } =
-		useTaskActions(tasks, setTasks, loadTasks);
+	const {
+		handleStatusChange,
+		handleDelete: handleDeleteTask,
+		handleUpdateTask,
+		handleAddSubTask,
+	} = useTaskActions(tasks, setTasks, loadTasks);
 
 	return (
 		<div class={styles.taskManager}>
@@ -171,7 +191,13 @@ export default function TaskManager() {
 					onKeyDown={(e) => e.key === "Enter" && handleSearch()}
 					class={styles.searchInput}
 				/>
-				<button type="button" onClick={handleSearch} class={styles.searchButton}>搜索</button>
+				<button
+					type="button"
+					onClick={handleSearch}
+					class={styles.searchButton}
+				>
+					搜索
+				</button>
 			</div>
 
 			<div class={styles.statsGrid}>
@@ -220,23 +246,34 @@ export default function TaskManager() {
 				<button
 					type="button"
 					class={`${styles.filterBtn} ${activeFilter() === "all" ? styles.filterActive : ""}`}
-					onClick={() => { setActiveFilter("all"); loadTasks(); }}
-				>全部</button>
+					onClick={() => {
+						setActiveFilter("all");
+						loadTasks();
+					}}
+				>
+					全部
+				</button>
 				<button
 					type="button"
 					class={`${styles.filterBtn} ${activeFilter() === "backlog" ? styles.filterActive : ""}`}
 					onClick={() => filterByStatus("backlog")}
-				>待办</button>
+				>
+					待办
+				</button>
 				<button
 					type="button"
 					class={`${styles.filterBtn} ${activeFilter() === "active" ? styles.filterActive : ""}`}
 					onClick={() => filterByStatus("active")}
-				>进行中</button>
+				>
+					进行中
+				</button>
 				<button
 					type="button"
 					class={`${styles.filterBtn} ${activeFilter() === "completed" ? styles.filterActive : ""}`}
 					onClick={() => filterByStatus("completed")}
-				>已完成</button>
+				>
+					已完成
+				</button>
 			</div>
 
 			<Show when={loading()}>

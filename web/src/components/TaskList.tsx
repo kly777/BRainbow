@@ -1,8 +1,8 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import type { Task } from "@/apis/types";
-import styles from "./TaskList.module.css"
 import EditTaskModal from "./EditTaskModal";
 import TaskItem from "./TaskItem";
+import styles from "./TaskList.module.css";
 
 // 扩展TaskStatus常量 - 使用后端实际的状态
 const TaskStatus = {
@@ -204,4 +204,3 @@ export default function TaskList(props: TaskListProps) {
 		</div>
 	);
 }
-

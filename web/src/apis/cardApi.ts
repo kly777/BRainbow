@@ -38,5 +38,11 @@ export const deleteCard = (id: number): Effect.Effect<void, ApiErrorType> =>
 		method: "DELETE",
 	});
 
-export const searchCards = (query: string): Effect.Effect<readonly Card[], ApiErrorType> =>
-	request(`/card/search?q=${encodeURIComponent(query)}`, Schema.Array(CardSchema), {});
+export const searchCards = (
+	query: string,
+): Effect.Effect<readonly Card[], ApiErrorType> =>
+	request(
+		`/card/search?q=${encodeURIComponent(query)}`,
+		Schema.Array(CardSchema),
+		{},
+	);

@@ -33,8 +33,10 @@ export interface TreeNode {
 	readonly children: readonly TreeNode[];
 }
 
-export const getTaskTree = (): Effect.Effect<readonly TreeNode[], ApiErrorType> =>
-	request("/tasks/tree", Schema.Array(TreeNodeSchema), {});
+export const getTaskTree = (): Effect.Effect<
+	readonly TreeNode[],
+	ApiErrorType
+> => request("/tasks/tree", Schema.Array(TreeNodeSchema), {});
 
 export const getTaskDetail = (
 	id: number,
@@ -176,5 +178,3 @@ export const moveToBacklog = (id: number): Effect.Effect<Task, ApiErrorType> =>
 	request(`/tasks/${id}/move-to-backlog`, TaskSchema, {
 		method: "POST",
 	});
-
-

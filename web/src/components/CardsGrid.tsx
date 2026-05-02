@@ -1,7 +1,7 @@
 import { type Component, createMemo, createSignal } from "solid-js";
+import type { CardData } from "./Card";
 import CardFilter from "./CardFilter";
 import CardMasonry, { type CardMasonryProps } from "./CardMasonry";
-import type { CardData } from "./Card";
 
 export interface CardsGridProps extends Omit<CardMasonryProps, "cards"> {
 	cards: CardData[];
@@ -18,8 +18,14 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 		const sb = sortBy();
 		const so = sortOrder();
 		list.sort((a, b) => {
-			const av = sb === "created" ? new Date(a.created_at).getTime() : new Date(a.updated_at).getTime();
-			const bv = sb === "created" ? new Date(b.created_at).getTime() : new Date(b.updated_at).getTime();
+			const av =
+				sb === "created"
+					? new Date(a.created_at).getTime()
+					: new Date(a.updated_at).getTime();
+			const bv =
+				sb === "created"
+					? new Date(b.created_at).getTime()
+					: new Date(b.updated_at).getTime();
 			return so === "asc" ? av - bv : bv - av;
 		});
 		return list;
@@ -32,7 +38,10 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 					onSearch={props.onSearch}
 					sortBy={sortBy()}
 					sortOrder={sortOrder()}
-					onSortChange={(by, order) => { setSortBy(by); setSortOrder(order); }}
+					onSortChange={(by, order) => {
+						setSortBy(by);
+						setSortOrder(order);
+					}}
 				/>
 			)}
 			<CardMasonry

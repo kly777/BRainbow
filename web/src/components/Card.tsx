@@ -1,6 +1,6 @@
 import { type Component, Show } from "solid-js";
+import styles from "./Card.module.css";
 import Markdown from "./Markdown";
-import styles from "./Card.module.css"
 
 // 卡片接口，匹配后端API
 export interface CardData {

@@ -1,7 +1,7 @@
 import { createSignal, For, Show } from "solid-js";
 import type { Task, TimeWindow } from "@/apis/types";
 import { formatDate } from "@/apis/types";
-import styles from "./TaskList.module.css"
+import styles from "./TaskList.module.css";
 
 const TaskStatus = {
 	BACKLOG: "backlog",
@@ -45,23 +45,37 @@ function TaskItem(props: TaskItemProps) {
 							</span>
 						</Show>
 					</div>
-					<Show when={props.feasibleWindows && props.feasibleWindows!.length > 0}>
+					<Show
+						when={props.feasibleWindows && props.feasibleWindows.length > 0}
+					>
 						<div class={styles.timeWindowChips}>
 							<For each={props.feasibleWindows}>
 								{(tw) => (
 									<span class={styles.timeWindowChip} title="可进行">
-										🟢 {new Date(tw.start_time).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+										🟢{" "}
+										{new Date(tw.start_time).toLocaleString("zh-CN", {
+											month: "2-digit",
+											day: "2-digit",
+											hour: "2-digit",
+											minute: "2-digit",
+										})}
 									</span>
 								)}
 							</For>
 						</div>
 					</Show>
-					<Show when={props.plannedWindows && props.plannedWindows!.length > 0}>
+					<Show when={props.plannedWindows && props.plannedWindows.length > 0}>
 						<div class={styles.timeWindowChips}>
 							<For each={props.plannedWindows}>
 								{(tw) => (
 									<span class={styles.timeWindowChip} title="计划">
-										🔵 {new Date(tw.start_time).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+										🔵{" "}
+										{new Date(tw.start_time).toLocaleString("zh-CN", {
+											month: "2-digit",
+											day: "2-digit",
+											hour: "2-digit",
+											minute: "2-digit",
+										})}
 									</span>
 								)}
 							</For>
@@ -135,7 +149,10 @@ function TaskItem(props: TaskItemProps) {
 					/>
 					<button
 						type="button"
-						onClick={() => { setShowSubTaskInput(false); setSubTaskTitle(""); }}
+						onClick={() => {
+							setShowSubTaskInput(false);
+							setSubTaskTitle("");
+						}}
 						class={styles.subTaskCancel}
 					>
 						取消

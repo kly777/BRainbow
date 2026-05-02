@@ -68,7 +68,9 @@ export const CreateTimeWindowRequestSchema = Schema.Struct({
 	user_id: Schema.optional(Schema.NullOr(Schema.Number)),
 });
 
-export type CreateTimeWindowRequest = Schema.Schema.Type<typeof CreateTimeWindowRequestSchema>;
+export type CreateTimeWindowRequest = Schema.Schema.Type<
+	typeof CreateTimeWindowRequestSchema
+>;
 
 export const TaskDetailSchema = Schema.Struct({
 	task: TaskSchema,
@@ -230,5 +232,3 @@ export function getErrorMessage(error: unknown): string {
 	}
 	return "未知错误";
 }
-
-

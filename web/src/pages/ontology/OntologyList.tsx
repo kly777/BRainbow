@@ -1,8 +1,14 @@
 import { Effect } from "effect";
-import { type Component, createResource, createSignal, For, Show } from "solid-js";
-import { createOnto, deleteOnto, getOntos } from "@/apis/ontoApi";
+import {
+	type Component,
+	createResource,
+	createSignal,
+	For,
+	Show,
+} from "solid-js";
 import type { Onto } from "@/apis/ontoApi";
-import styles from "./OntologyList.module.css"
+import { createOnto, deleteOnto, getOntos } from "@/apis/ontoApi";
+import styles from "./OntologyList.module.css";
 
 const OntologyListPage: Component = () => {
 	// 使用 createResource 加载本体数据
@@ -201,7 +207,11 @@ const OntologyListPage: Component = () => {
 			</Show>
 
 			<Show
-				when={!ontologies.loading && !ontologies.error && filteredOntologies().length > 0}
+				when={
+					!ontologies.loading &&
+					!ontologies.error &&
+					filteredOntologies().length > 0
+				}
 				fallback={
 					<Show when={!ontologies.loading && !ontologies.error}>
 						<div class={styles.emptyState}>
@@ -253,7 +263,9 @@ const OntologyListPage: Component = () => {
 															onClick={() => handleDeleteOnto(onto.id)}
 															disabled={deletingOntoId() === onto.id}
 														>
-															{deletingOntoId() === onto.id ? "删除中..." : "删除"}
+															{deletingOntoId() === onto.id
+																? "删除中..."
+																: "删除"}
 														</button>
 													</div>
 												</td>
@@ -296,9 +308,7 @@ const OntologyListPage: Component = () => {
 			</Show>
 
 			<div class={styles.stats}>
-				<p>
-					共 {filteredOntologies().length} 个本体
-				</p>
+				<p>共 {filteredOntologies().length} 个本体</p>
 			</div>
 
 			{/* 创建本体模态框 */}

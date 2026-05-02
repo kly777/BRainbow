@@ -60,6 +60,7 @@
 .appContent {
 	background-color: white;
 	flex: 1;
+	overflow: hidden;
 	/*min-height: 0;
 	overflow: hidden;
 	display: flex;

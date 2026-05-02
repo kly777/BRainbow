@@ -112,11 +112,11 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 		<div class={styles.container}>
 			<Show when={props.showFilters !== false}>
 				<div class={styles.filters}>
-					<div class={styles.searchSection}>
+					<div class={styles.filterRow}>
 						<input
 							type="text"
 							class={styles.searchInput}
-							placeholder="搜索卡片内容..."
+							placeholder="搜索卡片..."
 							value={searchQuery()}
 							onInput={(e) => setSearchQuery(e.currentTarget.value)}
 							onKeyDown={(e) => {
@@ -125,48 +125,26 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 								}
 							}}
 						/>
-						<button
-							type="button"
-							class={styles.clearButton}
-							onClick={clearFilters}
-							disabled={
-								searchQuery() === "" &&
-								selectedCategory() === "全部" &&
-								selectedTag() === ""
-							}
-						>
-							清空筛选
-						</button>
-					</div>
-
-					<div class={styles.filterControls}>
-						<div class={styles.sortControls}>
-							<div class={styles.filterGroup}>
-								<label for="sort-select" class={styles.filterLabel}>
-									排序:
-								</label>
-								<select
-									id="sort-select"
-									class={styles.filterSelect}
-									value={sortBy()}
-									onChange={(e) =>
-										setSortBy(
-											e.currentTarget.value as "created" | "updated",
-										)
-									}
-								>
-									<option value="updated">更新时间</option>
-									<option value="created">创建时间</option>
-								</select>
-							</div>
-
-							<button
-								type="button"
-								class={styles.sortButton}
-								onClick={toggleSortOrder}
+						<div class={styles.filterControls}>
+							<label for="sort-select" class={styles.filterLabel}>排序:</label>
+							<select
+								id="sort-select"
+								class={styles.filterSelect}
+								value={sortBy()}
+								onChange={(e) => setSortBy(e.currentTarget.value as "created" | "updated")}
+							>
+								<option value="updated">更新时间</option>
+								<option value="created">创建时间</option>
+							</select>
+							<button type="button" class={styles.sortButton} onClick={toggleSortOrder}
 								title={sortOrder() === "asc" ? "升序" : "降序"}
 							>
 								{sortOrder() === "asc" ? "↑" : "↓"}
+							</button>
+							<button type="button" class={styles.clearButton} onClick={clearFilters}
+								disabled={searchQuery() === ""}
+							>
+								清空
 							</button>
 						</div>
 					</div>
@@ -187,8 +165,14 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 						</button>
 					</div>
 				}
-			>
-				<div class={styles.cardsGrid}>
+            >
+                <div style={{
+                    "display": "flex",
+                    "flex-direction": "column",
+                    "flex": "1",
+                    "overflow": "auto"
+                }}>
+                    <div class={styles.cardsGrid}>
 					<For each={filteredAndSortedCards()}>
 						{(card) => (
 							<Card
@@ -201,6 +185,8 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 						)}
 					</For>
 				</div>
+                </div>
+
 			</Show>
 
 			<div class={styles.stats}>

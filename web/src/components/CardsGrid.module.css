@@ -45,6 +45,8 @@
 	margin: 0 auto;
 	overflow-y: auto;
 	flex: 1;
+	display: flex;
+	flex-direction: column;
 }
 
 .filters {
@@ -59,16 +61,23 @@
 .searchSection {
 	display: flex;
 	gap: 12px;
-	margin-bottom: 16px;
+	align-items: center;
+}
+
+.filterRow {
+	display: flex;
+	align-items: center;
+	gap: 12px;
 }
 
 .searchInput {
-	flex: 1;
-	padding: 10px 16px;
+	width: 220px;
+	padding: 8px 12px;
 	font-size: 0.875rem;
 	border: 1px solid #ddd;
 	border-radius: 6px;
 	transition: all 0.2s ease;
+	flex-shrink: 0;
 }
 
 .searchInput:focus {
@@ -82,7 +91,7 @@
 }
 
 .clearButton {
-	padding: 10px 20px;
+	padding: 8px 14px;
 	font-size: 0.875rem;
 	background: #f8f9fa;
 	color: #666;
@@ -91,6 +100,7 @@
 	cursor: pointer;
 	transition: all 0.2s ease;
 	white-space: nowrap;
+	flex-shrink: 0;
 }
 
 .clearButton:hover:not(:disabled) {
@@ -105,9 +115,9 @@
 
 .filterControls {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 16px;
+	gap: 12px;
 	align-items: center;
+	margin-left: auto;
 }
 
 .filterGroup {
@@ -179,6 +189,8 @@
 	font-size: 0.875rem;
 	color: #666;
 	text-align: center;
+	position: fixed;
+	bottom: 10px;
 }
 
 .stats p {

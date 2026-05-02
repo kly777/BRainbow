@@ -196,8 +196,6 @@ const CardsListPage: Component = () => {
 			<Show when={!cards.loading && !cards.error}>
 				<CardsGrid
 					cards={[...(cards() || [])]}
-					sortBy="updated"
-					sortOrder="desc"
 					showFilters={true}
 					onSearch={handleSearch}
 					onCardClick={handleCardClick}

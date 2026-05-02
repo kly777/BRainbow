@@ -39,7 +39,9 @@
 	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
-.searchInput::placeholder { color: #999; }
+.searchInput::placeholder {
+	color: #999;
+}
 
 .filterLabel {
 	font-size: 0.875rem;
@@ -71,7 +73,9 @@
 	min-width: 40px;
 }
 
-.sortButton:hover { background: #e9ecef; }
+.sortButton:hover {
+	background: #e9ecef;
+}
 
 .clearButton {
 	padding: 8px 14px;
@@ -86,16 +90,33 @@
 	flex-shrink: 0;
 }
 
-.clearButton:hover:not(:disabled) { background: #e9ecef; }
-.clearButton:disabled { opacity: 0.5; cursor: not-allowed; }
+.clearButton:hover:not(:disabled) {
+	background: #e9ecef;
+}
+.clearButton:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
 
 @media (max-width: 768px) {
-	.filterSelect { width: 100%; }
-	.sortControls { justify-content: space-between; }
+	.filterSelect {
+		width: 100%;
+	}
+	.sortControls {
+		justify-content: space-between;
+	}
 }
 
 @media (max-width: 480px) {
-	.filters { padding: 12px; }
-	.searchInput { font-size: 16px; padding: 10px 14px; }
-	.sortButton { flex: 1; text-align: center; }
+	.filters {
+		padding: 12px;
+	}
+	.searchInput {
+		font-size: 16px;
+		padding: 10px 14px;
+	}
+	.sortButton {
+		flex: 1;
+		text-align: center;
+	}
 }

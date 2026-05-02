@@ -19,20 +19,41 @@
 	margin: 20px 0;
 }
 
-.emptyState p { font-size: 1rem; color: #666; margin-bottom: 20px; }
+.emptyState p {
+	font-size: 1rem;
+	color: #666;
+	margin-bottom: 20px;
+}
 
 @media (max-width: 1024px) {
-	.cardsGrid { column-width: 260px; column-gap: 16px; }
-	.cardsGrid > * { margin-bottom: 16px; }
+	.cardsGrid {
+		column-width: 260px;
+		column-gap: 16px;
+	}
+	.cardsGrid > * {
+		margin-bottom: 16px;
+	}
 }
 
 @media (max-width: 768px) {
-	.cardsGrid { column-width: 240px; column-gap: 14px; }
-	.cardsGrid > * { margin-bottom: 14px; }
-	.emptyState { padding: 40px 16px; }
+	.cardsGrid {
+		column-width: 240px;
+		column-gap: 14px;
+	}
+	.cardsGrid > * {
+		margin-bottom: 14px;
+	}
+	.emptyState {
+		padding: 40px 16px;
+	}
 }
 
 @media (max-width: 480px) {
-	.cardsGrid { column-width: 100%; column-gap: 12px; }
-	.cardsGrid > * { margin-bottom: 12px; }
+	.cardsGrid {
+		column-width: 100%;
+		column-gap: 12px;
+	}
+	.cardsGrid > * {
+		margin-bottom: 12px;
+	}
 }

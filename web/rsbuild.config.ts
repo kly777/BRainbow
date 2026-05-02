@@ -14,8 +14,8 @@ export default defineConfig({
 	],
 	html: {
 		template: "./index.html",
-        tags: [
-		    // 解决 Cloudflare 的 Rocket Loader 与 SolidJS 不兼容
+		tags: [
+			// 解决 Cloudflare 的 Rocket Loader 与 SolidJS 不兼容
 			{ tag: "script", attrs: { "data-cfasync": "false" } },
 		],
 	},

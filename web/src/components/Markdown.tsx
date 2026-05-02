@@ -1,6 +1,7 @@
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { type Component, createMemo } from "solid-js";
+import "./markdown.css"
 
 export interface MarkdownProps {
 	content: string;

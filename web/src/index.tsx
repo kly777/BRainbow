@@ -6,7 +6,6 @@ import { login, register } from "@/apis/authApi";
 import { getErrorMessage } from "@/apis/types";
 import { AuthProvider, useAuth } from "./auth";
 import "@/normalize.css";
-import "@/markdown.css";
 import "./app.css";
 
 import styles from "./App.module.css";

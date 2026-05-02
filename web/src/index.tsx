@@ -14,27 +14,27 @@ const CardEditPage = lazy(() => import("@/pages/notes/CardEdit"));
 const DbViewerPage = lazy(() => import("@/pages/DbViewer"));
 
 function App() {
-  return (
-    <AuthProvider>
-      <Router root={Layout}>
-        <Route path="/" component={() => <HomePage />} />
-        <Route path="/tasks" component={() => <TaskManagerPage />} />
-        <Route path="/o" component={() => <OntologyListPage />} />
-        <Route path="/c" component={() => <CardsListPage />} />
-        <Route path="/c/:id" component={() => <CardDetailPage />} />
-        <Route path="/c/edit/:id" component={() => <CardEditPage />} />
-        <Route path="/db" component={() => <DbViewerPage />} />
-      </Router>
-    </AuthProvider>
-  );
+	return (
+		<AuthProvider>
+			<Router root={Layout}>
+				<Route path="/" component={() => <HomePage />} />
+				<Route path="/tasks" component={() => <TaskManagerPage />} />
+				<Route path="/o" component={() => <OntologyListPage />} />
+				<Route path="/c" component={() => <CardsListPage />} />
+				<Route path="/c/:id" component={() => <CardDetailPage />} />
+				<Route path="/c/edit/:id" component={() => <CardEditPage />} />
+				<Route path="/db" component={() => <DbViewerPage />} />
+			</Router>
+		</AuthProvider>
+	);
 }
 
 const root = document.getElementById("app");
 if (!root) {
-  const el = document.createElement("div");
-  el.id = "app";
-  document.body.appendChild(el);
-  render(() => <App />, el);
+	const el = document.createElement("div");
+	el.id = "app";
+	document.body.appendChild(el);
+	render(() => <App />, el);
 } else {
-  render(() => <App />, root);
+	render(() => <App />, root);
 }

@@ -28,6 +28,23 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+	gap: 16px;
+	position: relative;
+}
+
+.headerRow {
+	display: contents;
+}
+
+.hamburger {
+	display: none;
+	background: none;
+	border: none;
+	font-size: 20px;
+	cursor: pointer;
+	color: #374151;
+	padding: 4px 8px;
+	line-height: 1;
 }
 
 .appTitle {
@@ -43,7 +60,7 @@
 
 .navLinks {
 	display: flex;
-	gap: 20px;
+	gap: 4px;
 }
 
 .navLink {
@@ -73,6 +90,39 @@
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
+}
+
+/* 移动端：汉堡菜单展开为下拉面板 */
+@media (max-width: 640px) {
+	.hamburger {
+		display: block;
+	}
+
+	.navLinks {
+		display: none;
+	}
+
+	.navOpen {
+		display: flex;
+		flex-direction: column;
+		position: absolute;
+		top: 100%;
+		left: 0;
+		right: 0;
+		background: var(--bg-card);
+		padding: 12px 16px;
+		border-radius: 0 0 8px 8px;
+		box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+		z-index: 100;
+		gap: 4px;
+	}
+
+	.navOpen .navLink {
+		width: 100%;
+		text-align: center;
+		padding: 10px;
+		font-size: 15px;
+	}
 }
 
 .footer {
@@ -273,7 +323,7 @@
 /* Responsive design for header and navigation */
 @media (max-width: 768px) {
 	.headerContent {
-		flex-direction: column;
+		flex-direction: row;
 		align-items: flex-start;
 		gap: 12px;
 	}

@@ -3,6 +3,7 @@ import { lazy } from "solid-js";
 import { render } from "solid-js/web";
 import { AuthProvider } from "./auth";
 import Layout from "./Layout";
+import "@/global.css";
 import "@/normalize.css";
 
 const HomePage = lazy(() => import("@/pages/HomePage"));

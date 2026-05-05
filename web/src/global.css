@@ -1,0 +1,34 @@
+/* ===== 全局颜色变量 ===== */
+:root {
+	--c-primary: #3b82f6;
+	--c-primary-hover: #2563eb;
+	--c-primary-light: #f0f7ff;
+	--c-primary-ring: rgba(59, 130, 246, 0.25);
+
+	--c-danger: #ef4444;
+	--c-danger-hover: #dc2626;
+	--c-danger-light: #fef2f2;
+	--c-danger-border: #fca5a5;
+	--c-danger-bg: #f8d7da;
+	--c-danger-text: #c53030;
+
+	--c-text: #3d3629;
+	--c-text-heading: #2c2416;
+	--c-text-secondary: #6b5e4a;
+	--c-text-muted: #9b8e7a;
+
+	--c-bg: #fefcf5;
+	--c-bg-page: #fefcf5;
+	--c-bg-card: #fffef9;
+	--c-bg-subtle: #f8f3e6;
+	--c-bg-hover: #f0e8d5;
+
+	--c-border: #e8dfcc;
+	--c-border-hover: #d4c8aa;
+
+	--c-code: #d63384;
+	--c-code-bg: #f6f8fa;
+
+	/* 侧边栏宽度 */
+	--sidebar-w: 200px;
+}

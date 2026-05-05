@@ -9,8 +9,8 @@
 	align-items: center;
 	gap: 12px;
 	padding: 8px 16px;
-	background: #f8f9fa;
-	border-bottom: 1px solid #e5e7eb;
+	background: var(--c-bg-subtle);
+	border-bottom: 1px solid var(--c-border);
 	flex-shrink: 0;
 }
 
@@ -23,40 +23,40 @@
 .backBtn {
 	padding: 5px 10px;
 	font-size: 13px;
-	background: white;
-	color: #374151;
-	border: 1px solid #d1d5db;
+	background: var(--c-bg);
+	color: var(--c-text-secondary);
+	border: 1px solid var(--c-border);
 	border-radius: 6px;
 	cursor: pointer;
 }
 .backBtn:hover {
-	background: #f3f4f6;
+	background: var(--c-bg-hover);
 }
 
 .editBtn {
 	padding: 5px 12px;
 	font-size: 13px;
-	background: #3b82f6;
-	color: white;
+	background: var(--c-primary);
+	color: var(--c-bg);
 	border: none;
 	border-radius: 6px;
 	cursor: pointer;
 }
 .editBtn:hover {
-	background: #2563eb;
+	background: var(--c-primary-hover);
 }
 
 .deleteBtn {
 	padding: 5px 12px;
 	font-size: 13px;
-	background: white;
-	color: #ef4444;
-	border: 1px solid #fca5a5;
+	background: var(--c-bg);
+	color: var(--c-danger);
+	border: 1px solid var(--c-danger-border);
 	border-radius: 6px;
 	cursor: pointer;
 }
 .deleteBtn:hover {
-	background: #fef2f2;
+	background: var(--c-danger-light);
 }
 
 .loading {
@@ -65,14 +65,14 @@
 	justify-content: center;
 	gap: 8px;
 	padding: 40px;
-	color: #6b7280;
+	color: var(--c-text-muted);
 }
 
 .retryBtn {
 	padding: 4px 10px;
 	font-size: 13px;
-	background: #3b82f6;
-	color: white;
+	background: var(--c-primary);
+	color: var(--c-bg);
 	border: none;
 	border-radius: 4px;
 	cursor: pointer;
@@ -89,9 +89,9 @@
 	gap: 16px;
 	padding: 10px 24px;
 	font-size: 13px;
-	color: #6b7280;
-	background: #f9fafb;
-	border-bottom: 1px solid #e5e7eb;
+	color: var(--c-text-muted);
+	background: var(--c-bg-subtle);
+	border-bottom: 1px solid var(--c-border);
 }
 
 .body {

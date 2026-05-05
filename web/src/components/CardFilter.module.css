@@ -1,10 +1,10 @@
 .filters {
-	background: var(--bg-card);
+	background: var(--c-bg-card);
 	border-radius: 8px;
 	padding: 14px;
 	margin-bottom: 16px;
-	box-shadow: 0 1px 4px var(--shadow);
-	border: 1px solid var(--border);
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+	border: 1px solid var(--c-border);
 }
 
 .filterRow {
@@ -27,7 +27,7 @@
 	max-width: 220px;
 	padding: 8px 12px;
 	font-size: 0.875rem;
-	border: 1px solid #ddd;
+	border: 1px solid var(--c-border);
 	border-radius: 6px;
 	transition: all 0.2s ease;
 	flex-shrink: 0;
@@ -35,28 +35,28 @@
 
 .searchInput:focus {
 	outline: none;
-	border-color: #007bff;
-	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+	border-color: var(--c-primary);
+	box-shadow: 0 0 0 3px var(--c-primary-ring);
 }
 
 .searchInput::placeholder {
-	color: #999;
+	color: var(--c-text-muted);
 }
 
 .filterLabel {
 	font-size: 0.875rem;
 	font-weight: 500;
-	color: #333;
+	color: var(--c-text);
 	white-space: nowrap;
 }
 
 .filterSelect {
 	padding: 8px 12px;
 	font-size: 0.875rem;
-	border: 1px solid #ddd;
+	border: 1px solid var(--c-border);
 	border-radius: 4px;
-	background: white;
-	color: #333;
+	background: var(--c-bg);
+	color: var(--c-text);
 	cursor: pointer;
 	min-width: 120px;
 }
@@ -64,9 +64,9 @@
 .sortButton {
 	padding: 8px 12px;
 	font-size: 0.875rem;
-	background: #f8f9fa;
-	color: #333;
-	border: 1px solid #ddd;
+	background: var(--c-bg-subtle);
+	color: var(--c-text);
+	border: 1px solid var(--c-border);
 	border-radius: 4px;
 	cursor: pointer;
 	transition: all 0.2s ease;
@@ -74,15 +74,15 @@
 }
 
 .sortButton:hover {
-	background: #e9ecef;
+	background: var(--c-bg-hover);
 }
 
 .clearButton {
 	padding: 8px 14px;
 	font-size: 0.875rem;
-	background: #f8f9fa;
-	color: #666;
-	border: 1px solid #ddd;
+	background: var(--c-bg-subtle);
+	color: var(--c-text-secondary);
+	border: 1px solid var(--c-border);
 	border-radius: 6px;
 	cursor: pointer;
 	transition: all 0.2s ease;
@@ -91,7 +91,7 @@
 }
 
 .clearButton:hover:not(:disabled) {
-	background: #e9ecef;
+	background: var(--c-bg-hover);
 }
 .clearButton:disabled {
 	opacity: 0.5;

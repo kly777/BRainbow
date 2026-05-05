@@ -16,7 +16,7 @@
 .title {
 	font-size: 1.75rem;
 	font-weight: 600;
-	color: #333;
+	color: var(--c-text);
 	margin: 0;
 }
 
@@ -29,8 +29,8 @@
 	padding: 10px 20px;
 	font-size: 0.875rem;
 	font-weight: 500;
-	background: #007bff;
-	color: white;
+	background: var(--c-primary);
+	color: var(--c-bg);
 	border: none;
 	border-radius: 6px;
 	cursor: pointer;
@@ -38,12 +38,12 @@
 }
 
 .primaryButton:hover:not(:disabled) {
-	background: #0056b3;
+	background: var(--c-primary-hover);
 }
 
 .primaryButton:focus {
 	outline: none;
-	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3);
+	box-shadow: 0 0 0 3px var(--c-primary-ring);
 }
 
 .primaryButton:disabled {
@@ -55,23 +55,23 @@
 	padding: 10px 20px;
 	font-size: 0.875rem;
 	font-weight: 500;
-	background: white;
-	color: #666;
-	border: 1px solid #ddd;
+	background: var(--c-bg);
+	color: var(--c-text-secondary);
+	border: 1px solid var(--c-border);
 	border-radius: 6px;
 	cursor: pointer;
 	transition: all 0.2s ease;
 }
 
 .secondaryButton:hover:not(:disabled) {
-	background: #f5f5f5;
-	border-color: #ccc;
+	background: var(--c-bg-hover);
+	border-color: var(--c-border-hover);
 }
 
 .secondaryButton:focus {
 	outline: none;
-	border-color: #007bff;
-	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+	border-color: var(--c-primary);
+	box-shadow: 0 0 0 3px var(--c-primary-ring);
 }
 
 .secondaryButton:disabled {
@@ -82,30 +82,30 @@
 .loading {
 	text-align: center;
 	padding: 60px 20px;
-	background: white;
+	background: var(--c-bg-card);
 	border-radius: 8px;
-	border: 1px solid #eaeaea;
+	border: 1px solid var(--c-border);
 	margin: 20px 0;
 }
 
 .loading p {
 	font-size: 1rem;
-	color: #666;
+	color: var(--c-text-secondary);
 	margin: 0;
 }
 
 .error {
 	text-align: center;
 	padding: 40px 20px;
-	background: #fff5f5;
-	border: 1px solid #feb2b2;
+	background: var(--c-danger-light);
+	border: 1px solid var(--c-danger-border);
 	border-radius: 8px;
 	margin: 20px 0;
 }
 
 .error p {
 	font-size: 1rem;
-	color: #c53030;
+	color: var(--c-danger-text);
 	margin-bottom: 16px;
 }
 
@@ -125,7 +125,7 @@
 }
 
 .modal {
-	background: white;
+	background: var(--c-bg-card);
 	border-radius: 8px;
 	width: 100%;
 	max-width: 500px;
@@ -151,13 +151,13 @@
 	justify-content: space-between;
 	align-items: center;
 	padding: 20px 24px;
-	border-bottom: 1px solid #eaeaea;
+	border-bottom: 1px solid var(--c-border);
 }
 
 .modalHeader h2 {
 	font-size: 1.25rem;
 	font-weight: 600;
-	color: #333;
+	color: var(--c-text);
 	margin: 0;
 }
 
@@ -165,7 +165,7 @@
 	background: none;
 	border: none;
 	font-size: 1.5rem;
-	color: #999;
+	color: var(--c-text-muted);
 	cursor: pointer;
 	padding: 4px;
 	line-height: 1;
@@ -173,12 +173,12 @@
 }
 
 .closeButton:hover {
-	color: #333;
+	color: var(--c-text);
 }
 
 .closeButton:focus {
 	outline: none;
-	color: #007bff;
+	color: var(--c-primary);
 }
 
 .modalContent {
@@ -187,10 +187,10 @@
 
 .errorMessage {
 	padding: 12px 16px;
-	background: #fff5f5;
-	border: 1px solid #feb2b2;
+	background: var(--c-danger-light);
+	border: 1px solid var(--c-danger-border);
 	border-radius: 4px;
-	color: #c53030;
+	color: var(--c-danger-text);
 	font-size: 0.875rem;
 	margin-bottom: 20px;
 }
@@ -203,32 +203,32 @@
 	display: block;
 	font-size: 0.875rem;
 	font-weight: 500;
-	color: #333;
+	color: var(--c-text);
 	margin-bottom: 8px;
 }
 
 .formLabel::after {
 	content: " *";
-	color: #dc3545;
+	color: var(--c-danger);
 }
 
 .formInput {
 	width: 100%;
 	padding: 10px 12px;
 	font-size: 0.875rem;
-	border: 1px solid #ddd;
+	border: 1px solid var(--c-border);
 	border-radius: 4px;
 	transition: all 0.2s ease;
 }
 
 .formInput:focus {
 	outline: none;
-	border-color: #007bff;
-	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+	border-color: var(--c-primary);
+	box-shadow: 0 0 0 3px var(--c-primary-ring);
 }
 
 .formInput:disabled {
-	background: #f5f5f5;
+	background: var(--c-bg-hover);
 	cursor: not-allowed;
 }
 
@@ -236,7 +236,7 @@
 	width: 100%;
 	padding: 10px 12px;
 	font-size: 0.875rem;
-	border: 1px solid #ddd;
+	border: 1px solid var(--c-border);
 	border-radius: 4px;
 	resize: vertical;
 	transition: all 0.2s ease;
@@ -246,12 +246,12 @@
 
 .formTextarea:focus {
 	outline: none;
-	border-color: #007bff;
-	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+	border-color: var(--c-primary);
+	box-shadow: 0 0 0 3px var(--c-primary-ring);
 }
 
 .formTextarea:disabled {
-	background: #f5f5f5;
+	background: var(--c-bg-hover);
 	cursor: not-allowed;
 }
 
@@ -260,7 +260,7 @@
 	justify-content: flex-end;
 	gap: 12px;
 	padding: 20px 24px;
-	border-top: 1px solid #eaeaea;
+	border-top: 1px solid var(--c-border);
 }
 
 /* 响应式设计 */

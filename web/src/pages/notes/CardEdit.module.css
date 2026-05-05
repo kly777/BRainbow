@@ -9,15 +9,15 @@
 	align-items: center;
 	gap: 12px;
 	padding: 8px 16px;
-	background: #f8f9fa;
-	border-bottom: 1px solid #e5e7eb;
+	background: var(--c-bg-subtle);
+	border-bottom: 1px solid var(--c-border);
 	flex-shrink: 0;
 }
 
 .toolbarTitle {
 	font-size: 14px;
 	font-weight: 500;
-	color: #374151;
+	color: var(--c-text-secondary);
 }
 
 .toolbarActions {
@@ -29,28 +29,28 @@
 .backBtn {
 	padding: 5px 10px;
 	font-size: 13px;
-	background: white;
-	color: #374151;
-	border: 1px solid #d1d5db;
+	background: var(--c-bg);
+	color: var(--c-text-secondary);
+	border: 1px solid var(--c-border);
 	border-radius: 6px;
 	cursor: pointer;
 }
 .backBtn:hover {
-	background: #f3f4f6;
+	background: var(--c-bg-hover);
 }
 
 .saveBtn {
 	padding: 5px 14px;
 	font-size: 13px;
-	background: #3b82f6;
-	color: white;
+	background: var(--c-primary);
+	color: var(--c-bg);
 	border: none;
 	border-radius: 6px;
 	cursor: pointer;
 	font-weight: 500;
 }
 .saveBtn:hover {
-	background: #2563eb;
+	background: var(--c-primary-hover);
 }
 .saveBtn:disabled {
 	opacity: 0.5;
@@ -60,22 +60,22 @@
 .deleteBtn {
 	padding: 5px 12px;
 	font-size: 13px;
-	background: white;
-	color: #ef4444;
-	border: 1px solid #fca5a5;
+	background: var(--c-bg);
+	color: var(--c-danger);
+	border: 1px solid var(--c-danger-border);
 	border-radius: 6px;
 	cursor: pointer;
 }
 .deleteBtn:hover {
-	background: #fef2f2;
+	background: var(--c-danger-light);
 }
 
 .errorMsg {
 	padding: 8px 16px;
-	background: #fef2f2;
-	color: #dc2626;
+	background: var(--c-danger-light);
+	color: var(--c-danger-hover);
 	font-size: 13px;
-	border-bottom: 1px solid #fecaca;
+	border-bottom: 1px solid var(--c-danger-border);
 }
 
 .editor {
@@ -88,13 +88,13 @@
 	flex: 1;
 	padding: 16px;
 	border: none;
-	border-right: 1px solid #e5e7eb;
+	border-right: 1px solid var(--c-border);
 	resize: none;
 	font-size: 15px;
 	font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 	line-height: 1.6;
 	outline: none;
-	background: #fafafa;
+	background: var(--c-bg-subtle);
 }
 
 .preview {
@@ -108,7 +108,7 @@
 	align-items: center;
 	justify-content: center;
 	height: 100%;
-	color: #9ca3af;
+	color: var(--c-text-muted);
 	font-size: 14px;
 }
 
@@ -118,14 +118,14 @@
 	justify-content: center;
 	gap: 8px;
 	padding: 40px;
-	color: #6b7280;
+	color: var(--c-text-muted);
 }
 
 .retryBtn {
 	padding: 4px 10px;
 	font-size: 13px;
-	background: #3b82f6;
-	color: white;
+	background: var(--c-primary);
+	color: var(--c-bg);
 	border: none;
 	border-radius: 4px;
 	cursor: pointer;
@@ -137,7 +137,7 @@
 	}
 	.textarea {
 		border-right: none;
-		border-bottom: 1px solid #e5e7eb;
+		border-bottom: 1px solid var(--c-border);
 		min-height: 200px;
 	}
 }

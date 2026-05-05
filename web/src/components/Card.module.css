@@ -1,11 +1,11 @@
 .card {
-	background: var(--bg-card);
+	background: var(--c-bg-card);
 	border-radius: 8px;
 	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 	padding: 16px;
 	transition: all 0.2s ease;
 	cursor: pointer;
-	border: 1px solid var(--border);
+	border: 1px solid var(--c-border);
 	display: flex;
 	flex-direction: column;
 	/*height: 100%;*/
@@ -24,11 +24,11 @@
 .card:hover {
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 	transform: translateY(-2px);
-	border-color: #d0d0d0;
+	border-color: var(--c-border-hover);
 }
 
 .card:focus {
-	outline: 2px solid #007bff;
+	outline: 2px solid var(--c-primary);
 	outline-offset: 2px;
 }
 
@@ -47,7 +47,7 @@
 .cardTitle {
 	font-size: 1.125rem;
 	font-weight: 600;
-	color: #333;
+	color: var(--c-text);
 	margin: 0;
 	flex: 1;
 	line-height: 1.4;
@@ -60,8 +60,8 @@
 }
 
 .cardCategory {
-	background: #f0f7ff;
-	color: #007bff;
+	background: var(--c-primary-light);
+	color: var(--c-primary);
 	font-size: 0.75rem;
 	font-weight: 500;
 	padding: 4px 8px;
@@ -79,7 +79,7 @@
 .cardPreview {
 	font-size: 0.875rem;
 	line-height: 1.5;
-	color: #666;
+	color: var(--c-text-secondary);
 	margin: 0;
 	display: -webkit-box;
 	-webkit-line-clamp: 4;
@@ -98,8 +98,8 @@
 }
 
 .tag {
-	background: #f5f5f5;
-	color: #666;
+	background: var(--c-bg-hover);
+	color: var(--c-text-secondary);
 	font-size: 0.75rem;
 	padding: 2px 8px;
 	border-radius: 12px;
@@ -109,12 +109,12 @@
 }
 
 .tag:hover {
-	background: #e0e0e0;
-	color: #333;
+	background: var(--c-border-hover);
+	color: var(--c-text);
 }
 
 .tag:focus {
-	outline: 2px solid #007bff;
+	outline: 2px solid var(--c-primary);
 	outline-offset: 1px;
 }
 
@@ -124,7 +124,7 @@
 	gap: 4px;
 	margin-bottom: 12px;
 	font-size: 0.75rem;
-	color: #999;
+	color: var(--c-text-muted);
 }
 
 .metaItem {
@@ -156,44 +156,44 @@
 	padding: 6px 12px;
 	font-size: 0.875rem;
 	border-radius: 4px;
-	border: 1px solid #ddd;
-	background: white;
-	color: #333;
+	border: 1px solid var(--c-border);
+	background: var(--c-bg);
+	color: var(--c-text);
 	cursor: pointer;
 	transition: all 0.2s ease;
 }
 
 .actionButton:hover {
-	background: #f5f5f5;
-	border-color: #ccc;
+	background: var(--c-bg-hover);
+	border-color: var(--c-border-hover);
 }
 
 .actionButton:focus {
-	outline: 2px solid #007bff;
+	outline: 2px solid var(--c-primary);
 	outline-offset: 1px;
 }
 
 .deleteButton {
-	color: #dc3545;
-	border-color: #dc3545;
+	color: var(--c-danger);
+	border-color: var(--c-danger);
 }
 
 .deleteButton:hover {
-	background: #dc3545;
-	color: white;
+	background: var(--c-danger);
+	color: var(--c-bg);
 }
 
 .deleteButton:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
-	background: #f8d7da;
-	color: #721c24;
-	border-color: #f5c6cb;
+	background: var(--c-danger-bg);
+	color: var(--c-danger-text);
+	border-color: var(--c-danger-border);
 }
 
 .deleteButton:disabled:hover {
-	background: #f8d7da;
-	color: #721c24;
+	background: var(--c-danger-bg);
+	color: var(--c-danger-text);
 }
 
 /* 响应式设计 */

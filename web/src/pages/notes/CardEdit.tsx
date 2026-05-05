@@ -7,8 +7,9 @@ import {
 	createSignal,
 	Show,
 } from "solid-js";
-import { deleteCard, getCard, updateCard } from "@/apis/cardApi";
+import { deleteCard, getCard, updateCard, uploadImage } from "@/apis/cardApi";
 import type { UpdateCardRequest } from "@/apis/types";
+import { getErrorMessage } from "@/apis/types";
 import Markdown from "@/components/Markdown";
 import styles from "./CardEdit.module.css";
 
@@ -31,6 +32,9 @@ const CardEditPage: Component = () => {
 	const [content, setContent] = createSignal("");
 	const [isSubmitting, setIsSubmitting] = createSignal(false);
 	const [error, setError] = createSignal("");
+	const [isUploading, setIsUploading] = createSignal(false);
+	let fileInputRef: HTMLInputElement | undefined;
+	let textareaRef: HTMLTextAreaElement | undefined;
 
 	createEffect(() => {
 		const c = card();
@@ -72,6 +76,83 @@ const CardEditPage: Component = () => {
 		);
 	};
 
+	// ── 图片上传 ──
+	const triggerUpload = () => {
+		fileInputRef?.click();
+	};
+
+	const handleFileSelected = async (e: Event) => {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+
+		// 校验类型
+		if (!file.type.startsWith("image/")) {
+			setError("仅支持图片格式");
+			input.value = "";
+			return;
+		}
+
+		setIsUploading(true);
+		setError("");
+		try {
+			const image = await Effect.runPromise(uploadImage(file));
+			const md = `![${image.original_name}](${image.url})`;
+			insertAtCursor(md);
+		} catch (err) {
+			setError(`上传失败: ${getErrorMessage(err)}`);
+		} finally {
+			setIsUploading(false);
+			input.value = "";
+		}
+	};
+
+	const handlePaste = (e: ClipboardEvent) => {
+		const items = e.clipboardData?.items;
+		if (!items) return;
+
+		for (let i = 0; i < items.length; i++) {
+			const item = items[i];
+			if (item.type.startsWith("image/")) {
+				e.preventDefault();
+				const file = item.getAsFile();
+				if (!file) continue;
+
+				setIsUploading(true);
+				setError("");
+				Effect.runPromise(uploadImage(file))
+					.then((image) => {
+						const md = `![${image.original_name}](${image.url})`;
+						insertAtCursor(md);
+					})
+					.catch((err) => {
+						setError(`上传失败: ${getErrorMessage(err)}`);
+					})
+					.finally(() => setIsUploading(false));
+				break;
+			}
+		}
+	};
+
+	const insertAtCursor = (text: string) => {
+		const ta = textareaRef;
+		if (!ta) {
+			setContent(content() + text);
+			return;
+		}
+		const start = ta.selectionStart;
+		const end = ta.selectionEnd;
+		const before = content().slice(0, start);
+		const after = content().slice(end);
+		const newContent = before + text + after;
+		setContent(newContent);
+		// 恢复光标位置
+		requestAnimationFrame(() => {
+			ta.focus();
+			ta.setSelectionRange(start + text.length, start + text.length);
+		});
+	};
+
 	return (
 		<div class={styles.container}>
 			<div class={styles.toolbar}>
@@ -84,6 +165,14 @@ const CardEditPage: Component = () => {
 				</button>
 				<span class={styles.toolbarTitle}>编辑卡片</span>
 				<div class={styles.toolbarActions}>
+					<button
+						type="button"
+						class={styles.uploadBtn}
+						onClick={triggerUpload}
+						disabled={isUploading()}
+					>
+						{isUploading() ? "上传中..." : "📷 图片"}
+					</button>
 					<button type="button" class={styles.deleteBtn} onClick={handleDelete}>
 						删除
 					</button>
@@ -121,11 +210,13 @@ const CardEditPage: Component = () => {
 				<div class={styles.editor}>
 					<textarea
 						class={styles.textarea}
+						ref={textareaRef}
 						value={content()}
 						onInput={(e) => setContent(e.currentTarget.value)}
 						onKeyDown={handleKeyDown}
-						placeholder="输入 Markdown 内容..."
-						disabled={isSubmitting()}
+						onPaste={handlePaste}
+						placeholder="输入 Markdown 内容...支持粘贴图片"
+						disabled={isSubmitting() || isUploading()}
 					/>
 					<div class={styles.preview}>
 						<Show when={content().trim()}>
@@ -137,6 +228,13 @@ const CardEditPage: Component = () => {
 					</div>
 				</div>
 			</Show>
+			<input
+				type="file"
+				ref={fileInputRef}
+				class={styles.hiddenInput}
+				accept="image/*"
+				onChange={handleFileSelected}
+			/>
 		</div>
 	);
 };

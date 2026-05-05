@@ -17,6 +17,37 @@ export const UpdateCardRequestSchema = Schema.Struct({
 	content: Schema.optional(Schema.String),
 });
 
+// ==================== Image Schemas ====================
+
+export const ImageSchema = Schema.Struct({
+	id: Schema.Number,
+	url: Schema.String,
+	filename: Schema.String,
+	original_name: Schema.String,
+	content_type: Schema.String,
+});
+
+export type Image = Schema.Schema.Type<typeof ImageSchema>;
+
+export const ImageWithDateSchema = Schema.Struct({
+	id: Schema.Number,
+	url: Schema.String,
+	filename: Schema.String,
+	original_name: Schema.String,
+	content_type: Schema.String,
+	created_at: Schema.String,
+});
+
+export type ImageWithDate = Schema.Schema.Type<typeof ImageWithDateSchema>;
+
+export const RenameImageRequestSchema = Schema.Struct({
+	original_name: Schema.String,
+});
+
+export type RenameImageRequest = Schema.Schema.Type<
+	typeof RenameImageRequestSchema
+>;
+
 // ==================== Task Schemas ====================
 
 export const TaskSchema = Schema.Struct({

@@ -70,6 +70,28 @@
 	background: var(--c-danger-light);
 }
 
+.uploadBtn {
+	padding: 5px 12px;
+	font-size: 13px;
+	background: var(--c-bg);
+	color: var(--c-text-secondary);
+	border: 1px solid var(--c-border);
+	border-radius: 6px;
+	cursor: pointer;
+}
+.uploadBtn:hover {
+	background: var(--c-bg-hover);
+	color: var(--c-text);
+}
+.uploadBtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.hiddenInput {
+	display: none;
+}
+
 .errorMsg {
 	padding: 8px 16px;
 	background: var(--c-danger-light);

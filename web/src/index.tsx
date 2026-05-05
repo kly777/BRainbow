@@ -11,6 +11,7 @@ const OntologyListPage = lazy(() => import("@/pages/ontology/OntologyList"));
 const CardsListPage = lazy(() => import("@/pages/notes/CardsList"));
 const CardDetailPage = lazy(() => import("@/pages/notes/CardDetail"));
 const CardEditPage = lazy(() => import("@/pages/notes/CardEdit"));
+const ImagesListPage = lazy(() => import("@/pages/notes/ImagesList"));
 const DbViewerPage = lazy(() => import("@/pages/DbViewer"));
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
 				<Route path="/c" component={() => <CardsListPage />} />
 				<Route path="/c/:id" component={() => <CardDetailPage />} />
 				<Route path="/c/edit/:id" component={() => <CardEditPage />} />
+				<Route path="/i" component={() => <ImagesListPage />} />
 				<Route path="/db" component={() => <DbViewerPage />} />
 			</Router>
 		</AuthProvider>

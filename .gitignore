@@ -3,6 +3,9 @@
 
 *.db
 
+/uploads/*
+!/uploads/.gitkeep
+
 /doc
 
 /dist

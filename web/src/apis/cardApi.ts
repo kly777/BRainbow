@@ -5,6 +5,10 @@ import {
 	type Card,
 	CardSchema,
 	type CreateCardRequest,
+	type Image,
+	ImageSchema,
+	ImageWithDateSchema,
+	type RenameImageRequest,
 	type UpdateCardRequest,
 } from "./types";
 
@@ -46,3 +50,81 @@ export const searchCards = (
 		Schema.Array(CardSchema),
 		{},
 	);
+
+// ==================== Image Upload ====================
+
+import { Effect as E } from "effect";
+import { getToken } from "../auth";
+import { HttpError, NetworkError, ValidationError } from "./types";
+
+/**
+ * 上传图片（multipart/form-data）
+ */
+export const uploadImage = (
+	file: File,
+): E.Effect<Image, ApiErrorType> =>
+	E.gen(function* () {
+		const formData = new FormData();
+		formData.append("file", file);
+
+		const token = getToken();
+		const headers: Record<string, string> = {};
+		if (token) {
+			headers["Authorization"] = `Bearer ${token}`;
+		}
+
+		const response = yield* E.tryPromise({
+			try: async () =>
+				fetch("/api/images/upload", {
+					method: "POST",
+					headers,
+					body: formData,
+				}),
+			catch: (cause: unknown) => new NetworkError({ cause }),
+		});
+
+		if (!response.ok) {
+			let errorMessage = `HTTP ${response.status}`;
+			const errorJson = yield* E.tryPromise({
+				try: async () => response.json() as { error?: string },
+				catch: (cause: unknown) => new NetworkError({ cause }),
+			});
+			if (errorJson.error) {
+				errorMessage = errorJson.error;
+			}
+			return yield* E.fail(
+				new HttpError({ status: response.status, message: errorMessage }),
+			);
+		}
+
+		const json = yield* E.tryPromise({
+			try: async () => response.json() as unknown,
+			catch: (cause: unknown) => new NetworkError({ cause }),
+		});
+
+		const result = yield* Schema.decodeUnknown(ImageSchema)(json).pipe(
+			E.mapError(
+				(issue: unknown) => new ValidationError({ error: issue }),
+			),
+		);
+
+		return result;
+	});
+
+/** 获取所有图片 */
+export const listImages = (): E.Effect<readonly Image[], ApiErrorType> =>
+	request("/images", Schema.Array(ImageWithDateSchema), {});
+
+/** 重命名图片 */
+export const renameImage = (
+	id: number,
+	req: RenameImageRequest,
+): E.Effect<Image, ApiErrorType> =>
+	request(`/images/${id}`, ImageSchema, {
+		method: "PATCH",
+		body: JSON.stringify(req),
+	});
+
+/** 删除图片 */
+export const deleteImage = (id: number): E.Effect<void, ApiErrorType> =>
+	request(`/images/${id}`, Schema.Void, { method: "DELETE" });

@@ -301,6 +301,7 @@ dependencies = [
  "matchit",
  "memchr",
  "mime",
+ "multer",
  "percent-encoding",
  "pin-project-lite",
  "serde_core",
@@ -437,6 +438,7 @@ dependencies = [
  "sqlx",
  "tokio",
  "tower-http",
+ "uuid",
 ]
 
 [[package]]

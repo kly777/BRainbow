@@ -161,6 +161,21 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
+    // 创建图片表
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS image (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename TEXT NOT NULL UNIQUE,
+            original_name TEXT NOT NULL,
+            content_type TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
     // 创建能指所指表
     sqlx::query(
         r#"

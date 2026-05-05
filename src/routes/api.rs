@@ -1,6 +1,6 @@
-use axum::{middleware, Router, routing::get, routing::post};
+use axum::{middleware, Router, routing::{get, post}};
 
-use crate::modules::{card, db_viewer, onto, sign, task, time_window, user};
+use crate::modules::{card, db_viewer, image, onto, sign, task, time_window, user};
 use crate::state::AppState;
 
 pub fn create_api_router(state: AppState) -> Router<AppState> {
@@ -12,6 +12,7 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
     // ── 需登录的路由 ──
     let authed = Router::new()
         .route("/user", get(user::user_handler))
+        .nest("/images", image::routes())
         .nest("/card", card::routes())
         .nest("/onto", onto::routes())
         .nest("/sign", sign::routes())

@@ -24,6 +24,7 @@ pub fn create_router(state: AppState) -> Router {
     Router::new()
         .route("/header", get(header_handler))
         .nest("/api", api::create_api_router(state.clone()))
+        .nest_service("/uploads", ServeDir::new("uploads"))
         .fallback_service(
             ServeDir::new("dist").not_found_service(ServeFile::new("dist/index.html")),
         )

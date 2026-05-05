@@ -42,6 +42,15 @@ export default function Layout(props: { children?: JSX.Element }) {
 							卡片
 						</A>
 						<A
+							href="/i"
+							class={styles.navLink}
+							activeClass={styles.active}
+							end
+							onClick={() => setMenuOpen(false)}
+						>
+							图片
+						</A>
+						<A
 							href="/o"
 							class={styles.navLink}
 							activeClass={styles.active}

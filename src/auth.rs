@@ -1,22 +1,25 @@
 use axum::{
     extract::{Request, State},
-    http::{Method, StatusCode},
+    http::StatusCode,
     middleware::Next,
     response::{IntoResponse, Response},
 };
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
-use crate::modules::user::UserRepository;
+
 use crate::state::AppState;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: i32,       // user_id
-    pub role: String,   // "admin" | "user"
-    pub exp: usize,     // expiry
+    pub sub: i32,    // user_id
+    pub role: String, // "admin" | "user"
+    pub exp: usize,  // expiry
 }
 
-/// 从 JWT 提取 Claims
+// ============================================================
+// JWT 工具函数
+// ============================================================
+
 fn verify_token(token: &str, secret: &str) -> Option<Claims> {
     decode::<Claims>(
         token,
@@ -32,13 +35,19 @@ pub fn create_token(user_id: i32, role: &str, secret: &str) -> String {
     let exp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
-        .as_secs() as usize + 86400;
+        .as_secs() as usize
+        + 86400;
     let claims = Claims {
         sub: user_id,
         role: role.to_string(),
         exp,
     };
-    encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_bytes())).unwrap()
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_bytes()),
+    )
+    .unwrap()
 }
 
 fn extract_token(req: &Request) -> Option<String> {
@@ -49,70 +58,47 @@ fn extract_token(req: &Request) -> Option<String> {
         .map(|s| s.to_string())
 }
 
-fn get_claims(req: &Request, secret: &str) -> Option<Claims> {
-    let token = extract_token(req)?;
-    verify_token(&token, secret)
-}
+// ============================================================
+// 中间件
+// ============================================================
 
-fn is_public(path: &str) -> bool {
-    path == "/api/user/register" || path == "/api/user/login"
-}
-
-fn is_admin_only(path: &str) -> bool {
-    path.starts_with("/api/db")
-}
-
-pub async fn require_admin(
-    method: Method,
+/// 认证中间件：验证 JWT，将 Claims 注入 request extensions。
+/// 未登录返回 401。
+///
+/// 用法：挂载到需要登录的路由组上。
+///   Router::new().nest(…).layer(from_fn_with_state(state, auth::auth))
+pub async fn auth(
     State(state): State<AppState>,
-    request: Request,
+    mut request: Request,
     next: Next,
 ) -> Response {
-    let path = request.uri().path().to_string();
     let secret = &state.jwt_secret;
 
-    if is_public(&path) {
-        return next.run(request).await;
-    }
-
-    // admin-only 路径
-    if is_admin_only(&path) {
-        let claims = match get_claims(&request, secret) {
-            Some(c) => c,
-            None => return (StatusCode::UNAUTHORIZED, "请先登录").into_response(),
-        };
-        if claims.role != "admin" {
-            return (StatusCode::FORBIDDEN, "仅管理员可访问").into_response();
-        }
-        return next.run(request).await;
-    }
-
-    // GET 放行所有人
-    if method == Method::GET || method == Method::HEAD || method == Method::OPTIONS {
-        return next.run(request).await;
-    }
-
-    // 写操作需要 JWT
-    let claims = match get_claims(&request, secret) {
-        Some(c) => c,
-        None => {
-            // 兼容旧 X-User-Id 方式
-            let user_id = match request.headers().get("X-User-Id").and_then(|v| v.to_str().ok()).and_then(|s| s.parse::<i32>().ok()) {
-                Some(id) => id,
-                None => return (StatusCode::UNAUTHORIZED, "请先登录").into_response(),
-            };
-            let repo = UserRepository::new(state.db);
-            return match repo.get_role_by_id(user_id).await {
-                Ok(Some(role)) if role == "admin" => next.run(request).await,
-                Ok(Some(_)) => (StatusCode::FORBIDDEN, "仅管理员可执行此操作").into_response(),
-                _ => (StatusCode::UNAUTHORIZED, "用户不存在").into_response(),
-            };
-        }
+    let token = match extract_token(&request) {
+        Some(t) => t,
+        None => return (StatusCode::UNAUTHORIZED, "请先登录").into_response(),
     };
 
-    if claims.role != "admin" {
-        return (StatusCode::FORBIDDEN, "仅管理员可执行此操作").into_response();
-    }
+    let claims = match verify_token(&token, secret) {
+        Some(c) => c,
+        None => return (StatusCode::UNAUTHORIZED, "登录已过期，请重新登录").into_response(),
+    };
 
+    request.extensions_mut().insert(claims);
     next.run(request).await
+}
+
+/// 授权中间件：要求 admin 角色。必须在 [`auth`] 中间件之后使用。
+/// 非 admin 返回 403；未认证返回 401（防御性）。
+///
+/// 用法：叠加在 auth 中间件之上。
+///   Router::new().nest(…)
+///       .layer(from_fn(auth::require_admin))
+///       .layer(from_fn_with_state(state, auth::auth))
+pub async fn require_admin(request: Request, next: Next) -> Response {
+    match request.extensions().get::<Claims>() {
+        Some(c) if c.role == "admin" => next.run(request).await,
+        Some(_) => (StatusCode::FORBIDDEN, "仅管理员可访问").into_response(),
+        None => (StatusCode::UNAUTHORIZED, "请先登录").into_response(),
+    }
 }

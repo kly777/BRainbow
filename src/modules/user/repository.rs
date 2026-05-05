@@ -26,11 +26,6 @@ impl UserRepository {
             .bind(name).fetch_optional(&*self.db).await
     }
 
-    pub async fn get_role_by_id(&self, id: i32) -> Result<Option<String>, sqlx::Error> {
-        sqlx::query_scalar("SELECT role FROM user WHERE id = ?")
-            .bind(id).fetch_optional(&*self.db).await
-    }
-
     pub async fn create(&self, name: &str, password_hash: &str, role: &str) -> Result<User, sqlx::Error> {
         let result = sqlx::query(
             "INSERT INTO user (name, password_hash, role) VALUES (?, ?, ?) RETURNING id, name, password_hash, role"

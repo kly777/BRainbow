@@ -48,7 +48,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .allow_headers(Any);
 
     let app = app
-        .layer(middleware::from_fn_with_state(state, auth::require_admin))
         .layer(middleware::from_fn(logger))
         .layer(cors);
 

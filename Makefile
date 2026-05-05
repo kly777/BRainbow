@@ -6,7 +6,7 @@ TARGET_ARCH := x86_64-unknown-linux-gnu
 SSH_TARGET := $(REMOTE_USER)@$(REMOTE_HOST)
 time := $(shell date +%y%m%d_%H%M%S)
 
-.PHONY: clean deploy status db-pull db-push
+.PHONY: clean deploy status db-pull db-push logs rollback
 
 build: clean
 	cd web && pnpm build
@@ -32,3 +32,6 @@ db-pull:
 db-push:
 	scp -P $(REMOTE_PORT) ./brainbow.db $(SSH_TARGET):$(REMOTE_BASE)/$(APP_NAME)/brainbow.db
 	ssh -p $(REMOTE_PORT) $(SSH_TARGET) "sudo systemctl restart $(APP_NAME)"
+
+logs:
+	ssh -p $(REMOTE_PORT) $(SSH_TARGET) "journalctl -u $(APP_NAME) -n 50 --no-pager"

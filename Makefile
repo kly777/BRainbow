@@ -4,6 +4,7 @@ TARGET_ARCH := x86_64-unknown-linux-gnu
 -include .env.prod
 
 SSH_TARGET := $(REMOTE_USER)@$(REMOTE_HOST)
+time := $(shell date +%y%m%d_%H%M%S)
 
 .PHONY: clean deploy status db-pull db-push
 
@@ -26,7 +27,7 @@ status:
 
 db-pull:
 	mkdir -p db
-	scp -P $(REMOTE_PORT) $(SSH_TARGET):$(REMOTE_BASE)/$(APP_NAME)/brainbow.db ./db/brainbow.db
+	scp -P $(REMOTE_PORT) $(SSH_TARGET):$(REMOTE_BASE)/$(APP_NAME)/brainbow.db ./db/brainbow_$(time).db
 
 db-push:
 	scp -P $(REMOTE_PORT) ./brainbow.db $(SSH_TARGET):$(REMOTE_BASE)/$(APP_NAME)/brainbow.db

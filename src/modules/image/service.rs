@@ -2,6 +2,7 @@ use sqlx::SqlitePool;
 use std::sync::Arc;
 
 use super::model::Image;
+use crate::pagination::{Pagination, PaginatedResponse};
 
 const UPLOAD_DIR: &str = "uploads";
 
@@ -53,14 +54,23 @@ impl ImageService {
         }
     }
 
-    /// 获取所有图片
-    pub async fn list(&self) -> Result<Vec<Image>, String> {
-        sqlx::query_as::<_, Image>(
-            "SELECT id, filename, original_name, content_type, created_at FROM image ORDER BY created_at DESC",
+    /// 获取所有图片（分页）
+    pub async fn list(&self, pagination: &Pagination) -> Result<PaginatedResponse<Image>, String> {
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM image")
+            .fetch_one(&*self.db)
+            .await
+            .map_err(|e| format!("查询失败: {}", e))?;
+
+        let items = sqlx::query_as::<_, Image>(
+            "SELECT id, filename, original_name, content_type, created_at FROM image ORDER BY created_at DESC LIMIT ? OFFSET ?",
         )
+        .bind(pagination.limit())
+        .bind(pagination.offset())
         .fetch_all(&*self.db)
         .await
-        .map_err(|e| format!("查询失败: {}", e))
+        .map_err(|e| format!("查询失败: {}", e))?;
+
+        Ok(PaginatedResponse::new(items, total, pagination))
     }
 
     /// 重命名图片（修改 original_name）

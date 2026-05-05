@@ -17,6 +17,27 @@ impl TaskRepository {
         .await
     }
 
+    pub async fn find_all_paginated(
+        &self,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<Task>, i64), sqlx::Error> {
+        let total: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM task")
+                .fetch_one(&*self.db)
+                .await?;
+        let items = sqlx::query_as::<_, Task>(
+            "SELECT id, title, description, parent_task_id, status, completed_at,
+            effort_estimate_minutes, user_id, created_at, updated_at
+            FROM task ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&*self.db)
+        .await?;
+        Ok((items, total))
+    }
+
     pub async fn find_all_excluding_archived(&self) -> Result<Vec<Task>, sqlx::Error> {
         sqlx::query_as::<_, Task>(
             "SELECT id, title, description, parent_task_id, status, completed_at,
@@ -27,6 +48,27 @@ impl TaskRepository {
         )
         .fetch_all(&*self.db)
         .await
+    }
+
+    pub async fn find_all_excluding_archived_paginated(
+        &self,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<Task>, i64), sqlx::Error> {
+        let total: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE status != 'archived'")
+                .fetch_one(&*self.db)
+                .await?;
+        let items = sqlx::query_as::<_, Task>(
+            "SELECT id, title, description, parent_task_id, status, completed_at,
+            effort_estimate_minutes, user_id, created_at, updated_at
+            FROM task WHERE status != 'archived' ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&*self.db)
+        .await?;
+        Ok((items, total))
     }
 
     pub async fn find_by_id(&self, id: i32) -> Result<Option<Task>, sqlx::Error> {

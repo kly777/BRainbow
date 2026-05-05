@@ -13,6 +13,7 @@ use super::repository::TaskRepository;
 use super::response::{
     bad_request, internal_error, CalendarEvent, DagView, StatsResponse, TaskResponse, TreeNode,
 };
+use crate::pagination::{Pagination, PaginatedResponse};
 use crate::state::AppState;
 
 // ==================== 处理器函数 ====================
@@ -155,10 +156,10 @@ pub async fn get_stats_handler(State(state): State<AppState>) -> impl IntoRespon
 
 /// 搜索任务
 pub async fn search_tasks_handler(
-    Query(params): Query<HashMap<String, String>>,
+    Query(mut params): Query<HashMap<String, String>>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let query = match params.get("q") {
+    let query = match params.remove("q") {
         Some(q) if !q.is_empty() => q,
         _ => {
             return bad_request(
@@ -169,12 +170,26 @@ pub async fn search_tasks_handler(
         }
     };
 
+    let pagination = Pagination {
+        page: params
+            .get("page")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(1),
+        page_size: params
+            .get("page_size")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(20),
+    };
+
     let repo = TaskRepository::new(state.db);
 
-    match repo.search_by_title(query).await {
-        Ok(tasks) => {
-            let response: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
-            Json(response).into_response()
+    match repo
+        .search_by_title_paginated(&query, pagination.limit(), pagination.offset())
+        .await
+    {
+        Ok((tasks, total)) => {
+            let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
+            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
         Err(e) => {
             let error = format!("搜索任务失败: {}", e);

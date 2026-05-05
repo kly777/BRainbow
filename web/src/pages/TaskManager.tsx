@@ -2,7 +2,10 @@ import { Effect } from "effect";
 import { createSignal, onMount, Show } from "solid-js";
 import {
 	createTask,
+	getActiveTasks,
 	getAllTasks,
+	getBacklogTasks,
+	getCompletedTasks,
 	getTaskStats,
 	getTasks,
 	searchTasks,
@@ -39,7 +42,7 @@ export default function TaskManager() {
 		try {
 			setLoading(true);
 			const loadedTasks = await Effect.runPromise(getTasks());
-			setTasks([...loadedTasks]);
+			setTasks([...loadedTasks.items]);
 
 			// 加载统计
 			try {
@@ -71,7 +74,7 @@ export default function TaskManager() {
 		try {
 			setLoading(true);
 			const results = await Effect.runPromise(searchTasks(q));
-			setTasks([...results]);
+			setTasks([...results.items]);
 		} catch (error) {
 			console.error("搜索任务失败:", error);
 			alert(`搜索任务失败: ${getErrorMessage(error)}`);
@@ -83,24 +86,22 @@ export default function TaskManager() {
 	// 筛选任务
 	const filterByStatus = async (status: string) => {
 		setActiveFilter(status);
-		// setLoading(true);
 		try {
-			let results: readonly Task[];
+			let result: { readonly items: readonly Task[] };
 			switch (status) {
 				case "backlog":
-					results = await Effect.runPromise(getTasks());
+					result = await Effect.runPromise(getBacklogTasks());
 					break;
 				case "active":
-					results = await Effect.runPromise(getTasks());
+					result = await Effect.runPromise(getActiveTasks());
 					break;
 				case "completed":
-					results = await Effect.runPromise(getTasks());
+					result = await Effect.runPromise(getCompletedTasks());
 					break;
 				default:
-					results = await Effect.runPromise(getAllTasks());
+					result = await Effect.runPromise(getAllTasks());
 			}
-			// 根据状态客户端过滤
-			setTasks([...results.filter((t) => t.status === status)]);
+			setTasks([...result.items]);
 		} catch (error) {
 			console.error("筛选失败:", error);
 			alert(`筛选失败: ${getErrorMessage(error)}`);

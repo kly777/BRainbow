@@ -13,6 +13,7 @@ const CardsListPage: Component = () => {
 	const [cards, { mutate }] = createResource(() =>
 		Effect.runPromise(
 			getCards().pipe(
+				Effect.map((r) => r.items),
 				Effect.catchAll((error) => {
 					console.error("获取卡片列表失败:", error);
 					alert(`获取卡片列表失败: ${getErrorMessage(error)}`);
@@ -131,14 +132,17 @@ const CardsListPage: Component = () => {
 		if (!query) {
 			// 空查询 = 重新加载全部
 			const loaded = await Effect.runPromise(
-				getCards().pipe(Effect.catchAll(() => Effect.succeed([]))),
+				getCards().pipe(
+					Effect.map((r) => r.items),
+					Effect.catchAll(() => Effect.succeed([] as any)),
+				),
 			);
 			mutate([...loaded]);
 			return;
 		}
 		try {
-			const results = await Effect.runPromise(searchCards(query));
-			mutate([...results]);
+			const result = await Effect.runPromise(searchCards(query));
+			mutate([...result.items]);
 		} catch (error) {
 			console.error("搜索失败:", error);
 		}

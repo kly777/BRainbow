@@ -14,8 +14,7 @@ import styles from "./ImagesList.module.css";
 const ImagesListPage: Component = () => {
 	const [images, { refetch }] = createResource(async () => {
 		const result = await Effect.runPromise(listImages());
-		// listImages returns ImageWithDate[] but we only need Image fields
-		return result as unknown as Image[];
+		return result.items as unknown as Image[];
 	});
 
 	const [editingId, setEditingId] = createSignal<number | null>(null);

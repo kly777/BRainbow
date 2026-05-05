@@ -39,10 +39,10 @@ const HomePage = () => {
 				Effect.runPromise(getCards()),
 			]);
 
-			setTodos([...allTasks]);
+			setTodos([...allTasks.items]);
 
 			// 按 updated_at 降序排列，取前4个
-			const sortedCards = [...cards].sort(
+			const sortedCards = [...cards.items].sort(
 				(a, b) =>
 					new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
 			);
@@ -125,7 +125,7 @@ const HomePage = () => {
 			alert(`删除卡片失败: ${getErrorMessage(error)}`);
 			try {
 				const cards = await Effect.runPromise(getCards());
-				const sortedCards = [...cards].sort(
+				const sortedCards = [...cards.items].sort(
 					(a, b) =>
 						new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
 				);

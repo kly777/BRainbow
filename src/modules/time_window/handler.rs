@@ -13,6 +13,7 @@ use super::model::{
 };
 use crate::modules::task::{ErrorResponse, TaskErrorCode};
 use super::repository::TimeWindowRepository;
+use crate::pagination::Pagination;
 use crate::state::AppState;
 
 // ==================== 查询参数结构体 ====================
@@ -22,6 +23,8 @@ pub struct TimeWindowQuery {
     pub task_id: Option<i32>,
     pub window_type: Option<TimeWindowType>,
     pub user_id: Option<i32>,
+    #[serde(flatten)]
+    pub pagination: Pagination,
 }
 
 // ==================== 响应结构体 ====================
@@ -157,52 +160,45 @@ pub async fn get_time_windows_handler(
     Query(query): Query<TimeWindowQuery>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
+    use crate::pagination::PaginatedResponse;
     let repo = TimeWindowRepository::new(state.db);
-    #[allow(unused_assignments)]
-    let mut time_windows = Vec::new();
+    let p = &query.pagination;
 
-    // 根据查询条件获取时间窗口
     if let Some(task_id) = query.task_id {
-        if let Some(window_type) = query.window_type {
-            // 按任务ID和时间类型查询
-            match repo.find_by_task_id_and_type(task_id, window_type).await {
-                Ok(windows) => time_windows = windows,
-                Err(e) => {
-                    let error = format!("查询时间窗口失败: {}", e);
-                    return internal_error(error).into_response();
-                }
-            }
+        let result = if let Some(window_type) = query.window_type {
+            repo.find_by_task_id_and_type_paginated(
+                task_id,
+                window_type,
+                p.limit(),
+                p.offset(),
+            )
+            .await
         } else {
-            // 仅按任务ID查询
-            match repo.find_by_task_id(task_id).await {
-                Ok(windows) => time_windows = windows,
-                Err(e) => {
-                    let error = format!("查询时间窗口失败: {}", e);
-                    return internal_error(error).into_response();
-                }
+            repo.find_by_task_id_paginated(task_id, p.limit(), p.offset())
+                .await
+        };
+
+        return match result {
+            Ok((windows, total)) => {
+                let items: Vec<TimeWindowResponse> =
+                    windows.into_iter().map(TimeWindowResponse::from).collect();
+                Json(PaginatedResponse::new(items, total, p)).into_response()
             }
-        }
-    } else if let Some(user_id) = query.user_id {
-        // 按用户ID查询
-        match repo.find_by_user_id(user_id).await {
-            Ok(windows) => time_windows = windows,
             Err(e) => {
-                let error = format!("查询时间窗口失败: {}", e);
-                return internal_error(error).into_response();
+                internal_error(format!("查询时间窗口失败: {}", e)).into_response()
             }
-        }
-    } else {
-        // 如果没有查询条件，返回空列表
-        // 在实际应用中，可能需要限制或分页
-        return Json(Vec::<TimeWindowResponse>::new()).into_response();
+        };
     }
 
-    let response: Vec<TimeWindowResponse> = time_windows
-        .into_iter()
-        .map(TimeWindowResponse::from)
-        .collect();
+    if let Some(_user_id) = query.user_id {
+        // 按用户查询暂时返回空（待实现分页版本）
+        let empty: Vec<TimeWindowResponse> = Vec::new();
+        return Json(PaginatedResponse::new(empty, 0, p)).into_response();
+    }
 
-    Json(response).into_response()
+    // 无查询条件
+    let empty: Vec<TimeWindowResponse> = Vec::new();
+    Json(PaginatedResponse::new(empty, 0, p)).into_response()
 }
 
 /// 更新时间窗口

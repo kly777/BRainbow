@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use super::model::SignifierSignified;
 use super::repository::SignRepository;
+use crate::pagination::{Pagination, PaginatedResponse};
 
 /// 符号关系服务层
 pub struct SignService {
@@ -77,15 +78,45 @@ impl SignService {
             .map_err(|e| format!("根据能指获取符号关系失败: {}", e))
     }
 
-    /// 根据所指获取符号关系
-    pub async fn get_signs_by_signified(
+    /// 获取所有符号关系（分页）
+    pub async fn get_signs_paginated(
+        &self,
+        pagination: &Pagination,
+    ) -> Result<PaginatedResponse<SignifierSignified>, String> {
+        let (items, total) = self
+            .sign_repository
+            .find_all_paginated(pagination.limit(), pagination.offset())
+            .await
+            .map_err(|e| format!("获取符号关系列表失败: {}", e))?;
+        Ok(PaginatedResponse::new(items, total, pagination))
+    }
+
+    /// 根据能指获取符号关系（分页）
+    pub async fn get_signs_by_signifier_paginated(
+        &self,
+        signifier: &str,
+        pagination: &Pagination,
+    ) -> Result<PaginatedResponse<SignifierSignified>, String> {
+        let (items, total) = self
+            .sign_repository
+            .find_by_signifier_paginated(signifier, pagination.limit(), pagination.offset())
+            .await
+            .map_err(|e| format!("根据能指获取符号关系失败: {}", e))?;
+        Ok(PaginatedResponse::new(items, total, pagination))
+    }
+
+    /// 根据所指获取符号关系（分页）
+    pub async fn get_signs_by_signified_paginated(
         &self,
         signified: &str,
-    ) -> Result<Vec<SignifierSignified>, String> {
-        self.sign_repository
-            .find_by_signified(signified)
+        pagination: &Pagination,
+    ) -> Result<PaginatedResponse<SignifierSignified>, String> {
+        let (items, total) = self
+            .sign_repository
+            .find_by_signified_paginated(signified, pagination.limit(), pagination.offset())
             .await
-            .map_err(|e| format!("根据所指获取符号关系失败: {}", e))
+            .map_err(|e| format!("根据所指获取符号关系失败: {}", e))?;
+        Ok(PaginatedResponse::new(items, total, pagination))
     }
 
     // /// 根据本体ID获取符号关系

@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Multipart, Path, State},
+    extract::{Multipart, Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Json},
 };
@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::model::Image;
 use super::service::ImageService;
+use crate::pagination::Pagination;
 use crate::state::AppState;
 
 /// 允许的图片 MIME 类型
@@ -148,12 +149,22 @@ fn to_item(img: &Image) -> ImageItem {
 }
 
 /// GET /api/images
-pub async fn list_handler(State(state): State<AppState>) -> impl IntoResponse {
+pub async fn list_handler(
+    Query(pagination): Query<Pagination>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
     let service = ImageService::new(state.db.clone());
-    match service.list().await {
-        Ok(images) => {
-            let items: Vec<ImageItem> = images.iter().map(to_item).collect();
-            Json(items).into_response()
+    match service.list(&pagination).await {
+        Ok(response) => {
+            let items: Vec<ImageItem> = response.items.iter().map(to_item).collect();
+            Json(serde_json::json!({
+                "items": items,
+                "total": response.total,
+                "page": response.page,
+                "page_size": response.page_size,
+                "total_pages": response.total_pages,
+            }))
+            .into_response()
         }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }

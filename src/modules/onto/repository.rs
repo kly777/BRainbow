@@ -21,6 +21,24 @@ impl OntoRepository {
             .await
     }
 
+    pub async fn find_all_paginated(
+        &self,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<Onto>, i64), sqlx::Error> {
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM onto")
+            .fetch_one(&*self.db)
+            .await?;
+        let items = sqlx::query_as::<_, Onto>(
+            "SELECT id, name, description FROM onto ORDER BY id LIMIT ? OFFSET ?",
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&*self.db)
+        .await?;
+        Ok((items, total))
+    }
+
     /// 根据ID获取本体
     pub async fn find_by_id(&self, id: i32) -> Result<Option<Onto>, sqlx::Error> {
         sqlx::query_as::<_, Onto>("SELECT id, name, description FROM onto WHERE id = ?")

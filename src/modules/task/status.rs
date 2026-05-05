@@ -1,10 +1,12 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::{IntoResponse, Json},
 };
 
+use super::model::TaskStatus;
 use super::repository::TaskRepository;
 use super::response::{internal_error, not_found, TaskResponse};
+use crate::pagination::{Pagination, PaginatedResponse};
 use crate::state::AppState;
 
 // ==================== 处理器函数 ====================
@@ -78,65 +80,85 @@ pub async fn move_to_backlog_handler(
 }
 
 /// 获取待办任务
-pub async fn get_backlog_tasks_handler(State(state): State<AppState>) -> impl IntoResponse {
+pub async fn get_backlog_tasks_handler(
+    Query(pagination): Query<Pagination>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
     let repo = TaskRepository::new(state.db);
 
-    match repo.find_backlog_tasks().await {
-        Ok(tasks) => {
-            let response: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
-            Json(response).into_response()
+    match repo
+        .find_by_status_paginated(TaskStatus::Backlog, pagination.limit(), pagination.offset())
+        .await
+    {
+        Ok((tasks, total)) => {
+            let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
+            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
         Err(e) => {
-            let error = format!("获取待办任务失败: {}", e);
-            internal_error(error).into_response()
+            internal_error(format!("获取待办任务失败: {}", e)).into_response()
         }
     }
 }
 
 /// 获取活跃任务
-pub async fn get_active_tasks_handler(State(state): State<AppState>) -> impl IntoResponse {
+pub async fn get_active_tasks_handler(
+    Query(pagination): Query<Pagination>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
     let repo = TaskRepository::new(state.db);
 
-    match repo.find_active_tasks().await {
-        Ok(tasks) => {
-            let response: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
-            Json(response).into_response()
+    match repo
+        .find_by_status_paginated(TaskStatus::Active, pagination.limit(), pagination.offset())
+        .await
+    {
+        Ok((tasks, total)) => {
+            let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
+            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
         Err(e) => {
-            let error = format!("获取活跃任务失败: {}", e);
-            internal_error(error).into_response()
+            internal_error(format!("获取活跃任务失败: {}", e)).into_response()
         }
     }
 }
 
 /// 获取已完成任务
-pub async fn get_completed_tasks_handler(State(state): State<AppState>) -> impl IntoResponse {
+pub async fn get_completed_tasks_handler(
+    Query(pagination): Query<Pagination>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
     let repo = TaskRepository::new(state.db);
 
-    match repo.find_completed_tasks().await {
-        Ok(tasks) => {
-            let response: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
-            Json(response).into_response()
+    match repo
+        .find_by_status_paginated(TaskStatus::Completed, pagination.limit(), pagination.offset())
+        .await
+    {
+        Ok((tasks, total)) => {
+            let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
+            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
         Err(e) => {
-            let error = format!("获取已完成任务失败: {}", e);
-            internal_error(error).into_response()
+            internal_error(format!("获取已完成任务失败: {}", e)).into_response()
         }
     }
 }
 
 /// 获取已归档任务
-pub async fn get_archived_tasks_handler(State(state): State<AppState>) -> impl IntoResponse {
+pub async fn get_archived_tasks_handler(
+    Query(pagination): Query<Pagination>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
     let repo = TaskRepository::new(state.db);
 
-    match repo.find_archived_tasks().await {
-        Ok(tasks) => {
-            let response: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
-            Json(response).into_response()
+    match repo
+        .find_by_status_paginated(TaskStatus::Archived, pagination.limit(), pagination.offset())
+        .await
+    {
+        Ok((tasks, total)) => {
+            let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
+            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
         Err(e) => {
-            let error = format!("获取已归档任务失败: {}", e);
-            internal_error(error).into_response()
+            internal_error(format!("获取已归档任务失败: {}", e)).into_response()
         }
     }
 }

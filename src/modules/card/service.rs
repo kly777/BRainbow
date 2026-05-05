@@ -1,3 +1,4 @@
+use crate::pagination::{Pagination, PaginatedResponse};
 use std::sync::Arc;
 
 use super::model::Card;
@@ -66,5 +67,32 @@ impl CardService {
             .search_by_content(query)
             .await
             .map_err(|e| format!("搜索卡片失败: {}", e))
+    }
+
+    /// 获取所有卡片（分页）
+    pub async fn get_cards_paginated(
+        &self,
+        pagination: &Pagination,
+    ) -> Result<PaginatedResponse<Card>, String> {
+        let (items, total) = self
+            .card_repository
+            .find_all_paginated(pagination.limit(), pagination.offset())
+            .await
+            .map_err(|e| format!("获取卡片列表失败: {}", e))?;
+        Ok(PaginatedResponse::new(items, total, pagination))
+    }
+
+    /// 搜索卡片（分页）
+    pub async fn search_cards_paginated(
+        &self,
+        query: &str,
+        pagination: &Pagination,
+    ) -> Result<PaginatedResponse<Card>, String> {
+        let (items, total) = self
+            .card_repository
+            .search_by_content_paginated(query, pagination.limit(), pagination.offset())
+            .await
+            .map_err(|e| format!("搜索卡片失败: {}", e))?;
+        Ok(PaginatedResponse::new(items, total, pagination))
     }
 }

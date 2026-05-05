@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Json},
 };
@@ -9,38 +9,49 @@ use super::dto::{
 };
 use super::repository::TaskRepository;
 use super::response::{bad_request, internal_error, not_found, TaskResponse};
+use crate::pagination::{Pagination, PaginatedResponse};
 use crate::state::AppState;
 
 // ==================== 处理器函数 ====================
 
 /// 获取所有未归档任务
-pub async fn get_tasks_handler(State(state): State<AppState>) -> impl IntoResponse {
+pub async fn get_tasks_handler(
+    Query(pagination): Query<Pagination>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
     let repo = TaskRepository::new(state.db);
 
-    match repo.find_all_excluding_archived().await {
-        Ok(tasks) => {
-            let response: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
-            Json(response).into_response()
+    match repo
+        .find_all_excluding_archived_paginated(pagination.limit(), pagination.offset())
+        .await
+    {
+        Ok((tasks, total)) => {
+            let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
+            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
         Err(e) => {
-            let error = format!("获取任务列表失败: {}", e);
-            internal_error(error).into_response()
+            internal_error(format!("获取任务列表失败: {}", e)).into_response()
         }
     }
 }
 
 /// 获取所有任务（包括已归档）
-pub async fn get_all_tasks_handler(State(state): State<AppState>) -> impl IntoResponse {
+pub async fn get_all_tasks_handler(
+    Query(pagination): Query<Pagination>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
     let repo = TaskRepository::new(state.db);
 
-    match repo.find_all().await {
-        Ok(tasks) => {
-            let response: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
-            Json(response).into_response()
+    match repo
+        .find_all_paginated(pagination.limit(), pagination.offset())
+        .await
+    {
+        Ok((tasks, total)) => {
+            let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
+            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
         Err(e) => {
-            let error = format!("获取全部任务列表失败: {}", e);
-            internal_error(error).into_response()
+            internal_error(format!("获取全部任务列表失败: {}", e)).into_response()
         }
     }
 }

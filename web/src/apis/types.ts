@@ -40,6 +40,26 @@ export const ImageWithDateSchema = Schema.Struct({
 
 export type ImageWithDate = Schema.Schema.Type<typeof ImageWithDateSchema>;
 
+export const PaginatedImageSchema = Schema.Struct({
+	items: Schema.Array(ImageWithDateSchema),
+	total: Schema.Number,
+	page: Schema.Number,
+	page_size: Schema.Number,
+	total_pages: Schema.Number,
+});
+
+export type PaginatedImage = Schema.Schema.Type<typeof PaginatedImageSchema>;
+
+// 通用分页 Schema 工厂
+export const PaginatedSchema = <T extends Schema.Schema.Any>(itemSchema: T) =>
+	Schema.Struct({
+		items: Schema.Array(itemSchema),
+		total: Schema.Number,
+		page: Schema.Number,
+		page_size: Schema.Number,
+		total_pages: Schema.Number,
+	});
+
 export const RenameImageRequestSchema = Schema.Struct({
 	original_name: Schema.String,
 });

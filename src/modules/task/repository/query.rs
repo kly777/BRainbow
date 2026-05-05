@@ -131,6 +131,32 @@ impl TaskRepository {
         .await
     }
 
+    /// 搜索任务（分页）
+    pub async fn search_by_title_paginated(
+        &self,
+        query: &str,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<Task>, i64), sqlx::Error> {
+        let pattern = format!("%{}%", query);
+        let total: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE title LIKE ?")
+                .bind(&pattern)
+                .fetch_one(&*self.db)
+                .await?;
+        let items = sqlx::query_as::<_, Task>(
+            "SELECT id, title, description, parent_task_id, status, completed_at,
+            effort_estimate_minutes, user_id, created_at, updated_at
+            FROM task WHERE title LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        )
+        .bind(&pattern)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&*self.db)
+        .await?;
+        Ok((items, total))
+    }
+
     /// 获取任务统计信息
     pub async fn get_stats(&self) -> Result<(i64, i64, i64, i64), sqlx::Error> {
         let backlog: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE status = 'backlog'")

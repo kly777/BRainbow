@@ -79,10 +79,12 @@ impl SignRepository {
         &self,
         signifier: &str,
     ) -> Result<Vec<SignifierSignified>, sqlx::Error> {
-        sqlx::query_as::<_, SignifierSignified>("SELECT id, signifier, signified, onto_id, weight, relation_type, created_at FROM signifier_signified WHERE signifier = ? ORDER BY created_at DESC")
-            .bind(signifier)
-            .fetch_all(&*self.db)
-            .await
+        sqlx::query_as::<_, SignifierSignified>(
+            "SELECT id, signifier, signified, onto_id, weight, relation_type, created_at FROM signifier_signified WHERE signifier = ? ORDER BY created_at DESC",
+        )
+        .bind(signifier)
+        .fetch_all(&*self.db)
+        .await
     }
 
     /// 根据所指查找关系
@@ -90,10 +92,78 @@ impl SignRepository {
         &self,
         signified: &str,
     ) -> Result<Vec<SignifierSignified>, sqlx::Error> {
-        sqlx::query_as::<_, SignifierSignified>("SELECT id, signifier, signified, onto_id, weight, relation_type, created_at FROM signifier_signified WHERE signified = ? ORDER BY created_at DESC")
-            .bind(signified)
-            .fetch_all(&*self.db)
-            .await
+        sqlx::query_as::<_, SignifierSignified>(
+            "SELECT id, signifier, signified, onto_id, weight, relation_type, created_at FROM signifier_signified WHERE signified = ? ORDER BY created_at DESC",
+        )
+        .bind(signified)
+        .fetch_all(&*self.db)
+        .await
+    }
+
+    /// 获取所有能指所指关系（分页）
+    pub async fn find_all_paginated(
+        &self,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<SignifierSignified>, i64), sqlx::Error> {
+        let total: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM signifier_signified")
+                .fetch_one(&*self.db)
+                .await?;
+        let items = sqlx::query_as::<_, SignifierSignified>(
+            "SELECT id, signifier, signified, onto_id, weight, relation_type, created_at FROM signifier_signified ORDER BY id LIMIT ? OFFSET ?",
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&*self.db)
+        .await?;
+        Ok((items, total))
+    }
+
+    /// 根据能指查找关系（分页）
+    pub async fn find_by_signifier_paginated(
+        &self,
+        signifier: &str,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<SignifierSignified>, i64), sqlx::Error> {
+        let total: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM signifier_signified WHERE signifier = ?")
+                .bind(signifier)
+                .fetch_one(&*self.db)
+                .await?;
+        let items = sqlx::query_as::<_, SignifierSignified>(
+            "SELECT id, signifier, signified, onto_id, weight, relation_type, created_at FROM signifier_signified WHERE signifier = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        )
+        .bind(signifier)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&*self.db)
+        .await?;
+        Ok((items, total))
+    }
+
+    /// 根据所指查找关系（分页）
+    pub async fn find_by_signified_paginated(
+        &self,
+        signified: &str,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<SignifierSignified>, i64), sqlx::Error> {
+        let total: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM signifier_signified WHERE signified = ?")
+                .bind(signified)
+                .fetch_one(&*self.db)
+                .await?;
+        let items = sqlx::query_as::<_, SignifierSignified>(
+            "SELECT id, signifier, signified, onto_id, weight, relation_type, created_at FROM signifier_signified WHERE signified = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        )
+        .bind(signified)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&*self.db)
+        .await?;
+        Ok((items, total))
     }
 
     // /// 根据本体ID查找关系

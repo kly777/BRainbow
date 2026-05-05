@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use super::model::Onto;
 use super::repository::OntoRepository;
+use crate::pagination::{Pagination, PaginatedResponse};
 
 /// 本体服务层
 pub struct OntoService {
@@ -22,6 +23,19 @@ impl OntoService {
             .find_all()
             .await
             .map_err(|e| format!("获取本体列表失败: {}", e))
+    }
+
+    /// 获取所有本体（分页）
+    pub async fn get_ontos_paginated(
+        &self,
+        pagination: &Pagination,
+    ) -> Result<PaginatedResponse<Onto>, String> {
+        let (items, total) = self
+            .onto_repository
+            .find_all_paginated(pagination.limit(), pagination.offset())
+            .await
+            .map_err(|e| format!("获取本体列表失败: {}", e))?;
+        Ok(PaginatedResponse::new(items, total, pagination))
     }
 
     /// 根据ID获取本体

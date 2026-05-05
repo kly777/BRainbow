@@ -8,14 +8,17 @@ import {
 	type Image,
 	ImageSchema,
 	ImageWithDateSchema,
+	PaginatedImageSchema,
+	PaginatedSchema,
+	type PaginatedImage,
 	type RenameImageRequest,
 	type UpdateCardRequest,
 } from "./types";
 
 // ==================== Card API Functions ====================
 
-export const getCards = (): Effect.Effect<readonly Card[], ApiErrorType> =>
-	request("/card", Schema.Array(CardSchema), {});
+export const getCards = () =>
+	request("/card", PaginatedSchema(CardSchema), {});
 
 export const getCard = (id: number): Effect.Effect<Card, ApiErrorType> =>
 	request(`/card/${id}`, CardSchema, {});
@@ -44,10 +47,10 @@ export const deleteCard = (id: number): Effect.Effect<void, ApiErrorType> =>
 
 export const searchCards = (
 	query: string,
-): Effect.Effect<readonly Card[], ApiErrorType> =>
+) =>
 	request(
 		`/card/search?q=${encodeURIComponent(query)}`,
-		Schema.Array(CardSchema),
+		PaginatedSchema(CardSchema),
 		{},
 	);
 
@@ -112,8 +115,8 @@ export const uploadImage = (
 	});
 
 /** 获取所有图片 */
-export const listImages = (): E.Effect<readonly Image[], ApiErrorType> =>
-	request("/images", Schema.Array(ImageWithDateSchema), {});
+export const listImages = (): E.Effect<PaginatedImage, ApiErrorType> =>
+	request("/images", PaginatedImageSchema, {});
 
 /** 重命名图片 */
 export const renameImage = (

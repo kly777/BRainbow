@@ -3,6 +3,7 @@ import { request } from "./request";
 import {
 	type ApiErrorType,
 	type CreateTaskRequest,
+	PaginatedSchema,
 	type Task,
 	type TaskDetail,
 	TaskDetailSchema,
@@ -12,11 +13,10 @@ import {
 
 // ==================== Task API Functions ====================
 
-export const getTasks = (): Effect.Effect<readonly Task[], ApiErrorType> =>
-	request("/tasks", Schema.Array(TaskSchema), {});
+export const getTasks = () => request("/tasks", PaginatedSchema(TaskSchema), {});
 
-export const getAllTasks = (): Effect.Effect<readonly Task[], ApiErrorType> =>
-	request("/tasks/all", Schema.Array(TaskSchema), {});
+export const getAllTasks = () =>
+	request("/tasks/all", PaginatedSchema(TaskSchema), {});
 
 // ==================== Tree API ====================
 
@@ -109,34 +109,24 @@ export const updateTaskStatus = (
 		body: JSON.stringify({ status }),
 	});
 
-export const searchTasks = (
-	query: string,
-): Effect.Effect<readonly Task[], ApiErrorType> =>
+export const searchTasks = (query: string) =>
 	request(
 		`/tasks/search?q=${encodeURIComponent(query)}`,
-		Schema.Array(TaskSchema),
+		PaginatedSchema(TaskSchema),
 		{},
 	);
 
-export const getBacklogTasks = (): Effect.Effect<
-	readonly Task[],
-	ApiErrorType
-> => request("/tasks/status/backlog", Schema.Array(TaskSchema), {});
+export const getBacklogTasks = () =>
+	request("/tasks/status/backlog", PaginatedSchema(TaskSchema), {});
 
-export const getActiveTasks = (): Effect.Effect<
-	readonly Task[],
-	ApiErrorType
-> => request("/tasks/status/active", Schema.Array(TaskSchema), {});
+export const getActiveTasks = () =>
+	request("/tasks/status/active", PaginatedSchema(TaskSchema), {});
 
-export const getCompletedTasks = (): Effect.Effect<
-	readonly Task[],
-	ApiErrorType
-> => request("/tasks/status/completed", Schema.Array(TaskSchema), {});
+export const getCompletedTasks = () =>
+	request("/tasks/status/completed", PaginatedSchema(TaskSchema), {});
 
-export const getArchivedTasks = (): Effect.Effect<
-	readonly Task[],
-	ApiErrorType
-> => request("/tasks/status/archived", Schema.Array(TaskSchema), {});
+export const getArchivedTasks = () =>
+	request("/tasks/status/archived", PaginatedSchema(TaskSchema), {});
 
 export const getTaskStats = (): Effect.Effect<
 	{

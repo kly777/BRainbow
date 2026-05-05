@@ -1,11 +1,12 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Json},
 };
 use serde::{Deserialize, Serialize};
 
 use super::service::OntoService;
+use crate::pagination::Pagination;
 use crate::state::AppState;
 
 /// 创建本体请求结构体
@@ -63,25 +64,20 @@ pub async fn create_onto_handler(
 }
 
 /// 获取所有本体
-pub async fn get_ontos_handler(State(state): State<AppState>) -> impl IntoResponse {
+pub async fn get_ontos_handler(
+    Query(pagination): Query<Pagination>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
     let onto_service = OntoService::new(state.db.clone());
 
-    match onto_service.get_all_ontos().await {
-        Ok(ontos) => {
-            let onto_responses: Vec<OntoResponse> = ontos
-                .into_iter()
-                .map(|onto| OntoResponse {
-                    id: onto.id,
-                    name: onto.name,
-                    description: onto.description,
-                })
-                .collect();
-
-            Json(onto_responses).into_response()
-        }
+    match onto_service.get_ontos_paginated(&pagination).await {
+        Ok(response) => Json(response).into_response(),
         Err(e) => {
-            let error_msg = format!("获取本体列表失败: {}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("获取本体列表失败: {}", e),
+            )
+                .into_response()
         }
     }
 }

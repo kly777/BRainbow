@@ -7,11 +7,9 @@ import {
 	ValidationError,
 } from "./types";
 
-// ==================== API Configuration ====================
 
 const API_BASE_URL = "/api";
 
-// ==================== Request Helper ====================
 
 /**
  * 通用的API请求函数

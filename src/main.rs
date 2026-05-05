@@ -1,6 +1,7 @@
 mod auth;
 mod db;
 mod modules;
+mod pagination;
 mod routes;
 mod state;
 

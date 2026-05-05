@@ -3,6 +3,14 @@ import { marked } from "marked";
 import { type Component, createMemo } from "solid-js";
 import "./markdown.css";
 
+// 所有链接在新标签页打开
+DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+  if (node instanceof HTMLAnchorElement) {
+    node.setAttribute("target", "_blank");
+    node.setAttribute("rel", "noopener noreferrer");
+  }
+});
+
 export interface MarkdownProps {
 	content: string;
 	class?: string;

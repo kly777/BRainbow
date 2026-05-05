@@ -6,71 +6,68 @@ import styles from "./App.module.css";
 export default function Layout(props: { children?: JSX.Element }) {
 	const [menuOpen, setMenuOpen] = createSignal(false);
 
+	const closeMenu = () => setMenuOpen(false);
+
 	return (
-		<div class={styles.appContainer}>
-			<header class={styles.appHeader}>
-				<div class={styles.headerContent}>
-					<h1 class={styles.appTitle}>
-						Brain<span>bow</span>
-					</h1>
-					<nav class={`${styles.navLinks} ${menuOpen() ? styles.navOpen : ""}`}>
-						<A
-							href="/"
-							class={styles.navLink}
-							activeClass={styles.active}
-							end
-							onClick={() => setMenuOpen(false)}
-						>
-							主页
-						</A>
-						<A
-							href="/tasks"
-							class={styles.navLink}
-							activeClass={styles.active}
-							end
-							onClick={() => setMenuOpen(false)}
-						>
-							任务
-						</A>
-						<A
-							href="/c"
-							class={styles.navLink}
-							activeClass={styles.active}
-							end
-							onClick={() => setMenuOpen(false)}
-						>
-							卡片
-						</A>
-						<A
-							href="/i"
-							class={styles.navLink}
-							activeClass={styles.active}
-							end
-							onClick={() => setMenuOpen(false)}
-						>
-							图片
-						</A>
-						<A
-							href="/o"
-							class={styles.navLink}
-							activeClass={styles.active}
-							end
-							onClick={() => setMenuOpen(false)}
-						>
-							本体
-						</A>
-						<AuthStatus />
-					</nav>
-					<button
-						type="button"
-						class={styles.hamburger}
-						onClick={() => setMenuOpen(!menuOpen())}
-					>
-						{menuOpen() ? "✕" : "☰"}
-					</button>
-				</div>
+		<div class={styles.shell}>
+			{/* 移动端顶栏 */}
+			<header class={styles.topBar}>
+				<button
+					type="button"
+					class={styles.hamburger}
+					onClick={() => setMenuOpen(!menuOpen())}
+				>
+					{menuOpen() ? "✕" : "☰"}
+				</button>
+				<h1 class={styles.brand}>
+					Brain<span>bow</span>
+				</h1>
 			</header>
-			<main class={styles.appContent}>{props.children}</main>
+
+			{/* 侧边栏（桌面端常显，移动端通过 menuOpen 控制） */}
+			<aside
+				class={styles.sidebar}
+				classList={{ [styles.sidebarOpen]: menuOpen() }}
+			>
+				<h1 class={styles.sidebarBrand}>
+					Brain<span>bow</span>
+				</h1>
+				<nav class={styles.nav}>
+					<A href="/" class={styles.navLink} activeClass={styles.active} end onClick={closeMenu}>
+						<span class={styles.navIcon}>🏠</span>
+						主页
+					</A>
+					<A href="/tasks" class={styles.navLink} activeClass={styles.active} end onClick={closeMenu}>
+						<span class={styles.navIcon}>✅</span>
+						任务
+					</A>
+					<A href="/c" class={styles.navLink} activeClass={styles.active} end onClick={closeMenu}>
+						<span class={styles.navIcon}>📝</span>
+						卡片
+					</A>
+					<A href="/i" class={styles.navLink} activeClass={styles.active} end onClick={closeMenu}>
+						<span class={styles.navIcon}>🖼️</span>
+						图片
+					</A>
+					<A href="/o" class={styles.navLink} activeClass={styles.active} end onClick={closeMenu}>
+						<span class={styles.navIcon}>🔗</span>
+						本体
+					</A>
+				</nav>
+				<div class={styles.sidebarFooter}>
+					<AuthStatus />
+				</div>
+			</aside>
+
+			{/* 遮罩（移动端点击关闭） */}
+			<div
+				class={styles.overlay}
+				classList={{ [styles.overlayVisible]: menuOpen() }}
+				onClick={closeMenu}
+			/>
+
+			{/* 主内容区 */}
+			<main class={styles.content}>{props.children}</main>
 		</div>
 	);
 }

@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::ApiError;
 use super::dto::TaskErrorCode;
 use super::model::{Task, TaskStatus};
+use super::service::ServiceError;
 
 // ==================== 响应结构体 ====================
 
@@ -131,4 +132,22 @@ pub fn not_found() -> (StatusCode, Json<ApiError>) {
             "任务不存在".to_string(),
         )),
     )
+}
+
+pub fn from_service_error(e: ServiceError) -> (StatusCode, Json<ApiError>) {
+    match e {
+        ServiceError::InvalidInput(msg) => {
+            bad_request(TaskErrorCode::InvalidInput, msg)
+        }
+        ServiceError::NotFound => not_found(),
+        ServiceError::CircularParent => {
+            bad_request(TaskErrorCode::CircularParent, "检测到父子循环引用".into())
+        }
+        ServiceError::SelfParent => {
+            bad_request(TaskErrorCode::SelfParent, "不能设置自己为父任务".into())
+        }
+        ServiceError::Db(err) => {
+            internal_error(format!("数据库错误: {}", err))
+        }
+    }
 }

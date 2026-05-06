@@ -2,21 +2,19 @@ use sqlx::SqlitePool;
 use std::sync::Arc;
 
 use super::model::Image;
+use super::repository::ImageRepository;
 use crate::pagination::{Pagination, PaginatedResponse};
 
-const UPLOAD_DIR: &str = "uploads";
-
 pub struct ImageService {
-    db: Arc<SqlitePool>,
+    repo: ImageRepository,
 }
 
 impl ImageService {
     pub fn new(db: Arc<SqlitePool>) -> Self {
-        std::fs::create_dir_all(UPLOAD_DIR).ok();
-        Self { db }
+        std::fs::create_dir_all("uploads").ok();
+        Self { repo: ImageRepository::new(db) }
     }
 
-    /// 上传图片：保存文件 + 写数据库
     pub async fn upload(
         &self,
         data: &[u8],
@@ -28,86 +26,44 @@ impl ImageService {
             .and_then(|e| e.to_str())
             .unwrap_or("bin");
         let filename = format!("{}.{}", uuid::Uuid::new_v4(), ext);
-        let filepath = std::path::Path::new(UPLOAD_DIR).join(&filename);
+        let filepath = std::path::Path::new("uploads").join(&filename);
 
         tokio::fs::write(&filepath, data)
             .await
             .map_err(|e| format!("保存文件失败: {}", e))?;
 
-        let result = sqlx::query_as::<_, Image>(
-            r#"INSERT INTO image (filename, original_name, content_type)
-               VALUES (?, ?, ?)
-               RETURNING id, filename, original_name, content_type, created_at"#,
-        )
-        .bind(&filename)
-        .bind(original_name)
-        .bind(content_type)
-        .fetch_one(&*self.db)
-        .await;
-
-        match result {
-            Ok(image) => Ok(image),
-            Err(e) => {
-                let _ = tokio::fs::remove_file(&filepath).await;
-                Err(format!("数据库写入失败: {}", e))
-            }
-        }
+        self.repo
+            .insert(&filename, original_name, content_type)
+            .await
+            .map_err(|e| {
+                let _ = std::fs::remove_file(&filepath);
+                format!("数据库写入失败: {}", e)
+            })
     }
 
-    /// 获取所有图片（分页）
     pub async fn list(&self, pagination: &Pagination) -> Result<PaginatedResponse<Image>, String> {
-        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM image")
-            .fetch_one(&*self.db)
+        let total = self.repo.count().await.map_err(|e| format!("查询失败: {}", e))?;
+        let items = self
+            .repo
+            .find_all(pagination.limit(), pagination.offset())
             .await
             .map_err(|e| format!("查询失败: {}", e))?;
-
-        let items = sqlx::query_as::<_, Image>(
-            "SELECT id, filename, original_name, content_type, created_at FROM image ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        )
-        .bind(pagination.limit())
-        .bind(pagination.offset())
-        .fetch_all(&*self.db)
-        .await
-        .map_err(|e| format!("查询失败: {}", e))?;
-
         Ok(PaginatedResponse::new(items, total, pagination))
     }
 
-    /// 重命名图片（修改 original_name）
     pub async fn rename(&self, id: i32, new_name: &str) -> Result<Image, String> {
-        let result = sqlx::query_as::<_, Image>(
-            r#"UPDATE image SET original_name = ? WHERE id = ?
-               RETURNING id, filename, original_name, content_type, created_at"#,
-        )
-        .bind(new_name)
-        .bind(id)
-        .fetch_optional(&*self.db)
-        .await
-        .map_err(|e| format!("更新失败: {}", e))?;
-
-        result.ok_or_else(|| "图片不存在".to_string())
+        self.repo
+            .update_name(id, new_name)
+            .await
+            .map_err(|e| format!("更新失败: {}", e))?
+            .ok_or_else(|| "图片不存在".to_string())
     }
 
-    /// 删除图片（文件 + 数据库记录）
     pub async fn delete(&self, id: i32) -> Result<(), String> {
-        let image = sqlx::query_as::<_, Image>(
-            "SELECT id, filename, original_name, content_type, created_at FROM image WHERE id = ?",
-        )
-        .bind(id)
-        .fetch_optional(&*self.db)
-        .await
-        .map_err(|e| format!("查询失败: {}", e))?
-        .ok_or_else(|| "图片不存在".to_string())?;
-
-        let filepath = std::path::Path::new(UPLOAD_DIR).join(&image.filename);
-        tokio::fs::remove_file(&filepath).await.ok();
-
-        sqlx::query("DELETE FROM image WHERE id = ?")
-            .bind(id)
-            .execute(&*self.db)
-            .await
-            .map_err(|e| format!("删除失败: {}", e))?;
-
-        Ok(())
+        match self.repo.delete(id).await {
+            Ok(Some(_)) => Ok(()),
+            Ok(None) => Err("图片不存在".to_string()),
+            Err(e) => Err(format!("删除失败: {}", e)),
+        }
     }
 }

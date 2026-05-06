@@ -1,220 +1,165 @@
 use std::sync::Arc;
 
-use super::dto::{CreateTaskRequest, UpdateTaskRequest};
+use super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
 use super::model::{Task, TaskStatus};
 use super::repository::TaskRepository;
 
-/// 任务服务层
-#[allow(dead_code)]
 pub struct TaskService {
-    task_repository: TaskRepository,
+    repo: TaskRepository,
 }
 
-#[allow(dead_code)]
 impl TaskService {
-    /// 创建新的任务服务层实例
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
-        Self {
-            task_repository: TaskRepository::new(db),
+        Self { repo: TaskRepository::new(db) }
+    }
+
+    pub async fn list(&self, limit: i64, offset: i64) -> Result<(Vec<Task>, i64), sqlx::Error> {
+        self.repo.find_all_excluding_archived_paginated(limit, offset).await
+    }
+
+    pub async fn list_all(&self, limit: i64, offset: i64) -> Result<(Vec<Task>, i64), sqlx::Error> {
+        self.repo.find_all_paginated(limit, offset).await
+    }
+
+    pub async fn by_id(&self, id: i32) -> Result<Option<Task>, sqlx::Error> {
+        self.repo.find_by_id(id).await
+    }
+
+    pub async fn detail(&self, id: i32) -> Result<Option<super::dto::TaskDetailResponse>, sqlx::Error> {
+        self.repo.find_detail(id).await
+    }
+
+    pub async fn tree(&self, root: Option<i32>) -> Result<Vec<Task>, sqlx::Error> {
+        self.repo.find_tree(root).await
+    }
+
+    pub async fn stats(&self) -> Result<(i64, i64, i64, i64), sqlx::Error> {
+        self.repo.get_stats().await
+    }
+
+    pub async fn by_status(&self, status: TaskStatus, limit: i64, offset: i64) -> Result<(Vec<Task>, i64), sqlx::Error> {
+        self.repo.find_by_status_paginated(status, limit, offset).await
+    }
+
+    pub async fn search(&self, query: &str, limit: i64, offset: i64) -> Result<(Vec<Task>, i64), sqlx::Error> {
+        self.repo.search_by_title_paginated(query, limit, offset).await
+    }
+
+    pub async fn create(&self, req: CreateTaskRequest) -> Result<Task, ServiceError> {
+        validate_title(&req.title)?;
+        validate_effort(req.effort_estimate_minutes)?;
+        if let Some(parent_id) = req.parent_task_id {
+            check_circular_parent(&self.repo, 0, parent_id).await?;
         }
+        self.repo.create(req).await.map_err(ServiceError::Db)
     }
 
-    /// 获取所有任务
-    pub async fn get_all_tasks(&self) -> Result<Vec<Task>, String> {
-        self.task_repository
-            .find_all()
-            .await
-            .map_err(|e| format!("获取任务列表失败: {}", e))
+    pub async fn quick_create(&self, req: QuickCreateTaskRequest) -> Result<Task, ServiceError> {
+        validate_title(&req.title)?;
+        self.repo.quick_create(req).await.map_err(ServiceError::Db)
     }
 
-    /// 根据ID获取任务
-    pub async fn get_task_by_id(&self, id: i32) -> Result<Option<Task>, String> {
-        self.task_repository
-            .find_by_id(id)
-            .await
-            .map_err(|e| format!("获取任务失败: {}", e))
-    }
-
-    /// 创建任务
-    pub async fn create_task(&self, request: CreateTaskRequest) -> Result<Task, String> {
-        // 验证标题是否为空
-        if request.title.trim().is_empty() {
-            return Err("任务标题不能为空".to_string());
+    pub async fn update(&self, id: i32, req: UpdateTaskRequest) -> Result<Task, ServiceError> {
+        if let Some(ref title) = req.title {
+            validate_title(title)?;
         }
-
-        // 创建任务
-        self.task_repository
-            .create(request)
-            .await
-            .map_err(|e| format!("创建任务失败: {}", e))
-    }
-
-    /// 快速创建任务
-    pub async fn quick_create_task(&self, title: String, user_id: Option<i32>) -> Result<Task, String> {
-        if title.trim().is_empty() {
-            return Err("任务标题不能为空".to_string());
+        if let Some(Some(minutes)) = req.effort_estimate_minutes {
+            validate_effort(Some(minutes))?;
         }
-
-        let request = CreateTaskRequest {
-            title,
-            description: None,
-            parent_task_id: None,
-            effort_estimate_minutes: None,
-            user_id,
-        };
-
-        self.task_repository
-            .create(request)
-            .await
-            .map_err(|e| format!("快速创建任务失败: {}", e))
-    }
-
-    /// 更新任务
-    pub async fn update_task(&self, id: i32, request: UpdateTaskRequest) -> Result<Task, String> {
-        // 验证标题是否为空（如果提供了标题）
-        if let Some(ref title) = request.title {
-            if title.trim().is_empty() {
-                return Err("任务标题不能为空".to_string());
+        if let Some(Some(parent_id)) = req.parent_task_id {
+            if parent_id == id {
+                return Err(ServiceError::SelfParent);
             }
+            check_circular_parent(&self.repo, id, parent_id).await?;
         }
-
-        // 更新任务
-        self.task_repository
-            .update(id, request)
-            .await
-            .map_err(|e| format!("更新任务失败: {}", e))
+        self.repo.update(id, req).await.map_err(|e| match e {
+            sqlx::Error::RowNotFound => ServiceError::NotFound,
+            other => ServiceError::Db(other),
+        })
     }
 
-    /// 删除任务
-    pub async fn delete_task(&self, id: i32) -> Result<u64, String> {
-        self.task_repository
-            .delete(id)
-            .await
-            .map_err(|e| format!("删除任务失败: {}", e))
+    pub async fn complete(&self, id: i32) -> Result<Task, ServiceError> {
+        self.repo.complete(id).await.map_err(|e| match e {
+            sqlx::Error::RowNotFound => ServiceError::NotFound,
+            other => ServiceError::Db(other),
+        })
     }
 
-    /// 开始任务
-    pub async fn start_task(&self, id: i32) -> Result<Task, String> {
-        let request = UpdateTaskRequest {
-            title: None,
-            description: None,
-            parent_task_id: None,
-            status: Some(TaskStatus::Active),
-            effort_estimate_minutes: None,
-            user_id: None,
-        };
-
-        self.task_repository
-            .update(id, request)
-            .await
-            .map_err(|e| format!("开始任务失败: {}", e))
+    pub async fn activate(&self, id: i32) -> Result<Task, ServiceError> {
+        self.repo.activate(id).await.map_err(|e| match e {
+            sqlx::Error::RowNotFound => ServiceError::NotFound,
+            other => ServiceError::Db(other),
+        })
     }
 
-    /// 完成任务
-    pub async fn complete_task(&self, id: i32) -> Result<Task, String> {
-        let request = UpdateTaskRequest {
-            title: None,
-            description: None,
-            parent_task_id: None,
-            status: Some(TaskStatus::Completed),
-            effort_estimate_minutes: None,
-            user_id: None,
-        };
-
-        self.task_repository
-            .update(id, request)
-            .await
-            .map_err(|e| format!("完成任务失败: {}", e))
+    pub async fn archive(&self, id: i32) -> Result<Task, ServiceError> {
+        self.repo.archive(id).await.map_err(|e| match e {
+            sqlx::Error::RowNotFound => ServiceError::NotFound,
+            other => ServiceError::Db(other),
+        })
     }
 
-    /// 归档任务
-    pub async fn archive_task(&self, id: i32) -> Result<Task, String> {
-        let request = UpdateTaskRequest {
-            title: None,
-            description: None,
-            parent_task_id: None,
-            status: Some(TaskStatus::Archived),
-            effort_estimate_minutes: None,
-            user_id: None,
-        };
-
-        self.task_repository
-            .update(id, request)
-            .await
-            .map_err(|e| format!("归档任务失败: {}", e))
+    pub async fn move_to_backlog(&self, id: i32) -> Result<Task, ServiceError> {
+        self.repo.move_to_backlog(id).await.map_err(|e| match e {
+            sqlx::Error::RowNotFound => ServiceError::NotFound,
+            other => ServiceError::Db(other),
+        })
     }
 
-    /// 移动到待办列表
-    pub async fn move_to_backlog(&self, id: i32) -> Result<Task, String> {
-        let request = UpdateTaskRequest {
-            title: None,
-            description: None,
-            parent_task_id: None,
-            status: Some(TaskStatus::Backlog),
-            effort_estimate_minutes: None,
-            user_id: None,
-        };
-
-        self.task_repository
-            .update(id, request)
-            .await
-            .map_err(|e| format!("移动任务到待办列表失败: {}", e))
+    pub async fn delete(&self, id: i32) -> Result<u64, ServiceError> {
+        self.repo.delete(id).await.map_err(ServiceError::Db)
     }
 
-    /// 获取子任务
-    pub async fn get_child_tasks(&self, task_id: i32) -> Result<Vec<Task>, String> {
-        self.task_repository
-            .find_tree(Some(task_id))
-            .await
-            .map_err(|e| format!("获取子任务失败: {}", e))
+    pub async fn add_dependency(&self, task_id: i32, depends_on: i32) -> Result<(), ServiceError> {
+        self.repo.add_dependency(task_id, depends_on).await.map_err(ServiceError::Db)
     }
 
-    /// 获取任务依赖
-    pub async fn get_task_dependencies(&self, task_id: i32) -> Result<Vec<i32>, String> {
-        self.task_repository
-            .get_dependencies(task_id)
-            .await
-            .map_err(|e| format!("获取任务依赖失败: {}", e))
+    pub async fn remove_dependency(&self, task_id: i32, depends_on: i32) -> Result<u64, ServiceError> {
+        self.repo.remove_dependency(task_id, depends_on).await.map_err(ServiceError::Db)
     }
+}
 
-    /// 添加任务依赖
-    pub async fn add_task_dependency(&self, task_id: i32, depends_on_task_id: i32) -> Result<(), String> {
-        self.task_repository
-            .add_dependency(task_id, depends_on_task_id)
-            .await
-            .map_err(|e| format!("添加任务依赖失败: {}", e))
+fn validate_title(title: &str) -> Result<(), ServiceError> {
+    if title.is_empty() || title.len() > 255 {
+        return Err(ServiceError::InvalidInput("标题长度必须在1-255字符之间".into()));
     }
+    Ok(())
+}
 
-    /// 删除任务依赖
-    pub async fn remove_task_dependency(&self, task_id: i32, depends_on_task_id: i32) -> Result<(), String> {
-        self.task_repository
-            .remove_dependency(task_id, depends_on_task_id)
-            .await
-            .map(|_| ())
-            .map_err(|e| format!("删除任务依赖失败: {}", e))
+fn validate_effort(minutes: Option<i32>) -> Result<(), ServiceError> {
+    if let Some(m) = minutes {
+        if m < 0 {
+            return Err(ServiceError::InvalidInput("精力估算值不能为负数".into()));
+        }
     }
+    Ok(())
+}
 
-    /// 获取树形结构
-    pub async fn get_task_tree(&self, root_task_id: Option<i32>) -> Result<Vec<Task>, String> {
-        self.task_repository
-            .find_tree(root_task_id)
-            .await
-            .map_err(|e| format!("获取任务树失败: {}", e))
+async fn check_circular_parent(repo: &TaskRepository, task_id: i32, parent_id: i32) -> Result<(), ServiceError> {
+    let is_circular = repo.check_circular_parent(task_id, parent_id).await.map_err(ServiceError::Db)?;
+    if is_circular {
+        return Err(ServiceError::CircularParent);
     }
+    Ok(())
+}
 
-    /// 检查循环依赖
-    pub async fn check_circular_dependency(&self, task_id: i32, depends_on_task_id: i32) -> Result<bool, String> {
-        self.task_repository
-            .check_circular_parent(task_id, depends_on_task_id)
-            .await
-            .map_err(|e| format!("检查循环依赖失败: {}", e))
-    }
+#[derive(Debug)]
+pub enum ServiceError {
+    InvalidInput(String),
+    NotFound,
+    CircularParent,
+    SelfParent,
+    Db(sqlx::Error),
+}
 
-    /// 检查父子循环
-    pub async fn check_parent_child_cycle(&self, task_id: i32, parent_task_id: i32) -> Result<bool, String> {
-        self.task_repository
-            .check_circular_parent(task_id, parent_task_id)
-            .await
-            .map_err(|e| format!("检查父子循环失败: {}", e))
+impl std::fmt::Display for ServiceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ServiceError::InvalidInput(msg) => write!(f, "{}", msg),
+            ServiceError::NotFound => write!(f, "资源不存在"),
+            ServiceError::CircularParent => write!(f, "检测到父子循环引用"),
+            ServiceError::SelfParent => write!(f, "不能设置自己为父任务"),
+            ServiceError::Db(e) => write!(f, "数据库错误: {}", e),
+        }
     }
 }

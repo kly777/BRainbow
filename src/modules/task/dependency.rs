@@ -7,12 +7,9 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 use super::model::TaskStatus;
-use super::repository::TaskRepository;
-use super::response::{internal_error, not_found, MessageResponse};
-use crate::error;
+use super::response::{from_service_error, not_found, MessageResponse};
+use super::service::TaskService;
 use crate::state::AppState;
-
-// ==================== 查询参数结构体 ====================
 
 #[derive(Debug, Deserialize)]
 pub struct TreeQuery {
@@ -39,52 +36,26 @@ pub struct DependencyRequest {
     pub depends_on_task_id: i32,
 }
 
-// ==================== 处理器函数 ====================
-
-/// 添加任务依赖
-#[axum::debug_handler]
 pub async fn add_dependency_handler(
     Path(task_id): Path<i32>,
     State(state): State<AppState>,
     Json(payload): Json<DependencyRequest>,
 ) -> impl IntoResponse {
-    let repo = TaskRepository::new(state.db);
-
-    match repo
-        .add_dependency(task_id, payload.depends_on_task_id)
-        .await
-    {
-        Ok(_) => (
-            StatusCode::OK,
-            Json(serde_json::json!({"message": "依赖关系已添加"})),
-        )
-            .into_response(),
-        Err(e) => {
-            error::bad_request(format!("添加依赖失败: {}", e)).into_response()
-        }
+    let svc = TaskService::new(state.db);
+    match svc.add_dependency(task_id, payload.depends_on_task_id).await {
+        Ok(_) => (StatusCode::OK, Json(serde_json::json!({"message": "依赖关系已添加"}))).into_response(),
+        Err(e) => from_service_error(e).into_response(),
     }
 }
 
-/// 删除任务依赖
 pub async fn remove_dependency_handler(
     Path((task_id, depends_on_task_id)): Path<(i32, i32)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let repo = TaskRepository::new(state.db);
-
-    match repo.remove_dependency(task_id, depends_on_task_id).await {
-        Ok(rows_affected) => {
-            if rows_affected > 0 {
-                Json(MessageResponse {
-                    message: "依赖关系已删除".to_string(),
-                })
-                .into_response()
-            } else {
-                not_found().into_response()
-            }
-        }
-        Err(e) => {
-            internal_error(format!("删除依赖失败: {}", e)).into_response()
-        }
+    let svc = TaskService::new(state.db);
+    match svc.remove_dependency(task_id, depends_on_task_id).await {
+        Ok(rows) if rows > 0 => Json(MessageResponse { message: "依赖关系已删除".into() }).into_response(),
+        Ok(_) => not_found().into_response(),
+        Err(e) => from_service_error(e).into_response(),
     }
 }

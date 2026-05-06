@@ -1,6 +1,6 @@
 mod handler;
 mod model;
-mod repo;
+mod repository;
 
 
 use axum::{Router, routing::get};

@@ -10,21 +10,18 @@ use crate::error;
 use crate::pagination::Pagination;
 use crate::state::AppState;
 
-/// 创建本体请求结构体
 #[derive(Debug, Deserialize)]
 pub struct CreateOntoRequest {
     pub name: String,
     pub description: Option<String>,
 }
 
-/// 更新本体请求结构体
 #[derive(Debug, Deserialize)]
 pub struct UpdateOntoRequest {
     pub name: Option<String>,
     pub description: Option<String>,
 }
 
-/// 本体响应结构体
 #[derive(Debug, Serialize)]
 pub struct OntoResponse {
     pub id: i32,
@@ -32,32 +29,21 @@ pub struct OntoResponse {
     pub description: Option<String>,
 }
 
-/// 创建本体
 pub async fn create_onto_handler(
     State(state): State<AppState>,
     Json(payload): Json<CreateOntoRequest>,
 ) -> impl IntoResponse {
     let onto_service = OntoService::new(state.db.clone());
 
-    match onto_service
-        .create_onto(payload.name, payload.description)
-        .await
-    {
+    match onto_service.create_onto(payload.name, payload.description).await {
         Ok(onto) => {
-            let response = OntoResponse {
-                id: onto.id,
-                name: onto.name,
-                description: onto.description,
-            };
+            let response = OntoResponse { id: onto.id, name: onto.name, description: onto.description };
             Json(response).into_response()
         }
-        Err(e) => {
-            error::bad_request(format!("创建本体失败: {}", e)).into_response()
-        }
+        Err(e) => error::bad(e, "创建本体").into_response(),
     }
 }
 
-/// 获取所有本体
 pub async fn get_ontos_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
@@ -66,13 +52,10 @@ pub async fn get_ontos_handler(
 
     match onto_service.get_ontos_paginated(&pagination).await {
         Ok(response) => Json(response).into_response(),
-        Err(e) => {
-            error::internal_error(format!("获取本体列表失败: {}", e)).into_response()
-        }
+        Err(e) => error::internal(e, "获取本体列表").into_response(),
     }
 }
 
-/// 获取单个本体
 pub async fn get_onto_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -81,23 +64,14 @@ pub async fn get_onto_handler(
 
     match onto_service.get_onto_by_id(id).await {
         Ok(Some(onto)) => {
-            let response = OntoResponse {
-                id: onto.id,
-                name: onto.name,
-                description: onto.description,
-            };
+            let response = OntoResponse { id: onto.id, name: onto.name, description: onto.description };
             Json(response).into_response()
         }
-        Ok(None) => {
-            error::not_found(format!("本体 ID {} 不存在", id)).into_response()
-        }
-        Err(e) => {
-            error::internal_error(format!("获取本体失败: {}", e)).into_response()
-        }
+        Ok(None) => error::not_found(format!("本体 ID {} 不存在", id)).into_response(),
+        Err(e) => error::internal(e, "获取本体").into_response(),
     }
 }
 
-/// 更新本体
 pub async fn update_onto_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -105,26 +79,15 @@ pub async fn update_onto_handler(
 ) -> impl IntoResponse {
     let onto_service = OntoService::new(state.db.clone());
 
-    match onto_service
-        .update_onto(id, payload.name, payload.description)
-        .await
-    {
+    match onto_service.update_onto(id, payload.name, payload.description).await {
         Ok(onto) => {
-            let onto_response = OntoResponse {
-                id: onto.id,
-                name: onto.name,
-                description: onto.description,
-            };
-
+            let onto_response = OntoResponse { id: onto.id, name: onto.name, description: onto.description };
             Json(onto_response).into_response()
         }
-        Err(e) => {
-            error::internal_error(format!("更新本体失败: {}", e)).into_response()
-        }
+        Err(e) => error::internal(e, "更新本体").into_response(),
     }
 }
 
-/// 删除本体
 pub async fn delete_onto_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -139,8 +102,6 @@ pub async fn delete_onto_handler(
                 error::not_found(format!("本体 ID {} 不存在", id)).into_response()
             }
         }
-        Err(e) => {
-            error::internal_error(format!("删除本体失败: {}", e)).into_response()
-        }
+        Err(e) => error::internal(e, "删除本体").into_response(),
     }
 }

@@ -98,3 +98,19 @@ pub fn internal_error(message: impl Into<String>) -> (StatusCode, Json<ApiError>
         message,
     )
 }
+
+/// 500 + 自动拼 "{operation}失败: {error}"
+pub fn internal(
+    e: impl std::fmt::Display,
+    operation: &str,
+) -> (StatusCode, Json<ApiError>) {
+    internal_error(format!("{}失败: {}", operation, e))
+}
+
+/// 400 + 自动拼 "{operation}失败: {error}"
+pub fn bad(
+    e: impl std::fmt::Display,
+    operation: &str,
+) -> (StatusCode, Json<ApiError>) {
+    bad_request(format!("{}失败: {}", operation, e))
+}

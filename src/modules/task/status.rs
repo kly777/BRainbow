@@ -4,7 +4,8 @@ use axum::{
 };
 
 use super::model::TaskStatus;
-use super::response::{from_service_error, internal_error, TaskResponse};
+use crate::error;
+use super::response::{from_service_error, TaskResponse};
 use super::service::TaskService;
 use crate::pagination::{Pagination, PaginatedResponse};
 use crate::state::AppState;
@@ -63,7 +64,7 @@ pub async fn get_backlog_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => internal_error(format!("获取待办任务失败: {}", e)).into_response(),
+        Err(e) => error::internal(e, "获取待办任务").into_response(),
     }
 }
 
@@ -77,7 +78,7 @@ pub async fn get_active_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => internal_error(format!("获取活跃任务失败: {}", e)).into_response(),
+        Err(e) => error::internal(e, "获取活跃任务").into_response(),
     }
 }
 
@@ -91,7 +92,7 @@ pub async fn get_completed_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => internal_error(format!("获取已完成任务失败: {}", e)).into_response(),
+        Err(e) => error::internal(e, "获取已完成任务").into_response(),
     }
 }
 
@@ -105,6 +106,6 @@ pub async fn get_archived_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => internal_error(format!("获取已归档任务失败: {}", e)).into_response(),
+        Err(e) => error::internal(e, "获取已归档任务").into_response(),
     }
 }

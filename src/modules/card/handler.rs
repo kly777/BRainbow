@@ -10,19 +10,16 @@ use crate::error;
 use crate::pagination::Pagination;
 use crate::state::AppState;
 
-/// 创建卡片请求结构体
 #[derive(Debug, Deserialize)]
 pub struct CreateCardRequest {
     pub content: String,
 }
 
-/// 更新卡片请求结构体
 #[derive(Debug, Deserialize)]
 pub struct UpdateCardRequest {
     pub content: Option<String>,
 }
 
-/// 卡片响应结构体
 #[derive(Debug, Serialize)]
 pub struct CardResponse {
     pub id: i32,
@@ -31,17 +28,13 @@ pub struct CardResponse {
     pub updated_at: String,
 }
 
-/// 创建卡片
 pub async fn create_card_handler(
     State(state): State<AppState>,
     Json(payload): Json<CreateCardRequest>,
 ) -> impl IntoResponse {
     let card_service = CardService::new(state.db.clone());
 
-    match card_service
-        .create_card(payload.content.clone())
-        .await
-    {
+    match card_service.create_card(payload.content.clone()).await {
         Ok(card) => {
             let response = CardResponse {
                 id: card.id,
@@ -51,13 +44,10 @@ pub async fn create_card_handler(
             };
             (StatusCode::CREATED, Json(response)).into_response()
         }
-        Err(e) => {
-            error::bad_request(format!("创建卡片失败: {}", e)).into_response()
-        }
+        Err(e) => error::bad(e, "创建卡片").into_response(),
     }
 }
 
-/// 获取所有卡片
 pub async fn get_cards_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
@@ -66,13 +56,10 @@ pub async fn get_cards_handler(
 
     match card_service.get_cards_paginated(&pagination).await {
         Ok(response) => Json(response).into_response(),
-        Err(e) => {
-            error::internal_error(format!("获取卡片列表失败: {}", e)).into_response()
-        }
+        Err(e) => error::internal(e, "获取卡片列表").into_response(),
     }
 }
 
-/// 获取单个卡片
 pub async fn get_card_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -87,19 +74,13 @@ pub async fn get_card_handler(
                 created_at: card.created_at.to_string(),
                 updated_at: card.updated_at.to_string(),
             };
-
             Json(card_response).into_response()
         }
-        Ok(None) => {
-            error::not_found(format!("卡片 ID {} 不存在", id)).into_response()
-        }
-        Err(e) => {
-            error::internal_error(format!("获取卡片失败: {}", e)).into_response()
-        }
+        Ok(None) => error::not_found(format!("卡片 ID {} 不存在", id)).into_response(),
+        Err(e) => error::internal(e, "获取卡片").into_response(),
     }
 }
 
-/// 更新卡片
 pub async fn update_card_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -107,10 +88,7 @@ pub async fn update_card_handler(
 ) -> impl IntoResponse {
     let card_service = CardService::new(state.db.clone());
 
-    match card_service
-        .update_card(id, payload.content)
-        .await
-    {
+    match card_service.update_card(id, payload.content).await {
         Ok(card) => {
             let response = CardResponse {
                 id: card.id,
@@ -120,13 +98,10 @@ pub async fn update_card_handler(
             };
             Json(response).into_response()
         }
-        Err(e) => {
-            error::internal_error(format!("更新卡片失败: {}", e)).into_response()
-        }
+        Err(e) => error::internal(e, "更新卡片").into_response(),
     }
 }
 
-/// 删除卡片
 pub async fn delete_card_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -141,13 +116,10 @@ pub async fn delete_card_handler(
                 error::not_found(format!("卡片 ID {} 不存在", id)).into_response()
             }
         }
-        Err(e) => {
-            error::internal_error(format!("删除卡片失败: {}", e)).into_response()
-        }
+        Err(e) => error::internal(e, "删除卡片").into_response(),
     }
 }
 
-/// 搜索卡片的查询参数
 #[derive(Debug, Deserialize)]
 pub struct SearchCardsQuery {
     pub q: String,
@@ -155,7 +127,6 @@ pub struct SearchCardsQuery {
     pub pagination: Pagination,
 }
 
-/// 搜索卡片
 pub async fn search_cards_handler(
     Query(params): Query<SearchCardsQuery>,
     State(state): State<AppState>,
@@ -171,8 +142,6 @@ pub async fn search_cards_handler(
         .await
     {
         Ok(response) => Json(response).into_response(),
-        Err(e) => {
-            error::internal_error(format!("搜索卡片失败: {}", e)).into_response()
-        }
+        Err(e) => error::internal(e, "搜索卡片").into_response(),
     }
 }

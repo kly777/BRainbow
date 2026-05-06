@@ -22,7 +22,7 @@ impl CardService {
         self.card_repository
             .find_all()
             .await
-            .map_err(|e| format!("获取卡片列表失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 根据ID获取卡片
@@ -30,7 +30,7 @@ impl CardService {
         self.card_repository
             .find_by_id(id)
             .await
-            .map_err(|e| format!("获取卡片失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 创建卡片
@@ -38,7 +38,7 @@ impl CardService {
         self.card_repository
             .create(content)
             .await
-            .map_err(|e| format!("创建卡片失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 更新卡片
@@ -50,7 +50,7 @@ impl CardService {
         self.card_repository
             .update(id, content)
             .await
-            .map_err(|e| format!("更新卡片失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 删除卡片
@@ -58,7 +58,7 @@ impl CardService {
         self.card_repository
             .delete(id)
             .await
-            .map_err(|e| format!("删除卡片失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 搜索卡片
@@ -66,7 +66,7 @@ impl CardService {
         self.card_repository
             .search_by_content(query)
             .await
-            .map_err(|e| format!("搜索卡片失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 获取所有卡片（分页）
@@ -78,7 +78,7 @@ impl CardService {
             .card_repository
             .find_all_paginated(pagination.limit(), pagination.offset())
             .await
-            .map_err(|e| format!("获取卡片列表失败: {}", e))?;
+            .map_err(|e| e.to_string())?;
         Ok(PaginatedResponse::new(items, total, pagination))
     }
 
@@ -92,7 +92,7 @@ impl CardService {
             .card_repository
             .search_by_content_paginated(query, pagination.limit(), pagination.offset())
             .await
-            .map_err(|e| format!("搜索卡片失败: {}", e))?;
+            .map_err(|e| e.to_string())?;
         Ok(PaginatedResponse::new(items, total, pagination))
     }
 }

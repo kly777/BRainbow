@@ -25,12 +25,9 @@ pub struct TableData {
 
 pub async fn get_table_names(State(state): State<AppState>) -> impl IntoResponse {
     let repo = repository::DBRepo::new(state.db);
-    let table_names = repo.get_table_names().await;
-    match table_names {
-        Ok(table_names) => Json(table_names).into_response(),
-        Err(e) => {
-            error::internal_error(format!("获取表名失败: {}", e)).into_response()
-        }
+    match repo.get_table_names().await {
+        Ok(names) => Json(names).into_response(),
+        Err(e) => error::internal(e, "获取表名").into_response(),
     }
 }
 
@@ -39,11 +36,8 @@ pub async fn get_table_data(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let repo = repository::DBRepo::new(state.db);
-    let result = repo.get_table_data(&table_name, 5, 0).await;
-    match result {
+    match repo.get_table_data(&table_name, 5, 0).await {
         Ok((header, rows)) => Json(TableData { header, rows }).into_response(),
-        Err(e) => {
-            error::internal_error(format!("获取表数据失败: {}", e)).into_response()
-        }
+        Err(e) => error::internal(e, "获取表数据").into_response(),
     }
 }

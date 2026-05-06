@@ -30,24 +30,24 @@ impl ImageService {
 
         tokio::fs::write(&filepath, data)
             .await
-            .map_err(|e| format!("保存文件失败: {}", e))?;
+            .map_err(|e| e.to_string())?;
 
         self.repo
             .insert(&filename, original_name, content_type)
             .await
             .map_err(|e| {
                 let _ = std::fs::remove_file(&filepath);
-                format!("数据库写入失败: {}", e)
+                e.to_string()
             })
     }
 
     pub async fn list(&self, pagination: &Pagination) -> Result<PaginatedResponse<Image>, String> {
-        let total = self.repo.count().await.map_err(|e| format!("查询失败: {}", e))?;
+        let total = self.repo.count().await.map_err(|e| e.to_string())?;
         let items = self
             .repo
             .find_all(pagination.limit(), pagination.offset())
             .await
-            .map_err(|e| format!("查询失败: {}", e))?;
+            .map_err(|e| e.to_string())?;
         Ok(PaginatedResponse::new(items, total, pagination))
     }
 
@@ -55,7 +55,7 @@ impl ImageService {
         self.repo
             .update_name(id, new_name)
             .await
-            .map_err(|e| format!("更新失败: {}", e))?
+            .map_err(|e| e.to_string())?
             .ok_or_else(|| "图片不存在".to_string())
     }
 
@@ -63,7 +63,7 @@ impl ImageService {
         match self.repo.delete(id).await {
             Ok(Some(_)) => Ok(()),
             Ok(None) => Err("图片不存在".to_string()),
-            Err(e) => Err(format!("删除失败: {}", e)),
+            Err(e) => Err(e.to_string()),
         }
     }
 }

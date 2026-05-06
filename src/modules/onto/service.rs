@@ -22,7 +22,7 @@ impl OntoService {
         self.onto_repository
             .find_all()
             .await
-            .map_err(|e| format!("获取本体列表失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 获取所有本体（分页）
@@ -34,7 +34,7 @@ impl OntoService {
             .onto_repository
             .find_all_paginated(pagination.limit(), pagination.offset())
             .await
-            .map_err(|e| format!("获取本体列表失败: {}", e))?;
+            .map_err(|e| e.to_string())?;
         Ok(PaginatedResponse::new(items, total, pagination))
     }
 
@@ -43,7 +43,7 @@ impl OntoService {
         self.onto_repository
             .find_by_id(id)
             .await
-            .map_err(|e| format!("获取本体失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 创建本体
@@ -61,7 +61,7 @@ impl OntoService {
         self.onto_repository
             .create(name, description)
             .await
-            .map_err(|e| format!("创建本体失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 更新本体
@@ -82,7 +82,7 @@ impl OntoService {
         self.onto_repository
             .update(id, name, description)
             .await
-            .map_err(|e| format!("更新本体失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 删除本体
@@ -90,7 +90,7 @@ impl OntoService {
         self.onto_repository
             .delete(id)
             .await
-            .map_err(|e| format!("删除本体失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     // /// 根据名称查找本体
@@ -98,7 +98,7 @@ impl OntoService {
     //     self.onto_repository
     //         .find_by_name(name)
     //         .await
-    //         .map_err(|e| format!("根据名称查找本体失败: {}", e))
+    //         .map_err(|e| e.to_string())
     // }
 
     // /// 获取本体数量
@@ -106,7 +106,7 @@ impl OntoService {
     //     self.onto_repository
     //         .count()
     //         .await
-    //         .map_err(|e| format!("获取本体数量失败: {}", e))
+    //         .map_err(|e| e.to_string())
     // }
 
     // /// 检查本体是否存在
@@ -114,6 +114,6 @@ impl OntoService {
     //     self.onto_repository
     //         .exists(id)
     //         .await
-    //         .map_err(|e| format!("检查本体存在失败: {}", e))
+    //         .map_err(|e| e.to_string())
     // }
 }

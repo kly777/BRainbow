@@ -5,7 +5,8 @@ use axum::{
 };
 
 use super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
-use super::response::{from_service_error, internal_error, TaskResponse};
+use crate::error;
+use super::response::{from_service_error, TaskResponse};
 use super::service::TaskService;
 use crate::pagination::{Pagination, PaginatedResponse};
 use crate::state::AppState;
@@ -20,7 +21,7 @@ pub async fn get_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => internal_error(format!("获取任务列表失败: {}", e)).into_response(),
+        Err(e) => error::internal(e, "获取任务列表").into_response(),
     }
 }
 
@@ -34,7 +35,7 @@ pub async fn get_all_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => internal_error(format!("获取全部任务列表失败: {}", e)).into_response(),
+        Err(e) => error::internal(e, "获取全部任务").into_response(),
     }
 }
 
@@ -46,7 +47,7 @@ pub async fn get_task_handler(
     match svc.by_id(id).await {
         Ok(Some(task)) => Json(TaskResponse::from(task)).into_response(),
         Ok(None) => super::response::not_found().into_response(),
-        Err(e) => internal_error(format!("获取任务失败: {}", e)).into_response(),
+        Err(e) => error::internal(e, "获取任务").into_response(),
     }
 }
 
@@ -58,7 +59,7 @@ pub async fn get_task_detail_handler(
     match svc.detail(id).await {
         Ok(Some(detail)) => Json(detail).into_response(),
         Ok(None) => super::response::not_found().into_response(),
-        Err(e) => internal_error(format!("获取任务详情失败: {}", e)).into_response(),
+        Err(e) => error::internal(e, "获取任务详情").into_response(),
     }
 }
 

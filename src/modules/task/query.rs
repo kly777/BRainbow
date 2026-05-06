@@ -9,8 +9,9 @@ use std::pin::Pin;
 use super::dependency::{CalendarQuery, DagQuery, TreeQuery};
 use super::dto::TaskErrorCode;
 use super::model::Task;
+use crate::error;
 use super::response::{
-    bad_request, internal_error, CalendarEvent, DagView, StatsResponse, TaskResponse, TreeNode,
+    bad_request, CalendarEvent, DagView, StatsResponse, TaskResponse, TreeNode,
 };
 use super::service::TaskService;
 use crate::pagination::{Pagination, PaginatedResponse};
@@ -24,7 +25,7 @@ pub async fn get_tree_handler(
 
     let root_tasks = match svc.tree(None).await {
         Ok(tasks) => tasks,
-        Err(e) => return internal_error(format!("获取树形结构失败: {}", e)).into_response(),
+        Err(e) => return error::internal(e, "获取树形结构").into_response(),
     };
 
     let filtered = if let Some(status) = query.status {
@@ -70,7 +71,7 @@ pub async fn get_calendar_handler(
 
     let tasks = match svc.by_status(super::model::TaskStatus::Active, 1000, 0).await {
         Ok((tasks, _)) => tasks,
-        Err(e) => return internal_error(format!("获取日历事件失败: {}", e)).into_response(),
+        Err(e) => return error::internal(e, "获取日历事件").into_response(),
     };
 
     let events: Vec<CalendarEvent> = tasks
@@ -101,7 +102,7 @@ pub async fn get_stats_handler(State(state): State<AppState>) -> impl IntoRespon
         Ok((backlog, active, completed, archived)) => {
             Json(StatsResponse { backlog, active, completed, archived }).into_response()
         }
-        Err(e) => internal_error(format!("获取统计信息失败: {}", e)).into_response(),
+        Err(e) => error::internal(e, "获取统计").into_response(),
     }
 }
 
@@ -125,6 +126,6 @@ pub async fn search_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => internal_error(format!("搜索任务失败: {}", e)).into_response(),
+        Err(e) => error::internal(e, "搜索任务").into_response(),
     }
 }

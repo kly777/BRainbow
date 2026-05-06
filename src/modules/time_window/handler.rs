@@ -79,10 +79,6 @@ fn not_found() -> (StatusCode, Json<ApiError>) {
     error::not_found("时间窗口未找到")
 }
 
-fn internal_error(message: String) -> (StatusCode, Json<ApiError>) {
-    error::internal_error(message)
-}
-
 // ==================== 处理器函数 ====================
 
 /// 创建时间窗口
@@ -111,7 +107,7 @@ pub async fn create_time_window_handler(
                 )
                 .into_response();
             }
-            internal_error(format!("创建时间窗口失败: {}", e)).into_response()
+            error::internal(e, "创建时间窗口").into_response()
         }
     }
 }
@@ -127,7 +123,7 @@ pub async fn get_time_window_handler(
         Ok(Some(time_window)) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Ok(None) => not_found().into_response(),
         Err(e) => {
-            internal_error(format!("获取时间窗口失败: {}", e)).into_response()
+            error::internal(e, "获取时间窗口").into_response()
         }
     }
 }
@@ -162,7 +158,7 @@ pub async fn get_time_windows_handler(
                 Json(PaginatedResponse::new(items, total, p)).into_response()
             }
             Err(e) => {
-                internal_error(format!("查询时间窗口失败: {}", e)).into_response()
+                error::internal(e, "查询时间窗口").into_response()
             }
         };
     }
@@ -188,7 +184,7 @@ pub async fn update_time_window_handler(
         Ok(time_window) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Err(sqlx::Error::RowNotFound) => not_found().into_response(),
         Err(e) => {
-            internal_error(format!("更新时间窗口失败: {}", e)).into_response()
+            error::internal(e, "更新时间窗口").into_response()
         }
     }
 }
@@ -209,7 +205,7 @@ pub async fn delete_time_window_handler(
             }
         }
         Err(e) => {
-            internal_error(format!("删除时间窗口失败: {}", e)).into_response()
+            error::internal(e, "删除时间窗口").into_response()
         }
     }
 }
@@ -238,7 +234,7 @@ pub async fn get_time_window_stats_handler(
             .into_response()
         }
         Err(e) => {
-            internal_error(format!("获取时间窗口统计失败: {}", e)).into_response()
+            error::internal(e, "获取时间窗口统计").into_response()
         }
     }
 }
@@ -295,7 +291,7 @@ pub async fn check_time_conflict_handler(
             Json(serde_json::json!({ "has_conflict": has_conflict })).into_response()
         }
         Err(e) => {
-            internal_error(format!("检查时间窗口冲突失败: {}", e)).into_response()
+            error::internal(e, "检查时间窗口冲突").into_response()
         }
     }
 }

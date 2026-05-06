@@ -22,7 +22,7 @@ impl SignService {
         self.sign_repository
             .find_all()
             .await
-            .map_err(|e| format!("获取符号关系列表失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 根据ID获取符号关系
@@ -30,7 +30,7 @@ impl SignService {
         self.sign_repository
             .find_by_id(id)
             .await
-            .map_err(|e| format!("获取符号关系失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 创建符号关系
@@ -56,7 +56,7 @@ impl SignService {
         self.sign_repository
             .create(signifier, signified, onto_id, weight, relation_type)
             .await
-            .map_err(|e| format!("创建符号关系失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 删除符号关系
@@ -64,7 +64,7 @@ impl SignService {
         self.sign_repository
             .delete(id)
             .await
-            .map_err(|e| format!("删除符号关系失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 根据能指获取符号关系
@@ -75,7 +75,7 @@ impl SignService {
         self.sign_repository
             .find_by_signifier(signifier)
             .await
-            .map_err(|e| format!("根据能指获取符号关系失败: {}", e))
+            .map_err(|e| e.to_string())
     }
 
     /// 获取所有符号关系（分页）
@@ -87,7 +87,7 @@ impl SignService {
             .sign_repository
             .find_all_paginated(pagination.limit(), pagination.offset())
             .await
-            .map_err(|e| format!("获取符号关系列表失败: {}", e))?;
+            .map_err(|e| e.to_string())?;
         Ok(PaginatedResponse::new(items, total, pagination))
     }
 
@@ -101,7 +101,7 @@ impl SignService {
             .sign_repository
             .find_by_signifier_paginated(signifier, pagination.limit(), pagination.offset())
             .await
-            .map_err(|e| format!("根据能指获取符号关系失败: {}", e))?;
+            .map_err(|e| e.to_string())?;
         Ok(PaginatedResponse::new(items, total, pagination))
     }
 
@@ -115,7 +115,7 @@ impl SignService {
             .sign_repository
             .find_by_signified_paginated(signified, pagination.limit(), pagination.offset())
             .await
-            .map_err(|e| format!("根据所指获取符号关系失败: {}", e))?;
+            .map_err(|e| e.to_string())?;
         Ok(PaginatedResponse::new(items, total, pagination))
     }
 
@@ -124,7 +124,7 @@ impl SignService {
     //     self.sign_repository
     //         .find_by_onto_id(onto_id)
     //         .await
-    //         .map_err(|e| format!("根据本体ID获取符号关系失败: {}", e))
+    //         .map_err(|e| e.to_string())
     // }
 
     // /// 获取符号关系数量
@@ -132,7 +132,7 @@ impl SignService {
     //     self.sign_repository
     //         .count()
     //         .await
-    //         .map_err(|e| format!("获取符号关系数量失败: {}", e))
+    //         .map_err(|e| e.to_string())
     // }
 
     // /// 检查符号关系是否存在
@@ -140,7 +140,7 @@ impl SignService {
     //     self.sign_repository
     //         .exists(id)
     //         .await
-    //         .map_err(|e| format!("检查符号关系存在失败: {}", e))
+    //         .map_err(|e| e.to_string())
     // }
 
     // /// 更新符号关系
@@ -171,6 +171,6 @@ impl SignService {
     //     self.sign_repository
     //         .update(id, signifier, signified, onto_id, weight, relation_type)
     //         .await
-    //         .map_err(|e| format!("更新符号关系失败: {}", e))
+    //         .map_err(|e| e.to_string())
     // }
 }

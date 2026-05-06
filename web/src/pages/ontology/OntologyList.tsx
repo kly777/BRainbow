@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import type { Onto } from "@/apis/ontoApi";
 import { createOnto, deleteOnto, getOntos } from "@/apis/ontoApi";
-import { getErrorMessage, showErrorAlert } from "@/apis/types";
+import { getErrorMessage } from "@/apis/types";
 import styles from "./OntologyList.module.css";
 
 const OntologyListPage: Component = () => {
@@ -17,8 +17,8 @@ const OntologyListPage: Component = () => {
 		Effect.runPromise(
 			getOntos().pipe(
 				Effect.catchAll((error) => {
-					console.error("获取本体列表失败:", error);
-					showErrorAlert(error, "获取本体列表失败");
+					console.error("获取本体列表失败:", getErrorMessage(error));
+					// 全局 toast 已触发，降级返回空列表
 					return Effect.succeed([] as readonly Onto[]);
 				}),
 			),
@@ -109,12 +109,9 @@ const OntologyListPage: Component = () => {
 						console.log("本体删除成功:", id);
 					}),
 					Effect.catchAll((error) => {
-						console.error("删除本体失败:", error);
-						// 如果API调用失败，恢复被删除的本体
-						if (ontoToDelete) {
-							mutate([...currentData]);
-						}
-						showErrorAlert(error, "删除本体失败");
+						console.error("删除本体失败:", getErrorMessage(error));
+						// 回滚乐观删除
+						if (ontoToDelete) mutate([...currentData]);
 						return Effect.void;
 					}),
 					Effect.ensuring(

@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import { deleteImage, listImages, renameImage } from "@/apis/cardApi";
 import type { Image } from "@/apis/types";
-import { showErrorAlert } from "@/apis/types";
+import { getErrorMessage } from "@/apis/types";
 import styles from "./ImagesList.module.css";
 
 const ImagesListPage: Component = () => {
@@ -27,8 +27,8 @@ const ImagesListPage: Component = () => {
 			await Effect.runPromise(deleteImage(id));
 			refetch();
 		} catch (err) {
-			showErrorAlert(err, "删除失败");
-			refetch();
+			console.error("删除失败:", getErrorMessage(err));
+			refetch(); // 全局 toast 已触发
 		}
 	};
 
@@ -53,7 +53,7 @@ const ImagesListPage: Component = () => {
 			setEditingId(null);
 			refetch();
 		} catch (err) {
-			showErrorAlert(err, "重命名失败");
+			console.error("重命名失败:", getErrorMessage(err));
 		}
 	};
 

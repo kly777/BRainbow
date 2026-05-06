@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import { deleteCard, getCard, updateCard, uploadImage } from "@/apis/cardApi";
 import type { UpdateCardRequest } from "@/apis/types";
-import { getErrorMessage, showErrorAlert } from "@/apis/types";
+import { getErrorMessage } from "@/apis/types";
 import Markdown from "@/components/Markdown";
 import styles from "./CardEdit.module.css";
 
@@ -72,7 +72,7 @@ const CardEditPage: Component = () => {
 			deleteCard(cardId()).pipe(
 				Effect.tap(() => navigate("/c")),
 				Effect.catchAll((err) => {
-					showErrorAlert(err, "删除卡片失败");
+					console.error("删除卡片失败:", getErrorMessage(err));
 					return Effect.void;
 				}),
 			),

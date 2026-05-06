@@ -9,12 +9,7 @@ import {
 	moveToBacklog,
 	updateTask,
 } from "@/apis/taskApi";
-import {
-	type CreateTaskRequest,
-	getErrorMessage,
-	showErrorAlert,
-	type Task,
-} from "@/apis/types";
+import { type CreateTaskRequest, getErrorMessage, type Task } from "@/apis/types";
 
 export function useTaskActions(
 	getTasks: Accessor<Task[]>,
@@ -51,34 +46,30 @@ export function useTaskActions(
 				default:
 					throw new Error(`未知的状态: ${newStatus}`);
 			}
-			// 服务端确认后重载
 			await reload();
 		} catch (error) {
-			const msg = getErrorMessage(error);
-			console.error("更新任务状态失败:", msg);
-			// 回滚
+			// 全局层已 toast，组件只做回滚
+			console.error("更新任务状态失败:", getErrorMessage(error));
 			setTasks(
 				getTasks().map((t) =>
 					t.id === taskId ? { ...t, status: originalStatus } : t,
 				),
 			);
-			showErrorAlert(error, "更新任务状态失败");
 		}
 	};
 
 	const handleDelete = async (taskId: number) => {
 		if (!confirm("确定要删除这个任务吗？")) return;
 
-		// 乐观更新
-		setTasks(getTasks().filter((t) => t.id !== taskId));
+		// 乐观移除
+		const current = getTasks();
+		setTasks(current.filter((t) => t.id !== taskId));
 
 		try {
 			await Effect.runPromise(deleteTask(taskId));
 		} catch (error) {
-			const msg = getErrorMessage(error);
-			console.error("删除任务失败:", msg);
-			showErrorAlert(error, "删除任务失败");
-			await reload();
+			console.error("删除任务失败:", getErrorMessage(error));
+			await reload(); // 全局已 toast，组件只恢复数据
 		}
 	};
 
@@ -98,10 +89,9 @@ export function useTaskActions(
 			await Effect.runPromise(updateTask(taskId, updates));
 			await reload();
 		} catch (error) {
-			const msg = getErrorMessage(error);
-			console.error("更新任务失败:", msg);
+			console.error("更新任务失败:", getErrorMessage(error));
+			// 全局已 toast，组件只回滚
 			setTasks(getTasks().map((t) => (t.id === taskId ? originalTask : t)));
-			showErrorAlert(error, "更新任务失败");
 		}
 	};
 
@@ -111,9 +101,8 @@ export function useTaskActions(
 			const newTask = await Effect.runPromise(createTask(request));
 			setTasks([...getTasks(), newTask]);
 		} catch (error) {
-			const msg = getErrorMessage(error);
-			console.error("创建子任务失败:", msg);
-			showErrorAlert(error, "创建子任务失败");
+			console.error("创建子任务失败:", getErrorMessage(error));
+			// 全局已 toast + 回滚由 createTask 调用方处理
 		}
 	};
 

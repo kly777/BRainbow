@@ -2,11 +2,12 @@ use axum::{
     extract::{Request, State},
     http::StatusCode,
     middleware::Next,
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Json, Response},
 };
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
+use crate::error::ApiError;
 use crate::state::AppState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -76,12 +77,32 @@ pub async fn auth(
 
     let token = match extract_token(&request) {
         Some(t) => t,
-        None => return (StatusCode::UNAUTHORIZED, "请先登录").into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(ApiError {
+                    code: "UNAUTHORIZED".to_string(),
+                    message: "请先登录".to_string(),
+                    details: None,
+                }),
+            )
+                .into_response()
+        }
     };
 
     let claims = match verify_token(&token, secret) {
         Some(c) => c,
-        None => return (StatusCode::UNAUTHORIZED, "登录已过期，请重新登录").into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(ApiError {
+                    code: "TOKEN_EXPIRED".to_string(),
+                    message: "登录已过期，请重新登录".to_string(),
+                    details: None,
+                }),
+            )
+                .into_response()
+        }
     };
 
     request.extensions_mut().insert(claims);
@@ -98,7 +119,23 @@ pub async fn auth(
 pub async fn require_admin(request: Request, next: Next) -> Response {
     match request.extensions().get::<Claims>() {
         Some(c) if c.role == "admin" => next.run(request).await,
-        Some(_) => (StatusCode::FORBIDDEN, "仅管理员可访问").into_response(),
-        None => (StatusCode::UNAUTHORIZED, "请先登录").into_response(),
+        Some(_) => (
+            StatusCode::FORBIDDEN,
+            Json(ApiError {
+                code: "FORBIDDEN".to_string(),
+                message: "仅管理员可访问".to_string(),
+                details: None,
+            }),
+        )
+            .into_response(),
+        None => (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiError {
+                code: "UNAUTHORIZED".to_string(),
+                message: "请先登录".to_string(),
+                details: None,
+            }),
+        )
+            .into_response(),
     }
 }

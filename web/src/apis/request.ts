@@ -10,57 +10,124 @@ import {
 
 const API_BASE_URL = "/api";
 
-/**
- * 尝试从响应体解析后端统一错误格式 { code, message, details }。
- * 兼容旧格式 { error: "..." } 和纯文本。
- */
-async function extractErrorBody(
-	response: Response,
-): Promise<ApiErrorResponse> {
-	try {
-		const text = await response.text();
-		if (!text) {
-			return {
-				code: `HTTP_${response.status}`,
-				message: `HTTP ${response.status}`,
-			};
-		}
-		const json = JSON.parse(text);
-		// 新统一格式: { code, message, details? }
-		if (json && typeof json.code === "string" && typeof json.message === "string") {
-			return {
-				code: json.code,
-				message: json.message,
-				details: json.details,
-			};
-		}
-		// 旧格式: { error: "..." }
-		if (json && typeof json.error === "string") {
-			return {
-				code: `HTTP_${response.status}`,
-				message: json.error,
-			};
-		}
-		// 兜底：整个文本作为消息
-		return {
-			code: `HTTP_${response.status}`,
-			message: text.length > 200 ? text.slice(0, 200) : text,
-		};
-	} catch {
+// ==================== 全局副作用（与业务无关，组件不感知） ====================
+
+/** 登录弹窗事件 —— AuthStatus 监听它自动弹出登录框 */
+export const AUTH_REQUIRED_EVENT = "auth:required";
+
+function triggerAuthRequired(): void {
+	window.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT));
+}
+
+/** 延迟导入避免循环依赖 */
+let _showToast: ((opts: {
+	type: "error" | "warning";
+	title: string;
+	message: string;
+	details?: string;
+	duration?: number;
+}) => void) | null = null;
+
+async function toast(opts: {
+	type: "error" | "warning";
+	title: string;
+	message: string;
+	details?: string;
+	duration?: number;
+}): Promise<void> {
+	if (!_showToast) {
+		const mod = await import("../components/toastStore");
+		_showToast = mod.showToast as unknown as typeof _showToast;
+	}
+	// duration 提供默认值以匹配 showToast 的 non-optional 签名
+	_showToast?.({ ...opts, duration: opts.duration ?? 5000 });
+}
+
+// ==================== 错误体解析 ====================
+
+async function extractErrorBody(response: Response): Promise<ApiErrorResponse> {
+	const text = await response.text().catch(() => "");
+
+	if (!text) {
 		return {
 			code: `HTTP_${response.status}`,
 			message: `HTTP ${response.status}`,
 		};
 	}
+
+	try {
+		const json = JSON.parse(text);
+		if (json && typeof json.code === "string" && typeof json.message === "string") {
+			return { code: json.code, message: json.message, details: json.details };
+		}
+		if (json && typeof json.error === "string") {
+			return { code: `HTTP_${response.status}`, message: json.error };
+		}
+	} catch {
+		/* 纯文本，直接用 */
+	}
+
+	const short = text.length > 200 ? text.slice(0, 200) : text;
+	return { code: `HTTP_${response.status}`, message: short };
 }
 
+// ==================== 全局错误副作用（所有请求统一触发，不拦截错误） ====================
+
 /**
- * 通用的API请求函数
- * @param endpoint API端点
- * @param schema 响应数据的Schema
- * @param options 请求选项
- * @returns Effect包装的API响应
+ * 对错误执行全局副作用（登录弹窗 / toast / 日志），
+ * 然后原样将错误向上传播给组件做业务处理。
  */
+async function handleGlobalError(
+	endpoint: string,
+	httpError: HttpError,
+): Promise<void> {
+	const { status, code, message } = httpError;
+
+	// ── 日志：所有错误统一输出 ──
+	console.error(`[API] ${status} ${endpoint} — ${code}: ${message}`);
+
+	// ── 401 → 登录弹窗 + toast ──
+	if (status === 401) {
+		triggerAuthRequired();
+		await toast({
+			type: "warning",
+			title: "请先登录",
+			message,
+			details: code,
+			duration: 4000,
+		});
+		return;
+	}
+
+	// ── 403 → toast 提示 ──
+	if (status === 403) {
+		await toast({
+			type: "error",
+			title: "权限不足",
+			message,
+			details: code,
+			duration: 5000,
+		});
+		return;
+	}
+
+	// ── 5xx 服务器崩溃 → toast（组件通常只做回滚，不展示消息） ──
+	if (status >= 500) {
+		await toast({
+			type: "error",
+			title: "服务器错误",
+			message: message || "服务器内部错误，请稍后重试",
+			details: code,
+			duration: 8000,
+		});
+		return;
+	}
+
+	// ── 4xx 业务错误（404/409/422 等）→ 只打日志，由组件处理 UI ──
+}
+
+// ==================== 核心请求函数 ====================
+
 export const request = <T>(
 	endpoint: string,
 	schema: Schema.Schema<T>,
@@ -73,49 +140,40 @@ export const request = <T>(
 			try: async () =>
 				fetch(url, {
 					...options,
-					headers: (() => {
-						const headers = new Headers({
-							"Content-Type": "application/json",
-						});
-						if (options.headers) {
-							if (Array.isArray(options.headers)) {
-								for (const [key, value] of options.headers) {
-									if (value !== undefined) {
-										headers.append(key, String(value));
-									}
-								}
-							} else if (typeof options.headers === "object") {
-								for (const [key, value] of Object.entries(options.headers)) {
-									if (value !== undefined) {
-										headers.append(key, String(value));
-									}
-								}
-							}
-						}
-						const token = getToken();
-						if (token) {
-							headers.set("Authorization", `Bearer ${token}`);
-						}
-						return headers;
-					})(),
+					headers: buildHeaders(options.headers),
 				}),
-			catch: (cause: unknown) => new NetworkError({ cause }),
+			catch: (cause: unknown) => {
+				// ── 网络断开 → 全局 toast + 日志，然后抛出 ──
+				console.error(`[API] NETWORK ${endpoint}:`, cause);
+				toast({
+					type: "error",
+					title: "网络连接失败",
+					message: "请检查网络后重试",
+					details: "NETWORK",
+					duration: 6000,
+				});
+				return new NetworkError({ cause });
+			},
 		});
 
+		// ── 非 2xx → 全局副作用 + 抛出 ──
 		if (!response.ok) {
 			const errorBody = yield* Effect.tryPromise({
 				try: () => extractErrorBody(response),
 				catch: (cause: unknown) => new NetworkError({ cause }),
 			});
 
-			return yield* Effect.fail(
-				new HttpError({
-					status: response.status,
-					code: errorBody.code,
-					message: errorBody.message,
-					details: errorBody.details,
-				}),
-			);
+			const httpError = new HttpError({
+				status: response.status,
+				code: errorBody.code,
+				message: errorBody.message,
+				details: errorBody.details,
+			});
+
+			// 全局副作用：日志 + toast/登录（不拦截错误，继续抛给组件）
+			yield* Effect.promise(() => handleGlobalError(endpoint, httpError));
+
+			return yield* Effect.fail(httpError);
 		}
 
 		if (response.status === 204) {
@@ -135,3 +193,25 @@ export const request = <T>(
 
 		return result;
 	});
+
+// ==================== 辅助 ====================
+
+function buildHeaders(extra?: RequestInit["headers"]): Headers {
+	const headers = new Headers({ "Content-Type": "application/json" });
+
+	if (extra) {
+		const entries = Array.isArray(extra) ? extra : Object.entries(extra);
+		for (const [key, value] of entries) {
+			if (value !== undefined) {
+				headers.append(key, String(value));
+			}
+		}
+	}
+
+	const token = getToken();
+	if (token) {
+		headers.set("Authorization", `Bearer ${token}`);
+	}
+
+	return headers;
+}

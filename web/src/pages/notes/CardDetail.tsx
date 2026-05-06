@@ -2,7 +2,7 @@ import { useNavigate, useParams } from "@solidjs/router";
 import { Effect } from "effect";
 import { type Component, createResource, Show } from "solid-js";
 import { deleteCard, getCard } from "@/apis/cardApi";
-import { getErrorMessage, showErrorAlert } from "@/apis/types";
+import { getErrorMessage } from "@/apis/types";
 import Markdown from "@/components/Markdown";
 import styles from "./CardDetail.module.css";
 
@@ -28,7 +28,7 @@ const CardDetailPage: Component = () => {
 			deleteCard(cardId()).pipe(
 				Effect.tap(() => navigate("/c")),
 				Effect.catchAll((err) => {
-					showErrorAlert(err, "删除卡片失败");
+					console.error("删除卡片失败:", getErrorMessage(err));
 					return Effect.void;
 				}),
 			),

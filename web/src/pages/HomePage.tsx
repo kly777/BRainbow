@@ -6,7 +6,6 @@ import { createTask, getTasks } from "@/apis/taskApi";
 import {
 	type CreateTaskRequest,
 	getErrorMessage,
-	showErrorAlert,
 	type Task,
 } from "@/apis/types";
 import type { CardData } from "@/components/Card";
@@ -49,8 +48,8 @@ const HomePage = () => {
 			);
 			setRecentCards(sortedCards.slice(0, 4));
 		} catch (error) {
-			console.error("加载数据失败:", error);
-			showErrorAlert(error, "加载数据失败");
+			console.error("加载数据失败:", getErrorMessage(error));
+			// 全局 toast 已触发
 		} finally {
 			setLoading(false);
 		}
@@ -98,9 +97,8 @@ const HomePage = () => {
 			setTodos(todos().map((t) => (t.id === tempId ? newTask : t)));
 		} catch (error) {
 				console.error("创建任务失败:", getErrorMessage(error));
-			// 如果失败，从列表中移除临时任务
+			// 回滚乐观更新
 			setTodos(todos().filter((t) => t.id !== tempId));
-			showErrorAlert(error, "创建任务失败");
 		}
 	};
 
@@ -121,8 +119,8 @@ const HomePage = () => {
 		try {
 			await Effect.runPromise(apiDeleteCard(id));
 		} catch (error) {
-			console.error("删除卡片失败:", error);
-			showErrorAlert(error, "删除卡片失败");
+			console.error("删除卡片失败:", getErrorMessage(error));
+			// 全局 toast 已触发，这里尝试恢复数据
 			try {
 				const cards = await Effect.runPromise(getCards());
 				const sortedCards = [...cards.items].sort(

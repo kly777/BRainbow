@@ -13,7 +13,6 @@ import {
 import {
 	type CreateTaskRequest,
 	getErrorMessage,
-	showErrorAlert,
 	type Task,
 } from "@/apis/types";
 import TaskCalendar from "@/components/TaskCalendar";
@@ -51,11 +50,11 @@ export default function TaskManager() {
 				setStats(result);
 			} catch (e) {
 				console.error("获取统计失败:", e);
-				showErrorAlert(e, "获取统计失败");
+				// 全局 toast 已触发
 			}
 		} catch (error) {
 			console.error("加载任务失败:", error);
-			showErrorAlert(error, "加载任务失败");
+			// 全局 toast 已触发
 		} finally {
 			setLoading(false);
 		}
@@ -78,7 +77,7 @@ export default function TaskManager() {
 			setTasks([...results.items]);
 		} catch (error) {
 			console.error("搜索任务失败:", error);
-			showErrorAlert(error, "搜索任务失败");
+			// 全局 toast 已触发
 		} finally {
 			setLoading(false);
 		}
@@ -105,7 +104,7 @@ export default function TaskManager() {
 			setTasks([...result.items]);
 		} catch (error) {
 			console.error("筛选失败:", error);
-			showErrorAlert(error, "筛选失败");
+			// 全局 toast 已触发
 		} finally {
 			// setLoading(false);
 		}
@@ -157,7 +156,7 @@ export default function TaskManager() {
 			console.error("创建任务失败:", msg);
 			// 如果失败，从列表中移除临时任务
 			setTasks(tasks().filter((t) => t.id !== tempId));
-			showErrorAlert(error, "创建任务失败");
+			// 全局 toast 已触发
 		}
 	};
 
@@ -235,7 +234,7 @@ export default function TaskManager() {
 								setTasks([task, ...tasks()]);
 							} catch (error) {
 								console.error("快速创建失败:", error);
-								showErrorAlert(error, "快速创建失败");
+								// 全局 toast 已触发
 							}
 						}
 					}}

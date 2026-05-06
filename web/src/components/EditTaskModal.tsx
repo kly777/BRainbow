@@ -6,7 +6,7 @@ import {
 	getTimeWindows,
 } from "@/apis/timeWindowApi";
 import type { CreateTimeWindowRequest, Task, TimeWindow } from "@/apis/types";
-import { showErrorAlert } from "@/apis/types";
+import { getErrorMessage } from "@/apis/types";
 import styles from "../pages/TaskManager.module.css";
 import Modal from "./Modal";
 
@@ -43,8 +43,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 			setFeasibleWindows([...feasible]);
 			setPlannedWindows([...planned]);
 		} catch (error) {
-			console.error("加载时间窗口失败:", error);
-			showErrorAlert(error, "加载时间窗口失败");
+			console.error("加载时间窗口失败:", getErrorMessage(error));
 		}
 	};
 
@@ -96,8 +95,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 			setNewStartTime("");
 			setNewEndTime("");
 		} catch (error) {
-			console.error("创建时间窗口失败:", error);
-			showErrorAlert(error, "创建时间窗口失败");
+			console.error("创建时间窗口失败:", getErrorMessage(error));
 		}
 	};
 
@@ -110,8 +108,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 				setPlannedWindows(plannedWindows().filter((w) => w.id !== id));
 			}
 		} catch (error) {
-			console.error("删除时间窗口失败:", error);
-			showErrorAlert(error, "删除时间窗口失败");
+			console.error("删除时间窗口失败:", getErrorMessage(error));
 		}
 	};
 

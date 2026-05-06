@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { getToken } from "../auth";
+import { getToken } from "@/auth/context";
 import {
 	type ApiErrorType,
 	type ApiErrorResponse,

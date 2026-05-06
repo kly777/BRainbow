@@ -1,6 +1,6 @@
 import { type Effect, Schema } from "effect";
-import { request } from "./request";
-import type { ApiErrorType } from "./types";
+import { request } from "@/apis/request";
+import type { ApiErrorType } from "@/apis/types";
 
 export interface AuthUser {
 	id: number;

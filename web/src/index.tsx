@@ -1,7 +1,7 @@
 import { Route, Router } from "@solidjs/router";
 import { lazy } from "solid-js";
 import { render } from "solid-js/web";
-import { AuthProvider } from "./auth";
+import { AuthProvider } from "./auth/context";
 import Layout from "./Layout";
 import "@/global.css";
 import "@/normalize.css";

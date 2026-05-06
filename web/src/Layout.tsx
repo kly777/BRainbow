@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
 import { createSignal, type JSX } from "solid-js";
-import AuthStatus from "./AuthStatus";
+import AuthStatus from "./auth/AuthStatus";
 import ToastContainer from "./components/Toast";
 import styles from "./App.module.css";
 

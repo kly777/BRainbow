@@ -56,7 +56,7 @@ export const searchCards = (
 // ==================== Image Upload ====================
 
 import { Effect as E } from "effect";
-import { getToken } from "../auth";
+import { getToken } from "@/auth/context";
 import { HttpError, NetworkError, ValidationError } from "./types";
 
 /**

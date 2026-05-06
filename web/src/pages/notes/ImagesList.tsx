@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import { deleteImage, listImages, renameImage } from "@/apis/cardApi";
 import type { Image } from "@/apis/types";
-import { getErrorMessage, showErrorAlert } from "@/apis/types";
+import { showErrorAlert } from "@/apis/types";
 import styles from "./ImagesList.module.css";
 
 const ImagesListPage: Component = () => {
@@ -47,7 +47,9 @@ const ImagesListPage: Component = () => {
 		const name = editName().trim();
 		if (!name) return;
 		try {
-			await Effect.runPromise(renameImage(editingId()!, { original_name: name }));
+			const eid = editingId();
+			if (eid == null) return;
+			await Effect.runPromise(renameImage(eid, { original_name: name }));
 			setEditingId(null);
 			refetch();
 		} catch (err) {

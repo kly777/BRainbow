@@ -3,7 +3,6 @@ import { getToken } from "../auth";
 import {
 	type ApiErrorType,
 	type ApiErrorResponse,
-	ApiErrorResponseSchema,
 	HttpError,
 	NetworkError,
 	ValidationError,

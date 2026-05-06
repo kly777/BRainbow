@@ -7,7 +7,6 @@ import {
 	type CreateCardRequest,
 	type Image,
 	ImageSchema,
-	ImageWithDateSchema,
 	PaginatedImageSchema,
 	PaginatedSchema,
 	type PaginatedImage,
@@ -110,7 +109,7 @@ export const uploadImage = (
 		const token = getToken();
 		const headers: Record<string, string> = {};
 		if (token) {
-			headers["Authorization"] = `Bearer ${token}`;
+			headers.Authorization = `Bearer ${token}`;
 		}
 
 		const response = yield* E.tryPromise({

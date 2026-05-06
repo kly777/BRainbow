@@ -18,7 +18,7 @@ function iconForType(type: ToastItem["type"]): string {
 export default function ToastContainer() {
 	return (
 		<Show when={toasts().length > 0}>
-			<div class={styles.container} aria-live="polite" aria-label="通知">
+			<div class={styles.container} aria-live="polite" role="status">
 				<For each={toasts()}>
 					{(toast) => (
 						<div

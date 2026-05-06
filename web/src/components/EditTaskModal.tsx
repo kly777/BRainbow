@@ -6,7 +6,7 @@ import {
 	getTimeWindows,
 } from "@/apis/timeWindowApi";
 import type { CreateTimeWindowRequest, Task, TimeWindow } from "@/apis/types";
-import { getErrorMessage, showErrorAlert } from "@/apis/types";
+import { showErrorAlert } from "@/apis/types";
 import styles from "../pages/TaskManager.module.css";
 import Modal from "./Modal";
 

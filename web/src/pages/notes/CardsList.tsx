@@ -134,7 +134,7 @@ const CardsListPage: Component = () => {
 			const loaded = await Effect.runPromise(
 				getCards().pipe(
 					Effect.map((r) => r.items),
-					Effect.catchAll(() => Effect.succeed([] as any)),
+					Effect.catchAll(() => Effect.succeed([] as import("@/apis/types").Card[])),
 				),
 			);
 			mutate([...loaded]);

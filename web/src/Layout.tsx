@@ -61,10 +61,12 @@ export default function Layout(props: { children?: JSX.Element }) {
 			</aside>
 
 			{/* 遮罩（移动端点击关闭） */}
-			<div
+			<button
+				type="button"
 				class={styles.overlay}
 				classList={{ [styles.overlayVisible]: menuOpen() }}
 				onClick={closeMenu}
+				aria-label="关闭侧边菜单"
 			/>
 
 			{/* 主内容区 */}

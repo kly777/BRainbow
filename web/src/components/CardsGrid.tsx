@@ -4,7 +4,7 @@ import CardFilter from "./CardFilter";
 import CardMasonry, { type CardMasonryProps } from "./CardMasonry";
 
 export interface CardsGridProps extends Omit<CardMasonryProps, "cards"> {
-	cards: CardData[];
+	cards: readonly CardData[];
 	showFilters?: boolean;
 	onSearch?: (query: string) => void;
 }

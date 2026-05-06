@@ -9,6 +9,7 @@ import {
 import type { Onto } from "@/apis/ontoApi";
 import { createOnto, deleteOnto, getOntos } from "@/apis/ontoApi";
 import { getErrorMessage } from "@/apis/types";
+import { AsyncView } from "@/components/AsyncView";
 import styles from "./OntologyList.module.css";
 
 const OntologyListPage: Component = () => {
@@ -184,47 +185,15 @@ const OntologyListPage: Component = () => {
 				</div>
 			</div>
 
-			<Show when={ontologies.loading}>
-				<div class={styles.emptyState}>
-					<p>加载中...</p>
-				</div>
-			</Show>
-
-			<Show when={ontologies.error}>
-				<div class={styles.emptyState}>
-					<p>加载失败: {getErrorMessage(ontologies.error)}</p>
-					<button
-						type="button"
-						class={styles.primaryButton}
-						onClick={() => refetch()}
-					>
-						重试
-					</button>
-				</div>
-			</Show>
-
-			<Show
-				when={
-					!ontologies.loading &&
-					!ontologies.error &&
-					filteredOntologies().length > 0
-				}
-				fallback={
-					<Show when={!ontologies.loading && !ontologies.error}>
-						<div class={styles.emptyState}>
-							<p>没有找到匹配的本体</p>
-							<button
-								type="button"
-								class={styles.primaryButton}
-								onClick={openCreateModal}
-							>
-								创建第一个本体
-							</button>
-						</div>
-					</Show>
-				}
+			<AsyncView
+				data={filteredOntologies()}
+				loading={ontologies.loading}
+				error={ontologies.error}
+				onRetry={refetch}
+				emptyMessage="没有找到匹配的本体"
 			>
-				<Show
+				{(_data) => (
+			<Show
 					when={viewMode() === "grid"}
 					fallback={
 						<div class={styles.entitiesList}>
@@ -302,7 +271,8 @@ const OntologyListPage: Component = () => {
 						</For>
 					</div>
 				</Show>
-			</Show>
+			)}
+			</AsyncView>
 
 			<div class={styles.stats}>
 				<p>共 {filteredOntologies().length} 个本体</p>

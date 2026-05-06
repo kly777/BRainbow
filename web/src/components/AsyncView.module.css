@@ -1,0 +1,25 @@
+.state {
+	padding: 24px 16px;
+	text-align: center;
+	color: var(--c-text-muted);
+	font-size: 14px;
+}
+
+.errorText {
+	color: var(--c-danger-text);
+	margin-bottom: 10px;
+}
+
+.retryBtn {
+	padding: 6px 16px;
+	background: var(--c-primary);
+	color: #fff;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 13px;
+}
+
+.retryBtn:hover {
+	background: var(--c-primary-hover);
+}

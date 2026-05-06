@@ -7,6 +7,7 @@ import type { CardData } from "@/components/Card";
 import CardsGrid from "@/components/CardsGrid";
 import TaskList from "@/components/TaskList";
 import { TaskProvider, useTasks } from "@/components/TaskProvider";
+import { AsyncView } from "@/components/AsyncView";
 import styles from "./HomePage.module.css";
 
 function TaskSection() {
@@ -91,14 +92,9 @@ function CardSection() {
 					<A href="/c" class={styles.createLink}>+ 新建卡片</A>
 				</div>
 			</div>
-			<Show when={cards().length > 0} fallback={
-				<div class={styles.emptyState}>
-					<Show when={!loading()}><p>暂无知识卡片</p><p class={styles.emptyHint}>创建您的第一个知识卡片吧！</p></Show>
-					<Show when={loading()}><p>加载中...</p></Show>
-				</div>
-			}>
-				<CardsGrid cards={cards()} showFilters={false} onCardEdit={(id) => navigate(`/c/edit/${id}`)} onCardDelete={handleDelete} emptyMessage="暂无知识卡片" />
-			</Show>
+			<AsyncView data={cards()} loading={loading()} emptyMessage="暂无知识卡片">
+			{(data) => <CardsGrid cards={data} showFilters={false} onCardEdit={(id) => navigate(`/c/edit/${id}`)} onCardDelete={handleDelete} emptyMessage="暂无知识卡片" />}
+			</AsyncView>
 		</div>
 	);
 }

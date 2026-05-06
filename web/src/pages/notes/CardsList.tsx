@@ -5,6 +5,7 @@ import { createCard, deleteCard, getCards, searchCards } from "@/apis/cardApi";
 import { type CreateCardRequest, getErrorMessage } from "@/apis/types";
 
 import CardsGrid from "@/components/CardsGrid";
+import { AsyncView } from "@/components/AsyncView";
 import styles from "./CardsList.module.css";
 
 const emptyFallback = Effect.catchTags({
@@ -111,18 +112,13 @@ const CardsListPage: Component = () => {
 				</div>
 			</div>
 
-			<Show when={cards.loading}><div class={styles.loading}><p>加载中...</p></div></Show>
-
-			<Show when={cards.error}>
-				<div class={styles.error}>
-					<p>加载失败: {getErrorMessage(cards.error)}</p>
-					<button type="button" class={styles.primaryButton} onClick={() => window.location.reload()}>重试</button>
-				</div>
+			<AsyncView data={cards()} loading={cards.loading} error={cards.error} onRetry={() => window.location.reload()} emptyMessage="还没有卡片，点击上方按钮创建一个吧！">
+			{(data) => (
+				<Show when={!cards.loading && !cards.error}>
+				<CardsGrid cards={[...(data || [])]} showFilters={true} onSearch={handleSearch} onCardClick={handleCardClick} onCardEdit={handleCardEdit} onCardDelete={handleCardDelete} emptyMessage="还没有卡片，点击上方按钮创建一个吧！" deletingCardId={deletingCardId()} />
 			</Show>
-
-			<Show when={!cards.loading && !cards.error}>
-				<CardsGrid cards={[...(cards() || [])]} showFilters={true} onSearch={handleSearch} onCardClick={handleCardClick} onCardEdit={handleCardEdit} onCardDelete={handleCardDelete} emptyMessage="还没有卡片，点击上方按钮创建一个吧！" deletingCardId={deletingCardId()} />
-			</Show>
+			)}
+			</AsyncView>
 
 			<Show when={showCreateModal()}>
 				<div class={styles.modalOverlay} onClick={closeCreateModal} onKeyDown={(e) => { if (e.key === "Escape") closeCreateModal(); }} role="dialog" aria-modal="true" aria-label="创建新卡片" tabIndex={-1}>

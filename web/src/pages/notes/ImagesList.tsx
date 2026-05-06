@@ -9,6 +9,7 @@ import {
 import { deleteImage, listImages, renameImage } from "@/apis/cardApi";
 import type { Image } from "@/apis/types";
 import { getErrorMessage } from "@/apis/types";
+import { AsyncView } from "@/components/AsyncView";
 import styles from "./ImagesList.module.css";
 
 const ImagesListPage: Component = () => {
@@ -83,24 +84,9 @@ const ImagesListPage: Component = () => {
 				<div class={styles.errorBar}>{error()}</div>
 			</Show>
 
-			<Show when={images.loading}>
-				<div class={styles.loading}>加载中...</div>
-			</Show>
-
-			<Show when={images.error}>
-				<div class={styles.loading}>
-					加载失败{" "}
-					<button type="button" class={styles.retryBtn} onClick={() => refetch()}>
-						重试
-					</button>
-				</div>
-			</Show>
-
-			<Show when={!images.loading && !images.error && images()?.length === 0}>
-				<div class={styles.empty}>还没有图片，去卡片编辑器中上传吧</div>
-			</Show>
-
-			<div class={styles.grid}>
+			<AsyncView data={images()} loading={images.loading} error={images.error} onRetry={refetch} emptyMessage="还没有图片，去卡片编辑器中上传吧">
+			{(_data) => (
+				<div class={styles.grid}>
 				<For each={images()}>
 					{(img) => (
 						<div class={styles.card}>
@@ -171,7 +157,9 @@ const ImagesListPage: Component = () => {
 						</div>
 					)}
 				</For>
-			</div>
+				</div>
+			)}
+			</AsyncView>
 		</div>
 	);
 };

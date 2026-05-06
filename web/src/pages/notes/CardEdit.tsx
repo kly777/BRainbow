@@ -11,6 +11,7 @@ import { deleteCard, getCard, updateCard, uploadImage } from "@/apis/cardApi";
 import type { UpdateCardRequest } from "@/apis/types";
 import { getErrorMessage } from "@/apis/types";
 import Markdown from "@/components/Markdown";
+import { AsyncView } from "@/components/AsyncView";
 import styles from "./CardEdit.module.css";
 
 const CardEditPage: Component = () => {
@@ -187,23 +188,9 @@ const CardEditPage: Component = () => {
 				</div>
 			</div>
 
-			<Show when={card.loading}>
-				<div class={styles.loading}>加载中...</div>
-			</Show>
-			<Show when={card.error}>
-				<div class={styles.loading}>
-					加载失败: {getErrorMessage(card.error)}{" "}
-					<button
-						type="button"
-						class={styles.retryBtn}
-						onClick={() => refetch()}
-					>
-						重试
-					</button>
-				</div>
-			</Show>
-
-			<Show when={!card.loading && !card.error}>
+			<AsyncView data={card() ? [card()] : []} loading={card.loading} error={card.error} onRetry={refetch}>
+			{() => (
+				<Show when={!card.loading && !card.error}>
 				<Show when={error()}>
 					<div class={styles.errorMsg}>{error()}</div>
 				</Show>
@@ -228,6 +215,8 @@ const CardEditPage: Component = () => {
 					</div>
 				</div>
 			</Show>
+			)}
+			</AsyncView>
 			<input
 				type="file"
 				ref={fileInputRef}

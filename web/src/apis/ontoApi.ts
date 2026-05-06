@@ -1,6 +1,6 @@
-import { type Effect, Schema } from "effect";
+import { Effect, Schema } from "effect";
 import { request } from "./request";
-import type { ApiErrorType } from "./types";
+import { PaginatedSchema, type ApiErrorType } from "./types";
 
 export const OntoSchema = Schema.Struct({
 	id: Schema.Number,
@@ -10,8 +10,13 @@ export const OntoSchema = Schema.Struct({
 
 export interface Onto extends Schema.Schema.Type<typeof OntoSchema> {}
 
+/**
+ * 获取所有本体（后端返回分页结构，自动提取 items）。
+ */
 export const getOntos = (): Effect.Effect<readonly Onto[], ApiErrorType> =>
-	request("/onto", Schema.Array(OntoSchema), {});
+	request("/onto", PaginatedSchema(OntoSchema), {}).pipe(
+		Effect.map((r) => r.items),
+	);
 
 export const getOnto = (id: number): Effect.Effect<Onto, ApiErrorType> =>
 	request(`/onto/${id}`, OntoSchema, {});

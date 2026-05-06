@@ -103,16 +103,5 @@ pub enum TaskErrorCode {
     InvalidInput,
 }
 
-/// 错误响应
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ErrorResponse {
-    /// 错误码
-    pub code: TaskErrorCode,
-
-    /// 错误信息
-    pub message: String,
-
-    /// 错误详情（可选）
-    #[serde(default)]
-    pub details: Option<serde_json::Value>,
-}
+// ErrorResponse 已移至 crate::error::ApiError，
+// 任务模块专用错误可通过 response::error_response() 构造。

@@ -2,7 +2,7 @@ import { useNavigate } from "@solidjs/router";
 import { Effect } from "effect";
 import { type Component, createResource, createSignal, Show } from "solid-js";
 import { createCard, deleteCard, getCards, searchCards } from "@/apis/cardApi";
-import { type CreateCardRequest, getErrorMessage } from "@/apis/types";
+import { type CreateCardRequest, getErrorMessage, showErrorAlert } from "@/apis/types";
 
 import CardsGrid from "@/components/CardsGrid";
 import styles from "./CardsList.module.css";
@@ -16,7 +16,7 @@ const CardsListPage: Component = () => {
 				Effect.map((r) => r.items),
 				Effect.catchAll((error) => {
 					console.error("获取卡片列表失败:", error);
-					alert(`获取卡片列表失败: ${getErrorMessage(error)}`);
+					showErrorAlert(error, "获取卡片列表失败");
 					return Effect.succeed([]);
 				}),
 			),
@@ -71,7 +71,7 @@ const CardsListPage: Component = () => {
 						if (cardToDelete) {
 							mutate([...currentCards]);
 						}
-						alert(`删除卡片失败: ${getErrorMessage(error)}`);
+						showErrorAlert(error, "删除卡片失败");
 						return Effect.void;
 					}),
 					Effect.ensuring(
@@ -184,7 +184,7 @@ const CardsListPage: Component = () => {
 
 			<Show when={cards.error}>
 				<div class={styles.error}>
-					<p>加载失败: {cards.error?.toString()}</p>
+					<p>加载失败: {getErrorMessage(cards.error)}</p>
 					<button
 						type="button"
 						class={styles.primaryButton}

@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "@solidjs/router";
 import { Effect } from "effect";
 import { type Component, createResource, Show } from "solid-js";
 import { deleteCard, getCard } from "@/apis/cardApi";
+import { getErrorMessage, showErrorAlert } from "@/apis/types";
 import Markdown from "@/components/Markdown";
 import styles from "./CardDetail.module.css";
 
@@ -26,7 +27,10 @@ const CardDetailPage: Component = () => {
 		await Effect.runPromise(
 			deleteCard(cardId()).pipe(
 				Effect.tap(() => navigate("/c")),
-				Effect.catchAll(() => Effect.void),
+				Effect.catchAll((err) => {
+					showErrorAlert(err, "删除卡片失败");
+					return Effect.void;
+				}),
 			),
 		);
 	};
@@ -73,7 +77,7 @@ const CardDetailPage: Component = () => {
 			</Show>
 			<Show when={card.error}>
 				<div class={styles.loading}>
-					加载失败{" "}
+					加载失败: {getErrorMessage(card.error)}{" "}
 					<button
 						type="button"
 						class={styles.retryBtn}

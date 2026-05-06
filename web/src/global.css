@@ -29,6 +29,37 @@
 	--c-code: #d63384;
 	--c-code-bg: #f6f8fa;
 
+	/* ── Toast 通知颜色 ── */
+	--toast-error-bg: #fef2f2;
+	--toast-error-border: #fecaca;
+	--toast-error-text: #991b1b;
+	--toast-error-icon-bg: #dc2626;
+	--toast-error-icon-text: #fff;
+	--toast-error-code-bg: rgba(220, 38, 38, 0.12);
+
+	--toast-warning-bg: #fffbeb;
+	--toast-warning-border: #fde68a;
+	--toast-warning-text: #92400e;
+	--toast-warning-icon-bg: #d97706;
+	--toast-warning-icon-text: #fff;
+	--toast-warning-code-bg: rgba(217, 119, 6, 0.12);
+
+	--toast-success-bg: #f0fdf4;
+	--toast-success-border: #bbf7d0;
+	--toast-success-text: #166534;
+	--toast-success-icon-bg: #16a34a;
+	--toast-success-icon-text: #fff;
+	--toast-success-code-bg: rgba(22, 163, 74, 0.12);
+
+	--toast-info-bg: #eff6ff;
+	--toast-info-border: #bfdbfe;
+	--toast-info-text: #1e40af;
+	--toast-info-icon-bg: #2563eb;
+	--toast-info-icon-text: #fff;
+	--toast-info-code-bg: rgba(37, 99, 235, 0.12);
+
+	--toast-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08);
+
 	/* 侧边栏宽度 */
 	--sidebar-w: 200px;
 }

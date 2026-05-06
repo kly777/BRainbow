@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import { deleteCard, getCard, updateCard, uploadImage } from "@/apis/cardApi";
 import type { UpdateCardRequest } from "@/apis/types";
-import { getErrorMessage } from "@/apis/types";
+import { getErrorMessage, showErrorAlert } from "@/apis/types";
 import Markdown from "@/components/Markdown";
 import styles from "./CardEdit.module.css";
 
@@ -52,8 +52,8 @@ const CardEditPage: Component = () => {
 			const req: UpdateCardRequest = { content: content().trim() };
 			await Effect.runPromise(updateCard(cardId(), req));
 			navigate(`/c/${cardId()}`);
-		} catch {
-			setError("更新失败，请重试");
+		} catch (err) {
+			setError(getErrorMessage(err));
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -71,7 +71,10 @@ const CardEditPage: Component = () => {
 		await Effect.runPromise(
 			deleteCard(cardId()).pipe(
 				Effect.tap(() => navigate("/c")),
-				Effect.catchAll(() => Effect.void),
+				Effect.catchAll((err) => {
+					showErrorAlert(err, "删除卡片失败");
+					return Effect.void;
+				}),
 			),
 		);
 	};
@@ -192,7 +195,7 @@ const CardEditPage: Component = () => {
 			</Show>
 			<Show when={card.error}>
 				<div class={styles.loading}>
-					加载失败{" "}
+					加载失败: {getErrorMessage(card.error)}{" "}
 					<button
 						type="button"
 						class={styles.retryBtn}

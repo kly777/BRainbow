@@ -2,14 +2,58 @@ import { Effect, Schema } from "effect";
 import { getToken } from "../auth";
 import {
 	type ApiErrorType,
+	type ApiErrorResponse,
+	ApiErrorResponseSchema,
 	HttpError,
 	NetworkError,
 	ValidationError,
 } from "./types";
 
-
 const API_BASE_URL = "/api";
 
+/**
+ * 尝试从响应体解析后端统一错误格式 { code, message, details }。
+ * 兼容旧格式 { error: "..." } 和纯文本。
+ */
+async function extractErrorBody(
+	response: Response,
+): Promise<ApiErrorResponse> {
+	try {
+		const text = await response.text();
+		if (!text) {
+			return {
+				code: `HTTP_${response.status}`,
+				message: `HTTP ${response.status}`,
+			};
+		}
+		const json = JSON.parse(text);
+		// 新统一格式: { code, message, details? }
+		if (json && typeof json.code === "string" && typeof json.message === "string") {
+			return {
+				code: json.code,
+				message: json.message,
+				details: json.details,
+			};
+		}
+		// 旧格式: { error: "..." }
+		if (json && typeof json.error === "string") {
+			return {
+				code: `HTTP_${response.status}`,
+				message: json.error,
+			};
+		}
+		// 兜底：整个文本作为消息
+		return {
+			code: `HTTP_${response.status}`,
+			message: text.length > 200 ? text.slice(0, 200) : text,
+		};
+	} catch {
+		return {
+			code: `HTTP_${response.status}`,
+			message: `HTTP ${response.status}`,
+		};
+	}
+}
 
 /**
  * 通用的API请求函数
@@ -60,19 +104,18 @@ export const request = <T>(
 		});
 
 		if (!response.ok) {
-			let errorMessage = `HTTP ${response.status}`;
-			try {
-				const errorData = yield* Effect.tryPromise({
-					try: async (): Promise<{ error: string }> => response.json(),
-					catch: (cause: unknown) => new NetworkError({ cause }),
-				});
-				errorMessage = errorData.error || errorMessage;
-			} catch {
-				// If we can't parse JSON error, use default message
-			}
+			const errorBody = yield* Effect.tryPromise({
+				try: () => extractErrorBody(response),
+				catch: (cause: unknown) => new NetworkError({ cause }),
+			});
 
 			return yield* Effect.fail(
-				new HttpError({ status: response.status, message: errorMessage }),
+				new HttpError({
+					status: response.status,
+					code: errorBody.code,
+					message: errorBody.message,
+					details: errorBody.details,
+				}),
 			);
 		}
 

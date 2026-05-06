@@ -6,6 +6,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use super::service::OntoService;
+use crate::error;
 use crate::pagination::Pagination;
 use crate::state::AppState;
 
@@ -31,12 +32,6 @@ pub struct OntoResponse {
     pub description: Option<String>,
 }
 
-// /// 本体列表响应结构体
-// #[derive(Debug, Serialize)]
-// pub struct OntosResponse {
-//     pub ontos: Vec<OntoResponse>,
-// }
-
 /// 创建本体
 pub async fn create_onto_handler(
     State(state): State<AppState>,
@@ -57,8 +52,7 @@ pub async fn create_onto_handler(
             Json(response).into_response()
         }
         Err(e) => {
-            let error_msg = format!("创建本体失败: {}", e);
-            (axum::http::StatusCode::BAD_REQUEST, error_msg).into_response()
+            error::bad_request(format!("创建本体失败: {}", e)).into_response()
         }
     }
 }
@@ -73,11 +67,7 @@ pub async fn get_ontos_handler(
     match onto_service.get_ontos_paginated(&pagination).await {
         Ok(response) => Json(response).into_response(),
         Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("获取本体列表失败: {}", e),
-            )
-                .into_response()
+            error::internal_error(format!("获取本体列表失败: {}", e)).into_response()
         }
     }
 }
@@ -99,12 +89,10 @@ pub async fn get_onto_handler(
             Json(response).into_response()
         }
         Ok(None) => {
-            let error_msg = format!("本体 ID {} 不存在", id);
-            (axum::http::StatusCode::NOT_FOUND, error_msg).into_response()
+            error::not_found(format!("本体 ID {} 不存在", id)).into_response()
         }
         Err(e) => {
-            let error_msg = format!("获取本体失败: {}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            error::internal_error(format!("获取本体失败: {}", e)).into_response()
         }
     }
 }
@@ -131,8 +119,7 @@ pub async fn update_onto_handler(
             Json(onto_response).into_response()
         }
         Err(e) => {
-            let error_msg = format!("更新本体失败: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            error::internal_error(format!("更新本体失败: {}", e)).into_response()
         }
     }
 }
@@ -149,12 +136,11 @@ pub async fn delete_onto_handler(
             if rows_affected > 0 {
                 StatusCode::NO_CONTENT.into_response()
             } else {
-                (StatusCode::NOT_FOUND, format!("本体 ID {} 不存在", id)).into_response()
+                error::not_found(format!("本体 ID {} 不存在", id)).into_response()
             }
         }
         Err(e) => {
-            let error_msg = format!("删除本体失败: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            error::internal_error(format!("删除本体失败: {}", e)).into_response()
         }
     }
 }

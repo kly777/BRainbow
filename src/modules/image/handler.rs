@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::model::Image;
 use super::service::ImageService;
+use crate::error;
 use crate::pagination::Pagination;
 use crate::state::AppState;
 
@@ -59,36 +60,29 @@ pub async fn upload_handler(
 
         // 校验 MIME 类型
         if !ALLOWED_TYPES.iter().any(|t| content_type.starts_with(t)) {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({
-                    "error": format!("不支持的文件类型: {}，仅允许图片格式", content_type)
-                })),
-            )
-                .into_response();
+            return error::bad_request(format!(
+                "不支持的文件类型: {}，仅允许图片格式",
+                content_type
+            ))
+            .into_response();
         }
 
         // 读取全部字节
         let data = match field.bytes().await {
             Ok(d) => d,
             Err(e) => {
-                return (
-                    StatusCode::BAD_REQUEST,
-                    Json(serde_json::json!({"error": format!("读取文件失败: {}", e)})),
-                )
-                    .into_response();
+                return error::bad_request(format!("读取文件失败: {}", e)).into_response();
             }
         };
 
         // 校验大小
         if data.len() > MAX_SIZE {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({
-                    "error": format!("文件过大: {} 字节，最大允许 {} 字节", data.len(), MAX_SIZE)
-                })),
-            )
-                .into_response();
+            return error::bad_request(format!(
+                "文件过大: {} 字节，最大允许 {} 字节",
+                data.len(),
+                MAX_SIZE
+            ))
+            .into_response();
         }
 
         // 保存
@@ -111,20 +105,12 @@ pub async fn upload_handler(
                     .into_response();
             }
             Err(e) => {
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({"error": e})),
-                )
-                    .into_response();
+                return error::internal_error(format!("上传图片失败: {}", e)).into_response();
             }
         }
     }
 
-    (
-        StatusCode::BAD_REQUEST,
-        Json(serde_json::json!({"error": "缺少 'file' 字段"})),
-    )
-        .into_response()
+    error::bad_request("缺少 'file' 字段").into_response()
 }
 
 #[derive(Serialize)]
@@ -166,7 +152,7 @@ pub async fn list_handler(
             }))
             .into_response()
         }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+        Err(e) => error::internal_error(format!("获取图片列表失败: {}", e)).into_response(),
     }
 }
 
@@ -182,11 +168,7 @@ pub async fn rename_handler(
     Json(payload): Json<RenameRequest>,
 ) -> impl IntoResponse {
     if payload.original_name.trim().is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({"error": "名称不能为空"})),
-        )
-            .into_response();
+        return error::bad_request("名称不能为空").into_response();
     }
 
     let service = ImageService::new(state.db.clone());
@@ -194,11 +176,11 @@ pub async fn rename_handler(
         Ok(image) => Json(to_item(&image)).into_response(),
         Err(e) => {
             let code = if e == "图片不存在" {
-                StatusCode::NOT_FOUND
+                error::not_found(e)
             } else {
-                StatusCode::INTERNAL_SERVER_ERROR
+                error::internal_error(format!("重命名图片失败: {}", e))
             };
-            (code, Json(serde_json::json!({"error": e}))).into_response()
+            code.into_response()
         }
     }
 }
@@ -213,11 +195,11 @@ pub async fn delete_handler(
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => {
             let code = if e == "图片不存在" {
-                StatusCode::NOT_FOUND
+                error::not_found(e)
             } else {
-                StatusCode::INTERNAL_SERVER_ERROR
+                error::internal_error(format!("删除图片失败: {}", e))
             };
-            (code, Json(serde_json::json!({"error": e}))).into_response()
+            code.into_response()
         }
     }
 }

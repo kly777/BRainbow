@@ -6,6 +6,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use super::service::SignService;
+use crate::error;
 use crate::pagination::Pagination;
 use crate::state::AppState;
 
@@ -67,8 +68,7 @@ pub async fn create_sign_handler(
             Json(response).into_response()
         }
         Err(e) => {
-            let error_msg = format!("创建符号关系失败: {}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            error::internal_error(format!("创建符号关系失败: {}", e)).into_response()
         }
     }
 }
@@ -83,11 +83,7 @@ pub async fn get_signs_handler(
     match sign_service.get_signs_paginated(&pagination).await {
         Ok(response) => Json(response).into_response(),
         Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("获取符号关系列表失败: {}", e),
-            )
-                .into_response()
+            error::internal_error(format!("获取符号关系列表失败: {}", e)).into_response()
         }
     }
 }
@@ -113,12 +109,10 @@ pub async fn get_sign_handler(
             Json(response).into_response()
         }
         Ok(None) => {
-            let error_msg = format!("符号关系 ID {} 不存在", id);
-            (StatusCode::NOT_FOUND, error_msg).into_response()
+            error::not_found(format!("符号关系 ID {} 不存在", id)).into_response()
         }
         Err(e) => {
-            let error_msg = format!("获取符号关系失败: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            error::internal_error(format!("获取符号关系失败: {}", e)).into_response()
         }
     }
 }
@@ -135,18 +129,16 @@ pub async fn delete_sign_handler(
             if rows_affected > 0 {
                 StatusCode::NO_CONTENT.into_response()
             } else {
-                (StatusCode::NOT_FOUND, format!("符号关系 ID {} 不存在", id)).into_response()
+                error::not_found(format!("符号关系 ID {} 不存在", id)).into_response()
             }
         }
         Err(e) => {
-            let error_msg = format!("删除符号关系失败: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            error::internal_error(format!("删除符号关系失败: {}", e)).into_response()
         }
     }
 }
 
 /// 根据能指ID获取所有关系
-/// 按能指查询关系
 pub async fn get_signs_by_signifier_handler(
     Path(signifier): Path<String>,
     Query(pagination): Query<Pagination>,
@@ -160,17 +152,12 @@ pub async fn get_signs_by_signifier_handler(
     {
         Ok(response) => Json(response).into_response(),
         Err(e) => {
-            (
-                StatusCode::BAD_REQUEST,
-                format!("按能指查询关系失败: {}", e),
-            )
-                .into_response()
+            error::bad_request(format!("按能指查询关系失败: {}", e)).into_response()
         }
     }
 }
 
 /// 根据所指ID获取所有关系
-/// 按所指查询关系
 pub async fn get_signs_by_signified_handler(
     Path(signified): Path<String>,
     Query(pagination): Query<Pagination>,
@@ -184,11 +171,7 @@ pub async fn get_signs_by_signified_handler(
     {
         Ok(response) => Json(response).into_response(),
         Err(e) => {
-            (
-                StatusCode::BAD_REQUEST,
-                format!("按所指查询关系失败: {}", e),
-            )
-                .into_response()
+            error::bad_request(format!("按所指查询关系失败: {}", e)).into_response()
         }
     }
 }

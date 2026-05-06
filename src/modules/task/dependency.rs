@@ -6,9 +6,10 @@ use axum::{
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-use super::model::{TaskStatus};
+use super::model::TaskStatus;
 use super::repository::TaskRepository;
 use super::response::{internal_error, not_found, MessageResponse};
+use crate::error;
 use crate::state::AppState;
 
 // ==================== 查询参数结构体 ====================
@@ -53,10 +54,13 @@ pub async fn add_dependency_handler(
         .add_dependency(task_id, payload.depends_on_task_id)
         .await
     {
-        Ok(_) => (StatusCode::OK, Json(serde_json::json!({"message": "依赖关系已添加"}))).into_response(),
+        Ok(_) => (
+            StatusCode::OK,
+            Json(serde_json::json!({"message": "依赖关系已添加"})),
+        )
+            .into_response(),
         Err(e) => {
-            let error = format!("添加依赖失败: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": error}))).into_response()
+            error::bad_request(format!("添加依赖失败: {}", e)).into_response()
         }
     }
 }
@@ -80,8 +84,7 @@ pub async fn remove_dependency_handler(
             }
         }
         Err(e) => {
-            let error = format!("删除依赖失败: {}", e);
-            internal_error(error).into_response()
+            internal_error(format!("删除依赖失败: {}", e)).into_response()
         }
     }
 }

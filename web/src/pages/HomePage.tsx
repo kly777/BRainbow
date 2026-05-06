@@ -6,6 +6,7 @@ import { createTask, getTasks } from "@/apis/taskApi";
 import {
 	type CreateTaskRequest,
 	getErrorMessage,
+	showErrorAlert,
 	type Task,
 } from "@/apis/types";
 import type { CardData } from "@/components/Card";
@@ -49,7 +50,7 @@ const HomePage = () => {
 			setRecentCards(sortedCards.slice(0, 4));
 		} catch (error) {
 			console.error("加载数据失败:", error);
-			alert(`加载数据失败: ${getErrorMessage(error)}`);
+			showErrorAlert(error, "加载数据失败");
 		} finally {
 			setLoading(false);
 		}
@@ -96,11 +97,10 @@ const HomePage = () => {
 			// 用服务器返回的真实任务替换临时任务
 			setTodos(todos().map((t) => (t.id === tempId ? newTask : t)));
 		} catch (error) {
-			const msg = getErrorMessage(error);
-			console.error("创建任务失败:", msg);
+				console.error("创建任务失败:", getErrorMessage(error));
 			// 如果失败，从列表中移除临时任务
 			setTodos(todos().filter((t) => t.id !== tempId));
-			alert(`创建任务失败: ${msg}`);
+			showErrorAlert(error, "创建任务失败");
 		}
 	};
 
@@ -122,7 +122,7 @@ const HomePage = () => {
 			await Effect.runPromise(apiDeleteCard(id));
 		} catch (error) {
 			console.error("删除卡片失败:", error);
-			alert(`删除卡片失败: ${getErrorMessage(error)}`);
+			showErrorAlert(error, "删除卡片失败");
 			try {
 				const cards = await Effect.runPromise(getCards());
 				const sortedCards = [...cards.items].sort(

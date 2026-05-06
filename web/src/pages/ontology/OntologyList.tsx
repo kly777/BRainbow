@@ -8,6 +8,7 @@ import {
 } from "solid-js";
 import type { Onto } from "@/apis/ontoApi";
 import { createOnto, deleteOnto, getOntos } from "@/apis/ontoApi";
+import { getErrorMessage, showErrorAlert } from "@/apis/types";
 import styles from "./OntologyList.module.css";
 
 const OntologyListPage: Component = () => {
@@ -17,6 +18,7 @@ const OntologyListPage: Component = () => {
 			getOntos().pipe(
 				Effect.catchAll((error) => {
 					console.error("获取本体列表失败:", error);
+					showErrorAlert(error, "获取本体列表失败");
 					return Effect.succeed([] as readonly Onto[]);
 				}),
 			),
@@ -75,7 +77,7 @@ const OntologyListPage: Component = () => {
 				}),
 				Effect.catchAll((error) => {
 					console.error("创建本体失败:", error);
-					setCreateError("创建本体失败，请重试");
+					setCreateError(getErrorMessage(error));
 					return Effect.void;
 				}),
 				Effect.ensuring(
@@ -112,7 +114,7 @@ const OntologyListPage: Component = () => {
 						if (ontoToDelete) {
 							mutate([...currentData]);
 						}
-						alert("删除本体失败，请重试");
+						showErrorAlert(error, "删除本体失败");
 						return Effect.void;
 					}),
 					Effect.ensuring(
@@ -195,7 +197,7 @@ const OntologyListPage: Component = () => {
 
 			<Show when={ontologies.error}>
 				<div class={styles.emptyState}>
-					<p>加载失败: {ontologies.error?.toString()}</p>
+					<p>加载失败: {getErrorMessage(ontologies.error)}</p>
 					<button
 						type="button"
 						class={styles.primaryButton}

@@ -1,6 +1,5 @@
 use axum::{
     extract::State,
-    http::StatusCode,
     response::{IntoResponse, Json},
 };
 use bcrypt::{hash, verify, DEFAULT_COST};
@@ -9,6 +8,7 @@ use std::collections::HashMap;
 
 use super::repository::UserRepository;
 use crate::auth::create_token;
+use crate::error;
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -36,15 +36,15 @@ pub async fn register_handler(
     let password = payload.password.trim().to_string();
 
     if name.is_empty() || password.is_empty() {
-        return (StatusCode::BAD_REQUEST, "用户名和密码不能为空").into_response();
+        return error::bad_request("用户名和密码不能为空").into_response();
     }
     if password.len() < 4 {
-        return (StatusCode::BAD_REQUEST, "密码至少4位").into_response();
+        return error::bad_request("密码至少4位").into_response();
     }
 
     // 检查是否已存在
     if let Ok(Some(_)) = repo.find_by_name(&name).await {
-        return (StatusCode::CONFLICT, "用户名已存在").into_response();
+        return error::conflict("用户名已存在").into_response();
     }
 
     // 第一个用户是 admin
@@ -55,7 +55,9 @@ pub async fn register_handler(
 
     let password_hash = match hash(&password, DEFAULT_COST) {
         Ok(h) => h,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, format!("密码加密失败: {}", e)).into_response(),
+        Err(e) => {
+            return error::internal_error(format!("密码加密失败: {}", e)).into_response()
+        }
     };
 
     match repo.create(&name, &password_hash, role).await {
@@ -66,9 +68,12 @@ pub async fn register_handler(
                 name: user.name,
                 role: user.role,
                 token,
-            }).into_response()
+            })
+            .into_response()
         }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("创建用户失败: {}", e)).into_response(),
+        Err(e) => {
+            error::internal_error(format!("创建用户失败: {}", e)).into_response()
+        }
     }
 }
 
@@ -82,8 +87,12 @@ pub async fn login_handler(
 
     let user = match repo.find_by_name(&name).await {
         Ok(Some(u)) => u,
-        Ok(None) => return (StatusCode::UNAUTHORIZED, "用户名或密码错误").into_response(),
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, format!("数据库错误: {}", e)).into_response(),
+        Ok(None) => {
+            return error::unauthorized("用户名或密码错误").into_response()
+        }
+        Err(e) => {
+            return error::internal_error(format!("数据库错误: {}", e)).into_response()
+        }
     };
 
     match verify(&payload.password, &user.password_hash) {
@@ -94,10 +103,13 @@ pub async fn login_handler(
                 name: user.name,
                 role: user.role,
                 token,
-            }).into_response()
+            })
+            .into_response()
         }
-        Ok(false) => (StatusCode::UNAUTHORIZED, "用户名或密码错误").into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("密码验证失败: {}", e)).into_response(),
+        Ok(false) => error::unauthorized("用户名或密码错误").into_response(),
+        Err(e) => {
+            error::internal_error(format!("密码验证失败: {}", e)).into_response()
+        }
     }
 }
 
@@ -118,6 +130,8 @@ pub async fn user_handler(State(state): State<AppState>) -> impl IntoResponse {
                 .collect();
             Json(user_list).into_response()
         }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("获取用户失败: {}", e)).into_response(),
+        Err(e) => {
+            error::internal_error(format!("获取用户失败: {}", e)).into_response()
+        }
     }
 }

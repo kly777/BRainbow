@@ -6,6 +6,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use super::service::CardService;
+use crate::error;
 use crate::pagination::Pagination;
 use crate::state::AppState;
 
@@ -51,8 +52,7 @@ pub async fn create_card_handler(
             (StatusCode::CREATED, Json(response)).into_response()
         }
         Err(e) => {
-            let error_msg = format!("创建卡片失败: {}", e);
-            (StatusCode::BAD_REQUEST, error_msg).into_response()
+            error::bad_request(format!("创建卡片失败: {}", e)).into_response()
         }
     }
 }
@@ -67,7 +67,7 @@ pub async fn get_cards_handler(
     match card_service.get_cards_paginated(&pagination).await {
         Ok(response) => Json(response).into_response(),
         Err(e) => {
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("获取卡片列表失败: {}", e)).into_response()
+            error::internal_error(format!("获取卡片列表失败: {}", e)).into_response()
         }
     }
 }
@@ -91,12 +91,10 @@ pub async fn get_card_handler(
             Json(card_response).into_response()
         }
         Ok(None) => {
-            let error_msg = format!("卡片 ID {} 不存在", id);
-            (StatusCode::NOT_FOUND, error_msg).into_response()
+            error::not_found(format!("卡片 ID {} 不存在", id)).into_response()
         }
         Err(e) => {
-            let error_msg = format!("获取卡片失败: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            error::internal_error(format!("获取卡片失败: {}", e)).into_response()
         }
     }
 }
@@ -123,8 +121,7 @@ pub async fn update_card_handler(
             Json(response).into_response()
         }
         Err(e) => {
-            let error_msg = format!("更新卡片失败: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            error::internal_error(format!("更新卡片失败: {}", e)).into_response()
         }
     }
 }
@@ -141,12 +138,11 @@ pub async fn delete_card_handler(
             if rows_affected > 0 {
                 StatusCode::NO_CONTENT.into_response()
             } else {
-                (StatusCode::NOT_FOUND, format!("卡片 ID {} 不存在", id)).into_response()
+                error::not_found(format!("卡片 ID {} 不存在", id)).into_response()
             }
         }
         Err(e) => {
-            let error_msg = format!("删除卡片失败: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, error_msg).into_response()
+            error::internal_error(format!("删除卡片失败: {}", e)).into_response()
         }
     }
 }
@@ -165,11 +161,7 @@ pub async fn search_cards_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     if params.q.trim().is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            "搜索关键词不能为空".to_string(),
-        )
-            .into_response();
+        return error::bad_request("搜索关键词不能为空".to_string()).into_response();
     }
 
     let card_service = CardService::new(state.db.clone());
@@ -180,11 +172,7 @@ pub async fn search_cards_handler(
     {
         Ok(response) => Json(response).into_response(),
         Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("搜索卡片失败: {}", e),
-            )
-                .into_response()
+            error::internal_error(format!("搜索卡片失败: {}", e)).into_response()
         }
     }
 }

@@ -1,6 +1,6 @@
-import { type Effect, Schema } from "effect";
+import { Effect, Schema } from "effect";
 import { request } from "./request";
-import type { ApiErrorType } from "./types";
+import { PaginatedSchema, type ApiErrorType } from "./types";
 
 export const SignSchema = Schema.Struct({
 	id: Schema.Number,
@@ -14,8 +14,11 @@ export const SignSchema = Schema.Struct({
 
 export type Sign = Schema.Schema.Type<typeof SignSchema>;
 
+/** 获取所有符号关系（后端返回分页结构，自动提取 items）。 */
 export const getSigns = (): Effect.Effect<readonly Sign[], ApiErrorType> =>
-	request("/sign", Schema.Array(SignSchema), {});
+	request("/sign", PaginatedSchema(SignSchema), {}).pipe(
+		Effect.map((r) => r.items),
+	);
 
 export const getSign = (id: number): Effect.Effect<Sign, ApiErrorType> =>
 	request(`/sign/${id}`, SignSchema, {});
@@ -37,20 +40,22 @@ export const deleteSign = (id: number): Effect.Effect<void, ApiErrorType> =>
 		method: "DELETE",
 	});
 
+/** 按能指查询（后端返回分页结构，自动提取 items）。 */
 export const getSignsBySignifier = (
 	signifier: string,
 ): Effect.Effect<readonly Sign[], ApiErrorType> =>
 	request(
 		`/sign/signifier/${encodeURIComponent(signifier)}`,
-		Schema.Array(SignSchema),
+		PaginatedSchema(SignSchema),
 		{},
-	);
+	).pipe(Effect.map((r) => r.items));
 
+/** 按所指查询（后端返回分页结构，自动提取 items）。 */
 export const getSignsBySignified = (
 	signified: string,
 ): Effect.Effect<readonly Sign[], ApiErrorType> =>
 	request(
 		`/sign/signified/${encodeURIComponent(signified)}`,
-		Schema.Array(SignSchema),
+		PaginatedSchema(SignSchema),
 		{},
-	);
+	).pipe(Effect.map((r) => r.items));

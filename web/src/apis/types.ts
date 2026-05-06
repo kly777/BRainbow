@@ -147,22 +147,27 @@ export const UpdateTaskRequestSchema = Schema.Struct({
 	user_id: Schema.optional(Schema.NullOr(Schema.Number)),
 });
 
-export const ApiResponseSchema = <T extends Schema.Schema.Any>(dataSchema: T) =>
-	Schema.Union(
-		Schema.Struct({
-			success: Schema.Literal(true),
-			data: dataSchema,
-		}),
-		Schema.Struct({
-			success: Schema.Literal(false),
-			error: Schema.String,
-		}),
-	);
+// ==================== Unified API Error Schema ====================
 
-export const ApiErrorSchema = Schema.Struct({
-	error: Schema.String,
+/**
+ * 后端统一的错误响应格式:
+ * {
+ *   "code": "NOT_FOUND",           // 机器可读错误码
+ *   "message": "卡片 ID 3 不存在",  // 人类可读错误信息（中文）
+ *   "details": null                 // 可选附加信息
+ * }
+ */
+export const ApiErrorResponseSchema = Schema.Struct({
+	code: Schema.String,
+	message: Schema.String,
+	details: Schema.optional(Schema.Unknown),
 });
 
+export type ApiErrorResponse = Schema.Schema.Type<
+	typeof ApiErrorResponseSchema
+>;
+
+// 兼容旧格式的 error 字段
 export const ApiMessageSchema = Schema.Struct({
 	message: Schema.String,
 });
@@ -192,8 +197,6 @@ export type CreateCardRequest = Schema.Schema.Type<
 export type UpdateCardRequest = Schema.Schema.Type<
 	typeof UpdateCardRequestSchema
 >;
-export type ApiError = Schema.Schema.Type<typeof ApiErrorSchema>;
-export type ApiMessage = Schema.Schema.Type<typeof ApiMessageSchema>;
 export type ApiResponse<T> =
 	| { readonly success: true; readonly data: T }
 	| { readonly success: false; readonly error: string };
@@ -210,9 +213,17 @@ export class NetworkError extends Data.TaggedError("NetworkError")<{
 	}
 }
 
+/**
+ * HTTP 错误 - 携带后端返回的统一错误结构
+ */
 export class HttpError extends Data.TaggedError("HttpError")<{
 	readonly status: number;
+	/** 后端错误码，如 "NOT_FOUND", "VALIDATION_ERROR" */
+	readonly code: string;
+	/** 人类可读错误消息 */
 	readonly message: string;
+	/** 可选的附加详情 */
+	readonly details?: unknown;
 }> {}
 
 export class ValidationError extends Data.TaggedError("ValidationError")<{
@@ -268,18 +279,88 @@ export function getStatusText(status: string): string {
 
 // ==================== Error Utility ====================
 
+/**
+ * 从任意错误对象提取用户友好的错误消息。
+ * 优先展示后端返回的中文消息，兜底展示 HTTP 状态码或网络错误提示。
+ */
 export function getErrorMessage(error: unknown): string {
 	if (error instanceof HttpError) {
-		return error.message || `服务器错误 (${error.status})`;
+		// 后端返回的统一格式，直接使用 message 字段（已是中文）
+		const details = error.details
+			? ` (${JSON.stringify(error.details)})`
+			: "";
+		return error.message
+			? `${error.message}${details}`
+			: `服务器错误 (${error.status}, ${error.code})`;
 	}
 	if (error instanceof NetworkError) {
 		return "网络连接失败，请检查网络";
 	}
 	if (error instanceof ValidationError) {
-		return "数据格式错误";
+		return "数据格式错误，请联系开发者";
 	}
 	if (error instanceof Error) {
 		return error.message;
 	}
 	return "未知错误";
+}
+
+/**
+ * 将错误按 HTTP 状态码映射为 toast 类型。
+ */
+function errorToastType(error: unknown): "error" | "warning" {
+	if (error instanceof HttpError && error.status >= 400 && error.status < 500) {
+		return "warning";
+	}
+	return "error";
+}
+
+/**
+ * 从错误对象中提取错误码（用于 toast 右上角小徽章）。
+ */
+function errorCode(error: unknown): string | undefined {
+	if (error instanceof HttpError) {
+		return error.code;
+	}
+	if (error instanceof NetworkError) {
+		return "NETWORK";
+	}
+	if (error instanceof ValidationError) {
+		return "VALIDATION";
+	}
+	return undefined;
+}
+
+import { showToast } from "../components/toastStore";
+
+/**
+ * 通过右下角 Toast 弹出错误提示（替代原来的 alert）。
+ *
+ * @param error  - Effect 捕获的错误对象（HttpError / NetworkError / …）
+ * @param prefix - 操作上下文，如 "删除卡片失败"
+ *
+ * 示例：
+ *   showErrorAlert(error, "删除卡片失败")
+ *   → Toast 标题："删除卡片失败"
+ *   → Toast 内容："卡片 ID 3 不存在"（后端返回的中文消息）
+ *   → 右上角徽章：NOT_FOUND
+ */
+export function showErrorAlert(error: unknown, prefix?: string): void {
+	const detail = getErrorMessage(error);
+
+	showToast({
+		type: errorToastType(error),
+		title: prefix || "操作失败",
+		message: detail,
+		details: errorCode(error),
+		duration: 6000,
+	});
+}
+
+/**
+ * 从任意错误对象返回用于组件内展示的错误字符串。
+ */
+export function showErrorInline(error: unknown, prefix?: string): string {
+	const msg = getErrorMessage(error);
+	return prefix ? `${prefix}: ${msg}` : msg;
 }

@@ -12,6 +12,7 @@ import {
 import {
 	type CreateTaskRequest,
 	getErrorMessage,
+	showErrorAlert,
 	type Task,
 } from "@/apis/types";
 
@@ -61,7 +62,7 @@ export function useTaskActions(
 					t.id === taskId ? { ...t, status: originalStatus } : t,
 				),
 			);
-			alert(`更新任务状态失败: ${msg}`);
+			showErrorAlert(error, "更新任务状态失败");
 		}
 	};
 
@@ -76,7 +77,7 @@ export function useTaskActions(
 		} catch (error) {
 			const msg = getErrorMessage(error);
 			console.error("删除任务失败:", msg);
-			alert(`删除任务失败: ${msg}`);
+			showErrorAlert(error, "删除任务失败");
 			await reload();
 		}
 	};
@@ -100,7 +101,7 @@ export function useTaskActions(
 			const msg = getErrorMessage(error);
 			console.error("更新任务失败:", msg);
 			setTasks(getTasks().map((t) => (t.id === taskId ? originalTask : t)));
-			alert(`更新任务失败: ${msg}`);
+			showErrorAlert(error, "更新任务失败");
 		}
 	};
 
@@ -112,7 +113,7 @@ export function useTaskActions(
 		} catch (error) {
 			const msg = getErrorMessage(error);
 			console.error("创建子任务失败:", msg);
-			alert(`创建子任务失败: ${msg}`);
+			showErrorAlert(error, "创建子任务失败");
 		}
 	};
 

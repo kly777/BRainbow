@@ -61,6 +61,43 @@ import { getToken } from "../auth";
 import { HttpError, NetworkError, ValidationError } from "./types";
 
 /**
+ * 解析后端统一错误响应，兼容多格式
+ */
+async function extractImageError(response: Response): Promise<{
+	code: string;
+	message: string;
+	details?: unknown;
+}> {
+	try {
+		const json = await response.json();
+		// 统一格式: { code, message, details? }
+		if (json && typeof json.code === "string" && typeof json.message === "string") {
+			return {
+				code: json.code,
+				message: json.message,
+				details: json.details,
+			};
+		}
+		// 旧格式: { error: "..." }
+		if (json && typeof json.error === "string") {
+			return {
+				code: `HTTP_${response.status}`,
+				message: json.error,
+			};
+		}
+		return {
+			code: `HTTP_${response.status}`,
+			message: JSON.stringify(json),
+		};
+	} catch {
+		return {
+			code: `HTTP_${response.status}`,
+			message: `HTTP ${response.status}`,
+		};
+	}
+}
+
+/**
  * 上传图片（multipart/form-data）
  */
 export const uploadImage = (
@@ -87,16 +124,17 @@ export const uploadImage = (
 		});
 
 		if (!response.ok) {
-			let errorMessage = `HTTP ${response.status}`;
-			const errorJson = yield* E.tryPromise({
-				try: async () => response.json() as { error?: string },
+			const err = yield* E.tryPromise({
+				try: () => extractImageError(response),
 				catch: (cause: unknown) => new NetworkError({ cause }),
 			});
-			if (errorJson.error) {
-				errorMessage = errorJson.error;
-			}
 			return yield* E.fail(
-				new HttpError({ status: response.status, message: errorMessage }),
+				new HttpError({
+					status: response.status,
+					code: err.code,
+					message: err.message,
+					details: err.details,
+				}),
 			);
 		}
 

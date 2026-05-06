@@ -1,6 +1,7 @@
 import { A } from "@solidjs/router";
 import { createSignal, type JSX } from "solid-js";
 import AuthStatus from "./AuthStatus";
+import ToastContainer from "./components/Toast";
 import styles from "./App.module.css";
 
 export default function Layout(props: { children?: JSX.Element }) {
@@ -68,6 +69,9 @@ export default function Layout(props: { children?: JSX.Element }) {
 
 			{/* 主内容区 */}
 			<main class={styles.content}>{props.children}</main>
+
+			{/* 全局 Toast 通知 */}
+			<ToastContainer />
 		</div>
 	);
 }

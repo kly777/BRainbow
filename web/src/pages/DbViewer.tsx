@@ -1,6 +1,7 @@
 import { type Component, createSignal, For, onMount } from "solid-js";
 import { Effect } from "effect";
 import { getTables, getTableData, type ColumnInfo } from "@/apis/dbApi";
+import { getErrorMessage } from "@/apis/types";
 
 const DB: Component = () => {
 	const [tables, setTables] = createSignal<string[]>([]);
@@ -16,7 +17,7 @@ const DB: Component = () => {
 			const result = await Effect.runPromise(getTables());
 			setTables([...result]);
 		} catch (e) {
-			setError(e instanceof Error ? e.message : String(e));
+			setError(getErrorMessage(e));
 		} finally {
 			setLoading(false);
 		}
@@ -31,7 +32,7 @@ const DB: Component = () => {
 			setColumns([...result.header]);
 			setRows(result.rows.map((row) => row.map((v) => String(v ?? ""))));
 		} catch (e) {
-			setError(e instanceof Error ? e.message : String(e));
+			setError(getErrorMessage(e));
 		} finally {
 			setLoading(false);
 		}
@@ -124,7 +125,8 @@ const DB: Component = () => {
 														padding: "6px 10px",
 														"text-align": "left",
 														background: "var(--bg-input, #fef9f2)",
-														"border-bottom": "2px solid var(--border, #f0e6d3)",
+														"border-bottom":
+															"2px solid var(--border, #f0e6d3)",
 														"white-space": "nowrap",
 													}}
 												>

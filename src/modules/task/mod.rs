@@ -16,7 +16,7 @@ pub use crud::{
     create_task_handler, quick_create_task_handler, update_task_handler,
     delete_task_handler,
 };
-pub use dto::{ErrorResponse, TaskErrorCode};
+
 pub use query::{
     get_tree_handler, get_calendar_handler, get_dag_handler,
     get_stats_handler, search_tasks_handler,

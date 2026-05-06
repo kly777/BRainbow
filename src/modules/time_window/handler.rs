@@ -11,7 +11,7 @@ use super::model::{
     CreateTimeWindowRequest, TimeWindow, TimeWindowType,
     UpdateTimeWindowRequest,
 };
-use crate::modules::task::{ErrorResponse, TaskErrorCode};
+use crate::error::{self, ApiError};
 use super::repository::TimeWindowRepository;
 use crate::pagination::Pagination;
 use crate::state::AppState;
@@ -71,37 +71,16 @@ impl From<TimeWindow> for TimeWindowResponse {
 
 // ==================== 辅助函数 ====================
 
-fn bad_request(code: TaskErrorCode, message: String) -> (StatusCode, Json<ErrorResponse>) {
-    (
-        StatusCode::BAD_REQUEST,
-        Json(ErrorResponse {
-            code,
-            message,
-            details: None,
-        }),
-    )
+fn bad_request(code: &str, message: String) -> (StatusCode, Json<ApiError>) {
+    error::bad_request_with_code(code, message)
 }
 
-fn not_found() -> (StatusCode, Json<ErrorResponse>) {
-    (
-        StatusCode::NOT_FOUND,
-        Json(ErrorResponse {
-            code: TaskErrorCode::TaskNotFound,
-            message: "时间窗口未找到".to_string(),
-            details: None,
-        }),
-    )
+fn not_found() -> (StatusCode, Json<ApiError>) {
+    error::not_found("时间窗口未找到")
 }
 
-fn internal_error(message: String) -> (StatusCode, Json<ErrorResponse>) {
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        Json(ErrorResponse {
-            code: TaskErrorCode::SlotOverlap,
-            message,
-            details: None,
-        }),
-    )
+fn internal_error(message: String) -> (StatusCode, Json<ApiError>) {
+    error::internal_error(message)
 }
 
 // ==================== 处理器函数 ====================
@@ -118,7 +97,7 @@ pub async fn create_time_window_handler(
         Ok(time_window) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Err(sqlx::Error::Protocol(msg)) if msg.contains("Start time must be earlier") => {
             bad_request(
-                TaskErrorCode::InvalidTimeRange,
+                "invalid_time_range",
                 "开始时间必须早于结束时间".to_string(),
             )
             .into_response()
@@ -127,13 +106,12 @@ pub async fn create_time_window_handler(
             let msg = format!("{}", e);
             if msg.contains("FOREIGN KEY") {
                 return bad_request(
-                    TaskErrorCode::TaskNotFound,
+                    "task_not_found",
                     format!("任务 ID {} 不存在", task_id),
                 )
                 .into_response();
             }
-            let error = format!("创建时间窗口失败: {}", e);
-            internal_error(error).into_response()
+            internal_error(format!("创建时间窗口失败: {}", e)).into_response()
         }
     }
 }
@@ -149,8 +127,7 @@ pub async fn get_time_window_handler(
         Ok(Some(time_window)) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Ok(None) => not_found().into_response(),
         Err(e) => {
-            let error = format!("获取时间窗口失败: {}", e);
-            internal_error(error).into_response()
+            internal_error(format!("获取时间窗口失败: {}", e)).into_response()
         }
     }
 }
@@ -191,12 +168,10 @@ pub async fn get_time_windows_handler(
     }
 
     if let Some(_user_id) = query.user_id {
-        // 按用户查询暂时返回空（待实现分页版本）
         let empty: Vec<TimeWindowResponse> = Vec::new();
         return Json(PaginatedResponse::new(empty, 0, p)).into_response();
     }
 
-    // 无查询条件
     let empty: Vec<TimeWindowResponse> = Vec::new();
     Json(PaginatedResponse::new(empty, 0, p)).into_response()
 }
@@ -213,8 +188,7 @@ pub async fn update_time_window_handler(
         Ok(time_window) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Err(sqlx::Error::RowNotFound) => not_found().into_response(),
         Err(e) => {
-            let error = format!("更新时间窗口失败: {}", e);
-            internal_error(error).into_response()
+            internal_error(format!("更新时间窗口失败: {}", e)).into_response()
         }
     }
 }
@@ -235,8 +209,7 @@ pub async fn delete_time_window_handler(
             }
         }
         Err(e) => {
-            let error = format!("删除时间窗口失败: {}", e);
-            internal_error(error).into_response()
+            internal_error(format!("删除时间窗口失败: {}", e)).into_response()
         }
     }
 }
@@ -265,8 +238,7 @@ pub async fn get_time_window_stats_handler(
             .into_response()
         }
         Err(e) => {
-            let error = format!("获取时间窗口统计失败: {}", e);
-            internal_error(error).into_response()
+            internal_error(format!("获取时间窗口统计失败: {}", e)).into_response()
         }
     }
 }
@@ -285,7 +257,7 @@ pub async fn check_time_conflict_handler(
 
     if start_time_str.is_none() || end_time_str.is_none() {
         return bad_request(
-            TaskErrorCode::InvalidTimeRange,
+            "invalid_time_range",
             "需要提供start_time和end_time参数".to_string(),
         )
         .into_response();
@@ -295,7 +267,7 @@ pub async fn check_time_conflict_handler(
         Ok(time) => time,
         Err(_) => {
             return bad_request(
-                TaskErrorCode::InvalidTimeRange,
+                "invalid_time_range",
                 "无效的开始时间格式".to_string(),
             )
             .into_response()
@@ -306,7 +278,7 @@ pub async fn check_time_conflict_handler(
         Ok(time) => time,
         Err(_) => {
             return bad_request(
-                TaskErrorCode::InvalidTimeRange,
+                "invalid_time_range",
                 "无效的结束时间格式".to_string(),
             )
             .into_response()
@@ -319,10 +291,11 @@ pub async fn check_time_conflict_handler(
         .check_time_conflict(task_id, start_time, end_time, exclude_id)
         .await
     {
-        Ok(has_conflict) => Json(serde_json::json!({ "has_conflict": has_conflict })).into_response(),
+        Ok(has_conflict) => {
+            Json(serde_json::json!({ "has_conflict": has_conflict })).into_response()
+        }
         Err(e) => {
-            let error = format!("检查时间窗口冲突失败: {}", e);
-            internal_error(error).into_response()
+            internal_error(format!("检查时间窗口冲突失败: {}", e)).into_response()
         }
     }
 }

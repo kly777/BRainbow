@@ -1,11 +1,9 @@
-use axum::{
-    http::StatusCode,
-    response::Json,
-};
+use axum::{http::StatusCode, response::Json};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::dto::{ErrorResponse, TaskErrorCode};
+use crate::error::ApiError;
+use super::dto::TaskErrorCode;
 use super::model::{Task, TaskStatus};
 
 // ==================== 响应结构体 ====================
@@ -91,32 +89,41 @@ pub struct MessageResponse {
 
 // ==================== 错误处理工具函数 ====================
 
-pub fn error_response(code: TaskErrorCode, message: String) -> ErrorResponse {
-    ErrorResponse {
-        code,
+/// 将 TaskErrorCode 转为 snake_case 字符串（与 serde 序列化一致）
+fn code_to_string(code: TaskErrorCode) -> String {
+    serde_json::to_value(code)
+        .ok()
+        .and_then(|v| v.as_str().map(String::from))
+        .unwrap_or_else(|| "unknown_error".to_string())
+}
+
+pub fn error_response(code: TaskErrorCode, message: String) -> ApiError {
+    ApiError {
+        code: code_to_string(code),
         message,
         details: None,
     }
 }
 
-pub fn internal_error(message: String) -> (StatusCode, Json<ErrorResponse>) {
+pub fn internal_error(message: String) -> (StatusCode, Json<ApiError>) {
     (
         StatusCode::INTERNAL_SERVER_ERROR,
-        Json(error_response(
-            TaskErrorCode::TaskNotFound,
-            format!("内部错误: {}", message),
-        )),
+        Json(ApiError {
+            code: "INTERNAL_ERROR".to_string(),
+            message: format!("内部错误: {}", message),
+            details: None,
+        }),
     )
 }
 
-pub fn bad_request(code: TaskErrorCode, message: String) -> (StatusCode, Json<ErrorResponse>) {
+pub fn bad_request(code: TaskErrorCode, message: String) -> (StatusCode, Json<ApiError>) {
     (
         StatusCode::BAD_REQUEST,
         Json(error_response(code, message)),
     )
 }
 
-pub fn not_found() -> (StatusCode, Json<ErrorResponse>) {
+pub fn not_found() -> (StatusCode, Json<ApiError>) {
     (
         StatusCode::NOT_FOUND,
         Json(error_response(

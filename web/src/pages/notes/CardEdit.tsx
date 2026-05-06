@@ -71,10 +71,7 @@ const CardEditPage: Component = () => {
 		await Effect.runPromise(
 			deleteCard(cardId()).pipe(
 				Effect.tap(() => navigate("/c")),
-				Effect.catchAll((err) => {
-					console.error("删除卡片失败:", getErrorMessage(err));
-					return Effect.void;
-				}),
+				Effect.catchTag("HttpError", () => Effect.void),
 			),
 		);
 	};

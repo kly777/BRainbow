@@ -7,6 +7,12 @@ import { type CreateCardRequest, getErrorMessage } from "@/apis/types";
 import CardsGrid from "@/components/CardsGrid";
 import styles from "./CardsList.module.css";
 
+const emptyFallback = Effect.catchTags({
+	HttpError: () => Effect.succeed([]),
+	NetworkError: () => Effect.succeed([]),
+	ValidationError: () => Effect.succeed([]),
+});
+
 const CardsListPage: Component = () => {
 	const navigate = useNavigate();
 
@@ -14,8 +20,7 @@ const CardsListPage: Component = () => {
 		Effect.runPromise(
 			getCards().pipe(
 				Effect.map((r) => r.items),
-				// 加载失败 → 全局 toast 已触发，这里只降级返回空列表
-				Effect.catchAll(() => Effect.succeed([])),
+				emptyFallback,
 			),
 		),
 	);
@@ -29,7 +34,6 @@ const CardsListPage: Component = () => {
 	const handleCardClick = (id: number) => navigate(`/c/${id}`);
 	const handleCardEdit = (id: number) => navigate(`/c/edit/${id}`);
 
-	// ── 删除：乐观移除 + 失败回滚（全局 toast 已触发） ──
 	const handleCardDelete = async (id: number) => {
 		if (!confirm("确定要删除这个卡片吗？此操作不可撤销。")) return;
 		if (deletingCardId() === id) return;
@@ -43,8 +47,7 @@ const CardsListPage: Component = () => {
 		Effect.runPromise(
 			deleteCard(id).pipe(
 				Effect.tap(() => console.log("卡片删除成功:", id)),
-				Effect.catchAll(() => {
-					// 全局已 toast，组件只回滚
+				Effect.catchTag("HttpError", () => {
 					if (cardToDelete) mutate([...currentCards]);
 					return Effect.void;
 				}),
@@ -53,7 +56,6 @@ const CardsListPage: Component = () => {
 		);
 	};
 
-	// ── 创建：表单校验错误内联展示 ──
 	const handleCreateCard = async () => {
 		if (!newCardContent().trim()) {
 			setError("内容不能为空");
@@ -72,8 +74,7 @@ const CardsListPage: Component = () => {
 					setShowCreateModal(false);
 					mutate([newCard, ...(cards() || [])]);
 				}),
-				Effect.catchAll((err) => {
-					// 业务错误（如 400 内容过长）→ 内联展示
+				Effect.catchTag("HttpError", (err) => {
 					setError(getErrorMessage(err));
 					return Effect.void;
 				}),
@@ -85,10 +86,7 @@ const CardsListPage: Component = () => {
 	const handleSearch = async (query: string) => {
 		if (!query) {
 			const loaded = await Effect.runPromise(
-				getCards().pipe(
-					Effect.map((r) => r.items),
-					Effect.catchAll(() => Effect.succeed([])),
-				),
+				getCards().pipe(Effect.map((r) => r.items), emptyFallback),
 			);
 			mutate([...loaded]);
 			return;
@@ -101,64 +99,37 @@ const CardsListPage: Component = () => {
 		}
 	};
 
-	const openCreateModal = () => {
-		setNewCardContent("");
-		setError("");
-		setShowCreateModal(true);
-	};
-	const closeCreateModal = () => {
-		setShowCreateModal(false);
-		setError("");
-	};
+	const openCreateModal = () => { setNewCardContent(""); setError(""); setShowCreateModal(true); };
+	const closeCreateModal = () => { setShowCreateModal(false); setError(""); };
 
 	return (
 		<div class={styles.container}>
 			<div class={styles.header}>
 				<h1 class={styles.title}>卡片列表</h1>
 				<div class={styles.actions}>
-					<button type="button" class={styles.primaryButton} onClick={openCreateModal}>
-						新建卡片
-					</button>
+					<button type="button" class={styles.primaryButton} onClick={openCreateModal}>新建卡片</button>
 				</div>
 			</div>
 
-			<Show when={cards.loading}>
-				<div class={styles.loading}><p>加载中...</p></div>
-			</Show>
+			<Show when={cards.loading}><div class={styles.loading}><p>加载中...</p></div></Show>
 
 			<Show when={cards.error}>
 				<div class={styles.error}>
 					<p>加载失败: {getErrorMessage(cards.error)}</p>
-					<button type="button" class={styles.primaryButton} onClick={() => window.location.reload()}>
-						重试
-					</button>
+					<button type="button" class={styles.primaryButton} onClick={() => window.location.reload()}>重试</button>
 				</div>
 			</Show>
 
 			<Show when={!cards.loading && !cards.error}>
-				<CardsGrid
-					cards={[...(cards() || [])]}
-					showFilters={true}
-					onSearch={handleSearch}
-					onCardClick={handleCardClick}
-					onCardEdit={handleCardEdit}
-					onCardDelete={handleCardDelete}
-					emptyMessage="还没有卡片，点击上方按钮创建一个吧！"
-					deletingCardId={deletingCardId()}
-				/>
+				<CardsGrid cards={[...(cards() || [])]} showFilters={true} onSearch={handleSearch} onCardClick={handleCardClick} onCardEdit={handleCardEdit} onCardDelete={handleCardDelete} emptyMessage="还没有卡片，点击上方按钮创建一个吧！" deletingCardId={deletingCardId()} />
 			</Show>
 
 			<Show when={showCreateModal()}>
 				<div class={styles.modalOverlay} onClick={closeCreateModal} onKeyDown={(e) => { if (e.key === "Escape") closeCreateModal(); }} role="dialog" aria-modal="true" aria-label="创建新卡片" tabIndex={-1}>
 					<div class={styles.modal} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === "Escape") closeCreateModal(); }} role="document" tabIndex={-1}>
-						<div class={styles.modalHeader}>
-							<h2>创建新卡片</h2>
-							<button type="button" class={styles.closeButton} onClick={closeCreateModal} aria-label="关闭">×</button>
-						</div>
+						<div class={styles.modalHeader}><h2>创建新卡片</h2><button type="button" class={styles.closeButton} onClick={closeCreateModal} aria-label="关闭">×</button></div>
 						<div class={styles.modalContent}>
-							<Show when={error()}>
-								<div class={styles.errorMessage}>{error()}</div>
-							</Show>
+							<Show when={error()}><div class={styles.errorMessage}>{error()}</div></Show>
 							<div class={styles.formGroup}>
 								<label for="card-content" class={styles.formLabel}>内容</label>
 								<textarea id="card-content" class={styles.formTextarea} value={newCardContent()} onInput={(e) => setNewCardContent(e.currentTarget.value)} placeholder="请输入卡片内容" rows={6} disabled={isCreating()} />

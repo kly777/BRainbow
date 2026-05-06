@@ -16,10 +16,10 @@ const OntologyListPage: Component = () => {
 	const [ontologies, { mutate, refetch }] = createResource(() =>
 		Effect.runPromise(
 			getOntos().pipe(
-				Effect.catchAll((error) => {
-					console.error("获取本体列表失败:", getErrorMessage(error));
-					// 全局 toast 已触发，降级返回空列表
-					return Effect.succeed([] as readonly Onto[]);
+				Effect.catchTags({
+					HttpError: (e) => { console.error("获取本体列表失败:", getErrorMessage(e)); return Effect.succeed([] as readonly Onto[]); },
+					NetworkError: () => Effect.succeed([] as readonly Onto[]),
+					ValidationError: () => Effect.succeed([] as readonly Onto[]),
 				}),
 			),
 		),
@@ -75,8 +75,8 @@ const OntologyListPage: Component = () => {
 
 					console.log("本体创建成功");
 				}),
-				Effect.catchAll((error) => {
-					console.error("创建本体失败:", error);
+				Effect.catchTag("HttpError", (error) => {
+					console.error("创建本体失败:", getErrorMessage(error));
 					setCreateError(getErrorMessage(error));
 					return Effect.void;
 				}),
@@ -108,9 +108,7 @@ const OntologyListPage: Component = () => {
 					Effect.tap(() => {
 						console.log("本体删除成功:", id);
 					}),
-					Effect.catchAll((error) => {
-						console.error("删除本体失败:", getErrorMessage(error));
-						// 回滚乐观删除
+					Effect.catchTag("HttpError", () => {
 						if (ontoToDelete) mutate([...currentData]);
 						return Effect.void;
 					}),

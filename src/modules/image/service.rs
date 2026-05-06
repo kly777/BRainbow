@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use super::model::Image;
 use super::repository::ImageRepository;
+use super::UPLOAD_DIR;
 use crate::pagination::{Pagination, PaginatedResponse};
 
 pub struct ImageService {
@@ -11,7 +12,7 @@ pub struct ImageService {
 
 impl ImageService {
     pub fn new(db: Arc<SqlitePool>) -> Self {
-        std::fs::create_dir_all("uploads").ok();
+        std::fs::create_dir_all(UPLOAD_DIR).ok();
         Self { repo: ImageRepository::new(db) }
     }
 
@@ -26,7 +27,7 @@ impl ImageService {
             .and_then(|e| e.to_str())
             .unwrap_or("bin");
         let filename = format!("{}.{}", uuid::Uuid::new_v4(), ext);
-        let filepath = std::path::Path::new("uploads").join(&filename);
+        let filepath = std::path::Path::new(UPLOAD_DIR).join(&filename);
 
         tokio::fs::write(&filepath, data)
             .await

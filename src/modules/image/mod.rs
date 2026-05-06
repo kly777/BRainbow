@@ -3,6 +3,8 @@ pub mod model;
 pub mod repository;
 pub mod service;
 
+pub(crate) const UPLOAD_DIR: &str = "uploads";
+
 use axum::routing::{get, patch, post};
 use axum::Router;
 use crate::state::AppState;

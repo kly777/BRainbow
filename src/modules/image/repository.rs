@@ -2,6 +2,7 @@ use sqlx::SqlitePool;
 use std::sync::Arc;
 
 use super::model::Image;
+use super::UPLOAD_DIR;
 
 pub struct ImageRepository {
     db: Arc<SqlitePool>,
@@ -73,7 +74,7 @@ impl ImageRepository {
     pub async fn delete(&self, id: i32) -> Result<Option<Image>, sqlx::Error> {
         let image = self.find_by_id(id).await?;
         if let Some(ref img) = image {
-            let filepath = std::path::Path::new("uploads").join(&img.filename);
+            let filepath = std::path::Path::new(UPLOAD_DIR).join(&img.filename);
             tokio::fs::remove_file(&filepath).await.ok();
         }
         sqlx::query("DELETE FROM image WHERE id = ?")

@@ -54,7 +54,7 @@ export {
 	type TaskStatusType,
 	getStatusText,
 	formatDate,
-} from "./models";
+} from "./models.ts";
 
 // ── 错误处理 ──
 export {
@@ -67,4 +67,4 @@ export {
 	getErrorMessage,
 	showErrorAlert,
 	showErrorInline,
-} from "./errors";
+} from "./errors.ts";

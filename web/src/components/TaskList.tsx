@@ -1,7 +1,7 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
-import type { Task } from "@/apis/types";
-import EditTaskModal from "./EditTaskModal";
-import TaskItem from "./TaskItem";
+import type { Task } from "../apis/types/index.ts";
+import EditTaskModal from "./EditTaskModal.tsx";
+import TaskItem from "./TaskItem.tsx";
 import styles from "./TaskList.module.css";
 
 // 扩展TaskStatus常量 - 使用后端实际的状态

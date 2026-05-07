@@ -1,7 +1,7 @@
 import { type Component, createSignal, For, onMount } from "solid-js";
 import { Effect } from "effect";
-import { getTables, getTableData, type ColumnInfo } from "@/apis/dbApi";
-import { getErrorMessage } from "@/apis/types";
+import { getTables, getTableData, type ColumnInfo } from "../apis/dbApi.ts";
+import { getErrorMessage } from "../apis/types/index.ts";
 
 const DB: Component = () => {
 	const [tables, setTables] = createSignal<string[]>([]);

@@ -1,5 +1,5 @@
 import { Show, type JSX } from "solid-js";
-import { getErrorMessage } from "@/apis/types";
+import { getErrorMessage } from "../apis/types/index.ts";
 import styles from "./AsyncView.module.css";
 
 interface Props<T> {

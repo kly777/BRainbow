@@ -1,6 +1,6 @@
 import { type Effect, Schema } from "effect";
-import { request } from "./request";
-import type { ApiErrorType } from "./types";
+import { request } from "./request.ts";
+import type { ApiErrorType } from "./types/index.ts";
 
 const TableListSchema = Schema.Array(Schema.String);
 

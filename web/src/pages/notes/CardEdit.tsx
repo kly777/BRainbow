@@ -7,11 +7,11 @@ import {
 	createSignal,
 	Show,
 } from "solid-js";
-import { deleteCard, getCard, updateCard, uploadImage } from "@/apis/cardApi";
-import type { UpdateCardRequest } from "@/apis/types";
-import { getErrorMessage } from "@/apis/types";
-import Markdown from "@/components/Markdown";
-import { AsyncView } from "@/components/AsyncView";
+import { deleteCard, getCard, updateCard, uploadImage } from "../../apis/cardApi.ts";
+import type { UpdateCardRequest } from "../../apis/types/index.ts";
+import { getErrorMessage } from "../../apis/types/index.ts";
+import Markdown from "../../components/Markdown.tsx";
+import { AsyncView } from "../../components/AsyncView.tsx";
 import styles from "./CardEdit.module.css";
 
 const CardEditPage: Component = () => {

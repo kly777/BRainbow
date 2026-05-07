@@ -6,10 +6,10 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import type { Onto } from "@/apis/ontoApi";
-import { createOnto, deleteOnto, getOntos } from "@/apis/ontoApi";
-import { getErrorMessage } from "@/apis/types";
-import { AsyncView } from "@/components/AsyncView";
+import type { Onto } from "../../apis/ontoApi.ts";
+import { createOnto, deleteOnto, getOntos } from "../../apis/ontoApi.ts";
+import { getErrorMessage } from "../../apis/types/index.ts";
+import { AsyncView } from "../../components/AsyncView.tsx";
 import styles from "./OntologyList.module.css";
 
 const OntologyListPage: Component = () => {

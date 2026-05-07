@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect";
-import { request } from "./request";
-import { PaginatedSchema, type ApiErrorType } from "./types";
+import { request } from "./request.ts";
+import { PaginatedSchema, type ApiErrorType } from "./types/index.ts";
 
 export const SignSchema = Schema.Struct({
 	id: Schema.Number,

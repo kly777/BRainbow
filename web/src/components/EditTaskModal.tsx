@@ -4,11 +4,11 @@ import {
 	createTimeWindow,
 	deleteTimeWindow,
 	getTimeWindows,
-} from "@/apis/timeWindowApi";
-import type { CreateTimeWindowRequest, Task, TimeWindow } from "@/apis/types";
-import { getErrorMessage } from "@/apis/types";
+} from "../apis/timeWindowApi.ts";
+import type { CreateTimeWindowRequest, Task, TimeWindow } from "../apis/types/index.ts";
+import { getErrorMessage } from "../apis/types/index.ts";
 import styles from "../pages/TaskManager.module.css";
-import Modal from "./Modal";
+import Modal from "./Modal.tsx";
 
 interface EditTaskModalProps {
 	isOpen: boolean;

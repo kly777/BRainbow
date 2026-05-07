@@ -1,9 +1,9 @@
 import { useNavigate, useParams } from "@solidjs/router";
 import { Effect } from "effect";
 import { type Component, createResource } from "solid-js";
-import { deleteCard, getCard } from "@/apis/cardApi";
-import Markdown from "@/components/Markdown";
-import { AsyncView } from "@/components/AsyncView";
+import { deleteCard, getCard } from "../../apis/cardApi.ts";
+import Markdown from "../../components/Markdown.tsx";
+import { AsyncView } from "../../components/AsyncView.tsx";
 import styles from "./CardDetail.module.css";
 
 const CardDetailPage: Component = () => {

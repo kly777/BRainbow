@@ -1,8 +1,8 @@
 import { createSignal, Show } from "solid-js";
-import type { CreateTaskRequest } from "@/apis/types";
-import TaskCalendar from "@/components/TaskCalendar";
-import TaskList from "@/components/TaskList";
-import { TaskProvider, useTasks } from "@/components/TaskProvider";
+import type { CreateTaskRequest } from "../apis/types/index.ts";
+import TaskCalendar from "../components/TaskCalendar.tsx";
+import TaskList from "../components/TaskList.tsx";
+import { TaskProvider, useTasks } from "../components/TaskProvider.tsx";
 import styles from "./TaskManager.module.css";
 
 function StatsBar() {

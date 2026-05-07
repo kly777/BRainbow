@@ -1,13 +1,13 @@
 import { A, useNavigate } from "@solidjs/router";
 import { Effect } from "effect";
 import { createSignal, onMount, Show } from "solid-js";
-import { deleteCard as apiDeleteCard, getCards } from "@/apis/cardApi";
-import { getErrorMessage, type CreateTaskRequest } from "@/apis/types";
-import type { CardData } from "@/components/Card";
-import CardsGrid from "@/components/CardsGrid";
-import TaskList from "@/components/TaskList";
-import { TaskProvider, useTasks } from "@/components/TaskProvider";
-import { AsyncView } from "@/components/AsyncView";
+import { deleteCard as apiDeleteCard, getCards } from "../apis/cardApi.ts";
+import { getErrorMessage, type CreateTaskRequest } from "../apis/types/index.ts";
+import type { CardData } from "../components/Card.tsx";
+import CardsGrid from "../components/CardsGrid.tsx";
+import TaskList from "../components/TaskList.tsx";
+import { TaskProvider, useTasks } from "../components/TaskProvider.tsx";
+import { AsyncView } from "../components/AsyncView.tsx";
 import styles from "./HomePage.module.css";
 
 function TaskSection() {

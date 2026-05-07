@@ -19,7 +19,9 @@ function loadFromStorage() {
 		if (!raw) return null;
 		const user = JSON.parse(raw);
 		if (user?.id && user?.name) return user;
-	} catch {}
+	} catch {
+		/* ignore parse errors */
+	}
 	return null;
 }
 

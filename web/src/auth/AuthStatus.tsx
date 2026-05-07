@@ -1,8 +1,8 @@
 import { createSignal, Show } from "solid-js";
 import { Effect } from "effect";
-import { login, register } from "./api";
-import { getErrorMessage } from "@/apis/types";
-import { useAuth } from "./context";
+import { login, register } from "./api.ts";
+import { getErrorMessage } from "../apis/types/index.ts";
+import { useAuth } from "./context.tsx";
 import styles from "./AuthStatus.module.css";
 
 export default function AuthStatus() {

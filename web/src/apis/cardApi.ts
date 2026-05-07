@@ -1,5 +1,5 @@
 import { type Effect, Schema } from "effect";
-import { request } from "./request";
+import { request } from "./request.ts";
 import {
 	type ApiErrorType,
 	type Card,
@@ -12,7 +12,7 @@ import {
 	type PaginatedImage,
 	type RenameImageRequest,
 	type UpdateCardRequest,
-} from "./types";
+} from "./types/index.ts";
 
 // ==================== Card API Functions ====================
 
@@ -56,8 +56,8 @@ export const searchCards = (
 // ==================== Image Upload ====================
 
 import { Effect as E } from "effect";
-import { getToken } from "@/auth/context";
-import { HttpError, NetworkError, ValidationError } from "./types";
+import { getToken } from "../auth/context.tsx";
+import { HttpError, NetworkError, ValidationError } from "./types/index.ts";
 
 /**
  * 解析后端统一错误响应，兼容多格式
@@ -101,8 +101,8 @@ async function extractImageError(response: Response): Promise<{
  */
 export const uploadImage = (
 	file: File,
-): E.Effect<Image, ApiErrorType> =>
-	E.gen(function* () {
+): E.Effect<Image, ApiErrorType> => {
+	return E.gen(function* () {
 		const formData = new FormData();
 		formData.append("file", file);
 
@@ -149,7 +149,8 @@ export const uploadImage = (
 		);
 
 		return result;
-	});
+	})
+};
 
 /** 获取所有图片 */
 export const listImages = (): E.Effect<PaginatedImage, ApiErrorType> =>

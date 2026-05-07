@@ -1,11 +1,11 @@
 import { type Effect, Schema } from "effect";
-import { request } from "./request";
+import { request } from "./request.ts";
 import {
 	type ApiErrorType,
 	type CreateTimeWindowRequest,
 	type TimeWindow,
 	TimeWindowSchema,
-} from "./types";
+} from "./types/index.ts";
 
 // ==================== Time Window API Functions ====================
 

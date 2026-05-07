@@ -6,10 +6,10 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import { deleteImage, listImages, renameImage } from "@/apis/cardApi";
-import type { Image } from "@/apis/types";
-import { getErrorMessage } from "@/apis/types";
-import { AsyncView } from "@/components/AsyncView";
+import { deleteImage, listImages, renameImage } from "../../apis/cardApi.ts";
+import type { Image } from "../../apis/types/index.ts";
+import { getErrorMessage } from "../../apis/types/index.ts";
+import { AsyncView } from "../../components/AsyncView.tsx";
 import styles from "./ImagesList.module.css";
 
 const ImagesListPage: Component = () => {
@@ -64,7 +64,7 @@ const ImagesListPage: Component = () => {
 	};
 
 	const copyUrl = (url: string) => {
-		const full = `${window.location.origin}${url}`;
+		const full = `${globalThis.location.origin}${url}`;
 		navigator.clipboard.writeText(full).then(
 			() => setError(""),
 			() => setError("复制失败"),

@@ -1,19 +1,19 @@
 import { Route, Router } from "@solidjs/router";
 import { lazy } from "solid-js";
 import { render } from "solid-js/web";
-import { AuthProvider } from "./auth/context";
-import Layout from "./Layout";
+import { AuthProvider } from "./auth/context.tsx";
+import Layout from "./Layout.tsx";
 import "@/global.css";
 import "@/normalize.css";
 
-const HomePage = lazy(() => import("@/pages/HomePage"));
-const TaskManagerPage = lazy(() => import("@/pages/TaskManager"));
-const OntologyListPage = lazy(() => import("@/pages/ontology/OntologyList"));
-const CardsListPage = lazy(() => import("@/pages/notes/CardsList"));
-const CardDetailPage = lazy(() => import("@/pages/notes/CardDetail"));
-const CardEditPage = lazy(() => import("@/pages/notes/CardEdit"));
-const ImagesListPage = lazy(() => import("@/pages/notes/ImagesList"));
-const DbViewerPage = lazy(() => import("@/pages/DbViewer"));
+const HomePage = lazy(() => import("./pages/HomePage.tsx"));
+const TaskManagerPage = lazy(() => import("./pages/TaskManager.tsx"));
+const OntologyListPage = lazy(() => import("./pages/ontology/OntologyList.tsx"));
+const CardsListPage = lazy(() => import("./pages/notes/CardsList.tsx"));
+const CardDetailPage = lazy(() => import("./pages/notes/CardDetail.tsx"));
+const CardEditPage = lazy(() => import("./pages/notes/CardEdit.tsx"));
+const ImagesListPage = lazy(() => import("./pages/notes/ImagesList.tsx"));
+const DbViewerPage = lazy(() => import("./pages/DbViewer.tsx"));
 
 function App() {
 	return (

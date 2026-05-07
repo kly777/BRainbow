@@ -9,7 +9,7 @@ time := $(shell date +%y%m%d_%H%M%S)
 .PHONY: clean deploy status db-pull db-push logs rollback
 
 build: clean
-	cd web && pnpm build
+	cd web && deno task build
 	cd ..
 	mkdir -p $(SERVER_DIR)
 	cp -r web/dist $(SERVER_DIR)/

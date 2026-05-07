@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { toasts, dismissToast, type ToastItem } from "./toastStore";
+import { toasts, dismissToast, type ToastItem } from "./toastStore.ts";
 import styles from "./Toast.module.css";
 
 function iconForType(type: ToastItem["type"]): string {

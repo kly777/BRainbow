@@ -15,9 +15,9 @@ import {
 	moveToBacklog,
 	searchTasks,
 	updateTask as apiUpdateTask,
-} from "@/apis/taskApi";
-import type { CreateTaskRequest, Task } from "@/apis/types";
-import { getErrorMessage } from "@/apis/types";
+} from "../apis/taskApi.ts";
+import type { CreateTaskRequest, Task } from "../apis/types/index.ts";
+import { getErrorMessage } from "../apis/types/index.ts";
 
 interface Stats {
 	backlog: number;

@@ -1,5 +1,5 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
-import type { Task } from "@/apis/types";
+import type { Task } from "../apis/types/index.ts";
 import styles from "./TaskCalendar.module.css";
 
 // 状态对应颜色类名

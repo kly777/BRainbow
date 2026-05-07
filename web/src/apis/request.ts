@@ -1,12 +1,12 @@
 import { Effect, Schema } from "effect";
-import { getToken } from "@/auth/context";
+import { getToken } from "../auth/context.tsx";
 import {
 	type ApiErrorType,
 	type ApiErrorResponse,
 	HttpError,
 	NetworkError,
 	ValidationError,
-} from "./types";
+} from "./types/index.ts";
 
 const API_BASE_URL = "/api";
 
@@ -16,7 +16,7 @@ const API_BASE_URL = "/api";
 export const AUTH_REQUIRED_EVENT = "auth:required";
 
 function triggerAuthRequired(): void {
-	window.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT));
+	globalThis.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT));
 }
 
 /** 延迟导入避免循环依赖 */
@@ -36,7 +36,7 @@ async function toast(opts: {
 	duration?: number;
 }): Promise<void> {
 	if (!_showToast) {
-		const mod = await import("../components/toastStore");
+		const mod = await import("../components/toastStore.ts");
 		_showToast = mod.showToast as unknown as typeof _showToast;
 	}
 	// duration 提供默认值以匹配 showToast 的 non-optional 签名

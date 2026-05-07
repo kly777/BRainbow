@@ -1,5 +1,5 @@
 import { type Effect, Schema } from "effect";
-import { request } from "./request";
+import { request } from "./request.ts";
 import {
 	type ApiErrorType,
 	type CreateTaskRequest,
@@ -9,7 +9,7 @@ import {
 	TaskDetailSchema,
 	TaskSchema,
 	type UpdateTaskRequest,
-} from "./types";
+} from "./types/index.ts";
 
 // ==================== Task API Functions ====================
 
@@ -21,12 +21,16 @@ export const getAllTasks = () =>
 // ==================== Tree API ====================
 
 /** Recursive tree node schema for task hierarchy */
-export const TreeNodeSchema: Schema.Schema<TreeNode> = Schema.Struct({
+const TreeNodeSchema = Schema.Struct({
 	task: TaskSchema,
 	children: Schema.Array(
-		Schema.suspend(() => TreeNodeSchema as unknown as Schema.Schema<TreeNode>),
+		Schema.suspend(
+			(): Schema.Schema<TreeNode> => TreeNodeSchema as unknown as Schema.Schema<TreeNode>,
+		),
 	),
-});
+}) as unknown as Schema.Schema<TreeNode>;
+
+export { TreeNodeSchema };
 
 export interface TreeNode {
 	readonly task: Task;

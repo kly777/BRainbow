@@ -1,6 +1,6 @@
 import { createSignal, For, Show } from "solid-js";
-import type { Task, TimeWindow } from "@/apis/types";
-import { formatDate } from "@/apis/types";
+import type { Task, TimeWindow } from "../apis/types/index.ts";
+import { formatDate } from "../apis/types/index.ts";
 import styles from "./TaskList.module.css";
 
 const TaskStatus = {

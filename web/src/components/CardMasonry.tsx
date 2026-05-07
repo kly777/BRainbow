@@ -1,5 +1,5 @@
 import { type Component, For, Show } from "solid-js";
-import Card, { type CardData } from "./Card";
+import Card, { type CardData } from "./Card.tsx";
 import styles from "./CardMasonry.module.css";
 
 export interface CardMasonryProps {

@@ -1,11 +1,11 @@
 import { useNavigate } from "@solidjs/router";
 import { Effect } from "effect";
 import { type Component, createResource, createSignal, Show } from "solid-js";
-import { createCard, deleteCard, getCards, searchCards } from "@/apis/cardApi";
-import { type CreateCardRequest, getErrorMessage } from "@/apis/types";
+import { createCard, deleteCard, getCards, searchCards } from "../../apis/cardApi.ts";
+import { type CreateCardRequest, getErrorMessage } from "../../apis/types/index.ts";
 
-import CardsGrid from "@/components/CardsGrid";
-import { AsyncView } from "@/components/AsyncView";
+import CardsGrid from "../../components/CardsGrid.tsx";
+import { AsyncView } from "../../components/AsyncView.tsx";
 import styles from "./CardsList.module.css";
 
 const emptyFallback = Effect.catchTags({
@@ -112,10 +112,10 @@ const CardsListPage: Component = () => {
 				</div>
 			</div>
 
-			<AsyncView data={cards()} loading={cards.loading} error={cards.error} onRetry={() => window.location.reload()} emptyMessage="还没有卡片，点击上方按钮创建一个吧！">
+			<AsyncView data={cards()} loading={cards.loading} error={cards.error} onRetry={() => globalThis.location.reload()} emptyMessage="还没有卡片，点击上方按钮创建一个吧！">
 			{(data) => (
 				<Show when={!cards.loading && !cards.error}>
-				<CardsGrid cards={[...(data || [])]} showFilters={true} onSearch={handleSearch} onCardClick={handleCardClick} onCardEdit={handleCardEdit} onCardDelete={handleCardDelete} emptyMessage="还没有卡片，点击上方按钮创建一个吧！" deletingCardId={deletingCardId()} />
+				<CardsGrid cards={[...(data || [])]} showFilters onSearch={handleSearch} onCardClick={handleCardClick} onCardEdit={handleCardEdit} onCardDelete={handleCardDelete} emptyMessage="还没有卡片，点击上方按钮创建一个吧！" deletingCardId={deletingCardId()} />
 			</Show>
 			)}
 			</AsyncView>

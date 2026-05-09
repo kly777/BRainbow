@@ -3,12 +3,12 @@
   "specifiers": {
     "npm:@effect/platform@~0.96.1": "0.96.1_effect@3.21.2",
     "npm:@rsbuild/core@*": "1.7.5",
-    "npm:@rsbuild/core@^1.3.0": "1.7.5",
-    "npm:@rsbuild/plugin-babel@^1.1.0": "1.1.2_@rsbuild+core@1.7.5",
-    "npm:@rsbuild/plugin-solid@^1.1.0": "1.2.0_@rsbuild+core@1.7.5_@babel+core@7.29.0_solid-js@1.9.12",
-    "npm:@rsbuild/plugin-type-check@^1.3.0": "1.3.4_@rsbuild+core@1.7.5_tslib@2.8.1_typescript@6.0.3",
+    "npm:@rsbuild/core@^1.7.5": "1.7.5",
+    "npm:@rsbuild/plugin-babel@^1.1.2": "1.1.2_@rsbuild+core@1.7.5",
+    "npm:@rsbuild/plugin-solid@^1.2.0": "1.2.0_@rsbuild+core@1.7.5_@babel+core@7.29.0_solid-js@1.9.12",
+    "npm:@rsbuild/plugin-type-check@^1.3.4": "1.3.4_@rsbuild+core@1.7.5_tslib@2.8.1_typescript@6.0.3",
     "npm:@solidjs/router@~0.16.1": "0.16.1_solid-js@1.9.12",
-    "npm:@types/node@^25.6.0": "25.6.0",
+    "npm:@types/node@^25.6.2": "25.6.2",
     "npm:dompurify@^3.4.2": "3.4.2",
     "npm:effect@^3.21.2": "3.21.2",
     "npm:marked@^18.0.3": "18.0.3",
@@ -738,8 +738,8 @@
         "@babel/types"
       ]
     },
-    "@types/node@25.6.0": {
-      "integrity": "sha512-+qIYRKdNYJwY3vRCZMdJbPLJAtGjQBudzZzdzwQYkEPQd+PJGixUL5QfvCLDaULoLv+RhT3LDkwEfKaAkgSmNQ==",
+    "@types/node@25.6.2": {
+      "integrity": "sha512-sokuT28dxf9JT5Kady1fsXOvI4HVpjZa95NKT5y9PNTIrs2AsobR4GFAA90ZG8M+nxVRLysCXsVj6eGC7Vbrlw==",
       "dependencies": [
         "undici-types"
       ]
@@ -776,8 +776,8 @@
         "solid-js"
       ]
     },
-    "baseline-browser-mapping@2.10.27": {
-      "integrity": "sha512-zEs/ufmZoUd7WftKpKyXaT6RFxpQ5Qm9xytKRHvJfxFV9DFJkZph9RvJ1LcOUi0Z1ZVijMte65JbILeV+8QQEA==",
+    "baseline-browser-mapping@2.10.28": {
+      "integrity": "sha512-Ic44hnOtFIgravCunj1ifSoQPSUrkNiJuH9Mf6jr2jjoA74icqV8wU0KuadXeOR8zuIJMOoTv0GuQjZ9ZYNMeA==",
       "bin": true
     },
     "binary-extensions@2.3.0": {
@@ -853,8 +853,8 @@
         "fast-check"
       ]
     },
-    "electron-to-chromium@1.5.351": {
-      "integrity": "sha512-9D7Iqx8RImSvCnOsj86rCH6eQjZFQoM04Jn6HnZVM0Nu/G58/gmKYQ1d12MZTbjQbQSTGI8nwEy07ErsA2slLA=="
+    "electron-to-chromium@1.5.353": {
+      "integrity": "sha512-kOrWphBi8TOZyiJZqsgqIle0lw+tzmnQK83pV9dZUd01Nm2POECSyFQMAuarzZdYqQW7FH9RaYOuaRo3h+bQ3w=="
     },
     "entities@6.0.1": {
       "integrity": "sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g=="
@@ -1113,12 +1113,12 @@
   "workspace": {
     "dependencies": [
       "npm:@effect/platform@~0.96.1",
-      "npm:@rsbuild/core@^1.3.0",
-      "npm:@rsbuild/plugin-babel@^1.1.0",
-      "npm:@rsbuild/plugin-solid@^1.1.0",
-      "npm:@rsbuild/plugin-type-check@^1.3.0",
+      "npm:@rsbuild/core@^1.7.5",
+      "npm:@rsbuild/plugin-babel@^1.1.2",
+      "npm:@rsbuild/plugin-solid@^1.2.0",
+      "npm:@rsbuild/plugin-type-check@^1.3.4",
       "npm:@solidjs/router@~0.16.1",
-      "npm:@types/node@^25.6.0",
+      "npm:@types/node@^25.6.2",
       "npm:dompurify@^3.4.2",
       "npm:effect@^3.21.2",
       "npm:marked@^18.0.3",

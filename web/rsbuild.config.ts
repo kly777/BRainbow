@@ -33,10 +33,12 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:8080",
         changeOrigin: true,
+        timeout: 5000,
       },
       "/uploads": {
         target: "http://localhost:8080",
         changeOrigin: true,
+        timeout: 5000,
       },
     },
   },

@@ -2,6 +2,7 @@ import { createSignal, Show } from "solid-js";
 import type { CreateTaskRequest } from "../apis/types/index.ts";
 import TaskCalendar from "../components/TaskCalendar.tsx";
 import TaskDag from "../components/TaskDag.tsx";
+import TaskKanban from "../components/TaskKanban.tsx";
 import TaskList from "../components/TaskList.tsx";
 import { TaskProvider, useTasks } from "../components/TaskProvider.tsx";
 import styles from "./TaskManager.module.css";
@@ -128,37 +129,66 @@ function CreateModal(props: { open: boolean; onClose: () => void }) {
 
 function TaskPanel() {
 	const { tasks, loading, updateStatus, removeTask, updateTask, addSubTask } = useTasks();
+	const [viewMode, setViewMode] = createSignal<"list" | "kanban">("list");
 	const [rightTab, setRightTab] = createSignal<"calendar" | "dag">("calendar");
 
 	return (
 		<Show when={loading()} fallback={
-			<div class={styles.splitView}>
-				<TaskList tasks={tasks()} onStatusChange={updateStatus} onDelete={removeTask} onUpdate={updateTask} onAddSubTask={addSubTask} />
-				<div class={styles.rightPanel}>
-					<div class={styles.tabBar}>
-						<button
-							type="button"
-							class={`${styles.tabBtn} ${rightTab() === "calendar" ? styles.tabActive : ""}`}
-							onClick={() => setRightTab("calendar")}
-						>
-							📅 日历
-						</button>
-						<button
-							type="button"
-							class={`${styles.tabBtn} ${rightTab() === "dag" ? styles.tabActive : ""}`}
-							onClick={() => setRightTab("dag")}
-						>
-							🔗 依赖图
-						</button>
-					</div>
-					<Show when={rightTab() === "calendar"}>
-						<TaskCalendar />
-					</Show>
-					<Show when={rightTab() === "dag"}>
-						<TaskDag />
-					</Show>
+			<>
+				{/* 视图切换 */}
+				<div class={styles.viewSwitch}>
+					<button
+						type="button"
+						class={`${styles.viewBtn} ${viewMode() === "list" ? styles.viewActive : ""}`}
+						onClick={() => setViewMode("list")}
+					>
+						📋 列表
+					</button>
+					<button
+						type="button"
+						class={`${styles.viewBtn} ${viewMode() === "kanban" ? styles.viewActive : ""}`}
+						onClick={() => setViewMode("kanban")}
+					>
+						📌 看板
+					</button>
 				</div>
-			</div>
+
+				{/* 列表视图 */}
+				<Show when={viewMode() === "list"}>
+					<div class={styles.splitView}>
+						<TaskList tasks={tasks()} onStatusChange={updateStatus} onDelete={removeTask} onUpdate={updateTask} onAddSubTask={addSubTask} />
+						<div class={styles.rightPanel}>
+							<div class={styles.tabBar}>
+								<button
+									type="button"
+									class={`${styles.tabBtn} ${rightTab() === "calendar" ? styles.tabActive : ""}`}
+									onClick={() => setRightTab("calendar")}
+								>
+									📅 日历
+								</button>
+								<button
+									type="button"
+									class={`${styles.tabBtn} ${rightTab() === "dag" ? styles.tabActive : ""}`}
+									onClick={() => setRightTab("dag")}
+								>
+									🔗 依赖图
+								</button>
+							</div>
+							<Show when={rightTab() === "calendar"}>
+								<TaskCalendar />
+							</Show>
+							<Show when={rightTab() === "dag"}>
+								<TaskDag />
+							</Show>
+						</div>
+					</div>
+				</Show>
+
+				{/* 看板视图 */}
+				<Show when={viewMode() === "kanban"}>
+					<TaskKanban />
+				</Show>
+			</>
 		}>
 			<div class={styles.loading}>加载中...</div>
 		</Show>

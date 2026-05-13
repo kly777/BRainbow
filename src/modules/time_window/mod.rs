@@ -1,6 +1,7 @@
 mod handler;
 mod model;
 mod repository;
+pub mod service;
 
 pub use handler::{
     create_time_window_handler, get_time_window_handler, get_time_windows_handler,

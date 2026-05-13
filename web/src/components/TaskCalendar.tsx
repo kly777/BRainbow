@@ -1,25 +1,46 @@
-import { createMemo, createSignal, For, Show } from "solid-js";
-import type { Task } from "../apis/types/index.ts";
+import { createMemo, createResource, createSignal, For, Show } from "solid-js";
+import { Effect } from "effect";
+import { getCalendarEvents } from "../apis/taskApi.ts";
+import type { CalendarEvent } from "../apis/types/index.ts";
+import { getErrorMessage } from "../apis/types/index.ts";
 import styles from "./TaskCalendar.module.css";
 
-// 状态对应颜色类名
-const statusColors: Record<string, string> = {
-	backlog: styles.statusBacklog ?? "",
-	active: styles.statusActive ?? "",
-	completed: styles.statusCompleted ?? "",
-	archived: styles.statusArchived ?? "",
+// 窗口类型对应颜色
+const windowTypeColors: Record<string, string> = {
+	feasible: styles.typeFeasible ?? "",
+	planned: styles.typePlanned ?? "",
+	actual: styles.typeActual ?? "",
 };
 
-function getStatusColor(status: string): string {
-	return statusColors[status] || "";
+function getWindowTypeColor(wt: string): string {
+	return windowTypeColors[wt] || windowTypeColors.planned || "";
 }
 
-interface TaskCalendarProps {
-	tasks: Task[];
-}
-
-export default function TaskCalendar(props: TaskCalendarProps) {
+export default function TaskCalendar() {
 	const [currentDate, setCurrentDate] = createSignal<Date>(new Date());
+
+	// 计算当前月份的范围
+	const monthRange = createMemo(() => {
+		const d = currentDate();
+		const y = d.getFullYear();
+		const m = d.getMonth();
+		return {
+			start: new Date(y, m, 1).toISOString(),
+			end: new Date(y, m + 1, 0, 23, 59, 59).toISOString(),
+		};
+	});
+
+	// 获取日历事件
+	const [events] = createResource(monthRange, async (range) => {
+		try {
+			return await Effect.runPromise(
+				getCalendarEvents(range.start, range.end),
+			);
+		} catch (e) {
+			console.error("获取日历事件失败:", getErrorMessage(e));
+			return [];
+		}
+	});
 
 	// 切换月份
 	const changeMonth = (delta: number) => {
@@ -48,15 +69,16 @@ export default function TaskCalendar(props: TaskCalendarProps) {
 		return days;
 	});
 
-	// 获取指定日期的任务
-	const getTasksForDate = (date: Date) => {
-		return props.tasks.filter((task) => {
-			if (!task.created_at) return false;
-			const taskDate = new Date(task.created_at);
+	// 获取指定日期的日历事件
+	const getEventsForDate = (date: Date): readonly CalendarEvent[] => {
+		const evts = events();
+		if (!evts) return [];
+		return evts.filter((ev) => {
+			const evStart = new Date(ev.start);
 			return (
-				taskDate.getFullYear() === date.getFullYear() &&
-				taskDate.getMonth() === date.getMonth() &&
-				taskDate.getDate() === date.getDate()
+				evStart.getFullYear() === date.getFullYear() &&
+				evStart.getMonth() === date.getMonth() &&
+				evStart.getDate() === date.getDate()
 			);
 		});
 	};
@@ -98,12 +120,19 @@ export default function TaskCalendar(props: TaskCalendarProps) {
 							<Show when={date !== null}>
 								<div class={styles.dayNumber}>{date?.getDate()}</div>
 								<div class={styles.dayTasks}>
-									<For each={date ? getTasksForDate(date) : []}>
-										{(task) => (
+									<For each={date ? getEventsForDate(date) : []}>
+										{(ev) => (
 											<div
-												class={`${styles.dayTask} ${getStatusColor(task.status || "backlog")}`}
+												class={`${styles.dayTask} ${getWindowTypeColor(ev.window_type)}`}
+												title={`${ev.title} (${ev.window_type})`}
 											>
-												{task.title}
+												<span class={styles.eventTime}>
+													{new Date(ev.start).toLocaleTimeString("zh-CN", {
+														hour: "2-digit",
+														minute: "2-digit",
+													})}
+												</span>
+												{ev.title}
 											</div>
 										)}
 									</For>

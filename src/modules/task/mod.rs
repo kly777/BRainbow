@@ -5,7 +5,7 @@ mod model;
 mod query;
 mod repository;
 mod response;
-mod service;
+pub(crate) mod service;
 mod status;
 
 use axum::{Router, routing::{get, post, delete}};
@@ -27,6 +27,8 @@ pub use status::{
     move_to_backlog_handler, get_backlog_tasks_handler, get_active_tasks_handler,
     get_completed_tasks_handler, get_archived_tasks_handler,
 };
+
+pub use service::TaskService;
 
 pub fn routes() -> Router<AppState> {
     Router::new()

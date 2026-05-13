@@ -84,9 +84,34 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	display: flex;
+	align-items: center;
+	gap: 4px;
 }
 
-/* 状态颜色 */
+.eventTime {
+	font-size: 10px;
+	opacity: 0.8;
+	flex-shrink: 0;
+}
+
+/* 窗口类型颜色 */
+.typeFeasible {
+	background: #e5e7eb;
+	border-left: 3px solid #9ca3af;
+}
+
+.typePlanned {
+	background: #dbeafe;
+	border-left: 3px solid #3b82f6;
+}
+
+.typeActual {
+	background: #d1fae5;
+	border-left: 3px solid #10b981;
+}
+
+/* 旧状态颜色 - 保留兼容 */
 .status-pending {
 	background: #f59e0b;
 }

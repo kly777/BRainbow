@@ -1,8 +1,9 @@
-import { type Effect, Schema } from "effect";
+import { Effect, Schema } from "effect";
 import { request } from "./request.ts";
 import {
 	type ApiErrorType,
 	type CreateTimeWindowRequest,
+	PaginatedSchema,
 	type TimeWindow,
 	TimeWindowSchema,
 } from "./types/index.ts";
@@ -15,7 +16,10 @@ export const getTimeWindows = (
 ): Effect.Effect<readonly TimeWindow[], ApiErrorType> => {
 	let endpoint = `/time-windows?task_id=${taskId}`;
 	if (windowType) endpoint += `&window_type=${windowType}`;
-	return request(endpoint, Schema.Array(TimeWindowSchema), {});
+	return Effect.map(
+		request(endpoint, PaginatedSchema(TimeWindowSchema), {}),
+		(r) => r.items,
+	);
 };
 
 export const createTimeWindow = (

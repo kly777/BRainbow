@@ -7,7 +7,6 @@ mod routes;
 mod state;
 
 use std::time::Instant;
-use std::env;
 use std::net::SocketAddr;
 
 use axum::extract::Request;

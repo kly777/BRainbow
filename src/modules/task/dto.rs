@@ -19,10 +19,6 @@ pub struct CreateTaskRequest {
     /// 精力估算（分钟，可选）
     #[serde(default)]
     pub effort_estimate_minutes: Option<i32>,
-
-    /// 用户ID（可选）
-    #[serde(default)]
-    pub user_id: Option<i32>,
 }
 
 /// 快速创建任务请求体（仅标题）
@@ -30,10 +26,6 @@ pub struct CreateTaskRequest {
 pub struct QuickCreateTaskRequest {
     /// 任务标题（必需）
     pub title: String,
-
-    /// 用户ID（可选）
-    #[serde(default)]
-    pub user_id: Option<i32>,
 }
 
 /// 任务更新请求体（部分更新）
@@ -58,10 +50,6 @@ pub struct UpdateTaskRequest {
     /// 精力估算（分钟，可选）
     #[serde(default)]
     pub effort_estimate_minutes: Option<Option<i32>>,
-
-    /// 用户ID（可选）
-    #[serde(default)]
-    pub user_id: Option<Option<i32>>,
 }
 
 /// 任务详情响应（包含依赖和时间窗口信息）

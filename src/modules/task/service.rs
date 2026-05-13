@@ -1,7 +1,8 @@
 use std::sync::Arc;
+use chrono::{DateTime, Utc};
 
 use super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
-use super::model::{Task, TaskStatus};
+use super::model::{Task, TaskStatus, TimeWindow, TimeWindowType};
 use super::repository::TaskRepository;
 
 pub struct TaskService {
@@ -111,11 +112,166 @@ impl TaskService {
     }
 
     pub async fn add_dependency(&self, task_id: i32, depends_on: i32) -> Result<(), ServiceError> {
+        if task_id == depends_on {
+            return Err(ServiceError::SelfDependency);
+        }
         self.repo.add_dependency(task_id, depends_on).await.map_err(ServiceError::Db)
     }
 
     pub async fn remove_dependency(&self, task_id: i32, depends_on: i32) -> Result<u64, ServiceError> {
         self.repo.remove_dependency(task_id, depends_on).await.map_err(ServiceError::Db)
+    }
+
+    /// 获取日历事件 - 查询指定时间范围内的所有非归档任务的时间窗口
+    pub async fn calendar(
+        &self,
+        start: Option<DateTime<Utc>>,
+        end: Option<DateTime<Utc>>,
+        status: Option<TaskStatus>,
+    ) -> Result<Vec<(Task, TimeWindow)>, ServiceError> {
+        self.repo.find_calendar_events(start, end, status)
+            .await
+            .map_err(ServiceError::Db)
+    }
+
+    /// 校验时间窗口约束（C001 + C002）
+    /// 在创建/更新 time_window 或更新任务的 time_windows 时调用
+    pub async fn validate_time_windows(
+        &self,
+        task_id: i32,
+        time_windows: &[TimeWindow],
+        exclude_id: Option<i32>,
+    ) -> Result<(), ServiceError> {
+        // 获取任务已有的 available slots 和 planned slots
+        let existing = self.repo.find_time_windows_by_task(task_id).await.map_err(ServiceError::Db)?;
+
+        let mut all_feasible: Vec<&TimeWindow> = Vec::new();
+        let mut all_planned: Vec<&TimeWindow> = Vec::new();
+        let mut all_actual: Vec<&TimeWindow> = Vec::new();
+
+        for w in &existing {
+            match w.window_type {
+                TimeWindowType::Feasible => all_feasible.push(w),
+                TimeWindowType::Planned => all_planned.push(w),
+                TimeWindowType::Actual => all_actual.push(w),
+            }
+        }
+
+        // 合并新时间段
+        for w in time_windows {
+            match w.window_type {
+                TimeWindowType::Feasible => all_feasible.push(w),
+                TimeWindowType::Planned => all_planned.push(w),
+                TimeWindowType::Actual => all_actual.push(w),
+            }
+        }
+
+        // C002: 检查同类型时间段不重叠
+        let check_overlap = |windows: &[&TimeWindow], type_name: &str| -> Result<(), ServiceError> {
+            for i in 0..windows.len() {
+                for j in (i + 1)..windows.len() {
+                    let a = windows[i];
+                    let b = windows[j];
+                    // 跳过同一个 exclude_id 的情况（更新已有窗口时）
+                    if let Some(eid) = exclude_id {
+                        if a.id == eid || b.id == eid {
+                            continue;
+                        }
+                    }
+                    if a.start_time < b.end_time && b.start_time < a.end_time {
+                        return Err(ServiceError::SlotOverlap(format!(
+                            "{} 时间段 [{}, {}] 与 [{}, {}] 重叠",
+                            type_name, a.start_time, a.end_time, b.start_time, b.end_time
+                        )));
+                    }
+                }
+            }
+            Ok(())
+        };
+
+        check_overlap(&all_feasible, "feasible")?;
+        check_overlap(&all_planned, "planned")?;
+        check_overlap(&all_actual, "actual")?;
+
+        // C001: planned 必须在 feasible 内部
+        for planned in &all_planned {
+            let covered = all_feasible.iter().any(|f| {
+                f.start_time <= planned.start_time && f.end_time >= planned.end_time
+            });
+            if !covered {
+                return Err(ServiceError::PlannedOutsideAvailable(format!(
+                    "计划时间段 [{}, {}] 不在任何可行时间窗口内",
+                    planned.start_time, planned.end_time
+                )));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// 构建依赖图（DAG）
+    pub async fn dag(
+        &self,
+        root_task_id: Option<i32>,
+        depth: i32,
+    ) -> Result<super::response::DagView, ServiceError> {
+        use super::response::{DagEdge, DagNode, DagView};
+        use std::collections::{HashMap, HashSet, VecDeque};
+
+        // 获取所有任务用于构建节点
+        let (all_tasks, _) = self.repo.find_all_paginated(10000, 0).await.map_err(ServiceError::Db)?;
+
+        // 构建 BFS 从 root_task_id（如果有）出发，限制 depth
+        let mut nodes_map: HashMap<i32, DagNode> = HashMap::new();
+        let mut edges: Vec<DagEdge> = Vec::new();
+        let mut visited: HashSet<i32> = HashSet::new();
+
+        let mut queue: VecDeque<(i32, i32)> = VecDeque::new(); // (task_id, current_depth)
+
+        if let Some(root_id) = root_task_id {
+            queue.push_back((root_id, 0));
+        } else {
+            // 没有根节点时，从所有有依赖关系的任务开始
+            for task in &all_tasks {
+                let deps = self.repo.get_dependencies(task.id).await.map_err(ServiceError::Db)?;
+                if !deps.is_empty() {
+                    queue.push_back((task.id, 0));
+                }
+            }
+        }
+
+        while let Some((task_id, current_depth)) = queue.pop_front() {
+            if current_depth > depth || !visited.insert(task_id) {
+                continue;
+            }
+
+            if let Some(task) = all_tasks.iter().find(|t| t.id == task_id) {
+                nodes_map.entry(task_id).or_insert_with(|| DagNode {
+                    id: task.id,
+                    title: task.title.clone(),
+                    status: task.status.clone(),
+                });
+
+                let deps = self.repo.get_dependencies(task_id).await.map_err(ServiceError::Db)?;
+                for dep_id in deps {
+                    // 确保被依赖的节点也在图中
+                    if let Some(dep_task) = all_tasks.iter().find(|t| t.id == dep_id) {
+                        nodes_map.entry(dep_id).or_insert_with(|| DagNode {
+                            id: dep_task.id,
+                            title: dep_task.title.clone(),
+                            status: dep_task.status.clone(),
+                        });
+                    }
+                    edges.push(DagEdge { from: task_id, to: dep_id });
+                    queue.push_back((dep_id, current_depth + 1));
+                }
+            }
+        }
+
+        Ok(DagView {
+            nodes: nodes_map.into_values().collect(),
+            edges,
+        })
     }
 }
 
@@ -148,7 +304,12 @@ pub enum ServiceError {
     InvalidInput(String),
     NotFound,
     CircularParent,
+    CircularDependency,
     SelfParent,
+    SelfDependency,
+    PlannedOutsideAvailable(String),
+    SlotOverlap(String),
+    InvalidTimeRange(String),
     Db(sqlx::Error),
 }
 
@@ -158,7 +319,12 @@ impl std::fmt::Display for ServiceError {
             ServiceError::InvalidInput(msg) => write!(f, "{}", msg),
             ServiceError::NotFound => write!(f, "资源不存在"),
             ServiceError::CircularParent => write!(f, "检测到父子循环引用"),
+            ServiceError::CircularDependency => write!(f, "检测到依赖循环引用"),
             ServiceError::SelfParent => write!(f, "不能设置自己为父任务"),
+            ServiceError::SelfDependency => write!(f, "不能依赖自己"),
+            ServiceError::PlannedOutsideAvailable(msg) => write!(f, "计划时间超出可行时间: {}", msg),
+            ServiceError::SlotOverlap(msg) => write!(f, "时间段重叠: {}", msg),
+            ServiceError::InvalidTimeRange(msg) => write!(f, "无效的时间段: {}", msg),
             ServiceError::Db(e) => write!(f, "数据库错误: {}", e),
         }
     }

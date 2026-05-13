@@ -83,7 +83,6 @@ export const TaskSchema = Schema.Struct({
 	status: Schema.String,
 	completed_at: Schema.NullOr(Schema.String),
 	effort_estimate_minutes: Schema.NullOr(Schema.Number),
-	user_id: Schema.NullOr(Schema.Number),
 	created_at: Schema.String,
 	updated_at: Schema.String,
 });
@@ -109,9 +108,17 @@ export const TaskTimeAllocationSchema = Schema.Struct({
 
 export const TaskDetailSchema = Schema.Struct({
 	task: TaskSchema,
-	dependencies: Schema.Array(TaskDependencySchema),
-	decompositions: Schema.Array(TaskDecompositionSchema),
-	time_allocations: Schema.Array(TaskTimeAllocationSchema),
+	depends_on: Schema.Array(Schema.Number),
+	children: Schema.Array(TaskSchema),
+	available_slots: Schema.Array(
+		Schema.suspend((): Schema.Schema<TimeWindow> => TimeWindowSchema as unknown as Schema.Schema<TimeWindow>),
+	),
+	planned_slots: Schema.Array(
+		Schema.suspend((): Schema.Schema<TimeWindow> => TimeWindowSchema as unknown as Schema.Schema<TimeWindow>),
+	),
+	actual_slots: Schema.Array(
+		Schema.suspend((): Schema.Schema<TimeWindow> => TimeWindowSchema as unknown as Schema.Schema<TimeWindow>),
+	),
 });
 
 export const CreateTaskRequestSchema = Schema.Struct({
@@ -119,7 +126,6 @@ export const CreateTaskRequestSchema = Schema.Struct({
 	description: Schema.optional(Schema.NullOr(Schema.String)),
 	parent_task_id: Schema.optional(Schema.NullOr(Schema.Number)),
 	effort_estimate_minutes: Schema.optional(Schema.NullOr(Schema.Number)),
-	user_id: Schema.optional(Schema.NullOr(Schema.Number)),
 });
 
 export const UpdateTaskRequestSchema = Schema.Struct({
@@ -128,7 +134,6 @@ export const UpdateTaskRequestSchema = Schema.Struct({
 	parent_task_id: Schema.optional(Schema.NullOr(Schema.Number)),
 	status: Schema.optional(Schema.NullOr(Schema.String)),
 	effort_estimate_minutes: Schema.optional(Schema.NullOr(Schema.Number)),
-	user_id: Schema.optional(Schema.NullOr(Schema.Number)),
 });
 
 export type Task = Schema.Schema.Type<typeof TaskSchema>;
@@ -160,6 +165,41 @@ export const CreateTimeWindowRequestSchema = Schema.Struct({
 
 export type TimeWindow = Schema.Schema.Type<typeof TimeWindowSchema>;
 export type CreateTimeWindowRequest = Schema.Schema.Type<typeof CreateTimeWindowRequestSchema>;
+
+// ── Calendar Event ──
+
+export const CalendarEventSchema = Schema.Struct({
+	task_id: Schema.Number,
+	title: Schema.String,
+	start: Schema.String,
+	end: Schema.String,
+	window_type: Schema.String,
+	status: Schema.String,
+});
+
+export type CalendarEvent = Schema.Schema.Type<typeof CalendarEventSchema>;
+
+// ── DAG 依赖图 ──
+
+export const DagNodeSchema = Schema.Struct({
+	id: Schema.Number,
+	title: Schema.String,
+	status: Schema.String,
+});
+
+export const DagEdgeSchema = Schema.Struct({
+	from: Schema.Number,
+	to: Schema.Number,
+});
+
+export const DagViewSchema = Schema.Struct({
+	nodes: Schema.Array(DagNodeSchema),
+	edges: Schema.Array(DagEdgeSchema),
+});
+
+export type DagNode = Schema.Schema.Type<typeof DagNodeSchema>;
+export type DagEdge = Schema.Schema.Type<typeof DagEdgeSchema>;
+export type DagView = Schema.Schema.Type<typeof DagViewSchema>;
 
 // ── 通用响应 ──
 

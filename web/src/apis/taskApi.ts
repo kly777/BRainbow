@@ -2,7 +2,11 @@ import { type Effect, Schema } from "effect";
 import { request } from "./request.ts";
 import {
 	type ApiErrorType,
+	type CalendarEvent,
+	CalendarEventSchema,
 	type CreateTaskRequest,
+	type DagView,
+	DagViewSchema,
 	PaginatedSchema,
 	type Task,
 	type TaskDetail,
@@ -12,6 +16,23 @@ import {
 } from "./types/index.ts";
 
 // ==================== Task API Functions ====================
+
+export const getCalendarEvents = (
+	start?: string,
+	end?: string,
+	status?: string,
+): Effect.Effect<readonly CalendarEvent[], ApiErrorType> => {
+	const params = new URLSearchParams();
+	if (start) params.set("start", start);
+	if (end) params.set("end", end);
+	if (status) params.set("status", status);
+	const qs = params.toString();
+	return request(
+		`/tasks/calendar${qs ? `?${qs}` : ""}`,
+		Schema.Array(CalendarEventSchema),
+		{},
+	);
+};
 
 export const getTasks = () => request("/tasks", PaginatedSchema(TaskSchema), {});
 
@@ -45,7 +66,7 @@ export const getTaskTree = (): Effect.Effect<
 export const getTaskDetail = (
 	id: number,
 ): Effect.Effect<TaskDetail, ApiErrorType> =>
-	request(`/tasks/${id}`, TaskDetailSchema, {});
+	request(`/tasks/${id}/detail`, TaskDetailSchema, {});
 
 export const createTask = (
 	task: CreateTaskRequest,
@@ -73,9 +94,17 @@ export const addTaskDependency = (
 	taskId: number,
 	dependsOnTaskId: number,
 ): Effect.Effect<void, ApiErrorType> =>
-	request(`/tasks/${taskId}/dependencies/`, Schema.Void, {
+	request(`/tasks/${taskId}/dependencies`, Schema.Void, {
 		method: "POST",
 		body: JSON.stringify({ depends_on_task_id: dependsOnTaskId }),
+	});
+
+export const removeTaskDependency = (
+	taskId: number,
+	dependsOnTaskId: number,
+): Effect.Effect<void, ApiErrorType> =>
+	request(`/tasks/${taskId}/dependencies/${dependsOnTaskId}`, Schema.Void, {
+		method: "DELETE",
 	});
 
 export const addTaskDecomposition = (
@@ -172,3 +201,16 @@ export const moveToBacklog = (id: number): Effect.Effect<Task, ApiErrorType> =>
 	request(`/tasks/${id}/move-to-backlog`, TaskSchema, {
 		method: "POST",
 	});
+
+// ==================== DAG API ====================
+
+export const getDag = (
+	taskId?: number,
+	depth?: number,
+): Effect.Effect<DagView, ApiErrorType> => {
+	const params = new URLSearchParams();
+	if (taskId) params.set("task_id", String(taskId));
+	if (depth) params.set("depth", String(depth));
+	const qs = params.toString();
+	return request(`/tasks/dag${qs ? `?${qs}` : ""}`, DagViewSchema, {});
+};

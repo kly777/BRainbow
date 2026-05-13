@@ -2,7 +2,6 @@ use axum::{
     extract::{Query, State},
     response::{IntoResponse, Json},
 };
-use chrono::Utc;
 use std::collections::HashMap;
 use std::pin::Pin;
 
@@ -11,7 +10,7 @@ use super::dto::TaskErrorCode;
 use super::model::Task;
 use crate::error;
 use super::response::{
-    bad_request, CalendarEvent, DagView, StatsResponse, TaskResponse, TreeNode,
+    bad_request, CalendarEvent, StatsResponse, TaskResponse, TreeNode,
 };
 use super::service::TaskService;
 use crate::pagination::{Pagination, PaginatedResponse};
@@ -64,36 +63,40 @@ fn build_tree_node<'a>(
 }
 
 pub async fn get_calendar_handler(
-    Query(_query): Query<CalendarQuery>,
+    Query(query): Query<CalendarQuery>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let svc = TaskService::new(state.db);
 
-    let tasks = match svc.by_status(super::model::TaskStatus::Active, 1000, 0).await {
-        Ok((tasks, _)) => tasks,
-        Err(e) => return error::internal(e, "获取日历事件").into_response(),
-    };
-
-    let events: Vec<CalendarEvent> = tasks
-        .into_iter()
-        .map(|task| CalendarEvent {
-            task_id: task.id,
-            title: task.title,
-            start: Utc::now(),
-            end: Utc::now(),
-            window_type: "planned".to_string(),
-            status: task.status,
-        })
-        .collect();
-
-    Json(events).into_response()
+    match svc.calendar(query.start, query.end, query.status).await {
+        Ok(entries) => {
+            let events: Vec<CalendarEvent> = entries
+                .into_iter()
+                .map(|(task, tw)| CalendarEvent {
+                    task_id: task.id,
+                    title: task.title,
+                    start: tw.start_time,
+                    end: tw.end_time,
+                    window_type: tw.window_type.as_str().to_string(),
+                    status: task.status,
+                })
+                .collect();
+            Json(events).into_response()
+        }
+        Err(e) => error::internal(e, "获取日历事件").into_response(),
+    }
 }
 
 pub async fn get_dag_handler(
-    Query(_query): Query<DagQuery>,
-    _state: State<AppState>,
+    Query(query): Query<DagQuery>,
+    State(state): State<AppState>,
 ) -> impl IntoResponse {
-    Json(DagView { nodes: Vec::new(), edges: Vec::new() }).into_response()
+    let svc = TaskService::new(state.db);
+
+    match svc.dag(query.task_id, query.depth.unwrap_or(3)).await {
+        Ok(view) => Json(view).into_response(),
+        Err(e) => error::internal(e, "获取依赖图").into_response(),
+    }
 }
 
 pub async fn get_stats_handler(State(state): State<AppState>) -> impl IntoResponse {

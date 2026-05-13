@@ -110,9 +110,6 @@ pub struct Task {
     /// 精力估算（分钟数，可选）
     pub effort_estimate_minutes: Option<i32>,
 
-    /// 关联的用户ID
-    pub user_id: Option<i32>,
-
     /// 创建时间
     pub created_at: DateTime<Utc>,
 
@@ -123,17 +120,16 @@ pub struct Task {
 #[allow(dead_code)]
 impl Task {
     /// 创建新任务时的默认值
-    pub fn new(title: String, user_id: Option<i32>) -> Self {
+    pub fn new(title: String) -> Self {
         let now = Utc::now();
         Self {
-            id: 0, // 将由数据库生成
+            id: 0,
             title,
             description: None,
             parent_task_id: None,
             status: TaskStatus::Backlog,
             completed_at: None,
             effort_estimate_minutes: None,
-            user_id,
             created_at: now,
             updated_at: now,
         }

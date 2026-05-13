@@ -18,7 +18,6 @@ pub struct TaskResponse {
     pub status: TaskStatus,
     pub completed_at: Option<DateTime<Utc>>,
     pub effort_estimate_minutes: Option<i32>,
-    pub user_id: Option<i32>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -33,7 +32,6 @@ impl From<Task> for TaskResponse {
             status: task.status,
             completed_at: task.completed_at,
             effort_estimate_minutes: task.effort_estimate_minutes,
-            user_id: task.user_id,
             created_at: task.created_at,
             updated_at: task.updated_at,
         }
@@ -143,8 +141,23 @@ pub fn from_service_error(e: ServiceError) -> (StatusCode, Json<ApiError>) {
         ServiceError::CircularParent => {
             bad_request(TaskErrorCode::CircularParent, "检测到父子循环引用".into())
         }
+        ServiceError::CircularDependency => {
+            bad_request(TaskErrorCode::CircularDependency, "检测到依赖循环引用".into())
+        }
         ServiceError::SelfParent => {
             bad_request(TaskErrorCode::SelfParent, "不能设置自己为父任务".into())
+        }
+        ServiceError::SelfDependency => {
+            bad_request(TaskErrorCode::SelfDependency, "不能依赖自己".into())
+        }
+        ServiceError::PlannedOutsideAvailable(msg) => {
+            bad_request(TaskErrorCode::PlannedOutsideAvailable, msg)
+        }
+        ServiceError::SlotOverlap(msg) => {
+            bad_request(TaskErrorCode::SlotOverlap, msg)
+        }
+        ServiceError::InvalidTimeRange(msg) => {
+            bad_request(TaskErrorCode::InvalidTimeRange, msg)
         }
         ServiceError::Db(err) => {
             internal_error(format!("数据库错误: {}", err))

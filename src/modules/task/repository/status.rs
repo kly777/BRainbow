@@ -7,7 +7,7 @@ impl TaskRepository {
     pub async fn find_by_status(&self, status: TaskStatus) -> Result<Vec<Task>, sqlx::Error> {
         sqlx::query_as::<_, Task>(
             "SELECT id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, user_id, created_at, updated_at
+            effort_estimate_minutes, created_at, updated_at
             FROM task
             WHERE status = ?
             ORDER BY created_at DESC"
@@ -31,7 +31,7 @@ impl TaskRepository {
                 .await?;
         let items = sqlx::query_as::<_, Task>(
             "SELECT id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, user_id, created_at, updated_at
+            effort_estimate_minutes, created_at, updated_at
             FROM task WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
         )
         .bind(status_str)
@@ -48,7 +48,7 @@ impl TaskRepository {
             "UPDATE task SET status = 'completed', completed_at = ?, updated_at = ?
             WHERE id = ?
             RETURNING id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, user_id, created_at, updated_at"
+            effort_estimate_minutes, created_at, updated_at"
         )
         .bind(now)
         .bind(now)
@@ -65,7 +65,7 @@ impl TaskRepository {
             "UPDATE task SET status = 'active', updated_at = ?
             WHERE id = ?
             RETURNING id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, user_id, created_at, updated_at"
+            effort_estimate_minutes, created_at, updated_at"
         )
         .bind(now)
         .bind(id)
@@ -81,7 +81,7 @@ impl TaskRepository {
             "UPDATE task SET status = 'archived', updated_at = ?
             WHERE id = ?
             RETURNING id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, user_id, created_at, updated_at"
+            effort_estimate_minutes, created_at, updated_at"
         )
         .bind(now)
         .bind(id)
@@ -97,7 +97,7 @@ impl TaskRepository {
             "UPDATE task SET status = 'backlog', updated_at = ?
             WHERE id = ?
             RETURNING id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, user_id, created_at, updated_at"
+            effort_estimate_minutes, created_at, updated_at"
         )
         .bind(now)
         .bind(id)

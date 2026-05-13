@@ -9,7 +9,7 @@ impl TaskRepository {
     pub async fn find_all(&self) -> Result<Vec<Task>, sqlx::Error> {
         sqlx::query_as::<_, Task>(
             "SELECT id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, user_id, created_at, updated_at
+            effort_estimate_minutes, created_at, updated_at
             FROM task
             ORDER BY created_at DESC"
         )
@@ -28,7 +28,7 @@ impl TaskRepository {
                 .await?;
         let items = sqlx::query_as::<_, Task>(
             "SELECT id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, user_id, created_at, updated_at
+            effort_estimate_minutes, created_at, updated_at
             FROM task ORDER BY created_at DESC LIMIT ? OFFSET ?",
         )
         .bind(limit)
@@ -41,7 +41,7 @@ impl TaskRepository {
     pub async fn find_all_excluding_archived(&self) -> Result<Vec<Task>, sqlx::Error> {
         sqlx::query_as::<_, Task>(
             "SELECT id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, user_id, created_at, updated_at
+            effort_estimate_minutes, created_at, updated_at
             FROM task
             WHERE status != 'archived'
             ORDER BY created_at DESC"
@@ -61,7 +61,7 @@ impl TaskRepository {
                 .await?;
         let items = sqlx::query_as::<_, Task>(
             "SELECT id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, user_id, created_at, updated_at
+            effort_estimate_minutes, created_at, updated_at
             FROM task WHERE status != 'archived' ORDER BY created_at DESC LIMIT ? OFFSET ?",
         )
         .bind(limit)
@@ -74,7 +74,7 @@ impl TaskRepository {
     pub async fn find_by_id(&self, id: i32) -> Result<Option<Task>, sqlx::Error> {
         sqlx::query_as::<_, Task>(
             "SELECT id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, user_id, created_at, updated_at
+            effort_estimate_minutes, created_at, updated_at
             FROM task
             WHERE id = ?"
         )
@@ -88,10 +88,10 @@ impl TaskRepository {
         let result = sqlx::query(
             "INSERT INTO task (
                 title, description, parent_task_id, status, completed_at,
-                effort_estimate_minutes, user_id, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                effort_estimate_minutes, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, user_id, created_at, updated_at"
+            effort_estimate_minutes, created_at, updated_at"
         )
         .bind(&request.title)
         .bind(&request.description)
@@ -99,7 +99,6 @@ impl TaskRepository {
         .bind(TaskStatus::Backlog.as_str())
         .bind::<Option<DateTime<Utc>>>(None::<DateTime<Utc>>)
         .bind(request.effort_estimate_minutes)
-        .bind(request.user_id)
         .bind(now)
         .bind(now)
         .fetch_one(&*self.db)
@@ -114,7 +113,6 @@ impl TaskRepository {
                 .unwrap_or(TaskStatus::Backlog),
             completed_at: result.try_get("completed_at")?,
             effort_estimate_minutes: result.try_get("effort_estimate_minutes")?,
-            user_id: result.try_get("user_id")?,
             created_at: result.try_get("created_at")?,
             updated_at: result.try_get("updated_at")?,
         })
@@ -125,14 +123,13 @@ impl TaskRepository {
         let result = sqlx::query(
             "INSERT INTO task (
                 title, description, parent_task_id, status, completed_at,
-                effort_estimate_minutes, user_id, created_at, updated_at
-            ) VALUES (?, NULL, NULL, ?, NULL, NULL, ?, ?, ?)
+                effort_estimate_minutes, created_at, updated_at
+            ) VALUES (?, NULL, NULL, ?, NULL, NULL, ?, ?)
             RETURNING id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, user_id, created_at, updated_at"
+            effort_estimate_minutes, created_at, updated_at"
         )
         .bind(&request.title)
         .bind(TaskStatus::Backlog.as_str())
-        .bind(request.user_id)
         .bind(now)
         .bind(now)
         .fetch_one(&*self.db)
@@ -147,20 +144,17 @@ impl TaskRepository {
                 .unwrap_or(TaskStatus::Backlog),
             completed_at: result.try_get("completed_at")?,
             effort_estimate_minutes: result.try_get("effort_estimate_minutes")?,
-            user_id: result.try_get("user_id")?,
             created_at: result.try_get("created_at")?,
             updated_at: result.try_get("updated_at")?,
         })
     }
 
     pub async fn update(&self, id: i32, request: UpdateTaskRequest) -> Result<Task, sqlx::Error> {
-        // 先获取当前任务
         let current_task = match self.find_by_id(id).await? {
             Some(task) => task,
             None => return Err(sqlx::Error::RowNotFound),
         };
 
-        // 检查是否需要设置完成时间
         let (new_status, completed_at) = match request.status {
             Some(status) if status == TaskStatus::Completed && !current_task.is_completed() => {
                 (Some(status), Some(Utc::now()))
@@ -169,7 +163,6 @@ impl TaskRepository {
             None => (None, None),
         };
 
-        // 构建动态 UPDATE SET 语句
         let mut qb = sqlx::QueryBuilder::new("UPDATE task SET ");
         let mut first = true;
 
@@ -230,27 +223,14 @@ impl TaskRepository {
             }
         }
 
-        if let Some(user_id) = &request.user_id {
-            if !first { qb.push(", "); } // first = false;
-            match user_id {
-                Some(uid) => {
-                    qb.push("user_id = ");
-                    qb.push_bind(uid);
-                }
-                None => {
-                    qb.push("user_id = NULL");
-                }
-            }
-        }
-
-        // 总是更新时间戳
+        if !first { qb.push(", "); }
         qb.push("updated_at = ");
         qb.push_bind(Utc::now());
 
         let result = qb
             .push(" WHERE id = ")
             .push_bind(id)
-            .push(" RETURNING id, title, description, parent_task_id, status, completed_at, effort_estimate_minutes, user_id, created_at, updated_at")
+            .push(" RETURNING id, title, description, parent_task_id, status, completed_at, effort_estimate_minutes, created_at, updated_at")
             .build_query_as::<Task>()
             .fetch_one(&*self.db)
             .await?;
@@ -259,21 +239,18 @@ impl TaskRepository {
     }
 
     pub async fn delete(&self, id: i32) -> Result<u64, sqlx::Error> {
-        // 根据new_task.md，completed状态的任务直接删除，其他状态的任务归档
         let task = match self.find_by_id(id).await? {
             Some(task) => task,
             None => return Ok(0),
         };
 
         if task.is_completed() {
-            // 直接删除
             let result = sqlx::query("DELETE FROM task WHERE id = ?")
                 .bind(id)
                 .execute(&*self.db)
                 .await?;
             Ok(result.rows_affected())
         } else {
-            // 归档任务
             let result = sqlx::query("UPDATE task SET status = 'archived', updated_at = ? WHERE id = ?")
                 .bind(Utc::now())
                 .bind(id)

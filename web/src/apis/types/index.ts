@@ -47,6 +47,16 @@ export {
 	CreateTimeWindowRequestSchema,
 	type TimeWindow,
 	type CreateTimeWindowRequest,
+	// Calendar
+	CalendarEventSchema,
+	type CalendarEvent,
+	// DAG
+	DagNodeSchema,
+	DagEdgeSchema,
+	DagViewSchema,
+	type DagNode,
+	type DagEdge,
+	type DagView,
 	// 通用
 	type ApiResponse,
 	// 常量 & 展示

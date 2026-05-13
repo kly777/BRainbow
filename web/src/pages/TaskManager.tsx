@@ -1,6 +1,7 @@
 import { createSignal, Show } from "solid-js";
 import type { CreateTaskRequest } from "../apis/types/index.ts";
 import TaskCalendar from "../components/TaskCalendar.tsx";
+import TaskDag from "../components/TaskDag.tsx";
 import TaskList from "../components/TaskList.tsx";
 import { TaskProvider, useTasks } from "../components/TaskProvider.tsx";
 import styles from "./TaskManager.module.css";
@@ -127,12 +128,36 @@ function CreateModal(props: { open: boolean; onClose: () => void }) {
 
 function TaskPanel() {
 	const { tasks, loading, updateStatus, removeTask, updateTask, addSubTask } = useTasks();
+	const [rightTab, setRightTab] = createSignal<"calendar" | "dag">("calendar");
 
 	return (
 		<Show when={loading()} fallback={
 			<div class={styles.splitView}>
 				<TaskList tasks={tasks()} onStatusChange={updateStatus} onDelete={removeTask} onUpdate={updateTask} onAddSubTask={addSubTask} />
-				<div class={styles.calendarPanel}><TaskCalendar tasks={tasks()} /></div>
+				<div class={styles.rightPanel}>
+					<div class={styles.tabBar}>
+						<button
+							type="button"
+							class={`${styles.tabBtn} ${rightTab() === "calendar" ? styles.tabActive : ""}`}
+							onClick={() => setRightTab("calendar")}
+						>
+							📅 日历
+						</button>
+						<button
+							type="button"
+							class={`${styles.tabBtn} ${rightTab() === "dag" ? styles.tabActive : ""}`}
+							onClick={() => setRightTab("dag")}
+						>
+							🔗 依赖图
+						</button>
+					</div>
+					<Show when={rightTab() === "calendar"}>
+						<TaskCalendar />
+					</Show>
+					<Show when={rightTab() === "dag"}>
+						<TaskDag />
+					</Show>
+				</div>
 			</div>
 		}>
 			<div class={styles.loading}>加载中...</div>

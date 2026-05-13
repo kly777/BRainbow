@@ -52,7 +52,6 @@ function makeTemp(req: CreateTaskRequest): Task {
 		status: "backlog",
 		completed_at: null,
 		effort_estimate_minutes: req.effort_estimate_minutes ?? null,
-		user_id: req.user_id ?? null,
 		created_at: new Date().toISOString(),
 		updated_at: new Date().toISOString(),
 	};
@@ -106,7 +105,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		const orig = prev[idx];
 		setTasks(prev.map((t, i) => (i === idx ? { ...t, status: newStatus } : t)));
 
-		const fn: Record<string, () => Promise<unknown>> = {
+		const fn: Record<string, () => Promise<Task>> = {
 			completed: () => Effect.runPromise(completeTask(id)),
 			active: () => Effect.runPromise(activateTask(id)),
 			archived: () => Effect.runPromise(archiveTask(id)),
@@ -115,8 +114,9 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		try {
 			const f = fn[newStatus];
 			if (!f) throw new Error(`未知状态: ${newStatus}`);
-			await f();
-			await reload();
+			const updated = await f();
+			setTasks((c) => c.map((t) => (t.id === id ? updated : t)));
+			await reloadStats();
 		} catch (e) {
 			console.error("更新状态失败:", getErrorMessage(e));
 			setTasks((c) => c.map((t) => (t.id === id ? { ...t, status: orig.status } : t)));
@@ -142,8 +142,9 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		const orig = prev[idx];
 		setTasks(prev.map((t, i) => (i === idx ? { ...t, ...updates } : t)));
 		try {
-			await Effect.runPromise(apiUpdateTask(id, updates));
-			await reload();
+			const updated = await Effect.runPromise(apiUpdateTask(id, updates));
+			setTasks((c) => c.map((t) => (t.id === id ? updated : t)));
+			await reloadStats();
 		} catch (e) {
 			console.error("更新任务失败:", getErrorMessage(e));
 			setTasks((c) => c.map((t) => (t.id === id ? orig : t)));

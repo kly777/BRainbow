@@ -13,6 +13,7 @@ use super::model::{
 };
 use crate::error::{self, ApiError};
 use super::repository::TimeWindowRepository;
+use super::service::{TimeWindowService, ServiceError as TwServiceError};
 use crate::pagination::Pagination;
 use crate::state::AppState;
 
@@ -86,29 +87,11 @@ pub async fn create_time_window_handler(
     State(state): State<AppState>,
     Json(payload): Json<CreateTimeWindowRequest>,
 ) -> impl IntoResponse {
-    let repo = TimeWindowRepository::new(state.db);
-    let task_id = payload.task_id;
+    let svc = TimeWindowService::new(state.db);
 
-    match repo.create(payload).await {
+    match svc.create(payload).await {
         Ok(time_window) => Json(TimeWindowResponse::from(time_window)).into_response(),
-        Err(sqlx::Error::Protocol(msg)) if msg.contains("Start time must be earlier") => {
-            bad_request(
-                "invalid_time_range",
-                "开始时间必须早于结束时间".to_string(),
-            )
-            .into_response()
-        }
-        Err(e) => {
-            let msg = format!("{}", e);
-            if msg.contains("FOREIGN KEY") {
-                return bad_request(
-                    "task_not_found",
-                    format!("任务 ID {} 不存在", task_id),
-                )
-                .into_response();
-            }
-            error::internal(e, "创建时间窗口").into_response()
-        }
+        Err(e) => handle_tw_service_error(e),
     }
 }
 
@@ -178,13 +161,38 @@ pub async fn update_time_window_handler(
     State(state): State<AppState>,
     Json(payload): Json<UpdateTimeWindowRequest>,
 ) -> impl IntoResponse {
-    let repo = TimeWindowRepository::new(state.db);
+    let svc = TimeWindowService::new(state.db);
 
-    match repo.update(id, payload).await {
+    match svc.update(id, payload).await {
         Ok(time_window) => Json(TimeWindowResponse::from(time_window)).into_response(),
-        Err(sqlx::Error::RowNotFound) => not_found().into_response(),
-        Err(e) => {
-            error::internal(e, "更新时间窗口").into_response()
+        Err(e) => handle_tw_service_error(e),
+    }
+}
+
+fn handle_tw_service_error(e: TwServiceError) -> axum::response::Response {
+    match e {
+        TwServiceError::InvalidTimeRange(msg) => {
+            bad_request("invalid_time_range", msg).into_response()
+        }
+        TwServiceError::PlannedOutsideAvailable(msg) => {
+            bad_request("planned_outside_available", msg).into_response()
+        }
+        TwServiceError::SlotOverlap(msg) => {
+            bad_request("slot_overlap", msg).into_response()
+        }
+        TwServiceError::NotFound => not_found().into_response(),
+        TwServiceError::Internal(msg) => {
+            error::internal_error(msg).into_response()
+        }
+        TwServiceError::Db(sqlx_err) => {
+            let msg = format!("{}", sqlx_err);
+            if msg.contains("FOREIGN KEY") {
+                bad_request("task_not_found", "关联的任务不存在".to_string()).into_response()
+            } else if msg.contains("RowNotFound") {
+                not_found().into_response()
+            } else {
+                error::internal(sqlx_err, "时间窗口操作").into_response()
+            }
         }
     }
 }

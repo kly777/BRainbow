@@ -1,78 +1,75 @@
-/* 任务列表面板样式 */
+/* ===== 任务列表 —— 极简主义 ===== */
+
 .taskListPanel {
 	display: flex;
 	flex-direction: column;
-	gap: 20px;
+	gap: 32px;
 	flex: 1;
 	min-height: 0;
 	overflow-y: auto;
-	padding-right: 4px;
 }
 
+/* ── 状态分组：无卡片，仅标题 + 留白 ── */
+
 .statusSection {
-	background: var(--bg-card);
-	border-radius: 12px;
-	padding: 20px;
-	box-shadow: 0 1px 3px var(--shadow);
-	border: 1px solid var(--border);
+	/* 无背景、无边框、无阴影 */
 }
 
 .statusTitle {
-	margin: 0 0 15px 0;
-	font-size: 18px;
-	color: #374151;
+	margin: 0 0 14px;
+	font-size: 13px;
+	font-weight: 500;
+	color: #9ca3af;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 10px;
 }
 
 .statusIndicator {
-	width: 12px;
-	height: 12px;
+	width: 6px;
+	height: 6px;
 	border-radius: 50%;
 	display: inline-block;
+	flex-shrink: 0;
 }
 
-.statusBacklog {
-	background: #6b7280;
-}
+.statusBacklog  { background: #d1d5db; }
+.statusActive   { background: #3b82f6; }
+.statusCompleted { background: #10b981; }
+.statusArchived { background: #e5e7eb; }
 
-.statusActive {
-	background: #3b82f6;
-}
-
-.statusCompleted {
-	background: #10b981;
-}
-
-.statusArchived {
-	background: #9ca3af;
-}
+/* ── 任务列表：极细分割线 ── */
 
 .taskList {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
 }
 
+/* ── 单个任务项 ── */
+
 .taskItem {
-	padding: 14px;
-	background: var(--bg-input);
-	border-radius: 8px;
-	border-left: 4px solid #d1c4a5;
-	transition: all 0.2s;
+	display: flex;
+	flex-direction: column;
+	padding: 16px 0;
+	border-bottom: 1px solid #f3f4f6;
+	transition: background 0.15s ease;
+}
+
+.taskItem:first-child {
+	border-top: 1px solid #f3f4f6;
 }
 
 .taskItem:hover {
-	background: #fef5e7;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+	background: #fafbfc;
 }
 
 .taskRow {
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
-	gap: 12px;
+	gap: 20px;
 }
 
 .taskMain {
@@ -80,197 +77,233 @@
 	min-width: 0;
 }
 
+/* ── 标题 ── */
+
 .taskTitle {
-	margin: 0 0 8px 0;
-	font-size: 16px;
-	color: #1f2937;
+	margin: 0 0 4px;
+	font-size: 15px;
 	font-weight: 500;
+	color: #111827;
+	line-height: 1.5;
+	letter-spacing: -0.01em;
 }
 
+/* ── 描述 ── */
+
 .taskDescription {
-	margin: 0 0 10px 0;
-	font-size: 14px;
+	margin: 0 0 8px;
+	font-size: 13px;
 	color: #6b7280;
-	line-height: 1.5;
+	line-height: 1.6;
 }
+
+/* ── 元信息行 ── */
 
 .taskMeta {
 	display: flex;
-	gap: 12px;
+	gap: 14px;
 	align-items: center;
 	flex-wrap: wrap;
 }
 
 .dateBadge {
-	padding: 2px 8px;
-	border-radius: 4px;
 	font-size: 12px;
-	background: #e5e7eb;
-	color: #6b7280;
-}
-
-.taskActions {
-	display: flex;
-	gap: 8px;
-}
-
-.statusSelect {
-	padding: 6px 12px;
-	border: 1px solid #d1d5db;
-	border-radius: 6px;
-	font-size: 14px;
-	cursor: pointer;
-	background: white;
-}
-
-.editButton {
-	padding: 6px 12px;
-	background: #3b82f6;
-	color: white;
-	border: none;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 14px;
-	transition: background 0.2s;
-}
-
-.editButton:hover {
-	background: #2563eb;
-}
-
-.subTaskButton {
-	padding: 6px 12px;
-	background: #8b5cf6;
-	color: white;
-	border: none;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 16px;
-	font-weight: bold;
-	transition: background 0.2s;
-	line-height: 1;
-}
-
-.subTaskButton:hover {
-	background: #7c3aed;
-}
-
-.subTaskForm {
-	display: flex;
-	gap: 8px;
-	align-items: center;
-	margin-top: 12px;
-	padding: 8px 12px;
-	background: #fefce8;
-	border: 1px solid #fde68a;
-	border-radius: 8px;
-}
-
-.subTaskInput {
-	flex: 1;
-	padding: 8px 12px;
-	border: 1px solid #d1d5db;
-	border-radius: 6px;
-	font-size: 14px;
-	background: white;
-	outline: none;
-	transition: border-color 0.2s;
-}
-
-.subTaskInput:focus {
-	border-color: #8b5cf6;
-	box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
-}
-
-.subTaskCancel {
-	padding: 6px 12px;
-	background: #6b7280;
-	color: white;
-	border: none;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 13px;
-	white-space: nowrap;
-	transition: background 0.2s;
-}
-
-.subTaskCancel:hover {
-	background: #4b5563;
-}
-
-.childList {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	margin-top: 12px;
-	margin-left: 8px;
-	padding-left: 16px;
-}
-
-.childList > .taskItem {
-	padding: 12px 14px;
-	border-left-color: #c4b5fd;
-	background: #fafafa;
+	color: #9ca3af;
 }
 
 .timeWindowChips {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
-	margin-top: 8px;
+	margin-top: 6px;
 }
 
 .timeWindowChip {
-	font-size: 12px;
+	font-size: 11px;
 	padding: 2px 8px;
-	border-radius: 4px;
-	background: #f3f4f6;
-	color: #374151;
+	border-radius: 3px;
+	background: #f9fafb;
+	color: #6b7280;
+	border: 1px solid #f3f4f6;
 	white-space: nowrap;
 }
 
 .subTaskBadge {
 	margin-left: 8px;
-	padding: 2px 8px;
-	border-radius: 4px;
-	font-size: 12px;
-	background: #fef3c7;
-	color: #92400e;
-	font-weight: normal;
+	padding: 1px 6px;
+	border-radius: 3px;
+	font-size: 11px;
+	font-weight: 500;
+	color: #6b7280;
+	background: #f3f4f6;
+	vertical-align: middle;
 }
 
-.deleteButton {
-	padding: 6px 12px;
-	background: #ef4444;
-	color: white;
+/* ── 操作区 ── */
+
+.taskActions {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+	flex-shrink: 0;
+}
+
+.statusSelect {
+	padding: 5px 10px;
+	border: 1px solid #e5e7eb;
+	border-radius: 6px;
+	font-size: 12px;
+	color: #374151;
+	background: white;
+	cursor: pointer;
+	outline: none;
+	transition: border-color 0.15s;
+	appearance: none;
+	-webkit-appearance: none;
+	padding-right: 24px;
+	background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239ca3af' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 8px center;
+}
+
+.statusSelect:hover {
+	border-color: #d1d5db;
+}
+
+.statusSelect:focus {
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.editButton {
+	padding: 5px 10px;
+	background: none;
+	color: #9ca3af;
 	border: none;
 	border-radius: 6px;
 	cursor: pointer;
 	font-size: 14px;
-	transition: background 0.2s;
+	transition: all 0.15s;
+}
+
+.editButton:hover {
+	background: #f3f4f6;
+	color: #374151;
+}
+
+.subTaskButton {
+	padding: 4px 10px;
+	background: none;
+	color: #9ca3af;
+	border: 1px solid #e5e7eb;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 500;
+	transition: all 0.15s;
+	line-height: 1.4;
+}
+
+.subTaskButton:hover {
+	background: #f9fafb;
+	color: #374151;
+	border-color: #d1d5db;
+}
+
+.deleteButton {
+	padding: 5px 10px;
+	background: none;
+	color: #9ca3af;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 14px;
+	transition: all 0.15s;
 }
 
 .deleteButton:hover {
-	background: #dc2626;
+	background: #fef2f2;
+	color: #ef4444;
 }
 
-/* 响应式设计 */
+/* ── 子任务输入 ── */
+
+.subTaskForm {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	margin-top: 10px;
+	padding: 10px 0 0;
+	border-top: 1px solid #f3f4f6;
+}
+
+.subTaskInput {
+	flex: 1;
+	padding: 7px 12px;
+	border: 1px solid #e5e7eb;
+	border-radius: 6px;
+	font-size: 13px;
+	background: white;
+	outline: none;
+	transition: border-color 0.15s;
+}
+
+.subTaskInput:focus {
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.subTaskInput::placeholder {
+	color: #d1d5db;
+}
+
+.subTaskCancel {
+	padding: 7px 14px;
+	background: none;
+	color: #9ca3af;
+	border: 1px solid #e5e7eb;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 12px;
+	white-space: nowrap;
+	transition: all 0.15s;
+}
+
+.subTaskCancel:hover {
+	background: #f3f4f6;
+	color: #374151;
+}
+
+/* ── 子任务列表 ── */
+
+.childList {
+	display: flex;
+	flex-direction: column;
+	margin-top: 0;
+	margin-left: 20px;
+	padding-left: 16px;
+	border-left: 2px solid #f3f4f6;
+}
+
+.childList > .taskItem {
+	padding: 12px 0;
+}
+
+/* ── 响应式 ── */
+
 @media (max-width: 768px) {
-	.taskListPanel {
-		gap: 15px;
-	}
-
-	.statusSection {
-		padding: 15px;
-	}
-
-	.taskItem {
+	.taskRow {
 		flex-direction: column;
-		gap: 12px;
+		gap: 10px;
 	}
-
 	.taskActions {
 		width: 100%;
-		justify-content: space-between;
+		justify-content: flex-end;
+	}
+	.statusTitle {
+		font-size: 12px;
+	}
+	.taskTitle {
+		font-size: 14px;
 	}
 }

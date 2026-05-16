@@ -31,13 +31,13 @@ fn verify_token(token: &str, secret: &str) -> Option<Claims> {
     .map(|d| d.claims)
 }
 
-/// 生成 JWT（24h 有效）
+/// 生成 JWT（240h 有效）
 pub fn create_token(user_id: i32, role: &str, secret: &str) -> String {
     let exp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs() as usize
-        + 86400;
+        + 864000;
     let claims = Claims {
         sub: user_id,
         role: role.to_string(),

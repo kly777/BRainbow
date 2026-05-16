@@ -1,7 +1,7 @@
 import { A } from "@solidjs/router";
 import { createSignal, type JSX } from "solid-js";
 import AuthStatus from "./auth/AuthStatus.tsx";
-import ToastContainer from "./components/Toast.tsx";
+import ToastContainer from "./components/ui/Toast.tsx";
 import styles from "./App.module.css";
 
 export default function Layout(props: { children?: JSX.Element }) {

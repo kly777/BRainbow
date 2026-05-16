@@ -1,7 +1,7 @@
 // ==================== Error 类 · Schema · 错误工具 ====================
 
 import { Data, Schema } from "effect";
-import { showToast } from "../../components/toastStore.ts";
+import { showToast } from "../../components/ui/toastStore.ts";
 
 // ── 后端错误响应 Schema ──
 

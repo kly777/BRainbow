@@ -1,10 +1,10 @@
 import { createSignal, Show } from "solid-js";
 import type { CreateTaskRequest } from "../apis/types/index.ts";
-import TaskCalendar from "../components/TaskCalendar.tsx";
-import TaskDag from "../components/TaskDag.tsx";
-import TaskKanban from "../components/TaskKanban.tsx";
-import TaskList from "../components/TaskList.tsx";
-import { TaskProvider, useTasks } from "../components/TaskProvider.tsx";
+import TaskCalendar from "../components/task/TaskCalendar.tsx";
+import TaskDag from "../components/task/TaskDag.tsx";
+import TaskKanban from "../components/task/TaskKanban.tsx";
+import TaskList from "../components/task/TaskList.tsx";
+import { TaskProvider, useTasks } from "../components/task/TaskProvider.tsx";
 import styles from "./TaskManager.module.css";
 
 function StatsBar() {

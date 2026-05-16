@@ -10,8 +10,8 @@ import {
 import { deleteCard, getCard, updateCard, uploadImage } from "../../apis/cardApi.ts";
 import type { UpdateCardRequest } from "../../apis/types/index.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
-import Markdown from "../../components/Markdown.tsx";
-import { AsyncView } from "../../components/AsyncView.tsx";
+import Markdown from "../../components/ui/Markdown.tsx";
+import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import styles from "./CardEdit.module.css";
 
 const CardEditPage: Component = () => {

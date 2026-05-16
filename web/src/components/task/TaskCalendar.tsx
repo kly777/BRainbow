@@ -1,8 +1,8 @@
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { Effect } from "effect";
-import { getCalendarEvents } from "../apis/taskApi.ts";
-import type { CalendarEvent } from "../apis/types/index.ts";
-import { getErrorMessage } from "../apis/types/index.ts";
+import { getCalendarEvents } from "../../apis/taskApi.ts";
+import type { CalendarEvent } from "../../apis/types/index.ts";
+import { getErrorMessage } from "../../apis/types/index.ts";
 import styles from "./TaskCalendar.module.css";
 
 // 窗口类型对应颜色

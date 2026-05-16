@@ -9,7 +9,7 @@ import {
 import type { Onto } from "../../apis/ontoApi.ts";
 import { createOnto, deleteOnto, getOntos } from "../../apis/ontoApi.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
-import { AsyncView } from "../../components/AsyncView.tsx";
+import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import styles from "./OntologyList.module.css";
 
 const OntologyListPage: Component = () => {

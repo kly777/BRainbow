@@ -4,8 +4,8 @@ import { type Component, createResource, createSignal, Show } from "solid-js";
 import { createCard, deleteCard, getCards, searchCards } from "../../apis/cardApi.ts";
 import { type CreateCardRequest, getErrorMessage } from "../../apis/types/index.ts";
 
-import CardsGrid from "../../components/CardsGrid.tsx";
-import { AsyncView } from "../../components/AsyncView.tsx";
+import CardsGrid from "../../components/card/CardsGrid.tsx";
+import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import styles from "./CardsList.module.css";
 
 const emptyFallback = Effect.catchTags({

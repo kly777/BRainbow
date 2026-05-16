@@ -9,7 +9,7 @@ import {
 import { deleteImage, listImages, renameImage } from "../../apis/cardApi.ts";
 import type { Image } from "../../apis/types/index.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
-import { AsyncView } from "../../components/AsyncView.tsx";
+import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import styles from "./ImagesList.module.css";
 
 const ImagesListPage: Component = () => {

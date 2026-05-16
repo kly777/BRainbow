@@ -3,11 +3,11 @@ import { Effect } from "effect";
 import { createSignal, onMount, Show } from "solid-js";
 import { deleteCard as apiDeleteCard, getCards } from "../apis/cardApi.ts";
 import { getErrorMessage, type CreateTaskRequest } from "../apis/types/index.ts";
-import type { CardData } from "../components/Card.tsx";
-import CardsGrid from "../components/CardsGrid.tsx";
-import TaskList from "../components/TaskList.tsx";
-import { TaskProvider, useTasks } from "../components/TaskProvider.tsx";
-import { AsyncView } from "../components/AsyncView.tsx";
+import type { CardData } from "../components/card/Card.tsx";
+import CardsGrid from "../components/card/CardsGrid.tsx";
+import TaskList from "../components/task/TaskList.tsx";
+import { TaskProvider, useTasks } from "../components/task/TaskProvider.tsx";
+import { AsyncView } from "../components/ui/AsyncView.tsx";
 import styles from "./HomePage.module.css";
 
 function TaskSection() {

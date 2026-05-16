@@ -1,8 +1,8 @@
 import { createEffect, createMemo, createResource, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { Effect } from "effect";
-import { getDag, getAllTasks } from "../apis/taskApi.ts";
-import type { DagNode, DagEdge, Task } from "../apis/types/index.ts";
-import { getErrorMessage } from "../apis/types/index.ts";
+import { getDag, getAllTasks } from "../../apis/taskApi.ts";
+import type { DagNode, DagEdge, Task } from "../../apis/types/index.ts";
+import { getErrorMessage } from "../../apis/types/index.ts";
 import styles from "./TaskDag.module.css";
 
 // ==================== 布局引擎（纯函数，无外部依赖） ====================

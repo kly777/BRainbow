@@ -120,6 +120,9 @@ WorkingDirectory=$REMOTE_DIR
 ExecStart=$REMOTE_DIR/brainbow
 Restart=on-failure
 RestartSec=5
+MemoryMax=1024M
+CPUQuota=80%
+Environment="RUST_LOG=info"
 Environment="SERVICE_PORT=$SERVICE_PORT"
 Environment="BIND_HOST=$BIND_HOST"
 Environment="DATABASE_URL=sqlite:$REMOTE_DIR/$DATABASE_FILE"

@@ -17,12 +17,51 @@ use axum::response::Response;
 use sqlx::SqlitePool;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
+use tracing::{error, info};
+use tracing_subscriber::EnvFilter;
 
 use crate::routes::create_router;
 use crate::state::AppState;
 
+fn init_logging() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .with_target(false)
+        .init();
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install SIGTERM handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    info!("正在关闭...");
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    init_logging();
+
     // 连接数据库
     let database_url =
         std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:brainbow.db".into());
@@ -68,8 +107,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
-    println!("Listening on http://{}", listener.local_addr()?);
-    axum::serve(listener, app).await?;
+    info!("Listening on http://{}", listener.local_addr()?);
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     Ok(())
 }
@@ -83,7 +124,7 @@ async fn logger(req: Request, next: Next) -> Result<Response, axum::response::Re
     let duration = start.elapsed();
     let status = res.status();
 
-    println!("← {} {} - {} ({:?})", method, path, status, duration);
+    info!("← {} {} - {} ({:?})", method, path, status, duration);
 
     Ok(res)
 }

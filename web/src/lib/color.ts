@@ -153,7 +153,7 @@ export function oklabToRgb(ok: Oklab): RGB {
 /** 检查并规范化 HEX 字符串 */
 export function normalizeHex(input: string): string | null {
   let s = input.trim();
-  if (!s.startsWith("#")) s = "#" + s;
+  if (!s.startsWith("#")) s = `#${s}`;
   if (/^#[a-f\d]{6}$/i.test(s)) return s.toLowerCase();
   // 3 位缩写 → 6 位
   if (/^#[a-f\d]{3}$/i.test(s)) {

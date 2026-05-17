@@ -5,9 +5,10 @@
     "preview": "deno run -A npm:@rsbuild/core preview",
     "check": "deno check src/**/*.ts src/**/*.tsx",
     "fmt": "deno fmt",
-    "lint": "deno lint"
+    "lint": "deno lint && deno run -A npm:@biomejs/biome lint"
   },
   "imports": {
+    "@biomejs/biome": "npm:@biomejs/biome@^2.4.15",
     "solid-js": "npm:solid-js@^1.9.12",
     "solid-js/web": "npm:solid-js@^1.9.12/web",
     "solid-js/store": "npm:solid-js@^1.9.12/store",

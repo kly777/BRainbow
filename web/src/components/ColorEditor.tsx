@@ -1,4 +1,4 @@
-import { createSignal, createEffect, Accessor, Setter, Index } from "solid-js";
+import { createSignal, createEffect, type Accessor, type Setter, Index } from "solid-js";
 import {
   hexToRgb,
   rgbToHsl,
@@ -114,21 +114,21 @@ function ColorRow(props: {
 
   const onRgbInput = (ch: "r" | "g" | "b", e: Event) => {
     const n = parseInt((e.target as HTMLInputElement).value, 10);
-    if (isNaN(n)) return;
+    if (Number.isNaN(n)) return;
     if (ch === "r") setR(n); else if (ch === "g") setG(n); else setB(n);
     commitRgb(ch === "r" ? n : r(), ch === "g" ? n : g(), ch === "b" ? n : b());
   };
 
   const onHslInput = (ch: "h" | "s" | "l", e: Event) => {
     const n = parseInt((e.target as HTMLInputElement).value, 10);
-    if (isNaN(n)) return;
+    if (Number.isNaN(n)) return;
     if (ch === "h") setH(n); else if (ch === "s") setS(n); else setL(n);
     commitHsl(ch === "h" ? n : h(), ch === "s" ? n : s(), ch === "l" ? n : l());
   };
 
   const onOklabInput = (ch: "L" | "a" | "b", e: Event) => {
     const n = parseFloat((e.target as HTMLInputElement).value);
-    if (isNaN(n)) return;
+    if (Number.isNaN(n)) return;
     if (ch === "L") setOkL(n); else if (ch === "a") setOkA(n); else setOkB(n);
     commitOklab(ch === "L" ? n : okL(), ch === "a" ? n : okA(), ch === "b" ? n : okB());
   };
@@ -143,6 +143,7 @@ function ColorRow(props: {
       <div class={styles.segmented}>
         {SPACES.map((sp) => (
           <button
+            type="button"
             class={space() === sp.key ? styles.segActive : styles.segBtn}
             onClick={() => setSpace(sp.key)}
           >
@@ -196,6 +197,7 @@ function ColorRow(props: {
       )}
 
       <button
+        type="button"
         class={styles.removeBtn}
         onClick={props.onRemove}
         disabled={!props.canRemove}
@@ -235,7 +237,7 @@ export default function ColorEditor(props: Props) {
           )}
         </Index>
       </div>
-      <button class={styles.addBtn} onClick={addColor}>
+      <button type="button" class={styles.addBtn} onClick={addColor}>
         ＋ 添加颜色
       </button>
     </fieldset>

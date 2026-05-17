@@ -1,4 +1,4 @@
-import { createSignal, createEffect, Accessor, Setter } from "solid-js";
+import { createSignal, createEffect, type Accessor, type Setter } from "solid-js";
 import { Angle } from "../lib/angle.ts";
 import styles from "./AngleEditor.module.css";
 
@@ -26,7 +26,7 @@ const MODES: { key: AngleMode; label: string; unit: string }[] = [
 /** 把字符串解析后写入 angle，无法解析则忽略 */
 function commit(raw: string, mode: AngleMode, setAngle: Setter<Angle>) {
   const v = parseFloat(raw);
-  if (isNaN(v)) {
+  if (Number.isNaN(v)) {
       setAngle(new Angle(0));
       return;
   };
@@ -79,6 +79,7 @@ export default function AngleEditor(props: Props) {
       <div class={styles.segmented}>
         {MODES.map((m) => (
           <button
+            type="button"
             class={mode() === m.key ? styles.segActive : styles.segBtn}
             onClick={() => setMode(m.key)}
           >
@@ -98,7 +99,7 @@ export default function AngleEditor(props: Props) {
           onKeyDown={onKeyDown}
           class={styles.input}
         />
-        <span class={styles.unit}>{MODES.find((m) => m.key === mode())!.unit}</span>
+        <span class={styles.unit}>{MODES.find((m) => m.key === mode())?.unit}</span>
       </label>
     </fieldset>
   );

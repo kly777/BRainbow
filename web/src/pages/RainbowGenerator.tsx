@@ -39,8 +39,6 @@ function RainbowGenerator() {
       squareSize / Math.cos(angle().radian) +
       2 * rectHeight() * Math.tan(angle().radian),
   );
-  const y_offset = createMemo(() => rectHeight() / Math.cos(angle().radian));
-
   // ── 导出 ──
 
   const download = (url: string, filename: string) => {
@@ -71,14 +69,15 @@ function RainbowGenerator() {
     clone.setAttribute("width", String(squareSize));
     clone.setAttribute("height", String(squareSize));
     const xml = new XMLSerializer().serializeToString(clone);
-    const dataUrl = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(xml)));
+    const dataUrl = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(xml)))}`;
 
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement("canvas");
       canvas.width = squareSize;
       canvas.height = squareSize;
-      const ctx = canvas.getContext("2d")!;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
       ctx.drawImage(img, 0, 0);
       canvas.toBlob((blob) => {
         if (blob) download(URL.createObjectURL(blob), "rainbow.png");
@@ -94,10 +93,10 @@ function RainbowGenerator() {
         <ColorEditor colors={colors} setColors={setColors} />
 
         <div class={styles.exportRow}>
-          <button class={styles.exportBtn} onClick={exportSvg}>
+          <button type="button" class={styles.exportBtn} onClick={exportSvg}>
             导出 SVG
           </button>
-          <button class={styles.exportBtn} onClick={exportPng}>
+          <button type="button" class={styles.exportBtn} onClick={exportPng}>
             导出 PNG
           </button>
         </div>
@@ -107,6 +106,7 @@ function RainbowGenerator() {
           <div class={styles.segmented}>
             {RENDER_MODES.map((m) => (
               <button
+                type="button"
                 class={shapeRender() === m.key ? styles.segActive : styles.segBtn}
                 onClick={() => setShapeRender(m.key)}
               >

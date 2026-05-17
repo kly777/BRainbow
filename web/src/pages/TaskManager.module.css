@@ -1,815 +1,189 @@
 .taskManager {
-	margin: 0 auto;
-	padding: 16px;
-	display: flex;
-	flex-direction: column;
-	flex: 1;
-	min-height: 0;
+    margin: 0 0;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 12px;
 }
 
-.statsGrid {
-	display: grid;
-	grid-template-columns: repeat(4, 1fr);
-	gap: 16px;
-	margin-bottom: 24px;
-}
-
-.statCard {
-	background: white;
-	border-radius: 10px;
-	padding: 20px;
-	text-align: center;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-	border: 1px solid #e5e7eb;
-	transition: transform 0.2s;
-}
-
-.statCard:hover {
-	transform: translateY(-2px);
-}
-
-.statValue {
-	font-size: 32px;
-	font-weight: 700;
-	color: #3b82f6;
-	line-height: 1.2;
-}
-
-.statLabel {
-	font-size: 13px;
-	color: #6b7280;
-	margin-top: 4px;
-}
-
-.searchBar {
-	display: flex;
-	gap: 8px;
-	margin-bottom: 16px;
-}
-
-.searchInput {
-	flex: 1;
-	padding: 10px 14px;
-	border: 1px solid #d1d5db;
-	border-radius: 8px;
-	font-size: 14px;
-	outline: none;
-	transition: border-color 0.2s;
-}
-
-.searchInput:focus {
-	border-color: #3b82f6;
-}
-
-.searchButton {
-	padding: 10px 20px;
-	background: #3b82f6;
-	color: white;
-	border: none;
-	border-radius: 8px;
-	cursor: pointer;
-	font-size: 14px;
-	font-weight: 500;
-	transition: background 0.2s;
-}
-
-.searchButton:hover {
-	background: #2563eb;
-}
-
-.quickCreate {
-	margin-bottom: 16px;
-}
-
-.quickInput {
-	width: 100%;
-	padding: 12px 16px;
-	border: 2px dashed #d1d5db;
-	border-radius: 8px;
-	font-size: 14px;
-	color: #6b7280;
-	outline: none;
-	transition: all 0.2s;
-	box-sizing: border-box;
-}
-
-.quickInput:focus {
-	border-color: #10b981;
-	border-style: solid;
-	color: #1f2937;
-}
-
-.filterBar {
-	display: flex;
-	gap: 8px;
-	margin-bottom: 20px;
-	flex-wrap: wrap;
-}
-
-.filterBtn {
-	padding: 8px 16px;
-	background: #f3f4f6;
-	color: #374151;
-	border: 1px solid #d1d5db;
-	border-radius: 20px;
-	cursor: pointer;
-	font-size: 13px;
-	font-weight: 500;
-	transition: all 0.2s;
-}
-
-.filterBtn:hover {
-	background: #e5e7eb;
-}
-
-.filterActive {
-	background: #3b82f6;
-	color: white;
-	border-color: #3b82f6;
-}
-
-.filterActive:hover {
-	background: #2563eb;
-}
-
-.subTaskBadge {
-	font-size: 11px;
-	padding: 2px 6px;
-	background: #dbeafe;
-	color: #1e40af;
-	border-radius: 4px;
-	margin-left: 8px;
-	font-weight: 400;
-	vertical-align: middle;
-}
-
-.editButton {
-	padding: 6px 10px;
-	background: #f3f4f6;
-	color: #374151;
-	border: 1px solid #d1d5db;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 14px;
-	transition: all 0.2s;
-}
-
-.editButton:hover {
-	background: #e5e7eb;
-}
-
-.header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 30px;
-	padding-bottom: 20px;
-	border-bottom: 2px solid #e5e7eb;
-}
-
-.header h1 {
-	margin: 0;
-	font-size: 28px;
-	color: #1f2937;
-}
-
-.actions {
-	display: flex;
-	gap: 10px;
-	align-items: center;
-}
-
-.viewToggle {
-	padding: 8px 16px;
-	border: 1px solid #d1d5db;
-	background: white;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 14px;
-	transition: all 0.2s;
-}
-
-.viewToggle:hover {
-	background: #f3f4f6;
-}
-
-.viewToggle.active {
-	background: #3b82f6;
-	color: white;
-	border-color: #3b82f6;
-}
-
-.createButton {
-	padding: 8px 20px;
-	background: #10b981;
-	color: white;
-	border: none;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 14px;
-	font-weight: 500;
-	transition: background 0.2s;
-}
-
-.createButton:hover {
-	background: #059669;
-}
-
-.loading {
-	text-align: center;
-	padding: 40px;
-	color: #6b7280;
-	font-size: 16px;
-}
-
-/* 分栏视图样式 */
-.splitView {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 20px;
-	align-items: start;
-	flex: 1;
-	min-height: 0;
-}
-
-.taskListPanel {
-	display: flex;
-	flex-direction: column;
-	gap: 20px;
-	overflow-y: auto;
-}
-
-.rightPanel {
-	min-height: 0;
-	overflow-y: auto;
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-}
-
-.calendarPanel {
-	min-height: 0;
-	overflow-y: auto;
-}
-
-.tabBar {
-	display: flex;
-	gap: 4px;
-	background: #f3f4f6;
-	border-radius: 8px;
-	padding: 4px;
-}
-
-.tabBtn {
-	flex: 1;
-	padding: 8px 16px;
-	background: transparent;
-	border: none;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 13px;
-	font-weight: 500;
-	color: #6b7280;
-	transition: all 0.15s;
-}
-
-.tabBtn:hover {
-	color: #374151;
-}
-
-.tabActive {
-	background: white;
-	color: #1f2937;
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+/* ── 工具栏（单行：视图 | 搜索 | 快速添加） ── */
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    flex-shrink: 0;
 }
 
 .viewSwitch {
-	display: flex;
-	gap: 4px;
-	margin-bottom: 16px;
-	background: #f3f4f6;
-	border-radius: 8px;
-	padding: 4px;
-	width: fit-content;
+    display: flex;
+    gap: 2px;
+    background: #f3f4f6;
+    border-radius: 7px;
+    padding: 3px;
+    flex-shrink: 0;
 }
 
 .viewBtn {
-	padding: 7px 16px;
-	background: transparent;
-	border: none;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 13px;
-	font-weight: 500;
-	color: #6b7280;
-	transition: all 0.15s;
+    padding: 5px 12px;
+    background: none;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    transition: all 0.15s;
 }
 
 .viewBtn:hover {
-	color: #374151;
+    color: #374151;
 }
 
 .viewActive {
-	background: white;
-	color: #1f2937;
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-}
-
-/* 列表视图样式 */
-.listView {
-	display: grid;
-	gap: 30px;
-}
-
-.statusSection {
-	background: white;
-	border-radius: 12px;
-	padding: 20px;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.statusTitle {
-	margin: 0 0 15px 0;
-	font-size: 18px;
-	color: #374151;
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.statusIndicator {
-	width: 12px;
-	height: 12px;
-	border-radius: 50%;
-	display: inline-block;
-}
-
-.status-pending {
-	background: #f59e0b;
-}
-
-.status-in-progress {
-	background: #3b82f6;
-}
-
-.status-completed {
-	background: #10b981;
-}
-
-.status-backlog {
-	background: #6b7280;
-}
-
-.status-archived {
-	background: #9ca3af;
-}
-
-.taskList {
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-}
-
-.taskItem {
-	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
-	padding: 16px;
-	background: #f9fafb;
-	border-radius: 8px;
-	border-left: 4px solid #d1d5db;
-	transition: all 0.2s;
-}
-
-.taskItem:hover {
-	background: #f3f4f6;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.taskMain {
-	flex: 1;
-	min-width: 0;
-}
-
-.taskTitle {
-	margin: 0 0 8px 0;
-	font-size: 16px;
-	color: #1f2937;
-	font-weight: 500;
-}
-
-.taskDescription {
-	margin: 0 0 10px 0;
-	font-size: 14px;
-	color: #6b7280;
-	line-height: 1.5;
-}
-
-.taskMeta {
-	display: flex;
-	gap: 12px;
-	align-items: center;
-	flex-wrap: wrap;
-}
-
-.priorityBadge {
-	padding: 2px 8px;
-	border-radius: 4px;
-	font-size: 12px;
-	font-weight: 500;
-}
-
-.priority-low {
-	background: #d1fae5;
-	color: #065f46;
-}
-
-.priority-medium {
-	background: #fef3c7;
-	color: #92400e;
-}
-
-.priority-high {
-	background: #fee2e2;
-	color: #991b1b;
-}
-
-.priority-urgent {
-	background: #fecaca;
-	color: #7f1d1d;
-}
-
-.priority-default {
-	background: #e5e7eb;
-	color: #374151;
-}
-
-.effortBadge {
-	padding: 2px 8px;
-	background: #dbeafe;
-	color: #1e40af;
-	border-radius: 4px;
-	font-size: 12px;
-}
-
-.dateBadge {
-	padding: 2px 8px;
-	background: #e5e7eb;
-	color: #6b7280;
-	border-radius: 4px;
-	font-size: 12px;
-}
-
-.taskActions {
-	display: flex;
-	gap: 8px;
-	align-items: center;
-}
-
-.statusSelect {
-	padding: 6px 12px;
-	border: 1px solid #d1d5db;
-	border-radius: 6px;
-	background: white;
-	font-size: 13px;
-	cursor: pointer;
-}
-
-.statusSelect:hover {
-	border-color: #9ca3af;
-}
-
-.deleteButton {
-	padding: 6px 10px;
-	background: #ef4444;
-	color: white;
-	border: none;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 14px;
-	transition: background 0.2s;
-}
-
-.deleteButton:hover {
-	background: #dc2626;
-}
-
-/* 日历视图样式 */
-.calendarView {
-	background: white;
-	border-radius: 12px;
-	padding: 20px;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.calendarHeader {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 20px;
-}
-
-.calendarTitle {
-	margin: 0;
-	font-size: 20px;
-	color: #1f2937;
-}
-
-.navButton {
-	padding: 8px 16px;
-	background: #f3f4f6;
-	border: 1px solid #d1d5db;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 14px;
-	transition: all 0.2s;
-}
-
-.navButton:hover {
-	background: #e5e7eb;
-}
-
-.calendarGrid {
-	display: grid;
-	grid-template-columns: repeat(7, 1fr);
-	gap: 1px;
-	background: #e5e7eb;
-	border: 1px solid #e5e7eb;
-	border-radius: 8px;
-	overflow: hidden;
-}
-
-.dayHeader {
-	background: #f9fafb;
-	padding: 12px;
-	text-align: center;
-	font-weight: 600;
-	color: #374151;
-	font-size: 14px;
-}
-
-.calendarDay {
-	background: white;
-	min-height: 100px;
-	padding: 8px;
-	border-right: 1px solid #e5e7eb;
-	border-bottom: 1px solid #e5e7eb;
-}
-
-.calendarDay.empty {
-	background: #f9fafb;
-}
-
-.dayNumber {
-	font-weight: 600;
-	color: #374151;
-	margin-bottom: 8px;
-	font-size: 14px;
-}
-
-.dayTasks {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-}
-
-.dayTask {
-	padding: 4px 8px;
-	border-radius: 4px;
-	font-size: 11px;
-	color: white;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-/* 模态框样式 */
-.modalOverlay {
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	background: rgba(0, 0, 0, 0.5);
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	z-index: 1000;
-}
-
-.modal {
-	background: white;
-	border-radius: 12px;
-	padding: 24px;
-	width: 100%;
-	max-width: 500px;
-	max-height: 90vh;
-	overflow-y: auto;
-}
-
-.modalTitle {
-	margin: 0 0 20px 0;
-	font-size: 20px;
-	color: #1f2937;
-}
-
-.form {
-	display: flex;
-	flex-direction: column;
-	gap: 16px;
-}
-
-.formRow {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 16px;
-}
-
-.formGroup {
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-}
-
-.label {
-	font-size: 14px;
-	font-weight: 500;
-	color: #374151;
-}
-
-.input,
-.textarea,
-.select {
-	padding: 10px 12px;
-	border: 1px solid #d1d5db;
-	border-radius: 6px;
-	font-size: 14px;
-	transition: border-color 0.2s;
-}
-
-.input:focus,
-.textarea:focus,
-.select:focus {
-	outline: none;
-	border-color: #3b82f6;
-}
-
-.textarea {
-	resize: vertical;
-	min-height: 80px;
-}
-
-.formActions {
-	display: flex;
-	gap: 12px;
-	justify-content: flex-end;
-	margin-top: 8px;
-}
-
-.cancelButton,
-.submitButton {
-	padding: 10px 20px;
-	border: none;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 14px;
-	font-weight: 500;
-	transition: all 0.2s;
-}
-
-.cancelButton {
-	background: #f3f4f6;
-	color: #374151;
-}
-
-.cancelButton:hover {
-	background: #e5e7eb;
-}
-
-.submitButton {
-	background: #10b981;
-	color: white;
-}
-
-.submitButton:hover {
-	background: #059669;
-}
-
-.timeWindowList {
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-	margin-top: 4px;
-}
-
-.timeWindowItem {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 6px 10px;
-	background: #f9fafb;
-	border: 1px solid #e5e7eb;
-	border-radius: 6px;
-	font-size: 13px;
-}
-
-.timeWindowText {
-	color: #374151;
-}
-
-.timeWindowDelete {
-	background: none;
-	border: none;
-	color: #ef4444;
-	cursor: pointer;
-	font-size: 16px;
-	padding: 0 4px;
-	line-height: 1;
-}
-
-.timeWindowAddRow {
-	display: flex;
-	gap: 8px;
-	align-items: center;
-	margin-top: 4px;
-	flex-wrap: wrap;
-}
-
-.timeWindowTypeSelect {
-	padding: 6px 10px;
-	border: 1px solid #d1d5db;
-	border-radius: 6px;
-	font-size: 13px;
-	background: white;
-}
-
-.timeWindowInput {
-	padding: 6px 10px;
-	border: 1px solid #d1d5db;
-	border-radius: 6px;
-	font-size: 13px;
-	background: white;
-}
+    background: white;
+    color: #1f2937;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.searchBox {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    max-width: 240px;
+}
+
+.searchInput {
+    width: 100%;
+    padding: 5px 24px 5px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 12px;
+    outline: none;
+    background: #f9fafb;
+    box-sizing: border-box;
+}
+.searchInput:focus {
+    border-color: #3b82f6;
+    background: white;
+}
+
+.searchClear {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+}
+
+.quickAddBox {
+    flex-shrink: 0;
+}
+
+.quickAddInput {
+    padding: 5px 10px;
+    border: 1px dashed #d1d5db;
+    border-radius: 6px;
+    font-size: 12px;
+    outline: none;
+    color: #9ca3af;
+    background: none;
+    width: 140px;
+    box-sizing: border-box;
+    transition: all 0.15s;
+}
+.quickAddInput:focus {
+    border-color: #10b981;
+    border-style: solid;
+    color: #1f2937;
+    width: 200px;
+}
+
+.quickAddInput::placeholder {
+    color: #c4c4c4;
+}
+
+/* ── 加载 ── */
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+/* ── 分栏视图 ── */
+.splitView {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+    flex: 1;
+    min-height: 0;
+}
+
+.rightPanel {
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.tabBar {
+    display: flex;
+    gap: 4px;
+    background: #f3f4f6;
+    border-radius: 8px;
+    padding: 4px;
+    flex-shrink: 0;
+}
 
-.timeWindowSep {
-	color: #9ca3af;
-	font-size: 14px;
+.tabBtn {
+    flex: 1;
+    padding: 7px 14px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+    transition: all 0.15s;
 }
 
-.timeWindowAddBtn {
-	padding: 6px 14px;
-	background: #8b5cf6;
-	color: white;
-	border: none;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 13px;
-	font-weight: 500;
+.tabBtn:hover {
+    color: #374151;
 }
 
-.timeWindowAddBtn:disabled {
-	background: #d1d5db;
-	cursor: not-allowed;
+.tabActive {
+    background: white;
+    color: #1f2937;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
-/* 响应式设计 */
+/* ── 响应式 ── */
 @media (max-width: 768px) {
-	.taskManager {
-		padding: 10px;
-	}
-
-	.header {
-		flex-direction: column;
-		gap: 15px;
-		align-items: flex-start;
-	}
-
-	.actions {
-		width: 100%;
-		justify-content: space-between;
-	}
-
-	.formRow {
-		grid-template-columns: 1fr;
-	}
-
-	.calendarGrid {
-		font-size: 12px;
-	}
-
-	.calendarDay {
-		min-height: 60px;
-	}
-
-	.dayTask {
-		font-size: 10px;
-	}
-
-	.splitView {
-		grid-template-columns: 1fr;
-	}
-
-	.calendarPanel {
-		position: static;
-	}
+    .taskManager {
+        padding: 8px 12px;
+        gap: 8px;
+    }
+    .toolbar {
+        flex-wrap: wrap;
+    }
+    .quickAddInput {
+        width: 110px;
+    }
+    .quickAddInput:focus {
+        width: 150px;
+    }
+    .splitView {
+        grid-template-columns: 1fr;
+    }
 }

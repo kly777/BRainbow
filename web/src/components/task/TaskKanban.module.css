@@ -21,9 +21,9 @@
     transition: box-shadow 0.2s;
 }
 
-.column:global(.drag-over) {
+/*.column:global(.drag-over) {
     box-shadow: 0 0 0 2px var(--col-color, #3b82f6);
-}
+}*/
 
 .columnHeader {
     display: flex;

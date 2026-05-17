@@ -1,0 +1,50 @@
+.fieldset {
+  border: 1px solid var(--c-border, #e8dfcc);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 0 0 16px 0;
+  background: var(--c-bg-card, #fffef9);
+}
+
+.fieldset legend {
+  font-weight: 600;
+  color: var(--c-text-heading, #2c2416);
+  padding: 0 6px;
+}
+
+.row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--c-text-secondary, #6b5e4a);
+}
+
+.input {
+  width: 80px;
+  padding: 4px 6px;
+  border: 1px solid var(--c-border, #e8dfcc);
+  border-radius: 4px;
+  background: var(--c-bg, #fefcf5);
+  color: var(--c-text, #3d3629);
+  font-size: 14px;
+  text-align: right;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--c-primary, #3b82f6);
+  box-shadow: 0 0 0 2px var(--c-primary-ring, rgba(59, 130, 246, 0.25));
+}
+
+.unit {
+  color: var(--c-text-muted, #9b8e7a);
+  font-size: 12px;
+  min-width: 20px;
+}

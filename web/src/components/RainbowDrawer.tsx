@@ -1,21 +1,6 @@
 import { createEffect, createMemo } from "solid-js";
-import { createSignal } from "solid-js";
 import { For } from "solid-js/web";
-
-// 弧度
-class Angle {
-    private _value: number;
-    constructor(radian: number) {
-        this._value = radian;
-    }
-    get degree(): number {
-        return (this._value * 180) / Math.PI;
-    }
-
-    get radian(): number {
-        return this._value;
-    }
-}
+import { Angle } from "../lib/angle.ts";
 
 interface RainbowDrawerProps {
     colors: Array<string>;
@@ -65,4 +50,4 @@ function RainbowDrawer(props: RainbowDrawerProps) {
     );
 }
 
-export { RainbowDrawer , Angle};
+export { RainbowDrawer };

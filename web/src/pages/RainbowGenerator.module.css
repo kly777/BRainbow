@@ -46,6 +46,59 @@
   border-color: var(--c-border-hover, #d4c8aa);
 }
 
+/* ── 渲染模式 ── */
+.renderRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.renderLabel {
+  font-size: 13px;
+  color: var(--c-text-secondary, #6b5e4a);
+}
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--c-border, #e8dfcc);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.segBtn,
+.segActive {
+  padding: 3px 12px;
+  font-size: 12px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.segBtn {
+  background: transparent;
+  color: var(--c-text-muted, #9b8e7a);
+}
+
+.segBtn:hover {
+  background: var(--c-bg-hover, #f0e8d5);
+}
+
+.segActive {
+  background: var(--c-primary, #3b82f6);
+  color: #fff;
+  font-weight: 600;
+}
+
+.segBtn + .segBtn {
+  border-left: 1px solid var(--c-border, #e8dfcc);
+}
+
+.segActive + .segBtn,
+.segBtn + .segActive {
+  border-left-color: transparent;
+}
+
 /* ── 计算结果 ── */
 .stats {
   margin-top: 8px;

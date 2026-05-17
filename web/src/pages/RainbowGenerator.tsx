@@ -18,6 +18,15 @@ function RainbowGenerator() {
 
   const [angle, setAngle] = createSignal<Angle>(new Angle(Math.PI * (1 / 9)));
 
+  type ShapeRender = "auto" | "optimizeSpeed" | "crispEdges" | "geometricPrecision";
+  const [shapeRender, setShapeRender] = createSignal<ShapeRender>("geometricPrecision");
+  const RENDER_MODES: { key: ShapeRender; label: string }[] = [
+    { key: "geometricPrecision", label: "精度" },
+    { key: "auto",               label: "自动" },
+    { key: "crispEdges",         label: "锐利" },
+    { key: "optimizeSpeed",      label: "速度" },
+  ];
+
   let svgEl: SVGSVGElement | null = null;
 
   const height_sum = createMemo(
@@ -93,6 +102,20 @@ function RainbowGenerator() {
           </button>
         </div>
 
+        <div class={styles.renderRow}>
+          <span class={styles.renderLabel}>渲染</span>
+          <div class={styles.segmented}>
+            {RENDER_MODES.map((m) => (
+              <button
+                class={shapeRender() === m.key ? styles.segActive : styles.segBtn}
+                onClick={() => setShapeRender(m.key)}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <section class={styles.stats}>
           <h3>计算结果</h3>
           <table>
@@ -124,6 +147,7 @@ function RainbowGenerator() {
           squareSize={squareSize}
           eleSize={exportSize}
           svgRef={(el) => { svgEl = el; }}
+          shapeRendering={shapeRender()}
         />
       </div>
     </div>

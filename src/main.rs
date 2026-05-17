@@ -10,13 +10,13 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::Instant;
 
 use axum::extract::Request;
-use axum::http::Method;
+use axum::http::{HeaderValue, Method};
 use axum::middleware;
 use axum::middleware::Next;
 use axum::response::Response;
 use sqlx::SqlitePool;
 use std::sync::Arc;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
@@ -77,17 +77,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = create_router(state.clone());
 
     // 添加 CORS 中间件
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods([
-            Method::GET,
-            Method::POST,
-            Method::PUT,
-            Method::PATCH,
-            Method::DELETE,
-            Method::OPTIONS,
-        ])
-        .allow_headers(Any);
+    let cors_origins: Vec<HeaderValue> = std::env::var("CORS_ALLOW_ORIGIN")
+        .unwrap_or_else(|_| "http://localhost:3000".into())
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .filter_map(|s| s.parse::<HeaderValue>().ok())
+        .collect();
+
+    let cors = if cors_origins.is_empty() {
+        CorsLayer::permissive()
+    } else {
+        CorsLayer::new()
+            .allow_origin(AllowOrigin::list(cors_origins))
+            .allow_methods([
+                Method::GET,
+                Method::POST,
+                Method::PUT,
+                Method::PATCH,
+                Method::DELETE,
+                Method::OPTIONS,
+            ])
+            .allow_headers([
+                axum::http::header::CONTENT_TYPE,
+                axum::http::header::AUTHORIZATION,
+            ])
+    };
 
     let app = app
         .layer(middleware::from_fn(logger))

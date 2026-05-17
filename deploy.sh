@@ -34,6 +34,7 @@ load_config() {
     BIND_HOST="${BIND_HOST:-0.0.0.0}"
     DATABASE_FILE="${DATABASE_FILE:-brainbow.db}"
     SERVER_SOURCE_PATH="${SERVER_SOURCE_PATH:-server}"
+    CORS_ALLOW_ORIGIN="${CORS_ALLOW_ORIGIN:-http://localhost:3000,http://localhost:5173}"
 
     # 派生路径
     REMOTE_DIR="$REMOTE_BASE/$APP_NAME"
@@ -126,6 +127,7 @@ Environment="RUST_LOG=info"
 Environment="SERVICE_PORT=$SERVICE_PORT"
 Environment="BIND_HOST=$BIND_HOST"
 Environment="DATABASE_URL=sqlite:$REMOTE_DIR/$DATABASE_FILE"
+Environment="CORS_ALLOW_ORIGIN=$CORS_ALLOW_ORIGIN"
 
 [Install]
 WantedBy=multi-user.target

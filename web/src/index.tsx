@@ -14,6 +14,8 @@ const CardDetailPage = lazy(() => import("./pages/notes/CardDetail.tsx"));
 const CardEditPage = lazy(() => import("./pages/notes/CardEdit.tsx"));
 const ImagesListPage = lazy(() => import("./pages/notes/ImagesList.tsx"));
 const DbViewerPage = lazy(() => import("./pages/DbViewer.tsx"));
+const RainbowDrawer = lazy(() => import("./pages/RainbowGenerator.tsx"));
+
 
 function App() {
 	return (
@@ -27,6 +29,7 @@ function App() {
 				<Route path="/c/edit/:id" component={() => <CardEditPage />} />
 				<Route path="/i" component={() => <ImagesListPage />} />
 				<Route path="/db" component={() => <DbViewerPage />} />
+				<Route path="/rd" component={() => <RainbowDrawer />} />
 			</Router>
 		</AuthProvider>
 	);

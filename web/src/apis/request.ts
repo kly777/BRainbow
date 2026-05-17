@@ -36,7 +36,7 @@ async function toast(opts: {
 	duration?: number;
 }): Promise<void> {
 	if (!_showToast) {
-		const mod = await import("../components/toastStore.ts");
+		const mod = await import("../components/ui/toastStore.ts");
 		_showToast = mod.showToast as unknown as typeof _showToast;
 	}
 	// duration 提供默认值以匹配 showToast 的 non-optional 签名

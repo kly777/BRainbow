@@ -4,11 +4,13 @@ import {
   rgbToHsl,
   hslToRgb,
   rgbToHex,
+  rgbToOklab,
+  oklabToRgb,
   normalizeHex,
 } from "../lib/color.ts";
 import styles from "./ColorEditor.module.css";
 
-type ColorSpace = "hex" | "rgb" | "hsl";
+type ColorSpace = "hex" | "rgb" | "hsl" | "oklab";
 
 interface Props {
   colors: Accessor<string[]>;
@@ -19,6 +21,7 @@ const SPACES: { key: ColorSpace; label: string }[] = [
   { key: "hex", label: "HEX" },
   { key: "rgb", label: "RGB" },
   { key: "hsl", label: "HSL" },
+  { key: "oklab", label: "OKLAB" },
 ];
 
 /** 单个颜色行 */
@@ -46,6 +49,14 @@ function ColorRow(props: {
   const [s, setS] = createSignal(initHsl().s);
   const [l, setL] = createSignal(initHsl().l);
 
+  const initOklab = () => {
+    const r = hexToRgb(props.color);
+    return r ? rgbToOklab(r) : { L: 0, a: 0, b: 0 };
+  };
+  const [okL, setOkL] = createSignal(initOklab().L * 100);
+  const [okA, setOkA] = createSignal(initOklab().a);
+  const [okB, setOkB] = createSignal(initOklab().b);
+
   // ── 外部变化时同步（仅在失焦时） ──
   createEffect(() => {
     space();        // 订阅模式切换
@@ -61,6 +72,10 @@ function ColorRow(props: {
     setH(hsl.h);
     setS(hsl.s);
     setL(hsl.l);
+    const ok = rgbToOklab(rgb);
+    setOkL(ok.L * 100);
+    setOkA(ok.a);
+    setOkB(ok.b);
   });
 
   // ── 提交 ──
@@ -80,6 +95,13 @@ function ColorRow(props: {
       h: ((nh % 360) + 360) % 360,
       s: Math.max(0, Math.min(100, ns)),
       l: Math.max(0, Math.min(100, nl)),
+    })));
+  };
+  const commitOklab = (nL: number, na: number, nb: number) => {
+    props.onColor(rgbToHex(oklabToRgb({
+      L: Math.max(0, Math.min(1, nL / 100)),
+      a: na,
+      b: nb,
     })));
   };
 
@@ -102,6 +124,13 @@ function ColorRow(props: {
     if (isNaN(n)) return;
     if (ch === "h") setH(n); else if (ch === "s") setS(n); else setL(n);
     commitHsl(ch === "h" ? n : h(), ch === "s" ? n : s(), ch === "l" ? n : l());
+  };
+
+  const onOklabInput = (ch: "L" | "a" | "b", e: Event) => {
+    const n = parseFloat((e.target as HTMLInputElement).value);
+    if (isNaN(n)) return;
+    if (ch === "L") setOkL(n); else if (ch === "a") setOkA(n); else setOkB(n);
+    commitOklab(ch === "L" ? n : okL(), ch === "a" ? n : okA(), ch === "b" ? n : okB());
   };
 
   const onFocus = () => { focused = true; };
@@ -150,6 +179,16 @@ function ColorRow(props: {
             value={s()} onInput={(e) => onHslInput("s", e)} onFocus={onFocus} onBlur={onBlur} />
           <input class={styles.channel} type="number" min="0" max="100"
             value={l()} onInput={(e) => onHslInput("l", e)} onFocus={onFocus} onBlur={onBlur} />
+        </span>
+      )}
+      {space() === "oklab" && (
+        <span class={styles.triple}>
+          <input class={styles.channel} type="number" min="0" max="100" step="0.1"
+            value={okL()} onInput={(e) => onOklabInput("L", e)} onFocus={onFocus} onBlur={onBlur} />
+          <input class={styles.channel} type="number" step="0.001"
+            value={okA()} onInput={(e) => onOklabInput("a", e)} onFocus={onFocus} onBlur={onBlur} />
+          <input class={styles.channel} type="number" step="0.001"
+            value={okB()} onInput={(e) => onOklabInput("b", e)} onFocus={onFocus} onBlur={onBlur} />
         </span>
       )}
 

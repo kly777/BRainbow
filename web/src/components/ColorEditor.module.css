@@ -104,12 +104,13 @@
 }
 
 .channel {
-  width: 44px;
-  padding: 4px 4px;
+  width: 58px;
+  padding: 4px 6px;
   border: 1px solid var(--c-border, #e8dfcc);
   border-radius: 4px;
   background: var(--c-bg, #fefcf5);
   color: var(--c-text, #3d3629);
+  font-family: monospace;
   font-size: 12px;
   text-align: right;
 }

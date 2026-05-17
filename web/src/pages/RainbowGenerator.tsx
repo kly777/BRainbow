@@ -68,6 +68,7 @@ function RainbowGenerator() {
           colors={colors()}
           angle={angle()}
           squareSize={squareSize}
+          eleSize={400}
         />
       </div>
     </div>

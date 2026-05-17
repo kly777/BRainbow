@@ -6,12 +6,14 @@ interface RainbowDrawerProps {
     colors: Array<string>;
     angle: Angle;
     squareSize?: number;
+    eleSize?: number;
 }
 
 function RainbowDrawer(props: RainbowDrawerProps) {
     const colors = createMemo(() => props.colors);
     const squareSize = createMemo(() => props.squareSize ?? 200);
     const angle = createMemo(() => props.angle);
+    const eleSize = createMemo(() => props.eleSize ?? squareSize());
     const height_sum = createMemo(
         () =>
             squareSize() * (Math.sin(angle().radian) + Math.cos(angle().radian)),
@@ -30,7 +32,7 @@ function RainbowDrawer(props: RainbowDrawerProps) {
 
     return (
         <div>
-            <svg width={squareSize()} height={squareSize()}>
+            <svg width={eleSize()} height={eleSize()} viewBox={`0 0 ${squareSize()} ${squareSize()}`} shape-rendering="crispEdges">
                 <For each={colors()}>
                     {(color, index) => (
                         <rect

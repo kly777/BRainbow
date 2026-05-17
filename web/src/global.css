@@ -1,65 +1,67 @@
 /* ===== 全局颜色变量 ===== */
 :root {
-	--c-primary: #3b82f6;
-	--c-primary-hover: #2563eb;
-	--c-primary-light: #f0f7ff;
-	--c-primary-ring: rgba(59, 130, 246, 0.25);
+    --c-primary: #3b82f6;
+    --c-primary-hover: #2563eb;
+    --c-primary-light: #f0f7ff;
+    --c-primary-ring: rgba(59, 130, 246, 0.25);
 
-	--c-danger: #ef4444;
-	--c-danger-hover: #dc2626;
-	--c-danger-light: #fef2f2;
-	--c-danger-border: #fca5a5;
-	--c-danger-bg: #f8d7da;
-	--c-danger-text: #c53030;
+    --c-danger: #ef4444;
+    --c-danger-hover: #dc2626;
+    --c-danger-light: #fef2f2;
+    --c-danger-border: #fca5a5;
+    --c-danger-bg: #f8d7da;
+    --c-danger-text: #c53030;
 
-	--c-text: #3d3629;
-	--c-text-heading: #2c2416;
-	--c-text-secondary: #6b5e4a;
-	--c-text-muted: #9b8e7a;
+    --c-text: #3d3629;
+    --c-text-heading: #2c2416;
+    --c-text-secondary: #6b5e4a;
+    --c-text-muted: #9b8e7a;
 
-	--c-bg: #fefcf5;
-	--c-bg-page: #fefcf5;
-	--c-bg-card: #fffef9;
-	--c-bg-subtle: #f8f3e6;
-	--c-bg-hover: #f0e8d5;
+    --c-bg: #fefcf5;
+    --c-bg-page: #fefcf5;
+    --c-bg-card: #fffef9;
+    --c-bg-subtle: #f8f3e6;
+    --c-bg-hover: #f0e8d5;
 
-	--c-border: #e8dfcc;
-	--c-border-hover: #d4c8aa;
+    --c-border: #e8dfcc;
+    --c-border-hover: #d4c8aa;
 
-	--c-code: #d63384;
-	--c-code-bg: #f6f8fa;
+    --c-code: #d63384;
+    --c-code-bg: #f6f8fa;
 
-	/* ── Toast 通知颜色 ── */
-	--toast-error-bg: #fef2f2;
-	--toast-error-border: #fecaca;
-	--toast-error-text: #991b1b;
-	--toast-error-icon-bg: #dc2626;
-	--toast-error-icon-text: #fff;
-	--toast-error-code-bg: rgba(220, 38, 38, 0.12);
+    /* ── Toast 通知颜色 ── */
+    --toast-error-bg: #fef2f2;
+    --toast-error-border: #fecaca;
+    --toast-error-text: #991b1b;
+    --toast-error-icon-bg: #dc2626;
+    --toast-error-icon-text: #fff;
+    --toast-error-code-bg: rgba(220, 38, 38, 0.12);
 
-	--toast-warning-bg: #fffbeb;
-	--toast-warning-border: #fde68a;
-	--toast-warning-text: #92400e;
-	--toast-warning-icon-bg: #d97706;
-	--toast-warning-icon-text: #fff;
-	--toast-warning-code-bg: rgba(217, 119, 6, 0.12);
+    --toast-warning-bg: #fffbeb;
+    --toast-warning-border: #fde68a;
+    --toast-warning-text: #92400e;
+    --toast-warning-icon-bg: #d97706;
+    --toast-warning-icon-text: #fff;
+    --toast-warning-code-bg: rgba(217, 119, 6, 0.12);
 
-	--toast-success-bg: #f0fdf4;
-	--toast-success-border: #bbf7d0;
-	--toast-success-text: #166534;
-	--toast-success-icon-bg: #16a34a;
-	--toast-success-icon-text: #fff;
-	--toast-success-code-bg: rgba(22, 163, 74, 0.12);
+    --toast-success-bg: #f0fdf4;
+    --toast-success-border: #bbf7d0;
+    --toast-success-text: #166534;
+    --toast-success-icon-bg: #16a34a;
+    --toast-success-icon-text: #fff;
+    --toast-success-code-bg: rgba(22, 163, 74, 0.12);
 
-	--toast-info-bg: #eff6ff;
-	--toast-info-border: #bfdbfe;
-	--toast-info-text: #1e40af;
-	--toast-info-icon-bg: #2563eb;
-	--toast-info-icon-text: #fff;
-	--toast-info-code-bg: rgba(37, 99, 235, 0.12);
+    --toast-info-bg: #eff6ff;
+    --toast-info-border: #bfdbfe;
+    --toast-info-text: #1e40af;
+    --toast-info-icon-bg: #2563eb;
+    --toast-info-icon-text: #fff;
+    --toast-info-code-bg: rgba(37, 99, 235, 0.12);
 
-	--toast-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08);
+    --toast-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.12),
+        0 1px 4px rgba(0, 0, 0, 0.08);
 
-	/* 侧边栏宽度 */
-	--sidebar-w: 200px;
+    /* 侧边栏宽度 */
+    --sidebar-w: 200px;
 }

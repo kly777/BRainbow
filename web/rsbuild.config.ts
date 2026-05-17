@@ -4,48 +4,48 @@ import { pluginSolid } from "@rsbuild/plugin-solid";
 import { pluginTypeCheck } from "@rsbuild/plugin-type-check";
 
 export default defineConfig({
-  plugins: [
-    pluginTypeCheck(),
-    pluginBabel({
-      include: /\.(?:jsx|tsx)$/,
-    }),
-    pluginSolid(),
-  ],
-  html: {
-    template: "./index.html",
-    tags: [
-      { tag: "script", attrs: { "data-cfasync": "false" } },
+    plugins: [
+        pluginTypeCheck(),
+        pluginBabel({
+            include: /\.(?:jsx|tsx)$/,
+        }),
+        pluginSolid(),
     ],
-  },
-  source: {
-    entry: {
-      index: "./src/index.tsx",
+    html: {
+        template: "./index.html",
+        tags: [
+            { tag: "script", attrs: { "data-cfasync": "false" } },
+        ],
     },
-  },
-  resolve: {
-    alias: {
-      "@": new URL("./src", import.meta.url).pathname,
+    source: {
+        entry: {
+            index: "./src/index.tsx",
+        },
     },
-  },
-  server: {
-    port: 3001,
-    proxy: {
-      "/api": {
-        target: "http://localhost:8080",
-        changeOrigin: true,
-        timeout: 5000,
-      },
-      "/uploads": {
-        target: "http://localhost:8080",
-        changeOrigin: true,
-        timeout: 5000,
-      },
+    resolve: {
+        alias: {
+            "@": new URL("./src", import.meta.url).pathname,
+        },
     },
-  },
-  output: {
-    distPath: {
-      root: "dist",
+    server: {
+        port: 3001,
+        proxy: {
+            "/api": {
+                target: "http://localhost:8080",
+                changeOrigin: true,
+                timeout: 5000,
+            },
+            "/uploads": {
+                target: "http://localhost:8080",
+                changeOrigin: true,
+                timeout: 5000,
+            },
+        },
     },
-    cleanDistPath: true,
-  },
+    output: {
+        distPath: {
+            root: "dist",
+        },
+        cleanDistPath: true,
+    },
 });

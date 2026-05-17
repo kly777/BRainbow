@@ -5,33 +5,33 @@ import type { ApiErrorType } from "./types/index.ts";
 const TableListSchema = Schema.Array(Schema.String);
 
 export const getTables = (): Effect.Effect<readonly string[], ApiErrorType> =>
-	request("/db", TableListSchema, {});
+    request("/db", TableListSchema, {});
 
 export interface ColumnInfo {
-	readonly name: string;
-	readonly col_type: string;
+    readonly name: string;
+    readonly col_type: string;
 }
 
 const ColumnInfoSchema = Schema.Struct({
-	name: Schema.String,
-	col_type: Schema.String,
+    name: Schema.String,
+    col_type: Schema.String,
 });
 
 const RowSchema = Schema.Array(
-	Schema.Union(Schema.String, Schema.Number, Schema.Null),
+    Schema.Union(Schema.String, Schema.Number, Schema.Null),
 );
 
 const TableDataSchema = Schema.Struct({
-	header: Schema.Array(ColumnInfoSchema),
-	rows: Schema.Array(RowSchema),
+    header: Schema.Array(ColumnInfoSchema),
+    rows: Schema.Array(RowSchema),
 });
 
 export interface TableData {
-	readonly header: readonly ColumnInfo[];
-	readonly rows: readonly (readonly (string | number | null)[])[];
+    readonly header: readonly ColumnInfo[];
+    readonly rows: readonly (readonly (string | number | null)[])[];
 }
 
 export const getTableData = (
-	name: string,
+    name: string,
 ): Effect.Effect<TableData, ApiErrorType> =>
-	request(`/db/${name}`, TableDataSchema, {});
+    request(`/db/${name}`, TableDataSchema, {});

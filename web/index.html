@@ -1,29 +1,28 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brainbow</title>
-</head>
-<body>
-    <div id="app"></div>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Brainbow</title>
+    </head>
+    <body>
+        <div id="app"></div>
 
-    <noscript>
-        <div style="text-align: center; padding: 50px;">
-            <h1>需要启用 JavaScript</h1>
-            <p>Brainbow 需要 JavaScript 才能正常运行。</p>
-            <p>请启用浏览器中的 JavaScript 功能，然后刷新页面。</p>
-        </div>
-    </noscript>
+        <noscript>
+            <div style="text-align: center; padding: 50px">
+                <h1>需要启用 JavaScript</h1>
+                <p>Brainbow 需要 JavaScript 才能正常运行。</p>
+                <p>请启用浏览器中的 JavaScript 功能，然后刷新页面。</p>
+            </div>
+        </noscript>
 
-
-    <script>
-        // 错误处理
-        window.addEventListener('error', (event) => {
-            console.error('应用程序错误:', event.error);
-            const app = document.getElementById('app');
-            if (app) {
-                app.innerHTML = `
+        <script>
+            // 错误处理
+            window.addEventListener("error", (event) => {
+                console.error("应用程序错误:", event.error);
+                const app = document.getElementById("app");
+                if (app) {
+                    app.innerHTML = `
                     <div style="text-align: center; padding: 50px;">
                         <h1>应用程序错误</h1>
                         <p>抱歉，应用程序遇到了一个错误。</p>
@@ -41,8 +40,8 @@
                         </button>
                     </div>
                 `;
-            }
-        });
-    </script>
-</body>
+                }
+            });
+        </script>
+    </body>
 </html>

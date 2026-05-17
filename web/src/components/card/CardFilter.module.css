@@ -1,122 +1,122 @@
 .filters {
-	background: var(--c-bg-card);
-	border-radius: 8px;
-	padding: 14px;
-	margin-bottom: 16px;
-	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-	border: 1px solid var(--c-border);
+    background: var(--c-bg-card);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--c-border);
 }
 
 .filterRow {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .filterControls {
-	display: flex;
-	gap: 12px;
-	align-items: center;
-	flex-wrap: wrap;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 .searchInput {
-	flex: 1;
-	min-width: 0;
-	max-width: 220px;
-	padding: 8px 12px;
-	font-size: 0.875rem;
-	border: 1px solid var(--c-border);
-	border-radius: 6px;
-	transition: all 0.2s ease;
-	flex-shrink: 0;
+    flex: 1;
+    min-width: 0;
+    max-width: 220px;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    border: 1px solid var(--c-border);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
 .searchInput:focus {
-	outline: none;
-	border-color: var(--c-primary);
-	box-shadow: 0 0 0 3px var(--c-primary-ring);
+    outline: none;
+    border-color: var(--c-primary);
+    box-shadow: 0 0 0 3px var(--c-primary-ring);
 }
 
 .searchInput::placeholder {
-	color: var(--c-text-muted);
+    color: var(--c-text-muted);
 }
 
 .filterLabel {
-	font-size: 0.875rem;
-	font-weight: 500;
-	color: var(--c-text);
-	white-space: nowrap;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--c-text);
+    white-space: nowrap;
 }
 
 .filterSelect {
-	padding: 8px 12px;
-	font-size: 0.875rem;
-	border: 1px solid var(--c-border);
-	border-radius: 4px;
-	background: var(--c-bg);
-	color: var(--c-text);
-	cursor: pointer;
-	min-width: 120px;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    border: 1px solid var(--c-border);
+    border-radius: 4px;
+    background: var(--c-bg);
+    color: var(--c-text);
+    cursor: pointer;
+    min-width: 120px;
 }
 
 .sortButton {
-	padding: 8px 12px;
-	font-size: 0.875rem;
-	background: var(--c-bg-subtle);
-	color: var(--c-text);
-	border: 1px solid var(--c-border);
-	border-radius: 4px;
-	cursor: pointer;
-	transition: all 0.2s ease;
-	min-width: 40px;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    background: var(--c-bg-subtle);
+    color: var(--c-text);
+    border: 1px solid var(--c-border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 40px;
 }
 
 .sortButton:hover {
-	background: var(--c-bg-hover);
+    background: var(--c-bg-hover);
 }
 
 .clearButton {
-	padding: 8px 14px;
-	font-size: 0.875rem;
-	background: var(--c-bg-subtle);
-	color: var(--c-text-secondary);
-	border: 1px solid var(--c-border);
-	border-radius: 6px;
-	cursor: pointer;
-	transition: all 0.2s ease;
-	white-space: nowrap;
-	flex-shrink: 0;
+    padding: 8px 14px;
+    font-size: 0.875rem;
+    background: var(--c-bg-subtle);
+    color: var(--c-text-secondary);
+    border: 1px solid var(--c-border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .clearButton:hover:not(:disabled) {
-	background: var(--c-bg-hover);
+    background: var(--c-bg-hover);
 }
 .clearButton:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
-	.filterSelect {
-		width: 100%;
-	}
-	.sortControls {
-		justify-content: space-between;
-	}
+    .filterSelect {
+        width: 100%;
+    }
+    .sortControls {
+        justify-content: space-between;
+    }
 }
 
 @media (max-width: 480px) {
-	.filters {
-		padding: 12px;
-	}
-	.searchInput {
-		font-size: 16px;
-		padding: 10px 14px;
-	}
-	.sortButton {
-		flex: 1;
-		text-align: center;
-	}
+    .filters {
+        padding: 12px;
+    }
+    .searchInput {
+        font-size: 16px;
+        padding: 10px 14px;
+    }
+    .sortButton {
+        flex: 1;
+        text-align: center;
+    }
 }

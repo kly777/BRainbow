@@ -1,103 +1,103 @@
 .dagContainer {
-	background: white;
-	border-radius: 12px;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-	overflow: hidden;
-	display: flex;
-	flex-direction: column;
-	height: 600px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 600px;
 }
 
 .dagToolbar {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 16px 20px;
-	border-bottom: 1px solid #e5e7eb;
-	flex-shrink: 0;
-	flex-wrap: wrap;
-	gap: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .dagTitle {
-	margin: 0;
-	font-size: 18px;
-	color: #1f2937;
-	font-weight: 600;
+    margin: 0;
+    font-size: 18px;
+    color: #1f2937;
+    font-weight: 600;
 }
 
 .dagControls {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .taskSelect {
-	padding: 6px 12px;
-	border: 1px solid #d1d5db;
-	border-radius: 6px;
-	font-size: 13px;
-	color: #374151;
-	background: white;
-	outline: none;
-	cursor: pointer;
-	max-width: 200px;
+    padding: 6px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #374151;
+    background: white;
+    outline: none;
+    cursor: pointer;
+    max-width: 200px;
 }
 
 .taskSelect:focus {
-	border-color: #3b82f6;
-	box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
 .zoomBtn {
-	padding: 6px 12px;
-	background: #f3f4f6;
-	border: 1px solid #d1d5db;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 16px;
-	font-weight: 600;
-	color: #374151;
-	transition: all 0.15s;
-	min-width: 36px;
-	text-align: center;
+    padding: 6px 12px;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    color: #374151;
+    transition: all 0.15s;
+    min-width: 36px;
+    text-align: center;
 }
 
 .zoomBtn:hover {
-	background: #e5e7eb;
-	border-color: #9ca3af;
+    background: #e5e7eb;
+    border-color: #9ca3af;
 }
 
 .canvasWrap {
-	flex: 1;
-	position: relative;
-	overflow: hidden;
-	min-height: 0;
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
 }
 
 .dagCanvas {
-	width: 100%;
-	height: 100%;
-	display: block;
+    width: 100%;
+    height: 100%;
+    display: block;
 }
 
 .emptyHint {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	height: 100%;
-	color: #9ca3af;
-	padding: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #9ca3af;
+    padding: 40px;
 }
 
 .emptyHint p {
-	margin: 0 0 8px 0;
-	font-size: 15px;
+    margin: 0 0 8px 0;
+    font-size: 15px;
 }
 
 .hintSub {
-	font-size: 13px;
-	color: #d1d5db;
+    font-size: 13px;
+    color: #d1d5db;
 }

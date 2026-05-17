@@ -1,222 +1,222 @@
 .card {
-	background: var(--c-bg-card);
-	border-radius: 8px;
-	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-	padding: 16px;
-	transition: all 0.2s ease;
-	cursor: pointer;
-	border: 1px solid var(--c-border);
-	display: flex;
-	flex-direction: column;
-	/*height: 100%;*/
-	/*min-height: 280px;*/
-	text-align: left;
-	width: 100%;
+    background: var(--c-bg-card);
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    padding: 16px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: 1px solid var(--c-border);
+    display: flex;
+    flex-direction: column;
+    /*height: 100%;*/
+    /*min-height: 280px;*/
+    text-align: left;
+    width: 100%;
 }
 
 .card.deleting {
-	opacity: 0.5;
-	pointer-events: none;
-	transform: scale(0.98);
-	transition: all 0.3s ease;
+    opacity: 0.5;
+    pointer-events: none;
+    transform: scale(0.98);
+    transition: all 0.3s ease;
 }
 
 .card:hover {
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-	transform: translateY(-2px);
-	border-color: var(--c-border-hover);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    border-color: var(--c-border-hover);
 }
 
 .card:focus {
-	outline: 2px solid var(--c-primary);
-	outline-offset: 2px;
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
 }
 
 .card:active {
-	transform: translateY(0);
+    transform: translateY(0);
 }
 
 .cardHeader {
-	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
-	margin-bottom: 12px;
-	gap: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    gap: 8px;
 }
 
 .cardTitle {
-	font-size: 1.125rem;
-	font-weight: 600;
-	color: var(--c-text);
-	margin: 0;
-	flex: 1;
-	line-height: 1.4;
-	display: -webkit-box;
-	-webkit-line-clamp: 2;
-	line-clamp: 2;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
-	text-overflow: ellipsis;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--c-text);
+    margin: 0;
+    flex: 1;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .cardCategory {
-	background: var(--c-primary-light);
-	color: var(--c-primary);
-	font-size: 0.75rem;
-	font-weight: 500;
-	padding: 4px 8px;
-	border-radius: 4px;
-	white-space: nowrap;
-	flex-shrink: 0;
+    background: var(--c-primary-light);
+    color: var(--c-primary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .cardContent {
-	flex: 1;
-	margin-bottom: 12px;
-	overflow: hidden;
+    flex: 1;
+    margin-bottom: 12px;
+    overflow: hidden;
 }
 
 .cardPreview {
-	font-size: 0.875rem;
-	line-height: 1.5;
-	color: var(--c-text-secondary);
-	margin: 0;
-	display: -webkit-box;
-	-webkit-line-clamp: 4;
-	line-clamp: 4;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: pre-line;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--c-text-secondary);
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: pre-line;
 }
 
 .cardTags {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-	margin-bottom: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 12px;
 }
 
 .tag {
-	background: var(--c-bg-hover);
-	color: var(--c-text-secondary);
-	font-size: 0.75rem;
-	padding: 2px 8px;
-	border-radius: 12px;
-	border: none;
-	cursor: pointer;
-	transition: all 0.2s ease;
+    background: var(--c-bg-hover);
+    color: var(--c-text-secondary);
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .tag:hover {
-	background: var(--c-border-hover);
-	color: var(--c-text);
+    background: var(--c-border-hover);
+    color: var(--c-text);
 }
 
 .tag:focus {
-	outline: 2px solid var(--c-primary);
-	outline-offset: 1px;
+    outline: 2px solid var(--c-primary);
+    outline-offset: 1px;
 }
 
 .cardMeta {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-	margin-bottom: 12px;
-	font-size: 0.75rem;
-	color: var(--c-text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+    font-size: 0.75rem;
+    color: var(--c-text-muted);
 }
 
 .metaItem {
-	display: flex;
-	align-items: center;
-	gap: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .metaLabel {
-	font-weight: 500;
-	min-width: 32px;
+    font-weight: 500;
+    min-width: 32px;
 }
 
 .metaValue {
-	flex: 1;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .cardActions {
-	display: flex;
-	gap: 8px;
-	margin-top: auto;
+    display: flex;
+    gap: 8px;
+    margin-top: auto;
 }
 
 .actionButton {
-	flex: 1;
-	padding: 6px 12px;
-	font-size: 0.875rem;
-	border-radius: 4px;
-	border: 1px solid var(--c-border);
-	background: var(--c-bg);
-	color: var(--c-text);
-	cursor: pointer;
-	transition: all 0.2s ease;
+    flex: 1;
+    padding: 6px 12px;
+    font-size: 0.875rem;
+    border-radius: 4px;
+    border: 1px solid var(--c-border);
+    background: var(--c-bg);
+    color: var(--c-text);
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .actionButton:hover {
-	background: var(--c-bg-hover);
-	border-color: var(--c-border-hover);
+    background: var(--c-bg-hover);
+    border-color: var(--c-border-hover);
 }
 
 .actionButton:focus {
-	outline: 2px solid var(--c-primary);
-	outline-offset: 1px;
+    outline: 2px solid var(--c-primary);
+    outline-offset: 1px;
 }
 
 .deleteButton {
-	color: var(--c-danger);
-	border-color: var(--c-danger);
+    color: var(--c-danger);
+    border-color: var(--c-danger);
 }
 
 .deleteButton:hover {
-	background: var(--c-danger);
-	color: var(--c-bg);
+    background: var(--c-danger);
+    color: var(--c-bg);
 }
 
 .deleteButton:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-	background: var(--c-danger-bg);
-	color: var(--c-danger-text);
-	border-color: var(--c-danger-border);
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--c-danger-bg);
+    color: var(--c-danger-text);
+    border-color: var(--c-danger-border);
 }
 
 .deleteButton:disabled:hover {
-	background: var(--c-danger-bg);
-	color: var(--c-danger-text);
+    background: var(--c-danger-bg);
+    color: var(--c-danger-text);
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-	.card {
-		/*min-height: 240px;*/
-		padding: 12px;
-	}
+    .card {
+        /*min-height: 240px;*/
+        padding: 12px;
+    }
 
-	.cardTitle {
-		font-size: 1rem;
-	}
+    .cardTitle {
+        font-size: 1rem;
+    }
 
-	.cardPreview {
-		line-clamp: 3;
-	}
+    .cardPreview {
+        line-clamp: 3;
+    }
 
-	.cardActions {
-		/*flex-direction: column;*/
-		gap: 6px;
-	}
+    .cardActions {
+        /*flex-direction: column;*/
+        gap: 6px;
+    }
 
-	.actionButton {
-		padding: 8px;
-	}
+    .actionButton {
+        padding: 8px;
+    }
 }

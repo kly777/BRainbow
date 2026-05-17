@@ -1,197 +1,197 @@
 /* 主页样式 */
 .homePage {
-	margin: 0 auto;
-	padding: 16px;
-	display: flex;
-	flex-direction: column;
-	flex: 1;
-	min-height: 0;
+    margin: 0 auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
 }
 
 /* 主要内容区域 */
 .mainContent {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 20px;
-	flex: 1;
-	min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
 }
 
 @media (max-width: 1024px) {
-	.mainContent {
-		grid-template-columns: 1fr;
-	}
+    .mainContent {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* 区域通用样式 */
 .todoSection,
 .cardsSection {
-	background: var(--bg-card);
-	border-radius: 12px;
-	padding: 20px;
-	box-shadow: 0 1px 8px var(--shadow);
-	border: 1px solid var(--border);
-	display: flex;
-	flex-direction: column;
-	min-height: 0;
-	overflow: hidden;
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 8px var(--shadow);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* 区域头部样式 */
 .sectionHeader {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 16px;
-	padding-bottom: 12px;
-	border-bottom: 2px solid #f1f3f5;
-	flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f1f3f5;
+    flex-shrink: 0;
 }
 
 .sectionTitle {
-	font-size: 20px;
-	font-weight: 600;
-	color: #333;
-	margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
 }
 
 .sectionActions {
-	display: flex;
-	gap: 12px;
-	align-items: center;
+    display: flex;
+    gap: 12px;
+    align-items: center;
 }
 
 .viewAllLink {
-	color: #667eea;
-	text-decoration: none;
-	font-size: 13px;
-	font-weight: 500;
-	padding: 4px 10px;
-	border-radius: 6px;
-	transition: all 0.2s ease;
+    color: #667eea;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
 }
 
 .viewAllLink:hover {
-	background-color: #f0f7ff;
+    background-color: #f0f7ff;
 }
 
 .createLink {
-	background-color: #667eea;
-	color: white;
-	text-decoration: none;
-	font-size: 13px;
-	font-weight: 500;
-	padding: 6px 14px;
-	border-radius: 6px;
-	transition: background-color 0.2s ease;
+    background-color: #667eea;
+    color: white;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
 }
 
 .createLink:hover {
-	background-color: #5a67d8;
+    background-color: #5a67d8;
 }
 
 /* 添加任务表单 */
 .addTodoForm {
-	background: var(--bg-input);
-	border-radius: 10px;
-	padding: 16px;
-	margin-bottom: 16px;
-	border: 1px solid var(--border);
-	flex-shrink: 0;
+    background: var(--bg-input);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
 }
 
 .todoInput {
-	width: 100%;
-	padding: 10px 14px;
-	border: 2px solid #e9ecef;
-	border-radius: 8px;
-	font-size: 15px;
-	margin-bottom: 10px;
-	transition: border-color 0.2s ease;
-	box-sizing: border-box;
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 15px;
+    margin-bottom: 10px;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
 }
 
 .todoInput:focus {
-	outline: none;
-	border-color: #667eea;
+    outline: none;
+    border-color: #667eea;
 }
 
 .todoTextarea {
-	width: 100%;
-	padding: 10px 14px;
-	border: 2px solid #e9ecef;
-	border-radius: 8px;
-	font-size: 14px;
-	margin-bottom: 12px;
-	min-height: 70px;
-	resize: vertical;
-	transition: border-color 0.2s ease;
-	box-sizing: border-box;
-	font-family: inherit;
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 12px;
+    min-height: 70px;
+    resize: vertical;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+    font-family: inherit;
 }
 
 .todoTextarea:focus {
-	outline: none;
-	border-color: #667eea;
+    outline: none;
+    border-color: #667eea;
 }
 
 .formActions {
-	display: flex;
-	justify-content: flex-end;
+    display: flex;
+    justify-content: flex-end;
 }
 
 .addButton {
-	background-color: #667eea;
-	color: white;
-	border: none;
-	padding: 8px 20px;
-	border-radius: 8px;
-	font-size: 14px;
-	font-weight: 600;
-	cursor: pointer;
-	transition: background-color 0.2s ease;
+    background-color: #667eea;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
 }
 
 .addButton:hover:not(:disabled) {
-	background-color: #5a67d8;
+    background-color: #5a67d8;
 }
 
 .addButton:disabled {
-	background-color: #a0aec0;
-	cursor: not-allowed;
+    background-color: #a0aec0;
+    cursor: not-allowed;
 }
 
 /* 空状态 */
 .emptyState {
-	text-align: center;
-	padding: 40px 20px;
-	color: #6c757d;
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
 }
 
 .emptyState p {
-	font-size: 15px;
-	margin: 0 0 8px 0;
+    font-size: 15px;
+    margin: 0 0 8px 0;
 }
 
 .emptyHint {
-	font-size: 13px;
-	opacity: 0.7;
+    font-size: 13px;
+    opacity: 0.7;
 }
 
 @media (max-width: 768px) {
-	.todoSection,
-	.cardsSection {
-		padding: 16px;
-	}
+    .todoSection,
+    .cardsSection {
+        padding: 16px;
+    }
 
-	.sectionHeader {
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 8px;
-	}
+    .sectionHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
 
-	.sectionActions {
-		width: 100%;
-		justify-content: space-between;
-	}
+    .sectionActions {
+        width: 100%;
+        justify-content: space-between;
+    }
 }

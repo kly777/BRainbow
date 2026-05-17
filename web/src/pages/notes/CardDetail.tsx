@@ -90,8 +90,7 @@ const CardDetailPage: Component = () => {
                                 <Markdown content={c.content} />
                             </div>
                         </div>
-                    )
-                }
+                    )}
             </AsyncView>
         </div>
     );

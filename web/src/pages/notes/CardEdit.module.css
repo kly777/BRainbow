@@ -1,165 +1,166 @@
 .container {
-	height: 100%;
-	display: flex;
-	flex-direction: column;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .toolbar {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 8px 16px;
-	background: var(--c-bg-subtle);
-	border-bottom: 1px solid var(--c-border);
-	flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: var(--c-bg-subtle);
+    border-bottom: 1px solid var(--c-border);
+    flex-shrink: 0;
 }
 
 .toolbarTitle {
-	font-size: 14px;
-	font-weight: 500;
-	color: var(--c-text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--c-text-secondary);
 }
 
 .toolbarActions {
-	margin-left: auto;
-	display: flex;
-	gap: 8px;
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
 }
 
 .backBtn {
-	padding: 5px 10px;
-	font-size: 13px;
-	background: var(--c-bg);
-	color: var(--c-text-secondary);
-	border: 1px solid var(--c-border);
-	border-radius: 6px;
-	cursor: pointer;
+    padding: 5px 10px;
+    font-size: 13px;
+    background: var(--c-bg);
+    color: var(--c-text-secondary);
+    border: 1px solid var(--c-border);
+    border-radius: 6px;
+    cursor: pointer;
 }
 .backBtn:hover {
-	background: var(--c-bg-hover);
+    background: var(--c-bg-hover);
 }
 
 .saveBtn {
-	padding: 5px 14px;
-	font-size: 13px;
-	background: var(--c-primary);
-	color: var(--c-bg);
-	border: none;
-	border-radius: 6px;
-	cursor: pointer;
-	font-weight: 500;
+    padding: 5px 14px;
+    font-size: 13px;
+    background: var(--c-primary);
+    color: var(--c-bg);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
 }
 .saveBtn:hover {
-	background: var(--c-primary-hover);
+    background: var(--c-primary-hover);
 }
 .saveBtn:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .deleteBtn {
-	padding: 5px 12px;
-	font-size: 13px;
-	background: var(--c-bg);
-	color: var(--c-danger);
-	border: 1px solid var(--c-danger-border);
-	border-radius: 6px;
-	cursor: pointer;
+    padding: 5px 12px;
+    font-size: 13px;
+    background: var(--c-bg);
+    color: var(--c-danger);
+    border: 1px solid var(--c-danger-border);
+    border-radius: 6px;
+    cursor: pointer;
 }
 .deleteBtn:hover {
-	background: var(--c-danger-light);
+    background: var(--c-danger-light);
 }
 
 .uploadBtn {
-	padding: 5px 12px;
-	font-size: 13px;
-	background: var(--c-bg);
-	color: var(--c-text-secondary);
-	border: 1px solid var(--c-border);
-	border-radius: 6px;
-	cursor: pointer;
+    padding: 5px 12px;
+    font-size: 13px;
+    background: var(--c-bg);
+    color: var(--c-text-secondary);
+    border: 1px solid var(--c-border);
+    border-radius: 6px;
+    cursor: pointer;
 }
 .uploadBtn:hover {
-	background: var(--c-bg-hover);
-	color: var(--c-text);
+    background: var(--c-bg-hover);
+    color: var(--c-text);
 }
 .uploadBtn:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .hiddenInput {
-	display: none;
+    display: none;
 }
 
 .errorMsg {
-	padding: 8px 16px;
-	background: var(--c-danger-light);
-	color: var(--c-danger-hover);
-	font-size: 13px;
-	border-bottom: 1px solid var(--c-danger-border);
+    padding: 8px 16px;
+    background: var(--c-danger-light);
+    color: var(--c-danger-hover);
+    font-size: 13px;
+    border-bottom: 1px solid var(--c-danger-border);
 }
 
 .editor {
-	flex: 1;
-	display: flex;
-	min-height: 0;
+    flex: 1;
+    display: flex;
+    min-height: 0;
 }
 
 .textarea {
-	flex: 1;
-	padding: 16px;
-	border: none;
-	border-right: 1px solid var(--c-border);
-	resize: none;
-	font-size: 15px;
-	font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-	line-height: 1.6;
-	outline: none;
-	background: var(--c-bg-subtle);
+    flex: 1;
+    padding: 16px;
+    border: none;
+    border-right: 1px solid var(--c-border);
+    resize: none;
+    font-size: 15px;
+    font-family:
+        "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    line-height: 1.6;
+    outline: none;
+    background: var(--c-bg-subtle);
 }
 
 .preview {
-	flex: 1;
-	padding: 16px 24px;
-	overflow-y: auto;
+    flex: 1;
+    padding: 16px 24px;
+    overflow-y: auto;
 }
 
 .emptyPreview {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	height: 100%;
-	color: var(--c-text-muted);
-	font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--c-text-muted);
+    font-size: 14px;
 }
 
 .loading {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 8px;
-	padding: 40px;
-	color: var(--c-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 40px;
+    color: var(--c-text-muted);
 }
 
 .retryBtn {
-	padding: 4px 10px;
-	font-size: 13px;
-	background: var(--c-primary);
-	color: var(--c-bg);
-	border: none;
-	border-radius: 4px;
-	cursor: pointer;
+    padding: 4px 10px;
+    font-size: 13px;
+    background: var(--c-primary);
+    color: var(--c-bg);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
 }
 
 @media (max-width: 768px) {
-	.editor {
-		flex-direction: column;
-	}
-	.textarea {
-		border-right: none;
-		border-bottom: 1px solid var(--c-border);
-		min-height: 200px;
-	}
+    .editor {
+        flex-direction: column;
+    }
+    .textarea {
+        border-right: none;
+        border-bottom: 1px solid var(--c-border);
+        min-height: 200px;
+    }
 }

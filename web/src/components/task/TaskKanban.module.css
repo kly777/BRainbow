@@ -13,7 +13,11 @@
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
+	border: none;
 	border-top: 3px solid var(--col-color, #d1d5db);
+	padding: 0;
+	margin: 0;
+	min-width: 0;
 	transition: box-shadow 0.2s;
 }
 
@@ -72,6 +76,10 @@
 /* ── 卡片 ── */
 
 .card {
+	display: block;
+	width: 100%;
+	font: inherit;
+	text-align: inherit;
 	background: white;
 	border-radius: 8px;
 	padding: 12px;

@@ -262,19 +262,19 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 				<Show when={activeTab() === "basic"}>
 					<div class={styles.tabContent}>
 						<div class={styles.field}>
-							<label class={styles.fieldLabel}>标题 *</label>
-							<input type="text" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} class={styles.fieldInput} required placeholder="输入任务标题" />
+							<label class={styles.fieldLabel} for="task-title">标题 *</label>
+							<input id="task-title" type="text" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} class={styles.fieldInput} required placeholder="输入任务标题" />
 						</div>
 
 						<div class={styles.field}>
-							<label class={styles.fieldLabel}>描述</label>
-							<textarea value={description()} onInput={(e) => setDescription(e.currentTarget.value)} class={styles.fieldTextarea} placeholder="输入任务描述" rows={3} />
+							<label class={styles.fieldLabel} for="task-desc">描述</label>
+							<textarea id="task-desc" value={description()} onInput={(e) => setDescription(e.currentTarget.value)} class={styles.fieldTextarea} placeholder="输入任务描述" rows={3} />
 						</div>
 
 						<div class={styles.fieldRow}>
 							<div class={styles.field}>
-								<label class={styles.fieldLabel}>状态</label>
-								<select value={status()} onChange={(e) => setStatus(e.currentTarget.value)} class={styles.fieldInput}>
+								<label class={styles.fieldLabel} for="task-status">状态</label>
+								<select id="task-status" value={status()} onChange={(e) => setStatus(e.currentTarget.value)} class={styles.fieldInput}>
 									<option value="backlog">待办</option>
 									<option value="active">进行中</option>
 									<option value="completed">已完成</option>
@@ -283,14 +283,14 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 							</div>
 
 							<div class={styles.field}>
-								<label class={styles.fieldLabel}>预计工时（分钟）</label>
-								<input type="number" value={effort() ?? ""} onInput={(e) => setEffort(e.currentTarget.value ? parseInt(e.currentTarget.value, 10) : undefined)} class={styles.fieldInput} min="0" placeholder="可选" />
+								<label class={styles.fieldLabel} for="task-effort">预计工时（分钟）</label>
+								<input id="task-effort" type="number" value={effort() ?? ""} onInput={(e) => setEffort(e.currentTarget.value ? parseInt(e.currentTarget.value, 10) : undefined)} class={styles.fieldInput} min="0" placeholder="可选" />
 							</div>
 						</div>
 
 						<div class={styles.field}>
-							<label class={styles.fieldLabel}>父任务</label>
-							<select value={parentTaskId() ?? ""} onChange={(e) => setParentTaskId(e.currentTarget.value ? parseInt(e.currentTarget.value, 10) : undefined)} class={styles.fieldInput}>
+							<label class={styles.fieldLabel} for="task-parent">父任务</label>
+							<select id="task-parent" value={parentTaskId() ?? ""} onChange={(e) => setParentTaskId(e.currentTarget.value ? parseInt(e.currentTarget.value, 10) : undefined)} class={styles.fieldInput}>
 								<option value="">无</option>
 								<For each={props.allTasks.filter((t) => t.id !== props.task?.id)}>
 									{(t) => <option value={t.id}>{t.title}</option>}
@@ -319,8 +319,8 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 						<div class={styles.addTimeBlock}>
 							<div class={styles.fieldRow}>
 								<div class={styles.field}>
-									<label class={styles.fieldLabel}>类型</label>
-									<select value={newWindowType()} onChange={(e) => setNewWindowType(e.currentTarget.value as "feasible" | "planned")} class={styles.fieldInput}>
+									<label class={styles.fieldLabel} for="tw-type">类型</label>
+									<select id="tw-type" value={newWindowType()} onChange={(e) => setNewWindowType(e.currentTarget.value as "feasible" | "planned")} class={styles.fieldInput}>
 										<option value="feasible">🟢 可进行</option>
 										<option value="planned">🔵 计划</option>
 									</select>
@@ -328,22 +328,22 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 							</div>
 							<div class={styles.fieldRow}>
 								<div class={styles.field}>
-									<label class={styles.fieldLabel}>开始日期</label>
-									<input type="date" value={newStartDate()} onInput={(e) => setNewStartDate(e.currentTarget.value)} class={styles.fieldInput} />
+									<label class={styles.fieldLabel} for="tw-start-date">开始日期</label>
+									<input id="tw-start-date" type="date" value={newStartDate()} onInput={(e) => setNewStartDate(e.currentTarget.value)} class={styles.fieldInput} />
 								</div>
 								<div class={styles.field}>
-									<label class={styles.fieldLabel}>开始时间</label>
-									<input type="time" value={newStartTime()} onInput={(e) => setNewStartTime(e.currentTarget.value)} class={styles.fieldInput} />
+									<label class={styles.fieldLabel} for="tw-start-time">开始时间</label>
+									<input id="tw-start-time" type="time" value={newStartTime()} onInput={(e) => setNewStartTime(e.currentTarget.value)} class={styles.fieldInput} />
 								</div>
 							</div>
 							<div class={styles.fieldRow}>
 								<div class={styles.field}>
-									<label class={styles.fieldLabel}>结束日期</label>
-									<input type="date" value={newEndDate()} onInput={(e) => setNewEndDate(e.currentTarget.value)} class={styles.fieldInput} />
+									<label class={styles.fieldLabel} for="tw-end-date">结束日期</label>
+									<input id="tw-end-date" type="date" value={newEndDate()} onInput={(e) => setNewEndDate(e.currentTarget.value)} class={styles.fieldInput} />
 								</div>
 								<div class={styles.field}>
-									<label class={styles.fieldLabel}>结束时间</label>
-									<input type="time" value={newEndTime()} onInput={(e) => setNewEndTime(e.currentTarget.value)} class={styles.fieldInput} />
+									<label class={styles.fieldLabel} for="tw-end-time">结束时间</label>
+									<input id="tw-end-time" type="time" value={newEndTime()} onInput={(e) => setNewEndTime(e.currentTarget.value)} class={styles.fieldInput} />
 								</div>
 							</div>
 							<button type="button" onClick={handleAddTimeWindow} disabled={!newStartDate() || !newEndDate()} class={styles.addBtn}>

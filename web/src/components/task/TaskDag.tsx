@@ -99,10 +99,11 @@ function layout(nodes: readonly DagNode[], edges: readonly DagEdge[]): { nodes: 
 	const layoutEdges: LayoutEdge[] = edges
 		.filter((e) => positions.has(e.from) && positions.has(e.to))
 		.map((e) => {
-			const f = positions.get(e.from)!;
-			const t = positions.get(e.to)!;
+			const f = positions.get(e.from);
+			const t = positions.get(e.to);
+			if (!f || !t) return null;
 			return { from: e.from, to: e.to, x1: f.x, y1: f.y, x2: t.x, y2: t.y };
-		});
+		}).filter(Boolean) as LayoutEdge[];
 
 	return { nodes: layoutNodes, edges: layoutEdges };
 }
@@ -192,7 +193,7 @@ function drawGraph(
 		ctx.stroke();
 
 		// 文字
-		const text = n.title.length > 6 ? n.title.slice(0, 5) + "…" : n.title;
+		const text = n.title.length > 6 ? `${n.title.slice(0, 5)}…` : n.title;
 		ctx.fillStyle = "#fff";
 		ctx.font = `${isHovered ? "bold " : ""}10px sans-serif`;
 		ctx.textAlign = "center";

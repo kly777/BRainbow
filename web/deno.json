@@ -5,7 +5,7 @@
     "preview": "deno run -A npm:@rsbuild/core preview",
     "check": "deno check src/**/*.ts src/**/*.tsx",
     "fmt": "deno fmt",
-    "lint": "deno lint && deno run -A npm:@biomejs/biome lint"
+    "lint": "deno lint && deno run -A npm:@biomejs/biome lint --write"
   },
   "imports": {
     "@biomejs/biome": "npm:@biomejs/biome@^2.4.15",

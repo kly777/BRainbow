@@ -31,12 +31,13 @@ function KanbanCard(props: KanbanCardProps) {
 	const isSub = !!t.parent_task_id;
 
 	const onDragStart = (e: DragEvent) => {
-		e.dataTransfer!.setData("text/plain", props.dragId);
-		e.dataTransfer!.effectAllowed = "move";
+		e.dataTransfer?.setData("text/plain", props.dragId);
+		if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
 	};
 
 	return (
-		<div
+		<button
+			type="button"
 			class={styles.card}
 			draggable="true"
 			onDragStart={onDragStart}
@@ -49,7 +50,7 @@ function KanbanCard(props: KanbanCardProps) {
 				<span class={styles.cardTitleText}>{t.title}</span>
 			</div>
 			<Show when={t.description}>
-				<p class={styles.cardDesc}>{t.description!.slice(0, 80)}</p>
+				<p class={styles.cardDesc}>{t.description?.slice(0, 80)}</p>
 			</Show>
 			<div class={styles.cardMeta}>
 				<Show when={t.effort_estimate_minutes}>
@@ -64,7 +65,7 @@ function KanbanCard(props: KanbanCardProps) {
 					})}
 				</span>
 			</div>
-		</div>
+		</button>
 	);
 }
 
@@ -82,20 +83,21 @@ function Column(props: ColumnProps) {
 
 	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
-		e.dataTransfer!.dropEffect = "move";
+		if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
 	};
 
 	const onDrop = (e: DragEvent) => {
 		e.preventDefault();
-		const taskId = parseInt(e.dataTransfer!.getData("text/plain"), 10);
-		if (!isNaN(taskId)) {
+		const taskId = parseInt(e.dataTransfer?.getData("text/plain") ?? "", 10);
+		if (!Number.isNaN(taskId)) {
 			props.onDrop(taskId, props.col.key);
 		}
 	};
 
 	return (
-		<div
+		<fieldset
 			class={styles.column}
+			aria-label={props.col.label}
 			onDragOver={onDragOver}
 			onDrop={onDrop}
 			style={{ "--col-color": color }}
@@ -123,7 +125,7 @@ function Column(props: ColumnProps) {
 					</For>
 				</Show>
 			</div>
-		</div>
+		</fieldset>
 	);
 }
 
@@ -153,7 +155,7 @@ export default function TaskKanban() {
 		// 简单内联编辑：通过 updateTask 打开编辑模态
 		// 这里用一个简单的方式 —— console 输出提示
 		const newTitle = prompt("编辑标题", task.title);
-		if (newTitle && newTitle.trim() && newTitle !== task.title) {
+		if (newTitle?.trim() && newTitle !== task.title) {
 			updateTask(task.id, { title: newTitle.trim() });
 		}
 	};

@@ -41,20 +41,27 @@ load_config() {
 }
 
 # ========== 部署步骤 ==========
+stop_remote_service() {
+    log_info "停止远程服务..."
+    ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" \
+        "sudo systemctl stop $APP_NAME 2>/dev/null || true"
+    log_success "远程服务已停止"
+}
+
 backup_remote() {
     log_info "备份远程版本..."
     local timestamp
     timestamp=$(date +%Y%m%d_%H%M%S)
-    local backup_name="${APP_NAME}_backup_${timestamp}"
+    local backup_file="${APP_NAME}_backup_${timestamp}.tar.gz"
 
     # shellcheck disable=SC2087,SC2153
     ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" << ENDSSH
-        mkdir -p "$BACKUP_DIR" "$REMOTE_DIR"
+        mkdir -p "$BACKUP_DIR"
         if [ -d "$REMOTE_DIR" ]; then
-            cp -r "$REMOTE_DIR" "$BACKUP_DIR/$backup_name"
-            echo "已创建备份: $backup_name"
+            tar -czf "$BACKUP_DIR/$backup_file" -C "$REMOTE_BASE" "$APP_NAME"
+            echo "已创建备份: $backup_file"
         fi
-        sudo chown -R $REMOTE_USER:$REMOTE_USER "$REMOTE_DIR" "$BACKUP_DIR" 2>/dev/null || true
+        sudo chown -R $REMOTE_USER:$REMOTE_USER "$BACKUP_DIR" 2>/dev/null || true
 ENDSSH
 }
 
@@ -71,12 +78,17 @@ sync_files() {
         --exclude='.git' --exclude='target' --exclude='node_modules' \
         "$SERVER_SOURCE_PATH/" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/"
 
-    # 复制数据库
-    if [ -f "$DATABASE_FILE" ]; then
-        scp -P "$REMOTE_PORT" "$DATABASE_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/"
-        log_success "数据库文件已同步"
+    # 数据库同步（仅 FORCE_DB_OVERWRITE=true 时启用）
+    if [ "${FORCE_DB_OVERWRITE:-false}" = "true" ]; then
+        if [ -f "$DATABASE_FILE" ]; then
+            scp -P "$REMOTE_PORT" "$DATABASE_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/"
+            log_success "数据库文件已覆盖（FORCE_DB_OVERWRITE）"
+        else
+            log_error "本地数据库文件不存在: $DATABASE_FILE"
+            exit 1
+        fi
     else
-        log_info "跳过数据库文件（本地不存在）"
+        log_info "跳过数据库同步（保留远端数据。用 deploy-force-db 强制覆盖）"
     fi
 }
 
@@ -107,9 +119,9 @@ User=$REMOTE_USER
 WorkingDirectory=$REMOTE_DIR
 ExecStart=$REMOTE_DIR/brainbow
 Restart=on-failure
-Environment="RUST_LOG=info"
+RestartSec=5
+Environment="SERVICE_PORT=$SERVICE_PORT"
 Environment="BIND_HOST=$BIND_HOST"
-Environment="BIND_PORT=$SERVICE_PORT"
 Environment="DATABASE_URL=sqlite:$REMOTE_DIR/$DATABASE_FILE"
 
 [Install]
@@ -137,6 +149,7 @@ main() {
     log_info "部署 $APP_NAME 到 $REMOTE_HOST"
     echo "========================================="
 
+    stop_remote_service
     backup_remote
     sync_files
     setup_permissions

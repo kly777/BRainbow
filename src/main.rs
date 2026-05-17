@@ -6,8 +6,8 @@ mod pagination;
 mod routes;
 mod state;
 
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::Instant;
-use std::net::SocketAddr;
 
 use axum::extract::Request;
 use axum::http::Method;
@@ -24,7 +24,9 @@ use crate::state::AppState;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 连接数据库
-    let pool = SqlitePool::connect("sqlite:brainbow.db").await?;
+    let database_url =
+        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:brainbow.db".into());
+    let pool = SqlitePool::connect(&database_url).await?;
 
     // 创建数据库表（如果不存在）
     db::create_tables(&pool).await?;
@@ -52,11 +54,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(middleware::from_fn(logger))
         .layer(cors);
 
-    let port = env!("SERVICE_PORT")
-        .parse::<u16>()
+    let port: u16 = std::env::var("SERVICE_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
         .unwrap_or(3000);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    let bind_host: IpAddr = std::env::var("BIND_HOST")
+        .ok()
+        .and_then(|h| h.parse().ok())
+        .unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED));
+
+    let addr = SocketAddr::from((bind_host, port));
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
 

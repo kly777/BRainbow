@@ -23,6 +23,29 @@
   border: 1px solid var(--c-border, #e8dfcc);
 }
 
+/* ── 导出按钮 ── */
+.exportRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.exportBtn {
+  padding: 6px 16px;
+  border: 1px solid var(--c-border, #e8dfcc);
+  border-radius: 6px;
+  background: var(--c-bg-card, #fffef9);
+  color: var(--c-text-secondary, #6b5e4a);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.exportBtn:hover {
+  background: var(--c-bg-hover, #f0e8d5);
+  border-color: var(--c-border-hover, #d4c8aa);
+}
+
 /* ── 计算结果 ── */
 .stats {
   margin-top: 8px;

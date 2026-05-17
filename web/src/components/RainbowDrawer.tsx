@@ -7,6 +7,7 @@ interface RainbowDrawerProps {
     angle: Angle;
     squareSize?: number;
     eleSize?: number;
+    svgRef?: (el: SVGSVGElement) => void;
 }
 
 function RainbowDrawer(props: RainbowDrawerProps) {
@@ -51,7 +52,7 @@ function RainbowDrawer(props: RainbowDrawerProps) {
 
     return (
         <div>
-            <svg width={eleSize()} height={eleSize()} viewBox={`0 0 ${size()} ${size()}`} shape-rendering="geometricPrecision">
+            <svg ref={props.svgRef} width={eleSize()} height={eleSize()} viewBox={`0 0 ${size()} ${size()}`} shape-rendering="geometricPrecision">
                 <For each={stripePolygons()}>
                     {({ points }, index) => (
                         <polygon points={points} fill={props.colors[index()]} />

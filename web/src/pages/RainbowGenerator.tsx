@@ -13,9 +13,12 @@ function RainbowGenerator() {
     "#0000ff",
   ]);
 
-  const squareSize = 1000;
+  const squareSize = 10240;
+  const exportSize = 400;
 
   const [angle, setAngle] = createSignal<Angle>(new Angle(Math.PI * (1 / 9)));
+
+  let svgEl: SVGSVGElement | null = null;
 
   const height_sum = createMemo(
     () =>
@@ -29,11 +32,67 @@ function RainbowGenerator() {
   );
   const y_offset = createMemo(() => rectHeight() / Math.cos(angle().radian));
 
+  // ── 导出 ──
+
+  const download = (url: string, filename: string) => {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportSvg = () => {
+    if (!svgEl) return;
+    const clone = svgEl.cloneNode(true) as SVGSVGElement;
+    // 按实际内容大小导出（放大到 squareSize）
+    clone.setAttribute("width", String(squareSize));
+    clone.setAttribute("height", String(squareSize));
+    const xml = new XMLSerializer().serializeToString(clone);
+    const blob = new Blob(
+      [`<?xml version="1.0" encoding="UTF-8"?>\n${xml}`],
+      { type: "image/svg+xml" },
+    );
+    download(URL.createObjectURL(blob), "rainbow.svg");
+  };
+
+  const exportPng = () => {
+    if (!svgEl) return;
+    const clone = svgEl.cloneNode(true) as SVGSVGElement;
+    clone.setAttribute("width", String(squareSize));
+    clone.setAttribute("height", String(squareSize));
+    const xml = new XMLSerializer().serializeToString(clone);
+    const dataUrl = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(xml)));
+
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = squareSize;
+      canvas.height = squareSize;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob((blob) => {
+        if (blob) download(URL.createObjectURL(blob), "rainbow.png");
+      }, "image/png");
+    };
+    img.src = dataUrl;
+  };
+
   return (
     <div class={styles.page}>
       <div class={styles.controls}>
         <AngleEditor angle={angle} setAngle={setAngle} />
         <ColorEditor colors={colors} setColors={setColors} />
+
+        <div class={styles.exportRow}>
+          <button class={styles.exportBtn} onClick={exportSvg}>
+            导出 SVG
+          </button>
+          <button class={styles.exportBtn} onClick={exportPng}>
+            导出 PNG
+          </button>
+        </div>
+
         <section class={styles.stats}>
           <h3>计算结果</h3>
           <table>
@@ -63,7 +122,8 @@ function RainbowGenerator() {
           colors={colors()}
           angle={angle()}
           squareSize={squareSize}
-          eleSize={400}
+          eleSize={exportSize}
+          svgRef={(el) => { svgEl = el; }}
         />
       </div>
     </div>

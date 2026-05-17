@@ -100,7 +100,16 @@
 
 .triple {
   display: flex;
+  align-items: center;
   gap: 3px;
+}
+
+.rangeHint {
+  font-size: 10px;
+  color: var(--c-text-muted, #9b8e7a);
+  white-space: nowrap;
+  margin-left: 4px;
+  flex-shrink: 0;
 }
 
 .channel {

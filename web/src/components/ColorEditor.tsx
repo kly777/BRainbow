@@ -169,6 +169,7 @@ function ColorRow(props: {
             value={g()} onInput={(e) => onRgbInput("g", e)} onFocus={onFocus} onBlur={onBlur} />
           <input class={styles.channel} type="number" min="0" max="255"
             value={b()} onInput={(e) => onRgbInput("b", e)} onFocus={onFocus} onBlur={onBlur} />
+          <span class={styles.rangeHint}>0–255</span>
         </span>
       )}
       {space() === "hsl" && (
@@ -179,6 +180,7 @@ function ColorRow(props: {
             value={s()} onInput={(e) => onHslInput("s", e)} onFocus={onFocus} onBlur={onBlur} />
           <input class={styles.channel} type="number" min="0" max="100"
             value={l()} onInput={(e) => onHslInput("l", e)} onFocus={onFocus} onBlur={onBlur} />
+          <span class={styles.rangeHint}>H:0–360 S/L:0–100</span>
         </span>
       )}
       {space() === "oklab" && (
@@ -189,6 +191,7 @@ function ColorRow(props: {
             value={okA()} onInput={(e) => onOklabInput("a", e)} onFocus={onFocus} onBlur={onBlur} />
           <input class={styles.channel} type="number" step="0.001"
             value={okB()} onInput={(e) => onOklabInput("b", e)} onFocus={onFocus} onBlur={onBlur} />
+          <span class={styles.rangeHint}>L:0–100 a/b:无限制</span>
         </span>
       )}
 

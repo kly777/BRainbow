@@ -12,23 +12,58 @@
   padding: 0 6px;
 }
 
-.row {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
+/* ── 分段按钮 ── */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--c-border, #e8dfcc);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 10px;
 }
 
-.label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 14px;
+.segBtn,
+.segActive {
+  padding: 4px 14px;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.segBtn {
+  background: transparent;
   color: var(--c-text-secondary, #6b5e4a);
 }
 
+.segBtn:hover {
+  background: var(--c-bg-hover, #f0e8d5);
+}
+
+.segActive {
+  background: var(--c-primary, #3b82f6);
+  color: #fff;
+  font-weight: 600;
+}
+
+.segBtn + .segBtn {
+  border-left: 1px solid var(--c-border, #e8dfcc);
+}
+
+.segActive + .segBtn,
+.segBtn + .segActive {
+  border-left-color: transparent;
+}
+
+/* ── 输入行 ── */
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .input {
-  width: 80px;
-  padding: 4px 6px;
+  width: 110px;
+  padding: 5px 8px;
   border: 1px solid var(--c-border, #e8dfcc);
   border-radius: 4px;
   background: var(--c-bg, #fefcf5);
@@ -45,6 +80,6 @@
 
 .unit {
   color: var(--c-text-muted, #9b8e7a);
-  font-size: 12px;
-  min-width: 20px;
+  font-size: 13px;
+  min-width: 24px;
 }

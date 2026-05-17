@@ -1,50 +1,62 @@
-import { Accessor, Setter, For } from "solid-js";
+import { createSignal, Accessor, Setter, For } from "solid-js";
 import {
   hexToRgb,
   rgbToHsl,
   hslToRgb,
   rgbToHex,
   normalizeHex,
-} from "../lib/color";
+} from "../lib/color.ts";
 import styles from "./ColorEditor.module.css";
+
+type ColorSpace = "hex" | "rgb" | "hsl";
 
 interface Props {
   colors: Accessor<string[]>;
   setColors: Setter<string[]>;
 }
 
-/** 单个颜色行：色块预览 + HEX / RGB / HSL 输入 */
+const SPACES: { key: ColorSpace; label: string }[] = [
+  { key: "hex", label: "HEX" },
+  { key: "rgb", label: "RGB" },
+  { key: "hsl", label: "HSL" },
+];
+
+/** 单个颜色行：模式选择 + 对应输入 */
 function ColorRow(props: {
   color: string;
   onColor: (hex: string) => void;
   onRemove: () => void;
   canRemove: boolean;
 }) {
+  const [space, setSpace] = createSignal<ColorSpace>("hex");
+
   const rgb = () => hexToRgb(props.color);
   const hsl = () => (rgb() ? rgbToHsl(rgb()!) : null);
 
+  // ── HEX handlers ──
   const onHexInput = (e: Event) => {
     const val = (e.target as HTMLInputElement).value;
     if (val.length >= 7) {
-      const normalized = normalizeHex(val);
-      if (normalized) props.onColor(normalized);
+      const n = normalizeHex(val);
+      if (n) props.onColor(n);
     }
   };
-
   const onHexBlur = (e: Event) => {
     const val = (e.target as HTMLInputElement).value;
-    const normalized = normalizeHex(val);
-    if (normalized) props.onColor(normalized);
+    const n = normalizeHex(val);
+    if (n) props.onColor(n);
   };
 
-  const onRgbChange = (ch: "r" | "g" | "b", val: string) => {
+  // ── RGB handlers ──
+  const onRgb = (ch: "r" | "g" | "b", val: string) => {
     const n = parseInt(val, 10);
     if (isNaN(n) || !rgb()) return;
     const next = { ...rgb()!, [ch]: Math.max(0, Math.min(255, n)) };
     props.onColor(rgbToHex(next));
   };
 
-  const onHslChange = (ch: "h" | "s" | "l", val: string) => {
+  // ── HSL handlers ──
+  const onHsl = (ch: "h" | "s" | "l", val: string) => {
     const n = parseInt(val, 10);
     if (isNaN(n) || !hsl()) return;
     const next = { ...hsl()! };
@@ -55,12 +67,23 @@ function ColorRow(props: {
 
   return (
     <div class={styles.colorRow}>
-      {/* 色块预览 */}
+      {/* 色块 */}
       <div class={styles.swatch} style={{ "background-color": props.color }} />
 
-      {/* HEX */}
-      <label class={styles.space}>
-        <span class={styles.spaceName}>HEX</span>
+      {/* 空间切换 */}
+      <div class={styles.segmented}>
+        {SPACES.map((s) => (
+          <button
+            class={space() === s.key ? styles.segActive : styles.segBtn}
+            onClick={() => setSpace(s.key)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 当前空间输入 */}
+      {space() === "hex" && (
         <input
           class={styles.hexInput}
           value={props.color}
@@ -68,76 +91,34 @@ function ColorRow(props: {
           onBlur={onHexBlur}
           maxLength={7}
         />
-      </label>
-
-      {/* RGB */}
-      <label class={styles.space}>
-        <span class={styles.spaceName}>RGB</span>
+      )}
+      {space() === "rgb" && (
         <span class={styles.triple}>
-          <input
-            class={styles.channel}
-            type="number"
-            min="0"
-            max="255"
-            value={rgb()?.r ?? 0}
-            onInput={(e) => onRgbChange("r", e.target.value)}
-          />
-          <input
-            class={styles.channel}
-            type="number"
-            min="0"
-            max="255"
-            value={rgb()?.g ?? 0}
-            onInput={(e) => onRgbChange("g", e.target.value)}
-          />
-          <input
-            class={styles.channel}
-            type="number"
-            min="0"
-            max="255"
-            value={rgb()?.b ?? 0}
-            onInput={(e) => onRgbChange("b", e.target.value)}
-          />
+          <input class={styles.channel} type="number" min="0" max="255"
+            value={rgb()?.r ?? 0} onInput={(e) => onRgb("r", e.target.value)} />
+          <input class={styles.channel} type="number" min="0" max="255"
+            value={rgb()?.g ?? 0} onInput={(e) => onRgb("g", e.target.value)} />
+          <input class={styles.channel} type="number" min="0" max="255"
+            value={rgb()?.b ?? 0} onInput={(e) => onRgb("b", e.target.value)} />
         </span>
-      </label>
-
-      {/* HSL */}
-      <label class={styles.space}>
-        <span class={styles.spaceName}>HSL</span>
+      )}
+      {space() === "hsl" && (
         <span class={styles.triple}>
-          <input
-            class={styles.channel}
-            type="number"
-            min="0"
-            max="360"
-            value={hsl()?.h ?? 0}
-            onInput={(e) => onHslChange("h", e.target.value)}
-          />
-          <input
-            class={styles.channel}
-            type="number"
-            min="0"
-            max="100"
-            value={hsl()?.s ?? 0}
-            onInput={(e) => onHslChange("s", e.target.value)}
-          />
-          <input
-            class={styles.channel}
-            type="number"
-            min="0"
-            max="100"
-            value={hsl()?.l ?? 0}
-            onInput={(e) => onHslChange("l", e.target.value)}
-          />
+          <input class={styles.channel} type="number" min="0" max="360"
+            value={hsl()?.h ?? 0} onInput={(e) => onHsl("h", e.target.value)} />
+          <input class={styles.channel} type="number" min="0" max="100"
+            value={hsl()?.s ?? 0} onInput={(e) => onHsl("s", e.target.value)} />
+          <input class={styles.channel} type="number" min="0" max="100"
+            value={hsl()?.l ?? 0} onInput={(e) => onHsl("l", e.target.value)} />
         </span>
-      </label>
+      )}
 
       {/* 删除 */}
       <button
         class={styles.removeBtn}
         onClick={props.onRemove}
         disabled={!props.canRemove}
-        title="删除此颜色"
+        title="删除"
       >
         ✕
       </button>
@@ -145,15 +126,8 @@ function ColorRow(props: {
   );
 }
 
-/**
- * 颜色编辑器 —— 多色彩空间 + 增删
- *
- * 每行展示 HEX / RGB / HSL 三个空间，任意空间修改都
- * 实时同步到其余空间并写回 colors 信号。
- */
 export default function ColorEditor(props: Props) {
   const addColor = () => {
-    // 插入一个与最后一个颜色相近的随机色
     props.setColors((prev) => [...prev, randomPastel()]);
   };
 
@@ -187,7 +161,6 @@ export default function ColorEditor(props: Props) {
   );
 }
 
-/** 生成柔和随机色（HEX） */
 function randomPastel(): string {
   const h = Math.floor(Math.random() * 360);
   return rgbToHex(hslToRgb({ h, s: 60, l: 65 }));

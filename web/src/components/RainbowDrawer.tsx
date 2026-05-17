@@ -1,4 +1,4 @@
-import { createEffect, createMemo } from "solid-js";
+import { createMemo } from "solid-js";
 import { For } from "solid-js/web";
 import { Angle } from "../lib/angle.ts";
 
@@ -10,41 +10,51 @@ interface RainbowDrawerProps {
 }
 
 function RainbowDrawer(props: RainbowDrawerProps) {
-    const colors = createMemo(() => props.colors);
-    const squareSize = createMemo(() => props.squareSize ?? 200);
-    const angle = createMemo(() => props.angle);
-    const eleSize = createMemo(() => props.eleSize ?? squareSize());
+    const size = () => props.squareSize ?? 200;
+    const eleSize = () => props.eleSize ?? size();
     const height_sum = createMemo(
         () =>
-            squareSize() * (Math.sin(angle().radian) + Math.cos(angle().radian)),
+            size() * (Math.sin(props.angle.radian) + Math.cos(props.angle.radian)),
     );
-    const rectHeight = createMemo(() => height_sum() / colors().length);
+    const rectHeight = createMemo(() => height_sum() / props.colors.length);
     const rectWidth = createMemo(
         () =>
-            squareSize() / Math.cos(angle().radian) +
-            2 * rectHeight() * Math.tan(angle().radian),
+            size() / Math.cos(props.angle.radian) +
+            2 * rectHeight() * Math.tan(props.angle.radian),
     );
-    const y_offset = createMemo(() => rectHeight() / Math.cos(angle().radian));
+    const y_offset = createMemo(() => rectHeight() / Math.cos(props.angle.radian));
 
-    createEffect(() => {
-        console.log(colors());
+    /** 预计算每条色带旋转+平移后的多边形顶点，消除 runtime transform */
+    const stripePolygons = createMemo(() => {
+      const deg = props.angle.radian;
+      const cos = Math.cos(deg);
+      const sin = Math.sin(deg);
+      const tan = Math.tan(deg);
+      const rh = rectHeight();
+      const rw = rectWidth();
+      const yo = y_offset();
+      const xOff = tan * rh;
+
+      return props.colors.map((_, i) => {
+        const yBase = yo * i;
+        const ax = -xOff * cos;
+        const ay = yBase + xOff * sin;
+        const bx = (rw - xOff) * cos;
+        const by = yBase - (rw - xOff) * sin;
+        const cx = (rw - xOff) * cos + rh * sin;
+        const cy = yBase - (rw - xOff) * sin + rh * cos;
+        const dx = -xOff * cos + rh * sin;
+        const dy = yBase + xOff * sin + rh * cos;
+        return { points: `${ax},${ay} ${bx},${by} ${cx},${cy} ${dx},${dy}` };
+      });
     });
 
     return (
         <div>
-            <svg width={eleSize()} height={eleSize()} viewBox={`0 0 ${squareSize()} ${squareSize()}`} shape-rendering="crispEdges">
-                <For each={colors()}>
-                    {(color, index) => (
-                        <rect
-                            width={rectWidth().toString()}
-                            height={rectHeight().toString()}
-                            y={(y_offset() * index()).toString()}
-                            fill={color}
-                            transform={`
-                                rotate(${-angle().degree} 0  ${(y_offset() * index()).toString()} )
-                                translate(${-Math.tan(angle().radian) * rectHeight()})
-                            `}
-                        />
+            <svg width={eleSize()} height={eleSize()} viewBox={`0 0 ${size()} ${size()}`} shape-rendering="geometricPrecision">
+                <For each={stripePolygons()}>
+                    {({ points }, index) => (
+                        <polygon points={points} fill={props.colors[index()]} />
                     )}
                 </For>
             </svg>

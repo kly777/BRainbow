@@ -13,7 +13,7 @@ function RainbowGenerator() {
     "#0000ff",
   ]);
 
-  const squareSize = 400;
+  const squareSize = 1000;
 
   const [angle, setAngle] = createSignal<Angle>(new Angle(Math.PI * (1 / 9)));
 
@@ -28,11 +28,6 @@ function RainbowGenerator() {
       2 * rectHeight() * Math.tan(angle().radian),
   );
   const y_offset = createMemo(() => rectHeight() / Math.cos(angle().radian));
-
-  const previewScale = createMemo(() => {
-    const maxDim = Math.max(rectWidth(), height_sum());
-    return Math.min(1, 300 / maxDim);
-  });
 
   return (
     <div class={styles.page}>

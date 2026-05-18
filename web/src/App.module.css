@@ -2,7 +2,7 @@
 .shell {
     display: flex;
     min-height: 100vh;
-    background: var(--c-bg);
+    background: var(--color-bg);
 }
 
 /* ===== 移动端顶栏 ===== */
@@ -11,8 +11,8 @@
     align-items: center;
     gap: 12px;
     padding: 8px 14px;
-    background: var(--c-bg);
-    border-bottom: 1px solid var(--c-border);
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
     position: sticky;
     top: 0;
     z-index: 50;
@@ -25,7 +25,7 @@
     border: none;
     font-size: 20px;
     cursor: pointer;
-    color: var(--c-text-secondary);
+    color: var(--color-text-secondary);
     padding: 4px 6px;
     line-height: 1;
 }
@@ -34,11 +34,11 @@
     margin: 0;
     font-size: 18px;
     font-weight: 600;
-    color: var(--c-text);
+    color: var(--color-text);
 }
 
 .brand span {
-    color: var(--c-primary);
+    color: var(--color-accent);
 }
 
 /* ===== 侧边栏 ===== */
@@ -47,8 +47,8 @@
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    background: var(--c-bg);
-    border-right: 1px solid var(--c-border);
+    background: var(--color-bg);
+    border-right: 1px solid var(--color-border);
     padding: 20px 0 12px;
     height: 100vh;
     position: sticky;
@@ -60,11 +60,11 @@
     margin: 0 20px 24px;
     font-size: 22px;
     font-weight: 600;
-    color: var(--c-text);
+    color: var(--color-text);
 }
 
 .sidebarBrand span {
-    color: var(--c-primary);
+    color: var(--color-accent);
 }
 
 .nav {
@@ -81,7 +81,7 @@
     gap: 10px;
     padding: 10px 12px;
     border-radius: 8px;
-    color: var(--c-text-secondary);
+    color: var(--color-text-secondary);
     text-decoration: none;
     font-size: 14px;
     font-weight: 500;
@@ -89,13 +89,13 @@
 }
 
 .navLink:hover {
-    background: var(--c-bg-hover);
-    color: var(--c-text);
+    background: var(--color-surface-raised);
+    color: var(--color-text);
 }
 
 .navLink.active {
-    background: var(--c-primary-light);
-    color: var(--c-primary);
+    background: var(--color-accent-subtle);
+    color: var(--color-accent);
 }
 
 .navIcon {
@@ -108,7 +108,7 @@
 .sidebarFooter {
     margin-top: auto;
     padding: 12px 18px 4px;
-    border-top: 1px solid var(--c-border);
+    border-top: 1px solid var(--color-border);
 }
 
 /* ===== 遮罩 ===== */
@@ -116,7 +116,7 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.25);
+    background: oklch(0 0 0 / 0.25);
     z-index: 55;
     opacity: 0;
     pointer-events: none;
@@ -164,7 +164,7 @@
 
     .sidebarOpen {
         left: 0;
-        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.12);
+        box-shadow: 4px 0 20px oklch(0 0 0 / 0.12);
     }
 
     .sidebarBrand {
@@ -191,9 +191,9 @@
     text-align: center;
     padding: 15px;
     margin-top: 15px;
-    color: var(--c-text-muted);
+    color: var(--color-text-muted);
     font-size: 13px;
-    border-top: 1px solid var(--c-border);
+    border-top: 1px solid var(--color-border);
 }
 
 .landingPage {
@@ -209,30 +209,30 @@
 .landingPage h1 {
     font-size: 32px;
     margin-bottom: 20px;
-    color: var(--c-text);
+    color: var(--color-text);
 }
 
 .landingPage p {
     font-size: 18px;
-    color: var(--c-text-muted);
+    color: var(--color-text-muted);
     margin-bottom: 40px;
     max-width: 600px;
     line-height: 1.6;
 }
 
 .landingPage > a {
-    color: var(--c-primary);
+    color: var(--color-accent);
     text-decoration: none;
     font-weight: 500;
     padding: 10px 20px;
-    border: 2px solid var(--c-primary);
+    border: 2px solid var(--color-accent);
     border-radius: 6px;
     transition: all 0.3s ease;
 }
 
 .landingPage > a:hover {
-    background-color: var(--c-primary);
-    color: var(--c-bg);
+    background-color: var(--color-accent);
+    color: var(--color-bg);
     text-decoration: none;
 }
 
@@ -246,10 +246,10 @@
 }
 
 .featureCard {
-    background-color: var(--c-bg);
+    background-color: var(--color-bg);
     border-radius: 10px;
     padding: 20px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 3px 10px oklch(0 0 0 / 0.08);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     display: flex;
     flex-direction: column;
@@ -259,13 +259,13 @@
 
 .featureCard:hover {
     transform: translateY(-5px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 8px 24px oklch(0 0 0 / 0.12);
 }
 
 .featureCard h3 {
     font-size: 20px;
     margin: 0 0 15px 0;
-    color: var(--c-text);
+    color: var(--color-text);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -273,7 +273,7 @@
 
 .featureCard p {
     font-size: 15px;
-    color: var(--c-text-muted);
+    color: var(--color-text-muted);
     margin-bottom: 20px;
     line-height: 1.5;
     flex: 1;
@@ -281,8 +281,8 @@
 
 .featureLink {
     display: inline-block;
-    background-color: var(--c-primary);
-    color: var(--c-bg);
+    background-color: var(--color-accent);
+    color: var(--color-bg);
     padding: 10px 20px;
     border-radius: 6px;
     text-decoration: none;
@@ -292,22 +292,22 @@
 }
 
 .featureLink:hover {
-    background-color: var(--c-primary-hover);
-    color: var(--c-bg);
+    background-color: var(--color-accent-hover);
+    color: var(--color-bg);
     text-decoration: none;
 }
 
 .quickStats {
     margin-top: 30px;
     padding: 15px;
-    background-color: var(--c-bg-subtle);
+    background-color: var(--color-surface-raised);
     border-radius: 6px;
     max-width: 700px;
 }
 
 .quickStats p {
     font-size: 16px;
-    color: var(--c-text-secondary);
+    color: var(--color-text-secondary);
     margin: 10px 0;
     display: flex;
     align-items: center;

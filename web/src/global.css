@@ -1,66 +1,74 @@
-/* ===== 全局颜色变量 ===== */
+/* ===== 语义化设计令牌（oklch 色彩空间） ===== */
 :root {
-    --c-primary: #3b82f6;
-    --c-primary-hover: #2563eb;
-    --c-primary-light: #f0f7ff;
-    --c-primary-ring: rgba(59, 130, 246, 0.25);
+    /* ── 背景 ── */
+    --color-bg:              oklch(0.985 0.008 95);
+    --color-surface:         oklch(0.992 0.005 95);
+    --color-surface-raised:  oklch(0.97 0.01 92);
 
-    --c-danger: #ef4444;
-    --c-danger-hover: #dc2626;
-    --c-danger-light: #fef2f2;
-    --c-danger-border: #fca5a5;
-    --c-danger-bg: #f8d7da;
-    --c-danger-text: #c53030;
+    /* ── 文字 ── */
+    --color-text:            oklch(0.30 0.02 80);
+    --color-text-secondary:  oklch(0.50 0.015 80);
+    --color-text-muted:      oklch(0.65 0.01 80);
 
-    --c-text: #3d3629;
-    --c-text-heading: #2c2416;
-    --c-text-secondary: #6b5e4a;
-    --c-text-muted: #9b8e7a;
+    /* ── 边框 ── */
+    --color-border:          oklch(0.88 0.015 90);
+    --color-border-light:    oklch(0.93 0.008 90);
 
-    --c-bg: #fefcf5;
-    --c-bg-page: #fefcf5;
-    --c-bg-card: #fffef9;
-    --c-bg-subtle: #f8f3e6;
-    --c-bg-hover: #f0e8d5;
+    /* ── 强调色（蓝） ── */
+    --color-accent:          oklch(0.62 0.21 257);
+    --color-accent-hover:    oklch(0.55 0.23 257);
+    --color-accent-subtle:   oklch(0.96 0.02 257);
 
-    --c-border: #e8dfcc;
-    --c-border-hover: #d4c8aa;
+    /* ── 危险（红） ── */
+    --color-danger:          oklch(0.55 0.22 28);
+    --color-danger-subtle:   oklch(0.96 0.015 28);
 
-    --c-code: #d63384;
-    --c-code-bg: #f6f8fa;
+    /* ── 成功（绿） ── */
+    --color-success:         oklch(0.60 0.16 170);
+    --color-success-subtle:  oklch(0.96 0.03 170);
 
-    /* ── Toast 通知颜色 ── */
-    --toast-error-bg: #fef2f2;
-    --toast-error-border: #fecaca;
-    --toast-error-text: #991b1b;
-    --toast-error-icon-bg: #dc2626;
-    --toast-error-icon-text: #fff;
-    --toast-error-code-bg: rgba(220, 38, 38, 0.12);
+    /* ── 警告（琥珀） ── */
+    --color-warning:         oklch(0.68 0.15 80);
+    --color-warning-subtle:  oklch(0.96 0.04 80);
 
-    --toast-warning-bg: #fffbeb;
-    --toast-warning-border: #fde68a;
-    --toast-warning-text: #92400e;
-    --toast-warning-icon-bg: #d97706;
-    --toast-warning-icon-text: #fff;
-    --toast-warning-code-bg: rgba(217, 119, 6, 0.12);
+    /* ── 特殊色 ── */
+    --color-code:            oklch(0.52 0.20 0);
+    --color-code-bg:         oklch(0.97 0.005 240);
+    --color-overlay:         oklch(0 0 0 / 0.50);
+    --color-white:           oklch(1 0 0);
 
-    --toast-success-bg: #f0fdf4;
-    --toast-success-border: #bbf7d0;
-    --toast-success-text: #166534;
-    --toast-success-icon-bg: #16a34a;
-    --toast-success-icon-text: #fff;
-    --toast-success-code-bg: rgba(22, 163, 74, 0.12);
+    /* ── Toast 通知 ── */
+    --toast-error-bg:        var(--color-danger-subtle);
+    --toast-error-border:    oklch(0.85 0.05 28);
+    --toast-error-text:      oklch(0.35 0.10 28);
+    --toast-error-icon-bg:   var(--color-danger);
+    --toast-error-icon-text: oklch(1 0 0);
+    --toast-error-code-bg:   oklch(0.55 0.22 28 / 0.12);
 
-    --toast-info-bg: #eff6ff;
-    --toast-info-border: #bfdbfe;
-    --toast-info-text: #1e40af;
-    --toast-info-icon-bg: #2563eb;
-    --toast-info-icon-text: #fff;
-    --toast-info-code-bg: rgba(37, 99, 235, 0.12);
+    --toast-warning-bg:      var(--color-warning-subtle);
+    --toast-warning-border:  oklch(0.88 0.08 80);
+    --toast-warning-text:    oklch(0.40 0.08 80);
+    --toast-warning-icon-bg: var(--color-warning);
+    --toast-warning-icon-text: oklch(1 0 0);
+    --toast-warning-code-bg: oklch(0.68 0.15 80 / 0.12);
+
+    --toast-success-bg:      var(--color-success-subtle);
+    --toast-success-border:  oklch(0.85 0.07 170);
+    --toast-success-text:    oklch(0.35 0.08 170);
+    --toast-success-icon-bg: var(--color-success);
+    --toast-success-icon-text: oklch(1 0 0);
+    --toast-success-code-bg: oklch(0.60 0.16 170 / 0.12);
+
+    --toast-info-bg:         var(--color-accent-subtle);
+    --toast-info-border:     oklch(0.80 0.08 257);
+    --toast-info-text:       oklch(0.35 0.10 257);
+    --toast-info-icon-bg:    var(--color-accent);
+    --toast-info-icon-text:  oklch(1 0 0);
+    --toast-info-code-bg:    oklch(0.55 0.23 257 / 0.12);
 
     --toast-shadow:
-        0 4px 16px rgba(0, 0, 0, 0.12),
-        0 1px 4px rgba(0, 0, 0, 0.08);
+        0 4px 16px oklch(0 0 0 / 0.12),
+        0 1px 4px  oklch(0 0 0 / 0.08);
 
     /* 侧边栏宽度 */
     --sidebar-w: 200px;

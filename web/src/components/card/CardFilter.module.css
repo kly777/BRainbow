@@ -1,10 +1,10 @@
 .filters {
-    background: var(--c-bg-card);
+    background: var(--color-surface);
     border-radius: 8px;
     padding: 14px;
     margin-bottom: 16px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-    border: 1px solid var(--c-border);
+    box-shadow: 0 1px 4px oklch(0 0 0 / 0.06);
+    border: 1px solid var(--color-border);
 }
 
 .filterRow {
@@ -27,7 +27,7 @@
     max-width: 220px;
     padding: 8px 12px;
     font-size: 0.875rem;
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     transition: all 0.2s ease;
     flex-shrink: 0;
@@ -35,28 +35,28 @@
 
 .searchInput:focus {
     outline: none;
-    border-color: var(--c-primary);
-    box-shadow: 0 0 0 3px var(--c-primary-ring);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(oklch(0.62 0.21 257 / 0.25));
 }
 
 .searchInput::placeholder {
-    color: var(--c-text-muted);
+    color: var(--color-text-muted);
 }
 
 .filterLabel {
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--c-text);
+    color: var(--color-text);
     white-space: nowrap;
 }
 
 .filterSelect {
     padding: 8px 12px;
     font-size: 0.875rem;
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--color-border);
     border-radius: 4px;
-    background: var(--c-bg);
-    color: var(--c-text);
+    background: var(--color-bg);
+    color: var(--color-text);
     cursor: pointer;
     min-width: 120px;
 }
@@ -64,9 +64,9 @@
 .sortButton {
     padding: 8px 12px;
     font-size: 0.875rem;
-    background: var(--c-bg-subtle);
-    color: var(--c-text);
-    border: 1px solid var(--c-border);
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -74,15 +74,15 @@
 }
 
 .sortButton:hover {
-    background: var(--c-bg-hover);
+    background: var(--color-surface-raised);
 }
 
 .clearButton {
     padding: 8px 14px;
     font-size: 0.875rem;
-    background: var(--c-bg-subtle);
-    color: var(--c-text-secondary);
-    border: 1px solid var(--c-border);
+    background: var(--color-surface-raised);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -91,7 +91,7 @@
 }
 
 .clearButton:hover:not(:disabled) {
-    background: var(--c-bg-hover);
+    background: var(--color-surface-raised);
 }
 .clearButton:disabled {
     opacity: 0.5;

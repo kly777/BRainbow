@@ -9,15 +9,15 @@
     align-items: center;
     gap: 12px;
     padding: 8px 16px;
-    background: var(--c-bg-subtle);
-    border-bottom: 1px solid var(--c-border);
+    background: var(--color-surface-raised);
+    border-bottom: 1px solid var(--color-border);
     flex-shrink: 0;
 }
 
 .toolbarTitle {
     font-size: 14px;
     font-weight: 500;
-    color: var(--c-text-secondary);
+    color: var(--color-text-secondary);
 }
 
 .toolbarActions {
@@ -29,28 +29,28 @@
 .backBtn {
     padding: 5px 10px;
     font-size: 13px;
-    background: var(--c-bg);
-    color: var(--c-text-secondary);
-    border: 1px solid var(--c-border);
+    background: var(--color-bg);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     cursor: pointer;
 }
 .backBtn:hover {
-    background: var(--c-bg-hover);
+    background: var(--color-surface-raised);
 }
 
 .saveBtn {
     padding: 5px 14px;
     font-size: 13px;
-    background: var(--c-primary);
-    color: var(--c-bg);
+    background: var(--color-accent);
+    color: var(--color-bg);
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-weight: 500;
 }
 .saveBtn:hover {
-    background: var(--c-primary-hover);
+    background: var(--color-accent-hover);
 }
 .saveBtn:disabled {
     opacity: 0.5;
@@ -60,28 +60,28 @@
 .deleteBtn {
     padding: 5px 12px;
     font-size: 13px;
-    background: var(--c-bg);
-    color: var(--c-danger);
-    border: 1px solid var(--c-danger-border);
+    background: var(--color-bg);
+    color: var(--color-danger);
+    border: 1px solid var(var(--color-danger));
     border-radius: 6px;
     cursor: pointer;
 }
 .deleteBtn:hover {
-    background: var(--c-danger-light);
+    background: var(--color-danger-subtle);
 }
 
 .uploadBtn {
     padding: 5px 12px;
     font-size: 13px;
-    background: var(--c-bg);
-    color: var(--c-text-secondary);
-    border: 1px solid var(--c-border);
+    background: var(--color-bg);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     cursor: pointer;
 }
 .uploadBtn:hover {
-    background: var(--c-bg-hover);
-    color: var(--c-text);
+    background: var(--color-surface-raised);
+    color: var(--color-text);
 }
 .uploadBtn:disabled {
     opacity: 0.5;
@@ -94,10 +94,10 @@
 
 .errorMsg {
     padding: 8px 16px;
-    background: var(--c-danger-light);
-    color: var(--c-danger-hover);
+    background: var(--color-danger-subtle);
+    color: var(var(--color-danger));
     font-size: 13px;
-    border-bottom: 1px solid var(--c-danger-border);
+    border-bottom: 1px solid var(var(--color-danger));
 }
 
 .editor {
@@ -110,14 +110,14 @@
     flex: 1;
     padding: 16px;
     border: none;
-    border-right: 1px solid var(--c-border);
+    border-right: 1px solid var(--color-border);
     resize: none;
     font-size: 15px;
     font-family:
         "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     line-height: 1.6;
     outline: none;
-    background: var(--c-bg-subtle);
+    background: var(--color-surface-raised);
 }
 
 .preview {
@@ -131,7 +131,7 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: var(--c-text-muted);
+    color: var(--color-text-muted);
     font-size: 14px;
 }
 
@@ -141,14 +141,14 @@
     justify-content: center;
     gap: 8px;
     padding: 40px;
-    color: var(--c-text-muted);
+    color: var(--color-text-muted);
 }
 
 .retryBtn {
     padding: 4px 10px;
     font-size: 13px;
-    background: var(--c-primary);
-    color: var(--c-bg);
+    background: var(--color-accent);
+    color: var(--color-bg);
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -160,7 +160,7 @@
     }
     .textarea {
         border-right: none;
-        border-bottom: 1px solid var(--c-border);
+        border-bottom: 1px solid var(--color-border);
         min-height: 200px;
     }
 }

@@ -12,10 +12,10 @@ const COLUMNS = [
 ] as const;
 
 const STATUS_COLORS: Record<string, string> = {
-    backlog: "#6b7280",
-    active: "#3b82f6",
-    completed: "#10b981",
-    archived: "#9ca3af",
+    backlog: "var(--color-text-secondary)",
+    active: "var(--color-accent)",
+    completed: "var(--color-success)",
+    archived: "var(--color-text-muted)",
 };
 
 // ==================== 拖拽卡片 ====================

@@ -5,7 +5,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: oklch(0 0 0 / 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -14,9 +14,9 @@
 }
 
 .modalContent {
-    background-color: white;
+    background-color: var(--color-white);
     border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 20px oklch(0 0 0 / 0.15);
     max-width: 600px;
     width: 100%;
     max-height: 90vh;
@@ -27,7 +27,7 @@
 
 .modalHeader {
     padding: 20px;
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid var(--color-border-light);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -37,7 +37,7 @@
     margin: 0;
     font-size: 18px;
     font-weight: 600;
-    color: #212529;
+    color: var(--color-text);
 }
 
 .modalClose {
@@ -45,7 +45,7 @@
     border: none;
     font-size: 24px;
     line-height: 1;
-    color: #6c757d;
+    color: var(--color-text-muted);
     cursor: pointer;
     padding: 0;
     width: 30px;
@@ -58,8 +58,8 @@
 }
 
 .modalClose:hover {
-    background-color: #f8f9fa;
-    color: #212529;
+    background-color: var(--color-white);
+    color: var(--color-text);
 }
 
 .modalBody {
@@ -70,7 +70,7 @@
 
 .modalFooter {
     padding: 20px;
-    border-top: 1px solid #e9ecef;
+    border-top: 1px solid var(--color-border-light);
     display: flex;
     justify-content: flex-end;
     gap: 10px;
@@ -92,23 +92,23 @@
 
 .formLabel {
     font-weight: 500;
-    color: #495057;
+    color: var(--color-text-secondary);
     font-size: 14px;
 }
 
 .taskSelector {
     width: 100%;
     padding: 10px;
-    border: 1px solid #ced4da;
+    border: 1px solid var(--color-border);
     border-radius: 4px;
     font-size: 14px;
-    background-color: white;
+    background-color: var(--color-white);
 }
 
 .taskSelector:focus {
     outline: none;
-    border-color: #0066cc;
-    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px oklch(0.62 0.21 257 / 0.1);
 }
 
 .taskOption {
@@ -117,8 +117,8 @@
 
 /* Info box */
 .infoBox {
-    background-color: #f8f9fa;
-    border: 1px solid #e9ecef;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-border-light);
     border-radius: 4px;
     padding: 15px;
     margin-top: 15px;
@@ -132,7 +132,7 @@
 .infoBox ul {
     margin: 0;
     padding-left: 20px;
-    color: #6c757d;
+    color: var(--color-text-muted);
 }
 
 .infoBox li {
@@ -143,7 +143,7 @@
 .emptyList {
     text-align: center;
     padding: 20px;
-    color: #6c757d;
+    color: var(--color-text-muted);
 }
 
 .emptyList p {
@@ -156,15 +156,15 @@
     align-items: center;
     justify-content: center;
     padding: 40px;
-    color: #6c757d;
+    color: var(--color-text-muted);
 }
 
 .loading::after {
     content: "";
     width: 20px;
     height: 20px;
-    border: 2px solid #e9ecef;
-    border-top-color: #0066cc;
+    border: 2px solid var(--color-border-light);
+    border-top-color: var(--color-accent);
     border-radius: 50%;
     margin-left: 10px;
     animation: spin 1s linear infinite;
@@ -178,17 +178,17 @@
 
 /* Messages */
 .errorMessage {
-    background-color: #f8d7da;
-    color: #721c24;
+    background-color: var(--color-danger-subtle);
+    color: oklch(0.30 0.07 28);
     padding: 10px;
     border-radius: 4px;
-    border: 1px solid #f5c6cb;
+    border: 1px solid oklch(0.88 0.04 28);
 }
 
 .successMessage {
-    background-color: #d4edda;
-    color: #155724;
+    background-color: var(--color-success-subtle);
+    color: oklch(0.30 0.07 160);
     padding: 10px;
     border-radius: 4px;
-    border: 1px solid #c3e6cb;
+    border: 1px solid var(--color-success-subtle);
 }

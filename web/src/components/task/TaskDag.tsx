@@ -137,15 +137,22 @@ function layout(
 
 // ==================== 状态颜色 ====================
 
+function readCSSVar(name: string): string {
+    const style = getComputedStyle(document.documentElement);
+    return style.getPropertyValue(name).trim();
+}
+
 const STATUS_COLORS: Record<string, string> = {
-    backlog: "#9ca3af",
-    active: "#3b82f6",
-    completed: "#10b981",
-    archived: "#6b7280",
+    backlog: "var(--color-text-muted)",
+    active: "var(--color-accent)",
+    completed: "var(--color-success)",
+    archived: "var(--color-text-secondary)",
 };
 
 function statusColor(s: string): string {
-    return STATUS_COLORS[s] || "#9ca3af";
+    const v = STATUS_COLORS[s];
+    if (!v) return readCSSVar("--color-text-muted");
+    return v.startsWith("var(") ? readCSSVar(v.slice(4, -1)) : v;
 }
 
 // ==================== Canvas 渲染 ====================
@@ -175,7 +182,7 @@ function drawGraph(
         ctx.beginPath();
         ctx.moveTo(e.x1, e.y1);
         ctx.lineTo(e.x2 - (dx / len) * 32, e.y2 - (dy / len) * 32); // 不压到节点中心
-        ctx.strokeStyle = "#cbd5e1";
+        ctx.strokeStyle = readCSSVar("--color-border");
         ctx.lineWidth = 2;
         ctx.stroke();
 
@@ -195,7 +202,7 @@ function drawGraph(
             ay - arrowLen * Math.sin(angle + Math.PI / 6),
         );
         ctx.closePath();
-        ctx.fillStyle = "#cbd5e1";
+        ctx.fillStyle = readCSSVar("--color-border");
         ctx.fill();
     }
 
@@ -207,7 +214,7 @@ function drawGraph(
         // 阴影
         ctx.beginPath();
         ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = isHovered ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.08)";
+        ctx.fillStyle = isHovered ? "oklch(0 0 0 / 0.15)" : "oklch(0 0 0 / 0.08)";
         ctx.fill();
 
         // 圆
@@ -215,13 +222,13 @@ function drawGraph(
         ctx.arc(n.x, n.y, r - 2, 0, Math.PI * 2);
         ctx.fillStyle = statusColor(n.status);
         ctx.fill();
-        ctx.strokeStyle = isHovered ? "#1f2937" : "#fff";
+        ctx.strokeStyle = isHovered ? readCSSVar("--color-text") : readCSSVar("--color-white");
         ctx.lineWidth = 2;
         ctx.stroke();
 
         // 文字
         const text = n.title.length > 6 ? `${n.title.slice(0, 5)}…` : n.title;
-        ctx.fillStyle = "#fff";
+        ctx.fillStyle = readCSSVar("--color-white");
         ctx.font = `${isHovered ? "bold " : ""}10px sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -229,7 +236,7 @@ function drawGraph(
 
         // hover 时显示完整标题
         if (isHovered) {
-            ctx.fillStyle = "#1f2937";
+            ctx.fillStyle = readCSSVar("--color-text");
             ctx.font = "12px sans-serif";
             ctx.fillText(n.title, n.x, n.y - r - 12);
         }
@@ -237,21 +244,21 @@ function drawGraph(
 
     // 图例
     ctx.restore();
-    ctx.fillStyle = "#6b7280";
+    ctx.fillStyle = readCSSVar("--color-text-secondary");
     ctx.font = "11px sans-serif";
     ctx.textAlign = "left";
     ctx.fillText("● 待办", 12, 20);
     ctx.fillStyle = statusColor("active");
     ctx.fillText("●", 12, 20);
-    ctx.fillStyle = "#6b7280";
+    ctx.fillStyle = readCSSVar("--color-text-secondary");
     ctx.fillText("● 进行中", 24, 20);
     ctx.fillStyle = statusColor("active");
     ctx.fillText("●", 24, 20);
-    ctx.fillStyle = "#6b7280";
+    ctx.fillStyle = readCSSVar("--color-text-secondary");
     ctx.fillText("● 已完成", 76, 20);
     ctx.fillStyle = statusColor("completed");
     ctx.fillText("●", 76, 20);
-    ctx.fillStyle = "#6b7280";
+    ctx.fillStyle = readCSSVar("--color-text-secondary");
     ctx.textAlign = "left";
 }
 

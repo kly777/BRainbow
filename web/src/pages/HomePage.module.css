@@ -44,14 +44,14 @@
     align-items: center;
     margin-bottom: 16px;
     padding-bottom: 12px;
-    border-bottom: 2px solid #f1f3f5;
+    border-bottom: 2px solid var(--color-border-light);
     flex-shrink: 0;
 }
 
 .sectionTitle {
     font-size: 20px;
     font-weight: 600;
-    color: #333;
+    color: var(--color-text);
     margin: 0;
 }
 
@@ -62,7 +62,7 @@
 }
 
 .viewAllLink {
-    color: #667eea;
+    color: var(--color-accent);
     text-decoration: none;
     font-size: 13px;
     font-weight: 500;
@@ -72,12 +72,12 @@
 }
 
 .viewAllLink:hover {
-    background-color: #f0f7ff;
+    background-color: var(--color-accent-subtle);
 }
 
 .createLink {
-    background-color: #667eea;
-    color: white;
+    background-color: var(--color-accent);
+    color: var(--color-white);
     text-decoration: none;
     font-size: 13px;
     font-weight: 500;
@@ -87,7 +87,7 @@
 }
 
 .createLink:hover {
-    background-color: #5a67d8;
+    background-color: var(--color-accent-hover);
 }
 
 /* 添加任务表单 */
@@ -103,7 +103,7 @@
 .todoInput {
     width: 100%;
     padding: 10px 14px;
-    border: 2px solid #e9ecef;
+    border: 2px solid var(--color-border-light);
     border-radius: 8px;
     font-size: 15px;
     margin-bottom: 10px;
@@ -113,13 +113,13 @@
 
 .todoInput:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--color-accent);
 }
 
 .todoTextarea {
     width: 100%;
     padding: 10px 14px;
-    border: 2px solid #e9ecef;
+    border: 2px solid var(--color-border-light);
     border-radius: 8px;
     font-size: 14px;
     margin-bottom: 12px;
@@ -132,7 +132,7 @@
 
 .todoTextarea:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--color-accent);
 }
 
 .formActions {
@@ -141,8 +141,8 @@
 }
 
 .addButton {
-    background-color: #667eea;
-    color: white;
+    background-color: var(--color-accent);
+    color: var(--color-white);
     border: none;
     padding: 8px 20px;
     border-radius: 8px;
@@ -153,11 +153,11 @@
 }
 
 .addButton:hover:not(:disabled) {
-    background-color: #5a67d8;
+    background-color: var(--color-accent-hover);
 }
 
 .addButton:disabled {
-    background-color: #a0aec0;
+    background-color: var(--color-text-muted);
     cursor: not-allowed;
 }
 
@@ -165,7 +165,7 @@
 .emptyState {
     text-align: center;
     padding: 40px 20px;
-    color: #6c757d;
+    color: var(--color-text-muted);
 }
 
 .emptyState p {

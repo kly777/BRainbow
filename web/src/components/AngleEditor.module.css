@@ -1,21 +1,21 @@
 .fieldset {
-    border: 1px solid var(--c-border, #e8dfcc);
+    border: 1px solid var(--color-border, var(--color-border));
     border-radius: 8px;
     padding: 12px 16px;
     margin: 0 0 16px 0;
-    background: var(--c-bg-card, #fffef9);
+    background: var(--color-surface);
 }
 
 .fieldset legend {
     font-weight: 600;
-    color: var(--c-text-heading, #2c2416);
+    color: var(--color-text, var(--color-text));
     padding: 0 6px;
 }
 
 /* ── 分段按钮 ── */
 .segmented {
     display: inline-flex;
-    border: 1px solid var(--c-border, #e8dfcc);
+    border: 1px solid var(--color-border, var(--color-border));
     border-radius: 6px;
     overflow: hidden;
     margin-bottom: 10px;
@@ -32,21 +32,21 @@
 
 .segBtn {
     background: transparent;
-    color: var(--c-text-secondary, #6b5e4a);
+    color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .segBtn:hover {
-    background: var(--c-bg-hover, #f0e8d5);
+    background: var(--color-surface-raised, var(--color-surface-raised));
 }
 
 .segActive {
-    background: var(--c-primary, #3b82f6);
-    color: #fff;
+    background: var(--color-accent, var(--color-accent));
+    color: var(--color-white);
     font-weight: 600;
 }
 
 .segBtn + .segBtn {
-    border-left: 1px solid var(--c-border, #e8dfcc);
+    border-left: 1px solid var(--color-border, var(--color-border));
 }
 
 .segActive + .segBtn,
@@ -64,22 +64,22 @@
 .input {
     width: 110px;
     padding: 5px 8px;
-    border: 1px solid var(--c-border, #e8dfcc);
+    border: 1px solid var(--color-border, var(--color-border));
     border-radius: 4px;
-    background: var(--c-bg, #fefcf5);
-    color: var(--c-text, #3d3629);
+    background: var(--color-bg, var(--color-bg));
+    color: var(--color-text, var(--color-text));
     font-size: 14px;
     text-align: right;
 }
 
 .input:focus {
     outline: none;
-    border-color: var(--c-primary, #3b82f6);
-    box-shadow: 0 0 0 2px var(--c-primary-ring, rgba(59, 130, 246, 0.25));
+    border-color: var(--color-accent, var(--color-accent));
+    box-shadow: 0 0 0 2px var(oklch(0.62 0.21 257 / 0.25), oklch(0.62 0.21 257 / 0.25));
 }
 
 .unit {
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, var(--color-text-muted));
     font-size: 13px;
     min-width: 24px;
 }

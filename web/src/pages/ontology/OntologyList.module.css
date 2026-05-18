@@ -11,12 +11,12 @@
     align-items: center;
     margin-bottom: 30px;
     padding-bottom: 20px;
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid var(--color-border-light);
 }
 
 .header h1 {
     margin: 0;
-    color: #333;
+    color: var(--color-text);
     font-size: 28px;
     font-weight: 600;
 }
@@ -27,11 +27,11 @@
 }
 
 .filters {
-    background-color: #f8f9fa;
+    background-color: var(--color-white);
     border-radius: 8px;
     padding: 20px;
     margin-bottom: 30px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 4px oklch(0 0 0 / 0.05);
 }
 
 .searchSection {
@@ -41,7 +41,7 @@
 .searchInput {
     width: 100%;
     padding: 12px 16px;
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     font-size: 16px;
     transition: border-color 0.2s, box-shadow 0.2s;
@@ -49,8 +49,8 @@
 
 .searchInput:focus {
     outline: none;
-    border-color: #0066cc;
-    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px oklch(0.62 0.21 257 / 0.1);
 }
 
 .filterControls {
@@ -69,15 +69,15 @@
 
 .filterLabel {
     font-weight: 500;
-    color: #495057;
+    color: var(--color-text-secondary);
     min-width: 40px;
 }
 
 .filterSelect {
     padding: 8px 12px;
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--color-border);
     border-radius: 4px;
-    background-color: white;
+    background-color: var(--color-white);
     font-size: 14px;
     min-width: 150px;
     cursor: pointer;
@@ -86,7 +86,7 @@
 
 .filterSelect:focus {
     outline: none;
-    border-color: #0066cc;
+    border-color: var(--color-accent);
 }
 
 .viewToggle {
@@ -96,10 +96,10 @@
 
 .viewButton {
     padding: 8px 16px;
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--color-border);
     border-radius: 4px;
-    background-color: white;
-    color: #495057;
+    background-color: var(--color-white);
+    color: var(--color-text-secondary);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -107,13 +107,13 @@
 }
 
 .viewButton:hover {
-    background-color: #f8f9fa;
+    background-color: var(--color-white);
 }
 
 .viewButton.active {
-    background-color: #0066cc;
-    color: white;
-    border-color: #0066cc;
+    background-color: var(--color-accent);
+    color: var(--color-white);
+    border-color: var(--color-accent);
 }
 
 .entitiesGrid {
@@ -124,10 +124,10 @@
 }
 
 .entityCard {
-    background-color: white;
+    background-color: var(--color-white);
     border-radius: 8px;
     padding: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px oklch(0 0 0 / 0.08);
     transition: transform 0.2s, box-shadow 0.2s;
     display: flex;
     flex-direction: column;
@@ -136,7 +136,7 @@
 
 .entityCard:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 4px 12px oklch(0 0 0 / 0.12);
 }
 
 .entityHeader {
@@ -150,12 +150,12 @@
     margin: 0;
     font-size: 18px;
     font-weight: 600;
-    color: #333;
+    color: var(--color-text);
     flex: 1;
 }
 
 .entityType {
-    color: white;
+    color: var(--color-white);
     padding: 4px 10px;
     border-radius: 12px;
     font-size: 12px;
@@ -171,7 +171,7 @@
 
 .entityDescription p {
     margin: 0;
-    color: #6c757d;
+    color: var(--color-text-muted);
     font-size: 14px;
     line-height: 1.5;
 }
@@ -180,7 +180,7 @@
     margin: 0 0 10px 0;
     font-size: 14px;
     font-weight: 600;
-    color: #495057;
+    color: var(--color-text-secondary);
 }
 
 .entityProperties,
@@ -200,19 +200,19 @@
     align-items: flex-start;
     gap: 10px;
     padding: 8px;
-    background-color: #f8f9fa;
+    background-color: var(--color-white);
     border-radius: 4px;
     font-size: 13px;
 }
 
 .propertyKey {
     font-weight: 500;
-    color: #495057;
+    color: var(--color-text-secondary);
     min-width: 60px;
 }
 
 .propertyValue {
-    color: #6c757d;
+    color: var(--color-text-muted);
     flex: 1;
     text-align: right;
 }
@@ -228,22 +228,22 @@
     align-items: center;
     gap: 8px;
     padding: 8px;
-    background-color: #f8f9fa;
+    background-color: var(--color-white);
     border-radius: 4px;
     font-size: 13px;
 }
 
 .relationshipType {
     font-weight: 500;
-    color: #0066cc;
+    color: var(--color-accent);
 }
 
 .relationshipArrow {
-    color: #adb5bd;
+    color: var(--color-text-muted);
 }
 
 .relationshipTarget {
-    color: #495057;
+    color: var(--color-text-secondary);
     flex: 1;
 }
 
@@ -252,7 +252,7 @@
     justify-content: space-between;
     margin-bottom: 15px;
     padding-top: 15px;
-    border-top: 1px solid #f1f3f5;
+    border-top: 1px solid var(--color-border-light);
 }
 
 .metaItem {
@@ -263,7 +263,7 @@
 
 .metaLabel {
     font-size: 12px;
-    color: #adb5bd;
+    color: var(--color-text-muted);
 }
 
 .entityActions {
@@ -286,33 +286,33 @@
 }
 
 .primaryButton {
-    background-color: #0066cc;
-    color: white;
+    background-color: var(--color-accent);
+    color: var(--color-white);
 }
 
 .primaryButton:hover {
-    background-color: #0052a3;
+    background-color: var(--color-accent-hover);
 }
 
 .secondaryButton {
-    background-color: #f8f9fa;
-    color: #495057;
-    border: 1px solid #dee2e6;
+    background-color: var(--color-white);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
 }
 
 .secondaryButton:hover {
-    background-color: #e9ecef;
+    background-color: var(--color-border-light);
 }
 
 .deleteButton {
-    background-color: #f8f9fa;
-    color: #dc3545;
-    border: 1px solid #dc3545;
+    background-color: var(--color-white);
+    color: var(--color-danger);
+    border: 1px solid var(--color-danger);
 }
 
 .deleteButton:hover {
-    background-color: #dc3545;
-    color: white;
+    background-color: var(--color-danger);
+    color: var(--color-white);
 }
 
 /* List View Styles */
@@ -323,24 +323,24 @@
 .entitiesTable {
     width: 100%;
     border-collapse: collapse;
-    background-color: white;
+    background-color: var(--color-white);
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px oklch(0 0 0 / 0.08);
 }
 
 .entitiesTable th {
-    background-color: #f8f9fa;
+    background-color: var(--color-white);
     padding: 12px 16px;
     text-align: left;
     font-weight: 600;
-    color: #495057;
-    border-bottom: 1px solid #dee2e6;
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .entitiesTable td {
     padding: 12px 16px;
-    border-bottom: 1px solid #f1f3f5;
+    border-bottom: 1px solid var(--color-border-light);
     vertical-align: top;
 }
 
@@ -349,7 +349,7 @@
 }
 
 .entitiesTable tr:hover {
-    background-color: #f8f9fa;
+    background-color: var(--color-white);
 }
 
 .entityDescription {
@@ -357,7 +357,7 @@
 }
 
 .entityDescription {
-    color: #6c757d;
+    color: var(--color-text-muted);
     font-size: 13px;
     line-height: 1.4;
 }
@@ -372,36 +372,36 @@
 .moreProperties,
 .moreRelationships {
     font-size: 12px;
-    color: #adb5bd;
+    color: var(--color-text-muted);
     font-style: italic;
 }
 
 .updatedAt {
     font-size: 13px;
-    color: #6c757d;
+    color: var(--color-text-muted);
     white-space: nowrap;
 }
 
 .emptyState {
     text-align: center;
     padding: 60px 20px;
-    background-color: #f8f9fa;
+    background-color: var(--color-white);
     border-radius: 8px;
     margin: 30px 0;
 }
 
 .emptyState p {
     font-size: 18px;
-    color: #6c757d;
+    color: var(--color-text-muted);
     margin-bottom: 20px;
 }
 
 .stats {
     text-align: center;
     padding: 15px;
-    background-color: #f8f9fa;
+    background-color: var(--color-white);
     border-radius: 8px;
-    color: #6c757d;
+    color: var(--color-text-muted);
     font-size: 14px;
 }
 

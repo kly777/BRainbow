@@ -8,9 +8,9 @@ import styles from "./RainbowGenerator.module.css";
 
 function RainbowGenerator() {
     const [colors, setColors] = createSignal<string[]>([
-        "#00ff00",
-        "#ff0000",
-        "#0000ff",
+        "oklch(0.87 0.30 142)",
+        "oklch(0.63 0.26 29)",
+        "oklch(0.51 0.26 264)",
     ]);
 
     const squareSize = 10240;

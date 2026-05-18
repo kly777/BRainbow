@@ -6,7 +6,7 @@
 
 .btn {
     padding: 6px 14px;
-    color: #fff;
+    color: var(--color-white);
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -14,19 +14,19 @@
 }
 
 .btnLogin {
-    background: #3b82f6;
+    background: var(--color-accent);
 }
 
 .btnRegister {
-    background: #8b5cf6;
+    background: var(--color-accent);
 }
 
 .btnLogout {
-    background: #6b7280;
+    background: var(--color-text-secondary);
 }
 
 .btnCancel {
-    background: #6b7280;
+    background: var(--color-text-secondary);
     width: 100%;
 }
 
@@ -40,7 +40,7 @@
 .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.3);
+    background: oklch(0 0 0 / 0.3);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -48,14 +48,14 @@
 }
 
 .form {
-    background: #fff;
+    background: var(--color-surface);
     padding: 24px;
     border-radius: 12px;
     display: flex;
     flex-direction: column;
     gap: 12px;
     min-width: 280px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 20px oklch(0 0 0 / 0.15);
 }
 
 .title {
@@ -63,13 +63,13 @@
 }
 
 .error {
-    color: var(--c-danger-text);
+    color: var(--color-danger);
     font-size: 13px;
 }
 
 .input {
     padding: 10px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     font-size: 14px;
 }

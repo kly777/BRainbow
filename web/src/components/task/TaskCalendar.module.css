@@ -1,9 +1,9 @@
 /* 日历视图样式 */
 .calendarView {
-    background: white;
+    background: var(--color-surface);
     border-radius: 12px;
     padding: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px oklch(0 0 0 / 0.1);
 }
 
 .calendarHeader {
@@ -16,13 +16,13 @@
 .calendarTitle {
     margin: 0;
     font-size: 20px;
-    color: #1f2937;
+    color: var(--color-text);
 }
 
 .navButton {
     padding: 8px 16px;
-    background: #f3f4f6;
-    border: 1px solid #d1d5db;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
@@ -30,43 +30,43 @@
 }
 
 .navButton:hover {
-    background: #e5e7eb;
+    background: var(--color-border-light);
 }
 
 .calendarGrid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 1px;
-    background: #e5e7eb;
-    border: 1px solid #e5e7eb;
+    background: var(--color-border-light);
+    border: 1px solid var(--color-border-light);
     border-radius: 8px;
     overflow: hidden;
 }
 
 .dayHeader {
-    background: #f9fafb;
+    background: var(--color-bg);
     padding: 12px;
     text-align: center;
     font-weight: 600;
-    color: #374151;
+    color: var(--color-text);
     font-size: 14px;
 }
 
 .calendarDay {
-    background: white;
+    background: var(--color-surface);
     min-height: 100px;
     padding: 8px;
-    border-right: 1px solid #e5e7eb;
-    border-bottom: 1px solid #e5e7eb;
+    border-right: 1px solid var(--color-border-light);
+    border-bottom: 1px solid var(--color-border-light);
 }
 
 .calendarDay.empty {
-    background: #f9fafb;
+    background: var(--color-bg);
 }
 
 .dayNumber {
     font-weight: 600;
-    color: #374151;
+    color: var(--color-text);
     margin-bottom: 8px;
     font-size: 14px;
 }
@@ -97,41 +97,41 @@
 
 /* 窗口类型颜色 */
 .typeFeasible {
-    background: #e5e7eb;
-    border-left: 3px solid #9ca3af;
+    background: var(--color-border-light);
+    border-left: 3px solid var(--color-text-muted);
 }
 
 .typePlanned {
-    background: #dbeafe;
-    border-left: 3px solid #3b82f6;
+    background: var(--color-accent-subtle);
+    border-left: 3px solid var(--color-accent);
 }
 
 .typeActual {
-    background: #d1fae5;
-    border-left: 3px solid #10b981;
+    background: var(--color-success-subtle);
+    border-left: 3px solid var(--color-success);
 }
 
 /* 旧状态颜色 - 保留兼容 */
 .status-pending {
-    background: #f59e0b;
+    background: var(--color-warning);
 }
 
 .status-in-progress {
-    background: #3b82f6;
+    background: var(--color-accent);
 }
 
 .status-completed {
-    background: #10b981;
+    background: var(--color-success);
 }
 
 .status-cancelled {
-    background: #ef4444;
+    background: var(--color-danger);
 }
 
 .status-blocked {
-    background: #6b7280;
+    background: var(--color-text-secondary);
 }
 
 .status-default {
-    background: #9ca3af;
+    background: var(--color-text-muted);
 }

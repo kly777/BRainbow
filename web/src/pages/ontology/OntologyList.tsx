@@ -430,48 +430,48 @@ const OntologyListPage: Component = () => {
 					left: 0;
 					right: 0;
 					bottom: 0;
-					background-color: rgba(0, 0, 0, 0.5);
+					background-color: var(--color-overlay);
 					display: flex;
 					justify-content: center;
 					align-items: center;
 					z-index: 1000;
 				}
 				.modal {
-					background-color: white;
+					background-color: var(--color-surface);
 					border-radius: 8px;
 					width: 90%;
 					max-width: 500px;
-					box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+					box-shadow: 0 4px 20px oklch(0 0 0 / 0.15);
 				}
 				.modalHeader {
 					display: flex;
 					justify-content: space-between;
 					align-items: center;
 					padding: 20px;
-					border-bottom: 1px solid #e9ecef;
+					border-bottom: 1px solid var(--color-border-light);
 				}
 				.modalHeader h2 {
 					margin: 0;
 					font-size: 20px;
-					color: #333;
+					color: var(--color-text);
 				}
 				.closeButton {
 					background: none;
 					border: none;
 					font-size: 24px;
 					cursor: pointer;
-					color: #6c757d;
+					color: var(--color-text-muted);
 					padding: 4px 8px;
 				}
 				.closeButton:hover {
-					color: #333;
+					color: var(--color-text);
 				}
 				.modalContent {
 					padding: 20px;
 				}
 				.errorMessage {
-					background-color: #fff3f3;
-					color: #dc3545;
+					background-color: var(--color-danger-subtle);
+					color: var(--color-danger);
 					padding: 10px;
 					border-radius: 4px;
 					margin-bottom: 15px;
@@ -484,26 +484,26 @@ const OntologyListPage: Component = () => {
 					display: block;
 					margin-bottom: 6px;
 					font-weight: 500;
-					color: #495057;
+					color: var(--color-text-secondary);
 					font-size: 14px;
 				}
 				.formInput {
 					width: 100%;
 					padding: 10px 12px;
-					border: 1px solid #dee2e6;
+					border: 1px solid var(--color-border);
 					border-radius: 4px;
 					font-size: 14px;
 					box-sizing: border-box;
 				}
 				.formInput:focus {
 					outline: none;
-					border-color: #0066cc;
-					box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+					border-color: var(--color-accent);
+					box-shadow: 0 0 0 3px oklch(0.62 0.21 257 / 0.1);
 				}
 				.formTextarea {
 					width: 100%;
 					padding: 10px 12px;
-					border: 1px solid #dee2e6;
+					border: 1px solid var(--color-border);
 					border-radius: 4px;
 					font-size: 14px;
 					resize: vertical;
@@ -512,15 +512,15 @@ const OntologyListPage: Component = () => {
 				}
 				.formTextarea:focus {
 					outline: none;
-					border-color: #0066cc;
-					box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+					border-color: var(--color-accent);
+					box-shadow: 0 0 0 3px oklch(0.62 0.21 257 / 0.1);
 				}
 				.modalActions {
 					display: flex;
 					justify-content: flex-end;
 					gap: 10px;
 					padding: 20px;
-					border-top: 1px solid #e9ecef;
+					border-top: 1px solid var(--color-border-light);
 				}
 			`}
             </style>

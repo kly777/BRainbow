@@ -11,15 +11,12 @@
 
 /* ── 状态分组：无卡片，仅标题 + 留白 ── */
 
-.statusSection {
-    /* 无背景、无边框、无阴影 */
-}
 
 .statusTitle {
     margin: 0 0 14px;
     font-size: 13px;
     font-weight: 500;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     display: flex;
@@ -36,16 +33,16 @@
 }
 
 .statusBacklog {
-    background: #d1d5db;
+    background: var(--color-border);
 }
 .statusActive {
-    background: #3b82f6;
+    background: var(--color-accent);
 }
 .statusCompleted {
-    background: #10b981;
+    background: var(--color-success);
 }
 .statusArchived {
-    background: #e5e7eb;
+    background: var(--color-border-light);
 }
 
 /* ── 任务列表：极细分割线 ── */
@@ -61,16 +58,16 @@
     display: flex;
     flex-direction: column;
     padding: 16px 0;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-surface-raised);
     transition: background 0.15s ease;
 }
 
 .taskItem:first-child {
-    border-top: 1px solid #f3f4f6;
+    border-top: 1px solid var(--color-surface-raised);
 }
 
 .taskItem:hover {
-    background: #fafbfc;
+    background: var(--color-surface);
 }
 
 .taskRow {
@@ -91,7 +88,7 @@
     margin: 0 0 4px;
     font-size: 15px;
     font-weight: 500;
-    color: #111827;
+    color: var(--color-text);
     line-height: 1.5;
     letter-spacing: -0.01em;
 }
@@ -101,7 +98,7 @@
 .taskDescription {
     margin: 0 0 8px;
     font-size: 13px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     line-height: 1.6;
 }
 
@@ -116,7 +113,7 @@
 
 .dateBadge {
     font-size: 12px;
-    color: #9ca3af;
+    color: var(--color-text-muted);
 }
 
 .timeWindowChips {
@@ -130,9 +127,9 @@
     font-size: 11px;
     padding: 2px 8px;
     border-radius: 3px;
-    background: #f9fafb;
-    color: #6b7280;
-    border: 1px solid #f3f4f6;
+    background: var(--color-bg);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-surface-raised);
     white-space: nowrap;
 }
 
@@ -142,8 +139,8 @@
     border-radius: 3px;
     font-size: 11px;
     font-weight: 500;
-    color: #6b7280;
-    background: #f3f4f6;
+    color: var(--color-text-secondary);
+    background: var(--color-surface-raised);
     vertical-align: middle;
 }
 
@@ -158,11 +155,11 @@
 
 .statusSelect {
     padding: 5px 10px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border-light);
     border-radius: 6px;
     font-size: 12px;
-    color: #374151;
-    background: white;
+    color: var(--color-text);
+    background: var(--color-surface);
     cursor: pointer;
     outline: none;
     transition: border-color 0.15s;
@@ -175,18 +172,18 @@
 }
 
 .statusSelect:hover {
-    border-color: #d1d5db;
+    border-color: var(--color-border);
 }
 
 .statusSelect:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px oklch(0.62 0.21 257 / 0.1);
 }
 
 .editButton {
     padding: 5px 10px;
     background: none;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -195,15 +192,15 @@
 }
 
 .editButton:hover {
-    background: #f3f4f6;
-    color: #374151;
+    background: var(--color-surface-raised);
+    color: var(--color-text);
 }
 
 .subTaskButton {
     padding: 4px 10px;
     background: none;
-    color: #9ca3af;
-    border: 1px solid #e5e7eb;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border-light);
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
@@ -213,15 +210,15 @@
 }
 
 .subTaskButton:hover {
-    background: #f9fafb;
-    color: #374151;
-    border-color: #d1d5db;
+    background: var(--color-bg);
+    color: var(--color-text);
+    border-color: var(--color-border);
 }
 
 .deleteButton {
     padding: 5px 10px;
     background: none;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -230,8 +227,8 @@
 }
 
 .deleteButton:hover {
-    background: #fef2f2;
-    color: #ef4444;
+    background: var(--color-danger-subtle);
+    color: var(--color-danger);
 }
 
 /* ── 子任务输入 ── */
@@ -242,34 +239,34 @@
     align-items: center;
     margin-top: 10px;
     padding: 10px 0 0;
-    border-top: 1px solid #f3f4f6;
+    border-top: 1px solid var(--color-surface-raised);
 }
 
 .subTaskInput {
     flex: 1;
     padding: 7px 12px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border-light);
     border-radius: 6px;
     font-size: 13px;
-    background: white;
+    background: var(--color-surface);
     outline: none;
     transition: border-color 0.15s;
 }
 
 .subTaskInput:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px oklch(0.62 0.21 257 / 0.1);
 }
 
 .subTaskInput::placeholder {
-    color: #d1d5db;
+    color: var(--color-border);
 }
 
 .subTaskCancel {
     padding: 7px 14px;
     background: none;
-    color: #9ca3af;
-    border: 1px solid #e5e7eb;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border-light);
     border-radius: 6px;
     cursor: pointer;
     font-size: 12px;
@@ -278,8 +275,8 @@
 }
 
 .subTaskCancel:hover {
-    background: #f3f4f6;
-    color: #374151;
+    background: var(--color-surface-raised);
+    color: var(--color-text);
 }
 
 /* ── 子任务列表 ── */
@@ -290,7 +287,7 @@
     margin-top: 0;
     margin-left: 20px;
     padding-left: 16px;
-    border-left: 2px solid #f3f4f6;
+    border-left: 2px solid var(--color-surface-raised);
 }
 
 .childList > .taskItem {

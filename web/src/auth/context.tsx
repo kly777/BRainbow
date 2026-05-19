@@ -54,7 +54,14 @@ export function AuthProvider(props: { children: JSX.Element }) {
 
 export function useAuth() {
     const ctx = useContext(AuthContext);
-    if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+    if (!ctx) {
+        console.error("useAuth: 组件未包裹在 AuthProvider 内，返回空状态");
+        return {
+            auth: () => ({ user: null, isAdmin: false } as const),
+            login: () => {},
+            logout: () => {},
+        };
+    }
     return ctx;
 }
 

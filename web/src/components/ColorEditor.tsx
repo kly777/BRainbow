@@ -111,8 +111,12 @@ function ColorRow(props: {
         commit(Color.fromOklch({ L: okL(), C: okC(), h: okH() }));
     };
 
-    const onFocus = () => { focused = true; };
-    const onBlur = () => { focused = false; };
+    const onFocus = () => {
+        focused = true;
+    };
+    const onBlur = () => {
+        focused = false;
+    };
 
     return (
         <div class={styles.colorRow}>
@@ -145,9 +149,36 @@ function ColorRow(props: {
                     maxLength={7}
                 />
             )}
-            {space() === "rgb" && <RgbInputs r={r} g={g} b={b} onInput={onRgbInput} onFocus={onFocus} onBlur={onBlur} />}
-            {space() === "hsl" && <HslInputs h={h} s={s} l={l} onInput={onHslInput} onFocus={onFocus} onBlur={onBlur} />}
-            {space() === "oklch" && <OklchInputs L={okL} C={okC} h={okH} onInput={onOklchInput} onFocus={onFocus} onBlur={onBlur} />}
+            {space() === "rgb" && (
+                <RgbInputs
+                    r={r}
+                    g={g}
+                    b={b}
+                    onInput={onRgbInput}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                />
+            )}
+            {space() === "hsl" && (
+                <HslInputs
+                    h={h}
+                    s={s}
+                    l={l}
+                    onInput={onHslInput}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                />
+            )}
+            {space() === "oklch" && (
+                <OklchInputs
+                    L={okL}
+                    C={okC}
+                    h={okH}
+                    onInput={onOklchInput}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                />
+            )}
 
             <button
                 type="button"
@@ -174,12 +205,36 @@ function RgbInputs(props: {
 }) {
     return (
         <span class={styles.triple}>
-            <input class={styles.channel} type="number" min="0" max="255" value={props.r()}
-                onInput={(e) => props.onInput("r", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
-            <input class={styles.channel} type="number" min="0" max="255" value={props.g()}
-                onInput={(e) => props.onInput("g", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
-            <input class={styles.channel} type="number" min="0" max="255" value={props.b()}
-                onInput={(e) => props.onInput("b", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
+            <input
+                class={styles.channel}
+                type="number"
+                min="0"
+                max="255"
+                value={props.r()}
+                onInput={(e) => props.onInput("r", e)}
+                onFocus={props.onFocus}
+                onBlur={props.onBlur}
+            />
+            <input
+                class={styles.channel}
+                type="number"
+                min="0"
+                max="255"
+                value={props.g()}
+                onInput={(e) => props.onInput("g", e)}
+                onFocus={props.onFocus}
+                onBlur={props.onBlur}
+            />
+            <input
+                class={styles.channel}
+                type="number"
+                min="0"
+                max="255"
+                value={props.b()}
+                onInput={(e) => props.onInput("b", e)}
+                onFocus={props.onFocus}
+                onBlur={props.onBlur}
+            />
             <span class={styles.rangeHint}>0–255</span>
         </span>
     );
@@ -195,12 +250,36 @@ function HslInputs(props: {
 }) {
     return (
         <span class={styles.triple}>
-            <input class={styles.channel} type="number" min="0" max="360" value={props.h()}
-                onInput={(e) => props.onInput("h", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
-            <input class={styles.channel} type="number" min="0" max="100" value={props.s()}
-                onInput={(e) => props.onInput("s", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
-            <input class={styles.channel} type="number" min="0" max="100" value={props.l()}
-                onInput={(e) => props.onInput("l", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
+            <input
+                class={styles.channel}
+                type="number"
+                min="0"
+                max="360"
+                value={props.h()}
+                onInput={(e) => props.onInput("h", e)}
+                onFocus={props.onFocus}
+                onBlur={props.onBlur}
+            />
+            <input
+                class={styles.channel}
+                type="number"
+                min="0"
+                max="100"
+                value={props.s()}
+                onInput={(e) => props.onInput("s", e)}
+                onFocus={props.onFocus}
+                onBlur={props.onBlur}
+            />
+            <input
+                class={styles.channel}
+                type="number"
+                min="0"
+                max="100"
+                value={props.l()}
+                onInput={(e) => props.onInput("l", e)}
+                onFocus={props.onFocus}
+                onBlur={props.onBlur}
+            />
             <span class={styles.rangeHint}>H:0–360 S/L:0–100</span>
         </span>
     );
@@ -216,12 +295,38 @@ function OklchInputs(props: {
 }) {
     return (
         <span class={styles.triple}>
-            <input class={styles.channel} type="number" min="0" max="1" step="0.001" value={props.L()}
-                onInput={(e) => props.onInput("L", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
-            <input class={styles.channel} type="number" min="0" step="0.001" value={props.C()}
-                onInput={(e) => props.onInput("C", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
-            <input class={styles.channel} type="number" min="0" max="360" step="0.1" value={props.h()}
-                onInput={(e) => props.onInput("h", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
+            <input
+                class={styles.channel}
+                type="number"
+                min="0"
+                max="1"
+                step="0.001"
+                value={props.L()}
+                onInput={(e) => props.onInput("L", e)}
+                onFocus={props.onFocus}
+                onBlur={props.onBlur}
+            />
+            <input
+                class={styles.channel}
+                type="number"
+                min="0"
+                step="0.001"
+                value={props.C()}
+                onInput={(e) => props.onInput("C", e)}
+                onFocus={props.onFocus}
+                onBlur={props.onBlur}
+            />
+            <input
+                class={styles.channel}
+                type="number"
+                min="0"
+                max="360"
+                step="0.1"
+                value={props.h()}
+                onInput={(e) => props.onInput("h", e)}
+                onFocus={props.onFocus}
+                onBlur={props.onBlur}
+            />
             <span class={styles.rangeHint}>L:0–1 C:≥0 h:0–360</span>
         </span>
     );

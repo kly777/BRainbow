@@ -104,7 +104,12 @@ const DB: Component = () => {
                     </div>
                 )}
                 {loading() && (
-                    <div style={{ color: "var(--color-text-secondary)", padding: "12px" }}>
+                    <div
+                        style={{
+                            color: "var(--color-text-secondary)",
+                            padding: "12px",
+                        }}
+                    >
                         加载中...
                     </div>
                 )}
@@ -153,7 +158,8 @@ const DB: Component = () => {
                                                 colspan={columns().length}
                                                 style={{
                                                     padding: "20px",
-                                                    color: "var(--color-text-muted)",
+                                                    color:
+                                                        "var(--color-text-muted)",
                                                     "text-align": "center",
                                                 }}
                                             >

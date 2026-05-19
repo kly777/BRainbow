@@ -75,7 +75,8 @@
 .input:focus {
     outline: none;
     border-color: var(--color-accent, var(--color-accent));
-    box-shadow: 0 0 0 2px var(oklch(0.62 0.21 257 / 0.25), oklch(0.62 0.21 257 / 0.25));
+    box-shadow: 0 0 0 2px
+        var(oklch(0.62 0.21 257 / 0.25), oklch(0.62 0.21 257 / 0.25));
 }
 
 .unit {

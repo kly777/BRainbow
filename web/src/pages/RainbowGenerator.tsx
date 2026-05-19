@@ -1,6 +1,9 @@
 import { createMemo } from "solid-js";
 import { createSignal } from "solid-js";
-import { RainbowDrawer, type ShapeRender } from "../components/RainbowDrawer.tsx";
+import {
+    RainbowDrawer,
+    type ShapeRender,
+} from "../components/RainbowDrawer.tsx";
 import { Angle } from "../lib/angle.ts";
 import { Color } from "../lib/color.ts";
 import AngleEditor from "../components/AngleEditor.tsx";
@@ -13,13 +16,13 @@ function RainbowGenerator() {
     const h_offset = 29;
 
     const [colors, setColors] = createSignal<Color[]>([
-        Color.fromOklch({L, C, h:h_offset}),
-        Color.fromOklch({L, C, h:360/7 + h_offset}),
-        Color.fromOklch({L, C, h:360/7*2 + h_offset}),
-        Color.fromOklch({L, C, h:360/7*3 + h_offset}),
-        Color.fromOklch({L, C, h:360/7*4 + h_offset}),
-        Color.fromOklch({L, C, h:360/7*5 + h_offset}),
-        Color.fromOklch({L, C, h:360/7*6 + h_offset}),
+        Color.fromOklch({ L, C, h: h_offset }),
+        Color.fromOklch({ L, C, h: 360 / 7 + h_offset }),
+        Color.fromOklch({ L, C, h: 360 / 7 * 2 + h_offset }),
+        Color.fromOklch({ L, C, h: 360 / 7 * 3 + h_offset }),
+        Color.fromOklch({ L, C, h: 360 / 7 * 4 + h_offset }),
+        Color.fromOklch({ L, C, h: 360 / 7 * 5 + h_offset }),
+        Color.fromOklch({ L, C, h: 360 / 7 * 6 + h_offset }),
     ]);
 
     const squareSize = 10240;

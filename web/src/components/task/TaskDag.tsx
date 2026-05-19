@@ -220,7 +220,9 @@ function drawGraph(
         // 阴影
         ctx.beginPath();
         ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = isHovered ? "oklch(0 0 0 / 0.15)" : "oklch(0 0 0 / 0.08)";
+        ctx.fillStyle = isHovered
+            ? "oklch(0 0 0 / 0.15)"
+            : "oklch(0 0 0 / 0.08)";
         ctx.fill();
 
         // 圆
@@ -228,7 +230,9 @@ function drawGraph(
         ctx.arc(n.x, n.y, r - 2, 0, Math.PI * 2);
         ctx.fillStyle = statusColor(n.status);
         ctx.fill();
-        ctx.strokeStyle = isHovered ? readCSSVar("--color-text") : readCSSVar("--color-white");
+        ctx.strokeStyle = isHovered
+            ? readCSSVar("--color-text")
+            : readCSSVar("--color-white");
         ctx.lineWidth = 2;
         ctx.stroke();
 

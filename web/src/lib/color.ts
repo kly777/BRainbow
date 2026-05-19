@@ -131,8 +131,7 @@ export class Color {
 
     toHex(): string {
         const rgb = this.toRgb();
-        const h = (n: number) =>
-            Color.#clamp(n).toString(16).padStart(2, "0");
+        const h = (n: number) => Color.#clamp(n).toString(16).padStart(2, "0");
         return `#${h(rgb.r)}${h(rgb.g)}${h(rgb.b)}`;
     }
 

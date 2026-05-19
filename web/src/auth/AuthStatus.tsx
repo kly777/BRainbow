@@ -24,7 +24,9 @@ export default function AuthStatus() {
         setShowForm(true);
     };
     globalThis.addEventListener(AUTH_REQUIRED_EVENT, onAuthRequired);
-    onCleanup(() => globalThis.removeEventListener(AUTH_REQUIRED_EVENT, onAuthRequired));
+    onCleanup(() =>
+        globalThis.removeEventListener(AUTH_REQUIRED_EVENT, onAuthRequired)
+    );
 
     const handleSubmit = async (e: Event) => {
         e.preventDefault();

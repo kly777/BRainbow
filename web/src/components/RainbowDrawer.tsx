@@ -75,7 +75,10 @@ function RainbowDrawer(props: RainbowDrawerProps) {
                 <title>Rainbow</title>
                 <For each={stripePolygons()}>
                     {({ points }, index) => (
-                        <polygon points={points} fill={props.colors[index()].toHex()} />
+                        <polygon
+                            points={points}
+                            fill={props.colors[index()].toHex()}
+                        />
                     )}
                 </For>
             </svg>

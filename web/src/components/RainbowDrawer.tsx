@@ -3,7 +3,7 @@ import { For } from "solid-js/web";
 import type { Angle } from "../lib/angle.ts";
 import type { Color } from "../lib/color.ts";
 
-type ShapeRender =
+export type ShapeRender =
     | "auto"
     | "optimizeSpeed"
     | "crispEdges"

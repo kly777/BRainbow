@@ -137,9 +137,15 @@ function layout(
 
 // ==================== 状态颜色 ====================
 
+const _cssCache = new Map<string, string>();
+
 function readCSSVar(name: string): string {
+    const cached = _cssCache.get(name);
+    if (cached !== undefined) return cached;
     const style = getComputedStyle(document.documentElement);
-    return style.getPropertyValue(name).trim();
+    const val = style.getPropertyValue(name).trim();
+    _cssCache.set(name, val);
+    return val;
 }
 
 const STATUS_COLORS: Record<string, string> = {

@@ -90,35 +90,25 @@ function ColorRow(props: {
         if (ch === "r") setR(n);
         else if (ch === "g") setG(n);
         else setB(n);
-        commit(props.color.withRgb({
-            [ch]: Math.max(0, Math.min(255, n)),
-        }));
+        commit(Color.fromRgb({ r: r(), g: g(), b: b() }));
     };
 
     const onHslInput = (ch: "h" | "s" | "l", e: Event) => {
         const n = parseInt((e.target as HTMLInputElement).value, 10);
         if (Number.isNaN(n)) return;
-        if (ch === "h") setH(n);
-        else if (ch === "s") setS(n);
-        else setL(n);
-        const hsl: Partial<Hsl> = {};
-        if (ch === "h") hsl.h = ((n % 360) + 360) % 360;
-        else if (ch === "s") hsl.s = Math.max(0, Math.min(100, n));
-        else hsl.l = Math.max(0, Math.min(100, n));
-        commit(props.color.withHsl(hsl));
+        if (ch === "h") setH(((n % 360) + 360) % 360);
+        else if (ch === "s") setS(Math.max(0, Math.min(100, n)));
+        else setL(Math.max(0, Math.min(100, n)));
+        commit(Color.fromHsl({ h: h(), s: s(), l: l() }));
     };
 
     const onOklchInput = (ch: "L" | "C" | "h", e: Event) => {
         const n = parseFloat((e.target as HTMLInputElement).value);
         if (Number.isNaN(n)) return;
-        if (ch === "L") setOkL(n);
-        else if (ch === "C") setOkC(n);
-        else setOkH(n);
-        const lch: Partial<Oklch> = {};
-        if (ch === "L") lch.L = Math.max(0, Math.min(1, n));
-        else if (ch === "C") lch.C = Math.max(0, n);
-        else lch.h = ((n % 360) + 360) % 360;
-        commit(props.color.withOklch(lch));
+        if (ch === "L") setOkL(Math.max(0, Math.min(1, n)));
+        else if (ch === "C") setOkC(Math.max(0, n));
+        else setOkH(((n % 360) + 360) % 360);
+        commit(Color.fromOklch({ L: okL(), C: okC(), h: okH() }));
     };
 
     const onFocus = () => { focused = true; };

@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Effect, Exit } from "effect";
 
 /**
  * 颜色类 — 内部以 CIE XYZ 存储。
@@ -255,9 +255,4 @@ export class Color {
             l: Math.round(l * 100),
         };
     }
-}
-
-/** Effect.runSync 的便捷包装：解析已知有效的 hex */
-export function hexColor(hex: string): Color {
-    return Effect.runSync(Color.fromHex(hex));
 }

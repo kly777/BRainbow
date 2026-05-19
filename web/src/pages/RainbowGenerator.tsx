@@ -1,6 +1,6 @@
 import { createMemo } from "solid-js";
 import { createSignal } from "solid-js";
-import { RainbowDrawer } from "../components/RainbowDrawer.tsx";
+import { RainbowDrawer, type ShapeRender } from "../components/RainbowDrawer.tsx";
 import { Angle } from "../lib/angle.ts";
 import { Color } from "../lib/color.ts";
 import AngleEditor from "../components/AngleEditor.tsx";
@@ -27,11 +27,6 @@ function RainbowGenerator() {
 
     const [angle, setAngle] = createSignal<Angle>(new Angle(Math.PI * (1 / 9)));
 
-    type ShapeRender =
-        | "auto"
-        | "optimizeSpeed"
-        | "crispEdges"
-        | "geometricPrecision";
     const [shapeRender, setShapeRender] = createSignal<ShapeRender>(
         "geometricPrecision",
     );
@@ -55,6 +50,15 @@ function RainbowGenerator() {
             2 * rectHeight() * Math.tan(angle().radian),
     );
     // ── 导出 ──
+
+    const toBase64 = (bytes: Uint8Array): string => {
+        const CHUNK = 0x8000;
+        const parts: string[] = [];
+        for (let i = 0; i < bytes.length; i += CHUNK) {
+            parts.push(String.fromCharCode(...bytes.subarray(i, i + CHUNK)));
+        }
+        return btoa(parts.join(""));
+    };
 
     const download = (url: string, filename: string) => {
         const a = document.createElement("a");
@@ -85,7 +89,7 @@ function RainbowGenerator() {
         clone.setAttribute("height", String(squareSize));
         const xml = new XMLSerializer().serializeToString(clone);
         const dataUrl = `data:image/svg+xml;base64,${
-            btoa(unescape(encodeURIComponent(xml)))
+            toBase64(new TextEncoder().encode(xml))
         }`;
 
         const img = new Image();

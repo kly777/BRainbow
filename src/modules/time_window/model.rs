@@ -149,7 +149,6 @@ pub struct TimeWindow {
     pub recurrence_by_weekdays: Option<String>,
 }
 
-
 impl TimeWindow {
     /// 从数据库行创建时间窗口
     // pub fn from_row(
@@ -182,9 +181,10 @@ impl TimeWindow {
     pub fn recurrence_rule(&self) -> Option<RecurrenceRule> {
         match (self.recurrence_freq, self.recurrence_interval) {
             (Some(freq), Some(interval)) if interval >= 1 => {
-                let by_weekdays = self.recurrence_by_weekdays.as_ref().and_then(|s| {
-                    serde_json::from_str::<Vec<i32>>(s).ok()
-                });
+                let by_weekdays = self
+                    .recurrence_by_weekdays
+                    .as_ref()
+                    .and_then(|s| serde_json::from_str::<Vec<i32>>(s).ok());
 
                 Some(RecurrenceRule {
                     freq,

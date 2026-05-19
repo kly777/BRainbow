@@ -1,8 +1,8 @@
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
-use super::model::Image;
 use super::UPLOAD_DIR;
+use super::model::Image;
 
 pub struct ImageRepository {
     db: Arc<SqlitePool>,
@@ -37,11 +37,7 @@ impl ImageRepository {
             .await
     }
 
-    pub async fn find_all(
-        &self,
-        limit: i64,
-        offset: i64,
-    ) -> Result<Vec<Image>, sqlx::Error> {
+    pub async fn find_all(&self, limit: i64, offset: i64) -> Result<Vec<Image>, sqlx::Error> {
         sqlx::query_as::<_, Image>(
             "SELECT id, filename, original_name, content_type, created_at FROM image ORDER BY created_at DESC LIMIT ? OFFSET ?",
         )

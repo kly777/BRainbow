@@ -7,13 +7,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::model::{
-    CreateTimeWindowRequest, TimeWindow, TimeWindowType,
-    UpdateTimeWindowRequest,
-};
-use crate::error::{self, ApiError};
+use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTimeWindowRequest};
 use super::repository::TimeWindowRepository;
-use super::service::{TimeWindowService, ServiceError as TwServiceError};
+use super::service::{ServiceError as TwServiceError, TimeWindowService};
+use crate::error::{self, ApiError};
 use crate::pagination::Pagination;
 use crate::state::AppState;
 
@@ -105,9 +102,7 @@ pub async fn get_time_window_handler(
     match repo.find_by_id(id).await {
         Ok(Some(time_window)) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Ok(None) => not_found().into_response(),
-        Err(e) => {
-            error::internal(e, "获取时间窗口").into_response()
-        }
+        Err(e) => error::internal(e, "获取时间窗口").into_response(),
     }
 }
 
@@ -122,13 +117,8 @@ pub async fn get_time_windows_handler(
 
     if let Some(task_id) = query.task_id {
         let result = if let Some(window_type) = query.window_type {
-            repo.find_by_task_id_and_type_paginated(
-                task_id,
-                window_type,
-                p.limit(),
-                p.offset(),
-            )
-            .await
+            repo.find_by_task_id_and_type_paginated(task_id, window_type, p.limit(), p.offset())
+                .await
         } else {
             repo.find_by_task_id_paginated(task_id, p.limit(), p.offset())
                 .await
@@ -140,9 +130,7 @@ pub async fn get_time_windows_handler(
                     windows.into_iter().map(TimeWindowResponse::from).collect();
                 Json(PaginatedResponse::new(items, total, p)).into_response()
             }
-            Err(e) => {
-                error::internal(e, "查询时间窗口").into_response()
-            }
+            Err(e) => error::internal(e, "查询时间窗口").into_response(),
         };
     }
 
@@ -177,13 +165,9 @@ fn handle_tw_service_error(e: TwServiceError) -> axum::response::Response {
         TwServiceError::PlannedOutsideAvailable(msg) => {
             bad_request("planned_outside_available", msg).into_response()
         }
-        TwServiceError::SlotOverlap(msg) => {
-            bad_request("slot_overlap", msg).into_response()
-        }
+        TwServiceError::SlotOverlap(msg) => bad_request("slot_overlap", msg).into_response(),
         TwServiceError::NotFound => not_found().into_response(),
-        TwServiceError::Internal(msg) => {
-            error::internal_error(msg).into_response()
-        }
+        TwServiceError::Internal(msg) => error::internal_error(msg).into_response(),
         TwServiceError::Db(sqlx_err) => {
             let msg = format!("{}", sqlx_err);
             if msg.contains("FOREIGN KEY") {
@@ -212,9 +196,7 @@ pub async fn delete_time_window_handler(
                 not_found().into_response()
             }
         }
-        Err(e) => {
-            error::internal(e, "删除时间窗口").into_response()
-        }
+        Err(e) => error::internal(e, "删除时间窗口").into_response(),
     }
 }
 
@@ -241,9 +223,7 @@ pub async fn get_time_window_stats_handler(
             })
             .into_response()
         }
-        Err(e) => {
-            error::internal(e, "获取时间窗口统计").into_response()
-        }
+        Err(e) => error::internal(e, "获取时间窗口统计").into_response(),
     }
 }
 
@@ -270,22 +250,16 @@ pub async fn check_time_conflict_handler(
     let start_time = match start_time_str.unwrap().parse::<DateTime<Utc>>() {
         Ok(time) => time,
         Err(_) => {
-            return bad_request(
-                "invalid_time_range",
-                "无效的开始时间格式".to_string(),
-            )
-            .into_response()
+            return bad_request("invalid_time_range", "无效的开始时间格式".to_string())
+                .into_response();
         }
     };
 
     let end_time = match end_time_str.unwrap().parse::<DateTime<Utc>>() {
         Ok(time) => time,
         Err(_) => {
-            return bad_request(
-                "invalid_time_range",
-                "无效的结束时间格式".to_string(),
-            )
-            .into_response()
+            return bad_request("invalid_time_range", "无效的结束时间格式".to_string())
+                .into_response();
         }
     };
 
@@ -298,8 +272,6 @@ pub async fn check_time_conflict_handler(
         Ok(has_conflict) => {
             Json(serde_json::json!({ "has_conflict": has_conflict })).into_response()
         }
-        Err(e) => {
-            error::internal(e, "检查时间窗口冲突").into_response()
-        }
+        Err(e) => error::internal(e, "检查时间窗口冲突").into_response(),
     }
 }

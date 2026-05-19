@@ -1,4 +1,4 @@
-use crate::pagination::{Pagination, PaginatedResponse};
+use crate::pagination::{PaginatedResponse, Pagination};
 use std::sync::Arc;
 
 use super::model::Card;
@@ -42,11 +42,7 @@ impl CardService {
     }
 
     /// 更新卡片
-    pub async fn update_card(
-        &self,
-        id: i32,
-        content: Option<String>,
-    ) -> Result<Card, String> {
+    pub async fn update_card(&self, id: i32, content: Option<String>) -> Result<Card, String> {
         self.card_repository
             .update(id, content)
             .await

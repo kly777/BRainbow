@@ -1,9 +1,9 @@
-use sqlx::{Row, SqlitePool, Column, TypeInfo};
-use std::sync::Arc;
 use serde_json::Value;
+use sqlx::{Column, Row, SqlitePool, TypeInfo};
+use std::sync::Arc;
 
+use super::handler::{ColumnInfo, TableNames};
 use super::model::TableName;
-use super::handler::{TableNames, ColumnInfo};
 
 pub struct DBRepo {
     pool: Arc<SqlitePool>,
@@ -29,11 +29,9 @@ impl DBRepo {
         offset: i64,
     ) -> Result<(Vec<ColumnInfo>, Vec<Vec<Value>>), sqlx::Error> {
         // 用 PRAGMA 获取列信息（即使表为空也能拿到）
-        let pragma_rows = sqlx::query(
-            &format!("PRAGMA table_info({})", table_name)
-        )
-        .fetch_all(&*self.pool)
-        .await?;
+        let pragma_rows = sqlx::query(&format!("PRAGMA table_info({})", table_name))
+            .fetch_all(&*self.pool)
+            .await?;
 
         let columns: Vec<ColumnInfo> = pragma_rows
             .iter()
@@ -44,13 +42,11 @@ impl DBRepo {
             .collect();
 
         // 查数据
-        let rows = sqlx::query(
-            &format!("SELECT * FROM {} LIMIT $1 OFFSET $2", table_name)
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&*self.pool)
-        .await?;
+        let rows = sqlx::query(&format!("SELECT * FROM {} LIMIT $1 OFFSET $2", table_name))
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&*self.pool)
+            .await?;
 
         let data: Vec<Vec<Value>> = rows
             .iter()
@@ -60,20 +56,22 @@ impl DBRepo {
                     .map(|col| {
                         let name = col.name();
                         match col.type_info().name() {
-                            "INT4" => row.try_get::<i32, _>(name)
+                            "INT4" => row
+                                .try_get::<i32, _>(name)
                                 .map(|v| Value::Number(v.into()))
                                 .unwrap_or(Value::Null),
-                            "INTEGER" => row.try_get::<i64, _>(name)
+                            "INTEGER" => row
+                                .try_get::<i64, _>(name)
                                 .map(|v| Value::Number(v.into()))
                                 .unwrap_or(Value::Null),
-                            "TEXT" | "VARCHAR" | "DATETIME" => row.try_get::<String, _>(name)
+                            "TEXT" | "VARCHAR" | "DATETIME" => row
+                                .try_get::<String, _>(name)
                                 .map(Value::String)
                                 .unwrap_or(Value::Null),
-                            _ => {
-                                row.try_get::<String, _>(name)
-                                    .map(Value::String)
-                                    .unwrap_or(Value::Null)
-                            }
+                            _ => row
+                                .try_get::<String, _>(name)
+                                .map(Value::String)
+                                .unwrap_or(Value::Null),
                         }
                     })
                     .collect()

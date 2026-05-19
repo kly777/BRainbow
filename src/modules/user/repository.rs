@@ -8,25 +8,37 @@ pub struct UserRepository {
 }
 
 impl UserRepository {
-    pub fn new(db: Arc<SqlitePool>) -> Self { Self { db } }
+    pub fn new(db: Arc<SqlitePool>) -> Self {
+        Self { db }
+    }
 
     pub async fn find_all(&self) -> Result<Vec<User>, sqlx::Error> {
         sqlx::query_as::<_, User>("SELECT id, name, password_hash, role FROM user ORDER BY id")
-            .fetch_all(&*self.db).await
+            .fetch_all(&*self.db)
+            .await
     }
 
     #[allow(dead_code)]
     pub async fn find_by_id(&self, id: i32) -> Result<Option<User>, sqlx::Error> {
         sqlx::query_as::<_, User>("SELECT id, name, password_hash, role FROM user WHERE id = ?")
-            .bind(id).fetch_optional(&*self.db).await
+            .bind(id)
+            .fetch_optional(&*self.db)
+            .await
     }
 
     pub async fn find_by_name(&self, name: &str) -> Result<Option<User>, sqlx::Error> {
         sqlx::query_as::<_, User>("SELECT id, name, password_hash, role FROM user WHERE name = ?")
-            .bind(name).fetch_optional(&*self.db).await
+            .bind(name)
+            .fetch_optional(&*self.db)
+            .await
     }
 
-    pub async fn create(&self, name: &str, password_hash: &str, role: &str) -> Result<User, sqlx::Error> {
+    pub async fn create(
+        &self,
+        name: &str,
+        password_hash: &str,
+        role: &str,
+    ) -> Result<User, sqlx::Error> {
         let result = sqlx::query(
             "INSERT INTO user (name, password_hash, role) VALUES (?, ?, ?) RETURNING id, name, password_hash, role"
         )
@@ -41,6 +53,8 @@ impl UserRepository {
     }
 
     pub async fn count(&self) -> Result<i64, sqlx::Error> {
-        sqlx::query_scalar("SELECT COUNT(*) FROM user").fetch_one(&*self.db).await
+        sqlx::query_scalar("SELECT COUNT(*) FROM user")
+            .fetch_one(&*self.db)
+            .await
     }
 }

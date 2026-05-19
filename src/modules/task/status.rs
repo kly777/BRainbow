@@ -4,10 +4,10 @@ use axum::{
 };
 
 use super::model::TaskStatus;
-use crate::error;
-use super::response::{from_service_error, TaskResponse};
+use super::response::{TaskResponse, from_service_error};
 use super::service::TaskService;
-use crate::pagination::{Pagination, PaginatedResponse};
+use crate::error;
+use crate::pagination::{PaginatedResponse, Pagination};
 use crate::state::AppState;
 
 pub async fn complete_task_handler(
@@ -59,7 +59,10 @@ pub async fn get_backlog_tasks_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let svc = TaskService::new(state.db);
-    match svc.by_status(TaskStatus::Backlog, pagination.limit(), pagination.offset()).await {
+    match svc
+        .by_status(TaskStatus::Backlog, pagination.limit(), pagination.offset())
+        .await
+    {
         Ok((tasks, total)) => {
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
@@ -73,7 +76,10 @@ pub async fn get_active_tasks_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let svc = TaskService::new(state.db);
-    match svc.by_status(TaskStatus::Active, pagination.limit(), pagination.offset()).await {
+    match svc
+        .by_status(TaskStatus::Active, pagination.limit(), pagination.offset())
+        .await
+    {
         Ok((tasks, total)) => {
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
@@ -87,7 +93,14 @@ pub async fn get_completed_tasks_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let svc = TaskService::new(state.db);
-    match svc.by_status(TaskStatus::Completed, pagination.limit(), pagination.offset()).await {
+    match svc
+        .by_status(
+            TaskStatus::Completed,
+            pagination.limit(),
+            pagination.offset(),
+        )
+        .await
+    {
         Ok((tasks, total)) => {
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
@@ -101,7 +114,14 @@ pub async fn get_archived_tasks_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let svc = TaskService::new(state.db);
-    match svc.by_status(TaskStatus::Archived, pagination.limit(), pagination.offset()).await {
+    match svc
+        .by_status(
+            TaskStatus::Archived,
+            pagination.limit(),
+            pagination.offset(),
+        )
+        .await
+    {
         Ok((tasks, total)) => {
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()

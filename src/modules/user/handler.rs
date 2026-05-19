@@ -2,7 +2,7 @@ use axum::{
     extract::State,
     response::{IntoResponse, Json},
 };
-use bcrypt::{hash, verify, DEFAULT_COST};
+use bcrypt::{DEFAULT_COST, hash, verify};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -57,7 +57,13 @@ pub async fn register_handler(
     match repo.create(&name, &password_hash, role).await {
         Ok(user) => {
             let token = create_token(user.id, &user.role, &state.jwt_secret);
-            Json(LoginResponse { id: user.id, name: user.name, role: user.role, token }).into_response()
+            Json(LoginResponse {
+                id: user.id,
+                name: user.name,
+                role: user.role,
+                token,
+            })
+            .into_response()
         }
         Err(e) => error::internal(e, "创建用户").into_response(),
     }
@@ -79,7 +85,13 @@ pub async fn login_handler(
     match verify(&payload.password, &user.password_hash) {
         Ok(true) => {
             let token = create_token(user.id, &user.role, &state.jwt_secret);
-            Json(LoginResponse { id: user.id, name: user.name, role: user.role, token }).into_response()
+            Json(LoginResponse {
+                id: user.id,
+                name: user.name,
+                role: user.role,
+                token,
+            })
+            .into_response()
         }
         Ok(false) => error::unauthorized("用户名或密码错误").into_response(),
         Err(e) => error::internal(e, "密码验证").into_response(),

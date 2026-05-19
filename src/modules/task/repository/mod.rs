@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use sqlx::SqlitePool;
+use std::sync::Arc;
 
 pub(crate) mod crud;
 pub(crate) mod dependency;

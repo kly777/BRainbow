@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use super::model::{
-    CreateTimeWindowRequest, TimeWindow, UpdateTimeWindowRequest,
-};
+use super::model::{CreateTimeWindowRequest, TimeWindow, UpdateTimeWindowRequest};
 use super::repository::TimeWindowRepository;
 use crate::modules::task::TaskService;
 
@@ -94,7 +92,11 @@ impl TimeWindowService {
                 end_time,
                 window_type,
                 task_id: existing.task_id,
-                user_id: if let Some(uid) = request.user_id { uid } else { existing.user_id },
+                user_id: if let Some(uid) = request.user_id {
+                    uid
+                } else {
+                    existing.user_id
+                },
                 recurrence_freq: existing.recurrence_freq,
                 recurrence_interval: existing.recurrence_interval,
                 recurrence_until: existing.recurrence_until,
@@ -116,7 +118,10 @@ impl TimeWindowService {
                 })?;
         }
 
-        self.repo.update(id, request).await.map_err(ServiceError::Db)
+        self.repo
+            .update(id, request)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     pub async fn find_by_id(&self, id: i32) -> Result<Option<TimeWindow>, ServiceError> {

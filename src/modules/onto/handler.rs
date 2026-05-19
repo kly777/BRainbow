@@ -35,9 +35,16 @@ pub async fn create_onto_handler(
 ) -> impl IntoResponse {
     let onto_service = OntoService::new(state.db.clone());
 
-    match onto_service.create_onto(payload.name, payload.description).await {
+    match onto_service
+        .create_onto(payload.name, payload.description)
+        .await
+    {
         Ok(onto) => {
-            let response = OntoResponse { id: onto.id, name: onto.name, description: onto.description };
+            let response = OntoResponse {
+                id: onto.id,
+                name: onto.name,
+                description: onto.description,
+            };
             Json(response).into_response()
         }
         Err(e) => error::bad(e, "创建本体").into_response(),
@@ -64,7 +71,11 @@ pub async fn get_onto_handler(
 
     match onto_service.get_onto_by_id(id).await {
         Ok(Some(onto)) => {
-            let response = OntoResponse { id: onto.id, name: onto.name, description: onto.description };
+            let response = OntoResponse {
+                id: onto.id,
+                name: onto.name,
+                description: onto.description,
+            };
             Json(response).into_response()
         }
         Ok(None) => error::not_found(format!("本体 ID {} 不存在", id)).into_response(),
@@ -79,9 +90,16 @@ pub async fn update_onto_handler(
 ) -> impl IntoResponse {
     let onto_service = OntoService::new(state.db.clone());
 
-    match onto_service.update_onto(id, payload.name, payload.description).await {
+    match onto_service
+        .update_onto(id, payload.name, payload.description)
+        .await
+    {
         Ok(onto) => {
-            let onto_response = OntoResponse { id: onto.id, name: onto.name, description: onto.description };
+            let onto_response = OntoResponse {
+                id: onto.id,
+                name: onto.name,
+                description: onto.description,
+            };
             Json(onto_response).into_response()
         }
         Err(e) => error::internal(e, "更新本体").into_response(),

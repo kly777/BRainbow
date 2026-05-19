@@ -5,9 +5,9 @@ pub mod service;
 
 pub(crate) const UPLOAD_DIR: &str = "uploads";
 
-use axum::routing::{get, patch, post};
-use axum::Router;
 use crate::state::AppState;
+use axum::Router;
+use axum::routing::{get, patch, post};
 use handler::{delete_handler, list_handler, rename_handler, upload_handler};
 
 pub fn routes() -> Router<AppState> {

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::model::SignifierSignified;
 use super::repository::SignRepository;
-use crate::pagination::{Pagination, PaginatedResponse};
+use crate::pagination::{PaginatedResponse, Pagination};
 
 /// 符号关系服务层
 pub struct SignService {

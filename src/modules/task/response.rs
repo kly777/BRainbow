@@ -2,10 +2,10 @@ use axum::{http::StatusCode, response::Json};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::error::ApiError;
 use super::dto::TaskErrorCode;
 use super::model::{Task, TaskStatus};
 use super::service::ServiceError;
+use crate::error::ApiError;
 
 // ==================== 响应结构体 ====================
 
@@ -116,10 +116,7 @@ pub fn internal_error(message: String) -> (StatusCode, Json<ApiError>) {
 }
 
 pub fn bad_request(code: TaskErrorCode, message: String) -> (StatusCode, Json<ApiError>) {
-    (
-        StatusCode::BAD_REQUEST,
-        Json(error_response(code, message)),
-    )
+    (StatusCode::BAD_REQUEST, Json(error_response(code, message)))
 }
 
 pub fn not_found() -> (StatusCode, Json<ApiError>) {
@@ -134,16 +131,15 @@ pub fn not_found() -> (StatusCode, Json<ApiError>) {
 
 pub fn from_service_error(e: ServiceError) -> (StatusCode, Json<ApiError>) {
     match e {
-        ServiceError::InvalidInput(msg) => {
-            bad_request(TaskErrorCode::InvalidInput, msg)
-        }
+        ServiceError::InvalidInput(msg) => bad_request(TaskErrorCode::InvalidInput, msg),
         ServiceError::NotFound => not_found(),
         ServiceError::CircularParent => {
             bad_request(TaskErrorCode::CircularParent, "检测到父子循环引用".into())
         }
-        ServiceError::CircularDependency => {
-            bad_request(TaskErrorCode::CircularDependency, "检测到依赖循环引用".into())
-        }
+        ServiceError::CircularDependency => bad_request(
+            TaskErrorCode::CircularDependency,
+            "检测到依赖循环引用".into(),
+        ),
         ServiceError::SelfParent => {
             bad_request(TaskErrorCode::SelfParent, "不能设置自己为父任务".into())
         }
@@ -153,14 +149,8 @@ pub fn from_service_error(e: ServiceError) -> (StatusCode, Json<ApiError>) {
         ServiceError::PlannedOutsideAvailable(msg) => {
             bad_request(TaskErrorCode::PlannedOutsideAvailable, msg)
         }
-        ServiceError::SlotOverlap(msg) => {
-            bad_request(TaskErrorCode::SlotOverlap, msg)
-        }
-        ServiceError::InvalidTimeRange(msg) => {
-            bad_request(TaskErrorCode::InvalidTimeRange, msg)
-        }
-        ServiceError::Db(err) => {
-            internal_error(format!("数据库错误: {}", err))
-        }
+        ServiceError::SlotOverlap(msg) => bad_request(TaskErrorCode::SlotOverlap, msg),
+        ServiceError::InvalidTimeRange(msg) => bad_request(TaskErrorCode::InvalidTimeRange, msg),
+        ServiceError::Db(err) => internal_error(format!("数据库错误: {}", err)),
     }
 }

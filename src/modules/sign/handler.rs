@@ -37,13 +37,23 @@ pub async fn create_sign_handler(
     let sign_service = SignService::new(state.db.clone());
 
     match sign_service
-        .create_sign(payload.signifier, payload.signified, payload.onto_id, payload.weight, payload.relation_type)
+        .create_sign(
+            payload.signifier,
+            payload.signified,
+            payload.onto_id,
+            payload.weight,
+            payload.relation_type,
+        )
         .await
     {
         Ok(sign) => {
             let response = SignResponse {
-                id: sign.id, signifier: sign.signifier, signified: sign.signified,
-                onto_id: sign.onto_id, weight: sign.weight, relation_type: sign.relation_type,
+                id: sign.id,
+                signifier: sign.signifier,
+                signified: sign.signified,
+                onto_id: sign.onto_id,
+                weight: sign.weight,
+                relation_type: sign.relation_type,
                 created_at: sign.created_at.to_string(),
             };
             Json(response).into_response()
@@ -73,8 +83,12 @@ pub async fn get_sign_handler(
     match sign_service.get_sign_by_id(id).await {
         Ok(Some(sign)) => {
             let response = SignResponse {
-                id: sign.id, signifier: sign.signifier, signified: sign.signified,
-                onto_id: sign.onto_id, weight: sign.weight, relation_type: sign.relation_type,
+                id: sign.id,
+                signifier: sign.signifier,
+                signified: sign.signified,
+                onto_id: sign.onto_id,
+                weight: sign.weight,
+                relation_type: sign.relation_type,
                 created_at: sign.created_at.to_string(),
             };
             Json(response).into_response()
@@ -109,7 +123,10 @@ pub async fn get_signs_by_signifier_handler(
 ) -> impl IntoResponse {
     let sign_service = SignService::new(state.db.clone());
 
-    match sign_service.get_signs_by_signifier_paginated(&signifier, &pagination).await {
+    match sign_service
+        .get_signs_by_signifier_paginated(&signifier, &pagination)
+        .await
+    {
         Ok(response) => Json(response).into_response(),
         Err(e) => error::bad(e, "按能指查询").into_response(),
     }
@@ -122,7 +139,10 @@ pub async fn get_signs_by_signified_handler(
 ) -> impl IntoResponse {
     let sign_service = SignService::new(state.db.clone());
 
-    match sign_service.get_signs_by_signified_paginated(&signified, &pagination).await {
+    match sign_service
+        .get_signs_by_signified_paginated(&signified, &pagination)
+        .await
+    {
         Ok(response) => Json(response).into_response(),
         Err(e) => error::bad(e, "按所指查询").into_response(),
     }

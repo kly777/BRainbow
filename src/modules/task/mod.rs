@@ -8,24 +8,26 @@ mod response;
 pub(crate) mod service;
 mod status;
 
-use axum::{Router, routing::{get, post, delete}};
 use crate::state::AppState;
+use axum::{
+    Router,
+    routing::{delete, get, post},
+};
 
 pub use crud::{
-    get_tasks_handler, get_all_tasks_handler, get_task_handler, get_task_detail_handler,
-    create_task_handler, quick_create_task_handler, update_task_handler,
-    delete_task_handler,
+    create_task_handler, delete_task_handler, get_all_tasks_handler, get_task_detail_handler,
+    get_task_handler, get_tasks_handler, quick_create_task_handler, update_task_handler,
 };
 
-pub use query::{
-    get_tree_handler, get_calendar_handler, get_dag_handler,
-    get_stats_handler, search_tasks_handler,
-};
 pub use dependency::{add_dependency_handler, remove_dependency_handler};
+pub use query::{
+    get_calendar_handler, get_dag_handler, get_stats_handler, get_tree_handler,
+    search_tasks_handler,
+};
 pub use status::{
-    complete_task_handler, activate_task_handler, archive_task_handler,
-    move_to_backlog_handler, get_backlog_tasks_handler, get_active_tasks_handler,
-    get_completed_tasks_handler, get_archived_tasks_handler,
+    activate_task_handler, archive_task_handler, complete_task_handler, get_active_tasks_handler,
+    get_archived_tasks_handler, get_backlog_tasks_handler, get_completed_tasks_handler,
+    move_to_backlog_handler,
 };
 
 pub use service::TaskService;
@@ -50,7 +52,12 @@ pub fn routes() -> Router<AppState> {
         .nest(
             "/{id}",
             Router::new()
-                .route("/", get(get_task_handler).patch(update_task_handler).delete(delete_task_handler))
+                .route(
+                    "/",
+                    get(get_task_handler)
+                        .patch(update_task_handler)
+                        .delete(delete_task_handler),
+                )
                 .route("/detail", get(get_task_detail_handler))
                 .route("/complete", post(complete_task_handler))
                 .route("/activate", post(activate_task_handler))

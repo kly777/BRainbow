@@ -4,7 +4,7 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Json, Response},
 };
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 
 use crate::error::ApiError;
@@ -12,9 +12,9 @@ use crate::state::AppState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: i32,    // user_id
+    pub sub: i32,     // user_id
     pub role: String, // "admin" | "user"
-    pub exp: usize,  // expiry
+    pub exp: usize,   // expiry
 }
 
 // ============================================================
@@ -68,11 +68,7 @@ fn extract_token(req: &Request) -> Option<String> {
 ///
 /// 用法：挂载到需要登录的路由组上。
 ///   Router::new().nest(…).layer(from_fn_with_state(state, auth::auth))
-pub async fn auth(
-    State(state): State<AppState>,
-    mut request: Request,
-    next: Next,
-) -> Response {
+pub async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -> Response {
     let secret = &state.jwt_secret;
 
     let token = match extract_token(&request) {
@@ -86,7 +82,7 @@ pub async fn auth(
                     details: None,
                 }),
             )
-                .into_response()
+                .into_response();
         }
     };
 
@@ -101,7 +97,7 @@ pub async fn auth(
                     details: None,
                 }),
             )
-                .into_response()
+                .into_response();
         }
     };
 

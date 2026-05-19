@@ -8,12 +8,10 @@ use std::pin::Pin;
 use super::dependency::{CalendarQuery, DagQuery, TreeQuery};
 use super::dto::TaskErrorCode;
 use super::model::Task;
-use crate::error;
-use super::response::{
-    bad_request, CalendarEvent, StatsResponse, TaskResponse, TreeNode,
-};
+use super::response::{CalendarEvent, StatsResponse, TaskResponse, TreeNode, bad_request};
 use super::service::TaskService;
-use crate::pagination::{Pagination, PaginatedResponse};
+use crate::error;
+use crate::pagination::{PaginatedResponse, Pagination};
 use crate::state::AppState;
 
 pub async fn get_tree_handler(
@@ -28,7 +26,10 @@ pub async fn get_tree_handler(
     };
 
     let filtered = if let Some(status) = query.status {
-        root_tasks.into_iter().filter(|t| t.status == status).collect()
+        root_tasks
+            .into_iter()
+            .filter(|t| t.status == status)
+            .collect()
     } else {
         root_tasks
     };
@@ -58,7 +59,10 @@ fn build_tree_node<'a>(
                 child_nodes.push(node);
             }
         }
-        Some(TreeNode { task: TaskResponse::from(task), children: child_nodes })
+        Some(TreeNode {
+            task: TaskResponse::from(task),
+            children: child_nodes,
+        })
     })
 }
 
@@ -102,9 +106,13 @@ pub async fn get_dag_handler(
 pub async fn get_stats_handler(State(state): State<AppState>) -> impl IntoResponse {
     let svc = TaskService::new(state.db);
     match svc.stats().await {
-        Ok((backlog, active, completed, archived)) => {
-            Json(StatsResponse { backlog, active, completed, archived }).into_response()
-        }
+        Ok((backlog, active, completed, archived)) => Json(StatsResponse {
+            backlog,
+            active,
+            completed,
+            archived,
+        })
+        .into_response(),
         Err(e) => error::internal(e, "获取统计").into_response(),
     }
 }
@@ -115,16 +123,25 @@ pub async fn search_tasks_handler(
 ) -> impl IntoResponse {
     let query = match params.remove("q") {
         Some(q) if !q.is_empty() => q,
-        _ => return bad_request(TaskErrorCode::TaskNotFound, "搜索查询不能为空".into()).into_response(),
+        _ => {
+            return bad_request(TaskErrorCode::TaskNotFound, "搜索查询不能为空".into())
+                .into_response();
+        }
     };
 
     let pagination = Pagination {
         page: params.get("page").and_then(|s| s.parse().ok()).unwrap_or(1),
-        page_size: params.get("page_size").and_then(|s| s.parse().ok()).unwrap_or(20),
+        page_size: params
+            .get("page_size")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(20),
     };
 
     let svc = TaskService::new(state.db);
-    match svc.search(&query, pagination.limit(), pagination.offset()).await {
+    match svc
+        .search(&query, pagination.limit(), pagination.offset())
+        .await
+    {
         Ok((tasks, total)) => {
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()

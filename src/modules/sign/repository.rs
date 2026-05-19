@@ -106,10 +106,9 @@ impl SignRepository {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<SignifierSignified>, i64), sqlx::Error> {
-        let total: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM signifier_signified")
-                .fetch_one(&*self.db)
-                .await?;
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM signifier_signified")
+            .fetch_one(&*self.db)
+            .await?;
         let items = sqlx::query_as::<_, SignifierSignified>(
             "SELECT id, signifier, signified, onto_id, weight, relation_type, created_at FROM signifier_signified ORDER BY id LIMIT ? OFFSET ?",
         )

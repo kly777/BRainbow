@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::model::Onto;
 use super::repository::OntoRepository;
-use crate::pagination::{Pagination, PaginatedResponse};
+use crate::pagination::{PaginatedResponse, Pagination};
 
 /// 本体服务层
 pub struct OntoService {

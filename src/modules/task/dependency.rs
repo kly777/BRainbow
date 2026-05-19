@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 use super::model::TaskStatus;
-use super::response::{from_service_error, not_found, MessageResponse};
+use super::response::{MessageResponse, from_service_error, not_found};
 use super::service::TaskService;
 use crate::state::AppState;
 
@@ -42,8 +42,15 @@ pub async fn add_dependency_handler(
     Json(payload): Json<DependencyRequest>,
 ) -> impl IntoResponse {
     let svc = TaskService::new(state.db);
-    match svc.add_dependency(task_id, payload.depends_on_task_id).await {
-        Ok(_) => (StatusCode::OK, Json(serde_json::json!({"message": "依赖关系已添加"}))).into_response(),
+    match svc
+        .add_dependency(task_id, payload.depends_on_task_id)
+        .await
+    {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(serde_json::json!({"message": "依赖关系已添加"})),
+        )
+            .into_response(),
         Err(e) => from_service_error(e).into_response(),
     }
 }
@@ -54,7 +61,10 @@ pub async fn remove_dependency_handler(
 ) -> impl IntoResponse {
     let svc = TaskService::new(state.db);
     match svc.remove_dependency(task_id, depends_on_task_id).await {
-        Ok(rows) if rows > 0 => Json(MessageResponse { message: "依赖关系已删除".into() }).into_response(),
+        Ok(rows) if rows > 0 => Json(MessageResponse {
+            message: "依赖关系已删除".into(),
+        })
+        .into_response(),
         Ok(_) => not_found().into_response(),
         Err(e) => from_service_error(e).into_response(),
     }

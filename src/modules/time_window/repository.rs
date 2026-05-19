@@ -31,7 +31,8 @@ impl TimeWindowRepository {
         let recurrence_freq = request.recurrence_rule.as_ref().map(|rule| rule.freq);
         let recurrence_interval = request.recurrence_rule.as_ref().map(|rule| rule.interval);
         let recurrence_until = request.recurrence_rule.as_ref().and_then(|rule| rule.until);
-        let recurrence_by_weekdays = request.recurrence_rule
+        let recurrence_by_weekdays = request
+            .recurrence_rule
             .as_ref()
             .and_then(|rule| rule.by_weekdays.as_ref())
             .and_then(|days| serde_json::to_string(days).ok());
@@ -58,7 +59,8 @@ impl TimeWindowRepository {
             id: result.try_get("id")?,
             start_time: result.try_get("start_time")?,
             end_time: result.try_get("end_time")?,
-            window_type: TimeWindowType::from_str(&result.try_get::<String, _>("type")?).unwrap_or(TimeWindowType::Feasible),
+            window_type: TimeWindowType::from_str(&result.try_get::<String, _>("type")?)
+                .unwrap_or(TimeWindowType::Feasible),
             task_id: result.try_get("task_id")?,
             user_id: result.try_get("user_id")?,
             recurrence_freq: result.try_get("recurrence_freq")?,
@@ -80,7 +82,8 @@ impl TimeWindowRepository {
 
         match result {
             Some(row) => {
-                let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?).unwrap_or(TimeWindowType::Feasible);
+                let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?)
+                    .unwrap_or(TimeWindowType::Feasible);
 
                 Ok(Some(TimeWindow {
                     id: row.try_get("id")?,
@@ -106,11 +109,10 @@ impl TimeWindowRepository {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<TimeWindow>, i64), sqlx::Error> {
-        let total: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM time_window WHERE task_id = ?")
-                .bind(task_id)
-                .fetch_one(&*self.db)
-                .await?;
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM time_window WHERE task_id = ?")
+            .bind(task_id)
+            .fetch_one(&*self.db)
+            .await?;
         let results = sqlx::query(
             "SELECT id, start_time, end_time, type, task_id, user_id, recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays FROM time_window WHERE task_id = ? ORDER BY start_time LIMIT ? OFFSET ?",
         )
@@ -149,14 +151,11 @@ impl TimeWindowRepository {
         Ok((Self::parse_rows(&results)?, total))
     }
 
-    fn parse_rows(
-        rows: &[sqlx::sqlite::SqliteRow],
-    ) -> Result<Vec<TimeWindow>, sqlx::Error> {
+    fn parse_rows(rows: &[sqlx::sqlite::SqliteRow]) -> Result<Vec<TimeWindow>, sqlx::Error> {
         let mut time_windows = Vec::new();
         for row in rows {
-            let window_type =
-                TimeWindowType::from_str(&row.try_get::<String, _>("type")?)
-                    .unwrap_or(TimeWindowType::Feasible);
+            let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?)
+                .unwrap_or(TimeWindowType::Feasible);
             time_windows.push(TimeWindow {
                 id: row.try_get("id")?,
                 start_time: row.try_get("start_time")?,
@@ -185,7 +184,8 @@ impl TimeWindowRepository {
 
         let mut time_windows = Vec::new();
         for row in results {
-            let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?).unwrap_or(TimeWindowType::Feasible);
+            let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?)
+                .unwrap_or(TimeWindowType::Feasible);
 
             time_windows.push(TimeWindow {
                 id: row.try_get("id")?,
@@ -221,7 +221,8 @@ impl TimeWindowRepository {
 
         let mut time_windows = Vec::new();
         for row in results {
-            let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?).unwrap_or(TimeWindowType::Feasible);
+            let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?)
+                .unwrap_or(TimeWindowType::Feasible);
 
             time_windows.push(TimeWindow {
                 id: row.try_get("id")?,
@@ -252,7 +253,8 @@ impl TimeWindowRepository {
 
         let mut time_windows = Vec::new();
         for row in results {
-            let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?).unwrap_or(TimeWindowType::Feasible);
+            let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?)
+                .unwrap_or(TimeWindowType::Feasible);
 
             time_windows.push(TimeWindow {
                 id: row.try_get("id")?,
@@ -361,7 +363,9 @@ impl TimeWindowRepository {
         request: UpdateTimeWindowRequest,
     ) -> Result<TimeWindow, sqlx::Error> {
         // 首先获取当前时间窗口
-        let current = self.find_by_id(id).await?
+        let current = self
+            .find_by_id(id)
+            .await?
             .ok_or_else(|| sqlx::Error::RowNotFound)?;
 
         // 简化更新逻辑 - 直接更新所有字段
@@ -373,9 +377,16 @@ impl TimeWindowRepository {
         // 处理循环规则
         let (recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays) =
             if let Some(Some(rule)) = &request.recurrence_rule {
-                let by_weekdays = rule.by_weekdays.as_ref()
+                let by_weekdays = rule
+                    .by_weekdays
+                    .as_ref()
                     .and_then(|days| serde_json::to_string(days).ok());
-                (Some(&rule.freq), Some(rule.interval), rule.until, by_weekdays)
+                (
+                    Some(&rule.freq),
+                    Some(rule.interval),
+                    rule.until,
+                    by_weekdays,
+                )
             } else {
                 (None, None, None, None)
             };
@@ -399,7 +410,8 @@ impl TimeWindowRepository {
         .fetch_one(&*self.db)
         .await?;
 
-        let window_type = TimeWindowType::from_str(&result.try_get::<String, _>("type")?).unwrap_or(TimeWindowType::Feasible);
+        let window_type = TimeWindowType::from_str(&result.try_get::<String, _>("type")?)
+            .unwrap_or(TimeWindowType::Feasible);
 
         Ok(TimeWindow {
             id: result.try_get("id")?,

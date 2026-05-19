@@ -1,4 +1,7 @@
-use axum::{middleware, Router, routing::{get, post}};
+use axum::{
+    Router, middleware,
+    routing::{get, post},
+};
 
 use crate::modules::{card, db_viewer, image, onto, sign, task, time_window, user};
 use crate::state::AppState;
@@ -29,8 +32,5 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         .layer(middleware::from_fn(crate::auth::require_admin))
         .layer(middleware::from_fn_with_state(state, crate::auth::auth));
 
-    Router::new()
-        .merge(public)
-        .merge(authed)
-        .merge(admin)
+    Router::new().merge(public).merge(authed).merge(admin)
 }

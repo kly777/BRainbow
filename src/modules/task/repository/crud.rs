@@ -11,7 +11,7 @@ impl TaskRepository {
             "SELECT id, title, description, parent_task_id, status, completed_at,
             effort_estimate_minutes, created_at, updated_at
             FROM task
-            ORDER BY created_at DESC"
+            ORDER BY created_at DESC",
         )
         .fetch_all(&*self.db)
         .await
@@ -22,10 +22,9 @@ impl TaskRepository {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Task>, i64), sqlx::Error> {
-        let total: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM task")
-                .fetch_one(&*self.db)
-                .await?;
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM task")
+            .fetch_one(&*self.db)
+            .await?;
         let items = sqlx::query_as::<_, Task>(
             "SELECT id, title, description, parent_task_id, status, completed_at,
             effort_estimate_minutes, created_at, updated_at
@@ -44,7 +43,7 @@ impl TaskRepository {
             effort_estimate_minutes, created_at, updated_at
             FROM task
             WHERE status != 'archived'
-            ORDER BY created_at DESC"
+            ORDER BY created_at DESC",
         )
         .fetch_all(&*self.db)
         .await
@@ -55,10 +54,9 @@ impl TaskRepository {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Task>, i64), sqlx::Error> {
-        let total: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE status != 'archived'")
-                .fetch_one(&*self.db)
-                .await?;
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE status != 'archived'")
+            .fetch_one(&*self.db)
+            .await?;
         let items = sqlx::query_as::<_, Task>(
             "SELECT id, title, description, parent_task_id, status, completed_at,
             effort_estimate_minutes, created_at, updated_at
@@ -76,7 +74,7 @@ impl TaskRepository {
             "SELECT id, title, description, parent_task_id, status, completed_at,
             effort_estimate_minutes, created_at, updated_at
             FROM task
-            WHERE id = ?"
+            WHERE id = ?",
         )
         .bind(id)
         .fetch_optional(&*self.db)
@@ -91,7 +89,7 @@ impl TaskRepository {
                 effort_estimate_minutes, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, created_at, updated_at"
+            effort_estimate_minutes, created_at, updated_at",
         )
         .bind(&request.title)
         .bind(&request.description)
@@ -126,7 +124,7 @@ impl TaskRepository {
                 effort_estimate_minutes, created_at, updated_at
             ) VALUES (?, NULL, NULL, ?, NULL, NULL, ?, ?)
             RETURNING id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, created_at, updated_at"
+            effort_estimate_minutes, created_at, updated_at",
         )
         .bind(&request.title)
         .bind(TaskStatus::Backlog.as_str())
@@ -167,13 +165,19 @@ impl TaskRepository {
         let mut first = true;
 
         if let Some(title) = &request.title {
-            if !first { qb.push(", "); } first = false;
+            if !first {
+                qb.push(", ");
+            }
+            first = false;
             qb.push("title = ");
             qb.push_bind(title);
         }
 
         if let Some(description) = &request.description {
-            if !first { qb.push(", "); } first = false;
+            if !first {
+                qb.push(", ");
+            }
+            first = false;
             match description {
                 Some(desc) => {
                     qb.push("description = ");
@@ -186,7 +190,10 @@ impl TaskRepository {
         }
 
         if let Some(parent_task_id) = &request.parent_task_id {
-            if !first { qb.push(", "); } first = false;
+            if !first {
+                qb.push(", ");
+            }
+            first = false;
             match parent_task_id {
                 Some(pid) => {
                     qb.push("parent_task_id = ");
@@ -199,19 +206,28 @@ impl TaskRepository {
         }
 
         if let Some(status) = &new_status {
-            if !first { qb.push(", "); } first = false;
+            if !first {
+                qb.push(", ");
+            }
+            first = false;
             qb.push("status = ");
             qb.push_bind(status.as_str());
         }
 
         if let Some(ct) = &completed_at {
-            if !first { qb.push(", "); } first = false;
+            if !first {
+                qb.push(", ");
+            }
+            first = false;
             qb.push("completed_at = ");
             qb.push_bind(ct);
         }
 
         if let Some(effort) = &request.effort_estimate_minutes {
-            if !first { qb.push(", "); } first = false;
+            if !first {
+                qb.push(", ");
+            }
+            first = false;
             match effort {
                 Some(minutes) => {
                     qb.push("effort_estimate_minutes = ");
@@ -223,7 +239,9 @@ impl TaskRepository {
             }
         }
 
-        if !first { qb.push(", "); }
+        if !first {
+            qb.push(", ");
+        }
         qb.push("updated_at = ");
         qb.push_bind(Utc::now());
 
@@ -251,11 +269,12 @@ impl TaskRepository {
                 .await?;
             Ok(result.rows_affected())
         } else {
-            let result = sqlx::query("UPDATE task SET status = 'archived', updated_at = ? WHERE id = ?")
-                .bind(Utc::now())
-                .bind(id)
-                .execute(&*self.db)
-                .await?;
+            let result =
+                sqlx::query("UPDATE task SET status = 'archived', updated_at = ? WHERE id = ?")
+                    .bind(Utc::now())
+                    .bind(id)
+                    .execute(&*self.db)
+                    .await?;
             Ok(result.rows_affected())
         }
     }

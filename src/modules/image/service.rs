@@ -1,10 +1,10 @@
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
+use super::UPLOAD_DIR;
 use super::model::Image;
 use super::repository::ImageRepository;
-use super::UPLOAD_DIR;
-use crate::pagination::{Pagination, PaginatedResponse};
+use crate::pagination::{PaginatedResponse, Pagination};
 
 pub struct ImageService {
     repo: ImageRepository,
@@ -13,7 +13,9 @@ pub struct ImageService {
 impl ImageService {
     pub fn new(db: Arc<SqlitePool>) -> Self {
         std::fs::create_dir_all(UPLOAD_DIR).ok();
-        Self { repo: ImageRepository::new(db) }
+        Self {
+            repo: ImageRepository::new(db),
+        }
     }
 
     pub async fn upload(

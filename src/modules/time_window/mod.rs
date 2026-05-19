@@ -4,19 +4,27 @@ mod repository;
 pub mod service;
 
 pub use handler::{
-    create_time_window_handler, get_time_window_handler, get_time_windows_handler,
-    update_time_window_handler, delete_time_window_handler,
-    get_time_window_stats_handler, check_time_conflict_handler,
+    check_time_conflict_handler, create_time_window_handler, delete_time_window_handler,
+    get_time_window_handler, get_time_window_stats_handler, get_time_windows_handler,
+    update_time_window_handler,
 };
 pub use model::{TimeWindow, TimeWindowType};
 
-use axum::{Router, routing::get};
 use crate::state::AppState;
+use axum::{Router, routing::get};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/", get(get_time_windows_handler).post(create_time_window_handler))
-        .route("/{id}", get(get_time_window_handler).patch(update_time_window_handler).delete(delete_time_window_handler))
+        .route(
+            "/",
+            get(get_time_windows_handler).post(create_time_window_handler),
+        )
+        .route(
+            "/{id}",
+            get(get_time_window_handler)
+                .patch(update_time_window_handler)
+                .delete(delete_time_window_handler),
+        )
         .nest(
             "/task",
             Router::new()

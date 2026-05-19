@@ -30,10 +30,9 @@ impl CardRepository {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Card>, i64), sqlx::Error> {
-        let total: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM card")
-                .fetch_one(&*self.db)
-                .await?;
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM card")
+            .fetch_one(&*self.db)
+            .await?;
 
         let items = sqlx::query_as::<_, Card>(
             "SELECT id, content, created_at, updated_at FROM card ORDER BY updated_at DESC LIMIT ? OFFSET ?",
@@ -77,12 +76,7 @@ impl CardRepository {
     }
 
     /// 更新卡片
-    pub async fn update(
-        &self,
-        id: i32,
-        content: Option<String>,
-
-    ) -> Result<Card, sqlx::Error> {
+    pub async fn update(&self, id: i32, content: Option<String>) -> Result<Card, sqlx::Error> {
         // 构建更新语句
         let mut updates = Vec::new();
 
@@ -175,8 +169,10 @@ impl CardRepository {
             return self.find_all_paginated(limit, offset).await;
         }
 
-        let conditions: Vec<String> =
-            keywords.iter().map(|_| "content LIKE ?".to_string()).collect();
+        let conditions: Vec<String> = keywords
+            .iter()
+            .map(|_| "content LIKE ?".to_string())
+            .collect();
         let where_clause = conditions.join(" OR ");
         let score_expr: Vec<String> = keywords
             .iter()
@@ -217,11 +213,17 @@ impl CardRepository {
             return self.find_all().await;
         }
 
-        let conditions: Vec<String> = keywords.iter().map(|_| "content LIKE ?".to_string()).collect();
+        let conditions: Vec<String> = keywords
+            .iter()
+            .map(|_| "content LIKE ?".to_string())
+            .collect();
         let where_clause = conditions.join(" OR ");
-        
+
         // 计算每个关键词匹配的得分
-        let score_expr: Vec<String> = keywords.iter().map(|_| "CASE WHEN content LIKE ? THEN 1 ELSE 0 END".to_string()).collect();
+        let score_expr: Vec<String> = keywords
+            .iter()
+            .map(|_| "CASE WHEN content LIKE ? THEN 1 ELSE 0 END".to_string())
+            .collect();
         let score_sum = score_expr.join(" + ");
 
         let sql = format!(

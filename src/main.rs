@@ -104,9 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ])
     };
 
-    let app = app
-        .layer(middleware::from_fn(logger))
-        .layer(cors);
+    let app = app.layer(middleware::from_fn(logger)).layer(cors);
 
     let port: u16 = std::env::var("SERVICE_PORT")
         .ok()

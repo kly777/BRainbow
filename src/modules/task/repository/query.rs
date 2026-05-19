@@ -46,22 +46,21 @@ impl TaskRepository {
             None => return Ok(None),
         };
 
-        let dependencies = sqlx::query(
-            "SELECT depends_on_task_id FROM task_dependency WHERE task_id = ?"
-        )
-        .bind(id)
-        .fetch_all(&*self.db)
-        .await?
-        .into_iter()
-        .map(|row| row.try_get::<i32, _>("depends_on_task_id"))
-        .collect::<Result<Vec<_>, _>>()?;
+        let dependencies =
+            sqlx::query("SELECT depends_on_task_id FROM task_dependency WHERE task_id = ?")
+                .bind(id)
+                .fetch_all(&*self.db)
+                .await?
+                .into_iter()
+                .map(|row| row.try_get::<i32, _>("depends_on_task_id"))
+                .collect::<Result<Vec<_>, _>>()?;
 
         let children = sqlx::query_as::<_, Task>(
             "SELECT id, title, description, parent_task_id, status, completed_at,
             effort_estimate_minutes, created_at, updated_at
             FROM task
             WHERE parent_task_id = ?
-            ORDER BY created_at"
+            ORDER BY created_at",
         )
         .bind(id)
         .fetch_all(&*self.db)
@@ -72,7 +71,7 @@ impl TaskRepository {
             recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays
             FROM time_window
             WHERE task_id = ?
-            ORDER BY start_time"
+            ORDER BY start_time",
         )
         .bind(id)
         .fetch_all(&*self.db)
@@ -107,7 +106,7 @@ impl TaskRepository {
             effort_estimate_minutes, created_at, updated_at
             FROM task
             WHERE title LIKE ?
-            ORDER BY created_at DESC"
+            ORDER BY created_at DESC",
         )
         .bind(search_pattern)
         .fetch_all(&*self.db)
@@ -121,11 +120,10 @@ impl TaskRepository {
         offset: i64,
     ) -> Result<(Vec<Task>, i64), sqlx::Error> {
         let pattern = format!("%{}%", query);
-        let total: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE title LIKE ?")
-                .bind(&pattern)
-                .fetch_one(&*self.db)
-                .await?;
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE title LIKE ?")
+            .bind(&pattern)
+            .fetch_one(&*self.db)
+            .await?;
         let items = sqlx::query_as::<_, Task>(
             "SELECT id, title, description, parent_task_id, status, completed_at,
             effort_estimate_minutes, created_at, updated_at
@@ -225,13 +223,16 @@ impl TaskRepository {
         Ok(events)
     }
 
-    pub async fn find_time_windows_by_task(&self, task_id: i32) -> Result<Vec<TimeWindow>, sqlx::Error> {
+    pub async fn find_time_windows_by_task(
+        &self,
+        task_id: i32,
+    ) -> Result<Vec<TimeWindow>, sqlx::Error> {
         let rows = sqlx::query(
             "SELECT id, start_time, end_time, type, task_id, user_id,
                     recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays
              FROM time_window
              WHERE task_id = ?
-             ORDER BY start_time"
+             ORDER BY start_time",
         )
         .bind(task_id)
         .fetch_all(&*self.db)
@@ -266,13 +267,15 @@ impl TaskRepository {
             .fetch_one(&*self.db)
             .await?;
 
-        let completed: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE status = 'completed'")
-            .fetch_one(&*self.db)
-            .await?;
+        let completed: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE status = 'completed'")
+                .fetch_one(&*self.db)
+                .await?;
 
-        let archived: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE status = 'archived'")
-            .fetch_one(&*self.db)
-            .await?;
+        let archived: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE status = 'archived'")
+                .fetch_one(&*self.db)
+                .await?;
 
         Ok((backlog, active, completed, archived))
     }

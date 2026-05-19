@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{Decode, FromRow, Type, Sqlite, sqlite::SqliteValueRef};
+use sqlx::{Decode, FromRow, Sqlite, Type, sqlite::SqliteValueRef};
 use std::str::FromStr;
 
 /// 任务状态枚举

@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use chrono::{DateTime, Utc};
+use std::sync::Arc;
 
 use super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
 use super::model::{Task, TaskStatus, TimeWindow, TimeWindowType};
@@ -11,11 +11,15 @@ pub struct TaskService {
 
 impl TaskService {
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
-        Self { repo: TaskRepository::new(db) }
+        Self {
+            repo: TaskRepository::new(db),
+        }
     }
 
     pub async fn list(&self, limit: i64, offset: i64) -> Result<(Vec<Task>, i64), sqlx::Error> {
-        self.repo.find_all_excluding_archived_paginated(limit, offset).await
+        self.repo
+            .find_all_excluding_archived_paginated(limit, offset)
+            .await
     }
 
     pub async fn list_all(&self, limit: i64, offset: i64) -> Result<(Vec<Task>, i64), sqlx::Error> {
@@ -26,7 +30,10 @@ impl TaskService {
         self.repo.find_by_id(id).await
     }
 
-    pub async fn detail(&self, id: i32) -> Result<Option<super::dto::TaskDetailResponse>, sqlx::Error> {
+    pub async fn detail(
+        &self,
+        id: i32,
+    ) -> Result<Option<super::dto::TaskDetailResponse>, sqlx::Error> {
         self.repo.find_detail(id).await
     }
 
@@ -38,12 +45,26 @@ impl TaskService {
         self.repo.get_stats().await
     }
 
-    pub async fn by_status(&self, status: TaskStatus, limit: i64, offset: i64) -> Result<(Vec<Task>, i64), sqlx::Error> {
-        self.repo.find_by_status_paginated(status, limit, offset).await
+    pub async fn by_status(
+        &self,
+        status: TaskStatus,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<Task>, i64), sqlx::Error> {
+        self.repo
+            .find_by_status_paginated(status, limit, offset)
+            .await
     }
 
-    pub async fn search(&self, query: &str, limit: i64, offset: i64) -> Result<(Vec<Task>, i64), sqlx::Error> {
-        self.repo.search_by_title_paginated(query, limit, offset).await
+    pub async fn search(
+        &self,
+        query: &str,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<Task>, i64), sqlx::Error> {
+        self.repo
+            .search_by_title_paginated(query, limit, offset)
+            .await
     }
 
     pub async fn create(&self, req: CreateTaskRequest) -> Result<Task, ServiceError> {
@@ -115,11 +136,21 @@ impl TaskService {
         if task_id == depends_on {
             return Err(ServiceError::SelfDependency);
         }
-        self.repo.add_dependency(task_id, depends_on).await.map_err(ServiceError::Db)
+        self.repo
+            .add_dependency(task_id, depends_on)
+            .await
+            .map_err(ServiceError::Db)
     }
 
-    pub async fn remove_dependency(&self, task_id: i32, depends_on: i32) -> Result<u64, ServiceError> {
-        self.repo.remove_dependency(task_id, depends_on).await.map_err(ServiceError::Db)
+    pub async fn remove_dependency(
+        &self,
+        task_id: i32,
+        depends_on: i32,
+    ) -> Result<u64, ServiceError> {
+        self.repo
+            .remove_dependency(task_id, depends_on)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     /// 获取日历事件 - 查询指定时间范围内的所有非归档任务的时间窗口
@@ -129,7 +160,8 @@ impl TaskService {
         end: Option<DateTime<Utc>>,
         status: Option<TaskStatus>,
     ) -> Result<Vec<(Task, TimeWindow)>, ServiceError> {
-        self.repo.find_calendar_events(start, end, status)
+        self.repo
+            .find_calendar_events(start, end, status)
             .await
             .map_err(ServiceError::Db)
     }
@@ -143,7 +175,11 @@ impl TaskService {
         exclude_id: Option<i32>,
     ) -> Result<(), ServiceError> {
         // 获取任务已有的 available slots 和 planned slots
-        let existing = self.repo.find_time_windows_by_task(task_id).await.map_err(ServiceError::Db)?;
+        let existing = self
+            .repo
+            .find_time_windows_by_task(task_id)
+            .await
+            .map_err(ServiceError::Db)?;
 
         let mut all_feasible: Vec<&TimeWindow> = Vec::new();
         let mut all_planned: Vec<&TimeWindow> = Vec::new();
@@ -167,28 +203,29 @@ impl TaskService {
         }
 
         // C002: 检查同类型时间段不重叠
-        let check_overlap = |windows: &[&TimeWindow], type_name: &str| -> Result<(), ServiceError> {
-            for i in 0..windows.len() {
-                for j in (i + 1)..windows.len() {
-                    let a = windows[i];
-                    let b = windows[j];
-                    // 跳过同一个 exclude_id 的情况（更新已有窗口时）
-                    // 仅比较已入库的 ID（>0），新窗口 id=0 不会被误跳过
-                    if let Some(eid) = exclude_id {
-                        if eid > 0 && (a.id == eid || b.id == eid) {
-                            continue;
+        let check_overlap =
+            |windows: &[&TimeWindow], type_name: &str| -> Result<(), ServiceError> {
+                for i in 0..windows.len() {
+                    for j in (i + 1)..windows.len() {
+                        let a = windows[i];
+                        let b = windows[j];
+                        // 跳过同一个 exclude_id 的情况（更新已有窗口时）
+                        // 仅比较已入库的 ID（>0），新窗口 id=0 不会被误跳过
+                        if let Some(eid) = exclude_id {
+                            if eid > 0 && (a.id == eid || b.id == eid) {
+                                continue;
+                            }
+                        }
+                        if a.start_time < b.end_time && b.start_time < a.end_time {
+                            return Err(ServiceError::SlotOverlap(format!(
+                                "{} 时间段 [{}, {}] 与 [{}, {}] 重叠",
+                                type_name, a.start_time, a.end_time, b.start_time, b.end_time
+                            )));
                         }
                     }
-                    if a.start_time < b.end_time && b.start_time < a.end_time {
-                        return Err(ServiceError::SlotOverlap(format!(
-                            "{} 时间段 [{}, {}] 与 [{}, {}] 重叠",
-                            type_name, a.start_time, a.end_time, b.start_time, b.end_time
-                        )));
-                    }
                 }
-            }
-            Ok(())
-        };
+                Ok(())
+            };
 
         check_overlap(&all_feasible, "feasible")?;
         check_overlap(&all_planned, "planned")?;
@@ -196,9 +233,9 @@ impl TaskService {
 
         // C001: planned 必须在 feasible 内部
         for planned in &all_planned {
-            let covered = all_feasible.iter().any(|f| {
-                f.start_time <= planned.start_time && f.end_time >= planned.end_time
-            });
+            let covered = all_feasible
+                .iter()
+                .any(|f| f.start_time <= planned.start_time && f.end_time >= planned.end_time);
             if !covered {
                 return Err(ServiceError::PlannedOutsideAvailable(format!(
                     "计划时间段 [{}, {}] 不在任何可行时间窗口内",
@@ -219,11 +256,19 @@ impl TaskService {
         use super::response::{DagEdge, DagNode, DagView};
         use std::collections::{HashMap, HashSet, VecDeque};
 
-        let (all_tasks, _) = self.repo.find_all_paginated(10000, 0).await.map_err(ServiceError::Db)?;
+        let (all_tasks, _) = self
+            .repo
+            .find_all_paginated(10000, 0)
+            .await
+            .map_err(ServiceError::Db)?;
         let task_map: HashMap<i32, &Task> = all_tasks.iter().map(|t| (t.id, t)).collect();
 
         // 批量取全部依赖
-        let all_deps = self.repo.get_all_dependencies().await.map_err(ServiceError::Db)?;
+        let all_deps = self
+            .repo
+            .get_all_dependencies()
+            .await
+            .map_err(ServiceError::Db)?;
 
         let mut nodes_map: HashMap<i32, DagNode> = HashMap::new();
         let mut edges: Vec<DagEdge> = Vec::new();
@@ -261,7 +306,10 @@ impl TaskService {
                                 status: dep_task.status.clone(),
                             });
                         }
-                        edges.push(DagEdge { from: task_id, to: dep_id });
+                        edges.push(DagEdge {
+                            from: task_id,
+                            to: dep_id,
+                        });
                         queue.push_back((dep_id, current_depth + 1));
                     }
                 }
@@ -277,7 +325,9 @@ impl TaskService {
 
 fn validate_title(title: &str) -> Result<(), ServiceError> {
     if title.is_empty() || title.len() > 255 {
-        return Err(ServiceError::InvalidInput("标题长度必须在1-255字符之间".into()));
+        return Err(ServiceError::InvalidInput(
+            "标题长度必须在1-255字符之间".into(),
+        ));
     }
     Ok(())
 }
@@ -291,8 +341,15 @@ fn validate_effort(minutes: Option<i32>) -> Result<(), ServiceError> {
     Ok(())
 }
 
-async fn check_circular_parent(repo: &TaskRepository, task_id: i32, parent_id: i32) -> Result<(), ServiceError> {
-    let is_circular = repo.check_circular_parent(task_id, parent_id).await.map_err(ServiceError::Db)?;
+async fn check_circular_parent(
+    repo: &TaskRepository,
+    task_id: i32,
+    parent_id: i32,
+) -> Result<(), ServiceError> {
+    let is_circular = repo
+        .check_circular_parent(task_id, parent_id)
+        .await
+        .map_err(ServiceError::Db)?;
     if is_circular {
         return Err(ServiceError::CircularParent);
     }
@@ -322,7 +379,9 @@ impl std::fmt::Display for ServiceError {
             ServiceError::CircularDependency => write!(f, "检测到依赖循环引用"),
             ServiceError::SelfParent => write!(f, "不能设置自己为父任务"),
             ServiceError::SelfDependency => write!(f, "不能依赖自己"),
-            ServiceError::PlannedOutsideAvailable(msg) => write!(f, "计划时间超出可行时间: {}", msg),
+            ServiceError::PlannedOutsideAvailable(msg) => {
+                write!(f, "计划时间超出可行时间: {}", msg)
+            }
             ServiceError::SlotOverlap(msg) => write!(f, "时间段重叠: {}", msg),
             ServiceError::InvalidTimeRange(msg) => write!(f, "无效的时间段: {}", msg),
             ServiceError::Db(e) => write!(f, "数据库错误: {}", e),

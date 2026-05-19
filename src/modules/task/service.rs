@@ -173,8 +173,9 @@ impl TaskService {
                     let a = windows[i];
                     let b = windows[j];
                     // 跳过同一个 exclude_id 的情况（更新已有窗口时）
+                    // 仅比较已入库的 ID（>0），新窗口 id=0 不会被误跳过
                     if let Some(eid) = exclude_id {
-                        if a.id == eid || b.id == eid {
+                        if eid > 0 && (a.id == eid || b.id == eid) {
                             continue;
                         }
                     }
@@ -209,7 +210,7 @@ impl TaskService {
         Ok(())
     }
 
-    /// 构建依赖图（DAG）
+    /// 构建依赖图（DAG）— 批量查询，避免 N+1
     pub async fn dag(
         &self,
         root_task_id: Option<i32>,
@@ -218,24 +219,23 @@ impl TaskService {
         use super::response::{DagEdge, DagNode, DagView};
         use std::collections::{HashMap, HashSet, VecDeque};
 
-        // 获取所有任务用于构建节点
         let (all_tasks, _) = self.repo.find_all_paginated(10000, 0).await.map_err(ServiceError::Db)?;
+        let task_map: HashMap<i32, &Task> = all_tasks.iter().map(|t| (t.id, t)).collect();
 
-        // 构建 BFS 从 root_task_id（如果有）出发，限制 depth
+        // 批量取全部依赖
+        let all_deps = self.repo.get_all_dependencies().await.map_err(ServiceError::Db)?;
+
         let mut nodes_map: HashMap<i32, DagNode> = HashMap::new();
         let mut edges: Vec<DagEdge> = Vec::new();
         let mut visited: HashSet<i32> = HashSet::new();
-
-        let mut queue: VecDeque<(i32, i32)> = VecDeque::new(); // (task_id, current_depth)
+        let mut queue: VecDeque<(i32, i32)> = VecDeque::new();
 
         if let Some(root_id) = root_task_id {
             queue.push_back((root_id, 0));
         } else {
-            // 没有根节点时，从所有有依赖关系的任务开始
-            for task in &all_tasks {
-                let deps = self.repo.get_dependencies(task.id).await.map_err(ServiceError::Db)?;
+            for (&task_id, deps) in &all_deps {
                 if !deps.is_empty() {
-                    queue.push_back((task.id, 0));
+                    queue.push_back((task_id, 0));
                 }
             }
         }
@@ -245,25 +245,25 @@ impl TaskService {
                 continue;
             }
 
-            if let Some(task) = all_tasks.iter().find(|t| t.id == task_id) {
+            if let Some(&task) = task_map.get(&task_id) {
                 nodes_map.entry(task_id).or_insert_with(|| DagNode {
                     id: task.id,
                     title: task.title.clone(),
                     status: task.status.clone(),
                 });
 
-                let deps = self.repo.get_dependencies(task_id).await.map_err(ServiceError::Db)?;
-                for dep_id in deps {
-                    // 确保被依赖的节点也在图中
-                    if let Some(dep_task) = all_tasks.iter().find(|t| t.id == dep_id) {
-                        nodes_map.entry(dep_id).or_insert_with(|| DagNode {
-                            id: dep_task.id,
-                            title: dep_task.title.clone(),
-                            status: dep_task.status.clone(),
-                        });
+                if let Some(deps) = all_deps.get(&task_id) {
+                    for &dep_id in deps {
+                        if let Some(&dep_task) = task_map.get(&dep_id) {
+                            nodes_map.entry(dep_id).or_insert_with(|| DagNode {
+                                id: dep_task.id,
+                                title: dep_task.title.clone(),
+                                status: dep_task.status.clone(),
+                            });
+                        }
+                        edges.push(DagEdge { from: task_id, to: dep_id });
+                        queue.push_back((dep_id, current_depth + 1));
                     }
-                    edges.push(DagEdge { from: task_id, to: dep_id });
-                    queue.push_back((dep_id, current_depth + 1));
                 }
             }
         }

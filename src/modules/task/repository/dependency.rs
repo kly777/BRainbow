@@ -55,6 +55,23 @@ impl TaskRepository {
         Ok(dependencies)
     }
 
+    /// 一次查询返回所有任务的依赖关系 → Map<task_id, Vec<dep_id>>
+    pub async fn get_all_dependencies(&self) -> Result<std::collections::HashMap<i32, Vec<i32>>, sqlx::Error> {
+        let rows = sqlx::query(
+            "SELECT task_id, depends_on_task_id FROM task_dependency"
+        )
+        .fetch_all(&*self.db)
+        .await?;
+
+        let mut map: std::collections::HashMap<i32, Vec<i32>> = std::collections::HashMap::new();
+        for row in rows {
+            let task_id: i32 = row.try_get("task_id")?;
+            let dep_id: i32 = row.try_get("depends_on_task_id")?;
+            map.entry(task_id).or_default().push(dep_id);
+        }
+        Ok(map)
+    }
+
     fn check_circular_dependency<'a>(
         &'a self,
         start_id: i32,

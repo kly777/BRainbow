@@ -1,7 +1,8 @@
-import { createSignal, Show } from "solid-js";
+import { createSignal, onCleanup, Show } from "solid-js";
 import { Effect } from "effect";
 import { login, register } from "./api.ts";
 import { getErrorMessage } from "../apis/types/index.ts";
+import { AUTH_REQUIRED_EVENT } from "../apis/request.ts";
 import { useAuth } from "./context.tsx";
 import styles from "./AuthStatus.module.css";
 
@@ -13,16 +14,30 @@ export default function AuthStatus() {
     const [password, setPassword] = createSignal("");
     const [error, setError] = createSignal("");
 
+    // 监听 401 → 自动登出 + 弹出登录框
+    const onAuthRequired = () => {
+        logout();
+        setIsRegister(false);
+        setError("");
+        setName("");
+        setPassword("");
+        setShowForm(true);
+    };
+    globalThis.addEventListener(AUTH_REQUIRED_EVENT, onAuthRequired);
+    onCleanup(() => globalThis.removeEventListener(AUTH_REQUIRED_EVENT, onAuthRequired));
+
     const handleSubmit = async (e: Event) => {
         e.preventDefault();
         setError("");
-        try {
-            const fn = isRegister() ? register : login;
-            const result = await Effect.runPromise(fn(name(), password()));
-            authLogin(result.id, result.name, result.role, result.token);
+        const exit = await Effect.runPromiseExit(
+            (isRegister() ? register : login)(name(), password()),
+        );
+        if (exit._tag === "Success") {
+            const { id, name: uname, role, token } = exit.value;
+            authLogin(id, uname, role, token);
             setShowForm(false);
-        } catch (err) {
-            setError(getErrorMessage(err));
+        } else {
+            setError(getErrorMessage(exit.cause));
         }
     };
 

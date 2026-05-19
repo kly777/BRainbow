@@ -23,7 +23,7 @@ function App() {
         <AuthProvider>
             <Router root={Layout}>
                 <Route path="/" component={() => <HomePage />} />
-                <Route path="/tasks" component={() => <TaskManagerPage />} />
+                <Route path="/t" component={() => <TaskManagerPage />} />
                 <Route path="/o" component={() => <OntologyListPage />} />
                 <Route path="/c" component={() => <CardsListPage />} />
                 <Route path="/c/:id" component={() => <CardDetailPage />} />

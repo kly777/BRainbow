@@ -1,4 +1,5 @@
 .cardsGrid {
+    padding-top: 10px;
     column-count: auto;
     column-width: 300px;
     column-gap: 20px;

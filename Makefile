@@ -8,12 +8,15 @@ time := $(shell date +%y%m%d_%H%M%S)
 
 .PHONY: clean deploy status db-pull db-push logs rollback fmt
 
+dev:
+	cargo watch -x run --ignore web & cd web && deno task dev & wait
+	cd ..
+
+
 fmt:
 	cargo fmt
 	cd web && deno task fmt
 	cd ..
-
-
 
 build: clean
 	cd web && deno task build

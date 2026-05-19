@@ -9,18 +9,16 @@ time := $(shell date +%y%m%d_%H%M%S)
 .PHONY: clean deploy status db-pull db-push logs rollback fmt
 
 dev:
-	cargo watch -x run --ignore web & cd web && deno task dev & wait
-	cd ..
-
+	cargo watch -x run --ignore web & \
+	cd web && deno task dev & \
+	wait
 
 fmt:
 	cargo fmt
 	cd web && deno task fmt
-	cd ..
 
 build: clean
 	cd web && deno task build
-	cd ..
 	mkdir -p $(SERVER_DIR)
 	cp -r web/dist $(SERVER_DIR)/
 	cargo build --target $(TARGET_ARCH) --release
@@ -32,7 +30,7 @@ clean:
 deploy: build
 	bash ./deploy.sh
 
-# 强制覆盖远端数据库（首次部署 / 数据迁移用）
+# 覆盖远端数据库
 deploy-force-db: build
 	FORCE_DB_OVERWRITE=true bash ./deploy.sh
 

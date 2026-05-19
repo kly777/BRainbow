@@ -45,7 +45,7 @@ export default function Layout(props: { children?: JSX.Element }) {
                         主页
                     </A>
                     <A
-                        href="/tasks"
+                        href="/t"
                         class={styles.navLink}
                         activeClass={styles.active}
                         end

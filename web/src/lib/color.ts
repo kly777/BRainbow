@@ -1,16 +1,7 @@
 /**
- * 颜色类 — 内部以 CIE XYZ 存储，可按需在不同色彩空间中存取。
+ * 内部以 CIE XYZ 存储，可按需在不同色彩空间中存取。
  *
- *   输入/输出        中转层          内部存储
- *   ─────────────────────────────────────────────
- *   Hex  ←→  sRGB  ←→  Linear sRGB  ←→  XYZ
- *   HSL  ←→  sRGB
- *   OKLCH ←→ OKLAB ←────────────────────  XYZ
  */
-
-// ═══════════════════════════════════════════
-// 类型定义
-// ═══════════════════════════════════════════
 
 export interface Rgb {
     r: number; // 0–255
@@ -38,13 +29,9 @@ export interface Oklab {
 
 export interface Oklch {
     L: number; // 0–1
-    C: number;
+    C: number; // ≥0
     h: number; // 0–360
 }
-
-// ═══════════════════════════════════════════
-// Color 类
-// ═══════════════════════════════════════════
 
 export class Color {
     readonly x: number;
@@ -56,8 +43,6 @@ export class Color {
         this.y = y;
         this.z = z;
     }
-
-    // ── 工厂方法 ──
 
     static fromXyz(xyz: Xyz): Color {
         return new Color(xyz.x, xyz.y, xyz.z);
@@ -80,7 +65,7 @@ export class Color {
 
     static fromHex(hex: string): Color {
         const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        if (!m) throw new Error(`无效的 hex 颜色: ${hex}`);
+        if (!m) throw new Error(`无效的 hex: ${hex}`);
         return Color.fromRgb({
             r: parseInt(m[1], 16),
             g: parseInt(m[2], 16),
@@ -89,18 +74,16 @@ export class Color {
     }
 
     static fromHsl(hsl: Hsl): Color {
-        return Color.fromRgb(hslToRgb(hsl));
+        return Color.fromRgb(Color.#hslToRgb(hsl));
     }
 
     static fromOklab(ok: Oklab): Color {
         const l_ = ok.L + 0.3963377774 * ok.a + 0.2158037573 * ok.b;
         const m_ = ok.L - 0.1055613458 * ok.a - 0.0638541728 * ok.b;
-        const s_ = ok.L - 0.0894841775 * ok.a - 1.2914855480 * ok.b;
-
+        const s_ = ok.L - 0.0894841775 * ok.a - 1.291485548 * ok.b;
         const l = l_ ** 3;
         const m = m_ ** 3;
         const s = s_ ** 3;
-
         return Color.fromLinearRgb(
             4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
             -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
@@ -116,7 +99,7 @@ export class Color {
         });
     }
 
-    // ── 提取方法 ──
+    // ── 提取 ──
 
     toXyz(): Xyz {
         return { x: this.x, y: this.y, z: this.z };
@@ -134,43 +117,43 @@ export class Color {
     toRgb(): Rgb {
         const lr = this.toLinearRgb();
         return {
-            r: clampByte(Color.#gammaCompress(lr.r) * 255),
-            g: clampByte(Color.#gammaCompress(lr.g) * 255),
-            b: clampByte(Color.#gammaCompress(lr.b) * 255),
+            r: Color.#clamp(Color.#gammaCompress(lr.r) * 255),
+            g: Color.#clamp(Color.#gammaCompress(lr.g) * 255),
+            b: Color.#clamp(Color.#gammaCompress(lr.b) * 255),
         };
     }
 
     toHex(): string {
         const rgb = this.toRgb();
-        return (
-            "#" +
-            hex2(rgb.r) +
-            hex2(rgb.g) +
-            hex2(rgb.b)
-        ).toLowerCase();
+        const h = (n: number) => Color.#clamp(n).toString(16).padStart(2, "0");
+        return `#${h(rgb.r)}${h(rgb.g)}${h(rgb.b)}`;
     }
 
     toHsl(): Hsl {
-        return rgbToHsl(this.toRgb());
+        return Color.#rgbToHsl(this.toRgb());
     }
 
     toOklab(): Oklab {
         const lr = this.toLinearRgb();
-
-        const l = 0.4122214708 * lr.r + 0.5363325363 * lr.g +
-            0.0514459929 * lr.b;
-        const m = 0.2119034982 * lr.r + 0.6806995451 * lr.g +
-            0.1073969566 * lr.b;
-        const s = 0.0883024619 * lr.r + 0.2817188376 * lr.g +
-            0.6299787005 * lr.b;
-
+        const l =
+            0.4122214708 * lr.r + 0.5363325363 * lr.g + 0.0514459929 * lr.b;
+        const m =
+            0.2119034982 * lr.r + 0.6806995451 * lr.g + 0.1073969566 * lr.b;
+        const s =
+            0.0883024619 * lr.r + 0.2817188376 * lr.g + 0.6299787005 * lr.b;
         return {
-            L: 0.2104542553 * Math.cbrt(l) + 0.7936177850 * Math.cbrt(m) -
+            L:
+                0.2104542553 * Math.cbrt(l) +
+                0.793617785 * Math.cbrt(m) -
                 0.0040720468 * Math.cbrt(s),
-            a: 1.9779984951 * Math.cbrt(l) - 2.4285922050 * Math.cbrt(m) +
+            a:
+                1.9779984951 * Math.cbrt(l) -
+                2.428592205 * Math.cbrt(m) +
                 0.4505937099 * Math.cbrt(s),
-            b: 0.0259040371 * Math.cbrt(l) + 0.7827717662 * Math.cbrt(m) -
-                0.8086757660 * Math.cbrt(s),
+            b:
+                0.0259040371 * Math.cbrt(l) +
+                0.7827717662 * Math.cbrt(m) -
+                0.808675766 * Math.cbrt(s),
         };
     }
 
@@ -181,144 +164,89 @@ export class Color {
         return { L: ok.L, C, h };
     }
 
-    // ── 在原地生成新 Color（不可变） ──
+    // ── 不可变更新 ──
 
     withRgb(rgb: Partial<Rgb>): Color {
-        const cur = this.toRgb();
-        return Color.fromRgb({ ...cur, ...rgb });
+        return Color.fromRgb({ ...this.toRgb(), ...rgb });
     }
 
     withHsl(hsl: Partial<Hsl>): Color {
-        const cur = this.toHsl();
-        return Color.fromHsl({ ...cur, ...hsl });
+        return Color.fromHsl({ ...this.toHsl(), ...hsl });
     }
 
     withOklch(lch: Partial<Oklch>): Color {
-        const cur = this.toOklch();
-        return Color.fromOklch({ ...cur, ...lch });
+        return Color.fromOklch({ ...this.toOklch(), ...lch });
     }
 
-    // ── 辅助 ──
+    // ── 工具 ──
 
     equals(other: Color): boolean {
         return this.toHex() === other.toHex();
     }
 
-    /** 转换为 CSS 可用的字符串 */
     toString(): string {
         return this.toHex();
     }
 
-    // ── 私有：gamma 编解码 ──
+    // 私有辅助
+
+    static #clamp(n: number): number {
+        return Math.max(0, Math.min(255, Math.round(n)));
+    }
 
     static #gammaExpand(c: number): number {
         return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
     }
 
     static #gammaCompress(c: number): number {
-        const v = c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055;
-        return v;
-    }
-}
-
-// ═══════════════════════════════════════════
-// 独立工具函数（保持向后兼容）
-// ═══════════════════════════════════════════
-
-function clampByte(n: number): number {
-    return Math.max(0, Math.min(255, Math.round(n)));
-}
-
-function hex2(n: number): string {
-    return clampByte(n).toString(16).padStart(2, "0");
-}
-
-function hue2rgb(p: number, q: number, t: number): number {
-    if (t < 0) t += 1;
-    if (t > 1) t -= 1;
-    if (t < 1 / 6) return p + (q - p) * 6 * t;
-    if (t < 1 / 2) return q;
-    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-    return p;
-}
-
-/** HEX "#ff0000" → RGB { r:255, g:0, b:0 } */
-export function hexToRgb(hex: string): Rgb | null {
-    try {
-        return Color.fromHex(hex).toRgb();
-    } catch {
-        return null;
-    }
-}
-
-/** RGB → "#rrggbb" */
-export function rgbToHex(rgb: Rgb): string {
-    return Color.fromRgb(rgb).toHex();
-}
-
-/** RGB → HSL */
-export function rgbToHsl(rgb: Rgb): Hsl {
-    const r = rgb.r / 255;
-    const g = rgb.g / 255;
-    const b = rgb.b / 255;
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const d = max - min;
-    let h = 0;
-    if (d !== 0) {
-        if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-        else if (max === g) h = ((b - r) / d + 2) / 6;
-        else h = ((r - g) / d + 4) / 6;
-    }
-    const l = (max + min) / 2;
-    const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
-    return {
-        h: Math.round(h * 360),
-        s: Math.round(s * 100),
-        l: Math.round(l * 100),
-    };
-}
-
-/** HSL → RGB */
-export function hslToRgb(hsl: Hsl): Rgb {
-    const h = hsl.h / 360;
-    const s = hsl.s / 100;
-    const l = hsl.l / 100;
-
-    if (s === 0) {
-        const v = Math.round(l * 255);
-        return { r: v, g: v, b: v };
+        return c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055;
     }
 
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    return {
-        r: Math.round(hue2rgb(p, q, h + 1 / 3) * 255),
-        g: Math.round(hue2rgb(p, q, h) * 255),
-        b: Math.round(hue2rgb(p, q, h - 1 / 3) * 255),
-    };
-}
-
-/** OKLAB → RGB */
-export function oklabToRgb(ok: Oklab): Rgb {
-    return Color.fromOklab(ok).toRgb();
-}
-
-/** RGB → OKLAB */
-export function rgbToOklab(rgb: Rgb): Oklab {
-    return Color.fromRgb(rgb).toOklab();
-}
-
-/** 检查并规范化 HEX 字符串 */
-export function normalizeHex(input: string): string | null {
-    let s = input.trim();
-    if (!s.startsWith("#")) s = `#${s}`;
-    if (/^#[a-f\d]{6}$/i.test(s)) return s.toLowerCase();
-    if (/^#[a-f\d]{3}$/i.test(s)) {
-        return (
-            "#" +
-            s[1] + s[1] + s[2] + s[2] + s[3] + s[3]
-        ).toLowerCase();
+    static #hue2rgb(p: number, q: number, t: number): number {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
     }
-    return null;
+
+    static #hslToRgb(hsl: Hsl): Rgb {
+        const h = hsl.h / 360;
+        const s = hsl.s / 100;
+        const l = hsl.l / 100;
+        if (s === 0) {
+            const v = Math.round(l * 255);
+            return { r: v, g: v, b: v };
+        }
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        return {
+            r: Math.round(Color.#hue2rgb(p, q, h + 1 / 3) * 255),
+            g: Math.round(Color.#hue2rgb(p, q, h) * 255),
+            b: Math.round(Color.#hue2rgb(p, q, h - 1 / 3) * 255),
+        };
+    }
+
+    static #rgbToHsl(rgb: Rgb): Hsl {
+        const r = rgb.r / 255;
+        const g = rgb.g / 255;
+        const b = rgb.b / 255;
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const d = max - min;
+        let h = 0;
+        if (d !== 0) {
+            if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+            else if (max === g) h = ((b - r) / d + 2) / 6;
+            else h = ((r - g) / d + 4) / 6;
+        }
+        const l = (max + min) / 2;
+        const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+        return {
+            h: Math.round(h * 360),
+            s: Math.round(s * 100),
+            l: Math.round(l * 100),
+        };
+    }
 }

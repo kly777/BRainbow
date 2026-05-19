@@ -14,9 +14,10 @@ export default function AuthStatus() {
     const [password, setPassword] = createSignal("");
     const [error, setError] = createSignal("");
 
-    // 监听 401 → 自动登出 + 弹出登录框
+    // 监听 401 → 自动登出 + 弹出登录框（已弹出时跳过，避免并发 401 重复触发）
     const onAuthRequired = () => {
         logout();
+        if (showForm()) return;
         setIsRegister(false);
         setError("");
         setName("");

@@ -15,8 +15,20 @@ const API_BASE_URL = "/api";
 /** 登录弹窗事件 —— AuthStatus 监听它自动弹出登录框 */
 export const AUTH_REQUIRED_EVENT = "auth:required";
 
-function triggerAuthRequired(): void {
+let _authFiredAt = 0;
+
+async function triggerAuthRequired(message: string, code: string): Promise<void> {
+    const now = Date.now();
+    if (now - _authFiredAt < 3000) return; // 3 秒内去重，防止并发 401 重复弹窗
+    _authFiredAt = now;
     globalThis.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT));
+    await toast({
+        type: "warning",
+        title: "请先登录",
+        message,
+        details: code,
+        duration: 4000,
+    });
 }
 
 /** 延迟导入避免循环依赖 */
@@ -97,14 +109,7 @@ async function handleGlobalError(
 
     // ── 401 → 登录弹窗 + toast ──
     if (status === 401) {
-        triggerAuthRequired();
-        await toast({
-            type: "warning",
-            title: "请先登录",
-            message,
-            details: code,
-            duration: 4000,
-        });
+        await triggerAuthRequired(message, code);
         return;
     }
 

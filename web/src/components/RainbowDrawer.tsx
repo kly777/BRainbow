@@ -1,6 +1,7 @@
 import { createMemo } from "solid-js";
 import { For } from "solid-js/web";
 import type { Angle } from "../lib/angle.ts";
+import type { Color } from "../lib/color.ts";
 
 type ShapeRender =
     | "auto"
@@ -9,7 +10,7 @@ type ShapeRender =
     | "geometricPrecision";
 
 interface RainbowDrawerProps {
-    colors: Array<string>;
+    colors: Array<Color>;
     angle: Angle;
     squareSize?: number;
     eleSize?: number;
@@ -74,7 +75,7 @@ function RainbowDrawer(props: RainbowDrawerProps) {
                 <title>Rainbow</title>
                 <For each={stripePolygons()}>
                     {({ points }, index) => (
-                        <polygon points={points} fill={props.colors[index()]} />
+                        <polygon points={points} fill={props.colors[index()].toHex()} />
                     )}
                 </For>
             </svg>

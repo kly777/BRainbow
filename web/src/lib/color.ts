@@ -1,39 +1,263 @@
-/** HEX ⇔ RGB ⇔ HSL ⇔ OKLAB 互转工具 */
+/**
+ * 颜色类 — 内部以 CIE XYZ 存储，可按需在不同色彩空间中存取。
+ *
+ *   输入/输出        中转层          内部存储
+ *   ─────────────────────────────────────────────
+ *   Hex  ←→  sRGB  ←→  Linear sRGB  ←→  XYZ
+ *   HSL  ←→  sRGB
+ *   OKLCH ←→ OKLAB ←────────────────────  XYZ
+ */
 
-export interface RGB {
-    r: number; // 0-255
+// ═══════════════════════════════════════════
+// 类型定义
+// ═══════════════════════════════════════════
+
+export interface Rgb {
+    r: number; // 0–255
     g: number;
     b: number;
 }
 
-export interface HSL {
-    h: number; // 0-360
-    s: number; // 0-100
-    l: number; // 0-100
+export interface Hsl {
+    h: number; // 0–360
+    s: number; // 0–100
+    l: number; // 0–100
+}
+
+export interface Xyz {
+    x: number;
+    y: number;
+    z: number;
+}
+
+export interface Oklab {
+    L: number; // 0–1
+    a: number;
+    b: number;
+}
+
+export interface Oklch {
+    L: number; // 0–1
+    C: number;
+    h: number; // 0–360
+}
+
+// ═══════════════════════════════════════════
+// Color 类
+// ═══════════════════════════════════════════
+
+export class Color {
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
+
+    private constructor(x: number, y: number, z: number) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+
+    // ── 工厂方法 ──
+
+    static fromXyz(xyz: Xyz): Color {
+        return new Color(xyz.x, xyz.y, xyz.z);
+    }
+
+    static fromLinearRgb(lr: number, lg: number, lb: number): Color {
+        const x = 0.4124564 * lr + 0.3575761 * lg + 0.1804375 * lb;
+        const y = 0.2126729 * lr + 0.7151522 * lg + 0.0721750 * lb;
+        const z = 0.0193339 * lr + 0.1191920 * lg + 0.9503041 * lb;
+        return new Color(x, y, z);
+    }
+
+    static fromRgb(rgb: Rgb): Color {
+        return Color.fromLinearRgb(
+            Color.#gammaExpand(rgb.r / 255),
+            Color.#gammaExpand(rgb.g / 255),
+            Color.#gammaExpand(rgb.b / 255),
+        );
+    }
+
+    static fromHex(hex: string): Color {
+        const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (!m) throw new Error(`无效的 hex 颜色: ${hex}`);
+        return Color.fromRgb({
+            r: parseInt(m[1], 16),
+            g: parseInt(m[2], 16),
+            b: parseInt(m[3], 16),
+        });
+    }
+
+    static fromHsl(hsl: Hsl): Color {
+        return Color.fromRgb(hslToRgb(hsl));
+    }
+
+    static fromOklab(ok: Oklab): Color {
+        const l_ = ok.L + 0.3963377774 * ok.a + 0.2158037573 * ok.b;
+        const m_ = ok.L - 0.1055613458 * ok.a - 0.0638541728 * ok.b;
+        const s_ = ok.L - 0.0894841775 * ok.a - 1.2914855480 * ok.b;
+
+        const l = l_ ** 3;
+        const m = m_ ** 3;
+        const s = s_ ** 3;
+
+        return Color.fromLinearRgb(
+            4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+            -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+            -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+        );
+    }
+
+    static fromOklch(lch: Oklch): Color {
+        return Color.fromOklab({
+            L: lch.L,
+            a: lch.C * Math.cos((lch.h * Math.PI) / 180),
+            b: lch.C * Math.sin((lch.h * Math.PI) / 180),
+        });
+    }
+
+    // ── 提取方法 ──
+
+    toXyz(): Xyz {
+        return { x: this.x, y: this.y, z: this.z };
+    }
+
+    toLinearRgb(): { r: number; g: number; b: number } {
+        const { x, y, z } = this;
+        return {
+            r: 3.2404542 * x - 1.5371385 * y - 0.4985314 * z,
+            g: -0.9692660 * x + 1.8760108 * y + 0.0415560 * z,
+            b: 0.0556434 * x - 0.2040259 * y + 1.0572252 * z,
+        };
+    }
+
+    toRgb(): Rgb {
+        const lr = this.toLinearRgb();
+        return {
+            r: clampByte(Color.#gammaCompress(lr.r) * 255),
+            g: clampByte(Color.#gammaCompress(lr.g) * 255),
+            b: clampByte(Color.#gammaCompress(lr.b) * 255),
+        };
+    }
+
+    toHex(): string {
+        const rgb = this.toRgb();
+        return (
+            "#" +
+            hex2(rgb.r) +
+            hex2(rgb.g) +
+            hex2(rgb.b)
+        ).toLowerCase();
+    }
+
+    toHsl(): Hsl {
+        return rgbToHsl(this.toRgb());
+    }
+
+    toOklab(): Oklab {
+        const lr = this.toLinearRgb();
+
+        const l = 0.4122214708 * lr.r + 0.5363325363 * lr.g +
+            0.0514459929 * lr.b;
+        const m = 0.2119034982 * lr.r + 0.6806995451 * lr.g +
+            0.1073969566 * lr.b;
+        const s = 0.0883024619 * lr.r + 0.2817188376 * lr.g +
+            0.6299787005 * lr.b;
+
+        return {
+            L: 0.2104542553 * Math.cbrt(l) + 0.7936177850 * Math.cbrt(m) -
+                0.0040720468 * Math.cbrt(s),
+            a: 1.9779984951 * Math.cbrt(l) - 2.4285922050 * Math.cbrt(m) +
+                0.4505937099 * Math.cbrt(s),
+            b: 0.0259040371 * Math.cbrt(l) + 0.7827717662 * Math.cbrt(m) -
+                0.8086757660 * Math.cbrt(s),
+        };
+    }
+
+    toOklch(): Oklch {
+        const ok = this.toOklab();
+        const C = Math.sqrt(ok.a ** 2 + ok.b ** 2);
+        const h = ((Math.atan2(ok.b, ok.a) * 180) / Math.PI + 360) % 360;
+        return { L: ok.L, C, h };
+    }
+
+    // ── 在原地生成新 Color（不可变） ──
+
+    withRgb(rgb: Partial<Rgb>): Color {
+        const cur = this.toRgb();
+        return Color.fromRgb({ ...cur, ...rgb });
+    }
+
+    withHsl(hsl: Partial<Hsl>): Color {
+        const cur = this.toHsl();
+        return Color.fromHsl({ ...cur, ...hsl });
+    }
+
+    withOklch(lch: Partial<Oklch>): Color {
+        const cur = this.toOklch();
+        return Color.fromOklch({ ...cur, ...lch });
+    }
+
+    // ── 辅助 ──
+
+    equals(other: Color): boolean {
+        return this.toHex() === other.toHex();
+    }
+
+    /** 转换为 CSS 可用的字符串 */
+    toString(): string {
+        return this.toHex();
+    }
+
+    // ── 私有：gamma 编解码 ──
+
+    static #gammaExpand(c: number): number {
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    }
+
+    static #gammaCompress(c: number): number {
+        const v = c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055;
+        return v;
+    }
+}
+
+// ═══════════════════════════════════════════
+// 独立工具函数（保持向后兼容）
+// ═══════════════════════════════════════════
+
+function clampByte(n: number): number {
+    return Math.max(0, Math.min(255, Math.round(n)));
+}
+
+function hex2(n: number): string {
+    return clampByte(n).toString(16).padStart(2, "0");
+}
+
+function hue2rgb(p: number, q: number, t: number): number {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
 }
 
 /** HEX "#ff0000" → RGB { r:255, g:0, b:0 } */
-export function hexToRgb(hex: string): RGB | null {
-    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (!m) return null;
-    return {
-        r: parseInt(m[1], 16),
-        g: parseInt(m[2], 16),
-        b: parseInt(m[3], 16),
-    };
+export function hexToRgb(hex: string): Rgb | null {
+    try {
+        return Color.fromHex(hex).toRgb();
+    } catch {
+        return null;
+    }
 }
 
 /** RGB → "#rrggbb" */
-export function rgbToHex(rgb: RGB): string {
-    const toHex = (n: number) =>
-        Math.max(0, Math.min(255, Math.round(n)))
-            .toString(16)
-            .padStart(2, "0");
-    return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
+export function rgbToHex(rgb: Rgb): string {
+    return Color.fromRgb(rgb).toHex();
 }
 
 /** RGB → HSL */
-export function rgbToHsl(rgb: RGB): HSL {
+export function rgbToHsl(rgb: Rgb): Hsl {
     const r = rgb.r / 255;
     const g = rgb.g / 255;
     const b = rgb.b / 255;
@@ -56,7 +280,7 @@ export function rgbToHsl(rgb: RGB): HSL {
 }
 
 /** HSL → RGB */
-export function hslToRgb(hsl: HSL): RGB {
+export function hslToRgb(hsl: Hsl): Rgb {
     const h = hsl.h / 360;
     const s = hsl.s / 100;
     const l = hsl.l / 100;
@@ -75,79 +299,14 @@ export function hslToRgb(hsl: HSL): RGB {
     };
 }
 
-function hue2rgb(p: number, q: number, t: number): number {
-    if (t < 0) t += 1;
-    if (t > 1) t -= 1;
-    if (t < 1 / 6) return p + (q - p) * 6 * t;
-    if (t < 1 / 2) return q;
-    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-    return p;
-}
-
-// ═══════════════════════════════════════════
-// OKLAB（感知均匀色彩空间）
-// ═══════════════════════════════════════════
-
-export interface Oklab {
-    L: number; // 0-1
-    a: number; // ~-0.5..0.5
-    b: number; // ~-0.5..0.5
-}
-
-/** RGB → 线性 sRGB */
-function toLinear(c: number): number {
-    const v = c / 255;
-    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-}
-
-/** 线性 sRGB → sRGB 通道值 (0-255) */
-function fromLinear(c: number): number {
-    const v = c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055;
-    return Math.round(v * 255);
+/** OKLAB → RGB */
+export function oklabToRgb(ok: Oklab): Rgb {
+    return Color.fromOklab(ok).toRgb();
 }
 
 /** RGB → OKLAB */
-export function rgbToOklab(rgb: RGB): Oklab {
-    const rl = toLinear(rgb.r);
-    const gl = toLinear(rgb.g);
-    const bl = toLinear(rgb.b);
-
-    // 线性 sRGB → LMS
-    const l = 0.4122214708 * rl + 0.5363325363 * gl + 0.0514459929 * bl;
-    const m = 0.2119034982 * rl + 0.6806995451 * gl + 0.1073969566 * bl;
-    const s = 0.0883024619 * rl + 0.2817188376 * gl + 0.6299787005 * bl;
-
-    const lCbrt = Math.cbrt(l);
-    const mCbrt = Math.cbrt(m);
-    const sCbrt = Math.cbrt(s);
-
-    return {
-        L: 0.2104542553 * lCbrt + 0.7936177850 * mCbrt - 0.0040720468 * sCbrt,
-        a: 1.9779984951 * lCbrt - 2.4285922050 * mCbrt + 0.4505937099 * sCbrt,
-        b: 0.0259040371 * lCbrt + 0.7827717662 * mCbrt - 0.8086757660 * sCbrt,
-    };
-}
-
-/** OKLAB → RGB */
-export function oklabToRgb(ok: Oklab): RGB {
-    const l_ = ok.L + 0.3963377774 * ok.a + 0.2158037573 * ok.b;
-    const m_ = ok.L - 0.1055613458 * ok.a - 0.0638541728 * ok.b;
-    const s_ = ok.L - 0.0894841775 * ok.a - 1.2914855480 * ok.b;
-
-    const l = l_ ** 3;
-    const m = m_ ** 3;
-    const s = s_ ** 3;
-
-    // LMS → 线性 sRGB
-    const rl = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
-    const gl = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
-    const bl = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
-
-    return {
-        r: Math.max(0, Math.min(255, fromLinear(rl))),
-        g: Math.max(0, Math.min(255, fromLinear(gl))),
-        b: Math.max(0, Math.min(255, fromLinear(bl))),
-    };
+export function rgbToOklab(rgb: Rgb): Oklab {
+    return Color.fromRgb(rgb).toOklab();
 }
 
 /** 检查并规范化 HEX 字符串 */
@@ -155,16 +314,10 @@ export function normalizeHex(input: string): string | null {
     let s = input.trim();
     if (!s.startsWith("#")) s = `#${s}`;
     if (/^#[a-f\d]{6}$/i.test(s)) return s.toLowerCase();
-    // 3 位缩写 → 6 位
     if (/^#[a-f\d]{3}$/i.test(s)) {
         return (
             "#" +
-            s[1] +
-            s[1] +
-            s[2] +
-            s[2] +
-            s[3] +
-            s[3]
+            s[1] + s[1] + s[2] + s[2] + s[3] + s[3]
         ).toLowerCase();
     }
     return null;

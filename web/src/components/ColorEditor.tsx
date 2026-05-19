@@ -5,35 +5,30 @@ import {
     Index,
     type Setter,
 } from "solid-js";
-import {
-    hexToRgb,
-    hslToRgb,
-    normalizeHex,
-    oklabToRgb,
-    rgbToHex,
-    rgbToHsl,
-    rgbToOklab,
-} from "../lib/color.ts";
+import { Color, type Hsl, type Oklch, type Rgb } from "../lib/color.ts";
 import styles from "./ColorEditor.module.css";
 
-type ColorSpace = "hex" | "rgb" | "hsl" | "oklab";
+type ColorSpace = "hex" | "rgb" | "hsl" | "oklch";
 
 interface Props {
-    colors: Accessor<string[]>;
-    setColors: Setter<string[]>;
+    colors: Accessor<Color[]>;
+    setColors: Setter<Color[]>;
 }
 
 const SPACES: { key: ColorSpace; label: string }[] = [
     { key: "hex", label: "HEX" },
     { key: "rgb", label: "RGB" },
     { key: "hsl", label: "HSL" },
-    { key: "oklab", label: "OKLAB" },
+    { key: "oklch", label: "OKLCH" },
 ];
 
-/** 单个颜色行 */
+// ═══════════════════════════════════════════
+// ColorRow — 单色编辑行
+// ═══════════════════════════════════════════
+
 function ColorRow(props: {
-    color: string;
-    onColor: (hex: string) => void;
+    color: Color;
+    onColor: (c: Color) => void;
     onRemove: () => void;
     canRemove: boolean;
 }) {
@@ -41,81 +36,52 @@ function ColorRow(props: {
     let focused = false;
 
     // ── 本地缓冲（所有空间同时持有，切换时无需重新推导） ──
-    const initRgb = () => hexToRgb(props.color) ?? { r: 0, g: 0, b: 0 };
-    const initHsl = () => {
-        const r = hexToRgb(props.color);
-        return r ? rgbToHsl(r) : { h: 0, s: 0, l: 0 };
-    };
+    const initRgb = () => props.color.toRgb();
+    const initHsl = () => props.color.toHsl();
+    const initOklch = () => props.color.toOklch();
 
-    const [hex, setHex] = createSignal(props.color);
+    const [hex, setHex] = createSignal(props.color.toHex());
     const [r, setR] = createSignal(initRgb().r);
     const [g, setG] = createSignal(initRgb().g);
     const [b, setB] = createSignal(initRgb().b);
     const [h, setH] = createSignal(initHsl().h);
     const [s, setS] = createSignal(initHsl().s);
     const [l, setL] = createSignal(initHsl().l);
-
-    const initOklab = () => {
-        const r = hexToRgb(props.color);
-        return r ? rgbToOklab(r) : { L: 0, a: 0, b: 0 };
-    };
-    const [okL, setOkL] = createSignal(initOklab().L * 100);
-    const [okA, setOkA] = createSignal(initOklab().a);
-    const [okB, setOkB] = createSignal(initOklab().b);
+    const [okL, setOkL] = createSignal(initOklch().L);
+    const [okC, setOkC] = createSignal(initOklch().C);
+    const [okH, setOkH] = createSignal(initOklch().h);
 
     // ── 外部变化时同步（仅在失焦时） ──
     createEffect(() => {
-        space(); // 订阅模式切换
-        props.color; // 订阅外部颜色变化
+        space();
+        props.color;
         if (focused) return;
 
-        setHex(props.color);
-        const rgb = hexToRgb(props.color) ?? { r: 0, g: 0, b: 0 };
+        const c = props.color;
+        setHex(c.toHex());
+        const rgb = c.toRgb();
         setR(rgb.r);
         setG(rgb.g);
         setB(rgb.b);
-        const hsl = rgbToHsl(rgb);
+        const hsl = c.toHsl();
         setH(hsl.h);
         setS(hsl.s);
         setL(hsl.l);
-        const ok = rgbToOklab(rgb);
-        setOkL(ok.L * 100);
-        setOkA(ok.a);
-        setOkB(ok.b);
+        const lch = c.toOklch();
+        setOkL(lch.L);
+        setOkC(lch.C);
+        setOkH(lch.h);
     });
 
     // ── 提交 ──
-    const commitHex = (val: string) => {
-        const n = normalizeHex(val);
-        if (n) props.onColor(n);
-    };
-    const commitRgb = (nr: number, ng: number, nb: number) => {
-        props.onColor(rgbToHex({
-            r: Math.max(0, Math.min(255, nr)),
-            g: Math.max(0, Math.min(255, ng)),
-            b: Math.max(0, Math.min(255, nb)),
-        }));
-    };
-    const commitHsl = (nh: number, ns: number, nl: number) => {
-        props.onColor(rgbToHex(hslToRgb({
-            h: ((nh % 360) + 360) % 360,
-            s: Math.max(0, Math.min(100, ns)),
-            l: Math.max(0, Math.min(100, nl)),
-        })));
-    };
-    const commitOklab = (nL: number, na: number, nb: number) => {
-        props.onColor(rgbToHex(oklabToRgb({
-            L: Math.max(0, Math.min(1, nL / 100)),
-            a: na,
-            b: nb,
-        })));
-    };
+    const commit = (c: Color) => props.onColor(c);
 
-    // ── 事件处理 ──
     const onHexInput = (e: Event) => {
         const val = (e.target as HTMLInputElement).value;
         setHex(val);
-        commitHex(val);
+        try {
+            commit(Color.fromHex(val));
+        } catch { /* 忽略无效 hex */ }
     };
 
     const onRgbInput = (ch: "r" | "g" | "b", e: Event) => {
@@ -124,11 +90,9 @@ function ColorRow(props: {
         if (ch === "r") setR(n);
         else if (ch === "g") setG(n);
         else setB(n);
-        commitRgb(
-            ch === "r" ? n : r(),
-            ch === "g" ? n : g(),
-            ch === "b" ? n : b(),
-        );
+        commit(props.color.withRgb({
+            [ch]: Math.max(0, Math.min(255, n)),
+        }));
     };
 
     const onHslInput = (ch: "h" | "s" | "l", e: Event) => {
@@ -137,38 +101,34 @@ function ColorRow(props: {
         if (ch === "h") setH(n);
         else if (ch === "s") setS(n);
         else setL(n);
-        commitHsl(
-            ch === "h" ? n : h(),
-            ch === "s" ? n : s(),
-            ch === "l" ? n : l(),
-        );
+        const hsl: Partial<Hsl> = {};
+        if (ch === "h") hsl.h = ((n % 360) + 360) % 360;
+        else if (ch === "s") hsl.s = Math.max(0, Math.min(100, n));
+        else hsl.l = Math.max(0, Math.min(100, n));
+        commit(props.color.withHsl(hsl));
     };
 
-    const onOklabInput = (ch: "L" | "a" | "b", e: Event) => {
+    const onOklchInput = (ch: "L" | "C" | "h", e: Event) => {
         const n = parseFloat((e.target as HTMLInputElement).value);
         if (Number.isNaN(n)) return;
         if (ch === "L") setOkL(n);
-        else if (ch === "a") setOkA(n);
-        else setOkB(n);
-        commitOklab(
-            ch === "L" ? n : okL(),
-            ch === "a" ? n : okA(),
-            ch === "b" ? n : okB(),
-        );
+        else if (ch === "C") setOkC(n);
+        else setOkH(n);
+        const lch: Partial<Oklch> = {};
+        if (ch === "L") lch.L = Math.max(0, Math.min(1, n));
+        else if (ch === "C") lch.C = Math.max(0, n);
+        else lch.h = ((n % 360) + 360) % 360;
+        commit(props.color.withOklch(lch));
     };
 
-    const onFocus = () => {
-        focused = true;
-    };
-    const onBlur = () => {
-        focused = false;
-    };
+    const onFocus = () => { focused = true; };
+    const onBlur = () => { focused = false; };
 
     return (
         <div class={styles.colorRow}>
             <div
                 class={styles.swatch}
-                style={{ "background-color": props.color }}
+                style={{ "background-color": props.color.toHex() }}
             />
 
             <div class={styles.segmented}>
@@ -195,110 +155,9 @@ function ColorRow(props: {
                     maxLength={7}
                 />
             )}
-            {space() === "rgb" && (
-                <span class={styles.triple}>
-                    <input
-                        class={styles.channel}
-                        type="number"
-                        min="0"
-                        max="255"
-                        value={r()}
-                        onInput={(e) => onRgbInput("r", e)}
-                        onFocus={onFocus}
-                        onBlur={onBlur}
-                    />
-                    <input
-                        class={styles.channel}
-                        type="number"
-                        min="0"
-                        max="255"
-                        value={g()}
-                        onInput={(e) => onRgbInput("g", e)}
-                        onFocus={onFocus}
-                        onBlur={onBlur}
-                    />
-                    <input
-                        class={styles.channel}
-                        type="number"
-                        min="0"
-                        max="255"
-                        value={b()}
-                        onInput={(e) => onRgbInput("b", e)}
-                        onFocus={onFocus}
-                        onBlur={onBlur}
-                    />
-                    <span class={styles.rangeHint}>0–255</span>
-                </span>
-            )}
-            {space() === "hsl" && (
-                <span class={styles.triple}>
-                    <input
-                        class={styles.channel}
-                        type="number"
-                        min="0"
-                        max="360"
-                        value={h()}
-                        onInput={(e) => onHslInput("h", e)}
-                        onFocus={onFocus}
-                        onBlur={onBlur}
-                    />
-                    <input
-                        class={styles.channel}
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={s()}
-                        onInput={(e) => onHslInput("s", e)}
-                        onFocus={onFocus}
-                        onBlur={onBlur}
-                    />
-                    <input
-                        class={styles.channel}
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={l()}
-                        onInput={(e) => onHslInput("l", e)}
-                        onFocus={onFocus}
-                        onBlur={onBlur}
-                    />
-                    <span class={styles.rangeHint}>H:0–360 S/L:0–100</span>
-                </span>
-            )}
-            {space() === "oklab" && (
-                <span class={styles.triple}>
-                    <input
-                        class={styles.channel}
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={okL()}
-                        onInput={(e) => onOklabInput("L", e)}
-                        onFocus={onFocus}
-                        onBlur={onBlur}
-                    />
-                    <input
-                        class={styles.channel}
-                        type="number"
-                        step="0.001"
-                        value={okA()}
-                        onInput={(e) => onOklabInput("a", e)}
-                        onFocus={onFocus}
-                        onBlur={onBlur}
-                    />
-                    <input
-                        class={styles.channel}
-                        type="number"
-                        step="0.001"
-                        value={okB()}
-                        onInput={(e) => onOklabInput("b", e)}
-                        onFocus={onFocus}
-                        onBlur={onBlur}
-                    />
-                    <span class={styles.rangeHint}>L:0–100 a/b:无限制</span>
-                </span>
-            )}
+            {space() === "rgb" && <RgbInputs r={r} g={g} b={b} onInput={onRgbInput} onFocus={onFocus} onBlur={onBlur} />}
+            {space() === "hsl" && <HslInputs h={h} s={s} l={l} onInput={onHslInput} onFocus={onFocus} onBlur={onBlur} />}
+            {space() === "oklch" && <OklchInputs L={okL} C={okC} h={okH} onInput={onOklchInput} onFocus={onFocus} onBlur={onBlur} />}
 
             <button
                 type="button"
@@ -313,13 +172,86 @@ function ColorRow(props: {
     );
 }
 
+// ── 输入行组件 ──
+
+function RgbInputs(props: {
+    r: Accessor<number>;
+    g: Accessor<number>;
+    b: Accessor<number>;
+    onInput: (ch: "r" | "g" | "b", e: Event) => void;
+    onFocus: () => void;
+    onBlur: () => void;
+}) {
+    return (
+        <span class={styles.triple}>
+            <input class={styles.channel} type="number" min="0" max="255" value={props.r()}
+                onInput={(e) => props.onInput("r", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
+            <input class={styles.channel} type="number" min="0" max="255" value={props.g()}
+                onInput={(e) => props.onInput("g", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
+            <input class={styles.channel} type="number" min="0" max="255" value={props.b()}
+                onInput={(e) => props.onInput("b", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
+            <span class={styles.rangeHint}>0–255</span>
+        </span>
+    );
+}
+
+function HslInputs(props: {
+    h: Accessor<number>;
+    s: Accessor<number>;
+    l: Accessor<number>;
+    onInput: (ch: "h" | "s" | "l", e: Event) => void;
+    onFocus: () => void;
+    onBlur: () => void;
+}) {
+    return (
+        <span class={styles.triple}>
+            <input class={styles.channel} type="number" min="0" max="360" value={props.h()}
+                onInput={(e) => props.onInput("h", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
+            <input class={styles.channel} type="number" min="0" max="100" value={props.s()}
+                onInput={(e) => props.onInput("s", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
+            <input class={styles.channel} type="number" min="0" max="100" value={props.l()}
+                onInput={(e) => props.onInput("l", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
+            <span class={styles.rangeHint}>H:0–360 S/L:0–100</span>
+        </span>
+    );
+}
+
+function OklchInputs(props: {
+    L: Accessor<number>;
+    C: Accessor<number>;
+    h: Accessor<number>;
+    onInput: (ch: "L" | "C" | "h", e: Event) => void;
+    onFocus: () => void;
+    onBlur: () => void;
+}) {
+    return (
+        <span class={styles.triple}>
+            <input class={styles.channel} type="number" min="0" max="1" step="0.001" value={props.L()}
+                onInput={(e) => props.onInput("L", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
+            <input class={styles.channel} type="number" min="0" step="0.001" value={props.C()}
+                onInput={(e) => props.onInput("C", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
+            <input class={styles.channel} type="number" min="0" max="360" step="0.1" value={props.h()}
+                onInput={(e) => props.onInput("h", e)} onFocus={props.onFocus} onBlur={props.onBlur} />
+            <span class={styles.rangeHint}>L:0–1 C:≥0 h:0–360</span>
+        </span>
+    );
+}
+
+// ═══════════════════════════════════════════
+// ColorEditor — 主组件
+// ═══════════════════════════════════════════
+
 export default function ColorEditor(props: Props) {
     const addColor = () => {
-        props.setColors((prev) => [...prev, randomPastel()]);
+        const h = Math.random() * 360;
+        props.setColors((prev) => [
+            ...prev,
+            Color.fromOklch({ L: 0.65, C: 0.15, h }),
+        ]);
     };
 
-    const updateColor = (idx: number, hex: string) => {
-        props.setColors((prev) => prev.map((c, i) => (i === idx ? hex : c)));
+    const updateColor = (idx: number, c: Color) => {
+        props.setColors((prev) => prev.map((col, i) => (i === idx ? c : col)));
     };
 
     const removeColor = (idx: number) => {
@@ -334,7 +266,7 @@ export default function ColorEditor(props: Props) {
                     {(color, idx) => (
                         <ColorRow
                             color={color()}
-                            onColor={(hex) => updateColor(idx, hex)}
+                            onColor={(c) => updateColor(idx, c)}
                             onRemove={() => removeColor(idx)}
                             canRemove={props.colors().length > 1}
                         />
@@ -346,9 +278,4 @@ export default function ColorEditor(props: Props) {
             </button>
         </fieldset>
     );
-}
-
-function randomPastel(): string {
-    const h = Math.floor(Math.random() * 360);
-    return rgbToHex(hslToRgb({ h, s: 60, l: 65 }));
 }

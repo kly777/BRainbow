@@ -1,18 +1,26 @@
+import { Effect } from "effect";
+
 /**
- * 内部以 CIE XYZ 存储，可按需在不同色彩空间中存取。
+ * 颜色类 — 内部以 CIE XYZ 存储。
+ * 可能失败的操作（如 parse hex）返回 Effect，不抛异常。
  *
+ *   输入/输出        中转层          内部存储
+ *   ─────────────────────────────────────────────
+ *   Hex  ←→  sRGB  ←→  Linear sRGB  ←→  XYZ
+ *   HSL  ←→  sRGB
+ *   OKLCH ←→ OKLAB ←────────────────────  XYZ
  */
 
 export interface Rgb {
-    r: number; // 0–255
+    r: number;
     g: number;
     b: number;
 }
 
 export interface Hsl {
-    h: number; // 0–360
-    s: number; // 0–100
-    l: number; // 0–100
+    h: number;
+    s: number;
+    l: number;
 }
 
 export interface Xyz {
@@ -22,15 +30,15 @@ export interface Xyz {
 }
 
 export interface Oklab {
-    L: number; // 0–1
+    L: number;
     a: number;
     b: number;
 }
 
 export interface Oklch {
-    L: number; // 0–1
-    C: number; // ≥0
-    h: number; // 0–360
+    L: number;
+    C: number;
+    h: number;
 }
 
 export class Color {
@@ -43,6 +51,8 @@ export class Color {
         this.y = y;
         this.z = z;
     }
+
+    // ── 工厂 ──
 
     static fromXyz(xyz: Xyz): Color {
         return new Color(xyz.x, xyz.y, xyz.z);
@@ -63,13 +73,11 @@ export class Color {
         );
     }
 
-    static fromHex(hex: string): Color {
-        const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        if (!m) throw new Error(`无效的 hex: ${hex}`);
-        return Color.fromRgb({
-            r: parseInt(m[1], 16),
-            g: parseInt(m[2], 16),
-            b: parseInt(m[3], 16),
+    static fromHex(hex: string): Effect.Effect<Color, Error> {
+        return Effect.try({
+            try: () => Color.#parseHex(hex),
+            catch: (e) =>
+                e instanceof Error ? e : new Error(`无效的 hex: ${hex}`),
         });
     }
 
@@ -80,10 +88,8 @@ export class Color {
     static fromOklab(ok: Oklab): Color {
         const l_ = ok.L + 0.3963377774 * ok.a + 0.2158037573 * ok.b;
         const m_ = ok.L - 0.1055613458 * ok.a - 0.0638541728 * ok.b;
-        const s_ = ok.L - 0.0894841775 * ok.a - 1.291485548 * ok.b;
-        const l = l_ ** 3;
-        const m = m_ ** 3;
-        const s = s_ ** 3;
+        const s_ = ok.L - 0.0894841775 * ok.a - 1.2914855480 * ok.b;
+        const l = l_ ** 3, m = m_ ** 3, s = s_ ** 3;
         return Color.fromLinearRgb(
             4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
             -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
@@ -125,7 +131,8 @@ export class Color {
 
     toHex(): string {
         const rgb = this.toRgb();
-        const h = (n: number) => Color.#clamp(n).toString(16).padStart(2, "0");
+        const h = (n: number) =>
+            Color.#clamp(n).toString(16).padStart(2, "0");
         return `#${h(rgb.r)}${h(rgb.g)}${h(rgb.b)}`;
     }
 
@@ -135,25 +142,19 @@ export class Color {
 
     toOklab(): Oklab {
         const lr = this.toLinearRgb();
-        const l =
-            0.4122214708 * lr.r + 0.5363325363 * lr.g + 0.0514459929 * lr.b;
-        const m =
-            0.2119034982 * lr.r + 0.6806995451 * lr.g + 0.1073969566 * lr.b;
-        const s =
-            0.0883024619 * lr.r + 0.2817188376 * lr.g + 0.6299787005 * lr.b;
+        const l = 0.4122214708 * lr.r + 0.5363325363 * lr.g +
+            0.0514459929 * lr.b;
+        const m = 0.2119034982 * lr.r + 0.6806995451 * lr.g +
+            0.1073969566 * lr.b;
+        const s = 0.0883024619 * lr.r + 0.2817188376 * lr.g +
+            0.6299787005 * lr.b;
         return {
-            L:
-                0.2104542553 * Math.cbrt(l) +
-                0.793617785 * Math.cbrt(m) -
+            L: 0.2104542553 * Math.cbrt(l) + 0.7936177850 * Math.cbrt(m) -
                 0.0040720468 * Math.cbrt(s),
-            a:
-                1.9779984951 * Math.cbrt(l) -
-                2.428592205 * Math.cbrt(m) +
+            a: 1.9779984951 * Math.cbrt(l) - 2.4285922050 * Math.cbrt(m) +
                 0.4505937099 * Math.cbrt(s),
-            b:
-                0.0259040371 * Math.cbrt(l) +
-                0.7827717662 * Math.cbrt(m) -
-                0.808675766 * Math.cbrt(s),
+            b: 0.0259040371 * Math.cbrt(l) + 0.7827717662 * Math.cbrt(m) -
+                0.8086757660 * Math.cbrt(s),
         };
     }
 
@@ -178,8 +179,6 @@ export class Color {
         return Color.fromOklch({ ...this.toOklch(), ...lch });
     }
 
-    // ── 工具 ──
-
     equals(other: Color): boolean {
         return this.toHex() === other.toHex();
     }
@@ -188,7 +187,19 @@ export class Color {
         return this.toHex();
     }
 
-    // 私有辅助
+    // ═══════════════════════════════
+    // 私有
+    // ═══════════════════════════════
+
+    static #parseHex(hex: string): Color {
+        const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (!m) throw new Error(`无效的 hex: ${hex}`);
+        return Color.fromRgb({
+            r: parseInt(m[1], 16),
+            g: parseInt(m[2], 16),
+            b: parseInt(m[3], 16),
+        });
+    }
 
     static #clamp(n: number): number {
         return Math.max(0, Math.min(255, Math.round(n)));
@@ -212,9 +223,7 @@ export class Color {
     }
 
     static #hslToRgb(hsl: Hsl): Rgb {
-        const h = hsl.h / 360;
-        const s = hsl.s / 100;
-        const l = hsl.l / 100;
+        const h = hsl.h / 360, s = hsl.s / 100, l = hsl.l / 100;
         if (s === 0) {
             const v = Math.round(l * 255);
             return { r: v, g: v, b: v };
@@ -229,11 +238,8 @@ export class Color {
     }
 
     static #rgbToHsl(rgb: Rgb): Hsl {
-        const r = rgb.r / 255;
-        const g = rgb.g / 255;
-        const b = rgb.b / 255;
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
+        const r = rgb.r / 255, g = rgb.g / 255, b = rgb.b / 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
         const d = max - min;
         let h = 0;
         if (d !== 0) {
@@ -249,4 +255,9 @@ export class Color {
             l: Math.round(l * 100),
         };
     }
+}
+
+/** Effect.runSync 的便捷包装：解析已知有效的 hex */
+export function hexColor(hex: string): Color {
+    return Effect.runSync(Color.fromHex(hex));
 }

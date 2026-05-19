@@ -6,7 +6,14 @@ TARGET_ARCH := x86_64-unknown-linux-gnu
 SSH_TARGET := $(REMOTE_USER)@$(REMOTE_HOST)
 time := $(shell date +%y%m%d_%H%M%S)
 
-.PHONY: clean deploy status db-pull db-push logs rollback
+.PHONY: clean deploy status db-pull db-push logs rollback fmt
+
+fmt:
+	cargo fmt
+	cd web && deno task fmt
+	cd ..
+
+
 
 build: clean
 	cd web && deno task build

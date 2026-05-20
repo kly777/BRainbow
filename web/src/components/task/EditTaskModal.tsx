@@ -76,7 +76,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
     );
 
     // 加载详情（含依赖）
-    const [detail, { error: detailError }] = createResource(
+    const [detail] = createResource(
         () => (props.isOpen && props.task?.id ? props.task.id : null),
         async (taskId: number) => {
             const d = await Effect.runPromise(getTaskDetail(taskId));
@@ -664,9 +664,9 @@ export default function EditTaskModal(props: EditTaskModalProps) {
                 {/* 依赖关系 Tab */}
                 <Show when={activeTab() === "deps"}>
                     <div class={styles.tabContent}>
-                        <Show when={detailError}>
+                        <Show when={detail.error}>
                             <div class={styles.errorMsg}>
-                                加载详情失败: {getErrorMessage(detailError)}
+                                加载详情失败: {getErrorMessage(detail.error)}
                             </div>
                         </Show>
                         {/* 已有依赖 */}

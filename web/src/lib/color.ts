@@ -1,4 +1,4 @@
-import { Effect, Exit } from "effect";
+import { Effect } from "effect";
 
 /**
  * 颜色类 — 内部以 CIE XYZ 存储。

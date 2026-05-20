@@ -1,0 +1,10 @@
+{
+    "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
+    "files": {
+        "ignoreUnknown": true,
+        "includes": ["src/**"]
+    },
+    "linter": {
+        "enabled": true
+    }
+}

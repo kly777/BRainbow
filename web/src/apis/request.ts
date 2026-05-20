@@ -17,7 +17,10 @@ export const AUTH_REQUIRED_EVENT = "auth:required";
 
 let _authFiredAt = 0;
 
-async function triggerAuthRequired(message: string, code: string): Promise<void> {
+async function triggerAuthRequired(
+    message: string,
+    code: string,
+): Promise<void> {
     const now = Date.now();
     if (now - _authFiredAt < 3000) return; // 3 秒内去重，防止并发 401 重复弹窗
     _authFiredAt = now;

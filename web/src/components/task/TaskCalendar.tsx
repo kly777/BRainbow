@@ -89,7 +89,8 @@ export default function TaskCalendar() {
     });
 
     const getEventsForDate = (date: Date): readonly CalendarEvent[] => {
-        const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+        const key =
+            `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
         return eventsByDate().get(key) ?? [];
     };
 
@@ -130,9 +131,7 @@ export default function TaskCalendar() {
                         <div
                             class={`${styles.calendarDay} ${
                                 date
-                                    ? isSameDay(date, today)
-                                        ? styles.today
-                                        : ""
+                                    ? isSameDay(date, today) ? styles.today : ""
                                     : styles.empty
                             }`}
                         >

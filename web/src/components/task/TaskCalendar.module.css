@@ -71,6 +71,17 @@
     font-size: 14px;
 }
 
+/* 今天高亮 */
+.calendarDay.today {
+    background: var(--color-accent-subtle);
+    box-shadow: inset 0 0 0 2px var(--color-accent);
+    border-radius: 4px;
+}
+
+.calendarDay.today .dayNumber {
+    color: var(--color-accent);
+}
+
 .dayTasks {
     display: flex;
     flex-direction: column;

@@ -16,8 +16,15 @@ function getWindowTypeColor(wt: string): string {
     return windowTypeColors[wt] || windowTypeColors.planned || "";
 }
 
+function isSameDay(a: Date, b: Date): boolean {
+    return a.getFullYear() === b.getFullYear() &&
+        a.getMonth() === b.getMonth() &&
+        a.getDate() === b.getDate();
+}
+
 export default function TaskCalendar() {
     const [currentDate, setCurrentDate] = createSignal<Date>(new Date());
+    const today = new Date();
 
     // 计算当前月份的范围
     const monthRange = createMemo(() => {
@@ -122,7 +129,11 @@ export default function TaskCalendar() {
                     {(date) => (
                         <div
                             class={`${styles.calendarDay} ${
-                                date ? "" : styles.empty
+                                date
+                                    ? isSameDay(date, today)
+                                        ? styles.today
+                                        : ""
+                                    : styles.empty
                             }`}
                         >
                             <Show when={date !== null}>

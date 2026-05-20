@@ -105,7 +105,7 @@ function TaskItem(props: TaskItemProps) {
                         value={props.task.status || TaskStatus.BACKLOG}
                         onChange={(e) =>
                             props.onStatusChange(
-                                props.task.id || 0,
+                                props.task.id,
                                 e.currentTarget.value,
                             )}
                         class={styles.statusSelect}
@@ -125,7 +125,7 @@ function TaskItem(props: TaskItemProps) {
                     </button>
                     <button
                         type="button"
-                        onClick={() => props.onDelete(props.task.id || 0)}
+                        onClick={() => props.onDelete(props.task.id)}
                         class={styles.deleteButton}
                         title="删除"
                     >

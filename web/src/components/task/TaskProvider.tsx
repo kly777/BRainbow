@@ -238,6 +238,24 @@ export function TaskProvider(props: { children: JSX.Element }) {
 
 export function useTasks() {
     const ctx = useContext(TaskCtx);
-    if (!ctx) throw new Error("useTasks must be used within <TaskProvider>");
+    if (!ctx) {
+        console.error("useTasks: 组件未包裹在 TaskProvider 内");
+        const empty: Task[] = [];
+        const zero = { backlog: 0, active: 0, completed: 0, archived: 0 };
+        return {
+            tasks: () => empty,
+            loading: () => false,
+            stats: () => zero,
+            add: async () => null,
+            reload: async () => {},
+            reloadStats: async () => {},
+            updateStatus: async () => {},
+            removeTask: async () => {},
+            updateTask: async () => {},
+            addSubTask: async () => {},
+            filterByStatus: async () => {},
+            search: async () => {},
+        };
+    }
     return ctx;
 }

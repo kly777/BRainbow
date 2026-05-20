@@ -49,38 +49,41 @@ export default function TaskCalendar() {
         setCurrentDate(newDate);
     };
 
-    // 获取当前月份的天数（响应式）
+    // 获取当前月份的天数
     const daysInMonth = createMemo(() => {
         const date = currentDate();
         const year = date.getFullYear();
         const month = date.getMonth();
         const firstDay = new Date(year, month, 1);
         const lastDay = new Date(year, month + 1, 0);
-        const daysInMonthCount = lastDay.getDate();
-        const startDayOfWeek = firstDay.getDay();
+        const count = lastDay.getDate();
+        const startDow = firstDay.getDay();
 
         const days: (Date | null)[] = [];
-        for (let i = 0; i < startDayOfWeek; i++) {
-            days.push(null);
-        }
-        for (let i = 1; i <= daysInMonthCount; i++) {
-            days.push(new Date(year, month, i));
-        }
+        for (let i = 0; i < startDow; i++) days.push(null);
+        for (let i = 1; i <= count; i++) days.push(new Date(year, month, i));
+        while (days.length % 7 !== 0) days.push(null);
         return days;
     });
 
-    // 获取指定日期的日历事件
-    const getEventsForDate = (date: Date): readonly CalendarEvent[] => {
+    // 事件按日期预建索引（O(N) 一次，O(1) 查）
+    const eventsByDate = createMemo(() => {
+        const map = new Map<string, CalendarEvent[]>();
         const evts = events();
-        if (!evts) return [];
-        return evts.filter((ev) => {
-            const evStart = new Date(ev.start);
-            return (
-                evStart.getFullYear() === date.getFullYear() &&
-                evStart.getMonth() === date.getMonth() &&
-                evStart.getDate() === date.getDate()
-            );
-        });
+        if (!evts) return map;
+        for (const ev of evts) {
+            const d = new Date(ev.start);
+            const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+            const list = map.get(key);
+            if (list) list.push(ev);
+            else map.set(key, [ev]);
+        }
+        return map;
+    });
+
+    const getEventsForDate = (date: Date): readonly CalendarEvent[] => {
+        const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+        return eventsByDate().get(key) ?? [];
     };
 
     return (

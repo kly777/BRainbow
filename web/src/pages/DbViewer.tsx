@@ -41,7 +41,7 @@ const DB: Component = () => {
     onMount(() => loadTables());
 
     return (
-        <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
+        <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
             <div
                 style={{
                     width: "180px",

@@ -1,0 +1,166 @@
+/* ── 容器（悬浮定位，形态不变） ── */
+.bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── 收起态触发器 ── */
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  border: 1px solid var(--c-border, #e8dfcc);
+  border-radius: 12px;
+  background: var(--c-bg-card, #fffef9);
+  color: var(--c-text-muted, #9b8e7a);
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+
+.trigger:hover {
+  border-color: var(--c-primary, #3b82f6);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.12);
+}
+
+.triggerHint {
+  font-size: 13px;
+}
+
+.kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--c-border, #e8dfcc);
+  border-radius: 4px;
+  background: var(--c-bg-subtle, #f8f3e6);
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--c-text-secondary, #6b5e4a);
+}
+
+/* ── 展开态包裹 ── */
+.inputWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 340px;
+  max-width: 480px;
+}
+
+/* ── 建议列表（向上弹出） ── */
+.suggestions {
+  background: var(--c-bg-card, #fffef9);
+  border: 1px solid var(--c-border, #e8dfcc);
+  border-radius: 10px;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+  margin-bottom: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.suggestionItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  transition: background 0.1s;
+}
+
+.suggestionItem:hover {
+  background: var(--c-bg-subtle, #f8f3e6);
+}
+
+.sugLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text, #3d3629);
+  min-width: 60px;
+}
+
+.sugDesc {
+  font-size: 13px;
+  color: var(--c-text-secondary, #6b5e4a);
+  flex: 1;
+}
+
+.sugPath {
+  font-size: 12px;
+  font-family: monospace;
+  color: var(--c-text-muted, #9b8e7a);
+}
+
+.empty {
+  padding: 12px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--c-text-muted, #9b8e7a);
+}
+
+.searchHint {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--c-text-secondary, #6b5e4a);
+}
+
+.searchHint kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--c-border, #e8dfcc);
+  border-radius: 4px;
+  background: var(--c-bg-subtle, #f8f3e6);
+  font-family: monospace;
+  font-size: 11px;
+}
+
+/* ── 输入行（底部栏） ── */
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid var(--c-primary, #3b82f6);
+  border-radius: 12px;
+  background: var(--c-bg-card, #fffef9);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.prefix {
+  font-size: 18px;
+  color: var(--c-primary, #3b82f6);
+  font-weight: 600;
+  min-width: 14px;
+  text-align: center;
+}
+
+.input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: var(--c-text, #3d3629);
+  caret-color: var(--c-primary, #3b82f6);
+}
+
+.input::placeholder {
+  color: var(--c-text-muted, #9b8e7a);
+  font-size: 13px;
+}

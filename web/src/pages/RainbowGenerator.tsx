@@ -28,7 +28,7 @@ function RainbowGenerator() {
     const squareSize = 10240;
     const exportSize = 400;
 
-    const [angle, setAngle] = createSignal<Angle>(new Angle(Math.PI * (1 / 9)));
+    const [angle, setAngle] = createSignal<Angle>(new Angle(Math.PI * (43.5/360)));
 
     const [shapeRender, setShapeRender] = createSignal<ShapeRender>(
         "geometricPrecision",

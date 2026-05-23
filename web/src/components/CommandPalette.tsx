@@ -1,22 +1,7 @@
 import { createSignal, onCleanup, onMount } from "solid-js";
 import { useNavigate } from "@solidjs/router";
+import { NAV_ROUTES } from "../routes.ts";
 import styles from "./CommandPalette.module.css";
-
-interface Match {
-  label: string;
-  desc: string;
-  path: string;
-}
-
-const ROUTES: Match[] = [
-  { label: "主页", desc: "首页面板", path: "/" },
-  { label: "任务", desc: "任务管理", path: "/t" },
-  { label: "卡片", desc: "知识卡片浏览", path: "/c" },
-  { label: "图片", desc: "图片管理", path: "/i" },
-  { label: "本体", desc: "本体与符号系统", path: "/o" },
-  { label: "数据库", desc: "管理员数据库查看", path: "/db" },
-  { label: "彩虹生成器", desc: "Rainbow Generator", path: "/rd" },
-];
 
 const DUCK = "https://duckduckgo.com/?q=";
 const BING = "https://www.bing.com/search?q=";
@@ -55,7 +40,7 @@ export default function CommandPalette() {
 
   const matches = () =>
     isNav()
-      ? ROUTES.filter(
+      ? NAV_ROUTES.filter(
           (r) =>
             r.label.includes(queryText()) ||
             r.desc.includes(queryText()) ||

@@ -1,40 +1,99 @@
 import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { NAV_ROUTES } from "../routes.ts";
-import {
-    AUTH_REQUIRED_EVENT,
-} from "../apis/request.ts";
+import { AUTH_REQUIRED_EVENT } from "../apis/request.ts";
 import { useAuth } from "../auth/context.tsx";
 import styles from "./CommandPalette.module.css";
 
-const DUCK = "https://duckduckgo.com/?q=";
 const BING = "https://www.bing.com/search?q=";
-
-let _cachedEngine = BING;
-
-function getEngine(): string {
-    return _cachedEngine;
-}
+const DUCK = "https://duckduckgo.com/?q=";
+let _engine = BING;
 
 function probeDuck() {
     const img = new Image();
     img.onload = () => {
-        _cachedEngine = DUCK;
+        _engine = DUCK;
     };
     img.src = "https://duckduckgo.com/favicon.ico";
 }
 
-function search(query: string) {
-    globalThis.open(
-        `${getEngine()}${encodeURIComponent(query.trim())}`,
-        "_blank",
+function searchWeb(query: string) {
+    globalThis.open(`${_engine}${encodeURIComponent(query.trim())}`, "_blank");
+}
+
+type Mode = "idle" | "nav" | "search" | "cmd";
+
+const MODE_PREFIX: Record<Mode, string> = {
+    idle: "",
+    nav: "/",
+    search: "?",
+    cmd: ":",
+};
+
+const MODE_PLACEHOLDER: Record<Mode, string> = {
+    idle: "输入 / 导航  ? 搜索  : 指令",
+    nav: "输入路由名称…",
+    search: "输入搜索关键词…",
+    cmd: "输入指令…",
+};
+
+function detectMode(value: string): Mode {
+    if (value.startsWith("/")) return "nav";
+    if (value.startsWith("?")) return "search";
+    if (value.startsWith(":")) return "cmd";
+    return "idle";
+}
+
+/** 全局按键 → 模式映射 */
+const KEY_TO_PREFIX: Record<string, string> = {
+    "/": "/",
+    "?": "?",
+    "：": "?", // 全角
+    ":": ":",
+};
+
+interface Suggestion {
+    label: string;
+    desc: string;
+    extra?: string;
+    onSelect: () => void;
+}
+
+function SuggestionList(props: { items: Suggestion[] }) {
+    return (
+        <div class={styles.suggestions}>
+            {props.items.map((s) => (
+                <button
+                    type="button"
+                    class={styles.suggestionItem}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={s.onSelect}
+                >
+                    <span class={styles.sugLabel}>{s.label}</span>
+                    <span class={styles.sugDesc}>{s.desc}</span>
+                    {s.extra && <span class={styles.sugPath}>{s.extra}</span>}
+                </button>
+            ))}
+        </div>
     );
 }
 
-interface Command {
-    label: string;
-    desc: string;
-    action: () => void;
+function EmptyState(props: { text: string }) {
+    return (
+        <div class={styles.suggestions}>
+            <div class={styles.empty}>{props.text}</div>
+        </div>
+    );
+}
+
+function SearchHint(props: { query: string }) {
+    return (
+        <div class={styles.suggestions}>
+            <div class={styles.searchHint}>
+                <kbd>Enter</kbd> 搜索 「{props.query}」
+            </div>
+        </div>
+    );
 }
 
 export default function CommandPalette() {
@@ -46,76 +105,97 @@ export default function CommandPalette() {
     let inputRef!: HTMLInputElement;
     let barRef!: HTMLDivElement;
 
-    const isNav = () => value().startsWith("/");
-    const isSearch = () => value().startsWith("?");
-    const isCmd = () => value().startsWith(":");
-    const queryText = () => value().slice(1);
+    // ── 派生状态 ──
 
-    // ── 命令列表 ──
-    const commands = createMemo<Command[]>(() => {
-        const list: Command[] = [];
+    const mode = () => detectMode(value());
+    const query = () => value().slice(1);
+
+    // ── 命令 ──
+
+    const commands = createMemo(() => {
         if (!auth().user) {
-            list.push({
-                label: ":login",
-                desc: "登录",
-                action: () =>
-                    globalThis.dispatchEvent(
-                        new CustomEvent(AUTH_REQUIRED_EVENT),
-                    ),
-            });
-        } else {
-            list.push({
+            return [
+                {
+                    label: ":login",
+                    desc: "登录",
+                    action: () =>
+                        globalThis.dispatchEvent(
+                            new CustomEvent(AUTH_REQUIRED_EVENT),
+                        ),
+                },
+            ];
+        }
+        return [
+            {
                 label: ":logout",
                 desc: "退出登录",
                 action: () => logout(),
-            });
-        }
-        return list;
+            },
+        ];
     });
 
-    const navMatches = () =>
-        isNav()
-            ? NAV_ROUTES.filter(
-                (r) =>
-                    r.label.includes(queryText()) ||
-                    r.desc.includes(queryText()) ||
-                    r.path.slice(1).includes(queryText()),
-            )
-            : [];
+    // ── 匹配 ──
 
-    const cmdMatches = () =>
-        isCmd()
-            ? commands().filter(
-                (c) =>
-                    c.label.slice(1).includes(queryText()) ||
-                    c.desc.includes(queryText()),
-            )
-            : [];
+    const navItems = createMemo<Suggestion[]>(() => {
+        if (mode() !== "nav") return [];
+        const q = query();
+        return NAV_ROUTES.filter(
+            (r) =>
+                r.label.includes(q) ||
+                r.desc.includes(q) ||
+                r.path.slice(1).includes(q),
+        ).map((r) => ({
+            label: r.label,
+            desc: r.desc,
+            extra: r.path,
+            onSelect: () => {
+                navigate(r.path);
+                close();
+            },
+        }));
+    });
+
+    const cmdItems = createMemo<Suggestion[]>(() => {
+        if (mode() !== "cmd") return [];
+        const q = query();
+        return commands()
+            .filter((c) => c.label.slice(1).includes(q) || c.desc.includes(q))
+            .map((c) => ({
+                label: c.label,
+                desc: c.desc,
+                onSelect: () => {
+                    c.action();
+                    close();
+                },
+            }));
+    });
+
+    // ── 提交 ──
 
     const commit = () => {
-        if (isSearch() && queryText()) {
-            search(queryText());
-        } else if (isNav() && navMatches().length > 0) {
-            navigate(navMatches()[0].path);
-        } else if (isCmd() && cmdMatches().length > 0) {
-            cmdMatches()[0].action();
+        switch (mode()) {
+            case "search":
+                if (query()) searchWeb(query());
+                break;
+            case "nav":
+                if (navItems().length > 0) navItems()[0].onSelect();
+                break;
+            case "cmd":
+                if (cmdItems().length > 0) cmdItems()[0].onSelect();
+                break;
         }
         close();
     };
 
-    const onKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Escape") close();
-        if (e.key === "Enter") commit();
-    };
+    // ── 面板开关 ──
 
-    const openPalette = (initial = "") => {
+    const openPalette = (prefix = "") => {
         setOpen(true);
-        setValue(initial);
+        setValue(prefix);
         setTimeout(() => {
             inputRef?.focus();
-            if (initial) {
-                inputRef?.setSelectionRange(initial.length, initial.length);
-            }
+            if (prefix)
+                inputRef?.setSelectionRange(prefix.length, prefix.length);
         }, 0);
     };
 
@@ -128,29 +208,34 @@ export default function CommandPalette() {
         if (!barRef.contains(e.relatedTarget as Node)) close();
     };
 
-    // 全局快捷键
+    const onInputKey = (e: KeyboardEvent) => {
+        if (e.key === "Escape") close();
+        if (e.key === "Enter") commit();
+    };
+
+    // ── 全局快捷键 ──
+
     const globalKey = (e: KeyboardEvent) => {
+        // Ctrl+K
         if ((e.metaKey || e.ctrlKey) && e.key === "k") {
             e.preventDefault();
             openPalette();
             return;
         }
 
+        // 不在输入框内时，触发字符直接打开对应模式
         const tag = (e.target as HTMLElement)?.tagName;
-        const isInput =
-            tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" ||
+        const inInput =
+            tag === "INPUT" ||
+            tag === "TEXTAREA" ||
+            tag === "SELECT" ||
             (e.target as HTMLElement)?.isContentEditable;
-        if (isInput || e.altKey || e.ctrlKey || e.metaKey) return;
+        if (inInput || e.altKey || e.ctrlKey || e.metaKey) return;
 
-        if (e.key === "/") {
+        const prefix = KEY_TO_PREFIX[e.key];
+        if (prefix) {
             e.preventDefault();
-            openPalette("/");
-        } else if (e.key === "?" || e.key === "？") {
-            e.preventDefault();
-            openPalette("?");
-        } else if (e.key === ":") {
-            e.preventDefault();
-            openPalette(":");
+            openPalette(prefix);
         }
     };
 
@@ -160,15 +245,31 @@ export default function CommandPalette() {
     });
     onCleanup(() => globalThis.removeEventListener("keydown", globalKey));
 
-    const prefix = () =>
-        isNav() ? "/" : isSearch() ? "?" : isCmd() ? ":" : "";
+    // ── 建议面板 ──
 
-    const placeholder = () => {
-        if (isNav()) return "输入路由名称…";
-        if (isSearch()) return "输入搜索关键词…";
-        if (isCmd()) return "输入指令…";
-        return "输入 / 导航  ? 搜索  : 指令";
+    const ActionPanel = () => {
+        const m = mode();
+        const q = query();
+
+        if (m === "nav") {
+            if (navItems().length > 0)
+                return <SuggestionList items={navItems()} />;
+            if (q) return <EmptyState text="未匹配" />;
+        }
+
+        if (m === "cmd") {
+            if (cmdItems().length > 0)
+                return <SuggestionList items={cmdItems()} />;
+            if (q)
+                return <EmptyState text={auth().user ? "已登录" : "未登录"} />;
+        }
+
+        if (m === "search" && q) return <SearchHint query={q} />;
+
+        return null;
     };
+
+    // ── 渲染 ──
 
     return (
         <div
@@ -177,7 +278,22 @@ export default function CommandPalette() {
             classList={{ [styles.barOpen]: open() }}
             onFocusOut={onBarBlur}
         >
-            {!open() ? (
+            {open() ? (
+                <div class={styles.inputWrap}>
+                    {ActionPanel()}
+                    <div class={styles.inputRow}>
+                        <span class={styles.prefix}>{MODE_PREFIX[mode()]}</span>
+                        <input
+                            ref={inputRef}
+                            class={styles.input}
+                            placeholder={MODE_PLACEHOLDER[mode()]}
+                            value={value()}
+                            onInput={(e) => setValue(e.currentTarget.value)}
+                            onKeyDown={onInputKey}
+                        />
+                    </div>
+                </div>
+            ) : (
                 <button
                     type="button"
                     class={styles.trigger}
@@ -189,95 +305,6 @@ export default function CommandPalette() {
                     </span>
                     <kbd class={styles.kbd}>Ctrl+K</kbd>
                 </button>
-            ) : (
-                <div class={styles.inputWrap}>
-                    {/* 导航建议 */}
-                    {isNav() && navMatches().length > 0 && (
-                        <div class={styles.suggestions}>
-                            {navMatches().map((m) => (
-                                <button
-                                    type="button"
-                                    class={styles.suggestionItem}
-                                    onMouseDown={(e) => e.preventDefault()}
-                                    onClick={() => {
-                                        navigate(m.path);
-                                        close();
-                                    }}
-                                >
-                                    <span class={styles.sugLabel}>
-                                        {m.label}
-                                    </span>
-                                    <span class={styles.sugDesc}>
-                                        {m.desc}
-                                    </span>
-                                    <span class={styles.sugPath}>
-                                        {m.path}
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    {isNav() && queryText() && navMatches().length === 0 && (
-                        <div class={styles.suggestions}>
-                            <div class={styles.empty}>未匹配</div>
-                        </div>
-                    )}
-
-                    {/* 搜索提示 */}
-                    {isSearch() && queryText() && (
-                        <div class={styles.suggestions}>
-                            <div class={styles.searchHint}>
-                                <kbd>Enter</kbd> 搜索 「{queryText()}」
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 指令建议 */}
-                    {isCmd() && cmdMatches().length > 0 && (
-                        <div class={styles.suggestions}>
-                            {cmdMatches().map((c) => (
-                                <button
-                                    type="button"
-                                    class={styles.suggestionItem}
-                                    onMouseDown={(e) => e.preventDefault()}
-                                    onClick={() => {
-                                        c.action();
-                                        close();
-                                    }}
-                                >
-                                    <span class={styles.sugLabel}>
-                                        {c.label}
-                                    </span>
-                                    <span class={styles.sugDesc}>
-                                        {c.desc}
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    {isCmd() && queryText() && cmdMatches().length === 0 && (
-                        <div class={styles.suggestions}>
-                            <div class={styles.empty}>
-                                {auth().user ? "已登录" : "未登录"}
-                            </div>
-                        </div>
-                    )}
-
-                    <div class={styles.inputRow}>
-                        <span class={styles.prefix}>{prefix()}</span>
-                        <input
-                            ref={inputRef}
-                            class={styles.input}
-                            placeholder={placeholder()}
-                            value={value()}
-                            onInput={(e) =>
-                                setValue(e.currentTarget.value)}
-                            onKeyDown={onKeyDown}
-                        />
-                    </div>
-                </div>
             )}
         </div>
     );

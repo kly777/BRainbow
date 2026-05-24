@@ -6,27 +6,38 @@ import { AUTH_REQUIRED_EVENT } from "../apis/request.ts";
 import { useAuth } from "./context.tsx";
 import styles from "./AuthStatus.module.css";
 
+/**
+ * 登录弹窗（无可见 UI，仅 event 触发）
+ *
+ * - 监听 `auth:required` 事件 → 弹出登录/注册对话框
+ * - 401 错误自动触发该事件
+ * - `:login` 指令手动触发该事件
+ */
 export default function AuthStatus() {
-    const { auth, login: authLogin, logout } = useAuth();
+    const { login: authLogin, logout } = useAuth();
     const [showForm, setShowForm] = createSignal(false);
     const [isRegister, setIsRegister] = createSignal(false);
     const [name, setName] = createSignal("");
     const [password, setPassword] = createSignal("");
     const [error, setError] = createSignal("");
 
-    // 监听 401 → 自动登出 + 弹出登录框（已弹出时跳过，避免并发 401 重复触发）
-    const onAuthRequired = () => {
-        logout();
-        if (showForm()) return;
-        setIsRegister(false);
+    const open = (mode: "login" | "register" = "login") => {
+        setIsRegister(mode === "register");
         setError("");
         setName("");
         setPassword("");
         setShowForm(true);
     };
+
+    const onAuthRequired = () => {
+        logout();
+        if (showForm()) return;
+        open("login");
+    };
+
     globalThis.addEventListener(AUTH_REQUIRED_EVENT, onAuthRequired);
     onCleanup(() =>
-        globalThis.removeEventListener(AUTH_REQUIRED_EVENT, onAuthRequired)
+        globalThis.removeEventListener(AUTH_REQUIRED_EVENT, onAuthRequired),
     );
 
     const handleSubmit = async (e: Event) => {
@@ -45,90 +56,62 @@ export default function AuthStatus() {
     };
 
     return (
-        <div class={styles.row}>
-            <Show when={auth().user}>
-                <button
-                    type="button"
-                    onClick={logout}
-                    class={`${styles.btn} ${styles.btnLogout}`}
-                >
-                    退出
-                </button>
-            </Show>
-            <Show when={!auth().user}>
-                <button
-                    type="button"
-                    onClick={() => {
-                        setShowForm(!showForm());
-                        setIsRegister(false);
-                    }}
-                    class={`${styles.btn} ${styles.btnLogin}`}
-                >
-                    登录
-                </button>
-                <button
-                    type="button"
-                    onClick={() => {
-                        setShowForm(!showForm());
-                        setIsRegister(true);
-                    }}
-                    class={`${styles.btn} ${styles.btnRegister}`}
-                >
-                    注册
-                </button>
-            </Show>
-
-            <Show when={showForm()}>
-                <div
-                    role="dialog"
-                    aria-modal="true"
-                    class={styles.overlay}
-                    onClick={() => setShowForm(false)}
+        <Show when={showForm()}>
+            <div
+                role="dialog"
+                aria-modal="true"
+                class={styles.overlay}
+                onClick={() => setShowForm(false)}
+                onKeyDown={(e) => {
+                    if (e.key === "Escape") setShowForm(false);
+                }}
+            >
+                <form
+                    onSubmit={handleSubmit}
+                    class={styles.form}
+                    onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => {
                         if (e.key === "Escape") setShowForm(false);
                     }}
                 >
-                    <form
-                        onSubmit={handleSubmit}
-                        class={styles.form}
-                        onClick={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => {
-                            if (e.key === "Escape") setShowForm(false);
-                        }}
-                    >
-                        <h3 class={styles.title}>
-                            {isRegister() ? "注册" : "登录"}
-                        </h3>
-                        {error() && <p class={styles.error}>{error()}</p>}
-                        <input
-                            placeholder="用户名"
-                            value={name()}
-                            onInput={(e) => setName(e.currentTarget.value)}
-                            class={styles.input}
-                        />
-                        <input
-                            type="password"
-                            placeholder="密码"
-                            value={password()}
-                            onInput={(e) => setPassword(e.currentTarget.value)}
-                            class={styles.input}
-                        />
-                        <button
-                            type="submit"
-                            class={`${styles.btn} ${styles.btnSubmit}`}
-                        >
+                    <h3 class={styles.title}>
+                        {isRegister() ? "注册" : "登录"}
+                    </h3>
+                    {error() && <p class={styles.error}>{error()}</p>}
+                    <input
+                        placeholder="用户名"
+                        value={name()}
+                        onInput={(e) => setName(e.currentTarget.value)}
+                        class={styles.input}
+                    />
+                    <input
+                        type="password"
+                        placeholder="密码"
+                        value={password()}
+                        onInput={(e) => setPassword(e.currentTarget.value)}
+                        class={styles.input}
+                    />
+                    <div class={styles.actions}>
+                        <button type="submit" class={styles.btnSubmit}>
                             {isRegister() ? "注册" : "登录"}
                         </button>
                         <button
                             type="button"
-                            onClick={() => setShowForm(false)}
-                            class={`${styles.btn} ${styles.btnCancel}`}
+                            class={styles.btnLink}
+                            onClick={() => setIsRegister(!isRegister())}
                         >
-                            取消
+                            {isRegister() ? "已有账号？登录" : "没有账号？注册"}
                         </button>
-                    </form>
-                </div>
-            </Show>
-        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setShowForm(false)}
+                        class={styles.btnCancel}
+                    >
+                        取消
+                    </button>
+                </form>
+            </div>
+        </Show>
     );
 }

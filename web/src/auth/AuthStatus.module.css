@@ -1,46 +1,7 @@
-.row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.btn {
-    padding: 6px 14px;
-    color: var(--color-white);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-}
-
-.btnLogin {
-    background: var(--color-accent);
-}
-
-.btnRegister {
-    background: var(--color-accent);
-}
-
-.btnLogout {
-    background: var(--color-text-secondary);
-}
-
-.btnCancel {
-    background: var(--color-text-secondary);
-    width: 100%;
-}
-
-.btnSubmit {
-    composes: btnLogin;
-    width: 100%;
-}
-
-/* ── modal ── */
-
 .overlay {
     position: fixed;
     inset: 0;
-    background: oklch(0 0 0 / 0.3);
+    background: rgba(0, 0, 0, 0.25);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -48,28 +9,91 @@
 }
 
 .form {
-    background: var(--color-surface);
-    padding: 24px;
-    border-radius: 12px;
+    background: var(--c-bg-card, #fffef9);
+    padding: 28px 24px 20px;
+    border-radius: 14px;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    min-width: 280px;
-    box-shadow: 0 4px 20px oklch(0 0 0 / 0.15);
+    min-width: 300px;
+    max-width: 360px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    border: 1px solid var(--c-border, #e8dfcc);
 }
 
 .title {
     margin: 0;
+    font-size: 18px;
+    color: var(--c-text-heading, #2c2416);
+    text-align: center;
 }
 
 .error {
-    color: var(--color-danger);
+    color: var(--c-danger-text, #c53030);
     font-size: 13px;
+    margin: 0;
+    text-align: center;
 }
 
 .input {
-    padding: 10px;
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--c-border, #e8dfcc);
+    border-radius: 8px;
     font-size: 14px;
+    background: var(--c-bg, #fefcf5);
+    color: var(--c-text, #3d3629);
+    outline: none;
+}
+
+.input:focus {
+    border-color: var(--c-primary, #3b82f6);
+    box-shadow: 0 0 0 2px var(--c-primary-ring, rgba(59, 130, 246, 0.25));
+}
+
+.actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.btnSubmit {
+    padding: 10px 0;
+    border: none;
+    border-radius: 8px;
+    background: var(--c-primary, #3b82f6);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btnSubmit:hover {
+    background: var(--c-primary-hover, #2563eb);
+}
+
+.btnLink {
+    background: none;
+    border: none;
+    color: var(--c-primary, #3b82f6);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.btnLink:hover {
+    text-decoration: underline;
+}
+
+.btnCancel {
+    padding: 8px 0;
+    border: 1px solid var(--c-border, #e8dfcc);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--c-text-muted, #9b8e7a);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.btnCancel:hover {
+    background: var(--c-bg-subtle, #f8f3e6);
 }

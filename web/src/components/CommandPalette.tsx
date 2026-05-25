@@ -113,25 +113,25 @@ export default function CommandPalette() {
     // ── 命令 ──
 
     const commands = createMemo(() => {
+        const list = [
+            { label: ":home",   desc: "回到首页",          action: () => navigate("/") },
+            { label: ":top",    desc: "滚动到页面顶部",    action: () => globalThis.scrollTo({ top: 0, behavior: "smooth" }) },
+            { label: ":reload", desc: "重新加载页面",      action: () => globalThis.location.reload() },
+        ];
         if (!auth().user) {
-            return [
-                {
-                    label: ":login",
-                    desc: "登录",
-                    action: () =>
-                        globalThis.dispatchEvent(
-                            new CustomEvent(AUTH_REQUIRED_EVENT),
-                        ),
-                },
-            ];
-        }
-        return [
-            {
+            list.push({
+                label: ":login",
+                desc: "登录",
+                action: () => globalThis.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT)),
+            });
+        } else {
+            list.push({
                 label: ":logout",
                 desc: "退出登录",
                 action: () => logout(),
-            },
-        ];
+            });
+        }
+        return list;
     });
 
     // ── 匹配 ──

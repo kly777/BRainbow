@@ -4,7 +4,6 @@ import { AuthProvider } from "./auth/context.tsx";
 import Layout from "./Layout.tsx";
 import { ROUTES, toRouteDefs } from "./routes.ts";
 import "@/global.css";
-import "@/normalize.css";
 
 function App() {
     return (

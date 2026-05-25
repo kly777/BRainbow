@@ -83,8 +83,14 @@ const CardDetailPage: Component = () => {
                     c && (
                         <div class={styles.content}>
                             <div class={styles.meta}>
-                                <span>创建: {formatDate(c.created_at)}</span>
-                                <span>更新: {formatDate(c.updated_at)}</span>
+                                <span>
+                                    {c.created_at === c.updated_at ? "创建于" : "修改于"}
+                                    : {formatDate(
+                                        c.created_at === c.updated_at
+                                            ? c.created_at
+                                            : c.updated_at,
+                                    )}
+                                </span>
                             </div>
                             <div class={styles.body}>
                                 <Markdown content={c.content} />

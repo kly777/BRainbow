@@ -80,15 +80,15 @@ const Card: Component<CardProps> = (props) => {
 
             <div class={styles.cardMeta}>
                 <div class={styles.metaItem}>
-                    <span class={styles.metaLabel}>创建:</span>
-                    <span class={styles.metaValue}>
-                        {formatDate(props.created_at)}
+                    <span class={styles.metaLabel}>
+                        {props.created_at === props.updated_at ? "创建于" : "修改于"}:
                     </span>
-                </div>
-                <div class={styles.metaItem}>
-                    <span class={styles.metaLabel}>更新:</span>
                     <span class={styles.metaValue}>
-                        {formatDate(props.updated_at)}
+                        {formatDate(
+                            props.created_at === props.updated_at
+                                ? props.created_at
+                                : props.updated_at,
+                        )}
                     </span>
                 </div>
             </div>

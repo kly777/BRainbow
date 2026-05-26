@@ -1,7 +1,7 @@
 import { type Effect, Schema } from "effect";
 import { request } from "./request.ts";
 import type { ApiErrorType } from "./types/index.ts";
-import type { PaginationParams } from "./types/models.ts";
+import type { PaginationParams } from "./types/index.ts";
 
 const TableListSchema = Schema.Array(Schema.String);
 

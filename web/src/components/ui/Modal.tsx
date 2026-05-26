@@ -1,4 +1,5 @@
 import { type Component, type JSX, Show } from "solid-js";
+import { Portal } from "solid-js/web";
 import styles from "./Modal.module.css";
 
 interface ModalProps {
@@ -12,6 +13,7 @@ interface ModalProps {
 const Modal: Component<ModalProps> = (props) => {
     return (
         <Show when={props.isOpen}>
+            <Portal>
             <div
                 class={styles.modalOverlay}
                 onClick={props.onClose}
@@ -55,6 +57,7 @@ const Modal: Component<ModalProps> = (props) => {
                     </Show>
                 </div>
             </div>
+            </Portal>
         </Show>
     );
 };

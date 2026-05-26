@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js";
+import { Portal } from "solid-js/web";
 import { dismissToast, type ToastItem, toasts } from "./toastStore.ts";
 import styles from "./Toast.module.css";
 
@@ -18,6 +19,7 @@ function iconForType(type: ToastItem["type"]): string {
 export default function ToastContainer() {
     return (
         <Show when={toasts().length > 0}>
+            <Portal>
             <div class={styles.container} aria-live="polite" role="status">
                 <For each={toasts()}>
                     {(toast) => (
@@ -75,6 +77,7 @@ export default function ToastContainer() {
                     )}
                 </For>
             </div>
+            </Portal>
         </Show>
     );
 }

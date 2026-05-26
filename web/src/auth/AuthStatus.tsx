@@ -1,4 +1,5 @@
 import { createSignal, onCleanup, Show } from "solid-js";
+import { Portal } from "solid-js/web";
 import { Effect } from "effect";
 import { login, register } from "./api.ts";
 import { getErrorMessage } from "../apis/types/index.ts";
@@ -57,6 +58,7 @@ export default function AuthStatus() {
 
     return (
         <Show when={showForm()}>
+            <Portal>
             <div
                 role="dialog"
                 aria-modal="true"
@@ -112,6 +114,7 @@ export default function AuthStatus() {
                     </button>
                 </form>
             </div>
+            </Portal>
         </Show>
     );
 }

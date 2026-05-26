@@ -1,6 +1,7 @@
 import { type Effect, Schema } from "effect";
 import { request } from "./request.ts";
 import type { ApiErrorType } from "./types/index.ts";
+import type { PaginationParams } from "./types/models.ts";
 
 const TableListSchema = Schema.Array(Schema.String);
 
@@ -33,5 +34,9 @@ export interface TableData {
 
 export const getTableData = (
     name: string,
-): Effect.Effect<TableData, ApiErrorType> =>
-    request(`/db/${name}`, TableDataSchema, {});
+    params?: PaginationParams,
+): Effect.Effect<TableData, ApiErrorType> => {
+    const page = params?.page ?? 1;
+    const pageSize = params?.page_size ?? 20;
+    return request(`/db/${name}?page=${page}&page_size=${pageSize}`, TableDataSchema, {});
+};

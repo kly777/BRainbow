@@ -79,6 +79,15 @@ export const PaginatedSchema = <T extends Schema.Schema.Any>(itemSchema: T) =>
         total_pages: Schema.Number,
     });
 
+// ── 通用分页参数 ──
+
+export interface PaginationParams {
+    /** 页码，从 1 开始，默认 1 */
+    page?: number;
+    /** 每页条数，默认 20，最大 100 */
+    page_size?: number;
+}
+
 // ── Task ──
 
 export const TaskSchema = Schema.Struct({

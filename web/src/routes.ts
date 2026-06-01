@@ -77,6 +77,13 @@ export const ROUTES: RouteConfig[] = [
     nav: true,
     component: lazy(() => import("./pages/RainbowGenerator.tsx")),
   },
+  {
+    path: "/text",
+    label: "文本编辑",
+    desc: "多标签纯文本编辑器",
+    nav: true,
+    component: lazy(() => import("./pages/TextEditor.tsx")),
+  },
 ];
 
 /** 仅导航入口，用于命令面板 */

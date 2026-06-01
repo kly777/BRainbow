@@ -4,5 +4,6 @@ pub mod image;
 pub mod onto;
 pub mod sign;
 pub mod task;
+pub mod text;
 pub mod time_window;
 pub mod user;

@@ -1,0 +1,125 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--c-bg, #fefcf5);
+}
+
+/* ── 标签栏 ── */
+.tabs {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 6px;
+    border-bottom: 1px solid var(--c-border, #e8dfcc);
+    background: var(--c-bg-card, #fffef9);
+    flex-shrink: 0;
+    overflow-x: auto;
+}
+
+.tab,
+.tabActive {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--c-text-muted, #9b8e7a);
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.tab:hover {
+    color: var(--c-text, #3d3629);
+}
+
+.tab:focus-visible {
+    outline: 2px solid var(--c-primary, #3b82f6);
+    outline-offset: -2px;
+}
+
+.tabActive {
+    color: var(--c-text, #3d3629);
+    border-bottom-color: var(--c-primary, #3b82f6);
+}
+
+/* ── 重命名输入 ── */
+.renameInput {
+    width: 80px;
+    padding: 2px 4px;
+    border: 1px solid var(--c-primary, #3b82f6);
+    border-radius: 4px;
+    background: var(--c-bg, #fefcf5);
+    color: var(--c-text, #3d3629);
+    font-size: 13px;
+    outline: none;
+}
+
+.closeBtn {
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--c-text-muted, #9b8e7a);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+}
+
+.closeBtn:hover {
+    background: var(--c-bg-hover, #f0e8d5);
+    color: var(--c-danger-text, #c53030);
+}
+
+.closeBtn:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+}
+
+.addBtn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--c-text-muted, #9b8e7a);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+    flex-shrink: 0;
+}
+
+.addBtn:hover {
+    background: var(--c-bg-hover, #f0e8d5);
+}
+
+/* ── 编辑器 ── */
+.editor {
+    flex: 1;
+    border: none;
+    outline: none;
+    resize: none;
+    padding: 20px 24px;
+    font-size: 15px;
+    line-height: 1.7;
+    font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+    background: var(--c-bg, #fefcf5);
+    color: var(--c-text, #3d3629);
+}
+
+.editor::placeholder {
+    color: var(--c-text-muted, #9b8e7a);
+}

@@ -31,6 +31,11 @@ export default function MemPage() {
         return `${Math.round(secs / 2592000)}个月`;
     };
 
+    const dueStr = (ts: string) => {
+        const t = ts.endsWith("Z") ? ts : `${ts}Z`;
+        return new Date(t).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    };
+
     const loadDue = async () => {
         setLoading(true);
         const exit = await Effect.runPromiseExit(getDue(7));
@@ -109,7 +114,7 @@ export default function MemPage() {
                 <div class={styles.card}>
                     <Show when={isPreview()}>
                         <div class={styles.previewBanner}>
-                            将于 {new Date(item()?.due_at ?? "").toLocaleString("zh-CN")} 到期
+                            将于 {dueStr(item()?.due_at ?? "")} 到期
                         </div>
                     </Show>
                     <div class={styles.cue}>

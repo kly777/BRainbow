@@ -198,8 +198,8 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL DEFAULT '',
             content TEXT NOT NULL DEFAULT '',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
         )
         "#,
     )
@@ -214,8 +214,8 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         CREATE TABLE IF NOT EXISTS chunk (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             content TEXT NOT NULL DEFAULT '',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
         )
         "#,
     )
@@ -233,9 +233,9 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             stability REAL DEFAULT 0,
             difficulty REAL DEFAULT 0,
             step_index INTEGER,
-            due_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            due_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
             last_review_at TIMESTAMP,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
             FOREIGN KEY (cue_chunk_id) REFERENCES chunk(id),
             FOREIGN KEY (target_chunk_id) REFERENCES chunk(id)
         )

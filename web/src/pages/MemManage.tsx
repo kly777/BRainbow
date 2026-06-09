@@ -15,10 +15,17 @@ async function loadAllMems(): Promise<MemItem[]> {
     return [];
 }
 
+function parseUtc(ts: string): Date {
+    if (!ts.endsWith("Z") && !ts.includes("+") && !ts.includes("-", 10)) {
+        return new Date(`${ts}Z`);
+    }
+    return new Date(ts);
+}
+
 function dueLabel(ts: string): string {
-    const d = new Date(ts);
+    const d = parseUtc(ts);
     const diff = (d.getTime() - Date.now()) / 1000;
-    const fmt = d.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    const fmt = d.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
     if (diff < 0) return `已到期 (${fmt})`;
     return fmt;
 }
@@ -128,7 +135,7 @@ export default function MemManage() {
                                 </div>
                                 <div class={styles.meta}>
                                     <span>状态：{d().state}</span>
-                                    <span>到期：{new Date(d().due_at).toLocaleString("zh-CN")}</span>
+                                    <span>到期：{parseUtc(d().due_at).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
                                 </div>
                                 <button
                                     type="button"

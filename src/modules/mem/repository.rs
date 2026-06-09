@@ -52,7 +52,7 @@ impl MemRepo {
     }
 
     pub async fn update_chunk(&self, id: i32, content: &str) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE chunk SET content=?, updated_at=datetime('now') WHERE id=?")
+        sqlx::query("UPDATE chunk SET content=?, updated_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?")
             .bind(content)
             .bind(id)
             .execute(&*self.pool)
@@ -102,7 +102,7 @@ impl MemRepo {
         sqlx::query_scalar::<_, i32>(
             r#"
             SELECT m.id FROM mem m
-            WHERE m.due_at > datetime('now')
+            WHERE m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
               AND NOT EXISTS (
                 SELECT 1 FROM mem_prerequisite mp
                 JOIN mem pm ON mp.requires_mem_id = pm.id
@@ -120,7 +120,7 @@ impl MemRepo {
         let rows = sqlx::query_scalar::<_, i32>(
             r#"
             SELECT m.id FROM mem m
-            WHERE m.due_at <= datetime('now')
+            WHERE m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
               AND NOT EXISTS (
                 SELECT 1 FROM mem_prerequisite mp
                 JOIN mem pm ON mp.requires_mem_id = pm.id
@@ -146,7 +146,7 @@ impl MemRepo {
         due_at: &str,
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
-            "UPDATE mem SET state=?, stability=?, difficulty=?, step_index=?, due_at=?, last_review_at=datetime('now') WHERE id=?",
+            "UPDATE mem SET state=?, stability=?, difficulty=?, step_index=?, due_at=?, last_review_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?",
         )
         .bind(state)
         .bind(stability)

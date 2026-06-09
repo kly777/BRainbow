@@ -27,11 +27,12 @@ export default function MemPage() {
         }
     };
 
-    const previewLabel = (days: number) => {
-        if (days < 1 / 24) return `< 1分钟`;
-        if (days < 1) return `${Math.round(days * 1440)}分钟`;
-        if (days < 30) return `${Math.round(days)}天`;
-        return `${Math.round(days / 30)}个月`;
+    const previewLabel = (secs: number) => {
+        if (secs < 120) return "1分钟";
+        if (secs < 3600) return `${Math.round(secs / 60)}分钟`;
+        if (secs < 86400) return `${Math.round(secs / 3600)}小时`;
+        if (secs < 2592000) return `${Math.round(secs / 86400)}天`;
+        return `${Math.round(secs / 2592000)}个月`;
     };
 
     const loadDue = async () => {

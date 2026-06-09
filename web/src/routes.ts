@@ -92,6 +92,13 @@ export const ROUTES: RouteConfig[] = [
     component: lazy(() => import("./pages/MemPage.tsx")),
   },
   {
+    path: "/m/add",
+    label: "添加记忆",
+    desc: "创建新的记忆卡片",
+    nav: true,
+    component: lazy(() => import("./pages/MemAdd.tsx")),
+  },
+  {
     path: "/m/manage",
     label: "记忆管理",
     desc: "查看和删除记忆项",

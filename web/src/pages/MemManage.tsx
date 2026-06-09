@@ -1,5 +1,6 @@
 import { createSignal, onMount, Show, For } from "solid-js";
 import { Effect } from "effect";
+import { A } from "@solidjs/router";
 import { getDue, deleteMem, type MemItem } from "../apis/memApi.ts";
 import styles from "./MemManage.module.css";
 
@@ -51,7 +52,10 @@ export default function MemManage() {
         <div class={styles.page}>
             <div class={styles.topBar}>
                 <h1 class={styles.title}>记忆管理</h1>
-                <span class={styles.count}>{mems().length} 个</span>
+                <div class={styles.topActions}>
+                    <A href="/m/add" class={styles.addLink}>＋ 添加</A>
+                    <span class={styles.count}>{mems().length} 个</span>
+                </div>
             </div>
 
             <div class={styles.split}>

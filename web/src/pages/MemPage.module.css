@@ -120,10 +120,8 @@
 /* ── 卡片 ── */
 .card {
     flex: 1;
-    display: flex;
-    flex-direction: column;
     overflow-y: auto;
-    padding: 24px;
+    padding: 24px 24px 0;
     max-width: 720px;
     width: 100%;
     margin: 0 auto;
@@ -190,11 +188,14 @@
     width: 100%;
 }
 
-/* ── 按钮 ── */
+/* ── 按钮（距底部 64px，避免遮挡 CommandPalette）── */
 .actions {
     display: flex;
     justify-content: center;
-    padding: 20px 0;
+    padding: 14px 24px 78px;
+    border-top: 1px solid var(--c-border, #e8dfcc);
+    background: var(--c-bg, #fefcf5);
+    flex-shrink: 0;
 }
 
 .showBtn {

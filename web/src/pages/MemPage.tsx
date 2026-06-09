@@ -160,37 +160,37 @@ export default function MemPage() {
                             <div class={styles.content}><Markdown content={item()?.target.content ?? ""} /></div>
                         </div>
                     </Show>
+                </div>
 
-                    <div class={styles.actions}>
-                        {!showAnswer() ? (
-                            <button
-                                type="button"
-                                class={styles.showBtn}
-                                onClick={() => setShowAnswer(true)}
-                            >
-                                显示答案
+                <div class={styles.actions}>
+                    {!showAnswer() ? (
+                        <button
+                            type="button"
+                            class={styles.showBtn}
+                            onClick={() => setShowAnswer(true)}
+                        >
+                            显示答案
+                        </button>
+                    ) : (
+                        <div class={styles.ratings}>
+                            <button type="button" class={styles.again} onClick={() => rate(1)}>
+                                <span class={styles.ratingLabel}>忘记</span>
+                                <span class={styles.ratingTime}>{previewLabel(intervals()[0])}</span>
                             </button>
-                        ) : (
-                            <div class={styles.ratings}>
-                                <button type="button" class={styles.again} onClick={() => rate(1)}>
-                                    <span class={styles.ratingLabel}>忘记</span>
-                                    <span class={styles.ratingTime}>{previewLabel(intervals()[0])}</span>
-                                </button>
-                                <button type="button" class={styles.hard} onClick={() => rate(2)}>
-                                    <span class={styles.ratingLabel}>困难</span>
-                                    <span class={styles.ratingTime}>{previewLabel(intervals()[1])}</span>
-                                </button>
-                                <button type="button" class={styles.good} onClick={() => rate(3)}>
-                                    <span class={styles.ratingLabel}>良好</span>
-                                    <span class={styles.ratingTime}>{previewLabel(intervals()[2])}</span>
-                                </button>
-                                <button type="button" class={styles.easy} onClick={() => rate(4)}>
-                                    <span class={styles.ratingLabel}>简单</span>
-                                    <span class={styles.ratingTime}>{previewLabel(intervals()[3])}</span>
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                            <button type="button" class={styles.hard} onClick={() => rate(2)}>
+                                <span class={styles.ratingLabel}>困难</span>
+                                <span class={styles.ratingTime}>{previewLabel(intervals()[1])}</span>
+                            </button>
+                            <button type="button" class={styles.good} onClick={() => rate(3)}>
+                                <span class={styles.ratingLabel}>良好</span>
+                                <span class={styles.ratingTime}>{previewLabel(intervals()[2])}</span>
+                            </button>
+                            <button type="button" class={styles.easy} onClick={() => rate(4)}>
+                                <span class={styles.ratingLabel}>简单</span>
+                                <span class={styles.ratingTime}>{previewLabel(intervals()[3])}</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </Show>
         </div>

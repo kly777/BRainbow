@@ -1,7 +1,7 @@
 import { A } from "@solidjs/router";
 import { createSignal, onMount, Show } from "solid-js";
 import { Effect } from "effect";
-import { createMem, getDue, previewMem, reviewMem, type MemItem } from "../apis/memApi.ts";
+import { getDue, previewMem, reviewMem, type MemItem } from "../apis/memApi.ts";
 import Markdown from "../components/ui/Markdown.tsx";
 import styles from "./MemPage.module.css";
 
@@ -12,11 +12,6 @@ export default function MemPage() {
     const [loading, setLoading] = createSignal(true);
     const [count, setCount] = createSignal(0);
     const [isPreview, setIsPreview] = createSignal(false);
-
-    const [showForm, setShowForm] = createSignal(false);
-    const [cueText, setCueText] = createSignal("");
-    const [targetText, setTargetText] = createSignal("");
-    const [creating, setCreating] = createSignal(false);
 
     const item = () => due()[current()];
 
@@ -55,18 +50,6 @@ export default function MemPage() {
 
     onMount(loadDue);
 
-    const handleCreate = async () => {
-        const cue = cueText().trim();
-        const target = targetText().trim();
-        if (!cue || !target) return;
-        setCreating(true);
-        await Effect.runPromiseExit(createMem(cue, target));
-        setCueText("");
-        setTargetText("");
-        setShowForm(false);
-        setCreating(false);
-    };
-
     const rate = async (rating: number) => {
         if (!item()) return;
         await Effect.runPromiseExit(reviewMem(item().id, rating));
@@ -92,13 +75,7 @@ export default function MemPage() {
             <div class={styles.topBar}>
                 <span class={styles.title}>记忆复习</span>
                 <div class={styles.topRight}>
-                    <button
-                        type="button"
-                        class={styles.addBtn}
-                        onClick={() => setShowForm(!showForm())}
-                    >
-                        {showForm() ? "收起" : "＋ 添加"}
-                    </button>
+                    <A href="/m/add" class={styles.addLink}>＋ 添加</A>
                     <A href="/m/manage" class={styles.manageLink}>管理</A>
                     <span class={styles.count}>
                         {current() + 1}/{due().length}
@@ -106,33 +83,6 @@ export default function MemPage() {
                     </span>
                 </div>
             </div>
-
-            <Show when={showForm()}>
-                <div class={styles.form}>
-                    <textarea
-                        class={styles.formInput}
-                        placeholder="线索（Markdown）"
-                        value={cueText()}
-                        onInput={(e) => setCueText(e.currentTarget.value)}
-                        rows={3}
-                    />
-                    <textarea
-                        class={styles.formInput}
-                        placeholder="答案（Markdown）"
-                        value={targetText()}
-                        onInput={(e) => setTargetText(e.currentTarget.value)}
-                        rows={3}
-                    />
-                    <button
-                        type="button"
-                        class={styles.formSubmit}
-                        onClick={handleCreate}
-                        disabled={creating() || !cueText().trim() || !targetText().trim()}
-                    >
-                        {creating() ? "创建中…" : "创建记忆"}
-                    </button>
-                </div>
-            </Show>
 
             <Show
                 when={!loading() && due().length > 0}

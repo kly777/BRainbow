@@ -5,6 +5,9 @@
 }
 
 .topBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     padding: 20px 24px;
     border-bottom: 1px solid var(--c-border, #e8dfcc);
 }
@@ -87,4 +90,47 @@
 .submit:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+}
+
+/* ── 模式切换 ── */
+.modeTabs {
+    display: inline-flex;
+    border: 1px solid var(--c-border, #e8dfcc);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.modeBtn,
+.modeActive {
+    padding: 4px 14px;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.modeBtn {
+    background: transparent;
+    color: var(--c-text-secondary, #6b5e4a);
+}
+
+.modeBtn:hover {
+    background: var(--c-bg-hover, #f0e8d5);
+}
+
+.modeActive {
+    background: var(--c-primary, #3b82f6);
+    color: #fff;
+    font-weight: 600;
+}
+
+.modeBtn + .modeBtn {
+    border-left: 1px solid var(--c-border, #e8dfcc);
+}
+
+/* ── 进度 ── */
+.progress {
+    font-size: 13px;
+    color: var(--c-text-secondary, #6b5e4a);
+    text-align: center;
 }

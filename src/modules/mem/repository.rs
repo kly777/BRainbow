@@ -120,13 +120,13 @@ impl MemRepo {
         let rows = sqlx::query_scalar::<_, i32>(
             r#"
             SELECT m.id FROM mem m
-            WHERE m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+            WHERE (m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now') OR m.state = 'learning')
               AND NOT EXISTS (
                 SELECT 1 FROM mem_prerequisite mp
                 JOIN mem pm ON mp.requires_mem_id = pm.id
                 WHERE mp.mem_id = m.id AND pm.state = 'new'
               )
-            ORDER BY m.due_at
+            ORDER BY m.state = 'learning' DESC, m.due_at
             LIMIT ?
             "#,
         )

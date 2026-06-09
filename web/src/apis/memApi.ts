@@ -80,3 +80,8 @@ export const previewMem = (
     id: number,
 ): Effect.Effect<{ intervals: number[] }, ApiErrorType> =>
     request(`/mem/${id}/preview`, Schema.Struct({ intervals: Schema.Array(Schema.Number) }), {});
+
+export const deleteMem = (
+    id: number,
+): Effect.Effect<{ ok: boolean }, ApiErrorType> =>
+    request(`/mem/${id}`, OkSchema, { method: "DELETE" });

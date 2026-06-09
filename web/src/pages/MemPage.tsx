@@ -1,3 +1,4 @@
+import { A } from "@solidjs/router";
 import { createSignal, onMount, Show } from "solid-js";
 import { Effect } from "effect";
 import { createMem, getDue, previewMem, reviewMem, type MemItem } from "../apis/memApi.ts";
@@ -99,6 +100,7 @@ export default function MemPage() {
                     >
                         {showForm() ? "收起" : "＋ 添加"}
                     </button>
+                    <A href="/m/manage" class={styles.manageLink}>管理</A>
                     <span class={styles.count}>
                         {current() + 1}/{due().length}
                         {isPreview() ? "（提前查看）" : count() > due().length ? `（共 ${count()} 个待复习）` : ""}

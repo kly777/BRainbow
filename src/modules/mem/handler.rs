@@ -12,11 +12,14 @@ use crate::state::AppState;
 
 use super::repository::MemRepo;
 
-fn calc_days_since(last_review: &Option<String>) -> u32 {
-    let Some(ts) = last_review else { return 0 };
-    let Ok(dt) = chrono::DateTime::parse_from_rfc3339(ts) else { return 0 };
-    let dur = chrono::Utc::now().signed_duration_since(dt);
-    (dur.num_seconds().max(0) / 86400) as u32
+pub async fn delete_mem(
+    Path(id): Path<i32>, State(state): State<AppState>,
+) -> impl IntoResponse {
+    let repo = MemRepo::new(state.db);
+    match repo.delete_mem(id).await {
+        Ok(()) => Json(serde_json::json!({"ok": true})).into_response(),
+        Err(e) => error::internal(e, "delete").into_response(),
+    }
 }
 
 pub async fn create_mem(
@@ -62,6 +65,13 @@ pub async fn get_due(
     }
     let count = items.len();
     Json(DueResponse { items, due_count: count }).into_response()
+}
+
+fn calc_days_since(last_review: &Option<String>) -> u32 {
+    let Some(ts) = last_review else { return 0 };
+    let Ok(dt) = chrono::DateTime::parse_from_rfc3339(ts) else { return 0 };
+    let dur = chrono::Utc::now().signed_duration_since(dt);
+    (dur.num_seconds().max(0) / 86400) as u32
 }
 
 pub async fn preview_mem(

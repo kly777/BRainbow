@@ -91,6 +91,13 @@ export const ROUTES: RouteConfig[] = [
     nav: true,
     component: lazy(() => import("./pages/MemPage.tsx")),
   },
+  {
+    path: "/m/manage",
+    label: "记忆管理",
+    desc: "查看和删除记忆项",
+    nav: true,
+    component: lazy(() => import("./pages/MemManage.tsx")),
+  },
 ];
 
 /** 仅导航入口，用于命令面板 */

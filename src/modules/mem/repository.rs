@@ -155,4 +155,13 @@ impl MemRepo {
         .await?;
         Ok(())
     }
+
+    pub async fn delete_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("DELETE FROM mem_prerequisite WHERE mem_id = ? OR requires_mem_id = ?")
+            .bind(id).bind(id).execute(&mut *tx).await?;
+        sqlx::query("DELETE FROM mem WHERE id = ?").bind(id).execute(&mut *tx).await?;
+        tx.commit().await?;
+        Ok(())
+    }
 }

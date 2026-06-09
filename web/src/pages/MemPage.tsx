@@ -1,5 +1,5 @@
 import { A } from "@solidjs/router";
-import { createSignal, onMount, Show } from "solid-js";
+import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { Effect } from "effect";
 import { getDue, previewMem, reviewMem, type MemItem } from "../apis/memApi.ts";
 import Markdown from "../components/ui/Markdown.tsx";
@@ -48,7 +48,23 @@ export default function MemPage() {
         setLoading(false);
     };
 
-    onMount(loadDue);
+    const onKey = (e: KeyboardEvent) => {
+        if (e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement)?.tagName === "INPUT") return;
+        if (!showAnswer() && e.key === " ") {
+            e.preventDefault();
+            setShowAnswer(true);
+        } else if (showAnswer()) {
+            const r = ({ "1": 1, "2": 2, "3": 3, "4": 4 })[e.key];
+            if (r) rate(r);
+        }
+    };
+
+    onMount(() => {
+        loadDue();
+        globalThis.addEventListener("keydown", onKey);
+    });
+
+    onCleanup(() => globalThis.removeEventListener("keydown", onKey));
 
     const rate = async (rating: number) => {
         if (!item()) return;

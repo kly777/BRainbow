@@ -156,6 +156,15 @@ impl MemRepo {
         Ok(())
     }
 
+    pub async fn get_all_mems(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
+        sqlx::query_scalar::<_, i32>(
+            "SELECT id FROM mem ORDER BY due_at LIMIT ?",
+        )
+        .bind(limit)
+        .fetch_all(&*self.pool)
+        .await
+    }
+
     pub async fn delete_mem(&self, id: i32) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("DELETE FROM mem_prerequisite WHERE mem_id = ? OR requires_mem_id = ?")

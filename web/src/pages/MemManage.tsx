@@ -1,12 +1,12 @@
 import { createSignal, onMount, Show, For } from "solid-js";
 import { Effect } from "effect";
 import { A } from "@solidjs/router";
-import { getDue, deleteMem, type MemItem } from "../apis/memApi.ts";
+import { getAllMems, deleteMem, type MemItem } from "../apis/memApi.ts";
 import Markdown from "../components/ui/Markdown.tsx";
 import styles from "./MemManage.module.css";
 
 async function loadAllMems(): Promise<MemItem[]> {
-    const exit = await Effect.runPromiseExit(getDue(200));
+    const exit = await Effect.runPromiseExit(getAllMems(500));
     if (exit._tag === "Success") {
         return [...exit.value.items].sort(
             (a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime(),

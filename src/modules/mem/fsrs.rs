@@ -42,7 +42,7 @@ pub fn schedule(
     if rating == 1 && is_new {
         return ReviewOutcome {
             state: "learning".into(), stability: 0.0, difficulty: 0.0,
-            due_at: (now + Duration::seconds(60)).format("%Y-%m-%dT%H:%M:%S").to_string(),
+            due_at: (now + Duration::seconds(60)).format("%Y-%m-%dT%H:%M:%SZ").to_string(),
             interval_secs: 60.0,
         };
     }
@@ -52,7 +52,7 @@ pub fn schedule(
     let state = if rating == 1 { "relearning" } else { "review" };
     ReviewOutcome {
         state: state.into(), stability: s, difficulty: d,
-        due_at: (now + Duration::seconds(secs as i64)).format("%Y-%m-%dT%H:%M:%S").to_string(),
+        due_at: (now + Duration::seconds(secs as i64)).format("%Y-%m-%dT%H:%M:%SZ").to_string(),
         interval_secs: secs,
     }
 }

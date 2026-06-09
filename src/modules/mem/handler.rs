@@ -12,6 +12,32 @@ use crate::state::AppState;
 
 use super::repository::MemRepo;
 
+pub async fn get_all(
+    State(state): State<AppState>, Query(params): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let limit = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(200);
+    let repo = MemRepo::new(state.db);
+    let ids = match repo.get_all_mems(limit).await {
+        Ok(ids) => ids, Err(e) => return error::internal(e, "获取全部").into_response(),
+    };
+    let mut items = Vec::new();
+    for id in ids {
+        if let Ok(Some(row)) = repo.get_mem(id).await {
+            if let (Ok(Some(cue)), Ok(Some(target))) = (
+                repo.get_chunk(row.cue_chunk_id).await,
+                repo.get_chunk(row.target_chunk_id).await,
+            ) {
+                items.push(MemWithChunks {
+                    id: row.id, cue, target, state: row.state,
+                    stability: row.stability, difficulty: row.difficulty, due_at: row.due_at,
+                });
+            }
+        }
+    }
+    let count = items.len();
+    Json(DueResponse { items, due_count: count }).into_response()
+}
+
 pub async fn delete_mem(
     Path(id): Path<i32>, State(state): State<AppState>,
 ) -> impl IntoResponse {

@@ -1,7 +1,11 @@
 import { A } from "@solidjs/router";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { Effect } from "effect";
-import { getDue, previewMem, reviewMem, type MemItem } from "../apis/memApi.ts";
+import { buryMem, getDue, previewMem, reviewMem, type MemItem } from "../apis/memApi.ts";
+import { request } from "../apis/request.ts";
+import { Schema } from "effect";
+
+const OkSchema = Schema.Struct({ ok: Schema.Boolean });
 import Markdown from "../components/ui/Markdown.tsx";
 import { fmtInterval, fmtLocal } from "../lib/time.ts";
 import styles from "./MemPage.module.css";
@@ -14,7 +18,9 @@ export default function MemPage() {
     const [isPreview, setIsPreview] = createSignal(false);
 
     const item = () => due()[current()];
-    const [intervals, setIntervals] = createSignal([0, 0, 0, 0]);
+    const [intervals, setIntervals] = createSignal<readonly number[]>([0, 0, 0, 0]);
+    const [showUndo, setShowUndo] = createSignal(false);
+    let lastAction: { id: number; undoData: Record<string, unknown> } | null = null;
 
     const loadPreview = async (id: number) => {
         const exit = await Effect.runPromiseExit(previewMem(id));
@@ -47,8 +53,36 @@ export default function MemPage() {
     onCleanup(() => globalThis.removeEventListener("keydown", onKey));
 
     const rate = async (rating: number) => {
+        const it = item();
+        if (!it) return;
+        // 保存状态用于撤销
+        lastAction = {
+            id: it.id,
+            undoData: {
+                state: it.state, stability: it.stability, difficulty: it.difficulty,
+                step_index: null, lapses: 0, leeched: false, due_at: it.due_at,
+            },
+        };
+        await Effect.runPromiseExit(reviewMem(it.id, rating));
+        setShowUndo(true);
+        nextOrReload();
+    };
+
+    const undo = async () => {
+        if (!lastAction) return;
+        await Effect.runPromiseExit(
+            request(`/mem/${lastAction.id}/undo`, OkSchema, {
+                method: "POST",
+                body: JSON.stringify(lastAction.undoData),
+            }),
+        );
+        setShowUndo(false);
+        loadDue();
+    };
+
+    const bury = async () => {
         if (!item()) return;
-        await Effect.runPromiseExit(reviewMem(item().id, rating));
+        await Effect.runPromiseExit(buryMem(item().id));
         nextOrReload();
     };
 
@@ -91,7 +125,13 @@ export default function MemPage() {
                 </div>
                 <div class={styles.actions}>
                     {!showAnswer() ? (
-                        <button type="button" class={styles.showBtn} onClick={() => setShowAnswer(true)}>显示答案</button>
+                        <div class={styles.actionRow}>
+                            <button type="button" class={styles.buryBtn} onClick={bury}>跳过</button>
+                            <Show when={showUndo()}>
+                                <button type="button" class={styles.undoBtn} onClick={undo}>撤销</button>
+                            </Show>
+                            <button type="button" class={styles.showBtn} onClick={() => setShowAnswer(true)}>显示答案</button>
+                        </div>
                     ) : (
                         <div class={styles.ratings}>
                             <button type="button" class={styles.again} onClick={() => rate(1)}>

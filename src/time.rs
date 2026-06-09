@@ -23,9 +23,9 @@ pub fn parse(s: &str) -> Option<DateTime<Utc>> {
 }
 
 /// 从 last_review_at 计算距今天数
-pub fn days_since(s: &Option<String>) -> u32 {
-    let Some(ts) = s.as_deref() else { return 0 };
-    let Some(dt) = parse(ts) else { return 0 };
-    let dur = now_utc().signed_duration_since(dt);
-    (dur.num_seconds().max(0) / 86400) as u32
+pub fn _days_since(s: &Option<String>) -> u32 {
+    if let Some(dt) = s.as_deref().and_then(|ts| parse(ts)) {
+        return (now_utc().signed_duration_since(dt).num_seconds().max(0) / 86400) as u32;
+    }
+    0
 }

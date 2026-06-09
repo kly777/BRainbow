@@ -42,7 +42,7 @@ export interface MemItem {
 }
 
 export interface DueResponse {
-    items: MemItem[];
+    items: readonly MemItem[];
     due_count: number;
 }
 
@@ -83,10 +83,20 @@ export const reviewMem = (
 
 export const previewMem = (
     id: number,
-): Effect.Effect<{ intervals: number[] }, ApiErrorType> =>
+): Effect.Effect<{ intervals: readonly number[] }, ApiErrorType> =>
     request(`/mem/${id}/preview`, Schema.Struct({ intervals: Schema.Array(Schema.Number) }), {});
 
 export const deleteMem = (
     id: number,
 ): Effect.Effect<{ ok: boolean }, ApiErrorType> =>
     request(`/mem/${id}`, OkSchema, { method: "DELETE" });
+
+export const buryMem = (
+    id: number,
+): Effect.Effect<{ ok: boolean }, ApiErrorType> =>
+    request(`/mem/${id}/bury`, OkSchema, { method: "POST" });
+
+export const unburyMem = (
+    id: number,
+): Effect.Effect<{ ok: boolean }, ApiErrorType> =>
+    request(`/mem/${id}/unbury`, OkSchema, { method: "POST" });

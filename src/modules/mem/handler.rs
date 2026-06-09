@@ -38,6 +38,43 @@ pub async fn get_all(
     Json(DueResponse { items, due_count: count }).into_response()
 }
 
+pub async fn undo_review(
+    Path(id): Path<i32>, State(state): State<AppState>, Json(body): Json<UndoRequest>,
+) -> impl IntoResponse {
+    let repo = MemRepo::new(state.db);
+    let result = fsrs::ReviewOutcome {
+        state: body.state.clone(),
+        stability: body.stability,
+        difficulty: body.difficulty,
+        due_at: body.due_at.clone(),
+        interval_secs: 0.0,
+    };
+    if let Err(e) = repo.update_mem_fsrs(id, &result.state, result.stability, result.difficulty, body.step_index, body.lapses, body.leeched, &result.due_at).await {
+        return error::internal(e, "undo").into_response();
+    }
+    Json(serde_json::json!({ "ok": true })).into_response()
+}
+
+pub async fn bury_mem(
+    Path(id): Path<i32>, State(state): State<AppState>,
+) -> impl IntoResponse {
+    let repo = MemRepo::new(state.db);
+    match repo.bury_mem(id).await {
+        Ok(()) => Json(serde_json::json!({ "ok": true })).into_response(),
+        Err(e) => error::internal(e, "bury").into_response(),
+    }
+}
+
+pub async fn unbury_mem(
+    Path(id): Path<i32>, State(state): State<AppState>,
+) -> impl IntoResponse {
+    let repo = MemRepo::new(state.db);
+    match repo.unbury_mem(id).await {
+        Ok(()) => Json(serde_json::json!({ "ok": true })).into_response(),
+        Err(e) => error::internal(e, "unbury").into_response(),
+    }
+}
+
 pub async fn delete_mem(
     Path(id): Path<i32>, State(state): State<AppState>,
 ) -> impl IntoResponse {
@@ -126,15 +163,14 @@ pub async fn review_mem(
     let step = row.step_index.map(|i| i as usize);
     let result = fsrs::schedule(row.stability, row.difficulty, &row.state, step, body.rating, chrono::Utc::now());
     let new_step = if result.state == "learning" || result.state == "review" {
-        // learning → 学过但没毕业; review → 刚毕业
         if result.state == "review" { None }
         else { Some(match (step, body.rating) {
-            (_, 1) => 0,
-            (Some(s), _) => s + 1,
-            (None, _) => 0,
+            (_, 1) => 0, (Some(s), _) => s + 1, (None, _) => 0,
         }) }
     } else { None };
-    if let Err(e) = repo.update_mem_fsrs(id, &result.state, result.stability, result.difficulty, new_step.map(|s| s as i32), &result.due_at).await {
+    let lapses = if body.rating == 1 { row.lapses + 1 } else { 0 };
+    let leeched = row.leeched || lapses >= 5;
+    if let Err(e) = repo.update_mem_fsrs(id, &result.state, result.stability, result.difficulty, new_step.map(|s| s as i32), lapses, leeched, &result.due_at).await {
         return error::internal(e, "update").into_response();
     }
     Json(ReviewResponse { state: result.state, due_at: result.due_at }).into_response()

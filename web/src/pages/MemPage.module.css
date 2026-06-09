@@ -189,6 +189,28 @@
     width: 100%;
 }
 
+/* ── 操作行 ── */
+.actionRow {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.buryBtn {
+    padding: 12px 24px;
+    font-size: 15px;
+    border: 2px solid var(--c-border, #e8dfcc);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--c-text-muted, #9b8e7a);
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.buryBtn:hover {
+    background: var(--c-bg-subtle, #f8f3e6);
+}
+
 /* ── 按钮（距底部 64px，避免遮挡 CommandPalette）── */
 .actions {
     display: flex;
@@ -213,6 +235,22 @@
 
 .showBtn:hover {
     background: var(--c-primary-hover, #2563eb);
+}
+
+/* ── Undo ── */
+.undoBtn {
+    padding: 12px 24px;
+    font-size: 15px;
+    border: 2px solid var(--c-border, #e8dfcc);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--c-text-secondary, #6b5e4a);
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.undoBtn:hover {
+    background: var(--c-bg-subtle, #f8f3e6);
 }
 
 .ratings {

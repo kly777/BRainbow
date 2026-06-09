@@ -12,6 +12,9 @@ pub struct MemRow {
     pub stability: f64,
     pub difficulty: f64,
     pub step_index: Option<i32>,
+    pub buried: bool,
+    pub lapses: i32,
+    pub leeched: bool,
     pub due_at: String,
     pub last_review_at: Option<String>,
 }
@@ -91,7 +94,7 @@ impl MemRepo {
 
     pub async fn get_mem(&self, id: i32) -> Result<Option<MemRow>, sqlx::Error> {
         sqlx::query_as::<_, MemRow>(
-            "SELECT id, cue_chunk_id, target_chunk_id, state, stability, difficulty, step_index, due_at, last_review_at FROM mem WHERE id = ?",
+            "SELECT id, cue_chunk_id, target_chunk_id, state, stability, difficulty, step_index, buried, lapses, leeched, due_at, last_review_at FROM mem WHERE id = ?",
         )
         .bind(id)
         .fetch_optional(&*self.pool)
@@ -121,6 +124,7 @@ impl MemRepo {
             r#"
             SELECT m.id FROM mem m
             WHERE (m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now') OR m.state = 'learning')
+              AND m.buried = 0 AND m.leeched = 0
               AND NOT EXISTS (
                 SELECT 1 FROM mem_prerequisite mp
                 JOIN mem pm ON mp.requires_mem_id = pm.id
@@ -143,15 +147,19 @@ impl MemRepo {
         stability: f64,
         difficulty: f64,
         step_index: Option<i32>,
+        lapses: i32,
+        leeched: bool,
         due_at: &str,
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
-            "UPDATE mem SET state=?, stability=?, difficulty=?, step_index=?, due_at=?, last_review_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?",
+            "UPDATE mem SET state=?, stability=?, difficulty=?, step_index=?, lapses=?, leeched=?, due_at=?, last_review_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?",
         )
         .bind(state)
         .bind(stability)
         .bind(difficulty)
         .bind(step_index)
+        .bind(lapses)
+        .bind(leeched)
         .bind(due_at)
         .bind(id)
         .execute(&*self.pool)
@@ -166,6 +174,16 @@ impl MemRepo {
         .bind(limit)
         .fetch_all(&*self.pool)
         .await
+    }
+
+    pub async fn bury_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE mem SET buried = 1 WHERE id = ?").bind(id).execute(&*self.pool).await?;
+        Ok(())
+    }
+
+    pub async fn unbury_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE mem SET buried = 0 WHERE id = ?").bind(id).execute(&*self.pool).await?;
+        Ok(())
     }
 
     pub async fn delete_mem(&self, id: i32) -> Result<(), sqlx::Error> {

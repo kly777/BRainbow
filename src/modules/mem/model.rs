@@ -52,6 +52,17 @@ pub struct ReviewRequest {
     pub rating: u8,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct UndoRequest {
+    pub state: String,
+    pub stability: f64,
+    pub difficulty: f64,
+    pub step_index: Option<i32>,
+    pub lapses: i32,
+    pub leeched: bool,
+    pub due_at: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ReviewResponse {
     pub state: String,

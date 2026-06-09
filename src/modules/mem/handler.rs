@@ -123,7 +123,7 @@ pub async fn review_mem(
         Ok(None) => return error::not_found("not found").into_response(),
         Err(e) => return error::internal(e, "get").into_response(),
     };
-    let is_new = row.state == "new";
+    let is_new = row.state == "new" || row.stability == 0.0;
     let result = fsrs::schedule(row.stability, row.difficulty, is_new, body.rating, chrono::Utc::now());
     if let Err(e) = repo.update_mem_fsrs(id, &result.state, result.stability, result.difficulty, &result.due_at).await {
         return error::internal(e, "update").into_response();

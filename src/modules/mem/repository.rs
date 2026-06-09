@@ -105,7 +105,7 @@ impl MemRepo {
               AND NOT EXISTS (
                 SELECT 1 FROM mem_prerequisite mp
                 JOIN mem pm ON mp.requires_mem_id = pm.id
-                WHERE mp.mem_id = m.id AND pm.state IN ('new', 'learning')
+                WHERE mp.mem_id = m.id AND pm.state = 'new'
               )
             ORDER BY m.due_at
             LIMIT 1
@@ -123,7 +123,7 @@ impl MemRepo {
               AND NOT EXISTS (
                 SELECT 1 FROM mem_prerequisite mp
                 JOIN mem pm ON mp.requires_mem_id = pm.id
-                WHERE mp.mem_id = m.id AND pm.state IN ('new', 'learning')
+                WHERE mp.mem_id = m.id AND pm.state = 'new'
               )
             ORDER BY m.due_at
             LIMIT ?

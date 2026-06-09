@@ -40,8 +40,9 @@ pub fn schedule(
     s_old: f64, d_old: f64, is_new: bool, rating: u8, now: DateTime<Utc>,
 ) -> ReviewOutcome {
     if rating == 1 && is_new {
+        let s = init_stability(1);
         return ReviewOutcome {
-            state: "learning".into(), stability: 0.0, difficulty: 0.0,
+            state: "learning".into(), stability: s, difficulty: init_difficulty(1),
             due_at: (now + Duration::seconds(60)).format("%Y-%m-%dT%H:%M:%SZ").to_string(),
             interval_secs: 60.0,
         };

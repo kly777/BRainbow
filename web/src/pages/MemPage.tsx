@@ -10,7 +10,6 @@ export default function MemPage() {
     const [current, setCurrent] = createSignal(0);
     const [showAnswer, setShowAnswer] = createSignal(false);
     const [loading, setLoading] = createSignal(true);
-    const [count, setCount] = createSignal(0);
     const [isPreview, setIsPreview] = createSignal(false);
 
     const item = () => due()[current()];
@@ -34,10 +33,9 @@ export default function MemPage() {
 
     const loadDue = async () => {
         setLoading(true);
-        const exit = await Effect.runPromiseExit(getDue());
+        const exit = await Effect.runPromiseExit(getDue(7));
         if (exit._tag === "Success") {
             setDue([...exit.value.items]);
-            setCount(exit.value.due_count);
             setCurrent(0);
             setShowAnswer(false);
             setIsPreview(exit.value.due_count === 0 && exit.value.items.length > 0);
@@ -95,7 +93,7 @@ export default function MemPage() {
                     <A href="/m/manage" class={styles.manageLink}>管理</A>
                     <span class={styles.count}>
                         {current() + 1}/{due().length}
-                        {isPreview() ? "（提前查看）" : count() > due().length ? `（共 ${count()} 个待复习）` : ""}
+                        {isPreview() ? "（提前查看）" : `${due().length}/7 学习中`}
                     </span>
                 </div>
             </div>

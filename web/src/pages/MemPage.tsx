@@ -1,7 +1,7 @@
 import { A } from "@solidjs/router";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { Effect } from "effect";
-import { buryMem, getDue, previewMem, reviewMem, type MemItem } from "../apis/memApi.ts";
+import { buryMem, editMem, getDue, previewMem, reviewMem, type MemItem } from "../apis/memApi.ts";
 import { request } from "../apis/request.ts";
 import { Schema } from "effect";
 
@@ -16,6 +16,9 @@ export default function MemPage() {
     const [showAnswer, setShowAnswer] = createSignal(false);
     const [loading, setLoading] = createSignal(true);
     const [isPreview, setIsPreview] = createSignal(false);
+    const [editing, setEditing] = createSignal(false);
+    const [editCue, setEditCue] = createSignal("");
+    const [editTarget, setEditTarget] = createSignal("");
 
     const item = () => due()[current()];
     const [intervals, setIntervals] = createSignal<readonly number[]>([0, 0, 0, 0]);
@@ -86,6 +89,22 @@ export default function MemPage() {
         nextOrReload();
     };
 
+    const startEdit = () => {
+        const it = item();
+        if (!it) return;
+        setEditCue(it.cue.content);
+        setEditTarget(it.target.content);
+        setEditing(true);
+    };
+
+    const saveEdit = async () => {
+        const it = item();
+        if (!it) return;
+        await Effect.runPromiseExit(editMem(it.id, editCue(), editTarget()));
+        setEditing(false);
+        loadDue();
+    };
+
     const nextOrReload = () => {
         if (current() + 1 < due().length) {
             const next = current() + 1;
@@ -111,22 +130,42 @@ export default function MemPage() {
                     <Show when={isPreview()}>
                         <div class={styles.previewBanner}>将于 {fmtLocal(item()?.due_at ?? "")} 到期</div>
                     </Show>
-                    <div class={styles.cue}>
-                        <div class={styles.sectionLabel}>线索</div>
-                        <div class={styles.content}><Markdown content={item()?.cue.content ?? ""} /></div>
-                    </div>
-                    <Show when={showAnswer()}>
+                    <Show when={editing()} fallback={
+                        <>
+                            <div class={styles.cue}>
+                                <div class={styles.sectionLabel}>线索</div>
+                                <div class={styles.content}><Markdown content={item()?.cue.content ?? ""} /></div>
+                            </div>
+                            <Show when={showAnswer()}>
+                                <div class={styles.divider} />
+                                <div class={styles.target}>
+                                    <div class={styles.sectionLabel}>答案</div>
+                                    <div class={styles.content}><Markdown content={item()?.target.content ?? ""} /></div>
+                                </div>
+                            </Show>
+                        </>
+                    }>
+                        <div class={styles.cue}>
+                            <div class={styles.sectionLabel}>线索</div>
+                            <textarea class={styles.editArea} value={editCue()} onInput={(e) => setEditCue(e.currentTarget.value)} rows={3} />
+                        </div>
                         <div class={styles.divider} />
                         <div class={styles.target}>
                             <div class={styles.sectionLabel}>答案</div>
-                            <div class={styles.content}><Markdown content={item()?.target.content ?? ""} /></div>
+                            <textarea class={styles.editArea} value={editTarget()} onInput={(e) => setEditTarget(e.currentTarget.value)} rows={3} />
                         </div>
                     </Show>
                 </div>
                 <div class={styles.actions}>
-                    {!showAnswer() ? (
+                    {editing() ? (
+                        <div class={styles.actionRow}>
+                            <button type="button" class={styles.undoBtn} onClick={saveEdit}>保存</button>
+                            <button type="button" class={styles.undoBtn} onClick={() => setEditing(false)}>取消</button>
+                        </div>
+                    ) : !showAnswer() ? (
                         <div class={styles.actionRow}>
                             <button type="button" class={styles.buryBtn} onClick={bury}>跳过</button>
+                            <button type="button" class={styles.buryBtn} onClick={startEdit}>编辑</button>
                             <Show when={showUndo()}>
                                 <button type="button" class={styles.undoBtn} onClick={undo}>撤销</button>
                             </Show>

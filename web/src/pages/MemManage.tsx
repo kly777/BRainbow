@@ -1,7 +1,7 @@
 import { createSignal, onMount, Show, For } from "solid-js";
 import { A } from "@solidjs/router";
 import { Effect } from "effect";
-import { getAllMems, deleteMem, type MemItem } from "../apis/memApi.ts";
+import { editMem, getAllMems, deleteMem, type MemItem } from "../apis/memApi.ts";
 import Markdown from "../components/ui/Markdown.tsx";
 import { fmtLocal, fmtRelative } from "../lib/time.ts";
 import styles from "./MemManage.module.css";
@@ -22,6 +22,9 @@ export default function MemManage() {
     const [mems, setMems] = createSignal<MemItem[]>([]);
     const [loading, setLoading] = createSignal(true);
     const [selected, setSelected] = createSignal<number | null>(null);
+    const [editing, setEditing] = createSignal(false);
+    const [editCue, setEditCue] = createSignal("");
+    const [editTarget, setEditTarget] = createSignal("");
 
     const load = async () => { setLoading(true); setMems(await loadAllMems()); setLoading(false); };
     onMount(load);
@@ -30,6 +33,22 @@ export default function MemManage() {
         if (!confirm("确定删除？")) return;
         await Effect.runPromiseExit(deleteMem(id));
         if (selected() === id) setSelected(null);
+        load();
+    };
+
+    const startEdit = () => {
+        const d = detail();
+        if (!d) return;
+        setEditCue(d.cue.content);
+        setEditTarget(d.target.content);
+        setEditing(true);
+    };
+
+    const saveEdit = async () => {
+        const d = detail();
+        if (!d) return;
+        await Effect.runPromiseExit(editMem(d.id, editCue(), editTarget()));
+        setEditing(false);
         load();
     };
 
@@ -71,13 +90,38 @@ export default function MemManage() {
                 <div class={styles.detail}>
                     <Show when={detail()} fallback={<div class={styles.empty}>点击左侧条目查看详情</div>}>
                         {(d) => (<>
-                            <div class={styles.section}><span class={styles.sectionLabel}>线索</span><div class={styles.content}><Markdown content={d().cue.content} /></div></div>
-                            <div class={styles.section}><span class={styles.sectionLabel}>答案</span><div class={styles.content}><Markdown content={d().target.content} /></div></div>
+                            <Show when={editing()} fallback={
+                                <>
+                                    <div class={styles.section}><span class={styles.sectionLabel}>线索</span><div class={styles.content}><Markdown content={d().cue.content} /></div></div>
+                                    <div class={styles.section}><span class={styles.sectionLabel}>答案</span><div class={styles.content}><Markdown content={d().target.content} /></div></div>
+                                </>
+                            }>
+                                <div class={styles.section}>
+                                    <span class={styles.sectionLabel}>线索</span>
+                                    <textarea class={styles.editArea} value={editCue()} onInput={(e) => setEditCue(e.currentTarget.value)} rows={4} />
+                                </div>
+                                <div class={styles.section}>
+                                    <span class={styles.sectionLabel}>答案</span>
+                                    <textarea class={styles.editArea} value={editTarget()} onInput={(e) => setEditTarget(e.currentTarget.value)} rows={4} />
+                                </div>
+                            </Show>
                             <div class={styles.meta}>
                                 <span>状态：{d().state}</span>
                                 <span>到期：{fmtLocal(d().due_at)}</span>
                             </div>
-                            <button type="button" class={styles.deleteBtn} onClick={() => handleDelete(d().id)}>删除此记忆</button>
+                            <div class={styles.actionBtns}>
+                                {editing() ? (
+                                    <>
+                                        <button type="button" class={styles.editBtn} onClick={saveEdit}>保存</button>
+                                        <button type="button" class={styles.cancelBtn} onClick={() => setEditing(false)}>取消</button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button type="button" class={styles.editBtn} onClick={startEdit}>编辑</button>
+                                        <button type="button" class={styles.deleteBtn} onClick={() => handleDelete(d().id)}>删除</button>
+                                    </>
+                                )}
+                            </div>
                         </>)}
                     </Show>
                 </div>

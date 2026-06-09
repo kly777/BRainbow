@@ -181,8 +181,57 @@
     margin-top: 12px;
 }
 
-.deleteBtn {
+.actionBtns {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.editBtn {
+    flex: 1;
+    padding: 8px;
+    font-size: 13px;
+    border: 1px solid var(--c-border, #e8dfcc);
+    border-radius: 6px;
+    background: var(--c-bg-card, #fffef9);
+    color: var(--c-text-secondary, #6b5e4a);
+    cursor: pointer;
+}
+
+.editBtn:hover { background: var(--c-bg-hover, #f0e8d5); }
+
+.cancelBtn {
+    flex: 1;
+    padding: 8px;
+    font-size: 13px;
+    border: 1px solid var(--c-border, #e8dfcc);
+    border-radius: 6px;
+    background: var(--c-bg-card, #fffef9);
+    color: var(--c-text-secondary, #6b5e4a);
+    cursor: pointer;
+}
+
+.cancelBtn:hover { background: var(--c-bg-hover, #f0e8d5); }
+
+.editArea {
     width: 100%;
+    padding: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    border: 1px solid var(--c-border, #e8dfcc);
+    border-radius: 6px;
+    background: var(--c-bg, #fefcf5);
+    color: var(--c-text, #3d3629);
+    resize: vertical;
+}
+
+.editArea:focus {
+    outline: none;
+    border-color: var(--c-primary, #3b82f6);
+}
+
+.deleteBtn {
+    flex: 1;
     padding: 8px;
     font-size: 13px;
     border: 1px solid var(--c-danger-border, #fca5a5);
@@ -190,7 +239,6 @@
     background: var(--c-danger-light, #fef2f2);
     color: var(--c-danger-text, #c53030);
     cursor: pointer;
-    margin-top: 12px;
 }
 
 .deleteBtn:hover {

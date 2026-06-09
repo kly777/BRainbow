@@ -100,3 +100,13 @@ export const unburyMem = (
     id: number,
 ): Effect.Effect<{ ok: boolean }, ApiErrorType> =>
     request(`/mem/${id}/unbury`, OkSchema, { method: "POST" });
+
+export const editMem = (
+    id: number,
+    cue: string,
+    target: string,
+): Effect.Effect<{ ok: boolean }, ApiErrorType> =>
+    request(`/mem/${id}/edit`, OkSchema, {
+        method: "PUT",
+        body: JSON.stringify({ cue_content: cue, target_content: target }),
+    });

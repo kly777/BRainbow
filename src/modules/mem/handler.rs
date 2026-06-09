@@ -55,6 +55,22 @@ pub async fn undo_review(
     Json(serde_json::json!({ "ok": true })).into_response()
 }
 
+pub async fn edit_mem(
+    Path(id): Path<i32>, State(state): State<AppState>, Json(body): Json<EditMemRequest>,
+) -> impl IntoResponse {
+    let repo = MemRepo::new(state.db);
+    let row = match repo.get_mem(id).await {
+        Ok(Some(r)) => r, _ => return error::not_found("not found").into_response(),
+    };
+    if let Err(e) = repo.update_chunk(row.cue_chunk_id, &body.cue_content).await {
+        return error::internal(e, "更新线索").into_response();
+    }
+    if let Err(e) = repo.update_chunk(row.target_chunk_id, &body.target_content).await {
+        return error::internal(e, "更新目标").into_response();
+    }
+    Json(serde_json::json!({ "ok": true })).into_response()
+}
+
 pub async fn bury_mem(
     Path(id): Path<i32>, State(state): State<AppState>,
 ) -> impl IntoResponse {

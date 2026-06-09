@@ -283,6 +283,26 @@
     opacity: 0.75;
 }
 
+/* ── 编辑 ── */
+.editArea {
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
+    font-family: inherit;
+    line-height: 1.6;
+    border: 1px solid var(--c-border, #e8dfcc);
+    border-radius: 8px;
+    background: var(--c-bg, #fefcf5);
+    color: var(--c-text, #3d3629);
+    resize: vertical;
+    outline: none;
+}
+
+.editArea:focus {
+    border-color: var(--c-primary, #3b82f6);
+    box-shadow: 0 0 0 2px var(--c-primary-ring, rgba(59, 130, 246, 0.25));
+}
+
 .ratings button:hover {
     filter: brightness(0.92);
 }

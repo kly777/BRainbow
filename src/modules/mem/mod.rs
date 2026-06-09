@@ -9,6 +9,7 @@ use crate::state::AppState;
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", post(handler::create_mem))
+        .route("/{id}/edit", axum::routing::put(handler::edit_mem))
         .route("/all", get(handler::get_all))
         .route("/due", get(handler::get_due))
         .route("/{id}/review", post(handler::review_mem))

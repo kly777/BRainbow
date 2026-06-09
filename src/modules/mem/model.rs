@@ -53,6 +53,12 @@ pub struct ReviewRequest {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct EditMemRequest {
+    pub cue_content: String,
+    pub target_content: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct UndoRequest {
     pub state: String,
     pub stability: f64,

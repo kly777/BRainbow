@@ -232,6 +232,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             state TEXT NOT NULL DEFAULT 'new',
             stability REAL DEFAULT 0,
             difficulty REAL DEFAULT 0,
+            step_index INTEGER,
             due_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_review_at TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

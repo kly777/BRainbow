@@ -11,6 +11,7 @@ pub struct MemRow {
     pub state: String,
     pub stability: f64,
     pub difficulty: f64,
+    pub step_index: Option<i32>,
     pub due_at: String,
     pub last_review_at: Option<String>,
 }
@@ -90,7 +91,7 @@ impl MemRepo {
 
     pub async fn get_mem(&self, id: i32) -> Result<Option<MemRow>, sqlx::Error> {
         sqlx::query_as::<_, MemRow>(
-            "SELECT id, cue_chunk_id, target_chunk_id, state, stability, difficulty, due_at, last_review_at FROM mem WHERE id = ?",
+            "SELECT id, cue_chunk_id, target_chunk_id, state, stability, difficulty, step_index, due_at, last_review_at FROM mem WHERE id = ?",
         )
         .bind(id)
         .fetch_optional(&*self.pool)
@@ -141,14 +142,16 @@ impl MemRepo {
         state: &str,
         stability: f64,
         difficulty: f64,
+        step_index: Option<i32>,
         due_at: &str,
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
-            "UPDATE mem SET state=?, stability=?, difficulty=?, due_at=?, last_review_at=datetime('now') WHERE id=?",
+            "UPDATE mem SET state=?, stability=?, difficulty=?, step_index=?, due_at=?, last_review_at=datetime('now') WHERE id=?",
         )
         .bind(state)
         .bind(stability)
         .bind(difficulty)
+        .bind(step_index)
         .bind(due_at)
         .bind(id)
         .execute(&*self.pool)

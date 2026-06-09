@@ -1,8 +1,6 @@
 import { createSignal, onMount, Show } from "solid-js";
-import { For } from "solid-js/web";
 import { Effect } from "effect";
-import { createMem, getDue, reviewMem, type ChunkPart, type MemItem } from "../apis/memApi.ts";
-import { previewDue } from "../lib/fsrs.ts";
+import { createMem, getDue, previewMem, reviewMem, type MemItem } from "../apis/memApi.ts";
 import styles from "./MemPage.module.css";
 
 export default function MemPage() {
@@ -11,6 +9,7 @@ export default function MemPage() {
     const [showAnswer, setShowAnswer] = createSignal(false);
     const [loading, setLoading] = createSignal(true);
     const [count, setCount] = createSignal(0);
+    const [isPreview, setIsPreview] = createSignal(false);
 
     const [showForm, setShowForm] = createSignal(false);
     const [cueText, setCueText] = createSignal("");
@@ -19,11 +18,20 @@ export default function MemPage() {
 
     const item = () => due()[current()];
 
-    // 下次复习时间预览
-    const preview = () => {
-        const it = item();
-        if (!it) return {};
-        return previewDue(it.state, it.stability, it.difficulty);
+    const [intervals, setIntervals] = createSignal([0, 0, 0, 0]);
+
+    const loadPreview = async (id: number) => {
+        const exit = await Effect.runPromiseExit(previewMem(id));
+        if (exit._tag === "Success") {
+            setIntervals(exit.value.intervals);
+        }
+    };
+
+    const previewLabel = (days: number) => {
+        if (days < 1 / 24) return `< 1分钟`;
+        if (days < 1) return `${Math.round(days * 1440)}分钟`;
+        if (days < 30) return `${Math.round(days)}天`;
+        return `${Math.round(days / 30)}个月`;
     };
 
     const loadDue = async () => {
@@ -34,6 +42,10 @@ export default function MemPage() {
             setCount(exit.value.due_count);
             setCurrent(0);
             setShowAnswer(false);
+            setIsPreview(exit.value.due_count === 0 && exit.value.items.length > 0);
+            if (exit.value.items.length > 0) {
+                loadPreview(exit.value.items[0].id);
+            }
         }
         setLoading(false);
     };
@@ -45,13 +57,7 @@ export default function MemPage() {
         const target = targetText().trim();
         if (!cue || !target) return;
         setCreating(true);
-        await Effect.runPromiseExit(
-            createMem(
-                [{ type: "text", content: cue }],
-                [{ type: "text", content: target }],
-                [],
-            ),
-        );
+        await Effect.runPromiseExit(createMem(cue, target));
         setCueText("");
         setTargetText("");
         setShowForm(false);
@@ -66,33 +72,18 @@ export default function MemPage() {
 
     const nextOrReload = () => {
         if (current() + 1 < due().length) {
-            setCurrent(current() + 1);
+            const next = current() + 1;
+            setCurrent(next);
             setShowAnswer(false);
+            const it = due()[next];
+            if (it) loadPreview(it.id);
         } else {
             loadDue();
         }
     };
 
-    const renderParts = (parts: ChunkPart[]) => (
-        <For each={parts}>
-            {(p) => {
-                if (p.type === "text" && p.content) {
-                    return <div class={styles.md}>{p.content}</div>;
-                }
-                if (p.type === "image" && p.url) {
-                    return <img src={p.url} alt="" class={styles.img} />;
-                }
-                if (p.type === "audio" && p.url) {
-                    return (
-                        /* biome-ignore lint/a11y/useMediaCaption: 用户自备音频无需字幕 */
-                        <audio controls src={p.url} class={styles.audio}>
-                            浏览器不支持音频播放
-                        </audio>
-                    );
-                }
-                return null;
-            }}
-        </For>
+    const md = (content: string) => (
+        <div class={styles.md}>{content}</div>
     );
 
     return (
@@ -109,7 +100,7 @@ export default function MemPage() {
                     </button>
                     <span class={styles.count}>
                         {current() + 1}/{due().length}
-                        {count() > due().length ? `（共 ${count()} 个待复习）` : ""}
+                        {isPreview() ? "（提前查看）" : count() > due().length ? `（共 ${count()} 个待复习）` : ""}
                     </span>
                 </div>
             </div>
@@ -118,17 +109,17 @@ export default function MemPage() {
                 <div class={styles.form}>
                     <textarea
                         class={styles.formInput}
-                        placeholder="线索（支持 Markdown）"
+                        placeholder="线索（Markdown）"
                         value={cueText()}
                         onInput={(e) => setCueText(e.currentTarget.value)}
-                        rows={2}
+                        rows={3}
                     />
                     <textarea
                         class={styles.formInput}
-                        placeholder="答案（支持 Markdown）"
+                        placeholder="答案（Markdown）"
                         value={targetText()}
                         onInput={(e) => setTargetText(e.currentTarget.value)}
-                        rows={2}
+                        rows={3}
                     />
                     <button
                         type="button"
@@ -145,21 +136,26 @@ export default function MemPage() {
                 when={!loading() && due().length > 0}
                 fallback={
                     <div class={styles.empty}>
-                        {loading() ? "加载中…" : "没有待复习的记忆，干得好！🎉"}
+                        {loading() ? "加载中…" : "没有记忆卡片，去添加一些吧！"}
                     </div>
                 }
             >
                 <div class={styles.card}>
+                    <Show when={isPreview()}>
+                        <div class={styles.previewBanner}>
+                            将于 {new Date(item()?.due_at ?? "").toLocaleString("zh-CN")} 到期
+                        </div>
+                    </Show>
                     <div class={styles.cue}>
                         <div class={styles.sectionLabel}>线索</div>
-                        <div class={styles.content}>{renderParts(item()?.cue.parts ?? [])}</div>
+                        <div class={styles.content}>{md(item()?.cue.content ?? "")}</div>
                     </div>
 
                     <Show when={showAnswer()}>
                         <div class={styles.divider} />
                         <div class={styles.target}>
                             <div class={styles.sectionLabel}>答案</div>
-                            <div class={styles.content}>{renderParts(item()?.target.parts ?? [])}</div>
+                            <div class={styles.content}>{md(item()?.target.content ?? "")}</div>
                         </div>
                     </Show>
 
@@ -176,19 +172,19 @@ export default function MemPage() {
                             <div class={styles.ratings}>
                                 <button type="button" class={styles.again} onClick={() => rate(1)}>
                                     <span class={styles.ratingLabel}>忘记</span>
-                                    <span class={styles.ratingTime}>{preview()[1]}</span>
+                                    <span class={styles.ratingTime}>{previewLabel(intervals()[0])}</span>
                                 </button>
                                 <button type="button" class={styles.hard} onClick={() => rate(2)}>
                                     <span class={styles.ratingLabel}>困难</span>
-                                    <span class={styles.ratingTime}>{preview()[2]}</span>
+                                    <span class={styles.ratingTime}>{previewLabel(intervals()[1])}</span>
                                 </button>
                                 <button type="button" class={styles.good} onClick={() => rate(3)}>
                                     <span class={styles.ratingLabel}>良好</span>
-                                    <span class={styles.ratingTime}>{preview()[3]}</span>
+                                    <span class={styles.ratingTime}>{previewLabel(intervals()[2])}</span>
                                 </button>
                                 <button type="button" class={styles.easy} onClick={() => rate(4)}>
                                     <span class={styles.ratingLabel}>简单</span>
-                                    <span class={styles.ratingTime}>{preview()[4]}</span>
+                                    <span class={styles.ratingTime}>{previewLabel(intervals()[3])}</span>
                                 </button>
                             </div>
                         )}

@@ -1,31 +1,30 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::IntoResponse,
     Json,
 };
 use chrono::Utc;
+use std::collections::HashMap;
 
 use crate::error;
-use crate::modules::mem::fsrs::{self, CardState};
+use crate::modules::mem::fsrs;
 use crate::modules::mem::model::*;
 use crate::state::AppState;
 
 use super::repository::MemRepo;
 
-/// POST /mem → 创建记忆项
 pub async fn create_mem(
     State(state): State<AppState>,
     Json(body): Json<CreateMemRequest>,
 ) -> impl IntoResponse {
     let repo = MemRepo::new(state.db);
-
-    let cue_id = match repo.create_chunk(&body.cue_parts).await {
+    let cue_id = match repo.create_chunk(&body.cue_content).await {
         Ok(id) => id,
-        Err(e) => return error::internal(e, "创建线索块").into_response(),
+        Err(e) => return error::internal(e, "创建线索").into_response(),
     };
-    let target_id = match repo.create_chunk(&body.target_parts).await {
+    let target_id = match repo.create_chunk(&body.target_content).await {
         Ok(id) => id,
-        Err(e) => return error::internal(e, "创建目标块").into_response(),
+        Err(e) => return error::internal(e, "创建目标").into_response(),
     };
     match repo.create_mem(cue_id, target_id, &body.prerequisites).await {
         Ok(id) => Json(serde_json::json!({"id": id})).into_response(),
@@ -33,10 +32,9 @@ pub async fn create_mem(
     }
 }
 
-/// GET /mem/due?limit=20 → 到期需复习的记忆项
 pub async fn get_due(
     State(state): State<AppState>,
-    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+    Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
     let limit = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(20);
     let repo = MemRepo::new(state.db);
@@ -45,6 +43,14 @@ pub async fn get_due(
         Ok(ids) => ids,
         Err(e) => return error::internal(e, "获取待复习").into_response(),
     };
+
+    // 没有到期的 → 尝试获取最近一个
+    let mut ids = ids;
+    if ids.is_empty() {
+        if let Ok(Some(next_id)) = repo.get_next_mem().await {
+            ids.push(next_id);
+        }
+    }
 
     let mut items = Vec::new();
     for id in ids {
@@ -67,48 +73,46 @@ pub async fn get_due(
     }
 
     let count = items.len();
-    Json(DueResponse {
-        items,
-        due_count: count,
-    })
-    .into_response()
+    Json(DueResponse { items, due_count: count }).into_response()
 }
 
-/// POST /mem/:id/review → 评分复习
+pub async fn preview_mem(
+    Path(id): Path<i32>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let repo = MemRepo::new(state.db);
+    let row = match repo.get_mem(id).await {
+        Ok(Some(r)) => r,
+        Ok(None) => return error::not_found("not found").into_response(),
+        Err(e) => return error::internal(e, "get").into_response(),
+    };
+
+    let is_new = row.state == "new" || row.state == "learning";
+    let intervals = fsrs::preview(row.stability, row.difficulty, is_new);
+    Json(serde_json::json!({ "intervals": intervals })).into_response()
+}
+
 pub async fn review_mem(
     Path(id): Path<i32>,
     State(state): State<AppState>,
     Json(body): Json<ReviewRequest>,
 ) -> impl IntoResponse {
     let repo = MemRepo::new(state.db);
-
-    let mem = match repo.get_mem(id).await {
-        Ok(Some(m)) => m,
-        Ok(None) => return error::not_found("记忆项不存在").into_response(),
-        Err(e) => return error::internal(e, "获取记忆项").into_response(),
+    let row = match repo.get_mem(id).await {
+        Ok(Some(r)) => r,
+        Ok(None) => return error::not_found("not found").into_response(),
+        Err(e) => return error::internal(e, "get").into_response(),
     };
 
-    let card_state = CardState::from_str(&mem.state);
-    let now = Utc::now();
-
-    let result = fsrs::schedule(card_state, mem.stability, mem.difficulty, body.rating, now);
+    let is_new = row.state == "new" || row.state == "learning";
+    let result = fsrs::schedule(row.stability, row.difficulty, is_new, body.rating, Utc::now());
 
     if let Err(e) = repo
-        .update_mem_fsrs(
-            id,
-            result.state.as_str(),
-            result.stability,
-            result.difficulty,
-            &result.due_at.format("%Y-%m-%dT%H:%M:%S").to_string(),
-        )
+        .update_mem_fsrs(id, &result.state, result.stability, result.difficulty, &result.due_at)
         .await
     {
-        return error::internal(e, "更新记忆状态").into_response();
+        return error::internal(e, "update").into_response();
     }
 
-    Json(ReviewResponse {
-        state: result.state.as_str().to_string(),
-        due_at: result.due_at.to_rfc3339(),
-    })
-    .into_response()
+    Json(ReviewResponse { state: result.state, due_at: result.due_at }).into_response()
 }

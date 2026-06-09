@@ -208,12 +208,12 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 
     // ── 记忆系统 ──
 
-    // chunk：知识块（文本/图片/音频自由组合）
+    // chunk：知识块（Markdown 内容，图片/音频通过 MD 链接引用）
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS chunk (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            parts_json TEXT NOT NULL DEFAULT '[]',
+            content TEXT NOT NULL DEFAULT '',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )

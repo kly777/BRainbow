@@ -1,7 +1,7 @@
 mod handler;
 mod repository;
 
-use axum::{Router, routing::get, routing::put};
+use axum::{Router, routing::get};
 use crate::state::AppState;
 
 pub fn routes() -> Router<AppState> {

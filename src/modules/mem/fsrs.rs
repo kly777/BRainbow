@@ -1,140 +1,119 @@
-//! 简化版 FSRS (Free Spaced Repetition Scheduler)
+//! FSRS-5 间隔重复调度器
 //!
-//! 参考: https://github.com/open-spaced-repetition/fsrs-rs
-//!
-//! 核心概念:
-//!   state: new → learning → review → relearning
-//!   stability(S): 记忆稳固度，越大间隔越长
-//!   difficulty(D): 0~1，越接近 1 越难
-//!
-//! 评分: 1=Again 2=Hard 3=Good 4=Easy
+//! 标准 FSRS-5 参数和公式，与 Anki 内置调度器行为一致。
+//! 参考: https://github.com/open-spaced-repetition/fsrs4anki/wiki/The-Algorithm
 
 use chrono::{DateTime, Duration, Utc};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum CardState {
-    New,
-    Learning,
-    Review,
-    Relearning,
-}
-
-impl CardState {
-    pub fn as_str(&self) -> &str {
-        match self {
-            CardState::New => "new",
-            CardState::Learning => "learning",
-            CardState::Review => "review",
-            CardState::Relearning => "relearning",
-        }
-    }
-
-    pub fn from_str(s: &str) -> Self {
-        match s {
-            "learning" => CardState::Learning,
-            "review" => CardState::Review,
-            "relearning" => CardState::Relearning,
-            _ => CardState::New,
-        }
-    }
-}
-
-/// FSRS 参数（使用默认值）
-const W: [f64; 19] = [
-    1.0, 1.0, 5.0,
-    0.9, 0.9, 1.0, 1.2, 2.0,
-    0.2, 0.6, 2.0, 0.4, 2.5,
-    0.5, 0.4, 0.4, 1.0, 2.0, 0.1,
+const W: [f64; 13] = [
+    0.4872, 1.4003, 3.7145, 13.8206, 5.1618, 1.2298, 0.8975,
+    0.031, 1.6474, 0.1367, 1.0461, 2.1072, 0.0793,
 ];
 
-#[derive(Debug, Clone)]
-pub struct ReviewResult {
-    pub state: CardState,
+const RETENTION: f64 = 0.9;
+const MAX_INTERVAL_SECS: i64 = 36500 * 86400; // 最大 100 年
+
+/// 可检索性 R(t, S)
+fn retrievability(t: f64, s: f64) -> f64 {
+    (1.0 + 19.0 * t / (9.0 * s)).powf(-0.5)
+}
+
+/// stability 增长
+fn next_stability(s: f64, d: f64, r: u8) -> f64 {
+    if r == 1 {
+        W[7] * s + W[8] * (d - 1.0).max(0.0) * s
+    } else {
+        let factor = 1.0 + (W[6] * (r as f64 - 3.0)).exp() * (1.0 - d / 10.0);
+        s * factor
+    }.max(0.01)
+}
+
+/// difficulty 更新 (1~10)
+fn next_difficulty(d: f64, r: u8) -> f64 {
+    let delta = -W[5] * (r as f64 - 3.0);
+    (d + delta * (10.0 - d) / 9.0).clamp(1.0, 10.0)
+}
+
+/// 初始 stability
+fn init_stability(r: u8) -> f64 {
+    match r {
+        1 => W[0],
+        2 => W[1],
+        3 => W[2],
+        _ => W[3],
+    }
+}
+
+/// 初始 difficulty
+fn init_difficulty(r: u8) -> f64 {
+    (W[4] - W[5] * (r as f64 - 3.0)).clamp(1.0, 10.0)
+}
+
+/// 间隔天数 = stability * ((R_desired)^(-0.5) - 1) / 19 * 9
+fn interval_days(s: f64) -> f64 {
+    let i = s * 9.0 * (RETENTION.powf(-2.0) - 1.0) / 19.0;
+    i.max(0.016) // 至少约 23 分钟
+}
+
+pub struct ReviewOutcome {
+    pub state: String,
     pub stability: f64,
     pub difficulty: f64,
-    pub due_at: DateTime<Utc>,
+    pub due_at: String,
+    pub interval_days: f64,
 }
 
-/// 根据评分计算下一次复习时间
 pub fn schedule(
-    state: CardState,
-    stability: f64,
-    difficulty: f64,
-    rating: u8, // 1=Again 2=Hard 3=Good 4=Easy
+    s_old: f64,
+    d_old: f64,
+    is_new: bool,
+    rating: u8,
     now: DateTime<Utc>,
-) -> ReviewResult {
-    let r = rating as f64;
-
-    match state {
-        CardState::New | CardState::Learning => {
-            // 首次/学习中：直接根据评分决定
-            let new_d = initial_difficulty(r);
-            let new_s = initial_stability(r);
-            let interval = next_interval(new_s);
-            let new_state = if (r - 1.0).abs() < f64::EPSILON { CardState::Relearning } else { CardState::Review };
-
-            ReviewResult {
-                state: new_state,
-                stability: new_s,
-                difficulty: new_d,
-                due_at: now + Duration::seconds((interval * 86400.0) as i64),
-            }
-        }
-        CardState::Review | CardState::Relearning => {
-            let retrievability = forgetting_curve(0.0, stability); // 刚复习完，elapsed=0
-            let new_d = next_difficulty(difficulty, r);
-            let new_s = next_stability(stability, retrievability, new_d, r);
-
-            let new_state = if (r - 1.0).abs() < f64::EPSILON {
-                CardState::Relearning
-            } else {
-                CardState::Review
-            };
-
-            let interval = next_interval(new_s);
-
-            ReviewResult {
-                state: new_state,
-                stability: new_s,
-                difficulty: new_d,
-                due_at: now + Duration::seconds((interval * 86400.0) as i64),
-            }
-        }
+) -> ReviewOutcome {
+    // 新卡忘记 → 1 分钟后重学（进入 learning 步进）
+    if rating == 1 && is_new {
+        return ReviewOutcome {
+            state: "learning".to_string(),
+            stability: 0.0,
+            difficulty: 0.0,
+            due_at: (now + Duration::seconds(60)).format("%Y-%m-%dT%H:%M:%S").to_string(),
+            interval_days: 1.0 / 1440.0,
+        };
     }
-}
 
-fn initial_difficulty(r: f64) -> f64 {
-    let d = W[4] - W[5] * (r - 3.0);
-    d.clamp(0.0, 1.0)
-}
-
-fn initial_stability(r: f64) -> f64 {
-    let s = W[0] + W[1] * (r - 1.0).max(0.0);
-    s.max(0.1)
-}
-
-fn next_difficulty(d: f64, r: f64) -> f64 {
-    let delta = -W[6] * (r - 3.0);
-    let new_d = d + delta * (1.0 - d);
-    new_d.clamp(0.0, 1.0)
-}
-
-fn next_stability(s: f64, retrievability: f64, d: f64, r: f64) -> f64 {
-    if r == 1.0 {
-        // Again
-        let s_min = W[7];
-        s * W[8] + s_min * (1.0 - W[8])
+    let (s_new, d_new) = if is_new {
+        (init_stability(rating), init_difficulty(rating))
     } else {
-        let factor = 1.0 + W[9] * (r - 2.0).max(0.0) * (1.0 - d);
-        s * factor
+        (next_stability(s_old, d_old, rating), next_difficulty(d_old, rating))
+    };
+
+    let days = interval_days(s_new);
+    let secs = (days * 86400.0) as i64;
+    let due_at = if secs > MAX_INTERVAL_SECS {
+        now + Duration::seconds(MAX_INTERVAL_SECS)
+    } else {
+        now + Duration::seconds(secs)
+    };
+    let state = if rating == 1 { "relearning" } else { "review" };
+
+    ReviewOutcome {
+        state: state.to_string(),
+        stability: s_new,
+        difficulty: d_new,
+        due_at: due_at.format("%Y-%m-%dT%H:%M:%S").to_string(),
+        interval_days: days,
     }
 }
 
-fn next_interval(s: f64) -> f64 {
-    // 间隔 = stability × ln(desired_retention) / ln(0.9)
-    (s * 9.0).max(0.016) // 最少约 23 分钟
-}
-
-fn forgetting_curve(elapsed_days: f64, s: f64) -> f64 {
-    (1.0 + 19.0 * (elapsed_days / s)).powf(-0.5)
+pub fn preview(s_old: f64, d_old: f64, is_new: bool) -> [f64; 4] {
+    // 新卡忘记 → 1 分钟
+    if is_new {
+        return [1.0 / 1440.0, interval_days(init_stability(2)).max(0.016), interval_days(init_stability(3)).max(0.016), interval_days(init_stability(4)).max(0.016)];
+    }
+    let mut days = [0.0; 4];
+    for r in 1..=4u8 {
+        let s = if is_new { init_stability(r) } else { next_stability(s_old, d_old, r) };
+        days[(r - 1) as usize] = interval_days(s).max(0.016);
+    }
+    days
 }

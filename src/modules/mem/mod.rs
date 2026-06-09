@@ -11,4 +11,5 @@ pub fn routes() -> Router<AppState> {
         .route("/", post(handler::create_mem))
         .route("/due", get(handler::get_due))
         .route("/{id}/review", post(handler::review_mem))
+        .route("/{id}/preview", get(handler::preview_mem))
 }

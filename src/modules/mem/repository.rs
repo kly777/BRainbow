@@ -1,7 +1,7 @@
 use sqlx::{FromRow, SqlitePool};
 use std::sync::Arc;
 
-use super::model::{Chunk, ChunkPart};
+use super::model::Chunk;
 
 #[derive(Debug, FromRow)]
 pub struct MemRow {
@@ -24,12 +24,11 @@ impl MemRepo {
 
     // ── Chunk ──
 
-    pub async fn create_chunk(&self, parts: &[ChunkPart]) -> Result<i32, sqlx::Error> {
-        let json = serde_json::to_string(parts).unwrap_or_default();
+    pub async fn create_chunk(&self, content: &str) -> Result<i32, sqlx::Error> {
         let id = sqlx::query_scalar::<_, i32>(
-            "INSERT INTO chunk (parts_json) VALUES (?) RETURNING id",
+            "INSERT INTO chunk (content) VALUES (?) RETURNING id",
         )
-        .bind(&json)
+        .bind(content)
         .fetch_one(&*self.pool)
         .await?;
         Ok(id)
@@ -37,18 +36,27 @@ impl MemRepo {
 
     pub async fn get_chunk(&self, id: i32) -> Result<Option<Chunk>, sqlx::Error> {
         let row = sqlx::query_as::<_, (i32, String, String, String)>(
-            "SELECT id, parts_json, created_at, updated_at FROM chunk WHERE id = ?",
+            "SELECT id, content, created_at, updated_at FROM chunk WHERE id = ?",
         )
         .bind(id)
         .fetch_optional(&*self.pool)
         .await?;
 
-        Ok(row.map(|(id, json, created_at, updated_at)| Chunk {
+        Ok(row.map(|(id, content, created_at, updated_at)| Chunk {
             id,
-            parts: serde_json::from_str(&json).unwrap_or_default(),
+            content,
             created_at,
             updated_at,
         }))
+    }
+
+    pub async fn update_chunk(&self, id: i32, content: &str) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE chunk SET content=?, updated_at=datetime('now') WHERE id=?")
+            .bind(content)
+            .bind(id)
+            .execute(&*self.pool)
+            .await?;
+        Ok(())
     }
 
     // ── Mem ──
@@ -89,7 +97,24 @@ impl MemRepo {
         .await
     }
 
-    /// 到期 mem（前提满足的）
+    pub async fn get_next_mem(&self) -> Result<Option<i32>, sqlx::Error> {
+        sqlx::query_scalar::<_, i32>(
+            r#"
+            SELECT m.id FROM mem m
+            WHERE m.due_at > datetime('now')
+              AND NOT EXISTS (
+                SELECT 1 FROM mem_prerequisite mp
+                JOIN mem pm ON mp.requires_mem_id = pm.id
+                WHERE mp.mem_id = m.id AND pm.state IN ('new', 'learning')
+              )
+            ORDER BY m.due_at
+            LIMIT 1
+            "#,
+        )
+        .fetch_optional(&*self.pool)
+        .await
+    }
+
     pub async fn get_due_mems(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
         let rows = sqlx::query_scalar::<_, i32>(
             r#"

@@ -2,15 +2,9 @@ import { type Effect, Schema } from "effect";
 import { request } from "./request.ts";
 import type { ApiErrorType } from "./types/index.ts";
 
-const ChunkPartSchema = Schema.Union(
-    Schema.Struct({ type: Schema.Literal("text"), content: Schema.String }),
-    Schema.Struct({ type: Schema.Literal("image"), url: Schema.String }),
-    Schema.Struct({ type: Schema.Literal("audio"), url: Schema.String }),
-);
-
 const ChunkSchema = Schema.Struct({
     id: Schema.Number,
-    parts: Schema.Array(ChunkPartSchema),
+    content: Schema.String,
 });
 
 const MemWithChunksSchema = Schema.Struct({
@@ -32,16 +26,15 @@ const OkSchema = Schema.Struct({ ok: Schema.Boolean });
 
 // ── 类型 ──
 
-export interface ChunkPart {
-    type: "text" | "image" | "audio";
-    content?: string;
-    url?: string;
+export interface Chunk {
+    id: number;
+    content: string;
 }
 
 export interface MemItem {
     id: number;
-    cue: { id: number; parts: ChunkPart[] };
-    target: { id: number; parts: ChunkPart[] };
+    cue: Chunk;
+    target: Chunk;
     state: string;
     stability: number;
     difficulty: number;
@@ -56,15 +49,15 @@ export interface DueResponse {
 // ── API ──
 
 export const createMem = (
-    cueParts: ChunkPart[],
-    targetParts: ChunkPart[],
-    prerequisites: number[],
+    cueMd: string,
+    targetMd: string,
+    prerequisites: number[] = [],
 ): Effect.Effect<{ id: number }, ApiErrorType> =>
     request("/mem", Schema.Struct({ id: Schema.Number }), {
         method: "POST",
         body: JSON.stringify({
-            cue_parts: cueParts,
-            target_parts: targetParts,
+            cue_content: cueMd,
+            target_content: targetMd,
             prerequisites,
         }),
     });
@@ -82,3 +75,8 @@ export const reviewMem = (
         method: "POST",
         body: JSON.stringify({ rating }),
     });
+
+export const previewMem = (
+    id: number,
+): Effect.Effect<{ intervals: number[] }, ApiErrorType> =>
+    request(`/mem/${id}/preview`, Schema.Struct({ intervals: Schema.Array(Schema.Number) }), {});

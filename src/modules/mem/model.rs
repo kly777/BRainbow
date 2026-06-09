@@ -1,28 +1,17 @@
 use serde::{Deserialize, Serialize};
 
-/// 知识块的一部分：文本/图片/音频
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum ChunkPart {
-    #[serde(rename = "text")]
-    Text { content: String },
-    #[serde(rename = "image")]
-    Image { url: String },
-    #[serde(rename = "audio")]
-    Audio { url: String },
-}
-
+/// 知识块：Markdown 内容
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chunk {
     pub id: i32,
-    pub parts: Vec<ChunkPart>,
+    pub content: String,
     pub created_at: String,
     pub updated_at: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateChunkRequest {
-    pub parts: Vec<ChunkPart>,
+    pub content: String,
 }
 
 // ── Mem ──
@@ -53,14 +42,14 @@ pub struct MemWithChunks {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateMemRequest {
-    pub cue_parts: Vec<ChunkPart>,
-    pub target_parts: Vec<ChunkPart>,
-    pub prerequisites: Vec<i32>, // mem ids that must be learned first
+    pub cue_content: String,
+    pub target_content: String,
+    pub prerequisites: Vec<i32>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct ReviewRequest {
-    pub rating: u8, // 1-4
+    pub rating: u8,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -69,12 +58,6 @@ pub struct ReviewResponse {
     pub due_at: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct ReviewItem {
-    pub mem: MemWithChunks,
-}
-
-/// 到期需要复习的 mem 列表
 #[derive(Debug, Clone, Serialize)]
 pub struct DueResponse {
     pub items: Vec<MemWithChunks>,

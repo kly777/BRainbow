@@ -129,6 +129,20 @@
 }
 
 /* ── 进度 ── */
+/* ── 提示 ── */
+.hint {
+    font-size: 13px;
+    color: var(--c-text-secondary, #6b5e4a);
+    margin-bottom: 4px;
+}
+
+.hint code {
+    background: var(--c-bg-subtle, #f8f3e6);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
 .progress {
     font-size: 13px;
     color: var(--c-text-secondary, #6b5e4a);

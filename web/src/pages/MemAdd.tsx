@@ -162,12 +162,14 @@ export default function MemAdd() {
                     </Show>
                     <Show when={mode() === "json"}>
                         <label class={styles.label}>
-                            JSON 数组格式，每项含 cue 和 target 字段
+                            <div class={styles.hint}>
+                                粘贴 JSON 数组，每项需含 <code>cue</code>（线索）和 <code>target</code>（答案）字段，例如：<code>[&lbrace;"cue": "线索", "target": "答案"&rbrace;]</code>
+                            </div>
                             <textarea
                                 class={styles.textarea}
                                 value={jsonText()}
                                 onInput={onJsonInput}
-                                placeholder='[{"cue": "光合作用", "target": "植物将光能…"}]'
+                                placeholder="粘贴 JSON 数组…"
                                 rows={10}
                             />
                         </label>

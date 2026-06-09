@@ -1,6 +1,7 @@
 pub mod card;
 pub mod db_viewer;
 pub mod image;
+pub mod mem;
 pub mod onto;
 pub mod sign;
 pub mod task;

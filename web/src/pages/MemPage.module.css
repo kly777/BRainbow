@@ -1,0 +1,243 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--c-bg, #fefcf5);
+}
+
+.topBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--c-border, #e8dfcc);
+    background: var(--c-bg-card, #fffef9);
+    flex-shrink: 0;
+}
+
+.title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--c-text-heading, #2c2416);
+}
+
+.topRight {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.count {
+    font-size: 13px;
+    color: var(--c-text-muted, #9b8e7a);
+}
+
+.addBtn {
+    padding: 4px 14px;
+    font-size: 13px;
+    border: 1px solid var(--c-border, #e8dfcc);
+    border-radius: 6px;
+    background: var(--c-bg-card, #fffef9);
+    color: var(--c-text-secondary, #6b5e4a);
+    cursor: pointer;
+}
+
+.addBtn:hover {
+    background: var(--c-bg-hover, #f0e8d5);
+}
+
+/* ── 创建表单 ── */
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--c-border, #e8dfcc);
+    background: var(--c-bg-subtle, #f8f3e6);
+}
+
+.formInput {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--c-border, #e8dfcc);
+    border-radius: 6px;
+    background: var(--c-bg, #fefcf5);
+    color: var(--c-text, #3d3629);
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.formInput:focus {
+    outline: none;
+    border-color: var(--c-primary, #3b82f6);
+}
+
+.formSubmit {
+    align-self: flex-end;
+    padding: 6px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    background: var(--c-primary, #3b82f6);
+    color: #fff;
+    cursor: pointer;
+}
+
+.formSubmit:hover {
+    background: var(--c-primary-hover, #2563eb);
+}
+
+.formSubmit:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--c-text-muted, #9b8e7a);
+}
+
+/* ── 卡片 ── */
+.card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 24px;
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.sectionLabel {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--c-text-muted, #9b8e7a);
+    margin-bottom: 8px;
+}
+
+.cue {
+    padding: 24px;
+    background: var(--c-bg-card, #fffef9);
+    border: 1px solid var(--c-border, #e8dfcc);
+    border-radius: 12px;
+}
+
+.target {
+    padding: 24px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 12px;
+}
+
+.divider {
+    height: 1px;
+    background: var(--c-border, #e8dfcc);
+    margin: 16px 0;
+}
+
+.content {
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--c-text, #3d3629);
+}
+
+.md {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin: 8px 0;
+}
+
+.audio {
+    margin: 8px 0;
+    width: 100%;
+}
+
+/* ── 按钮 ── */
+.actions {
+    display: flex;
+    justify-content: center;
+    padding: 20px 0;
+}
+
+.showBtn {
+    padding: 12px 36px;
+    font-size: 15px;
+    border: 2px solid var(--c-primary, #3b82f6);
+    border-radius: 10px;
+    background: var(--c-primary, #3b82f6);
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.15s;
+}
+
+.showBtn:hover {
+    background: var(--c-primary-hover, #2563eb);
+}
+
+.ratings {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.ratings button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 10px 22px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: filter 0.15s;
+}
+
+.ratingLabel {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.ratingTime {
+    font-size: 11px;
+    font-weight: 400;
+    opacity: 0.75;
+}
+
+.ratings button:hover {
+    filter: brightness(0.92);
+}
+
+.again {
+    background: #fecaca;
+    color: #991b1b;
+}
+
+.hard {
+    background: #fed7aa;
+    color: #9a3412;
+}
+
+.good {
+    background: #bbf7d0;
+    color: #166534;
+}
+
+.easy {
+    background: #bfdbfe;
+    color: #1e40af;
+}

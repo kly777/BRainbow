@@ -206,5 +206,58 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
+    // ── 记忆系统 ──
+
+    // chunk：知识块（文本/图片/音频自由组合）
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS chunk (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            parts_json TEXT NOT NULL DEFAULT '[]',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // mem：记忆项（线索→目标）
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS mem (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cue_chunk_id INTEGER NOT NULL,
+            target_chunk_id INTEGER NOT NULL,
+            state TEXT NOT NULL DEFAULT 'new',
+            stability REAL DEFAULT 0,
+            difficulty REAL DEFAULT 0,
+            due_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_review_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (cue_chunk_id) REFERENCES chunk(id),
+            FOREIGN KEY (target_chunk_id) REFERENCES chunk(id)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // mem 前提：A 记下才记 B
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS mem_prerequisite (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mem_id INTEGER NOT NULL,
+            requires_mem_id INTEGER NOT NULL,
+            FOREIGN KEY (mem_id) REFERENCES mem(id),
+            FOREIGN KEY (requires_mem_id) REFERENCES mem(id),
+            UNIQUE(mem_id, requires_mem_id)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
     Ok(())
 }

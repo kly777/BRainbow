@@ -84,6 +84,13 @@ export const ROUTES: RouteConfig[] = [
     nav: true,
     component: lazy(() => import("./pages/TextEditor.tsx")),
   },
+  {
+    path: "/m",
+    label: "记忆",
+    desc: "间隔重复记忆系统",
+    nav: true,
+    component: lazy(() => import("./pages/MemPage.tsx")),
+  },
 ];
 
 /** 仅导航入口，用于命令面板 */

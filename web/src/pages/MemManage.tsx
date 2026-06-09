@@ -16,16 +16,19 @@ async function loadAllMems(): Promise<MemItem[]> {
 function dueLabel(ts: string): string {
     const d = new Date(ts);
     const diff = (d.getTime() - Date.now()) / 1000;
-    if (diff < 0) return "已到期";
-    if (diff < 3600) return `${Math.round(diff / 60)}分钟后`;
-    if (diff < 86400) return `${Math.round(diff / 3600)}小时后`;
-    return `${Math.round(diff / 86400)}天后`;
+    const fmt = d.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    if (diff < 0) return `已到期 (${fmt})`;
+    return fmt;
+}
+
+function previewText(content: string): string {
+    return content.slice(0, 50).replace(/\n/g, " ") || "（空）";
 }
 
 export default function MemManage() {
     const [mems, setMems] = createSignal<MemItem[]>([]);
     const [loading, setLoading] = createSignal(true);
-    const [expanded, setExpanded] = createSignal<number | null>(null);
+    const [selected, setSelected] = createSignal<number | null>(null);
 
     const load = async () => {
         setLoading(true);
@@ -38,64 +41,102 @@ export default function MemManage() {
     const handleDelete = async (id: number) => {
         if (!confirm("确定删除？")) return;
         await Effect.runPromiseExit(deleteMem(id));
+        if (selected() === id) setSelected(null);
         load();
     };
+
+    const detail = () => mems().find((m) => m.id === selected());
 
     return (
         <div class={styles.page}>
             <div class={styles.topBar}>
                 <h1 class={styles.title}>记忆管理</h1>
-                <span class={styles.count}>{mems().length} 个记忆项</span>
+                <span class={styles.count}>{mems().length} 个</span>
             </div>
 
-            <Show when={!loading()} fallback={<div class={styles.empty}>加载中…</div>}>
-                <div class={styles.list}>
-                    <For each={mems()}>
-                        {(mem) => (
-                            <div class={styles.item}>
+            <div class={styles.split}>
+                {/* 左侧表格 */}
+                <div class={styles.tableWrap}>
+                    <Show when={!loading()} fallback={<div class={styles.empty}>加载中…</div>}>
+                        <table class={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th class={styles.th}>线索</th>
+                                    <th class={styles.th}>答案</th>
+                                    <th class={styles.th}>状态</th>
+                                    <th class={styles.th}>下次复习</th>
+                                    <th class={styles.th} />
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <For each={mems()}>
+                                    {(mem) => (
+                                        <tr
+                                            class={selected() === mem.id ? styles.rowActive : styles.row}
+                                            onClick={() => setSelected(mem.id)}
+                                        >
+                                            <td class={styles.td}>{previewText(mem.cue.content)}</td>
+                                            <td class={styles.td}>{previewText(mem.target.content)}</td>
+                                            <td class={styles.td}>
+                                                <span classList={{ [styles.badge]: true, [styles[mem.state]]: true }}>
+                                                    {mem.state}
+                                                </span>
+                                            </td>
+                                            <td class={styles.tdDue}>{dueLabel(mem.due_at)}</td>
+                                            <td class={styles.tdAct}>
+                                                <button
+                                                    type="button"
+                                                    class={styles.delBtn}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDelete(mem.id);
+                                                    }}
+                                                >
+                                                    ×
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </For>
+                            </tbody>
+                        </table>
+                    </Show>
+                </div>
+
+                {/* 右侧详情 */}
+                <div class={styles.detail}>
+                    <Show
+                        when={detail()}
+                        fallback={
+                            <div class={styles.empty}>点击左侧条目查看详情</div>
+                        }
+                    >
+                        {(d) => (
+                            <>
+                                <div class={styles.section}>
+                                    <span class={styles.sectionLabel}>线索</span>
+                                    <pre class={styles.content}>{d().cue.content}</pre>
+                                </div>
+                                <div class={styles.section}>
+                                    <span class={styles.sectionLabel}>答案</span>
+                                    <pre class={styles.content}>{d().target.content}</pre>
+                                </div>
+                                <div class={styles.meta}>
+                                    <span>状态：{d().state}</span>
+                                    <span>到期：{new Date(d().due_at).toLocaleString("zh-CN")}</span>
+                                </div>
                                 <button
                                     type="button"
-                                    class={styles.itemHeader}
-                                    onClick={() => setExpanded(expanded() === mem.id ? null : mem.id)}
+                                    class={styles.deleteBtn}
+                                    onClick={() => handleDelete(d().id)}
                                 >
-                                    <span class={styles.itemLabel}>
-                                        {mem.cue.content.slice(0, 60) || "（空）"}
-                                    </span>
-                                    <span class={styles.itemMeta}>
-                                        <span classList={{ [styles.badge]: true, [styles[mem.state]]: true }}>
-                                            {mem.state}
-                                        </span>
-                                        <span class={styles.due}>{dueLabel(mem.due_at)}</span>
-                                        <span class={styles.arrow}>{expanded() === mem.id ? "▾" : "▸"}</span>
-                                    </span>
+                                    删除此记忆
                                 </button>
-
-                                <Show when={expanded() === mem.id}>
-                                    <div class={styles.detail}>
-                                        <div class={styles.section}>
-                                            <span class={styles.sectionLabel}>线索</span>
-                                            <pre class={styles.content}>{mem.cue.content}</pre>
-                                        </div>
-                                        <div class={styles.section}>
-                                            <span class={styles.sectionLabel}>答案</span>
-                                            <pre class={styles.content}>{mem.target.content}</pre>
-                                        </div>
-                                        <div class={styles.actions}>
-                                            <button
-                                                type="button"
-                                                class={styles.deleteBtn}
-                                                onClick={() => handleDelete(mem.id)}
-                                            >
-                                                删除
-                                            </button>
-                                        </div>
-                                    </div>
-                                </Show>
-                            </div>
+                            </>
                         )}
-                    </For>
+                    </Show>
                 </div>
-            </Show>
+            </div>
         </div>
     );
 }

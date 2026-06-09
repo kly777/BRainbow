@@ -167,11 +167,12 @@ impl MemRepo {
         Ok(())
     }
 
-    pub async fn get_all_mems(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
+    pub async fn get_all_mems(&self, limit: i64, offset: i64) -> Result<Vec<i32>, sqlx::Error> {
         sqlx::query_scalar::<_, i32>(
-            "SELECT id FROM mem ORDER BY due_at LIMIT ?",
+            "SELECT id FROM mem ORDER BY due_at LIMIT ? OFFSET ?",
         )
         .bind(limit)
+        .bind(offset)
         .fetch_all(&*self.pool)
         .await
     }

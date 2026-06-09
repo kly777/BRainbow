@@ -63,9 +63,9 @@ export const createMem = (
     });
 
 export const getAllMems = (
-    limit = 200,
+    pageSize = 200,
 ): Effect.Effect<DueResponse, ApiErrorType> =>
-    request(`/mem/all?limit=${limit}`, DueResponseSchema, {});
+    request(`/mem/all?page_size=${pageSize}`, DueResponseSchema, {});
 
 export const getDue = (
     limit = 50,

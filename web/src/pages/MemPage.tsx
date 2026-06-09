@@ -2,6 +2,7 @@ import { A } from "@solidjs/router";
 import { createSignal, onMount, Show } from "solid-js";
 import { Effect } from "effect";
 import { createMem, getDue, previewMem, reviewMem, type MemItem } from "../apis/memApi.ts";
+import Markdown from "../components/ui/Markdown.tsx";
 import styles from "./MemPage.module.css";
 
 export default function MemPage() {
@@ -84,9 +85,7 @@ export default function MemPage() {
         }
     };
 
-    const md = (content: string) => (
-        <div class={styles.md}>{content}</div>
-    );
+
 
     return (
         <div class={styles.page}>
@@ -151,14 +150,14 @@ export default function MemPage() {
                     </Show>
                     <div class={styles.cue}>
                         <div class={styles.sectionLabel}>线索</div>
-                        <div class={styles.content}>{md(item()?.cue.content ?? "")}</div>
+                        <div class={styles.content}><Markdown content={item()?.cue.content ?? ""} /></div>
                     </div>
 
                     <Show when={showAnswer()}>
                         <div class={styles.divider} />
                         <div class={styles.target}>
                             <div class={styles.sectionLabel}>答案</div>
-                            <div class={styles.content}>{md(item()?.target.content ?? "")}</div>
+                            <div class={styles.content}><Markdown content={item()?.target.content ?? ""} /></div>
                         </div>
                     </Show>
 

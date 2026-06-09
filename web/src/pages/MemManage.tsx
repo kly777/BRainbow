@@ -2,6 +2,7 @@ import { createSignal, onMount, Show, For } from "solid-js";
 import { Effect } from "effect";
 import { A } from "@solidjs/router";
 import { getDue, deleteMem, type MemItem } from "../apis/memApi.ts";
+import Markdown from "../components/ui/Markdown.tsx";
 import styles from "./MemManage.module.css";
 
 async function loadAllMems(): Promise<MemItem[]> {
@@ -119,11 +120,11 @@ export default function MemManage() {
                             <>
                                 <div class={styles.section}>
                                     <span class={styles.sectionLabel}>线索</span>
-                                    <pre class={styles.content}>{d().cue.content}</pre>
+                                    <div class={styles.content}><Markdown content={d().cue.content} /></div>
                                 </div>
                                 <div class={styles.section}>
                                     <span class={styles.sectionLabel}>答案</span>
-                                    <pre class={styles.content}>{d().target.content}</pre>
+                                    <div class={styles.content}><Markdown content={d().target.content} /></div>
                                 </div>
                                 <div class={styles.meta}>
                                     <span>状态：{d().state}</span>

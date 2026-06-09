@@ -3,7 +3,9 @@
 //! 新卡 → 学习 [1min, 10min] → 毕业 → FSRS review
 //! 复习/重新学习 → FSRS-5
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
+
+use crate::time;
 
 const W: [f64; 13] = [
     0.4872, 1.4003, 3.7145, 13.8206, 5.1618, 1.2298, 0.8975,
@@ -20,7 +22,6 @@ fn next_s(s: f64, d: f64, r: u8) -> f64 {
 }
 fn next_d(d: f64, r: u8) -> f64 { (d - W[5] * (r as f64 - 3.0) * (10.0 - d) / 9.0).clamp(1.0, 10.0) }
 fn intv(s: f64) -> f64 { (s * 9.0 * (RETENTION.powf(-2.0) - 1.0) / 19.0 * 86400.0).max(60.0) }
-fn fmt(t: DateTime<Utc>) -> String { t.format("%Y-%m-%dT%H:%M:%SZ").to_string() }
 
 pub struct ReviewOutcome {
     pub state: String,
@@ -40,13 +41,13 @@ pub fn schedule(
         return match rating {
             1 => ReviewOutcome {
                 state: "learning".into(), stability: s_old, difficulty: d_old,
-                due_at: fmt(now + Duration::seconds(STEPS[0])), interval_secs: STEPS[0] as f64,
+                due_at: time::due_in_secs(STEPS[0]), interval_secs: STEPS[0] as f64,
             },
             2 => {
                 let secs = STEPS[step.min(STEPS.len() - 1)];
                 ReviewOutcome {
                     state: "learning".into(), stability: s_old, difficulty: d_old,
-                    due_at: fmt(now + Duration::seconds(secs)), interval_secs: secs as f64,
+                    due_at: time::due_in_secs(secs), interval_secs: secs as f64,
                 }
             }
             _ => {
@@ -55,12 +56,12 @@ pub fn schedule(
                     let s = init_s(rating); let d = init_d(rating); let secs = intv(s);
                     ReviewOutcome {
                         state: "review".into(), stability: s, difficulty: d,
-                        due_at: fmt(now + Duration::seconds(secs as i64)), interval_secs: secs,
+                        due_at: time::due_in_secs(secs as i64), interval_secs: secs,
                     }
                 } else {
                     ReviewOutcome {
                         state: "learning".into(), stability: s_old, difficulty: d_old,
-                        due_at: fmt(now + Duration::seconds(STEPS[next])),
+                        due_at: time::due_in_secs(STEPS[next]),
                         interval_secs: STEPS[next] as f64,
                     }
                 }
@@ -73,7 +74,7 @@ pub fn schedule(
     ReviewOutcome {
         state: if rating == 1 { "relearning" } else { "review" }.into(),
         stability: s, difficulty: d,
-        due_at: fmt(now + Duration::seconds(secs as i64)), interval_secs: secs,
+        due_at: time::due_in_secs(secs as i64), interval_secs: secs,
     }
 }
 

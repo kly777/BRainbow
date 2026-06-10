@@ -37,7 +37,10 @@ impl MemService {
 
         let items = self.build_items(&ids).await;
         let has_more = ids.len() >= max_learning as usize;
-        Ok(DueResponse { due_count: items.len(), has_more, items })
+        let upcoming_count = if ids.is_empty() {
+            self.repo.count_upcoming().await.unwrap_or(0) as usize
+        } else { 0 };
+        Ok(DueResponse { due_count: items.len(), has_more, items, upcoming_count })
     }
 
     // ── 复习 ──
@@ -97,7 +100,7 @@ impl MemService {
     pub async fn get_all(&self, limit: i64, offset: i64) -> Result<DueResponse, sqlx::Error> {
         let ids = self.repo.get_all_mems(limit, offset).await?;
         let items = self.build_items(&ids).await;
-        Ok(DueResponse { due_count: items.len(), has_more: false, items })
+        Ok(DueResponse { due_count: items.len(), has_more: false, upcoming_count: 0, items })
     }
 
     pub async fn preview(&self, id: i32) -> Result<[f64; 4], AppError> {

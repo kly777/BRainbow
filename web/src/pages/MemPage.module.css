@@ -352,6 +352,12 @@
     transition: background 0.15s;
 }
 
+.hint {
+    font-size: 14px;
+    color: var(--c-text-muted, #9b8e7a);
+    margin: 4px 0 12px;
+}
+
 .showBtn:hover {
     background: var(--c-primary-hover, #2563eb);
 }

@@ -38,7 +38,7 @@ export default function MemPage() {
         if (exit._tag === "Success") {
             const data = exit.value;
             if (data.items.length === 0 && !data.has_more) {
-                setDone(true); setDue([]);
+                setDone(true); setDue([]); setUpcoming(data.upcoming_count ?? 0);
             } else {
                 setDone(false);
                 const shuffled = [...data.items].sort(() => Math.random() - 0.5);
@@ -113,7 +113,11 @@ export default function MemPage() {
                 </div>
 
                 <Show when={done()}>
-                    <div class={styles.empty}><p>🎉 本轮学习完成！</p><button type="button" class={styles.showBtn} onClick={loadDue}>再学一轮</button></div>
+                    <div class={styles.empty}>
+                    <p>🎉 本轮学习完成！</p>
+                    {upcoming() > 0 && <p class={styles.hint}>还有 {upcoming()} 张卡在未来等待复习</p>}
+                    <button type="button" class={styles.showBtn} onClick={loadDue}>再学一轮</button>
+                </div>
                 </Show>
 
                 <Show when={!loading() && !done() && due().length > 0} fallback={<div class={styles.empty}>{loading() ? "加载中…" : "没有记忆卡片，去添加一些吧！"}</div>}>

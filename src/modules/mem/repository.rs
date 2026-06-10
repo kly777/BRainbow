@@ -1,4 +1,5 @@
 use sqlx::{FromRow, SqlitePool};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use super::model::Chunk;
@@ -87,33 +88,55 @@ impl MemRepo {
         ).bind(limit).fetch_all(&*self.pool).await
     }
 
-    /// 填充池：due(含new)卡，60%复用/40%新
+    /// 填充池：新卡=到期复习 > 24h内 > 更远
     pub async fn get_fillers(&self, need: i64) -> Result<Vec<i32>, sqlx::Error> {
-        let review_count = (need as f64 * 0.6).round() as i64;
-        let new_count = need - review_count;
+        let mut ids = std::collections::HashSet::new();
+        let mut remaining = need;
 
-        let mut ids = Vec::new();
-
-        // 到期复习卡
-        let review_ids = sqlx::query_scalar::<_, i32>(
+        // 第1优先级：新卡 + 到期复习卡
+        let tier1 = sqlx::query_scalar::<_, i32>(
             r#"SELECT m.id FROM mem m
-            WHERE m.state = 'review' AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-              AND m.buried = 0
-              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
-            ORDER BY m.due_at LIMIT ?"#
-        ).bind(review_count).fetch_all(&*self.pool).await?;
-        ids.extend(review_ids);
-
-        // 新卡
-        let new_ids = sqlx::query_scalar::<_, i32>(
-            r#"SELECT m.id FROM mem m
-            WHERE m.state = 'new' AND m.buried = 0
+            WHERE m.state IN ('new', 'review') AND m.buried = 0
+              AND (m.state = 'new' OR m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
             ORDER BY RANDOM() LIMIT ?"#
-        ).bind(new_count).fetch_all(&*self.pool).await?;
-        ids.extend(new_ids);
+        ).bind(remaining).fetch_all(&*self.pool).await?;
+        for id in tier1 { ids.insert(id); }
+        remaining = need - ids.len() as i64;
 
-        Ok(ids)
+        // 第2优先级：24h 内到期
+        if remaining > 0 {
+            let tier2 = sqlx::query_scalar::<_, i32>(
+                r#"SELECT m.id FROM mem m
+                WHERE m.state = 'review' AND m.buried = 0
+                  AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+                  AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '+24 hours')
+                  AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
+                ORDER BY m.due_at LIMIT ?"#
+            ).bind(remaining).fetch_all(&*self.pool).await?;
+            for id in tier2 { ids.insert(id); }
+            remaining = need - ids.len() as i64;
+        }
+
+        // 第3优先级：更远
+        if remaining > 0 {
+            let tier3 = sqlx::query_scalar::<_, i32>(
+                r#"SELECT m.id FROM mem m
+                WHERE m.state = 'review' AND m.buried = 0
+                  AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '+24 hours')
+                  AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
+                ORDER BY m.due_at LIMIT ?"#
+            ).bind(remaining).fetch_all(&*self.pool).await?;
+            for id in tier3 { ids.insert(id); }
+        }
+
+        Ok(ids.into_iter().collect())
+    }
+
+    pub async fn count_upcoming(&self) -> Result<i64, sqlx::Error> {
+        sqlx::query_scalar::<_, i64>(
+            r#"SELECT COUNT(*) FROM mem WHERE state = 'review' AND buried = 0"#
+        ).fetch_one(&*self.pool).await
     }
 
     pub async fn get_next_mem(&self) -> Result<Option<i32>, sqlx::Error> {

@@ -79,6 +79,7 @@ pub struct ReviewResponse {
 pub struct DueResponse {
     pub items: Vec<MemWithChunks>,
     pub due_count: usize,
-    /// 是否有更多可复习的卡（用于前端判断是否结束）
     pub has_more: bool,
+    /// 未来还会到期的卡数
+    pub upcoming_count: usize,
 }

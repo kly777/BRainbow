@@ -70,7 +70,7 @@
 .sidebarIdx {
     color: var(--c-text-muted, #9b8e7a);
     font-size: 11px;
-    min-width: 16px;
+    min-width: 28px;
 }
 
 .sidebarText {

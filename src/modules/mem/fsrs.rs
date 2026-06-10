@@ -1,13 +1,13 @@
 //! FSRS 间隔重复调度器（基于 fsrs crate v6.6）
 //!
-//! 新卡 → 学习 [1min, 10min] → 毕业 → FSRS review
-//! Again 永远是短步进 (1min)
+//! 新卡 → 学习 [1min] → 毕业 → FSRS review
+//! Again 降 stability 升 difficulty，保持短间隔
 
 use chrono::{DateTime, Utc};
 use fsrs::{FSRS, MemoryState};
 use crate::time;
 
-const STEPS: [i64; 2] = [60, 600];
+const STEPS: [i64; 1] = [60];
 
 fn make_fsrs() -> FSRS { FSRS::new(&[]).unwrap() }
 
@@ -41,30 +41,38 @@ pub fn schedule(
 
     if let Some(step) = step {
         return match rating {
-            1 => ReviewOutcome {
-                state: "learning".into(), stability: s_old, difficulty: d_old,
-                due_at: time::due_in_secs(STEPS[0]),
-            },
+            1 => {
+                // Again: FSRS 降低 stability，仅时间保持短步进
+                let mem = Some(MemoryState { stability: s_old as f32, difficulty: d_old as f32 });
+                let (s, d, _) = compute_next_with_state(mem, 1);
+                ReviewOutcome {
+                    state: "learning".into(), stability: s, difficulty: d,
+                    due_at: time::due_in_secs(STEPS[0]),
+                }
+            }
             2 => {
                 let secs = STEPS[step.min(STEPS.len() - 1)];
                 ReviewOutcome { state: "learning".into(), stability: s_old, difficulty: d_old, due_at: time::due_in_secs(secs) }
             }
             _ => {
-                    let next = step + 1;
-                    if next >= STEPS.len() {
-                        let mem = Some(MemoryState { stability: s_old as f32, difficulty: d_old as f32 });
-                        let (s, d, secs) = compute_next_with_state(mem, rating);
-                        ReviewOutcome { state: "review".into(), stability: s, difficulty: d, due_at: time::due_in_secs(secs as i64) }
-                    } else {
-                        ReviewOutcome { state: "learning".into(), stability: s_old, difficulty: d_old, due_at: time::due_in_secs(STEPS[next]) }
-                    }
+                let next = step + 1;
+                if next >= STEPS.len() {
+                    let mem = Some(MemoryState { stability: s_old as f32, difficulty: d_old as f32 });
+                    let (s, d, secs) = compute_next_with_state(mem, rating);
+                    ReviewOutcome { state: "review".into(), stability: s, difficulty: d, due_at: time::due_in_secs(secs as i64) }
+                } else {
+                    ReviewOutcome { state: "learning".into(), stability: s_old, difficulty: d_old, due_at: time::due_in_secs(STEPS[next]) }
                 }
+            }
         };
     }
 
     if rating == 1 {
+        // Again on review: FSRS 降 s 升 d，1min 后重新评估
+        let mem = Some(MemoryState { stability: s_old as f32, difficulty: d_old as f32 });
+        let (s, d, _) = compute_next_with_state(mem, 1);
         return ReviewOutcome {
-            state: "review".into(), stability: s_old, difficulty: d_old,
+            state: "review".into(), stability: s, difficulty: d,
             due_at: time::due_in_secs(STEPS[0]),
         };
     }

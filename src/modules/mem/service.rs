@@ -74,13 +74,14 @@ impl MemService {
             Some(match (old, rating) { (_, 1) => 0, (Some(s), _) => s + 1, (None, _) => 0 })
         } else { None };
 
-        // 毕业判断：>24h → review, 否则保持 learning
-        let new_state = if row.state == "learning" {
-            if let Ok(due) = chrono::DateTime::parse_from_rfc3339(&outcome.due_at) {
-                let hours = (due.with_timezone(&chrono::Utc) - chrono::Utc::now()).num_hours();
-                if hours > 24 { "review" } else { "learning" }
-            } else { "learning" }
-        } else { &outcome.state };
+	        // 毕业判断：FSRS 产出 review 则直接毕业
+	        let new_state = if row.state == "learning" && outcome.state == "review" {
+	            "review"
+	        } else if row.state == "learning" {
+	            "learning"
+	        } else {
+	            &outcome.state
+	        };
 
 	        let lapses = if rating == 1 { row.lapses + 1 } else if rating <= 2 { row.lapses } else { 0 };
         let leeched = row.leeched || lapses >= 5;

@@ -13,21 +13,64 @@ pub struct MemService {
 impl MemService {
     pub fn new(pool: Arc<SqlitePool>) -> Self { Self { repo: MemRepo::new(pool) } }
 
-    // ── 查询 ──
-
     pub async fn get_all(&self, limit: i64, offset: i64) -> Result<DueResponse, sqlx::Error> {
         let ids = self.repo.get_all_mems(limit, offset).await?;
         let items = self.build_items(&ids).await;
-        Ok(DueResponse { due_count: items.len(), items })
+        Ok(DueResponse { due_count: items.len(), has_more: false, items })
     }
 
     pub async fn get_due(&self, limit: i64) -> Result<DueResponse, sqlx::Error> {
-        let mut ids = self.repo.get_due_mems(limit).await?;
-        if ids.is_empty() {
-            if let Ok(Some(id)) = self.repo.get_next_mem().await { ids.push(id); }
-        }
+        // 先确保池有足够的卡：从未入池且可学习的卡中补充
+        self.ensure_pool_full(limit as usize).await?;
+        let ids = self.repo.get_due_mems(limit).await?;
+        let pool_count = ids.len();
         let items = self.build_items(&ids).await;
-        Ok(DueResponse { due_count: items.len(), items })
+        let has_more = pool_count >= limit as usize;
+        Ok(DueResponse { due_count: items.len(), has_more, items })
+    }
+
+    async fn ensure_pool_full(&self, max: usize) -> Result<(), sqlx::Error> {
+        // 统计池中已有数量
+        let pool_ids = self.repo.get_pool_ids().await?;
+        let needed = max.saturating_sub(pool_ids.len());
+        if needed == 0 { return Ok(()); }
+        // 取未入池、可学习的卡（前提满足）
+        let candidates = self.repo.get_eligible_new_mems(needed as i64).await?;
+        for id in candidates {
+            self.repo.set_pool(id, true).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn review(&self, id: i32, rating: u8) -> Result<ReviewResponse, AppError> {
+        let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
+        let outcome = self.apply_review(&row, rating);
+
+        let new_step = if outcome.state == "learning" {
+            let old = row.step_index.map(|i| i as usize);
+            Some(match (old, rating) { (_, 1) => 0, (Some(s), _) => s + 1, (None, _) => 0 })
+        } else { None };
+
+        let lapses = if rating == 1 { row.lapses + 1 } else { 0 };
+        let leeched = row.leeched || lapses >= 5;
+
+        // 毕业判断：due_at 距现在超过 24h → 移出池
+        if row.in_pool {
+            if let Ok(due) = chrono::DateTime::parse_from_rfc3339(&outcome.due_at) {
+                let hours = (due.with_timezone(&chrono::Utc) - chrono::Utc::now()).num_hours();
+                if hours > 24 { self.repo.set_pool(id, false).await?; }
+            }
+        }
+
+        self.repo.update_mem_fsrs(id, &outcome.state, outcome.stability, outcome.difficulty,
+            new_step.map(|s| s as i32), lapses, leeched, &outcome.due_at).await?;
+
+        Ok(ReviewResponse { state: outcome.state, due_at: outcome.due_at })
+    }
+
+    fn apply_review(&self, row: &MemRow, rating: u8) -> ReviewOutcome {
+        let step = if row.state == "new" { Some(0) } else { row.step_index.map(|i| i as usize) };
+        fsrs::schedule(row.stability, row.difficulty, &row.state, step, rating, chrono::Utc::now())
     }
 
     async fn build_items(&self, ids: &[i32]) -> Vec<MemWithChunks> {
@@ -53,35 +96,10 @@ impl MemService {
         Ok(fsrs::preview(row.stability, row.difficulty, &row.state, row.step_index.map(|i| i as usize)))
     }
 
-    // ── 写操作 ──
-
     pub async fn create(&self, req: CreateMemRequest) -> Result<i32, sqlx::Error> {
         let cue_id = self.repo.create_chunk(&req.cue_content).await?;
         let target_id = self.repo.create_chunk(&req.target_content).await?;
         self.repo.create_mem(cue_id, target_id, &req.prerequisites).await
-    }
-
-    pub async fn review(&self, id: i32, rating: u8) -> Result<ReviewResponse, AppError> {
-        let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
-        let outcome = self.apply_review(&row, rating);
-
-        let new_step = if outcome.state == "learning" {
-            let old = row.step_index.map(|i| i as usize);
-            Some(match (old, rating) { (_, 1) => 0, (Some(s), _) => s + 1, (None, _) => 0 })
-        } else { None };
-
-        let lapses = if rating == 1 { row.lapses + 1 } else { 0 };
-        let leeched = row.leeched || lapses >= 5;
-
-        self.repo.update_mem_fsrs(id, &outcome.state, outcome.stability, outcome.difficulty,
-            new_step.map(|s| s as i32), lapses, leeched, &outcome.due_at).await?;
-
-        Ok(ReviewResponse { state: outcome.state, due_at: outcome.due_at })
-    }
-
-    fn apply_review(&self, row: &MemRow, rating: u8) -> ReviewOutcome {
-        let step = if row.state == "new" { Some(0) } else { row.step_index.map(|i| i as usize) };
-        fsrs::schedule(row.stability, row.difficulty, &row.state, step, rating, chrono::Utc::now())
     }
 
     pub async fn undo(&self, id: i32, req: UndoRequest) -> Result<(), sqlx::Error> {

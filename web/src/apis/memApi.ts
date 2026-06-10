@@ -20,6 +20,7 @@ const MemWithChunksSchema = Schema.Struct({
 const DueResponseSchema = Schema.Struct({
     items: Schema.Array(MemWithChunksSchema),
     due_count: Schema.Number,
+    has_more: Schema.Boolean,
 });
 
 const OkSchema = Schema.Struct({ ok: Schema.Boolean });
@@ -44,6 +45,7 @@ export interface MemItem {
 export interface DueResponse {
     items: readonly MemItem[];
     due_count: number;
+    has_more: boolean;
 }
 
 // ── API ──

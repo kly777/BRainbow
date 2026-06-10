@@ -15,6 +15,7 @@ pub struct MemRow {
     pub buried: bool,
     pub lapses: i32,
     pub leeched: bool,
+    pub in_pool: bool,
     pub due_at: String,
     pub last_review_at: Option<String>,
 }
@@ -94,7 +95,7 @@ impl MemRepo {
 
     pub async fn get_mem(&self, id: i32) -> Result<Option<MemRow>, sqlx::Error> {
         sqlx::query_as::<_, MemRow>(
-            "SELECT id, cue_chunk_id, target_chunk_id, state, stability, difficulty, step_index, buried, lapses, leeched, due_at, last_review_at FROM mem WHERE id = ?",
+            "SELECT id, cue_chunk_id, target_chunk_id, state, stability, difficulty, step_index, buried, lapses, leeched, in_pool, due_at, last_review_at FROM mem WHERE id = ?",
         )
         .bind(id)
         .fetch_optional(&*self.pool)
@@ -123,7 +124,7 @@ impl MemRepo {
         let rows = sqlx::query_scalar::<_, i32>(
             r#"
             SELECT m.id FROM mem m
-            WHERE (m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now') OR m.state = 'learning')
+            WHERE (m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now') OR m.state = 'learning' OR m.in_pool = 1)
               AND m.buried = 0 AND m.leeched = 0
               AND NOT EXISTS (
                 SELECT 1 FROM mem_prerequisite mp
@@ -131,6 +132,7 @@ impl MemRepo {
                 WHERE mp.mem_id = m.id AND pm.state = 'new'
               )
             ORDER BY
+              m.in_pool DESC,
               (julianday(strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) - julianday(m.due_at)) * (1.0 + m.difficulty / 10.0) DESC,
               m.id % 7
             LIMIT ?
@@ -181,6 +183,30 @@ impl MemRepo {
 
     pub async fn bury_mem(&self, id: i32) -> Result<(), sqlx::Error> {
         sqlx::query("UPDATE mem SET buried = 1 WHERE id = ?").bind(id).execute(&*self.pool).await?;
+        Ok(())
+    }
+
+    pub async fn get_pool_ids(&self) -> Result<Vec<i32>, sqlx::Error> {
+        sqlx::query_scalar::<_, i32>("SELECT id FROM mem WHERE in_pool = 1")
+            .fetch_all(&*self.pool).await
+    }
+
+    pub async fn get_eligible_new_mems(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
+        sqlx::query_scalar::<_, i32>(
+            r#"SELECT m.id FROM mem m
+            WHERE m.in_pool = 0 AND m.buried = 0 AND m.leeched = 0
+              AND NOT EXISTS (
+                SELECT 1 FROM mem_prerequisite mp
+                JOIN mem pm ON mp.requires_mem_id = pm.id
+                WHERE mp.mem_id = m.id AND pm.state = 'new'
+              )
+            ORDER BY (julianday(strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) - julianday(m.due_at)) * (1.0 + m.difficulty / 10.0) DESC
+            LIMIT ?"#,
+        ).bind(limit).fetch_all(&*self.pool).await
+    }
+
+    pub async fn set_pool(&self, id: i32, in_pool: bool) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE mem SET in_pool = ? WHERE id = ?").bind(in_pool).bind(id).execute(&*self.pool).await?;
         Ok(())
     }
 

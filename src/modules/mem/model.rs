@@ -82,4 +82,6 @@ pub struct DueResponse {
     pub has_more: bool,
     /// 未来还会到期的卡数
     pub upcoming_count: usize,
+    /// 所有卡的下次复习都在 24h 之后
+    pub all_far: bool,
 }

@@ -153,11 +153,12 @@ export const request = <T>(
     Effect.gen(function* () {
         const url = `${API_BASE_URL}${endpoint}`;
 
+        const isFormData = options.body instanceof FormData;
         const response = yield* Effect.tryPromise({
             try: async () =>
                 fetch(url, {
                     ...options,
-                    headers: buildHeaders(options.headers),
+                    headers: buildHeaders(options.headers, isFormData),
                 }),
             catch: (cause: unknown) => {
                 // ── 网络断开 → 全局 toast + 日志，然后抛出 ──
@@ -213,8 +214,9 @@ export const request = <T>(
 
 // ==================== 辅助 ====================
 
-function buildHeaders(extra?: RequestInit["headers"]): Headers {
-    const headers = new Headers({ "Content-Type": "application/json" });
+function buildHeaders(extra?: RequestInit["headers"], isFormData = false): Headers {
+    const headers = new Headers();
+    if (!isFormData) headers.set("Content-Type", "application/json");
 
     if (extra) {
         const entries = Array.isArray(extra) ? extra : Object.entries(extra);

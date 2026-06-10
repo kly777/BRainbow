@@ -15,33 +15,52 @@ impl MemService {
 
     // ── 获取学习池 ──
 
-    pub async fn get_due(&self, max_learning: i64) -> Result<DueResponse, sqlx::Error> {
-        // 1. 获取当前 learning 状态的卡
-        let mut ids = self.repo.get_learning_mems(max_learning).await?;
-        let pool_count = ids.len();
+	    pub async fn get_due(&self, max_learning: i64) -> Result<DueResponse, sqlx::Error> {
+	        // 1. 获取当前 learning 状态的卡（学习步进中）
+	        let mut ids = self.repo.get_learning_mems(max_learning).await?;
+	        let pool_count = ids.len();
 
-        // 2. 不足时补充
-        if pool_count < max_learning as usize {
-            let needed = max_learning as usize - pool_count;
-            let fillers = self.repo.get_fillers(needed as i64).await?;
-            for id in &fillers {
-                self.repo.set_state(*id, "learning", Some(0)).await?;
-            }
-            ids.extend(fillers);
-        }
+	        // 2. 不足时补充：到期复习卡（保持 review 状态，不走学习步进）
+	        if pool_count < max_learning as usize {
+	            let needed = max_learning as usize - pool_count;
+	            let due_reviews = self.repo.get_due_reviews(needed as i64).await?;
+	            ids.extend(due_reviews);
+	        }
 
-        // 3. 仍为空 → 取最近一个将来卡作为预览
-        if ids.is_empty() {
-            if let Ok(Some(id)) = self.repo.get_next_mem().await { ids.push(id); }
-        }
+	        // 3. 仍不足：拉新卡转为 learning
+	        if ids.len() < max_learning as usize {
+	            let needed = max_learning as usize - ids.len();
+	            let new_cards = self.repo.get_new_cards(needed as i64).await?;
+	            for id in &new_cards {
+	                self.repo.set_state(*id, "learning", Some(0)).await?;
+	            }
+	            ids.extend(new_cards);
+	        }
 
-        let items = self.build_items(&ids).await;
-        let has_more = ids.len() >= max_learning as usize;
-        let upcoming_count = if ids.is_empty() {
-            self.repo.count_upcoming().await.unwrap_or(0) as usize
-        } else { 0 };
-        Ok(DueResponse { due_count: items.len(), has_more, items, upcoming_count })
-    }
+	        // 4. 仍不足：将来 review 卡（保持 review，不转 learning）
+	        if ids.len() < max_learning as usize {
+	            let needed = max_learning as usize - ids.len();
+	            let upcoming = self.repo.get_upcoming_reviews(needed as i64).await?;
+	            ids.extend(upcoming);
+	        }
+
+	        // 5. 仍为空 → 取最近一个将来卡作为预览
+	        if ids.is_empty() {
+	            if let Ok(Some(id)) = self.repo.get_next_mem().await { ids.push(id); }
+	        }
+
+	        let items = self.build_items(&ids).await;
+	        let has_more = ids.len() >= max_learning as usize;
+	        let upcoming_count = if ids.is_empty() {
+	            self.repo.count_upcoming().await.unwrap_or(0) as usize
+	        } else { 0 };
+	        let all_far = !items.is_empty() && items.iter().all(|it| {
+	            chrono::DateTime::parse_from_rfc3339(&it.due_at)
+	                .map(|t| t > chrono::Utc::now() + chrono::Duration::hours(24))
+	                .unwrap_or(false)
+	        });
+	        Ok(DueResponse { due_count: items.len(), has_more, items, upcoming_count, all_far })
+	    }
 
     // ── 复习 ──
 
@@ -63,7 +82,7 @@ impl MemService {
             } else { "learning" }
         } else { &outcome.state };
 
-        let lapses = if rating == 1 { row.lapses + 1 } else { 0 };
+	        let lapses = if rating == 1 { row.lapses + 1 } else if rating <= 2 { row.lapses } else { 0 };
         let leeched = row.leeched || lapses >= 5;
 
         self.repo.update_mem_fsrs(id, new_state, outcome.stability, outcome.difficulty,
@@ -100,7 +119,7 @@ impl MemService {
     pub async fn get_all(&self, limit: i64, offset: i64) -> Result<DueResponse, sqlx::Error> {
         let ids = self.repo.get_all_mems(limit, offset).await?;
         let items = self.build_items(&ids).await;
-        Ok(DueResponse { due_count: items.len(), has_more: false, upcoming_count: 0, items })
+	        Ok(DueResponse { due_count: items.len(), has_more: false, upcoming_count: 0, all_far: false, items })
     }
 
     pub async fn preview(&self, id: i32) -> Result<[f64; 4], AppError> {

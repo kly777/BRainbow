@@ -1,5 +1,4 @@
 use sqlx::{FromRow, SqlitePool};
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use super::model::Chunk;
@@ -88,49 +87,36 @@ impl MemRepo {
         ).bind(limit).fetch_all(&*self.pool).await
     }
 
-    /// 填充池：新卡=到期复习 > 24h内 > 更远
-    pub async fn get_fillers(&self, need: i64) -> Result<Vec<i32>, sqlx::Error> {
-        let mut ids = std::collections::HashSet::new();
-        let mut remaining = need;
-
-        // 第1优先级：新卡 + 到期复习卡
-        let tier1 = sqlx::query_scalar::<_, i32>(
+    /// 获取到期复习卡（保持 review 状态，不转为 learning）
+    pub async fn get_due_reviews(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
+        sqlx::query_scalar::<_, i32>(
             r#"SELECT m.id FROM mem m
-            WHERE m.state IN ('new', 'review') AND m.buried = 0
-              AND (m.state = 'new' OR m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            WHERE m.state = 'review' AND m.buried = 0
+              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
+            ORDER BY m.due_at LIMIT ?"#
+        ).bind(limit).fetch_all(&*self.pool).await
+    }
+
+    /// 获取新卡（随后由 service 转为 learning 状态）
+    pub async fn get_new_cards(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
+        sqlx::query_scalar::<_, i32>(
+            r#"SELECT m.id FROM mem m
+            WHERE m.state = 'new' AND m.buried = 0
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
             ORDER BY RANDOM() LIMIT ?"#
-        ).bind(remaining).fetch_all(&*self.pool).await?;
-        for id in tier1 { ids.insert(id); }
-        remaining = need - ids.len() as i64;
+        ).bind(limit).fetch_all(&*self.pool).await
+    }
 
-        // 第2优先级：24h 内到期
-        if remaining > 0 {
-            let tier2 = sqlx::query_scalar::<_, i32>(
-                r#"SELECT m.id FROM mem m
-                WHERE m.state = 'review' AND m.buried = 0
-                  AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-                  AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '+24 hours')
-                  AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
-                ORDER BY m.due_at LIMIT ?"#
-            ).bind(remaining).fetch_all(&*self.pool).await?;
-            for id in tier2 { ids.insert(id); }
-            remaining = need - ids.len() as i64;
-        }
-
-        // 第3优先级：更远
-        if remaining > 0 {
-            let tier3 = sqlx::query_scalar::<_, i32>(
-                r#"SELECT m.id FROM mem m
-                WHERE m.state = 'review' AND m.buried = 0
-                  AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '+24 hours')
-                  AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
-                ORDER BY m.due_at LIMIT ?"#
-            ).bind(remaining).fetch_all(&*self.pool).await?;
-            for id in tier3 { ids.insert(id); }
-        }
-
-        Ok(ids.into_iter().collect())
+    /// 获取将来 review 卡（保持 review 状态，不转为 learning）
+    pub async fn get_upcoming_reviews(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
+        sqlx::query_scalar::<_, i32>(
+            r#"SELECT m.id FROM mem m
+            WHERE m.state = 'review' AND m.buried = 0
+              AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
+            ORDER BY m.due_at LIMIT ?"#
+        ).bind(limit).fetch_all(&*self.pool).await
     }
 
     pub async fn count_upcoming(&self) -> Result<i64, sqlx::Error> {
@@ -178,7 +164,7 @@ impl MemRepo {
         Ok(())
     }
 
-    pub async fn set_pool(&self, id: i32, _in_pool: bool) -> Result<(), sqlx::Error> {
+    pub async fn set_pool(&self, _id: i32, _in_pool: bool) -> Result<(), sqlx::Error> {
         Ok(()) // deprecated — pool membership is state='learning'
     }
 }

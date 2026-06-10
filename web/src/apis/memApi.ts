@@ -22,6 +22,7 @@ const DueResponseSchema = Schema.Struct({
     due_count: Schema.Number,
     has_more: Schema.Boolean,
     upcoming_count: Schema.Number,
+    all_far: Schema.Boolean,
 });
 
 const OkSchema = Schema.Struct({ ok: Schema.Boolean });
@@ -48,6 +49,7 @@ export interface DueResponse {
     due_count: number;
     has_more: boolean;
     upcoming_count: number;
+    all_far: boolean;
 }
 
 // ── API ──
@@ -114,3 +116,15 @@ export const editMem = (
         method: "PUT",
         body: JSON.stringify({ cue_content: cue, target_content: target }),
     });
+
+const ImageUploadSchema = Schema.Struct({
+    url: Schema.String,
+});
+
+export const uploadImage = (
+    file: File,
+): Effect.Effect<{ url: string }, ApiErrorType> => {
+    const form = new FormData();
+    form.append("file", file);
+    return request("/images/upload", ImageUploadSchema, { method: "POST", body: form });
+};

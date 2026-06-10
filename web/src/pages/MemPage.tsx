@@ -23,6 +23,8 @@ export default function MemPage() {
     const [intervals, setIntervals] = createSignal<readonly number[]>([0, 0, 0, 0]);
     const [showUndo, setShowUndo] = createSignal(false);
     const [sidebarOpen, setSidebarOpen] = createSignal(false);
+    const [allFar, setAllFar] = createSignal(false);
+    const [upcoming, setUpcoming] = createSignal(0);
     let lastAction: { id: number; undoData: Record<string, unknown> } | null = null;
 
     const item = () => due()[current()];
@@ -41,6 +43,7 @@ export default function MemPage() {
                 setDone(true); setDue([]); setUpcoming(data.upcoming_count ?? 0);
             } else {
                 setDone(false);
+                setAllFar(data.all_far);
                 const shuffled = [...data.items].sort(() => Math.random() - 0.5);
                 setDue(shuffled); setCurrent(0); setShowAnswer(false);
                 // 仅一张且非 learning → 提前查看
@@ -121,6 +124,7 @@ export default function MemPage() {
                 </Show>
 
                 <Show when={!loading() && !done() && due().length > 0} fallback={<div class={styles.empty}>{loading() ? "加载中…" : "没有记忆卡片，去添加一些吧！"}</div>}>
+                    <Show when={allFar()}><div class={styles.allFarBanner}>📅 所有卡的下次复习都在 24h 之后，当前为提前复习</div></Show>
                     <div class={styles.card}>
                         <Show when={isPreview() && current() === 0}><div class={styles.previewBanner}>将于 {fmtLocal(item()?.due_at ?? "")} 到期</div></Show>
                         <Show when={editing()} fallback={<><div class={styles.cue}><div class={styles.sectionLabel}>线索</div><div class={styles.content}><Markdown content={item()?.cue.content ?? ""} /></div></div>

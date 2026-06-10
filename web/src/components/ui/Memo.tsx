@@ -14,6 +14,10 @@ interface Props {
  * - 选中文本后粘贴 URL → 转为 [text](url)
  * - 无内置样式，由父组件通过 class 控制外观
  */
+
+import { Effect } from "effect";
+import { uploadImage } from "../../apis/memApi.ts";
+
 export default function Memo(props: Props) {
     let ref!: HTMLTextAreaElement;
 
@@ -28,16 +32,9 @@ export default function Memo(props: Props) {
                 const file = item.getAsFile();
                 if (!file) continue;
 
-                const form = new FormData();
-                form.append("file", file);
-
-                try {
-                    const res = await fetch("/api/images/upload", { method: "POST", body: form });
-                    const json = await res.json();
-                    const url = json.url || json.filename;
-                    if (url) insertAtCursor(`![](${url})`);
-                } catch {
-                    // upload failed, ignore
+                const exit = await Effect.runPromiseExit(uploadImage(file));
+                if (exit._tag === "Success") {
+                    insertAtCursor(`![](${exit.value.url})`);
                 }
                 return;
             }

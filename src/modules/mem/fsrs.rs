@@ -50,14 +50,15 @@ pub fn schedule(
                 ReviewOutcome { state: "learning".into(), stability: s_old, difficulty: d_old, due_at: time::due_in_secs(secs) }
             }
             _ => {
-                let next = step + 1;
-                if next >= STEPS.len() {
-                    let (s, d, secs) = compute_next_with_state(None, rating);
-                    ReviewOutcome { state: "review".into(), stability: s, difficulty: d, due_at: time::due_in_secs(secs as i64) }
-                } else {
-                    ReviewOutcome { state: "learning".into(), stability: s_old, difficulty: d_old, due_at: time::due_in_secs(STEPS[next]) }
+                    let next = step + 1;
+                    if next >= STEPS.len() {
+                        let mem = Some(MemoryState { stability: s_old as f32, difficulty: d_old as f32 });
+                        let (s, d, secs) = compute_next_with_state(mem, rating);
+                        ReviewOutcome { state: "review".into(), stability: s, difficulty: d, due_at: time::due_in_secs(secs as i64) }
+                    } else {
+                        ReviewOutcome { state: "learning".into(), stability: s_old, difficulty: d_old, due_at: time::due_in_secs(STEPS[next]) }
+                    }
                 }
-            }
         };
     }
 
@@ -79,8 +80,9 @@ pub fn preview(s_old: f64, d_old: f64, state: &str, step_index: Option<usize>) -
         let again = STEPS[0] as f64;
         let hard = STEPS[step.min(STEPS.len() - 1)] as f64;
         let next = step + 1;
+        let mem = Some(MemoryState { stability: s_old as f32, difficulty: d_old as f32 });
         let (good, easy) = if next >= STEPS.len() {
-            (compute_next(None, 3), compute_next(None, 4))
+            (compute_next(mem, 3), compute_next(mem, 4))
         } else {
             (STEPS[next] as f64, STEPS[next] as f64)
         };

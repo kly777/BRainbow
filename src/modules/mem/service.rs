@@ -30,6 +30,11 @@ impl MemService {
             ids.extend(fillers);
         }
 
+        // 3. 仍为空 → 取最近一个将来卡作为预览
+        if ids.is_empty() {
+            if let Ok(Some(id)) = self.repo.get_next_mem().await { ids.push(id); }
+        }
+
         let items = self.build_items(&ids).await;
         let has_more = ids.len() >= max_learning as usize;
         Ok(DueResponse { due_count: items.len(), has_more, items })

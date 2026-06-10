@@ -43,7 +43,8 @@ export default function MemPage() {
                 setDone(false);
                 const shuffled = [...data.items].sort(() => Math.random() - 0.5);
                 setDue(shuffled); setCurrent(0); setShowAnswer(false);
-                setIsPreview(data.due_count === 0);
+                // 仅一张且非 learning → 提前查看
+                setIsPreview(data.items.length === 1 && data.items[0]?.state !== "learning");
                 if (shuffled.length > 0) loadPreview(shuffled[0].id);
             }
         }
@@ -56,13 +57,21 @@ export default function MemPage() {
         const it = item(); if (!it) return;
         lastAction = { id: it.id, undoData: { state: it.state, stability: it.stability, difficulty: it.difficulty, step_index: null, lapses: 0, leeched: false, due_at: it.due_at } };
         await Effect.runPromiseExit(reviewMem(it.id, rating));
-        setShowUndo(true); loadDue();
+        setShowUndo(true);
+        loadDue();
     };
 
     const bury = async () => { const it = item(); if (it) { await Effect.runPromiseExit(buryMem(it.id)); loadDue(); } };
-    const undo = async () => { if (!lastAction) return; await Effect.runPromiseExit(request(`/mem/${lastAction.id}/undo`, OkSchema, { method: "POST", body: JSON.stringify(lastAction.undoData) })); setShowUndo(false); loadDue(); };
+
+    const undo = async () => {
+        if (!lastAction) return;
+        await Effect.runPromiseExit(request(`/mem/${lastAction.id}/undo`, OkSchema, { method: "POST", body: JSON.stringify(lastAction.undoData) }));
+        setShowUndo(false);
+        loadDue();
+    };
+
     const startEdit = () => { const it = item(); if (it) { setEditCue(it.cue.content); setEditTarget(it.target.content); setEditing(true); } };
-    const saveEdit = async () => { const it = item(); if (it) { await Effect.runPromiseExit(editMem(it.id, editCue(), editTarget())); setEditing(false); loadDue(); } };
+    const saveEdit = async () => { const it = item(); if (it) { await Effect.runPromiseExit(editMem(it.id, editCue(), editTarget())); setEditing(false); } };
 
     const onKey = (e: KeyboardEvent) => {
         if (e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement)?.tagName === "INPUT") return;

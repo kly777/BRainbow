@@ -1,41 +1,19 @@
-//! FSRS-5 + Anki 式学习步进 + Fuzz
+//! FSRS 间隔重复调度器（基于 fsrs crate v6.6）
 //!
 //! 新卡 → 学习 [1min, 10min] → 毕业 → FSRS review
-//! 复习/重新学习 → FSRS-5
-//! 间隔 ±5% 随机抖动
+//! Again 永远是短步进 (1min)
 
-use chrono::{DateTime, Utc};
-
+use chrono::{DateTime, Duration, Utc};
+use fsrs::{FSRS, MemoryState};
 use crate::time;
 
-const W: [f64; 13] = [
-    0.4872, 1.4003, 3.7145, 13.8206, 5.1618, 1.2298, 0.8975,
-    0.031, 1.6474, 0.1367, 1.0461, 2.1072, 0.0793,
-];
-const RETENTION: f64 = 0.9;
 const STEPS: [i64; 2] = [60, 600];
-
-fn init_s(r: u8) -> f64 { [W[0], W[1], W[2], W[3]][r as usize - 1] }
-fn init_d(r: u8) -> f64 { (W[4] - W[5] * (r as f64 - 3.0)).clamp(1.0, 10.0) }
-fn next_s(s: f64, d: f64, r: u8) -> f64 {
-    if r == 1 { (s * 0.5).max(W[7]) }
-    else { s * (1.0 + (W[6] * (r as f64 - 3.0)).exp() * (1.0 - d / 10.0)).max(0.01) }
-}
-fn next_d(d: f64, r: u8) -> f64 { (d - W[5] * (r as f64 - 3.0) * (10.0 - d) / 9.0).clamp(1.0, 10.0) }
-fn intv(s: f64) -> f64 { (s * 9.0 * (RETENTION.powf(-2.0) - 1.0) / 19.0 * 86400.0).max(60.0) }
-
-fn fuzz(secs: f64) -> f64 {
-    let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().subsec_nanos();
-    let r = (nanos as f64 % 100.0) / 100.0;
-    (secs * (0.95 + r * 0.1)).max(60.0)
-}
 
 pub struct ReviewOutcome {
     pub state: String,
     pub stability: f64,
     pub difficulty: f64,
     pub due_at: String,
-    pub interval_secs: f64,
 }
 
 pub fn schedule(
@@ -44,50 +22,66 @@ pub fn schedule(
 ) -> ReviewOutcome {
     let step = if state == "new" { Some(0) } else { step_index };
 
+    // 学习阶段
     if let Some(step) = step {
         return match rating {
             1 => ReviewOutcome {
                 state: "learning".into(), stability: s_old, difficulty: d_old,
-                due_at: time::due_in_secs(STEPS[0]), interval_secs: STEPS[0] as f64,
+                due_at: time::due_in_secs(STEPS[0]),
             },
             2 => {
                 let secs = STEPS[step.min(STEPS.len() - 1)];
                 ReviewOutcome {
                     state: "learning".into(), stability: s_old, difficulty: d_old,
-                    due_at: time::due_in_secs(secs), interval_secs: secs as f64,
+                    due_at: time::due_in_secs(secs),
                 }
             }
             _ => {
                 let next = step + 1;
                 if next >= STEPS.len() {
-                    let s = init_s(rating); let d = init_d(rating); let secs = fuzz(intv(s));
-                    ReviewOutcome {
-                        state: "review".into(), stability: s, difficulty: d,
-                        due_at: time::due_in_secs(secs as i64), interval_secs: secs,
-                    }
+                    fsrs_review(None, s_old, d_old, rating)
                 } else {
                     ReviewOutcome {
                         state: "learning".into(), stability: s_old, difficulty: d_old,
-                        due_at: time::due_in_secs(STEPS[next]), interval_secs: STEPS[next] as f64,
+                        due_at: time::due_in_secs(STEPS[next]),
                     }
                 }
             }
         };
     }
 
-    // Again on review → 回到短步进
+    // Again → 短步进，但更新 S/D（FSRS again 状态）
     if rating == 1 {
+        let mem = MemoryState { stability: s_old as f32, difficulty: d_old as f32 };
+        let fsrs = FSRS::default();
+        if let Ok(next) = fsrs.next_states(Some(mem), 0.9, 0) {
+            return ReviewOutcome {
+                state: "review".into(),
+                stability: next.again.memory.stability as f64,
+                difficulty: next.again.memory.difficulty as f64,
+                due_at: time::due_in_secs(STEPS[0]),
+            };
+        }
         return ReviewOutcome {
             state: "review".into(), stability: s_old, difficulty: d_old,
-            due_at: time::due_in_secs(STEPS[0]), interval_secs: STEPS[0] as f64,
+            due_at: time::due_in_secs(STEPS[0]),
         };
     }
 
-    let (s, d) = (next_s(s_old, d_old, rating), next_d(d_old, rating));
-    let secs = fuzz(intv(s));
+    let mem = MemoryState { stability: s_old as f32, difficulty: d_old as f32 };
+    fsrs_review(Some(mem), s_old, d_old, rating)
+}
+
+fn fsrs_review(mem: Option<MemoryState>, s_old: f64, d_old: f64, rating: u8) -> ReviewOutcome {
+    let fsrs = FSRS::default();
+    let next = fsrs.next_states(mem, 0.9, 0).unwrap_or_else(|_| panic!("FSRS error"));
+    let chosen = match rating { 1 => &next.again, 2 => &next.hard, 3 => &next.good, _ => &next.easy };
+    let s = chosen.memory.stability as f64;
+    let d = chosen.memory.difficulty as f64;
+    let secs = (chosen.interval as f64 * 86400.0).max(60.0);
     ReviewOutcome {
         state: "review".into(), stability: s, difficulty: d,
-        due_at: time::due_in_secs(secs as i64), interval_secs: secs,
+        due_at: time::due_in_secs(secs as i64),
     }
 }
 
@@ -98,16 +92,29 @@ pub fn preview(s_old: f64, d_old: f64, state: &str, step_index: Option<usize>) -
         let hard = STEPS[step.min(STEPS.len() - 1)] as f64;
         let next = step + 1;
         let (good, easy) = if next >= STEPS.len() {
-            (fuzz(intv(init_s(3))), fuzz(intv(init_s(4))))
+            let mem = MemoryState { stability: s_old as f32, difficulty: d_old as f32 };
+            let fsrs = FSRS::default();
+            if let Ok(next) = fsrs.next_states(Some(mem), 0.9, 0) {
+                ((next.good.interval as f64 * 86400.0).max(60.0),
+                 (next.easy.interval as f64 * 86400.0).max(60.0))
+            } else { (STEPS[next] as f64, STEPS[next] as f64) }
         } else {
             (STEPS[next] as f64, STEPS[next] as f64)
         };
         return [again, hard, good, easy];
     }
-    // review: again → 1分钟短步进
+    // review
     let again = STEPS[0] as f64;
-    let hard = fuzz(intv(next_s(s_old, d_old, 2)));
-    let good = fuzz(intv(next_s(s_old, d_old, 3)));
-    let easy = fuzz(intv(next_s(s_old, d_old, 4)));
-    [again, hard, good, easy]
+    let mem = MemoryState { stability: s_old as f32, difficulty: d_old as f32 };
+    let fsrs = FSRS::default();
+    if let Ok(next) = fsrs.next_states(Some(mem), 0.9, 0) {
+        [
+            again,
+            (next.hard.interval as f64 * 86400.0).max(60.0),
+            (next.good.interval as f64 * 86400.0).max(60.0),
+            (next.easy.interval as f64 * 86400.0).max(60.0),
+        ]
+    } else {
+        [again, 3600.0, 86400.0, 259200.0]
+    }
 }

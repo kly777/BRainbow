@@ -13,65 +13,63 @@ pub struct MemService {
 impl MemService {
     pub fn new(pool: Arc<SqlitePool>) -> Self { Self { repo: MemRepo::new(pool) } }
 
-    pub async fn get_all(&self, limit: i64, offset: i64) -> Result<DueResponse, sqlx::Error> {
-        let ids = self.repo.get_all_mems(limit, offset).await?;
-        let items = self.build_items(&ids).await;
-        Ok(DueResponse { due_count: items.len(), has_more: false, items })
-    }
+    // ── 获取学习池 ──
 
-    pub async fn get_due(&self, limit: i64) -> Result<DueResponse, sqlx::Error> {
-        // 先确保池有足够的卡：从未入池且可学习的卡中补充
-        self.ensure_pool_full(limit as usize).await?;
-        let ids = self.repo.get_due_mems(limit).await?;
+    pub async fn get_due(&self, max_learning: i64) -> Result<DueResponse, sqlx::Error> {
+        // 1. 获取当前 learning 状态的卡
+        let mut ids = self.repo.get_learning_mems(max_learning).await?;
         let pool_count = ids.len();
+
+        // 2. 不足时补充
+        if pool_count < max_learning as usize {
+            let needed = max_learning as usize - pool_count;
+            let fillers = self.repo.get_fillers(needed as i64).await?;
+            for id in &fillers {
+                self.repo.set_state(*id, "learning", Some(0)).await?;
+            }
+            ids.extend(fillers);
+        }
+
         let items = self.build_items(&ids).await;
-        let has_more = pool_count >= limit as usize;
+        let has_more = ids.len() >= max_learning as usize;
         Ok(DueResponse { due_count: items.len(), has_more, items })
     }
 
-    async fn ensure_pool_full(&self, max: usize) -> Result<(), sqlx::Error> {
-        // 统计池中已有数量
-        let pool_ids = self.repo.get_pool_ids().await?;
-        let needed = max.saturating_sub(pool_ids.len());
-        if needed == 0 { return Ok(()); }
-        // 取未入池、可学习的卡（前提满足）
-        let candidates = self.repo.get_eligible_new_mems(needed as i64).await?;
-        for id in candidates {
-            self.repo.set_pool(id, true).await?;
-        }
-        Ok(())
-    }
+    // ── 复习 ──
 
     pub async fn review(&self, id: i32, rating: u8) -> Result<ReviewResponse, AppError> {
         let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
         let outcome = self.apply_review(&row, rating);
 
+        // 步进管理
         let new_step = if outcome.state == "learning" {
             let old = row.step_index.map(|i| i as usize);
             Some(match (old, rating) { (_, 1) => 0, (Some(s), _) => s + 1, (None, _) => 0 })
         } else { None };
 
+        // 毕业判断：>24h → review, 否则保持 learning
+        let new_state = if row.state == "learning" {
+            if let Ok(due) = chrono::DateTime::parse_from_rfc3339(&outcome.due_at) {
+                let hours = (due.with_timezone(&chrono::Utc) - chrono::Utc::now()).num_hours();
+                if hours > 24 { "review" } else { "learning" }
+            } else { "learning" }
+        } else { &outcome.state };
+
         let lapses = if rating == 1 { row.lapses + 1 } else { 0 };
         let leeched = row.leeched || lapses >= 5;
 
-        // 毕业判断：due_at 距现在超过 24h → 移出池
-        if row.in_pool {
-            if let Ok(due) = chrono::DateTime::parse_from_rfc3339(&outcome.due_at) {
-                let hours = (due.with_timezone(&chrono::Utc) - chrono::Utc::now()).num_hours();
-                if hours > 24 { self.repo.set_pool(id, false).await?; }
-            }
-        }
-
-        self.repo.update_mem_fsrs(id, &outcome.state, outcome.stability, outcome.difficulty,
+        self.repo.update_mem_fsrs(id, new_state, outcome.stability, outcome.difficulty,
             new_step.map(|s| s as i32), lapses, leeched, &outcome.due_at).await?;
 
-        Ok(ReviewResponse { state: outcome.state, due_at: outcome.due_at })
+        Ok(ReviewResponse { state: new_state.to_string(), due_at: outcome.due_at })
     }
 
     fn apply_review(&self, row: &MemRow, rating: u8) -> ReviewOutcome {
         let step = if row.state == "new" { Some(0) } else { row.step_index.map(|i| i as usize) };
         fsrs::schedule(row.stability, row.difficulty, &row.state, step, rating, chrono::Utc::now())
     }
+
+    // ── 其他 ──
 
     async fn build_items(&self, ids: &[i32]) -> Vec<MemWithChunks> {
         let mut items = Vec::new();
@@ -89,6 +87,12 @@ impl MemService {
             }
         }
         items
+    }
+
+    pub async fn get_all(&self, limit: i64, offset: i64) -> Result<DueResponse, sqlx::Error> {
+        let ids = self.repo.get_all_mems(limit, offset).await?;
+        let items = self.build_items(&ids).await;
+        Ok(DueResponse { due_count: items.len(), has_more: false, items })
     }
 
     pub async fn preview(&self, id: i32) -> Result<[f64; 4], AppError> {
@@ -120,20 +124,10 @@ impl MemService {
 }
 
 #[derive(Debug)]
-pub enum AppError {
-    NotFound,
-    Db(sqlx::Error),
-}
-
-impl From<sqlx::Error> for AppError {
-    fn from(e: sqlx::Error) -> Self { AppError::Db(e) }
-}
-
+pub enum AppError { NotFound, Db(sqlx::Error) }
+impl From<sqlx::Error> for AppError { fn from(e: sqlx::Error) -> Self { AppError::Db(e) } }
 impl std::fmt::Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AppError::NotFound => write!(f, "not found"),
-            AppError::Db(e) => write!(f, "db: {e}"),
-        }
+        match self { AppError::NotFound => write!(f, "not found"), AppError::Db(e) => write!(f, "db: {e}") }
     }
 }

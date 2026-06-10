@@ -15,7 +15,6 @@ pub struct MemRow {
     pub buried: bool,
     pub lapses: i32,
     pub leeched: bool,
-    pub in_pool: bool,
     pub due_at: String,
     pub last_review_at: Option<String>,
 }
@@ -30,189 +29,45 @@ impl MemRepo {
     // ── Chunk ──
 
     pub async fn create_chunk(&self, content: &str) -> Result<i32, sqlx::Error> {
-        let id = sqlx::query_scalar::<_, i32>(
-            "INSERT INTO chunk (content) VALUES (?) RETURNING id",
-        )
-        .bind(content)
-        .fetch_one(&*self.pool)
-        .await?;
-        Ok(id)
+        sqlx::query_scalar::<_, i32>("INSERT INTO chunk (content) VALUES (?) RETURNING id")
+            .bind(content).fetch_one(&*self.pool).await
     }
 
     pub async fn get_chunk(&self, id: i32) -> Result<Option<Chunk>, sqlx::Error> {
-        let row = sqlx::query_as::<_, (i32, String, String, String)>(
+        sqlx::query_as::<_, (i32, String, String, String)>(
             "SELECT id, content, created_at, updated_at FROM chunk WHERE id = ?",
-        )
-        .bind(id)
-        .fetch_optional(&*self.pool)
-        .await?;
-
-        Ok(row.map(|(id, content, created_at, updated_at)| Chunk {
-            id,
-            content,
-            created_at,
-            updated_at,
-        }))
+        ).bind(id).fetch_optional(&*self.pool).await
+            .map(|r| r.map(|(id, content, ca, ua)| Chunk { id, content, created_at: ca, updated_at: ua }))
     }
 
     pub async fn update_chunk(&self, id: i32, content: &str) -> Result<(), sqlx::Error> {
         sqlx::query("UPDATE chunk SET content=?, updated_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?")
-            .bind(content)
-            .bind(id)
-            .execute(&*self.pool)
-            .await?;
+            .bind(content).bind(id).execute(&*self.pool).await?;
         Ok(())
     }
 
-    // ── Mem ──
+    // ── Mem CRUD ──
 
-    pub async fn create_mem(
-        &self,
-        cue_id: i32,
-        target_id: i32,
-        prerequisites: &[i32],
-    ) -> Result<i32, sqlx::Error> {
+    pub async fn create_mem(&self, cue_id: i32, target_id: i32, prerequisites: &[i32]) -> Result<i32, sqlx::Error> {
         let mem_id = sqlx::query_scalar::<_, i32>(
             "INSERT INTO mem (cue_chunk_id, target_chunk_id) VALUES (?, ?) RETURNING id",
-        )
-        .bind(cue_id)
-        .bind(target_id)
-        .fetch_one(&*self.pool)
-        .await?;
-
+        ).bind(cue_id).bind(target_id).fetch_one(&*self.pool).await?;
         for &req_id in prerequisites {
-            sqlx::query(
-                "INSERT OR IGNORE INTO mem_prerequisite (mem_id, requires_mem_id) VALUES (?, ?)",
-            )
-            .bind(mem_id)
-            .bind(req_id)
-            .execute(&*self.pool)
-            .await?;
+            sqlx::query("INSERT OR IGNORE INTO mem_prerequisite (mem_id, requires_mem_id) VALUES (?, ?)")
+                .bind(mem_id).bind(req_id).execute(&*self.pool).await?;
         }
-
         Ok(mem_id)
     }
 
     pub async fn get_mem(&self, id: i32) -> Result<Option<MemRow>, sqlx::Error> {
         sqlx::query_as::<_, MemRow>(
-            "SELECT id, cue_chunk_id, target_chunk_id, state, stability, difficulty, step_index, buried, lapses, leeched, in_pool, due_at, last_review_at FROM mem WHERE id = ?",
-        )
-        .bind(id)
-        .fetch_optional(&*self.pool)
-        .await
-    }
-
-    pub async fn get_next_mem(&self) -> Result<Option<i32>, sqlx::Error> {
-        sqlx::query_scalar::<_, i32>(
-            r#"
-            SELECT m.id FROM mem m
-            WHERE m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-              AND NOT EXISTS (
-                SELECT 1 FROM mem_prerequisite mp
-                JOIN mem pm ON mp.requires_mem_id = pm.id
-                WHERE mp.mem_id = m.id AND pm.state = 'new'
-              )
-            ORDER BY m.due_at
-            LIMIT 1
-            "#,
-        )
-        .fetch_optional(&*self.pool)
-        .await
-    }
-
-    pub async fn get_due_mems(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
-        let rows = sqlx::query_scalar::<_, i32>(
-            r#"
-            SELECT m.id FROM mem m
-            WHERE (m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now') OR m.state = 'learning' OR m.in_pool = 1)
-              AND m.buried = 0 AND m.leeched = 0
-              AND NOT EXISTS (
-                SELECT 1 FROM mem_prerequisite mp
-                JOIN mem pm ON mp.requires_mem_id = pm.id
-                WHERE mp.mem_id = m.id AND pm.state = 'new'
-              )
-            ORDER BY
-              m.in_pool DESC,
-              (julianday(strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) - julianday(m.due_at)) * (1.0 + m.difficulty / 10.0) DESC,
-              m.id % 7
-            LIMIT ?
-            "#,
-        )
-        .bind(limit)
-        .fetch_all(&*self.pool)
-        .await?;
-        Ok(rows)
-    }
-
-    pub async fn update_mem_fsrs(
-        &self,
-        id: i32,
-        state: &str,
-        stability: f64,
-        difficulty: f64,
-        step_index: Option<i32>,
-        lapses: i32,
-        leeched: bool,
-        due_at: &str,
-    ) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            "UPDATE mem SET state=?, stability=?, difficulty=?, step_index=?, lapses=?, leeched=?, due_at=?, last_review_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?",
-        )
-        .bind(state)
-        .bind(stability)
-        .bind(difficulty)
-        .bind(step_index)
-        .bind(lapses)
-        .bind(leeched)
-        .bind(due_at)
-        .bind(id)
-        .execute(&*self.pool)
-        .await?;
-        Ok(())
+            "SELECT id, cue_chunk_id, target_chunk_id, state, stability, difficulty, step_index, buried, lapses, leeched, due_at, last_review_at FROM mem WHERE id = ?",
+        ).bind(id).fetch_optional(&*self.pool).await
     }
 
     pub async fn get_all_mems(&self, limit: i64, offset: i64) -> Result<Vec<i32>, sqlx::Error> {
-        sqlx::query_scalar::<_, i32>(
-            "SELECT id FROM mem ORDER BY due_at LIMIT ? OFFSET ?",
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&*self.pool)
-        .await
-    }
-
-    pub async fn bury_mem(&self, id: i32) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE mem SET buried = 1 WHERE id = ?").bind(id).execute(&*self.pool).await?;
-        Ok(())
-    }
-
-    pub async fn get_pool_ids(&self) -> Result<Vec<i32>, sqlx::Error> {
-        sqlx::query_scalar::<_, i32>("SELECT id FROM mem WHERE in_pool = 1")
-            .fetch_all(&*self.pool).await
-    }
-
-    pub async fn get_eligible_new_mems(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
-        sqlx::query_scalar::<_, i32>(
-            r#"SELECT m.id FROM mem m
-            WHERE m.in_pool = 0 AND m.buried = 0 AND m.leeched = 0
-              AND NOT EXISTS (
-                SELECT 1 FROM mem_prerequisite mp
-                JOIN mem pm ON mp.requires_mem_id = pm.id
-                WHERE mp.mem_id = m.id AND pm.state = 'new'
-              )
-            ORDER BY (julianday(strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) - julianday(m.due_at)) * (1.0 + m.difficulty / 10.0) DESC
-            LIMIT ?"#,
-        ).bind(limit).fetch_all(&*self.pool).await
-    }
-
-    pub async fn set_pool(&self, id: i32, in_pool: bool) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE mem SET in_pool = ? WHERE id = ?").bind(in_pool).bind(id).execute(&*self.pool).await?;
-        Ok(())
-    }
-
-    pub async fn unbury_mem(&self, id: i32) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE mem SET buried = 0 WHERE id = ?").bind(id).execute(&*self.pool).await?;
-        Ok(())
+        sqlx::query_scalar::<_, i32>("SELECT id FROM mem ORDER BY due_at LIMIT ? OFFSET ?")
+            .bind(limit).bind(offset).fetch_all(&*self.pool).await
     }
 
     pub async fn delete_mem(&self, id: i32) -> Result<(), sqlx::Error> {
@@ -222,5 +77,85 @@ impl MemRepo {
         sqlx::query("DELETE FROM mem WHERE id = ?").bind(id).execute(&mut *tx).await?;
         tx.commit().await?;
         Ok(())
+    }
+
+    // ── 学习池 ──
+
+    pub async fn get_learning_mems(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
+        sqlx::query_scalar::<_, i32>(
+            "SELECT id FROM mem WHERE state = 'learning' AND buried = 0 ORDER BY due_at LIMIT ?"
+        ).bind(limit).fetch_all(&*self.pool).await
+    }
+
+    /// 填充池：due(含new)卡，60%复用/40%新
+    pub async fn get_fillers(&self, need: i64) -> Result<Vec<i32>, sqlx::Error> {
+        let review_count = (need as f64 * 0.6).round() as i64;
+        let new_count = need - review_count;
+
+        let mut ids = Vec::new();
+
+        // 到期复习卡
+        let review_ids = sqlx::query_scalar::<_, i32>(
+            r#"SELECT m.id FROM mem m
+            WHERE m.state = 'review' AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+              AND m.buried = 0
+              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
+            ORDER BY m.due_at LIMIT ?"#
+        ).bind(review_count).fetch_all(&*self.pool).await?;
+        ids.extend(review_ids);
+
+        // 新卡
+        let new_ids = sqlx::query_scalar::<_, i32>(
+            r#"SELECT m.id FROM mem m
+            WHERE m.state = 'new' AND m.buried = 0
+              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
+            ORDER BY RANDOM() LIMIT ?"#
+        ).bind(new_count).fetch_all(&*self.pool).await?;
+        ids.extend(new_ids);
+
+        Ok(ids)
+    }
+
+    pub async fn get_next_mem(&self) -> Result<Option<i32>, sqlx::Error> {
+        sqlx::query_scalar::<_, i32>(
+            r#"SELECT m.id FROM mem m
+            WHERE m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+              AND m.buried = 0
+              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
+            ORDER BY m.due_at LIMIT 1"#
+        ).fetch_optional(&*self.pool).await
+    }
+
+    // ── 更新 ──
+
+    pub async fn set_state(&self, id: i32, state: &str, step_index: Option<i32>) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE mem SET state=?, step_index=?, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?")
+            .bind(state).bind(step_index).bind(id).execute(&*self.pool).await?;
+        Ok(())
+    }
+
+    pub async fn update_mem_fsrs(
+        &self, id: i32, state: &str, stability: f64, difficulty: f64,
+        step_index: Option<i32>, lapses: i32, leeched: bool, due_at: &str,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "UPDATE mem SET state=?, stability=?, difficulty=?, step_index=?, lapses=?, leeched=?, due_at=?, last_review_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?",
+        ).bind(state).bind(stability).bind(difficulty).bind(step_index).bind(lapses).bind(leeched).bind(due_at).bind(id)
+            .execute(&*self.pool).await?;
+        Ok(())
+    }
+
+    pub async fn bury_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE mem SET buried = 1 WHERE id = ?").bind(id).execute(&*self.pool).await?;
+        Ok(())
+    }
+
+    pub async fn unbury_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE mem SET buried = 0 WHERE id = ?").bind(id).execute(&*self.pool).await?;
+        Ok(())
+    }
+
+    pub async fn set_pool(&self, id: i32, _in_pool: bool) -> Result<(), sqlx::Error> {
+        Ok(()) // deprecated — pool membership is state='learning'
     }
 }

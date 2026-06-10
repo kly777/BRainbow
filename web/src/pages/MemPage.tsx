@@ -40,11 +40,12 @@ export default function MemPage() {
                 setDue([]);
             } else {
                 setDone(false);
-                setDue([...data.items]);
+                const shuffled = [...data.items].sort(() => Math.random() - 0.5);
+                setDue(shuffled);
                 setCurrent(0);
                 setShowAnswer(false);
                 setIsPreview(data.due_count === 0);
-                if (data.items.length > 0) loadPreview(data.items[0].id);
+                if (shuffled.length > 0) loadPreview(shuffled[0].id);
             }
         }
         setLoading(false);

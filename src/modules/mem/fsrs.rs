@@ -9,6 +9,8 @@ use crate::time;
 
 const STEPS: [i64; 2] = [60, 600];
 
+fn grad_s(r: u8) -> f32 { [0.4872f32, 1.4003, 3.7145, 13.8206][r as usize - 1] }
+
 pub struct ReviewOutcome {
     pub state: String,
     pub stability: f64,
@@ -92,12 +94,13 @@ pub fn preview(s_old: f64, d_old: f64, state: &str, step_index: Option<usize>) -
         let hard = STEPS[step.min(STEPS.len() - 1)] as f64;
         let next = step + 1;
         let (good, easy) = if next >= STEPS.len() {
-            let mem = MemoryState { stability: s_old as f32, difficulty: d_old as f32 };
+            // 毕业：用初始 S/D 而非当前 0 值
+            let mem_g = MemoryState { stability: grad_s(3), difficulty: 5.0 };
+            let mem_e = MemoryState { stability: grad_s(4), difficulty: 5.0 };
             let fsrs = FSRS::default();
-            if let Ok(next) = fsrs.next_states(Some(mem), 0.9, 0) {
-                ((next.good.interval as f64 * 86400.0).max(60.0),
-                 (next.easy.interval as f64 * 86400.0).max(60.0))
-            } else { (STEPS[next] as f64, STEPS[next] as f64) }
+            let g = fsrs.next_states(Some(mem_g), 0.9, 0).map(|n| (n.good.interval as f64 * 86400.0).max(60.0)).unwrap_or(86400.0);
+            let e = fsrs.next_states(Some(mem_e), 0.9, 0).map(|n| (n.easy.interval as f64 * 86400.0).max(60.0)).unwrap_or(259200.0);
+            (g, e)
         } else {
             (STEPS[next] as f64, STEPS[next] as f64)
         };

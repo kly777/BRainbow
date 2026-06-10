@@ -7,7 +7,7 @@ import {
     onMount,
     Show,
 } from "solid-js";
-import { getAllTasks, getDag } from "../../apis/taskApi.ts";
+import { getAllTasksE, getDagE } from "../../apis/taskApi.ts";
 import type { DagEdge, DagNode, Task } from "../../apis/types/index.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
 import styles from "./TaskDag.module.css";
@@ -308,7 +308,7 @@ export default function TaskDag() {
         () => ({ taskId: taskFilter(), depth: depth() }),
         async ({ taskId, depth: d }) => {
             try {
-                return await getDag(taskId, d);
+                return await getDagE(taskId, d);
             } catch (e) {
                 console.error("获取依赖图失败:", getErrorMessage(e));
                 return { nodes: [], edges: [] };
@@ -319,7 +319,7 @@ export default function TaskDag() {
     // 拉取所有任务（用于选择器）
     const [allTasks] = createResource(async () => {
         try {
-            const r = await getAllTasks();
+            const r = await getAllTasksE();
             return [...r.items];
         } catch {
             return [];

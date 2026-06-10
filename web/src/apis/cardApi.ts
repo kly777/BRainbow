@@ -10,12 +10,12 @@ import {
 
 // ==================== Card API Functions ====================
 
-export const getCards = () => request("/card", {});
+export const getCardsE = () => request("/card", {});
 
-export const getCard = (id: number): Promise<Card> =>
+export const getCardE = (id: number): Promise<Card> =>
     request(`/card/${id}`, {});
 
-export const createCard = (
+export const createCardE = (
     card: CreateCardRequest,
 ): Promise<Card> =>
     request("/card", {
@@ -23,7 +23,7 @@ export const createCard = (
         body: JSON.stringify(card),
     });
 
-export const updateCard = (
+export const updateCardE = (
     id: number,
     card: UpdateCardRequest,
 ): Promise<Card> =>
@@ -32,12 +32,12 @@ export const updateCard = (
         body: JSON.stringify(card),
     });
 
-export const deleteCard = (id: number): Promise<void> =>
+export const deleteCardE = (id: number): Promise<void> =>
     request(`/card/${id}`, {
         method: "DELETE",
     });
 
-export const searchCards = (
+export const searchCardsE = (
     query: string,
 ) => request(
     `/card/search?q=${encodeURIComponent(query)}`,
@@ -141,11 +141,11 @@ export const uploadImage = async (
 };
 
 /** 获取所有图片 */
-export const listImages = (): Promise<PaginatedImage> =>
+export const listImagesE = (): Promise<PaginatedImage> =>
     request("/images", {});
 
 /** 重命名图片 */
-export const renameImage = (
+export const renameImageE = (
     id: number,
     req: RenameImageRequest,
 ): Promise<Image> =>
@@ -155,5 +155,5 @@ export const renameImage = (
     });
 
 /** 删除图片 */
-export const deleteImage = (id: number): Promise<void> =>
+export const deleteImageE = (id: number): Promise<void> =>
     request(`/images/${id}`, { method: "DELETE" });

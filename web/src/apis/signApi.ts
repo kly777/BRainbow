@@ -11,15 +11,15 @@ export interface Sign {
 }
 
 /** 获取所有符号关系（后端返回分页结构，自动提取 items）。 */
-export const getSigns = (): Promise<readonly Sign[]> =>
+export const getSignsE = (): Promise<readonly Sign[]> =>
     request<{ readonly items: readonly Sign[] }>("/sign", {}).then(
         (r) => r.items,
     );
 
-export const getSign = (id: number): Promise<Sign> =>
+export const getSignE = (id: number): Promise<Sign> =>
     request<Sign>(`/sign/${id}`, {});
 
-export const createSign = (data: {
+export const createSignE = (data: {
     signifier: string;
     signified: string;
     onto_id?: number | null;
@@ -31,13 +31,13 @@ export const createSign = (data: {
         body: JSON.stringify(data),
     });
 
-export const deleteSign = (id: number): Promise<void> =>
+export const deleteSignE = (id: number): Promise<void> =>
     request<void>(`/sign/${id}`, {
         method: "DELETE",
     });
 
 /** 按能指查询（后端返回分页结构，自动提取 items）。 */
-export const getSignsBySignifier = (
+export const getSignsBySignifierE = (
     signifier: string,
 ): Promise<readonly Sign[]> =>
     request<{ readonly items: readonly Sign[] }>(
@@ -46,7 +46,7 @@ export const getSignsBySignifier = (
     ).then((r) => r.items);
 
 /** 按所指查询（后端返回分页结构，自动提取 items）。 */
-export const getSignsBySignified = (
+export const getSignsBySignifiedE = (
     signified: string,
 ): Promise<readonly Sign[]> =>
     request<{ readonly items: readonly Sign[] }>(

@@ -9,15 +9,15 @@ export interface Onto {
 /**
  * 获取所有本体（后端返回分页结构，自动提取 items）。
  */
-export const getOntos = (): Promise<readonly Onto[]> =>
+export const getOntosE = (): Promise<readonly Onto[]> =>
     request<{ readonly items: readonly Onto[] }>("/onto", {}).then(
         (r) => r.items,
     );
 
-export const getOnto = (id: number): Promise<Onto> =>
+export const getOntoE = (id: number): Promise<Onto> =>
     request<Onto>(`/onto/${id}`, {});
 
-export const createOnto = (
+export const createOntoE = (
     name: string,
     description?: string,
 ): Promise<Onto> =>
@@ -26,7 +26,7 @@ export const createOnto = (
         body: JSON.stringify({ name, description }),
     });
 
-export const updateOnto = (
+export const updateOntoE = (
     id: number,
     data: { name?: string; description?: string },
 ): Promise<Onto> =>
@@ -35,7 +35,7 @@ export const updateOnto = (
         body: JSON.stringify(data),
     });
 
-export const deleteOnto = (id: number): Promise<void> =>
+export const deleteOntoE = (id: number): Promise<void> =>
     request<void>(`/onto/${id}`, {
         method: "DELETE",
     });

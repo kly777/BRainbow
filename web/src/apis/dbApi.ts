@@ -2,7 +2,7 @@ import { request } from "./request.ts";
 import type { ApiErrorType } from "./types/index.ts";
 import type { PaginationParams } from "./types/index.ts";
 
-export const getTables = (): Promise<readonly string[]> =>
+export const getTablesE = (): Promise<readonly string[]> =>
     request("/db", {});
 
 export interface ColumnInfo {
@@ -15,7 +15,7 @@ export interface TableData {
     readonly rows: readonly (readonly (string | number | null)[])[];
 }
 
-export const getTableData = (
+export const getTableDataE = (
     name: string,
     params?: PaginationParams,
 ): Promise<TableData> => {

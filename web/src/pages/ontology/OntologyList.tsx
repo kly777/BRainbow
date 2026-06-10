@@ -6,7 +6,7 @@ import {
     Show,
 } from "solid-js";
 import type { Onto } from "../../apis/ontoApi.ts";
-import { createOnto, deleteOnto, getOntos } from "../../apis/ontoApi.ts";
+import { createOntoE, deleteOntoE, getOntosE } from "../../apis/ontoApi.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import styles from "./OntologyList.module.css";
@@ -15,7 +15,7 @@ const OntologyListPage: Component = () => {
     // 使用 createResource 加载本体数据
 	    const [ontologies, { mutate, refetch }] = createResource(async () => {
 	        try {
-	            return await getOntos();
+	            return await getOntosE();
 	        } catch {
 	            return [];
 	        }
@@ -59,7 +59,7 @@ const OntologyListPage: Component = () => {
         const name = newName().trim();
         const description = newDescription().trim() || undefined;
 
-        createOnto(name, description).then((newOnto) => {
+        createOntoE(name, description).then((newOnto) => {
                 setNewName("");
                 setNewDescription("");
                 setShowCreateModal(false);
@@ -88,7 +88,7 @@ const OntologyListPage: Component = () => {
                 mutate(currentData.filter((onto) => onto.id !== id));
             }
 
-            deleteOnto(id).then(() => {
+            deleteOntoE(id).then(() => {
                     console.log("本体删除成功:", id);
                 }).catch(() => {
                     if (ontoToDelete) mutate([...currentData]);

@@ -9,10 +9,10 @@ export interface TextResponse {
     readonly tabs: readonly TabItem[];
 }
 
-export const loadText = (): Promise<TextResponse> =>
+export const loadTextE = (): Promise<TextResponse> =>
     request<TextResponse>("/text", {});
 
-export const saveText = (
+export const saveTextE = (
     tabs: readonly { name: string; content: string }[],
 ): Promise<{ readonly ok: boolean }> =>
     request<{ readonly ok: boolean }>("/text", {

@@ -6,14 +6,14 @@ import {
     Show,
 } from "solid-js";
 import {
-    createTimeWindow,
-    deleteTimeWindow,
-    getTimeWindows,
+    createTimeWindowE,
+    deleteTimeWindowE,
+    getTimeWindowsE,
 } from "../../apis/timeWindowApi.ts";
 import {
-    addTaskDependency,
-    getTaskDetail,
-    removeTaskDependency,
+    addTaskDependencyE,
+    getTaskDetailE,
+    removeTaskDependencyE,
 } from "../../apis/taskApi.ts";
 import type {
     CreateTimeWindowRequest,
@@ -78,7 +78,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
     const [detail] = createResource(
         () => (props.isOpen && props.task?.id ? props.task.id : null),
         async (taskId: number) => {
-            const d = await getTaskDetail(taskId);
+            const d = await getTaskDetailE(taskId);
             return d;
         },
     );
@@ -87,8 +87,8 @@ export default function EditTaskModal(props: EditTaskModalProps) {
     const loadTimeWindows = async (taskId: number) => {
         try {
             const [feasible, planned] = await Promise.all([
-                (getTimeWindows(taskId, "feasible")),
-                (getTimeWindows(taskId, "planned")),
+                (getTimeWindowsE(taskId, "feasible")),
+                (getTimeWindowsE(taskId, "planned")),
             ]);
             setFeasibleWindows([...feasible]);
             setPlannedWindows([...planned]);
@@ -161,7 +161,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
             task_id: props.task.id,
         };
         try {
-            const tw = await createTimeWindow(req);
+            const tw = await createTimeWindowE(req);
             if (tw.window_type === "feasible") {
                 setFeasibleWindows([...feasibleWindows(), tw]);
             } else {
@@ -181,7 +181,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 
     const handleDeleteTimeWindow = async (id: number, type: string) => {
         try {
-            await deleteTimeWindow(id);
+            await deleteTimeWindowE(id);
             if (type === "feasible") {
                 setFeasibleWindows(
                     feasibleWindows().filter((w) => w.id !== id),
@@ -214,7 +214,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
         }
         setDepError("");
         try {
-            await addTaskDependency(props.task.id, depId);
+            await addTaskDependencyE(props.task.id, depId);
             const depTask = props.allTasks.find((t) => t.id === depId);
             setDepIds([...depIds(), depId]);
             if (depTask) setDepTasks([...depTasks(), depTask]);
@@ -235,7 +235,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
     const handleRemoveDependency = async (depId: number) => {
         if (!props.task) return;
         try {
-            await removeTaskDependency(props.task.id, depId);
+            await removeTaskDependencyE(props.task.id, depId);
             setDepIds(depIds().filter((id) => id !== depId));
             setDepTasks(depTasks().filter((t) => t.id !== depId));
             props.onDependencyChange?.();

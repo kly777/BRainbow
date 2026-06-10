@@ -1,10 +1,10 @@
 import { useNavigate } from "@solidjs/router";
 import { type Component, createResource, createSignal, Show } from "solid-js";
 import {
-    createCard,
-    deleteCard,
-    getCards,
-    searchCards,
+    createCardE,
+    deleteCardE,
+    getCardsE,
+    searchCardsE,
 } from "../../apis/cardApi.ts";
 import {
     type CreateCardRequest,
@@ -20,7 +20,7 @@ const CardsListPage: Component = () => {
 
     const [cards, { mutate }] = createResource(async () => {
         try {
-            const r = await getCards();
+            const r = await getCardsE();
             return r.items;
         } catch {
             return [];
@@ -47,7 +47,7 @@ const CardsListPage: Component = () => {
         if (cardToDelete) mutate(currentCards.filter((card) => card.id !== id));
 
         try {
-            await deleteCard(id);
+            await deleteCardE(id);
             console.log("卡片删除成功:", id);
         } catch {
             if (cardToDelete) mutate([...currentCards]);
@@ -68,7 +68,7 @@ const CardsListPage: Component = () => {
         const request: CreateCardRequest = { content: newCardContent().trim() };
 
         try {
-            const newCard = await createCard(request);
+            const newCard = await createCardE(request);
             setNewCardContent("");
             setShowCreateModal(false);
             mutate([newCard, ...(cards() || [])]);
@@ -82,13 +82,13 @@ const CardsListPage: Component = () => {
     const handleSearch = async (query: string) => {
         if (!query) {
             try {
-                const r = await getCards();
+                const r = await getCardsE();
                 mutate([...r.items]);
             } catch { /* ignore */ }
             return;
         }
         try {
-            const result = await searchCards(query);
+            const result = await searchCardsE(query);
             mutate([...result.items]);
         } catch {
             // 全局 toast 已触发

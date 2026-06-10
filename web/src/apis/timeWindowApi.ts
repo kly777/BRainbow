@@ -6,7 +6,7 @@ import {
 
 // ==================== Time Window API Functions ====================
 
-export const getTimeWindows = (
+export const getTimeWindowsE = (
     taskId: number,
     windowType?: string,
 ): Promise<readonly TimeWindow[]> => {
@@ -17,7 +17,7 @@ export const getTimeWindows = (
     );
 };
 
-export const createTimeWindow = (
+export const createTimeWindowE = (
     data: CreateTimeWindowRequest,
 ): Promise<TimeWindow> =>
     request<TimeWindow>("/time-windows", {
@@ -25,7 +25,7 @@ export const createTimeWindow = (
         body: JSON.stringify(data),
     });
 
-export const deleteTimeWindow = (
+export const deleteTimeWindowE = (
     id: number,
 ): Promise<void> =>
     request<void>(`/time-windows/${id}`, {

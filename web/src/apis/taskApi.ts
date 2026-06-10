@@ -11,7 +11,7 @@ import {
 
 // ==================== Task API Functions ====================
 
-export const getCalendarEvents = (
+export const getCalendarEventsE = (
     start?: string,
     end?: string,
     status?: string,
@@ -27,10 +27,10 @@ export const getCalendarEvents = (
     );
 };
 
-export const getTasks = () =>
+export const getTasksE = () =>
     request("/tasks", {});
 
-export const getAllTasks = () =>
+export const getAllTasksE = () =>
     request("/tasks/all", {});
 
 // ==================== Tree API ====================
@@ -40,15 +40,15 @@ export interface TreeNode {
     readonly children: readonly TreeNode[];
 }
 
-export const getTaskTree = (): Promise<readonly TreeNode[]> =>
+export const getTaskTreeE = (): Promise<readonly TreeNode[]> =>
     request("/tasks/tree", {});
 
-export const getTaskDetail = (
+export const getTaskDetailE = (
     id: number,
 ): Promise<TaskDetail> =>
     request(`/tasks/${id}/detail`, {});
 
-export const createTask = (
+export const createTaskE = (
     task: CreateTaskRequest,
 ): Promise<Task> =>
     request("/tasks", {
@@ -56,7 +56,7 @@ export const createTask = (
         body: JSON.stringify(task),
     });
 
-export const updateTask = (
+export const updateTaskE = (
     id: number,
     task: UpdateTaskRequest,
 ): Promise<Task> =>
@@ -65,12 +65,12 @@ export const updateTask = (
         body: JSON.stringify(task),
     });
 
-export const deleteTask = (id: number): Promise<void> =>
+export const deleteTaskE = (id: number): Promise<void> =>
     request(`/tasks/${id}`, {
         method: "DELETE",
     });
 
-export const addTaskDependency = (
+export const addTaskDependencyE = (
     taskId: number,
     dependsOnTaskId: number,
 ): Promise<void> =>
@@ -79,7 +79,7 @@ export const addTaskDependency = (
         body: JSON.stringify({ depends_on_task_id: dependsOnTaskId }),
     });
 
-export const removeTaskDependency = (
+export const removeTaskDependencyE = (
     taskId: number,
     dependsOnTaskId: number,
 ): Promise<void> =>
@@ -87,7 +87,7 @@ export const removeTaskDependency = (
         method: "DELETE",
     });
 
-export const addTaskDecomposition = (
+export const addTaskDecompositionE = (
     parentTaskId: number,
     childTaskId: number,
 ): Promise<void> =>
@@ -98,7 +98,7 @@ export const addTaskDecomposition = (
         },
     );
 
-export const addTaskTimeAllocation = (
+export const addTaskTimeAllocationE = (
     taskId: number,
     timeWindowId: number,
     durationMinutes: number,
@@ -110,12 +110,12 @@ export const addTaskTimeAllocation = (
         },
     );
 
-export const getUserTasks = (
+export const getUserTasksE = (
     userId: number,
 ): Promise<readonly Task[]> =>
     request(`/tasks/user/${userId}`, {});
 
-export const updateTaskStatus = (
+export const updateTaskStatusE = (
     id: number,
     status: string,
 ): Promise<Task> =>
@@ -124,25 +124,25 @@ export const updateTaskStatus = (
         body: JSON.stringify({ status }),
     });
 
-export const searchTasks = (query: string) =>
+export const searchTasksE = (query: string) =>
     request(
         `/tasks/search?q=${encodeURIComponent(query)}`,
         {},
     );
 
-export const getBacklogTasks = () =>
+export const getBacklogTasksE = () =>
     request("/tasks/status/backlog", {});
 
-export const getActiveTasks = () =>
+export const getActiveTasksE = () =>
     request("/tasks/status/active", {});
 
-export const getCompletedTasks = () =>
+export const getCompletedTasksE = () =>
     request("/tasks/status/completed", {});
 
-export const getArchivedTasks = () =>
+export const getArchivedTasksE = () =>
     request("/tasks/status/archived", {});
 
-export const getTaskStats = (): Promise<{
+export const getTaskStatsE = (): Promise<{
     backlog: number;
     active: number;
     completed: number;
@@ -153,29 +153,29 @@ export const getTaskStats = (): Promise<{
 );
 
 // 任务状态操作
-export const completeTask = (id: number): Promise<Task> =>
+export const completeTaskE = (id: number): Promise<Task> =>
     request(`/tasks/${id}/complete`, {
         method: "POST",
     });
 
-export const activateTask = (id: number): Promise<Task> =>
+export const activateTaskE = (id: number): Promise<Task> =>
     request(`/tasks/${id}/activate`, {
         method: "POST",
     });
 
-export const archiveTask = (id: number): Promise<Task> =>
+export const archiveTaskE = (id: number): Promise<Task> =>
     request(`/tasks/${id}/archive`, {
         method: "POST",
     });
 
-export const moveToBacklog = (id: number): Promise<Task> =>
+export const moveToBacklogE = (id: number): Promise<Task> =>
     request(`/tasks/${id}/move-to-backlog`, {
         method: "POST",
     });
 
 // ==================== DAG API ====================
 
-export const getDag = (
+export const getDagE = (
     taskId?: number,
     depth?: number,
 ): Promise<DagView> => {

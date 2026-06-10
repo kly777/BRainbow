@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "@solidjs/router";
 import { type Component, createResource } from "solid-js";
-import { deleteCard, getCard } from "../../apis/cardApi.ts";
+import { deleteCardE, getCardE } from "../../apis/cardApi.ts";
 import Markdown from "../../components/ui/Markdown.tsx";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import styles from "./CardDetail.module.css";
@@ -18,12 +18,12 @@ const CardDetailPage: Component = () => {
     const [card, { refetch }] = createResource(async () => {
         const id = cardId();
         if (Number.isNaN(id)) throw new Error("无效ID");
-        return await getCard(id);
+        return await getCardE(id);
     });
 
     const handleDelete = async () => {
         if (!confirm("确定要删除？")) return;
-        try { await deleteCard(cardId()); navigate("/c"); } catch { /* ignore */ }
+        try { await deleteCardE(cardId()); navigate("/c"); } catch { /* ignore */ }
     };
 
     const formatDate = (s: string) => {

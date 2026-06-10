@@ -7,20 +7,20 @@ export interface AuthUser {
     token: string;
 }
 
-export const login = (
+export const loginE = (
     name: string,
     password: string,
 ): Promise<AuthUser> =>
-    request("/user/login", {
+    request("/user/loginE", {
         method: "POST",
         body: JSON.stringify({ name, password }),
     });
 
-export const register = (
+export const registerE = (
     name: string,
     password: string,
 ): Promise<AuthUser> =>
-    request("/user/register", {
+    request("/user/registerE", {
         method: "POST",
         body: JSON.stringify({ name, password }),
     });

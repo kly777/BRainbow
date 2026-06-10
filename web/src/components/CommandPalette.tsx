@@ -120,7 +120,7 @@ export default function CommandPalette() {
         ];
         if (!auth().user) {
             list.push({
-                label: ":login",
+                label: ":loginE",
                 desc: "登录",
                 action: () => globalThis.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT)),
             });

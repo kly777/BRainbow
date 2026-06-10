@@ -1,12 +1,12 @@
 import { createSignal, For, onCleanup, onMount } from "solid-js";
-import { loadText, saveText } from "../apis/textApi.ts";
+import { loadTextE, saveTextE } from "../apis/textApi.ts";
 import styles from "./TextEditor.module.css";
 
 let _saveTimer: ReturnType<typeof setInterval> | null = null;
 
 async function load(): Promise<{ name: string; content: string }[]> {
     try {
-        const res = await loadText();
+        const res = await loadTextE();
         if (res.tabs.length > 0) {
             return res.tabs.map((t) => ({ name: t.name, content: t.content }));
         }
@@ -19,7 +19,7 @@ async function load(): Promise<{ name: string; content: string }[]> {
 }
 
 async function save(tabs: { name: string; content: string }[]): Promise<void> {
-    try { await saveText(tabs); } catch { /* ignore */ }
+    try { await saveTextE(tabs); } catch { /* ignore */ }
 }
 
 function defaultName(i: number): string {

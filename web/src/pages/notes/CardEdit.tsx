@@ -7,9 +7,9 @@ import {
     Show,
 } from "solid-js";
 import {
-    deleteCard,
-    getCard,
-    updateCard,
+    deleteCardE,
+    getCardE,
+    updateCardE,
     uploadImage,
 } from "../../apis/cardApi.ts";
 import type { UpdateCardRequest } from "../../apis/types/index.ts";
@@ -31,7 +31,7 @@ const CardEditPage: Component = () => {
     const [card, { refetch }] = createResource(async () => {
         const id = cardId();
         if (Number.isNaN(id)) throw new Error("无效ID");
-        return await getCard(id);
+        return await getCardE(id);
     });
 
     const [content, setContent] = createSignal("");
@@ -55,7 +55,7 @@ const CardEditPage: Component = () => {
         setError("");
         try {
             const req: UpdateCardRequest = { content: content().trim() };
-            await updateCard(cardId(), req);
+            await updateCardE(cardId(), req);
             navigate(`/c/${cardId()}`);
         } catch (err) {
             setError(getErrorMessage(err));
@@ -73,7 +73,7 @@ const CardEditPage: Component = () => {
 
     const handleDelete = async () => {
         if (!confirm("确定要删除？")) return;
-        try { await deleteCard(cardId()); navigate("/c"); } catch { /* ignore */ }
+        try { await deleteCardE(cardId()); navigate("/c"); } catch { /* ignore */ }
     };
 
     // ── 图片上传 ──

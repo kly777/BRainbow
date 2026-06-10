@@ -1,6 +1,6 @@
 import { createSignal, onMount, Show, For } from "solid-js";
 import { A } from "@solidjs/router";
-import { editMem, getAllMems, deleteMem, type MemItem } from "../apis/memApi.ts";
+import { editMemE, getAllMemsE, deleteMemE, type MemItem } from "../apis/memApi.ts";
 import Markdown from "../components/ui/Markdown.tsx";
 import Memo from "../components/ui/Memo.tsx";
 import { fmtLocal, fmtRelative } from "../lib/time.ts";
@@ -8,7 +8,7 @@ import styles from "./MemManage.module.css";
 
 async function loadAllMems(): Promise<MemItem[]> {
     try {
-        const res = await getAllMems(500);
+        const res = await getAllMemsE(500);
         return [...res.items].sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime());
     } catch {
         return [];
@@ -32,7 +32,7 @@ export default function MemManage() {
 
     const handleDelete = async (id: number) => {
         if (!confirm("确定删除？")) return;
-        try { await deleteMem(id); } catch { /* ignore */ }
+        try { await deleteMemE(id); } catch { /* ignore */ }
         if (selected() === id) setSelected(null);
         load();
     };
@@ -48,7 +48,7 @@ export default function MemManage() {
     const saveEdit = async () => {
         const d = detail();
         if (!d) return;
-        try { await editMem(d.id, editCue(), editTarget()); } catch { /* ignore */ }
+        try { await editMemE(d.id, editCue(), editTarget()); } catch { /* ignore */ }
         setEditing(false);
         load();
     };

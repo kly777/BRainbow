@@ -5,7 +5,7 @@ import {
     For,
     Show,
 } from "solid-js";
-import { deleteImage, listImages, renameImage } from "../../apis/cardApi.ts";
+import { deleteImageE, listImagesE, renameImageE } from "../../apis/cardApi.ts";
 import type { Image } from "../../apis/types/index.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
@@ -13,7 +13,7 @@ import styles from "./ImagesList.module.css";
 
 const ImagesListPage: Component = () => {
     const [images, { refetch }] = createResource(async () => {
-        const result = await listImages();
+        const result = await listImagesE();
         return result.items as unknown as Image[];
     });
 
@@ -24,7 +24,7 @@ const ImagesListPage: Component = () => {
     const handleDelete = async (id: number) => {
         if (!confirm("确定要删除这张图片？")) return;
         try {
-            await deleteImage(id);
+            await deleteImageE(id);
             refetch();
         } catch (err) {
             console.error("删除失败:", getErrorMessage(err));
@@ -49,7 +49,7 @@ const ImagesListPage: Component = () => {
         try {
             const eid = editingId();
             if (eid == null) return;
-            await renameImage(eid, { original_name: name });
+            await renameImageE(eid, { original_name: name });
             setEditingId(null);
             refetch();
         } catch (err) {

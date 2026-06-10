@@ -6,20 +6,20 @@ import {
     useContext,
 } from "solid-js";
 import {
-    activateTask,
-    archiveTask,
-    completeTask,
-    createTask as apiCreateTask,
-    deleteTask as apiDeleteTask,
-    getActiveTasks,
-    getAllTasks,
-    getBacklogTasks,
-    getCompletedTasks,
-    getTasks,
-    getTaskStats,
-    moveToBacklog,
-    searchTasks,
-    updateTask as apiUpdateTask,
+    activateTaskE,
+    archiveTaskE,
+    completeTaskE,
+    createTaskE as apiCreateTask,
+    deleteTaskE as apiDeleteTask,
+    getActiveTasksE,
+    getAllTasksE,
+    getBacklogTasksE,
+    getCompletedTasksE,
+    getTasksE,
+    getTaskStatsE,
+    moveToBacklogE,
+    searchTasksE,
+    updateTaskE as apiUpdateTask,
 } from "../../apis/taskApi.ts";
 import type { CreateTaskRequest, Task } from "../../apis/types/index.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
@@ -40,7 +40,7 @@ interface TaskCtxValue {
     reloadStats(): Promise<void>;
     updateStatus(id: number, status: string): Promise<void>;
     removeTask(id: number): Promise<void>;
-    updateTask(id: number, updates: Partial<Task>): Promise<void>;
+    updateTaskE(id: number, updates: Partial<Task>): Promise<void>;
     addSubTask(parentId: number, title: string): Promise<void>;
     filterByStatus(status: string): Promise<void>;
     search(query: string): Promise<void>;
@@ -75,7 +75,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
     const reload = async () => {
         setLoading(true);
         try {
-            const r = await getTasks();
+            const r = await getTasksE();
             setTasks([...r.items]);
         } catch (e) {
             console.error("加载任务失败:", getErrorMessage(e));
@@ -86,7 +86,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 
     const reloadStats = async () => {
         try {
-            setStats(await getTaskStats());
+            setStats(await getTaskStatsE());
         } catch (e) {
             console.error("获取统计失败:", getErrorMessage(e));
         }
@@ -121,10 +121,10 @@ export function TaskProvider(props: { children: JSX.Element }) {
         );
 
         const fn: Record<string, () => Promise<Task>> = {
-            completed: () => (completeTask(id)),
-            active: () => (activateTask(id)),
-            archived: () => (archiveTask(id)),
-            backlog: () => (moveToBacklog(id)),
+            completed: () => (completeTaskE(id)),
+            active: () => (activateTaskE(id)),
+            archived: () => (archiveTaskE(id)),
+            backlog: () => (moveToBacklogE(id)),
         };
         try {
             const f = fn[newStatus];
@@ -152,7 +152,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
         }
     };
 
-    const updateTask = async (id: number, updates: Partial<Task>) => {
+    const updateTaskE = async (id: number, updates: Partial<Task>) => {
         const prev = tasks();
         const idx = prev.findIndex((t) => t.id === id);
         if (idx === -1) return;
@@ -182,16 +182,16 @@ export function TaskProvider(props: { children: JSX.Element }) {
             let r: { readonly items: readonly Task[] };
             switch (status) {
                 case "backlog":
-                    r = await getBacklogTasks();
+                    r = await getBacklogTasksE();
                     break;
                 case "active":
-                    r = await getActiveTasks();
+                    r = await getActiveTasksE();
                     break;
                 case "completed":
-                    r = await getCompletedTasks();
+                    r = await getCompletedTasksE();
                     break;
                 default:
-                    r = await getAllTasks();
+                    r = await getAllTasksE();
             }
             setTasks([...r.items]);
         } catch (e) {
@@ -206,7 +206,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
         }
         setLoading(true);
         try {
-            const r = await searchTasks(query);
+            const r = await searchTasksE(query);
             setTasks([...r.items]);
         } catch (e) {
             console.error("搜索失败:", getErrorMessage(e));
@@ -224,7 +224,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
         reloadStats,
         updateStatus,
         removeTask,
-        updateTask,
+        updateTaskE,
         addSubTask,
         filterByStatus,
         search: handleSearch,
@@ -248,7 +248,7 @@ export function useTasks() {
             reloadStats: async () => {},
             updateStatus: async () => {},
             removeTask: async () => {},
-            updateTask: async () => {},
+            updateTaskE: async () => {},
             addSubTask: async () => {},
             filterByStatus: async () => {},
             search: async () => {},

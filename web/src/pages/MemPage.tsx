@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
 import { createSignal, onCleanup, onMount, Show, For } from "solid-js";
-import { buryMem, editMem, getDue, previewMem, reviewMem, type MemItem } from "../apis/memApi.ts";
+import { buryMemE, editMemE, getDueE, previewMemE, reviewMemE, type MemItem } from "../apis/memApi.ts";
 import { request } from "../apis/request.ts";
 import Markdown from "../components/ui/Markdown.tsx";
 import Memo from "../components/ui/Memo.tsx";
@@ -28,7 +28,7 @@ export default function MemPage() {
 
     const loadPreview = async (id: number) => {
         try {
-            const res = await previewMem(id);
+            const res = await previewMemE(id);
             setIntervals(res.intervals);
         } catch { /* ignore */ }
     };
@@ -36,7 +36,7 @@ export default function MemPage() {
     const loadDue = async () => {
         setLoading(true);
         try {
-            const data = await getDue(7);
+            const data = await getDueE(7);
             if (data.items.length === 0 && !data.has_more) {
                 setDone(true); setDue([]); setUpcoming(data.upcoming_count ?? 0);
             } else {
@@ -56,12 +56,12 @@ export default function MemPage() {
     const rate = async (rating: number) => {
         const it = item(); if (!it) return;
         lastAction = { id: it.id, undoData: { state: it.state, stability: it.stability, difficulty: it.difficulty, step_index: null, lapses: 0, leeched: false, due_at: it.due_at } };
-        try { await reviewMem(it.id, rating); } catch { /* ignore */ }
+        try { await reviewMemE(it.id, rating); } catch { /* ignore */ }
         setShowUndo(true);
         loadDue();
     };
 
-    const bury = async () => { const it = item(); if (it) { try { await buryMem(it.id); } catch { /* ignore */ } loadDue(); } };
+    const bury = async () => { const it = item(); if (it) { try { await buryMemE(it.id); } catch { /* ignore */ } loadDue(); } };
 
     const undo = async () => {
         if (!lastAction) return;
@@ -71,7 +71,7 @@ export default function MemPage() {
     };
 
     const startEdit = () => { const it = item(); if (it) { setEditCue(it.cue.content); setEditTarget(it.target.content); setEditing(true); } };
-    const saveEdit = async () => { const it = item(); if (it) { try { await editMem(it.id, editCue(), editTarget()); } catch { /* ignore */ } setEditing(false); } };
+    const saveEdit = async () => { const it = item(); if (it) { try { await editMemE(it.id, editCue(), editTarget()); } catch { /* ignore */ } setEditing(false); } };
 
     const onKey = (e: KeyboardEvent) => {
         if (e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement)?.tagName === "INPUT") return;

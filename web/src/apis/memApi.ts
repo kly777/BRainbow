@@ -28,7 +28,7 @@ export interface DueResponse {
 
 // ── API ──
 
-export const createMem = (
+export const createMemE = (
     cueMd: string,
     targetMd: string,
     prerequisites: number[] = [],
@@ -42,17 +42,17 @@ export const createMem = (
         }),
     });
 
-export const getAllMems = (
+export const getAllMemsE = (
     pageSize = 200,
 ): Promise<DueResponse> =>
     request(`/mem/all?page_size=${pageSize}`, {});
 
-export const getDue = (
+export const getDueE = (
     limit = 50,
 ): Promise<DueResponse> =>
     request(`/mem/due?limit=${limit}`, {});
 
-export const reviewMem = (
+export const reviewMemE = (
     id: number,
     rating: number,
 ): Promise<{ ok: boolean }> =>
@@ -61,27 +61,27 @@ export const reviewMem = (
         body: JSON.stringify({ rating }),
     });
 
-export const previewMem = (
+export const previewMemE = (
     id: number,
 ): Promise<{ intervals: readonly number[] }> =>
     request(`/mem/${id}/preview`, {});
 
-export const deleteMem = (
+export const deleteMemE = (
     id: number,
 ): Promise<{ ok: boolean }> =>
     request(`/mem/${id}`, { method: "DELETE" });
 
-export const buryMem = (
+export const buryMemE = (
     id: number,
 ): Promise<{ ok: boolean }> =>
     request(`/mem/${id}/bury`, { method: "POST" });
 
-export const unburyMem = (
+export const unburyMemE = (
     id: number,
 ): Promise<{ ok: boolean }> =>
     request(`/mem/${id}/unbury`, { method: "POST" });
 
-export const editMem = (
+export const editMemE = (
     id: number,
     cue: string,
     target: string,

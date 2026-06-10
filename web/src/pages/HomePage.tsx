@@ -1,6 +1,6 @@
 import { A, useNavigate } from "@solidjs/router";
 import { createSignal, onMount, Show } from "solid-js";
-import { deleteCard as apiDeleteCard, getCards } from "../apis/cardApi.ts";
+import { deleteCardE as apiDeleteCard, getCardsE } from "../apis/cardApi.ts";
 import {
     type CreateTaskRequest,
     getErrorMessage,
@@ -19,7 +19,7 @@ function TaskSection() {
         add,
         updateStatus,
         removeTask,
-        updateTask,
+        updateTaskE,
         addSubTask,
     } = useTasks();
     const [title, setTitle] = createSignal("");
@@ -92,7 +92,7 @@ function TaskSection() {
                     tasks={tasks()}
                     onStatusChange={updateStatus}
                     onDelete={removeTask}
-                    onUpdate={updateTask}
+                    onUpdate={updateTaskE}
                     onAddSubTask={addSubTask}
                 />
             </Show>
@@ -108,7 +108,7 @@ function CardSection() {
     const load = async () => {
         setLoading(true);
         try {
-            const r = await getCards();
+            const r = await getCardsE();
             const sorted = [...r.items].sort((a, b) =>
                 new Date(b.updated_at).getTime() -
                 new Date(a.updated_at).getTime()

@@ -1,6 +1,6 @@
 import { createSignal, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { createMem } from "../apis/memApi.ts";
+import { createMemE } from "../apis/memApi.ts";
 import Memo from "../components/ui/Memo.tsx";
 import styles from "./MemAdd.module.css";
 
@@ -31,7 +31,7 @@ export default function MemAdd() {
     const handleCreate = async () => {
         if (!cue().trim() || !target().trim()) return;
         setCreating(true);
-        try { await createMem(cue().trim(), target().trim()); } catch { /* ignore */ }
+        try { await createMemE(cue().trim(), target().trim()); } catch { /* ignore */ }
         setCreating(false);
         navigate("/m/manage");
     };
@@ -44,7 +44,7 @@ export default function MemAdd() {
         setCreating(true);
         let done = 0;
         for (const item of items) {
-            try { await createMem(item.cue, item.target); } catch { /* ignore */ }
+            try { await createMemE(item.cue, item.target); } catch { /* ignore */ }
             done++;
             setBatchCount(done);
         }

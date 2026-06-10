@@ -130,7 +130,9 @@ impl MemRepo {
                 JOIN mem pm ON mp.requires_mem_id = pm.id
                 WHERE mp.mem_id = m.id AND pm.state = 'new'
               )
-            ORDER BY m.state = 'learning' DESC, m.due_at
+            ORDER BY
+              (julianday(strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) - julianday(m.due_at)) * (1.0 + m.difficulty / 10.0) DESC,
+              m.id % 7
             LIMIT ?
             "#,
         )

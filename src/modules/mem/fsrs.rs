@@ -18,8 +18,8 @@ const STEPS: [i64; 2] = [60, 600];
 fn init_s(r: u8) -> f64 { [W[0], W[1], W[2], W[3]][r as usize - 1] }
 fn init_d(r: u8) -> f64 { (W[4] - W[5] * (r as f64 - 3.0)).clamp(1.0, 10.0) }
 fn next_s(s: f64, d: f64, r: u8) -> f64 {
-    if r == 1 { (W[7] * s + W[8] * (d - 1.0).max(0.0) * s).max(0.01) }
-    else { (s * (1.0 + (W[6] * (r as f64 - 3.0)).exp() * (1.0 - d / 10.0))).max(0.01) }
+    if r == 1 { (s * 0.5).max(W[7]) }
+    else { s * (1.0 + (W[6] * (r as f64 - 3.0)).exp() * (1.0 - d / 10.0)).max(0.01) }
 }
 fn next_d(d: f64, r: u8) -> f64 { (d - W[5] * (r as f64 - 3.0) * (10.0 - d) / 9.0).clamp(1.0, 10.0) }
 fn intv(s: f64) -> f64 { (s * 9.0 * (RETENTION.powf(-2.0) - 1.0) / 19.0 * 86400.0).max(60.0) }
@@ -75,11 +75,18 @@ pub fn schedule(
         };
     }
 
+    // Again on review → 回到短步进
+    if rating == 1 {
+        return ReviewOutcome {
+            state: "review".into(), stability: s_old, difficulty: d_old,
+            due_at: time::due_in_secs(STEPS[0]), interval_secs: STEPS[0] as f64,
+        };
+    }
+
     let (s, d) = (next_s(s_old, d_old, rating), next_d(d_old, rating));
     let secs = fuzz(intv(s));
     ReviewOutcome {
-        state: if rating == 1 { "relearning" } else { "review" }.into(),
-        stability: s, difficulty: d,
+        state: "review".into(), stability: s, difficulty: d,
         due_at: time::due_in_secs(secs as i64), interval_secs: secs,
     }
 }
@@ -97,10 +104,10 @@ pub fn preview(s_old: f64, d_old: f64, state: &str, step_index: Option<usize>) -
         };
         return [again, hard, good, easy];
     }
-    let mut secs = [0.0; 4];
-    for r in 1..=4u8 {
-        let s = next_s(s_old, d_old, r);
-        secs[(r - 1) as usize] = fuzz(intv(s));
-    }
-    secs
+    // review: again → 1分钟短步进
+    let again = STEPS[0] as f64;
+    let hard = fuzz(intv(next_s(s_old, d_old, 2)));
+    let good = fuzz(intv(next_s(s_old, d_old, 3)));
+    let easy = fuzz(intv(next_s(s_old, d_old, 4)));
+    [again, hard, good, easy]
 }

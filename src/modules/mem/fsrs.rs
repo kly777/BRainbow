@@ -39,7 +39,7 @@ pub fn schedule(
             _ => {
                 let next = step + 1;
                 if next >= STEPS.len() {
-                    fsrs_review(None, s_old, d_old, rating)
+                    fsrs_review(None, rating)
                 } else {
                     ReviewOutcome {
                         state: "learning".into(), stability: s_old, difficulty: d_old,
@@ -69,10 +69,10 @@ pub fn schedule(
     }
 
     let mem = MemoryState { stability: s_old as f32, difficulty: d_old as f32 };
-    fsrs_review(Some(mem), s_old, d_old, rating)
+    fsrs_review(Some(mem), rating)
 }
 
-fn fsrs_review(mem: Option<MemoryState>, s_old: f64, d_old: f64, rating: u8) -> ReviewOutcome {
+fn fsrs_review(mem: Option<MemoryState>, rating: u8) -> ReviewOutcome {
     let fsrs = FSRS::default();
     let next = fsrs.next_states(mem, 0.9, 0).unwrap_or_else(|_| panic!("FSRS error"));
     let chosen = match rating { 1 => &next.again, 2 => &next.hard, 3 => &next.good, _ => &next.easy };

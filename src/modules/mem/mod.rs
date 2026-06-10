@@ -2,6 +2,7 @@ pub mod fsrs;
 pub mod handler;
 pub mod model;
 mod repository;
+pub mod service;
 
 use axum::{Router, routing::{get, post, delete}};
 use crate::state::AppState;

@@ -1,14 +1,11 @@
 import { A } from "@solidjs/router";
 import { createSignal, onCleanup, onMount, Show, For } from "solid-js";
-import { Effect, Schema } from "effect";
 import { buryMem, editMem, getDue, previewMem, reviewMem, type MemItem } from "../apis/memApi.ts";
 import { request } from "../apis/request.ts";
 import Markdown from "../components/ui/Markdown.tsx";
 import Memo from "../components/ui/Memo.tsx";
 import { fmtInterval, fmtLocal } from "../lib/time.ts";
 import styles from "./MemPage.module.css";
-
-const OkSchema = Schema.Struct({ ok: Schema.Boolean });
 
 export default function MemPage() {
     const [due, setDue] = createSignal<MemItem[]>([]);
@@ -30,15 +27,16 @@ export default function MemPage() {
     const item = () => due()[current()];
 
     const loadPreview = async (id: number) => {
-        const exit = await Effect.runPromiseExit(previewMem(id));
-        if (exit._tag === "Success") setIntervals(exit.value.intervals);
+        try {
+            const res = await previewMem(id);
+            setIntervals(res.intervals);
+        } catch { /* ignore */ }
     };
 
     const loadDue = async () => {
         setLoading(true);
-        const exit = await Effect.runPromiseExit(getDue(7));
-        if (exit._tag === "Success") {
-            const data = exit.value;
+        try {
+            const data = await getDue(7);
             if (data.items.length === 0 && !data.has_more) {
                 setDone(true); setDue([]); setUpcoming(data.upcoming_count ?? 0);
             } else {
@@ -46,11 +44,10 @@ export default function MemPage() {
                 setAllFar(data.all_far);
                 const shuffled = [...data.items].sort(() => Math.random() - 0.5);
                 setDue(shuffled); setCurrent(0); setShowAnswer(false);
-                // 仅一张且非 learning → 提前查看
                 setIsPreview(data.items.length === 1 && data.items[0]?.state !== "learning");
                 if (shuffled.length > 0) loadPreview(shuffled[0].id);
             }
-        }
+        } catch { /* ignore */ }
         setLoading(false);
     };
 
@@ -59,22 +56,22 @@ export default function MemPage() {
     const rate = async (rating: number) => {
         const it = item(); if (!it) return;
         lastAction = { id: it.id, undoData: { state: it.state, stability: it.stability, difficulty: it.difficulty, step_index: null, lapses: 0, leeched: false, due_at: it.due_at } };
-        await Effect.runPromiseExit(reviewMem(it.id, rating));
+        try { await reviewMem(it.id, rating); } catch { /* ignore */ }
         setShowUndo(true);
         loadDue();
     };
 
-    const bury = async () => { const it = item(); if (it) { await Effect.runPromiseExit(buryMem(it.id)); loadDue(); } };
+    const bury = async () => { const it = item(); if (it) { try { await buryMem(it.id); } catch { /* ignore */ } loadDue(); } };
 
     const undo = async () => {
         if (!lastAction) return;
-        await Effect.runPromiseExit(request(`/mem/${lastAction.id}/undo`, OkSchema, { method: "POST", body: JSON.stringify(lastAction.undoData) }));
+        try { await request(`/mem/${lastAction.id}/undo`, { method: "POST", body: JSON.stringify(lastAction.undoData) }); } catch { /* ignore */ }
         setShowUndo(false);
         loadDue();
     };
 
     const startEdit = () => { const it = item(); if (it) { setEditCue(it.cue.content); setEditTarget(it.target.content); setEditing(true); } };
-    const saveEdit = async () => { const it = item(); if (it) { await Effect.runPromiseExit(editMem(it.id, editCue(), editTarget())); setEditing(false); } };
+    const saveEdit = async () => { const it = item(); if (it) { try { await editMem(it.id, editCue(), editTarget()); } catch { /* ignore */ } setEditing(false); } };
 
     const onKey = (e: KeyboardEvent) => {
         if (e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement)?.tagName === "INPUT") return;
@@ -86,7 +83,6 @@ export default function MemPage() {
 
     return (
         <div class={styles.page}>
-            {/* 左侧栏 */}
             <div class={styles.sidebar} classList={{ [styles.sidebarOpen]: sidebarOpen() }}>
                 <div class={styles.sidebarHeader}>
                     <span>学习池 ({due().length}/7)</span>

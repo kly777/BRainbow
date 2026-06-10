@@ -1,31 +1,5 @@
-import { type Effect, Schema } from "effect";
 import { request } from "./request.ts";
-import type { ApiErrorType } from "./types/index.ts";
-
-const ChunkSchema = Schema.Struct({
-    id: Schema.Number,
-    content: Schema.String,
-});
-
-const MemWithChunksSchema = Schema.Struct({
-    id: Schema.Number,
-    cue: ChunkSchema,
-    target: ChunkSchema,
-    state: Schema.String,
-    stability: Schema.Number,
-    difficulty: Schema.Number,
-    due_at: Schema.String,
-});
-
-const DueResponseSchema = Schema.Struct({
-    items: Schema.Array(MemWithChunksSchema),
-    due_count: Schema.Number,
-    has_more: Schema.Boolean,
-    upcoming_count: Schema.Number,
-    all_far: Schema.Boolean,
-});
-
-const OkSchema = Schema.Struct({ ok: Schema.Boolean });
+import { getToken } from "../auth/context.tsx";
 
 // ── 类型 ──
 
@@ -58,8 +32,8 @@ export const createMem = (
     cueMd: string,
     targetMd: string,
     prerequisites: number[] = [],
-): Effect.Effect<{ id: number }, ApiErrorType> =>
-    request("/mem", Schema.Struct({ id: Schema.Number }), {
+): Promise<{ id: number }> =>
+    request("/mem", {
         method: "POST",
         body: JSON.stringify({
             cue_content: cueMd,
@@ -70,61 +44,65 @@ export const createMem = (
 
 export const getAllMems = (
     pageSize = 200,
-): Effect.Effect<DueResponse, ApiErrorType> =>
-    request(`/mem/all?page_size=${pageSize}`, DueResponseSchema, {});
+): Promise<DueResponse> =>
+    request(`/mem/all?page_size=${pageSize}`, {});
 
 export const getDue = (
     limit = 50,
-): Effect.Effect<DueResponse, ApiErrorType> =>
-    request(`/mem/due?limit=${limit}`, DueResponseSchema, {});
+): Promise<DueResponse> =>
+    request(`/mem/due?limit=${limit}`, {});
 
 export const reviewMem = (
     id: number,
     rating: number,
-): Effect.Effect<{ ok: boolean }, ApiErrorType> =>
-    request(`/mem/${id}/review`, OkSchema, {
+): Promise<{ ok: boolean }> =>
+    request(`/mem/${id}/review`, {
         method: "POST",
         body: JSON.stringify({ rating }),
     });
 
 export const previewMem = (
     id: number,
-): Effect.Effect<{ intervals: readonly number[] }, ApiErrorType> =>
-    request(`/mem/${id}/preview`, Schema.Struct({ intervals: Schema.Array(Schema.Number) }), {});
+): Promise<{ intervals: readonly number[] }> =>
+    request(`/mem/${id}/preview`, {});
 
 export const deleteMem = (
     id: number,
-): Effect.Effect<{ ok: boolean }, ApiErrorType> =>
-    request(`/mem/${id}`, OkSchema, { method: "DELETE" });
+): Promise<{ ok: boolean }> =>
+    request(`/mem/${id}`, { method: "DELETE" });
 
 export const buryMem = (
     id: number,
-): Effect.Effect<{ ok: boolean }, ApiErrorType> =>
-    request(`/mem/${id}/bury`, OkSchema, { method: "POST" });
+): Promise<{ ok: boolean }> =>
+    request(`/mem/${id}/bury`, { method: "POST" });
 
 export const unburyMem = (
     id: number,
-): Effect.Effect<{ ok: boolean }, ApiErrorType> =>
-    request(`/mem/${id}/unbury`, OkSchema, { method: "POST" });
+): Promise<{ ok: boolean }> =>
+    request(`/mem/${id}/unbury`, { method: "POST" });
 
 export const editMem = (
     id: number,
     cue: string,
     target: string,
-): Effect.Effect<{ ok: boolean }, ApiErrorType> =>
-    request(`/mem/${id}/edit`, OkSchema, {
+): Promise<{ ok: boolean }> =>
+    request(`/mem/${id}/edit`, {
         method: "PUT",
         body: JSON.stringify({ cue_content: cue, target_content: target }),
     });
 
-const ImageUploadSchema = Schema.Struct({
-    url: Schema.String,
-});
-
-export const uploadImage = (
-    file: File,
-): Effect.Effect<{ url: string }, ApiErrorType> => {
+export const uploadImage = async (file: File): Promise<string | null> => {
     const form = new FormData();
     form.append("file", file);
-    return request("/images/upload", ImageUploadSchema, { method: "POST", body: form });
+    try {
+        const res = await fetch("/api/images/upload", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${getToken()}` },
+            body: form,
+        });
+        const json = await res.json();
+        return json.url ?? null;
+    } catch {
+        return null;
+    }
 };

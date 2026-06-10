@@ -1,15 +1,12 @@
-import { Schema } from "effect";
-
 // ── 通用分页 ──
 
-export const PaginatedSchema = <T extends Schema.Schema.Any>(itemSchema: T) =>
-    Schema.Struct({
-        items: Schema.Array(itemSchema),
-        total: Schema.Number,
-        page: Schema.Number,
-        page_size: Schema.Number,
-        total_pages: Schema.Number,
-    });
+export interface PaginatedResponse<T> {
+    items: T[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+}
 
 export interface PaginationParams {
     /** 页码，从 1 开始，默认 1 */

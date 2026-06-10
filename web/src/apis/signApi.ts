@@ -1,27 +1,23 @@
-import { Effect, Schema } from "effect";
 import { request } from "./request.ts";
-import { type ApiErrorType, PaginatedSchema } from "./types/index.ts";
 
-export const SignSchema = Schema.Struct({
-    id: Schema.Number,
-    signifier: Schema.String,
-    signified: Schema.String,
-    onto_id: Schema.NullOr(Schema.Number),
-    weight: Schema.NullOr(Schema.Number),
-    relation_type: Schema.NullOr(Schema.String),
-    created_at: Schema.String,
-});
-
-export type Sign = Schema.Schema.Type<typeof SignSchema>;
+export interface Sign {
+    readonly id: number;
+    readonly signifier: string;
+    readonly signified: string;
+    readonly onto_id: number | null;
+    readonly weight: number | null;
+    readonly relation_type: string | null;
+    readonly created_at: string;
+}
 
 /** 获取所有符号关系（后端返回分页结构，自动提取 items）。 */
-export const getSigns = (): Effect.Effect<readonly Sign[], ApiErrorType> =>
-    request("/sign", PaginatedSchema(SignSchema), {}).pipe(
-        Effect.map((r) => r.items),
+export const getSigns = (): Promise<readonly Sign[]> =>
+    request<{ readonly items: readonly Sign[] }>("/sign", {}).then(
+        (r) => r.items,
     );
 
-export const getSign = (id: number): Effect.Effect<Sign, ApiErrorType> =>
-    request(`/sign/${id}`, SignSchema, {});
+export const getSign = (id: number): Promise<Sign> =>
+    request<Sign>(`/sign/${id}`, {});
 
 export const createSign = (data: {
     signifier: string;
@@ -29,33 +25,31 @@ export const createSign = (data: {
     onto_id?: number | null;
     weight?: number | null;
     relation_type?: string | null;
-}): Effect.Effect<Sign, ApiErrorType> =>
-    request("/sign", SignSchema, {
+}): Promise<Sign> =>
+    request<Sign>("/sign", {
         method: "POST",
         body: JSON.stringify(data),
     });
 
-export const deleteSign = (id: number): Effect.Effect<void, ApiErrorType> =>
-    request(`/sign/${id}`, Schema.Void, {
+export const deleteSign = (id: number): Promise<void> =>
+    request<void>(`/sign/${id}`, {
         method: "DELETE",
     });
 
 /** 按能指查询（后端返回分页结构，自动提取 items）。 */
 export const getSignsBySignifier = (
     signifier: string,
-): Effect.Effect<readonly Sign[], ApiErrorType> =>
-    request(
+): Promise<readonly Sign[]> =>
+    request<{ readonly items: readonly Sign[] }>(
         `/sign/signifier/${encodeURIComponent(signifier)}`,
-        PaginatedSchema(SignSchema),
         {},
-    ).pipe(Effect.map((r) => r.items));
+    ).then((r) => r.items);
 
 /** 按所指查询（后端返回分页结构，自动提取 items）。 */
 export const getSignsBySignified = (
     signified: string,
-): Effect.Effect<readonly Sign[], ApiErrorType> =>
-    request(
+): Promise<readonly Sign[]> =>
+    request<{ readonly items: readonly Sign[] }>(
         `/sign/signified/${encodeURIComponent(signified)}`,
-        PaginatedSchema(SignSchema),
         {},
-    ).pipe(Effect.map((r) => r.items));
+    ).then((r) => r.items);

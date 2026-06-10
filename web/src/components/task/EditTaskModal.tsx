@@ -1,4 +1,3 @@
-import { Effect } from "effect";
 import {
     createEffect,
     createResource,
@@ -79,7 +78,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
     const [detail] = createResource(
         () => (props.isOpen && props.task?.id ? props.task.id : null),
         async (taskId: number) => {
-            const d = await Effect.runPromise(getTaskDetail(taskId));
+            const d = await getTaskDetail(taskId);
             return d;
         },
     );
@@ -88,8 +87,8 @@ export default function EditTaskModal(props: EditTaskModalProps) {
     const loadTimeWindows = async (taskId: number) => {
         try {
             const [feasible, planned] = await Promise.all([
-                Effect.runPromise(getTimeWindows(taskId, "feasible")),
-                Effect.runPromise(getTimeWindows(taskId, "planned")),
+                (getTimeWindows(taskId, "feasible")),
+                (getTimeWindows(taskId, "planned")),
             ]);
             setFeasibleWindows([...feasible]);
             setPlannedWindows([...planned]);
@@ -162,7 +161,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
             task_id: props.task.id,
         };
         try {
-            const tw = await Effect.runPromise(createTimeWindow(req));
+            const tw = await createTimeWindow(req);
             if (tw.window_type === "feasible") {
                 setFeasibleWindows([...feasibleWindows(), tw]);
             } else {
@@ -182,7 +181,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 
     const handleDeleteTimeWindow = async (id: number, type: string) => {
         try {
-            await Effect.runPromise(deleteTimeWindow(id));
+            await deleteTimeWindow(id);
             if (type === "feasible") {
                 setFeasibleWindows(
                     feasibleWindows().filter((w) => w.id !== id),
@@ -215,7 +214,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
         }
         setDepError("");
         try {
-            await Effect.runPromise(addTaskDependency(props.task.id, depId));
+            await addTaskDependency(props.task.id, depId);
             const depTask = props.allTasks.find((t) => t.id === depId);
             setDepIds([...depIds(), depId]);
             if (depTask) setDepTasks([...depTasks(), depTask]);
@@ -236,7 +235,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
     const handleRemoveDependency = async (depId: number) => {
         if (!props.task) return;
         try {
-            await Effect.runPromise(removeTaskDependency(props.task.id, depId));
+            await removeTaskDependency(props.task.id, depId);
             setDepIds(depIds().filter((id) => id !== depId));
             setDepTasks(depTasks().filter((t) => t.id !== depId));
             props.onDependencyChange?.();

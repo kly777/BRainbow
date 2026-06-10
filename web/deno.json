@@ -13,8 +13,6 @@
         "solid-js/web": "npm:solid-js@^1.9.13/web",
         "solid-js/store": "npm:solid-js@^1.9.13/store",
         "@solidjs/router": "npm:@solidjs/router@^0.16.1",
-        "effect": "npm:effect@^3.21.2",
-        "@effect/platform": "npm:@effect/platform@^0.96.1",
         "marked": "npm:marked@^18.0.4",
         "dompurify": "npm:dompurify@^3.4.5",
         "@rsbuild/core": "npm:@rsbuild/core@^2.0.6",

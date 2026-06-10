@@ -7,7 +7,6 @@ import {
     onMount,
     Show,
 } from "solid-js";
-import { Effect } from "effect";
 import { getAllTasks, getDag } from "../../apis/taskApi.ts";
 import type { DagEdge, DagNode, Task } from "../../apis/types/index.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
@@ -309,7 +308,7 @@ export default function TaskDag() {
         () => ({ taskId: taskFilter(), depth: depth() }),
         async ({ taskId, depth: d }) => {
             try {
-                return await Effect.runPromise(getDag(taskId, d));
+                return await getDag(taskId, d);
             } catch (e) {
                 console.error("获取依赖图失败:", getErrorMessage(e));
                 return { nodes: [], edges: [] };
@@ -320,7 +319,7 @@ export default function TaskDag() {
     // 拉取所有任务（用于选择器）
     const [allTasks] = createResource(async () => {
         try {
-            const r = await Effect.runPromise(getAllTasks());
+            const r = await getAllTasks();
             return [...r.items];
         } catch {
             return [];

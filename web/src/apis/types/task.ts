@@ -1,123 +1,94 @@
-import { Schema } from "effect";
-import { TimeWindowSchema, type TimeWindow } from "./time_window.ts";
+import type { TimeWindow } from "./time_window.ts";
 
 // ── Task 基础 ──
 
-export const TaskSchema = Schema.Struct({
-    id: Schema.Number,
-    title: Schema.String,
-    description: Schema.NullOr(Schema.String),
-    parent_task_id: Schema.NullOr(Schema.Number),
-    status: Schema.String,
-    completed_at: Schema.NullOr(Schema.String),
-    effort_estimate_minutes: Schema.NullOr(Schema.Number),
-    created_at: Schema.String,
-    updated_at: Schema.String,
-});
+export interface Task {
+    id: number;
+    title: string;
+    description: string | null;
+    parent_task_id: number | null;
+    status: string;
+    completed_at: string | null;
+    effort_estimate_minutes: number | null;
+    created_at: string;
+    updated_at: string;
+}
 
-export const CreateTaskRequestSchema = Schema.Struct({
-    title: Schema.String,
-    description: Schema.optional(Schema.NullOr(Schema.String)),
-    parent_task_id: Schema.optional(Schema.NullOr(Schema.Number)),
-    effort_estimate_minutes: Schema.optional(Schema.NullOr(Schema.Number)),
-});
+export interface CreateTaskRequest {
+    title: string;
+    description?: string | null;
+    parent_task_id?: number | null;
+    effort_estimate_minutes?: number | null;
+}
 
-export const UpdateTaskRequestSchema = Schema.Struct({
-    title: Schema.optional(Schema.String),
-    description: Schema.optional(Schema.NullOr(Schema.String)),
-    parent_task_id: Schema.optional(Schema.NullOr(Schema.Number)),
-    status: Schema.optional(Schema.NullOr(Schema.String)),
-    effort_estimate_minutes: Schema.optional(Schema.NullOr(Schema.Number)),
-});
-
-export type Task = Schema.Schema.Type<typeof TaskSchema>;
-export type CreateTaskRequest = Schema.Schema.Type<typeof CreateTaskRequestSchema>;
-export type UpdateTaskRequest = Schema.Schema.Type<typeof UpdateTaskRequestSchema>;
+export interface UpdateTaskRequest {
+    title?: string;
+    description?: string | null;
+    parent_task_id?: number | null;
+    status?: string | null;
+    effort_estimate_minutes?: number | null;
+}
 
 // ── 依赖 & 分解 ──
 
-export const TaskDependencySchema = Schema.Struct({
-    id: Schema.Number,
-    task_id: Schema.Number,
-    depends_on_task_id: Schema.Number,
-});
+export interface TaskDependency {
+    id: number;
+    task_id: number;
+    depends_on_task_id: number;
+}
 
-export const TaskDecompositionSchema = Schema.Struct({
-    id: Schema.Number,
-    parent_task_id: Schema.Number,
-    child_task_id: Schema.Number,
-});
+export interface TaskDecomposition {
+    id: number;
+    parent_task_id: number;
+    child_task_id: number;
+}
 
-export const TaskTimeAllocationSchema = Schema.Struct({
-    id: Schema.Number,
-    task_id: Schema.Number,
-    time_window_id: Schema.Number,
-    duration_minutes: Schema.Number,
-});
-
-export type TaskDependency = Schema.Schema.Type<typeof TaskDependencySchema>;
-export type TaskDecomposition = Schema.Schema.Type<typeof TaskDecompositionSchema>;
-export type TaskTimeAllocation = Schema.Schema.Type<typeof TaskTimeAllocationSchema>;
+export interface TaskTimeAllocation {
+    id: number;
+    task_id: number;
+    time_window_id: number;
+    duration_minutes: number;
+}
 
 // ── TaskDetail ──
 
-export const TaskDetailSchema = Schema.Struct({
-    task: TaskSchema,
-    depends_on: Schema.Array(Schema.Number),
-    children: Schema.Array(TaskSchema),
-    available_slots: Schema.Array(
-        Schema.suspend((): Schema.Schema<TimeWindow> =>
-            TimeWindowSchema as unknown as Schema.Schema<TimeWindow>,
-        ),
-    ),
-    planned_slots: Schema.Array(
-        Schema.suspend((): Schema.Schema<TimeWindow> =>
-            TimeWindowSchema as unknown as Schema.Schema<TimeWindow>,
-        ),
-    ),
-    actual_slots: Schema.Array(
-        Schema.suspend((): Schema.Schema<TimeWindow> =>
-            TimeWindowSchema as unknown as Schema.Schema<TimeWindow>,
-        ),
-    ),
-});
-
-export type TaskDetail = Schema.Schema.Type<typeof TaskDetailSchema>;
+export interface TaskDetail {
+    task: Task;
+    depends_on: number[];
+    children: Task[];
+    available_slots: TimeWindow[];
+    planned_slots: TimeWindow[];
+    actual_slots: TimeWindow[];
+}
 
 // ── Calendar Event ──
 
-export const CalendarEventSchema = Schema.Struct({
-    task_id: Schema.Number,
-    title: Schema.String,
-    start: Schema.String,
-    end: Schema.String,
-    window_type: Schema.String,
-    status: Schema.String,
-});
-
-export type CalendarEvent = Schema.Schema.Type<typeof CalendarEventSchema>;
+export interface CalendarEvent {
+    task_id: number;
+    title: string;
+    start: string;
+    end: string;
+    window_type: string;
+    status: string;
+}
 
 // ── DAG 依赖图 ──
 
-export const DagNodeSchema = Schema.Struct({
-    id: Schema.Number,
-    title: Schema.String,
-    status: Schema.String,
-});
+export interface DagNode {
+    id: number;
+    title: string;
+    status: string;
+}
 
-export const DagEdgeSchema = Schema.Struct({
-    from: Schema.Number,
-    to: Schema.Number,
-});
+export interface DagEdge {
+    from: number;
+    to: number;
+}
 
-export const DagViewSchema = Schema.Struct({
-    nodes: Schema.Array(DagNodeSchema),
-    edges: Schema.Array(DagEdgeSchema),
-});
-
-export type DagNode = Schema.Schema.Type<typeof DagNodeSchema>;
-export type DagEdge = Schema.Schema.Type<typeof DagEdgeSchema>;
-export type DagView = Schema.Schema.Type<typeof DagViewSchema>;
+export interface DagView {
+    nodes: DagNode[];
+    edges: DagEdge[];
+}
 
 // ── 常量 & 展示 ──
 

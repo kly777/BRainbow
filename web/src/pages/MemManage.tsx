@@ -1,6 +1,5 @@
 import { createSignal, onMount, Show, For } from "solid-js";
 import { A } from "@solidjs/router";
-import { Effect } from "effect";
 import { editMem, getAllMems, deleteMem, type MemItem } from "../apis/memApi.ts";
 import Markdown from "../components/ui/Markdown.tsx";
 import Memo from "../components/ui/Memo.tsx";
@@ -8,11 +7,12 @@ import { fmtLocal, fmtRelative } from "../lib/time.ts";
 import styles from "./MemManage.module.css";
 
 async function loadAllMems(): Promise<MemItem[]> {
-    const exit = await Effect.runPromiseExit(getAllMems(500));
-    if (exit._tag === "Success") {
-        return [...exit.value.items].sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime());
+    try {
+        const res = await getAllMems(500);
+        return [...res.items].sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime());
+    } catch {
+        return [];
     }
-    return [];
 }
 
 function previewText(content: string): string {
@@ -32,7 +32,7 @@ export default function MemManage() {
 
     const handleDelete = async (id: number) => {
         if (!confirm("确定删除？")) return;
-        await Effect.runPromiseExit(deleteMem(id));
+        try { await deleteMem(id); } catch { /* ignore */ }
         if (selected() === id) setSelected(null);
         load();
     };
@@ -48,7 +48,7 @@ export default function MemManage() {
     const saveEdit = async () => {
         const d = detail();
         if (!d) return;
-        await Effect.runPromiseExit(editMem(d.id, editCue(), editTarget()));
+        try { await editMem(d.id, editCue(), editTarget()); } catch { /* ignore */ }
         setEditing(false);
         load();
     };

@@ -1,5 +1,4 @@
 import { useNavigate, useParams } from "@solidjs/router";
-import { Effect } from "effect";
 import {
     type Component,
     createEffect,
@@ -32,7 +31,7 @@ const CardEditPage: Component = () => {
     const [card, { refetch }] = createResource(async () => {
         const id = cardId();
         if (Number.isNaN(id)) throw new Error("无效ID");
-        return await Effect.runPromise(getCard(id));
+        return await getCard(id);
     });
 
     const [content, setContent] = createSignal("");
@@ -56,7 +55,7 @@ const CardEditPage: Component = () => {
         setError("");
         try {
             const req: UpdateCardRequest = { content: content().trim() };
-            await Effect.runPromise(updateCard(cardId(), req));
+            await updateCard(cardId(), req);
             navigate(`/c/${cardId()}`);
         } catch (err) {
             setError(getErrorMessage(err));
@@ -74,12 +73,7 @@ const CardEditPage: Component = () => {
 
     const handleDelete = async () => {
         if (!confirm("确定要删除？")) return;
-        await Effect.runPromise(
-            deleteCard(cardId()).pipe(
-                Effect.tap(() => navigate("/c")),
-                Effect.catchTag("HttpError", () => Effect.void),
-            ),
-        );
+        try { await deleteCard(cardId()); navigate("/c"); } catch { /* ignore */ }
     };
 
     // ── 图片上传 ──
@@ -92,7 +86,6 @@ const CardEditPage: Component = () => {
         const file = input.files?.[0];
         if (!file) return;
 
-        // 校验类型
         if (!file.type.startsWith("image/")) {
             setError("仅支持图片格式");
             input.value = "";
@@ -102,7 +95,7 @@ const CardEditPage: Component = () => {
         setIsUploading(true);
         setError("");
         try {
-            const image = await Effect.runPromise(uploadImage(file));
+            const image = await uploadImage(file);
             const md = `![${image.original_name}](${image.url})`;
             insertAtCursor(md);
         } catch (err) {
@@ -126,7 +119,7 @@ const CardEditPage: Component = () => {
 
                 setIsUploading(true);
                 setError("");
-                Effect.runPromise(uploadImage(file))
+                uploadImage(file)
                     .then((image) => {
                         const md = `![${image.original_name}](${image.url})`;
                         insertAtCursor(md);
@@ -152,7 +145,6 @@ const CardEditPage: Component = () => {
         const after = content().slice(end);
         const newContent = before + text + after;
         setContent(newContent);
-        // 恢复光标位置
         requestAnimationFrame(() => {
             ta.focus();
             ta.setSelectionRange(start + text.length, start + text.length);

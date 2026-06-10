@@ -15,7 +15,6 @@ interface Props {
  * - 无内置样式，由父组件通过 class 控制外观
  */
 
-import { Effect } from "effect";
 import { uploadImage } from "../../apis/memApi.ts";
 
 export default function Memo(props: Props) {
@@ -32,10 +31,8 @@ export default function Memo(props: Props) {
                 const file = item.getAsFile();
                 if (!file) continue;
 
-                const exit = await Effect.runPromiseExit(uploadImage(file));
-                if (exit._tag === "Success") {
-                    insertAtCursor(`![](${exit.value.url})`);
-                }
+                const url = await uploadImage(file);
+                if (url) insertAtCursor(`![](${url})`);
                 return;
             }
         }

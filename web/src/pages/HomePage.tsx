@@ -1,5 +1,4 @@
 import { A, useNavigate } from "@solidjs/router";
-import { Effect } from "effect";
 import { createSignal, onMount, Show } from "solid-js";
 import { deleteCard as apiDeleteCard, getCards } from "../apis/cardApi.ts";
 import {
@@ -109,7 +108,7 @@ function CardSection() {
     const load = async () => {
         setLoading(true);
         try {
-            const r = await Effect.runPromise(getCards());
+            const r = await getCards();
             const sorted = [...r.items].sort((a, b) =>
                 new Date(b.updated_at).getTime() -
                 new Date(a.updated_at).getTime()
@@ -128,7 +127,7 @@ function CardSection() {
         if (!confirm("确定要删除这个卡片吗？")) return;
         setCards((c) => c.filter((x) => x.id !== id));
         try {
-            await Effect.runPromise(apiDeleteCard(id));
+            await apiDeleteCard(id);
         } catch (e) {
             console.error("删除卡片失败:", getErrorMessage(e));
             await load();

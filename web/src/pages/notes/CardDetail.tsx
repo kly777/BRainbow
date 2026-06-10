@@ -1,5 +1,4 @@
 import { useNavigate, useParams } from "@solidjs/router";
-import { Effect } from "effect";
 import { type Component, createResource } from "solid-js";
 import { deleteCard, getCard } from "../../apis/cardApi.ts";
 import Markdown from "../../components/ui/Markdown.tsx";
@@ -19,17 +18,12 @@ const CardDetailPage: Component = () => {
     const [card, { refetch }] = createResource(async () => {
         const id = cardId();
         if (Number.isNaN(id)) throw new Error("无效ID");
-        return await Effect.runPromise(getCard(id));
+        return await getCard(id);
     });
 
     const handleDelete = async () => {
         if (!confirm("确定要删除？")) return;
-        await Effect.runPromise(
-            deleteCard(cardId()).pipe(
-                Effect.tap(() => navigate("/c")),
-                Effect.catchTag("HttpError", () => Effect.void),
-            ),
-        );
+        try { await deleteCard(cardId()); navigate("/c"); } catch { /* ignore */ }
     };
 
     const formatDate = (s: string) => {

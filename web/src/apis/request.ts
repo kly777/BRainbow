@@ -1,11 +1,8 @@
-import { Effect, Schema } from "effect";
 import { getToken } from "../auth/context.tsx";
 import {
     type ApiErrorResponse,
-    type ApiErrorType,
     HttpError,
     NetworkError,
-    ValidationError,
 } from "./types/index.ts";
 
 const API_BASE_URL = "/api";
@@ -145,78 +142,71 @@ async function handleGlobalError(
 
 // ==================== 核心请求函数 ====================
 
-export const request = <T>(
+export const request = async <T>(
     endpoint: string,
-    schema: Schema.Schema<T>,
     options: RequestInit = {},
-): Effect.Effect<T, ApiErrorType> =>
-    Effect.gen(function* () {
-        const url = `${API_BASE_URL}${endpoint}`;
+): Promise<T> => {
+    const url = `${API_BASE_URL}${endpoint}`;
 
-        const isFormData = options.body instanceof FormData;
-        const response = yield* Effect.tryPromise({
-            try: async () =>
-                fetch(url, {
-                    ...options,
-                    headers: buildHeaders(options.headers, isFormData),
-                }),
-            catch: (cause: unknown) => {
-                // ── 网络断开 → 全局 toast + 日志，然后抛出 ──
-                console.error(`[API] NETWORK ${endpoint}:`, cause);
-                toast({
-                    type: "error",
-                    title: "网络连接失败",
-                    message: "请检查网络后重试",
-                    details: "NETWORK",
-                    duration: 6000,
-                });
-                return new NetworkError({ cause });
-            },
+    let response: Response;
+    try {
+        response = await fetch(url, {
+            ...options,
+            headers: buildHeaders(options.headers),
         });
+    } catch (cause: unknown) {
+        // ── 网络断开 → 全局 toast + 日志，然后抛出 ──
+        console.error(`[API] NETWORK ${endpoint}:`, cause);
+        toast({
+            type: "error",
+            title: "网络连接失败",
+            message: "请检查网络后重试",
+            details: "NETWORK",
+            duration: 6000,
+        });
+        throw new NetworkError({ cause });
+    }
 
-        // ── 非 2xx → 全局副作用 + 抛出 ──
-        if (!response.ok) {
-            const errorBody = yield* Effect.tryPromise({
-                try: () => extractErrorBody(response),
-                catch: (cause: unknown) => new NetworkError({ cause }),
-            });
-
-            const httpError = new HttpError({
-                status: response.status,
-                code: errorBody.code,
-                message: errorBody.message,
-                details: errorBody.details,
-            });
-
-            // 全局副作用：日志 + toast/登录（不拦截错误，继续抛给组件）
-            yield* Effect.promise(() => handleGlobalError(endpoint, httpError));
-
-            return yield* Effect.fail(httpError);
+    // ── 非 2xx → 全局副作用 + 抛出 ──
+    if (!response.ok) {
+        let errorBody: ApiErrorResponse;
+        try {
+            errorBody = await extractErrorBody(response);
+        } catch (cause: unknown) {
+            throw new NetworkError({ cause });
         }
 
-        if (response.status === 204) {
-            return undefined as unknown as T;
-        }
-
-        const json = yield* Effect.tryPromise({
-            try: async () => response.json() as unknown,
-            catch: (cause: unknown) => new NetworkError({ cause }),
+        const httpError = new HttpError({
+            status: response.status,
+            code: errorBody.code,
+            message: errorBody.message,
+            details: errorBody.details,
         });
 
-        const result = yield* Schema.decodeUnknown(schema)(json).pipe(
-            Effect.mapError(
-                (issue: unknown) => new ValidationError({ error: issue }),
-            ),
-        );
+        // 全局副作用：日志 + toast/登录（不拦截错误，继续抛给组件）
+        await handleGlobalError(endpoint, httpError);
 
-        return result;
-    });
+        throw httpError;
+    }
+
+    if (response.status === 204) {
+        return undefined as unknown as T;
+    }
+
+    let json: unknown;
+    try {
+        json = await response.json();
+    } catch (cause: unknown) {
+        throw new NetworkError({ cause });
+    }
+
+    return json as T;
+};
 
 // ==================== 辅助 ====================
 
-function buildHeaders(extra?: RequestInit["headers"], isFormData = false): Headers {
-    const headers = new Headers();
-    if (!isFormData) headers.set("Content-Type", "application/json");
+function buildHeaders(extra?: RequestInit["headers"]): Headers {
+    const headers = new Headers({ "Content-Type": "application/json" });
 
     if (extra) {
         const entries = Array.isArray(extra) ? extra : Object.entries(extra);

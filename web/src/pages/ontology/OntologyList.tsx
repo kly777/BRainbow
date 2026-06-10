@@ -1,4 +1,3 @@
-import { Effect } from "effect";
 import {
     type Component,
     createResource,
@@ -14,21 +13,13 @@ import styles from "./OntologyList.module.css";
 
 const OntologyListPage: Component = () => {
     // 使用 createResource 加载本体数据
-    const [ontologies, { mutate, refetch }] = createResource(() =>
-        Effect.runPromise(
-            getOntos().pipe(
-                Effect.catchTags({
-                    HttpError: (e) => {
-                        console.error("获取本体列表失败:", getErrorMessage(e));
-                        return Effect.succeed([] as readonly Onto[]);
-                    },
-                    NetworkError: () => Effect.succeed([] as readonly Onto[]),
-                    ValidationError: () =>
-                        Effect.succeed([] as readonly Onto[]),
-                }),
-            ),
-        )
-    );
+	    const [ontologies, { mutate, refetch }] = createResource(async () => {
+	        try {
+	            return await getOntos();
+	        } catch {
+	            return [];
+	        }
+	    });
 
     const [searchQuery, setSearchQuery] = createSignal("");
     const [viewMode, setViewMode] = createSignal<"grid" | "list">("grid");
@@ -68,32 +59,19 @@ const OntologyListPage: Component = () => {
         const name = newName().trim();
         const description = newDescription().trim() || undefined;
 
-        Effect.runPromise(
-            createOnto(name, description).pipe(
-                Effect.tap((newOnto) => {
-                    // 清空表单并关闭模态框
-                    setNewName("");
-                    setNewDescription("");
-                    setShowCreateModal(false);
-
-                    // 乐观更新：立即将新本体添加到资源状态
-                    const currentData = ontologies() || [];
-                    mutate([newOnto, ...currentData]);
-
-                    console.log("本体创建成功");
-                }),
-                Effect.catchTag("HttpError", (error) => {
-                    console.error("创建本体失败:", getErrorMessage(error));
-                    setCreateError(getErrorMessage(error));
-                    return Effect.void;
-                }),
-                Effect.ensuring(
-                    Effect.sync(() => {
-                        setIsCreating(false);
-                    }),
-                ),
-            ),
-        );
+        createOnto(name, description).then((newOnto) => {
+                setNewName("");
+                setNewDescription("");
+                setShowCreateModal(false);
+                const currentData = ontologies() || [];
+                mutate([newOnto, ...currentData]);
+                console.log("本体创建成功");
+            }).catch((error: unknown) => {
+                console.error("创建本体失败:", getErrorMessage(error));
+                setCreateError(getErrorMessage(error));
+            }).finally(() => {
+                setIsCreating(false);
+            });
     };
 
     const handleDeleteOnto = async (id: number) => {
@@ -110,22 +88,13 @@ const OntologyListPage: Component = () => {
                 mutate(currentData.filter((onto) => onto.id !== id));
             }
 
-            Effect.runPromise(
-                deleteOnto(id).pipe(
-                    Effect.tap(() => {
-                        console.log("本体删除成功:", id);
-                    }),
-                    Effect.catchTag("HttpError", () => {
-                        if (ontoToDelete) mutate([...currentData]);
-                        return Effect.void;
-                    }),
-                    Effect.ensuring(
-                        Effect.sync(() => {
-                            setDeletingOntoId(null);
-                        }),
-                    ),
-                ),
-            );
+            deleteOnto(id).then(() => {
+                    console.log("本体删除成功:", id);
+                }).catch(() => {
+                    if (ontoToDelete) mutate([...currentData]);
+                }).finally(() => {
+                    setDeletingOntoId(null);
+                });
         }
     };
 

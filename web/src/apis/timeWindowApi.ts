@@ -1,11 +1,7 @@
-import { Effect, Schema } from "effect";
 import { request } from "./request.ts";
 import {
-    type ApiErrorType,
     type CreateTimeWindowRequest,
-    PaginatedSchema,
     type TimeWindow,
-    TimeWindowSchema,
 } from "./types/index.ts";
 
 // ==================== Time Window API Functions ====================
@@ -13,26 +9,25 @@ import {
 export const getTimeWindows = (
     taskId: number,
     windowType?: string,
-): Effect.Effect<readonly TimeWindow[], ApiErrorType> => {
+): Promise<readonly TimeWindow[]> => {
     let endpoint = `/time-windows?task_id=${taskId}`;
     if (windowType) endpoint += `&window_type=${windowType}`;
-    return Effect.map(
-        request(endpoint, PaginatedSchema(TimeWindowSchema), {}),
+    return request<{ readonly items: readonly TimeWindow[] }>(endpoint, {}).then(
         (r) => r.items,
     );
 };
 
 export const createTimeWindow = (
     data: CreateTimeWindowRequest,
-): Effect.Effect<TimeWindow, ApiErrorType> =>
-    request("/time-windows", TimeWindowSchema, {
+): Promise<TimeWindow> =>
+    request<TimeWindow>("/time-windows", {
         method: "POST",
         body: JSON.stringify(data),
     });
 
 export const deleteTimeWindow = (
     id: number,
-): Effect.Effect<void, ApiErrorType> =>
-    request(`/time-windows/${id}`, Schema.Void, {
+): Promise<void> =>
+    request<void>(`/time-windows/${id}`, {
         method: "DELETE",
     });

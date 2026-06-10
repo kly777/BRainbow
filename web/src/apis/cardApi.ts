@@ -1,30 +1,24 @@
-import { type Effect, Schema } from "effect";
 import { request } from "./request.ts";
 import {
-    type ApiErrorType,
     type Card,
-    CardSchema,
     type CreateCardRequest,
     type Image,
-    ImageSchema,
     type PaginatedImage,
-    PaginatedImageSchema,
-    PaginatedSchema,
     type RenameImageRequest,
     type UpdateCardRequest,
 } from "./types/index.ts";
 
 // ==================== Card API Functions ====================
 
-export const getCards = () => request("/card", PaginatedSchema(CardSchema), {});
+export const getCards = () => request("/card", {});
 
-export const getCard = (id: number): Effect.Effect<Card, ApiErrorType> =>
-    request(`/card/${id}`, CardSchema, {});
+export const getCard = (id: number): Promise<Card> =>
+    request(`/card/${id}`, {});
 
 export const createCard = (
     card: CreateCardRequest,
-): Effect.Effect<Card, ApiErrorType> =>
-    request("/card", CardSchema, {
+): Promise<Card> =>
+    request("/card", {
         method: "POST",
         body: JSON.stringify(card),
     });
@@ -32,14 +26,14 @@ export const createCard = (
 export const updateCard = (
     id: number,
     card: UpdateCardRequest,
-): Effect.Effect<Card, ApiErrorType> =>
-    request(`/card/${id}`, CardSchema, {
+): Promise<Card> =>
+    request(`/card/${id}`, {
         method: "PATCH",
         body: JSON.stringify(card),
     });
 
-export const deleteCard = (id: number): Effect.Effect<void, ApiErrorType> =>
-    request(`/card/${id}`, Schema.Void, {
+export const deleteCard = (id: number): Promise<void> =>
+    request(`/card/${id}`, {
         method: "DELETE",
     });
 
@@ -47,15 +41,13 @@ export const searchCards = (
     query: string,
 ) => request(
     `/card/search?q=${encodeURIComponent(query)}`,
-    PaginatedSchema(CardSchema),
     {},
 );
 
 // ==================== Image Upload ====================
 
-import { Effect as E } from "effect";
 import { getToken } from "../auth/context.tsx";
-import { HttpError, NetworkError, ValidationError } from "./types/index.ts";
+import { HttpError, NetworkError } from "./types/index.ts";
 
 /**
  * 解析后端统一错误响应，兼容多格式
@@ -100,73 +92,68 @@ async function extractImageError(response: Response): Promise<{
 /**
  * 上传图片（multipart/form-data）
  */
-export const uploadImage = (
+export const uploadImage = async (
     file: File,
-): E.Effect<Image, ApiErrorType> => {
-    return E.gen(function* () {
-        const formData = new FormData();
-        formData.append("file", file);
+): Promise<Image> => {
+    const formData = new FormData();
+    formData.append("file", file);
 
-        const token = getToken();
-        const headers: Record<string, string> = {};
-        if (token) {
-            headers.Authorization = `Bearer ${token}`;
-        }
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
 
-        const response = yield* E.tryPromise({
-            try: async () =>
-                fetch("/api/images/upload", {
-                    method: "POST",
-                    headers,
-                    body: formData,
-                }),
-            catch: (cause: unknown) => new NetworkError({ cause }),
+    let response: Response;
+    try {
+        response = await fetch("/api/images/upload", {
+            method: "POST",
+            headers,
+            body: formData,
         });
+    } catch (cause: unknown) {
+        throw new NetworkError({ cause });
+    }
 
-        if (!response.ok) {
-            const err = yield* E.tryPromise({
-                try: () => extractImageError(response),
-                catch: (cause: unknown) => new NetworkError({ cause }),
-            });
-            return yield* E.fail(
-                new HttpError({
-                    status: response.status,
-                    code: err.code,
-                    message: err.message,
-                    details: err.details,
-                }),
-            );
+    if (!response.ok) {
+        let err: { code: string; message: string; details?: unknown };
+        try {
+            err = await extractImageError(response);
+        } catch (cause: unknown) {
+            throw new NetworkError({ cause });
         }
-
-        const json = yield* E.tryPromise({
-            try: async () => response.json() as unknown,
-            catch: (cause: unknown) => new NetworkError({ cause }),
+        throw new HttpError({
+            status: response.status,
+            code: err.code,
+            message: err.message,
+            details: err.details,
         });
+    }
 
-        const result = yield* Schema.decodeUnknown(ImageSchema)(json).pipe(
-            E.mapError(
-                (issue: unknown) => new ValidationError({ error: issue }),
-            ),
-        );
+    let json: unknown;
+    try {
+        json = await response.json();
+    } catch (cause: unknown) {
+        throw new NetworkError({ cause });
+    }
 
-        return result;
-    });
+    return json as Image;
 };
 
 /** 获取所有图片 */
-export const listImages = (): E.Effect<PaginatedImage, ApiErrorType> =>
-    request("/images", PaginatedImageSchema, {});
+export const listImages = (): Promise<PaginatedImage> =>
+    request("/images", {});
 
 /** 重命名图片 */
 export const renameImage = (
     id: number,
     req: RenameImageRequest,
-): E.Effect<Image, ApiErrorType> =>
-    request(`/images/${id}`, ImageSchema, {
+): Promise<Image> =>
+    request(`/images/${id}`, {
         method: "PATCH",
         body: JSON.stringify(req),
     });
 
 /** 删除图片 */
-export const deleteImage = (id: number): E.Effect<void, ApiErrorType> =>
-    request(`/images/${id}`, Schema.Void, { method: "DELETE" });
+export const deleteImage = (id: number): Promise<void> =>
+    request(`/images/${id}`, { method: "DELETE" });

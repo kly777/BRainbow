@@ -1,4 +1,3 @@
-import { Effect } from "effect";
 import {
     createContext,
     createSignal,
@@ -76,7 +75,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
     const reload = async () => {
         setLoading(true);
         try {
-            const r = await Effect.runPromise(getTasks());
+            const r = await getTasks();
             setTasks([...r.items]);
         } catch (e) {
             console.error("加载任务失败:", getErrorMessage(e));
@@ -87,7 +86,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 
     const reloadStats = async () => {
         try {
-            setStats(await Effect.runPromise(getTaskStats()));
+            setStats(await getTaskStats());
         } catch (e) {
             console.error("获取统计失败:", getErrorMessage(e));
         }
@@ -102,7 +101,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
         const temp = makeTemp(req);
         setTasks((p) => [temp, ...p]);
         try {
-            const real = await Effect.runPromise(apiCreateTask(req));
+            const real = await apiCreateTask(req);
             setTasks((p) => p.map((t) => (t.id === temp.id ? real : t)));
             return real;
         } catch (e) {
@@ -122,10 +121,10 @@ export function TaskProvider(props: { children: JSX.Element }) {
         );
 
         const fn: Record<string, () => Promise<Task>> = {
-            completed: () => Effect.runPromise(completeTask(id)),
-            active: () => Effect.runPromise(activateTask(id)),
-            archived: () => Effect.runPromise(archiveTask(id)),
-            backlog: () => Effect.runPromise(moveToBacklog(id)),
+            completed: () => (completeTask(id)),
+            active: () => (activateTask(id)),
+            archived: () => (archiveTask(id)),
+            backlog: () => (moveToBacklog(id)),
         };
         try {
             const f = fn[newStatus];
@@ -146,7 +145,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
         const prev = tasks();
         setTasks(prev.filter((t) => t.id !== id));
         try {
-            await Effect.runPromise(apiDeleteTask(id));
+            await apiDeleteTask(id);
         } catch (e) {
             console.error("删除任务失败:", getErrorMessage(e));
             await reload();
@@ -160,7 +159,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
         const orig = prev[idx];
         setTasks(prev.map((t, i) => (i === idx ? { ...t, ...updates } : t)));
         try {
-            const updated = await Effect.runPromise(apiUpdateTask(id, updates));
+            const updated = await apiUpdateTask(id, updates);
             setTasks((c) => c.map((t) => (t.id === id ? updated : t)));
             await reloadStats();
         } catch (e) {
@@ -171,9 +170,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 
     const addSubTask = async (parentId: number, title: string) => {
         try {
-            const real = await Effect.runPromise(
-                apiCreateTask({ title, parent_task_id: parentId }),
-            );
+            const real = await apiCreateTask({ title, parent_task_id: parentId });
             setTasks((p) => [...p, real]);
         } catch (e) {
             console.error("创建子任务失败:", getErrorMessage(e));
@@ -185,16 +182,16 @@ export function TaskProvider(props: { children: JSX.Element }) {
             let r: { readonly items: readonly Task[] };
             switch (status) {
                 case "backlog":
-                    r = await Effect.runPromise(getBacklogTasks());
+                    r = await getBacklogTasks();
                     break;
                 case "active":
-                    r = await Effect.runPromise(getActiveTasks());
+                    r = await getActiveTasks();
                     break;
                 case "completed":
-                    r = await Effect.runPromise(getCompletedTasks());
+                    r = await getCompletedTasks();
                     break;
                 default:
-                    r = await Effect.runPromise(getAllTasks());
+                    r = await getAllTasks();
             }
             setTasks([...r.items]);
         } catch (e) {
@@ -209,7 +206,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
         }
         setLoading(true);
         try {
-            const r = await Effect.runPromise(searchTasks(query));
+            const r = await searchTasks(query);
             setTasks([...r.items]);
         } catch (e) {
             console.error("搜索失败:", getErrorMessage(e));

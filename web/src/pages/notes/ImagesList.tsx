@@ -1,4 +1,3 @@
-import { Effect } from "effect";
 import {
     type Component,
     createResource,
@@ -14,7 +13,7 @@ import styles from "./ImagesList.module.css";
 
 const ImagesListPage: Component = () => {
     const [images, { refetch }] = createResource(async () => {
-        const result = await Effect.runPromise(listImages());
+        const result = await listImages();
         return result.items as unknown as Image[];
     });
 
@@ -25,7 +24,7 @@ const ImagesListPage: Component = () => {
     const handleDelete = async (id: number) => {
         if (!confirm("确定要删除这张图片？")) return;
         try {
-            await Effect.runPromise(deleteImage(id));
+            await deleteImage(id);
             refetch();
         } catch (err) {
             console.error("删除失败:", getErrorMessage(err));
@@ -50,7 +49,7 @@ const ImagesListPage: Component = () => {
         try {
             const eid = editingId();
             if (eid == null) return;
-            await Effect.runPromise(renameImage(eid, { original_name: name }));
+            await renameImage(eid, { original_name: name });
             setEditingId(null);
             refetch();
         } catch (err) {

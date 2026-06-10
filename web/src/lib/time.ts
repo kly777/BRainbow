@@ -18,11 +18,11 @@ export function fmtLocal(ts: string): string {
     });
 }
 
-/** 格式化为相对时间 "3天后" / "已到期" */
+/** 格式化为相对时间 "3天后" / "待复习" */
 export function fmtRelative(ts: string): string {
     const d = parseUtc(ts);
     const diff = (d.getTime() - Date.now()) / 1000;
-    if (diff < 0) return `已到期 (${fmtLocal(ts)})`;
+    if (diff < 0) return `待复习`;
     if (diff < 120) return "1分钟";
     if (diff < 3600) return `${Math.round(diff / 60)}分钟`;
     if (diff < 86400) return `${Math.round(diff / 3600)}小时`;

@@ -2,6 +2,7 @@ import { createSignal, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { Effect } from "effect";
 import { createMem } from "../apis/memApi.ts";
+import Memo from "../components/ui/Memo.tsx";
 import styles from "./MemAdd.module.css";
 
 /** 解析文本：每行 "线索 | 答案" 或 "线索\t答案" */
@@ -114,26 +115,10 @@ export default function MemAdd() {
 
             <div class={styles.form}>
                 <Show when={mode() === "single"}>
-                    <label class={styles.label}>
-                        线索（Markdown）
-                        <textarea
-                            class={styles.textarea}
-                            placeholder="例如：质能方程 E=mc²"
-                            value={cue()}
-                            onInput={(e) => setCue(e.currentTarget.value)}
-                            rows={4}
-                        />
-                    </label>
-                    <label class={styles.label}>
-                        答案（Markdown）
-                        <textarea
-                            class={styles.textarea}
-                            placeholder="例如：能量等于质量乘以光速的平方"
-                            value={target()}
-                            onInput={(e) => setTarget(e.currentTarget.value)}
-                            rows={4}
-                        />
-                    </label>
+                    <label class={styles.label} for="add-cue">线索（Markdown）</label>
+                    <Memo id="add-cue" class={styles.textarea} placeholder="例如：质能方程 E=mc²" value={cue()} onInput={setCue} rows={4} />
+                    <label class={styles.label} for="add-target">答案（Markdown）</label>
+                    <Memo id="add-target" class={styles.textarea} placeholder="例如：能量等于质量乘以光速的平方" value={target()} onInput={setTarget} rows={4} />
                     <div class={styles.actions}>
                         <button type="button" class={styles.cancel} onClick={() => navigate("/m/manage")}>取消</button>
                         <button

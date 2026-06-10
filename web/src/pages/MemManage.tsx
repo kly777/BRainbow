@@ -3,6 +3,7 @@ import { A } from "@solidjs/router";
 import { Effect } from "effect";
 import { editMem, getAllMems, deleteMem, type MemItem } from "../apis/memApi.ts";
 import Markdown from "../components/ui/Markdown.tsx";
+import Memo from "../components/ui/Memo.tsx";
 import { fmtLocal, fmtRelative } from "../lib/time.ts";
 import styles from "./MemManage.module.css";
 
@@ -98,11 +99,11 @@ export default function MemManage() {
                             }>
                                 <div class={styles.section}>
                                     <span class={styles.sectionLabel}>线索</span>
-                                    <textarea class={styles.editArea} value={editCue()} onInput={(e) => setEditCue(e.currentTarget.value)} rows={4} />
+                                    <Memo class={styles.editArea} value={editCue()} onInput={setEditCue} rows={4} />
                                 </div>
                                 <div class={styles.section}>
                                     <span class={styles.sectionLabel}>答案</span>
-                                    <textarea class={styles.editArea} value={editTarget()} onInput={(e) => setEditTarget(e.currentTarget.value)} rows={4} />
+                                    <Memo class={styles.editArea} value={editTarget()} onInput={setEditTarget} rows={4} />
                                 </div>
                             </Show>
                             <div class={styles.meta}>

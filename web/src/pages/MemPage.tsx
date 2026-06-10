@@ -4,6 +4,7 @@ import { Effect, Schema } from "effect";
 import { buryMem, editMem, getDue, previewMem, reviewMem, type MemItem } from "../apis/memApi.ts";
 import { request } from "../apis/request.ts";
 import Markdown from "../components/ui/Markdown.tsx";
+import Memo from "../components/ui/Memo.tsx";
 import { fmtInterval, fmtLocal } from "../lib/time.ts";
 import styles from "./MemPage.module.css";
 
@@ -111,8 +112,8 @@ export default function MemPage() {
                         <Show when={isPreview() && current() === 0}><div class={styles.previewBanner}>将于 {fmtLocal(item()?.due_at ?? "")} 到期</div></Show>
                         <Show when={editing()} fallback={<><div class={styles.cue}><div class={styles.sectionLabel}>线索</div><div class={styles.content}><Markdown content={item()?.cue.content ?? ""} /></div></div>
                         <Show when={showAnswer()}><div class={styles.divider} /><div class={styles.target}><div class={styles.sectionLabel}>答案</div><div class={styles.content}><Markdown content={item()?.target.content ?? ""} /></div></div></Show></>}>
-                            <div class={styles.cue}><div class={styles.sectionLabel}>线索</div><textarea class={styles.editArea} value={editCue()} onInput={(e) => setEditCue(e.currentTarget.value)} rows={3} /></div>
-                            <div class={styles.divider} /><div class={styles.target}><div class={styles.sectionLabel}>答案</div><textarea class={styles.editArea} value={editTarget()} onInput={(e) => setEditTarget(e.currentTarget.value)} rows={3} /></div>
+                            <div class={styles.cue}><div class={styles.sectionLabel}>线索</div><Memo class={styles.editArea} value={editCue()} onInput={setEditCue} rows={3} /></div>
+                            <div class={styles.divider} /><div class={styles.target}><div class={styles.sectionLabel}>答案</div><Memo class={styles.editArea} value={editTarget()} onInput={setEditTarget} rows={3} /></div>
                         </Show>
                     </div>
                     <div class={styles.actions}>

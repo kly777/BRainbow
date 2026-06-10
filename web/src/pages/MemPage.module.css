@@ -61,6 +61,21 @@
     color: var(--c-text, #3d3629);
 }
 
+.editLinkBtn {
+    font-size: 13px;
+    color: var(--c-text-muted, #9b8e7a);
+    padding: 4px 10px;
+    border: 1px solid var(--c-border, #e8dfcc);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.editLinkBtn:hover {
+    background: var(--c-bg-hover, #f0e8d5);
+    color: var(--c-text, #3d3629);
+}
+
 /* ── 创建表单 ── */
 .form {
     display: flex;

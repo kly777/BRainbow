@@ -122,6 +122,14 @@ export default function MemPage() {
                 <div class={styles.topRight}>
                     <A href="/m/add" class={styles.addLink}>＋ 添加</A>
                     <A href="/m/manage" class={styles.manageLink}>管理</A>
+                    {editing() ? (
+                        <>
+                            <button type="button" class={styles.editLinkBtn} onClick={saveEdit}>保存</button>
+                            <button type="button" class={styles.editLinkBtn} onClick={() => setEditing(false)}>取消</button>
+                        </>
+                    ) : (
+                        <button type="button" class={styles.editLinkBtn} onClick={startEdit}>编辑</button>
+                    )}
                     <span class={styles.count}>{due().length}/7 学习中</span>
                 </div>
             </div>
@@ -157,15 +165,9 @@ export default function MemPage() {
                     </Show>
                 </div>
                 <div class={styles.actions}>
-                    {editing() ? (
-                        <div class={styles.actionRow}>
-                            <button type="button" class={styles.undoBtn} onClick={saveEdit}>保存</button>
-                            <button type="button" class={styles.undoBtn} onClick={() => setEditing(false)}>取消</button>
-                        </div>
-                    ) : !showAnswer() ? (
+                    {!showAnswer() ? (
                         <div class={styles.actionRow}>
                             <button type="button" class={styles.buryBtn} onClick={bury}>跳过</button>
-                            <button type="button" class={styles.buryBtn} onClick={startEdit}>编辑</button>
                             <Show when={showUndo()}>
                                 <button type="button" class={styles.undoBtn} onClick={undo}>撤销</button>
                             </Show>

@@ -11,7 +11,7 @@ export const loginE = (
     name: string,
     password: string,
 ): Promise<AuthUser> =>
-    request("/user/loginE", {
+    request("/user/login", {
         method: "POST",
         body: JSON.stringify({ name, password }),
     });
@@ -20,7 +20,7 @@ export const registerE = (
     name: string,
     password: string,
 ): Promise<AuthUser> =>
-    request("/user/registerE", {
+    request("/user/register", {
         method: "POST",
         body: JSON.stringify({ name, password }),
     });

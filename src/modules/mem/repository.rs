@@ -83,7 +83,7 @@ impl MemRepo {
 
     pub async fn get_learning_mems(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
         sqlx::query_scalar::<_, i32>(
-            "SELECT id FROM mem WHERE state = 'learning' AND buried = 0 ORDER BY due_at LIMIT ?"
+            "SELECT id FROM mem WHERE state IN ('learning', 'relearning') AND buried = 0 ORDER BY due_at LIMIT ?"
         ).bind(limit).fetch_all(&*self.pool).await
     }
 
@@ -161,6 +161,13 @@ impl MemRepo {
 
     pub async fn unbury_mem(&self, id: i32) -> Result<(), sqlx::Error> {
         sqlx::query("UPDATE mem SET buried = 0 WHERE id = ?").bind(id).execute(&*self.pool).await?;
+        Ok(())
+    }
+
+    pub async fn reset_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?"
+        ).bind(id).execute(&*self.pool).await?;
         Ok(())
     }
 

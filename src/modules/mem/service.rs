@@ -4,7 +4,6 @@ use std::sync::Arc;
 use crate::modules::mem::fsrs::{self, ReviewOutcome};
 use crate::modules::mem::model::*;
 use crate::modules::mem::repository::{MemRepo, MemRow};
-use crate::time;
 
 pub struct MemService {
     repo: MemRepo,
@@ -15,52 +14,47 @@ impl MemService {
 
     // ── 获取学习池 ──
 
-	    pub async fn get_due(&self, max_learning: i64) -> Result<DueResponse, sqlx::Error> {
-	        // 1. 获取当前 learning 状态的卡（学习步进中）
-	        let mut ids = self.repo.get_learning_mems(max_learning).await?;
-	        let pool_count = ids.len();
+    pub async fn get_due(&self, max_learning: i64) -> Result<DueResponse, sqlx::Error> {
+        let mut ids = self.repo.get_learning_mems(max_learning).await?;
+        let pool_count = ids.len();
 
-	        // 2. 不足时补充：到期复习卡（保持 review 状态，不走学习步进）
-	        if pool_count < max_learning as usize {
-	            let needed = max_learning as usize - pool_count;
-	            let due_reviews = self.repo.get_due_reviews(needed as i64).await?;
-	            ids.extend(due_reviews);
-	        }
+        if pool_count < max_learning as usize {
+            let needed = max_learning as usize - pool_count;
+            let due_reviews = self.repo.get_due_reviews(needed as i64).await?;
+            ids.extend(due_reviews);
+        }
 
-	        // 3. 仍不足：拉新卡转为 learning
-	        if ids.len() < max_learning as usize {
-	            let needed = max_learning as usize - ids.len();
-	            let new_cards = self.repo.get_new_cards(needed as i64).await?;
-	            for id in &new_cards {
-	                self.repo.set_state(*id, "learning", Some(0)).await?;
-	            }
-	            ids.extend(new_cards);
-	        }
+        if ids.len() < max_learning as usize {
+            let needed = max_learning as usize - ids.len();
+            let new_cards = self.repo.get_new_cards(needed as i64).await?;
+            for id in &new_cards {
+                self.repo.set_state(*id, "learning", Some(0)).await?;
+            }
+            ids.extend(new_cards);
+        }
 
-	        // 4. 仍不足：将来 review 卡（保持 review，不转 learning）
-	        if ids.len() < max_learning as usize {
-	            let needed = max_learning as usize - ids.len();
-	            let upcoming = self.repo.get_upcoming_reviews(needed as i64).await?;
-	            ids.extend(upcoming);
-	        }
+        if ids.len() < max_learning as usize {
+            let needed = max_learning as usize - ids.len();
+            let upcoming = self.repo.get_upcoming_reviews(needed as i64).await?;
+            ids.extend(upcoming);
+        }
 
-	        // 5. 仍为空 → 取最近一个将来卡作为预览
-	        if ids.is_empty() {
-	            if let Ok(Some(id)) = self.repo.get_next_mem().await { ids.push(id); }
-	        }
+        if ids.is_empty() {
+            if let Ok(Some(id)) = self.repo.get_next_mem().await { ids.push(id); }
+        }
 
-	        let items = self.build_items(&ids).await;
-	        let has_more = ids.len() >= max_learning as usize;
-	        let upcoming_count = if ids.is_empty() {
-	            self.repo.count_upcoming().await.unwrap_or(0) as usize
-	        } else { 0 };
-	        let all_far = !items.is_empty() && items.iter().all(|it| {
-	            chrono::DateTime::parse_from_rfc3339(&it.due_at)
-	                .map(|t| t > chrono::Utc::now() + chrono::Duration::hours(24))
-	                .unwrap_or(false)
-	        });
-	        Ok(DueResponse { due_count: items.len(), has_more, items, upcoming_count, all_far })
-	    }
+        let items = self.build_items(&ids).await;
+        let has_more = ids.len() >= max_learning as usize;
+        let upcoming_count = if ids.is_empty() {
+            self.repo.count_upcoming().await.unwrap_or(0) as usize
+        } else { 0 };
+        let all_far = !items.is_empty() && items.iter().all(|it| {
+            chrono::DateTime::parse_from_rfc3339(&it.due_at)
+                .map(|t| t > chrono::Utc::now() + chrono::Duration::hours(24))
+                .unwrap_or(false)
+        });
+        Ok(DueResponse { due_count: items.len(), has_more, items, upcoming_count, all_far })
+    }
 
     // ── 复习 ──
 
@@ -68,22 +62,14 @@ impl MemService {
         let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
         let outcome = self.apply_review(&row, rating);
 
-        // 步进管理
-        let new_step = if outcome.state == "learning" {
+        let new_step = if outcome.state.has_steps() {
             let old = row.step_index.map(|i| i as usize);
             Some(match (old, rating) { (_, 1) => 0, (Some(s), _) => s + 1, (None, _) => 0 })
         } else { None };
 
-	        // 毕业判断：FSRS 产出 review 则直接毕业
-	        let new_state = if row.state == "learning" && outcome.state == "review" {
-	            "review"
-	        } else if row.state == "learning" {
-	            "learning"
-	        } else {
-	            &outcome.state
-	        };
+        let new_state = outcome.state.as_str();
 
-	        let lapses = if rating == 1 { row.lapses + 1 } else if rating <= 2 { row.lapses } else { 0 };
+        let lapses = if rating == 1 { row.lapses + 1 } else if rating <= 2 { row.lapses } else { 0 };
         let leeched = row.leeched || lapses >= 5;
 
         self.repo.update_mem_fsrs(id, new_state, outcome.stability, outcome.difficulty,
@@ -93,8 +79,9 @@ impl MemService {
     }
 
     fn apply_review(&self, row: &MemRow, rating: u8) -> ReviewOutcome {
-        let step = if row.state == "new" { Some(0) } else { row.step_index.map(|i| i as usize) };
-        fsrs::schedule(row.stability, row.difficulty, &row.state, step, rating, chrono::Utc::now())
+        let state: CardState = row.state.parse().unwrap_or(CardState::New);
+        let step = if state == CardState::New { Some(0) } else { row.step_index.map(|i| i as usize) };
+        fsrs::schedule(row.stability, row.difficulty, state, step, rating, chrono::Utc::now())
     }
 
     // ── 其他 ──
@@ -120,12 +107,13 @@ impl MemService {
     pub async fn get_all(&self, limit: i64, offset: i64) -> Result<DueResponse, sqlx::Error> {
         let ids = self.repo.get_all_mems(limit, offset).await?;
         let items = self.build_items(&ids).await;
-	        Ok(DueResponse { due_count: items.len(), has_more: false, upcoming_count: 0, all_far: false, items })
+        Ok(DueResponse { due_count: items.len(), has_more: false, upcoming_count: 0, all_far: false, items })
     }
 
     pub async fn preview(&self, id: i32) -> Result<[f64; 4], AppError> {
         let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
-        Ok(fsrs::preview(row.stability, row.difficulty, &row.state, row.step_index.map(|i| i as usize)))
+        let state: CardState = row.state.parse().unwrap_or(CardState::New);
+        Ok(fsrs::preview(row.stability, row.difficulty, state, row.step_index.map(|i| i as usize)))
     }
 
     pub async fn create(&self, req: CreateMemRequest) -> Result<i32, sqlx::Error> {
@@ -149,6 +137,7 @@ impl MemService {
     pub async fn bury(&self, id: i32) -> Result<(), sqlx::Error> { self.repo.bury_mem(id).await }
     pub async fn unbury(&self, id: i32) -> Result<(), sqlx::Error> { self.repo.unbury_mem(id).await }
     pub async fn delete(&self, id: i32) -> Result<(), sqlx::Error> { self.repo.delete_mem(id).await }
+    pub async fn reset(&self, id: i32) -> Result<(), sqlx::Error> { self.repo.reset_mem(id).await }
 }
 
 #[derive(Debug)]

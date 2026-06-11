@@ -81,6 +81,11 @@ export const unburyMemE = (
 ): Promise<{ ok: boolean }> =>
     request(`/mem/${id}/unbury`, { method: "POST" });
 
+export const resetMemE = (
+    id: number,
+): Promise<{ ok: boolean }> =>
+    request(`/mem/${id}/reset`, { method: "POST" });
+
 export const editMemE = (
     id: number,
     cue: string,

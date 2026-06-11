@@ -93,7 +93,7 @@ export default function MemPage() {
                         <button type="button" class={i() === current() ? styles.sidebarActive : styles.sidebarItem} onClick={() => { setCurrent(i()); setShowAnswer(false); setSidebarOpen(false); }}>
                             <span class={styles.sidebarIdx}>#{mem.id}</span>
                             <span class={styles.sidebarText}>{mem.cue.content.slice(0, 40) || "（空）"}</span>
-                            <span class={styles.sidebarState}>{mem.state === "new" ? "新" : mem.state === "learning" ? "学" : "复"}</span>
+                            <span class={styles.sidebarState}>{mem.state === "new" ? "新" : mem.state === "learning" ? "学" : mem.state === "relearning" ? "重" : "复"}</span>
                         </button>
                     )}</For>
                 </div>

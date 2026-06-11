@@ -86,6 +86,11 @@ pub async fn unbury_mem(Path(id): Path<i32>, State(state): State<AppState>) -> i
     match svc.unbury(id).await { Ok(()) => ok(), Err(e) => err(e, "取消跳过") }
 }
 
+pub async fn reset_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.reset(id).await { Ok(()) => ok(), Err(e) => err(e, "重置") }
+}
+
 pub async fn delete_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
     match svc.delete(id).await { Ok(()) => ok(), Err(e) => err(e, "删除") }

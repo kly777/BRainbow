@@ -1,6 +1,6 @@
 import { createSignal, onMount, Show, For } from "solid-js";
 import { A } from "@solidjs/router";
-import { editMemE, getAllMemsE, deleteMemE, type MemItem } from "../apis/memApi.ts";
+import { editMemE, getAllMemsE, deleteMemE, resetMemE, type MemItem } from "../apis/memApi.ts";
 import Markdown from "../components/ui/Markdown.tsx";
 import Memo from "../components/ui/Memo.tsx";
 import { fmtLocal, fmtRelative } from "../lib/time.ts";
@@ -29,6 +29,12 @@ export default function MemManage() {
 
     const load = async () => { setLoading(true); setMems(await loadAllMems()); setLoading(false); };
     onMount(load);
+
+    const handleReset = async (id: number) => {
+        if (!confirm("确定重置？将清空所有记忆数据")) return;
+        try { await resetMemE(id); } catch { /* ignore */ }
+        load();
+    };
 
     const handleDelete = async (id: number) => {
         if (!confirm("确定删除？")) return;
@@ -119,6 +125,7 @@ export default function MemManage() {
                                 ) : (
                                     <>
                                         <button type="button" class={styles.editBtn} onClick={startEdit}>编辑</button>
+                                        <button type="button" class={styles.cancelBtn} onClick={() => handleReset(d().id)}>忘却</button>
                                         <button type="button" class={styles.deleteBtn} onClick={() => handleDelete(d().id)}>删除</button>
                                     </>
                                 )}

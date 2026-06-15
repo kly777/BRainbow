@@ -99,20 +99,6 @@ impl TaskRepository {
         }))
     }
 
-    pub async fn search_by_title(&self, query: &str) -> Result<Vec<Task>, sqlx::Error> {
-        let search_pattern = format!("%{}%", query);
-        sqlx::query_as::<_, Task>(
-            "SELECT id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, created_at, updated_at
-            FROM task
-            WHERE title LIKE ?
-            ORDER BY created_at DESC",
-        )
-        .bind(search_pattern)
-        .fetch_all(&*self.db)
-        .await
-    }
-
     pub async fn search_by_title_paginated(
         &self,
         query: &str,

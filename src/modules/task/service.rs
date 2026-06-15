@@ -361,12 +361,10 @@ pub enum ServiceError {
     InvalidInput(String),
     NotFound,
     CircularParent,
-    CircularDependency,
     SelfParent,
     SelfDependency,
     PlannedOutsideAvailable(String),
     SlotOverlap(String),
-    InvalidTimeRange(String),
     Db(sqlx::Error),
 }
 
@@ -376,14 +374,12 @@ impl std::fmt::Display for ServiceError {
             ServiceError::InvalidInput(msg) => write!(f, "{}", msg),
             ServiceError::NotFound => write!(f, "资源不存在"),
             ServiceError::CircularParent => write!(f, "检测到父子循环引用"),
-            ServiceError::CircularDependency => write!(f, "检测到依赖循环引用"),
             ServiceError::SelfParent => write!(f, "不能设置自己为父任务"),
             ServiceError::SelfDependency => write!(f, "不能依赖自己"),
             ServiceError::PlannedOutsideAvailable(msg) => {
                 write!(f, "计划时间超出可行时间: {}", msg)
             }
             ServiceError::SlotOverlap(msg) => write!(f, "时间段重叠: {}", msg),
-            ServiceError::InvalidTimeRange(msg) => write!(f, "无效的时间段: {}", msg),
             ServiceError::Db(e) => write!(f, "数据库错误: {}", e),
         }
     }

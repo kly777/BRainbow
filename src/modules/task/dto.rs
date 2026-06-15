@@ -81,13 +81,11 @@ pub enum TaskErrorCode {
     PlannedOutsideAvailable,
     SlotOverlap,
     CircularParent,
-    CircularDependency,
     SelfParent,
     SelfDependency,
     MissingCompletedAt,
     UnexpectedCompletedAt,
     TaskNotFound,
-    InvalidTimeRange,
     InvalidInput,
 }
 

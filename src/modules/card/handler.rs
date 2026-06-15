@@ -5,9 +5,9 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::service::CardService;
+use super::repository::CardRepository;
 use crate::error;
-use crate::pagination::Pagination;
+use crate::pagination::{PaginatedResponse, Pagination};
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -32,9 +32,9 @@ pub async fn create_card_handler(
     State(state): State<AppState>,
     Json(payload): Json<CreateCardRequest>,
 ) -> impl IntoResponse {
-    let card_service = CardService::new(state.db.clone());
+    let repo = CardRepository::new(state.db.clone());
 
-    match card_service.create_card(payload.content.clone()).await {
+    match repo.create(payload.content.clone()).await {
         Ok(card) => {
             let response = CardResponse {
                 id: card.id,
@@ -52,10 +52,14 @@ pub async fn get_cards_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let card_service = CardService::new(state.db.clone());
+    let repo = CardRepository::new(state.db.clone());
 
-    match card_service.get_cards_paginated(&pagination).await {
-        Ok(response) => Json(response).into_response(),
+    match repo
+        .find_all_paginated(pagination.limit(), pagination.offset())
+        .await
+    {
+        Ok((items, total)) => Json(PaginatedResponse::new(items, total, &pagination))
+            .into_response(),
         Err(e) => error::internal(e, "获取卡片列表").into_response(),
     }
 }
@@ -64,9 +68,9 @@ pub async fn get_card_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let card_service = CardService::new(state.db.clone());
+    let repo = CardRepository::new(state.db.clone());
 
-    match card_service.get_card_by_id(id).await {
+    match repo.find_by_id(id).await {
         Ok(Some(card)) => {
             let card_response = CardResponse {
                 id: card.id,
@@ -86,9 +90,9 @@ pub async fn update_card_handler(
     Path(id): Path<i32>,
     Json(payload): Json<UpdateCardRequest>,
 ) -> impl IntoResponse {
-    let card_service = CardService::new(state.db.clone());
+    let repo = CardRepository::new(state.db.clone());
 
-    match card_service.update_card(id, payload.content).await {
+    match repo.update(id, payload.content).await {
         Ok(card) => {
             let response = CardResponse {
                 id: card.id,
@@ -106,9 +110,9 @@ pub async fn delete_card_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let card_service = CardService::new(state.db.clone());
+    let repo = CardRepository::new(state.db.clone());
 
-    match card_service.delete_card(id).await {
+    match repo.delete(id).await {
         Ok(rows_affected) => {
             if rows_affected > 0 {
                 StatusCode::NO_CONTENT.into_response()
@@ -135,13 +139,14 @@ pub async fn search_cards_handler(
         return error::bad_request("搜索关键词不能为空".to_string()).into_response();
     }
 
-    let card_service = CardService::new(state.db.clone());
+    let repo = CardRepository::new(state.db.clone());
 
-    match card_service
-        .search_cards_paginated(params.q.trim(), &params.pagination)
+    match repo
+        .search_by_content_paginated(params.q.trim(), params.pagination.limit(), params.pagination.offset())
         .await
     {
-        Ok(response) => Json(response).into_response(),
+        Ok((items, total)) => Json(PaginatedResponse::new(items, total, &params.pagination))
+            .into_response(),
         Err(e) => error::internal(e, "搜索卡片").into_response(),
     }
 }

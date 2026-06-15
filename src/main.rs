@@ -5,7 +5,6 @@ mod modules;
 mod pagination;
 mod routes;
 mod state;
-mod time;
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::Instant;

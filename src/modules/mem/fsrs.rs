@@ -4,10 +4,13 @@
 //! 学习步进：[1min, 10min]  重学步进：[10min]
 //! Again 始终走 FSRS 降 stability
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Duration};
 use fsrs::{FSRS, MemoryState};
 use crate::modules::mem::model::CardState;
-use crate::time;
+
+fn due_in_secs(secs: i64) -> String {
+    (Utc::now() + Duration::seconds(secs)).format("%Y-%m-%dT%H:%M:%SZ").to_string()
+}
 
 /// 初始学习步进
 const STEPS: [i64; 2] = [60, 600];
@@ -58,21 +61,21 @@ pub fn schedule(
                 let (s, d, _) = compute_next_with_state(mem, 1);
                 ReviewOutcome {
                     state: Learning, stability: s, difficulty: d,
-                    due_at: time::due_in_secs(STEPS[0]),
+                    due_at: due_in_secs(STEPS[0]),
                 }
             }
             2 => {
                 let secs = STEPS[step.min(STEPS.len() - 1)];
-                ReviewOutcome { state: Learning, stability: s_old, difficulty: d_old, due_at: time::due_in_secs(secs) }
+                ReviewOutcome { state: Learning, stability: s_old, difficulty: d_old, due_at: due_in_secs(secs) }
             }
             _ => {
                 let next = step + 1;
                 if next >= STEPS.len() {
                     let mem = Some(MemoryState { stability: s_old as f32, difficulty: d_old as f32 });
                     let (s, d, secs) = compute_next_with_state(mem, rating);
-                    ReviewOutcome { state: Review, stability: s, difficulty: d, due_at: time::due_in_secs(secs as i64) }
+                    ReviewOutcome { state: Review, stability: s, difficulty: d, due_at: due_in_secs(secs as i64) }
                 } else {
-                    ReviewOutcome { state: Learning, stability: s_old, difficulty: d_old, due_at: time::due_in_secs(STEPS[next]) }
+                    ReviewOutcome { state: Learning, stability: s_old, difficulty: d_old, due_at: due_in_secs(STEPS[next]) }
                 }
             }
         };
@@ -85,12 +88,12 @@ pub fn schedule(
         let (s, d, _) = compute_next_with_state(mem, 1);
         return ReviewOutcome {
             state: Relearning, stability: s, difficulty: d,
-            due_at: time::due_in_secs(RELEARN_STEPS[0]),
+            due_at: due_in_secs(RELEARN_STEPS[0]),
         };
     }
 
     let (s, d, secs) = compute_next_with_state(mem, rating);
-    ReviewOutcome { state: Review, stability: s, difficulty: d, due_at: time::due_in_secs(secs as i64) }
+    ReviewOutcome { state: Review, stability: s, difficulty: d, due_at: due_in_secs(secs as i64) }
 }
 
 fn relearn(s_old: f64, d_old: f64, step: usize, rating: u8) -> ReviewOutcome {
@@ -102,20 +105,20 @@ fn relearn(s_old: f64, d_old: f64, step: usize, rating: u8) -> ReviewOutcome {
             let (s, d, _) = compute_next_with_state(mem, 1);
             ReviewOutcome {
                 state: Relearning, stability: s, difficulty: d,
-                due_at: time::due_in_secs(RELEARN_STEPS[0]),
+                due_at: due_in_secs(RELEARN_STEPS[0]),
             }
         }
         2 => {
             let secs = RELEARN_STEPS[step.min(RELEARN_STEPS.len() - 1)];
-            ReviewOutcome { state: Relearning, stability: s_old, difficulty: d_old, due_at: time::due_in_secs(secs) }
+            ReviewOutcome { state: Relearning, stability: s_old, difficulty: d_old, due_at: due_in_secs(secs) }
         }
         _ => {
             let next = step + 1;
             if next >= RELEARN_STEPS.len() {
                 let (s, d, secs) = compute_next_with_state(mem, rating);
-                ReviewOutcome { state: Review, stability: s, difficulty: d, due_at: time::due_in_secs(secs as i64) }
+                ReviewOutcome { state: Review, stability: s, difficulty: d, due_at: due_in_secs(secs as i64) }
             } else {
-                ReviewOutcome { state: Relearning, stability: s_old, difficulty: d_old, due_at: time::due_in_secs(RELEARN_STEPS[next]) }
+                ReviewOutcome { state: Relearning, stability: s_old, difficulty: d_old, due_at: due_in_secs(RELEARN_STEPS[next]) }
             }
         }
     }

@@ -45,23 +45,6 @@ pub fn error(
     )
 }
 
-/// 同样但带详情
-pub fn error_with_details(
-    status: StatusCode,
-    code: impl Into<String>,
-    message: impl Into<String>,
-    details: serde_json::Value,
-) -> (StatusCode, Json<ApiError>) {
-    (
-        status,
-        Json(ApiError {
-            code: code.into(),
-            message: message.into(),
-            details: Some(details),
-        }),
-    )
-}
-
 /// 400 Bad Request - 请求参数无效
 pub fn bad_request(message: impl Into<String>) -> (StatusCode, Json<ApiError>) {
     error(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", message)

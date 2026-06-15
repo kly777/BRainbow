@@ -14,13 +14,6 @@ impl OntoRepository {
         Self { db }
     }
 
-    /// 获取所有本体
-    pub async fn find_all(&self) -> Result<Vec<Onto>, sqlx::Error> {
-        sqlx::query_as::<_, Onto>("SELECT id, name, description FROM onto ORDER BY id")
-            .fetch_all(&*self.db)
-            .await
-    }
-
     pub async fn find_all_paginated(
         &self,
         limit: i64,
@@ -77,31 +70,6 @@ impl OntoRepository {
 
         Ok(result.rows_affected())
     }
-
-    // /// 根据名称查找本体
-    // pub async fn find_by_name(&self, name: &str) -> Result<Option<Onto>, sqlx::Error> {
-    //     sqlx::query_as::<_, Onto>("SELECT id, name, description FROM onto WHERE name = ?")
-    //         .bind(name)
-    //         .fetch_optional(&*self.db)
-    //         .await
-    // }
-
-    // /// 获取本体数量
-    // pub async fn count(&self) -> Result<i64, sqlx::Error> {
-    //     sqlx::query_scalar("SELECT COUNT(*) FROM onto")
-    //         .fetch_one(&*self.db)
-    //         .await
-    // }
-
-    // /// 检查本体是否存在
-    // pub async fn exists(&self, id: i32) -> Result<bool, sqlx::Error> {
-    //     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM onto WHERE id = ?")
-    //         .bind(id)
-    //         .fetch_one(&*self.db)
-    //         .await?;
-
-    //     Ok(count > 0)
-    // }
 
     /// 更新本体
     pub async fn update(

@@ -136,10 +136,6 @@ pub fn from_service_error(e: ServiceError) -> (StatusCode, Json<ApiError>) {
         ServiceError::CircularParent => {
             bad_request(TaskErrorCode::CircularParent, "检测到父子循环引用".into())
         }
-        ServiceError::CircularDependency => bad_request(
-            TaskErrorCode::CircularDependency,
-            "检测到依赖循环引用".into(),
-        ),
         ServiceError::SelfParent => {
             bad_request(TaskErrorCode::SelfParent, "不能设置自己为父任务".into())
         }
@@ -150,7 +146,6 @@ pub fn from_service_error(e: ServiceError) -> (StatusCode, Json<ApiError>) {
             bad_request(TaskErrorCode::PlannedOutsideAvailable, msg)
         }
         ServiceError::SlotOverlap(msg) => bad_request(TaskErrorCode::SlotOverlap, msg),
-        ServiceError::InvalidTimeRange(msg) => bad_request(TaskErrorCode::InvalidTimeRange, msg),
         ServiceError::Db(err) => internal_error(format!("数据库错误: {}", err)),
     }
 }

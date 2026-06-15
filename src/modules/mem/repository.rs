@@ -12,10 +12,12 @@ pub struct MemRow {
     pub stability: f64,
     pub difficulty: f64,
     pub step_index: Option<i32>,
+    #[allow(dead_code)]
     pub buried: bool,
     pub lapses: i32,
     pub leeched: bool,
     pub due_at: String,
+    #[allow(dead_code)]
     pub last_review_at: Option<String>,
 }
 
@@ -171,7 +173,4 @@ impl MemRepo {
         Ok(())
     }
 
-    pub async fn set_pool(&self, _id: i32, _in_pool: bool) -> Result<(), sqlx::Error> {
-        Ok(()) // deprecated — pool membership is state='learning'
-    }
 }

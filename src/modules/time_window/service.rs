@@ -124,13 +124,6 @@ impl TimeWindowService {
             .map_err(ServiceError::Db)
     }
 
-    pub async fn find_by_id(&self, id: i32) -> Result<Option<TimeWindow>, ServiceError> {
-        self.repo.find_by_id(id).await.map_err(ServiceError::Db)
-    }
-
-    pub async fn delete(&self, id: i32) -> Result<u64, ServiceError> {
-        self.repo.delete(id).await.map_err(ServiceError::Db)
-    }
 }
 
 #[derive(Debug)]

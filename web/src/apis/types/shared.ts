@@ -17,10 +17,6 @@ export interface PaginationParams {
 
 // ── 通用响应 ──
 
-export type ApiResponse<T> =
-    | { readonly success: true; readonly data: T }
-    | { readonly success: false; readonly error: string };
-
 // ── 展示工具 ──
 
 export const formatDate = (dateString: string): string => {

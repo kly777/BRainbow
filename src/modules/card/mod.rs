@@ -1,7 +1,6 @@
 mod handler;
 mod model;
-mod repository;
-mod service;
+pub mod repository;
 
 pub use handler::{
     create_card_handler, delete_card_handler, get_card_handler, get_cards_handler,

@@ -117,78 +117,13 @@ pub struct Task {
     pub updated_at: DateTime<Utc>,
 }
 
-#[allow(dead_code)]
 impl Task {
-    /// 创建新任务时的默认值
-    pub fn new(title: String) -> Self {
-        let now = Utc::now();
-        Self {
-            id: 0,
-            title,
-            description: None,
-            parent_task_id: None,
-            status: TaskStatus::Backlog,
-            completed_at: None,
-            effort_estimate_minutes: None,
-            created_at: now,
-            updated_at: now,
-        }
-    }
-
-    /// 检查任务是否已完成
     pub fn is_completed(&self) -> bool {
         self.status == TaskStatus::Completed
-    }
-
-    /// 检查任务是否活跃（可排程）
-    pub fn is_active(&self) -> bool {
-        self.status == TaskStatus::Active
-    }
-
-    /// 检查任务是否在待办列表中
-    pub fn is_backlog(&self) -> bool {
-        self.status == TaskStatus::Backlog
-    }
-
-    /// 检查任务是否已归档
-    pub fn is_archived(&self) -> bool {
-        self.status == TaskStatus::Archived
-    }
-
-    /// 完成任务（设置状态和完成时间）
-    pub fn complete(&mut self) {
-        self.status = TaskStatus::Completed;
-        self.completed_at = Some(Utc::now());
-        self.updated_at = Utc::now();
-    }
-
-    /// 激活任务
-    pub fn activate(&mut self) {
-        self.status = TaskStatus::Active;
-        self.updated_at = Utc::now();
-    }
-
-    /// 归档任务
-    pub fn archive(&mut self) {
-        self.status = TaskStatus::Archived;
-        self.updated_at = Utc::now();
-    }
-
-    /// 移动到待办列表
-    pub fn move_to_backlog(&mut self) {
-        self.status = TaskStatus::Backlog;
-        self.updated_at = Utc::now();
     }
 }
 
 // Re-export TimeWindow and TimeWindowType for TaskDetailResponse and repository
 pub use crate::modules::time_window::{TimeWindow, TimeWindowType};
 
-/// 任务依赖关系
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FromRow)]
-#[allow(dead_code)]
-pub struct TaskDependency {
-    pub id: i32,
-    pub task_id: i32,
-    pub depends_on_task_id: i32,
-}
+

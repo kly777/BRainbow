@@ -58,7 +58,7 @@ pub async fn create_sign_handler(
             };
             Json(response).into_response()
         }
-        Err(e) => error::internal(e, "创建符号关系").into_response(),
+        Err(e) => error::internal(e, "创建符号关系"),
     }
 }
 
@@ -70,7 +70,7 @@ pub async fn get_signs_handler(
 
     match sign_service.get_signs_paginated(&pagination).await {
         Ok(response) => Json(response).into_response(),
-        Err(e) => error::internal(e, "获取符号关系列表").into_response(),
+        Err(e) => error::internal(e, "获取符号关系列表"),
     }
 }
 
@@ -93,8 +93,8 @@ pub async fn get_sign_handler(
             };
             Json(response).into_response()
         }
-        Ok(None) => error::not_found(format!("符号关系 ID {} 不存在", id)).into_response(),
-        Err(e) => error::internal(e, "获取符号关系").into_response(),
+        Ok(None) => error::not_found(format!("符号关系 ID {} 不存在", id)),
+        Err(e) => error::internal(e, "获取符号关系"),
     }
 }
 
@@ -109,10 +109,10 @@ pub async fn delete_sign_handler(
             if rows_affected > 0 {
                 StatusCode::NO_CONTENT.into_response()
             } else {
-                error::not_found(format!("符号关系 ID {} 不存在", id)).into_response()
+                error::not_found(format!("符号关系 ID {} 不存在", id))
             }
         }
-        Err(e) => error::internal(e, "删除符号关系").into_response(),
+        Err(e) => error::internal(e, "删除符号关系"),
     }
 }
 
@@ -128,7 +128,7 @@ pub async fn get_signs_by_signifier_handler(
         .await
     {
         Ok(response) => Json(response).into_response(),
-        Err(e) => error::bad(e, "按能指查询").into_response(),
+        Err(e) => error::bad(e, "按能指查询"),
     }
 }
 
@@ -144,6 +144,6 @@ pub async fn get_signs_by_signified_handler(
         .await
     {
         Ok(response) => Json(response).into_response(),
-        Err(e) => error::bad(e, "按所指查询").into_response(),
+        Err(e) => error::bad(e, "按所指查询"),
     }
 }

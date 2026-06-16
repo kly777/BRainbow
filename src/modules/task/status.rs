@@ -4,7 +4,7 @@ use axum::{
 };
 
 use super::model::TaskStatus;
-use super::response::{TaskResponse, from_service_error};
+use super::response::TaskResponse;
 use super::service::TaskService;
 use crate::error;
 use crate::pagination::{PaginatedResponse, Pagination};
@@ -17,7 +17,7 @@ pub async fn complete_task_handler(
     let svc = TaskService::new(state.db);
     match svc.complete(id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
-        Err(e) => from_service_error(e).into_response(),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -28,7 +28,7 @@ pub async fn activate_task_handler(
     let svc = TaskService::new(state.db);
     match svc.activate(id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
-        Err(e) => from_service_error(e).into_response(),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -39,7 +39,7 @@ pub async fn archive_task_handler(
     let svc = TaskService::new(state.db);
     match svc.archive(id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
-        Err(e) => from_service_error(e).into_response(),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -50,7 +50,7 @@ pub async fn move_to_backlog_handler(
     let svc = TaskService::new(state.db);
     match svc.move_to_backlog(id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
-        Err(e) => from_service_error(e).into_response(),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -67,7 +67,7 @@ pub async fn get_backlog_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => error::internal(e, "获取待办任务").into_response(),
+        Err(e) => error::internal(e, "获取待办任务"),
     }
 }
 
@@ -84,7 +84,7 @@ pub async fn get_active_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => error::internal(e, "获取活跃任务").into_response(),
+        Err(e) => error::internal(e, "获取活跃任务"),
     }
 }
 
@@ -105,7 +105,7 @@ pub async fn get_completed_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => error::internal(e, "获取已完成任务").into_response(),
+        Err(e) => error::internal(e, "获取已完成任务"),
     }
 }
 
@@ -126,6 +126,6 @@ pub async fn get_archived_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => error::internal(e, "获取已归档任务").into_response(),
+        Err(e) => error::internal(e, "获取已归档任务"),
     }
 }

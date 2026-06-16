@@ -7,13 +7,13 @@ use std::collections::HashMap;
 
 use crate::error;
 use crate::modules::mem::model::*;
-use crate::modules::mem::service::{AppError, MemService};
+use crate::modules::mem::service::MemService;
 use crate::pagination::Pagination;
 use crate::state::AppState;
 
 fn ok() -> axum::response::Response { Json(serde_json::json!({ "ok": true })).into_response() }
 fn err(e: impl std::fmt::Display, op: &str) -> axum::response::Response {
-    error::internal(e, op).into_response()
+    error::internal(e, op)
 }
 
 pub async fn get_all(State(state): State<AppState>, Query(p): Query<Pagination>) -> impl IntoResponse {
@@ -45,8 +45,7 @@ pub async fn preview_mem(Path(id): Path<i32>, State(state): State<AppState>) -> 
     let svc = MemService::new(state.db.clone());
     match svc.preview(id).await {
         Ok(secs) => Json(serde_json::json!({ "intervals": secs })).into_response(),
-        Err(AppError::NotFound) => error::not_found("not found").into_response(),
-        Err(e) => err(e, "预览"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -54,8 +53,7 @@ pub async fn review_mem(Path(id): Path<i32>, State(state): State<AppState>, Json
     let svc = MemService::new(state.db.clone());
     match svc.review(id, body.rating).await {
         Ok(res) => Json(res).into_response(),
-        Err(AppError::NotFound) => error::not_found("not found").into_response(),
-        Err(e) => err(e, "复习"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -71,8 +69,7 @@ pub async fn edit_mem(Path(id): Path<i32>, State(state): State<AppState>, Json(b
     let svc = MemService::new(state.db.clone());
     match svc.edit(id, body).await {
         Ok(()) => ok(),
-        Err(AppError::NotFound) => error::not_found("not found").into_response(),
-        Err(e) => err(e, "编辑"),
+        Err(e) => e.into_response(),
     }
 }
 

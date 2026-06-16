@@ -5,7 +5,7 @@ use axum::{
 };
 
 use super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
-use super::response::{TaskResponse, from_service_error};
+use super::response::TaskResponse;
 use super::service::TaskService;
 use crate::error;
 use crate::pagination::{PaginatedResponse, Pagination};
@@ -21,7 +21,7 @@ pub async fn get_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => error::internal(e, "获取任务列表").into_response(),
+        Err(e) => error::internal(e, "获取任务列表"),
     }
 }
 
@@ -35,7 +35,7 @@ pub async fn get_all_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => error::internal(e, "获取全部任务").into_response(),
+        Err(e) => error::internal(e, "获取全部任务"),
     }
 }
 
@@ -46,8 +46,8 @@ pub async fn get_task_handler(
     let svc = TaskService::new(state.db);
     match svc.by_id(id).await {
         Ok(Some(task)) => Json(TaskResponse::from(task)).into_response(),
-        Ok(None) => super::response::not_found().into_response(),
-        Err(e) => error::internal(e, "获取任务").into_response(),
+        Ok(None) => error::not_found("任务不存在"),
+        Err(e) => error::internal(e, "获取任务"),
     }
 }
 
@@ -58,8 +58,8 @@ pub async fn get_task_detail_handler(
     let svc = TaskService::new(state.db);
     match svc.detail(id).await {
         Ok(Some(detail)) => Json(detail).into_response(),
-        Ok(None) => super::response::not_found().into_response(),
-        Err(e) => error::internal(e, "获取任务详情").into_response(),
+        Ok(None) => error::not_found("任务不存在"),
+        Err(e) => error::internal(e, "获取任务详情"),
     }
 }
 
@@ -70,7 +70,7 @@ pub async fn create_task_handler(
     let svc = TaskService::new(state.db);
     match svc.create(payload).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
-        Err(e) => from_service_error(e).into_response(),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -81,7 +81,7 @@ pub async fn quick_create_task_handler(
     let svc = TaskService::new(state.db);
     match svc.quick_create(payload).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
-        Err(e) => from_service_error(e).into_response(),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -93,7 +93,7 @@ pub async fn update_task_handler(
     let svc = TaskService::new(state.db);
     match svc.update(id, payload).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
-        Err(e) => from_service_error(e).into_response(),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -104,7 +104,7 @@ pub async fn delete_task_handler(
     let svc = TaskService::new(state.db);
     match svc.delete(id).await {
         Ok(rows) if rows > 0 => StatusCode::NO_CONTENT.into_response(),
-        Ok(_) => super::response::not_found().into_response(),
-        Err(e) => from_service_error(e).into_response(),
+        Ok(_) => error::not_found("任务不存在"),
+        Err(e) => e.into_response(),
     }
 }

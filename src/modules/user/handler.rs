@@ -34,14 +34,14 @@ pub async fn register_handler(
     let password = payload.password.trim().to_string();
 
     if name.is_empty() || password.is_empty() {
-        return error::bad_request("用户名和密码不能为空").into_response();
+        return error::bad_request("用户名和密码不能为空");
     }
     if password.len() < 4 {
-        return error::bad_request("密码至少4位").into_response();
+        return error::bad_request("密码至少4位");
     }
 
     if let Ok(Some(_)) = repo.find_by_name(&name).await {
-        return error::conflict("用户名已存在").into_response();
+        return error::conflict("用户名已存在");
     }
 
     let role = match repo.count().await {
@@ -51,7 +51,7 @@ pub async fn register_handler(
 
     let password_hash = match hash(&password, DEFAULT_COST) {
         Ok(h) => h,
-        Err(e) => return error::internal(e, "密码加密").into_response(),
+        Err(e) => return error::internal(e, "密码加密"),
     };
 
     match repo.create(&name, &password_hash, role).await {
@@ -65,7 +65,7 @@ pub async fn register_handler(
             })
             .into_response()
         }
-        Err(e) => error::internal(e, "创建用户").into_response(),
+        Err(e) => error::internal(e, "创建用户"),
     }
 }
 
@@ -78,8 +78,8 @@ pub async fn login_handler(
 
     let user = match repo.find_by_name(&name).await {
         Ok(Some(u)) => u,
-        Ok(None) => return error::unauthorized("用户名或密码错误").into_response(),
-        Err(e) => return error::internal(e, "数据库查询").into_response(),
+        Ok(None) => return error::unauthorized("用户名或密码错误"),
+        Err(e) => return error::internal(e, "数据库查询"),
     };
 
     match verify(&payload.password, &user.password_hash) {
@@ -93,8 +93,8 @@ pub async fn login_handler(
             })
             .into_response()
         }
-        Ok(false) => error::unauthorized("用户名或密码错误").into_response(),
-        Err(e) => error::internal(e, "密码验证").into_response(),
+        Ok(false) => error::unauthorized("用户名或密码错误"),
+        Err(e) => error::internal(e, "密码验证"),
     }
 }
 
@@ -114,6 +114,6 @@ pub async fn user_handler(State(state): State<AppState>) -> impl IntoResponse {
                 .collect();
             Json(user_list).into_response()
         }
-        Err(e) => error::internal(e, "获取用户").into_response(),
+        Err(e) => error::internal(e, "获取用户"),
     }
 }

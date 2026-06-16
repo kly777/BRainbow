@@ -28,7 +28,7 @@ pub async fn get_table_names(State(state): State<AppState>) -> impl IntoResponse
     let repo = repository::DBRepo::new(state.db);
     match repo.get_table_names().await {
         Ok(names) => Json(names).into_response(),
-        Err(e) => error::internal(e, "获取表名").into_response(),
+        Err(e) => error::internal(e, "获取表名"),
     }
 }
 
@@ -40,6 +40,6 @@ pub async fn get_table_data(
     let repo = repository::DBRepo::new(state.db);
     match repo.get_table_data(&table_name, pagination.limit(), pagination.offset()).await {
         Ok((header, rows)) => Json(TableData { header, rows }).into_response(),
-        Err(e) => error::internal(e, "获取表数据").into_response(),
+        Err(e) => error::internal(e, "获取表数据"),
     }
 }

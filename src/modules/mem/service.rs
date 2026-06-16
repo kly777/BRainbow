@@ -148,3 +148,12 @@ impl std::fmt::Display for AppError {
         match self { AppError::NotFound => write!(f, "not found"), AppError::Db(e) => write!(f, "db: {e}") }
     }
 }
+
+impl AppError {
+    pub fn into_response(self) -> axum::response::Response {
+        match self {
+            AppError::NotFound => crate::error::not_found("记忆项不存在"),
+            AppError::Db(e) => crate::error::internal(e, "数据库操作"),
+        }
+    }
+}

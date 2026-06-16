@@ -47,7 +47,7 @@ pub async fn create_onto_handler(
             };
             Json(response).into_response()
         }
-        Err(e) => error::bad(e, "创建本体").into_response(),
+        Err(e) => error::bad(e, "创建本体"),
     }
 }
 
@@ -59,7 +59,7 @@ pub async fn get_ontos_handler(
 
     match onto_service.get_ontos_paginated(&pagination).await {
         Ok(response) => Json(response).into_response(),
-        Err(e) => error::internal(e, "获取本体列表").into_response(),
+        Err(e) => error::internal(e, "获取本体列表"),
     }
 }
 
@@ -78,8 +78,8 @@ pub async fn get_onto_handler(
             };
             Json(response).into_response()
         }
-        Ok(None) => error::not_found(format!("本体 ID {} 不存在", id)).into_response(),
-        Err(e) => error::internal(e, "获取本体").into_response(),
+        Ok(None) => error::not_found(format!("本体 ID {} 不存在", id)),
+        Err(e) => error::internal(e, "获取本体"),
     }
 }
 
@@ -102,7 +102,7 @@ pub async fn update_onto_handler(
             };
             Json(onto_response).into_response()
         }
-        Err(e) => error::internal(e, "更新本体").into_response(),
+        Err(e) => error::internal(e, "更新本体"),
     }
 }
 
@@ -117,9 +117,9 @@ pub async fn delete_onto_handler(
             if rows_affected > 0 {
                 StatusCode::NO_CONTENT.into_response()
             } else {
-                error::not_found(format!("本体 ID {} 不存在", id)).into_response()
+                error::not_found(format!("本体 ID {} 不存在", id))
             }
         }
-        Err(e) => error::internal(e, "删除本体").into_response(),
+        Err(e) => error::internal(e, "删除本体"),
     }
 }

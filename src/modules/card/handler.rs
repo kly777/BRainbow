@@ -44,7 +44,7 @@ pub async fn create_card_handler(
             };
             (StatusCode::CREATED, Json(response)).into_response()
         }
-        Err(e) => error::bad(e, "创建卡片").into_response(),
+        Err(e) => error::bad(e, "创建卡片"),
     }
 }
 
@@ -60,7 +60,7 @@ pub async fn get_cards_handler(
     {
         Ok((items, total)) => Json(PaginatedResponse::new(items, total, &pagination))
             .into_response(),
-        Err(e) => error::internal(e, "获取卡片列表").into_response(),
+        Err(e) => error::internal(e, "获取卡片列表"),
     }
 }
 
@@ -80,8 +80,8 @@ pub async fn get_card_handler(
             };
             Json(card_response).into_response()
         }
-        Ok(None) => error::not_found(format!("卡片 ID {} 不存在", id)).into_response(),
-        Err(e) => error::internal(e, "获取卡片").into_response(),
+        Ok(None) => error::not_found(format!("卡片 ID {} 不存在", id)),
+        Err(e) => error::internal(e, "获取卡片"),
     }
 }
 
@@ -102,7 +102,7 @@ pub async fn update_card_handler(
             };
             Json(response).into_response()
         }
-        Err(e) => error::internal(e, "更新卡片").into_response(),
+        Err(e) => error::internal(e, "更新卡片"),
     }
 }
 
@@ -117,10 +117,10 @@ pub async fn delete_card_handler(
             if rows_affected > 0 {
                 StatusCode::NO_CONTENT.into_response()
             } else {
-                error::not_found(format!("卡片 ID {} 不存在", id)).into_response()
+                error::not_found(format!("卡片 ID {} 不存在", id))
             }
         }
-        Err(e) => error::internal(e, "删除卡片").into_response(),
+        Err(e) => error::internal(e, "删除卡片"),
     }
 }
 
@@ -136,7 +136,7 @@ pub async fn search_cards_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     if params.q.trim().is_empty() {
-        return error::bad_request("搜索关键词不能为空".to_string()).into_response();
+        return error::bad_request("搜索关键词不能为空");
     }
 
     let repo = CardRepository::new(state.db.clone());
@@ -147,6 +147,6 @@ pub async fn search_cards_handler(
     {
         Ok((items, total)) => Json(PaginatedResponse::new(items, total, &params.pagination))
             .into_response(),
-        Err(e) => error::internal(e, "搜索卡片").into_response(),
+        Err(e) => error::internal(e, "搜索卡片"),
     }
 }

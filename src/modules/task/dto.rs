@@ -74,20 +74,4 @@ pub struct TaskDetailResponse {
     pub actual_slots: Vec<TimeWindow>,
 }
 
-/// 错误码枚举
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TaskErrorCode {
-    PlannedOutsideAvailable,
-    SlotOverlap,
-    CircularParent,
-    SelfParent,
-    SelfDependency,
-    MissingCompletedAt,
-    UnexpectedCompletedAt,
-    TaskNotFound,
-    InvalidInput,
-}
 
-// ErrorResponse 已移至 crate::error::ApiError，
-// 任务模块专用错误可通过 response::error_response() 构造。

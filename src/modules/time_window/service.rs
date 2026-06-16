@@ -148,3 +148,25 @@ impl std::fmt::Display for ServiceError {
         }
     }
 }
+
+impl ServiceError {
+    pub fn into_response(self) -> axum::response::Response {
+        match self {
+            Self::InvalidTimeRange(msg) => crate::error::bad_request_with_code("INVALID_TIME_RANGE", msg),
+            Self::PlannedOutsideAvailable(msg) => crate::error::bad_request_with_code("PLANNED_OUTSIDE_AVAILABLE", msg),
+            Self::SlotOverlap(msg) => crate::error::bad_request_with_code("SLOT_OVERLAP", msg),
+            Self::NotFound => crate::error::not_found("时间窗口未找到"),
+            Self::Internal(msg) => crate::error::internal_error(msg),
+            Self::Db(e) => {
+                let msg = format!("{}", e);
+                if msg.contains("FOREIGN KEY") {
+                    crate::error::bad_request_with_code("TASK_NOT_FOUND", "关联的任务不存在")
+                } else if msg.contains("RowNotFound") {
+                    crate::error::not_found("时间窗口未找到")
+                } else {
+                    crate::error::internal(e, "时间窗口操作")
+                }
+            }
+        }
+    }
+}

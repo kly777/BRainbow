@@ -54,13 +54,12 @@ pub async fn upload_handler(
             return error::bad_request(format!(
                 "不支持的文件类型: {}，仅允许图片格式",
                 content_type
-            ))
-            .into_response();
+            ));
         }
 
         let data = match field.bytes().await {
             Ok(d) => d,
-            Err(e) => return error::bad(e, "读取文件").into_response(),
+            Err(e) => return error::bad(e, "读取文件"),
         };
 
         if data.len() > MAX_SIZE {
@@ -68,8 +67,7 @@ pub async fn upload_handler(
                 "文件过大: {} 字节，最大允许 {} 字节",
                 data.len(),
                 MAX_SIZE
-            ))
-            .into_response();
+            ));
         }
 
         match service.upload(&data, &original_name, &content_type).await {
@@ -87,11 +85,11 @@ pub async fn upload_handler(
                 )
                     .into_response();
             }
-            Err(e) => return error::internal(e, "上传图片").into_response(),
+            Err(e) => return error::internal(e, "上传图片"),
         }
     }
 
-    error::bad_request("缺少 'file' 字段").into_response()
+    error::bad_request("缺少 'file' 字段")
 }
 
 #[derive(Serialize)]
@@ -132,7 +130,7 @@ pub async fn list_handler(
             }))
             .into_response()
         }
-        Err(e) => error::internal(e, "获取图片列表").into_response(),
+        Err(e) => error::internal(e, "获取图片列表"),
     }
 }
 
@@ -147,7 +145,7 @@ pub async fn rename_handler(
     Json(payload): Json<RenameRequest>,
 ) -> impl IntoResponse {
     if payload.original_name.trim().is_empty() {
-        return error::bad_request("名称不能为空").into_response();
+        return error::bad_request("名称不能为空");
     }
 
     let service = ImageService::new(state.db.clone());
@@ -157,8 +155,7 @@ pub async fn rename_handler(
             error::not_found(e)
         } else {
             error::internal(e, "重命名图片")
-        }
-        .into_response(),
+        },
     }
 }
 
@@ -173,7 +170,6 @@ pub async fn delete_handler(
             error::not_found(e)
         } else {
             error::internal(e, "删除图片")
-        }
-        .into_response(),
+        },
     }
 }

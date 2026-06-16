@@ -1,6 +1,5 @@
 import { type Component, createSignal, For, onMount } from "solid-js";
-import { Effect } from "effect";
-import { type ColumnInfo, getTableData, getTables } from "../apis/dbApi.ts";
+import { type ColumnInfo, getTableDataE, getTablesE } from "../apis/dbApi.ts";
 import { getErrorMessage } from "../apis/types/index.ts";
 
 const DB: Component = () => {
@@ -14,7 +13,7 @@ const DB: Component = () => {
     const loadTables = async () => {
         setLoading(true);
         try {
-            const result = await Effect.runPromise(getTables());
+            const result = await getTablesE();
             setTables([...result]);
         } catch (e) {
             setError(getErrorMessage(e));
@@ -28,7 +27,7 @@ const DB: Component = () => {
         setLoading(true);
         setError("");
         try {
-            const result = await Effect.runPromise(getTableData(name));
+            const result = await getTableDataE(name);
             setColumns([...result.header]);
             setRows(result.rows.map((row) => row.map((v) => String(v ?? ""))));
         } catch (e) {

@@ -38,7 +38,7 @@ pub async fn get_text(State(state): State<AppState>) -> impl IntoResponse {
                 .collect();
             Json(TextResponse { tabs }).into_response()
         }
-        Err(e) => error::internal(e, "加载笔记").into_response(),
+        Err(e) => error::internal(e, "加载笔记"),
     }
 }
 
@@ -54,6 +54,6 @@ pub async fn save_text(
         .collect();
     match repo.save_tabs(&tabs).await {
         Ok(()) => Json(serde_json::json!({"ok": true})).into_response(),
-        Err(e) => error::internal(e, "保存笔记").into_response(),
+        Err(e) => error::internal(e, "保存笔记"),
     }
 }

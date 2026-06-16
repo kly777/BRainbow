@@ -1,6 +1,5 @@
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
-import { Effect } from "effect";
-import { getCalendarEvents } from "../../apis/taskApi.ts";
+import { getCalendarEventsE } from "../../apis/taskApi.ts";
 import type { CalendarEvent } from "../../apis/types/index.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
 import styles from "./TaskCalendar.module.css";
@@ -40,9 +39,7 @@ export default function TaskCalendar() {
     // 获取日历事件
     const [events] = createResource(monthRange, async (range) => {
         try {
-            return await Effect.runPromise(
-                getCalendarEvents(range.start, range.end),
-            );
+            return await getCalendarEventsE(range.start, range.end);
         } catch (e) {
             console.error("获取日历事件失败:", getErrorMessage(e));
             return [];

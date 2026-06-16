@@ -15,15 +15,6 @@ impl CardRepository {
         Self { db }
     }
 
-    /// 获取所有卡片
-    pub async fn find_all(&self) -> Result<Vec<Card>, sqlx::Error> {
-        sqlx::query_as::<_, Card>(
-            "SELECT id, content, created_at, updated_at FROM card ORDER BY id",
-        )
-        .fetch_all(&*self.db)
-        .await
-    }
-
     /// 获取所有卡片（分页）
     pub async fn find_all_paginated(
         &self,
@@ -132,31 +123,6 @@ impl CardRepository {
         Ok(result.rows_affected())
     }
 
-    // /// 根据用户ID获取卡片
-    // pub async fn find_by_user_id(&self, user_id: i32) -> Result<Vec<Card>, sqlx::Error> {
-    //     sqlx::query_as::<_, Card>("SELECT id, title, content, user_id, created_at, updated_at FROM card WHERE user_id = ? ORDER BY created_at DESC")
-    //         .bind(user_id)
-    //         .fetch_all(&*self.db)
-    //         .await
-    // }
-
-    // /// 获取卡片数量
-    // pub async fn count(&self) -> Result<i64, sqlx::Error> {
-    //     sqlx::query_scalar("SELECT COUNT(*) FROM card")
-    //         .fetch_one(&*self.db)
-    //         .await
-    // }
-
-    // /// 检查卡片是否存在
-    // pub async fn exists(&self, id: i32) -> Result<bool, sqlx::Error> {
-    //     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM card WHERE id = ?")
-    //         .bind(id)
-    //         .fetch_one(&*self.db)
-    //         .await?;
-
-    //     Ok(count > 0)
-    // }
-
     /// 根据内容搜索卡片（分页）
     pub async fn search_by_content_paginated(
         &self,
@@ -206,40 +172,4 @@ impl CardRepository {
         Ok((items, total))
     }
 
-    /// 根据内容搜索卡片（不分页，内部使用）
-    pub async fn search_by_content(&self, query: &str) -> Result<Vec<Card>, sqlx::Error> {
-        let keywords: Vec<&str> = query.split_whitespace().collect();
-        if keywords.is_empty() {
-            return self.find_all().await;
-        }
-
-        let conditions: Vec<String> = keywords
-            .iter()
-            .map(|_| "content LIKE ?".to_string())
-            .collect();
-        let where_clause = conditions.join(" OR ");
-
-        // 计算每个关键词匹配的得分
-        let score_expr: Vec<String> = keywords
-            .iter()
-            .map(|_| "CASE WHEN content LIKE ? THEN 1 ELSE 0 END".to_string())
-            .collect();
-        let score_sum = score_expr.join(" + ");
-
-        let sql = format!(
-            "SELECT id, content, created_at, updated_at FROM card WHERE {} ORDER BY ({}) DESC, updated_at DESC",
-            where_clause, score_sum
-        );
-
-        let mut query = sqlx::query_as::<_, Card>(&sql);
-        // bind where params
-        for kw in &keywords {
-            query = query.bind(format!("%{}%", kw));
-        }
-        // bind score params
-        for kw in &keywords {
-            query = query.bind(format!("%{}%", kw));
-        }
-        query.fetch_all(&*self.db).await
-    }
 }

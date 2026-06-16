@@ -6,17 +6,6 @@ use super::super::model::{Task, TaskStatus};
 use super::TaskRepository;
 
 impl TaskRepository {
-    pub async fn find_all(&self) -> Result<Vec<Task>, sqlx::Error> {
-        sqlx::query_as::<_, Task>(
-            "SELECT id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, created_at, updated_at
-            FROM task
-            ORDER BY created_at DESC",
-        )
-        .fetch_all(&*self.db)
-        .await
-    }
-
     pub async fn find_all_paginated(
         &self,
         limit: i64,
@@ -35,18 +24,6 @@ impl TaskRepository {
         .fetch_all(&*self.db)
         .await?;
         Ok((items, total))
-    }
-
-    pub async fn find_all_excluding_archived(&self) -> Result<Vec<Task>, sqlx::Error> {
-        sqlx::query_as::<_, Task>(
-            "SELECT id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, created_at, updated_at
-            FROM task
-            WHERE status != 'archived'
-            ORDER BY created_at DESC",
-        )
-        .fetch_all(&*self.db)
-        .await
     }
 
     pub async fn find_all_excluding_archived_paginated(

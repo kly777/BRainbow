@@ -84,6 +84,27 @@ export const ROUTES: RouteConfig[] = [
     nav: true,
     component: lazy(() => import("./pages/TextEditor.tsx")),
   },
+  {
+    path: "/m",
+    label: "记忆",
+    desc: "间隔重复记忆系统",
+    nav: true,
+    component: lazy(() => import("./pages/MemPage.tsx")),
+  },
+  {
+    path: "/m/add",
+    label: "添加记忆",
+    desc: "创建新的记忆卡片",
+    nav: true,
+    component: lazy(() => import("./pages/MemAdd.tsx")),
+  },
+  {
+    path: "/m/manage",
+    label: "记忆管理",
+    desc: "查看和删除记忆项",
+    nav: true,
+    component: lazy(() => import("./pages/MemManage.tsx")),
+  },
 ];
 
 /** 仅导航入口，用于命令面板 */

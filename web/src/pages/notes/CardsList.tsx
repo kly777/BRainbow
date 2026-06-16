@@ -1,11 +1,10 @@
 import { useNavigate } from "@solidjs/router";
-import { Effect } from "effect";
 import { type Component, createResource, createSignal, Show } from "solid-js";
 import {
-    createCard,
-    deleteCard,
-    getCards,
-    searchCards,
+    createCardE,
+    deleteCardE,
+    getCardsE,
+    searchCardsE,
 } from "../../apis/cardApi.ts";
 import {
     type CreateCardRequest,
@@ -16,31 +15,23 @@ import CardsGrid from "../../components/card/CardsGrid.tsx";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import styles from "./CardsList.module.css";
 
-const emptyFallback = Effect.catchTags({
-    HttpError: () => Effect.succeed([]),
-    NetworkError: () => Effect.succeed([]),
-    ValidationError: () => Effect.succeed([]),
-});
-
 const CardsListPage: Component = () => {
     const navigate = useNavigate();
 
-    const [cards, { mutate }] = createResource(() =>
-        Effect.runPromise(
-            getCards().pipe(
-                Effect.map((r) => r.items),
-                emptyFallback,
-            ),
-        )
-    );
+    const [cards, { mutate }] = createResource(async () => {
+        try {
+            const r = await getCardsE();
+            return r.items;
+        } catch {
+            return [];
+        }
+    });
 
     const [showCreateModal, setShowCreateModal] = createSignal(false);
     const [newCardContent, setNewCardContent] = createSignal("");
     const [isCreating, setIsCreating] = createSignal(false);
     const [error, setError] = createSignal("");
-    const [deletingCardId, setDeletingCardId] = createSignal<number | null>(
-        null,
-    );
+    const [deletingCardId, setDeletingCardId] = createSignal<number | null>(null);
 
     const handleCardClick = (id: number) => navigate(`/c/${id}`);
     const handleCardEdit = (id: number) => navigate(`/c/edit/${id}`);
@@ -55,16 +46,14 @@ const CardsListPage: Component = () => {
         const cardToDelete = currentCards.find((card) => card.id === id);
         if (cardToDelete) mutate(currentCards.filter((card) => card.id !== id));
 
-        Effect.runPromise(
-            deleteCard(id).pipe(
-                Effect.tap(() => console.log("卡片删除成功:", id)),
-                Effect.catchTag("HttpError", () => {
-                    if (cardToDelete) mutate([...currentCards]);
-                    return Effect.void;
-                }),
-                Effect.ensuring(Effect.sync(() => setDeletingCardId(null))),
-            ),
-        );
+        try {
+            await deleteCardE(id);
+            console.log("卡片删除成功:", id);
+        } catch {
+            if (cardToDelete) mutate([...currentCards]);
+        } finally {
+            setDeletingCardId(null);
+        }
     };
 
     const handleCreateCard = async () => {
@@ -78,32 +67,28 @@ const CardsListPage: Component = () => {
 
         const request: CreateCardRequest = { content: newCardContent().trim() };
 
-        Effect.runPromise(
-            createCard(request).pipe(
-                Effect.tap((newCard) => {
-                    setNewCardContent("");
-                    setShowCreateModal(false);
-                    mutate([newCard, ...(cards() || [])]);
-                }),
-                Effect.catchTag("HttpError", (err) => {
-                    setError(getErrorMessage(err));
-                    return Effect.void;
-                }),
-                Effect.ensuring(Effect.sync(() => setIsCreating(false))),
-            ),
-        );
+        try {
+            const newCard = await createCardE(request);
+            setNewCardContent("");
+            setShowCreateModal(false);
+            mutate([newCard, ...(cards() || [])]);
+        } catch (err) {
+            setError(getErrorMessage(err));
+        } finally {
+            setIsCreating(false);
+        }
     };
 
     const handleSearch = async (query: string) => {
         if (!query) {
-            const loaded = await Effect.runPromise(
-                getCards().pipe(Effect.map((r) => r.items), emptyFallback),
-            );
-            mutate([...loaded]);
+            try {
+                const r = await getCardsE();
+                mutate([...r.items]);
+            } catch { /* ignore */ }
             return;
         }
         try {
-            const result = await Effect.runPromise(searchCards(query));
+            const result = await searchCardsE(query);
             mutate([...result.items]);
         } catch {
             // 全局 toast 已触发
@@ -195,20 +180,14 @@ const CardsListPage: Component = () => {
                                 <div class={styles.errorMessage}>{error()}</div>
                             </Show>
                             <div class={styles.formGroup}>
-                                <label
-                                    for="card-content"
-                                    class={styles.formLabel}
-                                >
+                                <label for="card-content" class={styles.formLabel}>
                                     内容
                                 </label>
                                 <textarea
                                     id="card-content"
                                     class={styles.formTextarea}
                                     value={newCardContent()}
-                                    onInput={(e) =>
-                                        setNewCardContent(
-                                            e.currentTarget.value,
-                                        )}
+                                    onInput={(e) => setNewCardContent(e.currentTarget.value)}
                                     placeholder="请输入卡片内容"
                                     rows={6}
                                     disabled={isCreating()}

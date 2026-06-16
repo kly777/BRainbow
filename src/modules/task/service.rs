@@ -361,12 +361,10 @@ pub enum ServiceError {
     InvalidInput(String),
     NotFound,
     CircularParent,
-    CircularDependency,
     SelfParent,
     SelfDependency,
     PlannedOutsideAvailable(String),
     SlotOverlap(String),
-    InvalidTimeRange(String),
     Db(sqlx::Error),
 }
 
@@ -376,15 +374,28 @@ impl std::fmt::Display for ServiceError {
             ServiceError::InvalidInput(msg) => write!(f, "{}", msg),
             ServiceError::NotFound => write!(f, "资源不存在"),
             ServiceError::CircularParent => write!(f, "检测到父子循环引用"),
-            ServiceError::CircularDependency => write!(f, "检测到依赖循环引用"),
             ServiceError::SelfParent => write!(f, "不能设置自己为父任务"),
             ServiceError::SelfDependency => write!(f, "不能依赖自己"),
             ServiceError::PlannedOutsideAvailable(msg) => {
                 write!(f, "计划时间超出可行时间: {}", msg)
             }
             ServiceError::SlotOverlap(msg) => write!(f, "时间段重叠: {}", msg),
-            ServiceError::InvalidTimeRange(msg) => write!(f, "无效的时间段: {}", msg),
             ServiceError::Db(e) => write!(f, "数据库错误: {}", e),
+        }
+    }
+}
+
+impl ServiceError {
+    pub fn into_response(self) -> axum::response::Response {
+        match self {
+            Self::InvalidInput(msg) => crate::error::bad_request_with_code("INVALID_INPUT", msg),
+            Self::NotFound => crate::error::not_found("任务不存在"),
+            Self::CircularParent => crate::error::bad_request_with_code("CIRCULAR_PARENT", "检测到父子循环引用"),
+            Self::SelfParent => crate::error::bad_request_with_code("SELF_PARENT", "不能设置自己为父任务"),
+            Self::SelfDependency => crate::error::bad_request_with_code("SELF_DEPENDENCY", "不能依赖自己"),
+            Self::PlannedOutsideAvailable(msg) => crate::error::bad_request_with_code("PLANNED_OUTSIDE_AVAILABLE", msg),
+            Self::SlotOverlap(msg) => crate::error::bad_request_with_code("SLOT_OVERLAP", msg),
+            Self::Db(e) => crate::error::internal(e, "数据库操作"),
         }
     }
 }

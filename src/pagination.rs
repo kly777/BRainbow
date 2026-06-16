@@ -34,10 +34,6 @@ impl Pagination {
     pub fn limit(&self) -> i64 {
         self.clamp().1
     }
-
-    pub fn page(&self) -> i64 {
-        self.clamp().0
-    }
 }
 
 #[derive(Debug, Serialize)]

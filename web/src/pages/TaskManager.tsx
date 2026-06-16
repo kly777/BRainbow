@@ -92,7 +92,7 @@ function Toolbar(
 }
 
 function TaskPanel(props: { viewMode: "list" | "kanban" }) {
-    const { tasks, loading, updateStatus, removeTask, updateTask, addSubTask } =
+    const { tasks, loading, updateStatus, removeTask, updateTaskE, addSubTask } =
         useTasks();
     const [rightTab, setRightTab] = createSignal<"calendar" | "dag">(
         "calendar",
@@ -109,7 +109,7 @@ function TaskPanel(props: { viewMode: "list" | "kanban" }) {
                                 tasks={tasks()}
                                 onStatusChange={updateStatus}
                                 onDelete={removeTask}
-                                onUpdate={updateTask}
+                                onUpdate={updateTaskE}
                                 onAddSubTask={addSubTask}
                             />
                             <div class={styles.rightPanel}>

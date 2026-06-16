@@ -1,40 +1,51 @@
-// ==================== Error 类 · Schema · 错误工具 ====================
+// ==================== Error 类 · 错误工具 ====================
 
-import { Data, Schema } from "effect";
 import { showToast } from "../../components/ui/toastStore.ts";
-
-// ── 后端错误响应 Schema ──
-
-export const ApiErrorResponseSchema = Schema.Struct({
-    code: Schema.String,
-    message: Schema.String,
-    details: Schema.optional(Schema.Unknown),
-});
-
-export type ApiErrorResponse = Schema.Schema.Type<
-    typeof ApiErrorResponseSchema
->;
 
 // ── Error 类 ──
 
-export class NetworkError extends Data.TaggedError("NetworkError")<{
+export class NetworkError extends Error {
     readonly cause: unknown;
-}> {
+
+    constructor(args: { readonly cause: unknown }) {
+        super("Network error");
+        this.name = "NetworkError";
+        this.cause = args.cause;
+    }
+
     static fromUnknown(cause: unknown): NetworkError {
         return new NetworkError({ cause });
     }
 }
 
-export class HttpError extends Data.TaggedError("HttpError")<{
+export class HttpError extends Error {
     readonly status: number;
     readonly code: string;
-    readonly message: string;
     readonly details?: unknown;
-}> {}
 
-export class ValidationError extends Data.TaggedError("ValidationError")<{
+    constructor(args: {
+        readonly status: number;
+        readonly code: string;
+        readonly message: string;
+        readonly details?: unknown;
+    }) {
+        super(args.message);
+        this.name = "HttpError";
+        this.status = args.status;
+        this.code = args.code;
+        this.details = args.details;
+    }
+}
+
+export class ValidationError extends Error {
     readonly error: unknown;
-}> {}
+
+    constructor(args: { readonly error: unknown }) {
+        super("Validation error");
+        this.name = "ValidationError";
+        this.error = args.error;
+    }
+}
 
 export type ApiErrorType = NetworkError | HttpError | ValidationError;
 

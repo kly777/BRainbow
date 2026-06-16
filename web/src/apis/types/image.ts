@@ -1,35 +1,28 @@
-import { Schema } from "effect";
+export interface Image {
+    id: number;
+    url: string;
+    filename: string;
+    original_name: string;
+    content_type: string;
+}
 
-export const ImageSchema = Schema.Struct({
-    id: Schema.Number,
-    url: Schema.String,
-    filename: Schema.String,
-    original_name: Schema.String,
-    content_type: Schema.String,
-});
+export interface ImageWithDate {
+    id: number;
+    url: string;
+    filename: string;
+    original_name: string;
+    content_type: string;
+    created_at: string;
+}
 
-export const ImageWithDateSchema = Schema.Struct({
-    id: Schema.Number,
-    url: Schema.String,
-    filename: Schema.String,
-    original_name: Schema.String,
-    content_type: Schema.String,
-    created_at: Schema.String,
-});
+export interface PaginatedImage {
+    items: ImageWithDate[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+}
 
-export const PaginatedImageSchema = Schema.Struct({
-    items: Schema.Array(ImageWithDateSchema),
-    total: Schema.Number,
-    page: Schema.Number,
-    page_size: Schema.Number,
-    total_pages: Schema.Number,
-});
-
-export const RenameImageRequestSchema = Schema.Struct({
-    original_name: Schema.String,
-});
-
-export type Image = Schema.Schema.Type<typeof ImageSchema>;
-export type ImageWithDate = Schema.Schema.Type<typeof ImageWithDateSchema>;
-export type PaginatedImage = Schema.Schema.Type<typeof PaginatedImageSchema>;
-export type RenameImageRequest = Schema.Schema.Type<typeof RenameImageRequestSchema>;
+export interface RenameImageRequest {
+    original_name: string;
+}

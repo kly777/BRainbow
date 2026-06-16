@@ -1,6 +1,4 @@
-import { type Effect, Schema } from "effect";
 import { request } from "../apis/request.ts";
-import type { ApiErrorType } from "../apis/types/index.ts";
 
 export interface AuthUser {
     id: number;
@@ -9,27 +7,20 @@ export interface AuthUser {
     token: string;
 }
 
-const AuthUserSchema = Schema.Struct({
-    id: Schema.Number,
-    name: Schema.String,
-    role: Schema.String,
-    token: Schema.String,
-});
-
-export const login = (
+export const loginE = (
     name: string,
     password: string,
-): Effect.Effect<AuthUser, ApiErrorType> =>
-    request("/user/login", AuthUserSchema, {
+): Promise<AuthUser> =>
+    request("/user/login", {
         method: "POST",
         body: JSON.stringify({ name, password }),
     });
 
-export const register = (
+export const registerE = (
     name: string,
     password: string,
-): Effect.Effect<AuthUser, ApiErrorType> =>
-    request("/user/register", AuthUserSchema, {
+): Promise<AuthUser> =>
+    request("/user/register", {
         method: "POST",
         body: JSON.stringify({ name, password }),
     });

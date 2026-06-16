@@ -6,10 +6,9 @@ use std::collections::HashMap;
 use std::pin::Pin;
 
 use super::dependency::{CalendarQuery, DagQuery, TreeQuery};
-use super::dto::TaskErrorCode;
-use super::model::Task;
-use super::response::{CalendarEvent, StatsResponse, TaskResponse, TreeNode, bad_request};
-use super::service::TaskService;
+use super::super::model::Task;
+use super::super::response::{CalendarEvent, StatsResponse, TaskResponse, TreeNode};
+use super::super::service::TaskService;
 use crate::error;
 use crate::pagination::{PaginatedResponse, Pagination};
 use crate::state::AppState;
@@ -22,7 +21,7 @@ pub async fn get_tree_handler(
 
     let root_tasks = match svc.tree(None).await {
         Ok(tasks) => tasks,
-        Err(e) => return error::internal(e, "获取树形结构").into_response(),
+        Err(e) => return error::internal(e, "获取树形结构"),
     };
 
     let filtered = if let Some(status) = query.status {
@@ -87,7 +86,7 @@ pub async fn get_calendar_handler(
                 .collect();
             Json(events).into_response()
         }
-        Err(e) => error::internal(e, "获取日历事件").into_response(),
+        Err(e) => error::internal(e, "获取日历事件"),
     }
 }
 
@@ -99,7 +98,7 @@ pub async fn get_dag_handler(
 
     match svc.dag(query.task_id, query.depth.unwrap_or(3)).await {
         Ok(view) => Json(view).into_response(),
-        Err(e) => error::internal(e, "获取依赖图").into_response(),
+        Err(e) => error::internal(e, "获取依赖图"),
     }
 }
 
@@ -113,7 +112,7 @@ pub async fn get_stats_handler(State(state): State<AppState>) -> impl IntoRespon
             archived,
         })
         .into_response(),
-        Err(e) => error::internal(e, "获取统计").into_response(),
+        Err(e) => error::internal(e, "获取统计"),
     }
 }
 
@@ -124,8 +123,7 @@ pub async fn search_tasks_handler(
     let query = match params.remove("q") {
         Some(q) if !q.is_empty() => q,
         _ => {
-            return bad_request(TaskErrorCode::TaskNotFound, "搜索查询不能为空".into())
-                .into_response();
+            return error::bad_request("搜索查询不能为空");
         }
     };
 
@@ -146,6 +144,6 @@ pub async fn search_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => error::internal(e, "搜索任务").into_response(),
+        Err(e) => error::internal(e, "搜索任务"),
     }
 }

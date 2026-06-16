@@ -6,9 +6,10 @@ use axum::{
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-use super::model::TaskStatus;
-use super::response::{MessageResponse, from_service_error, not_found};
-use super::service::TaskService;
+use super::super::model::TaskStatus;
+use super::super::response::MessageResponse;
+use super::super::service::TaskService;
+use crate::error;
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -51,7 +52,7 @@ pub async fn add_dependency_handler(
             Json(serde_json::json!({"message": "依赖关系已添加"})),
         )
             .into_response(),
-        Err(e) => from_service_error(e).into_response(),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -65,7 +66,7 @@ pub async fn remove_dependency_handler(
             message: "依赖关系已删除".into(),
         })
         .into_response(),
-        Ok(_) => not_found().into_response(),
-        Err(e) => from_service_error(e).into_response(),
+        Ok(_) => error::not_found("任务不存在"),
+        Err(e) => e.into_response(),
     }
 }

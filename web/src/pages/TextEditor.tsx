@@ -1,15 +1,16 @@
 import { createSignal, For, onCleanup, onMount } from "solid-js";
-import { Effect } from "effect";
-import { loadText, saveText } from "../apis/textApi.ts";
+import { loadTextE, saveTextE } from "../apis/textApi.ts";
 import styles from "./TextEditor.module.css";
 
 let _saveTimer: ReturnType<typeof setInterval> | null = null;
 
 async function load(): Promise<{ name: string; content: string }[]> {
-    const exit = await Effect.runPromiseExit(loadText());
-    if (exit._tag === "Success" && exit.value.tabs.length > 0) {
-        return exit.value.tabs.map((t) => ({ name: t.name, content: t.content }));
-    }
+    try {
+        const res = await loadTextE();
+        if (res.tabs.length > 0) {
+            return res.tabs.map((t) => ({ name: t.name, content: t.content }));
+        }
+    } catch { /* ignore */ }
     return [
         { name: "笔记 1", content: "" },
         { name: "笔记 2", content: "" },
@@ -18,7 +19,7 @@ async function load(): Promise<{ name: string; content: string }[]> {
 }
 
 async function save(tabs: { name: string; content: string }[]): Promise<void> {
-    await Effect.runPromiseExit(saveText(tabs));
+    try { await saveTextE(tabs); } catch { /* ignore */ }
 }
 
 function defaultName(i: number): string {

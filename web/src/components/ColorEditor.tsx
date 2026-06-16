@@ -5,7 +5,6 @@ import {
     Index,
     type Setter,
 } from "solid-js";
-import { Effect, Exit } from "effect";
 import { Color } from "../lib/color.ts";
 import styles from "./ColorEditor.module.css";
 
@@ -80,8 +79,8 @@ function ColorRow(props: {
     const onHexInput = (e: Event) => {
         const val = (e.target as HTMLInputElement).value;
         setHex(val);
-        const exit = Effect.runSyncExit(Color.fromHex(val));
-        if (Exit.isSuccess(exit)) commit(exit.value);
+        const c = Color.fromHex(val);
+        if (c) commit(c);
     };
 
     const onRgbInput = (ch: "r" | "g" | "b", e: Event) => {

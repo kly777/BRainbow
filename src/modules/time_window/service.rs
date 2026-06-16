@@ -124,13 +124,6 @@ impl TimeWindowService {
             .map_err(ServiceError::Db)
     }
 
-    pub async fn find_by_id(&self, id: i32) -> Result<Option<TimeWindow>, ServiceError> {
-        self.repo.find_by_id(id).await.map_err(ServiceError::Db)
-    }
-
-    pub async fn delete(&self, id: i32) -> Result<u64, ServiceError> {
-        self.repo.delete(id).await.map_err(ServiceError::Db)
-    }
 }
 
 #[derive(Debug)]
@@ -152,6 +145,28 @@ impl std::fmt::Display for ServiceError {
             ServiceError::NotFound => write!(f, "资源不存在"),
             ServiceError::Internal(msg) => write!(f, "内部错误: {}", msg),
             ServiceError::Db(e) => write!(f, "数据库错误: {}", e),
+        }
+    }
+}
+
+impl ServiceError {
+    pub fn into_response(self) -> axum::response::Response {
+        match self {
+            Self::InvalidTimeRange(msg) => crate::error::bad_request_with_code("INVALID_TIME_RANGE", msg),
+            Self::PlannedOutsideAvailable(msg) => crate::error::bad_request_with_code("PLANNED_OUTSIDE_AVAILABLE", msg),
+            Self::SlotOverlap(msg) => crate::error::bad_request_with_code("SLOT_OVERLAP", msg),
+            Self::NotFound => crate::error::not_found("时间窗口未找到"),
+            Self::Internal(msg) => crate::error::internal_error(msg),
+            Self::Db(e) => {
+                let msg = format!("{}", e);
+                if msg.contains("FOREIGN KEY") {
+                    crate::error::bad_request_with_code("TASK_NOT_FOUND", "关联的任务不存在")
+                } else if msg.contains("RowNotFound") {
+                    crate::error::not_found("时间窗口未找到")
+                } else {
+                    crate::error::internal(e, "时间窗口操作")
+                }
+            }
         }
     }
 }

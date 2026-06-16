@@ -133,7 +133,7 @@ function Column(props: ColumnProps) {
 // ==================== 主组件 ====================
 
 export default function TaskKanban() {
-    const { tasks, updateStatus, updateTask } = useTasks();
+    const { tasks, updateStatus, updateTaskE } = useTasks();
 
     // 按状态分组（排除 archived）
     const grouped = createMemo(() => {
@@ -157,11 +157,11 @@ export default function TaskKanban() {
     };
 
     const handleEdit = (task: Task) => {
-        // 简单内联编辑：通过 updateTask 打开编辑模态
+        // 简单内联编辑：通过 updateTaskE 打开编辑模态
         // 这里用一个简单的方式 —— console 输出提示
         const newTitle = prompt("编辑标题", task.title);
         if (newTitle?.trim() && newTitle !== task.title) {
-            updateTask(task.id, { title: newTitle.trim() });
+            updateTaskE(task.id, { title: newTitle.trim() });
         }
     };
 

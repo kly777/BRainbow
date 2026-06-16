@@ -1,27 +1,21 @@
-import { type Effect, Schema } from "effect";
 import { request } from "./request.ts";
 import {
     type ApiErrorType,
     type CalendarEvent,
-    CalendarEventSchema,
     type CreateTaskRequest,
     type DagView,
-    DagViewSchema,
-    PaginatedSchema,
     type Task,
     type TaskDetail,
-    TaskDetailSchema,
-    TaskSchema,
     type UpdateTaskRequest,
 } from "./types/index.ts";
 
 // ==================== Task API Functions ====================
 
-export const getCalendarEvents = (
+export const getCalendarEventsE = (
     start?: string,
     end?: string,
     status?: string,
-): Effect.Effect<readonly CalendarEvent[], ApiErrorType> => {
+): Promise<readonly CalendarEvent[]> => {
     const params = new URLSearchParams();
     if (start) params.set("start", start);
     if (end) params.set("end", end);
@@ -29,193 +23,165 @@ export const getCalendarEvents = (
     const qs = params.toString();
     return request(
         `/tasks/calendar${qs ? `?${qs}` : ""}`,
-        Schema.Array(CalendarEventSchema),
         {},
     );
 };
 
-export const getTasks = () =>
-    request("/tasks", PaginatedSchema(TaskSchema), {});
+export const getTasksE = () =>
+    request("/tasks", {});
 
-export const getAllTasks = () =>
-    request("/tasks/all", PaginatedSchema(TaskSchema), {});
+export const getAllTasksE = () =>
+    request("/tasks/all", {});
 
 // ==================== Tree API ====================
-
-/** Recursive tree node schema for task hierarchy */
-const TreeNodeSchema = Schema.Struct({
-    task: TaskSchema,
-    children: Schema.Array(
-        Schema.suspend(
-            (): Schema.Schema<TreeNode> =>
-                TreeNodeSchema as unknown as Schema.Schema<TreeNode>,
-        ),
-    ),
-}) as unknown as Schema.Schema<TreeNode>;
-
-export { TreeNodeSchema };
 
 export interface TreeNode {
     readonly task: Task;
     readonly children: readonly TreeNode[];
 }
 
-export const getTaskTree = (): Effect.Effect<
-    readonly TreeNode[],
-    ApiErrorType
-> => request("/tasks/tree", Schema.Array(TreeNodeSchema), {});
+export const getTaskTreeE = (): Promise<readonly TreeNode[]> =>
+    request("/tasks/tree", {});
 
-export const getTaskDetail = (
+export const getTaskDetailE = (
     id: number,
-): Effect.Effect<TaskDetail, ApiErrorType> =>
-    request(`/tasks/${id}/detail`, TaskDetailSchema, {});
+): Promise<TaskDetail> =>
+    request(`/tasks/${id}/detail`, {});
 
-export const createTask = (
+export const createTaskE = (
     task: CreateTaskRequest,
-): Effect.Effect<Task, ApiErrorType> =>
-    request("/tasks", TaskSchema, {
+): Promise<Task> =>
+    request("/tasks", {
         method: "POST",
         body: JSON.stringify(task),
     });
 
-export const updateTask = (
+export const updateTaskE = (
     id: number,
     task: UpdateTaskRequest,
-): Effect.Effect<Task, ApiErrorType> =>
-    request(`/tasks/${id}`, TaskSchema, {
+): Promise<Task> =>
+    request(`/tasks/${id}`, {
         method: "PATCH",
         body: JSON.stringify(task),
     });
 
-export const deleteTask = (id: number): Effect.Effect<void, ApiErrorType> =>
-    request(`/tasks/${id}`, Schema.Void, {
+export const deleteTaskE = (id: number): Promise<void> =>
+    request(`/tasks/${id}`, {
         method: "DELETE",
     });
 
-export const addTaskDependency = (
+export const addTaskDependencyE = (
     taskId: number,
     dependsOnTaskId: number,
-): Effect.Effect<void, ApiErrorType> =>
-    request(`/tasks/${taskId}/dependencies`, Schema.Void, {
+): Promise<void> =>
+    request(`/tasks/${taskId}/dependencies`, {
         method: "POST",
         body: JSON.stringify({ depends_on_task_id: dependsOnTaskId }),
     });
 
-export const removeTaskDependency = (
+export const removeTaskDependencyE = (
     taskId: number,
     dependsOnTaskId: number,
-): Effect.Effect<void, ApiErrorType> =>
-    request(`/tasks/${taskId}/dependencies/${dependsOnTaskId}`, Schema.Void, {
+): Promise<void> =>
+    request(`/tasks/${taskId}/dependencies/${dependsOnTaskId}`, {
         method: "DELETE",
     });
 
-export const addTaskDecomposition = (
+export const addTaskDecompositionE = (
     parentTaskId: number,
     childTaskId: number,
-): Effect.Effect<void, ApiErrorType> =>
+): Promise<void> =>
     request(
         `/tasks/${parentTaskId}/decomposition/${childTaskId}`,
-        Schema.Void,
         {
             method: "POST",
         },
     );
 
-export const addTaskTimeAllocation = (
+export const addTaskTimeAllocationE = (
     taskId: number,
     timeWindowId: number,
     durationMinutes: number,
-): Effect.Effect<void, ApiErrorType> =>
+): Promise<void> =>
     request(
         `/tasks/${taskId}/time-allocation/${timeWindowId}/${durationMinutes}`,
-        Schema.Void,
         {
             method: "POST",
         },
     );
 
-export const getUserTasks = (
+export const getUserTasksE = (
     userId: number,
-): Effect.Effect<readonly Task[], ApiErrorType> =>
-    request(`/tasks/user/${userId}`, Schema.Array(TaskSchema), {});
+): Promise<readonly Task[]> =>
+    request(`/tasks/user/${userId}`, {});
 
-export const updateTaskStatus = (
+export const updateTaskStatusE = (
     id: number,
     status: string,
-): Effect.Effect<Task, ApiErrorType> =>
-    request(`/tasks/${id}`, TaskSchema, {
+): Promise<Task> =>
+    request(`/tasks/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ status }),
     });
 
-export const searchTasks = (query: string) =>
+export const searchTasksE = (query: string) =>
     request(
         `/tasks/search?q=${encodeURIComponent(query)}`,
-        PaginatedSchema(TaskSchema),
         {},
     );
 
-export const getBacklogTasks = () =>
-    request("/tasks/status/backlog", PaginatedSchema(TaskSchema), {});
+export const getBacklogTasksE = () =>
+    request("/tasks/status/backlog", {});
 
-export const getActiveTasks = () =>
-    request("/tasks/status/active", PaginatedSchema(TaskSchema), {});
+export const getActiveTasksE = () =>
+    request("/tasks/status/active", {});
 
-export const getCompletedTasks = () =>
-    request("/tasks/status/completed", PaginatedSchema(TaskSchema), {});
+export const getCompletedTasksE = () =>
+    request("/tasks/status/completed", {});
 
-export const getArchivedTasks = () =>
-    request("/tasks/status/archived", PaginatedSchema(TaskSchema), {});
+export const getArchivedTasksE = () =>
+    request("/tasks/status/archived", {});
 
-export const getTaskStats = (): Effect.Effect<
-    {
-        backlog: number;
-        active: number;
-        completed: number;
-        archived: number;
-    },
-    ApiErrorType
-> => request(
+export const getTaskStatsE = (): Promise<{
+    backlog: number;
+    active: number;
+    completed: number;
+    archived: number;
+}> => request(
     "/tasks/stats",
-    Schema.Struct({
-        backlog: Schema.Number,
-        active: Schema.Number,
-        completed: Schema.Number,
-        archived: Schema.Number,
-    }),
     {},
 );
 
 // 任务状态操作
-export const completeTask = (id: number): Effect.Effect<Task, ApiErrorType> =>
-    request(`/tasks/${id}/complete`, TaskSchema, {
+export const completeTaskE = (id: number): Promise<Task> =>
+    request(`/tasks/${id}/complete`, {
         method: "POST",
     });
 
-export const activateTask = (id: number): Effect.Effect<Task, ApiErrorType> =>
-    request(`/tasks/${id}/activate`, TaskSchema, {
+export const activateTaskE = (id: number): Promise<Task> =>
+    request(`/tasks/${id}/activate`, {
         method: "POST",
     });
 
-export const archiveTask = (id: number): Effect.Effect<Task, ApiErrorType> =>
-    request(`/tasks/${id}/archive`, TaskSchema, {
+export const archiveTaskE = (id: number): Promise<Task> =>
+    request(`/tasks/${id}/archive`, {
         method: "POST",
     });
 
-export const moveToBacklog = (id: number): Effect.Effect<Task, ApiErrorType> =>
-    request(`/tasks/${id}/move-to-backlog`, TaskSchema, {
+export const moveToBacklogE = (id: number): Promise<Task> =>
+    request(`/tasks/${id}/move-to-backlog`, {
         method: "POST",
     });
 
 // ==================== DAG API ====================
 
-export const getDag = (
+export const getDagE = (
     taskId?: number,
     depth?: number,
-): Effect.Effect<DagView, ApiErrorType> => {
+): Promise<DagView> => {
     const params = new URLSearchParams();
     if (taskId) params.set("task_id", String(taskId));
     if (depth) params.set("depth", String(depth));
     const qs = params.toString();
-    return request(`/tasks/dag${qs ? `?${qs}` : ""}`, DagViewSchema, {});
+    return request(`/tasks/dag${qs ? `?${qs}` : ""}`, {});
 };

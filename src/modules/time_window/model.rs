@@ -150,33 +150,6 @@ pub struct TimeWindow {
 }
 
 impl TimeWindow {
-    /// 从数据库行创建时间窗口
-    // pub fn from_row(
-    //     id: i32,
-    //     start_time: DateTime<Utc>,
-    //     end_time: DateTime<Utc>,
-    //     window_type: TimeWindowType,
-    //     task_id: i32,
-    //     user_id: Option<i32>,
-    //     recurrence_freq: Option<RecurrenceFrequency>,
-    //     recurrence_interval: Option<i32>,
-    //     recurrence_until: Option<DateTime<Utc>>,
-    //     recurrence_by_weekdays: Option<String>,
-    // ) -> Self {
-    //     Self {
-    //         id,
-    //         start_time,
-    //         end_time,
-    //         window_type,
-    //         task_id,
-    //         user_id,
-    //         recurrence_freq,
-    //         recurrence_interval,
-    //         recurrence_until,
-    //         recurrence_by_weekdays,
-    //     }
-    // }
-
     /// 获取循环规则（如果存在）
     pub fn recurrence_rule(&self) -> Option<RecurrenceRule> {
         match (self.recurrence_freq, self.recurrence_interval) {
@@ -196,46 +169,6 @@ impl TimeWindow {
             _ => None,
         }
     }
-
-    // /// 设置循环规则
-    // pub fn set_recurrence_rule(&mut self, rule: Option<RecurrenceRule>) {
-    //     match rule {
-    //         Some(rule) => {
-    //             self.recurrence_freq = Some(rule.freq);
-    //             self.recurrence_interval = Some(rule.interval);
-    //             self.recurrence_until = rule.until;
-    //             self.recurrence_by_weekdays = rule.by_weekdays
-    //                 .map(|days| serde_json::to_string(&days).unwrap_or_default());
-    //         }
-    //         None => {
-    //             self.recurrence_freq = None;
-    //             self.recurrence_interval = None;
-    //             self.recurrence_until = None;
-    //             self.recurrence_by_weekdays = None;
-    //         }
-    //     }
-    // }
-
-    // /// 检查时间窗口是否有效（开始时间早于结束时间）
-    // pub fn is_valid(&self) -> bool {
-    //     self.start_time < self.end_time
-    // }
-
-    // /// 获取持续时间（分钟）
-    // pub fn duration_minutes(&self) -> i64 {
-    //     let duration = self.end_time - self.start_time;
-    //     duration.num_minutes()
-    // }
-
-    // /// 检查时间窗口是否与另一个时间窗口重叠
-    // pub fn overlaps_with(&self, other: &TimeWindow) -> bool {
-    //     self.start_time < other.end_time && other.start_time < self.end_time
-    // }
-
-    // /// 检查时间窗口是否包含指定时间点
-    // pub fn contains(&self, time: DateTime<Utc>) -> bool {
-    //     self.start_time <= time && time <= self.end_time
-    // }
 }
 
 /// 创建时间窗口请求

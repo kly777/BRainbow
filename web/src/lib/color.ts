@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+// Simple Option type, no dependencies
 
 /**
  * 颜色类 — 内部以 CIE XYZ 存储。
@@ -73,12 +73,12 @@ export class Color {
         );
     }
 
-    static fromHex(hex: string): Effect.Effect<Color, Error> {
-        return Effect.try({
-            try: () => Color.#parseHex(hex),
-            catch: (e) =>
-                e instanceof Error ? e : new Error(`无效的 hex: ${hex}`),
-        });
+    static fromHex(hex: string): Color | null {
+        try {
+            return Color.#parseHex(hex);
+        } catch {
+            return null;
+        }
     }
 
     static fromHsl(hsl: Hsl): Color {

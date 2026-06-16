@@ -1,7 +1,6 @@
 import { createSignal, onCleanup, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-import { Effect } from "effect";
-import { login, register } from "./api.ts";
+import { loginE, registerE } from "./api.ts";
 import { getErrorMessage } from "../apis/types/index.ts";
 import { AUTH_REQUIRED_EVENT } from "../apis/request.ts";
 import { useAuth } from "./context.tsx";
@@ -12,7 +11,7 @@ import styles from "./AuthStatus.module.css";
  *
  * - 监听 `auth:required` 事件 → 弹出登录/注册对话框
  * - 401 错误自动触发该事件
- * - `:login` 指令手动触发该事件
+ * - `:loginE` 指令手动触发该事件
  */
 export default function AuthStatus() {
     const { login: authLogin, logout } = useAuth();
@@ -44,15 +43,13 @@ export default function AuthStatus() {
     const handleSubmit = async (e: Event) => {
         e.preventDefault();
         setError("");
-        const exit = await Effect.runPromiseExit(
-            (isRegister() ? register : login)(name(), password()),
-        );
-        if (exit._tag === "Success") {
-            const { id, name: uname, role, token } = exit.value;
+        try {
+            const user = await (isRegister() ? registerE : loginE)(name(), password());
+            const { id, name: uname, role, token } = user;
             authLogin(id, uname, role, token);
             setShowForm(false);
-        } else {
-            setError(getErrorMessage(exit.cause));
+        } catch (e) {
+            setError(getErrorMessage(e));
         }
     };
 

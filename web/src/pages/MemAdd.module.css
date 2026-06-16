@@ -1,0 +1,150 @@
+.page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0;
+}
+
+.topBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--c-border, #e8dfcc);
+}
+
+.title {
+    font-size: 18px;
+    color: var(--c-text-heading, #2c2416);
+    margin: 0;
+}
+
+.form {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--c-text-secondary, #6b5e4a);
+}
+
+.textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--c-border, #e8dfcc);
+    border-radius: 8px;
+    background: var(--c-bg, #fefcf5);
+    color: var(--c-text, #3d3629);
+    font-size: 15px;
+    font-family: inherit;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+}
+
+.textarea:focus {
+    border-color: var(--c-primary, #3b82f6);
+    box-shadow: 0 0 0 2px var(--c-primary-ring, rgba(59, 130, 246, 0.25));
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.cancel {
+    padding: 8px 20px;
+    font-size: 14px;
+    border: 1px solid var(--c-border, #e8dfcc);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--c-text-secondary, #6b5e4a);
+    cursor: pointer;
+}
+
+.cancel:hover {
+    background: var(--c-bg-subtle, #f8f3e6);
+}
+
+.submit {
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    background: var(--c-primary, #3b82f6);
+    color: #fff;
+    cursor: pointer;
+}
+
+.submit:hover {
+    background: var(--c-primary-hover, #2563eb);
+}
+
+.submit:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ── 模式切换 ── */
+.modeTabs {
+    display: inline-flex;
+    border: 1px solid var(--c-border, #e8dfcc);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.modeBtn,
+.modeActive {
+    padding: 4px 14px;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.modeBtn {
+    background: transparent;
+    color: var(--c-text-secondary, #6b5e4a);
+}
+
+.modeBtn:hover {
+    background: var(--c-bg-hover, #f0e8d5);
+}
+
+.modeActive {
+    background: var(--c-primary, #3b82f6);
+    color: #fff;
+    font-weight: 600;
+}
+
+.modeBtn + .modeBtn {
+    border-left: 1px solid var(--c-border, #e8dfcc);
+}
+
+/* ── 进度 ── */
+/* ── 提示 ── */
+.hint {
+    font-size: 13px;
+    color: var(--c-text-secondary, #6b5e4a);
+    margin-bottom: 4px;
+}
+
+.hint code {
+    background: var(--c-bg-subtle, #f8f3e6);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.progress {
+    font-size: 13px;
+    color: var(--c-text-secondary, #6b5e4a);
+    text-align: center;
+}

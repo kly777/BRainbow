@@ -12,7 +12,8 @@
 //! }
 //! ```
 
-use axum::{http::StatusCode, response::Json};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 
 /// 统一的 API 错误响应体
@@ -29,78 +30,52 @@ pub struct ApiError {
 
 // ==================== 通用错误辅助函数 ====================
 
-/// 构造带状态码的 Json 错误响应
-pub fn error(
-    status: StatusCode,
-    code: impl Into<String>,
-    message: impl Into<String>,
-) -> (StatusCode, Json<ApiError>) {
-    (
-        status,
-        Json(ApiError {
-            code: code.into(),
-            message: message.into(),
-            details: None,
-        }),
-    )
-}
-
-/// 同样但带详情
-pub fn error_with_details(
-    status: StatusCode,
-    code: impl Into<String>,
-    message: impl Into<String>,
-    details: serde_json::Value,
-) -> (StatusCode, Json<ApiError>) {
-    (
-        status,
-        Json(ApiError {
-            code: code.into(),
-            message: message.into(),
-            details: Some(details),
-        }),
-    )
+fn resp(status: StatusCode, code: &str, message: impl Into<String>) -> Response {
+    let body = axum::Json(ApiError {
+        code: code.into(),
+        message: message.into(),
+        details: None,
+    });
+    (status, body).into_response()
 }
 
 /// 400 Bad Request - 请求参数无效
-pub fn bad_request(message: impl Into<String>) -> (StatusCode, Json<ApiError>) {
-    error(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", message)
+pub fn bad_request(message: impl Into<String>) -> Response {
+    resp(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", message)
 }
 
 /// 带自定义 code 的 400
-pub fn bad_request_with_code(
-    code: impl Into<String>,
-    message: impl Into<String>,
-) -> (StatusCode, Json<ApiError>) {
-    error(StatusCode::BAD_REQUEST, code, message)
+pub fn bad_request_with_code(code: impl Into<String>, message: impl Into<String>) -> Response {
+    let code = code.into();
+    resp(StatusCode::BAD_REQUEST, &code, message)
 }
 
 /// 404 Not Found - 资源不存在
-pub fn not_found(message: impl Into<String>) -> (StatusCode, Json<ApiError>) {
-    error(StatusCode::NOT_FOUND, "NOT_FOUND", message)
+pub fn not_found(message: impl Into<String>) -> Response {
+    resp(StatusCode::NOT_FOUND, "NOT_FOUND", message)
 }
 
 /// 409 Conflict - 资源冲突
-pub fn conflict(message: impl Into<String>) -> (StatusCode, Json<ApiError>) {
-    error(StatusCode::CONFLICT, "CONFLICT", message)
+pub fn conflict(message: impl Into<String>) -> Response {
+    resp(StatusCode::CONFLICT, "CONFLICT", message)
 }
 
 /// 401 Unauthorized - 未认证
-pub fn unauthorized(message: impl Into<String>) -> (StatusCode, Json<ApiError>) {
-    error(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", message)
+pub fn unauthorized(message: impl Into<String>) -> Response {
+    resp(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", message)
 }
 
-/// 500 Internal Server Error - 服务器内部错误
-pub fn internal_error(message: impl Into<String>) -> (StatusCode, Json<ApiError>) {
-    error(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", message)
+/// 500 Internal Server Error
+pub fn internal_error(message: impl Into<String>) -> Response {
+    resp(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", message)
 }
 
 /// 500 + 自动拼 "{operation}失败: {error}"
-pub fn internal(e: impl std::fmt::Display, operation: &str) -> (StatusCode, Json<ApiError>) {
+pub fn internal(e: impl std::fmt::Display, operation: &str) -> Response {
     internal_error(format!("{}失败: {}", operation, e))
 }
 
 /// 400 + 自动拼 "{operation}失败: {error}"
-pub fn bad(e: impl std::fmt::Display, operation: &str) -> (StatusCode, Json<ApiError>) {
+pub fn bad(e: impl std::fmt::Display, operation: &str) -> Response {
     bad_request(format!("{}失败: {}", operation, e))
 }

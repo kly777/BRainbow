@@ -4,9 +4,9 @@ use axum::{
     response::{IntoResponse, Json},
 };
 
-use super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
-use super::response::TaskResponse;
-use super::service::TaskService;
+use super::super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
+use super::super::response::TaskResponse;
+use super::super::service::TaskService;
 use crate::error;
 use crate::pagination::{PaginatedResponse, Pagination};
 use crate::state::AppState;

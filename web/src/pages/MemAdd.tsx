@@ -81,12 +81,23 @@ export default function MemAdd() {
 		setJsonText("");
 	};
 
+	const handleKeyDown = (e: KeyboardEvent, handler: () => Promise<void>) => {
+		if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+			e.preventDefault();
+			handler();
+		}
+	};
+
 	const currentCount = () => {
 		if (mode() === "batch") return parseBatch(batchText()).length;
 		if (mode() === "json") {
 			try {
 				return (JSON.parse(jsonText()) as unknown[]).filter(
-					(i: unknown) => i && typeof i === "object" && "cue" in (i as Record<string, unknown>) && "target" in (i as Record<string, unknown>),
+					(i: unknown) =>
+						i &&
+						typeof i === "object" &&
+						"cue" in (i as Record<string, unknown>) &&
+						"target" in (i as Record<string, unknown>),
 				).length;
 			} catch {
 				return 0;
@@ -97,39 +108,41 @@ export default function MemAdd() {
 
 	return (
 		<div class={styles.page}>
-			<h1 class={styles.title}>添加记忆</h1>
-
-			<div class={styles.tabs}>
-				<button
-					type="button"
-					class={mode() === "single" ? styles.tabActive : styles.tab}
-					onClick={() => setMode("single")}
-				>
-					单条
-				</button>
-				<button
-					type="button"
-					class={mode() === "batch" ? styles.tabActive : styles.tab}
-					onClick={() => setMode("batch")}
-				>
-					批量
-				</button>
-				<button
-					type="button"
-					class={mode() === "json" ? styles.tabActive : styles.tab}
-					onClick={() => setMode("json")}
-				>
-					JSON
-				</button>
+			<div class={styles.topBar}>
+				<h1 class={styles.title}>添加记忆</h1>
+				<div class={styles.modeTabs}>
+					<button
+						type="button"
+						class={mode() === "single" ? styles.modeActive : styles.modeBtn}
+						onClick={() => setMode("single")}
+					>
+						单条
+					</button>
+					<button
+						type="button"
+						class={mode() === "batch" ? styles.modeActive : styles.modeBtn}
+						onClick={() => setMode("batch")}
+					>
+						批量
+					</button>
+					<button
+						type="button"
+						class={mode() === "json" ? styles.modeActive : styles.modeBtn}
+						onClick={() => setMode("json")}
+					>
+						JSON
+					</button>
+				</div>
 			</div>
 
-			<div class={styles.body}>
+			<div class={styles.form}>
 				<Show when={mode() === "single"}>
 					<label class={styles.label} for="add-cue">
 						线索（Markdown）
 					</label>
 					<MarkdownEditor
 						id="add-cue"
+						class={styles.textarea}
 						placeholder="例如：质能方程 E=mc²"
 						value={cue()}
 						onInput={setCue}
@@ -140,6 +153,7 @@ export default function MemAdd() {
 					</label>
 					<MarkdownEditor
 						id="add-target"
+						class={styles.textarea}
 						placeholder="例如：能量等于质量乘以光速的平方"
 						value={target()}
 						onInput={setTarget}
@@ -165,9 +179,9 @@ export default function MemAdd() {
 				</Show>
 
 				<Show when={mode() === "batch"}>
-					<label class={styles.label}>
-						每行一条：「线索 | 答案」或「线索 制表符 答案」
-					</label>
+					<p class={styles.hint}>
+						每行一条：<code>线索 | 答案</code>或<code>线索 制表符 答案</code>
+					</p>
 					<textarea
 						class={styles.textarea}
 						value={batchText()}
@@ -197,15 +211,17 @@ export default function MemAdd() {
 				</Show>
 
 				<Show when={mode() === "json"}>
-					<label class={styles.label}>
-						JSON 数组：{'[{"cue": "...", "target": "..."}, ...]'}
-					</label>
+					<p class={styles.hint}>
+						每行一条 JSON：{"{"}"cue": "...", "target": "..."
+						{"}"}
+					</p>
 					<textarea
 						class={styles.textarea}
 						value={jsonText()}
 						onInput={(e) => setJsonText(e.currentTarget.value)}
 						rows={8}
 						placeholder={'[{"cue":"光速","target":"299792458 m/s"}]'}
+						onKeyDown={(e) => handleKeyDown(e, handleJson)}
 					/>
 					<div class={styles.actions}>
 						<button

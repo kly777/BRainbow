@@ -105,8 +105,7 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
       <textarea
         ref={textareaRef}
         id={props.id}
-        class={dragover() ? styles.textareaDrag : styles.textarea}
-        classList={{ [props.class ?? ""]: !!props.class }}
+        class={props.class || (dragover() ? styles.textareaDrag : styles.textarea)}
         value={props.value}
         onInput={onInput}
         onPaste={onPaste}

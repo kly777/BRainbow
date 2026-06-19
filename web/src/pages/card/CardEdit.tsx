@@ -11,7 +11,7 @@ import {
     getCardE,
     updateCardE,
 } from "../../apis/cardApi.ts";
-import { uploadImage } from "../../apis/imageApi.ts";
+import { uploadMedia } from "../../apis/mediaApi.ts";
 import type { UpdateCardRequest } from "../../apis/types/index.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
 import Breadcrumb from "../../components/ui/Breadcrumb.tsx";
@@ -96,7 +96,7 @@ const CardEditPage: Component = () => {
         setIsUploading(true);
         setError("");
         try {
-            const image = await uploadImage(file);
+            const image = await uploadMedia(file);
             const md = `![${image.original_name}](${image.url})`;
             insertAtCursor(md);
         } catch (err) {
@@ -120,7 +120,7 @@ const CardEditPage: Component = () => {
 
                 setIsUploading(true);
                 setError("");
-                uploadImage(file)
+                uploadMedia(file)
                     .then((image) => {
                         const md = `![${image.original_name}](${image.url})`;
                         insertAtCursor(md);

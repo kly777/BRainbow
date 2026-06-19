@@ -61,7 +61,7 @@ export const ROUTES: RouteConfig[] = [
     label: "图片",
     desc: "图片管理",
     nav: true,
-    component: lazy(() => import("./pages/image/ImagesList.tsx")),
+    component: lazy(() => import("./pages/media/MediaList.tsx")),
   },
   {
     path: "/db",

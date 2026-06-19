@@ -161,17 +161,36 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
-    // 创建图片表
+    // 创建媒体表
     sqlx::query(
         r#"
-        CREATE TABLE IF NOT EXISTS image (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            filename TEXT NOT NULL UNIQUE,
-            original_name TEXT NOT NULL,
-            content_type TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        CREATE TABLE IF NOT EXISTS media (
+            id              INTEGER PRIMARY KEY,
+            stored_id       TEXT NOT NULL UNIQUE,
+            original_name   TEXT NOT NULL,
+            media_type      TEXT NOT NULL CHECK(media_type IN ('image', 'video', 'audio')),
+            mime_type       TEXT NOT NULL,
+            size_bytes      INTEGER NOT NULL DEFAULT 0,
+            width           INTEGER,
+            height          INTEGER,
+            duration_ms     INTEGER,
+            user_id         INTEGER,
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES user(id)
         )
         "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_media_type_created ON media(media_type, created_at DESC)",
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_media_stored_id ON media(stored_id)",
     )
     .execute(pool)
     .await?;

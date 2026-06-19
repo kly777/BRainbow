@@ -19,14 +19,6 @@ export {
     type UpdateCardRequest,
 } from "./card.ts";
 
-// ── 图片 ──
-export {
-    type Image,
-    type ImageWithDate,
-    type PaginatedImage,
-    type RenameImageRequest,
-} from "./image.ts";
-
 // ── 时间窗口 ──
 export {
     type CreateTimeWindowRequest,

@@ -1,9 +1,19 @@
 import { request } from "./request.ts";
-import { type Card, type CreateCardRequest, type UpdateCardRequest } from "./types/index.ts";
+import type { Card, CreateCardRequest, UpdateCardRequest } from "./types/index.ts";
+
+// ==================== 类型 ====================
+
+export interface PaginatedCards {
+    items: Card[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+}
 
 // ==================== Card API Functions ====================
 
-export const getCardsE = () => request("/cards", {});
+export const getCardsE = (): Promise<PaginatedCards> => request("/cards", {});
 
 export const getCardE = (id: number): Promise<Card> =>
     request(`/cards/${id}`, {});
@@ -32,7 +42,7 @@ export const deleteCardE = (id: number): Promise<void> =>
 
 export const searchCardsE = (
     query: string,
-) => request(
+): Promise<PaginatedCards> => request(
     `/cards/search?q=${encodeURIComponent(query)}`,
     {},
 );

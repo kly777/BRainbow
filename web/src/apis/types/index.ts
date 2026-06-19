@@ -13,16 +13,16 @@ export {
 } from "./errors.ts";
 
 // ── 卡片 ──
-export {
-    type Card,
-    type CreateCardRequest,
-    type UpdateCardRequest,
+export type {
+    Card,
+    CreateCardRequest,
+    UpdateCardRequest,
 } from "./card.ts";
 
 // ── 时间窗口 ──
-export {
-    type CreateTimeWindowRequest,
-    type TimeWindow,
+export type {
+    CreateTimeWindowRequest,
+    TimeWindow,
 } from "./time_window.ts";
 
 // ── 任务 ──

@@ -1,7 +1,5 @@
 import { A } from "@solidjs/router";
-import { createSignal, Show } from "solid-js";
 import { useAuth } from "../auth/context.tsx";
-import AuthStatus from "../auth/AuthStatus.tsx";
 import styles from "./LandingPage.module.css";
 
 const modules = [
@@ -15,12 +13,8 @@ const modules = [
 
 export default function LandingPage() {
   const { auth } = useAuth();
-  const [showLogin, setShowLogin] = createSignal(false);
 
-  // 已登录用户不应看到着陆页，但作为兜底
-  if (auth().user) {
-    return null;
-  }
+  if (auth().user) return null;
 
   return (
     <div class={styles.landingPage}>
@@ -33,20 +27,11 @@ export default function LandingPage() {
         <button
           type="button"
           class={styles.ctaPrimary}
-          onClick={() => setShowLogin(true)}
+          onClick={() =>
+            globalThis.dispatchEvent(new CustomEvent("auth:required"))
+          }
         >
           开始使用
-        </button>
-        <span class={styles.ctaDivider}>或</span>
-        <button
-          type="button"
-          class={styles.ctaSecondary}
-          onClick={() => {
-            // 触发登录弹窗 — AuthStatus 监听 auth:required 事件
-            globalThis.dispatchEvent(new CustomEvent("auth:required"));
-          }}
-        >
-          已有账号？登录
         </button>
       </div>
 

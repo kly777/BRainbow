@@ -1,13 +1,22 @@
 import { request } from "./request.ts";
-import {
-    type ApiErrorType,
-    type CalendarEvent,
-    type CreateTaskRequest,
-    type DagView,
-    type Task,
-    type TaskDetail,
-    type UpdateTaskRequest,
+import type {
+    CalendarEvent,
+    CreateTaskRequest,
+    DagView,
+    Task,
+    TaskDetail,
+    UpdateTaskRequest,
 } from "./types/index.ts";
+
+// ==================== 类型 ====================
+
+export interface TaskListResponse {
+    items: Task[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+}
 
 // ==================== Task API Functions ====================
 
@@ -27,10 +36,10 @@ export const getCalendarEventsE = (
     );
 };
 
-export const getTasksE = () =>
+export const getTasksE = (): Promise<TaskListResponse> =>
     request("/tasks", {});
 
-export const getAllTasksE = () =>
+export const getAllTasksE = (): Promise<TaskListResponse> =>
     request("/tasks/all", {});
 
 // ==================== Tree API ====================
@@ -124,22 +133,22 @@ export const updateTaskStatusE = (
         body: JSON.stringify({ status }),
     });
 
-export const searchTasksE = (query: string) =>
+export const searchTasksE = (query: string): Promise<TaskListResponse> =>
     request(
         `/tasks/search?q=${encodeURIComponent(query)}`,
         {},
     );
 
-export const getBacklogTasksE = () =>
+export const getBacklogTasksE = (): Promise<TaskListResponse> =>
     request("/tasks/status/backlog", {});
 
-export const getActiveTasksE = () =>
+export const getActiveTasksE = (): Promise<TaskListResponse> =>
     request("/tasks/status/active", {});
 
-export const getCompletedTasksE = () =>
+export const getCompletedTasksE = (): Promise<TaskListResponse> =>
     request("/tasks/status/completed", {});
 
-export const getArchivedTasksE = () =>
+export const getArchivedTasksE = (): Promise<TaskListResponse> =>
     request("/tasks/status/archived", {});
 
 export const getTaskStatsE = (): Promise<{

@@ -1,6 +1,5 @@
 import { getToken } from "../auth/context.tsx";
 import {
-    type ApiErrorResponse,
     HttpError,
     NetworkError,
 } from "./types/index.ts";
@@ -59,7 +58,7 @@ async function toast(opts: {
 
 // ==================== 错误体解析 ====================
 
-async function extractErrorBody(response: Response): Promise<ApiErrorResponse> {
+async function extractErrorBody(response: Response): Promise<{ code: string; message: string; details?: unknown }> {
     const text = await response.text().catch(() => "");
 
     if (!text) {
@@ -169,7 +168,7 @@ export const request = async <T>(
 
     // ── 非 2xx → 全局副作用 + 抛出 ──
     if (!response.ok) {
-        let errorBody: ApiErrorResponse;
+        let errorBody: { code: string; message: string; details?: unknown };
         try {
             errorBody = await extractErrorBody(response);
         } catch (cause: unknown) {

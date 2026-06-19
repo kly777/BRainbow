@@ -1,7 +1,7 @@
 import { request } from "./request.ts";
-import {
-    type CreateTimeWindowRequest,
-    type TimeWindow,
+import type {
+    CreateTimeWindowRequest,
+    TimeWindow,
 } from "./types/index.ts";
 
 // ==================== Time Window API Functions ====================

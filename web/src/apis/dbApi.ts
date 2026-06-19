@@ -1,5 +1,4 @@
 import { request } from "./request.ts";
-import type { ApiErrorType } from "./types/index.ts";
 import type { PaginationParams } from "./types/index.ts";
 
 export const getTablesE = (): Promise<readonly string[]> =>

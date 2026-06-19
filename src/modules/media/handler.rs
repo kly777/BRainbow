@@ -1,7 +1,7 @@
 use axum::{
     body::Body,
     extract::{Multipart, Path, Query, State},
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     response::{IntoResponse, Json, Response},
 };
 use serde::{Deserialize, Serialize};
@@ -68,7 +68,10 @@ pub async fn upload_handler(
             Err(e) => return error::bad_request(format!("读取文件失败: {}", e)),
         };
 
-        match service.upload(&data, &original_name, &content_type, None).await {
+        match service
+            .upload(&data, &original_name, &content_type, None)
+            .await
+        {
             Ok(media) => {
                 return (StatusCode::CREATED, Json(to_response(&media))).into_response();
             }
@@ -146,9 +149,7 @@ pub async fn file_handler(
         Err(_) => return error::not_found("文件不存在"),
     };
 
-    let ct = if media.media_type.as_str() == "image"
-        && media.mime_type != "image/svg+xml"
-    {
+    let ct = if media.media_type.as_str() == "image" && media.mime_type != "image/svg+xml" {
         media.mime_type.clone()
     } else {
         "application/octet-stream".to_string()
@@ -189,7 +190,10 @@ pub async fn rename_handler(
         return error::bad_request("名称不能为空");
     }
     let service = MediaService::new(state.db.clone());
-    match service.rename(&stored_id, payload.original_name.trim()).await {
+    match service
+        .rename(&stored_id, payload.original_name.trim())
+        .await
+    {
         Ok(media) => Json(to_response(&media)).into_response(),
         Err(e) => error::not_found(e),
     }

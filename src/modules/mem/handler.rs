@@ -1,7 +1,7 @@
 use axum::{
+    Json,
     extract::{Path, Query, State},
     response::IntoResponse,
-    Json,
 };
 use std::collections::HashMap;
 
@@ -11,12 +11,17 @@ use crate::modules::mem::service::MemService;
 use crate::pagination::Pagination;
 use crate::state::AppState;
 
-fn ok() -> axum::response::Response { Json(serde_json::json!({ "ok": true })).into_response() }
+fn ok() -> axum::response::Response {
+    Json(serde_json::json!({ "ok": true })).into_response()
+}
 fn err(e: impl std::fmt::Display, op: &str) -> axum::response::Response {
     error::internal(e, op)
 }
 
-pub async fn get_all(State(state): State<AppState>, Query(p): Query<Pagination>) -> impl IntoResponse {
+pub async fn get_all(
+    State(state): State<AppState>,
+    Query(p): Query<Pagination>,
+) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
     match svc.get_all(p.limit(), p.offset()).await {
         Ok(res) => Json(res).into_response(),
@@ -24,8 +29,14 @@ pub async fn get_all(State(state): State<AppState>, Query(p): Query<Pagination>)
     }
 }
 
-pub async fn get_due(State(state): State<AppState>, Query(params): Query<HashMap<String, String>>) -> impl IntoResponse {
-    let limit = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(7);
+pub async fn get_due(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let limit = params
+        .get("limit")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(7);
     let svc = MemService::new(state.db.clone());
     match svc.get_due(limit).await {
         Ok(res) => Json(res).into_response(),
@@ -33,7 +44,10 @@ pub async fn get_due(State(state): State<AppState>, Query(params): Query<HashMap
     }
 }
 
-pub async fn create_mem(State(state): State<AppState>, Json(body): Json<CreateMemRequest>) -> impl IntoResponse {
+pub async fn create_mem(
+    State(state): State<AppState>,
+    Json(body): Json<CreateMemRequest>,
+) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
     match svc.create(body).await {
         Ok(id) => Json(serde_json::json!({ "id": id })).into_response(),
@@ -49,7 +63,11 @@ pub async fn preview_mem(Path(id): Path<i32>, State(state): State<AppState>) -> 
     }
 }
 
-pub async fn review_mem(Path(id): Path<i32>, State(state): State<AppState>, Json(body): Json<ReviewRequest>) -> impl IntoResponse {
+pub async fn review_mem(
+    Path(id): Path<i32>,
+    State(state): State<AppState>,
+    Json(body): Json<ReviewRequest>,
+) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
     match svc.review(id, body.rating).await {
         Ok(res) => Json(res).into_response(),
@@ -57,7 +75,11 @@ pub async fn review_mem(Path(id): Path<i32>, State(state): State<AppState>, Json
     }
 }
 
-pub async fn undo_review(Path(id): Path<i32>, State(state): State<AppState>, Json(body): Json<UndoRequest>) -> impl IntoResponse {
+pub async fn undo_review(
+    Path(id): Path<i32>,
+    State(state): State<AppState>,
+    Json(body): Json<UndoRequest>,
+) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
     match svc.undo(id, body).await {
         Ok(()) => ok(),
@@ -65,7 +87,11 @@ pub async fn undo_review(Path(id): Path<i32>, State(state): State<AppState>, Jso
     }
 }
 
-pub async fn edit_mem(Path(id): Path<i32>, State(state): State<AppState>, Json(body): Json<EditMemRequest>) -> impl IntoResponse {
+pub async fn edit_mem(
+    Path(id): Path<i32>,
+    State(state): State<AppState>,
+    Json(body): Json<EditMemRequest>,
+) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
     match svc.edit(id, body).await {
         Ok(()) => ok(),
@@ -75,20 +101,32 @@ pub async fn edit_mem(Path(id): Path<i32>, State(state): State<AppState>, Json(b
 
 pub async fn bury_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
-    match svc.bury(id).await { Ok(()) => ok(), Err(e) => err(e, "跳过") }
+    match svc.bury(id).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "跳过"),
+    }
 }
 
 pub async fn unbury_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
-    match svc.unbury(id).await { Ok(()) => ok(), Err(e) => err(e, "取消跳过") }
+    match svc.unbury(id).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "取消跳过"),
+    }
 }
 
 pub async fn reset_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
-    match svc.reset(id).await { Ok(()) => ok(), Err(e) => err(e, "重置") }
+    match svc.reset(id).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "重置"),
+    }
 }
 
 pub async fn delete_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
-    match svc.delete(id).await { Ok(()) => ok(), Err(e) => err(e, "删除") }
+    match svc.delete(id).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "删除"),
+    }
 }

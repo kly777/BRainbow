@@ -1,25 +1,25 @@
 .state {
-    padding: 24px 16px;
-    text-align: center;
-    color: var(--color-text-muted);
-    font-size: 14px;
+	padding: 24px 16px;
+	text-align: center;
+	color: var(--color-text-muted);
+	font-size: 14px;
 }
 
 .errorText {
-    color: var(--color-danger);
-    margin-bottom: 10px;
+	color: var(--color-danger);
+	margin-bottom: 10px;
 }
 
 .retryBtn {
-    padding: 6px 16px;
-    background: var(--color-accent);
-    color: var(--color-white);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
+	padding: 6px 16px;
+	background: var(--color-accent);
+	color: var(--color-white);
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 13px;
 }
 
 .retryBtn:hover {
-    background: var(--color-accent-hover);
+	background: var(--color-accent-hover);
 }

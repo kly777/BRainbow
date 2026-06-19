@@ -7,11 +7,11 @@ import HomePage from "./HomePage.tsx";
  * 首页守卫：未登录 → 着陆页，已登录 → 主页仪表盘
  */
 export default function HomeGuard() {
-  const { auth } = useAuth();
+	const { auth } = useAuth();
 
-  return (
-    <Show when={auth().user} fallback={<LandingPage />}>
-      <HomePage />
-    </Show>
-  );
+	return (
+		<Show when={auth().user} fallback={<LandingPage />}>
+			<HomePage />
+		</Show>
+	);
 }

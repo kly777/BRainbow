@@ -38,7 +38,10 @@ pub async fn get_table_data(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let repo = repository::DBRepo::new(state.db);
-    match repo.get_table_data(&table_name, pagination.limit(), pagination.offset()).await {
+    match repo
+        .get_table_data(&table_name, pagination.limit(), pagination.offset())
+        .await
+    {
         Ok((header, rows)) => Json(TableData { header, rows }).into_response(),
         Err(e) => error::internal(e, "获取表数据"),
     }

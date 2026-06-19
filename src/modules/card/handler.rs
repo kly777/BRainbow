@@ -58,8 +58,9 @@ pub async fn get_cards_handler(
         .find_all_paginated(pagination.limit(), pagination.offset())
         .await
     {
-        Ok((items, total)) => Json(PaginatedResponse::new(items, total, &pagination))
-            .into_response(),
+        Ok((items, total)) => {
+            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
+        }
         Err(e) => error::internal(e, "获取卡片列表"),
     }
 }
@@ -142,11 +143,16 @@ pub async fn search_cards_handler(
     let repo = CardRepository::new(state.db.clone());
 
     match repo
-        .search_by_content_paginated(params.q.trim(), params.pagination.limit(), params.pagination.offset())
+        .search_by_content_paginated(
+            params.q.trim(),
+            params.pagination.limit(),
+            params.pagination.offset(),
+        )
         .await
     {
-        Ok((items, total)) => Json(PaginatedResponse::new(items, total, &params.pagination))
-            .into_response(),
+        Ok((items, total)) => {
+            Json(PaginatedResponse::new(items, total, &params.pagination)).into_response()
+        }
         Err(e) => error::internal(e, "搜索卡片"),
     }
 }

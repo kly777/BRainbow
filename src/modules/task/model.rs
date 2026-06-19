@@ -125,5 +125,3 @@ impl Task {
 
 // Re-export TimeWindow and TimeWindowType for TaskDetailResponse and repository
 pub use crate::modules::time_window::{TimeWindow, TimeWindowType};
-
-

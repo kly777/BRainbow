@@ -10,7 +10,11 @@ pub struct MemService {
 }
 
 impl MemService {
-    pub fn new(pool: Arc<SqlitePool>) -> Self { Self { repo: MemRepo::new(pool) } }
+    pub fn new(pool: Arc<SqlitePool>) -> Self {
+        Self {
+            repo: MemRepo::new(pool),
+        }
+    }
 
     // ── 获取学习池 ──
 
@@ -40,20 +44,31 @@ impl MemService {
         }
 
         if ids.is_empty() {
-            if let Ok(Some(id)) = self.repo.get_next_mem().await { ids.push(id); }
+            if let Ok(Some(id)) = self.repo.get_next_mem().await {
+                ids.push(id);
+            }
         }
 
         let items = self.build_items(&ids).await;
         let has_more = ids.len() >= max_learning as usize;
         let upcoming_count = if ids.is_empty() {
             self.repo.count_upcoming().await.unwrap_or(0) as usize
-        } else { 0 };
-        let all_far = !items.is_empty() && items.iter().all(|it| {
-            chrono::DateTime::parse_from_rfc3339(&it.due_at)
-                .map(|t| t > chrono::Utc::now() + chrono::Duration::hours(24))
-                .unwrap_or(false)
-        });
-        Ok(DueResponse { due_count: items.len(), has_more, items, upcoming_count, all_far })
+        } else {
+            0
+        };
+        let all_far = !items.is_empty()
+            && items.iter().all(|it| {
+                chrono::DateTime::parse_from_rfc3339(&it.due_at)
+                    .map(|t| t > chrono::Utc::now() + chrono::Duration::hours(24))
+                    .unwrap_or(false)
+            });
+        Ok(DueResponse {
+            due_count: items.len(),
+            has_more,
+            items,
+            upcoming_count,
+            all_far,
+        })
     }
 
     // ── 复习 ──
@@ -64,24 +79,60 @@ impl MemService {
 
         let new_step = if outcome.state.has_steps() {
             let old = row.step_index.map(|i| i as usize);
-            Some(match (old, rating) { (_, 1) => 0, (Some(s), _) => s + 1, (None, _) => 0 })
-        } else { None };
+            Some(match (old, rating) {
+                (_, 1) => 0,
+                (Some(s), _) => s + 1,
+                (None, _) => 0,
+            })
+        } else {
+            None
+        };
 
         let new_state = outcome.state.as_str();
 
-        let lapses = if rating == 1 { row.lapses + 1 } else if rating <= 2 { row.lapses } else { 0 };
+        let lapses = if rating == 1 {
+            row.lapses + 1
+        } else if rating <= 2 {
+            row.lapses
+        } else {
+            0
+        };
         let leeched = row.leeched || lapses >= 5;
 
-        self.repo.update_mem_fsrs(id, new_state, outcome.stability, outcome.difficulty,
-            new_step.map(|s| s as i32), lapses, leeched, &outcome.due_at).await?;
+        self.repo
+            .update_mem_fsrs(
+                id,
+                new_state,
+                outcome.stability,
+                outcome.difficulty,
+                new_step.map(|s| s as i32),
+                lapses,
+                leeched,
+                &outcome.due_at,
+            )
+            .await?;
 
-        Ok(ReviewResponse { state: new_state.to_string(), due_at: outcome.due_at })
+        Ok(ReviewResponse {
+            state: new_state.to_string(),
+            due_at: outcome.due_at,
+        })
     }
 
     fn apply_review(&self, row: &MemRow, rating: u8) -> ReviewOutcome {
         let state: CardState = row.state.parse().unwrap_or(CardState::New);
-        let step = if state == CardState::New { Some(0) } else { row.step_index.map(|i| i as usize) };
-        fsrs::schedule(row.stability, row.difficulty, state, step, rating, chrono::Utc::now())
+        let step = if state == CardState::New {
+            Some(0)
+        } else {
+            row.step_index.map(|i| i as usize)
+        };
+        fsrs::schedule(
+            row.stability,
+            row.difficulty,
+            state,
+            step,
+            rating,
+            chrono::Utc::now(),
+        )
     }
 
     // ── 其他 ──
@@ -95,8 +146,13 @@ impl MemService {
                     self.repo.get_chunk(row.target_chunk_id).await,
                 ) {
                     items.push(MemWithChunks {
-                        id: row.id, cue, target, state: row.state,
-                        stability: row.stability, difficulty: row.difficulty, due_at: row.due_at,
+                        id: row.id,
+                        cue,
+                        target,
+                        state: row.state,
+                        stability: row.stability,
+                        difficulty: row.difficulty,
+                        due_at: row.due_at,
                     });
                 }
             }
@@ -107,45 +163,92 @@ impl MemService {
     pub async fn get_all(&self, limit: i64, offset: i64) -> Result<DueResponse, sqlx::Error> {
         let ids = self.repo.get_all_mems(limit, offset).await?;
         let items = self.build_items(&ids).await;
-        Ok(DueResponse { due_count: items.len(), has_more: false, upcoming_count: 0, all_far: false, items })
+        Ok(DueResponse {
+            due_count: items.len(),
+            has_more: false,
+            upcoming_count: 0,
+            all_far: false,
+            items,
+        })
     }
 
     pub async fn preview(&self, id: i32) -> Result<[f64; 4], AppError> {
         let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
         let state: CardState = row.state.parse().unwrap_or(CardState::New);
-        Ok(fsrs::preview(row.stability, row.difficulty, state, row.step_index.map(|i| i as usize)))
+        Ok(fsrs::preview(
+            row.stability,
+            row.difficulty,
+            state,
+            row.step_index.map(|i| i as usize),
+        ))
     }
 
     pub async fn create(&self, req: CreateMemRequest) -> Result<i32, sqlx::Error> {
         let cue_id = self.repo.create_chunk(&req.cue_content).await?;
         let target_id = self.repo.create_chunk(&req.target_content).await?;
-        self.repo.create_mem(cue_id, target_id, &req.prerequisites).await
+        self.repo
+            .create_mem(cue_id, target_id, &req.prerequisites)
+            .await
     }
 
     pub async fn undo(&self, id: i32, req: UndoRequest) -> Result<(), sqlx::Error> {
-        self.repo.update_mem_fsrs(id, &req.state, req.stability, req.difficulty,
-            req.step_index, req.lapses, req.leeched, &req.due_at).await
+        self.repo
+            .update_mem_fsrs(
+                id,
+                &req.state,
+                req.stability,
+                req.difficulty,
+                req.step_index,
+                req.lapses,
+                req.leeched,
+                &req.due_at,
+            )
+            .await
     }
 
     pub async fn edit(&self, id: i32, req: EditMemRequest) -> Result<(), AppError> {
         let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
-        self.repo.update_chunk(row.cue_chunk_id, &req.cue_content).await.map_err(AppError::Db)?;
-        self.repo.update_chunk(row.target_chunk_id, &req.target_content).await.map_err(AppError::Db)?;
+        self.repo
+            .update_chunk(row.cue_chunk_id, &req.cue_content)
+            .await
+            .map_err(AppError::Db)?;
+        self.repo
+            .update_chunk(row.target_chunk_id, &req.target_content)
+            .await
+            .map_err(AppError::Db)?;
         Ok(())
     }
 
-    pub async fn bury(&self, id: i32) -> Result<(), sqlx::Error> { self.repo.bury_mem(id).await }
-    pub async fn unbury(&self, id: i32) -> Result<(), sqlx::Error> { self.repo.unbury_mem(id).await }
-    pub async fn delete(&self, id: i32) -> Result<(), sqlx::Error> { self.repo.delete_mem(id).await }
-    pub async fn reset(&self, id: i32) -> Result<(), sqlx::Error> { self.repo.reset_mem(id).await }
+    pub async fn bury(&self, id: i32) -> Result<(), sqlx::Error> {
+        self.repo.bury_mem(id).await
+    }
+    pub async fn unbury(&self, id: i32) -> Result<(), sqlx::Error> {
+        self.repo.unbury_mem(id).await
+    }
+    pub async fn delete(&self, id: i32) -> Result<(), sqlx::Error> {
+        self.repo.delete_mem(id).await
+    }
+    pub async fn reset(&self, id: i32) -> Result<(), sqlx::Error> {
+        self.repo.reset_mem(id).await
+    }
 }
 
 #[derive(Debug)]
-pub enum AppError { NotFound, Db(sqlx::Error) }
-impl From<sqlx::Error> for AppError { fn from(e: sqlx::Error) -> Self { AppError::Db(e) } }
+pub enum AppError {
+    NotFound,
+    Db(sqlx::Error),
+}
+impl From<sqlx::Error> for AppError {
+    fn from(e: sqlx::Error) -> Self {
+        AppError::Db(e)
+    }
+}
 impl std::fmt::Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self { AppError::NotFound => write!(f, "not found"), AppError::Db(e) => write!(f, "db: {e}") }
+        match self {
+            AppError::NotFound => write!(f, "not found"),
+            AppError::Db(e) => write!(f, "db: {e}"),
+        }
     }
 }
 

@@ -1,60 +1,60 @@
 .cardsGrid {
-    padding-top: 10px;
-    column-count: auto;
-    column-width: 300px;
-    column-gap: 20px;
-    width: 100%;
+	padding-top: 10px;
+	column-count: auto;
+	column-width: 300px;
+	column-gap: 20px;
+	width: 100%;
 }
 
 .cardsGrid > * {
-    break-inside: avoid;
-    margin-bottom: 20px;
+	break-inside: avoid;
+	margin-bottom: 20px;
 }
 
 .emptyState {
-    text-align: center;
-    padding: 60px 20px;
-    background: var(--color-surface);
-    border-radius: 8px;
-    border: 2px dashed var(--color-border);
-    margin: 20px 0;
+	text-align: center;
+	padding: 60px 20px;
+	background: var(--color-surface);
+	border-radius: 8px;
+	border: 2px dashed var(--color-border);
+	margin: 20px 0;
 }
 
 .emptyState p {
-    font-size: 1rem;
-    color: var(--color-text-secondary);
-    margin-bottom: 20px;
+	font-size: 1rem;
+	color: var(--color-text-secondary);
+	margin-bottom: 20px;
 }
 
 @media (max-width: 1024px) {
-    .cardsGrid {
-        column-width: 260px;
-        column-gap: 16px;
-    }
-    .cardsGrid > * {
-        margin-bottom: 16px;
-    }
+	.cardsGrid {
+		column-width: 260px;
+		column-gap: 16px;
+	}
+	.cardsGrid > * {
+		margin-bottom: 16px;
+	}
 }
 
 @media (max-width: 768px) {
-    .cardsGrid {
-        column-width: 240px;
-        column-gap: 14px;
-    }
-    .cardsGrid > * {
-        margin-bottom: 14px;
-    }
-    .emptyState {
-        padding: 40px 16px;
-    }
+	.cardsGrid {
+		column-width: 240px;
+		column-gap: 14px;
+	}
+	.cardsGrid > * {
+		margin-bottom: 14px;
+	}
+	.emptyState {
+		padding: 40px 16px;
+	}
 }
 
 @media (max-width: 480px) {
-    .cardsGrid {
-        column-width: 100%;
-        column-gap: 12px;
-    }
-    .cardsGrid > * {
-        margin-bottom: 12px;
-    }
+	.cardsGrid {
+		column-width: 100%;
+		column-gap: 12px;
+	}
+	.cardsGrid > * {
+		margin-bottom: 12px;
+	}
 }

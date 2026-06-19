@@ -73,5 +73,3 @@ pub struct TaskDetailResponse {
     /// 实际执行时间段
     pub actual_slots: Vec<TimeWindow>,
 }
-
-

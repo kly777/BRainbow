@@ -171,5 +171,4 @@ impl CardRepository {
 
         Ok((items, total))
     }
-
 }

@@ -1,148 +1,148 @@
 /* 日历视图样式 */
 .calendarView {
-    background: var(--color-surface);
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 1px 3px oklch(0 0 0 / 0.1);
+	background: var(--color-surface);
+	border-radius: 12px;
+	padding: 20px;
+	box-shadow: 0 1px 3px oklch(0 0 0 / 0.1);
 }
 
 .calendarHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20px;
 }
 
 .calendarTitle {
-    margin: 0;
-    font-size: 20px;
-    color: var(--color-text);
+	margin: 0;
+	font-size: 20px;
+	color: var(--color-text);
 }
 
 .navButton {
-    padding: 8px 16px;
-    background: var(--color-surface-raised);
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s;
+	padding: 8px 16px;
+	background: var(--color-surface-raised);
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 14px;
+	transition: all 0.2s;
 }
 
 .navButton:hover {
-    background: var(--color-border-light);
+	background: var(--color-border-light);
 }
 
 .calendarGrid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 1px;
-    background: var(--color-border-light);
-    border: 1px solid var(--color-border-light);
-    border-radius: 8px;
-    overflow: hidden;
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 1px;
+	background: var(--color-border-light);
+	border: 1px solid var(--color-border-light);
+	border-radius: 8px;
+	overflow: hidden;
 }
 
 .dayHeader {
-    background: var(--color-bg);
-    padding: 12px;
-    text-align: center;
-    font-weight: 600;
-    color: var(--color-text);
-    font-size: 14px;
+	background: var(--color-bg);
+	padding: 12px;
+	text-align: center;
+	font-weight: 600;
+	color: var(--color-text);
+	font-size: 14px;
 }
 
 .calendarDay {
-    background: var(--color-surface);
-    min-height: 100px;
-    padding: 8px;
-    border-right: 1px solid var(--color-border-light);
-    border-bottom: 1px solid var(--color-border-light);
+	background: var(--color-surface);
+	min-height: 100px;
+	padding: 8px;
+	border-right: 1px solid var(--color-border-light);
+	border-bottom: 1px solid var(--color-border-light);
 }
 
 .calendarDay.empty {
-    background: var(--color-bg);
+	background: var(--color-bg);
 }
 
 .dayNumber {
-    font-weight: 600;
-    color: var(--color-text);
-    margin-bottom: 8px;
-    font-size: 14px;
+	font-weight: 600;
+	color: var(--color-text);
+	margin-bottom: 8px;
+	font-size: 14px;
 }
 
 /* 今天高亮 */
 .calendarDay.today {
-    background: var(--color-accent-subtle);
-    box-shadow: inset 0 0 0 2px var(--color-accent);
-    border-radius: 4px;
+	background: var(--color-accent-subtle);
+	box-shadow: inset 0 0 0 2px var(--color-accent);
+	border-radius: 4px;
 }
 
 .calendarDay.today .dayNumber {
-    color: var(--color-accent);
+	color: var(--color-accent);
 }
 
 .dayTasks {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
 }
 
 .dayTask {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: flex;
-    align-items: center;
-    gap: 4px;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 11px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .eventTime {
-    font-size: 10px;
-    opacity: 0.8;
-    flex-shrink: 0;
+	font-size: 10px;
+	opacity: 0.8;
+	flex-shrink: 0;
 }
 
 /* 窗口类型颜色 */
 .typeFeasible {
-    background: var(--color-border-light);
-    border-left: 3px solid var(--color-text-muted);
+	background: var(--color-border-light);
+	border-left: 3px solid var(--color-text-muted);
 }
 
 .typePlanned {
-    background: var(--color-accent-subtle);
-    border-left: 3px solid var(--color-accent);
+	background: var(--color-accent-subtle);
+	border-left: 3px solid var(--color-accent);
 }
 
 .typeActual {
-    background: var(--color-success-subtle);
-    border-left: 3px solid var(--color-success);
+	background: var(--color-success-subtle);
+	border-left: 3px solid var(--color-success);
 }
 
 /* 旧状态颜色 - 保留兼容 */
 .status-pending {
-    background: var(--color-warning);
+	background: var(--color-warning);
 }
 
 .status-in-progress {
-    background: var(--color-accent);
+	background: var(--color-accent);
 }
 
 .status-completed {
-    background: var(--color-success);
+	background: var(--color-success);
 }
 
 .status-cancelled {
-    background: var(--color-danger);
+	background: var(--color-danger);
 }
 
 .status-blocked {
-    background: var(--color-text-secondary);
+	background: var(--color-text-secondary);
 }
 
 .status-default {
-    background: var(--color-text-muted);
+	background: var(--color-text-muted);
 }

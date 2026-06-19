@@ -26,20 +26,34 @@ pub struct MemRepo {
 }
 
 impl MemRepo {
-    pub fn new(pool: Arc<SqlitePool>) -> Self { Self { pool } }
+    pub fn new(pool: Arc<SqlitePool>) -> Self {
+        Self { pool }
+    }
 
     // ── Chunk ──
 
     pub async fn create_chunk(&self, content: &str) -> Result<i32, sqlx::Error> {
         sqlx::query_scalar::<_, i32>("INSERT INTO chunk (content) VALUES (?) RETURNING id")
-            .bind(content).fetch_one(&*self.pool).await
+            .bind(content)
+            .fetch_one(&*self.pool)
+            .await
     }
 
     pub async fn get_chunk(&self, id: i32) -> Result<Option<Chunk>, sqlx::Error> {
         sqlx::query_as::<_, (i32, String, String, String)>(
             "SELECT id, content, created_at, updated_at FROM chunk WHERE id = ?",
-        ).bind(id).fetch_optional(&*self.pool).await
-            .map(|r| r.map(|(id, content, ca, ua)| Chunk { id, content, created_at: ca, updated_at: ua }))
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await
+        .map(|r| {
+            r.map(|(id, content, ca, ua)| Chunk {
+                id,
+                content,
+                created_at: ca,
+                updated_at: ua,
+            })
+        })
     }
 
     pub async fn update_chunk(&self, id: i32, content: &str) -> Result<(), sqlx::Error> {
@@ -50,13 +64,27 @@ impl MemRepo {
 
     // ── Mem CRUD ──
 
-    pub async fn create_mem(&self, cue_id: i32, target_id: i32, prerequisites: &[i32]) -> Result<i32, sqlx::Error> {
+    pub async fn create_mem(
+        &self,
+        cue_id: i32,
+        target_id: i32,
+        prerequisites: &[i32],
+    ) -> Result<i32, sqlx::Error> {
         let mem_id = sqlx::query_scalar::<_, i32>(
             "INSERT INTO mem (cue_chunk_id, target_chunk_id) VALUES (?, ?) RETURNING id",
-        ).bind(cue_id).bind(target_id).fetch_one(&*self.pool).await?;
+        )
+        .bind(cue_id)
+        .bind(target_id)
+        .fetch_one(&*self.pool)
+        .await?;
         for &req_id in prerequisites {
-            sqlx::query("INSERT OR IGNORE INTO mem_prerequisite (mem_id, requires_mem_id) VALUES (?, ?)")
-                .bind(mem_id).bind(req_id).execute(&*self.pool).await?;
+            sqlx::query(
+                "INSERT OR IGNORE INTO mem_prerequisite (mem_id, requires_mem_id) VALUES (?, ?)",
+            )
+            .bind(mem_id)
+            .bind(req_id)
+            .execute(&*self.pool)
+            .await?;
         }
         Ok(mem_id)
     }
@@ -69,14 +97,23 @@ impl MemRepo {
 
     pub async fn get_all_mems(&self, limit: i64, offset: i64) -> Result<Vec<i32>, sqlx::Error> {
         sqlx::query_scalar::<_, i32>("SELECT id FROM mem ORDER BY due_at LIMIT ? OFFSET ?")
-            .bind(limit).bind(offset).fetch_all(&*self.pool).await
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&*self.pool)
+            .await
     }
 
     pub async fn delete_mem(&self, id: i32) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("DELETE FROM mem_prerequisite WHERE mem_id = ? OR requires_mem_id = ?")
-            .bind(id).bind(id).execute(&mut *tx).await?;
-        sqlx::query("DELETE FROM mem WHERE id = ?").bind(id).execute(&mut *tx).await?;
+            .bind(id)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query("DELETE FROM mem WHERE id = ?")
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
         tx.commit().await?;
         Ok(())
     }
@@ -123,8 +160,10 @@ impl MemRepo {
 
     pub async fn count_upcoming(&self) -> Result<i64, sqlx::Error> {
         sqlx::query_scalar::<_, i64>(
-            r#"SELECT COUNT(*) FROM mem WHERE state = 'review' AND buried = 0"#
-        ).fetch_one(&*self.pool).await
+            r#"SELECT COUNT(*) FROM mem WHERE state = 'review' AND buried = 0"#,
+        )
+        .fetch_one(&*self.pool)
+        .await
     }
 
     pub async fn get_next_mem(&self) -> Result<Option<i32>, sqlx::Error> {
@@ -139,15 +178,27 @@ impl MemRepo {
 
     // ── 更新 ──
 
-    pub async fn set_state(&self, id: i32, state: &str, step_index: Option<i32>) -> Result<(), sqlx::Error> {
+    pub async fn set_state(
+        &self,
+        id: i32,
+        state: &str,
+        step_index: Option<i32>,
+    ) -> Result<(), sqlx::Error> {
         sqlx::query("UPDATE mem SET state=?, step_index=?, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?")
             .bind(state).bind(step_index).bind(id).execute(&*self.pool).await?;
         Ok(())
     }
 
     pub async fn update_mem_fsrs(
-        &self, id: i32, state: &str, stability: f64, difficulty: f64,
-        step_index: Option<i32>, lapses: i32, leeched: bool, due_at: &str,
+        &self,
+        id: i32,
+        state: &str,
+        stability: f64,
+        difficulty: f64,
+        step_index: Option<i32>,
+        lapses: i32,
+        leeched: bool,
+        due_at: &str,
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             "UPDATE mem SET state=?, stability=?, difficulty=?, step_index=?, lapses=?, leeched=?, due_at=?, last_review_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?",
@@ -157,12 +208,18 @@ impl MemRepo {
     }
 
     pub async fn bury_mem(&self, id: i32) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE mem SET buried = 1 WHERE id = ?").bind(id).execute(&*self.pool).await?;
+        sqlx::query("UPDATE mem SET buried = 1 WHERE id = ?")
+            .bind(id)
+            .execute(&*self.pool)
+            .await?;
         Ok(())
     }
 
     pub async fn unbury_mem(&self, id: i32) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE mem SET buried = 0 WHERE id = ?").bind(id).execute(&*self.pool).await?;
+        sqlx::query("UPDATE mem SET buried = 0 WHERE id = ?")
+            .bind(id)
+            .execute(&*self.pool)
+            .await?;
         Ok(())
     }
 
@@ -172,5 +229,4 @@ impl MemRepo {
         ).bind(id).execute(&*self.pool).await?;
         Ok(())
     }
-
 }

@@ -8,20 +8,20 @@ import { generateIcon } from "./lib/icon.ts";
 import "@/global.css";
 
 function App() {
-    onMount(() => generateIcon());
-    return (
-        <AuthProvider>
-            <Router root={Layout}>{toRouteDefs(ROUTES)}</Router>
-        </AuthProvider>
-    );
+	onMount(() => generateIcon());
+	return (
+		<AuthProvider>
+			<Router root={Layout}>{toRouteDefs(ROUTES)}</Router>
+		</AuthProvider>
+	);
 }
 
 const root = document.getElementById("app");
 if (!root) {
-    const el = document.createElement("div");
-    el.id = "app";
-    document.body.appendChild(el);
-    render(() => <App />, el);
+	const el = document.createElement("div");
+	el.id = "app";
+	document.body.appendChild(el);
+	render(() => <App />, el);
 } else {
-    render(() => <App />, root);
+	render(() => <App />, root);
 }

@@ -123,7 +123,6 @@ impl TimeWindowService {
             .await
             .map_err(ServiceError::Db)
     }
-
 }
 
 #[derive(Debug)]
@@ -152,8 +151,12 @@ impl std::fmt::Display for ServiceError {
 impl ServiceError {
     pub fn into_response(self) -> axum::response::Response {
         match self {
-            Self::InvalidTimeRange(msg) => crate::error::bad_request_with_code("INVALID_TIME_RANGE", msg),
-            Self::PlannedOutsideAvailable(msg) => crate::error::bad_request_with_code("PLANNED_OUTSIDE_AVAILABLE", msg),
+            Self::InvalidTimeRange(msg) => {
+                crate::error::bad_request_with_code("INVALID_TIME_RANGE", msg)
+            }
+            Self::PlannedOutsideAvailable(msg) => {
+                crate::error::bad_request_with_code("PLANNED_OUTSIDE_AVAILABLE", msg)
+            }
             Self::SlotOverlap(msg) => crate::error::bad_request_with_code("SLOT_OVERLAP", msg),
             Self::NotFound => crate::error::not_found("时间窗口未找到"),
             Self::Internal(msg) => crate::error::internal_error(msg),

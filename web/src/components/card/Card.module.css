@@ -1,222 +1,222 @@
 .card {
-    background: var(--color-surface);
-    border-radius: 8px;
-    box-shadow: 0 1px 4px oklch(0 0 0 / 0.06);
-    padding: 16px;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    border: 1px solid var(--color-border);
-    display: flex;
-    flex-direction: column;
-    /*height: 100%;*/
-    /*min-height: 280px;*/
-    text-align: left;
-    width: 100%;
+	background: var(--color-surface);
+	border-radius: 8px;
+	box-shadow: 0 1px 4px oklch(0 0 0 / 0.06);
+	padding: 16px;
+	transition: all 0.2s ease;
+	cursor: pointer;
+	border: 1px solid var(--color-border);
+	display: flex;
+	flex-direction: column;
+	/*height: 100%;*/
+	/*min-height: 280px;*/
+	text-align: left;
+	width: 100%;
 }
 
 .card.deleting {
-    opacity: 0.5;
-    pointer-events: none;
-    transform: scale(0.98);
-    transition: all 0.3s ease;
+	opacity: 0.5;
+	pointer-events: none;
+	transform: scale(0.98);
+	transition: all 0.3s ease;
 }
 
 .card:hover {
-    box-shadow: 0 4px 16px oklch(0 0 0 / 0.15);
-    transform: translateY(-2px);
-    border-color: var(--color-border);
+	box-shadow: 0 4px 16px oklch(0 0 0 / 0.15);
+	transform: translateY(-2px);
+	border-color: var(--color-border);
 }
 
 .card:focus {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
 }
 
 .card:active {
-    transform: translateY(0);
+	transform: translateY(0);
 }
 
 .cardHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 12px;
-    gap: 8px;
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	margin-bottom: 12px;
+	gap: 8px;
 }
 
 .cardTitle {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--color-text);
-    margin: 0;
-    flex: 1;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
+	font-size: 1.125rem;
+	font-weight: 600;
+	color: var(--color-text);
+	margin: 0;
+	flex: 1;
+	line-height: 1.4;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .cardCategory {
-    background: var(--color-accent-subtle);
-    color: var(--color-accent);
-    font-size: 0.75rem;
-    font-weight: 500;
-    padding: 4px 8px;
-    border-radius: 4px;
-    white-space: nowrap;
-    flex-shrink: 0;
+	background: var(--color-accent-subtle);
+	color: var(--color-accent);
+	font-size: 0.75rem;
+	font-weight: 500;
+	padding: 4px 8px;
+	border-radius: 4px;
+	white-space: nowrap;
+	flex-shrink: 0;
 }
 
 .cardContent {
-    flex: 1;
-    margin-bottom: 12px;
-    overflow: hidden;
+	flex: 1;
+	margin-bottom: 12px;
+	overflow: hidden;
 }
 
 .cardPreview {
-    font-size: 0.875rem;
-    line-height: 1.5;
-    color: var(--color-text-secondary);
-    margin: 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    line-clamp: 4;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: pre-line;
+	font-size: 0.875rem;
+	line-height: 1.5;
+	color: var(--color-text-secondary);
+	margin: 0;
+	display: -webkit-box;
+	-webkit-line-clamp: 4;
+	line-clamp: 4;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: pre-line;
 }
 
 .cardTags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-bottom: 12px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-bottom: 12px;
 }
 
 .tag {
-    background: var(--color-surface-raised);
-    color: var(--color-text-secondary);
-    font-size: 0.75rem;
-    padding: 2px 8px;
-    border-radius: 12px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
+	background: var(--color-surface-raised);
+	color: var(--color-text-secondary);
+	font-size: 0.75rem;
+	padding: 2px 8px;
+	border-radius: 12px;
+	border: none;
+	cursor: pointer;
+	transition: all 0.2s ease;
 }
 
 .tag:hover {
-    background: var(--color-border);
-    color: var(--color-text);
+	background: var(--color-border);
+	color: var(--color-text);
 }
 
 .tag:focus {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 1px;
+	outline: 2px solid var(--color-accent);
+	outline-offset: 1px;
 }
 
 .cardMeta {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 12px;
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-bottom: 12px;
+	font-size: 0.75rem;
+	color: var(--color-text-muted);
 }
 
 .metaItem {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+	display: flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .metaLabel {
-    font-weight: 500;
-    min-width: 32px;
+	font-weight: 500;
+	min-width: 32px;
 }
 
 .metaValue {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .cardActions {
-    display: flex;
-    gap: 8px;
-    margin-top: auto;
+	display: flex;
+	gap: 8px;
+	margin-top: auto;
 }
 
 .actionButton {
-    flex: 1;
-    padding: 6px 12px;
-    font-size: 0.875rem;
-    border-radius: 4px;
-    border: 1px solid var(--color-border);
-    background: var(--color-bg);
-    color: var(--color-text);
-    cursor: pointer;
-    transition: all 0.2s ease;
+	flex: 1;
+	padding: 6px 12px;
+	font-size: 0.875rem;
+	border-radius: 4px;
+	border: 1px solid var(--color-border);
+	background: var(--color-bg);
+	color: var(--color-text);
+	cursor: pointer;
+	transition: all 0.2s ease;
 }
 
 .actionButton:hover {
-    background: var(--color-surface-raised);
-    border-color: var(--color-border);
+	background: var(--color-surface-raised);
+	border-color: var(--color-border);
 }
 
 .actionButton:focus {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 1px;
+	outline: 2px solid var(--color-accent);
+	outline-offset: 1px;
 }
 
 .deleteButton {
-    color: var(--color-danger);
-    border-color: var(--color-danger);
+	color: var(--color-danger);
+	border-color: var(--color-danger);
 }
 
 .deleteButton:hover {
-    background: var(--color-danger);
-    color: var(--color-bg);
+	background: var(--color-danger);
+	color: var(--color-bg);
 }
 
 .deleteButton:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    background: var(--color-danger-subtle);
-    color: var(--color-danger);
-    border-color: var(var(--color-danger));
+	opacity: 0.5;
+	cursor: not-allowed;
+	background: var(--color-danger-subtle);
+	color: var(--color-danger);
+	border-color: var(var(--color-danger));
 }
 
 .deleteButton:disabled:hover {
-    background: var(--color-danger-subtle);
-    color: var(--color-danger);
+	background: var(--color-danger-subtle);
+	color: var(--color-danger);
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-    .card {
-        /*min-height: 240px;*/
-        padding: 12px;
-    }
+	.card {
+		/*min-height: 240px;*/
+		padding: 12px;
+	}
 
-    .cardTitle {
-        font-size: 1rem;
-    }
+	.cardTitle {
+		font-size: 1rem;
+	}
 
-    .cardPreview {
-        line-clamp: 3;
-    }
+	.cardPreview {
+		line-clamp: 3;
+	}
 
-    .cardActions {
-        /*flex-direction: column;*/
-        gap: 6px;
-    }
+	.cardActions {
+		/*flex-direction: column;*/
+		gap: 6px;
+	}
 
-    .actionButton {
-        padding: 8px;
-    }
+	.actionButton {
+		padding: 8px;
+	}
 }

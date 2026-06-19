@@ -1,166 +1,165 @@
 .container {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
 }
 
 .toolbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 16px;
-    background: var(--color-surface-raised);
-    border-bottom: 1px solid var(--color-border);
-    flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 16px;
+	background: var(--color-surface-raised);
+	border-bottom: 1px solid var(--color-border);
+	flex-shrink: 0;
 }
 
 .toolbarTitle {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--color-text-secondary);
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--color-text-secondary);
 }
 
 .toolbarActions {
-    margin-left: auto;
-    display: flex;
-    gap: 8px;
+	margin-left: auto;
+	display: flex;
+	gap: 8px;
 }
 
 .backBtn {
-    padding: 5px 10px;
-    font-size: 13px;
-    background: var(--color-bg);
-    color: var(--color-text-secondary);
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-    cursor: pointer;
+	padding: 5px 10px;
+	font-size: 13px;
+	background: var(--color-bg);
+	color: var(--color-text-secondary);
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	cursor: pointer;
 }
 .backBtn:hover {
-    background: var(--color-surface-raised);
+	background: var(--color-surface-raised);
 }
 
 .saveBtn {
-    padding: 5px 14px;
-    font-size: 13px;
-    background: var(--color-accent);
-    color: var(--color-bg);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
+	padding: 5px 14px;
+	font-size: 13px;
+	background: var(--color-accent);
+	color: var(--color-bg);
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 500;
 }
 .saveBtn:hover {
-    background: var(--color-accent-hover);
+	background: var(--color-accent-hover);
 }
 .saveBtn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
 .deleteBtn {
-    padding: 5px 12px;
-    font-size: 13px;
-    background: var(--color-bg);
-    color: var(--color-danger);
-    border: 1px solid var(var(--color-danger));
-    border-radius: 6px;
-    cursor: pointer;
+	padding: 5px 12px;
+	font-size: 13px;
+	background: var(--color-bg);
+	color: var(--color-danger);
+	border: 1px solid var(var(--color-danger));
+	border-radius: 6px;
+	cursor: pointer;
 }
 .deleteBtn:hover {
-    background: var(--color-danger-subtle);
+	background: var(--color-danger-subtle);
 }
 
 .uploadBtn {
-    padding: 5px 12px;
-    font-size: 13px;
-    background: var(--color-bg);
-    color: var(--color-text-secondary);
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-    cursor: pointer;
+	padding: 5px 12px;
+	font-size: 13px;
+	background: var(--color-bg);
+	color: var(--color-text-secondary);
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	cursor: pointer;
 }
 .uploadBtn:hover {
-    background: var(--color-surface-raised);
-    color: var(--color-text);
+	background: var(--color-surface-raised);
+	color: var(--color-text);
 }
 .uploadBtn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
 .hiddenInput {
-    display: none;
+	display: none;
 }
 
 .errorMsg {
-    padding: 8px 16px;
-    background: var(--color-danger-subtle);
-    color: var(var(--color-danger));
-    font-size: 13px;
-    border-bottom: 1px solid var(var(--color-danger));
+	padding: 8px 16px;
+	background: var(--color-danger-subtle);
+	color: var(var(--color-danger));
+	font-size: 13px;
+	border-bottom: 1px solid var(var(--color-danger));
 }
 
 .editor {
-    flex: 1;
-    display: flex;
-    min-height: 0;
+	flex: 1;
+	display: flex;
+	min-height: 0;
 }
 
 .textarea {
-    flex: 1;
-    padding: 16px;
-    border: none;
-    border-right: 1px solid var(--color-border);
-    resize: none;
-    font-size: 15px;
-    font-family:
-        "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-    line-height: 1.6;
-    outline: none;
-    background: var(--color-surface-raised);
+	flex: 1;
+	padding: 16px;
+	border: none;
+	border-right: 1px solid var(--color-border);
+	resize: none;
+	font-size: 15px;
+	font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+	line-height: 1.6;
+	outline: none;
+	background: var(--color-surface-raised);
 }
 
 .preview {
-    flex: 1;
-    padding: 16px 24px;
-    overflow-y: auto;
+	flex: 1;
+	padding: 16px 24px;
+	overflow-y: auto;
 }
 
 .emptyPreview {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: var(--color-text-muted);
-    font-size: 14px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	color: var(--color-text-muted);
+	font-size: 14px;
 }
 
 .loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 40px;
-    color: var(--color-text-muted);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 40px;
+	color: var(--color-text-muted);
 }
 
 .retryBtn {
-    padding: 4px 10px;
-    font-size: 13px;
-    background: var(--color-accent);
-    color: var(--color-bg);
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
+	padding: 4px 10px;
+	font-size: 13px;
+	background: var(--color-accent);
+	color: var(--color-bg);
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
 }
 
 @media (max-width: 768px) {
-    .editor {
-        flex-direction: column;
-    }
-    .textarea {
-        border-right: none;
-        border-bottom: 1px solid var(--color-border);
-        min-height: 200px;
-    }
+	.editor {
+		flex-direction: column;
+	}
+	.textarea {
+		border-right: none;
+		border-bottom: 1px solid var(--color-border);
+		min-height: 200px;
+	}
 }

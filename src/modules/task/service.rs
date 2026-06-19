@@ -390,10 +390,18 @@ impl ServiceError {
         match self {
             Self::InvalidInput(msg) => crate::error::bad_request_with_code("INVALID_INPUT", msg),
             Self::NotFound => crate::error::not_found("任务不存在"),
-            Self::CircularParent => crate::error::bad_request_with_code("CIRCULAR_PARENT", "检测到父子循环引用"),
-            Self::SelfParent => crate::error::bad_request_with_code("SELF_PARENT", "不能设置自己为父任务"),
-            Self::SelfDependency => crate::error::bad_request_with_code("SELF_DEPENDENCY", "不能依赖自己"),
-            Self::PlannedOutsideAvailable(msg) => crate::error::bad_request_with_code("PLANNED_OUTSIDE_AVAILABLE", msg),
+            Self::CircularParent => {
+                crate::error::bad_request_with_code("CIRCULAR_PARENT", "检测到父子循环引用")
+            }
+            Self::SelfParent => {
+                crate::error::bad_request_with_code("SELF_PARENT", "不能设置自己为父任务")
+            }
+            Self::SelfDependency => {
+                crate::error::bad_request_with_code("SELF_DEPENDENCY", "不能依赖自己")
+            }
+            Self::PlannedOutsideAvailable(msg) => {
+                crate::error::bad_request_with_code("PLANNED_OUTSIDE_AVAILABLE", msg)
+            }
             Self::SlotOverlap(msg) => crate::error::bad_request_with_code("SLOT_OVERLAP", msg),
             Self::Db(e) => crate::error::internal(e, "数据库操作"),
         }

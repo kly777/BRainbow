@@ -4,8 +4,11 @@ pub mod model;
 mod repository;
 pub mod service;
 
-use axum::{Router, routing::{get, post, delete}};
 use crate::state::AppState;
+use axum::{
+    Router,
+    routing::{delete, get, post},
+};
 
 pub fn routes() -> Router<AppState> {
     Router::new()

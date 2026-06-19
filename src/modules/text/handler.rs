@@ -1,4 +1,4 @@
-use axum::{extract::State, response::IntoResponse, Json};
+use axum::{Json, extract::State, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 
 use crate::error;
@@ -47,11 +47,7 @@ pub async fn save_text(
     Json(body): Json<SaveRequest>,
 ) -> impl IntoResponse {
     let repo = repository::TextRepo::new(state.db);
-    let tabs: Vec<(String, String)> = body
-        .tabs
-        .into_iter()
-        .map(|t| (t.name, t.content))
-        .collect();
+    let tabs: Vec<(String, String)> = body.tabs.into_iter().map(|t| (t.name, t.content)).collect();
     match repo.save_tabs(&tabs).await {
         Ok(()) => Json(serde_json::json!({"ok": true})).into_response(),
         Err(e) => error::internal(e, "保存笔记"),

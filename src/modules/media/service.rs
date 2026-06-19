@@ -42,8 +42,17 @@ fn generate_stored_id() -> String {
 }
 
 fn sanitize_name(name: &str) -> String {
-    let safe: String = name.chars().take(255).collect::<String>().trim().to_string();
-    if safe.is_empty() { "unnamed".into() } else { safe }
+    let safe: String = name
+        .chars()
+        .take(255)
+        .collect::<String>()
+        .trim()
+        .to_string();
+    if safe.is_empty() {
+        "unnamed".into()
+    } else {
+        safe
+    }
 }
 
 /// 获取扩展名对应的目录名
@@ -67,7 +76,9 @@ impl MediaService {
         }
         // 清理孤儿临时文件
         Self::cleanup_temp_files();
-        Self { repo: MediaRepository::new(db) }
+        Self {
+            repo: MediaRepository::new(db),
+        }
     }
 
     fn cleanup_temp_files() {
@@ -99,8 +110,7 @@ impl MediaService {
         user_id: Option<i64>,
     ) -> Result<Media, String> {
         // 1. MIME 真实校验
-        let real_mime = Self::detect_mime(data)
-            .ok_or_else(|| "无法识别文件类型".to_string())?;
+        let real_mime = Self::detect_mime(data).ok_or_else(|| "无法识别文件类型".to_string())?;
 
         if real_mime != client_mime {
             return Err(format!(
@@ -109,8 +119,8 @@ impl MediaService {
             ));
         }
 
-        let (media_type_str, max_size) = find_allowed(&real_mime)
-            .ok_or_else(|| format!("不支持的文件类型: {}", real_mime))?;
+        let (media_type_str, max_size) =
+            find_allowed(&real_mime).ok_or_else(|| format!("不支持的文件类型: {}", real_mime))?;
 
         // 2. 大小校验
         if data.len() as u64 > max_size {
@@ -133,17 +143,21 @@ impl MediaService {
             .map_err(|e| format!("写入文件失败: {}", e))?;
 
         // 4. 插库
-        let media = match self.repo.insert(
-            &stored_id,
-            &safe_name,
-            media_type_str,
-            &real_mime,
-            data.len() as i64,
-            None,
-            None,
-            None,
-            user_id,
-        ).await {
+        let media = match self
+            .repo
+            .insert(
+                &stored_id,
+                &safe_name,
+                media_type_str,
+                &real_mime,
+                data.len() as i64,
+                None,
+                None,
+                None,
+                user_id,
+            )
+            .await
+        {
             Ok(m) => m,
             Err(e) => {
                 let _ = tokio::fs::remove_file(&tmp_path).await;
@@ -159,7 +173,10 @@ impl MediaService {
         // 6. 元数据解析（非阻塞）
         let (width, height, duration_ms) = Self::extract_metadata(media_type_str, &real_mime, data);
         if width.is_some() || height.is_some() || duration_ms.is_some() {
-            let _ = self.repo.update_metadata(media.id, width, height, duration_ms).await;
+            let _ = self
+                .repo
+                .update_metadata(media.id, width, height, duration_ms)
+                .await;
         }
 
         Ok(Media {
@@ -170,11 +187,19 @@ impl MediaService {
         })
     }
 
-    fn extract_metadata(media_type: &str, mime: &str, data: &[u8]) -> (Option<i64>, Option<i64>, Option<i64>) {
+    fn extract_metadata(
+        media_type: &str,
+        mime: &str,
+        data: &[u8],
+    ) -> (Option<i64>, Option<i64>, Option<i64>) {
         if media_type != "image" {
             return (None, None, None);
         }
-        match image::ImageReader::new(std::io::Cursor::new(data)).with_guessed_format().ok().and_then(|r| r.into_dimensions().ok()) {
+        match image::ImageReader::new(std::io::Cursor::new(data))
+            .with_guessed_format()
+            .ok()
+            .and_then(|r| r.into_dimensions().ok())
+        {
             Some((w, h)) => (Some(w as i64), Some(h as i64), None),
             None => {
                 warn!("图片尺寸解析失败 mime={}", mime);
@@ -183,23 +208,47 @@ impl MediaService {
         }
     }
 
-    pub async fn list(&self, pagination: &Pagination, media_type: Option<&str>) -> Result<PaginatedResponse<Media>, String> {
-        let total = self.repo.count(media_type).await.map_err(|e| e.to_string())?;
-        let items = self.repo.find_all(pagination.limit(), pagination.offset(), media_type).await.map_err(|e| e.to_string())?;
+    pub async fn list(
+        &self,
+        pagination: &Pagination,
+        media_type: Option<&str>,
+    ) -> Result<PaginatedResponse<Media>, String> {
+        let total = self
+            .repo
+            .count(media_type)
+            .await
+            .map_err(|e| e.to_string())?;
+        let items = self
+            .repo
+            .find_all(pagination.limit(), pagination.offset(), media_type)
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(PaginatedResponse::new(items, total, pagination))
     }
 
     pub async fn get_by_stored_id(&self, stored_id: &str) -> Result<Option<Media>, String> {
-        self.repo.find_by_stored_id(stored_id).await.map_err(|e| e.to_string())
+        self.repo
+            .find_by_stored_id(stored_id)
+            .await
+            .map_err(|e| e.to_string())
     }
 
     pub async fn rename(&self, stored_id: &str, new_name: &str) -> Result<Media, String> {
         let safe = sanitize_name(new_name);
-        self.repo.update_name(stored_id, &safe).await.map_err(|e| e.to_string())?.ok_or_else(|| "媒体不存在".to_string())
+        self.repo
+            .update_name(stored_id, &safe)
+            .await
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| "媒体不存在".to_string())
     }
 
     pub async fn delete(&self, stored_id: &str) -> Result<(), String> {
-        let media = self.repo.delete(stored_id).await.map_err(|e| e.to_string())?.ok_or_else(|| "媒体不存在".to_string())?;
+        let media = self
+            .repo
+            .delete(stored_id)
+            .await
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| "媒体不存在".to_string())?;
         let dir = dir_for_type(media.media_type.as_str());
         let path = format!("{}/{}/{}", UPLOAD_DIR, dir, stored_id);
         if let Err(e) = std::fs::remove_file(&path) {

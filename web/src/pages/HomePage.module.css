@@ -1,11 +1,46 @@
 /* 主页样式 */
 .homePage {
     margin: 0 auto;
-    padding: 16px;
+    padding: 24px 20px;
     display: flex;
     flex-direction: column;
     flex: 1;
     min-height: 0;
+    max-width: 1200px;
+}
+
+/* ── 模块导航栏 ── */
+.moduleNav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.moduleCard {
+    padding: 6px 16px;
+    border-radius: 8px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-light);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    transition: background 0.15s, color 0.15s;
+}
+
+.moduleCard:hover {
+    background: var(--color-accent-subtle);
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    text-decoration: none;
+}
+
+.moduleIcon,
+.moduleLabel,
+.moduleDesc {
+    display: none;
 }
 
 /* 主要内容区域 */
@@ -23,14 +58,13 @@
     }
 }
 
-/* 区域通用样式 */
-.todoSection,
-.cardsSection {
-    background: var(--bg-card);
+/* 仪表盘卡片通用 */
+.dashboardSection {
+    background: var(--color-surface);
     border-radius: 12px;
     padding: 20px;
-    box-shadow: 0 1px 8px var(--shadow);
-    border: 1px solid var(--border);
+    box-shadow: 0 1px 8px oklch(0 0 0 / 0.05);
+    border: 1px solid var(--color-border-light);
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -49,7 +83,7 @@
 }
 
 .sectionTitle {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 600;
     color: var(--color-text);
     margin: 0;
@@ -90,77 +124,6 @@
     background-color: var(--color-accent-hover);
 }
 
-/* 添加任务表单 */
-.addTodoForm {
-    background: var(--bg-input);
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 16px;
-    border: 1px solid var(--border);
-    flex-shrink: 0;
-}
-
-.todoInput {
-    width: 100%;
-    padding: 10px 14px;
-    border: 2px solid var(--color-border-light);
-    border-radius: 8px;
-    font-size: 15px;
-    margin-bottom: 10px;
-    transition: border-color 0.2s ease;
-    box-sizing: border-box;
-}
-
-.todoInput:focus {
-    outline: none;
-    border-color: var(--color-accent);
-}
-
-.todoTextarea {
-    width: 100%;
-    padding: 10px 14px;
-    border: 2px solid var(--color-border-light);
-    border-radius: 8px;
-    font-size: 14px;
-    margin-bottom: 12px;
-    min-height: 70px;
-    resize: vertical;
-    transition: border-color 0.2s ease;
-    box-sizing: border-box;
-    font-family: inherit;
-}
-
-.todoTextarea:focus {
-    outline: none;
-    border-color: var(--color-accent);
-}
-
-.formActions {
-    display: flex;
-    justify-content: flex-end;
-}
-
-.addButton {
-    background-color: var(--color-accent);
-    color: var(--color-white);
-    border: none;
-    padding: 8px 20px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.addButton:hover:not(:disabled) {
-    background-color: var(--color-accent-hover);
-}
-
-.addButton:disabled {
-    background-color: var(--color-text-muted);
-    cursor: not-allowed;
-}
-
 /* 空状态 */
 .emptyState {
     text-align: center;
@@ -178,9 +141,16 @@
     opacity: 0.7;
 }
 
+.emptyHint a {
+    color: var(--color-accent);
+}
+
 @media (max-width: 768px) {
-    .todoSection,
-    .cardsSection {
+    .homePage {
+        padding: 16px 12px;
+    }
+
+    .dashboardSection {
         padding: 16px;
     }
 

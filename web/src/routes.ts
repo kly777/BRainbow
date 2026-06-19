@@ -21,7 +21,7 @@ export const ROUTES: RouteConfig[] = [
     label: "主页",
     desc: "首页面板",
     nav: true,
-    component: lazy(() => import("./pages/HomePage.tsx")),
+    component: lazy(() => import("./pages/HomeGuard.tsx")),
   },
   {
     path: "/t",
@@ -94,15 +94,15 @@ export const ROUTES: RouteConfig[] = [
   {
     path: "/m/add",
     label: "添加记忆",
-    desc: "创建新的记忆卡片",
-    nav: true,
+    desc: "",
+    nav: false,
     component: lazy(() => import("./pages/MemAdd.tsx")),
   },
   {
     path: "/m/manage",
     label: "记忆管理",
-    desc: "查看和删除记忆项",
-    nav: true,
+    desc: "",
+    nav: false,
     component: lazy(() => import("./pages/MemManage.tsx")),
   },
 ];

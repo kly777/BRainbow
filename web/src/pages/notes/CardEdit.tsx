@@ -14,6 +14,7 @@ import {
 } from "../../apis/cardApi.ts";
 import type { UpdateCardRequest } from "../../apis/types/index.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
+import Breadcrumb from "../../components/ui/Breadcrumb.tsx";
 import Markdown from "../../components/ui/Markdown.tsx";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import styles from "./CardEdit.module.css";
@@ -153,6 +154,12 @@ const CardEditPage: Component = () => {
 
     return (
         <div class={styles.container}>
+            <Breadcrumb items={[
+                { label: "首页", href: "/" },
+                { label: "卡片", href: "/c" },
+                { label: `#${cardId()}`, href: `/c/${cardId()}` },
+                { label: "编辑" },
+            ]} />
             <div class={styles.toolbar}>
                 <button
                     type="button"

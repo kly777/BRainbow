@@ -1,15 +1,15 @@
 .page {
     display: flex;
     height: 100vh;
-    background: var(--c-bg, #fefcf5);
+    background: var(--color-bg, #fefcf5);
 }
 
 /* ── 左侧栏 ── */
 .sidebar {
     width: 0;
     overflow: hidden;
-    border-right: 1px solid var(--c-border, #e8dfcc);
-    background: var(--c-bg-card, #fffef9);
+    border-right: 1px solid var(--color-border, #e8dfcc);
+    background: var(--color-surface, #fffef9);
     transition: width 0.2s;
     display: flex;
     flex-direction: column;
@@ -25,22 +25,22 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 14px;
-    border-bottom: 1px solid var(--c-border, #e8dfcc);
+    border-bottom: 1px solid var(--color-border, #e8dfcc);
     font-size: 13px;
     font-weight: 600;
-    color: var(--c-text, #3d3629);
+    color: var(--color-text, #3d3629);
 }
 
 .sidebarClose {
     background: none;
     border: none;
     font-size: 16px;
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, #9b8e7a);
     cursor: pointer;
     padding: 2px 6px;
 }
 
-.sidebarClose:hover { color: var(--c-text, #3d3629); }
+.sidebarClose:hover { color: var(--color-text, #3d3629); }
 
 .sidebarList {
     flex: 1;
@@ -56,7 +56,7 @@
     border: none;
     border-radius: 6px;
     background: transparent;
-    color: var(--c-text, #3d3629);
+    color: var(--color-text, #3d3629);
     cursor: pointer;
     font-size: 13px;
     width: 100%;
@@ -64,11 +64,11 @@
     font-family: inherit;
 }
 
-.sidebarItem:hover { background: var(--c-bg-subtle, #f8f3e6); }
-.sidebarActive { background: var(--c-primary-light, #f0f7ff); }
+.sidebarItem:hover { background: var(--color-bg-subtle, #f8f3e6); }
+.sidebarActive { background: var(--color-accent-subtle, #f0f7ff); }
 
 .sidebarIdx {
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, #9b8e7a);
     font-size: 11px;
     min-width: 28px;
 }
@@ -84,8 +84,8 @@
     font-size: 10px;
     padding: 1px 5px;
     border-radius: 4px;
-    background: var(--c-bg-subtle, #f8f3e6);
-    color: var(--c-text-muted, #9b8e7a);
+    background: var(--color-bg-subtle, #f8f3e6);
+    color: var(--color-text-muted, #9b8e7a);
 }
 
 /* ── 汉堡菜单 ── */
@@ -94,13 +94,13 @@
     background: none;
     border: none;
     font-size: 18px;
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, #9b8e7a);
     cursor: pointer;
     padding: 4px 8px;
     margin-right: 8px;
 }
 
-.hamburger:hover { color: var(--c-text, #3d3629); }
+.hamburger:hover { color: var(--color-text, #3d3629); }
 
 .main {
     flex: 1;
@@ -114,15 +114,15 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 20px;
-    border-bottom: 1px solid var(--c-border, #e8dfcc);
-    background: var(--c-bg-card, #fffef9);
+    border-bottom: 1px solid var(--color-border, #e8dfcc);
+    background: var(--color-surface, #fffef9);
     flex-shrink: 0;
 }
 
 .title {
     font-size: 16px;
     font-weight: 600;
-    color: var(--c-text-heading, #2c2416);
+    color: var(--color-text, #2c2416);
 }
 
 .topRight {
@@ -133,7 +133,7 @@
 
 .count {
     font-size: 13px;
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, #9b8e7a);
 }
 
 .addLink {
@@ -144,40 +144,40 @@
     padding: 4px 12px;
     border: none;
     border-radius: 6px;
-    background: var(--c-primary, #3b82f6);
+    background: var(--color-accent, #3b82f6);
 }
 
 .addLink:hover {
-    background: var(--c-primary-hover, #2563eb);
+    background: var(--color-accent-hover, #2563eb);
 }
 
 .manageLink {
     font-size: 13px;
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, #9b8e7a);
     text-decoration: none;
     padding: 4px 10px;
-    border: 1px solid var(--c-border, #e8dfcc);
+    border: 1px solid var(--color-border, #e8dfcc);
     border-radius: 6px;
 }
 
 .manageLink:hover {
-    background: var(--c-bg-hover, #f0e8d5);
-    color: var(--c-text, #3d3629);
+    background: var(--color-surface-raised, #f0e8d5);
+    color: var(--color-text, #3d3629);
 }
 
 .editLinkBtn {
     font-size: 13px;
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, #9b8e7a);
     padding: 4px 10px;
-    border: 1px solid var(--c-border, #e8dfcc);
+    border: 1px solid var(--color-border, #e8dfcc);
     border-radius: 6px;
     background: transparent;
     cursor: pointer;
 }
 
 .editLinkBtn:hover {
-    background: var(--c-bg-hover, #f0e8d5);
-    color: var(--c-text, #3d3629);
+    background: var(--color-surface-raised, #f0e8d5);
+    color: var(--color-text, #3d3629);
 }
 
 /* ── 创建表单 ── */
@@ -186,17 +186,17 @@
     flex-direction: column;
     gap: 8px;
     padding: 16px 20px;
-    border-bottom: 1px solid var(--c-border, #e8dfcc);
-    background: var(--c-bg-subtle, #f8f3e6);
+    border-bottom: 1px solid var(--color-border, #e8dfcc);
+    background: var(--color-bg-subtle, #f8f3e6);
 }
 
 .formInput {
     width: 100%;
     padding: 8px 10px;
-    border: 1px solid var(--c-border, #e8dfcc);
+    border: 1px solid var(--color-border, #e8dfcc);
     border-radius: 6px;
-    background: var(--c-bg, #fefcf5);
-    color: var(--c-text, #3d3629);
+    background: var(--color-bg, #fefcf5);
+    color: var(--color-text, #3d3629);
     font-size: 14px;
     font-family: inherit;
     resize: vertical;
@@ -204,7 +204,7 @@
 
 .formInput:focus {
     outline: none;
-    border-color: var(--c-primary, #3b82f6);
+    border-color: var(--color-accent, #3b82f6);
 }
 
 .formSubmit {
@@ -214,13 +214,13 @@
     font-weight: 600;
     border: none;
     border-radius: 6px;
-    background: var(--c-primary, #3b82f6);
+    background: var(--color-accent, #3b82f6);
     color: #fff;
     cursor: pointer;
 }
 
 .formSubmit:hover {
-    background: var(--c-primary-hover, #2563eb);
+    background: var(--color-accent-hover, #2563eb);
 }
 
 .formSubmit:disabled {
@@ -234,7 +234,7 @@
     align-items: center;
     justify-content: center;
     font-size: 18px;
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, #9b8e7a);
 }
 
 /* ── 卡片 ── */
@@ -251,14 +251,14 @@
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, #9b8e7a);
     margin-bottom: 8px;
 }
 
 .cue {
     padding: 24px;
-    background: var(--c-bg-card, #fffef9);
-    border: 1px solid var(--c-border, #e8dfcc);
+    background: var(--color-surface, #fffef9);
+    border: 1px solid var(--color-border, #e8dfcc);
     border-radius: 12px;
 }
 
@@ -274,8 +274,8 @@
     text-align: center;
     padding: 8px;
     font-size: 12px;
-    color: var(--c-text-muted, #9b8e7a);
-    background: var(--c-bg-subtle, #f8f3e6);
+    color: var(--color-text-muted, #9b8e7a);
+    background: var(--color-bg-subtle, #f8f3e6);
     border-radius: 8px;
     margin-bottom: 12px;
 }
@@ -298,14 +298,14 @@
 
 .divider {
     height: 1px;
-    background: var(--c-border, #e8dfcc);
+    background: var(--color-border, #e8dfcc);
     margin: 16px 0;
 }
 
 .content {
     font-size: 16px;
     line-height: 1.7;
-    color: var(--c-text, #3d3629);
+    color: var(--color-text, #3d3629);
 }
 
 .md {
@@ -334,16 +334,16 @@
 .buryBtn {
     padding: 12px 24px;
     font-size: 15px;
-    border: 2px solid var(--c-border, #e8dfcc);
+    border: 2px solid var(--color-border, #e8dfcc);
     border-radius: 10px;
     background: transparent;
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, #9b8e7a);
     cursor: pointer;
     font-weight: 500;
 }
 
 .buryBtn:hover {
-    background: var(--c-bg-subtle, #f8f3e6);
+    background: var(--color-bg-subtle, #f8f3e6);
 }
 
 /* ── 按钮（距底部 64px，避免遮挡 CommandPalette）── */
@@ -351,17 +351,17 @@
     display: flex;
     justify-content: center;
     padding: 14px 24px 78px;
-    border-top: 1px solid var(--c-border, #e8dfcc);
-    background: var(--c-bg, #fefcf5);
+    border-top: 1px solid var(--color-border, #e8dfcc);
+    background: var(--color-bg, #fefcf5);
     flex-shrink: 0;
 }
 
 .showBtn {
     padding: 12px 36px;
     font-size: 15px;
-    border: 2px solid var(--c-primary, #3b82f6);
+    border: 2px solid var(--color-accent, #3b82f6);
     border-radius: 10px;
-    background: var(--c-primary, #3b82f6);
+    background: var(--color-accent, #3b82f6);
     color: #fff;
     cursor: pointer;
     font-weight: 600;
@@ -370,28 +370,28 @@
 
 .hint {
     font-size: 14px;
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, #9b8e7a);
     margin: 4px 0 12px;
 }
 
 .showBtn:hover {
-    background: var(--c-primary-hover, #2563eb);
+    background: var(--color-accent-hover, #2563eb);
 }
 
 /* ── Undo ── */
 .undoBtn {
     padding: 12px 24px;
     font-size: 15px;
-    border: 2px solid var(--c-border, #e8dfcc);
+    border: 2px solid var(--color-border, #e8dfcc);
     border-radius: 10px;
     background: transparent;
-    color: var(--c-text-secondary, #6b5e4a);
+    color: var(--color-text-secondary, #6b5e4a);
     cursor: pointer;
     font-weight: 500;
 }
 
 .undoBtn:hover {
-    background: var(--c-bg-subtle, #f8f3e6);
+    background: var(--color-bg-subtle, #f8f3e6);
 }
 
 .ratings {
@@ -431,17 +431,17 @@
     font-size: 14px;
     font-family: inherit;
     line-height: 1.6;
-    border: 1px solid var(--c-border, #e8dfcc);
+    border: 1px solid var(--color-border, #e8dfcc);
     border-radius: 8px;
-    background: var(--c-bg, #fefcf5);
-    color: var(--c-text, #3d3629);
+    background: var(--color-bg, #fefcf5);
+    color: var(--color-text, #3d3629);
     resize: vertical;
     outline: none;
 }
 
 .editArea:focus {
-    border-color: var(--c-primary, #3b82f6);
-    box-shadow: 0 0 0 2px var(--c-primary-ring, rgba(59, 130, 246, 0.25));
+    border-color: var(--color-accent, #3b82f6);
+    box-shadow: 0 0 0 2px var(--color-accent-ring, rgba(59, 130, 246, 0.25));
 }
 
 .ratings button:hover {

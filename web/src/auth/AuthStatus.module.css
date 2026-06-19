@@ -9,7 +9,7 @@
 }
 
 .form {
-    background: var(--c-bg-card, #fffef9);
+    background: var(--color-surface, #fffef9);
     padding: 28px 24px 20px;
     border-radius: 14px;
     display: flex;
@@ -18,18 +18,18 @@
     min-width: 300px;
     max-width: 360px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-    border: 1px solid var(--c-border, #e8dfcc);
+    border: 1px solid var(--color-border, #e8dfcc);
 }
 
 .title {
     margin: 0;
     font-size: 18px;
-    color: var(--c-text-heading, #2c2416);
+    color: var(--color-text, #2c2416);
     text-align: center;
 }
 
 .error {
-    color: var(--c-danger-text, #c53030);
+    color: var(--color-danger, #c53030);
     font-size: 13px;
     margin: 0;
     text-align: center;
@@ -37,17 +37,17 @@
 
 .input {
     padding: 10px 12px;
-    border: 1px solid var(--c-border, #e8dfcc);
+    border: 1px solid var(--color-border, #e8dfcc);
     border-radius: 8px;
     font-size: 14px;
-    background: var(--c-bg, #fefcf5);
-    color: var(--c-text, #3d3629);
+    background: var(--color-bg, #fefcf5);
+    color: var(--color-text, #3d3629);
     outline: none;
 }
 
 .input:focus {
-    border-color: var(--c-primary, #3b82f6);
-    box-shadow: 0 0 0 2px var(--c-primary-ring, rgba(59, 130, 246, 0.25));
+    border-color: var(--color-accent, #3b82f6);
+    box-shadow: 0 0 0 2px var(--color-accent-ring, rgba(59, 130, 246, 0.25));
 }
 
 .actions {
@@ -60,7 +60,7 @@
     padding: 10px 0;
     border: none;
     border-radius: 8px;
-    background: var(--c-primary, #3b82f6);
+    background: var(--color-accent, #3b82f6);
     color: #fff;
     font-size: 14px;
     font-weight: 600;
@@ -68,13 +68,13 @@
 }
 
 .btnSubmit:hover {
-    background: var(--c-primary-hover, #2563eb);
+    background: var(--color-accent-hover, #2563eb);
 }
 
 .btnLink {
     background: none;
     border: none;
-    color: var(--c-primary, #3b82f6);
+    color: var(--color-accent, #3b82f6);
     font-size: 13px;
     cursor: pointer;
     padding: 4px;
@@ -86,14 +86,14 @@
 
 .btnCancel {
     padding: 8px 0;
-    border: 1px solid var(--c-border, #e8dfcc);
+    border: 1px solid var(--color-border, #e8dfcc);
     border-radius: 8px;
     background: transparent;
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, #9b8e7a);
     font-size: 13px;
     cursor: pointer;
 }
 
 .btnCancel:hover {
-    background: var(--c-bg-subtle, #f8f3e6);
+    background: var(--color-bg-subtle, #f8f3e6);
 }

@@ -10,8 +10,8 @@ import {
     deleteCardE,
     getCardE,
     updateCardE,
-    uploadImage,
 } from "../../apis/cardApi.ts";
+import { uploadImage } from "../../apis/imageApi.ts";
 import type { UpdateCardRequest } from "../../apis/types/index.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
 import Breadcrumb from "../../components/ui/Breadcrumb.tsx";

@@ -5,7 +5,7 @@ import {
     For,
     Show,
 } from "solid-js";
-import { deleteImageE, listImagesE, renameImageE } from "../../apis/cardApi.ts";
+import { deleteImageE, listImagesE, renameImageE } from "../../apis/imageApi.ts";
 import type { Image } from "../../apis/types/index.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";

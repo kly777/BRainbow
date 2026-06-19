@@ -3,7 +3,7 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background: var(--c-bg, #fefcf5);
+    background: var(--color-bg, #fefcf5);
 }
 
 /* ===== 主内容 ===== */
@@ -17,9 +17,9 @@
     text-align: center;
     padding: 15px;
     margin-top: 15px;
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, #9b8e7a);
     font-size: 13px;
-    border-top: 1px solid var(--c-border, #e8dfcc);
+    border-top: 1px solid var(--color-border, #e8dfcc);
 }
 
 .landingPage {
@@ -35,30 +35,30 @@
 .landingPage h1 {
     font-size: 32px;
     margin-bottom: 20px;
-    color: var(--c-text, #3d3629);
+    color: var(--color-text, #3d3629);
 }
 
 .landingPage p {
     font-size: 18px;
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, #9b8e7a);
     margin-bottom: 40px;
     max-width: 600px;
     line-height: 1.6;
 }
 
 .landingPage > a {
-    color: var(--c-primary, #3b82f6);
+    color: var(--color-accent, #3b82f6);
     text-decoration: none;
     font-weight: 500;
     padding: 10px 20px;
-    border: 2px solid var(--c-primary, #3b82f6);
+    border: 2px solid var(--color-accent, #3b82f6);
     border-radius: 6px;
     transition: all 0.3s ease;
 }
 
 .landingPage > a:hover {
-    background-color: var(--c-primary, #3b82f6);
-    color: var(--c-bg, #fefcf5);
+    background-color: var(--color-accent, #3b82f6);
+    color: var(--color-bg, #fefcf5);
     text-decoration: none;
 }
 
@@ -72,7 +72,7 @@
 }
 
 .featureCard {
-    background-color: var(--c-bg-card, #fffef9);
+    background-color: var(--color-surface, #fffef9);
     border-radius: 10px;
     padding: 20px;
     box-shadow: 0 3px 10px oklch(0 0 0 / 0.08);
@@ -91,7 +91,7 @@
 .featureCard h3 {
     font-size: 20px;
     margin: 0 0 15px 0;
-    color: var(--c-text, #3d3629);
+    color: var(--color-text, #3d3629);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -99,7 +99,7 @@
 
 .featureCard p {
     font-size: 15px;
-    color: var(--c-text-muted, #9b8e7a);
+    color: var(--color-text-muted, #9b8e7a);
     margin-bottom: 20px;
     line-height: 1.5;
     flex: 1;
@@ -107,8 +107,8 @@
 
 .featureLink {
     display: inline-block;
-    background-color: var(--c-primary, #3b82f6);
-    color: var(--c-bg, #fefcf5);
+    background-color: var(--color-accent, #3b82f6);
+    color: var(--color-bg, #fefcf5);
     padding: 10px 20px;
     border-radius: 6px;
     text-decoration: none;
@@ -118,22 +118,22 @@
 }
 
 .featureLink:hover {
-    background-color: var(--c-primary-hover, #2563eb);
-    color: var(--c-bg, #fefcf5);
+    background-color: var(--color-accent-hover, #2563eb);
+    color: var(--color-bg, #fefcf5);
     text-decoration: none;
 }
 
 .quickStats {
     margin-top: 30px;
     padding: 15px;
-    background-color: var(--c-bg-subtle, #f8f3e6);
+    background-color: var(--color-bg-subtle, #f8f3e6);
     border-radius: 6px;
     max-width: 700px;
 }
 
 .quickStats p {
     font-size: 16px;
-    color: var(--c-text-secondary, #6b5e4a);
+    color: var(--color-text-secondary, #6b5e4a);
     margin: 10px 0;
     display: flex;
     align-items: center;

@@ -18,7 +18,7 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
     let authed = Router::new()
         .route("/user", get(user::user_handler))
         .nest("/images", image::routes())
-        .nest("/card", card::routes())
+        .nest("/cards", card::routes())
         .nest("/onto", onto::routes())
         .nest("/sign", sign::routes())
         .nest("/tasks", task::routes())

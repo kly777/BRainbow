@@ -1,7 +1,7 @@
 import { createSignal, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { createMemE } from "../apis/memApi.ts";
-import Memo from "../components/ui/Memo.tsx";
+import MarkdownEditor from "../components/ui/MarkdownEditor.tsx";
 import styles from "./MemAdd.module.css";
 
 /** 解析文本：每行 "线索 | 答案" 或 "线索\t答案" */
@@ -33,102 +33,103 @@ export default function MemAdd() {
 		setCreating(true);
 		try {
 			await createMemE(cue().trim(), target().trim());
+			setCue("");
+			setTarget("");
 		} catch {
 			/* ignore */
 		}
 		setCreating(false);
-		navigate("/m/manage");
 	};
 
 	const handleBatch = async () => {
-		const items =
-			mode() === "json" ? parseJson(jsonText()) : parseBatch(batchText());
-		if (items.length === 0) return;
+		const pairs = parseBatch(batchText());
+		if (pairs.length === 0) return;
 		setCreating(true);
-		let done = 0;
-		for (const item of items) {
+		setBatchCount(0);
+		for (const p of pairs) {
 			try {
-				await createMemE(item.cue, item.target);
+				await createMemE(p.cue, p.target);
+				setBatchCount((c) => c + 1);
 			} catch {
-				/* ignore */
+				/* continue */
 			}
-			done++;
-			setBatchCount(done);
 		}
 		setCreating(false);
-		navigate("/m/manage");
+		setBatchText("");
 	};
 
-	const currentCount = () =>
-		mode() === "json"
-			? parseJson(jsonText()).length
-			: parseBatch(batchText()).length;
-
-	const onBatchInput = (e: Event) => {
-		const v = (e.target as HTMLTextAreaElement).value;
-		setBatchText(v);
-		setBatchCount(0);
-	};
-
-	const onJsonInput = (e: Event) => {
-		const v = (e.target as HTMLTextAreaElement).value;
-		setJsonText(v);
-		setBatchCount(0);
-	};
-
-	function parseJson(text: string): { cue: string; target: string }[] {
+	const handleJson = async () => {
+		let items: { cue: string; target: string }[] = [];
 		try {
-			const arr = JSON.parse(text);
-			if (!Array.isArray(arr)) return [];
-			return arr
-				.filter(
-					(it): it is { cue: string; target: string } =>
-						typeof it?.cue === "string" && typeof it?.target === "string",
-				)
-				.map((it) => ({ cue: it.cue.trim(), target: it.target.trim() }))
-				.filter((it) => it.cue && it.target);
+			items = JSON.parse(jsonText());
 		} catch {
-			return [];
+			return;
 		}
-	}
+		const valid = items.filter((i) => i.cue && i.target);
+		if (valid.length === 0) return;
+		setCreating(true);
+		setBatchCount(0);
+		for (const p of valid) {
+			try {
+				await createMemE(p.cue, p.target);
+				setBatchCount((c) => c + 1);
+			} catch {
+				/* continue */
+			}
+		}
+		setCreating(false);
+		setJsonText("");
+	};
+
+	const currentCount = () => {
+		if (mode() === "batch") return parseBatch(batchText()).length;
+		if (mode() === "json") {
+			try {
+				return (JSON.parse(jsonText()) as unknown[]).filter(
+					(i: unknown) => i && typeof i === "object" && "cue" in (i as Record<string, unknown>) && "target" in (i as Record<string, unknown>),
+				).length;
+			} catch {
+				return 0;
+			}
+		}
+		return 0;
+	};
 
 	return (
 		<div class={styles.page}>
-			<div class={styles.topBar}>
-				<h1 class={styles.title}>添加记忆</h1>
-				<div class={styles.modeTabs}>
-					<button
-						type="button"
-						class={mode() === "single" ? styles.modeActive : styles.modeBtn}
-						onClick={() => setMode("single")}
-					>
-						单个
-					</button>
-					<button
-						type="button"
-						class={mode() === "batch" ? styles.modeActive : styles.modeBtn}
-						onClick={() => setMode("batch")}
-					>
-						文本
-					</button>
-					<button
-						type="button"
-						class={mode() === "json" ? styles.modeActive : styles.modeBtn}
-						onClick={() => setMode("json")}
-					>
-						JSON
-					</button>
-				</div>
+			<h1 class={styles.title}>添加记忆</h1>
+
+			<div class={styles.tabs}>
+				<button
+					type="button"
+					class={mode() === "single" ? styles.tabActive : styles.tab}
+					onClick={() => setMode("single")}
+				>
+					单条
+				</button>
+				<button
+					type="button"
+					class={mode() === "batch" ? styles.tabActive : styles.tab}
+					onClick={() => setMode("batch")}
+				>
+					批量
+				</button>
+				<button
+					type="button"
+					class={mode() === "json" ? styles.tabActive : styles.tab}
+					onClick={() => setMode("json")}
+				>
+					JSON
+				</button>
 			</div>
 
-			<div class={styles.form}>
+			<div class={styles.body}>
 				<Show when={mode() === "single"}>
 					<label class={styles.label} for="add-cue">
 						线索（Markdown）
 					</label>
-					<Memo
+					<MarkdownEditor
 						id="add-cue"
-						class={styles.textarea}
 						placeholder="例如：质能方程 E=mc²"
 						value={cue()}
 						onInput={setCue}
@@ -137,9 +138,8 @@ export default function MemAdd() {
 					<label class={styles.label} for="add-target">
 						答案（Markdown）
 					</label>
-					<Memo
+					<MarkdownEditor
 						id="add-target"
-						class={styles.textarea}
 						placeholder="例如：能量等于质量乘以光速的平方"
 						value={target()}
 						onInput={setTarget}
@@ -159,46 +159,22 @@ export default function MemAdd() {
 							onClick={handleCreate}
 							disabled={creating() || !cue().trim() || !target().trim()}
 						>
-							{creating() ? "创建中…" : "创建记忆"}
+							{creating() ? "创建中..." : "创建"}
 						</button>
 					</div>
 				</Show>
 
-				<Show when={mode() === "batch" || mode() === "json"}>
-					<Show when={mode() === "batch"}>
-						<label class={styles.label}>
-							每行一条：<code>线索 | 答案</code> 或{" "}
-							<code>线索&nbsp;&nbsp;&nbsp;&nbsp;答案</code>
-							<textarea
-								class={styles.textarea}
-								placeholder="光合作用 | 植物将光能转化为化学能\n勾股定理 | a²+b²=c²"
-								value={batchText()}
-								onInput={onBatchInput}
-								rows={10}
-							/>
-						</label>
-					</Show>
-					<Show when={mode() === "json"}>
-						<label class={styles.label}>
-							<div class={styles.hint}>
-								粘贴 JSON 数组，每项需含 <code>cue</code>（线索）和{" "}
-								<code>target</code>（答案）字段，例如：
-								<code>[&lbrace;"cue": "线索", "target": "答案"&rbrace;]</code>
-							</div>
-							<textarea
-								class={styles.textarea}
-								value={jsonText()}
-								onInput={onJsonInput}
-								placeholder="粘贴 JSON 数组…"
-								rows={10}
-							/>
-						</label>
-					</Show>
-					{batchCount() > 0 && (
-						<div class={styles.progress}>
-							已创建 {batchCount()}/{currentCount()}
-						</div>
-					)}
+				<Show when={mode() === "batch"}>
+					<label class={styles.label}>
+						每行一条：「线索 | 答案」或「线索 制表符 答案」
+					</label>
+					<textarea
+						class={styles.textarea}
+						value={batchText()}
+						onInput={(e) => setBatchText(e.currentTarget.value)}
+						rows={8}
+						placeholder={"质能方程 | E=mc²\n光速 | 299792458 m/s"}
+					/>
 					<div class={styles.actions}>
 						<button
 							type="button"
@@ -211,6 +187,38 @@ export default function MemAdd() {
 							type="button"
 							class={styles.submit}
 							onClick={handleBatch}
+							disabled={creating() || currentCount() === 0}
+						>
+							{creating()
+								? `创建中 ${batchCount()}/${currentCount()}`
+								: `批量创建 (${currentCount()} 条)`}
+						</button>
+					</div>
+				</Show>
+
+				<Show when={mode() === "json"}>
+					<label class={styles.label}>
+						JSON 数组：{'[{"cue": "...", "target": "..."}, ...]'}
+					</label>
+					<textarea
+						class={styles.textarea}
+						value={jsonText()}
+						onInput={(e) => setJsonText(e.currentTarget.value)}
+						rows={8}
+						placeholder={'[{"cue":"光速","target":"299792458 m/s"}]'}
+					/>
+					<div class={styles.actions}>
+						<button
+							type="button"
+							class={styles.cancel}
+							onClick={() => navigate("/m/manage")}
+						>
+							取消
+						</button>
+						<button
+							type="button"
+							class={styles.submit}
+							onClick={handleJson}
 							disabled={creating() || currentCount() === 0}
 						>
 							{creating()

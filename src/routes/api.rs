@@ -12,7 +12,8 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         .route("/user/register", post(user::register_handler))
         .route("/user/login", post(user::login_handler))
         .nest("/mem", mem::routes())
-        .nest("/text", text::routes());
+        .nest("/text", text::routes())
+        .nest("/media", media::public_file_route());
 
     // ── 需登录的路由 ──
     let authed = Router::new()

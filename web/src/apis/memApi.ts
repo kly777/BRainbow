@@ -1,5 +1,4 @@
 import { request } from "./request.ts";
-import { getToken } from "../auth/context.tsx";
 
 // ── 类型 ──
 
@@ -85,16 +84,10 @@ export const editMemE = (
 	});
 
 export const uploadImage = async (file: File): Promise<string | null> => {
-	const form = new FormData();
-	form.append("file", file);
 	try {
-		const res = await fetch("/api/images/upload", {
-			method: "POST",
-			headers: { Authorization: `Bearer ${getToken()}` },
-			body: form,
-		});
-		const json = await res.json();
-		return json.url ?? null;
+		const { uploadMedia } = await import("./mediaApi.ts");
+		const item = await uploadMedia(file);
+		return item.url;
 	} catch {
 		return null;
 	}

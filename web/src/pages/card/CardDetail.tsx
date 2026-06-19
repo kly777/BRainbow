@@ -2,7 +2,7 @@ import { useNavigate, useParams } from "@solidjs/router";
 import { type Component, createResource } from "solid-js";
 import { deleteCardE, getCardE } from "../../apis/cardApi.ts";
 import Breadcrumb from "../../components/ui/Breadcrumb.tsx";
-import Markdown from "../../components/ui/Markdown.tsx";
+import MarkdownRenderer from "../../components/ui/Markdown.tsx";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import styles from "./CardDetail.module.css";
 
@@ -94,7 +94,7 @@ const CardDetailPage: Component = () => {
 								</span>
 							</div>
 							<div class={styles.body}>
-								<Markdown content={c.content} />
+								<MarkdownRenderer content={c.content} />
 							</div>
 						</div>
 					)

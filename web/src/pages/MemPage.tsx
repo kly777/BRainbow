@@ -9,8 +9,8 @@ import {
 	type MemItem,
 } from "../apis/memApi.ts";
 import { request } from "../apis/request.ts";
-import Markdown from "../components/ui/Markdown.tsx";
-import Memo from "../components/ui/Memo.tsx";
+import MarkdownRenderer from "../components/ui/Markdown.tsx";
+import MarkdownEditor from "../components/ui/MarkdownEditor.tsx";
 import { fmtInterval, fmtLocal } from "../lib/time.ts";
 import styles from "./MemPage.module.css";
 
@@ -294,7 +294,7 @@ export default function MemPage() {
 									<div class={styles.cue}>
 										<div class={styles.sectionLabel}>线索</div>
 										<div class={styles.content}>
-											<Markdown content={item()?.cue.content ?? ""} />
+											<MarkdownRenderer content={item()?.cue.content ?? ""} />
 										</div>
 									</div>
 									<Show when={showAnswer()}>
@@ -302,7 +302,7 @@ export default function MemPage() {
 										<div class={styles.target}>
 											<div class={styles.sectionLabel}>答案</div>
 											<div class={styles.content}>
-												<Markdown content={item()?.target.content ?? ""} />
+												<MarkdownRenderer content={item()?.target.content ?? ""} />
 											</div>
 										</div>
 									</Show>
@@ -311,7 +311,7 @@ export default function MemPage() {
 						>
 							<div class={styles.cue}>
 								<div class={styles.sectionLabel}>线索</div>
-								<Memo
+								<MarkdownEditor
 									class={styles.editArea}
 									value={editCue()}
 									onInput={setEditCue}
@@ -321,7 +321,7 @@ export default function MemPage() {
 							<div class={styles.divider} />
 							<div class={styles.target}>
 								<div class={styles.sectionLabel}>答案</div>
-								<Memo
+								<MarkdownEditor
 									class={styles.editArea}
 									value={editTarget()}
 									onInput={setEditTarget}

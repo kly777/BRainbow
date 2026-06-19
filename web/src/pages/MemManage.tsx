@@ -7,8 +7,8 @@ import {
 	resetMemE,
 	type MemItem,
 } from "../apis/memApi.ts";
-import Markdown from "../components/ui/Markdown.tsx";
-import Memo from "../components/ui/Memo.tsx";
+import MarkdownRenderer from "../components/ui/Markdown.tsx";
+import MarkdownEditor from "../components/ui/MarkdownEditor.tsx";
 import { fmtLocal, fmtRelative } from "../lib/time.ts";
 import styles from "./MemManage.module.css";
 
@@ -169,13 +169,13 @@ export default function MemManage() {
 											<div class={styles.section}>
 												<span class={styles.sectionLabel}>线索</span>
 												<div class={styles.content}>
-													<Markdown content={d().cue.content} />
+													<MarkdownRenderer content={d().cue.content} />
 												</div>
 											</div>
 											<div class={styles.section}>
 												<span class={styles.sectionLabel}>答案</span>
 												<div class={styles.content}>
-													<Markdown content={d().target.content} />
+													<MarkdownRenderer content={d().target.content} />
 												</div>
 											</div>
 										</>
@@ -183,7 +183,7 @@ export default function MemManage() {
 								>
 									<div class={styles.section}>
 										<span class={styles.sectionLabel}>线索</span>
-										<Memo
+										<MarkdownEditor
 											class={styles.editArea}
 											value={editCue()}
 											onInput={setEditCue}
@@ -192,7 +192,7 @@ export default function MemManage() {
 									</div>
 									<div class={styles.section}>
 										<span class={styles.sectionLabel}>答案</span>
-										<Memo
+										<MarkdownEditor
 											class={styles.editArea}
 											value={editTarget()}
 											onInput={setEditTarget}

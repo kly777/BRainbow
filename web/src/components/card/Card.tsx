@@ -1,6 +1,6 @@
 import { type Component, Show } from "solid-js";
 import styles from "./Card.module.css";
-import Markdown from "../ui/Markdown.tsx";
+import MarkdownRenderer from "../ui/Markdown.tsx";
 
 // 卡片接口，匹配后端API
 export interface CardData {
@@ -59,7 +59,7 @@ const Card: Component<CardProps> = (props) => {
 	return (
 		<div class={`${styles.card} ${props.isDeleting ? styles.deleting : ""}`}>
 			<div class={styles.cardContent}>
-				<Markdown content={props.content} />
+				<MarkdownRenderer content={props.content} />
 			</div>
 
 			<Show when={props.tags && props.tags.length > 0}>

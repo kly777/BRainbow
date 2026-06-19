@@ -14,15 +14,15 @@ check-env:
 
 dev:
 	cargo watch -x run --ignore web & \
-	cd web && deno task dev & \
+	cd web && npx vite & \
 	wait
 
 fmt:
 	cargo fmt
-	cd web && deno task fmt
+	cd web && npx @biomejs/biome format --write src/
 
 build: clean
-	cd web && deno task build
+	cd web && npx vite build
 	mkdir -p $(SERVER_DIR)
 	cp -r web/dist $(SERVER_DIR)/
 	cargo build --target $(TARGET_ARCH) --release

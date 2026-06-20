@@ -302,7 +302,9 @@ export default function MemPage() {
 										<div class={styles.target}>
 											<div class={styles.sectionLabel}>答案</div>
 											<div class={styles.content}>
-												<MarkdownRenderer content={item()?.target.content ?? ""} />
+												<MarkdownRenderer
+													content={item()?.target.content ?? ""}
+												/>
 											</div>
 										</div>
 									</Show>

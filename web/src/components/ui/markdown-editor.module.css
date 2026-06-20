@@ -1,40 +1,41 @@
 .editor {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0;
 }
 
 .textarea,
 .textareaDrag {
-    width: 100%;
-    padding: var(--space-md);
-    border: 2px solid var(--color-border);
-    border-radius: var(--radius-md);
-    font-size: var(--text-base);
-    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
-    line-height: 1.6;
-    resize: vertical;
-    background: var(--color-surface);
-    color: var(--color-text);
-    transition: border-color 0.15s;
-    box-sizing: border-box;
+	width: 100%;
+	padding: var(--space-md);
+	border: 2px solid var(--color-border);
+	border-radius: var(--radius-md);
+	font-size: var(--text-base);
+	font-family:
+		ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+	line-height: 1.6;
+	resize: vertical;
+	background: var(--color-surface);
+	color: var(--color-text);
+	transition: border-color 0.15s;
+	box-sizing: border-box;
 }
 
 .textarea:focus {
-    outline: none;
-    border-color: var(--color-accent);
+	outline: none;
+	border-color: var(--color-accent);
 }
 
 .textareaDrag {
-    border-color: var(--color-accent);
-    background: var(--color-accent-subtle);
+	border-color: var(--color-accent);
+	background: var(--color-accent-subtle);
 }
 
 .preview {
-    margin-top: var(--space-sm);
-    padding: var(--space-md);
-    border: 1px solid var(--color-border-light);
-    border-radius: var(--radius-md);
-    background: var(--color-surface);
-    min-height: 40px;
+	margin-top: var(--space-sm);
+	padding: var(--space-md);
+	border: 1px solid var(--color-border-light);
+	border-radius: var(--radius-md);
+	background: var(--color-surface);
+	min-height: 40px;
 }

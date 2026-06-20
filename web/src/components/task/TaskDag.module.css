@@ -1,6 +1,6 @@
 .dagContainer {
 	background: var(--color-surface);
-	border-radius: 12px;
+	border-radius: var(--radius-lg);
 	box-shadow: 0 1px 3px oklch(0 0 0 / 0.1);
 	overflow: hidden;
 	display: flex;
@@ -12,16 +12,16 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 16px 20px;
+	padding: var(--space-lg) 20px;
 	border-bottom: 1px solid var(--color-border-light);
 	flex-shrink: 0;
 	flex-wrap: wrap;
-	gap: 12px;
+	gap: var(--space-md);
 }
 
 .dagTitle {
 	margin: 0;
-	font-size: 18px;
+	font-size: var(--text-lg);
 	color: var(--color-text);
 	font-weight: 600;
 }
@@ -29,15 +29,15 @@
 .dagControls {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-sm);
 	flex-wrap: wrap;
 }
 
 .taskSelect {
-	padding: 6px 12px;
+	padding: var(--space-xs) 12px;
 	border: 1px solid var(--color-border);
-	border-radius: 6px;
-	font-size: 13px;
+	border-radius: var(--radius-md);
+	font-size: var(--text-sm);
 	color: var(--color-text);
 	background: var(--color-surface);
 	outline: none;
@@ -51,12 +51,12 @@
 }
 
 .zoomBtn {
-	padding: 6px 12px;
+	padding: var(--space-xs) 12px;
 	background: var(--color-surface-raised);
 	border: 1px solid var(--color-border);
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
-	font-size: 16px;
+	font-size: var(--text-lg);
 	font-weight: 600;
 	color: var(--color-text);
 	transition: all 0.15s;
@@ -89,15 +89,15 @@
 	justify-content: center;
 	height: 100%;
 	color: var(--color-text-muted);
-	padding: 40px;
+	padding: var(--space-xl);
 }
 
 .emptyHint p {
-	margin: 0 0 8px 0;
-	font-size: 15px;
+	margin: 0 0 var(--space-sm) 0;
+	font-size: var(--text-base);
 }
 
 .hintSub {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--color-border);
 }

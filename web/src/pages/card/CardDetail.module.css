@@ -7,8 +7,8 @@
 .toolbar {
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	padding: 8px 16px;
+	gap: var(--space-md);
+	padding: var(--space-sm) 16px;
 	background: var(--color-surface-raised);
 	border-bottom: 1px solid var(--color-border);
 	flex-shrink: 0;
@@ -17,16 +17,16 @@
 .toolbarActions {
 	margin-left: auto;
 	display: flex;
-	gap: 8px;
+	gap: var(--space-sm);
 }
 
 .backBtn {
-	padding: 5px 10px;
-	font-size: 13px;
+	padding: var(--space-xs) 10px;
+	font-size: var(--text-sm);
 	background: var(--color-bg);
 	color: var(--color-text-secondary);
 	border: 1px solid var(--color-border);
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
 }
 .backBtn:hover {
@@ -34,12 +34,12 @@
 }
 
 .editBtn {
-	padding: 5px 12px;
-	font-size: 13px;
+	padding: var(--space-xs) 12px;
+	font-size: var(--text-sm);
 	background: var(--color-accent);
 	color: var(--color-bg);
 	border: none;
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
 }
 .editBtn:hover {
@@ -47,12 +47,12 @@
 }
 
 .deleteBtn {
-	padding: 5px 12px;
-	font-size: 13px;
+	padding: var(--space-xs) 12px;
+	font-size: var(--text-sm);
 	background: var(--color-bg);
 	color: var(--color-danger);
 	border: 1px solid var(var(--color-danger));
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
 }
 .deleteBtn:hover {
@@ -63,18 +63,18 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 8px;
-	padding: 40px;
+	gap: var(--space-sm);
+	padding: var(--space-xl);
 	color: var(--color-text-muted);
 }
 
 .retryBtn {
-	padding: 4px 10px;
-	font-size: 13px;
+	padding: var(--space-xs) 10px;
+	font-size: var(--text-sm);
 	background: var(--color-accent);
 	color: var(--color-bg);
 	border: none;
-	border-radius: 4px;
+	border-radius: var(--radius-sm);
 	cursor: pointer;
 }
 
@@ -86,16 +86,16 @@
 
 .meta {
 	display: flex;
-	gap: 16px;
-	padding: 10px 24px;
-	font-size: 13px;
+	gap: var(--space-lg);
+	padding: var(--space-sm) 24px;
+	font-size: var(--text-sm);
 	color: var(--color-text-muted);
 	background: var(--color-surface-raised);
 	border-bottom: 1px solid var(--color-border);
 }
 
 .body {
-	padding: 24px 24px 40px;
+	padding: var(--space-xl) 24px 40px;
 	max-width: 860px;
 	margin: 0 auto;
 }

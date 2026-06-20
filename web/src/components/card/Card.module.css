@@ -1,8 +1,8 @@
 .card {
 	background: var(--color-surface);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	box-shadow: 0 1px 4px oklch(0 0 0 / 0.06);
-	padding: 16px;
+	padding: var(--space-lg);
 	transition: all 0.2s ease;
 	cursor: pointer;
 	border: 1px solid var(--color-border);
@@ -22,7 +22,7 @@
 }
 
 .card:hover {
-	box-shadow: 0 4px 16px oklch(0 0 0 / 0.15);
+	box-shadow: 0 var(--space-xs) 16px oklch(0 0 0 / 0.15);
 	transform: translateY(-2px);
 	border-color: var(--color-border);
 }
@@ -40,8 +40,8 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
-	margin-bottom: 12px;
-	gap: 8px;
+	margin-bottom: var(--space-md);
+	gap: var(--space-sm);
 }
 
 .cardTitle {
@@ -64,15 +64,15 @@
 	color: var(--color-accent);
 	font-size: 0.75rem;
 	font-weight: 500;
-	padding: 4px 8px;
-	border-radius: 4px;
+	padding: var(--space-xs) 8px;
+	border-radius: var(--radius-sm);
 	white-space: nowrap;
 	flex-shrink: 0;
 }
 
 .cardContent {
 	flex: 1;
-	margin-bottom: 12px;
+	margin-bottom: var(--space-md);
 	overflow: hidden;
 }
 
@@ -93,16 +93,16 @@
 .cardTags {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 4px;
-	margin-bottom: 12px;
+	gap: var(--space-xs);
+	margin-bottom: var(--space-md);
 }
 
 .tag {
 	background: var(--color-surface-raised);
 	color: var(--color-text-secondary);
 	font-size: 0.75rem;
-	padding: 2px 8px;
-	border-radius: 12px;
+	padding: var(--space-xs) 8px;
+	border-radius: var(--radius-lg);
 	border: none;
 	cursor: pointer;
 	transition: all 0.2s ease;
@@ -121,8 +121,8 @@
 .cardMeta {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	margin-bottom: 12px;
+	gap: var(--space-xs);
+	margin-bottom: var(--space-md);
 	font-size: 0.75rem;
 	color: var(--color-text-muted);
 }
@@ -130,7 +130,7 @@
 .metaItem {
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	gap: var(--space-xs);
 }
 
 .metaLabel {
@@ -147,15 +147,15 @@
 
 .cardActions {
 	display: flex;
-	gap: 8px;
+	gap: var(--space-sm);
 	margin-top: auto;
 }
 
 .actionButton {
 	flex: 1;
-	padding: 6px 12px;
+	padding: var(--space-xs) 12px;
 	font-size: 0.875rem;
-	border-radius: 4px;
+	border-radius: var(--radius-sm);
 	border: 1px solid var(--color-border);
 	background: var(--color-bg);
 	color: var(--color-text);
@@ -200,7 +200,7 @@
 @media (max-width: 768px) {
 	.card {
 		/*min-height: 240px;*/
-		padding: 12px;
+		padding: var(--space-md);
 	}
 
 	.cardTitle {
@@ -213,10 +213,10 @@
 
 	.cardActions {
 		/*flex-direction: column;*/
-		gap: 6px;
+		gap: var(--space-xs);
 	}
 
 	.actionButton {
-		padding: 8px;
+		padding: var(--space-sm);
 	}
 }

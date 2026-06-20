@@ -96,7 +96,7 @@
 	font-size: 0.875em;
 	padding: 0.2em 0.4em;
 	background-color: var(--color-code-bg);
-	border-radius: 3px;
+	border-radius: var(--radius-sm);
 	color: var(--color-code);
 }
 
@@ -105,7 +105,7 @@
 	font-size: 0.875em;
 	padding: 1em;
 	background-color: var(--color-code-bg);
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	overflow-x: auto;
 	line-height: 1.45;
 	margin: 1em 0;
@@ -170,7 +170,7 @@
 .markdown-content img {
 	max-width: 100%;
 	height: auto;
-	border-radius: 4px;
+	border-radius: var(--radius-sm);
 }
 
 /* 表格 */

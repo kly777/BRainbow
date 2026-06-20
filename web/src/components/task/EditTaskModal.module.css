@@ -16,20 +16,20 @@
 
 .tab {
 	flex: 1;
-	padding: 10px 12px;
+	padding: var(--space-sm) 12px;
 	background: none;
 	border: none;
 	border-bottom: 2px solid transparent;
 	margin-bottom: -2px;
 	cursor: pointer;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 500;
 	color: var(--color-text-secondary);
 	transition: all 0.15s;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 6px;
+	gap: var(--space-xs);
 }
 
 .tab:hover {
@@ -42,18 +42,18 @@
 }
 
 .tabCount {
-	font-size: 11px;
+	font-size: var(--text-xs);
 	background: var(--color-accent-subtle);
 	color: var(--color-accent-hover);
-	padding: 1px 6px;
-	border-radius: 10px;
+	padding: var(--space-xs) var(--space-xs);
+	border-radius: var(--radius-md);
 	font-weight: 600;
 }
 
 /* ── Tab 内容区 ── */
 
 .tabContent {
-	padding: 16px 0 0 0;
+	padding: var(--space-lg) 0 0 0;
 	flex: 1;
 	overflow-y: auto;
 	max-height: 55vh;
@@ -64,24 +64,24 @@
 .field {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	margin-bottom: 12px;
+	gap: var(--space-xs);
+	margin-bottom: var(--space-md);
 	flex: 1;
 	min-width: 0;
 }
 
 .fieldLabel {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 500;
 	color: var(--color-text);
 }
 
 .fieldInput,
 .fieldSelect {
-	padding: 8px 10px;
+	padding: var(--space-sm) 10px;
 	border: 1px solid var(--color-border);
-	border-radius: 6px;
-	font-size: 13px;
+	border-radius: var(--radius-md);
+	font-size: var(--text-sm);
 	color: var(--color-text);
 	transition: border-color 0.15s;
 	background: var(--color-surface);
@@ -97,10 +97,10 @@
 }
 
 .fieldTextarea {
-	padding: 8px 10px;
+	padding: var(--space-sm) 10px;
 	border: 1px solid var(--color-border);
-	border-radius: 6px;
-	font-size: 13px;
+	border-radius: var(--radius-md);
+	font-size: var(--text-sm);
 	resize: vertical;
 	min-height: 60px;
 	font-family: inherit;
@@ -115,7 +115,7 @@
 
 .fieldRow {
 	display: flex;
-	gap: 12px;
+	gap: var(--space-md);
 }
 
 .fieldRow > .field {
@@ -127,24 +127,24 @@
 .presets {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: var(--space-xs);
 	flex-wrap: wrap;
-	margin-bottom: 12px;
+	margin-bottom: var(--space-md);
 }
 
 .presetsLabel {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--color-text-muted);
 	flex-shrink: 0;
 }
 
 .presetBtn {
-	padding: 4px 10px;
-	font-size: 12px;
+	padding: var(--space-xs) 10px;
+	font-size: var(--text-sm);
 	background: var(--color-success-subtle);
 	color: oklch(0.4 0.1 170);
 	border: 1px solid var(--color-success-subtle);
-	border-radius: 4px;
+	border-radius: var(--radius-sm);
 	cursor: pointer;
 	transition: all 0.15s;
 	white-space: nowrap;
@@ -160,19 +160,19 @@
 .addTimeBlock {
 	background: var(--color-bg);
 	border: 1px dashed var(--color-border);
-	border-radius: 8px;
-	padding: 12px;
-	margin-bottom: 12px;
+	border-radius: var(--radius-md);
+	padding: var(--space-md);
+	margin-bottom: var(--space-md);
 }
 
 .addBtn {
-	padding: 6px 14px;
+	padding: var(--space-xs) 14px;
 	background: var(--color-accent);
 	color: var(--color-white);
 	border: none;
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 500;
 	transition: background 0.15s;
 	margin-top: 4px;
@@ -192,25 +192,25 @@
 .sectionHeader {
 	display: flex;
 	align-items: baseline;
-	gap: 8px;
-	margin-bottom: 8px;
+	gap: var(--space-sm);
+	margin-bottom: var(--space-sm);
 }
 
 .sectionTitle {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--color-text);
 }
 
 .sectionHint {
-	font-size: 11px;
+	font-size: var(--text-xs);
 	color: var(--color-text-muted);
 }
 
 .timeList {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--space-xs);
 	margin-bottom: 4px;
 }
 
@@ -218,11 +218,11 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 6px 10px;
+	padding: var(--space-xs) 10px;
 	background: var(--color-bg);
 	border: 1px solid var(--color-border-light);
-	border-radius: 6px;
-	font-size: 12px;
+	border-radius: var(--radius-md);
+	font-size: var(--text-sm);
 }
 
 .timeItemText {
@@ -234,27 +234,27 @@
 	background: none;
 	border: none;
 	color: var(--color-danger);
-	font-size: 16px;
+	font-size: var(--text-lg);
 	cursor: pointer;
-	padding: 0 4px;
+	padding: 0 var(--space-xs);
 	line-height: 1;
 	flex-shrink: 0;
 }
 
 .emptyMsg {
 	color: var(--color-border);
-	font-size: 13px;
-	padding: 12px 0;
+	font-size: var(--text-sm);
+	padding: var(--space-md) 0;
 	text-align: center;
 }
 
 .errorMsg {
 	color: var(--color-danger);
-	font-size: 12px;
+	font-size: var(--text-sm);
 	margin-top: 6px;
-	padding: 6px 10px;
+	padding: var(--space-xs) 10px;
 	background: var(--color-danger-subtle);
-	border-radius: 4px;
+	border-radius: var(--radius-sm);
 }
 
 /* ── 依赖列表 ── */
@@ -262,30 +262,30 @@
 .depList {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	margin-bottom: 12px;
+	gap: var(--space-xs);
+	margin-bottom: var(--space-md);
 }
 
 .depItem {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 8px 10px;
+	padding: var(--space-sm) 10px;
 	background: var(--color-bg);
 	border: 1px solid var(--color-border-light);
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 }
 
 .depInfo {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-sm);
 	flex: 1;
 	min-width: 0;
 }
 
 .depTitle {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--color-text);
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -293,9 +293,9 @@
 }
 
 .depStatus {
-	font-size: 10px;
-	padding: 2px 6px;
-	border-radius: 4px;
+	font-size: var(--text-xs);
+	padding: var(--space-xs) 6px;
+	border-radius: var(--radius-sm);
 	font-weight: 500;
 	flex-shrink: 0;
 }
@@ -324,9 +324,9 @@
 	background: none;
 	border: none;
 	color: var(--color-danger);
-	font-size: 18px;
+	font-size: var(--text-lg);
 	cursor: pointer;
-	padding: 0 4px;
+	padding: 0 var(--space-xs);
 	line-height: 1;
 	flex-shrink: 0;
 }
@@ -336,29 +336,29 @@
 }
 
 .addDepBlock {
-	margin-top: 12px;
-	padding: 12px;
+	margin-top: var(--space-md);
+	padding: var(--space-md);
 	background: var(--color-bg);
 	border: 1px dashed var(--color-border);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 }
 
 .addDepRow {
 	display: flex;
-	gap: 8px;
+	gap: var(--space-sm);
 	align-items: flex-end;
 }
 
 /* ── 底部按钮 ── */
 
 .cancelBtn {
-	padding: 8px 18px;
+	padding: var(--space-sm) 18px;
 	background: var(--color-surface-raised);
 	color: var(--color-text);
 	border: 1px solid var(--color-border);
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 500;
 	transition: all 0.15s;
 }
@@ -368,13 +368,13 @@
 }
 
 .saveBtn {
-	padding: 8px 18px;
+	padding: var(--space-sm) 18px;
 	background: var(--color-success);
 	color: var(--color-white);
 	border: none;
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 500;
 	transition: background 0.15s;
 }

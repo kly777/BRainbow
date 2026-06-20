@@ -10,7 +10,7 @@
 	display: flex;
 	align-items: center;
 	gap: 0;
-	padding: 0 6px;
+	padding: 0 var(--space-xs);
 	border-bottom: 1px solid var(--color-border, #e8dfcc);
 	background: var(--color-surface, #fffef9);
 	flex-shrink: 0;
@@ -21,9 +21,9 @@
 .tabActive {
 	display: flex;
 	align-items: center;
-	gap: 6px;
-	padding: 8px 14px;
-	font-size: 13px;
+	gap: var(--space-xs);
+	padding: var(--space-sm) 14px;
+	font-size: var(--text-sm);
 	cursor: pointer;
 	border: none;
 	background: transparent;
@@ -53,12 +53,12 @@
 /* ── 重命名输入 ── */
 .renameInput {
 	width: 80px;
-	padding: 2px 4px;
+	padding: var(--space-xs) 4px;
 	border: 1px solid var(--color-accent, #3b82f6);
-	border-radius: 4px;
+	border-radius: var(--radius-sm);
 	background: var(--color-bg, #fefcf5);
 	color: var(--color-text, #3d3629);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	outline: none;
 }
 
@@ -66,10 +66,10 @@
 	width: 18px;
 	height: 18px;
 	border: none;
-	border-radius: 3px;
+	border-radius: var(--radius-sm);
 	background: transparent;
 	color: var(--color-text-muted, #9b8e7a);
-	font-size: 14px;
+	font-size: var(--text-base);
 	cursor: pointer;
 	display: flex;
 	align-items: center;
@@ -92,10 +92,10 @@
 	width: 28px;
 	height: 28px;
 	border: none;
-	border-radius: 4px;
+	border-radius: var(--radius-sm);
 	background: transparent;
 	color: var(--color-text-muted, #9b8e7a);
-	font-size: 16px;
+	font-size: var(--text-lg);
 	cursor: pointer;
 	display: flex;
 	align-items: center;
@@ -114,8 +114,8 @@
 	border: none;
 	outline: none;
 	resize: none;
-	padding: 20px 24px;
-	font-size: 15px;
+	padding: var(--space-xl) 24px;
+	font-size: var(--text-base);
 	line-height: 1.7;
 	font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
 	background: var(--color-bg, #fefcf5);

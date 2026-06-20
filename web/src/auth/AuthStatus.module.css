@@ -10,11 +10,11 @@
 
 .form {
 	background: var(--color-surface, #fffef9);
-	padding: 28px 24px 20px;
-	border-radius: 14px;
+	padding: var(--space-xl) var(--space-xl) var(--space-xl);
+	border-radius: var(--radius-lg);
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--space-md);
 	min-width: 300px;
 	max-width: 360px;
 	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
@@ -23,23 +23,23 @@
 
 .title {
 	margin: 0;
-	font-size: 18px;
+	font-size: var(--text-lg);
 	color: var(--color-text, #2c2416);
 	text-align: center;
 }
 
 .error {
 	color: var(--color-danger, #c53030);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	margin: 0;
 	text-align: center;
 }
 
 .input {
-	padding: 10px 12px;
+	padding: var(--space-sm) 12px;
 	border: 1px solid var(--color-border, #e8dfcc);
-	border-radius: 8px;
-	font-size: 14px;
+	border-radius: var(--radius-md);
+	font-size: var(--text-base);
 	background: var(--color-bg, #fefcf5);
 	color: var(--color-text, #3d3629);
 	outline: none;
@@ -53,16 +53,16 @@
 .actions {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: var(--space-sm);
 }
 
 .btnSubmit {
-	padding: 10px 0;
+	padding: var(--space-sm) 0;
 	border: none;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	background: var(--color-accent, #3b82f6);
 	color: #fff;
-	font-size: 14px;
+	font-size: var(--text-base);
 	font-weight: 600;
 	cursor: pointer;
 }
@@ -75,9 +75,9 @@
 	background: none;
 	border: none;
 	color: var(--color-accent, #3b82f6);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	cursor: pointer;
-	padding: 4px;
+	padding: var(--space-xs);
 }
 
 .btnLink:hover {
@@ -85,12 +85,12 @@
 }
 
 .btnCancel {
-	padding: 8px 0;
+	padding: var(--space-sm) 0;
 	border: 1px solid var(--color-border, #e8dfcc);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	background: transparent;
 	color: var(--color-text-muted, #9b8e7a);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	cursor: pointer;
 }
 

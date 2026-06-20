@@ -8,39 +8,39 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 20px 24px;
+	padding: var(--space-xl) 24px;
 	border-bottom: 1px solid var(--color-border, #e8dfcc);
 }
 
 .title {
-	font-size: 18px;
+	font-size: var(--text-lg);
 	color: var(--color-text, #2c2416);
 	margin: 0;
 }
 
 .form {
-	padding: 24px;
+	padding: var(--space-xl);
 	display: flex;
 	flex-direction: column;
-	gap: 20px;
+	gap: var(--space-xl);
 }
 
 .label {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
-	font-size: 13px;
+	gap: var(--space-xs);
+	font-size: var(--text-sm);
 	color: var(--color-text-secondary, #6b5e4a);
 }
 
 .textarea {
 	width: 100%;
-	padding: 12px;
+	padding: var(--space-md);
 	border: 1px solid var(--color-border, #e8dfcc);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	background: var(--color-bg, #fefcf5);
 	color: var(--color-text, #3d3629);
-	font-size: 15px;
+	font-size: var(--text-base);
 	font-family: inherit;
 	line-height: 1.6;
 	resize: vertical;
@@ -55,14 +55,14 @@
 .actions {
 	display: flex;
 	justify-content: flex-end;
-	gap: 10px;
+	gap: var(--space-sm);
 }
 
 .cancel {
-	padding: 8px 20px;
-	font-size: 14px;
+	padding: var(--space-sm) 20px;
+	font-size: var(--text-base);
 	border: 1px solid var(--color-border, #e8dfcc);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	background: transparent;
 	color: var(--color-text-secondary, #6b5e4a);
 	cursor: pointer;
@@ -73,11 +73,11 @@
 }
 
 .submit {
-	padding: 8px 20px;
-	font-size: 14px;
+	padding: var(--space-sm) 20px;
+	font-size: var(--text-base);
 	font-weight: 600;
 	border: none;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	background: var(--color-accent, #3b82f6);
 	color: #fff;
 	cursor: pointer;
@@ -96,14 +96,14 @@
 .modeTabs {
 	display: inline-flex;
 	border: 1px solid var(--color-border, #e8dfcc);
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	overflow: hidden;
 }
 
 .modeBtn,
 .modeActive {
-	padding: 4px 14px;
-	font-size: 13px;
+	padding: var(--space-xs) 14px;
+	font-size: var(--text-sm);
 	border: none;
 	cursor: pointer;
 	transition: background 0.15s;
@@ -131,20 +131,20 @@
 /* ── 进度 ── */
 /* ── 提示 ── */
 .hint {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--color-text-secondary, #6b5e4a);
 	margin-bottom: 4px;
 }
 
 .hint code {
 	background: var(--color-bg-subtle, #f8f3e6);
-	padding: 1px 5px;
-	border-radius: 3px;
-	font-size: 12px;
+	padding: var(--space-xs) var(--space-xs);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-sm);
 }
 
 .progress {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--color-text-secondary, #6b5e4a);
 	text-align: center;
 }

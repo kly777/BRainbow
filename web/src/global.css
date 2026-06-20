@@ -73,6 +73,23 @@
 
 	/* 侧边栏宽度 */
 	--sidebar-w: 200px;
+
+	/* ── 间距与尺寸令牌 ── */
+	--radius-sm: 4px;
+	--radius-md: 8px;
+	--radius-lg: 12px;
+
+	--space-xs: 4px;
+	--space-sm: 8px;
+	--space-md: 12px;
+	--space-lg: 16px;
+	--space-xl: 24px;
+
+	--text-xs: 11px;
+	--text-sm: 13px;
+	--text-base: 15px;
+	--text-lg: 18px;
+	--text-xl: 22px;
 }
 
 *,

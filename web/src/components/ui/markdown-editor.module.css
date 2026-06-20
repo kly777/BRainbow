@@ -7,10 +7,10 @@
 .textarea,
 .textareaDrag {
     width: 100%;
-    padding: 12px;
+    padding: var(--space-md);
     border: 2px solid var(--color-border);
-    border-radius: 8px;
-    font-size: 14px;
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
     font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
     line-height: 1.6;
     resize: vertical;
@@ -31,10 +31,10 @@
 }
 
 .preview {
-    margin-top: 8px;
-    padding: 12px;
+    margin-top: var(--space-sm);
+    padding: var(--space-md);
     border: 1px solid var(--color-border-light);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background: var(--color-surface);
     min-height: 40px;
 }

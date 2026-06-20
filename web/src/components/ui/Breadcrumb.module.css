@@ -1,13 +1,13 @@
 .breadcrumb {
 	display: flex;
 	align-items: center;
-	gap: 6px;
-	padding: 12px 0;
+	gap: var(--space-xs);
+	padding: var(--space-md) 0;
 	flex-wrap: wrap;
 }
 
 .link {
-	font-size: 14px;
+	font-size: var(--text-base);
 	color: var(--color-accent);
 	text-decoration: none;
 	font-weight: 500;
@@ -18,13 +18,13 @@
 }
 
 .current {
-	font-size: 14px;
+	font-size: var(--text-base);
 	color: var(--color-text-secondary);
 	font-weight: 400;
 }
 
 .sep {
-	font-size: 16px;
+	font-size: var(--text-lg);
 	color: var(--color-text-muted);
 	user-select: none;
 }

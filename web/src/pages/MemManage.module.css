@@ -11,13 +11,13 @@
 	display: flex;
 	align-items: baseline;
 	justify-content: space-between;
-	padding: 16px 20px;
+	padding: var(--space-lg) 20px;
 	border-bottom: 1px solid var(--color-border, #e8dfcc);
 	flex-shrink: 0;
 }
 
 .title {
-	font-size: 18px;
+	font-size: var(--text-lg);
 	color: var(--color-text, #2c2416);
 	margin: 0;
 }
@@ -25,11 +25,11 @@
 .topActions {
 	display: flex;
 	align-items: center;
-	gap: 14px;
+	gap: var(--space-md);
 }
 
 .addLink {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--color-accent, #3b82f6);
 	text-decoration: none;
 	font-weight: 500;
@@ -40,7 +40,7 @@
 }
 
 .count {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--color-text-muted, #9b8e7a);
 }
 
@@ -60,11 +60,11 @@
 .table {
 	width: 100%;
 	border-collapse: collapse;
-	font-size: 13px;
+	font-size: var(--text-sm);
 }
 
 .th {
-	padding: 8px 14px;
+	padding: var(--space-sm) 14px;
 	text-align: left;
 	font-weight: 600;
 	color: var(--color-text-muted, #9b8e7a);
@@ -91,7 +91,7 @@
 }
 
 .td {
-	padding: 8px 14px;
+	padding: var(--space-sm) 14px;
 	border-bottom: 1px solid var(--color-border, #e8dfcc);
 	color: var(--color-text, #3d3629);
 	max-width: 200px;
@@ -103,7 +103,7 @@
 .tdDue {
 	composes: td;
 	color: var(--color-text-secondary, #6b5e4a);
-	font-size: 12px;
+	font-size: var(--text-sm);
 }
 
 .tdAct {
@@ -116,11 +116,11 @@
 	width: 22px;
 	height: 22px;
 	border: none;
-	border-radius: 4px;
+	border-radius: var(--radius-sm);
 	background: transparent;
 	color: var(--color-text-muted, #9b8e7a);
 	cursor: pointer;
-	font-size: 14px;
+	font-size: var(--text-base);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -132,9 +132,9 @@
 }
 
 .badge {
-	font-size: 11px;
-	padding: 1px 7px;
-	border-radius: 10px;
+	font-size: var(--text-xs);
+	padding: var(--space-xs) var(--space-sm);
+	border-radius: var(--radius-md);
 	font-weight: 500;
 }
 
@@ -160,16 +160,16 @@
 	width: 320px;
 	flex-shrink: 0;
 	overflow-y: auto;
-	padding: 20px;
+	padding: var(--space-xl);
 	background: var(--color-surface, #fffef9);
 }
 
 .section {
-	margin-bottom: 16px;
+	margin-bottom: var(--space-lg);
 }
 
 .sectionLabel {
-	font-size: 11px;
+	font-size: var(--text-xs);
 	text-transform: uppercase;
 	color: var(--color-text-muted, #9b8e7a);
 	margin-bottom: 4px;
@@ -177,7 +177,7 @@
 }
 
 .content {
-	font-size: 14px;
+	font-size: var(--text-base);
 	line-height: 1.7;
 	color: var(--color-text, #3d3629);
 }
@@ -185,26 +185,26 @@
 .meta {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	font-size: 12px;
+	gap: var(--space-xs);
+	font-size: var(--text-sm);
 	color: var(--color-text-secondary, #6b5e4a);
-	padding: 12px 0;
+	padding: var(--space-md) 0;
 	border-top: 1px solid var(--color-border, #e8dfcc);
-	margin-top: 12px;
+	margin-top: var(--space-md);
 }
 
 .actionBtns {
 	display: flex;
-	gap: 8px;
-	margin-top: 12px;
+	gap: var(--space-sm);
+	margin-top: var(--space-md);
 }
 
 .editBtn {
 	flex: 1;
-	padding: 8px;
-	font-size: 13px;
+	padding: var(--space-sm);
+	font-size: var(--text-sm);
 	border: 1px solid var(--color-border, #e8dfcc);
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	background: var(--color-surface, #fffef9);
 	color: var(--color-text-secondary, #6b5e4a);
 	cursor: pointer;
@@ -216,10 +216,10 @@
 
 .cancelBtn {
 	flex: 1;
-	padding: 8px;
-	font-size: 13px;
+	padding: var(--space-sm);
+	font-size: var(--text-sm);
 	border: 1px solid var(--color-border, #e8dfcc);
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	background: var(--color-surface, #fffef9);
 	color: var(--color-text-secondary, #6b5e4a);
 	cursor: pointer;
@@ -231,11 +231,11 @@
 
 .editArea {
 	width: 100%;
-	padding: 8px;
-	font-size: 13px;
+	padding: var(--space-sm);
+	font-size: var(--text-sm);
 	font-family: inherit;
 	border: 1px solid var(--color-border, #e8dfcc);
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	background: var(--color-bg, #fefcf5);
 	color: var(--color-text, #3d3629);
 	resize: vertical;
@@ -248,10 +248,10 @@
 
 .deleteBtn {
 	flex: 1;
-	padding: 8px;
-	font-size: 13px;
+	padding: var(--space-sm);
+	font-size: var(--text-sm);
 	border: 1px solid var(--color-danger-border, #fca5a5);
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	background: var(--color-danger-light, #fef2f2);
 	color: var(--color-danger, #c53030);
 	cursor: pointer;
@@ -263,7 +263,7 @@
 
 .empty {
 	text-align: center;
-	padding: 40px;
+	padding: var(--space-xl);
 	color: var(--color-text-muted, #9b8e7a);
-	font-size: 14px;
+	font-size: var(--text-base);
 }

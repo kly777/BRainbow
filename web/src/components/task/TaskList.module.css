@@ -3,7 +3,7 @@
 .taskListPanel {
 	display: flex;
 	flex-direction: column;
-	gap: 32px;
+	gap: var(--space-xl);
 	flex: 1;
 	min-height: 0;
 	overflow-y: auto;
@@ -12,15 +12,15 @@
 /* ── 状态分组：无卡片，仅标题 + 留白 ── */
 
 .statusTitle {
-	margin: 0 0 14px;
-	font-size: 13px;
+	margin: 0 0 var(--space-md);
+	font-size: var(--text-sm);
 	font-weight: 500;
 	color: var(--color-text-muted);
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: var(--space-sm);
 }
 
 .statusIndicator {
@@ -56,7 +56,7 @@
 .taskItem {
 	display: flex;
 	flex-direction: column;
-	padding: 16px 0;
+	padding: var(--space-lg) 0;
 	border-bottom: 1px solid var(--color-surface-raised);
 	transition: background 0.15s ease;
 }
@@ -73,7 +73,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
-	gap: 20px;
+	gap: var(--space-xl);
 }
 
 .taskMain {
@@ -84,8 +84,8 @@
 /* ── 标题 ── */
 
 .taskTitle {
-	margin: 0 0 4px;
-	font-size: 15px;
+	margin: 0 0 var(--space-xs);
+	font-size: var(--text-base);
 	font-weight: 500;
 	color: var(--color-text);
 	line-height: 1.5;
@@ -95,8 +95,8 @@
 /* ── 描述 ── */
 
 .taskDescription {
-	margin: 0 0 8px;
-	font-size: 13px;
+	margin: 0 0 var(--space-sm);
+	font-size: var(--text-sm);
 	color: var(--color-text-secondary);
 	line-height: 1.6;
 }
@@ -105,27 +105,27 @@
 
 .taskMeta {
 	display: flex;
-	gap: 14px;
+	gap: var(--space-md);
 	align-items: center;
 	flex-wrap: wrap;
 }
 
 .dateBadge {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--color-text-muted);
 }
 
 .timeWindowChips {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 6px;
+	gap: var(--space-xs);
 	margin-top: 6px;
 }
 
 .timeWindowChip {
-	font-size: 11px;
-	padding: 2px 8px;
-	border-radius: 3px;
+	font-size: var(--text-xs);
+	padding: var(--space-xs) 8px;
+	border-radius: var(--radius-sm);
 	background: var(--color-bg);
 	color: var(--color-text-secondary);
 	border: 1px solid var(--color-surface-raised);
@@ -134,9 +134,9 @@
 
 .subTaskBadge {
 	margin-left: 8px;
-	padding: 1px 6px;
-	border-radius: 3px;
-	font-size: 11px;
+	padding: var(--space-xs) var(--space-xs);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-xs);
 	font-weight: 500;
 	color: var(--color-text-secondary);
 	background: var(--color-surface-raised);
@@ -147,16 +147,16 @@
 
 .taskActions {
 	display: flex;
-	gap: 6px;
+	gap: var(--space-xs);
 	align-items: center;
 	flex-shrink: 0;
 }
 
 .statusSelect {
-	padding: 5px 10px;
+	padding: var(--space-xs) 10px;
 	border: 1px solid var(--color-border-light);
-	border-radius: 6px;
-	font-size: 12px;
+	border-radius: var(--radius-md);
+	font-size: var(--text-sm);
 	color: var(--color-text);
 	background: var(--color-surface);
 	cursor: pointer;
@@ -180,13 +180,13 @@
 }
 
 .editButton {
-	padding: 5px 10px;
+	padding: var(--space-xs) 10px;
 	background: none;
 	color: var(--color-text-muted);
 	border: none;
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
-	font-size: 14px;
+	font-size: var(--text-base);
 	transition: all 0.15s;
 }
 
@@ -196,13 +196,13 @@
 }
 
 .subTaskButton {
-	padding: 4px 10px;
+	padding: var(--space-xs) 10px;
 	background: none;
 	color: var(--color-text-muted);
 	border: 1px solid var(--color-border-light);
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
-	font-size: 14px;
+	font-size: var(--text-base);
 	font-weight: 500;
 	transition: all 0.15s;
 	line-height: 1.4;
@@ -215,13 +215,13 @@
 }
 
 .deleteButton {
-	padding: 5px 10px;
+	padding: var(--space-xs) 10px;
 	background: none;
 	color: var(--color-text-muted);
 	border: none;
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
-	font-size: 14px;
+	font-size: var(--text-base);
 	transition: all 0.15s;
 }
 
@@ -234,19 +234,19 @@
 
 .subTaskForm {
 	display: flex;
-	gap: 8px;
+	gap: var(--space-sm);
 	align-items: center;
 	margin-top: 10px;
-	padding: 10px 0 0;
+	padding: var(--space-sm) 0 0;
 	border-top: 1px solid var(--color-surface-raised);
 }
 
 .subTaskInput {
 	flex: 1;
-	padding: 7px 12px;
+	padding: var(--space-sm) var(--space-md);
 	border: 1px solid var(--color-border-light);
-	border-radius: 6px;
-	font-size: 13px;
+	border-radius: var(--radius-md);
+	font-size: var(--text-sm);
 	background: var(--color-surface);
 	outline: none;
 	transition: border-color 0.15s;
@@ -262,13 +262,13 @@
 }
 
 .subTaskCancel {
-	padding: 7px 14px;
+	padding: var(--space-sm) var(--space-md);
 	background: none;
 	color: var(--color-text-muted);
 	border: 1px solid var(--color-border-light);
-	border-radius: 6px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
-	font-size: 12px;
+	font-size: var(--text-sm);
 	white-space: nowrap;
 	transition: all 0.15s;
 }
@@ -290,7 +290,7 @@
 }
 
 .childList > .taskItem {
-	padding: 12px 0;
+	padding: var(--space-md) 0;
 }
 
 /* ── 响应式 ── */
@@ -298,16 +298,16 @@
 @media (max-width: 768px) {
 	.taskRow {
 		flex-direction: column;
-		gap: 10px;
+		gap: var(--space-sm);
 	}
 	.taskActions {
 		width: 100%;
 		justify-content: flex-end;
 	}
 	.statusTitle {
-		font-size: 12px;
+		font-size: var(--text-sm);
 	}
 	.taskTitle {
-		font-size: 14px;
+		font-size: var(--text-base);
 	}
 }

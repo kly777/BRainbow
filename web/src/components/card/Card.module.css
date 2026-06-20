@@ -190,7 +190,7 @@
 	cursor: not-allowed;
 	background: var(--color-danger-subtle);
 	color: var(--color-danger);
-	border-color: var(var(--color-danger));
+	border-color: var(--color-danger);
 }
 
 .deleteButton:disabled:hover {

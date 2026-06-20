@@ -96,7 +96,7 @@
 	outline: none;
 	border-color: var(--color-accent, var(--color-accent));
 	box-shadow: 0 0 0 2px
-		var(oklch(0.62 0.21 257 / 0.25), oklch(0.62 0.21 257 / 0.25));
+		var(--color-accent-ring, oklch(0.58 0.2 255 / 0.25));
 }
 
 .triple {
@@ -129,7 +129,7 @@
 	outline: none;
 	border-color: var(--color-accent, var(--color-accent));
 	box-shadow: 0 0 0 2px
-		var(oklch(0.62 0.21 257 / 0.25), oklch(0.62 0.21 257 / 0.25));
+		var(--color-accent-ring, oklch(0.58 0.2 255 / 0.25));
 }
 
 .channel::-webkit-inner-spin-button,

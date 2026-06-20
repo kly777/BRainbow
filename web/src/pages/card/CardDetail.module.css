@@ -51,7 +51,7 @@
 	font-size: var(--text-sm);
 	background: var(--color-bg);
 	color: var(--color-danger);
-	border: 1px solid var(var(--color-danger));
+	border: 1px solid var(--color-danger);
 	border-radius: var(--radius-md);
 	cursor: pointer;
 }

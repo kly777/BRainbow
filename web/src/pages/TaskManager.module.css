@@ -1,4 +1,6 @@
 .taskManager {
+  max-width: 1440px;
+  margin: 0 auto;
 	margin: 0 0;
 	padding: var(--space-md) 16px;
 	display: flex;
@@ -171,6 +173,7 @@
 /* ── 响应式 ── */
 @media (max-width: 768px) {
 	.taskManager {
+  margin: 0 auto;
 		padding: var(--space-sm) 12px;
 		gap: var(--space-sm);
 	}

@@ -2,9 +2,9 @@
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
 	gap: var(--space-lg);
-	height: calc(100vh - 320px);
-	min-height: 400px;
-	overflow: hidden;
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
 }
 
 .column {

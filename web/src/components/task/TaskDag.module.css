@@ -5,7 +5,7 @@
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
-	height: 600px;
+	height: var(--cmp-height, 400px);
 }
 
 .dagToolbar {

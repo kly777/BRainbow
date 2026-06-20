@@ -12,6 +12,8 @@
 	/*min-height: 280px;*/
 	text-align: left;
 	width: 100%;
+	overflow-wrap: break-word;
+	overflow-y: auto;
 }
 
 .card.deleting {

@@ -1,7 +1,7 @@
 .cardsGrid {
 	padding-top: 10px;
 	column-count: auto;
-	column-width: 300px;
+	column-width: var(--masonry-column-width, 300px);
 	column-gap: var(--space-xl);
 	width: 100%;
 }

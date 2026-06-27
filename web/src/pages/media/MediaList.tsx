@@ -115,8 +115,8 @@ const MediaListPage: Component = () => {
 											<>
 												<div class={styles.preview}>
 													<Show when={item.media_type === "image"}>
-                                                        <a
-                                                            class={styles.previewLink}
+														<a
+															class={styles.previewLink}
 															href={item.url}
 															target="_blank"
 															rel="noopener noreferrer"

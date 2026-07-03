@@ -51,7 +51,7 @@
 
 @media (max-width: 480px) {
 	.cardsGrid {
-		column-width: 100%;
+		column-width: auto;
 		column-gap: var(--space-md);
 	}
 	.cardsGrid > * {

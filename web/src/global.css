@@ -111,6 +111,7 @@ html {
 		"Apple Color Emoji", "Segoe UI Emoji"; /* 1 */
 	line-height: 1.15; /* 2 */
 	-webkit-text-size-adjust: 100%; /* 3 */
+	text-size-adjust: 100%;
 	tab-size: 4; /* 4 */
 }
 

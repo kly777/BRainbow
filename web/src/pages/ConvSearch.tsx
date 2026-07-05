@@ -3,6 +3,9 @@ import { A, useNavigate, useSearchParams } from "@solidjs/router";
 import { request } from "../apis/request.ts";
 import styles from "./ConvSearch.module.css";
 
+const VALID_TABS = ["all", "conv", "article"] as const;
+type Tab = (typeof VALID_TABS)[number];
+
 interface ConvHit {
 	conv_id: number;
 	title: string;
@@ -18,8 +21,6 @@ interface SearchResponse {
 	hits: ConvHit[];
 	total: number;
 }
-
-type Tab = "all" | "conv" | "article";
 
 function searchConv(q: string, tab: Tab): Promise<SearchResponse> {
 	return request(`/conv/search?q=${encodeURIComponent(q)}&limit=50&search_type=${tab}`);
@@ -40,16 +41,35 @@ const typeLabel: Record<string, string> = {
 
 export default function ConvSearch() {
 	const [query, setQuery] = createSignal("");
-	const [searchQuery, setSearchQuery] = createSignal("");
-	const [tab, setTab] = createSignal<Tab>("all");
-	const [searchParams] = useSearchParams();
+	const [searchParams, setSearchParams] = useSearchParams();
 	const navigate = useNavigate();
+
+	// 从 URL 恢复 tab
+	const tab = () => {
+		const t = searchParams.t;
+		const tv = Array.isArray(t) ? t[0] : t;
+		return VALID_TABS.includes(tv as Tab) ? (tv as Tab) : "all";
+	};
+	const setTab = (t: Tab) => {
+		const q = searchParams.q;
+		const params: Record<string, string> = {};
+		if (q) params.q = Array.isArray(q) ? q[0] : q;
+		if (t !== "all") params.t = t;
+		setSearchParams(params);
+	};
+
+	// 从 URL 恢复 query
+	const searchQuery = () => {
+		const q = searchParams.q;
+		if (Array.isArray(q)) return q[0];
+		return q ?? "";
+	};
 
 	onMount(() => {
 		const urlQ = searchParams.q;
-		if (urlQ && typeof urlQ === "string") {
-			setQuery(urlQ);
-			setSearchQuery(urlQ);
+		const q = Array.isArray(urlQ) ? urlQ[0] : urlQ;
+		if (q && typeof q === "string") {
+			setQuery(q);
 		}
 	});
 
@@ -67,15 +87,24 @@ export default function ConvSearch() {
 		e.preventDefault();
 		const q = query().trim();
 		if (!q) return;
-		setSearchQuery(q);
-		navigate(`/conv?q=${encodeURIComponent(q)}`, { replace: true });
+		const params: Record<string, string> = { q };
+		if (tab() !== "all") params.t = tab();
+		setSearchParams(params, { replace: true });
 	};
 
 	const itemHref = (hit: ConvHit) => {
+		const q = searchQuery();
+		const t = tab();
+		const params = new URLSearchParams();
+		if (q) params.set("q", String(q));
+		if (t !== "all") params.set("t", t);
+		const qs = params.toString();
+		const suffix = qs ? `?${qs}` : "";
 		if (hit.match_field === "article" && hit.article_title) {
-			return `/conv/concept/${hit.conv_id}?article=${encodeURIComponent(hit.article_title)}`;
+			params.set("article", hit.article_title);
+			return `/conv/concept/${hit.conv_id}?${params.toString()}`;
 		}
-		return `/conv/qa/${hit.conv_id}`;
+		return `/conv/qa/${hit.conv_id}${suffix}`;
 	};
 
 	return (
@@ -88,14 +117,24 @@ export default function ConvSearch() {
 			<p class={styles.initialHint}>输入关键词，搜索 AI 对话历史、概念和方案</p>
 
 			<form class={styles.searchBar} onSubmit={handleSearch}>
-				<input
-					class={styles.input}
-					type="text"
-					placeholder="搜索对话、文章、标签…"
-					value={query()}
-					onInput={(e) => setQuery(e.currentTarget.value)}
-					autofocus
-				/>
+				<div class={styles.inputWrap}>
+					<input
+						class={styles.input}
+						type="text"
+						placeholder="搜索对话、文章、标签…"
+						value={query()}
+						onInput={(e) => setQuery(e.currentTarget.value)}
+						autofocus
+					/>
+					<Show when={query()}>
+						<button
+							type="button"
+							class={styles.clearBtn}
+							onClick={() => { setQuery(""); }}>
+							×
+						</button>
+					</Show>
+				</div>
 				<button type="submit" class={styles.btn}>搜索</button>
 			</form>
 
@@ -133,6 +172,11 @@ export default function ConvSearch() {
 				<Show when={!searchQuery()}>
 					<div class={styles.empty}>输入关键词搜索对话或文章</div>
 				</Show>
+				<Show when={data.loading}>
+					<div class={styles.spinnerWrap}>
+						<div class={styles.spinner} />
+					</div>
+				</Show>
 				<For each={data().hits}>
 					{(hit) => (
 						<A href={itemHref(hit)} class={styles.item}>
@@ -146,7 +190,7 @@ export default function ConvSearch() {
 						</A>
 					)}
 				</For>
-				<Show when={searchQuery() && data().hits.length === 0}>
+				<Show when={searchQuery() && !data.loading && data().hits.length === 0}>
 					<div class={styles.empty}>没有找到匹配的结果</div>
 				</Show>
 			</div>

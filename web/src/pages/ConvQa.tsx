@@ -1,5 +1,5 @@
 import { createResource, Show, For } from "solid-js";
-import { A, useParams } from "@solidjs/router";
+import { A, useParams, useSearchParams } from "@solidjs/router";
 import { request } from "../apis/request.ts";
 import MarkdownRenderer from "../components/ui/Markdown.tsx";
 import styles from "./ConvDetail.module.css";
@@ -27,9 +27,20 @@ const typeLabel: Record<string, string> = {
 
 export default function ConvQaPage() {
 	const params = useParams();
+	const [searchParams] = useSearchParams();
 	const [data] = createResource(() => params.id, (id) =>
 		request<ConvQaData>(`/conv/qa/${id}`),
 	);
+
+	const backHref = () => {
+		const params = new URLSearchParams();
+		const q = searchParams.q;
+		const t = searchParams.t;
+		if (q) params.set("q", String(q));
+		if (t && t !== "all") params.set("t", String(t));
+		const qs = params.toString();
+		return qs ? `/conv?${qs}` : "/conv";
+	};
 
 	return (
 		<div class={styles.page}>
@@ -37,7 +48,7 @@ export default function ConvQaPage() {
 				{(d) => (
 					<>
 						<div class={styles.topBar}>
-							<A href="/conv" class={styles.backLink}>← 搜索</A>
+							<A href={backHref()} class={styles.backLink}>← 搜索</A>
 							<div class={styles.titleArea}>
 								<h1 class={styles.title}>{d().title}</h1>
 								<span class={styles.tag}>{typeLabel[d().conv_type] || d().conv_type}</span>

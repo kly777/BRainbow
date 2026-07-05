@@ -42,13 +42,23 @@ export default function ConvDetailPage() {
 		request<ConvDetail>(`/conv/${id}`),
 	);
 
+	const backHref = () => {
+		const params = new URLSearchParams();
+		const q = searchParams.q;
+		const t = searchParams.t;
+		if (q) params.set("q", String(q));
+		if (t && t !== "all") params.set("t", String(t));
+		const qs = params.toString();
+		return qs ? `/conv?${qs}` : "/conv";
+	};
+
 	return (
 		<div class={styles.page}>
 			<Show when={data()} fallback={<div class={styles.loading}>加载中…</div>}>
 				{(d) => (
 					<>
 						<div class={styles.topBar}>
-							<A href="/conv" class={styles.backLink}>← 搜索</A>
+							<A href={backHref()} class={styles.backLink}>← 搜索</A>
 							<div class={styles.titleArea}>
 								<h1 class={styles.title}>{d().title}</h1>
 								<span class={styles.tag}>{typeLabel[d().conv_type] || d().conv_type}</span>

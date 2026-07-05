@@ -417,10 +417,11 @@ fn true_memory_simulation_check() {
 fn custom_config_produces_different_intervals() {
     let default = SchedulerConfig::default();
     let fast = SchedulerConfig {
-        learning_steps: vec![30, 120],        // 30s, 2min
-        relearn_steps: vec![60, 300],          // 1min, 5min
-        graduating_interval_secs: 43200,       // 12h
+        learning_steps: vec![30, 120],
+        relearn_steps: vec![60, 300],
+        graduating_interval_secs: 43200,
         desired_retention: 0.85,
+        fsrs_params: Vec::new(),
     };
     let now = Utc::now();
 

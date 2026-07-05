@@ -6,7 +6,9 @@ use axum::{
 use std::collections::HashMap;
 
 use crate::error;
+use crate::modules::mem::config::MemConfig;
 use crate::modules::mem::model::*;
+use crate::modules::mem::optimizer;
 use crate::modules::mem::service::MemService;
 use crate::pagination::Pagination;
 use crate::state::AppState;
@@ -128,5 +130,32 @@ pub async fn delete_mem(Path(id): Path<i32>, State(state): State<AppState>) -> i
     match svc.delete(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "删除"),
+    }
+}
+
+/// 优化 FSRS 参数
+pub async fn optimize_params(State(state): State<AppState>) -> impl IntoResponse {
+    let config = MemConfig::load();
+    match optimizer::optimize_fsrs_params(&state.db, &config).await {
+        Ok(Some(params)) => {
+            tracing::info!("FSRS 参数优化完成，共 {} 个参数", params.len());
+            // 保存并更新全局参数
+            let mut cfg = config;
+            if let Err(e) = cfg.update_fsrs_params(params) {
+                return err(e, "保存参数");
+            };
+            Json(serde_json::json!({
+                "ok": true,
+                "params": cfg.fsrs_params,
+                "message": format!("优化完成，得到 {} 个参数", cfg.fsrs_params.len()),
+            }))
+            .into_response()
+        }
+        Ok(None) => Json(serde_json::json!({
+            "ok": false,
+            "message": "数据不足，至少需要 10 条复习记录"
+        }))
+        .into_response(),
+        Err(e) => err(e, "优化"),
     }
 }

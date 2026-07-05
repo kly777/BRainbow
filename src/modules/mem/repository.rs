@@ -22,7 +22,7 @@ pub struct MemRow {
 }
 
 pub struct MemRepo {
-    pool: Arc<SqlitePool>,
+    pub(crate) pool: Arc<SqlitePool>,
 }
 
 impl MemRepo {

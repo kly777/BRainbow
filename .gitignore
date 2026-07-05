@@ -6,6 +6,8 @@
 /uploads/*
 !/uploads/.gitkeep
 
+mem_config.json
+
 /doc
 
 /dist

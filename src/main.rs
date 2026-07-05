@@ -70,6 +70,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 创建数据库表（如果不存在）
     db::create_tables(&pool).await?;
 
+    // 加载记忆配置（FSRS 参数 + 调度配置）
+    modules::mem::config::load_and_init_mem_config();
+
     // 创建应用状态
     let state = AppState::new(Arc::new(pool));
 

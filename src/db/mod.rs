@@ -281,5 +281,34 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
-    Ok(())
+    // 复习日志表（用于 FSRS 参数优化）
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS revlog (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mem_id INTEGER NOT NULL,
+            review_time TEXT NOT NULL,
+            rating INTEGER NOT NULL,
+            delta_t INTEGER NOT NULL,
+            stability_before REAL,
+            difficulty_before REAL,
+            state_before TEXT,
+            stability_after REAL,
+            difficulty_after REAL,
+            state_after TEXT,
+            FOREIGN KEY (mem_id) REFERENCES mem(id)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // 创建索引
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_revlog_mem_id ON revlog(mem_id)"
+    )
+    .execute(pool)
+    .await?;
+
+   Ok(())
 }

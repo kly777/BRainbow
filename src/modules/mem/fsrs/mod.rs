@@ -7,6 +7,20 @@
 use crate::modules::mem::model::CardState;
 use chrono::{DateTime, Duration, Utc};
 use fsrs::{FSRS, MemoryState};
+use std::sync::OnceLock;
+
+/// 全局 FSRS 参数，启动时由 `init_global_params` 设置。
+static GLOBAL_FSRS_PARAMS: OnceLock<Vec<f32>> = OnceLock::new();
+
+/// 设置全局 FSRS 参数（启动时调用）
+pub fn init_global_params(params: Vec<f32>) {
+    GLOBAL_FSRS_PARAMS.set(params).ok();
+}
+
+/// 获取当前 FSRS 参数
+pub fn get_global_params() -> &'static [f32] {
+    GLOBAL_FSRS_PARAMS.get().map(|v| v.as_slice()).unwrap_or(&[])
+}
 
 // ── 可配置参数 ──
 
@@ -21,15 +35,18 @@ pub struct SchedulerConfig {
     pub graduating_interval_secs: i64,
     /// 期望回忆率
     pub desired_retention: f64,
+    /// FSRS 内部参数（19 个浮点数），空 = 默认
+    pub fsrs_params: Vec<f32>,
 }
 
 impl Default for SchedulerConfig {
     fn default() -> Self {
         Self {
-            learning_steps: vec![60, 600],         // 1min, 10min
-            relearn_steps: vec![600],               // 10min
-            graduating_interval_secs: 86400,        // 1天
+            learning_steps: vec![60, 600],
+            relearn_steps: vec![600],
+            graduating_interval_secs: 86400,
             desired_retention: 0.9,
+            fsrs_params: Vec::new(),
         }
     }
 }
@@ -55,7 +72,7 @@ fn due_in_secs(secs: i64) -> String {
 }
 
 fn make_fsrs() -> FSRS {
-    FSRS::new(&[]).unwrap()
+    FSRS::new(get_global_params()).unwrap()
 }
 
 /// 除非有真实的记忆参数，否则传 None（避免 stability=0 / difficulty=0 传给 FSRS）

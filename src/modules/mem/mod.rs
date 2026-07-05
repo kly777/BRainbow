@@ -1,6 +1,8 @@
+pub mod config;
 pub mod fsrs;
 pub mod handler;
 pub mod model;
+pub mod optimizer;
 mod repository;
 pub mod service;
 
@@ -23,4 +25,5 @@ pub fn routes() -> Router<AppState> {
         .route("/{id}/unbury", post(handler::unbury_mem))
         .route("/{id}/reset", post(handler::reset_mem))
         .route("/{id}", delete(handler::delete_mem))
+        .route("/optimize", post(handler::optimize_params))
 }

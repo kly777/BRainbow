@@ -1,6 +1,7 @@
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
+use crate::modules::mem::config::MemConfig;
 use crate::modules::mem::fsrs::{self, ReviewOutcome};
 use crate::modules::mem::model::*;
 use crate::modules::mem::repository::{MemRepo, MemRow};
@@ -131,6 +132,37 @@ impl MemService {
                 &outcome.due_at,
             )
             .await?;
+
+        // 写 revlog
+        let delta_t = days_elapsed_since(&row.last_review_at) as i32;
+        let now_str = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
+        sqlx::query(
+            r#"
+            INSERT INTO revlog (mem_id, review_time, rating, delta_t,
+                stability_before, difficulty_before, state_before,
+                stability_after, difficulty_after, state_after)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            "#,
+        )
+        .bind(id)
+        .bind(&now_str)
+        .bind(rating as i32)
+        .bind(delta_t)
+        .bind(row.stability)
+        .bind(row.difficulty)
+        .bind(&row.state)
+        .bind(outcome.stability)
+        .bind(outcome.difficulty)
+        .bind(new_state)
+        .execute(&*self.repo.pool)
+        .await
+        .map_err(AppError::Db)?;
+
+        // 每 20 次复习自动触发一次参数优化
+        let pool = self.repo.pool.clone();
+        tokio::spawn(async move {
+            maybe_auto_optimize(pool, 20).await;
+        });
 
         Ok(ReviewResponse {
             state: new_state.to_string(),
@@ -264,6 +296,37 @@ impl MemService {
     }
     pub async fn reset(&self, id: i32) -> Result<(), sqlx::Error> {
         self.repo.reset_mem(id).await
+    }
+}
+
+/// 如果 revlog 条数达到 `every` 的整数倍，自动触发 FSRS 参数优化。
+async fn maybe_auto_optimize(pool: Arc<SqlitePool>, every: i64) {
+    let count: Result<(i64,), _> = sqlx::query_as("SELECT COUNT(*) FROM revlog")
+        .fetch_one(&*pool)
+        .await;
+    let count = match count {
+        Ok((n,)) => n,
+        Err(_) => return,
+    };
+    if count < 10 || count % every != 0 {
+        return;
+    }
+
+    tracing::info!("触发自动优化: revlog 共 {} 条", count);
+    let config = MemConfig::load();
+    match crate::modules::mem::optimizer::optimize_fsrs_params(&pool, &config).await {
+        Ok(Some(params)) => {
+            let mut cfg = config;
+            if let Err(e) = cfg.update_fsrs_params(params) {
+                tracing::warn!("自动优化后保存参数失败: {}", e);
+            } else {
+                tracing::info!("自动优化完成, 参数已更新");
+            }
+        }
+        Ok(None) => {}
+        Err(e) => {
+            tracing::warn!("自动优化失败: {}", e);
+        }
     }
 }
 

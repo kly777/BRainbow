@@ -5,6 +5,26 @@ use crate::modules::mem::fsrs::{self, ReviewOutcome};
 use crate::modules::mem::model::*;
 use crate::modules::mem::repository::{MemRepo, MemRow};
 
+/// 计算自上次复习以来经过的天数。
+/// 新卡（无 last_review_at）返回 0。
+/// 已复习过的卡即使不到 1 天也返回至少 1，
+/// 确保 FSRS 收到非零 days_elapsed 从而正确更新 stability。
+fn days_elapsed_since(last_review_at: &Option<String>) -> u32 {
+    match last_review_at {
+        None => 0,
+        Some(s) => {
+            if let Ok(t) = chrono::DateTime::parse_from_rfc3339(s) {
+                let t_utc = t.with_timezone(&chrono::Utc);
+                let elapsed = chrono::Utc::now() - t_utc;
+                let days = elapsed.num_seconds() / 86400;
+                std::cmp::max(1, days as u32)
+            } else {
+                1
+            }
+        }
+    }
+}
+
 pub struct MemService {
     repo: MemRepo,
 }
@@ -125,6 +145,13 @@ impl MemService {
         } else {
             row.step_index.map(|i| i as usize)
         };
+        let days_elapsed = days_elapsed_since(&row.last_review_at);
+        let config = fsrs::SchedulerConfig::default();
+        let cumulative_step_days = if state.has_steps() || state == CardState::New {
+            days_elapsed.max(1)
+        } else {
+            days_elapsed
+        };
         fsrs::schedule(
             row.stability,
             row.difficulty,
@@ -132,6 +159,9 @@ impl MemService {
             step,
             rating,
             chrono::Utc::now(),
+            days_elapsed,
+            cumulative_step_days,
+            &config,
         )
     }
 
@@ -175,11 +205,15 @@ impl MemService {
     pub async fn preview(&self, id: i32) -> Result<[f64; 4], AppError> {
         let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
         let state: CardState = row.state.parse().unwrap_or(CardState::New);
+        let days_elapsed = days_elapsed_since(&row.last_review_at);
+        let config = fsrs::SchedulerConfig::default();
         Ok(fsrs::preview(
             row.stability,
             row.difficulty,
             state,
             row.step_index.map(|i| i as usize),
+            days_elapsed,
+            &config,
         ))
     }
 

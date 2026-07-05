@@ -105,6 +105,31 @@ export const ROUTES: RouteConfig[] = [
 		nav: false,
 		component: lazy(() => import("./pages/MemManage.tsx")),
 	},
+	{
+		path: "/conv",
+		label: "对话搜索",
+		desc: "搜索 AI 对话历史",
+		nav: true,
+		component: lazy(() => import("./pages/ConvSearch.tsx")),
+	},
+	{
+		path: "/conv/qa/:id",
+		label: "对话详情",
+		desc: "",
+		component: lazy(() => import("./pages/ConvQa.tsx")),
+	},
+	{
+		path: "/conv/concept/:id",
+		label: "概念详情",
+		desc: "",
+		component: lazy(() => import("./pages/ConvConcept.tsx")),
+	},
+	{
+		path: "/conv/:id",
+		label: "对话详情 (旧)",
+		desc: "",
+		component: lazy(() => import("./pages/ConvDetail.tsx")),
+	},
 ];
 
 /** 仅导航入口，用于命令面板 */

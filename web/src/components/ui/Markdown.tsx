@@ -2,8 +2,10 @@ import DOMPurify from "dompurify";
 import hljs from "highlight.js";
 import { marked } from "marked";
 import { markedHighlight } from "marked-highlight";
+import markedKatex from "marked-katex-extension";
 import { type Component, createMemo } from "solid-js";
 import "highlight.js/styles/github.css";
+import "katex/dist/katex.min.css";
 import "./markdown.css";
 
 // 所有链接在新标签页打开
@@ -14,7 +16,7 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
 	}
 });
 
-// 配置marked
+// 配置 marked
 marked.use(
 	markedHighlight({
 		langPrefix: "hljs language-",
@@ -24,6 +26,10 @@ marked.use(
 			}
 			return code;
 		},
+	}),
+	markedKatex({
+		throwOnError: false,
+		nonStandard: true,
 	}),
 );
 
@@ -47,6 +53,14 @@ const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 				content = content.replace(/\n/g, " ");
 			}
 
+			// 1. 将 \(...\) 和 \[...\] 转为 $...$ 和 $$...$$
+			content = content
+				.replace(/\\\(/g, "$")
+				.replace(/\\\)/g, "$")
+				.replace(/\\\[/g, "$$$$")
+				.replace(/\\\]/g, "$$$$");
+
+			// 2. marked 解析（含 markedKatex 插件自动处理 $...$ / $$...$$）
 			const rawHtml = marked.parse(content) as string;
 
 			return DOMPurify.sanitize(rawHtml, {
@@ -82,6 +96,31 @@ const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 					"img",
 					"div",
 					"span",
+					// KaTeX MathML（无障碍备选）
+					"math",
+					"semantics",
+					"mrow",
+					"mfrac",
+					"mi",
+					"mo",
+					"msup",
+					"msub",
+					"mn",
+					"mtext",
+					"mspace",
+					"msqrt",
+					"mroot",
+					"mover",
+					"munder",
+					"munderover",
+					"mtable",
+					"mtr",
+					"mtd",
+					"mpadded",
+					"mphantom",
+					"annotation",
+					"svg",
+					"path",
 				],
 				ALLOWED_ATTR: [
 					"href",
@@ -95,6 +134,15 @@ const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 					"class",
 					"id",
 					"align",
+					// KaTeX 必需
+					"style",
+					"aria-hidden",
+					"encoding",
+					"xmlns",
+					"d",
+					"viewBox",
+					"fill",
+					"stroke",
 				],
 				ALLOWED_URI_REGEXP:
 					/^(?:(?:https?|mailto|ftp|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,

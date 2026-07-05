@@ -3,7 +3,7 @@ use axum::{
     routing::{get, post},
 };
 
-use crate::modules::{card, db_viewer, media, mem, onto, sign, task, text, time_window, user};
+use crate::modules::{card, conv, db_viewer, media, mem, onto, sign, task, text, time_window, user};
 use crate::state::AppState;
 
 pub fn create_api_router(state: AppState) -> Router<AppState> {
@@ -13,7 +13,8 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         .route("/user/login", post(user::login_handler))
         .nest("/mem", mem::routes())
         .nest("/text", text::routes())
-        .nest("/media", media::public_file_route());
+        .nest("/media", media::public_file_route())
+        .nest("/conv", conv::routes());
 
     // ── 需登录的路由 ──
     let authed = Router::new()

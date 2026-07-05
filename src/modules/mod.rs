@@ -1,4 +1,5 @@
 pub mod card;
+pub mod conv;
 pub mod db_viewer;
 pub mod media;
 pub mod mem;

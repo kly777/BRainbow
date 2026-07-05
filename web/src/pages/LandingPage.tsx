@@ -17,6 +17,7 @@ const modules = [
 		title: "间隔记忆",
 		desc: "基于 FSRS 的智能复习系统",
 	},
+	{ path: "/conv", icon: "🔍", title: "对话搜索", desc: "搜索 AI 对话历史" },
 	{ path: "/text", icon: "✍️", title: "文本编辑", desc: "多标签纯文本编辑器" },
 	{ path: "/i", icon: "🖼️", title: "图片管理", desc: "上传和管理图片资源" },
 ];

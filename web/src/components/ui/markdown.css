@@ -229,6 +229,29 @@
 	display: none;
 }
 
+/* 数学公式（KaTeX） */
+.markdown-content .katex-display {
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding: 0.5em 0;
+}
+
+.markdown-content .katex {
+	font-size: 1.05em;
+}
+
+.markdown-content .katex-display > .katex {
+	white-space: normal;
+}
+
+.markdown-content .katex-display > .katex > .katex-html {
+	white-space: normal;
+}
+
+.markdown-content .katex-html {
+	max-width: 100%;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
 	.markdown-content h1 {

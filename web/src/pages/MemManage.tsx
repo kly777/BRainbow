@@ -88,6 +88,7 @@ export default function MemManage() {
 	return (
 		<div class={styles.page}>
 			<div class={styles.topBar}>
+				<A href="/m" class={styles.backLink}>← 记忆</A>
 				<h1 class={styles.title}>记忆管理</h1>
 				<div class={styles.topActions}>
 					<A href="/m/add" class={styles.addLink}>

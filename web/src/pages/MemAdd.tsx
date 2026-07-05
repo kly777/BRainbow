@@ -1,5 +1,5 @@
 import { createSignal, Show } from "solid-js";
-import { useNavigate } from "@solidjs/router";
+import { A, useNavigate } from "@solidjs/router";
 import { createMemE } from "../apis/memApi.ts";
 import MarkdownEditor from "../components/ui/MarkdownEditor.tsx";
 import styles from "./MemAdd.module.css";
@@ -109,7 +109,8 @@ export default function MemAdd() {
 	return (
 		<div class={styles.page}>
 			<div class={styles.topBar}>
-				<h1 class={styles.title}>添加记忆</h1>
+			<A href="/m" class={styles.backLink}>← 记忆</A>
+			<h1 class={styles.title}>添加记忆</h1>
 				<div class={styles.modeTabs}>
 					<button
 						type="button"
@@ -163,7 +164,7 @@ export default function MemAdd() {
 						<button
 							type="button"
 							class={styles.cancel}
-							onClick={() => navigate("/m/manage")}
+							onClick={() => navigate("/m")}
 						>
 							取消
 						</button>
@@ -193,7 +194,7 @@ export default function MemAdd() {
 						<button
 							type="button"
 							class={styles.cancel}
-							onClick={() => navigate("/m/manage")}
+							onClick={() => navigate("/m")}
 						>
 							取消
 						</button>
@@ -227,7 +228,7 @@ export default function MemAdd() {
 						<button
 							type="button"
 							class={styles.cancel}
-							onClick={() => navigate("/m/manage")}
+							onClick={() => navigate("/m")}
 						>
 							取消
 						</button>

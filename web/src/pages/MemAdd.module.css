@@ -4,6 +4,19 @@
 	padding: 0;
 }
 
+.backLink {
+	font-size: var(--text-sm);
+	color: var(--color-accent, #3b82f6);
+	text-decoration: none;
+	font-weight: 500;
+	margin-right: var(--space-sm);
+	white-space: nowrap;
+}
+
+.backLink:hover {
+	text-decoration: underline;
+}
+
 .topBar {
 	display: flex;
 	align-items: center;

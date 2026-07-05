@@ -7,10 +7,22 @@
 	padding: 0;
 }
 
+.backLink {
+	font-size: var(--text-sm);
+	color: var(--color-accent, #3b82f6);
+	text-decoration: none;
+	font-weight: 500;
+	margin-right: var(--space-sm);
+}
+
+.backLink:hover {
+	text-decoration: underline;
+}
+
 .topBar {
 	display: flex;
 	align-items: baseline;
-	justify-content: space-between;
+	justify-content: flex-start;
 	padding: var(--space-lg) 20px;
 	border-bottom: 1px solid var(--color-border, #e8dfcc);
 	flex-shrink: 0;

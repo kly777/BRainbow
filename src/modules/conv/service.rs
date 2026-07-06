@@ -1,47 +1,10 @@
-use axum::{
-    Json,
-    extract::{Path, Query, State},
-    response::IntoResponse,
-    routing::get,
-    Router,
-};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::error;
-use crate::state::AppState;
 use sqlx::SqlitePool;
 
-#[derive(Deserialize)]
-pub struct SearchParams {
-    q: Option<String>,
-    limit: Option<i64>,
-    offset: Option<i64>,
-    /// "all" | "conv" | "article"
-    search_type: Option<String>,
-}
+use super::model::{ConvHit, SearchResponse};
 
-#[derive(Serialize)]
-pub struct ConvHit {
-    pub conv_id: i64,
-    pub title: String,
-    pub conv_type: String,
-    pub snippet: String,
-    pub match_field: String,
-    pub created_at: String,
-    pub score: i64,
-    /// 文章模式下，存具体文章标题
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub article_title: Option<String>,
-}
 
-#[derive(Serialize)]
-pub struct SearchResponse {
-    pub hits: Vec<ConvHit>,
-    pub total: i64,
-}
-
-/// 计算关键词在各表中的 IDF（逆文档频率）
 async fn compute_idf(pool: &SqlitePool, kw: &str) -> f64 {
     let pattern = format!("%{}%", kw);
     let total: (i64,) = sqlx::query_as(
@@ -65,7 +28,7 @@ fn count_occurrences(text: &str, keyword: &str) -> usize {
     count
 }
 
-/// TF 分数：出现次数 / 文本长度（避免短文本过度占优，加 100 平滑）
+/// TF 分数：出现次数 / 文本长度（+100 平滑避免短文本过度占优）
 fn tf_score(count: usize, text_len: usize) -> f64 {
     count as f64 / (text_len.max(1) as f64 + 100.0)
 }
@@ -79,16 +42,21 @@ struct RawHit {
     snippet: String,
     created_at: String,
     source_len: usize,
-    keyword_index: usize,  // 哪个关键词
-    ocurrences: usize,       // 出现次数
+    keyword_index: usize,
+    ocurrences: usize,
     article_title: Option<String>,
 }
 
-async fn search_conv(pool: &SqlitePool, q: &str, limit: i64, _offset: i64, search_type: &str) -> Result<SearchResponse, sqlx::Error> {
+pub async fn search_conv(
+    pool: &SqlitePool,
+    q: &str,
+    limit: i64,
+    _offset: i64,
+    search_type: &str,
+) -> Result<SearchResponse, sqlx::Error> {
     let search_convs = search_type == "all" || search_type == "conv";
     let search_articles = search_type == "all" || search_type == "article";
 
-    // 按空格拆分关键词
     let keywords: Vec<&str> = q.split_whitespace().filter(|k| !k.is_empty()).collect();
     if keywords.is_empty() {
         return Ok(SearchResponse { hits: vec![], total: 0 });
@@ -157,7 +125,7 @@ async fn search_conv(pool: &SqlitePool, q: &str, limit: i64, _offset: i64, searc
         }
     }
 
-    // 预计算 IDF（每个关键词一次）
+    // 预计算 IDF
     let idfs: Vec<f64> = {
         let mut v = Vec::new();
         for kw in &keywords {
@@ -199,192 +167,9 @@ async fn search_conv(pool: &SqlitePool, q: &str, limit: i64, _offset: i64, searc
     let total = hits.len() as i64;
     Ok(SearchResponse { hits, total })
 }
-
-pub async fn search_handler(
-    State(state): State<AppState>,
-    Query(params): Query<SearchParams>,
-) -> impl IntoResponse {
-    let q = match params.q {
-        Some(ref s) if !s.trim().is_empty() => s.trim(),
-        _ => return Json(serde_json::json!({ "hits": [], "total": 0 })).into_response(),
-    };
-
-    let limit = params.limit.unwrap_or(20).min(100);
-    let offset = params.offset.unwrap_or(0);
-    let search_type = params.search_type.as_deref().unwrap_or("all");
-
-    match search_conv(&*state.db, q, limit, offset, search_type).await {
-        Ok(res) => Json(res).into_response(),
-        Err(e) => error::internal(e, "搜索"),
-    }
-}
-
-#[derive(Serialize)]
-pub struct QaPair {
-    pub qa_id: i32,
-    pub question: String,
-    pub answer: String,
-}
-
-#[derive(Serialize)]
-pub struct ConvDetail {
-    pub conv_id: i64,
-    pub title: String,
-    pub conv_type: String,
-    pub created_at: String,
-    pub qa_pairs: Vec<QaPair>,
-    pub articles: Vec<ArticleItem>,
-}
-
-#[derive(Serialize)]
-pub struct ArticleItem {
-    pub article_type: String,
-    pub title: String,
-    pub content: String,
-}
-
-pub async fn conv_detail_handler(
-    State(state): State<AppState>,
-    Path(id): Path<i64>,
-    Query(params): Query<HashMap<String, String>>,
-) -> impl IntoResponse {
-    let article_only = params.get("mode").map(|s| s.as_str()) == Some("article");
-    let pool = &*state.db;
-
-    // 取标题
-    let title_info: Option<(String, String, String)> = sqlx::query_as(
-        "SELECT title, conv_type, created_at FROM conv_titles WHERE conv_id = ?1 ORDER BY id LIMIT 1",
-    )
-    .bind(id)
-    .fetch_optional(pool)
-    .await
-    .unwrap_or(None);
-
-    let (title, conv_type, created_at) = match title_info {
-        Some(t) => t,
-        None => return error::not_found("对话不存在"),
-    };
-
-    // 取 Q&A（article_only 模式跳过）
-    let qa_pairs: Vec<(i32, String, String)> = if article_only {
-        Vec::new()
-    } else {
-        sqlx::query_as(
-            "SELECT qa_id, question, answer FROM conv WHERE conv_id = ?1 ORDER BY qa_id",
-        )
-        .bind(id)
-        .fetch_all(pool)
-        .await
-        .unwrap_or_default()
-    };
-
-    // 取文章
-    let articles: Vec<(String, String, String)> = sqlx::query_as(
-        "SELECT article_type, title, content FROM articles WHERE conv_id = ?1",
-    )
-    .bind(id)
-    .fetch_all(pool)
-    .await
-    .unwrap_or_default();
-
-    Json(ConvDetail {
-        conv_id: id,
-        title,
-        conv_type,
-        created_at,
-        qa_pairs: qa_pairs.into_iter().map(|(id, q, a)| QaPair { qa_id: id, question: q, answer: a }).collect(),
-        articles: articles.into_iter().map(|(t, title, c)| ArticleItem { article_type: t, title, content: c }).collect(),
-    })
-    .into_response()
-}
-
-pub fn routes() -> Router<AppState> {
-    Router::new()
-        .route("/search", get(search_handler))
-        .route("/{id}", get(conv_detail_handler))
-        .route("/qa/{id}", get(conv_qa_handler))
-        .route("/concept/{id}", get(conv_concept_handler))
-}
-
-/// 返回指定对话的 Q&A（无文章）
-pub async fn conv_qa_handler(
-    State(state): State<AppState>,
-    Path(id): Path<i64>,
-) -> impl IntoResponse {
-    let pool = &*state.db;
-
-    let title_info: Option<(String, String, String)> = sqlx::query_as(
-        "SELECT title, conv_type, created_at FROM conv_titles WHERE conv_id = ?1 ORDER BY id LIMIT 1",
-    )
-    .bind(id)
-    .fetch_optional(pool)
-    .await
-    .unwrap_or(None);
-
-    let (title, conv_type, created_at) = match title_info {
-        Some(t) => t,
-        None => return error::not_found("对话不存在"),
-    };
-
-    let qa_pairs: Vec<(i32, String, String)> = sqlx::query_as(
-        "SELECT qa_id, question, answer FROM conv WHERE conv_id = ?1 ORDER BY qa_id",
-    )
-    .bind(id)
-    .fetch_all(pool)
-    .await
-    .unwrap_or_default();
-
-    Json(serde_json::json!({
-        "conv_id": id,
-        "title": title,
-        "conv_type": conv_type,
-        "created_at": created_at,
-        "qa_pairs": qa_pairs.into_iter().map(|(id, q, a)| serde_json::json!({
-            "qa_id": id, "question": q, "answer": a
-        })).collect::<Vec<_>>(),
-    }))
-    .into_response()
-}
-
-/// 返回指定对话的某一篇文章
-pub async fn conv_concept_handler(
-    State(state): State<AppState>,
-    Path(id): Path<i64>,
-    Query(params): Query<HashMap<String, String>>,
-) -> impl IntoResponse {
-    let article_title = match params.get("article") {
-        Some(t) => t,
-        None => return error::not_found("缺少 article 参数"),
-    };
-
-    let pool = &*state.db;
-
-    let article: Option<(String, String, String)> = sqlx::query_as(
-        "SELECT article_type, title, content FROM articles WHERE conv_id = ?1 AND title = ?2 LIMIT 1",
-    )
-    .bind(id)
-    .bind(article_title)
-    .fetch_optional(pool)
-    .await
-    .unwrap_or(None);
-
-    match article {
-        Some((atype, title, content)) => {
-            Json(serde_json::json!({
-                "conv_id": id,
-                "article_type": atype,
-                "title": title,
-                "content": content,
-            }))
-            .into_response()
-        }
-        None => error::not_found("文章不存在"),
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use super::*;
+    use crate::modules::conv::model::{ConvHit, SearchResponse};
     use sqlx::SqlitePool;
 
     /// 创建临时 conv.db 测试数据

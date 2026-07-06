@@ -1,8 +1,7 @@
-use std::collections::HashMap;
-
 use sqlx::SqlitePool;
 
 use super::model::{ConvHit, SearchResponse};
+use super::scoring;
 
 
 async fn compute_idf(pool: &SqlitePool, kw: &str) -> f64 {
@@ -16,35 +15,18 @@ async fn compute_idf(pool: &SqlitePool, kw: &str) -> f64 {
     (total.0 as f64 / matched.0.max(1) as f64).ln()
 }
 
-fn count_occurrences(text: &str, keyword: &str) -> usize {
-    let s = text.to_lowercase();
-    let kw = keyword.to_lowercase();
-    let mut count = 0;
-    let mut pos = 0;
-    while let Some(idx) = s[pos..].find(&kw) {
-        count += 1;
-        pos += idx + kw.len();
-    }
-    count
-}
-
-/// TF 分数：出现次数 / 文本长度（+100 平滑避免短文本过度占优）
-fn tf_score(count: usize, text_len: usize) -> f64 {
-    count as f64 / (text_len.max(1) as f64 + 100.0)
-}
-
 #[derive(Debug, Clone)]
-struct RawHit {
-    conv_id: i64,
-    title: String,
-    conv_type: String,
-    match_field: String,
-    snippet: String,
-    created_at: String,
-    source_len: usize,
-    keyword_index: usize,
-    ocurrences: usize,
-    article_title: Option<String>,
+pub struct RawHit {
+    pub conv_id: i64,
+    pub title: String,
+    pub conv_type: String,
+    pub match_field: String,
+    pub snippet: String,
+    pub created_at: String,
+    pub source_len: usize,
+    pub keyword_index: usize,
+    pub ocurrences: usize,
+    pub article_title: Option<String>,
 }
 
 pub async fn search_conv(
@@ -72,7 +54,7 @@ pub async fn search_conv(
                 "SELECT conv_id, title, conv_type, created_at FROM conv_titles WHERE title LIKE ?1 LIMIT 200"
             ).bind(&pattern).fetch_all(pool).await?;
             for (cid, title, ctype, created) in rows {
-                let occ = count_occurrences(&title, kw);
+                let occ = scoring::count_occurrences(&title, kw);
                 let len = title.len();
                 raw_hits.push(RawHit {
                     conv_id: cid, title: title.clone(), conv_type: ctype,
@@ -93,7 +75,7 @@ pub async fn search_conv(
             ).bind(&pattern).fetch_all(pool).await?;
             for (cid, title, ctype, created, question, answer) in rows {
                 let text = format!("{} {}", question, answer);
-                let occ = count_occurrences(&text, kw);
+                let occ = scoring::count_occurrences(&text, kw);
                 let snippet = if question.contains(kw) { question } else { answer };
                 raw_hits.push(RawHit {
                     conv_id: cid, title, conv_type: ctype,
@@ -114,7 +96,7 @@ pub async fn search_conv(
             ).bind(&pattern).fetch_all(pool).await?;
             for (cid, atype, art_title, content, created) in rows {
                 let text = format!("{} {}", art_title, content);
-                let occ = count_occurrences(&text, kw);
+                let occ = scoring::count_occurrences(&text, kw);
                 raw_hits.push(RawHit {
                     conv_id: cid, title: art_title.clone(), conv_type: atype,
                     match_field: "article".into(), snippet: content,
@@ -134,36 +116,7 @@ pub async fn search_conv(
         v
     };
 
-    // 按 conv_id 聚合分数 = TF * IDF，多关键词累加
-    let mut scored: HashMap<i64, (f64, RawHit)> = HashMap::new();
-    for hit in raw_hits {
-        let tf = tf_score(hit.ocurrences, hit.source_len);
-        let idf = idfs[hit.keyword_index];
-        let score = tf * idf;
-        if score <= 0.0 { continue; }
-
-        let entry = scored.entry(hit.conv_id).or_insert((0.0, hit.clone()));
-        entry.0 += score;
-    }
-
-    // 排序取 top N
-    let mut results: Vec<(f64, RawHit)> = scored.into_values().collect();
-    results.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-    results.truncate(limit as usize);
-
-    let hits: Vec<ConvHit> = results.into_iter().map(|(score, hit)| {
-        ConvHit {
-            conv_id: hit.conv_id,
-            title: hit.title,
-            conv_type: hit.conv_type,
-            snippet: hit.snippet,
-            match_field: hit.match_field,
-            created_at: hit.created_at,
-            score: (score * 1000.0) as i64,
-            article_title: hit.article_title,
-        }
-    }).collect();
-
+    let hits = scoring::score_and_rank(raw_hits, &idfs, limit as usize);
     let total = hits.len() as i64;
     Ok(SearchResponse { hits, total })
 }

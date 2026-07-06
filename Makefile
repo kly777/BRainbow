@@ -6,7 +6,7 @@ TARGET_ARCH := x86_64-unknown-linux-gnu
 SSH_TARGET := $(REMOTE_USER)@$(REMOTE_HOST)
 time := $(shell date +%y%m%d_%H%M%S)
 
-.PHONY: clean deploy status db-pull db-push logs rollback fmt check-env
+.PHONY: clean deploy deploy-web deploy-backend deploy-force-db status db-pull db-push logs rollback fmt check-env
 
 check-env:
 	@test -n "$(REMOTE_HOST)" || (echo "错误: .env.prod 未设置 REMOTE_HOST"; exit 1)
@@ -21,17 +21,54 @@ fmt:
 	cargo fmt
 	cd web && npx @biomejs/biome format --write src/
 
-build: clean
+build:
 	cd web && npx vite build
 	mkdir -p $(SERVER_DIR)
 	cp -r web/dist $(SERVER_DIR)/
 	cargo build --target $(TARGET_ARCH) --release
 	cp target/$(TARGET_ARCH)/release/brainbow $(SERVER_DIR)/
 
+# 重建
+build-full: clean
+	cd web && npx vite build
+	mkdir -p $(SERVER_DIR)
+	cp -r web/dist $(SERVER_DIR)/
+	cargo build --target $(TARGET_ARCH) --release
+	cp target/$(TARGET_ARCH)/release/brainbow $(SERVER_DIR)/
+
+build-web:
+	cd web && npx vite build
+	mkdir -p $(SERVER_DIR)
+	cp -r web/dist $(SERVER_DIR)/
+
+build-backend:
+	cargo build --target $(TARGET_ARCH) --release
+	mkdir -p $(SERVER_DIR)
+	cp target/$(TARGET_ARCH)/release/brainbow $(SERVER_DIR)/
+	@[ -d "$(SERVER_DIR)/dist" ] || $(MAKE) build-web
+
 clean:
 	rm -rf $(SERVER_DIR)/
 
+clean-stamps:
+	@echo "stamp files 已移除"
+
 deploy: build check-env
+	bash ./deploy.sh
+
+# 全量部署
+deploy-full: build-full check-env
+	bash ./deploy.sh
+
+# 仅部署前端
+deploy-web: build-web check-env
+	@echo "=== 部署前端文件 ==="
+	rsync -avz -e "ssh -p $(REMOTE_PORT)" $(SERVER_DIR)/dist/ $(SSH_TARGET):$(REMOTE_BASE)/$(APP_NAME)/dist/
+	ssh -p $(REMOTE_PORT) $(SSH_TARGET) "sudo systemctl reload caddy 2>/dev/null || true"
+	@echo "前端已部署，Caddy 已重载"
+
+# 仅部署后端
+deploy-backend: build-backend check-env
 	bash ./deploy.sh
 
 # 覆盖远端数据库

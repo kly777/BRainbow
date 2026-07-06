@@ -310,5 +310,63 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
+    // ── 对话系统 (conv) ──
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS conv_titles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conv_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            conv_type TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(conv_id, title)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS conv (
+            conv_id INTEGER NOT NULL,
+            qa_id INTEGER NOT NULL,
+            question TEXT,
+            answer TEXT
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS articles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conv_id INTEGER NOT NULL,
+            article_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT,
+            word_count INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(conv_id, title)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // 创建索引
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_conv_conv_id ON conv(conv_id)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_conv_titles_conv_id ON conv_titles(conv_id)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_articles_conv_id ON articles(conv_id)")
+        .execute(pool)
+        .await?;
+
    Ok(())
 }

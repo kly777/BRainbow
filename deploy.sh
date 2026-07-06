@@ -146,6 +146,82 @@ check_status() {
         "sudo systemctl status $APP_NAME --no-pager | head -15"
 }
 
+# ========== Caddy 生命周期管理 ==========
+
+check_caddy() {
+    log_info "检查 Caddy 状态..."
+
+    # 1. 检查 Caddy 是否已安装
+    if ! ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" "command -v caddy" >/dev/null 2>&1; then
+        log_error "远程服务器未安装 Caddy"
+        log_info "请先安装: sudo apt install caddy"
+        exit 1
+    fi
+
+    # 2. 验证 Caddy 配置
+    if ! ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" \
+        "timeout 10 caddy validate --config /etc/caddy/Caddyfile 2>&1" | grep -q "Valid configuration"; then
+        log_error "Caddy 配置无效，请检查 /etc/caddy/Caddyfile"
+        exit 1
+    fi
+    log_success "Caddy 配置有效"
+
+    # 3. 检查 Caddy 服务是否运行
+    if ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" \
+        "systemctl is-active caddy" 2>/dev/null | grep -q "active"; then
+        log_success "Caddy 服务运行中"
+    else
+        log_warning "Caddy 未运行！请手动启动: ssh $REMOTE_USER@$REMOTE_HOST 'sudo systemctl start caddy'"
+    fi
+}
+
+reload_caddy() {
+    local caddyfile_remote="/etc/caddy/Caddyfile"
+    log_info "重新加载 Caddy..."
+
+    if ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" \
+        "sudo systemctl reload caddy" 2>/dev/null; then
+        log_success "Caddy 已重新加载"
+    else
+        log_warning "Caddy 重载失败（可能 sudo 受限），请手动执行: sudo systemctl reload caddy"
+    fi
+}
+
+check_caddy_endpoint() {
+    log_info "验证服务端点..."
+    sleep 2
+
+    # 1. 后端健康检查（直连端口）
+    local http_code
+    http_code=$(ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" \
+        "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/health 2>/dev/null || echo '000'")
+    if [ "$http_code" = "200" ]; then
+        log_success "后端服务响应正常 (HTTP $http_code)"
+    else
+        log_warning "后端服务返回 HTTP $http_code，请检查"
+    fi
+
+    # 2. 通过 Caddy 反向代理访问 API
+    http_code=$(ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" \
+        "curl -s -o /dev/null -w '%{http_code}' http://localhost/api/health 2>/dev/null || echo '000'")
+    if [ "$http_code" = "200" ]; then
+        log_success "Caddy → 后端反向代理正常 (HTTP $http_code)"
+    else
+        log_warning "Caddy 反向代理返回 HTTP $http_code"
+    fi
+
+    # 3. 前端 SPA 是否可达
+    http_code=$(ssh -p "$REMOTE_PORT" "$REMOTE_USER@$REMOTE_HOST" \
+        "curl -s -o /dev/null -w '%{http_code}' http://localhost/ 2>/dev/null || echo '000'")
+    if [ "$http_code" = "200" ]; then
+        log_success "前端页面可达 (HTTP $http_code)"
+    else
+        log_warning "前端返回 HTTP $http_code"
+    fi
+}
+
+log_warning() { echo -e "\033[0;33m[WARN]\033[0m $1"; }
+
 # ========== 主流程 ==========
 main() {
     load_config
@@ -154,15 +230,18 @@ main() {
     log_info "部署 $APP_NAME 到 $REMOTE_HOST"
     echo "========================================="
 
+    check_caddy
     stop_remote_service
     backup_remote
     sync_files
     setup_permissions
     setup_service
+    reload_caddy
     check_status
+    check_caddy_endpoint
 
     echo ""
-    log_success "Listening on http://$REMOTE_HOST:$SERVICE_PORT"
+    log_success "https://brainbow.top"
 }
 
 main "$@"

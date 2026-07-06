@@ -253,17 +253,11 @@ pub async fn search_handler(
         _ => return Json(serde_json::json!({ "hits": [], "total": 0 })).into_response(),
     };
 
-    // conv.db 在同级目录
-    let conv_pool = match SqlitePool::connect("sqlite:conv.db").await {
-        Ok(p) => p,
-        Err(e) => return error::internal(e, "连接 conv.db"),
-    };
-
     let limit = params.limit.unwrap_or(20).min(100);
     let offset = params.offset.unwrap_or(0);
-
     let search_type = params.search_type.as_deref().unwrap_or("all");
-    match search_conv(&conv_pool, q, limit, offset, search_type).await {
+
+    match search_conv(&*state.db, q, limit, offset, search_type).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => error::internal(e, "搜索"),
     }
@@ -294,21 +288,19 @@ pub struct ArticleItem {
 }
 
 pub async fn conv_detail_handler(
+    State(state): State<AppState>,
     Path(id): Path<i64>,
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
     let article_only = params.get("mode").map(|s| s.as_str()) == Some("article");
-    let pool = match SqlitePool::connect("sqlite:conv.db").await {
-        Ok(p) => p,
-        Err(e) => return error::internal(e, "连接 conv.db"),
-    };
+    let pool = &*state.db;
 
     // 取标题
     let title_info: Option<(String, String, String)> = sqlx::query_as(
         "SELECT title, conv_type, created_at FROM conv_titles WHERE conv_id = ?1 ORDER BY id LIMIT 1",
     )
     .bind(id)
-    .fetch_optional(&pool)
+    .fetch_optional(pool)
     .await
     .unwrap_or(None);
 
@@ -325,7 +317,7 @@ pub async fn conv_detail_handler(
             "SELECT qa_id, question, answer FROM conv WHERE conv_id = ?1 ORDER BY qa_id",
         )
         .bind(id)
-        .fetch_all(&pool)
+        .fetch_all(pool)
         .await
         .unwrap_or_default()
     };
@@ -335,7 +327,7 @@ pub async fn conv_detail_handler(
         "SELECT article_type, title, content FROM articles WHERE conv_id = ?1",
     )
     .bind(id)
-    .fetch_all(&pool)
+    .fetch_all(pool)
     .await
     .unwrap_or_default();
 
@@ -360,18 +352,16 @@ pub fn routes() -> Router<AppState> {
 
 /// 返回指定对话的 Q&A（无文章）
 pub async fn conv_qa_handler(
+    State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> impl IntoResponse {
-    let pool = match SqlitePool::connect("sqlite:conv.db").await {
-        Ok(p) => p,
-        Err(e) => return error::internal(e, "连接 conv.db"),
-    };
+    let pool = &*state.db;
 
     let title_info: Option<(String, String, String)> = sqlx::query_as(
         "SELECT title, conv_type, created_at FROM conv_titles WHERE conv_id = ?1 ORDER BY id LIMIT 1",
     )
     .bind(id)
-    .fetch_optional(&pool)
+    .fetch_optional(pool)
     .await
     .unwrap_or(None);
 
@@ -384,7 +374,7 @@ pub async fn conv_qa_handler(
         "SELECT qa_id, question, answer FROM conv WHERE conv_id = ?1 ORDER BY qa_id",
     )
     .bind(id)
-    .fetch_all(&pool)
+    .fetch_all(pool)
     .await
     .unwrap_or_default();
 
@@ -402,6 +392,7 @@ pub async fn conv_qa_handler(
 
 /// 返回指定对话的某一篇文章
 pub async fn conv_concept_handler(
+    State(state): State<AppState>,
     Path(id): Path<i64>,
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
@@ -410,17 +401,14 @@ pub async fn conv_concept_handler(
         None => return error::not_found("缺少 article 参数"),
     };
 
-    let pool = match SqlitePool::connect("sqlite:conv.db").await {
-        Ok(p) => p,
-        Err(e) => return error::internal(e, "连接 conv.db"),
-    };
+    let pool = &*state.db;
 
     let article: Option<(String, String, String)> = sqlx::query_as(
         "SELECT article_type, title, content FROM articles WHERE conv_id = ?1 AND title = ?2 LIMIT 1",
     )
     .bind(id)
     .bind(article_title)
-    .fetch_optional(&pool)
+    .fetch_optional(pool)
     .await
     .unwrap_or(None);
 

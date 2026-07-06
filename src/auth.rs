@@ -135,3 +135,141 @@ pub async fn require_admin(request: Request, next: Next) -> Response {
             .into_response(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_SECRET: &str = "test-secret-key-for-unit-tests";
+
+    // ── create_token + verify_token roundtrip ──
+
+    #[test]
+    fn create_and_verify_user_token() {
+        let token = create_token(42, "user", TEST_SECRET);
+        let claims = verify_token(&token, TEST_SECRET).expect("应能验证 token");
+        assert_eq!(claims.sub, 42);
+        assert_eq!(claims.role, "user");
+        assert!(claims.exp > 0);
+    }
+
+    #[test]
+    fn create_and_verify_admin_token() {
+        let token = create_token(1, "admin", TEST_SECRET);
+        let claims = verify_token(&token, TEST_SECRET).expect("应能验证 token");
+        assert_eq!(claims.sub, 1);
+        assert_eq!(claims.role, "admin");
+    }
+
+    #[test]
+    fn verify_with_wrong_secret_returns_none() {
+        let token = create_token(7, "user", TEST_SECRET);
+        assert!(verify_token(&token, "wrong-secret").is_none());
+    }
+
+    #[test]
+    fn verify_garbage_token_returns_none() {
+        assert!(verify_token("not-a-jwt-token", TEST_SECRET).is_none());
+    }
+
+    #[test]
+    fn verify_empty_string_returns_none() {
+        assert!(verify_token("", TEST_SECRET).is_none());
+    }
+
+    #[test]
+    fn tokens_with_different_secrets_are_independent() {
+        let token_a = create_token(1, "user", "secret-a");
+        let token_b = create_token(2, "admin", "secret-b");
+        assert!(verify_token(&token_a, "secret-a").is_some());
+        assert!(verify_token(&token_a, "secret-b").is_none());
+        assert!(verify_token(&token_b, "secret-b").is_some());
+        assert!(verify_token(&token_b, "secret-a").is_none());
+    }
+
+    #[test]
+    fn token_contains_correct_user_id() {
+        for id in [1, 100, 9999] {
+            let token = create_token(id, "user", TEST_SECRET);
+            let claims = verify_token(&token, TEST_SECRET).unwrap();
+            assert_eq!(claims.sub, id, "user_id {} 应正确编码", id);
+        }
+    }
+
+    // ── extract_token ──
+
+    #[test]
+    fn extract_token_from_bearer_header() {
+        use axum::body::Body;
+        let req = Request::builder()
+            .header("Authorization", "Bearer my-token-123")
+            .body(Body::empty())
+            .unwrap();
+        assert_eq!(extract_token(&req), Some("my-token-123".to_string()));
+    }
+
+    #[test]
+    fn extract_token_missing_header() {
+        use axum::body::Body;
+        let req = Request::builder().body(Body::empty()).unwrap();
+        assert_eq!(extract_token(&req), None);
+    }
+
+    #[test]
+    fn extract_token_without_bearer_prefix() {
+        use axum::body::Body;
+        let req = Request::builder()
+            .header("Authorization", "Basic somebase64")
+            .body(Body::empty())
+            .unwrap();
+        assert_eq!(extract_token(&req), None);
+    }
+
+    #[test]
+    fn extract_token_empty_bearer() {
+        use axum::body::Body;
+        let req = Request::builder()
+            .header("Authorization", "Bearer ")
+            .body(Body::empty())
+            .unwrap();
+        assert_eq!(extract_token(&req), Some("".to_string()));
+    }
+
+    #[test]
+    fn extract_token_lowercase_bearer() {
+        use axum::body::Body;
+        let req = Request::builder()
+            .header("Authorization", "bearer my-token")
+            .body(Body::empty())
+            .unwrap();
+        // strip_prefix is case-sensitive, so "bearer" should NOT match "Bearer"
+        assert_eq!(extract_token(&req), None);
+    }
+
+    #[test]
+    fn extract_token_with_extra_whitespace() {
+        use axum::body::Body;
+        let req = Request::builder()
+            .header("Authorization", "Bearer  my-token")
+            .body(Body::empty())
+            .unwrap();
+        // strip_prefix removes exactly "Bearer ", so extra space stays in result
+        assert_eq!(extract_token(&req), Some(" my-token".to_string()));
+    }
+
+    // ── Claims serialization ──
+
+    #[test]
+    fn claims_json_roundtrip() {
+        let claims = Claims {
+            sub: 5,
+            role: "admin".to_string(),
+            exp: 9999999999,
+        };
+        let json = serde_json::to_string(&claims).unwrap();
+        let deserialized: Claims = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.sub, 5);
+        assert_eq!(deserialized.role, "admin");
+        assert_eq!(deserialized.exp, 9999999999);
+    }
+}

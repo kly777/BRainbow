@@ -173,3 +173,74 @@ impl ServiceError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── ServiceError Display ──
+
+    #[test]
+    fn error_invalid_time_range_display() {
+        let e = ServiceError::InvalidTimeRange("开始 > 结束".into());
+        assert!(format!("{}", e).contains("开始 > 结束"));
+    }
+
+    #[test]
+    fn error_planned_outside_available_display() {
+        let e = ServiceError::PlannedOutsideAvailable("不可行".into());
+        assert!(format!("{}", e).contains("不可行"));
+    }
+
+    #[test]
+    fn error_slot_overlap_display() {
+        let e = ServiceError::SlotOverlap("重叠".into());
+        assert!(format!("{}", e).contains("重叠"));
+    }
+
+    #[test]
+    fn error_not_found_display() {
+        let e = ServiceError::NotFound;
+        assert_eq!(format!("{}", e), "资源不存在");
+    }
+
+    #[test]
+    fn error_internal_display() {
+        let e = ServiceError::Internal("内部错误".into());
+        assert!(format!("{}", e).contains("内部错误"));
+    }
+
+    #[test]
+    fn error_db_display() {
+        let e = ServiceError::Db(sqlx::Error::Protocol("db err".into()));
+        assert!(format!("{}", e).contains("db err"));
+    }
+
+    // ── ServiceError::into_response ──
+
+    #[test]
+    fn error_into_response_does_not_panic() {
+        let errors = vec![
+            ServiceError::InvalidTimeRange("测试".into()),
+            ServiceError::PlannedOutsideAvailable("测试".into()),
+            ServiceError::SlotOverlap("测试".into()),
+            ServiceError::NotFound,
+            ServiceError::Internal("测试".into()),
+            ServiceError::Db(sqlx::Error::Protocol("测试".into())),
+        ];
+        for e in errors {
+            let _ = e.into_response();
+        }
+    }
+
+    // ── 时间窗口类型 ──
+
+    #[test]
+    fn time_window_type_from_str() {
+        use crate::modules::time_window::model::TimeWindowType;
+        assert_eq!("feasible".parse::<TimeWindowType>().unwrap(), TimeWindowType::Feasible);
+        assert_eq!("planned".parse::<TimeWindowType>().unwrap(), TimeWindowType::Planned);
+        assert_eq!("actual".parse::<TimeWindowType>().unwrap(), TimeWindowType::Actual);
+        assert!("invalid".parse::<TimeWindowType>().is_err());
+    }
+}

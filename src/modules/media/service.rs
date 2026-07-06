@@ -262,3 +262,158 @@ impl MediaService {
         format!("{}/{}/{}", UPLOAD_DIR, dir_for_type(media_type), stored_id)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── sanitize_name ──
+
+    #[test]
+    fn sanitize_name_keeps_normal_name() {
+        assert_eq!(sanitize_name("photo.jpg"), "photo.jpg");
+    }
+
+    #[test]
+    fn sanitize_name_trims_whitespace() {
+        let result = sanitize_name("  my file.png  ");
+        assert_eq!(result, "my file.png");
+    }
+
+    #[test]
+    fn sanitize_name_truncates_long_name() {
+        let long = "a".repeat(300);
+        let result = sanitize_name(&long);
+        assert_eq!(result.len(), 255);
+    }
+
+    #[test]
+    fn sanitize_name_empty_falls_back_to_unnamed() {
+        let result = sanitize_name("   ");
+        assert_eq!(result, "unnamed");
+    }
+
+    #[test]
+    fn sanitize_name_preserves_unicode() {
+        let name = "照片.png";
+        assert_eq!(sanitize_name(name), "照片.png");
+    }
+
+    // ── find_allowed ──
+
+    #[test]
+    fn find_allowed_png() {
+        let result = find_allowed("image/png");
+        assert!(result.is_some());
+        let (media_type, max_size) = result.unwrap();
+        assert_eq!(media_type, "image");
+        assert_eq!(max_size, 10_485_760);
+    }
+
+    #[test]
+    fn find_allowed_mp4() {
+        let result = find_allowed("video/mp4");
+        assert!(result.is_some());
+        let (media_type, max_size) = result.unwrap();
+        assert_eq!(media_type, "video");
+        assert_eq!(max_size, 209_715_200);
+    }
+
+    #[test]
+    fn find_allowed_mp3() {
+        let result = find_allowed("audio/mpeg");
+        assert!(result.is_some());
+        let (media_type, max_size) = result.unwrap();
+        assert_eq!(media_type, "audio");
+        assert_eq!(max_size, 52_428_800);
+    }
+
+    #[test]
+    fn find_allowed_unsupported_mime() {
+        assert!(find_allowed("application/pdf").is_none());
+        assert!(find_allowed("text/plain").is_none());
+        assert!(find_allowed("image/avif").is_none());
+    }
+
+    #[test]
+    fn find_allowed_empty_mime() {
+        assert!(find_allowed("").is_none());
+    }
+
+    #[test]
+    fn find_allowed_case_sensitive() {
+        // MIME 是大小写敏感的
+        assert!(find_allowed("IMAGE/PNG").is_none());
+    }
+
+    #[test]
+    fn find_allowed_jpeg() {
+        let result = find_allowed("image/jpeg");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().0, "image");
+    }
+
+    #[test]
+    fn find_allowed_webp() {
+        let result = find_allowed("image/webp");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().0, "image");
+    }
+
+    // ── dir_for_type ──
+
+    #[test]
+    fn dir_for_type_image() {
+        assert_eq!(dir_for_type("image"), "image");
+    }
+
+    #[test]
+    fn dir_for_type_video() {
+        assert_eq!(dir_for_type("video"), "video");
+    }
+
+    #[test]
+    fn dir_for_type_audio() {
+        assert_eq!(dir_for_type("audio"), "audio");
+    }
+
+    #[test]
+    fn dir_for_type_unknown_falls_to_image() {
+        assert_eq!(dir_for_type("unknown"), "image");
+    }
+
+    // ── generate_stored_id ──
+
+    #[test]
+    fn stored_id_is_12_chars() {
+        let id = generate_stored_id();
+        assert_eq!(id.len(), 12);
+    }
+
+    #[test]
+    fn stored_ids_are_unique() {
+        let ids: std::collections::HashSet<String> =
+            (0..100).map(|_| generate_stored_id()).collect();
+        assert_eq!(ids.len(), 100);
+    }
+
+    // ── MediaService::file_path (静态方法) ──
+
+    #[test]
+    fn file_path_image() {
+        let path = MediaService::file_path("image", "abc123");
+        assert_eq!(path, "uploads/image/abc123");
+    }
+
+    #[test]
+    fn file_path_video() {
+        let path = MediaService::file_path("video", "vid456");
+        assert_eq!(path, "uploads/video/vid456");
+    }
+
+    #[test]
+    fn file_path_audio() {
+        let path = MediaService::file_path("audio", "aud789");
+        assert_eq!(path, "uploads/audio/aud789");
+    }
+}

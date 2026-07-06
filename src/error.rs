@@ -79,3 +79,96 @@ pub fn internal(e: impl std::fmt::Display, operation: &str) -> Response {
 pub fn bad(e: impl std::fmt::Display, operation: &str) -> Response {
     bad_request(format!("{}失败: {}", operation, e))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::StatusCode;
+
+    #[test]
+    fn bad_request_returns_400() {
+        let resp = bad_request("无效参数");
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn bad_request_with_code_returns_400() {
+        let resp = bad_request_with_code("CUSTOM_CODE", "自定义错误");
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn not_found_returns_404() {
+        let resp = not_found("资源不存在");
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[test]
+    fn conflict_returns_409() {
+        let resp = conflict("冲突");
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+    }
+
+    #[test]
+    fn unauthorized_returns_401() {
+        let resp = unauthorized("请登录");
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[test]
+    fn internal_error_returns_500() {
+        let resp = internal_error("服务器出错");
+        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[test]
+    fn internal_formats_message() {
+        let resp = internal(std::io::Error::new(std::io::ErrorKind::Other, "磁盘满"), "写入");
+        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[test]
+    fn bad_formats_message() {
+        let resp = bad(std::fmt::Error, "格式化");
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn all_error_codes_are_distinct() {
+        let errors: Vec<Response> = vec![
+            bad_request("a"),
+            bad_request_with_code("CODE", "b"),
+            not_found("c"),
+            conflict("d"),
+            unauthorized("e"),
+            internal_error("f"),
+        ];
+        let statuses: Vec<u16> = errors.iter().map(|r| r.status().as_u16()).collect();
+        assert_eq!(statuses, vec![400, 400, 404, 409, 401, 500]);
+    }
+
+    #[test]
+    fn api_error_serialization() {
+        let err = ApiError {
+            code: "NOT_FOUND".into(),
+            message: "卡片未找到".into(),
+            details: Some(serde_json::json!({ "id": 42 })),
+        };
+        let json = serde_json::to_string(&err).unwrap();
+        assert!(json.contains("NOT_FOUND"));
+        assert!(json.contains("卡片未找到"));
+        assert!(json.contains("42"));
+    }
+
+    #[test]
+    fn api_error_details_omitted_when_none() {
+        let err = ApiError {
+            code: "OK".into(),
+            message: "一切正常".into(),
+            details: None,
+        };
+        let json = serde_json::to_string(&err).unwrap();
+        // details 字段应被跳过
+        assert!(!json.contains("details"));
+    }
+}

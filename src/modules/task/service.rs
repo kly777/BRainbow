@@ -407,3 +407,137 @@ impl ServiceError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── validate_title ──
+
+    #[test]
+    fn title_valid() {
+        assert!(validate_title("My Task").is_ok());
+    }
+
+    #[test]
+    fn title_empty() {
+        let err = validate_title("").unwrap_err();
+        assert!(matches!(err, ServiceError::InvalidInput(_)));
+    }
+
+    #[test]
+    fn title_too_long() {
+        let long = "a".repeat(256);
+        let err = validate_title(&long).unwrap_err();
+        assert!(matches!(err, ServiceError::InvalidInput(_)));
+    }
+
+    #[test]
+    fn title_exactly_255_chars() {
+        let ok = "a".repeat(255);
+        assert!(validate_title(&ok).is_ok());
+    }
+
+    #[test]
+    fn title_single_char() {
+        assert!(validate_title("x").is_ok());
+    }
+
+    #[test]
+    fn title_whitespace_only() {
+        // 空白字符串 trim 后为空——但 validate_title 不做 trim，
+        // 所以 "   " 不算 empty，长度 3，预期 ok
+        assert!(validate_title("   ").is_ok());
+    }
+
+    // ── validate_effort ──
+
+    #[test]
+    fn effort_none_is_valid() {
+        assert!(validate_effort(None).is_ok());
+    }
+
+    #[test]
+    fn effort_zero_is_valid() {
+        assert!(validate_effort(Some(0)).is_ok());
+    }
+
+    #[test]
+    fn effort_positive_is_valid() {
+        assert!(validate_effort(Some(30)).is_ok());
+        assert!(validate_effort(Some(1)).is_ok());
+        assert!(validate_effort(Some(9999)).is_ok());
+    }
+
+    #[test]
+    fn effort_negative_is_invalid() {
+        let err = validate_effort(Some(-1)).unwrap_err();
+        assert!(matches!(err, ServiceError::InvalidInput(_)));
+        let err2 = validate_effort(Some(-999)).unwrap_err();
+        assert!(matches!(err2, ServiceError::InvalidInput(_)));
+    }
+
+    // ── ServiceError display ──
+
+    #[test]
+    fn service_error_invalid_input_display() {
+        let e = ServiceError::InvalidInput("标题太短".into());
+        assert_eq!(format!("{}", e), "标题太短");
+    }
+
+    #[test]
+    fn service_error_not_found_display() {
+        let e = ServiceError::NotFound;
+        assert_eq!(format!("{}", e), "资源不存在");
+    }
+
+    #[test]
+    fn service_error_circular_parent_display() {
+        let e = ServiceError::CircularParent;
+        assert_eq!(format!("{}", e), "检测到父子循环引用");
+    }
+
+    #[test]
+    fn service_error_self_parent_display() {
+        let e = ServiceError::SelfParent;
+        assert_eq!(format!("{}", e), "不能设置自己为父任务");
+    }
+
+    #[test]
+    fn service_error_self_dependency_display() {
+        let e = ServiceError::SelfDependency;
+        assert_eq!(format!("{}", e), "不能依赖自己");
+    }
+
+    #[test]
+    fn service_error_planned_outside_available_display() {
+        let e = ServiceError::PlannedOutsideAvailable("超出范围".into());
+        assert!(format!("{}", e).contains("超出"));
+    }
+
+    #[test]
+    fn service_error_slot_overlap_display() {
+        let e = ServiceError::SlotOverlap("重叠".into());
+        assert!(format!("{}", e).contains("重叠"));
+    }
+
+    // ── ServiceError::into_response ──
+    // 只验证不 panic，不校验具体 HTTP 响应体结构
+
+    #[test]
+    fn service_error_into_response_does_not_panic() {
+        let errors = vec![
+            ServiceError::InvalidInput("测试".into()),
+            ServiceError::NotFound,
+            ServiceError::CircularParent,
+            ServiceError::SelfParent,
+            ServiceError::SelfDependency,
+            ServiceError::PlannedOutsideAvailable("测试".into()),
+            ServiceError::SlotOverlap("测试".into()),
+            ServiceError::Db(sqlx::Error::Protocol("测试".into())),
+        ];
+        for e in errors {
+            let _ = e.into_response();
+        }
+    }
+}

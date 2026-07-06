@@ -1,9 +1,14 @@
+/// <reference types="vitest" />
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import { fileURLToPath } from "node:url";
 
 export default defineConfig({
   plugins: [solid()],
+
+  test: {
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+  },
 
   resolve: {
     alias: {

@@ -9,6 +9,7 @@ use tokio_util::io::ReaderStream;
 
 use super::service::MediaService;
 use crate::error;
+use crate::error::ServiceError;
 use crate::pagination::Pagination;
 use crate::state::AppState;
 
@@ -75,7 +76,7 @@ pub async fn upload_handler(
             Ok(media) => {
                 return (StatusCode::CREATED, Json(to_response(&media))).into_response();
             }
-            Err(e) => return error::bad_request(e),
+            Err(e) => return e.into_response(),
         }
     }
 
@@ -111,7 +112,7 @@ pub async fn list_handler(
             }))
             .into_response()
         }
-        Err(e) => error::internal_error(e),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -125,7 +126,7 @@ pub async fn get_handler(
     match service.get_by_stored_id(&stored_id).await {
         Ok(Some(media)) => Json(to_response(&media)).into_response(),
         Ok(None) => error::not_found("媒体不存在"),
-        Err(e) => error::internal_error(e),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -138,15 +139,15 @@ pub async fn file_handler(
     let service = MediaService::new(state.db.clone());
     let media = match service.get_by_stored_id(&stored_id).await {
         Ok(Some(m)) => m,
-        Ok(None) => return error::not_found("媒体不存在"),
-        Err(e) => return error::internal_error(e),
+        Ok(None) => return ServiceError::NotFound("媒体不存在".into()).into_response(),
+        Err(e) => return e.into_response(),
     };
 
     let path = MediaService::file_path(media.media_type.as_str(), &stored_id);
 
     let file = match tokio::fs::File::open(&path).await {
         Ok(f) => f,
-        Err(_) => return error::not_found("文件不存在"),
+        Err(_) => return ServiceError::NotFound("文件不存在".into()).into_response(),
     };
 
     let ct = if media.media_type.as_str() == "image" && media.mime_type != "image/svg+xml" {
@@ -195,7 +196,7 @@ pub async fn rename_handler(
         .await
     {
         Ok(media) => Json(to_response(&media)).into_response(),
-        Err(e) => error::not_found(e),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -208,6 +209,6 @@ pub async fn delete_handler(
     let service = MediaService::new(state.db.clone());
     match service.delete(&stored_id).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
-        Err(e) => error::not_found(e),
+        Err(e) => e.into_response(),
     }
 }

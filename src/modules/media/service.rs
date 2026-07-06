@@ -5,6 +5,7 @@ use tracing::warn;
 
 use super::model::Media;
 use super::repository::MediaRepository;
+use crate::error::ServiceError;
 use crate::pagination::{PaginatedResponse, Pagination};
 
 pub(crate) const UPLOAD_DIR: &str = "uploads";
@@ -108,27 +109,20 @@ impl MediaService {
         original_name: &str,
         client_mime: &str,
         user_id: Option<i64>,
-    ) -> Result<Media, String> {
+    ) -> Result<Media, ServiceError> {
         // 1. MIME 真实校验
-        let real_mime = Self::detect_mime(data).ok_or_else(|| "无法识别文件类型".to_string())?;
+        let real_mime = Self::detect_mime(data).ok_or_else(|| ServiceError::InvalidInput("无法识别文件类型".into()))?;
 
         if real_mime != client_mime {
-            return Err(format!(
-                "文件类型不符：声明 {}，实际 {}",
-                client_mime, real_mime
-            ));
+            return Err(ServiceError::InvalidInput(format!("文件类型不符：声明 {}, 实际 {}", client_mime, real_mime)));
         }
 
         let (media_type_str, max_size) =
-            find_allowed(&real_mime).ok_or_else(|| format!("不支持的文件类型: {}", real_mime))?;
+            find_allowed(&real_mime).ok_or_else(|| ServiceError::InvalidInput(format!("不支持的文件类型: {}", real_mime)))?;
 
         // 2. 大小校验
         if data.len() as u64 > max_size {
-            return Err(format!(
-                "文件过大: {} 字节, 最大允许 {} 字节",
-                data.len(),
-                max_size
-            ));
+            return Err(ServiceError::InvalidInput(format!("文件过大: {} 字节, 最大允许 {} 字节", data.len(), max_size)));
         }
 
         let safe_name = sanitize_name(original_name);
@@ -140,7 +134,7 @@ impl MediaService {
         // 3. 写临时文件
         tokio::fs::write(&tmp_path, data)
             .await
-            .map_err(|e| format!("写入文件失败: {}", e))?;
+            .map_err(|e| ServiceError::Internal(format!("写入文件失败: {}", e)))?;
 
         // 4. 插库
         let media = match self
@@ -161,7 +155,7 @@ impl MediaService {
             Ok(m) => m,
             Err(e) => {
                 let _ = tokio::fs::remove_file(&tmp_path).await;
-                return Err(format!("数据库写入失败: {}", e));
+                return Err(ServiceError::Db(e));
             }
         };
 
@@ -212,43 +206,43 @@ impl MediaService {
         &self,
         pagination: &Pagination,
         media_type: Option<&str>,
-    ) -> Result<PaginatedResponse<Media>, String> {
+    ) -> Result<PaginatedResponse<Media>, ServiceError> {
         let total = self
             .repo
             .count(media_type)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| ServiceError::Db(e))?;
         let items = self
             .repo
             .find_all(pagination.limit(), pagination.offset(), media_type)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| ServiceError::Db(e))?;
         Ok(PaginatedResponse::new(items, total, pagination))
     }
 
-    pub async fn get_by_stored_id(&self, stored_id: &str) -> Result<Option<Media>, String> {
+    pub async fn get_by_stored_id(&self, stored_id: &str) -> Result<Option<Media>, ServiceError> {
         self.repo
             .find_by_stored_id(stored_id)
             .await
-            .map_err(|e| e.to_string())
+            .map_err(|e| ServiceError::Db(e))
     }
 
-    pub async fn rename(&self, stored_id: &str, new_name: &str) -> Result<Media, String> {
+    pub async fn rename(&self, stored_id: &str, new_name: &str) -> Result<Media, ServiceError> {
         let safe = sanitize_name(new_name);
         self.repo
             .update_name(stored_id, &safe)
             .await
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| "媒体不存在".to_string())
+            .map_err(|e| ServiceError::Db(e))?
+            .ok_or_else(|| ServiceError::NotFound("媒体不存在".into()))
     }
 
-    pub async fn delete(&self, stored_id: &str) -> Result<(), String> {
+    pub async fn delete(&self, stored_id: &str) -> Result<(), ServiceError> {
         let media = self
             .repo
             .delete(stored_id)
             .await
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| "媒体不存在".to_string())?;
+            .map_err(|e| ServiceError::Db(e))?
+            .ok_or_else(|| ServiceError::NotFound("媒体不存在".into()))?;
         let dir = dir_for_type(media.media_type.as_str());
         let path = format!("{}/{}/{}", UPLOAD_DIR, dir, stored_id);
         if let Err(e) = std::fs::remove_file(&path) {

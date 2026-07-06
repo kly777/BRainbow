@@ -90,41 +90,41 @@ impl TaskService {
         }
         if let Some(Some(parent_id)) = req.parent_task_id {
             if parent_id == id {
-                return Err(ServiceError::SelfParent);
+                return Err(ServiceError::InvalidInput("不能设置自己为父任务".into()));
             }
             check_circular_parent(&self.repo, id, parent_id).await?;
         }
         self.repo.update(id, req).await.map_err(|e| match e {
-            sqlx::Error::RowNotFound => ServiceError::NotFound,
-            other => ServiceError::Db(other),
+            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
+            other => ServiceError::from(other),
         })
     }
 
     pub async fn complete(&self, id: i32) -> Result<Task, ServiceError> {
         self.repo.complete(id).await.map_err(|e| match e {
-            sqlx::Error::RowNotFound => ServiceError::NotFound,
-            other => ServiceError::Db(other),
+            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
+            other => ServiceError::from(other),
         })
     }
 
     pub async fn activate(&self, id: i32) -> Result<Task, ServiceError> {
         self.repo.activate(id).await.map_err(|e| match e {
-            sqlx::Error::RowNotFound => ServiceError::NotFound,
-            other => ServiceError::Db(other),
+            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
+            other => ServiceError::from(other),
         })
     }
 
     pub async fn archive(&self, id: i32) -> Result<Task, ServiceError> {
         self.repo.archive(id).await.map_err(|e| match e {
-            sqlx::Error::RowNotFound => ServiceError::NotFound,
-            other => ServiceError::Db(other),
+            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
+            other => ServiceError::from(other),
         })
     }
 
     pub async fn move_to_backlog(&self, id: i32) -> Result<Task, ServiceError> {
         self.repo.move_to_backlog(id).await.map_err(|e| match e {
-            sqlx::Error::RowNotFound => ServiceError::NotFound,
-            other => ServiceError::Db(other),
+            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
+            other => ServiceError::from(other),
         })
     }
 
@@ -134,7 +134,7 @@ impl TaskService {
 
     pub async fn add_dependency(&self, task_id: i32, depends_on: i32) -> Result<(), ServiceError> {
         if task_id == depends_on {
-            return Err(ServiceError::SelfDependency);
+            return Err(ServiceError::InvalidInput("不能依赖自己".into()));
         }
         self.repo
             .add_dependency(task_id, depends_on)
@@ -217,7 +217,7 @@ impl TaskService {
                             }
                         }
                         if a.start_time < b.end_time && b.start_time < a.end_time {
-                            return Err(ServiceError::SlotOverlap(format!(
+                            return Err(ServiceError::InvalidInput(format!(
                                 "{} 时间段 [{}, {}] 与 [{}, {}] 重叠",
                                 type_name, a.start_time, a.end_time, b.start_time, b.end_time
                             )));
@@ -237,7 +237,7 @@ impl TaskService {
                 .iter()
                 .any(|f| f.start_time <= planned.start_time && f.end_time >= planned.end_time);
             if !covered {
-                return Err(ServiceError::PlannedOutsideAvailable(format!(
+                return Err(ServiceError::InvalidInput(format!(
                     "计划时间段 [{}, {}] 不在任何可行时间窗口内",
                     planned.start_time, planned.end_time
                 )));
@@ -351,62 +351,12 @@ async fn check_circular_parent(
         .await
         .map_err(ServiceError::Db)?;
     if is_circular {
-        return Err(ServiceError::CircularParent);
+        return Err(ServiceError::InvalidInput("检测到父子循环引用".into()));
     }
     Ok(())
 }
 
-#[derive(Debug)]
-pub enum ServiceError {
-    InvalidInput(String),
-    NotFound,
-    CircularParent,
-    SelfParent,
-    SelfDependency,
-    PlannedOutsideAvailable(String),
-    SlotOverlap(String),
-    Db(sqlx::Error),
-}
-
-impl std::fmt::Display for ServiceError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ServiceError::InvalidInput(msg) => write!(f, "{}", msg),
-            ServiceError::NotFound => write!(f, "资源不存在"),
-            ServiceError::CircularParent => write!(f, "检测到父子循环引用"),
-            ServiceError::SelfParent => write!(f, "不能设置自己为父任务"),
-            ServiceError::SelfDependency => write!(f, "不能依赖自己"),
-            ServiceError::PlannedOutsideAvailable(msg) => {
-                write!(f, "计划时间超出可行时间: {}", msg)
-            }
-            ServiceError::SlotOverlap(msg) => write!(f, "时间段重叠: {}", msg),
-            ServiceError::Db(e) => write!(f, "数据库错误: {}", e),
-        }
-    }
-}
-
-impl ServiceError {
-    pub fn into_response(self) -> axum::response::Response {
-        match self {
-            Self::InvalidInput(msg) => crate::error::bad_request_with_code("INVALID_INPUT", msg),
-            Self::NotFound => crate::error::not_found("任务不存在"),
-            Self::CircularParent => {
-                crate::error::bad_request_with_code("CIRCULAR_PARENT", "检测到父子循环引用")
-            }
-            Self::SelfParent => {
-                crate::error::bad_request_with_code("SELF_PARENT", "不能设置自己为父任务")
-            }
-            Self::SelfDependency => {
-                crate::error::bad_request_with_code("SELF_DEPENDENCY", "不能依赖自己")
-            }
-            Self::PlannedOutsideAvailable(msg) => {
-                crate::error::bad_request_with_code("PLANNED_OUTSIDE_AVAILABLE", msg)
-            }
-            Self::SlotOverlap(msg) => crate::error::bad_request_with_code("SLOT_OVERLAP", msg),
-            Self::Db(e) => crate::error::internal(e, "数据库操作"),
-        }
-    }
-}
+pub use crate::error::ServiceError;
 
 #[cfg(test)]
 mod tests {
@@ -487,37 +437,37 @@ mod tests {
 
     #[test]
     fn service_error_not_found_display() {
-        let e = ServiceError::NotFound;
-        assert_eq!(format!("{}", e), "资源不存在");
+        let e = ServiceError::NotFound("任务不存在".into());
+        assert_eq!(format!("{}", e), "任务不存在");
     }
 
     #[test]
     fn service_error_circular_parent_display() {
-        let e = ServiceError::CircularParent;
+        let e = ServiceError::InvalidInput("检测到父子循环引用".into());
         assert_eq!(format!("{}", e), "检测到父子循环引用");
     }
 
     #[test]
     fn service_error_self_parent_display() {
-        let e = ServiceError::SelfParent;
+        let e = ServiceError::InvalidInput("不能设置自己为父任务".into());
         assert_eq!(format!("{}", e), "不能设置自己为父任务");
     }
 
     #[test]
     fn service_error_self_dependency_display() {
-        let e = ServiceError::SelfDependency;
+        let e = ServiceError::InvalidInput("不能依赖自己".into());
         assert_eq!(format!("{}", e), "不能依赖自己");
     }
 
     #[test]
     fn service_error_planned_outside_available_display() {
-        let e = ServiceError::PlannedOutsideAvailable("超出范围".into());
+        let e = ServiceError::InvalidInput("超出范围".into());
         assert!(format!("{}", e).contains("超出"));
     }
 
     #[test]
     fn service_error_slot_overlap_display() {
-        let e = ServiceError::SlotOverlap("重叠".into());
+        let e = ServiceError::InvalidInput("重叠".into());
         assert!(format!("{}", e).contains("重叠"));
     }
 
@@ -528,13 +478,13 @@ mod tests {
     fn service_error_into_response_does_not_panic() {
         let errors = vec![
             ServiceError::InvalidInput("测试".into()),
-            ServiceError::NotFound,
-            ServiceError::CircularParent,
-            ServiceError::SelfParent,
-            ServiceError::SelfDependency,
-            ServiceError::PlannedOutsideAvailable("测试".into()),
-            ServiceError::SlotOverlap("测试".into()),
-            ServiceError::Db(sqlx::Error::Protocol("测试".into())),
+            ServiceError::NotFound("任务不存在".into()),
+            ServiceError::InvalidInput("检测到父子循环引用".into()),
+            ServiceError::InvalidInput("不能设置自己为父任务".into()),
+            ServiceError::InvalidInput("不能依赖自己".into()),
+            ServiceError::InvalidInput("测试".into()),
+            ServiceError::InvalidInput("测试".into()),
+            ServiceError::from(sqlx::Error::Protocol("测试".into())),
         ];
         for e in errors {
             let _ = e.into_response();

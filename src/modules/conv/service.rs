@@ -1,5 +1,6 @@
 use sqlx::SqlitePool;
 
+use crate::error::ServiceError;
 use super::model::{ConvHit, SearchResponse};
 use super::scoring;
 
@@ -35,7 +36,7 @@ pub async fn search_conv(
     limit: i64,
     _offset: i64,
     search_type: &str,
-) -> Result<SearchResponse, sqlx::Error> {
+) -> Result<SearchResponse, ServiceError> {
     let search_convs = search_type == "all" || search_type == "conv";
     let search_articles = search_type == "all" || search_type == "article";
 

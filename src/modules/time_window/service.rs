@@ -23,7 +23,7 @@ impl TimeWindowService {
     ) -> Result<TimeWindow, ServiceError> {
         // 基础校验：开始时间必须早于结束时间
         if request.start_time >= request.end_time {
-            return Err(ServiceError::InvalidTimeRange(
+            return Err(ServiceError::InvalidInput(
                 "开始时间必须早于结束时间".into(),
             ));
         }
@@ -51,11 +51,11 @@ impl TimeWindowService {
             .validate_time_windows(request.task_id, &[new_window], None)
             .await
             .map_err(|e| match e {
-                crate::modules::task::service::ServiceError::PlannedOutsideAvailable(msg) => {
-                    ServiceError::PlannedOutsideAvailable(msg)
+                crate::modules::task::service::ServiceError::InvalidInput(msg) => {
+                    ServiceError::InvalidInput(msg)
                 }
-                crate::modules::task::service::ServiceError::SlotOverlap(msg) => {
-                    ServiceError::SlotOverlap(msg)
+                crate::modules::task::service::ServiceError::InvalidInput(msg) => {
+                    ServiceError::InvalidInput(msg)
                 }
                 other => ServiceError::Internal(format!("约束校验失败: {}", other)),
             })?;
@@ -71,7 +71,7 @@ impl TimeWindowService {
         let existing = self.repo.find_by_id(id).await.map_err(ServiceError::Db)?;
         let existing = match existing {
             Some(w) => w,
-            None => return Err(ServiceError::NotFound),
+            None => return Err(ServiceError::NotFound("时间窗口未找到".into())),
         };
 
         // 如果更新了时间范围，做约束校验
@@ -80,7 +80,7 @@ impl TimeWindowService {
             let end_time = request.end_time.unwrap_or(existing.end_time);
 
             if start_time >= end_time {
-                return Err(ServiceError::InvalidTimeRange(
+                return Err(ServiceError::InvalidInput(
                     "开始时间必须早于结束时间".into(),
                 ));
             }
@@ -108,11 +108,11 @@ impl TimeWindowService {
                 .validate_time_windows(existing.task_id, &[new_window], Some(id))
                 .await
                 .map_err(|e| match e {
-                    crate::modules::task::service::ServiceError::PlannedOutsideAvailable(msg) => {
-                        ServiceError::PlannedOutsideAvailable(msg)
+                    crate::modules::task::service::ServiceError::InvalidInput(msg) => {
+                        ServiceError::InvalidInput(msg)
                     }
-                    crate::modules::task::service::ServiceError::SlotOverlap(msg) => {
-                        ServiceError::SlotOverlap(msg)
+                    crate::modules::task::service::ServiceError::InvalidInput(msg) => {
+                        ServiceError::InvalidInput(msg)
                     }
                     other => ServiceError::Internal(format!("约束校验失败: {}", other)),
                 })?;
@@ -125,54 +125,7 @@ impl TimeWindowService {
     }
 }
 
-#[derive(Debug)]
-pub enum ServiceError {
-    InvalidTimeRange(String),
-    PlannedOutsideAvailable(String),
-    SlotOverlap(String),
-    NotFound,
-    Internal(String),
-    Db(sqlx::Error),
-}
-
-impl std::fmt::Display for ServiceError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ServiceError::InvalidTimeRange(msg) => write!(f, "无效时间段: {}", msg),
-            ServiceError::PlannedOutsideAvailable(msg) => write!(f, "计划时间超出: {}", msg),
-            ServiceError::SlotOverlap(msg) => write!(f, "时间段重叠: {}", msg),
-            ServiceError::NotFound => write!(f, "资源不存在"),
-            ServiceError::Internal(msg) => write!(f, "内部错误: {}", msg),
-            ServiceError::Db(e) => write!(f, "数据库错误: {}", e),
-        }
-    }
-}
-
-impl ServiceError {
-    pub fn into_response(self) -> axum::response::Response {
-        match self {
-            Self::InvalidTimeRange(msg) => {
-                crate::error::bad_request_with_code("INVALID_TIME_RANGE", msg)
-            }
-            Self::PlannedOutsideAvailable(msg) => {
-                crate::error::bad_request_with_code("PLANNED_OUTSIDE_AVAILABLE", msg)
-            }
-            Self::SlotOverlap(msg) => crate::error::bad_request_with_code("SLOT_OVERLAP", msg),
-            Self::NotFound => crate::error::not_found("时间窗口未找到"),
-            Self::Internal(msg) => crate::error::internal_error(msg),
-            Self::Db(e) => {
-                let msg = format!("{}", e);
-                if msg.contains("FOREIGN KEY") {
-                    crate::error::bad_request_with_code("TASK_NOT_FOUND", "关联的任务不存在")
-                } else if msg.contains("RowNotFound") {
-                    crate::error::not_found("时间窗口未找到")
-                } else {
-                    crate::error::internal(e, "时间窗口操作")
-                }
-            }
-        }
-    }
-}
+pub use crate::error::ServiceError;
 
 #[cfg(test)]
 mod tests {
@@ -182,26 +135,26 @@ mod tests {
 
     #[test]
     fn error_invalid_time_range_display() {
-        let e = ServiceError::InvalidTimeRange("开始 > 结束".into());
+        let e = ServiceError::InvalidInput("开始 > 结束".into());
         assert!(format!("{}", e).contains("开始 > 结束"));
     }
 
     #[test]
     fn error_planned_outside_available_display() {
-        let e = ServiceError::PlannedOutsideAvailable("不可行".into());
+        let e = ServiceError::InvalidInput("不可行".into());
         assert!(format!("{}", e).contains("不可行"));
     }
 
     #[test]
     fn error_slot_overlap_display() {
-        let e = ServiceError::SlotOverlap("重叠".into());
+        let e = ServiceError::InvalidInput("重叠".into());
         assert!(format!("{}", e).contains("重叠"));
     }
 
     #[test]
     fn error_not_found_display() {
-        let e = ServiceError::NotFound;
-        assert_eq!(format!("{}", e), "资源不存在");
+        let e = ServiceError::NotFound("时间窗口未找到".into());
+        assert_eq!(format!("{}", e), "时间窗口未找到");
     }
 
     #[test]
@@ -212,7 +165,7 @@ mod tests {
 
     #[test]
     fn error_db_display() {
-        let e = ServiceError::Db(sqlx::Error::Protocol("db err".into()));
+        let e = ServiceError::from(sqlx::Error::Protocol("db err".into()));
         assert!(format!("{}", e).contains("db err"));
     }
 
@@ -221,12 +174,12 @@ mod tests {
     #[test]
     fn error_into_response_does_not_panic() {
         let errors = vec![
-            ServiceError::InvalidTimeRange("测试".into()),
-            ServiceError::PlannedOutsideAvailable("测试".into()),
-            ServiceError::SlotOverlap("测试".into()),
-            ServiceError::NotFound,
+            ServiceError::InvalidInput("测试".into()),
+            ServiceError::InvalidInput("测试".into()),
+            ServiceError::InvalidInput("测试".into()),
+            ServiceError::NotFound("时间窗口未找到".into()),
             ServiceError::Internal("测试".into()),
-            ServiceError::Db(sqlx::Error::Protocol("测试".into())),
+            ServiceError::from(sqlx::Error::Protocol("测试".into())),
         ];
         for e in errors {
             let _ = e.into_response();

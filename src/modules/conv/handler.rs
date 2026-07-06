@@ -37,7 +37,7 @@ pub async fn search_handler(
 
     match search_conv(&*state.db, q, limit, offset, search_type).await {
         Ok(res) => Json(res).into_response(),
-        Err(e) => error::internal(e, "搜索"),
+        Err(e) => e.into_response(),
     }
 }
 

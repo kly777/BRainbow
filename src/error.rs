@@ -18,10 +18,10 @@ use serde::Serialize;
 
 /// 统一的 API 错误响应体
 #[derive(Debug, Serialize)]
-pub struct ApiError {
+pub struct ErrorBody {
     /// 机器可读错误码，如 "NOT_FOUND", "VALIDATION_ERROR", "INTERNAL_ERROR"
     pub code: String,
-    /// 面向用户的错误信息（中文）
+    /// 面向用户的错误信息
     pub message: String,
     /// 可选的附加详情
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -29,9 +29,11 @@ pub struct ApiError {
 }
 
 // ==================== 通用错误辅助函数 ====================
+// 以下函数内部委托给 ServiceError，确保与 service 层错误格式一致。
+// handler 中快速返回时使用这些简写，需要更多控制时直接用 ServiceError。
 
 fn resp(status: StatusCode, code: &str, message: impl Into<String>) -> Response {
-    let body = axum::Json(ApiError {
+    let body = axum::Json(ErrorBody {
         code: code.into(),
         message: message.into(),
         details: None,
@@ -39,45 +41,88 @@ fn resp(status: StatusCode, code: &str, message: impl Into<String>) -> Response 
     (status, body).into_response()
 }
 
-/// 400 Bad Request - 请求参数无效
+/// 400 — 参数无效（委托给 ServiceError::InvalidInput）
 pub fn bad_request(message: impl Into<String>) -> Response {
-    resp(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", message)
+    ServiceError::InvalidInput(message.into()).into_response()
 }
 
-/// 带自定义 code 的 400
+/// 400 — 带自定义 code
 pub fn bad_request_with_code(code: impl Into<String>, message: impl Into<String>) -> Response {
-    let code = code.into();
-    resp(StatusCode::BAD_REQUEST, &code, message)
+    resp(StatusCode::BAD_REQUEST, &code.into(), message)
 }
 
-/// 404 Not Found - 资源不存在
+/// 404 — 资源不存在（委托给 ServiceError::NotFound）
 pub fn not_found(message: impl Into<String>) -> Response {
-    resp(StatusCode::NOT_FOUND, "NOT_FOUND", message)
+    ServiceError::NotFound(message.into()).into_response()
 }
 
-/// 409 Conflict - 资源冲突
+/// 409 — 资源冲突（委托给 ServiceError::AlreadyExists）
 pub fn conflict(message: impl Into<String>) -> Response {
-    resp(StatusCode::CONFLICT, "CONFLICT", message)
+    ServiceError::AlreadyExists(message.into()).into_response()
 }
 
-/// 401 Unauthorized - 未认证
+/// 401 — 未认证
 pub fn unauthorized(message: impl Into<String>) -> Response {
     resp(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", message)
 }
 
-/// 500 Internal Server Error
+/// 500 — 内部错误（委托给 ServiceError::Internal）
 pub fn internal_error(message: impl Into<String>) -> Response {
-    resp(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", message)
+    ServiceError::Internal(message.into()).into_response()
 }
 
 /// 500 + 自动拼 "{operation}失败: {error}"
 pub fn internal(e: impl std::fmt::Display, operation: &str) -> Response {
-    internal_error(format!("{}失败: {}", operation, e))
+    ServiceError::Internal(format!("{}失败: {}", operation, e)).into_response()
 }
 
 /// 400 + 自动拼 "{operation}失败: {error}"
 pub fn bad(e: impl std::fmt::Display, operation: &str) -> Response {
-    bad_request(format!("{}失败: {}", operation, e))
+    ServiceError::InvalidInput(format!("{}失败: {}", operation, e)).into_response()
+}
+
+// ==================== 统一的服务错误类型 ====================
+
+/// 所有 service 层共用的错误类型。
+/// 每个变体都有机器可读的错误码和中文消息。
+#[derive(Debug)]
+pub enum ServiceError {
+    InvalidInput(String),
+    NotFound(String),
+    AlreadyExists(String),
+    Internal(String),
+    Db(sqlx::Error),
+}
+
+impl ServiceError {
+    /// 转为 axum HTTP 响应
+    pub fn into_response(self) -> Response {
+        match self {
+            Self::InvalidInput(msg) => resp(StatusCode::BAD_REQUEST, "INVALID_INPUT", msg),
+            Self::NotFound(msg) => resp(StatusCode::NOT_FOUND, "NOT_FOUND", msg),
+            Self::AlreadyExists(msg) => resp(StatusCode::CONFLICT, "CONFLICT", msg),
+            Self::Internal(msg) => resp(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", msg),
+            Self::Db(e) => resp(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", format!("数据库操作失败: {}", e)),
+        }
+    }
+}
+
+impl std::fmt::Display for ServiceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidInput(msg) => write!(f, "{}", msg),
+            Self::NotFound(msg) => write!(f, "{}", msg),
+            Self::AlreadyExists(msg) => write!(f, "{}", msg),
+            Self::Internal(msg) => write!(f, "{}", msg),
+            Self::Db(e) => write!(f, "数据库错误: {}", e),
+        }
+    }
+}
+
+impl From<sqlx::Error> for ServiceError {
+    fn from(e: sqlx::Error) -> Self {
+        ServiceError::Db(e)
+    }
 }
 
 #[cfg(test)]
@@ -149,7 +194,7 @@ mod tests {
 
     #[test]
     fn api_error_serialization() {
-        let err = ApiError {
+        let err = ErrorBody {
             code: "NOT_FOUND".into(),
             message: "卡片未找到".into(),
             details: Some(serde_json::json!({ "id": 42 })),
@@ -162,7 +207,7 @@ mod tests {
 
     #[test]
     fn api_error_details_omitted_when_none() {
-        let err = ApiError {
+        let err = ErrorBody {
             code: "OK".into(),
             message: "一切正常".into(),
             details: None,

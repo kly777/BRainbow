@@ -7,7 +7,7 @@ use axum::{
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 
-use crate::error::ApiError;
+use crate::error::ErrorBody;
 use crate::state::AppState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -76,7 +76,7 @@ pub async fn auth(State(state): State<AppState>, mut request: Request, next: Nex
         None => {
             return (
                 StatusCode::UNAUTHORIZED,
-                Json(ApiError {
+                Json(ErrorBody {
                     code: "UNAUTHORIZED".to_string(),
                     message: "请先登录".to_string(),
                     details: None,
@@ -91,7 +91,7 @@ pub async fn auth(State(state): State<AppState>, mut request: Request, next: Nex
         None => {
             return (
                 StatusCode::UNAUTHORIZED,
-                Json(ApiError {
+                Json(ErrorBody {
                     code: "TOKEN_EXPIRED".to_string(),
                     message: "登录已过期，请重新登录".to_string(),
                     details: None,
@@ -117,7 +117,7 @@ pub async fn require_admin(request: Request, next: Next) -> Response {
         Some(c) if c.role == "admin" => next.run(request).await,
         Some(_) => (
             StatusCode::FORBIDDEN,
-            Json(ApiError {
+            Json(ErrorBody {
                 code: "FORBIDDEN".to_string(),
                 message: "仅管理员可访问".to_string(),
                 details: None,
@@ -126,7 +126,7 @@ pub async fn require_admin(request: Request, next: Next) -> Response {
             .into_response(),
         None => (
             StatusCode::UNAUTHORIZED,
-            Json(ApiError {
+            Json(ErrorBody {
                 code: "UNAUTHORIZED".to_string(),
                 message: "请先登录".to_string(),
                 details: None,

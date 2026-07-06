@@ -5,9 +5,9 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::service::OntoService;
+use super::repository::OntoRepository;
 use crate::error;
-use crate::pagination::Pagination;
+use crate::pagination::{PaginatedResponse, Pagination};
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -33,12 +33,12 @@ pub async fn create_onto_handler(
     State(state): State<AppState>,
     Json(payload): Json<CreateOntoRequest>,
 ) -> impl IntoResponse {
-    let onto_service = OntoService::new(state.db.clone());
+    if payload.name.trim().is_empty() {
+        return error::bad_request("本体名称不能为空".to_string());
+    }
+    let repo = OntoRepository::new(state.db.clone());
 
-    match onto_service
-        .create_onto(payload.name, payload.description)
-        .await
-    {
+    match repo.create(payload.name, payload.description).await {
         Ok(onto) => {
             let response = OntoResponse {
                 id: onto.id,
@@ -55,10 +55,10 @@ pub async fn get_ontos_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let onto_service = OntoService::new(state.db.clone());
+    let repo = OntoRepository::new(state.db.clone());
 
-    match onto_service.get_ontos_paginated(&pagination).await {
-        Ok(response) => Json(response).into_response(),
+    match repo.find_all_paginated(pagination.limit(), pagination.offset()).await {
+        Ok((items, total)) => Json(PaginatedResponse::new(items, total, &pagination)).into_response(),
         Err(e) => error::internal(e, "获取本体列表"),
     }
 }
@@ -67,9 +67,9 @@ pub async fn get_onto_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let onto_service = OntoService::new(state.db.clone());
+    let repo = OntoRepository::new(state.db.clone());
 
-    match onto_service.get_onto_by_id(id).await {
+    match repo.find_by_id(id).await {
         Ok(Some(onto)) => {
             let response = OntoResponse {
                 id: onto.id,
@@ -88,12 +88,9 @@ pub async fn update_onto_handler(
     Path(id): Path<i32>,
     Json(payload): Json<UpdateOntoRequest>,
 ) -> impl IntoResponse {
-    let onto_service = OntoService::new(state.db.clone());
+    let repo = OntoRepository::new(state.db.clone());
 
-    match onto_service
-        .update_onto(id, payload.name, payload.description)
-        .await
-    {
+    match repo.update(id, payload.name, payload.description).await {
         Ok(onto) => {
             let onto_response = OntoResponse {
                 id: onto.id,
@@ -110,9 +107,9 @@ pub async fn delete_onto_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let onto_service = OntoService::new(state.db.clone());
+    let repo = OntoRepository::new(state.db.clone());
 
-    match onto_service.delete_onto(id).await {
+    match repo.delete(id).await {
         Ok(rows_affected) => {
             if rows_affected > 0 {
                 StatusCode::NO_CONTENT.into_response()

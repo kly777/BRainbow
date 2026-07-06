@@ -5,9 +5,9 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::service::SignService;
+use super::repository::SignRepository;
 use crate::error;
-use crate::pagination::Pagination;
+use crate::pagination::{PaginatedResponse, Pagination};
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -34,18 +34,15 @@ pub async fn create_sign_handler(
     State(state): State<AppState>,
     Json(payload): Json<CreateSignRequest>,
 ) -> impl IntoResponse {
-    let sign_service = SignService::new(state.db.clone());
+    if payload.signifier.trim().is_empty() {
+        return error::bad_request("能指不能为空".to_string());
+    }
+    if payload.signified.trim().is_empty() {
+        return error::bad_request("所指不能为空".to_string());
+    }
+    let repo = SignRepository::new(state.db.clone());
 
-    match sign_service
-        .create_sign(
-            payload.signifier,
-            payload.signified,
-            payload.onto_id,
-            payload.weight,
-            payload.relation_type,
-        )
-        .await
-    {
+    match repo.create(payload.signifier, payload.signified, payload.onto_id, payload.weight, payload.relation_type).await {
         Ok(sign) => {
             let response = SignResponse {
                 id: sign.id,
@@ -66,10 +63,10 @@ pub async fn get_signs_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let sign_service = SignService::new(state.db.clone());
+    let repo = SignRepository::new(state.db.clone());
 
-    match sign_service.get_signs_paginated(&pagination).await {
-        Ok(response) => Json(response).into_response(),
+    match repo.find_all_paginated(pagination.limit(), pagination.offset()).await {
+        Ok((items, total)) => Json(PaginatedResponse::new(items, total, &pagination)).into_response(),
         Err(e) => error::internal(e, "获取符号关系列表"),
     }
 }
@@ -78,9 +75,9 @@ pub async fn get_sign_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let sign_service = SignService::new(state.db.clone());
+    let repo = SignRepository::new(state.db.clone());
 
-    match sign_service.get_sign_by_id(id).await {
+    match repo.find_by_id(id).await {
         Ok(Some(sign)) => {
             let response = SignResponse {
                 id: sign.id,
@@ -102,9 +99,9 @@ pub async fn delete_sign_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let sign_service = SignService::new(state.db.clone());
+    let repo = SignRepository::new(state.db.clone());
 
-    match sign_service.delete_sign(id).await {
+    match repo.delete(id).await {
         Ok(rows_affected) => {
             if rows_affected > 0 {
                 StatusCode::NO_CONTENT.into_response()
@@ -121,13 +118,10 @@ pub async fn get_signs_by_signifier_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let sign_service = SignService::new(state.db.clone());
+    let repo = SignRepository::new(state.db.clone());
 
-    match sign_service
-        .get_signs_by_signifier_paginated(&signifier, &pagination)
-        .await
-    {
-        Ok(response) => Json(response).into_response(),
+    match repo.find_by_signifier_paginated(&signifier, pagination.limit(), pagination.offset()).await {
+        Ok((items, total)) => Json(PaginatedResponse::new(items, total, &pagination)).into_response(),
         Err(e) => error::bad(e, "按能指查询"),
     }
 }
@@ -137,13 +131,10 @@ pub async fn get_signs_by_signified_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let sign_service = SignService::new(state.db.clone());
+    let repo = SignRepository::new(state.db.clone());
 
-    match sign_service
-        .get_signs_by_signified_paginated(&signified, &pagination)
-        .await
-    {
-        Ok(response) => Json(response).into_response(),
+    match repo.find_by_signified_paginated(&signified, pagination.limit(), pagination.offset()).await {
+        Ok((items, total)) => Json(PaginatedResponse::new(items, total, &pagination)).into_response(),
         Err(e) => error::bad(e, "按所指查询"),
     }
 }

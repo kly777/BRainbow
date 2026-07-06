@@ -1,7 +1,6 @@
 mod handler;
 mod model;
 mod repository;
-mod service;
 
 pub use handler::{
     create_sign_handler, delete_sign_handler, get_sign_handler, get_signs_by_signified_handler,

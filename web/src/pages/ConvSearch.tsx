@@ -52,9 +52,9 @@ export default function ConvSearch() {
 	};
 	const setTab = (t: Tab) => {
 		const q = searchParams.q;
-		const params: Record<string, string> = {};
+		const params: Record<string, string | undefined> = {};
 		if (q) params.q = Array.isArray(q) ? q[0] : q;
-		if (t !== "all") params.t = t;
+		params.t = t === "all" ? undefined : t;  // 切到"全部"时显式移除 t 参数
 		setSearchParams(params);
 	};
 

@@ -55,7 +55,7 @@ async function toast(opts: {
 
 // ==================== 错误体解析 ====================
 
-async function extractErrorBody(
+export async function extractErrorBody(
 	response: Response,
 ): Promise<{ code: string; message: string; details?: unknown }> {
 	const text = await response.text().catch(() => "");

@@ -38,7 +38,7 @@ function generateColors(n: number): string[] {
 // SVG 生成
 // ═══════════════════════════════════════════
 
-function buildSvg(colors: string[], angle: Angle, size: number): string {
+export function buildSvg(colors: string[], angle: Angle, size: number): string {
 	const deg = angle.radian;
 	const cos = Math.cos(deg);
 	const sin = Math.sin(deg);

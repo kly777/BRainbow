@@ -3,6 +3,7 @@ use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
 use super::model::Card;
+use crate::db::query::SeparatedExt;
 
 /// Card 数据访问层
 pub struct CardRepository {
@@ -73,10 +74,7 @@ impl CardRepository {
         let mut builder = QueryBuilder::new("UPDATE card SET ");
         let mut sep = builder.separated(", ");
 
-        if let Some(ref content) = content {
-            sep.push("content = ");
-            sep.push_bind(content);
-        }
+        sep.push_opt("content = ", &content);
 
         // 始终更新 updated_at
         sep.push("updated_at = ");

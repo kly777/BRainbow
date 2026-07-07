@@ -1,4 +1,5 @@
 use sqlx::{QueryBuilder, Row, SqlitePool};
+use crate::db::query::SeparatedExt;
 use std::sync::Arc;
 
 use super::model::Onto;
@@ -82,16 +83,14 @@ impl OntoRepository {
         let mut sep = builder.separated(", ");
         let mut has_updates = false;
 
-        if let Some(ref name) = name {
-            sep.push("name = ");
-            sep.push_bind(name);
+        if name.is_some() {
             has_updates = true;
         }
-        if let Some(ref description) = description {
-            sep.push("description = ");
-            sep.push_bind(description);
+        if description.is_some() {
             has_updates = true;
         }
+        sep.push_opt("name = ", &name);
+        sep.push_opt("description = ", &description);
 
         if !has_updates {
             return self

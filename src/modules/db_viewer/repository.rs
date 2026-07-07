@@ -4,16 +4,7 @@ use std::sync::Arc;
 
 use super::handler::{ColumnInfo, TableNames};
 use super::model::TableName;
-
-/// 校验表名是否只包含合法字符（字母、数字、下划线）
-fn sanitize_table_name(name: &str) -> Result<String, sqlx::Error> {
-    if name.is_empty() || !name.chars().all(|c| c.is_alphanumeric() || c == '_') {
-        return Err(sqlx::Error::Protocol(
-            format!("invalid table name: '{}'", name),
-        ));
-    }
-    Ok(name.to_string())
-}
+use crate::db::query::sanitize_table_name;
 
 pub struct DBRepo {
     pool: Arc<SqlitePool>,

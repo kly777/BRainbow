@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
+use crate::db::query::QueryBuilderExt;
+
 use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTimeWindowRequest};
 
 /// TimeWindow 数据访问层
@@ -384,10 +386,7 @@ impl TimeWindowRepository {
         builder.push_bind(start_time);
         builder.push(")");
 
-        if let Some(exclude_id) = exclude_id {
-            builder.push(" AND id != ");
-            builder.push_bind(exclude_id);
-        }
+        builder.push_opt(" AND id != ", &exclude_id);
 
         let result = builder.build().fetch_one(&*self.db).await?;
         let count: i64 = result.try_get("count")?;

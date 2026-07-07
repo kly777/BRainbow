@@ -1,3 +1,5 @@
+pub mod query;
+
 use sqlx::SqlitePool;
 
 /// 创建表

@@ -1,5 +1,5 @@
 use chrono::Utc;
-use sqlx::{Row, SqlitePool};
+use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
 use super::model::Card;
@@ -68,42 +68,25 @@ impl CardRepository {
 
     /// 更新卡片
     pub async fn update(&self, id: i32, content: Option<String>) -> Result<Card, sqlx::Error> {
-        // 构建更新语句
-        let mut updates = Vec::new();
-
-        if let Some(_) = &content {
-            updates.push("content = ?");
-        }
-
-        updates.push("updated_at = ?");
         let now = Utc::now();
 
-        if updates.is_empty() {
-            // 如果没有更新，直接返回当前卡片
-            return self
-                .find_by_id(id)
-                .await?
-                .ok_or_else(|| sqlx::Error::RowNotFound);
+        let mut builder = QueryBuilder::new("UPDATE card SET ");
+        let mut sep = builder.separated(", ");
+
+        if let Some(ref content) = content {
+            sep.push("content = ");
+            sep.push_bind(content);
         }
 
-        let update_clause = updates.join(", ");
-        let query = format!(
-            "UPDATE card SET {} WHERE id = ? RETURNING id, content, created_at, updated_at",
-            update_clause
-        );
+        // 始终更新 updated_at
+        sep.push("updated_at = ");
+        sep.push_bind(now);
 
-        // 构建查询
-        let mut query_builder = sqlx::query(sqlx::AssertSqlSafe(query.as_str()));
+        builder.push(" WHERE id = ");
+        builder.push_bind(id);
+        builder.push(" RETURNING id, content, created_at, updated_at");
 
-        // 绑定参数
-        if let Some(content) = &content {
-            query_builder = query_builder.bind(content);
-        }
-
-        query_builder = query_builder.bind(now);
-        query_builder = query_builder.bind(id);
-
-        let result = query_builder.fetch_one(&*self.db).await?;
+        let result = builder.build().fetch_one(&*self.db).await?;
 
         Ok(Card {
             id: result.try_get("id")?,
@@ -135,39 +118,40 @@ impl CardRepository {
             return self.find_all_paginated(limit, offset).await;
         }
 
-        let conditions: Vec<String> = keywords
-            .iter()
-            .map(|_| "content LIKE ?".to_string())
-            .collect();
-        let where_clause = conditions.join(" OR ");
-        let score_expr: Vec<String> = keywords
-            .iter()
-            .map(|_| "CASE WHEN content LIKE ? THEN 1 ELSE 0 END".to_string())
-            .collect();
-        let score_sum = score_expr.join(" + ");
-
-        // count total
-        let count_sql = format!("SELECT COUNT(*) FROM card WHERE {}", where_clause);
-        let mut count_query = sqlx::query_scalar(sqlx::AssertSqlSafe(count_sql.as_str()));
+        // ── Count ──
+        let mut count_builder = QueryBuilder::new("SELECT COUNT(*) FROM card WHERE ");
+        let mut count_sep = count_builder.separated(" OR ");
         for kw in &keywords {
-            count_query = count_query.bind(format!("%{}%", kw));
+            count_sep.push("content LIKE ");
+            count_sep.push_bind(format!("%{}%", kw));
         }
-        let total: i64 = count_query.fetch_one(&*self.db).await?;
+        let total: i64 = count_builder.build_query_scalar().fetch_one(&*self.db).await?;
 
-        // fetch page
-        let sql = format!(
-            "SELECT id, content, created_at, updated_at FROM card WHERE {} ORDER BY ({}) DESC, updated_at DESC LIMIT ? OFFSET ?",
-            where_clause, score_sum
+        // ── Fetch ──
+        let mut fetch_builder = QueryBuilder::new(
+            "SELECT id, content, created_at, updated_at FROM card WHERE ",
         );
-        let mut query = sqlx::query_as::<_, Card>(sqlx::AssertSqlSafe(sql.as_str()));
+        let mut where_sep = fetch_builder.separated(" OR ");
         for kw in &keywords {
-            query = query.bind(format!("%{}%", kw));
+            where_sep.push("content LIKE ");
+            where_sep.push_bind(format!("%{}%", kw));
         }
+        fetch_builder.push(" ORDER BY (");
+        let mut score_sep = fetch_builder.separated(" + ");
         for kw in &keywords {
-            query = query.bind(format!("%{}%", kw));
+            score_sep.push("CASE WHEN content LIKE ");
+            score_sep.push_bind(format!("%{}%", kw));
+            score_sep.push(" THEN 1 ELSE 0 END");
         }
-        query = query.bind(limit).bind(offset);
-        let items = query.fetch_all(&*self.db).await?;
+        fetch_builder.push(") DESC, updated_at DESC LIMIT ");
+        fetch_builder.push_bind(limit);
+        fetch_builder.push(" OFFSET ");
+        fetch_builder.push_bind(offset);
+
+        let items = fetch_builder
+            .build_query_as::<Card>()
+            .fetch_all(&*self.db)
+            .await?;
 
         Ok((items, total))
     }

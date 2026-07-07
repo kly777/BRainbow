@@ -5,6 +5,16 @@ use std::sync::Arc;
 use super::handler::{ColumnInfo, TableNames};
 use super::model::TableName;
 
+/// 校验表名是否只包含合法字符（字母、数字、下划线）
+fn sanitize_table_name(name: &str) -> Result<String, sqlx::Error> {
+    if name.is_empty() || !name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+        return Err(sqlx::Error::Protocol(
+            format!("invalid table name: '{}'", name),
+        ));
+    }
+    Ok(name.to_string())
+}
+
 pub struct DBRepo {
     pool: Arc<SqlitePool>,
 }
@@ -28,11 +38,16 @@ impl DBRepo {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<ColumnInfo>, Vec<Vec<Value>>), sqlx::Error> {
+        // 先校验表名合法，SQLite 不支持参数化表名
+        let safe_name = sanitize_table_name(table_name)?;
+
         // 用 PRAGMA 获取列信息（即使表为空也能拿到）
-        let pragma_sql = format!("PRAGMA table_info({})", table_name);
-        let pragma_rows = sqlx::query(sqlx::AssertSqlSafe(pragma_sql.as_str()))
-            .fetch_all(&*self.pool)
-            .await?;
+        let pragma_rows = sqlx::query(
+            // SAFETY: sanitize_table_name 确保 safe_name 只含 [a-zA-Z0-9_]
+            sqlx::AssertSqlSafe(format!("PRAGMA table_info({})", safe_name)),
+        )
+        .fetch_all(&*self.pool)
+        .await?;
 
         let columns: Vec<ColumnInfo> = pragma_rows
             .iter()
@@ -43,12 +58,14 @@ impl DBRepo {
             .collect();
 
         // 查数据
-        let query_sql = format!("SELECT * FROM {} LIMIT $1 OFFSET $2", table_name);
-        let rows = sqlx::query(sqlx::AssertSqlSafe(query_sql.as_str()))
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&*self.pool)
-            .await?;
+        let rows = sqlx::query(
+            // SAFETY: sanitize_table_name 确保 safe_name 只含 [a-zA-Z0-9_]
+            sqlx::AssertSqlSafe(format!("SELECT * FROM {} LIMIT $1 OFFSET $2", safe_name)),
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&*self.pool)
+        .await?;
 
         let data: Vec<Vec<Value>> = rows
             .iter()

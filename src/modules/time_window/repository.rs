@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use sqlx::{Row, SqlitePool};
+use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
 use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTimeWindowRequest};
@@ -374,24 +374,22 @@ impl TimeWindowRepository {
         end_time: DateTime<Utc>,
         exclude_id: Option<i32>,
     ) -> Result<bool, sqlx::Error> {
-        let base_query = "SELECT COUNT(*) as count FROM time_window WHERE task_id = ? AND (start_time < ? AND end_time > ?)";
-
-        let query = if let Some(_exclude_id) = exclude_id {
-            format!("{} AND id != ?", base_query)
-        } else {
-            base_query.to_string()
-        };
-
-        let mut query_builder = sqlx::query(sqlx::AssertSqlSafe(query.as_str()))
-            .bind(task_id)
-            .bind(end_time)
-            .bind(start_time);
+        let mut builder = QueryBuilder::new(
+            "SELECT COUNT(*) as count FROM time_window WHERE task_id = ",
+        );
+        builder.push_bind(task_id);
+        builder.push(" AND (start_time < ");
+        builder.push_bind(end_time);
+        builder.push(" AND end_time > ");
+        builder.push_bind(start_time);
+        builder.push(")");
 
         if let Some(exclude_id) = exclude_id {
-            query_builder = query_builder.bind(exclude_id);
+            builder.push(" AND id != ");
+            builder.push_bind(exclude_id);
         }
 
-        let result = query_builder.fetch_one(&*self.db).await?;
+        let result = builder.build().fetch_one(&*self.db).await?;
         let count: i64 = result.try_get("count")?;
 
         Ok(count > 0)

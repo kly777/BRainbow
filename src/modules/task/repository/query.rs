@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use sqlx::Row;
+use sqlx::{QueryBuilder, Row};
 
 use super::super::dto::TaskDetailResponse;
 use super::super::model::{Task, TaskStatus, TimeWindow, TimeWindowType};
@@ -7,20 +7,23 @@ use super::TaskRepository;
 
 impl TaskRepository {
     pub async fn find_tree(&self, root_task_id: Option<i32>) -> Result<Vec<Task>, sqlx::Error> {
-        let base_query = "WITH RECURSIVE task_tree AS (
-            SELECT id, title, description, parent_task_id, status, completed_at,
-                   effort_estimate_minutes, created_at, updated_at
-            FROM task
-            WHERE ";
+        let mut builder = QueryBuilder::new(
+            "WITH RECURSIVE task_tree AS (
+                SELECT id, title, description, parent_task_id, status, completed_at,
+                       effort_estimate_minutes, created_at, updated_at
+                FROM task
+                WHERE ",
+        );
 
-        let condition = if let Some(_root_id) = root_task_id {
-            format!("{} id = ?", base_query)
+        if let Some(root_id) = root_task_id {
+            builder.push("id = ");
+            builder.push_bind(root_id);
         } else {
-            format!("{} parent_task_id IS NULL", base_query)
-        };
+            builder.push("parent_task_id IS NULL");
+        }
 
-        let full_query = format!(
-            "{}
+        builder.push(
+            "
             UNION ALL
             SELECT t.id, t.title, t.description, t.parent_task_id, t.status, t.completed_at,
                    t.effort_estimate_minutes, t.created_at, t.updated_at
@@ -28,16 +31,9 @@ impl TaskRepository {
             INNER JOIN task_tree tt ON t.parent_task_id = tt.id
         )
         SELECT * FROM task_tree ORDER BY created_at",
-            condition
         );
 
-        let mut query = sqlx::query_as::<_, Task>(sqlx::AssertSqlSafe(full_query.as_str()));
-
-        if let Some(root_id) = root_task_id {
-            query = query.bind(root_id);
-        }
-
-        query.fetch_all(&*self.db).await
+        builder.build_query_as::<Task>().fetch_all(&*self.db).await
     }
 
     pub async fn find_detail(&self, id: i32) -> Result<Option<TaskDetailResponse>, sqlx::Error> {

@@ -1,4 +1,4 @@
-use sqlx::{Row, SqlitePool};
+use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
 use super::model::Onto;
@@ -78,45 +78,33 @@ impl OntoRepository {
         name: Option<String>,
         description: Option<String>,
     ) -> Result<Onto, sqlx::Error> {
-        // 构建更新语句
-        let mut updates = Vec::new();
+        let mut builder = QueryBuilder::new("UPDATE onto SET ");
+        let mut sep = builder.separated(", ");
+        let mut has_updates = false;
 
-        if let Some(_) = &name {
-            updates.push("name = ?");
+        if let Some(ref name) = name {
+            sep.push("name = ");
+            sep.push_bind(name);
+            has_updates = true;
+        }
+        if let Some(ref description) = description {
+            sep.push("description = ");
+            sep.push_bind(description);
+            has_updates = true;
         }
 
-        if let Some(_) = &description {
-            updates.push("description = ?");
-        }
-
-        if updates.is_empty() {
-            // 如果没有更新，直接返回当前本体
+        if !has_updates {
             return self
                 .find_by_id(id)
                 .await?
                 .ok_or_else(|| sqlx::Error::RowNotFound);
         }
 
-        let update_clause = updates.join(", ");
-        let query = format!(
-            "UPDATE onto SET {} WHERE id = ? RETURNING id, name, description",
-            update_clause
-        );
+        builder.push(" WHERE id = ");
+        builder.push_bind(id);
+        builder.push(" RETURNING id, name, description");
 
-        // 构建查询
-        let mut query_builder = sqlx::query(sqlx::AssertSqlSafe(query.as_str()));
-
-        // 绑定参数
-        if let Some(name) = &name {
-            query_builder = query_builder.bind(name);
-        }
-        if let Some(description) = &description {
-            query_builder = query_builder.bind(description);
-        }
-
-        query_builder = query_builder.bind(id);
-
-        let result = query_builder.fetch_one(&*self.db).await?;
+        let result = builder.build().fetch_one(&*self.db).await?;
 
         Ok(Onto {
             id: result.try_get("id")?,

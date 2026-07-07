@@ -1,4 +1,4 @@
-import { request } from "./request.ts";
+import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
 import type {
 	Card,
 	CreateCardRequest,
@@ -17,30 +17,31 @@ export interface PaginatedCards {
 
 // ==================== Card API Functions ====================
 
-export const getCardsE = (): Promise<PaginatedCards> => request("/cards", {});
+export const getCardsE = (): Promise<PaginatedCards> => cachedRequest("/cards", {});
 
+// 单张卡片缓存 60 秒，不常变
 export const getCardE = (id: number): Promise<Card> =>
-	request(`/cards/${id}`, {});
+	cachedRequest(`/cards/${id}`, {}, 60_000);
 
 export const createCardE = (card: CreateCardRequest): Promise<Card> =>
-	request("/cards", {
+	request<Card>("/cards", {
 		method: "POST",
 		body: JSON.stringify(card),
-	});
+	}).then((r) => tapInvalidate(CACHE.cards, r));
 
 export const updateCardE = (
 	id: number,
 	card: UpdateCardRequest,
 ): Promise<Card> =>
-	request(`/cards/${id}`, {
+	request<Card>(`/cards/${id}`, {
 		method: "PATCH",
 		body: JSON.stringify(card),
-	});
+	}).then((r) => tapInvalidate(CACHE.cards, r));
 
 export const deleteCardE = (id: number): Promise<void> =>
-	request(`/cards/${id}`, {
+	request<void>(`/cards/${id}`, {
 		method: "DELETE",
-	});
+	}).then((r) => tapInvalidate(CACHE.cards, r));
 
 export const searchCardsE = (query: string): Promise<PaginatedCards> =>
-	request(`/cards/search?q=${encodeURIComponent(query)}`, {});
+	cachedRequest(`/cards/search?q=${encodeURIComponent(query)}`, {});

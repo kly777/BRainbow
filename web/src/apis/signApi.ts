@@ -1,4 +1,4 @@
-import { request } from "./request.ts";
+import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
 
 export interface Sign {
 	readonly id: number;
@@ -10,14 +10,14 @@ export interface Sign {
 	readonly created_at: string;
 }
 
-/** 获取所有符号关系（后端返回分页结构，自动提取 items）。 */
+/** 符号关系不常变，缓存 60 秒 */
 export const getSignsE = (): Promise<readonly Sign[]> =>
-	request<{ readonly items: readonly Sign[] }>("/sign", {}).then(
+	cachedRequest<{ readonly items: readonly Sign[] }>("/sign", {}, 60_000).then(
 		(r) => r.items,
 	);
 
 export const getSignE = (id: number): Promise<Sign> =>
-	request<Sign>(`/sign/${id}`, {});
+	cachedRequest<Sign>(`/sign/${id}`, {}, 60_000);
 
 export const createSignE = (data: {
 	signifier: string;
@@ -29,27 +29,29 @@ export const createSignE = (data: {
 	request<Sign>("/sign", {
 		method: "POST",
 		body: JSON.stringify(data),
-	});
+	}).then((r) => tapInvalidate(CACHE.sign, r));
 
 export const deleteSignE = (id: number): Promise<void> =>
 	request<void>(`/sign/${id}`, {
 		method: "DELETE",
-	});
+	}).then((r) => tapInvalidate(CACHE.sign, r));
 
-/** 按能指查询（后端返回分页结构，自动提取 items）。 */
+/** 按能指查询（缓存 60 秒）。 */
 export const getSignsBySignifierE = (
 	signifier: string,
 ): Promise<readonly Sign[]> =>
-	request<{ readonly items: readonly Sign[] }>(
+	cachedRequest<{ readonly items: readonly Sign[] }>(
 		`/sign/signifier/${encodeURIComponent(signifier)}`,
 		{},
+		60_000,
 	).then((r) => r.items);
 
-/** 按所指查询（后端返回分页结构，自动提取 items）。 */
+/** 按所指查询（缓存 60 秒）。 */
 export const getSignsBySignifiedE = (
 	signified: string,
 ): Promise<readonly Sign[]> =>
-	request<{ readonly items: readonly Sign[] }>(
+	cachedRequest<{ readonly items: readonly Sign[] }>(
 		`/sign/signified/${encodeURIComponent(signified)}`,
 		{},
+		60_000,
 	).then((r) => r.items);

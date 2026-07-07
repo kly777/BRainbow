@@ -1,4 +1,4 @@
-import { request } from "./request.ts";
+import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
 import { getToken } from "../auth/context.tsx";
 import { HttpError, NetworkError } from "./types/index.ts";
 
@@ -87,7 +87,7 @@ export const uploadMedia = async (file: File): Promise<MediaItem> => {
 	return response.json() as Promise<MediaItem>;
 };
 
-/** 媒体列表 */
+/** 媒体列表（缓存 30 秒） */
 export const listMediaE = (params?: {
 	media_type?: string;
 	page?: number;
@@ -98,23 +98,25 @@ export const listMediaE = (params?: {
 	if (params?.page) qs.set("page", String(params.page));
 	if (params?.page_size) qs.set("page_size", String(params.page_size));
 	const suffix = qs.toString() ? `?${qs.toString()}` : "";
-	return request(`/media${suffix}`, {});
+	return cachedRequest(`/media${suffix}`, {});
 };
 
-/** 单条详情 */
+/** 单条详情（缓存 60 秒） */
 export const getMediaE = (stored_id: string): Promise<MediaItem> =>
-	request(`/media/${stored_id}`, {});
+	cachedRequest(`/media/${stored_id}`, {}, 60_000);
 
 /** 重命名 */
 export const renameMediaE = (
 	stored_id: string,
 	original_name: string,
 ): Promise<MediaItem> =>
-	request(`/media/${stored_id}`, {
+	request<MediaItem>(`/media/${stored_id}`, {
 		method: "PATCH",
 		body: JSON.stringify({ original_name }),
-	});
+	}).then((r) => tapInvalidate(CACHE.media, r));
 
 /** 删除 */
 export const deleteMediaE = (stored_id: string): Promise<void> =>
-	request(`/media/${stored_id}`, { method: "DELETE" });
+	request<void>(`/media/${stored_id}`, { method: "DELETE" }).then((r) =>
+		tapInvalidate(CACHE.media, r),
+	);

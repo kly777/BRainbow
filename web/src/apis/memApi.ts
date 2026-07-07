@@ -1,4 +1,4 @@
-import { request } from "./request.ts";
+import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
 
 // ── 类型 ──
 
@@ -32,18 +32,20 @@ export const createMemE = (
 	targetMd: string,
 	prerequisites: number[] = [],
 ): Promise<{ id: number }> =>
-	request("/mem", {
+	request<{ id: number }>("/mem", {
 		method: "POST",
 		body: JSON.stringify({
 			cue_content: cueMd,
 			target_content: targetMd,
 			prerequisites,
 		}),
-	});
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
+// mem 列表缓存 10 秒（不常刷新）
 export const getAllMemsE = (pageSize = 200): Promise<DueResponse> =>
-	request(`/mem/all?page_size=${pageSize}`, {});
+	cachedRequest(`/mem/all?page_size=${pageSize}`, {}, 10_000);
 
+// ⚠️ 复习数据必须实时，不缓存
 export const getDueE = (limit = 50): Promise<DueResponse> =>
 	request(`/mem/due?limit=${limit}`, {});
 
@@ -51,10 +53,10 @@ export const reviewMemE = (
 	id: number,
 	rating: number,
 ): Promise<{ ok: boolean }> =>
-	request(`/mem/${id}/review`, {
+	request<{ ok: boolean }>(`/mem/${id}/review`, {
 		method: "POST",
 		body: JSON.stringify({ rating }),
-	});
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const previewMemE = (
 	id: number,
@@ -62,26 +64,34 @@ export const previewMemE = (
 	request(`/mem/${id}/preview`, {});
 
 export const deleteMemE = (id: number): Promise<{ ok: boolean }> =>
-	request(`/mem/${id}`, { method: "DELETE" });
+	request<{ ok: boolean }>(`/mem/${id}`, { method: "DELETE" }).then((r) =>
+		tapInvalidate(CACHE.mem, r),
+	);
 
 export const buryMemE = (id: number): Promise<{ ok: boolean }> =>
-	request(`/mem/${id}/bury`, { method: "POST" });
+	request<{ ok: boolean }>(`/mem/${id}/bury`, { method: "POST" }).then((r) =>
+		tapInvalidate(CACHE.mem, r),
+	);
 
 export const unburyMemE = (id: number): Promise<{ ok: boolean }> =>
-	request(`/mem/${id}/unbury`, { method: "POST" });
+	request<{ ok: boolean }>(`/mem/${id}/unbury`, { method: "POST" }).then((r) =>
+		tapInvalidate(CACHE.mem, r),
+	);
 
 export const resetMemE = (id: number): Promise<{ ok: boolean }> =>
-	request(`/mem/${id}/reset`, { method: "POST" });
+	request<{ ok: boolean }>(`/mem/${id}/reset`, { method: "POST" }).then((r) =>
+		tapInvalidate(CACHE.mem, r),
+	);
 
 export const editMemE = (
 	id: number,
 	cue: string,
 	target: string,
 ): Promise<{ ok: boolean }> =>
-	request(`/mem/${id}/edit`, {
+	request<{ ok: boolean }>(`/mem/${id}/edit`, {
 		method: "PUT",
 		body: JSON.stringify({ cue_content: cue, target_content: target }),
-	});
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const uploadImage = async (file: File): Promise<string | null> => {
 	try {

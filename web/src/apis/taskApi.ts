@@ -1,4 +1,4 @@
-import { request } from "./request.ts";
+import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
 import type {
 	CalendarEvent,
 	CreateTaskRequest,
@@ -30,13 +30,13 @@ export const getCalendarEventsE = (
 	if (end) params.set("end", end);
 	if (status) params.set("status", status);
 	const qs = params.toString();
-	return request(`/tasks/calendar${qs ? `?${qs}` : ""}`, {});
+	return cachedRequest(`/tasks/calendar${qs ? `?${qs}` : ""}`, {});
 };
 
-export const getTasksE = (): Promise<TaskListResponse> => request("/tasks", {});
+export const getTasksE = (): Promise<TaskListResponse> => cachedRequest("/tasks", {});
 
 export const getAllTasksE = (): Promise<TaskListResponse> =>
-	request("/tasks/all", {});
+	cachedRequest("/tasks/all", {});
 
 // ==================== Tree API ====================
 
@@ -45,127 +45,131 @@ export interface TreeNode {
 	readonly children: readonly TreeNode[];
 }
 
+// 任务树缓存 15 秒（频繁操作节点）
 export const getTaskTreeE = (): Promise<readonly TreeNode[]> =>
-	request("/tasks/tree", {});
+	cachedRequest("/tasks/tree", {}, 15_000);
 
+// 任务详情缓存 60 秒
 export const getTaskDetailE = (id: number): Promise<TaskDetail> =>
-	request(`/tasks/${id}/detail`, {});
+	cachedRequest(`/tasks/${id}/detail`, {}, 60_000);
 
 export const createTaskE = (task: CreateTaskRequest): Promise<Task> =>
-	request("/tasks", {
+	request<Task>("/tasks", {
 		method: "POST",
 		body: JSON.stringify(task),
-	});
+	}).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const updateTaskE = (
 	id: number,
 	task: UpdateTaskRequest,
 ): Promise<Task> =>
-	request(`/tasks/${id}`, {
+	request<Task>(`/tasks/${id}`, {
 		method: "PATCH",
 		body: JSON.stringify(task),
-	});
+	}).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const deleteTaskE = (id: number): Promise<void> =>
-	request(`/tasks/${id}`, {
+	request<void>(`/tasks/${id}`, {
 		method: "DELETE",
-	});
+	}).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const addTaskDependencyE = (
 	taskId: number,
 	dependsOnTaskId: number,
 ): Promise<void> =>
-	request(`/tasks/${taskId}/dependencies`, {
+	request<void>(`/tasks/${taskId}/dependencies`, {
 		method: "POST",
 		body: JSON.stringify({ depends_on_task_id: dependsOnTaskId }),
-	});
+	}).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const removeTaskDependencyE = (
 	taskId: number,
 	dependsOnTaskId: number,
 ): Promise<void> =>
-	request(`/tasks/${taskId}/dependencies/${dependsOnTaskId}`, {
+	request<void>(`/tasks/${taskId}/dependencies/${dependsOnTaskId}`, {
 		method: "DELETE",
-	});
+	}).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const addTaskDecompositionE = (
 	parentTaskId: number,
 	childTaskId: number,
 ): Promise<void> =>
-	request(`/tasks/${parentTaskId}/decomposition/${childTaskId}`, {
+	request<void>(`/tasks/${parentTaskId}/decomposition/${childTaskId}`, {
 		method: "POST",
-	});
+	}).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const addTaskTimeAllocationE = (
 	taskId: number,
 	timeWindowId: number,
 	durationMinutes: number,
 ): Promise<void> =>
-	request(
+	request<void>(
 		`/tasks/${taskId}/time-allocation/${timeWindowId}/${durationMinutes}`,
 		{
 			method: "POST",
 		},
-	);
+	).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const getUserTasksE = (userId: number): Promise<readonly Task[]> =>
-	request(`/tasks/user/${userId}`, {});
+	cachedRequest(`/tasks/user/${userId}`, {});
 
 export const updateTaskStatusE = (id: number, status: string): Promise<Task> =>
-	request(`/tasks/${id}`, {
+	request<Task>(`/tasks/${id}`, {
 		method: "PATCH",
 		body: JSON.stringify({ status }),
-	});
+	}).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const searchTasksE = (query: string): Promise<TaskListResponse> =>
-	request(`/tasks/search?q=${encodeURIComponent(query)}`, {});
+	cachedRequest(`/tasks/search?q=${encodeURIComponent(query)}`, {});
 
 export const getBacklogTasksE = (): Promise<TaskListResponse> =>
-	request("/tasks/status/backlog", {});
+	cachedRequest("/tasks/status/backlog", {});
 
 export const getActiveTasksE = (): Promise<TaskListResponse> =>
-	request("/tasks/status/active", {});
+	cachedRequest("/tasks/status/active", {});
 
 export const getCompletedTasksE = (): Promise<TaskListResponse> =>
-	request("/tasks/status/completed", {});
+	cachedRequest("/tasks/status/completed", {});
 
 export const getArchivedTasksE = (): Promise<TaskListResponse> =>
-	request("/tasks/status/archived", {});
+	cachedRequest("/tasks/status/archived", {});
 
+// 任务统计缓存 15 秒
 export const getTaskStatsE = (): Promise<{
 	backlog: number;
 	active: number;
 	completed: number;
 	archived: number;
-}> => request("/tasks/stats", {});
+}> => cachedRequest("/tasks/stats", {}, 15_000);
 
 // 任务状态操作
 export const completeTaskE = (id: number): Promise<Task> =>
-	request(`/tasks/${id}/complete`, {
+	request<Task>(`/tasks/${id}/complete`, {
 		method: "POST",
-	});
+	}).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const activateTaskE = (id: number): Promise<Task> =>
-	request(`/tasks/${id}/activate`, {
+	request<Task>(`/tasks/${id}/activate`, {
 		method: "POST",
-	});
+	}).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const archiveTaskE = (id: number): Promise<Task> =>
-	request(`/tasks/${id}/archive`, {
+	request<Task>(`/tasks/${id}/archive`, {
 		method: "POST",
-	});
+	}).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const moveToBacklogE = (id: number): Promise<Task> =>
-	request(`/tasks/${id}/move-to-backlog`, {
+	request<Task>(`/tasks/${id}/move-to-backlog`, {
 		method: "POST",
-	});
+	}).then((r) => tapInvalidate(CACHE.tasks, r));
 
 // ==================== DAG API ====================
 
+// DAG 视图缓存 15 秒
 export const getDagE = (taskId?: number, depth?: number): Promise<DagView> => {
 	const params = new URLSearchParams();
 	if (taskId) params.set("task_id", String(taskId));
 	if (depth) params.set("depth", String(depth));
 	const qs = params.toString();
-	return request(`/tasks/dag${qs ? `?${qs}` : ""}`, {});
+	return cachedRequest(`/tasks/dag${qs ? `?${qs}` : ""}`, {}, 15_000);
 };

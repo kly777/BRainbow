@@ -1,7 +1,7 @@
-import { request } from "./request.ts";
+import { cachedRequest } from "./request.ts";
 import type { PaginationParams } from "./types/index.ts";
 
-export const getTablesE = (): Promise<readonly string[]> => request("/db", {});
+export const getTablesE = (): Promise<readonly string[]> => cachedRequest("/db", {});
 
 export interface ColumnInfo {
 	readonly name: string;
@@ -19,5 +19,5 @@ export const getTableDataE = (
 ): Promise<TableData> => {
 	const page = params?.page ?? 1;
 	const pageSize = params?.page_size ?? 20;
-	return request(`/db/${name}?page=${page}&page_size=${pageSize}`, {});
+	return cachedRequest(`/db/${name}?page=${page}&page_size=${pageSize}`, {});
 };

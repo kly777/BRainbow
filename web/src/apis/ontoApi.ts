@@ -1,4 +1,4 @@
-import { request } from "./request.ts";
+import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
 
 export interface Onto {
 	readonly id: number;
@@ -9,13 +9,14 @@ export interface Onto {
 /**
  * 获取所有本体（后端返回分页结构，自动提取 items）。
  */
+// 本体数据不常变，缓存 60 秒
 export const getOntosE = (): Promise<readonly Onto[]> =>
-	request<{ readonly items: readonly Onto[] }>("/onto", {}).then(
+	cachedRequest<{ readonly items: readonly Onto[] }>("/onto", {}, 60_000).then(
 		(r) => r.items,
 	);
 
 export const getOntoE = (id: number): Promise<Onto> =>
-	request<Onto>(`/onto/${id}`, {});
+	cachedRequest<Onto>(`/onto/${id}`, {}, 60_000);
 
 export const createOntoE = (
 	name: string,
@@ -24,7 +25,7 @@ export const createOntoE = (
 	request<Onto>("/onto", {
 		method: "POST",
 		body: JSON.stringify({ name, description }),
-	});
+	}).then((r) => tapInvalidate(CACHE.onto, r));
 
 export const updateOntoE = (
 	id: number,
@@ -33,9 +34,9 @@ export const updateOntoE = (
 	request<Onto>(`/onto/${id}`, {
 		method: "PATCH",
 		body: JSON.stringify(data),
-	});
+	}).then((r) => tapInvalidate(CACHE.onto, r));
 
 export const deleteOntoE = (id: number): Promise<void> =>
 	request<void>(`/onto/${id}`, {
 		method: "DELETE",
-	});
+	}).then((r) => tapInvalidate(CACHE.onto, r));

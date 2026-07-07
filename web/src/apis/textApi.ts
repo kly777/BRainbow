@@ -1,4 +1,4 @@
-import { request } from "./request.ts";
+import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
 
 export interface TabItem {
 	readonly name: string;
@@ -10,7 +10,7 @@ export interface TextResponse {
 }
 
 export const loadTextE = (): Promise<TextResponse> =>
-	request<TextResponse>("/text", {});
+	cachedRequest<TextResponse>("/text", {});
 
 export const saveTextE = (
 	tabs: readonly { name: string; content: string }[],
@@ -18,4 +18,4 @@ export const saveTextE = (
 	request<{ readonly ok: boolean }>("/text", {
 		method: "PUT",
 		body: JSON.stringify({ tabs }),
-	});
+	}).then((r) => tapInvalidate(CACHE.text, r));

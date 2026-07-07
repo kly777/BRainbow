@@ -29,7 +29,8 @@ impl DBRepo {
         offset: i64,
     ) -> Result<(Vec<ColumnInfo>, Vec<Vec<Value>>), sqlx::Error> {
         // 用 PRAGMA 获取列信息（即使表为空也能拿到）
-        let pragma_rows = sqlx::query(&format!("PRAGMA table_info({})", table_name))
+        let pragma_sql = format!("PRAGMA table_info({})", table_name);
+        let pragma_rows = sqlx::query(sqlx::AssertSqlSafe(pragma_sql.as_str()))
             .fetch_all(&*self.pool)
             .await?;
 
@@ -42,7 +43,8 @@ impl DBRepo {
             .collect();
 
         // 查数据
-        let rows = sqlx::query(&format!("SELECT * FROM {} LIMIT $1 OFFSET $2", table_name))
+        let query_sql = format!("SELECT * FROM {} LIMIT $1 OFFSET $2", table_name);
+        let rows = sqlx::query(sqlx::AssertSqlSafe(query_sql.as_str()))
             .bind(limit)
             .bind(offset)
             .fetch_all(&*self.pool)

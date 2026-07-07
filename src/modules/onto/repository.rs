@@ -104,7 +104,7 @@ impl OntoRepository {
         );
 
         // 构建查询
-        let mut query_builder = sqlx::query(&query);
+        let mut query_builder = sqlx::query(sqlx::AssertSqlSafe(query.as_str()));
 
         // 绑定参数
         if let Some(name) = &name {

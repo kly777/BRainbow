@@ -382,7 +382,7 @@ impl TimeWindowRepository {
             base_query.to_string()
         };
 
-        let mut query_builder = sqlx::query(&query)
+        let mut query_builder = sqlx::query(sqlx::AssertSqlSafe(query.as_str()))
             .bind(task_id)
             .bind(end_time)
             .bind(start_time);

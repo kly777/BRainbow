@@ -93,7 +93,7 @@ impl CardRepository {
         );
 
         // 构建查询
-        let mut query_builder = sqlx::query(&query);
+        let mut query_builder = sqlx::query(sqlx::AssertSqlSafe(query.as_str()));
 
         // 绑定参数
         if let Some(content) = &content {
@@ -148,7 +148,7 @@ impl CardRepository {
 
         // count total
         let count_sql = format!("SELECT COUNT(*) FROM card WHERE {}", where_clause);
-        let mut count_query = sqlx::query_scalar(&count_sql);
+        let mut count_query = sqlx::query_scalar(sqlx::AssertSqlSafe(count_sql.as_str()));
         for kw in &keywords {
             count_query = count_query.bind(format!("%{}%", kw));
         }
@@ -159,7 +159,7 @@ impl CardRepository {
             "SELECT id, content, created_at, updated_at FROM card WHERE {} ORDER BY ({}) DESC, updated_at DESC LIMIT ? OFFSET ?",
             where_clause, score_sum
         );
-        let mut query = sqlx::query_as::<_, Card>(&sql);
+        let mut query = sqlx::query_as::<_, Card>(sqlx::AssertSqlSafe(sql.as_str()));
         for kw in &keywords {
             query = query.bind(format!("%{}%", kw));
         }

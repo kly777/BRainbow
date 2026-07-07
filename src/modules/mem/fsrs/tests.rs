@@ -1,6 +1,7 @@
 use super::*;
 use chrono::Utc;
 use rand::Rng;
+use rand::RngExt;
 use rand::SeedableRng;
 
 /// 默认测试配置
@@ -196,11 +197,11 @@ fn true_rating(true_stability: f64, days_elapsed: u32, rng: &mut impl Rng) -> u8
         return 3;
     }
     let recall_prob = 2.0_f64.powf(-(days_elapsed as f64) / true_stability);
-    let recalled: bool = rng.r#gen::<f64>() < recall_prob;
+    let recalled: bool = rng.random::<f64>() < recall_prob;
     if !recalled {
         1
     } else {
-        let p: f64 = rng.r#gen();
+        let p: f64 = rng.random();
         if p < 0.15 { 2 } else if p < 0.75 { 3 } else { 4 }
     }
 }

@@ -31,7 +31,7 @@ impl TaskRepository {
             condition
         );
 
-        let mut query = sqlx::query_as::<_, Task>(&full_query);
+        let mut query = sqlx::query_as::<_, Task>(sqlx::AssertSqlSafe(full_query.as_str()));
 
         if let Some(root_id) = root_task_id {
             query = query.bind(root_id);

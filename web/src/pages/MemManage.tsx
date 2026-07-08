@@ -55,9 +55,25 @@ export default function MemManage() {
 	const [editing, setEditing] = createSignal(false);
 	const [editCue, setEditCue] = createSignal("");
 	const [editTarget, setEditTarget] = createSignal("");
+	const [searchQuery, setSearchQuery] = createSignal("");
+	const [filterState, setFilterState] = createSignal<string>("all");
+
+	const filteredMems = () => {
+		const raw = mems();
+		const q = searchQuery().toLowerCase().trim();
+		const st = filterState();
+		return raw.filter((m) => {
+			if (st !== "all" && m.state !== st) return false;
+			if (!q) return true;
+			return (
+				m.cue.content.toLowerCase().includes(q) ||
+				m.target.content.toLowerCase().includes(q)
+			);
+		});
+	};
 
 	const allSelected = () =>
-		mems().length > 0 && batchIds().size === mems().length;
+		filteredMems().length > 0 && batchIds().size === filteredMems().length;
 
 	const toggleBatch = (id: number) => {
 		setBatchIds((prev) => {
@@ -75,8 +91,13 @@ export default function MemManage() {
 		if (allSelected()) {
 			setBatchIds(new Set<number>());
 		} else {
-			setBatchIds(new Set<number>(mems().map((m) => m.id)));
+			setBatchIds(new Set<number>(filteredMems().map((m) => m.id)));
 		}
+	};
+
+	const setFilter = (st: string) => {
+		setFilterState(st);
+		setBatchIds(new Set<number>());
 	};
 
 	const load = async () => {
@@ -206,7 +227,33 @@ export default function MemManage() {
 					<A href="/m/add" class={styles.addLink}>
 						＋ 添加
 					</A>
-					<span class={styles.count}>{mems().length} 个</span>
+					<span class={styles.count}>{filteredMems().length}/{mems().length} 个</span>
+				</div>
+			</div>
+			<div class={styles.toolbar}>
+				<input
+					type="search"
+					class={styles.searchInput}
+					placeholder="搜索线索或答案…"
+					value={searchQuery()}
+					onInput={(e) => { setSearchQuery(e.currentTarget.value); setBatchIds(new Set<number>()); }}
+				/>
+				<div class={styles.filterGroup}>
+					{[
+						["all", "全部"],
+						["new", "新"],
+						["learning", "学习"],
+						["review", "复习"],
+						["relearning", "重学"],
+					].map(([val, label]) => (
+						<button
+							type="button"
+							class={filterState() === val ? styles.filterActive : styles.filterBtn}
+							onClick={() => setFilter(val)}
+						>
+							{label}
+						</button>
+					))}
 				</div>
 			</div>
 			<div class={styles.split}>
@@ -267,7 +314,7 @@ export default function MemManage() {
 								</tr>
 							</thead>
 							<tbody>
-								<For each={mems()}>
+								<For each={filteredMems()}>
 									{(mem) => (
 										<tr
 											class={

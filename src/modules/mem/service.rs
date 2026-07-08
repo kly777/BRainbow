@@ -215,6 +215,8 @@ impl MemService {
                         stability: row.stability,
                         difficulty: row.difficulty,
                         due_at: row.due_at,
+                        lapses: row.lapses,
+                        leeched: row.leeched,
                     });
                 }
             }
@@ -236,13 +238,14 @@ impl MemService {
 
     /// 获取各状态计数（新卡 / 学习中 / 待复习 / 已埋葬）
     pub async fn get_counts(&self) -> Result<MemCounts, sqlx::Error> {
-        let (new_count, learning_count, due_count, buried_count) =
+        let (new_count, learning_count, due_count, buried_count, suspended_count) =
             self.repo.get_counts().await?;
         Ok(MemCounts {
             new: new_count as usize,
             learning: learning_count as usize,
             due: due_count as usize,
             buried: buried_count as usize,
+            suspended: suspended_count as usize,
         })
     }
 
@@ -262,6 +265,20 @@ impl MemService {
             retention,
             total_estimate,
         })
+    }
+
+    // ── 挂起 / 恢复 ──
+
+    pub async fn suspend(&self, id: i32) -> Result<(), AppError> {
+        self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
+        self.repo.suspend_mem(id).await.map_err(AppError::Db)?;
+        Ok(())
+    }
+
+    pub async fn unsuspend(&self, id: i32) -> Result<(), AppError> {
+        self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
+        self.repo.unsuspend_mem(id).await.map_err(AppError::Db)?;
+        Ok(())
     }
 
     pub async fn preview(&self, id: i32) -> Result<[f64; 4], AppError> {

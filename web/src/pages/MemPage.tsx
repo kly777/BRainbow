@@ -8,6 +8,7 @@ import {
 	getSessionEstimateE,
 	previewMemE,
 	reviewMemE,
+	suspendMemE,
 	type MemCounts,
 	type MemItem,
 } from "../apis/memApi.ts";
@@ -241,6 +242,7 @@ export default function MemPage() {
 						<span class={styles.statLearning}>{c().learning}</span>
 						<span class={styles.statDue}>{c().due}</span>
 						<span class={styles.statBuried}>{c().buried}</span>
+						<span class={styles.statSuspended}>{c().suspended}</span>
 					</div>
 				}</Show>
 				<div class={styles.sidebarList}>
@@ -416,6 +418,13 @@ export default function MemPage() {
 							<div class={styles.actionRow}>
 								<button type="button" class={styles.buryBtn} onClick={bury}>
 									跳过
+								</button>
+								<button
+									type="button"
+									class={styles.buryBtn}
+									onClick={async () => { if (item()) await suspendMemE(item()!.id); loadDue(); }}
+								>
+									挂起
 								</button>
 								<Show when={showUndo()}>
 									<button type="button" class={styles.undoBtn} onClick={undo}>

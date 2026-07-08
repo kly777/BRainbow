@@ -153,9 +153,28 @@ impl MemRepo {
 
     // ── 学习池 ──
 
+    pub async fn suspend_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE mem SET state='suspended' WHERE id=?")
+            .bind(id)
+            .execute(&*self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn unsuspend_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+        // 恢复到新卡状态，保留内容
+        sqlx::query(
+            "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?"
+        )
+        .bind(id)
+        .execute(&*self.pool)
+        .await?;
+        Ok(())
+    }
+
     pub async fn get_learning_mems(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
         sqlx::query_scalar::<_, i32>(
-            "SELECT id FROM mem WHERE state IN ('learning', 'relearning') AND buried = 0 ORDER BY due_at LIMIT ?"
+            "SELECT id FROM mem WHERE state IN ('learning', 'relearning') AND buried = 0 AND state != 'suspended' ORDER BY due_at LIMIT ?"
         ).bind(limit).fetch_all(&*self.pool).await
     }
 
@@ -163,7 +182,7 @@ impl MemRepo {
     pub async fn get_due_reviews(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
         sqlx::query_scalar::<_, i32>(
             r#"SELECT m.id FROM mem m
-            WHERE m.state = 'review' AND m.buried = 0
+            WHERE m.state = 'review' AND m.buried = 0 AND m.state != 'suspended'
               AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
             ORDER BY m.due_at LIMIT ?"#
@@ -174,7 +193,7 @@ impl MemRepo {
     pub async fn get_new_cards(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
         sqlx::query_scalar::<_, i32>(
             r#"SELECT m.id FROM mem m
-            WHERE m.state = 'new' AND m.buried = 0
+            WHERE m.state = 'new' AND m.buried = 0 AND m.state != 'suspended'
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
             ORDER BY RANDOM() LIMIT ?"#
         ).bind(limit).fetch_all(&*self.pool).await
@@ -184,7 +203,7 @@ impl MemRepo {
     pub async fn get_upcoming_reviews(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
         sqlx::query_scalar::<_, i32>(
             r#"SELECT m.id FROM mem m
-            WHERE m.state = 'review' AND m.buried = 0
+            WHERE m.state = 'review' AND m.buried = 0 AND m.state != 'suspended'
               AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
             ORDER BY m.due_at LIMIT ?"#
@@ -193,7 +212,7 @@ impl MemRepo {
 
     pub async fn count_upcoming(&self) -> Result<i64, sqlx::Error> {
         sqlx::query_scalar::<_, i64>(
-            r#"SELECT COUNT(*) FROM mem WHERE state = 'review' AND buried = 0"#,
+            r#"SELECT COUNT(*) FROM mem WHERE state = 'review' AND buried = 0 AND state != 'suspended'"#,
         )
         .fetch_one(&*self.pool)
         .await
@@ -201,7 +220,7 @@ impl MemRepo {
 
     pub async fn count_due_total(&self) -> Result<i64, sqlx::Error> {
         sqlx::query_scalar(
-            r#"SELECT COUNT(*) FROM mem WHERE buried = 0 AND (
+            r#"SELECT COUNT(*) FROM mem WHERE buried = 0 AND state != 'suspended' AND (
                 state = 'new'
                 OR state IN ('learning', 'relearning')
                 OR (state = 'review' AND due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
@@ -211,19 +230,19 @@ impl MemRepo {
         .await
     }
 
-    pub async fn get_counts(&self) -> Result<(i64, i64, i64, i64), sqlx::Error> {
+    pub async fn get_counts(&self) -> Result<(i64, i64, i64, i64, i64), sqlx::Error> {
         let new_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM mem WHERE state = 'new' AND buried = 0",
+            "SELECT COUNT(*) FROM mem WHERE state = 'new' AND buried = 0 AND state != 'suspended'",
         )
         .fetch_one(&*self.pool)
         .await?;
         let learning_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM mem WHERE state IN ('learning', 'relearning') AND buried = 0",
+            "SELECT COUNT(*) FROM mem WHERE state IN ('learning', 'relearning') AND buried = 0 AND state != 'suspended'",
         )
         .fetch_one(&*self.pool)
         .await?;
         let due_count: i64 = sqlx::query_scalar(
-            r#"SELECT COUNT(*) FROM mem WHERE state = 'review' AND buried = 0
+            r#"SELECT COUNT(*) FROM mem WHERE state = 'review' AND buried = 0 AND state != 'suspended'
                AND due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#,
         )
         .fetch_one(&*self.pool)
@@ -233,14 +252,19 @@ impl MemRepo {
         )
         .fetch_one(&*self.pool)
         .await?;
-        Ok((new_count, learning_count, due_count, buried_count))
+        let suspended_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM mem WHERE state = 'suspended'",
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+        Ok((new_count, learning_count, due_count, buried_count, suspended_count))
     }
 
     pub async fn get_next_mem(&self) -> Result<Option<i32>, sqlx::Error> {
         sqlx::query_scalar::<_, i32>(
             r#"SELECT m.id FROM mem m
             WHERE m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-              AND m.buried = 0
+              AND m.buried = 0 AND m.state != 'suspended'
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
             ORDER BY m.due_at LIMIT 1"#
         ).fetch_optional(&*self.pool).await

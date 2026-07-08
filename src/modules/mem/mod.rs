@@ -25,6 +25,8 @@ pub fn routes() -> Router<AppState> {
         .route("/{id}/preview", get(handler::preview_mem))
         .route("/{id}/bury", post(handler::bury_mem))
         .route("/{id}/unbury", post(handler::unbury_mem))
+        .route("/{id}/suspend", post(handler::suspend_mem))
+        .route("/{id}/unsuspend", post(handler::unsuspend_mem))
         .route("/{id}/reset", post(handler::reset_mem))
         .route("/{id}", delete(handler::delete_mem))
         .route("/optimize", post(handler::optimize_params))

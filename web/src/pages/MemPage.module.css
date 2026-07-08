@@ -76,6 +76,10 @@
 	color: var(--color-text-muted, #9b8e7a);
 }
 
+.statSuspended {
+	color: #9ca3af;
+}
+
 .sidebarList {
 	flex: 1;
 	overflow-y: auto;

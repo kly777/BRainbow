@@ -125,6 +125,22 @@ pub async fn bury_mem(Path(id): Path<i32>, State(state): State<AppState>) -> imp
     }
 }
 
+pub async fn suspend_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.suspend(id).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "挂起"),
+    }
+}
+
+pub async fn unsuspend_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.unsuspend(id).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "恢复"),
+    }
+}
+
 pub async fn unbury_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
     match svc.unbury(id).await {

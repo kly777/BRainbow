@@ -141,6 +141,16 @@ pub fn schedule(
 ) -> ReviewOutcome {
     use CardState::*;
 
+    // 挂起状态不应进入调度（安全兜底）
+    if state == Suspended {
+        return ReviewOutcome {
+            state: Suspended,
+            stability: s_old,
+            difficulty: d_old,
+            due_at: chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+        };
+    }
+
     // ── 重学阶段 ──
     if state == Relearning {
         return relearn(
@@ -297,6 +307,11 @@ pub fn preview(
 ) -> [f64; 4] {
     let mem = to_memory_state(s_old, d_old);
     use CardState::*;
+
+    // 挂起状态返回空间隔
+    if state == Suspended {
+        return [0.0, 0.0, 0.0, 0.0];
+    }
 
     if state == Relearning {
         let steps = &config.relearn_steps;

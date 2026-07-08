@@ -245,6 +245,15 @@
 	background: #fecaca;
 	color: #991b1b;
 }
+.suspended {
+	background: #e5e7eb;
+	color: #6b7280;
+}
+
+.leechedBadge {
+	font-size: var(--text-xs);
+	cursor: help;
+}
 
 /* ── 右侧详情 ── */
 .detail {

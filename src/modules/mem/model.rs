@@ -10,6 +10,7 @@ pub enum CardState {
     Learning,
     Review,
     Relearning,
+    Suspended,
 }
 
 impl CardState {
@@ -19,12 +20,19 @@ impl CardState {
             Self::Learning => "learning",
             Self::Review => "review",
             Self::Relearning => "relearning",
+            Self::Suspended => "suspended",
         }
     }
 
     /// 是否是步进状态（需要 step_index）
     pub fn has_steps(self) -> bool {
         matches!(self, Self::Learning | Self::Relearning)
+    }
+
+    /// 卡片是否处于活跃状态（未被挂起）
+    #[allow(dead_code)]
+    pub fn is_active(self) -> bool {
+        !matches!(self, Self::Suspended)
     }
 }
 
@@ -42,6 +50,7 @@ impl FromStr for CardState {
             "learning" => Ok(Self::Learning),
             "review" => Ok(Self::Review),
             "relearning" => Ok(Self::Relearning),
+            "suspended" => Ok(Self::Suspended),
             _ => Err(format!("unknown card state: {s}")),
         }
     }
@@ -67,6 +76,8 @@ pub struct MemWithChunks {
     pub stability: f64,
     pub difficulty: f64,
     pub due_at: String,
+    pub lapses: i32,
+    pub leeched: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -122,6 +133,7 @@ pub struct MemCounts {
     pub learning: usize,
     pub due: usize,
     pub buried: usize,
+    pub suspended: usize,
 }
 
 /// 本次学习预估

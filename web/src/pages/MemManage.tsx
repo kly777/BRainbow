@@ -6,6 +6,8 @@ import {
 	getAllMemsE,
 	deleteMemE,
 	resetMemE,
+	suspendMemE,
+	unsuspendMemE,
 	type MemItem,
 } from "../apis/memApi.ts";
 import MarkdownRenderer from "../components/ui/Markdown.tsx";
@@ -62,8 +64,11 @@ export default function MemManage() {
 		const raw = mems();
 		const q = searchQuery().toLowerCase().trim();
 		const st = filterState();
+		const now = new Date();
 		return raw.filter((m) => {
-			if (st !== "all" && m.state !== st) return false;
+			if (st === "today_done") {
+				if (m.state !== "review" || new Date(m.due_at) <= now) return false;
+			} else if (st !== "all" && m.state !== st) return false;
 			if (!q) return true;
 			return (
 				m.cue.content.toLowerCase().includes(q) ||
@@ -245,6 +250,8 @@ export default function MemManage() {
 						["learning", "学习"],
 						["review", "复习"],
 						["relearning", "重学"],
+						["suspended", "挂起"],
+						["today_done", "已复习"],
 					].map(([val, label]) => (
 						<button
 							type="button"
@@ -351,6 +358,7 @@ export default function MemManage() {
 													}}
 												>
 													{mem.state}
+													{mem.leeched && <span class={styles.leechedBadge}> ⚠️</span>}
 												</span>
 											</td>
 											<td class={styles.td}>{mem.difficulty.toFixed(2)}</td>
@@ -421,7 +429,8 @@ export default function MemManage() {
 									</div>
 								</Show>
 								<div class={styles.meta}>
-									<span>状态：{d().state}</span>
+									<span>状态：{d().state}{d().leeched ? ' ⚠️烂卡' : ''}</span>
+									<span>遗忘：{d().lapses} 次</span>
 									<span>难度：{d().difficulty.toFixed(2)}</span>
 									<span>创建：{fmtLocal(d().cue.created_at)}</span>
 									<span>到期：{fmtLocal(d().due_at)}</span>
@@ -460,6 +469,24 @@ export default function MemManage() {
 											>
 												忘却
 											</button>
+											<Show when={d().state !== 'suspended'}>
+												<button
+													type="button"
+													class={styles.editBtn}
+													onClick={async () => { await suspendMemE(d().id); load(); }}
+												>
+													挂起
+												</button>
+											</Show>
+											<Show when={d().state === 'suspended'}>
+												<button
+													type="button"
+													class={styles.editBtn}
+													onClick={async () => { await unsuspendMemE(d().id); load(); }}
+												>
+													恢复
+												</button>
+											</Show>
 											<button
 												type="button"
 												class={styles.deleteBtn}

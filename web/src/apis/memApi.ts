@@ -16,6 +16,8 @@ export interface MemItem {
 	stability: number;
 	difficulty: number;
 	due_at: string;
+	lapses: number;
+	leeched: boolean;
 }
 
 export interface DueResponse {
@@ -33,6 +35,7 @@ export interface MemCounts {
 	learning: number;
 	due: number;
 	buried: number;
+	suspended: number;
 }
 
 export interface SessionEstimate {
@@ -89,6 +92,16 @@ export const deleteMemE = (id: number): Promise<{ ok: boolean }> =>
 
 export const buryMemE = (id: number): Promise<{ ok: boolean }> =>
 	request<{ ok: boolean }>(`/mem/${id}/bury`, { method: "POST" }).then((r) =>
+		tapInvalidate(CACHE.mem, r),
+	);
+
+export const suspendMemE = (id: number): Promise<{ ok: boolean }> =>
+	request<{ ok: boolean }>(`/mem/${id}/suspend`, { method: "POST" }).then((r) =>
+		tapInvalidate(CACHE.mem, r),
+	);
+
+export const unsuspendMemE = (id: number): Promise<{ ok: boolean }> =>
+	request<{ ok: boolean }>(`/mem/${id}/unsuspend`, { method: "POST" }).then((r) =>
 		tapInvalidate(CACHE.mem, r),
 	);
 

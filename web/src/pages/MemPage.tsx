@@ -36,8 +36,7 @@ export default function MemPage() {
 	const [allFar, setAllFar] = createSignal(false);
 	const [upcoming, setUpcoming] = createSignal(0);
 	const [counts, setCounts] = createSignal<MemCounts | null>(null);
-	const [sessionReviewed, setSessionReviewed] = createSignal(0);
-	const [sessionTotal, setSessionTotal] = createSignal(0);
+	const [estimatedTotal, setEstimatedTotal] = createSignal(0);
 
 	// ── 动态队列大小 ──
 	// 基于近期评分（1-4）调整一次拉取多少张卡
@@ -87,14 +86,13 @@ export default function MemPage() {
 			if (data.items.length === 0 && !data.has_more) {
 				setDone(true);
 				setDue([]);
-				setSessionTotal(0);
+				setEstimatedTotal(0);
 				setUpcoming(data.upcoming_count ?? 0);
 			} else {
 				setDone(false);
 				setAllFar(data.all_far);
-				// 获取本次学习预估次数
-				getSessionEstimateE().then((est) => setSessionTotal(est.total_estimate)).catch(() => {});
-				setSessionReviewed(0);
+// 后端预估本次学习需要查看的总次数
+				getSessionEstimateE().then((est) => setEstimatedTotal(est.total_estimate)).catch(() => {});
 				const shuffled = [...data.items].sort(() => Math.random() - 0.5);
 				setDue(shuffled);
 				setCurrent(0);
@@ -152,7 +150,6 @@ export default function MemPage() {
 		// 记录评分，用于动态调整队列大小
 		setRecentRatings((prev) => [...prev, rating].slice(-MAX_HISTORY));
 		setShowUndo(true);
-		setSessionReviewed((prev) => prev + 1);
 		advanceQueue();
 		loadCounts();
 	};
@@ -325,14 +322,10 @@ export default function MemPage() {
 					</div>
 				</div>
 
-				<Show when={!done() && sessionTotal() > 0}>
+				<Show when={estimatedTotal() > 0}>
 					<div class={styles.progressBar}>
-						<div
-							class={styles.progressFill}
-							style={{ width: `${Math.min((sessionReviewed() / sessionTotal()) * 100, 100)}%` }}
-						/>
 						<span class={styles.progressText}>
-							已复习 {sessionReviewed()} / {sessionTotal()}
+							≈ {estimatedTotal()} 次学习
 						</span>
 					</div>
 				</Show>

@@ -123,3 +123,14 @@ pub struct MemCounts {
     pub due: usize,
     pub buried: usize,
 }
+
+/// 本次学习预估
+#[derive(Debug, Clone, Serialize)]
+pub struct SessionEstimate {
+    /// 当前到期的总卡数
+    pub due_count: usize,
+    /// 近期记忆保持率（0~1）
+    pub retention: f64,
+    /// 预估本次学习需要查看的总次数
+    pub total_estimate: usize,
+}

@@ -199,6 +199,18 @@ impl MemRepo {
         .await
     }
 
+    pub async fn count_due_total(&self) -> Result<i64, sqlx::Error> {
+        sqlx::query_scalar(
+            r#"SELECT COUNT(*) FROM mem WHERE buried = 0 AND (
+                state = 'new'
+                OR state IN ('learning', 'relearning')
+                OR (state = 'review' AND due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            )"#,
+        )
+        .fetch_one(&*self.pool)
+        .await
+    }
+
     pub async fn get_counts(&self) -> Result<(i64, i64, i64, i64), sqlx::Error> {
         let new_count: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM mem WHERE state = 'new' AND buried = 0",
@@ -279,6 +291,23 @@ impl MemRepo {
             .execute(&*self.pool)
             .await?;
         Ok(())
+    }
+
+    pub async fn get_recent_retention(&self, limit: i64) -> Result<f64, sqlx::Error> {
+        let ratings: Vec<i64> = sqlx::query_scalar(
+            "SELECT rating FROM revlog ORDER BY review_time DESC LIMIT ?"
+        )
+        .bind(limit)
+        .fetch_all(&*self.pool)
+        .await?;
+
+        if ratings.is_empty() {
+            return Ok(0.0);
+        }
+
+        let total = ratings.len() as f64;
+        let passed = ratings.iter().filter(|&&r| r >= 3).count() as f64;
+        Ok(passed / total)
     }
 
     pub async fn reset_mem(&self, id: i32) -> Result<(), sqlx::Error> {
@@ -497,5 +526,124 @@ mod tests {
         let repo = setup_db().await;
         let result = repo.delete_mem(999).await;
         assert!(result.is_err());
+    }
+
+    // ── session_estimate 相关 ──
+
+    #[tokio::test]
+    async fn count_due_total_empty_db() {
+        let repo = setup_db().await;
+        assert_eq!(repo.count_due_total().await.unwrap(), 0);
+    }
+
+    #[tokio::test]
+    async fn count_due_total_counts_all_states() {
+        let repo = setup_db().await;
+
+        async fn insert_mem(repo: &MemRepo, state: &str, buried: i32, due_at: &str) {
+            let cue_id = repo.create_chunk("cue").await.unwrap();
+            let target_id = repo.create_chunk("target").await.unwrap();
+            sqlx::query(
+                "INSERT INTO mem (cue_chunk_id, target_chunk_id, state, buried, due_at) VALUES (?, ?, ?, ?, ?)"
+            )
+            .bind(cue_id)
+            .bind(target_id)
+            .bind(state)
+            .bind(buried)
+            .bind(due_at)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
+        }
+
+        // new, not buried → 应计入
+        insert_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
+        // learning, not buried → 应计入
+        insert_mem(&repo, "learning", 0, "2099-01-01T00:00:00Z").await;
+        // relearning, not buried → 应计入
+        insert_mem(&repo, "relearning", 0, "2099-01-01T00:00:00Z").await;
+        // review, due (past), not buried → 应计入
+        insert_mem(&repo, "review", 0, "2020-01-01T00:00:00Z").await;
+        // review, due (nowish), not buried → 应计入
+        insert_mem(&repo, "review", 0, "2025-01-01T00:00:00Z").await;
+        // review, not due, not buried → 不应计入
+        insert_mem(&repo, "review", 0, "2099-01-01T00:00:00Z").await;
+        // new, buried → 不应计入
+        insert_mem(&repo, "new", 1, "2099-01-01T00:00:00Z").await;
+
+        assert_eq!(repo.count_due_total().await.unwrap(), 5);
+    }
+
+    #[tokio::test]
+    async fn get_recent_retention_empty() {
+        let repo = setup_db().await;
+        assert_eq!(repo.get_recent_retention(100).await.unwrap(), 0.0);
+    }
+
+    #[tokio::test]
+    async fn get_recent_retention_all_pass() {
+        let repo = setup_db().await;
+        let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+
+        for i in 0..10 {
+            let time_str = format!("2025-01-01T00:00:{:02}Z", i);
+            sqlx::query(
+                "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, 1)"
+            )
+            .bind(mem_id)
+            .bind(&time_str)
+            .bind(3)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
+        }
+
+        assert_eq!(repo.get_recent_retention(100).await.unwrap(), 1.0);
+    }
+
+    #[tokio::test]
+    async fn get_recent_retention_mixed() {
+        let repo = setup_db().await;
+        let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+
+        // 6 pass, 4 fail → retention = 0.6
+        for i in 0..10 {
+            let rating = if i < 6 { 3 } else { 1 };
+            let time_str = format!("2025-01-01T00:00:{:02}Z", i);
+            sqlx::query(
+                "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, 1)"
+            )
+            .bind(mem_id)
+            .bind(&time_str)
+            .bind(rating)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
+        }
+
+        let retention = repo.get_recent_retention(100).await.unwrap();
+        assert!((retention - 0.6).abs() < 1e-10);
+    }
+
+    #[tokio::test]
+    async fn get_recent_retention_respects_limit() {
+        let repo = setup_db().await;
+        let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+
+        for i in 0..20 {
+            let time_str = format!("2025-01-01T00:00:{:02}Z", i);
+            sqlx::query(
+                "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, 1)"
+            )
+            .bind(mem_id)
+            .bind(&time_str)
+            .bind(4)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
+        }
+
+        // limit=5 只取前 5 个（都是 4）→ 1.0
+        assert_eq!(repo.get_recent_retention(5).await.unwrap(), 1.0);
     }
 }

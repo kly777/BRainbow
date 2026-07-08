@@ -35,7 +35,14 @@ export interface MemCounts {
 	buried: number;
 }
 
+export interface SessionEstimate {
+	due_count: number;
+	retention: number;
+	total_estimate: number;
+}
+
 export const getMemCountsE = (): Promise<MemCounts> => request("/mem/counts", {});
+export const getSessionEstimateE = (): Promise<SessionEstimate> => request("/mem/session-estimate", {});
 
 // ── API ──
 

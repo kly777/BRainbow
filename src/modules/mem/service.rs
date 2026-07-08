@@ -246,6 +246,24 @@ impl MemService {
         })
     }
 
+    pub async fn get_session_estimate(&self) -> Result<SessionEstimate, sqlx::Error> {
+        let due_count = self.repo.count_due_total().await? as usize;
+        let retention = self.repo.get_recent_retention(100).await?;
+        let total_estimate = if retention > 0.0 {
+            let raw = due_count as f64 / retention;
+            // 保留至少 due_count，向上取整
+            std::cmp::max(due_count, raw.ceil() as usize)
+        } else {
+            // 无历史数据时按 80% 估算
+            (due_count as f64 / 0.8).ceil() as usize
+        };
+        Ok(SessionEstimate {
+            due_count,
+            retention,
+            total_estimate,
+        })
+    }
+
     pub async fn preview(&self, id: i32) -> Result<[f64; 4], AppError> {
         let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
         let state: CardState = row.state.parse().unwrap_or(CardState::New);

@@ -31,6 +31,14 @@ pub async fn get_all(
     }
 }
 
+pub async fn get_session_estimate(State(state): State<AppState>) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.get_session_estimate().await {
+        Ok(est) => Json(est).into_response(),
+        Err(e) => err(e, "获取学习预估"),
+    }
+}
+
 pub async fn get_counts(State(state): State<AppState>) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
     match svc.get_counts().await {

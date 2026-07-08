@@ -5,6 +5,7 @@ import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
 export interface Chunk {
 	id: number;
 	content: string;
+	created_at: string;
 }
 
 export interface MemItem {

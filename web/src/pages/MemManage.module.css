@@ -76,7 +76,7 @@
 }
 
 .th {
-	padding: var(--space-sm) 14px;
+	padding: var(--space-sm) 10px;
 	text-align: left;
 	font-weight: 600;
 	color: var(--color-text-muted, #9b8e7a);
@@ -86,6 +86,17 @@
 	position: sticky;
 	top: 0;
 	z-index: 1;
+}
+
+.thSort {
+	composes: th;
+	cursor: pointer;
+	user-select: none;
+}
+
+.thSort:hover {
+	color: var(--color-text, #3d3629);
+	background: var(--color-bg, #fefcf5);
 }
 
 .thCb {

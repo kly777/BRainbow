@@ -13,12 +13,29 @@ import MarkdownEditor from "../components/ui/MarkdownEditor.tsx";
 import { fmtLocal, fmtRelative } from "../lib/time.ts";
 import styles from "./MemManage.module.css";
 
-async function loadAllMems(): Promise<MemItem[]> {
+type SortField = "cue.created_at" | "difficulty" | "due_at" | "state";
+type SortDir = "asc" | "desc";
+
+function compareMems(a: MemItem, b: MemItem, field: SortField, dir: SortDir): number {
+	const mul = dir === "asc" ? 1 : -1;
+	switch (field) {
+		case "due_at":
+		case "cue.created_at": {
+			const va = new Date(field === "due_at" ? a.due_at : a.cue.created_at).getTime();
+			const vb = new Date(field === "due_at" ? b.due_at : b.cue.created_at).getTime();
+			return (va - vb) * mul;
+		}
+		case "difficulty":
+			return (a.difficulty - b.difficulty) * mul;
+		case "state":
+			return a.state.localeCompare(b.state) * mul;
+	}
+}
+
+async function loadAllMems(sortField: SortField, sortDir: SortDir): Promise<MemItem[]> {
 	try {
 		const res = await getAllMemsE(500);
-		return [...res.items].sort(
-			(a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime(),
-		);
+		return [...res.items].sort((a, b) => compareMems(a, b, sortField, sortDir));
 	} catch {
 		return [];
 	}
@@ -32,6 +49,8 @@ export default function MemManage() {
 	const [mems, setMems] = createSignal<MemItem[]>([]);
 	const [loading, setLoading] = createSignal(true);
 	const [detailId, setDetailId] = createSignal<number | null>(null);
+	const [sortField, setSortField] = createSignal<SortField>("due_at");
+	const [sortDir, setSortDir] = createSignal<SortDir>("asc");
 	const [batchIds, setBatchIds] = createSignal<Set<number>>(new Set());
 	const [editing, setEditing] = createSignal(false);
 	const [editCue, setEditCue] = createSignal("");
@@ -62,10 +81,25 @@ export default function MemManage() {
 
 	const load = async () => {
 		setLoading(true);
-		setMems(await loadAllMems());
+		setMems(await loadAllMems(sortField(), sortDir()));
 		setLoading(false);
 	};
 	onMount(load);
+
+	const toggleSort = (field: SortField) => {
+		setSortField((prev) => {
+			if (prev === field) {
+				setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+				return prev;
+			}
+			setSortDir("asc");
+			return field;
+		});
+		// load() 在下一 tick 执行（signal 更新后自动触发 effect）
+		// 但 Solid 的 signal 是同步的，load 需要等 setSortField 完成
+		// 加 setTimeout 确保 signal 已更新
+		setTimeout(load, 0);
+	};
 
 	const handleReset = async (id: number) => {
 		if (!confirm("确定重置？将清空所有记忆数据")) return;
@@ -217,8 +251,18 @@ export default function MemManage() {
 									</th>
 									<th class={styles.th}>线索</th>
 									<th class={styles.th}>答案</th>
-									<th class={styles.th}>状态</th>
-									<th class={styles.th}>下次复习</th>
+									<th class={styles.thSort} onClick={() => toggleSort("state")}>
+										状态{sortField() === "state" ? (sortDir() === "asc" ? " ▲" : " ▼") : ""}
+									</th>
+									<th class={styles.thSort} onClick={() => toggleSort("difficulty")}>
+										难度{sortField() === "difficulty" ? (sortDir() === "asc" ? " ▲" : " ▼") : ""}
+									</th>
+									<th class={styles.thSort} onClick={() => toggleSort("due_at")}>
+										复习{sortField() === "due_at" ? (sortDir() === "asc" ? " ▲" : " ▼") : ""}
+									</th>
+									<th class={styles.thSort} onClick={() => toggleSort("cue.created_at")}>
+										创建{sortField() === "cue.created_at" ? (sortDir() === "asc" ? " ▲" : " ▼") : ""}
+									</th>
 									<th class={styles.th} />
 								</tr>
 							</thead>
@@ -262,7 +306,9 @@ export default function MemManage() {
 													{mem.state}
 												</span>
 											</td>
+											<td class={styles.td}>{mem.difficulty.toFixed(2)}</td>
 											<td class={styles.tdDue}>{fmtRelative(mem.due_at)}</td>
+											<td class={styles.tdDue}>{fmtLocal(mem.cue.created_at)}</td>
 											<td class={styles.tdAct}>
 												<button
 													type="button"
@@ -329,6 +375,8 @@ export default function MemManage() {
 								</Show>
 								<div class={styles.meta}>
 									<span>状态：{d().state}</span>
+									<span>难度：{d().difficulty.toFixed(2)}</span>
+									<span>创建：{fmtLocal(d().cue.created_at)}</span>
 									<span>到期：{fmtLocal(d().due_at)}</span>
 								</div>
 								<div class={styles.actionBtns}>

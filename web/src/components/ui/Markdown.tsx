@@ -143,6 +143,8 @@ const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 					"viewBox",
 					"fill",
 					"stroke",
+					// KaTeX SVG sqrt 必需
+					"preserveAspectRatio",
 				],
 				ALLOWED_URI_REGEXP:
 					/^(?:(?:https?|mailto|ftp|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,

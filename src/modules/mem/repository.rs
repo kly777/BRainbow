@@ -105,6 +105,21 @@ impl MemRepo {
 
     pub async fn delete_mem(&self, id: i32) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
+
+        // 先查出关联的 chunk id，删除 mem 后清理孤儿 chunk
+        let (cue_id, target_id): (i32, i32) = sqlx::query_as(
+            "SELECT cue_chunk_id, target_chunk_id FROM mem WHERE id = ?",
+        )
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or(sqlx::Error::RowNotFound)?;
+
+        // 级联删除关联数据
+        sqlx::query("DELETE FROM revlog WHERE mem_id = ?")
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
         sqlx::query("DELETE FROM mem_prerequisite WHERE mem_id = ? OR requires_mem_id = ?")
             .bind(id)
             .bind(id)
@@ -114,6 +129,24 @@ impl MemRepo {
             .bind(id)
             .execute(&mut *tx)
             .await?;
+
+        // 清理不再被任何 mem 引用的孤儿 chunk
+        for chunk_id in [cue_id, target_id] {
+            let usage: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM mem WHERE cue_chunk_id = ? OR target_chunk_id = ?",
+            )
+            .bind(chunk_id)
+            .bind(chunk_id)
+            .fetch_one(&mut *tx)
+            .await?;
+            if usage == 0 {
+                sqlx::query("DELETE FROM chunk WHERE id = ?")
+                    .bind(chunk_id)
+                    .execute(&mut *tx)
+                    .await?;
+            }
+        }
+
         tx.commit().await?;
         Ok(())
     }
@@ -228,5 +261,216 @@ impl MemRepo {
             "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?"
         ).bind(id).execute(&*self.pool).await?;
         Ok(())
+    }
+}
+
+// ── 测试 ──
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::SqlitePool;
+
+    /// 创建测试数据库（含 mem 相关所有表）
+    async fn setup_db() -> MemRepo {
+        let pool = SqlitePool::connect("sqlite::memory:")
+            .await
+            .expect("create in-memory db");
+
+        sqlx::query(
+            "CREATE TABLE chunk (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                content TEXT NOT NULL DEFAULT '',
+                created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE mem (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cue_chunk_id INTEGER NOT NULL,
+                target_chunk_id INTEGER NOT NULL,
+                state TEXT NOT NULL DEFAULT 'new',
+                stability REAL DEFAULT 0,
+                difficulty REAL DEFAULT 0,
+                step_index INTEGER,
+                buried INTEGER NOT NULL DEFAULT 0,
+                lapses INTEGER NOT NULL DEFAULT 0,
+                leeched INTEGER NOT NULL DEFAULT 0,
+                due_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                last_review_at TEXT,
+                created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                FOREIGN KEY (cue_chunk_id) REFERENCES chunk(id),
+                FOREIGN KEY (target_chunk_id) REFERENCES chunk(id)
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE mem_prerequisite (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mem_id INTEGER NOT NULL,
+                requires_mem_id INTEGER NOT NULL,
+                FOREIGN KEY (mem_id) REFERENCES mem(id),
+                FOREIGN KEY (requires_mem_id) REFERENCES mem(id),
+                UNIQUE(mem_id, requires_mem_id)
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE revlog (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mem_id INTEGER NOT NULL,
+                review_time TEXT NOT NULL,
+                rating INTEGER NOT NULL,
+                delta_t INTEGER NOT NULL,
+                FOREIGN KEY (mem_id) REFERENCES mem(id)
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // 启用外键约束（SQLite 默认不启用）
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        MemRepo {
+            pool: Arc::new(pool),
+        }
+    }
+
+    /// 创建一条测试 mem 记录，返回 (mem_id, cue_chunk_id, target_chunk_id)
+    async fn create_test_mem(repo: &MemRepo, cue: &str, target: &str) -> (i32, i32, i32) {
+        let cue_id = repo.create_chunk(cue).await.unwrap();
+        let target_id = repo.create_chunk(target).await.unwrap();
+        let mem_id = repo.create_mem(cue_id, target_id, &[]).await.unwrap();
+        (mem_id, cue_id, target_id)
+    }
+
+    #[tokio::test]
+    async fn delete_mem_basic() {
+        let repo = setup_db().await;
+        let (mem_id, cue_id, target_id) = create_test_mem(&repo, "cue", "target").await;
+
+        // 验证 mem 存在
+        assert!(repo.get_mem(mem_id).await.unwrap().is_some());
+
+        // 删除
+        repo.delete_mem(mem_id).await.unwrap();
+
+        // 验证 mem 已被删除
+        assert!(repo.get_mem(mem_id).await.unwrap().is_none());
+
+        // 验证 chunk 已被清理
+        assert!(repo.get_chunk(cue_id).await.unwrap().is_none());
+        assert!(repo.get_chunk(target_id).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn delete_mem_with_revlog() {
+        let repo = setup_db().await;
+        let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+
+        // 插入复习日志
+        sqlx::query("INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, ?)")
+            .bind(mem_id)
+            .bind("2025-01-01")
+            .bind(3)
+            .bind(1)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
+
+        // 删除——之前因 FK 约束会失败
+        repo.delete_mem(mem_id).await.unwrap();
+
+        // 验证 mem 已删
+        assert!(repo.get_mem(mem_id).await.unwrap().is_none());
+
+        // 验证 revlog 也被级联删除
+        let count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM revlog WHERE mem_id = ?")
+                .bind(mem_id)
+                .fetch_one(&*repo.pool)
+                .await
+                .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[tokio::test]
+    async fn delete_mem_with_prerequisite() {
+        let repo = setup_db().await;
+        let (mem_id, ..) = create_test_mem(&repo, "main", "main-target").await;
+        let (dep_id, ..) = create_test_mem(&repo, "dep", "dep-target").await;
+
+        // 添加前提约束：mem 依赖 dep
+        sqlx::query(
+            "INSERT INTO mem_prerequisite (mem_id, requires_mem_id) VALUES (?, ?)",
+        )
+        .bind(mem_id)
+        .bind(dep_id)
+        .execute(&*repo.pool)
+        .await
+        .unwrap();
+
+        // 删除依赖的 mem (dep)
+        repo.delete_mem(dep_id).await.unwrap();
+
+        // 验证 dep 已删
+        assert!(repo.get_mem(dep_id).await.unwrap().is_none());
+
+        // 验证前提约束也被清理
+        let count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM mem_prerequisite WHERE mem_id = ? OR requires_mem_id = ?",
+        )
+        .bind(mem_id)
+        .bind(dep_id)
+        .fetch_one(&*repo.pool)
+        .await
+        .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[tokio::test]
+    async fn delete_mem_preserves_shared_chunk() {
+        let repo = setup_db().await;
+        let cue_id = repo.create_chunk("shared-cue").await.unwrap();
+
+        // 两个 mem 共用同一个 cue chunk
+        let target1 = repo.create_chunk("target1").await.unwrap();
+        let target2 = repo.create_chunk("target2").await.unwrap();
+        let mem1 = repo.create_mem(cue_id, target1, &[]).await.unwrap();
+        let mem2 = repo.create_mem(cue_id, target2, &[]).await.unwrap();
+
+        // 删除第一个 mem
+        repo.delete_mem(mem1).await.unwrap();
+
+        // 验证 mem1 已删
+        assert!(repo.get_mem(mem1).await.unwrap().is_none());
+
+        // 验证共享的 cue chunk 仍存在（因为 mem2 还在引用）
+        assert!(repo.get_chunk(cue_id).await.unwrap().is_some());
+
+        // 验证 mem2 正常
+        assert!(repo.get_mem(mem2).await.unwrap().is_some());
+    }
+
+    #[tokio::test]
+    async fn delete_nonexistent_mem_returns_error() {
+        let repo = setup_db().await;
+        let result = repo.delete_mem(999).await;
+        assert!(result.is_err());
     }
 }

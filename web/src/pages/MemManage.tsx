@@ -1,6 +1,7 @@
 import { createSignal, onMount, Show, For } from "solid-js";
 import { A } from "@solidjs/router";
 import {
+	buryMemE,
 	editMemE,
 	getAllMemsE,
 	deleteMemE,
@@ -30,10 +31,34 @@ function previewText(content: string): string {
 export default function MemManage() {
 	const [mems, setMems] = createSignal<MemItem[]>([]);
 	const [loading, setLoading] = createSignal(true);
-	const [selected, setSelected] = createSignal<number | null>(null);
+	const [detailId, setDetailId] = createSignal<number | null>(null);
+	const [batchIds, setBatchIds] = createSignal<Set<number>>(new Set());
 	const [editing, setEditing] = createSignal(false);
 	const [editCue, setEditCue] = createSignal("");
 	const [editTarget, setEditTarget] = createSignal("");
+
+	const allSelected = () =>
+		mems().length > 0 && batchIds().size === mems().length;
+
+	const toggleBatch = (id: number) => {
+		setBatchIds((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) {
+				next.delete(id);
+			} else {
+				next.add(id);
+			}
+			return next;
+		});
+	};
+
+	const toggleAll = () => {
+		if (allSelected()) {
+			setBatchIds(new Set<number>());
+		} else {
+			setBatchIds(new Set<number>(mems().map((m) => m.id)));
+		}
+	};
 
 	const load = async () => {
 		setLoading(true);
@@ -59,7 +84,12 @@ export default function MemManage() {
 		} catch {
 			/* ignore */
 		}
-		if (selected() === id) setSelected(null);
+		if (detailId() === id) setDetailId(null);
+		setBatchIds((prev) => {
+			const next = new Set(prev);
+			next.delete(id);
+			return next;
+		});
 		load();
 	};
 
@@ -83,7 +113,55 @@ export default function MemManage() {
 		load();
 	};
 
-	const detail = () => mems().find((m) => m.id === selected());
+	// ── 批量操作 ──
+
+	const batchDelete = async () => {
+		const ids = [...batchIds()];
+		if (ids.length === 0) return;
+		if (!confirm(`确定删除 ${ids.length} 条记忆？`)) return;
+		for (const id of ids) {
+			try {
+				await deleteMemE(id);
+			} catch {
+				/* ignore */
+			}
+		}
+		setBatchIds(new Set<number>());
+		setDetailId(null);
+		load();
+	};
+
+	const batchReset = async () => {
+		const ids = [...batchIds()];
+		if (ids.length === 0) return;
+		if (!confirm(`确定重置 ${ids.length} 条记忆的记忆数据？`)) return;
+		for (const id of ids) {
+			try {
+				await resetMemE(id);
+			} catch {
+				/* ignore */
+			}
+		}
+		setBatchIds(new Set<number>());
+		load();
+	};
+
+	const batchBury = async () => {
+		const ids = [...batchIds()];
+		if (ids.length === 0) return;
+		if (!confirm(`确定埋葬 ${ids.length} 条记忆？（移至池底）`)) return;
+		for (const id of ids) {
+			try {
+				await buryMemE(id);
+			} catch {
+				/* ignore */
+			}
+		}
+		setBatchIds(new Set<number>());
+		load();
+	};
+
+	const detail = () => mems().find((m) => m.id === detailId());
 
 	return (
 		<div class={styles.page}>
@@ -103,9 +181,40 @@ export default function MemManage() {
 						when={!loading()}
 						fallback={<div class={styles.empty}>加载中…</div>}
 					>
+						<div class={styles.batchBar} classList={{ [styles.batchBarVisible]: batchIds().size > 0 }}>
+							<span class={styles.batchCount}>{batchIds().size} 条已选</span>
+							<button
+								type="button"
+								class={styles.batchBtnReset}
+								onClick={batchReset}
+							>
+								忘却
+							</button>
+							<button
+								type="button"
+								class={styles.batchBtnBury}
+								onClick={batchBury}
+							>
+								埋葬
+							</button>
+							<button
+								type="button"
+								class={styles.batchBtnDelete}
+								onClick={batchDelete}
+							>
+								删除
+							</button>
+						</div>
 						<table class={styles.table}>
 							<thead>
 								<tr>
+									<th class={styles.thCb}>
+										<input
+											type="checkbox"
+											checked={allSelected()}
+											onInput={toggleAll}
+										/>
+									</th>
 									<th class={styles.th}>线索</th>
 									<th class={styles.th}>答案</th>
 									<th class={styles.th}>状态</th>
@@ -118,12 +227,27 @@ export default function MemManage() {
 									{(mem) => (
 										<tr
 											class={
-												selected() === mem.id ? styles.rowActive : styles.row
+												detailId() === mem.id ? styles.rowActive : styles.row
 											}
-											onClick={() => setSelected(mem.id)}
 										>
-											<td class={styles.td}>{previewText(mem.cue.content)}</td>
-											<td class={styles.td}>
+											<td class={styles.tdCb}>
+												<input
+													type="checkbox"
+													checked={batchIds().has(mem.id)}
+													onInput={() => toggleBatch(mem.id)}
+													onClick={(e) => e.stopPropagation()}
+												/>
+											</td>
+											<td
+												class={styles.td}
+												onClick={() => setDetailId(mem.id)}
+											>
+												{previewText(mem.cue.content)}
+											</td>
+											<td
+												class={styles.td}
+												onClick={() => setDetailId(mem.id)}
+											>
 												{previewText(mem.target.content)}
 											</td>
 											<td class={styles.td}>

@@ -1,10 +1,15 @@
 {
-    "$schema": "https://biomejs.dev/schemas/2.5.0/schema.json",
-    "files": {
-        "ignoreUnknown": true,
-        "includes": ["src/**"]
-    },
-    "linter": {
-        "enabled": true
-    }
+	"$schema": "https://biomejs.dev/schemas/2.5.2/schema.json",
+	"files": {
+		"ignoreUnknown": true,
+		"includes": ["src/**"]
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"style": {
+				"noNonNullAssertion": "off"
+			}
+		}
+	}
 }

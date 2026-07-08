@@ -54,9 +54,6 @@ impl TimeWindowService {
                 crate::modules::task::service::ServiceError::InvalidInput(msg) => {
                     ServiceError::InvalidInput(msg)
                 }
-                crate::modules::task::service::ServiceError::InvalidInput(msg) => {
-                    ServiceError::InvalidInput(msg)
-                }
                 other => ServiceError::Internal(format!("约束校验失败: {}", other)),
             })?;
 
@@ -108,9 +105,6 @@ impl TimeWindowService {
                 .validate_time_windows(existing.task_id, &[new_window], Some(id))
                 .await
                 .map_err(|e| match e {
-                    crate::modules::task::service::ServiceError::InvalidInput(msg) => {
-                        ServiceError::InvalidInput(msg)
-                    }
                     crate::modules::task::service::ServiceError::InvalidInput(msg) => {
                         ServiceError::InvalidInput(msg)
                     }

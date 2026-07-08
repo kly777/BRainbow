@@ -422,7 +422,6 @@ fn custom_config_produces_different_intervals() {
         relearn_steps: vec![60, 300],
         graduating_interval_secs: 43200,
         desired_retention: 0.85,
-        fsrs_params: Vec::new(),
     };
     let now = Utc::now();
 

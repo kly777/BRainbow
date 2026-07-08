@@ -35,8 +35,6 @@ pub struct SchedulerConfig {
     pub graduating_interval_secs: i64,
     /// 期望回忆率
     pub desired_retention: f64,
-    /// FSRS 内部参数（19 个浮点数），空 = 默认
-    pub fsrs_params: Vec<f32>,
 }
 
 impl Default for SchedulerConfig {
@@ -46,20 +44,7 @@ impl Default for SchedulerConfig {
             relearn_steps: vec![600],
             graduating_interval_secs: 86400,
             desired_retention: 0.9,
-            fsrs_params: Vec::new(),
         }
-    }
-}
-
-impl SchedulerConfig {
-    /// 学习步进总数
-    pub fn learning_steps_count(&self) -> usize {
-        self.learning_steps.len()
-    }
-
-    /// 重学步进总数
-    pub fn relearn_steps_count(&self) -> usize {
-        self.relearn_steps.len()
     }
 }
 

@@ -6,8 +6,6 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-use super::fsrs::SchedulerConfig;
-
 const CONFIG_PATH: &str = "mem_config.json";
 
 /// 持久化配置
@@ -97,17 +95,6 @@ impl MemConfig {
     pub fn update_fsrs_params(&mut self, params: Vec<f32>) -> Result<(), String> {
         self.fsrs_params = params;
         self.save()
-    }
-
-    /// 转换为 SchedulerConfig
-    pub fn to_scheduler_config(&self) -> SchedulerConfig {
-        SchedulerConfig {
-            learning_steps: self.learning_steps.clone(),
-            relearn_steps: self.relearn_steps.clone(),
-            graduating_interval_secs: self.graduating_interval_secs,
-            desired_retention: self.desired_retention,
-            fsrs_params: self.fsrs_params.clone(),
-        }
     }
 }
 

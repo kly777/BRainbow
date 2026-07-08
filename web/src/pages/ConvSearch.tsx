@@ -42,7 +42,7 @@ const typeLabel: Record<string, string> = {
 export default function ConvSearch() {
 	const [query, setQuery] = createSignal("");
 	const [searchParams, setSearchParams] = useSearchParams();
-	const navigate = useNavigate();
+	const _navigate = useNavigate();
 
 	// 从 URL 恢复 tab
 	const tab = () => {

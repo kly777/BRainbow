@@ -66,11 +66,6 @@ pub fn unauthorized(message: impl Into<String>) -> Response {
     resp(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", message)
 }
 
-/// 500 — 内部错误（委托给 ServiceError::Internal）
-pub fn internal_error(message: impl Into<String>) -> Response {
-    ServiceError::Internal(message.into()).into_response()
-}
-
 /// 500 + 自动拼 "{operation}失败: {error}"
 pub fn internal(e: impl std::fmt::Display, operation: &str) -> Response {
     ServiceError::Internal(format!("{}失败: {}", operation, e)).into_response()
@@ -162,7 +157,7 @@ mod tests {
 
     #[test]
     fn internal_error_returns_500() {
-        let resp = internal_error("服务器出错");
+        let resp = internal("服务器出错", "test");
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 
@@ -186,7 +181,7 @@ mod tests {
             not_found("c"),
             conflict("d"),
             unauthorized("e"),
-            internal_error("f"),
+            internal(std::fmt::Error, "f"),
         ];
         let statuses: Vec<u16> = errors.iter().map(|r| r.status().as_u16()).collect();
         assert_eq!(statuses, vec![400, 400, 404, 409, 401, 500]);

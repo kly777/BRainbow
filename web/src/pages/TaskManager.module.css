@@ -1,7 +1,6 @@
 .taskManager {
 	max-width: 1440px;
 	margin: 0 auto;
-	margin: 0 0;
 	padding: var(--space-md) 16px;
 	display: flex;
 	flex-direction: column;

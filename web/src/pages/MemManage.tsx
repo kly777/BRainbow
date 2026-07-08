@@ -241,12 +241,14 @@ export default function MemManage() {
 											<td
 												class={styles.td}
 												onClick={() => setDetailId(mem.id)}
+												onKeyDown={(e) => { if (e.key === 'Enter') setDetailId(mem.id); }}
 											>
 												{previewText(mem.cue.content)}
 											</td>
 											<td
 												class={styles.td}
 												onClick={() => setDetailId(mem.id)}
+												onKeyDown={(e) => { if (e.key === 'Enter') setDetailId(mem.id); }}
 											>
 												{previewText(mem.target.content)}
 											</td>

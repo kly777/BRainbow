@@ -244,12 +244,12 @@
 	white-space: normal;
 }
 
-.markdown-content .katex-display > .katex > .katex-html {
-	white-space: normal;
-}
-
 .markdown-content .katex-html {
 	max-width: 100%;
+}
+
+.markdown-content .katex-display > .katex > .katex-html {
+	white-space: normal;
 }
 
 /* 响应式设计 */

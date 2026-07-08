@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use super::model::{ConvHit, SearchResponse};
+use super::model::ConvHit;
 
 use super::service::RawHit;
 

@@ -1,7 +1,7 @@
 use sqlx::SqlitePool;
 
 use crate::error::ServiceError;
-use super::model::{ConvHit, SearchResponse};
+use super::model::SearchResponse;
 use super::scoring;
 
 
@@ -122,11 +122,12 @@ pub async fn search_conv(
     Ok(SearchResponse { hits, total })
 }
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
-    use crate::modules::conv::model::{ConvHit, SearchResponse};
     use sqlx::SqlitePool;
 
     /// 创建临时 conv.db 测试数据
+    #[allow(dead_code)]
     async fn setup_test_db() -> SqlitePool {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
 

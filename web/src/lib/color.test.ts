@@ -25,7 +25,7 @@ describe("hex roundtrip", () => {
     it(`${name}: fromHex → toHex === ${c.hex}`, () => {
       const color = Color.fromHex(c.hex);
       expect(color).not.toBeNull();
-      expect(color!.toHex()).toBe(c.hex);
+      expect(color?.toHex()).toBe(c.hex);
     });
   }
 

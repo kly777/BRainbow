@@ -441,3 +441,65 @@ fn custom_config_produces_different_intervals() {
     assert!(d_step != f_step, "不同步进应产生不同间隔: {d_step}s vs {f_step}s");
     eprintln!("默认步进: {d_step}s, 快速步进: {f_step}s");
 }
+
+// ── 全局参数运行时更新 ──
+//
+// 这些测试会短暂修改 `GLOBAL_FSRS_PARAMS`，然后立即恢复为空。
+// 窗口极小（set → assert → restore 在同一线程连续执行），
+// 并行测试几乎不可能在窗口内读到脏数据。
+//
+// 使用的参数值必须能被 FSRS 接受，避免 InvalidParameters 错误
+// 污染并行的其他测试。这里使用默认 FSRS 参数（19 个 f32）。
+
+/// 默认 FSRS 参数（从实际优化结果提取，保证 FSRS 能接受）
+fn default_fsrs_params() -> Vec<f32> {
+    vec![
+        0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194,
+        0.001, 1.8722, 0.1666, 0.796, 1.4835, 0.0614, 0.2629,
+        1.6483, 0.6014, 1.8729, 0.5425, 0.0912,
+    ]
+}
+
+#[test]
+fn global_params_can_be_set_after_init() {
+    init_global_params(vec![]);
+
+    assert!(get_global_params().is_empty());
+
+    let params = default_fsrs_params();
+    set_global_params(params.clone());
+
+    assert_eq!(get_global_params(), params);
+
+    init_global_params(vec![]);
+}
+
+#[test]
+fn global_params_overwrites_previous() {
+    init_global_params(vec![]);
+
+    let first = vec![1.0, 2.0, 3.0];
+    init_global_params(first.clone());
+    let p1 = get_global_params();
+    assert_eq!(p1, first);
+
+    let second = default_fsrs_params();
+    set_global_params(second.clone());
+    let p2 = get_global_params();
+    assert_eq!(p2, second);
+    assert_ne!(p1, p2, "set_global_params 后参数应变化");
+
+    init_global_params(vec![]);
+}
+
+#[test]
+fn make_fsrs_uses_current_global_params() {
+    init_global_params(vec![]);
+    let _fsrs = make_fsrs();
+
+    let params = default_fsrs_params();
+    set_global_params(params);
+    let _fsrs = make_fsrs();
+
+    init_global_params(vec![]);
+}

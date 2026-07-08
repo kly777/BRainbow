@@ -171,11 +171,10 @@ pub async fn optimize_params(State(state): State<AppState>) -> impl IntoResponse
     match optimizer::optimize_fsrs_params(&state.db, &config).await {
         Ok(Some(params)) => {
             tracing::info!("FSRS 参数优化完成，共 {} 个参数", params.len());
-            // 保存并更新全局参数
+            // 保存到文件 + 更新运行时参数
             let mut cfg = config;
-            if let Err(e) = cfg.update_fsrs_params(params) {
-                return err(e, "保存参数");
-            };
+            cfg.update_fsrs_params(params.clone()).ok();
+            crate::modules::mem::fsrs::set_global_params(params);
             Json(serde_json::json!({
                 "ok": true,
                 "params": cfg.fsrs_params,

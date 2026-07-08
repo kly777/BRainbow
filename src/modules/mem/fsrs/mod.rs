@@ -7,19 +7,31 @@
 use crate::modules::mem::model::CardState;
 use chrono::{DateTime, Duration, Utc};
 use fsrs::{FSRS, MemoryState};
-use std::sync::OnceLock;
+use std::sync::RwLock;
 
-/// 全局 FSRS 参数，启动时由 `init_global_params` 设置。
-static GLOBAL_FSRS_PARAMS: OnceLock<Vec<f32>> = OnceLock::new();
+/// 全局 FSRS 参数，启动时由 `init_global_params` 设置，
+/// 优化后可运行时更新（不重启即生效）。
+static GLOBAL_FSRS_PARAMS: RwLock<Vec<f32>> = RwLock::new(Vec::new());
 
 /// 设置全局 FSRS 参数（启动时调用）
 pub fn init_global_params(params: Vec<f32>) {
-    GLOBAL_FSRS_PARAMS.set(params).ok();
+    if let Ok(mut p) = GLOBAL_FSRS_PARAMS.write() {
+        *p = params;
+    }
 }
 
-/// 获取当前 FSRS 参数
-pub fn get_global_params() -> &'static [f32] {
-    GLOBAL_FSRS_PARAMS.get().map(|v| v.as_slice()).unwrap_or(&[])
+/// 运行时更新全局 FSRS 参数（优化后调用）
+pub fn set_global_params(params: Vec<f32>) {
+    let count = params.len();
+    if let Ok(mut p) = GLOBAL_FSRS_PARAMS.write() {
+        *p = params;
+    }
+    tracing::info!("FSRS 参数已运行时更新 ({count} 个)");
+}
+
+/// 获取当前 FSRS 参数（返回空 Vec 表示用默认值）
+pub fn get_global_params() -> Vec<f32> {
+    GLOBAL_FSRS_PARAMS.read().ok().map(|p| p.clone()).unwrap_or_default()
 }
 
 // ── 可配置参数 ──
@@ -57,7 +69,8 @@ fn due_in_secs(secs: i64) -> String {
 }
 
 fn make_fsrs() -> FSRS {
-    FSRS::new(get_global_params()).unwrap()
+    let params = get_global_params();
+    FSRS::new(&params).unwrap()
 }
 
 /// 除非有真实的记忆参数，否则传 None（避免 stability=0 / difficulty=0 传给 FSRS）

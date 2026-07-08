@@ -364,10 +364,13 @@ async fn maybe_auto_optimize(pool: Arc<SqlitePool>, every: i64) {
     match crate::modules::mem::optimizer::optimize_fsrs_params(&pool, &config).await {
         Ok(Some(params)) => {
             let mut cfg = config;
-            if let Err(e) = cfg.update_fsrs_params(params) {
-                tracing::warn!("自动优化后保存参数失败: {}", e);
+            // 保存到文件 + 立即更新运行时参数
+            let ok = cfg.update_fsrs_params(params.clone()).is_ok();
+            crate::modules::mem::fsrs::set_global_params(params);
+            if ok {
+                tracing::info!("自动优化完成, 参数已更新 (文件 + 运行时)");
             } else {
-                tracing::info!("自动优化完成, 参数已更新");
+                tracing::warn!("自动优化完成但保存文件失败, 仅运行时生效");
             }
         }
         Ok(None) => {}

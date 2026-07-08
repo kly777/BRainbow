@@ -9,13 +9,13 @@ pub mod service;
 use crate::state::AppState;
 use axum::{
     Router,
-    routing::{delete, get, post},
+    routing::{delete, get, post, put},
 };
 
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", post(handler::create_mem))
-        .route("/{id}/edit", axum::routing::put(handler::edit_mem))
+        .route("/{id}/edit", put(handler::edit_mem))
         .route("/all", get(handler::get_all))
         .route("/due", get(handler::get_due))
         .route("/counts", get(handler::get_counts))

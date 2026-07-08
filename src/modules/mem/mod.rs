@@ -18,6 +18,7 @@ pub fn routes() -> Router<AppState> {
         .route("/{id}/edit", axum::routing::put(handler::edit_mem))
         .route("/all", get(handler::get_all))
         .route("/due", get(handler::get_due))
+        .route("/counts", get(handler::get_counts))
         .route("/{id}/review", post(handler::review_mem))
         .route("/{id}/undo", post(handler::undo_review))
         .route("/{id}/preview", get(handler::preview_mem))

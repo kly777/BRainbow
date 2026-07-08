@@ -25,6 +25,17 @@ export interface DueResponse {
 	all_far: boolean;
 }
 
+// ── 统计 ──
+
+export interface MemCounts {
+	new: number;
+	learning: number;
+	due: number;
+	buried: number;
+}
+
+export const getMemCountsE = (): Promise<MemCounts> => request("/mem/counts", {});
+
 // ── API ──
 
 export const createMemE = (

@@ -4,8 +4,10 @@ import {
 	buryMemE,
 	editMemE,
 	getDueE,
+	getMemCountsE,
 	previewMemE,
 	reviewMemE,
+	type MemCounts,
 	type MemItem,
 } from "../apis/memApi.ts";
 import { request } from "../apis/request.ts";
@@ -31,6 +33,26 @@ export default function MemPage() {
 	const [sidebarOpen, setSidebarOpen] = createSignal(false);
 	const [allFar, setAllFar] = createSignal(false);
 	const [upcoming, setUpcoming] = createSignal(0);
+	const [counts, setCounts] = createSignal<MemCounts | null>(null);
+
+	// ── 动态队列大小 ──
+	// 基于近期评分（1-4）调整一次拉取多少张卡
+	const MAX_HISTORY = 15;
+	const MIN_LIMIT = 3;
+	const MAX_LIMIT = 15;
+	const DEFAULT_LIMIT = 7;
+
+	const [recentRatings, setRecentRatings] = createSignal<number[]>([]);
+
+	const maxLearning = () => {
+		const ratings = recentRatings();
+		if (ratings.length < 3) return DEFAULT_LIMIT;
+		const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+		// avg: 1~4 → limit: MIN_LIMIT~MAX_LIMIT
+		return Math.round(
+			MIN_LIMIT + ((avg - 1) / 3) * (MAX_LIMIT - MIN_LIMIT),
+		);
+	};
 	let lastAction: { id: number; undoData: Record<string, unknown> } | null =
 		null;
 
@@ -45,10 +67,19 @@ export default function MemPage() {
 		}
 	};
 
+	const loadCounts = async () => {
+		try {
+			setCounts(await getMemCountsE());
+		} catch {
+			/* ignore */
+		}
+	};
+
 	const loadDue = async () => {
 		setLoading(true);
+		loadCounts();
 		try {
-			const data = await getDueE(7);
+			const data = await getDueE(maxLearning());
 			if (data.items.length === 0 && !data.has_more) {
 				setDone(true);
 				setDue([]);
@@ -71,7 +102,24 @@ export default function MemPage() {
 		setLoading(false);
 	};
 
-	onMount(loadDue);
+	onMount(() => { loadDue(); loadCounts(); });
+
+	/** 从当前队列移除已复习卡片并推进到下一张，队列空则重新拉取 */
+	const advanceQueue = () => {
+		setDue((prev) => {
+			const next = [...prev];
+			next.splice(current(), 1);
+			return next;
+		});
+		// 队列仍有剩余卡片：推进到下一张
+		if (due().length > 0) {
+			loadPreview(due()[current()]?.id);
+			setShowAnswer(false);
+		} else {
+			// 队列已空：从服务端拉取新一批
+			loadDue();
+		}
+	};
 
 	const rate = async (rating: number) => {
 		const it = item();
@@ -93,8 +141,11 @@ export default function MemPage() {
 		} catch {
 			/* ignore */
 		}
+		// 记录评分，用于动态调整队列大小
+		setRecentRatings((prev) => [...prev, rating].slice(-MAX_HISTORY));
 		setShowUndo(true);
-		loadDue();
+		advanceQueue();
+		loadCounts();
 	};
 
 	const bury = async () => {
@@ -105,7 +156,7 @@ export default function MemPage() {
 			} catch {
 				/* ignore */
 			}
-			loadDue();
+			advanceQueue();
 		}
 	};
 
@@ -167,7 +218,7 @@ export default function MemPage() {
 				classList={{ [styles.sidebarOpen]: sidebarOpen() }}
 			>
 				<div class={styles.sidebarHeader}>
-					<span>学习池 ({due().length}/7)</span>
+					<span>学习池</span>
 					<button
 						type="button"
 						class={styles.sidebarClose}
@@ -176,6 +227,14 @@ export default function MemPage() {
 						×
 					</button>
 				</div>
+				<Show when={counts()}>{(c) =>
+					<div class={styles.sidebarStats}>
+						<span class={styles.statNew}>{c().new}</span>
+						<span class={styles.statLearning}>{c().learning}</span>
+						<span class={styles.statDue}>{c().due}</span>
+						<span class={styles.statBuried}>{c().buried}</span>
+					</div>
+				}</Show>
 				<div class={styles.sidebarList}>
 					<For each={due()}>
 						{(mem, i) => (
@@ -252,7 +311,7 @@ export default function MemPage() {
 								编辑
 							</button>
 						)}
-						<span class={styles.count}>{due().length}/7</span>
+						<span class={styles.count}>{due().length}/{maxLearning()}</span>
 					</div>
 				</div>
 

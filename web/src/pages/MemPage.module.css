@@ -44,6 +44,38 @@
 	color: var(--color-text, #3d3629);
 }
 
+/* ── Anki 风格统计栏 ── */
+.sidebarStats {
+	display: flex;
+	gap: 0;
+	border-bottom: 1px solid var(--color-border, #e8dfcc);
+	user-select: none;
+}
+
+.sidebarStats > span {
+	flex: 1;
+	text-align: center;
+	padding: var(--space-xs) 0;
+	font-size: var(--text-base);
+	line-height: 1;
+}
+
+.statNew {
+	color: #3b82f6;
+}
+
+.statLearning {
+	color: #d97706;
+}
+
+.statDue {
+	color: #22c55e;
+}
+
+.statBuried {
+	color: var(--color-text-muted, #9b8e7a);
+}
+
 .sidebarList {
 	flex: 1;
 	overflow-y: auto;

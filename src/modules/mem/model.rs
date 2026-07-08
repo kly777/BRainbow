@@ -114,3 +114,12 @@ pub struct DueResponse {
     /// 所有卡的下次复习都在 24h 之后
     pub all_far: bool,
 }
+
+/// 各状态计数（与 Anki 底部统计类似）
+#[derive(Debug, Clone, Serialize)]
+pub struct MemCounts {
+    pub new: usize,
+    pub learning: usize,
+    pub due: usize,
+    pub buried: usize,
+}

@@ -199,6 +199,31 @@ impl MemRepo {
         .await
     }
 
+    pub async fn get_counts(&self) -> Result<(i64, i64, i64, i64), sqlx::Error> {
+        let new_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM mem WHERE state = 'new' AND buried = 0",
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+        let learning_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM mem WHERE state IN ('learning', 'relearning') AND buried = 0",
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+        let due_count: i64 = sqlx::query_scalar(
+            r#"SELECT COUNT(*) FROM mem WHERE state = 'review' AND buried = 0
+               AND due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#,
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+        let buried_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM mem WHERE buried = 1",
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+        Ok((new_count, learning_count, due_count, buried_count))
+    }
+
     pub async fn get_next_mem(&self) -> Result<Option<i32>, sqlx::Error> {
         sqlx::query_scalar::<_, i32>(
             r#"SELECT m.id FROM mem m

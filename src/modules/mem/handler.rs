@@ -31,6 +31,14 @@ pub async fn get_all(
     }
 }
 
+pub async fn get_counts(State(state): State<AppState>) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.get_counts().await {
+        Ok(counts) => Json(counts).into_response(),
+        Err(e) => err(e, "获取统计"),
+    }
+}
+
 pub async fn get_due(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,

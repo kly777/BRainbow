@@ -234,6 +234,18 @@ impl MemService {
         })
     }
 
+    /// 获取各状态计数（新卡 / 学习中 / 待复习 / 已埋葬）
+    pub async fn get_counts(&self) -> Result<MemCounts, sqlx::Error> {
+        let (new_count, learning_count, due_count, buried_count) =
+            self.repo.get_counts().await?;
+        Ok(MemCounts {
+            new: new_count as usize,
+            learning: learning_count as usize,
+            due: due_count as usize,
+            buried: buried_count as usize,
+        })
+    }
+
     pub async fn preview(&self, id: i32) -> Result<[f64; 4], AppError> {
         let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
         let state: CardState = row.state.parse().unwrap_or(CardState::New);

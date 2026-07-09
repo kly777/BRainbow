@@ -444,6 +444,16 @@ impl MemRepo {
         Ok(())
     }
 
+    pub async fn batch_bury_mems(&self, ids: &[i32]) -> Result<(), sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        for &id in ids {
+            sqlx::query("UPDATE mem SET buried = 1 WHERE id = ?")
+                .bind(id).execute(&mut *tx).await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
     pub async fn batch_reset_mems(&self, ids: &[i32]) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         for &id in ids {

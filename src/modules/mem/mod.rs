@@ -20,6 +20,7 @@ pub fn routes() -> Router<AppState> {
         .route("/due", get(handler::get_due))
         .route("/counts", get(handler::get_counts))
         .route("/session-estimate", get(handler::get_session_estimate))
+        .route("/batch-bury", post(handler::batch_bury))
         .route("/batch-delete", post(handler::batch_delete))
         .route("/batch-reset", post(handler::batch_reset))
         .route("/{id}/review", post(handler::review_mem))

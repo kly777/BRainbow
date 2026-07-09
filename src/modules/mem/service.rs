@@ -291,6 +291,11 @@ impl MemService {
         Ok(())
     }
 
+    pub async fn batch_bury(&self, ids: &[i32]) -> Result<(), AppError> {
+        self.repo.batch_bury_mems(ids).await.map_err(AppError::Db)?;
+        Ok(())
+    }
+
     pub async fn batch_reset(&self, ids: &[i32]) -> Result<(), AppError> {
         self.repo.batch_reset_mems(ids).await.map_err(AppError::Db)?;
         Ok(())

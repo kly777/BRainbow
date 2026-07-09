@@ -30,6 +30,20 @@ pub async fn get_all(
     }
 }
 
+pub async fn batch_bury(
+    State(state): State<AppState>,
+    Json(payload): Json<BatchIdsRequest>,
+) -> impl IntoResponse {
+    if payload.ids.is_empty() {
+        return error::bad_request("ids 为空");
+    }
+    let svc = MemService::new(state.db.clone());
+    match svc.batch_bury(&payload.ids).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "批量埋葬"),
+    }
+}
+
 pub async fn batch_delete(
     State(state): State<AppState>,
     Json(payload): Json<BatchIdsRequest>,

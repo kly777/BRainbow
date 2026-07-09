@@ -134,6 +134,12 @@ export const resetMemE = (id: number): Promise<{ ok: boolean }> =>
 		tapInvalidate(CACHE.mem, r),
 	);
 
+export const batchBuryMemE = (ids: number[]): Promise<{ ok: boolean }> =>
+	request<{ ok: boolean }>("/mem/batch-bury", {
+		method: "POST",
+		body: JSON.stringify({ ids }),
+	}).then((r) => tapInvalidate(CACHE.mem, r));
+
 export const batchDeleteMemE = (ids: number[]): Promise<{ ok: boolean }> =>
 	request<{ ok: boolean }>("/mem/batch-delete", {
 		method: "POST",

@@ -96,6 +96,39 @@
 	border-color: var(--color-accent, #3b82f6);
 }
 
+/* ── 分页 ── */
+.pagination {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-md);
+	padding: var(--space-md);
+}
+
+.pageBtn {
+	padding: var(--space-xs) var(--space-md);
+	border: 1px solid var(--color-border, #e8dfcc);
+	border-radius: var(--radius-md);
+	background: var(--color-surface, #fffef9);
+	color: var(--color-text, #3d3629);
+	font-size: var(--text-sm);
+	cursor: pointer;
+}
+
+.pageBtn:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.pageBtn:hover:not(:disabled) {
+	background: var(--color-bg-subtle, #f8f3e6);
+}
+
+.pageInfo {
+	font-size: var(--text-sm);
+	color: var(--color-text-muted, #9b8e7a);
+}
+
 .addLink {
 	font-size: var(--text-sm);
 	color: var(--color-accent, #3b82f6);

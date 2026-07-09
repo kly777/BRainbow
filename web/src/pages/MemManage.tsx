@@ -8,6 +8,7 @@ import {
 	resetMemE,
 	suspendMemE,
 	unsuspendMemE,
+	batchBuryMemE,
 	batchDeleteMemE,
 	batchResetMemE,
 	type MemItem,
@@ -20,18 +21,34 @@ import styles from "./MemManage.module.css";
 type SortField = "cue.created_at" | "difficulty" | "due_at" | "state";
 type SortDir = "asc" | "desc";
 
-async function loadAllMems(sortField: SortField, sortDir: SortDir, search: string, stateFilter: string): Promise<MemItem[]> {
+interface PageMeta {
+	page: number;
+	total_pages: number;
+	total: number;
+}
+
+async function loadAllMems(
+	sortField: SortField,
+	sortDir: SortDir,
+	search: string,
+	stateFilter: string,
+	page: number,
+): Promise<{ items: MemItem[]; meta: PageMeta }> {
 	try {
 		const res = await getAllMemsE({
 			sort: sortField,
 			order: sortDir,
 			q: search || undefined,
 			state: stateFilter !== "all" ? stateFilter : undefined,
-			page_size: 500,
+			page,
+			page_size: 50,
 		});
-		return res.items;
+		return {
+			items: res.items,
+			meta: { page: res.page, total_pages: res.total_pages, total: res.total },
+		};
 	} catch {
-		return [];
+		return { items: [], meta: { page: 1, total_pages: 0, total: 0 } };
 	}
 }
 
@@ -41,6 +58,7 @@ function previewText(content: string): string {
 
 export default function MemManage() {
 	const [mems, setMems] = createSignal<MemItem[]>([]);
+	const [pageMeta, setPageMeta] = createSignal<PageMeta>({ page: 1, total_pages: 0, total: 0 });
 	const [loading, setLoading] = createSignal(true);
 	const [detailId, setDetailId] = createSignal<number | null>(null);
 	const [sortField, setSortField] = createSignal<SortField>("due_at");
@@ -77,12 +95,17 @@ export default function MemManage() {
 
 	const setFilter = (st: string) => {
 		setFilterState(st);
+		setPage(1);
 		setBatchIds(new Set<number>());
 	};
 
+	const [page, setPage] = createSignal(1);
+
 	const load = async () => {
 		setLoading(true);
-		setMems(await loadAllMems(sortField(), sortDir(), searchQuery(), filterState()));
+		const { items, meta } = await loadAllMems(sortField(), sortDir(), searchQuery(), filterState(), page());
+		setMems(items);
+		setPageMeta(meta);
 		setLoading(false);
 	};
 	onMount(load);
@@ -96,9 +119,7 @@ export default function MemManage() {
 			setSortDir("asc");
 			return field;
 		});
-		// load() 在下一 tick 执行（signal 更新后自动触发 effect）
-		// 但 Solid 的 signal 是同步的，load 需要等 setSortField 完成
-		// 加 setTimeout 确保 signal 已更新
+		setPage(1);
 		setTimeout(load, 0);
 	};
 
@@ -181,12 +202,10 @@ export default function MemManage() {
 		const ids = [...batchIds()];
 		if (ids.length === 0) return;
 		if (!confirm(`确定埋葬 ${ids.length} 条记忆？（移至池底）`)) return;
-		for (const id of ids) {
-			try {
-				await buryMemE(id);
-			} catch {
-				/* ignore */
-			}
+		try {
+			await batchBuryMemE(ids);
+		} catch {
+			/* ignore */
 		}
 		setBatchIds(new Set<number>());
 		load();
@@ -203,7 +222,7 @@ export default function MemManage() {
 					<A href="/m/add" class={styles.addLink}>
 						＋ 添加
 					</A>
-					<span class={styles.count}>{mems().length} 个</span>
+					<span class={styles.count}>{pageMeta().total} 个</span>
 				</div>
 			</div>
 			<div class={styles.toolbar}>
@@ -212,7 +231,7 @@ export default function MemManage() {
 					class={styles.searchInput}
 					placeholder="搜索线索或答案…"
 					value={searchQuery()}
-					onInput={(e) => { setSearchQuery(e.currentTarget.value); setBatchIds(new Set<number>()); }}
+					onInput={(e) => { setSearchQuery(e.currentTarget.value); setPage(1); setBatchIds(new Set<number>()); }}
 				/>
 				<div class={styles.filterGroup}>
 					{[
@@ -352,6 +371,29 @@ export default function MemManage() {
 								</For>
 							</tbody>
 						</table>
+						<Show when={pageMeta().total_pages > 1}>
+							<div class={styles.pagination}>
+								<button
+									type="button"
+									class={styles.pageBtn}
+									disabled={page() <= 1}
+									onClick={() => { setPage((p) => Math.max(1, p - 1)); setTimeout(load, 0); }}
+								>
+									‹
+								</button>
+								<span class={styles.pageInfo}>
+									{pageMeta().page} / {pageMeta().total_pages}（共{pageMeta().total}条）
+								</span>
+								<button
+									type="button"
+									class={styles.pageBtn}
+									disabled={page() >= pageMeta().total_pages}
+									onClick={() => { setPage((p) => p + 1); setTimeout(load, 0); }}
+								>
+									›
+								</button>
+							</div>
+						</Show>
 					</Show>
 				</div>
 				<div class={styles.detail}>

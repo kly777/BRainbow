@@ -1,6 +1,6 @@
-import { createSignal, For, Show } from "solid-js";
+import { createMemo, createSignal, For, Show } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
-import { createMemE, importCsvE, importJsonE } from "../apis/memApi.ts";
+import { createMemE, importJsonE } from "../apis/memApi.ts";
 import { showToast } from "../components/ui/toastStore.ts";
 import MarkdownEditor from "../components/ui/MarkdownEditor.tsx";
 import styles from "./MemAdd.module.css";
@@ -32,6 +32,55 @@ export default function MemAdd() {
 	const [importing, setImporting] = createSignal(false);
 	const [importDefaultTags, setImportDefaultTags] = createSignal("");
 	const [importResult, setImportResult] = createSignal<{ imported: number; errors: string[] } | null>(null);
+
+	interface PreviewRow {
+		cue: string;
+		target: string;
+		tags: string[];
+		selected: boolean;
+	}
+	const [previewRows, setPreviewRows] = createSignal<PreviewRow[]>([]);
+	const [parseError, setParseError] = createSignal("");
+
+	const selectedCount = createMemo(() => previewRows().filter((r) => r.selected).length);
+
+	async function parseFile(file: File): Promise<PreviewRow[]> {
+		const text = await file.text();
+		if (file.name.endsWith(".json")) {
+			const json = JSON.parse(text);
+			const items = Array.isArray(json) ? json : (json.mems ?? []);
+			return items.map((i: { cue?: string; target?: string; tags?: string[] }) => ({
+				cue: (i.cue ?? "").trim(),
+				target: (i.target ?? "").trim(),
+				tags: i.tags ?? [],
+				selected: true,
+			}));
+		}
+		// CSV 解析
+		const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+		if (lines.length === 0) return [];
+		// 跳过表头
+		const header = lines[0].toLowerCase();
+		const hasHeader = header.includes("cue") || header.includes("target") || header.includes("tags");
+		const dataLines = hasHeader ? lines.slice(1) : lines;
+
+		return dataLines.map((line) => {
+			// 简单 CSV 解析（支持引号）
+			const fields: string[] = [];
+			let current = "";
+			let inQuote = false;
+			for (const ch of line) {
+				if (ch === '"') { inQuote = !inQuote; continue; }
+				if (ch === "," && !inQuote) { fields.push(current.trim()); current = ""; continue; }
+				current += ch;
+			}
+			fields.push(current.trim());
+			const cue = fields[0] ?? "";
+			const target = fields[1] ?? "";
+			const tags = (fields[2] ?? "").split(/[;,]/).map((s) => s.trim()).filter(Boolean);
+			return { cue, target, tags, selected: true };
+		}).filter((r) => r.cue && r.target);
+	}
 
 	const handleCreate = async () => {
 		if (!cue().trim() || !target().trim()) return;
@@ -224,10 +273,14 @@ export default function MemAdd() {
 				</Show>
 
 				<Show when={mode() === "json"}>
-					<p class={styles.hint}>
-						每行一条 JSON：{"{"}"cue": "...", "target": "..."
-						{"}"}
-					</p>
+					<div class={styles.formatBlock}>
+						<p class={styles.formatName}>JSON 格式</p>
+						<pre class={styles.formatExample}>{`[
+  { "cue": "质能方程", "target": "E=mc²", "tags": ["物理", "公式"] },
+  { "cue": "光速", "target": "299792458 m/s" }
+]`}</pre>
+						<p class={styles.formatNote}><code>tags</code> 可选，可省略。也可包装为 <code>{'{"mems": [...]}'}</code></p>
+					</div>
 					<textarea
 						class={styles.textarea}
 						value={jsonText()}
@@ -273,15 +326,97 @@ export default function MemAdd() {
 						</div>
 					</Show>
 					<Show when={!importResult()}>
-						<p class={styles.hint}>
-							支持 CSV（<code>cue,target,tags</code>）和 JSON 文件
-						</p>
+						<div class={styles.formatHint}>
+							<p class={styles.hintTitle}>支持的文件格式</p>
+							<div class={styles.formatBlock}>
+								<p class={styles.formatName}>CSV</p>
+								<pre class={styles.formatExample}>cue,target,tags<br />
+质能方程,E=mc²,物理;公式<br />
+光速,299792458 m/s,物理<br />
+DNA,双螺旋结构,生物;遗传</pre>
+								<p class={styles.formatNote}>标签可用 <code>;</code> 或 <code>,</code> 分隔，内容含逗号请用引号</p>
+							</div>
+							{/*<div class={styles.formatBlock}>
+								<p class={styles.formatName}>JSON</p>
+								<pre class={styles.formatExample}>{`[
+  { "cue": "质能方程", "target": "E=mc²", "tags": ["物理", "公式"] },
+  { "cue": "光速", "target": "299792458 m/s" }
+]`}</pre>
+								<p class={styles.formatNote}>或包装为 {`{ "mems": [...] }`}。无标签可省略 <code>tags</code> 字段</p>
+							</div>*/}
+						</div>
 						<input
 							type="file"
 							accept=".csv,.json"
 							class={styles.fileInput}
-							onChange={(e) => setImportFile(e.currentTarget.files?.[0] ?? null)}
+							onChange={async (e) => {
+								const file = e.currentTarget.files?.[0] ?? null;
+								setImportFile(file);
+								if (file) {
+									try {
+										const rows = await parseFile(file);
+										setPreviewRows(rows);
+										setParseError("");
+									} catch (err) {
+										setParseError(String(err));
+										setPreviewRows([]);
+									}
+								} else {
+									setPreviewRows([]);
+								}
+							}}
 						/>
+						<Show when={parseError()}>
+							<p class={styles.importErrors}>{parseError()}</p>
+						</Show>
+						<Show when={previewRows().length > 0}>
+							<div class={styles.previewTable}>
+								<table>
+									<thead>
+										<tr>
+											<th class={styles.previewTh}>
+												<input
+													type="checkbox"
+													checked={selectedCount() === previewRows().length}
+													onChange={() => {
+														const all = selectedCount() === previewRows().length;
+														setPreviewRows((prev) => prev.map((r) => ({ ...r, selected: !all })));
+													}}
+												/>
+											</th>
+											<th class={styles.previewTh}>线索</th>
+											<th class={styles.previewTh}>答案</th>
+											<th class={styles.previewTh}>标签</th>
+										</tr>
+									</thead>
+									<tbody>
+										<For each={previewRows()}>
+											{(row, i) => (
+												<tr>
+													<td class={styles.previewTd}>
+														<input
+															type="checkbox"
+															checked={row.selected}
+															onChange={() => setPreviewRows((prev) => {
+																const next = [...prev];
+																next[i()] = { ...next[i()], selected: !next[i()].selected };
+																return next;
+															})}
+														/>
+													</td>
+													<td class={styles.previewTd}>{row.cue.slice(0, 60)}</td>
+													<td class={styles.previewTd}>{row.target.slice(0, 60)}</td>
+													<td class={styles.previewTd}>
+														<For each={row.tags}>{(tag) => <span class={styles.previewTag}>{tag}</span>}</For>
+													</td>
+												</tr>
+											)}
+										</For>
+									</tbody>
+								</table>
+							</div>
+							<p class={styles.previewCount}>已选 {selectedCount()} / 共 {previewRows().length} 条</p>
+						</Show>
 						<div class={styles.formGroup}>
 							<label class={styles.label}>默认标签（可选）</label>
 							<input
@@ -297,22 +432,15 @@ export default function MemAdd() {
 							<button
 								type="button"
 								class={styles.submit}
-								disabled={!importFile() || importing()}
+								disabled={selectedCount() === 0 || importing()}
 								onClick={async () => {
-									const file = importFile();
-									if (!file) return;
+									const rows = previewRows().filter((r) => r.selected);
+									if (rows.length === 0) return;
 									setImporting(true);
 									try {
-										const text = await file.text();
 										const tags = importDefaultTags().split(/[;,]/).map(s => s.trim()).filter(Boolean);
-										let result;
-										if (file.name.endsWith(".json")) {
-											const json = JSON.parse(text);
-											const mems = Array.isArray(json) ? json : (json.mems ?? []);
-											result = await importJsonE(mems, tags.length > 0 ? tags : undefined);
-										} else {
-											result = await importCsvE(text, tags.length > 0 ? tags : undefined);
-										}
+										const mems = rows.map((r) => ({ cue: r.cue, target: r.target, tags: r.tags }));
+										const result = await importJsonE(mems, tags.length > 0 ? tags : undefined);
 										setImportResult(result);
 									} catch (err: unknown) {
 										showToast({ type: "error", title: "导入失败", message: String(err), duration: 5000 });
@@ -321,7 +449,7 @@ export default function MemAdd() {
 									}
 								}}
 							>
-								{importing() ? "导入中…" : `导入${importFile() ? ` (${importFile()!.name})` : ""}`}
+								{importing() ? "导入中…" : `导入所选 (${selectedCount()} 条)`}
 							</button>
 						</div>
 					</Show>

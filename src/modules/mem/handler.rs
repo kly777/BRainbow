@@ -10,7 +10,6 @@ use crate::modules::mem::config::MemConfig;
 use crate::modules::mem::model::*;
 use crate::modules::mem::optimizer;
 use crate::modules::mem::service::MemService;
-use crate::pagination::Pagination;
 use crate::state::AppState;
 
 fn ok() -> axum::response::Response {
@@ -22,12 +21,40 @@ fn err(e: impl std::fmt::Display, op: &str) -> axum::response::Response {
 
 pub async fn get_all(
     State(state): State<AppState>,
-    Query(p): Query<Pagination>,
+    Query(p): Query<MemQuery>,
 ) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
-    match svc.get_all(p.limit(), p.offset()).await {
+    match svc.get_all(&p).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => err(e, "获取全部"),
+    }
+}
+
+pub async fn batch_delete(
+    State(state): State<AppState>,
+    Json(payload): Json<BatchIdsRequest>,
+) -> impl IntoResponse {
+    if payload.ids.is_empty() {
+        return error::bad_request("ids 为空");
+    }
+    let svc = MemService::new(state.db.clone());
+    match svc.batch_delete(&payload.ids).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "批量删除"),
+    }
+}
+
+pub async fn batch_reset(
+    State(state): State<AppState>,
+    Json(payload): Json<BatchIdsRequest>,
+) -> impl IntoResponse {
+    if payload.ids.is_empty() {
+        return error::bad_request("ids 为空");
+    }
+    let svc = MemService::new(state.db.clone());
+    match svc.batch_reset(&payload.ids).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "批量重置"),
     }
 }
 

@@ -1,5 +1,5 @@
 // ── 共享 ──
-export { formatDate, type PaginationParams } from "./shared.ts";
+export { formatDate, type PaginatedResponse, type PaginationParams } from "./shared.ts";
 
 // ── 错误处理 ──
 export {

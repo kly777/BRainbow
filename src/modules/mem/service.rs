@@ -5,6 +5,7 @@ use crate::modules::mem::config::MemConfig;
 use crate::modules::mem::fsrs::{self, ReviewOutcome};
 use crate::modules::mem::model::*;
 use crate::modules::mem::repository::{MemRepo, MemRow};
+use crate::pagination::{Pagination, PaginatedResponse};
 
 /// 计算自上次复习以来经过的天数。
 /// 新卡（无 last_review_at）返回 0。
@@ -224,16 +225,18 @@ impl MemService {
         items
     }
 
-    pub async fn get_all(&self, limit: i64, offset: i64) -> Result<DueResponse, sqlx::Error> {
-        let ids = self.repo.get_all_mems(limit, offset).await?;
+    pub async fn get_all(&self, query: &MemQuery) -> Result<PaginatedResponse<MemWithChunks>, sqlx::Error> {
+        let pagination = Pagination {
+            page: query.page.unwrap_or(1),
+            page_size: query.page_size.unwrap_or(50),
+        };
+        let (page, page_size) = pagination.clamp();
+        let offset = (page - 1) * page_size;
+        let ids = self.repo.get_all_mems(page_size, offset, query).await?;
         let items = self.build_items(&ids).await;
-        Ok(DueResponse {
-            due_count: items.len(),
-            has_more: false,
-            upcoming_count: 0,
-            all_far: false,
-            items,
-        })
+        let total = self.repo.count_all_mems(query).await?;
+        let pagination_ref = &pagination;
+        Ok(PaginatedResponse::new(items, total, pagination_ref))
     }
 
     /// 获取各状态计数（新卡 / 学习中 / 待复习 / 已埋葬）
@@ -278,6 +281,18 @@ impl MemService {
     pub async fn unsuspend(&self, id: i32) -> Result<(), AppError> {
         self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
         self.repo.unsuspend_mem(id).await.map_err(AppError::Db)?;
+        Ok(())
+    }
+
+    // ── 批量操作 ──
+
+    pub async fn batch_delete(&self, ids: &[i32]) -> Result<(), AppError> {
+        self.repo.batch_delete_mems(ids).await.map_err(AppError::Db)?;
+        Ok(())
+    }
+
+    pub async fn batch_reset(&self, ids: &[i32]) -> Result<(), AppError> {
+        self.repo.batch_reset_mems(ids).await.map_err(AppError::Db)?;
         Ok(())
     }
 

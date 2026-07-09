@@ -136,6 +136,23 @@ pub struct MemCounts {
     pub suspended: usize,
 }
 
+/// 管理页查询参数
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct MemQuery {
+    pub q: Option<String>,
+    pub state: Option<String>,
+    pub sort: Option<String>,
+    pub order: Option<String>,
+    pub page: Option<i64>,
+    pub page_size: Option<i64>,
+}
+
+/// 批量操作请求
+#[derive(Debug, Clone, Deserialize)]
+pub struct BatchIdsRequest {
+    pub ids: Vec<i32>,
+}
+
 /// 本次学习预估
 #[derive(Debug, Clone, Serialize)]
 pub struct SessionEstimate {

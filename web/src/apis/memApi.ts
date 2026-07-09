@@ -1,4 +1,5 @@
 import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
+import type { PaginatedResponse } from "./types/shared.ts";
 
 // ── 类型 ──
 
@@ -29,6 +30,15 @@ export interface DueResponse {
 }
 
 // ── 统计 ──
+
+export interface MemQuery {
+	q?: string;
+	state?: string;
+	sort?: string;
+	order?: string;
+	page?: number;
+	page_size?: number;
+}
 
 export interface MemCounts {
 	new: number;
@@ -63,9 +73,18 @@ export const createMemE = (
 		}),
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
-// mem 列表缓存 10 秒（不常刷新）
-export const getAllMemsE = (pageSize = 200): Promise<DueResponse> =>
-	cachedRequest(`/mem/all?page_size=${pageSize}`, {}, 10_000);
+// mem 列表（服务端搜索/筛选/排序）
+export const getAllMemsE = (params?: MemQuery): Promise<PaginatedResponse<MemItem>> => {
+	const qs = new URLSearchParams();
+	if (params?.q) qs.set("q", params.q);
+	if (params?.state) qs.set("state", params.state);
+	if (params?.sort) qs.set("sort", params.sort);
+	if (params?.order) qs.set("order", params.order);
+	if (params?.page) qs.set("page", String(params.page));
+	if (params?.page_size) qs.set("page_size", String(params.page_size));
+	const suffix = qs.toString();
+	return request(`/mem/all${suffix ? `?${suffix}` : ""}`, {});
+};
 
 // ⚠️ 复习数据必须实时，不缓存
 export const getDueE = (limit = 50): Promise<DueResponse> =>
@@ -114,6 +133,18 @@ export const resetMemE = (id: number): Promise<{ ok: boolean }> =>
 	request<{ ok: boolean }>(`/mem/${id}/reset`, { method: "POST" }).then((r) =>
 		tapInvalidate(CACHE.mem, r),
 	);
+
+export const batchDeleteMemE = (ids: number[]): Promise<{ ok: boolean }> =>
+	request<{ ok: boolean }>("/mem/batch-delete", {
+		method: "POST",
+		body: JSON.stringify({ ids }),
+	}).then((r) => tapInvalidate(CACHE.mem, r));
+
+export const batchResetMemE = (ids: number[]): Promise<{ ok: boolean }> =>
+	request<{ ok: boolean }>("/mem/batch-reset", {
+		method: "POST",
+		body: JSON.stringify({ ids }),
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const editMemE = (
 	id: number,

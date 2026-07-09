@@ -1,7 +1,7 @@
-use sqlx::{FromRow, SqlitePool};
+use sqlx::{FromRow, SqlitePool, QueryBuilder};
 use std::sync::Arc;
 
-use super::model::Chunk;
+use super::model::{Chunk, MemQuery};
 
 #[derive(Debug, FromRow)]
 pub struct MemRow {
@@ -95,12 +95,86 @@ impl MemRepo {
         ).bind(id).fetch_optional(&*self.pool).await
     }
 
-    pub async fn get_all_mems(&self, limit: i64, offset: i64) -> Result<Vec<i32>, sqlx::Error> {
-        sqlx::query_scalar::<_, i32>("SELECT id FROM mem ORDER BY due_at LIMIT ? OFFSET ?")
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&*self.pool)
-            .await
+    pub async fn get_all_mems(&self, limit: i64, offset: i64, query: &MemQuery) -> Result<Vec<i32>, sqlx::Error> {
+        let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
+            "SELECT m.id FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1"
+        );
+
+        if let Some(ref state) = query.state {
+            if state == "today_done" {
+                qb.push(" AND m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')");
+            } else if state != "all" && !state.is_empty() {
+                qb.push(" AND m.state = ");
+                qb.push_bind(state);
+            }
+        }
+
+        if let Some(ref q) = query.q {
+            if !q.trim().is_empty() {
+                let pattern = format!("%{}%", q.trim());
+                qb.push(" AND (cc.content LIKE ");
+                qb.push_bind(&pattern);
+                qb.push(" OR ct.content LIKE ");
+                qb.push_bind(pattern);
+                qb.push(")");
+            }
+        }
+
+        // 排序
+        match query.sort.as_deref() {
+            Some("difficulty") => {
+                qb.push(" ORDER BY m.difficulty");
+            }
+            Some("cue.created_at") => {
+                qb.push(" ORDER BY cc.created_at");
+            }
+            Some("state") => {
+                qb.push(" ORDER BY m.state");
+            }
+            _ => {
+                qb.push(" ORDER BY m.due_at");
+            }
+        }
+        if query.order.as_deref() == Some("desc") {
+            qb.push(" DESC");
+        } else {
+            qb.push(" ASC");
+        }
+
+        qb.push(" LIMIT ");
+        qb.push_bind(limit);
+        qb.push(" OFFSET ");
+        qb.push_bind(offset);
+
+        qb.build_query_scalar().fetch_all(&*self.pool).await
+    }
+
+    pub async fn count_all_mems(&self, query: &MemQuery) -> Result<i64, sqlx::Error> {
+        let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
+            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1"
+        );
+
+        if let Some(ref state) = query.state {
+            if state == "today_done" {
+                qb.push(" AND m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')");
+            } else if state != "all" && !state.is_empty() {
+                qb.push(" AND m.state = ");
+                qb.push_bind(state);
+            }
+        }
+
+        if let Some(ref q) = query.q {
+            if !q.trim().is_empty() {
+                let pattern = format!("%{}%", q.trim());
+                qb.push(" AND (cc.content LIKE ");
+                qb.push_bind(&pattern);
+                qb.push(" OR ct.content LIKE ");
+                qb.push_bind(pattern);
+                qb.push(")");
+            }
+        }
+
+        qb.build_query_scalar().fetch_one(&*self.pool).await
     }
 
     pub async fn delete_mem(&self, id: i32) -> Result<(), sqlx::Error> {
@@ -332,6 +406,53 @@ impl MemRepo {
         let total = ratings.len() as f64;
         let passed = ratings.iter().filter(|&&r| r >= 3).count() as f64;
         Ok(passed / total)
+    }
+
+    pub async fn batch_delete_mems(&self, ids: &[i32]) -> Result<(), sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        for &id in ids {
+            // 级联删除
+            sqlx::query("DELETE FROM revlog WHERE mem_id = ?")
+                .bind(id).execute(&mut *tx).await?;
+            sqlx::query("DELETE FROM mem_prerequisite WHERE mem_id = ? OR requires_mem_id = ?")
+                .bind(id).bind(id).execute(&mut *tx).await?;
+            let (cue_id, target_id): (i32, i32) = sqlx::query_as(
+                "SELECT cue_chunk_id, target_chunk_id FROM mem WHERE id = ?"
+            )
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await?
+            .unwrap_or_default();
+            sqlx::query("DELETE FROM mem WHERE id = ?")
+                .bind(id).execute(&mut *tx).await?;
+            // 清理孤儿 chunk
+            for chunk_id in [cue_id, target_id] {
+                if chunk_id > 0 {
+                    let usage: i64 = sqlx::query_scalar(
+                        "SELECT COUNT(*) FROM mem WHERE cue_chunk_id = ? OR target_chunk_id = ?"
+                    )
+                    .bind(chunk_id).bind(chunk_id)
+                    .fetch_one(&mut *tx).await?;
+                    if usage == 0 {
+                        sqlx::query("DELETE FROM chunk WHERE id = ?")
+                            .bind(chunk_id).execute(&mut *tx).await?;
+                    }
+                }
+            }
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
+    pub async fn batch_reset_mems(&self, ids: &[i32]) -> Result<(), sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        for &id in ids {
+            sqlx::query(
+                "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?"
+            ).bind(id).execute(&mut *tx).await?;
+        }
+        tx.commit().await?;
+        Ok(())
     }
 
     pub async fn reset_mem(&self, id: i32) -> Result<(), sqlx::Error> {

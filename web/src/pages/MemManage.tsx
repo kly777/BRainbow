@@ -8,6 +8,8 @@ import {
 	resetMemE,
 	suspendMemE,
 	unsuspendMemE,
+	batchDeleteMemE,
+	batchResetMemE,
 	type MemItem,
 } from "../apis/memApi.ts";
 import MarkdownRenderer from "../components/ui/Markdown.tsx";
@@ -18,26 +20,16 @@ import styles from "./MemManage.module.css";
 type SortField = "cue.created_at" | "difficulty" | "due_at" | "state";
 type SortDir = "asc" | "desc";
 
-function compareMems(a: MemItem, b: MemItem, field: SortField, dir: SortDir): number {
-	const mul = dir === "asc" ? 1 : -1;
-	switch (field) {
-		case "due_at":
-		case "cue.created_at": {
-			const va = new Date(field === "due_at" ? a.due_at : a.cue.created_at).getTime();
-			const vb = new Date(field === "due_at" ? b.due_at : b.cue.created_at).getTime();
-			return (va - vb) * mul;
-		}
-		case "difficulty":
-			return (a.difficulty - b.difficulty) * mul;
-		case "state":
-			return a.state.localeCompare(b.state) * mul;
-	}
-}
-
-async function loadAllMems(sortField: SortField, sortDir: SortDir): Promise<MemItem[]> {
+async function loadAllMems(sortField: SortField, sortDir: SortDir, search: string, stateFilter: string): Promise<MemItem[]> {
 	try {
-		const res = await getAllMemsE(500);
-		return [...res.items].sort((a, b) => compareMems(a, b, sortField, sortDir));
+		const res = await getAllMemsE({
+			sort: sortField,
+			order: sortDir,
+			q: search || undefined,
+			state: stateFilter !== "all" ? stateFilter : undefined,
+			page_size: 500,
+		});
+		return res.items;
 	} catch {
 		return [];
 	}
@@ -60,25 +52,8 @@ export default function MemManage() {
 	const [searchQuery, setSearchQuery] = createSignal("");
 	const [filterState, setFilterState] = createSignal<string>("all");
 
-	const filteredMems = () => {
-		const raw = mems();
-		const q = searchQuery().toLowerCase().trim();
-		const st = filterState();
-		const now = new Date();
-		return raw.filter((m) => {
-			if (st === "today_done") {
-				if (m.state !== "review" || new Date(m.due_at) <= now) return false;
-			} else if (st !== "all" && m.state !== st) return false;
-			if (!q) return true;
-			return (
-				m.cue.content.toLowerCase().includes(q) ||
-				m.target.content.toLowerCase().includes(q)
-			);
-		});
-	};
-
 	const allSelected = () =>
-		filteredMems().length > 0 && batchIds().size === filteredMems().length;
+		mems().length > 0 && batchIds().size === mems().length;
 
 	const toggleBatch = (id: number) => {
 		setBatchIds((prev) => {
@@ -96,7 +71,7 @@ export default function MemManage() {
 		if (allSelected()) {
 			setBatchIds(new Set<number>());
 		} else {
-			setBatchIds(new Set<number>(filteredMems().map((m) => m.id)));
+			setBatchIds(new Set<number>(mems().map((m) => m.id)));
 		}
 	};
 
@@ -107,7 +82,7 @@ export default function MemManage() {
 
 	const load = async () => {
 		setLoading(true);
-		setMems(await loadAllMems(sortField(), sortDir()));
+		setMems(await loadAllMems(sortField(), sortDir(), searchQuery(), filterState()));
 		setLoading(false);
 	};
 	onMount(load);
@@ -179,12 +154,10 @@ export default function MemManage() {
 		const ids = [...batchIds()];
 		if (ids.length === 0) return;
 		if (!confirm(`确定删除 ${ids.length} 条记忆？`)) return;
-		for (const id of ids) {
-			try {
-				await deleteMemE(id);
-			} catch {
-				/* ignore */
-			}
+		try {
+			await batchDeleteMemE(ids);
+		} catch {
+			/* ignore */
 		}
 		setBatchIds(new Set<number>());
 		setDetailId(null);
@@ -195,12 +168,10 @@ export default function MemManage() {
 		const ids = [...batchIds()];
 		if (ids.length === 0) return;
 		if (!confirm(`确定重置 ${ids.length} 条记忆的记忆数据？`)) return;
-		for (const id of ids) {
-			try {
-				await resetMemE(id);
-			} catch {
-				/* ignore */
-			}
+		try {
+			await batchResetMemE(ids);
+		} catch {
+			/* ignore */
 		}
 		setBatchIds(new Set<number>());
 		load();
@@ -232,7 +203,7 @@ export default function MemManage() {
 					<A href="/m/add" class={styles.addLink}>
 						＋ 添加
 					</A>
-					<span class={styles.count}>{filteredMems().length}/{mems().length} 个</span>
+					<span class={styles.count}>{mems().length} 个</span>
 				</div>
 			</div>
 			<div class={styles.toolbar}>
@@ -321,7 +292,7 @@ export default function MemManage() {
 								</tr>
 							</thead>
 							<tbody>
-								<For each={filteredMems()}>
+								<For each={mems()}>
 									{(mem) => (
 										<tr
 											class={

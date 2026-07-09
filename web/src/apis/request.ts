@@ -106,8 +106,10 @@ export async function extractErrorBody(
 /**
  * 对错误执行全局副作用（登录弹窗 / toast / 日志），
  * 然后原样将错误向上传播给组件做业务处理。
+ *
+ * 导出以供 uploadMedia 等无法使用 request() 的场景统一错误处理。
  */
-async function handleGlobalError(
+export async function handleGlobalError(
 	endpoint: string,
 	httpError: HttpError,
 ): Promise<void> {
@@ -217,7 +219,7 @@ export const request = async <T>(
 	try {
 		response = await fetch(url, {
 			...options,
-			headers: buildHeaders(options.headers),
+			headers: buildHeaders(options.headers, options.body),
 		});
 	} catch (cause: unknown) {
 		// ── 网络断开 → 全局 toast + 日志，然后抛出 ──
@@ -270,14 +272,20 @@ export const request = async <T>(
 
 // ==================== 辅助 ====================
 
-function buildHeaders(extra?: RequestInit["headers"]): Headers {
-	const headers = new Headers({ "Content-Type": "application/json" });
+function buildHeaders(extra?: RequestInit["headers"], body?: BodyInit | null): Headers {
+	const headers = new Headers();
 
+	// FormData 让浏览器自动设 Content-Type（含 boundary），手动设会破坏上传
+	if (!(body instanceof FormData)) {
+		headers.set("Content-Type", "application/json");
+	}
+
+	// 合并外部 headers：调用方提供的值优先（用 set 而非 append，避免重复）
 	if (extra) {
 		const entries = Array.isArray(extra) ? extra : Object.entries(extra);
 		for (const [key, value] of entries) {
 			if (value !== undefined) {
-				headers.append(key, String(value));
+				headers.set(key, String(value));
 			}
 		}
 	}

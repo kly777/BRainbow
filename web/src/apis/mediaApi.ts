@@ -1,6 +1,4 @@
 import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
-import { getToken } from "../auth/context.tsx";
-import { HttpError, NetworkError } from "./types/index.ts";
 
 // ── 类型 ──
 
@@ -27,64 +25,16 @@ export interface PaginatedMedia {
 	total_pages: number;
 }
 
-// ── 内部辅助 ──
-
-async function extractError(response: Response): Promise<{
-	code: string;
-	message: string;
-	details?: unknown;
-}> {
-	try {
-		const json = await response.json();
-		if (
-			json &&
-			typeof json.code === "string" &&
-			typeof json.message === "string"
-		) {
-			return { code: json.code, message: json.message, details: json.details };
-		}
-		return { code: `HTTP_${response.status}`, message: JSON.stringify(json) };
-	} catch {
-		return {
-			code: `HTTP_${response.status}`,
-			message: `HTTP ${response.status}`,
-		};
-	}
-}
-
 // ── API ──
 
 /** 上传媒体文件 */
 export const uploadMedia = async (file: File): Promise<MediaItem> => {
 	const formData = new FormData();
 	formData.append("file", file);
-
-	const token = getToken();
-	const headers: Record<string, string> = {};
-	if (token) headers.Authorization = `Bearer ${token}`;
-
-	let response: Response;
-	try {
-		response = await fetch("/api/media/upload", {
-			method: "POST",
-			headers,
-			body: formData,
-		});
-	} catch (cause: unknown) {
-		throw new NetworkError({ cause });
-	}
-
-	if (!response.ok) {
-		const err = await extractError(response);
-		throw new HttpError({
-			status: response.status,
-			code: err.code,
-			message: err.message,
-			details: err.details,
-		});
-	}
-
-	return response.json() as Promise<MediaItem>;
+	return request<MediaItem>("/media/upload", {
+		method: "POST",
+		body: formData,
+	});
 };
 
 /** 媒体列表（缓存 30 秒） */

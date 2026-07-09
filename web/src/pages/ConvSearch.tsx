@@ -1,30 +1,10 @@
 import { createSignal, createResource, Show, For, onMount } from "solid-js";
 import { A, useNavigate, useSearchParams } from "@solidjs/router";
-import { request } from "../apis/request.ts";
+import { searchConvE, type ConvSearchType, type ConvHit } from "../apis/convApi.ts";
 import styles from "./ConvSearch.module.css";
 
 const VALID_TABS = ["all", "conv", "article"] as const;
 type Tab = (typeof VALID_TABS)[number];
-
-interface ConvHit {
-	conv_id: number;
-	title: string;
-	conv_type: string;
-	snippet: string;
-	match_field: string;
-	created_at: string;
-	score: number;
-	article_title?: string;
-}
-
-interface SearchResponse {
-	hits: ConvHit[];
-	total: number;
-}
-
-function searchConv(q: string, tab: Tab): Promise<SearchResponse> {
-	return request(`/conv/search?q=${encodeURIComponent(q)}&limit=50&search_type=${tab}`);
-}
 
 const fieldLabel: Record<string, string> = {
 	title: "标题",
@@ -78,7 +58,7 @@ export default function ConvSearch() {
 		(key) => {
 			if (!key) return { hits: [], total: 0 };
 			const [q, t] = key.split("|");
-			return searchConv(q, t as Tab);
+			return searchConvE(q, t as Tab);
 		},
 		{ initialValue: { hits: [], total: 0 } },
 	);

@@ -1,29 +1,8 @@
 import { createResource, Show, For } from "solid-js";
 import { A, useParams, useSearchParams } from "@solidjs/router";
-import { request } from "../apis/request.ts";
+import { getConvDetailE, type ConvDetail } from "../apis/convApi.ts";
 import MarkdownRenderer from "../components/ui/Markdown.tsx";
 import styles from "./ConvDetail.module.css";
-
-interface QaPair {
-	qa_id: number;
-	question: string;
-	answer: string;
-}
-
-interface ArticleItem {
-	article_type: string;
-	title: string;
-	content: string;
-}
-
-interface ConvDetail {
-	conv_id: number;
-	title: string;
-	conv_type: string;
-	created_at: string;
-	qa_pairs: QaPair[];
-	articles: ArticleItem[];
-}
 
 const typeLabel: Record<string, string> = {
 	concept: "概念",
@@ -39,7 +18,7 @@ export default function ConvDetailPage() {
 	const articleOnly = () => searchParams.mode === "article";
 
 	const [data] = createResource(id, (id) =>
-		request<ConvDetail>(`/conv/${id}`),
+		getConvDetailE(Number(id)),
 	);
 
 	const backHref = () => {

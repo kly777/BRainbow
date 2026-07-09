@@ -1,22 +1,8 @@
 import { createResource, Show, For } from "solid-js";
 import { A, useParams, useSearchParams } from "@solidjs/router";
-import { request } from "../apis/request.ts";
+import { getConvQaE, type ConvQaData } from "../apis/convApi.ts";
 import MarkdownRenderer from "../components/ui/Markdown.tsx";
 import styles from "./ConvDetail.module.css";
-
-interface QaPair {
-	qa_id: number;
-	question: string;
-	answer: string;
-}
-
-interface ConvQaData {
-	conv_id: number;
-	title: string;
-	conv_type: string;
-	created_at: string;
-	qa_pairs: QaPair[];
-}
 
 const typeLabel: Record<string, string> = {
 	concept: "概念",
@@ -29,7 +15,7 @@ export default function ConvQaPage() {
 	const params = useParams();
 	const [searchParams] = useSearchParams();
 	const [data] = createResource(() => params.id, (id) =>
-		request<ConvQaData>(`/conv/qa/${id}`),
+		getConvQaE(Number(id)),
 	);
 
 	const backHref = () => {

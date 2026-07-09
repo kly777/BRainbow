@@ -1,15 +1,8 @@
 import { createResource, Show } from "solid-js";
 import { A, useParams, useSearchParams } from "@solidjs/router";
-import { request } from "../apis/request.ts";
+import { getConvConceptE, type ConvConceptData } from "../apis/convApi.ts";
 import MarkdownRenderer from "../components/ui/Markdown.tsx";
 import styles from "./ConvDetail.module.css";
-
-interface ConvConceptData {
-	conv_id: number;
-	article_type: string;
-	title: string;
-	content: string;
-}
 
 const typeLabel: Record<string, string> = {
 	concept: "概念",
@@ -25,7 +18,7 @@ export default function ConvConceptPage() {
 	const [data] = createResource(
 		() => ({ id: params.id, article: searchParams.article }),
 		({ id, article }) =>
-			request<ConvConceptData>(`/conv/concept/${id}?article=${encodeURIComponent(String(article || ""))}`),
+			getConvConceptE(Number(id), String(article || "")),
 	);
 
 	const backHref = () => {

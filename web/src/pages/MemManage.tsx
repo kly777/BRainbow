@@ -18,8 +18,10 @@ import {
 	batchAddTagToMemsE,
 	batchRemoveTagFromMemsE,
 	batchSetTagsForMemsE,
+	batchGetMemsTagsE,
 	type MemItem,
 	type TagInfo,
+	type MemTagRow,
 } from "../apis/memApi.ts";
 import MarkdownRenderer from "../components/ui/Markdown.tsx";
 import MarkdownEditor from "../components/ui/MarkdownEditor.tsx";
@@ -72,6 +74,7 @@ export default function MemManage() {
 	const [loading, setLoading] = createSignal(true);
 	const [detailId, setDetailId] = createSignal<number | null>(null);
 	const [memTags, setMemTags] = createSignal<Map<number, TagInfo[]>>(new Map());
+	const [allTagsLoaded, setAllTagsLoaded] = createSignal(false);
 	const [sortField, setSortField] = createSignal<SortField>("due_at");
 	const [sortDir, setSortDir] = createSignal<SortDir>("asc");
 	const [batchIds, setBatchIds] = createSignal<Set<number>>(new Set());
@@ -108,9 +111,20 @@ export default function MemManage() {
 		setFilterState(st);
 		setPage(1);
 		setBatchIds(new Set<number>());
+		setTimeout(load, 0);
 	};
 
 	const [page, setPage] = createSignal(1);
+	let searchTimer: ReturnType<typeof setTimeout> | undefined;
+
+	const handleSearchInput = (value: string) => {
+		setSearchQuery(value);
+		setPage(1);
+		setBatchIds(new Set<number>());
+		// 防抖 300ms，避免频繁请求
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(load, 300);
+	};
 
 	// 当 detailId 变化时加载标签
 	createEffect(() => {
@@ -179,6 +193,22 @@ export default function MemManage() {
 		const { items, meta } = await loadAllMems(sortField(), sortDir(), searchQuery(), filterState(), page());
 		setMems(items);
 		setPageMeta(meta);
+		// 批量加载标签
+		if (items.length > 0) {
+			const ids = items.map((m) => m.id);
+			batchGetMemsTagsE(ids).then((rows) => {
+				const map = new Map<number, TagInfo[]>();
+				for (const row of rows) {
+					const tags = map.get(row.mem_id) ?? [];
+					tags.push({ id: row.id, name: row.name, created_at: row.created_at });
+					map.set(row.mem_id, tags);
+				}
+				setMemTags(map);
+			}).catch(() => {});
+		} else {
+			setMemTags(new Map());
+		}
+		setAllTagsLoaded(true);
 		setLoading(false);
 	};
 	onMount(load);
@@ -304,7 +334,7 @@ export default function MemManage() {
 					class={styles.searchInput}
 					placeholder="搜索线索或答案…"
 					value={searchQuery()}
-					onInput={(e) => { setSearchQuery(e.currentTarget.value); setPage(1); setBatchIds(new Set<number>()); }}
+					onInput={(e) => { handleSearchInput(e.currentTarget.value); }}
 				/>
 				<div class={styles.filterGroup}>
 					{[
@@ -394,6 +424,7 @@ export default function MemManage() {
 									<th class={styles.thSort} onClick={() => toggleSort("cue.created_at")}>
 										创建{sortField() === "cue.created_at" ? (sortDir() === "asc" ? " ▲" : " ▼") : ""}
 									</th>
+									<th class={styles.th}>标签</th>
 									<th class={styles.th} />
 								</tr>
 							</thead>
@@ -441,6 +472,16 @@ export default function MemManage() {
 											<td class={styles.td}>{mem.difficulty.toFixed(2)}</td>
 											<td class={styles.tdDue}>{fmtRelative(mem.due_at)}</td>
 											<td class={styles.tdDue}>{fmtLocal(mem.cue.created_at)}</td>
+											<td class={styles.td}>
+												<div class={styles.cellTags}>
+													<For each={(memTags().get(mem.id) ?? []).slice(0, 3)}>
+														{(tag) => <span class={styles.cellTag}>{tag.name}</span>}
+													</For>
+													<Show when={(memTags().get(mem.id) ?? []).length > 3}>
+														<span class={styles.cellTag}>+{(memTags().get(mem.id) ?? []).length - 3}</span>
+													</Show>
+												</div>
+											</td>
 											<td class={styles.tdAct}>
 												<button
 													type="button"

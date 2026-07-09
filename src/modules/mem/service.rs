@@ -40,19 +40,19 @@ impl MemService {
 
     // ── 获取学习池 ──
 
-    pub async fn get_due(&self, max_learning: i64) -> Result<DueResponse, sqlx::Error> {
-        let mut ids = self.repo.get_learning_mems(max_learning).await?;
+    pub async fn get_due(&self, max_learning: i64, tag_ids: &[i32]) -> Result<DueResponse, sqlx::Error> {
+        let mut ids = self.repo.get_learning_mems(max_learning, tag_ids).await?;
         let pool_count = ids.len();
 
         if pool_count < max_learning as usize {
             let needed = max_learning as usize - pool_count;
-            let due_reviews = self.repo.get_due_reviews(needed as i64).await?;
+            let due_reviews = self.repo.get_due_reviews(needed as i64, tag_ids).await?;
             ids.extend(due_reviews);
         }
 
         if ids.len() < max_learning as usize {
             let needed = max_learning as usize - ids.len();
-            let new_cards = self.repo.get_new_cards(needed as i64).await?;
+            let new_cards = self.repo.get_new_cards(needed as i64, tag_ids).await?;
             for id in &new_cards {
                 self.repo.set_state(*id, "learning", Some(0)).await?;
             }
@@ -61,7 +61,7 @@ impl MemService {
 
         if ids.len() < max_learning as usize {
             let needed = max_learning as usize - ids.len();
-            let upcoming = self.repo.get_upcoming_reviews(needed as i64).await?;
+            let upcoming = self.repo.get_upcoming_reviews(needed as i64, tag_ids).await?;
             ids.extend(upcoming);
         }
 
@@ -415,6 +415,10 @@ impl MemService {
     pub async fn batch_set_tags_for_mems(&self, mem_ids: &[i32], tag_ids: &[i32]) -> Result<(), AppError> {
         self.repo.batch_set_tags_for_mems(mem_ids, tag_ids).await.map_err(AppError::Db)?;
         Ok(())
+    }
+
+    pub async fn get_mems_tags_batch(&self, mem_ids: &[i32]) -> Result<Vec<MemTagRow>, AppError> {
+        self.repo.get_mems_tags_batch(mem_ids).await.map_err(AppError::Db)
     }
 
     pub async fn delete(&self, id: i32) -> Result<(), sqlx::Error> {

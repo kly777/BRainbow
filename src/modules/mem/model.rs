@@ -162,7 +162,7 @@ pub struct TagInfo {
 }
 
 /// 标签 + mem_id 联合查询结果（供 get_mems_tags_batch 使用）
-#[derive(Debug, Clone, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct MemTagRow {
     pub mem_id: i32,
     pub id: i32,

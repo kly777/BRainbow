@@ -35,6 +35,7 @@ pub fn routes() -> Router<AppState> {
         .route("/tag/batch-add", post(handler::batch_add_tag))
         .route("/tag/batch-remove", post(handler::batch_remove_tag))
         .route("/tag/batch-set", post(handler::batch_set_tags))
+        .route("/tag/batch-by-ids", post(handler::batch_get_mems_tags))
         .route("/{id}/review", post(handler::review_mem))
         .route("/{id}/undo", post(handler::undo_review))
         .route("/{id}/preview", get(handler::preview_mem))

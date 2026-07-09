@@ -87,8 +87,13 @@ export const getAllMemsE = (params?: MemQuery): Promise<PaginatedResponse<MemIte
 };
 
 // ⚠️ 复习数据必须实时，不缓存
-export const getDueE = (limit = 50): Promise<DueResponse> =>
-	request(`/mem/due?limit=${limit}`, {});
+export const getDueE = (limit = 50, tagIds?: number[]): Promise<DueResponse> => {
+	let url = `/mem/due?limit=${limit}`;
+	if (tagIds && tagIds.length > 0) {
+		url += `&tag_ids=${tagIds.join(",")}`;
+	}
+	return request(url, {});
+};
 
 export const reviewMemE = (
 	id: number,
@@ -227,6 +232,20 @@ export const batchRemoveTagFromMemsE = (memIds: number[], tagId: number): Promis
 		method: "POST",
 		body: JSON.stringify({ mem_ids: memIds, tag_id: tagId }),
 	}).then((r) => tapInvalidate(CACHE.mem, r));
+
+/** 批量获取多个 mem 的标签，返回每行 { mem_id, id, name, created_at } */
+export interface MemTagRow {
+	mem_id: number;
+	id: number;
+	name: string;
+	created_at: string;
+}
+
+export const batchGetMemsTagsE = (memIds: number[]): Promise<MemTagRow[]> =>
+	request<MemTagRow[]>("/mem/tag/batch-by-ids", {
+		method: "POST",
+		body: JSON.stringify({ ids: memIds }),
+	});
 
 export const batchSetTagsForMemsE = (memIds: number[], tagIds: number[]): Promise<{ ok: boolean }> =>
 	request<{ ok: boolean }>("/mem/tag/batch-set", {

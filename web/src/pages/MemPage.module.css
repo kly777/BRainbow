@@ -341,6 +341,45 @@
 	border-radius: var(--radius-md);
 }
 
+/* ── 标签筛选 ── */
+.tagFilterBar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-xs);
+	max-width: 1440px;
+	margin: 0 auto var(--space-md);
+	padding: 0 var(--space-md);
+}
+
+.tagFilterLabel {
+	font-size: var(--text-xs);
+	color: var(--color-text-muted, #9b8e7a);
+	white-space: nowrap;
+}
+
+.tagFilterChip {
+	padding: var(--space-xs) var(--space-sm);
+	font-size: var(--text-xs);
+	border: 1px solid var(--color-border, #e8dfcc);
+	border-radius: var(--radius-sm, 4px);
+	background: var(--color-surface, #fffef9);
+	color: var(--color-text-muted, #7a6f5e);
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.tagFilterChip:hover {
+	border-color: var(--color-accent, #3b82f6);
+	color: var(--color-accent, #3b82f6);
+}
+
+.tagFilterChipActive {
+	background: var(--color-accent, #3b82f6);
+	color: #fff;
+	border-color: var(--color-accent, #3b82f6);
+}
+
 .allFarBanner {
 	text-align: center;
 	padding: var(--space-sm) 16px;

@@ -9,8 +9,10 @@ import {
 	previewMemE,
 	reviewMemE,
 	suspendMemE,
+	listTagsE,
 	type MemCounts,
 	type MemItem,
+	type TagInfo,
 } from "../apis/memApi.ts";
 import { request } from "../apis/request.ts";
 import MarkdownRenderer from "../components/ui/Markdown.tsx";
@@ -37,6 +39,19 @@ export default function MemPage() {
 	const [upcoming, setUpcoming] = createSignal(0);
 	const [counts, setCounts] = createSignal<MemCounts | null>(null);
 	const [estimatedTotal, setEstimatedTotal] = createSignal(0);
+	const [allTags, setAllTags] = createSignal<TagInfo[]>([]);
+	const [tagFilterIds, setTagFilterIds] = createSignal<number[]>([]);
+
+	const toggleTagFilter = (tagId: number) => {
+		setTagFilterIds((prev) => {
+			if (prev.includes(tagId)) {
+				return prev.filter((id) => id !== tagId);
+			}
+			const next = [...prev, tagId];
+			return next;
+		});
+		setTimeout(loadDue, 0);
+	};
 
 	// ── 动态队列大小 ──
 	// 基于近期评分（1-4）调整一次拉取多少张卡
@@ -82,7 +97,7 @@ export default function MemPage() {
 		setLoading(true);
 		loadCounts();
 		try {
-			const data = await getDueE(maxLearning());
+			const data = await getDueE(maxLearning(), tagFilterIds().length > 0 ? tagFilterIds() : undefined);
 			if (data.items.length === 0 && !data.has_more) {
 				setDone(true);
 				setDue([]);
@@ -108,7 +123,11 @@ export default function MemPage() {
 		setLoading(false);
 	};
 
-	onMount(() => { loadDue(); loadCounts(); });
+	onMount(() => {
+		loadDue();
+		loadCounts();
+		listTagsE().then(setAllTags).catch(() => {});
+	});
 
 	/** 从当前队列移除已复习卡片并推进到下一张，队列空则重新拉取 */
 	const advanceQueue = () => {
@@ -327,6 +346,27 @@ export default function MemPage() {
 						<span class={styles.progressText}>
 							≈ {estimatedTotal()} 次学习
 						</span>
+					</div>
+				</Show>
+
+				<Show when={allTags().length > 0}>
+					<div class={styles.tagFilterBar}>
+						<span class={styles.tagFilterLabel}>标签筛选：</span>
+						<For each={allTags()}>
+							{(tag) => {
+								const active = () => tagFilterIds().includes(tag.id);
+								return (
+									<button
+										type="button"
+										class={styles.tagFilterChip}
+										classList={{ [styles.tagFilterChipActive]: active() }}
+										onClick={() => toggleTagFilter(tag.id)}
+									>
+										{tag.name}
+									</button>
+								);
+							}}
+						</For>
 					</div>
 				</Show>
 

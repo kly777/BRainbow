@@ -217,6 +217,20 @@ pub async fn batch_remove_tag(
     }
 }
 
+pub async fn batch_get_mems_tags(
+    State(state): State<AppState>,
+    Json(payload): Json<BatchIdsRequest>,
+) -> impl IntoResponse {
+    if payload.ids.is_empty() {
+        return Json::<Vec<MemTagRow>>(vec![]).into_response();
+    }
+    let svc = MemService::new(state.db.clone());
+    match svc.get_mems_tags_batch(&payload.ids).await {
+        Ok(rows) => Json(rows).into_response(),
+        Err(e) => err(e, "批量获取标签"),
+    }
+}
+
 pub async fn batch_set_tags(
     State(state): State<AppState>,
     Json(payload): Json<BatchSetTagsRequest>,
@@ -239,8 +253,12 @@ pub async fn get_due(
         .get("limit")
         .and_then(|v| v.parse().ok())
         .unwrap_or(7);
+    let tag_ids: Vec<i32> = params
+        .get("tag_ids")
+        .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
+        .unwrap_or_default();
     let svc = MemService::new(state.db.clone());
-    match svc.get_due(limit).await {
+    match svc.get_due(limit, &tag_ids).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => err(e, "获取待复习"),
     }

@@ -122,8 +122,10 @@ impl MemRepo {
                 qb.push(" AND (cc.content LIKE ");
                 qb.push_bind(&pattern);
                 qb.push(" OR ct.content LIKE ");
+                qb.push_bind(&pattern);
+                qb.push(" OR EXISTS (SELECT 1 FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id AND t.name LIKE ");
                 qb.push_bind(pattern);
-                qb.push(")");
+                qb.push("))");
             }
         }
 
@@ -176,8 +178,10 @@ impl MemRepo {
                 qb.push(" AND (cc.content LIKE ");
                 qb.push_bind(&pattern);
                 qb.push(" OR ct.content LIKE ");
+                qb.push_bind(&pattern);
+                qb.push(" OR EXISTS (SELECT 1 FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id AND t.name LIKE ");
                 qb.push_bind(pattern);
-                qb.push(")");
+                qb.push("))");
             }
         }
 
@@ -201,6 +205,12 @@ impl MemRepo {
             .bind(id)
             .execute(&mut *tx)
             .await?;
+
+        // 记录该 mem 的标签，删除后清理孤儿
+        let mem_tag_ids: Vec<i32> = sqlx::query_scalar("SELECT tag_id FROM mem_tag WHERE mem_id = ?")
+            .bind(id)
+            .fetch_all(&mut *tx)
+            .await?;
         sqlx::query("DELETE FROM mem_prerequisite WHERE mem_id = ? OR requires_mem_id = ?")
             .bind(id)
             .bind(id)
@@ -210,6 +220,20 @@ impl MemRepo {
             .bind(id)
             .execute(&mut *tx)
             .await?;
+
+        // 清理孤儿标签（mem_tag 已由 ON DELETE CASCADE 删除）
+        for &tid in &mem_tag_ids {
+            let cnt: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM mem_tag WHERE tag_id = ?")
+                .bind(tid)
+                .fetch_one(&mut *tx)
+                .await?;
+            if cnt == 0 {
+                sqlx::query("DELETE FROM tag WHERE id = ?")
+                    .bind(tid)
+                    .execute(&mut *tx)
+                    .await?;
+            }
+        }
 
         // 清理不再被任何 mem 引用的孤儿 chunk
         for chunk_id in [cue_id, target_id] {
@@ -253,42 +277,68 @@ impl MemRepo {
         Ok(())
     }
 
-    pub async fn get_learning_mems(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
-        sqlx::query_scalar::<_, i32>(
-            "SELECT id FROM mem WHERE state IN ('learning', 'relearning') AND buried = 0 AND state != 'suspended' ORDER BY due_at LIMIT ?"
-        ).bind(limit).fetch_all(&*self.pool).await
+    /// 如果 tag_ids 非空，构建 EXISTS 子查询过滤
+    fn tag_filter_sql(qb: &mut sqlx::QueryBuilder<sqlx::Sqlite>, tag_ids: &[i32]) {
+        if tag_ids.is_empty() {
+            return;
+        }
+        qb.push(" AND EXISTS (SELECT 1 FROM mem_tag WHERE mem_id = m.id AND tag_id IN (");
+        let mut sep = qb.separated(", ");
+        for &tid in tag_ids {
+            sep.push_bind(tid);
+        }
+        qb.push("))");
+    }
+
+    pub async fn get_learning_mems(&self, limit: i64, tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
+            "SELECT m.id FROM mem m WHERE m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended'"
+        );
+        Self::tag_filter_sql(&mut qb, tag_ids);
+        qb.push(" ORDER BY due_at LIMIT ");
+        qb.push_bind(limit);
+        qb.build_query_scalar().fetch_all(&*self.pool).await
     }
 
     /// 获取到期复习卡（保持 review 状态，不转为 learning）
-    pub async fn get_due_reviews(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
-        sqlx::query_scalar::<_, i32>(
+    pub async fn get_due_reviews(&self, limit: i64, tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.id FROM mem m
             WHERE m.state = 'review' AND m.buried = 0 AND m.state != 'suspended'
               AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
-            ORDER BY m.due_at LIMIT ?"#
-        ).bind(limit).fetch_all(&*self.pool).await
+              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#
+        );
+        Self::tag_filter_sql(&mut qb, tag_ids);
+        qb.push(" ORDER BY m.due_at LIMIT ");
+        qb.push_bind(limit);
+        qb.build_query_scalar().fetch_all(&*self.pool).await
     }
 
     /// 获取新卡（随后由 service 转为 learning 状态）
-    pub async fn get_new_cards(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
-        sqlx::query_scalar::<_, i32>(
+    pub async fn get_new_cards(&self, limit: i64, tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.id FROM mem m
             WHERE m.state = 'new' AND m.buried = 0 AND m.state != 'suspended'
-              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
-            ORDER BY RANDOM() LIMIT ?"#
-        ).bind(limit).fetch_all(&*self.pool).await
+              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#
+        );
+        Self::tag_filter_sql(&mut qb, tag_ids);
+        qb.push(" ORDER BY RANDOM() LIMIT ");
+        qb.push_bind(limit);
+        qb.build_query_scalar().fetch_all(&*self.pool).await
     }
 
     /// 获取将来 review 卡（保持 review 状态，不转为 learning）
-    pub async fn get_upcoming_reviews(&self, limit: i64) -> Result<Vec<i32>, sqlx::Error> {
-        sqlx::query_scalar::<_, i32>(
+    pub async fn get_upcoming_reviews(&self, limit: i64, tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.id FROM mem m
             WHERE m.state = 'review' AND m.buried = 0 AND m.state != 'suspended'
               AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
-            ORDER BY m.due_at LIMIT ?"#
-        ).bind(limit).fetch_all(&*self.pool).await
+              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#
+        );
+        Self::tag_filter_sql(&mut qb, tag_ids);
+        qb.push(" ORDER BY m.due_at LIMIT ");
+        qb.push_bind(limit);
+        qb.build_query_scalar().fetch_all(&*self.pool).await
     }
 
     pub async fn count_upcoming(&self) -> Result<i64, sqlx::Error> {
@@ -495,7 +545,10 @@ impl MemRepo {
 
     pub async fn list_tags(&self, user_id: i32) -> Result<Vec<TagInfo>, sqlx::Error> {
         let rows = sqlx::query_as::<_, TagRow>(
-            "SELECT id, name, created_at FROM tag WHERE user_id = ? ORDER BY name"
+            "SELECT t.id, t.name, t.created_at FROM tag t
+             WHERE t.user_id = ?
+               AND EXISTS (SELECT 1 FROM mem_tag WHERE tag_id = t.id)
+             ORDER BY t.name"
         )
         .bind(user_id)
         .fetch_all(&*self.pool)
@@ -540,21 +593,41 @@ impl MemRepo {
         Ok(())
     }
 
+    /// 删除无任何 mem 关联的孤儿标签
+    async fn delete_orphan_tag(&self, tag_id: i32) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "DELETE FROM tag WHERE id = ? AND NOT EXISTS (SELECT 1 FROM mem_tag WHERE tag_id = ?)"
+        )
+        .bind(tag_id)
+        .bind(tag_id)
+        .execute(&*self.pool)
+        .await?;
+        Ok(())
+    }
+
     pub async fn remove_tag_from_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), sqlx::Error> {
         sqlx::query("DELETE FROM mem_tag WHERE mem_id = ? AND tag_id = ?")
             .bind(mem_id)
             .bind(tag_id)
             .execute(&*self.pool)
             .await?;
+        self.delete_orphan_tag(tag_id).await?;
         Ok(())
     }
 
     pub async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
+        // 记录移除前的旧标签
+        let old_tag_ids: Vec<i32> = sqlx::query_scalar("SELECT tag_id FROM mem_tag WHERE mem_id = ?")
+            .bind(mem_id)
+            .fetch_all(&mut *tx)
+            .await?;
+        // 删除旧的关联
         sqlx::query("DELETE FROM mem_tag WHERE mem_id = ?")
             .bind(mem_id)
             .execute(&mut *tx)
             .await?;
+        // 插入新的
         for &tag_id in tag_ids {
             sqlx::query("INSERT OR IGNORE INTO mem_tag (mem_id, tag_id) VALUES (?, ?)")
                 .bind(mem_id)
@@ -563,6 +636,12 @@ impl MemRepo {
                 .await?;
         }
         tx.commit().await?;
+        // 清理孤儿标签
+        for &tid in &old_tag_ids {
+            if !tag_ids.contains(&tid) {
+                self.delete_orphan_tag(tid).await?;
+            }
+        }
         Ok(())
     }
 
@@ -607,7 +686,6 @@ impl MemRepo {
         if mem_ids.is_empty() {
             return Ok(());
         }
-        // 使用 IN 子句
         let ids_sql = mem_ids.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
         let mut qb = sqlx::QueryBuilder::new(format!("DELETE FROM mem_tag WHERE tag_id = ? AND mem_id IN ({ids_sql})"));
         qb.push_bind(tag_id);
@@ -615,6 +693,8 @@ impl MemRepo {
             qb.push_bind(mid);
         }
         qb.build().execute(&*self.pool).await?;
+        // 清理孤儿标签
+        self.delete_orphan_tag(tag_id).await?;
         Ok(())
     }
 
@@ -623,13 +703,23 @@ impl MemRepo {
             return Ok(());
         }
         let mut tx = self.pool.begin().await?;
-        // 删除所有选中 mem 的现有标签
+        // 记录所有涉及到的旧标签（可能跨多个 mem）
         let ids_sql = mem_ids.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
-        let mut qb = sqlx::QueryBuilder::new(format!("DELETE FROM mem_tag WHERE mem_id IN ({ids_sql})"));
-        for &mid in mem_ids {
-            qb.push_bind(mid);
+        let mut old_tag_ids: Vec<i32> = {
+            let mut qb = sqlx::QueryBuilder::new(format!("SELECT DISTINCT tag_id FROM mem_tag WHERE mem_id IN ({ids_sql})"));
+            for &mid in mem_ids {
+                qb.push_bind(mid);
+            }
+            qb.build_query_scalar().fetch_all(&mut *tx).await?
+        };
+        // 删除旧的关联
+        {
+            let mut qb = sqlx::QueryBuilder::new(format!("DELETE FROM mem_tag WHERE mem_id IN ({ids_sql})"));
+            for &mid in mem_ids {
+                qb.push_bind(mid);
+            }
+            qb.build().execute(&mut *tx).await?;
         }
-        qb.build().execute(&mut *tx).await?;
         // 插入新的标签
         for &mid in mem_ids {
             for &tid in tag_ids {
@@ -641,6 +731,11 @@ impl MemRepo {
             }
         }
         tx.commit().await?;
+        // 清理不再使用的旧标签
+        old_tag_ids.retain(|tid| !tag_ids.contains(tid));
+        for &tid in &old_tag_ids {
+            self.delete_orphan_tag(tid).await?;
+        }
         Ok(())
     }
 
@@ -1051,10 +1146,20 @@ mod tests {
         let t2 = repo.create_tag("教程", uid).await.unwrap();
         assert!(t2.id > t1.id);
 
-        // 列出所有标签
+        // 无 mem 关联 → list_tags 应该为空（只返回有 mem 的标签）
+        assert!(repo.list_tags(uid).await.unwrap().is_empty());
+
+        // 给一个 mem 打上标签后，才会出现
+        let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+        repo.add_tag_to_mem(mem_id, t1.id).await.unwrap();
+        let tags = repo.list_tags(uid).await.unwrap();
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].name, "rust");
+
+        // 再打一个
+        repo.add_tag_to_mem(mem_id, t2.id).await.unwrap();
         let tags = repo.list_tags(uid).await.unwrap();
         assert_eq!(tags.len(), 2);
-        // 默认按 name 排序
         assert_eq!(tags[0].name, "rust");
         assert_eq!(tags[1].name, "教程");
     }
@@ -1237,19 +1342,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn delete_mem_cascades_to_mem_tag() {
+    async fn delete_mem_cleans_orphan_tag() {
         let repo = setup_db().await;
         let uid = create_user(&repo).await;
 
-        let tag = repo.create_tag("级联", uid).await.unwrap();
+        let tag = repo.create_tag("孤儿", uid).await.unwrap();
         let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
         repo.add_tag_to_mem(mem_id, tag.id).await.unwrap();
 
-        // 删除 mem -> mem_tag 应被级联删除（FK ON DELETE CASCADE）
+        // 删除 mem → mem_tag 级联删除 → 标签无 mem 关联 → 自动清理
         repo.delete_mem(mem_id).await.unwrap();
 
-        // 但 tag 本身仍然存在
+        // 标签已被自动删除
         let tags = repo.list_tags(uid).await.unwrap();
-        assert_eq!(tags.len(), 1);
+        assert!(tags.is_empty());
     }
 }

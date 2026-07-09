@@ -2,4 +2,6 @@ mod handler;
 mod model;
 mod repository;
 
-pub use handler::{login_handler, register_handler, user_handler};
+pub use handler::{
+    change_password_handler, login_handler, logout_handler, register_handler, user_handler,
+};

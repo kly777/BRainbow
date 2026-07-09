@@ -57,4 +57,13 @@ impl UserRepository {
             .fetch_one(&*self.db)
             .await
     }
+
+    pub async fn update_password(&self, id: i32, new_hash: &str) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE user SET password_hash = ? WHERE id = ?")
+            .bind(new_hash)
+            .bind(id)
+            .execute(&*self.db)
+            .await?;
+        Ok(())
+    }
 }

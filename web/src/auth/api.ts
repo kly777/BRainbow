@@ -18,3 +18,15 @@ export const registerE = (name: string, password: string): Promise<AuthUser> =>
 		method: "POST",
 		body: JSON.stringify({ name, password }),
 	});
+
+export const logoutE = (): Promise<{ ok: boolean }> =>
+	request("/user/logout", { method: "POST" });
+
+export const changePasswordE = (
+	oldPassword: string,
+	newPassword: string,
+): Promise<{ ok: boolean }> =>
+	request("/user/password", {
+		method: "POST",
+		body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+	});

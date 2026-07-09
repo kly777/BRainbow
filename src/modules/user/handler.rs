@@ -1,13 +1,14 @@
 use axum::{
     extract::State,
     response::{IntoResponse, Json},
+    Extension,
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::repository::UserRepository;
-use crate::auth::create_token;
+use crate::auth::{create_token, Claims};
 use crate::error;
 use crate::state::AppState;
 
@@ -115,5 +116,52 @@ pub async fn user_handler(State(state): State<AppState>) -> impl IntoResponse {
             Json(user_list).into_response()
         }
         Err(e) => error::internal(e, "获取用户"),
+    }
+}
+
+pub async fn logout_handler() -> impl IntoResponse {
+    // JWT 无服务端 session，前端清除 token 即可。
+    // 此端点用于未来添加 token 黑名单。
+    Json(serde_json::json!({ "ok": true }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ChangePasswordRequest {
+    pub old_password: String,
+    pub new_password: String,
+}
+
+pub async fn change_password_handler(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<ChangePasswordRequest>,
+) -> impl IntoResponse {
+    let repo = UserRepository::new(state.db);
+
+    // 验证当前密码
+    let user = match repo.find_by_id(claims.sub).await {
+        Ok(Some(u)) => u,
+        Ok(None) => return error::not_found("用户不存在"),
+        Err(e) => return error::internal(e, "查询用户"),
+    };
+
+    match verify(&payload.old_password, &user.password_hash) {
+        Ok(true) => {}
+        Ok(false) => return error::unauthorized("当前密码错误"),
+        Err(e) => return error::internal(e, "密码验证"),
+    }
+
+    if payload.new_password.len() < 4 {
+        return error::bad_request("新密码至少4位");
+    }
+
+    let new_hash = match hash(&payload.new_password, DEFAULT_COST) {
+        Ok(h) => h,
+        Err(e) => return error::internal(e, "密码加密"),
+    };
+
+    match repo.update_password(claims.sub, &new_hash).await {
+        Ok(()) => Json(serde_json::json!({ "ok": true })).into_response(),
+        Err(e) => error::internal(e, "更新密码"),
     }
 }

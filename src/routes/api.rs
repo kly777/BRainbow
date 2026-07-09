@@ -19,6 +19,8 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
     // ── 需登录的路由 ──
     let authed = Router::new()
         .route("/user", get(user::user_handler))
+        .route("/user/logout", post(user::logout_handler))
+        .route("/user/password", post(user::change_password_handler))
         .nest("/media", media::routes())
         .nest("/cards", card::routes())
         .nest("/onto", onto::routes())

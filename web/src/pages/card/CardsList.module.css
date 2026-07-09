@@ -257,6 +257,49 @@
 	cursor: not-allowed;
 }
 
+.previewSection {
+	margin-top: var(--space-md);
+	padding: var(--space-md);
+	border: 1px solid var(--color-border, #e8dfcc);
+	border-radius: var(--radius-sm);
+	background: var(--color-bg-subtle, #f8f3e6);
+}
+
+.previewLabel {
+	display: block;
+	font-size: 0.75rem;
+	color: var(--color-text-muted, #9b8e7a);
+	margin-bottom: var(--space-xs);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.previewContent {
+	font-size: 0.875rem;
+	line-height: 1.6;
+	color: var(--color-text, #3d3629);
+}
+
+.previewContent p {
+	margin: 0 0 var(--space-sm);
+}
+
+.previewContent p:last-child {
+	margin-bottom: 0;
+}
+
+.state {
+	padding: var(--space-xl) 16px;
+	text-align: center;
+	color: var(--color-text-muted);
+	font-size: var(--text-base);
+}
+
+.errorText {
+	color: var(--color-danger);
+	margin-bottom: 10px;
+}
+
 .modalActions {
 	display: flex;
 	justify-content: flex-end;

@@ -75,6 +75,9 @@
 	flex: 1;
 	margin-bottom: var(--space-md);
 	overflow: hidden;
+	display: -webkit-box;
+	-webkit-line-clamp: 6;
+	-webkit-box-orient: vertical;
 }
 
 .cardPreview {

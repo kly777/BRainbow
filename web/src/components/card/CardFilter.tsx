@@ -1,4 +1,4 @@
-import { type Component, createSignal } from "solid-js";
+import { type Component, createSignal, onCleanup } from "solid-js";
 import styles from "./CardFilter.module.css";
 
 export interface CardFilterProps {
@@ -10,6 +10,23 @@ export interface CardFilterProps {
 
 const CardFilter: Component<CardFilterProps> = (props) => {
 	const [searchQuery, setSearchQuery] = createSignal("");
+	let searchTimer: ReturnType<typeof setTimeout> | undefined;
+	onCleanup(() => clearTimeout(searchTimer));
+
+	const handleSearchInput = (value: string) => {
+		setSearchQuery(value);
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(() => {
+			props.onSearch?.(value.trim());
+		}, 300);
+	};
+
+	const clearSearch = () => {
+		setSearchQuery("");
+		clearTimeout(searchTimer);
+		props.onSearch?.("");
+	};
+
 	const [sortBy, setSortBy] = createSignal<"created" | "updated">(
 		props.sortBy || "updated",
 	);
@@ -29,14 +46,7 @@ const CardFilter: Component<CardFilterProps> = (props) => {
 		props.onSortChange?.(by, sortOrder());
 	};
 
-	const handleSearch = () => {
-		props.onSearch?.(searchQuery().trim());
-	};
 
-	const clearSearch = () => {
-		setSearchQuery("");
-		props.onSearch?.("");
-	};
 
 	return (
 		<div class={styles.filters}>
@@ -47,10 +57,7 @@ const CardFilter: Component<CardFilterProps> = (props) => {
 						class={styles.searchInput}
 						placeholder="搜索卡片..."
 						value={searchQuery()}
-						onInput={(e) => setSearchQuery(e.currentTarget.value)}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") handleSearch();
-						}}
+						onInput={(e) => handleSearchInput(e.currentTarget.value)}
 					/>
 					<span class={styles.filterLabel}>排序:</span>
 					<select

@@ -45,6 +45,13 @@ export const ROUTES: RouteConfig[] = [
 		component: lazy(() => import("./pages/card/CardsList.tsx")),
 	},
 	{
+		path: "/c/add",
+		label: "新建卡片",
+		desc: "",
+		nav: false,
+		component: lazy(() => import("./pages/card/CardAdd.tsx")),
+	},
+	{
 		path: "/c/:id",
 		label: "卡片详情",
 		desc: "",

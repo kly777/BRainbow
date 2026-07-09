@@ -1,0 +1,74 @@
+.container {
+	max-width: 1440px;
+	margin: 0 auto;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.toolbar {
+	display: flex;
+	align-items: center;
+	gap: var(--space-md);
+	padding: var(--space-sm) 16px;
+	background: var(--color-surface-raised);
+	border-bottom: 1px solid var(--color-border);
+	flex-shrink: 0;
+}
+
+.toolbarTitle {
+	font-size: var(--text-base);
+	font-weight: 500;
+	color: var(--color-text-secondary);
+}
+
+.toolbarActions {
+	margin-left: auto;
+	display: flex;
+	gap: var(--space-sm);
+}
+
+.backBtn {
+	padding: var(--space-xs) 10px;
+	font-size: var(--text-sm);
+	background: var(--color-bg);
+	color: var(--color-text-secondary);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	cursor: pointer;
+}
+.backBtn:hover {
+	background: var(--color-surface-raised);
+}
+
+.saveBtn {
+	padding: var(--space-xs) 14px;
+	font-size: var(--text-sm);
+	background: var(--color-accent);
+	color: var(--color-bg);
+	border: none;
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	font-weight: 500;
+}
+.saveBtn:hover {
+	background: var(--color-accent-hover);
+}
+.saveBtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.errorMsg {
+	padding: var(--space-sm) 16px;
+	background: var(--color-danger-subtle);
+	color: var(--color-danger);
+	font-size: var(--text-sm);
+	border-bottom: 1px solid var(--color-danger);
+}
+
+.editorArea {
+	flex: 1;
+	display: flex;
+	min-height: 0;
+}

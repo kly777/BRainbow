@@ -11,7 +11,6 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
     let public = Router::new()
         .route("/user/register", post(user::register_handler))
         .route("/user/login", post(user::login_handler))
-        .nest("/mem", mem::routes())
         .nest("/text", text::routes())
         .nest("/media", media::public_file_route())
         .nest("/conv", conv::routes());
@@ -21,6 +20,7 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         .route("/user", get(user::user_handler))
         .route("/user/logout", post(user::logout_handler))
         .route("/user/password", post(user::change_password_handler))
+        .nest("/mem", mem::routes())
         .nest("/media", media::routes())
         .nest("/cards", card::routes())
         .nest("/onto", onto::routes())

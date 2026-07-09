@@ -1,0 +1,112 @@
+/* ── 右侧详情 ── */
+.detail {
+	width: 320px;
+	flex-shrink: 0;
+	overflow-y: auto;
+	padding: var(--space-xl);
+	background: var(--color-surface, #fffef9);
+}
+
+.section {
+	margin-bottom: var(--space-lg);
+}
+
+.sectionLabel {
+	font-size: var(--text-xs);
+	text-transform: uppercase;
+	color: var(--color-text-muted, #9b8e7a);
+	margin-bottom: 4px;
+	display: block;
+}
+
+.content {
+	font-size: var(--text-base);
+	line-height: 1.7;
+	color: var(--color-text, #3d3629);
+}
+
+.meta {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
+	font-size: var(--text-sm);
+	color: var(--color-text-secondary, #6b5e4a);
+	padding: var(--space-md) 0;
+	border-top: 1px solid var(--color-border, #e8dfcc);
+	margin-top: var(--space-md);
+}
+
+.actionBtns {
+	display: flex;
+	gap: var(--space-sm);
+	margin-top: var(--space-md);
+}
+
+.editBtn {
+	flex: 1;
+	padding: var(--space-sm);
+	font-size: var(--text-sm);
+	border: 1px solid var(--color-border, #e8dfcc);
+	border-radius: var(--radius-md);
+	background: var(--color-surface, #fffef9);
+	color: var(--color-text-secondary, #6b5e4a);
+	cursor: pointer;
+}
+
+.editBtn:hover {
+	background: var(--color-surface-raised, #f0e8d5);
+}
+
+.cancelBtn {
+	flex: 1;
+	padding: var(--space-sm);
+	font-size: var(--text-sm);
+	border: 1px solid var(--color-border, #e8dfcc);
+	border-radius: var(--radius-md);
+	background: var(--color-surface, #fffef9);
+	color: var(--color-text-secondary, #6b5e4a);
+	cursor: pointer;
+}
+
+.cancelBtn:hover {
+	background: var(--color-surface-raised, #f0e8d5);
+}
+
+.editArea {
+	width: 100%;
+	padding: var(--space-sm);
+	font-size: var(--text-sm);
+	font-family: inherit;
+	border: 1px solid var(--color-border, #e8dfcc);
+	border-radius: var(--radius-md);
+	background: var(--color-bg, #fefcf5);
+	color: var(--color-text, #3d3629);
+	resize: vertical;
+}
+
+.editArea:focus {
+	outline: none;
+	border-color: var(--color-accent, #3b82f6);
+}
+
+.deleteBtn {
+	flex: 1;
+	padding: var(--space-sm);
+	font-size: var(--text-sm);
+	border: 1px solid var(--color-danger-border, #fca5a5);
+	border-radius: var(--radius-md);
+	background: var(--color-danger-light, #fef2f2);
+	color: var(--color-danger, #c53030);
+	cursor: pointer;
+}
+
+.deleteBtn:hover {
+	background: var(--color-danger-subtle, #f8d7da);
+}
+
+.empty {
+	text-align: center;
+	padding: var(--space-xl);
+	color: var(--color-text-muted, #9b8e7a);
+	font-size: var(--text-base);
+}

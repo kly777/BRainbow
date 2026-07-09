@@ -421,6 +421,111 @@ impl MemService {
         self.repo.get_mems_tags_batch(mem_ids).await.map_err(AppError::Db)
     }
 
+    // ── CSV/JSON 导入导出 ──
+
+    pub async fn export_csv(&self, tag_ids: &[i32]) -> Result<String, AppError> {
+        let rows = self.repo.export_all_mems(tag_ids).await.map_err(AppError::Db)?;
+        let mut wtr = csv::Writer::from_writer(Vec::new());
+        wtr.write_record(["cue", "target", "tags"]).map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string().into())))?;
+
+        for (cue, target, tags) in &rows {
+            wtr.write_record([cue, target, tags]).map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string().into())))?;
+        }
+
+        wtr.flush().map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string().into())))?;
+        let data = wtr.into_inner().map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string().into())))?;
+        String::from_utf8(data).map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string().into())))
+    }
+
+    async fn apply_tags_to_mem(&self, mem_id: i32, tags_str: &str, default_tags: &[String], user_id: i32) -> Result<(), AppError> {
+        // 处理 CSV 中的标签 + 默认标签
+        let mut all_names: Vec<String> = tags_str.split([';', ',']).map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+        for dt in default_tags {
+            if !all_names.contains(dt) {
+                all_names.push(dt.clone());
+            }
+        }
+        for name in &all_names {
+            let tag = match self.repo.search_tags(user_id, name).await.map_err(AppError::Db)?.into_iter().find(|t| t.name == *name) {
+                Some(t) => t,
+                None => self.repo.create_tag(name, user_id).await.map_err(AppError::Db)?,
+            };
+            self.repo.add_tag_to_mem(mem_id, tag.id).await.map_err(AppError::Db)?;
+        }
+        Ok(())
+    }
+
+    pub async fn import_csv(&self, csv_data: &str, user_id: i32, default_tags: &[String]) -> Result<(usize, Vec<String>), AppError> {
+        let mut reader = csv::ReaderBuilder::new()
+            .has_headers(true)
+            .flexible(true)
+            .from_reader(csv_data.as_bytes());
+
+        let mut count = 0usize;
+        let mut errors = Vec::new();
+
+        for (i, result) in reader.records().enumerate() {
+            match result {
+                Ok(record) => {
+                    let cue = record.get(0).unwrap_or("");
+                    let target = record.get(1).unwrap_or("");
+                    let tags_str = record.get(2).unwrap_or("");
+
+                    if cue.trim().is_empty() || target.trim().is_empty() {
+                        errors.push(format!("行 {}: 线索或答案为空", i + 2));
+                        continue;
+                    }
+
+                    // 创建 mem
+                    let cue_id = self.repo.create_chunk(cue).await.map_err(AppError::Db)?;
+                    let target_id = self.repo.create_chunk(target).await.map_err(AppError::Db)?;
+                    let mem_id = self.repo.create_mem(cue_id, target_id, &[]).await.map_err(AppError::Db)?;
+
+                    // 处理标签（CSV 中标签 + 默认标签）
+                    self.apply_tags_to_mem(mem_id, tags_str, default_tags, user_id).await?;
+
+                    count += 1;
+                }
+                Err(e) => {
+                    errors.push(format!("行 {}: {}", i + 2, e));
+                }
+            }
+        }
+
+        Ok((count, errors))
+    }
+
+    pub async fn import_json(
+        &self,
+        mems: &[JsonMemItem],
+        user_id: i32,
+        default_tags: &[String],
+    ) -> Result<(usize, Vec<String>), AppError> {
+        let mut count = 0usize;
+        let mut errors = Vec::new();
+
+        for (i, item) in mems.iter().enumerate() {
+            let cue = item.cue.trim();
+            let target = item.target.trim();
+
+            if cue.is_empty() || target.is_empty() {
+                errors.push(format!("项 {}: 线索或答案为空", i + 1));
+                continue;
+            }
+
+            let cue_id = self.repo.create_chunk(cue).await.map_err(AppError::Db)?;
+            let target_id = self.repo.create_chunk(target).await.map_err(AppError::Db)?;
+            let mem_id = self.repo.create_mem(cue_id, target_id, &[]).await.map_err(AppError::Db)?;
+
+            let tags_str = item.tags.join("; ");
+            self.apply_tags_to_mem(mem_id, &tags_str, default_tags, user_id).await?;
+
+            count += 1;
+        }
+
+        Ok((count, errors))
+    }
+
     pub async fn delete(&self, id: i32) -> Result<(), sqlx::Error> {
         self.repo.delete_mem(id).await
     }

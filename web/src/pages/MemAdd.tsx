@@ -1,6 +1,7 @@
-import { createSignal, Show } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
-import { createMemE } from "../apis/memApi.ts";
+import { createMemE, importCsvE, importJsonE } from "../apis/memApi.ts";
+import { showToast } from "../components/ui/toastStore.ts";
 import MarkdownEditor from "../components/ui/MarkdownEditor.tsx";
 import styles from "./MemAdd.module.css";
 
@@ -26,7 +27,11 @@ export default function MemAdd() {
 	const [batchText, setBatchText] = createSignal("");
 	const [jsonText, setJsonText] = createSignal("");
 	const [batchCount, setBatchCount] = createSignal(0);
-	const [mode, setMode] = createSignal<"single" | "batch" | "json">("single");
+	const [mode, setMode] = createSignal<"single" | "batch" | "json" | "csv">("single");
+	const [importFile, setImportFile] = createSignal<File | null>(null);
+	const [importing, setImporting] = createSignal(false);
+	const [importDefaultTags, setImportDefaultTags] = createSignal("");
+	const [importResult, setImportResult] = createSignal<{ imported: number; errors: string[] } | null>(null);
 
 	const handleCreate = async () => {
 		if (!cue().trim() || !target().trim()) return;
@@ -132,6 +137,13 @@ export default function MemAdd() {
 						onClick={() => setMode("json")}
 					>
 						JSON
+					</button>
+					<button
+						type="button"
+						class={mode() === "csv" ? styles.modeActive : styles.modeBtn}
+						onClick={() => setMode("csv")}
+					>
+						导入
 					</button>
 				</div>
 			</div>
@@ -243,6 +255,76 @@ export default function MemAdd() {
 								: `批量创建 (${currentCount()} 条)`}
 						</button>
 					</div>
+				</Show>
+
+				<Show when={mode() === "csv"}>
+					<Show when={importResult()}>
+						<div class={styles.importResult}>
+							<p>已导入 {importResult()!.imported} 条记忆</p>
+							<Show when={(importResult()?.errors.length ?? 0) > 0}>
+								<p class={styles.importErrors}>错误：</p>
+								<ul class={styles.importErrorList}>
+									<For each={importResult()!.errors}>{(e) => <li>{e}</li>}</For>
+								</ul>
+							</Show>
+							<button type="button" class={styles.submit} onClick={() => { setImportResult(null); setImportFile(null); }}>
+								继续导入
+							</button>
+						</div>
+					</Show>
+					<Show when={!importResult()}>
+						<p class={styles.hint}>
+							支持 CSV（<code>cue,target,tags</code>）和 JSON 文件
+						</p>
+						<input
+							type="file"
+							accept=".csv,.json"
+							class={styles.fileInput}
+							onChange={(e) => setImportFile(e.currentTarget.files?.[0] ?? null)}
+						/>
+						<div class={styles.formGroup}>
+							<label class={styles.label}>默认标签（可选）</label>
+							<input
+								type="text"
+								class={styles.textInput}
+								placeholder="标签1; 标签2"
+								value={importDefaultTags()}
+								onInput={(e) => setImportDefaultTags(e.currentTarget.value)}
+							/>
+						</div>
+						<div class={styles.actions}>
+							<button type="button" class={styles.cancel} onClick={() => navigate("/m")}>取消</button>
+							<button
+								type="button"
+								class={styles.submit}
+								disabled={!importFile() || importing()}
+								onClick={async () => {
+									const file = importFile();
+									if (!file) return;
+									setImporting(true);
+									try {
+										const text = await file.text();
+										const tags = importDefaultTags().split(/[;,]/).map(s => s.trim()).filter(Boolean);
+										let result;
+										if (file.name.endsWith(".json")) {
+											const json = JSON.parse(text);
+											const mems = Array.isArray(json) ? json : (json.mems ?? []);
+											result = await importJsonE(mems, tags.length > 0 ? tags : undefined);
+										} else {
+											result = await importCsvE(text, tags.length > 0 ? tags : undefined);
+										}
+										setImportResult(result);
+									} catch (err: unknown) {
+										showToast({ type: "error", title: "导入失败", message: String(err), duration: 5000 });
+									} finally {
+										setImporting(false);
+									}
+								}}
+							>
+								{importing() ? "导入中…" : `导入${importFile() ? ` (${importFile()!.name})` : ""}`}
+							</button>
+						</div>
+					</Show>
 				</Show>
 			</div>
 		</div>

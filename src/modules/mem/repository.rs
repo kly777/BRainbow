@@ -739,6 +739,28 @@ impl MemRepo {
         Ok(())
     }
 
+    pub async fn export_all_mems(&self, tag_ids: &[i32]) -> Result<Vec<(String, String, String)>, sqlx::Error> {
+        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
+            "SELECT cc.content AS cue, ct.content AS target,
+                COALESCE((SELECT GROUP_CONCAT(t.name, '; ') FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id), '') AS tags
+             FROM mem m
+             JOIN chunk cc ON cc.id = m.cue_chunk_id
+             JOIN chunk ct ON ct.id = m.target_chunk_id"
+        );
+
+        if !tag_ids.is_empty() {
+            qb.push(" WHERE m.id IN (SELECT mem_id FROM mem_tag WHERE tag_id IN (");
+            let mut sep = qb.separated(", ");
+            for &tid in tag_ids {
+                sep.push_bind(tid);
+            }
+            qb.push("))");
+        }
+
+        qb.push(" ORDER BY m.id");
+        qb.build_query_as::<(String, String, String)>().fetch_all(&*self.pool).await
+    }
+
     pub async fn reset_mem(&self, id: i32) -> Result<(), sqlx::Error> {
         sqlx::query(
             "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?"

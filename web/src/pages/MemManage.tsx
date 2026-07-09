@@ -19,6 +19,8 @@ import {
 	batchRemoveTagFromMemsE,
 	batchSetTagsForMemsE,
 	batchGetMemsTagsE,
+	downloadExportCsv,
+	listTagsE,
 	type MemItem,
 	type TagInfo,
 	type MemTagRow,
@@ -169,6 +171,12 @@ export default function MemManage() {
 	};
 
 	// ── 批量标签 ──
+	// ── 导入导出 ──
+	const [showExportModal, setShowExportModal] = createSignal(false);
+	const [exportTagIds, setExportTagIds] = createSignal<number[]>([]);
+	const [allUserTags, setAllUserTags] = createSignal<TagInfo[]>([]);
+	onMount(() => { listTagsE().then(setAllUserTags).catch(() => {}); });
+
 	const [showBatchTagModal, setShowBatchTagModal] = createSignal(false);
 	const [batchTagMode, setBatchTagMode] = createSignal<"add" | "remove" | "set">("add");
 
@@ -336,6 +344,9 @@ export default function MemManage() {
 					value={searchQuery()}
 					onInput={(e) => { handleSearchInput(e.currentTarget.value); }}
 				/>
+				<div class={styles.toolRow}>
+					<button type="button" class={styles.toolBtn} onClick={() => setShowExportModal(true)}>导出</button>
+				</div>
 				<div class={styles.filterGroup}>
 					{[
 						["all", "全部"],
@@ -667,6 +678,35 @@ export default function MemManage() {
 						onRemove={() => {}}
 					/>
 			</Modal>
+			{/* 导出 Modal */}
+			<Modal
+				isOpen={showExportModal()}
+				onClose={() => setShowExportModal(false)}
+				title="导出记忆"
+			>
+				<p style={{ "margin-bottom": "var(--space-md)", "font-size": "var(--text-sm)", color: "var(--color-text-muted)" }}>
+					可选：按标签筛选导出（不选则导出全部）
+				</p>
+				<TagSelector
+					tags={allUserTags().filter((t) => exportTagIds().includes(t.id))}
+					onAdd={(tag) => setExportTagIds((prev) => [...prev, tag.id])}
+					onRemove={(tagId) => setExportTagIds((prev) => prev.filter((id) => id !== tagId))}
+				/>
+				<div style={{ "margin-top": "var(--space-md)", display: "flex", "justify-content": "flex-end", gap: "var(--space-sm)" }}>
+					<button
+						type="button"
+						class={styles.editBtn}
+						onClick={() => {
+							downloadExportCsv(exportTagIds().length > 0 ? exportTagIds() : undefined);
+							setShowExportModal(false);
+						}}
+					>
+						下载 CSV
+					</button>
+				</div>
+			</Modal>
+
+			
 		</div>
 	);
 }

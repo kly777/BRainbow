@@ -3,6 +3,7 @@ use axum::{
     extract::{Extension, Path, Query, State},
     response::IntoResponse,
 };
+use serde::Deserialize;
 
 use crate::auth::Claims;
 use std::collections::HashMap;
@@ -228,6 +229,72 @@ pub async fn batch_get_mems_tags(
     match svc.get_mems_tags_batch(&payload.ids).await {
         Ok(rows) => Json(rows).into_response(),
         Err(e) => err(e, "批量获取标签"),
+    }
+}
+
+// ── CSV 导入导出 ──
+
+pub async fn export_csv(
+    State(state): State<AppState>,
+    Extension(_claims): Extension<Claims>,
+    Query(params): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let tag_ids: Vec<i32> = params
+        .get("tag_ids")
+        .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
+        .unwrap_or_default();
+    let svc = MemService::new(state.db.clone());
+    match svc.export_csv(&tag_ids).await {
+        Ok(csv) => (
+            [("Content-Type", "text/csv; charset=utf-8"),
+             ("Content-Disposition", "attachment; filename=\"mems.csv\"")],
+            csv,
+        ).into_response(),
+        Err(e) => err(e, "导出 CSV"),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct ImportCsvPayload {
+    pub csv: String,
+    #[serde(default)]
+    pub default_tags: Vec<String>,
+}
+
+pub async fn import_csv(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<ImportCsvPayload>,
+) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.import_csv(&payload.csv, claims.sub, &payload.default_tags).await {
+        Ok((count, errors)) => Json(serde_json::json!({
+            "imported": count,
+            "errors": errors,
+        })).into_response(),
+        Err(e) => err(e, "导入 CSV"),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct ImportJsonPayload {
+    pub mems: Vec<JsonMemItem>,
+    #[serde(default)]
+    pub default_tags: Vec<String>,
+}
+
+pub async fn import_json(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<ImportJsonPayload>,
+) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.import_json(&payload.mems, claims.sub, &payload.default_tags).await {
+        Ok((count, errors)) => Json(serde_json::json!({
+            "imported": count,
+            "errors": errors,
+        })).into_response(),
+        Err(e) => err(e, "导入 JSON"),
     }
 }
 

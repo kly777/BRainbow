@@ -204,6 +204,15 @@ pub struct BatchSetTagsRequest {
     pub tag_ids: Vec<i32>,
 }
 
+/// JSON 导入的单条记忆
+#[derive(Debug, Clone, Deserialize)]
+pub struct JsonMemItem {
+    pub cue: String,
+    pub target: String,
+    #[serde(default)]
+    pub tags: Vec<String>,
+}
+
 /// MemWithTags — 供列表用
 #[derive(Debug, Clone, Serialize)]
 pub struct MemWithTags {

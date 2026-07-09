@@ -253,6 +253,67 @@ export const batchSetTagsForMemsE = (memIds: number[], tagIds: number[]): Promis
 		body: JSON.stringify({ mem_ids: memIds, tag_ids: tagIds }),
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
+// ── CSV 导入导出 ──
+
+export const exportCsvE = (): Promise<Blob> =>
+	request<Blob>("/mem/export/csv", {}).then((r) => {
+		// request returns parsed JSON by default, but we need the raw response
+		// This won't work with the standard request() function
+		throw new Error("use exportCsvDownload directly");
+	});
+
+export async function downloadExportCsv(tagIds?: number[]): Promise<void> {
+	const token = (await import("../auth/context.tsx")).getToken();
+	const headers: Record<string, string> = {};
+	if (token) headers["Authorization"] = `Bearer ${token}`;
+
+	let url = "/api/mem/export/csv";
+	if (tagIds && tagIds.length > 0) {
+		url += `?tag_ids=${tagIds.join(",")}`;
+	}
+
+	const response = await fetch(url, { headers });
+	if (!response.ok) {
+		const err = await response.text();
+		throw new Error(err || "导出失败");
+	}
+	const blob = await response.blob();
+	const downloadUrl = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = downloadUrl;
+	a.download = `mems_${new Date().toISOString().slice(0, 10)}.csv`;
+	a.click();
+	URL.revokeObjectURL(downloadUrl);
+}
+
+export interface ImportCsvResult {
+	imported: number;
+	errors: string[];
+}
+
+export const importCsvE = (csvContent: string, defaultTags?: string[]): Promise<ImportCsvResult> =>
+	request<ImportCsvResult>("/mem/import/csv", {
+		method: "POST",
+		body: JSON.stringify({ csv: csvContent, default_tags: defaultTags ?? [] }),
+	}).then((r) => tapInvalidate(CACHE.mem, r));
+
+export interface ImportJsonItem {
+	cue: string;
+	target: string;
+	tags?: string[];
+}
+
+export interface ImportJsonResult {
+	imported: number;
+	errors: string[];
+}
+
+export const importJsonE = (mems: ImportJsonItem[], defaultTags?: string[]): Promise<ImportJsonResult> =>
+	request<ImportJsonResult>("/mem/import/json", {
+		method: "POST",
+		body: JSON.stringify({ mems, default_tags: defaultTags ?? [] }),
+	}).then((r) => tapInvalidate(CACHE.mem, r));
+
 export const uploadImage = async (file: File): Promise<string | null> => {
 	try {
 		const { uploadMedia } = await import("./mediaApi.ts");

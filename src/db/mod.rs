@@ -312,6 +312,37 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
+    // ── 标签系统 (mem) ──
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS tag (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES user(id),
+            UNIQUE(name, user_id)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS mem_tag (
+            mem_id INTEGER NOT NULL,
+            tag_id INTEGER NOT NULL,
+            PRIMARY KEY (mem_id, tag_id),
+            FOREIGN KEY (mem_id) REFERENCES mem(id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
     // ── 对话系统 (conv) ──
 
     sqlx::query(

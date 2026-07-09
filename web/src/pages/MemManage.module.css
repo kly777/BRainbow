@@ -428,6 +428,22 @@
 
 .batchBtnReset,
 .batchBtnBury,
+.batchBtnTag,
+.batchBtnTagRemove {
+	padding: var(--space-xs) var(--space-md);
+	border: 1px solid var(--color-accent, #3b82f6);
+	border-radius: var(--radius-md);
+	font-size: var(--text-sm);
+	cursor: pointer;
+	background: var(--color-surface, #fffef9);
+	color: var(--color-accent, #3b82f6);
+}
+
+.batchBtnTag:hover,
+.batchBtnTagRemove:hover {
+	background: var(--color-accent-light, #e8f0fe);
+}
+
 .batchBtnDelete {
 	padding: var(--space-xs) var(--space-md);
 	font-size: var(--text-sm);

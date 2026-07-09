@@ -358,6 +358,65 @@ impl MemService {
     pub async fn unbury(&self, id: i32) -> Result<(), sqlx::Error> {
         self.repo.unbury_mem(id).await
     }
+    // ── 标签 ──
+
+    pub async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, AppError> {
+        self.repo.create_tag(name, user_id).await.map_err(AppError::Db)
+    }
+
+    pub async fn delete_tag(&self, id: i32) -> Result<(), AppError> {
+        self.repo.delete_tag(id).await.map_err(AppError::Db)?;
+        Ok(())
+    }
+
+    pub async fn list_tags(&self, user_id: i32) -> Result<Vec<TagInfo>, AppError> {
+        self.repo.list_tags(user_id).await.map_err(AppError::Db)
+    }
+
+    pub async fn search_tags(&self, user_id: i32, q: &str) -> Result<Vec<TagInfo>, AppError> {
+        self.repo.search_tags(user_id, q).await.map_err(AppError::Db)
+    }
+
+    pub async fn get_mem_tags(&self, mem_id: i32) -> Result<Vec<TagInfo>, AppError> {
+        self.repo.get_mem_tags(mem_id).await.map_err(AppError::Db)
+    }
+
+    pub async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), AppError> {
+        // 验证 mem 存在
+        self.repo.get_mem(mem_id).await?.ok_or(AppError::NotFound)?;
+        self.repo.add_tag_to_mem(mem_id, tag_id).await.map_err(AppError::Db)?;
+        Ok(())
+    }
+
+    pub async fn remove_tag_from_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), AppError> {
+        self.repo.remove_tag_from_mem(mem_id, tag_id).await.map_err(AppError::Db)?;
+        Ok(())
+    }
+
+    pub async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), AppError> {
+        // 验证 mem 存在
+        self.repo.get_mem(mem_id).await?.ok_or(AppError::NotFound)?;
+        self.repo.set_mem_tags(mem_id, tag_ids).await.map_err(AppError::Db)?;
+        Ok(())
+    }
+
+    // ── 批量标签 ──
+
+    pub async fn batch_add_tag_to_mems(&self, mem_ids: &[i32], tag_id: i32) -> Result<(), AppError> {
+        self.repo.batch_add_tag_to_mems(mem_ids, tag_id).await.map_err(AppError::Db)?;
+        Ok(())
+    }
+
+    pub async fn batch_remove_tag_from_mems(&self, mem_ids: &[i32], tag_id: i32) -> Result<(), AppError> {
+        self.repo.batch_remove_tag_from_mems(mem_ids, tag_id).await.map_err(AppError::Db)?;
+        Ok(())
+    }
+
+    pub async fn batch_set_tags_for_mems(&self, mem_ids: &[i32], tag_ids: &[i32]) -> Result<(), AppError> {
+        self.repo.batch_set_tags_for_mems(mem_ids, tag_ids).await.map_err(AppError::Db)?;
+        Ok(())
+    }
+
     pub async fn delete(&self, id: i32) -> Result<(), sqlx::Error> {
         self.repo.delete_mem(id).await
     }

@@ -1,7 +1,14 @@
 use sqlx::{FromRow, SqlitePool, QueryBuilder};
 use std::sync::Arc;
 
-use super::model::{Chunk, MemQuery};
+use super::model::{Chunk, MemQuery, MemTagRow, TagInfo};
+
+#[derive(Debug, sqlx::FromRow)]
+struct TagRow {
+    id: i32,
+    name: String,
+    created_at: String,
+}
 
 #[derive(Debug, FromRow)]
 pub struct MemRow {
@@ -465,6 +472,178 @@ impl MemRepo {
         Ok(())
     }
 
+    // ── 标签 ──
+
+    pub async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, sqlx::Error> {
+        let row = sqlx::query_as::<_, TagRow>(
+            "INSERT INTO tag (name, user_id) VALUES (?, ?) RETURNING id, name, created_at"
+        )
+        .bind(name)
+        .bind(user_id)
+        .fetch_one(&*self.pool)
+        .await?;
+        Ok(TagInfo { id: row.id, name: row.name, created_at: row.created_at })
+    }
+
+    pub async fn delete_tag(&self, id: i32) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM tag WHERE id = ?")
+            .bind(id)
+            .execute(&*self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn list_tags(&self, user_id: i32) -> Result<Vec<TagInfo>, sqlx::Error> {
+        let rows = sqlx::query_as::<_, TagRow>(
+            "SELECT id, name, created_at FROM tag WHERE user_id = ? ORDER BY name"
+        )
+        .bind(user_id)
+        .fetch_all(&*self.pool)
+        .await?;
+        Ok(rows.into_iter().map(|r| TagInfo { id: r.id, name: r.name, created_at: r.created_at }).collect())
+    }
+
+    pub async fn search_tags(&self, user_id: i32, q: &str) -> Result<Vec<TagInfo>, sqlx::Error> {
+        if q.is_empty() {
+            return Ok(vec![]);
+        }
+        let rows = sqlx::query_as::<_, TagRow>(
+            "SELECT id, name, created_at FROM tag WHERE user_id = ? AND name LIKE ? ORDER BY name LIMIT 20"
+        )
+        .bind(user_id)
+        .bind(format!("%{}%", q))
+        .fetch_all(&*self.pool)
+        .await?;
+        Ok(rows.into_iter().map(|r| TagInfo { id: r.id, name: r.name, created_at: r.created_at }).collect())
+    }
+
+    pub async fn get_mem_tags(&self, mem_id: i32) -> Result<Vec<TagInfo>, sqlx::Error> {
+        let rows = sqlx::query_as::<_, TagRow>(
+            "SELECT t.id, t.name, t.created_at
+             FROM tag t
+             JOIN mem_tag mt ON mt.tag_id = t.id
+             WHERE mt.mem_id = ?
+             ORDER BY t.name"
+        )
+        .bind(mem_id)
+        .fetch_all(&*self.pool)
+        .await?;
+        Ok(rows.into_iter().map(|r| TagInfo { id: r.id, name: r.name, created_at: r.created_at }).collect())
+    }
+
+    pub async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), sqlx::Error> {
+        sqlx::query("INSERT OR IGNORE INTO mem_tag (mem_id, tag_id) VALUES (?, ?)")
+            .bind(mem_id)
+            .bind(tag_id)
+            .execute(&*self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn remove_tag_from_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM mem_tag WHERE mem_id = ? AND tag_id = ?")
+            .bind(mem_id)
+            .bind(tag_id)
+            .execute(&*self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("DELETE FROM mem_tag WHERE mem_id = ?")
+            .bind(mem_id)
+            .execute(&mut *tx)
+            .await?;
+        for &tag_id in tag_ids {
+            sqlx::query("INSERT OR IGNORE INTO mem_tag (mem_id, tag_id) VALUES (?, ?)")
+                .bind(mem_id)
+                .bind(tag_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
+    pub async fn get_mems_tags_batch(&self, mem_ids: &[i32]) -> Result<Vec<MemTagRow>, sqlx::Error> {
+        if mem_ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let mut qb = sqlx::QueryBuilder::new(
+            "SELECT mt.mem_id, t.id, t.name, t.created_at
+             FROM mem_tag mt
+             JOIN tag t ON t.id = mt.tag_id
+             WHERE mt.mem_id IN ("
+        );
+        let mut separated = qb.separated(", ");
+        for &id in mem_ids {
+            separated.push_bind(id);
+        }
+        separated.push_unseparated(")");
+        let rows: Vec<MemTagRow> = qb.build_query_as().fetch_all(&*self.pool).await?;
+        Ok(rows)
+    }
+
+    // ── 批量标签 ──
+
+    pub async fn batch_add_tag_to_mems(&self, mem_ids: &[i32], tag_id: i32) -> Result<(), sqlx::Error> {
+        if mem_ids.is_empty() {
+            return Ok(());
+        }
+        let mut tx = self.pool.begin().await?;
+        for &mid in mem_ids {
+            sqlx::query("INSERT OR IGNORE INTO mem_tag (mem_id, tag_id) VALUES (?, ?)")
+                .bind(mid)
+                .bind(tag_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
+    pub async fn batch_remove_tag_from_mems(&self, mem_ids: &[i32], tag_id: i32) -> Result<(), sqlx::Error> {
+        if mem_ids.is_empty() {
+            return Ok(());
+        }
+        // 使用 IN 子句
+        let ids_sql = mem_ids.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+        let mut qb = sqlx::QueryBuilder::new(format!("DELETE FROM mem_tag WHERE tag_id = ? AND mem_id IN ({ids_sql})"));
+        qb.push_bind(tag_id);
+        for &mid in mem_ids {
+            qb.push_bind(mid);
+        }
+        qb.build().execute(&*self.pool).await?;
+        Ok(())
+    }
+
+    pub async fn batch_set_tags_for_mems(&self, mem_ids: &[i32], tag_ids: &[i32]) -> Result<(), sqlx::Error> {
+        if mem_ids.is_empty() {
+            return Ok(());
+        }
+        let mut tx = self.pool.begin().await?;
+        // 删除所有选中 mem 的现有标签
+        let ids_sql = mem_ids.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+        let mut qb = sqlx::QueryBuilder::new(format!("DELETE FROM mem_tag WHERE mem_id IN ({ids_sql})"));
+        for &mid in mem_ids {
+            qb.push_bind(mid);
+        }
+        qb.build().execute(&mut *tx).await?;
+        // 插入新的标签
+        for &mid in mem_ids {
+            for &tid in tag_ids {
+                sqlx::query("INSERT OR IGNORE INTO mem_tag (mem_id, tag_id) VALUES (?, ?)")
+                    .bind(mid)
+                    .bind(tid)
+                    .execute(&mut *tx)
+                    .await?;
+            }
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
     pub async fn reset_mem(&self, id: i32) -> Result<(), sqlx::Error> {
         sqlx::query(
             "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?"
@@ -485,6 +664,17 @@ mod tests {
         let pool = SqlitePool::connect("sqlite::memory:")
             .await
             .expect("create in-memory db");
+
+        sqlx::query(
+            "CREATE TABLE user (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
 
         sqlx::query(
             "CREATE TABLE chunk (
@@ -543,6 +733,33 @@ mod tests {
                 rating INTEGER NOT NULL,
                 delta_t INTEGER NOT NULL,
                 FOREIGN KEY (mem_id) REFERENCES mem(id)
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS tag (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES user(id),
+                UNIQUE(name, user_id)
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS mem_tag (
+                mem_id INTEGER NOT NULL,
+                tag_id INTEGER NOT NULL,
+                PRIMARY KEY (mem_id, tag_id),
+                FOREIGN KEY (mem_id) REFERENCES mem(id) ON DELETE CASCADE,
+                FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE
             )",
         )
         .execute(&pool)
@@ -800,5 +1017,239 @@ mod tests {
 
         // limit=5 只取前 5 个（都是 4）→ 1.0
         assert_eq!(repo.get_recent_retention(5).await.unwrap(), 1.0);
+    }
+
+    // ── 标签 ──
+
+    /// 创建用户，name 唯一，每次调用自动生成不同名字
+    async fn create_user(repo: &MemRepo) -> i32 {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        static COUNTER: AtomicU32 = AtomicU32::new(1);
+        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+        sqlx::query("INSERT INTO user (name, password_hash) VALUES (?, ?)")
+            .bind(format!("user_{n}"))
+            .bind("hash")
+            .execute(&*repo.pool)
+            .await
+            .unwrap()
+            .last_insert_rowid() as i32
+    }
+
+    #[tokio::test]
+    async fn create_and_list_tags() {
+        let repo = setup_db().await;
+        let uid = create_user(&repo).await;
+
+        // 初始为空
+        assert!(repo.list_tags(uid).await.unwrap().is_empty());
+
+        // 创建两个标签
+        let t1 = repo.create_tag("rust", uid).await.unwrap();
+        assert!(t1.id > 0);
+        assert_eq!(t1.name, "rust");
+
+        let t2 = repo.create_tag("教程", uid).await.unwrap();
+        assert!(t2.id > t1.id);
+
+        // 列出所有标签
+        let tags = repo.list_tags(uid).await.unwrap();
+        assert_eq!(tags.len(), 2);
+        // 默认按 name 排序
+        assert_eq!(tags[0].name, "rust");
+        assert_eq!(tags[1].name, "教程");
+    }
+
+    #[tokio::test]
+    async fn create_tag_duplicate_name_fails() {
+        let repo = setup_db().await;
+        let uid = create_user(&repo).await;
+
+        repo.create_tag("同名", uid).await.unwrap();
+        let err = repo.create_tag("同名", uid).await.unwrap_err();
+        // 应该因为 UNIQUE(name, user_id) 而出错
+        assert!(err.to_string().contains("UNIQUE") || err.to_string().contains("constraint"));
+    }
+
+    #[tokio::test]
+    async fn tags_are_scoped_to_user() {
+        let repo = setup_db().await;
+        let uid1 = create_user(&repo).await;
+        let uid2 = create_user(&repo).await;
+
+        repo.create_tag("私密", uid1).await.unwrap();
+        assert!(repo.list_tags(uid2).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn search_tags_by_prefix() {
+        let repo = setup_db().await;
+        let uid = create_user(&repo).await;
+
+        repo.create_tag("functional-programming", uid).await.unwrap();
+        repo.create_tag("fsharp", uid).await.unwrap();
+        repo.create_tag("rust", uid).await.unwrap();
+
+        // 搜索 "fun" 应该匹配 functional-programming
+        let results = repo.search_tags(uid, "fun").await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "functional-programming");
+
+        // 搜索 "f" 应该匹配 functional-programming 和 fsharp
+        let results = repo.search_tags(uid, "f").await.unwrap();
+        assert_eq!(results.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn search_tags_empty_query_returns_none() {
+        let repo = setup_db().await;
+        let uid = create_user(&repo).await;
+        repo.create_tag("rust", uid).await.unwrap();
+
+        let results = repo.search_tags(uid, "").await.unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[tokio::test]
+    async fn delete_tag_removes_tag_and_cascades() {
+        let repo = setup_db().await;
+        let uid = create_user(&repo).await;
+
+        let tag = repo.create_tag("移除", uid).await.unwrap();
+        let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+        repo.add_tag_to_mem(mem_id, tag.id).await.unwrap();
+
+        // 验证关联存在
+        let tags = repo.get_mem_tags(mem_id).await.unwrap();
+        assert_eq!(tags.len(), 1);
+
+        // 删除标签
+        repo.delete_tag(tag.id).await.unwrap();
+
+        // 标签已删除
+        assert!(repo.list_tags(uid).await.unwrap().is_empty());
+
+        // mem_tag 被级联删除
+        let tags = repo.get_mem_tags(mem_id).await.unwrap();
+        assert!(tags.is_empty());
+    }
+
+    #[tokio::test]
+    async fn add_and_get_mem_tags() {
+        let repo = setup_db().await;
+        let uid = create_user(&repo).await;
+
+        let t1 = repo.create_tag("标签A", uid).await.unwrap();
+        let t2 = repo.create_tag("标签B", uid).await.unwrap();
+        let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+
+        // 初始无标签
+        assert!(repo.get_mem_tags(mem_id).await.unwrap().is_empty());
+
+        // 添加两个标签
+        repo.add_tag_to_mem(mem_id, t1.id).await.unwrap();
+        repo.add_tag_to_mem(mem_id, t2.id).await.unwrap();
+
+        let tags = repo.get_mem_tags(mem_id).await.unwrap();
+        assert_eq!(tags.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn add_duplicate_tag_is_idempotent() {
+        let repo = setup_db().await;
+        let uid = create_user(&repo).await;
+
+        let tag = repo.create_tag("幂等", uid).await.unwrap();
+        let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+
+        repo.add_tag_to_mem(mem_id, tag.id).await.unwrap();
+        repo.add_tag_to_mem(mem_id, tag.id).await.unwrap(); // 第二次不应报错
+
+        let tags = repo.get_mem_tags(mem_id).await.unwrap();
+        assert_eq!(tags.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn remove_tag_from_mem() {
+        let repo = setup_db().await;
+        let uid = create_user(&repo).await;
+
+        let t1 = repo.create_tag("保留", uid).await.unwrap();
+        let t2 = repo.create_tag("移除", uid).await.unwrap();
+        let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+
+        repo.add_tag_to_mem(mem_id, t1.id).await.unwrap();
+        repo.add_tag_to_mem(mem_id, t2.id).await.unwrap();
+
+        // 移除一个标签
+        repo.remove_tag_from_mem(mem_id, t2.id).await.unwrap();
+
+        let tags = repo.get_mem_tags(mem_id).await.unwrap();
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].name, "保留");
+    }
+
+    #[tokio::test]
+    async fn set_mem_tags_replaces_all() {
+        let repo = setup_db().await;
+        let uid = create_user(&repo).await;
+
+        let t1 = repo.create_tag("旧标签", uid).await.unwrap();
+        let t2 = repo.create_tag("新标签A", uid).await.unwrap();
+        let t3 = repo.create_tag("新标签B", uid).await.unwrap();
+        let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+
+        repo.add_tag_to_mem(mem_id, t1.id).await.unwrap();
+
+        // 批量覆盖：只保留 t2, t3
+        repo.set_mem_tags(mem_id, &[t2.id, t3.id]).await.unwrap();
+
+        let tags = repo.get_mem_tags(mem_id).await.unwrap();
+        assert_eq!(tags.len(), 2);
+        assert!(tags.iter().all(|t| t.name.starts_with("新标签")));
+    }
+
+    #[tokio::test]
+    async fn set_mem_tags_empty_clears_all() {
+        let repo = setup_db().await;
+        let uid = create_user(&repo).await;
+
+        let tag = repo.create_tag("清空", uid).await.unwrap();
+        let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+        repo.add_tag_to_mem(mem_id, tag.id).await.unwrap();
+
+        repo.set_mem_tags(mem_id, &[]).await.unwrap();
+        assert!(repo.get_mem_tags(mem_id).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn mem_tags_are_independent_per_mem() {
+        let repo = setup_db().await;
+        let uid = create_user(&repo).await;
+
+        let tag = repo.create_tag("共享", uid).await.unwrap();
+        let (m1, ..) = create_test_mem(&repo, "a", "a-target").await;
+        let (m2, ..) = create_test_mem(&repo, "b", "b-target").await;
+
+        repo.add_tag_to_mem(m1, tag.id).await.unwrap();
+
+        assert_eq!(repo.get_mem_tags(m1).await.unwrap().len(), 1);
+        assert!(repo.get_mem_tags(m2).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn delete_mem_cascades_to_mem_tag() {
+        let repo = setup_db().await;
+        let uid = create_user(&repo).await;
+
+        let tag = repo.create_tag("级联", uid).await.unwrap();
+        let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+        repo.add_tag_to_mem(mem_id, tag.id).await.unwrap();
+
+        // 删除 mem -> mem_tag 应被级联删除（FK ON DELETE CASCADE）
+        repo.delete_mem(mem_id).await.unwrap();
+
+        // 但 tag 本身仍然存在
+        let tags = repo.list_tags(uid).await.unwrap();
+        assert_eq!(tags.len(), 1);
     }
 }

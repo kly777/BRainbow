@@ -1,4 +1,4 @@
-import { createSignal, onMount, Show, For } from "solid-js";
+import { createEffect, createSignal, onMount, Show, For } from "solid-js";
 import { A } from "@solidjs/router";
 import {
 	buryMemE,
@@ -11,10 +11,20 @@ import {
 	batchBuryMemE,
 	batchDeleteMemE,
 	batchResetMemE,
+	getMemTagsE,
+	addTagToMemE,
+	removeTagFromMemE,
+	setMemTagsE,
+	batchAddTagToMemsE,
+	batchRemoveTagFromMemsE,
+	batchSetTagsForMemsE,
 	type MemItem,
+	type TagInfo,
 } from "../apis/memApi.ts";
 import MarkdownRenderer from "../components/ui/Markdown.tsx";
 import MarkdownEditor from "../components/ui/MarkdownEditor.tsx";
+import TagSelector from "../components/TagSelector.tsx";
+import Modal from "../components/ui/Modal.tsx";
 import { fmtLocal, fmtRelative } from "../lib/time.ts";
 import styles from "./MemManage.module.css";
 
@@ -61,6 +71,7 @@ export default function MemManage() {
 	const [pageMeta, setPageMeta] = createSignal<PageMeta>({ page: 1, total_pages: 0, total: 0 });
 	const [loading, setLoading] = createSignal(true);
 	const [detailId, setDetailId] = createSignal<number | null>(null);
+	const [memTags, setMemTags] = createSignal<Map<number, TagInfo[]>>(new Map());
 	const [sortField, setSortField] = createSignal<SortField>("due_at");
 	const [sortDir, setSortDir] = createSignal<SortDir>("asc");
 	const [batchIds, setBatchIds] = createSignal<Set<number>>(new Set());
@@ -100,6 +111,68 @@ export default function MemManage() {
 	};
 
 	const [page, setPage] = createSignal(1);
+
+	// 当 detailId 变化时加载标签
+	createEffect(() => {
+		const id = detailId();
+		if (id === null) return;
+		getMemTagsE(id).then((tags) => {
+			setMemTags((prev) => {
+				const next = new Map(prev);
+				next.set(id, tags);
+				return next;
+			});
+		}).catch(() => {});
+	});
+
+	const tagsForDetail = () => {
+		const id = detailId();
+		return id !== null ? (memTags().get(id) ?? []) : [];
+	};
+
+	const addTag = async (tag: TagInfo) => {
+		const id = detailId();
+		if (id === null) return;
+		await addTagToMemE(id, tag.id);
+		setMemTags((prev) => {
+			const next = new Map(prev);
+			const t = next.get(id) ?? [];
+			next.set(id, [...t, tag]);
+			return next;
+		});
+	};
+
+	const removeTag = async (tagId: number) => {
+		const id = detailId();
+		if (id === null) return;
+		await removeTagFromMemE(id, tagId);
+		setMemTags((prev) => {
+			const next = new Map(prev);
+			const t = (next.get(id) ?? []).filter((t) => t.id !== tagId);
+			next.set(id, t);
+			return next;
+		});
+	};
+
+	// ── 批量标签 ──
+	const [showBatchTagModal, setShowBatchTagModal] = createSignal(false);
+	const [batchTagMode, setBatchTagMode] = createSignal<"add" | "remove" | "set">("add");
+
+	const handleBatchAddTag = async (tag: TagInfo) => {
+		const ids = [...batchIds()];
+		if (ids.length === 0) return;
+		await batchAddTagToMemsE(ids, tag.id);
+		setShowBatchTagModal(false);
+		load();
+	};
+
+	const handleBatchRemoveTag = async (tag: TagInfo) => {
+		const ids = [...batchIds()];
+		if (ids.length === 0) return;
+		await batchRemoveTagFromMemsE(ids, tag.id);
+		setShowBatchTagModal(false);
+		load();
+	};
 
 	const load = async () => {
 		setLoading(true);
@@ -277,6 +350,20 @@ export default function MemManage() {
 							</button>
 							<button
 								type="button"
+								class={styles.batchBtnTag}
+								onClick={() => { setBatchTagMode("add"); setShowBatchTagModal(true); }}
+							>
+								标签+
+							</button>
+							<button
+								type="button"
+								class={styles.batchBtnTagRemove}
+								onClick={() => { setBatchTagMode("remove"); setShowBatchTagModal(true); }}
+							>
+								标签-
+							</button>
+							<button
+								type="button"
 								class={styles.batchBtnDelete}
 								onClick={batchDelete}
 							>
@@ -448,6 +535,14 @@ export default function MemManage() {
 									<span>创建：{fmtLocal(d().cue.created_at)}</span>
 									<span>到期：{fmtLocal(d().due_at)}</span>
 								</div>
+								<div class={styles.section}>
+									<span class={styles.sectionLabel}>标签</span>
+									<TagSelector
+										tags={tagsForDetail()}
+										onAdd={addTag}
+										onRemove={removeTag}
+									/>
+								</div>
 								<div class={styles.actionBtns}>
 									{editing() ? (
 										<>
@@ -515,6 +610,22 @@ export default function MemManage() {
 					</Show>
 				</div>
 			</div>
+
+			{/* 批量标签 Modal */}
+			<Modal
+				isOpen={showBatchTagModal()}
+					onClose={() => setShowBatchTagModal(false)}
+					title={batchTagMode() === "add" ? "批量添加标签" : batchTagMode() === "remove" ? "批量移除标签" : "批量设置标签"}
+				>
+					<p style={{ "margin-bottom": "var(--space-md)", "font-size": "var(--text-sm)", color: "var(--color-text-muted)" }}>
+						对 {batchIds().size} 条记忆{batchTagMode() === "add" ? "添加" : batchTagMode() === "remove" ? "移除" : "设置"}标签
+					</p>
+					<TagSelector
+						tags={[]}
+						onAdd={batchTagMode() === "remove" ? handleBatchRemoveTag : handleBatchAddTag}
+						onRemove={() => {}}
+					/>
+			</Modal>
 		</div>
 	);
 }

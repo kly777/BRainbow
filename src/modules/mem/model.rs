@@ -153,6 +153,64 @@ pub struct BatchIdsRequest {
     pub ids: Vec<i32>,
 }
 
+/// 标签
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TagInfo {
+    pub id: i32,
+    pub name: String,
+    pub created_at: String,
+}
+
+/// 标签 + mem_id 联合查询结果（供 get_mems_tags_batch 使用）
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct MemTagRow {
+    pub mem_id: i32,
+    pub id: i32,
+    pub name: String,
+    pub created_at: String,
+}
+
+/// 创建标签请求
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateTagRequest {
+    pub name: String,
+}
+
+/// 给 mem 打标签请求
+#[derive(Debug, Clone, Deserialize)]
+pub struct TagMemRequest {
+    pub mem_id: i32,
+    pub tag_id: i32,
+}
+
+/// 批量设置标签请求
+#[derive(Debug, Clone, Deserialize)]
+pub struct SetTagsRequest {
+    pub mem_id: i32,
+    pub tag_ids: Vec<i32>,
+}
+
+/// 批量 mem 标签操作请求
+#[derive(Debug, Clone, Deserialize)]
+pub struct BatchTagRequest {
+    pub mem_ids: Vec<i32>,
+    pub tag_id: i32,
+}
+
+/// 批量 mem 设置多标签请求
+#[derive(Debug, Clone, Deserialize)]
+pub struct BatchSetTagsRequest {
+    pub mem_ids: Vec<i32>,
+    pub tag_ids: Vec<i32>,
+}
+
+/// MemWithTags — 供列表用
+#[derive(Debug, Clone, Serialize)]
+pub struct MemWithTags {
+    pub mem: MemWithChunks,
+    pub tags: Vec<TagInfo>,
+}
+
 /// 本次学习预估
 #[derive(Debug, Clone, Serialize)]
 pub struct SessionEstimate {

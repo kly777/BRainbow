@@ -1,8 +1,10 @@
 use axum::{
     Json,
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     response::IntoResponse,
 };
+
+use crate::auth::Claims;
 use std::collections::HashMap;
 
 use crate::error;
@@ -85,6 +87,147 @@ pub async fn get_counts(State(state): State<AppState>) -> impl IntoResponse {
     match svc.get_counts().await {
         Ok(counts) => Json(counts).into_response(),
         Err(e) => err(e, "获取统计"),
+    }
+}
+
+// ── 标签 ──
+
+pub async fn create_tag(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<CreateTagRequest>,
+) -> impl IntoResponse {
+    if payload.name.trim().is_empty() {
+        return error::bad_request("标签名不能为空");
+    }
+    let svc = MemService::new(state.db.clone());
+    match svc.create_tag(payload.name.trim(), claims.sub).await {
+        Ok(tag) => Json(tag).into_response(),
+        Err(e) => err(e, "创建标签"),
+    }
+}
+
+pub async fn delete_tag(
+    State(state): State<AppState>,
+    Extension(_claims): Extension<Claims>,
+    Path(id): Path<i32>,
+) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.delete_tag(id).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "删除标签"),
+    }
+}
+
+pub async fn list_tags(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.list_tags(claims.sub).await {
+        Ok(tags) => Json(tags).into_response(),
+        Err(e) => err(e, "列出标签"),
+    }
+}
+
+pub async fn search_tags(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Query(params): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let q = params.get("q").map(|s| s.as_str()).unwrap_or("");
+    let svc = MemService::new(state.db.clone());
+    match svc.search_tags(claims.sub, q).await {
+        Ok(tags) => Json(tags).into_response(),
+        Err(e) => err(e, "搜索标签"),
+    }
+}
+
+pub async fn get_mem_tags(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.get_mem_tags(id).await {
+        Ok(tags) => Json(tags).into_response(),
+        Err(e) => err(e, "获取记忆标签"),
+    }
+}
+
+pub async fn add_mem_tag(
+    State(state): State<AppState>,
+    Json(payload): Json<TagMemRequest>,
+) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.add_tag_to_mem(payload.mem_id, payload.tag_id).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "添加标签"),
+    }
+}
+
+pub async fn remove_mem_tag(
+    State(state): State<AppState>,
+    Json(payload): Json<TagMemRequest>,
+) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.remove_tag_from_mem(payload.mem_id, payload.tag_id).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "移除标签"),
+    }
+}
+
+pub async fn set_mem_tags(
+    State(state): State<AppState>,
+    Json(payload): Json<SetTagsRequest>,
+) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.set_mem_tags(payload.mem_id, &payload.tag_ids).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "设置标签"),
+    }
+}
+
+// ── 批量标签 ──
+
+pub async fn batch_add_tag(
+    State(state): State<AppState>,
+    Json(payload): Json<BatchTagRequest>,
+) -> impl IntoResponse {
+    if payload.mem_ids.is_empty() {
+        return error::bad_request("mem_ids 为空");
+    }
+    let svc = MemService::new(state.db.clone());
+    match svc.batch_add_tag_to_mems(&payload.mem_ids, payload.tag_id).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "批量添加标签"),
+    }
+}
+
+pub async fn batch_remove_tag(
+    State(state): State<AppState>,
+    Json(payload): Json<BatchTagRequest>,
+) -> impl IntoResponse {
+    if payload.mem_ids.is_empty() {
+        return error::bad_request("mem_ids 为空");
+    }
+    let svc = MemService::new(state.db.clone());
+    match svc.batch_remove_tag_from_mems(&payload.mem_ids, payload.tag_id).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "批量移除标签"),
+    }
+}
+
+pub async fn batch_set_tags(
+    State(state): State<AppState>,
+    Json(payload): Json<BatchSetTagsRequest>,
+) -> impl IntoResponse {
+    if payload.mem_ids.is_empty() {
+        return error::bad_request("mem_ids 为空");
+    }
+    let svc = MemService::new(state.db.clone());
+    match svc.batch_set_tags_for_mems(&payload.mem_ids, &payload.tag_ids).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "批量设置标签"),
     }
 }
 

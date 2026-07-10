@@ -143,6 +143,8 @@ pub struct MemQuery {
     pub state: Option<String>,
     pub sort: Option<String>,
     pub order: Option<String>,
+    /// 逗号分隔的标签 ID
+    pub tag_ids: Option<String>,
     pub page: Option<i64>,
     pub page_size: Option<i64>,
 }

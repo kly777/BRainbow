@@ -57,6 +57,7 @@ async function loadAllMems(
 	sortDir: SortDir,
 	search: string,
 	stateFilter: string,
+	tagFilter: TagInfo | null,
 	page: number,
 ): Promise<{ items: MemItem[]; meta: PageMeta }> {
 	try {
@@ -65,6 +66,7 @@ async function loadAllMems(
 			order: sortDir,
 			q: search || undefined,
 			state: stateFilter !== "all" ? stateFilter : undefined,
+			tag_ids: tagFilter ? String(tagFilter.id) : undefined,
 			page,
 			page_size: 50,
 		});
@@ -127,6 +129,7 @@ export default function MemManage() {
 	const [showExportModal, setShowExportModal] = createSignal(false);
 	const [showBatchTagModal, setShowBatchTagModal] = createSignal(false);
 	const [batchTagMode, setBatchTagMode] = createSignal<"add" | "remove">("add");
+	const [tagFilter, setTagFilter] = createSignal<TagInfo | null>(null);
 
 	// ── Derived ──
 	const allSelected = () =>
@@ -148,6 +151,7 @@ export default function MemManage() {
 			sortDir(),
 			searchQuery(),
 			filterState(),
+			tagFilter(),
 			page(),
 		);
 		setMems(items);
@@ -183,7 +187,7 @@ export default function MemManage() {
 	// URL 参数变化时重新加载（含浏览器前进/后退）
 	createEffect(() => {
 		// 读取 URL 派生值来追踪依赖
-		void (searchQuery(), filterState(), sortField(), sortDir(), page());
+		void (searchQuery(), filterState(), sortField(), sortDir(), page(), tagFilter());
 		if (!initialLoadDone) return;
 		load();
 	});
@@ -389,6 +393,8 @@ export default function MemManage() {
 				onSearch={handleSearchInput}
 				onFilterChange={setFilter}
 				onExport={() => setShowExportModal(true)}
+				tagFilter={tagFilter()}
+				onTagFilterChange={setTagFilter}
 			/>
 
 			<div class={styles.split}>

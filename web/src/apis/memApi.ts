@@ -36,6 +36,7 @@ export interface MemQuery {
 	state?: string;
 	sort?: string;
 	order?: string;
+	tag_ids?: string;
 	page?: number;
 	page_size?: number;
 }
@@ -84,6 +85,7 @@ export const getAllMemsE = (
 	if (params?.state) qs.set("state", params.state);
 	if (params?.sort) qs.set("sort", params.sort);
 	if (params?.order) qs.set("order", params.order);
+	if (params?.tag_ids) qs.set("tag_ids", params.tag_ids);
 	if (params?.page) qs.set("page", String(params.page));
 	if (params?.page_size) qs.set("page_size", String(params.page_size));
 	const suffix = qs.toString();

@@ -5,4 +5,71 @@
 	padding: var(--space-sm) 14px;
 	border-bottom: 1px solid var(--color-border);
 	flex-shrink: 0;
+	position: relative;
+}
+
+.tagFilter {
+	position: relative;
+	flex-shrink: 0;
+}
+
+.tagInput {
+	width: 100px;
+	padding: 4px 8px;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	font-size: 13px;
+	background: var(--color-bg);
+	outline: none;
+}
+.tagInput:focus {
+	border-color: var(--color-border-hover);
+}
+
+.activeTag {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 8px;
+	background: oklch(0.9 0.05 250);
+	border-radius: 12px;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.tagClear {
+	border: none;
+	background: none;
+	cursor: pointer;
+	padding: 0 2px;
+	font-size: 14px;
+	line-height: 1;
+	color: inherit;
+	opacity: 0.6;
+}
+.tagClear:hover {
+	opacity: 1;
+}
+
+.tagDropdown {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	z-index: 100;
+	min-width: 120px;
+	margin-top: 4px;
+	padding: 4px 0;
+	background: var(--color-bg);
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.tagOption {
+	padding: 4px 10px;
+	font-size: 13px;
+	cursor: pointer;
+}
+.tagOption:hover {
+	background: var(--color-bg-subtle);
 }

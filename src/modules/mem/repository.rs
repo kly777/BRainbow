@@ -129,6 +129,22 @@ impl MemRepo {
             }
         }
 
+        // 标签过滤
+        if let Some(ref tag_ids_str) = query.tag_ids {
+            let ids: Vec<i32> = tag_ids_str
+                .split(',')
+                .filter_map(|s| s.trim().parse().ok())
+                .collect();
+            if !ids.is_empty() {
+                qb.push(" AND m.id IN (SELECT mem_id FROM mem_tag WHERE tag_id IN (");
+                let mut sep = qb.separated(", ");
+                for &id in &ids {
+                    sep.push_bind(id);
+                }
+                qb.push("))");
+            }
+        }
+
         // 排序
         match query.sort.as_deref() {
             Some("difficulty") => {
@@ -181,6 +197,22 @@ impl MemRepo {
                 qb.push_bind(&pattern);
                 qb.push(" OR EXISTS (SELECT 1 FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id AND t.name LIKE ");
                 qb.push_bind(pattern);
+                qb.push("))");
+            }
+        }
+
+        // 标签过滤
+        if let Some(ref tag_ids_str) = query.tag_ids {
+            let ids: Vec<i32> = tag_ids_str
+                .split(',')
+                .filter_map(|s| s.trim().parse().ok())
+                .collect();
+            if !ids.is_empty() {
+                qb.push(" AND m.id IN (SELECT mem_id FROM mem_tag WHERE tag_id IN (");
+                let mut sep = qb.separated(", ");
+                for &id in &ids {
+                    sep.push_bind(id);
+                }
                 qb.push("))");
             }
         }

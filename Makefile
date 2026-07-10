@@ -13,6 +13,7 @@ check-env:
 	@test -n "$(APP_NAME)"   || (echo "错误: .env.prod 未设置 APP_NAME"; exit 1)
 
 dev:
+	trap 'wait; printf "Finished"; exit 0' INT TERM; \
 	cargo watch -x run --ignore web & \
 	cd web && npx vite & \
 	wait

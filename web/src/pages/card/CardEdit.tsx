@@ -11,6 +11,8 @@ import type { UpdateCardRequest } from "../../apis/types/index.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
 import Breadcrumb from "../../components/ui/Breadcrumb.tsx";
 import MarkdownEditor from "../../components/ui/MarkdownEditor.tsx";
+import Button from "../../components/ui/Button.tsx";
+import Toolbar from "../../components/ui/Toolbar.tsx";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import styles from "./CardEdit.module.css";
 
@@ -77,29 +79,27 @@ const CardEditPage: Component = () => {
 					{ label: "编辑" },
 				]}
 			/>
-			<div class={styles.toolbar}>
-				<button
-					type="button"
-					class={styles.backBtn}
-					onClick={() => navigate(`/c/${cardId()}`)}
+			<Toolbar
+				title="编辑卡片"
+				backLabel="返回"
+				onBack={() => navigate(`/c/${cardId()}`)}
+			>
+				<Button variant="danger" size="sm" onClick={handleDelete}>
+					删除
+				</Button>
+				<Button
+					variant="primary"
+					size="sm"
+					onClick={doSave}
+					disabled={isSubmitting()}
 				>
-					← 返回
-				</button>
-				<span class={styles.toolbarTitle}>编辑卡片</span>
-				<div class={styles.toolbarActions}>
-					<button type="button" class={styles.deleteBtn} onClick={handleDelete}>
-						删除
-					</button>
-					<button
-						type="button"
-						class={styles.saveBtn}
-						onClick={doSave}
-						disabled={isSubmitting()}
-					>
-						{isSubmitting() ? "保存中..." : "保存"}
-					</button>
-				</div>
-			</div>
+					{isSubmitting() ? "保存中..." : "保存"}
+				</Button>
+			</Toolbar>
+
+			<Show when={error()}>
+				<div class={styles.errorMsg}>{error()}</div>
+			</Show>
 
 			<AsyncView
 				data={card() ? [card()] : []}
@@ -109,15 +109,12 @@ const CardEditPage: Component = () => {
 			>
 				{() => (
 					<Show when={!card.loading && !card.error}>
-						<Show when={error()}>
-							<div class={styles.errorMsg}>{error()}</div>
-						</Show>
 						<MarkdownEditor
 							value={content()}
 							onInput={setContent}
 							preview
 							rows={20}
-							placeholder="输入 Markdown 内容...支持粘贴和拖拽图片"
+							placeholder="输入 Markdown 内容…支持粘贴和拖拽图片"
 						/>
 					</Show>
 				)}

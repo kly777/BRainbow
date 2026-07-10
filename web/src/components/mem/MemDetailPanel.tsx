@@ -3,6 +3,8 @@ import type { MemItem, TagInfo } from "../../apis/memApi.ts";
 import MarkdownRenderer from "../ui/Markdown.tsx";
 import MarkdownEditor from "../ui/MarkdownEditor.tsx";
 import TagSelector from "../TagSelector.tsx";
+import Button from "../ui/Button.tsx";
+import Badge from "../ui/Badge.tsx";
 import { fmtLocal } from "../../lib/time.ts";
 import styles from "./MemDetailPanel.module.css";
 
@@ -74,7 +76,7 @@ export default function MemDetailPanel(props: Props) {
 						</Show>
 						<div class={styles.meta}>
 							<span>
-								状态：{d().state}
+								状态：<Badge variant={d().state as any}>{d().state}</Badge>
 								{d().leeched ? " ⚠️烂卡" : ""}
 							</span>
 							<span>遗忘：{d().lapses} 次</span>
@@ -95,62 +97,34 @@ export default function MemDetailPanel(props: Props) {
 								when={props.editing}
 								fallback={
 									<>
-										<button
-											type="button"
-											class={styles.editBtn}
-											onClick={props.onStartEdit}
-										>
+										<Button variant="secondary" size="sm" onClick={props.onStartEdit}>
 											编辑
-										</button>
-										<button
-											type="button"
-											class={styles.cancelBtn}
-											onClick={() => props.onReset(d().id)}
-										>
+										</Button>
+										<Button variant="secondary" size="sm" onClick={() => props.onReset(d().id)}>
 											忘却
-										</button>
+										</Button>
 										<Show when={d().state !== "suspended"}>
-											<button
-												type="button"
-												class={styles.editBtn}
-												onClick={() => props.onSuspend(d().id)}
-											>
+											<Button variant="secondary" size="sm" onClick={() => props.onSuspend(d().id)}>
 												挂起
-											</button>
+											</Button>
 										</Show>
 										<Show when={d().state === "suspended"}>
-											<button
-												type="button"
-												class={styles.editBtn}
-												onClick={() => props.onUnsuspend(d().id)}
-											>
+											<Button variant="secondary" size="sm" onClick={() => props.onUnsuspend(d().id)}>
 												恢复
-											</button>
+											</Button>
 										</Show>
-										<button
-											type="button"
-											class={styles.deleteBtn}
-											onClick={() => props.onDelete(d().id)}
-										>
+										<Button variant="danger" size="sm" onClick={() => props.onDelete(d().id)}>
 											删除
-										</button>
+										</Button>
 									</>
 								}
 							>
-								<button
-									type="button"
-									class={styles.editBtn}
-									onClick={props.onSaveEdit}
-								>
+								<Button variant="primary" size="sm" onClick={props.onSaveEdit}>
 									保存
-								</button>
-								<button
-									type="button"
-									class={styles.cancelBtn}
-									onClick={props.onCancelEdit}
-								>
+								</Button>
+								<Button variant="secondary" size="sm" onClick={props.onCancelEdit}>
 									取消
-								</button>
+								</Button>
 							</Show>
 						</div>
 					</>

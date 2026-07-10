@@ -4,6 +4,8 @@ import { createCardE } from "../../apis/cardApi.ts";
 import { type CreateCardRequest, getErrorMessage } from "../../apis/types/index.ts";
 import Breadcrumb from "../../components/ui/Breadcrumb.tsx";
 import MarkdownEditor from "../../components/ui/MarkdownEditor.tsx";
+import Button from "../../components/ui/Button.tsx";
+import Toolbar from "../../components/ui/Toolbar.tsx";
 import styles from "./CardAdd.module.css";
 
 const CardAddPage: Component = () => {
@@ -49,26 +51,20 @@ const CardAddPage: Component = () => {
 					{ label: "新建卡片" },
 				]}
 			/>
-			<div class={styles.toolbar}>
-				<button
-					type="button"
-					class={styles.backBtn}
-					onClick={() => navigate("/c")}
+			<Toolbar
+				title="新建卡片"
+				backLabel="卡片列表"
+				onBack={() => navigate("/c")}
+			>
+				<Button
+					variant="primary"
+					size="sm"
+					onClick={doCreate}
+					disabled={isSubmitting() || !canSave()}
 				>
-					← 卡片列表
-				</button>
-				<span class={styles.toolbarTitle}>新建卡片</span>
-				<div class={styles.toolbarActions}>
-					<button
-						type="button"
-						class={styles.saveBtn}
-						onClick={doCreate}
-						disabled={isSubmitting() || !canSave()}
-					>
-						{isSubmitting() ? "保存中..." : "保存"}
-					</button>
-				</div>
-			</div>
+					{isSubmitting() ? "保存中..." : "保存"}
+				</Button>
+			</Toolbar>
 
 			<Show when={error()}>
 				<div class={styles.errorMsg}>{error()}</div>

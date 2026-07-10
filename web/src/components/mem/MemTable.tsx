@@ -1,6 +1,7 @@
 import { For, Show } from "solid-js";
 import type { MemItem, TagInfo } from "../../apis/memApi.ts";
 import { fmtRelative, fmtLocal } from "../../lib/time.ts";
+import Badge from "../ui/Badge.tsx";
 import styles from "./MemTable.module.css";
 
 type SortField = "cue.created_at" | "difficulty" | "due_at" | "state";
@@ -123,17 +124,10 @@ export default function MemTable(props: Props) {
 										{previewText(mem.target.content)}
 									</td>
 									<td class={styles.td}>
-										<span
-											classList={{
-												[styles.badge]: true,
-												[styles[mem.state]]: true,
-											}}
-										>
+										<Badge variant={mem.state as any}>
 											{mem.state}
-											{mem.leeched && (
-												<span class={styles.leechedBadge}> ⚠️</span>
-											)}
-										</span>
+											{mem.leeched && " ⚠️"}
+										</Badge>
 									</td>
 									<td class={styles.td}>{mem.difficulty.toFixed(2)}</td>
 									<td class={styles.tdDue}>{fmtRelative(mem.due_at)}</td>

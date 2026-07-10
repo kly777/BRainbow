@@ -1,0 +1,27 @@
+.group {
+	display: flex;
+	gap: var(--space-xs);
+}
+
+.btn,
+.active {
+	padding: var(--space-xs) var(--space-sm);
+	font-size: var(--text-xs);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	background: var(--color-surface);
+	color: var(--color-text-secondary);
+	cursor: pointer;
+	font-family: inherit;
+	white-space: nowrap;
+}
+
+.btn:hover {
+	background: var(--color-surface-raised);
+}
+
+.active {
+	background: var(--color-accent);
+	color: #fff;
+	border-color: var(--color-accent);
+}

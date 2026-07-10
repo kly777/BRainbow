@@ -14,6 +14,7 @@ import {
 
 import CardsGrid from "../../components/card/CardsGrid.tsx";
 import MarkdownRenderer from "../../components/ui/Markdown.tsx";
+import Button from "../../components/ui/Button.tsx";
 import { showToast } from "../../components/ui/toastStore.ts";
 import styles from "./CardsList.module.css";
 
@@ -124,13 +125,12 @@ const CardsListPage: Component = () => {
 			<div class={styles.header}>
 				<h1 class={styles.title}>卡片列表</h1>
 				<div class={styles.actions}>
-					<button
-						type="button"
-						class={styles.primaryButton}
-						onClick={openCreateModal}
-					>
-						新建卡片
-					</button>
+					<Button variant="secondary" size="sm" onClick={() => navigate("/c/add")}>
+						＋ 新建
+					</Button>
+					<Button variant="primary" size="sm" onClick={openCreateModal}>
+						快速创建
+					</Button>
 				</div>
 			</div>
 
@@ -140,7 +140,7 @@ const CardsListPage: Component = () => {
 			<Show when={error()}>
 				<div class={styles.state}>
 					<p class={styles.errorText}>加载失败</p>
-					<button type="button" onClick={() => globalThis.location.reload()}>重试</button>
+					<Button variant="secondary" size="sm" onClick={() => globalThis.location.reload()}>重试</Button>
 				</div>
 			</Show>
 			<Show when={!loading() && !error()}>
@@ -179,14 +179,7 @@ const CardsListPage: Component = () => {
 					>
 						<div class={styles.modalHeader}>
 							<h2>创建新卡片</h2>
-							<button
-								type="button"
-								class={styles.closeButton}
-								onClick={closeCreateModal}
-								aria-label="关闭"
-							>
-								×
-							</button>
+							<Button variant="icon" onClick={closeCreateModal} title="关闭">×</Button>
 						</div>
 						<div class={styles.modalContent}>
 							<Show when={modalError()}>
@@ -216,22 +209,12 @@ const CardsListPage: Component = () => {
 							</Show>
 						</div>
 						<div class={styles.modalActions}>
-							<button
-								type="button"
-								class={styles.secondaryButton}
-								onClick={closeCreateModal}
-								disabled={isCreating()}
-							>
+							<Button variant="secondary" size="sm" onClick={closeCreateModal} disabled={isCreating()}>
 								取消
-							</button>
-							<button
-								type="button"
-								class={styles.primaryButton}
-								onClick={handleCreateCard}
-								disabled={isCreating()}
-							>
+							</Button>
+							<Button variant="primary" size="sm" onClick={handleCreateCard} disabled={isCreating()}>
 								{isCreating() ? "创建中..." : "创建"}
-							</button>
+							</Button>
 						</div>
 					</div>
 				</div>

@@ -3,6 +3,8 @@ import { type Component, createResource } from "solid-js";
 import { deleteCardE, getCardE } from "../../apis/cardApi.ts";
 import Breadcrumb from "../../components/ui/Breadcrumb.tsx";
 import MarkdownRenderer from "../../components/ui/Markdown.tsx";
+import Button from "../../components/ui/Button.tsx";
+import Toolbar from "../../components/ui/Toolbar.tsx";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import styles from "./CardDetail.module.css";
 
@@ -54,27 +56,21 @@ const CardDetailPage: Component = () => {
 					{ label: card()?.content?.slice(0, 20) || `#${cardId()}` },
 				]}
 			/>
-			<div class={styles.toolbar}>
-				<button
-					type="button"
-					class={styles.backBtn}
-					onClick={() => navigate("/c")}
+			<Toolbar
+				backLabel="卡片列表"
+				onBack={() => navigate("/c")}
+			>
+				<Button
+					variant="secondary"
+					size="sm"
+					onClick={() => navigate(`/c/edit/${cardId()}`)}
 				>
-					← 卡片列表
-				</button>
-				<div class={styles.toolbarActions}>
-					<button
-						type="button"
-						class={styles.editBtn}
-						onClick={() => navigate(`/c/edit/${cardId()}`)}
-					>
-						编辑
-					</button>
-					<button type="button" class={styles.deleteBtn} onClick={handleDelete}>
-						删除
-					</button>
-				</div>
-			</div>
+					编辑
+				</Button>
+				<Button variant="danger" size="sm" onClick={handleDelete}>
+					删除
+				</Button>
+			</Toolbar>
 
 			<AsyncView
 				data={card() ? [card()] : []}

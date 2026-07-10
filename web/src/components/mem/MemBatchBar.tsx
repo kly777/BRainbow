@@ -1,3 +1,4 @@
+import Button from "../ui/Button.tsx";
 import styles from "./MemBatchBar.module.css";
 
 interface Props {
@@ -16,21 +17,11 @@ export default function MemBatchBar(props: Props) {
 			classList={{ [styles.visible]: props.selectedCount > 0 }}
 		>
 			<span class={styles.count}>{props.selectedCount} 条已选</span>
-			<button type="button" class={styles.btnReset} onClick={props.onReset}>
-				忘却
-			</button>
-			<button type="button" class={styles.btnBury} onClick={props.onBury}>
-				埋葬
-			</button>
-			<button type="button" class={styles.btnTag} onClick={props.onTag}>
-				标签+
-			</button>
-			<button type="button" class={styles.btnTagRemove} onClick={props.onTagRemove}>
-				标签-
-			</button>
-			<button type="button" class={styles.btnDelete} onClick={props.onDelete}>
-				删除
-			</button>
+			<Button variant="ghost" size="sm" onClick={props.onReset}>忘却</Button>
+			<Button variant="ghost" size="sm" onClick={props.onBury}>埋葬</Button>
+			<Button variant="ghost" size="sm" onClick={props.onTag}>标签+</Button>
+			<Button variant="ghost" size="sm" onClick={props.onTagRemove}>标签-</Button>
+			<Button variant="danger" size="sm" onClick={props.onDelete}>删除</Button>
 		</div>
 	);
 }

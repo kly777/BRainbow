@@ -1,5 +1,6 @@
-import type { JSX } from "solid-js";
-import { For } from "solid-js";
+import SearchInput from "../ui/SearchInput.tsx";
+import FilterGroup from "../ui/FilterGroup.tsx";
+import Button from "../ui/Button.tsx";
 import styles from "./MemManageToolbar.module.css";
 
 interface Props {
@@ -10,47 +11,32 @@ interface Props {
 	onExport: () => void;
 }
 
-const FILTERS: [string, string][] = [
-	["all", "全部"],
-	["new", "新"],
-	["learning", "学习"],
-	["review", "复习"],
-	["relearning", "重学"],
-	["suspended", "挂起"],
-	["today_done", "已复习"],
+const FILTER_OPTIONS = [
+	{ value: "all", label: "全部" },
+	{ value: "new", label: "新" },
+	{ value: "learning", label: "学习" },
+	{ value: "review", label: "复习" },
+	{ value: "relearning", label: "重学" },
+	{ value: "suspended", label: "挂起" },
+	{ value: "today_done", label: "已复习" },
 ];
 
 export default function MemManageToolbar(props: Props) {
 	return (
 		<div class={styles.toolbar}>
-			<input
-				type="search"
-				class={styles.searchInput}
-				placeholder="搜索线索或答案…"
+			<SearchInput
 				value={props.searchQuery}
-				onInput={(e: InputEvent) => {
-					const target = e.currentTarget as HTMLInputElement;
-					props.onSearch(target.value);
-				}}
+				onSearch={props.onSearch}
+				placeholder="搜索线索或答案…"
 			/>
-			<div class={styles.toolRow}>
-				<button type="button" class={styles.toolBtn} onClick={props.onExport}>
-					导出
-				</button>
-			</div>
-			<div class={styles.filterGroup}>
-				<For each={FILTERS}>
-					{([val, label]) => (
-						<button
-							type="button"
-							class={props.filterState === val ? styles.filterActive : styles.filterBtn}
-							onClick={() => props.onFilterChange(val)}
-						>
-							{label}
-						</button>
-					)}
-				</For>
-			</div>
+			<Button variant="ghost" size="sm" onClick={props.onExport}>
+				导出
+			</Button>
+			<FilterGroup
+				options={FILTER_OPTIONS}
+				selected={props.filterState}
+				onChange={props.onFilterChange}
+			/>
 		</div>
 	);
 }

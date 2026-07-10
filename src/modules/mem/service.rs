@@ -254,18 +254,56 @@ impl MemService {
     }
 
     pub async fn get_session_estimate(&self) -> Result<SessionEstimate, sqlx::Error> {
-        let due_count = self.repo.count_due_total().await? as usize;
+        let (new_count, learning_count, due_count, _, _) = self.repo.get_counts().await?;
+        // relearning 包含在 learning_count 中，单独查
+        let relearning_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM mem WHERE state = 'relearning' AND buried = 0"
+        )
+        .fetch_one(&*self.repo.pool)
+        .await?;
+        // learning 去掉 relearning 的纯学习卡
+        let pure_learning = learning_count - relearning_count;
+
         let retention = self.repo.get_recent_retention(100).await?;
-        let total_estimate = if retention > 0.0 {
-            let raw = due_count as f64 / retention;
-            // 保留至少 due_count，向上取整
-            std::cmp::max(due_count, raw.ceil() as usize)
+
+        let config = crate::modules::mem::config::MemConfig::load();
+        let step_count_learning = config.learning_steps.len();  // 默认 2
+        let step_count_relearning = config.relearn_steps.len(); // 默认 1
+
+        // 每张新卡：每个 learning step 出现一次
+        let new_total = new_count as usize * step_count_learning;
+
+        // 学习中的卡：已过部分 step，估算剩余一半 + 至少 1 次
+        let learning_remaining = if step_count_learning > 1 {
+            (step_count_learning / 2 + 1)
         } else {
-            // 无历史数据时按 80% 估算
-            (due_count as f64 / 0.8).ceil() as usize
+            1
         };
+        let learning_total = pure_learning as usize * learning_remaining;
+
+        // 重学中的卡：类似，估算剩余步数
+        let relearn_remaining = if step_count_relearning > 1 {
+            (step_count_relearning / 2 + 1)
+        } else {
+            1
+        };
+        let relearning_total = relearning_count as usize * relearn_remaining;
+
+        // 到期的复习卡：部分可能失败进入重学，每张失败卡走一遍 relearn steps
+        let fail_rate = if retention > 0.0 {
+            1.0 - retention
+        } else {
+            0.2 // 默认 20%
+        };
+        let review_total = due_count as usize
+            + (due_count as f64 * fail_rate * step_count_relearning as f64).ceil() as usize;
+
+        let total_estimate = new_total + learning_total + relearning_total + review_total;
+
+        let due_count_total = (new_count + learning_count + due_count) as usize;
+
         Ok(SessionEstimate {
-            due_count,
+            due_count: due_count_total,
             retention,
             total_estimate,
         })

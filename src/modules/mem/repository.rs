@@ -381,18 +381,6 @@ impl MemRepo {
         .await
     }
 
-    pub async fn count_due_total(&self) -> Result<i64, sqlx::Error> {
-        sqlx::query_scalar(
-            r#"SELECT COUNT(*) FROM mem WHERE buried = 0 AND state != 'suspended' AND (
-                state = 'new'
-                OR state IN ('learning', 'relearning')
-                OR (state = 'review' AND due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
-            )"#,
-        )
-        .fetch_one(&*self.pool)
-        .await
-    }
-
     pub async fn get_counts(&self) -> Result<(i64, i64, i64, i64, i64), sqlx::Error> {
         let new_count: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM mem WHERE state = 'new' AND buried = 0 AND state != 'suspended'",
@@ -920,50 +908,6 @@ mod tests {
     // ── session_estimate 相关 ──
 
     #[tokio::test]
-    async fn count_due_total_empty_db() {
-        let repo = setup_db().await;
-        assert_eq!(repo.count_due_total().await.unwrap(), 0);
-    }
-
-    #[tokio::test]
-    async fn count_due_total_counts_all_states() {
-        let repo = setup_db().await;
-
-        async fn insert_mem(repo: &MemRepo, state: &str, buried: i32, due_at: &str) {
-            let cue_id = repo.create_chunk("cue").await.unwrap();
-            let target_id = repo.create_chunk("target").await.unwrap();
-            sqlx::query(
-                "INSERT INTO mem (cue_chunk_id, target_chunk_id, state, buried, due_at) VALUES (?, ?, ?, ?, ?)"
-            )
-            .bind(cue_id)
-            .bind(target_id)
-            .bind(state)
-            .bind(buried)
-            .bind(due_at)
-            .execute(&*repo.pool)
-            .await
-            .unwrap();
-        }
-
-        // new, not buried → 应计入
-        insert_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
-        // learning, not buried → 应计入
-        insert_mem(&repo, "learning", 0, "2099-01-01T00:00:00Z").await;
-        // relearning, not buried → 应计入
-        insert_mem(&repo, "relearning", 0, "2099-01-01T00:00:00Z").await;
-        // review, due (past), not buried → 应计入
-        insert_mem(&repo, "review", 0, "2020-01-01T00:00:00Z").await;
-        // review, due (nowish), not buried → 应计入
-        insert_mem(&repo, "review", 0, "2025-01-01T00:00:00Z").await;
-        // review, not due, not buried → 不应计入
-        insert_mem(&repo, "review", 0, "2099-01-01T00:00:00Z").await;
-        // new, buried → 不应计入
-        insert_mem(&repo, "new", 1, "2099-01-01T00:00:00Z").await;
-
-        assert_eq!(repo.count_due_total().await.unwrap(), 5);
-    }
-
-    #[tokio::test]
     async fn get_recent_retention_empty() {
         let repo = setup_db().await;
         assert_eq!(repo.get_recent_retention(100).await.unwrap(), 0.0);
@@ -1278,5 +1222,135 @@ mod tests {
         // 标签已被自动删除
         let tags = repo.list_tags(uid).await.unwrap();
         assert!(tags.is_empty());
+    }
+
+    // ── get_session_estimate ──
+
+    /// 插入一条 mem（仅基本字段），返回 id
+    async fn insert_session_mem(
+        repo: &MemRepo,
+        state: &str,
+        buried: i32,
+        due_at: &str,
+    ) -> i32 {
+        let cue_id = repo.create_chunk("cue").await.unwrap();
+        let target_id = repo.create_chunk("target").await.unwrap();
+        sqlx::query_scalar::<_, i32>(
+            "INSERT INTO mem (cue_chunk_id, target_chunk_id, state, buried, due_at) VALUES (?, ?, ?, ?, ?) RETURNING id"
+        )
+        .bind(cue_id)
+        .bind(target_id)
+        .bind(state)
+        .bind(buried)
+        .bind(due_at)
+        .fetch_one(&*repo.pool)
+        .await
+        .unwrap()
+    }
+
+    async fn estimate(repo: &MemRepo) -> crate::modules::mem::model::SessionEstimate {
+        let svc = crate::modules::mem::service::MemService::new(repo.pool.clone());
+        svc.get_session_estimate().await.unwrap()
+    }
+
+    #[tokio::test]
+    async fn estimate_empty_db() {
+        let repo = setup_db().await;
+        let est = estimate(&repo).await;
+        assert_eq!(est.due_count, 0);
+        assert_eq!(est.total_estimate, 0);
+    }
+
+    #[tokio::test]
+    async fn estimate_all_new() {
+        let repo = setup_db().await;
+        // 3 张新卡 → learning_steps 默认 2，new_total = 3 × 2 = 6
+        for _ in 0..3 {
+            insert_session_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
+        }
+        let est = estimate(&repo).await;
+        assert_eq!(est.due_count, 3);
+        assert_eq!(est.total_estimate, 3 * 2); // 新卡 × 2 steps
+    }
+
+    #[tokio::test]
+    async fn estimate_all_review_no_failures() {
+        let repo = setup_db().await;
+        // 5 张到期的复习卡 + 3 条全通过的 revlog → retention = 1.0
+        let due_at = "2020-01-01T00:00:00Z";
+        for _ in 0..5 {
+            let mem_id = insert_session_mem(&repo, "review", 0, due_at).await;
+            sqlx::query("INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, ?)")
+                .bind(mem_id)
+                .bind("2020-01-01T00:00:00Z")
+                .bind(4i32) // easy = pass
+                .bind(1i32)
+                .execute(&*repo.pool)
+                .await
+                .unwrap();
+        }
+        let est = estimate(&repo).await;
+        assert_eq!(est.due_count, 5);
+        // retention = 1.0 → fail_rate = 0 → total = review_due (5) + 0 失败重学
+        assert_eq!(est.total_estimate, 5);
+    }
+
+    #[tokio::test]
+    async fn estimate_mixed_new_and_review() {
+        let repo = setup_db().await;
+        // 2 张新卡
+        for _ in 0..2 {
+            insert_session_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
+        }
+        // 3 张到期的复习卡 + 全部失败的 revlog → retention = 0.0 → 20% 默认失败率
+        let due_at = "2020-01-01T00:00:00Z";
+        for _ in 0..3 {
+            let mem_id = insert_session_mem(&repo, "review", 0, due_at).await;
+            sqlx::query("INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, ?)")
+                .bind(mem_id)
+                .bind("2020-01-01T00:00:00Z")
+                .bind(1i32) // again = fail
+                .bind(1i32)
+                .execute(&*repo.pool)
+                .await
+                .unwrap();
+        }
+        let est = estimate(&repo).await;
+        assert_eq!(est.due_count, 5); // 2 new + 3 review
+        // new: 2 × 2 steps = 4
+        // review: 3 + 3 × 0.2 × 1(relearn step) = 3 + 0.6 = ceil(3.6) = 4
+        // total: 4 + 4 = 8
+        assert_eq!(est.total_estimate, 8);
+    }
+
+    #[tokio::test]
+    async fn estimate_with_relearning() {
+        let repo = setup_db().await;
+        // 2 张 relearning 卡
+        for _ in 0..2 {
+            insert_session_mem(&repo, "relearning", 0, "2020-01-01T00:00:00Z").await;
+        }
+        // 3 张新卡
+        for _ in 0..3 {
+            insert_session_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
+        }
+        let est = estimate(&repo).await;
+        assert_eq!(est.due_count, 5);
+        // relearning: 2 × 1 (默认 1 个 step) = 2
+        // new: 3 × 2 = 6
+        // total: 8
+        assert_eq!(est.total_estimate, 8);
+    }
+
+    #[tokio::test]
+    async fn estimate_buried_and_suspended_excluded() {
+        let repo = setup_db().await;
+        // buried 新卡 → 不计
+        insert_session_mem(&repo, "new", 1, "2099-01-01T00:00:00Z").await;
+        // 正常新卡 → 计
+        insert_session_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
+        let est = estimate(&repo).await;
+        assert_eq!(est.due_count, 1);
+        assert_eq!(est.total_estimate, 1 * 2);
     }
 }

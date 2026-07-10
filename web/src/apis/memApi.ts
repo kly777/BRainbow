@@ -1,5 +1,5 @@
 import { CACHE, request, tapInvalidate } from "./request.ts";
-import type { PaginatedResponse } from "./types/shared.ts";
+import type { BatchDataResponse, BatchResponse, PaginatedResponse } from "./types/shared.ts";
 
 // ── 类型 ──
 
@@ -146,22 +146,22 @@ export const resetMemE = (id: number): Promise<{ ok: boolean }> =>
 		tapInvalidate(CACHE.mem, r),
 	);
 
-export const batchBuryMemE = (ids: number[]): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>("/mem/batch-bury", {
+export const batchBuryMemE = (ids: number[]): Promise<BatchResponse> =>
+	request<BatchResponse>("/mem/batch-bury", {
 		method: "POST",
-		body: JSON.stringify({ ids }),
+		body: JSON.stringify({ items: ids }),
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
-export const batchDeleteMemE = (ids: number[]): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>("/mem/batch-delete", {
+export const batchDeleteMemE = (ids: number[]): Promise<BatchResponse> =>
+	request<BatchResponse>("/mem/batch-delete", {
 		method: "POST",
-		body: JSON.stringify({ ids }),
+		body: JSON.stringify({ items: ids }),
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
-export const batchResetMemE = (ids: number[]): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>("/mem/batch-reset", {
+export const batchResetMemE = (ids: number[]): Promise<BatchResponse> =>
+	request<BatchResponse>("/mem/batch-reset", {
 		method: "POST",
-		body: JSON.stringify({ ids }),
+		body: JSON.stringify({ items: ids }),
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const editMemE = (
@@ -240,19 +240,19 @@ export const setMemTagsE = (
 export const batchAddTagToMemsE = (
 	memIds: number[],
 	tagId: number,
-): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>("/mem/tag/batch-add", {
+): Promise<BatchResponse> =>
+	request<BatchResponse>("/mem/tag/batch-add", {
 		method: "POST",
-		body: JSON.stringify({ mem_ids: memIds, tag_id: tagId }),
+		body: JSON.stringify({ items: memIds, tag_id: tagId }),
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const batchRemoveTagFromMemsE = (
 	memIds: number[],
 	tagId: number,
-): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>("/mem/tag/batch-remove", {
+): Promise<BatchResponse> =>
+	request<BatchResponse>("/mem/tag/batch-remove", {
 		method: "POST",
-		body: JSON.stringify({ mem_ids: memIds, tag_id: tagId }),
+		body: JSON.stringify({ items: memIds, tag_id: tagId }),
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 /** 批量获取多个 mem 的标签，返回每行 { mem_id, id, name, created_at } */
@@ -263,19 +263,21 @@ export interface MemTagRow {
 	created_at: string;
 }
 
-export const batchGetMemsTagsE = (memIds: number[]): Promise<MemTagRow[]> =>
-	request<MemTagRow[]>("/mem/tag/batch-by-ids", {
+export const batchGetMemsTagsE = (
+	memIds: number[],
+): Promise<BatchDataResponse<MemTagRow>> =>
+	request<BatchDataResponse<MemTagRow>>("/mem/tag/batch-by-ids", {
 		method: "POST",
-		body: JSON.stringify({ ids: memIds }),
+		body: JSON.stringify({ items: memIds }),
 	});
 
 export const batchSetTagsForMemsE = (
 	memIds: number[],
 	tagIds: number[],
-): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>("/mem/tag/batch-set", {
+): Promise<BatchResponse> =>
+	request<BatchResponse>("/mem/tag/batch-set", {
 		method: "POST",
-		body: JSON.stringify({ mem_ids: memIds, tag_ids: tagIds }),
+		body: JSON.stringify({ items: memIds, tag_ids: tagIds }),
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 // ── CSV 导入导出 ──

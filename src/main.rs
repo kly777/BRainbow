@@ -1,4 +1,5 @@
 mod auth;
+mod batch;
 mod db;
 mod error;
 mod modules;

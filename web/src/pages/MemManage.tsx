@@ -155,9 +155,9 @@ export default function MemManage() {
 		if (items.length > 0) {
 			const ids = items.map((m) => m.id);
 			batchGetMemsTagsE(ids)
-				.then((rows) => {
+				.then((res) => {
 					const map = new Map<number, TagInfo[]>();
-					for (const row of rows) {
+					for (const row of res.items) {
 						const tags = map.get(row.mem_id) ?? [];
 						tags.push({
 							id: row.id,

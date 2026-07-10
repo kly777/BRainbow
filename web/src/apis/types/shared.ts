@@ -15,7 +15,33 @@ export interface PaginationParams {
 	page_size?: number;
 }
 
-// ── 通用响应 ──
+// ── 通用批量操作 ──
+
+/** 批量写操作响应（删除、埋葬、重置、打标签等） */
+export interface BatchResponse {
+	ok: boolean;
+	processed: number;
+	succeeded: number;
+	failed: number;
+	errors?: BatchErrorDetail[];
+}
+
+/** 批量读操作响应（查询、读取等） */
+export interface BatchDataResponse<T> {
+	ok: boolean;
+	processed: number;
+	succeeded: number;
+	failed: number;
+	items: T[];
+	errors?: BatchErrorDetail[];
+}
+
+/** 批量操作中单条错误详情 */
+export interface BatchErrorDetail {
+	index: number;
+	code: string;
+	message: string;
+}
 
 // ── 展示工具 ──
 

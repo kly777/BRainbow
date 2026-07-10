@@ -18,6 +18,9 @@ export {
 	ValidationError,
 } from "./errors.ts";
 export {
+	type BatchDataResponse,
+	type BatchErrorDetail,
+	type BatchResponse,
 	formatDate,
 	type PaginatedResponse,
 	type PaginationParams,

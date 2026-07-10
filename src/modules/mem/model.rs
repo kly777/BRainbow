@@ -147,12 +147,6 @@ pub struct MemQuery {
     pub page_size: Option<i64>,
 }
 
-/// 批量操作请求
-#[derive(Debug, Clone, Deserialize)]
-pub struct BatchIdsRequest {
-    pub ids: Vec<i32>,
-}
-
 /// 标签
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TagInfo {
@@ -187,20 +181,6 @@ pub struct TagMemRequest {
 #[derive(Debug, Clone, Deserialize)]
 pub struct SetTagsRequest {
     pub mem_id: i32,
-    pub tag_ids: Vec<i32>,
-}
-
-/// 批量 mem 标签操作请求
-#[derive(Debug, Clone, Deserialize)]
-pub struct BatchTagRequest {
-    pub mem_ids: Vec<i32>,
-    pub tag_id: i32,
-}
-
-/// 批量 mem 设置多标签请求
-#[derive(Debug, Clone, Deserialize)]
-pub struct BatchSetTagsRequest {
-    pub mem_ids: Vec<i32>,
     pub tag_ids: Vec<i32>,
 }
 

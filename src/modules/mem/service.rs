@@ -5,6 +5,7 @@ use crate::modules::mem::config::MemConfig;
 use crate::modules::mem::fsrs::{self, ReviewOutcome};
 use crate::modules::mem::model::*;
 use crate::modules::mem::repository::{MemRepo, MemRow};
+use crate::batch::{batch_execute, batch_execute_with_code, BatchDataResponse, BatchResponse};
 use crate::pagination::{Pagination, PaginatedResponse};
 
 /// 计算自上次复习以来经过的天数。
@@ -286,19 +287,28 @@ impl MemService {
 
     // ── 批量操作 ──
 
-    pub async fn batch_delete(&self, ids: &[i32]) -> Result<(), AppError> {
-        self.repo.batch_delete_mems(ids).await.map_err(AppError::Db)?;
-        Ok(())
+    pub async fn batch_delete(&self, ids: &[i32]) -> BatchResponse {
+        let (_, errors) = batch_execute(ids.iter().copied(), |id| async move {
+            self.repo.delete_mem(id).await.map_err(|e| format!("{e}"))
+        })
+        .await;
+        BatchResponse::from_results(errors, ids.len())
     }
 
-    pub async fn batch_bury(&self, ids: &[i32]) -> Result<(), AppError> {
-        self.repo.batch_bury_mems(ids).await.map_err(AppError::Db)?;
-        Ok(())
+    pub async fn batch_bury(&self, ids: &[i32]) -> BatchResponse {
+        let (_, errors) = batch_execute(ids.iter().copied(), |id| async move {
+            self.repo.bury_mem(id).await.map_err(|e| format!("{e}"))
+        })
+        .await;
+        BatchResponse::from_results(errors, ids.len())
     }
 
-    pub async fn batch_reset(&self, ids: &[i32]) -> Result<(), AppError> {
-        self.repo.batch_reset_mems(ids).await.map_err(AppError::Db)?;
-        Ok(())
+    pub async fn batch_reset(&self, ids: &[i32]) -> BatchResponse {
+        let (_, errors) = batch_execute(ids.iter().copied(), |id| async move {
+            self.repo.reset_mem(id).await.map_err(|e| format!("{e}"))
+        })
+        .await;
+        BatchResponse::from_results(errors, ids.len())
     }
 
     pub async fn preview(&self, id: i32) -> Result<[f64; 4], AppError> {
@@ -402,23 +412,66 @@ impl MemService {
 
     // ── 批量标签 ──
 
-    pub async fn batch_add_tag_to_mems(&self, mem_ids: &[i32], tag_id: i32) -> Result<(), AppError> {
-        self.repo.batch_add_tag_to_mems(mem_ids, tag_id).await.map_err(AppError::Db)?;
-        Ok(())
+    pub async fn batch_add_tag_to_mems(&self, mem_ids: &[i32], tag_id: i32) -> BatchResponse {
+        let (_, errors) = batch_execute_with_code(
+            mem_ids.iter().copied(),
+            |mem_id| async move {
+                self.repo
+                    .add_tag_to_mem(mem_id, tag_id)
+                    .await
+                    .map_err(|e| (crate::batch::CODE_DB_ERROR, format!("{e}")))
+            },
+        )
+        .await;
+        BatchResponse::from_results(errors, mem_ids.len())
     }
 
-    pub async fn batch_remove_tag_from_mems(&self, mem_ids: &[i32], tag_id: i32) -> Result<(), AppError> {
-        self.repo.batch_remove_tag_from_mems(mem_ids, tag_id).await.map_err(AppError::Db)?;
-        Ok(())
+    pub async fn batch_remove_tag_from_mems(&self, mem_ids: &[i32], tag_id: i32) -> BatchResponse {
+        let (_, errors) = batch_execute_with_code(
+            mem_ids.iter().copied(),
+            |mem_id| async move {
+                self.repo
+                    .remove_tag_from_mem(mem_id, tag_id)
+                    .await
+                    .map_err(|e| (crate::batch::CODE_DB_ERROR, format!("{e}")))
+            },
+        )
+        .await;
+        BatchResponse::from_results(errors, mem_ids.len())
     }
 
-    pub async fn batch_set_tags_for_mems(&self, mem_ids: &[i32], tag_ids: &[i32]) -> Result<(), AppError> {
-        self.repo.batch_set_tags_for_mems(mem_ids, tag_ids).await.map_err(AppError::Db)?;
-        Ok(())
+    pub async fn batch_set_tags_for_mems(&self, mem_ids: &[i32], tag_ids: &[i32]) -> BatchResponse {
+        let tag_ids = tag_ids.to_vec();
+        let (_, errors) = batch_execute_with_code(
+            mem_ids.iter().copied(),
+            |mem_id| {
+                let tag_ids = tag_ids.clone();
+                async move {
+                    self.repo
+                        .set_mem_tags(mem_id, &tag_ids)
+                        .await
+                        .map_err(|e| (crate::batch::CODE_DB_ERROR, format!("{e}")))
+                }
+            },
+        )
+        .await;
+        BatchResponse::from_results(errors, mem_ids.len())
     }
 
-    pub async fn get_mems_tags_batch(&self, mem_ids: &[i32]) -> Result<Vec<MemTagRow>, AppError> {
-        self.repo.get_mems_tags_batch(mem_ids).await.map_err(AppError::Db)
+    pub async fn get_mems_tags_batch(&self, mem_ids: &[i32]) -> BatchDataResponse<MemTagRow> {
+        // 复用 repo 层的批量查询（单条 SQL，无部分失败语义）
+        match self.repo.get_mems_tags_batch(mem_ids).await {
+            Ok(items) => BatchDataResponse::all_ok(items),
+            Err(e) => BatchDataResponse::from_results(
+                vec![],
+                vec![crate::batch::BatchErrorDetail {
+                    index: 0,
+                    code: crate::batch::CODE_DB_ERROR,
+                    message: format!("数据库查询失败: {e}"),
+                }],
+                mem_ids.len(),
+            ),
+        }
     }
 
     // ── CSV/JSON 导入导出 ──

@@ -8,7 +8,9 @@ use serde::Deserialize;
 use crate::auth::Claims;
 use std::collections::HashMap;
 
+use crate::batch::{BatchDataResponse, BatchRequest, BatchResponse};
 use crate::error;
+use crate::guard_empty_batch;
 use crate::modules::mem::config::MemConfig;
 use crate::modules::mem::model::*;
 use crate::modules::mem::optimizer;
@@ -35,44 +37,29 @@ pub async fn get_all(
 
 pub async fn batch_bury(
     State(state): State<AppState>,
-    Json(payload): Json<BatchIdsRequest>,
-) -> impl IntoResponse {
-    if payload.ids.is_empty() {
-        return error::bad_request("ids 为空");
-    }
+    Json(payload): Json<BatchRequest<i32>>,
+) -> Json<BatchResponse> {
+    guard_empty_batch!(payload.items);
     let svc = MemService::new(state.db.clone());
-    match svc.batch_bury(&payload.ids).await {
-        Ok(()) => ok(),
-        Err(e) => err(e, "批量埋葬"),
-    }
+    Json(svc.batch_bury(&payload.items).await)
 }
 
 pub async fn batch_delete(
     State(state): State<AppState>,
-    Json(payload): Json<BatchIdsRequest>,
-) -> impl IntoResponse {
-    if payload.ids.is_empty() {
-        return error::bad_request("ids 为空");
-    }
+    Json(payload): Json<BatchRequest<i32>>,
+) -> Json<BatchResponse> {
+    guard_empty_batch!(payload.items);
     let svc = MemService::new(state.db.clone());
-    match svc.batch_delete(&payload.ids).await {
-        Ok(()) => ok(),
-        Err(e) => err(e, "批量删除"),
-    }
+    Json(svc.batch_delete(&payload.items).await)
 }
 
 pub async fn batch_reset(
     State(state): State<AppState>,
-    Json(payload): Json<BatchIdsRequest>,
-) -> impl IntoResponse {
-    if payload.ids.is_empty() {
-        return error::bad_request("ids 为空");
-    }
+    Json(payload): Json<BatchRequest<i32>>,
+) -> Json<BatchResponse> {
+    guard_empty_batch!(payload.items);
     let svc = MemService::new(state.db.clone());
-    match svc.batch_reset(&payload.ids).await {
-        Ok(()) => ok(),
-        Err(e) => err(e, "批量重置"),
-    }
+    Json(svc.batch_reset(&payload.items).await)
 }
 
 pub async fn get_session_estimate(State(state): State<AppState>) -> impl IntoResponse {
@@ -188,48 +175,49 @@ pub async fn set_mem_tags(
     }
 }
 
+// ── 批量标签请求结构体 ──
+
+#[derive(Debug, Deserialize)]
+pub struct BatchTagRequest {
+    pub items: Vec<i32>,
+    pub tag_id: i32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BatchSetTagsRequest {
+    pub items: Vec<i32>,
+    pub tag_ids: Vec<i32>,
+}
+
 // ── 批量标签 ──
 
 pub async fn batch_add_tag(
     State(state): State<AppState>,
     Json(payload): Json<BatchTagRequest>,
-) -> impl IntoResponse {
-    if payload.mem_ids.is_empty() {
-        return error::bad_request("mem_ids 为空");
-    }
+) -> Json<BatchResponse> {
+    guard_empty_batch!(payload.items);
     let svc = MemService::new(state.db.clone());
-    match svc.batch_add_tag_to_mems(&payload.mem_ids, payload.tag_id).await {
-        Ok(()) => ok(),
-        Err(e) => err(e, "批量添加标签"),
-    }
+    Json(svc.batch_add_tag_to_mems(&payload.items, payload.tag_id).await)
 }
 
 pub async fn batch_remove_tag(
     State(state): State<AppState>,
     Json(payload): Json<BatchTagRequest>,
-) -> impl IntoResponse {
-    if payload.mem_ids.is_empty() {
-        return error::bad_request("mem_ids 为空");
-    }
+) -> Json<BatchResponse> {
+    guard_empty_batch!(payload.items);
     let svc = MemService::new(state.db.clone());
-    match svc.batch_remove_tag_from_mems(&payload.mem_ids, payload.tag_id).await {
-        Ok(()) => ok(),
-        Err(e) => err(e, "批量移除标签"),
-    }
+    Json(svc.batch_remove_tag_from_mems(&payload.items, payload.tag_id).await)
 }
 
 pub async fn batch_get_mems_tags(
     State(state): State<AppState>,
-    Json(payload): Json<BatchIdsRequest>,
-) -> impl IntoResponse {
-    if payload.ids.is_empty() {
-        return Json::<Vec<MemTagRow>>(vec![]).into_response();
+    Json(payload): Json<BatchRequest<i32>>,
+) -> Json<BatchDataResponse<MemTagRow>> {
+    if payload.items.is_empty() {
+        return Json(BatchDataResponse::empty());
     }
     let svc = MemService::new(state.db.clone());
-    match svc.get_mems_tags_batch(&payload.ids).await {
-        Ok(rows) => Json(rows).into_response(),
-        Err(e) => err(e, "批量获取标签"),
-    }
+    Json(svc.get_mems_tags_batch(&payload.items).await)
 }
 
 // ── CSV 导入导出 ──
@@ -301,15 +289,10 @@ pub async fn import_json(
 pub async fn batch_set_tags(
     State(state): State<AppState>,
     Json(payload): Json<BatchSetTagsRequest>,
-) -> impl IntoResponse {
-    if payload.mem_ids.is_empty() {
-        return error::bad_request("mem_ids 为空");
-    }
+) -> Json<BatchResponse> {
+    guard_empty_batch!(payload.items);
     let svc = MemService::new(state.db.clone());
-    match svc.batch_set_tags_for_mems(&payload.mem_ids, &payload.tag_ids).await {
-        Ok(()) => ok(),
-        Err(e) => err(e, "批量设置标签"),
-    }
+    Json(svc.batch_set_tags_for_mems(&payload.items, &payload.tag_ids).await)
 }
 
 pub async fn get_due(

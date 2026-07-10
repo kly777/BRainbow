@@ -1,7 +1,7 @@
 use sqlx::{FromRow, SqlitePool};
 use std::sync::Arc;
 
-use super::model::Media;
+use super::model::{Media, NewMedia};
 
 #[derive(Debug, FromRow)]
 struct MediaRow {
@@ -50,32 +50,22 @@ impl MediaRepository {
         Self { db }
     }
 
-    pub async fn insert(
-        &self,
-        stored_id: &str,
-        original_name: &str,
-        media_type: &str,
-        mime_type: &str,
-        size_bytes: i64,
-        width: Option<i64>,
-        height: Option<i64>,
-        duration_ms: Option<i64>,
-        user_id: Option<i64>,
+    pub async fn insert(&self, params: NewMedia<'_>,
     ) -> Result<Media, sqlx::Error> {
         let row = sqlx::query_as::<_, MediaRow>(
             r#"INSERT INTO media (stored_id, original_name, media_type, mime_type, size_bytes, width, height, duration_ms, user_id)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                RETURNING id, stored_id, original_name, media_type, mime_type, size_bytes, width, height, duration_ms, user_id, created_at"#,
         )
-        .bind(stored_id)
-        .bind(original_name)
-        .bind(media_type)
-        .bind(mime_type)
-        .bind(size_bytes)
-        .bind(width)
-        .bind(height)
-        .bind(duration_ms)
-        .bind(user_id)
+        .bind(params.stored_id)
+        .bind(params.original_name)
+        .bind(params.media_type)
+        .bind(params.mime_type)
+        .bind(params.size_bytes)
+        .bind(params.width)
+        .bind(params.height)
+        .bind(params.duration_ms)
+        .bind(params.user_id)
         .fetch_one(&*self.db)
         .await?;
 

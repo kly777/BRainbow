@@ -35,7 +35,7 @@ pub async fn search_handler(
     let offset = params.offset.unwrap_or(0);
     let search_type = params.search_type.as_deref().unwrap_or("all");
 
-    match search_conv(&*state.db, q, limit, offset, search_type).await {
+    match search_conv(&state.db, q, limit, offset, search_type).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => e.into_response(),
     }

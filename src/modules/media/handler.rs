@@ -102,7 +102,7 @@ pub async fn list_handler(
 
     match service.list(&q.pagination, mt).await {
         Ok(response) => {
-            let items: Vec<MediaResponse> = response.items.iter().map(|m| to_response(m)).collect();
+            let items: Vec<MediaResponse> = response.items.iter().map(to_response).collect();
             Json(serde_json::json!({
                 "items": items,
                 "total": response.total,

@@ -1,6 +1,19 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+/// 创建媒体记录所需的参数
+pub struct NewMedia<'a> {
+    pub stored_id: &'a str,
+    pub original_name: &'a str,
+    pub media_type: &'a str,
+    pub mime_type: &'a str,
+    pub size_bytes: i64,
+    pub width: Option<i64>,
+    pub height: Option<i64>,
+    pub duration_ms: Option<i64>,
+    pub user_id: Option<i64>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MediaType {
     #[serde(rename = "image")]

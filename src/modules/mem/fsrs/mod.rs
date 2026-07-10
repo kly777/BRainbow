@@ -5,7 +5,7 @@
 //! Again 始终走 FSRS 降 stability
 
 use crate::modules::mem::model::CardState;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{Duration, Utc};
 use fsrs::{FSRS, MemoryState};
 use std::sync::RwLock;
 
@@ -143,18 +143,28 @@ pub struct ReviewOutcome {
 ///
 /// `cumulative_step_days`：自进入当前步进阶段（Learning 或 Relearning）
 /// 以来经过的总天数。用于毕业时正确反映实际经过时间。
-pub fn schedule(
-    s_old: f64,
-    d_old: f64,
-    state: CardState,
-    step_index: Option<usize>,
-    rating: u8,
-    _now: DateTime<Utc>,
-    days_elapsed: u32,
-    cumulative_step_days: u32,
-    config: &SchedulerConfig,
-) -> ReviewOutcome {
+/// FSRS 调度输入参数。
+pub struct ScheduleInput {
+    pub s_old: f64,
+    pub d_old: f64,
+    pub state: CardState,
+    pub step_index: Option<usize>,
+    pub rating: u8,
+    pub days_elapsed: u32,
+    pub cumulative_step_days: u32,
+}
+
+pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> ReviewOutcome {
     use CardState::*;
+    let ScheduleInput {
+        s_old,
+        d_old,
+        state,
+        step_index,
+        rating,
+        days_elapsed,
+        cumulative_step_days,
+    } = input;
 
     // 挂起状态不应进入调度（安全兜底）
     if state == Suspended {

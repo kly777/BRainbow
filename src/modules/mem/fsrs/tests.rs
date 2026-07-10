@@ -22,7 +22,8 @@ fn schedule_secs(
     let now = Utc::now();
     let config = test_config();
     let outcome = schedule(
-        s_old, d_old, state, step_index, rating, now, days_elapsed, 0, &config,
+        ScheduleInput { s_old, d_old, state, step_index, rating, days_elapsed, cumulative_step_days: 0 },
+        &config,
     );
     let due = chrono::DateTime::parse_from_rfc3339(&outcome.due_at)
         .unwrap()
@@ -98,7 +99,10 @@ fn good_grows_faster_than_hard() {
         let mut d = 5.0;
         // 5 次 Review（用相同初始 S/D）
         for _ in 0..5 {
-            let o = schedule(s, d, CardState::Review, None, rating, Utc::now(), 3, 0, &config);
+            let o = schedule(
+                ScheduleInput { s_old: s, d_old: d, state: CardState::Review, step_index: None, rating, days_elapsed: 3, cumulative_step_days: 0 },
+                &config,
+            );
             s = o.stability; d = o.difficulty;
         }
         results.push((rating, s));
@@ -115,7 +119,10 @@ fn good_grows_faster_than_hard() {
 #[test]
 fn forget_in_review_triggers_relearning() {
     let config = test_config();
-    let outcome = schedule(5.0, 5.0, CardState::Review, None, 1, Utc::now(), 5, 0, &config);
+    let outcome = schedule(
+        ScheduleInput { s_old: 5.0, d_old: 5.0, state: CardState::Review, step_index: None, rating: 1, days_elapsed: 5, cumulative_step_days: 0 },
+        &config,
+    );
     assert_eq!(outcome.state, CardState::Relearning);
     let secs = schedule_secs(5.0, 5.0, CardState::Review, None, 1, 5);
     assert!(secs <= 3600.0);
@@ -124,9 +131,15 @@ fn forget_in_review_triggers_relearning() {
 #[test]
 fn relearn_then_recover() {
     let config = test_config();
-    let o1 = schedule(5.0, 5.0, CardState::Review, None, 1, Utc::now(), 5, 0, &config);
+    let o1 = schedule(
+        ScheduleInput { s_old: 5.0, d_old: 5.0, state: CardState::Review, step_index: None, rating: 1, days_elapsed: 5, cumulative_step_days: 0 },
+        &config,
+    );
     assert_eq!(o1.state, CardState::Relearning);
-    let o2 = schedule(o1.stability, o1.difficulty, o1.state, Some(0), 3, Utc::now(), 1, 1, &config);
+    let o2 = schedule(
+        ScheduleInput { s_old: o1.stability, d_old: o1.difficulty, state: o1.state, step_index: Some(0), rating: 3, days_elapsed: 1, cumulative_step_days: 1 },
+        &config,
+    );
     assert_eq!(o2.state, CardState::Review);
 }
 
@@ -160,16 +173,25 @@ fn long_term_growth_trajectory() {
     let mut state = CardState::New;
 
     // Step 0 → 1（步进不更新 S/D）
-    let o1 = schedule(s, d, state, None, 3, Utc::now(), 0, 0, &config);
+    let o1 = schedule(
+        ScheduleInput { s_old: s, d_old: d, state, step_index: None, rating: 3, days_elapsed: 0, cumulative_step_days: 0 },
+        &config,
+    );
     (s, d, state) = (o1.stability, o1.difficulty, o1.state);
     // Step 1 → 毕业（用 cumulative_step_days=1）
-    let o2 = schedule(s, d, state, Some(1), 3, Utc::now(), 0, 1, &config);
+    let o2 = schedule(
+        ScheduleInput { s_old: s, d_old: d, state, step_index: Some(1), rating: 3, days_elapsed: 0, cumulative_step_days: 1 },
+        &config,
+    );
     (s, d, state) = (o2.stability, o2.difficulty, o2.state);
     assert_eq!(state, CardState::Review, "应毕业到 Review");
 
     let mut de = 1u32;
     for _ in 0..20 {
-        let o = schedule(s, d, state, None, 3, Utc::now(), de, 0, &config);
+        let o = schedule(
+            ScheduleInput { s_old: s, d_old: d, state, step_index: None, rating: 3, days_elapsed: de, cumulative_step_days: 0 },
+            &config,
+        );
         s = o.stability; d = o.difficulty;
         de = interval_days(s).max(1.0) as u32;
     }
@@ -263,8 +285,16 @@ impl TrueMemSim {
         let rating = true_rating(self.true_s, days_elapsed.max(1), rng);
 
         let outcome = schedule(
-            self.sys_s, self.sys_d, self.sys_state, self.sys_step,
-            rating, Utc::now(), days_elapsed, cumulative_step_days, &self.config,
+            ScheduleInput {
+                s_old: self.sys_s,
+                d_old: self.sys_d,
+                state: self.sys_state,
+                step_index: self.sys_step,
+                rating,
+                days_elapsed,
+                cumulative_step_days,
+            },
+            &self.config,
         );
         self.sys_s = outcome.stability;
         self.sys_d = outcome.difficulty;
@@ -428,8 +458,14 @@ fn custom_config_produces_different_intervals() {
     let now = Utc::now();
 
     // 学习步进不同 → 步进间隔不同
-    let d1 = schedule(0.0, 0.0, CardState::New, None, 3, now, 0, 0, &default);
-    let f1 = schedule(0.0, 0.0, CardState::New, None, 3, now, 0, 0, &fast);
+    let d1 = schedule(
+        ScheduleInput { s_old: 0.0, d_old: 0.0, state: CardState::New, step_index: None, rating: 3, days_elapsed: 0, cumulative_step_days: 0 },
+        &default,
+    );
+    let f1 = schedule(
+        ScheduleInput { s_old: 0.0, d_old: 0.0, state: CardState::New, step_index: None, rating: 3, days_elapsed: 0, cumulative_step_days: 0 },
+        &fast,
+    );
     // 默认 [60, 600]，第一个 step 后 due 在 STEPS[1]=600s
     // 快速 [30, 120]，第一个 step 后 due 在 120s
     let d_due = chrono::DateTime::parse_from_rfc3339(&d1.due_at)

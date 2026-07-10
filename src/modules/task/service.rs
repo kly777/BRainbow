@@ -211,11 +211,10 @@ impl TaskService {
                         let b = windows[j];
                         // 跳过同一个 exclude_id 的情况（更新已有窗口时）
                         // 仅比较已入库的 ID（>0），新窗口 id=0 不会被误跳过
-                        if let Some(eid) = exclude_id {
-                            if eid > 0 && (a.id == eid || b.id == eid) {
+                        if let Some(eid) = exclude_id
+                            && eid > 0 && (a.id == eid || b.id == eid) {
                                 continue;
                             }
-                        }
                         if a.start_time < b.end_time && b.start_time < a.end_time {
                             return Err(ServiceError::InvalidInput(format!(
                                 "{} 时间段 [{}, {}] 与 [{}, {}] 重叠",
@@ -333,11 +332,10 @@ fn validate_title(title: &str) -> Result<(), ServiceError> {
 }
 
 fn validate_effort(minutes: Option<i32>) -> Result<(), ServiceError> {
-    if let Some(m) = minutes {
-        if m < 0 {
+    if let Some(m) = minutes
+        && m < 0 {
             return Err(ServiceError::InvalidInput("精力估算值不能为负数".into()));
         }
-    }
     Ok(())
 }
 

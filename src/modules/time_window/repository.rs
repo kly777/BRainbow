@@ -174,7 +174,7 @@ impl TimeWindowRepository {
         Ok(time_windows)
     }
 
-    /// 查找在指定时间范围内的时间窗口
+    // 查找在指定时间范围内的时间窗口
     // pub async fn find_in_time_range(
     //     &self,
     //     start_time: DateTime<Utc>,
@@ -210,7 +210,7 @@ impl TimeWindowRepository {
     //     Ok(time_windows)
     // }
 
-    /// 查找与指定时间范围重叠的时间窗口
+    // 查找与指定时间范围重叠的时间窗口
     // pub async fn find_overlapping_time_windows(
     //     &self,
     //     start_time: DateTime<Utc>,
@@ -303,9 +303,9 @@ impl TimeWindowRepository {
         .bind(end_time)
         .bind(window_type.as_str())
         .bind(user_id)
-        .bind(&recurrence_freq)
-        .bind(&recurrence_interval)
-        .bind(&recurrence_until)
+        .bind(recurrence_freq)
+        .bind(recurrence_interval)
+        .bind(recurrence_until)
         .bind(&recurrence_by_weekdays)
         .bind(id)
         .fetch_one(&*self.db)

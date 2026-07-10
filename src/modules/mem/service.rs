@@ -66,11 +66,10 @@ impl MemService {
             ids.extend(upcoming);
         }
 
-        if ids.is_empty() {
-            if let Ok(Some(id)) = self.repo.get_next_mem().await {
+        if ids.is_empty()
+            && let Ok(Some(id)) = self.repo.get_next_mem().await {
                 ids.push(id);
             }
-        }
 
         let items = self.build_items(&ids).await;
         let has_more = ids.len() >= max_learning as usize;
@@ -125,13 +124,15 @@ impl MemService {
         self.repo
             .update_mem_fsrs(
                 id,
-                new_state,
-                outcome.stability,
-                outcome.difficulty,
-                new_step.map(|s| s as i32),
-                lapses,
-                leeched,
-                &outcome.due_at,
+                &FsrsUpdate {
+                    state: new_state.to_string(),
+                    stability: outcome.stability,
+                    difficulty: outcome.difficulty,
+                    step_index: new_step.map(|s| s as i32),
+                    lapses,
+                    leeched,
+                    due_at: outcome.due_at.clone(),
+                },
             )
             .await?;
 
@@ -187,14 +188,15 @@ impl MemService {
             days_elapsed
         };
         fsrs::schedule(
-            row.stability,
-            row.difficulty,
-            state,
-            step,
-            rating,
-            chrono::Utc::now(),
-            days_elapsed,
-            cumulative_step_days,
+            fsrs::ScheduleInput {
+                s_old: row.stability,
+                d_old: row.difficulty,
+                state,
+                step_index: step,
+                rating,
+                days_elapsed,
+                cumulative_step_days,
+            },
             &config,
         )
     }
@@ -204,8 +206,8 @@ impl MemService {
     async fn build_items(&self, ids: &[i32]) -> Vec<MemWithChunks> {
         let mut items = Vec::new();
         for &id in ids {
-            if let Ok(Some(row)) = self.repo.get_mem(id).await {
-                if let (Ok(Some(cue)), Ok(Some(target))) = (
+            if let Ok(Some(row)) = self.repo.get_mem(id).await
+                && let (Ok(Some(cue)), Ok(Some(target))) = (
                     self.repo.get_chunk(row.cue_chunk_id).await,
                     self.repo.get_chunk(row.target_chunk_id).await,
                 ) {
@@ -221,7 +223,6 @@ impl MemService {
                         leeched: row.leeched,
                     });
                 }
-            }
         }
         items
     }
@@ -275,7 +276,7 @@ impl MemService {
 
         // 学习中的卡：已过部分 step，估算剩余一半 + 至少 1 次
         let learning_remaining = if step_count_learning > 1 {
-            (step_count_learning / 2 + 1)
+            step_count_learning / 2 + 1 
         } else {
             1
         };
@@ -283,7 +284,7 @@ impl MemService {
 
         // 重学中的卡：类似，估算剩余步数
         let relearn_remaining = if step_count_relearning > 1 {
-            (step_count_relearning / 2 + 1)
+            step_count_relearning / 2 + 1 
         } else {
             1
         };
@@ -376,13 +377,15 @@ impl MemService {
         self.repo
             .update_mem_fsrs(
                 id,
-                &req.state,
-                req.stability,
-                req.difficulty,
-                req.step_index,
-                req.lapses,
-                req.leeched,
-                &req.due_at,
+                &FsrsUpdate {
+                    state: req.state.clone(),
+                    stability: req.stability,
+                    difficulty: req.difficulty,
+                    step_index: req.step_index,
+                    lapses: req.lapses,
+                    leeched: req.leeched,
+                    due_at: req.due_at.clone(),
+                },
             )
             .await
     }
@@ -520,15 +523,15 @@ impl MemService {
         let mut wtr = csv::WriterBuilder::new()
             .delimiter(b'|')
             .from_writer(Vec::new());
-        wtr.write_record(["cue", "target", "tags"]).map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string().into())))?;
+        wtr.write_record(["cue", "target", "tags"]).map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string())))?;
 
         for (cue, target, tags) in &rows {
-            wtr.write_record([cue, target, tags]).map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string().into())))?;
+            wtr.write_record([cue, target, tags]).map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string())))?;
         }
 
-        wtr.flush().map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string().into())))?;
-        let data = wtr.into_inner().map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string().into())))?;
-        String::from_utf8(data).map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string().into())))
+        wtr.flush().map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string())))?;
+        let data = wtr.into_inner().map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string())))?;
+        String::from_utf8(data).map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string())))
     }
 
     async fn apply_tags_to_mem(&self, mem_id: i32, tags_str: &str, default_tags: &[String], user_id: i32) -> Result<(), AppError> {

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use sqlx::SqlitePool;
 use tracing::warn;
 
-use super::model::Media;
+use super::model::{Media, NewMedia};
 use super::repository::MediaRepository;
 use crate::error::ServiceError;
 use crate::pagination::{PaginatedResponse, Pagination};
@@ -139,17 +139,17 @@ impl MediaService {
         // 4. 插库
         let media = match self
             .repo
-            .insert(
-                &stored_id,
-                &safe_name,
-                media_type_str,
-                &real_mime,
-                data.len() as i64,
-                None,
-                None,
-                None,
+            .insert(NewMedia {
+                stored_id: &stored_id,
+                original_name: &safe_name,
+                media_type: media_type_str,
+                mime_type: &real_mime,
+                size_bytes: data.len() as i64,
+                width: None,
+                height: None,
+                duration_ms: None,
                 user_id,
-            )
+            })
             .await
         {
             Ok(m) => m,
@@ -211,12 +211,12 @@ impl MediaService {
             .repo
             .count(media_type)
             .await
-            .map_err(|e| ServiceError::Db(e))?;
+            .map_err(ServiceError::Db)?;
         let items = self
             .repo
             .find_all(pagination.limit(), pagination.offset(), media_type)
             .await
-            .map_err(|e| ServiceError::Db(e))?;
+            .map_err(ServiceError::Db)?;
         Ok(PaginatedResponse::new(items, total, pagination))
     }
 
@@ -224,7 +224,7 @@ impl MediaService {
         self.repo
             .find_by_stored_id(stored_id)
             .await
-            .map_err(|e| ServiceError::Db(e))
+            .map_err(ServiceError::Db)
     }
 
     pub async fn rename(&self, stored_id: &str, new_name: &str) -> Result<Media, ServiceError> {
@@ -232,7 +232,7 @@ impl MediaService {
         self.repo
             .update_name(stored_id, &safe)
             .await
-            .map_err(|e| ServiceError::Db(e))?
+            .map_err(ServiceError::Db)?
             .ok_or_else(|| ServiceError::NotFound("媒体不存在".into()))
     }
 
@@ -241,7 +241,7 @@ impl MediaService {
             .repo
             .delete(stored_id)
             .await
-            .map_err(|e| ServiceError::Db(e))?
+            .map_err(ServiceError::Db)?
             .ok_or_else(|| ServiceError::NotFound("媒体不存在".into()))?;
         let dir = dir_for_type(media.media_type.as_str());
         let path = format!("{}/{}/{}", UPLOAD_DIR, dir, stored_id);

@@ -1,7 +1,7 @@
 use sqlx::{FromRow, SqlitePool, QueryBuilder};
 use std::sync::Arc;
 
-use super::model::{Chunk, MemQuery, MemTagRow, TagInfo};
+use super::model::{Chunk, FsrsUpdate, MemQuery, MemTagRow, TagInfo};
 
 #[derive(Debug, sqlx::FromRow)]
 struct TagRow {
@@ -116,8 +116,8 @@ impl MemRepo {
             }
         }
 
-        if let Some(ref q) = query.q {
-            if !q.trim().is_empty() {
+        if let Some(ref q) = query.q
+            && !q.trim().is_empty() {
                 let pattern = format!("%{}%", q.trim());
                 qb.push(" AND (cc.content LIKE ");
                 qb.push_bind(&pattern);
@@ -127,7 +127,6 @@ impl MemRepo {
                 qb.push_bind(pattern);
                 qb.push("))");
             }
-        }
 
         // 标签过滤
         if let Some(ref tag_ids_str) = query.tag_ids {
@@ -188,8 +187,8 @@ impl MemRepo {
             }
         }
 
-        if let Some(ref q) = query.q {
-            if !q.trim().is_empty() {
+        if let Some(ref q) = query.q
+            && !q.trim().is_empty() {
                 let pattern = format!("%{}%", q.trim());
                 qb.push(" AND (cc.content LIKE ");
                 qb.push_bind(&pattern);
@@ -199,7 +198,6 @@ impl MemRepo {
                 qb.push_bind(pattern);
                 qb.push("))");
             }
-        }
 
         // 标签过滤
         if let Some(ref tag_ids_str) = query.tag_ids {
@@ -434,21 +432,19 @@ impl MemRepo {
         Ok(())
     }
 
-    pub async fn update_mem_fsrs(
-        &self,
-        id: i32,
-        state: &str,
-        stability: f64,
-        difficulty: f64,
-        step_index: Option<i32>,
-        lapses: i32,
-        leeched: bool,
-        due_at: &str,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn update_mem_fsrs(&self, id: i32, params: &FsrsUpdate) -> Result<(), sqlx::Error> {
         sqlx::query(
             "UPDATE mem SET state=?, stability=?, difficulty=?, step_index=?, lapses=?, leeched=?, due_at=?, last_review_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?",
-        ).bind(state).bind(stability).bind(difficulty).bind(step_index).bind(lapses).bind(leeched).bind(due_at).bind(id)
-            .execute(&*self.pool).await?;
+        )
+        .bind(&params.state)
+        .bind(params.stability)
+        .bind(params.difficulty)
+        .bind(params.step_index)
+        .bind(params.lapses)
+        .bind(params.leeched)
+        .bind(&params.due_at)
+        .bind(id)
+        .execute(&*self.pool).await?;
         Ok(())
     }
 

@@ -196,10 +196,22 @@ pub struct JsonMemItem {
 }
 
 /// MemWithTags — 供列表用
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize)]
 pub struct MemWithTags {
     pub mem: MemWithChunks,
     pub tags: Vec<TagInfo>,
+}
+
+/// FSRS 更新参数（对应 mem 表中的 FSRS 相关字段）
+pub struct FsrsUpdate {
+    pub state: String,
+    pub stability: f64,
+    pub difficulty: f64,
+    pub step_index: Option<i32>,
+    pub lapses: i32,
+    pub leeched: bool,
+    pub due_at: String,
 }
 
 /// 本次学习预估

@@ -122,6 +122,7 @@ impl From<sqlx::Error> for ServiceError {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
     use axum::http::StatusCode;
 

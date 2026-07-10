@@ -122,6 +122,7 @@ pub async fn search_conv(
     Ok(SearchResponse { hits, total })
 }
 mod tests {
+    #![allow(clippy::unwrap_used)]
     #[allow(unused_imports)]
     use super::*;
     use sqlx::SqlitePool;

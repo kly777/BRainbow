@@ -172,7 +172,8 @@ pub async fn file_handler(
         );
     }
 
-    resp.body(body).unwrap()
+    resp.body(body)
+        .expect("ResponseBuilder 使用已知合法的状态码和头，不会失败")
 }
 
 // ── 重命名 ──

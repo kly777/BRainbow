@@ -138,6 +138,7 @@ pub async fn require_admin(request: Request, next: Next) -> Response {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
 
     const TEST_SECRET: &str = "test-secret-key-for-unit-tests";

@@ -212,7 +212,11 @@ pub async fn check_time_conflict_handler(
         );
     }
 
-    let start_time = match start_time_str.unwrap().parse::<DateTime<Utc>>() {
+    // is_none 已在上方守卫，此处取值安全
+    let start_time_str = start_time_str.expect("已在 is_none 守卫后");
+    let end_time_str = end_time_str.expect("已在 is_none 守卫后");
+
+    let start_time = match start_time_str.parse::<DateTime<Utc>>() {
         Ok(time) => time,
         Err(_) => {
             return error::bad_request_with_code("invalid_time_range", "无效的开始时间格式")
@@ -220,7 +224,7 @@ pub async fn check_time_conflict_handler(
         }
     };
 
-    let end_time = match end_time_str.unwrap().parse::<DateTime<Utc>>() {
+    let end_time = match end_time_str.parse::<DateTime<Utc>>() {
         Ok(time) => time,
         Err(_) => {
             return error::bad_request_with_code("invalid_time_range", "无效的结束时间格式")

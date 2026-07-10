@@ -70,7 +70,7 @@ fn due_in_secs(secs: i64) -> String {
 
 fn make_fsrs() -> FSRS {
     let params = get_global_params();
-    FSRS::new(&params).unwrap()
+    FSRS::new(&params).expect("FSRS 参数来自全局配置或默认值，构造不会失败")
 }
 
 /// 除非有真实的记忆参数，否则传 None（避免 stability=0 / difficulty=0 传给 FSRS）
@@ -92,7 +92,8 @@ fn compute_next(
     desired_retention: f64,
 ) -> f64 {
     let fsrs = make_fsrs();
-    let next = fsrs.next_states(mem, desired_retention as f32, days_elapsed).unwrap();
+    let next = fsrs.next_states(mem, desired_retention as f32, days_elapsed)
+        .expect("FSRS next_states 接收合法参数，不会失败");
     let chosen = match rating {
         1 => &next.again,
         2 => &next.hard,
@@ -109,7 +110,8 @@ fn compute_next_with_state(
     desired_retention: f64,
 ) -> (f64, f64, f64) {
     let fsrs = make_fsrs();
-    let next = fsrs.next_states(mem, desired_retention as f32, days_elapsed).unwrap();
+    let next = fsrs.next_states(mem, desired_retention as f32, days_elapsed)
+        .expect("FSRS next_states 接收合法参数，不会失败");
     let chosen = match rating {
         1 => &next.again,
         2 => &next.hard,

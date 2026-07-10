@@ -65,6 +65,7 @@ impl<T: Serialize> PaginatedResponse<T> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
 
     // ── Pagination::clamp ──

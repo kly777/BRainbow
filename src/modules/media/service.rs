@@ -259,6 +259,7 @@ impl MediaService {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
 
     // ── sanitize_name ──

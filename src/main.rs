@@ -1,3 +1,6 @@
+// 禁止生产代码使用 .unwrap()（测试模块内已 #![allow]）
+#![deny(clippy::unwrap_used)]
+
 mod auth;
 mod batch;
 mod db;

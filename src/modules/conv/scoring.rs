@@ -73,6 +73,7 @@ pub fn count_occurrences(text: &str, keyword: &str) -> usize {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
 
     fn make_hit(conv_id: i64, ki: usize, occ: usize, len: usize) -> RawHit {

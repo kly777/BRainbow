@@ -476,9 +476,12 @@ impl MemService {
 
     // ── CSV/JSON 导入导出 ──
 
+    /// 导出为 PSV（Pipe-Separated Values），列分隔符为竖线 `|`
     pub async fn export_csv(&self, tag_ids: &[i32]) -> Result<String, AppError> {
         let rows = self.repo.export_all_mems(tag_ids).await.map_err(AppError::Db)?;
-        let mut wtr = csv::Writer::from_writer(Vec::new());
+        let mut wtr = csv::WriterBuilder::new()
+            .delimiter(b'|')
+            .from_writer(Vec::new());
         wtr.write_record(["cue", "target", "tags"]).map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string().into())))?;
 
         for (cue, target, tags) in &rows {
@@ -508,12 +511,32 @@ impl MemService {
         Ok(())
     }
 
+    /// 从 CSV（逗号分隔）导入，兼容旧格式
     pub async fn import_csv(&self, csv_data: &str, user_id: i32, default_tags: &[String]) -> Result<(usize, Vec<String>), AppError> {
         let mut reader = csv::ReaderBuilder::new()
             .has_headers(true)
             .flexible(true)
             .from_reader(csv_data.as_bytes());
+        self.import_records(&mut reader, user_id, default_tags).await
+    }
 
+    /// 从 PSV（竖线分隔）导入，与导出格式一致
+    pub async fn import_psv(&self, psv_data: &str, user_id: i32, default_tags: &[String]) -> Result<(usize, Vec<String>), AppError> {
+        let mut reader = csv::ReaderBuilder::new()
+            .delimiter(b'|')
+            .has_headers(true)
+            .flexible(true)
+            .from_reader(psv_data.as_bytes());
+        self.import_records(&mut reader, user_id, default_tags).await
+    }
+
+    /// 导入逻辑复用：按分隔符(s)逐行解析 cue | target | tags
+    async fn import_records(
+        &self,
+        reader: &mut csv::Reader<&[u8]>,
+        user_id: i32,
+        default_tags: &[String],
+    ) -> Result<(usize, Vec<String>), AppError> {
         let mut count = 0usize;
         let mut errors = Vec::new();
 
@@ -529,12 +552,10 @@ impl MemService {
                         continue;
                     }
 
-                    // 创建 mem
                     let cue_id = self.repo.create_chunk(cue).await.map_err(AppError::Db)?;
                     let target_id = self.repo.create_chunk(target).await.map_err(AppError::Db)?;
                     let mem_id = self.repo.create_mem(cue_id, target_id, &[]).await.map_err(AppError::Db)?;
 
-                    // 处理标签（CSV 中标签 + 默认标签）
                     self.apply_tags_to_mem(mem_id, tags_str, default_tags, user_id).await?;
 
                     count += 1;

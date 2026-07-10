@@ -233,12 +233,12 @@ pub async fn export_csv(
         .unwrap_or_default();
     let svc = MemService::new(state.db.clone());
     match svc.export_csv(&tag_ids).await {
-        Ok(csv) => (
-            [("Content-Type", "text/csv; charset=utf-8"),
-             ("Content-Disposition", "attachment; filename=\"mems.csv\"")],
-            csv,
+        Ok(psv) => (
+            [("Content-Type", "text/tab-separated-values; charset=utf-8"),
+             ("Content-Disposition", "attachment; filename=\"mems.psv\"")],
+            psv,
         ).into_response(),
-        Err(e) => err(e, "导出 CSV"),
+        Err(e) => err(e, "导出 PSV"),
     }
 }
 
@@ -261,6 +261,21 @@ pub async fn import_csv(
             "errors": errors,
         })).into_response(),
         Err(e) => err(e, "导入 CSV"),
+    }
+}
+
+pub async fn import_psv(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<ImportCsvPayload>,
+) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.import_psv(&payload.csv, claims.sub, &payload.default_tags).await {
+        Ok((count, errors)) => Json(serde_json::json!({
+            "imported": count,
+            "errors": errors,
+        })).into_response(),
+        Err(e) => err(e, "导入 PSV"),
     }
 }
 

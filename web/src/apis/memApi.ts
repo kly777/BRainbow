@@ -318,6 +318,7 @@ export interface ImportCsvResult {
 	errors: string[];
 }
 
+/** 导入 CSV（逗号分隔） */
 export const importCsvE = (
 	csvContent: string,
 	defaultTags?: string[],
@@ -325,6 +326,16 @@ export const importCsvE = (
 	request<ImportCsvResult>("/mem/import/csv", {
 		method: "POST",
 		body: JSON.stringify({ csv: csvContent, default_tags: defaultTags ?? [] }),
+	}).then((r) => tapInvalidate(CACHE.mem, r));
+
+/** 导入 PSV（竖线分隔），与导出格式一致 */
+export const importPsvE = (
+	psvContent: string,
+	defaultTags?: string[],
+): Promise<ImportCsvResult> =>
+	request<ImportCsvResult>("/mem/import/psv", {
+		method: "POST",
+		body: JSON.stringify({ csv: psvContent, default_tags: defaultTags ?? [] }),
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export interface ImportJsonItem {

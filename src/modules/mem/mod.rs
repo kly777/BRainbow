@@ -36,9 +36,10 @@ pub fn routes() -> Router<AppState> {
         .route("/tag/batch-remove", post(handler::batch_remove_tag))
         .route("/tag/batch-set", post(handler::batch_set_tags))
         .route("/tag/batch-by-ids", post(handler::batch_get_mems_tags))
-        // ── CSV 导入导出 ──
+        // ── CSV / PSV 导入导出 ──
         .route("/export/csv", get(handler::export_csv))
         .route("/import/csv", post(handler::import_csv))
+        .route("/import/psv", post(handler::import_psv))
         .route("/import/json", post(handler::import_json))
         .route("/{id}/review", post(handler::review_mem))
         .route("/{id}/undo", post(handler::undo_review))

@@ -7,6 +7,7 @@ export interface CardsGridProps extends Omit<CardMasonryProps, "cards"> {
 	cards: readonly CardData[];
 	showFilters?: boolean;
 	onSearch?: (query: string) => void;
+	initialSearchQuery?: string;
 }
 
 const CardsGrid: Component<CardsGridProps> = (props) => {
@@ -36,6 +37,7 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 			{props.showFilters !== false && (
 				<CardFilter
 					onSearch={props.onSearch}
+					initialQuery={props.initialSearchQuery}
 					sortBy={sortBy()}
 					sortOrder={sortOrder()}
 					onSortChange={(by, order) => {

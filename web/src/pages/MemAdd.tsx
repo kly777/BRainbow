@@ -1,4 +1,4 @@
-import { A, useNavigate } from "@solidjs/router";
+import { A, useNavigate, useSearchParams } from "@solidjs/router";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { createMemE, importJsonE } from "../apis/memApi.ts";
 import MarkdownEditor from "../components/ui/MarkdownEditor.tsx";
@@ -27,9 +27,16 @@ export default function MemAdd() {
 	const [batchText, setBatchText] = createSignal("");
 	const [jsonText, setJsonText] = createSignal("");
 	const [batchCount, setBatchCount] = createSignal(0);
-	const [mode, setMode] = createSignal<"single" | "batch" | "json" | "csv">(
-		"single",
-	);
+	const [searchParams, setSearchParams] = useSearchParams();
+	const VALID_MODES = ["single", "batch", "json", "csv"];
+	const mode = () => {
+		const m = searchParams.mode;
+		return typeof m === "string" && VALID_MODES.includes(m)
+			? (m as "single" | "batch" | "json" | "csv")
+			: "single";
+	};
+	const setMode = (m: "single" | "batch" | "json" | "csv") =>
+		setSearchParams({ mode: m === "single" ? undefined : m });
 	const [_importFile, setImportFile] = createSignal<File | null>(null);
 	const [importing, setImporting] = createSignal(false);
 	const [importDefaultTags, setImportDefaultTags] = createSignal("");

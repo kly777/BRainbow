@@ -1,3 +1,4 @@
+import { useSearchParams } from "@solidjs/router";
 import {
 	type Component,
 	createResource,
@@ -22,8 +23,22 @@ const OntologyListPage: Component = () => {
 		}
 	});
 
-	const [searchQuery, setSearchQuery] = createSignal("");
-	const [viewMode, setViewMode] = createSignal<"grid" | "list">("grid");
+	const [searchParams, setSearchParams] = useSearchParams();
+	const searchQuery = () => {
+		const q = searchParams.q;
+		if (Array.isArray(q)) return q[0] ?? "";
+		return q ?? "";
+	};
+	const setSearchQuery = (q: string) => setSearchParams({ q: q || undefined });
+	const viewMode = () => {
+		const v = searchParams.view;
+		return (v === "list" ? "list" : "grid") as "grid" | "list";
+	};
+	const setViewMode = (v: "grid" | "list") =>
+		setSearchParams({
+			q: searchQuery() || undefined,
+			view: v === "grid" ? undefined : v,
+		});
 
 	const [showCreateModal, setShowCreateModal] = createSignal(false);
 	const [newName, setNewName] = createSignal("");

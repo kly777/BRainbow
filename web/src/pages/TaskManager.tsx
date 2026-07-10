@@ -1,3 +1,4 @@
+import { useSearchParams } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
 import TaskCalendar from "../components/task/TaskCalendar.tsx";
 import TaskDag from "../components/task/TaskDag.tsx";
@@ -9,16 +10,17 @@ import styles from "./TaskManager.module.css";
 function Toolbar(props: {
 	viewMode: "list" | "kanban";
 	onViewChange: (v: "list" | "kanban") => void;
+	searchQuery: string;
+	onSearchChange: (q: string) => void;
 }) {
 	const { add, search, reload } = useTasks();
-	const [q, setQ] = createSignal("");
 	const [title, setTitle] = createSignal("");
+	const [localQ, setLocalQ] = createSignal(props.searchQuery);
 
-	const quickAdd = async () => {
-		const t = title().trim();
-		if (!t) return;
-		setTitle("");
-		await add({ title: t });
+	const doSearch = (q: string) => {
+		if (q) search(q);
+		else reload();
+		props.onSearchChange(q);
 	};
 
 	return (
@@ -48,24 +50,24 @@ function Toolbar(props: {
 				<input
 					type="text"
 					placeholder="搜索..."
-					value={q()}
-					onInput={(e) => setQ(e.currentTarget.value)}
+					value={localQ()}
+					onInput={(e) => setLocalQ(e.currentTarget.value)}
 					onKeyDown={(e) => {
-						if (e.key === "Enter") search(q());
+						if (e.key === "Enter") doSearch(localQ());
 						if (e.key === "Escape") {
-							setQ("");
-							reload();
+							setLocalQ("");
+							doSearch("");
 						}
 					}}
 					class={styles.searchInput}
 				/>
-				{q() && (
+				{localQ() && (
 					<button
 						type="button"
 						class={styles.searchClear}
 						onClick={() => {
-							setQ("");
-							reload();
+							setLocalQ("");
+							doSearch("");
 						}}
 					>
 						×
@@ -80,7 +82,12 @@ function Toolbar(props: {
 					value={title()}
 					onInput={(e) => setTitle(e.currentTarget.value)}
 					onKeyDown={(e) => {
-						if (e.key === "Enter") quickAdd();
+						if (e.key === "Enter") {
+							const t = title().trim();
+							if (!t) return;
+							setTitle("");
+							add({ title: t });
+						}
 					}}
 					class={styles.quickAddInput}
 				/>
@@ -89,10 +96,13 @@ function Toolbar(props: {
 	);
 }
 
-function TaskPanel(props: { viewMode: "list" | "kanban" }) {
+function TaskPanel(props: {
+	viewMode: "list" | "kanban";
+	rightTab: "calendar" | "dag";
+	onRightTabChange: (t: "calendar" | "dag") => void;
+}) {
 	const { tasks, loading, updateStatus, removeTask, updateTaskE, addSubTask } =
 		useTasks();
-	const [rightTab, setRightTab] = createSignal<"calendar" | "dag">("calendar");
 
 	return (
 		<Show
@@ -113,26 +123,26 @@ function TaskPanel(props: { viewMode: "list" | "kanban" }) {
 									<button
 										type="button"
 										class={`${styles.tabBtn} ${
-											rightTab() === "calendar" ? styles.tabActive : ""
+											props.rightTab === "calendar" ? styles.tabActive : ""
 										}`}
-										onClick={() => setRightTab("calendar")}
+										onClick={() => props.onRightTabChange("calendar")}
 									>
 										日历
 									</button>
 									<button
 										type="button"
 										class={`${styles.tabBtn} ${
-											rightTab() === "dag" ? styles.tabActive : ""
+											props.rightTab === "dag" ? styles.tabActive : ""
 										}`}
-										onClick={() => setRightTab("dag")}
+										onClick={() => props.onRightTabChange("dag")}
 									>
 										依赖图
 									</button>
 								</div>
-								<Show when={rightTab() === "calendar"}>
+								<Show when={props.rightTab === "calendar"}>
 									<TaskCalendar />
 								</Show>
-								<Show when={rightTab() === "dag"}>
+								<Show when={props.rightTab === "dag"}>
 									<TaskDag />
 								</Show>
 							</div>
@@ -150,13 +160,38 @@ function TaskPanel(props: { viewMode: "list" | "kanban" }) {
 }
 
 export default function TaskManager() {
-	const [viewMode, setViewMode] = createSignal<"list" | "kanban">("list");
+	const [searchParams, setSearchParams] = useSearchParams();
+
+	const viewMode = () =>
+		(searchParams.view === "kanban" ? "kanban" : "list") as "list" | "kanban";
+	const setViewMode = (v: "list" | "kanban") =>
+		setSearchParams({ view: v === "list" ? undefined : v });
+
+	const rightTab = () =>
+		(searchParams.right === "dag" ? "dag" : "calendar") as "calendar" | "dag";
+	const setRightTab = (t: "calendar" | "dag") =>
+		setSearchParams({ right: t === "calendar" ? undefined : t });
+
+	const searchQuery = () => {
+		const q = searchParams.q;
+		return typeof q === "string" ? q : "";
+	};
+	const onSearchChange = (q: string) => setSearchParams({ q: q || undefined });
 
 	return (
 		<TaskProvider>
 			<div class={styles.taskManager}>
-				<Toolbar viewMode={viewMode()} onViewChange={setViewMode} />
-				<TaskPanel viewMode={viewMode()} />
+				<Toolbar
+					viewMode={viewMode()}
+					onViewChange={setViewMode}
+					searchQuery={searchQuery()}
+					onSearchChange={onSearchChange}
+				/>
+				<TaskPanel
+					viewMode={viewMode()}
+					rightTab={rightTab()}
+					onRightTabChange={setRightTab}
+				/>
 			</div>
 		</TaskProvider>
 	);

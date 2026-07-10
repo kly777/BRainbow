@@ -3,13 +3,14 @@ import styles from "./CardFilter.module.css";
 
 export interface CardFilterProps {
 	onSearch?: (query: string) => void;
+	initialQuery?: string;
 	sortBy?: "created" | "updated";
 	sortOrder?: "asc" | "desc";
 	onSortChange?: (by: "created" | "updated", order: "asc" | "desc") => void;
 }
 
 const CardFilter: Component<CardFilterProps> = (props) => {
-	const [searchQuery, setSearchQuery] = createSignal("");
+	const [searchQuery, setSearchQuery] = createSignal(props.initialQuery ?? "");
 	let searchTimer: ReturnType<typeof setTimeout> | undefined;
 	onCleanup(() => clearTimeout(searchTimer));
 

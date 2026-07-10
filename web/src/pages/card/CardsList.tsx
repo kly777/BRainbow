@@ -1,4 +1,4 @@
-import { useNavigate } from "@solidjs/router";
+import { useNavigate, useSearchParams } from "@solidjs/router";
 import { type Component, createSignal, onMount, Show } from "solid-js";
 import {
 	createCardE,
@@ -27,7 +27,11 @@ const CardsListPage: Component = () => {
 
 	onMount(async () => {
 		try {
-			setCards((await getCardsE()).items);
+			const initialQ = searchQuery();
+			const items = initialQ
+				? (await searchCardsE(initialQ)).items
+				: (await getCardsE()).items;
+			setCards(items);
 		} catch (e) {
 			setError(e);
 		} finally {
@@ -45,7 +49,11 @@ const CardsListPage: Component = () => {
 
 	const [showCreateModal, setShowCreateModal] = createSignal(false);
 	const [newCardContent, setNewCardContent] = createSignal("");
-	const [searchQuery, setSearchQuery] = createSignal("");
+	const [searchParams, setSearchParams] = useSearchParams();
+	const searchQuery = () => {
+		const q = searchParams.q;
+		return typeof q === "string" ? q : "";
+	};
 	const isSearchMode = () => searchQuery().trim().length > 0;
 	const [isCreating, setIsCreating] = createSignal(false);
 	const [modalError, setModalError] = createSignal("");
@@ -109,7 +117,7 @@ const CardsListPage: Component = () => {
 	};
 
 	const handleSearch = async (query: string) => {
-		setSearchQuery(query);
+		setSearchParams({ q: query || undefined });
 		if (!query) {
 			await loadCards();
 			return;
@@ -170,6 +178,7 @@ const CardsListPage: Component = () => {
 					cards={[...(cards() || [])]}
 					showFilters
 					onSearch={handleSearch}
+					initialSearchQuery={searchQuery()}
 					onCardClick={handleCardClick}
 					onCardEdit={handleCardEdit}
 					onCardDelete={handleCardDelete}

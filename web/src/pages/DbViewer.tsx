@@ -1,10 +1,17 @@
+import { useSearchParams } from "@solidjs/router";
 import { type Component, createSignal, For, onMount } from "solid-js";
 import { type ColumnInfo, getTableDataE, getTablesE } from "../apis/dbApi.ts";
 import { getErrorMessage } from "../apis/types/index.ts";
 
 const DB: Component = () => {
+	const [searchParams, setSearchParams] = useSearchParams();
 	const [tables, setTables] = createSignal<string[]>([]);
-	const [activeTable, setActiveTable] = createSignal("");
+	const activeTable = () => {
+		const t = searchParams.table;
+		return typeof t === "string" ? t : "";
+	};
+	const setActiveTable = (name: string) =>
+		setSearchParams({ table: name || undefined });
 	const [columns, setColumns] = createSignal<ColumnInfo[]>([]);
 	const [rows, setRows] = createSignal<string[][]>([]);
 	const [loading, setLoading] = createSignal(false);

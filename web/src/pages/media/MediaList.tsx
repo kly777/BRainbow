@@ -1,3 +1,4 @@
+import { useSearchParams } from "@solidjs/router";
 import {
 	type Component,
 	createResource,
@@ -30,8 +31,17 @@ function formatSize(bytes: number): string {
 	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+const VALID_TYPES = ["", "image", "video", "audio"];
+
 const MediaListPage: Component = () => {
-	const [mediaType, setMediaType] = createSignal("");
+	const [searchParams, setSearchParams] = useSearchParams();
+	const mediaType = () => {
+		const t = searchParams.type;
+		return typeof t === "string" && VALID_TYPES.includes(t) ? t : "";
+	};
+	const setMediaType = (t: string) => {
+		setSearchParams({ type: t || undefined });
+	};
 	const [media, { refetch }] = createResource(
 		() => mediaType(),
 		async (mt): Promise<MediaItem[]> => {

@@ -1,4 +1,4 @@
-import { A } from "@solidjs/router";
+import { A, useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal, onMount } from "solid-js";
 import {
 	addTagToMemE,
@@ -36,6 +36,22 @@ interface PageMeta {
 	total: number;
 }
 
+const VALID_STATES = [
+	"all",
+	"new",
+	"learning",
+	"review",
+	"relearning",
+	"suspended",
+	"today_done",
+];
+const VALID_SORT_FIELDS: SortField[] = [
+	"cue.created_at",
+	"difficulty",
+	"due_at",
+	"state",
+];
+
 async function loadAllMems(
 	sortField: SortField,
 	sortDir: SortDir,
@@ -61,9 +77,41 @@ async function loadAllMems(
 	}
 }
 
-let searchTimer: ReturnType<typeof setTimeout> | undefined;
+let _searchTimer: ReturnType<typeof setTimeout> | undefined;
+
+let initialLoadDone = false;
 
 export default function MemManage() {
+	const [searchParams, setSearchParams] = useSearchParams();
+
+	// ── URL 派生状态 ──
+	const searchQuery = () => {
+		const q = searchParams.q;
+		return typeof q === "string" ? q : "";
+	};
+	const filterState = () => {
+		const s = searchParams.state;
+		return typeof s === "string" && VALID_STATES.includes(s) ? s : "all";
+	};
+	const sortField = () => {
+		const s = searchParams.sort;
+		return typeof s === "string" && VALID_SORT_FIELDS.includes(s as SortField)
+			? (s as SortField)
+			: "due_at";
+	};
+	const sortDir = (): SortDir =>
+		searchParams.order === "desc" ? "desc" : "asc";
+	const page = () => {
+		const p = Number(searchParams.page);
+		return p > 0 ? p : 1;
+	};
+	const detailId = () => {
+		const id = Number(searchParams.id);
+		return id > 0 ? id : null;
+	};
+	const setDetailId = (id: number | null) =>
+		setSearchParams({ id: id != null ? String(id) : undefined });
+
 	const [mems, setMems] = createSignal<MemItem[]>([]);
 	const [pageMeta, setPageMeta] = createSignal<PageMeta>({
 		page: 1,
@@ -71,17 +119,11 @@ export default function MemManage() {
 		total: 0,
 	});
 	const [loading, setLoading] = createSignal(true);
-	const [detailId, setDetailId] = createSignal<number | null>(null);
 	const [memTags, setMemTags] = createSignal<Map<number, TagInfo[]>>(new Map());
-	const [sortField, setSortField] = createSignal<SortField>("due_at");
-	const [sortDir, setSortDir] = createSignal<SortDir>("asc");
 	const [batchIds, setBatchIds] = createSignal<Set<number>>(new Set());
 	const [editing, setEditing] = createSignal(false);
 	const [editCue, setEditCue] = createSignal("");
 	const [editTarget, setEditTarget] = createSignal("");
-	const [searchQuery, setSearchQuery] = createSignal("");
-	const [filterState, setFilterState] = createSignal<string>("all");
-	const [page, setPage] = createSignal(1);
 	const [showExportModal, setShowExportModal] = createSignal(false);
 	const [showBatchTagModal, setShowBatchTagModal] = createSignal(false);
 	const [batchTagMode, setBatchTagMode] = createSignal<"add" | "remove">("add");
@@ -110,7 +152,6 @@ export default function MemManage() {
 		);
 		setMems(items);
 		setPageMeta(meta);
-		// 批量加载标签
 		if (items.length > 0) {
 			const ids = items.map((m) => m.id);
 			batchGetMemsTagsE(ids)
@@ -134,9 +175,20 @@ export default function MemManage() {
 		setLoading(false);
 	};
 
-	onMount(load);
+	onMount(() => {
+		load();
+		initialLoadDone = true;
+	});
 
-	// 当 detailId 变化时加载单个记忆的标签（补全）
+	// URL 参数变化时重新加载（含浏览器前进/后退）
+	createEffect(() => {
+		// 读取 URL 派生值来追踪依赖
+		void (searchQuery(), filterState(), sortField(), sortDir(), page());
+		if (!initialLoadDone) return;
+		load();
+	});
+
+	// 当 detailId 变化时加载单个记忆的标签
 	createEffect(() => {
 		const id = detailId();
 		if (id === null) return;
@@ -152,52 +204,40 @@ export default function MemManage() {
 	});
 
 	const handleSearchInput = (value: string) => {
-		setSearchQuery(value);
-		setPage(1);
+		setSearchParams({ q: value || undefined, page: "1" });
 		setBatchIds(new Set<number>());
-		// 防抖 300ms
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(load, 300);
 	};
 
 	const setFilter = (st: string) => {
-		setFilterState(st);
-		setPage(1);
+		setSearchParams({ state: st === "all" ? undefined : st, page: "1" });
 		setBatchIds(new Set<number>());
-		setTimeout(load, 0);
 	};
 
 	const toggleSort = (field: SortField) => {
-		setSortField((prev) => {
-			if (prev === field) {
-				setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-				return prev;
-			}
-			setSortDir("asc");
-			return field;
-		});
-		setPage(1);
-		setTimeout(load, 0);
+		const curField = sortField();
+		const curDir = sortDir();
+		const params: Record<string, string | undefined> = { page: "1" };
+		if (curField === field) {
+			params.order = curDir === "asc" ? "desc" : "asc";
+		} else {
+			params.sort = field;
+			params.order = "asc";
+		}
+		setSearchParams(params);
 	};
 
 	const toggleBatch = (id: number) => {
 		setBatchIds((prev) => {
 			const next = new Set(prev);
-			if (next.has(id)) {
-				next.delete(id);
-			} else {
-				next.add(id);
-			}
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
 			return next;
 		});
 	};
 
 	const toggleAll = () => {
-		if (allSelected()) {
-			setBatchIds(new Set<number>());
-		} else {
-			setBatchIds(new Set<number>(mems().map((m) => m.id)));
-		}
+		if (allSelected()) setBatchIds(new Set<number>());
+		else setBatchIds(new Set<number>(mems().map((m) => m.id)));
 	};
 
 	const handleDelete = async (id: number) => {
@@ -384,8 +424,7 @@ export default function MemManage() {
 						onSelectRow={setDetailId}
 						onDelete={handleDelete}
 						onPageChange={(p) => {
-							setPage(p);
-							setTimeout(load, 0);
+							setSearchParams({ page: String(p) });
 						}}
 					/>
 				</div>
@@ -419,7 +458,6 @@ export default function MemManage() {
 				isOpen={showExportModal()}
 				onClose={() => setShowExportModal(false)}
 			/>
-
 			<MemBatchTagModal
 				isOpen={showBatchTagModal()}
 				onClose={() => setShowBatchTagModal(false)}

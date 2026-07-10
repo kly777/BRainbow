@@ -1,5 +1,5 @@
-import { For } from "solid-js";
 import type { Component } from "solid-js";
+import { For } from "solid-js";
 import styles from "./FilterGroup.module.css";
 
 interface FilterOption {

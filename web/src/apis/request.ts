@@ -1,13 +1,13 @@
 import { getToken } from "../auth/context.tsx";
-import { HttpError, NetworkError } from "./types/index.ts";
 import {
-	CACHE,
 	buildCacheKey,
+	CACHE,
+	clearAllCache as cacheClear,
+	invalidateCache as cacheInvalidate,
 	readCache,
 	writeCache,
-	invalidateCache as cacheInvalidate,
-	clearAllCache as cacheClear,
 } from "./cache.ts";
+import { HttpError, NetworkError } from "./types/index.ts";
 
 export { CACHE };
 
@@ -272,7 +272,10 @@ export const request = async <T>(
 
 // ==================== 辅助 ====================
 
-function buildHeaders(extra?: RequestInit["headers"], body?: BodyInit | null): Headers {
+function buildHeaders(
+	extra?: RequestInit["headers"],
+	body?: BodyInit | null,
+): Headers {
 	const headers = new Headers();
 
 	// FormData 让浏览器自动设 Content-Type（含 boundary），手动设会破坏上传

@@ -1,10 +1,10 @@
 import { createSignal, onCleanup, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-import { loginE, registerE, logoutE, changePasswordE } from "./api.ts";
-import { getErrorMessage } from "../apis/types/index.ts";
 import { AUTH_REQUIRED_EVENT } from "../apis/request.ts";
-import { useAuth } from "./context.tsx";
+import { getErrorMessage } from "../apis/types/index.ts";
 import styles from "./AuthStatus.module.css";
+import { changePasswordE, loginE, logoutE, registerE } from "./api.ts";
+import { useAuth } from "./context.tsx";
 
 type DialogMode = "login" | "password";
 
@@ -35,7 +35,7 @@ export default function AuthStatus() {
 		setShowForm(true);
 	};
 
-	const openPasswordDialog = () => {
+	const _openPasswordDialog = () => {
 		setDialogMode("password");
 		setError("");
 		setOldPassword("");
@@ -79,7 +79,7 @@ export default function AuthStatus() {
 		}
 	};
 
-	const handleLogout = async () => {
+	const _handleLogout = async () => {
 		try {
 			await logoutE();
 		} catch {
@@ -109,7 +109,11 @@ export default function AuthStatus() {
 						}}
 					>
 						<h3 class={styles.title}>
-							{dialogMode() === "password" ? "修改密码" : isRegister() ? "注册" : "登录"}
+							{dialogMode() === "password"
+								? "修改密码"
+								: isRegister()
+									? "注册"
+									: "登录"}
 						</h3>
 						{error() && <p class={styles.error}>{error()}</p>}
 

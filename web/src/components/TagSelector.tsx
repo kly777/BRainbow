@@ -1,5 +1,5 @@
-import { createSignal, createResource, Show, For } from "solid-js";
-import { searchTagsE, createTagE, type TagInfo } from "../apis/memApi.ts";
+import { createResource, createSignal, For, Show } from "solid-js";
+import { createTagE, searchTagsE, type TagInfo } from "../apis/memApi.ts";
 import styles from "./TagSelector.module.css";
 
 interface Props {
@@ -109,6 +109,8 @@ export default function TagSelector(props: Props) {
 						{(tag) => (
 							<div
 								class={styles.dropdownItem}
+								role="button"
+								tabIndex={-1}
 								onMouseDown={() => handleSelect(tag)}
 							>
 								{tag.name}
@@ -118,6 +120,8 @@ export default function TagSelector(props: Props) {
 					<Show when={!hasExactMatch() && query().trim().length > 0}>
 						<div
 							class={`${styles.dropdownItem} ${styles.createNew}`}
+							role="button"
+							tabIndex={-1}
 							onMouseDown={handleCreate}
 						>
 							{creating() ? "创建中…" : `+ 创建"${query().trim()}"`}

@@ -1,6 +1,6 @@
-import SearchInput from "../ui/SearchInput.tsx";
-import FilterGroup from "../ui/FilterGroup.tsx";
 import Button from "../ui/Button.tsx";
+import FilterGroup from "../ui/FilterGroup.tsx";
+import SearchInput from "../ui/SearchInput.tsx";
 import styles from "./MemManageToolbar.module.css";
 
 interface Props {

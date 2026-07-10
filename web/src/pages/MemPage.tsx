@@ -1,17 +1,17 @@
 import { A } from "@solidjs/router";
-import { createSignal, onCleanup, onMount, Show, For } from "solid-js";
+import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import {
 	buryMemE,
 	editMemE,
 	getDueE,
 	getMemCountsE,
 	getSessionEstimateE,
-	previewMemE,
-	reviewMemE,
-	suspendMemE,
 	listTagsE,
 	type MemCounts,
 	type MemItem,
+	previewMemE,
+	reviewMemE,
+	suspendMemE,
 	type TagInfo,
 } from "../apis/memApi.ts";
 import { request } from "../apis/request.ts";
@@ -67,9 +67,7 @@ export default function MemPage() {
 		if (ratings.length < 3) return DEFAULT_LIMIT;
 		const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
 		// avg: 1~4 → limit: MIN_LIMIT~MAX_LIMIT
-		return Math.round(
-			MIN_LIMIT + ((avg - 1) / 3) * (MAX_LIMIT - MIN_LIMIT),
-		);
+		return Math.round(MIN_LIMIT + ((avg - 1) / 3) * (MAX_LIMIT - MIN_LIMIT));
 	};
 	let lastAction: { id: number; undoData: Record<string, unknown> } | null =
 		null;
@@ -97,7 +95,10 @@ export default function MemPage() {
 		setLoading(true);
 		loadCounts();
 		try {
-			const data = await getDueE(maxLearning(), tagFilterIds().length > 0 ? tagFilterIds() : undefined);
+			const data = await getDueE(
+				maxLearning(),
+				tagFilterIds().length > 0 ? tagFilterIds() : undefined,
+			);
 			if (data.items.length === 0 && !data.has_more) {
 				setDone(true);
 				setDue([]);
@@ -106,8 +107,10 @@ export default function MemPage() {
 			} else {
 				setDone(false);
 				setAllFar(data.all_far);
-// 后端预估本次学习需要查看的总次数
-				getSessionEstimateE().then((est) => setEstimatedTotal(est.total_estimate)).catch(() => {});
+				// 后端预估本次学习需要查看的总次数
+				getSessionEstimateE()
+					.then((est) => setEstimatedTotal(est.total_estimate))
+					.catch(() => {});
 				const shuffled = [...data.items].sort(() => Math.random() - 0.5);
 				setDue(shuffled);
 				setCurrent(0);
@@ -126,7 +129,9 @@ export default function MemPage() {
 	onMount(() => {
 		loadDue();
 		loadCounts();
-		listTagsE().then(setAllTags).catch(() => {});
+		listTagsE()
+			.then(setAllTags)
+			.catch(() => {});
 	});
 
 	/** 从当前队列移除已复习卡片并推进到下一张，队列空则重新拉取 */
@@ -252,15 +257,17 @@ export default function MemPage() {
 						×
 					</button>
 				</div>
-				<Show when={counts()}>{(c) =>
-					<div class={styles.sidebarStats}>
-						<span class={styles.statNew}>{c().new}</span>
-						<span class={styles.statLearning}>{c().learning}</span>
-						<span class={styles.statDue}>{c().due}</span>
-						<span class={styles.statBuried}>{c().buried}</span>
-						<span class={styles.statSuspended}>{c().suspended}</span>
-					</div>
-				}</Show>
+				<Show when={counts()}>
+					{(c) => (
+						<div class={styles.sidebarStats}>
+							<span class={styles.statNew}>{c().new}</span>
+							<span class={styles.statLearning}>{c().learning}</span>
+							<span class={styles.statDue}>{c().due}</span>
+							<span class={styles.statBuried}>{c().buried}</span>
+							<span class={styles.statSuspended}>{c().suspended}</span>
+						</div>
+					)}
+				</Show>
 				<div class={styles.sidebarList}>
 					<For each={due()}>
 						{(mem, i) => (
@@ -337,15 +344,15 @@ export default function MemPage() {
 								编辑
 							</button>
 						)}
-						<span class={styles.count}>{due().length}/{maxLearning()}</span>
+						<span class={styles.count}>
+							{due().length}/{maxLearning()}
+						</span>
 					</div>
 				</div>
 
 				<Show when={estimatedTotal() > 0}>
 					<div class={styles.progressBar}>
-						<span class={styles.progressText}>
-							≈ {estimatedTotal()} 次学习
-						</span>
+						<span class={styles.progressText}>≈ {estimatedTotal()} 次学习</span>
 					</div>
 				</Show>
 
@@ -455,7 +462,10 @@ export default function MemPage() {
 								<button
 									type="button"
 									class={styles.buryBtn}
-									onClick={async () => { if (item()) await suspendMemE(item()!.id); loadDue(); }}
+									onClick={async () => {
+										if (item()) await suspendMemE(item()!.id);
+										loadDue();
+									}}
 								>
 									挂起
 								</button>

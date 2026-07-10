@@ -1,7 +1,7 @@
 import { Show } from "solid-js";
 import { useAuth } from "../auth/context.tsx";
-import LandingPage from "./LandingPage.tsx";
 import HomePage from "./HomePage.tsx";
+import LandingPage from "./LandingPage.tsx";
 
 /**
  * 首页守卫：未登录 → 着陆页，已登录 → 主页仪表盘

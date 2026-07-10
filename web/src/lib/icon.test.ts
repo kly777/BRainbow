@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { buildSvg } from "./icon";
+import { describe, expect, it } from "vitest";
 import { Angle } from "./angle";
+import { buildSvg } from "./icon";
 
 // ── SVG 结构 ──
 

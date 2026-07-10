@@ -1,4 +1,4 @@
-import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
+import { CACHE, request, tapInvalidate } from "./request.ts";
 import type { PaginatedResponse } from "./types/shared.ts";
 
 // ── 类型 ──
@@ -54,8 +54,10 @@ export interface SessionEstimate {
 	total_estimate: number;
 }
 
-export const getMemCountsE = (): Promise<MemCounts> => request("/mem/counts", {});
-export const getSessionEstimateE = (): Promise<SessionEstimate> => request("/mem/session-estimate", {});
+export const getMemCountsE = (): Promise<MemCounts> =>
+	request("/mem/counts", {});
+export const getSessionEstimateE = (): Promise<SessionEstimate> =>
+	request("/mem/session-estimate", {});
 
 // ── API ──
 
@@ -74,7 +76,9 @@ export const createMemE = (
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 // mem 列表（服务端搜索/筛选/排序）
-export const getAllMemsE = (params?: MemQuery): Promise<PaginatedResponse<MemItem>> => {
+export const getAllMemsE = (
+	params?: MemQuery,
+): Promise<PaginatedResponse<MemItem>> => {
 	const qs = new URLSearchParams();
 	if (params?.q) qs.set("q", params.q);
 	if (params?.state) qs.set("state", params.state);
@@ -87,7 +91,10 @@ export const getAllMemsE = (params?: MemQuery): Promise<PaginatedResponse<MemIte
 };
 
 // ⚠️ 复习数据必须实时，不缓存
-export const getDueE = (limit = 50, tagIds?: number[]): Promise<DueResponse> => {
+export const getDueE = (
+	limit = 50,
+	tagIds?: number[],
+): Promise<DueResponse> => {
 	let url = `/mem/due?limit=${limit}`;
 	if (tagIds && tagIds.length > 0) {
 		url += `&tag_ids=${tagIds.join(",")}`;
@@ -125,8 +132,8 @@ export const suspendMemE = (id: number): Promise<{ ok: boolean }> =>
 	);
 
 export const unsuspendMemE = (id: number): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>(`/mem/${id}/unsuspend`, { method: "POST" }).then((r) =>
-		tapInvalidate(CACHE.mem, r),
+	request<{ ok: boolean }>(`/mem/${id}/unsuspend`, { method: "POST" }).then(
+		(r) => tapInvalidate(CACHE.mem, r),
 	);
 
 export const unburyMemE = (id: number): Promise<{ ok: boolean }> =>
@@ -203,31 +210,46 @@ export const searchTagsE = (q: string): Promise<TagInfo[]> =>
 export const getMemTagsE = (memId: number): Promise<TagInfo[]> =>
 	request<TagInfo[]>(`/mem/tag/mem/${memId}`, {});
 
-export const addTagToMemE = (memId: number, tagId: number): Promise<{ ok: boolean }> =>
+export const addTagToMemE = (
+	memId: number,
+	tagId: number,
+): Promise<{ ok: boolean }> =>
 	request<{ ok: boolean }>("/mem/tag/mem/add", {
 		method: "POST",
 		body: JSON.stringify({ mem_id: memId, tag_id: tagId }),
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
-export const removeTagFromMemE = (memId: number, tagId: number): Promise<{ ok: boolean }> =>
+export const removeTagFromMemE = (
+	memId: number,
+	tagId: number,
+): Promise<{ ok: boolean }> =>
 	request<{ ok: boolean }>("/mem/tag/mem/remove", {
 		method: "POST",
 		body: JSON.stringify({ mem_id: memId, tag_id: tagId }),
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
-export const setMemTagsE = (memId: number, tagIds: number[]): Promise<{ ok: boolean }> =>
+export const setMemTagsE = (
+	memId: number,
+	tagIds: number[],
+): Promise<{ ok: boolean }> =>
 	request<{ ok: boolean }>("/mem/tag/mem/set", {
 		method: "POST",
 		body: JSON.stringify({ mem_id: memId, tag_ids: tagIds }),
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
-export const batchAddTagToMemsE = (memIds: number[], tagId: number): Promise<{ ok: boolean }> =>
+export const batchAddTagToMemsE = (
+	memIds: number[],
+	tagId: number,
+): Promise<{ ok: boolean }> =>
 	request<{ ok: boolean }>("/mem/tag/batch-add", {
 		method: "POST",
 		body: JSON.stringify({ mem_ids: memIds, tag_id: tagId }),
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
-export const batchRemoveTagFromMemsE = (memIds: number[], tagId: number): Promise<{ ok: boolean }> =>
+export const batchRemoveTagFromMemsE = (
+	memIds: number[],
+	tagId: number,
+): Promise<{ ok: boolean }> =>
 	request<{ ok: boolean }>("/mem/tag/batch-remove", {
 		method: "POST",
 		body: JSON.stringify({ mem_ids: memIds, tag_id: tagId }),
@@ -247,7 +269,10 @@ export const batchGetMemsTagsE = (memIds: number[]): Promise<MemTagRow[]> =>
 		body: JSON.stringify({ ids: memIds }),
 	});
 
-export const batchSetTagsForMemsE = (memIds: number[], tagIds: number[]): Promise<{ ok: boolean }> =>
+export const batchSetTagsForMemsE = (
+	memIds: number[],
+	tagIds: number[],
+): Promise<{ ok: boolean }> =>
 	request<{ ok: boolean }>("/mem/tag/batch-set", {
 		method: "POST",
 		body: JSON.stringify({ mem_ids: memIds, tag_ids: tagIds }),
@@ -256,7 +281,7 @@ export const batchSetTagsForMemsE = (memIds: number[], tagIds: number[]): Promis
 // ── CSV 导入导出 ──
 
 export const exportCsvE = (): Promise<Blob> =>
-	request<Blob>("/mem/export/csv", {}).then((r) => {
+	request<Blob>("/mem/export/csv", {}).then((_r) => {
 		// request returns parsed JSON by default, but we need the raw response
 		// This won't work with the standard request() function
 		throw new Error("use exportCsvDownload directly");
@@ -265,7 +290,7 @@ export const exportCsvE = (): Promise<Blob> =>
 export async function downloadExportCsv(tagIds?: number[]): Promise<void> {
 	const token = (await import("../auth/context.tsx")).getToken();
 	const headers: Record<string, string> = {};
-	if (token) headers["Authorization"] = `Bearer ${token}`;
+	if (token) headers.Authorization = `Bearer ${token}`;
 
 	let url = "/api/mem/export/csv";
 	if (tagIds && tagIds.length > 0) {
@@ -291,7 +316,10 @@ export interface ImportCsvResult {
 	errors: string[];
 }
 
-export const importCsvE = (csvContent: string, defaultTags?: string[]): Promise<ImportCsvResult> =>
+export const importCsvE = (
+	csvContent: string,
+	defaultTags?: string[],
+): Promise<ImportCsvResult> =>
 	request<ImportCsvResult>("/mem/import/csv", {
 		method: "POST",
 		body: JSON.stringify({ csv: csvContent, default_tags: defaultTags ?? [] }),
@@ -308,7 +336,10 @@ export interface ImportJsonResult {
 	errors: string[];
 }
 
-export const importJsonE = (mems: ImportJsonItem[], defaultTags?: string[]): Promise<ImportJsonResult> =>
+export const importJsonE = (
+	mems: ImportJsonItem[],
+	defaultTags?: string[],
+): Promise<ImportJsonResult> =>
 	request<ImportJsonResult>("/mem/import/json", {
 		method: "POST",
 		body: JSON.stringify({ mems, default_tags: defaultTags ?? [] }),

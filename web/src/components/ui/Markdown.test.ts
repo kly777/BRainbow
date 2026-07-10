@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeAll } from "vitest";
+
 import DOMPurify from "dompurify";
 import hljs from "highlight.js";
 import { marked } from "marked";
 import { markedHighlight } from "marked-highlight";
 import markedKatex from "marked-katex-extension";
+import { beforeAll, describe, expect, it } from "vitest";
 
 // ── 配置（与 Markdown.tsx 保持一致） ──
 
@@ -35,23 +36,83 @@ beforeAll(() => {
 });
 
 const ALLOWED_TAGS = [
-	"h1", "h2", "h3", "h4", "h5", "h6",
-	"p", "br", "hr", "strong", "em", "b", "i", "u", "s",
-	"blockquote", "code", "pre", "ul", "ol", "li",
-	"table", "thead", "tbody", "tr", "th", "td",
-	"a", "img", "div", "span",
-	"math", "semantics", "mrow", "mfrac", "mi", "mo", "msup", "msub",
-	"mn", "mtext", "mspace", "msqrt", "mroot", "mover", "munder",
-	"munderover", "mtable", "mtr", "mtd",
-	"mpadded", "mphantom", "annotation",
-	"svg", "path",
+	"h1",
+	"h2",
+	"h3",
+	"h4",
+	"h5",
+	"h6",
+	"p",
+	"br",
+	"hr",
+	"strong",
+	"em",
+	"b",
+	"i",
+	"u",
+	"s",
+	"blockquote",
+	"code",
+	"pre",
+	"ul",
+	"ol",
+	"li",
+	"table",
+	"thead",
+	"tbody",
+	"tr",
+	"th",
+	"td",
+	"a",
+	"img",
+	"div",
+	"span",
+	"math",
+	"semantics",
+	"mrow",
+	"mfrac",
+	"mi",
+	"mo",
+	"msup",
+	"msub",
+	"mn",
+	"mtext",
+	"mspace",
+	"msqrt",
+	"mroot",
+	"mover",
+	"munder",
+	"munderover",
+	"mtable",
+	"mtr",
+	"mtd",
+	"mpadded",
+	"mphantom",
+	"annotation",
+	"svg",
+	"path",
 ];
 
 const ALLOWED_ATTR = [
-	"href", "target", "rel", "title", "src", "alt",
-	"width", "height", "class", "id", "align",
-	"style", "aria-hidden", "encoding",
-	"xmlns", "d", "viewBox", "fill", "stroke",
+	"href",
+	"target",
+	"rel",
+	"title",
+	"src",
+	"alt",
+	"width",
+	"height",
+	"class",
+	"id",
+	"align",
+	"style",
+	"aria-hidden",
+	"encoding",
+	"xmlns",
+	"d",
+	"viewBox",
+	"fill",
+	"stroke",
 	"preserveAspectRatio",
 ];
 
@@ -80,7 +141,6 @@ function render(content: string, inline = false): string {
 // ── 测试 ──
 
 describe("Markdown rendering pipeline", () => {
-
 	// ========== 基础 Markdown ==========
 
 	describe("plain markdown", () => {
@@ -230,7 +290,9 @@ describe("Markdown rendering pipeline", () => {
 		});
 
 		it("renders multiple inline formulas", () => {
-			const html = render("当 $a \\ne 0$ 时，$x = {-b \\pm \\sqrt{b^2-4ac} \\over 2a}$");
+			const html = render(
+				"当 $a \\ne 0$ 时，$x = {-b \\pm \\sqrt{b^2-4ac} \\over 2a}$",
+			);
 			const katexSpans = html.match(/<span class="katex">/g);
 			expect(katexSpans?.length).toBe(2);
 		});

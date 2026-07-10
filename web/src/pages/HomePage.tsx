@@ -2,10 +2,10 @@ import { A, useNavigate } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 import { deleteCardE as apiDeleteCard, getCardsE } from "../apis/cardApi.ts";
 import { getErrorMessage } from "../apis/types/index.ts";
-import CardsGrid from "../components/card/CardsGrid.tsx";
 import type { CardData } from "../components/card/Card.tsx";
-import { TaskProvider, useTasks } from "../components/task/TaskProvider.tsx";
+import CardsGrid from "../components/card/CardsGrid.tsx";
 import TaskList from "../components/task/TaskList.tsx";
+import { TaskProvider, useTasks } from "../components/task/TaskProvider.tsx";
 import { AsyncView } from "../components/ui/AsyncView.tsx";
 import styles from "./HomePage.module.css";
 

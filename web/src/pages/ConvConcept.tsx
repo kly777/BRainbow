@@ -1,6 +1,6 @@
-import { createResource, Show } from "solid-js";
 import { A, useParams, useSearchParams } from "@solidjs/router";
-import { getConvConceptE, type ConvConceptData } from "../apis/convApi.ts";
+import { createResource, Show } from "solid-js";
+import { getConvConceptE } from "../apis/convApi.ts";
 import MarkdownRenderer from "../components/ui/Markdown.tsx";
 import styles from "./ConvDetail.module.css";
 
@@ -17,8 +17,7 @@ export default function ConvConceptPage() {
 
 	const [data] = createResource(
 		() => ({ id: params.id, article: searchParams.article }),
-		({ id, article }) =>
-			getConvConceptE(Number(id), String(article || "")),
+		({ id, article }) => getConvConceptE(Number(id), String(article || "")),
 	);
 
 	const backHref = () => {
@@ -37,14 +36,20 @@ export default function ConvConceptPage() {
 				{(d) => (
 					<>
 						<div class={styles.topBar}>
-							<A href={backHref()} class={styles.backLink}>← 搜索</A>
+							<A href={backHref()} class={styles.backLink}>
+								← 搜索
+							</A>
 							<div class={styles.titleArea}>
 								<h1 class={styles.title}>{d().title}</h1>
-								<span class={styles.tag}>{typeLabel[d().article_type] || d().article_type}</span>
+								<span class={styles.tag}>
+									{typeLabel[d().article_type] || d().article_type}
+								</span>
 							</div>
 						</div>
 						<div class={styles.body}>
-							<div class={styles.md}><MarkdownRenderer content={d().content} /></div>
+							<div class={styles.md}>
+								<MarkdownRenderer content={d().content} />
+							</div>
 						</div>
 					</>
 				)}

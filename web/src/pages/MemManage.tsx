@@ -1,31 +1,30 @@
-import { createEffect, createSignal, onMount, Show } from "solid-js";
 import { A } from "@solidjs/router";
+import { createEffect, createSignal, onMount } from "solid-js";
 import {
-	buryMemE,
-	editMemE,
-	getAllMemsE,
-	deleteMemE,
-	resetMemE,
-	suspendMemE,
-	unsuspendMemE,
+	addTagToMemE,
+	batchAddTagToMemsE,
 	batchBuryMemE,
 	batchDeleteMemE,
-	batchResetMemE,
-	getMemTagsE,
-	addTagToMemE,
-	removeTagFromMemE,
-	batchAddTagToMemsE,
-	batchRemoveTagFromMemsE,
 	batchGetMemsTagsE,
+	batchRemoveTagFromMemsE,
+	batchResetMemE,
+	deleteMemE,
+	editMemE,
+	getAllMemsE,
+	getMemTagsE,
 	type MemItem,
+	removeTagFromMemE,
+	resetMemE,
+	suspendMemE,
 	type TagInfo,
+	unsuspendMemE,
 } from "../apis/memApi.ts";
-import MemManageToolbar from "../components/mem/MemManageToolbar.tsx";
 import MemBatchBar from "../components/mem/MemBatchBar.tsx";
-import MemTable from "../components/mem/MemTable.tsx";
+import MemBatchTagModal from "../components/mem/MemBatchTagModal.tsx";
 import MemDetailPanel from "../components/mem/MemDetailPanel.tsx";
 import MemExportModal from "../components/mem/MemExportModal.tsx";
-import MemBatchTagModal from "../components/mem/MemBatchTagModal.tsx";
+import MemManageToolbar from "../components/mem/MemManageToolbar.tsx";
+import MemTable from "../components/mem/MemTable.tsx";
 import styles from "./MemManage.module.css";
 
 type SortField = "cue.created_at" | "difficulty" | "due_at" | "state";
@@ -61,6 +60,8 @@ async function loadAllMems(
 		return { items: [], meta: { page: 1, total_pages: 0, total: 0 } };
 	}
 }
+
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
 export default function MemManage() {
 	const [mems, setMems] = createSignal<MemItem[]>([]);
@@ -155,8 +156,8 @@ export default function MemManage() {
 		setPage(1);
 		setBatchIds(new Set<number>());
 		// 防抖 300ms
-		clearTimeout((window as any).__memSearchTimer);
-		(window as any).__memSearchTimer = setTimeout(load, 300);
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(load, 300);
 	};
 
 	const setFilter = (st: string) => {

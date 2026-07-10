@@ -17,11 +17,21 @@ export default function MemBatchBar(props: Props) {
 			classList={{ [styles.visible]: props.selectedCount > 0 }}
 		>
 			<span class={styles.count}>{props.selectedCount} 条已选</span>
-			<Button variant="ghost" size="sm" onClick={props.onReset}>忘却</Button>
-			<Button variant="ghost" size="sm" onClick={props.onBury}>埋葬</Button>
-			<Button variant="ghost" size="sm" onClick={props.onTag}>标签+</Button>
-			<Button variant="ghost" size="sm" onClick={props.onTagRemove}>标签-</Button>
-			<Button variant="danger" size="sm" onClick={props.onDelete}>删除</Button>
+			<Button variant="ghost" size="sm" onClick={props.onReset}>
+				忘却
+			</Button>
+			<Button variant="ghost" size="sm" onClick={props.onBury}>
+				埋葬
+			</Button>
+			<Button variant="ghost" size="sm" onClick={props.onTag}>
+				标签+
+			</Button>
+			<Button variant="ghost" size="sm" onClick={props.onTagRemove}>
+				标签-
+			</Button>
+			<Button variant="danger" size="sm" onClick={props.onDelete}>
+				删除
+			</Button>
 		</div>
 	);
 }

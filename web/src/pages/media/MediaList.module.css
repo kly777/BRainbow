@@ -11,38 +11,6 @@
 	margin: 0 0 var(--space-xl) 0;
 }
 
-/* ── Tab 切换 ── */
-.tabs {
-	display: flex;
-	gap: var(--space-sm);
-	margin-bottom: var(--space-xl);
-}
-
-.tab,
-.tabActive {
-	padding: var(--space-xs) 16px;
-	border-radius: var(--radius-md);
-	font-size: var(--text-base);
-	font-weight: 500;
-	cursor: pointer;
-	border: 1px solid var(--color-border);
-	background: var(--color-surface);
-	color: var(--color-text-secondary);
-	font-family: inherit;
-	transition: all 0.15s;
-}
-
-.tab:hover {
-	border-color: var(--color-accent);
-	color: var(--color-accent);
-}
-
-.tabActive {
-	background: var(--color-accent);
-	color: var(--color-white);
-	border-color: var(--color-accent);
-}
-
 /* ── 网格 ── */
 .grid {
 	display: grid;
@@ -116,31 +84,6 @@
 	gap: var(--space-xs);
 	padding: var(--space-sm) 12px;
 	border-top: 1px solid var(--color-border-light);
-}
-
-.btn {
-	padding: var(--space-xs) 12px;
-	border-radius: var(--radius-md);
-	font-size: var(--text-sm);
-	font-weight: 500;
-	cursor: pointer;
-	border: 1px solid var(--color-border);
-	background: var(--color-surface);
-	color: var(--color-text-secondary);
-	font-family: inherit;
-	transition: all 0.15s;
-}
-
-.btn:hover {
-	background: var(--color-accent-subtle);
-	color: var(--color-accent);
-	border-color: var(--color-accent);
-}
-
-.btnDanger:hover {
-	background: var(--color-danger-subtle);
-	color: var(--color-danger);
-	border-color: var(--color-danger);
 }
 
 /* ── 重命名 ── */

@@ -28,5 +28,8 @@ export const changePasswordE = (
 ): Promise<{ ok: boolean }> =>
 	request("/user/password", {
 		method: "POST",
-		body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+		body: JSON.stringify({
+			old_password: oldPassword,
+			new_password: newPassword,
+		}),
 	});

@@ -12,8 +12,7 @@ interface Props {
 }
 
 export default function MemBatchTagModal(props: Props) {
-	const title = () =>
-		props.mode === "add" ? "批量添加标签" : "批量移除标签";
+	const title = () => (props.mode === "add" ? "批量添加标签" : "批量移除标签");
 	const desc = () =>
 		`对 ${props.selectedCount} 条记忆${
 			props.mode === "add" ? "添加" : "移除"
@@ -32,9 +31,7 @@ export default function MemBatchTagModal(props: Props) {
 			</p>
 			<TagSelector
 				tags={[]}
-				onAdd={
-					props.mode === "remove" ? props.onRemoveTag : props.onAddTag
-				}
+				onAdd={props.mode === "remove" ? props.onRemoveTag : props.onAddTag}
 				onRemove={() => {}}
 			/>
 		</Modal>

@@ -1,8 +1,8 @@
-import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { NAV_ROUTES } from "../routes.ts";
+import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { AUTH_REQUIRED_EVENT } from "../apis/request.ts";
 import { useAuth } from "../auth/context.tsx";
+import { NAV_ROUTES } from "../routes.ts";
 import styles from "./CommandPalette.module.css";
 
 const BING = "https://www.bing.com/search?q=";

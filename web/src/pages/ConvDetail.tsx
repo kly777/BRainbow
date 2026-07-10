@@ -1,6 +1,6 @@
-import { createResource, Show, For } from "solid-js";
 import { A, useParams, useSearchParams } from "@solidjs/router";
-import { getConvDetailE, type ConvDetail } from "../apis/convApi.ts";
+import { createResource, For, Show } from "solid-js";
+import { getConvDetailE } from "../apis/convApi.ts";
 import MarkdownRenderer from "../components/ui/Markdown.tsx";
 import styles from "./ConvDetail.module.css";
 
@@ -17,9 +17,7 @@ export default function ConvDetailPage() {
 	const id = () => params.id;
 	const articleOnly = () => searchParams.mode === "article";
 
-	const [data] = createResource(id, (id) =>
-		getConvDetailE(Number(id)),
-	);
+	const [data] = createResource(id, (id) => getConvDetailE(Number(id)));
 
 	const backHref = () => {
 		const params = new URLSearchParams();
@@ -37,10 +35,14 @@ export default function ConvDetailPage() {
 				{(d) => (
 					<>
 						<div class={styles.topBar}>
-							<A href={backHref()} class={styles.backLink}>← 搜索</A>
+							<A href={backHref()} class={styles.backLink}>
+								← 搜索
+							</A>
 							<div class={styles.titleArea}>
 								<h1 class={styles.title}>{d().title}</h1>
-								<span class={styles.tag}>{typeLabel[d().conv_type] || d().conv_type}</span>
+								<span class={styles.tag}>
+									{typeLabel[d().conv_type] || d().conv_type}
+								</span>
 								<span class={styles.date}>{d().created_at.slice(0, 10)}</span>
 							</div>
 						</div>
@@ -48,22 +50,26 @@ export default function ConvDetailPage() {
 						<div class={styles.body}>
 							<Show when={!articleOnly()}>
 								<div class={styles.qaSection}>
-								<h2 class={styles.sectionTitle}>对话记录</h2>
-								<For each={d().qa_pairs}>
-									{(qa) => (
-										<div class={styles.qaBlock}>
-											<div class={styles.question}>
-												<span class={styles.qLabel}>Q</span>
-												<div class={styles.md}><MarkdownRenderer content={qa.question} /></div>
+									<h2 class={styles.sectionTitle}>对话记录</h2>
+									<For each={d().qa_pairs}>
+										{(qa) => (
+											<div class={styles.qaBlock}>
+												<div class={styles.question}>
+													<span class={styles.qLabel}>Q</span>
+													<div class={styles.md}>
+														<MarkdownRenderer content={qa.question} />
+													</div>
+												</div>
+												<div class={styles.answer}>
+													<span class={styles.aLabel}>A</span>
+													<div class={styles.md}>
+														<MarkdownRenderer content={qa.answer} />
+													</div>
+												</div>
 											</div>
-											<div class={styles.answer}>
-												<span class={styles.aLabel}>A</span>
-												<div class={styles.md}><MarkdownRenderer content={qa.answer} /></div>
-											</div>
-										</div>
-									)}
-								</For>
-							</div>
+										)}
+									</For>
+								</div>
 							</Show>
 
 							<Show when={d().articles.length > 0}>
@@ -73,10 +79,14 @@ export default function ConvDetailPage() {
 										{(art) => (
 											<div class={styles.articleBlock}>
 												<h3 class={styles.articleTitle}>
-													<span class={styles.artTag}>{typeLabel[art.article_type] || art.article_type}</span>
+													<span class={styles.artTag}>
+														{typeLabel[art.article_type] || art.article_type}
+													</span>
 													{art.title}
 												</h3>
-												<div class={styles.md}><MarkdownRenderer content={art.content} /></div>
+												<div class={styles.md}>
+													<MarkdownRenderer content={art.content} />
+												</div>
 											</div>
 										)}
 									</For>

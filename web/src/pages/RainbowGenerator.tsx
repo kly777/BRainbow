@@ -1,13 +1,14 @@
-import { createMemo } from "solid-js";
-import { createSignal } from "solid-js";
+import { createMemo, createSignal } from "solid-js";
+import AngleEditor from "../components/AngleEditor.tsx";
+import ColorEditor from "../components/ColorEditor.tsx";
 import {
 	RainbowDrawer,
 	type ShapeRender,
 } from "../components/RainbowDrawer.tsx";
+import Button from "../components/ui/Button.tsx";
+import FilterGroup from "../components/ui/FilterGroup.tsx";
 import { Angle } from "../lib/angle.ts";
 import { Color } from "../lib/color.ts";
-import AngleEditor from "../components/AngleEditor.tsx";
-import ColorEditor from "../components/ColorEditor.tsx";
 import styles from "./RainbowGenerator.module.css";
 
 function RainbowGenerator() {
@@ -34,11 +35,11 @@ function RainbowGenerator() {
 
 	const [shapeRender, setShapeRender] =
 		createSignal<ShapeRender>("geometricPrecision");
-	const RENDER_MODES: { key: ShapeRender; label: string }[] = [
-		{ key: "geometricPrecision", label: "精度" },
-		{ key: "auto", label: "自动" },
-		{ key: "crispEdges", label: "锐利" },
-		{ key: "optimizeSpeed", label: "速度" },
+	const RENDER_MODES = [
+		{ value: "geometricPrecision" as const, label: "精度" },
+		{ value: "auto" as const, label: "自动" },
+		{ value: "crispEdges" as const, label: "锐利" },
+		{ value: "optimizeSpeed" as const, label: "速度" },
 	];
 
 	let svgEl: SVGSVGElement | null = null;
@@ -52,6 +53,7 @@ function RainbowGenerator() {
 			squareSize / Math.cos(angle().radian) +
 			2 * rectHeight() * Math.tan(angle().radian),
 	);
+
 	// ── 导出 ──
 
 	const toBase64 = (bytes: Uint8Array): string => {
@@ -74,7 +76,6 @@ function RainbowGenerator() {
 	const exportSvg = () => {
 		if (!svgEl) return;
 		const clone = svgEl.cloneNode(true) as SVGSVGElement;
-		// 按实际内容大小导出（放大到 squareSize）
 		clone.setAttribute("width", String(squareSize));
 		clone.setAttribute("height", String(squareSize));
 		const xml = new XMLSerializer().serializeToString(clone);
@@ -115,30 +116,22 @@ function RainbowGenerator() {
 				<AngleEditor angle={angle} setAngle={setAngle} />
 				<ColorEditor colors={colors} setColors={setColors} />
 
-				<div class={styles.exportRow}>
-					<button type="button" class={styles.exportBtn} onClick={exportSvg}>
+				<div class={styles.exportBtns}>
+					<Button variant="secondary" size="sm" onClick={exportSvg}>
 						导出 SVG
-					</button>
-					<button type="button" class={styles.exportBtn} onClick={exportPng}>
+					</Button>
+					<Button variant="secondary" size="sm" onClick={exportPng}>
 						导出 PNG
-					</button>
+					</Button>
 				</div>
 
-				<div class={styles.renderRow}>
-					<span class={styles.renderLabel}>渲染</span>
-					<div class={styles.segmented}>
-						{RENDER_MODES.map((m) => (
-							<button
-								type="button"
-								class={
-									shapeRender() === m.key ? styles.segActive : styles.segBtn
-								}
-								onClick={() => setShapeRender(m.key)}
-							>
-								{m.label}
-							</button>
-						))}
-					</div>
+				<div class={styles.renderMode}>
+					<span class={styles.renderLabel}>渲染模式</span>
+					<FilterGroup
+						options={RENDER_MODES}
+						selected={shapeRender()}
+						onChange={(v) => setShapeRender(v as ShapeRender)}
+					/>
 				</div>
 
 				<section class={styles.stats}>

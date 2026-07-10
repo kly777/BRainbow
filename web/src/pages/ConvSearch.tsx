@@ -1,6 +1,6 @@
-import { createSignal, createResource, Show, For, onMount } from "solid-js";
 import { A, useNavigate, useSearchParams } from "@solidjs/router";
-import { searchConvE, type ConvSearchType, type ConvHit } from "../apis/convApi.ts";
+import { createResource, createSignal, For, onMount, Show } from "solid-js";
+import { type ConvHit, searchConvE } from "../apis/convApi.ts";
 import styles from "./ConvSearch.module.css";
 
 const VALID_TABS = ["all", "conv", "article"] as const;
@@ -34,7 +34,7 @@ export default function ConvSearch() {
 		const q = searchParams.q;
 		const params: Record<string, string | undefined> = {};
 		if (q) params.q = Array.isArray(q) ? q[0] : q;
-		params.t = t === "all" ? undefined : t;  // 切到"全部"时显式移除 t 参数
+		params.t = t === "all" ? undefined : t; // 切到"全部"时显式移除 t 参数
 		setSearchParams(params);
 	};
 
@@ -54,7 +54,7 @@ export default function ConvSearch() {
 	});
 
 	const [data] = createResource(
-		() => searchQuery() ? `${searchQuery()}|${tab()}` : null,
+		() => (searchQuery() ? `${searchQuery()}|${tab()}` : null),
 		(key) => {
 			if (!key) return { hits: [], total: 0 };
 			const [q, t] = key.split("|");
@@ -90,7 +90,9 @@ export default function ConvSearch() {
 	return (
 		<div class={styles.page}>
 			<div class={styles.topBar}>
-				<A href="/" class={styles.backLink}>← 主页</A>
+				<A href="/" class={styles.backLink}>
+					← 主页
+				</A>
 				<h1 class={styles.title}>对话搜索</h1>
 			</div>
 
@@ -110,12 +112,17 @@ export default function ConvSearch() {
 						<button
 							type="button"
 							class={styles.clearBtn}
-							onClick={() => { setQuery(""); }}>
+							onClick={() => {
+								setQuery("");
+							}}
+						>
 							×
 						</button>
 					</Show>
 				</div>
-				<button type="submit" class={styles.btn}>搜索</button>
+				<button type="submit" class={styles.btn}>
+					搜索
+				</button>
 			</form>
 
 			<div class={styles.tabs}>
@@ -161,8 +168,12 @@ export default function ConvSearch() {
 					{(hit) => (
 						<A href={itemHref(hit)} class={styles.item}>
 							<div class={styles.itemTop}>
-								<span class={styles.badge}>{fieldLabel[hit.match_field] || hit.match_field}</span>
-								<span class={styles.tagType}>{typeLabel[hit.conv_type] || hit.conv_type}</span>
+								<span class={styles.badge}>
+									{fieldLabel[hit.match_field] || hit.match_field}
+								</span>
+								<span class={styles.tagType}>
+									{typeLabel[hit.conv_type] || hit.conv_type}
+								</span>
 							</div>
 							<div class={styles.itemTitle}>{hit.title}</div>
 							<div class={styles.itemSnippet}>{hit.snippet}</div>

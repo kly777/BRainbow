@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { showToast, dismissToast, dismissAll, toasts } from "./toastStore";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { dismissAll, dismissToast, showToast, toasts } from "./toastStore";
 
 beforeEach(() => {
 	vi.useFakeTimers();

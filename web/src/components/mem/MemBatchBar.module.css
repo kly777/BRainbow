@@ -8,7 +8,9 @@
 	font-size: var(--text-sm);
 	height: 0;
 	overflow: hidden;
-	transition: height 0.15s ease, padding 0.15s ease;
+	transition:
+		height 0.15s ease,
+		padding 0.15s ease;
 }
 
 .visible {

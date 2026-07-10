@@ -1,11 +1,11 @@
 import { Show } from "solid-js";
 import type { MemItem, TagInfo } from "../../apis/memApi.ts";
+import { fmtLocal } from "../../lib/time.ts";
+import TagSelector from "../TagSelector.tsx";
+import Badge from "../ui/Badge.tsx";
+import Button from "../ui/Button.tsx";
 import MarkdownRenderer from "../ui/Markdown.tsx";
 import MarkdownEditor from "../ui/MarkdownEditor.tsx";
-import TagSelector from "../TagSelector.tsx";
-import Button from "../ui/Button.tsx";
-import Badge from "../ui/Badge.tsx";
-import { fmtLocal } from "../../lib/time.ts";
 import styles from "./MemDetailPanel.module.css";
 
 interface Props {
@@ -76,7 +76,19 @@ export default function MemDetailPanel(props: Props) {
 						</Show>
 						<div class={styles.meta}>
 							<span>
-								状态：<Badge variant={d().state as any}>{d().state}</Badge>
+								状态：
+								<Badge
+									variant={
+										d().state as
+											| "new"
+											| "learning"
+											| "review"
+											| "relearning"
+											| "suspended"
+									}
+								>
+									{d().state}
+								</Badge>
 								{d().leeched ? " ⚠️烂卡" : ""}
 							</span>
 							<span>遗忘：{d().lapses} 次</span>
@@ -97,23 +109,43 @@ export default function MemDetailPanel(props: Props) {
 								when={props.editing}
 								fallback={
 									<>
-										<Button variant="secondary" size="sm" onClick={props.onStartEdit}>
+										<Button
+											variant="secondary"
+											size="sm"
+											onClick={props.onStartEdit}
+										>
 											编辑
 										</Button>
-										<Button variant="secondary" size="sm" onClick={() => props.onReset(d().id)}>
+										<Button
+											variant="secondary"
+											size="sm"
+											onClick={() => props.onReset(d().id)}
+										>
 											忘却
 										</Button>
 										<Show when={d().state !== "suspended"}>
-											<Button variant="secondary" size="sm" onClick={() => props.onSuspend(d().id)}>
+											<Button
+												variant="secondary"
+												size="sm"
+												onClick={() => props.onSuspend(d().id)}
+											>
 												挂起
 											</Button>
 										</Show>
 										<Show when={d().state === "suspended"}>
-											<Button variant="secondary" size="sm" onClick={() => props.onUnsuspend(d().id)}>
+											<Button
+												variant="secondary"
+												size="sm"
+												onClick={() => props.onUnsuspend(d().id)}
+											>
 												恢复
 											</Button>
 										</Show>
-										<Button variant="danger" size="sm" onClick={() => props.onDelete(d().id)}>
+										<Button
+											variant="danger"
+											size="sm"
+											onClick={() => props.onDelete(d().id)}
+										>
 											删除
 										</Button>
 									</>
@@ -122,7 +154,11 @@ export default function MemDetailPanel(props: Props) {
 								<Button variant="primary" size="sm" onClick={props.onSaveEdit}>
 									保存
 								</Button>
-								<Button variant="secondary" size="sm" onClick={props.onCancelEdit}>
+								<Button
+									variant="secondary"
+									size="sm"
+									onClick={props.onCancelEdit}
+								>
 									取消
 								</Button>
 							</Show>

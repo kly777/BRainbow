@@ -1,6 +1,6 @@
 import { For, Show } from "solid-js";
 import type { MemItem, TagInfo } from "../../apis/memApi.ts";
-import { fmtRelative, fmtLocal } from "../../lib/time.ts";
+import { fmtLocal, fmtRelative } from "../../lib/time.ts";
 import Badge from "../ui/Badge.tsx";
 import styles from "./MemTable.module.css";
 
@@ -44,7 +44,7 @@ const SORT_COLUMNS: { field: SortField; label: string }[] = [
 ];
 
 function SortIcon(props: { field: SortField; active: boolean; dir: SortDir }) {
-	if (!props.active) return <></>;
+	if (!props.active) return null;
 	return <>{props.dir === "asc" ? " ▲" : " ▼"}</>;
 }
 
@@ -109,7 +109,6 @@ export default function MemTable(props: Props) {
 										onKeyDown={(e) => {
 											if (e.key === "Enter") props.onSelectRow(mem.id);
 										}}
-										tabIndex={0}
 									>
 										{previewText(mem.cue.content)}
 									</td>
@@ -119,12 +118,20 @@ export default function MemTable(props: Props) {
 										onKeyDown={(e) => {
 											if (e.key === "Enter") props.onSelectRow(mem.id);
 										}}
-										tabIndex={0}
 									>
 										{previewText(mem.target.content)}
 									</td>
 									<td class={styles.td}>
-										<Badge variant={mem.state as any}>
+										<Badge
+											variant={
+												mem.state as
+													| "new"
+													| "learning"
+													| "review"
+													| "relearning"
+													| "suspended"
+											}
+										>
 											{mem.state}
 											{mem.leeched && " ⚠️"}
 										</Badge>
@@ -140,9 +147,7 @@ export default function MemTable(props: Props) {
 												)}
 											</For>
 											<Show when={tags().length > 3}>
-												<span class={styles.cellTag}>
-													+{tags().length - 3}
-												</span>
+												<span class={styles.cellTag}>+{tags().length - 3}</span>
 											</Show>
 										</div>
 									</td>

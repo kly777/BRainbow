@@ -1,10 +1,13 @@
 import { useNavigate } from "@solidjs/router";
 import { type Component, createSignal, Show } from "solid-js";
 import { createCardE } from "../../apis/cardApi.ts";
-import { type CreateCardRequest, getErrorMessage } from "../../apis/types/index.ts";
+import {
+	type CreateCardRequest,
+	getErrorMessage,
+} from "../../apis/types/index.ts";
 import Breadcrumb from "../../components/ui/Breadcrumb.tsx";
-import MarkdownEditor from "../../components/ui/MarkdownEditor.tsx";
 import Button from "../../components/ui/Button.tsx";
+import MarkdownEditor from "../../components/ui/MarkdownEditor.tsx";
 import Toolbar from "../../components/ui/Toolbar.tsx";
 import styles from "./CardAdd.module.css";
 
@@ -43,7 +46,7 @@ const CardAddPage: Component = () => {
 	};
 
 	return (
-		<div class={styles.container} onKeyDown={handleKeyDown}>
+		<div class={styles.container} onKeyDown={handleKeyDown} role="none">
 			<Breadcrumb
 				items={[
 					{ label: "首页", href: "/" },

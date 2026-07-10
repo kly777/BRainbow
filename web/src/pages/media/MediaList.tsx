@@ -6,20 +6,22 @@ import {
 	Show,
 } from "solid-js";
 import {
-	type MediaItem,
 	deleteMediaE,
 	listMediaE,
+	type MediaItem,
 	renameMediaE,
 } from "../../apis/mediaApi.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
+import Button from "../../components/ui/Button.tsx";
+import FilterGroup from "../../components/ui/FilterGroup.tsx";
 import styles from "./MediaList.module.css";
 
-const TABS: { label: string; value: string }[] = [
-	{ label: "全部", value: "" },
-	{ label: "图片", value: "image" },
-	{ label: "视频", value: "video" },
-	{ label: "音频", value: "audio" },
+const TABS = [
+	{ value: "", label: "全部" },
+	{ value: "image", label: "图片" },
+	{ value: "video", label: "视频" },
+	{ value: "audio", label: "音频" },
 ];
 
 function formatSize(bytes: number): string {
@@ -81,19 +83,11 @@ const MediaListPage: Component = () => {
 		<div class={styles.page}>
 			<h1 class={styles.title}>媒体管理</h1>
 
-			<nav class={styles.tabs}>
-				<For each={TABS}>
-					{(tab) => (
-						<button
-							type="button"
-							class={tab.value === mediaType() ? styles.tabActive : styles.tab}
-							onClick={() => setMediaType(tab.value)}
-						>
-							{tab.label}
-						</button>
-					)}
-				</For>
-			</nav>
+			<FilterGroup
+				options={TABS}
+				selected={mediaType()}
+				onChange={setMediaType}
+			/>
 
 			<Show when={error()}>
 				<p class={styles.error}>{error()}</p>
@@ -144,20 +138,20 @@ const MediaListPage: Component = () => {
 													</p>
 												</div>
 												<div class={styles.actions}>
-													<button
-														type="button"
-														class={styles.btn}
+													<Button
+														variant="secondary"
+														size="sm"
 														onClick={() => startRename(item)}
 													>
 														重命名
-													</button>
-													<button
-														type="button"
-														class={`${styles.btn} ${styles.btnDanger}`}
+													</Button>
+													<Button
+														variant="danger"
+														size="sm"
 														onClick={() => handleDelete(item.stored_id)}
 													>
 														删除
-													</button>
+													</Button>
 												</div>
 											</>
 										}
@@ -170,20 +164,20 @@ const MediaListPage: Component = () => {
 												class={styles.editInput}
 												onKeyPress={(e) => e.key === "Enter" && handleRename()}
 											/>
-											<button
-												type="button"
-												class={styles.btn}
+											<Button
+												variant="primary"
+												size="sm"
 												onClick={handleRename}
 											>
 												保存
-											</button>
-											<button
-												type="button"
-												class={styles.btn}
+											</Button>
+											<Button
+												variant="secondary"
+												size="sm"
 												onClick={() => setEditingId(null)}
 											>
 												取消
-											</button>
+											</Button>
 										</div>
 									</Show>
 								</div>

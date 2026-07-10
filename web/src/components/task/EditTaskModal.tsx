@@ -6,23 +6,23 @@ import {
 	Show,
 } from "solid-js";
 import {
-	createTimeWindowE,
-	deleteTimeWindowE,
-	getTimeWindowsE,
-} from "../../apis/timeWindowApi.ts";
-import {
 	addTaskDependencyE,
 	getTaskDetailE,
 	removeTaskDependencyE,
 } from "../../apis/taskApi.ts";
+import {
+	createTimeWindowE,
+	deleteTimeWindowE,
+	getTimeWindowsE,
+} from "../../apis/timeWindowApi.ts";
 import type {
 	CreateTimeWindowRequest,
 	Task,
 	TimeWindow,
 } from "../../apis/types/index.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
-import styles from "./EditTaskModal.module.css";
 import Modal from "../ui/Modal.tsx";
+import styles from "./EditTaskModal.module.css";
 
 interface EditTaskModalProps {
 	isOpen: boolean;

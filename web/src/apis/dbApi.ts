@@ -1,7 +1,8 @@
 import { cachedRequest } from "./request.ts";
 import type { PaginationParams } from "./types/index.ts";
 
-export const getTablesE = (): Promise<readonly string[]> => cachedRequest("/db", {});
+export const getTablesE = (): Promise<readonly string[]> =>
+	cachedRequest("/db", {});
 
 export interface ColumnInfo {
 	readonly name: string;

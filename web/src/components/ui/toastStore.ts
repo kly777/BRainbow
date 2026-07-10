@@ -29,7 +29,9 @@ const DEFAULT_DURATION = 5000; // 5秒
  * 弹出一个 Toast 通知。
  * 返回 toast id，可用于手动关闭。
  */
-export function showToast(item: Omit<ToastItem, "id" | "leaving">): number {
+export function showToast(
+	item: Omit<ToastItem, "id" | "leaving" | "duration"> & { duration?: number },
+): number {
 	const id = nextId++;
 	const toast: ToastItem = {
 		...item,

@@ -1,4 +1,4 @@
-import type { JSX, Component } from "solid-js";
+import type { Component, JSX } from "solid-js";
 import styles from "./Toolbar.module.css";
 
 interface ToolbarProps {

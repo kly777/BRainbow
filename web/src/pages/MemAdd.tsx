@@ -1,8 +1,8 @@
-import { createMemo, createSignal, For, Show } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
+import { createMemo, createSignal, For, Show } from "solid-js";
 import { createMemE, importJsonE } from "../apis/memApi.ts";
-import { showToast } from "../components/ui/toastStore.ts";
 import MarkdownEditor from "../components/ui/MarkdownEditor.tsx";
+import { showToast } from "../components/ui/toastStore.ts";
 import styles from "./MemAdd.module.css";
 
 /** 解析文本：每行 "线索 | 答案" 或 "线索\t答案" */
@@ -27,11 +27,16 @@ export default function MemAdd() {
 	const [batchText, setBatchText] = createSignal("");
 	const [jsonText, setJsonText] = createSignal("");
 	const [batchCount, setBatchCount] = createSignal(0);
-	const [mode, setMode] = createSignal<"single" | "batch" | "json" | "csv">("single");
-	const [importFile, setImportFile] = createSignal<File | null>(null);
+	const [mode, setMode] = createSignal<"single" | "batch" | "json" | "csv">(
+		"single",
+	);
+	const [_importFile, setImportFile] = createSignal<File | null>(null);
 	const [importing, setImporting] = createSignal(false);
 	const [importDefaultTags, setImportDefaultTags] = createSignal("");
-	const [importResult, setImportResult] = createSignal<{ imported: number; errors: string[] } | null>(null);
+	const [importResult, setImportResult] = createSignal<{
+		imported: number;
+		errors: string[];
+	} | null>(null);
 
 	interface PreviewRow {
 		cue: string;
@@ -42,44 +47,66 @@ export default function MemAdd() {
 	const [previewRows, setPreviewRows] = createSignal<PreviewRow[]>([]);
 	const [parseError, setParseError] = createSignal("");
 
-	const selectedCount = createMemo(() => previewRows().filter((r) => r.selected).length);
+	const selectedCount = createMemo(
+		() => previewRows().filter((r) => r.selected).length,
+	);
 
 	async function parseFile(file: File): Promise<PreviewRow[]> {
 		const text = await file.text();
 		if (file.name.endsWith(".json")) {
 			const json = JSON.parse(text);
 			const items = Array.isArray(json) ? json : (json.mems ?? []);
-			return items.map((i: { cue?: string; target?: string; tags?: string[] }) => ({
-				cue: (i.cue ?? "").trim(),
-				target: (i.target ?? "").trim(),
-				tags: i.tags ?? [],
-				selected: true,
-			}));
+			return items.map(
+				(i: { cue?: string; target?: string; tags?: string[] }) => ({
+					cue: (i.cue ?? "").trim(),
+					target: (i.target ?? "").trim(),
+					tags: i.tags ?? [],
+					selected: true,
+				}),
+			);
 		}
 		// CSV 解析
-		const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+		const lines = text
+			.split("\n")
+			.map((l) => l.trim())
+			.filter(Boolean);
 		if (lines.length === 0) return [];
 		// 跳过表头
 		const header = lines[0].toLowerCase();
-		const hasHeader = header.includes("cue") || header.includes("target") || header.includes("tags");
+		const hasHeader =
+			header.includes("cue") ||
+			header.includes("target") ||
+			header.includes("tags");
 		const dataLines = hasHeader ? lines.slice(1) : lines;
 
-		return dataLines.map((line) => {
-			// 简单 CSV 解析（支持引号）
-			const fields: string[] = [];
-			let current = "";
-			let inQuote = false;
-			for (const ch of line) {
-				if (ch === '"') { inQuote = !inQuote; continue; }
-				if (ch === "," && !inQuote) { fields.push(current.trim()); current = ""; continue; }
-				current += ch;
-			}
-			fields.push(current.trim());
-			const cue = fields[0] ?? "";
-			const target = fields[1] ?? "";
-			const tags = (fields[2] ?? "").split(/[;,]/).map((s) => s.trim()).filter(Boolean);
-			return { cue, target, tags, selected: true };
-		}).filter((r) => r.cue && r.target);
+		return dataLines
+			.map((line) => {
+				// 简单 CSV 解析（支持引号）
+				const fields: string[] = [];
+				let current = "";
+				let inQuote = false;
+				for (const ch of line) {
+					if (ch === '"') {
+						inQuote = !inQuote;
+						continue;
+					}
+					if (ch === "," && !inQuote) {
+						fields.push(current.trim());
+						current = "";
+						continue;
+					}
+					current += ch;
+				}
+				fields.push(current.trim());
+				const cue = fields[0] ?? "";
+				const target = fields[1] ?? "";
+				const tags = (fields[2] ?? "")
+					.split(/[;,]/)
+					.map((s) => s.trim())
+					.filter(Boolean);
+				return { cue, target, tags, selected: true };
+			})
+			.filter((r) => r.cue && r.target);
 	}
 
 	const handleCreate = async () => {
@@ -163,8 +190,10 @@ export default function MemAdd() {
 	return (
 		<div class={styles.page}>
 			<div class={styles.topBar}>
-			<A href="/m" class={styles.backLink}>← 记忆</A>
-			<h1 class={styles.title}>添加记忆</h1>
+				<A href="/m" class={styles.backLink}>
+					← 记忆
+				</A>
+				<h1 class={styles.title}>添加记忆</h1>
 				<div class={styles.modeTabs}>
 					<button
 						type="button"
@@ -279,7 +308,10 @@ export default function MemAdd() {
   { "cue": "质能方程", "target": "E=mc²", "tags": ["物理", "公式"] },
   { "cue": "光速", "target": "299792458 m/s" }
 ]`}</pre>
-						<p class={styles.formatNote}><code>tags</code> 可选，可省略。也可包装为 <code>{'{"mems": [...]}'}</code></p>
+						<p class={styles.formatNote}>
+							<code>tags</code> 可选，可省略。也可包装为{" "}
+							<code>{'{"mems": [...]}'}</code>
+						</p>
 					</div>
 					<textarea
 						class={styles.textarea}
@@ -320,7 +352,14 @@ export default function MemAdd() {
 									<For each={importResult()!.errors}>{(e) => <li>{e}</li>}</For>
 								</ul>
 							</Show>
-							<button type="button" class={styles.submit} onClick={() => { setImportResult(null); setImportFile(null); }}>
+							<button
+								type="button"
+								class={styles.submit}
+								onClick={() => {
+									setImportResult(null);
+									setImportFile(null);
+								}}
+							>
 								继续导入
 							</button>
 						</div>
@@ -330,11 +369,19 @@ export default function MemAdd() {
 							<p class={styles.hintTitle}>支持的文件格式</p>
 							<div class={styles.formatBlock}>
 								<p class={styles.formatName}>CSV</p>
-								<pre class={styles.formatExample}>cue,target,tags<br />
-质能方程,E=mc²,物理;公式<br />
-光速,299792458 m/s,物理<br />
-DNA,双螺旋结构,生物;遗传</pre>
-								<p class={styles.formatNote}>标签可用 <code>;</code> 或 <code>,</code> 分隔，内容含逗号请用引号</p>
+								<pre class={styles.formatExample}>
+									cue,target,tags
+									<br />
+									质能方程,E=mc²,物理;公式
+									<br />
+									光速,299792458 m/s,物理
+									<br />
+									DNA,双螺旋结构,生物;遗传
+								</pre>
+								<p class={styles.formatNote}>
+									标签可用 <code>;</code> 或 <code>,</code>{" "}
+									分隔，内容含逗号请用引号
+								</p>
 							</div>
 							{/*<div class={styles.formatBlock}>
 								<p class={styles.formatName}>JSON</p>
@@ -379,8 +426,11 @@ DNA,双螺旋结构,生物;遗传</pre>
 													type="checkbox"
 													checked={selectedCount() === previewRows().length}
 													onChange={() => {
-														const all = selectedCount() === previewRows().length;
-														setPreviewRows((prev) => prev.map((r) => ({ ...r, selected: !all })));
+														const all =
+															selectedCount() === previewRows().length;
+														setPreviewRows((prev) =>
+															prev.map((r) => ({ ...r, selected: !all })),
+														);
 													}}
 												/>
 											</th>
@@ -397,17 +447,30 @@ DNA,双螺旋结构,生物;遗传</pre>
 														<input
 															type="checkbox"
 															checked={row.selected}
-															onChange={() => setPreviewRows((prev) => {
-																const next = [...prev];
-																next[i()] = { ...next[i()], selected: !next[i()].selected };
-																return next;
-															})}
+															onChange={() =>
+																setPreviewRows((prev) => {
+																	const next = [...prev];
+																	next[i()] = {
+																		...next[i()],
+																		selected: !next[i()].selected,
+																	};
+																	return next;
+																})
+															}
 														/>
 													</td>
-													<td class={styles.previewTd}>{row.cue.slice(0, 60)}</td>
-													<td class={styles.previewTd}>{row.target.slice(0, 60)}</td>
 													<td class={styles.previewTd}>
-														<For each={row.tags}>{(tag) => <span class={styles.previewTag}>{tag}</span>}</For>
+														{row.cue.slice(0, 60)}
+													</td>
+													<td class={styles.previewTd}>
+														{row.target.slice(0, 60)}
+													</td>
+													<td class={styles.previewTd}>
+														<For each={row.tags}>
+															{(tag) => (
+																<span class={styles.previewTag}>{tag}</span>
+															)}
+														</For>
 													</td>
 												</tr>
 											)}
@@ -415,11 +478,16 @@ DNA,双螺旋结构,生物;遗传</pre>
 									</tbody>
 								</table>
 							</div>
-							<p class={styles.previewCount}>已选 {selectedCount()} / 共 {previewRows().length} 条</p>
+							<p class={styles.previewCount}>
+								已选 {selectedCount()} / 共 {previewRows().length} 条
+							</p>
 						</Show>
 						<div class={styles.formGroup}>
-							<label class={styles.label}>默认标签（可选）</label>
+							<label for="import-default-tags" class={styles.label}>
+								默认标签（可选）
+							</label>
 							<input
+								id="import-default-tags"
 								type="text"
 								class={styles.textInput}
 								placeholder="标签1; 标签2"
@@ -428,7 +496,13 @@ DNA,双螺旋结构,生物;遗传</pre>
 							/>
 						</div>
 						<div class={styles.actions}>
-							<button type="button" class={styles.cancel} onClick={() => navigate("/m")}>取消</button>
+							<button
+								type="button"
+								class={styles.cancel}
+								onClick={() => navigate("/m")}
+							>
+								取消
+							</button>
 							<button
 								type="button"
 								class={styles.submit}
@@ -438,12 +512,27 @@ DNA,双螺旋结构,生物;遗传</pre>
 									if (rows.length === 0) return;
 									setImporting(true);
 									try {
-										const tags = importDefaultTags().split(/[;,]/).map(s => s.trim()).filter(Boolean);
-										const mems = rows.map((r) => ({ cue: r.cue, target: r.target, tags: r.tags }));
-										const result = await importJsonE(mems, tags.length > 0 ? tags : undefined);
+										const tags = importDefaultTags()
+											.split(/[;,]/)
+											.map((s) => s.trim())
+											.filter(Boolean);
+										const mems = rows.map((r) => ({
+											cue: r.cue,
+											target: r.target,
+											tags: r.tags,
+										}));
+										const result = await importJsonE(
+											mems,
+											tags.length > 0 ? tags : undefined,
+										);
 										setImportResult(result);
 									} catch (err: unknown) {
-										showToast({ type: "error", title: "导入失败", message: String(err), duration: 5000 });
+										showToast({
+											type: "error",
+											title: "导入失败",
+											message: String(err),
+											duration: 5000,
+										});
 									} finally {
 										setImporting(false);
 									}

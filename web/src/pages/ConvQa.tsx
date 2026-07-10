@@ -1,6 +1,6 @@
-import { createResource, Show, For } from "solid-js";
 import { A, useParams, useSearchParams } from "@solidjs/router";
-import { getConvQaE, type ConvQaData } from "../apis/convApi.ts";
+import { createResource, For, Show } from "solid-js";
+import { getConvQaE } from "../apis/convApi.ts";
 import MarkdownRenderer from "../components/ui/Markdown.tsx";
 import styles from "./ConvDetail.module.css";
 
@@ -14,8 +14,9 @@ const typeLabel: Record<string, string> = {
 export default function ConvQaPage() {
 	const params = useParams();
 	const [searchParams] = useSearchParams();
-	const [data] = createResource(() => params.id, (id) =>
-		getConvQaE(Number(id)),
+	const [data] = createResource(
+		() => params.id,
+		(id) => getConvQaE(Number(id)),
 	);
 
 	const backHref = () => {
@@ -34,10 +35,14 @@ export default function ConvQaPage() {
 				{(d) => (
 					<>
 						<div class={styles.topBar}>
-							<A href={backHref()} class={styles.backLink}>← 搜索</A>
+							<A href={backHref()} class={styles.backLink}>
+								← 搜索
+							</A>
 							<div class={styles.titleArea}>
 								<h1 class={styles.title}>{d().title}</h1>
-								<span class={styles.tag}>{typeLabel[d().conv_type] || d().conv_type}</span>
+								<span class={styles.tag}>
+									{typeLabel[d().conv_type] || d().conv_type}
+								</span>
 								<span class={styles.date}>{d().created_at.slice(0, 10)}</span>
 							</div>
 						</div>
@@ -49,11 +54,15 @@ export default function ConvQaPage() {
 										<div class={styles.qaBlock}>
 											<div class={styles.question}>
 												<span class={styles.qLabel}>Q</span>
-												<div class={styles.md}><MarkdownRenderer content={qa.question} /></div>
+												<div class={styles.md}>
+													<MarkdownRenderer content={qa.question} />
+												</div>
 											</div>
 											<div class={styles.answer}>
 												<span class={styles.aLabel}>A</span>
-												<div class={styles.md}><MarkdownRenderer content={qa.answer} /></div>
+												<div class={styles.md}>
+													<MarkdownRenderer content={qa.answer} />
+												</div>
 											</div>
 										</div>
 									)}

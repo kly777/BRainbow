@@ -1,4 +1,4 @@
-import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
+import { CACHE, cachedRequest, request, tapInvalidate } from "./request.ts";
 import type {
 	Card,
 	CreateCardRequest,
@@ -17,7 +17,8 @@ export interface PaginatedCards {
 
 // ==================== Card API Functions ====================
 
-export const getCardsE = (): Promise<PaginatedCards> => cachedRequest("/cards", {});
+export const getCardsE = (): Promise<PaginatedCards> =>
+	cachedRequest("/cards", {});
 
 // 单张卡片缓存 60 秒，不常变
 export const getCardE = (id: number): Promise<Card> =>

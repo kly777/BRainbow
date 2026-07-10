@@ -1,6 +1,6 @@
-import { createSignal, createEffect } from "solid-js";
+import { createEffect, createSignal } from "solid-js";
 import type { TagInfo } from "../../apis/memApi.ts";
-import { listTagsE, downloadExportCsv } from "../../apis/memApi.ts";
+import { downloadExportCsv, listTagsE } from "../../apis/memApi.ts";
 import TagSelector from "../TagSelector.tsx";
 import Modal from "../ui/Modal.tsx";
 
@@ -15,7 +15,9 @@ export default function MemExportModal(props: Props) {
 
 	createEffect(() => {
 		if (props.isOpen) {
-			listTagsE().then(setAllUserTags).catch(() => {});
+			listTagsE()
+				.then(setAllUserTags)
+				.catch(() => {});
 		}
 	});
 

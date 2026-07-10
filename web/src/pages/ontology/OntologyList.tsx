@@ -8,10 +8,12 @@ import {
 import { createOntoE, deleteOntoE, getOntosE } from "../../apis/ontoApi.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
+import Button from "../../components/ui/Button.tsx";
+import FilterGroup from "../../components/ui/FilterGroup.tsx";
+import SearchInput from "../../components/ui/SearchInput.tsx";
 import styles from "./OntologyList.module.css";
 
 const OntologyListPage: Component = () => {
-	// 使用 createResource 加载本体数据
 	const [ontologies, { mutate, refetch }] = createResource(async () => {
 		try {
 			return await getOntosE();
@@ -23,16 +25,13 @@ const OntologyListPage: Component = () => {
 	const [searchQuery, setSearchQuery] = createSignal("");
 	const [viewMode, setViewMode] = createSignal<"grid" | "list">("grid");
 
-	// 创建本体相关状态
 	const [showCreateModal, setShowCreateModal] = createSignal(false);
 	const [newName, setNewName] = createSignal("");
 	const [newDescription, setNewDescription] = createSignal("");
 	const [isCreating, setIsCreating] = createSignal(false);
 	const [createError, setCreateError] = createSignal("");
-	// 正在删除的本体ID，用于防止重复删除
 	const [deletingOntoId, setDeletingOntoId] = createSignal<number | null>(null);
 
-	// 过滤本体
 	const filteredOntologies = () => {
 		const data = ontologies() || [];
 		if (!searchQuery()) return data;
@@ -76,12 +75,10 @@ const OntologyListPage: Component = () => {
 
 	const handleDeleteOnto = async (id: number) => {
 		if (confirm("确定要删除这个本体吗？此操作不可撤销。")) {
-			// 防止重复删除
 			if (deletingOntoId() === id) return;
 
 			setDeletingOntoId(id);
 
-			// 乐观更新：立即从资源状态中移除
 			const currentData = ontologies() || [];
 			const ontoToDelete = currentData.find((onto) => onto.id === id);
 			if (ontoToDelete) {
@@ -118,49 +115,29 @@ const OntologyListPage: Component = () => {
 			<div class={styles.header}>
 				<h1>知识管理</h1>
 				<div class={styles.actions}>
-					<button
-						type="button"
-						class={styles.primaryButton}
-						onClick={openCreateModal}
-					>
+					<Button variant="primary" onClick={openCreateModal}>
 						新建本体
-					</button>
+					</Button>
 				</div>
 			</div>
 
 			<div class={styles.filters}>
 				<div class={styles.searchSection}>
-					<input
-						type="text"
-						class={styles.searchInput}
-						placeholder="搜索本体名称或描述..."
+					<SearchInput
 						value={searchQuery()}
-						onInput={(e) => setSearchQuery(e.currentTarget.value)}
+						onSearch={setSearchQuery}
+						placeholder="搜索本体名称或描述..."
 					/>
 				</div>
 
-				<div class={styles.filterControls}>
-					<div class={styles.viewToggle}>
-						<button
-							type="button"
-							class={`${styles.viewButton} ${
-								viewMode() === "grid" ? styles.active : ""
-							}`}
-							onClick={() => setViewMode("grid")}
-						>
-							网格视图
-						</button>
-						<button
-							type="button"
-							class={`${styles.viewButton} ${
-								viewMode() === "list" ? styles.active : ""
-							}`}
-							onClick={() => setViewMode("list")}
-						>
-							列表视图
-						</button>
-					</div>
-				</div>
+				<FilterGroup
+					options={[
+						{ value: "grid", label: "网格视图" },
+						{ value: "list", label: "列表视图" },
+					]}
+					selected={viewMode()}
+					onChange={(v) => setViewMode(v as "grid" | "list")}
+				/>
 			</div>
 
 			<AsyncView
@@ -201,16 +178,16 @@ const OntologyListPage: Component = () => {
 													</td>
 													<td>
 														<div class={styles.entityActions}>
-															<button
-																type="button"
-																class={styles.deleteButton}
+															<Button
+																variant="danger"
+																size="sm"
 																onClick={() => handleDeleteOnto(onto.id)}
 																disabled={deletingOntoId() === onto.id}
 															>
 																{deletingOntoId() === onto.id
 																	? "删除中..."
 																	: "删除"}
-															</button>
+															</Button>
 														</div>
 													</td>
 												</tr>
@@ -235,14 +212,14 @@ const OntologyListPage: Component = () => {
 										</div>
 
 										<div class={styles.entityActions}>
-											<button
-												type="button"
-												class={styles.deleteButton}
+											<Button
+												variant="danger"
+												size="sm"
 												onClick={() => handleDeleteOnto(onto.id)}
 												disabled={deletingOntoId() === onto.id}
 											>
 												{deletingOntoId() === onto.id ? "删除中..." : "删除"}
-											</button>
+											</Button>
 										</div>
 									</div>
 								)}
@@ -284,14 +261,9 @@ const OntologyListPage: Component = () => {
 					>
 						<div class={styles.modalHeader}>
 							<h2>创建新本体</h2>
-							<button
-								type="button"
-								class={styles.closeButton}
-								onClick={closeCreateModal}
-								aria-label="关闭"
-							>
+							<Button variant="icon" onClick={closeCreateModal} title="关闭">
 								×
-							</button>
+							</Button>
 						</div>
 
 						<div class={styles.modalContent}>
@@ -331,22 +303,20 @@ const OntologyListPage: Component = () => {
 						</div>
 
 						<div class={styles.modalActions}>
-							<button
-								type="button"
-								class={styles.secondaryButton}
+							<Button
+								variant="secondary"
 								onClick={closeCreateModal}
 								disabled={isCreating()}
 							>
 								取消
-							</button>
-							<button
-								type="button"
-								class={styles.primaryButton}
+							</Button>
+							<Button
+								variant="primary"
 								onClick={handleCreateOnto}
 								disabled={isCreating()}
 							>
 								{isCreating() ? "创建中..." : "创建"}
-							</button>
+							</Button>
 						</div>
 					</div>
 				</div>
@@ -378,82 +348,63 @@ const OntologyListPage: Component = () => {
 					display: flex;
 					justify-content: space-between;
 					align-items: center;
-					padding: 20px;
-					border-bottom: 1px solid var(--color-border-light);
+					padding: var(--space-lg) 20px;
+					border-bottom: 1px solid var(--color-border);
 				}
 				.modalHeader h2 {
+					font-size: 1.125rem;
+					font-weight: 600;
 					margin: 0;
-					font-size: 20px;
-					color: var(--color-text);
-				}
-				.closeButton {
-					background: none;
-					border: none;
-					font-size: 24px;
-					cursor: pointer;
-					color: var(--color-text-muted);
-					padding: 4px 8px;
-				}
-				.closeButton:hover {
-					color: var(--color-text);
 				}
 				.modalContent {
-					padding: 20px;
-				}
-				.errorMessage {
-					background-color: var(--color-danger-subtle);
-					color: var(--color-danger);
-					padding: 10px;
-					border-radius: 4px;
-					margin-bottom: 15px;
-					font-size: 14px;
-				}
-				.formGroup {
-					margin-bottom: 15px;
-				}
-				.formLabel {
-					display: block;
-					margin-bottom: 6px;
-					font-weight: 500;
-					color: var(--color-text-secondary);
-					font-size: 14px;
-				}
-				.formInput {
-					width: 100%;
-					padding: 10px 12px;
-					border: 1px solid var(--color-border);
-					border-radius: 4px;
-					font-size: 14px;
-					box-sizing: border-box;
-				}
-				.formInput:focus {
-					outline: none;
-					border-color: var(--color-accent);
-					box-shadow: 0 0 0 3px oklch(0.62 0.21 257 / 0.1);
-				}
-				.formTextarea {
-					width: 100%;
-					padding: 10px 12px;
-					border: 1px solid var(--color-border);
-					border-radius: 4px;
-					font-size: 14px;
-					resize: vertical;
-					font-family: inherit;
-					box-sizing: border-box;
-				}
-				.formTextarea:focus {
-					outline: none;
-					border-color: var(--color-accent);
-					box-shadow: 0 0 0 3px oklch(0.62 0.21 257 / 0.1);
+					padding: var(--space-lg) 20px;
 				}
 				.modalActions {
 					display: flex;
 					justify-content: flex-end;
-					gap: 10px;
-					padding: 20px;
-					border-top: 1px solid var(--color-border-light);
+					gap: var(--space-sm);
+					padding: var(--space-lg) 20px;
+					border-top: 1px solid var(--color-border);
 				}
-			`}
+				.formGroup {
+					margin-bottom: var(--space-lg);
+				}
+				.formLabel {
+					display: block;
+					font-size: 0.875rem;
+					font-weight: 500;
+					margin-bottom: var(--space-sm);
+					color: var(--color-text);
+				}
+				.formInput,
+				.formTextarea {
+					width: 100%;
+					padding: var(--space-sm) 10px;
+					font-size: 0.875rem;
+					border: 1px solid var(--color-border);
+					border-radius: var(--radius-sm);
+					transition: all 0.2s ease;
+					font-family: inherit;
+				}
+				.formInput:focus,
+				.formTextarea:focus {
+					outline: none;
+					border-color: var(--color-accent);
+					box-shadow: 0 0 0 3px var(--color-accent-ring, oklch(0.58 0.2 255 / 0.25));
+				}
+				.formTextarea {
+					resize: vertical;
+				}
+				.errorMessage {
+					padding: var(--space-sm) 10px;
+					background: var(--color-danger-subtle);
+					border: 1px solid var(--color-danger);
+					border-radius: var(--radius-sm);
+					color: var(--color-danger);
+					font-size: 0.875rem;
+					margin-bottom: var(--space-lg);
+				}
+				`}
 			</style>
 		</div>
 	);

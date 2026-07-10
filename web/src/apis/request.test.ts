@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { extractErrorBody } from "./request";
 
 function mockResponse(body: string, status = 400): Response {
@@ -67,18 +67,14 @@ describe("extractErrorBody", () => {
 
 	describe("非 JSON 回退", () => {
 		it("plain text as message", async () => {
-			const result = await extractErrorBody(
-				mockResponse("Not Found", 404),
-			);
+			const result = await extractErrorBody(mockResponse("Not Found", 404));
 			expect(result.code).toBe("HTTP_404");
 			expect(result.message).toBe("Not Found");
 		});
 
 		it("long text truncated to 200", async () => {
 			const long = "x".repeat(300);
-			const result = await extractErrorBody(
-				mockResponse(long),
-			);
+			const result = await extractErrorBody(mockResponse(long));
 			expect(result.message.length).toBe(200);
 			expect(result.message).toBe("x".repeat(200));
 		});
@@ -117,9 +113,7 @@ describe("extractErrorBody", () => {
 	describe("边界", () => {
 		it("exactly 200 chars not truncated", async () => {
 			const exactly200 = "x".repeat(200);
-			const result = await extractErrorBody(
-				mockResponse(exactly200),
-			);
+			const result = await extractErrorBody(mockResponse(exactly200));
 			expect(result.message.length).toBe(200);
 		});
 

@@ -63,7 +63,9 @@ export const searchConvE = (
 	tab: ConvSearchType = "all",
 	limit = 50,
 ): Promise<SearchResponse> =>
-	request(`/conv/search?q=${encodeURIComponent(q)}&limit=${limit}&search_type=${tab}`);
+	request(
+		`/conv/search?q=${encodeURIComponent(q)}&limit=${limit}&search_type=${tab}`,
+	);
 
 export const getConvDetailE = (id: number): Promise<ConvDetail> =>
 	request(`/conv/${id}`);

@@ -1,5 +1,5 @@
-import { createSignal, createEffect, onCleanup } from "solid-js";
 import type { Component } from "solid-js";
+import { createEffect, createSignal, onCleanup } from "solid-js";
 import styles from "./SearchInput.module.css";
 
 interface SearchInputProps {
@@ -23,7 +23,10 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 	const handleInput = (value: string) => {
 		setLocal(value);
 		clearTimeout(timer);
-		timer = setTimeout(() => props.onSearch(value.trim()), props.debounceMs ?? 300);
+		timer = setTimeout(
+			() => props.onSearch(value.trim()),
+			props.debounceMs ?? 300,
+		);
 	};
 
 	return (

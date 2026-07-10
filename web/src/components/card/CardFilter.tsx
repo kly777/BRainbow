@@ -46,8 +46,6 @@ const CardFilter: Component<CardFilterProps> = (props) => {
 		props.onSortChange?.(by, sortOrder());
 	};
 
-
-
 	return (
 		<div class={styles.filters}>
 			<div class={styles.filterRow}>

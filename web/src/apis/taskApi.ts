@@ -1,4 +1,4 @@
-import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
+import { CACHE, cachedRequest, request, tapInvalidate } from "./request.ts";
 import type {
 	CalendarEvent,
 	CreateTaskRequest,
@@ -33,7 +33,8 @@ export const getCalendarEventsE = (
 	return cachedRequest(`/tasks/calendar${qs ? `?${qs}` : ""}`, {});
 };
 
-export const getTasksE = (): Promise<TaskListResponse> => cachedRequest("/tasks", {});
+export const getTasksE = (): Promise<TaskListResponse> =>
+	cachedRequest("/tasks", {});
 
 export const getAllTasksE = (): Promise<TaskListResponse> =>
 	cachedRequest("/tasks/all", {});

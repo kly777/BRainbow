@@ -1,4 +1,4 @@
-import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
+import { CACHE, cachedRequest, request, tapInvalidate } from "./request.ts";
 import type { CreateTimeWindowRequest, TimeWindow } from "./types/index.ts";
 
 // ==================== Time Window API Functions ====================
@@ -9,9 +9,10 @@ export const getTimeWindowsE = (
 ): Promise<readonly TimeWindow[]> => {
 	let endpoint = `/time-windows?task_id=${taskId}`;
 	if (windowType) endpoint += `&window_type=${windowType}`;
-	return cachedRequest<{ readonly items: readonly TimeWindow[] }>(endpoint, {}).then(
-		(r) => r.items,
-	);
+	return cachedRequest<{ readonly items: readonly TimeWindow[] }>(
+		endpoint,
+		{},
+	).then((r) => r.items);
 };
 
 export const createTimeWindowE = (

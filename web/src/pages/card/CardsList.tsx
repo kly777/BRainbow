@@ -13,8 +13,8 @@ import {
 } from "../../apis/types/index.ts";
 
 import CardsGrid from "../../components/card/CardsGrid.tsx";
-import MarkdownRenderer from "../../components/ui/Markdown.tsx";
 import Button from "../../components/ui/Button.tsx";
+import MarkdownRenderer from "../../components/ui/Markdown.tsx";
 import { showToast } from "../../components/ui/toastStore.ts";
 import styles from "./CardsList.module.css";
 
@@ -38,7 +38,9 @@ const CardsListPage: Component = () => {
 	const loadCards = async () => {
 		try {
 			setCards((await getCardsE()).items);
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 	};
 
 	const [showCreateModal, setShowCreateModal] = createSignal(false);
@@ -64,7 +66,12 @@ const CardsListPage: Component = () => {
 
 		try {
 			await deleteCardE(id);
-			showToast({ type: "success", title: "卡片已删除", message: "", duration: 3000 });
+			showToast({
+				type: "success",
+				title: "卡片已删除",
+				message: "",
+				duration: 3000,
+			});
 		} catch {
 			if (cardToDelete) setCards([...currentCards]);
 		} finally {
@@ -88,7 +95,12 @@ const CardsListPage: Component = () => {
 			setNewCardContent("");
 			setShowCreateModal(false);
 			setCards([newCard, ...cards()]);
-			showToast({ type: "success", title: "卡片已创建", message: "", duration: 3000 });
+			showToast({
+				type: "success",
+				title: "卡片已创建",
+				message: "",
+				duration: 3000,
+			});
 		} catch (err) {
 			setModalError(getErrorMessage(err));
 		} finally {
@@ -120,12 +132,16 @@ const CardsListPage: Component = () => {
 		setModalError("");
 	};
 
-		return (
+	return (
 		<div class={styles.container}>
 			<div class={styles.header}>
 				<h1 class={styles.title}>卡片列表</h1>
 				<div class={styles.actions}>
-					<Button variant="secondary" size="sm" onClick={() => navigate("/c/add")}>
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={() => navigate("/c/add")}
+					>
 						＋ 新建
 					</Button>
 					<Button variant="primary" size="sm" onClick={openCreateModal}>
@@ -140,7 +156,13 @@ const CardsListPage: Component = () => {
 			<Show when={error()}>
 				<div class={styles.state}>
 					<p class={styles.errorText}>加载失败</p>
-					<Button variant="secondary" size="sm" onClick={() => globalThis.location.reload()}>重试</Button>
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={() => globalThis.location.reload()}
+					>
+						重试
+					</Button>
 				</div>
 			</Show>
 			<Show when={!loading() && !error()}>
@@ -151,12 +173,16 @@ const CardsListPage: Component = () => {
 					onCardClick={handleCardClick}
 					onCardEdit={handleCardEdit}
 					onCardDelete={handleCardDelete}
-					emptyMessage={isSearchMode() ? "没有找到匹配的卡片" : "还没有卡片，点击上方按钮创建一个吧！"}
+					emptyMessage={
+						isSearchMode()
+							? "没有找到匹配的卡片"
+							: "还没有卡片，点击上方按钮创建一个吧！"
+					}
 					deletingCardId={deletingCardId()}
 				/>
 			</Show>
 
-<Show when={showCreateModal()}>
+			<Show when={showCreateModal()}>
 				<div
 					class={styles.modalOverlay}
 					onClick={closeCreateModal}
@@ -179,7 +205,9 @@ const CardsListPage: Component = () => {
 					>
 						<div class={styles.modalHeader}>
 							<h2>创建新卡片</h2>
-							<Button variant="icon" onClick={closeCreateModal} title="关闭">×</Button>
+							<Button variant="icon" onClick={closeCreateModal} title="关闭">
+								×
+							</Button>
 						</div>
 						<div class={styles.modalContent}>
 							<Show when={modalError()}>
@@ -209,10 +237,20 @@ const CardsListPage: Component = () => {
 							</Show>
 						</div>
 						<div class={styles.modalActions}>
-							<Button variant="secondary" size="sm" onClick={closeCreateModal} disabled={isCreating()}>
+							<Button
+								variant="secondary"
+								size="sm"
+								onClick={closeCreateModal}
+								disabled={isCreating()}
+							>
 								取消
 							</Button>
-							<Button variant="primary" size="sm" onClick={handleCreateCard} disabled={isCreating()}>
+							<Button
+								variant="primary"
+								size="sm"
+								onClick={handleCreateCard}
+								disabled={isCreating()}
+							>
 								{isCreating() ? "创建中..." : "创建"}
 							</Button>
 						</div>

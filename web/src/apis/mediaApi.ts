@@ -1,4 +1,4 @@
-import { request, cachedRequest, tapInvalidate, CACHE } from "./request.ts";
+import { CACHE, cachedRequest, request, tapInvalidate } from "./request.ts";
 
 // ── 类型 ──
 

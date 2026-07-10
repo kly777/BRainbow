@@ -1,5 +1,5 @@
-import { lazy, type Component } from "solid-js";
 import type { RouteDefinition } from "@solidjs/router";
+import { type Component, lazy } from "solid-js";
 
 export interface RouteConfig {
 	path: string;

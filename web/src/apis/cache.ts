@@ -59,7 +59,10 @@ export function buildCacheKey(method: string, endpoint: string): string {
 /**
  * 读取缓存。如果不存在或已过期，返回 null 并删除过期条目。
  */
-export function readCache<T>(key: string, staleMs = DEFAULT_STALE_MS): T | null {
+export function readCache<T>(
+	key: string,
+	staleMs = DEFAULT_STALE_MS,
+): T | null {
 	const entry = store.get(key);
 	if (!entry) return null;
 	if (Date.now() - entry.fetchedAt > staleMs) {
@@ -109,7 +112,10 @@ export function cacheSize(): number {
 /**
  * 获取缓存快照（用于调试）。
  */
-export function cacheSnapshot(): ReadonlyMap<string, { data: unknown; age: number }> {
+export function cacheSnapshot(): ReadonlyMap<
+	string,
+	{ data: unknown; age: number }
+> {
 	const now = Date.now();
 	const snapshot = new Map<string, { data: unknown; age: number }>();
 	for (const [key, entry] of store) {

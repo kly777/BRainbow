@@ -94,9 +94,21 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 
 	// ── 输入 ──
 
-	const onInput = (e: Event) => {
-		props.onInput((e.target as HTMLTextAreaElement).value);
+	const autoResize = (ta: HTMLTextAreaElement) => {
+		ta.style.height = "auto";
+		ta.style.height = `${ta.scrollHeight}px`;
 	};
+
+	const onInput = (e: Event) => {
+		const ta = e.target as HTMLTextAreaElement;
+		autoResize(ta);
+		props.onInput(ta.value);
+	};
+
+	// 初始自动高度
+	queueMicrotask(() => {
+		if (textareaRef) autoResize(textareaRef);
+	});
 
 	const rows = props.rows ?? 6;
 

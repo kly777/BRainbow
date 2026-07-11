@@ -293,11 +293,30 @@
 }
 
 .sectionLabel {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
 	font-size: var(--text-xs);
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
 	color: var(--color-text-muted, #9b8e7a);
 	margin-bottom: var(--space-sm);
+}
+
+.copyBtn {
+	border: none;
+	background: none;
+	cursor: pointer;
+	padding: 2px 4px;
+	font-size: 12px;
+	line-height: 1;
+	opacity: 0.5;
+	transition: opacity 0.15s;
+	border-radius: 4px;
+}
+.copyBtn:hover {
+	opacity: 1;
+	background: var(--color-bg-subtle, #f5f2ed);
 }
 
 .cue {

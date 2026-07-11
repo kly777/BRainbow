@@ -217,6 +217,19 @@ export default function MemPage() {
 		if (it) {
 			try {
 				await editMemE(it.id, editCue(), editTarget());
+				// 立即更新本地数据，无需刷新
+				setDue((prev) => {
+					const next = [...prev];
+					const idx = current();
+					if (idx >= 0 && idx < next.length) {
+						next[idx] = {
+							...next[idx],
+							cue: { ...next[idx].cue, content: editCue() },
+							target: { ...next[idx].target, content: editTarget() },
+						};
+					}
+					return next;
+				});
 			} catch {
 				/* ignore */
 			}
@@ -413,7 +426,19 @@ export default function MemPage() {
 							fallback={
 								<>
 									<div class={styles.cue}>
-										<div class={styles.sectionLabel}>线索</div>
+										<div class={styles.sectionLabel}>
+											线索
+											<button
+												type="button"
+												class={styles.copyBtn}
+												title="复制线索"
+												onClick={() => {
+													navigator.clipboard.writeText(item()?.cue.content ?? "");
+												}}
+											>
+												📋
+											</button>
+										</div>
 										<div class={styles.content}>
 											<MarkdownRenderer content={item()?.cue.content ?? ""} />
 										</div>

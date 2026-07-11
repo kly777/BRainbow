@@ -3,7 +3,13 @@
 	flex-shrink: 0;
 	overflow-y: auto;
 	padding: var(--space-xl);
-	background: var(--color-surface);
+}
+
+@media (max-width: 768px) {
+	.detail {
+		width: 100%;
+		flex: 1;
+	}
 }
 
 .section {

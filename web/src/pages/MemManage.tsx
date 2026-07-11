@@ -397,7 +397,7 @@ export default function MemManage() {
 				onTagFilterChange={setTagFilter}
 			/>
 
-			<div class={styles.split}>
+			<div class={styles.split} classList={{ [styles.detailActive]: detailId() !== null }}>
 				<div class={styles.tableWrap}>
 					<MemBatchBar
 						selectedCount={batchIds().size}

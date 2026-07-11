@@ -69,3 +69,16 @@
 	overflow-y: auto;
 	border-right: 1px solid var(--color-border, #e8dfcc);
 }
+
+@media (max-width: 768px) {
+	.split {
+		flex-direction: column;
+	}
+	.tableWrap {
+		border-right: none;
+	}
+	/* 详情激活时隐藏表格，面板占满 */
+	.detailActive .tableWrap {
+		display: none;
+	}
+}

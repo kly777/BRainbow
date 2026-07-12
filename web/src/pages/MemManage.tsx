@@ -244,6 +244,19 @@ export default function MemManage() {
 		else setBatchIds(new Set<number>(mems().map((m) => m.id)));
 	};
 
+	const silentLoad = async () => {
+		const { items, meta } = await loadAllMems(
+			sortField(),
+			sortDir(),
+			searchQuery(),
+			filterState(),
+			tagFilter(),
+			page(),
+		);
+		setMems(items);
+		setPageMeta(meta);
+	};
+
 	const handleDelete = async (id: number) => {
 		if (!confirm("确定删除？")) return;
 		try {
@@ -257,7 +270,13 @@ export default function MemManage() {
 			next.delete(id);
 			return next;
 		});
-		load();
+		// 当前页只剩这条且不是第一页 → 回退
+		if (mems().length <= 1 && page() > 1) {
+			setSearchParams({ page: String(page() - 1) });
+		} else {
+			// 静默刷新，不显示 loading
+			silentLoad();
+		}
 	};
 
 	const handleReset = async (id: number) => {

@@ -161,7 +161,7 @@ export default function MemTable(props: Props) {
 											}}
 											title="删除"
 										>
-											×
+											x
 										</button>
 									</td>
 								</tr>

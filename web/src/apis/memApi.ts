@@ -37,6 +37,7 @@ export interface MemQuery {
 	sort?: string;
 	order?: string;
 	tag_ids?: string;
+	exclude_tag_ids?: string;
 	page?: number;
 	page_size?: number;
 }
@@ -86,6 +87,7 @@ export const getAllMemsE = (
 	if (params?.sort) qs.set("sort", params.sort);
 	if (params?.order) qs.set("order", params.order);
 	if (params?.tag_ids) qs.set("tag_ids", params.tag_ids);
+	if (params?.exclude_tag_ids) qs.set("exclude_tag_ids", params.exclude_tag_ids);
 	if (params?.page) qs.set("page", String(params.page));
 	if (params?.page_size) qs.set("page_size", String(params.page_size));
 	const suffix = qs.toString();
@@ -96,10 +98,14 @@ export const getAllMemsE = (
 export const getDueE = (
 	limit = 50,
 	tagIds?: number[],
+	excludeIds?: number[],
 ): Promise<DueResponse> => {
 	let url = `/mem/due?limit=${limit}`;
 	if (tagIds && tagIds.length > 0) {
 		url += `&tag_ids=${tagIds.join(",")}`;
+	}
+	if (excludeIds && excludeIds.length > 0) {
+		url += `&exclude_tag_ids=${excludeIds.join(",")}`;
 	}
 	return request(url, {});
 };

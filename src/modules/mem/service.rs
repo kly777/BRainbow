@@ -41,19 +41,19 @@ impl MemService {
 
     // ── 获取学习池 ──
 
-    pub async fn get_due(&self, max_learning: i64, tag_ids: &[i32]) -> Result<DueResponse, sqlx::Error> {
-        let mut ids = self.repo.get_learning_mems(max_learning, tag_ids).await?;
+    pub async fn get_due(&self, max_learning: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<DueResponse, sqlx::Error> {
+        let mut ids = self.repo.get_learning_mems(max_learning, tag_ids, exclude_tag_ids).await?;
         let pool_count = ids.len();
 
         if pool_count < max_learning as usize {
             let needed = max_learning as usize - pool_count;
-            let due_reviews = self.repo.get_due_reviews(needed as i64, tag_ids).await?;
+            let due_reviews = self.repo.get_due_reviews(needed as i64, tag_ids, exclude_tag_ids).await?;
             ids.extend(due_reviews);
         }
 
         if ids.len() < max_learning as usize {
             let needed = max_learning as usize - ids.len();
-            let new_cards = self.repo.get_new_cards(needed as i64, tag_ids).await?;
+            let new_cards = self.repo.get_new_cards(needed as i64, tag_ids, exclude_tag_ids).await?;
             for id in &new_cards {
                 self.repo.set_state(*id, "learning", Some(0)).await?;
             }

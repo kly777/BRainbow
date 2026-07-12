@@ -6,11 +6,22 @@
 	border-bottom: 1px solid var(--color-border);
 	flex-shrink: 0;
 	position: relative;
+	flex-wrap: wrap;
 }
 
 .tagFilter {
 	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 4px;
 	flex-shrink: 0;
+}
+
+.tagList {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex-wrap: wrap;
 }
 
 .tagInput {
@@ -37,6 +48,17 @@
 	white-space: nowrap;
 }
 
+.excludedTag {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 8px;
+	background: oklch(0.92 0.04 30);
+	border-radius: 12px;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
 .tagClear {
 	border: none;
 	background: none;
@@ -51,6 +73,32 @@
 	opacity: 1;
 }
 
+.clearAllBtn {
+	border: none;
+	background: none;
+	cursor: pointer;
+	padding: 2px 6px;
+	font-size: 11px;
+	color: var(--color-text-muted);
+	text-decoration: underline;
+}
+.clearAllBtn:hover {
+	color: var(--color-text);
+}
+
+.modeToggle {
+	border: 1px solid var(--color-border);
+	background: var(--color-bg);
+	cursor: pointer;
+	padding: 2px 6px;
+	font-size: 13px;
+	line-height: 1;
+	border-radius: 4px;
+}
+.modeToggle:hover {
+	background: var(--color-bg-subtle);
+}
+
 .tagDropdown {
 	position: absolute;
 	top: 100%;
@@ -62,7 +110,7 @@
 	background: var(--color-bg);
 	border: 1px solid var(--color-border);
 	border-radius: 6px;
-	box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .tagOption {

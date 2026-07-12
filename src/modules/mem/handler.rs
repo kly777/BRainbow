@@ -322,8 +322,12 @@ pub async fn get_due(
         .get("tag_ids")
         .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
         .unwrap_or_default();
+    let exclude_tag_ids: Vec<i32> = params
+        .get("exclude_tag_ids")
+        .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
+        .unwrap_or_default();
     let svc = MemService::new(state.db.clone());
-    match svc.get_due(limit, &tag_ids).await {
+    match svc.get_due(limit, &tag_ids, &exclude_tag_ids).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => err(e, "获取待复习"),
     }

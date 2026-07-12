@@ -1,4 +1,4 @@
-import { A } from "@solidjs/router";
+import { A, useSearchParams } from "@solidjs/router";
 import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import {
 	buryMemE,
@@ -39,16 +39,32 @@ export default function MemPage() {
 	const [upcoming, setUpcoming] = createSignal(0);
 	const [counts, setCounts] = createSignal<MemCounts | null>(null);
 	const [estimatedTotal, setEstimatedTotal] = createSignal(0);
+	const [searchParams, setSearchParams] = useSearchParams();
 	const [allTags, setAllTags] = createSignal<TagInfo[]>([]);
-	const [tagFilterIds, setTagFilterIds] = createSignal<number[]>([]);
+
+	// ── URL 持久化的标签过滤 ──
+	const tagFilterIds = () => {
+		const v = searchParams.tag_ids;
+		return typeof v === "string" ? v.split(",").filter(Boolean).map(Number) : [];
+	};
+	const tagMode = (): "include" | "exclude" =>
+		searchParams.tag_mode === "exclude" ? "exclude" : "include";
 
 	const toggleTagFilter = (tagId: number) => {
-		setTagFilterIds((prev) => {
-			if (prev.includes(tagId)) {
-				return prev.filter((id) => id !== tagId);
-			}
-			const next = [...prev, tagId];
-			return next;
+		const ids = tagFilterIds();
+		const next = ids.includes(tagId)
+			? ids.filter((id) => id !== tagId)
+			: [...ids, tagId];
+		setSearchParams({
+			tag_ids: next.length > 0 ? next.join(",") : undefined,
+			tag_mode: searchParams.tag_mode,
+		});
+		setTimeout(loadDue, 0);
+	};
+
+	const toggleTagMode = () => {
+		setSearchParams({
+			tag_mode: tagMode() === "include" ? "exclude" : "include",
 		});
 		setTimeout(loadDue, 0);
 	};
@@ -97,7 +113,12 @@ export default function MemPage() {
 		try {
 			const data = await getDueE(
 				maxLearning(),
-				tagFilterIds().length > 0 ? tagFilterIds() : undefined,
+				tagMode() === "include" && tagFilterIds().length > 0
+					? tagFilterIds()
+					: undefined,
+				tagMode() === "exclude" && tagFilterIds().length > 0
+					? tagFilterIds()
+					: undefined,
 			);
 			if (data.items.length === 0 && !data.has_more) {
 				setDone(true);
@@ -267,7 +288,7 @@ export default function MemPage() {
 						class={styles.sidebarClose}
 						onClick={() => setSidebarOpen(false)}
 					>
-						×
+						x
 					</button>
 				</div>
 				<Show when={counts()}>
@@ -371,7 +392,14 @@ export default function MemPage() {
 
 				<Show when={allTags().length > 0}>
 					<div class={styles.tagFilterBar}>
-						<span class={styles.tagFilterLabel}>标签筛选：</span>
+						<button
+							type="button"
+							class={styles.tagModeBtn}
+							onClick={toggleTagMode}
+							title={tagMode() === "include" ? "切换为排除模式" : "切换为包含模式"}
+						>
+							{tagMode() === "include" ? "☐ 包含" : "☒ 排除"}
+						</button>
 						<For each={allTags()}>
 							{(tag) => {
 								const active = () => tagFilterIds().includes(tag.id);

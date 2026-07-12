@@ -12,6 +12,7 @@ import {
 	editMemE,
 	getAllMemsE,
 	getMemTagsE,
+	searchTagsE,
 	type MemItem,
 	removeTagFromMemE,
 	resetMemE,
@@ -23,7 +24,7 @@ import MemBatchBar from "../components/mem/MemBatchBar.tsx";
 import MemBatchTagModal from "../components/mem/MemBatchTagModal.tsx";
 import MemDetailPanel from "../components/mem/MemDetailPanel.tsx";
 import MemExportModal from "../components/mem/MemExportModal.tsx";
-import MemManageToolbar from "../components/mem/MemManageToolbar.tsx";
+import MemManageToolbar, { type TagMode } from "../components/mem/MemManageToolbar.tsx";
 import MemTable from "../components/mem/MemTable.tsx";
 import styles from "./MemManage.module.css";
 
@@ -43,6 +44,7 @@ const VALID_STATES = [
 	"review",
 	"relearning",
 	"suspended",
+	"buried",
 	"today_done",
 ];
 const VALID_SORT_FIELDS: SortField[] = [
@@ -57,16 +59,19 @@ async function loadAllMems(
 	sortDir: SortDir,
 	search: string,
 	stateFilter: string,
-	tagFilter: TagInfo | null,
+	tagFilters: TagInfo[],
+	tagMode: TagMode,
 	page: number,
 ): Promise<{ items: MemItem[]; meta: PageMeta }> {
 	try {
+		const tagIds = tagFilters.map((t) => t.id).join(",");
 		const res = await getAllMemsE({
 			sort: sortField,
 			order: sortDir,
 			q: search || undefined,
 			state: stateFilter !== "all" ? stateFilter : undefined,
-			tag_ids: tagFilter ? String(tagFilter.id) : undefined,
+			tag_ids: tagMode === "include" ? tagIds || undefined : undefined,
+			exclude_tag_ids: tagMode === "exclude" ? tagIds || undefined : undefined,
 			page,
 			page_size: 50,
 		});
@@ -129,7 +134,46 @@ export default function MemManage() {
 	const [showExportModal, setShowExportModal] = createSignal(false);
 	const [showBatchTagModal, setShowBatchTagModal] = createSignal(false);
 	const [batchTagMode, setBatchTagMode] = createSignal<"add" | "remove">("add");
-	const [tagFilter, setTagFilter] = createSignal<TagInfo | null>(null);
+
+	// ── URL 持久化的标签过滤 ──
+	const tagFilterIds = () => {
+		const v = searchParams.tag_ids;
+		return typeof v === "string" ? v.split(",").filter(Boolean).map(Number) : [];
+	};
+	const tagMode = (): TagMode =>
+		searchParams.tag_mode === "exclude" ? "exclude" : "include";
+	// 用名字在 URL 中持久化，避免 ID 漂移
+	const tagFilterNames = () => {
+		const v = searchParams.tag_names;
+		return typeof v === "string" ? v.split(",").filter(Boolean) : [];
+	};
+	const [tagFilters, setTagFiltersInternal] = createSignal<TagInfo[]>([]);
+	// 从 URL 名字解析为 TagInfo 对象
+	// 从 URL 中的 tag_names 恢复 TagInfo 对象
+	onMount(async () => {
+		const names = tagFilterNames();
+		if (names.length === 0) return;
+		const all: TagInfo[] = [];
+		for (const name of names) {
+			try {
+				const tags = await searchTagsE(name);
+				const found = tags.find((t: TagInfo) => t.name === name);
+				if (found) all.push(found);
+			} catch {
+				/* ignore */
+			}
+		}
+		setTagFiltersInternal(all);
+	});
+
+	const setTagFilters = (tags: TagInfo[], mode: TagMode) => {
+		setTagFiltersInternal(tags);
+		const names = tags.map((t) => t.name).join(",");
+		setSearchParams({
+			tag_names: names || undefined,
+			tag_mode: mode === "exclude" ? "exclude" : undefined,
+		});
+	};
 
 	// ── Derived ──
 	const allSelected = () =>
@@ -151,7 +195,8 @@ export default function MemManage() {
 			sortDir(),
 			searchQuery(),
 			filterState(),
-			tagFilter(),
+			tagFilters(),
+			tagMode(),
 			page(),
 		);
 		setMems(items);
@@ -187,7 +232,7 @@ export default function MemManage() {
 	// URL 参数变化时重新加载（含浏览器前进/后退）
 	createEffect(() => {
 		// 读取 URL 派生值来追踪依赖
-		void (searchQuery(), filterState(), sortField(), sortDir(), page(), tagFilter());
+		void (searchQuery(), filterState(), sortField(), sortDir(), page(), tagFilters(), tagMode());
 		if (!initialLoadDone) return;
 		load();
 	});
@@ -250,7 +295,8 @@ export default function MemManage() {
 			sortDir(),
 			searchQuery(),
 			filterState(),
-			tagFilter(),
+			tagFilters(),
+			tagMode(),
 			page(),
 		);
 		setMems(items);
@@ -412,8 +458,9 @@ export default function MemManage() {
 				onSearch={handleSearchInput}
 				onFilterChange={setFilter}
 				onExport={() => setShowExportModal(true)}
-				tagFilter={tagFilter()}
-				onTagFilterChange={setTagFilter}
+				tagFilters={tagFilters()}
+				tagMode={tagMode()}
+				onTagFiltersChange={setTagFilters}
 			/>
 
 			<div class={styles.split} classList={{ [styles.detailActive]: detailId() !== null }}>

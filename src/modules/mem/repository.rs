@@ -108,12 +108,19 @@ impl MemRepo {
         );
 
         if let Some(ref state) = query.state {
-            if state == "today_done" {
-                qb.push(" AND m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')");
-            } else if state != "all" && !state.is_empty() {
-                qb.push(" AND m.state = ");
-                qb.push_bind(state);
+            if state == "buried" {
+                qb.push(" AND m.buried = 1");
+            } else {
+                qb.push(" AND m.buried = 0");
+                if state == "today_done" {
+                    qb.push(" AND m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')");
+                } else if state != "all" && !state.is_empty() {
+                    qb.push(" AND m.state = ");
+                    qb.push_bind(state);
+                }
             }
+        } else {
+            qb.push(" AND m.buried = 0");
         }
 
         if let Some(ref q) = query.q
@@ -136,6 +143,21 @@ impl MemRepo {
                 .collect();
             if !ids.is_empty() {
                 qb.push(" AND m.id IN (SELECT mem_id FROM mem_tag WHERE tag_id IN (");
+                let mut sep = qb.separated(", ");
+                for &id in &ids {
+                    sep.push_bind(id);
+                }
+                qb.push("))");
+            }
+        }
+        // 黑名��过滤
+        if let Some(ref exclude_str) = query.exclude_tag_ids {
+            let ids: Vec<i32> = exclude_str
+                .split(',')
+                .filter_map(|s| s.trim().parse().ok())
+                .collect();
+            if !ids.is_empty() {
+                qb.push(" AND m.id NOT IN (SELECT mem_id FROM mem_tag WHERE tag_id IN (");
                 let mut sep = qb.separated(", ");
                 for &id in &ids {
                     sep.push_bind(id);
@@ -179,12 +201,19 @@ impl MemRepo {
         );
 
         if let Some(ref state) = query.state {
-            if state == "today_done" {
-                qb.push(" AND m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')");
-            } else if state != "all" && !state.is_empty() {
-                qb.push(" AND m.state = ");
-                qb.push_bind(state);
+            if state == "buried" {
+                qb.push(" AND m.buried = 1");
+            } else {
+                qb.push(" AND m.buried = 0");
+                if state == "today_done" {
+                    qb.push(" AND m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')");
+                } else if state != "all" && !state.is_empty() {
+                    qb.push(" AND m.state = ");
+                    qb.push_bind(state);
+                }
             }
+        } else {
+            qb.push(" AND m.buried = 0");
         }
 
         if let Some(ref q) = query.q
@@ -207,6 +236,21 @@ impl MemRepo {
                 .collect();
             if !ids.is_empty() {
                 qb.push(" AND m.id IN (SELECT mem_id FROM mem_tag WHERE tag_id IN (");
+                let mut sep = qb.separated(", ");
+                for &id in &ids {
+                    sep.push_bind(id);
+                }
+                qb.push("))");
+            }
+        }
+        // 黑名单过滤
+        if let Some(ref exclude_str) = query.exclude_tag_ids {
+            let ids: Vec<i32> = exclude_str
+                .split(',')
+                .filter_map(|s| s.trim().parse().ok())
+                .collect();
+            if !ids.is_empty() {
+                qb.push(" AND m.id NOT IN (SELECT mem_id FROM mem_tag WHERE tag_id IN (");
                 let mut sep = qb.separated(", ");
                 for &id in &ids {
                     sep.push_bind(id);
@@ -320,18 +364,31 @@ impl MemRepo {
         qb.push("))");
     }
 
-    pub async fn get_learning_mems(&self, limit: i64, tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+    fn exclude_tag_filter_sql(qb: &mut sqlx::QueryBuilder<sqlx::Sqlite>, tag_ids: &[i32]) {
+        if tag_ids.is_empty() {
+            return;
+        }
+        qb.push(" AND NOT EXISTS (SELECT 1 FROM mem_tag WHERE mem_id = m.id AND tag_id IN (");
+        let mut sep = qb.separated(", ");
+        for &tid in tag_ids {
+            sep.push_bind(tid);
+        }
+        qb.push("))");
+    }
+
+    pub async fn get_learning_mems(&self, limit: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             "SELECT m.id FROM mem m WHERE m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended'"
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
+        Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         qb.push(" ORDER BY due_at LIMIT ");
         qb.push_bind(limit);
         qb.build_query_scalar().fetch_all(&*self.pool).await
     }
 
     /// 获取到期复习卡（保持 review 状态，不转为 learning）
-    pub async fn get_due_reviews(&self, limit: i64, tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+    pub async fn get_due_reviews(&self, limit: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.id FROM mem m
             WHERE m.state = 'review' AND m.buried = 0 AND m.state != 'suspended'
@@ -339,19 +396,21 @@ impl MemRepo {
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
+        Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         qb.push(" ORDER BY m.due_at LIMIT ");
         qb.push_bind(limit);
         qb.build_query_scalar().fetch_all(&*self.pool).await
     }
 
     /// 获取新卡（随后由 service 转为 learning 状态）
-    pub async fn get_new_cards(&self, limit: i64, tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+    pub async fn get_new_cards(&self, limit: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.id FROM mem m
             WHERE m.state = 'new' AND m.buried = 0 AND m.state != 'suspended'
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
+        Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         qb.push(" ORDER BY RANDOM() LIMIT ");
         qb.push_bind(limit);
         qb.build_query_scalar().fetch_all(&*self.pool).await
@@ -1350,4 +1409,69 @@ mod tests {
         assert_eq!(est.due_count, 1);
         assert_eq!(est.total_estimate, 1 * 2);
     }
+
+    // ── get_all_mems / count_all_mems 埋葬过滤 ──
+
+    #[tokio::test]
+    async fn get_all_excludes_buried_by_default() {
+        let repo = setup_db().await;
+        // 正常卡
+        insert_session_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
+        // 已埋葬卡
+        insert_session_mem(&repo, "new", 1, "2099-01-01T00:00:00Z").await;
+
+        let query = MemQuery::default();
+        let ids = repo.get_all_mems(100, 0, &query).await.unwrap();
+        let count = repo.count_all_mems(&query).await.unwrap();
+
+        assert_eq!(ids.len(), 1, "默认应排除已埋葬卡");
+        assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    async fn count_all_excludes_buried_by_default() {
+        let repo = setup_db().await;
+        insert_session_mem(&repo, "review", 0, "2020-01-01T00:00:00Z").await;
+        insert_session_mem(&repo, "review", 1, "2020-01-01T00:00:00Z").await;
+        insert_session_mem(&repo, "review", 0, "2020-01-01T00:00:00Z").await;
+
+        let query = MemQuery::default();
+        let count = repo.count_all_mems(&query).await.unwrap();
+        assert_eq!(count, 2, "2 张正常卡，1 张已埋葬");
+    }
+
+    #[tokio::test]
+    async fn get_all_finds_buried_with_state_filter() {
+        let repo = setup_db().await;
+        insert_session_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
+        insert_session_mem(&repo, "new", 1, "2099-01-01T00:00:00Z").await;
+        insert_session_mem(&repo, "learning", 1, "2099-01-01T00:00:00Z").await;
+
+        // state=buried 只返回已埋葬卡
+        let query = MemQuery {
+            state: Some("buried".into()),
+            ..MemQuery::default()
+        };
+        let ids = repo.get_all_mems(100, 0, &query).await.unwrap();
+        assert_eq!(ids.len(), 2, "2 张已埋葬卡");
+
+        let count = repo.count_all_mems(&query).await.unwrap();
+        assert_eq!(count, 2);
+    }
+
+    #[tokio::test]
+    async fn get_all_state_review_still_excludes_buried() {
+        let repo = setup_db().await;
+        insert_session_mem(&repo, "review", 0, "2020-01-01T00:00:00Z").await;
+        insert_session_mem(&repo, "review", 1, "2020-01-01T00:00:00Z").await;
+
+        // state=review 应只返回未埋葬的 review 卡
+        let query = MemQuery {
+            state: Some("review".into()),
+            ..MemQuery::default()
+        };
+        let ids = repo.get_all_mems(100, 0, &query).await.unwrap();
+        assert_eq!(ids.len(), 1, "只有 1 张未埋葬的 review 卡");
+    }
 }
+

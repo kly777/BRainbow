@@ -1,5 +1,5 @@
 import { A, useSearchParams } from "@solidjs/router";
-import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { createMemo, createResource, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import {
 	buryMemE,
 	editMemE,
@@ -11,6 +11,7 @@ import {
 	type MemItem,
 	previewMemE,
 	reviewMemE,
+	searchTagsE,
 	suspendMemE,
 	type TagInfo,
 } from "../apis/memApi.ts";
@@ -50,11 +51,37 @@ export default function MemPage() {
 	const tagMode = (): "include" | "exclude" =>
 		searchParams.tag_mode === "exclude" ? "exclude" : "include";
 
-	const toggleTagFilter = (tagId: number) => {
-		const ids = tagFilterIds();
-		const next = ids.includes(tagId)
-			? ids.filter((id) => id !== tagId)
-			: [...ids, tagId];
+	// 从 URL 中的 ID 恢复 TagInfo
+	const tagFilterTags = createMemo(() =>
+		allTags().filter((t) => tagFilterIds().includes(t.id)),
+	);
+
+	// 搜索添加标签
+	const [tagQuery, setTagQuery] = createSignal("");
+	const [tagOpen, setTagOpen] = createSignal(false);
+
+	const [tagSearchResults] = createResource(
+		() => (tagQuery().trim().length > 0 ? tagQuery().trim() : null),
+		(q) => searchTagsE(q),
+	);
+
+	const tagSuggestions = () =>
+		(tagQuery().trim()
+			? (tagSearchResults() ?? []).filter(
+					(t) => !tagFilterIds().includes(t.id),
+				)
+			: []) as TagInfo[];
+
+	const addTagFilter = (tag: TagInfo) => {
+		const next = [...tagFilterIds(), tag.id];
+		setSearchParams({ tag_ids: next.join(","), tag_mode: searchParams.tag_mode });
+		setTagQuery("");
+		setTagOpen(false);
+		setTimeout(loadDue, 0);
+	};
+
+	const removeTagFilter = (tagId: number) => {
+		const next = tagFilterIds().filter((id) => id !== tagId);
 		setSearchParams({
 			tag_ids: next.length > 0 ? next.join(",") : undefined,
 			tag_mode: searchParams.tag_mode,
@@ -400,21 +427,69 @@ export default function MemPage() {
 						>
 							{tagMode() === "include" ? "☐ 包含" : "☒ 排除"}
 						</button>
-						<For each={allTags()}>
-							{(tag) => {
-								const active = () => tagFilterIds().includes(tag.id);
-								return (
+						<For each={tagFilterTags()}>
+							{(tag) => (
+								<span
+									class={
+										tagMode() === "include"
+											? styles.tagFilterChipActive
+											: styles.tagFilterChipExcluded
+									}
+								>
+									{tag.name}
 									<button
 										type="button"
-										class={styles.tagFilterChip}
-										classList={{ [styles.tagFilterChipActive]: active() }}
-										onClick={() => toggleTagFilter(tag.id)}
+										class={styles.tagClear}
+										onClick={() => removeTagFilter(tag.id)}
 									>
-										{tag.name}
+										x
 									</button>
-								);
-							}}
+								</span>
+							)}
 						</For>
+						<Show when={tagFilterTags().length > 0}>
+							<button
+								type="button"
+								class={styles.tagClearAll}
+								onClick={() => {
+									setSearchParams({ tag_ids: undefined, tag_mode: undefined });
+									setTimeout(loadDue, 0);
+								}}
+							>
+								清除
+							</button>
+						</Show>
+						<input
+							type="text"
+							class={styles.tagSearchInput}
+							placeholder="添加标签过滤…"
+							value={tagQuery()}
+							onInput={(e) => {
+								setTagQuery(e.currentTarget.value);
+								setTagOpen(true);
+							}}
+							onFocus={() => setTagOpen(true)}
+							onBlur={() => setTimeout(() => setTagOpen(false), 200)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" && tagSuggestions().length > 0) {
+									addTagFilter(tagSuggestions()[0]);
+								}
+							}}
+						/>
+						<Show when={tagOpen() && tagSuggestions().length > 0}>
+							<div class={styles.tagDropdown}>
+								{tagSuggestions().map((t) => (
+									<div
+										class={styles.tagOption}
+										role="button"
+										tabIndex={-1}
+										onMouseDown={() => addTagFilter(t)}
+									>
+										{t.name}
+									</div>
+								))}
+							</div>
+						</Show>
 					</div>
 				</Show>
 

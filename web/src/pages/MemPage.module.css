@@ -369,34 +369,7 @@
 	max-width: 1440px;
 	margin: 0 auto var(--space-md);
 	padding: 0 var(--space-md);
-}
-
-.tagFilterLabel {
-	font-size: var(--text-xs);
-	color: var(--color-text-muted, #9b8e7a);
-	white-space: nowrap;
-}
-
-.tagFilterChip {
-	padding: var(--space-xs) var(--space-sm);
-	font-size: var(--text-xs);
-	border: 1px solid var(--color-border, #e8dfcc);
-	border-radius: var(--radius-sm, 4px);
-	background: var(--color-surface, #fffef9);
-	color: var(--color-text-muted, #7a6f5e);
-	cursor: pointer;
-	transition: all 0.15s;
-}
-
-.tagFilterChip:hover {
-	border-color: var(--color-accent, #3b82f6);
-	color: var(--color-accent, #3b82f6);
-}
-
-.tagFilterChipActive {
-	background: var(--color-accent, #3b82f6);
-	color: #fff;
-	border-color: var(--color-accent, #3b82f6);
+	position: relative;
 }
 
 .tagModeBtn {
@@ -408,10 +381,98 @@
 	color: var(--color-text-muted, #7a6f5e);
 	cursor: pointer;
 	white-space: nowrap;
+	flex-shrink: 0;
 }
 .tagModeBtn:hover {
 	border-color: var(--color-accent, #3b82f6);
 	color: var(--color-accent, #3b82f6);
+}
+
+/* 已选标签 pill（包含模式） */
+.tagFilterChipActive {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 8px;
+	background: oklch(0.9 0.05 250);
+	border-radius: 12px;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+/* 已选标签 pill（排除模式） */
+.tagFilterChipExcluded {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 8px;
+	background: oklch(0.92 0.04 30);
+	border-radius: 12px;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.tagClear {
+	border: none;
+	background: none;
+	cursor: pointer;
+	padding: 0 2px;
+	font-size: 14px;
+	line-height: 1;
+	color: inherit;
+	opacity: 0.6;
+}
+.tagClear:hover {
+	opacity: 1;
+}
+
+.tagClearAll {
+	border: none;
+	background: none;
+	cursor: pointer;
+	padding: 2px 6px;
+	font-size: 11px;
+	color: var(--color-text-muted);
+	text-decoration: underline;
+}
+.tagClearAll:hover {
+	color: var(--color-text);
+}
+
+.tagSearchInput {
+	width: 100px;
+	padding: 4px 8px;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	font-size: 13px;
+	background: var(--color-bg);
+	outline: none;
+}
+.tagSearchInput:focus {
+	border-color: var(--color-border-hover);
+}
+
+.tagDropdown {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	z-index: 100;
+	min-width: 120px;
+	margin-top: 4px;
+	padding: 4px 0;
+	background: var(--color-bg);
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.tagOption {
+	padding: 4px 10px;
+	font-size: 13px;
+	cursor: pointer;
+}
+.tagOption:hover {
+	background: var(--color-bg-subtle);
 }
 
 .allFarBanner {

@@ -3,7 +3,7 @@ use axum::{
     routing::{get, post},
 };
 
-use crate::modules::{card, conv, db_viewer, media, mem, onto, sign, task, text, time_window, user};
+use crate::modules::{card, conv, db_viewer, media, mem, onto, reading, sign, task, text, time_window, user};
 use crate::state::AppState;
 
 pub fn create_api_router(state: AppState) -> Router<AppState> {
@@ -25,6 +25,7 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         .nest("/cards", card::routes())
         .nest("/onto", onto::routes())
         .nest("/sign", sign::routes())
+        .nest("/reading", reading::routes())
         .nest("/tasks", task::routes())
         .nest("/time-windows", time_window::routes())
         .layer(middleware::from_fn_with_state(

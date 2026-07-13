@@ -401,5 +401,54 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await?;
 
+    // ── Reading / 英语阅读模块 ──
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS reading_article (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            word_count INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS reading_article_word (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            article_id INTEGER NOT NULL,
+            word TEXT NOT NULL,
+            FOREIGN KEY (article_id) REFERENCES reading_article(id) ON DELETE CASCADE,
+            UNIQUE(article_id, word)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS reading_user_word (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            word TEXT NOT NULL UNIQUE,
+            status TEXT NOT NULL DEFAULT 'unknown',
+            unknown_count INTEGER NOT NULL DEFAULT 0,
+            known_count INTEGER NOT NULL DEFAULT 0,
+            first_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_reading_article_word_article ON reading_article_word(article_id)")
+        .execute(pool)
+        .await?;
+
    Ok(())
 }

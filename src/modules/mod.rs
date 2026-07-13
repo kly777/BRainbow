@@ -3,6 +3,7 @@ pub mod conv;
 pub mod db_viewer;
 pub mod media;
 pub mod mem;
+pub mod reading;
 pub mod onto;
 pub mod sign;
 pub mod task;

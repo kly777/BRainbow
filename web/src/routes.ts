@@ -92,6 +92,27 @@ export const ROUTES: RouteConfig[] = [
 		component: lazy(() => import("./pages/TextEditor.tsx")),
 	},
 	{
+		path: "/reading",
+		label: "英语阅读",
+		desc: "英语阅读与单词管理",
+		nav: true,
+		component: lazy(() => import("./pages/reading/ReadingList.tsx")),
+	},
+	{
+		path: "/reading/unknown",
+		label: "不认识词表",
+		desc: "",
+		nav: false,
+		component: lazy(() => import("./pages/reading/ReadingUnknown.tsx")),
+	},
+	{
+		path: "/reading/:id",
+		label: "阅读文章",
+		desc: "",
+		nav: false,
+		component: lazy(() => import("./pages/reading/ReadingDetail.tsx")),
+	},
+	{
 		path: "/m",
 		label: "记忆",
 		desc: "间隔重复记忆系统",

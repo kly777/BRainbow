@@ -1,5 +1,5 @@
 import { A, useParams } from "@solidjs/router";
-import { createEffect, createResource, createSignal, For, Show } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal, For, Show } from "solid-js";
 import {
 	getArticle,
 	markWord,
@@ -57,6 +57,14 @@ export default function ReadingDetail() {
 
 	const wordKnown = (word: string) =>
 		wordStatus(word) === "known" || wordStatus(word) === "ignored";
+
+	// 侧栏排序：不认识 → 忽略 → 认识
+	const sortedWords = createMemo(() => {
+		const order: Record<string, number> = { unknown: 0, ignored: 1, known: 2 };
+		return [...(detail()?.words ?? [])].sort(
+			(a, b) => (order[wordStatus(a.word)] ?? 2) - (order[wordStatus(b.word)] ?? 2),
+		);
+	});
 
 	const handleMark = async (
 		word: string,
@@ -194,43 +202,44 @@ export default function ReadingDetail() {
 						<div class={styles.content}>{renderContent(d().article.content)}</div>
 
 						<div class={styles.sidebar}>
-							<h3>文章词表</h3>
-							<button
-								class={styles.uploadUnknownBtn}
-								onClick={handleUploadUnknown}
-								disabled={uploadingUnknown()}
-							>
-								{uploadingUnknown() ? "上传中…" : "上传全部不认识词"}
-							</button>
-							<div class={styles.wordList}>
-								<For each={d().words}>
-									{(w) => {
-										const st = wordStatus(w.word);
-										return (
-											<div
-												class={styles.wordItem}
-												classList={{
-													[styles.knownWord]: st === "known",
-													[styles.ignoredWordSidebar]: st === "ignored",
-												}}
-											>
-												<span
-													class={
-														st === "known"
-															? styles.knownIcon
-															: st === "ignored"
-																? styles.ignoredIcon
-																: styles.unknownIcon
-													}
-													onClick={() =>
-														handleMark(
-															w.word,
+							<div class={styles.wordListArea}>
+								<h3>文章词表</h3>
+								<button
+									class={styles.uploadUnknownBtn}
+									onClick={handleUploadUnknown}
+									disabled={uploadingUnknown()}
+								>
+									{uploadingUnknown() ? "上传中…" : "上传全部不认识词"}
+								</button>
+								<div class={styles.wordList}>
+									<For each={sortedWords()}>
+										{(w) => {
+											const st = wordStatus(w.word);
+											return (
+												<div
+													class={styles.wordItem}
+													classList={{
+														[styles.knownWord]: st === "known",
+														[styles.ignoredWordSidebar]: st === "ignored",
+													}}
+												>
+													<span
+														class={
 															st === "known"
-																? "unknown"
+																? styles.knownIcon
 																: st === "ignored"
+																	? styles.ignoredIcon
+																	: styles.unknownIcon
+														}
+														onClick={() =>
+															handleMark(
+																w.word,
+																st === "known"
 																	? "unknown"
-																	: "known",
-														)
+																	: st === "ignored"
+																		? "unknown"
+																		: "known",
+															)
 													}
 												>
 													{st === "known"
@@ -252,24 +261,23 @@ export default function ReadingDetail() {
 									}}
 								</For>
 							</div>
-
-							{/* 笔记输入框 */}
-							<div class={styles.notesSection}>
-								<h3>词组笔记</h3>
-								<textarea
-									class={styles.notesInput}
-									value={notes()}
-									onInput={(e) => setNotes(e.currentTarget.value)}
-									onBlur={handleNotesBlur}
-									placeholder="输入词组或笔记，每行一个&#10;保存后下次打开仍在"
-									rows={6}
-								/>
+						</div>
+							<div class={styles.sidebarFooter}>
+								<div class={styles.notesSection}>
+									<h3>词组笔记</h3>
+									<textarea
+										class={styles.notesInput}
+										value={notes()}
+										onInput={(e) => setNotes(e.currentTarget.value)}
+										onBlur={handleNotesBlur}
+										placeholder="输入词组或笔记，每行一个&#10;保存后下次打开仍在"
+										rows={4}
+									/>
+								</div>
+								<button class={styles.copyBtn} onClick={handleCopyUnknown}>
+									📋 复制不认识词 + 笔记
+								</button>
 							</div>
-
-							{/* 复制按钮 */}
-							<button class={styles.copyBtn} onClick={handleCopyUnknown}>
-								📋 复制不认识词 + 笔记
-							</button>
 						</div>
 					</>
 				)}

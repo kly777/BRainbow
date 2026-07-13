@@ -92,8 +92,22 @@
 	border-radius: 8px;
 	padding: var(--space-md);
 	background: var(--color-surface);
-	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
 	max-height: calc(100vh - 120px);
+}
+
+.wordListArea {
+	flex: 1;
+	overflow-y: auto;
+	min-height: 0;
+}
+
+.sidebarFooter {
+	flex-shrink: 0;
+	padding-top: 10px;
+	border-top: 1px solid var(--color-border);
+	margin-top: 8px;
 }
 
 .sidebar h3 {
@@ -190,7 +204,7 @@
 }
 
 .notesSection {
-	margin-top: 16px;
+	margin-bottom: 4px;
 }
 
 .notesSection h3 {
@@ -239,6 +253,6 @@
 	.sidebar {
 		grid-column: 1;
 		grid-row: auto;
-		max-height: 300px;
+		max-height: 400px;
 	}
 }

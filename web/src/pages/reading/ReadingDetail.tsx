@@ -140,26 +140,31 @@ export default function ReadingDetail() {
 
 			const sentences = splitSentences(para);
 			const rendered = sentences.map((sentence) => {
+				// 按空白分割成 token，再按非字母字符进一步分割（和后端分词规则一致）
 				const tokens = sentence.split(/(\s+)/);
-				const renderedTokens = tokens.map((token) => {
-					const clean = token.replace(/[^a-zA-Z']/g, "").toLowerCase();
-					const isWord = clean.length > 0 && /[a-zA-Z]/.test(token);
-					if (!isWord) return token;
+				const renderedTokens = tokens.flatMap((token) => {
+					// 对每个 token 按非 [a-zA-Z'] 字符分割，保留分隔符
+					const parts = token.split(/([^a-zA-Z'-]+)/);
+					return parts.map((part) => {
+						const isWord = part.length > 0 && /[a-zA-Z']/.test(part);
+						if (!isWord) return part;
 
-					const cls = wordKnown(clean) ? styles.word : styles.unknownWord;
+						const clean = part.toLowerCase();
+						const cls = wordKnown(clean) ? styles.word : styles.unknownWord;
 
-					return (
-						<span
-							class={cls}
-							onContextMenu={(e) => {
-								e.preventDefault();
-								handleMark(clean, "ignored");
-							}}
-							onClick={() => handleWordClick(clean)}
-						>
-							{token}
-						</span>
-					);
+						return (
+							<span
+								class={cls}
+								onContextMenu={(e) => {
+									e.preventDefault();
+									handleMark(clean, "ignored");
+								}}
+								onClick={() => handleWordClick(clean)}
+							>
+								{part}
+							</span>
+						);
+					});
 				});
 				return <span>{renderedTokens} </span>;
 			});

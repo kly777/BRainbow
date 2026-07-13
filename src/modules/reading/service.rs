@@ -5,7 +5,7 @@ use super::model::Article;
 use super::repository;
 
 fn extract_words(text: &str) -> Vec<String> {
-    text.split(|c: char| !c.is_ascii_alphabetic() && c != '\'')
+    text.split(|c: char| !c.is_ascii_alphabetic() && c != '\'' && c != '-')
         .filter(|s| !s.is_empty())
         .map(|s| s.to_lowercase())
         .collect()
@@ -85,8 +85,7 @@ mod tests {
         let words = extract_words("Page 2 of 3 — well-known");
         assert!(!words.iter().any(|w| w == "2"));
         assert!(words.iter().any(|w| w == "of"));
-        assert!(words.iter().any(|w| w == "well"));
-        assert!(words.iter().any(|w| w == "known"));
+        assert!(words.iter().any(|w| w == "well-known"), "hyphenated word should be one token: {:?}", words);
     }
 
     #[test]

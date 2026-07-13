@@ -409,6 +409,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             title TEXT NOT NULL,
             content TEXT NOT NULL,
             word_count INTEGER DEFAULT 0,
+            notes TEXT NOT NULL DEFAULT '',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         "#,
@@ -449,6 +450,13 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     sqlx::query("CREATE INDEX IF NOT EXISTS idx_reading_article_word_article ON reading_article_word(article_id)")
         .execute(pool)
         .await?;
+
+    // 迁移：为已有数据库添加 notes 列
+    let _ = sqlx::query(
+        "ALTER TABLE reading_article ADD COLUMN notes TEXT NOT NULL DEFAULT ''"
+    )
+    .execute(pool)
+    .await;
 
    Ok(())
 }

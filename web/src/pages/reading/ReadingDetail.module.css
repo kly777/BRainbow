@@ -189,6 +189,49 @@
 	color: var(--color-text);
 }
 
+.notesSection {
+	margin-top: 16px;
+}
+
+.notesSection h3 {
+	font-size: 0.95rem;
+	margin: 0 0 6px;
+}
+
+.notesInput {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 8px;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	background: var(--color-bg);
+	color: var(--color-text);
+	font-size: 0.85rem;
+	line-height: 1.5;
+	resize: vertical;
+	font-family: inherit;
+}
+.notesInput:focus {
+	outline: none;
+	border-color: var(--color-accent);
+}
+
+.copyBtn {
+	width: 100%;
+	margin-top: 8px;
+	padding: 8px 12px;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	background: var(--color-surface);
+	color: var(--color-text);
+	font-size: 0.85rem;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+.copyBtn:hover {
+	background: var(--color-bg-subtle);
+}
+
 @media (max-width: 768px) {
 	.page {
 		grid-template-columns: 1fr;

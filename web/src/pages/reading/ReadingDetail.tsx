@@ -1,9 +1,11 @@
 import { A, useParams } from "@solidjs/router";
-import { createResource, createSignal, For, Show } from "solid-js";
+import { createEffect, createResource, createSignal, For, Show } from "solid-js";
 import {
 	getArticle,
 	markWord,
 	recommendNext,
+	getArticleNotes,
+	updateArticleNotes,
 } from "../../apis/readingApi.ts";
 import styles from "./ReadingDetail.module.css";
 
@@ -18,6 +20,29 @@ export default function ReadingDetail() {
 	const [detail, { refetch }] = createResource(id, getArticle);
 	const [recommended] = createResource(id, recommendNext);
 
+	// 笔记
+	const [notes, setNotes] = createSignal("");
+	const [notesLoaded, setNotesLoaded] = createSignal(false);
+
+	// 文章加载后读取笔记
+	createEffect(() => {
+		if (detail() && !notesLoaded()) {
+			getArticleNotes(id()).then((r) => {
+				setNotes(r.notes);
+				setNotesLoaded(true);
+			});
+		}
+	});
+
+	// 自动保存笔记（blur）
+	let saveTimer: ReturnType<typeof setTimeout> | undefined;
+	const handleNotesBlur = () => {
+		if (saveTimer) clearTimeout(saveTimer);
+		saveTimer = setTimeout(() => {
+			updateArticleNotes(id(), notes());
+		}, 300);
+	};
+
 	// 乐观更新：本地覆盖后端返回的状态
 	const [localStatus, setLocalStatus] = createSignal<
 		Map<string, "known" | "unknown" | "ignored">
@@ -30,7 +55,8 @@ export default function ReadingDetail() {
 		return w?.status ?? "unknown";
 	};
 
-	const wordKnown = (word: string) => wordStatus(word) === "known" || wordStatus(word) === "ignored";
+	const wordKnown = (word: string) =>
+		wordStatus(word) === "known" || wordStatus(word) === "ignored";
 
 	const handleMark = async (
 		word: string,
@@ -80,6 +106,20 @@ export default function ReadingDetail() {
 		} finally {
 			setUploadingUnknown(false);
 		}
+	};
+
+	// 复制不认识的单词 + 笔记
+	const handleCopyUnknown = async () => {
+		const allWords = detail()?.words ?? [];
+		const unknownWords = allWords
+			.filter((w) => wordStatus(w.word) === "unknown")
+			.map((w) => w.word);
+		const noteText = notes().trim();
+		const parts = [unknownWords.join("\n")];
+		if (noteText) parts.push(noteText);
+		const text = parts.join("\n\n");
+		if (!text) return;
+		await navigator.clipboard.writeText(text);
 	};
 
 	const renderContent = (text: string) => {
@@ -212,6 +252,24 @@ export default function ReadingDetail() {
 									}}
 								</For>
 							</div>
+
+							{/* 笔记输入框 */}
+							<div class={styles.notesSection}>
+								<h3>词组笔记</h3>
+								<textarea
+									class={styles.notesInput}
+									value={notes()}
+									onInput={(e) => setNotes(e.currentTarget.value)}
+									onBlur={handleNotesBlur}
+									placeholder="输入词组或笔记，每行一个&#10;保存后下次打开仍在"
+									rows={6}
+								/>
+							</div>
+
+							{/* 复制按钮 */}
+							<button class={styles.copyBtn} onClick={handleCopyUnknown}>
+								📋 复制不认识词 + 笔记
+							</button>
 						</div>
 					</>
 				)}

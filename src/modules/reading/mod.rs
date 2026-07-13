@@ -14,4 +14,5 @@ pub fn routes() -> Router<AppState> {
         .route("/{id}/recommend", get(handler::recommend_next))
         .route("/word/{word}", post(handler::mark_word))
         .route("/unknown", get(handler::list_unknown_words))
+        .route("/{id}/notes", get(handler::get_notes).put(handler::update_notes))
 }

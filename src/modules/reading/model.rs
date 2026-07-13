@@ -7,6 +7,7 @@ pub struct Article {
     pub title: String,
     pub content: String,
     pub word_count: i64,
+    pub notes: String,
     pub created_at: String,
 }
 

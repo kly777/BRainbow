@@ -42,36 +42,38 @@ impl ReadingRepo {
     }
 
     pub async fn get_article(&self, id: i64) -> Result<Option<Article>, sqlx::Error> {
-        sqlx::query_as::<_, (i64, String, String, i64, String)>(
-            "SELECT id, title, content, word_count, created_at FROM reading_article WHERE id = ?",
+        sqlx::query_as::<_, (i64, String, String, i64, String, String)>(
+            "SELECT id, title, content, word_count, notes, created_at FROM reading_article WHERE id = ?",
         )
         .bind(id)
         .fetch_optional(&*self.pool)
         .await
         .map(|row| {
-            row.map(|(id, title, content, word_count, created_at)| Article {
+            row.map(|(id, title, content, word_count, notes, created_at)| Article {
                 id,
                 title,
                 content,
                 word_count,
+                notes,
                 created_at,
             })
         })
     }
 
     pub async fn get_all_articles(&self) -> Result<Vec<Article>, sqlx::Error> {
-        sqlx::query_as::<_, (i64, String, String, i64, String)>(
-            "SELECT id, title, content, word_count, created_at FROM reading_article ORDER BY id DESC",
+        sqlx::query_as::<_, (i64, String, String, i64, String, String)>(
+            "SELECT id, title, content, word_count, notes, created_at FROM reading_article ORDER BY id DESC",
         )
         .fetch_all(&*self.pool)
         .await
         .map(|rows| {
             rows.into_iter()
-                .map(|(id, title, content, word_count, created_at)| Article {
+                .map(|(id, title, content, word_count, notes, created_at)| Article {
                     id,
                     title,
                     content,
                     word_count,
+                    notes,
                     created_at,
                 })
                 .collect()
@@ -172,6 +174,19 @@ impl ReadingRepo {
         }
 
         Ok(summaries)
+    }
+
+    // ── 笔记 ──
+
+    pub async fn update_article_notes(&self, id: i64, notes: &str) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "UPDATE reading_article SET notes = ? WHERE id = ?",
+        )
+        .bind(notes)
+        .bind(id)
+        .execute(&*self.pool)
+        .await?;
+        Ok(())
     }
 
     // ── 用户词库 ──
@@ -286,6 +301,7 @@ mod tests {
                 title TEXT NOT NULL,
                 content TEXT NOT NULL,
                 word_count INTEGER DEFAULT 0,
+                notes TEXT NOT NULL DEFAULT '',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )",
         )

@@ -7,6 +7,7 @@ export interface Article {
 	title: string;
 	content: string;
 	word_count: number;
+	notes: string;
 	created_at: string;
 }
 
@@ -74,3 +75,18 @@ export const recommendNext = (
 	id: number,
 ): Promise<{ recommended: ArticleSummary | null }> =>
 	request(`/reading/${id}/recommend`, {});
+
+export const getArticleNotes = (
+	id: number,
+): Promise<{ notes: string }> =>
+	request(`/reading/${id}/notes`, {});
+
+export const updateArticleNotes = (
+	id: number,
+	notes: string,
+): Promise<{ ok: boolean }> =>
+	request(`/reading/${id}/notes`, {
+		method: "PUT",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ notes }),
+	});

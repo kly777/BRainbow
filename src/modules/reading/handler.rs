@@ -33,7 +33,7 @@ pub async fn upload_article(
     }
 }
 
-/// 获取单篇文章详情（含词状态）
+/// 获取单篇文章详情（含词状态 + notes）
 pub async fn get_article(
     State(state): State<AppState>,
     Path(id): Path<i64>,
@@ -96,5 +96,32 @@ pub async fn recommend_next(
     match repo.recommend_article(id, 0.9).await {
         Ok(article) => Json(json!({"recommended": article})).into_response(),
         Err(e) => error::internal(e, "推荐下一篇"),
+    }
+}
+
+/// 获取文章笔记
+pub async fn get_notes(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> impl IntoResponse {
+    let repo = repository::ReadingRepo::new(state.db);
+    match repo.get_article(id).await {
+        Ok(Some(article)) => Json(json!({"notes": article.notes})).into_response(),
+        Ok(None) => error::not_found("文章未找到"),
+        Err(e) => error::internal(e, "获取笔记"),
+    }
+}
+
+/// 更新文章笔记
+pub async fn update_notes(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Json(body): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let notes = body.get("notes").and_then(|v| v.as_str()).unwrap_or("");
+    let repo = repository::ReadingRepo::new(state.db);
+    match repo.update_article_notes(id, notes).await {
+        Ok(()) => Json(json!({"ok": true})).into_response(),
+        Err(e) => error::internal(e, "更新笔记"),
     }
 }

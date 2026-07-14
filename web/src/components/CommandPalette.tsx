@@ -1,5 +1,5 @@
 import { useNavigate } from "@solidjs/router";
-import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { AUTH_REQUIRED_EVENT } from "../apis/request.ts";
 import { useAuth } from "../auth/context.tsx";
 import { NAV_ROUTES } from "../routes.ts";
@@ -11,9 +11,7 @@ let _engine = BING;
 
 function probeDuck() {
 	const img = new Image();
-	img.onload = () => {
-		_engine = DUCK;
-	};
+	img.onload = () => { _engine = DUCK; };
 	img.src = "https://duckduckgo.com/favicon.ico";
 }
 
@@ -23,13 +21,7 @@ function searchWeb(query: string) {
 
 type Mode = "idle" | "nav" | "search" | "cmd";
 
-const MODE_PREFIX: Record<Mode, string> = {
-	idle: "",
-	nav: "/",
-	search: "?",
-	cmd: ":",
-};
-
+const MODE_PREFIX: Record<Mode, string> = { idle: "", nav: "/", search: "?", cmd: ":" };
 const MODE_PLACEHOLDER: Record<Mode, string> = {
 	idle: "输入 / 导航  ? 搜索  : 指令",
 	nav: "输入路由名称…",
@@ -44,13 +36,7 @@ function detectMode(value: string): Mode {
 	return "idle";
 }
 
-/** 全局按键 → 模式映射 */
-const KEY_TO_PREFIX: Record<string, string> = {
-	"/": "/",
-	"?": "?",
-	"：": "?", // 全角
-	":": ":",
-};
+const KEY_TO_PREFIX: Record<string, string> = { "/": "/", "?": "?", "：": "?", ":": ":" };
 
 interface Suggestion {
 	label: string;
@@ -105,98 +91,45 @@ export default function CommandPalette() {
 	let inputRef!: HTMLInputElement;
 	let barRef!: HTMLDivElement;
 
-	// ── 派生状态 ──
-
 	const mode = () => detectMode(value());
 	const query = () => value().slice(1);
-
-	// ── 命令 ──
 
 	const commands = createMemo(() => {
 		const list = [
 			{ label: ":home", desc: "回到首页", action: () => navigate("/") },
-			{
-				label: ":top",
-				desc: "滚动到页面顶部",
-				action: () => globalThis.scrollTo({ top: 0, behavior: "smooth" }),
-			},
-			{
-				label: ":reload",
-				desc: "重新加载页面",
-				action: () => globalThis.location.reload(),
-			},
+			{ label: ":top", desc: "滚动到页面顶部", action: () => globalThis.scrollTo({ top: 0, behavior: "smooth" }) },
+			{ label: ":reload", desc: "重新加载页面", action: () => globalThis.location.reload() },
 		];
 		if (!auth().user) {
-			list.push({
-				label: ":loginE",
-				desc: "登录",
-				action: () =>
-					globalThis.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT)),
-			});
+			list.push({ label: ":loginE", desc: "登录", action: () => globalThis.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT)) });
 		} else {
-			list.push({
-				label: ":logout",
-				desc: "退出登录",
-				action: () => logout(),
-			});
+			list.push({ label: ":logout", desc: "退出登录", action: () => logout() });
 		}
 		return list;
 	});
 
-	// ── 匹配 ──
-
 	const navItems = createMemo<Suggestion[]>(() => {
 		if (mode() !== "nav") return [];
 		const q = query();
-		return NAV_ROUTES.filter(
-			(r) =>
-				r.label.includes(q) ||
-				r.desc.includes(q) ||
-				r.path.slice(1).includes(q),
-		).map((r) => ({
-			label: r.label,
-			desc: r.desc,
-			extra: r.path,
-			onSelect: () => {
-				navigate(r.path);
-				close();
-			},
-		}));
+		return NAV_ROUTES.filter((r) => r.label.includes(q) || r.desc.includes(q) || r.path.slice(1).includes(q))
+			.map((r) => ({ label: r.label, desc: r.desc, extra: r.path, onSelect: () => { navigate(r.path); close(); } }));
 	});
 
 	const cmdItems = createMemo<Suggestion[]>(() => {
 		if (mode() !== "cmd") return [];
 		const q = query();
-		return commands()
-			.filter((c) => c.label.slice(1).includes(q) || c.desc.includes(q))
-			.map((c) => ({
-				label: c.label,
-				desc: c.desc,
-				onSelect: () => {
-					c.action();
-					close();
-				},
-			}));
+		return commands().filter((c) => c.label.slice(1).includes(q) || c.desc.includes(q))
+			.map((c) => ({ label: c.label, desc: c.desc, onSelect: () => { c.action(); close(); } }));
 	});
-
-	// ── 提交 ──
 
 	const commit = () => {
 		switch (mode()) {
-			case "search":
-				if (query()) searchWeb(query());
-				break;
-			case "nav":
-				if (navItems().length > 0) navItems()[0].onSelect();
-				break;
-			case "cmd":
-				if (cmdItems().length > 0) cmdItems()[0].onSelect();
-				break;
+			case "search": if (query()) searchWeb(query()); break;
+			case "nav": if (navItems().length > 0) navItems()[0].onSelect(); break;
+			case "cmd": if (cmdItems().length > 0) cmdItems()[0].onSelect(); break;
 		}
 		close();
 	};
-
-	// ── 面板开关 ──
 
 	const openPalette = (prefix = "") => {
 		setOpen(true);
@@ -212,39 +145,23 @@ export default function CommandPalette() {
 		setValue("");
 	};
 
-	const onBarBlur = (e: FocusEvent) => {
-		if (!barRef.contains(e.relatedTarget as Node)) close();
-	};
-
 	const onInputKey = (e: KeyboardEvent) => {
 		if (e.key === "Escape") close();
 		if (e.key === "Enter") commit();
 	};
 
-	// ── 全局快捷键 ──
-
 	const globalKey = (e: KeyboardEvent) => {
-		// Ctrl+K
 		if ((e.metaKey || e.ctrlKey) && e.key === "k") {
 			e.preventDefault();
-			openPalette();
+			if (open()) close();
+			else openPalette();
 			return;
 		}
-
-		// 不在输入框内时，触发字符直接打开对应模式
 		const tag = (e.target as HTMLElement)?.tagName;
-		const inInput =
-			tag === "INPUT" ||
-			tag === "TEXTAREA" ||
-			tag === "SELECT" ||
-			(e.target as HTMLElement)?.isContentEditable;
+		const inInput = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target as HTMLElement)?.isContentEditable;
 		if (inInput || e.altKey || e.ctrlKey || e.metaKey) return;
-
 		const prefix = KEY_TO_PREFIX[e.key];
-		if (prefix) {
-			e.preventDefault();
-			openPalette(prefix);
-		}
+		if (prefix) { e.preventDefault(); openPalette(prefix); }
 	};
 
 	onMount(() => {
@@ -253,39 +170,27 @@ export default function CommandPalette() {
 	});
 	onCleanup(() => globalThis.removeEventListener("keydown", globalKey));
 
-	// ── 建议面板 ──
-
 	const ActionPanel = () => {
 		const m = mode();
 		const q = query();
-
 		if (m === "nav") {
 			if (navItems().length > 0) return <SuggestionList items={navItems()} />;
 			if (q) return <EmptyState text="未匹配" />;
 		}
-
 		if (m === "cmd") {
 			if (cmdItems().length > 0) return <SuggestionList items={cmdItems()} />;
 			if (q) return <EmptyState text={auth().user ? "已登录" : "未登录"} />;
 		}
-
 		if (m === "search" && q) return <SearchHint query={q} />;
-
 		return null;
 	};
 
-	// ── 渲染 ──
-
 	return (
-		<div
-			ref={barRef}
-			class={styles.bar}
-			classList={{ [styles.barOpen]: open() }}
-			onFocusOut={onBarBlur}
-		>
-			{open() ? (
-				<div class={styles.inputWrap}>
-					{ActionPanel()}
+		<>
+			{/* 遮罩 + 面板 */}
+			<Show when={open()}>
+				<div class={styles.overlay} onClick={close} />
+				<div ref={barRef} class={styles.bar}>
 					<div class={styles.inputRow}>
 						<span class={styles.prefix}>{MODE_PREFIX[mode()]}</span>
 						<input
@@ -297,20 +202,14 @@ export default function CommandPalette() {
 							onKeyDown={onInputKey}
 						/>
 					</div>
+					{ActionPanel()}
 				</div>
-			) : (
-				<button
-					type="button"
-					class={styles.trigger}
-					onClick={() => openPalette()}
-					title="命令面板 (Ctrl+K)"
-				>
-					<span class={styles.triggerHint}>
-						/ 导航 &nbsp; ? 搜索 &nbsp; : 指令
-					</span>
-					<kbd class={styles.kbd}>Ctrl+K</kbd>
-				</button>
-			)}
-		</div>
+			</Show>
+
+			{/* 移动端 FAB（桌面隐藏） */}
+			<button type="button" class={styles.fab} onClick={() => openPalette()} title="命令面板">
+				⌘
+			</button>
+		</>
 	);
 }

@@ -1,74 +1,77 @@
-/* ── 容器（悬浮定位） ── */
-.bar {
+/* ── 遮罩 ── */
+.overlay {
 	position: fixed;
-	bottom: 24px;
-	left: 50%;
-	transform: translateX(-50%);
-	z-index: 80;
+	inset: 0;
+	z-index: 90;
+	background: rgba(0, 0, 0, 0.15);
 	display: flex;
-	flex-direction: column;
-	align-items: stretch;
-	width: var(--cmp-width, 420px);
-	max-width: 90vw;
-	overflow-wrap: break-word;
-	overflow-y: auto;
+	justify-content: center;
 }
 
-/* ── 收起态触发器 —— 与输入行同尺寸 ── */
-.trigger {
+/* ── 面板（悬浮在偏上方中间） ── */
+.bar {
+	position: fixed;
+	top: 80px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 99;
+	display: flex;
+	flex-direction: column;
+	width: var(--cmp-width, 480px);
+	max-width: 90vw;
+	max-height: 60vh;
+	overflow-wrap: break-word;
+}
+
+/* ── 输入行 ── */
+.inputRow {
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	gap: var(--space-md);
+	gap: var(--space-sm);
 	padding: var(--space-sm) 16px;
 	border: 1px solid var(--color-border, #e8dfcc);
 	border-radius: var(--radius-lg);
 	background: var(--color-surface, #fffef9);
-	color: var(--color-text-muted, #9b8e7a);
-	font-size: var(--text-sm);
-	cursor: pointer;
-	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-	transition:
-		border-color 0.15s,
-		box-shadow 0.15s;
-	white-space: nowrap;
+	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+	transition: border-color 0.15s;
+}
+
+.inputRow:focus-within {
+	border-color: var(--color-accent, #3b82f6);
+	box-shadow: 0 4px 24px rgba(59, 130, 246, 0.12);
+}
+
+.prefix {
+	font-size: var(--text-lg);
+	color: var(--color-accent, #3b82f6);
+	font-weight: 600;
+	min-width: 14px;
+	text-align: center;
+}
+
+.input {
+	flex: 1;
+	border: none;
+	outline: none;
+	background: transparent;
+	font-size: var(--text-base);
+	color: var(--color-text, #3d3629);
+	caret-color: var(--color-accent, #3b82f6);
 	font-family: inherit;
 }
 
-.trigger:hover {
-	border-color: var(--color-border-hover, #d4c8aa);
-	box-shadow: 0 var(--space-xs) 20px rgba(0, 0, 0, 0.08);
+.input::placeholder {
+	color: var(--color-text-muted, #9b8e7a);
 }
 
-.triggerHint {
-	font-size: var(--text-sm);
-}
-
-.kbd {
-	display: inline-block;
-	padding: var(--space-xs) var(--space-xs);
-	border: 1px solid var(--color-border, #e8dfcc);
-	border-radius: var(--radius-sm);
-	background: var(--color-bg-subtle, #f8f3e6);
-	font-family: monospace;
-	font-size: var(--text-xs);
-	color: var(--color-text-secondary, #6b5e4a);
-}
-
-/* ── 展开态包裹 ── */
-.inputWrap {
-	display: flex;
-	flex-direction: column;
-}
-
-/* ── 建议列表（向上弹出） ── */
+/* ── 建议列表（在输入行下方展开） ── */
 .suggestions {
 	background: var(--color-surface, #fffef9);
 	border: 1px solid var(--color-border, #e8dfcc);
 	border-radius: var(--radius-md);
-	box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
-	margin-bottom: 6px;
-	max-height: 220px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+	margin-top: 6px;
+	max-height: 280px;
 	overflow-y: auto;
 	padding: var(--space-xs);
 }
@@ -135,45 +138,35 @@
 	font-size: var(--text-xs);
 }
 
-/* ── 输入行 —— 与触发器同尺寸同圆角 ── */
-.inputRow {
-	display: flex;
-	align-items: center;
-	gap: var(--space-sm);
-	padding: var(--space-sm) 16px;
-	border: 1px solid var(--color-border, #e8dfcc);
-	border-radius: var(--radius-lg);
-	background: var(--color-surface, #fffef9);
-	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-	transition: border-color 0.15s;
+/* ── 移动端右下角呼出按钮 ── */
+.fab {
+	display: none;
 }
 
-/* 输入框内部聚焦时高亮边框 */
-.inputRow:focus-within {
-	border-color: var(--color-accent, #3b82f6);
-	box-shadow: 0 2px 12px rgba(59, 130, 246, 0.1);
-}
-
-.prefix {
-	font-size: var(--text-lg);
-	color: var(--color-accent, #3b82f6);
-	font-weight: 600;
-	min-width: 14px;
-	text-align: center;
-}
-
-.input {
-	flex: 1;
-	border: none;
-	outline: none;
-	background: transparent;
-	font-size: var(--text-sm);
-	color: var(--color-text, #3d3629);
-	caret-color: var(--color-accent, #3b82f6);
-	font-family: inherit;
-}
-
-.input::placeholder {
-	color: var(--color-text-muted, #9b8e7a);
-	font-size: var(--text-sm);
+@media (max-width: 768px) {
+	.fab {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		position: fixed;
+		bottom: 20px;
+		right: 20px;
+		z-index: 70;
+		width: 48px;
+		height: 48px;
+		border: none;
+		border-radius: 50%;
+		background: var(--color-accent, #3b82f6);
+		color: #fff;
+		font-size: 22px;
+		box-shadow: 0 2px 12px rgba(59, 130, 246, 0.3);
+		cursor: pointer;
+		transition: transform 0.15s;
+	}
+	.fab:hover {
+		transform: scale(1.08);
+	}
+	.fab:active {
+		transform: scale(0.95);
+	}
 }

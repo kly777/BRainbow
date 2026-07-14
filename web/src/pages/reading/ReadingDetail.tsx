@@ -24,9 +24,10 @@ export default function ReadingDetail() {
 	const [notes, setNotes] = createSignal("");
 	const [notesLoaded, setNotesLoaded] = createSignal(false);
 
-	// 文章加载后读取笔记
+	// 文章加载后读取笔记 + 动态标题
 	createEffect(() => {
 		if (detail() && !notesLoaded()) {
+			document.title = `${detail()!.article.title} · Brainbow`;
 			getArticleNotes(id()).then((r) => {
 				setNotes(r.notes);
 				setNotesLoaded(true);

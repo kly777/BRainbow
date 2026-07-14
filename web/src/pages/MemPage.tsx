@@ -105,6 +105,17 @@ export default function MemPage() {
 
 	const [recentRatings, setRecentRatings] = createSignal<number[]>([]);
 
+	// ── 卡面停留计时 ──
+	// 每次切换到新卡时记录开始时间，评分时记录耗时，估算剩余
+	const [cardStart, setCardStart] = createSignal(Date.now());
+	const [cardDurations, setCardDurations] = createSignal<number[]>([]);
+	const avgCardTime = () => {
+		const d = cardDurations();
+		if (d.length === 0) return 0;
+		return d.reduce((a, b) => a + b, 0) / d.length;
+	};
+	const estRemaining = () => Math.round(avgCardTime() * estimatedTotal());
+
 	const maxLearning = () => {
 		const ratings = recentRatings();
 		if (ratings.length < 3) return DEFAULT_LIMIT;
@@ -162,6 +173,7 @@ export default function MemPage() {
 				const shuffled = [...data.items].sort(() => Math.random() - 0.5);
 				setDue(shuffled);
 				setCurrent(0);
+				setCardStart(Date.now());
 				setShowAnswer(false);
 				setIsPreview(
 					data.items.length === 1 && data.items[0]?.state !== "learning",
@@ -191,6 +203,7 @@ export default function MemPage() {
 		});
 		// 队列仍有剩余卡片：推进到下一张
 		if (due().length > 0) {
+			setCardStart(Date.now());
 			loadPreview(due()[current()]?.id);
 			setShowAnswer(false);
 		} else {
@@ -221,6 +234,9 @@ export default function MemPage() {
 		}
 		// 记录评分，用于动态调整队列大小
 		setRecentRatings((prev) => [...prev, rating].slice(-MAX_HISTORY));
+		// 记录耗时（上限 5 分钟，防止中途离开拉高预估）
+		const elapsed = Math.min((Date.now() - cardStart()) / 1000, 300);
+		setCardDurations((prev) => [...prev, elapsed].slice(-30));
 		setShowUndo(true);
 		advanceQueue();
 		loadCounts();
@@ -494,7 +510,15 @@ export default function MemPage() {
 							</div>
 						</Show>
 						<Show when={estimatedTotal() > 0}>
-							<span class={styles.progressText}>≈ {estimatedTotal()} 次学习</span>
+							<span class={styles.progressText}>
+								≈ {estimatedTotal()} 次学习
+								<Show when={estRemaining() >= 60}>
+									· ~{Math.round(estRemaining() / 60)}m
+								</Show>
+								<Show when={estRemaining() > 0 && estRemaining() < 60}>
+									· ~{estRemaining()}s
+								</Show>
+							</span>
 						</Show>
 					</div>
 				</Show>

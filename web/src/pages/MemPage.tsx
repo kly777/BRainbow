@@ -285,6 +285,14 @@ export default function MemPage() {
 		}
 	};
 
+	const handleCopyCard = () => {
+		const it = item();
+		if (!it) return;
+		navigator.clipboard.writeText(
+			`线索:\n${it.cue.content}\n---\n答案:\n${it.target.content}`,
+		);
+	};
+
 	const onKey = (e: KeyboardEvent) => {
 		if (
 			e.target instanceof HTMLTextAreaElement ||
@@ -379,6 +387,7 @@ export default function MemPage() {
 						<A href="/m/manage" class={styles.manageLink}>
 							管理
 						</A>
+
 						{editing() ? (
 							<>
 								<button
@@ -540,6 +549,14 @@ export default function MemPage() {
 												}}
 											>
 												📋
+											</button>
+											<button
+												type="button"
+												class={styles.copyBtn}
+												title="复制整张卡片"
+												onClick={handleCopyCard}
+											>
+												📋+
 											</button>
 										</div>
 										<div class={styles.content}>

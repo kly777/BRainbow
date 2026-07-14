@@ -24,7 +24,6 @@ export default function ReadingDetail() {
 	const [notes, setNotes] = createSignal("");
 	const [notesLoaded, setNotesLoaded] = createSignal(false);
 
-	// 文章加载后读取笔记 + 动态标题
 	createEffect(() => {
 		if (detail() && !notesLoaded()) {
 			document.title = `${detail()!.article.title} · Brainbow`;
@@ -35,35 +34,35 @@ export default function ReadingDetail() {
 		}
 	});
 
-	// 自动保存笔记（blur）
 	let saveTimer: ReturnType<typeof setTimeout> | undefined;
 	const handleNotesBlur = () => {
 		if (saveTimer) clearTimeout(saveTimer);
-		saveTimer = setTimeout(() => {
-			updateArticleNotes(id(), notes());
-		}, 300);
+		saveTimer = setTimeout(() => updateArticleNotes(id(), notes()), 300);
 	};
 
-	// 乐观更新：本地覆盖后端返回的状态
+	// 乐观更新
 	const [localStatus, setLocalStatus] = createSignal<
 		Map<string, "known" | "unknown" | "ignored">
 	>(new Map());
 
-	const wordStatus = (word: string): "known" | "unknown" | "ignored" => {
-		const local = localStatus().get(word);
-		if (local) return local;
-		const w = detail()?.words.find((w) => w.word === word);
-		return w?.status ?? "unknown";
-	};
-
-	const wordKnown = (word: string) =>
-		wordStatus(word) === "known" || wordStatus(word) === "ignored";
+	// 合并后端 + 乐观更新为单一 Map → O(1) 查找
+	const wordStatusMap = createMemo(() => {
+		const map = new Map<string, "known" | "unknown" | "ignored">();
+		for (const w of detail()?.words ?? []) {
+			map.set(w.word, w.status as "known" | "unknown" | "ignored");
+		}
+		for (const [word, status] of localStatus()) {
+			map.set(word, status);
+		}
+		return map;
+	});
 
 	// 侧栏排序：不认识 → 忽略 → 认识
 	const sortedWords = createMemo(() => {
 		const order: Record<string, number> = { unknown: 0, ignored: 1, known: 2 };
+		const map = wordStatusMap();
 		return [...(detail()?.words ?? [])].sort(
-			(a, b) => (order[wordStatus(a.word)] ?? 2) - (order[wordStatus(b.word)] ?? 2),
+			(a, b) => (order[map.get(a.word) ?? "known"] ?? 2) - (order[map.get(b.word) ?? "known"] ?? 2),
 		);
 	});
 
@@ -88,24 +87,37 @@ export default function ReadingDetail() {
 		if (clickTimer) {
 			clearTimeout(clickTimer);
 			clickTimer = undefined;
-			// 双击 → 不认识
 			handleMark(word, "unknown");
 			return;
 		}
 		clickTimer = setTimeout(() => {
 			clickTimer = undefined;
-			// 单击 → 认识
 			handleMark(word, "known");
 		}, 250);
+	};
+
+	// 事件委托：一个 handler 代替每个 span 的 onClick/onContextMenu
+	const handleContentClick = (e: MouseEvent) => {
+		const word = (e.target as HTMLElement).dataset.word;
+		if (word) handleWordClick(word);
+	};
+
+	const handleContentContextMenu = (e: MouseEvent) => {
+		const word = (e.target as HTMLElement).dataset.word;
+		if (word) {
+			e.preventDefault();
+			handleMark(word, "ignored");
+		}
 	};
 
 	// 批量提交不认识词
 	const [uploadingUnknown, setUploadingUnknown] = createSignal(false);
 	const handleUploadUnknown = async () => {
-		const allWords = detail()?.words ?? [];
-		const unknownWords = allWords
-			.filter((w) => wordStatus(w.word) === "unknown")
-			.map((w) => w.word);
+		const unknownWords: string[] = [];
+		const map = wordStatusMap();
+		for (const w of detail()?.words ?? []) {
+			if (map.get(w.word) === "unknown") unknownWords.push(w.word);
+		}
 		if (unknownWords.length === 0) return;
 
 		setUploadingUnknown(true);
@@ -117,12 +129,13 @@ export default function ReadingDetail() {
 		}
 	};
 
-	// 复制不认识的单词 + 笔记
+	// 复制不认识词 + 笔记
 	const handleCopyUnknown = async () => {
-		const allWords = detail()?.words ?? [];
-		const unknownWords = allWords
-			.filter((w) => wordStatus(w.word) === "unknown")
-			.map((w) => w.word);
+		const unknownWords: string[] = [];
+		const map = wordStatusMap();
+		for (const w of detail()?.words ?? []) {
+			if (map.get(w.word) === "unknown") unknownWords.push(w.word);
+		}
 		const noteText = notes().trim();
 		const parts = [unknownWords.join("\n")];
 		if (noteText) parts.push(noteText);
@@ -131,40 +144,28 @@ export default function ReadingDetail() {
 		await navigator.clipboard.writeText(text);
 	};
 
+	// 内容渲染（data-word 属性 + 事件委托，无内联事件）
 	const renderContent = (text: string) => {
+		const map = wordStatusMap();
 		const paragraphs = text.split(/\n/);
 
 		return paragraphs.map((para) => {
-			if (para.trim().length === 0) {
-				return <br />;
-			}
+			if (para.trim().length === 0) return <br />;
 
 			const sentences = splitSentences(para);
 			const rendered = sentences.map((sentence) => {
-				// 按空白分割成 token，再按非字母字符进一步分割（和后端分词规则一致）
 				const tokens = sentence.split(/(\s+)/);
 				const renderedTokens = tokens.flatMap((token) => {
-					// 对每个 token 按非 [a-zA-Z'] 字符分割，保留分隔符
 					const parts = token.split(/([^a-zA-Z'-]+)/);
 					return parts.map((part) => {
 						const isWord = part.length > 0 && /[a-zA-Z']/.test(part);
 						if (!isWord) return part;
 
 						const clean = part.toLowerCase();
-						const cls = wordKnown(clean) ? styles.word : styles.unknownWord;
+						const s = map.get(clean);
+						const cls = s === "known" || s === "ignored" ? styles.word : styles.unknownWord;
 
-						return (
-							<span
-								class={cls}
-								onContextMenu={(e) => {
-									e.preventDefault();
-									handleMark(clean, "ignored");
-								}}
-								onClick={() => handleWordClick(clean)}
-							>
-								{part}
-							</span>
-						);
+						return <span class={cls} data-word={clean}>{part}</span>;
 					});
 				});
 				return <span>{renderedTokens} </span>;
@@ -176,9 +177,7 @@ export default function ReadingDetail() {
 
 	return (
 		<div class={styles.page}>
-			<A href="/reading" class={styles.back}>
-				← 文章列表
-			</A>
+			<A href="/reading" class={styles.back}>← 文章列表</A>
 
 			<Show when={detail()}>
 				{(d) => (
@@ -187,25 +186,25 @@ export default function ReadingDetail() {
 							<h1>{d().article.title}</h1>
 							<div class={styles.meta}>
 								<span>{d().article.word_count} 词</span>
-								<span>
-									{d().words.filter((w) => w.status === "unknown").length} 个不认识
-								</span>
+								<span>{d().words.filter((w) => w.status === "unknown").length} 个不认识</span>
 							</div>
 						</div>
 
 						<Show when={recommended()?.recommended}>
 							{(rec) => (
-								<A
-									href={`/reading/${rec().id}`}
-									class={styles.recommendBanner}
-								>
-									推荐下一篇：{rec().title}（认识率{" "}
-									{(rec().known_ratio * 100).toFixed(0)}%）
+								<A href={`/reading/${rec().id}`} class={styles.recommendBanner}>
+									推荐下一篇：{rec().title}（认识率 {(rec().known_ratio * 100).toFixed(0)}%）
 								</A>
 							)}
 						</Show>
 
-						<div class={styles.content}>{renderContent(d().article.content)}</div>
+						<div
+							class={styles.content}
+							onClick={handleContentClick}
+							onContextMenu={handleContentContextMenu}
+						>
+							{renderContent(d().article.content)}
+						</div>
 
 						<div class={styles.sidebar}>
 							<div class={styles.wordListArea}>
@@ -220,7 +219,7 @@ export default function ReadingDetail() {
 								<div class={styles.wordList}>
 									<For each={sortedWords()}>
 										{(w) => {
-											const st = wordStatus(w.word);
+											const st = wordStatusMap().get(w.word) ?? "unknown";
 											return (
 												<div
 													class={styles.wordItem}
@@ -230,44 +229,25 @@ export default function ReadingDetail() {
 													}}
 												>
 													<span
-														class={
-															st === "known"
-																? styles.knownIcon
-																: st === "ignored"
-																	? styles.ignoredIcon
-																	: styles.unknownIcon
-														}
-														onClick={() =>
-															handleMark(
-																w.word,
-																st === "known"
-																	? "unknown"
-																	: st === "ignored"
-																		? "unknown"
-																		: "known",
-															)
-													}
-												>
-													{st === "known"
-														? "✓"
-														: st === "ignored"
-															? "–"
-															: "✗"}
-												</span>
-												<span class={styles.wordName}>{w.word}</span>
-												<button
-													class={styles.ignoreBtn}
-													onClick={() => handleMark(w.word, "ignored")}
-													title={st === "ignored" ? "取消忽略" : "忽略此词"}
-												>
-													{st === "ignored" ? "取消" : "忽略"}
-												</button>
-											</div>
-										);
-									}}
-								</For>
+														class={st === "known" ? styles.knownIcon : st === "ignored" ? styles.ignoredIcon : styles.unknownIcon}
+														onClick={() => handleMark(w.word, st === "known" ? "unknown" : st === "ignored" ? "unknown" : "known")}
+													>
+														{st === "known" ? "✓" : st === "ignored" ? "–" : "✗"}
+													</span>
+													<span class={styles.wordName}>{w.word}</span>
+													<button
+														class={styles.ignoreBtn}
+														onClick={() => handleMark(w.word, "ignored")}
+														title={st === "ignored" ? "取消忽略" : "忽略此词"}
+													>
+														{st === "ignored" ? "取消" : "忽略"}
+													</button>
+												</div>
+											);
+										}}
+									</For>
+								</div>
 							</div>
-						</div>
 							<div class={styles.sidebarFooter}>
 								<div class={styles.notesSection}>
 									<h3>词组笔记</h3>
@@ -276,7 +256,7 @@ export default function ReadingDetail() {
 										value={notes()}
 										onInput={(e) => setNotes(e.currentTarget.value)}
 										onBlur={handleNotesBlur}
-										placeholder="输入词组或笔记，每行一个&#10;保存后下次打开仍在"
+										placeholder={"输入词组或笔记，每行一个\n保存后下次打开仍在"}
 										rows={4}
 									/>
 								</div>

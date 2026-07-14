@@ -152,6 +152,7 @@
 	display: flex;
 	flex-direction: column;
 	min-width: 0;
+	overflow-y: auto;
 }
 
 .topBar {
@@ -285,11 +286,9 @@
 /* ── 卡片 ── */
 .card {
 	flex: 1;
-	overflow-y: auto;
-	padding: var(--space-xl) 24px 0;
+	padding: var(--space-xl) 24px 90px;
 	max-width: 1440px;
 	width: 100%;
-	margin: 0 auto;
 }
 
 .sectionLabel {
@@ -344,31 +343,24 @@
 	margin-bottom: var(--space-md);
 }
 
-/* ── 全部 24h 后横幅 ── */
-.progressBar {
-	width: 100%;
-	max-width: 1440px;
-	margin: var(--space-sm) auto var(--space-lg);
-	text-align: right;
-}
-
 .progressText {
 	font-size: var(--text-xs);
 	color: var(--color-text-muted, #9b8e7a);
-	background: var(--color-bg-subtle, #f8f3e6);
-	padding: var(--space-xs) var(--space-sm);
-	border-radius: var(--radius-md);
+	margin-left: auto;
+	white-space: nowrap;
 }
 
-/* ── 标签筛选 ── */
+/* ── 标签筛选（紧凑） ── */
 .tagFilterBar {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: var(--space-xs);
-	max-width: 1440px;
-	margin: 0 auto var(--space-md);
-	padding: 0 var(--space-md);
+	gap: 4px;
+	padding: 4px 12px;
+	margin: 0 24px 8px;
+	background: var(--color-bg-subtle, #f8f3e6);
+	border: 1px solid var(--color-border, #e8dfcc);
+	border-radius: 8px;
 	position: relative;
 }
 
@@ -540,14 +532,17 @@
 	background: var(--color-bg-subtle, #f8f3e6);
 }
 
-/* ── 按钮（距底部 64px，避免遮挡 CommandPalette）── */
+/* ── 按钮浮动在卡片底部 ── */
 .actions {
 	display: flex;
 	justify-content: center;
-	padding: var(--space-md) 24px 78px;
-	border-top: 1px solid var(--color-border, #e8dfcc);
-	background: var(--color-bg, #fefcf5);
+	padding: var(--space-md) 24px;
 	flex-shrink: 0;
+	position: sticky;
+	bottom: 0;
+	z-index: 10;
+	background: var(--color-bg);
+	box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .showBtn {

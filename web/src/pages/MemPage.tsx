@@ -420,13 +420,7 @@ export default function MemPage() {
 					</div>
 				</div>
 
-				<Show when={estimatedTotal() > 0}>
-					<div class={styles.progressBar}>
-						<span class={styles.progressText}>≈ {estimatedTotal()} 次学习</span>
-					</div>
-				</Show>
-
-				<Show when={allTags().length > 0}>
+				<Show when={allTags().length > 0 || estimatedTotal() > 0}>
 					<div class={styles.tagFilterBar}>
 						<button
 							type="button"
@@ -498,6 +492,9 @@ export default function MemPage() {
 									</div>
 								))}
 							</div>
+						</Show>
+						<Show when={estimatedTotal() > 0}>
+							<span class={styles.progressText}>≈ {estimatedTotal()} 次学习</span>
 						</Show>
 					</div>
 				</Show>

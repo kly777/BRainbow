@@ -511,14 +511,13 @@ export default function MemPage() {
 						<Show when={tagOpen() && tagSuggestions().length > 0}>
 							<div class={styles.tagDropdown}>
 								{tagSuggestions().map((t) => (
-									<div
+									<button type="button"
 										class={styles.tagOption}
-										role="button"
 										tabIndex={-1}
 										onMouseDown={() => addTagFilter(t)}
 									>
 										{t.name}
-									</div>
+									</button>
 								))}
 							</div>
 						</Show>

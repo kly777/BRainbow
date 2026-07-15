@@ -50,8 +50,7 @@ export default function ReadingList() {
 					class={styles.overlay}
 					onClick={() => setUploadOpen(false)}
 					onKeyDown={(e) => e.key === "Enter" && setUploadOpen(false)}
-					role="presentation"
-					tabIndex={-1}
+					role="button" aria-label="关闭"
 				/>
 				<div class={styles.modal}>
 					<h2>上传文章</h2>

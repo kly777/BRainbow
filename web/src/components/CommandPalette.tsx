@@ -251,8 +251,7 @@ export default function CommandPalette() {
 					class={styles.overlay}
 					onClick={close}
 					onKeyDown={(e) => e.key === "Enter" && close()}
-					role="presentation"
-					tabIndex={-1}
+					role="button" aria-label="关闭"
 				/>
 				<div ref={barRef} class={styles.bar}>
 					<div class={styles.inputRow}>

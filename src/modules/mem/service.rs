@@ -685,7 +685,51 @@ impl MemService {
     }
 }
 
+/// revlog 封顶条数。超过此值后修剪到 TARGET_REVLOGS。
+/// 2000 条 ≈ 1-2 个月的日常复习数据，足够 FSRS 优化使用。
+const MAX_REVLOGS: i64 = 2000;
+
+/// 修剪后的目标条数（80% 水位线，避免频繁删除）。
+const TARGET_REVLOGS: i64 = 1600;
+
+/// 当 revlog 超过 MAX_REVLOGS 时，删除最旧的记录直到只剩 TARGET_REVLOGS 条。
+async fn prune_revlog(pool: &SqlitePool) {
+    let count: Result<(i64,), _> = sqlx::query_as("SELECT COUNT(*) FROM revlog")
+        .fetch_one(pool)
+        .await;
+    let count = match count {
+        Ok((n,)) => n,
+        Err(_) => return,
+    };
+    if count <= MAX_REVLOGS {
+        return;
+    }
+
+    let to_delete = count - TARGET_REVLOGS;
+    tracing::info!(
+        "revlog 已达 {} 条 (上限 {}), 删除最旧的 {} 条",
+        count,
+        MAX_REVLOGS,
+        to_delete
+    );
+
+    // 删除最旧的 to_delete 条记录。
+    // SQLite 支持在子查询中使用 LIMIT（3.33+），这等价于保留最新的 TARGET_REVLOGS 条。
+    let result = sqlx::query(
+        "DELETE FROM revlog WHERE id IN (SELECT id FROM revlog ORDER BY id ASC LIMIT ?)",
+    )
+    .bind(to_delete)
+    .execute(pool)
+    .await;
+
+    match result {
+        Ok(r) => tracing::info!("revlog 修剪完成, 删除了 {} 行", r.rows_affected()),
+        Err(e) => tracing::warn!("revlog 修剪失败: {}", e),
+    }
+}
+
 /// 如果 revlog 条数达到 `every` 的整数倍，自动触发 FSRS 参数优化。
+/// 优化完成后检查是否需要修剪 revlog。
 async fn maybe_auto_optimize(pool: Arc<SqlitePool>, every: i64) {
     let count: Result<(i64,), _> = sqlx::query_as("SELECT COUNT(*) FROM revlog")
         .fetch_one(&*pool)
@@ -717,6 +761,9 @@ async fn maybe_auto_optimize(pool: Arc<SqlitePool>, every: i64) {
             tracing::warn!("自动优化失败: {}", e);
         }
     }
+
+    // 优化完成后检查并修剪过旧的 revlog
+    prune_revlog(&pool).await;
 }
 
 #[derive(Debug)]
@@ -744,5 +791,215 @@ impl AppError {
             AppError::NotFound => crate::error::not_found("记忆项不存在"),
             AppError::Db(e) => crate::error::internal(e, "数据库操作"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use sqlx::SqlitePool;
+
+    /// 创建仅含 revlog 表的内存数据库（不需外键，prune 只操作 revlog）。
+    async fn setup_revlog_db() -> SqlitePool {
+        let pool = SqlitePool::connect("sqlite::memory:")
+            .await
+            .expect("create in-memory db");
+
+        sqlx::query(
+            "CREATE TABLE revlog (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mem_id INTEGER NOT NULL DEFAULT 0,
+                review_time TEXT NOT NULL,
+                rating INTEGER NOT NULL,
+                delta_t INTEGER NOT NULL
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        pool
+    }
+
+    /// 插入 n 条 revlog，review_time 严格递增（无重复）。
+    async fn insert_revlogs(pool: &SqlitePool, n: i64, base_mem_id: i32) {
+        for i in 0..n {
+            // 生成唯一递增的时间戳：基准时间 + i 分钟
+            let review = format!(
+                "2026-01-{:02}T{:02}:{:02}:00Z",
+                1 + (i / 1440) as i32,         // 天在第 1 天 → 递增
+                (i / 60) as i32 % 24,            // 小时 0-23
+                i as i32 % 60,                   // 分钟 0-59
+            );
+            sqlx::query(
+                "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, ?)",
+            )
+            .bind(base_mem_id + (i % 5) as i32)
+            .bind(&review)
+            .bind((i % 4 + 1) as i32)
+            .bind(1i32)
+            .execute(pool)
+            .await
+            .unwrap();
+        }
+    }
+
+    // ── prune_revlog ──
+
+    #[tokio::test]
+    async fn prune_revlog_below_max_does_nothing() {
+        let pool = setup_revlog_db().await;
+        insert_revlogs(&pool, 100, 1).await;
+
+        prune_revlog(&pool).await;
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        // 100 < MAX_REVLOGS(2000)，不应被修剪
+        assert_eq!(count, 100, "低于上限不应被修剪");
+    }
+
+    #[tokio::test]
+    async fn prune_revlog_at_max_does_nothing() {
+        let pool = setup_revlog_db().await;
+        insert_revlogs(&pool, MAX_REVLOGS, 1).await;
+
+        prune_revlog(&pool).await;
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, MAX_REVLOGS, "等于上限不应被修剪");
+    }
+
+    #[tokio::test]
+    async fn prune_revlog_over_max_trims_to_target() {
+        let pool = setup_revlog_db().await;
+        // 插入 2500 条，超过 MAX_REVLOGS(2000)
+        insert_revlogs(&pool, 2500, 1).await;
+
+        prune_revlog(&pool).await;
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, TARGET_REVLOGS, "应修剪到目标值");
+    }
+
+    #[tokio::test]
+    async fn prune_revlog_preserves_newest() {
+        let pool = setup_revlog_db().await;
+        insert_revlogs(&pool, 2100, 1).await;
+
+        let max_id_before: i32 = sqlx::query_scalar("SELECT MAX(id) FROM revlog")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(max_id_before, 2100);
+
+        prune_revlog(&pool).await;
+
+        // 最新的 id 保留
+        let max_id_after: Option<i32> = sqlx::query_scalar("SELECT MAX(id) FROM revlog")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(max_id_after, Some(2100), "最新 id 应保留");
+
+        // 最旧的 id 已删除（2100-1600=500 条被删）
+        let min_id_after: i32 = sqlx::query_scalar("SELECT MIN(id) FROM revlog")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(min_id_after, 501, "最旧 500 条已删");
+
+        // timestamp 严格递增，最旧的也应 > 2026-01-01T00:00:00Z
+        let oldest_ts: String = sqlx::query_scalar(
+            "SELECT review_time FROM revlog ORDER BY review_time ASC LIMIT 1",
+        )
+        .fetch_one(&pool).await.unwrap();
+        assert!(
+            oldest_ts.as_str() > "2026-01-01T00:00:00Z",
+            "最旧 timestamp={} 应大于 2026-01-01",
+            oldest_ts
+        );
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count, TARGET_REVLOGS);
+    }
+
+    #[tokio::test]
+    async fn prune_revlog_keeps_multiple_mems() {
+        let pool = setup_revlog_db().await;
+        // 5 个不同的 mem，共 2500 条，均分
+        insert_revlogs(&pool, 2500, 1).await;
+
+        prune_revlog(&pool).await;
+
+        // 每个 mem 都应还有记录
+        for mem_id in 1..=5 {
+            let cnt: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM revlog WHERE mem_id = ?",
+            )
+            .bind(mem_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+            assert!(
+                cnt > 0,
+                "mem_id={} 至少应有 1 条记录 (实际 {})",
+                mem_id,
+                cnt
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn prune_revlog_empty_db_does_nothing() {
+        let pool = setup_revlog_db().await;
+        prune_revlog(&pool).await;
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 0, "空库不应出错");
+    }
+
+    #[tokio::test]
+    async fn prune_revlog_slightly_over_max() {
+        let pool = setup_revlog_db().await;
+        // 2010 条，刚超 MAX_REVLOGS(2000) 一点点
+        insert_revlogs(&pool, MAX_REVLOGS + 10, 1).await;
+
+        prune_revlog(&pool).await;
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        // 2010 - 1600 = 410 条被删，剩 1600
+        assert_eq!(count, TARGET_REVLOGS, "刚超上限也应修剪到目标值");
+    }
+
+    #[tokio::test]
+    async fn prune_revlog_many_times_idempotent() {
+        let pool = setup_revlog_db().await;
+        insert_revlogs(&pool, 3000, 1).await;
+
+        // 第一次修剪
+        prune_revlog(&pool).await;
+        let count1: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count1, TARGET_REVLOGS);
+
+        // 第二次修剪（此时 count ≤ MAX_REVLOGS，不应再删）
+        prune_revlog(&pool).await;
+        let count2: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count2, TARGET_REVLOGS, "重复修剪不应继续删除");
     }
 }

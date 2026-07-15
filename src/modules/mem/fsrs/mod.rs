@@ -54,7 +54,7 @@ impl Default for SchedulerConfig {
         Self {
             learning_steps: vec![60, 600],
             relearn_steps: vec![600],
-            graduating_interval_secs: 86400,
+            graduating_interval_secs: 7200,
             desired_retention: 0.9,
         }
     }

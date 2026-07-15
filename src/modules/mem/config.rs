@@ -34,7 +34,7 @@ pub struct MemConfig {
 
 fn default_learning_steps() -> Vec<i64> { vec![60, 600] }
 fn default_relearn_steps() -> Vec<i64> { vec![600] }
-fn default_graduating_interval() -> i64 { 86400 }
+fn default_graduating_interval() -> i64 { 7200 }
 fn default_desired_retention() -> f64 { 0.9 }
 
 impl Default for MemConfig {

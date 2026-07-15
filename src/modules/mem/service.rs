@@ -19,10 +19,9 @@ fn days_elapsed_since(last_review_at: &Option<String>) -> u32 {
             if let Ok(t) = chrono::DateTime::parse_from_rfc3339(s) {
                 let t_utc = t.with_timezone(&chrono::Utc);
                 let elapsed = chrono::Utc::now() - t_utc;
-                let days = elapsed.num_seconds() / 86400;
-                std::cmp::max(1, days as u32)
+                (elapsed.num_seconds() / 86400) as u32
             } else {
-                1
+                0
             }
         }
     }
@@ -220,7 +219,7 @@ impl MemService {
         let days_elapsed = days_elapsed_since(&row.last_review_at);
         let config = fsrs::SchedulerConfig::default();
         let cumulative_step_days = if state.has_steps() || state == CardState::New {
-            days_elapsed.max(1)
+            days_elapsed
         } else {
             days_elapsed
         };

@@ -119,7 +119,7 @@ mod tests {
     #[test]
     fn short_text_boost() {
         let hits = vec![
-            make_hit(1, 0, 1, 10),  // short doc
+            make_hit(1, 0, 1, 10),   // short doc
             make_hit(2, 0, 1, 1000), // long doc
         ];
         let idfs = vec![1.0];

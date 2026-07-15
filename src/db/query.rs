@@ -22,10 +22,7 @@
 //! let safe = sanitize_table_name(user_input)?;
 //! ```
 
-use sqlx::{
-    query_builder::Separated,
-    Database, Encode, QueryBuilder, Type,
-};
+use sqlx::{Database, Encode, QueryBuilder, Type, query_builder::Separated};
 
 // ── QueryBuilder 扩展 ──
 

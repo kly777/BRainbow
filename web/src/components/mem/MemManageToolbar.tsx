@@ -61,7 +61,8 @@ export default function MemManageToolbar(props: Props) {
 	};
 
 	const toggleMode = () => {
-		const newMode: TagMode = props.tagMode === "include" ? "exclude" : "include";
+		const newMode: TagMode =
+			props.tagMode === "include" ? "exclude" : "include";
 		props.onTagFiltersChange(props.tagFilters, newMode);
 	};
 
@@ -83,7 +84,9 @@ export default function MemManageToolbar(props: Props) {
 					type="button"
 					class={styles.modeToggle}
 					onClick={toggleMode}
-					title={props.tagMode === "include" ? "切换为排除模式" : "切换为包含模式"}
+					title={
+						props.tagMode === "include" ? "切换为排除模式" : "切换为包含模式"
+					}
 				>
 					{props.tagMode === "include" ? "☐ 包含" : "☒ 排除"}
 				</button>

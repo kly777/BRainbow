@@ -31,7 +31,11 @@ pub fn set_global_params(params: Vec<f32>) {
 
 /// 获取当前 FSRS 参数（返回空 Vec 表示用默认值）
 pub fn get_global_params() -> Vec<f32> {
-    GLOBAL_FSRS_PARAMS.read().ok().map(|p| p.clone()).unwrap_or_default()
+    GLOBAL_FSRS_PARAMS
+        .read()
+        .ok()
+        .map(|p| p.clone())
+        .unwrap_or_default()
 }
 
 // ── 可配置参数 ──
@@ -92,7 +96,8 @@ fn compute_next(
     desired_retention: f64,
 ) -> f64 {
     let fsrs = make_fsrs();
-    let next = fsrs.next_states(mem, desired_retention as f32, days_elapsed)
+    let next = fsrs
+        .next_states(mem, desired_retention as f32, days_elapsed)
         .expect("FSRS next_states 接收合法参数，不会失败");
     let chosen = match rating {
         1 => &next.again,
@@ -110,7 +115,8 @@ fn compute_next_with_state(
     desired_retention: f64,
 ) -> (f64, f64, f64) {
     let fsrs = make_fsrs();
-    let next = fsrs.next_states(mem, desired_retention as f32, days_elapsed)
+    let next = fsrs
+        .next_states(mem, desired_retention as f32, days_elapsed)
         .expect("FSRS next_states 接收合法参数，不会失败");
     let chosen = match rating {
         1 => &next.again,
@@ -179,8 +185,13 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> ReviewOutcome
     // ── 重学阶段 ──
     if state == Relearning {
         return relearn(
-            s_old, d_old, step_index.unwrap_or(0), rating, days_elapsed,
-            cumulative_step_days, config,
+            s_old,
+            d_old,
+            step_index.unwrap_or(0),
+            rating,
+            days_elapsed,
+            cumulative_step_days,
+            config,
         );
     }
 
@@ -198,7 +209,8 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> ReviewOutcome
         return match rating {
             1 => {
                 // Again：用 FSRS 更新状态，回到 step 0
-                let (s, d, _) = compute_next_with_state(mem, 1, days_elapsed, config.desired_retention);
+                let (s, d, _) =
+                    compute_next_with_state(mem, 1, days_elapsed, config.desired_retention);
                 ReviewOutcome {
                     state: Learning,
                     stability: s,
@@ -221,7 +233,10 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> ReviewOutcome
                 if next >= total_steps {
                     // 毕业 → Review：使用累积时间
                     let (s, d, secs) = compute_next_with_state(
-                        mem, rating, cumulative_step_days, config.desired_retention,
+                        mem,
+                        rating,
+                        cumulative_step_days,
+                        config.desired_retention,
                     );
                     let secs = secs.max(config.graduating_interval_secs as f64);
                     ReviewOutcome {
@@ -302,7 +317,10 @@ fn relearn(
             let next = step + 1;
             if next >= total_steps {
                 let (s, d, secs) = compute_next_with_state(
-                    mem, rating, cumulative_step_days, config.desired_retention,
+                    mem,
+                    rating,
+                    cumulative_step_days,
+                    config.desired_retention,
                 );
                 ReviewOutcome {
                     state: Review,
@@ -368,8 +386,10 @@ pub fn preview(
         let hard = steps[step.min(steps.len() - 1)] as f64;
         let next = step + 1;
         let (good, easy) = if next >= steps.len() {
-            (compute_next(mem, 3, days_elapsed, config.desired_retention),
-             compute_next(mem, 4, days_elapsed, config.desired_retention))
+            (
+                compute_next(mem, 3, days_elapsed, config.desired_retention),
+                compute_next(mem, 4, days_elapsed, config.desired_retention),
+            )
         } else {
             (steps[next] as f64, steps[next] as f64)
         };
@@ -383,7 +403,6 @@ pub fn preview(
         compute_next(mem, 4, days_elapsed, config.desired_retention),
     ]
 }
-
 
 #[cfg(test)]
 mod tests;

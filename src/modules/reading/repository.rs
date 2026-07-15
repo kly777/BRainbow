@@ -14,7 +14,12 @@ impl ReadingRepo {
 
     // ── 文章 CRUD ──
 
-    pub async fn insert_article(&self, title: &str, content: &str, word_count: i64) -> Result<i64, sqlx::Error> {
+    pub async fn insert_article(
+        &self,
+        title: &str,
+        content: &str,
+        word_count: i64,
+    ) -> Result<i64, sqlx::Error> {
         let result = sqlx::query(
             "INSERT INTO reading_article (title, content, word_count) VALUES (?, ?, ?)",
         )
@@ -26,7 +31,11 @@ impl ReadingRepo {
         Ok(result.last_insert_rowid())
     }
 
-    pub async fn insert_article_words(&self, article_id: i64, words: &[String]) -> Result<(), sqlx::Error> {
+    pub async fn insert_article_words(
+        &self,
+        article_id: i64,
+        words: &[String],
+    ) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         for word in words {
             sqlx::query(
@@ -93,7 +102,10 @@ impl ReadingRepo {
     }
 
     /// 获取文章每词的认识状态
-    pub async fn get_article_word_statuses(&self, article_id: i64) -> Result<Vec<ArticleWordStatus>, sqlx::Error> {
+    pub async fn get_article_word_statuses(
+        &self,
+        article_id: i64,
+    ) -> Result<Vec<ArticleWordStatus>, sqlx::Error> {
         let rows = sqlx::query_as::<_, (String, String)>(
             r#"
             SELECT w.word, COALESCE(uw.status, 'unknown') AS status
@@ -109,10 +121,7 @@ impl ReadingRepo {
 
         Ok(rows
             .into_iter()
-            .map(|(word, status)| ArticleWordStatus {
-                word,
-                status,
-            })
+            .map(|(word, status)| ArticleWordStatus { word, status })
             .collect())
     }
 
@@ -148,15 +157,20 @@ impl ReadingRepo {
         let mut summaries = Vec::with_capacity(articles.len());
 
         for article in articles {
-            let known_ratio = self.get_article_known_ratio(article.id).await.unwrap_or(0.0);
+            let known_ratio = self
+                .get_article_known_ratio(article.id)
+                .await
+                .unwrap_or(0.0);
 
-            let unknown_count = sqlx::query_as::<_, (i64,)>(r#"
+            let unknown_count = sqlx::query_as::<_, (i64,)>(
+                r#"
                 SELECT COUNT(*)
                 FROM reading_article_word w
                 LEFT JOIN reading_user_word uw ON uw.word = w.word
                 WHERE w.article_id = ?
                   AND (uw.status IS NULL OR uw.status = 'unknown')
-            "#)
+            "#,
+            )
             .bind(article.id)
             .fetch_one(&*self.pool)
             .await
@@ -179,13 +193,11 @@ impl ReadingRepo {
     // ── 笔记 ──
 
     pub async fn update_article_notes(&self, id: i64, notes: &str) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            "UPDATE reading_article SET notes = ? WHERE id = ?",
-        )
-        .bind(notes)
-        .bind(id)
-        .execute(&*self.pool)
-        .await?;
+        sqlx::query("UPDATE reading_article SET notes = ? WHERE id = ?")
+            .bind(notes)
+            .bind(id)
+            .execute(&*self.pool)
+            .await?;
         Ok(())
     }
 
@@ -254,12 +266,14 @@ impl ReadingRepo {
         .await
         .map(|rows| {
             rows.into_iter()
-                .map(|(word, unknown_count, known_count, first_seen_at)| UnknownWord {
-                    word,
-                    unknown_count,
-                    known_count,
-                    first_seen_at,
-                })
+                .map(
+                    |(word, unknown_count, known_count, first_seen_at)| UnknownWord {
+                        word,
+                        unknown_count,
+                        known_count,
+                        first_seen_at,
+                    },
+                )
                 .collect()
         })
     }
@@ -349,10 +363,16 @@ mod tests {
         let word_count = words.len() as i64;
         let unique: Vec<String> = {
             let mut seen = std::collections::HashSet::new();
-            words.into_iter().filter(|w| seen.insert(w.clone())).collect()
+            words
+                .into_iter()
+                .filter(|w| seen.insert(w.clone()))
+                .collect()
         };
 
-        let id = repo.insert_article(title, content, word_count).await.unwrap();
+        let id = repo
+            .insert_article(title, content, word_count)
+            .await
+            .unwrap();
         repo.insert_article_words(id, &unique).await.unwrap();
         id
     }
@@ -364,7 +384,11 @@ mod tests {
         let repo = setup_db().await;
         let id = insert_article(&repo, "Test Title", "hello world").await;
 
-        let article = repo.get_article(id).await.unwrap().expect("article should exist");
+        let article = repo
+            .get_article(id)
+            .await
+            .unwrap()
+            .expect("article should exist");
         assert_eq!(article.title, "Test Title");
         assert_eq!(article.content, "hello world");
         assert_eq!(article.word_count, 2);
@@ -485,7 +509,10 @@ mod tests {
         repo.upsert_user_word("hello", "known").await.unwrap();
 
         let words = repo.get_unknown_words().await.unwrap();
-        assert!(words.is_empty(), "switched to known, should not appear in unknown");
+        assert!(
+            words.is_empty(),
+            "switched to known, should not appear in unknown"
+        );
 
         let row = sqlx::query_as::<_, (String, i64, i64)>(
             "SELECT status, unknown_count, known_count FROM reading_user_word WHERE word = ?",
@@ -528,7 +555,10 @@ mod tests {
         // ratio: only bob counts as known, alice excluded, charlie and dave unknown
         // total after exclusion: 3 (bob, charlie, dave), known: 1 (bob)
         let ratio = repo.get_article_known_ratio(id).await.unwrap();
-        assert!((ratio - 1.0 / 3.0).abs() < 0.001, "ignored should be excluded from total");
+        assert!(
+            (ratio - 1.0 / 3.0).abs() < 0.001,
+            "ignored should be excluded from total"
+        );
 
         // status should reflect 'ignored'
         let statuses = repo.get_article_word_statuses(id).await.unwrap();

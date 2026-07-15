@@ -111,18 +111,27 @@ impl MediaService {
         user_id: Option<i64>,
     ) -> Result<Media, ServiceError> {
         // 1. MIME 真实校验
-        let real_mime = Self::detect_mime(data).ok_or_else(|| ServiceError::InvalidInput("无法识别文件类型".into()))?;
+        let real_mime = Self::detect_mime(data)
+            .ok_or_else(|| ServiceError::InvalidInput("无法识别文件类型".into()))?;
 
         if real_mime != client_mime {
-            return Err(ServiceError::InvalidInput(format!("文件类型不符：声明 {}, 实际 {}", client_mime, real_mime)));
+            return Err(ServiceError::InvalidInput(format!(
+                "文件类型不符：声明 {}, 实际 {}",
+                client_mime, real_mime
+            )));
         }
 
-        let (media_type_str, max_size) =
-            find_allowed(&real_mime).ok_or_else(|| ServiceError::InvalidInput(format!("不支持的文件类型: {}", real_mime)))?;
+        let (media_type_str, max_size) = find_allowed(&real_mime).ok_or_else(|| {
+            ServiceError::InvalidInput(format!("不支持的文件类型: {}", real_mime))
+        })?;
 
         // 2. 大小校验
         if data.len() as u64 > max_size {
-            return Err(ServiceError::InvalidInput(format!("文件过大: {} 字节, 最大允许 {} 字节", data.len(), max_size)));
+            return Err(ServiceError::InvalidInput(format!(
+                "文件过大: {} 字节, 最大允许 {} 字节",
+                data.len(),
+                max_size
+            )));
         }
 
         let safe_name = sanitize_name(original_name);

@@ -306,11 +306,9 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .await?;
 
     // 创建索引
-    sqlx::query(
-        "CREATE INDEX IF NOT EXISTS idx_revlog_mem_id ON revlog(mem_id)"
-    )
-    .execute(pool)
-    .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_revlog_mem_id ON revlog(mem_id)")
+        .execute(pool)
+        .await?;
 
     // ── 标签系统 (mem) ──
 
@@ -452,11 +450,9 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .await?;
 
     // 迁移：为已有数据库添加 notes 列
-    let _ = sqlx::query(
-        "ALTER TABLE reading_article ADD COLUMN notes TEXT NOT NULL DEFAULT ''"
-    )
-    .execute(pool)
-    .await;
+    let _ = sqlx::query("ALTER TABLE reading_article ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+        .execute(pool)
+        .await;
 
-   Ok(())
+    Ok(())
 }

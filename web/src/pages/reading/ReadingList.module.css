@@ -133,7 +133,9 @@
 	background: var(--color-surface);
 	text-decoration: none;
 	color: inherit;
-	transition: border-color 0.15s, box-shadow 0.15s;
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s;
 }
 .card:hover {
 	border-color: var(--color-accent, #3b82f6);

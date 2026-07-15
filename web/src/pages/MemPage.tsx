@@ -1,5 +1,13 @@
 import { A, useSearchParams } from "@solidjs/router";
-import { createMemo, createResource, createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import {
+	createMemo,
+	createResource,
+	createSignal,
+	For,
+	onCleanup,
+	onMount,
+	Show,
+} from "solid-js";
 import {
 	buryMemE,
 	editMemE,
@@ -46,7 +54,9 @@ export default function MemPage() {
 	// ── URL 持久化的标签过滤 ──
 	const tagFilterIds = () => {
 		const v = searchParams.tag_ids;
-		return typeof v === "string" ? v.split(",").filter(Boolean).map(Number) : [];
+		return typeof v === "string"
+			? v.split(",").filter(Boolean).map(Number)
+			: [];
 	};
 	const tagMode = (): "include" | "exclude" =>
 		searchParams.tag_mode === "exclude" ? "exclude" : "include";
@@ -67,14 +77,15 @@ export default function MemPage() {
 
 	const tagSuggestions = () =>
 		(tagQuery().trim()
-			? (tagSearchResults() ?? []).filter(
-					(t) => !tagFilterIds().includes(t.id),
-				)
+			? (tagSearchResults() ?? []).filter((t) => !tagFilterIds().includes(t.id))
 			: []) as TagInfo[];
 
 	const addTagFilter = (tag: TagInfo) => {
 		const next = [...tagFilterIds(), tag.id];
-		setSearchParams({ tag_ids: next.join(","), tag_mode: searchParams.tag_mode });
+		setSearchParams({
+			tag_ids: next.join(","),
+			tag_mode: searchParams.tag_mode,
+		});
 		setTagQuery("");
 		setTagOpen(false);
 		setTimeout(loadDue, 0);
@@ -442,7 +453,9 @@ export default function MemPage() {
 							type="button"
 							class={styles.tagModeBtn}
 							onClick={toggleTagMode}
-							title={tagMode() === "include" ? "切换为排除模式" : "切换为包含模式"}
+							title={
+								tagMode() === "include" ? "切换为排除模式" : "切换为包含模式"
+							}
 						>
 							{tagMode() === "include" ? "☐ 包含" : "☒ 排除"}
 						</button>
@@ -566,7 +579,9 @@ export default function MemPage() {
 												class={styles.copyBtn}
 												title="复制线索"
 												onClick={() => {
-													navigator.clipboard.writeText(item()?.cue.content ?? "");
+													navigator.clipboard.writeText(
+														item()?.cue.content ?? "",
+													);
 												}}
 											>
 												📋

@@ -234,10 +234,7 @@ describe("parseImportFile", () => {
 	});
 
 	it("parses CSV with quoted comma in field", () => {
-		const result = parseImportFile(
-			'cue,target,tags\n"a,b",c,t1',
-			"data.csv",
-		);
+		const result = parseImportFile('cue,target,tags\n"a,b",c,t1', "data.csv");
 		expect(result).toEqual([{ cue: "a,b", target: "c", tags: ["t1"] }]);
 	});
 
@@ -246,9 +243,7 @@ describe("parseImportFile", () => {
 			"cue|target|tags\na|b|t1\n|d|t2\ne||t3",
 			"data.psv",
 		);
-		expect(result).toEqual([
-			{ cue: "a", target: "b", tags: ["t1"] },
-		]);
+		expect(result).toEqual([{ cue: "a", target: "b", tags: ["t1"] }]);
 	});
 
 	it("returns empty array for empty CSV", () => {
@@ -256,10 +251,7 @@ describe("parseImportFile", () => {
 	});
 
 	it("handles tags separated by semicolons and commas", () => {
-		const result = parseImportFile(
-			"cue|target|tags\na|b|t1,t2;t3",
-			"data.psv",
-		);
+		const result = parseImportFile("cue|target|tags\na|b|t1,t2;t3", "data.psv");
 		expect(result).toEqual([
 			{ cue: "a", target: "b", tags: ["t1", "t2", "t3"] },
 		]);
@@ -268,18 +260,12 @@ describe("parseImportFile", () => {
 	// ── 文件名大小写 ──
 
 	it("handles uppercase .JSON extension", () => {
-		const result = parseImportFile(
-			'[{"cue":"a","target":"b"}]',
-			"DATA.JSON",
-		);
+		const result = parseImportFile('[{"cue":"a","target":"b"}]', "DATA.JSON");
 		expect(result).toEqual([{ cue: "a", target: "b", tags: [] }]);
 	});
 
 	it("handles .PSV extension", () => {
-		const result = parseImportFile(
-			"cue|target|tags\na|b|t1",
-			"export.PSV",
-		);
+		const result = parseImportFile("cue|target|tags\na|b|t1", "export.PSV");
 		expect(result).toEqual([{ cue: "a", target: "b", tags: ["t1"] }]);
 	});
 });

@@ -376,9 +376,8 @@ impl TimeWindowRepository {
         end_time: DateTime<Utc>,
         exclude_id: Option<i32>,
     ) -> Result<bool, sqlx::Error> {
-        let mut builder = QueryBuilder::new(
-            "SELECT COUNT(*) as count FROM time_window WHERE task_id = ",
-        );
+        let mut builder =
+            QueryBuilder::new("SELECT COUNT(*) as count FROM time_window WHERE task_id = ");
         builder.push_bind(task_id);
         builder.push(" AND (start_time < ");
         builder.push_bind(end_time);

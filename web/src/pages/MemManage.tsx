@@ -24,7 +24,9 @@ import MemBatchBar from "../components/mem/MemBatchBar.tsx";
 import MemBatchTagModal from "../components/mem/MemBatchTagModal.tsx";
 import MemDetailPanel from "../components/mem/MemDetailPanel.tsx";
 import MemExportModal from "../components/mem/MemExportModal.tsx";
-import MemManageToolbar, { type TagMode } from "../components/mem/MemManageToolbar.tsx";
+import MemManageToolbar, {
+	type TagMode,
+} from "../components/mem/MemManageToolbar.tsx";
 import MemTable from "../components/mem/MemTable.tsx";
 import styles from "./MemManage.module.css";
 
@@ -138,7 +140,9 @@ export default function MemManage() {
 	// ── URL 持久化的标签过滤 ──
 	const tagFilterIds = () => {
 		const v = searchParams.tag_ids;
-		return typeof v === "string" ? v.split(",").filter(Boolean).map(Number) : [];
+		return typeof v === "string"
+			? v.split(",").filter(Boolean).map(Number)
+			: [];
 	};
 	const tagMode = (): TagMode =>
 		searchParams.tag_mode === "exclude" ? "exclude" : "include";
@@ -232,7 +236,13 @@ export default function MemManage() {
 	// URL 参数变化时重新加载（含浏览器前进/后退）
 	createEffect(() => {
 		// 读取 URL 派生值来追踪依赖
-		void (searchQuery(), filterState(), sortField(), sortDir(), page(), tagFilters(), tagMode());
+		void (searchQuery(),
+		filterState(),
+		sortField(),
+		sortDir(),
+		page(),
+		tagFilters(),
+		tagMode());
 		if (!initialLoadDone) return;
 		load();
 	});
@@ -463,7 +473,10 @@ export default function MemManage() {
 				onTagFiltersChange={setTagFilters}
 			/>
 
-			<div class={styles.split} classList={{ [styles.detailActive]: detailId() !== null }}>
+			<div
+				class={styles.split}
+				classList={{ [styles.detailActive]: detailId() !== null }}
+			>
 				<div class={styles.tableWrap}>
 					<MemBatchBar
 						selectedCount={batchIds().size}

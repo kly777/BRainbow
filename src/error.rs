@@ -29,7 +29,15 @@ pub struct ErrorBody {
 
 fn resp(status: StatusCode, message: impl Into<String>) -> Response {
     let code = status.canonical_reason().unwrap_or("Unknown").to_string();
-    (status, axum::Json(ErrorBody { code, message: message.into(), details: None })).into_response()
+    (
+        status,
+        axum::Json(ErrorBody {
+            code,
+            message: message.into(),
+            details: None,
+        }),
+    )
+        .into_response()
 }
 
 /// 400
@@ -59,7 +67,10 @@ pub fn unauthorized(message: impl Into<String>) -> Response {
 
 /// 500，自动拼 "{operation}失败: {error}"
 pub fn internal(e: impl std::fmt::Display, operation: &str) -> Response {
-    resp(StatusCode::INTERNAL_SERVER_ERROR, format!("{}失败: {}", operation, e))
+    resp(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        format!("{}失败: {}", operation, e),
+    )
 }
 
 /// 400，自动拼 "{operation}失败: {error}"
@@ -95,7 +106,10 @@ impl ServiceError {
             Self::NotFound(msg) => resp(StatusCode::NOT_FOUND, msg),
             Self::AlreadyExists(msg) => resp(StatusCode::CONFLICT, msg),
             Self::Internal(msg) => resp(StatusCode::INTERNAL_SERVER_ERROR, msg),
-            Self::Db(e) => resp(StatusCode::INTERNAL_SERVER_ERROR, format!("数据库操作失败: {}", e)),
+            Self::Db(e) => resp(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("数据库操作失败: {}", e),
+            ),
         }
     }
 }

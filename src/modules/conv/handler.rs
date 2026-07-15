@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
 use axum::{
-    Json,
+    Json, Router,
     extract::{Path, Query, State},
     response::IntoResponse,
-    Router,
     routing::get,
 };
 
@@ -65,30 +64,41 @@ pub async fn conv_detail_handler(
     let qa_pairs: Vec<(i32, String, String)> = if article_only {
         Vec::new()
     } else {
-        sqlx::query_as(
-            "SELECT qa_id, question, answer FROM conv WHERE conv_id = ?1 ORDER BY qa_id",
-        )
-        .bind(id)
-        .fetch_all(pool)
-        .await
-        .unwrap_or_default()
+        sqlx::query_as("SELECT qa_id, question, answer FROM conv WHERE conv_id = ?1 ORDER BY qa_id")
+            .bind(id)
+            .fetch_all(pool)
+            .await
+            .unwrap_or_default()
     };
 
-    let articles: Vec<(String, String, String)> = sqlx::query_as(
-        "SELECT article_type, title, content FROM articles WHERE conv_id = ?1",
-    )
-    .bind(id)
-    .fetch_all(pool)
-    .await
-    .unwrap_or_default();
+    let articles: Vec<(String, String, String)> =
+        sqlx::query_as("SELECT article_type, title, content FROM articles WHERE conv_id = ?1")
+            .bind(id)
+            .fetch_all(pool)
+            .await
+            .unwrap_or_default();
 
     Json(ConvDetail {
         conv_id: id,
         title,
         conv_type,
         created_at,
-        qa_pairs: qa_pairs.into_iter().map(|(id, q, a)| QaPair { qa_id: id, question: q, answer: a }).collect(),
-        articles: articles.into_iter().map(|(t, title, c)| ArticleItem { article_type: t, title, content: c }).collect(),
+        qa_pairs: qa_pairs
+            .into_iter()
+            .map(|(id, q, a)| QaPair {
+                qa_id: id,
+                question: q,
+                answer: a,
+            })
+            .collect(),
+        articles: articles
+            .into_iter()
+            .map(|(t, title, c)| ArticleItem {
+                article_type: t,
+                title,
+                content: c,
+            })
+            .collect(),
     })
     .into_response()
 }
@@ -154,15 +164,13 @@ pub async fn conv_concept_handler(
     .unwrap_or(None);
 
     match article {
-        Some((atype, title, content)) => {
-            Json(serde_json::json!({
-                "conv_id": id,
-                "article_type": atype,
-                "title": title,
-                "content": content,
-            }))
-            .into_response()
-        }
+        Some((atype, title, content)) => Json(serde_json::json!({
+            "conv_id": id,
+            "article_type": atype,
+            "title": title,
+            "content": content,
+        }))
+        .into_response(),
         None => error::not_found("文章不存在"),
     }
 }

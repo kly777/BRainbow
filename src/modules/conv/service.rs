@@ -1,9 +1,8 @@
 use sqlx::SqlitePool;
 
-use crate::error::ServiceError;
 use super::model::SearchResponse;
 use super::scoring;
-
+use crate::error::ServiceError;
 
 async fn compute_idf(pool: &SqlitePool, kw: &str) -> f64 {
     let pattern = format!("%{}%", kw);
@@ -42,7 +41,10 @@ pub async fn search_conv(
 
     let keywords: Vec<&str> = q.split_whitespace().filter(|k| !k.is_empty()).collect();
     if keywords.is_empty() {
-        return Ok(SearchResponse { hits: vec![], total: 0 });
+        return Ok(SearchResponse {
+            hits: vec![],
+            total: 0,
+        });
     }
 
     let mut raw_hits: Vec<RawHit> = Vec::new();
@@ -58,10 +60,16 @@ pub async fn search_conv(
                 let occ = scoring::count_occurrences(&title, kw);
                 let len = title.len();
                 raw_hits.push(RawHit {
-                    conv_id: cid, title: title.clone(), conv_type: ctype,
-                    match_field: "title".into(), snippet: title,
-                    created_at: created, source_len: len,
-                    keyword_index: ki, ocurrences: occ, article_title: None,
+                    conv_id: cid,
+                    title: title.clone(),
+                    conv_type: ctype,
+                    match_field: "title".into(),
+                    snippet: title,
+                    created_at: created,
+                    source_len: len,
+                    keyword_index: ki,
+                    ocurrences: occ,
+                    article_title: None,
                 });
             }
         }
@@ -77,12 +85,22 @@ pub async fn search_conv(
             for (cid, title, ctype, created, question, answer) in rows {
                 let text = format!("{} {}", question, answer);
                 let occ = scoring::count_occurrences(&text, kw);
-                let snippet = if question.contains(kw) { question } else { answer };
+                let snippet = if question.contains(kw) {
+                    question
+                } else {
+                    answer
+                };
                 raw_hits.push(RawHit {
-                    conv_id: cid, title, conv_type: ctype,
-                    match_field: "qa".into(), snippet,
-                    created_at: created, source_len: text.len(),
-                    keyword_index: ki, ocurrences: occ, article_title: None,
+                    conv_id: cid,
+                    title,
+                    conv_type: ctype,
+                    match_field: "qa".into(),
+                    snippet,
+                    created_at: created,
+                    source_len: text.len(),
+                    keyword_index: ki,
+                    ocurrences: occ,
+                    article_title: None,
                 });
             }
         }
@@ -99,10 +117,16 @@ pub async fn search_conv(
                 let text = format!("{} {}", art_title, content);
                 let occ = scoring::count_occurrences(&text, kw);
                 raw_hits.push(RawHit {
-                    conv_id: cid, title: art_title.clone(), conv_type: atype,
-                    match_field: "article".into(), snippet: content,
-                    created_at: created, source_len: text.len(),
-                    keyword_index: ki, ocurrences: occ, article_title: Some(art_title),
+                    conv_id: cid,
+                    title: art_title.clone(),
+                    conv_type: atype,
+                    match_field: "article".into(),
+                    snippet: content,
+                    created_at: created,
+                    source_len: text.len(),
+                    keyword_index: ki,
+                    ocurrences: occ,
+                    article_title: Some(art_title),
                 });
             }
         }
@@ -139,7 +163,7 @@ mod tests {
                 title TEXT,
                 conv_type TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )"
+            )",
         )
         .execute(&pool)
         .await
@@ -151,7 +175,7 @@ mod tests {
                 qa_id INTEGER,
                 question TEXT,
                 answer TEXT
-            )"
+            )",
         )
         .execute(&pool)
         .await
@@ -165,7 +189,7 @@ mod tests {
                 title TEXT,
                 content TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )"
+            )",
         )
         .execute(&pool)
         .await
@@ -219,15 +243,20 @@ mod tests {
         let pool = setup_test_db().await;
         // "中间件"只在文章中出现
         let res_all = search_conv(&pool, "中间件", 20, 0, "all").await.unwrap();
-        assert!(res_all.hits.iter().any(|h| h.match_field == "article"), "全部模式下应有文章匹配");
+        assert!(
+            res_all.hits.iter().any(|h| h.match_field == "article"),
+            "全部模式下应有文章匹配"
+        );
 
         let res_conv = search_conv(&pool, "中间件", 20, 0, "conv").await.unwrap();
         assert!(res_conv.hits.is_empty(), "conv 模式下不应有文章匹配");
 
         // "Go" 在对话和文章中都有
         let res_article = search_conv(&pool, "Go", 20, 0, "article").await.unwrap();
-        assert!(res_article.hits.iter().all(|h| h.match_field == "article"),
-            "article 模式应只返回文章");
+        assert!(
+            res_article.hits.iter().all(|h| h.match_field == "article"),
+            "article 模式应只返回文章"
+        );
     }
 
     #[tokio::test]
@@ -237,7 +266,10 @@ mod tests {
         eprintln!("\n── search_title_match 'Go' ──");
         eprintln!("  总命中: {}", res.hits.len());
         for h in &res.hits {
-            eprintln!("  [{:6}] score={:4} title={}", h.match_field, h.score, h.title);
+            eprintln!(
+                "  [{:6}] score={:4} title={}",
+                h.match_field, h.score, h.title
+            );
         }
         assert!(res.hits.len() > 0, "至少应有一条命中");
     }
@@ -247,8 +279,11 @@ mod tests {
         let pool = setup_test_db().await;
         let res = search_conv(&pool, "Go", 20, 0, "all").await.unwrap();
         eprintln!("\n── search_qa_match 'Go' ──");
-        eprintln!("  总命中: {}  QA命中: {}", res.hits.len(),
-            res.hits.iter().filter(|h| h.match_field == "qa").count());
+        eprintln!(
+            "  总命中: {}  QA命中: {}",
+            res.hits.len(),
+            res.hits.iter().filter(|h| h.match_field == "qa").count()
+        );
         for h in &res.hits {
             eprintln!("  [{:6}] title={}", h.match_field, h.title);
         }
@@ -258,7 +293,9 @@ mod tests {
     #[tokio::test]
     async fn search_no_match() {
         let pool = setup_test_db().await;
-        let res = search_conv(&pool, "xyznonexistent", 20, 0, "all").await.unwrap();
+        let res = search_conv(&pool, "xyznonexistent", 20, 0, "all")
+            .await
+            .unwrap();
         assert!(res.hits.is_empty(), "不应有匹配");
         assert_eq!(res.total, 0);
     }
@@ -269,9 +306,15 @@ mod tests {
         let res = search_conv(&pool, "Bash", 20, 0, "all").await.unwrap();
         let conv5_hits: Vec<_> = res.hits.iter().filter(|h| h.conv_id == 5).collect();
         eprintln!("\n── search_multi_title_same_conv 'Bash' ──");
-        eprintln!("  conv 5 命中数: {} (FTS5 去重后每 conv 最多 1 条)", conv5_hits.len());
+        eprintln!(
+            "  conv 5 命中数: {} (FTS5 去重后每 conv 最多 1 条)",
+            conv5_hits.len()
+        );
         for h in &conv5_hits {
-            eprintln!("  [{:6}] title={}  snippet={:.40}", h.match_field, h.title, h.snippet);
+            eprintln!(
+                "  [{:6}] title={}  snippet={:.40}",
+                h.match_field, h.title, h.snippet
+            );
         }
         // 注：bundled SQLite tokenizer 对短英文词可能不索引，生产环境正常
     }
@@ -280,7 +323,11 @@ mod tests {
     async fn search_article_match() {
         let pool = setup_test_db().await;
         let res = search_conv(&pool, "中间件", 20, 0, "all").await.unwrap();
-        let art_hits: Vec<_> = res.hits.iter().filter(|h| h.match_field == "article").collect();
+        let art_hits: Vec<_> = res
+            .hits
+            .iter()
+            .filter(|h| h.match_field == "article")
+            .collect();
         assert!(!art_hits.is_empty(), "应有文章匹配");
     }
 
@@ -293,7 +340,9 @@ mod tests {
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO conv (conv_id, qa_id, question, answer) VALUES (99, 0, ?, 'ok')")
             .bind(&long_q)
-            .execute(&pool).await.unwrap();
+            .execute(&pool)
+            .await
+            .unwrap();
 
         let res = search_conv(&pool, "测试内容", 20, 0, "all").await.unwrap();
         eprintln!("\n── search_truncate_utf8 '测试内容' ──");

@@ -131,10 +131,7 @@ pub async fn search_tags(
     }
 }
 
-pub async fn get_mem_tags(
-    State(state): State<AppState>,
-    Path(id): Path<i32>,
-) -> impl IntoResponse {
+pub async fn get_mem_tags(State(state): State<AppState>, Path(id): Path<i32>) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
     match svc.get_mem_tags(id).await {
         Ok(tags) => Json(tags).into_response(),
@@ -158,7 +155,10 @@ pub async fn remove_mem_tag(
     Json(payload): Json<TagMemRequest>,
 ) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
-    match svc.remove_tag_from_mem(payload.mem_id, payload.tag_id).await {
+    match svc
+        .remove_tag_from_mem(payload.mem_id, payload.tag_id)
+        .await
+    {
         Ok(()) => ok(),
         Err(e) => err(e, "移除标签"),
     }
@@ -197,7 +197,10 @@ pub async fn batch_add_tag(
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
     let svc = MemService::new(state.db.clone());
-    Json(svc.batch_add_tag_to_mems(&payload.items, payload.tag_id).await)
+    Json(
+        svc.batch_add_tag_to_mems(&payload.items, payload.tag_id)
+            .await,
+    )
 }
 
 pub async fn batch_remove_tag(
@@ -206,7 +209,10 @@ pub async fn batch_remove_tag(
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
     let svc = MemService::new(state.db.clone());
-    Json(svc.batch_remove_tag_from_mems(&payload.items, payload.tag_id).await)
+    Json(
+        svc.batch_remove_tag_from_mems(&payload.items, payload.tag_id)
+            .await,
+    )
 }
 
 pub async fn batch_get_mems_tags(
@@ -234,10 +240,13 @@ pub async fn export_csv(
     let svc = MemService::new(state.db.clone());
     match svc.export_csv(&tag_ids).await {
         Ok(psv) => (
-            [("Content-Type", "text/tab-separated-values; charset=utf-8"),
-             ("Content-Disposition", "attachment; filename=\"mems.psv\"")],
+            [
+                ("Content-Type", "text/tab-separated-values; charset=utf-8"),
+                ("Content-Disposition", "attachment; filename=\"mems.psv\""),
+            ],
             psv,
-        ).into_response(),
+        )
+            .into_response(),
         Err(e) => err(e, "导出 PSV"),
     }
 }
@@ -255,11 +264,15 @@ pub async fn import_csv(
     Json(payload): Json<ImportCsvPayload>,
 ) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
-    match svc.import_csv(&payload.csv, claims.sub, &payload.default_tags).await {
+    match svc
+        .import_csv(&payload.csv, claims.sub, &payload.default_tags)
+        .await
+    {
         Ok((count, errors)) => Json(serde_json::json!({
             "imported": count,
             "errors": errors,
-        })).into_response(),
+        }))
+        .into_response(),
         Err(e) => err(e, "导入 CSV"),
     }
 }
@@ -270,11 +283,15 @@ pub async fn import_psv(
     Json(payload): Json<ImportCsvPayload>,
 ) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
-    match svc.import_psv(&payload.csv, claims.sub, &payload.default_tags).await {
+    match svc
+        .import_psv(&payload.csv, claims.sub, &payload.default_tags)
+        .await
+    {
         Ok((count, errors)) => Json(serde_json::json!({
             "imported": count,
             "errors": errors,
-        })).into_response(),
+        }))
+        .into_response(),
         Err(e) => err(e, "导入 PSV"),
     }
 }
@@ -292,11 +309,15 @@ pub async fn import_json(
     Json(payload): Json<ImportJsonPayload>,
 ) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
-    match svc.import_json(&payload.mems, claims.sub, &payload.default_tags).await {
+    match svc
+        .import_json(&payload.mems, claims.sub, &payload.default_tags)
+        .await
+    {
         Ok((count, errors)) => Json(serde_json::json!({
             "imported": count,
             "errors": errors,
-        })).into_response(),
+        }))
+        .into_response(),
         Err(e) => err(e, "导入 JSON"),
     }
 }
@@ -307,7 +328,10 @@ pub async fn batch_set_tags(
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
     let svc = MemService::new(state.db.clone());
-    Json(svc.batch_set_tags_for_mems(&payload.items, &payload.tag_ids).await)
+    Json(
+        svc.batch_set_tags_for_mems(&payload.items, &payload.tag_ids)
+            .await,
+    )
 }
 
 pub async fn get_due(
@@ -404,7 +428,10 @@ pub async fn suspend_mem(Path(id): Path<i32>, State(state): State<AppState>) -> 
     }
 }
 
-pub async fn unsuspend_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
+pub async fn unsuspend_mem(
+    Path(id): Path<i32>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
     let svc = MemService::new(state.db.clone());
     match svc.unsuspend(id).await {
         Ok(()) => ok(),

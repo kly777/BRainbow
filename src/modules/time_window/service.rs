@@ -186,9 +186,18 @@ mod tests {
     #[test]
     fn time_window_type_from_str() {
         use crate::modules::time_window::model::TimeWindowType;
-        assert_eq!("feasible".parse::<TimeWindowType>().unwrap(), TimeWindowType::Feasible);
-        assert_eq!("planned".parse::<TimeWindowType>().unwrap(), TimeWindowType::Planned);
-        assert_eq!("actual".parse::<TimeWindowType>().unwrap(), TimeWindowType::Actual);
+        assert_eq!(
+            "feasible".parse::<TimeWindowType>().unwrap(),
+            TimeWindowType::Feasible
+        );
+        assert_eq!(
+            "planned".parse::<TimeWindowType>().unwrap(),
+            TimeWindowType::Planned
+        );
+        assert_eq!(
+            "actual".parse::<TimeWindowType>().unwrap(),
+            TimeWindowType::Actual
+        );
         assert!("invalid".parse::<TimeWindowType>().is_err());
     }
 }

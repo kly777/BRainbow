@@ -127,12 +127,14 @@ impl CardRepository {
             count_builder.push("content LIKE ");
             count_builder.push_bind(format!("%{}%", kw));
         }
-        let total: i64 = count_builder.build_query_scalar().fetch_one(&*self.db).await?;
+        let total: i64 = count_builder
+            .build_query_scalar()
+            .fetch_one(&*self.db)
+            .await?;
 
         // ── Fetch ──
-        let mut fetch_builder = QueryBuilder::new(
-            "SELECT id, content, created_at, updated_at FROM card WHERE ",
-        );
+        let mut fetch_builder =
+            QueryBuilder::new("SELECT id, content, created_at, updated_at FROM card WHERE ");
         for (i, kw) in keywords.iter().enumerate() {
             if i > 0 {
                 fetch_builder.push(" OR ");
@@ -183,7 +185,7 @@ mod tests {
                 content TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
-            )"
+            )",
         )
         .execute(&pool)
         .await
@@ -258,7 +260,10 @@ mod tests {
         let repo = setup_db().await;
         let card = repo.create("旧内容".to_string()).await.unwrap();
 
-        let updated = repo.update(card.id, Some("新内容".to_string())).await.unwrap();
+        let updated = repo
+            .update(card.id, Some("新内容".to_string()))
+            .await
+            .unwrap();
         assert_eq!(updated.content, "新内容");
         assert_eq!(updated.id, card.id);
         // updated_at 应该更新
@@ -325,13 +330,14 @@ mod tests {
         repo.create("go开发".to_string()).await.unwrap();
         repo.create("rust入门".to_string()).await.unwrap();
 
-        let (items, total) = repo.search_by_content_paginated("rust", 10, 0).await.unwrap();
+        let (items, total) = repo
+            .search_by_content_paginated("rust", 10, 0)
+            .await
+            .unwrap();
         assert_eq!(total, 2);
         // 匹配得分高的在前："rust入门" 和 "rust学习" 都含 rust，得分相同
         // 按 updated_at DESC，后创建的在前面
-        assert!(
-            items[0].content.contains("rust") && items[1].content.contains("rust")
-        );
+        assert!(items[0].content.contains("rust") && items[1].content.contains("rust"));
     }
 
     #[tokio::test]
@@ -357,7 +363,10 @@ mod tests {
         let repo = setup_db().await;
         repo.create("rust".to_string()).await.unwrap();
 
-        let (items, total) = repo.search_by_content_paginated("nonexistent", 10, 0).await.unwrap();
+        let (items, total) = repo
+            .search_by_content_paginated("nonexistent", 10, 0)
+            .await
+            .unwrap();
         assert_eq!(total, 0);
         assert!(items.is_empty());
     }
@@ -370,7 +379,10 @@ mod tests {
             repo.create(format!("rust_{i}")).await.unwrap();
         }
 
-        let (items, total) = repo.search_by_content_paginated("rust", 3, 5).await.unwrap();
+        let (items, total) = repo
+            .search_by_content_paginated("rust", 3, 5)
+            .await
+            .unwrap();
         assert_eq!(total, 10);
         assert_eq!(items.len(), 3);
     }

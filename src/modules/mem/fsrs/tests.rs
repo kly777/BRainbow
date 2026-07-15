@@ -22,7 +22,15 @@ fn schedule_secs(
     let now = Utc::now();
     let config = test_config();
     let outcome = schedule(
-        ScheduleInput { s_old, d_old, state, step_index, rating, days_elapsed, cumulative_step_days: 0 },
+        ScheduleInput {
+            s_old,
+            d_old,
+            state,
+            step_index,
+            rating,
+            days_elapsed,
+            cumulative_step_days: 0,
+        },
         &config,
     );
     let due = chrono::DateTime::parse_from_rfc3339(&outcome.due_at)
@@ -62,8 +70,14 @@ fn intervals_are_ordered_for_review_card() {
         .map(|r| schedule_secs(5.0, 5.0, CardState::Review, None, r, 3))
         .collect();
     for i in 0..3 {
-        assert!(intervals[i] < intervals[i + 1],
-            "{} ({:.0}s) < {} ({:.0}s)", rating_name(i as u8 + 1), intervals[i], rating_name(i as u8 + 2), intervals[i + 1]);
+        assert!(
+            intervals[i] < intervals[i + 1],
+            "{} ({:.0}s) < {} ({:.0}s)",
+            rating_name(i as u8 + 1),
+            intervals[i],
+            rating_name(i as u8 + 2),
+            intervals[i + 1]
+        );
     }
 }
 
@@ -100,18 +114,35 @@ fn good_grows_faster_than_hard() {
         // 5 次 Review（用相同初始 S/D）
         for _ in 0..5 {
             let o = schedule(
-                ScheduleInput { s_old: s, d_old: d, state: CardState::Review, step_index: None, rating, days_elapsed: 3, cumulative_step_days: 0 },
+                ScheduleInput {
+                    s_old: s,
+                    d_old: d,
+                    state: CardState::Review,
+                    step_index: None,
+                    rating,
+                    days_elapsed: 3,
+                    cumulative_step_days: 0,
+                },
                 &config,
             );
-            s = o.stability; d = o.difficulty;
+            s = o.stability;
+            d = o.difficulty;
         }
         results.push((rating, s));
     }
     // Easy > Good > Hard
-    assert!(results[0].1 < results[1].1,
-        "Hard S={:.2} < Good S={:.2}", results[0].1, results[1].1);
-    assert!(results[1].1 < results[2].1,
-        "Good S={:.2} < Easy S={:.2}", results[1].1, results[2].1);
+    assert!(
+        results[0].1 < results[1].1,
+        "Hard S={:.2} < Good S={:.2}",
+        results[0].1,
+        results[1].1
+    );
+    assert!(
+        results[1].1 < results[2].1,
+        "Good S={:.2} < Easy S={:.2}",
+        results[1].1,
+        results[2].1
+    );
 }
 
 // ── 4. Relearning ──
@@ -120,7 +151,15 @@ fn good_grows_faster_than_hard() {
 fn forget_in_review_triggers_relearning() {
     let config = test_config();
     let outcome = schedule(
-        ScheduleInput { s_old: 5.0, d_old: 5.0, state: CardState::Review, step_index: None, rating: 1, days_elapsed: 5, cumulative_step_days: 0 },
+        ScheduleInput {
+            s_old: 5.0,
+            d_old: 5.0,
+            state: CardState::Review,
+            step_index: None,
+            rating: 1,
+            days_elapsed: 5,
+            cumulative_step_days: 0,
+        },
         &config,
     );
     assert_eq!(outcome.state, CardState::Relearning);
@@ -132,12 +171,28 @@ fn forget_in_review_triggers_relearning() {
 fn relearn_then_recover() {
     let config = test_config();
     let o1 = schedule(
-        ScheduleInput { s_old: 5.0, d_old: 5.0, state: CardState::Review, step_index: None, rating: 1, days_elapsed: 5, cumulative_step_days: 0 },
+        ScheduleInput {
+            s_old: 5.0,
+            d_old: 5.0,
+            state: CardState::Review,
+            step_index: None,
+            rating: 1,
+            days_elapsed: 5,
+            cumulative_step_days: 0,
+        },
         &config,
     );
     assert_eq!(o1.state, CardState::Relearning);
     let o2 = schedule(
-        ScheduleInput { s_old: o1.stability, d_old: o1.difficulty, state: o1.state, step_index: Some(0), rating: 3, days_elapsed: 1, cumulative_step_days: 1 },
+        ScheduleInput {
+            s_old: o1.stability,
+            d_old: o1.difficulty,
+            state: o1.state,
+            step_index: Some(0),
+            rating: 3,
+            days_elapsed: 1,
+            cumulative_step_days: 1,
+        },
         &config,
     );
     assert_eq!(o2.state, CardState::Review);
@@ -174,13 +229,29 @@ fn long_term_growth_trajectory() {
 
     // Step 0 → 1（步进不更新 S/D）
     let o1 = schedule(
-        ScheduleInput { s_old: s, d_old: d, state, step_index: None, rating: 3, days_elapsed: 0, cumulative_step_days: 0 },
+        ScheduleInput {
+            s_old: s,
+            d_old: d,
+            state,
+            step_index: None,
+            rating: 3,
+            days_elapsed: 0,
+            cumulative_step_days: 0,
+        },
         &config,
     );
     (s, d, state) = (o1.stability, o1.difficulty, o1.state);
     // Step 1 → 毕业（用 cumulative_step_days=1）
     let o2 = schedule(
-        ScheduleInput { s_old: s, d_old: d, state, step_index: Some(1), rating: 3, days_elapsed: 0, cumulative_step_days: 1 },
+        ScheduleInput {
+            s_old: s,
+            d_old: d,
+            state,
+            step_index: Some(1),
+            rating: 3,
+            days_elapsed: 0,
+            cumulative_step_days: 1,
+        },
         &config,
     );
     (s, d, state) = (o2.stability, o2.difficulty, o2.state);
@@ -189,13 +260,26 @@ fn long_term_growth_trajectory() {
     let mut de = 1u32;
     for _ in 0..20 {
         let o = schedule(
-            ScheduleInput { s_old: s, d_old: d, state, step_index: None, rating: 3, days_elapsed: de, cumulative_step_days: 0 },
+            ScheduleInput {
+                s_old: s,
+                d_old: d,
+                state,
+                step_index: None,
+                rating: 3,
+                days_elapsed: de,
+                cumulative_step_days: 0,
+            },
             &config,
         );
-        s = o.stability; d = o.difficulty;
+        s = o.stability;
+        d = o.difficulty;
         de = interval_days(s).max(1.0) as u32;
     }
-    assert!(interval_days(s) >= 10.0, "20次后间隔={:.1}", interval_days(s));
+    assert!(
+        interval_days(s) >= 10.0,
+        "20次后间隔={:.1}",
+        interval_days(s)
+    );
 }
 
 // ── 7. de 排序 ──
@@ -226,7 +310,13 @@ fn true_rating(true_stability: f64, days_elapsed: u32, rng: &mut impl Rng) -> u8
         1
     } else {
         let p: f64 = rng.random();
-        if p < 0.15 { 2 } else if p < 0.75 { 3 } else { 4 }
+        if p < 0.15 {
+            2
+        } else if p < 0.75 {
+            3
+        } else {
+            4
+        }
     }
 }
 
@@ -276,7 +366,8 @@ impl TrueMemSim {
             (self.current_interval_days() as u32).max(1)
         };
 
-        let cumulative_step_days = if self.sys_state.has_steps() || self.sys_state == CardState::New {
+        let cumulative_step_days = if self.sys_state.has_steps() || self.sys_state == CardState::New
+        {
             (self.step_cumulative_secs / 86400).max(1) as u32
         } else {
             days_elapsed
@@ -344,10 +435,10 @@ fn true_memory_simulation_report() {
     let mut rng = StdRng::seed_from_u64(42);
 
     let card_types = [
-        ("容易 (S=30d)",  30.0_f64),
-        ("中等 (S=10d)",  10.0_f64),
-        ("困难 (S=3d)",   3.0_f64),
-        ("极难 (S=1d)",   1.0_f64),
+        ("容易 (S=30d)", 30.0_f64),
+        ("中等 (S=10d)", 10.0_f64),
+        ("困难 (S=3d)", 3.0_f64),
+        ("极难 (S=1d)", 1.0_f64),
     ];
 
     println!("\n");
@@ -363,10 +454,14 @@ fn true_memory_simulation_report() {
     println!("  步进阶段不更新 S/D，毕业时用累积时间 (cumulative_step_days)");
     println!();
 
-    println!("{:<12} {:<10} {:<12} {:<14} {:<14} {:<14} {:<14}",
-        "卡片难度", "S_true", "遗忘率", "最终间隔(d)", "FSRS估计S", "估计误差 %", ">30d占比");
-    println!("{:-<12} {:-<10} {:-<12} {:-<14} {:-<14} {:-<14} {:-<14}",
-        "", "", "", "", "", "", "");
+    println!(
+        "{:<12} {:<10} {:<12} {:<14} {:<14} {:<14} {:<14}",
+        "卡片难度", "S_true", "遗忘率", "最终间隔(d)", "FSRS估计S", "估计误差 %", ">30d占比"
+    );
+    println!(
+        "{:-<12} {:-<10} {:-<12} {:-<14} {:-<14} {:-<14} {:-<14}",
+        "", "", "", "", "", "", ""
+    );
 
     for &(name, true_s) in &card_types {
         let mut total_lapses = 0u64;
@@ -398,8 +493,16 @@ fn true_memory_simulation_report() {
         let avg_err = errors.iter().sum::<f64>() / 200.0 * 100.0;
         let pct_30d = over_30d as f64 / 200.0 * 100.0;
 
-        println!("{:<12} {:<10.0} {:<11.1}% {:<14.1} {:<14.2} {:<13.1}% {:<13.1}%",
-            name, true_s, lapse_rate * 100.0, avg_iv, avg_sys, avg_err, pct_30d);
+        println!(
+            "{:<12} {:<10.0} {:<11.1}% {:<14.1} {:<14.2} {:<13.1}% {:<13.1}%",
+            name,
+            true_s,
+            lapse_rate * 100.0,
+            avg_iv,
+            avg_sys,
+            avg_err,
+            pct_30d
+        );
     }
 
     println!();
@@ -459,11 +562,27 @@ fn custom_config_produces_different_intervals() {
 
     // 学习步进不同 → 步进间隔不同
     let d1 = schedule(
-        ScheduleInput { s_old: 0.0, d_old: 0.0, state: CardState::New, step_index: None, rating: 3, days_elapsed: 0, cumulative_step_days: 0 },
+        ScheduleInput {
+            s_old: 0.0,
+            d_old: 0.0,
+            state: CardState::New,
+            step_index: None,
+            rating: 3,
+            days_elapsed: 0,
+            cumulative_step_days: 0,
+        },
         &default,
     );
     let f1 = schedule(
-        ScheduleInput { s_old: 0.0, d_old: 0.0, state: CardState::New, step_index: None, rating: 3, days_elapsed: 0, cumulative_step_days: 0 },
+        ScheduleInput {
+            s_old: 0.0,
+            d_old: 0.0,
+            state: CardState::New,
+            step_index: None,
+            rating: 3,
+            days_elapsed: 0,
+            cumulative_step_days: 0,
+        },
         &fast,
     );
     // 默认 [60, 600]，第一个 step 后 due 在 STEPS[1]=600s
@@ -476,7 +595,10 @@ fn custom_config_produces_different_intervals() {
         .with_timezone(&Utc);
     let d_step = (d_due - now).num_seconds();
     let f_step = (f_due - now).num_seconds();
-    assert!(d_step != f_step, "不同步进应产生不同间隔: {d_step}s vs {f_step}s");
+    assert!(
+        d_step != f_step,
+        "不同步进应产生不同间隔: {d_step}s vs {f_step}s"
+    );
     eprintln!("默认步进: {d_step}s, 快速步进: {f_step}s");
 }
 
@@ -492,9 +614,8 @@ fn custom_config_produces_different_intervals() {
 /// 默认 FSRS 参数（从实际优化结果提取，保证 FSRS 能接受）
 fn default_fsrs_params() -> Vec<f32> {
     vec![
-        0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194,
-        0.001, 1.8722, 0.1666, 0.796, 1.4835, 0.0614, 0.2629,
-        1.6483, 0.6014, 1.8729, 0.5425, 0.0912,
+        0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194, 0.001, 1.8722, 0.1666, 0.796,
+        1.4835, 0.0614, 0.2629, 1.6483, 0.6014, 1.8729, 0.5425, 0.0912,
     ]
 }
 

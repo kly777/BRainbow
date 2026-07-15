@@ -50,8 +50,7 @@ impl MediaRepository {
         Self { db }
     }
 
-    pub async fn insert(&self, params: NewMedia<'_>,
-    ) -> Result<Media, sqlx::Error> {
+    pub async fn insert(&self, params: NewMedia<'_>) -> Result<Media, sqlx::Error> {
         let row = sqlx::query_as::<_, MediaRow>(
             r#"INSERT INTO media (stored_id, original_name, media_type, mime_type, size_bytes, width, height, duration_ms, user_id)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)

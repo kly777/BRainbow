@@ -13,7 +13,10 @@ fn extract_words(text: &str) -> Vec<String> {
 
 fn unique_words(words: Vec<String>) -> Vec<String> {
     let mut seen = std::collections::HashSet::new();
-    words.into_iter().filter(|w| seen.insert(w.clone())).collect()
+    words
+        .into_iter()
+        .filter(|w| seen.insert(w.clone()))
+        .collect()
 }
 
 pub struct ReadingService {
@@ -40,7 +43,9 @@ impl ReadingService {
         repo.insert_article_words(article_id, &unique).await?;
 
         // 返回
-        repo.get_article(article_id).await.map(|a| a.expect("刚插入的文章必须存在"))
+        repo.get_article(article_id)
+            .await
+            .map(|a| a.expect("刚插入的文章必须存在"))
     }
 }
 
@@ -57,7 +62,9 @@ mod tests {
         let words = extract_words(text);
         assert_eq!(
             words,
-            vec!["hello", "world", "this", "is", "a", "test", "don't", "stop", "learning"]
+            vec![
+                "hello", "world", "this", "is", "a", "test", "don't", "stop", "learning"
+            ]
         );
     }
 
@@ -85,7 +92,11 @@ mod tests {
         let words = extract_words("Page 2 of 3 — well-known");
         assert!(!words.iter().any(|w| w == "2"));
         assert!(words.iter().any(|w| w == "of"));
-        assert!(words.iter().any(|w| w == "well-known"), "hyphenated word should be one token: {:?}", words);
+        assert!(
+            words.iter().any(|w| w == "well-known"),
+            "hyphenated word should be one token: {:?}",
+            words
+        );
     }
 
     #[test]
@@ -150,7 +161,9 @@ mod tests {
         sorted.sort();
         assert_eq!(
             sorted,
-            vec!["barks", "brown", "dog", "fox", "jumps", "lazy", "over", "quick", "the"]
+            vec![
+                "barks", "brown", "dog", "fox", "jumps", "lazy", "over", "quick", "the"
+            ]
         );
         assert_eq!(unique.iter().filter(|w| *w == "the").count(), 1);
     }

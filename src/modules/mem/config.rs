@@ -32,10 +32,18 @@ pub struct MemConfig {
     pub desired_retention: f64,
 }
 
-fn default_learning_steps() -> Vec<i64> { vec![60, 600] }
-fn default_relearn_steps() -> Vec<i64> { vec![600] }
-fn default_graduating_interval() -> i64 { 7200 }
-fn default_desired_retention() -> f64 { 0.9 }
+fn default_learning_steps() -> Vec<i64> {
+    vec![60, 600]
+}
+fn default_relearn_steps() -> Vec<i64> {
+    vec![600]
+}
+fn default_graduating_interval() -> i64 {
+    7200
+}
+fn default_desired_retention() -> f64 {
+    0.9
+}
 
 impl Default for MemConfig {
     fn default() -> Self {
@@ -54,20 +62,15 @@ impl MemConfig {
     pub fn load() -> Self {
         if Path::new(CONFIG_PATH).exists() {
             match fs::read_to_string(CONFIG_PATH) {
-                Ok(content) => {
-                    match serde_json::from_str::<MemConfig>(&content) {
-                        Ok(cfg) => {
-                            tracing::info!(
-                                "已加载记忆配置，FSRS 参数数: {}",
-                                cfg.fsrs_params.len()
-                            );
-                            return cfg;
-                        }
-                        Err(e) => {
-                            tracing::warn!("解析 {} 失败 ({}), 使用默认配置", CONFIG_PATH, e);
-                        }
+                Ok(content) => match serde_json::from_str::<MemConfig>(&content) {
+                    Ok(cfg) => {
+                        tracing::info!("已加载记忆配置，FSRS 参数数: {}", cfg.fsrs_params.len());
+                        return cfg;
                     }
-                }
+                    Err(e) => {
+                        tracing::warn!("解析 {} 失败 ({}), 使用默认配置", CONFIG_PATH, e);
+                    }
+                },
                 Err(e) => {
                     tracing::warn!("读取 {} 失败 ({}), 使用默认配置", CONFIG_PATH, e);
                 }

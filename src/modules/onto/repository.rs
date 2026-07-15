@@ -1,5 +1,5 @@
-use sqlx::{QueryBuilder, Row, SqlitePool};
 use crate::db::query::SeparatedExt;
+use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
 use super::model::Onto;

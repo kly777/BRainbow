@@ -1,14 +1,14 @@
 use axum::{
+    Extension,
     extract::State,
     response::{IntoResponse, Json},
-    Extension,
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::repository::UserRepository;
-use crate::auth::{create_token, Claims};
+use crate::auth::{Claims, create_token};
 use crate::error;
 use crate::state::AppState;
 

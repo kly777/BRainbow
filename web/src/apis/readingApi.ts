@@ -76,9 +76,7 @@ export const recommendNext = (
 ): Promise<{ recommended: ArticleSummary | null }> =>
 	request(`/reading/${id}/recommend`, {});
 
-export const getArticleNotes = (
-	id: number,
-): Promise<{ notes: string }> =>
+export const getArticleNotes = (id: number): Promise<{ notes: string }> =>
 	request(`/reading/${id}/notes`, {});
 
 export const updateArticleNotes = (

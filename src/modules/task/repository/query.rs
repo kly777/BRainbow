@@ -125,10 +125,9 @@ impl TaskRepository {
         end: Option<DateTime<Utc>>,
         status_filter: Option<TaskStatus>,
     ) -> Result<Vec<(Task, TimeWindow)>, sqlx::Error> {
-        let default_start = DateTime::from_timestamp(0, 0)
-            .expect("Unix 纪元时间戳 0 始终合法");
-        let default_end = DateTime::from_timestamp(4102444800, 0)
-            .expect("4102444800 是 2099 年的合法时间戳");
+        let default_start = DateTime::from_timestamp(0, 0).expect("Unix 纪元时间戳 0 始终合法");
+        let default_end =
+            DateTime::from_timestamp(4102444800, 0).expect("4102444800 是 2099 年的合法时间戳");
         let range_start = start.unwrap_or(default_start);
         let range_end = end.unwrap_or(default_end);
 

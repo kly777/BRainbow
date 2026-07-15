@@ -25,9 +25,7 @@ export default function ReadingUnknown() {
 				<For
 					each={data()?.words}
 					fallback={
-						<div class={styles.empty}>
-							暂无不认识词——开始阅读文章吧
-						</div>
+						<div class={styles.empty}>暂无不认识词——开始阅读文章吧</div>
 					}
 				>
 					{(w) => (

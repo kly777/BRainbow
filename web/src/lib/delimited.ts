@@ -169,19 +169,18 @@ export function parseBatch(text: string): { cue: string; target: string }[] {
  * // → [{ cue: "a", target: "b", tags: [], selected: true }]
  * ```
  */
-export function parseImportFile(
-	text: string,
-	filename: string,
-): ImportRow[] {
+export function parseImportFile(text: string, filename: string): ImportRow[] {
 	// JSON 文件
 	if (filename.toLowerCase().endsWith(".json")) {
 		const json = JSON.parse(text);
 		const items = Array.isArray(json) ? json : (json.mems ?? []);
-		return items.map((i: { cue?: string; target?: string; tags?: string[] }) => ({
-			cue: (i.cue ?? "").trim(),
-			target: (i.target ?? "").trim(),
-			tags: i.tags ?? [],
-		}));
+		return items.map(
+			(i: { cue?: string; target?: string; tags?: string[] }) => ({
+				cue: (i.cue ?? "").trim(),
+				target: (i.target ?? "").trim(),
+				tags: i.tags ?? [],
+			}),
+		);
 	}
 
 	// CSV / PSV

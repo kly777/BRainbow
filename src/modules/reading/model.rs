@@ -17,8 +17,8 @@ pub struct ArticleSummary {
     pub id: i64,
     pub title: String,
     pub word_count: i64,
-    pub known_ratio: f64,          // 0.0 ~ 1.0
-    pub unknown_word_count: i64,   // 文章中不认识词的数量
+    pub known_ratio: f64,        // 0.0 ~ 1.0
+    pub unknown_word_count: i64, // 文章中不认识词的数量
     pub created_at: String,
 }
 
@@ -57,5 +57,3 @@ pub struct UploadArticleRequest {
 pub struct MarkWordRequest {
     pub status: String, // "known" | "unknown"
 }
-
-

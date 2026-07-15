@@ -3,10 +3,7 @@ import { createMemo, createSignal, For, Show } from "solid-js";
 import { importJsonE } from "../apis/memApi.ts";
 import MarkdownEditor from "../components/ui/MarkdownEditor.tsx";
 import { showToast } from "../components/ui/toastStore.ts";
-import {
-	parseBatch,
-	parseImportFile,
-} from "../lib/delimited.ts";
+import { parseBatch, parseImportFile } from "../lib/delimited.ts";
 import styles from "./MemAdd.module.css";
 
 // ── 类型 ──
@@ -272,15 +269,10 @@ export default function MemAdd() {
 				<Show when={mode() === "paste"}>
 					<Show when={importResult()}>
 						{/* 导入成功页面 */}
-						<ImportResult
-							result={importResult()!}
-							onContinue={resetImport}
-						/>
+						<ImportResult result={importResult()!} onContinue={resetImport} />
 					</Show>
 					<Show when={!importResult()}>
-						<p class={styles.hint}>
-							支持两种格式（自动识别）：
-						</p>
+						<p class={styles.hint}>支持两种格式（自动识别）：</p>
 						<div class={styles.formatHint}>
 							<div class={styles.formatBlock}>
 								<p class={styles.formatName}>PSV（竖线分隔）</p>
@@ -300,7 +292,8 @@ export default function MemAdd() {
   {"cue":"光速","target":"299792458 m/s"}
 ]`}</pre>
 								<p class={styles.formatNote}>
-									<code>tags</code> 可选，也可包装为 <code>{'{"mems": [...]}'}</code>
+									<code>tags</code> 可选，也可包装为{" "}
+									<code>{'{"mems": [...]}'}</code>
 								</p>
 							</div>
 						</div>
@@ -364,10 +357,7 @@ export default function MemAdd() {
 				{/* ========== 从文件导入 ========== */}
 				<Show when={mode() === "file"}>
 					<Show when={importResult()}>
-						<ImportResult
-							result={importResult()!}
-							onContinue={resetImport}
-						/>
+						<ImportResult result={importResult()!} onContinue={resetImport} />
 					</Show>
 					<Show when={!importResult()}>
 						<div class={styles.formatHint}>
@@ -381,9 +371,7 @@ export default function MemAdd() {
 									<br />
 									光速,299792458 m/s,物理
 								</pre>
-								<p class={styles.formatNote}>
-									内容含逗号请用引号包裹
-								</p>
+								<p class={styles.formatNote}>内容含逗号请用引号包裹</p>
 							</div>
 							<div class={styles.formatBlock}>
 								<p class={styles.formatName}>PSV（竖线分隔）</p>
@@ -532,17 +520,11 @@ function ImportPreview(props: {
 										onChange={() => props.onToggle(i())}
 									/>
 								</td>
-								<td class={styles.previewTd}>
-									{row.cue.slice(0, 60)}
-								</td>
-								<td class={styles.previewTd}>
-									{row.target.slice(0, 60)}
-								</td>
+								<td class={styles.previewTd}>{row.cue.slice(0, 60)}</td>
+								<td class={styles.previewTd}>{row.target.slice(0, 60)}</td>
 								<td class={styles.previewTd}>
 									<For each={row.tags}>
-										{(tag) => (
-											<span class={styles.previewTag}>{tag}</span>
-										)}
+										{(tag) => <span class={styles.previewTag}>{tag}</span>}
 									</For>
 								</td>
 							</tr>

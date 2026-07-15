@@ -57,8 +57,13 @@ pub async fn get_ontos_handler(
 ) -> impl IntoResponse {
     let repo = OntoRepository::new(state.db.clone());
 
-    match repo.find_all_paginated(pagination.limit(), pagination.offset()).await {
-        Ok((items, total)) => Json(PaginatedResponse::new(items, total, &pagination)).into_response(),
+    match repo
+        .find_all_paginated(pagination.limit(), pagination.offset())
+        .await
+    {
+        Ok((items, total)) => {
+            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
+        }
         Err(e) => error::internal(e, "获取本体列表"),
     }
 }

@@ -1,5 +1,9 @@
 import { CACHE, request, tapInvalidate } from "./request.ts";
-import type { BatchDataResponse, BatchResponse, PaginatedResponse } from "./types/shared.ts";
+import type {
+	BatchDataResponse,
+	BatchResponse,
+	PaginatedResponse,
+} from "./types/shared.ts";
 
 // ── 类型 ──
 
@@ -87,7 +91,8 @@ export const getAllMemsE = (
 	if (params?.sort) qs.set("sort", params.sort);
 	if (params?.order) qs.set("order", params.order);
 	if (params?.tag_ids) qs.set("tag_ids", params.tag_ids);
-	if (params?.exclude_tag_ids) qs.set("exclude_tag_ids", params.exclude_tag_ids);
+	if (params?.exclude_tag_ids)
+		qs.set("exclude_tag_ids", params.exclude_tag_ids);
 	if (params?.page) qs.set("page", String(params.page));
 	if (params?.page_size) qs.set("page_size", String(params.page_size));
 	const suffix = qs.toString();

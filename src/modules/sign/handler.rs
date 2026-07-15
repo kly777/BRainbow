@@ -42,7 +42,16 @@ pub async fn create_sign_handler(
     }
     let repo = SignRepository::new(state.db.clone());
 
-    match repo.create(payload.signifier, payload.signified, payload.onto_id, payload.weight, payload.relation_type).await {
+    match repo
+        .create(
+            payload.signifier,
+            payload.signified,
+            payload.onto_id,
+            payload.weight,
+            payload.relation_type,
+        )
+        .await
+    {
         Ok(sign) => {
             let response = SignResponse {
                 id: sign.id,
@@ -65,8 +74,13 @@ pub async fn get_signs_handler(
 ) -> impl IntoResponse {
     let repo = SignRepository::new(state.db.clone());
 
-    match repo.find_all_paginated(pagination.limit(), pagination.offset()).await {
-        Ok((items, total)) => Json(PaginatedResponse::new(items, total, &pagination)).into_response(),
+    match repo
+        .find_all_paginated(pagination.limit(), pagination.offset())
+        .await
+    {
+        Ok((items, total)) => {
+            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
+        }
         Err(e) => error::internal(e, "获取符号关系列表"),
     }
 }
@@ -120,8 +134,13 @@ pub async fn get_signs_by_signifier_handler(
 ) -> impl IntoResponse {
     let repo = SignRepository::new(state.db.clone());
 
-    match repo.find_by_signifier_paginated(&signifier, pagination.limit(), pagination.offset()).await {
-        Ok((items, total)) => Json(PaginatedResponse::new(items, total, &pagination)).into_response(),
+    match repo
+        .find_by_signifier_paginated(&signifier, pagination.limit(), pagination.offset())
+        .await
+    {
+        Ok((items, total)) => {
+            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
+        }
         Err(e) => error::bad(e, "按能指查询"),
     }
 }
@@ -133,8 +152,13 @@ pub async fn get_signs_by_signified_handler(
 ) -> impl IntoResponse {
     let repo = SignRepository::new(state.db.clone());
 
-    match repo.find_by_signified_paginated(&signified, pagination.limit(), pagination.offset()).await {
-        Ok((items, total)) => Json(PaginatedResponse::new(items, total, &pagination)).into_response(),
+    match repo
+        .find_by_signified_paginated(&signified, pagination.limit(), pagination.offset())
+        .await
+    {
+        Ok((items, total)) => {
+            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
+        }
         Err(e) => error::bad(e, "按所指查询"),
     }
 }

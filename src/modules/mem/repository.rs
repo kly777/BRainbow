@@ -1,4 +1,4 @@
-use sqlx::{FromRow, SqlitePool, QueryBuilder};
+use sqlx::{FromRow, QueryBuilder, SqlitePool};
 use std::sync::Arc;
 
 use super::model::{Chunk, FsrsUpdate, MemQuery, MemTagRow, TagInfo};
@@ -102,9 +102,14 @@ impl MemRepo {
         ).bind(id).fetch_optional(&*self.pool).await
     }
 
-    pub async fn get_all_mems(&self, limit: i64, offset: i64, query: &MemQuery) -> Result<Vec<i32>, sqlx::Error> {
+    pub async fn get_all_mems(
+        &self,
+        limit: i64,
+        offset: i64,
+        query: &MemQuery,
+    ) -> Result<Vec<i32>, sqlx::Error> {
         let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
-            "SELECT m.id FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1"
+            "SELECT m.id FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1",
         );
 
         if let Some(ref state) = query.state {
@@ -124,16 +129,17 @@ impl MemRepo {
         }
 
         if let Some(ref q) = query.q
-            && !q.trim().is_empty() {
-                let pattern = format!("%{}%", q.trim());
-                qb.push(" AND (cc.content LIKE ");
-                qb.push_bind(&pattern);
-                qb.push(" OR ct.content LIKE ");
-                qb.push_bind(&pattern);
-                qb.push(" OR EXISTS (SELECT 1 FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id AND t.name LIKE ");
-                qb.push_bind(pattern);
-                qb.push("))");
-            }
+            && !q.trim().is_empty()
+        {
+            let pattern = format!("%{}%", q.trim());
+            qb.push(" AND (cc.content LIKE ");
+            qb.push_bind(&pattern);
+            qb.push(" OR ct.content LIKE ");
+            qb.push_bind(&pattern);
+            qb.push(" OR EXISTS (SELECT 1 FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id AND t.name LIKE ");
+            qb.push_bind(pattern);
+            qb.push("))");
+        }
 
         // 标签过滤
         if let Some(ref tag_ids_str) = query.tag_ids {
@@ -197,7 +203,7 @@ impl MemRepo {
 
     pub async fn count_all_mems(&self, query: &MemQuery) -> Result<i64, sqlx::Error> {
         let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
-            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1"
+            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1",
         );
 
         if let Some(ref state) = query.state {
@@ -217,16 +223,17 @@ impl MemRepo {
         }
 
         if let Some(ref q) = query.q
-            && !q.trim().is_empty() {
-                let pattern = format!("%{}%", q.trim());
-                qb.push(" AND (cc.content LIKE ");
-                qb.push_bind(&pattern);
-                qb.push(" OR ct.content LIKE ");
-                qb.push_bind(&pattern);
-                qb.push(" OR EXISTS (SELECT 1 FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id AND t.name LIKE ");
-                qb.push_bind(pattern);
-                qb.push("))");
-            }
+            && !q.trim().is_empty()
+        {
+            let pattern = format!("%{}%", q.trim());
+            qb.push(" AND (cc.content LIKE ");
+            qb.push_bind(&pattern);
+            qb.push(" OR ct.content LIKE ");
+            qb.push_bind(&pattern);
+            qb.push(" OR EXISTS (SELECT 1 FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id AND t.name LIKE ");
+            qb.push_bind(pattern);
+            qb.push("))");
+        }
 
         // 标签过滤
         if let Some(ref tag_ids_str) = query.tag_ids {
@@ -266,13 +273,12 @@ impl MemRepo {
         let mut tx = self.pool.begin().await?;
 
         // 先查出关联的 chunk id，删除 mem 后清理孤儿 chunk
-        let (cue_id, target_id): (i32, i32) = sqlx::query_as(
-            "SELECT cue_chunk_id, target_chunk_id FROM mem WHERE id = ?",
-        )
-        .bind(id)
-        .fetch_optional(&mut *tx)
-        .await?
-        .ok_or(sqlx::Error::RowNotFound)?;
+        let (cue_id, target_id): (i32, i32) =
+            sqlx::query_as("SELECT cue_chunk_id, target_chunk_id FROM mem WHERE id = ?")
+                .bind(id)
+                .fetch_optional(&mut *tx)
+                .await?
+                .ok_or(sqlx::Error::RowNotFound)?;
 
         // 级联删除关联数据
         sqlx::query("DELETE FROM revlog WHERE mem_id = ?")
@@ -281,10 +287,11 @@ impl MemRepo {
             .await?;
 
         // 记录该 mem 的标签，删除后清理孤儿
-        let mem_tag_ids: Vec<i32> = sqlx::query_scalar("SELECT tag_id FROM mem_tag WHERE mem_id = ?")
-            .bind(id)
-            .fetch_all(&mut *tx)
-            .await?;
+        let mem_tag_ids: Vec<i32> =
+            sqlx::query_scalar("SELECT tag_id FROM mem_tag WHERE mem_id = ?")
+                .bind(id)
+                .fetch_all(&mut *tx)
+                .await?;
         sqlx::query("DELETE FROM mem_prerequisite WHERE mem_id = ? OR requires_mem_id = ?")
             .bind(id)
             .bind(id)
@@ -376,10 +383,15 @@ impl MemRepo {
         qb.push("))");
     }
 
-    pub async fn get_learning_mems(&self, limit: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+    pub async fn get_learning_mems(
+        &self,
+        limit: i64,
+        tag_ids: &[i32],
+        exclude_tag_ids: &[i32],
+    ) -> Result<Vec<i32>, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.id FROM mem m WHERE m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended'
-              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#
+              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#,
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
@@ -388,9 +400,13 @@ impl MemRepo {
         qb.build_query_scalar().fetch_all(&*self.pool).await
     }
 
-    pub async fn get_due_learning_count(&self, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<i64, sqlx::Error> {
+    pub async fn get_due_learning_count(
+        &self,
+        tag_ids: &[i32],
+        exclude_tag_ids: &[i32],
+    ) -> Result<i64, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
-            "SELECT COUNT(*) FROM mem m WHERE m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"
+            "SELECT COUNT(*) FROM mem m WHERE m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')",
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
@@ -398,7 +414,9 @@ impl MemRepo {
     }
 
     pub async fn defer_learning_cards(&self, ids: &[i32]) -> Result<(), sqlx::Error> {
-        if ids.is_empty() { return Ok(()); }
+        if ids.is_empty() {
+            return Ok(());
+        }
         for id in ids {
             sqlx::query("UPDATE mem SET state = 'deferred' WHERE id = ?")
                 .bind(id)
@@ -408,10 +426,14 @@ impl MemRepo {
         Ok(())
     }
 
-    pub async fn get_deferred_learning(&self, limit: i64, tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+    pub async fn get_deferred_learning(
+        &self,
+        limit: i64,
+        tag_ids: &[i32],
+    ) -> Result<Vec<i32>, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.id FROM mem m WHERE m.state = 'deferred' AND m.buried = 0
-              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#
+              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#,
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
         qb.push(" ORDER BY due_at LIMIT ");
@@ -420,12 +442,17 @@ impl MemRepo {
     }
 
     /// 获取到期复习卡（保持 review 状态，不转为 learning）
-    pub async fn get_due_reviews(&self, limit: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+    pub async fn get_due_reviews(
+        &self,
+        limit: i64,
+        tag_ids: &[i32],
+        exclude_tag_ids: &[i32],
+    ) -> Result<Vec<i32>, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.id FROM mem m
             WHERE m.state = 'review' AND m.buried = 0 AND m.state != 'suspended'
               AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#
+              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#,
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
@@ -435,11 +462,16 @@ impl MemRepo {
     }
 
     /// 获取新卡（随后由 service 转为 learning 状态）
-    pub async fn get_new_cards(&self, limit: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+    pub async fn get_new_cards(
+        &self,
+        limit: i64,
+        tag_ids: &[i32],
+        exclude_tag_ids: &[i32],
+    ) -> Result<Vec<i32>, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.id FROM mem m
             WHERE m.state = 'new' AND m.buried = 0 AND m.state != 'suspended'
-              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#
+              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#,
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
@@ -449,12 +481,16 @@ impl MemRepo {
     }
 
     /// 获取将来 review 卡（保持 review 状态，不转为 learning）
-    pub async fn get_upcoming_reviews(&self, limit: i64, tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+    pub async fn get_upcoming_reviews(
+        &self,
+        limit: i64,
+        tag_ids: &[i32],
+    ) -> Result<Vec<i32>, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.id FROM mem m
             WHERE m.state = 'review' AND m.buried = 0 AND m.state != 'suspended'
               AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#
+              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#,
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
         qb.push(" ORDER BY m.due_at LIMIT ");
@@ -487,17 +523,20 @@ impl MemRepo {
         )
         .fetch_one(&*self.pool)
         .await?;
-        let buried_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM mem WHERE buried = 1",
-        )
-        .fetch_one(&*self.pool)
-        .await?;
-        let suspended_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM mem WHERE state = 'suspended'",
-        )
-        .fetch_one(&*self.pool)
-        .await?;
-        Ok((new_count, learning_count, due_count, buried_count, suspended_count))
+        let buried_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM mem WHERE buried = 1")
+            .fetch_one(&*self.pool)
+            .await?;
+        let suspended_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM mem WHERE state = 'suspended'")
+                .fetch_one(&*self.pool)
+                .await?;
+        Ok((
+            new_count,
+            learning_count,
+            due_count,
+            buried_count,
+            suspended_count,
+        ))
     }
 
     pub async fn get_next_mem(&self) -> Result<Option<i32>, sqlx::Error> {
@@ -556,12 +595,11 @@ impl MemRepo {
     }
 
     pub async fn get_recent_retention(&self, limit: i64) -> Result<f64, sqlx::Error> {
-        let ratings: Vec<i64> = sqlx::query_scalar(
-            "SELECT rating FROM revlog ORDER BY review_time DESC LIMIT ?"
-        )
-        .bind(limit)
-        .fetch_all(&*self.pool)
-        .await?;
+        let ratings: Vec<i64> =
+            sqlx::query_scalar("SELECT rating FROM revlog ORDER BY review_time DESC LIMIT ?")
+                .bind(limit)
+                .fetch_all(&*self.pool)
+                .await?;
 
         if ratings.is_empty() {
             return Ok(0.0);
@@ -576,13 +614,17 @@ impl MemRepo {
 
     pub async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, sqlx::Error> {
         let row = sqlx::query_as::<_, TagRow>(
-            "INSERT INTO tag (name, user_id) VALUES (?, ?) RETURNING id, name, created_at"
+            "INSERT INTO tag (name, user_id) VALUES (?, ?) RETURNING id, name, created_at",
         )
         .bind(name)
         .bind(user_id)
         .fetch_one(&*self.pool)
         .await?;
-        Ok(TagInfo { id: row.id, name: row.name, created_at: row.created_at })
+        Ok(TagInfo {
+            id: row.id,
+            name: row.name,
+            created_at: row.created_at,
+        })
     }
 
     pub async fn delete_tag(&self, id: i32) -> Result<(), sqlx::Error> {
@@ -598,12 +640,19 @@ impl MemRepo {
             "SELECT t.id, t.name, t.created_at FROM tag t
              WHERE t.user_id = ?
                AND EXISTS (SELECT 1 FROM mem_tag WHERE tag_id = t.id)
-             ORDER BY t.name"
+             ORDER BY t.name",
         )
         .bind(user_id)
         .fetch_all(&*self.pool)
         .await?;
-        Ok(rows.into_iter().map(|r| TagInfo { id: r.id, name: r.name, created_at: r.created_at }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|r| TagInfo {
+                id: r.id,
+                name: r.name,
+                created_at: r.created_at,
+            })
+            .collect())
     }
 
     pub async fn search_tags(&self, user_id: i32, q: &str) -> Result<Vec<TagInfo>, sqlx::Error> {
@@ -617,7 +666,14 @@ impl MemRepo {
         .bind(format!("%{}%", q))
         .fetch_all(&*self.pool)
         .await?;
-        Ok(rows.into_iter().map(|r| TagInfo { id: r.id, name: r.name, created_at: r.created_at }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|r| TagInfo {
+                id: r.id,
+                name: r.name,
+                created_at: r.created_at,
+            })
+            .collect())
     }
 
     pub async fn get_mem_tags(&self, mem_id: i32) -> Result<Vec<TagInfo>, sqlx::Error> {
@@ -626,12 +682,19 @@ impl MemRepo {
              FROM tag t
              JOIN mem_tag mt ON mt.tag_id = t.id
              WHERE mt.mem_id = ?
-             ORDER BY t.name"
+             ORDER BY t.name",
         )
         .bind(mem_id)
         .fetch_all(&*self.pool)
         .await?;
-        Ok(rows.into_iter().map(|r| TagInfo { id: r.id, name: r.name, created_at: r.created_at }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|r| TagInfo {
+                id: r.id,
+                name: r.name,
+                created_at: r.created_at,
+            })
+            .collect())
     }
 
     pub async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), sqlx::Error> {
@@ -646,7 +709,7 @@ impl MemRepo {
     /// 删除无任何 mem 关联的孤儿标签
     async fn delete_orphan_tag(&self, tag_id: i32) -> Result<(), sqlx::Error> {
         sqlx::query(
-            "DELETE FROM tag WHERE id = ? AND NOT EXISTS (SELECT 1 FROM mem_tag WHERE tag_id = ?)"
+            "DELETE FROM tag WHERE id = ? AND NOT EXISTS (SELECT 1 FROM mem_tag WHERE tag_id = ?)",
         )
         .bind(tag_id)
         .bind(tag_id)
@@ -668,10 +731,11 @@ impl MemRepo {
     pub async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         // 记录移除前的旧标签
-        let old_tag_ids: Vec<i32> = sqlx::query_scalar("SELECT tag_id FROM mem_tag WHERE mem_id = ?")
-            .bind(mem_id)
-            .fetch_all(&mut *tx)
-            .await?;
+        let old_tag_ids: Vec<i32> =
+            sqlx::query_scalar("SELECT tag_id FROM mem_tag WHERE mem_id = ?")
+                .bind(mem_id)
+                .fetch_all(&mut *tx)
+                .await?;
         // 删除旧的关联
         sqlx::query("DELETE FROM mem_tag WHERE mem_id = ?")
             .bind(mem_id)
@@ -695,7 +759,10 @@ impl MemRepo {
         Ok(())
     }
 
-    pub async fn get_mems_tags_batch(&self, mem_ids: &[i32]) -> Result<Vec<MemTagRow>, sqlx::Error> {
+    pub async fn get_mems_tags_batch(
+        &self,
+        mem_ids: &[i32],
+    ) -> Result<Vec<MemTagRow>, sqlx::Error> {
         if mem_ids.is_empty() {
             return Ok(vec![]);
         }
@@ -703,7 +770,7 @@ impl MemRepo {
             "SELECT mt.mem_id, t.id, t.name, t.created_at
              FROM mem_tag mt
              JOIN tag t ON t.id = mt.tag_id
-             WHERE mt.mem_id IN ("
+             WHERE mt.mem_id IN (",
         );
         let mut separated = qb.separated(", ");
         for &id in mem_ids {
@@ -714,7 +781,10 @@ impl MemRepo {
         Ok(rows)
     }
 
-    pub async fn export_all_mems(&self, tag_ids: &[i32]) -> Result<Vec<(String, String, String)>, sqlx::Error> {
+    pub async fn export_all_mems(
+        &self,
+        tag_ids: &[i32],
+    ) -> Result<Vec<(String, String, String)>, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             "SELECT cc.content AS cue, ct.content AS target,
                 COALESCE((SELECT GROUP_CONCAT(t.name, '; ') FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id), '') AS tags
@@ -733,7 +803,9 @@ impl MemRepo {
         }
 
         qb.push(" ORDER BY m.id");
-        qb.build_query_as::<(String, String, String)>().fetch_all(&*self.pool).await
+        qb.build_query_as::<(String, String, String)>()
+            .fetch_all(&*self.pool)
+            .await
     }
 
     pub async fn reset_mem(&self, id: i32) -> Result<(), sqlx::Error> {
@@ -903,14 +975,16 @@ mod tests {
         let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
 
         // 插入复习日志
-        sqlx::query("INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, ?)")
-            .bind(mem_id)
-            .bind("2025-01-01")
-            .bind(3)
-            .bind(1)
-            .execute(&*repo.pool)
-            .await
-            .unwrap();
+        sqlx::query(
+            "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, ?)",
+        )
+        .bind(mem_id)
+        .bind("2025-01-01")
+        .bind(3)
+        .bind(1)
+        .execute(&*repo.pool)
+        .await
+        .unwrap();
 
         // 删除——之前因 FK 约束会失败
         repo.delete_mem(mem_id).await.unwrap();
@@ -919,12 +993,11 @@ mod tests {
         assert!(repo.get_mem(mem_id).await.unwrap().is_none());
 
         // 验证 revlog 也被级联删除
-        let count: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM revlog WHERE mem_id = ?")
-                .bind(mem_id)
-                .fetch_one(&*repo.pool)
-                .await
-                .unwrap();
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog WHERE mem_id = ?")
+            .bind(mem_id)
+            .fetch_one(&*repo.pool)
+            .await
+            .unwrap();
         assert_eq!(count, 0);
     }
 
@@ -935,14 +1008,12 @@ mod tests {
         let (dep_id, ..) = create_test_mem(&repo, "dep", "dep-target").await;
 
         // 添加前提约束：mem 依赖 dep
-        sqlx::query(
-            "INSERT INTO mem_prerequisite (mem_id, requires_mem_id) VALUES (?, ?)",
-        )
-        .bind(mem_id)
-        .bind(dep_id)
-        .execute(&*repo.pool)
-        .await
-        .unwrap();
+        sqlx::query("INSERT INTO mem_prerequisite (mem_id, requires_mem_id) VALUES (?, ?)")
+            .bind(mem_id)
+            .bind(dep_id)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
 
         // 删除依赖的 mem (dep)
         repo.delete_mem(dep_id).await.unwrap();
@@ -1009,7 +1080,7 @@ mod tests {
         for i in 0..10 {
             let time_str = format!("2025-01-01T00:00:{:02}Z", i);
             sqlx::query(
-                "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, 1)"
+                "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, 1)",
             )
             .bind(mem_id)
             .bind(&time_str)
@@ -1032,7 +1103,7 @@ mod tests {
             let rating = if i < 6 { 3 } else { 1 };
             let time_str = format!("2025-01-01T00:00:{:02}Z", i);
             sqlx::query(
-                "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, 1)"
+                "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, 1)",
             )
             .bind(mem_id)
             .bind(&time_str)
@@ -1054,7 +1125,7 @@ mod tests {
         for i in 0..20 {
             let time_str = format!("2025-01-01T00:00:{:02}Z", i);
             sqlx::query(
-                "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, 1)"
+                "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, 1)",
             )
             .bind(mem_id)
             .bind(&time_str)
@@ -1144,7 +1215,9 @@ mod tests {
         let repo = setup_db().await;
         let uid = create_user(&repo).await;
 
-        repo.create_tag("functional-programming", uid).await.unwrap();
+        repo.create_tag("functional-programming", uid)
+            .await
+            .unwrap();
         repo.create_tag("fsharp", uid).await.unwrap();
         repo.create_tag("rust", uid).await.unwrap();
 
@@ -1315,12 +1388,7 @@ mod tests {
     // ── get_session_estimate ──
 
     /// 插入一条 mem（仅基本字段），返回 id
-    async fn insert_session_mem(
-        repo: &MemRepo,
-        state: &str,
-        buried: i32,
-        due_at: &str,
-    ) -> i32 {
+    async fn insert_session_mem(repo: &MemRepo, state: &str, buried: i32, due_at: &str) -> i32 {
         let cue_id = repo.create_chunk("cue").await.unwrap();
         let target_id = repo.create_chunk("target").await.unwrap();
         sqlx::query_scalar::<_, i32>(
@@ -1368,14 +1436,16 @@ mod tests {
         let due_at = "2020-01-01T00:00:00Z";
         for _ in 0..5 {
             let mem_id = insert_session_mem(&repo, "review", 0, due_at).await;
-            sqlx::query("INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, ?)")
-                .bind(mem_id)
-                .bind("2020-01-01T00:00:00Z")
-                .bind(4i32) // easy = pass
-                .bind(1i32)
-                .execute(&*repo.pool)
-                .await
-                .unwrap();
+            sqlx::query(
+                "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, ?)",
+            )
+            .bind(mem_id)
+            .bind("2020-01-01T00:00:00Z")
+            .bind(4i32) // easy = pass
+            .bind(1i32)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
         }
         let est = estimate(&repo).await;
         assert_eq!(est.due_count, 5);
@@ -1394,14 +1464,16 @@ mod tests {
         let due_at = "2020-01-01T00:00:00Z";
         for _ in 0..3 {
             let mem_id = insert_session_mem(&repo, "review", 0, due_at).await;
-            sqlx::query("INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, ?)")
-                .bind(mem_id)
-                .bind("2020-01-01T00:00:00Z")
-                .bind(1i32) // again = fail
-                .bind(1i32)
-                .execute(&*repo.pool)
-                .await
-                .unwrap();
+            sqlx::query(
+                "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, ?)",
+            )
+            .bind(mem_id)
+            .bind("2020-01-01T00:00:00Z")
+            .bind(1i32) // again = fail
+            .bind(1i32)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
         }
         let est = estimate(&repo).await;
         assert_eq!(est.due_count, 5); // 2 new + 3 review
@@ -1520,22 +1592,26 @@ mod tests {
 
         // 创建 5 张 review 卡（未来的 due_at，本不应出现在本轮）
         for i in 0..5 {
-            let cue_id = repo.create_chunk(&format!("upcoming_cue_{}", i)).await.unwrap();
-            let target_id = repo.create_chunk(&format!("upcoming_target_{}", i)).await.unwrap();
+            let cue_id = repo
+                .create_chunk(&format!("upcoming_cue_{}", i))
+                .await
+                .unwrap();
+            let target_id = repo
+                .create_chunk(&format!("upcoming_target_{}", i))
+                .await
+                .unwrap();
             let id = repo.create_mem(cue_id, target_id, &[]).await.unwrap();
             // 设为 review 状态，due_at 在 1 分钟后（使用 TZ 格式，与真实代码一致）
             // 1 分钟 = 60 秒
             let future = (chrono::Utc::now() + chrono::Duration::seconds(60))
                 .format("%Y-%m-%dT%H:%M:%SZ")
                 .to_string();
-            sqlx::query(
-                "UPDATE mem SET state = 'review', due_at = ? WHERE id = ?"
-            )
-            .bind(&future)
-            .bind(id)
-            .execute(&*repo.pool)
-            .await
-            .unwrap();
+            sqlx::query("UPDATE mem SET state = 'review', due_at = ? WHERE id = ?")
+                .bind(&future)
+                .bind(id)
+                .execute(&*repo.pool)
+                .await
+                .unwrap();
         }
 
         // 验证新卡有 20 张
@@ -1548,13 +1624,19 @@ mod tests {
         let exclude_tag_ids: &[i32] = &[];
 
         // 1. learning
-        let mut ids = repo.get_learning_mems(limit, tag_ids, exclude_tag_ids).await.unwrap();
+        let mut ids = repo
+            .get_learning_mems(limit, tag_ids, exclude_tag_ids)
+            .await
+            .unwrap();
         assert_eq!(ids.len(), 0, "没有 learning 卡");
 
         // 2. due_reviews
         if ids.len() < limit as usize {
             let needed = limit as usize - ids.len();
-            let due = repo.get_due_reviews(needed as i64, tag_ids, exclude_tag_ids).await.unwrap();
+            let due = repo
+                .get_due_reviews(needed as i64, tag_ids, exclude_tag_ids)
+                .await
+                .unwrap();
             assert!(due.is_empty(), "没有到期的 review 卡");
             ids.extend(due);
         }
@@ -1562,7 +1644,10 @@ mod tests {
         // 3. new_cards
         if ids.len() < limit as usize {
             let needed = limit as usize - ids.len();
-            let new_cards = repo.get_new_cards(needed as i64, tag_ids, exclude_tag_ids).await.unwrap();
+            let new_cards = repo
+                .get_new_cards(needed as i64, tag_ids, exclude_tag_ids)
+                .await
+                .unwrap();
             // 关键断言：应该拿到足够的卡填满队列
             ids.extend(new_cards);
         }
@@ -1573,11 +1658,13 @@ mod tests {
         // 4. 验证 upcoming 不会被用到
         if ids.len() < limit as usize {
             let needed = limit as usize - ids.len();
-            let upcoming = repo.get_upcoming_reviews(needed as i64, tag_ids).await.unwrap();
+            let upcoming = repo
+                .get_upcoming_reviews(needed as i64, tag_ids)
+                .await
+                .unwrap();
             // 不应走到这里！
             ids.extend(upcoming);
             panic!("不应拉取 upcoming！新卡足够填满队列");
         }
     }
 }
-

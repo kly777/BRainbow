@@ -1,5 +1,12 @@
 import { A, useParams } from "@solidjs/router";
-import { createEffect, createMemo, createResource, createSignal, For, Show } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createResource,
+	createSignal,
+	For,
+	Show,
+} from "solid-js";
 import {
 	getArticle,
 	markWord,
@@ -62,7 +69,9 @@ export default function ReadingDetail() {
 		const order: Record<string, number> = { unknown: 0, ignored: 1, known: 2 };
 		const map = wordStatusMap();
 		return [...(detail()?.words ?? [])].sort(
-			(a, b) => (order[map.get(a.word) ?? "known"] ?? 2) - (order[map.get(b.word) ?? "known"] ?? 2),
+			(a, b) =>
+				(order[map.get(a.word) ?? "known"] ?? 2) -
+				(order[map.get(b.word) ?? "known"] ?? 2),
 		);
 	});
 
@@ -163,9 +172,16 @@ export default function ReadingDetail() {
 
 						const clean = part.toLowerCase();
 						const s = map.get(clean);
-						const cls = s === "known" || s === "ignored" ? styles.word : styles.unknownWord;
+						const cls =
+							s === "known" || s === "ignored"
+								? styles.word
+								: styles.unknownWord;
 
-						return <span class={cls} data-word={clean}>{part}</span>;
+						return (
+							<span class={cls} data-word={clean}>
+								{part}
+							</span>
+						);
 					});
 				});
 				return <span>{renderedTokens} </span>;
@@ -177,7 +193,9 @@ export default function ReadingDetail() {
 
 	return (
 		<div class={styles.page}>
-			<A href="/reading" class={styles.back}>← 文章列表</A>
+			<A href="/reading" class={styles.back}>
+				← 文章列表
+			</A>
 
 			<Show when={detail()}>
 				{(d) => (
@@ -186,14 +204,18 @@ export default function ReadingDetail() {
 							<h1>{d().article.title}</h1>
 							<div class={styles.meta}>
 								<span>{d().article.word_count} 词</span>
-								<span>{d().words.filter((w) => w.status === "unknown").length} 个不认识</span>
+								<span>
+									{d().words.filter((w) => w.status === "unknown").length}{" "}
+									个不认识
+								</span>
 							</div>
 						</div>
 
 						<Show when={recommended()?.recommended}>
 							{(rec) => (
 								<A href={`/reading/${rec().id}`} class={styles.recommendBanner}>
-									推荐下一篇：{rec().title}（认识率 {(rec().known_ratio * 100).toFixed(0)}%）
+									推荐下一篇：{rec().title}（认识率{" "}
+									{(rec().known_ratio * 100).toFixed(0)}%）
 								</A>
 							)}
 						</Show>
@@ -229,10 +251,29 @@ export default function ReadingDetail() {
 													}}
 												>
 													<span
-														class={st === "known" ? styles.knownIcon : st === "ignored" ? styles.ignoredIcon : styles.unknownIcon}
-														onClick={() => handleMark(w.word, st === "known" ? "unknown" : st === "ignored" ? "unknown" : "known")}
+														class={
+															st === "known"
+																? styles.knownIcon
+																: st === "ignored"
+																	? styles.ignoredIcon
+																	: styles.unknownIcon
+														}
+														onClick={() =>
+															handleMark(
+																w.word,
+																st === "known"
+																	? "unknown"
+																	: st === "ignored"
+																		? "unknown"
+																		: "known",
+															)
+														}
 													>
-														{st === "known" ? "✓" : st === "ignored" ? "–" : "✗"}
+														{st === "known"
+															? "✓"
+															: st === "ignored"
+																? "–"
+																: "✗"}
 													</span>
 													<span class={styles.wordName}>{w.word}</span>
 													<button

@@ -247,7 +247,13 @@ export default function CommandPalette() {
 		<>
 			{/* 遮罩 + 面板 */}
 			<Show when={open()}>
-				<div class={styles.overlay} onClick={close} />
+				<div
+					class={styles.overlay}
+					onClick={close}
+					onKeyDown={(e) => e.key === "Enter" && close()}
+					role="presentation"
+					tabIndex={-1}
+				/>
 				<div ref={barRef} class={styles.bar}>
 					<div class={styles.inputRow}>
 						<span class={styles.prefix}>{MODE_PREFIX[mode()]}</span>

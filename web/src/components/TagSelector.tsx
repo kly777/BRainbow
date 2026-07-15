@@ -107,25 +107,23 @@ export default function TagSelector(props: Props) {
 				<div class={styles.dropdown}>
 					<For each={filteredSuggestions()}>
 						{(tag) => (
-							<div
+							<button
+								type="button"
 								class={styles.dropdownItem}
-								role="button"
-								tabIndex={-1}
 								onMouseDown={() => handleSelect(tag)}
 							>
 								{tag.name}
-							</div>
+							</button>
 						)}
 					</For>
 					<Show when={!hasExactMatch() && query().trim().length > 0}>
-						<div
+						<button
+							type="button"
 							class={`${styles.dropdownItem} ${styles.createNew}`}
-							role="button"
-							tabIndex={-1}
 							onMouseDown={handleCreate}
 						>
 							{creating() ? "创建中…" : `+ 创建"${query().trim()}"`}
-						</div>
+						</button>
 					</Show>
 				</div>
 			</Show>

@@ -142,14 +142,13 @@ export default function MemManageToolbar(props: Props) {
 				<Show when={tagOpen() && suggestions().length > 0}>
 					<div class={styles.tagDropdown}>
 						{suggestions().map((tag) => (
-							<div
+							<button
+								type="button"
 								class={styles.tagOption}
-								role="button"
-								tabIndex={-1}
 								onMouseDown={() => addTag(tag)}
 							>
 								{tag.name}
-							</div>
+							</button>
 						))}
 					</div>
 				</Show>

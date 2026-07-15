@@ -37,6 +37,7 @@ export default function ReadingUnknown() {
 								</span>
 							</div>
 							<button
+								type="button"
 								class={styles.knownBtn}
 								onClick={() => handleMarkKnown(w.word)}
 							>

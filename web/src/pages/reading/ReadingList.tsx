@@ -1,15 +1,9 @@
-import { A, useSearchParams } from "@solidjs/router";
+import { A } from "@solidjs/router";
+import { createResource, createSignal, For, Show } from "solid-js";
 import {
-	createEffect,
-	createResource,
-	createSignal,
-	For,
-	Show,
-} from "solid-js";
-import {
+	type ArticleSummary,
 	listArticles,
 	uploadArticle,
-	type ArticleSummary,
 } from "../../apis/readingApi.ts";
 import styles from "./ReadingList.module.css";
 
@@ -41,14 +35,24 @@ export default function ReadingList() {
 				<A href="/reading/unknown" class={styles.unknownLink}>
 					不认识词表
 				</A>
-				<button class={styles.uploadBtn} onClick={() => setUploadOpen(true)}>
+				<button
+					type="button"
+					class={styles.uploadBtn}
+					onClick={() => setUploadOpen(true)}
+				>
 					+ 上传文章
 				</button>
 			</div>
 
 			{/* 上传 Modal */}
 			<Show when={uploadOpen()}>
-				<div class={styles.overlay} onClick={() => setUploadOpen(false)} />
+				<div
+					class={styles.overlay}
+					onClick={() => setUploadOpen(false)}
+					onKeyDown={(e) => e.key === "Enter" && setUploadOpen(false)}
+					role="presentation"
+					tabIndex={-1}
+				/>
 				<div class={styles.modal}>
 					<h2>上传文章</h2>
 					<input
@@ -66,12 +70,14 @@ export default function ReadingList() {
 					/>
 					<div class={styles.modalActions}>
 						<button
+							type="button"
 							class={styles.cancelBtn}
 							onClick={() => setUploadOpen(false)}
 						>
 							取消
 						</button>
 						<button
+							type="button"
 							class={styles.submitBtn}
 							onClick={handleUpload}
 							disabled={uploading() || !title().trim() || !content().trim()}

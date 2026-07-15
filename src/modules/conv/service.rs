@@ -271,7 +271,7 @@ mod tests {
                 h.match_field, h.score, h.title
             );
         }
-        assert!(res.hits.len() > 0, "至少应有一条命中");
+        assert!(!res.hits.is_empty(), "至少应有一条命中");
     }
 
     #[tokio::test]
@@ -287,7 +287,7 @@ mod tests {
         for h in &res.hits {
             eprintln!("  [{:6}] title={}", h.match_field, h.title);
         }
-        assert!(res.hits.len() > 0, "至少应有一条命中");
+        assert!(!res.hits.is_empty(), "至少应有一条命中");
     }
 
     #[tokio::test]

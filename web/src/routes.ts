@@ -1,6 +1,6 @@
-import { useLocation } from "@solidjs/router";
 import type { RouteDefinition } from "@solidjs/router";
-import { createEffect, type Component, lazy, onCleanup } from "solid-js";
+import { useLocation } from "@solidjs/router";
+import { type Component, createEffect, lazy, onCleanup } from "solid-js";
 
 export interface RouteConfig {
 	path: string;

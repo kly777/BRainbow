@@ -12,10 +12,10 @@ import {
 	editMemE,
 	getAllMemsE,
 	getMemTagsE,
-	searchTagsE,
 	type MemItem,
 	removeTagFromMemE,
 	resetMemE,
+	searchTagsE,
 	suspendMemE,
 	type TagInfo,
 	unsuspendMemE,
@@ -138,7 +138,7 @@ export default function MemManage() {
 	const [batchTagMode, setBatchTagMode] = createSignal<"add" | "remove">("add");
 
 	// ── URL 持久化的标签过滤 ──
-	const tagFilterIds = () => {
+	const _tagFilterIds = () => {
 		const v = searchParams.tag_ids;
 		return typeof v === "string"
 			? v.split(",").filter(Boolean).map(Number)
@@ -236,13 +236,13 @@ export default function MemManage() {
 	// URL 参数变化时重新加载（含浏览器前进/后退）
 	createEffect(() => {
 		// 读取 URL 派生值来追踪依赖
-		void (searchQuery(),
-		filterState(),
-		sortField(),
-		sortDir(),
-		page(),
-		tagFilters(),
-		tagMode());
+		void searchQuery();
+		void filterState();
+		void sortField();
+		void sortDir();
+		void page();
+		void tagFilters();
+		void tagMode();
 		if (!initialLoadDone) return;
 		load();
 	});

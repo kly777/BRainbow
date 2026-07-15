@@ -84,6 +84,7 @@ pub fn bad(e: impl std::fmt::Display, operation: &str) -> Response {
 pub enum ServiceError {
     InvalidInput(String),
     NotFound(String),
+    #[allow(dead_code)]
     AlreadyExists(String),
     Internal(String),
     Db(sqlx::Error),

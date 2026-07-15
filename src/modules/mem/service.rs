@@ -55,10 +55,10 @@ impl MemService {
             .get_due_learning_count(tag_ids, exclude_tag_ids)
             .await? as usize;
 
-        let mut ids: Vec<i32> = Vec::new();
         let mut deferred_extra = false;
 
         // 如果太多 → 随机 defer 1/3
+        let mut ids: Vec<i32>;
         if due_learning_count > threshold {
             let to_defer = due_learning_count / 3;
             // 取 learning_quota 张作为本批，其余随机 defer
@@ -69,7 +69,6 @@ impl MemService {
             let for_batch: Vec<i32> = all_learning.iter().take(learning_quota).copied().collect();
             let extra: Vec<i32> = all_learning.iter().skip(learning_quota).copied().collect();
             // extra 中随机选 to_defer 张 defer（在 await 前完成所有 RNG 操作）
-            use rand::seq::IndexedRandom;
             use rand::seq::IteratorRandom;
             let to_defer_ids: Vec<i32> = extra.iter().copied().sample(&mut rand::rng(), to_defer);
             self.repo.defer_learning_cards(&to_defer_ids).await?;
@@ -245,11 +244,7 @@ impl MemService {
         };
         let days_elapsed = days_elapsed_since(&row.last_review_at);
         let config = fsrs::SchedulerConfig::default();
-        let cumulative_step_days = if state.has_steps() || state == CardState::New {
-            days_elapsed
-        } else {
-            days_elapsed
-        };
+        let cumulative_step_days = days_elapsed;
         fsrs::schedule(
             fsrs::ScheduleInput {
                 s_old: row.stability,

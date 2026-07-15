@@ -9,9 +9,9 @@ import {
 } from "solid-js";
 import {
 	getArticle,
+	getArticleNotes,
 	markWord,
 	recommendNext,
-	getArticleNotes,
 	updateArticleNotes,
 } from "../../apis/readingApi.ts";
 import styles from "./ReadingDetail.module.css";
@@ -222,7 +222,11 @@ export default function ReadingDetail() {
 
 						<div
 							class={styles.content}
+							role="application"
 							onClick={handleContentClick}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") handleContentClick(e as never);
+							}}
 							onContextMenu={handleContentContextMenu}
 						>
 							{renderContent(d().article.content)}
@@ -232,6 +236,7 @@ export default function ReadingDetail() {
 							<div class={styles.wordListArea}>
 								<h3>文章词表</h3>
 								<button
+									type="button"
 									class={styles.uploadUnknownBtn}
 									onClick={handleUploadUnknown}
 									disabled={uploadingUnknown()}
@@ -250,7 +255,7 @@ export default function ReadingDetail() {
 														[styles.ignoredWordSidebar]: st === "ignored",
 													}}
 												>
-													<span
+													<button type="button"
 														class={
 															st === "known"
 																? styles.knownIcon
@@ -274,9 +279,10 @@ export default function ReadingDetail() {
 															: st === "ignored"
 																? "–"
 																: "✗"}
-													</span>
+													</button>
 													<span class={styles.wordName}>{w.word}</span>
 													<button
+													type="button"
 														class={styles.ignoreBtn}
 														onClick={() => handleMark(w.word, "ignored")}
 														title={st === "ignored" ? "取消忽略" : "忽略此词"}
@@ -301,7 +307,11 @@ export default function ReadingDetail() {
 										rows={4}
 									/>
 								</div>
-								<button class={styles.copyBtn} onClick={handleCopyUnknown}>
+								<button
+									type="button"
+									class={styles.copyBtn}
+									onClick={handleCopyUnknown}
+								>
 									📋 复制不认识词 + 笔记
 								</button>
 							</div>

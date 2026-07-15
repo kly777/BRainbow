@@ -1511,7 +1511,7 @@ mod tests {
         insert_session_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
         let est = estimate(&repo).await;
         assert_eq!(est.due_count, 1);
-        assert_eq!(est.total_estimate, 1 * 2);
+        assert_eq!(est.total_estimate, 2);
     }
 
     // ── get_all_mems / count_all_mems 埋葬过滤 ──
@@ -1615,7 +1615,7 @@ mod tests {
         }
 
         // 验证新卡有 20 张
-        let (n, l, d, b, s) = repo.get_counts().await.unwrap();
+        let (n, _l, _d, _b, _s) = repo.get_counts().await.unwrap();
         assert_eq!(n, 20, "应有 20 张新卡");
 
         // 模拟 get_due 逻辑（简化版）：先取 learning，再取 due_reviews，再取 new_cards

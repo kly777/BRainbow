@@ -378,10 +378,42 @@ impl MemRepo {
 
     pub async fn get_learning_mems(&self, limit: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
-            "SELECT m.id FROM mem m WHERE m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended'"
+            r#"SELECT m.id FROM mem m WHERE m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended'
+              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
+        qb.push(" ORDER BY due_at LIMIT ");
+        qb.push_bind(limit);
+        qb.build_query_scalar().fetch_all(&*self.pool).await
+    }
+
+    pub async fn get_due_learning_count(&self, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<i64, sqlx::Error> {
+        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
+            "SELECT COUNT(*) FROM mem m WHERE m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"
+        );
+        Self::tag_filter_sql(&mut qb, tag_ids);
+        Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
+        qb.build_query_scalar().fetch_one(&*self.pool).await
+    }
+
+    pub async fn defer_learning_cards(&self, ids: &[i32]) -> Result<(), sqlx::Error> {
+        if ids.is_empty() { return Ok(()); }
+        for id in ids {
+            sqlx::query("UPDATE mem SET state = 'deferred' WHERE id = ?")
+                .bind(id)
+                .execute(&*self.pool)
+                .await?;
+        }
+        Ok(())
+    }
+
+    pub async fn get_deferred_learning(&self, limit: i64, tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
+            r#"SELECT m.id FROM mem m WHERE m.state = 'deferred' AND m.buried = 0
+              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#
+        );
+        Self::tag_filter_sql(&mut qb, tag_ids);
         qb.push(" ORDER BY due_at LIMIT ");
         qb.push_bind(limit);
         qb.build_query_scalar().fetch_all(&*self.pool).await
@@ -1472,6 +1504,80 @@ mod tests {
         };
         let ids = repo.get_all_mems(100, 0, &query).await.unwrap();
         assert_eq!(ids.len(), 1, "只有 1 张未埋葬的 review 卡");
+    }
+
+    /// 模拟 get_due 的核心逻辑：验证新卡足够时不会拉取 upcoming
+    #[tokio::test]
+    async fn test_due_does_not_pull_upcoming_when_new_cards_exist() {
+        let repo = setup_db().await;
+
+        // 创建 20 张新卡
+        for i in 0..20 {
+            let cue_id = repo.create_chunk(&format!("cue_{}", i)).await.unwrap();
+            let target_id = repo.create_chunk(&format!("target_{}", i)).await.unwrap();
+            repo.create_mem(cue_id, target_id, &[]).await.unwrap();
+        }
+
+        // 创建 5 张 review 卡（未来的 due_at，本不应出现在本轮）
+        for i in 0..5 {
+            let cue_id = repo.create_chunk(&format!("upcoming_cue_{}", i)).await.unwrap();
+            let target_id = repo.create_chunk(&format!("upcoming_target_{}", i)).await.unwrap();
+            let id = repo.create_mem(cue_id, target_id, &[]).await.unwrap();
+            // 设为 review 状态，due_at 在 1 分钟后（使用 TZ 格式，与真实代码一致）
+            // 1 分钟 = 60 秒
+            let future = (chrono::Utc::now() + chrono::Duration::seconds(60))
+                .format("%Y-%m-%dT%H:%M:%SZ")
+                .to_string();
+            sqlx::query(
+                "UPDATE mem SET state = 'review', due_at = ? WHERE id = ?"
+            )
+            .bind(&future)
+            .bind(id)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
+        }
+
+        // 验证新卡有 20 张
+        let (n, l, d, b, s) = repo.get_counts().await.unwrap();
+        assert_eq!(n, 20, "应有 20 张新卡");
+
+        // 模拟 get_due 逻辑（简化版）：先取 learning，再取 due_reviews，再取 new_cards
+        let limit = 7;
+        let tag_ids: &[i32] = &[];
+        let exclude_tag_ids: &[i32] = &[];
+
+        // 1. learning
+        let mut ids = repo.get_learning_mems(limit, tag_ids, exclude_tag_ids).await.unwrap();
+        assert_eq!(ids.len(), 0, "没有 learning 卡");
+
+        // 2. due_reviews
+        if ids.len() < limit as usize {
+            let needed = limit as usize - ids.len();
+            let due = repo.get_due_reviews(needed as i64, tag_ids, exclude_tag_ids).await.unwrap();
+            assert!(due.is_empty(), "没有到期的 review 卡");
+            ids.extend(due);
+        }
+
+        // 3. new_cards
+        if ids.len() < limit as usize {
+            let needed = limit as usize - ids.len();
+            let new_cards = repo.get_new_cards(needed as i64, tag_ids, exclude_tag_ids).await.unwrap();
+            // 关键断言：应该拿到足够的卡填满队列
+            ids.extend(new_cards);
+        }
+
+        // 验证：新卡足够填满队列，无需用到 upcoming
+        assert_eq!(ids.len(), limit as usize, "应有 7 张卡（全部来自新卡）");
+
+        // 4. 验证 upcoming 不会被用到
+        if ids.len() < limit as usize {
+            let needed = limit as usize - ids.len();
+            let upcoming = repo.get_upcoming_reviews(needed as i64, tag_ids).await.unwrap();
+            // 不应走到这里！
+            ids.extend(upcoming);
+            panic!("不应拉取 upcoming！新卡足够填满队列");
+        }
     }
 }
 

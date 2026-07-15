@@ -11,6 +11,7 @@ pub enum CardState {
     Review,
     Relearning,
     Suspended,
+    Deferred,
 }
 
 impl CardState {
@@ -21,6 +22,7 @@ impl CardState {
             Self::Review => "review",
             Self::Relearning => "relearning",
             Self::Suspended => "suspended",
+            Self::Deferred => "deferred",
         }
     }
 
@@ -51,6 +53,7 @@ impl FromStr for CardState {
             "review" => Ok(Self::Review),
             "relearning" => Ok(Self::Relearning),
             "suspended" => Ok(Self::Suspended),
+            "deferred" => Ok(Self::Deferred),
             _ => Err(format!("unknown card state: {s}")),
         }
     }

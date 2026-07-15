@@ -42,17 +42,53 @@ impl MemService {
     // ── 获取学习池 ──
 
     pub async fn get_due(&self, max_learning: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<DueResponse, sqlx::Error> {
-        let mut ids = self.repo.get_learning_mems(max_learning, tag_ids, exclude_tag_ids).await?;
-        let pool_count = ids.len();
+        let learning_quota = std::cmp::max(1, max_learning / 2) as usize;
+        let threshold = (max_learning * 2) as usize;
 
-        if pool_count < max_learning as usize {
-            let needed = max_learning as usize - pool_count;
-            let due_reviews = self.repo.get_due_reviews(needed as i64, tag_ids, exclude_tag_ids).await?;
-            ids.extend(due_reviews);
+        // 统计到期 learning 卡总数
+        let due_learning_count = self.repo.get_due_learning_count(tag_ids, exclude_tag_ids).await? as usize;
+
+        let mut ids: Vec<i32> = Vec::new();
+        let mut deferred_extra = false;
+
+        // 如果太多 → 随机 defer 1/3
+        if due_learning_count > threshold {
+            let to_defer = due_learning_count / 3;
+            // 取 learning_quota 张作为本批，其余随机 defer
+            let all_learning = self.repo.get_learning_mems(due_learning_count as i64, tag_ids, exclude_tag_ids).await?;
+            let for_batch: Vec<i32> = all_learning.iter().take(learning_quota).copied().collect();
+            let extra: Vec<i32> = all_learning.iter().skip(learning_quota).copied().collect();
+            // extra 中随机选 to_defer 张 defer（在 await 前完成所有 RNG 操作）
+            use rand::seq::IteratorRandom;
+            use rand::seq::IndexedRandom;
+            let to_defer_ids: Vec<i32> = extra.iter().copied().sample(&mut rand::rng(), to_defer);
+            self.repo.defer_learning_cards(&to_defer_ids).await?;
+            ids = for_batch;
+            deferred_extra = true;
+        } else {
+            ids = self.repo.get_learning_mems(learning_quota as i64, tag_ids, exclude_tag_ids).await?;
         }
 
-        if ids.len() < max_learning as usize {
-            let needed = max_learning as usize - ids.len();
+        // 取 review
+        let review_quota = (max_learning as usize).saturating_sub(ids.len());
+        if review_quota > 0 {
+            let due = self.repo.get_due_reviews(review_quota as i64, tag_ids, exclude_tag_ids).await?;
+            ids.extend(due);
+        }
+
+        // review 不足 → 从 deferred 拉回来
+        let needed = (max_learning as usize).saturating_sub(ids.len());
+        if needed > 0 {
+            let deferred = self.repo.get_deferred_learning(needed as i64, tag_ids).await?;
+            for id in &deferred {
+                self.repo.set_state(*id, "learning", Some(0)).await?;
+            }
+            ids.extend(deferred);
+        }
+
+        // 还不够 → 新卡
+        let needed = (max_learning as usize).saturating_sub(ids.len());
+        if needed > 0 {
             let new_cards = self.repo.get_new_cards(needed as i64, tag_ids, exclude_tag_ids).await?;
             for id in &new_cards {
                 self.repo.set_state(*id, "learning", Some(0)).await?;
@@ -60,8 +96,9 @@ impl MemService {
             ids.extend(new_cards);
         }
 
-        if ids.len() < max_learning as usize {
-            let needed = max_learning as usize - ids.len();
+        // 还不够 → upcoming
+        let needed = (max_learning as usize).saturating_sub(ids.len());
+        if needed > 0 {
             let upcoming = self.repo.get_upcoming_reviews(needed as i64, tag_ids).await?;
             ids.extend(upcoming);
         }
@@ -72,7 +109,7 @@ impl MemService {
             }
 
         let items = self.build_items(&ids).await;
-        let has_more = ids.len() >= max_learning as usize;
+        let has_more = deferred_extra || ids.len() >= max_learning as usize;
         let upcoming_count = if ids.is_empty() {
             self.repo.count_upcoming().await.unwrap_or(0) as usize
         } else {

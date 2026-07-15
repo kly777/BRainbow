@@ -496,7 +496,7 @@ impl MemService {
                 self.repo
                     .add_tag_to_mem(mem_id, tag_id)
                     .await
-                    .map_err(|e| (crate::batch::CODE_DB_ERROR, format!("{e}")))
+                    .map_err(|e| ("DB_ERROR", format!("{e}")))
             },
         )
         .await;
@@ -510,7 +510,7 @@ impl MemService {
                 self.repo
                     .remove_tag_from_mem(mem_id, tag_id)
                     .await
-                    .map_err(|e| (crate::batch::CODE_DB_ERROR, format!("{e}")))
+                    .map_err(|e| ("DB_ERROR", format!("{e}")))
             },
         )
         .await;
@@ -527,7 +527,7 @@ impl MemService {
                     self.repo
                         .set_mem_tags(mem_id, &tag_ids)
                         .await
-                        .map_err(|e| (crate::batch::CODE_DB_ERROR, format!("{e}")))
+                        .map_err(|e| ("DB_ERROR", format!("{e}")))
                 }
             },
         )
@@ -543,7 +543,7 @@ impl MemService {
                 vec![],
                 vec![crate::batch::BatchErrorDetail {
                     index: 0,
-                    code: crate::batch::CODE_DB_ERROR,
+                    code: "Internal Server Error".into(),
                     message: format!("数据库查询失败: {e}"),
                 }],
                 mem_ids.len(),

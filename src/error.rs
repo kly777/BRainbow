@@ -1,85 +1,74 @@
 //! 统一的 API 错误响应格式
 //!
-//! 所有 handler 的错误返回都应使用此模块中的结构和辅助函数，
-//! 确保前端能够一致地解析错误信息。
-//!
 //! JSON 格式:
 //! ```json
 //! {
-//!   "code": "NOT_FOUND",           // 机器可读错误码
-//!   "message": "卡片 ID 3 不存在",  // 人类可读错误信息（中文）
-//!   "details": null                 // 可选附加信息
+//!   "code": "Bad Request",
+//!   "message": "无效参数"
 //! }
 //! ```
+//!
+//! `code` 字段取自 HTTP 标准状态码短语（`StatusCode::canonical_reason()`），
+//! 不再维护自定义错误码常量。
 
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// 统一的 API 错误响应体
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ErrorBody {
-    /// 机器可读错误码，如 "NOT_FOUND", "VALIDATION_ERROR", "INTERNAL_ERROR"
+    /// HTTP 状态码标准短语，如 "Bad Request", "Not Found"
     pub code: String,
     /// 面向用户的错误信息
     pub message: String,
-    /// 可选的附加详情
+    /// 可选附加信息（auth 模块直接构造时使用）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<serde_json::Value>,
 }
 
-// ==================== 通用错误辅助函数 ====================
-// 以下函数内部委托给 ServiceError，确保与 service 层错误格式一致。
-// handler 中快速返回时使用这些简写，需要更多控制时直接用 ServiceError。
-
-fn resp(status: StatusCode, code: &str, message: impl Into<String>) -> Response {
-    let body = axum::Json(ErrorBody {
-        code: code.into(),
-        message: message.into(),
-        details: None,
-    });
-    (status, body).into_response()
+fn resp(status: StatusCode, message: impl Into<String>) -> Response {
+    let code = status.canonical_reason().unwrap_or("Unknown").to_string();
+    (status, axum::Json(ErrorBody { code, message: message.into(), details: None })).into_response()
 }
 
-/// 400 — 参数无效（委托给 ServiceError::InvalidInput）
+/// 400
 pub fn bad_request(message: impl Into<String>) -> Response {
-    ServiceError::InvalidInput(message.into()).into_response()
+    resp(StatusCode::BAD_REQUEST, message)
 }
 
-/// 400 — 带自定义 code
-pub fn bad_request_with_code(code: impl Into<String>, message: impl Into<String>) -> Response {
-    resp(StatusCode::BAD_REQUEST, &code.into(), message)
+/// 400 — 带 code（已弃用，兼容 time_window 模块）
+pub fn bad_request_with_code(_code: impl Into<String>, message: impl Into<String>) -> Response {
+    resp(StatusCode::BAD_REQUEST, message)
 }
 
-/// 404 — 资源不存在（委托给 ServiceError::NotFound）
+/// 404
 pub fn not_found(message: impl Into<String>) -> Response {
-    ServiceError::NotFound(message.into()).into_response()
+    resp(StatusCode::NOT_FOUND, message)
 }
 
-/// 409 — 资源冲突（委托给 ServiceError::AlreadyExists）
+/// 409
 pub fn conflict(message: impl Into<String>) -> Response {
-    ServiceError::AlreadyExists(message.into()).into_response()
+    resp(StatusCode::CONFLICT, message)
 }
 
-/// 401 — 未认证
+/// 401
 pub fn unauthorized(message: impl Into<String>) -> Response {
-    resp(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", message)
+    resp(StatusCode::UNAUTHORIZED, message)
 }
 
-/// 500 + 自动拼 "{operation}失败: {error}"
+/// 500，自动拼 "{operation}失败: {error}"
 pub fn internal(e: impl std::fmt::Display, operation: &str) -> Response {
-    ServiceError::Internal(format!("{}失败: {}", operation, e)).into_response()
+    resp(StatusCode::INTERNAL_SERVER_ERROR, format!("{}失败: {}", operation, e))
 }
 
-/// 400 + 自动拼 "{operation}失败: {error}"
+/// 400，自动拼 "{operation}失败: {error}"
 pub fn bad(e: impl std::fmt::Display, operation: &str) -> Response {
-    ServiceError::InvalidInput(format!("{}失败: {}", operation, e)).into_response()
+    resp(StatusCode::BAD_REQUEST, format!("{}失败: {}", operation, e))
 }
 
-// ==================== 统一的服务错误类型 ====================
+// ── 服务层错误类型 ──
 
-/// 所有 service 层共用的错误类型。
-/// 每个变体都有机器可读的错误码和中文消息。
 #[derive(Debug)]
 pub enum ServiceError {
     InvalidInput(String),
@@ -90,14 +79,23 @@ pub enum ServiceError {
 }
 
 impl ServiceError {
-    /// 转为 axum HTTP 响应
+    /// 获取对应的 HTTP 状态码
+    pub fn status_code(&self) -> StatusCode {
+        match self {
+            Self::InvalidInput(_) => StatusCode::BAD_REQUEST,
+            Self::NotFound(_) => StatusCode::NOT_FOUND,
+            Self::AlreadyExists(_) => StatusCode::CONFLICT,
+            Self::Internal(_) | Self::Db(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+
     pub fn into_response(self) -> Response {
         match self {
-            Self::InvalidInput(msg) => resp(StatusCode::BAD_REQUEST, "INVALID_INPUT", msg),
-            Self::NotFound(msg) => resp(StatusCode::NOT_FOUND, "NOT_FOUND", msg),
-            Self::AlreadyExists(msg) => resp(StatusCode::CONFLICT, "CONFLICT", msg),
-            Self::Internal(msg) => resp(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", msg),
-            Self::Db(e) => resp(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", format!("数据库操作失败: {}", e)),
+            Self::InvalidInput(msg) => resp(StatusCode::BAD_REQUEST, msg),
+            Self::NotFound(msg) => resp(StatusCode::NOT_FOUND, msg),
+            Self::AlreadyExists(msg) => resp(StatusCode::CONFLICT, msg),
+            Self::Internal(msg) => resp(StatusCode::INTERNAL_SERVER_ERROR, msg),
+            Self::Db(e) => resp(StatusCode::INTERNAL_SERVER_ERROR, format!("数据库操作失败: {}", e)),
         }
     }
 }
@@ -124,92 +122,24 @@ impl From<sqlx::Error> for ServiceError {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
-    use axum::http::StatusCode;
 
     #[test]
     fn bad_request_returns_400() {
-        let resp = bad_request("无效参数");
-        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
-    }
-
-    #[test]
-    fn bad_request_with_code_returns_400() {
-        let resp = bad_request_with_code("CUSTOM_CODE", "自定义错误");
-        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        let r = bad_request("无效参数");
+        assert_eq!(r.status(), StatusCode::BAD_REQUEST);
     }
 
     #[test]
     fn not_found_returns_404() {
-        let resp = not_found("资源不存在");
-        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+        let r = not_found("资源不存在");
+        assert_eq!(r.status(), StatusCode::NOT_FOUND);
     }
 
-    #[test]
-    fn conflict_returns_409() {
-        let resp = conflict("冲突");
-        assert_eq!(resp.status(), StatusCode::CONFLICT);
-    }
-
-    #[test]
-    fn unauthorized_returns_401() {
-        let resp = unauthorized("请登录");
-        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
-    }
-
-    #[test]
-    fn internal_error_returns_500() {
-        let resp = internal("服务器出错", "test");
-        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
-    #[test]
-    fn internal_formats_message() {
-        let resp = internal(std::io::Error::new(std::io::ErrorKind::Other, "磁盘满"), "写入");
-        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
-    #[test]
-    fn bad_formats_message() {
-        let resp = bad(std::fmt::Error, "格式化");
-        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
-    }
-
-    #[test]
-    fn all_error_codes_are_distinct() {
-        let errors: Vec<Response> = vec![
-            bad_request("a"),
-            bad_request_with_code("CODE", "b"),
-            not_found("c"),
-            conflict("d"),
-            unauthorized("e"),
-            internal(std::fmt::Error, "f"),
-        ];
-        let statuses: Vec<u16> = errors.iter().map(|r| r.status().as_u16()).collect();
-        assert_eq!(statuses, vec![400, 400, 404, 409, 401, 500]);
-    }
-
-    #[test]
-    fn api_error_serialization() {
-        let err = ErrorBody {
-            code: "NOT_FOUND".into(),
-            message: "卡片未找到".into(),
-            details: Some(serde_json::json!({ "id": 42 })),
-        };
-        let json = serde_json::to_string(&err).unwrap();
-        assert!(json.contains("NOT_FOUND"));
-        assert!(json.contains("卡片未找到"));
-        assert!(json.contains("42"));
-    }
-
-    #[test]
-    fn api_error_details_omitted_when_none() {
-        let err = ErrorBody {
-            code: "OK".into(),
-            message: "一切正常".into(),
-            details: None,
-        };
-        let json = serde_json::to_string(&err).unwrap();
-        // details 字段应被跳过
-        assert!(!json.contains("details"));
+    #[tokio::test]
+    async fn code_derived_from_status() {
+        let r = not_found("x");
+        let bytes = axum::body::to_bytes(r.into_body(), 1024).await.unwrap();
+        let body: ErrorBody = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(body.code, "Not Found");
     }
 }

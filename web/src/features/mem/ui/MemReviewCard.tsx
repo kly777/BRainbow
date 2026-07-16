@@ -94,7 +94,7 @@ export default function MemReviewCard(props: MemReviewCardProps) {
 								<Show when={m.mnemonic() || m.mnemonicLoading()}>
 									<div style={{"margin-top":"16px","padding":"12px 16px","background":"#f0fdf4","border":"1px solid #bbf7d0","border-radius":"8px","font-size":"14px"}}>
 										<div style={{"font-weight":"600","margin-bottom":"4px","font-size":"12px","color":"#15803d"}}>💡 AI 助记</div>
-										<Show when={m.mnemonicLoading()} fallback={<span>{m.mnemonic()}</span>}>
+										<Show when={m.mnemonicLoading()} fallback={<MarkdownRenderer content={m.mnemonic() ?? ""} />}>
 											<span style={{ color: "#6b7280" }}>生成中…</span>
 										</Show>
 									</div>

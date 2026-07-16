@@ -74,6 +74,9 @@ export default function MemReviewCard(props: MemReviewCardProps) {
 								>
 									📋+
 								</button>
+								<button type="button" class={styles.copyBtn} title={m.mnemonic() ? "重新生成助记" : "AI 生成助记"} onClick={m.generateMnemonic} disabled={m.mnemonicLoading()}>
+									{m.mnemonicLoading() ? "⏳" : "🤖"}
+								</button>
 							</div>
 							<div class={styles.content}>
 								<MarkdownRenderer content={m.item()?.cue.content ?? ""} />
@@ -86,6 +89,16 @@ export default function MemReviewCard(props: MemReviewCardProps) {
 								<div class={styles.content}>
 									<MarkdownRenderer content={m.item()?.target.content ?? ""} />
 								</div>
+
+								{/* AI 助记 */}
+								<Show when={m.mnemonic() || m.mnemonicLoading()}>
+									<div style={{"margin-top":"16px","padding":"12px 16px","background":"#f0fdf4","border":"1px solid #bbf7d0","border-radius":"8px","font-size":"14px"}}>
+										<div style={{"font-weight":"600","margin-bottom":"4px","font-size":"12px","color":"#15803d"}}>💡 AI 助记</div>
+										<Show when={m.mnemonicLoading()} fallback={<span>{m.mnemonic()}</span>}>
+											<span style={{ color: "#6b7280" }}>生成中…</span>
+										</Show>
+									</div>
+								</Show>
 							</div>
 						</Show>
 					</Show>
@@ -113,26 +126,6 @@ export default function MemReviewCard(props: MemReviewCardProps) {
 						</div>
 					</Show>
 				</div>
-
-				{/* AI 助记 */}
-				<Show when={m.mnemonic() || m.mnemonicLoading()}>
-					<div style={{
-						"margin": "16px auto",
-						"max-width": "600px",
-						"padding": "12px 16px",
-						"background": "#f0fdf4",
-						"border": "1px solid #bbf7d0",
-						"border-radius": "8px",
-						"font-size": "14px",
-					}}>
-						<div style={{"font-weight": "600", "margin-bottom": "4px", "font-size": "12px", "color": "#15803d"}}>
-							💡 AI 助记
-						</div>
-						<Show when={m.mnemonicLoading()} fallback={<span>{m.mnemonic()}</span>}>
-							<span style={{ color: "#6b7280" }}>生成中…</span>
-						</Show>
-					</div>
-				</Show>
 
 				{/* 操作区 */}
 				<div class={styles.actions}>

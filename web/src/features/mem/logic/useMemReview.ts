@@ -32,6 +32,7 @@ import { calcAvgCardTime, calcMaxLearning, ALPHA } from "./mem-calcs.ts";
 import { useMemTagFilter } from "./useMemTagFilter.ts";
 import { callAi } from "../../../lib/ai.ts";
 import { fillPrompt, getAiSettings } from "../../../lib/ai-settings.ts";
+import { notifyError } from "../../../lib/notify.ts";
 
 // ── Hook ──
 
@@ -136,7 +137,10 @@ export function useMemReview(): UseMemReview {
 		const it = item();
 		if (!it) return;
 		const settings = getAiSettings();
-		if (!settings.apiKey) return;
+		if (!settings.apiKey) {
+			notifyError("未配置 API Key", new Error("请在顶栏 🤖 AI 设置中配置 API Key"));
+			return;
+		}
 		setMnemonicLoading(true);
 		try {
 			const prompt = fillPrompt(settings.mnemonicPrompt, {
@@ -146,15 +150,14 @@ export function useMemReview(): UseMemReview {
 			const res = await callAi({
 				messages: [{ role: "user", content: prompt }],
 			});
-			// 保存到后端
 			await setMnemonicE(it.id, res.content).catch(() => {});
 			setMnemonics((prev) => {
 				const next = new Map(prev);
 				next.set(it.id, res.content);
 				return next;
 			});
-		} catch {
-			/* ignore */
+		} catch (e) {
+			notifyError("AI 生成失败", e);
 		}
 		setMnemonicLoading(false);
 	};

@@ -310,6 +310,20 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await?;
 
+    // ── AI 助记 ──
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS mem_mnemonic (
+            mem_id INTEGER PRIMARY KEY,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            FOREIGN KEY (mem_id) REFERENCES mem(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
     // ── 标签系统 (mem) ──
 
     sqlx::query(

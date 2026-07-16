@@ -808,6 +808,30 @@ impl MemRepo {
             .await
     }
 
+    pub async fn get_mnemonic(&self, mem_id: i32) -> Result<Option<String>, sqlx::Error> {
+        sqlx::query_scalar::<_, String>(
+            "SELECT content FROM mem_mnemonic WHERE mem_id = ?",
+        )
+        .bind(mem_id)
+        .fetch_optional(&*self.pool)
+        .await
+    }
+
+    pub async fn upsert_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            INSERT INTO mem_mnemonic (mem_id, content)
+            VALUES (?, ?)
+            ON CONFLICT(mem_id) DO UPDATE SET content = excluded.content
+            "#,
+        )
+        .bind(mem_id)
+        .bind(content)
+        .execute(&*self.pool)
+        .await?;
+        Ok(())
+    }
+
     pub async fn reset_mem(&self, id: i32) -> Result<(), sqlx::Error> {
         sqlx::query(
             "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?"
@@ -898,6 +922,18 @@ mod tests {
                 rating INTEGER NOT NULL,
                 delta_t INTEGER NOT NULL,
                 FOREIGN KEY (mem_id) REFERENCES mem(id)
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS mem_mnemonic (
+                mem_id INTEGER PRIMARY KEY,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                FOREIGN KEY (mem_id) REFERENCES mem(id) ON DELETE CASCADE
             )",
         )
         .execute(&pool)

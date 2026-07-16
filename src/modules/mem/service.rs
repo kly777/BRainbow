@@ -283,6 +283,7 @@ impl MemService {
                     self.repo.get_chunk(row.target_chunk_id).await,
                 )
             {
+                let mnemonic = self.repo.get_mnemonic(id).await.unwrap_or(None);
                 items.push(MemWithChunks {
                     id: row.id,
                     cue,
@@ -293,6 +294,7 @@ impl MemService {
                     due_at: row.due_at,
                     lapses: row.lapses,
                     leeched: row.leeched,
+                    mnemonic,
                 });
             }
         }
@@ -782,6 +784,14 @@ impl MemService {
     }
     pub async fn reset(&self, id: i32) -> Result<(), sqlx::Error> {
         self.repo.reset_mem(id).await
+    }
+
+    pub async fn get_mnemonic(&self, mem_id: i32) -> Result<Option<String>, sqlx::Error> {
+        self.repo.get_mnemonic(mem_id).await
+    }
+
+    pub async fn set_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), sqlx::Error> {
+        self.repo.upsert_mnemonic(mem_id, content).await
     }
 }
 

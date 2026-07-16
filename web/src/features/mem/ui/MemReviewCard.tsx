@@ -114,6 +114,26 @@ export default function MemReviewCard(props: MemReviewCardProps) {
 					</Show>
 				</div>
 
+				{/* AI 助记 */}
+				<Show when={m.mnemonic() || m.mnemonicLoading()}>
+					<div style={{
+						"margin": "16px auto",
+						"max-width": "600px",
+						"padding": "12px 16px",
+						"background": "#f0fdf4",
+						"border": "1px solid #bbf7d0",
+						"border-radius": "8px",
+						"font-size": "14px",
+					}}>
+						<div style={{"font-weight": "600", "margin-bottom": "4px", "font-size": "12px", "color": "#15803d"}}>
+							💡 AI 助记
+						</div>
+						<Show when={m.mnemonicLoading()} fallback={<span>{m.mnemonic()}</span>}>
+							<span style={{ color: "#6b7280" }}>生成中…</span>
+						</Show>
+					</div>
+				</Show>
+
 				{/* 操作区 */}
 				<div class={styles.actions}>
 					<Show

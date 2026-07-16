@@ -25,6 +25,7 @@ export interface MemItem {
 	due_at: string;
 	lapses: number;
 	leeched: boolean;
+	mnemonic?: string | null;
 }
 
 export interface DueResponse {
@@ -368,6 +369,22 @@ export const uploadImage = async (file: File): Promise<string | null> => {
 		return null;
 	}
 };
+
+// ── AI 助记 ──
+
+export const getMnemonicE = (
+	memId: number,
+): Promise<{ content: string | null }> =>
+	request(`/mem/${memId}/mnemonic`, {});
+
+export const setMnemonicE = (
+	memId: number,
+	content: string,
+): Promise<{ ok: boolean }> =>
+	request<{ ok: boolean }>(`/mem/${memId}/mnemonic`, {
+		method: "PUT",
+		body: JSON.stringify({ content }),
+	});
 
 // ── 类型 re-export（保持向后兼容） ──
 export type {

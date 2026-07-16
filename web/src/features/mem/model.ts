@@ -19,6 +19,7 @@ export interface MemItem {
 	due_at: string;
 	lapses: number;
 	leeched: boolean;
+	mnemonic?: string | null;
 }
 
 /** getDue 返回结构 */

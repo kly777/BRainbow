@@ -21,13 +21,17 @@ import {
 	editMemE,
 	getDueE,
 	getMemCountsE,
+	getMnemonicE,
 	getSessionEstimateE,
 	previewMemE,
 	reviewMemE,
+	setMnemonicE,
 	suspendMemE,
 } from "../api.ts";
 import { calcAvgCardTime, calcMaxLearning, ALPHA } from "./mem-calcs.ts";
 import { useMemTagFilter } from "./useMemTagFilter.ts";
+import { callAi } from "../../../lib/ai.ts";
+import { fillPrompt, getAiSettings } from "../../../lib/ai-settings.ts";
 
 // ── Hook ──
 
@@ -79,6 +83,12 @@ export interface UseMemReview {
 	startEdit: () => void;
 	saveEdit: () => Promise<void>;
 	handleCopyCard: () => void;
+	/** 当前卡片的 AI 助记（如有） */
+	mnemonic: () => string | undefined;
+	/** 是否正在生成助记 */
+	mnemonicLoading: () => boolean;
+	/** 手动触发当前卡片助记生成 */
+	generateMnemonic: () => Promise<void>;
 }
 
 export function useMemReview(): UseMemReview {
@@ -111,6 +121,44 @@ export function useMemReview(): UseMemReview {
 	const [cardStart, setCardStart] = createSignal(Date.now());
 	const [cardDurations, setCardDurations] = createSignal<number[]>([]);
 
+	// ── AI 助记 ──
+	const [consecutiveForgets, setConsecutiveForgets] = createSignal<
+		Map<number, number>
+	>(new Map());
+	const [mnemonics, setMnemonics] = createSignal<Map<number, string>>(
+		new Map(),
+	);
+	const [mnemonicLoading, setMnemonicLoading] = createSignal(false);
+
+	const mnemonic = () => mnemonics().get(item()?.id ?? -1);
+
+	const generateMnemonic = async () => {
+		const it = item();
+		if (!it) return;
+		const settings = getAiSettings();
+		if (!settings.apiKey) return;
+		setMnemonicLoading(true);
+		try {
+			const prompt = fillPrompt(settings.mnemonicPrompt, {
+				cue: it.cue.content,
+				target: it.target.content,
+			});
+			const res = await callAi({
+				messages: [{ role: "user", content: prompt }],
+			});
+			// 保存到后端
+			await setMnemonicE(it.id, res.content).catch(() => {});
+			setMnemonics((prev) => {
+				const next = new Map(prev);
+				next.set(it.id, res.content);
+				return next;
+			});
+		} catch {
+			/* ignore */
+		}
+		setMnemonicLoading(false);
+	};
+
 	// ── 撤销记录 ──
 	let lastAction: { id: number; undoData: Record<string, unknown> } | null =
 		null;
@@ -121,6 +169,33 @@ export function useMemReview(): UseMemReview {
 	const estRemaining = () => Math.round(avgCardTime() * estimatedTotal());
 	const maxLearning = () => calcMaxLearning(avgRating());
 	const item = () => due()[current()];
+
+	const loadMnemonic = async (memId: number) => {
+		// 优先用后端返回的 mnemonic 字段
+		const it = item();
+		const existing = it && it.mnemonic;
+		if (existing) {
+			setMnemonics((prev) => {
+				const next = new Map(prev);
+				next.set(it!.id, existing);
+				return next;
+			});
+			return;
+		}
+		// 没有则尝试从后端单独获取
+		try {
+			const res = await getMnemonicE(memId);
+			if (res.content) {
+				setMnemonics((prev) => {
+					const next = new Map(prev);
+					next.set(memId, res.content!);
+					return next;
+				});
+			}
+		} catch {
+			/* ignore */
+		}
+	};
 
 	// ── 数据加载 ──
 
@@ -179,7 +254,10 @@ export function useMemReview(): UseMemReview {
 				setIsPreview(
 					data.items.length === 1 && data.items[0]?.state !== "learning",
 				);
-				if (data.items.length > 0) loadPreview(data.items[0].id);
+				if (data.items.length > 0) {
+					loadPreview(data.items[0].id);
+					loadMnemonic(data.items[0].id);
+				}
 			}
 		} catch {
 			/* ignore */
@@ -197,7 +275,9 @@ export function useMemReview(): UseMemReview {
 		});
 		if (due().length > 0) {
 			setCardStart(Date.now());
-			loadPreview(due()[current()]?.id);
+			const nextId = due()[current()]?.id;
+			loadPreview(nextId);
+			if (nextId) loadMnemonic(nextId);
 			_setShowAnswer(false);
 		} else {
 			loadDue();
@@ -227,6 +307,26 @@ export function useMemReview(): UseMemReview {
 		setAvgRating((prev) => prev * (1 - ALPHA) + rating * ALPHA);
 		const elapsed = Math.min((Date.now() - cardStart()) / 1000, 300);
 		setCardDurations((prev) => [...prev, elapsed].slice(-30));
+
+		// 连续忘记检测
+		if (rating === 1) {
+			setConsecutiveForgets((prev) => {
+				const next = new Map(prev);
+				const count = (next.get(it.id) ?? 0) + 1;
+				next.set(it.id, count);
+				if (count >= 3 && !mnemonics().has(it.id)) {
+					setTimeout(() => generateMnemonic(), 0);
+				}
+				return next;
+			});
+		} else {
+			setConsecutiveForgets((prev) => {
+				const next = new Map(prev);
+				next.delete(it.id);
+				return next;
+			});
+		}
+
 		setShowUndo(true);
 		advanceQueue();
 		loadCounts();
@@ -391,5 +491,8 @@ export function useMemReview(): UseMemReview {
 		startEdit,
 		saveEdit,
 		handleCopyCard,
+		mnemonic,
+		mnemonicLoading,
+		generateMnemonic,
 	};
 }

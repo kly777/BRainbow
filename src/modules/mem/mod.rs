@@ -49,6 +49,7 @@ pub fn routes() -> Router<AppState> {
         .route("/{id}/suspend", post(handler::suspend_mem))
         .route("/{id}/unsuspend", post(handler::unsuspend_mem))
         .route("/{id}/reset", post(handler::reset_mem))
+        .route("/{id}/mnemonic", get(handler::get_mnemonic).put(handler::set_mnemonic))
         .route("/{id}", delete(handler::delete_mem))
         .route("/optimize", post(handler::optimize_params))
 }

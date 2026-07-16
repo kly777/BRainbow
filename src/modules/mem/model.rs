@@ -81,6 +81,7 @@ pub struct MemWithChunks {
     pub due_at: String,
     pub lapses: i32,
     pub leeched: bool,
+    pub mnemonic: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -488,3 +488,32 @@ pub async fn optimize_params(State(state): State<AppState>) -> impl IntoResponse
         Err(e) => err(e, "优化"),
     }
 }
+
+pub async fn get_mnemonic(
+    Path(id): Path<i32>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.get_mnemonic(id).await {
+        Ok(Some(content)) => Json(serde_json::json!({ "content": content })).into_response(),
+        Ok(None) => Json(serde_json::json!({ "content": null })).into_response(),
+        Err(e) => err(e, "查询助记"),
+    }
+}
+
+pub async fn set_mnemonic(
+    Path(id): Path<i32>,
+    State(state): State<AppState>,
+    Json(body): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    match body.get("content").and_then(|v| v.as_str()) {
+        Some(content) => {
+            let svc = MemService::new(state.db.clone());
+            match svc.set_mnemonic(id, content).await {
+                Ok(()) => ok(),
+                Err(e) => err(e, "保存助记"),
+            }
+        }
+        None => err("缺少 content 字段", "保存助记"),
+    }
+}

@@ -1,11 +1,11 @@
 import { Show } from "solid-js";
-import type { MemItem, TagInfo } from "../../apis/memApi.ts";
-import { fmtLocal } from "../../lib/time.ts";
-import TagSelector from "../TagSelector.tsx";
-import Badge from "../ui/Badge.tsx";
-import Button from "../ui/Button.tsx";
-import MarkdownRenderer from "../ui/Markdown.tsx";
-import MarkdownEditor from "../ui/MarkdownEditor.tsx";
+import type { MemItem, TagInfo } from "../../../apis/memApi.ts";
+import { fmtLocal } from "../../../lib/time.ts";
+import TagSelector from "../../../components/TagSelector.tsx";
+import Badge from "../../../components/ui/Badge.tsx";
+import Button from "../../../components/ui/Button.tsx";
+import MarkdownRenderer from "../../../components/ui/Markdown.tsx";
+import MarkdownEditor from "../../../components/ui/MarkdownEditor.tsx";
 import styles from "./MemDetailPanel.module.css";
 
 interface Props {

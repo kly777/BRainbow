@@ -1,8 +1,8 @@
 import { createResource, createSignal, For, Show } from "solid-js";
-import { searchTagsE, type TagInfo } from "../../apis/memApi.ts";
-import Button from "../ui/Button.tsx";
-import FilterGroup from "../ui/FilterGroup.tsx";
-import SearchInput from "../ui/SearchInput.tsx";
+import { searchTagsE, type TagInfo } from "../../../apis/memApi.ts";
+import Button from "../../../components/ui/Button.tsx";
+import FilterGroup from "../../../components/ui/FilterGroup.tsx";
+import SearchInput from "../../../components/ui/SearchInput.tsx";
 import styles from "./MemManageToolbar.module.css";
 
 export type TagMode = "include" | "exclude";

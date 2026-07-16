@@ -1,6 +1,6 @@
-import type { TagInfo } from "../../apis/memApi.ts";
-import TagSelector from "../TagSelector.tsx";
-import Modal from "../ui/Modal.tsx";
+import type { TagInfo } from "../../../apis/memApi.ts";
+import TagSelector from "../../../components/TagSelector.tsx";
+import Modal from "../../../components/ui/Modal.tsx";
 
 interface Props {
 	isOpen: boolean;

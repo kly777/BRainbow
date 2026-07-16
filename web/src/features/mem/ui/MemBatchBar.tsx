@@ -1,4 +1,4 @@
-import Button from "../ui/Button.tsx";
+import Button from "../../../components/ui/Button.tsx";
 import styles from "./MemBatchBar.module.css";
 
 interface Props {

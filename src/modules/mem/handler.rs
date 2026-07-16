@@ -517,3 +517,13 @@ pub async fn set_mnemonic(
         None => err("缺少 content 字段", "保存助记"),
     }
 }
+
+pub async fn upcoming_counts(
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let svc = MemService::new(state.db.clone());
+    match svc.upcoming_counts().await {
+        Ok(v) => Json(v).into_response(),
+        Err(e) => err(e, "查询 upcoming 数量"),
+    }
+}

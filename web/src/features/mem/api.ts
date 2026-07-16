@@ -386,6 +386,14 @@ export const setMnemonicE = (
 		body: JSON.stringify({ content }),
 	});
 
+export interface UpcomingCounts {
+	within_8h: number;
+	within_24h: number;
+}
+
+export const getUpcomingCountsE = (): Promise<UpcomingCounts> =>
+	request("/mem/upcoming-counts", {});
+
 // ── 类型 re-export（保持向后兼容） ──
 export type {
 	BatchDataResponse,

@@ -751,6 +751,12 @@ impl MemService {
     pub async fn set_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), sqlx::Error> {
         self.repo.upsert_mnemonic(mem_id, content).await
     }
+
+    pub async fn upcoming_counts(&self) -> Result<serde_json::Value, sqlx::Error> {
+        let h8 = self.repo.count_upcoming_within_hours(8).await?;
+        let h24 = self.repo.count_upcoming_within_hours(24).await?;
+        Ok(serde_json::json!({"within_8h": h8, "within_24h": h24}))
+    }
 }
 
 /// revlog 封顶条数。超过此值后修剪到 TARGET_REVLOGS。

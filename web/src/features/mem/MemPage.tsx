@@ -2,8 +2,9 @@
 // 薄壳视图层：渲染逻辑全部来自 useMemReview hook
 
 import { A } from "@solidjs/router";
-import { Show, createSignal } from "solid-js";
+import { Show, createResource, createSignal } from "solid-js";
 import { useMemReview } from "./logic/useMemReview.ts";
+import { getUpcomingCountsE } from "./api.ts";
 import MemSidebar from "./ui/MemSidebar.tsx";
 import MemTagFilterBar from "./ui/MemTagFilterBar.tsx";
 import MemReviewCard from "./ui/MemReviewCard.tsx";
@@ -13,6 +14,14 @@ import styles from "./MemPage.module.css";
 export default function MemPage() {
 	const m = useMemReview();
 	const [showAiSettings, setShowAiSettings] = createSignal(false);
+
+	const [upcomingCounts] = createResource(
+		() => m.due().length,
+		async () => {
+			try { return await getUpcomingCountsE(); }
+			catch { return { within_8h: 0, within_24h: 0 }; }
+		},
+	);
 
 	return (
 		<div class={styles.page}>
@@ -74,6 +83,9 @@ export default function MemPage() {
 						</Show>
 						<span class={styles.count}>
 							{m.due().length}/{m.maxLearning()}
+						</span>
+						<span class={styles.count} style={{ "font-size": "11px" }}>
+							8h:{upcomingCounts()?.within_8h ?? "-"} 24h:{upcomingCounts()?.within_24h ?? "-"}
 						</span>
 					</div>
 				</div>

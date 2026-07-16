@@ -506,6 +506,20 @@ impl MemRepo {
         .await
     }
 
+    /// 统计在 N 小时内到期的 review 卡数量（不含 learning）
+    pub async fn count_upcoming_within_hours(&self, hours: i64) -> Result<i64, sqlx::Error> {
+        sqlx::query_scalar::<_, i64>(
+            r#"SELECT COUNT(*) FROM mem m
+            WHERE m.state IN ('review') AND m.buried = 0
+              AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '+' || ? || ' hours')
+              AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#,
+        )
+        .bind(hours)
+        .fetch_one(&*self.pool)
+        .await
+    }
+
     pub async fn get_counts(&self) -> Result<(i64, i64, i64, i64, i64), sqlx::Error> {
         let new_count: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM mem WHERE state = 'new' AND buried = 0 AND state != 'suspended'",

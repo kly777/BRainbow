@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
 import { createResource, For } from "solid-js";
-import { listUnknownWords, markWord } from "../../apis/readingApi.ts";
+import { listUnknownWords, markWord } from "./api.ts";
 import styles from "./ReadingUnknown.module.css";
 
 export default function ReadingUnknown() {

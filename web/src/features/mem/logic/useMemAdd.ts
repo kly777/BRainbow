@@ -2,7 +2,7 @@
 
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createMemo, createSignal } from "solid-js";
-import { importJsonE } from "../../../apis/memApi.ts";
+import { importJsonE } from "../api.ts";
 import { showToast } from "../../../components/ui/toastStore.ts";
 import { parseBatch, parseImportFile } from "../../../lib/delimited.ts";
 
@@ -59,7 +59,7 @@ export function useMemAdd() {
 		if (!cue().trim() || !target().trim()) return;
 		setCreating(true);
 		try {
-			const { createMemE } = await import("../../../apis/memApi.ts");
+			const { createMemE } = await import("../api.ts");
 			await createMemE(cue().trim(), target().trim());
 			setCue("");
 			setTarget("");

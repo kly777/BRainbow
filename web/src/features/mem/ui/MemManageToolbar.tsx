@@ -1,5 +1,5 @@
 import { createResource, createSignal, For, Show } from "solid-js";
-import { searchTagsE, type TagInfo } from "../../../apis/memApi.ts";
+import { searchTagsE, type TagInfo } from "../api.ts";
 import Button from "../../../components/ui/Button.tsx";
 import FilterGroup from "../../../components/ui/FilterGroup.tsx";
 import SearchInput from "../../../components/ui/SearchInput.tsx";

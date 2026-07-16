@@ -1,6 +1,6 @@
 import { A, useNavigate } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
-import { deleteCardE as apiDeleteCard, getCardsE } from "../apis/cardApi.ts";
+import { deleteCardE as apiDeleteCard, getCardsE } from "../features/card/api.ts";
 import { getErrorMessage } from "../apis/types/index.ts";
 import { notifyError } from "../lib/notify.ts";
 import type { CardData } from "../features/card/ui/Card.tsx";

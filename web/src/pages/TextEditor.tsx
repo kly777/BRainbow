@@ -1,5 +1,5 @@
 import { createSignal, For, onCleanup, onMount } from "solid-js";
-import { loadTextE, saveTextE } from "../apis/textApi.ts";
+import { loadTextE, saveTextE } from "./textApi.ts";
 import styles from "./TextEditor.module.css";
 
 let _saveTimer: ReturnType<typeof setInterval> | null = null;

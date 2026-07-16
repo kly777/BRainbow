@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SessionEstimate } from "./memApi";
+import type { SessionEstimate } from "./api";
 
 describe("SessionEstimate type", () => {
 	it("has correct shape", () => {
@@ -14,7 +14,6 @@ describe("SessionEstimate type", () => {
 	});
 
 	it("total_estimate is at least due_count", () => {
-		// retention = 1.0 → total_estimate = due_count
 		const data: SessionEstimate = {
 			due_count: 10,
 			retention: 1.0,
@@ -34,7 +33,6 @@ describe("SessionEstimate type", () => {
 	});
 
 	it("progress percentage calculation", () => {
-		// sessionReviewed / total_estimate * 100
 		const estimate: SessionEstimate = {
 			due_count: 20,
 			retention: 0.8,
@@ -51,7 +49,7 @@ describe("SessionEstimate type", () => {
 			retention: 0.5,
 			total_estimate: 20,
 		};
-		const reviewed = 25; // 超过预估
+		const reviewed = 25;
 		const progress = Math.min((reviewed / estimate.total_estimate) * 100, 100);
 		expect(progress).toBe(100);
 	});

@@ -1,5 +1,5 @@
 // ── 阅读详情页核心逻辑 ──
-import type { ArticleDetail } from "../../../apis/readingApi.ts";
+import type { ArticleDetail } from "../api.ts";
 
 import { useParams } from "@solidjs/router";
 import {
@@ -14,7 +14,7 @@ import {
 	markWord,
 	recommendNext,
 	updateArticleNotes,
-} from "../../../apis/readingApi.ts";
+} from "../api.ts";
 
 export function useReadingDetail() {
 	const params = useParams();

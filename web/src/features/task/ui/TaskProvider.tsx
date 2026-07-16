@@ -12,7 +12,7 @@ import {
 	getTaskStatsE,
 	getTasksE,
 	searchTasksE,
-} from "../../../apis/taskApi.ts";
+} from "../api.ts";
 import type { CreateTaskRequest, Task } from "../../../apis/types/index.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { notifyError } from "../../../lib/notify.ts";

@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "@solidjs/router";
 import { type Component, createResource } from "solid-js";
-import { deleteCardE, getCardE } from "../../apis/cardApi.ts";
+import { deleteCardE, getCardE } from "./api.ts";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import Breadcrumb from "../../components/ui/Breadcrumb.tsx";
 import Button from "../../components/ui/Button.tsx";

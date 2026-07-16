@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import type { MemItem, TagInfo } from "../../../apis/memApi.ts";
+import type { MemItem, TagInfo } from "../api.ts";
 import { fmtLocal, fmtRelative } from "../../../lib/time.ts";
 import Badge from "../../../components/ui/Badge.tsx";
 import styles from "./MemTable.module.css";

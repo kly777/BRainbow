@@ -1,6 +1,6 @@
 import { useNavigate } from "@solidjs/router";
 import { type Component, createSignal, Show } from "solid-js";
-import { createCardE } from "../../apis/cardApi.ts";
+import { createCardE } from "./api.ts";
 import {
 	type CreateCardRequest,
 	getErrorMessage,

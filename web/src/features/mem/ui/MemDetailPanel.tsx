@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import type { MemItem, TagInfo } from "../../../apis/memApi.ts";
+import type { MemItem, TagInfo } from "../api.ts";
 import { fmtLocal } from "../../../lib/time.ts";
 import TagSelector from "../../../components/TagSelector.tsx";
 import Badge from "../../../components/ui/Badge.tsx";

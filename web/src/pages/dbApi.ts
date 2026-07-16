@@ -1,5 +1,5 @@
-import { cachedRequest } from "./request.ts";
-import type { PaginationParams } from "./types/index.ts";
+import { cachedRequest } from "../apis/request.ts";
+import type { PaginationParams } from "../apis/types/index.ts";
 
 export const getTablesE = (): Promise<readonly string[]> =>
 	cachedRequest("/db", {});

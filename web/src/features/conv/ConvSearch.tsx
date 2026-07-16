@@ -1,6 +1,6 @@
 import { A, useNavigate, useSearchParams } from "@solidjs/router";
 import { createResource, createSignal, For, onMount, Show } from "solid-js";
-import { type ConvHit, searchConvE } from "../../apis/convApi.ts";
+import { type ConvHit, searchConvE } from "./api.ts";
 import styles from "./ConvSearch.module.css";
 
 const VALID_TABS = ["all", "conv", "article"] as const;

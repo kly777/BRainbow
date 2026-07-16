@@ -19,7 +19,7 @@ import {
 	unsuspendMemE,
 	type MemItem,
 	type TagInfo,
-} from "../../../apis/memApi.ts";
+} from "../api.ts";
 import { fetchAllMems } from "./mem-manage-utils.ts";
 import type { PageMeta } from "./mem-manage-utils.ts";
 import { useMemManageParams } from "./useMemManageParams.ts";

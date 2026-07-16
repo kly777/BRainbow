@@ -4,7 +4,7 @@ import {
 	type ArticleSummary,
 	listArticles,
 	uploadArticle,
-} from "../../apis/readingApi.ts";
+} from "./api.ts";
 import styles from "./ReadingList.module.css";
 
 export default function ReadingList() {

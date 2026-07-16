@@ -7,7 +7,7 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import { getAllTasksE, getDagE } from "../../../apis/taskApi.ts";
+import { getAllTasksE, getDagE } from "../api.ts";
 import type { Task } from "../../../apis/types/index.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { layout } from "./dag-layout.ts";

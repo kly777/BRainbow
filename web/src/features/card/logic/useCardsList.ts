@@ -7,7 +7,7 @@ import {
 	deleteCardE,
 	getCardsE,
 	searchCardsE,
-} from "../../../apis/cardApi.ts";
+} from "../api.ts";
 import type { Card, CreateCardRequest } from "../../../apis/types/card.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { showToast } from "../../../components/ui/toastStore.ts";

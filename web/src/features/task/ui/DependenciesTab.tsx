@@ -9,7 +9,7 @@ import {
 	addTaskDependencyE,
 	getTaskDetailE,
 	removeTaskDependencyE,
-} from "../../../apis/taskApi.ts";
+} from "../api.ts";
 import type { Task } from "../../../apis/types/index.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { notifyError } from "../../../lib/notify.ts";

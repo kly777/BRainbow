@@ -1,6 +1,6 @@
 import { createEffect, createSignal } from "solid-js";
-import type { TagInfo } from "../../../apis/memApi.ts";
-import { downloadExportCsv, listTagsE } from "../../../apis/memApi.ts";
+import type { TagInfo } from "../api.ts";
+import { downloadExportCsv, listTagsE } from "../api.ts";
 import TagSelector from "../../../components/TagSelector.tsx";
 import Modal from "../../../components/ui/Modal.tsx";
 

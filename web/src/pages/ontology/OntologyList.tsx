@@ -6,7 +6,7 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import { createOntoE, deleteOntoE, getOntosE } from "../../apis/ontoApi.ts";
+import { createOntoE, deleteOntoE, getOntosE } from "./api.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
 import { notifyError, notifySuccess } from "../../lib/notify.ts";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";

@@ -2,7 +2,7 @@
 
 import { useNavigate } from "@solidjs/router";
 import { onMount, Show } from "solid-js";
-import { searchCardsE } from "../../apis/cardApi.ts";
+import { searchCardsE } from "./api.ts";
 import CardsGrid from "./ui/CardsGrid.tsx";
 import Button from "../../components/ui/Button.tsx";
 import MarkdownRenderer from "../../components/ui/Markdown.tsx";
@@ -18,7 +18,7 @@ export default function CardsListPage() {
 			const q = m.searchQuery();
 			const items = q
 				? (await searchCardsE(q)).items
-				: (await (await import("../../apis/cardApi.ts")).getCardsE()).items;
+				: (await (await import("./api.ts")).getCardsE()).items;
 			m.setCards(items);
 		} catch (e) {
 			m.setError(e);

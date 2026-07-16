@@ -9,7 +9,7 @@ import { notifyError } from "../../../lib/notify.ts";
 import {
 	createTimeWindowE,
 	deleteTimeWindowE,
-} from "../../../apis/timeWindowApi.ts";
+} from "../timeWindowApi.ts";
 import styles from "./EditTaskModal.module.css";
 
 interface TimeWindowsTabProps {

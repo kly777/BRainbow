@@ -1,5 +1,5 @@
 import { createResource, createSignal, For, Show } from "solid-js";
-import { createTagE, searchTagsE, type TagInfo } from "../apis/memApi.ts";
+import { createTagE, searchTagsE, type TagInfo } from "../features/mem/api.ts";
 import styles from "./TagSelector.module.css";
 
 interface Props {

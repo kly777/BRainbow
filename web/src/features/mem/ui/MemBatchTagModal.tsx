@@ -1,4 +1,4 @@
-import type { TagInfo } from "../../../apis/memApi.ts";
+import type { TagInfo } from "../api.ts";
 import TagSelector from "../../../components/TagSelector.tsx";
 import Modal from "../../../components/ui/Modal.tsx";
 

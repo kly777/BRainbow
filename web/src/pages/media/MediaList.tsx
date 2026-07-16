@@ -11,7 +11,7 @@ import {
 	listMediaE,
 	type MediaItem,
 	renameMediaE,
-} from "../../apis/mediaApi.ts";
+} from "../../features/mem/mediaApi.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
 import { notifyError } from "../../lib/notify.ts";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";

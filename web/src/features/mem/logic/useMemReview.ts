@@ -1,11 +1,9 @@
 // ── 记忆复习模块的核心业务逻辑 ──
-// 从 pages/MemPage.tsx 提取的状态管理、副作用、API 编排
 
 import { useSearchParams } from "@solidjs/router";
 import {
 	createEffect,
 	createMemo,
-	createResource,
 	createSignal,
 	onCleanup,
 	onMount,
@@ -24,41 +22,16 @@ import {
 	getDueE,
 	getMemCountsE,
 	getSessionEstimateE,
-	listTagsE,
 	previewMemE,
 	reviewMemE,
-	searchTagsE,
 	suspendMemE,
 } from "../api.ts";
-
-// ── 常量 ──
-
-/** 指数移动平均衰减因子 */
-const ALPHA = 0.2;
-/** 每轮最少拉取数 */
-const MIN_LIMIT = 3;
-/** 每轮最多拉取数 */
-const MAX_LIMIT = 15;
-/** 默认拉取数 */
-const DEFAULT_LIMIT = 7;
-
-// ── 纯计算辅助 ──
-
-/** 动态队列大小：基于评分 EMA 计算 */
-function calcMaxLearning(avg: number): number {
-	return Math.round(MIN_LIMIT + ((avg - 1) / 3) * (MAX_LIMIT - MIN_LIMIT));
-}
-
-/** 平均单张卡耗时（秒） */
-function calcAvgCardTime(durations: readonly number[]): number {
-	if (durations.length === 0) return 0;
-	return durations.reduce((a, b) => a + b, 0) / durations.length;
-}
+import { calcAvgCardTime, calcMaxLearning, ALPHA } from "./mem-calcs.ts";
+import { useMemTagFilter } from "./useMemTagFilter.ts";
 
 // ── Hook ──
 
 export interface UseMemReview {
-	// state
 	due: () => MemItem[];
 	current: () => number;
 	showAnswer: () => boolean;
@@ -78,7 +51,6 @@ export interface UseMemReview {
 	allTags: () => TagInfo[];
 	tagQuery: () => string;
 	tagOpen: () => boolean;
-	// derived
 	tagFilterIds: () => number[];
 	tagMode: () => "include" | "exclude";
 	tagFilterTags: () => TagInfo[];
@@ -87,7 +59,6 @@ export interface UseMemReview {
 	estRemaining: () => number;
 	maxLearning: () => number;
 	item: () => MemItem | undefined;
-	// actions
 	addTagFilter: (tag: TagInfo) => void;
 	removeTagFilter: (tagId: number) => void;
 	toggleTagMode: () => void;
@@ -132,9 +103,6 @@ export function useMemReview(): UseMemReview {
 	const [upcoming, setUpcoming] = createSignal(0);
 	const [counts, setCounts] = createSignal<MemCounts | null>(null);
 	const [estimatedTotal, setEstimatedTotal] = createSignal(0);
-	const [allTags, _setAllTags] = createSignal<TagInfo[]>([]);
-	const [tagQuery, _setTagQuery] = createSignal("");
-	const [tagOpen, _setTagOpen] = createSignal(false);
 
 	// ── 动态队列 ──
 	const [avgRating, setAvgRating] = createSignal(2.5);
@@ -148,30 +116,6 @@ export function useMemReview(): UseMemReview {
 		null;
 
 	// ── derived ──
-
-	const tagFilterIds = () => {
-		const v = searchParams.tag_ids;
-		return typeof v === "string"
-			? v.split(",").filter(Boolean).map(Number)
-			: [];
-	};
-
-	const tagMode = (): "include" | "exclude" =>
-		searchParams.tag_mode === "exclude" ? "exclude" : "include";
-
-	const tagFilterTags = createMemo(() =>
-		allTags().filter((t) => tagFilterIds().includes(t.id)),
-	);
-
-	const [tagSearchResults] = createResource(
-		() => (tagQuery().trim().length > 0 ? tagQuery().trim() : null),
-		(q) => searchTagsE(q),
-	);
-
-	const tagSuggestions = () =>
-		(tagQuery().trim()
-			? (tagSearchResults() ?? []).filter((t) => !tagFilterIds().includes(t.id))
-			: []) as TagInfo[];
 
 	const avgCardTime = () => calcAvgCardTime(cardDurations());
 	const estRemaining = () => Math.round(avgCardTime() * estimatedTotal());
@@ -196,17 +140,25 @@ export function useMemReview(): UseMemReview {
 		}
 	};
 
-	const loadDue = async () => {
+	// Forward reference: tagFilter needs loadDue, loadDue needs tagFilter
+	let loadDue: () => Promise<void>;
+
+	// ── 标签过滤 ──
+	const tagFilter = useMemTagFilter(() => {
+		setTimeout(loadDue, 0);
+	});
+
+	loadDue = async () => {
 		setLoading(true);
 		loadCounts();
 		try {
 			const data = await getDueE(
 				maxLearning(),
-				tagMode() === "include" && tagFilterIds().length > 0
-					? tagFilterIds()
+				tagFilter.tagMode() === "include" && tagFilter.tagFilterIds().length > 0
+					? tagFilter.tagFilterIds()
 					: undefined,
-				tagMode() === "exclude" && tagFilterIds().length > 0
-					? tagFilterIds()
+				tagFilter.tagMode() === "exclude" && tagFilter.tagFilterIds().length > 0
+					? tagFilter.tagFilterIds()
 					: undefined,
 			);
 			if (data.items.length === 0 && !data.has_more) {
@@ -233,40 +185,6 @@ export function useMemReview(): UseMemReview {
 			/* ignore */
 		}
 		setLoading(false);
-	};
-
-	// ── 标签过滤 ──
-
-	const addTagFilter = (tag: TagInfo) => {
-		const next = [...tagFilterIds(), tag.id];
-		setSearchParams({
-			tag_ids: next.join(","),
-			tag_mode: searchParams.tag_mode,
-		});
-		_setTagQuery("");
-		_setTagOpen(false);
-		setTimeout(loadDue, 0);
-	};
-
-	const removeTagFilter = (tagId: number) => {
-		const next = tagFilterIds().filter((id) => id !== tagId);
-		setSearchParams({
-			tag_ids: next.length > 0 ? next.join(",") : undefined,
-			tag_mode: searchParams.tag_mode,
-		});
-		setTimeout(loadDue, 0);
-	};
-
-	const toggleTagMode = () => {
-		setSearchParams({
-			tag_mode: tagMode() === "include" ? "exclude" : "include",
-		});
-		setTimeout(loadDue, 0);
-	};
-
-	const clearTagFilters = () => {
-		setSearchParams({ tag_ids: undefined, tag_mode: undefined });
-		setTimeout(loadDue, 0);
 	};
 
 	// ── 学习流程 ──
@@ -415,9 +333,6 @@ export function useMemReview(): UseMemReview {
 	onMount(() => {
 		loadDue();
 		loadCounts();
-		listTagsE()
-			.then(_setAllTags)
-			.catch(() => {});
 		globalThis.addEventListener("keydown", onKey);
 	});
 	onCleanup(() => globalThis.removeEventListener("keydown", onKey));
@@ -445,29 +360,29 @@ export function useMemReview(): UseMemReview {
 		upcoming,
 		counts,
 		estimatedTotal,
-		allTags,
-		tagQuery,
-		tagOpen,
-		tagFilterIds,
-		tagMode,
-		tagFilterTags,
-		tagSuggestions,
+		allTags: tagFilter.allTags,
+		tagQuery: tagFilter.tagQuery,
+		tagOpen: tagFilter.tagOpen,
+		tagFilterIds: tagFilter.tagFilterIds,
+		tagMode: tagFilter.tagMode,
+		tagFilterTags: tagFilter.tagFilterTags,
+		tagSuggestions: tagFilter.tagSuggestions,
 		avgCardTime,
 		estRemaining,
 		maxLearning,
 		item,
-		addTagFilter,
-		removeTagFilter,
-		toggleTagMode,
-		clearTagFilters,
+		addTagFilter: tagFilter.addTagFilter,
+		removeTagFilter: tagFilter.removeTagFilter,
+		toggleTagMode: tagFilter.toggleTagMode,
+		clearTagFilters: tagFilter.clearTagFilters,
 		setSidebarOpen: _setSidebarOpen,
 		setCurrent: _setCurrent,
 		setShowAnswer: _setShowAnswer,
 		setEditing: _setEditing,
 		setEditCue: _setEditCue,
 		setEditTarget: _setEditTarget,
-		setTagQuery: _setTagQuery,
-		setTagOpen: _setTagOpen,
+		setTagQuery: tagFilter.setTagQuery,
+		setTagOpen: tagFilter.setTagOpen,
 		loadDue,
 		rate,
 		bury,

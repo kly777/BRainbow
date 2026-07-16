@@ -126,13 +126,7 @@ export default function TaskCalendar() {
 				<For each={daysInMonth()}>
 					{(date) => (
 						<div
-							class={`${styles.calendarDay} ${
-								date
-									? isSameDay(date, today)
-										? styles.today
-										: ""
-									: styles.empty
-							}`}
+							classList={{ [styles.calendarDay]: true, [styles.today]: date !== null && isSameDay(date, today), [styles.empty]: date === null }}
 						>
 							<Show when={date !== null}>
 								<div class={styles.dayNumber}>{date?.getDate()}</div>

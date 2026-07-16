@@ -28,18 +28,14 @@ function Toolbar(props: {
 			<div class={styles.viewSwitch}>
 				<button
 					type="button"
-					class={`${styles.viewBtn} ${
-						props.viewMode === "list" ? styles.viewActive : ""
-					}`}
+					classList={{ [styles.viewBtn]: true, [styles.viewActive]: props.viewMode === "list" }}
 					onClick={() => props.onViewChange("list")}
 				>
 					列表
 				</button>
 				<button
 					type="button"
-					class={`${styles.viewBtn} ${
-						props.viewMode === "kanban" ? styles.viewActive : ""
-					}`}
+					classList={{ [styles.viewBtn]: true, [styles.viewActive]: props.viewMode === "kanban" }}
 					onClick={() => props.onViewChange("kanban")}
 				>
 					看板
@@ -122,18 +118,14 @@ function TaskPanel(props: {
 								<div class={styles.tabBar}>
 									<button
 										type="button"
-										class={`${styles.tabBtn} ${
-											props.rightTab === "calendar" ? styles.tabActive : ""
-										}`}
+										classList={{ [styles.tabBtn]: true, [styles.tabActive]: props.rightTab === "calendar" }}
 										onClick={() => props.onRightTabChange("calendar")}
 									>
 										日历
 									</button>
 									<button
 										type="button"
-										class={`${styles.tabBtn} ${
-											props.rightTab === "dag" ? styles.tabActive : ""
-										}`}
+										classList={{ [styles.tabBtn]: true, [styles.tabActive]: props.rightTab === "dag" }}
 										onClick={() => props.onRightTabChange("dag")}
 									>
 										依赖图

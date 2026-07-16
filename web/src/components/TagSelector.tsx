@@ -119,7 +119,7 @@ export default function TagSelector(props: Props) {
 					<Show when={!hasExactMatch() && query().trim().length > 0}>
 						<button
 							type="button"
-							class={`${styles.dropdownItem} ${styles.createNew}`}
+							classList={{ [styles.dropdownItem]: true, [styles.createNew]: true }}
 							onMouseDown={handleCreate}
 						>
 							{creating() ? "创建中…" : `+ 创建"${query().trim()}"`}

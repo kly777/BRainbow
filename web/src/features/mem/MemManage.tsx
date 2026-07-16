@@ -72,9 +72,7 @@ export default function MemManage() {
 						onToggleAll={m.toggleAll}
 						onSelectRow={m.setDetailId}
 						onDelete={m.handleDelete}
-						onPageChange={(p) => {
-							/* handle via search params in hook */
-						}}
+						onPageChange={(p) => m.goToPage(p)}
 					/>
 				</div>
 				<MemDetailPanel

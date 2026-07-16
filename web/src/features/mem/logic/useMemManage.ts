@@ -358,6 +358,7 @@ export function useMemManage() {
 		handleSearchInput: params.handleSearchInput,
 		setFilter: params.setFilter,
 		toggleSort: params.toggleSort,
+		goToPage: params.goToPage,
 
 		// 操作
 		toggleBatch,

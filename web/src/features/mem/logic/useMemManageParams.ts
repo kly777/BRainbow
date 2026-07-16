@@ -23,6 +23,7 @@ export interface UseMemManageParamsResult {
 	handleSearchInput: (value: string) => void;
 	setFilter: (state: string) => void;
 	toggleSort: (field: SortField) => void;
+	goToPage: (p: number) => void;
 }
 
 export function useMemManageParams(): UseMemManageParamsResult {
@@ -93,6 +94,10 @@ export function useMemManageParams(): UseMemManageParamsResult {
 		setSearchParams(params);
 	};
 
+	const goToPage = (p: number) => {
+		setSearchParams({ page: p > 1 ? String(p) : undefined });
+	};
+
 	return {
 		searchQuery,
 		filterState,
@@ -107,5 +112,6 @@ export function useMemManageParams(): UseMemManageParamsResult {
 		handleSearchInput,
 		setFilter,
 		toggleSort,
+		goToPage,
 	};
 }

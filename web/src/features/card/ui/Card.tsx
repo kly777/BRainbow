@@ -1,5 +1,5 @@
 import { type Component, Show } from "solid-js";
-import MarkdownRenderer from "../ui/Markdown.tsx";
+import MarkdownRenderer from "../../../components/ui/Markdown.tsx";
 import styles from "./Card.module.css";
 
 // 卡片接口，匹配后端API

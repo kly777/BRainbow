@@ -49,7 +49,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Cards",
 		desc: "知识卡片浏览",
 		nav: true,
-		component: lazy(() => import("./pages/card/CardsList.tsx")),
+		component: lazy(() => import("./features/card/CardsList.tsx")),
 	},
 	{
 		path: "/c/add",
@@ -57,21 +57,21 @@ export const ROUTES: RouteConfig[] = [
 		title: "New Card",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("./pages/card/CardAdd.tsx")),
+		component: lazy(() => import("./features/card/CardAdd.tsx")),
 	},
 	{
 		path: "/c/:id",
 		label: "卡片详情",
 		title: "Card",
 		desc: "",
-		component: lazy(() => import("./pages/card/CardDetail.tsx")),
+		component: lazy(() => import("./features/card/CardDetail.tsx")),
 	},
 	{
 		path: "/c/edit/:id",
 		label: "编辑卡片",
 		title: "Edit Card",
 		desc: "",
-		component: lazy(() => import("./pages/card/CardEdit.tsx")),
+		component: lazy(() => import("./features/card/CardEdit.tsx")),
 	},
 	{
 		path: "/i",

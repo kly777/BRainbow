@@ -27,9 +27,12 @@ export function useMemAdd() {
 	// ── 模式 ──
 	const mode = (): AddMode => {
 		const m = searchParams.mode;
-		return typeof m === "string" && VALID_MODES.includes(m as AddMode) ? (m as AddMode) : "single";
+		return typeof m === "string" && VALID_MODES.includes(m as AddMode)
+			? (m as AddMode)
+			: "single";
 	};
-	const setMode = (m: AddMode) => setSearchParams({ mode: m === "single" ? undefined : m });
+	const setMode = (m: AddMode) =>
+		setSearchParams({ mode: m === "single" ? undefined : m });
 
 	// ── 单条创建 ──
 	const [cue, setCue] = createSignal("");
@@ -41,10 +44,15 @@ export function useMemAdd() {
 	const [previewRows, setPreviewRows] = createSignal<PreviewRow[]>([]);
 	const [importing, setImporting] = createSignal(false);
 	const [importDefaultTags, setImportDefaultTags] = createSignal("");
-	const [importResult, setImportResult] = createSignal<{ imported: number; errors: string[] } | null>(null);
+	const [importResult, setImportResult] = createSignal<{
+		imported: number;
+		errors: string[];
+	} | null>(null);
 	const [parseError, setParseError] = createSignal("");
 
-	const selectedCount = createMemo(() => previewRows().filter((r) => r.selected).length);
+	const selectedCount = createMemo(
+		() => previewRows().filter((r) => r.selected).length,
+	);
 
 	// ── 单条创建 ──
 	const handleCreate = async () => {
@@ -55,7 +63,9 @@ export function useMemAdd() {
 			await createMemE(cue().trim(), target().trim());
 			setCue("");
 			setTarget("");
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 		setCreating(false);
 	};
 
@@ -68,11 +78,15 @@ export function useMemAdd() {
 				const items = JSON.parse(trimmed);
 				return (Array.isArray(items) ? items : [])
 					.map((i: { cue?: string; target?: string; tags?: string[] }) => ({
-						cue: (i.cue ?? "").trim(), target: (i.target ?? "").trim(),
-						tags: i.tags ?? [], selected: true,
+						cue: (i.cue ?? "").trim(),
+						target: (i.target ?? "").trim(),
+						tags: i.tags ?? [],
+						selected: true,
 					}))
 					.filter((r: PreviewRow) => r.cue && r.target);
-			} catch { /* fallthrough */ }
+			} catch {
+				/* fallthrough */
+			}
 		}
 		return parseBatch(trimmed).map((p) => ({ ...p, tags: [], selected: true }));
 	}
@@ -81,11 +95,25 @@ export function useMemAdd() {
 	const doImport = async (rows: PreviewRow[]) => {
 		setImporting(true);
 		try {
-			const tags = importDefaultTags().split(/[;,]/).map((s) => s.trim()).filter(Boolean);
-			const mems = rows.map((r) => ({ cue: r.cue, target: r.target, tags: r.tags }));
-			setImportResult(await importJsonE(mems, tags.length > 0 ? tags : undefined));
+			const tags = importDefaultTags()
+				.split(/[;,]/)
+				.map((s) => s.trim())
+				.filter(Boolean);
+			const mems = rows.map((r) => ({
+				cue: r.cue,
+				target: r.target,
+				tags: r.tags,
+			}));
+			setImportResult(
+				await importJsonE(mems, tags.length > 0 ? tags : undefined),
+			);
 		} catch (err: unknown) {
-			showToast({ type: "error", title: "导入失败", message: String(err), duration: 5000 });
+			showToast({
+				type: "error",
+				title: "导入失败",
+				message: String(err),
+				duration: 5000,
+			});
 		} finally {
 			setImporting(false);
 		}
@@ -103,12 +131,20 @@ export function useMemAdd() {
 
 	// ── 文件处理 ──
 	async function handleFilePicked(file: File | null) {
-		if (!file) { setPreviewRows([]); return; }
+		if (!file) {
+			setPreviewRows([]);
+			return;
+		}
 		try {
 			const text = await file.text();
-			setPreviewRows(parseImportFile(text, file.name).map((r) => ({ ...r, selected: true })));
+			setPreviewRows(
+				parseImportFile(text, file.name).map((r) => ({ ...r, selected: true })),
+			);
 			setParseError("");
-		} catch (err) { setParseError(String(err)); setPreviewRows([]); }
+		} catch (err) {
+			setParseError(String(err));
+			setPreviewRows([]);
+		}
 	}
 
 	// ── 重置 ──
@@ -120,13 +156,28 @@ export function useMemAdd() {
 	};
 
 	return {
-		mode, setMode,
-		cue, setCue, target, setTarget, creating,
-		pasteText, setPasteText, previewRows, setPreviewRows,
-		importing, importDefaultTags, setImportDefaultTags,
-		importResult, parseError, selectedCount,
+		mode,
+		setMode,
+		cue,
+		setCue,
+		target,
+		setTarget,
+		creating,
+		pasteText,
+		setPasteText,
+		previewRows,
+		setPreviewRows,
+		importing,
+		importDefaultTags,
+		setImportDefaultTags,
+		importResult,
+		parseError,
+		selectedCount,
 		handleCreate,
-		parsePasteText, handlePasteImport, handleFilePicked, handleFileImport,
+		parsePasteText,
+		handlePasteImport,
+		handleFilePicked,
+		handleFileImport,
 		resetImport,
 		navigate,
 	};

@@ -123,7 +123,9 @@ export function useMemReview(): UseMemReview {
 	const [editing, _setEditing] = createSignal(false);
 	const [editCue, _setEditCue] = createSignal("");
 	const [editTarget, _setEditTarget] = createSignal("");
-	const [intervals, setIntervals] = createSignal<readonly number[]>([0, 0, 0, 0]);
+	const [intervals, setIntervals] = createSignal<readonly number[]>([
+		0, 0, 0, 0,
+	]);
 	const [showUndo, setShowUndo] = createSignal(false);
 	const [sidebarOpen, _setSidebarOpen] = createSignal(false);
 	const [allFar, setAllFar] = createSignal(false);
@@ -142,13 +144,16 @@ export function useMemReview(): UseMemReview {
 	const [cardDurations, setCardDurations] = createSignal<number[]>([]);
 
 	// ── 撤销记录 ──
-	let lastAction: { id: number; undoData: Record<string, unknown> } | null = null;
+	let lastAction: { id: number; undoData: Record<string, unknown> } | null =
+		null;
 
 	// ── derived ──
 
 	const tagFilterIds = () => {
 		const v = searchParams.tag_ids;
-		return typeof v === "string" ? v.split(",").filter(Boolean).map(Number) : [];
+		return typeof v === "string"
+			? v.split(",").filter(Boolean).map(Number)
+			: [];
 	};
 
 	const tagMode = (): "include" | "exclude" =>
@@ -178,13 +183,17 @@ export function useMemReview(): UseMemReview {
 	const loadPreview = async (id: number) => {
 		try {
 			setIntervals((await previewMemE(id)).intervals);
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 	};
 
 	const loadCounts = async () => {
 		try {
 			setCounts(await getMemCountsE());
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 	};
 
 	const loadDue = async () => {
@@ -193,8 +202,12 @@ export function useMemReview(): UseMemReview {
 		try {
 			const data = await getDueE(
 				maxLearning(),
-				tagMode() === "include" && tagFilterIds().length > 0 ? tagFilterIds() : undefined,
-				tagMode() === "exclude" && tagFilterIds().length > 0 ? tagFilterIds() : undefined,
+				tagMode() === "include" && tagFilterIds().length > 0
+					? tagFilterIds()
+					: undefined,
+				tagMode() === "exclude" && tagFilterIds().length > 0
+					? tagFilterIds()
+					: undefined,
 			);
 			if (data.items.length === 0 && !data.has_more) {
 				setDone(true);
@@ -211,10 +224,14 @@ export function useMemReview(): UseMemReview {
 				_setCurrent(0);
 				setCardStart(Date.now());
 				_setShowAnswer(false);
-				setIsPreview(data.items.length === 1 && data.items[0]?.state !== "learning");
+				setIsPreview(
+					data.items.length === 1 && data.items[0]?.state !== "learning",
+				);
 				if (data.items.length > 0) loadPreview(data.items[0].id);
 			}
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 		setLoading(false);
 	};
 
@@ -222,7 +239,10 @@ export function useMemReview(): UseMemReview {
 
 	const addTagFilter = (tag: TagInfo) => {
 		const next = [...tagFilterIds(), tag.id];
-		setSearchParams({ tag_ids: next.join(","), tag_mode: searchParams.tag_mode });
+		setSearchParams({
+			tag_ids: next.join(","),
+			tag_mode: searchParams.tag_mode,
+		});
 		_setTagQuery("");
 		_setTagOpen(false);
 		setTimeout(loadDue, 0);
@@ -238,7 +258,9 @@ export function useMemReview(): UseMemReview {
 	};
 
 	const toggleTagMode = () => {
-		setSearchParams({ tag_mode: tagMode() === "include" ? "exclude" : "include" });
+		setSearchParams({
+			tag_mode: tagMode() === "include" ? "exclude" : "include",
+		});
 		setTimeout(loadDue, 0);
 	};
 
@@ -279,7 +301,11 @@ export function useMemReview(): UseMemReview {
 				due_at: it.due_at,
 			},
 		};
-		try { await reviewMemE(it.id, rating); } catch { /* ignore */ }
+		try {
+			await reviewMemE(it.id, rating);
+		} catch {
+			/* ignore */
+		}
 		setAvgRating((prev) => prev * (1 - ALPHA) + rating * ALPHA);
 		const elapsed = Math.min((Date.now() - cardStart()) / 1000, 300);
 		setCardDurations((prev) => [...prev, elapsed].slice(-30));
@@ -291,7 +317,11 @@ export function useMemReview(): UseMemReview {
 	const bury = async () => {
 		const it = item();
 		if (it) {
-			try { await buryMemE(it.id); } catch { /* ignore */ }
+			try {
+				await buryMemE(it.id);
+			} catch {
+				/* ignore */
+			}
 			advanceQueue();
 		}
 	};
@@ -303,7 +333,9 @@ export function useMemReview(): UseMemReview {
 				method: "POST",
 				body: JSON.stringify(lastAction.undoData),
 			});
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 		setShowUndo(false);
 		loadDue();
 	};
@@ -311,7 +343,11 @@ export function useMemReview(): UseMemReview {
 	const resumeSuspend = async () => {
 		const it = item();
 		if (it) {
-			try { await suspendMemE(it.id); } catch { /* ignore */ }
+			try {
+				await suspendMemE(it.id);
+			} catch {
+				/* ignore */
+			}
 			loadDue();
 		}
 	};
@@ -342,7 +378,9 @@ export function useMemReview(): UseMemReview {
 					}
 					return next;
 				});
-			} catch { /* ignore */ }
+			} catch {
+				/* ignore */
+			}
 			_setEditing(false);
 		}
 	};
@@ -350,18 +388,26 @@ export function useMemReview(): UseMemReview {
 	const handleCopyCard = () => {
 		const it = item();
 		if (!it) return;
-		navigator.clipboard.writeText(`线索:\n${it.cue.content}\n---\n答案:\n${it.target.content}`);
+		navigator.clipboard.writeText(
+			`线索:\n${it.cue.content}\n---\n答案:\n${it.target.content}`,
+		);
 	};
 
 	// ── 键盘处理 ──
 
 	const onKey = (e: KeyboardEvent) => {
-		if (e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement)?.tagName === "INPUT") return;
+		if (
+			e.target instanceof HTMLTextAreaElement ||
+			(e.target as HTMLElement)?.tagName === "INPUT"
+		)
+			return;
 		if (!showAnswer() && e.key === " ") {
 			e.preventDefault();
 			_setShowAnswer(true);
 		} else if (showAnswer()) {
-			const r = ({ "1": 1, "2": 2, "3": 3, "4": 4 } as Record<string, number>)[e.key];
+			const r = ({ "1": 1, "2": 2, "3": 3, "4": 4 } as Record<string, number>)[
+				e.key
+			];
 			if (r) rate(r);
 		}
 	};
@@ -369,7 +415,9 @@ export function useMemReview(): UseMemReview {
 	onMount(() => {
 		loadDue();
 		loadCounts();
-		listTagsE().then(_setAllTags).catch(() => {});
+		listTagsE()
+			.then(_setAllTags)
+			.catch(() => {});
 		globalThis.addEventListener("keydown", onKey);
 	});
 	onCleanup(() => globalThis.removeEventListener("keydown", onKey));
@@ -381,13 +429,37 @@ export function useMemReview(): UseMemReview {
 	});
 
 	return {
-		due, current, showAnswer, loading, isPreview, done,
-		editing, editCue, editTarget, intervals, showUndo,
-		sidebarOpen, allFar, upcoming, counts, estimatedTotal,
-		allTags, tagQuery, tagOpen,
-		tagFilterIds, tagMode, tagFilterTags, tagSuggestions,
-		avgCardTime, estRemaining, maxLearning, item,
-		addTagFilter, removeTagFilter, toggleTagMode, clearTagFilters,
+		due,
+		current,
+		showAnswer,
+		loading,
+		isPreview,
+		done,
+		editing,
+		editCue,
+		editTarget,
+		intervals,
+		showUndo,
+		sidebarOpen,
+		allFar,
+		upcoming,
+		counts,
+		estimatedTotal,
+		allTags,
+		tagQuery,
+		tagOpen,
+		tagFilterIds,
+		tagMode,
+		tagFilterTags,
+		tagSuggestions,
+		avgCardTime,
+		estRemaining,
+		maxLearning,
+		item,
+		addTagFilter,
+		removeTagFilter,
+		toggleTagMode,
+		clearTagFilters,
 		setSidebarOpen: _setSidebarOpen,
 		setCurrent: _setCurrent,
 		setShowAnswer: _setShowAnswer,
@@ -396,7 +468,13 @@ export function useMemReview(): UseMemReview {
 		setEditTarget: _setEditTarget,
 		setTagQuery: _setTagQuery,
 		setTagOpen: _setTagOpen,
-		loadDue, rate, bury, undo, resumeSuspend,
-		startEdit, saveEdit, handleCopyCard,
+		loadDue,
+		rate,
+		bury,
+		undo,
+		resumeSuspend,
+		startEdit,
+		saveEdit,
+		handleCopyCard,
 	};
 }

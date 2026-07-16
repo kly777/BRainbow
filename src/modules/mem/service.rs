@@ -1142,8 +1142,12 @@ mod tests {
         let target_id = svc.repo.create_chunk("target").await.unwrap();
         let id = svc.repo.create_mem(cue_id, target_id, &[]).await.unwrap();
         sqlx::query("UPDATE mem SET state=?, due_at=?, stability=1.0, difficulty=1.0 WHERE id=?")
-            .bind(state).bind(due_at).bind(id)
-            .execute(&*svc.repo.pool).await.unwrap();
+            .bind(state)
+            .bind(due_at)
+            .bind(id)
+            .execute(&*svc.repo.pool)
+            .await
+            .unwrap();
         id
     }
 
@@ -1177,7 +1181,10 @@ mod tests {
 
         // deferred 卡被拉出后应恢复为 learning
         let deferred_new_state = get_state(&svc, deferred_id).await;
-        assert_eq!(deferred_new_state, "learning", "deferred 卡应恢复为 learning");
+        assert_eq!(
+            deferred_new_state, "learning",
+            "deferred 卡应恢复为 learning"
+        );
     }
 
     /// 有 deferred 卡但没有 review 卡时，保底槽位照常生效
@@ -1222,24 +1229,33 @@ mod tests {
         // 返回 5 张（learning + deferred 拉回），其中至少 2 张来自 learning
         assert_eq!(result.items.len(), 5, "应返回 5 张卡");
 
-        let remaining_learning: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM mem WHERE state='learning'"
-        )
-        .fetch_one(&*svc.repo.pool).await.unwrap();
+        let remaining_learning: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM mem WHERE state='learning'")
+                .fetch_one(&*svc.repo.pool)
+                .await
+                .unwrap();
 
-        let deferred_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM mem WHERE state='deferred'"
-        )
-        .fetch_one(&*svc.repo.pool).await.unwrap();
+        let deferred_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM mem WHERE state='deferred'")
+                .fetch_one(&*svc.repo.pool)
+                .await
+                .unwrap();
 
         // to_defer = 20/2 = 10（原始 defer）
         // deferred_slot 拉 1 + more_deferred 拉若干 → 最终 deferred e [5,9]
-        assert!(deferred_count >= 5 && deferred_count <= 9,
-            "defer ≈ 10 但部分被拉回，实际 deferred={deferred_count}");
-        assert!(remaining_learning >= 9 && remaining_learning <= 15,
-            "2(batch) + 8(未触碰) + 3(拉回) ≈ 13, 实际 learning={remaining_learning}");
+        assert!(
+            deferred_count >= 5 && deferred_count <= 9,
+            "defer ≈ 10 但部分被拉回，实际 deferred={deferred_count}"
+        );
+        assert!(
+            remaining_learning >= 9 && remaining_learning <= 15,
+            "2(batch) + 8(未触碰) + 3(拉回) ≈ 13, 实际 learning={remaining_learning}"
+        );
         // 总数守恒
-        assert_eq!(remaining_learning + deferred_count, 20,
-            "所有卡要么 learning 要么 deferred");
+        assert_eq!(
+            remaining_learning + deferred_count,
+            20,
+            "所有卡要么 learning 要么 deferred"
+        );
     }
 }

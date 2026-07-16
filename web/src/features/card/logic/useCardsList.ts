@@ -2,7 +2,12 @@
 
 import { useSearchParams } from "@solidjs/router";
 import { createSignal } from "solid-js";
-import { createCardE, deleteCardE, getCardsE, searchCardsE } from "../../../apis/cardApi.ts";
+import {
+	createCardE,
+	deleteCardE,
+	getCardsE,
+	searchCardsE,
+} from "../../../apis/cardApi.ts";
 import type { Card, CreateCardRequest } from "../../../apis/types/card.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { showToast } from "../../../components/ui/toastStore.ts";
@@ -18,11 +23,18 @@ export function useCardsList() {
 	const [deletingCardId, setDeletingCardId] = createSignal<number | null>(null);
 
 	const [searchParams, setSearchParams] = useSearchParams();
-	const searchQuery = () => { const q = searchParams.q; return typeof q === "string" ? q : ""; };
+	const searchQuery = () => {
+		const q = searchParams.q;
+		return typeof q === "string" ? q : "";
+	};
 	const isSearchMode = () => searchQuery().trim().length > 0;
 
 	const loadCards = async () => {
-		try { setCards((await getCardsE()).items); } catch { /* ignore */ }
+		try {
+			setCards((await getCardsE()).items);
+		} catch {
+			/* ignore */
+		}
 	};
 
 	const handleCardDelete = async (id: number) => {
@@ -34,7 +46,12 @@ export function useCardsList() {
 		if (cardToDelete) setCards(current.filter((c) => c.id !== id));
 		try {
 			await deleteCardE(id);
-			showToast({ type: "success", title: "卡片已删除", message: "", duration: 3000 });
+			showToast({
+				type: "success",
+				title: "卡片已删除",
+				message: "",
+				duration: 3000,
+			});
 		} catch {
 			if (cardToDelete) setCards([...current]);
 		} finally {
@@ -43,27 +60,63 @@ export function useCardsList() {
 	};
 
 	const handleCreateCard = async () => {
-		if (!newCardContent().trim()) { setError("内容不能为空"); return; }
-		setIsCreating(true); setModalError("");
+		if (!newCardContent().trim()) {
+			setError("内容不能为空");
+			return;
+		}
+		setIsCreating(true);
+		setModalError("");
 		try {
 			const req: CreateCardRequest = { content: newCardContent().trim() };
 			const newCard = await createCardE(req);
-			setNewCardContent(""); setShowCreateModal(false);
+			setNewCardContent("");
+			setShowCreateModal(false);
 			setCards([newCard, ...cards()]);
-			showToast({ type: "success", title: "卡片已创建", message: "", duration: 3000 });
-		} catch (err) { setModalError(getErrorMessage(err)); } finally { setIsCreating(false); }
+			showToast({
+				type: "success",
+				title: "卡片已创建",
+				message: "",
+				duration: 3000,
+			});
+		} catch (err) {
+			setModalError(getErrorMessage(err));
+		} finally {
+			setIsCreating(false);
+		}
 	};
 
 	const handleSearch = async (query: string) => {
 		setSearchParams({ q: query || undefined });
-		if (!query) { await loadCards(); return; }
-		try { setCards([...(await searchCardsE(query)).items]); } catch { /* global toast handled */ }
+		if (!query) {
+			await loadCards();
+			return;
+		}
+		try {
+			setCards([...(await searchCardsE(query)).items]);
+		} catch {
+			/* global toast handled */
+		}
 	};
 
 	return {
-		cards, setCards, loading, setLoading, error, setError,
-		searchQuery, isSearchMode, showCreateModal, setShowCreateModal,
-		newCardContent, setNewCardContent, isCreating, modalError,
-		deletingCardId, loadCards, handleCardDelete, handleCreateCard, handleSearch,
+		cards,
+		setCards,
+		loading,
+		setLoading,
+		error,
+		setError,
+		searchQuery,
+		isSearchMode,
+		showCreateModal,
+		setShowCreateModal,
+		newCardContent,
+		setNewCardContent,
+		isCreating,
+		modalError,
+		deletingCardId,
+		loadCards,
+		handleCardDelete,
+		handleCreateCard,
+		handleSearch,
 	};
 }

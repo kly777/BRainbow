@@ -74,6 +74,8 @@ export default function AuthStatus() {
 			const { id, name: uname, role, token } = user;
 			authLogin(id, uname, role, token);
 			setShowForm(false);
+			// 登录后刷新页面
+			window.location.reload();
 		} catch (e) {
 			setError(getErrorMessage(e));
 		}

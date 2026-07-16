@@ -324,6 +324,11 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
+    // ── 迁移：deferred 状态已废弃 → 全部改回 new ──
+    sqlx::query("UPDATE mem SET state='new', step_index=NULL, lapses=0, leeched=0 WHERE state='deferred'")
+        .execute(pool)
+        .await?;
+
     // ── 标签系统 (mem) ──
 
     sqlx::query(

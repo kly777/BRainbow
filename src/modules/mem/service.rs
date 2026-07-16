@@ -46,56 +46,23 @@ impl MemService {
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<DueResponse, sqlx::Error> {
-        let learning_quota = std::cmp::max(1, max_learning / 2) as usize;
-        let threshold = (max_learning * 2) as usize;
+        let cap = max_learning as usize;
+        let mut ids: Vec<i32> = Vec::with_capacity(cap);
 
-        // 统计到期 learning 卡总数
-        let due_learning_count = self
+        // 1. 学习卡优先：learning + relearning（按 due_at 排序）
+        let learning = self
             .repo
-            .get_due_learning_count(tag_ids, exclude_tag_ids)
-            .await? as usize;
-
-        let mut deferred_extra = false;
-
-        // 如果太多 → 随机 defer 1/2
-        let mut ids: Vec<i32>;
-        if due_learning_count > threshold {
-            let to_defer = due_learning_count / 2;
-            // 取 learning_quota 张作为本批，其余随机 defer
-            let all_learning = self
-                .repo
-                .get_learning_mems(due_learning_count as i64, tag_ids, exclude_tag_ids)
-                .await?;
-            let for_batch: Vec<i32> = all_learning.iter().take(learning_quota).copied().collect();
-            let extra: Vec<i32> = all_learning.iter().skip(learning_quota).copied().collect();
-            // extra 中随机选 to_defer 张 defer（在 await 前完成所有 RNG 操作）
-            use rand::seq::IteratorRandom;
-            let to_defer_ids: Vec<i32> = extra.iter().copied().sample(&mut rand::rng(), to_defer);
-            self.repo.defer_learning_cards(&to_defer_ids).await?;
-            ids = for_batch;
-            deferred_extra = true;
-        } else {
-            ids = self
-                .repo
-                .get_learning_mems(learning_quota as i64, tag_ids, exclude_tag_ids)
-                .await?;
-        }
-
-        // deferred 保底：每轮至少拉回 1 张
-        let deferred_slot = std::cmp::min(1, (max_learning as usize).saturating_sub(ids.len()));
-        if deferred_slot > 0 {
-            let deferred = self
-                .repo
-                .get_deferred_learning(deferred_slot as i64, tag_ids)
-                .await?;
-            for id in &deferred {
-                self.repo.set_state(*id, "learning", Some(0)).await?;
+            .get_learning_mems(max_learning, tag_ids, exclude_tag_ids)
+            .await?;
+        for id in &learning {
+            if ids.len() < cap {
+                ids.push(*id);
             }
-            ids.extend(deferred);
         }
+        let more_to_learn = learning.len() > ids.len();
 
-        // 取 review
-        let review_quota = (max_learning as usize).saturating_sub(ids.len());
+        // 2. 到期 review 填空
+        let review_quota = cap.saturating_sub(ids.len());
         if review_quota > 0 {
             let due = self
                 .repo
@@ -104,25 +71,12 @@ impl MemService {
             ids.extend(due);
         }
 
-        // 还不够 → 从 deferred 多拉一些回来
-        let needed = (max_learning as usize).saturating_sub(ids.len());
-        if needed > 0 {
-            let deferred = self
-                .repo
-                .get_deferred_learning(needed as i64, tag_ids)
-                .await?;
-            for id in &deferred {
-                self.repo.set_state(*id, "learning", Some(0)).await?;
-            }
-            ids.extend(deferred);
-        }
-
-        // 还不够 → 新卡
-        let needed = (max_learning as usize).saturating_sub(ids.len());
-        if needed > 0 {
+        // 3. 新卡填空
+        let new_quota = cap.saturating_sub(ids.len());
+        if new_quota > 0 {
             let new_cards = self
                 .repo
-                .get_new_cards(needed as i64, tag_ids, exclude_tag_ids)
+                .get_new_cards(new_quota as i64, tag_ids, exclude_tag_ids)
                 .await?;
             for id in &new_cards {
                 self.repo.set_state(*id, "learning", Some(0)).await?;
@@ -130,16 +84,17 @@ impl MemService {
             ids.extend(new_cards);
         }
 
-        // 还不够 → upcoming
-        let needed = (max_learning as usize).saturating_sub(ids.len());
-        if needed > 0 {
+        // 4. 提前复习 (upcoming) 填空
+        let upcoming_quota = cap.saturating_sub(ids.len());
+        if upcoming_quota > 0 {
             let upcoming = self
                 .repo
-                .get_upcoming_reviews(needed as i64, tag_ids)
+                .get_upcoming_reviews(upcoming_quota as i64, tag_ids)
                 .await?;
             ids.extend(upcoming);
         }
 
+        // 5. 实在没卡了，随便给一张
         if ids.is_empty()
             && let Ok(Some(id)) = self.repo.get_next_mem().await
         {
@@ -147,22 +102,25 @@ impl MemService {
         }
 
         let items = self.build_items(&ids).await;
-        let has_more = deferred_extra || ids.len() >= max_learning as usize;
+        let has_more = more_to_learn || ids.len() >= cap;
         let upcoming_count = if ids.is_empty() {
             self.repo.count_upcoming().await.unwrap_or(0) as usize
         } else {
             0
         };
+
+        // all_far：当前批次全部提前 24h+
         let all_far = !items.is_empty()
             && items.iter().all(|it| {
                 chrono::DateTime::parse_from_rfc3339(&it.due_at)
                     .map(|t| t > chrono::Utc::now() + chrono::Duration::hours(24))
                     .unwrap_or(false)
             });
+
         Ok(DueResponse {
-            due_count: items.len(),
+            items: items.into(),
+            due_count: ids.len(),
             has_more,
-            items,
             upcoming_count,
             all_far,
         })

@@ -108,13 +108,13 @@ export default function MemPage() {
 	};
 
 	// ── 动态队列大小 ──
-	// 基于近期评分（1-4）调整一次拉取多少张卡
-	const MAX_HISTORY = 15;
+	// 基于评分（1-4）的指数移动平均，调整一次拉取多少张卡
+	const ALPHA = 0.2; // 指数移动平均衰减因子
 	const MIN_LIMIT = 3;
 	const MAX_LIMIT = 15;
 	const DEFAULT_LIMIT = 7;
 
-	const [recentRatings, setRecentRatings] = createSignal<number[]>([]);
+	const [avgRating, setAvgRating] = createSignal(2.5); // EMA 初始值偏保守
 
 	// ── 卡面停留计时 ──
 	// 每次切换到新卡时记录开始时间，评分时记录耗时，估算剩余
@@ -128,9 +128,7 @@ export default function MemPage() {
 	const estRemaining = () => Math.round(avgCardTime() * estimatedTotal());
 
 	const maxLearning = () => {
-		const ratings = recentRatings();
-		if (ratings.length < 3) return DEFAULT_LIMIT;
-		const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+		const avg = avgRating();
 		// avg: 1~4 → limit: MIN_LIMIT~MAX_LIMIT
 		return Math.round(MIN_LIMIT + ((avg - 1) / 3) * (MAX_LIMIT - MIN_LIMIT));
 	};
@@ -181,15 +179,14 @@ export default function MemPage() {
 				getSessionEstimateE()
 					.then((est) => setEstimatedTotal(est.total_estimate))
 					.catch(() => {});
-				const shuffled = [...data.items].sort(() => Math.random() - 0.5);
-				setDue(shuffled);
+				setDue([...data.items]);
 				setCurrent(0);
 				setCardStart(Date.now());
 				setShowAnswer(false);
 				setIsPreview(
 					data.items.length === 1 && data.items[0]?.state !== "learning",
 				);
-				if (shuffled.length > 0) loadPreview(shuffled[0].id);
+				if (data.items.length > 0) loadPreview(data.items[0].id);
 			}
 		} catch {
 			/* ignore */
@@ -243,8 +240,8 @@ export default function MemPage() {
 		} catch {
 			/* ignore */
 		}
-		// 记录评分，用于动态调整队列大小
-		setRecentRatings((prev) => [...prev, rating].slice(-MAX_HISTORY));
+		// 记录评分，指数移动平均调整队列大小
+		setAvgRating((prev) => prev * (1 - ALPHA) + rating * ALPHA);
 		// 记录耗时（上限 5 分钟，防止中途离开拉高预估）
 		const elapsed = Math.min((Date.now() - cardStart()) / 1000, 300);
 		setCardDurations((prev) => [...prev, elapsed].slice(-30));

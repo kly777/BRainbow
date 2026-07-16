@@ -33,7 +33,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Tasks",
 		desc: "任务管理",
 		nav: true,
-		component: lazy(() => import("./pages/TaskManager.tsx")),
+		component: lazy(() => import("./features/task/TaskManager.tsx")),
 	},
 	{
 		path: "/o",
@@ -111,7 +111,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Reading",
 		desc: "英语阅读与单词管理",
 		nav: true,
-		component: lazy(() => import("./pages/reading/ReadingList.tsx")),
+		component: lazy(() => import("./features/reading/ReadingList.tsx")),
 	},
 	{
 		path: "/reading/unknown",
@@ -119,7 +119,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Unknown Words",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("./pages/reading/ReadingUnknown.tsx")),
+		component: lazy(() => import("./features/reading/ReadingUnknown.tsx")),
 	},
 	{
 		path: "/reading/:id",
@@ -127,7 +127,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Reading",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("./pages/reading/ReadingDetail.tsx")),
+		component: lazy(() => import("./features/reading/ReadingDetail.tsx")),
 	},
 	{
 		path: "/m",
@@ -159,28 +159,28 @@ export const ROUTES: RouteConfig[] = [
 		title: "Conversations",
 		desc: "搜索 AI 对话历史",
 		nav: true,
-		component: lazy(() => import("./pages/ConvSearch.tsx")),
+		component: lazy(() => import("./features/conv/ConvSearch.tsx")),
 	},
 	{
 		path: "/conv/qa/:id",
 		label: "对话详情",
 		title: "Conversation",
 		desc: "",
-		component: lazy(() => import("./pages/ConvQa.tsx")),
+		component: lazy(() => import("./features/conv/ConvQa.tsx")),
 	},
 	{
 		path: "/conv/concept/:id",
 		label: "概念详情",
 		title: "Concept",
 		desc: "",
-		component: lazy(() => import("./pages/ConvConcept.tsx")),
+		component: lazy(() => import("./features/conv/ConvConcept.tsx")),
 	},
 	{
 		path: "/conv/:id",
 		label: "对话详情 (旧)",
 		title: "Conversation",
 		desc: "",
-		component: lazy(() => import("./pages/ConvDetail.tsx")),
+		component: lazy(() => import("./features/conv/ConvDetail.tsx")),
 	},
 ];
 

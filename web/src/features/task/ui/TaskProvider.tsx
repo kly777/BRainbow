@@ -20,9 +20,9 @@ import {
 	getTasksE,
 	moveToBacklogE,
 	searchTasksE,
-} from "../../apis/taskApi.ts";
-import type { CreateTaskRequest, Task } from "../../apis/types/index.ts";
-import { getErrorMessage } from "../../apis/types/index.ts";
+} from "../../../apis/taskApi.ts";
+import type { CreateTaskRequest, Task } from "../../../apis/types/index.ts";
+import { getErrorMessage } from "../../../apis/types/index.ts";
 
 interface Stats {
 	backlog: number;

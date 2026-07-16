@@ -1,7 +1,7 @@
 import { A, useParams, useSearchParams } from "@solidjs/router";
-import { createResource, For, Show } from "solid-js";
-import { getConvQaE } from "../apis/convApi.ts";
-import MarkdownRenderer from "../components/ui/Markdown.tsx";
+import { createResource, Show } from "solid-js";
+import { getConvConceptE } from "../../apis/convApi.ts";
+import MarkdownRenderer from "../../components/ui/Markdown.tsx";
 import styles from "./ConvDetail.module.css";
 
 const typeLabel: Record<string, string> = {
@@ -11,12 +11,13 @@ const typeLabel: Record<string, string> = {
 	summary: "总结",
 };
 
-export default function ConvQaPage() {
+export default function ConvConceptPage() {
 	const params = useParams();
 	const [searchParams] = useSearchParams();
+
 	const [data] = createResource(
-		() => params.id,
-		(id) => getConvQaE(Number(id)),
+		() => ({ id: params.id, article: searchParams.article }),
+		({ id, article }) => getConvConceptE(Number(id), String(article || "")),
 	);
 
 	const backHref = () => {
@@ -41,32 +42,13 @@ export default function ConvQaPage() {
 							<div class={styles.titleArea}>
 								<h1 class={styles.title}>{d().title}</h1>
 								<span class={styles.tag}>
-									{typeLabel[d().conv_type] || d().conv_type}
+									{typeLabel[d().article_type] || d().article_type}
 								</span>
-								<span class={styles.date}>{d().created_at.slice(0, 10)}</span>
 							</div>
 						</div>
 						<div class={styles.body}>
-							<div class={styles.qaSection}>
-								<h2 class={styles.sectionTitle}>对话记录</h2>
-								<For each={d().qa_pairs}>
-									{(qa) => (
-										<div class={styles.qaBlock}>
-											<div class={styles.question}>
-												<span class={styles.qLabel}>Q</span>
-												<div class={styles.md}>
-													<MarkdownRenderer content={qa.question} />
-												</div>
-											</div>
-											<div class={styles.answer}>
-												<span class={styles.aLabel}>A</span>
-												<div class={styles.md}>
-													<MarkdownRenderer content={qa.answer} />
-												</div>
-											</div>
-										</div>
-									)}
-								</For>
+							<div class={styles.md}>
+								<MarkdownRenderer content={d().content} />
 							</div>
 						</div>
 					</>

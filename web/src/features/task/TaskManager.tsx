@@ -1,10 +1,10 @@
 import { useSearchParams } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
-import TaskCalendar from "../components/task/TaskCalendar.tsx";
-import TaskDag from "../components/task/TaskDag.tsx";
-import TaskKanban from "../components/task/TaskKanban.tsx";
-import TaskList from "../components/task/TaskList.tsx";
-import { TaskProvider, useTasks } from "../components/task/TaskProvider.tsx";
+import TaskCalendar from "./ui/TaskCalendar.tsx";
+import TaskDag from "./ui/TaskDag.tsx";
+import TaskKanban from "./ui/TaskKanban.tsx";
+import TaskList from "./ui/TaskList.tsx";
+import { TaskProvider, useTasks } from "./ui/TaskProvider.tsx";
 import styles from "./TaskManager.module.css";
 
 function Toolbar(props: {

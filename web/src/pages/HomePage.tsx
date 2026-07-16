@@ -4,8 +4,8 @@ import { deleteCardE as apiDeleteCard, getCardsE } from "../apis/cardApi.ts";
 import { getErrorMessage } from "../apis/types/index.ts";
 import type { CardData } from "../features/card/ui/Card.tsx";
 import CardsGrid from "../features/card/ui/CardsGrid.tsx";
-import TaskList from "../components/task/TaskList.tsx";
-import { TaskProvider, useTasks } from "../components/task/TaskProvider.tsx";
+import TaskList from "../features/task/ui/TaskList.tsx";
+import { TaskProvider, useTasks } from "../features/task/ui/TaskProvider.tsx";
 import { AsyncView } from "../components/ui/AsyncView.tsx";
 import styles from "./HomePage.module.css";
 

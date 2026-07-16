@@ -9,19 +9,19 @@ import {
 	addTaskDependencyE,
 	getTaskDetailE,
 	removeTaskDependencyE,
-} from "../../apis/taskApi.ts";
+} from "../../../apis/taskApi.ts";
 import {
 	createTimeWindowE,
 	deleteTimeWindowE,
 	getTimeWindowsE,
-} from "../../apis/timeWindowApi.ts";
+} from "../../../apis/timeWindowApi.ts";
 import type {
 	CreateTimeWindowRequest,
 	Task,
 	TimeWindow,
-} from "../../apis/types/index.ts";
-import { getErrorMessage } from "../../apis/types/index.ts";
-import Modal from "../ui/Modal.tsx";
+} from "../../../apis/types/index.ts";
+import { getErrorMessage } from "../../../apis/types/index.ts";
+import Modal from "../../../components/ui/Modal.tsx";
 import styles from "./EditTaskModal.module.css";
 
 interface EditTaskModalProps {

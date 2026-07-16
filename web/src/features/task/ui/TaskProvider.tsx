@@ -6,23 +6,20 @@ import {
 	useContext,
 } from "solid-js";
 import {
-	activateTaskE,
 	createTaskE as apiCreateTask,
 	deleteTaskE as apiDeleteTask,
 	updateTaskE as apiUpdateTask,
-	archiveTaskE,
-	completeTaskE,
-	getActiveTasksE,
-	getAllTasksE,
-	getBacklogTasksE,
-	getCompletedTasksE,
 	getTaskStatsE,
 	getTasksE,
-	moveToBacklogE,
 	searchTasksE,
 } from "../../../apis/taskApi.ts";
 import type { CreateTaskRequest, Task } from "../../../apis/types/index.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
+import {
+	fetchTasksByFilter,
+	makeTemp,
+	STATUS_API,
+} from "./task-provider-utils.ts";
 
 interface Stats {
 	backlog: number;
@@ -47,20 +44,6 @@ interface TaskCtxValue {
 }
 
 const TaskCtx = createContext<TaskCtxValue>();
-
-function makeTemp(req: CreateTaskRequest): Task {
-	return {
-		id: Date.now(),
-		title: req.title,
-		description: req.description ?? null,
-		parent_task_id: req.parent_task_id ?? null,
-		status: "backlog",
-		completed_at: null,
-		effort_estimate_minutes: req.effort_estimate_minutes ?? null,
-		created_at: new Date().toISOString(),
-		updated_at: new Date().toISOString(),
-	};
-}
 
 export function TaskProvider(props: { children: JSX.Element }) {
 	const [tasks, setTasks] = createSignal<Task[]>([]);
@@ -118,16 +101,10 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		const orig = prev[idx];
 		setTasks(prev.map((t, i) => (i === idx ? { ...t, status: newStatus } : t)));
 
-		const fn: Record<string, () => Promise<Task>> = {
-			completed: () => completeTaskE(id),
-			active: () => activateTaskE(id),
-			archived: () => archiveTaskE(id),
-			backlog: () => moveToBacklogE(id),
-		};
 		try {
-			const f = fn[newStatus];
-			if (!f) throw new Error(`未知状态: ${newStatus}`);
-			const updated = await f();
+			const apiFn = STATUS_API[newStatus];
+			if (!apiFn) throw new Error(`未知状态: ${newStatus}`);
+			const updated = await apiFn(id);
 			setTasks((c) => c.map((t) => (t.id === id ? updated : t)));
 			await reloadStats();
 		} catch (e) {
@@ -177,20 +154,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 
 	const filterByStatus = async (status: string) => {
 		try {
-			let r: { readonly items: readonly Task[] };
-			switch (status) {
-				case "backlog":
-					r = await getBacklogTasksE();
-					break;
-				case "active":
-					r = await getActiveTasksE();
-					break;
-				case "completed":
-					r = await getCompletedTasksE();
-					break;
-				default:
-					r = await getAllTasksE();
-			}
+			const r = await fetchTasksByFilter(status);
 			setTasks([...r.items]);
 		} catch (e) {
 			console.error("筛选失败:", getErrorMessage(e));

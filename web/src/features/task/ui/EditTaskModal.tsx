@@ -1,6 +1,6 @@
 import { createEffect, createSignal, Show } from "solid-js";
 import { getTimeWindowsE } from "../timeWindowApi.ts";
-import type { Task, TimeWindow } from "../../../apis/types/index.ts";
+import type { Task, TimeWindow } from "../types.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import Modal from "../../../components/ui/Modal.tsx";
 import BasicInfoTab from "./BasicInfoTab.tsx";

@@ -8,7 +8,7 @@ import {
 	Show,
 } from "solid-js";
 import { getAllTasksE, getDagE } from "../api.ts";
-import type { Task } from "../../../apis/types/index.ts";
+import type { Task } from "../types.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { layout } from "./dag-layout.ts";
 import type { LayoutNode } from "./dag-layout.ts";

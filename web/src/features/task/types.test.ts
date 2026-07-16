@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getStatusText, TaskStatus } from "./task.ts";
+import { getStatusText, TaskStatus } from "./types.ts";
 
 describe("TaskStatus constants", () => {
 	it("has correct values", () => {

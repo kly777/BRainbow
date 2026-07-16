@@ -1,6 +1,6 @@
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { getCalendarEventsE } from "../api.ts";
-import type { CalendarEvent } from "../../../apis/types/index.ts";
+import type { CalendarEvent } from "../types.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import styles from "./TaskCalendar.module.css";
 

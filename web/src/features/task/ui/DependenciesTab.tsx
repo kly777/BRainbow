@@ -10,7 +10,7 @@ import {
 	getTaskDetailE,
 	removeTaskDependencyE,
 } from "../api.ts";
-import type { Task } from "../../../apis/types/index.ts";
+import type { Task } from "../types.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { notifyError } from "../../../lib/notify.ts";
 import styles from "./EditTaskModal.module.css";

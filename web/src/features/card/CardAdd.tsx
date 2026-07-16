@@ -1,10 +1,8 @@
 import { useNavigate } from "@solidjs/router";
 import { type Component, createSignal, Show } from "solid-js";
 import { createCardE } from "./api.ts";
-import {
-	type CreateCardRequest,
-	getErrorMessage,
-} from "../../apis/types/index.ts";
+import type { CreateCardRequest } from "./types.ts";
+import { getErrorMessage } from "../../apis/types/index.ts";
 import Breadcrumb from "../../components/ui/Breadcrumb.tsx";
 import Button from "../../components/ui/Button.tsx";
 import MarkdownEditor from "../../components/ui/MarkdownEditor.tsx";

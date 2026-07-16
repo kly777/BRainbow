@@ -3,7 +3,7 @@ import type {
 	CreateTimeWindowRequest,
 	Task,
 	TimeWindow,
-} from "../../../apis/types/index.ts";
+} from "../types.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { notifyError } from "../../../lib/notify.ts";
 import {

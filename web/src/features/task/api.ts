@@ -6,7 +6,7 @@ import type {
 	Task,
 	TaskDetail,
 	UpdateTaskRequest,
-} from "../../apis/types/index.ts";
+} from "./types.ts";
 
 // ==================== 类型 ====================
 

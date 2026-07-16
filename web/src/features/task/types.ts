@@ -1,4 +1,4 @@
-import type { TimeWindow } from "./time_window.ts";
+// ── 任务模块类型（含时间窗口） ──
 
 // ── Task 基础 ──
 
@@ -88,6 +88,25 @@ export interface DagEdge {
 export interface DagView {
 	nodes: DagNode[];
 	edges: DagEdge[];
+}
+
+// ── 时间窗口 ──
+
+export interface TimeWindow {
+	id: number;
+	start_time: string;
+	end_time: string;
+	window_type: string;
+	task_id: number;
+	user_id: number | null;
+}
+
+export interface CreateTimeWindowRequest {
+	start_time: string;
+	end_time: string;
+	window_type: string;
+	task_id: number;
+	user_id?: number | null;
 }
 
 // ── 常量 & 展示 ──

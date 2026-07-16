@@ -1,3 +1,5 @@
+// ── 卡片模块类型 ──
+
 export interface Card {
 	id: number;
 	content: string;

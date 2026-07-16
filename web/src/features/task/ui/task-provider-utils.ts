@@ -1,6 +1,6 @@
 // ── TaskProvider 的纯函数和 API 调度映射 ──
 
-import type { CreateTaskRequest, Task } from "../../../apis/types/index.ts";
+import type { CreateTaskRequest, Task } from "../types.ts";
 import {
 	activateTaskE,
 	archiveTaskE,

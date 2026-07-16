@@ -8,7 +8,7 @@ import {
 	getCardsE,
 	searchCardsE,
 } from "../api.ts";
-import type { Card, CreateCardRequest } from "../../../apis/types/card.ts";
+import type { Card, CreateCardRequest } from "../types.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { showToast } from "../../../components/ui/toastStore.ts";
 

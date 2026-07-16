@@ -1,6 +1,6 @@
 // ── 依赖图布局引擎（纯函数，无外部依赖） ──
 
-import type { DagEdge, DagNode } from "../../../apis/types/index.ts";
+import type { DagEdge, DagNode } from "../types.ts";
 
 /** 带布局坐标的节点 */
 export interface LayoutNode {

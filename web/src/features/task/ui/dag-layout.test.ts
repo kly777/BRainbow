@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { layout } from "./dag-layout.ts";
-import type { DagNode, DagEdge } from "../../../apis/types/index.ts";
+import type { DagNode, DagEdge } from "../types.ts";
 
 describe("layout", () => {
 	it("empty nodes → empty result", () => {

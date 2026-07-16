@@ -7,7 +7,7 @@ import {
 	Show,
 } from "solid-js";
 import { deleteCardE, getCardE, updateCardE } from "./api.ts";
-import type { UpdateCardRequest } from "../../apis/types/index.ts";
+import type { UpdateCardRequest } from "./types.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import Breadcrumb from "../../components/ui/Breadcrumb.tsx";

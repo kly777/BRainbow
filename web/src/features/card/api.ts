@@ -3,7 +3,7 @@ import type {
 	Card,
 	CreateCardRequest,
 	UpdateCardRequest,
-} from "../../apis/types/index.ts";
+} from "./types.ts";
 
 // ==================== 类型 ====================
 

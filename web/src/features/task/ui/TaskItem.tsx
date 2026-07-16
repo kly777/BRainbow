@@ -1,5 +1,5 @@
 import { createSignal, For, Show } from "solid-js";
-import type { Task, TimeWindow } from "../../../apis/types/index.ts";
+import type { Task, TimeWindow } from "../types.ts";
 import { formatDate } from "../../../apis/types/index.ts";
 import styles from "./TaskList.module.css";
 

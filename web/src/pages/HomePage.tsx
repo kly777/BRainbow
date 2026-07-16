@@ -2,6 +2,7 @@ import { A, useNavigate } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 import { deleteCardE as apiDeleteCard, getCardsE } from "../apis/cardApi.ts";
 import { getErrorMessage } from "../apis/types/index.ts";
+import { notifyError } from "../lib/notify.ts";
 import type { CardData } from "../features/card/ui/Card.tsx";
 import CardsGrid from "../features/card/ui/CardsGrid.tsx";
 import TaskList from "../features/task/ui/TaskList.tsx";
@@ -99,7 +100,7 @@ function CardOverview() {
 		try {
 			await apiDeleteCard(id);
 		} catch (e) {
-			console.error("删除失败:", getErrorMessage(e));
+			notifyError("删除失败", e);
 			refetch();
 		}
 	};

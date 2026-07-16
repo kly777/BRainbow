@@ -8,6 +8,7 @@ import {
 } from "solid-js";
 import { createOntoE, deleteOntoE, getOntosE } from "../../apis/ontoApi.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
+import { notifyError, notifySuccess } from "../../lib/notify.ts";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import Button from "../../components/ui/Button.tsx";
 import FilterGroup from "../../components/ui/FilterGroup.tsx";
@@ -77,10 +78,10 @@ const OntologyListPage: Component = () => {
 				setShowCreateModal(false);
 				const currentData = ontologies() || [];
 				mutate([newOnto, ...currentData]);
-				console.log("本体创建成功");
+				notifySuccess("本体创建成功");
 			})
 			.catch((error: unknown) => {
-				console.error("创建本体失败:", getErrorMessage(error));
+				notifyError("创建本体失败", error);
 				setCreateError(getErrorMessage(error));
 			})
 			.finally(() => {
@@ -102,9 +103,10 @@ const OntologyListPage: Component = () => {
 
 			deleteOntoE(id)
 				.then(() => {
-					console.log("本体删除成功:", id);
+					notifySuccess("本体已删除");
 				})
-				.catch(() => {
+				.catch((error: unknown) => {
+					notifyError("删除本体失败", error);
 					if (ontoToDelete) mutate([...currentData]);
 				})
 				.finally(() => {

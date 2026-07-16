@@ -15,6 +15,7 @@ import {
 } from "../../../apis/taskApi.ts";
 import type { CreateTaskRequest, Task } from "../../../apis/types/index.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
+import { notifyError } from "../../../lib/notify.ts";
 import {
 	fetchTasksByFilter,
 	makeTemp,
@@ -88,7 +89,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 			setTasks((p) => p.map((t) => (t.id === temp.id ? real : t)));
 			return real;
 		} catch (e) {
-			console.error("创建任务失败:", getErrorMessage(e));
+			notifyError("创建任务失败", e);
 			setTasks((p) => p.filter((t) => t.id !== temp.id));
 			return null;
 		}
@@ -108,7 +109,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 			setTasks((c) => c.map((t) => (t.id === id ? updated : t)));
 			await reloadStats();
 		} catch (e) {
-			console.error("更新状态失败:", getErrorMessage(e));
+			notifyError("更新状态失败", e);
 			setTasks((c) =>
 				c.map((t) => (t.id === id ? { ...t, status: orig.status } : t)),
 			);
@@ -122,7 +123,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		try {
 			await apiDeleteTask(id);
 		} catch (e) {
-			console.error("删除任务失败:", getErrorMessage(e));
+			notifyError("删除任务失败", e);
 			await reload();
 		}
 	};
@@ -138,7 +139,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 			setTasks((c) => c.map((t) => (t.id === id ? updated : t)));
 			await reloadStats();
 		} catch (e) {
-			console.error("更新任务失败:", getErrorMessage(e));
+			notifyError("更新任务失败", e);
 			setTasks((c) => c.map((t) => (t.id === id ? orig : t)));
 		}
 	};
@@ -148,7 +149,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 			const real = await apiCreateTask({ title, parent_task_id: parentId });
 			setTasks((p) => [...p, real]);
 		} catch (e) {
-			console.error("创建子任务失败:", getErrorMessage(e));
+			notifyError("创建子任务失败", e);
 		}
 	};
 

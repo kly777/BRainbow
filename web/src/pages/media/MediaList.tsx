@@ -13,6 +13,7 @@ import {
 	renameMediaE,
 } from "../../apis/mediaApi.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
+import { notifyError } from "../../lib/notify.ts";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import Button from "../../components/ui/Button.tsx";
 import FilterGroup from "../../components/ui/FilterGroup.tsx";
@@ -64,7 +65,7 @@ const MediaListPage: Component = () => {
 			await deleteMediaE(stored_id);
 			refetch();
 		} catch (err) {
-			console.error("删除失败:", getErrorMessage(err));
+			notifyError("删除失败", err);
 			refetch();
 		}
 	};

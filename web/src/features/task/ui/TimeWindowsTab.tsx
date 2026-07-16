@@ -5,6 +5,7 @@ import type {
 	TimeWindow,
 } from "../../../apis/types/index.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
+import { notifyError } from "../../../lib/notify.ts";
 import {
 	createTimeWindowE,
 	deleteTimeWindowE,
@@ -95,7 +96,7 @@ export default function TimeWindowsTab(props: TimeWindowsTabProps) {
 				);
 			}
 		} catch (e) {
-			console.error("删除时间窗口失败:", getErrorMessage(e));
+			notifyError("删除时间窗口失败", e);
 		}
 	};
 

@@ -12,6 +12,7 @@ import {
 } from "../../../apis/taskApi.ts";
 import type { Task } from "../../../apis/types/index.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
+import { notifyError } from "../../../lib/notify.ts";
 import styles from "./EditTaskModal.module.css";
 
 interface DependenciesTabProps {
@@ -88,7 +89,7 @@ export default function DependenciesTab(props: DependenciesTabProps) {
 			setDepTasks(depTasks().filter((t) => t.id !== depId));
 			props.onDependencyChange?.();
 		} catch (e) {
-			console.error("删除依赖失败:", getErrorMessage(e));
+			notifyError("删除依赖失败", e);
 		}
 	};
 

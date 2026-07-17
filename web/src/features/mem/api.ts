@@ -374,8 +374,7 @@ export const uploadImage = async (file: File): Promise<string | null> => {
 
 export const getMnemonicE = (
 	memId: number,
-): Promise<{ content: string | null }> =>
-	request(`/mem/${memId}/mnemonic`, {});
+): Promise<{ content: string | null }> => request(`/mem/${memId}/mnemonic`, {});
 
 export const setMnemonicE = (
 	memId: number,

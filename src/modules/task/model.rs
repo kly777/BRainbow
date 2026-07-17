@@ -141,9 +141,15 @@ mod tests {
 
     #[test]
     fn task_status_from_str() {
-        assert_eq!("backlog".parse::<TaskStatus>().unwrap(), TaskStatus::Backlog);
+        assert_eq!(
+            "backlog".parse::<TaskStatus>().unwrap(),
+            TaskStatus::Backlog
+        );
         assert_eq!("active".parse::<TaskStatus>().unwrap(), TaskStatus::Active);
-        assert_eq!(TaskStatus::from_str("completed"), Some(TaskStatus::Completed));
+        assert_eq!(
+            TaskStatus::from_str("completed"),
+            Some(TaskStatus::Completed)
+        );
         assert_eq!(TaskStatus::from_str("archived"), Some(TaskStatus::Archived));
         assert_eq!(TaskStatus::from_str("invalid"), None);
     }
@@ -165,15 +171,33 @@ mod tests {
 
     #[test]
     fn task_is_completed() {
-        let t = Task { id: 1, title: "x".into(), description: None, parent_task_id: None, status: TaskStatus::Completed, completed_at: None, effort_estimate_minutes: None, created_at: chrono::Utc::now(), updated_at: chrono::Utc::now() };
+        let t = Task {
+            id: 1,
+            title: "x".into(),
+            description: None,
+            parent_task_id: None,
+            status: TaskStatus::Completed,
+            completed_at: None,
+            effort_estimate_minutes: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
         assert!(t.is_completed());
-        let t2 = Task { status: TaskStatus::Active, ..t };
+        let t2 = Task {
+            status: TaskStatus::Active,
+            ..t
+        };
         assert!(!t2.is_completed());
     }
 
     #[test]
     fn task_deserialize_all_statuses() {
-        for (json, expected) in [("\"backlog\"", TaskStatus::Backlog), ("\"active\"", TaskStatus::Active), ("\"completed\"", TaskStatus::Completed), ("\"archived\"", TaskStatus::Archived)] {
+        for (json, expected) in [
+            ("\"backlog\"", TaskStatus::Backlog),
+            ("\"active\"", TaskStatus::Active),
+            ("\"completed\"", TaskStatus::Completed),
+            ("\"archived\"", TaskStatus::Archived),
+        ] {
             let s: TaskStatus = serde_json::from_str(json).unwrap();
             assert_eq!(s, expected);
         }

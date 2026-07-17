@@ -74,7 +74,13 @@ export default function MemReviewCard(props: MemReviewCardProps) {
 								>
 									📋+
 								</button>
-								<button type="button" class={styles.copyBtn} title={m.mnemonic() ? "重新生成助记" : "AI 生成助记"} onClick={m.generateMnemonic} disabled={m.mnemonicLoading()}>
+								<button
+									type="button"
+									class={styles.copyBtn}
+									title={m.mnemonic() ? "重新生成助记" : "AI 生成助记"}
+									onClick={m.generateMnemonic}
+									disabled={m.mnemonicLoading()}
+								>
 									{m.mnemonicLoading() ? "⏳" : "🤖"}
 								</button>
 							</div>
@@ -92,9 +98,32 @@ export default function MemReviewCard(props: MemReviewCardProps) {
 
 								{/* AI 助记 */}
 								<Show when={m.mnemonic() || m.mnemonicLoading()}>
-									<div style={{"margin-top":"16px","padding":"12px 16px","background":"#f0fdf4","border":"1px solid #bbf7d0","border-radius":"8px","font-size":"14px"}}>
-										<div style={{"font-weight":"600","margin-bottom":"4px","font-size":"12px","color":"#15803d"}}>💡 AI 助记</div>
-										<Show when={m.mnemonicLoading()} fallback={<MarkdownRenderer content={m.mnemonic() ?? ""} />}>
+									<div
+										style={{
+											"margin-top": "16px",
+											padding: "12px 16px",
+											background: "#f0fdf4",
+											border: "1px solid #bbf7d0",
+											"border-radius": "8px",
+											"font-size": "14px",
+										}}
+									>
+										<div
+											style={{
+												"font-weight": "600",
+												"margin-bottom": "4px",
+												"font-size": "12px",
+												color: "#15803d",
+											}}
+										>
+											💡 AI 助记
+										</div>
+										<Show
+											when={m.mnemonicLoading()}
+											fallback={
+												<MarkdownRenderer content={m.mnemonic() ?? ""} />
+											}
+										>
 											<span style={{ color: "#6b7280" }}>生成中…</span>
 										</Show>
 									</div>

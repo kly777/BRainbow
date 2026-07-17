@@ -233,9 +233,18 @@ mod tests {
 
     #[test]
     fn time_window_type_from_str() {
-        assert_eq!("feasible".parse::<TimeWindowType>().unwrap(), TimeWindowType::Feasible);
-        assert_eq!("planned".parse::<TimeWindowType>().unwrap(), TimeWindowType::Planned);
-        assert_eq!("actual".parse::<TimeWindowType>().unwrap(), TimeWindowType::Actual);
+        assert_eq!(
+            "feasible".parse::<TimeWindowType>().unwrap(),
+            TimeWindowType::Feasible
+        );
+        assert_eq!(
+            "planned".parse::<TimeWindowType>().unwrap(),
+            TimeWindowType::Planned
+        );
+        assert_eq!(
+            "actual".parse::<TimeWindowType>().unwrap(),
+            TimeWindowType::Actual
+        );
         assert!("invalid".parse::<TimeWindowType>().is_err());
     }
 
@@ -257,7 +266,18 @@ mod tests {
     #[test]
     fn recurrence_rule_roundtrip() {
         use std::str::FromStr;
-        let tw = TimeWindow { id: 1, start_time: chrono::Utc::now(), end_time: chrono::Utc::now() + chrono::Duration::hours(1), window_type: TimeWindowType::Feasible, task_id: 1, user_id: None, recurrence_freq: RecurrenceFrequency::from_str("weekly").ok(), recurrence_interval: Some(1), recurrence_until: Some(chrono::Utc::now()), recurrence_by_weekdays: Some("[1,3,5]".into()) };
+        let tw = TimeWindow {
+            id: 1,
+            start_time: chrono::Utc::now(),
+            end_time: chrono::Utc::now() + chrono::Duration::hours(1),
+            window_type: TimeWindowType::Feasible,
+            task_id: 1,
+            user_id: None,
+            recurrence_freq: RecurrenceFrequency::from_str("weekly").ok(),
+            recurrence_interval: Some(1),
+            recurrence_until: Some(chrono::Utc::now()),
+            recurrence_by_weekdays: Some("[1,3,5]".into()),
+        };
         let rule = tw.recurrence_rule();
         assert!(rule.is_some());
         let r = rule.unwrap();
@@ -268,13 +288,30 @@ mod tests {
 
     #[test]
     fn recurrence_rule_none_when_no_freq() {
-        let tw = TimeWindow { recurrence_freq: None, recurrence_interval: None, recurrence_until: None, recurrence_by_weekdays: None, ..Default::default() };
+        let tw = TimeWindow {
+            recurrence_freq: None,
+            recurrence_interval: None,
+            recurrence_until: None,
+            recurrence_by_weekdays: None,
+            ..Default::default()
+        };
         assert!(tw.recurrence_rule().is_none());
     }
 }
 
 impl Default for TimeWindow {
     fn default() -> Self {
-        Self { id: 0, start_time: chrono::Utc::now(), end_time: chrono::Utc::now(), window_type: TimeWindowType::Feasible, task_id: 0, user_id: None, recurrence_freq: None, recurrence_interval: None, recurrence_until: None, recurrence_by_weekdays: None }
+        Self {
+            id: 0,
+            start_time: chrono::Utc::now(),
+            end_time: chrono::Utc::now(),
+            window_type: TimeWindowType::Feasible,
+            task_id: 0,
+            user_id: None,
+            recurrence_freq: None,
+            recurrence_interval: None,
+            recurrence_until: None,
+            recurrence_by_weekdays: None,
+        }
     }
 }

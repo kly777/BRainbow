@@ -2,12 +2,7 @@
 
 import { useSearchParams } from "@solidjs/router";
 import { createSignal } from "solid-js";
-import {
-	createCardE,
-	deleteCardE,
-	getCardsE,
-	searchCardsE,
-} from "../api.ts";
+import { createCardE, deleteCardE, getCardsE, searchCardsE } from "../api.ts";
 import type { Card, CreateCardRequest } from "../types.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { showToast } from "../../../components/ui/toastStore.ts";

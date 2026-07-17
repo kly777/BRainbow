@@ -11,9 +11,9 @@
 //! `code` 字段取自 HTTP 标准状态码短语（`StatusCode::canonical_reason()`），
 //! 不再维护自定义错误码常量。
 
+use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use serde::{Deserialize, Serialize};
 
 /// 统一的 API 错误响应体
@@ -216,7 +216,10 @@ mod tests {
 
     #[tokio::test]
     async fn ok_or_returns_500_on_err() {
-        let r = ok_or::<(), _>(Err(std::io::Error::new(std::io::ErrorKind::Other, "oops")), "op");
+        let r = ok_or::<(), _>(
+            Err(std::io::Error::new(std::io::ErrorKind::Other, "oops")),
+            "op",
+        );
         assert_eq!(r.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 
@@ -230,7 +233,10 @@ mod tests {
 
     #[tokio::test]
     async fn created_or_returns_500_on_err() {
-        let r = created_or::<(), _>(Err(std::io::Error::new(std::io::ErrorKind::Other, "fail")), "op");
+        let r = created_or::<(), _>(
+            Err(std::io::Error::new(std::io::ErrorKind::Other, "fail")),
+            "op",
+        );
         assert_eq!(r.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 
@@ -250,7 +256,10 @@ mod tests {
 
     #[tokio::test]
     async fn found_or_returns_500_on_error() {
-        let r = found_or::<(), _>(Err(std::io::Error::new(std::io::ErrorKind::Other, "db")), "find");
+        let r = found_or::<(), _>(
+            Err(std::io::Error::new(std::io::ErrorKind::Other, "db")),
+            "find",
+        );
         assert_eq!(r.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 

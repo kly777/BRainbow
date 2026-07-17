@@ -1,10 +1,6 @@
 import { A } from "@solidjs/router";
 import { createResource, createSignal, For, Show } from "solid-js";
-import {
-	type ArticleSummary,
-	listArticles,
-	uploadArticle,
-} from "./api.ts";
+import { type ArticleSummary, listArticles, uploadArticle } from "./api.ts";
 import styles from "./ReadingList.module.css";
 
 export default function ReadingList() {

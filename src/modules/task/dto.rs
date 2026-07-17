@@ -81,7 +81,12 @@ mod tests {
 
     #[test]
     fn create_task_request_serialize() {
-        let req = CreateTaskRequest { title: "test".into(), description: Some("desc".into()), parent_task_id: None, effort_estimate_minutes: Some(30) };
+        let req = CreateTaskRequest {
+            title: "test".into(),
+            description: Some("desc".into()),
+            parent_task_id: None,
+            effort_estimate_minutes: Some(30),
+        };
         let json = serde_json::to_string(&req).unwrap();
         assert!(json.contains("\"title\":\"test\""));
         assert!(json.contains("\"effort_estimate_minutes\":30"));
@@ -89,14 +94,22 @@ mod tests {
 
     #[test]
     fn update_task_request_partial() {
-        let req = UpdateTaskRequest { title: Some("new".into()), description: Some(None), parent_task_id: None, status: None, effort_estimate_minutes: None };
+        let req = UpdateTaskRequest {
+            title: Some("new".into()),
+            description: Some(None),
+            parent_task_id: None,
+            status: None,
+            effort_estimate_minutes: None,
+        };
         let json = serde_json::to_string(&req).unwrap();
         assert!(json.contains("\"title\":\"new\""));
     }
 
     #[test]
     fn quick_create_task_request() {
-        let req = QuickCreateTaskRequest { title: "quick".into() };
+        let req = QuickCreateTaskRequest {
+            title: "quick".into(),
+        };
         let json = serde_json::to_string(&req).unwrap();
         assert_eq!(json, "{\"title\":\"quick\"}");
     }

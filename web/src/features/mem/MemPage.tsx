@@ -18,8 +18,11 @@ export default function MemPage() {
 	const [upcomingCounts] = createResource(
 		() => m.due().length,
 		async () => {
-			try { return await getUpcomingCountsE(); }
-			catch { return { within_8h: 0, within_24h: 0 }; }
+			try {
+				return await getUpcomingCountsE();
+			} catch {
+				return { within_8h: 0, within_24h: 0 };
+			}
 		},
 	);
 
@@ -85,7 +88,8 @@ export default function MemPage() {
 							{m.due().length}/{m.maxLearning()}
 						</span>
 						<span class={styles.count} style={{ "font-size": "11px" }}>
-							8h:{upcomingCounts()?.within_8h ?? "-"} 24h:{upcomingCounts()?.within_24h ?? "-"}
+							8h:{upcomingCounts()?.within_8h ?? "-"} 24h:
+							{upcomingCounts()?.within_24h ?? "-"}
 						</span>
 					</div>
 				</div>

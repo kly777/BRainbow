@@ -10,9 +10,10 @@ export function notifyError(title: string, error?: unknown): void {
 		type: "error",
 		title,
 		message: error ? getErrorMessage(error) : "",
-		details: error && typeof error === "object" && "code" in (error as object)
-			? String((error as { code: string }).code)
-			: undefined,
+		details:
+			error && typeof error === "object" && "code" in (error as object)
+				? String((error as { code: string }).code)
+				: undefined,
 		duration: 6000,
 	});
 }

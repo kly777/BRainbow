@@ -102,9 +102,13 @@ mod tests {
     async fn setup() -> DBRepo {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
         sqlx::query("CREATE TABLE test_table (id INTEGER PRIMARY KEY, name TEXT)")
-            .execute(&*pool).await.unwrap();
+            .execute(&*pool)
+            .await
+            .unwrap();
         sqlx::query("INSERT INTO test_table VALUES (1, 'alice'), (2, 'bob')")
-            .execute(&*pool).await.unwrap();
+            .execute(&*pool)
+            .await
+            .unwrap();
         DBRepo { pool }
     }
 

@@ -7,7 +7,7 @@
 //!
 //! ```ignore
 //! use crate::db::query::{QueryBuilderExt, sanitize_table_name};
-//! 
+//!
 //! // 条件式 UPDATE SET
 //! let mut builder = QueryBuilder::new("UPDATE card SET ");
 //! let mut sep = builder.separated(", ");

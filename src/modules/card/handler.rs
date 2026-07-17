@@ -112,7 +112,11 @@ pub async fn search_cards_handler(
     }
     let result = state
         .card
-        .search(params.q.trim(), params.pagination.limit(), params.pagination.offset())
+        .search(
+            params.q.trim(),
+            params.pagination.limit(),
+            params.pagination.offset(),
+        )
         .await
         .map(|(items, total)| {
             let items: Vec<CardResponse> = items.into_iter().map(CardResponse::from).collect();

@@ -47,12 +47,13 @@ impl OntoService {
         name: Option<String>,
         description: Option<String>,
     ) -> Result<Onto, ServiceError> {
-        self.repo.update(id, name, description).await.map_err(|e| {
-            match e {
+        self.repo
+            .update(id, name, description)
+            .await
+            .map_err(|e| match e {
                 sqlx::Error::RowNotFound => ServiceError::NotFound("本体不存在".into()),
                 other => ServiceError::Db(other),
-            }
-        })
+            })
     }
 
     pub async fn delete(&self, id: i32) -> Result<u64, ServiceError> {
@@ -82,7 +83,10 @@ mod tests {
     #[tokio::test]
     async fn create_valid() {
         let (svc, _) = real_service().await;
-        let onto = svc.create("onto-a".into(), Some("desc".into())).await.unwrap();
+        let onto = svc
+            .create("onto-a".into(), Some("desc".into()))
+            .await
+            .unwrap();
         assert_eq!(onto.name, "onto-a");
     }
 
@@ -114,5 +118,4 @@ mod tests {
         svc.delete(onto.id).await.unwrap();
         assert!(svc.by_id(onto.id).await.unwrap().is_none());
     }
-
 }

@@ -16,7 +16,11 @@ impl SignService {
         }
     }
 
-    pub async fn list(&self, limit: i64, offset: i64) -> Result<(Vec<SignifierSignified>, i64), ServiceError> {
+    pub async fn list(
+        &self,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<SignifierSignified>, i64), ServiceError> {
         self.repo
             .find_all_paginated(limit, offset)
             .await
@@ -92,29 +96,42 @@ mod tests {
     #[tokio::test]
     async fn create_valid() {
         let svc = setup().await;
-        let s = svc.create("日".into(), "sun".into(), None, None, None).await.unwrap();
+        let s = svc
+            .create("日".into(), "sun".into(), None, None, None)
+            .await
+            .unwrap();
         assert_eq!(s.signifier, "日");
     }
 
     #[tokio::test]
     async fn create_empty_signifier_rejected() {
         let svc = setup().await;
-        let err = svc.create("".into(), "sun".into(), None, None, None).await.unwrap_err();
+        let err = svc
+            .create("".into(), "sun".into(), None, None, None)
+            .await
+            .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
     }
 
     #[tokio::test]
     async fn create_empty_signified_rejected() {
         let svc = setup().await;
-        let err = svc.create("日".into(), "  ".into(), None, None, None).await.unwrap_err();
+        let err = svc
+            .create("日".into(), "  ".into(), None, None, None)
+            .await
+            .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
     }
 
     #[tokio::test]
     async fn list_paginated() {
         let svc = setup().await;
-        svc.create("a".into(), "1".into(), None, None, None).await.unwrap();
-        svc.create("b".into(), "2".into(), None, None, None).await.unwrap();
+        svc.create("a".into(), "1".into(), None, None, None)
+            .await
+            .unwrap();
+        svc.create("b".into(), "2".into(), None, None, None)
+            .await
+            .unwrap();
         let (items, total) = svc.list(1, 0).await.unwrap();
         assert_eq!(total, 2);
         assert_eq!(items.len(), 1);
@@ -123,7 +140,9 @@ mod tests {
     #[tokio::test]
     async fn by_signifier_query() {
         let svc = setup().await;
-        svc.create("月".into(), "moon".into(), None, None, None).await.unwrap();
+        svc.create("月".into(), "moon".into(), None, None, None)
+            .await
+            .unwrap();
         let (items, _) = svc.by_signifier("月", 10, 0).await.unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].signified, "moon");
@@ -132,7 +151,10 @@ mod tests {
     #[tokio::test]
     async fn delete_sign() {
         let svc = setup().await;
-        let s = svc.create("x".into(), "y".into(), None, None, None).await.unwrap();
+        let s = svc
+            .create("x".into(), "y".into(), None, None, None)
+            .await
+            .unwrap();
         assert_eq!(svc.delete(s.id).await.unwrap(), 1);
         assert!(svc.by_id(s.id).await.unwrap().is_none());
     }

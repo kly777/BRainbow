@@ -57,7 +57,9 @@ const Card: Component<CardProps> = (props) => {
 	};
 
 	return (
-		<div classList={{ [styles.card]: true, [styles.deleting]: props.isDeleting }}>
+		<div
+			classList={{ [styles.card]: true, [styles.deleting]: props.isDeleting }}
+		>
 			<div class={styles.cardContent}>
 				<MarkdownRenderer content={props.content} />
 			</div>
@@ -101,7 +103,10 @@ const Card: Component<CardProps> = (props) => {
 				</button>
 				<button
 					type="button"
-					classList={{ [styles.actionButton]: true, [styles.deleteButton]: true }}
+					classList={{
+						[styles.actionButton]: true,
+						[styles.deleteButton]: true,
+					}}
 					onClick={handleDeleteClick}
 				>
 					删除

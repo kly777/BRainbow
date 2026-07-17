@@ -1,4 +1,9 @@
-import { CACHE, cachedRequest, request, tapInvalidate } from "../../apis/request.ts";
+import {
+	CACHE,
+	cachedRequest,
+	request,
+	tapInvalidate,
+} from "../../apis/request.ts";
 
 // ── 类型 ──
 

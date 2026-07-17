@@ -42,9 +42,13 @@ mod tests {
     async fn setup() -> DbViewerService {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
         sqlx::query("CREATE TABLE test_t (id INTEGER PRIMARY KEY, val TEXT)")
-            .execute(&*pool).await.unwrap();
+            .execute(&*pool)
+            .await
+            .unwrap();
         sqlx::query("INSERT INTO test_t VALUES (1, 'x')")
-            .execute(&*pool).await.unwrap();
+            .execute(&*pool)
+            .await
+            .unwrap();
         DbViewerService::new(pool)
     }
 

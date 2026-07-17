@@ -28,10 +28,7 @@ export function makeTemp(req: CreateTaskRequest): Task {
 }
 
 /** 状态 → API 调用映射 */
-export const STATUS_API: Record<
-	string,
-	(id: number) => Promise<Task>
-> = {
+export const STATUS_API: Record<string, (id: number) => Promise<Task>> = {
 	completed: (id) => completeTaskE(id),
 	active: (id) => activateTaskE(id),
 	archived: (id) => archiveTaskE(id),

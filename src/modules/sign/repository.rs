@@ -150,7 +150,10 @@ mod tests {
     #[tokio::test]
     async fn create_and_find_by_id() {
         let repo = setup().await;
-        let s = repo.create("猫".into(), "cat".into(), None, None, None).await.unwrap();
+        let s = repo
+            .create("猫".into(), "cat".into(), None, None, None)
+            .await
+            .unwrap();
         assert!(s.id > 0);
         assert_eq!(s.signifier, "猫");
 
@@ -161,8 +164,12 @@ mod tests {
     #[tokio::test]
     async fn find_by_signifier() {
         let repo = setup().await;
-        repo.create("狗".into(), "dog".into(), None, None, None).await.unwrap();
-        repo.create("狗".into(), "chien".into(), None, None, None).await.unwrap();
+        repo.create("狗".into(), "dog".into(), None, None, None)
+            .await
+            .unwrap();
+        repo.create("狗".into(), "chien".into(), None, None, None)
+            .await
+            .unwrap();
         let (items, total) = repo.find_by_signifier_paginated("狗", 10, 0).await.unwrap();
         assert_eq!(total, 2);
         assert_eq!(items.len(), 2);
@@ -171,15 +178,23 @@ mod tests {
     #[tokio::test]
     async fn find_by_signified() {
         let repo = setup().await;
-        repo.create("书".into(), "book".into(), None, None, None).await.unwrap();
-        let (items, total) = repo.find_by_signified_paginated("book", 10, 0).await.unwrap();
+        repo.create("书".into(), "book".into(), None, None, None)
+            .await
+            .unwrap();
+        let (items, total) = repo
+            .find_by_signified_paginated("book", 10, 0)
+            .await
+            .unwrap();
         assert_eq!(total, 1);
     }
 
     #[tokio::test]
     async fn delete_cascade() {
         let repo = setup().await;
-        let s = repo.create("x".into(), "y".into(), None, None, None).await.unwrap();
+        let s = repo
+            .create("x".into(), "y".into(), None, None, None)
+            .await
+            .unwrap();
         assert_eq!(repo.delete(s.id).await.unwrap(), 1);
         assert!(repo.find_by_id(s.id).await.unwrap().is_none());
     }

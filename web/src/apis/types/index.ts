@@ -20,7 +20,11 @@ export {
 } from "./shared.ts";
 
 // 卡片（从 feature 目录 re-export）
-export type { Card, CreateCardRequest, UpdateCardRequest } from "../../features/card/types.ts";
+export type {
+	Card,
+	CreateCardRequest,
+	UpdateCardRequest,
+} from "../../features/card/types.ts";
 
 // 任务 + 时间窗口（从 feature 目录 re-export）
 export {

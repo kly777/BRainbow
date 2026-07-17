@@ -98,12 +98,7 @@ export default function TaskDag() {
 		canvas.height = rect.height * dpr;
 		ctx.scale(dpr, dpr);
 
-		const auto = calcAutoOffset(
-			rect.width,
-			rect.height,
-			lay.nodes,
-			scale(),
-		);
+		const auto = calcAutoOffset(rect.width, rect.height, lay.nodes, scale());
 		drawGraph(
 			ctx,
 			lay,
@@ -137,12 +132,7 @@ export default function TaskDag() {
 		const lay = layoutData();
 		if (!canvas || !lay) return null;
 		const rect = canvas.getBoundingClientRect();
-		const auto = calcAutoOffset(
-			rect.width,
-			rect.height,
-			lay.nodes,
-			scale(),
-		);
+		const auto = calcAutoOffset(rect.width, rect.height, lay.nodes, scale());
 		return {
 			x: (clientX - rect.left - auto.x - offset().x) / scale(),
 			y: (clientY - rect.top - auto.y - offset().y) / scale(),

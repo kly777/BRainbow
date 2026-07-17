@@ -3,17 +3,10 @@ use std::sync::Arc;
 
 use crate::config::Config;
 use crate::modules::{
-    card::CardService,
-    db_viewer::DbViewerService,
-    media::service::MediaService,
-    mem::service::MemService,
-    onto::OntoService,
-    reading::service::ReadingService,
-    sign::SignService,
-    task::TaskService,
-    text::TextService,
-    time_window::service::TimeWindowService,
-    user::UserService,
+    card::CardService, db_viewer::DbViewerService, media::service::MediaService,
+    mem::service::MemService, onto::OntoService, reading::service::ReadingService,
+    sign::SignService, task::TaskService, text::TextService,
+    time_window::service::TimeWindowService, user::UserService,
 };
 
 /// 应用级共享状态。

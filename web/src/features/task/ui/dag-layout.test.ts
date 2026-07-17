@@ -77,9 +77,7 @@ describe("layout", () => {
 	it("edge to non-existent node appears in output (layoutNodes only maps original nodes)", () => {
 		// layoutNodes 由原始 nodes.map 生成，不会加入边引用的未知节点
 		// 但该节点有 position（拓扑排序加入），所以 edge 过滤通过
-		const nodes: DagNode[] = [
-			{ id: 1, title: "A", status: "backlog" },
-		];
+		const nodes: DagNode[] = [{ id: 1, title: "A", status: "backlog" }];
 		const edges: DagEdge[] = [{ from: 1, to: 999 }];
 		const result = layout(nodes, edges);
 		expect(result.nodes).toHaveLength(1);

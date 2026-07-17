@@ -84,13 +84,17 @@ impl OntoRepository {
         let mut has_updates = false;
 
         if let Some(ref n) = name {
-            if has_updates { builder.push(", "); }
+            if has_updates {
+                builder.push(", ");
+            }
             builder.push("name = ");
             builder.push_bind(n);
             has_updates = true;
         }
         if let Some(ref d) = description {
-            if has_updates { builder.push(", "); }
+            if has_updates {
+                builder.push(", ");
+            }
             builder.push("description = ");
             builder.push_bind(d);
             has_updates = true;
@@ -133,7 +137,10 @@ mod tests {
     #[tokio::test]
     async fn create_and_find() {
         let repo = setup_db().await;
-        let onto = repo.create("test-name".into(), Some("desc".into())).await.unwrap();
+        let onto = repo
+            .create("test-name".into(), Some("desc".into()))
+            .await
+            .unwrap();
         assert!(onto.id > 0);
         assert_eq!(onto.name, "test-name");
         assert_eq!(onto.description, Some("desc".into()));
@@ -161,8 +168,14 @@ mod tests {
     #[tokio::test]
     async fn update_name_and_description() {
         let repo = setup_db().await;
-        let onto = repo.create("old".into(), Some("old-desc".into())).await.unwrap();
-        let updated = repo.update(onto.id, Some("new".into()), Some("new-desc".into())).await.unwrap();
+        let onto = repo
+            .create("old".into(), Some("old-desc".into()))
+            .await
+            .unwrap();
+        let updated = repo
+            .update(onto.id, Some("new".into()), Some("new-desc".into()))
+            .await
+            .unwrap();
         assert_eq!(updated.name, "new");
         assert_eq!(updated.description, Some("new-desc".into()));
     }

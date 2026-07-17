@@ -135,7 +135,10 @@ mod tests {
     #[tokio::test]
     async fn register_first_user_is_admin() {
         let svc = setup().await;
-        let (user, token) = svc.register("admin".into(), "pass1234".into(), TEST_SECRET).await.unwrap();
+        let (user, token) = svc
+            .register("admin".into(), "pass1234".into(), TEST_SECRET)
+            .await
+            .unwrap();
         assert_eq!(user.role, "admin");
         assert!(!token.is_empty());
     }
@@ -143,37 +146,55 @@ mod tests {
     #[tokio::test]
     async fn register_second_user_is_user() {
         let svc = setup().await;
-        svc.register("admin".into(), "pass1234".into(), TEST_SECRET).await.unwrap();
-        let (user, _) = svc.register("user1".into(), "pass1234".into(), TEST_SECRET).await.unwrap();
+        svc.register("admin".into(), "pass1234".into(), TEST_SECRET)
+            .await
+            .unwrap();
+        let (user, _) = svc
+            .register("user1".into(), "pass1234".into(), TEST_SECRET)
+            .await
+            .unwrap();
         assert_eq!(user.role, "user");
     }
 
     #[tokio::test]
     async fn register_empty_name_rejected() {
         let svc = setup().await;
-        let err = svc.register("  ".into(), "pass1234".into(), TEST_SECRET).await.unwrap_err();
+        let err = svc
+            .register("  ".into(), "pass1234".into(), TEST_SECRET)
+            .await
+            .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
     }
 
     #[tokio::test]
     async fn register_short_password_rejected() {
         let svc = setup().await;
-        let err = svc.register("user".into(), "abc".into(), TEST_SECRET).await.unwrap_err();
+        let err = svc
+            .register("user".into(), "abc".into(), TEST_SECRET)
+            .await
+            .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
     }
 
     #[tokio::test]
     async fn register_duplicate_name() {
         let svc = setup().await;
-        svc.register("alice".into(), "pass1234".into(), TEST_SECRET).await.unwrap();
-        let err = svc.register("alice".into(), "other123".into(), TEST_SECRET).await.unwrap_err();
+        svc.register("alice".into(), "pass1234".into(), TEST_SECRET)
+            .await
+            .unwrap();
+        let err = svc
+            .register("alice".into(), "other123".into(), TEST_SECRET)
+            .await
+            .unwrap_err();
         assert!(matches!(err, ServiceError::AlreadyExists(_)));
     }
 
     #[tokio::test]
     async fn login_success() {
         let svc = setup().await;
-        svc.register("bob".into(), "secret123".into(), TEST_SECRET).await.unwrap();
+        svc.register("bob".into(), "secret123".into(), TEST_SECRET)
+            .await
+            .unwrap();
         let (user, token) = svc.login("bob", "secret123", TEST_SECRET).await.unwrap();
         assert_eq!(user.name, "bob");
         assert!(!token.is_empty());
@@ -182,7 +203,9 @@ mod tests {
     #[tokio::test]
     async fn login_wrong_password() {
         let svc = setup().await;
-        svc.register("bob".into(), "correct".into(), TEST_SECRET).await.unwrap();
+        svc.register("bob".into(), "correct".into(), TEST_SECRET)
+            .await
+            .unwrap();
         let err = svc.login("bob", "wrong", TEST_SECRET).await.unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
     }
@@ -197,8 +220,12 @@ mod tests {
     #[tokio::test]
     async fn list_all_users() {
         let svc = setup().await;
-        svc.register("a".into(), "pass1234".into(), TEST_SECRET).await.unwrap();
-        svc.register("b".into(), "pass1234".into(), TEST_SECRET).await.unwrap();
+        svc.register("a".into(), "pass1234".into(), TEST_SECRET)
+            .await
+            .unwrap();
+        svc.register("b".into(), "pass1234".into(), TEST_SECRET)
+            .await
+            .unwrap();
         let users = svc.list_all().await.unwrap();
         assert_eq!(users.len(), 2);
     }
@@ -206,8 +233,13 @@ mod tests {
     #[tokio::test]
     async fn change_password_success() {
         let svc = setup().await;
-        let (user, _) = svc.register("alice".into(), "oldPass1".into(), TEST_SECRET).await.unwrap();
-        svc.change_password(user.id, "oldPass1", "newPass2").await.unwrap();
+        let (user, _) = svc
+            .register("alice".into(), "oldPass1".into(), TEST_SECRET)
+            .await
+            .unwrap();
+        svc.change_password(user.id, "oldPass1", "newPass2")
+            .await
+            .unwrap();
         // 用新密码登录验证
         let (_, token) = svc.login("alice", "newPass2", TEST_SECRET).await.unwrap();
         assert!(!token.is_empty());
@@ -216,16 +248,28 @@ mod tests {
     #[tokio::test]
     async fn change_password_wrong_old() {
         let svc = setup().await;
-        let (user, _) = svc.register("alice".into(), "realPass".into(), TEST_SECRET).await.unwrap();
-        let err = svc.change_password(user.id, "wrong", "newPass").await.unwrap_err();
+        let (user, _) = svc
+            .register("alice".into(), "realPass".into(), TEST_SECRET)
+            .await
+            .unwrap();
+        let err = svc
+            .change_password(user.id, "wrong", "newPass")
+            .await
+            .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
     }
 
     #[tokio::test]
     async fn change_password_short_new() {
         let svc = setup().await;
-        let (user, _) = svc.register("alice".into(), "realPass".into(), TEST_SECRET).await.unwrap();
-        let err = svc.change_password(user.id, "realPass", "ab").await.unwrap_err();
+        let (user, _) = svc
+            .register("alice".into(), "realPass".into(), TEST_SECRET)
+            .await
+            .unwrap();
+        let err = svc
+            .change_password(user.id, "realPass", "ab")
+            .await
+            .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
     }
 }

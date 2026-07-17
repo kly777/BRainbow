@@ -783,12 +783,10 @@ impl MemRepo {
     }
 
     pub async fn get_mnemonic(&self, mem_id: i32) -> Result<Option<String>, sqlx::Error> {
-        sqlx::query_scalar::<_, String>(
-            "SELECT content FROM mem_mnemonic WHERE mem_id = ?",
-        )
-        .bind(mem_id)
-        .fetch_optional(&*self.pool)
-        .await
+        sqlx::query_scalar::<_, String>("SELECT content FROM mem_mnemonic WHERE mem_id = ?")
+            .bind(mem_id)
+            .fetch_optional(&*self.pool)
+            .await
     }
 
     pub async fn upsert_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), sqlx::Error> {

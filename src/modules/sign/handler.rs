@@ -48,7 +48,13 @@ pub async fn create_sign_handler(
 ) -> impl IntoResponse {
     let result = state
         .sign
-        .create(payload.signifier, payload.signified, payload.onto_id, payload.weight, payload.relation_type)
+        .create(
+            payload.signifier,
+            payload.signified,
+            payload.onto_id,
+            payload.weight,
+            payload.relation_type,
+        )
         .await
         .map(SignResponse::from);
     error::created_or(result, "创建符号关系")

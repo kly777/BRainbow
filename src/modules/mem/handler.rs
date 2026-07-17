@@ -488,10 +488,7 @@ pub async fn optimize_params(State(state): State<AppState>) -> impl IntoResponse
     }
 }
 
-pub async fn get_mnemonic(
-    Path(id): Path<i32>,
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_mnemonic(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
     let svc = &state.mem;
     match svc.get_mnemonic(id).await {
         Ok(Some(content)) => Json(serde_json::json!({ "content": content })).into_response(),
@@ -517,9 +514,7 @@ pub async fn set_mnemonic(
     }
 }
 
-pub async fn upcoming_counts(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn upcoming_counts(State(state): State<AppState>) -> impl IntoResponse {
     let svc = &state.mem;
     match svc.upcoming_counts().await {
         Ok(v) => Json(v).into_response(),

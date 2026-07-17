@@ -1,4 +1,9 @@
-import { CACHE, cachedRequest, request, tapInvalidate } from "../../apis/request.ts";
+import {
+	CACHE,
+	cachedRequest,
+	request,
+	tapInvalidate,
+} from "../../apis/request.ts";
 
 export interface Onto {
 	readonly id: number;

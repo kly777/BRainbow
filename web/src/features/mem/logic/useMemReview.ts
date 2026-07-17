@@ -138,7 +138,10 @@ export function useMemReview(): UseMemReview {
 		if (!it) return;
 		const settings = getAiSettings();
 		if (!settings.apiKey) {
-			notifyError("未配置 API Key", new Error("请在顶栏 🤖 AI 设置中配置 API Key"));
+			notifyError(
+				"未配置 API Key",
+				new Error("请在顶栏 🤖 AI 设置中配置 API Key"),
+			);
 			return;
 		}
 		setMnemonicLoading(true);

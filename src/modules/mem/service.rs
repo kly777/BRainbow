@@ -1084,5 +1084,4 @@ mod tests {
             .unwrap();
         assert_eq!(count2, TARGET_REVLOGS, "重复修剪不应继续删除");
     }
-
 }

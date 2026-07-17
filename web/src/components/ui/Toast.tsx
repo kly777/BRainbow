@@ -24,8 +24,12 @@ export default function ToastContainer() {
 					<For each={toasts()}>
 						{(toast) => (
 							<div
-								classList={{ [styles.toast]: true, [styles[toast.type]]: true, [styles.leaving]: toast.leaving }}
-							role="alert"
+								classList={{
+									[styles.toast]: true,
+									[styles[toast.type]]: true,
+									[styles.leaving]: toast.leaving,
+								}}
+								role="alert"
 							>
 								<div class={styles.body}>
 									<span class={styles.icon}>{iconForType(toast.type)}</span>

@@ -99,14 +99,20 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 				<div class={styles.tabBar}>
 					<button
 						type="button"
-						classList={{ [styles.tab]: true, [styles.tabActive]: activeTab() === "basic" }}
+						classList={{
+							[styles.tab]: true,
+							[styles.tabActive]: activeTab() === "basic",
+						}}
 						onClick={() => setActiveTab("basic")}
 					>
 						基本信息
 					</button>
 					<button
 						type="button"
-						classList={{ [styles.tab]: true, [styles.tabActive]: activeTab() === "time" }}
+						classList={{
+							[styles.tab]: true,
+							[styles.tabActive]: activeTab() === "time",
+						}}
 						onClick={() => setActiveTab("time")}
 					>
 						时间段
@@ -118,7 +124,10 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 					</button>
 					<button
 						type="button"
-						classList={{ [styles.tab]: true, [styles.tabActive]: activeTab() === "deps" }}
+						classList={{
+							[styles.tab]: true,
+							[styles.tabActive]: activeTab() === "deps",
+						}}
 						onClick={() => setActiveTab("deps")}
 					>
 						依赖关系

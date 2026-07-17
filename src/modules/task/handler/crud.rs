@@ -14,7 +14,11 @@ pub async fn get_tasks_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    match state.task.list(pagination.limit(), pagination.offset()).await {
+    match state
+        .task
+        .list(pagination.limit(), pagination.offset())
+        .await
+    {
         Ok((tasks, total)) => {
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
@@ -27,7 +31,11 @@ pub async fn get_all_tasks_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    match state.task.list_all(pagination.limit(), pagination.offset()).await {
+    match state
+        .task
+        .list_all(pagination.limit(), pagination.offset())
+        .await
+    {
         Ok((tasks, total)) => {
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()

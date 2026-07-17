@@ -17,7 +17,7 @@ pub async fn get_tree_handler(
     Query(query): Query<TreeQuery>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = TaskService::new(state.db);
+    let svc = &state.task;
 
     let root_tasks = match svc.tree(None).await {
         Ok(tasks) => tasks,
@@ -69,7 +69,7 @@ pub async fn get_calendar_handler(
     Query(query): Query<CalendarQuery>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = TaskService::new(state.db);
+    let svc = &state.task;
 
     match svc.calendar(query.start, query.end, query.status).await {
         Ok(entries) => {
@@ -94,7 +94,7 @@ pub async fn get_dag_handler(
     Query(query): Query<DagQuery>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = TaskService::new(state.db);
+    let svc = &state.task;
 
     match svc.dag(query.task_id, query.depth.unwrap_or(3)).await {
         Ok(view) => Json(view).into_response(),
@@ -103,7 +103,7 @@ pub async fn get_dag_handler(
 }
 
 pub async fn get_stats_handler(State(state): State<AppState>) -> impl IntoResponse {
-    let svc = TaskService::new(state.db);
+    let svc = &state.task;
     match svc.stats().await {
         Ok((backlog, active, completed, archived)) => Json(StatsResponse {
             backlog,
@@ -135,7 +135,7 @@ pub async fn search_tasks_handler(
             .unwrap_or(20),
     };
 
-    let svc = TaskService::new(state.db);
+    let svc = &state.task;
     match svc
         .search(&query, pagination.limit(), pagination.offset())
         .await

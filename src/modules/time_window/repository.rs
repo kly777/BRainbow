@@ -7,6 +7,7 @@ use crate::db::query::QueryBuilderExt;
 use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTimeWindowRequest};
 
 /// TimeWindow 数据访问层
+#[derive(Clone)]
 pub struct TimeWindowRepository {
     db: Arc<SqlitePool>,
 }

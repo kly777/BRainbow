@@ -65,6 +65,7 @@ fn dir_for_type(media_type: &str) -> &str {
     }
 }
 
+#[derive(Clone)]
 pub struct MediaService {
     repo: MediaRepository,
 }

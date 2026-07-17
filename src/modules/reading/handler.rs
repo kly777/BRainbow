@@ -10,7 +10,6 @@ use crate::state::AppState;
 
 use super::model::{ArticleDetail, MarkWordRequest, UploadArticleRequest};
 use super::repository;
-use super::service;
 
 /// 文章列表（含认识率）
 pub async fn list_articles(State(state): State<AppState>) -> impl IntoResponse {
@@ -26,7 +25,7 @@ pub async fn upload_article(
     State(state): State<AppState>,
     Json(body): Json<UploadArticleRequest>,
 ) -> impl IntoResponse {
-    let svc = service::ReadingService::new(state.db);
+    let svc = &state.reading;
     match svc.upload_article(&body.title, &body.content).await {
         Ok(article) => Json(json!({"article": article})).into_response(),
         Err(e) => error::internal(e, "上传文章"),

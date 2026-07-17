@@ -19,6 +19,7 @@ fn unique_words(words: Vec<String>) -> Vec<String> {
         .collect()
 }
 
+#[derive(Clone)]
 pub struct ReadingService {
     pool: Arc<SqlitePool>,
 }

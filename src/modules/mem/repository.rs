@@ -28,6 +28,7 @@ pub struct MemRow {
     pub last_review_at: Option<String>,
 }
 
+#[derive(Clone)]
 pub struct MemRepo {
     pub(crate) pool: Arc<SqlitePool>,
 }

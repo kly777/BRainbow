@@ -27,6 +27,7 @@ fn days_elapsed_since(last_review_at: &Option<String>) -> u32 {
     }
 }
 
+#[derive(Clone)]
 pub struct MemService {
     repo: MemRepo,
 }

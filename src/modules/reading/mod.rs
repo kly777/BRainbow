@@ -1,7 +1,7 @@
 mod handler;
 mod model;
 mod repository;
-mod service;
+pub mod service;
 
 use crate::state::AppState;
 use axum::{

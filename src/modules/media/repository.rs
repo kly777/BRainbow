@@ -41,6 +41,7 @@ impl From<MediaRow> for Media {
     }
 }
 
+#[derive(Clone)]
 pub struct MediaRepository {
     db: Arc<SqlitePool>,
 }

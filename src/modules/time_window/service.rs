@@ -1,19 +1,18 @@
-use std::sync::Arc;
-
 use super::model::{CreateTimeWindowRequest, TimeWindow, UpdateTimeWindowRequest};
 use super::repository::TimeWindowRepository;
 use crate::modules::task::TaskService;
 
+#[derive(Clone)]
 pub struct TimeWindowService {
     repo: TimeWindowRepository,
-    db: Arc<sqlx::SqlitePool>,
+    task: TaskService,
 }
 
 impl TimeWindowService {
-    pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
+    pub fn new(db: std::sync::Arc<sqlx::SqlitePool>, task: TaskService) -> Self {
         Self {
-            repo: TimeWindowRepository::new(db.clone()),
-            db,
+            repo: TimeWindowRepository::new(db),
+            task,
         }
     }
 
@@ -29,7 +28,6 @@ impl TimeWindowService {
         }
 
         // 约束校验：C001 + C002
-        let task_svc = TaskService::new(self.db.clone());
         let new_window = TimeWindow {
             id: 0,
             start_time: request.start_time,
@@ -47,7 +45,7 @@ impl TimeWindowService {
                 .and_then(|days| serde_json::to_string(days).ok()),
         };
 
-        task_svc
+        self.task
             .validate_time_windows(request.task_id, &[new_window], None)
             .await
             .map_err(|e| match e {
@@ -100,8 +98,7 @@ impl TimeWindowService {
                 recurrence_by_weekdays: existing.recurrence_by_weekdays.clone(),
             };
 
-            let task_svc = TaskService::new(self.db.clone());
-            task_svc
+            self.task
                 .validate_time_windows(existing.task_id, &[new_window], Some(id))
                 .await
                 .map_err(|e| match e {

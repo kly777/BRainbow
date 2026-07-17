@@ -50,7 +50,7 @@ pub async fn upload_handler(
     State(state): State<AppState>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
-    let service = MediaService::new(state.db.clone());
+    let service = &state.media;
 
     while let Ok(Some(field)) = multipart.next_field().await {
         let name = field.name().unwrap_or("").to_string();
@@ -97,7 +97,7 @@ pub async fn list_handler(
     Query(q): Query<ListQuery>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let service = MediaService::new(state.db.clone());
+    let service = &state.media;
     let mt = q.media_type.as_deref().filter(|s| !s.is_empty());
 
     match service.list(&q.pagination, mt).await {
@@ -122,7 +122,7 @@ pub async fn get_handler(
     State(state): State<AppState>,
     Path(stored_id): Path<String>,
 ) -> impl IntoResponse {
-    let service = MediaService::new(state.db.clone());
+    let service = &state.media;
     match service.get_by_stored_id(&stored_id).await {
         Ok(Some(media)) => Json(to_response(&media)).into_response(),
         Ok(None) => error::not_found("媒体不存在"),
@@ -136,7 +136,7 @@ pub async fn file_handler(
     State(state): State<AppState>,
     Path(stored_id): Path<String>,
 ) -> Response {
-    let service = MediaService::new(state.db.clone());
+    let service = &state.media;
     let media = match service.get_by_stored_id(&stored_id).await {
         Ok(Some(m)) => m,
         Ok(None) => return ServiceError::NotFound("媒体不存在".into()).into_response(),
@@ -191,7 +191,7 @@ pub async fn rename_handler(
     if payload.original_name.trim().is_empty() {
         return error::bad_request("名称不能为空");
     }
-    let service = MediaService::new(state.db.clone());
+    let service = &state.media;
     match service
         .rename(&stored_id, payload.original_name.trim())
         .await
@@ -207,7 +207,7 @@ pub async fn delete_handler(
     State(state): State<AppState>,
     Path(stored_id): Path<String>,
 ) -> impl IntoResponse {
-    let service = MediaService::new(state.db.clone());
+    let service = &state.media;
     match service.delete(&stored_id).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => e.into_response(),

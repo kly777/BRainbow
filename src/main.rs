@@ -3,6 +3,7 @@
 
 mod auth;
 mod batch;
+mod config;
 mod db;
 mod error;
 mod modules;
@@ -10,7 +11,7 @@ mod pagination;
 mod routes;
 mod state;
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::SocketAddr;
 use std::time::Instant;
 
 use axum::extract::Request;
@@ -24,6 +25,7 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
+use crate::config::Config;
 use crate::routes::create_router;
 use crate::state::AppState;
 
@@ -66,29 +68,28 @@ async fn shutdown_signal() {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_logging();
 
+    // 加载配置
+    let config = Config::from_env();
+
     // 连接数据库
-    let database_url =
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:brainbow.db".into());
-    let pool = SqlitePool::connect(&database_url).await?;
+    let pool = SqlitePool::connect(&config.database_url).await?;
 
     // 创建数据库表（如果不存在）
     db::create_tables(&pool).await?;
 
     // 加载记忆配置（FSRS 参数 + 调度配置）
-    modules::mem::config::load_and_init_mem_config();
+    modules::mem::config::load_and_init_mem_config(Some(&config.mem_config_path));
 
     // 创建应用状态
-    let state = AppState::new(Arc::new(pool));
+    let state = AppState::new(Arc::new(pool), &config);
 
     // 创建路由
     let app = create_router(state.clone());
 
     // 添加 CORS 中间件
-    let cors_origins: Vec<HeaderValue> = std::env::var("CORS_ALLOW_ORIGIN")
-        .unwrap_or_else(|_| "http://localhost:3000".into())
-        .split(',')
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
+    let cors_origins: Vec<HeaderValue> = config
+        .cors_allow_origin
+        .iter()
         .filter_map(|s| s.parse::<HeaderValue>().ok())
         .collect();
 
@@ -113,18 +114,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = app.layer(middleware::from_fn(logger)).layer(cors);
 
-    let port: u16 = std::env::var("SERVICE_PORT")
-        .ok()
-        .and_then(|p| p.parse().ok())
-        .unwrap_or(3000);
-
-    let bind_host: IpAddr = std::env::var("BIND_HOST")
-        .ok()
-        .and_then(|h| h.parse().ok())
-        .unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED));
-
-    let addr = SocketAddr::from((bind_host, port));
-
+    let addr = SocketAddr::from((config.bind_host, config.service_port));
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
     info!("Listening on http://{}", listener.local_addr()?);

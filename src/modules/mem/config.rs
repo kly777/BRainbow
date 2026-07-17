@@ -58,39 +58,49 @@ impl Default for MemConfig {
 }
 
 impl MemConfig {
-    /// 从文件加载；不存在则返回默认值
+    /// 从默认路径加载；不存在则返回默认值
     pub fn load() -> Self {
-        if Path::new(CONFIG_PATH).exists() {
-            match fs::read_to_string(CONFIG_PATH) {
+        Self::load_from(Path::new(CONFIG_PATH))
+    }
+
+    /// 从指定路径加载；不存在则返回默认值
+    pub fn load_from(path: &Path) -> Self {
+        if path.exists() {
+            match fs::read_to_string(path) {
                 Ok(content) => match serde_json::from_str::<MemConfig>(&content) {
                     Ok(cfg) => {
                         tracing::info!("已加载记忆配置，FSRS 参数数: {}", cfg.fsrs_params.len());
                         return cfg;
                     }
                     Err(e) => {
-                        tracing::warn!("解析 {} 失败 ({}), 使用默认配置", CONFIG_PATH, e);
+                        tracing::warn!("解析 {} 失败 ({}), 使用默认配置", path.display(), e);
                     }
                 },
                 Err(e) => {
-                    tracing::warn!("读取 {} 失败 ({}), 使用默认配置", CONFIG_PATH, e);
+                    tracing::warn!("读取 {} 失败 ({}), 使用默认配置", path.display(), e);
                 }
             }
         } else {
-            tracing::info!("{} 不存在，创建默认配置文件", CONFIG_PATH);
+            tracing::info!("{} 不存在，创建默认配置文件", path.display());
             let cfg = MemConfig::default();
-            if let Err(e) = cfg.save() {
-                tracing::warn!("创建 {} 失败: {}", CONFIG_PATH, e);
+            if let Err(e) = cfg.save_to(path) {
+                tracing::warn!("创建 {} 失败: {}", path.display(), e);
             }
             return cfg;
         }
         MemConfig::default()
     }
 
-    /// 保存到文件
+    /// 保存到默认路径
     pub fn save(&self) -> Result<(), String> {
+        self.save_to(Path::new(CONFIG_PATH))
+    }
+
+    /// 保存到指定路径
+    fn save_to(&self, path: &Path) -> Result<(), String> {
         let content = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
-        fs::write(CONFIG_PATH, &content).map_err(|e| e.to_string())?;
-        tracing::info!("已保存记忆配置到 {}", CONFIG_PATH);
+        fs::write(path, &content).map_err(|e| e.to_string())?;
+        tracing::info!("已保存记忆配置到 {}", path.display());
         Ok(())
     }
 
@@ -102,8 +112,11 @@ impl MemConfig {
 }
 
 /// 加载配置并初始化全局 FSRS 参数
-pub fn load_and_init_mem_config() -> MemConfig {
-    let cfg = MemConfig::load();
+///
+/// `config_path`：配置文件的路径，默认 `mem_config.json`。
+pub fn load_and_init_mem_config(config_path: Option<&Path>) -> MemConfig {
+    let path = config_path.unwrap_or(Path::new(CONFIG_PATH));
+    let cfg = MemConfig::load_from(path);
     crate::modules::mem::fsrs::init_global_params(cfg.fsrs_params.clone());
     cfg
 }

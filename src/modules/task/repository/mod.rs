@@ -7,6 +7,7 @@ pub(crate) mod query;
 pub(crate) mod status;
 
 /// Task 数据访问层 - 根据new_task.md重新设计
+#[derive(Clone)]
 pub struct TaskRepository {
     pub(crate) db: Arc<SqlitePool>,
 }

@@ -5,7 +5,6 @@ use axum::{
 
 use super::super::model::TaskStatus;
 use super::super::response::TaskResponse;
-use super::super::service::TaskService;
 use crate::error;
 use crate::pagination::{PaginatedResponse, Pagination};
 use crate::state::AppState;
@@ -14,8 +13,7 @@ pub async fn complete_task_handler(
     Path(id): Path<i32>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = TaskService::new(state.db);
-    match svc.complete(id).await {
+    match state.task.complete(id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -25,8 +23,7 @@ pub async fn activate_task_handler(
     Path(id): Path<i32>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = TaskService::new(state.db);
-    match svc.activate(id).await {
+    match state.task.activate(id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -36,8 +33,7 @@ pub async fn archive_task_handler(
     Path(id): Path<i32>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = TaskService::new(state.db);
-    match svc.archive(id).await {
+    match state.task.archive(id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -47,8 +43,7 @@ pub async fn move_to_backlog_handler(
     Path(id): Path<i32>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = TaskService::new(state.db);
-    match svc.move_to_backlog(id).await {
+    match state.task.move_to_backlog(id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -58,8 +53,7 @@ pub async fn get_backlog_tasks_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = TaskService::new(state.db);
-    match svc
+    match state.task
         .by_status(TaskStatus::Backlog, pagination.limit(), pagination.offset())
         .await
     {
@@ -75,8 +69,7 @@ pub async fn get_active_tasks_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = TaskService::new(state.db);
-    match svc
+    match state.task
         .by_status(TaskStatus::Active, pagination.limit(), pagination.offset())
         .await
     {
@@ -92,8 +85,7 @@ pub async fn get_completed_tasks_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = TaskService::new(state.db);
-    match svc
+    match state.task
         .by_status(
             TaskStatus::Completed,
             pagination.limit(),
@@ -113,8 +105,7 @@ pub async fn get_archived_tasks_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = TaskService::new(state.db);
-    match svc
+    match state.task
         .by_status(
             TaskStatus::Archived,
             pagination.limit(),

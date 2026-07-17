@@ -5,6 +5,7 @@ use super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
 use super::model::{Task, TaskStatus, TimeWindow, TimeWindowType};
 use super::repository::TaskRepository;
 
+#[derive(Clone)]
 pub struct TaskService {
     repo: TaskRepository,
 }

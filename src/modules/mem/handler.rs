@@ -14,7 +14,6 @@ use crate::guard_empty_batch;
 use crate::modules::mem::config::MemConfig;
 use crate::modules::mem::model::*;
 use crate::modules::mem::optimizer;
-use crate::modules::mem::service::MemService;
 use crate::state::AppState;
 
 fn ok() -> axum::response::Response {
@@ -28,7 +27,7 @@ pub async fn get_all(
     State(state): State<AppState>,
     Query(p): Query<MemQuery>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.get_all(&p).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => err(e, "获取全部"),
@@ -40,7 +39,7 @@ pub async fn batch_bury(
     Json(payload): Json<BatchRequest<i32>>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     Json(svc.batch_bury(&payload.items).await)
 }
 
@@ -49,7 +48,7 @@ pub async fn batch_delete(
     Json(payload): Json<BatchRequest<i32>>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     Json(svc.batch_delete(&payload.items).await)
 }
 
@@ -58,12 +57,12 @@ pub async fn batch_reset(
     Json(payload): Json<BatchRequest<i32>>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     Json(svc.batch_reset(&payload.items).await)
 }
 
 pub async fn get_session_estimate(State(state): State<AppState>) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.get_session_estimate().await {
         Ok(est) => Json(est).into_response(),
         Err(e) => err(e, "获取学习预估"),
@@ -71,7 +70,7 @@ pub async fn get_session_estimate(State(state): State<AppState>) -> impl IntoRes
 }
 
 pub async fn get_counts(State(state): State<AppState>) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.get_counts().await {
         Ok(counts) => Json(counts).into_response(),
         Err(e) => err(e, "获取统计"),
@@ -88,7 +87,7 @@ pub async fn create_tag(
     if payload.name.trim().is_empty() {
         return error::bad_request("标签名不能为空");
     }
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.create_tag(payload.name.trim(), claims.sub).await {
         Ok(tag) => Json(tag).into_response(),
         Err(e) => err(e, "创建标签"),
@@ -100,7 +99,7 @@ pub async fn delete_tag(
     Extension(_claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.delete_tag(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "删除标签"),
@@ -111,7 +110,7 @@ pub async fn list_tags(
     State(state): State<AppState>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.list_tags(claims.sub).await {
         Ok(tags) => Json(tags).into_response(),
         Err(e) => err(e, "列出标签"),
@@ -124,7 +123,7 @@ pub async fn search_tags(
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
     let q = params.get("q").map(|s| s.as_str()).unwrap_or("");
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.search_tags(claims.sub, q).await {
         Ok(tags) => Json(tags).into_response(),
         Err(e) => err(e, "搜索标签"),
@@ -132,7 +131,7 @@ pub async fn search_tags(
 }
 
 pub async fn get_mem_tags(State(state): State<AppState>, Path(id): Path<i32>) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.get_mem_tags(id).await {
         Ok(tags) => Json(tags).into_response(),
         Err(e) => err(e, "获取记忆标签"),
@@ -143,7 +142,7 @@ pub async fn add_mem_tag(
     State(state): State<AppState>,
     Json(payload): Json<TagMemRequest>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.add_tag_to_mem(payload.mem_id, payload.tag_id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "添加标签"),
@@ -154,7 +153,7 @@ pub async fn remove_mem_tag(
     State(state): State<AppState>,
     Json(payload): Json<TagMemRequest>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc
         .remove_tag_from_mem(payload.mem_id, payload.tag_id)
         .await
@@ -168,7 +167,7 @@ pub async fn set_mem_tags(
     State(state): State<AppState>,
     Json(payload): Json<SetTagsRequest>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.set_mem_tags(payload.mem_id, &payload.tag_ids).await {
         Ok(()) => ok(),
         Err(e) => err(e, "设置标签"),
@@ -196,7 +195,7 @@ pub async fn batch_add_tag(
     Json(payload): Json<BatchTagRequest>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     Json(
         svc.batch_add_tag_to_mems(&payload.items, payload.tag_id)
             .await,
@@ -208,7 +207,7 @@ pub async fn batch_remove_tag(
     Json(payload): Json<BatchTagRequest>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     Json(
         svc.batch_remove_tag_from_mems(&payload.items, payload.tag_id)
             .await,
@@ -222,7 +221,7 @@ pub async fn batch_get_mems_tags(
     if payload.items.is_empty() {
         return Json(BatchDataResponse::empty());
     }
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     Json(svc.get_mems_tags_batch(&payload.items).await)
 }
 
@@ -237,7 +236,7 @@ pub async fn export_csv(
         .get("tag_ids")
         .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
         .unwrap_or_default();
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.export_csv(&tag_ids).await {
         Ok(psv) => (
             [
@@ -263,7 +262,7 @@ pub async fn import_csv(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ImportCsvPayload>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc
         .import_csv(&payload.csv, claims.sub, &payload.default_tags)
         .await
@@ -282,7 +281,7 @@ pub async fn import_psv(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ImportCsvPayload>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc
         .import_psv(&payload.csv, claims.sub, &payload.default_tags)
         .await
@@ -308,7 +307,7 @@ pub async fn import_json(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ImportJsonPayload>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc
         .import_json(&payload.mems, claims.sub, &payload.default_tags)
         .await
@@ -327,7 +326,7 @@ pub async fn batch_set_tags(
     Json(payload): Json<BatchSetTagsRequest>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     Json(
         svc.batch_set_tags_for_mems(&payload.items, &payload.tag_ids)
             .await,
@@ -350,7 +349,7 @@ pub async fn get_due(
         .get("exclude_tag_ids")
         .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
         .unwrap_or_default();
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.get_due(limit, &tag_ids, &exclude_tag_ids).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => err(e, "获取待复习"),
@@ -361,7 +360,7 @@ pub async fn create_mem(
     State(state): State<AppState>,
     Json(body): Json<CreateMemRequest>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.create(body).await {
         Ok(id) => Json(serde_json::json!({ "id": id })).into_response(),
         Err(e) => err(e, "创建记忆项"),
@@ -369,7 +368,7 @@ pub async fn create_mem(
 }
 
 pub async fn preview_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.preview(id).await {
         Ok(secs) => Json(serde_json::json!({ "intervals": secs })).into_response(),
         Err(e) => e.into_response(),
@@ -381,7 +380,7 @@ pub async fn review_mem(
     State(state): State<AppState>,
     Json(body): Json<ReviewRequest>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.review(id, body.rating).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => e.into_response(),
@@ -393,7 +392,7 @@ pub async fn undo_review(
     State(state): State<AppState>,
     Json(body): Json<UndoRequest>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.undo(id, body).await {
         Ok(()) => ok(),
         Err(e) => err(e, "撤销"),
@@ -405,7 +404,7 @@ pub async fn edit_mem(
     State(state): State<AppState>,
     Json(body): Json<EditMemRequest>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.edit(id, body).await {
         Ok(()) => ok(),
         Err(e) => e.into_response(),
@@ -413,7 +412,7 @@ pub async fn edit_mem(
 }
 
 pub async fn bury_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.bury(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "跳过"),
@@ -421,7 +420,7 @@ pub async fn bury_mem(Path(id): Path<i32>, State(state): State<AppState>) -> imp
 }
 
 pub async fn suspend_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.suspend(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "挂起"),
@@ -432,7 +431,7 @@ pub async fn unsuspend_mem(
     Path(id): Path<i32>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.unsuspend(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "恢复"),
@@ -440,7 +439,7 @@ pub async fn unsuspend_mem(
 }
 
 pub async fn unbury_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.unbury(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "取消跳过"),
@@ -448,7 +447,7 @@ pub async fn unbury_mem(Path(id): Path<i32>, State(state): State<AppState>) -> i
 }
 
 pub async fn reset_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.reset(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "重置"),
@@ -456,7 +455,7 @@ pub async fn reset_mem(Path(id): Path<i32>, State(state): State<AppState>) -> im
 }
 
 pub async fn delete_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.delete(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "删除"),
@@ -493,7 +492,7 @@ pub async fn get_mnemonic(
     Path(id): Path<i32>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.get_mnemonic(id).await {
         Ok(Some(content)) => Json(serde_json::json!({ "content": content })).into_response(),
         Ok(None) => Json(serde_json::json!({ "content": null })).into_response(),
@@ -508,7 +507,7 @@ pub async fn set_mnemonic(
 ) -> impl IntoResponse {
     match body.get("content").and_then(|v| v.as_str()) {
         Some(content) => {
-            let svc = MemService::new(state.db.clone());
+            let svc = &state.mem;
             match svc.set_mnemonic(id, content).await {
                 Ok(()) => ok(),
                 Err(e) => err(e, "保存助记"),
@@ -521,7 +520,7 @@ pub async fn set_mnemonic(
 pub async fn upcoming_counts(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = MemService::new(state.db.clone());
+    let svc = &state.mem;
     match svc.upcoming_counts().await {
         Ok(v) => Json(v).into_response(),
         Err(e) => err(e, "查询 upcoming 数量"),

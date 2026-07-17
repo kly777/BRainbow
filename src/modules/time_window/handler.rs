@@ -9,7 +9,6 @@ use std::collections::HashMap;
 
 use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTimeWindowRequest};
 use super::repository::TimeWindowRepository;
-use super::service::TimeWindowService;
 use crate::error;
 use crate::pagination::Pagination;
 use crate::state::AppState;
@@ -74,9 +73,7 @@ pub async fn create_time_window_handler(
     State(state): State<AppState>,
     Json(payload): Json<CreateTimeWindowRequest>,
 ) -> impl IntoResponse {
-    let svc = TimeWindowService::new(state.db);
-
-    match svc.create(payload).await {
+    match state.time_window.create(payload).await {
         Ok(time_window) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -139,9 +136,7 @@ pub async fn update_time_window_handler(
     State(state): State<AppState>,
     Json(payload): Json<UpdateTimeWindowRequest>,
 ) -> impl IntoResponse {
-    let svc = TimeWindowService::new(state.db);
-
-    match svc.update(id, payload).await {
+    match state.time_window.update(id, payload).await {
         Ok(time_window) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Err(e) => e.into_response(),
     }

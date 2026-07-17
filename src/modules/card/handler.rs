@@ -1,6 +1,5 @@
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
     response::{IntoResponse, Json},
 };
 use serde::{Deserialize, Serialize};
@@ -33,19 +32,14 @@ pub async fn create_card_handler(
     Json(payload): Json<CreateCardRequest>,
 ) -> impl IntoResponse {
     let repo = CardRepository::new(state.db.clone());
-
-    match repo.create(payload.content.clone()).await {
-        Ok(card) => {
-            let response = CardResponse {
-                id: card.id,
-                content: card.content,
-                created_at: card.created_at.to_string(),
-                updated_at: card.updated_at.to_string(),
-            };
-            (StatusCode::CREATED, Json(response)).into_response()
-        }
-        Err(e) => error::bad(e, "创建卡片"),
-    }
+    let result = repo.create(payload.content.clone()).await
+        .map(|card| CardResponse {
+            id: card.id,
+            content: card.content,
+            created_at: card.created_at.to_string(),
+            updated_at: card.updated_at.to_string(),
+        });
+    error::created_or(result, "创建卡片")
 }
 
 pub async fn get_cards_handler(
@@ -53,16 +47,11 @@ pub async fn get_cards_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let repo = CardRepository::new(state.db.clone());
-
-    match repo
+    let result = repo
         .find_all_paginated(pagination.limit(), pagination.offset())
         .await
-    {
-        Ok((items, total)) => {
-            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
-        }
-        Err(e) => error::internal(e, "获取卡片列表"),
-    }
+        .map(|(items, total)| PaginatedResponse::new(items, total, &pagination));
+    error::ok_or(result, "获取卡片列表")
 }
 
 pub async fn get_card_handler(
@@ -70,20 +59,14 @@ pub async fn get_card_handler(
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let repo = CardRepository::new(state.db.clone());
-
-    match repo.find_by_id(id).await {
-        Ok(Some(card)) => {
-            let card_response = CardResponse {
-                id: card.id,
-                content: card.content,
-                created_at: card.created_at.to_string(),
-                updated_at: card.updated_at.to_string(),
-            };
-            Json(card_response).into_response()
-        }
-        Ok(None) => error::not_found(format!("卡片 ID {} 不存在", id)),
-        Err(e) => error::internal(e, "获取卡片"),
-    }
+    let result = repo.find_by_id(id).await
+        .map(|opt| opt.map(|card| CardResponse {
+            id: card.id,
+            content: card.content,
+            created_at: card.created_at.to_string(),
+            updated_at: card.updated_at.to_string(),
+        }));
+    error::found_or(result, "获取卡片")
 }
 
 pub async fn update_card_handler(
@@ -92,19 +75,14 @@ pub async fn update_card_handler(
     Json(payload): Json<UpdateCardRequest>,
 ) -> impl IntoResponse {
     let repo = CardRepository::new(state.db.clone());
-
-    match repo.update(id, payload.content).await {
-        Ok(card) => {
-            let response = CardResponse {
-                id: card.id,
-                content: card.content,
-                created_at: card.created_at.to_string(),
-                updated_at: card.updated_at.to_string(),
-            };
-            Json(response).into_response()
-        }
-        Err(e) => error::internal(e, "更新卡片"),
-    }
+    let result = repo.update(id, payload.content).await
+        .map(|card| CardResponse {
+            id: card.id,
+            content: card.content,
+            created_at: card.created_at.to_string(),
+            updated_at: card.updated_at.to_string(),
+        });
+    error::ok_or(result, "更新卡片")
 }
 
 pub async fn delete_card_handler(
@@ -112,17 +90,7 @@ pub async fn delete_card_handler(
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let repo = CardRepository::new(state.db.clone());
-
-    match repo.delete(id).await {
-        Ok(rows_affected) => {
-            if rows_affected > 0 {
-                StatusCode::NO_CONTENT.into_response()
-            } else {
-                error::not_found(format!("卡片 ID {} 不存在", id))
-            }
-        }
-        Err(e) => error::internal(e, "删除卡片"),
-    }
+    error::deleted_or(repo.delete(id).await, "删除卡片")
 }
 
 #[derive(Debug, Deserialize)]
@@ -141,18 +109,13 @@ pub async fn search_cards_handler(
     }
 
     let repo = CardRepository::new(state.db.clone());
-
-    match repo
+    let result = repo
         .search_by_content_paginated(
             params.q.trim(),
             params.pagination.limit(),
             params.pagination.offset(),
         )
         .await
-    {
-        Ok((items, total)) => {
-            Json(PaginatedResponse::new(items, total, &params.pagination)).into_response()
-        }
-        Err(e) => error::internal(e, "搜索卡片"),
-    }
+        .map(|(items, total)| PaginatedResponse::new(items, total, &params.pagination));
+    error::ok_or(result, "搜索卡片")
 }

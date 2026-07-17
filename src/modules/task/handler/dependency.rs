@@ -8,7 +8,6 @@ use serde::Deserialize;
 
 use super::super::model::TaskStatus;
 use super::super::response::MessageResponse;
-use super::super::service::TaskService;
 use crate::error;
 use crate::state::AppState;
 
@@ -42,7 +41,7 @@ pub async fn add_dependency_handler(
     State(state): State<AppState>,
     Json(payload): Json<DependencyRequest>,
 ) -> impl IntoResponse {
-    let svc = TaskService::new(state.db);
+    let svc = &state.task;
     match svc
         .add_dependency(task_id, payload.depends_on_task_id)
         .await
@@ -60,7 +59,7 @@ pub async fn remove_dependency_handler(
     Path((task_id, depends_on_task_id)): Path<(i32, i32)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let svc = TaskService::new(state.db);
+    let svc = &state.task;
     match svc.remove_dependency(task_id, depends_on_task_id).await {
         Ok(rows) if rows > 0 => Json(MessageResponse {
             message: "依赖关系已删除".into(),

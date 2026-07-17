@@ -79,6 +79,12 @@ list-backups:
 health:
 	./$(DEPLOY_SCRIPT) health
 
+db-backup:
+	./$(DEPLOY_SCRIPT) db-backup
+
+backup-prune:
+	./$(DEPLOY_SCRIPT) backup-prune
+
 check-env:
 	@test -n "$(REMOTE_HOST)" || (echo "错误: .env.prod 未设置 REMOTE_HOST"; exit 1)
 	@test -n "$(APP_NAME)"   || (echo "错误: .env.prod 未设置 APP_NAME"; exit 1)

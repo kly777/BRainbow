@@ -1,16 +1,12 @@
 use axum::{
     extract::{Path, Query, State},
-    response::{IntoResponse, Json},
+    response::IntoResponse,
 };
 use serde::Serialize;
 
 use crate::error;
 use crate::pagination::Pagination;
 use crate::state::AppState;
-
-use super::repository;
-
-pub type TableNames = Vec<String>;
 
 #[derive(Debug, Serialize)]
 pub struct ColumnInfo {
@@ -25,11 +21,7 @@ pub struct TableData {
 }
 
 pub async fn get_table_names(State(state): State<AppState>) -> impl IntoResponse {
-    let repo = repository::DBRepo::new(state.db);
-    match repo.get_table_names().await {
-        Ok(names) => Json(names).into_response(),
-        Err(e) => error::internal(e, "获取表名"),
-    }
+    error::ok_or(state.db_viewer.get_table_names().await, "获取表名")
 }
 
 pub async fn get_table_data(
@@ -37,12 +29,10 @@ pub async fn get_table_data(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let repo = repository::DBRepo::new(state.db);
-    match repo
+    let result = state
+        .db_viewer
         .get_table_data(&table_name, pagination.limit(), pagination.offset())
         .await
-    {
-        Ok((header, rows)) => Json(TableData { header, rows }).into_response(),
-        Err(e) => error::internal(e, "获取表数据"),
-    }
+        .map(|(header, rows)| TableData { header, rows });
+    error::ok_or(result, "获取表数据")
 }

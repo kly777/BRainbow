@@ -1,6 +1,9 @@
 mod handler;
 mod model;
 mod repository;
+pub mod service;
+
+pub use service::OntoService;
 
 pub use handler::{
     create_onto_handler, delete_onto_handler, get_onto_handler, get_ontos_handler,

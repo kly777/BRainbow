@@ -2,10 +2,11 @@ use serde_json::Value;
 use sqlx::{Column, Row, SqlitePool, TypeInfo};
 use std::sync::Arc;
 
-use super::handler::{ColumnInfo, TableNames};
+use super::handler::ColumnInfo;
 use super::model::TableName;
 use crate::db::query::sanitize_table_name;
 
+#[derive(Clone)]
 pub struct DBRepo {
     pool: Arc<SqlitePool>,
 }
@@ -14,7 +15,7 @@ impl DBRepo {
         Self { pool }
     }
 
-    pub async fn get_table_names(&self) -> Result<TableNames, sqlx::Error> {
+    pub async fn get_table_names(&self) -> Result<Vec<String>, sqlx::Error> {
         let query = "SELECT name FROM sqlite_master WHERE type='table'";
         let rows = sqlx::query_as::<_, TableName>(query)
             .fetch_all(&*self.pool)

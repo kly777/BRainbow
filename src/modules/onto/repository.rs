@@ -5,6 +5,7 @@ use std::sync::Arc;
 use super::model::Onto;
 
 /// Onto 数据访问层
+#[derive(Clone)]
 pub struct OntoRepository {
     db: Arc<SqlitePool>,
 }

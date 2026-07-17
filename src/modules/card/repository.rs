@@ -5,6 +5,7 @@ use std::sync::Arc;
 use super::model::Card;
 
 /// Card 数据访问层
+#[derive(Clone)]
 pub struct CardRepository {
     db: Arc<SqlitePool>,
 }

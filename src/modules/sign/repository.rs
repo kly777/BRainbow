@@ -4,6 +4,7 @@ use std::sync::Arc;
 use super::model::SignifierSignified;
 
 /// SignifierSignified 数据访问层
+#[derive(Clone)]
 pub struct SignRepository {
     db: Arc<SqlitePool>,
 }

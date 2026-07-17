@@ -3,13 +3,10 @@ use axum::{
     extract::State,
     response::{IntoResponse, Json},
 };
-use bcrypt::{DEFAULT_COST, hash, verify};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::repository::UserRepository;
-use crate::auth::{Claims, create_token};
-use crate::error;
+use crate::auth::Claims;
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -30,43 +27,19 @@ pub async fn register_handler(
     State(state): State<AppState>,
     Json(payload): Json<LoginRequest>,
 ) -> impl IntoResponse {
-    let repo = UserRepository::new(state.db);
-    let name = payload.name.trim().to_string();
-    let password = payload.password.trim().to_string();
-
-    if name.is_empty() || password.is_empty() {
-        return error::bad_request("用户名和密码不能为空");
-    }
-    if password.len() < 4 {
-        return error::bad_request("密码至少4位");
-    }
-
-    if let Ok(Some(_)) = repo.find_by_name(&name).await {
-        return error::conflict("用户名已存在");
-    }
-
-    let role = match repo.count().await {
-        Ok(0) => "admin",
-        _ => "user",
-    };
-
-    let password_hash = match hash(&password, DEFAULT_COST) {
-        Ok(h) => h,
-        Err(e) => return error::internal(e, "密码加密"),
-    };
-
-    match repo.create(&name, &password_hash, role).await {
-        Ok(user) => {
-            let token = create_token(user.id, &user.role, &state.jwt_secret);
-            Json(LoginResponse {
-                id: user.id,
-                name: user.name,
-                role: user.role,
-                token,
-            })
-            .into_response()
-        }
-        Err(e) => error::internal(e, "创建用户"),
+    match state
+        .user
+        .register(payload.name, payload.password, &state.jwt_secret)
+        .await
+    {
+        Ok((user, token)) => Json(LoginResponse {
+            id: user.id,
+            name: user.name,
+            role: user.role,
+            token,
+        })
+        .into_response(),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -74,34 +47,24 @@ pub async fn login_handler(
     State(state): State<AppState>,
     Json(payload): Json<LoginRequest>,
 ) -> impl IntoResponse {
-    let repo = UserRepository::new(state.db);
-    let name = payload.name.trim().to_string();
-
-    let user = match repo.find_by_name(&name).await {
-        Ok(Some(u)) => u,
-        Ok(None) => return error::unauthorized("用户名或密码错误"),
-        Err(e) => return error::internal(e, "数据库查询"),
-    };
-
-    match verify(&payload.password, &user.password_hash) {
-        Ok(true) => {
-            let token = create_token(user.id, &user.role, &state.jwt_secret);
-            Json(LoginResponse {
-                id: user.id,
-                name: user.name,
-                role: user.role,
-                token,
-            })
-            .into_response()
-        }
-        Ok(false) => error::unauthorized("用户名或密码错误"),
-        Err(e) => error::internal(e, "密码验证"),
+    match state
+        .user
+        .login(&payload.name, &payload.password, &state.jwt_secret)
+        .await
+    {
+        Ok((user, token)) => Json(LoginResponse {
+            id: user.id,
+            name: user.name,
+            role: user.role,
+            token,
+        })
+        .into_response(),
+        Err(e) => e.into_response(),
     }
 }
 
 pub async fn user_handler(State(state): State<AppState>) -> impl IntoResponse {
-    let repo = UserRepository::new(state.db);
-    match repo.find_all().await {
+    match state.user.list_all().await {
         Ok(users) => {
             let user_list: Vec<HashMap<String, String>> = users
                 .into_iter()
@@ -115,13 +78,11 @@ pub async fn user_handler(State(state): State<AppState>) -> impl IntoResponse {
                 .collect();
             Json(user_list).into_response()
         }
-        Err(e) => error::internal(e, "获取用户"),
+        Err(e) => e.into_response(),
     }
 }
 
 pub async fn logout_handler() -> impl IntoResponse {
-    // JWT 无服务端 session，前端清除 token 即可。
-    // 此端点用于未来添加 token 黑名单。
     Json(serde_json::json!({ "ok": true }))
 }
 
@@ -136,32 +97,12 @@ pub async fn change_password_handler(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ChangePasswordRequest>,
 ) -> impl IntoResponse {
-    let repo = UserRepository::new(state.db);
-
-    // 验证当前密码
-    let user = match repo.find_by_id(claims.sub).await {
-        Ok(Some(u)) => u,
-        Ok(None) => return error::not_found("用户不存在"),
-        Err(e) => return error::internal(e, "查询用户"),
-    };
-
-    match verify(&payload.old_password, &user.password_hash) {
-        Ok(true) => {}
-        Ok(false) => return error::unauthorized("当前密码错误"),
-        Err(e) => return error::internal(e, "密码验证"),
-    }
-
-    if payload.new_password.len() < 4 {
-        return error::bad_request("新密码至少4位");
-    }
-
-    let new_hash = match hash(&payload.new_password, DEFAULT_COST) {
-        Ok(h) => h,
-        Err(e) => return error::internal(e, "密码加密"),
-    };
-
-    match repo.update_password(claims.sub, &new_hash).await {
+    match state
+        .user
+        .change_password(claims.sub, &payload.old_password, &payload.new_password)
+        .await
+    {
         Ok(()) => Json(serde_json::json!({ "ok": true })).into_response(),
-        Err(e) => error::internal(e, "更新密码"),
+        Err(e) => e.into_response(),
     }
 }

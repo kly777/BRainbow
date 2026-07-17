@@ -1,5 +1,8 @@
 mod handler;
 mod repository;
+pub mod service;
+
+pub use service::TextService;
 
 use crate::state::AppState;
 use axum::{Router, routing::get};

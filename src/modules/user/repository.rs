@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use super::model::User;
 
+#[derive(Clone)]
 pub struct UserRepository {
     db: Arc<SqlitePool>,
 }

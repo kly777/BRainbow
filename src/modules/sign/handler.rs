@@ -1,11 +1,9 @@
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
     response::{IntoResponse, Json},
 };
 use serde::{Deserialize, Serialize};
 
-use super::repository::SignRepository;
 use crate::error;
 use crate::pagination::{PaginatedResponse, Pagination};
 use crate::state::AppState;
@@ -30,101 +28,64 @@ pub struct SignResponse {
     pub created_at: String,
 }
 
+impl From<super::model::SignifierSignified> for SignResponse {
+    fn from(s: super::model::SignifierSignified) -> Self {
+        Self {
+            id: s.id,
+            signifier: s.signifier,
+            signified: s.signified,
+            onto_id: s.onto_id,
+            weight: s.weight,
+            relation_type: s.relation_type,
+            created_at: s.created_at.to_string(),
+        }
+    }
+}
+
 pub async fn create_sign_handler(
     State(state): State<AppState>,
     Json(payload): Json<CreateSignRequest>,
 ) -> impl IntoResponse {
-    if payload.signifier.trim().is_empty() {
-        return error::bad_request("能指不能为空".to_string());
-    }
-    if payload.signified.trim().is_empty() {
-        return error::bad_request("所指不能为空".to_string());
-    }
-    let repo = SignRepository::new(state.db.clone());
-
-    match repo
-        .create(
-            payload.signifier,
-            payload.signified,
-            payload.onto_id,
-            payload.weight,
-            payload.relation_type,
-        )
+    let result = state
+        .sign
+        .create(payload.signifier, payload.signified, payload.onto_id, payload.weight, payload.relation_type)
         .await
-    {
-        Ok(sign) => {
-            let response = SignResponse {
-                id: sign.id,
-                signifier: sign.signifier,
-                signified: sign.signified,
-                onto_id: sign.onto_id,
-                weight: sign.weight,
-                relation_type: sign.relation_type,
-                created_at: sign.created_at.to_string(),
-            };
-            Json(response).into_response()
-        }
-        Err(e) => error::internal(e, "创建符号关系"),
-    }
+        .map(SignResponse::from);
+    error::created_or(result, "创建符号关系")
 }
 
 pub async fn get_signs_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let repo = SignRepository::new(state.db.clone());
-
-    match repo
-        .find_all_paginated(pagination.limit(), pagination.offset())
+    let result = state
+        .sign
+        .list(pagination.limit(), pagination.offset())
         .await
-    {
-        Ok((items, total)) => {
-            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
-        }
-        Err(e) => error::internal(e, "获取符号关系列表"),
-    }
+        .map(|(items, total)| {
+            let items: Vec<SignResponse> = items.into_iter().map(SignResponse::from).collect();
+            PaginatedResponse::new(items, total, &pagination)
+        });
+    error::ok_or(result, "获取符号关系列表")
 }
 
 pub async fn get_sign_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let repo = SignRepository::new(state.db.clone());
-
-    match repo.find_by_id(id).await {
-        Ok(Some(sign)) => {
-            let response = SignResponse {
-                id: sign.id,
-                signifier: sign.signifier,
-                signified: sign.signified,
-                onto_id: sign.onto_id,
-                weight: sign.weight,
-                relation_type: sign.relation_type,
-                created_at: sign.created_at.to_string(),
-            };
-            Json(response).into_response()
-        }
-        Ok(None) => error::not_found(format!("符号关系 ID {} 不存在", id)),
-        Err(e) => error::internal(e, "获取符号关系"),
-    }
+    let result = state
+        .sign
+        .by_id(id)
+        .await
+        .map(|opt| opt.map(SignResponse::from));
+    error::found_or(result, "获取符号关系")
 }
 
 pub async fn delete_sign_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let repo = SignRepository::new(state.db.clone());
-
-    match repo.delete(id).await {
-        Ok(rows_affected) => {
-            if rows_affected > 0 {
-                StatusCode::NO_CONTENT.into_response()
-            } else {
-                error::not_found(format!("符号关系 ID {} 不存在", id))
-            }
-        }
-        Err(e) => error::internal(e, "删除符号关系"),
-    }
+    error::deleted_or(state.sign.delete(id).await, "删除符号关系")
 }
 
 pub async fn get_signs_by_signifier_handler(
@@ -132,17 +93,15 @@ pub async fn get_signs_by_signifier_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let repo = SignRepository::new(state.db.clone());
-
-    match repo
-        .find_by_signifier_paginated(&signifier, pagination.limit(), pagination.offset())
+    let result = state
+        .sign
+        .by_signifier(&signifier, pagination.limit(), pagination.offset())
         .await
-    {
-        Ok((items, total)) => {
-            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
-        }
-        Err(e) => error::bad(e, "按能指查询"),
-    }
+        .map(|(items, total)| {
+            let items: Vec<SignResponse> = items.into_iter().map(SignResponse::from).collect();
+            PaginatedResponse::new(items, total, &pagination)
+        });
+    error::ok_or(result, "按能指查询")
 }
 
 pub async fn get_signs_by_signified_handler(
@@ -150,15 +109,13 @@ pub async fn get_signs_by_signified_handler(
     Query(pagination): Query<Pagination>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let repo = SignRepository::new(state.db.clone());
-
-    match repo
-        .find_by_signified_paginated(&signified, pagination.limit(), pagination.offset())
+    let result = state
+        .sign
+        .by_signified(&signified, pagination.limit(), pagination.offset())
         .await
-    {
-        Ok((items, total)) => {
-            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
-        }
-        Err(e) => error::bad(e, "按所指查询"),
-    }
+        .map(|(items, total)| {
+            let items: Vec<SignResponse> = items.into_iter().map(SignResponse::from).collect();
+            PaginatedResponse::new(items, total, &pagination)
+        });
+    error::ok_or(result, "按所指查询")
 }

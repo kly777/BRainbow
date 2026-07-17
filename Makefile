@@ -1,20 +1,15 @@
-SERVER_DIR := server
-TARGET_ARCH := x86_64-unknown-linux-gnu
+BUILD_DIR := build
 
 -include .env.prod
 
-SSH_TARGET := $(REMOTE_USER)@$(REMOTE_HOST)
 time := $(shell date +%y%m%d_%H%M%S)
+DEPLOY_SCRIPT := ./scripts/deploy.sh
 
-.PHONY: clean deploy deploy-web deploy-backend deploy-force-db status db-pull db-push logs rollback fmt check-env
-
-check-env:
-	@test -n "$(REMOTE_HOST)" || (echo "错误: .env.prod 未设置 REMOTE_HOST"; exit 1)
-	@test -n "$(APP_NAME)"   || (echo "错误: .env.prod 未设置 APP_NAME"; exit 1)
+.PHONY: dev fmt build build-check build-web build-backend clean deploy deploy-web deploy-backend check status logs db-pull db-push rollback list-backups
 
 dev:
 	trap 'wait; printf "Finished"; exit 0' INT TERM; \
-	cargo watch -x run --ignore web & \
+	cargo watch -x run --ignore web --ignore build --ignore $(BUILD_DIR) & \
 	cd web && npx vite & \
 	wait
 
@@ -22,89 +17,68 @@ fmt:
 	cargo fmt
 	cd web && npx @biomejs/biome format --write src/
 
-build:
-	cd web && npx vite build
-	mkdir -p $(SERVER_DIR)
-	cp -r web/dist $(SERVER_DIR)/
-	cargo build --target $(TARGET_ARCH) --release
-	cp target/$(TARGET_ARCH)/release/brainbow $(SERVER_DIR)/
+check:
+	./$(DEPLOY_SCRIPT) check
 
-# 重建
-build-full: clean
-	cd web && npx vite build
-	mkdir -p $(SERVER_DIR)
-	cp -r web/dist $(SERVER_DIR)/
-	cargo build --target $(TARGET_ARCH) --release
-	cp target/$(TARGET_ARCH)/release/brainbow $(SERVER_DIR)/
+build:
+	./$(DEPLOY_SCRIPT) build
+
+# 全量部署（构建 → 部署）
+deploy: build
+	./$(DEPLOY_SCRIPT) deploy
+
+# 仅部署前端（假设 build/ 已存在）
+deploy-web: check-env
+	@[ -d "$(BUILD_DIR)/dist" ] || (echo "错误: 请先 make build"; exit 1)
+	echo "=== 仅部署前端 ==="
+	rsync -avz --delete -e "ssh -p $(REMOTE_PORT)" \
+		$(BUILD_DIR)/dist/ \
+		$(REMOTE_USER)@$(REMOTE_HOST):$(REMOTE_BASE)/$(APP_NAME)/dist/
+	ssh -p $(REMOTE_PORT) $(REMOTE_USER)@$(REMOTE_HOST) \
+		"sudo systemctl reload caddy 2>/dev/null || true"
+
+# 仅部署后端（假设 build/ 已存在）
+deploy-backend: check-env
+	@[ -f "$(BUILD_DIR)/brainbow" ] || (echo "错误: 请先 make build"; exit 1)
+	./$(DEPLOY_SCRIPT) deploy
+
+# 仅编译（快速迭代）
+build-backend:
+	cargo build --release
+	rm -rf $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)
+	cp web/dist/index.html $(BUILD_DIR)/dist/ 2>/dev/null || true
+	cp target/release/brainbow $(BUILD_DIR)/brainbow
 
 build-web:
 	cd web && npx vite build
-	mkdir -p $(SERVER_DIR)
-	cp -r web/dist $(SERVER_DIR)/
-
-build-backend:
-	cargo build --target $(TARGET_ARCH) --release
-	mkdir -p $(SERVER_DIR)
-	cp target/$(TARGET_ARCH)/release/brainbow $(SERVER_DIR)/
-	@[ -d "$(SERVER_DIR)/dist" ] || $(MAKE) build-web
 
 clean:
-	rm -rf $(SERVER_DIR)/
+	rm -rf $(BUILD_DIR)/
 
-clean-stamps:
-	@echo "stamp files 已移除"
+# ── 快捷命令委托给 scripts/deploy.sh ──
 
-deploy: build check-env
-	bash ./deploy.sh
+status:
+	./$(DEPLOY_SCRIPT) status
 
-# 全量部署
-deploy-full: build-full check-env
-	bash ./deploy.sh
+logs:
+	./$(DEPLOY_SCRIPT) logs $(n)
 
-# 仅部署前端
-deploy-web: build-web check-env
-	@echo "=== 部署前端文件 ==="
-	rsync -avz -e "ssh -p $(REMOTE_PORT)" $(SERVER_DIR)/dist/ $(SSH_TARGET):$(REMOTE_BASE)/$(APP_NAME)/dist/
-	ssh -p $(REMOTE_PORT) $(SSH_TARGET) "sudo systemctl reload caddy 2>/dev/null || true"
-	@echo "前端已部署，Caddy 已重载"
+db-pull:
+	./$(DEPLOY_SCRIPT) db-pull
 
-# 仅部署后端
-deploy-backend: build-backend check-env
-	bash ./deploy.sh
+db-push:
+	./$(DEPLOY_SCRIPT) db-push
 
-# 覆盖远端数据库
-deploy-force-db: build check-env
-	FORCE_DB_OVERWRITE=true bash ./deploy.sh
+rollback:
+	./$(DEPLOY_SCRIPT) rollback $(name)
 
-status: check-env
-	ssh -p $(REMOTE_PORT) $(SSH_TARGET) "sudo systemctl status $(APP_NAME) --no-pager"
+list-backups:
+	./$(DEPLOY_SCRIPT) list-backups
 
-db-pull: check-env
-	mkdir -p db
-	scp -P $(REMOTE_PORT) $(SSH_TARGET):$(REMOTE_BASE)/$(APP_NAME)/brainbow.db ./db/brainbow_$(time).db
+health:
+	./$(DEPLOY_SCRIPT) health
 
-db-push: check-env
-	ssh -p $(REMOTE_PORT) $(SSH_TARGET) "sudo systemctl stop $(APP_NAME)"
-	scp -P $(REMOTE_PORT) ./brainbow.db $(SSH_TARGET):$(REMOTE_BASE)/$(APP_NAME)/brainbow.db
-	ssh -p $(REMOTE_PORT) $(SSH_TARGET) "sudo systemctl start $(APP_NAME)"
-
-logs: check-env
-	ssh -p $(REMOTE_PORT) $(SSH_TARGET) "journalctl -u $(APP_NAME) -n 50 --no-pager"
-
-rollback: check-env
-	@latest=$$(ssh -p $(REMOTE_PORT) $(SSH_TARGET) "ls -1t $(REMOTE_BASE)/$(APP_NAME)_backups/*.tar.gz 2>/dev/null | head -1 | xargs -r basename | sed 's/.tar.gz//'"); \
-	if [ -z "$$latest" ]; then \
-		echo "未找到可用备份"; exit 1; \
-	fi; \
-	echo "回滚到: $$latest"; \
-	ssh -p $(REMOTE_PORT) $(SSH_TARGET) "set -euo pipefail; \
-		sudo systemctl stop $(APP_NAME) || true; \
-		sudo rm -rf $(REMOTE_BASE)/$(APP_NAME)/*; \
-		sudo tar -xzf $(REMOTE_BASE)/$(APP_NAME)_backups/$${latest}.tar.gz -C $(REMOTE_BASE); \
-		sudo chown -R $(REMOTE_USER):$(REMOTE_USER) $(REMOTE_BASE)/$(APP_NAME); \
-		if [ -f $(REMOTE_BASE)/$(APP_NAME)/brainbow ]; then \
-			sudo chmod +x $(REMOTE_BASE)/$(APP_NAME)/brainbow; \
-			sudo systemctl start $(APP_NAME); \
-		else \
-			echo '错误: 备份未包含 brainbow 二进制'; exit 1; \
-		fi"
+check-env:
+	@test -n "$(REMOTE_HOST)" || (echo "错误: .env.prod 未设置 REMOTE_HOST"; exit 1)
+	@test -n "$(APP_NAME)"   || (echo "错误: .env.prod 未设置 APP_NAME"; exit 1)

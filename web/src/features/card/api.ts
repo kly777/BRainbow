@@ -18,8 +18,8 @@ export interface PaginatedCards {
 
 // ==================== Card API Functions ====================
 
-export const getCardsE = (): Promise<PaginatedCards> =>
-	cachedRequest("/cards", {});
+export const getCardsE = (page = 1, pageSize = 20): Promise<PaginatedCards> =>
+	cachedRequest(`/cards?page=${page}&page_size=${pageSize}`, {});
 
 // 单张卡片缓存 60 秒，不常变
 export const getCardE = (id: number): Promise<Card> =>
@@ -45,5 +45,8 @@ export const deleteCardE = (id: number): Promise<void> =>
 		method: "DELETE",
 	}).then((r) => tapInvalidate(CACHE.cards, r));
 
-export const searchCardsE = (query: string): Promise<PaginatedCards> =>
-	cachedRequest(`/cards/search?q=${encodeURIComponent(query)}`, {});
+export const searchCardsE = (query: string, page = 1, pageSize = 20): Promise<PaginatedCards> =>
+	cachedRequest(
+		`/cards/search?q=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}`,
+		{},
+	);

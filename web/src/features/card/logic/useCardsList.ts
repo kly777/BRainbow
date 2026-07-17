@@ -4,11 +4,14 @@ import { useSearchParams } from "@solidjs/router";
 import { createSignal } from "solid-js";
 import { createCardE, deleteCardE, getCardsE, searchCardsE } from "../api.ts";
 import type { Card, CreateCardRequest } from "../types.ts";
+import type { PaginatedCards } from "../api.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { showToast } from "../../../components/ui/toastStore.ts";
 
 export function useCardsList() {
 	const [cards, setCards] = createSignal<Card[]>([]);
+	const [page, setPage] = createSignal(1);
+	const [totalPages, setTotalPages] = createSignal(0);
 	const [loading, setLoading] = createSignal(true);
 	const [error, setError] = createSignal<unknown>(null);
 	const [showCreateModal, setShowCreateModal] = createSignal(false);
@@ -24,11 +27,17 @@ export function useCardsList() {
 	};
 	const isSearchMode = () => searchQuery().trim().length > 0;
 
-	const loadCards = async () => {
+	const loadCards = async (p = 1) => {
 		try {
-			setCards((await getCardsE()).items);
+			setLoading(true);
+			const result: PaginatedCards = await getCardsE(p);
+			setCards(result.items);
+			setPage(result.page);
+			setTotalPages(result.total_pages);
 		} catch {
 			/* ignore */
+		} finally {
+			setLoading(false);
 		}
 	};
 
@@ -82,20 +91,51 @@ export function useCardsList() {
 
 	const handleSearch = async (query: string) => {
 		setSearchParams({ q: query || undefined });
+		setPage(1);
 		if (!query) {
-			await loadCards();
+			await loadCards(1);
 			return;
 		}
 		try {
-			setCards([...(await searchCardsE(query)).items]);
+			setLoading(true);
+			const result: PaginatedCards = await searchCardsE(query, 1);
+			setCards(result.items);
+			setPage(result.page);
+			setTotalPages(result.total_pages);
 		} catch {
 			/* global toast handled */
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handlePageChange = async (newPage: number) => {
+		if (newPage < 1 || newPage > totalPages()) return;
+		setPage(newPage);
+		try {
+			setLoading(true);
+			const q = searchQuery();
+			const result: PaginatedCards = q
+				? await searchCardsE(q, newPage)
+				: await getCardsE(newPage);
+			setCards(result.items);
+			setPage(result.page);
+			setTotalPages(result.total_pages);
+			window.scrollTo({ top: 0, behavior: "smooth" });
+		} catch {
+			/* ignore */
+		} finally {
+			setLoading(false);
 		}
 	};
 
 	return {
 		cards,
 		setCards,
+		page,
+		setPage,
+		totalPages,
+		setTotalPages,
 		loading,
 		setLoading,
 		error,
@@ -113,5 +153,6 @@ export function useCardsList() {
 		handleCardDelete,
 		handleCreateCard,
 		handleSearch,
+		handlePageChange,
 	};
 }

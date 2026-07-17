@@ -2,7 +2,8 @@
 
 import { useNavigate } from "@solidjs/router";
 import { onMount, Show } from "solid-js";
-import { searchCardsE } from "./api.ts";
+import { getCardsE, searchCardsE } from "./api.ts";
+import type { PaginatedCards } from "./api.ts";
 import CardsGrid from "./ui/CardsGrid.tsx";
 import Button from "../../components/ui/Button.tsx";
 import MarkdownRenderer from "../../components/ui/Markdown.tsx";
@@ -16,10 +17,12 @@ export default function CardsListPage() {
 	onMount(async () => {
 		try {
 			const q = m.searchQuery();
-			const items = q
-				? (await searchCardsE(q)).items
-				: (await (await import("./api.ts")).getCardsE()).items;
-			m.setCards(items);
+			const result: PaginatedCards = q
+				? await searchCardsE(q, 1)
+				: await getCardsE(1);
+			m.setCards(result.items);
+			m.setPage(result.page);
+			m.setTotalPages(result.total_pages);
 		} catch (e) {
 			m.setError(e);
 		} finally {
@@ -82,6 +85,29 @@ export default function CardsListPage() {
 					}
 					deletingCardId={m.deletingCardId()}
 				/>
+				<Show when={m.totalPages() > 1}>
+					<div class={styles.pagination}>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() => m.handlePageChange(m.page() - 1)}
+							disabled={m.page() <= 1}
+						>
+							← 上一页
+						</Button>
+						<span class={styles.pageInfo}>
+							第 {m.page()} / {m.totalPages()} 页
+						</span>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() => m.handlePageChange(m.page() + 1)}
+							disabled={m.page() >= m.totalPages()}
+						>
+							下一页 →
+						</Button>
+					</div>
+				</Show>
 			</Show>
 
 			<Show when={m.showCreateModal()}>

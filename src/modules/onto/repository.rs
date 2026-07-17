@@ -1,4 +1,3 @@
-use crate::db::query::SeparatedExt;
 use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
@@ -80,18 +79,22 @@ impl OntoRepository {
         name: Option<String>,
         description: Option<String>,
     ) -> Result<Onto, sqlx::Error> {
+        // 构建 SET 子句：手工拼 SQL + bind，避 SeparatedExt 的 sqlx 0.9 兼容问题
         let mut builder = QueryBuilder::new("UPDATE onto SET ");
-        let mut sep = builder.separated(", ");
         let mut has_updates = false;
 
-        if name.is_some() {
+        if let Some(ref n) = name {
+            if has_updates { builder.push(", "); }
+            builder.push("name = ");
+            builder.push_bind(n);
             has_updates = true;
         }
-        if description.is_some() {
+        if let Some(ref d) = description {
+            if has_updates { builder.push(", "); }
+            builder.push("description = ");
+            builder.push_bind(d);
             has_updates = true;
         }
-        sep.push_opt("name = ", &name);
-        sep.push_opt("description = ", &description);
 
         if !has_updates {
             return self
@@ -111,5 +114,76 @@ impl OntoRepository {
             name: result.try_get("name")?,
             description: result.try_get("description")?,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use sqlx::SqlitePool;
+
+    async fn setup_db() -> OntoRepository {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE onto (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT)")
+            .execute(&pool).await.unwrap();
+        OntoRepository::new(Arc::new(pool))
+    }
+
+    #[tokio::test]
+    async fn create_and_find() {
+        let repo = setup_db().await;
+        let onto = repo.create("test-name".into(), Some("desc".into())).await.unwrap();
+        assert!(onto.id > 0);
+        assert_eq!(onto.name, "test-name");
+        assert_eq!(onto.description, Some("desc".into()));
+
+        let found = repo.find_by_id(onto.id).await.unwrap().unwrap();
+        assert_eq!(found.name, "test-name");
+    }
+
+    #[tokio::test]
+    async fn find_all_paginated() {
+        let repo = setup_db().await;
+        repo.create("A".into(), None).await.unwrap();
+        repo.create("B".into(), None).await.unwrap();
+        let (items, total) = repo.find_all_paginated(10, 0).await.unwrap();
+        assert_eq!(total, 2);
+        assert_eq!(items.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn find_by_id_not_found() {
+        let repo = setup_db().await;
+        assert!(repo.find_by_id(999).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn update_name_and_description() {
+        let repo = setup_db().await;
+        let onto = repo.create("old".into(), Some("old-desc".into())).await.unwrap();
+        let updated = repo.update(onto.id, Some("new".into()), Some("new-desc".into())).await.unwrap();
+        assert_eq!(updated.name, "new");
+        assert_eq!(updated.description, Some("new-desc".into()));
+    }
+
+    #[tokio::test]
+    async fn update_nonexistent_fails() {
+        let repo = setup_db().await;
+        assert!(repo.update(999, Some("x".into()), None).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn delete_existing() {
+        let repo = setup_db().await;
+        let onto = repo.create("x".into(), None).await.unwrap();
+        assert_eq!(repo.delete(onto.id).await.unwrap(), 1);
+        assert!(repo.find_by_id(onto.id).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn delete_nonexistent() {
+        let repo = setup_db().await;
+        assert_eq!(repo.delete(999).await.unwrap(), 0);
     }
 }

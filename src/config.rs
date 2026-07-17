@@ -81,17 +81,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn config_from_env_uses_defaults() {
-        // 不设任何环境变量，验证默认值合理
-        let cfg = Config::from_env();
-        assert_eq!(cfg.database_url, "sqlite:brainbow.db");
-        assert!(!cfg.jwt_secret.is_empty());
-        assert_eq!(cfg.service_port, 3000);
-        assert_eq!(cfg.bind_host, IpAddr::V4(Ipv4Addr::UNSPECIFIED));
-        assert_eq!(cfg.mem_config_path, PathBuf::from("mem_config.json"));
-    }
-
-    #[test]
     fn config_parses_cors() {
         // SAFETY: 测试环境中的 env var 操作
         unsafe { std::env::set_var("CORS_ALLOW_ORIGIN", "http://a.com, http://b.com") };

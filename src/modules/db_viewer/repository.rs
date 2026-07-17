@@ -92,3 +92,48 @@ impl DBRepo {
         Ok((columns, data))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use sqlx::SqlitePool;
+
+    async fn setup() -> DBRepo {
+        let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
+        sqlx::query("CREATE TABLE test_table (id INTEGER PRIMARY KEY, name TEXT)")
+            .execute(&*pool).await.unwrap();
+        sqlx::query("INSERT INTO test_table VALUES (1, 'alice'), (2, 'bob')")
+            .execute(&*pool).await.unwrap();
+        DBRepo { pool }
+    }
+
+    #[tokio::test]
+    async fn get_table_names() {
+        let repo = setup().await;
+        let names = repo.get_table_names().await.unwrap();
+        assert!(names.contains(&"test_table".to_string()));
+    }
+
+    #[tokio::test]
+    async fn get_table_data() {
+        let repo = setup().await;
+        let (header, rows) = repo.get_table_data("test_table", 10, 0).await.unwrap();
+        assert_eq!(header.len(), 2);
+        assert_eq!(rows.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn get_table_data_paginated() {
+        let repo = setup().await;
+        let (_, rows) = repo.get_table_data("test_table", 1, 0).await.unwrap();
+        assert_eq!(rows.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn table_not_found() {
+        let repo = setup().await;
+        let result = repo.get_table_data("nonexistent", 10, 0).await;
+        assert!(result.is_err());
+    }
+}

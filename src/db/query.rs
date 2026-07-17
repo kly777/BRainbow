@@ -84,3 +84,43 @@ pub fn sanitize_table_name(name: &str) -> Result<String, sqlx::Error> {
     }
     Ok(name.to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+
+    #[test]
+    fn sanitize_valid_names() {
+        assert_eq!(sanitize_table_name("cards").unwrap(), "cards");
+        assert_eq!(sanitize_table_name("user_data").unwrap(), "user_data");
+        assert_eq!(sanitize_table_name("my_table_1").unwrap(), "my_table_1");
+    }
+
+    #[test]
+    fn sanitize_empty_rejected() {
+        assert!(sanitize_table_name("").is_err());
+    }
+
+    #[test]
+    fn sanitize_special_chars_rejected() {
+        assert!(sanitize_table_name("users; DROP TABLE").is_err());
+        assert!(sanitize_table_name("table-name").is_err());
+        assert!(sanitize_table_name("table name").is_err());
+        assert!(sanitize_table_name("DROP TABLE users").is_err());
+    }
+
+    #[test]
+    fn sanitize_symbols_rejected() {
+        // `is_alphanumeric` returns true for Unicode letters, so use symbols
+        assert!(sanitize_table_name("table-name").is_err());
+        assert!(sanitize_table_name("table/name").is_err());
+        assert!(sanitize_table_name("table;drop").is_err());
+    }
+
+    #[test]
+    fn sanitize_underscore_allowed() {
+        assert_eq!(sanitize_table_name("_").unwrap(), "_");
+        assert_eq!(sanitize_table_name("a_b_c").unwrap(), "a_b_c");
+    }
+}

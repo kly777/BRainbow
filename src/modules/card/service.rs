@@ -54,3 +54,62 @@ impl CardService {
             .map_err(ServiceError::Db)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use sqlx::SqlitePool;
+
+    async fn setup() -> CardService {
+        let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
+        sqlx::query("CREATE TABLE card (id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)")
+            .execute(&*pool).await.unwrap();
+        CardService::new(pool)
+    }
+
+    #[tokio::test]
+    async fn create_and_list() {
+        let svc = setup().await;
+        let card = svc.create("hello".into()).await.unwrap();
+        assert!(card.id > 0);
+
+        let (items, total) = svc.list(10, 0).await.unwrap();
+        assert_eq!(total, 1);
+        assert_eq!(items[0].content, "hello");
+    }
+
+    #[tokio::test]
+    async fn by_id() {
+        let svc = setup().await;
+        let card = svc.create("test".into()).await.unwrap();
+        assert!(svc.by_id(card.id).await.unwrap().is_some());
+        assert!(svc.by_id(999).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn update_content() {
+        let svc = setup().await;
+        let card = svc.create("old".into()).await.unwrap();
+        let updated = svc.update(card.id, Some("new".into())).await.unwrap();
+        assert_eq!(updated.content, "new");
+    }
+
+    #[tokio::test]
+    async fn delete() {
+        let svc = setup().await;
+        let card = svc.create("x".into()).await.unwrap();
+        assert_eq!(svc.delete(card.id).await.unwrap(), 1);
+        assert!(svc.by_id(card.id).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn search_by_keyword() {
+        let svc = setup().await;
+        svc.create("rust language".into()).await.unwrap();
+        svc.create("go language".into()).await.unwrap();
+        let (items, total) = svc.search("rust", 10, 0).await.unwrap();
+        assert_eq!(total, 1);
+        assert_eq!(items[0].content, "rust language");
+    }
+}

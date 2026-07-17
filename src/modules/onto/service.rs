@@ -59,3 +59,60 @@ impl OntoService {
         self.repo.delete(id).await.map_err(ServiceError::Db)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use sqlx::SqlitePool;
+
+    fn setup_service() -> OntoService {
+        let pool = Arc::new(SqlitePool::connect_lazy("sqlite::memory:").unwrap());
+        // 不能用 lazy，用同步创建
+        OntoService::new(pool)
+    }
+
+    async fn real_service() -> (OntoService, Arc<SqlitePool>) {
+        let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
+        sqlx::query("CREATE TABLE onto (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT)")
+            .execute(&*pool).await.unwrap();
+        (OntoService::new(pool.clone()), pool)
+    }
+
+    #[tokio::test]
+    async fn create_valid() {
+        let (svc, _) = real_service().await;
+        let onto = svc.create("onto-a".into(), Some("desc".into())).await.unwrap();
+        assert_eq!(onto.name, "onto-a");
+    }
+
+    #[tokio::test]
+    async fn create_empty_name_rejected() {
+        let (svc, _) = real_service().await;
+        let err = svc.create("  ".into(), None).await.unwrap_err();
+        assert!(matches!(err, ServiceError::InvalidInput(_)));
+    }
+
+    #[tokio::test]
+    async fn list_and_by_id() {
+        let (svc, _) = real_service().await;
+        svc.create("a".into(), None).await.unwrap();
+        let (items, total) = svc.list(10, 0).await.unwrap();
+        assert_eq!(total, 1);
+        assert_eq!(items[0].name, "a");
+        assert!(svc.by_id(items[0].id).await.unwrap().is_some());
+        assert!(svc.by_id(999).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn update_and_delete() {
+        let (svc, _) = real_service().await;
+        let onto = svc.create("x".into(), None).await.unwrap();
+        svc.update(onto.id, Some("y".into()), None).await.unwrap();
+        let u = svc.by_id(onto.id).await.unwrap().unwrap();
+        assert_eq!(u.name, "y");
+        svc.delete(onto.id).await.unwrap();
+        assert!(svc.by_id(onto.id).await.unwrap().is_none());
+    }
+
+}

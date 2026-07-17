@@ -218,3 +218,63 @@ pub struct UpdateTimeWindowRequest {
     #[serde(default)]
     pub recurrence_rule: Option<Option<RecurrenceRule>>,
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+
+    #[test]
+    fn time_window_type_display() {
+        assert_eq!(TimeWindowType::Feasible.to_string(), "feasible");
+        assert_eq!(TimeWindowType::Planned.to_string(), "planned");
+        assert_eq!(TimeWindowType::Actual.to_string(), "actual");
+    }
+
+    #[test]
+    fn time_window_type_from_str() {
+        assert_eq!("feasible".parse::<TimeWindowType>().unwrap(), TimeWindowType::Feasible);
+        assert_eq!("planned".parse::<TimeWindowType>().unwrap(), TimeWindowType::Planned);
+        assert_eq!("actual".parse::<TimeWindowType>().unwrap(), TimeWindowType::Actual);
+        assert!("invalid".parse::<TimeWindowType>().is_err());
+    }
+
+    #[test]
+    fn time_window_type_as_str() {
+        assert_eq!(TimeWindowType::Feasible.as_str(), "feasible");
+        assert_eq!(TimeWindowType::Planned.as_str(), "planned");
+        assert_eq!(TimeWindowType::Actual.as_str(), "actual");
+    }
+
+    #[test]
+    fn time_window_type_serde() {
+        let json = serde_json::to_string(&TimeWindowType::Planned).unwrap();
+        assert_eq!(json, "\"planned\"");
+        let parsed: TimeWindowType = serde_json::from_str("\"actual\"").unwrap();
+        assert_eq!(parsed, TimeWindowType::Actual);
+    }
+
+    #[test]
+    fn recurrence_rule_roundtrip() {
+        use std::str::FromStr;
+        let tw = TimeWindow { id: 1, start_time: chrono::Utc::now(), end_time: chrono::Utc::now() + chrono::Duration::hours(1), window_type: TimeWindowType::Feasible, task_id: 1, user_id: None, recurrence_freq: RecurrenceFrequency::from_str("weekly").ok(), recurrence_interval: Some(1), recurrence_until: Some(chrono::Utc::now()), recurrence_by_weekdays: Some("[1,3,5]".into()) };
+        let rule = tw.recurrence_rule();
+        assert!(rule.is_some());
+        let r = rule.unwrap();
+        assert_eq!(r.freq, RecurrenceFrequency::Weekly);
+        assert_eq!(r.interval, 1);
+        assert_eq!(r.by_weekdays, Some(vec![1, 3, 5]));
+    }
+
+    #[test]
+    fn recurrence_rule_none_when_no_freq() {
+        let tw = TimeWindow { recurrence_freq: None, recurrence_interval: None, recurrence_until: None, recurrence_by_weekdays: None, ..Default::default() };
+        assert!(tw.recurrence_rule().is_none());
+    }
+}
+
+impl Default for TimeWindow {
+    fn default() -> Self {
+        Self { id: 0, start_time: chrono::Utc::now(), end_time: chrono::Utc::now(), window_type: TimeWindowType::Feasible, task_id: 0, user_id: None, recurrence_freq: None, recurrence_interval: None, recurrence_until: None, recurrence_by_weekdays: None }
+    }
+}

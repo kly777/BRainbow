@@ -125,3 +125,57 @@ impl Task {
 
 // Re-export TimeWindow and TimeWindowType for TaskDetailResponse and repository
 pub use crate::modules::time_window::{TimeWindow, TimeWindowType};
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+
+    #[test]
+    fn task_status_display() {
+        assert_eq!(TaskStatus::Backlog.to_string(), "backlog");
+        assert_eq!(TaskStatus::Active.to_string(), "active");
+        assert_eq!(TaskStatus::Completed.to_string(), "completed");
+        assert_eq!(TaskStatus::Archived.to_string(), "archived");
+    }
+
+    #[test]
+    fn task_status_from_str() {
+        assert_eq!("backlog".parse::<TaskStatus>().unwrap(), TaskStatus::Backlog);
+        assert_eq!("active".parse::<TaskStatus>().unwrap(), TaskStatus::Active);
+        assert_eq!(TaskStatus::from_str("completed"), Some(TaskStatus::Completed));
+        assert_eq!(TaskStatus::from_str("archived"), Some(TaskStatus::Archived));
+        assert_eq!(TaskStatus::from_str("invalid"), None);
+    }
+
+    #[test]
+    fn task_status_from_string() {
+        let s = "active".to_string();
+        let status: TaskStatus = s.into();
+        assert_eq!(status, TaskStatus::Active);
+    }
+
+    #[test]
+    fn task_status_serde() {
+        let json = serde_json::to_string(&TaskStatus::Completed).unwrap();
+        assert_eq!(json, "\"completed\"");
+        let parsed: TaskStatus = serde_json::from_str("\"backlog\"").unwrap();
+        assert_eq!(parsed, TaskStatus::Backlog);
+    }
+
+    #[test]
+    fn task_is_completed() {
+        let t = Task { id: 1, title: "x".into(), description: None, parent_task_id: None, status: TaskStatus::Completed, completed_at: None, effort_estimate_minutes: None, created_at: chrono::Utc::now(), updated_at: chrono::Utc::now() };
+        assert!(t.is_completed());
+        let t2 = Task { status: TaskStatus::Active, ..t };
+        assert!(!t2.is_completed());
+    }
+
+    #[test]
+    fn task_deserialize_all_statuses() {
+        for (json, expected) in [("\"backlog\"", TaskStatus::Backlog), ("\"active\"", TaskStatus::Active), ("\"completed\"", TaskStatus::Completed), ("\"archived\"", TaskStatus::Archived)] {
+            let s: TaskStatus = serde_json::from_str(json).unwrap();
+            assert_eq!(s, expected);
+        }
+    }
+}

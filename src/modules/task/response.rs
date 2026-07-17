@@ -79,3 +79,48 @@ pub struct StatsResponse {
 pub struct MessageResponse {
     pub message: String,
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+
+    #[test]
+    fn task_response_from_task() {
+        let task = Task { id: 42, title: "Test".into(), description: Some("desc".into()), parent_task_id: None, status: TaskStatus::Active, completed_at: None, effort_estimate_minutes: Some(60), created_at: chrono::Utc::now(), updated_at: chrono::Utc::now() };
+        let resp = TaskResponse::from(task);
+        assert_eq!(resp.id, 42);
+        assert_eq!(resp.title, "Test");
+        assert_eq!(resp.status, crate::modules::task::model::TaskStatus::Active);
+    }
+
+    #[test]
+    fn calendar_event_serialize() {
+        let ev = CalendarEvent { task_id: 1, title: "x".into(), start: chrono::Utc::now(), end: chrono::Utc::now(), window_type: "planned".into(), status: crate::modules::task::model::TaskStatus::Active };
+        let json = serde_json::to_string(&ev).unwrap();
+        assert!(json.contains("\"task_id\":1"));
+        assert!(json.contains("\"window_type\":\"planned\""));
+    }
+
+    #[test]
+    fn stats_response() {
+        let s = StatsResponse { backlog: 5, active: 3, completed: 10, archived: 2 };
+        assert_eq!(s.backlog, 5);
+        assert_eq!(s.active, 3);
+    }
+
+    #[test]
+    fn dag_view_roundtrip() {
+        let view = DagView { nodes: vec![DagNode { id: 1, title: "a".into(), status: crate::modules::task::model::TaskStatus::Active }], edges: vec![DagEdge { from: 1, to: 2 }] };
+        let json = serde_json::to_string(&view).unwrap();
+        assert!(json.contains("\"id\":1"));
+        assert!(json.contains("\"from\":1"));
+    }
+
+    #[test]
+    fn tree_node_serialize() {
+        let node = TreeNode { task: TaskResponse { id: 1, title: "root".into(), description: None, parent_task_id: None, status: crate::modules::task::model::TaskStatus::Active, completed_at: None, effort_estimate_minutes: None, created_at: chrono::Utc::now(), updated_at: chrono::Utc::now() }, children: vec![] };
+        let json = serde_json::to_string(&node).unwrap();
+        assert!(json.contains("\"title\":\"root\""));
+    }
+}

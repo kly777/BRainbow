@@ -401,47 +401,6 @@ impl MemRepo {
         qb.build_query_scalar().fetch_all(&*self.pool).await
     }
 
-    pub async fn get_due_learning_count(
-        &self,
-        tag_ids: &[i32],
-        exclude_tag_ids: &[i32],
-    ) -> Result<i64, sqlx::Error> {
-        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
-            "SELECT COUNT(*) FROM mem m WHERE m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')",
-        );
-        Self::tag_filter_sql(&mut qb, tag_ids);
-        Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
-        qb.build_query_scalar().fetch_one(&*self.pool).await
-    }
-
-    pub async fn defer_learning_cards(&self, ids: &[i32]) -> Result<(), sqlx::Error> {
-        if ids.is_empty() {
-            return Ok(());
-        }
-        for id in ids {
-            sqlx::query("UPDATE mem SET state = 'deferred' WHERE id = ?")
-                .bind(id)
-                .execute(&*self.pool)
-                .await?;
-        }
-        Ok(())
-    }
-
-    pub async fn get_deferred_learning(
-        &self,
-        limit: i64,
-        tag_ids: &[i32],
-    ) -> Result<Vec<i32>, sqlx::Error> {
-        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
-            r#"SELECT m.id FROM mem m WHERE m.state = 'deferred' AND m.buried = 0
-              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#,
-        );
-        Self::tag_filter_sql(&mut qb, tag_ids);
-        qb.push(" ORDER BY due_at LIMIT ");
-        qb.push_bind(limit);
-        qb.build_query_scalar().fetch_all(&*self.pool).await
-    }
-
     /// 获取到期复习卡（保持 review 状态，不转为 learning）
     pub async fn get_due_reviews(
         &self,

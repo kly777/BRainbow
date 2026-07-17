@@ -68,9 +68,13 @@ impl Config {
                 .and_then(|h| h.parse().ok())
                 .unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED)),
 
-            mem_config_path: PathBuf::from("mem_config.json"),
+            mem_config_path: std::env::var("MEM_CONFIG_PATH")
+                .map(PathBuf::from)
+                .unwrap_or_else(|_| PathBuf::from("mem_config.json")),
 
-            upload_dir: PathBuf::from("uploads"),
+            upload_dir: std::env::var("UPLOAD_DIR")
+                .map(PathBuf::from)
+                .unwrap_or_else(|_| PathBuf::from("uploads")),
         }
     }
 }

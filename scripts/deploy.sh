@@ -70,7 +70,9 @@ load_config() {
     BUILD_TARGET="${BUILD_TARGET:-native}"
 
     REMOTE_DIR="$REMOTE_BASE/$APP_NAME"
-    BACKUP_DIR="$REMOTE_BASE/${APP_NAME}_backups"
+    SERVICE_DIR="$REMOTE_DIR/service"
+    DATA_DIR="$REMOTE_DIR/data"
+    BACKUP_DIR="$REMOTE_DIR/backup"
     BACKUP_RETAIN_DAYS="${BACKUP_RETAIN_DAYS:-30}"
     BACKUP_RETAIN_COUNT="${BACKUP_RETAIN_COUNT:-20}"
     SSH_CMD="ssh -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
@@ -97,7 +99,7 @@ db_backup() {
     local ts
     ts=$(date -u +%Y%m%d_%H%M%S)
     local dest="db_${suffix}_${ts}.db"
-    local src="$REMOTE_DIR/$DATABASE_FILE"
+    local src="$DATA_DIR/$DATABASE_FILE"
 
     if remote "command -v sqlite3" >/dev/null 2>&1; then
         log_info "sqlite3 .backup 事务性快照..."
@@ -285,52 +287,51 @@ cmd_deploy() {
     log_info "备份当前版本..."
     remote "mkdir -p $BACKUP_DIR"
     # 数据库备份（服务已停，直接 cp 即一致）
-    remote "cp '$REMOTE_DIR/$DATABASE_FILE' '$BACKUP_DIR/db_deploy_${timestamp}.db' 2>/dev/null; echo ok" | grep -q ok && \
+    remote "cp '$DATA_DIR/$DATABASE_FILE' '$BACKUP_DIR/db_deploy_${timestamp}.db' 2>/dev/null; echo ok" | grep -q ok && \
         log_info "数据库备份: db_deploy_${timestamp}.db ($(remote "du -h '$BACKUP_DIR/db_deploy_${timestamp}.db' | cut -f1" 2>/dev/null))" || \
         log_warn "数据库备份失败，跳过（可能无数据库文件）"
     # 代码：不包含数据库，tarball 小很多
-    if remote "[ -f '$REMOTE_DIR/brainbow' ]" 2>/dev/null; then
+    if remote "[ -f '$SERVICE_DIR/brainbow' ]" 2>/dev/null; then
         remote "tar -czf $BACKUP_DIR/code_${timestamp}.tar.gz \
-            -C $REMOTE_DIR brainbow dist/ mem_config.json 2>/dev/null" || true
+            -C $SERVICE_DIR brainbow dist/ 2>/dev/null" || true
         log_info "代码备份: code_${timestamp}.tar.gz ($(remote "du -h $BACKUP_DIR/code_${timestamp}.tar.gz | cut -f1" 2>/dev/null))"
     fi
     log_done "备份完成"
     # 备份后清理
     prune_backups
 
-    # Step 3: 同步文件
-    # 前端文件放到 dist/ 子目录（Caddy 配置期望）
-    # --exclude=$DATABASE_FILE 等保护远端数据不被 --delete 误删
+    # Step 3: 确保数据目录存在
+    log_info "确保数据目录存在..."
+    remote "mkdir -p '$DATA_DIR'"
+
+    # Step 4: 同步文件（数据与代码分离，无需 --exclude）
     log_info "同步前端 + 后端..."
-    # 先同步二进制到根目录
     eval "rsync -avz -e \"ssh -p $REMOTE_PORT\" \
-        $binary $REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/" 2>&1 | tail -3
-    # 再同步前端到 dist/ 子目录
+        $binary $REMOTE_USER@$REMOTE_HOST:$SERVICE_DIR/" 2>&1 | tail -3
     eval "rsync -avz --delete -e \"ssh -p $REMOTE_PORT\" \
-        $dist/ $REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/dist/" 2>&1 | tail -3
+        $dist/ $REMOTE_USER@$REMOTE_HOST:$SERVICE_DIR/dist/" 2>&1 | tail -3
     log_done "同步完成"
 
-    # Step 4: 设置权限
+    # Step 5: 设置权限
     log_info "设置权限..."
     remote "\
-        find $REMOTE_DIR -type d -exec chmod 755 {} \; 2>/dev/null; \
-        find $REMOTE_DIR -type f -exec chmod 644 {} \; 2>/dev/null; \
-        chmod +x $REMOTE_DIR/brainbow 2>/dev/null; \
-        [ -f $REMOTE_DIR/$DATABASE_FILE ] && chmod 666 $REMOTE_DIR/$DATABASE_FILE || true"
+        find $SERVICE_DIR -type d -exec chmod 755 {} \; 2>/dev/null; \
+        find $SERVICE_DIR -type f -exec chmod 644 {} \; 2>/dev/null; \
+        chmod +x $SERVICE_DIR/brainbow 2>/dev/null"
     log_done "权限设置完成"
 
-    # Step 5: 配置 systemd 服务（安装时只需一次，每次部署只用 restart）
+    # Step 6: 配置 systemd 服务
     setup_systemd
 
-    # Step 6: 启动服务
+    # Step 7: 启动服务
     log_info "启动服务..."
     remote "sudo systemctl daemon-reload && sudo systemctl enable $APP_NAME && sudo systemctl start $APP_NAME"
     log_done "服务已启动"
 
-    # Step 7: 等待服务就绪
+    # Step 8: 等待服务就绪
     wait_for_ready
 
-    # Step 8: 重载 Caddy
+    # Step 9: 重载 Caddy
     log_info "重载 Caddy..."
     remote "sudo systemctl reload caddy 2>/dev/null || sudo systemctl restart caddy" && \
         log_done "Caddy 已重载" || log_warn "Caddy 重载失败"
@@ -340,10 +341,9 @@ cmd_deploy() {
 }
 
 setup_systemd() {
-    log_info "确保 systemd 服务存在..."
+    log_info "更新 systemd 服务..."
     remote "\
-        if [ ! -f /etc/systemd/system/$APP_NAME.service ]; then \
-            sudo tee /etc/systemd/system/$APP_NAME.service > /dev/null << 'SERVICE'
+        sudo tee /etc/systemd/system/$APP_NAME.service > /dev/null << 'SERVICE'
 [Unit]
 Description=Brainbow Application
 After=network.target
@@ -351,8 +351,8 @@ After=network.target
 [Service]
 Type=simple
 User=$REMOTE_USER
-WorkingDirectory=$REMOTE_DIR
-ExecStart=$REMOTE_DIR/brainbow
+WorkingDirectory=$SERVICE_DIR
+ExecStart=$SERVICE_DIR/brainbow
 Restart=on-failure
 RestartSec=5
 MemoryMax=1024M
@@ -360,7 +360,8 @@ CPUQuota=80%
 Environment=\"RUST_LOG=info\"
 Environment=\"SERVICE_PORT=$SERVICE_PORT\"
 Environment=\"BIND_HOST=$BIND_HOST\"
-Environment=\"DATABASE_URL=sqlite:$REMOTE_DIR/$DATABASE_FILE\"
+Environment=\"DATABASE_URL=sqlite:$DATA_DIR/$DATABASE_FILE\"
+Environment=\"MEM_CONFIG_PATH=$DATA_DIR/mem_config.json\"
 Environment=\"CORS_ALLOW_ORIGIN=$CORS_ALLOW_ORIGIN\"
 
 [Install]
@@ -442,8 +443,8 @@ cmd_health() {
     remote "ps aux | grep brainbow | grep -v grep | awk '{print \$11, \$3, \$4}'" 2>/dev/null | while IFS= read -r line; do
         [ -n "$line" ] && log_info "进程资源: CPU=${line#* }"
     done
-    log_info "二进制: $(remote "ls -lh $REMOTE_DIR/brainbow 2>/dev/null | awk '{print \$5}'" 2>/dev/null || echo 'N/A')"
-    log_info "数据库: $(remote "ls -lh $REMOTE_DIR/$DATABASE_FILE 2>/dev/null | awk '{print \$5}'" 2>/dev/null || echo 'N/A')"
+    log_info "二进制: $(remote "ls -lh $SERVICE_DIR/brainbow 2>/dev/null | awk '{print \$5}'" 2>/dev/null || echo 'N/A')"
+    log_info "数据库: $(remote "ls -lh $DATA_DIR/$DATABASE_FILE 2>/dev/null | awk '{print \$5}'" 2>/dev/null || echo 'N/A')"
 
     echo ""
     log_info "检查结果: $ok/$total"
@@ -520,7 +521,7 @@ cmd_rollback() {
         log_info "恢复数据库: $restore_db.db"
         # 停止服务后直接 cp 覆盖
         remote "sudo systemctl stop $APP_NAME 2>/dev/null || true"
-        remote "cp '$BACKUP_DIR/${restore_db}.db' '$REMOTE_DIR/$DATABASE_FILE'" && \
+        remote "cp '$BACKUP_DIR/${restore_db}.db' '$DATA_DIR/$DATABASE_FILE'" && \
             log_done "数据库已恢复 ($(remote "du -h '$BACKUP_DIR/${restore_db}.db' | cut -f1" 2>/dev/null))" || {
             log_error "数据库恢复失败"
             exit 1
@@ -562,9 +563,9 @@ cmd_rollback() {
         log_info "停止服务..."
         remote "sudo systemctl stop $APP_NAME 2>/dev/null || true"
 
-        # 原子性替换
+        # 原子性替换（只替换 service/，不动 data/ backup/）
         log_info "替换应用目录..."
-        remote "rm -rf '$REMOTE_DIR' && mkdir -p '$REMOTE_DIR' && cp -r '$tmp_dir/'* '$REMOTE_DIR/' && rm -rf '$tmp_dir'"
+        remote "rm -rf '$SERVICE_DIR' && mkdir -p '$SERVICE_DIR' && cp -r '$tmp_dir/'* '$SERVICE_DIR/' && rm -rf '$tmp_dir'"
         log_done "目录已替换"
     else
         # 只有数据库回滚，需要重启服务
@@ -573,7 +574,7 @@ cmd_rollback() {
     fi
 
     # 设置权限
-    remote "chmod +x '$REMOTE_DIR/brainbow' 2>/dev/null || true"
+    remote "chmod +x '$SERVICE_DIR/brainbow' 2>/dev/null || true"
 
     # 等待就绪
     wait_for_ready
@@ -687,7 +688,7 @@ cmd_db_pull() {
     local ts
     ts=$(date +%y%m%d_%H%M%S)
     mkdir -p "$PROJECT_DIR/db"
-    $SCP_CMD "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/$DATABASE_FILE" \
+    $SCP_CMD "$REMOTE_USER@$REMOTE_HOST:$DATA_DIR/$DATABASE_FILE" \
         "$PROJECT_DIR/db/${DATABASE_FILE%.*}_${ts}.db"
     log_done "数据库已拉取到: db/${DATABASE_FILE%.*}_${ts}.db"
 }
@@ -705,13 +706,13 @@ cmd_db_push() {
     fi
     log_warn "即将覆盖远端数据库！"
     log_info "来源: $src"
-    log_info "目标: $REMOTE_HOST:$REMOTE_DIR/$DATABASE_FILE"
+    log_info "目标: $REMOTE_HOST:$DATA_DIR/$DATABASE_FILE"
     echo -n "确认？(y/N) "
     read -r ans
     [ "$ans" != "y" ] && { log_info "已取消"; exit 1; }
 
     remote "sudo systemctl stop $APP_NAME"
-    $SCP_CMD "$src" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/$DATABASE_FILE"
+    $SCP_CMD "$src" "$REMOTE_USER@$REMOTE_HOST:$DATA_DIR/$DATABASE_FILE"
     remote "sudo systemctl start $APP_NAME"
     log_done "数据库已推送并重启服务"
 }

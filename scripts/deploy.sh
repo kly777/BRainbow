@@ -367,7 +367,7 @@ Environment=\"CORS_ALLOW_ORIGIN=$CORS_ALLOW_ORIGIN\"
 [Install]
 WantedBy=multi-user.target
 SERVICE
-        fi" > /dev/null 2>&1
+" > /dev/null 2>&1
 }
 
 wait_for_ready() {

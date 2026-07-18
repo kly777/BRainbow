@@ -8,6 +8,8 @@ export interface CardsGridProps extends Omit<CardMasonryProps, "cards"> {
 	showFilters?: boolean;
 	onSearch?: (query: string) => void;
 	initialSearchQuery?: string;
+	onLoadMore?: () => void;
+	loadingMore?: boolean;
 }
 
 const CardsGrid: Component<CardsGridProps> = (props) => {
@@ -51,6 +53,8 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 				onCardClick={props.onCardClick}
 				onCardEdit={props.onCardEdit}
 				onCardDelete={props.onCardDelete}
+				onLoadMore={props.onLoadMore}
+				loadingMore={props.loadingMore}
 				emptyMessage={props.emptyMessage}
 				deletingCardId={props.deletingCardId}
 			/>

@@ -109,6 +109,9 @@ export function useCardsList() {
 		}
 	};
 
+	const [loadingMore, setLoadingMore] = createSignal(false);
+	const [hasMore, setHasMore] = createSignal(true);
+
 	const handlePageChange = async (newPage: number) => {
 		if (newPage < 1 || newPage > totalPages()) return;
 		setPage(newPage);
@@ -121,11 +124,36 @@ export function useCardsList() {
 			setCards(result.items);
 			setPage(result.page);
 			setTotalPages(result.total_pages);
-			window.scrollTo({ top: 0, behavior: "smooth" });
 		} catch {
 			/* ignore */
 		} finally {
 			setLoading(false);
+		}
+	};
+
+	const handleLoadMore = async () => {
+		if (loadingMore() || !hasMore()) return;
+		const nextPage = page() + 1;
+		if (totalPages() > 0 && nextPage > totalPages()) {
+			setHasMore(false);
+			return;
+		}
+		setLoadingMore(true);
+		try {
+			const q = searchQuery();
+			const result: PaginatedCards = q
+				? await searchCardsE(q, nextPage)
+				: await getCardsE(nextPage);
+			setCards([...cards(), ...result.items]);
+			setPage(result.page);
+			setTotalPages(result.total_pages);
+			if (result.page >= result.total_pages) {
+				setHasMore(false);
+			}
+		} catch {
+			/* ignore */
+		} finally {
+			setLoadingMore(false);
 		}
 	};
 
@@ -150,9 +178,12 @@ export function useCardsList() {
 		modalError,
 		deletingCardId,
 		loadCards,
+		loadingMore,
+		hasMore,
 		handleCardDelete,
 		handleCreateCard,
 		handleSearch,
 		handlePageChange,
+		handleLoadMore,
 	};
 }

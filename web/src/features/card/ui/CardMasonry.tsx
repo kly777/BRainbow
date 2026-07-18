@@ -7,9 +7,13 @@ export interface CardMasonryProps {
 	onCardClick?: (id: number) => void;
 	onCardEdit?: (id: number) => void;
 	onCardDelete?: (id: number) => void;
+	onLoadMore?: () => void;
+	loadingMore?: boolean;
 	emptyMessage?: string;
 	deletingCardId?: number | null;
 }
+
+const SCROLL_THRESHOLD = 0.8; // 滚动到 80% 时触发加载
 
 const CardMasonry: Component<CardMasonryProps> = (props) => {
 	const isCardDeleting = (cardId: number) => {
@@ -28,6 +32,23 @@ const CardMasonry: Component<CardMasonryProps> = (props) => {
 		if (props.onCardDelete) props.onCardDelete(id);
 	};
 
+	let scrollRef: HTMLDivElement | undefined;
+
+	const handleScroll = () => {
+		if (!scrollRef || !props.onLoadMore) return;
+		const { scrollLeft, scrollWidth, clientWidth } = scrollRef;
+		if (scrollLeft + clientWidth >= scrollWidth * SCROLL_THRESHOLD) {
+			props.onLoadMore();
+		}
+	};
+
+	// 滚轮垂直滚动 → 映射为水平滚动（免 Shift）
+	const handleWheel = (e: WheelEvent) => {
+		if (!scrollRef) return;
+		e.preventDefault();
+		scrollRef.scrollLeft += e.deltaY;
+	};
+
 	return (
 		<Show
 			when={props.cards.length > 0}
@@ -37,7 +58,7 @@ const CardMasonry: Component<CardMasonryProps> = (props) => {
 				</div>
 			}
 		>
-			<div class={styles.cardsGrid}>
+			<div ref={scrollRef} class={styles.cardsGrid} onScroll={handleScroll} onWheel={handleWheel}>
 				<For each={props.cards}>
 					{(card) => (
 						<Card
@@ -49,6 +70,9 @@ const CardMasonry: Component<CardMasonryProps> = (props) => {
 						/>
 					)}
 				</For>
+				<Show when={props.loadingMore}>
+					<div class={styles.loadingMore}>加载中...</div>
+				</Show>
 			</div>
 		</Show>
 	);

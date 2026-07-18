@@ -17,6 +17,16 @@
 	margin-bottom: var(--space-xl);
 }
 
+.loadingMore {
+	width: var(--masonry-column-width, 300px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--color-text-muted);
+	font-size: 0.875rem;
+	padding: var(--space-xl);
+}
+
 .emptyState {
 	text-align: center;
 	padding: var(--space-xl) var(--space-xl);

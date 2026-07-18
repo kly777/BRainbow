@@ -277,30 +277,6 @@
 	}
 }
 
-/* ── 悬浮分页控件 ── */
-.pagination {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: var(--space-sm);
-	padding: var(--space-xs) var(--space-md);
-	position: fixed;
-	bottom: var(--space-lg);
-	left: 50%;
-	transform: translateX(-50%);
-	background: var(--color-surface);
-	box-shadow: 0 2px 12px oklch(0 0 0 / 0.12);
-	border-radius: var(--radius-full, 999px);
-	z-index: 100;
-}
-
-.pageInfo {
-	font-size: 0.875rem;
-	color: var(--color-text-secondary);
-	min-width: 100px;
-	text-align: center;
-}
-
 @media (max-width: 480px) {
 	.modalActions {
 		flex-direction: column;

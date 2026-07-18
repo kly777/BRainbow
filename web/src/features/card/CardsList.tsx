@@ -74,6 +74,8 @@ export default function CardsListPage() {
 					cards={[...(m.cards() || [])]}
 					showFilters
 					onSearch={m.handleSearch}
+					onLoadMore={m.handleLoadMore}
+					loadingMore={m.loadingMore()}
 					initialSearchQuery={m.searchQuery()}
 					onCardClick={(id) => navigate(`/c/${id}`)}
 					onCardEdit={(id) => navigate(`/c/edit/${id}`)}
@@ -85,29 +87,6 @@ export default function CardsListPage() {
 					}
 					deletingCardId={m.deletingCardId()}
 				/>
-				<Show when={m.totalPages() > 1}>
-					<div class={styles.pagination}>
-						<Button
-							variant="secondary"
-							size="sm"
-							onClick={() => m.handlePageChange(m.page() - 1)}
-							disabled={m.page() <= 1}
-						>
-							← 上一页
-						</Button>
-						<span class={styles.pageInfo}>
-							第 {m.page()} / {m.totalPages()} 页
-						</span>
-						<Button
-							variant="secondary"
-							size="sm"
-							onClick={() => m.handlePageChange(m.page() + 1)}
-							disabled={m.page() >= m.totalPages()}
-						>
-							下一页 →
-						</Button>
-					</div>
-				</Show>
 			</Show>
 
 			<Show when={m.showCreateModal()}>

@@ -1,12 +1,18 @@
 .cardsGrid {
 	padding-top: 10px;
 	column-count: auto;
-	column-width: var(--masonry-column-width, 300px);
 	column-gap: var(--space-xl);
 	width: 100%;
+	flex:1;
+	overflow-x: auto;
+	display: flex;
+	flex-direction: column;
+	flex-wrap: wrap;
 }
 
 .cardsGrid > * {
+    width: var(--masonry-column-width, 300px);
+    flex-grow: 1;
 	break-inside: avoid;
 	margin-bottom: var(--space-xl);
 }

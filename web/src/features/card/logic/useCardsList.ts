@@ -29,15 +29,12 @@ export function useCardsList() {
 
 	const loadCards = async (p = 1) => {
 		try {
-			setLoading(true);
 			const result: PaginatedCards = await getCardsE(p);
 			setCards(result.items);
 			setPage(result.page);
 			setTotalPages(result.total_pages);
 		} catch {
 			/* ignore */
-		} finally {
-			setLoading(false);
 		}
 	};
 
@@ -92,20 +89,18 @@ export function useCardsList() {
 	const handleSearch = async (query: string) => {
 		setSearchParams({ q: query || undefined });
 		setPage(1);
+		setHasMore(true);
 		if (!query) {
 			await loadCards(1);
 			return;
 		}
 		try {
-			setLoading(true);
 			const result: PaginatedCards = await searchCardsE(query, 1);
 			setCards(result.items);
 			setPage(result.page);
 			setTotalPages(result.total_pages);
 		} catch {
 			/* global toast handled */
-		} finally {
-			setLoading(false);
 		}
 	};
 

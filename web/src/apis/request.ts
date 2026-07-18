@@ -77,6 +77,18 @@ export async function extractErrorBody(
 		};
 	}
 
+	// Cloudflare 等中间件返回 HTML 而非 JSON，不显示原始 HTML
+	const trimmed = text.trimStart();
+	if (trimmed.startsWith("<")) {
+		const reason =
+			response.status === 403
+				? "请求被防火墙拦截"
+				: response.status >= 500
+					? "服务器暂时不可用，请稍后重试"
+					: `服务器返回异常 (${response.status})`;
+		return { code: `HTTP_${response.status}`, message: reason };
+	}
+
 	try {
 		const json = JSON.parse(text);
 		if (

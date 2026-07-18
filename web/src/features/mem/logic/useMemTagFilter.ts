@@ -4,6 +4,7 @@ import { useSearchParams } from "@solidjs/router";
 import { createMemo, createResource, createSignal } from "solid-js";
 import { listTagsE, searchTagsE } from "../api.ts";
 import { notifyError } from "../../../lib/notify.ts";
+import { tryAsync } from "../../../lib/result.ts";
 import type { TagInfo } from "../model.ts";
 
 interface UseMemTagFilterResult {
@@ -29,11 +30,11 @@ export function useMemTagFilter(loadDue: () => void): UseMemTagFilterResult {
 	const [tagOpen, setTagOpen] = createSignal(false);
 
 	// 首次加载所有标签
-	listTagsE()
-		.then(setAllTags)
-		.catch((e: unknown) => {
-			notifyError("加载标签列表失败", e);
-		});
+	(async () => {
+		const result = await tryAsync(() => listTagsE());
+		if (result.ok) setAllTags(result.value);
+		else notifyError("加载标签列表失败", result.error);
+	})();
 
 	const tagFilterIds = () => {
 		const v = searchParams.tag_ids;

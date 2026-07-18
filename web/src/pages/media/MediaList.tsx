@@ -18,6 +18,7 @@ import {
 } from "../../features/mem/mediaApi.ts";
 import { showConfirm, tryOrNotify } from "../../lib/safe-action.ts";
 import { notifyError } from "../../lib/notify.ts";
+import { tryAsync } from "../../lib/result.ts";
 import styles from "./MediaList.module.css";
 
 const TABS = [
@@ -47,13 +48,12 @@ const MediaListPage: Component = () => {
 	const [media, { refetch }] = createResource(
 		() => mediaType(),
 		async (mt): Promise<MediaItem[]> => {
-			try {
-				const r = await listMediaE(mt ? { media_type: mt } : {});
-				return r.items;
-			} catch (e: unknown) {
-				notifyError("加载媒体列表失败", e);
-				return [];
-			}
+			const result = await tryAsync(() =>
+				listMediaE(mt ? { media_type: mt } : {}),
+			);
+			if (result.ok) return result.value.items;
+			notifyError("加载媒体列表失败", result.error);
+			return [];
 		},
 	);
 
@@ -81,12 +81,12 @@ const MediaListPage: Component = () => {
 	const handleRename = async () => {
 		const id = editingId();
 		if (!id || !editName().trim()) return;
-		try {
-			await renameMediaE(id, editName().trim());
+		const result = await tryAsync(() => renameMediaE(id, editName().trim()));
+		if (result.ok) {
 			setEditingId(null);
 			refetch();
-		} catch (err) {
-			setError(getErrorMessage(err));
+		} else {
+			setError(getErrorMessage(result.error));
 		}
 	};
 

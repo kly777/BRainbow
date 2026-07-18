@@ -1,6 +1,7 @@
 import { A } from "@solidjs/router";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { type ArticleSummary, listArticles, uploadArticle } from "./api.ts";
+import { tryAsync } from "../../lib/result.ts";
 import styles from "./ReadingList.module.css";
 
 export default function ReadingList() {
@@ -13,15 +14,16 @@ export default function ReadingList() {
 	const handleUpload = async () => {
 		if (!title().trim() || !content().trim()) return;
 		setUploading(true);
-		try {
-			await uploadArticle(title().trim(), content().trim());
+		const result = await tryAsync(() =>
+			uploadArticle(title().trim(), content().trim()),
+		);
+		if (result.ok) {
 			setTitle("");
 			setContent("");
 			setUploadOpen(false);
 			refetch();
-		} finally {
-			setUploading(false);
 		}
+		setUploading(false);
 	};
 
 	return (

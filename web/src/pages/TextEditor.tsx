@@ -2,18 +2,16 @@ import { createSignal, For, onCleanup, onMount } from "solid-js";
 import styles from "./TextEditor.module.css";
 import { loadTextE, saveTextE } from "./textApi.ts";
 import { notifyError } from "../lib/notify.ts";
+import { tryAsync } from "../lib/result.ts";
 
 let _saveTimer: ReturnType<typeof setInterval> | null = null;
 
 async function load(): Promise<{ name: string; content: string }[]> {
-	try {
-		const res = await loadTextE();
-		if (res.tabs.length > 0) {
-			return res.tabs.map((t) => ({ name: t.name, content: t.content }));
-		}
-	} catch (e: unknown) {
-		notifyError("加载文本失败", e);
+	const result = await tryAsync(() => loadTextE());
+	if (result.ok && result.value.tabs.length > 0) {
+		return result.value.tabs.map((t) => ({ name: t.name, content: t.content }));
 	}
+	if (!result.ok) notifyError("加载文本失败", result.error);
 	return [
 		{ name: "笔记 1", content: "" },
 		{ name: "笔记 2", content: "" },
@@ -22,11 +20,8 @@ async function load(): Promise<{ name: string; content: string }[]> {
 }
 
 async function save(tabs: { name: string; content: string }[]): Promise<void> {
-	try {
-		await saveTextE(tabs);
-	} catch (e: unknown) {
-		notifyError("自动保存文本失败", e);
-	}
+	const result = await tryAsync(() => saveTextE(tabs));
+	if (!result.ok) notifyError("自动保存文本失败", result.error);
 }
 
 function defaultName(i: number): string {

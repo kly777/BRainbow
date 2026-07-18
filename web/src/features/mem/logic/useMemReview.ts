@@ -29,7 +29,6 @@ import type {
 	DueResponse,
 	MemCounts,
 	MemItem,
-	SessionEstimate,
 	TagInfo,
 } from "../model.ts";
 import { ALPHA, calcAvgCardTime, calcMaxLearning } from "./mem-calcs.ts";
@@ -156,7 +155,7 @@ export function useMemReview(): UseMemReview {
 
 		if (aiResult.ok) {
 			// 保存助记到后端（失败不影响用户体验——本地已缓存）
-			await setMnemonicE(it.id, aiResult.value.content).catch(() => {});
+			tryAsync(() => setMnemonicE(it.id, aiResult.value.content));
 			setMnemonics((prev) => {
 				const next = new Map(prev);
 				next.set(it.id, aiResult.value.content);
@@ -254,11 +253,11 @@ export function useMemReview(): UseMemReview {
 		} else {
 			setDone(false);
 			setAllFar(data.all_far);
-			getSessionEstimateE()
-				.then((est: SessionEstimate) => setEstimatedTotal(est.total_estimate))
-				.catch(() => {
-					// 预估失败不影响复习
-				});
+			(async () => {
+				const estResult = await tryAsync(() => getSessionEstimateE());
+				if (estResult.ok) setEstimatedTotal(estResult.value.total_estimate);
+				// 预估失败不影响复习
+			})();
 			setDue([...data.items]);
 			_setCurrent(0);
 			setCardStart(Date.now());

@@ -15,6 +15,7 @@ import {
 	recommendNext,
 	updateArticleNotes,
 } from "../api.ts";
+import { tryAsync } from "../../../lib/result.ts";
 
 export function useReadingDetail() {
 	const params = useParams();
@@ -76,9 +77,8 @@ export function useReadingDetail() {
 	) => {
 		const prev = localStatus();
 		setLocalStatus((p) => new Map(p).set(word, status));
-		try {
-			await markWord(word, status);
-		} catch {
+		const result = await tryAsync(() => markWord(word, status));
+		if (!result.ok) {
 			setLocalStatus(prev);
 			return;
 		}
@@ -121,12 +121,11 @@ export function useReadingDetail() {
 			if (map.get(w.word) === "unknown") unknownWords.push(w.word);
 		if (unknownWords.length === 0) return;
 		setUploadingUnknown(true);
-		try {
-			await Promise.all(unknownWords.map((w) => markWord(w, "unknown")));
-			refetch();
-		} finally {
-			setUploadingUnknown(false);
-		}
+		const result = await tryAsync(() =>
+			Promise.all(unknownWords.map((w) => markWord(w, "unknown"))),
+		);
+		if (result.ok) refetch();
+		setUploadingUnknown(false);
 	};
 
 	const handleCopyUnknown = async () => {

@@ -1,6 +1,6 @@
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
-import { getErrorMessage } from "../../../apis/types/index.ts";
 import { notifyError } from "../../../lib/notify.ts";
+import { tryAsync } from "../../../lib/result.ts";
 import { getCalendarEventsE } from "../api.ts";
 import type { CalendarEvent } from "../types.ts";
 import styles from "./TaskCalendar.module.css";
@@ -41,12 +41,12 @@ export default function TaskCalendar() {
 
 	// 获取日历事件
 	const [events] = createResource(monthRange, async (range) => {
-		try {
-			return await getCalendarEventsE(range.start, range.end);
-		} catch (e) {
-			notifyError("获取日历事件失败", e);
-			return [];
-		}
+		const result = await tryAsync(() =>
+			getCalendarEventsE(range.start, range.end),
+		);
+		if (result.ok) return result.value;
+		notifyError("获取日历事件失败", result.error);
+		return [];
 	});
 
 	// 切换月份

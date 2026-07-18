@@ -7,8 +7,8 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import { getErrorMessage } from "../../../apis/types/index.ts";
 import { notifyError } from "../../../lib/notify.ts";
+import { tryAsync } from "../../../lib/result.ts";
 import { getAllTasksE, getDagE } from "../api.ts";
 import type { Task } from "../types.ts";
 import type { LayoutNode } from "./dag-layout.ts";
@@ -52,24 +52,19 @@ export default function TaskDag() {
 	const [dagData] = createResource(
 		() => ({ taskId: taskFilter(), depth: depth() }),
 		async ({ taskId, depth: d }) => {
-			try {
-				return await getDagE(taskId, d);
-			} catch (e) {
-				notifyError("获取依赖图失败", e);
-				return { nodes: [], edges: [] };
-			}
+			const result = await tryAsync(() => getDagE(taskId, d));
+			if (result.ok) return result.value;
+			notifyError("获取依赖图失败", result.error);
+			return { nodes: [], edges: [] };
 		},
 	);
 
 	// 拉取所有任务（用于选择器）
 	const [allTasks] = createResource(async () => {
-		try {
-			const r = await getAllTasksE();
-			return [...r.items];
-		} catch (e: unknown) {
-			notifyError("获取任务列表失败", e);
-			return [];
-		}
+		const result = await tryAsync(() => getAllTasksE());
+		if (result.ok) return [...result.value.items];
+		notifyError("获取任务列表失败", result.error);
+		return [];
 	});
 
 	// 布局计算

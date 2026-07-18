@@ -1,7 +1,7 @@
 import { createEffect, createSignal, Show } from "solid-js";
-import { getErrorMessage } from "../../../apis/types/index.ts";
 import Modal from "../../../components/ui/Modal.tsx";
 import { notifyError } from "../../../lib/notify.ts";
+import { tryAsync } from "../../../lib/result.ts";
 import { getTimeWindowsE } from "../timeWindowApi.ts";
 import type { Task, TimeWindow } from "../types.ts";
 import BasicInfoTab from "./BasicInfoTab.tsx";
@@ -37,15 +37,18 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 
 	// 加载时间窗口
 	const loadTimeWindows = async (taskId: number) => {
-		try {
-			const [feasible, planned] = await Promise.all([
+		const result = await tryAsync(() =>
+			Promise.all([
 				getTimeWindowsE(taskId, "feasible"),
 				getTimeWindowsE(taskId, "planned"),
-			]);
+			]),
+		);
+		if (result.ok) {
+			const [feasible, planned] = result.value;
 			setFeasibleWindows([...feasible]);
 			setPlannedWindows([...planned]);
-		} catch (e) {
-			notifyError("加载时间窗口失败", e);
+		} else {
+			notifyError("加载时间窗口失败", result.error);
 		}
 	};
 

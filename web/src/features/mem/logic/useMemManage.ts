@@ -100,32 +100,24 @@ export function useMemManage() {
 		setMems(items);
 		setPageMeta(meta);
 		if (items.length > 0) {
-			batchGetMemsTagsE(items.map((m) => m.id))
-				.then(
-					(res: {
-						items: {
-							mem_id: number;
-							id: number;
-							name: string;
-							created_at: string;
-						}[];
-					}) => {
-						const map = new Map<number, TagInfo[]>();
-						for (const row of res.items) {
-							const tags = map.get(row.mem_id) ?? [];
-							tags.push({
-								id: row.id,
-								name: row.name,
-								created_at: row.created_at,
-							});
-							map.set(row.mem_id, tags);
-						}
-						setMemTags(map);
-					},
-				)
-				.catch(() => {
-					// 标签加载失败不影响主列表
-				});
+			(async () => {
+				const result = await tryAsync(() =>
+					batchGetMemsTagsE(items.map((m) => m.id)),
+				);
+				if (!result.ok) return; // 标签加载失败不影响主列表
+				const res = result.value;
+				const map = new Map<number, TagInfo[]>();
+				for (const row of res.items) {
+					const tags = map.get(row.mem_id) ?? [];
+					tags.push({
+						id: row.id,
+						name: row.name,
+						created_at: row.created_at,
+					});
+					map.set(row.mem_id, tags);
+				}
+				setMemTags(map);
+			})();
 		} else {
 			setMemTags(new Map());
 		}
@@ -166,17 +158,15 @@ export function useMemManage() {
 	createEffect(() => {
 		const id = params.detailId();
 		if (id === null) return;
-		getMemTagsE(id)
-			.then((tags: TagInfo[]) => {
-				setMemTags((prev) => {
-					const next = new Map(prev);
-					next.set(id, tags);
-					return next;
-				});
-			})
-			.catch(() => {
-				// 标签加载失败不影响详情展示
+		(async () => {
+			const result = await tryAsync(() => getMemTagsE(id));
+			if (!result.ok) return; // 标签加载失败不影响详情展示
+			setMemTags((prev) => {
+				const next = new Map(prev);
+				next.set(id, result.value);
+				return next;
 			});
+		})();
 	});
 
 	// ── 操作 ──

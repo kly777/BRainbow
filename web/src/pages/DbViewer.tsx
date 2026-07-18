@@ -1,6 +1,7 @@
 import { useSearchParams } from "@solidjs/router";
 import { type Component, createSignal, For, onMount } from "solid-js";
 import { getErrorMessage } from "../apis/types/index.ts";
+import { tryAsync } from "../lib/result.ts";
 import { type ColumnInfo, getTableDataE, getTablesE } from "./dbApi.ts";
 
 const DB: Component = () => {
@@ -19,29 +20,29 @@ const DB: Component = () => {
 
 	const loadTables = async () => {
 		setLoading(true);
-		try {
-			const result = await getTablesE();
-			setTables([...result]);
-		} catch (e) {
-			setError(getErrorMessage(e));
-		} finally {
-			setLoading(false);
+		const result = await tryAsync(() => getTablesE());
+		if (result.ok) {
+			setTables([...result.value]);
+		} else {
+			setError(getErrorMessage(result.error));
 		}
+		setLoading(false);
 	};
 
 	const loadTable = async (name: string) => {
 		setActiveTable(name);
 		setLoading(true);
 		setError("");
-		try {
-			const result = await getTableDataE(name);
-			setColumns([...result.header]);
-			setRows(result.rows.map((row) => row.map((v) => String(v ?? ""))));
-		} catch (e) {
-			setError(getErrorMessage(e));
-		} finally {
-			setLoading(false);
+		const result = await tryAsync(() => getTableDataE(name));
+		if (result.ok) {
+			setColumns([...result.value.header]);
+			setRows(
+				result.value.rows.map((row) => row.map((v) => String(v ?? ""))),
+			);
+		} else {
+			setError(getErrorMessage(result.error));
 		}
+		setLoading(false);
 	};
 
 	onMount(() => loadTables());

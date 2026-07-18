@@ -8,6 +8,7 @@ import {
 	resetAiSettings,
 	setAiSettings,
 } from "../../../lib/ai-settings.ts";
+import { tryAsync } from "../../../lib/result.ts";
 import styles from "../MemPage.module.css";
 
 interface AiSettingsModalProps {
@@ -50,17 +51,19 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 	const testConnection = async () => {
 		setTestStatus("testing");
 		setTestMsg("");
-		try {
-			await callAi({
+		const result = await tryAsync(() =>
+			callAi({
 				messages: [{ role: "user", content: "回复 'ok' 两个字" }],
 				model: model() || undefined,
 				maxTokens: 10,
-			});
+			}),
+		);
+		if (result.ok) {
 			setTestStatus("ok");
 			setTestMsg("连接成功 ✅");
-		} catch (e) {
+		} else {
 			setTestStatus("fail");
-			setTestMsg(e instanceof Error ? e.message : "未知错误");
+			setTestMsg(result.error.message);
 		}
 	};
 

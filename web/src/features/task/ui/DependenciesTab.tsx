@@ -7,6 +7,7 @@ import {
 } from "solid-js";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { notifyError } from "../../../lib/notify.ts";
+import { tryAsync } from "../../../lib/result.ts";
 import {
 	addTaskDependencyE,
 	getTaskDetailE,
@@ -63,15 +64,17 @@ export default function DependenciesTab(props: DependenciesTabProps) {
 			return;
 		}
 		setError("");
-		try {
-			await addTaskDependencyE(props.task.id, depId);
+		const result = await tryAsync(() =>
+			addTaskDependencyE(props.task.id, depId),
+		);
+		if (result.ok) {
 			const depTask = props.allTasks.find((t) => t.id === depId);
 			setDepIds([...depIds(), depId]);
 			if (depTask) setDepTasks([...depTasks(), depTask]);
 			setNewDepId(undefined);
 			props.onDependencyChange?.();
-		} catch (e) {
-			const msg = getErrorMessage(e);
+		} else {
+			const msg = getErrorMessage(result.error);
 			setError(
 				msg.includes("Circular")
 					? "不能形成循环依赖"
@@ -83,13 +86,15 @@ export default function DependenciesTab(props: DependenciesTabProps) {
 	};
 
 	const handleRemove = async (depId: number) => {
-		try {
-			await removeTaskDependencyE(props.task.id, depId);
+		const result = await tryAsync(() =>
+			removeTaskDependencyE(props.task.id, depId),
+		);
+		if (result.ok) {
 			setDepIds(depIds().filter((id) => id !== depId));
 			setDepTasks(depTasks().filter((t) => t.id !== depId));
 			props.onDependencyChange?.();
-		} catch (e) {
-			notifyError("删除依赖失败", e);
+		} else {
+			notifyError("删除依赖失败", result.error);
 		}
 	};
 

@@ -12,18 +12,17 @@ import Button from "../../components/ui/Button.tsx";
 import FilterGroup from "../../components/ui/FilterGroup.tsx";
 import SearchInput from "../../components/ui/SearchInput.tsx";
 import { notifyError, notifySuccess } from "../../lib/notify.ts";
+import { tryAsync } from "../../lib/result.ts";
 import { showConfirm, tryOrNotify } from "../../lib/safe-action.ts";
 import { createOntoE, deleteOntoE, getOntosE } from "./api.ts";
 import styles from "./OntologyList.module.css";
 
 const OntologyListPage: Component = () => {
 	const [ontologies, { mutate, refetch }] = createResource(async () => {
-		try {
-			return await getOntosE();
-		} catch (e: unknown) {
-			notifyError("加载本体列表失败", e);
-			return [];
-		}
+		const result = await tryAsync(() => getOntosE());
+		if (result.ok) return result.value;
+		notifyError("加载本体列表失败", result.error);
+		return [];
 	});
 
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -73,22 +72,19 @@ const OntologyListPage: Component = () => {
 		const name = newName().trim();
 		const description = newDescription().trim() || undefined;
 
-		createOntoE(name, description)
-			.then((newOnto) => {
-				setNewName("");
-				setNewDescription("");
-				setShowCreateModal(false);
-				const currentData = ontologies() || [];
-				mutate([newOnto, ...currentData]);
-				notifySuccess("本体创建成功");
-			})
-			.catch((error: unknown) => {
-				notifyError("创建本体失败", error);
-				setCreateError(getErrorMessage(error));
-			})
-			.finally(() => {
-				setIsCreating(false);
-			});
+		const result = await tryAsync(() => createOntoE(name, description));
+		if (result.ok) {
+			setNewName("");
+			setNewDescription("");
+			setShowCreateModal(false);
+			const currentData = ontologies() || [];
+			mutate([result.value, ...currentData]);
+			notifySuccess("本体创建成功");
+		} else {
+			notifyError("创建本体失败", result.error);
+			setCreateError(getErrorMessage(result.error));
+		}
+		setIsCreating(false);
 	};
 
 	const handleDeleteOnto = async (id: number) => {

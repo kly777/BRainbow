@@ -1,6 +1,7 @@
 import { createSignal, For, Show } from "solid-js";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { notifyError } from "../../../lib/notify.ts";
+import { tryAsync } from "../../../lib/result.ts";
 import { createTimeWindowE, deleteTimeWindowE } from "../timeWindowApi.ts";
 import type { CreateTimeWindowRequest, Task, TimeWindow } from "../types.ts";
 import styles from "./EditTaskModal.module.css";
@@ -57,15 +58,16 @@ export default function TimeWindowsTab(props: TimeWindowsTabProps) {
 			window_type: newWindowType(),
 			task_id: props.task.id,
 		};
-		try {
-			const tw = await createTimeWindowE(req);
+		const result = await tryAsync(() => createTimeWindowE(req));
+		if (result.ok) {
+			const tw = result.value;
 			if (tw.window_type === "feasible") {
 				props.setFeasibleWindows([...props.feasibleWindows(), tw]);
 			} else {
 				props.setPlannedWindows([...props.plannedWindows(), tw]);
 			}
-		} catch (e) {
-			const msg = getErrorMessage(e);
+		} else {
+			const msg = getErrorMessage(result.error);
 			setError(
 				msg.includes("planned_outside")
 					? "计划时间必须在可进行时间窗口内"
@@ -77,8 +79,8 @@ export default function TimeWindowsTab(props: TimeWindowsTabProps) {
 	};
 
 	const handleDelete = async (id: number, type: string) => {
-		try {
-			await deleteTimeWindowE(id);
+		const result = await tryAsync(() => deleteTimeWindowE(id));
+		if (result.ok) {
 			if (type === "feasible") {
 				props.setFeasibleWindows(
 					props.feasibleWindows().filter((w) => w.id !== id),
@@ -88,8 +90,8 @@ export default function TimeWindowsTab(props: TimeWindowsTabProps) {
 					props.plannedWindows().filter((w) => w.id !== id),
 				);
 			}
-		} catch (e) {
-			notifyError("删除时间窗口失败", e);
+		} else {
+			notifyError("删除时间窗口失败", result.error);
 		}
 	};
 

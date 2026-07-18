@@ -1,11 +1,17 @@
 // ── 统一用户通知模块 ──
 // 封装 toastStore.showToast，提供简洁的业务层 API
 
-import { getErrorMessage } from "../apis/types/errors.ts";
+import { getErrorMessage, HttpError } from "../apis/types/errors.ts";
 import { showToast } from "../components/ui/toastStore.ts";
 
-/** 显示错误通知（带可选的原始 error 对象提取详情） */
+/**
+ * 显示错误通知（带可选的原始 error 对象提取详情）。
+ * 401 错误静默忽略 —— 登录弹窗已由 AuthStatus 统一处理。
+ */
 export function notifyError(title: string, error?: unknown): void {
+	// 401 → 登录弹窗已显示，跳过 toast 避免冗余提示
+	if (error instanceof HttpError && error.status === 401) return;
+
 	showToast({
 		type: "error",
 		title,

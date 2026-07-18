@@ -20,19 +20,19 @@ export const AUTH_REQUIRED_EVENT = "auth:required";
 
 let _authFiredAt = 0;
 
-async function triggerAuthRequired(
-	message: string,
-	code: string,
-): Promise<void> {
+/**
+ * 触发登录弹窗 + 一条集中 toast（3 秒去重防并发）。
+ * 组件层的 notifyError 对 401 静默，避免一人犯错全楼挨骂。
+ */
+async function triggerAuthRequired(): Promise<void> {
 	const now = Date.now();
-	if (now - _authFiredAt < 3000) return; // 3 秒内去重，防止并发 401 重复弹窗
+	if (now - _authFiredAt < 3000) return;
 	_authFiredAt = now;
 	globalThis.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT));
 	await toast({
 		type: "warning",
 		title: "请先登录",
-		message,
-		details: code,
+		message: "登录已过期或尚未登录",
 		duration: 4000,
 	});
 }
@@ -130,9 +130,9 @@ export async function handleGlobalError(
 	// ── 日志：所有错误统一输出 ──
 	console.error(`[API] ${status} ${endpoint} — ${code}: ${message}`);
 
-	// ── 401 → 登录弹窗 + toast ──
+	// ── 401 → 静默触发登录弹窗（AuthStatus 对话框是唯一的 UI）──
 	if (status === 401) {
-		await triggerAuthRequired(message, code);
+		await triggerAuthRequired();
 		return;
 	}
 

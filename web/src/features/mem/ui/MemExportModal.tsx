@@ -1,8 +1,8 @@
 import { createEffect, createSignal } from "solid-js";
-import type { TagInfo } from "../api.ts";
-import { downloadExportCsv, listTagsE } from "../api.ts";
 import TagSelector from "../../../components/TagSelector.tsx";
 import Modal from "../../../components/ui/Modal.tsx";
+import type { TagInfo } from "../api.ts";
+import { downloadExportCsv, listTagsE } from "../api.ts";
 
 interface Props {
 	isOpen: boolean;
@@ -17,7 +17,9 @@ export default function MemExportModal(props: Props) {
 		if (props.isOpen) {
 			listTagsE()
 				.then(setAllUserTags)
-				.catch(() => {});
+				.catch((e: unknown) => {
+					console.error("加载标签列表失败:", e);
+				});
 		}
 	});
 

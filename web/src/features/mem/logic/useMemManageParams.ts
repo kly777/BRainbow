@@ -3,10 +3,10 @@
 import { useSearchParams } from "@solidjs/router";
 import type { TagMode } from "../ui/MemManageToolbar.tsx";
 import {
-	type SortField,
 	type SortDir,
-	VALID_STATES,
+	type SortField,
 	VALID_SORT_FIELDS,
+	VALID_STATES,
 } from "./mem-manage-utils.ts";
 
 export interface UseMemManageParamsResult {

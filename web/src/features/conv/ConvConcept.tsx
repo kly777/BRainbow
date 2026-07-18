@@ -1,7 +1,7 @@
 import { A, useParams, useSearchParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
-import { getConvConceptE } from "./api.ts";
 import MarkdownRenderer from "../../components/ui/Markdown.tsx";
+import { getConvConceptE } from "./api.ts";
 import styles from "./ConvDetail.module.css";
 
 const typeLabel: Record<string, string> = {

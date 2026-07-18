@@ -6,17 +6,17 @@ import {
 	For,
 	Show,
 } from "solid-js";
+import { getErrorMessage } from "../../apis/types/index.ts";
+import { AsyncView } from "../../components/ui/AsyncView.tsx";
+import Button from "../../components/ui/Button.tsx";
+import FilterGroup from "../../components/ui/FilterGroup.tsx";
 import {
 	deleteMediaE,
 	listMediaE,
 	type MediaItem,
 	renameMediaE,
 } from "../../features/mem/mediaApi.ts";
-import { getErrorMessage } from "../../apis/types/index.ts";
-import { notifyError } from "../../lib/notify.ts";
-import { AsyncView } from "../../components/ui/AsyncView.tsx";
-import Button from "../../components/ui/Button.tsx";
-import FilterGroup from "../../components/ui/FilterGroup.tsx";
+import { showConfirm, tryOrNotify } from "../../lib/safe-action.ts";
 import styles from "./MediaList.module.css";
 
 const TABS = [
@@ -49,7 +49,8 @@ const MediaListPage: Component = () => {
 			try {
 				const r = await listMediaE(mt ? { media_type: mt } : {});
 				return r.items;
-			} catch {
+			} catch (e: unknown) {
+				console.error("加载媒体列表失败:", e);
 				return [];
 			}
 		},
@@ -60,14 +61,14 @@ const MediaListPage: Component = () => {
 	const [error, setError] = createSignal("");
 
 	const handleDelete = async (stored_id: string) => {
-		if (!confirm("确定要删除？")) return;
-		try {
-			await deleteMediaE(stored_id);
-			refetch();
-		} catch (err) {
-			notifyError("删除失败", err);
-			refetch();
-		}
+		const confirmed = await showConfirm({
+			title: "删除媒体",
+			message: "确定要删除这个媒体文件吗？此操作不可撤销。",
+			variant: "danger",
+		});
+		if (!confirmed) return;
+		await tryOrNotify(() => deleteMediaE(stored_id), "删除媒体");
+		refetch();
 	};
 
 	const startRename = (item: MediaItem) => {

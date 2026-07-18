@@ -5,6 +5,9 @@ import {
 	onMount,
 	useContext,
 } from "solid-js";
+import { getErrorMessage } from "../../../apis/types/index.ts";
+import { notifyError } from "../../../lib/notify.ts";
+import { showConfirm, tryOrNotify } from "../../../lib/safe-action.ts";
 import {
 	createTaskE as apiCreateTask,
 	deleteTaskE as apiDeleteTask,
@@ -14,8 +17,6 @@ import {
 	searchTasksE,
 } from "../api.ts";
 import type { CreateTaskRequest, Task } from "../types.ts";
-import { getErrorMessage } from "../../../apis/types/index.ts";
-import { notifyError } from "../../../lib/notify.ts";
 import {
 	fetchTasksByFilter,
 	makeTemp,
@@ -117,15 +118,16 @@ export function TaskProvider(props: { children: JSX.Element }) {
 	};
 
 	const removeTask = async (id: number) => {
-		if (!confirm("确定要删除这个任务吗？")) return;
+		const confirmed = await showConfirm({
+			title: "删除任务",
+			message: "确定要删除这个任务吗？子任务也会被一并删除。",
+			variant: "danger",
+		});
+		if (!confirmed) return;
 		const prev = tasks();
 		setTasks(prev.filter((t) => t.id !== id));
-		try {
-			await apiDeleteTask(id);
-		} catch (e) {
-			notifyError("删除任务失败", e);
-			await reload();
-		}
+		const ok = await tryOrNotify(() => apiDeleteTask(id), "删除任务");
+		if (!ok) await reload();
 	};
 
 	const updateTaskE = async (id: number, updates: Partial<Task>) => {

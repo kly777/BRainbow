@@ -2,12 +2,12 @@
 
 import { createSignal, Show } from "solid-js";
 import Modal from "../../../components/ui/Modal.tsx";
+import { callAi } from "../../../lib/ai.ts";
 import {
 	getAiSettings,
-	setAiSettings,
 	resetAiSettings,
+	setAiSettings,
 } from "../../../lib/ai-settings.ts";
-import { callAi } from "../../../lib/ai.ts";
 import styles from "../MemPage.module.css";
 
 interface AiSettingsModalProps {

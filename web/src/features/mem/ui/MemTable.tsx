@@ -1,7 +1,7 @@
 import { For, Show } from "solid-js";
-import type { MemItem, TagInfo } from "../api.ts";
-import { fmtLocal, fmtRelative } from "../../../lib/time.ts";
 import Badge from "../../../components/ui/Badge.tsx";
+import { fmtLocal, fmtRelative } from "../../../lib/time.ts";
+import type { MemItem, TagInfo } from "../api.ts";
 import styles from "./MemTable.module.css";
 
 type SortField = "cue.created_at" | "difficulty" | "due_at" | "state";

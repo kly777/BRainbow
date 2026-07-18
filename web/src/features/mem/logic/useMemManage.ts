@@ -1,6 +1,8 @@
 // ── 记忆管理模块的核心业务逻辑 ──
 
 import { createEffect, createSignal, onMount } from "solid-js";
+import { notifyError } from "../../../lib/notify.ts";
+import { showConfirm, tryOrNotify } from "../../../lib/safe-action.ts";
 import {
 	addTagToMemE,
 	batchAddTagToMemsE,
@@ -12,18 +14,18 @@ import {
 	deleteMemE,
 	editMemE,
 	getMemTagsE,
+	type MemItem,
 	removeTagFromMemE,
 	resetMemE,
 	searchTagsE,
 	suspendMemE,
-	unsuspendMemE,
-	type MemItem,
 	type TagInfo,
+	unsuspendMemE,
 } from "../api.ts";
-import { fetchAllMems } from "./mem-manage-utils.ts";
-import type { PageMeta } from "./mem-manage-utils.ts";
-import { useMemManageParams } from "./useMemManageParams.ts";
 import type { TagMode } from "../ui/MemManageToolbar.tsx";
+import type { PageMeta } from "./mem-manage-utils.ts";
+import { fetchAllMems } from "./mem-manage-utils.ts";
+import { useMemManageParams } from "./useMemManageParams.ts";
 
 let initialLoadDone = false;
 
@@ -43,7 +45,7 @@ export function useMemManage() {
 				const found = tags.find((t: TagInfo) => t.name === name);
 				if (found) all.push(found);
 			} catch {
-				/* ignore */
+				// URL 中的标签名可能已失效，忽略即可
 			}
 		}
 		setTagFiltersInternal(all);
@@ -121,7 +123,9 @@ export function useMemManage() {
 						setMemTags(map);
 					},
 				)
-				.catch(() => {});
+				.catch(() => {
+					// 标签加载失败不影响主列表
+				});
 		} else {
 			setMemTags(new Map());
 		}
@@ -170,7 +174,9 @@ export function useMemManage() {
 					return next;
 				});
 			})
-			.catch(() => {});
+			.catch(() => {
+				// 标签加载失败不影响详情展示
+			});
 	});
 
 	// ── 操作 ──
@@ -188,12 +194,16 @@ export function useMemManage() {
 			: setBatchIds(new Set(mems().map((m) => m.id)));
 
 	const handleDelete = async (id: number) => {
-		if (!confirm("确定删除？")) return;
-		try {
-			await deleteMemE(id);
-		} catch {
-			/* ignore */
-		}
+		const confirmed = await showConfirm({
+			title: "删除记忆",
+			message: "确定删除这条记忆？此操作不可撤销。",
+			variant: "danger",
+		});
+		if (!confirmed) return;
+
+		const ok = await tryOrNotify(() => deleteMemE(id), "删除");
+		if (!ok) return;
+
 		if (params.detailId() === id) params.setDetailId(null);
 		setBatchIds((prev) => {
 			const n = new Set(prev);
@@ -206,19 +216,22 @@ export function useMemManage() {
 	};
 
 	const handleReset = async (id: number) => {
-		if (!confirm("确定重置？")) return;
-		try {
-			await resetMemE(id);
-		} catch {
-			/* ignore */
-		}
+		const confirmed = await showConfirm({
+			title: "重置记忆",
+			message: "确定重置这条记忆的复习进度？所有复习数据将被清除。",
+			variant: "warning",
+		});
+		if (!confirmed) return;
+
+		await tryOrNotify(() => resetMemE(id), "重置");
 		load();
 	};
 
 	const addTag = async (tag: TagInfo) => {
 		const id = params.detailId();
 		if (id === null) return;
-		await addTagToMemE(id, tag.id);
+		const ok = await tryOrNotify(() => addTagToMemE(id, tag.id), "添加标签");
+		if (!ok) return;
 		setMemTags((prev) => {
 			const n = new Map(prev);
 			const t = n.get(id) ?? [];
@@ -230,7 +243,11 @@ export function useMemManage() {
 	const removeTag = async (tagId: number) => {
 		const id = params.detailId();
 		if (id === null) return;
-		await removeTagFromMemE(id, tagId);
+		const ok = await tryOrNotify(
+			() => removeTagFromMemE(id, tagId),
+			"移除标签",
+		);
+		if (!ok) return;
 		setMemTags((prev) => {
 			const n = new Map(prev);
 			const t = (n.get(id) ?? []).filter((t) => t.id !== tagId);
@@ -250,11 +267,11 @@ export function useMemManage() {
 	const saveEdit = async () => {
 		const d = detail();
 		if (!d) return;
-		try {
-			await editMemE(d.id, editCue(), editTarget());
-		} catch {
-			/* ignore */
-		}
+		const ok = await tryOrNotify(
+			() => editMemE(d.id, editCue(), editTarget()),
+			"保存编辑",
+		);
+		if (!ok) return;
 		setEditing(false);
 		load();
 	};
@@ -263,12 +280,16 @@ export function useMemManage() {
 	const batchDelete = async () => {
 		const ids = [...batchIds()];
 		if (ids.length === 0) return;
-		if (!confirm(`确定删除 ${ids.length} 条记忆？`)) return;
-		try {
-			await batchDeleteMemE(ids);
-		} catch {
-			/* ignore */
-		}
+		const confirmed = await showConfirm({
+			title: "批量删除",
+			message: `确定删除 ${ids.length} 条记忆？此操作不可撤销。`,
+			variant: "danger",
+			confirmLabel: "删除",
+		});
+		if (!confirmed) return;
+
+		const ok = await tryOrNotify(() => batchDeleteMemE(ids), "批量删除");
+		if (!ok) return;
 		setBatchIds(new Set<number>());
 		params.setDetailId(null);
 		load();
@@ -277,12 +298,16 @@ export function useMemManage() {
 	const batchReset = async () => {
 		const ids = [...batchIds()];
 		if (ids.length === 0) return;
-		if (!confirm(`确定重置 ${ids.length} 条记忆？`)) return;
-		try {
-			await batchResetMemE(ids);
-		} catch {
-			/* ignore */
-		}
+		const confirmed = await showConfirm({
+			title: "批量重置",
+			message: `确定重置 ${ids.length} 条记忆的复习进度？`,
+			variant: "warning",
+			confirmLabel: "重置",
+		});
+		if (!confirmed) return;
+
+		const ok = await tryOrNotify(() => batchResetMemE(ids), "批量重置");
+		if (!ok) return;
 		setBatchIds(new Set<number>());
 		load();
 	};
@@ -290,12 +315,16 @@ export function useMemManage() {
 	const batchBury = async () => {
 		const ids = [...batchIds()];
 		if (ids.length === 0) return;
-		if (!confirm(`确定埋葬 ${ids.length} 条记忆？`)) return;
-		try {
-			await batchBuryMemE(ids);
-		} catch {
-			/* ignore */
-		}
+		const confirmed = await showConfirm({
+			title: "批量埋葬",
+			message: `确定埋葬 ${ids.length} 条记忆？它们将不再出现在复习队列中。`,
+			variant: "warning",
+			confirmLabel: "埋葬",
+		});
+		if (!confirmed) return;
+
+		const ok = await tryOrNotify(() => batchBuryMemE(ids), "批量埋葬");
+		if (!ok) return;
 		setBatchIds(new Set<number>());
 		load();
 	};
@@ -303,7 +332,11 @@ export function useMemManage() {
 	const handleBatchAddTag = async (tag: TagInfo) => {
 		const ids = [...batchIds()];
 		if (ids.length === 0) return;
-		await batchAddTagToMemsE(ids, tag.id);
+		const ok = await tryOrNotify(
+			() => batchAddTagToMemsE(ids, tag.id),
+			"批量添加标签",
+		);
+		if (!ok) return;
 		setShowBatchTagModal(false);
 		load();
 	};
@@ -311,7 +344,11 @@ export function useMemManage() {
 	const handleBatchRemoveTag = async (tag: TagInfo) => {
 		const ids = [...batchIds()];
 		if (ids.length === 0) return;
-		await batchRemoveTagFromMemsE(ids, tag.id);
+		const ok = await tryOrNotify(
+			() => batchRemoveTagFromMemsE(ids, tag.id),
+			"批量移除标签",
+		);
+		if (!ok) return;
 		setShowBatchTagModal(false);
 		load();
 	};

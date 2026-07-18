@@ -6,20 +6,22 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import { createOntoE, deleteOntoE, getOntosE } from "./api.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
-import { notifyError, notifySuccess } from "../../lib/notify.ts";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import Button from "../../components/ui/Button.tsx";
 import FilterGroup from "../../components/ui/FilterGroup.tsx";
 import SearchInput from "../../components/ui/SearchInput.tsx";
+import { notifyError, notifySuccess } from "../../lib/notify.ts";
+import { showConfirm, tryOrNotify } from "../../lib/safe-action.ts";
+import { createOntoE, deleteOntoE, getOntosE } from "./api.ts";
 import styles from "./OntologyList.module.css";
 
 const OntologyListPage: Component = () => {
 	const [ontologies, { mutate, refetch }] = createResource(async () => {
 		try {
 			return await getOntosE();
-		} catch {
+		} catch (e: unknown) {
+			console.error("加载本体列表失败:", e);
 			return [];
 		}
 	});
@@ -90,29 +92,29 @@ const OntologyListPage: Component = () => {
 	};
 
 	const handleDeleteOnto = async (id: number) => {
-		if (confirm("确定要删除这个本体吗？此操作不可撤销。")) {
-			if (deletingOntoId() === id) return;
+		const confirmed = await showConfirm({
+			title: "删除本体",
+			message: "确定要删除这个本体吗？此操作不可撤销。",
+			variant: "danger",
+		});
+		if (!confirmed) return;
+		if (deletingOntoId() === id) return;
 
-			setDeletingOntoId(id);
+		setDeletingOntoId(id);
 
-			const currentData = ontologies() || [];
-			const ontoToDelete = currentData.find((onto) => onto.id === id);
-			if (ontoToDelete) {
-				mutate(currentData.filter((onto) => onto.id !== id));
-			}
-
-			deleteOntoE(id)
-				.then(() => {
-					notifySuccess("本体已删除");
-				})
-				.catch((error: unknown) => {
-					notifyError("删除本体失败", error);
-					if (ontoToDelete) mutate([...currentData]);
-				})
-				.finally(() => {
-					setDeletingOntoId(null);
-				});
+		const currentData = ontologies() || [];
+		const ontoToDelete = currentData.find((onto) => onto.id === id);
+		if (ontoToDelete) {
+			mutate(currentData.filter((onto) => onto.id !== id));
 		}
+
+		const ok = await tryOrNotify(() => deleteOntoE(id), "删除本体");
+		if (ok) {
+			notifySuccess("本体已删除");
+		} else {
+			if (ontoToDelete) mutate([...currentData]);
+		}
+		setDeletingOntoId(null);
 	};
 
 	const openCreateModal = () => {

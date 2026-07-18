@@ -2,14 +2,14 @@
 // 薄壳视图层：渲染逻辑全部来自 useMemReview hook
 
 import { A } from "@solidjs/router";
-import { Show, createResource, createSignal } from "solid-js";
-import { useMemReview } from "./logic/useMemReview.ts";
+import { createResource, createSignal, Show } from "solid-js";
 import { getUpcomingCountsE } from "./api.ts";
+import { useMemReview } from "./logic/useMemReview.ts";
+import styles from "./MemPage.module.css";
+import AiSettingsModal from "./ui/AiSettingsModal.tsx";
+import MemReviewCard from "./ui/MemReviewCard.tsx";
 import MemSidebar from "./ui/MemSidebar.tsx";
 import MemTagFilterBar from "./ui/MemTagFilterBar.tsx";
-import MemReviewCard from "./ui/MemReviewCard.tsx";
-import AiSettingsModal from "./ui/AiSettingsModal.tsx";
-import styles from "./MemPage.module.css";
 
 export default function MemPage() {
 	const m = useMemReview();
@@ -20,7 +20,8 @@ export default function MemPage() {
 		async () => {
 			try {
 				return await getUpcomingCountsE();
-			} catch {
+			} catch (e: unknown) {
+				console.error("获取待复习统计失败:", e);
 				return { within_8h: 0, within_24h: 0 };
 			}
 		},

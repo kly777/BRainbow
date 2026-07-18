@@ -7,12 +7,12 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
+import { getErrorMessage } from "../../../apis/types/index.ts";
 import { getAllTasksE, getDagE } from "../api.ts";
 import type { Task } from "../types.ts";
-import { getErrorMessage } from "../../../apis/types/index.ts";
-import { layout } from "./dag-layout.ts";
 import type { LayoutNode } from "./dag-layout.ts";
-import { drawGraph, calcAutoOffset, hitTestNode } from "./dag-render.ts";
+import { layout } from "./dag-layout.ts";
+import { calcAutoOffset, drawGraph, hitTestNode } from "./dag-render.ts";
 import styles from "./TaskDag.module.css";
 
 // ── 任务选择器 ──
@@ -65,7 +65,8 @@ export default function TaskDag() {
 		try {
 			const r = await getAllTasksE();
 			return [...r.items];
-		} catch {
+		} catch (e: unknown) {
+			console.error("获取任务列表失败:", e);
 			return [];
 		}
 	});

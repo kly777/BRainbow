@@ -30,7 +30,9 @@ export function useMemTagFilter(loadDue: () => void): UseMemTagFilterResult {
 	// 首次加载所有标签
 	listTagsE()
 		.then(setAllTags)
-		.catch(() => {});
+		.catch((e: unknown) => {
+			console.error("加载标签列表失败:", e);
+		});
 
 	const tagFilterIds = () => {
 		const v = searchParams.tag_ids;

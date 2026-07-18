@@ -1,16 +1,17 @@
 import { A, useNavigate } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
+import { getErrorMessage } from "../apis/types/index.ts";
+import { AsyncView } from "../components/ui/AsyncView.tsx";
 import {
 	deleteCardE as apiDeleteCard,
 	getCardsE,
 } from "../features/card/api.ts";
-import { getErrorMessage } from "../apis/types/index.ts";
-import { notifyError } from "../lib/notify.ts";
 import type { CardData } from "../features/card/ui/Card.tsx";
 import CardsGrid from "../features/card/ui/CardsGrid.tsx";
 import TaskList from "../features/task/ui/TaskList.tsx";
 import { TaskProvider, useTasks } from "../features/task/ui/TaskProvider.tsx";
-import { AsyncView } from "../components/ui/AsyncView.tsx";
+import { notifyError } from "../lib/notify.ts";
+import { showConfirm, tryOrNotify } from "../lib/safe-action.ts";
 import styles from "./HomePage.module.css";
 
 // 模块入口（纯文字链接）
@@ -98,14 +99,15 @@ function CardOverview() {
 	const recentCards = () => (cards() ?? []).slice(0, 4);
 
 	const handleDelete = async (id: number) => {
-		if (!confirm("确定要删除这个卡片吗？")) return;
+		const confirmed = await showConfirm({
+			title: "删除卡片",
+			message: "确定要删除这个卡片吗？此操作不可撤销。",
+			variant: "danger",
+		});
+		if (!confirmed) return;
 		mutate((prev) => prev?.filter((c) => c.id !== id));
-		try {
-			await apiDeleteCard(id);
-		} catch (e) {
-			notifyError("删除失败", e);
-			refetch();
-		}
+		const ok = await tryOrNotify(() => apiDeleteCard(id), "删除卡片");
+		if (!ok) refetch();
 	};
 
 	return (

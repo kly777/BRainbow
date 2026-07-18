@@ -1,0 +1,77 @@
+/**
+ * 全局确认对话框状态管理
+ *
+ * 提供命令式 API：await showConfirm({ title, message, variant })
+ * 类似 toastStore 的模式 —— 全局信号 + Container 组件渲染
+ *
+ * 用法：
+ *   import { showConfirm } from "./confirmStore";
+ *   const ok = await showConfirm({ title: "删除", message: "确定？", variant: "danger" });
+ *   if (!ok) return;
+ */
+
+import { createSignal } from "solid-js";
+
+// ==================== Types ====================
+
+export type ConfirmVariant = "danger" | "warning" | "info";
+
+export interface ConfirmOptions {
+	title: string;
+	message: string;
+	variant?: ConfirmVariant;
+	confirmLabel?: string;
+	cancelLabel?: string;
+}
+
+interface ConfirmItem {
+	id: number;
+	options: ConfirmOptions;
+	resolve: (value: boolean) => void;
+}
+
+// ==================== Global State ====================
+
+const [items, setItems] = createSignal<ConfirmItem[]>([]);
+let nextId = 1;
+
+// ==================== Public API ====================
+
+/**
+ * 弹出确认对话框，返回 Promise<boolean>。
+ * 用户点击"确认" → resolve(true)，点击"取消"或按 Escape → resolve(false)。
+ */
+export function showConfirm(options: ConfirmOptions): Promise<boolean> {
+	return new Promise((resolve) => {
+		const id = nextId++;
+		const item: ConfirmItem = { id, options, resolve };
+
+		setItems((prev) => [...prev, item]);
+
+		// 清理：无论 resolve 与否，超时后确保从列表移除
+		const cleanup = () => {
+			setItems((prev) => prev.filter((i) => i.id !== id));
+		};
+
+		// 包装 resolve 以触发清理
+		const wrappedResolve = (value: boolean) => {
+			cleanup();
+			resolve(value);
+		};
+
+		// 替换原始的 resolve
+		item.resolve = wrappedResolve;
+	});
+}
+
+/**
+ * 关闭所有确认对话框（用于路由切换等场景）
+ */
+export function dismissAllConfirms(): void {
+	for (const item of items()) {
+		item.resolve(false);
+	}
+	setItems([]);
+}
+
+export { items as confirms };

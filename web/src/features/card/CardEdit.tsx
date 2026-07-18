@@ -6,15 +6,16 @@ import {
 	createSignal,
 	Show,
 } from "solid-js";
-import { deleteCardE, getCardE, updateCardE } from "./api.ts";
-import type { UpdateCardRequest } from "./types.ts";
 import { getErrorMessage } from "../../apis/types/index.ts";
 import { AsyncView } from "../../components/ui/AsyncView.tsx";
 import Breadcrumb from "../../components/ui/Breadcrumb.tsx";
 import Button from "../../components/ui/Button.tsx";
 import MarkdownEditor from "../../components/ui/MarkdownEditor.tsx";
 import Toolbar from "../../components/ui/Toolbar.tsx";
+import { showConfirm, tryOrNotify } from "../../lib/safe-action.ts";
+import { deleteCardE, getCardE, updateCardE } from "./api.ts";
 import styles from "./CardEdit.module.css";
+import type { UpdateCardRequest } from "./types.ts";
 
 const CardEditPage: Component = () => {
 	const params = useParams();
@@ -60,13 +61,14 @@ const CardEditPage: Component = () => {
 	};
 
 	const handleDelete = async () => {
-		if (!confirm("确定要删除？")) return;
-		try {
-			await deleteCardE(cardId());
-			navigate("/c");
-		} catch {
-			/* ignore */
-		}
+		const confirmed = await showConfirm({
+			title: "删除卡片",
+			message: "确定要删除这个卡片吗？此操作不可撤销。",
+			variant: "danger",
+		});
+		if (!confirmed) return;
+		const ok = await tryOrNotify(() => deleteCardE(cardId()), "删除卡片");
+		if (ok) navigate("/c");
 	};
 
 	return (

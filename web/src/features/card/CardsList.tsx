@@ -2,13 +2,13 @@
 
 import { useNavigate } from "@solidjs/router";
 import { onMount, Show } from "solid-js";
-import { getCardsE, searchCardsE } from "./api.ts";
-import type { PaginatedCards } from "./api.ts";
-import CardsGrid from "./ui/CardsGrid.tsx";
 import Button from "../../components/ui/Button.tsx";
 import MarkdownRenderer from "../../components/ui/Markdown.tsx";
-import { useCardsList } from "./logic/useCardsList.ts";
+import type { PaginatedCards } from "./api.ts";
+import { getCardsE, searchCardsE } from "./api.ts";
 import styles from "./CardsList.module.css";
+import { useCardsList } from "./logic/useCardsList.ts";
+import CardsGrid from "./ui/CardsGrid.tsx";
 
 export default function CardsListPage() {
 	const navigate = useNavigate();

@@ -2,11 +2,12 @@
 
 import { useSearchParams } from "@solidjs/router";
 import { createSignal } from "solid-js";
-import { createCardE, deleteCardE, getCardsE, searchCardsE } from "../api.ts";
-import type { Card, CreateCardRequest } from "../types.ts";
-import type { PaginatedCards } from "../api.ts";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { showToast } from "../../../components/ui/toastStore.ts";
+import { showConfirm, tryOrNotify } from "../../../lib/safe-action.ts";
+import type { PaginatedCards } from "../api.ts";
+import { createCardE, deleteCardE, getCardsE, searchCardsE } from "../api.ts";
+import type { Card, CreateCardRequest } from "../types.ts";
 
 export function useCardsList() {
 	const [cards, setCards] = createSignal<Card[]>([]);
@@ -34,30 +35,37 @@ export function useCardsList() {
 			setPage(result.page);
 			setTotalPages(result.total_pages);
 		} catch {
-			/* ignore */
+			// 全局错误处理已 toast，此处仅保留加载状态
 		}
 	};
 
 	const handleCardDelete = async (id: number) => {
-		if (!confirm("确定要删除这个卡片吗？此操作不可撤销。")) return;
+		const confirmed = await showConfirm({
+			title: "删除卡片",
+			message: "确定要删除这个卡片吗？此操作不可撤销。",
+			variant: "danger",
+		});
+		if (!confirmed) return;
 		if (deletingCardId() === id) return;
+
 		setDeletingCardId(id);
 		const current = cards();
 		const cardToDelete = current.find((c) => c.id === id);
 		if (cardToDelete) setCards(current.filter((c) => c.id !== id));
-		try {
-			await deleteCardE(id);
+
+		const ok = await tryOrNotify(() => deleteCardE(id), "删除卡片");
+		if (!ok) {
+			// 回滚
+			if (cardToDelete) setCards([...current]);
+		} else {
 			showToast({
 				type: "success",
 				title: "卡片已删除",
 				message: "",
 				duration: 3000,
 			});
-		} catch {
-			if (cardToDelete) setCards([...current]);
-		} finally {
-			setDeletingCardId(null);
 		}
+		setDeletingCardId(null);
 	};
 
 	const handleCreateCard = async () => {
@@ -100,7 +108,7 @@ export function useCardsList() {
 			setPage(result.page);
 			setTotalPages(result.total_pages);
 		} catch {
-			/* global toast handled */
+			// 全局错误处理已 toast
 		}
 	};
 
@@ -120,7 +128,7 @@ export function useCardsList() {
 			setPage(result.page);
 			setTotalPages(result.total_pages);
 		} catch {
-			/* ignore */
+			// 全局错误处理已 toast
 		} finally {
 			setLoading(false);
 		}
@@ -146,7 +154,7 @@ export function useCardsList() {
 				setHasMore(false);
 			}
 		} catch {
-			/* ignore */
+			// 全局错误处理已 toast
 		} finally {
 			setLoadingMore(false);
 		}

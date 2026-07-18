@@ -1,6 +1,5 @@
 // ── TaskProvider 的纯函数和 API 调度映射 ──
 
-import type { CreateTaskRequest, Task } from "../types.ts";
 import {
 	activateTaskE,
 	archiveTaskE,
@@ -11,6 +10,7 @@ import {
 	getCompletedTasksE,
 	moveToBacklogE,
 } from "../api.ts";
+import type { CreateTaskRequest, Task } from "../types.ts";
 
 /** 生成临时任务对象（乐观更新用） */
 export function makeTemp(req: CreateTaskRequest): Task {

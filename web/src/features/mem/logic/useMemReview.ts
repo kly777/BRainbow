@@ -9,13 +9,10 @@ import {
 	onMount,
 } from "solid-js";
 import { request } from "../../../apis/request.ts";
-import type {
-	DueResponse,
-	MemCounts,
-	MemItem,
-	SessionEstimate,
-	TagInfo,
-} from "../model.ts";
+import { callAi } from "../../../lib/ai.ts";
+import { fillPrompt, getAiSettings } from "../../../lib/ai-settings.ts";
+import { notifyError } from "../../../lib/notify.ts";
+import { tryOrNotify } from "../../../lib/safe-action.ts";
 import {
 	buryMemE,
 	editMemE,
@@ -28,11 +25,15 @@ import {
 	setMnemonicE,
 	suspendMemE,
 } from "../api.ts";
-import { calcAvgCardTime, calcMaxLearning, ALPHA } from "./mem-calcs.ts";
+import type {
+	DueResponse,
+	MemCounts,
+	MemItem,
+	SessionEstimate,
+	TagInfo,
+} from "../model.ts";
+import { ALPHA, calcAvgCardTime, calcMaxLearning } from "./mem-calcs.ts";
 import { useMemTagFilter } from "./useMemTagFilter.ts";
-import { callAi } from "../../../lib/ai.ts";
-import { fillPrompt, getAiSettings } from "../../../lib/ai-settings.ts";
-import { notifyError } from "../../../lib/notify.ts";
 
 // ── Hook ──
 
@@ -153,6 +154,7 @@ export function useMemReview(): UseMemReview {
 			const res = await callAi({
 				messages: [{ role: "user", content: prompt }],
 			});
+			// 保存助记到后端（失败不影响用户体验——本地已缓存）
 			await setMnemonicE(it.id, res.content).catch(() => {});
 			setMnemonics((prev) => {
 				const next = new Map(prev);
@@ -199,7 +201,7 @@ export function useMemReview(): UseMemReview {
 				});
 			}
 		} catch {
-			/* ignore */
+			// 助记词加载是可选的增强功能，失败不影响复习
 		}
 	};
 
@@ -209,7 +211,7 @@ export function useMemReview(): UseMemReview {
 		try {
 			setIntervals((await previewMemE(id)).intervals);
 		} catch {
-			/* ignore */
+			// 预览加载失败不影响复习流程
 		}
 	};
 
@@ -217,7 +219,7 @@ export function useMemReview(): UseMemReview {
 		try {
 			setCounts(await getMemCountsE());
 		} catch {
-			/* ignore */
+			// 统计加载失败不影响复习
 		}
 	};
 
@@ -252,7 +254,9 @@ export function useMemReview(): UseMemReview {
 				setAllFar(data.all_far);
 				getSessionEstimateE()
 					.then((est: SessionEstimate) => setEstimatedTotal(est.total_estimate))
-					.catch(() => {});
+					.catch(() => {
+						// 预估失败不影响复习
+					});
 				setDue([...data.items]);
 				_setCurrent(0);
 				setCardStart(Date.now());
@@ -266,7 +270,7 @@ export function useMemReview(): UseMemReview {
 				}
 			}
 		} catch {
-			/* ignore */
+			// 加载复习队列失败，显示空状态
 		}
 		setLoading(false);
 	};
@@ -305,11 +309,8 @@ export function useMemReview(): UseMemReview {
 				due_at: it.due_at,
 			},
 		};
-		try {
-			await reviewMemE(it.id, rating);
-		} catch {
-			/* ignore */
-		}
+		const ok = await tryOrNotify(() => reviewMemE(it.id, rating), "评分");
+		if (!ok) return;
 		setAvgRating((prev) => prev * (1 - ALPHA) + rating * ALPHA);
 		const elapsed = Math.min((Date.now() - cardStart()) / 1000, 300);
 		setCardDurations((prev) => [...prev, elapsed].slice(-30));
@@ -341,25 +342,22 @@ export function useMemReview(): UseMemReview {
 	const bury = async () => {
 		const it = item();
 		if (it) {
-			try {
-				await buryMemE(it.id);
-			} catch {
-				/* ignore */
-			}
-			advanceQueue();
+			const ok = await tryOrNotify(() => buryMemE(it.id), "埋葬");
+			if (ok) advanceQueue();
 		}
 	};
 
 	const undo = async () => {
 		if (!lastAction) return;
-		try {
-			await request(`/mem/${lastAction.id}/undo`, {
-				method: "POST",
-				body: JSON.stringify(lastAction.undoData),
-			});
-		} catch {
-			/* ignore */
-		}
+		const ok = await tryOrNotify(
+			() =>
+				request(`/mem/${lastAction!.id}/undo`, {
+					method: "POST",
+					body: JSON.stringify(lastAction!.undoData),
+				}),
+			"撤销评分",
+		);
+		if (!ok) return;
 		setShowUndo(false);
 		loadDue();
 	};
@@ -367,12 +365,8 @@ export function useMemReview(): UseMemReview {
 	const resumeSuspend = async () => {
 		const it = item();
 		if (it) {
-			try {
-				await suspendMemE(it.id);
-			} catch {
-				/* ignore */
-			}
-			loadDue();
+			const ok = await tryOrNotify(() => suspendMemE(it.id), "暂停");
+			if (ok) loadDue();
 		}
 	};
 
@@ -388,23 +382,26 @@ export function useMemReview(): UseMemReview {
 	const saveEdit = async () => {
 		const it = item();
 		if (it) {
-			try {
-				await editMemE(it.id, editCue(), editTarget());
-				setDue((prev) => {
-					const next = [...prev];
-					const idx = current();
-					if (idx >= 0 && idx < next.length) {
-						next[idx] = {
-							...next[idx],
-							cue: { ...next[idx].cue, content: editCue() },
-							target: { ...next[idx].target, content: editTarget() },
-						};
-					}
-					return next;
-				});
-			} catch {
-				/* ignore */
+			const ok = await tryOrNotify(
+				() => editMemE(it.id, editCue(), editTarget()),
+				"保存编辑",
+			);
+			if (!ok) {
+				_setEditing(false);
+				return;
 			}
+			setDue((prev) => {
+				const next = [...prev];
+				const idx = current();
+				if (idx >= 0 && idx < next.length) {
+					next[idx] = {
+						...next[idx],
+						cue: { ...next[idx].cue, content: editCue() },
+						target: { ...next[idx].target, content: editTarget() },
+					};
+				}
+				return next;
+			});
 			_setEditing(false);
 		}
 	};

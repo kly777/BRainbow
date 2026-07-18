@@ -5,14 +5,14 @@ import {
 	For,
 	Show,
 } from "solid-js";
+import { getErrorMessage } from "../../../apis/types/index.ts";
+import { notifyError } from "../../../lib/notify.ts";
 import {
 	addTaskDependencyE,
 	getTaskDetailE,
 	removeTaskDependencyE,
 } from "../api.ts";
 import type { Task } from "../types.ts";
-import { getErrorMessage } from "../../../apis/types/index.ts";
-import { notifyError } from "../../../lib/notify.ts";
 import styles from "./EditTaskModal.module.css";
 
 interface DependenciesTabProps {

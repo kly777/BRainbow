@@ -1,5 +1,4 @@
 // ── 阅读详情页核心逻辑 ──
-import type { ArticleDetail } from "../api.ts";
 
 import { useParams } from "@solidjs/router";
 import {
@@ -8,6 +7,7 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
+import type { ArticleDetail } from "../api.ts";
 import {
 	getArticle,
 	getArticleNotes,

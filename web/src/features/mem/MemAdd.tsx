@@ -3,7 +3,7 @@
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 import MarkdownEditor from "../../components/ui/MarkdownEditor.tsx";
-import { useMemAdd, type PreviewRow } from "./logic/useMemAdd.ts";
+import { type PreviewRow, useMemAdd } from "./logic/useMemAdd.ts";
 import styles from "./MemAdd.module.css";
 
 export default function MemAdd() {

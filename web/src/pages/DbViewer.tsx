@@ -36,9 +36,7 @@ const DB: Component = () => {
 		const result = await tryAsync(() => getTableDataE(name));
 		if (result.ok) {
 			setColumns([...result.value.header]);
-			setRows(
-				result.value.rows.map((row) => row.map((v) => String(v ?? ""))),
-			);
+			setRows(result.value.rows.map((row) => row.map((v) => String(v ?? ""))));
 		} else {
 			setError(getErrorMessage(result.error));
 		}

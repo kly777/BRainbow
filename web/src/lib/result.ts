@@ -153,7 +153,10 @@ export function match<T, E, R>(
  * @example
  *   tap(ok(user), u => console.log("loaded:", u.name))
  */
-export function tap<T, E>(r: Result<T, E>, fn: (value: T) => void): Result<T, E> {
+export function tap<T, E>(
+	r: Result<T, E>,
+	fn: (value: T) => void,
+): Result<T, E> {
 	if (r.ok) fn(r.value);
 	return r;
 }

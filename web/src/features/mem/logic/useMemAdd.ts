@@ -140,7 +140,10 @@ export function useMemAdd() {
 		}
 		const result = await tryAsync(async () => {
 			const text = await file.text();
-			return parseImportFile(text, file.name).map((r) => ({ ...r, selected: true }));
+			return parseImportFile(text, file.name).map((r) => ({
+				...r,
+				selected: true,
+			}));
 		});
 		if (result.ok) {
 			setPreviewRows(result.value);

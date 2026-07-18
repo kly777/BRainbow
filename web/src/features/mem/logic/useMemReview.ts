@@ -25,12 +25,7 @@ import {
 	setMnemonicE,
 	suspendMemE,
 } from "../api.ts";
-import type {
-	DueResponse,
-	MemCounts,
-	MemItem,
-	TagInfo,
-} from "../model.ts";
+import type { DueResponse, MemCounts, MemItem, TagInfo } from "../model.ts";
 import { ALPHA, calcAvgCardTime, calcMaxLearning } from "./mem-calcs.ts";
 import { useMemTagFilter } from "./useMemTagFilter.ts";
 

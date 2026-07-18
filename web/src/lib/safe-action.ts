@@ -28,7 +28,16 @@ import type { ConfirmOptions } from "../components/ui/confirmStore.ts";
 
 // Re-export 以便统一导入
 export { show as showConfirm };
-export { tryAsync, ok, err, map, flatMap, unwrapOr, match, type Result } from "./result.ts";
+export {
+	tryAsync,
+	ok,
+	err,
+	map,
+	flatMap,
+	unwrapOr,
+	match,
+	type Result,
+} from "./result.ts";
 
 /**
  * 执行异步函数，失败时自动调用 notifyError。

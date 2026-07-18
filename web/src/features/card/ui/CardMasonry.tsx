@@ -1,4 +1,4 @@
-import { type Component, For, Show } from "solid-js";
+import { type Component, createEffect, For, Show } from "solid-js";
 import Card, { type CardData } from "./Card.tsx";
 import styles from "./CardMasonry.module.css";
 
@@ -48,6 +48,19 @@ const CardMasonry: Component<CardMasonryProps> = (props) => {
 		e.preventDefault();
 		scrollRef.scrollLeft += e.deltaY;
 	};
+
+	// 内容未撑满时自动加载下一页，直到填满视口或没有更多
+	createEffect(() => {
+		props.cards.length; // 依赖卡片变化
+		props.loadingMore;  // 依赖加载状态
+		queueMicrotask(() => {
+			if (!scrollRef || !props.onLoadMore || props.loadingMore) return;
+			const { scrollWidth, clientWidth } = scrollRef;
+			if (scrollWidth <= clientWidth + 2) {
+				props.onLoadMore();
+			}
+		});
+	});
 
 	return (
 		<Show

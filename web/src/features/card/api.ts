@@ -45,7 +45,11 @@ export const deleteCardE = (id: number): Promise<void> =>
 		method: "DELETE",
 	}).then((r) => tapInvalidate(CACHE.cards, r));
 
-export const searchCardsE = (query: string, page = 1, pageSize = 20): Promise<PaginatedCards> =>
+export const searchCardsE = (
+	query: string,
+	page = 1,
+	pageSize = 20,
+): Promise<PaginatedCards> =>
 	cachedRequest(
 		`/cards/search?q=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}`,
 		{},

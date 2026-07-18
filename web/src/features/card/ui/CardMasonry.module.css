@@ -3,7 +3,7 @@
 	column-count: auto;
 	column-gap: var(--space-xl);
 	width: 100%;
-	flex:1;
+	flex: 1;
 	overflow-x: auto;
 	display: flex;
 	flex-direction: column;

@@ -35,7 +35,15 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 	});
 
 	return (
-		<div style={{ flex: 1, "min-height": 0, "overflow-y": "auto", display: "flex", "flex-direction": "column" }}>
+		<div
+			style={{
+				flex: 1,
+				"min-height": 0,
+				"overflow-y": "auto",
+				display: "flex",
+				"flex-direction": "column",
+			}}
+		>
 			{props.showFilters !== false && (
 				<CardFilter
 					onSearch={props.onSearch}

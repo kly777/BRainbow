@@ -52,7 +52,7 @@ const CardMasonry: Component<CardMasonryProps> = (props) => {
 	// 内容未撑满时自动加载下一页，直到填满视口或没有更多
 	createEffect(() => {
 		props.cards.length; // 依赖卡片变化
-		props.loadingMore;  // 依赖加载状态
+		props.loadingMore; // 依赖加载状态
 		queueMicrotask(() => {
 			if (!scrollRef || !props.onLoadMore || props.loadingMore) return;
 			const { scrollWidth, clientWidth } = scrollRef;
@@ -71,7 +71,12 @@ const CardMasonry: Component<CardMasonryProps> = (props) => {
 				</div>
 			}
 		>
-			<div ref={scrollRef} class={styles.cardsGrid} onScroll={handleScroll} onWheel={handleWheel}>
+			<div
+				ref={scrollRef}
+				class={styles.cardsGrid}
+				onScroll={handleScroll}
+				onWheel={handleWheel}
+			>
 				<For each={props.cards}>
 					{(card) => (
 						<Card

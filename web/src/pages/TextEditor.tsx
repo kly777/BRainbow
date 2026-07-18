@@ -1,6 +1,7 @@
 import { createSignal, For, onCleanup, onMount } from "solid-js";
 import styles from "./TextEditor.module.css";
 import { loadTextE, saveTextE } from "./textApi.ts";
+import { notifyError } from "../lib/notify.ts";
 
 let _saveTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -11,7 +12,7 @@ async function load(): Promise<{ name: string; content: string }[]> {
 			return res.tabs.map((t) => ({ name: t.name, content: t.content }));
 		}
 	} catch (e: unknown) {
-		console.error("加载文本失败:", e);
+		notifyError("加载文本失败", e);
 	}
 	return [
 		{ name: "笔记 1", content: "" },
@@ -24,7 +25,7 @@ async function save(tabs: { name: string; content: string }[]): Promise<void> {
 	try {
 		await saveTextE(tabs);
 	} catch (e: unknown) {
-		console.error("自动保存文本失败:", e);
+		notifyError("自动保存文本失败", e);
 	}
 }
 

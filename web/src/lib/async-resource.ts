@@ -1,8 +1,9 @@
 // ── 异步数据加载 hook：消除手动 loading / error 样板代码 ──
 
-import { createSignal, onMount, type Signal } from "solid-js";
+import { createSignal, onMount } from "solid-js";
 import { getErrorMessage } from "../apis/types/index.ts";
 import { showToast } from "../components/ui/toastStore.ts";
+import { tryAsync, type Result } from "./result.ts";
 
 /** useAsyncResource 的返回类型 */
 export interface AsyncResource<T> {
@@ -50,16 +51,16 @@ export function useAsyncResource<T>(
 	async function load() {
 		setLoading(true);
 		setError(null);
-		try {
-			const result = await fetcher();
-			setData(() => result);
-		} catch (err: unknown) {
-			const msg = getErrorMessage(err);
+
+		const result = await tryAsync(fetcher);
+		if (result.ok) {
+			setData(() => result.value);
+		} else {
+			const msg = getErrorMessage(result.error);
 			setError(msg);
-			(options?.onError ?? defaultOnError)(err);
-		} finally {
-			setLoading(false);
+			(options?.onError ?? defaultOnError)(result.error);
 		}
+		setLoading(false);
 	}
 
 	onMount(() => {

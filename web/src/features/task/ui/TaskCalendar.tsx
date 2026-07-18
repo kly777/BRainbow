@@ -1,5 +1,6 @@
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { getErrorMessage } from "../../../apis/types/index.ts";
+import { notifyError } from "../../../lib/notify.ts";
 import { getCalendarEventsE } from "../api.ts";
 import type { CalendarEvent } from "../types.ts";
 import styles from "./TaskCalendar.module.css";
@@ -43,7 +44,7 @@ export default function TaskCalendar() {
 		try {
 			return await getCalendarEventsE(range.start, range.end);
 		} catch (e) {
-			console.error("获取日历事件失败:", getErrorMessage(e));
+			notifyError("获取日历事件失败", e);
 			return [];
 		}
 	});

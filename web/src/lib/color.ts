@@ -1,4 +1,4 @@
-// Simple Option type, no dependencies
+import { trySync, unwrapOrNull } from "./result.ts";
 
 /**
  * 颜色类 — 内部以 CIE XYZ 存储。
@@ -74,11 +74,7 @@ export class Color {
 	}
 
 	static fromHex(hex: string): Color | null {
-		try {
-			return Color.#parseHex(hex);
-		} catch {
-			return null;
-		}
+		return unwrapOrNull(trySync(() => Color.#parseHex(hex)));
 	}
 
 	static fromHsl(hsl: Hsl): Color {

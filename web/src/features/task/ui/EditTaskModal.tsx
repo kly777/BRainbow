@@ -1,6 +1,7 @@
 import { createEffect, createSignal, Show } from "solid-js";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import Modal from "../../../components/ui/Modal.tsx";
+import { notifyError } from "../../../lib/notify.ts";
 import { getTimeWindowsE } from "../timeWindowApi.ts";
 import type { Task, TimeWindow } from "../types.ts";
 import BasicInfoTab from "./BasicInfoTab.tsx";
@@ -44,7 +45,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 			setFeasibleWindows([...feasible]);
 			setPlannedWindows([...planned]);
 		} catch (e) {
-			console.error("加载时间窗口失败:", getErrorMessage(e));
+			notifyError("加载时间窗口失败", e);
 		}
 	};
 

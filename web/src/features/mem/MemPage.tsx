@@ -5,6 +5,7 @@ import { A } from "@solidjs/router";
 import { createResource, createSignal, Show } from "solid-js";
 import { getUpcomingCountsE } from "./api.ts";
 import { useMemReview } from "./logic/useMemReview.ts";
+import { notifyError } from "../../lib/notify.ts";
 import styles from "./MemPage.module.css";
 import AiSettingsModal from "./ui/AiSettingsModal.tsx";
 import MemReviewCard from "./ui/MemReviewCard.tsx";
@@ -21,7 +22,7 @@ export default function MemPage() {
 			try {
 				return await getUpcomingCountsE();
 			} catch (e: unknown) {
-				console.error("获取待复习统计失败:", e);
+				notifyError("获取待复习统计失败", e);
 				return { within_8h: 0, within_24h: 0 };
 			}
 		},

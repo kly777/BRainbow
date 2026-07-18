@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createMemo, createSignal } from "solid-js";
 import { showToast } from "../../../components/ui/toastStore.ts";
 import { parseBatch, parseImportFile } from "../../../lib/delimited.ts";
-import { notifyError } from "../../../lib/notify.ts";
+import { tryAsync, trySync, match } from "../../../lib/result.ts";
 import { tryOrNotify } from "../../../lib/safe-action.ts";
 import { importJsonE } from "../api.ts";
 
@@ -77,7 +77,7 @@ export function useMemAdd() {
 		const trimmed = text.trim();
 		if (!trimmed) return [];
 		if (trimmed.startsWith("[")) {
-			try {
+			const result = trySync(() => {
 				const items = JSON.parse(trimmed);
 				return (Array.isArray(items) ? items : [])
 					.map((i: { cue?: string; target?: string; tags?: string[] }) => ({
@@ -87,9 +87,9 @@ export function useMemAdd() {
 						selected: true,
 					}))
 					.filter((r: PreviewRow) => r.cue && r.target);
-			} catch {
-				/* fallthrough */
-			}
+			});
+			if (result.ok) return result.value;
+			// JSON 解析失败 → fallthrough 到分隔符解析
 		}
 		return parseBatch(trimmed).map((p) => ({ ...p, tags: [], selected: true }));
 	}
@@ -97,29 +97,29 @@ export function useMemAdd() {
 	// ── 导入执行 ──
 	const doImport = async (rows: PreviewRow[]) => {
 		setImporting(true);
-		try {
-			const tags = importDefaultTags()
-				.split(/[;,]/)
-				.map((s) => s.trim())
-				.filter(Boolean);
-			const mems = rows.map((r) => ({
-				cue: r.cue,
-				target: r.target,
-				tags: r.tags,
-			}));
-			setImportResult(
-				await importJsonE(mems, tags.length > 0 ? tags : undefined),
-			);
-		} catch (err: unknown) {
+		const tags = importDefaultTags()
+			.split(/[;,]/)
+			.map((s) => s.trim())
+			.filter(Boolean);
+		const mems = rows.map((r) => ({
+			cue: r.cue,
+			target: r.target,
+			tags: r.tags,
+		}));
+		const result = await tryAsync(() =>
+			importJsonE(mems, tags.length > 0 ? tags : undefined),
+		);
+		if (result.ok) {
+			setImportResult(result.value);
+		} else {
 			showToast({
 				type: "error",
 				title: "导入失败",
-				message: String(err),
+				message: result.error.message,
 				duration: 5000,
 			});
-		} finally {
-			setImporting(false);
 		}
+		setImporting(false);
 	};
 
 	const handlePasteImport = async () => {
@@ -138,14 +138,15 @@ export function useMemAdd() {
 			setPreviewRows([]);
 			return;
 		}
-		try {
+		const result = await tryAsync(async () => {
 			const text = await file.text();
-			setPreviewRows(
-				parseImportFile(text, file.name).map((r) => ({ ...r, selected: true })),
-			);
+			return parseImportFile(text, file.name).map((r) => ({ ...r, selected: true }));
+		});
+		if (result.ok) {
+			setPreviewRows(result.value);
 			setParseError("");
-		} catch (err) {
-			setParseError(String(err));
+		} else {
+			setParseError(result.error.message);
 			setPreviewRows([]);
 		}
 	}

@@ -8,6 +8,7 @@ import {
 	Show,
 } from "solid-js";
 import { getErrorMessage } from "../../../apis/types/index.ts";
+import { notifyError } from "../../../lib/notify.ts";
 import { getAllTasksE, getDagE } from "../api.ts";
 import type { Task } from "../types.ts";
 import type { LayoutNode } from "./dag-layout.ts";
@@ -54,7 +55,7 @@ export default function TaskDag() {
 			try {
 				return await getDagE(taskId, d);
 			} catch (e) {
-				console.error("获取依赖图失败:", getErrorMessage(e));
+				notifyError("获取依赖图失败", e);
 				return { nodes: [], edges: [] };
 			}
 		},
@@ -66,7 +67,7 @@ export default function TaskDag() {
 			const r = await getAllTasksE();
 			return [...r.items];
 		} catch (e: unknown) {
-			console.error("获取任务列表失败:", e);
+			notifyError("获取任务列表失败", e);
 			return [];
 		}
 	});

@@ -3,6 +3,8 @@
 import { getAllMemsE } from "../api.ts";
 import type { MemItem, TagInfo } from "../model.ts";
 import type { TagMode } from "../ui/MemManageToolbar.tsx";
+import { tryAsync, unwrapOr } from "../../../lib/result.ts";
+import { notifyError } from "../../../lib/notify.ts";
 
 // ── 类型 ──
 
@@ -46,9 +48,9 @@ export async function fetchAllMems(
 	tagMode: TagMode,
 	page: number,
 ): Promise<{ items: MemItem[]; meta: PageMeta }> {
-	try {
-		const tagIds = tagFilters.map((t) => t.id).join(",");
-		const res = await getAllMemsE({
+	const tagIds = tagFilters.map((t) => t.id).join(",");
+	const result = await tryAsync(() =>
+		getAllMemsE({
 			sort: sortField,
 			order: sortDir,
 			q: search || undefined,
@@ -57,13 +59,17 @@ export async function fetchAllMems(
 			exclude_tag_ids: tagMode === "exclude" ? tagIds || undefined : undefined,
 			page,
 			page_size: 50,
-		});
+		}),
+	);
+
+	if (result.ok) {
+		const res = result.value;
 		return {
 			items: res.items,
 			meta: { page: res.page, total_pages: res.total_pages, total: res.total },
 		};
-	} catch (e: unknown) {
-		console.error("获取记忆列表失败:", e);
-		return { items: [], meta: { page: 1, total_pages: 0, total: 0 } };
 	}
+
+	notifyError("获取记忆列表失败", result.error);
+	return { items: [], meta: { page: 1, total_pages: 0, total: 0 } };
 }

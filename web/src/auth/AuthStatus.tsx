@@ -1,7 +1,7 @@
 import { createSignal, onCleanup, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import { AUTH_REQUIRED_EVENT } from "../apis/request.ts";
-import { getErrorMessage } from "../apis/types/index.ts";
+import { tryAsync } from "../lib/result.ts";
 import styles from "./AuthStatus.module.css";
 import { changePasswordE, loginE, logoutE, registerE } from "./api.ts";
 import { useAuth } from "./context.tsx";
@@ -57,36 +57,36 @@ export default function AuthStatus() {
 	const handleSubmit = async (e: Event) => {
 		e.preventDefault();
 		setError("");
+
 		if (dialogMode() === "password") {
-			try {
-				await changePasswordE(oldPassword(), newPassword());
+			const result = await tryAsync(() =>
+				changePasswordE(oldPassword(), newPassword()),
+			);
+			if (result.ok) {
 				setShowForm(false);
-			} catch (e) {
-				setError(getErrorMessage(e));
+			} else {
+				setError(result.error.message);
 			}
 			return;
 		}
-		try {
-			const user = await (isRegister() ? registerE : loginE)(
-				name(),
-				password(),
-			);
-			const { id, name: uname, role, token } = user;
+
+		const result = await tryAsync(() =>
+			(isRegister() ? registerE : loginE)(name(), password()),
+		);
+		if (result.ok) {
+			const { id, name: uname, role, token } = result.value;
 			authLogin(id, uname, role, token);
 			setShowForm(false);
 			// 登录后刷新页面
 			window.location.reload();
-		} catch (e) {
-			setError(getErrorMessage(e));
+		} else {
+			setError(result.error.message);
 		}
 	};
 
 	const _handleLogout = async () => {
-		try {
-			await logoutE();
-		} catch {
-			/* ignore network errors — local logout anyway */
-		}
+		// 登出失败不影响本地 logout
+		await tryAsync(() => logoutE());
 		logout();
 	};
 

@@ -1,5 +1,6 @@
 import { createResource, createSignal, For, Show } from "solid-js";
 import { createTagE, searchTagsE, type TagInfo } from "../features/mem/api.ts";
+import { tryAsync } from "../lib/result.ts";
 import styles from "./TagSelector.module.css";
 
 interface Props {
@@ -40,16 +41,14 @@ export default function TagSelector(props: Props) {
 		const name = query().trim();
 		if (!name) return;
 		setCreating(true);
-		try {
-			const tag = await createTagE(name);
-			props.onAdd(tag);
+		const result = await tryAsync(() => createTagE(name));
+		if (result.ok) {
+			props.onAdd(result.value);
 			setQuery("");
 			setOpen(false);
-		} catch {
-			/* toast handled globally */
-		} finally {
-			setCreating(false);
 		}
+		// toast handled globally by request.ts
+		setCreating(false);
 	};
 
 	const handleKeyDown = (e: KeyboardEvent) => {

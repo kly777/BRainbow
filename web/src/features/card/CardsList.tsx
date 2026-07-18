@@ -4,7 +4,7 @@ import { useNavigate } from "@solidjs/router";
 import { onMount, Show } from "solid-js";
 import Button from "../../components/ui/Button.tsx";
 import MarkdownRenderer from "../../components/ui/Markdown.tsx";
-import type { PaginatedCards } from "./api.ts";
+import { tryAsync } from "../../lib/result.ts";
 import { getCardsE, searchCardsE } from "./api.ts";
 import styles from "./CardsList.module.css";
 import { useCardsList } from "./logic/useCardsList.ts";
@@ -15,19 +15,18 @@ export default function CardsListPage() {
 	const m = useCardsList();
 
 	onMount(async () => {
-		try {
-			const q = m.searchQuery();
-			const result: PaginatedCards = q
-				? await searchCardsE(q, 1)
-				: await getCardsE(1);
-			m.setCards(result.items);
-			m.setPage(result.page);
-			m.setTotalPages(result.total_pages);
-		} catch (e) {
-			m.setError(e);
-		} finally {
-			m.setLoading(false);
+		const q = m.searchQuery();
+		const result = await tryAsync(() =>
+			q ? searchCardsE(q, 1) : getCardsE(1),
+		);
+		if (result.ok) {
+			m.setCards(result.value.items);
+			m.setPage(result.value.page);
+			m.setTotalPages(result.value.total_pages);
+		} else {
+			m.setError(result.error);
 		}
+		m.setLoading(false);
 	});
 
 	return (

@@ -1,6 +1,7 @@
 // ── 记忆模块 API ──
 
 import { CACHE, request, tapInvalidate } from "../../apis/request.ts";
+import { tryAsync, unwrapOrNull } from "../../lib/result.ts";
 import type {
 	BatchDataResponse,
 	BatchResponse,
@@ -361,13 +362,12 @@ export const importJsonE = (
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const uploadImage = async (file: File): Promise<string | null> => {
-	try {
+	const result = await tryAsync(async () => {
 		const { uploadMedia } = await import("./mediaApi.ts");
 		const item = await uploadMedia(file);
 		return item.url;
-	} catch {
-		return null;
-	}
+	});
+	return unwrapOrNull(result);
 };
 
 // ── AI 助记 ──

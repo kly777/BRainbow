@@ -13,6 +13,7 @@ import Button from "../../components/ui/Button.tsx";
 import MarkdownEditor from "../../components/ui/MarkdownEditor.tsx";
 import Toolbar from "../../components/ui/Toolbar.tsx";
 import { showConfirm, tryOrNotify } from "../../lib/safe-action.ts";
+import { tryAsync } from "../../lib/result.ts";
 import { deleteCardE, getCardE, updateCardE } from "./api.ts";
 import styles from "./CardEdit.module.css";
 import type { UpdateCardRequest } from "./types.ts";
@@ -49,15 +50,16 @@ const CardEditPage: Component = () => {
 		}
 		setIsSubmitting(true);
 		setError("");
-		try {
+		const result = await tryAsync(async () => {
 			const req: UpdateCardRequest = { content: content().trim() };
 			await updateCardE(cardId(), req);
+		});
+		if (result.ok) {
 			navigate(`/c/${cardId()}`);
-		} catch (err) {
-			setError(getErrorMessage(err));
-		} finally {
-			setIsSubmitting(false);
+		} else {
+			setError(getErrorMessage(result.error));
 		}
+		setIsSubmitting(false);
 	};
 
 	const handleDelete = async () => {

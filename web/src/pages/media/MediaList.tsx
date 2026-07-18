@@ -17,6 +17,7 @@ import {
 	renameMediaE,
 } from "../../features/mem/mediaApi.ts";
 import { showConfirm, tryOrNotify } from "../../lib/safe-action.ts";
+import { notifyError } from "../../lib/notify.ts";
 import styles from "./MediaList.module.css";
 
 const TABS = [
@@ -50,7 +51,7 @@ const MediaListPage: Component = () => {
 				const r = await listMediaE(mt ? { media_type: mt } : {});
 				return r.items;
 			} catch (e: unknown) {
-				console.error("加载媒体列表失败:", e);
+				notifyError("加载媒体列表失败", e);
 				return [];
 			}
 		},

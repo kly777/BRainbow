@@ -12,7 +12,7 @@ import { request } from "../../../apis/request.ts";
 import { callAi } from "../../../lib/ai.ts";
 import { fillPrompt, getAiSettings } from "../../../lib/ai-settings.ts";
 import { notifyError } from "../../../lib/notify.ts";
-import { tryOrNotify } from "../../../lib/safe-action.ts";
+import { tryAsync } from "../../../lib/result.ts";
 import {
 	buryMemE,
 	editMemE,
@@ -85,11 +85,8 @@ export interface UseMemReview {
 	startEdit: () => void;
 	saveEdit: () => Promise<void>;
 	handleCopyCard: () => void;
-	/** 当前卡片的 AI 助记（如有） */
 	mnemonic: () => string | undefined;
-	/** 是否正在生成助记 */
 	mnemonicLoading: () => boolean;
-	/** 手动触发当前卡片助记生成 */
 	generateMnemonic: () => Promise<void>;
 }
 
@@ -146,23 +143,27 @@ export function useMemReview(): UseMemReview {
 			return;
 		}
 		setMnemonicLoading(true);
-		try {
+
+		const aiResult = await tryAsync(async () => {
 			const prompt = fillPrompt(settings.mnemonicPrompt, {
 				cue: it.cue.content,
 				target: it.target.content,
 			});
-			const res = await callAi({
+			return await callAi({
 				messages: [{ role: "user", content: prompt }],
 			});
+		});
+
+		if (aiResult.ok) {
 			// 保存助记到后端（失败不影响用户体验——本地已缓存）
-			await setMnemonicE(it.id, res.content).catch(() => {});
+			await setMnemonicE(it.id, aiResult.value.content).catch(() => {});
 			setMnemonics((prev) => {
 				const next = new Map(prev);
-				next.set(it.id, res.content);
+				next.set(it.id, aiResult.value.content);
 				return next;
 			});
-		} catch (e) {
-			notifyError("AI 生成失败", e);
+		} else {
+			notifyError("AI 生成失败", aiResult.error);
 		}
 		setMnemonicLoading(false);
 	};
@@ -179,7 +180,6 @@ export function useMemReview(): UseMemReview {
 	const item = () => due()[current()];
 
 	const loadMnemonic = async (memId: number) => {
-		// 优先用后端返回的 mnemonic 字段
 		const it = item();
 		const existing = it && it.mnemonic;
 		if (existing) {
@@ -190,37 +190,29 @@ export function useMemReview(): UseMemReview {
 			});
 			return;
 		}
-		// 没有则尝试从后端单独获取
-		try {
-			const res = await getMnemonicE(memId);
-			if (res.content) {
-				setMnemonics((prev) => {
-					const next = new Map(prev);
-					next.set(memId, res.content!);
-					return next;
-				});
-			}
-		} catch {
-			// 助记词加载是可选的增强功能，失败不影响复习
+		// 没有则尝试从后端单独获取（可选增强功能，失败不影响复习）
+		const result = await tryAsync(() => getMnemonicE(memId));
+		if (result.ok && result.value.content) {
+			setMnemonics((prev) => {
+				const next = new Map(prev);
+				next.set(memId, result.value.content!);
+				return next;
+			});
 		}
 	};
 
 	// ── 数据加载 ──
 
 	const loadPreview = async (id: number) => {
-		try {
-			setIntervals((await previewMemE(id)).intervals);
-		} catch {
-			// 预览加载失败不影响复习流程
-		}
+		const result = await tryAsync(() => previewMemE(id));
+		if (result.ok) setIntervals(result.value.intervals);
+		// 预览加载失败不影响复习流程
 	};
 
 	const loadCounts = async () => {
-		try {
-			setCounts(await getMemCountsE());
-		} catch {
-			// 统计加载失败不影响复习
-		}
+		const result = await tryAsync(() => getMemCountsE());
+		if (result.ok) setCounts(result.value);
+		// 统计加载失败不影响复习
 	};
 
 	// Forward reference: tagFilter needs loadDue, loadDue needs tagFilter
@@ -234,8 +226,9 @@ export function useMemReview(): UseMemReview {
 	loadDue = async () => {
 		setLoading(true);
 		loadCounts();
-		try {
-			const data = await getDueE(
+
+		const dueResult = await tryAsync(() =>
+			getDueE(
 				maxLearning(),
 				tagFilter.tagMode() === "include" && tagFilter.tagFilterIds().length > 0
 					? tagFilter.tagFilterIds()
@@ -243,34 +236,40 @@ export function useMemReview(): UseMemReview {
 				tagFilter.tagMode() === "exclude" && tagFilter.tagFilterIds().length > 0
 					? tagFilter.tagFilterIds()
 					: undefined,
-			);
-			if (data.items.length === 0 && !data.has_more) {
-				setDone(true);
-				setDue([]);
-				setEstimatedTotal(0);
-				setUpcoming(data.upcoming_count ?? 0);
-			} else {
-				setDone(false);
-				setAllFar(data.all_far);
-				getSessionEstimateE()
-					.then((est: SessionEstimate) => setEstimatedTotal(est.total_estimate))
-					.catch(() => {
-						// 预估失败不影响复习
-					});
-				setDue([...data.items]);
-				_setCurrent(0);
-				setCardStart(Date.now());
-				_setShowAnswer(false);
-				setIsPreview(
-					data.items.length === 1 && data.items[0]?.state !== "learning",
-				);
-				if (data.items.length > 0) {
-					loadPreview(data.items[0].id);
-					loadMnemonic(data.items[0].id);
-				}
-			}
-		} catch {
+			),
+		);
+
+		if (!dueResult.ok) {
 			// 加载复习队列失败，显示空状态
+			setLoading(false);
+			return;
+		}
+
+		const data = dueResult.value;
+		if (data.items.length === 0 && !data.has_more) {
+			setDone(true);
+			setDue([]);
+			setEstimatedTotal(0);
+			setUpcoming(data.upcoming_count ?? 0);
+		} else {
+			setDone(false);
+			setAllFar(data.all_far);
+			getSessionEstimateE()
+				.then((est: SessionEstimate) => setEstimatedTotal(est.total_estimate))
+				.catch(() => {
+					// 预估失败不影响复习
+				});
+			setDue([...data.items]);
+			_setCurrent(0);
+			setCardStart(Date.now());
+			_setShowAnswer(false);
+			setIsPreview(
+				data.items.length === 1 && data.items[0]?.state !== "learning",
+			);
+			if (data.items.length > 0) {
+				loadPreview(data.items[0].id);
+				loadMnemonic(data.items[0].id);
+			}
 		}
 		setLoading(false);
 	};
@@ -309,8 +308,14 @@ export function useMemReview(): UseMemReview {
 				due_at: it.due_at,
 			},
 		};
-		const ok = await tryOrNotify(() => reviewMemE(it.id, rating), "评分");
-		if (!ok) return;
+
+		// Railway: 成功 → 更新本地状态，失败 → 通知用户，状态不变
+		const result = await tryAsync(() => reviewMemE(it.id, rating));
+		if (!result.ok) {
+			notifyError("评分失败", result.error);
+			return;
+		}
+
 		setAvgRating((prev) => prev * (1 - ALPHA) + rating * ALPHA);
 		const elapsed = Math.min((Date.now() - cardStart()) / 1000, 300);
 		setCardDurations((prev) => [...prev, elapsed].slice(-30));
@@ -341,32 +346,39 @@ export function useMemReview(): UseMemReview {
 
 	const bury = async () => {
 		const it = item();
-		if (it) {
-			const ok = await tryOrNotify(() => buryMemE(it.id), "埋葬");
-			if (ok) advanceQueue();
+		if (!it) return;
+		const result = await tryAsync(() => buryMemE(it.id));
+		if (result.ok) {
+			advanceQueue();
+		} else {
+			notifyError("埋葬失败", result.error);
 		}
 	};
 
 	const undo = async () => {
 		if (!lastAction) return;
-		const ok = await tryOrNotify(
-			() =>
-				request(`/mem/${lastAction!.id}/undo`, {
-					method: "POST",
-					body: JSON.stringify(lastAction!.undoData),
-				}),
-			"撤销评分",
+		const result = await tryAsync(() =>
+			request(`/mem/${lastAction!.id}/undo`, {
+				method: "POST",
+				body: JSON.stringify(lastAction!.undoData),
+			}),
 		);
-		if (!ok) return;
+		if (!result.ok) {
+			notifyError("撤销评分失败", result.error);
+			return;
+		}
 		setShowUndo(false);
 		loadDue();
 	};
 
 	const resumeSuspend = async () => {
 		const it = item();
-		if (it) {
-			const ok = await tryOrNotify(() => suspendMemE(it.id), "暂停");
-			if (ok) loadDue();
+		if (!it) return;
+		const result = await tryAsync(() => suspendMemE(it.id));
+		if (result.ok) {
+			loadDue();
+		} else {
+			notifyError("暂停失败", result.error);
 		}
 	};
 
@@ -381,29 +393,29 @@ export function useMemReview(): UseMemReview {
 
 	const saveEdit = async () => {
 		const it = item();
-		if (it) {
-			const ok = await tryOrNotify(
-				() => editMemE(it.id, editCue(), editTarget()),
-				"保存编辑",
-			);
-			if (!ok) {
-				_setEditing(false);
-				return;
-			}
-			setDue((prev) => {
-				const next = [...prev];
-				const idx = current();
-				if (idx >= 0 && idx < next.length) {
-					next[idx] = {
-						...next[idx],
-						cue: { ...next[idx].cue, content: editCue() },
-						target: { ...next[idx].target, content: editTarget() },
-					};
-				}
-				return next;
-			});
+		if (!it) return;
+		const result = await tryAsync(() =>
+			editMemE(it.id, editCue(), editTarget()),
+		);
+		if (!result.ok) {
+			notifyError("保存编辑失败", result.error);
 			_setEditing(false);
+			return;
 		}
+		// 成功：乐观更新本地数据
+		setDue((prev) => {
+			const next = [...prev];
+			const idx = current();
+			if (idx >= 0 && idx < next.length) {
+				next[idx] = {
+					...next[idx],
+					cue: { ...next[idx].cue, content: editCue() },
+					target: { ...next[idx].target, content: editTarget() },
+				};
+			}
+			return next;
+		});
+		_setEditing(false);
 	};
 
 	const handleCopyCard = () => {

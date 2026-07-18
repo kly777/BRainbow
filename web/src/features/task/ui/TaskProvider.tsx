@@ -5,7 +5,7 @@ import {
 	onMount,
 	useContext,
 } from "solid-js";
-import { getErrorMessage } from "../../../apis/types/index.ts";
+import { tryAsync } from "../../../lib/result.ts";
 import { notifyError } from "../../../lib/notify.ts";
 import { showConfirm, tryOrNotify } from "../../../lib/safe-action.ts";
 import {
@@ -59,21 +59,21 @@ export function TaskProvider(props: { children: JSX.Element }) {
 
 	const reload = async () => {
 		setLoading(true);
-		try {
-			const r = await getTasksE();
-			setTasks([...r.items]);
-		} catch (e) {
-			console.error("加载任务失败:", getErrorMessage(e));
-		} finally {
-			setLoading(false);
+		const result = await tryAsync(() => getTasksE());
+		if (result.ok) {
+			setTasks([...result.value.items]);
+		} else {
+			notifyError("加载任务失败", result.error);
 		}
+		setLoading(false);
 	};
 
 	const reloadStats = async () => {
-		try {
-			setStats(await getTaskStatsE());
-		} catch (e) {
-			console.error("获取统计失败:", getErrorMessage(e));
+		const result = await tryAsync(() => getTaskStatsE());
+		if (result.ok) {
+			setStats(result.value);
+		} else {
+			notifyError("获取统计失败", result.error);
 		}
 	};
 
@@ -85,15 +85,15 @@ export function TaskProvider(props: { children: JSX.Element }) {
 	const add = async (req: CreateTaskRequest): Promise<Task | null> => {
 		const temp = makeTemp(req);
 		setTasks((p) => [temp, ...p]);
-		try {
-			const real = await apiCreateTask(req);
-			setTasks((p) => p.map((t) => (t.id === temp.id ? real : t)));
-			return real;
-		} catch (e) {
-			notifyError("创建任务失败", e);
-			setTasks((p) => p.filter((t) => t.id !== temp.id));
-			return null;
+
+		const result = await tryAsync(() => apiCreateTask(req));
+		if (result.ok) {
+			setTasks((p) => p.map((t) => (t.id === temp.id ? result.value : t)));
+			return result.value;
 		}
+		// 失败：回滚乐观更新
+		setTasks((p) => p.filter((t) => t.id !== temp.id));
+		return null;
 	};
 
 	const updateStatus = async (id: number, newStatus: string) => {
@@ -101,16 +101,25 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		const idx = prev.findIndex((t) => t.id === id);
 		if (idx === -1) return;
 		const orig = prev[idx];
+
+		// 乐观更新
 		setTasks(prev.map((t, i) => (i === idx ? { ...t, status: newStatus } : t)));
 
-		try {
-			const apiFn = STATUS_API[newStatus];
-			if (!apiFn) throw new Error(`未知状态: ${newStatus}`);
-			const updated = await apiFn(id);
-			setTasks((c) => c.map((t) => (t.id === id ? updated : t)));
+		const apiFn = STATUS_API[newStatus];
+		if (!apiFn) {
+			// 非法状态：回滚
+			setTasks((c) =>
+				c.map((t) => (t.id === id ? { ...t, status: orig.status } : t)),
+			);
+			return;
+		}
+
+		const result = await tryAsync(() => apiFn(id));
+		if (result.ok) {
+			setTasks((c) => c.map((t) => (t.id === id ? result.value : t)));
 			await reloadStats();
-		} catch (e) {
-			notifyError("更新状态失败", e);
+		} else {
+			// 失败：回滚
 			setTasks((c) =>
 				c.map((t) => (t.id === id ? { ...t, status: orig.status } : t)),
 			);
@@ -135,32 +144,35 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		const idx = prev.findIndex((t) => t.id === id);
 		if (idx === -1) return;
 		const orig = prev[idx];
+
+		// 乐观更新
 		setTasks(prev.map((t, i) => (i === idx ? { ...t, ...updates } : t)));
-		try {
-			const updated = await apiUpdateTask(id, updates);
-			setTasks((c) => c.map((t) => (t.id === id ? updated : t)));
+
+		const result = await tryAsync(() => apiUpdateTask(id, updates));
+		if (result.ok) {
+			setTasks((c) => c.map((t) => (t.id === id ? result.value : t)));
 			await reloadStats();
-		} catch (e) {
-			notifyError("更新任务失败", e);
+		} else {
+			// 失败：回滚
 			setTasks((c) => c.map((t) => (t.id === id ? orig : t)));
 		}
 	};
 
 	const addSubTask = async (parentId: number, title: string) => {
-		try {
-			const real = await apiCreateTask({ title, parent_task_id: parentId });
-			setTasks((p) => [...p, real]);
-		} catch (e) {
-			notifyError("创建子任务失败", e);
+		const result = await tryAsync(() =>
+			apiCreateTask({ title, parent_task_id: parentId }),
+		);
+		if (result.ok) {
+			setTasks((p) => [...p, result.value]);
 		}
 	};
 
 	const filterByStatus = async (status: string) => {
-		try {
-			const r = await fetchTasksByFilter(status);
-			setTasks([...r.items]);
-		} catch (e) {
-			console.error("筛选失败:", getErrorMessage(e));
+		const result = await tryAsync(() => fetchTasksByFilter(status));
+		if (result.ok) {
+			setTasks([...result.value.items]);
+		} else {
+			notifyError("筛选任务失败", result.error);
 		}
 	};
 
@@ -170,14 +182,13 @@ export function TaskProvider(props: { children: JSX.Element }) {
 			return;
 		}
 		setLoading(true);
-		try {
-			const r = await searchTasksE(query);
-			setTasks([...r.items]);
-		} catch (e) {
-			console.error("搜索失败:", getErrorMessage(e));
-		} finally {
-			setLoading(false);
+		const result = await tryAsync(() => searchTasksE(query));
+		if (result.ok) {
+			setTasks([...result.value.items]);
+		} else {
+			notifyError("搜索任务失败", result.error);
 		}
+		setLoading(false);
 	};
 
 	const ctx: TaskCtxValue = {

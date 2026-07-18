@@ -21,7 +21,7 @@ const OntologyListPage: Component = () => {
 		try {
 			return await getOntosE();
 		} catch (e: unknown) {
-			console.error("加载本体列表失败:", e);
+			notifyError("加载本体列表失败", e);
 			return [];
 		}
 	});

@@ -2,6 +2,7 @@
 // 支持任意兼容 OpenAI Chat Completions API 的服务
 
 import { getAiSettings } from "./ai-settings.ts";
+import { tryAsync, trySync, unwrapOr } from "./result.ts";
 
 export interface AiMessage {
 	role: "system" | "user" | "assistant";
@@ -49,7 +50,8 @@ export async function callAi(req: AiRequest): Promise<AiResponse> {
 	});
 
 	if (!response.ok) {
-		const errText = await response.text().catch(() => "未知错误");
+		const textResult = await tryAsync(() => response.text());
+		const errText = unwrapOr(textResult, "未知错误");
 		throw new Error(
 			`AI 请求失败 (${response.status}): ${errText.slice(0, 200)}`,
 		);

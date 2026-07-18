@@ -4,10 +4,10 @@ import { useSearchParams } from "@solidjs/router";
 import { createSignal } from "solid-js";
 import { getErrorMessage } from "../../../apis/types/index.ts";
 import { showToast } from "../../../components/ui/toastStore.ts";
+import { tryAsync } from "../../../lib/result.ts";
 import { showConfirm, tryOrNotify } from "../../../lib/safe-action.ts";
-import type { PaginatedCards } from "../api.ts";
-import { createCardE, deleteCardE, getCardsE, searchCardsE } from "../api.ts";
 import type { Card, CreateCardRequest } from "../types.ts";
+import { createCardE, deleteCardE, getCardsE, searchCardsE } from "../api.ts";
 
 export function useCardsList() {
 	const [cards, setCards] = createSignal<Card[]>([]);
@@ -29,14 +29,13 @@ export function useCardsList() {
 	const isSearchMode = () => searchQuery().trim().length > 0;
 
 	const loadCards = async (p = 1) => {
-		try {
-			const result: PaginatedCards = await getCardsE(p);
-			setCards(result.items);
-			setPage(result.page);
-			setTotalPages(result.total_pages);
-		} catch {
-			// 全局错误处理已 toast，此处仅保留加载状态
+		const result = await tryAsync(() => getCardsE(p));
+		if (result.ok) {
+			setCards(result.value.items);
+			setPage(result.value.page);
+			setTotalPages(result.value.total_pages);
 		}
+		// 全局错误处理已 toast，此处仅保留加载状态
 	};
 
 	const handleCardDelete = async (id: number) => {
@@ -55,7 +54,6 @@ export function useCardsList() {
 
 		const ok = await tryOrNotify(() => deleteCardE(id), "删除卡片");
 		if (!ok) {
-			// 回滚
 			if (cardToDelete) setCards([...current]);
 		} else {
 			showToast({
@@ -75,23 +73,26 @@ export function useCardsList() {
 		}
 		setIsCreating(true);
 		setModalError("");
-		try {
+
+		const result = await tryAsync(async () => {
 			const req: CreateCardRequest = { content: newCardContent().trim() };
-			const newCard = await createCardE(req);
+			return await createCardE(req);
+		});
+
+		if (result.ok) {
 			setNewCardContent("");
 			setShowCreateModal(false);
-			setCards([newCard, ...cards()]);
+			setCards([result.value, ...cards()]);
 			showToast({
 				type: "success",
 				title: "卡片已创建",
 				message: "",
 				duration: 3000,
 			});
-		} catch (err) {
-			setModalError(getErrorMessage(err));
-		} finally {
-			setIsCreating(false);
+		} else {
+			setModalError(getErrorMessage(result.error));
 		}
+		setIsCreating(false);
 	};
 
 	const handleSearch = async (query: string) => {
@@ -102,14 +103,13 @@ export function useCardsList() {
 			await loadCards(1);
 			return;
 		}
-		try {
-			const result: PaginatedCards = await searchCardsE(query, 1);
-			setCards(result.items);
-			setPage(result.page);
-			setTotalPages(result.total_pages);
-		} catch {
-			// 全局错误处理已 toast
+		const result = await tryAsync(() => searchCardsE(query, 1));
+		if (result.ok) {
+			setCards(result.value.items);
+			setPage(result.value.page);
+			setTotalPages(result.value.total_pages);
 		}
+		// 全局错误处理已 toast
 	};
 
 	const [loadingMore, setLoadingMore] = createSignal(false);
@@ -118,20 +118,18 @@ export function useCardsList() {
 	const handlePageChange = async (newPage: number) => {
 		if (newPage < 1 || newPage > totalPages()) return;
 		setPage(newPage);
-		try {
-			setLoading(true);
-			const q = searchQuery();
-			const result: PaginatedCards = q
-				? await searchCardsE(q, newPage)
-				: await getCardsE(newPage);
-			setCards(result.items);
-			setPage(result.page);
-			setTotalPages(result.total_pages);
-		} catch {
-			// 全局错误处理已 toast
-		} finally {
-			setLoading(false);
+		setLoading(true);
+		const q = searchQuery();
+		const result = await tryAsync(() =>
+			q ? searchCardsE(q, newPage) : getCardsE(newPage),
+		);
+		if (result.ok) {
+			setCards(result.value.items);
+			setPage(result.value.page);
+			setTotalPages(result.value.total_pages);
 		}
+		// 全局错误处理已 toast
+		setLoading(false);
 	};
 
 	const handleLoadMore = async () => {
@@ -142,22 +140,20 @@ export function useCardsList() {
 			return;
 		}
 		setLoadingMore(true);
-		try {
-			const q = searchQuery();
-			const result: PaginatedCards = q
-				? await searchCardsE(q, nextPage)
-				: await getCardsE(nextPage);
-			setCards([...cards(), ...result.items]);
-			setPage(result.page);
-			setTotalPages(result.total_pages);
-			if (result.page >= result.total_pages) {
+		const q = searchQuery();
+		const result = await tryAsync(() =>
+			q ? searchCardsE(q, nextPage) : getCardsE(nextPage),
+		);
+		if (result.ok) {
+			setCards([...cards(), ...result.value.items]);
+			setPage(result.value.page);
+			setTotalPages(result.value.total_pages);
+			if (result.value.page >= result.value.total_pages) {
 				setHasMore(false);
 			}
-		} catch {
-			// 全局错误处理已 toast
-		} finally {
-			setLoadingMore(false);
 		}
+		// 全局错误处理已 toast
+		setLoadingMore(false);
 	};
 
 	return {

@@ -5,6 +5,7 @@ import Breadcrumb from "../../components/ui/Breadcrumb.tsx";
 import Button from "../../components/ui/Button.tsx";
 import MarkdownEditor from "../../components/ui/MarkdownEditor.tsx";
 import Toolbar from "../../components/ui/Toolbar.tsx";
+import { tryAsync } from "../../lib/result.ts";
 import { createCardE } from "./api.ts";
 import styles from "./CardAdd.module.css";
 import type { CreateCardRequest } from "./types.ts";
@@ -25,15 +26,16 @@ const CardAddPage: Component = () => {
 		}
 		setIsSubmitting(true);
 		setError("");
-		try {
+		const result = await tryAsync(async () => {
 			const req: CreateCardRequest = { content: content().trim() };
-			const card = await createCardE(req);
-			navigate(`/c/${card.id}`);
-		} catch (err) {
-			setError(getErrorMessage(err));
-		} finally {
-			setIsSubmitting(false);
+			return await createCardE(req);
+		});
+		if (result.ok) {
+			navigate(`/c/${result.value.id}`);
+		} else {
+			setError(getErrorMessage(result.error));
 		}
+		setIsSubmitting(false);
 	};
 
 	const handleKeyDown = (e: KeyboardEvent) => {

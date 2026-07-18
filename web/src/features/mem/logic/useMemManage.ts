@@ -2,6 +2,7 @@
 
 import { createEffect, createSignal, onMount } from "solid-js";
 import { notifyError } from "../../../lib/notify.ts";
+import { tryAsync } from "../../../lib/result.ts";
 import { showConfirm, tryOrNotify } from "../../../lib/safe-action.ts";
 import {
 	addTagToMemE,
@@ -40,13 +41,12 @@ export function useMemManage() {
 		if (names.length === 0) return;
 		const all: TagInfo[] = [];
 		for (const name of names) {
-			try {
-				const tags = await searchTagsE(name);
-				const found = tags.find((t: TagInfo) => t.name === name);
+			const result = await tryAsync(() => searchTagsE(name));
+			if (result.ok) {
+				const found = result.value.find((t: TagInfo) => t.name === name);
 				if (found) all.push(found);
-			} catch {
-				// URL 中的标签名可能已失效，忽略即可
 			}
+			// URL 中的标签名可能已失效，忽略即可
 		}
 		setTagFiltersInternal(all);
 	});

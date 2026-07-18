@@ -99,8 +99,17 @@ pub async fn delete_card_handler(
 #[derive(Debug, Deserialize)]
 pub struct SearchCardsQuery {
     pub q: String,
-    #[serde(flatten)]
-    pub pagination: Pagination,
+    pub page: Option<i64>,
+    pub page_size: Option<i64>,
+}
+
+impl SearchCardsQuery {
+    fn pagination(&self) -> Pagination {
+        Pagination {
+            page: self.page.unwrap_or(1),
+            page_size: self.page_size.unwrap_or(20),
+        }
+    }
 }
 
 pub async fn search_cards_handler(
@@ -110,17 +119,18 @@ pub async fn search_cards_handler(
     if params.q.trim().is_empty() {
         return error::bad_request("搜索关键词不能为空");
     }
+    let pagination = params.pagination();
     let result = state
         .card
         .search(
             params.q.trim(),
-            params.pagination.limit(),
-            params.pagination.offset(),
+            pagination.limit(),
+            pagination.offset(),
         )
         .await
         .map(|(items, total)| {
             let items: Vec<CardResponse> = items.into_iter().map(CardResponse::from).collect();
-            PaginatedResponse::new(items, total, &params.pagination)
+            PaginatedResponse::new(items, total, &pagination)
         });
     error::ok_or(result, "搜索卡片")
 }

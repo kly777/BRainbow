@@ -1,9 +1,5 @@
-import {
-	CACHE,
-	cachedRequest,
-	request,
-	tapInvalidate,
-} from "../../apis/request.ts";
+import { request } from "../../apis/request.ts";
+import { CACHE, cachedRequest, tapInvalidate } from "../../apis/cache.ts";
 import type { CreateTimeWindowRequest, TimeWindow } from "./types.ts";
 
 // ==================== Time Window API Functions ====================

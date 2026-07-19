@@ -1,9 +1,5 @@
-import {
-	CACHE,
-	cachedRequest,
-	request,
-	tapInvalidate,
-} from "../../apis/request.ts";
+import { del, patch, request } from "../../apis/request.ts";
+import { CACHE, cachedRequest, tapInvalidate } from "../../apis/cache.ts";
 
 // ── 类型 ──
 
@@ -65,13 +61,10 @@ export const renameMediaE = (
 	stored_id: string,
 	original_name: string,
 ): Promise<MediaItem> =>
-	request<MediaItem>(`/media/${stored_id}`, {
-		method: "PATCH",
-		body: JSON.stringify({ original_name }),
-	}).then((r) => tapInvalidate(CACHE.media, r));
+	patch<MediaItem>(`/media/${stored_id}`, { original_name }).then((r) => tapInvalidate(CACHE.media, r));
 
 /** 删除 */
 export const deleteMediaE = (stored_id: string): Promise<void> =>
-	request<void>(`/media/${stored_id}`, { method: "DELETE" }).then((r) =>
+	del<void>(`/media/${stored_id}`).then((r) =>
 		tapInvalidate(CACHE.media, r),
 	);

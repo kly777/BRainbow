@@ -1,9 +1,5 @@
-import {
-	CACHE,
-	cachedRequest,
-	request,
-	tapInvalidate,
-} from "../../apis/request.ts";
+import { del, post, request } from "../../apis/request.ts";
+import { CACHE, cachedRequest, tapInvalidate } from "../../apis/cache.ts";
 import type { Card, CreateCardRequest, UpdateCardRequest } from "./types.ts";
 
 // ==================== 类型 ====================
@@ -26,10 +22,7 @@ export const getCardE = (id: number): Promise<Card> =>
 	cachedRequest(`/cards/${id}`, {}, 60_000);
 
 export const createCardE = (card: CreateCardRequest): Promise<Card> =>
-	request<Card>("/cards", {
-		method: "POST",
-		body: JSON.stringify(card),
-	}).then((r) => tapInvalidate(CACHE.cards, r));
+	post<Card>("/cards", card).then((r) => tapInvalidate(CACHE.cards, r));
 
 export const updateCardE = (
 	id: number,
@@ -41,9 +34,7 @@ export const updateCardE = (
 	}).then((r) => tapInvalidate(CACHE.cards, r));
 
 export const deleteCardE = (id: number): Promise<void> =>
-	request<void>(`/cards/${id}`, {
-		method: "DELETE",
-	}).then((r) => tapInvalidate(CACHE.cards, r));
+	del<void>(`/cards/${id}`).then((r) => tapInvalidate(CACHE.cards, r));
 
 export const searchCardsE = (
 	query: string,

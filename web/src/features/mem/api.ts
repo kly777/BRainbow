@@ -1,6 +1,7 @@
 // ── 记忆模块 API ──
 
-import { CACHE, request, tapInvalidate } from "../../apis/request.ts";
+import { del, post, put, request } from "../../apis/request.ts";
+import { CACHE, tapInvalidate } from "../../apis/cache.ts";
 import { tryAsync, unwrapOrNull } from "../../lib/result.ts";
 import type {
 	BatchDataResponse,
@@ -74,14 +75,11 @@ export const createMemE = (
 	targetMd: string,
 	prerequisites: number[] = [],
 ): Promise<{ id: number }> =>
-	request<{ id: number }>("/mem", {
-		method: "POST",
-		body: JSON.stringify({
+	post<{ id: number }>("/mem", {
 			cue_content: cueMd,
 			target_content: targetMd,
 			prerequisites,
-		}),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+		}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const getAllMemsE = (
 	params?: MemQuery,
@@ -119,10 +117,7 @@ export const reviewMemE = (
 	id: number,
 	rating: number,
 ): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>(`/mem/${id}/review`, {
-		method: "POST",
-		body: JSON.stringify({ rating }),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	post<{ ok: boolean }>(`/mem/${id}/review`, { rating }).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const previewMemE = (
 	id: number,
@@ -130,7 +125,7 @@ export const previewMemE = (
 	request(`/mem/${id}/preview`, {});
 
 export const deleteMemE = (id: number): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>(`/mem/${id}`, { method: "DELETE" }).then((r) =>
+	del<{ ok: boolean }>(`/mem/${id}`).then((r) =>
 		tapInvalidate(CACHE.mem, r),
 	);
 
@@ -160,32 +155,20 @@ export const resetMemE = (id: number): Promise<{ ok: boolean }> =>
 	);
 
 export const batchBuryMemE = (ids: number[]): Promise<BatchResponse> =>
-	request<BatchResponse>("/mem/batch-bury", {
-		method: "POST",
-		body: JSON.stringify({ items: ids }),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	post<BatchResponse>("/mem/batch-bury", { items: ids }).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const batchDeleteMemE = (ids: number[]): Promise<BatchResponse> =>
-	request<BatchResponse>("/mem/batch-delete", {
-		method: "POST",
-		body: JSON.stringify({ items: ids }),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	post<BatchResponse>("/mem/batch-delete", { items: ids }).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const batchResetMemE = (ids: number[]): Promise<BatchResponse> =>
-	request<BatchResponse>("/mem/batch-reset", {
-		method: "POST",
-		body: JSON.stringify({ items: ids }),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	post<BatchResponse>("/mem/batch-reset", { items: ids }).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const editMemE = (
 	id: number,
 	cue: string,
 	target: string,
 ): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>(`/mem/${id}/edit`, {
-		method: "PUT",
-		body: JSON.stringify({ cue_content: cue, target_content: target }),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	put<{ ok: boolean }>(`/mem/${id}/edit`, { cue_content: cue, target_content: target }).then((r) => tapInvalidate(CACHE.mem, r));
 
 // ── 标签 ──
 
@@ -206,13 +189,10 @@ export interface SetTagsRequest {
 }
 
 export const createTagE = (name: string): Promise<TagInfo> =>
-	request<TagInfo>("/mem/tag/create", {
-		method: "POST",
-		body: JSON.stringify({ name }),
-	});
+	post<TagInfo>("/mem/tag/create", { name });
 
 export const deleteTagE = (id: number): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>(`/mem/tag/delete/${id}`, { method: "DELETE" });
+	del<{ ok: boolean }>(`/mem/tag/delete/${id}`);
 
 export const listTagsE = (): Promise<TagInfo[]> =>
 	request<TagInfo[]>("/mem/tag/list", {});
@@ -227,46 +207,31 @@ export const addTagToMemE = (
 	memId: number,
 	tagId: number,
 ): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>("/mem/tag/mem/add", {
-		method: "POST",
-		body: JSON.stringify({ mem_id: memId, tag_id: tagId }),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	post<{ ok: boolean }>("/mem/tag/mem/add", { mem_id: memId, tag_id: tagId }).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const removeTagFromMemE = (
 	memId: number,
 	tagId: number,
 ): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>("/mem/tag/mem/remove", {
-		method: "POST",
-		body: JSON.stringify({ mem_id: memId, tag_id: tagId }),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	post<{ ok: boolean }>("/mem/tag/mem/remove", { mem_id: memId, tag_id: tagId }).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const setMemTagsE = (
 	memId: number,
 	tagIds: number[],
 ): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>("/mem/tag/mem/set", {
-		method: "POST",
-		body: JSON.stringify({ mem_id: memId, tag_ids: tagIds }),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	post<{ ok: boolean }>("/mem/tag/mem/set", { mem_id: memId, tag_ids: tagIds }).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const batchAddTagToMemsE = (
 	memIds: number[],
 	tagId: number,
 ): Promise<BatchResponse> =>
-	request<BatchResponse>("/mem/tag/batch-add", {
-		method: "POST",
-		body: JSON.stringify({ items: memIds, tag_id: tagId }),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	post<BatchResponse>("/mem/tag/batch-add", { items: memIds, tag_id: tagId }).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const batchRemoveTagFromMemsE = (
 	memIds: number[],
 	tagId: number,
 ): Promise<BatchResponse> =>
-	request<BatchResponse>("/mem/tag/batch-remove", {
-		method: "POST",
-		body: JSON.stringify({ items: memIds, tag_id: tagId }),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	post<BatchResponse>("/mem/tag/batch-remove", { items: memIds, tag_id: tagId }).then((r) => tapInvalidate(CACHE.mem, r));
 
 export interface MemTagRow {
 	mem_id: number;
@@ -287,10 +252,7 @@ export const batchSetTagsForMemsE = (
 	memIds: number[],
 	tagIds: number[],
 ): Promise<BatchResponse> =>
-	request<BatchResponse>("/mem/tag/batch-set", {
-		method: "POST",
-		body: JSON.stringify({ items: memIds, tag_ids: tagIds }),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	post<BatchResponse>("/mem/tag/batch-set", { items: memIds, tag_ids: tagIds }).then((r) => tapInvalidate(CACHE.mem, r));
 
 // ── CSV 导入导出 ──
 
@@ -327,19 +289,13 @@ export const importCsvE = (
 	csvContent: string,
 	defaultTags?: string[],
 ): Promise<ImportCsvResult> =>
-	request<ImportCsvResult>("/mem/import/csv", {
-		method: "POST",
-		body: JSON.stringify({ csv: csvContent, default_tags: defaultTags ?? [] }),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	post<ImportCsvResult>("/mem/import/csv", { csv: csvContent, default_tags: defaultTags ?? [] }).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const importPsvE = (
 	psvContent: string,
 	defaultTags?: string[],
 ): Promise<ImportCsvResult> =>
-	request<ImportCsvResult>("/mem/import/psv", {
-		method: "POST",
-		body: JSON.stringify({ csv: psvContent, default_tags: defaultTags ?? [] }),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	post<ImportCsvResult>("/mem/import/psv", { csv: psvContent, default_tags: defaultTags ?? [] }).then((r) => tapInvalidate(CACHE.mem, r));
 
 export interface ImportJsonItem {
 	cue: string;
@@ -356,10 +312,7 @@ export const importJsonE = (
 	mems: ImportJsonItem[],
 	defaultTags?: string[],
 ): Promise<ImportJsonResult> =>
-	request<ImportJsonResult>("/mem/import/json", {
-		method: "POST",
-		body: JSON.stringify({ mems, default_tags: defaultTags ?? [] }),
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	post<ImportJsonResult>("/mem/import/json", { mems, default_tags: defaultTags ?? [] }).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const uploadImage = async (file: File): Promise<string | null> => {
 	const result = await tryAsync(async () => {
@@ -380,10 +333,7 @@ export const setMnemonicE = (
 	memId: number,
 	content: string,
 ): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>(`/mem/${memId}/mnemonic`, {
-		method: "PUT",
-		body: JSON.stringify({ content }),
-	});
+	put<{ ok: boolean }>(`/mem/${memId}/mnemonic`, { content });
 
 export interface UpcomingCounts {
 	within_8h: number;

@@ -1,15 +1,5 @@
 import { getToken } from "../auth/context.tsx";
-import {
-	buildCacheKey,
-	CACHE,
-	clearAllCache as cacheClear,
-	invalidateCache as cacheInvalidate,
-	readCache,
-	writeCache,
-} from "./cache.ts";
 import { HttpError, NetworkError } from "./types/index.ts";
-
-export { CACHE };
 
 const API_BASE_URL = "/api";
 
@@ -165,62 +155,6 @@ export async function handleGlobalError(
 
 // ==================== 核心请求函数 ====================
 
-/**
- * 带缓存的 GET 请求。对于非 GET 请求，行为与 request() 相同。
- *
- * @param endpoint - API 路径（不含 /api 前缀）
- * @param options - fetch options
- * @param staleMs - 缓存有效期，默认 30 秒
- */
-export const cachedRequest = async <T>(
-	endpoint: string,
-	options: RequestInit = {},
-	staleMs = 30_000,
-): Promise<T> => {
-	const method = (options.method ?? "GET").toUpperCase();
-
-	// 非 GET 请求不走缓存
-	if (method !== "GET") {
-		return request<T>(endpoint, options);
-	}
-
-	const key = buildCacheKey(method, endpoint);
-	const cached = readCache<T>(key, staleMs);
-	if (cached !== null) {
-		return cached;
-	}
-
-	const data = await request<T>(endpoint, options);
-	writeCache(key, data);
-	return data;
-};
-
-/**
- * 使匹配正则表达式的缓存失效。
- * 在增删改操作完成后调用，确保下次读取拿到最新数据。
- *
- * @example
- *   invalidateCache(/^GET \/cards/)
- */
-export const invalidateCache = cacheInvalidate;
-
-/**
- * 清除所有缓存。
- */
-export const clearAllCache = cacheClear;
-
-/**
- * 在 Promise 链中使缓存失效并透传结果。
- * 用于增删改操作完成后自动失效相关缓存。
- *
- * @example
- *   request("/cards", { method: "POST", body }).then(r => tapInvalidate(CACHE.cards, r))
- */
-export function tapInvalidate<T>(pattern: RegExp, result: T): T {
-	cacheInvalidate(pattern);
-	return result;
-}
-
 export const request = async <T>(
 	endpoint: string,
 	options: RequestInit = {},
@@ -283,6 +217,32 @@ export const request = async <T>(
 };
 
 // ==================== 辅助 ====================
+// ==================== HTTP 方法快捷方式 ====================
+
+/** POST JSON body */
+export const post = <T>(endpoint: string, body: unknown): Promise<T> =>
+	request<T>(endpoint, {
+		method: "POST",
+		body: JSON.stringify(body),
+	});
+
+/** PUT JSON body */
+export const put = <T>(endpoint: string, body: unknown): Promise<T> =>
+	request<T>(endpoint, {
+		method: "PUT",
+		body: JSON.stringify(body),
+	});
+
+/** PATCH JSON body */
+export const patch = <T>(endpoint: string, body: unknown): Promise<T> =>
+	request<T>(endpoint, {
+		method: "PATCH",
+		body: JSON.stringify(body),
+	});
+
+/** DELETE */
+export const del = <T>(endpoint: string): Promise<T> =>
+	request<T>(endpoint, { method: "DELETE" });
 
 function buildHeaders(
 	extra?: RequestInit["headers"],

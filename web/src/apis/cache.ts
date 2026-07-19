@@ -6,7 +6,8 @@
  *
  * 使用方式（在 API 模块中）：
  *
- *   import { cachedRequest, invalidateCache, CACHE } from "./request.ts";
+ *   import { cachedRequest, CACHE, tapInvalidate } from "./cache.ts";
+ *   import { request } from "./request.ts";
  *
  *   // GET → 走缓存
  *   export const getCardsE = () => cachedRequest<PaginatedCards>("/cards", {});
@@ -14,8 +15,21 @@
  *   // 写操作 → 失效相关缓存
  *   export const createCardE = (card) =>
  *     request("/cards", { method: "POST", body: JSON.stringify(card) })
- *       .then(invalidateCache(CACHE.cards));
+ *       .then((r) => tapInvalidate(CACHE.cards, r));
  */
+
+// ── 延迟导入 request（避免与 request.ts 循环依赖） ──
+
+type RequestFn = <T>(endpoint: string, options?: RequestInit) => Promise<T>;
+let _request: RequestFn | null = null;
+
+async function getRequest(): Promise<RequestFn> {
+	if (!_request) {
+		const mod = await import("./request.ts");
+		_request = mod.request;
+	}
+	return _request;
+}
 
 // ── 类型 ──
 
@@ -122,4 +136,51 @@ export function cacheSnapshot(): ReadonlyMap<
 		snapshot.set(key, { data: entry.data, age: now - entry.fetchedAt });
 	}
 	return snapshot;
+}
+
+// ==================== cachedRequest ====================
+
+/**
+ * 带缓存的 GET 请求。对于非 GET 请求，行为与 request() 相同。
+ *
+ * @param endpoint - API 路径（不含 /api 前缀）
+ * @param options - fetch options
+ * @param staleMs - 缓存有效期，默认 30 秒
+ */
+export const cachedRequest = async <T>(
+	endpoint: string,
+	options: RequestInit = {},
+	staleMs = DEFAULT_STALE_MS,
+): Promise<T> => {
+	const method = (options.method ?? "GET").toUpperCase();
+
+	// 非 GET 请求不走缓存
+	if (method !== "GET") {
+		const req = await getRequest();
+		return req<T>(endpoint, options);
+	}
+
+	const key = buildCacheKey(method, endpoint);
+	const cached = readCache<T>(key, staleMs);
+	if (cached !== null) {
+		return cached;
+	}
+
+	const req = await getRequest();
+	const data = await req<T>(endpoint, options);
+	writeCache(key, data);
+	return data;
+};
+
+/**
+ * 在 Promise 链中使缓存失效并透传结果。
+ * 用于增删改操作完成后自动失效相关缓存。
+ *
+ * @example
+ *   request("/cards", { method: "POST", body })
+ *     .then((r) => tapInvalidate(CACHE.cards, r))
+ */
+export function tapInvalidate<T>(pattern: RegExp, result: T): T {
+	invalidateCache(pattern);
+	return result;
 }

@@ -1,9 +1,5 @@
-import {
-	CACHE,
-	cachedRequest,
-	request,
-	tapInvalidate,
-} from "../../apis/request.ts";
+import { del, patch, post, request } from "../../apis/request.ts";
+import { CACHE, cachedRequest, tapInvalidate } from "../../apis/cache.ts";
 
 export interface Onto {
 	readonly id: number;
@@ -27,19 +23,13 @@ export const createOntoE = (
 	name: string,
 	description?: string,
 ): Promise<Onto> =>
-	request<Onto>("/onto", {
-		method: "POST",
-		body: JSON.stringify({ name, description }),
-	}).then((r) => tapInvalidate(CACHE.onto, r));
+	post<Onto>("/onto", { name, description }).then((r) => tapInvalidate(CACHE.onto, r));
 
 export const updateOntoE = (
 	id: number,
 	data: { name?: string; description?: string },
 ): Promise<Onto> =>
-	request<Onto>(`/onto/${id}`, {
-		method: "PATCH",
-		body: JSON.stringify(data),
-	}).then((r) => tapInvalidate(CACHE.onto, r));
+	patch<Onto>(`/onto/${id}`, data).then((r) => tapInvalidate(CACHE.onto, r));
 
 export const deleteOntoE = (id: number): Promise<void> =>
 	request<void>(`/onto/${id}`, {

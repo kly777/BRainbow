@@ -1,9 +1,5 @@
-import {
-	CACHE,
-	cachedRequest,
-	request,
-	tapInvalidate,
-} from "../../apis/request.ts";
+import { del, patch, post, request } from "../../apis/request.ts";
+import { CACHE, cachedRequest, tapInvalidate } from "../../apis/cache.ts";
 import type {
 	CalendarEvent,
 	CreateTaskRequest,
@@ -60,19 +56,13 @@ export const getTaskDetailE = (id: number): Promise<TaskDetail> =>
 	cachedRequest(`/tasks/${id}/detail`, {}, 60_000);
 
 export const createTaskE = (task: CreateTaskRequest): Promise<Task> =>
-	request<Task>("/tasks", {
-		method: "POST",
-		body: JSON.stringify(task),
-	}).then((r) => tapInvalidate(CACHE.tasks, r));
+	post<Task>("/tasks", task).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const updateTaskE = (
 	id: number,
 	task: UpdateTaskRequest,
 ): Promise<Task> =>
-	request<Task>(`/tasks/${id}`, {
-		method: "PATCH",
-		body: JSON.stringify(task),
-	}).then((r) => tapInvalidate(CACHE.tasks, r));
+	patch<Task>(`/tasks/${id}`, task).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const deleteTaskE = (id: number): Promise<void> =>
 	request<void>(`/tasks/${id}`, {
@@ -83,10 +73,7 @@ export const addTaskDependencyE = (
 	taskId: number,
 	dependsOnTaskId: number,
 ): Promise<void> =>
-	request<void>(`/tasks/${taskId}/dependencies`, {
-		method: "POST",
-		body: JSON.stringify({ depends_on_task_id: dependsOnTaskId }),
-	}).then((r) => tapInvalidate(CACHE.tasks, r));
+	post<void>(`/tasks/${taskId}/dependencies`, { depends_on_task_id: dependsOnTaskId }).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const removeTaskDependencyE = (
 	taskId: number,
@@ -120,10 +107,7 @@ export const getUserTasksE = (userId: number): Promise<readonly Task[]> =>
 	cachedRequest(`/tasks/user/${userId}`, {});
 
 export const updateTaskStatusE = (id: number, status: string): Promise<Task> =>
-	request<Task>(`/tasks/${id}`, {
-		method: "PATCH",
-		body: JSON.stringify({ status }),
-	}).then((r) => tapInvalidate(CACHE.tasks, r));
+	patch<Task>(`/tasks/${id}`, { status }).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const searchTasksE = (query: string): Promise<TaskListResponse> =>
 	cachedRequest(`/tasks/search?q=${encodeURIComponent(query)}`, {});

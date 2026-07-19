@@ -1,4 +1,4 @@
-import { request } from "../../apis/request.ts";
+import { post, put, request } from "../../apis/request.ts";
 
 // ── 类型 ──
 
@@ -51,22 +51,13 @@ export const getArticleWords = (id: number): Promise<{ words: string[] }> =>
 export const uploadArticle = (
 	title: string,
 	content: string,
-): Promise<{ article: Article }> =>
-	request("/reading", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ title, content }),
-	});
+): Promise<{ article: Article }> => post("/reading", { title, content });
 
 export const markWord = (
 	word: string,
 	status: "known" | "unknown" | "ignored",
 ): Promise<{ ok: boolean }> =>
-	request(`/reading/word/${encodeURIComponent(word)}`, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ status }),
-	});
+	post(`/reading/word/${encodeURIComponent(word)}`, { status });
 
 export const listUnknownWords = (): Promise<{ words: UnknownWord[] }> =>
 	request("/reading/unknown", {});
@@ -83,8 +74,4 @@ export const updateArticleNotes = (
 	id: number,
 	notes: string,
 ): Promise<{ ok: boolean }> =>
-	request(`/reading/${id}/notes`, {
-		method: "PUT",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ notes }),
-	});
+	put(`/reading/${id}/notes`, { notes });

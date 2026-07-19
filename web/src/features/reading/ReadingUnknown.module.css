@@ -58,17 +58,17 @@ h1 {
 
 .knownBtn {
 	padding: 4px 12px;
-	border: 1px solid #16a34a;
+	border: 1px solid oklch(0.5 0.18 150);
 	border-radius: 6px;
 	background: transparent;
-	color: #16a34a;
+	color: oklch(0.5 0.18 150);
 	cursor: pointer;
 	font-size: 0.85rem;
 	font-weight: 600;
 }
 .knownBtn:hover {
-	background: #16a34a;
-	color: #fff;
+	background: oklch(0.5 0.18 150);
+	color: var(--color-white);
 }
 
 .empty {

@@ -3,7 +3,7 @@
 	position: fixed;
 	inset: 0;
 	z-index: 90;
-	background: rgba(0, 0, 0, 0.15);
+	background: var(--color-overlay);
 	display: flex;
 	justify-content: center;
 }
@@ -32,13 +32,13 @@
 	border: 1px solid var(--color-border, #e8dfcc);
 	border-radius: var(--radius-lg);
 	background: var(--color-surface, #fffef9);
-	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+	box-shadow: var(--shadow-lg);
 	transition: border-color 0.15s;
 }
 
 .inputRow:focus-within {
 	border-color: var(--color-accent, #3b82f6);
-	box-shadow: 0 4px 24px rgba(59, 130, 246, 0.12);
+	box-shadow: 0 4px 24px var(--color-accent-ring);
 }
 
 .prefix {
@@ -69,7 +69,7 @@
 	background: var(--color-surface, #fffef9);
 	border: 1px solid var(--color-border, #e8dfcc);
 	border-radius: var(--radius-md);
-	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+	box-shadow: var(--shadow-md);
 	margin-top: 6px;
 	max-height: 280px;
 	overflow-y: auto;
@@ -157,9 +157,9 @@
 		border: none;
 		border-radius: 50%;
 		background: var(--color-accent, #3b82f6);
-		color: #fff;
+		color: var(--color-white);
 		font-size: 22px;
-		box-shadow: 0 2px 12px rgba(59, 130, 246, 0.3);
+		box-shadow: 0 2px 12px oklch(0.58 0.2 255 / 0.3);
 		cursor: pointer;
 		transition: transform 0.15s;
 	}

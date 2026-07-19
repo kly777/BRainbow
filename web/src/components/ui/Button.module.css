@@ -11,8 +11,13 @@
 	line-height: 1.15;
 	white-space: nowrap;
 	transition:
-		background 0.1s,
-		border-color 0.1s;
+		background var(--transition-fast),
+		border-color var(--transition-fast),
+		transform var(--transition-fast);
+}
+
+.btn:active:not(:disabled) {
+	transform: scale(0.97);
 }
 
 .btn:disabled {

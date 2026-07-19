@@ -92,7 +92,7 @@
 	border: none;
 	border-radius: var(--radius-md);
 	background: var(--color-accent, #3b82f6);
-	color: #fff;
+	color: var(--color-white);
 	cursor: pointer;
 }
 
@@ -133,7 +133,7 @@
 
 .modeActive {
 	background: var(--color-accent, #3b82f6);
-	color: #fff;
+	color: var(--color-white);
 	font-weight: 600;
 }
 

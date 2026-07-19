@@ -61,15 +61,15 @@
 }
 
 .statNew {
-	color: #3b82f6;
+	color: var(--badge-new-text);
 }
 
 .statLearning {
-	color: #d97706;
+	color: var(--badge-learning-text);
 }
 
 .statDue {
-	color: #22c55e;
+	color: var(--badge-review-text);
 }
 
 .statBuried {
@@ -77,7 +77,7 @@
 }
 
 .statSuspended {
-	color: #9ca3af;
+	color: var(--badge-suspended-text);
 }
 
 .sidebarList {
@@ -184,7 +184,7 @@
 
 .addLink {
 	font-size: var(--text-sm);
-	color: #fff;
+	color: var(--color-white);
 	text-decoration: none;
 	font-weight: 500;
 	padding: var(--space-xs) 12px;
@@ -261,7 +261,7 @@
 	border: none;
 	border-radius: var(--radius-md);
 	background: var(--color-accent, #3b82f6);
-	color: #fff;
+	color: var(--color-white);
 	cursor: pointer;
 }
 
@@ -327,8 +327,8 @@
 
 .target {
 	padding: var(--space-xl);
-	background: #f0fdf4;
-	border: 1px solid #bbf7d0;
+	background: var(--color-success-subtle);
+	border: 1px solid oklch(0.85 0.08 160);
 	border-radius: var(--radius-lg);
 }
 
@@ -455,7 +455,7 @@
 	background: var(--color-bg);
 	border: 1px solid var(--color-border);
 	border-radius: 6px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	box-shadow: var(--shadow-md);
 }
 
 .tagOption {
@@ -471,9 +471,9 @@
 	text-align: center;
 	padding: var(--space-sm) 16px;
 	font-size: var(--text-sm);
-	color: #92400e;
-	background: #fef3c7;
-	border: 1px solid #fcd34d;
+	color: oklch(0.4 0.12 85);
+	background: var(--color-warning-subtle);
+	border: 1px solid oklch(0.85 0.12 85);
 	border-radius: var(--radius-md);
 	margin-bottom: var(--space-lg);
 	max-width: 1440px;
@@ -542,7 +542,7 @@
 	bottom: 0;
 	z-index: 10;
 	background: var(--color-bg);
-	box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
+	box-shadow: 0 -4px 12px oklch(0 0 0 / 0.06);
 }
 
 .showBtn {
@@ -551,7 +551,7 @@
 	border: 2px solid var(--color-accent, #3b82f6);
 	border-radius: var(--radius-md);
 	background: var(--color-accent, #3b82f6);
-	color: #fff;
+	color: var(--color-white);
 	cursor: pointer;
 	font-weight: 600;
 	transition: background 0.15s;
@@ -638,21 +638,21 @@
 }
 
 .again {
-	background: #fecaca;
-	color: #991b1b;
+	background: var(--badge-relearning-bg);
+	color: var(--badge-relearning-text);
 }
 
 .hard {
-	background: #fed7aa;
-	color: #9a3412;
+	background: var(--badge-learning-bg);
+	color: var(--badge-learning-text);
 }
 
 .good {
-	background: #bbf7d0;
-	color: #166534;
+	background: var(--badge-review-bg);
+	color: var(--badge-review-text);
 }
 
 .easy {
-	background: #bfdbfe;
-	color: #1e40af;
+	background: var(--badge-new-bg);
+	color: var(--badge-new-text);
 }

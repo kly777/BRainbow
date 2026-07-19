@@ -14,9 +14,7 @@
 .dialog {
 	background: var(--color-surface);
 	border-radius: var(--radius-lg);
-	box-shadow:
-		0 8px 32px oklch(0 0 0 / 0.2),
-		0 2px 8px oklch(0 0 0 / 0.12);
+	box-shadow: var(--shadow-lg);
 	max-width: 420px;
 	width: 100%;
 	padding: var(--space-xl);
@@ -99,8 +97,8 @@
 	cursor: pointer;
 	line-height: 1.4;
 	transition:
-		background 0.15s,
-		box-shadow 0.15s;
+		background var(--transition-fast),
+		box-shadow var(--transition-fast);
 	border: none;
 }
 

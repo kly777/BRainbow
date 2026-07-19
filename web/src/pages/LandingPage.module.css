@@ -88,11 +88,11 @@
 	background: var(--color-surface);
 	border-radius: var(--radius-lg);
 	padding: var(--space-xl) 20px;
-	box-shadow: 0 2px 8px oklch(0 0 0 / 0.06);
+	box-shadow: var(--shadow-sm);
 	border: 1px solid var(--color-border-light);
 	transition:
-		transform 0.2s,
-		box-shadow 0.2s;
+		transform var(--transition-base),
+		box-shadow var(--transition-base);
 	text-decoration: none;
 	color: inherit;
 	display: flex;
@@ -103,7 +103,7 @@
 
 .featureCard:hover {
 	transform: translateY(-3px);
-	box-shadow: 0 var(--space-xs) 20px oklch(0 0 0 / 0.1);
+	box-shadow: var(--shadow-lg);
 	text-decoration: none;
 }
 

@@ -29,7 +29,7 @@
 .uploadBtn {
 	padding: 8px 16px;
 	background: var(--color-accent, #3b82f6);
-	color: #fff;
+	color: var(--color-white);
 	border: none;
 	border-radius: 6px;
 	cursor: pointer;
@@ -44,7 +44,7 @@
 .overlay {
 	position: fixed;
 	inset: 0;
-	background: rgba(0, 0, 0, 0.4);
+	background: oklch(0 0 0 / 0.4);
 	z-index: 100;
 }
 
@@ -59,7 +59,7 @@
 	z-index: 101;
 	width: 90%;
 	max-width: 600px;
-	box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+	box-shadow: var(--shadow-lg);
 }
 
 .modal h2 {
@@ -107,7 +107,7 @@
 .submitBtn {
 	padding: 8px 16px;
 	background: var(--color-accent, #3b82f6);
-	color: #fff;
+	color: var(--color-white);
 	border: none;
 	border-radius: 6px;
 	cursor: pointer;
@@ -139,7 +139,7 @@
 }
 .card:hover {
 	border-color: var(--color-accent, #3b82f6);
-	box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+	box-shadow: 0 2px 8px var(--color-accent-ring);
 }
 
 .cardTitle {
@@ -156,13 +156,13 @@
 }
 
 .ratio[data-known="high"] {
-	color: #16a34a;
+	color: oklch(0.5 0.18 150);
 }
 .ratio[data-known="mid"] {
-	color: #ca8a04;
+	color: oklch(0.55 0.16 80);
 }
 .ratio[data-known="low"] {
-	color: #dc2626;
+	color: oklch(0.45 0.22 30);
 }
 
 .unknownCount {

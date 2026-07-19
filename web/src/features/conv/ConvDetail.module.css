@@ -125,7 +125,7 @@
 	font-size: var(--text-xs);
 	font-weight: 700;
 	color: var(--color-success, #16a34a);
-	background: #dcfce7;
+	background: var(--color-success-subtle);
 	width: 20px;
 	height: 20px;
 	border-radius: 50%;

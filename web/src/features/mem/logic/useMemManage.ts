@@ -6,12 +6,7 @@ import { tryAsync } from "../../../lib/result.ts";
 import { showConfirm, tryOrNotify } from "../../../lib/safe-action.ts";
 import {
 	addTagToMemE,
-	batchAddTagToMemsE,
-	batchBuryMemE,
-	batchDeleteMemE,
 	batchGetMemsTagsE,
-	batchRemoveTagFromMemsE,
-	batchResetMemE,
 	deleteMemE,
 	editMemE,
 	getMemTagsE,
@@ -26,6 +21,7 @@ import {
 import type { TagMode } from "../ui/MemManageToolbar.tsx";
 import type { PageMeta } from "./mem-manage-utils.ts";
 import { fetchAllMems } from "./mem-manage-utils.ts";
+import { useBatchOps } from "./useBatchOps.ts";
 import { useMemManageParams } from "./useMemManageParams.ts";
 
 let initialLoadDone = false;
@@ -267,81 +263,13 @@ export function useMemManage() {
 	};
 
 	// ── 批量操作 ──
-	const batchDelete = async () => {
-		const ids = [...batchIds()];
-		if (ids.length === 0) return;
-		const confirmed = await showConfirm({
-			title: "批量删除",
-			message: `确定删除 ${ids.length} 条记忆？此操作不可撤销。`,
-			variant: "danger",
-			confirmLabel: "删除",
-		});
-		if (!confirmed) return;
-
-		const ok = await tryOrNotify(() => batchDeleteMemE(ids), "批量删除");
-		if (!ok) return;
-		setBatchIds(new Set<number>());
-		params.setDetailId(null);
-		load();
-	};
-
-	const batchReset = async () => {
-		const ids = [...batchIds()];
-		if (ids.length === 0) return;
-		const confirmed = await showConfirm({
-			title: "批量重置",
-			message: `确定重置 ${ids.length} 条记忆的复习进度？`,
-			variant: "warning",
-			confirmLabel: "重置",
-		});
-		if (!confirmed) return;
-
-		const ok = await tryOrNotify(() => batchResetMemE(ids), "批量重置");
-		if (!ok) return;
-		setBatchIds(new Set<number>());
-		load();
-	};
-
-	const batchBury = async () => {
-		const ids = [...batchIds()];
-		if (ids.length === 0) return;
-		const confirmed = await showConfirm({
-			title: "批量埋葬",
-			message: `确定埋葬 ${ids.length} 条记忆？它们将不再出现在复习队列中。`,
-			variant: "warning",
-			confirmLabel: "埋葬",
-		});
-		if (!confirmed) return;
-
-		const ok = await tryOrNotify(() => batchBuryMemE(ids), "批量埋葬");
-		if (!ok) return;
-		setBatchIds(new Set<number>());
-		load();
-	};
-
-	const handleBatchAddTag = async (tag: TagInfo) => {
-		const ids = [...batchIds()];
-		if (ids.length === 0) return;
-		const ok = await tryOrNotify(
-			() => batchAddTagToMemsE(ids, tag.id),
-			"批量添加标签",
-		);
-		if (!ok) return;
-		setShowBatchTagModal(false);
-		load();
-	};
-
-	const handleBatchRemoveTag = async (tag: TagInfo) => {
-		const ids = [...batchIds()];
-		if (ids.length === 0) return;
-		const ok = await tryOrNotify(
-			() => batchRemoveTagFromMemsE(ids, tag.id),
-			"批量移除标签",
-		);
-		if (!ok) return;
-		setShowBatchTagModal(false);
-		load();
-	};
+	const batchOps = useBatchOps({
+		selectedIds: () => [...batchIds()],
+		clearSelection: () => setBatchIds(new Set<number>()),
+		reload: load,
+		closeDetail: () => params.setDetailId(null),
+		closeTagModal: () => setShowBatchTagModal(false),
+	});
 
 	return {
 		// URL 参数（来自 params hook）
@@ -400,10 +328,10 @@ export function useMemManage() {
 		unsuspendMemE,
 
 		// 批量操作
-		batchDelete,
-		batchReset,
-		batchBury,
-		handleBatchAddTag,
-		handleBatchRemoveTag,
+		batchDelete: batchOps.batchDelete,
+		batchReset: batchOps.batchReset,
+		batchBury: batchOps.batchBury,
+		handleBatchAddTag: batchOps.batchAddTag,
+		handleBatchRemoveTag: batchOps.batchRemoveTag,
 	};
 }

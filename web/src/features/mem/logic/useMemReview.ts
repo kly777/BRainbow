@@ -1,16 +1,7 @@
 // ── 记忆复习模块的核心业务逻辑 ──
 
 import { useSearchParams } from "@solidjs/router";
-import {
-	createEffect,
-	createMemo,
-	createSignal,
-	onCleanup,
-	onMount,
-} from "solid-js";
-import { request } from "../../../apis/request.ts";
-import { callAi } from "../../../lib/ai.ts";
-import { fillPrompt, getAiSettings } from "../../../lib/ai-settings.ts";
+import { createEffect, createSignal, onMount } from "solid-js";
 import { notifyError } from "../../../lib/notify.ts";
 import { tryAsync } from "../../../lib/result.ts";
 import {
@@ -18,16 +9,17 @@ import {
 	editMemE,
 	getDueE,
 	getMemCountsE,
-	getMnemonicE,
 	getSessionEstimateE,
 	previewMemE,
 	reviewMemE,
-	setMnemonicE,
 	suspendMemE,
 } from "../api.ts";
-import type { DueResponse, MemCounts, MemItem, TagInfo } from "../model.ts";
+import type { MemCounts, MemItem, TagInfo } from "../model.ts";
 import { ALPHA, calcAvgCardTime, calcMaxLearning } from "./mem-calcs.ts";
 import { useMemTagFilter } from "./useMemTagFilter.ts";
+import { useMnemonic } from "./useMnemonic.ts";
+import { useReviewKeyboard } from "./useReviewKeyboard.ts";
+import { useUndo } from "./useUndo.ts";
 
 // ── Hook ──
 
@@ -100,7 +92,6 @@ export function useMemReview(): UseMemReview {
 	const [intervals, setIntervals] = createSignal<readonly number[]>([
 		0, 0, 0, 0,
 	]);
-	const [showUndo, setShowUndo] = createSignal(false);
 	const [sidebarOpen, _setSidebarOpen] = createSignal(false);
 	const [allFar, setAllFar] = createSignal(false);
 	const [upcoming, setUpcoming] = createSignal(0);
@@ -114,86 +105,17 @@ export function useMemReview(): UseMemReview {
 	const [cardStart, setCardStart] = createSignal(Date.now());
 	const [cardDurations, setCardDurations] = createSignal<number[]>([]);
 
-	// ── AI 助记 ──
-	const [consecutiveForgets, setConsecutiveForgets] = createSignal<
-		Map<number, number>
-	>(new Map());
-	const [mnemonics, setMnemonics] = createSignal<Map<number, string>>(
-		new Map(),
-	);
-	const [mnemonicLoading, setMnemonicLoading] = createSignal(false);
-
-	const mnemonic = () => mnemonics().get(item()?.id ?? -1);
-
-	const generateMnemonic = async () => {
-		const it = item();
-		if (!it) return;
-		const settings = getAiSettings();
-		if (!settings.apiKey) {
-			notifyError(
-				"未配置 API Key",
-				new Error("请在顶栏 🤖 AI 设置中配置 API Key"),
-			);
-			return;
-		}
-		setMnemonicLoading(true);
-
-		const aiResult = await tryAsync(async () => {
-			const prompt = fillPrompt(settings.mnemonicPrompt, {
-				cue: it.cue.content,
-				target: it.target.content,
-			});
-			return await callAi({
-				messages: [{ role: "user", content: prompt }],
-			});
-		});
-
-		if (aiResult.ok) {
-			// 保存助记到后端（失败不影响用户体验——本地已缓存）
-			tryAsync(() => setMnemonicE(it.id, aiResult.value.content));
-			setMnemonics((prev) => {
-				const next = new Map(prev);
-				next.set(it.id, aiResult.value.content);
-				return next;
-			});
-		} else {
-			notifyError("AI 生成失败", aiResult.error);
-		}
-		setMnemonicLoading(false);
-	};
-
-	// ── 撤销记录 ──
-	let lastAction: { id: number; undoData: Record<string, unknown> } | null =
-		null;
-
 	// ── derived ──
-
 	const avgCardTime = () => calcAvgCardTime(cardDurations());
 	const estRemaining = () => Math.round(avgCardTime() * estimatedTotal());
 	const maxLearning = () => calcMaxLearning(avgRating());
 	const item = () => due()[current()];
 
-	const loadMnemonic = async (memId: number) => {
-		const it = item();
-		const existing = it && it.mnemonic;
-		if (existing) {
-			setMnemonics((prev) => {
-				const next = new Map(prev);
-				next.set(it!.id, existing);
-				return next;
-			});
-			return;
-		}
-		// 没有则尝试从后端单独获取（可选增强功能，失败不影响复习）
-		const result = await tryAsync(() => getMnemonicE(memId));
-		if (result.ok && result.value.content) {
-			setMnemonics((prev) => {
-				const next = new Map(prev);
-				next.set(memId, result.value.content!);
-				return next;
-			});
-		}
-	};
+	// ── 子 hook：撤销（undo 成功后重载队列）──
+	const undoHook = useUndo(() => loadDue());
+
+	// ── 子 hook：AI 助记 ──
+	const mnemonicHook = useMnemonic();
 
 	// ── 数据加载 ──
 
@@ -262,7 +184,7 @@ export function useMemReview(): UseMemReview {
 			);
 			if (data.items.length > 0) {
 				loadPreview(data.items[0].id);
-				loadMnemonic(data.items[0].id);
+				mnemonicHook.load(data.items[0]);
 			}
 		}
 		setLoading(false);
@@ -278,9 +200,11 @@ export function useMemReview(): UseMemReview {
 		});
 		if (due().length > 0) {
 			setCardStart(Date.now());
-			const nextId = due()[current()]?.id;
-			loadPreview(nextId);
-			if (nextId) loadMnemonic(nextId);
+			const nextItem = due()[current()];
+			if (nextItem) {
+				loadPreview(nextItem.id);
+				mnemonicHook.load(nextItem);
+			}
 			_setShowAnswer(false);
 		} else {
 			loadDue();
@@ -290,18 +214,7 @@ export function useMemReview(): UseMemReview {
 	const rate = async (rating: number) => {
 		const it = item();
 		if (!it) return;
-		lastAction = {
-			id: it.id,
-			undoData: {
-				state: it.state,
-				stability: it.stability,
-				difficulty: it.difficulty,
-				step_index: null,
-				lapses: 0,
-				leeched: false,
-				due_at: it.due_at,
-			},
-		};
+		undoHook.record(it);
 
 		// Railway: 成功 → 更新本地状态，失败 → 通知用户，状态不变
 		const result = await tryAsync(() => reviewMemE(it.id, rating));
@@ -314,26 +227,9 @@ export function useMemReview(): UseMemReview {
 		const elapsed = Math.min((Date.now() - cardStart()) / 1000, 300);
 		setCardDurations((prev) => [...prev, elapsed].slice(-30));
 
-		// 连续忘记检测
-		if (rating === 1) {
-			setConsecutiveForgets((prev) => {
-				const next = new Map(prev);
-				const count = (next.get(it.id) ?? 0) + 1;
-				next.set(it.id, count);
-				if (count >= 3 && !mnemonics().has(it.id)) {
-					setTimeout(() => generateMnemonic(), 0);
-				}
-				return next;
-			});
-		} else {
-			setConsecutiveForgets((prev) => {
-				const next = new Map(prev);
-				next.delete(it.id);
-				return next;
-			});
-		}
+		mnemonicHook.trackRating(it, rating);
 
-		setShowUndo(true);
+		undoHook.show();
 		advanceQueue();
 		loadCounts();
 	};
@@ -347,22 +243,6 @@ export function useMemReview(): UseMemReview {
 		} else {
 			notifyError("埋葬失败", result.error);
 		}
-	};
-
-	const undo = async () => {
-		if (!lastAction) return;
-		const result = await tryAsync(() =>
-			request(`/mem/${lastAction!.id}/undo`, {
-				method: "POST",
-				body: JSON.stringify(lastAction!.undoData),
-			}),
-		);
-		if (!result.ok) {
-			notifyError("撤销评分失败", result.error);
-			return;
-		}
-		setShowUndo(false);
-		loadDue();
 	};
 
 	const resumeSuspend = async () => {
@@ -420,31 +300,17 @@ export function useMemReview(): UseMemReview {
 		);
 	};
 
-	// ── 键盘处理 ──
-
-	const onKey = (e: KeyboardEvent) => {
-		if (
-			e.target instanceof HTMLTextAreaElement ||
-			(e.target as HTMLElement)?.tagName === "INPUT"
-		)
-			return;
-		if (!showAnswer() && e.key === " ") {
-			e.preventDefault();
-			_setShowAnswer(true);
-		} else if (showAnswer()) {
-			const r = ({ "1": 1, "2": 2, "3": 3, "4": 4 } as Record<string, number>)[
-				e.key
-			];
-			if (r) rate(r);
-		}
-	};
+	// ── 键盘快捷键（空格翻面，1-4 评分）──
+	useReviewKeyboard({
+		showAnswer,
+		onShowAnswer: () => _setShowAnswer(true),
+		onRate: rate,
+	});
 
 	onMount(() => {
 		loadDue();
 		loadCounts();
-		globalThis.addEventListener("keydown", onKey);
 	});
-	onCleanup(() => globalThis.removeEventListener("keydown", onKey));
 
 	// ── 当标签过滤变化时重新加载 ──
 	// biome-ignore lint/correctness/useExhaustiveDependencies: manual deps tracking
@@ -463,7 +329,7 @@ export function useMemReview(): UseMemReview {
 		editCue,
 		editTarget,
 		intervals,
-		showUndo,
+		showUndo: undoHook.showUndo,
 		sidebarOpen,
 		allFar,
 		upcoming,
@@ -495,13 +361,16 @@ export function useMemReview(): UseMemReview {
 		loadDue,
 		rate,
 		bury,
-		undo,
+		undo: undoHook.undo,
 		resumeSuspend,
 		startEdit,
 		saveEdit,
 		handleCopyCard,
-		mnemonic,
-		mnemonicLoading,
-		generateMnemonic,
+		mnemonic: () => mnemonicHook.mnemonicFor(item()?.id),
+		mnemonicLoading: mnemonicHook.loading,
+		generateMnemonic: async () => {
+			const it = item();
+			if (it) await mnemonicHook.generate(it);
+		},
 	};
 }

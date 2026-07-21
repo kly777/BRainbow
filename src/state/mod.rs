@@ -4,9 +4,9 @@ use std::sync::Arc;
 use crate::config::Config;
 use crate::modules::{
     card::CardService, db_viewer::DbViewerService, media::service::MediaService,
-    mem::service::MemService, onto::OntoService, reading::service::ReadingService,
-    sign::SignService, task::TaskService, text::TextService,
-    time_window::service::TimeWindowService, user::UserService,
+    mem::MemRepo, mem::service::MemService, onto::OntoService,
+    reading::service::ReadingService, sign::SignService, task::TaskService,
+    text::TextService, time_window::service::TimeWindowService, user::UserService,
 };
 
 /// 应用级共享状态。
@@ -35,6 +35,9 @@ pub struct AppState {
 impl AppState {
     pub fn new(db: Arc<SqlitePool>, config: &Config) -> Self {
         let task = TaskService::new(db.clone());
+        // 构建 Repository adapter，通过 trait 注入 Service
+        let mem_repo: Arc<dyn crate::modules::mem::port::MemRepository> =
+            Arc::new(MemRepo::new(db.clone()));
         Self {
             db: db.clone(),
             jwt_secret: Arc::new(config.jwt_secret.clone()),
@@ -45,7 +48,7 @@ impl AppState {
             text: TextService::new(db.clone()),
             db_viewer: DbViewerService::new(db.clone()),
             task: task.clone(),
-            mem: MemService::new(db.clone()),
+            mem: MemService::new(mem_repo, db.clone()),
             media: MediaService::new(db.clone()),
             reading: ReadingService::new(db.clone()),
             time_window: TimeWindowService::new(db.clone(), task),

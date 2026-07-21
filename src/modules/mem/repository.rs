@@ -1,7 +1,9 @@
-use sqlx::{FromRow, QueryBuilder, SqlitePool};
+use sqlx::{QueryBuilder, SqlitePool};
 use std::sync::Arc;
 
-use super::model::{Chunk, FsrsUpdate, MemQuery, MemTagRow, TagInfo};
+use super::model::{Chunk, FsrsUpdate, InsertRevlogParams, MemQuery, MemRow, MemTagRow, TagInfo};
+use async_trait::async_trait;
+use super::port::MemRepository;
 
 #[derive(Debug, sqlx::FromRow)]
 struct TagRow {
@@ -10,27 +12,11 @@ struct TagRow {
     created_at: String,
 }
 
-#[derive(Debug, FromRow)]
-pub struct MemRow {
-    pub id: i32,
-    pub cue_chunk_id: i32,
-    pub target_chunk_id: i32,
-    pub state: String,
-    pub stability: f64,
-    pub difficulty: f64,
-    pub step_index: Option<i32>,
-    #[allow(dead_code)]
-    pub buried: bool,
-    pub lapses: i32,
-    pub leeched: bool,
-    pub due_at: String,
-    #[allow(dead_code)]
-    pub last_review_at: Option<String>,
-}
+
 
 #[derive(Clone)]
 pub struct MemRepo {
-    pub(crate) pool: Arc<SqlitePool>,
+    pool: Arc<SqlitePool>,
 }
 
 impl MemRepo {
@@ -810,6 +796,189 @@ impl MemRepo {
         ).bind(id).execute(&*self.pool).await?;
         Ok(())
     }
+
+    // ── Revlog methods (moved from service.rs direct SQL) ──
+
+    pub async fn insert_revlog(&self, params: &InsertRevlogParams) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            INSERT INTO revlog (mem_id, review_time, rating, delta_t,
+                stability_before, difficulty_before, state_before,
+                stability_after, difficulty_after, state_after)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            "#,
+        )
+        .bind(params.mem_id)
+        .bind(&params.review_time)
+        .bind(params.rating as i32)
+        .bind(params.delta_t)
+        .bind(params.stability_before)
+        .bind(params.difficulty_before)
+        .bind(&params.state_before)
+        .bind(params.stability_after)
+        .bind(params.difficulty_after)
+        .bind(&params.state_after)
+        .execute(&*self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn count_revlogs(&self) -> Result<i64, sqlx::Error> {
+        sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
+            .fetch_one(&*self.pool)
+            .await
+    }
+
+    pub async fn prune_revlogs(&self) -> Result<(), sqlx::Error> {
+        const MAX_REVLOGS: i64 = 2000;
+        const TARGET_REVLOGS: i64 = 1600;
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
+            .fetch_one(&*self.pool)
+            .await?;
+        if count <= MAX_REVLOGS {
+            return Ok(());
+        }
+
+        let to_delete = count - TARGET_REVLOGS;
+        tracing::info!(
+            "revlog 已达 {} 条 (上限 {}), 删除最旧的 {} 条",
+            count,
+            MAX_REVLOGS,
+            to_delete
+        );
+
+        sqlx::query(
+            "DELETE FROM revlog WHERE id IN (SELECT id FROM revlog ORDER BY id ASC LIMIT ?)",
+        )
+        .bind(to_delete)
+        .execute(&*self.pool)
+        .await?;
+        Ok(())
+    }
+}
+
+// ── MemRepository trait implementation ──
+
+#[async_trait]
+impl MemRepository for MemRepo {
+    async fn create_chunk(&self, content: &str) -> Result<i32, sqlx::Error> {
+        self.create_chunk(content).await
+    }
+    async fn get_chunk(&self, id: i32) -> Result<Option<Chunk>, sqlx::Error> {
+        self.get_chunk(id).await
+    }
+    async fn update_chunk(&self, id: i32, content: &str) -> Result<(), sqlx::Error> {
+        self.update_chunk(id, content).await
+    }
+    async fn create_mem(&self, cue_id: i32, target_id: i32, prerequisites: &[i32]) -> Result<i32, sqlx::Error> {
+        self.create_mem(cue_id, target_id, prerequisites).await
+    }
+    async fn get_mem(&self, id: i32) -> Result<Option<MemRow>, sqlx::Error> {
+        self.get_mem(id).await
+    }
+    async fn delete_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+        self.delete_mem(id).await
+    }
+    async fn get_all_mems(&self, limit: i64, offset: i64, query: &MemQuery) -> Result<Vec<i32>, sqlx::Error> {
+        self.get_all_mems(limit, offset, query).await
+    }
+    async fn count_all_mems(&self, query: &MemQuery) -> Result<i64, sqlx::Error> {
+        self.count_all_mems(query).await
+    }
+    async fn get_learning_mems(&self, limit: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+        self.get_learning_mems(limit, tag_ids, exclude_tag_ids).await
+    }
+    async fn get_due_reviews(&self, limit: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+        self.get_due_reviews(limit, tag_ids, exclude_tag_ids).await
+    }
+    async fn get_new_cards(&self, limit: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+        self.get_new_cards(limit, tag_ids, exclude_tag_ids).await
+    }
+    async fn get_upcoming_reviews(&self, limit: i64, tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+        self.get_upcoming_reviews(limit, tag_ids).await
+    }
+    async fn count_upcoming(&self) -> Result<i64, sqlx::Error> {
+        self.count_upcoming().await
+    }
+    async fn count_upcoming_within_hours(&self, hours: i64) -> Result<i64, sqlx::Error> {
+        self.count_upcoming_within_hours(hours).await
+    }
+    async fn get_counts(&self) -> Result<(i64, i64, i64, i64, i64), sqlx::Error> {
+        self.get_counts().await
+    }
+    async fn get_next_mem(&self) -> Result<Option<i32>, sqlx::Error> {
+        self.get_next_mem().await
+    }
+    async fn set_state(&self, id: i32, state: &str, step_index: Option<i32>) -> Result<(), sqlx::Error> {
+        self.set_state(id, state, step_index).await
+    }
+    async fn update_mem_fsrs(&self, id: i32, params: &FsrsUpdate) -> Result<(), sqlx::Error> {
+        self.update_mem_fsrs(id, params).await
+    }
+    async fn bury_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+        self.bury_mem(id).await
+    }
+    async fn unbury_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+        self.unbury_mem(id).await
+    }
+    async fn suspend_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+        self.suspend_mem(id).await
+    }
+    async fn unsuspend_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+        self.unsuspend_mem(id).await
+    }
+    async fn reset_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+        self.reset_mem(id).await
+    }
+    async fn get_recent_retention(&self, limit: i64) -> Result<f64, sqlx::Error> {
+        self.get_recent_retention(limit).await
+    }
+    async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, sqlx::Error> {
+        self.create_tag(name, user_id).await
+    }
+    async fn delete_tag(&self, id: i32) -> Result<(), sqlx::Error> {
+        self.delete_tag(id).await
+    }
+    async fn list_tags(&self, user_id: i32) -> Result<Vec<TagInfo>, sqlx::Error> {
+        self.list_tags(user_id).await
+    }
+    async fn search_tags(&self, user_id: i32, q: &str) -> Result<Vec<TagInfo>, sqlx::Error> {
+        self.search_tags(user_id, q).await
+    }
+    async fn get_mem_tags(&self, mem_id: i32) -> Result<Vec<TagInfo>, sqlx::Error> {
+        self.get_mem_tags(mem_id).await
+    }
+    async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), sqlx::Error> {
+        self.add_tag_to_mem(mem_id, tag_id).await
+    }
+    async fn remove_tag_from_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), sqlx::Error> {
+        self.remove_tag_from_mem(mem_id, tag_id).await
+    }
+    async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), sqlx::Error> {
+        self.set_mem_tags(mem_id, tag_ids).await
+    }
+    async fn get_mems_tags_batch(&self, mem_ids: &[i32]) -> Result<Vec<MemTagRow>, sqlx::Error> {
+        self.get_mems_tags_batch(mem_ids).await
+    }
+    async fn export_all_mems(&self, tag_ids: &[i32]) -> Result<Vec<(String, String, String)>, sqlx::Error> {
+        self.export_all_mems(tag_ids).await
+    }
+    async fn get_mnemonic(&self, mem_id: i32) -> Result<Option<String>, sqlx::Error> {
+        self.get_mnemonic(mem_id).await
+    }
+    async fn upsert_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), sqlx::Error> {
+        self.upsert_mnemonic(mem_id, content).await
+    }
+    async fn insert_revlog(&self, params: &InsertRevlogParams) -> Result<(), sqlx::Error> {
+        self.insert_revlog(params).await
+    }
+    async fn count_revlogs(&self) -> Result<i64, sqlx::Error> {
+        self.count_revlogs().await
+    }
+    async fn prune_revlogs(&self) -> Result<(), sqlx::Error> {
+        self.prune_revlogs().await
+    }
 }
 
 // ── 测试 ──
@@ -1413,7 +1582,10 @@ mod tests {
     }
 
     async fn estimate(repo: &MemRepo) -> crate::modules::mem::model::SessionEstimate {
-        let svc = crate::modules::mem::service::MemService::new(repo.pool.clone());
+        let pool = repo.pool.clone();
+        let repo_arc: Arc<dyn crate::modules::mem::port::MemRepository> =
+            Arc::new(MemRepo::new(pool.clone()));
+        let svc = crate::modules::mem::service::MemService::new(repo_arc, pool);
         svc.get_session_estimate().await.unwrap()
     }
 

@@ -206,6 +206,39 @@ pub struct MemWithTags {
     pub tags: Vec<TagInfo>,
 }
 
+/// 数据库行：mem 表的一条记录（供 Repository 层使用）
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct MemRow {
+    pub id: i32,
+    pub cue_chunk_id: i32,
+    pub target_chunk_id: i32,
+    pub state: String,
+    pub stability: f64,
+    pub difficulty: f64,
+    pub step_index: Option<i32>,
+    #[allow(dead_code)]
+    pub buried: bool,
+    pub lapses: i32,
+    pub leeched: bool,
+    pub due_at: String,
+    #[allow(dead_code)]
+    pub last_review_at: Option<String>,
+}
+
+/// 插入 revlog 的参数（将 service 中的直写 SQL 收进 Repository）
+pub struct InsertRevlogParams {
+    pub mem_id: i32,
+    pub review_time: String,
+    pub rating: u8,
+    pub delta_t: i32,
+    pub stability_before: f64,
+    pub difficulty_before: f64,
+    pub state_before: String,
+    pub stability_after: f64,
+    pub difficulty_after: f64,
+    pub state_after: String,
+}
+
 /// FSRS 更新参数（对应 mem 表中的 FSRS 相关字段）
 pub struct FsrsUpdate {
     pub state: String,

@@ -3,7 +3,9 @@ pub mod fsrs;
 pub mod handler;
 pub mod model;
 pub mod optimizer;
-mod repository;
+pub mod port;
+pub(crate) mod repository;
+pub(crate) use repository::MemRepo;
 pub mod service;
 
 use crate::state::AppState;

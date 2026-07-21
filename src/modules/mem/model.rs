@@ -239,6 +239,25 @@ pub struct InsertRevlogParams {
     pub state_after: String,
 }
 
+/// 计算自上次复习以来经过的天数。
+/// 新卡（无 last_review_at）返回 0。
+/// 已复习过的卡即使不到 1 天也返回至少 1，
+/// 确保 FSRS 收到非零 days_elapsed 从而正确更新 stability。
+pub(crate) fn days_elapsed_since(last_review_at: &Option<String>) -> u32 {
+    match last_review_at {
+        None => 0,
+        Some(s) => {
+            if let Ok(t) = chrono::DateTime::parse_from_rfc3339(s) {
+                let t_utc = t.with_timezone(&chrono::Utc);
+                let elapsed = chrono::Utc::now() - t_utc;
+                (elapsed.num_seconds() / 86400) as u32
+            } else {
+                0
+            }
+        }
+    }
+}
+
 /// FSRS 更新参数（对应 mem 表中的 FSRS 相关字段）
 pub struct FsrsUpdate {
     pub state: String,
@@ -259,4 +278,35 @@ pub struct SessionEstimate {
     pub retention: f64,
     /// 预估本次学习需要查看的总次数
     pub total_estimate: usize,
+}
+
+/// mem 模块通用错误
+#[derive(Debug)]
+pub enum AppError {
+    NotFound,
+    Db(sqlx::Error),
+}
+
+impl From<sqlx::Error> for AppError {
+    fn from(e: sqlx::Error) -> Self {
+        AppError::Db(e)
+    }
+}
+
+impl std::fmt::Display for AppError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AppError::NotFound => write!(f, "not found"),
+            AppError::Db(e) => write!(f, "db: {e}"),
+        }
+    }
+}
+
+impl AppError {
+    pub fn into_response(self) -> axum::response::Response {
+        match self {
+            AppError::NotFound => crate::error::not_found("记忆项不存在"),
+            AppError::Db(e) => crate::error::internal(e, "数据库操作"),
+        }
+    }
 }

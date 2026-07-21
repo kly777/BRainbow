@@ -6,6 +6,7 @@ pub mod optimizer;
 pub mod port;
 pub(crate) mod repository;
 pub(crate) use repository::MemRepo;
+pub mod query;
 pub mod service;
 
 use crate::state::AppState;

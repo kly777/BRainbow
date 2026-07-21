@@ -856,6 +856,14 @@ impl MemRepo {
         .await?;
         Ok(())
     }
+
+    pub async fn count_relearning(&self) -> Result<i64, sqlx::Error> {
+        sqlx::query_scalar(
+            "SELECT COUNT(*) FROM mem WHERE state = 'relearning' AND buried = 0",
+        )
+        .fetch_one(&*self.pool)
+        .await
+    }
 }
 
 // ── MemRepository trait implementation ──
@@ -978,6 +986,9 @@ impl MemRepository for MemRepo {
     }
     async fn prune_revlogs(&self) -> Result<(), sqlx::Error> {
         self.prune_revlogs().await
+    }
+    async fn count_relearning(&self) -> Result<i64, sqlx::Error> {
+        self.count_relearning().await
     }
 }
 
@@ -1582,10 +1593,9 @@ mod tests {
     }
 
     async fn estimate(repo: &MemRepo) -> crate::modules::mem::model::SessionEstimate {
-        let pool = repo.pool.clone();
         let repo_arc: Arc<dyn crate::modules::mem::port::MemRepository> =
-            Arc::new(MemRepo::new(pool.clone()));
-        let svc = crate::modules::mem::service::MemService::new(repo_arc, pool);
+            Arc::new(MemRepo::new(repo.pool.clone()));
+        let svc = crate::modules::mem::query::MemQueryService::new(repo_arc);
         svc.get_session_estimate().await.unwrap()
     }
 

@@ -1,31 +1,11 @@
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
-use crate::batch::{BatchDataResponse, BatchResponse, batch_execute, batch_execute_with_code};
+use crate::batch::{BatchResponse, batch_execute, batch_execute_with_code};
 use crate::modules::mem::config::MemConfig;
 use crate::modules::mem::fsrs::{self, ReviewOutcome};
 use crate::modules::mem::model::*;
 use crate::modules::mem::port::MemRepository;
-use crate::pagination::{PaginatedResponse, Pagination};
-
-/// 计算自上次复习以来经过的天数。
-/// 新卡（无 last_review_at）返回 0。
-/// 已复习过的卡即使不到 1 天也返回至少 1，
-/// 确保 FSRS 收到非零 days_elapsed 从而正确更新 stability。
-fn days_elapsed_since(last_review_at: &Option<String>) -> u32 {
-    match last_review_at {
-        None => 0,
-        Some(s) => {
-            if let Ok(t) = chrono::DateTime::parse_from_rfc3339(s) {
-                let t_utc = t.with_timezone(&chrono::Utc);
-                let elapsed = chrono::Utc::now() - t_utc;
-                (elapsed.num_seconds() / 86400) as u32
-            } else {
-                0
-            }
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct MemService {
@@ -39,7 +19,7 @@ impl MemService {
         Self { repo, db }
     }
 
-    // ── 获取学习池 ──
+    // ── 获取学习池（含侧面：新卡标注 learning 状态） ──
 
     pub async fn get_due(
         &self,
@@ -72,7 +52,7 @@ impl MemService {
             ids.extend(due);
         }
 
-        // 3. 新卡填空
+        // 3. 新卡填空（标注 learning 状态——这是写操作）
         let new_quota = cap.saturating_sub(ids.len());
         if new_quota > 0 {
             let new_cards = self
@@ -110,7 +90,6 @@ impl MemService {
             0
         };
 
-        // all_far：当前批次全部提前 24h+
         let all_far = !items.is_empty()
             && items.iter().all(|it| {
                 chrono::DateTime::parse_from_rfc3339(&it.due_at)
@@ -170,7 +149,7 @@ impl MemService {
             )
             .await?;
 
-        // 写 revlog（通过 Repository trait，不再直写 SQL）
+        // 写 revlog（通过 Repository trait）
         let delta_t = days_elapsed_since(&row.last_review_at) as i32;
         let now_str = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
         self.repo
@@ -226,7 +205,7 @@ impl MemService {
         )
     }
 
-    // ── 其他 ──
+    // ── 内部辅助 ──
 
     async fn build_items(&self, ids: &[i32]) -> Vec<MemWithChunks> {
         let mut items = Vec::new();
@@ -253,92 +232,6 @@ impl MemService {
             }
         }
         items
-    }
-
-    pub async fn get_all(
-        &self,
-        query: &MemQuery,
-    ) -> Result<PaginatedResponse<MemWithChunks>, sqlx::Error> {
-        let pagination = Pagination {
-            page: query.page.unwrap_or(1),
-            page_size: query.page_size.unwrap_or(50),
-        };
-        let (page, page_size) = pagination.clamp();
-        let offset = (page - 1) * page_size;
-        let ids = self.repo.get_all_mems(page_size, offset, query).await?;
-        let items = self.build_items(&ids).await;
-        let total = self.repo.count_all_mems(query).await?;
-        let pagination_ref = &pagination;
-        Ok(PaginatedResponse::new(items, total, pagination_ref))
-    }
-
-    /// 获取各状态计数（新卡 / 学习中 / 待复习 / 已埋葬）
-    pub async fn get_counts(&self) -> Result<MemCounts, sqlx::Error> {
-        let (new_count, learning_count, due_count, buried_count, suspended_count) =
-            self.repo.get_counts().await?;
-        Ok(MemCounts {
-            new: new_count as usize,
-            learning: learning_count as usize,
-            due: due_count as usize,
-            buried: buried_count as usize,
-            suspended: suspended_count as usize,
-        })
-    }
-
-    pub async fn get_session_estimate(&self) -> Result<SessionEstimate, sqlx::Error> {
-        let (new_count, learning_count, due_count, _, _) = self.repo.get_counts().await?;
-        // relearning 包含在 learning_count 中，单独查
-        let relearning_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM mem WHERE state = 'relearning' AND buried = 0",
-        )
-        .fetch_one(&*self.db)
-        .await?;
-        // learning 去掉 relearning 的纯学习卡
-        let pure_learning = learning_count - relearning_count;
-
-        let retention = self.repo.get_recent_retention(100).await?;
-
-        let config = crate::modules::mem::config::MemConfig::load();
-        let step_count_learning = config.learning_steps.len(); // 默认 2
-        let step_count_relearning = config.relearn_steps.len(); // 默认 1
-
-        // 每张新卡：每个 learning step 出现一次
-        let new_total = new_count as usize * step_count_learning;
-
-        // 学习中的卡：已过部分 step，估算剩余一半 + 至少 1 次
-        let learning_remaining = if step_count_learning > 1 {
-            step_count_learning / 2 + 1
-        } else {
-            1
-        };
-        let learning_total = pure_learning as usize * learning_remaining;
-
-        // 重学中的卡：类似，估算剩余步数
-        let relearn_remaining = if step_count_relearning > 1 {
-            step_count_relearning / 2 + 1
-        } else {
-            1
-        };
-        let relearning_total = relearning_count as usize * relearn_remaining;
-
-        // 到期的复习卡：部分可能失败进入重学，每张失败卡走一遍 relearn steps
-        let fail_rate = if retention > 0.0 {
-            1.0 - retention
-        } else {
-            0.2 // 默认 20%
-        };
-        let review_total = due_count as usize
-            + (due_count as f64 * fail_rate * step_count_relearning as f64).ceil() as usize;
-
-        let total_estimate = new_total + learning_total + relearning_total + review_total;
-
-        let due_count_total = (new_count + learning_count + due_count) as usize;
-
-        Ok(SessionEstimate {
-            due_count: due_count_total,
-            retention,
-            total_estimate,
-        })
     }
 
     // ── 挂起 / 恢复 ──
@@ -381,20 +274,7 @@ impl MemService {
         BatchResponse::from_results(errors, ids.len())
     }
 
-    pub async fn preview(&self, id: i32) -> Result<[f64; 4], AppError> {
-        let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
-        let state: CardState = row.state.parse().unwrap_or(CardState::New);
-        let days_elapsed = days_elapsed_since(&row.last_review_at);
-        let config = fsrs::SchedulerConfig::default();
-        Ok(fsrs::preview(
-            row.stability,
-            row.difficulty,
-            state,
-            row.step_index.map(|i| i as usize),
-            days_elapsed,
-            &config,
-        ))
-    }
+    // ── CRUD ──
 
     pub async fn create(&self, req: CreateMemRequest) -> Result<i32, sqlx::Error> {
         let cue_id = self.repo.create_chunk(&req.cue_content).await?;
@@ -440,6 +320,13 @@ impl MemService {
     pub async fn unbury(&self, id: i32) -> Result<(), sqlx::Error> {
         self.repo.unbury_mem(id).await
     }
+    pub async fn delete(&self, id: i32) -> Result<(), sqlx::Error> {
+        self.repo.delete_mem(id).await
+    }
+    pub async fn reset(&self, id: i32) -> Result<(), sqlx::Error> {
+        self.repo.reset_mem(id).await
+    }
+
     // ── 标签 ──
 
     pub async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, AppError> {
@@ -454,23 +341,7 @@ impl MemService {
         Ok(())
     }
 
-    pub async fn list_tags(&self, user_id: i32) -> Result<Vec<TagInfo>, AppError> {
-        self.repo.list_tags(user_id).await.map_err(AppError::Db)
-    }
-
-    pub async fn search_tags(&self, user_id: i32, q: &str) -> Result<Vec<TagInfo>, AppError> {
-        self.repo
-            .search_tags(user_id, q)
-            .await
-            .map_err(AppError::Db)
-    }
-
-    pub async fn get_mem_tags(&self, mem_id: i32) -> Result<Vec<TagInfo>, AppError> {
-        self.repo.get_mem_tags(mem_id).await.map_err(AppError::Db)
-    }
-
     pub async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), AppError> {
-        // 验证 mem 存在
         self.repo.get_mem(mem_id).await?.ok_or(AppError::NotFound)?;
         self.repo
             .add_tag_to_mem(mem_id, tag_id)
@@ -488,7 +359,6 @@ impl MemService {
     }
 
     pub async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), AppError> {
-        // 验证 mem 存在
         self.repo.get_mem(mem_id).await?.ok_or(AppError::NotFound)?;
         self.repo
             .set_mem_tags(mem_id, tag_ids)
@@ -536,93 +406,9 @@ impl MemService {
         BatchResponse::from_results(errors, mem_ids.len())
     }
 
-    pub async fn get_mems_tags_batch(&self, mem_ids: &[i32]) -> BatchDataResponse<MemTagRow> {
-        // 复用 repo 层的批量查询（单条 SQL，无部分失败语义）
-        match self.repo.get_mems_tags_batch(mem_ids).await {
-            Ok(items) => BatchDataResponse::all_ok(items),
-            Err(e) => BatchDataResponse::from_results(
-                vec![],
-                vec![crate::batch::BatchErrorDetail {
-                    index: 0,
-                    code: "Internal Server Error".into(),
-                    message: format!("数据库查询失败: {e}"),
-                }],
-                mem_ids.len(),
-            ),
-        }
-    }
+    // ── CSV/JSON 导入 ──
 
-    // ── CSV/JSON 导入导出 ──
-
-    /// 导出为 PSV（Pipe-Separated Values），列分隔符为竖线 `|`
-    pub async fn export_csv(&self, tag_ids: &[i32]) -> Result<String, AppError> {
-        let rows = self
-            .repo
-            .export_all_mems(tag_ids)
-            .await
-            .map_err(AppError::Db)?;
-        let mut wtr = csv::WriterBuilder::new()
-            .delimiter(b'|')
-            .from_writer(Vec::new());
-        wtr.write_record(["cue", "target", "tags"])
-            .map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string())))?;
-
-        for (cue, target, tags) in &rows {
-            wtr.write_record([cue, target, tags])
-                .map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string())))?;
-        }
-
-        wtr.flush()
-            .map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string())))?;
-        let data = wtr
-            .into_inner()
-            .map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string())))?;
-        String::from_utf8(data).map_err(|e| AppError::Db(sqlx::Error::Protocol(e.to_string())))
-    }
-
-    async fn apply_tags_to_mem(
-        &self,
-        mem_id: i32,
-        tags_str: &str,
-        default_tags: &[String],
-        user_id: i32,
-    ) -> Result<(), AppError> {
-        // 处理 CSV 中的标签 + 默认标签
-        let mut all_names: Vec<String> = tags_str
-            .split([';', ','])
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect();
-        for dt in default_tags {
-            if !all_names.contains(dt) {
-                all_names.push(dt.clone());
-            }
-        }
-        for name in &all_names {
-            let tag = match self
-                .repo
-                .search_tags(user_id, name)
-                .await
-                .map_err(AppError::Db)?
-                .into_iter()
-                .find(|t| t.name == *name)
-            {
-                Some(t) => t,
-                None => self
-                    .repo
-                    .create_tag(name, user_id)
-                    .await
-                    .map_err(AppError::Db)?,
-            };
-            self.repo
-                .add_tag_to_mem(mem_id, tag.id)
-                .await
-                .map_err(AppError::Db)?;
-        }
-        Ok(())
-    }
-
-    /// 从 CSV（逗号分隔）导入，兼容旧格式
+    /// 导入为 CSV（逗号分隔）
     pub async fn import_csv(
         &self,
         csv_data: &str,
@@ -637,7 +423,7 @@ impl MemService {
             .await
     }
 
-    /// 从 PSV（竖线分隔）导入，与导出格式一致
+    /// 导入为 PSV（竖线分隔）
     pub async fn import_psv(
         &self,
         psv_data: &str,
@@ -653,7 +439,7 @@ impl MemService {
             .await
     }
 
-    /// 导入逻辑复用：按分隔符(s)逐行解析 cue | target | tags
+    /// 导入逻辑复用
     async fn import_records(
         &self,
         reader: &mut csv::Reader<&[u8]>,
@@ -697,6 +483,48 @@ impl MemService {
         Ok((count, errors))
     }
 
+    async fn apply_tags_to_mem(
+        &self,
+        mem_id: i32,
+        tags_str: &str,
+        default_tags: &[String],
+        user_id: i32,
+    ) -> Result<(), AppError> {
+        let mut all_names: Vec<String> = tags_str
+            .split([';', ','])
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        for dt in default_tags {
+            if !all_names.contains(dt) {
+                all_names.push(dt.clone());
+            }
+        }
+        for name in &all_names {
+            let tag = match self
+                .repo
+                .search_tags(user_id, name)
+                .await
+                .map_err(AppError::Db)?
+                .into_iter()
+                .find(|t| t.name == *name)
+            {
+                Some(t) => t,
+                None => self
+                    .repo
+                    .create_tag(name, user_id)
+                    .await
+                    .map_err(AppError::Db)?,
+            };
+            self.repo
+                .add_tag_to_mem(mem_id, tag.id)
+                .await
+                .map_err(AppError::Db)?;
+        }
+        Ok(())
+    }
+
+    /// 从 JSON 导入
     pub async fn import_json(
         &self,
         mems: &[JsonMemItem],
@@ -733,30 +561,14 @@ impl MemService {
         Ok((count, errors))
     }
 
-    pub async fn delete(&self, id: i32) -> Result<(), sqlx::Error> {
-        self.repo.delete_mem(id).await
-    }
-    pub async fn reset(&self, id: i32) -> Result<(), sqlx::Error> {
-        self.repo.reset_mem(id).await
-    }
-
-    pub async fn get_mnemonic(&self, mem_id: i32) -> Result<Option<String>, sqlx::Error> {
-        self.repo.get_mnemonic(mem_id).await
-    }
+    // ── 助记 ──
 
     pub async fn set_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), sqlx::Error> {
         self.repo.upsert_mnemonic(mem_id, content).await
     }
-
-    pub async fn upcoming_counts(&self) -> Result<serde_json::Value, sqlx::Error> {
-        let h8 = self.repo.count_upcoming_within_hours(8).await?;
-        let h24 = self.repo.count_upcoming_within_hours(24).await?;
-        Ok(serde_json::json!({"within_8h": h8, "within_24h": h24}))
-    }
 }
 
 /// 如果 revlog 条数达到 `every` 的整数倍，自动触发 FSRS 参数优化。
-/// 优化完成后检查是否需要修剪 revlog。
 async fn maybe_auto_optimize(
     repo: Arc<dyn MemRepository>,
     db: Arc<SqlitePool>,
@@ -785,185 +597,11 @@ async fn maybe_auto_optimize(
         }
         Ok(None) => {}
         Err(e) => {
-            tracing::warn!("自动优化失败: {}", e);
+            tracing::warn!("自动优化失败: {e}");
         }
     }
 
-    // 优化完成后检查并修剪过旧的 revlog
     if let Err(e) = repo.prune_revlogs().await {
-        tracing::warn!("revlog 修剪失败: {}", e);
-    }
-}
-
-#[derive(Debug)]
-pub enum AppError {
-    NotFound,
-    Db(sqlx::Error),
-}
-impl From<sqlx::Error> for AppError {
-    fn from(e: sqlx::Error) -> Self {
-        AppError::Db(e)
-    }
-}
-impl std::fmt::Display for AppError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AppError::NotFound => write!(f, "not found"),
-            AppError::Db(e) => write!(f, "db: {e}"),
-        }
-    }
-}
-
-impl AppError {
-    pub fn into_response(self) -> axum::response::Response {
-        match self {
-            AppError::NotFound => crate::error::not_found("记忆项不存在"),
-            AppError::Db(e) => crate::error::internal(e, "数据库操作"),
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #![allow(clippy::unwrap_used)]
-    use super::*;
-    use crate::modules::mem::MemRepo;
-    use sqlx::SqlitePool;
-
-    /// 创建仅含 revlog 表的内存数据库。
-    async fn setup_revlog_db() -> SqlitePool {
-        let pool = SqlitePool::connect("sqlite::memory:")
-            .await
-            .expect("create in-memory db");
-
-        sqlx::query(
-            "CREATE TABLE revlog (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                mem_id INTEGER NOT NULL DEFAULT 0,
-                review_time TEXT NOT NULL,
-                rating INTEGER NOT NULL,
-                delta_t INTEGER NOT NULL
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        pool
-    }
-
-    /// 插入 n 条 revlog。
-    async fn insert_revlogs(pool: &SqlitePool, n: i64, base_mem_id: i32) {
-        for i in 0..n {
-            let review = format!(
-                "2026-01-{:02}T{:02}:{:02}:00Z",
-                1 + (i / 1440) as i32,
-                (i / 60) as i32 % 24,
-                i as i32 % 60,
-            );
-            sqlx::query(
-                "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, ?)",
-            )
-            .bind(base_mem_id + (i % 5) as i32)
-            .bind(&review)
-            .bind((i % 4 + 1) as i32)
-            .bind(1i32)
-            .execute(pool)
-            .await
-            .unwrap();
-        }
-    }
-
-    // ── prune_revlogs（通过 MemRepo adapter 测试）──
-
-    #[tokio::test]
-    async fn prune_revlog_below_max_does_nothing() {
-        let pool = setup_revlog_db().await;
-        insert_revlogs(&pool, 100, 1).await;
-
-        let repo: Arc<dyn MemRepository> =
-            Arc::new(MemRepo::new(Arc::new(pool.clone())));
-        repo.prune_revlogs().await.unwrap();
-
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        assert_eq!(count, 100, "低于上限不应被修剪");
-    }
-
-    #[tokio::test]
-    async fn prune_revlog_over_max_trims_to_target() {
-        let pool = setup_revlog_db().await;
-        insert_revlogs(&pool, 2500, 1).await;
-
-        let repo: Arc<dyn MemRepository> =
-            Arc::new(MemRepo::new(Arc::new(pool.clone())));
-        repo.prune_revlogs().await.unwrap();
-
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        assert_eq!(count, 1600, "应修剪到 1600");
-    }
-
-    #[tokio::test]
-    async fn prune_revlog_preserves_newest() {
-        let pool = setup_revlog_db().await;
-        insert_revlogs(&pool, 2100, 1).await;
-
-        let repo: Arc<dyn MemRepository> =
-            Arc::new(MemRepo::new(Arc::new(pool.clone())));
-        repo.prune_revlogs().await.unwrap();
-
-        let max_id_after: Option<i32> = sqlx::query_scalar("SELECT MAX(id) FROM revlog")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        assert_eq!(max_id_after, Some(2100), "最新 id 应保留");
-
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        assert_eq!(count, 1600);
-    }
-
-    #[tokio::test]
-    async fn prune_revlog_empty_db_does_nothing() {
-        let pool = setup_revlog_db().await;
-        let repo: Arc<dyn MemRepository> =
-            Arc::new(MemRepo::new(Arc::new(pool.clone())));
-        repo.prune_revlogs().await.unwrap();
-
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        assert_eq!(count, 0, "空库不应出错");
-    }
-
-    #[tokio::test]
-    async fn prune_revlog_many_times_idempotent() {
-        let pool = setup_revlog_db().await;
-        insert_revlogs(&pool, 3000, 1).await;
-
-        let repo: Arc<dyn MemRepository> =
-            Arc::new(MemRepo::new(Arc::new(pool.clone())));
-
-        repo.prune_revlogs().await.unwrap();
-        let count1: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        assert_eq!(count1, 1600);
-
-        repo.prune_revlogs().await.unwrap();
-        let count2: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        assert_eq!(count2, 1600, "重复修剪不应继续删除");
+        tracing::warn!("revlog 修剪失败: {e}");
     }
 }

@@ -23,16 +23,131 @@ fn err(e: impl std::fmt::Display, op: &str) -> axum::response::Response {
     error::internal(e, op)
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  读操作（通过 MemQueryService，无副作用）
+// ═══════════════════════════════════════════════════════════════
+
 pub async fn get_all(
     State(state): State<AppState>,
     Query(p): Query<MemQuery>,
 ) -> impl IntoResponse {
-    let svc = &state.mem;
+    let svc = &state.mem_query;
     match svc.get_all(&p).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => err(e, "获取全部"),
     }
 }
+
+pub async fn get_session_estimate(State(state): State<AppState>) -> impl IntoResponse {
+    let svc = &state.mem_query;
+    match svc.get_session_estimate().await {
+        Ok(est) => Json(est).into_response(),
+        Err(e) => err(e, "获取学习预估"),
+    }
+}
+
+pub async fn get_counts(State(state): State<AppState>) -> impl IntoResponse {
+    let svc = &state.mem_query;
+    match svc.get_counts().await {
+        Ok(counts) => Json(counts).into_response(),
+        Err(e) => err(e, "获取统计"),
+    }
+}
+
+pub async fn list_tags(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let svc = &state.mem_query;
+    match svc.list_tags(claims.sub).await {
+        Ok(tags) => Json(tags).into_response(),
+        Err(e) => err(e, "列出标签"),
+    }
+}
+
+pub async fn search_tags(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Query(params): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let q = params.get("q").map(|s| s.as_str()).unwrap_or("");
+    let svc = &state.mem_query;
+    match svc.search_tags(claims.sub, q).await {
+        Ok(tags) => Json(tags).into_response(),
+        Err(e) => err(e, "搜索标签"),
+    }
+}
+
+pub async fn get_mem_tags(State(state): State<AppState>, Path(id): Path<i32>) -> impl IntoResponse {
+    let svc = &state.mem_query;
+    match svc.get_mem_tags(id).await {
+        Ok(tags) => Json(tags).into_response(),
+        Err(e) => err(e, "获取记忆标签"),
+    }
+}
+
+pub async fn batch_get_mems_tags(
+    State(state): State<AppState>,
+    Json(payload): Json<BatchRequest<i32>>,
+) -> Json<BatchDataResponse<MemTagRow>> {
+    if payload.items.is_empty() {
+        return Json(BatchDataResponse::empty());
+    }
+    let svc = &state.mem_query;
+    Json(svc.get_mems_tags_batch(&payload.items).await)
+}
+
+pub async fn export_csv(
+    State(state): State<AppState>,
+    Extension(_claims): Extension<Claims>,
+    Query(params): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let tag_ids: Vec<i32> = params
+        .get("tag_ids")
+        .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
+        .unwrap_or_default();
+    let svc = &state.mem_query;
+    match svc.export_csv(&tag_ids).await {
+        Ok(psv) => (
+            [
+                ("Content-Type", "text/tab-separated-values; charset=utf-8"),
+                ("Content-Disposition", "attachment; filename=\"mems.psv\""),
+            ],
+            psv,
+        )
+            .into_response(),
+        Err(e) => err(e, "导出 PSV"),
+    }
+}
+
+pub async fn preview_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
+    let svc = &state.mem_query;
+    match svc.preview(id).await {
+        Ok(secs) => Json(serde_json::json!({ "intervals": secs })).into_response(),
+        Err(e) => e.into_response(),
+    }
+}
+
+pub async fn get_mnemonic(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
+    let svc = &state.mem_query;
+    match svc.get_mnemonic(id).await {
+        Ok(Some(content)) => Json(serde_json::json!({ "content": content })).into_response(),
+        Ok(None) => Json(serde_json::json!({ "content": null })).into_response(),
+        Err(e) => err(e, "查询助记"),
+    }
+}
+
+pub async fn upcoming_counts(State(state): State<AppState>) -> impl IntoResponse {
+    let svc = &state.mem_query;
+    match svc.upcoming_counts().await {
+        Ok(v) => Json(v).into_response(),
+        Err(e) => err(e, "查询 upcoming 数量"),
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  写操作（通过 MemService，含副作用和不变量检查）
+// ═══════════════════════════════════════════════════════════════
 
 pub async fn batch_bury(
     State(state): State<AppState>,
@@ -61,24 +176,6 @@ pub async fn batch_reset(
     Json(svc.batch_reset(&payload.items).await)
 }
 
-pub async fn get_session_estimate(State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem;
-    match svc.get_session_estimate().await {
-        Ok(est) => Json(est).into_response(),
-        Err(e) => err(e, "获取学习预估"),
-    }
-}
-
-pub async fn get_counts(State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem;
-    match svc.get_counts().await {
-        Ok(counts) => Json(counts).into_response(),
-        Err(e) => err(e, "获取统计"),
-    }
-}
-
-// ── 标签 ──
-
 pub async fn create_tag(
     State(state): State<AppState>,
     Extension(claims): Extension<Claims>,
@@ -103,38 +200,6 @@ pub async fn delete_tag(
     match svc.delete_tag(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "删除标签"),
-    }
-}
-
-pub async fn list_tags(
-    State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
-) -> impl IntoResponse {
-    let svc = &state.mem;
-    match svc.list_tags(claims.sub).await {
-        Ok(tags) => Json(tags).into_response(),
-        Err(e) => err(e, "列出标签"),
-    }
-}
-
-pub async fn search_tags(
-    State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
-    Query(params): Query<HashMap<String, String>>,
-) -> impl IntoResponse {
-    let q = params.get("q").map(|s| s.as_str()).unwrap_or("");
-    let svc = &state.mem;
-    match svc.search_tags(claims.sub, q).await {
-        Ok(tags) => Json(tags).into_response(),
-        Err(e) => err(e, "搜索标签"),
-    }
-}
-
-pub async fn get_mem_tags(State(state): State<AppState>, Path(id): Path<i32>) -> impl IntoResponse {
-    let svc = &state.mem;
-    match svc.get_mem_tags(id).await {
-        Ok(tags) => Json(tags).into_response(),
-        Err(e) => err(e, "获取记忆标签"),
     }
 }
 
@@ -188,8 +253,6 @@ pub struct BatchSetTagsRequest {
     pub tag_ids: Vec<i32>,
 }
 
-// ── 批量标签 ──
-
 pub async fn batch_add_tag(
     State(state): State<AppState>,
     Json(payload): Json<BatchTagRequest>,
@@ -214,41 +277,19 @@ pub async fn batch_remove_tag(
     )
 }
 
-pub async fn batch_get_mems_tags(
+pub async fn batch_set_tags(
     State(state): State<AppState>,
-    Json(payload): Json<BatchRequest<i32>>,
-) -> Json<BatchDataResponse<MemTagRow>> {
-    if payload.items.is_empty() {
-        return Json(BatchDataResponse::empty());
-    }
+    Json(payload): Json<BatchSetTagsRequest>,
+) -> Json<BatchResponse> {
+    guard_empty_batch!(payload.items);
     let svc = &state.mem;
-    Json(svc.get_mems_tags_batch(&payload.items).await)
+    Json(
+        svc.batch_set_tags_for_mems(&payload.items, &payload.tag_ids)
+            .await,
+    )
 }
 
-// ── CSV 导入导出 ──
-
-pub async fn export_csv(
-    State(state): State<AppState>,
-    Extension(_claims): Extension<Claims>,
-    Query(params): Query<HashMap<String, String>>,
-) -> impl IntoResponse {
-    let tag_ids: Vec<i32> = params
-        .get("tag_ids")
-        .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
-        .unwrap_or_default();
-    let svc = &state.mem;
-    match svc.export_csv(&tag_ids).await {
-        Ok(psv) => (
-            [
-                ("Content-Type", "text/tab-separated-values; charset=utf-8"),
-                ("Content-Disposition", "attachment; filename=\"mems.psv\""),
-            ],
-            psv,
-        )
-            .into_response(),
-        Err(e) => err(e, "导出 PSV"),
-    }
-}
+// ── CSV/JSON 导入类 ──
 
 #[derive(Deserialize)]
 pub struct ImportCsvPayload {
@@ -321,17 +362,7 @@ pub async fn import_json(
     }
 }
 
-pub async fn batch_set_tags(
-    State(state): State<AppState>,
-    Json(payload): Json<BatchSetTagsRequest>,
-) -> Json<BatchResponse> {
-    guard_empty_batch!(payload.items);
-    let svc = &state.mem;
-    Json(
-        svc.batch_set_tags_for_mems(&payload.items, &payload.tag_ids)
-            .await,
-    )
-}
+// ── get_due（含侧面写操作：新卡标注 learning）──
 
 pub async fn get_due(
     State(state): State<AppState>,
@@ -356,6 +387,8 @@ pub async fn get_due(
     }
 }
 
+// ── 纯写操作 ──
+
 pub async fn create_mem(
     State(state): State<AppState>,
     Json(body): Json<CreateMemRequest>,
@@ -364,14 +397,6 @@ pub async fn create_mem(
     match svc.create(body).await {
         Ok(id) => Json(serde_json::json!({ "id": id })).into_response(),
         Err(e) => err(e, "创建记忆项"),
-    }
-}
-
-pub async fn preview_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem;
-    match svc.preview(id).await {
-        Ok(secs) => Json(serde_json::json!({ "intervals": secs })).into_response(),
-        Err(e) => e.into_response(),
     }
 }
 
@@ -419,6 +444,14 @@ pub async fn bury_mem(Path(id): Path<i32>, State(state): State<AppState>) -> imp
     }
 }
 
+pub async fn unbury_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
+    let svc = &state.mem;
+    match svc.unbury(id).await {
+        Ok(()) => ok(),
+        Err(e) => err(e, "取消跳过"),
+    }
+}
+
 pub async fn suspend_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
     let svc = &state.mem;
     match svc.suspend(id).await {
@@ -438,14 +471,6 @@ pub async fn unsuspend_mem(
     }
 }
 
-pub async fn unbury_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem;
-    match svc.unbury(id).await {
-        Ok(()) => ok(),
-        Err(e) => err(e, "取消跳过"),
-    }
-}
-
 pub async fn reset_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
     let svc = &state.mem;
     match svc.reset(id).await {
@@ -459,41 +484,6 @@ pub async fn delete_mem(Path(id): Path<i32>, State(state): State<AppState>) -> i
     match svc.delete(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "删除"),
-    }
-}
-
-/// 优化 FSRS 参数
-pub async fn optimize_params(State(state): State<AppState>) -> impl IntoResponse {
-    let config = MemConfig::load();
-    match optimizer::optimize_fsrs_params(&state.db, &config).await {
-        Ok(Some(params)) => {
-            tracing::info!("FSRS 参数优化完成，共 {} 个参数", params.len());
-            // 保存到文件 + 更新运行时参数
-            let mut cfg = config;
-            cfg.update_fsrs_params(params.clone()).ok();
-            crate::modules::mem::fsrs::set_global_params(params);
-            Json(serde_json::json!({
-                "ok": true,
-                "params": cfg.fsrs_params,
-                "message": format!("优化完成，得到 {} 个参数", cfg.fsrs_params.len()),
-            }))
-            .into_response()
-        }
-        Ok(None) => Json(serde_json::json!({
-            "ok": false,
-            "message": "数据不足，至少需要 10 条复习记录"
-        }))
-        .into_response(),
-        Err(e) => err(e, "优化"),
-    }
-}
-
-pub async fn get_mnemonic(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem;
-    match svc.get_mnemonic(id).await {
-        Ok(Some(content)) => Json(serde_json::json!({ "content": content })).into_response(),
-        Ok(None) => Json(serde_json::json!({ "content": null })).into_response(),
-        Err(e) => err(e, "查询助记"),
     }
 }
 
@@ -514,10 +504,27 @@ pub async fn set_mnemonic(
     }
 }
 
-pub async fn upcoming_counts(State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem;
-    match svc.upcoming_counts().await {
-        Ok(v) => Json(v).into_response(),
-        Err(e) => err(e, "查询 upcoming 数量"),
+/// 优化 FSRS 参数（直接使用 state.db，不属于任一服务）
+pub async fn optimize_params(State(state): State<AppState>) -> impl IntoResponse {
+    let config = MemConfig::load();
+    match optimizer::optimize_fsrs_params(&state.db, &config).await {
+        Ok(Some(params)) => {
+            tracing::info!("FSRS 参数优化完成，共 {} 个参数", params.len());
+            let mut cfg = config;
+            cfg.update_fsrs_params(params.clone()).ok();
+            crate::modules::mem::fsrs::set_global_params(params);
+            Json(serde_json::json!({
+                "ok": true,
+                "params": cfg.fsrs_params,
+                "message": format!("优化完成，得到 {} 个参数", cfg.fsrs_params.len()),
+            }))
+            .into_response()
+        }
+        Ok(None) => Json(serde_json::json!({
+            "ok": false,
+            "message": "数据不足，至少需要 10 条复习记录"
+        }))
+        .into_response(),
+        Err(e) => err(e, "优化"),
     }
 }

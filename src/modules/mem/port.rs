@@ -141,4 +141,5 @@ pub trait MemRepository: Send + Sync {
     async fn insert_revlog(&self, params: &InsertRevlogParams) -> Result<(), sqlx::Error>;
     async fn count_revlogs(&self) -> Result<i64, sqlx::Error>;
     async fn prune_revlogs(&self) -> Result<(), sqlx::Error>;
+    async fn count_relearning(&self) -> Result<i64, sqlx::Error>;
 }

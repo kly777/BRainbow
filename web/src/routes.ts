@@ -138,6 +138,14 @@ export const ROUTES: RouteConfig[] = [
 		component: lazy(() => import("./features/mem/MemPage.tsx")),
 	},
 	{
+		path: "/v2/m",
+		label: "记忆 v2",
+		title: "Memory v2",
+		desc: "重设计的记忆复习页",
+		nav: false,
+		component: lazy(() => import("./features/mem/v2/MemPageV2.tsx")),
+	},
+	{
 		path: "/m/add",
 		label: "添加记忆",
 		title: "New Mem",

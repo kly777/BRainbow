@@ -1,0 +1,61 @@
+// ── v2 上下文条：统计 + 编辑 ──
+
+import { Show } from "solid-js";
+import type { UseMemReview } from "../../logic/useMemReview.ts";
+import styles from "../MemPageV2.module.css";
+
+interface V2ContextBarProps {
+	m: UseMemReview;
+	upcomingCounts: { within_8h: number; within_24h: number } | undefined;
+}
+
+export default function V2ContextBar(props: V2ContextBarProps) {
+	const { m } = props;
+
+	return (
+		<div class={styles.contextBar}>
+			<div class={styles.ctxStats}>
+				<Show when={m.estimatedTotal() > 0}>
+					<span class={styles.ctxStat}>
+						≈{m.estimatedTotal()} 次
+						<Show when={m.estRemaining() >= 60}>
+							· ~{Math.round(m.estRemaining() / 60)}m
+						</Show>
+						<Show when={m.estRemaining() > 0 && m.estRemaining() < 60}>
+							· ~{m.estRemaining()}s
+						</Show>
+					</span>
+				</Show>
+				<Show when={props.upcomingCounts}>
+					{(u) => (
+						<span class={styles.ctxStat}>
+							8h:{u().within_8h} · 24h:{u().within_24h}
+						</span>
+					)}
+				</Show>
+			</div>
+
+			<div class={styles.ctxActions}>
+				<Show
+					when={m.editing()}
+					fallback={
+						<button type="button" class={styles.ghostBtn} onClick={m.startEdit}>
+							编辑
+						</button>
+					}
+				>
+					<button type="button" class={styles.primaryBtn} onClick={m.saveEdit}>
+						保存
+					</button>
+					<button
+						type="button"
+						class={styles.ghostBtn}
+						onClick={() => m.setEditing(false)}
+					>
+						取消
+					</button>
+				</Show>
+			</div>
+		</div>
+	);
+}

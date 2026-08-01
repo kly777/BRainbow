@@ -4,6 +4,7 @@ import { Show } from "solid-js";
 import MarkdownRenderer from "../../../components/ui/Markdown.tsx";
 import MarkdownEditor from "../../../components/ui/MarkdownEditor.tsx";
 import { fmtInterval, fmtLocal } from "../../../lib/time.ts";
+import { useSpeech } from "../logic/useSpeech.ts";
 import type { UseMemReview } from "../logic/useMemReview.ts";
 import styles from "../MemPage.module.css";
 
@@ -13,6 +14,7 @@ interface MemReviewCardProps {
 
 export default function MemReviewCard(props: MemReviewCardProps) {
 	const { m } = props;
+	const speech = useSpeech();
 
 	return (
 		<>
@@ -56,6 +58,15 @@ export default function MemReviewCard(props: MemReviewCardProps) {
 						<div class={styles.cue}>
 							<div class={styles.sectionLabel}>
 								线索
+								<button
+									type="button"
+									class={styles.copyBtn}
+									title="朗读线索"
+									onClick={() => speech.toggle(m.item()?.cue.content ?? "")}
+									disabled={!speech.supported}
+								>
+									{speech.speaking() ? "⏹" : "🔊"}
+								</button>
 								<button
 									type="button"
 									class={styles.copyBtn}

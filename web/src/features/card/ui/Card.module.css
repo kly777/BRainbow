@@ -1,15 +1,13 @@
 .card {
-	background: var(--color-surface);
-	border-radius: var(--radius-md);
+	background: var(--v2-surface, var(--color-surface));
+	border-radius: var(--radius-lg);
 	box-shadow: 0 1px 4px oklch(0 0 0 / 0.06);
 	padding: var(--space-lg);
 	transition: all 0.2s ease;
 	cursor: pointer;
-	border: 1px solid var(--color-border);
+	border: 1px solid var(--v2-border, var(--color-border));
 	display: flex;
 	flex-direction: column;
-	/*height: 100%;*/
-	/*min-height: 280px;*/
 	text-align: left;
 	width: 100%;
 	overflow-wrap: break-word;
@@ -24,9 +22,9 @@
 }
 
 .card:hover {
-	box-shadow: 0 var(--space-xs) 16px oklch(0 0 0 / 0.15);
+	box-shadow: 0 var(--space-xs) 16px oklch(0 0 0 / 0.12);
 	transform: translateY(-2px);
-	border-color: var(--color-border);
+	border-color: var(--v2-accent, var(--color-accent));
 }
 
 .card:focus {
@@ -101,19 +99,19 @@
 }
 
 .tag {
-	background: var(--color-surface-raised);
-	color: var(--color-text-secondary);
+	background: var(--badge-new-bg);
+	color: var(--badge-new-text);
 	font-size: 0.75rem;
-	padding: var(--space-xs) 8px;
-	border-radius: var(--radius-lg);
+	padding: 2px 8px;
+	border-radius: 999px;
 	border: none;
 	cursor: pointer;
-	transition: all 0.2s ease;
+	transition: all 0.15s ease;
 }
 
 .tag:hover {
-	background: var(--color-border);
-	color: var(--color-text);
+	filter: brightness(0.94);
+	color: var(--badge-new-text);
 }
 
 .tag:focus {
@@ -127,7 +125,8 @@
 	gap: var(--space-xs);
 	margin-bottom: var(--space-md);
 	font-size: 0.75rem;
-	color: var(--color-text-muted);
+	font-family: var(--v2-font-mono, ui-monospace, monospace);
+	color: var(--v2-ink-faint, var(--color-text-muted));
 }
 
 .metaItem {
@@ -158,17 +157,17 @@
 	flex: 1;
 	padding: var(--space-xs) 12px;
 	font-size: 0.875rem;
-	border-radius: var(--radius-sm);
-	border: 1px solid var(--color-border);
-	background: var(--color-bg);
-	color: var(--color-text);
+	border-radius: var(--radius-md);
+	border: 1px solid var(--v2-border-strong, var(--color-border));
+	background: transparent;
+	color: var(--v2-ink-muted, var(--color-text-secondary));
 	cursor: pointer;
-	transition: all 0.2s ease;
+	transition: all 0.15s ease;
 }
 
 .actionButton:hover {
-	background: var(--color-surface-raised);
-	border-color: var(--color-border);
+	background: var(--v2-surface-raised, var(--color-surface-raised));
+	color: var(--v2-ink, var(--color-text));
 }
 
 .actionButton:focus {

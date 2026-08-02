@@ -5,15 +5,15 @@
    ══════════════════════════════════════════════════════════ */
 
 .page {
-	/* ── v2 设计令牌（页面局部作用域，不污染全局） ── */
-	--v2-bg: oklch(0.96 0.008 240);
-	--v2-surface: oklch(0.99 0.002 240);
-	--v2-surface-raised: oklch(0.94 0.01 240);
-	--v2-ink: oklch(0.24 0.02 250);
-	--v2-ink-muted: oklch(0.55 0.015 250);
-	--v2-ink-faint: oklch(0.68 0.012 250);
-	--v2-border: oklch(0.88 0.012 240);
-	--v2-border-strong: oklch(0.8 0.02 240);
+	/* ── v2 设计令牌（暖纸色系，与全局一致；accent 保留目录绿签名色） ── */
+	--v2-bg: oklch(0.975 0.008 95);
+	--v2-surface: oklch(0.99 0.004 95);
+	--v2-surface-raised: oklch(0.95 0.012 95);
+	--v2-ink: oklch(0.25 0.015 85);
+	--v2-ink-muted: oklch(0.45 0.012 85);
+	--v2-ink-faint: oklch(0.6 0.008 85);
+	--v2-border: oklch(0.86 0.015 95);
+	--v2-border-strong: oklch(0.82 0.03 95);
 	--v2-accent: oklch(0.52 0.1 165);
 	--v2-accent-strong: oklch(0.42 0.11 165);
 	--v2-accent-soft: oklch(0.93 0.03 165);

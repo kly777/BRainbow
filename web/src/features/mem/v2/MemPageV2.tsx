@@ -9,6 +9,7 @@ import { useMemReview } from "../logic/useMemReview.ts";
 import { notifyError } from "../../../lib/notify.ts";
 import { tryAsync } from "../../../lib/result.ts";
 import styles from "./MemPageV2.module.css";
+import "./tokens.css";
 import AiSettingsModal from "../ui/AiSettingsModal.tsx";
 import V2ContextBar from "./ui/V2ContextBar.tsx";
 import V2FilterBar from "./ui/V2FilterBar.tsx";

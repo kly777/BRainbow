@@ -18,7 +18,7 @@ export default function MemAddV2() {
 		<div class={styles.page}>
 			{/* 头栏 */}
 			<div class={styles.topBar}>
-				<A href="/v2/m" class={styles.backLink}>
+				<A href="/m" class={styles.backLink}>
 					← 记忆
 				</A>
 				<h1 class={styles.title}>添加记忆</h1>
@@ -90,7 +90,7 @@ export default function MemAddV2() {
 							<button
 								type="button"
 								class={styles.cancel}
-								onClick={() => m.navigate("/v2/m")}
+								onClick={() => m.navigate("/m")}
 							>
 								取消
 							</button>
@@ -172,7 +172,7 @@ function PasteViewV2(props: { m: ReturnType<typeof useMemAdd> }) {
 						<button
 							type="button"
 							class={styles.cancel}
-							onClick={() => m.navigate("/v2/m")}
+							onClick={() => m.navigate("/m")}
 						>
 							取消
 						</button>
@@ -255,7 +255,7 @@ function FileViewV2(props: { m: ReturnType<typeof useMemAdd> }) {
 						<button
 							type="button"
 							class={styles.cancel}
-							onClick={() => m.navigate("/v2/m")}
+							onClick={() => m.navigate("/m")}
 						>
 							取消
 						</button>

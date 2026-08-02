@@ -135,23 +135,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Memory",
 		desc: "间隔重复记忆系统",
 		nav: true,
-		component: lazy(() => import("./features/mem/MemPage.tsx")),
-	},
-	{
-		path: "/v2/m",
-		label: "记忆 v2",
-		title: "Memory v2",
-		desc: "重设计的记忆复习页",
-		nav: false,
 		component: lazy(() => import("./features/mem/v2/MemPageV2.tsx")),
-	},
-	{
-		path: "/v2/m/add",
-		label: "添加记忆 v2",
-		title: "New Mem v2",
-		desc: "",
-		nav: false,
-		component: lazy(() => import("./features/mem/v2/MemAddV2.tsx")),
 	},
 	{
 		path: "/m/add",
@@ -159,7 +143,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "New Mem",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("./features/mem/MemAdd.tsx")),
+		component: lazy(() => import("./features/mem/v2/MemAddV2.tsx")),
 	},
 	{
 		path: "/m/manage",

@@ -182,7 +182,7 @@ export function ImportResultV2(props: {
 				<button type="button" class={styles.cancel} onClick={props.onContinue}>
 					继续导入
 				</button>
-				<a href="/v2/m" class={styles.submit}>
+				<a href="/m" class={styles.submit}>
 					去复习
 				</a>
 			</div>

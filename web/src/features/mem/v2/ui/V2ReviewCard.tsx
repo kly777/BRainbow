@@ -1,4 +1,5 @@
-// ── v2 复习卡片：线索/答案 + 操作行 + 评分 + 队列导航 ──
+// ── v2 复习卡片：目录卡 + 3D 翻面 + 卡牌层叠 ──
+// 线索与答案分居卡片两面，点"显示答案"实体翻转。
 
 import { Show } from "solid-js";
 import MarkdownRenderer from "../../../../components/ui/Markdown.tsx";
@@ -55,95 +56,10 @@ export default function V2ReviewCard(props: V2ReviewCardProps) {
 					</div>
 				</Show>
 
-				<div class={styles.cardWrap}>
-					<div class={styles.card}>
-						<Show when={m.isPreview() && m.current() === 0}>
-							<div class={styles.previewBanner}>
-								将于 {fmtLocal(m.item()?.due_at ?? "")} 到期
-							</div>
-						</Show>
-
-						{/* 复习模式 */}
-						<Show when={!m.editing()}>
-							<div class={styles.section}>
-								<div class={styles.sectionLabel}>
-									线索
-									<button
-										type="button"
-										class={styles.toolBtn}
-										title="朗读线索"
-										onClick={() => speech.toggle(m.item()?.cue.content ?? "")}
-										disabled={!speech.supported}
-									>
-										{speech.speaking() ? "⏹" : "🔊"}
-									</button>
-									<button
-										type="button"
-										class={styles.toolBtn}
-										title="复制线索"
-										onClick={() =>
-											navigator.clipboard.writeText(
-												m.item()?.cue.content ?? "",
-											)
-										}
-									>
-										📋
-									</button>
-									<button
-										type="button"
-										class={styles.toolBtn}
-										title="复制整张卡片"
-										onClick={m.handleCopyCard}
-									>
-										📋+
-									</button>
-									<button
-										type="button"
-										class={styles.toolBtn}
-										title={m.mnemonic() ? "重新生成助记" : "AI 生成助记"}
-										onClick={m.generateMnemonic}
-										disabled={m.mnemonicLoading()}
-									>
-										{m.mnemonicLoading() ? "⏳" : "🤖"}
-									</button>
-								</div>
-								<div class={styles.content}>
-									<MarkdownRenderer content={m.item()?.cue.content ?? ""} />
-								</div>
-							</div>
-
-							<Show when={m.showAnswer()}>
-								<div class={styles.divider} />
-								<div class={styles.section}>
-									<div class={styles.sectionLabel}>答案</div>
-									<div class={styles.content}>
-										<MarkdownRenderer
-											content={m.item()?.target.content ?? ""}
-										/>
-									</div>
-
-									{/* AI 助记 */}
-									<Show when={m.mnemonic() || m.mnemonicLoading()}>
-										<div class={styles.mnemonic}>
-											<div class={styles.mnemonicLabel}>💡 AI 助记</div>
-											<Show
-												when={m.mnemonicLoading()}
-												fallback={
-													<MarkdownRenderer
-														content={m.mnemonic() ?? ""}
-													/>
-												}
-											>
-												<span class={styles.mnemonicLoading}>生成中…</span>
-											</Show>
-										</div>
-									</Show>
-								</div>
-							</Show>
-						</Show>
-
-						{/* 编辑模式 */}
-						<Show when={m.editing()}>
+				{/* 编辑模式：普通纵向布局 */}
+				<Show when={m.editing()}>
+					<div class={styles.cardWrap}>
+						<div class={styles.cardFlat}>
 							<div class={styles.section}>
 								<div class={styles.sectionLabel}>线索</div>
 								<MarkdownEditor
@@ -163,10 +79,128 @@ export default function V2ReviewCard(props: V2ReviewCardProps) {
 									rows={3}
 								/>
 							</div>
+						</div>
+					</div>
+				</Show>
+
+				{/* 复习模式：翻面卡片 */}
+				<Show when={!m.editing()}>
+					<div class={styles.cardWrap}>
+						<Show when={m.isPreview() && m.current() === 0}>
+							<div class={styles.previewBanner}>
+								将于 {fmtLocal(m.item()?.due_at ?? "")} 到期
+							</div>
 						</Show>
+
+						{/* 层叠舞台 */}
+						<div class={styles.cardStage}>
+							{/* 背面层叠的边缘（提示队列深度） */}
+							<Show when={m.due().length > 1}>
+								<div class={`${styles.stackEdge} ${styles.stackEdge2}`} />
+								<Show when={m.due().length > 2}>
+									<div class={`${styles.stackEdge} ${styles.stackEdge1}`} />
+								</Show>
+							</Show>
+
+							{/* 翻面体 */}
+							<div
+								class={styles.cardFlip}
+								classList={{ [styles.flipped]: m.showAnswer() }}
+							>
+								{/* 线索面 */}
+								<div class={`${styles.cardFace} ${styles.cueFace}`}>
+									<div class={styles.cardTab}>
+										<span class={styles.cardTabText}>线索</span>
+										<span class={styles.cardTabNo}>#{m.item()?.id}</span>
+									</div>
+									<div class={styles.cardBody}>
+										<div class={styles.content}>
+											<MarkdownRenderer
+												content={m.item()?.cue.content ?? ""}
+											/>
+										</div>
+									</div>
+									<div class={styles.cardTools}>
+										<button
+											type="button"
+											class={styles.toolBtn}
+											title="朗读线索"
+											onClick={() =>
+												speech.toggle(m.item()?.cue.content ?? "")
+											}
+											disabled={!speech.supported}
+										>
+											{speech.speaking() ? "⏹" : "🔊"}
+										</button>
+										<button
+											type="button"
+											class={styles.toolBtn}
+											title="复制线索"
+											onClick={() =>
+												navigator.clipboard.writeText(
+													m.item()?.cue.content ?? "",
+												)
+											}
+										>
+											📋
+										</button>
+										<button
+											type="button"
+											class={styles.toolBtn}
+											title="复制整张卡片"
+											onClick={m.handleCopyCard}
+										>
+											📋+
+										</button>
+										<button
+											type="button"
+											class={styles.toolBtn}
+											title={m.mnemonic() ? "重新生成助记" : "AI 生成助记"}
+											onClick={m.generateMnemonic}
+											disabled={m.mnemonicLoading()}
+										>
+											{m.mnemonicLoading() ? "⏳" : "🤖"}
+										</button>
+									</div>
+								</div>
+
+								{/* 答案面 */}
+								<div class={`${styles.cardFace} ${styles.answerFace}`}>
+									<div class={styles.cardTab}>
+										<span class={styles.cardTabText}>答案</span>
+										<span class={styles.cardTabNo}>
+											#{m.item()?.id} · {m.item()?.state}
+										</span>
+									</div>
+									<div class={styles.cardBody}>
+										<div class={styles.content}>
+											<MarkdownRenderer
+												content={m.item()?.target.content ?? ""}
+											/>
+										</div>
+
+										<Show when={m.mnemonic() || m.mnemonicLoading()}>
+											<div class={styles.mnemonic}>
+												<div class={styles.mnemonicLabel}>💡 AI 助记</div>
+												<Show
+													when={m.mnemonicLoading()}
+													fallback={
+														<MarkdownRenderer
+															content={m.mnemonic() ?? ""}
+														/>
+													}
+												>
+													<span class={styles.mnemonicLoading}>生成中…</span>
+												</Show>
+											</div>
+										</Show>
+									</div>
+								</div>
+							</div>
+						</div>
 					</div>
 
-					{/* 操作行：未翻面时 */}
+					{/* 操作行：未翻面时（固定在底部中间） */}
 					<Show when={!m.showAnswer()}>
 						<div class={styles.actionRow}>
 							<button
@@ -261,7 +295,7 @@ export default function V2ReviewCard(props: V2ReviewCardProps) {
 							</button>
 						</div>
 					</Show>
-				</div>
+				</Show>
 			</Show>
 		</>
 	);

@@ -1,4 +1,4 @@
-// ── v2 上下文条：统计 + 编辑 ──
+// ── v2 上下文条：卡元数据 + 统计 + 编辑 ──
 
 import { Show } from "solid-js";
 import type { UseMemReview } from "../../logic/useMemReview.ts";
@@ -9,12 +9,29 @@ interface V2ContextBarProps {
 	upcomingCounts: { within_8h: number; within_24h: number } | undefined;
 }
 
+const stateLabel: Record<string, string> = {
+	new: "new",
+	learning: "learning",
+	relearning: "relearning",
+	review: "review",
+	suspended: "suspended",
+};
+
 export default function V2ContextBar(props: V2ContextBarProps) {
 	const { m } = props;
 
 	return (
 		<div class={styles.contextBar}>
 			<div class={styles.ctxStats}>
+				{/* 当前卡编号与状态 */}
+				<Show when={m.item()}>
+					{(it) => (
+						<span class={styles.ctxStat} title="当前卡片">
+							#{it().id} · {stateLabel[it().state] ?? it().state}
+						</span>
+					)}
+				</Show>
+
 				<Show when={m.estimatedTotal() > 0}>
 					<span class={styles.ctxStat}>
 						≈{m.estimatedTotal()} 次

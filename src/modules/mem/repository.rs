@@ -737,6 +737,8 @@ impl MemRepo {
             separated.push_bind(id);
         }
         separated.push_unseparated(")");
+        // 与 get_mem_tags 保持一致：按名称排序，保证表格与详情顺序稳定一致
+        qb.push(" ORDER BY mt.mem_id, t.name");
         let rows: Vec<MemTagRow> = qb.build_query_as().fetch_all(&*self.pool).await?;
         Ok(rows)
     }

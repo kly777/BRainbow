@@ -26,6 +26,7 @@ interface Props {
 	onDelete: (id: number) => void;
 	onAddTag: (tag: TagInfo) => void;
 	onRemoveTag: (tagId: number) => void;
+	onClose: () => void;
 }
 
 const stateLabel: Record<string, string> = {
@@ -48,16 +49,23 @@ export default function V2ManageDetail(props: Props) {
 			>
 				{(d) => (
 					<div class={styles.detailCard}>
-						{/* 档案卡头：编号 + 状态 */}
+					{/* 档案卡头：编号 + 状态 + 关闭 */}
 						<div class={styles.detailHead}>
 							<span class={styles.detailId}>#{d().id}</span>
-							<span
-								class={styles.detailState}
-								data-state={d().state}
-							>
-								{stateLabel[d().state] ?? d().state}
-								{d().leeched ? " ⚠️烂卡" : ""}
-							</span>
+							<div class={styles.detailHeadRight}>
+								<span class={styles.detailState} data-state={d().state}>
+									{stateLabel[d().state] ?? d().state}
+									{d().leeched ? " ⚠️烂卡" : ""}
+								</span>
+								<button
+									type="button"
+									class={styles.detailClose}
+									onClick={props.onClose}
+									title="关闭面板"
+								>
+									✕
+								</button>
+							</div>
 						</div>
 
 						{/* 线索 / 答案 */}

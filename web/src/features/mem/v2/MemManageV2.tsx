@@ -100,6 +100,7 @@ export default function MemManageV2() {
 					onDelete={m.handleDelete}
 					onAddTag={m.addTag}
 					onRemoveTag={m.removeTag}
+					onClose={() => m.setDetailId(null)}
 				/>
 			</div>
 

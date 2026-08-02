@@ -367,6 +367,10 @@
 
 /* ── 表格卡 ── */
 .tableCard {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
 	background: var(--v2-surface);
 	border: 1px solid var(--v2-border);
 	border-radius: var(--radius-lg);
@@ -374,7 +378,9 @@
 }
 
 .tableScroll {
-	overflow-x: auto;
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
 }
 
 .table {
@@ -565,6 +571,27 @@
 	justify-content: space-between;
 	padding-bottom: var(--space-sm);
 	border-bottom: 1px solid var(--v2-border);
+}
+
+.detailHeadRight {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+}
+
+.detailClose {
+	background: none;
+	border: none;
+	color: var(--v2-ink-faint);
+	cursor: pointer;
+	font-size: 13px;
+	padding: 2px 6px;
+	border-radius: 4px;
+}
+
+.detailClose:hover {
+	color: var(--v2-ink);
+	background: var(--v2-surface-raised);
 }
 
 .detailId {

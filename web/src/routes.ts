@@ -151,7 +151,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Manage",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("./features/mem/MemManage.tsx")),
+		component: lazy(() => import("./features/mem/v2/MemManageV2.tsx")),
 	},
 	{
 		path: "/conv",

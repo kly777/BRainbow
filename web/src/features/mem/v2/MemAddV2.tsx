@@ -4,7 +4,7 @@
 // 业务逻辑复用 useMemAdd，此处只做视图层
 
 import { A } from "@solidjs/router";
-import { For, Show } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 import MarkdownEditor from "../../../components/ui/MarkdownEditor.tsx";
 import { useMemAdd } from "../logic/useMemAdd.ts";
 import styles from "./MemAddV2.module.css";
@@ -199,6 +199,8 @@ function PasteViewV2(props: { m: ReturnType<typeof useMemAdd> }) {
 
 function FileViewV2(props: { m: ReturnType<typeof useMemAdd> }) {
 	const m = props.m;
+	// 本地文件名状态，仅用于展示已选文件
+	const [fileName, setFileName] = createSignal("");
 	return (
 		<Show
 			when={m.importResult()}
@@ -206,17 +208,18 @@ function FileViewV2(props: { m: ReturnType<typeof useMemAdd> }) {
 				<div class={styles.stack}>
 					<FormatHintV2 mode="file" />
 					<div class={styles.inputCard}>
-						<label class={styles.label} for="import-file">
-							选择文件
+						<label for="import-file" class={styles.fileBtn}>
+							📄 {fileName() || "选择文件"}
 						</label>
 						<input
 							id="import-file"
 							type="file"
 							accept=".csv,.psv,.json"
-							class={styles.fileInput}
-							onChange={(e) =>
-								m.handleFilePicked(e.currentTarget.files?.[0] ?? null)
-							}
+							class={styles.fileInputHidden}
+							onChange={(e) => {
+								setFileName(e.currentTarget.files?.[0]?.name ?? "");
+								m.handleFilePicked(e.currentTarget.files?.[0] ?? null);
+							}}
 						/>
 						<Show when={m.parseError()}>
 							<p class={styles.importErrors}>{m.parseError()}</p>

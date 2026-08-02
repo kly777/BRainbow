@@ -687,6 +687,23 @@
 
 .editArea {
 	width: 100%;
+	padding: var(--space-md);
+	border: 1px solid var(--v2-border-strong);
+	border-radius: var(--radius-md);
+	font-size: var(--text-base);
+	font-family: var(--v2-font-mono);
+	line-height: 1.6;
+	resize: vertical;
+	background: var(--v2-bg);
+	color: var(--v2-ink);
+	transition: border-color 0.15s, box-shadow 0.15s;
+	box-sizing: border-box;
+	outline: none;
+}
+
+.editArea:focus {
+	border-color: var(--v2-accent);
+	box-shadow: 0 0 0 2px var(--v2-accent-soft);
 }
 
 /* ── 操作行（固定在视口底部中间） ── */

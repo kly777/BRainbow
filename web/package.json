@@ -10,7 +10,8 @@
     "lint": "npx @biomejs/biome lint --write src/",
     "fmt": "npx @biomejs/biome format --write src/",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "ui-inspect": "node scripts/ui-inspect.mjs"
   },
   "dependencies": {
     "@solidjs/router": "^0.16.1",

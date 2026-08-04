@@ -7,7 +7,7 @@ import MarkdownEditor from "../../../../components/ui/MarkdownEditor.tsx";
 import { fmtInterval, fmtLocal } from "../../../../lib/time.ts";
 import { useSpeech } from "../../logic/useSpeech.ts";
 import type { UseMemReview } from "../../logic/useMemReview.ts";
-import styles from "../MemPageV2.module.css";
+import * as styles from "./V2ReviewCard.css.ts";
 
 interface V2ReviewCardProps {
 	m: UseMemReview;

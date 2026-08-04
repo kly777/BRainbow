@@ -2,7 +2,7 @@
 
 import { Show } from "solid-js";
 import type { UseMemReview } from "../../logic/useMemReview.ts";
-import styles from "../MemPageV2.module.css";
+import * as styles from "./V2ContextBar.css.ts";
 
 interface V2ContextBarProps {
 	m: UseMemReview;
@@ -56,17 +56,17 @@ export default function V2ContextBar(props: V2ContextBarProps) {
 				<Show
 					when={m.editing()}
 					fallback={
-						<button type="button" class={styles.ghostBtn} onClick={m.startEdit}>
+						<button type="button" class={styles.btnGhost} onClick={m.startEdit}>
 							编辑
 						</button>
 					}
 				>
-					<button type="button" class={styles.primaryBtn} onClick={m.saveEdit}>
+					<button type="button" class={styles.btnPrimary} onClick={m.saveEdit}>
 						保存
 					</button>
 					<button
 						type="button"
-						class={styles.ghostBtn}
+						class={styles.btnGhost}
 						onClick={() => m.setEditing(false)}
 					>
 						取消

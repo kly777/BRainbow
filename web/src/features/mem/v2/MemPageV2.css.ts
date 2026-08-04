@@ -1,0 +1,112 @@
+/**
+ * MemPageV2 — 页面布局（vanilla-extract 迁移）
+ */
+import { style } from "@vanilla-extract/css";
+import { radius, space, textSize, vars } from "../../../styles/tokens.css.ts";
+
+export const page = style({
+	display: "flex",
+	height: "100vh",
+	background: vars.v2.bg,
+	color: vars.v2.ink,
+});
+
+export const main = style({
+	flex: 1,
+	display: "flex",
+	flexDirection: "column",
+	minWidth: 0,
+	overflowY: "auto",
+});
+
+export const topBar = style({
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "space-between",
+	gap: space.md,
+	padding: `${space.sm} 20px`,
+	borderBottom: `1px solid ${vars.v2.border}`,
+	background: vars.v2.surface,
+	flexShrink: 0,
+	"@media": {
+		"(max-width: 600px)": { paddingLeft: 12, paddingRight: 12 },
+	},
+});
+
+export const hamburger = style({
+	display: "block",
+	background: "none",
+	border: "none",
+	fontSize: textSize.lg,
+	color: vars.v2.inkFaint,
+	cursor: "pointer",
+	padding: `${space.xs} 8px`,
+	marginRight: 4,
+	selectors: {
+		"&:hover": { color: vars.v2.ink },
+	},
+});
+
+export const title = style({
+	fontFamily: vars.v2.fontDisplay,
+	fontSize: textSize.lg,
+	fontWeight: 600,
+	letterSpacing: "0.08em",
+	color: vars.v2.ink,
+	flex: 1,
+});
+
+export const topRight = style({
+	display: "flex",
+	alignItems: "center",
+	gap: space.md,
+});
+
+export const iconBtn = style({
+	background: "none",
+	border: "none",
+	fontSize: textSize.base,
+	cursor: "pointer",
+	padding: "2px 4px",
+	opacity: 0.7,
+	selectors: {
+		"&:hover": { opacity: 1 },
+	},
+});
+
+export const addLink = style({
+	fontSize: textSize.sm,
+	color: vars.v2.white,
+	textDecoration: "none",
+	fontWeight: 500,
+	padding: `${space.xs} 12px`,
+	border: "none",
+	borderRadius: radius.md,
+	background: vars.v2.accent,
+	selectors: {
+		"&:hover": { background: vars.v2.accentStrong },
+	},
+});
+
+export const manageLink = style({
+	fontSize: textSize.sm,
+	color: vars.v2.inkMuted,
+	textDecoration: "none",
+	padding: `${space.xs} 10px`,
+	border: `1px solid ${vars.v2.border}`,
+	borderRadius: radius.md,
+	selectors: {
+		"&:hover": { background: vars.v2.surfaceRaised, color: vars.v2.ink },
+	},
+});
+
+export const cardArea = style({
+	flex: 1,
+	padding: `${space.lg} 20px`,
+	display: "flex",
+	flexDirection: "column",
+	alignItems: "center",
+	"@media": {
+		"(max-width: 600px)": { padding: `${space.md} 12px` },
+	},
+});

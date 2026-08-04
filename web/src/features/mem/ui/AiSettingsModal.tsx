@@ -9,7 +9,7 @@ import {
 	setAiSettings,
 } from "../../../lib/ai-settings.ts";
 import { tryAsync } from "../../../lib/result.ts";
-import styles from "../MemPage.module.css";
+
 
 interface AiSettingsModalProps {
 	isOpen: boolean;
@@ -78,8 +78,8 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 				}}
 			>
 				{/* API 地址 */}
-				<div class={styles.field}>
-					<label class={styles.fieldLabel} for="ai-endpoint">
+				<div class="">
+					<label class="" for="ai-endpoint">
 						API 地址
 					</label>
 					<input
@@ -97,8 +97,8 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 				</div>
 
 				{/* API Key */}
-				<div class={styles.field}>
-					<label class={styles.fieldLabel} for="ai-key">
+				<div class="">
+					<label class="" for="ai-key">
 						API Key
 					</label>
 					<input
@@ -116,8 +116,8 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 				</div>
 
 				{/* 模型 */}
-				<div class={styles.field}>
-					<label class={styles.fieldLabel} for="ai-model">
+				<div class="">
+					<label class="" for="ai-model">
 						模型
 					</label>
 					<input
@@ -171,8 +171,8 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 				/>
 
 				{/* 助记提示词 */}
-				<div class={styles.field}>
-					<label class={styles.fieldLabel} for="ai-prompt">
+				<div class="">
+					<label class="" for="ai-prompt">
 						助记生成提示词
 						<span
 							style={{

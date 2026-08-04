@@ -2,7 +2,7 @@
 
 import { For, Show } from "solid-js";
 import type { PreviewRow } from "../../logic/useMemAdd.ts";
-import styles from "../MemAddV2.module.css";
+import * as styles from "./V2ImportParts.css.ts";
 
 // ── 格式说明（档案说明卡） ──
 

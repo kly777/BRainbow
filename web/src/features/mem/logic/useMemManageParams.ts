@@ -1,7 +1,7 @@
 // ── URL 搜索参数管理 ──
 
 import { useSearchParams } from "@solidjs/router";
-import type { TagMode } from "../ui/MemManageToolbar.tsx";
+import type { TagMode } from "./mem-manage-utils.ts";
 import {
 	type SortDir,
 	type SortField,

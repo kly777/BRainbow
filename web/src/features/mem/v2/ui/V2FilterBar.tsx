@@ -2,7 +2,7 @@
 
 import { For, Show } from "solid-js";
 import type { UseMemReview } from "../../logic/useMemReview.ts";
-import styles from "../MemPageV2.module.css";
+import * as styles from "./V2FilterBar.css.ts";
 
 interface V2FilterBarProps {
 	m: UseMemReview;

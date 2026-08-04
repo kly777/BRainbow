@@ -2,7 +2,8 @@
 
 import { getAllMemsE } from "../api.ts";
 import type { MemItem, TagInfo } from "../model.ts";
-import type { TagMode } from "../ui/MemManageToolbar.tsx";
+export type TagMode = "include" | "exclude";
+// (类型原在 v1 MemManageToolbar，已上移至此)
 import { tryAsync, unwrapOr } from "../../../lib/result.ts";
 import { notifyError } from "../../../lib/notify.ts";
 

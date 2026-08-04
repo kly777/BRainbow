@@ -18,7 +18,7 @@ import {
 	type TagInfo,
 	unsuspendMemE,
 } from "../api.ts";
-import type { TagMode } from "../ui/MemManageToolbar.tsx";
+import type { TagMode } from "./mem-manage-utils.ts";
 import type { PageMeta } from "./mem-manage-utils.ts";
 import { fetchAllMems } from "./mem-manage-utils.ts";
 import { useBatchOps } from "./useBatchOps.ts";

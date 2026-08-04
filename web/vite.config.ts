@@ -1,10 +1,11 @@
 /// <reference types="vitest" />
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
+import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import { fileURLToPath } from "node:url";
 
 export default defineConfig({
-  plugins: [solid()],
+  plugins: [solid(), vanillaExtractPlugin({ identifiers: "debug" })],
 
   test: {
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],

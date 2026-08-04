@@ -4,14 +4,13 @@
 
 import { A } from "@solidjs/router";
 import { useMemManage } from "../logic/useMemManage.ts";
-import styles from "./MemManageV2.module.css";
+import * as styles from "./MemManageV2.css.ts";
 import MemBatchTagModal from "../ui/MemBatchTagModal.tsx";
 import MemExportModal from "../ui/MemExportModal.tsx";
 import V2ManageBatchBar from "./ui/V2ManageBatchBar.tsx";
 import V2ManageDetail from "./ui/V2ManageDetail.tsx";
 import V2ManageTable from "./ui/V2ManageTable.tsx";
 import V2ManageToolbar from "./ui/V2ManageToolbar.tsx";
-import "./tokens.css";
 
 export default function MemManageV2() {
 	const m = useMemManage();

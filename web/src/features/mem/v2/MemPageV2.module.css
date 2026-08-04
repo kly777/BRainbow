@@ -491,30 +491,9 @@
 }
 
 /* ── 层叠舞台（perspective 容器） ── */
+/* 复习卡片容器 */
 .cardStage {
 	position: relative;
-	perspective: 1400px;
-}
-
-/* 背面的堆叠边缘：层叠提示队列深度 */
-.stackEdge {
-	position: absolute;
-	left: 10px;
-	right: 10px;
-	height: 100%;
-	background: var(--v2-surface);
-	border: 1px solid var(--v2-border);
-	border-radius: var(--radius-lg);
-}
-
-.stackEdge1 {
-	bottom: -8px;
-	transform: scale(0.985);
-}
-
-.stackEdge2 {
-	bottom: -14px;
-	transform: scale(0.97);
 }
 
 /* 目录卡：线索常显 + 答案展开 */

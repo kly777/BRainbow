@@ -92,16 +92,8 @@ export default function V2ReviewCard(props: V2ReviewCardProps) {
 							</div>
 						</Show>
 
-					{/* 层叠舞台 */}
+					{/* 复习卡片 */}
 					<div class={styles.cardStage}>
-						{/* 背面层叠的边缘（提示队列深度） */}
-						<Show when={m.due().length > 1}>
-							<div class={`${styles.stackEdge} ${styles.stackEdge2}`} />
-							<Show when={m.due().length > 2}>
-								<div class={`${styles.stackEdge} ${styles.stackEdge1}`} />
-							</Show>
-						</Show>
-
 						{/* 目录卡：线索常显 + 答案展开 */}
 						<div class={styles.card}>
 							{/* 线索段 */}

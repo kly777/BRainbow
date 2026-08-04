@@ -92,80 +92,78 @@ export default function V2ReviewCard(props: V2ReviewCardProps) {
 							</div>
 						</Show>
 
-						{/* 层叠舞台 */}
-						<div class={styles.cardStage}>
-							{/* 背面层叠的边缘（提示队列深度） */}
-							<Show when={m.due().length > 1}>
-								<div class={`${styles.stackEdge} ${styles.stackEdge2}`} />
-								<Show when={m.due().length > 2}>
-									<div class={`${styles.stackEdge} ${styles.stackEdge1}`} />
-								</Show>
+					{/* 层叠舞台 */}
+					<div class={styles.cardStage}>
+						{/* 背面层叠的边缘（提示队列深度） */}
+						<Show when={m.due().length > 1}>
+							<div class={`${styles.stackEdge} ${styles.stackEdge2}`} />
+							<Show when={m.due().length > 2}>
+								<div class={`${styles.stackEdge} ${styles.stackEdge1}`} />
 							</Show>
+						</Show>
 
-							{/* 翻面体 */}
-							<div
-								class={styles.cardFlip}
-								classList={{ [styles.flipped]: m.showAnswer() }}
-							>
-								{/* 线索面 */}
-								<div class={`${styles.cardFace} ${styles.cueFace}`}>
-									<div class={styles.cardTab}>
-										<span class={styles.cardTabText}>线索</span>
-										<span class={styles.cardTabNo}>#{m.item()?.id}</span>
-									</div>
-									<div class={styles.cardBody}>
-										<div class={styles.content}>
-											<MarkdownRenderer
-												content={m.item()?.cue.content ?? ""}
-											/>
-										</div>
-									</div>
-									<div class={styles.cardTools}>
-										<button
-											type="button"
-											class={styles.toolBtn}
-											title="朗读线索"
-											onClick={() =>
-												speech.toggle(m.item()?.cue.content ?? "")
-											}
-											disabled={!speech.supported}
-										>
-											{speech.speaking() ? "⏹" : "🔊"}
-										</button>
-										<button
-											type="button"
-											class={styles.toolBtn}
-											title="复制线索"
-											onClick={() =>
-												navigator.clipboard.writeText(
-													m.item()?.cue.content ?? "",
-												)
-											}
-										>
-											📋
-										</button>
-										<button
-											type="button"
-											class={styles.toolBtn}
-											title="复制整张卡片"
-											onClick={m.handleCopyCard}
-										>
-											📋+
-										</button>
-										<button
-											type="button"
-											class={styles.toolBtn}
-											title={m.mnemonic() ? "重新生成助记" : "AI 生成助记"}
-											onClick={m.generateMnemonic}
-											disabled={m.mnemonicLoading()}
-										>
-											{m.mnemonicLoading() ? "⏳" : "🤖"}
-										</button>
+						{/* 目录卡：线索常显 + 答案展开 */}
+						<div class={styles.card}>
+							{/* 线索段 */}
+							<div class={styles.face}>
+								<div class={styles.cardTab}>
+									<span class={styles.cardTabText}>线索</span>
+									<span class={styles.cardTabNo}>#{m.item()?.id}</span>
+								</div>
+								<div class={styles.cardBody}>
+									<div class={styles.content}>
+										<MarkdownRenderer
+											content={m.item()?.cue.content ?? ""}
+										/>
 									</div>
 								</div>
+								<div class={styles.cardTools}>
+									<button
+										type="button"
+										class={styles.toolBtn}
+										title="朗读线索"
+										onClick={() =>
+											speech.toggle(m.item()?.cue.content ?? "")
+										}
+										disabled={!speech.supported}
+									>
+										{speech.speaking() ? "⏹" : "🔊"}
+									</button>
+									<button
+										type="button"
+										class={styles.toolBtn}
+										title="复制线索"
+										onClick={() =>
+											navigator.clipboard.writeText(
+												m.item()?.cue.content ?? "",
+											)
+										}
+									>
+										📋
+									</button>
+									<button
+										type="button"
+										class={styles.toolBtn}
+										title="复制整张卡片"
+										onClick={m.handleCopyCard}
+									>
+										📋+
+									</button>
+									<button
+										type="button"
+										class={styles.toolBtn}
+										title={m.mnemonic() ? "重新生成助记" : "AI 生成助记"}
+										onClick={m.generateMnemonic}
+										disabled={m.mnemonicLoading()}
+									>
+										{m.mnemonicLoading() ? "⏳" : "🤖"}
+									</button>
+								</div>
+							</div>
 
-								{/* 答案面 */}
-								<div class={`${styles.cardFace} ${styles.answerFace}`}>
+							{/* 答案段（显示答案后展开） */}
+							<Show when={m.showAnswer()}>
+								<div class={styles.answer}>
 									<div class={styles.cardTab}>
 										<span class={styles.cardTabText}>答案</span>
 										<span class={styles.cardTabNo}>
@@ -196,10 +194,10 @@ export default function V2ReviewCard(props: V2ReviewCardProps) {
 										</Show>
 									</div>
 								</div>
-							</div>
+							</Show>
 						</div>
 					</div>
-
+					</div>
 					{/* 操作行：未翻面时（固定在底部中间） */}
 					<Show when={!m.showAnswer()}>
 						<div class={styles.actionRow}>

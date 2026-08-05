@@ -25,6 +25,7 @@ export const btn = style({
 });
 
 export const active = style({
+	borderRadius: radius.md,
 	background: vars.color.accent,
 	color: vars.color.bg,
 	borderColor: vars.color.accent,

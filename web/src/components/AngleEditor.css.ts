@@ -43,6 +43,7 @@ export const segBtn = style({
 });
 
 export const segActive = style({
+	borderRadius: radius.md,
 	padding: `${space.xs} 14px`,
 	fontSize: textSize.sm,
 	border: "none",

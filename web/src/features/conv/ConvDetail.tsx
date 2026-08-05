@@ -2,7 +2,7 @@ import { useParams, useSearchParams } from "@solidjs/router";
 import { createResource, For, Show } from "solid-js";
 import MarkdownRenderer from "../../components/ui/Markdown.tsx";
 import { getConvDetailE } from "./api.ts";
-import styles from "./ConvDetail.module.css";
+import * as styles from "./ConvDetail.css.ts";
 import { typeLabel } from "./logic/constants.ts";
 import { useBackHref } from "./logic/useBackHref.ts";
 import ConvTopBar from "./ui/ConvTopBar.tsx";

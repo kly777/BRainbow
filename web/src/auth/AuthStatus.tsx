@@ -2,7 +2,7 @@ import { createSignal, onCleanup, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import { AUTH_REQUIRED_EVENT } from "../apis/request.ts";
 import { tryAsync } from "../lib/result.ts";
-import styles from "./AuthStatus.module.css";
+import * as styles from "./AuthStatus.css.ts";
 import { changePasswordE, loginE, logoutE, registerE } from "./api.ts";
 import { useAuth } from "./context.tsx";
 

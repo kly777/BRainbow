@@ -1,6 +1,6 @@
 import { createEffect, For, onCleanup, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-import styles from "./ConfirmModal.module.css";
+import * as styles from "./ConfirmModal.css.ts";
 import type { ConfirmVariant } from "./confirmStore.ts";
 import { confirms } from "./confirmStore.ts";
 
@@ -16,6 +16,12 @@ const BTN_CLASS: Record<ConfirmVariant, string> = {
 	danger: styles.btnDanger,
 	warning: styles.btnWarning,
 	info: styles.btnPrimary,
+};
+
+const ICON_CLASS: Record<ConfirmVariant, string> = {
+	danger: styles.iconDanger,
+	warning: styles.iconWarning,
+	info: styles.iconInfo,
 };
 
 const DEFAULT_CONFIRM: Record<ConfirmVariant, string> = {
@@ -99,7 +105,7 @@ function ConfirmDialog(props: {
 				onKeyDown={onKeyDown}
 			>
 				<div class={styles.header}>
-					<div class={`${styles.iconWrap} ${styles[variant]}`}>
+					<div class={`${styles.iconWrap} ${ICON_CLASS[variant]}`}>
 						{ICON[variant]}
 					</div>
 					<div class={styles.titleWrap}>

@@ -12,7 +12,7 @@ import TaskList from "../features/task/ui/TaskList.tsx";
 import { TaskProvider, useTasks } from "../features/task/ui/TaskProvider.tsx";
 import { notifyError } from "../lib/notify.ts";
 import { showConfirm, tryOrNotify } from "../lib/safe-action.ts";
-import styles from "./HomePage.module.css";
+import * as styles from "./HomePage.css.ts";
 
 // 模块入口（纯文字链接）
 const MODULES = [

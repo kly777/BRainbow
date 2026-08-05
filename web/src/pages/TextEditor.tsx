@@ -1,5 +1,5 @@
 import { createSignal, For, onCleanup, onMount } from "solid-js";
-import styles from "./TextEditor.module.css";
+import * as styles from "./TextEditor.css.ts";
 import { loadTextE, saveTextE } from "./textApi.ts";
 import { notifyError } from "../lib/notify.ts";
 import { tryAsync } from "../lib/result.ts";

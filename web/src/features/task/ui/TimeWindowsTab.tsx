@@ -4,7 +4,7 @@ import { notifyError } from "../../../lib/notify.ts";
 import { tryAsync } from "../../../lib/result.ts";
 import { createTimeWindowE, deleteTimeWindowE } from "../timeWindowApi.ts";
 import type { CreateTimeWindowRequest, Task, TimeWindow } from "../types.ts";
-import styles from "./EditTaskModal.module.css";
+import * as styles from "./EditTaskModal.css.ts";
 
 interface TimeWindowsTabProps {
 	task: Task;

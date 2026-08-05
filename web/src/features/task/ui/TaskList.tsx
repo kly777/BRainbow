@@ -2,7 +2,7 @@ import { createMemo, createSignal, For, Show } from "solid-js";
 import type { Task } from "../types.ts";
 import EditTaskModal from "./EditTaskModal.tsx";
 import TaskItem from "./TaskItem.tsx";
-import styles from "./TaskList.module.css";
+import * as styles from "./TaskList.css.ts";
 
 // 扩展TaskStatus常量 - 使用后端实际的状态
 const TaskStatus = {

@@ -15,7 +15,7 @@ import Toolbar from "../../components/ui/Toolbar.tsx";
 import { showConfirm, tryOrNotify } from "../../lib/safe-action.ts";
 import { tryAsync } from "../../lib/result.ts";
 import { deleteCardE, getCardE, updateCardE } from "./api.ts";
-import styles from "./CardEdit.module.css";
+import * as styles from "./CardEdit.css.ts";
 import type { UpdateCardRequest } from "./types.ts";
 
 const CardEditPage: Component = () => {

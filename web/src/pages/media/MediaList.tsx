@@ -19,7 +19,7 @@ import {
 import { showConfirm, tryOrNotify } from "../../lib/safe-action.ts";
 import { notifyError } from "../../lib/notify.ts";
 import { tryAsync } from "../../lib/result.ts";
-import styles from "./MediaList.module.css";
+import * as styles from "./MediaList.css.ts";
 
 const TABS = [
 	{ value: "", label: "全部" },

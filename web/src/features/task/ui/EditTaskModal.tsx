@@ -6,7 +6,7 @@ import { getTimeWindowsE } from "../timeWindowApi.ts";
 import type { Task, TimeWindow } from "../types.ts";
 import BasicInfoTab from "./BasicInfoTab.tsx";
 import DependenciesTab from "./DependenciesTab.tsx";
-import styles from "./EditTaskModal.module.css";
+import * as styles from "./EditTaskModal.css.ts";
 import TimeWindowsTab from "./TimeWindowsTab.tsx";
 
 interface EditTaskModalProps {

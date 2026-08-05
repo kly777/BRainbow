@@ -1,5 +1,5 @@
 import type { Component, JSX } from "solid-js";
-import styles from "./Toolbar.module.css";
+import * as styles from "./Toolbar.css.ts";
 
 interface ToolbarProps {
 	title?: string;

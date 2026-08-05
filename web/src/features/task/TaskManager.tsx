@@ -1,6 +1,6 @@
 import { useSearchParams } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
-import styles from "./TaskManager.module.css";
+import * as styles from "./TaskManager.css.ts";
 import TaskCalendar from "./ui/TaskCalendar.tsx";
 import TaskDag from "./ui/TaskDag.tsx";
 import TaskKanban from "./ui/TaskKanban.tsx";

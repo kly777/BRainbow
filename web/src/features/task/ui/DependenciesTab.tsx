@@ -14,7 +14,15 @@ import {
 	removeTaskDependencyE,
 } from "../api.ts";
 import type { Task } from "../types.ts";
-import styles from "./EditTaskModal.module.css";
+import * as styles from "./EditTaskModal.css.ts";
+
+// 依赖状态类映射（vanilla-extract 不支持动态索引）
+const depStatusClass: Record<string, string> = {
+	backlog: styles.depStatusBacklog,
+	active: styles.depStatusActive,
+	completed: styles.depStatusCompleted,
+	archived: styles.depStatusArchived,
+};
 
 interface DependenciesTabProps {
 	task: Task;
@@ -123,8 +131,7 @@ export default function DependenciesTab(props: DependenciesTabProps) {
 									<span class={styles.depTitle}>{t.title}</span>
 									<span
 										class={`${styles.depStatus} ${
-											styles[`depStatus_${t.status || "backlog"}`]
-										}`}
+											depStatusClass[t.status || "backlog"]}`}
 									>
 										{t.status || "backlog"}
 									</span>

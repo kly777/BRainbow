@@ -1,5 +1,5 @@
 import type { Component, JSX } from "solid-js";
-import styles from "./Badge.module.css";
+import * as styles from "./Badge.css.ts";
 
 type BadgeVariant =
 	| "default"
@@ -13,6 +13,20 @@ type BadgeVariant =
 	| "danger"
 	| "info";
 
+// vanilla-extract 命名导出不支持动态索引，用映射表
+const variantClass: Record<BadgeVariant, string> = {
+	default: styles.default_,
+	new: styles.new_,
+	learning: styles.learning,
+	review: styles.review,
+	relearning: styles.relearning,
+	suspended: styles.suspended,
+	success: styles.success,
+	warning: styles.warning,
+	danger: styles.danger,
+	info: styles.info,
+};
+
 interface BadgeProps {
 	variant?: BadgeVariant;
 	class?: string;
@@ -22,7 +36,7 @@ interface BadgeProps {
 const Badge: Component<BadgeProps> = (props) => {
 	return (
 		<span
-			class={`${styles.badge} ${styles[props.variant ?? "default"]}${props.class ? ` ${props.class}` : ""}`}
+			class={`${styles.badge} ${variantClass[props.variant ?? "default"]}${props.class ? ` ${props.class}` : ""}`}
 		>
 			{props.children}
 		</span>

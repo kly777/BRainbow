@@ -1,5 +1,5 @@
 import type { Component, JSX } from "solid-js";
-import styles from "./Button.module.css";
+import * as styles from "./Button.css.ts";
 
 type Variant = "primary" | "secondary" | "danger" | "ghost" | "icon";
 type Size = "sm" | "md";
@@ -19,7 +19,7 @@ const Button: Component<ButtonProps> = (props) => {
 	return (
 		<button
 			type={props.type ?? "button"}
-			class={`${styles.btn} ${styles[props.variant ?? "secondary"]} ${styles[props.size ?? "md"]}${props.class ? ` ${props.class}` : ""}`}
+			class={`${styles.btn} ${styles.variants[props.variant ?? "secondary"]} ${styles.variants[props.size ?? "md"]}${props.class ? ` ${props.class}` : ""}`}
 			disabled={props.disabled}
 			onClick={props.onClick}
 			title={props.title}

@@ -14,7 +14,7 @@ import type { Task } from "../types.ts";
 import type { LayoutNode } from "./dag-layout.ts";
 import { layout } from "./dag-layout.ts";
 import { calcAutoOffset, drawGraph, hitTestNode } from "./dag-render.ts";
-import styles from "./TaskDag.module.css";
+import * as styles from "./TaskDag.css.ts";
 
 // ── 任务选择器 ──
 

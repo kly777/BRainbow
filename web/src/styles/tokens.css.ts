@@ -42,7 +42,12 @@ export const vars = createGlobalTheme(":root", {
 		dangerSubtle: "oklch(0.96 0.015 25)",
 
 		// ── 成功色 ──
+		success: "oklch(0.55 0.17 160)",
 		successSubtle: "oklch(0.95 0.03 160)",
+
+		// ── 警告色 ──
+		warning: "oklch(0.6 0.16 85)",
+		warningSubtle: "oklch(0.96 0.03 85)",
 
 		// ── 字体 ──
 		fontDisplay: 'Georgia, "Noto Serif SC", "Songti SC", "SimSun", serif',

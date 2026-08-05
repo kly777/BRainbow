@@ -1,6 +1,6 @@
 import type { Component } from "solid-js";
 import { For } from "solid-js";
-import styles from "./FilterGroup.module.css";
+import * as styles from "./FilterGroup.css.ts";
 
 interface FilterOption {
 	value: string;

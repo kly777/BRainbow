@@ -1,6 +1,6 @@
 import { For } from "solid-js";
 import MarkdownRenderer from "../../../components/ui/Markdown.tsx";
-import styles from "../ConvDetail.module.css";
+import * as styles from "../ConvDetail.css.ts";
 
 interface QaPair {
 	question: string;

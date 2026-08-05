@@ -1,6 +1,6 @@
 import type { Component } from "solid-js";
 import { createEffect, createSignal, onCleanup } from "solid-js";
-import styles from "./SearchInput.module.css";
+import * as styles from "./SearchInput.css.ts";
 
 interface SearchInputProps {
 	value: string;

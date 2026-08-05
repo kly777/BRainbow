@@ -1,7 +1,7 @@
 import { createSignal, Show } from "solid-js";
 import { uploadMedia } from "../../features/mem/mediaApi.ts";
 import MarkdownRenderer from "./Markdown.tsx";
-import styles from "./markdown-editor.module.css";
+import * as styles from "./markdown-editor.css.ts";
 
 interface MarkdownEditorProps {
 	value: string;

@@ -1,6 +1,6 @@
 import { type JSX, Show } from "solid-js";
 import { getErrorMessage } from "../../apis/types/index.ts";
-import styles from "./AsyncView.module.css";
+import * as styles from "./AsyncView.css.ts";
 
 interface Props<T> {
 	data: readonly T[] | null | undefined;

@@ -14,6 +14,7 @@ import {
 	reviewMemE,
 	suspendMemE,
 } from "@features/mem/api.ts";
+import type { DueResponse } from "@features/mem/api.ts";
 import type { MemCounts, MemItem, TagInfo } from "@features/mem/model.ts";
 import { ALPHA, calcAvgCardTime, calcMaxLearning } from "@features/mem/logic/mem-calcs.ts";
 import { useMemTagFilter } from "@features/mem/logic/useMemTagFilter.ts";
@@ -112,12 +113,28 @@ export function useMemReview(): UseMemReview {
 	const item = () => due()[current()];
 
 	// ── 子 hook：撤销（undo 成功后重载队列）──
-	const undoHook = useUndo(() => loadDue());
+	const undoHook = useUndo(() => {
+		// 撤销恢复了卡片：已评记录作废，重新拉取
+		reviewedIds.clear();
+		prefetched = null;
+		loadDue();
+	});
 
 	// ── 子 hook：AI 助记 ──
 	const mnemonicHook = useMnemonic();
 
 	// ── 数据加载 ──
+
+	// 会话预估缓存：retention 重计算，60s 内不重复请求
+	const ESTIMATE_TTL = 60_000;
+	let lastEstimateAt = 0;
+
+	// ── 队列预取：剩余 ≤3 张时提前拉下一批，评完无缝衔接 ──
+	const PREFETCH_THRESHOLD = 3;
+	let prefetching = false;
+	let prefetched: DueResponse | null = null;
+	// 本轮已评卡片 id：预取结果可能含尚未评完的卡，复用前需过滤
+	const reviewedIds = new Set<number>();
 
 	const loadPreview = async (id: number) => {
 		const result = await tryAsync(() => previewMemE(id));
@@ -136,41 +153,40 @@ export function useMemReview(): UseMemReview {
 
 	// ── 标签过滤 ──
 	const tagFilter = useMemTagFilter(() => {
+		// 标签切换：旧预取/已评记录作废，重新拉取
+		prefetched = null;
+		reviewedIds.clear();
 		setTimeout(loadDue, 0);
 	});
 
-	loadDue = async () => {
-		setLoading(true);
-		loadCounts();
+	// 队列请求（参数与 loadDue 一致，供预取复用）
+	const fetchDue = () => {
+		const include =
+			tagFilter.tagMode() === "include" && tagFilter.tagFilterIds().length > 0
+				? tagFilter.tagFilterIds()
+				: undefined;
+		const exclude =
+			tagFilter.tagMode() === "exclude" && tagFilter.tagFilterIds().length > 0
+				? tagFilter.tagFilterIds()
+				: undefined;
+		return getDueE(maxLearning(), include, exclude);
+	};
 
-		const dueResult = await tryAsync(() =>
-			getDueE(
-				maxLearning(),
-				tagFilter.tagMode() === "include" && tagFilter.tagFilterIds().length > 0
-					? tagFilter.tagFilterIds()
-					: undefined,
-				tagFilter.tagMode() === "exclude" && tagFilter.tagFilterIds().length > 0
-					? tagFilter.tagFilterIds()
-					: undefined,
-			),
-		);
-
-		if (!dueResult.ok) {
-			// 加载复习队列失败，显示空状态
-			setLoading(false);
-			return;
-		}
-
-		const data = dueResult.value;
+	// 应用队列结果（loadDue / 预取复用共用）
+	const applyQueue = (data: DueResponse) => {
 		if (data.items.length === 0 && !data.has_more) {
 			setDone(true);
 			setDue([]);
 			setEstimatedTotal(0);
 			setUpcoming(data.upcoming_count ?? 0);
+			reviewedIds.clear();
 		} else {
 			setDone(false);
 			setAllFar(data.all_far);
 			(async () => {
+				// 预估 60s 缓存，避免每次队列重载都重算 retention
+				if (Date.now() - lastEstimateAt < ESTIMATE_TTL) return;
+				lastEstimateAt = Date.now();
 				const estResult = await tryAsync(() => getSessionEstimateE());
 				if (estResult.ok) setEstimatedTotal(estResult.value.total_estimate);
 				// 预估失败不影响复习
@@ -190,6 +206,43 @@ export function useMemReview(): UseMemReview {
 		setLoading(false);
 	};
 
+	loadDue = async () => {
+		// stale-while-revalidate：已有卡片时不清空、不闪加载中，旧卡保持到新队列就绪
+		if (due().length === 0) setLoading(true);
+		loadCounts();
+
+		// 预取复用：仅队列为空且预取已就绪（undo/标签切换时 due 非空，走正常网络拉取）
+		if (due().length === 0 && prefetched) {
+			const data = prefetched;
+			prefetched = null;
+			const fresh = data.items.filter((it) => !reviewedIds.has(it.id));
+			if (fresh.length > 0) {
+				applyQueue({ ...data, items: fresh });
+				return;
+			}
+			// 预取全是已评卡：退回正常拉取
+		}
+
+		const dueResult = await tryAsync(() => fetchDue());
+		// 失败时若已有卡片则保留旧队列（stale-while-revalidate），仅空态标记加载结束
+		if (!dueResult.ok) {
+			setLoading(false);
+			return;
+		}
+		applyQueue(dueResult.value);
+	};
+
+	// 剩余卡 ≤ 阈值且未在预取/已有缓存时，提前请求下一批
+	const prefetchNext = () => {
+		if (prefetching || prefetched) return;
+		if (due().length === 0 || due().length > PREFETCH_THRESHOLD) return;
+		prefetching = true;
+		void tryAsync(() => fetchDue()).then((r) => {
+			prefetching = false;
+			if (r.ok) prefetched = r.value;
+		});
+	};
+
 	// ── 学习流程 ──
 
 	const advanceQueue = () => {
@@ -198,6 +251,8 @@ export function useMemReview(): UseMemReview {
 			next.splice(current(), 1);
 			return next;
 		});
+		// 剩余卡变短，触发下一批预取（队列空时 loadDue 直接复用缓存）
+		prefetchNext();
 		if (due().length > 0) {
 			setCardStart(Date.now());
 			const nextItem = due()[current()];
@@ -227,11 +282,12 @@ export function useMemReview(): UseMemReview {
 		const elapsed = Math.min((Date.now() - cardStart()) / 1000, 300);
 		setCardDurations((prev) => [...prev, elapsed].slice(-30));
 
+		reviewedIds.add(it.id);
 		mnemonicHook.trackRating(it, rating);
 
 		undoHook.show();
 		advanceQueue();
-		loadCounts();
+		// counts 由下一轮 loadDue（队列空时）或下次进入刷新，避免每张卡一个统计请求
 	};
 
 	const bury = async () => {
@@ -239,6 +295,7 @@ export function useMemReview(): UseMemReview {
 		if (!it) return;
 		const result = await tryAsync(() => buryMemE(it.id));
 		if (result.ok) {
+			reviewedIds.add(it.id);
 			advanceQueue();
 		} else {
 			notifyError("埋葬失败", result.error);

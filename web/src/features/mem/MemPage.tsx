@@ -3,8 +3,8 @@
 // 业务逻辑全部复用 useMemReview，此处只做组合与交互增强
 
 import { A } from "@solidjs/router";
-import { createResource, createSignal, onCleanup, onMount, Show } from "solid-js";
-import { getUpcomingCountsE } from "@features/mem/api.ts";
+import { createDeferred, createResource, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { getUpcomingCountsE, type UpcomingCounts } from "@features/mem/api.ts";
 import { useMemReview } from "@features/mem/logic/useMemReview.ts";
 import { notifyError } from "@lib/notify.ts";
 import { tryAsync } from "@lib/result.ts";
@@ -19,11 +19,22 @@ export default function MemPage() {
 	const m = useMemReview();
 	const [showAiSettings, setShowAiSettings] = createSignal(false);
 
+	// 8h/24h 待复习统计：评分会连续改变 due.length，用 createDeferred 合并 + 60s 缓存降频
+	const UPCOMING_TTL = 60_000;
+	let lastUpcomingAt = 0;
+	let lastUpcoming: UpcomingCounts | null = null;
+	const dueLen = createDeferred(() => m.due().length);
 	const [upcomingCounts] = createResource(
-		() => m.due().length,
+		() => dueLen(),
 		async () => {
+			if (lastUpcoming && Date.now() - lastUpcomingAt < UPCOMING_TTL)
+				return lastUpcoming;
 			const result = await tryAsync(() => getUpcomingCountsE());
-			if (result.ok) return result.value;
+			if (result.ok) {
+				lastUpcoming = result.value;
+				lastUpcomingAt = Date.now();
+				return result.value;
+			}
 			notifyError("获取待复习统计失败", result.error);
 			return { within_8h: 0, within_24h: 0 };
 		},

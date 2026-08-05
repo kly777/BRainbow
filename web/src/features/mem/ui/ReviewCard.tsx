@@ -41,9 +41,9 @@ export default function ReviewCard(props: ReviewCardProps) {
 				</div>
 			</Show>
 
-			{/* 卡片区 */}
+			{/* 卡片区：有旧卡时保持显示（stale-while-revalidate），loading 仅作用于无卡空态 */}
 			<Show
-				when={!m.loading() && !m.done() && m.due().length > 0}
+				when={!m.done() && m.due().length > 0}
 				fallback={
 					<div class={styles.empty}>
 						{m.loading() ? "加载中…" : "没有记忆卡片，去添加一些吧！"}

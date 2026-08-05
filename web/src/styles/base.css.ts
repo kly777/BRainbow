@@ -95,3 +95,38 @@ export const btnBack = style([
 		},
 	},
 ]);
+
+// ── 底部胶囊条（fixed 贴底，桌面居中胶囊 / 移动全宽） ──
+// actionRow（显示答案前）与 ratings（显示答案后）共用，保证高度一致
+export const bottomBar = style({
+	position: "fixed",
+	bottom: 0,
+	left: 0,
+	right: 0,
+	marginInline: "auto",
+	width: "fit-content",
+	minHeight: 48,
+	zIndex: 20,
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+	gap: space.sm,
+	padding: "0 16px", // 水平内边距（高度由 minHeight 决定）
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.borderStrong}`,
+	borderBottom: "none",
+	borderRadius: "14px 14px 0 0",
+	boxShadow: "0 -4px 16px rgb(0 0 0 / 8%)",
+	flexWrap: "nowrap",
+	maxWidth: "100vw",
+	"@media": {
+		"(max-width: 600px)": {
+			width: "100%",
+			gap: 4,
+			padding: "0 12px",
+			borderRadius: 0,
+			borderLeft: "none",
+			borderRight: "none",
+		},
+	},
+});

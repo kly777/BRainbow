@@ -2,16 +2,21 @@
  * ReviewCard — 复习卡片（vanilla-extract 迁移）
  * 按钮复用 base.css.ts 通用件
  */
-import { keyframes, style } from "@vanilla-extract/css";
+import { composeStyles, globalStyle, keyframes, style } from "@vanilla-extract/css";
 import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 // 按钮复用 base（组件引用 styles.ghostBtn/primaryBtn/navBtn）
 export { btnGhost as ghostBtn, btnNav as navBtn, btnPrimary as primaryBtn } from "@styles/base.css.ts";
+import { bottomBar } from "@styles/base.css.ts";
 
 export const cardWrap = style({
 	width: "100%",
 	maxWidth: 680,
 	marginBottom: 96,
+	display: "flex",
+	flexDirection: "column",
+	maxHeight: "calc(100% - 96px)",
+	minHeight: 0,
 });
 
 export const previewBanner = style({
@@ -26,6 +31,9 @@ export const previewBanner = style({
 
 export const cardStage = style({
 	position: "relative",
+	flex: 1,
+	minHeight: 0,
+	display: "flex",
 });
 
 export const card = style({
@@ -35,11 +43,18 @@ export const card = style({
 	borderRadius: radius.lg,
 	boxShadow: "0 2px 10px rgb(0 0 0 / 5%)",
 	overflow: "hidden",
+	flex: 1,
+	minHeight: 0,
+	display: "flex",
+	flexDirection: "column",
 });
 
 export const face = style({
 	display: "flex",
 	flexDirection: "column",
+	flex: "0 1 auto",
+	minHeight: 0,
+	overflow: "hidden",
 });
 
 const answerIn = keyframes({
@@ -52,6 +67,9 @@ export const answer = style({
 	flexDirection: "column",
 	borderTop: `1px solid ${vars.color.border}`,
 	animation: `${answerIn} 0.3s ease`,
+	flex: "0 1 auto",
+	minHeight: 0,
+	overflow: "hidden",
 	"@media": {
 		"(prefers-reduced-motion: reduce)": { animation: "none" },
 	},
@@ -86,7 +104,8 @@ export const cardTabNo = style({
 export const cardBody = style({
 	flex: 1,
 	padding: `${space.lg} ${space.xl}`,
-	overflow: "visible",
+	minHeight: 0,
+	overflowY: "auto",
 	display: "flex",
 	flexDirection: "column",
 	"@media": {
@@ -211,58 +230,39 @@ export const editArea = style({
 	},
 });
 
-export const actionRow = style({
-	position: "fixed",
-	bottom: 0,
-	left: "50%",
-	transform: "translateX(-50%)",
-	zIndex: 20,
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "center",
-	gap: space.sm,
-	padding: `${space.sm} ${space.lg}`,
-	background: vars.color.surface,
-	border: `1px solid ${vars.color.borderStrong}`,
-	borderBottom: "none",
-	borderRadius: "14px 14px 0 0",
-	boxShadow: "0 -4px 16px rgb(0 0 0 / 8%)",
-	flexWrap: "nowrap",
-	maxWidth: "100vw",
-	"@media": {
-		"(max-width: 600px)": {
-			left: 0,
-			transform: "none",
-			width: "100%",
-			gap: 4,
-			padding: "6px 12px",
-			borderRadius: 0,
-			borderLeft: "none",
-			borderRight: "none",
-		},
-	},
-});
+export const actionRow = bottomBar;
 
-export const ratings = style({
-	display: "grid",
-	gridTemplateColumns: "repeat(4, 1fr)",
-	gap: space.sm,
-	marginTop: space.md,
-	"@media": {
-		"(max-width: 600px)": { gridTemplateColumns: "repeat(2, 1fr)" },
-	},
-});
+export const ratings = composeStyles(
+	bottomBar,
+	style({
+		maxWidth: 640,
+		minWidth: 480,
+		"@media": {
+			"(max-width: 600px)": { maxWidth: "100%", minWidth: 0 }
+		},
+	}),
+);
 
 export const ratingBtn = style({
 	display: "flex",
-	flexDirection: "column",
-	alignItems: "center",
-	gap: 2,
-	padding: "10px 8px",
+	flexDirection: "row",
+	alignItems: "baseline", // label 与 time 基线对齐
+	justifyContent: "center",
+	gap: 6,
+	flex: 1,
+	padding: `${space.xs} 8px`,
 	border: "1px solid transparent",
 	borderRadius: radius.md,
 	cursor: "pointer",
 	transition: "filter 0.15s, transform 0.1s",
+	"@media": {
+		"(max-width: 600px)": {
+			padding: `${space.xs} 4px`,
+			borderRadius: 10,
+			minHeight: 40,
+			gap: 4,
+		},
+	},
 	selectors: {
 		"&:hover": {
 			filter: "brightness(0.95)",
@@ -274,12 +274,18 @@ export const ratingBtn = style({
 export const ratingLabel = style({
 	fontSize: textSize.sm,
 	fontWeight: 500,
+	"@media": {
+		"(max-width: 600px)": { fontSize: 15 },
+	},
 });
 
 export const ratingTime = style({
 	fontSize: 11,
 	fontFamily: vars.font.mono,
 	opacity: 0.8,
+	"@media": {
+		"(max-width: 600px)": { fontSize: 12 },
+	},
 });
 
 export const again = style({
@@ -320,4 +326,9 @@ export const emptyTitle = style({
 
 export const emptyHint = style({
 	fontSize: textSize.sm,
+});
+
+// cardBody 内内容不收缩（flex 容器默认 shrink 会压扁长内容）
+globalStyle(`${cardBody} > *`, {
+	flexShrink: 0,
 });

@@ -16,7 +16,8 @@ export const main = style({
 	display: "flex",
 	flexDirection: "column",
 	minWidth: 0,
-	overflowY: "auto",
+	minHeight: 0,
+	overflow: "hidden",
 });
 
 export const topBar = style({
@@ -103,6 +104,7 @@ export const manageLink = style({
 
 export const cardArea = style({
 	flex: 1,
+	minHeight: 0,
 	padding: `${space.lg} 20px`,
 	display: "flex",
 	flexDirection: "column",

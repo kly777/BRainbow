@@ -14,8 +14,8 @@ export const container = style({
 
 export const errorMsg = style({
 	padding: `${space.sm} 16px`,
-	background: vars.v2.dangerSubtle,
-	color: vars.v2.danger,
+	background: vars.color.dangerSubtle,
+	color: vars.color.danger,
 	fontSize: textSize.sm,
-	borderBottom: `1px solid ${vars.v2.danger}`,
+	borderBottom: `1px solid ${vars.color.danger}`,
 });

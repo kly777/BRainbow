@@ -11,7 +11,7 @@ export const container = style({
 	flexDirection: "column",
 	overflow: "hidden",
 	padding: space.xl,
-	background: vars.v2.bg,
+	background: vars.color.bg,
 	"@media": {
 		"(max-width: 768px)": { margin: "0 auto", padding: `${space.lg} 12px` },
 	},
@@ -28,11 +28,11 @@ export const header = style({
 });
 
 export const title = style({
-	fontFamily: vars.v2.fontDisplay,
+	fontFamily: vars.font.display,
 	fontSize: "1.5rem",
 	fontWeight: 600,
 	letterSpacing: "0.08em",
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	margin: 0,
 });
 
@@ -47,30 +47,30 @@ export const actions = style({
 export const loading = style({
 	textAlign: "center",
 	padding: `${space.xl} ${space.xl}`,
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	borderRadius: radius.md,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	margin: `${space.xl} 0`,
 });
 
 globalStyle(`${loading} p`, {
 	fontSize: "1rem",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	margin: 0,
 });
 
 export const error = style({
 	textAlign: "center",
 	padding: `${space.xl} 20px`,
-	background: vars.v2.dangerSubtle,
-	border: `1px solid ${vars.v2.danger}`,
+	background: vars.color.dangerSubtle,
+	border: `1px solid ${vars.color.danger}`,
 	borderRadius: radius.md,
 	margin: `${space.xl} 0`,
 });
 
 globalStyle(`${error} p`, {
 	fontSize: "1rem",
-	color: vars.v2.danger,
+	color: vars.color.danger,
 	marginBottom: space.lg,
 });
 
@@ -94,7 +94,7 @@ const modalSlideIn = keyframes({
 });
 
 export const modal = style({
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	borderRadius: radius.lg,
 	width: "100%",
 	maxWidth: 500,
@@ -112,7 +112,7 @@ export const modalHeader = style({
 	justifyContent: "space-between",
 	alignItems: "center",
 	padding: `${space.xl} 24px`,
-	borderBottom: `1px solid ${vars.v2.border}`,
+	borderBottom: `1px solid ${vars.color.border}`,
 	"@media": {
 		"(max-width: 768px)": { padding: `${space.lg} 20px` },
 	},
@@ -121,7 +121,7 @@ export const modalHeader = style({
 globalStyle(`${modalHeader} h2`, {
 	fontSize: "1.25rem",
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	margin: 0,
 });
 
@@ -134,10 +134,10 @@ export const modalContent = style({
 
 export const errorMessage = style({
 	padding: `${space.md} 16px`,
-	background: vars.v2.dangerSubtle,
-	border: `1px solid ${vars.v2.danger}`,
+	background: vars.color.dangerSubtle,
+	border: `1px solid ${vars.color.danger}`,
 	borderRadius: radius.sm,
-	color: vars.v2.danger,
+	color: vars.color.danger,
 	fontSize: "0.875rem",
 	marginBottom: space.xl,
 });
@@ -150,10 +150,10 @@ export const formLabel = style({
 	display: "block",
 	fontSize: "0.875rem",
 	fontWeight: 500,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	marginBottom: space.sm,
 	selectors: {
-		"&::after": { content: '" *"', color: vars.v2.danger },
+		"&::after": { content: '" *"', color: vars.color.danger },
 	},
 });
 
@@ -161,16 +161,16 @@ export const formInput = style({
 	width: "100%",
 	padding: `${space.sm} 12px`,
 	fontSize: "0.875rem",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.sm,
 	transition: "all 0.2s ease",
 	selectors: {
 		"&:focus": {
 			outline: "none",
-			borderColor: vars.v2.accent,
-			boxShadow: `0 0 0 3px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 0 0 3px ${vars.color.accentSoft}`,
 		},
-		"&:disabled": { background: vars.v2.surfaceRaised, cursor: "not-allowed" },
+		"&:disabled": { background: vars.color.surfaceRaised, cursor: "not-allowed" },
 	},
 });
 
@@ -178,7 +178,7 @@ export const formTextarea = style({
 	width: "100%",
 	padding: `${space.sm} 12px`,
 	fontSize: "0.875rem",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.sm,
 	resize: "vertical",
 	transition: "all 0.2s ease",
@@ -187,25 +187,25 @@ export const formTextarea = style({
 	selectors: {
 		"&:focus": {
 			outline: "none",
-			borderColor: vars.v2.accent,
-			boxShadow: `0 0 0 3px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 0 0 3px ${vars.color.accentSoft}`,
 		},
-		"&:disabled": { background: vars.v2.surfaceRaised, cursor: "not-allowed" },
+		"&:disabled": { background: vars.color.surfaceRaised, cursor: "not-allowed" },
 	},
 });
 
 export const previewSection = style({
 	marginTop: space.md,
 	padding: space.md,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.sm,
-	background: vars.v2.bg,
+	background: vars.color.bg,
 });
 
 export const previewLabel = style({
 	display: "block",
 	fontSize: "0.75rem",
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 	marginBottom: space.xs,
 	textTransform: "uppercase",
 	letterSpacing: 0.5,
@@ -214,7 +214,7 @@ export const previewLabel = style({
 export const previewContent = style({
 	fontSize: "0.875rem",
 	lineHeight: 1.6,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 globalStyle(`${previewContent} p`, {
@@ -233,12 +233,12 @@ export const state = style({
 	justifyContent: "center",
 	padding: `${space.xl} 16px`,
 	textAlign: "center",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	fontSize: textSize.base,
 });
 
 export const errorText = style({
-	color: vars.v2.danger,
+	color: vars.color.danger,
 	marginBottom: 10,
 });
 
@@ -247,7 +247,7 @@ export const modalActions = style({
 	justifyContent: "flex-end",
 	gap: space.md,
 	padding: `${space.xl} 24px`,
-	borderTop: `1px solid ${vars.v2.border}`,
+	borderTop: `1px solid ${vars.color.border}`,
 	"@media": {
 		"(max-width: 768px)": { padding: `${space.lg} 20px` },
 		"(max-width: 480px)": { flexDirection: "column" },

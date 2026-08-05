@@ -12,7 +12,7 @@ export const page = style({
 
 export const back = style({
 	fontSize: "0.9rem",
-	color: vars.v2.accent,
+	color: vars.color.accent,
 	textDecoration: "none",
 	selectors: {
 		"&:hover": { textDecoration: "underline" },
@@ -26,7 +26,7 @@ globalStyle(`${page} h1`, {
 
 export const subtitle = style({
 	fontSize: "0.85rem",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	margin: "0 0 24px",
 });
 
@@ -41,9 +41,9 @@ export const card = style({
 	alignItems: "center",
 	justifyContent: "space-between",
 	padding: "12px 16px",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: 8,
-	background: vars.v2.surface,
+	background: vars.color.surface,
 });
 
 export const wordMain = style({
@@ -59,7 +59,7 @@ export const word = style({
 
 export const counts = style({
 	fontSize: "0.8rem",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });
 
 export const knownBtn = style({
@@ -74,13 +74,13 @@ export const knownBtn = style({
 	selectors: {
 		"&:hover": {
 			background: "oklch(0.5 0.18 150)",
-			color: vars.v2.white,
+			color: vars.color.white,
 		},
 	},
 });
 
 export const empty = style({
 	textAlign: "center",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	padding: "40px 0",
 });

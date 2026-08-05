@@ -14,7 +14,7 @@ export const editModal = style({
 export const tabBar = style({
 	display: "flex",
 	gap: 0,
-	borderBottom: `2px solid ${vars.v2.border}`,
+	borderBottom: `2px solid ${vars.color.border}`,
 	marginBottom: 0,
 	flexShrink: 0,
 });
@@ -29,26 +29,26 @@ export const tab = style({
 	cursor: "pointer",
 	fontSize: textSize.sm,
 	fontWeight: 500,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	transition: "all 0.15s",
 	display: "flex",
 	alignItems: "center",
 	justifyContent: "center",
 	gap: space.xs,
 	selectors: {
-		"&:hover": { color: vars.v2.ink },
+		"&:hover": { color: vars.color.ink },
 	},
 });
 
 export const tabActive = style({
-	color: vars.v2.accent,
-	borderBottomColor: vars.v2.accent,
+	color: vars.color.accent,
+	borderBottomColor: vars.color.accent,
 });
 
 export const tabCount = style({
 	fontSize: textSize.xs,
-	background: vars.v2.accentSoft,
-	color: vars.v2.accent,
+	background: vars.color.accentSoft,
+	color: vars.color.accent,
 	padding: space.xs,
 	borderRadius: radius.md,
 	fontWeight: 600,
@@ -73,24 +73,24 @@ export const field = style({
 export const fieldLabel = style({
 	fontSize: textSize.sm,
 	fontWeight: 500,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 const fieldInputBase = {
 	padding: `${space.sm} 10px`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	fontSize: textSize.sm,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	transition: "border-color 0.15s",
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	width: "100%",
 	boxSizing: "border-box",
 	selectors: {
 		"&:focus": {
 			outline: "none",
-			borderColor: vars.v2.accent,
-			boxShadow: `0 0 0 2px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 0 0 2px ${vars.color.accentSoft}`,
 		},
 	},
 } as const;
@@ -100,7 +100,7 @@ export const fieldSelect = style(fieldInputBase);
 
 export const fieldTextarea = style({
 	padding: `${space.sm} 10px`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	fontSize: textSize.sm,
 	resize: "vertical",
@@ -110,8 +110,8 @@ export const fieldTextarea = style({
 	selectors: {
 		"&:focus": {
 			outline: "none",
-			borderColor: vars.v2.accent,
-			boxShadow: `0 0 0 2px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 0 0 2px ${vars.color.accentSoft}`,
 		},
 	},
 });
@@ -135,28 +135,28 @@ export const presets = style({
 
 export const presetsLabel = style({
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	flexShrink: 0,
 });
 
 export const presetBtn = style({
 	padding: `${space.xs} 10px`,
 	fontSize: textSize.sm,
-	background: vars.v2.successSubtle,
+	background: vars.color.successSubtle,
 	color: "oklch(0.4 0.1 170)",
-	border: `1px solid ${vars.v2.successSubtle}`,
+	border: `1px solid ${vars.color.successSubtle}`,
 	borderRadius: radius.sm,
 	cursor: "pointer",
 	transition: "all 0.15s",
 	whiteSpace: "nowrap",
 	selectors: {
-		"&:hover": { background: vars.v2.successSubtle, borderColor: "oklch(0.88 0.08 160)" },
+		"&:hover": { background: vars.color.successSubtle, borderColor: "oklch(0.88 0.08 160)" },
 	},
 });
 
 export const addTimeBlock = style({
-	background: vars.v2.bg,
-	border: `1px dashed ${vars.v2.border}`,
+	background: vars.color.bg,
+	border: `1px dashed ${vars.color.border}`,
 	borderRadius: radius.md,
 	padding: space.md,
 	marginBottom: space.md,
@@ -164,8 +164,8 @@ export const addTimeBlock = style({
 
 export const addBtn = style({
 	padding: `${space.xs} 14px`,
-	background: vars.v2.accent,
-	color: vars.v2.white,
+	background: vars.color.accent,
+	color: vars.color.white,
 	border: "none",
 	borderRadius: radius.md,
 	cursor: "pointer",
@@ -174,8 +174,8 @@ export const addBtn = style({
 	transition: "background 0.15s",
 	marginTop: 4,
 	selectors: {
-		"&:hover": { background: vars.v2.accentStrong },
-		"&:disabled": { background: vars.v2.border, cursor: "not-allowed" },
+		"&:hover": { background: vars.color.accentStrong },
+		"&:disabled": { background: vars.color.border, cursor: "not-allowed" },
 	},
 });
 
@@ -189,12 +189,12 @@ export const sectionHeader = style({
 export const sectionTitle = style({
 	fontSize: textSize.sm,
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 export const sectionHint = style({
 	fontSize: textSize.xs,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });
 
 export const timeList = style({
@@ -209,21 +209,21 @@ export const timeItem = style({
 	justifyContent: "space-between",
 	alignItems: "center",
 	padding: `${space.xs} 10px`,
-	background: vars.v2.bg,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.bg,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	fontSize: textSize.sm,
 });
 
 export const timeItemText = style({
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	flex: 1,
 });
 
 export const timeDelete = style({
 	background: "none",
 	border: "none",
-	color: vars.v2.danger,
+	color: vars.color.danger,
 	fontSize: textSize.lg,
 	cursor: "pointer",
 	padding: `0 ${space.xs}`,
@@ -232,18 +232,18 @@ export const timeDelete = style({
 });
 
 export const emptyMsg = style({
-	color: vars.v2.border,
+	color: vars.color.border,
 	fontSize: textSize.sm,
 	padding: `${space.md} 0`,
 	textAlign: "center",
 });
 
 export const errorMsg = style({
-	color: vars.v2.danger,
+	color: vars.color.danger,
 	fontSize: textSize.sm,
 	marginTop: 6,
 	padding: `${space.xs} 10px`,
-	background: vars.v2.dangerSubtle,
+	background: vars.color.dangerSubtle,
 	borderRadius: radius.sm,
 });
 
@@ -259,8 +259,8 @@ export const depItem = style({
 	justifyContent: "space-between",
 	alignItems: "center",
 	padding: `${space.sm} 10px`,
-	background: vars.v2.bg,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.bg,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 });
 
@@ -274,7 +274,7 @@ export const depInfo = style({
 
 export const depTitle = style({
 	fontSize: textSize.sm,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	overflow: "hidden",
 	textOverflow: "ellipsis",
 	whiteSpace: "nowrap",
@@ -289,29 +289,29 @@ export const depStatus = style({
 });
 
 export const depStatusBacklog = style({
-	background: vars.v2.border,
-	color: vars.v2.inkMuted,
+	background: vars.color.border,
+	color: vars.color.inkMuted,
 });
 
 export const depStatusActive = style({
-	background: vars.v2.accentSoft,
-	color: vars.v2.accent,
+	background: vars.color.accentSoft,
+	color: vars.color.accent,
 });
 
 export const depStatusCompleted = style({
-	background: vars.v2.successSubtle,
+	background: vars.color.successSubtle,
 	color: "oklch(0.4 0.1 170)",
 });
 
 export const depStatusArchived = style({
-	background: vars.v2.surfaceRaised,
-	color: vars.v2.inkMuted,
+	background: vars.color.surfaceRaised,
+	color: vars.color.inkMuted,
 });
 
 export const depRemove = style({
 	background: "none",
 	border: "none",
-	color: vars.v2.danger,
+	color: vars.color.danger,
 	fontSize: textSize.lg,
 	cursor: "pointer",
 	padding: `0 ${space.xs}`,
@@ -322,8 +322,8 @@ export const depRemove = style({
 export const addDepBlock = style({
 	marginTop: space.md,
 	padding: space.md,
-	background: vars.v2.bg,
-	border: `1px dashed ${vars.v2.border}`,
+	background: vars.color.bg,
+	border: `1px dashed ${vars.color.border}`,
 	borderRadius: radius.md,
 });
 
@@ -335,23 +335,23 @@ export const addDepRow = style({
 
 export const cancelBtn = style({
 	padding: `${space.sm} 18px`,
-	background: vars.v2.surfaceRaised,
-	color: vars.v2.ink,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surfaceRaised,
+	color: vars.color.ink,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	cursor: "pointer",
 	fontSize: textSize.sm,
 	fontWeight: 500,
 	transition: "all 0.15s",
 	selectors: {
-		"&:hover": { background: vars.v2.border },
+		"&:hover": { background: vars.color.border },
 	},
 });
 
 export const saveBtn = style({
 	padding: `${space.sm} 18px`,
-	background: vars.v2.success,
-	color: vars.v2.white,
+	background: vars.color.success,
+	color: vars.color.white,
 	border: "none",
 	borderRadius: radius.md,
 	cursor: "pointer",
@@ -359,6 +359,6 @@ export const saveBtn = style({
 	fontWeight: 500,
 	transition: "background 0.15s",
 	selectors: {
-		"&:hover": { background: vars.v2.success },
+		"&:hover": { background: vars.color.success },
 	},
 });

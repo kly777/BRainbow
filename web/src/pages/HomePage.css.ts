@@ -28,18 +28,18 @@ export const moduleNav = style({
 export const moduleCard = style({
 	padding: `${space.xs} 16px`,
 	borderRadius: radius.md,
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.border}`,
 	textDecoration: "none",
 	fontSize: textSize.base,
 	fontWeight: 500,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	transition: "background 0.15s, color 0.15s",
 	selectors: {
 		"&:hover": {
-			background: vars.v2.accentSoft,
-			color: vars.v2.accent,
-			borderColor: vars.v2.accent,
+			background: vars.color.accentSoft,
+			color: vars.color.accent,
+			borderColor: vars.color.accent,
 			textDecoration: "none",
 		},
 	},
@@ -61,11 +61,11 @@ export const mainContent = style({
 });
 
 export const dashboardSection = style({
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	borderRadius: radius.lg,
 	padding: space.xl,
 	boxShadow: "0 1px 3px oklch(0 0 0 / 0.08)",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	display: "flex",
 	flexDirection: "column",
 	minHeight: 0,
@@ -81,7 +81,7 @@ export const sectionHeader = style({
 	alignItems: "center",
 	marginBottom: space.lg,
 	paddingBottom: 12,
-	borderBottom: `2px solid ${vars.v2.border}`,
+	borderBottom: `2px solid ${vars.color.border}`,
 	flexShrink: 0,
 	"@media": {
 		"(max-width: 768px)": {
@@ -95,7 +95,7 @@ export const sectionHeader = style({
 export const sectionTitle = style({
 	fontSize: textSize.lg,
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	margin: 0,
 });
 
@@ -109,7 +109,7 @@ export const sectionActions = style({
 });
 
 export const viewAllLink = style({
-	color: vars.v2.accent,
+	color: vars.color.accent,
 	textDecoration: "none",
 	fontSize: textSize.sm,
 	fontWeight: 500,
@@ -117,13 +117,13 @@ export const viewAllLink = style({
 	borderRadius: radius.md,
 	transition: "all 0.2s ease",
 	selectors: {
-		"&:hover": { backgroundColor: vars.v2.accentSoft },
+		"&:hover": { backgroundColor: vars.color.accentSoft },
 	},
 });
 
 export const createLink = style({
-	backgroundColor: vars.v2.accent,
-	color: vars.v2.white,
+	backgroundColor: vars.color.accent,
+	color: vars.color.white,
 	textDecoration: "none",
 	fontSize: textSize.sm,
 	fontWeight: 500,
@@ -131,14 +131,14 @@ export const createLink = style({
 	borderRadius: radius.md,
 	transition: "background-color 0.2s ease",
 	selectors: {
-		"&:hover": { backgroundColor: vars.v2.accentStrong },
+		"&:hover": { backgroundColor: vars.color.accentStrong },
 	},
 });
 
 export const emptyState = style({
 	textAlign: "center",
 	padding: `${space.xl} 20px`,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });
 
 globalStyle(`${emptyState} p`, {
@@ -152,5 +152,5 @@ export const emptyHint = style({
 });
 
 globalStyle(`${emptyHint} a`, {
-	color: vars.v2.accent,
+	color: vars.color.accent,
 });

@@ -5,7 +5,7 @@ import { globalStyle, style } from "@vanilla-extract/css";
 import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const dagContainer = style({
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	borderRadius: radius.lg,
 	boxShadow: "0 1px 3px oklch(0 0 0 / 0.1)",
 	overflow: "hidden",
@@ -19,7 +19,7 @@ export const dagToolbar = style({
 	justifyContent: "space-between",
 	alignItems: "center",
 	padding: `${space.lg} 20px`,
-	borderBottom: `1px solid ${vars.v2.border}`,
+	borderBottom: `1px solid ${vars.color.border}`,
 	flexShrink: 0,
 	flexWrap: "wrap",
 	gap: space.md,
@@ -28,7 +28,7 @@ export const dagToolbar = style({
 export const dagTitle = style({
 	margin: 0,
 	fontSize: textSize.lg,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	fontWeight: 600,
 });
 
@@ -41,38 +41,38 @@ export const dagControls = style({
 
 export const taskSelect = style({
 	padding: `${space.xs} 12px`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	fontSize: textSize.sm,
-	color: vars.v2.ink,
-	background: vars.v2.surface,
+	color: vars.color.ink,
+	background: vars.color.surface,
 	outline: "none",
 	cursor: "pointer",
 	maxWidth: 200,
 	selectors: {
 		"&:focus": {
-			borderColor: vars.v2.accent,
-			boxShadow: `0 0 0 2px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 0 0 2px ${vars.color.accentSoft}`,
 		},
 	},
 });
 
 export const zoomBtn = style({
 	padding: `${space.xs} 12px`,
-	background: vars.v2.surfaceRaised,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surfaceRaised,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	cursor: "pointer",
 	fontSize: textSize.lg,
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	transition: "all 0.15s",
 	minWidth: 36,
 	textAlign: "center",
 	selectors: {
 		"&:hover": {
-			background: vars.v2.border,
-			borderColor: vars.v2.inkMuted,
+			background: vars.color.border,
+			borderColor: vars.color.inkMuted,
 		},
 	},
 });
@@ -96,7 +96,7 @@ export const emptyHint = style({
 	alignItems: "center",
 	justifyContent: "center",
 	height: "100%",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	padding: space.xl,
 });
 
@@ -107,7 +107,7 @@ export const hintP = style({
 
 export const hintSub = style({
 	fontSize: textSize.sm,
-	color: vars.v2.border,
+	color: vars.color.border,
 });
 
 globalStyle(`${emptyHint} p`, {

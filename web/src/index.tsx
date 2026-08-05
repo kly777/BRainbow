@@ -5,7 +5,11 @@ import { AuthProvider } from "@auth/context.tsx";
 import Layout from "./Layout.tsx";
 import { generateIcon } from "@lib/icon.ts";
 import { ROUTES, toRouteDefs } from "./routes.ts";
+import { initTheme } from "@styles/theme.ts";
 import "@/global.css";
+
+// 应用持久化主题（在渲染前挂主题类，避免闪烁）
+initTheme();
 
 function App() {
 	onMount(() => generateIcon());

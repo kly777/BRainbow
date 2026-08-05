@@ -13,8 +13,8 @@ export const page = style({
 	display: "flex",
 	flexDirection: "column",
 	minHeight: "100vh",
-	background: vars.v2.bg,
-	color: vars.v2.ink,
+	background: vars.color.bg,
+	color: vars.color.ink,
 });
 
 export const topBar = style({
@@ -22,8 +22,8 @@ export const topBar = style({
 	alignItems: "center",
 	gap: space.md,
 	padding: `${space.sm} 20px`,
-	borderBottom: `1px solid ${vars.v2.border}`,
-	background: vars.v2.surface,
+	borderBottom: `1px solid ${vars.color.border}`,
+	background: vars.color.surface,
 	flexShrink: 0,
 	flexWrap: "wrap",
 	"@media": {
@@ -32,12 +32,12 @@ export const topBar = style({
 });
 
 export const title = style({
-	fontFamily: vars.v2.fontDisplay,
+	fontFamily: vars.font.display,
 	fontSize: textSize.lg,
 	fontWeight: 600,
 	letterSpacing: "0.08em",
 	margin: 0,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	flex: 1,
 	"@media": {
 		"(max-width: 600px)": { fontSize: textSize.base },
@@ -47,8 +47,8 @@ export const title = style({
 export const modeTabs = style({
 	display: "flex",
 	gap: 2,
-	background: vars.v2.bg,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.bg,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	padding: 2,
 	"@media": {
@@ -62,7 +62,7 @@ export const modeTabs = style({
 
 export const modeBtn = style({
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	background: "transparent",
 	border: "none",
 	borderRadius: `calc(${radius.md} - 2px)`,
@@ -70,7 +70,7 @@ export const modeBtn = style({
 	cursor: "pointer",
 	whiteSpace: "nowrap",
 	selectors: {
-		"&:hover": { color: vars.v2.ink },
+		"&:hover": { color: vars.color.ink },
 	},
 	"@media": {
 		"(max-width: 600px)": { flex: 1, textAlign: "center", padding: `${space.xs} 6px` },
@@ -79,8 +79,8 @@ export const modeBtn = style({
 
 export const modeActive = style({
 	fontSize: textSize.sm,
-	color: vars.v2.white,
-	background: vars.v2.accent,
+	color: vars.color.white,
+	background: vars.color.accent,
 	border: "none",
 	borderRadius: `calc(${radius.md} - 2px)`,
 	padding: `${space.xs} 12px`,
@@ -108,8 +108,8 @@ export const cardWrap = style({
 });
 
 export const card = style({
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.borderStrong}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.borderStrong}`,
 	borderRadius: radius.lg,
 	overflow: "hidden",
 	boxShadow: "0 2px 10px rgb(0 0 0 / 5%)",
@@ -126,23 +126,23 @@ export const faceTab = style({
 	justifyContent: "space-between",
 	gap: space.sm,
 	padding: `${space.sm} ${space.md}`,
-	borderBottom: `1px solid ${vars.v2.border}`,
-	background: vars.v2.bg,
+	borderBottom: `1px solid ${vars.color.border}`,
+	background: vars.color.bg,
 });
 
 export const faceTabText = style({
-	fontFamily: vars.v2.fontDisplay,
+	fontFamily: vars.font.display,
 	fontSize: textSize.xs,
 	fontWeight: 600,
 	letterSpacing: "0.12em",
 	textTransform: "uppercase",
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 export const faceTabNo = style({
 	fontSize: textSize.xs,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.inkFaint,
+	fontFamily: vars.font.mono,
+	color: vars.color.inkFaint,
 });
 
 export const faceBody = style({
@@ -152,21 +152,21 @@ export const faceBody = style({
 export const textarea = style({
 	width: "100%",
 	padding: space.md,
-	border: `1px solid ${vars.v2.borderStrong}`,
+	border: `1px solid ${vars.color.borderStrong}`,
 	borderRadius: radius.md,
 	fontSize: textSize.base,
-	fontFamily: vars.v2.fontMono,
+	fontFamily: vars.font.mono,
 	lineHeight: 1.6,
 	resize: "vertical",
-	background: vars.v2.bg,
-	color: vars.v2.ink,
+	background: vars.color.bg,
+	color: vars.color.ink,
 	transition: "border-color 0.15s, box-shadow 0.15s",
 	boxSizing: "border-box",
 	outline: "none",
 	selectors: {
 		"&:focus": {
-			borderColor: vars.v2.accent,
-			boxShadow: `0 0 0 2px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 0 0 2px ${vars.color.accentSoft}`,
 		},
 	},
 });
@@ -176,16 +176,16 @@ export const fold = style({
 	justifyContent: "center",
 	alignItems: "center",
 	padding: `${space.sm} 0`,
-	borderTop: `1px dashed ${vars.v2.borderStrong}`,
-	borderBottom: `1px dashed ${vars.v2.borderStrong}`,
-	background: vars.v2.bg,
+	borderTop: `1px dashed ${vars.color.borderStrong}`,
+	borderBottom: `1px dashed ${vars.color.borderStrong}`,
+	background: vars.color.bg,
 });
 
 export const foldMark = style({
 	fontSize: 11,
-	fontFamily: vars.v2.fontMono,
+	fontFamily: vars.font.mono,
 	letterSpacing: "0.2em",
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 });
 
 export const actions = style({
@@ -196,8 +196,8 @@ export const actions = style({
 });
 
 export const inputCard = style({
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.lg,
 	padding: space.md,
 });
@@ -207,8 +207,8 @@ export const fileBtn = style({
 	alignItems: "center",
 	gap: space.sm,
 	fontSize: textSize.sm,
-	color: vars.v2.white,
-	background: vars.v2.accent,
+	color: vars.color.white,
+	background: vars.color.accent,
 	border: "none",
 	borderRadius: radius.md,
 	padding: `${space.sm} 20px`,
@@ -216,7 +216,7 @@ export const fileBtn = style({
 	fontWeight: 500,
 	transition: "background 0.15s",
 	selectors: {
-		"&:hover": { background: vars.v2.accentStrong },
+		"&:hover": { background: vars.color.accentStrong },
 	},
 });
 
@@ -234,14 +234,14 @@ export const fileInputHidden = style({
 
 export const importErrors = style({
 	fontSize: textSize.sm,
-	color: vars.v2.badgeRelearningText,
+	color: vars.color.badgeRelearningText,
 	margin: `${space.sm} 0 0`,
 });
 
 export const previewCount = style({
 	fontSize: 12,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.inkFaint,
+	fontFamily: vars.font.mono,
+	color: vars.color.inkFaint,
 	margin: `${space.sm} ${space.md} 0`,
 });
 

@@ -17,7 +17,7 @@ export const landingPage = style({
 export const heroTitle = style({
 	fontSize: textSize.xl,
 	fontWeight: 700,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	margin: `0 0 ${space.lg} 0`,
 	letterSpacing: -0.5,
 	"@media": {
@@ -27,7 +27,7 @@ export const heroTitle = style({
 
 export const heroSubtitle = style({
 	fontSize: textSize.lg,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	margin: `0 0 ${space.xl} 0`,
 	maxWidth: 480,
 	lineHeight: 1.7,
@@ -47,8 +47,8 @@ export const ctaRow = style({
 
 export const ctaPrimary = style({
 	padding: `${space.md} 32px`,
-	background: vars.v2.accent,
-	color: vars.v2.white,
+	background: vars.color.accent,
+	color: vars.color.white,
 	border: "none",
 	borderRadius: radius.md,
 	fontSize: textSize.lg,
@@ -57,20 +57,20 @@ export const ctaPrimary = style({
 	transition: "background 0.2s",
 	fontFamily: "inherit",
 	selectors: {
-		"&:hover": { background: vars.v2.accentStrong },
+		"&:hover": { background: vars.color.accentStrong },
 	},
 });
 
 export const ctaDivider = style({
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	fontSize: textSize.base,
 });
 
 export const ctaSecondary = style({
 	padding: `${space.sm} 24px`,
 	background: "transparent",
-	color: vars.v2.accent,
-	border: `2px solid ${vars.v2.accent}`,
+	color: vars.color.accent,
+	border: `2px solid ${vars.color.accent}`,
 	borderRadius: radius.md,
 	fontSize: textSize.base,
 	fontWeight: 500,
@@ -78,7 +78,7 @@ export const ctaSecondary = style({
 	transition: "background 0.2s, color 0.2s",
 	fontFamily: "inherit",
 	selectors: {
-		"&:hover": { background: vars.v2.accent, color: vars.v2.white },
+		"&:hover": { background: vars.color.accent, color: vars.color.white },
 	},
 });
 
@@ -98,11 +98,11 @@ export const featureGrid = style({
 });
 
 export const featureCard = style({
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	borderRadius: radius.lg,
 	padding: `${space.xl} 20px`,
 	boxShadow: "0 1px 3px oklch(0 0 0 / 0.08)",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	transition: "transform 0.2s, box-shadow 0.2s",
 	textDecoration: "none",
 	color: "inherit",
@@ -127,20 +127,20 @@ export const featureIcon = style({
 globalStyle(`${featureCard} h3`, {
 	fontSize: textSize.lg,
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	margin: `0 0 ${space.sm} 0`,
 });
 
 globalStyle(`${featureCard} p`, {
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	margin: 0,
 	lineHeight: 1.5,
 });
 
 export const hint = style({
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	margin: 0,
 	lineHeight: 1.8,
 });
@@ -148,10 +148,10 @@ export const hint = style({
 globalStyle(`${hint} kbd`, {
 	display: "inline-block",
 	padding: `${space.xs} 7px`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.sm,
-	background: vars.v2.surfaceRaised,
+	background: vars.color.surfaceRaised,
 	fontFamily: "monospace",
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });

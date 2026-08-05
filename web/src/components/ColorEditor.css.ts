@@ -5,16 +5,16 @@ import { composeStyles, globalStyle, style } from "@vanilla-extract/css";
 import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const fieldset = style({
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	padding: `${space.md} 16px`,
 	margin: `0 0 ${space.lg} 0`,
-	background: vars.v2.surface,
+	background: vars.color.surface,
 });
 
 globalStyle(`${fieldset} legend`, {
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	padding: `0 ${space.xs}`,
 });
 
@@ -30,7 +30,7 @@ export const colorRow = style({
 	alignItems: "center",
 	gap: space.sm,
 	padding: `${space.xs} 8px`,
-	background: vars.v2.surfaceRaised,
+	background: vars.color.surfaceRaised,
 	borderRadius: radius.md,
 	flexWrap: "wrap",
 });
@@ -39,13 +39,13 @@ export const swatch = style({
 	width: 28,
 	height: 28,
 	borderRadius: radius.sm,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	flexShrink: 0,
 });
 
 export const segmented = style({
 	display: "inline-flex",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	overflow: "hidden",
 	flexShrink: 0,
@@ -58,10 +58,10 @@ export const segBtn = style({
 	cursor: "pointer",
 	transition: "background 0.15s",
 	background: "transparent",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	selectors: {
-		"&:hover": { background: vars.v2.surfaceRaised },
-		"& + &": { borderLeft: `1px solid ${vars.v2.border}` },
+		"&:hover": { background: vars.color.surfaceRaised },
+		"& + &": { borderLeft: `1px solid ${vars.color.border}` },
 	},
 });
 
@@ -71,24 +71,24 @@ export const segActive = style({
 	border: "none",
 	cursor: "pointer",
 	transition: "background 0.15s",
-	background: vars.v2.accent,
-	color: vars.v2.white,
+	background: vars.color.accent,
+	color: vars.color.white,
 	fontWeight: 600,
 });
 
 const hexBase = style({
 	padding: `${space.xs} 6px`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.sm,
-	background: vars.v2.bg,
-	color: vars.v2.ink,
+	background: vars.color.bg,
+	color: vars.color.ink,
 	fontFamily: "monospace",
 	fontSize: textSize.sm,
 	selectors: {
 		"&:focus": {
 			outline: "none",
-			borderColor: vars.v2.accent,
-			boxShadow: `0 0 0 2px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 0 0 2px ${vars.color.accentSoft}`,
 		},
 	},
 });
@@ -106,7 +106,7 @@ export const triple = style({
 
 export const rangeHint = style({
 	fontSize: textSize.xs,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	whiteSpace: "nowrap",
 	marginLeft: 4,
 	flexShrink: 0,
@@ -134,10 +134,10 @@ export const removeBtn = style({
 	marginLeft: "auto",
 	width: 26,
 	height: 26,
-	border: `1px solid ${vars.v2.danger}`,
+	border: `1px solid ${vars.color.danger}`,
 	borderRadius: radius.sm,
-	background: vars.v2.dangerSubtle,
-	color: vars.v2.danger,
+	background: vars.color.dangerSubtle,
+	color: vars.color.danger,
 	fontSize: textSize.base,
 	cursor: "pointer",
 	display: "flex",
@@ -146,23 +146,23 @@ export const removeBtn = style({
 	flexShrink: 0,
 	selectors: {
 		"&:disabled": { opacity: 0.35, cursor: "not-allowed" },
-		"&:hover:not(:disabled)": { background: vars.v2.dangerSubtle },
+		"&:hover:not(:disabled)": { background: vars.color.dangerSubtle },
 	},
 });
 
 export const addBtn = style({
 	padding: `${space.xs} 14px`,
-	border: `1px dashed ${vars.v2.border}`,
+	border: `1px dashed ${vars.color.border}`,
 	borderRadius: radius.md,
 	background: "transparent",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	fontSize: textSize.sm,
 	cursor: "pointer",
 	selectors: {
 		"&:hover": {
-			borderColor: vars.v2.accent,
-			color: vars.v2.accent,
-			background: vars.v2.accentSoft,
+			borderColor: vars.color.accent,
+			color: vars.color.accent,
+			background: vars.color.accentSoft,
 		},
 	},
 });

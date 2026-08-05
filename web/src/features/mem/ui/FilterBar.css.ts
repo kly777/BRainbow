@@ -10,8 +10,8 @@ export const filterBar = style({
 	alignItems: "center",
 	gap: "4px",
 	padding: "4px 20px",
-	borderBottom: `1px solid ${vars.v2.border}`,
-	background: vars.v2.surface,
+	borderBottom: `1px solid ${vars.color.border}`,
+	background: vars.color.surface,
 	flexShrink: 0,
 	"@media": {
 		"(max-width: 600px)": { paddingLeft: 12, paddingRight: 12 },
@@ -20,15 +20,15 @@ export const filterBar = style({
 
 export const tagModeBtn = style({
 	fontSize: textSize.xs,
-	fontFamily: vars.v2.fontMono,
-	border: `1px solid ${vars.v2.border}`,
+	fontFamily: vars.font.mono,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.sm,
 	background: "transparent",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	padding: "2px 8px",
 	cursor: "pointer",
 	selectors: {
-		"&:hover": { color: vars.v2.ink, background: vars.v2.surfaceRaised },
+		"&:hover": { color: vars.color.ink, background: vars.color.surfaceRaised },
 	},
 });
 
@@ -39,8 +39,8 @@ export const tagChipActive = style({
 	fontSize: textSize.xs,
 	padding: "2px 8px",
 	borderRadius: 999,
-	background: vars.v2.badgeNewBg,
-	color: vars.v2.badgeNewText,
+	background: vars.color.badgeNewBg,
+	color: vars.color.badgeNewText,
 });
 
 export const tagChipExcluded = style({
@@ -50,8 +50,8 @@ export const tagChipExcluded = style({
 	fontSize: textSize.xs,
 	padding: "2px 8px",
 	borderRadius: 999,
-	background: vars.v2.badgeSuspendedBg,
-	color: vars.v2.badgeSuspendedText,
+	background: vars.color.badgeSuspendedBg,
+	color: vars.color.badgeSuspendedText,
 });
 
 export const tagClear = style({
@@ -71,11 +71,11 @@ export const tagClearAll = style({
 	fontSize: textSize.xs,
 	border: "none",
 	background: "none",
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 	cursor: "pointer",
 	padding: "2px 6px",
 	selectors: {
-		"&:hover": { color: vars.v2.ink },
+		"&:hover": { color: vars.color.ink },
 	},
 });
 
@@ -86,13 +86,13 @@ export const tagSearchInput = style({
 	border: "1px solid transparent",
 	borderRadius: radius.sm,
 	background: "transparent",
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	padding: "2px 8px",
 	selectors: {
-		"&::placeholder": { color: vars.v2.inkFaint },
+		"&::placeholder": { color: vars.color.inkFaint },
 		"&:focus": {
-			borderColor: vars.v2.borderStrong,
-			background: vars.v2.surfaceRaised,
+			borderColor: vars.color.borderStrong,
+			background: vars.color.surfaceRaised,
 		},
 	},
 });
@@ -103,8 +103,8 @@ export const tagDropdown = style({
 	left: 20,
 	right: 20,
 	zIndex: 20,
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	boxShadow: "0 4px 12px rgb(0 0 0 / 8%)",
 	maxHeight: 200,
@@ -120,8 +120,8 @@ export const tagOption = style({
 	border: "none",
 	background: "none",
 	cursor: "pointer",
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	selectors: {
-		"&:hover": { background: vars.v2.surfaceRaised },
+		"&:hover": { background: vars.color.surfaceRaised },
 	},
 });

@@ -22,8 +22,8 @@ export const tag = style({
 	padding: "2px 6px",
 	fontSize: textSize.xs,
 	borderRadius: radius.sm,
-	background: vars.v2.bg,
-	color: vars.v2.inkMuted,
+	background: vars.color.bg,
+	color: vars.color.inkMuted,
 	whiteSpace: "nowrap",
 });
 
@@ -50,14 +50,14 @@ export const inputRow = style({
 export const input = style({
 	flex: 1,
 	padding: `${space.xs} ${space.sm}`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	fontSize: textSize.sm,
-	background: vars.v2.surface,
-	color: vars.v2.ink,
+	background: vars.color.surface,
+	color: vars.color.ink,
 	outline: "none",
 	selectors: {
-		"&:focus": { borderColor: vars.v2.accent },
+		"&:focus": { borderColor: vars.color.accent },
 	},
 });
 
@@ -67,8 +67,8 @@ export const dropdown = style({
 	left: 0,
 	right: 0,
 	zIndex: 10,
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	boxShadow: "0 4px 12px oklch(0 0 0 / 0.1)",
 	maxHeight: 200,
@@ -81,15 +81,15 @@ export const dropdownItem = style({
 	cursor: "pointer",
 	transition: "background 0.1s",
 	selectors: {
-		"&:hover": { background: vars.v2.bg },
+		"&:hover": { background: vars.color.bg },
 	},
 });
 
 export const dropdownItemActive = style({
-	background: vars.v2.accentSoft,
+	background: vars.color.accentSoft,
 });
 
 export const createNew = style({
-	color: vars.v2.accent,
+	color: vars.color.accent,
 	fontWeight: 500,
 });

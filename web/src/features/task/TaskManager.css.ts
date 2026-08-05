@@ -36,7 +36,7 @@ export const toolbar = style({
 export const viewSwitch = style({
 	display: "flex",
 	gap: space.xs,
-	background: vars.v2.surfaceRaised,
+	background: vars.color.surfaceRaised,
 	borderRadius: radius.md,
 	padding: space.xs,
 	flexShrink: 0,
@@ -50,16 +50,16 @@ export const viewBtn = style({
 	cursor: "pointer",
 	fontSize: textSize.sm,
 	fontWeight: 500,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	transition: "all 0.15s",
 	selectors: {
-		"&:hover": { color: vars.v2.ink },
+		"&:hover": { color: vars.color.ink },
 	},
 });
 
 export const viewActive = style({
-	background: vars.v2.surface,
-	color: vars.v2.ink,
+	background: vars.color.surface,
+	color: vars.color.ink,
 	boxShadow: "0 1px 2px oklch(0 0 0 / 0.06)",
 });
 
@@ -73,14 +73,14 @@ export const searchBox = style({
 export const searchInput = style({
 	width: "100%",
 	padding: `${space.xs} 24px ${space.xs} ${space.sm}`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	fontSize: textSize.sm,
 	outline: "none",
-	background: vars.v2.bg,
+	background: vars.color.bg,
 	boxSizing: "border-box",
 	selectors: {
-		"&:focus": { borderColor: vars.v2.accent, background: vars.v2.surface },
+		"&:focus": { borderColor: vars.color.accent, background: vars.color.surface },
 	},
 });
 
@@ -91,7 +91,7 @@ export const searchClear = style({
 	transform: "translateY(-50%)",
 	background: "none",
 	border: "none",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	cursor: "pointer",
 	fontSize: textSize.base,
 	padding: `${space.xs} 4px`,
@@ -103,23 +103,23 @@ export const quickAddBox = style({
 
 export const quickAddInput = style({
 	padding: `${space.xs} 10px`,
-	border: `1px dashed ${vars.v2.border}`,
+	border: `1px dashed ${vars.color.border}`,
 	borderRadius: radius.md,
 	fontSize: textSize.sm,
 	outline: "none",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	background: "none",
 	width: 140,
 	boxSizing: "border-box",
 	transition: "all 0.15s",
 	selectors: {
 		"&:focus": {
-			borderColor: vars.v2.success,
+			borderColor: vars.color.success,
 			borderStyle: "solid",
-			color: vars.v2.ink,
+			color: vars.color.ink,
 			width: 200,
 		},
-		"&::placeholder": { color: vars.v2.inkMuted },
+		"&::placeholder": { color: vars.color.inkMuted },
 	},
 	"@media": {
 		"(max-width: 768px)": { width: 110 },
@@ -133,7 +133,7 @@ export const quickAddFocus = style({
 export const loading = style({
 	textAlign: "center",
 	padding: space.xl,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	fontSize: textSize.base,
 });
 
@@ -160,7 +160,7 @@ export const rightPanel = style({
 export const tabBar = style({
 	display: "flex",
 	gap: space.xs,
-	background: vars.v2.surfaceRaised,
+	background: vars.color.surfaceRaised,
 	borderRadius: radius.md,
 	padding: space.xs,
 	flexShrink: 0,
@@ -175,15 +175,15 @@ export const tabBtn = style({
 	cursor: "pointer",
 	fontSize: textSize.sm,
 	fontWeight: 500,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	transition: "all 0.15s",
 	selectors: {
-		"&:hover": { color: vars.v2.ink },
+		"&:hover": { color: vars.color.ink },
 	},
 });
 
 export const tabActive = style({
-	background: vars.v2.surface,
-	color: vars.v2.ink,
+	background: vars.color.surface,
+	color: vars.color.ink,
 	boxShadow: "0 1px 2px oklch(0 0 0 / 0.08)",
 });

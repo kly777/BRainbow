@@ -14,51 +14,51 @@ export const badge = style({
 });
 
 export const default_ = style({
-	background: vars.v2.bg,
-	color: vars.v2.inkMuted,
+	background: vars.color.bg,
+	color: vars.color.inkMuted,
 });
 
 export const new_ = style({
-	background: vars.v2.badgeNewBg,
-	color: vars.v2.badgeNewText,
+	background: vars.color.badgeNewBg,
+	color: vars.color.badgeNewText,
 });
 
 export const learning = style({
-	background: vars.v2.badgeLearningBg,
-	color: vars.v2.badgeLearningText,
+	background: vars.color.badgeLearningBg,
+	color: vars.color.badgeLearningText,
 });
 
 export const review = style({
-	background: vars.v2.badgeReviewBg,
-	color: vars.v2.badgeReviewText,
+	background: vars.color.badgeReviewBg,
+	color: vars.color.badgeReviewText,
 });
 
 export const relearning = style({
-	background: vars.v2.badgeRelearningBg,
-	color: vars.v2.badgeRelearningText,
+	background: vars.color.badgeRelearningBg,
+	color: vars.color.badgeRelearningText,
 });
 
 export const suspended = style({
-	background: vars.v2.badgeSuspendedBg,
-	color: vars.v2.badgeSuspendedText,
+	background: vars.color.badgeSuspendedBg,
+	color: vars.color.badgeSuspendedText,
 });
 
 export const success = style({
-	background: vars.v2.successSubtle,
-	color: vars.v2.success,
+	background: vars.color.successSubtle,
+	color: vars.color.success,
 });
 
 export const warning = style({
-	background: vars.v2.warningSubtle,
-	color: vars.v2.warning,
+	background: vars.color.warningSubtle,
+	color: vars.color.warning,
 });
 
 export const danger = style({
-	background: vars.v2.dangerSubtle,
-	color: vars.v2.danger,
+	background: vars.color.dangerSubtle,
+	color: vars.color.danger,
 });
 
 export const info = style({
-	background: vars.v2.accentSoft,
-	color: vars.v2.accent,
+	background: vars.color.accentSoft,
+	color: vars.color.accent,
 });

@@ -20,7 +20,7 @@ export const content = style({
 
 export const meta = style({
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	marginBottom: space.xl,
 });
 

@@ -5,7 +5,7 @@ import { globalStyle, style } from "@vanilla-extract/css";
 import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const calendarView = style({
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	borderRadius: radius.lg,
 	padding: space.xl,
 	boxShadow: "0 1px 3px oklch(0 0 0 / 0.1)",
@@ -21,19 +21,19 @@ export const calendarHeader = style({
 export const calendarTitle = style({
 	margin: 0,
 	fontSize: textSize.xl,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 export const navButton = style({
 	padding: `${space.sm} 16px`,
-	background: vars.v2.surfaceRaised,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surfaceRaised,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	cursor: "pointer",
 	fontSize: textSize.base,
 	transition: "all 0.2s",
 	selectors: {
-		"&:hover": { background: vars.v2.border },
+		"&:hover": { background: vars.color.border },
 	},
 });
 
@@ -41,18 +41,18 @@ export const calendarGrid = style({
 	display: "grid",
 	gridTemplateColumns: "repeat(7, 1fr)",
 	gap: space.xs,
-	background: vars.v2.border,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.border,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	overflow: "hidden",
 });
 
 export const dayHeader = style({
-	background: vars.v2.bg,
+	background: vars.color.bg,
 	padding: space.md,
 	textAlign: "center",
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	fontSize: textSize.base,
 });
 
@@ -61,35 +61,35 @@ export const today = style({});
 export const empty = style({});
 
 export const calendarDay = style({
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	minHeight: 100,
 	padding: space.sm,
-	borderRight: `1px solid ${vars.v2.border}`,
-	borderBottom: `1px solid ${vars.v2.border}`,
+	borderRight: `1px solid ${vars.color.border}`,
+	borderBottom: `1px solid ${vars.color.border}`,
 	selectors: {
 		[`&.${today}`]: {
-			background: vars.v2.accentSoft,
-			boxShadow: `inset 0 0 0 2px ${vars.v2.accent}`,
+			background: vars.color.accentSoft,
+			boxShadow: `inset 0 0 0 2px ${vars.color.accent}`,
 			borderRadius: radius.sm,
 		},
-		[`&.${empty}`]: { background: vars.v2.bg },
+		[`&.${empty}`]: { background: vars.color.bg },
 	},
 });
 
 export const dayNumber = style({
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	marginBottom: space.sm,
 	fontSize: textSize.base,
 });
 
 // 今天高亮时 dayNumber 颜色
 export const dayNumberToday = style({
-	color: vars.v2.accent,
+	color: vars.color.accent,
 });
 
 globalStyle(`.${today} .dayNumber`, {
-	color: vars.v2.accent,
+	color: vars.color.accent,
 });
 
 export const dayTasks = style({
@@ -117,16 +117,16 @@ export const eventTime = style({
 });
 
 export const typeFeasible = style({
-	background: vars.v2.border,
-	borderLeft: `3px solid ${vars.v2.inkMuted}`,
+	background: vars.color.border,
+	borderLeft: `3px solid ${vars.color.inkMuted}`,
 });
 
 export const typePlanned = style({
-	background: vars.v2.accentSoft,
-	borderLeft: `3px solid ${vars.v2.accent}`,
+	background: vars.color.accentSoft,
+	borderLeft: `3px solid ${vars.color.accent}`,
 });
 
 export const typeActual = style({
-	background: vars.v2.successSubtle,
-	borderLeft: `3px solid ${vars.v2.success}`,
+	background: vars.color.successSubtle,
+	borderLeft: `3px solid ${vars.color.success}`,
 });

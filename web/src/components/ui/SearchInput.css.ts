@@ -7,14 +7,14 @@ import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 export const input = style({
 	padding: `${space.xs} ${space.sm}`,
 	fontSize: textSize.sm,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
-	background: vars.v2.bg,
-	color: vars.v2.ink,
+	background: vars.color.bg,
+	color: vars.color.ink,
 	outline: "none",
 	transition: "border-color 0.15s",
 	selectors: {
-		"&:focus": { borderColor: vars.v2.accent },
-		"&::placeholder": { color: vars.v2.inkMuted },
+		"&:focus": { borderColor: vars.color.accent },
+		"&::placeholder": { color: vars.color.inkMuted },
 	},
 });

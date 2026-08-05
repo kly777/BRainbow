@@ -8,7 +8,7 @@ export const shell = style({
 	display: "flex",
 	flexDirection: "column",
 	minHeight: "100vh",
-	background: vars.v2.bg,
+	background: vars.color.bg,
 });
 
 export const content = style({
@@ -21,9 +21,9 @@ export const footer = style({
 	textAlign: "center",
 	padding: space.md,
 	marginTop: 15,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	fontSize: textSize.sm,
-	borderTop: `1px solid ${vars.v2.border}`,
+	borderTop: `1px solid ${vars.color.border}`,
 });
 
 export const landingPage = style({
@@ -43,29 +43,29 @@ export const landingPage = style({
 globalStyle(`${landingPage} h1`, {
 	fontSize: textSize.xl,
 	marginBottom: space.xl,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 globalStyle(`${landingPage} p`, {
 	fontSize: textSize.lg,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	marginBottom: 40,
 	maxWidth: 600,
 	lineHeight: 1.6,
 });
 
 export const landingLink = style({
-	color: vars.v2.accent,
+	color: vars.color.accent,
 	textDecoration: "none",
 	fontWeight: 500,
 	padding: `${space.sm} 20px`,
-	border: `2px solid ${vars.v2.accent}`,
+	border: `2px solid ${vars.color.accent}`,
 	borderRadius: radius.md,
 	transition: "all 0.3s ease",
 	selectors: {
 		"&:hover": {
-			backgroundColor: vars.v2.accent,
-			color: vars.v2.bg,
+			backgroundColor: vars.color.accent,
+			color: vars.color.bg,
 			textDecoration: "none",
 		},
 	},
@@ -87,7 +87,7 @@ export const featureGrid = style({
 });
 
 export const featureCard = style({
-	backgroundColor: vars.v2.surface,
+	backgroundColor: vars.color.surface,
 	borderRadius: radius.md,
 	padding: space.xl,
 	boxShadow: "0 3px 10px oklch(0 0 0 / 0.08)",
@@ -111,7 +111,7 @@ export const featureCard = style({
 globalStyle(`${featureCard} h3`, {
 	fontSize: textSize.xl,
 	margin: `0 0 ${space.md} 0`,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	display: "flex",
 	alignItems: "center",
 	gap: space.sm,
@@ -119,7 +119,7 @@ globalStyle(`${featureCard} h3`, {
 
 globalStyle(`${featureCard} p`, {
 	fontSize: textSize.base,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	marginBottom: space.xl,
 	lineHeight: 1.5,
 	flex: 1,
@@ -127,8 +127,8 @@ globalStyle(`${featureCard} p`, {
 
 export const featureLink = style({
 	display: "inline-block",
-	backgroundColor: vars.v2.accent,
-	color: vars.v2.bg,
+	backgroundColor: vars.color.accent,
+	color: vars.color.bg,
 	padding: `${space.sm} 20px`,
 	borderRadius: radius.md,
 	textDecoration: "none",
@@ -137,8 +137,8 @@ export const featureLink = style({
 	border: "none",
 	selectors: {
 		"&:hover": {
-			backgroundColor: vars.v2.accentStrong,
-			color: vars.v2.bg,
+			backgroundColor: vars.color.accentStrong,
+			color: vars.color.bg,
 			textDecoration: "none",
 		},
 	},
@@ -147,7 +147,7 @@ export const featureLink = style({
 export const quickStats = style({
 	marginTop: 30,
 	padding: space.md,
-	backgroundColor: vars.v2.bg,
+	backgroundColor: vars.color.bg,
 	borderRadius: radius.md,
 	maxWidth: 700,
 	"@media": {
@@ -157,7 +157,7 @@ export const quickStats = style({
 
 globalStyle(`${quickStats} p`, {
 	fontSize: textSize.lg,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	margin: `${space.sm} 0`,
 	display: "flex",
 	alignItems: "center",

@@ -25,7 +25,7 @@ globalStyle(`${header} h1`, {
 
 export const unknownLink = style({
 	fontSize: "0.9rem",
-	color: vars.v2.accent,
+	color: vars.color.accent,
 	textDecoration: "none",
 	selectors: {
 		"&:hover": { textDecoration: "underline" },
@@ -34,8 +34,8 @@ export const unknownLink = style({
 
 export const uploadBtn = style({
 	padding: "8px 16px",
-	background: vars.v2.accent,
-	color: vars.v2.white,
+	background: vars.color.accent,
+	color: vars.color.white,
 	border: "none",
 	borderRadius: 6,
 	cursor: "pointer",
@@ -58,14 +58,14 @@ export const modal = style({
 	top: "50%",
 	left: "50%",
 	transform: "translate(-50%, -50%)",
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	padding: 24,
 	borderRadius: 12,
 	zIndex: 101,
 	width: "90%",
 	maxWidth: 600,
 	boxShadow: "0 8px 32px oklch(0 0 0 / 0.15)",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 });
 
 globalStyle(`${modal} h2`, {
@@ -76,23 +76,23 @@ globalStyle(`${modal} h2`, {
 export const input = style({
 	width: "100%",
 	padding: "8px 12px",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: 6,
 	fontSize: "1rem",
 	marginBottom: 12,
-	background: vars.v2.surface,
-	color: vars.v2.ink,
+	background: vars.color.surface,
+	color: vars.color.ink,
 });
 
 export const textarea = style({
 	width: "100%",
 	padding: "8px 12px",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: 6,
 	fontSize: "0.95rem",
 	resize: "vertical",
-	background: vars.v2.surface,
-	color: vars.v2.ink,
+	background: vars.color.surface,
+	color: vars.color.ink,
 });
 
 export const modalActions = style({
@@ -104,16 +104,16 @@ export const modalActions = style({
 
 export const cancelBtn = style({
 	padding: "8px 16px",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: 6,
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	cursor: "pointer",
 });
 
 export const submitBtn = style({
 	padding: "8px 16px",
-	background: vars.v2.accent,
-	color: vars.v2.white,
+	background: vars.color.accent,
+	color: vars.color.white,
 	border: "none",
 	borderRadius: 6,
 	cursor: "pointer",
@@ -132,16 +132,16 @@ export const list = style({
 export const card = style({
 	display: "block",
 	padding: 16,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: 8,
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	textDecoration: "none",
 	color: "inherit",
 	transition: "border-color 0.15s, box-shadow 0.15s",
 	selectors: {
 		"&:hover": {
-			borderColor: vars.v2.accent,
-			boxShadow: `0 2px 8px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 2px 8px ${vars.color.accentSoft}`,
 		},
 	},
 });
@@ -156,7 +156,7 @@ export const cardMeta = style({
 	display: "flex",
 	gap: 16,
 	fontSize: "0.85rem",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });
 
 export const ratio = style({
@@ -168,26 +168,26 @@ export const ratio = style({
 });
 
 export const unknownCount = style({
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });
 
 export const barOuter = style({
 	marginTop: 8,
 	height: 4,
-	background: vars.v2.bg,
+	background: vars.color.bg,
 	borderRadius: 2,
 	overflow: "hidden",
 });
 
 export const barInner = style({
 	height: "100%",
-	background: vars.v2.accent,
+	background: vars.color.accent,
 	borderRadius: 2,
 	transition: "width 0.3s",
 });
 
 export const empty = style({
 	textAlign: "center",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	padding: "40px 0",
 });

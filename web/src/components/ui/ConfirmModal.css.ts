@@ -16,8 +16,8 @@ export const overlay = style({
 });
 
 export const dialog = style({
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.lg,
 	boxShadow: "0 8px 32px oklch(0 0 0 / 0.15)",
 	maxWidth: 420,
@@ -47,18 +47,18 @@ export const iconWrap = style({
 });
 
 export const iconDanger = style({
-	background: vars.v2.dangerSubtle,
-	color: vars.v2.danger,
+	background: vars.color.dangerSubtle,
+	color: vars.color.danger,
 });
 
 export const iconWarning = style({
-	background: vars.v2.warningSubtle,
-	color: vars.v2.warning,
+	background: vars.color.warningSubtle,
+	color: vars.color.warning,
 });
 
 export const iconInfo = style({
-	background: vars.v2.accentSoft,
-	color: vars.v2.accent,
+	background: vars.color.accentSoft,
+	color: vars.color.accent,
 });
 
 export const titleWrap = style({
@@ -70,14 +70,14 @@ export const title = style({
 	margin: 0,
 	fontSize: textSize.lg,
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	lineHeight: 1.3,
 });
 
 export const message = style({
 	margin: `${space.xs} 0 0`,
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	lineHeight: 1.5,
 });
 
@@ -103,23 +103,23 @@ export const btn = style({
 	border: "none",
 	selectors: {
 		"&:focus-visible": {
-			outline: `2px solid ${vars.v2.accent}`,
+			outline: `2px solid ${vars.color.accent}`,
 			outlineOffset: 2,
 		},
 	},
 });
 
 export const btnCancel = style({
-	background: vars.v2.bg,
-	color: vars.v2.inkMuted,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.bg,
+	color: vars.color.inkMuted,
+	border: `1px solid ${vars.color.border}`,
 	selectors: {
-		"&:hover": { background: vars.v2.surfaceRaised, color: vars.v2.ink },
+		"&:hover": { background: vars.color.surfaceRaised, color: vars.color.ink },
 	},
 });
 
 export const btnDanger = style({
-	background: vars.v2.danger,
+	background: vars.color.danger,
 	color: "oklch(1 0 0)",
 	selectors: {
 		"&:hover": { background: "oklch(0.48 0.18 25)" },
@@ -127,7 +127,7 @@ export const btnDanger = style({
 });
 
 export const btnWarning = style({
-	background: vars.v2.warning,
+	background: vars.color.warning,
 	color: "oklch(1 0 0)",
 	selectors: {
 		"&:hover": { background: "oklch(0.52 0.14 85)" },
@@ -135,9 +135,9 @@ export const btnWarning = style({
 });
 
 export const btnPrimary = style({
-	background: vars.v2.accent,
+	background: vars.color.accent,
 	color: "oklch(1 0 0)",
 	selectors: {
-		"&:hover": { background: vars.v2.accentStrong },
+		"&:hover": { background: vars.color.accentStrong },
 	},
 });

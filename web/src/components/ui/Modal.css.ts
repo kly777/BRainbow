@@ -19,9 +19,9 @@ export const modalOverlay = style({
 });
 
 export const modalContent = style({
-	backgroundColor: vars.v2.surface,
+	backgroundColor: vars.color.surface,
 	borderRadius: radius.md,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	boxShadow: `0 ${space.xs} 20px oklch(0 0 0 / 0.15)`,
 	maxWidth: 600,
 	width: "100%",
@@ -33,7 +33,7 @@ export const modalContent = style({
 
 export const modalHeader = style({
 	padding: space.xl,
-	borderBottom: `1px solid ${vars.v2.border}`,
+	borderBottom: `1px solid ${vars.color.border}`,
 	display: "flex",
 	alignItems: "center",
 	justifyContent: "space-between",
@@ -43,7 +43,7 @@ export const modalTitle = style({
 	margin: 0,
 	fontSize: textSize.lg,
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 export const modalClose = style({
@@ -51,7 +51,7 @@ export const modalClose = style({
 	border: "none",
 	fontSize: textSize.xl,
 	lineHeight: 1,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	cursor: "pointer",
 	padding: 0,
 	width: 30,
@@ -62,7 +62,7 @@ export const modalClose = style({
 	borderRadius: radius.sm,
 	transition: "background-color 0.2s, color 0.2s",
 	selectors: {
-		"&:hover": { backgroundColor: vars.v2.surfaceRaised, color: vars.v2.ink },
+		"&:hover": { backgroundColor: vars.color.surfaceRaised, color: vars.color.ink },
 	},
 });
 
@@ -74,7 +74,7 @@ export const modalBody = style({
 
 export const modalFooter = style({
 	padding: space.xl,
-	borderTop: `1px solid ${vars.v2.border}`,
+	borderTop: `1px solid ${vars.color.border}`,
 	display: "flex",
 	justifyContent: "flex-end",
 	gap: space.sm,
@@ -94,22 +94,22 @@ export const formGroup = style({
 
 export const formLabel = style({
 	fontWeight: 500,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	fontSize: textSize.base,
 });
 
 export const taskSelector = style({
 	width: "100%",
 	padding: space.sm,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.sm,
 	fontSize: textSize.base,
-	backgroundColor: vars.v2.surface,
+	backgroundColor: vars.color.surface,
 	selectors: {
 		"&:focus": {
 			outline: "none",
-			borderColor: vars.v2.accent,
-			boxShadow: `0 0 0 3px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 0 0 3px ${vars.color.accentSoft}`,
 		},
 	},
 });
@@ -119,8 +119,8 @@ export const taskOption = style({
 });
 
 export const infoBox = style({
-	backgroundColor: vars.v2.surface,
-	border: `1px solid ${vars.v2.border}`,
+	backgroundColor: vars.color.surface,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.sm,
 	padding: space.md,
 	marginTop: 15,
@@ -134,7 +134,7 @@ globalStyle(`${infoBox} p`, {
 globalStyle(`${infoBox} ul`, {
 	margin: 0,
 	paddingLeft: 20,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });
 
 globalStyle(`${infoBox} li`, {
@@ -144,7 +144,7 @@ globalStyle(`${infoBox} li`, {
 export const emptyList = style({
 	textAlign: "center",
 	padding: space.xl,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });
 
 globalStyle(`${emptyList} p`, {
@@ -156,7 +156,7 @@ export const loading = style({
 	alignItems: "center",
 	justifyContent: "center",
 	padding: space.xl,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });
 
 const spin = keyframes({
@@ -167,15 +167,15 @@ export const loadingAfter = style({
 	content: '""',
 	width: 20,
 	height: 20,
-	border: `2px solid ${vars.v2.border}`,
-	borderTopColor: vars.v2.accent,
+	border: `2px solid ${vars.color.border}`,
+	borderTopColor: vars.color.accent,
 	borderRadius: "50%",
 	marginLeft: 10,
 	animation: `${spin} 1s linear infinite`,
 });
 
 export const errorMessage = style({
-	backgroundColor: vars.v2.dangerSubtle,
+	backgroundColor: vars.color.dangerSubtle,
 	color: "oklch(0.3 0.07 28)",
 	padding: space.sm,
 	borderRadius: radius.sm,
@@ -183,9 +183,9 @@ export const errorMessage = style({
 });
 
 export const successMessage = style({
-	backgroundColor: vars.v2.successSubtle,
+	backgroundColor: vars.color.successSubtle,
 	color: "oklch(0.3 0.07 160)",
 	padding: space.sm,
 	borderRadius: radius.sm,
-	border: `1px solid ${vars.v2.successSubtle}`,
+	border: `1px solid ${vars.color.successSubtle}`,
 });

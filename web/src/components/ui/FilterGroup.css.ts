@@ -12,20 +12,20 @@ export const group = style({
 export const btn = style({
 	padding: `${space.xs} ${space.sm}`,
 	fontSize: textSize.xs,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
-	background: vars.v2.surface,
-	color: vars.v2.inkMuted,
+	background: vars.color.surface,
+	color: vars.color.inkMuted,
 	cursor: "pointer",
 	fontFamily: "inherit",
 	whiteSpace: "nowrap",
 	selectors: {
-		"&:hover": { background: vars.v2.surfaceRaised },
+		"&:hover": { background: vars.color.surfaceRaised },
 	},
 });
 
 export const active = style({
-	background: vars.v2.accent,
-	color: vars.v2.bg,
-	borderColor: vars.v2.accent,
+	background: vars.color.accent,
+	color: vars.color.bg,
+	borderColor: vars.color.accent,
 });

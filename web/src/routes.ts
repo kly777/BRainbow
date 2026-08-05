@@ -52,6 +52,14 @@ export const ROUTES: RouteConfig[] = [
 		component: lazy(() => import("@features/card/CardsList.tsx")),
 	},
 	{
+		path: "/color",
+		label: "配色",
+		title: "Color",
+		desc: "全局主题配色切换",
+		nav: true,
+		component: lazy(() => import("@pages/ColorPage.tsx")),
+	},
+	{
 		path: "/c/add",
 		label: "新建卡片",
 		title: "New Card",

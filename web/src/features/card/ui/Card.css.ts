@@ -8,13 +8,13 @@ import { radius, space, vars } from "@styles/tokens.css.ts";
 export const deleting = style({});
 
 export const card = style({
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	borderRadius: radius.lg,
 	boxShadow: "0 1px 4px oklch(0 0 0 / 0.06)",
 	padding: space.lg,
 	transition: "all 0.2s ease",
 	cursor: "pointer",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	display: "flex",
 	flexDirection: "column",
 	textAlign: "left",
@@ -31,10 +31,10 @@ export const card = style({
 		"&:hover": {
 			boxShadow: `0 ${space.xs} 16px oklch(0 0 0 / 0.12)`,
 			transform: "translateY(-2px)",
-			borderColor: vars.v2.accent,
+			borderColor: vars.color.accent,
 		},
 		"&:focus": {
-			outline: `2px solid ${vars.v2.accent}`,
+			outline: `2px solid ${vars.color.accent}`,
 			outlineOffset: 2,
 		},
 		"&:active": { transform: "translateY(0)" },
@@ -56,7 +56,7 @@ export const cardHeader = style({
 export const cardTitle = style({
 	fontSize: "1.125rem",
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	margin: 0,
 	flex: 1,
 	lineHeight: 1.4,
@@ -71,8 +71,8 @@ export const cardTitle = style({
 });
 
 export const cardCategory = style({
-	background: vars.v2.accentSoft,
-	color: vars.v2.accent,
+	background: vars.color.accentSoft,
+	color: vars.color.accent,
 	fontSize: "0.75rem",
 	fontWeight: 500,
 	padding: `${space.xs} 8px`,
@@ -93,7 +93,7 @@ export const cardContent = style({
 export const cardPreview = style({
 	fontSize: "0.875rem",
 	lineHeight: 1.5,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	margin: 0,
 	display: "-webkit-box",
 	WebkitLineClamp: 4,
@@ -114,8 +114,8 @@ export const cardTags = style({
 });
 
 export const tag = style({
-	background: vars.v2.badgeNewBg,
-	color: vars.v2.badgeNewText,
+	background: vars.color.badgeNewBg,
+	color: vars.color.badgeNewText,
 	fontSize: "0.75rem",
 	padding: "2px 8px",
 	borderRadius: 999,
@@ -125,10 +125,10 @@ export const tag = style({
 	selectors: {
 		"&:hover": {
 			filter: "brightness(0.94)",
-			color: vars.v2.badgeNewText,
+			color: vars.color.badgeNewText,
 		},
 		"&:focus": {
-			outline: `2px solid ${vars.v2.accent}`,
+			outline: `2px solid ${vars.color.accent}`,
 			outlineOffset: 1,
 		},
 	},
@@ -140,8 +140,8 @@ export const cardMeta = style({
 	gap: space.xs,
 	marginBottom: space.md,
 	fontSize: "0.75rem",
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.inkFaint,
+	fontFamily: vars.font.mono,
+	color: vars.color.inkFaint,
 });
 
 export const metaItem = style({
@@ -176,15 +176,15 @@ export const actionButton = style({
 	padding: `${space.xs} 12px`,
 	fontSize: "0.875rem",
 	borderRadius: radius.md,
-	border: `1px solid ${vars.v2.borderStrong}`,
+	border: `1px solid ${vars.color.borderStrong}`,
 	background: "transparent",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	cursor: "pointer",
 	transition: "all 0.15s ease",
 	selectors: {
-		"&:hover": { background: vars.v2.surfaceRaised, color: vars.v2.ink },
+		"&:hover": { background: vars.color.surfaceRaised, color: vars.color.ink },
 		"&:focus": {
-			outline: `2px solid ${vars.v2.accent}`,
+			outline: `2px solid ${vars.color.accent}`,
 			outlineOffset: 1,
 		},
 	},
@@ -194,20 +194,20 @@ export const actionButton = style({
 });
 
 export const deleteButton = style({
-	color: vars.v2.danger,
-	borderColor: vars.v2.danger,
+	color: vars.color.danger,
+	borderColor: vars.color.danger,
 	selectors: {
-		"&:hover": { background: vars.v2.danger, color: vars.v2.bg },
+		"&:hover": { background: vars.color.danger, color: vars.color.bg },
 		"&:disabled": {
 			opacity: 0.5,
 			cursor: "not-allowed",
-			background: vars.v2.dangerSubtle,
-			color: vars.v2.danger,
-			borderColor: vars.v2.danger,
+			background: vars.color.dangerSubtle,
+			color: vars.color.danger,
+			borderColor: vars.color.danger,
 		},
 		"&:disabled:hover": {
-			background: vars.v2.dangerSubtle,
-			color: vars.v2.danger,
+			background: vars.color.dangerSubtle,
+			color: vars.color.danger,
 		},
 	},
 });

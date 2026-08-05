@@ -10,8 +10,8 @@ export const page = style({
 	display: "flex",
 	flexDirection: "column",
 	height: "100vh",
-	background: vars.v2.bg,
-	color: vars.v2.ink,
+	background: vars.color.bg,
+	color: vars.color.ink,
 });
 
 export const topBar = style({
@@ -19,8 +19,8 @@ export const topBar = style({
 	alignItems: "center",
 	gap: space.md,
 	padding: `${space.sm} 20px`,
-	borderBottom: `1px solid ${vars.v2.border}`,
-	background: vars.v2.surface,
+	borderBottom: `1px solid ${vars.color.border}`,
+	background: vars.color.surface,
 	flexShrink: 0,
 	"@media": {
 		"(max-width: 768px)": { paddingLeft: 12, paddingRight: 12 },
@@ -28,12 +28,12 @@ export const topBar = style({
 });
 
 export const title = style({
-	fontFamily: vars.v2.fontDisplay,
+	fontFamily: vars.font.display,
 	fontSize: textSize.lg,
 	fontWeight: 600,
 	letterSpacing: "0.08em",
 	margin: 0,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	flex: 1,
 });
 
@@ -45,8 +45,8 @@ export const topActions = style({
 
 export const count = style({
 	fontSize: 11,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.inkFaint,
+	fontFamily: vars.font.mono,
+	color: vars.color.inkFaint,
 	fontVariantNumeric: "tabular-nums",
 });
 

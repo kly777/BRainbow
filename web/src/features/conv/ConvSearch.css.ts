@@ -21,12 +21,12 @@ export const topBar = style({
 	alignItems: "center",
 	gap: space.md,
 	padding: `${space.lg} 20px`,
-	borderBottom: `1px solid ${vars.v2.border}`,
+	borderBottom: `1px solid ${vars.color.border}`,
 });
 
 export const backLink = style({
 	fontSize: textSize.sm,
-	color: vars.v2.accent,
+	color: vars.color.accent,
 	textDecoration: "none",
 	fontWeight: 500,
 	whiteSpace: "nowrap",
@@ -37,7 +37,7 @@ export const backLink = style({
 
 export const title = style({
 	fontSize: textSize.lg,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	margin: 0,
 });
 
@@ -50,7 +50,7 @@ export const searchBar = style({
 export const initialHint = style({
 	padding: `0 20px ${space.md}`,
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	textAlign: "center",
 });
 
@@ -64,23 +64,23 @@ export const tabs = style({
 export const tab = style({
 	padding: "6px 16px",
 	fontSize: textSize.sm,
-	border: `1px solid ${vars.v2.border}`,
-	background: vars.v2.surface,
-	color: vars.v2.inkMuted,
+	border: `1px solid ${vars.color.border}`,
+	background: vars.color.surface,
+	color: vars.color.inkMuted,
 	cursor: "pointer",
 	borderRadius: `${radius.md} ${radius.md} 0 0`,
 	borderBottom: "none",
 	selectors: {
-		"&:hover": { background: vars.v2.bg },
+		"&:hover": { background: vars.color.bg },
 	},
 });
 
 export const tabActive = style({
 	padding: "6px 16px",
 	fontSize: textSize.sm,
-	border: `1px solid ${vars.v2.border}`,
-	background: vars.v2.bg,
-	color: vars.v2.ink,
+	border: `1px solid ${vars.color.border}`,
+	background: vars.color.bg,
+	color: vars.color.ink,
 	cursor: "pointer",
 	borderRadius: `${radius.md} ${radius.md} 0 0`,
 	borderBottom: "none",
@@ -98,13 +98,13 @@ export const input = style({
 	flex: 1,
 	padding: "10px 36px 10px 14px",
 	fontSize: textSize.base,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
-	background: vars.v2.bg,
-	color: vars.v2.ink,
+	background: vars.color.bg,
+	color: vars.color.ink,
 	outline: "none",
 	selectors: {
-		"&:focus": { borderColor: vars.v2.accent },
+		"&:focus": { borderColor: vars.color.accent },
 	},
 });
 
@@ -115,8 +115,8 @@ export const clearBtn = style({
 	height: 22,
 	border: "none",
 	borderRadius: "50%",
-	background: vars.v2.inkFaint,
-	color: vars.v2.bg,
+	background: vars.color.inkFaint,
+	color: vars.color.bg,
 	fontSize: 14,
 	lineHeight: 1,
 	cursor: "pointer",
@@ -136,8 +136,8 @@ export const btn = style({
 	fontSize: textSize.base,
 	border: "none",
 	borderRadius: radius.md,
-	background: vars.v2.accent,
-	color: vars.v2.white,
+	background: vars.color.accent,
+	color: vars.color.white,
 	cursor: "pointer",
 	fontWeight: 500,
 	selectors: {
@@ -148,7 +148,7 @@ export const btn = style({
 export const summary = style({
 	padding: `0 20px ${space.md}`,
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });
 
 export const results = style({
@@ -171,17 +171,17 @@ const spin = keyframes({
 export const spinner = style({
 	width: 24,
 	height: 24,
-	border: `3px solid ${vars.v2.border}`,
-	borderTopColor: vars.v2.accent,
+	border: `3px solid ${vars.color.border}`,
+	borderTopColor: vars.color.accent,
 	borderRadius: "50%",
 	animation: `${spin} 0.7s linear infinite`,
 });
 
 export const item = style({
 	padding: space.md,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	cursor: "pointer",
 	transition: "box-shadow 0.15s",
 	textDecoration: "none",
@@ -202,8 +202,8 @@ export const badge = style({
 	fontSize: textSize.xs,
 	padding: "2px 8px",
 	borderRadius: radius.sm,
-	background: vars.v2.accentSoft,
-	color: vars.v2.accent,
+	background: vars.color.accentSoft,
+	color: vars.color.accent,
 	fontWeight: 500,
 });
 
@@ -211,21 +211,21 @@ export const tagType = style({
 	fontSize: textSize.xs,
 	padding: "2px 8px",
 	borderRadius: radius.sm,
-	background: vars.v2.bg,
-	color: vars.v2.inkMuted,
+	background: vars.color.bg,
+	color: vars.color.inkMuted,
 });
 
 export const itemTitle = style({
 	fontSize: textSize.base,
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	marginBottom: 4,
 	lineHeight: 1.4,
 });
 
 export const itemSnippet = style({
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	lineHeight: 1.5,
 	display: "-webkit-box",
 	WebkitLineClamp: 3,
@@ -235,13 +235,13 @@ export const itemSnippet = style({
 
 export const itemMeta = style({
 	fontSize: textSize.xs,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	marginTop: 6,
 });
 
 export const empty = style({
 	textAlign: "center",
 	padding: space.xl,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	fontSize: textSize.base,
 });

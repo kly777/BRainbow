@@ -7,8 +7,8 @@ import { space, textSize, vars } from "@styles/tokens.css.ts";
 export const sidebar = style({
 	width: 0,
 	overflow: "hidden",
-	borderRight: `1px solid ${vars.v2.border}`,
-	background: vars.v2.surface,
+	borderRight: `1px solid ${vars.color.border}`,
+	background: vars.color.surface,
 	transition: "width 0.2s ease",
 	display: "flex",
 	flexDirection: "column",
@@ -24,8 +24,8 @@ export const sidebarHeader = style({
 	alignItems: "center",
 	justifyContent: "space-between",
 	padding: `${space.md} 14px`,
-	borderBottom: `1px solid ${vars.v2.border}`,
-	fontFamily: vars.v2.fontDisplay,
+	borderBottom: `1px solid ${vars.color.border}`,
+	fontFamily: vars.font.display,
 	fontSize: textSize.sm,
 	fontWeight: 600,
 });
@@ -34,11 +34,11 @@ export const sidebarClose = style({
 	background: "none",
 	border: "none",
 	fontSize: textSize.sm,
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 	cursor: "pointer",
 	padding: `${space.xs} 6px`,
 	selectors: {
-		"&:hover": { color: vars.v2.ink },
+		"&:hover": { color: vars.color.ink },
 	},
 });
 
@@ -47,10 +47,10 @@ export const legend = style({
 	flexWrap: "wrap",
 	gap: "4px 10px",
 	padding: `${space.sm} 14px`,
-	borderBottom: `1px solid ${vars.v2.border}`,
+	borderBottom: `1px solid ${vars.color.border}`,
 	fontSize: textSize.xs,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.inkFaint,
+	fontFamily: vars.font.mono,
+	color: vars.color.inkFaint,
 });
 
 export const legendItem = style({
@@ -67,11 +67,11 @@ export const dot = style({
 	display: "inline-block",
 });
 
-export const dotNew = style({ background: vars.v2.badgeNewText });
-export const dotLearning = style({ background: vars.v2.badgeLearningText });
-export const dotReview = style({ background: vars.v2.badgeReviewText });
-export const dotBuried = style({ background: vars.v2.inkFaint });
-export const dotSuspended = style({ background: vars.v2.badgeSuspendedText });
+export const dotNew = style({ background: vars.color.badgeNewText });
+export const dotLearning = style({ background: vars.color.badgeLearningText });
+export const dotReview = style({ background: vars.color.badgeReviewText });
+export const dotBuried = style({ background: vars.color.inkFaint });
+export const dotSuspended = style({ background: vars.color.badgeSuspendedText });
 
 export const sidebarList = style({
 	flex: 1,
@@ -89,18 +89,18 @@ export const sidebarItem = style({
 	border: "none",
 	background: "transparent",
 	selectors: {
-		"&:hover": { background: vars.v2.surfaceRaised },
+		"&:hover": { background: vars.color.surfaceRaised },
 	},
 });
 
 export const sidebarActive = style({
-	background: vars.v2.accentSoft,
+	background: vars.color.accentSoft,
 });
 
 export const sidebarIdx = style({
 	fontSize: textSize.xs,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.inkFaint,
+	fontFamily: vars.font.mono,
+	color: vars.color.inkFaint,
 	flexShrink: 0,
 	fontVariantNumeric: "tabular-nums",
 });
@@ -114,7 +114,7 @@ export const sidebarText = style({
 
 export const sidebarState = style({
 	fontSize: textSize.xs,
-	fontFamily: vars.v2.fontMono,
+	fontFamily: vars.font.mono,
 	flexShrink: 0,
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 });

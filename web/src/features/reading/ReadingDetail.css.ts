@@ -20,7 +20,7 @@ export const page = style({
 export const back = style({
 	gridColumn: "1 / -1",
 	fontSize: "0.9rem",
-	color: vars.v2.accent,
+	color: vars.color.accent,
 	textDecoration: "none",
 	selectors: {
 		"&:hover": { textDecoration: "underline" },
@@ -38,7 +38,7 @@ globalStyle(`${header} h1`, {
 
 export const meta = style({
 	fontSize: "0.85rem",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	display: "flex",
 	gap: 16,
 });
@@ -51,7 +51,7 @@ export const recommendBanner = style({
 	border: "1px solid oklch(0.85 0.08 250)",
 	borderRadius: 8,
 	fontSize: "0.9rem",
-	color: vars.v2.accent,
+	color: vars.color.accent,
 	textDecoration: "none",
 	selectors: {
 		"&:hover": { background: "oklch(0.92 0.06 250 / 0.5)" },
@@ -66,9 +66,9 @@ export const content = style({
 	overflowY: "auto",
 	maxHeight: "calc(100vh - 240px)",
 	padding: space.md,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: 8,
-	background: vars.v2.surface,
+	background: vars.color.surface,
 });
 
 export const paragraph = style({
@@ -101,10 +101,10 @@ export const unknownWord = style({
 export const sidebar = style({
 	gridColumn: 2,
 	gridRow: "2 / 4",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: 8,
 	padding: space.md,
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	display: "flex",
 	flexDirection: "column",
 	maxHeight: "calc(100vh - 120px)",
@@ -126,7 +126,7 @@ export const wordListArea = style({
 export const sidebarFooter = style({
 	flexShrink: 0,
 	paddingTop: 10,
-	borderTop: `1px solid ${vars.v2.border}`,
+	borderTop: `1px solid ${vars.color.border}`,
 	marginTop: 8,
 });
 
@@ -146,7 +146,7 @@ export const uploadUnknownBtn = style({
 	fontSize: 12,
 	cursor: "pointer",
 	selectors: {
-		"&:hover": { background: "oklch(0.45 0.22 30)", color: vars.v2.white },
+		"&:hover": { background: "oklch(0.45 0.22 30)", color: vars.color.white },
 		"&:disabled": { opacity: 0.5, cursor: "not-allowed" },
 	},
 });
@@ -165,7 +165,7 @@ export const wordItem = style({
 	borderRadius: 4,
 	fontSize: "0.9rem",
 	selectors: {
-		"&:hover": { background: vars.v2.bg },
+		"&:hover": { background: vars.color.bg },
 	},
 });
 
@@ -174,12 +174,12 @@ export const wordName = style({
 });
 
 export const knownWord = style({
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	textDecoration: "line-through",
 });
 
 export const ignoredWordSidebar = style({
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	fontStyle: "italic",
 });
 
@@ -196,7 +196,7 @@ export const unknownIcon = style({
 });
 
 export const ignoredIcon = style({
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	fontSize: 12,
 	cursor: "pointer",
 });
@@ -207,12 +207,12 @@ export const ignoreBtn = style({
 	cursor: "pointer",
 	padding: "2px 4px",
 	fontSize: 11,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	opacity: 0,
 	borderRadius: 3,
 	selectors: {
 		[`${wordItem}:hover &`]: { opacity: 1 },
-		"&:hover": { background: vars.v2.bg, color: vars.v2.ink },
+		"&:hover": { background: vars.color.bg, color: vars.color.ink },
 	},
 });
 
@@ -229,16 +229,16 @@ export const notesInput = style({
 	width: "100%",
 	boxSizing: "border-box",
 	padding: 8,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: 6,
-	background: vars.v2.bg,
-	color: vars.v2.ink,
+	background: vars.color.bg,
+	color: vars.color.ink,
 	fontSize: "0.85rem",
 	lineHeight: 1.5,
 	resize: "vertical",
 	fontFamily: "inherit",
 	selectors: {
-		"&:focus": { outline: "none", borderColor: vars.v2.accent },
+		"&:focus": { outline: "none", borderColor: vars.color.accent },
 	},
 });
 
@@ -246,14 +246,14 @@ export const copyBtn = style({
 	width: "100%",
 	marginTop: 8,
 	padding: "8px 12px",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: 6,
-	background: vars.v2.surface,
-	color: vars.v2.ink,
+	background: vars.color.surface,
+	color: vars.color.ink,
 	fontSize: "0.85rem",
 	cursor: "pointer",
 	transition: "background 0.15s",
 	selectors: {
-		"&:hover": { background: vars.v2.bg },
+		"&:hover": { background: vars.color.bg },
 	},
 });

@@ -34,50 +34,50 @@ export const md = style({
 });
 
 export const primary = style({
-	background: vars.v2.accent,
-	color: vars.v2.bg,
+	background: vars.color.accent,
+	color: vars.color.bg,
 	border: "none",
 	selectors: {
-		"&:hover:not(:disabled)": { background: vars.v2.accentStrong },
+		"&:hover:not(:disabled)": { background: vars.color.accentStrong },
 	},
 });
 
 export const secondary = style({
-	background: vars.v2.bg,
-	color: vars.v2.inkMuted,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.bg,
+	color: vars.color.inkMuted,
+	border: `1px solid ${vars.color.border}`,
 	selectors: {
 		"&:hover:not(:disabled)": {
-			background: vars.v2.surfaceRaised,
-			color: vars.v2.ink,
+			background: vars.color.surfaceRaised,
+			color: vars.color.ink,
 		},
 	},
 });
 
 export const danger = style({
-	background: vars.v2.bg,
-	color: vars.v2.danger,
-	border: `1px solid ${vars.v2.danger}`,
+	background: vars.color.bg,
+	color: vars.color.danger,
+	border: `1px solid ${vars.color.danger}`,
 	selectors: {
-		"&:hover:not(:disabled)": { background: vars.v2.dangerSubtle },
+		"&:hover:not(:disabled)": { background: vars.color.dangerSubtle },
 	},
 });
 
 export const ghost = style({
 	background: "transparent",
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 	border: "1px solid transparent",
 	selectors: {
 		"&:hover:not(:disabled)": {
-			background: vars.v2.bg,
-			color: vars.v2.ink,
+			background: vars.color.bg,
+			color: vars.color.ink,
 		},
 	},
 });
 
 export const icon = style({
 	background: "transparent",
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 	border: "none",
 	borderRadius: radius.sm,
 	width: 22,
@@ -87,8 +87,8 @@ export const icon = style({
 	lineHeight: 1,
 	selectors: {
 		"&:hover:not(:disabled)": {
-			background: vars.v2.dangerSubtle,
-			color: vars.v2.danger,
+			background: vars.color.dangerSubtle,
+			color: vars.color.danger,
 		},
 	},
 });

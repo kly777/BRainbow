@@ -19,7 +19,7 @@ export const header = style({
 	alignItems: "center",
 	marginBottom: 30,
 	paddingBottom: 20,
-	borderBottom: `1px solid ${vars.v2.border}`,
+	borderBottom: `1px solid ${vars.color.border}`,
 	"@media": {
 		"(max-width: 768px)": {
 			flexDirection: "column",
@@ -31,7 +31,7 @@ export const header = style({
 
 globalStyle(`${header} h1`, {
 	margin: 0,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	fontSize: textSize.xl,
 	fontWeight: 600,
 	"@media": {
@@ -45,7 +45,7 @@ export const actions = style({
 });
 
 export const filters = style({
-	backgroundColor: vars.v2.surface,
+	backgroundColor: vars.color.surface,
 	borderRadius: radius.md,
 	padding: space.xl,
 	marginBottom: 30,
@@ -73,7 +73,7 @@ export const entitiesGrid = style({
 });
 
 export const entityCard = style({
-	backgroundColor: vars.v2.surface,
+	backgroundColor: vars.color.surface,
 	borderRadius: radius.md,
 	padding: space.xl,
 	boxShadow: "0 2px 8px oklch(0 0 0 / 0.08)",
@@ -100,12 +100,12 @@ export const entityName = style({
 	margin: 0,
 	fontSize: textSize.lg,
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	flex: 1,
 });
 
 export const entityType = style({
-	color: vars.v2.white,
+	color: vars.color.white,
 	padding: `${space.xs} 10px`,
 	borderRadius: radius.lg,
 	fontSize: textSize.sm,
@@ -117,7 +117,7 @@ export const entityType = style({
 export const entityDescription = style({
 	fontSize: "0.9375rem",
 	lineHeight: 1.6,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	marginBottom: 15,
 	flex: 1,
 });
@@ -131,7 +131,7 @@ export const entityActions = style({
 	gap: space.sm,
 	marginTop: "auto",
 	paddingTop: 15,
-	borderTop: `1px solid ${vars.v2.border}`,
+	borderTop: `1px solid ${vars.color.border}`,
 });
 
 export const entitiesList = style({
@@ -149,33 +149,33 @@ export const entitiesTh = style({
 	padding: `${space.md} 16px`,
 	textAlign: "left",
 	fontWeight: 600,
-	color: vars.v2.inkMuted,
-	backgroundColor: vars.v2.surfaceRaised,
-	borderBottom: `2px solid ${vars.v2.border}`,
+	color: vars.color.inkMuted,
+	backgroundColor: vars.color.surfaceRaised,
+	borderBottom: `2px solid ${vars.color.border}`,
 	whiteSpace: "nowrap",
 });
 
 export const entitiesTd = style({
 	padding: `${space.md} 16px`,
-	borderBottom: `1px solid ${vars.v2.border}`,
-	color: vars.v2.ink,
+	borderBottom: `1px solid ${vars.color.border}`,
+	color: vars.color.ink,
 });
 
 globalStyle(`${entitiesTable} tr:hover td`, {
-	backgroundColor: vars.v2.surfaceRaised,
+	backgroundColor: vars.color.surfaceRaised,
 });
 
 export const stats = style({
 	marginTop: 20,
 	paddingTop: 20,
-	borderTop: `1px solid ${vars.v2.border}`,
+	borderTop: `1px solid ${vars.color.border}`,
 	textAlign: "center",
 });
 
 globalStyle(`${stats} p`, {
 	margin: 0,
 	fontSize: "0.875rem",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });
 
 // ── 新增实体弹窗（原 module.css 未定义，补基础样式） ──
@@ -191,8 +191,8 @@ export const modalOverlay = style({
 });
 
 export const modal = style({
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.lg,
 	padding: space.xl,
 	width: "100%",
@@ -216,9 +216,9 @@ export const modalContent = style({
 });
 
 export const errorMessage = style({
-	color: vars.v2.danger,
+	color: vars.color.danger,
 	fontSize: textSize.sm,
-	background: vars.v2.dangerSubtle,
+	background: vars.color.dangerSubtle,
 	padding: space.sm,
 	borderRadius: radius.sm,
 });
@@ -232,26 +232,26 @@ export const formGroup = style({
 export const formLabel = style({
 	fontSize: textSize.sm,
 	fontWeight: 500,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 export const formInput = style({
 	padding: `${space.sm} 12px`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	fontSize: textSize.base,
-	background: vars.v2.bg,
-	color: vars.v2.ink,
+	background: vars.color.bg,
+	color: vars.color.ink,
 	outline: "none",
 });
 
 export const formTextarea = style({
 	padding: `${space.sm} 12px`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	fontSize: textSize.base,
-	background: vars.v2.bg,
-	color: vars.v2.ink,
+	background: vars.color.bg,
+	color: vars.color.ink,
 	outline: "none",
 	resize: "vertical",
 	minHeight: 80,

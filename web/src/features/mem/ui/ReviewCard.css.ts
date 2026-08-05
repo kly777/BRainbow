@@ -17,11 +17,11 @@ export const cardWrap = style({
 export const previewBanner = style({
 	padding: `${space.xs} ${space.md}`,
 	marginBottom: space.md,
-	background: vars.v2.badgeNewBg,
-	color: vars.v2.badgeNewText,
+	background: vars.color.badgeNewBg,
+	color: vars.color.badgeNewText,
 	borderRadius: radius.md,
 	fontSize: textSize.xs,
-	fontFamily: vars.v2.fontMono,
+	fontFamily: vars.font.mono,
 });
 
 export const cardStage = style({
@@ -30,8 +30,8 @@ export const cardStage = style({
 
 export const card = style({
 	width: "100%",
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.borderStrong}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.borderStrong}`,
 	borderRadius: radius.lg,
 	boxShadow: "0 2px 10px rgb(0 0 0 / 5%)",
 	overflow: "hidden",
@@ -50,7 +50,7 @@ const answerIn = keyframes({
 export const answer = style({
 	display: "flex",
 	flexDirection: "column",
-	borderTop: `1px solid ${vars.v2.border}`,
+	borderTop: `1px solid ${vars.color.border}`,
 	animation: `${answerIn} 0.3s ease`,
 	"@media": {
 		"(prefers-reduced-motion: reduce)": { animation: "none" },
@@ -63,23 +63,23 @@ export const cardTab = style({
 	justifyContent: "space-between",
 	gap: space.sm,
 	padding: `${space.sm} ${space.md}`,
-	borderBottom: `1px solid ${vars.v2.border}`,
-	background: vars.v2.bg,
+	borderBottom: `1px solid ${vars.color.border}`,
+	background: vars.color.bg,
 });
 
 export const cardTabText = style({
-	fontFamily: vars.v2.fontDisplay,
+	fontFamily: vars.font.display,
 	fontSize: textSize.xs,
 	fontWeight: 600,
 	letterSpacing: "0.12em",
 	textTransform: "uppercase",
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 export const cardTabNo = style({
 	fontSize: textSize.xs,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.inkFaint,
+	fontFamily: vars.font.mono,
+	color: vars.color.inkFaint,
 	fontVariantNumeric: "tabular-nums",
 });
 
@@ -97,7 +97,7 @@ export const cardBody = style({
 export const content = style({
 	fontSize: textSize.base,
 	lineHeight: 1.75,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	wordBreak: "break-word",
 });
 
@@ -106,8 +106,8 @@ export const cardTools = style({
 	alignItems: "center",
 	gap: "2px",
 	padding: `${space.xs} ${space.md}`,
-	borderTop: `1px solid ${vars.v2.border}`,
-	background: vars.v2.bg,
+	borderTop: `1px solid ${vars.color.border}`,
+	background: vars.color.bg,
 });
 
 export const toolBtn = style({
@@ -123,7 +123,7 @@ export const toolBtn = style({
 	selectors: {
 		"&:hover:not(:disabled)": {
 			opacity: 1,
-			background: vars.v2.surfaceRaised,
+			background: vars.color.surfaceRaised,
 		},
 		"&:disabled": { opacity: 0.2, cursor: "default" },
 	},
@@ -132,8 +132,8 @@ export const toolBtn = style({
 export const mnemonic = style({
 	marginTop: space.md,
 	padding: "12px 16px",
-	background: vars.v2.badgeReviewBg,
-	border: `1px solid ${vars.v2.badgeReviewText}`,
+	background: vars.color.badgeReviewBg,
+	border: `1px solid ${vars.color.badgeReviewText}`,
 	borderRadius: radius.md,
 	fontSize: textSize.sm,
 });
@@ -142,25 +142,25 @@ export const mnemonicLabel = style({
 	fontWeight: 600,
 	marginBottom: 4,
 	fontSize: 12,
-	color: vars.v2.badgeReviewText,
+	color: vars.color.badgeReviewText,
 });
 
 export const mnemonicLoading = style({
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 });
 
 export const banner = style({
 	padding: `${space.sm} ${space.md}`,
 	marginBottom: space.md,
-	background: vars.v2.badgeLearningBg,
-	color: vars.v2.badgeLearningText,
+	background: vars.color.badgeLearningBg,
+	color: vars.color.badgeLearningText,
 	borderRadius: radius.md,
 	fontSize: textSize.sm,
 });
 
 export const cardFlat = style({
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.borderStrong}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.borderStrong}`,
 	borderRadius: radius.lg,
 	padding: space.xl,
 });
@@ -173,39 +173,39 @@ export const sectionLabel = style({
 	display: "flex",
 	alignItems: "center",
 	gap: space.sm,
-	fontFamily: vars.v2.fontDisplay,
+	fontFamily: vars.font.display,
 	fontSize: textSize.xs,
 	fontWeight: 600,
 	letterSpacing: "0.12em",
 	textTransform: "uppercase",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	marginBottom: space.sm,
 });
 
 export const divider = style({
 	height: 1,
-	background: vars.v2.border,
+	background: vars.color.border,
 	margin: `${space.md} 0`,
 });
 
 export const editArea = style({
 	width: "100%",
 	padding: space.md,
-	border: `1px solid ${vars.v2.borderStrong}`,
+	border: `1px solid ${vars.color.borderStrong}`,
 	borderRadius: radius.md,
 	fontSize: textSize.base,
-	fontFamily: vars.v2.fontMono,
+	fontFamily: vars.font.mono,
 	lineHeight: 1.6,
 	resize: "vertical",
-	background: vars.v2.bg,
-	color: vars.v2.ink,
+	background: vars.color.bg,
+	color: vars.color.ink,
 	transition: "border-color 0.15s, box-shadow 0.15s",
 	boxSizing: "border-box",
 	outline: "none",
 	selectors: {
 		"&:focus": {
-			borderColor: vars.v2.accent,
-			boxShadow: `0 0 0 2px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 0 0 2px ${vars.color.accentSoft}`,
 		},
 	},
 });
@@ -221,8 +221,8 @@ export const actionRow = style({
 	justifyContent: "center",
 	gap: space.sm,
 	padding: `${space.sm} ${space.lg}`,
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.borderStrong}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.borderStrong}`,
 	borderBottom: "none",
 	borderRadius: "14px 14px 0 0",
 	boxShadow: "0 -4px 16px rgb(0 0 0 / 8%)",
@@ -277,34 +277,34 @@ export const ratingLabel = style({
 
 export const ratingTime = style({
 	fontSize: 11,
-	fontFamily: vars.v2.fontMono,
+	fontFamily: vars.font.mono,
 	opacity: 0.8,
 });
 
 export const again = style({
-	background: vars.v2.badgeRelearningBg,
-	color: vars.v2.badgeRelearningText,
+	background: vars.color.badgeRelearningBg,
+	color: vars.color.badgeRelearningText,
 });
 
 export const hard = style({
-	background: vars.v2.badgeLearningBg,
-	color: vars.v2.badgeLearningText,
+	background: vars.color.badgeLearningBg,
+	color: vars.color.badgeLearningText,
 });
 
 export const good = style({
-	background: vars.v2.badgeReviewBg,
-	color: vars.v2.badgeReviewText,
+	background: vars.color.badgeReviewBg,
+	color: vars.color.badgeReviewText,
 });
 
 export const easy = style({
-	background: vars.v2.badgeNewBg,
-	color: vars.v2.badgeNewText,
+	background: vars.color.badgeNewBg,
+	color: vars.color.badgeNewText,
 });
 
 export const empty = style({
 	textAlign: "center",
 	padding: `${space.xl} 0`,
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 	display: "flex",
 	flexDirection: "column",
 	alignItems: "center",
@@ -312,9 +312,9 @@ export const empty = style({
 });
 
 export const emptyTitle = style({
-	fontFamily: vars.v2.fontDisplay,
+	fontFamily: vars.font.display,
 	fontSize: textSize.lg,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 export const emptyHint = style({

@@ -134,54 +134,54 @@ export const progress = style({
 
 // ── 类型色 ──
 export const error = style({
-	background: vars.v2.dangerSubtle,
+	background: vars.color.dangerSubtle,
 	border: "1px solid oklch(0.85 0.06 25)",
 	color: "oklch(0.3 0.09 25)",
 });
 
 export const warning = style({
-	background: vars.v2.warningSubtle,
+	background: vars.color.warningSubtle,
 	border: "1px solid oklch(0.88 0.09 85)",
 	color: "oklch(0.35 0.08 60)",
 });
 
 export const success = style({
-	background: vars.v2.successSubtle,
+	background: vars.color.successSubtle,
 	border: "1px solid oklch(0.85 0.08 160)",
 	color: "oklch(0.3 0.08 160)",
 });
 
 export const info = style({
-	background: vars.v2.accentSoft,
+	background: vars.color.accentSoft,
 	border: "1px solid oklch(0.85 0.08 165)",
 	color: "oklch(0.3 0.07 165)",
 });
 
 // 类型内 icon/code 色
 globalStyle(`.${error} .icon`, {
-	background: vars.v2.danger,
-	color: vars.v2.white,
+	background: vars.color.danger,
+	color: vars.color.white,
 });
 globalStyle(`.${error} .code`, {
 	background: "oklch(0.55 0.2 25 / 0.12)",
 });
 globalStyle(`.${warning} .icon`, {
-	background: vars.v2.warning,
-	color: vars.v2.white,
+	background: vars.color.warning,
+	color: vars.color.white,
 });
 globalStyle(`.${warning} .code`, {
 	background: "oklch(0.6 0.16 85 / 0.12)",
 });
 globalStyle(`.${success} .icon`, {
-	background: vars.v2.success,
-	color: vars.v2.white,
+	background: vars.color.success,
+	color: vars.color.white,
 });
 globalStyle(`.${success} .code`, {
 	background: "oklch(0.55 0.17 160 / 0.12)",
 });
 globalStyle(`.${info} .icon`, {
-	background: vars.v2.accent,
-	color: vars.v2.white,
+	background: vars.color.accent,
+	color: vars.color.white,
 });
 globalStyle(`.${info} .code`, {
 	background: "oklch(0.52 0.1 165 / 0.12)",

@@ -13,35 +13,35 @@ export const editor = style({
 export const textarea = style({
 	width: "100%",
 	padding: space.md,
-	border: `2px solid ${vars.v2.border}`,
+	border: `2px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	fontSize: textSize.base,
 	fontFamily:
 		"ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace",
 	lineHeight: 1.6,
 	resize: "vertical",
-	background: vars.v2.surface,
-	color: vars.v2.ink,
+	background: vars.color.surface,
+	color: vars.color.ink,
 	transition: "border-color 0.15s",
 	boxSizing: "border-box",
 	selectors: {
-		"&:focus": { outline: "none", borderColor: vars.v2.accent },
+		"&:focus": { outline: "none", borderColor: vars.color.accent },
 	},
 });
 
 export const textareaDrag = composeStyles(
 	textarea,
 	style({
-		borderColor: vars.v2.accent,
-		background: vars.v2.accentSoft,
+		borderColor: vars.color.accent,
+		background: vars.color.accentSoft,
 	}),
 );
 
 export const preview = style({
 	marginTop: space.sm,
 	padding: space.md,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	minHeight: 40,
 });

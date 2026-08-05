@@ -8,8 +8,8 @@ import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 export { btnGhost as cancel, btnPrimary as submit } from "@styles/base.css.ts";
 
 export const hintCard = style({
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.lg,
 	overflow: "hidden",
 });
@@ -18,17 +18,17 @@ export const hintTab = style({
 	display: "flex",
 	alignItems: "center",
 	padding: `${space.sm} ${space.md}`,
-	borderBottom: `1px solid ${vars.v2.border}`,
-	background: vars.v2.bg,
+	borderBottom: `1px solid ${vars.color.border}`,
+	background: vars.color.bg,
 });
 
 export const hintTabText = style({
-	fontFamily: vars.v2.fontDisplay,
+	fontFamily: vars.font.display,
 	fontSize: textSize.xs,
 	fontWeight: 600,
 	letterSpacing: "0.12em",
 	textTransform: "uppercase",
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 export const hintBody = style({
@@ -37,7 +37,7 @@ export const hintBody = style({
 
 export const hintLead = style({
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	margin: `0 0 ${space.sm}`,
 });
 
@@ -49,48 +49,48 @@ export const hintBlock = style({
 });
 
 export const hintName = style({
-	fontFamily: vars.v2.fontDisplay,
+	fontFamily: vars.font.display,
 	fontSize: textSize.sm,
 	fontWeight: 600,
 	margin: "0 0 4px",
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 export const hintExample = style({
-	fontFamily: vars.v2.fontMono,
+	fontFamily: vars.font.mono,
 	fontSize: 12,
 	lineHeight: 1.6,
-	background: vars.v2.bg,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.bg,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	padding: `${space.sm} ${space.md}`,
 });
 
 export const hintNote = style({
 	fontSize: 11,
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 	margin: 0,
 });
 
 export const label = style({
 	display: "block",
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });
 
 export const textInput = style({
 	width: "100%",
 	fontSize: textSize.sm,
-	color: vars.v2.ink,
-	background: vars.v2.bg,
-	border: `1px solid ${vars.v2.border}`,
+	color: vars.color.ink,
+	background: vars.color.bg,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	padding: `${space.sm} 10px`,
 });
 
 export const previewCard = style({
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.lg,
 	overflow: "hidden",
 });
@@ -100,23 +100,23 @@ export const previewTab = style({
 	alignItems: "baseline",
 	justifyContent: "space-between",
 	padding: `${space.sm} ${space.md}`,
-	borderBottom: `1px solid ${vars.v2.border}`,
-	background: vars.v2.bg,
+	borderBottom: `1px solid ${vars.color.border}`,
+	background: vars.color.bg,
 });
 
 export const previewTabText = style({
-	fontFamily: vars.v2.fontDisplay,
+	fontFamily: vars.font.display,
 	fontSize: textSize.xs,
 	fontWeight: 600,
 	letterSpacing: "0.12em",
 	textTransform: "uppercase",
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 export const previewTabNo = style({
 	fontSize: textSize.xs,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.accent,
+	fontFamily: vars.font.mono,
+	color: vars.color.accent,
 });
 
 export const previewBody = style({
@@ -133,18 +133,18 @@ export const previewTable = style({
 export const previewTh = style({
 	textAlign: "left",
 	fontSize: textSize.xs,
-	fontFamily: vars.v2.fontMono,
+	fontFamily: vars.font.mono,
 	fontWeight: 500,
 	textTransform: "uppercase",
 	letterSpacing: "0.05em",
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 	padding: "6px 8px",
 });
 
 export const previewTd = style({
 	padding: "6px 8px",
-	borderBottom: `1px solid ${vars.v2.border}`,
-	color: vars.v2.ink,
+	borderBottom: `1px solid ${vars.color.border}`,
+	color: vars.color.ink,
 	maxWidth: 240,
 	overflow: "hidden",
 	textOverflow: "ellipsis",
@@ -157,27 +157,27 @@ export const previewTag = style({
 	padding: "1px 6px",
 	marginRight: 4,
 	borderRadius: 999,
-	background: vars.v2.badgeNewBg,
-	color: vars.v2.badgeNewText,
+	background: vars.color.badgeNewBg,
+	color: vars.color.badgeNewText,
 });
 
 export const previewCount = style({
 	fontSize: 12,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.inkFaint,
+	fontFamily: vars.font.mono,
+	color: vars.color.inkFaint,
 	margin: `${space.sm} ${space.md} 0`,
 });
 
 export const tagCard = style({
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.lg,
 	padding: space.md,
 });
 
 export const importErrors = style({
 	fontSize: textSize.sm,
-	color: vars.v2.badgeRelearningText,
+	color: vars.color.badgeRelearningText,
 	margin: `${space.sm} 0 0`,
 });
 
@@ -185,14 +185,14 @@ export const importErrorList = style({
 	margin: `${space.xs} 0 0`,
 	paddingLeft: space.lg,
 	fontSize: textSize.sm,
-	color: vars.v2.badgeRelearningText,
+	color: vars.color.badgeRelearningText,
 });
 
 export const resultCard = style({
 	width: "100%",
 	maxWidth: 480,
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.borderStrong}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.borderStrong}`,
 	borderRadius: radius.lg,
 	padding: space.xl,
 	textAlign: "center",
@@ -204,16 +204,16 @@ export const resultMark = style({
 	height: 48,
 	margin: `0 auto ${space.md}`,
 	borderRadius: "50%",
-	background: vars.v2.accent,
-	color: vars.v2.white,
+	background: vars.color.accent,
+	color: vars.color.white,
 	fontSize: 24,
 	lineHeight: "48px",
 });
 
 export const resultTitle = style({
-	fontFamily: vars.v2.fontDisplay,
+	fontFamily: vars.font.display,
 	fontSize: textSize.lg,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 export const resultActions = style({

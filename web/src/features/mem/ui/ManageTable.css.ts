@@ -11,8 +11,8 @@ export const tableCard = style({
 	minHeight: 0,
 	display: "flex",
 	flexDirection: "column",
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.lg,
 });
 
@@ -31,13 +31,13 @@ export const table = style({
 const thBase = {
 	textAlign: "left" as const,
 	fontSize: textSize.xs,
-	fontFamily: vars.v2.fontMono,
+	fontFamily: vars.font.mono,
 	fontWeight: 500,
 	textTransform: "uppercase" as const,
 	letterSpacing: "0.05em",
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 	padding: "6px 10px",
-	borderBottom: `1px solid ${vars.v2.border}`,
+	borderBottom: `1px solid ${vars.color.border}`,
 	whiteSpace: "nowrap" as const,
 };
 
@@ -48,7 +48,7 @@ export const thSort = style({
 	cursor: "pointer",
 	userSelect: "none",
 	selectors: {
-		"&:hover": { color: vars.v2.ink },
+		"&:hover": { color: vars.color.ink },
 	},
 });
 
@@ -59,13 +59,13 @@ export const thCb = style({
 
 const tdBase = {
 	padding: "8px 10px",
-	borderBottom: `1px solid ${vars.v2.border}`,
+	borderBottom: `1px solid ${vars.color.border}`,
 	verticalAlign: "middle" as const,
 };
 
 export const td = style({
 	...tdBase,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	maxWidth: 220,
 	overflow: "hidden",
 	textOverflow: "ellipsis",
@@ -77,18 +77,18 @@ export const tdCb = style({ ...tdBase, width: 32 });
 
 export const tdNum = style({
 	...tdBase,
-	fontFamily: vars.v2.fontMono,
+	fontFamily: vars.font.mono,
 	fontSize: 12,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	whiteSpace: "nowrap",
 	fontVariantNumeric: "tabular-nums",
 });
 
 export const tdDue = style({
 	...tdBase,
-	fontFamily: vars.v2.fontMono,
+	fontFamily: vars.font.mono,
 	fontSize: 12,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	whiteSpace: "nowrap",
 	fontVariantNumeric: "tabular-nums",
 });
@@ -102,14 +102,14 @@ export const tdAct = style({
 export const row = style({
 	transition: "background 0.1s",
 	selectors: {
-		"&:hover": { background: vars.v2.bg },
+		"&:hover": { background: vars.color.bg },
 	},
 });
 
 export const rowActive = style({
-	background: vars.v2.accentSoft,
+	background: vars.color.accentSoft,
 	selectors: {
-		"&:hover": { background: vars.v2.accentSoft },
+		"&:hover": { background: vars.color.accentSoft },
 	},
 });
 
@@ -123,23 +123,23 @@ export const cellTag = style({
 	fontSize: 10,
 	padding: "1px 6px",
 	borderRadius: 999,
-	background: vars.v2.badgeNewBg,
-	color: vars.v2.badgeNewText,
+	background: vars.color.badgeNewBg,
+	color: vars.color.badgeNewText,
 	whiteSpace: "nowrap",
 });
 
 export const delBtn = style({
 	background: "none",
 	border: "none",
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 	cursor: "pointer",
 	fontSize: 12,
 	padding: "2px 4px",
 	borderRadius: 4,
 	selectors: {
 		"&:hover": {
-			color: vars.v2.badgeRelearningText,
-			background: vars.v2.badgeRelearningBg,
+			color: vars.color.badgeRelearningText,
+			background: vars.color.badgeRelearningBg,
 		},
 	},
 });
@@ -154,13 +154,13 @@ export const pagination = style({
 
 export const pageInfo = style({
 	fontSize: 12,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.inkFaint,
+	fontFamily: vars.font.mono,
+	color: vars.color.inkFaint,
 	fontVariantNumeric: "tabular-nums",
 });
 
 export const empty = style({
 	textAlign: "center",
 	padding: `${space.xl} 0`,
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 });

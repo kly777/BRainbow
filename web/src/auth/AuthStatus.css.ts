@@ -15,7 +15,7 @@ export const overlay = style({
 });
 
 export const form = style({
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	padding: space.xl,
 	borderRadius: radius.lg,
 	display: "flex",
@@ -24,18 +24,18 @@ export const form = style({
 	minWidth: 300,
 	maxWidth: 360,
 	boxShadow: "0 8px 32px oklch(0 0 0 / 0.15)",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 });
 
 export const title = style({
 	margin: 0,
 	fontSize: textSize.lg,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	textAlign: "center",
 });
 
 export const error = style({
-	color: vars.v2.danger,
+	color: vars.color.danger,
 	fontSize: textSize.sm,
 	margin: 0,
 	textAlign: "center",
@@ -43,16 +43,16 @@ export const error = style({
 
 export const input = style({
 	padding: `${space.sm} 12px`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	fontSize: textSize.base,
-	background: vars.v2.bg,
-	color: vars.v2.ink,
+	background: vars.color.bg,
+	color: vars.color.ink,
 	outline: "none",
 	selectors: {
 		"&:focus": {
-			borderColor: vars.v2.accent,
-			boxShadow: `0 0 0 2px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 0 0 2px ${vars.color.accentSoft}`,
 		},
 	},
 });
@@ -67,20 +67,20 @@ export const btnSubmit = style({
 	padding: `${space.sm} 0`,
 	border: "none",
 	borderRadius: radius.md,
-	background: vars.v2.accent,
-	color: vars.v2.white,
+	background: vars.color.accent,
+	color: vars.color.white,
 	fontSize: textSize.base,
 	fontWeight: 600,
 	cursor: "pointer",
 	selectors: {
-		"&:hover": { background: vars.v2.accentStrong },
+		"&:hover": { background: vars.color.accentStrong },
 	},
 });
 
 export const btnLink = style({
 	background: "none",
 	border: "none",
-	color: vars.v2.accent,
+	color: vars.color.accent,
 	fontSize: textSize.sm,
 	cursor: "pointer",
 	padding: space.xs,
@@ -91,13 +91,13 @@ export const btnLink = style({
 
 export const btnCancel = style({
 	padding: `${space.sm} 0`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	background: "transparent",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	fontSize: textSize.sm,
 	cursor: "pointer",
 	selectors: {
-		"&:hover": { background: vars.v2.bg },
+		"&:hover": { background: vars.color.bg },
 	},
 });

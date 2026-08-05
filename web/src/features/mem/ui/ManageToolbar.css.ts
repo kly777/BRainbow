@@ -11,8 +11,8 @@ export const toolbar = style({
 	flexWrap: "wrap",
 	gap: space.sm,
 	padding: `${space.sm} 20px`,
-	borderBottom: `1px solid ${vars.v2.border}`,
-	background: vars.v2.surface,
+	borderBottom: `1px solid ${vars.color.border}`,
+	background: vars.color.surface,
 });
 
 export const searchBox = style({
@@ -24,15 +24,15 @@ export const searchBox = style({
 export const searchInput = style({
 	width: "100%",
 	fontSize: textSize.sm,
-	color: vars.v2.ink,
-	background: vars.v2.bg,
-	border: `1px solid ${vars.v2.border}`,
+	color: vars.color.ink,
+	background: vars.color.bg,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	padding: `${space.xs} 12px`,
 	selectors: {
 		"&:focus": {
-			borderColor: vars.v2.accent,
-			boxShadow: `0 0 0 2px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 0 0 2px ${vars.color.accentSoft}`,
 		},
 	},
 });
@@ -47,15 +47,15 @@ export const tagFilter = style({
 
 export const modeToggle = style({
 	fontSize: textSize.xs,
-	fontFamily: vars.v2.fontMono,
-	border: `1px solid ${vars.v2.border}`,
+	fontFamily: vars.font.mono,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.sm,
 	background: "transparent",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	padding: "3px 8px",
 	cursor: "pointer",
 	selectors: {
-		"&:hover": { color: vars.v2.ink, background: vars.v2.surfaceRaised },
+		"&:hover": { color: vars.color.ink, background: vars.color.surfaceRaised },
 	},
 });
 
@@ -66,8 +66,8 @@ export const activeTag = style({
 	fontSize: textSize.xs,
 	padding: "2px 8px",
 	borderRadius: 999,
-	background: vars.v2.badgeNewBg,
-	color: vars.v2.badgeNewText,
+	background: vars.color.badgeNewBg,
+	color: vars.color.badgeNewText,
 });
 
 export const excludedTag = style({
@@ -77,8 +77,8 @@ export const excludedTag = style({
 	fontSize: textSize.xs,
 	padding: "2px 8px",
 	borderRadius: 999,
-	background: vars.v2.badgeSuspendedBg,
-	color: vars.v2.badgeSuspendedText,
+	background: vars.color.badgeSuspendedBg,
+	color: vars.color.badgeSuspendedText,
 });
 
 export const tagClear = style({
@@ -98,24 +98,24 @@ export const clearAllBtn = style({
 	fontSize: textSize.xs,
 	border: "none",
 	background: "none",
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 	cursor: "pointer",
 	padding: "2px 6px",
 	selectors: {
-		"&:hover": { color: vars.v2.ink },
+		"&:hover": { color: vars.color.ink },
 	},
 });
 
 export const tagInput = style({
 	fontSize: textSize.xs,
 	width: 120,
-	color: vars.v2.ink,
-	background: vars.v2.bg,
-	border: `1px solid ${vars.v2.border}`,
+	color: vars.color.ink,
+	background: vars.color.bg,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.sm,
 	padding: "3px 8px",
 	selectors: {
-		"&:focus": { borderColor: vars.v2.accent },
+		"&:focus": { borderColor: vars.color.accent },
 	},
 });
 
@@ -124,8 +124,8 @@ export const tagDropdown = style({
 	top: "calc(100% + 4px)",
 	left: 0,
 	zIndex: 20,
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	boxShadow: "0 4px 12px rgb(0 0 0 / 8%)",
 });
@@ -139,22 +139,22 @@ export const tagOption = style({
 	border: "none",
 	background: "none",
 	cursor: "pointer",
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	selectors: {
-		"&:hover": { background: vars.v2.surfaceRaised },
+		"&:hover": { background: vars.color.surfaceRaised },
 	},
 });
 
 export const exportBtn = style({
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	background: "transparent",
-	border: `1px solid ${vars.v2.borderStrong}`,
+	border: `1px solid ${vars.color.borderStrong}`,
 	borderRadius: radius.md,
 	padding: `${space.xs} 12px`,
 	cursor: "pointer",
 	selectors: {
-		"&:hover": { background: vars.v2.surfaceRaised, color: vars.v2.ink },
+		"&:hover": { background: vars.color.surfaceRaised, color: vars.color.ink },
 	},
 });
 
@@ -165,23 +165,23 @@ export const filterGroup = style({
 
 export const filterBtn = style({
 	fontSize: textSize.xs,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.inkMuted,
+	fontFamily: vars.font.mono,
+	color: vars.color.inkMuted,
 	background: "transparent",
 	border: "none",
 	borderRadius: `calc(${radius.md} - 2px)`,
 	padding: "3px 8px",
 	cursor: "pointer",
 	selectors: {
-		"&:hover": { color: vars.v2.ink },
+		"&:hover": { color: vars.color.ink },
 	},
 });
 
 export const filterActive = style({
 	fontSize: textSize.xs,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.white,
-	background: vars.v2.accent,
+	fontFamily: vars.font.mono,
+	color: vars.color.white,
+	background: vars.color.accent,
 	border: "none",
 	borderRadius: `calc(${radius.md} - 2px)`,
 	padding: "3px 8px",

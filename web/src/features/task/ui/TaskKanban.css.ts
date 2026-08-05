@@ -20,7 +20,7 @@ export const board = style({
 });
 
 export const column = style({
-	background: vars.v2.surfaceRaised,
+	background: vars.color.surfaceRaised,
 	borderRadius: radius.lg,
 	display: "flex",
 	flexDirection: "column",
@@ -48,15 +48,15 @@ export const columnIcon = style({
 export const columnLabel = style({
 	fontSize: textSize.base,
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	flex: 1,
 });
 
 export const columnCount = style({
 	fontSize: textSize.sm,
 	fontWeight: 700,
-	background: vars.v2.border,
-	color: vars.v2.inkMuted,
+	background: vars.color.border,
+	color: vars.color.inkMuted,
 	padding: `${space.xs} 10px`,
 	borderRadius: radius.lg,
 	minWidth: 24,
@@ -77,10 +77,10 @@ export const columnBody = style({
 
 export const emptyCol = style({
 	textAlign: "center",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	fontSize: textSize.sm,
 	padding: `${space.xl} 16px`,
-	border: `2px dashed ${vars.v2.border}`,
+	border: `2px dashed ${vars.color.border}`,
 	borderRadius: radius.md,
 });
 
@@ -89,13 +89,13 @@ export const card = style({
 	width: "100%",
 	font: "inherit",
 	textAlign: "inherit",
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	borderRadius: radius.md,
 	padding: space.md,
 	boxShadow: "0 1px 2px oklch(0 0 0 / 0.06)",
 	cursor: "grab",
 	transition: "transform 0.12s, box-shadow 0.12s",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	selectors: {
 		"&:active": { cursor: "grabbing" },
 		"&:hover": {
@@ -114,8 +114,8 @@ export const cardTitle = style({
 
 export const subBadge = style({
 	fontSize: textSize.xs,
-	background: vars.v2.accentSoft,
-	color: vars.v2.accent,
+	background: vars.color.accentSoft,
+	color: vars.color.accent,
 	padding: space.xs,
 	borderRadius: radius.sm,
 	fontWeight: 600,
@@ -126,7 +126,7 @@ export const subBadge = style({
 export const cardTitleText = style({
 	fontSize: textSize.sm,
 	fontWeight: 600,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	lineHeight: 1.4,
 	overflow: "hidden",
 	display: "-webkit-box",
@@ -136,7 +136,7 @@ export const cardTitleText = style({
 
 export const cardDesc = style({
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	margin: `0 0 ${space.sm} 0`,
 	lineHeight: 1.4,
 	overflow: "hidden",
@@ -153,8 +153,8 @@ export const cardMeta = style({
 
 export const effortTag = style({
 	fontSize: textSize.xs,
-	background: vars.v2.accentSoft,
-	color: vars.v2.accent,
+	background: vars.color.accentSoft,
+	color: vars.color.accent,
 	padding: `${space.xs} 6px`,
 	borderRadius: radius.sm,
 	fontWeight: 500,
@@ -162,5 +162,5 @@ export const effortTag = style({
 
 export const cardDate = style({
 	fontSize: textSize.xs,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });

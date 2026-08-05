@@ -32,9 +32,9 @@ export const preview = style({
 	alignItems: "flex-start",
 	justifyContent: "center",
 	padding: space.lg,
-	background: vars.v2.surfaceRaised,
+	background: vars.color.surfaceRaised,
 	borderRadius: radius.lg,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 });
 
 export const exportBtns = style({
@@ -45,7 +45,7 @@ export const exportBtns = style({
 
 export const renderLabel = style({
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	display: "block",
 	marginBottom: space.xs,
 });
@@ -57,9 +57,9 @@ export const renderMode = style({
 export const stats = style({
 	marginTop: space.sm,
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.border}`,
+	color: vars.color.inkMuted,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	padding: `${space.md} 16px`,
 });
@@ -67,7 +67,7 @@ export const stats = style({
 globalStyle(`${stats} h3`, {
 	margin: `0 0 ${space.sm} 0`,
 	fontSize: textSize.base,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 globalStyle(`${stats} table`, {
@@ -80,12 +80,12 @@ globalStyle(`${stats} td`, {
 });
 
 globalStyle(`${stats} td:first-child`, {
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	whiteSpace: "nowrap",
 });
 
 globalStyle(`${stats} td:last-child`, {
 	textAlign: "right",
 	fontFamily: "monospace",
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });

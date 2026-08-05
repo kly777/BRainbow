@@ -36,23 +36,23 @@ export const inputRow = style({
 	alignItems: "center",
 	gap: space.sm,
 	padding: `${space.sm} 16px`,
-	border: `1px solid ${vars.v2.borderStrong}`,
+	border: `1px solid ${vars.color.borderStrong}`,
 	borderRadius: radius.lg,
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	boxShadow: "0 8px 32px oklch(0 0 0 / 0.14)",
 	transition: "border-color 0.15s, box-shadow 0.15s",
 	selectors: {
 		"&:focus-within": {
-			borderColor: vars.v2.accent,
-			boxShadow: `0 8px 32px oklch(0 0 0 / 0.14), 0 0 0 2px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 8px 32px oklch(0 0 0 / 0.14), 0 0 0 2px ${vars.color.accentSoft}`,
 		},
 	},
 });
 
 export const prefix = style({
 	fontSize: textSize.lg,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.accent,
+	fontFamily: vars.font.mono,
+	color: vars.color.accent,
 	fontWeight: 600,
 	minWidth: 14,
 	textAlign: "center",
@@ -64,8 +64,8 @@ export const input = style({
 	outline: "none",
 	background: "transparent",
 	fontSize: textSize.base,
-	color: vars.v2.ink,
-	caretColor: vars.v2.accent,
+	color: vars.color.ink,
+	caretColor: vars.color.accent,
 	fontFamily: "inherit",
 	selectors: {
 		"&:focus-visible": {
@@ -73,13 +73,13 @@ export const input = style({
 			boxShadow: "none",
 			borderColor: "transparent",
 		},
-		"&::placeholder": { color: vars.v2.inkFaint },
+		"&::placeholder": { color: vars.color.inkFaint },
 	},
 });
 
 export const suggestions = style({
-	background: vars.v2.surface,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.surface,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.lg,
 	boxShadow: "0 8px 32px oklch(0 0 0 / 0.12)",
 	marginTop: 6,
@@ -104,8 +104,8 @@ export const suggestionItem = style({
 	transition: "background 0.1s",
 	position: "relative",
 	selectors: {
-		"&:hover": { background: vars.v2.surfaceRaised },
-		"&:focus-visible": { outline: "none", background: vars.v2.surfaceRaised },
+		"&:hover": { background: vars.color.surfaceRaised },
+		"&:focus-visible": { outline: "none", background: vars.color.surfaceRaised },
 		"&:hover::before, &:focus-visible::before": {
 			content: '""',
 			position: "absolute",
@@ -114,7 +114,7 @@ export const suggestionItem = style({
 			bottom: "20%",
 			width: 3,
 			borderRadius: 2,
-			background: vars.v2.accent,
+			background: vars.color.accent,
 		},
 	},
 });
@@ -122,45 +122,45 @@ export const suggestionItem = style({
 export const sugLabel = style({
 	fontSize: textSize.base,
 	fontWeight: 600,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.ink,
+	fontFamily: vars.font.mono,
+	color: vars.color.ink,
 	minWidth: 60,
 });
 
 export const sugDesc = style({
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	flex: 1,
 });
 
 export const sugPath = style({
 	fontSize: textSize.sm,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.inkFaint,
+	fontFamily: vars.font.mono,
+	color: vars.color.inkFaint,
 });
 
 export const empty = style({
 	padding: `${space.md} 16px`,
 	textAlign: "center",
 	fontSize: textSize.sm,
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 });
 
 export const searchHint = style({
 	padding: `${space.sm} 16px`,
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });
 
 globalStyle(`${searchHint} kbd`, {
 	display: "inline-block",
 	padding: "1px 6px",
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: 4,
-	background: vars.v2.bg,
-	fontFamily: vars.v2.fontMono,
+	background: vars.color.bg,
+	fontFamily: vars.font.mono,
 	fontSize: textSize.xs,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 });
 
 export const fab = style({
@@ -178,10 +178,10 @@ export const fab = style({
 			height: 48,
 			border: "none",
 			borderRadius: "50%",
-			background: vars.v2.accent,
-			color: vars.v2.white,
+			background: vars.color.accent,
+			color: vars.color.white,
 			fontSize: 22,
-			boxShadow: `0 2px 12px ${vars.v2.accentSoft}`,
+			boxShadow: `0 2px 12px ${vars.color.accentSoft}`,
 			cursor: "pointer",
 			transition: "transform 0.15s",
 			selectors: {

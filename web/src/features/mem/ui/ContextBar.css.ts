@@ -14,8 +14,8 @@ export const contextBar = style({
 	justifyContent: "space-between",
 	gap: space.lg,
 	padding: `${space.xs} 20px`,
-	borderBottom: `1px solid ${vars.v2.border}`,
-	background: vars.v2.surface,
+	borderBottom: `1px solid ${vars.color.border}`,
+	background: vars.color.surface,
 	flexShrink: 0,
 	flexWrap: "wrap",
 	"@media": {
@@ -31,8 +31,8 @@ export const ctxStats = style({
 
 export const ctxStat = style({
 	fontSize: textSize.xs,
-	fontFamily: vars.v2.fontMono,
-	color: vars.v2.inkFaint,
+	fontFamily: vars.font.mono,
+	color: vars.color.inkFaint,
 	whiteSpace: "nowrap",
 	fontVariantNumeric: "tabular-nums",
 });

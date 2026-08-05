@@ -14,7 +14,7 @@ export const breadcrumb = style({
 
 export const link = style({
 	fontSize: textSize.base,
-	color: vars.v2.accent,
+	color: vars.color.accent,
 	textDecoration: "none",
 	fontWeight: 500,
 	selectors: {
@@ -24,12 +24,12 @@ export const link = style({
 
 export const current = style({
 	fontSize: textSize.base,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	fontWeight: 400,
 });
 
 export const sep = style({
 	fontSize: textSize.lg,
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 	userSelect: "none",
 });

@@ -9,15 +9,15 @@ export const toolbar = style({
 	alignItems: "center",
 	gap: space.md,
 	padding: `${space.sm} 16px`,
-	background: vars.v2.surfaceRaised,
-	borderBottom: `1px solid ${vars.v2.border}`,
+	background: vars.color.surfaceRaised,
+	borderBottom: `1px solid ${vars.color.border}`,
 	flexShrink: 0,
 });
 
 export const title = style({
 	fontSize: textSize.base,
 	fontWeight: 500,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });
 
 export const actions = style({
@@ -29,13 +29,13 @@ export const actions = style({
 export const backBtn = style({
 	padding: `${space.xs} 10px`,
 	fontSize: textSize.sm,
-	background: vars.v2.bg,
-	color: vars.v2.inkMuted,
-	border: `1px solid ${vars.v2.border}`,
+	background: vars.color.bg,
+	color: vars.color.inkMuted,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	cursor: "pointer",
 	fontFamily: "inherit",
 	selectors: {
-		"&:hover": { background: vars.v2.surfaceRaised },
+		"&:hover": { background: vars.color.surfaceRaised },
 	},
 });

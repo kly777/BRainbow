@@ -7,8 +7,8 @@ import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 export const page = style({
 	display: "flex",
 	height: "100vh",
-	background: vars.v2.bg,
-	color: vars.v2.ink,
+	background: vars.color.bg,
+	color: vars.color.ink,
 });
 
 export const main = style({
@@ -25,8 +25,8 @@ export const topBar = style({
 	justifyContent: "space-between",
 	gap: space.md,
 	padding: `${space.sm} 20px`,
-	borderBottom: `1px solid ${vars.v2.border}`,
-	background: vars.v2.surface,
+	borderBottom: `1px solid ${vars.color.border}`,
+	background: vars.color.surface,
 	flexShrink: 0,
 	"@media": {
 		"(max-width: 600px)": { paddingLeft: 12, paddingRight: 12 },
@@ -38,21 +38,21 @@ export const hamburger = style({
 	background: "none",
 	border: "none",
 	fontSize: textSize.lg,
-	color: vars.v2.inkFaint,
+	color: vars.color.inkFaint,
 	cursor: "pointer",
 	padding: `${space.xs} 8px`,
 	marginRight: 4,
 	selectors: {
-		"&:hover": { color: vars.v2.ink },
+		"&:hover": { color: vars.color.ink },
 	},
 });
 
 export const title = style({
-	fontFamily: vars.v2.fontDisplay,
+	fontFamily: vars.font.display,
 	fontSize: textSize.lg,
 	fontWeight: 600,
 	letterSpacing: "0.08em",
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	flex: 1,
 });
 
@@ -76,27 +76,27 @@ export const iconBtn = style({
 
 export const addLink = style({
 	fontSize: textSize.sm,
-	color: vars.v2.white,
+	color: vars.color.white,
 	textDecoration: "none",
 	fontWeight: 500,
 	padding: `${space.xs} 12px`,
 	border: "none",
 	borderRadius: radius.md,
-	background: vars.v2.accent,
+	background: vars.color.accent,
 	selectors: {
-		"&:hover": { background: vars.v2.accentStrong },
+		"&:hover": { background: vars.color.accentStrong },
 	},
 });
 
 export const manageLink = style({
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	textDecoration: "none",
 	padding: `${space.xs} 10px`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	selectors: {
-		"&:hover": { background: vars.v2.surfaceRaised, color: vars.v2.ink },
+		"&:hover": { background: vars.color.surfaceRaised, color: vars.color.ink },
 	},
 });
 

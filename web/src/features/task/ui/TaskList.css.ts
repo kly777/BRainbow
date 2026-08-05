@@ -20,7 +20,7 @@ export const statusTitle = style({
 	margin: `0 0 ${space.md}`,
 	fontSize: textSize.sm,
 	fontWeight: 500,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	textTransform: "uppercase",
 	letterSpacing: "0.08em",
 	display: "flex",
@@ -36,10 +36,10 @@ export const statusIndicator = style({
 	flexShrink: 0,
 });
 
-export const statusBacklog = style({ background: vars.v2.border });
-export const statusActive = style({ background: vars.v2.accent });
-export const statusCompleted = style({ background: vars.v2.success });
-export const statusArchived = style({ background: vars.v2.border });
+export const statusBacklog = style({ background: vars.color.border });
+export const statusActive = style({ background: vars.color.accent });
+export const statusCompleted = style({ background: vars.color.success });
+export const statusArchived = style({ background: vars.color.border });
 
 export const taskList = style({
 	display: "flex",
@@ -50,11 +50,11 @@ export const taskItem = style({
 	display: "flex",
 	flexDirection: "column",
 	padding: `${space.lg} 0`,
-	borderBottom: `1px solid ${vars.v2.surfaceRaised}`,
+	borderBottom: `1px solid ${vars.color.surfaceRaised}`,
 	transition: "background 0.15s ease",
 	selectors: {
-		"&:first-child": { borderTop: `1px solid ${vars.v2.surfaceRaised}` },
-		"&:hover": { background: vars.v2.surface },
+		"&:first-child": { borderTop: `1px solid ${vars.color.surfaceRaised}` },
+		"&:hover": { background: vars.color.surface },
 	},
 });
 
@@ -77,7 +77,7 @@ export const taskTitle = style({
 	margin: `0 0 ${space.xs}`,
 	fontSize: textSize.base,
 	fontWeight: 500,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	lineHeight: 1.5,
 	letterSpacing: "-0.01em",
 });
@@ -85,7 +85,7 @@ export const taskTitle = style({
 export const taskDescription = style({
 	margin: `0 0 ${space.sm}`,
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	lineHeight: 1.6,
 });
 
@@ -98,7 +98,7 @@ export const taskMeta = style({
 
 export const dateBadge = style({
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 });
 
 export const timeWindowChips = style({
@@ -112,9 +112,9 @@ export const timeWindowChip = style({
 	fontSize: textSize.xs,
 	padding: `${space.xs} 8px`,
 	borderRadius: radius.sm,
-	background: vars.v2.bg,
-	color: vars.v2.inkMuted,
-	border: `1px solid ${vars.v2.surfaceRaised}`,
+	background: vars.color.bg,
+	color: vars.color.inkMuted,
+	border: `1px solid ${vars.color.surfaceRaised}`,
 	whiteSpace: "nowrap",
 });
 
@@ -124,8 +124,8 @@ export const subTaskBadge = style({
 	borderRadius: radius.sm,
 	fontSize: textSize.xs,
 	fontWeight: 500,
-	color: vars.v2.inkMuted,
-	background: vars.v2.surfaceRaised,
+	color: vars.color.inkMuted,
+	background: vars.color.surfaceRaised,
 	verticalAlign: "middle",
 });
 
@@ -144,21 +144,21 @@ const selectArrow =
 
 export const statusSelect = style({
 	padding: `${space.xs} 24px ${space.xs} 10px`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	fontSize: textSize.sm,
-	color: vars.v2.ink,
-	background: `${vars.v2.surface} ${selectArrow} no-repeat right 8px center`,
+	color: vars.color.ink,
+	background: `${vars.color.surface} ${selectArrow} no-repeat right 8px center`,
 	cursor: "pointer",
 	outline: "none",
 	transition: "border-color 0.15s",
 	appearance: "none",
 	WebkitAppearance: "none",
 	selectors: {
-		"&:hover": { borderColor: vars.v2.border },
+		"&:hover": { borderColor: vars.color.border },
 		"&:focus": {
-			borderColor: vars.v2.accent,
-			boxShadow: `0 0 0 2px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 0 0 2px ${vars.color.accentSoft}`,
 		},
 	},
 });
@@ -166,22 +166,22 @@ export const statusSelect = style({
 export const editButton = style({
 	padding: `${space.xs} 10px`,
 	background: "none",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	border: "none",
 	borderRadius: radius.md,
 	cursor: "pointer",
 	fontSize: textSize.base,
 	transition: "all 0.15s",
 	selectors: {
-		"&:hover": { background: vars.v2.surfaceRaised, color: vars.v2.ink },
+		"&:hover": { background: vars.color.surfaceRaised, color: vars.color.ink },
 	},
 });
 
 export const subTaskButton = style({
 	padding: `${space.xs} 10px`,
 	background: "none",
-	color: vars.v2.inkMuted,
-	border: `1px solid ${vars.v2.border}`,
+	color: vars.color.inkMuted,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	cursor: "pointer",
 	fontSize: textSize.base,
@@ -190,9 +190,9 @@ export const subTaskButton = style({
 	lineHeight: 1.4,
 	selectors: {
 		"&:hover": {
-			background: vars.v2.bg,
-			color: vars.v2.ink,
-			borderColor: vars.v2.border,
+			background: vars.color.bg,
+			color: vars.color.ink,
+			borderColor: vars.color.border,
 		},
 	},
 });
@@ -200,14 +200,14 @@ export const subTaskButton = style({
 export const deleteButton = style({
 	padding: `${space.xs} 10px`,
 	background: "none",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	border: "none",
 	borderRadius: radius.md,
 	cursor: "pointer",
 	fontSize: textSize.base,
 	transition: "all 0.15s",
 	selectors: {
-		"&:hover": { background: vars.v2.dangerSubtle, color: vars.v2.danger },
+		"&:hover": { background: vars.color.dangerSubtle, color: vars.color.danger },
 	},
 });
 
@@ -217,39 +217,39 @@ export const subTaskForm = style({
 	alignItems: "center",
 	marginTop: 10,
 	padding: `${space.sm} 0 0`,
-	borderTop: `1px solid ${vars.v2.surfaceRaised}`,
+	borderTop: `1px solid ${vars.color.surfaceRaised}`,
 });
 
 export const subTaskInput = style({
 	flex: 1,
 	padding: `${space.sm} ${space.md}`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	fontSize: textSize.sm,
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	outline: "none",
 	transition: "border-color 0.15s",
 	selectors: {
 		"&:focus": {
-			borderColor: vars.v2.accent,
-			boxShadow: `0 0 0 2px ${vars.v2.accentSoft}`,
+			borderColor: vars.color.accent,
+			boxShadow: `0 0 0 2px ${vars.color.accentSoft}`,
 		},
-		"&::placeholder": { color: vars.v2.border },
+		"&::placeholder": { color: vars.color.border },
 	},
 });
 
 export const subTaskCancel = style({
 	padding: `${space.sm} ${space.md}`,
 	background: "none",
-	color: vars.v2.inkMuted,
-	border: `1px solid ${vars.v2.border}`,
+	color: vars.color.inkMuted,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	cursor: "pointer",
 	fontSize: textSize.sm,
 	whiteSpace: "nowrap",
 	transition: "all 0.15s",
 	selectors: {
-		"&:hover": { background: vars.v2.surfaceRaised, color: vars.v2.ink },
+		"&:hover": { background: vars.color.surfaceRaised, color: vars.color.ink },
 	},
 });
 
@@ -259,7 +259,7 @@ export const childList = style({
 	marginTop: 0,
 	marginLeft: 20,
 	paddingLeft: 16,
-	borderLeft: `2px solid ${vars.v2.surfaceRaised}`,
+	borderLeft: `2px solid ${vars.color.surfaceRaised}`,
 });
 
 globalStyle(`${childList} > .${taskItem}`, {

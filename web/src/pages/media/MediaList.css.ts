@@ -13,7 +13,7 @@ export const page = style({
 export const title = style({
 	fontSize: textSize.xl,
 	fontWeight: 700,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	margin: `0 0 ${space.xl} 0`,
 });
 
@@ -30,9 +30,9 @@ export const grid = style({
 });
 
 export const card = style({
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	borderRadius: radius.md,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	overflow: "hidden",
 	display: "flex",
 	flexDirection: "column",
@@ -40,7 +40,7 @@ export const card = style({
 
 export const preview = style({
 	aspectRatio: "16 / 10",
-	background: vars.v2.bg,
+	background: vars.color.bg,
 	display: "flex",
 	alignItems: "center",
 	justifyContent: "center",
@@ -74,7 +74,7 @@ export const info = style({
 export const name = style({
 	fontSize: textSize.sm,
 	fontWeight: 500,
-	color: vars.v2.ink,
+	color: vars.color.ink,
 	margin: `0 0 ${space.xs} 0`,
 	overflow: "hidden",
 	textOverflow: "ellipsis",
@@ -83,7 +83,7 @@ export const name = style({
 
 export const meta = style({
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	margin: 0,
 });
 
@@ -91,7 +91,7 @@ export const actions = style({
 	display: "flex",
 	gap: space.xs,
 	padding: `${space.sm} 12px`,
-	borderTop: `1px solid ${vars.v2.border}`,
+	borderTop: `1px solid ${vars.color.border}`,
 });
 
 export const editRow = style({
@@ -103,18 +103,18 @@ export const editRow = style({
 
 export const editInput = style({
 	padding: `${space.xs} 10px`,
-	border: `1px solid ${vars.v2.border}`,
+	border: `1px solid ${vars.color.border}`,
 	borderRadius: radius.md,
 	fontSize: textSize.sm,
 	fontFamily: "inherit",
 	outline: "none",
 	selectors: {
-		"&:focus": { borderColor: vars.v2.accent },
+		"&:focus": { borderColor: vars.color.accent },
 	},
 });
 
 export const error = style({
-	color: vars.v2.danger,
+	color: vars.color.danger,
 	fontSize: textSize.sm,
 	margin: `0 0 ${space.md} 0`,
 });

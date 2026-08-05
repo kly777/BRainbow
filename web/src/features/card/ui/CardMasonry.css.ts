@@ -48,7 +48,7 @@ export const loadingMore = style({
 	display: "flex",
 	alignItems: "center",
 	justifyContent: "center",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	fontSize: "0.875rem",
 	padding: space.xl,
 });
@@ -56,9 +56,9 @@ export const loadingMore = style({
 export const emptyState = style({
 	textAlign: "center",
 	padding: space.xl,
-	background: vars.v2.surface,
+	background: vars.color.surface,
 	borderRadius: radius.md,
-	border: `2px dashed ${vars.v2.border}`,
+	border: `2px dashed ${vars.color.border}`,
 	margin: `${space.xl} 0`,
 	"@media": {
 		"(max-width: 768px)": { padding: `${space.xl} 16px` },
@@ -67,6 +67,6 @@ export const emptyState = style({
 
 globalStyle(`${emptyState} p`, {
 	fontSize: "1rem",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	marginBottom: space.xl,
 });

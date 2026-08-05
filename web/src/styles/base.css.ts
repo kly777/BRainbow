@@ -10,9 +10,9 @@ import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 // ── 按钮基础（数组组合的第一项） ──
 export const btnBase = style({
 	fontSize: textSize.sm,
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	background: "transparent",
-	border: `1px solid ${vars.v2.borderStrong}`,
+	border: `1px solid ${vars.color.borderStrong}`,
 	borderRadius: radius.md,
 	padding: `${space.xs} 14px`,
 	cursor: "pointer",
@@ -38,12 +38,12 @@ const compactBtn = {
 export const btnPrimary = style([
 	btnBase,
 	{
-		color: vars.v2.white,
-		background: vars.v2.accent,
+		color: vars.color.white,
+		background: vars.color.accent,
 		border: "none",
 		fontWeight: 500,
 		selectors: {
-			"&:hover": { background: vars.v2.accentStrong },
+			"&:hover": { background: vars.color.accentStrong },
 			"&:disabled": { opacity: 0.5, cursor: "default" },
 		},
 		"@media": { "(max-width: 600px)": compactBtn },
@@ -55,7 +55,7 @@ export const btnGhost = style([
 	btnBase,
 	{
 		selectors: {
-			"&:hover": { background: vars.v2.surfaceRaised, color: vars.v2.ink },
+			"&:hover": { background: vars.color.surfaceRaised, color: vars.color.ink },
 			"&:disabled": { opacity: 0.35, cursor: "default" },
 		},
 		"@media": { "(max-width: 600px)": compactBtn },
@@ -71,8 +71,8 @@ export const btnNav = style([
 		padding: `${space.xs} 12px`,
 		selectors: {
 			"&:hover:not(:disabled)": {
-				background: vars.v2.surfaceRaised,
-				color: vars.v2.ink,
+				background: vars.color.surfaceRaised,
+				color: vars.color.ink,
 			},
 			"&:disabled": { opacity: 0.35, cursor: "default" },
 		},
@@ -86,12 +86,12 @@ export const btnNav = style([
 export const btnBack = style([
 	btnBase,
 	{
-		borderColor: vars.v2.border,
+		borderColor: vars.color.border,
 		textDecoration: "none",
 		display: "inline-block",
 		whiteSpace: "nowrap",
 		selectors: {
-			"&:hover": { background: vars.v2.surfaceRaised, color: vars.v2.ink },
+			"&:hover": { background: vars.color.surfaceRaised, color: vars.color.ink },
 		},
 	},
 ]);

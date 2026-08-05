@@ -7,24 +7,24 @@ import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 export const state = style({
 	padding: `${space.xl} 16px`,
 	textAlign: "center",
-	color: vars.v2.inkMuted,
+	color: vars.color.inkMuted,
 	fontSize: textSize.base,
 });
 
 export const errorText = style({
-	color: vars.v2.danger,
+	color: vars.color.danger,
 	marginBottom: 10,
 });
 
 export const retryBtn = style({
 	padding: `${space.xs} 16px`,
-	background: vars.v2.accent,
-	color: vars.v2.white,
+	background: vars.color.accent,
+	color: vars.color.white,
 	border: "none",
 	borderRadius: radius.md,
 	cursor: "pointer",
 	fontSize: textSize.sm,
 	selectors: {
-		"&:hover": { background: vars.v2.accentStrong },
+		"&:hover": { background: vars.color.accentStrong },
 	},
 });

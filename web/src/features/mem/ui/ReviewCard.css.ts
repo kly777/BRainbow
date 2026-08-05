@@ -52,11 +52,18 @@ export const card = style({
 export const face = style({
 	display: "flex",
 	flexDirection: "column",
-	flex: "0 1 auto",
+	flex: "0 0 auto",
+	maxHeight: "70%",
 	minHeight: 0,
 	overflow: "hidden",
 });
 
+
+// 显示答案前：线索占满整张卡片（无答案，无需 70% 限制）
+export const faceFill = style({
+	flex: "1 0 auto",
+	maxHeight: "100%",
+});
 const answerIn = keyframes({
 	from: { opacity: 0, transform: "translateY(-8px)" },
 	to: { opacity: 1, transform: "translateY(0)" },
@@ -67,7 +74,8 @@ export const answer = style({
 	flexDirection: "column",
 	borderTop: `1px solid ${vars.color.border}`,
 	animation: `${answerIn} 0.3s ease`,
-	flex: "0 1 auto",
+	// 答案占剩余空间，超长时自身滚动
+	flex: "1 1 auto",
 	minHeight: 0,
 	overflow: "hidden",
 	"@media": {

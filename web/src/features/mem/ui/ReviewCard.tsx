@@ -97,7 +97,7 @@ export default function ReviewCard(props: ReviewCardProps) {
 						{/* 目录卡：线索常显 + 答案展开 */}
 						<div class={styles.card}>
 							{/* 线索段 */}
-							<div class={styles.face}>
+							<div classList={{ [styles.face]: true, [styles.faceFill]: !m.showAnswer() }}>
 								<div class={styles.cardTab}>
 									<span class={styles.cardTabText}>线索</span>
 									<span class={styles.cardTabNo}>#{m.item()?.id}</span>

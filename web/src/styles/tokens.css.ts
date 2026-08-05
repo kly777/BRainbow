@@ -180,6 +180,8 @@ const legacyAliases = (c: ColorSet) => ({
 	"--color-warning": c.warning,
 	"--color-warning-subtle": c.warningSubtle,
 	"--color-white": c.white,
+	"--color-code": c.inkMuted,
+	"--color-code-bg": c.surfaceRaised,
 	"--color-overlay": "oklch(0 0 0 / 0.5)",
 	"--toast-error-bg": c.dangerSubtle,
 	"--toast-error-border": "oklch(0.85 0.06 25)",
@@ -234,4 +236,49 @@ globalStyle("body", {
 	background: vars.color.bg,
 	color: vars.color.ink,
 	transition: "background-color 0.25s ease, color 0.25s ease",
+});
+
+// ── 全局体验层（主题感知：文本选择/滚动条/焦点 ring） ──
+globalStyle("html", {
+	scrollBehavior: "smooth",
+});
+
+globalStyle("body", {
+	lineHeight: 1.6,
+	WebkitFontSmoothing: "antialiased",
+	MozOsxFontSmoothing: "grayscale",
+});
+
+globalStyle("::selection", {
+	background: vars.color.accentSoft,
+	color: vars.color.accent,
+});
+
+globalStyle("::-webkit-scrollbar", {
+	width: 6,
+	height: 6,
+});
+
+globalStyle("::-webkit-scrollbar-track", {
+	background: "transparent",
+});
+
+globalStyle("::-webkit-scrollbar-thumb", {
+	background: vars.color.border,
+	borderRadius: 3,
+});
+
+globalStyle("::-webkit-scrollbar-thumb:hover", {
+	background: vars.color.borderStrong,
+});
+
+globalStyle(":focus-visible", {
+	outline: `2px solid ${vars.color.accent}`,
+	outlineOffset: 2,
+});
+
+globalStyle("input:focus-visible, textarea:focus-visible, select:focus-visible", {
+	outline: "none",
+	borderColor: vars.color.accent,
+	boxShadow: `0 0 0 2px ${vars.color.accentSoft}`,
 });

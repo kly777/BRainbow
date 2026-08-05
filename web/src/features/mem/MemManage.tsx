@@ -3,16 +3,16 @@
 // 业务逻辑复用 useMemManage，此处只做视图层
 
 import { A } from "@solidjs/router";
-import { useMemManage } from "../logic/useMemManage.ts";
-import * as styles from "./MemManageV2.css.ts";
-import MemBatchTagModal from "../ui/MemBatchTagModal.tsx";
-import MemExportModal from "../ui/MemExportModal.tsx";
-import V2ManageBatchBar from "./ui/V2ManageBatchBar.tsx";
-import V2ManageDetail from "./ui/V2ManageDetail.tsx";
-import V2ManageTable from "./ui/V2ManageTable.tsx";
-import V2ManageToolbar from "./ui/V2ManageToolbar.tsx";
+import { useMemManage } from "./logic/useMemManage.ts";
+import * as styles from "./MemManage.css.ts";
+import MemBatchTagModal from "./ui/MemBatchTagModal.tsx";
+import MemExportModal from "./ui/MemExportModal.tsx";
+import ManageBatchBar from "./ui/ManageBatchBar.tsx";
+import ManageDetail from "./ui/ManageDetail.tsx";
+import ManageTable from "./ui/ManageTable.tsx";
+import ManageToolbar from "./ui/ManageToolbar.tsx";
 
-export default function MemManageV2() {
+export default function MemManage() {
 	const m = useMemManage();
 
 	return (
@@ -32,7 +32,7 @@ export default function MemManageV2() {
 			</div>
 
 			{/* 工具栏 */}
-			<V2ManageToolbar
+			<ManageToolbar
 				searchQuery={m.searchQuery()}
 				filterState={m.filterState()}
 				onSearch={m.handleSearchInput}
@@ -44,7 +44,7 @@ export default function MemManageV2() {
 			/>
 
 			{/* 批量操作条 */}
-			<V2ManageBatchBar
+			<ManageBatchBar
 				selectedCount={m.batchIds().size}
 				onReset={m.batchReset}
 				onBury={m.batchBury}
@@ -59,7 +59,7 @@ export default function MemManageV2() {
 				classList={{ [styles.detailActive]: m.detailId() !== null }}
 			>
 				<div class={styles.tableWrap}>
-					<V2ManageTable
+					<ManageTable
 						mems={m.mems()}
 						batchIds={m.batchIds()}
 						sortField={m.sortField()}
@@ -78,7 +78,7 @@ export default function MemManageV2() {
 						onPageChange={(p) => m.goToPage(p)}
 					/>
 				</div>
-				<V2ManageDetail
+				<ManageDetail
 					mem={m.detail()}
 					memTags={m.tagsForDetail()}
 					editing={m.editing()}

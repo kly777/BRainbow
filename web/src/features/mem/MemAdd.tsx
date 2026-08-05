@@ -5,12 +5,12 @@
 
 import { A } from "@solidjs/router";
 import { createSignal, For, Show } from "solid-js";
-import MarkdownEditor from "../../../components/ui/MarkdownEditor.tsx";
-import { useMemAdd } from "../logic/useMemAdd.ts";
-import * as styles from "./MemAddV2.css.ts";
-import { FormatHintV2, ImportPreviewTableV2, ImportTagInputV2, ImportResultV2 } from "./ui/V2ImportParts.tsx";
+import MarkdownEditor from "../../components/ui/MarkdownEditor.tsx";
+import { useMemAdd } from "./logic/useMemAdd.ts";
+import * as styles from "./MemAdd.css.ts";
+import { FormatHint, ImportPreviewTable, ImportTagInput, ImportResult } from "./ui/ImportParts.tsx";
 
-export default function MemAddV2() {
+export default function MemAdd() {
 	const m = useMemAdd();
 
 	return (
@@ -108,11 +108,11 @@ export default function MemAddV2() {
 				</Show>
 
 				<Show when={m.mode() === "paste"}>
-					<PasteViewV2 m={m} />
+					<PasteView m={m} />
 				</Show>
 
 				<Show when={m.mode() === "file"}>
-					<FileViewV2 m={m} />
+					<FileView m={m} />
 				</Show>
 			</div>
 		</div>
@@ -121,14 +121,14 @@ export default function MemAddV2() {
 
 // ── 批量粘贴视图 ──
 
-function PasteViewV2(props: { m: ReturnType<typeof useMemAdd> }) {
+function PasteView(props: { m: ReturnType<typeof useMemAdd> }) {
 	const m = props.m;
 	return (
 		<Show
 			when={m.importResult()}
 			fallback={
 				<div class={styles.stack}>
-					<FormatHintV2 mode="paste" />
+					<FormatHint mode="paste" />
 					<div class={styles.inputCard}>
 						<textarea
 							class={styles.textarea}
@@ -142,7 +142,7 @@ function PasteViewV2(props: { m: ReturnType<typeof useMemAdd> }) {
 						/>
 					</div>
 					<Show when={m.previewRows().length > 0}>
-						<ImportPreviewTableV2
+						<ImportPreviewTable
 							rows={m.previewRows()}
 							selectedCount={m.selectedCount()}
 							onToggle={(i) =>
@@ -163,7 +163,7 @@ function PasteViewV2(props: { m: ReturnType<typeof useMemAdd> }) {
 							已选 {m.selectedCount()} / 共 {m.previewRows().length} 条
 						</p>
 					</Show>
-					<ImportTagInputV2
+					<ImportTagInput
 						value={m.importDefaultTags()}
 						onChange={m.setImportDefaultTags}
 					/>
@@ -189,14 +189,14 @@ function PasteViewV2(props: { m: ReturnType<typeof useMemAdd> }) {
 				</div>
 			}
 		>
-			<ImportResultV2 result={m.importResult()!} onContinue={m.resetImport} />
+			<ImportResult result={m.importResult()!} onContinue={m.resetImport} />
 		</Show>
 	);
 }
 
 // ── 文件导入视图 ──
 
-function FileViewV2(props: { m: ReturnType<typeof useMemAdd> }) {
+function FileView(props: { m: ReturnType<typeof useMemAdd> }) {
 	const m = props.m;
 	// 本地文件名状态，仅用于展示已选文件
 	const [fileName, setFileName] = createSignal("");
@@ -205,7 +205,7 @@ function FileViewV2(props: { m: ReturnType<typeof useMemAdd> }) {
 			when={m.importResult()}
 			fallback={
 				<div class={styles.stack}>
-					<FormatHintV2 mode="file" />
+					<FormatHint mode="file" />
 					<div class={styles.inputCard}>
 						<label for="import-file" class={styles.fileBtn}>
 							📄 {fileName() || "选择文件"}
@@ -225,7 +225,7 @@ function FileViewV2(props: { m: ReturnType<typeof useMemAdd> }) {
 						</Show>
 					</div>
 					<Show when={m.previewRows().length > 0}>
-						<ImportPreviewTableV2
+						<ImportPreviewTable
 							rows={m.previewRows()}
 							selectedCount={m.selectedCount()}
 							onToggle={(i) =>
@@ -246,7 +246,7 @@ function FileViewV2(props: { m: ReturnType<typeof useMemAdd> }) {
 							已选 {m.selectedCount()} / 共 {m.previewRows().length} 条
 						</p>
 					</Show>
-					<ImportTagInputV2
+					<ImportTagInput
 						value={m.importDefaultTags()}
 						onChange={m.setImportDefaultTags}
 					/>
@@ -272,7 +272,7 @@ function FileViewV2(props: { m: ReturnType<typeof useMemAdd> }) {
 				</div>
 			}
 		>
-			<ImportResultV2 result={m.importResult()!} onContinue={m.resetImport} />
+			<ImportResult result={m.importResult()!} onContinue={m.resetImport} />
 		</Show>
 	);
 }

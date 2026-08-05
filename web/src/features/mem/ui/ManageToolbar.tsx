@@ -1,8 +1,8 @@
 // ── v2 管理工具栏：搜索 / 标签过滤 / 状态筛选 / 导出 ──
 
 import { createResource, createSignal, For, Show } from "solid-js";
-import { searchTagsE, type TagInfo } from "../../api.ts";
-import * as styles from "./V2ManageToolbar.css.ts";
+import { searchTagsE, type TagInfo } from "../api.ts";
+import * as styles from "./ManageToolbar.css.ts";
 
 export type TagMode = "include" | "exclude";
 
@@ -28,7 +28,7 @@ const FILTER_OPTIONS = [
 	{ value: "today_done", label: "已复习" },
 ];
 
-export default function V2ManageToolbar(props: Props) {
+export default function ManageToolbar(props: Props) {
 	const [tagQuery, setTagQuery] = createSignal("");
 	const [tagOpen, setTagOpen] = createSignal(false);
 

@@ -2,12 +2,12 @@
 // 线索/答案用目录卡标签页，元数据等宽，操作与标签管理
 
 import { Show } from "solid-js";
-import TagSelector from "../../../../components/TagSelector.tsx";
-import MarkdownRenderer from "../../../../components/ui/Markdown.tsx";
-import MarkdownEditor from "../../../../components/ui/MarkdownEditor.tsx";
-import { fmtLocal } from "../../../../lib/time.ts";
-import type { MemItem, TagInfo } from "../../api.ts";
-import * as styles from "./V2ManageDetail.css.ts";
+import TagSelector from "../../../components/TagSelector.tsx";
+import MarkdownRenderer from "../../../components/ui/Markdown.tsx";
+import MarkdownEditor from "../../../components/ui/MarkdownEditor.tsx";
+import { fmtLocal } from "../../../lib/time.ts";
+import type { MemItem, TagInfo } from "../api.ts";
+import * as styles from "./ManageDetail.css.ts";
 
 interface Props {
 	mem: MemItem | undefined;
@@ -37,7 +37,7 @@ const stateLabel: Record<string, string> = {
 	suspended: "挂起",
 };
 
-export default function V2ManageDetail(props: Props) {
+export default function ManageDetail(props: Props) {
 	return (
 		<aside
 			class={styles.detail}

@@ -1,8 +1,8 @@
 /**
- * V2Sidebar — 目录索引抽屉（vanilla-extract 迁移）
+ * Sidebar — 目录索引抽屉（vanilla-extract 迁移）
  */
 import { style } from "@vanilla-extract/css";
-import { space, textSize, vars } from "../../../../styles/tokens.css.ts";
+import { space, textSize, vars } from "../../../styles/tokens.css.ts";
 
 export const sidebar = style({
 	width: 0,

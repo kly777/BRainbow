@@ -1,10 +1,10 @@
 // ── v2 侧栏：学习池队列 + 状态图例 ──
 
 import { createEffect, For, Show } from "solid-js";
-import type { UseMemReview } from "../../logic/useMemReview.ts";
-import * as styles from "./V2Sidebar.css.ts";
+import type { UseMemReview } from "../logic/useMemReview.ts";
+import * as styles from "./Sidebar.css.ts";
 
-interface V2SidebarProps {
+interface SidebarProps {
 	m: UseMemReview;
 }
 
@@ -15,7 +15,7 @@ const stateLabel: Record<string, string> = {
 	review: "复",
 };
 
-export default function V2Sidebar(props: V2SidebarProps) {
+export default function Sidebar(props: SidebarProps) {
 	const { m } = props;
 
 	// 当前卡自动滚动到可见

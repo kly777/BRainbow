@@ -1,12 +1,12 @@
 // ── v2 导入相关子组件：格式说明卡 / 预览清单 / 默认标签 / 结果页 ──
 
 import { For, Show } from "solid-js";
-import type { PreviewRow } from "../../logic/useMemAdd.ts";
-import * as styles from "./V2ImportParts.css.ts";
+import type { PreviewRow } from "../logic/useMemAdd.ts";
+import * as styles from "./ImportParts.css.ts";
 
 // ── 格式说明（档案说明卡） ──
 
-export function FormatHintV2(props: { mode: "paste" | "file" }) {
+export function FormatHint(props: { mode: "paste" | "file" }) {
 	return (
 		<div class={styles.hintCard}>
 			<div class={styles.hintTab}>
@@ -77,7 +77,7 @@ export function FormatHintV2(props: { mode: "paste" | "file" }) {
 
 // ── 预览清单（待入库卡片） ──
 
-export function ImportPreviewTableV2(props: {
+export function ImportPreviewTable(props: {
 	rows: PreviewRow[];
 	selectedCount: number;
 	onToggle: (i: number) => void;
@@ -141,7 +141,7 @@ export function ImportPreviewTableV2(props: {
 
 // ── 默认标签输入 ──
 
-export function ImportTagInputV2(props: {
+export function ImportTagInput(props: {
 	value: string;
 	onChange: (v: string) => void;
 }) {
@@ -164,7 +164,7 @@ export function ImportTagInputV2(props: {
 
 // ── 导入结果页 ──
 
-export function ImportResultV2(props: {
+export function ImportResult(props: {
 	result: { imported: number; errors: string[] };
 	onContinue: () => void;
 }) {

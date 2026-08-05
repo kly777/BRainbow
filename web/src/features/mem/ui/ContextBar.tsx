@@ -1,10 +1,10 @@
 // ── v2 上下文条：卡元数据 + 统计 + 编辑 ──
 
 import { Show } from "solid-js";
-import type { UseMemReview } from "../../logic/useMemReview.ts";
-import * as styles from "./V2ContextBar.css.ts";
+import type { UseMemReview } from "../logic/useMemReview.ts";
+import * as styles from "./ContextBar.css.ts";
 
-interface V2ContextBarProps {
+interface ContextBarProps {
 	m: UseMemReview;
 	upcomingCounts: { within_8h: number; within_24h: number } | undefined;
 }
@@ -17,7 +17,7 @@ const stateLabel: Record<string, string> = {
 	suspended: "suspended",
 };
 
-export default function V2ContextBar(props: V2ContextBarProps) {
+export default function ContextBar(props: ContextBarProps) {
 	const { m } = props;
 
 	return (

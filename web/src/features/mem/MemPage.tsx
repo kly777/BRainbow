@@ -4,18 +4,18 @@
 
 import { A } from "@solidjs/router";
 import { createResource, createSignal, onCleanup, onMount, Show } from "solid-js";
-import { getUpcomingCountsE } from "../api.ts";
-import { useMemReview } from "../logic/useMemReview.ts";
-import { notifyError } from "../../../lib/notify.ts";
-import { tryAsync } from "../../../lib/result.ts";
-import * as styles from "./MemPageV2.css.ts";
-import AiSettingsModal from "../ui/AiSettingsModal.tsx";
-import V2ContextBar from "./ui/V2ContextBar.tsx";
-import V2FilterBar from "./ui/V2FilterBar.tsx";
-import V2ReviewCard from "./ui/V2ReviewCard.tsx";
-import V2Sidebar from "./ui/V2Sidebar.tsx";
+import { getUpcomingCountsE } from "./api.ts";
+import { useMemReview } from "./logic/useMemReview.ts";
+import { notifyError } from "../../lib/notify.ts";
+import { tryAsync } from "../../lib/result.ts";
+import * as styles from "./MemPage.css.ts";
+import AiSettingsModal from "./ui/AiSettingsModal.tsx";
+import ContextBar from "./ui/ContextBar.tsx";
+import FilterBar from "./ui/FilterBar.tsx";
+import ReviewCard from "./ui/ReviewCard.tsx";
+import Sidebar from "./ui/Sidebar.tsx";
 
-export default function MemPageV2() {
+export default function MemPage() {
 	const m = useMemReview();
 	const [showAiSettings, setShowAiSettings] = createSignal(false);
 
@@ -52,7 +52,7 @@ export default function MemPageV2() {
 
 	return (
 		<div class={styles.page}>
-			<V2Sidebar m={m} />
+			<Sidebar m={m} />
 
 			<div class={styles.main}>
 				{/* 全局头：只留导航 */}
@@ -84,14 +84,14 @@ export default function MemPageV2() {
 				</div>
 
 				{/* 上下文条：统计 + 编辑 */}
-				<V2ContextBar m={m} upcomingCounts={upcomingCounts()} />
+				<ContextBar m={m} upcomingCounts={upcomingCounts()} />
 
 				{/* 过滤 */}
-				<V2FilterBar m={m} />
+				<FilterBar m={m} />
 
 				{/* 卡片区 */}
 				<div class={styles.cardArea}>
-					<V2ReviewCard m={m} />
+					<ReviewCard m={m} />
 				</div>
 			</div>
 

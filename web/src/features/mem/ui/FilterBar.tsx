@@ -1,14 +1,14 @@
 // ── v2 标签过滤栏 ──
 
 import { For, Show } from "solid-js";
-import type { UseMemReview } from "../../logic/useMemReview.ts";
-import * as styles from "./V2FilterBar.css.ts";
+import type { UseMemReview } from "../logic/useMemReview.ts";
+import * as styles from "./FilterBar.css.ts";
 
-interface V2FilterBarProps {
+interface FilterBarProps {
 	m: UseMemReview;
 }
 
-export default function V2FilterBar(props: V2FilterBarProps) {
+export default function FilterBar(props: FilterBarProps) {
 	const { m } = props;
 
 	return (

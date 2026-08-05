@@ -1,12 +1,12 @@
 /**
- * V2ReviewCard — 复习卡片（vanilla-extract 迁移）
+ * ReviewCard — 复习卡片（vanilla-extract 迁移）
  * 按钮复用 base.css.ts 通用件
  */
 import { keyframes, style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "../../../styles/tokens.css.ts";
 
 // 按钮复用 base（组件引用 styles.ghostBtn/primaryBtn/navBtn）
-export { btnGhost as ghostBtn, btnNav as navBtn, btnPrimary as primaryBtn } from "../../../../styles/base.css.ts";
+export { btnGhost as ghostBtn, btnNav as navBtn, btnPrimary as primaryBtn } from "../../../styles/base.css.ts";
 
 export const cardWrap = style({
 	width: "100%",

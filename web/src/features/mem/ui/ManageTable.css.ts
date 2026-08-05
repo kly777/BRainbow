@@ -1,10 +1,10 @@
 /**
- * V2ManageTable — 管理表格（vanilla-extract 迁移）
+ * ManageTable — 管理表格（vanilla-extract 迁移）
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "../../../styles/tokens.css.ts";
 
-export { btnNav as pageBtn } from "../../../../styles/base.css.ts";
+export { btnNav as pageBtn } from "../../../styles/base.css.ts";
 
 export const tableCard = style({
 	flex: 1,

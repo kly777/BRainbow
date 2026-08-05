@@ -1,6 +1,6 @@
 // ── v2 批量操作条（选中条目后出现） ──
 
-import * as styles from "./V2ManageBatchBar.css.ts";
+import * as styles from "./ManageBatchBar.css.ts";
 
 interface Props {
 	selectedCount: number;
@@ -11,7 +11,7 @@ interface Props {
 	onDelete: () => void;
 }
 
-export default function V2ManageBatchBar(props: Props) {
+export default function ManageBatchBar(props: Props) {
 	return (
 		<div
 			class={styles.batchBar}

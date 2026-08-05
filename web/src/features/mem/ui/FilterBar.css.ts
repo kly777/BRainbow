@@ -1,8 +1,8 @@
 /**
- * V2FilterBar — 标签过滤栏（vanilla-extract 迁移）
+ * FilterBar — 标签过滤栏（vanilla-extract 迁移）
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "../../../styles/tokens.css.ts";
 
 export const filterBar = style({
 	display: "flex",

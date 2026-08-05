@@ -1,10 +1,10 @@
 // ── v2 管理表格：档案清单 ──
 
 import { For, Show } from "solid-js";
-import Badge from "../../../../components/ui/Badge.tsx";
-import { fmtLocal, fmtRelative } from "../../../../lib/time.ts";
-import type { MemItem, TagInfo } from "../../api.ts";
-import * as styles from "./V2ManageTable.css.ts";
+import Badge from "../../../components/ui/Badge.tsx";
+import { fmtLocal, fmtRelative } from "../../../lib/time.ts";
+import type { MemItem, TagInfo } from "../api.ts";
+import * as styles from "./ManageTable.css.ts";
 
 type SortField = "cue.created_at" | "difficulty" | "due_at" | "state";
 type SortDir = "asc" | "desc";
@@ -50,7 +50,7 @@ function SortIcon(props: { field: SortField; active: boolean; dir: SortDir }) {
 	return <>{props.dir === "asc" ? " ▲" : " ▼"}</>;
 }
 
-export default function V2ManageTable(props: Props) {
+export default function ManageTable(props: Props) {
 	return (
 		<Show
 			when={!props.loading}

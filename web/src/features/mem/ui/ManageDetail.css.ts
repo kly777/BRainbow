@@ -1,13 +1,13 @@
 /**
- * V2ManageDetail — 档案卡详情侧栏（vanilla-extract 迁移）
+ * ManageDetail — 档案卡详情侧栏（vanilla-extract 迁移）
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "../../../styles/tokens.css.ts";
 
 export {
 	btnGhost as ghostBtn,
 	btnPrimary as primaryBtn,
-} from "../../../../styles/base.css.ts";
+} from "../../../styles/base.css.ts";
 
 export const detail = style({
 	width: 0,

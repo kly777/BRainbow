@@ -1,14 +1,14 @@
 // ── AI 设置面板 ──
 
 import { createSignal, Show } from "solid-js";
-import Modal from "../../../components/ui/Modal.tsx";
-import { callAi } from "../../../lib/ai.ts";
+import Modal from "@components/ui/Modal.tsx";
+import { callAi } from "@lib/ai.ts";
 import {
 	getAiSettings,
 	resetAiSettings,
 	setAiSettings,
-} from "../../../lib/ai-settings.ts";
-import { tryAsync } from "../../../lib/result.ts";
+} from "@lib/ai-settings.ts";
+import { tryAsync } from "@lib/result.ts";
 
 
 interface AiSettingsModalProps {

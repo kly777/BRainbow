@@ -6,16 +6,16 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import { getErrorMessage } from "../../apis/types/index.ts";
-import { AsyncView } from "../../components/ui/AsyncView.tsx";
-import Button from "../../components/ui/Button.tsx";
-import FilterGroup from "../../components/ui/FilterGroup.tsx";
-import SearchInput from "../../components/ui/SearchInput.tsx";
-import { notifyError, notifySuccess } from "../../lib/notify.ts";
-import { tryAsync } from "../../lib/result.ts";
-import { showConfirm, tryOrNotify } from "../../lib/safe-action.ts";
-import { createOntoE, deleteOntoE, getOntosE } from "./api.ts";
-import * as styles from "./OntologyList.css.ts";
+import { getErrorMessage } from "@apis/types/index.ts";
+import { AsyncView } from "@components/ui/AsyncView.tsx";
+import Button from "@components/ui/Button.tsx";
+import FilterGroup from "@components/ui/FilterGroup.tsx";
+import SearchInput from "@components/ui/SearchInput.tsx";
+import { notifyError, notifySuccess } from "@lib/notify.ts";
+import { tryAsync } from "@lib/result.ts";
+import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
+import { createOntoE, deleteOntoE, getOntosE } from "@pages/ontology/api.ts";
+import * as styles from "@pages/ontology/OntologyList.css.ts";
 
 const OntologyListPage: Component = () => {
 	const [ontologies, { mutate, refetch }] = createResource(async () => {

@@ -1,8 +1,8 @@
 // ── v2 上下文条：卡元数据 + 统计 + 编辑 ──
 
 import { Show } from "solid-js";
-import type { UseMemReview } from "../logic/useMemReview.ts";
-import * as styles from "./ContextBar.css.ts";
+import type { UseMemReview } from "@features/mem/logic/useMemReview.ts";
+import * as styles from "@features/mem/ui/ContextBar.css.ts";
 
 interface ContextBarProps {
 	m: UseMemReview;

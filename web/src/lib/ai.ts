@@ -1,8 +1,8 @@
 // ── 通用 AI 客户端 ──
 // 支持任意兼容 OpenAI Chat Completions API 的服务
 
-import { getAiSettings } from "./ai-settings.ts";
-import { tryAsync, trySync, unwrapOr } from "./result.ts";
+import { getAiSettings } from "@lib/ai-settings.ts";
+import { tryAsync, trySync, unwrapOr } from "@lib/result.ts";
 
 export interface AiMessage {
 	role: "system" | "user" | "assistant";

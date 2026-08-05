@@ -2,8 +2,8 @@
 
 import { useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal, onMount } from "solid-js";
-import { notifyError } from "../../../lib/notify.ts";
-import { tryAsync } from "../../../lib/result.ts";
+import { notifyError } from "@lib/notify.ts";
+import { tryAsync } from "@lib/result.ts";
 import {
 	buryMemE,
 	editMemE,
@@ -13,13 +13,13 @@ import {
 	previewMemE,
 	reviewMemE,
 	suspendMemE,
-} from "../api.ts";
-import type { MemCounts, MemItem, TagInfo } from "../model.ts";
-import { ALPHA, calcAvgCardTime, calcMaxLearning } from "./mem-calcs.ts";
-import { useMemTagFilter } from "./useMemTagFilter.ts";
-import { useMnemonic } from "./useMnemonic.ts";
-import { useReviewKeyboard } from "./useReviewKeyboard.ts";
-import { useUndo } from "./useUndo.ts";
+} from "@features/mem/api.ts";
+import type { MemCounts, MemItem, TagInfo } from "@features/mem/model.ts";
+import { ALPHA, calcAvgCardTime, calcMaxLearning } from "@features/mem/logic/mem-calcs.ts";
+import { useMemTagFilter } from "@features/mem/logic/useMemTagFilter.ts";
+import { useMnemonic } from "@features/mem/logic/useMnemonic.ts";
+import { useReviewKeyboard } from "@features/mem/logic/useReviewKeyboard.ts";
+import { useUndo } from "@features/mem/logic/useUndo.ts";
 
 // ── Hook ──
 

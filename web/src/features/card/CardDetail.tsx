@@ -1,13 +1,13 @@
 import { useNavigate, useParams } from "@solidjs/router";
 import { type Component, createResource } from "solid-js";
-import { AsyncView } from "../../components/ui/AsyncView.tsx";
-import Breadcrumb from "../../components/ui/Breadcrumb.tsx";
-import Button from "../../components/ui/Button.tsx";
-import MarkdownRenderer from "../../components/ui/Markdown.tsx";
-import Toolbar from "../../components/ui/Toolbar.tsx";
-import { showConfirm, tryOrNotify } from "../../lib/safe-action.ts";
-import { deleteCardE, getCardE } from "./api.ts";
-import * as styles from "./CardDetail.css.ts";
+import { AsyncView } from "@components/ui/AsyncView.tsx";
+import Breadcrumb from "@components/ui/Breadcrumb.tsx";
+import Button from "@components/ui/Button.tsx";
+import MarkdownRenderer from "@components/ui/Markdown.tsx";
+import Toolbar from "@components/ui/Toolbar.tsx";
+import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
+import { deleteCardE, getCardE } from "@features/card/api.ts";
+import * as styles from "@features/card/CardDetail.css.ts";
 
 const CardDetailPage: Component = () => {
 	const params = useParams();

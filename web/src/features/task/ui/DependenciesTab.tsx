@@ -5,16 +5,16 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import { getErrorMessage } from "../../../apis/types/index.ts";
-import { notifyError } from "../../../lib/notify.ts";
-import { tryAsync } from "../../../lib/result.ts";
+import { getErrorMessage } from "@apis/types/index.ts";
+import { notifyError } from "@lib/notify.ts";
+import { tryAsync } from "@lib/result.ts";
 import {
 	addTaskDependencyE,
 	getTaskDetailE,
 	removeTaskDependencyE,
-} from "../api.ts";
-import type { Task } from "../types.ts";
-import * as styles from "./EditTaskModal.css.ts";
+} from "@features/task/api.ts";
+import type { Task } from "@features/task/types.ts";
+import * as styles from "@features/task/ui/EditTaskModal.css.ts";
 
 // 依赖状态类映射（vanilla-extract 不支持动态索引）
 const depStatusClass: Record<string, string> = {

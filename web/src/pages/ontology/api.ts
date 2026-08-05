@@ -1,5 +1,5 @@
-import { del, patch, post, request } from "../../apis/request.ts";
-import { CACHE, cachedRequest, tapInvalidate } from "../../apis/cache.ts";
+import { del, patch, post, request } from "@apis/request.ts";
+import { CACHE, cachedRequest, tapInvalidate } from "@apis/cache.ts";
 
 export interface Onto {
 	readonly id: number;

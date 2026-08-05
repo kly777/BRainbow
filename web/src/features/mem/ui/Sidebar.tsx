@@ -1,8 +1,8 @@
 // ── v2 侧栏：学习池队列 + 状态图例 ──
 
 import { createEffect, For, Show } from "solid-js";
-import type { UseMemReview } from "../logic/useMemReview.ts";
-import * as styles from "./Sidebar.css.ts";
+import type { UseMemReview } from "@features/mem/logic/useMemReview.ts";
+import * as styles from "@features/mem/ui/Sidebar.css.ts";
 
 interface SidebarProps {
 	m: UseMemReview;

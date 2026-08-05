@@ -4,8 +4,8 @@
  * 使用 LCH 色彩空间生成感知均匀的有关系颜色，复用 Color 类做色域裁剪。
  */
 
-import { Angle } from "./angle.ts";
-import { Color, type Oklch } from "./color.ts";
+import { Angle } from "@lib/angle.ts";
+import { Color, type Oklch } from "@lib/color.ts";
 
 /** 随机角度 (5° ~ 80°) */
 function randomAngle(): Angle {

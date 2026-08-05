@@ -1,5 +1,5 @@
 import type { Component, JSX } from "solid-js";
-import * as styles from "./Badge.css.ts";
+import * as styles from "@components/ui/Badge.css.ts";
 
 type BadgeVariant =
 	| "default"

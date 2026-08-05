@@ -2,7 +2,7 @@
  * Card — 目录卡（vanilla-extract 迁移，去双 fallback）
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, vars } from "../../../styles/tokens.css.ts";
+import { radius, space, vars } from "@styles/tokens.css.ts";
 
 // 删除中状态类（先定义，供 card 组合引用）
 export const deleting = style({});

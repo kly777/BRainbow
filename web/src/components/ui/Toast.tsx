@@ -1,7 +1,7 @@
 import { For, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-import * as styles from "./Toast.css.ts";
-import { dismissToast, type ToastItem, toasts } from "./toastStore.ts";
+import * as styles from "@components/ui/Toast.css.ts";
+import { dismissToast, type ToastItem, toasts } from "@components/ui/toastStore.ts";
 
 function iconForType(type: ToastItem["type"]): string {
 	switch (type) {

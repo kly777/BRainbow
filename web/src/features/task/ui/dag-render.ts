@@ -1,6 +1,6 @@
 // ── 依赖图 Canvas 渲染 ──
 
-import type { LayoutEdge, LayoutNode } from "./dag-layout.ts";
+import type { LayoutEdge, LayoutNode } from "@features/task/ui/dag-layout.ts";
 
 /** CSS 变量缓存 */
 const _cssCache = new Map<string, string>();

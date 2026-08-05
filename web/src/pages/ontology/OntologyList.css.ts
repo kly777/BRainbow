@@ -2,7 +2,7 @@
  * OntologyList — 本体列表（vanilla-extract 迁移，v2 令牌）
  */
 import { globalStyle, style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const container = style({
 	maxWidth: 1440,

@@ -21,10 +21,10 @@
  *   );
  */
 
-import { notifyError } from "./notify.ts";
-import { tryAsync, type Result } from "./result.ts";
-import { showConfirm as show } from "../components/ui/confirmStore.ts";
-import type { ConfirmOptions } from "../components/ui/confirmStore.ts";
+import { notifyError } from "@lib/notify.ts";
+import { tryAsync, type Result } from "@lib/result.ts";
+import { showConfirm as show } from "@components/ui/confirmStore.ts";
+import type { ConfirmOptions } from "@components/ui/confirmStore.ts";
 
 // Re-export 以便统一导入
 export { show as showConfirm };
@@ -37,7 +37,7 @@ export {
 	unwrapOr,
 	match,
 	type Result,
-} from "./result.ts";
+} from "@lib/result.ts";
 
 /**
  * 执行异步函数，失败时自动调用 notifyError。

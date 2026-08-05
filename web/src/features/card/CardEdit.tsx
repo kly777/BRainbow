@@ -6,17 +6,17 @@ import {
 	createSignal,
 	Show,
 } from "solid-js";
-import { getErrorMessage } from "../../apis/types/index.ts";
-import { AsyncView } from "../../components/ui/AsyncView.tsx";
-import Breadcrumb from "../../components/ui/Breadcrumb.tsx";
-import Button from "../../components/ui/Button.tsx";
-import MarkdownEditor from "../../components/ui/MarkdownEditor.tsx";
-import Toolbar from "../../components/ui/Toolbar.tsx";
-import { showConfirm, tryOrNotify } from "../../lib/safe-action.ts";
-import { tryAsync } from "../../lib/result.ts";
-import { deleteCardE, getCardE, updateCardE } from "./api.ts";
-import * as styles from "./CardEdit.css.ts";
-import type { UpdateCardRequest } from "./types.ts";
+import { getErrorMessage } from "@apis/types/index.ts";
+import { AsyncView } from "@components/ui/AsyncView.tsx";
+import Breadcrumb from "@components/ui/Breadcrumb.tsx";
+import Button from "@components/ui/Button.tsx";
+import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
+import Toolbar from "@components/ui/Toolbar.tsx";
+import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
+import { tryAsync } from "@lib/result.ts";
+import { deleteCardE, getCardE, updateCardE } from "@features/card/api.ts";
+import * as styles from "@features/card/CardEdit.css.ts";
+import type { UpdateCardRequest } from "@features/card/types.ts";
 
 const CardEditPage: Component = () => {
 	const params = useParams();

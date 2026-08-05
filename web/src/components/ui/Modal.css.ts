@@ -2,7 +2,7 @@
  * Modal — 通用弹窗（vanilla-extract 迁移，v2 令牌）
  */
 import { globalStyle, keyframes, style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const modalOverlay = style({
 	position: "fixed",

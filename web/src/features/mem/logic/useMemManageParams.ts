@@ -1,13 +1,13 @@
 // ── URL 搜索参数管理 ──
 
 import { useSearchParams } from "@solidjs/router";
-import type { TagMode } from "./mem-manage-utils.ts";
+import type { TagMode } from "@features/mem/logic/mem-manage-utils.ts";
 import {
 	type SortDir,
 	type SortField,
 	VALID_SORT_FIELDS,
 	VALID_STATES,
-} from "./mem-manage-utils.ts";
+} from "@features/mem/logic/mem-manage-utils.ts";
 
 export interface UseMemManageParamsResult {
 	searchQuery: () => string;

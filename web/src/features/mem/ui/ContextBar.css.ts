@@ -3,10 +3,10 @@
  * 按钮复用 base.css.ts 通用件，其余样式就地定义
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 // 按钮复用 base 通用件（re-export 保持调用方 styles.btnGhost 不变）
-export { btnGhost, btnPrimary } from "../../../styles/base.css.ts";
+export { btnGhost, btnPrimary } from "@styles/base.css.ts";
 
 export const contextBar = style({
 	display: "flex",

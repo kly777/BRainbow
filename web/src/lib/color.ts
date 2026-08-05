@@ -1,4 +1,4 @@
-import { trySync, unwrapOrNull } from "./result.ts";
+import { trySync, unwrapOrNull } from "@lib/result.ts";
 
 /**
  * 颜色类 — 内部以 CIE XYZ 存储。

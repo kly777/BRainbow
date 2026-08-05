@@ -2,7 +2,7 @@
  * ColorEditor — 颜色编辑器（vanilla-extract 迁移，v2 令牌）
  */
 import { composeStyles, globalStyle, style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const fieldset = style({
 	border: `1px solid ${vars.v2.border}`,

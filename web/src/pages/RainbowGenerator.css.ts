@@ -2,7 +2,7 @@
  * RainbowGenerator — 彩虹生成器（vanilla-extract 迁移，v2 令牌）
  */
 import { globalStyle, style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const page = style({
 	display: "flex",

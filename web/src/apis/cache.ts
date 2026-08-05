@@ -6,8 +6,8 @@
  *
  * 使用方式（在 API 模块中）：
  *
- *   import { cachedRequest, CACHE, tapInvalidate } from "./cache.ts";
- *   import { request } from "./request.ts";
+ *   import { cachedRequest, CACHE, tapInvalidate } from "@apis/cache.ts";
+ *   import { request } from "@apis/request.ts";
  *
  *   // GET → 走缓存
  *   export const getCardsE = () => cachedRequest<PaginatedCards>("/cards", {});
@@ -25,7 +25,7 @@ let _request: RequestFn | null = null;
 
 async function getRequest(): Promise<RequestFn> {
 	if (!_request) {
-		const mod = await import("./request.ts");
+		const mod = await import("@apis/request.ts");
 		_request = mod.request;
 	}
 	return _request;

@@ -1,9 +1,9 @@
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
-import { notifyError } from "../../../lib/notify.ts";
-import { tryAsync } from "../../../lib/result.ts";
-import { getCalendarEventsE } from "../api.ts";
-import type { CalendarEvent } from "../types.ts";
-import * as styles from "./TaskCalendar.css.ts";
+import { notifyError } from "@lib/notify.ts";
+import { tryAsync } from "@lib/result.ts";
+import { getCalendarEventsE } from "@features/task/api.ts";
+import type { CalendarEvent } from "@features/task/types.ts";
+import * as styles from "@features/task/ui/TaskCalendar.css.ts";
 
 // 窗口类型对应颜色
 const windowTypeColors: Record<string, string> = {

@@ -2,7 +2,7 @@
  * CardMasonry — 卡片瀑布流（vanilla-extract 迁移，v2 令牌）
  */
 import { globalStyle, style } from "@vanilla-extract/css";
-import { radius, space, vars } from "../../../styles/tokens.css.ts";
+import { radius, space, vars } from "@styles/tokens.css.ts";
 
 export const cardsGrid = style({
 	paddingTop: 10,

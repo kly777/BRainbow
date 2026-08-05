@@ -1,8 +1,8 @@
 // ── v2 标签过滤栏 ──
 
 import { For, Show } from "solid-js";
-import type { UseMemReview } from "../logic/useMemReview.ts";
-import * as styles from "./FilterBar.css.ts";
+import type { UseMemReview } from "@features/mem/logic/useMemReview.ts";
+import * as styles from "@features/mem/ui/FilterBar.css.ts";
 
 interface FilterBarProps {
 	m: UseMemReview;

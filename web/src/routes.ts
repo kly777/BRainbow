@@ -25,7 +25,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Brainbow",
 		desc: "首页面板",
 		nav: true,
-		component: lazy(() => import("./pages/HomeGuard.tsx")),
+		component: lazy(() => import("@pages/HomeGuard.tsx")),
 	},
 	{
 		path: "/t",
@@ -33,7 +33,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Tasks",
 		desc: "任务管理",
 		nav: true,
-		component: lazy(() => import("./features/task/TaskManager.tsx")),
+		component: lazy(() => import("@features/task/TaskManager.tsx")),
 	},
 	{
 		path: "/o",
@@ -41,7 +41,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Ontology",
 		desc: "本体与符号系统",
 		nav: true,
-		component: lazy(() => import("./pages/ontology/OntologyList.tsx")),
+		component: lazy(() => import("@pages/ontology/OntologyList.tsx")),
 	},
 	{
 		path: "/c",
@@ -49,7 +49,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Cards",
 		desc: "知识卡片浏览",
 		nav: true,
-		component: lazy(() => import("./features/card/CardsList.tsx")),
+		component: lazy(() => import("@features/card/CardsList.tsx")),
 	},
 	{
 		path: "/c/add",
@@ -57,21 +57,21 @@ export const ROUTES: RouteConfig[] = [
 		title: "New Card",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("./features/card/CardAdd.tsx")),
+		component: lazy(() => import("@features/card/CardAdd.tsx")),
 	},
 	{
 		path: "/c/:id",
 		label: "卡片详情",
 		title: "Card",
 		desc: "",
-		component: lazy(() => import("./features/card/CardDetail.tsx")),
+		component: lazy(() => import("@features/card/CardDetail.tsx")),
 	},
 	{
 		path: "/c/edit/:id",
 		label: "编辑卡片",
 		title: "Edit Card",
 		desc: "",
-		component: lazy(() => import("./features/card/CardEdit.tsx")),
+		component: lazy(() => import("@features/card/CardEdit.tsx")),
 	},
 	{
 		path: "/i",
@@ -79,7 +79,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Images",
 		desc: "图片管理",
 		nav: true,
-		component: lazy(() => import("./pages/media/MediaList.tsx")),
+		component: lazy(() => import("@pages/media/MediaList.tsx")),
 	},
 	{
 		path: "/db",
@@ -87,7 +87,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Database",
 		desc: "管理员数据库查看",
 		nav: true,
-		component: lazy(() => import("./pages/DbViewer.tsx")),
+		component: lazy(() => import("@pages/DbViewer.tsx")),
 	},
 	{
 		path: "/rg",
@@ -95,7 +95,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Rainbow",
 		desc: "Rainbow Generator",
 		nav: true,
-		component: lazy(() => import("./pages/RainbowGenerator.tsx")),
+		component: lazy(() => import("@pages/RainbowGenerator.tsx")),
 	},
 	{
 		path: "/text",
@@ -103,7 +103,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Text",
 		desc: "多标签纯文本编辑器",
 		nav: true,
-		component: lazy(() => import("./pages/TextEditor.tsx")),
+		component: lazy(() => import("@pages/TextEditor.tsx")),
 	},
 	{
 		path: "/reading",
@@ -111,7 +111,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Reading",
 		desc: "英语阅读与单词管理",
 		nav: true,
-		component: lazy(() => import("./features/reading/ReadingList.tsx")),
+		component: lazy(() => import("@features/reading/ReadingList.tsx")),
 	},
 	{
 		path: "/reading/unknown",
@@ -119,7 +119,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Unknown Words",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("./features/reading/ReadingUnknown.tsx")),
+		component: lazy(() => import("@features/reading/ReadingUnknown.tsx")),
 	},
 	{
 		path: "/reading/:id",
@@ -127,7 +127,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Reading",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("./features/reading/ReadingDetail.tsx")),
+		component: lazy(() => import("@features/reading/ReadingDetail.tsx")),
 	},
 	{
 		path: "/m",
@@ -135,7 +135,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Memory",
 		desc: "间隔重复记忆系统",
 		nav: true,
-		component: lazy(() => import("./features/mem/MemPage.tsx")),
+		component: lazy(() => import("@features/mem/MemPage.tsx")),
 	},
 	{
 		path: "/m/add",
@@ -143,7 +143,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "New Mem",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("./features/mem/MemAdd.tsx")),
+		component: lazy(() => import("@features/mem/MemAdd.tsx")),
 	},
 	{
 		path: "/m/manage",
@@ -151,7 +151,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Manage",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("./features/mem/MemManage.tsx")),
+		component: lazy(() => import("@features/mem/MemManage.tsx")),
 	},
 	{
 		path: "/conv",
@@ -159,28 +159,28 @@ export const ROUTES: RouteConfig[] = [
 		title: "Conversations",
 		desc: "搜索 AI 对话历史",
 		nav: true,
-		component: lazy(() => import("./features/conv/ConvSearch.tsx")),
+		component: lazy(() => import("@features/conv/ConvSearch.tsx")),
 	},
 	{
 		path: "/conv/qa/:id",
 		label: "对话详情",
 		title: "Conversation",
 		desc: "",
-		component: lazy(() => import("./features/conv/ConvQa.tsx")),
+		component: lazy(() => import("@features/conv/ConvQa.tsx")),
 	},
 	{
 		path: "/conv/concept/:id",
 		label: "概念详情",
 		title: "Concept",
 		desc: "",
-		component: lazy(() => import("./features/conv/ConvConcept.tsx")),
+		component: lazy(() => import("@features/conv/ConvConcept.tsx")),
 	},
 	{
 		path: "/conv/:id",
 		label: "对话详情 (旧)",
 		title: "Conversation",
 		desc: "",
-		component: lazy(() => import("./features/conv/ConvDetail.tsx")),
+		component: lazy(() => import("@features/conv/ConvDetail.tsx")),
 	},
 ];
 

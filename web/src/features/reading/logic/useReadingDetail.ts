@@ -7,15 +7,15 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
-import type { ArticleDetail } from "../api.ts";
+import type { ArticleDetail } from "@features/reading/api.ts";
 import {
 	getArticle,
 	getArticleNotes,
 	markWord,
 	recommendNext,
 	updateArticleNotes,
-} from "../api.ts";
-import { tryAsync } from "../../../lib/result.ts";
+} from "@features/reading/api.ts";
+import { tryAsync } from "@lib/result.ts";
 
 export function useReadingDetail() {
 	const params = useParams();

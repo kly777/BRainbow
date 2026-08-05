@@ -1,8 +1,8 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
-import type { Task } from "../types.ts";
-import EditTaskModal from "./EditTaskModal.tsx";
-import TaskItem from "./TaskItem.tsx";
-import * as styles from "./TaskList.css.ts";
+import type { Task } from "@features/task/types.ts";
+import EditTaskModal from "@features/task/ui/EditTaskModal.tsx";
+import TaskItem from "@features/task/ui/TaskItem.tsx";
+import * as styles from "@features/task/ui/TaskList.css.ts";
 
 // 扩展TaskStatus常量 - 使用后端实际的状态
 const TaskStatus = {

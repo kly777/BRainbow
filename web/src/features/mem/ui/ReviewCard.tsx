@@ -2,12 +2,12 @@
 // 线索与答案分居卡片两面，点"显示答案"实体翻转。
 
 import { Show } from "solid-js";
-import MarkdownRenderer from "../../../components/ui/Markdown.tsx";
-import MarkdownEditor from "../../../components/ui/MarkdownEditor.tsx";
-import { fmtInterval, fmtLocal } from "../../../lib/time.ts";
-import { useSpeech } from "../logic/useSpeech.ts";
-import type { UseMemReview } from "../logic/useMemReview.ts";
-import * as styles from "./ReviewCard.css.ts";
+import MarkdownRenderer from "@components/ui/Markdown.tsx";
+import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
+import { fmtInterval, fmtLocal } from "@lib/time.ts";
+import { useSpeech } from "@features/mem/logic/useSpeech.ts";
+import type { UseMemReview } from "@features/mem/logic/useMemReview.ts";
+import * as styles from "@features/mem/ui/ReviewCard.css.ts";
 
 interface ReviewCardProps {
 	m: UseMemReview;

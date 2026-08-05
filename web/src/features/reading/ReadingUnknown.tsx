@@ -1,7 +1,7 @@
 import { A } from "@solidjs/router";
 import { createResource, For } from "solid-js";
-import { listUnknownWords, markWord } from "./api.ts";
-import * as styles from "./ReadingUnknown.css.ts";
+import { listUnknownWords, markWord } from "@features/reading/api.ts";
+import * as styles from "@features/reading/ReadingUnknown.css.ts";
 
 export default function ReadingUnknown() {
 	const [data, { refetch }] = createResource(listUnknownWords);

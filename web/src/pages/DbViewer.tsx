@@ -1,8 +1,8 @@
 import { useSearchParams } from "@solidjs/router";
 import { type Component, createSignal, For, onMount } from "solid-js";
-import { getErrorMessage } from "../apis/types/index.ts";
-import { tryAsync } from "../lib/result.ts";
-import { type ColumnInfo, getTableDataE, getTablesE } from "./dbApi.ts";
+import { getErrorMessage } from "@apis/types/index.ts";
+import { tryAsync } from "@lib/result.ts";
+import { type ColumnInfo, getTableDataE, getTablesE } from "@pages/dbApi.ts";
 
 const DB: Component = () => {
 	const [searchParams, setSearchParams] = useSearchParams();

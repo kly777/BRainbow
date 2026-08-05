@@ -1,13 +1,13 @@
 // ── 记忆模块 API ──
 
-import { del, post, put, request } from "../../apis/request.ts";
-import { CACHE, tapInvalidate } from "../../apis/cache.ts";
-import { tryAsync, unwrapOrNull } from "../../lib/result.ts";
+import { del, post, put, request } from "@apis/request.ts";
+import { CACHE, tapInvalidate } from "@apis/cache.ts";
+import { tryAsync, unwrapOrNull } from "@lib/result.ts";
 import type {
 	BatchDataResponse,
 	BatchResponse,
 	PaginatedResponse,
-} from "../../apis/types/shared.ts";
+} from "@apis/types/shared.ts";
 
 // ── 类型 ──
 
@@ -257,7 +257,7 @@ export const batchSetTagsForMemsE = (
 // ── CSV 导入导出 ──
 
 export async function downloadExportCsv(tagIds?: number[]): Promise<void> {
-	const token = (await import("../../auth/context.tsx")).getToken();
+	const token = (await import("@auth/context.tsx")).getToken();
 	const headers: Record<string, string> = {};
 	if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -316,7 +316,7 @@ export const importJsonE = (
 
 export const uploadImage = async (file: File): Promise<string | null> => {
 	const result = await tryAsync(async () => {
-		const { uploadMedia } = await import("./mediaApi.ts");
+		const { uploadMedia } = await import("@features/mem/mediaApi.ts");
 		const item = await uploadMedia(file);
 		return item.url;
 	});
@@ -348,4 +348,4 @@ export type {
 	BatchDataResponse,
 	BatchResponse,
 	PaginatedResponse,
-} from "../../apis/types/shared.ts";
+} from "@apis/types/shared.ts";

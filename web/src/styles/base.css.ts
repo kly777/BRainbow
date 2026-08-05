@@ -5,7 +5,7 @@
  * 组件用 `import { btnPrimary, btnGhost } from "../../styles/base.css.ts"` 复用。
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "./tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 // ── 按钮基础（数组组合的第一项） ──
 export const btnBase = style({

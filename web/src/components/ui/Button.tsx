@@ -1,5 +1,5 @@
 import type { Component, JSX } from "solid-js";
-import * as styles from "./Button.css.ts";
+import * as styles from "@components/ui/Button.css.ts";
 
 type Variant = "primary" | "secondary" | "danger" | "ghost" | "icon";
 type Size = "sm" | "md";

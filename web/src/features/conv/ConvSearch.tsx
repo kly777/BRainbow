@@ -1,7 +1,7 @@
 import { A, useNavigate, useSearchParams } from "@solidjs/router";
 import { createResource, createSignal, For, onMount, Show } from "solid-js";
-import { type ConvHit, searchConvE } from "./api.ts";
-import * as styles from "./ConvSearch.css.ts";
+import { type ConvHit, searchConvE } from "@features/conv/api.ts";
+import * as styles from "@features/conv/ConvSearch.css.ts";
 
 const VALID_TABS = ["all", "conv", "article"] as const;
 type Tab = (typeof VALID_TABS)[number];

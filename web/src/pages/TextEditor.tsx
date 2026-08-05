@@ -1,8 +1,8 @@
 import { createSignal, For, onCleanup, onMount } from "solid-js";
-import * as styles from "./TextEditor.css.ts";
-import { loadTextE, saveTextE } from "./textApi.ts";
-import { notifyError } from "../lib/notify.ts";
-import { tryAsync } from "../lib/result.ts";
+import * as styles from "@pages/TextEditor.css.ts";
+import { loadTextE, saveTextE } from "@pages/textApi.ts";
+import { notifyError } from "@lib/notify.ts";
+import { tryAsync } from "@lib/result.ts";
 
 let _saveTimer: ReturnType<typeof setInterval> | null = null;
 

@@ -1,8 +1,8 @@
 // ── 统一用户通知模块 ──
 // 封装 toastStore.showToast，提供简洁的业务层 API
 
-import { getErrorMessage, HttpError } from "../apis/types/errors.ts";
-import { showToast } from "../components/ui/toastStore.ts";
+import { getErrorMessage, HttpError } from "@apis/types/errors.ts";
+import { showToast } from "@components/ui/toastStore.ts";
 
 /**
  * 显示错误通知（带可选的原始 error 对象提取详情）。

@@ -6,20 +6,20 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import { getErrorMessage } from "../../apis/types/index.ts";
-import { AsyncView } from "../../components/ui/AsyncView.tsx";
-import Button from "../../components/ui/Button.tsx";
-import FilterGroup from "../../components/ui/FilterGroup.tsx";
+import { getErrorMessage } from "@apis/types/index.ts";
+import { AsyncView } from "@components/ui/AsyncView.tsx";
+import Button from "@components/ui/Button.tsx";
+import FilterGroup from "@components/ui/FilterGroup.tsx";
 import {
 	deleteMediaE,
 	listMediaE,
 	type MediaItem,
 	renameMediaE,
-} from "../../features/mem/mediaApi.ts";
-import { showConfirm, tryOrNotify } from "../../lib/safe-action.ts";
-import { notifyError } from "../../lib/notify.ts";
-import { tryAsync } from "../../lib/result.ts";
-import * as styles from "./MediaList.css.ts";
+} from "@features/mem/mediaApi.ts";
+import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
+import { notifyError } from "@lib/notify.ts";
+import { tryAsync } from "@lib/result.ts";
+import * as styles from "@pages/media/MediaList.css.ts";
 
 const TABS = [
 	{ value: "", label: "全部" },

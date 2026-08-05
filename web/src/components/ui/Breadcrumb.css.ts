@@ -2,7 +2,7 @@
  * Breadcrumb — 面包屑（vanilla-extract 迁移）
  */
 import { style } from "@vanilla-extract/css";
-import { space, textSize, vars } from "../../styles/tokens.css.ts";
+import { space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const breadcrumb = style({
 	display: "flex",

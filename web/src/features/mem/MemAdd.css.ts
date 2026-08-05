@@ -3,11 +3,11 @@
  * 按钮/输入复用 base.css.ts
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 // 按钮/提交复用 base 通用件（组件引用 styles.cancel / styles.submit）
-export { btnGhost as cancel, btnPrimary as submit } from "../../styles/base.css.ts";
-export { btnBack as backLink } from "../../styles/base.css.ts";
+export { btnGhost as cancel, btnPrimary as submit } from "@styles/base.css.ts";
+export { btnBack as backLink } from "@styles/base.css.ts";
 
 export const page = style({
 	display: "flex",

@@ -3,7 +3,7 @@
  * 共享：EditTaskModal + TimeWindowsTab + BasicInfoTab + DependenciesTab
  */
 import { globalStyle, style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const editModal = style({
 	display: "flex",

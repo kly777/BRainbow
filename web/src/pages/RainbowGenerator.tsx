@@ -1,15 +1,15 @@
 import { createMemo, createSignal } from "solid-js";
-import AngleEditor from "../components/AngleEditor.tsx";
-import ColorEditor from "../components/ColorEditor.tsx";
+import AngleEditor from "@components/AngleEditor.tsx";
+import ColorEditor from "@components/ColorEditor.tsx";
 import {
 	RainbowDrawer,
 	type ShapeRender,
-} from "../components/RainbowDrawer.tsx";
-import Button from "../components/ui/Button.tsx";
-import FilterGroup from "../components/ui/FilterGroup.tsx";
-import { Angle } from "../lib/angle.ts";
-import { Color } from "../lib/color.ts";
-import * as styles from "./RainbowGenerator.css.ts";
+} from "@components/RainbowDrawer.tsx";
+import Button from "@components/ui/Button.tsx";
+import FilterGroup from "@components/ui/FilterGroup.tsx";
+import { Angle } from "@lib/angle.ts";
+import { Color } from "@lib/color.ts";
+import * as styles from "@pages/RainbowGenerator.css.ts";
 
 function RainbowGenerator() {
 	const L = 0.7;

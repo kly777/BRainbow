@@ -2,12 +2,12 @@
 
 import { useSearchParams } from "@solidjs/router";
 import { createSignal } from "solid-js";
-import { getErrorMessage } from "../../../apis/types/index.ts";
-import { showToast } from "../../../components/ui/toastStore.ts";
-import { tryAsync } from "../../../lib/result.ts";
-import { showConfirm, tryOrNotify } from "../../../lib/safe-action.ts";
-import type { Card, CreateCardRequest } from "../types.ts";
-import { createCardE, deleteCardE, getCardsE, searchCardsE } from "../api.ts";
+import { getErrorMessage } from "@apis/types/index.ts";
+import { showToast } from "@components/ui/toastStore.ts";
+import { tryAsync } from "@lib/result.ts";
+import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
+import type { Card, CreateCardRequest } from "@features/card/types.ts";
+import { createCardE, deleteCardE, getCardsE, searchCardsE } from "@features/card/api.ts";
 
 export function useCardsList() {
 	const [cards, setCards] = createSignal<Card[]>([]);

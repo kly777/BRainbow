@@ -2,7 +2,7 @@
  * Badge — 状态徽章（vanilla-extract 迁移，v2 令牌）
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const badge = style({
 	display: "inline-block",

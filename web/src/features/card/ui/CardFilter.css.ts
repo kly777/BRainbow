@@ -2,7 +2,7 @@
  * CardFilter — 卡片过滤器（vanilla-extract 迁移）
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, vars } from "../../../styles/tokens.css.ts";
+import { radius, space, vars } from "@styles/tokens.css.ts";
 
 export const filters = style({
 	background: vars.v2.surface,

@@ -1,5 +1,5 @@
-import { getToken } from "../auth/context.tsx";
-import { HttpError, NetworkError } from "./types/index.ts";
+import { getToken } from "@auth/context.tsx";
+import { HttpError, NetworkError } from "@apis/types/index.ts";
 
 const API_BASE_URL = "/api";
 
@@ -46,7 +46,7 @@ async function toast(opts: {
 	duration?: number;
 }): Promise<void> {
 	if (!_showToast) {
-		const mod = await import("../components/ui/toastStore.ts");
+		const mod = await import("@components/ui/toastStore.ts");
 		_showToast = mod.showToast as unknown as typeof _showToast;
 	}
 	// duration 提供默认值以匹配 showToast 的 non-optional 签名

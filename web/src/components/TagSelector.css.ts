@@ -2,7 +2,7 @@
  * TagSelector — 标签选择器（vanilla-extract 迁移）
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const tagSelector = style({
 	position: "relative",

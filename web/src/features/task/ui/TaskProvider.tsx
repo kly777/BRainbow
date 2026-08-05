@@ -5,9 +5,9 @@ import {
 	onMount,
 	useContext,
 } from "solid-js";
-import { tryAsync } from "../../../lib/result.ts";
-import { notifyError } from "../../../lib/notify.ts";
-import { showConfirm, tryOrNotify } from "../../../lib/safe-action.ts";
+import { tryAsync } from "@lib/result.ts";
+import { notifyError } from "@lib/notify.ts";
+import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
 import {
 	createTaskE as apiCreateTask,
 	deleteTaskE as apiDeleteTask,
@@ -15,13 +15,13 @@ import {
 	getTaskStatsE,
 	getTasksE,
 	searchTasksE,
-} from "../api.ts";
-import type { CreateTaskRequest, Task } from "../types.ts";
+} from "@features/task/api.ts";
+import type { CreateTaskRequest, Task } from "@features/task/types.ts";
 import {
 	fetchTasksByFilter,
 	makeTemp,
 	STATUS_API,
-} from "./task-provider-utils.ts";
+} from "@features/task/ui/task-provider-utils.ts";
 
 interface Stats {
 	backlog: number;

@@ -1,10 +1,10 @@
 import { useParams, useSearchParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
-import MarkdownRenderer from "../../components/ui/Markdown.tsx";
-import { getConvConceptE } from "./api.ts";
-import * as styles from "./ConvDetail.css.ts";
-import { useBackHref } from "./logic/useBackHref.ts";
-import ConvTopBar from "./ui/ConvTopBar.tsx";
+import MarkdownRenderer from "@components/ui/Markdown.tsx";
+import { getConvConceptE } from "@features/conv/api.ts";
+import * as styles from "@features/conv/ConvDetail.css.ts";
+import { useBackHref } from "@features/conv/logic/useBackHref.ts";
+import ConvTopBar from "@features/conv/ui/ConvTopBar.tsx";
 
 export default function ConvConceptPage() {
 	const params = useParams();

@@ -2,10 +2,10 @@
 
 import { useSearchParams } from "@solidjs/router";
 import { createMemo, createResource, createSignal } from "solid-js";
-import { listTagsE, searchTagsE } from "../api.ts";
-import { notifyError } from "../../../lib/notify.ts";
-import { tryAsync } from "../../../lib/result.ts";
-import type { TagInfo } from "../model.ts";
+import { listTagsE, searchTagsE } from "@features/mem/api.ts";
+import { notifyError } from "@lib/notify.ts";
+import { tryAsync } from "@lib/result.ts";
+import type { TagInfo } from "@features/mem/model.ts";
 
 interface UseMemTagFilterResult {
 	allTags: () => TagInfo[];

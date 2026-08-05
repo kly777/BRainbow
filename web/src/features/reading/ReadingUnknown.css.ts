@@ -2,7 +2,7 @@
  * ReadingUnknown — 生词表（vanilla-extract 迁移，v2 令牌）
  */
 import { globalStyle, style } from "@vanilla-extract/css";
-import { space, vars } from "../../styles/tokens.css.ts";
+import { space, vars } from "@styles/tokens.css.ts";
 
 export const page = style({
 	maxWidth: 700,

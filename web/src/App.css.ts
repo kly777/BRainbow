@@ -2,7 +2,7 @@
  * App — 应用壳 + 落地页（vanilla-extract 迁移，v2 令牌）
  */
 import { globalStyle, style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "./styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const shell = style({
 	display: "flex",

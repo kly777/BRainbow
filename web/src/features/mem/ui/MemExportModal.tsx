@@ -1,10 +1,10 @@
 import { createEffect, createSignal } from "solid-js";
-import TagSelector from "../../../components/TagSelector.tsx";
-import Modal from "../../../components/ui/Modal.tsx";
-import { notifyError } from "../../../lib/notify.ts";
-import { tryAsync } from "../../../lib/result.ts";
-import type { TagInfo } from "../api.ts";
-import { downloadExportCsv, listTagsE } from "../api.ts";
+import TagSelector from "@components/TagSelector.tsx";
+import Modal from "@components/ui/Modal.tsx";
+import { notifyError } from "@lib/notify.ts";
+import { tryAsync } from "@lib/result.ts";
+import type { TagInfo } from "@features/mem/api.ts";
+import { downloadExportCsv, listTagsE } from "@features/mem/api.ts";
 
 interface Props {
 	isOpen: boolean;

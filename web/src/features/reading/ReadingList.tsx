@@ -1,8 +1,8 @@
 import { A } from "@solidjs/router";
 import { createResource, createSignal, For, Show } from "solid-js";
-import { type ArticleSummary, listArticles, uploadArticle } from "./api.ts";
-import { tryAsync } from "../../lib/result.ts";
-import * as styles from "./ReadingList.css.ts";
+import { type ArticleSummary, listArticles, uploadArticle } from "@features/reading/api.ts";
+import { tryAsync } from "@lib/result.ts";
+import * as styles from "@features/reading/ReadingList.css.ts";
 
 export default function ReadingList() {
 	const [articles, { refetch }] = createResource(listArticles);

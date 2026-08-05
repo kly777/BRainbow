@@ -5,8 +5,8 @@ import {
 	Index,
 	type Setter,
 } from "solid-js";
-import { Color } from "../lib/color.ts";
-import * as styles from "./ColorEditor.css.ts";
+import { Color } from "@lib/color.ts";
+import * as styles from "@components/ColorEditor.css.ts";
 
 type ColorSpace = "hex" | "rgb" | "hsl" | "oklch";
 

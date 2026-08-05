@@ -1,11 +1,11 @@
 // ── 记忆管理模块的类型、常量和纯数据访问函数 ──
 
-import { getAllMemsE } from "../api.ts";
-import type { MemItem, TagInfo } from "../model.ts";
+import { getAllMemsE } from "@features/mem/api.ts";
+import type { MemItem, TagInfo } from "@features/mem/model.ts";
 export type TagMode = "include" | "exclude";
 // (类型原在 v1 MemManageToolbar，已上移至此)
-import { tryAsync, unwrapOr } from "../../../lib/result.ts";
-import { notifyError } from "../../../lib/notify.ts";
+import { tryAsync, unwrapOr } from "@lib/result.ts";
+import { notifyError } from "@lib/notify.ts";
 
 // ── 类型 ──
 

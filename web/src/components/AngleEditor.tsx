@@ -4,8 +4,8 @@ import {
 	createSignal,
 	type Setter,
 } from "solid-js";
-import { Angle } from "../lib/angle.ts";
-import * as styles from "./AngleEditor.css.ts";
+import { Angle } from "@lib/angle.ts";
+import * as styles from "@components/AngleEditor.css.ts";
 
 type AngleMode = "deg" | "rad" | "slope";
 

@@ -3,7 +3,7 @@
  * 按钮复用 base.css.ts（exportBtn = btnGhost 紧凑变体）
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const toolbar = style({
 	display: "flex",

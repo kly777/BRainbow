@@ -7,14 +7,14 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import { notifyError } from "../../../lib/notify.ts";
-import { tryAsync } from "../../../lib/result.ts";
-import { getAllTasksE, getDagE } from "../api.ts";
-import type { Task } from "../types.ts";
-import type { LayoutNode } from "./dag-layout.ts";
-import { layout } from "./dag-layout.ts";
-import { calcAutoOffset, drawGraph, hitTestNode } from "./dag-render.ts";
-import * as styles from "./TaskDag.css.ts";
+import { notifyError } from "@lib/notify.ts";
+import { tryAsync } from "@lib/result.ts";
+import { getAllTasksE, getDagE } from "@features/task/api.ts";
+import type { Task } from "@features/task/types.ts";
+import type { LayoutNode } from "@features/task/ui/dag-layout.ts";
+import { layout } from "@features/task/ui/dag-layout.ts";
+import { calcAutoOffset, drawGraph, hitTestNode } from "@features/task/ui/dag-render.ts";
+import * as styles from "@features/task/ui/TaskDag.css.ts";
 
 // ── 任务选择器 ──
 

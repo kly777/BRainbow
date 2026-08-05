@@ -1,6 +1,6 @@
 import { type JSX, Show, createEffect } from "solid-js";
-import { AUTH_REQUIRED_EVENT } from "../apis/request.ts";
-import { useAuth } from "./context.tsx";
+import { AUTH_REQUIRED_EVENT } from "@apis/request.ts";
+import { useAuth } from "@auth/context.tsx";
 
 /**
  * 路由守卫：未登录时不渲染子组件，并触发登录弹窗。

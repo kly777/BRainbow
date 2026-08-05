@@ -2,7 +2,7 @@
  * CommandPalette — 命令面板（vanilla-extract 迁移，目录卡风格）
  */
 import { globalStyle, style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const overlay = style({
 	position: "fixed",

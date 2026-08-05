@@ -1,7 +1,7 @@
 import { createMemo } from "solid-js";
 import { For } from "solid-js/web";
-import type { Angle } from "../lib/angle.ts";
-import type { Color } from "../lib/color.ts";
+import type { Angle } from "@lib/angle.ts";
+import type { Color } from "@lib/color.ts";
 
 export type ShapeRender =
 	| "auto"

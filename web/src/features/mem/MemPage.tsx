@@ -4,16 +4,16 @@
 
 import { A } from "@solidjs/router";
 import { createResource, createSignal, onCleanup, onMount, Show } from "solid-js";
-import { getUpcomingCountsE } from "./api.ts";
-import { useMemReview } from "./logic/useMemReview.ts";
-import { notifyError } from "../../lib/notify.ts";
-import { tryAsync } from "../../lib/result.ts";
-import * as styles from "./MemPage.css.ts";
-import AiSettingsModal from "./ui/AiSettingsModal.tsx";
-import ContextBar from "./ui/ContextBar.tsx";
-import FilterBar from "./ui/FilterBar.tsx";
-import ReviewCard from "./ui/ReviewCard.tsx";
-import Sidebar from "./ui/Sidebar.tsx";
+import { getUpcomingCountsE } from "@features/mem/api.ts";
+import { useMemReview } from "@features/mem/logic/useMemReview.ts";
+import { notifyError } from "@lib/notify.ts";
+import { tryAsync } from "@lib/result.ts";
+import * as styles from "@features/mem/MemPage.css.ts";
+import AiSettingsModal from "@features/mem/ui/AiSettingsModal.tsx";
+import ContextBar from "@features/mem/ui/ContextBar.tsx";
+import FilterBar from "@features/mem/ui/FilterBar.tsx";
+import ReviewCard from "@features/mem/ui/ReviewCard.tsx";
+import Sidebar from "@features/mem/ui/Sidebar.tsx";
 
 export default function MemPage() {
 	const m = useMemReview();

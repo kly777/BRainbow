@@ -3,14 +3,14 @@
 // 业务逻辑复用 useMemManage，此处只做视图层
 
 import { A } from "@solidjs/router";
-import { useMemManage } from "./logic/useMemManage.ts";
-import * as styles from "./MemManage.css.ts";
-import MemBatchTagModal from "./ui/MemBatchTagModal.tsx";
-import MemExportModal from "./ui/MemExportModal.tsx";
-import ManageBatchBar from "./ui/ManageBatchBar.tsx";
-import ManageDetail from "./ui/ManageDetail.tsx";
-import ManageTable from "./ui/ManageTable.tsx";
-import ManageToolbar from "./ui/ManageToolbar.tsx";
+import { useMemManage } from "@features/mem/logic/useMemManage.ts";
+import * as styles from "@features/mem/MemManage.css.ts";
+import MemBatchTagModal from "@features/mem/ui/MemBatchTagModal.tsx";
+import MemExportModal from "@features/mem/ui/MemExportModal.tsx";
+import ManageBatchBar from "@features/mem/ui/ManageBatchBar.tsx";
+import ManageDetail from "@features/mem/ui/ManageDetail.tsx";
+import ManageTable from "@features/mem/ui/ManageTable.tsx";
+import ManageToolbar from "@features/mem/ui/ManageToolbar.tsx";
 
 export default function MemManage() {
 	const m = useMemManage();

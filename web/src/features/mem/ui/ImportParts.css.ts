@@ -3,9 +3,9 @@
  * 按钮复用 base.css.ts
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
-export { btnGhost as cancel, btnPrimary as submit } from "../../../styles/base.css.ts";
+export { btnGhost as cancel, btnPrimary as submit } from "@styles/base.css.ts";
 
 export const hintCard = style({
 	background: vars.v2.surface,

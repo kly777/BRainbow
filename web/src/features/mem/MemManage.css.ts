@@ -2,9 +2,9 @@
  * MemManage — 页面布局（vanilla-extract 迁移）
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
-export { btnGhost as backLink, btnPrimary as addLink } from "../../styles/base.css.ts";
+export { btnGhost as backLink, btnPrimary as addLink } from "@styles/base.css.ts";
 
 export const page = style({
 	display: "flex",

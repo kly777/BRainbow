@@ -1,4 +1,4 @@
-import { post, put, request } from "../../apis/request.ts";
+import { post, put, request } from "@apis/request.ts";
 
 // ── 类型 ──
 

@@ -2,7 +2,7 @@
  * TaskKanban — 看板（vanilla-extract 迁移，v2 令牌）
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const board = style({
 	display: "grid",

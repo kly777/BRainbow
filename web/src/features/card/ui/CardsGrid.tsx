@@ -1,7 +1,7 @@
 import { type Component, createMemo, createSignal } from "solid-js";
-import type { CardData } from "./Card.tsx";
-import CardFilter from "./CardFilter.tsx";
-import CardMasonry, { type CardMasonryProps } from "./CardMasonry.tsx";
+import type { CardData } from "@features/card/ui/Card.tsx";
+import CardFilter from "@features/card/ui/CardFilter.tsx";
+import CardMasonry, { type CardMasonryProps } from "@features/card/ui/CardMasonry.tsx";
 
 export interface CardsGridProps extends Omit<CardMasonryProps, "cards"> {
 	cards: readonly CardData[];

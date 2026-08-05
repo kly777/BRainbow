@@ -2,7 +2,7 @@
  * ManageBatchBar — 批量操作条（vanilla-extract 迁移）
  */
 import { style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const batchBar = style({
 	display: "flex",

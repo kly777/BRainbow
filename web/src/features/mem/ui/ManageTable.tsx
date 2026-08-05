@@ -1,10 +1,10 @@
 // ── v2 管理表格：档案清单 ──
 
 import { For, Show } from "solid-js";
-import Badge from "../../../components/ui/Badge.tsx";
-import { fmtLocal, fmtRelative } from "../../../lib/time.ts";
-import type { MemItem, TagInfo } from "../api.ts";
-import * as styles from "./ManageTable.css.ts";
+import Badge from "@components/ui/Badge.tsx";
+import { fmtLocal, fmtRelative } from "@lib/time.ts";
+import type { MemItem, TagInfo } from "@features/mem/api.ts";
+import * as styles from "@features/mem/ui/ManageTable.css.ts";
 
 type SortField = "cue.created_at" | "difficulty" | "due_at" | "state";
 type SortDir = "asc" | "desc";

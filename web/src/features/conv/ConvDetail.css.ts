@@ -2,7 +2,7 @@
  * ConvDetail — 对话详情（vanilla-extract 迁移，v2 令牌）
  */
 import { keyframes, style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 const fadeIn = keyframes({
 	from: { opacity: 0, transform: "translateY(6px)" },

@@ -1,5 +1,5 @@
-import { request } from "./request.ts";
-import { CACHE, cachedRequest, tapInvalidate } from "./cache.ts";
+import { request } from "@apis/request.ts";
+import { CACHE, cachedRequest, tapInvalidate } from "@apis/cache.ts";
 
 export interface Sign {
 	readonly id: number;

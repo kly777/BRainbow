@@ -1,7 +1,7 @@
 import { createMemo, For, Show } from "solid-js";
-import type { Task } from "../types.ts";
-import * as styles from "./TaskKanban.css.ts";
-import { useTasks } from "./TaskProvider.tsx";
+import type { Task } from "@features/task/types.ts";
+import * as styles from "@features/task/ui/TaskKanban.css.ts";
+import { useTasks } from "@features/task/ui/TaskProvider.tsx";
 
 // ==================== 状态常量 ====================
 

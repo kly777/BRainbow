@@ -2,7 +2,7 @@
  * MarkdownEditor — 富文本编辑器（vanilla-extract 迁移）
  */
 import { composeStyles, style } from "@vanilla-extract/css";
-import { radius, space, textSize, vars } from "../../styles/tokens.css.ts";
+import { radius, space, textSize, vars } from "@styles/tokens.css.ts";
 
 export const editor = style({
 	display: "flex",

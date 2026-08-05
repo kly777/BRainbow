@@ -2,12 +2,12 @@
 // 线索/答案用目录卡标签页，元数据等宽，操作与标签管理
 
 import { Show } from "solid-js";
-import TagSelector from "../../../components/TagSelector.tsx";
-import MarkdownRenderer from "../../../components/ui/Markdown.tsx";
-import MarkdownEditor from "../../../components/ui/MarkdownEditor.tsx";
-import { fmtLocal } from "../../../lib/time.ts";
-import type { MemItem, TagInfo } from "../api.ts";
-import * as styles from "./ManageDetail.css.ts";
+import TagSelector from "@components/TagSelector.tsx";
+import MarkdownRenderer from "@components/ui/Markdown.tsx";
+import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
+import { fmtLocal } from "@lib/time.ts";
+import type { MemItem, TagInfo } from "@features/mem/api.ts";
+import * as styles from "@features/mem/ui/ManageDetail.css.ts";
 
 interface Props {
 	mem: MemItem | undefined;

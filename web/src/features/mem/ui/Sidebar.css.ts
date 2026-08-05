@@ -88,6 +88,7 @@ export const sidebarItem = style({
 	marginBottom: 2,
 	border: "none",
 	background: "transparent",
+	color: vars.color.ink,
 	selectors: {
 		"&:hover": { background: vars.color.surfaceRaised },
 	},

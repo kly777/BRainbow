@@ -103,6 +103,7 @@ export const modalActions = style({
 });
 
 export const cancelBtn = style({
+	color: vars.color.inkMuted,
 	padding: "8px 16px",
 	border: `1px solid ${vars.color.border}`,
 	borderRadius: 6,

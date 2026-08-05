@@ -25,6 +25,7 @@ export const calendarTitle = style({
 });
 
 export const navButton = style({
+	color: vars.color.ink,
 	padding: `${space.sm} 16px`,
 	background: vars.color.surfaceRaised,
 	border: `1px solid ${vars.color.border}`,

@@ -111,6 +111,7 @@ export const cardTools = style({
 });
 
 export const toolBtn = style({
+	color: vars.color.inkMuted,
 	border: "none",
 	background: "none",
 	cursor: "pointer",

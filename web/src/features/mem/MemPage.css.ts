@@ -63,6 +63,7 @@ export const topRight = style({
 });
 
 export const iconBtn = style({
+	color: vars.color.inkMuted,
 	background: "none",
 	border: "none",
 	fontSize: textSize.base,

@@ -8,7 +8,8 @@
 :root,
 :root[data-theme="paper"] {
 	/* ── 字体（三主题共用） ── */
-	--t-font-display: system-ui, "Segoe UI", "Roboto", "PingFang SC", "Noto Sans SC", sans-serif;
+	--t-font-display:
+		system-ui, "Segoe UI", "Roboto", "PingFang SC", "Noto Sans SC", sans-serif;
 	--t-font-mono:
 		ui-monospace, sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
 

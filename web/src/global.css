@@ -2,7 +2,8 @@
 :root {
 	/* ── 间距与尺寸令牌（7 档；radius-xs 为 6px 新增档，sm 保持 4px 兼容旧引用） ── */
 	--radius-xs: 6px;
-	--radius-sm: 4px;	--radius-md: 8px;
+	--radius-sm: 4px;
+	--radius-md: 8px;
 	--radius-lg: 12px;
 	--radius-xl: 16px;
 	--space-2xs: 2px;

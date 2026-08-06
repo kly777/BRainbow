@@ -3,7 +3,7 @@ import hljs from "highlight.js";
 import { marked } from "marked";
 import { markedHighlight } from "marked-highlight";
 import markedKatex from "marked-katex-extension";
-import { type Component, createMemo } from "solid-js";
+import { createEffect, createMemo, onCleanup, type Component } from "solid-js";
 import "highlight.js/styles/github.css";
 import "katex/dist/katex.min.css";
 import "./markdown.css";
@@ -154,8 +154,32 @@ const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 		}
 	});
 
+	let divRef: HTMLDivElement | undefined;
+
+	// 图片加载失败（文件缺失/被删除）时替换为占位，避免破图
+	createEffect(() => {
+		html();
+		const div = divRef;
+		if (!div) return;
+		const handlers: Array<[HTMLImageElement, () => void]> = [];
+		for (const img of div.querySelectorAll("img")) {
+			const handler = () => {
+				const ph = document.createElement("span");
+				ph.className = "markdown-broken-image";
+				ph.setAttribute("aria-hidden", "true");
+				img.replaceWith(ph);
+			};
+			img.addEventListener("error", handler);
+			handlers.push([img, handler]);
+		}
+		onCleanup(() => {
+			for (const [img, h] of handlers) img.removeEventListener("error", h);
+		});
+	});
+
 	return (
 		<div
+			ref={divRef}
 			class={props.class}
 			classList={{
 				"markdown-content": true,

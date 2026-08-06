@@ -117,6 +117,8 @@ pub enum ServiceError {
     NotFound(String),
     #[allow(dead_code)]
     AlreadyExists(String),
+    /// 资源仍被内容引用，删除被拒绝（409）
+    InUse(String),
     Internal(String),
     Db(sqlx::Error),
 }
@@ -127,7 +129,7 @@ impl ServiceError {
         match self {
             Self::InvalidInput(_) => StatusCode::BAD_REQUEST,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
-            Self::AlreadyExists(_) => StatusCode::CONFLICT,
+            Self::AlreadyExists(_) | Self::InUse(_) => StatusCode::CONFLICT,
             Self::Internal(_) | Self::Db(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -137,6 +139,7 @@ impl ServiceError {
             Self::InvalidInput(msg) => resp(StatusCode::BAD_REQUEST, msg),
             Self::NotFound(msg) => resp(StatusCode::NOT_FOUND, msg),
             Self::AlreadyExists(msg) => resp(StatusCode::CONFLICT, msg),
+            Self::InUse(msg) => resp(StatusCode::CONFLICT, msg),
             Self::Internal(msg) => resp(StatusCode::INTERNAL_SERVER_ERROR, msg),
             Self::Db(e) => resp(
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -152,6 +155,7 @@ impl std::fmt::Display for ServiceError {
             Self::InvalidInput(msg) => write!(f, "{}", msg),
             Self::NotFound(msg) => write!(f, "{}", msg),
             Self::AlreadyExists(msg) => write!(f, "{}", msg),
+            Self::InUse(msg) => write!(f, "{}", msg),
             Self::Internal(msg) => write!(f, "{}", msg),
             Self::Db(e) => write!(f, "数据库错误: {}", e),
         }

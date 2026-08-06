@@ -246,7 +246,19 @@ impl MediaService {
             .ok_or_else(|| ServiceError::NotFound("媒体不存在".into()))
     }
 
-    pub async fn delete(&self, stored_id: &str) -> Result<(), ServiceError> {
+    pub async fn delete(&self, stored_id: &str, force: bool) -> Result<(), ServiceError> {
+        // 删除前检查引用：图片仍被内容使用时拒绝（除非 force）
+        let refs = self
+            .repo
+            .count_content_references(stored_id)
+            .await
+            .map_err(ServiceError::Db)?;
+        if refs > 0 && !force {
+            return Err(ServiceError::InUse(format!(
+                "该媒体文件仍被 {refs} 处内容引用（删除后引用处将无法显示），确认仍要删除吗？"
+            )));
+        }
+
         let media = self
             .repo
             .delete(stored_id)

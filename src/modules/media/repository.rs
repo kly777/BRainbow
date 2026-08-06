@@ -177,3 +177,24 @@ impl MediaRepository {
         Ok(existing)
     }
 }
+
+impl MediaRepository {
+    /// 统计内容表（card/articles/mem/text_note/chunk）中引用该媒体文件的条数
+    pub async fn count_content_references(&self, stored_id: &str) -> Result<usize, sqlx::Error> {
+        let pattern = format!("%{stored_id}%");
+        let row: (i64,) = sqlx::query_as(
+            "SELECT
+                (SELECT COUNT(*) FROM card WHERE content LIKE ?) +
+                (SELECT COUNT(*) FROM articles WHERE content LIKE ?) +
+                (SELECT COUNT(*) FROM chunk WHERE content LIKE ?) +
+                (SELECT COUNT(*) FROM text_note WHERE content LIKE ?)",
+        )
+        .bind(&pattern)
+        .bind(&pattern)
+        .bind(&pattern)
+        .bind(&pattern)
+        .fetch_one(&*self.db)
+        .await?;
+        Ok(row.0 as usize)
+    }
+}

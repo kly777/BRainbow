@@ -6,7 +6,7 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import { getErrorMessage } from "@apis/types/index.ts";
+import { getErrorMessage, HttpError } from "@apis/types/index.ts";
 import { AsyncView } from "@components/ui/AsyncView.tsx";
 import Button from "@components/ui/Button.tsx";
 import FilterGroup from "@components/ui/FilterGroup.tsx";
@@ -16,7 +16,7 @@ import {
 	type MediaItem,
 	renameMediaE,
 } from "@features/mem/mediaApi.ts";
-import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
+import { showConfirm } from "@lib/safe-action.ts";
 import { notifyError } from "@lib/notify.ts";
 import { tryAsync } from "@lib/result.ts";
 import styles from "@pages/media/MediaList.module.css";
@@ -62,13 +62,26 @@ const MediaListPage: Component = () => {
 	const [error, setError] = createSignal("");
 
 	const handleDelete = async (stored_id: string) => {
-		const confirmed = await showConfirm({
-			title: "删除媒体",
-			message: "确定要删除这个媒体文件吗？此操作不可撤销。",
-			variant: "danger",
-		});
-		if (!confirmed) return;
-		await tryOrNotify(() => deleteMediaE(stored_id), "删除媒体");
+		let force = false;
+		for (;;) {
+			const confirmed = await showConfirm({
+				title: force ? "强制删除媒体" : "删除媒体",
+				message: force
+					? "该文件仍被内容引用，强制删除后引用处将无法显示。仍要删除吗？"
+					: "确定要删除这个媒体文件吗？此操作不可撤销。",
+				variant: "danger",
+			});
+			if (!confirmed) return;
+			const result = await tryAsync(() => deleteMediaE(stored_id, force));
+			if (result.ok) break;
+			// 409：仍被引用 → 升级为强制删除确认
+			if (result.error instanceof HttpError && result.error.status === 409) {
+				force = true;
+				continue;
+			}
+			notifyError("删除媒体失败", getErrorMessage(result.error));
+			return;
+		}
 		refetch();
 	};
 

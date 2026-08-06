@@ -5,6 +5,14 @@ use axum::{
     response::{IntoResponse, Json, Response},
 };
 use serde::{Deserialize, Serialize};
+
+/// 删除媒体查询参数
+#[derive(Deserialize)]
+pub struct DeleteQuery {
+    /// 跳过引用检查强制删除
+    #[serde(default)]
+    pub force: Option<bool>,
+}
 use tokio_util::io::ReaderStream;
 
 use super::service::MediaService;
@@ -206,9 +214,10 @@ pub async fn rename_handler(
 pub async fn delete_handler(
     State(state): State<AppState>,
     Path(stored_id): Path<String>,
+    Query(query): Query<DeleteQuery>,
 ) -> impl IntoResponse {
     let service = &state.media;
-    match service.delete(&stored_id).await {
+    match service.delete(&stored_id, query.force.unwrap_or(false)).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => e.into_response(),
     }

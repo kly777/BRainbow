@@ -65,6 +65,8 @@ export const renameMediaE = (
 		tapInvalidate(CACHE.media, r),
 	);
 
-/** 删除 */
-export const deleteMediaE = (stored_id: string): Promise<void> =>
-	del<void>(`/media/${stored_id}`).then((r) => tapInvalidate(CACHE.media, r));
+/** 删除；force=true 跳过引用检查强制删除 */
+export const deleteMediaE = (stored_id: string, force = false): Promise<void> =>
+	del<void>(`/media/${stored_id}${force ? "?force=true" : ""}`).then((r) =>
+		tapInvalidate(CACHE.media, r),
+	);

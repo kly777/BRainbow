@@ -276,3 +276,17 @@
 		padding: 0.5em;
 	}
 }
+
+/* 图片加载失败占位（文件缺失/被删除） */
+.markdown-broken-image {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 64px;
+	height: 48px;
+	border: 1px dashed var(--t-color-border);
+	border-radius: var(--radius-sm);
+	color: var(--t-color-ink-faint);
+	font-size: 1.2rem;
+	vertical-align: middle;
+}

@@ -138,3 +138,100 @@
 		border-right: none;
 	}
 }
+
+/* ===== 共享组件样式（ADR 0001 决策 8：输入框/卡片/空状态/标签） ===== */
+
+/* ── 输入框 ── */
+.field-input {
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-base);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+}
+
+.field-input:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 var(--space-2xs) var(--t-color-accent-soft);
+}
+
+.field-input::placeholder {
+	color: var(--t-color-ink-faint);
+}
+
+.field-textarea {
+	composes: field-input;
+	resize: vertical;
+}
+
+/* ── 卡片 ── */
+.card {
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	padding: var(--space-lg);
+	box-shadow: var(--shadow-sm);
+}
+
+/* ── 空状态（居中图标 + 提示 + 引导按钮） ── */
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--space-sm);
+	text-align: center;
+	color: var(--t-color-ink-muted);
+	padding: var(--space-2xl) var(--space-lg);
+}
+
+.empty-icon {
+	font-size: var(--text-2xl);
+	line-height: 1;
+	color: var(--t-color-ink-faint);
+}
+
+.empty-hint {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	max-width: 320px;
+}
+
+.empty-action {
+	margin-top: var(--space-sm);
+}
+
+/* ── 标签/徽章（胶囊） ── */
+.tag-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	padding: var(--space-2xs) var(--space-sm);
+	border-radius: 999px;
+	font-size: var(--text-xs);
+	line-height: 18px;
+	white-space: nowrap;
+}
+
+.tag-accent {
+	composes: tag-chip;
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
+}
+
+.tag-neutral {
+	composes: tag-chip;
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink-muted);
+}
+
+.tag-danger {
+	composes: tag-chip;
+	background: var(--t-color-danger-subtle);
+	color: var(--t-color-danger);
+}

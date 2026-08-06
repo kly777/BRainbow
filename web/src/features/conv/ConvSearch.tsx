@@ -1,5 +1,6 @@
-import { A, useNavigate, useSearchParams } from "@solidjs/router";
+import { A, useNavigate } from "@solidjs/router";
 import { createResource, createSignal, For, onMount, Show } from "solid-js";
+import { strParam, useUrlParams } from "@lib/useUrlParams.ts";
 import { type ConvHit, searchConvE } from "@features/conv/api.ts";
 import styles from "@features/conv/ConvSearch.module.css";
 
@@ -21,34 +22,24 @@ const typeLabel: Record<string, string> = {
 
 export default function ConvSearch() {
 	const [query, setQuery] = createSignal("");
-	const [searchParams, setSearchParams] = useSearchParams();
+	const urlParams = useUrlParams({ q: strParam(""), t: strParam("") });
 	const _navigate = useNavigate();
 
 	// 从 URL 恢复 tab
 	const tab = () => {
-		const t = searchParams.t;
-		const tv = Array.isArray(t) ? t[0] : t;
+		const tv = urlParams.get("t");
 		return VALID_TABS.includes(tv as Tab) ? (tv as Tab) : "all";
 	};
 	const setTab = (t: Tab) => {
-		const q = searchParams.q;
-		const params: Record<string, string | undefined> = {};
-		if (q) params.q = Array.isArray(q) ? q[0] : q;
-		params.t = t === "all" ? undefined : t; // 切到"全部"时显式移除 t 参数
-		setSearchParams(params);
+		urlParams.set({ q: urlParams.get("q"), t: t === "all" ? "all" : t });
 	};
 
 	// 从 URL 恢复 query
-	const searchQuery = () => {
-		const q = searchParams.q;
-		if (Array.isArray(q)) return q[0];
-		return q ?? "";
-	};
+	const searchQuery = () => urlParams.get("q");
 
 	onMount(() => {
-		const urlQ = searchParams.q;
-		const q = Array.isArray(urlQ) ? urlQ[0] : urlQ;
-		if (q && typeof q === "string") {
+		const q = urlParams.get("q");
+		if (q) {
 			setQuery(q);
 		}
 	});
@@ -67,9 +58,7 @@ export default function ConvSearch() {
 		e.preventDefault();
 		const q = query().trim();
 		if (!q) return;
-		const params: Record<string, string> = { q };
-		if (tab() !== "all") params.t = tab();
-		setSearchParams(params, { replace: true });
+		urlParams.set({ q, t: tab() !== "all" ? tab() : "all" }, { replace: true });
 	};
 
 	const itemHref = (hit: ConvHit) => {

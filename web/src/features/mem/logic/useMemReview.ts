@@ -1,7 +1,7 @@
 // ── 记忆复习模块的核心业务逻辑 ──
 
-import { useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal, onMount } from "solid-js";
+import { enumParam, listParam, useUrlParams } from "@lib/useUrlParams.ts";
 import { notifyError } from "@lib/notify.ts";
 import { tryAsync } from "@lib/result.ts";
 import {
@@ -82,7 +82,10 @@ export interface UseMemReview {
 }
 
 export function useMemReview(): UseMemReview {
-	const [searchParams] = useSearchParams();
+	const params = useUrlParams({
+		tag_ids: listParam(),
+		tag_mode: enumParam(["include", "exclude"] as const, "include"),
+	});
 
 	// ── 核心状态 ──
 	const [due, setDue] = createSignal<MemItem[]>([]);
@@ -375,8 +378,8 @@ export function useMemReview(): UseMemReview {
 
 	// ── 当标签过滤变化时重新加载 ──
 	createEffect(() => {
-		void searchParams.tag_ids;
-		void searchParams.tag_mode;
+		void params.get("tag_ids");
+		void params.get("tag_mode");
 	});
 
 	return {

@@ -1,4 +1,4 @@
-import { useSearchParams } from "@solidjs/router";
+import { enumParam, strParam, useUrlParams } from "@lib/useUrlParams.ts";
 import { createSignal, Show } from "solid-js";
 import styles from "@features/task/TaskManager.module.css";
 import TaskCalendar from "@features/task/ui/TaskCalendar.tsx";
@@ -164,23 +164,20 @@ function TaskPanel(props: {
 }
 
 export default function TaskManager() {
-	const [searchParams, setSearchParams] = useSearchParams();
+	const params = useUrlParams({
+		view: enumParam(["list", "kanban"] as const, "list"),
+		right: enumParam(["calendar", "dag"] as const, "calendar"),
+		q: strParam(""),
+	});
 
-	const viewMode = () =>
-		(searchParams.view === "kanban" ? "kanban" : "list") as "list" | "kanban";
-	const setViewMode = (v: "list" | "kanban") =>
-		setSearchParams({ view: v === "list" ? undefined : v });
+	const viewMode = () => params.get("view");
+	const setViewMode = (v: "list" | "kanban") => params.set({ view: v });
 
-	const rightTab = () =>
-		(searchParams.right === "dag" ? "dag" : "calendar") as "calendar" | "dag";
-	const setRightTab = (t: "calendar" | "dag") =>
-		setSearchParams({ right: t === "calendar" ? undefined : t });
+	const rightTab = () => params.get("right");
+	const setRightTab = (t: "calendar" | "dag") => params.set({ right: t });
 
-	const searchQuery = () => {
-		const q = searchParams.q;
-		return typeof q === "string" ? q : "";
-	};
-	const onSearchChange = (q: string) => setSearchParams({ q: q || undefined });
+	const searchQuery = () => params.get("q");
+	const onSearchChange = (q: string) => params.set({ q });
 
 	return (
 		<TaskProvider>

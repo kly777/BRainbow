@@ -1,7 +1,7 @@
 // ── 标签过滤逻辑 ──
 
-import { useSearchParams } from "@solidjs/router";
 import { createMemo, createResource, createSignal } from "solid-js";
+import { enumParam, listParam, useUrlParams } from "@lib/useUrlParams.ts";
 import { listTagsE, searchTagsE } from "@features/mem/api.ts";
 import { notifyError } from "@lib/notify.ts";
 import { tryAsync } from "@lib/result.ts";
@@ -24,7 +24,10 @@ interface UseMemTagFilterResult {
 }
 
 export function useMemTagFilter(loadDue: () => void): UseMemTagFilterResult {
-	const [searchParams, setSearchParams] = useSearchParams();
+	const params = useUrlParams({
+		tag_ids: listParam(),
+		tag_mode: enumParam(["include", "exclude"] as const, "include"),
+	});
 	const [allTags, setAllTags] = createSignal<TagInfo[]>([]);
 	const [tagQuery, setTagQuery] = createSignal("");
 	const [tagOpen, setTagOpen] = createSignal(false);
@@ -36,15 +39,9 @@ export function useMemTagFilter(loadDue: () => void): UseMemTagFilterResult {
 		else notifyError("加载标签列表失败", result.error);
 	})();
 
-	const tagFilterIds = () => {
-		const v = searchParams.tag_ids;
-		return typeof v === "string"
-			? v.split(",").filter(Boolean).map(Number)
-			: [];
-	};
+	const tagFilterIds = () => params.get("tag_ids").map(Number);
 
-	const tagMode = (): "include" | "exclude" =>
-		searchParams.tag_mode === "exclude" ? "exclude" : "include";
+	const tagMode = (): "include" | "exclude" => params.get("tag_mode");
 
 	const tagFilterTags = createMemo(() =>
 		allTags().filter((t) => tagFilterIds().includes(t.id)),
@@ -62,10 +59,7 @@ export function useMemTagFilter(loadDue: () => void): UseMemTagFilterResult {
 
 	const addTagFilter = (tag: TagInfo) => {
 		const next = [...tagFilterIds(), tag.id];
-		setSearchParams({
-			tag_ids: next.join(","),
-			tag_mode: searchParams.tag_mode,
-		});
+		params.set({ tag_ids: next.map(String), tag_mode: tagMode() });
 		setTagQuery("");
 		setTagOpen(false);
 		setTimeout(loadDue, 0);
@@ -73,22 +67,17 @@ export function useMemTagFilter(loadDue: () => void): UseMemTagFilterResult {
 
 	const removeTagFilter = (tagId: number) => {
 		const next = tagFilterIds().filter((id) => id !== tagId);
-		setSearchParams({
-			tag_ids: next.length > 0 ? next.join(",") : undefined,
-			tag_mode: searchParams.tag_mode,
-		});
+		params.set({ tag_ids: next.map(String), tag_mode: tagMode() });
 		setTimeout(loadDue, 0);
 	};
 
 	const toggleTagMode = () => {
-		setSearchParams({
-			tag_mode: tagMode() === "include" ? "exclude" : "include",
-		});
+		params.set({ tag_mode: tagMode() === "include" ? "exclude" : "include" });
 		setTimeout(loadDue, 0);
 	};
 
 	const clearTagFilters = () => {
-		setSearchParams({ tag_ids: undefined, tag_mode: undefined });
+		params.set({ tag_ids: [], tag_mode: "include" });
 		setTimeout(loadDue, 0);
 	};
 

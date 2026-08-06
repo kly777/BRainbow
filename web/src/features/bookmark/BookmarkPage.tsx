@@ -1,8 +1,8 @@
 import { createEffect, createSignal, For, Show } from "solid-js";
-import { useSearchParams } from "@solidjs/router";
 import Button from "@components/ui/Button.tsx";
 import Modal from "@components/ui/Modal.tsx";
 import SearchInput from "@components/ui/SearchInput.tsx";
+import { strParam, numParam, useUrlParams } from "@lib/useUrlParams.ts";
 import { tryAsync } from "@lib/result.ts";
 import { notifyError, notifySuccess } from "@lib/notify.ts";
 import { showConfirm } from "@lib/safe-action.ts";
@@ -30,23 +30,16 @@ function extractDomain(url: string): string {
 	}
 }
 
-/** 从 URL 参数读取正整数页码，非法则回退 1 */
-function parsePage(v: string | undefined): number {
-	const n = Number(v);
-	return Number.isInteger(n) && n > 0 ? n : 1;
-}
-
 export default function BookmarkPage() {
 	// ── 状态全部由 URL query 驱动：q / tag / page ──
-	const [searchParams, setSearchParams] = useSearchParams();
-	const searchQuery = () =>
-		typeof searchParams.q === "string" ? searchParams.q : "";
-	const tagFilter = () =>
-		typeof searchParams.tag === "string" ? searchParams.tag : "";
-	const page = () =>
-		parsePage(
-			typeof searchParams.page === "string" ? searchParams.page : undefined,
-		);
+	const params = useUrlParams({
+		q: strParam(""),
+		tag: strParam(""),
+		page: numParam(1, { min: 1 }),
+	});
+	const searchQuery = () => params.get("q");
+	const tagFilter = () => params.get("tag");
+	const page = () => params.get("page");
 	const [pageSize] = createSignal(500);
 
 	const [bookmarks, setBookmarks] = createSignal<Bookmark[]>([]);
@@ -102,11 +95,11 @@ export default function BookmarkPage() {
 	});
 
 	function handleSearch(q: string) {
-		setSearchParams({ q: q.trim() || undefined, page: undefined });
+		params.set({ q: q.trim(), page: 1 });
 	}
 
 	function handleTagFilter(tag: string) {
-		setSearchParams({ tag: tag || undefined, page: undefined });
+		params.set({ tag, page: 1 });
 	}
 
 	function clearTagFilter() {
@@ -115,7 +108,7 @@ export default function BookmarkPage() {
 
 	function goPage(n: number) {
 		if (n < 1 || n > totalPages()) return;
-		setSearchParams({ page: n > 1 ? String(n) : undefined });
+		params.set({ page: n });
 	}
 
 	function openCreate() {
@@ -238,7 +231,7 @@ export default function BookmarkPage() {
 			// 当前页被删空时回退一页（URL 变化触发加载）
 			if (wasLastOnPage) {
 				const back = page() - 1;
-				setSearchParams({ page: back > 1 ? String(back) : undefined });
+				params.set({ page: back });
 			}
 		} else {
 			// 失败：回滚本地状态

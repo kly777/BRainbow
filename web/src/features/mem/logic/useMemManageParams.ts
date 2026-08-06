@@ -1,6 +1,12 @@
 // ── URL 搜索参数管理 ──
 
-import { useSearchParams } from "@solidjs/router";
+import {
+	enumParam,
+	numParam,
+	listParam,
+	strParam,
+	useUrlParams,
+} from "@lib/useUrlParams.ts";
 import type { TagMode } from "@features/mem/logic/mem-manage-utils.ts";
 import {
 	type SortDir,
@@ -27,75 +33,53 @@ export interface UseMemManageParamsResult {
 }
 
 export function useMemManageParams(): UseMemManageParamsResult {
-	const [searchParams, setSearchParams] = useSearchParams();
+	const params = useUrlParams({
+		q: strParam(""),
+		state: enumParam(VALID_STATES, "all"),
+		sort: enumParam(VALID_SORT_FIELDS, "due_at"),
+		order: enumParam(["asc", "desc"] as const, "asc"),
+		page: numParam(1, { min: 1 }),
+		id: numParam(0, { min: 1 }),
+		tag_mode: enumParam(["include", "exclude"] as const, "include"),
+		tag_names: listParam(),
+	});
 
-	const searchQuery = () => {
-		const q = searchParams.q;
-		return typeof q === "string" ? q : "";
-	};
-
-	const filterState = () => {
-		const s = searchParams.state;
-		return typeof s === "string" &&
-			VALID_STATES.includes(s as (typeof VALID_STATES)[number])
-			? s
-			: "all";
-	};
-
-	const sortField = (): SortField => {
-		const s = searchParams.sort;
-		return typeof s === "string" && VALID_SORT_FIELDS.includes(s as SortField)
-			? (s as SortField)
-			: "due_at";
-	};
-
-	const sortDir = (): SortDir =>
-		searchParams.order === "desc" ? "desc" : "asc";
-
-	const page = () => {
-		const p = Number(searchParams.page);
-		return p > 0 ? p : 1;
-	};
+	const searchQuery = () => params.get("q");
+	const filterState = () => params.get("state");
+	const sortField = () => params.get("sort");
+	const sortDir = (): SortDir => params.get("order");
+	const page = () => params.get("page");
 
 	const detailId = () => {
-		const id = Number(searchParams.id);
+		const id = params.get("id");
 		return id > 0 ? id : null;
 	};
-
 	const setDetailId = (id: number | null) =>
-		setSearchParams({ id: id != null ? String(id) : undefined });
+		params.set({ id: id ?? 0 });
 
-	const tagMode = (): TagMode =>
-		searchParams.tag_mode === "exclude" ? "exclude" : "include";
-
-	const tagFilterNames = () => {
-		const v = searchParams.tag_names;
-		return typeof v === "string" ? v.split(",").filter(Boolean) : [];
-	};
+	const tagMode = (): TagMode => params.get("tag_mode");
+	const tagFilterNames = () => params.get("tag_names");
 
 	// ── 便捷操作 ──
 
 	const handleSearchInput = (value: string) => {
-		setSearchParams({ q: value || undefined, page: "1" });
+		params.set({ q: value, page: 1 });
 	};
 
 	const setFilter = (st: string) => {
-		setSearchParams({ state: st === "all" ? undefined : st, page: "1" });
+		params.set({ state: st as (typeof VALID_STATES)[number], page: 1 });
 	};
 
 	const toggleSort = (field: SortField) => {
-		const params: Record<string, string | undefined> = { page: "1" };
-		if (sortField() === field)
-			params.order = sortDir() === "asc" ? "desc" : "asc";
-		else {
-			params.sort = field;
-			params.order = "asc";
+		if (sortField() === field) {
+			params.set({ order: sortDir() === "asc" ? "desc" : "asc", page: 1 });
+		} else {
+			params.set({ sort: field, order: "asc", page: 1 });
 		}
-		setSearchParams(params);
 	};
 
 	const goToPage = (p: number) => {
-		setSearchParams({ page: p > 1 ? String(p) : undefined });
+		params.set({ page: p });
 	};
 
 	return {
@@ -108,7 +92,7 @@ export function useMemManageParams(): UseMemManageParamsResult {
 		setDetailId,
 		tagMode,
 		tagFilterNames,
-		setSearchParams,
+		setSearchParams: params.setSearchParams,
 		handleSearchInput,
 		setFilter,
 		toggleSort,

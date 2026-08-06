@@ -175,7 +175,10 @@ mod tests {
         let items = parse_netscape_html(html);
         assert_eq!(
             items,
-            vec![bm("A", "https://a.com/", &[]), bm("B", "https://b.com/", &[])]
+            vec![
+                bm("A", "https://a.com/", &[]),
+                bm("B", "https://b.com/", &[])
+            ]
         );
     }
 

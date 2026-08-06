@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::config::Config;
 use crate::modules::{
     bookmark::BookmarkService, card::CardService, db_viewer::DbViewerService,
-    media::service::MediaService, mem::query::MemQueryService, mem::MemRepo,
+    media::service::MediaService, mem::MemRepo, mem::query::MemQueryService,
     mem::service::MemService, onto::OntoService, reading::service::ReadingService,
     sign::SignService, task::TaskService, text::TextService,
     time_window::service::TimeWindowService, user::UserService,

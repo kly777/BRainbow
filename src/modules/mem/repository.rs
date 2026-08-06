@@ -2,8 +2,8 @@ use sqlx::{QueryBuilder, SqlitePool};
 use std::sync::Arc;
 
 use super::model::{Chunk, FsrsUpdate, InsertRevlogParams, MemQuery, MemRow, MemTagRow, TagInfo};
-use async_trait::async_trait;
 use super::port::MemRepository;
+use async_trait::async_trait;
 
 #[derive(Debug, sqlx::FromRow)]
 struct TagRow {
@@ -11,8 +11,6 @@ struct TagRow {
     name: String,
     created_at: String,
 }
-
-
 
 #[derive(Clone)]
 pub struct MemRepo {
@@ -860,11 +858,9 @@ impl MemRepo {
     }
 
     pub async fn count_relearning(&self) -> Result<i64, sqlx::Error> {
-        sqlx::query_scalar(
-            "SELECT COUNT(*) FROM mem WHERE state = 'relearning' AND buried = 0",
-        )
-        .fetch_one(&*self.pool)
-        .await
+        sqlx::query_scalar("SELECT COUNT(*) FROM mem WHERE state = 'relearning' AND buried = 0")
+            .fetch_one(&*self.pool)
+            .await
     }
 }
 
@@ -881,7 +877,12 @@ impl MemRepository for MemRepo {
     async fn update_chunk(&self, id: i32, content: &str) -> Result<(), sqlx::Error> {
         self.update_chunk(id, content).await
     }
-    async fn create_mem(&self, cue_id: i32, target_id: i32, prerequisites: &[i32]) -> Result<i32, sqlx::Error> {
+    async fn create_mem(
+        &self,
+        cue_id: i32,
+        target_id: i32,
+        prerequisites: &[i32],
+    ) -> Result<i32, sqlx::Error> {
         self.create_mem(cue_id, target_id, prerequisites).await
     }
     async fn get_mem(&self, id: i32) -> Result<Option<MemRow>, sqlx::Error> {
@@ -890,22 +891,47 @@ impl MemRepository for MemRepo {
     async fn delete_mem(&self, id: i32) -> Result<(), sqlx::Error> {
         self.delete_mem(id).await
     }
-    async fn get_all_mems(&self, limit: i64, offset: i64, query: &MemQuery) -> Result<Vec<i32>, sqlx::Error> {
+    async fn get_all_mems(
+        &self,
+        limit: i64,
+        offset: i64,
+        query: &MemQuery,
+    ) -> Result<Vec<i32>, sqlx::Error> {
         self.get_all_mems(limit, offset, query).await
     }
     async fn count_all_mems(&self, query: &MemQuery) -> Result<i64, sqlx::Error> {
         self.count_all_mems(query).await
     }
-    async fn get_learning_mems(&self, limit: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
-        self.get_learning_mems(limit, tag_ids, exclude_tag_ids).await
+    async fn get_learning_mems(
+        &self,
+        limit: i64,
+        tag_ids: &[i32],
+        exclude_tag_ids: &[i32],
+    ) -> Result<Vec<i32>, sqlx::Error> {
+        self.get_learning_mems(limit, tag_ids, exclude_tag_ids)
+            .await
     }
-    async fn get_due_reviews(&self, limit: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+    async fn get_due_reviews(
+        &self,
+        limit: i64,
+        tag_ids: &[i32],
+        exclude_tag_ids: &[i32],
+    ) -> Result<Vec<i32>, sqlx::Error> {
         self.get_due_reviews(limit, tag_ids, exclude_tag_ids).await
     }
-    async fn get_new_cards(&self, limit: i64, tag_ids: &[i32], exclude_tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+    async fn get_new_cards(
+        &self,
+        limit: i64,
+        tag_ids: &[i32],
+        exclude_tag_ids: &[i32],
+    ) -> Result<Vec<i32>, sqlx::Error> {
         self.get_new_cards(limit, tag_ids, exclude_tag_ids).await
     }
-    async fn get_upcoming_reviews(&self, limit: i64, tag_ids: &[i32]) -> Result<Vec<i32>, sqlx::Error> {
+    async fn get_upcoming_reviews(
+        &self,
+        limit: i64,
+        tag_ids: &[i32],
+    ) -> Result<Vec<i32>, sqlx::Error> {
         self.get_upcoming_reviews(limit, tag_ids).await
     }
     async fn count_upcoming(&self) -> Result<i64, sqlx::Error> {
@@ -920,7 +946,12 @@ impl MemRepository for MemRepo {
     async fn get_next_mem(&self) -> Result<Option<i32>, sqlx::Error> {
         self.get_next_mem().await
     }
-    async fn set_state(&self, id: i32, state: &str, step_index: Option<i32>) -> Result<(), sqlx::Error> {
+    async fn set_state(
+        &self,
+        id: i32,
+        state: &str,
+        step_index: Option<i32>,
+    ) -> Result<(), sqlx::Error> {
         self.set_state(id, state, step_index).await
     }
     async fn update_mem_fsrs(&self, id: i32, params: &FsrsUpdate) -> Result<(), sqlx::Error> {
@@ -971,7 +1002,10 @@ impl MemRepository for MemRepo {
     async fn get_mems_tags_batch(&self, mem_ids: &[i32]) -> Result<Vec<MemTagRow>, sqlx::Error> {
         self.get_mems_tags_batch(mem_ids).await
     }
-    async fn export_all_mems(&self, tag_ids: &[i32]) -> Result<Vec<(String, String, String)>, sqlx::Error> {
+    async fn export_all_mems(
+        &self,
+        tag_ids: &[i32],
+    ) -> Result<Vec<(String, String, String)>, sqlx::Error> {
         self.export_all_mems(tag_ids).await
     }
     async fn get_mnemonic(&self, mem_id: i32) -> Result<Option<String>, sqlx::Error> {

@@ -31,13 +31,19 @@ pub fn routes() -> Router<AppState> {
             "/import",
             post(import_bookmarks_handler).layer(DefaultBodyLimit::max(64 * 1024 * 1024)),
         )
-        .route("/", get(get_bookmarks_handler).post(create_bookmark_handler))
+        .route(
+            "/",
+            get(get_bookmarks_handler).post(create_bookmark_handler),
+        )
         .route(
             "/{id}",
             get(get_bookmark_handler)
                 .patch(update_bookmark_handler)
                 .delete(delete_bookmark_handler),
         )
-        .route("/{id}/tags", get(get_bookmark_tags_handler).put(handler::set_bookmark_tags_handler))
+        .route(
+            "/{id}/tags",
+            get(get_bookmark_tags_handler).put(handler::set_bookmark_tags_handler),
+        )
         .route("/search", get(search_bookmarks_handler))
 }

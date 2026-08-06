@@ -569,11 +569,7 @@ impl MemService {
 }
 
 /// 如果 revlog 条数达到 `every` 的整数倍，自动触发 FSRS 参数优化。
-async fn maybe_auto_optimize(
-    repo: Arc<dyn MemRepository>,
-    db: Arc<SqlitePool>,
-    every: i64,
-) {
+async fn maybe_auto_optimize(repo: Arc<dyn MemRepository>, db: Arc<SqlitePool>, every: i64) {
     let count = match repo.count_revlogs().await {
         Ok(n) => n,
         Err(_) => return,

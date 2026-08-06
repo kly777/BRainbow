@@ -95,7 +95,10 @@ impl BookmarkService {
         self.repo.delete_tag(id).await.map_err(ServiceError::Db)
     }
 
-    pub async fn get_bookmark_tags(&self, bookmark_id: i32) -> Result<Vec<BookmarkTag>, ServiceError> {
+    pub async fn get_bookmark_tags(
+        &self,
+        bookmark_id: i32,
+    ) -> Result<Vec<BookmarkTag>, ServiceError> {
         self.repo
             .get_bookmark_tags(bookmark_id)
             .await
@@ -122,10 +125,7 @@ impl BookmarkService {
     ///
     /// 按 URL 去重：已存在的书签合并文件夹标签；不存在的创建。
     /// 返回统计结果。
-    pub async fn import_netscape_html(
-        &self,
-        html: &str,
-    ) -> Result<ImportResult, ServiceError> {
+    pub async fn import_netscape_html(&self, html: &str) -> Result<ImportResult, ServiceError> {
         let parsed = super::import_html::parse_netscape_html(html);
 
         let mut created = 0u64;
@@ -248,7 +248,9 @@ mod tests {
     #[tokio::test]
     async fn list_filtered_by_tag() {
         let svc = setup().await;
-        svc.create("A", "https://a.com", "", &str_vec(&["编程"])).await.unwrap();
+        svc.create("A", "https://a.com", "", &str_vec(&["编程"]))
+            .await
+            .unwrap();
         svc.create("B", "https://b.com", "", &[]).await.unwrap();
 
         let (items, total) = svc.list(10, 0, Some("编程")).await.unwrap();
@@ -267,7 +269,10 @@ mod tests {
     #[tokio::test]
     async fn update_and_delete() {
         let svc = setup().await;
-        let bm = svc.create("t", "https://e.com", "", &str_vec(&["a"])).await.unwrap();
+        let bm = svc
+            .create("t", "https://e.com", "", &str_vec(&["a"]))
+            .await
+            .unwrap();
         let updated = svc.update(bm.id, Some("新标题"), None, None).await.unwrap();
         assert_eq!(updated.title, "新标题");
         assert_eq!(updated.tags, str_vec(&["a"]));
@@ -286,8 +291,12 @@ mod tests {
     #[tokio::test]
     async fn search_by_keyword() {
         let svc = setup().await;
-        svc.create("Rust 官网", "https://rust-lang.org", "", &[]).await.unwrap();
-        svc.create("Go 官网", "https://go.dev", "", &[]).await.unwrap();
+        svc.create("Rust 官网", "https://rust-lang.org", "", &[])
+            .await
+            .unwrap();
+        svc.create("Go 官网", "https://go.dev", "", &[])
+            .await
+            .unwrap();
         let (items, total) = svc.search("rust", None, 10, 0).await.unwrap();
         assert_eq!(total, 1);
         assert_eq!(items[0].url, "https://rust-lang.org");
@@ -296,8 +305,17 @@ mod tests {
     #[tokio::test]
     async fn search_with_tag_filter() {
         let svc = setup().await;
-        svc.create("Rust 官网", "https://rust-lang.org", "", &str_vec(&["编程"])).await.unwrap();
-        svc.create("Go 官网", "https://go.dev", "", &[]).await.unwrap();
+        svc.create(
+            "Rust 官网",
+            "https://rust-lang.org",
+            "",
+            &str_vec(&["编程"]),
+        )
+        .await
+        .unwrap();
+        svc.create("Go 官网", "https://go.dev", "", &[])
+            .await
+            .unwrap();
         let (items, total) = svc.search("rust", Some("编程"), 10, 0).await.unwrap();
         assert_eq!(total, 1);
         assert_eq!(items[0].url, "https://rust-lang.org");
@@ -312,7 +330,10 @@ mod tests {
         let svc = setup().await;
         let bm = svc.create("t", "https://e.com", "", &[]).await.unwrap();
 
-        let tags = svc.set_bookmark_tags(bm.id, &str_vec(&["编程", "rust"])).await.unwrap();
+        let tags = svc
+            .set_bookmark_tags(bm.id, &str_vec(&["编程", "rust"]))
+            .await
+            .unwrap();
         assert_eq!(tags.len(), 2);
 
         let got = svc.get_bookmark_tags(bm.id).await.unwrap();
@@ -331,6 +352,12 @@ mod tests {
 
         // 删除标签
         assert_eq!(svc.delete_tag(t.id).await.unwrap(), 1);
-        assert!(svc.get_bookmark_tags(bm.id).await.unwrap().iter().all(|x| x.id != t.id));
+        assert!(
+            svc.get_bookmark_tags(bm.id)
+                .await
+                .unwrap()
+                .iter()
+                .all(|x| x.id != t.id)
+        );
     }
 }

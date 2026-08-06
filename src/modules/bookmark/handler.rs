@@ -8,7 +8,9 @@ use crate::error;
 use crate::pagination::{PaginatedResponse, Pagination};
 use crate::state::AppState;
 
-use super::model::{Bookmark, CreateBookmarkRequest, SetBookmarkTagsRequest, UpdateBookmarkRequest};
+use super::model::{
+    Bookmark, CreateBookmarkRequest, SetBookmarkTagsRequest, UpdateBookmarkRequest,
+};
 
 #[derive(Debug, Serialize)]
 pub struct BookmarkResponse {
@@ -43,7 +45,10 @@ pub struct BookmarkTagResponse {
 
 impl From<super::model::BookmarkTag> for BookmarkTagResponse {
     fn from(t: super::model::BookmarkTag) -> Self {
-        Self { id: t.id, name: t.name }
+        Self {
+            id: t.id,
+            name: t.name,
+        }
     }
 }
 
@@ -56,7 +61,11 @@ pub struct BookmarkTagWithCountResponse {
 
 impl From<super::model::BookmarkTagWithCount> for BookmarkTagWithCountResponse {
     fn from(t: super::model::BookmarkTagWithCount) -> Self {
-        Self { id: t.id, name: t.name, count: t.count }
+        Self {
+            id: t.id,
+            name: t.name,
+            count: t.count,
+        }
     }
 }
 
@@ -87,7 +96,11 @@ pub async fn create_bookmark_handler(
         return resp;
     }
 
-    let tags: Vec<String> = payload.tags.into_iter().filter(|t| !t.trim().is_empty()).collect();
+    let tags: Vec<String> = payload
+        .tags
+        .into_iter()
+        .filter(|t| !t.trim().is_empty())
+        .collect();
 
     let result = state
         .bookmark
@@ -119,7 +132,11 @@ pub async fn get_bookmarks_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let pagination = params.pagination();
-    let tag = params.tag.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    let tag = params
+        .tag
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
     let result = state
         .bookmark
         .list(pagination.limit(), pagination.offset(), tag)
@@ -149,7 +166,11 @@ pub async fn update_bookmark_handler(
     Path(id): Path<i32>,
     Json(payload): Json<UpdateBookmarkRequest>,
 ) -> impl IntoResponse {
-    let title = payload.title.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    let title = payload
+        .title
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
     let description = payload
         .description
         .as_deref()
@@ -204,10 +225,19 @@ pub async fn search_bookmarks_handler(
         return error::bad_request("搜索关键词不能为空");
     }
     let pagination = params.pagination();
-    let tag = params.tag.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    let tag = params
+        .tag
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
     let result = state
         .bookmark
-        .search(params.q.trim(), tag, pagination.limit(), pagination.offset())
+        .search(
+            params.q.trim(),
+            tag,
+            pagination.limit(),
+            pagination.offset(),
+        )
         .await
         .map(|(items, total)| {
             let items: Vec<BookmarkResponse> =
@@ -256,7 +286,11 @@ pub async fn import_bookmarks_handler(
     if !html.contains("<A HREF=") && !html.contains("<DT><A") {
         return error::bad_request(format!(
             "「{}」不是 Firefox 导出的书签 HTML（未找到书签条目）",
-            if file_name.is_empty() { "上传的文件" } else { &file_name }
+            if file_name.is_empty() {
+                "上传的文件"
+            } else {
+                &file_name
+            }
         ));
     }
 
@@ -278,8 +312,10 @@ pub async fn search_tags_handler(
     let q = params.q.as_deref().map(str::trim).filter(|s| !s.is_empty());
     match state.bookmark.search_tags(q).await {
         Ok(tags) => {
-            let tags: Vec<BookmarkTagWithCountResponse> =
-                tags.into_iter().map(BookmarkTagWithCountResponse::from).collect();
+            let tags: Vec<BookmarkTagWithCountResponse> = tags
+                .into_iter()
+                .map(BookmarkTagWithCountResponse::from)
+                .collect();
             Json(tags).into_response()
         }
         Err(e) => e.into_response(),

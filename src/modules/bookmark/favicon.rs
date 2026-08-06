@@ -71,14 +71,15 @@ fn looks_like_domain(host: &str) -> bool {
         return false;
     }
     let labels: Vec<&str> = host.split('.').collect();
-    let all_numeric = labels.iter().all(|l| !l.is_empty() && l.chars().all(|c| c.is_ascii_digit()));
+    let all_numeric = labels
+        .iter()
+        .all(|l| !l.is_empty() && l.chars().all(|c| c.is_ascii_digit()));
     if all_numeric {
         return false;
     }
     labels.iter().all(|l| {
         !l.is_empty()
-            && l.chars()
-                .all(|c| c.is_ascii_alphanumeric() || c == '-')
+            && l.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
             && !l.starts_with('-')
             && !l.ends_with('-')
     })
@@ -97,7 +98,14 @@ fn read_cached(host: &str) -> Option<(Vec<u8>, &'static str)> {
         let path = cache_path(host, ext);
         if let Ok(bytes) = std::fs::read(&path) {
             if !bytes.is_empty() {
-                return Some((bytes, if ext == "ico" { "image/x-icon" } else { "image/png" }));
+                return Some((
+                    bytes,
+                    if ext == "ico" {
+                        "image/x-icon"
+                    } else {
+                        "image/png"
+                    },
+                ));
             }
         }
     }
@@ -122,10 +130,8 @@ async fn save_cache(host: &str, bytes: &[u8]) {
 fn file_response(bytes: Vec<u8>, mime: &'static str) -> Response {
     let mut resp = Response::new(axum::body::Body::from(bytes));
     *resp.status_mut() = StatusCode::OK;
-    resp.headers_mut().insert(
-        header::CONTENT_TYPE,
-        header::HeaderValue::from_static(mime),
-    );
+    resp.headers_mut()
+        .insert(header::CONTENT_TYPE, header::HeaderValue::from_static(mime));
     resp.headers_mut().insert(
         header::CACHE_CONTROL,
         header::HeaderValue::from_static("public, max-age=86400"),
@@ -198,8 +204,7 @@ fn extract_link_icon_href(html: &str) -> Option<String> {
         };
         let tag = &html[link_start..link_start + link_end_rel];
         let tag_lower = &lower[link_start..link_start + link_end_rel];
-        let has_icon_rel = tag_lower
-            .contains("rel=\"icon\"")
+        let has_icon_rel = tag_lower.contains("rel=\"icon\"")
             || tag_lower.contains("rel='icon'")
             || tag_lower.contains("rel=\"shortcut icon\"")
             || tag_lower.contains("rel='shortcut icon'");
@@ -230,7 +235,9 @@ fn extract_attr(tag_lower: &str, tag_orig: &str, attr: &str) -> Option<String> {
             rest[1..=end].to_string()
         }
         _ => {
-            let end = rest.find(|c: char| c.is_whitespace() || c == '>').unwrap_or(rest.len());
+            let end = rest
+                .find(|c: char| c.is_whitespace() || c == '>')
+                .unwrap_or(rest.len());
             rest[..end].to_string()
         }
     };
@@ -281,10 +288,19 @@ mod tests {
 
     #[test]
     fn extract_host_variants() {
-        assert_eq!(extract_host("https://www.rust-lang.org/learn"), Some("www.rust-lang.org".into()));
-        assert_eq!(extract_host("http://example.com:8080/x"), Some("example.com".into()));
+        assert_eq!(
+            extract_host("https://www.rust-lang.org/learn"),
+            Some("www.rust-lang.org".into())
+        );
+        assert_eq!(
+            extract_host("http://example.com:8080/x"),
+            Some("example.com".into())
+        );
         assert_eq!(extract_host("example.com"), Some("example.com".into()));
-        assert_eq!(extract_host("//cdn.example.com/a.png"), Some("cdn.example.com".into()));
+        assert_eq!(
+            extract_host("//cdn.example.com/a.png"),
+            Some("cdn.example.com".into())
+        );
         assert_eq!(extract_host("https://USER@example.com/"), None);
         assert_eq!(extract_host("not a url"), None);
     }
@@ -308,13 +324,18 @@ mod tests {
 
     #[test]
     fn extract_link_icon_variants() {
-        let html = r#"<html><head><link rel="icon" href="/favicon.png" type="image/png"></head></html>"#;
+        let html =
+            r#"<html><head><link rel="icon" href="/favicon.png" type="image/png"></head></html>"#;
         assert_eq!(extract_link_icon_href(html), Some("/favicon.png".into()));
 
         let html = r#"<link rel='shortcut icon' href='https://cdn.example.com/i.ico'>"#;
-        assert_eq!(extract_link_icon_href(html), Some("https://cdn.example.com/i.ico".into()));
+        assert_eq!(
+            extract_link_icon_href(html),
+            Some("https://cdn.example.com/i.ico".into())
+        );
 
-        let html = r#"<link rel="apple-touch-icon" href="/apple.png"><link rel="icon" href="/icon.png">"#;
+        let html =
+            r#"<link rel="apple-touch-icon" href="/apple.png"><link rel="icon" href="/icon.png">"#;
         assert_eq!(extract_link_icon_href(html), Some("/icon.png".into()));
 
         let html = r#"<html><head></head></html>"#;
@@ -323,15 +344,30 @@ mod tests {
 
     #[test]
     fn resolve_href_variants() {
-        assert_eq!(resolve_href("example.com", "/icon.png"), Some("https://example.com/icon.png".into()));
-        assert_eq!(resolve_href("example.com", "icon.png"), Some("https://example.com/icon.png".into()));
-        assert_eq!(resolve_href("example.com", "//cdn.com/i.png"), Some("https://cdn.com/i.png".into()));
-        assert_eq!(resolve_href("example.com", "https://x.com/i.png"), Some("https://x.com/i.png".into()));
+        assert_eq!(
+            resolve_href("example.com", "/icon.png"),
+            Some("https://example.com/icon.png".into())
+        );
+        assert_eq!(
+            resolve_href("example.com", "icon.png"),
+            Some("https://example.com/icon.png".into())
+        );
+        assert_eq!(
+            resolve_href("example.com", "//cdn.com/i.png"),
+            Some("https://cdn.com/i.png".into())
+        );
+        assert_eq!(
+            resolve_href("example.com", "https://x.com/i.png"),
+            Some("https://x.com/i.png".into())
+        );
     }
 
     #[test]
     fn extract_attr_unquoted() {
         let tag = r#"<link rel=icon href=/a.png>"#;
-        assert_eq!(extract_attr(tag.to_lowercase().as_str(), tag, "href"), Some("/a.png".into()));
+        assert_eq!(
+            extract_attr(tag.to_lowercase().as_str(), tag, "href"),
+            Some("/a.png".into())
+        );
     }
 }

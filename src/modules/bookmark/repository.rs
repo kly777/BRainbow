@@ -48,7 +48,10 @@ impl BookmarkRepo {
         if let Some(t) = tag {
             tags_filter_clause(&mut count_builder, t);
         }
-        let total: i64 = count_builder.build_query_scalar().fetch_one(&*self.pool).await?;
+        let total: i64 = count_builder
+            .build_query_scalar()
+            .fetch_one(&*self.pool)
+            .await?;
 
         let mut fetch_builder = QueryBuilder::new(BOOKMARK_SELECT);
         fetch_builder.push(" WHERE 1=1");
@@ -72,7 +75,6 @@ impl BookmarkRepo {
     /// 根据 ID 获取书签
     pub async fn find_by_id(&self, id: i32) -> Result<Option<Bookmark>, sqlx::Error> {
         let row = sqlx::query_as::<_, BookmarkRow>(select_with("WHERE id = ?"))
-
             .bind(id)
             .fetch_optional(&*self.pool)
             .await?;
@@ -116,14 +118,18 @@ impl BookmarkRepo {
             created_at: result.try_get("created_at")?,
             updated_at: result.try_get("updated_at")?,
         };
-        bookmark.tags = self.get_bookmark_tags(id).await?.into_iter().map(|t| t.name).collect();
+        bookmark.tags = self
+            .get_bookmark_tags(id)
+            .await?
+            .into_iter()
+            .map(|t| t.name)
+            .collect();
         Ok(bookmark)
     }
 
     /// 根据 URL 获取书签（导入时按 URL 去重/合并）
     pub async fn find_by_url(&self, url: &str) -> Result<Option<Bookmark>, sqlx::Error> {
         let row = sqlx::query_as::<_, BookmarkRow>(select_with("WHERE url = ?"))
-
             .bind(url)
             .fetch_optional(&*self.pool)
             .await?;
@@ -180,7 +186,12 @@ impl BookmarkRepo {
             created_at: result.try_get("created_at")?,
             updated_at: result.try_get("updated_at")?,
         };
-        bookmark.tags = self.get_bookmark_tags(id).await?.into_iter().map(|t| t.name).collect();
+        bookmark.tags = self
+            .get_bookmark_tags(id)
+            .await?
+            .into_iter()
+            .map(|t| t.name)
+            .collect();
         Ok(bookmark)
     }
 
@@ -310,12 +321,11 @@ impl BookmarkRepo {
         if result.rows_affected() == 0 {
             return self.find_tag_by_name(name).await;
         }
-        let row = sqlx::query_as::<_, BookmarkTag>(
-            "SELECT id, name FROM bookmark_tag WHERE name = ?",
-        )
-        .bind(name)
-        .fetch_one(&*self.pool)
-        .await?;
+        let row =
+            sqlx::query_as::<_, BookmarkTag>("SELECT id, name FROM bookmark_tag WHERE name = ?")
+                .bind(name)
+                .fetch_one(&*self.pool)
+                .await?;
         Ok(row)
     }
 
@@ -329,7 +339,10 @@ impl BookmarkRepo {
     }
 
     /// 获取书签的标签
-    pub async fn get_bookmark_tags(&self, bookmark_id: i32) -> Result<Vec<BookmarkTag>, sqlx::Error> {
+    pub async fn get_bookmark_tags(
+        &self,
+        bookmark_id: i32,
+    ) -> Result<Vec<BookmarkTag>, sqlx::Error> {
         let rows = sqlx::query_as::<_, BookmarkTag>(
             "SELECT t.id, t.name \
              FROM bookmark_tag t \
@@ -385,22 +398,23 @@ impl BookmarkRepo {
             .await?;
 
         for tag_id in tag_ids {
-            sqlx::query("INSERT OR IGNORE INTO bookmark_tag_rel (bookmark_id, tag_id) VALUES (?, ?)")
-                .bind(bookmark_id)
-                .bind(tag_id)
-                .execute(&mut **tx)
-                .await?;
+            sqlx::query(
+                "INSERT OR IGNORE INTO bookmark_tag_rel (bookmark_id, tag_id) VALUES (?, ?)",
+            )
+            .bind(bookmark_id)
+            .bind(tag_id)
+            .execute(&mut **tx)
+            .await?;
         }
         Ok(())
     }
 
     async fn find_tag_by_name(&self, name: &str) -> Result<BookmarkTag, sqlx::Error> {
-        let row = sqlx::query_as::<_, BookmarkTag>(
-            "SELECT id, name FROM bookmark_tag WHERE name = ?",
-        )
-        .bind(name)
-        .fetch_one(&*self.pool)
-        .await?;
+        let row =
+            sqlx::query_as::<_, BookmarkTag>("SELECT id, name FROM bookmark_tag WHERE name = ?")
+                .bind(name)
+                .fetch_one(&*self.pool)
+                .await?;
         Ok(row)
     }
 }
@@ -452,7 +466,9 @@ mod tests {
         .await
         .unwrap();
 
-        BookmarkRepo { pool: Arc::new(pool) }
+        BookmarkRepo {
+            pool: Arc::new(pool),
+        }
     }
 
     fn str_vec(v: &[&str]) -> Vec<String> {
@@ -463,7 +479,12 @@ mod tests {
     async fn create_with_tags_and_find_by_id() {
         let repo = setup_db().await;
         let bm = repo
-            .create("Rust 官网", "https://www.rust-lang.org/", "学习", &str_vec(&["编程", "rust"]))
+            .create(
+                "Rust 官网",
+                "https://www.rust-lang.org/",
+                "学习",
+                &str_vec(&["编程", "rust"]),
+            )
             .await
             .unwrap();
         assert_eq!(bm.tags, str_vec(&["rust", "编程"])); // 按名称排序
@@ -481,9 +502,13 @@ mod tests {
     #[tokio::test]
     async fn find_all_paginated_with_tags() {
         let repo = setup_db().await;
-        repo.create("A", "https://a.com", "", &str_vec(&["x"])).await.unwrap();
+        repo.create("A", "https://a.com", "", &str_vec(&["x"]))
+            .await
+            .unwrap();
         repo.create("B", "https://b.com", "", &[]).await.unwrap();
-        repo.create("C", "https://c.com", "", &str_vec(&["y", "x"])).await.unwrap();
+        repo.create("C", "https://c.com", "", &str_vec(&["y", "x"]))
+            .await
+            .unwrap();
 
         let (items, total) = repo.find_all_paginated(10, 0, None).await.unwrap();
         assert_eq!(total, 3);
@@ -495,15 +520,22 @@ mod tests {
     #[tokio::test]
     async fn find_all_filtered_by_tag() {
         let repo = setup_db().await;
-        repo.create("A", "https://a.com", "", &str_vec(&["编程"])).await.unwrap();
+        repo.create("A", "https://a.com", "", &str_vec(&["编程"]))
+            .await
+            .unwrap();
         repo.create("B", "https://b.com", "", &[]).await.unwrap();
-        repo.create("C", "https://c.com", "", &str_vec(&["编程", "rust"])).await.unwrap();
+        repo.create("C", "https://c.com", "", &str_vec(&["编程", "rust"]))
+            .await
+            .unwrap();
 
         let (items, total) = repo.find_all_paginated(10, 0, Some("编程")).await.unwrap();
         assert_eq!(total, 2);
         assert!(items.iter().all(|b| b.tags.contains(&"编程".to_string())));
 
-        let (items, total) = repo.find_all_paginated(10, 0, Some("不存在的")).await.unwrap();
+        let (items, total) = repo
+            .find_all_paginated(10, 0, Some("不存在的"))
+            .await
+            .unwrap();
         assert_eq!(total, 0);
         assert!(items.is_empty());
     }
@@ -512,7 +544,9 @@ mod tests {
     async fn find_all_paginated_respects_limit_offset() {
         let repo = setup_db().await;
         for i in 0..10 {
-            repo.create(&format!("bm{i}"), "https://x.com", "", &[]).await.unwrap();
+            repo.create(&format!("bm{i}"), "https://x.com", "", &[])
+                .await
+                .unwrap();
         }
         let (items, total) = repo.find_all_paginated(3, 2, None).await.unwrap();
         assert_eq!(total, 10);
@@ -523,10 +557,16 @@ mod tests {
     #[tokio::test]
     async fn update_partial_fields() {
         let repo = setup_db().await;
-        let bm = repo.create("旧标题", "https://old.com", "旧描述", &str_vec(&["a"])).await.unwrap();
+        let bm = repo
+            .create("旧标题", "https://old.com", "旧描述", &str_vec(&["a"]))
+            .await
+            .unwrap();
 
         // 只更新标题
-        let updated = repo.update(bm.id, Some("新标题"), None, None).await.unwrap();
+        let updated = repo
+            .update(bm.id, Some("新标题"), None, None)
+            .await
+            .unwrap();
         assert_eq!(updated.title, "新标题");
         assert_eq!(updated.url, "https://old.com");
         assert_eq!(updated.description, "旧描述");
@@ -544,7 +584,10 @@ mod tests {
     #[tokio::test]
     async fn delete_existing_cascades_tag_rels() {
         let repo = setup_db().await;
-        let bm = repo.create("x", "https://x.com", "", &str_vec(&["编程"])).await.unwrap();
+        let bm = repo
+            .create("x", "https://x.com", "", &str_vec(&["编程"]))
+            .await
+            .unwrap();
         assert_eq!(repo.delete(bm.id).await.unwrap(), 1);
         assert!(repo.find_by_id(bm.id).await.unwrap().is_none());
         // 标签本身保留，关联清除
@@ -571,16 +614,25 @@ mod tests {
     #[tokio::test]
     async fn search_matches_title_url_description() {
         let repo = setup_db().await;
-        repo.create("Rust 教程", "https://rust.example.com", "入门指南", &[]).await.unwrap();
-        repo.create("Go 官网", "https://go.dev", "", &[]).await.unwrap();
-        repo.create("其它", "https://other.example.com", "提到 rust 语言", &[]).await.unwrap();
+        repo.create("Rust 教程", "https://rust.example.com", "入门指南", &[])
+            .await
+            .unwrap();
+        repo.create("Go 官网", "https://go.dev", "", &[])
+            .await
+            .unwrap();
+        repo.create("其它", "https://other.example.com", "提到 rust 语言", &[])
+            .await
+            .unwrap();
 
         let (items, total) = repo.search_paginated("rust", None, 10, 0).await.unwrap();
         assert_eq!(total, 2);
         assert!(items[0].title.contains("Rust") || items[0].description.contains("rust"));
 
         // 多关键词命中得分排序
-        let (items, total) = repo.search_paginated("rust 教程", None, 10, 0).await.unwrap();
+        let (items, total) = repo
+            .search_paginated("rust 教程", None, 10, 0)
+            .await
+            .unwrap();
         assert_eq!(total, 2);
         assert_eq!(items[0].title, "Rust 教程"); // 得分 2
         assert_eq!(items[1].title, "其它"); // 得分 1
@@ -589,8 +641,12 @@ mod tests {
     #[tokio::test]
     async fn search_combined_with_tag_filter() {
         let repo = setup_db().await;
-        repo.create("Rust 教程", "https://a.com", "", &str_vec(&["编程"])).await.unwrap();
-        repo.create("Rust 新闻", "https://b.com", "", &[]).await.unwrap();
+        repo.create("Rust 教程", "https://a.com", "", &str_vec(&["编程"]))
+            .await
+            .unwrap();
+        repo.create("Rust 新闻", "https://b.com", "", &[])
+            .await
+            .unwrap();
 
         let (items, total) = repo
             .search_paginated("rust", Some("编程"), 10, 0)
@@ -623,8 +679,12 @@ mod tests {
     #[tokio::test]
     async fn search_tags_with_counts() {
         let repo = setup_db().await;
-        repo.create("A", "https://a.com", "", &str_vec(&["编程", "rust"])).await.unwrap();
-        repo.create("B", "https://b.com", "", &str_vec(&["编程"])).await.unwrap();
+        repo.create("A", "https://a.com", "", &str_vec(&["编程", "rust"]))
+            .await
+            .unwrap();
+        repo.create("B", "https://b.com", "", &str_vec(&["编程"]))
+            .await
+            .unwrap();
 
         let tags = repo.search_tags(None).await.unwrap();
         // 按 count DESC：编程(2) 在前
@@ -643,14 +703,20 @@ mod tests {
         let repo = setup_db().await;
         let bm = repo.create("A", "https://a.com", "", &[]).await.unwrap();
 
-        let tags = repo.set_bookmark_tags(bm.id, &str_vec(&["编程", "rust"])).await.unwrap();
+        let tags = repo
+            .set_bookmark_tags(bm.id, &str_vec(&["编程", "rust"]))
+            .await
+            .unwrap();
         assert_eq!(tags.len(), 2);
 
         let got = repo.get_bookmark_tags(bm.id).await.unwrap();
         assert_eq!(got.len(), 2);
 
         // 整体替换：清空并设置新标签
-        let tags = repo.set_bookmark_tags(bm.id, &str_vec(&["rust"])).await.unwrap();
+        let tags = repo
+            .set_bookmark_tags(bm.id, &str_vec(&["rust"]))
+            .await
+            .unwrap();
         assert_eq!(tags.len(), 1);
         assert_eq!(tags[0].name, "rust");
         // 空的也清空
@@ -658,7 +724,10 @@ mod tests {
         assert!(tags.is_empty());
         assert!(repo.get_bookmark_tags(bm.id).await.unwrap().is_empty());
         // 标签名去重
-        let tags = repo.set_bookmark_tags(bm.id, &str_vec(&["a", "a"])).await.unwrap();
+        let tags = repo
+            .set_bookmark_tags(bm.id, &str_vec(&["a", "a"]))
+            .await
+            .unwrap();
         assert_eq!(tags.len(), 1);
     }
 
@@ -666,7 +735,10 @@ mod tests {
     async fn set_tags_ignores_blank_names() {
         let repo = setup_db().await;
         let bm = repo.create("A", "https://a.com", "", &[]).await.unwrap();
-        let tags = repo.set_bookmark_tags(bm.id, &str_vec(&["", "  ", "有效"])).await.unwrap();
+        let tags = repo
+            .set_bookmark_tags(bm.id, &str_vec(&["", "  ", "有效"]))
+            .await
+            .unwrap();
         assert_eq!(tags.len(), 1);
         assert_eq!(tags[0].name, "有效");
     }
@@ -674,7 +746,10 @@ mod tests {
     #[tokio::test]
     async fn delete_tag_cascades_rels() {
         let repo = setup_db().await;
-        let bm = repo.create("A", "https://a.com", "", &str_vec(&["编程", "rust"])).await.unwrap();
+        let bm = repo
+            .create("A", "https://a.com", "", &str_vec(&["编程", "rust"]))
+            .await
+            .unwrap();
         let tag = repo.search_tags(Some("编程")).await.unwrap().remove(0);
 
         assert_eq!(repo.delete_tag(tag.id).await.unwrap(), 1);

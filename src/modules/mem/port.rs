@@ -1,8 +1,6 @@
 use async_trait::async_trait;
 
-use super::model::{
-    Chunk, FsrsUpdate, InsertRevlogParams, MemQuery, MemRow, MemTagRow, TagInfo,
-};
+use super::model::{Chunk, FsrsUpdate, InsertRevlogParams, MemQuery, MemRow, MemTagRow, TagInfo};
 
 /// Repository interface for the `mem` module.
 ///
@@ -77,11 +75,7 @@ pub trait MemRepository: Send + Sync {
         state: &str,
         step_index: Option<i32>,
     ) -> Result<(), sqlx::Error>;
-    async fn update_mem_fsrs(
-        &self,
-        id: i32,
-        params: &FsrsUpdate,
-    ) -> Result<(), sqlx::Error>;
+    async fn update_mem_fsrs(&self, id: i32, params: &FsrsUpdate) -> Result<(), sqlx::Error>;
     async fn bury_mem(&self, id: i32) -> Result<(), sqlx::Error>;
     async fn unbury_mem(&self, id: i32) -> Result<(), sqlx::Error>;
     async fn suspend_mem(&self, id: i32) -> Result<(), sqlx::Error>;
@@ -91,34 +85,15 @@ pub trait MemRepository: Send + Sync {
 
     // ── Tags ──
 
-    async fn create_tag(
-        &self,
-        name: &str,
-        user_id: i32,
-    ) -> Result<TagInfo, sqlx::Error>;
+    async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, sqlx::Error>;
     async fn delete_tag(&self, id: i32) -> Result<(), sqlx::Error>;
     async fn list_tags(&self, user_id: i32) -> Result<Vec<TagInfo>, sqlx::Error>;
-    async fn search_tags(
-        &self,
-        user_id: i32,
-        q: &str,
-    ) -> Result<Vec<TagInfo>, sqlx::Error>;
+    async fn search_tags(&self, user_id: i32, q: &str) -> Result<Vec<TagInfo>, sqlx::Error>;
     async fn get_mem_tags(&self, mem_id: i32) -> Result<Vec<TagInfo>, sqlx::Error>;
     async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), sqlx::Error>;
-    async fn remove_tag_from_mem(
-        &self,
-        mem_id: i32,
-        tag_id: i32,
-    ) -> Result<(), sqlx::Error>;
-    async fn set_mem_tags(
-        &self,
-        mem_id: i32,
-        tag_ids: &[i32],
-    ) -> Result<(), sqlx::Error>;
-    async fn get_mems_tags_batch(
-        &self,
-        mem_ids: &[i32],
-    ) -> Result<Vec<MemTagRow>, sqlx::Error>;
+    async fn remove_tag_from_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), sqlx::Error>;
+    async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), sqlx::Error>;
+    async fn get_mems_tags_batch(&self, mem_ids: &[i32]) -> Result<Vec<MemTagRow>, sqlx::Error>;
     async fn export_all_mems(
         &self,
         tag_ids: &[i32],
@@ -126,15 +101,8 @@ pub trait MemRepository: Send + Sync {
 
     // ── Mnemonic ──
 
-    async fn get_mnemonic(
-        &self,
-        mem_id: i32,
-    ) -> Result<Option<String>, sqlx::Error>;
-    async fn upsert_mnemonic(
-        &self,
-        mem_id: i32,
-        content: &str,
-    ) -> Result<(), sqlx::Error>;
+    async fn get_mnemonic(&self, mem_id: i32) -> Result<Option<String>, sqlx::Error>;
+    async fn upsert_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), sqlx::Error>;
 
     // ── Revlog (previously direct SQL in service) ──
 

@@ -4,8 +4,7 @@ use axum::{
 };
 
 use crate::modules::{
-    bookmark, card, conv, db_viewer, media, mem, onto, reading, sign, task, text, time_window,
-    user,
+    bookmark, card, conv, db_viewer, media, mem, onto, reading, sign, task, text, time_window, user,
 };
 use crate::state::AppState;
 

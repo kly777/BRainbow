@@ -42,6 +42,7 @@
 .card {
 	composes: card from "../../../styles/base.module.css";
 	width: 100%;
+	padding: 0; /* 布局容器：内边距由 face/answer 内部提供 */
 	border-color: var(--t-color-border-strong);
 	border-radius: var(--radius-lg);
 	box-shadow: var(--shadow-md);

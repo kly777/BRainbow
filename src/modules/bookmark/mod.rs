@@ -1,9 +1,11 @@
+mod favicon;
 mod handler;
 mod import_html;
 mod model;
 pub mod repository;
 pub mod service;
 
+pub use favicon::favicon_handler;
 pub use handler::{
     create_bookmark_handler, create_tag_handler, delete_bookmark_handler, delete_tag_handler,
     get_bookmark_handler, get_bookmark_tags_handler, get_bookmarks_handler,

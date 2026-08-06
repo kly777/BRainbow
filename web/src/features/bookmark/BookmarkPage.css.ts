@@ -5,8 +5,6 @@ import { globalStyle, style } from "@vanilla-extract/css";
 import { radius, space, vars } from "@styles/tokens.css.ts";
 
 export const page = style({
-	maxWidth: 900,
-	margin: "0 auto",
 	padding: space.lg,
 });
 
@@ -37,66 +35,51 @@ export const errorText = style({
 export const list = style({
 	display: "flex",
 	flexDirection: "column",
-	gap: space.sm,
+	gap: 2,
 });
 
 export const item = style({
+	position: "relative",
 	display: "flex",
-	alignItems: "flex-start",
-	gap: space.md,
-	padding: space.md,
-	border: `1px solid ${vars.color.border}`,
-	borderRadius: radius.md,
-	background: vars.color.surface,
-	transition: "border-color 0.15s, box-shadow 0.15s",
+	alignItems: "center",
+	gap: space.sm,
+	padding: "4px 8px",
+	borderRadius: radius.sm,
+	minWidth: 0,
+	transition: "background 0.12s",
 	selectors: {
 		"&:hover": {
-			borderColor: vars.color.accent,
-			boxShadow: `0 2px 8px ${vars.color.accentSoft}`,
+			background: vars.color.bg,
 		},
 	},
 });
 
-export const favicon = style({
-	flexShrink: 0,
-	width: 40,
-	height: 40,
-	borderRadius: radius.sm,
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "center",
-	fontSize: "1.1rem",
-	fontWeight: 600,
-	background: vars.color.accentSoft,
-	color: vars.color.accent,
-});
-
-export const itemBody = style({
-	flex: 1,
-	minWidth: 0,
-});
-
 export const itemTitle = style({
-	fontSize: "1.05rem",
-	fontWeight: 600,
-	color: vars.color.accent,
+	fontSize: "0.85rem",
+	fontWeight: 500,
+	color: vars.color.ink,
 	textDecoration: "none",
-	display: "block",
+	flex: "1 1 auto",
+	minWidth: 0,
 	whiteSpace: "nowrap",
 	overflow: "hidden",
 	textOverflow: "ellipsis",
 	selectors: {
-		"&:hover": { textDecoration: "underline" },
+		"&:hover": {
+			color: vars.color.accent,
+			textDecoration: "underline",
+		},
 	},
 });
 
 export const itemUrl = style({
-	fontSize: "0.85rem",
+	fontSize: "0.72rem",
 	color: vars.color.inkMuted,
+	flex: "0 1 auto",
+	maxWidth: "30%",
 	whiteSpace: "nowrap",
 	overflow: "hidden",
 	textOverflow: "ellipsis",
-	marginTop: 2,
 });
 
 export const itemDesc = style({
@@ -110,28 +93,39 @@ export const itemDesc = style({
 });
 
 export const itemActions = style({
-	flexShrink: 0,
 	display: "flex",
-	gap: space.xs,
+	alignItems: "center",
+	gap: 2,
+	flexShrink: 0,
 });
 
 export const itemTags = style({
+	flex: "0 0 auto",
+	maxWidth: "30%",
 	display: "flex",
-	flexWrap: "wrap",
-	gap: 6,
-	marginTop: 8,
+	gap: 4,
+	overflow: "hidden",
+	whiteSpace: "nowrap",
 });
 
 export const itemTag = style({
 	border: "none",
-	background: "transparent",
-	padding: 0,
-	fontSize: "0.8rem",
+	background: vars.color.accentSoft,
+	padding: "0 6px",
+	borderRadius: "999px",
+	fontSize: "0.7rem",
+	lineHeight: "18px",
 	color: vars.color.accent,
 	cursor: "pointer",
+	flexShrink: 0,
 	selectors: {
 		"&:hover": { textDecoration: "underline" },
 	},
+});
+
+// 删除按钮用红色图标
+globalStyle(`${itemActions} button:last-child`, {
+	color: vars.color.danger,
 });
 
 export const filterBar = style({

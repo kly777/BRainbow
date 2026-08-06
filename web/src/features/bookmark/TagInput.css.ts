@@ -61,27 +61,71 @@ export const dropdown = style({
 	overflowY: "auto",
 });
 
+export const dropdownDelete = style({
+	flexShrink: 0,
+	width: 18,
+	height: 18,
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+	border: "none",
+	background: "transparent",
+	color: vars.color.danger,
+	fontSize: "0.9rem",
+	lineHeight: 1,
+	padding: 0,
+	cursor: "pointer",
+	opacity: 0,
+	transition: "opacity 0.12s",
+	selectors: {
+		"&:hover": { background: vars.color.dangerSubtle, borderRadius: "50%" },
+	},
+});
+
 export const dropdownItem = style({
 	display: "flex",
-	justifyContent: "space-between",
+	alignItems: "center",
+	gap: 4,
+	width: "100%",
+	padding: "4px 6px 4px 12px",
+	border: "none",
+	background: "transparent",
+	selectors: {
+		"&:hover": {
+			background: vars.color.accentSoft,
+			// hover 时显示删除按钮
+			[`& ${dropdownDelete}`]: { opacity: 1 },
+		},
+	},
+});
+
+export const dropdownSelect = style({
+	flex: 1,
+	minWidth: 0,
+	display: "flex",
 	alignItems: "center",
 	gap: 8,
-	width: "100%",
-	textAlign: "left",
-	padding: "8px 12px",
+	padding: "2px 0",
 	border: "none",
 	background: "transparent",
 	color: vars.color.ink,
 	fontSize: "0.9rem",
+	textAlign: "left",
 	cursor: "pointer",
-	selectors: {
-		"&:hover": { background: vars.color.accentSoft },
-	},
+});
+
+export const dropdownName = style({
+	flex: 1,
+	minWidth: 0,
+	whiteSpace: "nowrap",
+	overflow: "hidden",
+	textOverflow: "ellipsis",
 });
 
 export const dropdownCount = style({
 	fontSize: "0.75rem",
 	color: vars.color.inkMuted,
+	flexShrink: 0,
 });
 
 export const createNew = style({

@@ -14,6 +14,7 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
     let public = Router::new()
         .route("/user/register", post(user::register_handler))
         .route("/user/login", post(user::login_handler))
+        .route("/bookmarks/favicon", get(bookmark::favicon_handler))
         .nest("/text", text::routes())
         .nest("/media", media::public_file_route())
         .nest("/conv", conv::routes());

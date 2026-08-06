@@ -27,3 +27,4 @@ nanoid = "0.5"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp"] }
 infer = "0.19"
 rand = "0.10"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }

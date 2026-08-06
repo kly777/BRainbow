@@ -1,4 +1,5 @@
-import { createSignal, For, onMount, Show } from "solid-js";
+import { createEffect, createSignal, For, Show } from "solid-js";
+import { useSearchParams } from "@solidjs/router";
 import Button from "@components/ui/Button.tsx";
 import Modal from "@components/ui/Modal.tsx";
 import SearchInput from "@components/ui/SearchInput.tsx";
@@ -6,6 +7,8 @@ import { tryAsync } from "@lib/result.ts";
 import { notifyError, notifySuccess } from "@lib/notify.ts";
 import { showConfirm } from "@lib/safe-action.ts";
 import TagInput from "@features/bookmark/TagInput.tsx";
+import Favicon from "@features/bookmark/Favicon.tsx";
+import TagManager from "@features/bookmark/TagManager.tsx";
 import {
 	createBookmarkE,
 	deleteBookmarkE,
@@ -27,17 +30,27 @@ function extractDomain(url: string): string {
 	}
 }
 
+/** 从 URL 参数读取正整数页码，非法则回退 1 */
+function parsePage(v: string | undefined): number {
+	const n = Number(v);
+	return Number.isInteger(n) && n > 0 ? n : 1;
+}
+
 export default function BookmarkPage() {
+	// ── 状态全部由 URL query 驱动：q / tag / page ──
+	const [searchParams, setSearchParams] = useSearchParams();
+	const searchQuery = () => (typeof searchParams.q === "string" ? searchParams.q : "");
+	const tagFilter = () => (typeof searchParams.tag === "string" ? searchParams.tag : "");
+	const page = () => parsePage(
+		typeof searchParams.page === "string" ? searchParams.page : undefined,
+	);
+	const [pageSize] = createSignal(500);
+
 	const [bookmarks, setBookmarks] = createSignal<Bookmark[]>([]);
 	const [total, setTotal] = createSignal(0);
-	const [page, setPage] = createSignal(1);
 	const [totalPages, setTotalPages] = createSignal(1);
-	const [pageSize] = createSignal(20);
 	const [loading, setLoading] = createSignal(true);
 	const [error, setError] = createSignal<string | null>(null);
-	const [searchQuery, setSearchQuery] = createSignal("");
-	/** 按标签过滤（空表示不过滤） */
-	const [tagFilter, setTagFilter] = createSignal("");
 
 	const [modalOpen, setModalOpen] = createSignal(false);
 	const [editing, setEditing] = createSignal<Bookmark | null>(null);
@@ -49,19 +62,27 @@ export default function BookmarkPage() {
 	const [formError, setFormError] = createSignal<string | null>(null);
 
 	const [importing, setImporting] = createSignal(false);
+	const [tagManagerOpen, setTagManagerOpen] = createSignal(false);
 
-	async function load(pageNum = page(), q = searchQuery(), tag = tagFilter()) {
-		setLoading(true);
+	// 竞态守卫：只应用最新一次请求的结果
+	let loadSeq = 0;
+
+	async function load(params?: { silent?: boolean }) {
+		const seq = ++loadSeq;
+		const q = searchQuery().trim();
+		const tag = tagFilter();
+		const pageNum = page();
+		if (!params?.silent) setLoading(true);
 		setError(null);
 		const result = await tryAsync(() =>
-			q.trim()
-				? searchBookmarksE(q.trim(), pageNum, pageSize(), tag || undefined)
+			q
+				? searchBookmarksE(q, pageNum, pageSize(), tag || undefined)
 				: getBookmarksE(pageNum, pageSize(), tag || undefined),
 		);
+		if (seq !== loadSeq) return;
 		if (result.ok) {
 			setBookmarks(result.value.items);
 			setTotal(result.value.total);
-			setPage(result.value.page);
 			setTotalPages(result.value.total_pages);
 		} else {
 			setError(result.error.message);
@@ -69,21 +90,29 @@ export default function BookmarkPage() {
 		setLoading(false);
 	}
 
-	onMount(() => load());
+	// URL 参数变化（搜索/过滤/翻页/后退前进）时自动加载
+	createEffect(() => {
+		void searchQuery();
+		void tagFilter();
+		void page();
+		void load();
+	});
 
 	function handleSearch(q: string) {
-		setSearchQuery(q);
-		load(1, q);
+		setSearchParams({ q: q.trim() || undefined, page: undefined });
 	}
 
 	function handleTagFilter(tag: string) {
-		setTagFilter(tag);
-		load(1, searchQuery(), tag);
+		setSearchParams({ tag: tag || undefined, page: undefined });
 	}
 
 	function clearTagFilter() {
-		setTagFilter("");
-		load(1, searchQuery(), "");
+		handleTagFilter("");
+	}
+
+	function goPage(n: number) {
+		if (n < 1 || n > totalPages()) return;
+		setSearchParams({ page: n > 1 ? String(n) : undefined });
 	}
 
 	function openCreate() {
@@ -138,15 +167,27 @@ export default function BookmarkPage() {
 			if (editing()) {
 				const updated = await updateBookmarkE(editing()!.id, body);
 				await setBookmarkTagsE(updated.id, tags);
-				return updated;
+				return { ...updated, tags };
 			}
-			const created = await createBookmarkE({ ...body, tags });
-			return created;
+			return createBookmarkE({ ...body, tags });
 		});
 		if (result.ok) {
 			setModalOpen(false);
 			notifySuccess(editing() ? "书签已更新" : "书签已添加");
-			load();
+			const updated = result.value;
+			if (searchQuery() || tagFilter()) {
+				// 有过滤条件时新数据可能不匹配，静默刷新
+				load({ silent: true });
+			} else if (editing()) {
+				// 编辑：本地更新该项，保持位置
+				setBookmarks((prev) =>
+					prev.map((b) => (b.id === updated.id ? updated : b)),
+				);
+			} else {
+				// 创建：新书签按创建时间倒序排在最前
+				setBookmarks((prev) => [updated, ...prev.filter((b) => b.id !== updated.id)]);
+				setTotal((t) => t + 1);
+			}
 		} else {
 			setFormError(result.error.message);
 		}
@@ -162,13 +203,14 @@ export default function BookmarkPage() {
 				"导入完成",
 				`新建 ${result.value.created} 条，合并标签 ${result.value.merged} 条`,
 			);
-			load(1, searchQuery(), tagFilter());
+			load({ silent: true });
 		} else {
 			notifyError("导入失败", result.error);
 		}
 		setImporting(false);
 	}
 
+	// ── 删除：乐观更新，失败回滚 ──
 	async function handleDelete(bm: Bookmark) {
 		const confirmed = await showConfirm({
 			title: "删除书签",
@@ -177,17 +219,26 @@ export default function BookmarkPage() {
 		});
 		if (!confirmed) return;
 
+		const prev = bookmarks();
+		const wasLastOnPage = prev.length === 1 && page() > 1;
+
+		// 乐观移除
+		setBookmarks(prev.filter((b) => b.id !== bm.id));
+		setTotal((t) => Math.max(0, t - 1));
+
 		const result = await tryAsync(() => deleteBookmarkE(bm.id));
 		if (result.ok) {
 			notifySuccess("书签已删除");
-			// 删除后若当前页为空则回退一页
-			if (bookmarks().length === 1 && page() > 1) {
-				load(page() - 1);
-			} else {
-				load();
+			// 当前页被删空时回退一页（URL 变化触发加载）
+			if (wasLastOnPage) {
+				const back = page() - 1;
+				setSearchParams({ page: back > 1 ? String(back) : undefined });
 			}
 		} else {
+			// 失败：回滚本地状态
 			notifyError("删除失败", result.error);
+			setBookmarks(prev);
+			setTotal((t) => t + 1);
 		}
 	}
 
@@ -200,6 +251,15 @@ export default function BookmarkPage() {
 					onSearch={handleSearch}
 					placeholder="搜索标题 / URL / 备注…"
 				/>
+				<Show when={searchQuery().trim()}>
+					<Button
+						variant="icon"
+						title="清空搜索"
+						onClick={() => handleSearch("")}
+					>
+						✕
+					</Button>
+				</Show>
 				<Button
 					variant="secondary"
 					size="sm"
@@ -218,6 +278,13 @@ export default function BookmarkPage() {
 						e.currentTarget.value = "";
 					}}
 				/>
+				<Button
+					variant="secondary"
+					size="sm"
+					onClick={() => setTagManagerOpen(true)}
+				>
+					标签管理
+				</Button>
 				<Button variant="primary" size="sm" onClick={openCreate}>
 					＋ 新建书签
 				</Button>
@@ -249,7 +316,7 @@ export default function BookmarkPage() {
 					when={bookmarks().length > 0}
 					fallback={
 						<div class={styles.state}>
-							{searchQuery().trim()
+							{searchQuery().trim() || tagFilter()
 								? "没有找到匹配的书签"
 								: "还没有书签，点击上方按钮添加第一个吧！"}
 						</div>
@@ -259,57 +326,51 @@ export default function BookmarkPage() {
 						<For each={bookmarks()}>
 							{(bm) => (
 								<div class={styles.item}>
-									<div class={styles.favicon} aria-hidden="true">
-										{extractDomain(bm.url).charAt(0).toUpperCase()}
+									<Favicon url={bm.url} letter={extractDomain(bm.url)} />
+									<a
+										class={styles.itemTitle}
+										href={bm.url}
+										target="_blank"
+										rel="noopener noreferrer"
+										title={bm.title}
+									>
+										{bm.title}
+									</a>
+									<div class={styles.itemUrl} title={bm.url}>
+										{extractDomain(bm.url)}
 									</div>
-									<div class={styles.itemBody}>
-										<a
-											class={styles.itemTitle}
-											href={bm.url}
-											target="_blank"
-											rel="noopener noreferrer"
-										>
-											{bm.title}
-										</a>
-										<div class={styles.itemUrl}>{bm.url}</div>
-										<Show when={bm.description}>
-											<div class={styles.itemDesc}>{bm.description}</div>
-										</Show>
-										<Show when={bm.tags.length > 0}>
-											<div class={styles.itemTags}>
-												<For each={bm.tags}>
-													{(tag) => (
-														<button
-															type="button"
-															class={styles.itemTag}
-															title={`按标签「${tag}」过滤`}
-															onClick={(e) => {
-																e.preventDefault();
-																e.stopPropagation();
-																handleTagFilter(tag);
-															}}
-														>
-															#{tag}
-														</button>
-													)}
-												</For>
-											</div>
-										</Show>
+									<div class={styles.itemTags}>
+										<For each={bm.tags}>
+											{(tag) => (
+												<button
+													type="button"
+													class={styles.itemTag}
+													title={`按标签「${tag}」过滤`}
+													onClick={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
+														handleTagFilter(tag);
+													}}
+												>
+													#{tag}
+												</button>
+											)}
+										</For>
 									</div>
 									<div class={styles.itemActions}>
 										<Button
-											variant="secondary"
-											size="sm"
+											variant="icon"
+											title="编辑"
 											onClick={() => openEdit(bm)}
 										>
-											编辑
+											✎
 										</Button>
 										<Button
-											variant="danger"
-											size="sm"
+											variant="icon"
+											title="删除"
 											onClick={() => handleDelete(bm)}
 										>
-											删除
+											✕
 										</Button>
 									</div>
 								</div>
@@ -327,7 +388,7 @@ export default function BookmarkPage() {
 									variant="secondary"
 									size="sm"
 									disabled={page() <= 1}
-									onClick={() => load(page() - 1)}
+									onClick={() => goPage(page() - 1)}
 								>
 									← 上一页
 								</Button>
@@ -335,7 +396,7 @@ export default function BookmarkPage() {
 									variant="secondary"
 									size="sm"
 									disabled={page() >= totalPages()}
-									onClick={() => load(page() + 1)}
+									onClick={() => goPage(page() + 1)}
 								>
 									下一页 →
 								</Button>
@@ -399,29 +460,36 @@ export default function BookmarkPage() {
 						disabled={saving()}
 					/>
 				</div>
-			<div class={styles.formGroup}>
-				<label class={styles.formLabel} for="bookmark-desc">
-					备注
-				</label>
-				<textarea
-					id="bookmark-desc"
-					class={styles.formTextarea}
-					value={formDesc()}
-					onInput={(e) => setFormDesc(e.currentTarget.value)}
-					placeholder="可选，一句话描述这个网页（可选）"
-					rows={3}
-					disabled={saving()}
-				/>
-			</div>
-			<div class={styles.formGroup}>
-				<span class={styles.formLabel}>标签</span>
-				<TagInput
-					tags={formTags()}
-					onAdd={addFormTag}
-					onRemove={removeFormTag}
-				/>
-			</div>
-		</Modal>
-	</div>
-);
+				<div class={styles.formGroup}>
+					<label class={styles.formLabel} for="bookmark-desc">
+						备注
+					</label>
+					<textarea
+						id="bookmark-desc"
+						class={styles.formTextarea}
+						value={formDesc()}
+						onInput={(e) => setFormDesc(e.currentTarget.value)}
+						placeholder="可选，一句话描述这个网页（可选）"
+						rows={3}
+						disabled={saving()}
+					/>
+				</div>
+				<div class={styles.formGroup}>
+					<span class={styles.formLabel}>标签</span>
+					<TagInput
+						tags={formTags()}
+						onAdd={addFormTag}
+						onRemove={removeFormTag}
+						onTagDeleted={() => load({ silent: true })}
+					/>
+				</div>
+			</Modal>
+
+			<TagManager
+				isOpen={tagManagerOpen()}
+				onClose={() => setTagManagerOpen(false)}
+				onDeleted={() => load({ silent: true })}
+			/>
+		</div>
+	);
 }

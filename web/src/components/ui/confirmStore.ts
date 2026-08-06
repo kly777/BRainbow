@@ -40,27 +40,23 @@ let nextId = 1;
 /**
  * 弹出确认对话框，返回 Promise<boolean>。
  * 用户点击"确认" → resolve(true)，点击"取消"或按 Escape → resolve(false)。
+ *
+ * 注意：wrappedResolve 必须在放入信号数组**之前**构造好——
+ * Solid 的信号更新会同步触发 ConfirmDialog 渲染，组件在渲染时解构
+ * resolve；若之后再替换 item.resolve，组件会持有无清理逻辑的旧引用，
+ * 点击按钮后 Promise 虽被 resolve，但对话框不会从列表移除。
  */
 export function showConfirm(options: ConfirmOptions): Promise<boolean> {
 	return new Promise((resolve) => {
 		const id = nextId++;
-		const item: ConfirmItem = { id, options, resolve };
 
-		setItems((prev) => [...prev, item]);
-
-		// 清理：无论 resolve 与否，超时后确保从列表移除
-		const cleanup = () => {
-			setItems((prev) => prev.filter((i) => i.id !== id));
-		};
-
-		// 包装 resolve 以触发清理
 		const wrappedResolve = (value: boolean) => {
-			cleanup();
+			// 无论 resolve 与否，先从列表移除
+			setItems((prev) => prev.filter((i) => i.id !== id));
 			resolve(value);
 		};
 
-		// 替换原始的 resolve
-		item.resolve = wrappedResolve;
+		setItems((prev) => [...prev, { id, options, resolve: wrappedResolve }]);
 	});
 }
 

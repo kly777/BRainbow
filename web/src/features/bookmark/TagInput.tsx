@@ -1,22 +1,29 @@
 /**
  * 书签标签输入：已选标签 chips + 建议下拉（基于现有标签搜索）。
  * 按名称工作，Enter 直接添加（保存时后端自动创建）。
+ * 建议下拉中可 hover 删除已存在的标签（全局删除，所有书签移除该标签）。
  */
 import { createResource, createSignal, For, Show } from "solid-js";
-import { searchBookmarkTagsE } from "@features/bookmark/api.ts";
+import { tryAsync } from "@lib/result.ts";
+import { notifyError, notifySuccess } from "@lib/notify.ts";
+import { showConfirm } from "@lib/safe-action.ts";
+import { deleteBookmarkTagE, searchBookmarkTagsE } from "@features/bookmark/api.ts";
+import type { BookmarkTagWithCount } from "@features/bookmark/types.ts";
 import * as styles from "@features/bookmark/TagInput.css.ts";
 
 interface Props {
 	tags: string[];
 	onAdd: (name: string) => void;
 	onRemove: (name: string) => void;
+	/** 标签被全局删除后通知父组件刷新列表 */
+	onTagDeleted?: () => void;
 }
 
 export default function TagInput(props: Props) {
 	const [query, setQuery] = createSignal("");
 	const [open, setOpen] = createSignal(false);
 
-	const [searchResults] = createResource(
+	const [searchResults, { refetch }] = createResource(
 		() => (query().trim().length > 0 ? query().trim() : null),
 		(q) => searchBookmarkTagsE(q),
 	);
@@ -55,6 +62,25 @@ export default function TagInput(props: Props) {
 		}
 		if (e.key === "Escape") {
 			setOpen(false);
+		}
+	};
+
+	const handleDeleteTag = async (tag: BookmarkTagWithCount) => {
+		setOpen(false);
+		const confirmed = await showConfirm({
+			title: "删除标签",
+			message: `确定要删除标签「${tag.name}」吗？所有书签都会移除该标签。`,
+			variant: "danger",
+		});
+		if (!confirmed) return;
+
+		const result = await tryAsync(() => deleteBookmarkTagE(tag.id));
+		if (result.ok) {
+			notifySuccess("标签已删除");
+			refetch();
+			props.onTagDeleted?.();
+		} else {
+			notifyError("删除失败", result.error);
 		}
 	};
 
@@ -98,18 +124,34 @@ export default function TagInput(props: Props) {
 				<div class={styles.dropdown}>
 					<For each={filteredSuggestions()}>
 						{(tag) => (
-							<button
-								type="button"
-								class={styles.dropdownItem}
-								onMouseDown={() => {
-									props.onAdd(tag.name);
-									setQuery("");
-									setOpen(false);
-								}}
-							>
-								{tag.name}
-								<span class={styles.dropdownCount}>{tag.count}</span>
-							</button>
+							<div class={styles.dropdownItem}>
+								<button
+									type="button"
+									class={styles.dropdownSelect}
+									onMouseDown={(e) => e.preventDefault()}
+									onClick={() => {
+										props.onAdd(tag.name);
+										setQuery("");
+										setOpen(false);
+									}}
+								>
+									<span class={styles.dropdownName}>{tag.name}</span>
+									<span class={styles.dropdownCount}>{tag.count}</span>
+								</button>
+								<button
+									type="button"
+									class={styles.dropdownDelete}
+									title={`删除标签「${tag.name}」`}
+									onMouseDown={(e) => e.stopPropagation()}
+									onClick={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+										handleDeleteTag(tag);
+									}}
+								>
+									×
+								</button>
+							</div>
 						)}
 					</For>
 					<Show when={!hasExactMatch() && query().trim().length > 0}>

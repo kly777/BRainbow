@@ -1,0 +1,90 @@
+/* components/AngleEditor.css.ts — 由 vanilla-extract 迁移 */
+
+.fieldset {
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	padding: var(--space-md) 16px;
+	margin: 0 0 var(--space-lg) 0;
+	background: var(--t-color-surface);
+}
+
+.legend {
+}
+
+.segmented {
+	display: inline-flex;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	overflow: hidden;
+	margin-bottom: 10px;
+}
+
+.segBtn {
+	padding: var(--space-xs) 14px;
+	font-size: var(--text-sm);
+	border: none;
+	cursor: pointer;
+	transition: background 0.15s;
+	background: transparent;
+	color: var(--t-color-ink-muted);
+}
+
+.segActive {
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) 14px;
+	font-size: var(--text-sm);
+	border: none;
+	cursor: pointer;
+	transition: background 0.15s;
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
+	font-weight: 600;
+}
+
+.inputRow {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+}
+
+.input {
+	width: 110px;
+	padding: var(--space-xs) 8px;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+	font-size: var(--text-base);
+	text-align: right;
+}
+
+.unit {
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-sm);
+	min-width: 24px;
+}
+
+.segBtn:hover {
+	background: var(--t-color-surface-raised);
+}
+
+.segBtn + .segBtn {
+	border-left: 1px solid var(--t-color-border);
+}
+
+.input:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
+}
+
+.fieldset legend {
+	font-weight: 600;
+	color: var(--t-color-ink);
+	padding: 0 var(--space-xs);
+}
+
+.segActive + .segBtn,
+.segBtn + .segActive {
+	border-left-color: transparent;
+}

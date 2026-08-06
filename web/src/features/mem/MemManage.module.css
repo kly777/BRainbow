@@ -1,0 +1,83 @@
+/* features/mem/MemManage.css.ts — 由 vanilla-extract 迁移 */
+
+.backLink {
+	composes: btnGhost from "../../styles/base.module.css";
+}
+
+.addLink {
+	composes: btnPrimary from "../../styles/base.module.css";
+}
+
+.page {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+}
+
+.topBar {
+	display: flex;
+	align-items: center;
+	gap: var(--space-md);
+	padding: var(--space-sm) 20px;
+	border-bottom: 1px solid var(--t-color-border);
+	background: var(--t-color-surface);
+	flex-shrink: 0;
+}
+
+.title {
+	font-family: var(--t-font-display);
+	font-size: var(--text-lg);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	margin: 0;
+	color: var(--t-color-ink);
+	flex: 1;
+}
+
+.topActions {
+	display: flex;
+	align-items: center;
+	gap: var(--space-md);
+}
+
+.count {
+	font-size: 11px;
+	font-family: var(--t-font-mono);
+	color: var(--t-color-ink-faint);
+	font-variant-numeric: tabular-nums;
+}
+
+.split {
+	flex: 1;
+	display: flex;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.tableWrap {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	padding: var(--space-md) 20px;
+	overflow-y: auto;
+}
+
+.detailActive {
+}
+
+@media (max-width: 768px) {
+	.topBar {
+		padding-left: 12px;
+		padding-right: 12px;
+	}
+}
+
+@media (max-width: 768px) {
+	.tableWrap {
+		padding-left: 12px;
+		padding-right: 12px;
+	}
+}

@@ -1,7 +1,16 @@
 /**
  * theme.ts — 主题切换逻辑（纯函数，localStorage 持久化）
+ *
+ * 主题通过 <html data-theme="paper|midnight|ocean"> 生效，
+ * 变量定义见 styles/tokens.css。
  */
-import { paperTheme, themes, type ThemeName } from "./tokens.css.ts";
+export const themes = {
+	paper: { label: "暖纸 · 目录绿", swatches: ["oklch(0.99 0.004 95)", "oklch(0.52 0.1 165)"] },
+	midnight: { label: "暗夜 · 墨绿", swatches: ["oklch(0.21 0.014 260)", "oklch(0.68 0.12 165)"] },
+	ocean: { label: "冷蓝 · 晴空", swatches: ["oklch(0.99 0.003 250)", "oklch(0.55 0.18 255)"] },
+} as const;
+
+export type ThemeName = keyof typeof themes;
 
 const KEY = "brainbow_theme";
 const VALID = Object.keys(themes) as ThemeName[];
@@ -12,22 +21,15 @@ export function getTheme(): ThemeName {
 	return saved && VALID.includes(saved) ? saved : "paper";
 }
 
-/** 应用主题：把对应主题类挂到 <html>，并持久化 */
+/** 应用主题：设置 <html data-theme>，并持久化 */
 export function applyTheme(name: ThemeName) {
-	const el = document.documentElement;
-	for (const t of VALID) el.classList.remove(themes[t].theme);
-	el.classList.add(themes[name].theme);
+	document.documentElement.dataset.theme = name;
 	localStorage.setItem(KEY, name);
 }
 
 /** 初始化：应用持久化主题（或默认 paper） */
 export function initTheme() {
-	// paper 主题类必须先存在（createThemeContract 无默认值）
-	if (!document.documentElement.classList.contains(paperTheme)) {
-		document.documentElement.classList.add(paperTheme);
-	}
-	const name = getTheme();
-	if (name !== "paper") applyTheme(name);
+	document.documentElement.dataset.theme = getTheme();
 }
 
 /** 主题名 → 显示信息 */

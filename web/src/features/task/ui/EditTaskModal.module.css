@@ -1,0 +1,352 @@
+/* features/task/ui/EditTaskModal.css.ts — 由 vanilla-extract 迁移 */
+
+.editModal {
+	display: flex;
+	flex-direction: column;
+	min-height: 420px;
+}
+
+.tabBar {
+	display: flex;
+	gap: 0;
+	border-bottom: 2px solid var(--t-color-border);
+	margin-bottom: 0;
+	flex-shrink: 0;
+}
+
+.tab {
+	flex: 1;
+	padding: var(--space-sm) 12px;
+	background: none;
+	border: none;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -2px;
+	cursor: pointer;
+	font-size: var(--text-sm);
+	font-weight: 500;
+	color: var(--t-color-ink-muted);
+	transition: all 0.15s;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-xs);
+}
+
+.tabActive {
+	color: var(--t-color-accent);
+	border-bottom-color: var(--t-color-accent);
+}
+
+.tabCount {
+	font-size: var(--text-xs);
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
+	padding: var(--space-xs);
+	border-radius: var(--radius-md);
+	font-weight: 600;
+}
+
+.tabContent {
+	padding: var(--space-lg) 0 0 0;
+	flex: 1;
+	overflow-y: auto;
+	max-height: 55vh;
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
+	margin-bottom: var(--space-md);
+	flex: 1;
+	min-width: 0;
+}
+
+.fieldLabel {
+	font-size: var(--text-sm);
+	font-weight: 500;
+	color: var(--t-color-ink);
+}
+
+.fieldInput {
+}
+
+.fieldSelect {
+}
+
+.fieldTextarea {
+	padding: var(--space-sm) 10px;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	font-size: var(--text-sm);
+	resize: vertical;
+	min-height: 60px;
+	font-family: inherit;
+	transition: border-color 0.15s;
+}
+
+.fieldRow {
+	display: flex;
+	gap: var(--space-md);
+}
+
+.presets {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+	flex-wrap: wrap;
+	margin-bottom: var(--space-md);
+}
+
+.presetsLabel {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	flex-shrink: 0;
+}
+
+.presetBtn {
+	padding: var(--space-xs) 10px;
+	font-size: var(--text-sm);
+	background: var(--t-color-success-subtle);
+	color: oklch(0.4 0.1 170);
+	border: 1px solid var(--t-color-success-subtle);
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+	transition: all 0.15s;
+	white-space: nowrap;
+}
+
+.addTimeBlock {
+	background: var(--t-color-bg);
+	border: 1px dashed var(--t-color-border);
+	border-radius: var(--radius-md);
+	padding: var(--space-md);
+	margin-bottom: var(--space-md);
+}
+
+.addBtn {
+	padding: var(--space-xs) 14px;
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
+	border: none;
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	font-size: var(--text-sm);
+	font-weight: 500;
+	transition: background 0.15s;
+	margin-top: 4px;
+}
+
+.sectionHeader {
+	display: flex;
+	align-items: baseline;
+	gap: var(--space-sm);
+	margin-bottom: var(--space-sm);
+}
+
+.sectionTitle {
+	font-size: var(--text-sm);
+	font-weight: 600;
+	color: var(--t-color-ink);
+}
+
+.sectionHint {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.timeList {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
+	margin-bottom: 4px;
+}
+
+.timeItem {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: var(--space-xs) 10px;
+	background: var(--t-color-bg);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	font-size: var(--text-sm);
+}
+
+.timeItemText {
+	color: var(--t-color-ink);
+	flex: 1;
+}
+
+.timeDelete {
+	background: none;
+	border: none;
+	color: var(--t-color-danger);
+	font-size: var(--text-lg);
+	cursor: pointer;
+	padding: 0 var(--space-xs);
+	line-height: 1;
+	flex-shrink: 0;
+}
+
+.emptyMsg {
+	color: var(--t-color-border);
+	font-size: var(--text-sm);
+	padding: var(--space-md) 0;
+	text-align: center;
+}
+
+.errorMsg {
+	color: var(--t-color-danger);
+	font-size: var(--text-sm);
+	margin-top: 6px;
+	padding: var(--space-xs) 10px;
+	background: var(--t-color-danger-subtle);
+	border-radius: var(--radius-sm);
+}
+
+.depList {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
+	margin-bottom: var(--space-md);
+}
+
+.depItem {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: var(--space-sm) 10px;
+	background: var(--t-color-bg);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+}
+
+.depInfo {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	flex: 1;
+	min-width: 0;
+}
+
+.depTitle {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.depStatus {
+	font-size: var(--text-xs);
+	padding: var(--space-xs) 6px;
+	border-radius: var(--radius-sm);
+	font-weight: 500;
+	flex-shrink: 0;
+}
+
+.depStatusBacklog {
+	background: var(--t-color-border);
+	color: var(--t-color-ink-muted);
+}
+
+.depStatusActive {
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
+}
+
+.depStatusCompleted {
+	background: var(--t-color-success-subtle);
+	color: oklch(0.4 0.1 170);
+}
+
+.depStatusArchived {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink-muted);
+}
+
+.depRemove {
+	background: none;
+	border: none;
+	color: var(--t-color-danger);
+	font-size: var(--text-lg);
+	cursor: pointer;
+	padding: 0 var(--space-xs);
+	line-height: 1;
+	flex-shrink: 0;
+}
+
+.addDepBlock {
+	margin-top: var(--space-md);
+	padding: var(--space-md);
+	background: var(--t-color-bg);
+	border: 1px dashed var(--t-color-border);
+	border-radius: var(--radius-md);
+}
+
+.addDepRow {
+	display: flex;
+	gap: var(--space-sm);
+	align-items: flex-end;
+}
+
+.cancelBtn {
+	padding: var(--space-sm) 18px;
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	font-size: var(--text-sm);
+	font-weight: 500;
+	transition: all 0.15s;
+}
+
+.saveBtn {
+	padding: var(--space-sm) 18px;
+	background: var(--t-color-success);
+	color: var(--t-color-white);
+	border: none;
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	font-size: var(--text-sm);
+	font-weight: 500;
+	transition: background 0.15s;
+}
+
+.tab:hover {
+	color: var(--t-color-ink);
+}
+
+.fieldTextarea:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
+}
+
+.presetBtn:hover {
+	background: var(--t-color-success-subtle);
+	border-color: oklch(0.88 0.08 160);
+}
+
+.addBtn:hover {
+	background: var(--t-color-accent-strong);
+}
+
+.addBtn:disabled {
+	background: var(--t-color-border);
+	cursor: not-allowed;
+}
+
+.cancelBtn:hover {
+	background: var(--t-color-border);
+}
+
+.saveBtn:hover {
+	background: var(--t-color-success);
+}
+
+.fieldRow > .field {
+	flex: 1;
+}

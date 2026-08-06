@@ -1,0 +1,29 @@
+/* components/ui/FilterGroup.css.ts — 由 vanilla-extract 迁移 */
+
+.group {
+	display: flex;
+	gap: var(--space-xs);
+}
+
+.btn {
+	padding: var(--space-xs) var(--space-sm);
+	font-size: var(--text-xs);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink-muted);
+	cursor: pointer;
+	font-family: inherit;
+	white-space: nowrap;
+}
+
+.active {
+	border-radius: var(--radius-md);
+	background: var(--t-color-accent);
+	color: var(--t-color-bg);
+	border-color: var(--t-color-accent);
+}
+
+.btn:hover {
+	background: var(--t-color-surface-raised);
+}

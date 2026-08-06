@@ -1,0 +1,96 @@
+/* components/ui/Button.css.ts — 由 vanilla-extract 迁移 */
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-xs);
+	border-radius: var(--radius-md);
+	font-family: inherit;
+	font-weight: 500;
+	cursor: pointer;
+	line-height: 1.15;
+	white-space: nowrap;
+	transition:
+		background 0.15s,
+		border-color 0.15s,
+		transform 0.15s;
+}
+
+.sm {
+	padding: var(--space-xs) 10px;
+	font-size: var(--text-sm);
+}
+
+.md {
+	padding: var(--space-xs) 14px;
+	font-size: var(--text-base);
+}
+
+.primary {
+	background: var(--t-color-accent);
+	color: var(--t-color-bg);
+	border: none;
+}
+
+.secondary {
+	background: var(--t-color-bg);
+	color: var(--t-color-ink-muted);
+	border: 1px solid var(--t-color-border);
+}
+
+.danger {
+	background: var(--t-color-bg);
+	color: var(--t-color-danger);
+	border: 1px solid var(--t-color-danger);
+}
+
+.ghost {
+	background: transparent;
+	color: var(--t-color-ink-faint);
+	border: 1px solid transparent;
+}
+
+.icon {
+	background: transparent;
+	color: var(--t-color-ink-faint);
+	border: none;
+	border-radius: var(--radius-sm);
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	font-size: var(--text-base);
+	line-height: 1;
+}
+
+.btn:active:not(:disabled) {
+	transform: scale(0.97);
+}
+
+.btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.primary:hover:not(:disabled) {
+	background: var(--t-color-accent-strong);
+}
+
+.secondary:hover:not(:disabled) {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.danger:hover:not(:disabled) {
+	background: var(--t-color-danger-subtle);
+}
+
+.ghost:hover:not(:disabled) {
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+}
+
+.icon:hover:not(:disabled) {
+	background: var(--t-color-danger-subtle);
+	color: var(--t-color-danger);
+}

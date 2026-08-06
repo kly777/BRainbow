@@ -6,7 +6,7 @@ import {
 	type Setter,
 } from "solid-js";
 import { Color } from "@lib/color.ts";
-import * as styles from "@components/ColorEditor.css.ts";
+import styles from "@components/ColorEditor.module.css";
 
 type ColorSpace = "hex" | "rgb" | "hsl" | "oklch";
 

@@ -1,0 +1,183 @@
+/* components/ui/Modal.css.ts — 由 vanilla-extract 迁移 */
+
+.modalOverlay {
+	position: fixed;
+	inset: 0;
+	background-color: oklch(0 0 0 / 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: var(--space-xl);
+}
+
+.modalContent {
+	background-color: var(--t-color-surface);
+	border-radius: var(--radius-md);
+	border: 1px solid var(--t-color-border);
+	box-shadow: 0 var(--space-xs) 20px oklch(0 0 0 / 0.15);
+	max-width: 600px;
+	width: 100%;
+	max-height: 90vh;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.modalHeader {
+	padding: var(--space-xl);
+	border-bottom: 1px solid var(--t-color-border);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.modalTitle {
+	margin: 0;
+	font-size: var(--text-lg);
+	font-weight: 600;
+	color: var(--t-color-ink);
+}
+
+.modalClose {
+	background: none;
+	border: none;
+	font-size: var(--text-xl);
+	line-height: 1;
+	color: var(--t-color-ink-muted);
+	cursor: pointer;
+	padding: 0;
+	width: 30px;
+	height: 30px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-sm);
+	transition:
+		background-color 0.2s,
+		color 0.2s;
+}
+
+.modalBody {
+	padding: var(--space-xl);
+	flex: 1;
+	overflow-y: auto;
+}
+
+.modalFooter {
+	padding: var(--space-xl);
+	border-top: 1px solid var(--t-color-border);
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-sm);
+}
+
+.modalBodyContent {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
+}
+
+.formGroup {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
+}
+
+.formLabel {
+	font-weight: 500;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-base);
+}
+
+.taskSelector {
+	width: 100%;
+	padding: var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-base);
+	background-color: var(--t-color-surface);
+}
+
+.taskOption {
+	padding: var(--space-sm) 12px;
+}
+
+.infoBox {
+	background-color: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	padding: var(--space-md);
+	margin-top: 15px;
+}
+
+.emptyList {
+	text-align: center;
+	padding: var(--space-xl);
+	color: var(--t-color-ink-muted);
+}
+
+.loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--space-xl);
+	color: var(--t-color-ink-muted);
+}
+
+.loadingAfter {
+	content: "";
+	width: 20px;
+	height: 20px;
+	border: 2px solid var(--t-color-border);
+	border-top-color: var(--t-color-accent);
+	border-radius: 50%;
+	margin-left: 10px;
+	animation: spin 1s linear infinite;
+}
+
+.errorMessage {
+	background-color: var(--t-color-danger-subtle);
+	color: oklch(0.3 0.07 28);
+	padding: var(--space-sm);
+	border-radius: var(--radius-sm);
+	border: 1px solid oklch(0.88 0.04 28);
+}
+
+.successMessage {
+	background-color: var(--t-color-success-subtle);
+	color: oklch(0.3 0.07 160);
+	padding: var(--space-sm);
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--t-color-success-subtle);
+}
+
+.modalClose:hover {
+	background-color: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.taskSelector:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-soft);
+}
+
+.infoBox p {
+	margin-bottom: var(--space-sm);
+	font-weight: 500;
+}
+
+.infoBox ul {
+	margin: 0;
+	padding-left: 20px;
+	color: var(--t-color-ink-muted);
+}
+
+.infoBox li {
+	margin-bottom: 4px;
+}
+
+.emptyList p {
+	margin-bottom: var(--space-sm);
+}

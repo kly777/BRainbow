@@ -9,7 +9,7 @@ import { notifyError, notifySuccess } from "@lib/notify.ts";
 import { showConfirm } from "@lib/safe-action.ts";
 import { deleteBookmarkTagE, searchBookmarkTagsE } from "@features/bookmark/api.ts";
 import type { BookmarkTagWithCount } from "@features/bookmark/types.ts";
-import * as styles from "@features/bookmark/TagManager.css.ts";
+import styles from "@features/bookmark/TagManager.module.css";
 
 interface Props {
 	isOpen: boolean;

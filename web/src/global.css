@@ -1,64 +1,19 @@
-/* ===== 语义化设计令牌（oklch 色彩空间） ===== */
+/* ===== 布局常量令牌（不随主题；颜色令牌见 styles/tokens.css） ===== */
 :root {
-	/* ── 背景（暖纸色系，统一色相 95°） ── */
-	--color-bg: oklch(0.975 0.008 95);
-	--color-bg-subtle: oklch(0.97 0.01 95);
-	--color-surface: oklch(0.99 0.004 95);
-	--color-surface-raised: oklch(0.95 0.012 95);
-
-	/* ── 文字 ── */
-	--color-text: oklch(0.25 0.015 85);
-	--color-text-secondary: oklch(0.45 0.012 85);
-	--color-text-muted: oklch(0.6 0.008 85);
-
-	/* ── 边框 ── */
-	--color-border: oklch(0.86 0.015 95);
-	--color-border-hover: oklch(0.82 0.03 95);
-	--color-border-light: oklch(0.91 0.008 95);
-
-	/* ── 强调色（v2 目录绿） ── */
-	--color-accent: oklch(0.52 0.1 165);
-	--color-accent-hover: oklch(0.42 0.11 165);
-	--color-accent-subtle: oklch(0.93 0.03 165);
-	--color-accent-ring: oklch(0.52 0.1 165 / 0.22);
-
-	/* ── 状态色 ── */
-	--color-danger: oklch(0.55 0.2 25);
-	--color-danger-subtle: oklch(0.96 0.015 25);
-	--color-danger-light: oklch(0.97 0.015 25);
-	--color-danger-border: oklch(0.72 0.12 25);
-
-	--color-success: oklch(0.55 0.17 160);
-	--color-success-subtle: oklch(0.96 0.02 160);
-
-	--color-warning: oklch(0.6 0.16 85);
-	--color-warning-subtle: oklch(0.96 0.03 85);
-
-	/* ── 特殊色 ── */
-	--color-code: oklch(0.5 0.18 0);
-	--color-code-bg: oklch(0.97 0.003 250);
-	--color-overlay: oklch(0 0 0 / 0.5);
-	--color-white: oklch(1 0 0);
-
 	/* ── 间距与尺寸令牌 ── */
 	--radius-sm: 4px;
 	--radius-md: 8px;
 	--radius-lg: 12px;
-
 	--space-xs: 4px;
 	--space-sm: 8px;
 	--space-md: 12px;
 	--space-lg: 16px;
 	--space-xl: 24px;
-
 	--text-xs: 11px;
 	--text-sm: 13px;
 	--text-base: 15px;
 	--text-lg: 18px;
 	--text-xl: 22px;
-
-
-
 }
 
 *,
@@ -76,8 +31,9 @@
 
 html {
 	font-family:
-		system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif,
-		"Apple Color Emoji", "Segoe UI Emoji"; /* 1 */
+		system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji",
+		"Segoe UI Emoji"; /* 1 */
+
 	line-height: 1.15; /* 2 */
 	-webkit-text-size-adjust: 100%; /* 3 */
 	text-size-adjust: 100%;
@@ -122,6 +78,7 @@ samp,
 pre {
 	font-family:
 		ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; /* 1 */
+
 	font-size: 1em; /* 2 */
 }
 

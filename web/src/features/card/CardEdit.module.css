@@ -1,0 +1,17 @@
+/* features/card/CardEdit.css.ts — 由 vanilla-extract 迁移 */
+
+.container {
+	max-width: 1440px;
+	margin: 0 auto;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.errorMsg {
+	padding: var(--space-sm) 16px;
+	background: var(--t-color-danger-subtle);
+	color: var(--t-color-danger);
+	font-size: var(--text-sm);
+	border-bottom: 1px solid var(--t-color-danger);
+}

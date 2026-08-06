@@ -1,0 +1,23 @@
+/* features/bookmark/Favicon.css.ts — 由 vanilla-extract 迁移 */
+
+.img {
+	width: 20px;
+	height: 20px;
+	border-radius: var(--radius-sm);
+	object-fit: contain;
+	flex-shrink: 0;
+}
+
+.letter {
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	font-size: 0.8rem;
+	font-weight: 600;
+	border-radius: var(--radius-sm);
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
+}

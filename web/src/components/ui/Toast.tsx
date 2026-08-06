@@ -1,7 +1,14 @@
 import { For, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-import * as styles from "@components/ui/Toast.css.ts";
+import styles from "@components/ui/Toast.module.css";
 import { dismissToast, type ToastItem, toasts } from "@components/ui/toastStore.ts";
+
+const TYPE_CLASS: Record<ToastItem["type"], string> = {
+	error: styles.error,
+	warning: styles.warning,
+	success: styles.success,
+	info: styles.info,
+};
 
 function iconForType(type: ToastItem["type"]): string {
 	switch (type) {
@@ -26,7 +33,7 @@ export default function ToastContainer() {
 							<div
 								classList={{
 									[styles.toast]: true,
-									[styles.variants[toast.type]]: true,
+									[TYPE_CLASS[toast.type]]: true,
 									[styles.leaving]: toast.leaving,
 								}}
 								role="alert"

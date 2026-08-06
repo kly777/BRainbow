@@ -2,7 +2,7 @@
 
 import { createResource, createSignal, For, Show } from "solid-js";
 import { searchTagsE, type TagInfo } from "@features/mem/api.ts";
-import * as styles from "@features/mem/ui/ManageToolbar.css.ts";
+import styles from "@features/mem/ui/ManageToolbar.module.css";
 
 export type TagMode = "include" | "exclude";
 

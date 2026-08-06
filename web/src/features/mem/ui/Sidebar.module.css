@@ -1,0 +1,133 @@
+/* features/mem/ui/Sidebar.css.ts — 由 vanilla-extract 迁移 */
+
+.sidebar {
+	width: 0;
+	overflow: hidden;
+	border-right: 1px solid var(--t-color-border);
+	background: var(--t-color-surface);
+	transition: width 0.2s ease;
+	display: flex;
+	flex-direction: column;
+	flex-shrink: 0;
+}
+
+.sidebarOpen {
+	width: 240px;
+}
+
+.sidebarHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--space-md) 14px;
+	border-bottom: 1px solid var(--t-color-border);
+	font-family: var(--t-font-display);
+	font-size: var(--text-sm);
+	font-weight: 600;
+}
+
+.sidebarClose {
+	background: none;
+	border: none;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-faint);
+	cursor: pointer;
+	padding: var(--space-xs) 6px;
+}
+
+.legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 10px;
+	padding: var(--space-sm) 14px;
+	border-bottom: 1px solid var(--t-color-border);
+	font-size: var(--text-xs);
+	font-family: var(--t-font-mono);
+	color: var(--t-color-ink-faint);
+}
+
+.legendItem {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	white-space: nowrap;
+}
+
+.dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	display: inline-block;
+}
+
+.dotNew {
+	background: var(--t-color-badge-new-text);
+}
+
+.dotLearning {
+	background: var(--t-color-badge-learning-text);
+}
+
+.dotReview {
+	background: var(--t-color-badge-review-text);
+}
+
+.dotBuried {
+	background: var(--t-color-ink-faint);
+}
+
+.dotSuspended {
+	background: var(--t-color-badge-suspended-text);
+}
+
+.sidebarList {
+	flex: 1;
+	overflow-y: auto;
+	padding: var(--space-xs);
+}
+
+.sidebarItem {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 8px 10px;
+	margin-bottom: 2px;
+	border: none;
+	background: transparent;
+	color: var(--t-color-ink);
+}
+
+.sidebarActive {
+	background: var(--t-color-accent-soft);
+}
+
+.sidebarIdx {
+	font-size: var(--text-xs);
+	font-family: var(--t-font-mono);
+	color: var(--t-color-ink-faint);
+	flex-shrink: 0;
+	font-variant-numeric: tabular-nums;
+}
+
+.sidebarText {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.sidebarState {
+	font-size: var(--text-xs);
+	font-family: var(--t-font-mono);
+	flex-shrink: 0;
+	color: var(--t-color-ink-faint);
+}
+
+.sidebarClose:hover {
+	color: var(--t-color-ink);
+}
+
+.sidebarItem:hover {
+	background: var(--t-color-surface-raised);
+}

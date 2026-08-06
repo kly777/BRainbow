@@ -1,0 +1,140 @@
+/* ===== 通用组件样式（由 vanilla-extract base.css.ts 迁移） =====
+ * 按钮体系单一来源：组件用 `import base from "../../styles/base.module.css"` 复用。
+ * btnPrimary / btnGhost / btnNav / btnBack 通过 composes 复用 btnBase。
+ */
+
+.btnBase {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	background: transparent;
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) 14px;
+	cursor: pointer;
+	transition:
+		background 0.15s,
+		color 0.15s,
+		border-color 0.15s;
+}
+
+/* 实心主按钮 */
+.btnPrimary {
+	composes: btnBase;
+	color: var(--t-color-white);
+	background: var(--t-color-accent);
+	border: none;
+	font-weight: 500;
+}
+
+.btnPrimary:hover {
+	background: var(--t-color-accent-strong);
+}
+
+.btnPrimary:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+/* 幽灵按钮（描边） */
+.btnGhost {
+	composes: btnBase;
+}
+
+.btnGhost:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.btnGhost:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+/* 导航/翻页大按钮（◀ ▶） */
+.btnNav {
+	composes: btnBase;
+	font-size: var(--text-lg);
+	line-height: 1;
+	padding: var(--space-xs) 12px;
+}
+
+.btnNav:hover:not(:disabled) {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.btnNav:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+/* 链接式返回按钮 */
+.btnBack {
+	composes: btnBase;
+	border-color: var(--t-color-border);
+	text-decoration: none;
+	display: inline-block;
+	white-space: nowrap;
+}
+
+.btnBack:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+/* 底部胶囊条（fixed 贴底，桌面居中胶囊 / 移动全宽） */
+
+/* actionRow（显示答案前）与 ratings（显示答案后）共用，保证高度一致 */
+.bottomBar {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	margin-inline: auto;
+	width: fit-content;
+	min-height: 48px;
+	z-index: 20;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-sm);
+	padding: 0 16px; /* 水平内边距（高度由 min-height 决定） */
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border-strong);
+	border-bottom: none;
+	border-radius: 14px 14px 0 0;
+	box-shadow: 0 -4px 16px rgb(0 0 0 / 8%);
+	flex-wrap: nowrap;
+	max-width: 100vw;
+}
+
+/* 窄屏（≤600px）紧凑按钮：32px 高，紧凑内边距 */
+@media (max-width: 600px) {
+	.btnPrimary,
+	.btnGhost,
+	.btnNav {
+		padding: 0 10px;
+		font-size: 12px;
+		line-height: 1;
+		height: 32px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
+	}
+
+	.btnNav {
+		font-size: 16px;
+		padding-left: 11px;
+		padding-right: 11px;
+	}
+
+	.bottomBar {
+		width: 100%;
+		gap: 4px;
+		padding: 0 12px;
+		border-radius: 0;
+		border-left: none;
+		border-right: none;
+	}
+}

@@ -1,0 +1,60 @@
+/* components/ui/Badge.css.ts — 由 vanilla-extract 迁移 */
+
+.badge {
+	display: inline-block;
+	font-size: var(--text-xs);
+	padding: var(--space-xs) var(--space-sm);
+	border-radius: var(--radius-md);
+	font-weight: 500;
+	line-height: 1.2;
+}
+
+.default_ {
+	background: var(--t-color-bg);
+	color: var(--t-color-ink-muted);
+}
+
+.new_ {
+	background: var(--t-color-badge-new-bg);
+	color: var(--t-color-badge-new-text);
+}
+
+.learning {
+	background: var(--t-color-badge-learning-bg);
+	color: var(--t-color-badge-learning-text);
+}
+
+.review {
+	background: var(--t-color-badge-review-bg);
+	color: var(--t-color-badge-review-text);
+}
+
+.relearning {
+	background: var(--t-color-badge-relearning-bg);
+	color: var(--t-color-badge-relearning-text);
+}
+
+.suspended {
+	background: var(--t-color-badge-suspended-bg);
+	color: var(--t-color-badge-suspended-text);
+}
+
+.success {
+	background: var(--t-color-success-subtle);
+	color: var(--t-color-success);
+}
+
+.warning {
+	background: var(--t-color-warning-subtle);
+	color: var(--t-color-warning);
+}
+
+.danger {
+	background: var(--t-color-danger-subtle);
+	color: var(--t-color-danger);
+}
+
+.info {
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
+}

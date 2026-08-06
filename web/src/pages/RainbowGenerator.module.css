@@ -1,0 +1,95 @@
+/* pages/RainbowGenerator.css.ts — 由 vanilla-extract 迁移 */
+
+.page {
+	display: flex;
+	gap: var(--space-xl);
+	padding: var(--space-xl);
+	max-width: 1440px;
+	margin: 0 auto;
+	flex-wrap: wrap;
+}
+
+.controls {
+	flex: 1 1 400px;
+	min-width: 340px;
+}
+
+.preview {
+	flex: 0 0 auto;
+	max-width: 100%;
+	overflow-x: auto;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding: var(--space-lg);
+	background: var(--t-color-surface-raised);
+	border-radius: var(--radius-lg);
+	border: 1px solid var(--t-color-border);
+}
+
+.exportBtns {
+	display: flex;
+	gap: var(--space-sm);
+	margin-bottom: var(--space-lg);
+}
+
+.renderLabel {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	display: block;
+	margin-bottom: var(--space-xs);
+}
+
+.renderMode {
+	margin-bottom: var(--space-lg);
+}
+
+.stats {
+	margin-top: var(--space-sm);
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	padding: var(--space-md) 16px;
+}
+
+@media (max-width: 480px) {
+	.page {
+		padding: var(--space-md);
+		gap: var(--space-md);
+	}
+}
+
+@media (max-width: 480px) {
+	.controls {
+		min-width: 0;
+		flex-basis: 100%;
+	}
+}
+
+.stats h3 {
+	margin: 0 0 var(--space-sm) 0;
+	font-size: var(--text-base);
+	color: var(--t-color-ink);
+}
+
+.stats table {
+	border-collapse: collapse;
+	width: 100%;
+}
+
+.stats td {
+	padding: var(--space-xs) var(--space-sm);
+}
+
+.stats td:first-child {
+	color: var(--t-color-ink-muted);
+	white-space: nowrap;
+}
+
+.stats td:last-child {
+	text-align: right;
+	font-family: monospace;
+	color: var(--t-color-ink);
+}

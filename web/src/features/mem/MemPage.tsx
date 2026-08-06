@@ -8,7 +8,7 @@ import { getUpcomingCountsE, type UpcomingCounts } from "@features/mem/api.ts";
 import { useMemReview } from "@features/mem/logic/useMemReview.ts";
 import { notifyError } from "@lib/notify.ts";
 import { tryAsync } from "@lib/result.ts";
-import * as styles from "@features/mem/MemPage.css.ts";
+import styles from "@features/mem/MemPage.module.css";
 import AiSettingsModal from "@features/mem/ui/AiSettingsModal.tsx";
 import ContextBar from "@features/mem/ui/ContextBar.tsx";
 import FilterBar from "@features/mem/ui/FilterBar.tsx";

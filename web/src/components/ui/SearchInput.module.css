@@ -1,0 +1,20 @@
+/* components/ui/SearchInput.css.ts — 由 vanilla-extract 迁移 */
+
+.input {
+	padding: var(--space-xs) var(--space-sm);
+	font-size: var(--text-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+	outline: none;
+	transition: border-color 0.15s;
+}
+
+.input:focus {
+	border-color: var(--t-color-accent);
+}
+
+.input::placeholder {
+	color: var(--t-color-ink-muted);
+}

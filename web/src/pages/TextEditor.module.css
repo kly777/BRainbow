@@ -1,0 +1,125 @@
+/* pages/TextEditor.css.ts — 由 vanilla-extract 迁移 */
+
+.page {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+	background: var(--t-color-bg);
+}
+
+.tabs {
+	display: flex;
+	align-items: center;
+	gap: 0;
+	padding: 0 var(--space-xs);
+	border-bottom: 1px solid var(--t-color-border);
+	background: var(--t-color-surface);
+	flex-shrink: 0;
+	overflow-x: auto;
+}
+
+.tab {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+	padding: var(--space-sm) 14px;
+	font-size: var(--text-sm);
+	cursor: pointer;
+	border: none;
+	background: transparent;
+	color: var(--t-color-ink-muted);
+	border-bottom: 2px solid transparent;
+	transition:
+		color 0.15s,
+		border-color 0.15s;
+	white-space: nowrap;
+	user-select: none;
+}
+
+.tabActive {
+	color: var(--t-color-ink);
+	border-bottom-color: var(--t-color-accent);
+}
+
+.renameInput {
+	width: 80px;
+	padding: var(--space-xs) 4px;
+	border: 1px solid var(--t-color-accent);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+	font-size: var(--text-sm);
+	outline: none;
+}
+
+.closeBtn {
+	width: 18px;
+	height: 18px;
+	border: none;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-base);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	line-height: 1;
+}
+
+.addBtn {
+	width: 28px;
+	height: 28px;
+	border: none;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-lg);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: 4px;
+	flex-shrink: 0;
+}
+
+.editor {
+	flex: 1;
+	border: none;
+	outline: none;
+	resize: none;
+	padding: var(--space-xl) 24px;
+	font-size: var(--text-base);
+	line-height: 1.7;
+	font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+}
+
+.tab:hover {
+	color: var(--t-color-ink);
+}
+
+.tab:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: -2px;
+}
+
+.closeBtn:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-danger);
+}
+
+.closeBtn:disabled {
+	opacity: 0.25;
+	cursor: not-allowed;
+}
+
+.addBtn:hover {
+	background: var(--t-color-surface-raised);
+}
+
+.editor::placeholder {
+	color: var(--t-color-ink-muted);
+}

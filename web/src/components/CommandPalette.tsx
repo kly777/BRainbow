@@ -3,7 +3,7 @@ import { createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { AUTH_REQUIRED_EVENT } from "@apis/request.ts";
 import { useAuth } from "@auth/context.tsx";
 import { NAV_ROUTES } from "../routes.ts";
-import * as styles from "@components/CommandPalette.css.ts";
+import styles from "@components/CommandPalette.module.css";
 
 const BING = "https://www.bing.com/search?q=";
 const DUCK = "https://duckduckgo.com/?q=";

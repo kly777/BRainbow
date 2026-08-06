@@ -1,0 +1,177 @@
+/* pages/HomePage.css.ts — 由 vanilla-extract 迁移 */
+
+.homePage {
+	margin: 0 auto;
+	padding: var(--space-xl) 20px;
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+	max-width: 1440px;
+}
+
+.moduleNav {
+	display: flex;
+	gap: var(--space-sm);
+	margin-bottom: var(--space-xl);
+	flex-shrink: 0;
+	flex-wrap: wrap;
+}
+
+.moduleCard {
+	padding: var(--space-xs) 16px;
+	border-radius: var(--radius-md);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	text-decoration: none;
+	font-size: var(--text-base);
+	font-weight: 500;
+	color: var(--t-color-ink-muted);
+	transition:
+		background 0.15s,
+		color 0.15s;
+}
+
+.moduleIcon {
+	display: none;
+}
+
+.moduleLabel {
+	display: none;
+}
+
+.moduleDesc {
+	display: none;
+}
+
+.mainContent {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--space-xl);
+	flex: 1;
+	min-height: 0;
+}
+
+.dashboardSection {
+	background: var(--t-color-surface);
+	border-radius: var(--radius-lg);
+	padding: var(--space-xl);
+	box-shadow: 0 1px 3px oklch(0 0 0 / 0.08);
+	border: 1px solid var(--t-color-border);
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.sectionHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: var(--space-lg);
+	padding-bottom: 12px;
+	border-bottom: 2px solid var(--t-color-border);
+	flex-shrink: 0;
+}
+
+.sectionTitle {
+	font-size: var(--text-lg);
+	font-weight: 600;
+	color: var(--t-color-ink);
+	margin: 0;
+}
+
+.sectionActions {
+	display: flex;
+	gap: var(--space-md);
+	align-items: center;
+}
+
+.viewAllLink {
+	color: var(--t-color-accent);
+	text-decoration: none;
+	font-size: var(--text-sm);
+	font-weight: 500;
+	padding: var(--space-xs) 10px;
+	border-radius: var(--radius-md);
+	transition: all 0.2s ease;
+}
+
+.createLink {
+	background-color: var(--t-color-accent);
+	color: var(--t-color-white);
+	text-decoration: none;
+	font-size: var(--text-sm);
+	font-weight: 500;
+	padding: var(--space-xs) 14px;
+	border-radius: var(--radius-md);
+	transition: background-color 0.2s ease;
+}
+
+.emptyState {
+	text-align: center;
+	padding: var(--space-xl) 20px;
+	color: var(--t-color-ink-muted);
+}
+
+.emptyHint {
+	font-size: var(--text-sm);
+	opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+	.homePage {
+		padding: var(--space-lg) 12px;
+	}
+}
+
+.moduleCard:hover {
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
+	border-color: var(--t-color-accent);
+	text-decoration: none;
+}
+
+@media (max-width: 1024px) {
+	.mainContent {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 768px) {
+	.dashboardSection {
+		padding: var(--space-lg);
+	}
+}
+
+@media (max-width: 768px) {
+	.sectionHeader {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--space-sm);
+	}
+}
+
+@media (max-width: 768px) {
+	.sectionActions {
+		width: 100%;
+		justify-content: space-between;
+	}
+}
+
+.viewAllLink:hover {
+	background-color: var(--t-color-accent-soft);
+}
+
+.createLink:hover {
+	background-color: var(--t-color-accent-strong);
+}
+
+.emptyState p {
+	font-size: var(--text-base);
+	margin: 0 0 var(--space-sm) 0;
+}
+
+.emptyHint a {
+	color: var(--t-color-accent);
+}

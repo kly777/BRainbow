@@ -2,7 +2,7 @@
 
 import { Show } from "solid-js";
 import type { UseMemReview } from "@features/mem/logic/useMemReview.ts";
-import * as styles from "@features/mem/ui/ContextBar.css.ts";
+import styles from "@features/mem/ui/ContextBar.module.css";
 
 interface ContextBarProps {
 	m: UseMemReview;

@@ -1,0 +1,266 @@
+/* pages/ontology/OntologyList.css.ts — 由 vanilla-extract 迁移 */
+
+.container {
+	max-width: 1440px;
+	margin: 0 auto;
+	padding: var(--space-xl);
+}
+
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 30px;
+	padding-bottom: 20px;
+	border-bottom: 1px solid var(--t-color-border);
+}
+
+.actions {
+	display: flex;
+	gap: var(--space-sm);
+}
+
+.filters {
+	background-color: var(--t-color-surface);
+	border-radius: var(--radius-md);
+	padding: var(--space-xl);
+	margin-bottom: 30px;
+	box-shadow: 0 2px 4px oklch(0 0 0 / 0.05);
+}
+
+.searchSection {
+	margin-bottom: var(--space-xl);
+}
+
+.entitiesGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+	gap: var(--space-xl);
+	margin-bottom: 30px;
+}
+
+.entityCard {
+	background-color: var(--t-color-surface);
+	border-radius: var(--radius-md);
+	padding: var(--space-xl);
+	box-shadow: 0 2px 8px oklch(0 0 0 / 0.08);
+	transition:
+		transform 0.2s,
+		box-shadow 0.2s;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+.entityHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	margin-bottom: 15px;
+}
+
+.entityName {
+	margin: 0;
+	font-size: var(--text-lg);
+	font-weight: 600;
+	color: var(--t-color-ink);
+	flex: 1;
+}
+
+.entityType {
+	color: var(--t-color-white);
+	padding: var(--space-xs) 10px;
+	border-radius: var(--radius-lg);
+	font-size: var(--text-sm);
+	font-weight: 500;
+	margin-left: 10px;
+	white-space: nowrap;
+}
+
+.entityDescription {
+	font-size: 0.9375rem;
+	line-height: 1.6;
+	color: var(--t-color-ink);
+	margin-bottom: 15px;
+	flex: 1;
+}
+
+.entityActions {
+	display: flex;
+	gap: var(--space-sm);
+	margin-top: auto;
+	padding-top: 15px;
+	border-top: 1px solid var(--t-color-border);
+}
+
+.entitiesList {
+	overflow-x: auto;
+	margin-bottom: 30px;
+}
+
+.entitiesTable {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.9375rem;
+}
+
+.entitiesTh {
+	padding: var(--space-md) 16px;
+	text-align: left;
+	font-weight: 600;
+	color: var(--t-color-ink-muted);
+	background-color: var(--t-color-surface-raised);
+	border-bottom: 2px solid var(--t-color-border);
+	white-space: nowrap;
+}
+
+.entitiesTd {
+	padding: var(--space-md) 16px;
+	border-bottom: 1px solid var(--t-color-border);
+	color: var(--t-color-ink);
+}
+
+.stats {
+	margin-top: 20px;
+	padding-top: 20px;
+	border-top: 1px solid var(--t-color-border);
+	text-align: center;
+}
+
+.modalOverlay {
+	position: fixed;
+	inset: 0;
+	background: oklch(0 0 0 / 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: var(--space-xl);
+}
+
+.modal {
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-lg);
+	padding: var(--space-xl);
+	width: 100%;
+	max-width: 520px;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 8px 32px oklch(0 0 0 / 0.15);
+}
+
+.modalHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: var(--space-lg);
+}
+
+.modalContent {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
+}
+
+.errorMessage {
+	color: var(--t-color-danger);
+	font-size: var(--text-sm);
+	background: var(--t-color-danger-subtle);
+	padding: var(--space-sm);
+	border-radius: var(--radius-sm);
+}
+
+.formGroup {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
+}
+
+.formLabel {
+	font-size: var(--text-sm);
+	font-weight: 500;
+	color: var(--t-color-ink);
+}
+
+.formInput {
+	padding: var(--space-sm) 12px;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	font-size: var(--text-base);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+	outline: none;
+}
+
+.formTextarea {
+	padding: var(--space-sm) 12px;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	font-size: var(--text-base);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+	outline: none;
+	resize: vertical;
+	min-height: 80px;
+}
+
+.modalActions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-sm);
+	margin-top: var(--space-lg);
+}
+
+@media (max-width: 768px) {
+	.container {
+		padding: var(--space-lg);
+	}
+}
+
+@media (max-width: 768px) {
+	.header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--space-md);
+	}
+}
+
+@media (max-width: 480px) {
+	.filters {
+		padding: var(--space-lg);
+	}
+}
+
+@media (max-width: 768px) {
+	.entitiesGrid {
+		grid-template-columns: 1fr;
+		gap: var(--space-lg);
+	}
+}
+
+.entityCard:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 var(--space-xs) var(--space-md) oklch(0 0 0 / 0.12);
+}
+
+.header h1 {
+	margin: 0;
+	color: var(--t-color-ink);
+	font-size: var(--text-xl);
+	font-weight: 600;
+}
+
+.entityDescription p {
+	margin: 0;
+}
+
+.entitiesTable tr:hover td {
+	background-color: var(--t-color-surface-raised);
+}
+
+.stats p {
+	margin: 0;
+	font-size: 0.875rem;
+	color: var(--t-color-ink-muted);
+}

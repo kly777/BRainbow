@@ -1,6 +1,6 @@
 // ── v2 批量操作条（选中条目后出现） ──
 
-import * as styles from "@features/mem/ui/ManageBatchBar.css.ts";
+import styles from "@features/mem/ui/ManageBatchBar.module.css";
 
 interface Props {
 	selectedCount: number;

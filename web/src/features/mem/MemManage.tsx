@@ -4,7 +4,7 @@
 
 import { A } from "@solidjs/router";
 import { useMemManage } from "@features/mem/logic/useMemManage.ts";
-import * as styles from "@features/mem/MemManage.css.ts";
+import styles from "@features/mem/MemManage.module.css";
 import MemBatchTagModal from "@features/mem/ui/MemBatchTagModal.tsx";
 import MemExportModal from "@features/mem/ui/MemExportModal.tsx";
 import ManageBatchBar from "@features/mem/ui/ManageBatchBar.tsx";

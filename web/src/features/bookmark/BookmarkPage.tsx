@@ -19,7 +19,7 @@ import {
 	updateBookmarkE,
 } from "@features/bookmark/api.ts";
 import type { Bookmark } from "@features/bookmark/types.ts";
-import * as styles from "@features/bookmark/BookmarkPage.css.ts";
+import styles from "@features/bookmark/BookmarkPage.module.css";
 
 /** 从 URL 提取域名（用于展示与标题兜底） */
 function extractDomain(url: string): string {

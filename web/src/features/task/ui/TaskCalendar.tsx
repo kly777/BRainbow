@@ -3,7 +3,7 @@ import { notifyError } from "@lib/notify.ts";
 import { tryAsync } from "@lib/result.ts";
 import { getCalendarEventsE } from "@features/task/api.ts";
 import type { CalendarEvent } from "@features/task/types.ts";
-import * as styles from "@features/task/ui/TaskCalendar.css.ts";
+import styles from "@features/task/ui/TaskCalendar.module.css";
 
 // 窗口类型对应颜色
 const windowTypeColors: Record<string, string> = {

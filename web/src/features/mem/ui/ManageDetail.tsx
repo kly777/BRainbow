@@ -7,7 +7,7 @@ import MarkdownRenderer from "@components/ui/Markdown.tsx";
 import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
 import { fmtLocal } from "@lib/time.ts";
 import type { MemItem, TagInfo } from "@features/mem/api.ts";
-import * as styles from "@features/mem/ui/ManageDetail.css.ts";
+import styles from "@features/mem/ui/ManageDetail.module.css";
 
 interface Props {
 	mem: MemItem | undefined;

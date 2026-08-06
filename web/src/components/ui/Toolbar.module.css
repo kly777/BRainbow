@@ -1,0 +1,38 @@
+/* components/ui/Toolbar.css.ts — 由 vanilla-extract 迁移 */
+
+.toolbar {
+	display: flex;
+	align-items: center;
+	gap: var(--space-md);
+	padding: var(--space-sm) 16px;
+	background: var(--t-color-surface-raised);
+	border-bottom: 1px solid var(--t-color-border);
+	flex-shrink: 0;
+}
+
+.title {
+	font-size: var(--text-base);
+	font-weight: 500;
+	color: var(--t-color-ink-muted);
+}
+
+.actions {
+	margin-left: auto;
+	display: flex;
+	gap: var(--space-sm);
+}
+
+.backBtn {
+	padding: var(--space-xs) 10px;
+	font-size: var(--text-sm);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink-muted);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	font-family: inherit;
+}
+
+.backBtn:hover {
+	background: var(--t-color-surface-raised);
+}

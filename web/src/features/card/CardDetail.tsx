@@ -7,7 +7,7 @@ import MarkdownRenderer from "@components/ui/Markdown.tsx";
 import Toolbar from "@components/ui/Toolbar.tsx";
 import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
 import { deleteCardE, getCardE } from "@features/card/api.ts";
-import * as styles from "@features/card/CardDetail.css.ts";
+import styles from "@features/card/CardDetail.module.css";
 
 const CardDetailPage: Component = () => {
 	const params = useParams();

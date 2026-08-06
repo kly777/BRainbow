@@ -15,7 +15,7 @@ import { notifyError, notifySuccess } from "@lib/notify.ts";
 import { tryAsync } from "@lib/result.ts";
 import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
 import { createOntoE, deleteOntoE, getOntosE } from "@pages/ontology/api.ts";
-import * as styles from "@pages/ontology/OntologyList.css.ts";
+import styles from "@pages/ontology/OntologyList.module.css";
 
 const OntologyListPage: Component = () => {
 	const [ontologies, { mutate, refetch }] = createResource(async () => {

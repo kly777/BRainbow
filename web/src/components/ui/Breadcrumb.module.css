@@ -1,0 +1,32 @@
+/* components/ui/Breadcrumb.css.ts — 由 vanilla-extract 迁移 */
+
+.breadcrumb {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+	padding: var(--space-md) 0;
+	flex-wrap: wrap;
+}
+
+.link {
+	font-size: var(--text-base);
+	color: var(--t-color-accent);
+	text-decoration: none;
+	font-weight: 500;
+}
+
+.current {
+	font-size: var(--text-base);
+	color: var(--t-color-ink-muted);
+	font-weight: 400;
+}
+
+.sep {
+	font-size: var(--text-lg);
+	color: var(--t-color-ink-faint);
+	user-select: none;
+}
+
+.link:hover {
+	text-decoration: underline;
+}

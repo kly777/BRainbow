@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
 import { useAuth } from "@auth/context.tsx";
-import * as styles from "@pages/LandingPage.css.ts";
+import styles from "@pages/LandingPage.module.css";
 
 const modules = [
 	{

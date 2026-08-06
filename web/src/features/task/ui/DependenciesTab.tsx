@@ -14,7 +14,7 @@ import {
 	removeTaskDependencyE,
 } from "@features/task/api.ts";
 import type { Task } from "@features/task/types.ts";
-import * as styles from "@features/task/ui/EditTaskModal.css.ts";
+import styles from "@features/task/ui/EditTaskModal.module.css";
 
 // 依赖状态类映射（vanilla-extract 不支持动态索引）
 const depStatusClass: Record<string, string> = {

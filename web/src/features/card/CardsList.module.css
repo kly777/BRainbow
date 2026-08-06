@@ -1,0 +1,279 @@
+/* features/card/CardsList.css.ts — 由 vanilla-extract 迁移 */
+
+.container {
+	width: 100%;
+	height: 100dvh;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	padding: var(--space-xl);
+	background: var(--t-color-bg);
+}
+
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding-bottom: 16px;
+}
+
+.title {
+	font-family: var(--t-font-display);
+	font-size: 1.5rem;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	color: var(--t-color-ink);
+	margin: 0;
+}
+
+.actions {
+	display: flex;
+	gap: var(--space-md);
+}
+
+.loading {
+	text-align: center;
+	padding: var(--space-xl) var(--space-xl);
+	background: var(--t-color-surface);
+	border-radius: var(--radius-md);
+	border: 1px solid var(--t-color-border);
+	margin: var(--space-xl) 0;
+}
+
+.error {
+	text-align: center;
+	padding: var(--space-xl) 20px;
+	background: var(--t-color-danger-subtle);
+	border: 1px solid var(--t-color-danger);
+	border-radius: var(--radius-md);
+	margin: var(--space-xl) 0;
+}
+
+.modalOverlay {
+	position: fixed;
+	inset: 0;
+	background: oklch(0 0 0 / 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: var(--space-xl);
+}
+
+.modal {
+	background: var(--t-color-surface);
+	border-radius: var(--radius-lg);
+	width: 100%;
+	max-width: 500px;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 var(--space-xs) 24px oklch(0 0 0 / 0.15);
+	animation: modalSlideIn 0.3s ease;
+}
+
+.modalHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: var(--space-xl) 24px;
+	border-bottom: 1px solid var(--t-color-border);
+}
+
+.modalContent {
+	padding: var(--space-xl);
+}
+
+.errorMessage {
+	padding: var(--space-md) 16px;
+	background: var(--t-color-danger-subtle);
+	border: 1px solid var(--t-color-danger);
+	border-radius: var(--radius-sm);
+	color: var(--t-color-danger);
+	font-size: 0.875rem;
+	margin-bottom: var(--space-xl);
+}
+
+.formGroup {
+	margin-bottom: var(--space-xl);
+}
+
+.formLabel {
+	display: block;
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: var(--t-color-ink);
+	margin-bottom: var(--space-sm);
+}
+
+.formInput {
+	width: 100%;
+	padding: var(--space-sm) 12px;
+	font-size: 0.875rem;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	transition: all 0.2s ease;
+}
+
+.formTextarea {
+	width: 100%;
+	padding: var(--space-sm) 12px;
+	font-size: 0.875rem;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	resize: vertical;
+	transition: all 0.2s ease;
+	font-family: inherit;
+	line-height: 1.5;
+}
+
+.previewSection {
+	margin-top: var(--space-md);
+	padding: var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-bg);
+}
+
+.previewLabel {
+	display: block;
+	font-size: 0.75rem;
+	color: var(--t-color-ink-faint);
+	margin-bottom: var(--space-xs);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.previewContent {
+	font-size: 0.875rem;
+	line-height: 1.6;
+	color: var(--t-color-ink);
+}
+
+.state {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: var(--space-xl) 16px;
+	text-align: center;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-base);
+}
+
+.errorText {
+	color: var(--t-color-danger);
+	margin-bottom: 10px;
+}
+
+.modalActions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-md);
+	padding: var(--space-xl) 24px;
+	border-top: 1px solid var(--t-color-border);
+}
+
+@media (max-width: 768px) {
+	.container {
+		margin: 0 auto;
+		padding: var(--space-lg) 12px;
+	}
+}
+
+@media (max-width: 768px) {
+	.header {
+		align-items: center;
+		gap: var(--space-lg);
+	}
+}
+
+@media (max-width: 768px) {
+	.actions {
+		justify-content: flex-end;
+	}
+}
+
+@media (max-width: 768px) {
+	.modal {
+		max-width: 100%;
+	}
+}
+
+@media (max-width: 768px) {
+	.modalHeader {
+		padding: var(--space-lg) 20px;
+	}
+}
+
+@media (max-width: 768px) {
+	.modalContent {
+		padding: var(--space-xl);
+	}
+}
+
+.formLabel::after {
+	content: " *";
+	color: var(--t-color-danger);
+}
+
+.formInput:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-soft);
+}
+
+.formInput:disabled {
+	background: var(--t-color-surface-raised);
+	cursor: not-allowed;
+}
+
+.formTextarea:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-soft);
+}
+
+.formTextarea:disabled {
+	background: var(--t-color-surface-raised);
+	cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+	.modalActions {
+		padding: var(--space-lg) 20px;
+	}
+}
+
+@media (max-width: 480px) {
+	.modalActions {
+		flex-direction: column;
+	}
+}
+
+.loading p {
+	font-size: 1rem;
+	color: var(--t-color-ink-muted);
+	margin: 0;
+}
+
+.error p {
+	font-size: 1rem;
+	color: var(--t-color-danger);
+	margin-bottom: var(--space-lg);
+}
+
+.modalHeader h2 {
+	font-size: 1.25rem;
+	font-weight: 600;
+	color: var(--t-color-ink);
+	margin: 0;
+}
+
+.previewContent p {
+	margin: 0 0 var(--space-sm);
+}
+
+.previewContent p:last-child {
+	margin-bottom: 0;
+}

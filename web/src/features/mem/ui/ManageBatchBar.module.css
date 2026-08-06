@@ -1,0 +1,62 @@
+/* features/mem/ui/ManageBatchBar.css.ts — 由 vanilla-extract 迁移 */
+
+.batchBar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-md);
+	padding: 0 20px;
+	max-height: 0;
+	overflow: hidden;
+	background: var(--t-color-accent-soft);
+	border-bottom: 1px solid transparent;
+	transition:
+		max-height 0.2s ease,
+		padding 0.2s ease;
+}
+
+.batchBarVisible {
+	max-height: 56px;
+	padding: var(--space-sm) 20px;
+	border-bottom-color: var(--t-color-border);
+}
+
+.batchCount {
+	font-size: 12px;
+	font-family: var(--t-font-mono);
+	color: var(--t-color-accent-strong);
+	font-variant-numeric: tabular-nums;
+}
+
+.batchActions {
+	display: flex;
+	gap: var(--space-xs);
+}
+
+.batchBtn {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) 12px;
+	cursor: pointer;
+}
+
+.batchBtnDanger {
+	font-size: var(--text-sm);
+	color: var(--t-color-white);
+	background: var(--t-color-danger);
+	border: none;
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) 12px;
+	cursor: pointer;
+}
+
+.batchBtn:hover {
+	background: var(--t-color-surface-raised);
+}
+
+.batchBtnDanger:hover {
+	filter: brightness(0.92);
+}

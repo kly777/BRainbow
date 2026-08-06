@@ -1,5 +1,5 @@
 import { type Component, createSignal, onCleanup } from "solid-js";
-import * as styles from "@features/card/ui/CardFilter.css.ts";
+import styles from "@features/card/ui/CardFilter.module.css";
 
 export interface CardFilterProps {
 	onSearch?: (query: string) => void;

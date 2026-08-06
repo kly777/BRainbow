@@ -1,0 +1,145 @@
+/* components/ui/ConfirmModal.css.ts — 由 vanilla-extract 迁移 */
+
+.overlay {
+	position: fixed;
+	inset: 0;
+	background: oklch(0 0 0 / 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1100;
+	padding: var(--space-xl);
+}
+
+.dialog {
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-lg);
+	box-shadow: 0 8px 32px oklch(0 0 0 / 0.15);
+	max-width: 420px;
+	width: 100%;
+	padding: var(--space-xl);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-lg);
+}
+
+.header {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--space-md);
+}
+
+.iconWrap {
+	flex-shrink: 0;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 18px;
+	line-height: 1;
+}
+
+.iconDanger {
+	background: var(--t-color-danger-subtle);
+	color: var(--t-color-danger);
+}
+
+.iconWarning {
+	background: var(--t-color-warning-subtle);
+	color: var(--t-color-warning);
+}
+
+.iconInfo {
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
+}
+
+.titleWrap {
+	flex: 1;
+	min-width: 0;
+}
+
+.title {
+	margin: 0;
+	font-size: var(--text-lg);
+	font-weight: 600;
+	color: var(--t-color-ink);
+	line-height: 1.3;
+}
+
+.message {
+	margin: var(--space-xs) 0 0;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	line-height: 1.5;
+}
+
+.actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-sm);
+	margin-top: var(--space-xs);
+}
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--space-xs) var(--space-lg);
+	border-radius: var(--radius-md);
+	font-family: inherit;
+	font-size: var(--text-sm);
+	font-weight: 500;
+	cursor: pointer;
+	line-height: 1.4;
+	transition:
+		background 0.15s,
+		box-shadow 0.15s;
+	border: none;
+}
+
+.btnCancel {
+	background: var(--t-color-bg);
+	color: var(--t-color-ink-muted);
+	border: 1px solid var(--t-color-border);
+}
+
+.btnDanger {
+	background: var(--t-color-danger);
+	color: oklch(1 0 0);
+}
+
+.btnWarning {
+	background: var(--t-color-warning);
+	color: oklch(1 0 0);
+}
+
+.btnPrimary {
+	background: var(--t-color-accent);
+	color: oklch(1 0 0);
+}
+
+.btn:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 2px;
+}
+
+.btnCancel:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.btnDanger:hover {
+	background: oklch(0.48 0.18 25);
+}
+
+.btnWarning:hover {
+	background: oklch(0.52 0.14 85);
+}
+
+.btnPrimary:hover {
+	background: var(--t-color-accent-strong);
+}

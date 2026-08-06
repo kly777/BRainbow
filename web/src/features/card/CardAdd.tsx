@@ -7,7 +7,7 @@ import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
 import Toolbar from "@components/ui/Toolbar.tsx";
 import { tryAsync } from "@lib/result.ts";
 import { createCardE } from "@features/card/api.ts";
-import * as styles from "@features/card/CardAdd.css.ts";
+import styles from "@features/card/CardAdd.module.css";
 import type { CreateCardRequest } from "@features/card/types.ts";
 
 const CardAddPage: Component = () => {

@@ -8,6 +8,8 @@
     "preview": "vite preview",
     "check": "tsc --noEmit",
     "lint": "npx @biomejs/biome lint --write src/",
+    "lint:css": "stylelint \"src/**/*.css\"",
+    "format:css": "prettier --write \"src/**/*.css\"",
     "fmt": "npx @biomejs/biome format --write src/",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -15,8 +17,6 @@
   },
   "dependencies": {
     "@solidjs/router": "^0.16.1",
-    "@vanilla-extract/css": "^1.21.2",
-    "@vanilla-extract/vite-plugin": "^5.2.6",
     "dompurify": "^3.4.11",
     "highlight.js": "^11.11.1",
     "katex": "^0.17.0",
@@ -28,6 +28,9 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.2",
     "jsdom": "^29.1.1",
+    "prettier": "^3.9.6",
+    "stylelint": "^17.14.1",
+    "stylelint-config-standard": "^40.0.0",
     "typescript": "~6.0.3",
     "vite": "^8.1.3",
     "vite-plugin-solid": "^2.11.12",

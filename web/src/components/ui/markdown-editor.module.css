@@ -1,0 +1,42 @@
+/* components/ui/markdown-editor.css.ts — 由 vanilla-extract 迁移 */
+
+.editor {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+}
+
+.textarea {
+	width: 100%;
+	padding: var(--space-md);
+	border: 2px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	font-size: var(--text-base);
+	font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+	line-height: 1.6;
+	resize: vertical;
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	transition: border-color 0.15s;
+	box-sizing: border-box;
+}
+
+.preview {
+	margin-top: var(--space-sm);
+	padding: var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: var(--t-color-surface);
+	min-height: 40px;
+}
+
+.textarea:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+}
+
+.textareaDrag {
+	composes: textarea;
+	border-color: var(--t-color-accent);
+	background: var(--t-color-accent-soft);
+}

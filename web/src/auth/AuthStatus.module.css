@@ -1,0 +1,101 @@
+/* auth/AuthStatus.css.ts — 由 vanilla-extract 迁移 */
+
+.overlay {
+	position: fixed;
+	inset: 0;
+	background: oklch(0 0 0 / 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.form {
+	background: var(--t-color-surface);
+	padding: var(--space-xl);
+	border-radius: var(--radius-lg);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
+	min-width: 300px;
+	max-width: 360px;
+	box-shadow: 0 8px 32px oklch(0 0 0 / 0.15);
+	border: 1px solid var(--t-color-border);
+}
+
+.title {
+	margin: 0;
+	font-size: var(--text-lg);
+	color: var(--t-color-ink);
+	text-align: center;
+}
+
+.error {
+	color: var(--t-color-danger);
+	font-size: var(--text-sm);
+	margin: 0;
+	text-align: center;
+}
+
+.input {
+	padding: var(--space-sm) 12px;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	font-size: var(--text-base);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+	outline: none;
+}
+
+.actions {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-sm);
+}
+
+.btnSubmit {
+	padding: var(--space-sm) 0;
+	border: none;
+	border-radius: var(--radius-md);
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
+	font-size: var(--text-base);
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.btnLink {
+	background: none;
+	border: none;
+	color: var(--t-color-accent);
+	font-size: var(--text-sm);
+	cursor: pointer;
+	padding: var(--space-xs);
+}
+
+.btnCancel {
+	padding: var(--space-sm) 0;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: transparent;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-sm);
+	cursor: pointer;
+}
+
+.input:focus {
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
+}
+
+.btnSubmit:hover {
+	background: var(--t-color-accent-strong);
+}
+
+.btnLink:hover {
+	text-decoration: underline;
+}
+
+.btnCancel:hover {
+	background: var(--t-color-bg);
+}

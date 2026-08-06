@@ -7,7 +7,7 @@ import { A } from "@solidjs/router";
 import { createSignal, For, Show } from "solid-js";
 import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
 import { useMemAdd } from "@features/mem/logic/useMemAdd.ts";
-import * as styles from "@features/mem/MemAdd.css.ts";
+import styles from "@features/mem/MemAdd.module.css";
 import { FormatHint, ImportPreviewTable, ImportTagInput, ImportResult } from "@features/mem/ui/ImportParts.tsx";
 
 export default function MemAdd() {

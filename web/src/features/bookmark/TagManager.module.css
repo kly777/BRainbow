@@ -1,0 +1,43 @@
+/* features/bookmark/TagManager.css.ts — 由 vanilla-extract 迁移 */
+
+.state {
+	text-align: center;
+	color: var(--t-color-ink-muted);
+	padding: 24px 0;
+	font-size: 0.9rem;
+}
+
+.list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	max-height: 50vh;
+	overflow-y: auto;
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	padding: 6px 10px;
+	border-radius: var(--radius-sm);
+}
+
+.name {
+	flex: 1;
+	min-width: 0;
+	font-size: 0.9rem;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.count {
+	flex-shrink: 0;
+	font-size: 0.8rem;
+	color: var(--t-color-ink-muted);
+}
+
+.row:hover {
+	background: var(--t-color-bg);
+}

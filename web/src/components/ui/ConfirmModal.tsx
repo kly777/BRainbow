@@ -1,6 +1,6 @@
 import { createEffect, For, onCleanup, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-import * as styles from "@components/ui/ConfirmModal.css.ts";
+import styles from "@components/ui/ConfirmModal.module.css";
 import type { ConfirmVariant } from "@components/ui/confirmStore.ts";
 import { confirms } from "@components/ui/confirmStore.ts";
 

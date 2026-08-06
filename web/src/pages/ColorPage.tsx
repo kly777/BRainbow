@@ -2,10 +2,10 @@
  * ColorPage — 主题/配色切换页（/color）
  */
 import { createSignal, For, onMount } from "solid-js";
-import { themes, type ThemeName } from "@styles/tokens.css.ts";
+import { themes, type ThemeName } from "@styles/theme.ts";
 import { applyTheme, getTheme, themeInfo } from "@styles/theme.ts";
-import { btnGhost } from "@styles/base.css.ts";
-import * as styles from "./ColorPage.css.ts";
+import baseStyles from "@styles/base.module.css";
+import styles from "./ColorPage.module.css";
 
 export default function ColorPage() {
 	const [current, setCurrent] = createSignal<ThemeName>(getTheme());
@@ -56,7 +56,7 @@ export default function ColorPage() {
 
 			<div class={styles.footer}>
 				<button
-					class={btnGhost}
+					class={baseStyles.btnGhost}
 					onClick={() => {
 						applyTheme("paper");
 						setCurrent("paper");

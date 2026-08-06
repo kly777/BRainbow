@@ -1,0 +1,137 @@
+/* features/card/ui/CardFilter.css.ts — 由 vanilla-extract 迁移 */
+
+.filters {
+	background: var(--t-color-surface);
+	border-radius: var(--radius-lg);
+	padding: var(--space-md);
+	margin-bottom: var(--space-lg);
+	box-shadow: 0 1px 4px oklch(0 0 0 / 0.06);
+	border: 1px solid var(--t-color-border);
+}
+
+.filterRow {
+	display: flex;
+	align-items: center;
+	gap: var(--space-md);
+	flex-wrap: wrap;
+}
+
+.filterControls {
+	display: flex;
+	gap: var(--space-md);
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.searchInput {
+	flex: 1;
+	min-width: 0;
+	max-width: 220px;
+	padding: var(--space-sm) 12px;
+	font-size: 0.875rem;
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-md);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+	transition: all 0.15s ease;
+	flex-shrink: 0;
+	outline: none;
+}
+
+.filterLabel {
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: var(--t-color-ink);
+	white-space: nowrap;
+}
+
+.filterSelect {
+	padding: var(--space-sm) 12px;
+	font-size: 0.875rem;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+	cursor: pointer;
+	min-width: 120px;
+	outline: none;
+}
+
+.sortButton {
+	padding: var(--space-sm) 12px;
+	font-size: 0.875rem;
+	background: transparent;
+	color: var(--t-color-ink-muted);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	transition: all 0.15s ease;
+	min-width: 40px;
+}
+
+.clearButton {
+	padding: var(--space-sm) 14px;
+	font-size: 0.875rem;
+	background: transparent;
+	color: var(--t-color-ink-muted);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	transition: all 0.15s ease;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+	.filters {
+		padding: var(--space-md);
+	}
+}
+
+.searchInput:focus {
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
+}
+
+.searchInput::placeholder {
+	color: var(--t-color-ink-faint);
+}
+
+@media (max-width: 480px) {
+	.searchInput {
+		font-size: 1.125rem;
+		padding: var(--space-sm) 14px;
+	}
+}
+
+.filterSelect:focus {
+	border-color: var(--t-color-accent);
+}
+
+@media (max-width: 768px) {
+	.filterSelect {
+		width: 100%;
+	}
+}
+
+.sortButton:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+@media (max-width: 480px) {
+	.sortButton {
+		flex: 1;
+		text-align: center;
+	}
+}
+
+.clearButton:hover:not(:disabled) {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.clearButton:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}

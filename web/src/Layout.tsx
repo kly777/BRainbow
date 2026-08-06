@@ -1,6 +1,6 @@
 import { useLocation } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
-import * as styles from "./App.css.ts";
+import styles from "./App.module.css";
 import AuthGuard from "@auth/AuthGuard.tsx";
 import AuthStatus from "@auth/AuthStatus.tsx";
 import CommandPalette from "@components/CommandPalette.tsx";

@@ -9,7 +9,7 @@ import Button from "@components/ui/Button.tsx";
 import FilterGroup from "@components/ui/FilterGroup.tsx";
 import { Angle } from "@lib/angle.ts";
 import { Color } from "@lib/color.ts";
-import * as styles from "@pages/RainbowGenerator.css.ts";
+import styles from "@pages/RainbowGenerator.module.css";
 
 function RainbowGenerator() {
 	const L = 0.7;

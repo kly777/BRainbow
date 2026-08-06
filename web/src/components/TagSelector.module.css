@@ -1,0 +1,94 @@
+/* components/TagSelector.css.ts — 由 vanilla-extract 迁移 */
+
+.tagSelector {
+	position: relative;
+}
+
+.tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-xs);
+	margin-bottom: var(--space-xs);
+}
+
+.tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	padding: 2px 6px;
+	font-size: var(--text-xs);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink-muted);
+	white-space: nowrap;
+}
+
+.tagRemove {
+	margin-left: 2px;
+	cursor: pointer;
+	font-size: 0.85em;
+	opacity: 0.6;
+	background: none;
+	border: none;
+	padding: 0;
+	color: inherit;
+	line-height: 1;
+}
+
+.inputRow {
+	display: flex;
+	gap: var(--space-xs);
+}
+
+.input {
+	flex: 1;
+	padding: var(--space-xs) var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	font-size: var(--text-sm);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	outline: none;
+}
+
+.dropdown {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	z-index: 10;
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	box-shadow: 0 4px 12px oklch(0 0 0 / 0.1);
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+.dropdownItem {
+	padding: var(--space-xs) var(--space-sm);
+	font-size: var(--text-sm);
+	cursor: pointer;
+	transition: background 0.1s;
+}
+
+.dropdownItemActive {
+	background: var(--t-color-accent-soft);
+}
+
+.createNew {
+	color: var(--t-color-accent);
+	font-weight: 500;
+}
+
+.tagRemove:hover {
+	opacity: 1;
+}
+
+.input:focus {
+	border-color: var(--t-color-accent);
+}
+
+.dropdownItem:hover {
+	background: var(--t-color-bg);
+}

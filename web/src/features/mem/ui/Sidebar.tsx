@@ -2,7 +2,7 @@
 
 import { createEffect, For, Show } from "solid-js";
 import type { UseMemReview } from "@features/mem/logic/useMemReview.ts";
-import * as styles from "@features/mem/ui/Sidebar.css.ts";
+import styles from "@features/mem/ui/Sidebar.module.css";
 
 interface SidebarProps {
 	m: UseMemReview;

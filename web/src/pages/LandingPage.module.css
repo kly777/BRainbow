@@ -1,0 +1,166 @@
+/* pages/LandingPage.css.ts — 由 vanilla-extract 迁移 */
+
+.landingPage {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: calc(100vh - 80px);
+	padding: var(--space-xl);
+	text-align: center;
+}
+
+.heroTitle {
+	font-size: var(--text-xl);
+	font-weight: 700;
+	color: var(--t-color-ink);
+	margin: 0 0 var(--space-lg) 0;
+	letter-spacing: -0.5px;
+}
+
+.heroSubtitle {
+	font-size: var(--text-lg);
+	color: var(--t-color-ink-muted);
+	margin: 0 0 var(--space-xl) 0;
+	max-width: 480px;
+	line-height: 1.7;
+}
+
+.ctaRow {
+	display: flex;
+	align-items: center;
+	gap: var(--space-lg);
+	margin-bottom: 48px;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+.ctaPrimary {
+	padding: var(--space-md) 32px;
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
+	border: none;
+	border-radius: var(--radius-md);
+	font-size: var(--text-lg);
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.2s;
+	font-family: inherit;
+}
+
+.ctaDivider {
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-base);
+}
+
+.ctaSecondary {
+	padding: var(--space-sm) 24px;
+	background: transparent;
+	color: var(--t-color-accent);
+	border: 2px solid var(--t-color-accent);
+	border-radius: var(--radius-md);
+	font-size: var(--text-base);
+	font-weight: 500;
+	cursor: pointer;
+	transition:
+		background 0.2s,
+		color 0.2s;
+	font-family: inherit;
+}
+
+.featureGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: var(--space-lg);
+	width: 100%;
+	max-width: 800px;
+	margin-bottom: 40px;
+}
+
+.featureCard {
+	background: var(--t-color-surface);
+	border-radius: var(--radius-lg);
+	padding: var(--space-xl) 20px;
+	box-shadow: 0 1px 3px oklch(0 0 0 / 0.08);
+	border: 1px solid var(--t-color-border);
+	transition:
+		transform 0.2s,
+		box-shadow 0.2s;
+	text-decoration: none;
+	color: inherit;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+}
+
+.featureIcon {
+	font-size: var(--text-xl);
+	margin-bottom: var(--space-md);
+}
+
+.hint {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	margin: 0;
+	line-height: 1.8;
+}
+
+@media (max-width: 640px) {
+	.heroTitle {
+		font-size: var(--text-xl);
+	}
+}
+
+@media (max-width: 640px) {
+	.heroSubtitle {
+		font-size: var(--text-base);
+	}
+}
+
+.ctaPrimary:hover {
+	background: var(--t-color-accent-strong);
+}
+
+.ctaSecondary:hover {
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
+}
+
+@media (max-width: 640px) {
+	.featureGrid {
+		grid-template-columns: 1fr 1fr;
+		gap: var(--space-md);
+	}
+}
+
+.featureCard:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 8px 24px oklch(0 0 0 / 0.12);
+	text-decoration: none;
+}
+
+.featureCard h3 {
+	font-size: var(--text-lg);
+	font-weight: 600;
+	color: var(--t-color-ink);
+	margin: 0 0 var(--space-sm) 0;
+}
+
+.featureCard p {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	margin: 0;
+	line-height: 1.5;
+}
+
+.hint kbd {
+	display: inline-block;
+	padding: var(--space-xs) 7px;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-surface-raised);
+	font-family: monospace;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+}

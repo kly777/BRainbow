@@ -1,0 +1,274 @@
+/* features/reading/ReadingDetail.css.ts — 由 vanilla-extract 迁移 */
+
+.page {
+	max-width: 1100px;
+	margin: 0 auto;
+	padding: var(--space-lg);
+	display: grid;
+	grid-template-columns: 1fr 280px;
+	grid-template-rows: auto auto 1fr;
+	gap: var(--space-md);
+}
+
+.back {
+	grid-column: 1 / -1;
+	font-size: 0.9rem;
+	color: var(--t-color-accent);
+	text-decoration: none;
+}
+
+.header {
+	grid-column: 1;
+}
+
+.meta {
+	font-size: 0.85rem;
+	color: var(--t-color-ink-muted);
+	display: flex;
+	gap: 16px;
+}
+
+.recommendBanner {
+	grid-column: 1;
+	display: block;
+	padding: 8px 16px;
+	background: oklch(0.95 0.05 250 / 0.5);
+	border: 1px solid oklch(0.85 0.08 250);
+	border-radius: 8px;
+	font-size: 0.9rem;
+	color: var(--t-color-accent);
+	text-decoration: none;
+}
+
+.content {
+	grid-column: 1;
+	grid-row: 3;
+	font-size: 1rem;
+	line-height: 1.8;
+	overflow-y: auto;
+	max-height: calc(100vh - 240px);
+	padding: var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: 8px;
+	background: var(--t-color-surface);
+}
+
+.paragraph {
+	margin-bottom: 1em;
+}
+
+.word {
+	cursor: pointer;
+}
+
+.unknownWord {
+	cursor: pointer;
+	text-decoration: underline wavy oklch(0.45 0.22 30) 1.5px;
+	text-underline-offset: 3px;
+	font-weight: 600;
+}
+
+.sidebar {
+	grid-column: 2;
+	grid-row: 2 / 4;
+	border: 1px solid var(--t-color-border);
+	border-radius: 8px;
+	padding: var(--space-md);
+	background: var(--t-color-surface);
+	display: flex;
+	flex-direction: column;
+	max-height: calc(100vh - 120px);
+}
+
+.wordListArea {
+	flex: 1;
+	overflow-y: auto;
+	min-height: 0;
+}
+
+.sidebarFooter {
+	flex-shrink: 0;
+	padding-top: 10px;
+	border-top: 1px solid var(--t-color-border);
+	margin-top: 8px;
+}
+
+.uploadUnknownBtn {
+	width: 100%;
+	margin-bottom: 10px;
+	padding: 6px 12px;
+	border: 1px solid oklch(0.45 0.22 30);
+	border-radius: 6px;
+	background: transparent;
+	color: oklch(0.45 0.22 30);
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.wordList {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.wordItem {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 6px;
+	border-radius: 4px;
+	font-size: 0.9rem;
+}
+
+.wordName {
+	flex: 1;
+}
+
+.knownWord {
+	color: var(--t-color-ink-muted);
+	text-decoration: line-through;
+}
+
+.ignoredWordSidebar {
+	color: var(--t-color-ink-muted);
+	font-style: italic;
+}
+
+.knownIcon {
+	color: oklch(0.5 0.18 150);
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.unknownIcon {
+	color: oklch(0.45 0.22 30);
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.ignoredIcon {
+	color: var(--t-color-ink-muted);
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.ignoreBtn {
+	border: none;
+	background: none;
+	cursor: pointer;
+	padding: 2px 4px;
+	font-size: 11px;
+	color: var(--t-color-ink-muted);
+	opacity: 0;
+	border-radius: 3px;
+}
+
+.notesSection {
+	margin-bottom: 4px;
+}
+
+.notesInput {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 8px;
+	border: 1px solid var(--t-color-border);
+	border-radius: 6px;
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+	font-size: 0.85rem;
+	line-height: 1.5;
+	resize: vertical;
+	font-family: inherit;
+}
+
+.copyBtn {
+	width: 100%;
+	margin-top: 8px;
+	padding: 8px 12px;
+	border: 1px solid var(--t-color-border);
+	border-radius: 6px;
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	font-size: 0.85rem;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+
+@media (max-width: 768px) {
+	.page {
+		grid-template-columns: 1fr;
+	}
+}
+
+.back:hover {
+	text-decoration: underline;
+}
+
+.recommendBanner:hover {
+	background: oklch(0.92 0.06 250 / 0.5);
+}
+
+.word:hover {
+	background: oklch(0.92 0.03 200 / 0.25);
+	border-radius: 2px;
+}
+
+.unknownWord:hover {
+	background: oklch(0.92 0.05 30 / 0.2);
+	border-radius: 2px;
+}
+
+@media (max-width: 768px) {
+	.sidebar {
+		grid-column: 1;
+		grid-row: auto;
+		max-height: 400px;
+	}
+}
+
+.uploadUnknownBtn:hover {
+	background: oklch(0.45 0.22 30);
+	color: var(--t-color-white);
+}
+
+.uploadUnknownBtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.wordItem:hover {
+	background: var(--t-color-bg);
+}
+
+.wordItem:hover .ignoreBtn {
+	opacity: 1;
+}
+
+.ignoreBtn:hover {
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+}
+
+.notesInput:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+}
+
+.copyBtn:hover {
+	background: var(--t-color-bg);
+}
+
+.header h1 {
+	margin: 0 0 4px;
+	font-size: 1.3rem;
+}
+
+.sidebar h3 {
+	margin: 0 0 8px;
+	font-size: 1rem;
+}
+
+.notesSection h3 {
+	font-size: 0.95rem;
+	margin: 0 0 6px;
+}

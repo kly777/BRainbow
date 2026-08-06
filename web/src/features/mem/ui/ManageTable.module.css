@@ -1,0 +1,144 @@
+/* features/mem/ui/ManageTable.css.ts — 由 vanilla-extract 迁移 */
+
+.pageBtn {
+	composes: btnNav from "../../../styles/base.module.css";
+}
+
+.tableCard {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-lg);
+}
+
+.tableScroll {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+}
+
+.table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--text-sm);
+}
+
+.th {
+}
+
+.thSort {
+	cursor: pointer;
+	user-select: none;
+}
+
+.thCb {
+	width: 32px;
+}
+
+.td {
+	color: var(--t-color-ink);
+	max-width: 220px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.tdCb {
+	width: 32px;
+}
+
+.tdNum {
+	font-family: var(--t-font-mono);
+	font-size: 12px;
+	color: var(--t-color-ink-muted);
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.tdDue {
+	font-family: var(--t-font-mono);
+	font-size: 12px;
+	color: var(--t-color-ink-muted);
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.tdAct {
+	width: 40px;
+	text-align: right;
+}
+
+.row {
+	transition: background 0.1s;
+}
+
+.rowActive {
+	background: var(--t-color-accent-soft);
+}
+
+.cellTags {
+	display: flex;
+	gap: 4px;
+	flex-wrap: wrap;
+}
+
+.cellTag {
+	font-size: 10px;
+	padding: 1px 6px;
+	border-radius: 999px;
+	background: var(--t-color-badge-new-bg);
+	color: var(--t-color-badge-new-text);
+	white-space: nowrap;
+}
+
+.delBtn {
+	background: none;
+	border: none;
+	color: var(--t-color-ink-faint);
+	cursor: pointer;
+	font-size: 12px;
+	padding: 2px 4px;
+	border-radius: 4px;
+}
+
+.pagination {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-md);
+	padding: var(--space-md) 0 var(--space-lg);
+}
+
+.pageInfo {
+	font-size: 12px;
+	font-family: var(--t-font-mono);
+	color: var(--t-color-ink-faint);
+	font-variant-numeric: tabular-nums;
+}
+
+.empty {
+	text-align: center;
+	padding: var(--space-xl) 0;
+	color: var(--t-color-ink-faint);
+}
+
+.thSort:hover {
+	color: var(--t-color-ink);
+}
+
+.row:hover {
+	background: var(--t-color-bg);
+}
+
+.rowActive:hover {
+	background: var(--t-color-accent-soft);
+}
+
+.delBtn:hover {
+	color: var(--t-color-badge-relearning-text);
+	background: var(--t-color-badge-relearning-bg);
+}

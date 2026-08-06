@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
 import { For } from "solid-js";
-import * as styles from "@components/ui/Breadcrumb.css.ts";
+import styles from "@components/ui/Breadcrumb.module.css";
 
 export interface Crumb {
 	label: string;

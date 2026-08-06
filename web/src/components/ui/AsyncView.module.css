@@ -1,0 +1,27 @@
+/* components/ui/AsyncView.css.ts — 由 vanilla-extract 迁移 */
+
+.state {
+	padding: var(--space-xl) 16px;
+	text-align: center;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-base);
+}
+
+.errorText {
+	color: var(--t-color-danger);
+	margin-bottom: 10px;
+}
+
+.retryBtn {
+	padding: var(--space-xs) 16px;
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
+	border: none;
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	font-size: var(--text-sm);
+}
+
+.retryBtn:hover {
+	background: var(--t-color-accent-strong);
+}

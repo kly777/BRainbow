@@ -1,0 +1,273 @@
+/* ===== 语义化设计令牌（由 vanilla-extract tokens.css.ts 迁移） =====
+ *
+ * --t-color-* / --t-font-*：组件契约（组件样式统一 var(--t-*) 引用）。
+ * --color-* / --toast-*：旧全局别名（markdown.css 与内联样式使用），随主题切换。
+ * --space-* / --radius-* / --text-*：布局常量（global.css 定义，不随主题）。
+ */
+
+:root,
+:root[data-theme="paper"] {
+	/* ── 字体（三主题共用） ── */
+	--t-font-display: Georgia, "Noto Serif SC", "Songti SC", "SimSun", serif;
+	--t-font-mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+
+	/* ── 主题契约：paper（暖纸 · 目录绿，默认） ── */
+	--t-color-bg: oklch(0.975 0.008 95);
+	--t-color-surface: oklch(0.99 0.004 95);
+	--t-color-surface-raised: oklch(0.95 0.012 95);
+	--t-color-ink: oklch(0.25 0.015 85);
+	--t-color-ink-muted: oklch(0.45 0.012 85);
+	--t-color-ink-faint: oklch(0.6 0.008 85);
+	--t-color-border: oklch(0.86 0.015 95);
+	--t-color-border-strong: oklch(0.82 0.03 95);
+	--t-color-accent: oklch(0.52 0.1 165);
+	--t-color-accent-strong: oklch(0.42 0.11 165);
+	--t-color-accent-soft: oklch(0.93 0.03 165);
+	--t-color-white: oklch(1 0 0);
+	--t-color-badge-new-bg: oklch(0.93 0.04 270);
+	--t-color-badge-new-text: oklch(0.45 0.18 270);
+	--t-color-badge-learning-bg: oklch(0.93 0.07 65);
+	--t-color-badge-learning-text: oklch(0.45 0.15 60);
+	--t-color-badge-review-bg: oklch(0.93 0.06 150);
+	--t-color-badge-review-text: oklch(0.4 0.12 150);
+	--t-color-badge-suspended-bg: oklch(0.93 0 0);
+	--t-color-badge-suspended-text: oklch(0.5 0 0);
+	--t-color-badge-relearning-bg: oklch(0.93 0.06 20);
+	--t-color-badge-relearning-text: oklch(0.42 0.15 20);
+	--t-color-danger: oklch(0.55 0.2 25);
+	--t-color-danger-subtle: oklch(0.96 0.015 25);
+	--t-color-success: oklch(0.55 0.17 160);
+	--t-color-success-subtle: oklch(0.95 0.03 160);
+	--t-color-warning: oklch(0.6 0.16 85);
+	--t-color-warning-subtle: oklch(0.96 0.03 85);
+
+	/* ── 旧全局别名（legacyAliases：跟随主题） ── */
+	--color-bg: var(--t-color-bg);
+	--color-bg-subtle: var(--t-color-bg);
+	--color-surface: var(--t-color-surface);
+	--color-surface-raised: var(--t-color-surface-raised);
+	--color-text: var(--t-color-ink);
+	--color-text-secondary: var(--t-color-ink-muted);
+	--color-text-muted: var(--t-color-ink-faint);
+	--color-border: var(--t-color-border);
+	--color-border-light: var(--t-color-border);
+	--color-border-hover: var(--t-color-border-strong);
+	--color-accent: var(--t-color-accent);
+	--color-accent-hover: var(--t-color-accent-strong);
+	--color-accent-subtle: var(--t-color-accent-soft);
+	--color-accent-ring: oklch(0.52 0.1 165 / 0.25);
+	--color-danger: var(--t-color-danger);
+	--color-danger-subtle: var(--t-color-danger-subtle);
+	--color-danger-light: var(--t-color-danger-subtle);
+	--color-danger-border: var(--t-color-danger);
+	--color-success: var(--t-color-success);
+	--color-success-subtle: var(--t-color-success-subtle);
+	--color-warning: var(--t-color-warning);
+	--color-warning-subtle: var(--t-color-warning-subtle);
+	--color-white: var(--t-color-white);
+	--color-code: var(--t-color-ink-muted);
+	--color-code-bg: var(--t-color-surface-raised);
+	--color-overlay: oklch(0 0 0 / 0.5);
+	--toast-error-bg: var(--t-color-danger-subtle);
+	--toast-error-border: oklch(0.85 0.06 25);
+	--toast-error-text: oklch(0.3 0.09 25);
+	--toast-error-icon-bg: var(--t-color-danger);
+	--toast-warning-bg: var(--t-color-warning-subtle);
+	--toast-warning-icon-bg: var(--t-color-warning);
+	--toast-success-bg: var(--t-color-success-subtle);
+	--toast-success-icon-bg: var(--t-color-success);
+	--toast-info-bg: var(--t-color-accent-soft);
+	--toast-info-icon-bg: var(--t-color-accent);
+}
+
+:root[data-theme="midnight"] {
+	/* ── 主题契约：midnight（暗夜 · 墨绿） ── */
+	--t-color-bg: oklch(0.17 0.012 260);
+	--t-color-surface: oklch(0.21 0.014 260);
+	--t-color-surface-raised: oklch(0.27 0.016 260);
+	--t-color-ink: oklch(0.93 0.008 95);
+	--t-color-ink-muted: oklch(0.76 0.006 95);
+	--t-color-ink-faint: oklch(0.6 0.005 95);
+	--t-color-border: oklch(0.32 0.014 260);
+	--t-color-border-strong: oklch(0.4 0.018 260);
+	--t-color-accent: oklch(0.68 0.12 165);
+	--t-color-accent-strong: oklch(0.76 0.12 165);
+	--t-color-accent-soft: oklch(0.3 0.05 165);
+	--t-color-white: oklch(1 0 0);
+	--t-color-badge-new-bg: oklch(0.32 0.05 270);
+	--t-color-badge-new-text: oklch(0.72 0.14 270);
+	--t-color-badge-learning-bg: oklch(0.34 0.06 65);
+	--t-color-badge-learning-text: oklch(0.76 0.11 60);
+	--t-color-badge-review-bg: oklch(0.32 0.05 150);
+	--t-color-badge-review-text: oklch(0.7 0.1 150);
+	--t-color-badge-suspended-bg: oklch(0.3 0 0);
+	--t-color-badge-suspended-text: oklch(0.65 0 0);
+	--t-color-badge-relearning-bg: oklch(0.34 0.06 20);
+	--t-color-badge-relearning-text: oklch(0.75 0.12 20);
+	--t-color-danger: oklch(0.7 0.16 25);
+	--t-color-danger-subtle: oklch(0.32 0.05 25);
+	--t-color-success: oklch(0.72 0.12 160);
+	--t-color-success-subtle: oklch(0.3 0.04 160);
+	--t-color-warning: oklch(0.78 0.12 85);
+	--t-color-warning-subtle: oklch(0.34 0.05 85);
+
+	/* ── 旧全局别名 ── */
+	--color-bg: var(--t-color-bg);
+	--color-bg-subtle: var(--t-color-bg);
+	--color-surface: var(--t-color-surface);
+	--color-surface-raised: var(--t-color-surface-raised);
+	--color-text: var(--t-color-ink);
+	--color-text-secondary: var(--t-color-ink-muted);
+	--color-text-muted: var(--t-color-ink-faint);
+	--color-border: var(--t-color-border);
+	--color-border-light: var(--t-color-border);
+	--color-border-hover: var(--t-color-border-strong);
+	--color-accent: var(--t-color-accent);
+	--color-accent-hover: var(--t-color-accent-strong);
+	--color-accent-subtle: var(--t-color-accent-soft);
+	--color-accent-ring: oklch(0.68 0.12 165 / 0.25);
+	--color-danger: var(--t-color-danger);
+	--color-danger-subtle: var(--t-color-danger-subtle);
+	--color-danger-light: var(--t-color-danger-subtle);
+	--color-danger-border: var(--t-color-danger);
+	--color-success: var(--t-color-success);
+	--color-success-subtle: var(--t-color-success-subtle);
+	--color-warning: var(--t-color-warning);
+	--color-warning-subtle: var(--t-color-warning-subtle);
+	--color-white: var(--t-color-white);
+	--color-code: var(--t-color-ink-muted);
+	--color-code-bg: var(--t-color-surface-raised);
+	--color-overlay: oklch(0 0 0 / 0.5);
+	--toast-error-bg: var(--t-color-danger-subtle);
+	--toast-error-border: oklch(0.85 0.06 25);
+	--toast-error-text: oklch(0.3 0.09 25);
+	--toast-error-icon-bg: var(--t-color-danger);
+	--toast-warning-bg: var(--t-color-warning-subtle);
+	--toast-warning-icon-bg: var(--t-color-warning);
+	--toast-success-bg: var(--t-color-success-subtle);
+	--toast-success-icon-bg: var(--t-color-success);
+	--toast-info-bg: var(--t-color-accent-soft);
+	--toast-info-icon-bg: var(--t-color-accent);
+}
+
+:root[data-theme="ocean"] {
+	/* ── 主题契约：ocean（冷蓝 · 晴空） ── */
+	--t-color-bg: oklch(0.975 0.006 250);
+	--t-color-surface: oklch(0.99 0.003 250);
+	--t-color-surface-raised: oklch(0.95 0.01 250);
+	--t-color-ink: oklch(0.25 0.02 250);
+	--t-color-ink-muted: oklch(0.45 0.015 250);
+	--t-color-ink-faint: oklch(0.6 0.01 250);
+	--t-color-border: oklch(0.86 0.012 250);
+	--t-color-border-strong: oklch(0.82 0.025 250);
+	--t-color-accent: oklch(0.55 0.18 255);
+	--t-color-accent-strong: oklch(0.45 0.2 255);
+	--t-color-accent-soft: oklch(0.93 0.03 255);
+	--t-color-white: oklch(1 0 0);
+	--t-color-badge-new-bg: oklch(0.93 0.04 270);
+	--t-color-badge-new-text: oklch(0.45 0.18 270);
+	--t-color-badge-learning-bg: oklch(0.93 0.07 65);
+	--t-color-badge-learning-text: oklch(0.45 0.15 60);
+	--t-color-badge-review-bg: oklch(0.93 0.06 150);
+	--t-color-badge-review-text: oklch(0.4 0.12 150);
+	--t-color-badge-suspended-bg: oklch(0.93 0 0);
+	--t-color-badge-suspended-text: oklch(0.5 0 0);
+	--t-color-badge-relearning-bg: oklch(0.93 0.06 20);
+	--t-color-badge-relearning-text: oklch(0.42 0.15 20);
+	--t-color-danger: oklch(0.55 0.2 25);
+	--t-color-danger-subtle: oklch(0.96 0.015 25);
+	--t-color-success: oklch(0.55 0.17 160);
+	--t-color-success-subtle: oklch(0.95 0.03 160);
+	--t-color-warning: oklch(0.6 0.16 85);
+	--t-color-warning-subtle: oklch(0.96 0.03 85);
+
+	/* ── 旧全局别名 ── */
+	--color-bg: var(--t-color-bg);
+	--color-bg-subtle: var(--t-color-bg);
+	--color-surface: var(--t-color-surface);
+	--color-surface-raised: var(--t-color-surface-raised);
+	--color-text: var(--t-color-ink);
+	--color-text-secondary: var(--t-color-ink-muted);
+	--color-text-muted: var(--t-color-ink-faint);
+	--color-border: var(--t-color-border);
+	--color-border-light: var(--t-color-border);
+	--color-border-hover: var(--t-color-border-strong);
+	--color-accent: var(--t-color-accent);
+	--color-accent-hover: var(--t-color-accent-strong);
+	--color-accent-subtle: var(--t-color-accent-soft);
+	--color-accent-ring: oklch(0.55 0.18 255 / 0.25);
+	--color-danger: var(--t-color-danger);
+	--color-danger-subtle: var(--t-color-danger-subtle);
+	--color-danger-light: var(--t-color-danger-subtle);
+	--color-danger-border: var(--t-color-danger);
+	--color-success: var(--t-color-success);
+	--color-success-subtle: var(--t-color-success-subtle);
+	--color-warning: var(--t-color-warning);
+	--color-warning-subtle: var(--t-color-warning-subtle);
+	--color-white: var(--t-color-white);
+	--color-code: var(--t-color-ink-muted);
+	--color-code-bg: var(--t-color-surface-raised);
+	--color-overlay: oklch(0 0 0 / 0.5);
+	--toast-error-bg: var(--t-color-danger-subtle);
+	--toast-error-border: oklch(0.85 0.06 25);
+	--toast-error-text: oklch(0.3 0.09 25);
+	--toast-error-icon-bg: var(--t-color-danger);
+	--toast-warning-bg: var(--t-color-warning-subtle);
+	--toast-warning-icon-bg: var(--t-color-warning);
+	--toast-success-bg: var(--t-color-success-subtle);
+	--toast-success-icon-bg: var(--t-color-success);
+	--toast-info-bg: var(--t-color-accent-soft);
+	--toast-info-icon-bg: var(--t-color-accent);
+}
+
+/* ===== 全局体验层（主题感知：文本选择/滚动条/焦点 ring） ===== */
+html {
+	scroll-behavior: smooth;
+}
+
+body {
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+	transition:
+		background-color 0.25s ease,
+		color 0.25s ease;
+	line-height: 1.6;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
+}
+
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--t-color-border);
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--t-color-border-strong);
+}
+
+:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 2px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
+}

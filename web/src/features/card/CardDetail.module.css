@@ -1,0 +1,26 @@
+/* features/card/CardDetail.css.ts — 由 vanilla-extract 迁移 */
+
+.container {
+	max-width: 1440px;
+	margin: 0 auto;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.content {
+	flex: 1;
+	padding: var(--space-lg) 24px;
+	overflow-y: auto;
+}
+
+.meta {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	margin-bottom: var(--space-xl);
+}
+
+.body {
+	font-size: var(--text-base);
+	line-height: 1.8;
+}

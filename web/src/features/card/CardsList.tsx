@@ -6,7 +6,7 @@ import Button from "@components/ui/Button.tsx";
 import MarkdownRenderer from "@components/ui/Markdown.tsx";
 import { tryAsync } from "@lib/result.ts";
 import { getCardsE, searchCardsE } from "@features/card/api.ts";
-import * as styles from "@features/card/CardsList.css.ts";
+import styles from "@features/card/CardsList.module.css";
 import { useCardsList } from "@features/card/logic/useCardsList.ts";
 import CardsGrid from "@features/card/ui/CardsGrid.tsx";
 

@@ -1,0 +1,166 @@
+/* components/ColorEditor.css.ts — 由 vanilla-extract 迁移 */
+
+.fieldset {
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	padding: var(--space-md) 16px;
+	margin: 0 0 var(--space-lg) 0;
+	background: var(--t-color-surface);
+}
+
+.list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-sm);
+	margin-bottom: var(--space-md);
+}
+
+.colorRow {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	padding: var(--space-xs) 8px;
+	background: var(--t-color-surface-raised);
+	border-radius: var(--radius-md);
+	flex-wrap: wrap;
+}
+
+.swatch {
+	width: 28px;
+	height: 28px;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--t-color-border);
+	flex-shrink: 0;
+}
+
+.segmented {
+	display: inline-flex;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	overflow: hidden;
+	flex-shrink: 0;
+}
+
+.segBtn {
+	padding: var(--space-xs) 10px;
+	font-size: var(--text-sm);
+	border: none;
+	cursor: pointer;
+	transition: background 0.15s;
+	background: transparent;
+	color: var(--t-color-ink-muted);
+}
+
+.segActive {
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) 10px;
+	font-size: var(--text-sm);
+	border: none;
+	cursor: pointer;
+	transition: background 0.15s;
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
+	font-weight: 600;
+}
+
+.triple {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+}
+
+.rangeHint {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+	white-space: nowrap;
+	margin-left: 4px;
+	flex-shrink: 0;
+}
+
+.removeBtn {
+	margin-left: auto;
+	width: 26px;
+	height: 26px;
+	border: 1px solid var(--t-color-danger);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-danger-subtle);
+	color: var(--t-color-danger);
+	font-size: var(--text-base);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.hexBase {
+	padding: var(--space-xs) 6px;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+	font-family: monospace;
+	font-size: var(--text-sm);
+}
+
+.hexBase:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
+}
+
+.hexInput {
+	composes: hexBase;
+	width: 68px;
+}
+
+.channel {
+	composes: hexBase;
+	width: 58px;
+	text-align: right;
+}
+
+.channel::-webkit-inner-spin-button,
+.channel::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+.addBtn {
+	padding: var(--space-xs) 14px;
+	border: 1px dashed var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: transparent;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-sm);
+	cursor: pointer;
+}
+
+.segBtn:hover {
+	background: var(--t-color-surface-raised);
+}
+
+.segBtn + .segBtn {
+	border-left: 1px solid var(--t-color-border);
+}
+
+.removeBtn:disabled {
+	opacity: 0.35;
+	cursor: not-allowed;
+}
+
+.removeBtn:hover:not(:disabled) {
+	background: var(--t-color-danger-subtle);
+}
+
+.addBtn:hover {
+	border-color: var(--t-color-accent);
+	color: var(--t-color-accent);
+	background: var(--t-color-accent-soft);
+}
+
+.fieldset legend {
+	font-weight: 600;
+	color: var(--t-color-ink);
+	padding: 0 var(--space-xs);
+}

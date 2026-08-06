@@ -1,7 +1,7 @@
 import { useParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 import { getConvQaE } from "@features/conv/api.ts";
-import * as styles from "@features/conv/ConvDetail.css.ts";
+import styles from "@features/conv/ConvDetail.module.css";
 import { useBackHref } from "@features/conv/logic/useBackHref.ts";
 import ConvTopBar from "@features/conv/ui/ConvTopBar.tsx";
 import QaPairList from "@features/conv/ui/QaPairList.tsx";

@@ -1,0 +1,234 @@
+/* features/card/ui/Card.css.ts — 由 vanilla-extract 迁移 */
+
+.deleting {
+}
+
+.card {
+	background: var(--t-color-surface);
+	border-radius: var(--radius-lg);
+	box-shadow: 0 1px 4px oklch(0 0 0 / 0.06);
+	padding: var(--space-lg);
+	transition: all 0.2s ease;
+	cursor: pointer;
+	border: 1px solid var(--t-color-border);
+	display: flex;
+	flex-direction: column;
+	text-align: left;
+	width: 100%;
+	overflow-wrap: break-word;
+	overflow-y: auto;
+}
+
+.cardHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	margin-bottom: var(--space-md);
+	gap: var(--space-sm);
+}
+
+.cardTitle {
+	font-size: 1.125rem;
+	font-weight: 600;
+	color: var(--t-color-ink);
+	margin: 0;
+	flex: 1;
+	line-height: 1.4;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.cardCategory {
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
+	font-size: 0.75rem;
+	font-weight: 500;
+	padding: var(--space-xs) 8px;
+	border-radius: var(--radius-sm);
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.cardContent {
+	flex: 1;
+	margin-bottom: var(--space-md);
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-line-clamp: 6;
+	-webkit-box-orient: vertical;
+}
+
+.cardPreview {
+	font-size: 0.875rem;
+	line-height: 1.5;
+	color: var(--t-color-ink-muted);
+	margin: 0;
+	display: -webkit-box;
+	-webkit-line-clamp: 4;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: pre-line;
+}
+
+.cardTags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-xs);
+	margin-bottom: var(--space-md);
+}
+
+.tag {
+	background: var(--t-color-badge-new-bg);
+	color: var(--t-color-badge-new-text);
+	font-size: 0.75rem;
+	padding: 2px 8px;
+	border-radius: 999px;
+	border: none;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.cardMeta {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
+	margin-bottom: var(--space-md);
+	font-size: 0.75rem;
+	font-family: var(--t-font-mono);
+	color: var(--t-color-ink-faint);
+}
+
+.metaItem {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+}
+
+.metaLabel {
+	font-weight: 500;
+	min-width: 32px;
+}
+
+.metaValue {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cardActions {
+	display: flex;
+	gap: var(--space-sm);
+	margin-top: auto;
+}
+
+.actionButton {
+	flex: 1;
+	padding: var(--space-xs) 12px;
+	font-size: 0.875rem;
+	border-radius: var(--radius-md);
+	border: 1px solid var(--t-color-border-strong);
+	background: transparent;
+	color: var(--t-color-ink-muted);
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.deleteButton {
+	color: var(--t-color-danger);
+	border-color: var(--t-color-danger);
+}
+
+.card.deleting {
+	opacity: 0.5;
+	pointer-events: none;
+	transform: scale(0.98);
+	transition: all 0.3s ease;
+}
+
+.card:hover {
+	box-shadow: 0 var(--space-xs) 16px oklch(0 0 0 / 0.12);
+	transform: translateY(-2px);
+	border-color: var(--t-color-accent);
+}
+
+.card:focus {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 2px;
+}
+
+.card:active {
+	transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+	.card {
+		padding: var(--space-md);
+	}
+}
+
+@media (max-width: 768px) {
+	.cardTitle {
+		font-size: 1rem;
+	}
+}
+
+@media (max-width: 768px) {
+	.cardPreview {
+		-webkit-line-clamp: 3;
+	}
+}
+
+.tag:hover {
+	filter: brightness(0.94);
+	color: var(--t-color-badge-new-text);
+}
+
+.tag:focus {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 1px;
+}
+
+@media (max-width: 768px) {
+	.cardActions {
+		gap: var(--space-xs);
+	}
+}
+
+.actionButton:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.actionButton:focus {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 1px;
+}
+
+@media (max-width: 768px) {
+	.actionButton {
+		padding: var(--space-sm);
+	}
+}
+
+.deleteButton:hover {
+	background: var(--t-color-danger);
+	color: var(--t-color-bg);
+}
+
+.deleteButton:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	background: var(--t-color-danger-subtle);
+	color: var(--t-color-danger);
+	border-color: var(--t-color-danger);
+}
+
+.deleteButton:disabled:hover {
+	background: var(--t-color-danger-subtle);
+	color: var(--t-color-danger);
+}

@@ -1,8 +1,21 @@
 import type { Component, JSX } from "solid-js";
-import * as styles from "@components/ui/Button.css.ts";
+import styles from "@components/ui/Button.module.css";
 
 type Variant = "primary" | "secondary" | "danger" | "ghost" | "icon";
 type Size = "sm" | "md";
+
+const VARIANT_CLASS: Record<Variant, string> = {
+	primary: styles.primary,
+	secondary: styles.secondary,
+	danger: styles.danger,
+	ghost: styles.ghost,
+	icon: styles.icon,
+};
+
+const SIZE_CLASS: Record<Size, string> = {
+	sm: styles.sm,
+	md: styles.md,
+};
 
 interface ButtonProps {
 	variant?: Variant;
@@ -19,7 +32,7 @@ const Button: Component<ButtonProps> = (props) => {
 	return (
 		<button
 			type={props.type ?? "button"}
-			class={`${styles.btn} ${styles.variants[props.variant ?? "secondary"]} ${styles.variants[props.size ?? "md"]}${props.class ? ` ${props.class}` : ""}`}
+			class={`${styles.btn} ${VARIANT_CLASS[props.variant ?? "secondary"]} ${SIZE_CLASS[props.size ?? "md"]}${props.class ? ` ${props.class}` : ""}`}
 			disabled={props.disabled}
 			onClick={props.onClick}
 			title={props.title}

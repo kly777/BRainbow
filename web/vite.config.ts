@@ -1,7 +1,6 @@
 /// <reference types="vitest" />
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
-import autoprefixer from "autoprefixer";
 import { fileURLToPath } from "node:url";
 
 export default defineConfig({
@@ -11,9 +10,9 @@ export default defineConfig({
 		modules: {
 			localsConvention: "camelCaseOnly",
 		},
-		postcss: {
-			plugins: [autoprefixer()],
-		},
+		// build 的 CSS minify 用 vite 默认的 lightningcss：
+		// 按内置现代基线（chrome111/safari16.4 等）自动生成/规范化前缀，
+		// 本项目兼容性要求低，无需 autoprefixer 按 browserslist 加旧前缀
 	},
 
 	test: {
@@ -56,8 +55,5 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
-    // CSS 前缀由 postcss/autoprefixer 按 browserslist 统一处理；
-    // 不用 lightningcss minify（其固定基线会删除 autoprefixer 已加的前缀）
-    cssMinify: "esbuild",
   },
 });

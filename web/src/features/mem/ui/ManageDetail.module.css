@@ -14,7 +14,7 @@
 	flex-shrink: 0;
 	border-left: 1px solid var(--t-color-border);
 	background: var(--t-color-bg);
-	transition: width 0.25s ease;
+	transition: width var(--t-transition-normal) ease;
 	display: flex;
 	flex-direction: column;
 }
@@ -118,7 +118,7 @@
 	color: var(--t-color-ink);
 	box-sizing: border-box;
 	outline: none;
-	transition: box-shadow 0.15s;
+	transition: box-shadow var(--t-transition-fast);
 }
 
 .meta {
@@ -151,7 +151,7 @@
 }
 
 .empty {
-	text-align: center;
+	composes: empty-state from "../../../styles/base.module.css";
 	padding: var(--space-xl) 0;
 	color: var(--t-color-ink-faint);
 }

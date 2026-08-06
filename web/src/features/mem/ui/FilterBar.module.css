@@ -18,28 +18,20 @@
 	border-radius: var(--radius-sm);
 	background: transparent;
 	color: var(--t-color-ink-muted);
-	padding: 2px 8px;
+	padding: var(--space-2xs) var(--space-sm);
 	cursor: pointer;
 }
 
 .tag-chip-active {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	font-size: var(--text-xs);
-	padding: 2px 8px;
-	border-radius: 999px;
+	composes: tag-chip from "../../../styles/base.module.css";
+	gap: var(--space-xs);
 	background: var(--t-color-badge-new-bg);
 	color: var(--t-color-badge-new-text);
 }
 
 .tag-chip-excluded {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	font-size: var(--text-xs);
-	padding: 2px 8px;
-	border-radius: 999px;
+	composes: tag-chip from "../../../styles/base.module.css";
+	gap: var(--space-xs);
 	background: var(--t-color-badge-suspended-bg);
 	color: var(--t-color-badge-suspended-text);
 }
@@ -71,7 +63,7 @@
 	border-radius: var(--radius-sm);
 	background: transparent;
 	color: var(--t-color-ink);
-	padding: 2px 8px;
+	padding: var(--space-2xs) var(--space-sm);
 }
 
 .tag-dropdown {

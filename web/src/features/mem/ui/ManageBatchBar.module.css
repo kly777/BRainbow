@@ -10,8 +10,7 @@
 	overflow: hidden;
 	background: var(--t-color-accent-soft);
 	border-bottom: 1px solid transparent;
-	transition:
-		max-height 0.2s ease,
+	transition: max-height var(--t-transition-normal) ease,
 		padding 0.2s ease;
 }
 

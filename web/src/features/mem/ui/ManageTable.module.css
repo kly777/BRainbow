@@ -122,7 +122,7 @@
 }
 
 .empty {
-	text-align: center;
+	composes: empty-state from "../../../styles/base.module.css";
 	padding: var(--space-xl) 0;
 	color: var(--t-color-ink-faint);
 }

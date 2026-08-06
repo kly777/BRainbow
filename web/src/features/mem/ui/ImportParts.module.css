@@ -9,8 +9,7 @@
 }
 
 .hint-card {
-	background: var(--t-color-surface);
-	border: 1px solid var(--t-color-border);
+	composes: card from "../../../styles/base.module.css";
 	border-radius: var(--radius-lg);
 	overflow: hidden;
 }
@@ -77,18 +76,15 @@
 }
 
 .text-input {
-	width: 100%;
+	composes: field-input from "../../../styles/base.module.css";
 	font-size: var(--text-sm);
-	color: var(--t-color-ink);
 	background: var(--t-color-bg);
-	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	padding: var(--space-sm) 10px;
 }
 
 .preview-card {
-	background: var(--t-color-surface);
-	border: 1px solid var(--t-color-border);
+	composes: card from "../../../styles/base.module.css";
 	border-radius: var(--radius-lg);
 	overflow: hidden;
 }

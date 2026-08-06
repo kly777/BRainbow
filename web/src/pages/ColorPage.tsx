@@ -21,12 +21,16 @@ export default function ColorPage() {
 		<div class={styles.page}>
 			<h1 class={styles.title}>配色方案</h1>
 			<p class={styles.desc}>
-				选择全局配色主题。切换即时生效并持久化到本地（不影响他人），
-				当前主题：<code>{current()}</code>
+				选择全局配色主题。切换即时生效并持久化到本地（不影响他人）， 当前主题：
+				<code>{current()}</code>
 			</p>
 
 			<div class={styles.grid}>
-				<For each={Object.entries(themes) as [ThemeName, (typeof themes)[ThemeName]][]}>
+				<For
+					each={
+						Object.entries(themes) as [ThemeName, (typeof themes)[ThemeName]][]
+					}
+				>
 					{([name, info]) => (
 						<div
 							class={`${styles.card} ${current() === name ? styles.cardActive : ""}`}
@@ -37,7 +41,9 @@ export default function ColorPage() {
 						>
 							<div class={styles.swatchRow}>
 								<For each={info.swatches}>
-									{(bg) => <div class={styles.swatch} style={{ background: bg }} />}
+									{(bg) => (
+										<div class={styles.swatch} style={{ background: bg }} />
+									)}
 								</For>
 							</div>
 							<div class={styles.cardName}>{info.label}</div>
@@ -45,9 +51,15 @@ export default function ColorPage() {
 								{current() === name ? "✓ 当前" : "点击切换"}
 							</div>
 							<div class={styles.previewBox}>
-								<span class={`${styles.previewBtn} ${styles.previewAccent}`}>主按钮</span>
-								<span class={`${styles.previewBtn} ${styles.previewMuted}`}>描边按钮</span>
-								<span class={`${styles.previewBtn} ${styles.previewPlain}`}>普通</span>
+								<span class={`${styles.previewBtn} ${styles.previewAccent}`}>
+									主按钮
+								</span>
+								<span class={`${styles.previewBtn} ${styles.previewMuted}`}>
+									描边按钮
+								</span>
+								<span class={`${styles.previewBtn} ${styles.previewPlain}`}>
+									普通
+								</span>
 							</div>
 						</div>
 					)}

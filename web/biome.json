@@ -11,5 +11,13 @@
 				"noNonNullAssertion": "off"
 			}
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["*.css"],
+			"formatter": {
+				"lineWidth": 100
+			}
+		}
+	]
 }

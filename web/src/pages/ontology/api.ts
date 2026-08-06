@@ -23,7 +23,9 @@ export const createOntoE = (
 	name: string,
 	description?: string,
 ): Promise<Onto> =>
-	post<Onto>("/onto", { name, description }).then((r) => tapInvalidate(CACHE.onto, r));
+	post<Onto>("/onto", { name, description }).then((r) =>
+		tapInvalidate(CACHE.onto, r),
+	);
 
 export const updateOntoE = (
 	id: number,

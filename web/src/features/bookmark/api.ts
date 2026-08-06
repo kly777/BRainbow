@@ -1,5 +1,10 @@
 import { del, patch, post, request } from "@apis/request.ts";
-import { CACHE, cachedRequest, invalidateCache, tapInvalidate } from "@apis/cache.ts";
+import {
+	CACHE,
+	cachedRequest,
+	invalidateCache,
+	tapInvalidate,
+} from "@apis/cache.ts";
 import type {
 	Bookmark,
 	BookmarkTag,
@@ -15,13 +20,18 @@ export const getBookmarksE = (
 	pageSize = 20,
 	tag?: string,
 ): Promise<PaginatedBookmarks> => {
-	const qs = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+	const qs = new URLSearchParams({
+		page: String(page),
+		page_size: String(pageSize),
+	});
 	if (tag) qs.set("tag", tag);
 	return cachedRequest(`/bookmarks?${qs}`, {});
 };
 
 export const createBookmarkE = (bm: CreateBookmarkRequest): Promise<Bookmark> =>
-	post<Bookmark>("/bookmarks", bm).then((r) => tapInvalidate(CACHE.bookmarks, r));
+	post<Bookmark>("/bookmarks", bm).then((r) =>
+		tapInvalidate(CACHE.bookmarks, r),
+	);
 
 export const updateBookmarkE = (
 	id: number,
@@ -59,7 +69,10 @@ export const searchBookmarkTagsE = (q = ""): Promise<BookmarkTagWithCount[]> =>
 	);
 
 /** 设置书签标签（按名称整体替换，自动创建新标签） */
-export const setBookmarkTagsE = (id: number, tags: string[]): Promise<BookmarkTag[]> =>
+export const setBookmarkTagsE = (
+	id: number,
+	tags: string[],
+): Promise<BookmarkTag[]> =>
 	request<BookmarkTag[]>(`/bookmarks/${id}/tags`, {
 		method: "PUT",
 		body: JSON.stringify({ tags }),

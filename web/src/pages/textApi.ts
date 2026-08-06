@@ -16,4 +16,6 @@ export const loadTextE = (): Promise<TextResponse> =>
 export const saveTextE = (
 	tabs: readonly { name: string; content: string }[],
 ): Promise<{ readonly ok: boolean }> =>
-	put<{ readonly ok: boolean }>("/text", { tabs }).then((r) => tapInvalidate(CACHE.text, r));
+	put<{ readonly ok: boolean }>("/text", { tabs }).then((r) =>
+		tapInvalidate(CACHE.text, r),
+	);

@@ -9,7 +9,6 @@
     "check": "tsc --noEmit",
     "lint": "npx @biomejs/biome lint --write src/",
     "lint:css": "stylelint \"src/**/*.css\"",
-    "format:css": "prettier --write \"src/**/*.css\"",
     "fmt": "npx @biomejs/biome format --write src/",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -28,7 +27,6 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.2",
     "jsdom": "^29.1.1",
-    "prettier": "^3.9.6",
     "stylelint": "^17.14.1",
     "stylelint-config-standard": "^40.0.0",
     "typescript": "~6.0.3",

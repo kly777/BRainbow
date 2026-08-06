@@ -29,7 +29,9 @@ export function FormatHint(props: { mode: "paste" | "file" }) {
 						</div>
 						<div class={styles.hintBlock}>
 							<p class={styles.hintName}>JSON</p>
-							<pre class={styles.hintExample}>{`[{"cue":"质能方程","target":"E=mc²"}]`}</pre>
+							<pre
+								class={styles.hintExample}
+							>{`[{"cue":"质能方程","target":"E=mc²"}]`}</pre>
 							<p class={styles.hintNote}>
 								<code>tags</code> 可选
 							</p>
@@ -63,9 +65,11 @@ export function FormatHint(props: { mode: "paste" | "file" }) {
 						</div>
 						<div class={styles.hintBlock}>
 							<p class={styles.hintName}>JSON</p>
-							<pre class={styles.hintExample}>{`[{"cue":"质能方程","target":"E=mc²","tags":["物理"]}]`}</pre>
+							<pre
+								class={styles.hintExample}
+							>{`[{"cue":"质能方程","target":"E=mc²","tags":["物理"]}]`}</pre>
 							<p class={styles.hintNote}>
-								或包装为 <code>{"{\"mems\": [...]}"}</code>
+								或包装为 <code>{'{"mems": [...]}'}</code>
 							</p>
 						</div>
 					</>
@@ -124,9 +128,7 @@ export function ImportPreviewTable(props: {
 									<td class={styles.previewTd}>{row.target.slice(0, 60)}</td>
 									<td class={styles.previewTd}>
 										<For each={row.tags}>
-											{(tag) => (
-												<span class={styles.previewTag}>{tag}</span>
-											)}
+											{(tag) => <span class={styles.previewTag}>{tag}</span>}
 										</For>
 									</td>
 								</tr>

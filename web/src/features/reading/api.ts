@@ -73,5 +73,4 @@ export const getArticleNotes = (id: number): Promise<{ notes: string }> =>
 export const updateArticleNotes = (
 	id: number,
 	notes: string,
-): Promise<{ ok: boolean }> =>
-	put(`/reading/${id}/notes`, { notes });
+): Promise<{ ok: boolean }> => put(`/reading/${id}/notes`, { notes });

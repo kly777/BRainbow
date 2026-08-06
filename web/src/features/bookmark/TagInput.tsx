@@ -7,7 +7,10 @@ import { createResource, createSignal, For, Show } from "solid-js";
 import { tryAsync } from "@lib/result.ts";
 import { notifyError, notifySuccess } from "@lib/notify.ts";
 import { showConfirm } from "@lib/safe-action.ts";
-import { deleteBookmarkTagE, searchBookmarkTagsE } from "@features/bookmark/api.ts";
+import {
+	deleteBookmarkTagE,
+	searchBookmarkTagsE,
+} from "@features/bookmark/api.ts";
 import type { BookmarkTagWithCount } from "@features/bookmark/types.ts";
 import styles from "@features/bookmark/TagInput.module.css";
 

@@ -131,7 +131,8 @@ export default function DependenciesTab(props: DependenciesTabProps) {
 									<span class={styles.depTitle}>{t.title}</span>
 									<span
 										class={`${styles.depStatus} ${
-											depStatusClass[t.status || "backlog"]}`}
+											depStatusClass[t.status || "backlog"]
+										}`}
 									>
 										{t.status || "backlog"}
 									</span>

@@ -49,7 +49,7 @@ export default function ManageDetail(props: Props) {
 			>
 				{(d) => (
 					<div class={styles.detailCard}>
-					{/* 档案卡头：编号 + 状态 + 关闭 */}
+						{/* 档案卡头：编号 + 状态 + 关闭 */}
 						<div class={styles.detailHead}>
 							<span class={styles.detailId}>#{d().id}</span>
 							<div class={styles.detailHeadRight}>

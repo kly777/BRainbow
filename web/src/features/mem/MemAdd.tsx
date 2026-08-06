@@ -8,7 +8,12 @@ import { createSignal, For, Show } from "solid-js";
 import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
 import { useMemAdd } from "@features/mem/logic/useMemAdd.ts";
 import styles from "@features/mem/MemAdd.module.css";
-import { FormatHint, ImportPreviewTable, ImportTagInput, ImportResult } from "@features/mem/ui/ImportParts.tsx";
+import {
+	FormatHint,
+	ImportPreviewTable,
+	ImportTagInput,
+	ImportResult,
+} from "@features/mem/ui/ImportParts.tsx";
 
 export default function MemAdd() {
 	const m = useMemAdd();
@@ -97,9 +102,7 @@ export default function MemAdd() {
 								type="button"
 								class={styles.submit}
 								onClick={m.handleCreate}
-								disabled={
-									m.creating() || !m.cue().trim() || !m.target().trim()
-								}
+								disabled={m.creating() || !m.cue().trim() || !m.target().trim()}
 							>
 								{m.creating() ? "创建中..." : "创建"}
 							</button>
@@ -181,9 +184,7 @@ function PasteView(props: { m: ReturnType<typeof useMemAdd> }) {
 							disabled={m.selectedCount() === 0 || m.importing()}
 							onClick={m.handlePasteImport}
 						>
-							{m.importing()
-								? "导入中…"
-								: `导入所选 (${m.selectedCount()} 条)`}
+							{m.importing() ? "导入中…" : `导入所选 (${m.selectedCount()} 条)`}
 						</button>
 					</div>
 				</div>
@@ -264,9 +265,7 @@ function FileView(props: { m: ReturnType<typeof useMemAdd> }) {
 							disabled={m.selectedCount() === 0 || m.importing()}
 							onClick={m.handleFileImport}
 						>
-							{m.importing()
-								? "导入中…"
-								: `导入所选 (${m.selectedCount()} 条)`}
+							{m.importing() ? "导入中…" : `导入所选 (${m.selectedCount()} 条)`}
 						</button>
 					</div>
 				</div>

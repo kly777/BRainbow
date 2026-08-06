@@ -12,7 +12,8 @@
 	border: 2px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	font-size: var(--text-base);
-	font-family: ui-monospace, sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
+	font-family:
+		ui-monospace, sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
 	line-height: 1.6;
 	resize: vertical;
 	background: var(--t-color-surface);

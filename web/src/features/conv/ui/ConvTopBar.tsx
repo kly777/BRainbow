@@ -18,9 +18,7 @@ export default function ConvTopBar(props: Props) {
 			</A>
 			<div class={styles.titleArea}>
 				<h1 class={styles.title}>{props.title}</h1>
-				<span class={styles.tag}>
-					{typeLabel[props.type] || props.type}
-				</span>
+				<span class={styles.tag}>{typeLabel[props.type] || props.type}</span>
 				{props.date && <span class={styles.date}>{props.date}</span>}
 			</div>
 		</div>

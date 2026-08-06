@@ -113,8 +113,7 @@ export default function ManageTable(props: Props) {
 												class={styles.td}
 												onClick={() => props.onSelectRow(mem.id)}
 												onKeyDown={(e) => {
-													if (e.key === "Enter")
-														props.onSelectRow(mem.id);
+													if (e.key === "Enter") props.onSelectRow(mem.id);
 												}}
 											>
 												{previewText(mem.cue.content)}
@@ -123,8 +122,7 @@ export default function ManageTable(props: Props) {
 												class={styles.td}
 												onClick={() => props.onSelectRow(mem.id)}
 												onKeyDown={(e) => {
-													if (e.key === "Enter")
-														props.onSelectRow(mem.id);
+													if (e.key === "Enter") props.onSelectRow(mem.id);
 												}}
 											>
 												{previewText(mem.target.content)}
@@ -144,9 +142,7 @@ export default function ManageTable(props: Props) {
 													{mem.leeched && " ⚠️"}
 												</Badge>
 											</td>
-											<td class={styles.tdNum}>
-												{mem.difficulty.toFixed(2)}
-											</td>
+											<td class={styles.tdNum}>{mem.difficulty.toFixed(2)}</td>
 											<td class={styles.tdDue}>{fmtRelative(mem.due_at)}</td>
 											<td class={styles.tdDue}>
 												{fmtLocal(mem.cue.created_at)}
@@ -155,9 +151,7 @@ export default function ManageTable(props: Props) {
 												<div class={styles.cellTags}>
 													<For each={tags().slice(0, 3)}>
 														{(tag) => (
-															<span class={styles.cellTag}>
-																{tag.name}
-															</span>
+															<span class={styles.cellTag}>{tag.name}</span>
 														)}
 													</For>
 													<Show when={tags().length > 3}>

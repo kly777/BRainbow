@@ -33,7 +33,9 @@ export default function ReviewCard(props: ReviewCardProps) {
 				<div class={styles.empty}>
 					<p class={styles.emptyTitle}>🎉 本轮学习完成！</p>
 					<Show when={m.upcoming() > 0}>
-						<p class={styles.emptyHint}>还有 {m.upcoming()} 张卡在未来等待复习</p>
+						<p class={styles.emptyHint}>
+							还有 {m.upcoming()} 张卡在未来等待复习
+						</p>
 					</Show>
 					<button type="button" class={styles.primaryBtn} onClick={m.loadDue}>
 						再学一轮
@@ -92,103 +94,102 @@ export default function ReviewCard(props: ReviewCardProps) {
 							</div>
 						</Show>
 
-					{/* 复习卡片 */}
-					<div class={styles.cardStage}>
-						{/* 目录卡：线索常显 + 答案展开 */}
-						<div class={styles.card}>
-							{/* 线索段 */}
-							<div classList={{ [styles.face]: true, [styles.faceFill]: !m.showAnswer() }}>
-								<div class={styles.cardTab}>
-									<span class={styles.cardTabText}>线索</span>
-									<span class={styles.cardTabNo}>#{m.item()?.id}</span>
-								</div>
-								<div class={styles.cardBody}>
-									<div class={styles.content}>
-										<MarkdownRenderer
-											content={m.item()?.cue.content ?? ""}
-										/>
-									</div>
-								</div>
-								<div class={styles.cardTools}>
-									<button
-										type="button"
-										class={styles.toolBtn}
-										title="朗读线索"
-										onClick={() =>
-											speech.toggle(m.item()?.cue.content ?? "")
-										}
-										disabled={!speech.supported}
-									>
-										{speech.speaking() ? "⏹" : "🔊"}
-									</button>
-									<button
-										type="button"
-										class={styles.toolBtn}
-										title="复制线索"
-										onClick={() =>
-											navigator.clipboard.writeText(
-												m.item()?.cue.content ?? "",
-											)
-										}
-									>
-										📋
-									</button>
-									<button
-										type="button"
-										class={styles.toolBtn}
-										title="复制整张卡片"
-										onClick={m.handleCopyCard}
-									>
-										📋+
-									</button>
-									<button
-										type="button"
-										class={styles.toolBtn}
-										title={m.mnemonic() ? "重新生成助记" : "AI 生成助记"}
-										onClick={m.generateMnemonic}
-										disabled={m.mnemonicLoading()}
-									>
-										{m.mnemonicLoading() ? "⏳" : "🤖"}
-									</button>
-								</div>
-							</div>
-
-							{/* 答案段（显示答案后展开） */}
-							<Show when={m.showAnswer()}>
-								<div class={styles.answer}>
+						{/* 复习卡片 */}
+						<div class={styles.cardStage}>
+							{/* 目录卡：线索常显 + 答案展开 */}
+							<div class={styles.card}>
+								{/* 线索段 */}
+								<div
+									classList={{
+										[styles.face]: true,
+										[styles.faceFill]: !m.showAnswer(),
+									}}
+								>
 									<div class={styles.cardTab}>
-										<span class={styles.cardTabText}>答案</span>
-										<span class={styles.cardTabNo}>
-											#{m.item()?.id} · {m.item()?.state}
-										</span>
+										<span class={styles.cardTabText}>线索</span>
+										<span class={styles.cardTabNo}>#{m.item()?.id}</span>
 									</div>
 									<div class={styles.cardBody}>
 										<div class={styles.content}>
-											<MarkdownRenderer
-												content={m.item()?.target.content ?? ""}
-											/>
+											<MarkdownRenderer content={m.item()?.cue.content ?? ""} />
 										</div>
-
-										<Show when={m.mnemonic() || m.mnemonicLoading()}>
-											<div class={styles.mnemonic}>
-												<div class={styles.mnemonicLabel}>💡 AI 助记</div>
-												<Show
-													when={m.mnemonicLoading()}
-													fallback={
-														<MarkdownRenderer
-															content={m.mnemonic() ?? ""}
-														/>
-													}
-												>
-													<span class={styles.mnemonicLoading}>生成中…</span>
-												</Show>
-											</div>
-										</Show>
+									</div>
+									<div class={styles.cardTools}>
+										<button
+											type="button"
+											class={styles.toolBtn}
+											title="朗读线索"
+											onClick={() => speech.toggle(m.item()?.cue.content ?? "")}
+											disabled={!speech.supported}
+										>
+											{speech.speaking() ? "⏹" : "🔊"}
+										</button>
+										<button
+											type="button"
+											class={styles.toolBtn}
+											title="复制线索"
+											onClick={() =>
+												navigator.clipboard.writeText(
+													m.item()?.cue.content ?? "",
+												)
+											}
+										>
+											📋
+										</button>
+										<button
+											type="button"
+											class={styles.toolBtn}
+											title="复制整张卡片"
+											onClick={m.handleCopyCard}
+										>
+											📋+
+										</button>
+										<button
+											type="button"
+											class={styles.toolBtn}
+											title={m.mnemonic() ? "重新生成助记" : "AI 生成助记"}
+											onClick={m.generateMnemonic}
+											disabled={m.mnemonicLoading()}
+										>
+											{m.mnemonicLoading() ? "⏳" : "🤖"}
+										</button>
 									</div>
 								</div>
-							</Show>
+
+								{/* 答案段（显示答案后展开） */}
+								<Show when={m.showAnswer()}>
+									<div class={styles.answer}>
+										<div class={styles.cardTab}>
+											<span class={styles.cardTabText}>答案</span>
+											<span class={styles.cardTabNo}>
+												#{m.item()?.id} · {m.item()?.state}
+											</span>
+										</div>
+										<div class={styles.cardBody}>
+											<div class={styles.content}>
+												<MarkdownRenderer
+													content={m.item()?.target.content ?? ""}
+												/>
+											</div>
+
+											<Show when={m.mnemonic() || m.mnemonicLoading()}>
+												<div class={styles.mnemonic}>
+													<div class={styles.mnemonicLabel}>💡 AI 助记</div>
+													<Show
+														when={m.mnemonicLoading()}
+														fallback={
+															<MarkdownRenderer content={m.mnemonic() ?? ""} />
+														}
+													>
+														<span class={styles.mnemonicLoading}>生成中…</span>
+													</Show>
+												</div>
+											</Show>
+										</div>
+									</div>
+								</Show>
+							</div>
 						</div>
-					</div>
 					</div>
 					{/* 操作行：未翻面时（固定在底部中间） */}
 					<Show when={!m.showAnswer()}>

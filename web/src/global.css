@@ -31,8 +31,8 @@
 
 html {
 	font-family:
-		system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji",
-		"Segoe UI Emoji"; /* 1 */
+		system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif,
+		"Apple Color Emoji", "Segoe UI Emoji"; /* 1 */
 
 	line-height: 1.15; /* 2 */
 	-webkit-text-size-adjust: 100%; /* 3 */

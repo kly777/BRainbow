@@ -73,7 +73,9 @@ export const addTaskDependencyE = (
 	taskId: number,
 	dependsOnTaskId: number,
 ): Promise<void> =>
-	post<void>(`/tasks/${taskId}/dependencies`, { depends_on_task_id: dependsOnTaskId }).then((r) => tapInvalidate(CACHE.tasks, r));
+	post<void>(`/tasks/${taskId}/dependencies`, {
+		depends_on_task_id: dependsOnTaskId,
+	}).then((r) => tapInvalidate(CACHE.tasks, r));
 
 export const removeTaskDependencyE = (
 	taskId: number,
@@ -107,7 +109,9 @@ export const getUserTasksE = (userId: number): Promise<readonly Task[]> =>
 	cachedRequest(`/tasks/user/${userId}`, {});
 
 export const updateTaskStatusE = (id: number, status: string): Promise<Task> =>
-	patch<Task>(`/tasks/${id}`, { status }).then((r) => tapInvalidate(CACHE.tasks, r));
+	patch<Task>(`/tasks/${id}`, { status }).then((r) =>
+		tapInvalidate(CACHE.tasks, r),
+	);
 
 export const searchTasksE = (query: string): Promise<TaskListResponse> =>
 	cachedRequest(`/tasks/search?q=${encodeURIComponent(query)}`, {});

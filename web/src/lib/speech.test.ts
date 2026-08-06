@@ -15,7 +15,9 @@ describe("stripMarkdown", () => {
 	});
 
 	it("保留链接文字，去掉 URL", () => {
-		expect(stripMarkdown("[Rust 官网](https://rust-lang.org)")).toBe("Rust 官网");
+		expect(stripMarkdown("[Rust 官网](https://rust-lang.org)")).toBe(
+			"Rust 官网",
+		);
 	});
 
 	it("图片取 alt 文本", () => {

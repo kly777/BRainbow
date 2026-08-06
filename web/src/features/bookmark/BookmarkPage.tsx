@@ -39,11 +39,14 @@ function parsePage(v: string | undefined): number {
 export default function BookmarkPage() {
 	// ── 状态全部由 URL query 驱动：q / tag / page ──
 	const [searchParams, setSearchParams] = useSearchParams();
-	const searchQuery = () => (typeof searchParams.q === "string" ? searchParams.q : "");
-	const tagFilter = () => (typeof searchParams.tag === "string" ? searchParams.tag : "");
-	const page = () => parsePage(
-		typeof searchParams.page === "string" ? searchParams.page : undefined,
-	);
+	const searchQuery = () =>
+		typeof searchParams.q === "string" ? searchParams.q : "";
+	const tagFilter = () =>
+		typeof searchParams.tag === "string" ? searchParams.tag : "";
+	const page = () =>
+		parsePage(
+			typeof searchParams.page === "string" ? searchParams.page : undefined,
+		);
 	const [pageSize] = createSignal(500);
 
 	const [bookmarks, setBookmarks] = createSignal<Bookmark[]>([]);
@@ -185,7 +188,10 @@ export default function BookmarkPage() {
 				);
 			} else {
 				// 创建：新书签按创建时间倒序排在最前
-				setBookmarks((prev) => [updated, ...prev.filter((b) => b.id !== updated.id)]);
+				setBookmarks((prev) => [
+					updated,
+					...prev.filter((b) => b.id !== updated.id),
+				]);
 				setTotal((t) => t + 1);
 			}
 		} else {
@@ -263,7 +269,9 @@ export default function BookmarkPage() {
 				<Button
 					variant="secondary"
 					size="sm"
-					onClick={() => document.getElementById("bookmark-import-input")?.click()}
+					onClick={() =>
+						document.getElementById("bookmark-import-input")?.click()
+					}
 					disabled={importing()}
 				>
 					{importing() ? "导入中..." : "导入 Firefox 书签"}

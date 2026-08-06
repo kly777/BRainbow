@@ -9,7 +9,8 @@
 :root[data-theme="paper"] {
 	/* ── 字体（三主题共用） ── */
 	--t-font-display: georgia, "Noto Serif SC", "Songti SC", "SimSun", serif;
-	--t-font-mono: ui-monospace, sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
+	--t-font-mono:
+		ui-monospace, sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
 
 	/* ── 主题契约：paper（暖纸 · 目录绿，默认） ── */
 	--t-color-bg: oklch(97.5% 0.008 95deg);

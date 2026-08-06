@@ -105,7 +105,8 @@
 	padding: var(--space-xs);
 	border-radius: var(--radius-sm);
 	font-size: var(--text-xs);
-	font-family: ui-monospace, "Cascadia Code", "Source Code Pro", menlo, monospace;
+	font-family:
+		ui-monospace, "Cascadia Code", "Source Code Pro", menlo, monospace;
 	font-weight: 500;
 	vertical-align: middle;
 	opacity: 0.85;

@@ -76,10 +76,10 @@ export const createMemE = (
 	prerequisites: number[] = [],
 ): Promise<{ id: number }> =>
 	post<{ id: number }>("/mem", {
-			cue_content: cueMd,
-			target_content: targetMd,
-			prerequisites,
-		}).then((r) => tapInvalidate(CACHE.mem, r));
+		cue_content: cueMd,
+		target_content: targetMd,
+		prerequisites,
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const getAllMemsE = (
 	params?: MemQuery,
@@ -117,7 +117,9 @@ export const reviewMemE = (
 	id: number,
 	rating: number,
 ): Promise<{ ok: boolean }> =>
-	post<{ ok: boolean }>(`/mem/${id}/review`, { rating }).then((r) => tapInvalidate(CACHE.mem, r));
+	post<{ ok: boolean }>(`/mem/${id}/review`, { rating }).then((r) =>
+		tapInvalidate(CACHE.mem, r),
+	);
 
 export const previewMemE = (
 	id: number,
@@ -125,9 +127,7 @@ export const previewMemE = (
 	request(`/mem/${id}/preview`, {});
 
 export const deleteMemE = (id: number): Promise<{ ok: boolean }> =>
-	del<{ ok: boolean }>(`/mem/${id}`).then((r) =>
-		tapInvalidate(CACHE.mem, r),
-	);
+	del<{ ok: boolean }>(`/mem/${id}`).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const buryMemE = (id: number): Promise<{ ok: boolean }> =>
 	request<{ ok: boolean }>(`/mem/${id}/bury`, { method: "POST" }).then((r) =>
@@ -155,20 +155,29 @@ export const resetMemE = (id: number): Promise<{ ok: boolean }> =>
 	);
 
 export const batchBuryMemE = (ids: number[]): Promise<BatchResponse> =>
-	post<BatchResponse>("/mem/batch-bury", { items: ids }).then((r) => tapInvalidate(CACHE.mem, r));
+	post<BatchResponse>("/mem/batch-bury", { items: ids }).then((r) =>
+		tapInvalidate(CACHE.mem, r),
+	);
 
 export const batchDeleteMemE = (ids: number[]): Promise<BatchResponse> =>
-	post<BatchResponse>("/mem/batch-delete", { items: ids }).then((r) => tapInvalidate(CACHE.mem, r));
+	post<BatchResponse>("/mem/batch-delete", { items: ids }).then((r) =>
+		tapInvalidate(CACHE.mem, r),
+	);
 
 export const batchResetMemE = (ids: number[]): Promise<BatchResponse> =>
-	post<BatchResponse>("/mem/batch-reset", { items: ids }).then((r) => tapInvalidate(CACHE.mem, r));
+	post<BatchResponse>("/mem/batch-reset", { items: ids }).then((r) =>
+		tapInvalidate(CACHE.mem, r),
+	);
 
 export const editMemE = (
 	id: number,
 	cue: string,
 	target: string,
 ): Promise<{ ok: boolean }> =>
-	put<{ ok: boolean }>(`/mem/${id}/edit`, { cue_content: cue, target_content: target }).then((r) => tapInvalidate(CACHE.mem, r));
+	put<{ ok: boolean }>(`/mem/${id}/edit`, {
+		cue_content: cue,
+		target_content: target,
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 // ── 标签 ──
 
@@ -207,31 +216,46 @@ export const addTagToMemE = (
 	memId: number,
 	tagId: number,
 ): Promise<{ ok: boolean }> =>
-	post<{ ok: boolean }>("/mem/tag/mem/add", { mem_id: memId, tag_id: tagId }).then((r) => tapInvalidate(CACHE.mem, r));
+	post<{ ok: boolean }>("/mem/tag/mem/add", {
+		mem_id: memId,
+		tag_id: tagId,
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const removeTagFromMemE = (
 	memId: number,
 	tagId: number,
 ): Promise<{ ok: boolean }> =>
-	post<{ ok: boolean }>("/mem/tag/mem/remove", { mem_id: memId, tag_id: tagId }).then((r) => tapInvalidate(CACHE.mem, r));
+	post<{ ok: boolean }>("/mem/tag/mem/remove", {
+		mem_id: memId,
+		tag_id: tagId,
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const setMemTagsE = (
 	memId: number,
 	tagIds: number[],
 ): Promise<{ ok: boolean }> =>
-	post<{ ok: boolean }>("/mem/tag/mem/set", { mem_id: memId, tag_ids: tagIds }).then((r) => tapInvalidate(CACHE.mem, r));
+	post<{ ok: boolean }>("/mem/tag/mem/set", {
+		mem_id: memId,
+		tag_ids: tagIds,
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const batchAddTagToMemsE = (
 	memIds: number[],
 	tagId: number,
 ): Promise<BatchResponse> =>
-	post<BatchResponse>("/mem/tag/batch-add", { items: memIds, tag_id: tagId }).then((r) => tapInvalidate(CACHE.mem, r));
+	post<BatchResponse>("/mem/tag/batch-add", {
+		items: memIds,
+		tag_id: tagId,
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const batchRemoveTagFromMemsE = (
 	memIds: number[],
 	tagId: number,
 ): Promise<BatchResponse> =>
-	post<BatchResponse>("/mem/tag/batch-remove", { items: memIds, tag_id: tagId }).then((r) => tapInvalidate(CACHE.mem, r));
+	post<BatchResponse>("/mem/tag/batch-remove", {
+		items: memIds,
+		tag_id: tagId,
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export interface MemTagRow {
 	mem_id: number;
@@ -252,7 +276,10 @@ export const batchSetTagsForMemsE = (
 	memIds: number[],
 	tagIds: number[],
 ): Promise<BatchResponse> =>
-	post<BatchResponse>("/mem/tag/batch-set", { items: memIds, tag_ids: tagIds }).then((r) => tapInvalidate(CACHE.mem, r));
+	post<BatchResponse>("/mem/tag/batch-set", {
+		items: memIds,
+		tag_ids: tagIds,
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 // ── CSV 导入导出 ──
 
@@ -289,13 +316,19 @@ export const importCsvE = (
 	csvContent: string,
 	defaultTags?: string[],
 ): Promise<ImportCsvResult> =>
-	post<ImportCsvResult>("/mem/import/csv", { csv: csvContent, default_tags: defaultTags ?? [] }).then((r) => tapInvalidate(CACHE.mem, r));
+	post<ImportCsvResult>("/mem/import/csv", {
+		csv: csvContent,
+		default_tags: defaultTags ?? [],
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const importPsvE = (
 	psvContent: string,
 	defaultTags?: string[],
 ): Promise<ImportCsvResult> =>
-	post<ImportCsvResult>("/mem/import/psv", { csv: psvContent, default_tags: defaultTags ?? [] }).then((r) => tapInvalidate(CACHE.mem, r));
+	post<ImportCsvResult>("/mem/import/psv", {
+		csv: psvContent,
+		default_tags: defaultTags ?? [],
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export interface ImportJsonItem {
 	cue: string;
@@ -312,7 +345,10 @@ export const importJsonE = (
 	mems: ImportJsonItem[],
 	defaultTags?: string[],
 ): Promise<ImportJsonResult> =>
-	post<ImportJsonResult>("/mem/import/json", { mems, default_tags: defaultTags ?? [] }).then((r) => tapInvalidate(CACHE.mem, r));
+	post<ImportJsonResult>("/mem/import/json", {
+		mems,
+		default_tags: defaultTags ?? [],
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const uploadImage = async (file: File): Promise<string | null> => {
 	const result = await tryAsync(async () => {

@@ -37,7 +37,7 @@ export function stripMarkdown(text: string): string {
 		.replace(/^\s*[-*+]\s+/gm, "")
 		// 有序列表 1. 2.
 		.replace(/^\s*\d+\.\s+/gm, "")
-		// 引用 > 
+		// 引用 >
 		.replace(/^\s*>\s?/gm, "")
 		// 分隔线 --- *** ___
 		.replace(/^\s*(-{3,}|\*{3,}|_{3,})\s*$/gm, "")

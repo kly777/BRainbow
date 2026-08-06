@@ -7,7 +7,10 @@ import Modal from "@components/ui/Modal.tsx";
 import { tryAsync } from "@lib/result.ts";
 import { notifyError, notifySuccess } from "@lib/notify.ts";
 import { showConfirm } from "@lib/safe-action.ts";
-import { deleteBookmarkTagE, searchBookmarkTagsE } from "@features/bookmark/api.ts";
+import {
+	deleteBookmarkTagE,
+	searchBookmarkTagsE,
+} from "@features/bookmark/api.ts";
 import type { BookmarkTagWithCount } from "@features/bookmark/types.ts";
 import styles from "@features/bookmark/TagManager.module.css";
 
@@ -59,7 +62,11 @@ export default function TagManager(props: Props) {
 			</Show>
 			<Show
 				when={!tags.loading && (tags() ?? []).length > 0}
-				fallback={<div class={styles.state}>还没有标签，给书签添加标签后会显示在这里</div>}
+				fallback={
+					<div class={styles.state}>
+						还没有标签，给书签添加标签后会显示在这里
+					</div>
+				}
 			>
 				<div class={styles.list}>
 					<For each={tags()}>

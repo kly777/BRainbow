@@ -1,7 +1,11 @@
 import { For, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import styles from "@components/ui/Toast.module.css";
-import { dismissToast, type ToastItem, toasts } from "@components/ui/toastStore.ts";
+import {
+	dismissToast,
+	type ToastItem,
+	toasts,
+} from "@components/ui/toastStore.ts";
 
 const TYPE_CLASS: Record<ToastItem["type"], string> = {
 	error: styles.error,

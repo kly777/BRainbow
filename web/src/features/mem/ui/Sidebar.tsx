@@ -56,8 +56,7 @@ export default function Sidebar(props: SidebarProps) {
 							<i class={`${styles.dot} ${styles.dotReview}`} />复 {c().due}
 						</span>
 						<span class={styles.legendItem}>
-							<i class={`${styles.dot} ${styles.dotBuried}`} />埋{" "}
-							{c().buried}
+							<i class={`${styles.dot} ${styles.dotBuried}`} />埋 {c().buried}
 						</span>
 						<span class={styles.legendItem}>
 							<i class={`${styles.dot} ${styles.dotSuspended}`} />挂{" "}

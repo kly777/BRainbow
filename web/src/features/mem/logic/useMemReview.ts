@@ -16,7 +16,11 @@ import {
 } from "@features/mem/api.ts";
 import type { DueResponse } from "@features/mem/api.ts";
 import type { MemCounts, MemItem, TagInfo } from "@features/mem/model.ts";
-import { ALPHA, calcAvgCardTime, calcMaxLearning } from "@features/mem/logic/mem-calcs.ts";
+import {
+	ALPHA,
+	calcAvgCardTime,
+	calcMaxLearning,
+} from "@features/mem/logic/mem-calcs.ts";
 import { useMemTagFilter } from "@features/mem/logic/useMemTagFilter.ts";
 import { useMnemonic } from "@features/mem/logic/useMnemonic.ts";
 import { useReviewKeyboard } from "@features/mem/logic/useReviewKeyboard.ts";

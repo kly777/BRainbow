@@ -5,9 +5,18 @@
  * 变量定义见 styles/tokens.css。
  */
 export const themes = {
-	paper: { label: "暖纸 · 目录绿", swatches: ["oklch(0.99 0.004 95)", "oklch(0.52 0.1 165)"] },
-	midnight: { label: "暗夜 · 墨绿", swatches: ["oklch(0.21 0.014 260)", "oklch(0.68 0.12 165)"] },
-	ocean: { label: "冷蓝 · 晴空", swatches: ["oklch(0.99 0.003 250)", "oklch(0.55 0.18 255)"] },
+	paper: {
+		label: "暖纸 · 目录绿",
+		swatches: ["oklch(0.99 0.004 95)", "oklch(0.52 0.1 165)"],
+	},
+	midnight: {
+		label: "暗夜 · 墨绿",
+		swatches: ["oklch(0.21 0.014 260)", "oklch(0.68 0.12 165)"],
+	},
+	ocean: {
+		label: "冷蓝 · 晴空",
+		swatches: ["oklch(0.99 0.003 250)", "oklch(0.55 0.18 255)"],
+	},
 } as const;
 
 export type ThemeName = keyof typeof themes;

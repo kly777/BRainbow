@@ -18,7 +18,9 @@ export default function FilterBar(props: FilterBarProps) {
 					type="button"
 					class={styles.tagModeBtn}
 					onClick={m.toggleTagMode}
-					title={m.tagMode() === "include" ? "切换为排除模式" : "切换为包含模式"}
+					title={
+						m.tagMode() === "include" ? "切换为排除模式" : "切换为包含模式"
+					}
 				>
 					{m.tagMode() === "include" ? "☐ 包含" : "☒ 排除"}
 				</button>

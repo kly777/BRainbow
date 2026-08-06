@@ -61,10 +61,10 @@ export const renameMediaE = (
 	stored_id: string,
 	original_name: string,
 ): Promise<MediaItem> =>
-	patch<MediaItem>(`/media/${stored_id}`, { original_name }).then((r) => tapInvalidate(CACHE.media, r));
+	patch<MediaItem>(`/media/${stored_id}`, { original_name }).then((r) =>
+		tapInvalidate(CACHE.media, r),
+	);
 
 /** 删除 */
 export const deleteMediaE = (stored_id: string): Promise<void> =>
-	del<void>(`/media/${stored_id}`).then((r) =>
-		tapInvalidate(CACHE.media, r),
-	);
+	del<void>(`/media/${stored_id}`).then((r) => tapInvalidate(CACHE.media, r));

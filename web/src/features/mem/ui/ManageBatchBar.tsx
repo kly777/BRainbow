@@ -17,9 +17,7 @@ export default function ManageBatchBar(props: Props) {
 			class={styles.batchBar}
 			classList={{ [styles.batchBarVisible]: props.selectedCount > 0 }}
 		>
-			<span class={styles.batchCount}>
-				{props.selectedCount} 条已选
-			</span>
+			<span class={styles.batchCount}>{props.selectedCount} 条已选</span>
 			<div class={styles.batchActions}>
 				<button type="button" class={styles.batchBtn} onClick={props.onReset}>
 					忘却

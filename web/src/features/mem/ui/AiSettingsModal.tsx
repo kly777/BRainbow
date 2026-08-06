@@ -10,7 +10,6 @@ import {
 } from "@lib/ai-settings.ts";
 import { tryAsync } from "@lib/result.ts";
 
-
 interface AiSettingsModalProps {
 	isOpen: boolean;
 	onClose: () => void;

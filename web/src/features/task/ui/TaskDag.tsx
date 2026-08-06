@@ -13,7 +13,11 @@ import { getAllTasksE, getDagE } from "@features/task/api.ts";
 import type { Task } from "@features/task/types.ts";
 import type { LayoutNode } from "@features/task/ui/dag-layout.ts";
 import { layout } from "@features/task/ui/dag-layout.ts";
-import { calcAutoOffset, drawGraph, hitTestNode } from "@features/task/ui/dag-render.ts";
+import {
+	calcAutoOffset,
+	drawGraph,
+	hitTestNode,
+} from "@features/task/ui/dag-render.ts";
 import styles from "@features/task/ui/TaskDag.module.css";
 
 // ── 任务选择器 ──

@@ -170,13 +170,19 @@ export const request = async <T>(
 	} catch (cause: unknown) {
 		// ── 网络断开 → 全局 toast + 日志，然后抛出 ──
 		console.error(`[API] NETWORK ${endpoint}:`, cause);
-		toast({
-			type: "error",
-			title: "网络连接失败",
-			message: "请检查网络后重试",
-			details: "NETWORK",
-			duration: 6000,
-		});
+		// 未登录时大请求体（如书签导入）可能被服务器/代理截断连接，
+		// 收不到 401 而是 NetworkError —— 兜底弹登录提示
+		if (!getToken()) {
+			await triggerAuthRequired();
+		} else {
+			toast({
+				type: "error",
+				title: "网络连接失败",
+				message: "请检查网络后重试",
+				details: "NETWORK",
+				duration: 6000,
+			});
+		}
 		throw new NetworkError({ cause });
 	}
 

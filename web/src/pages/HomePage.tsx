@@ -21,6 +21,7 @@ const MODULES = [
 	{ path: "/o", label: "本体" },
 	{ path: "/m", label: "记忆" },
 	{ path: "/conv", label: "搜索" },
+	{ path: "/bookmark", label: "书签" },
 	{ path: "/text", label: "文本" },
 	{ path: "/i", label: "图片" },
 ];

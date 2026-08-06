@@ -1,3 +1,4 @@
+pub mod bookmark;
 pub mod card;
 pub mod conv;
 pub mod db_viewer;

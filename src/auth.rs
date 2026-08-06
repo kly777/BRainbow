@@ -74,6 +74,7 @@ pub async fn auth(State(state): State<AppState>, mut request: Request, next: Nex
     let token = match extract_token(&request) {
         Some(t) => t,
         None => {
+            drain_rejected_body(&mut request).await;
             return (
                 StatusCode::UNAUTHORIZED,
                 Json(ErrorBody {
@@ -89,6 +90,7 @@ pub async fn auth(State(state): State<AppState>, mut request: Request, next: Nex
     let claims = match verify_token(&token, secret) {
         Some(c) => c,
         None => {
+            drain_rejected_body(&mut request).await;
             return (
                 StatusCode::UNAUTHORIZED,
                 Json(ErrorBody {
@@ -103,6 +105,17 @@ pub async fn auth(State(state): State<AppState>, mut request: Request, next: Nex
 
     request.extensions_mut().insert(claims);
     next.run(request).await
+}
+
+/// 拒绝请求前消费（丢弃）请求体。
+///
+/// 若不读取 body 直接返回响应，hyper 发送响应后会重置连接，
+/// 大文件上传场景（如书签导入 multipart）下客户端会收到
+/// "Request has been truncated" / NetworkError，而非 401。
+/// 最多丢弃 8MB，防止恶意无限 body 拖垮连接。
+async fn drain_rejected_body(request: &mut Request) {
+    let body = std::mem::take(request.body_mut());
+    let _ = axum::body::to_bytes(body, 8 * 1024 * 1024).await;
 }
 
 /// 授权中间件：要求 admin 角色。必须在 [`auth`] 中间件之后使用。

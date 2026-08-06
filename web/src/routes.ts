@@ -130,6 +130,14 @@ export const ROUTES: RouteConfig[] = [
 		component: lazy(() => import("@features/reading/ReadingUnknown.tsx")),
 	},
 	{
+		path: "/bookmark",
+		label: "书签",
+		title: "Bookmarks",
+		desc: "网页书签管理",
+		nav: true,
+		component: lazy(() => import("@features/bookmark/BookmarkPage.tsx")),
+	},
+	{
 		path: "/reading/:id",
 		label: "阅读文章",
 		title: "Reading",

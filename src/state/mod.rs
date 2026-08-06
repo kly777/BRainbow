@@ -3,11 +3,11 @@ use std::sync::Arc;
 
 use crate::config::Config;
 use crate::modules::{
-    card::CardService, db_viewer::DbViewerService, media::service::MediaService,
-    mem::query::MemQueryService, mem::MemRepo, mem::service::MemService,
-    onto::OntoService,
-    reading::service::ReadingService, sign::SignService, task::TaskService,
-    text::TextService, time_window::service::TimeWindowService, user::UserService,
+    bookmark::BookmarkService, card::CardService, db_viewer::DbViewerService,
+    media::service::MediaService, mem::query::MemQueryService, mem::MemRepo,
+    mem::service::MemService, onto::OntoService, reading::service::ReadingService,
+    sign::SignService, task::TaskService, text::TextService,
+    time_window::service::TimeWindowService, user::UserService,
 };
 
 /// 应用级共享状态。
@@ -21,6 +21,7 @@ pub struct AppState {
 
     // ── 预创建的服务实例 ──
     pub card: CardService,
+    pub bookmark: BookmarkService,
     pub onto: OntoService,
     pub sign: SignService,
     pub user: UserService,
@@ -45,6 +46,7 @@ impl AppState {
             db: db.clone(),
             jwt_secret: Arc::new(config.jwt_secret.clone()),
             card: CardService::new(db.clone()),
+            bookmark: BookmarkService::new(db.clone()),
             onto: OntoService::new(db.clone()),
             sign: SignService::new(db.clone()),
             user: UserService::new(db.clone()),

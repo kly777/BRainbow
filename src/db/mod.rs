@@ -413,6 +413,62 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await?;
 
+    // ── Bookmark / 网页书签模块 ──
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS bookmark (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            url TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_bookmark_created ON bookmark(created_at DESC)",
+    )
+    .execute(pool)
+    .await?;
+
+    // 书签标签表（独立命名空间，与 mem 的 tag 表互不干扰）
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS bookmark_tag (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // 书签-标签关联表
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS bookmark_tag_rel (
+            bookmark_id INTEGER NOT NULL,
+            tag_id INTEGER NOT NULL,
+            PRIMARY KEY (bookmark_id, tag_id),
+            FOREIGN KEY (bookmark_id) REFERENCES bookmark(id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES bookmark_tag(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_bookmark_tag_rel_tag ON bookmark_tag_rel(tag_id)",
+    )
+    .execute(pool)
+    .await?;
+
     // ── Reading / 英语阅读模块 ──
     sqlx::query(
         r#"

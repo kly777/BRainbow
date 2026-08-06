@@ -47,6 +47,7 @@ const store = new Map<string, CacheEntry>();
 /** 预定义的缓存失效模式，按 API 领域划分 */
 export const CACHE = {
 	cards: /^GET \/cards/,
+	bookmarks: /^GET \/bookmarks/,
 	tasks: /^GET \/tasks/,
 	db: /^GET \/db/,
 	onto: /^GET \/onto/,

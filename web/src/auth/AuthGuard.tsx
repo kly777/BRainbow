@@ -13,9 +13,16 @@ import { useAuth } from "@auth/context.tsx";
  */
 export default function AuthGuard(props: { children: JSX.Element }) {
 	const { auth } = useAuth();
+	// 防循环：logout() 产生新 auth 对象会重新触发 effect，只 dispatch 一次
+	let notified = false;
 
 	createEffect(() => {
-		if (!auth().user) {
+		if (auth().user) {
+			notified = false;
+			return;
+		}
+		if (!notified) {
+			notified = true;
 			globalThis.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT));
 		}
 	});

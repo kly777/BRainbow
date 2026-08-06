@@ -60,7 +60,7 @@
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
-	box-shadow: 0 4px 12px oklch(0% 0 0deg / 10%);
+	box-shadow: var(--shadow-md);
 	max-height: 200px;
 	overflow-y: auto;
 }

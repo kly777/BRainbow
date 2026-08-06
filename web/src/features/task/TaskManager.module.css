@@ -43,7 +43,7 @@
 .view-active {
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
-	box-shadow: 0 1px 2px oklch(0% 0 0deg / 6%);
+	box-shadow: var(--shadow-sm);
 }
 
 .search-box {
@@ -145,7 +145,7 @@
 .tab-active {
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
-	box-shadow: 0 1px 2px oklch(0% 0 0deg / 8%);
+	box-shadow: var(--shadow-sm);
 }
 
 @media (width <= 768px) {

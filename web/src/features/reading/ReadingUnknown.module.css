@@ -52,10 +52,10 @@
 
 .known-btn {
 	padding: 4px 12px;
-	border: 1px solid oklch(50% 0.18 150deg);
+	border: 1px solid var(--t-color-mark-correct);
 	border-radius: 6px;
 	background: transparent;
-	color: oklch(50% 0.18 150deg);
+	color: var(--t-color-mark-correct);
 	cursor: pointer;
 	font-size: 0.85rem;
 	font-weight: 600;
@@ -72,7 +72,7 @@
 }
 
 .known-btn:hover {
-	background: oklch(50% 0.18 150deg);
+	background: var(--t-color-mark-correct);
 	color: var(--t-color-white);
 }
 

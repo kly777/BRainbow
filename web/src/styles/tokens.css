@@ -48,6 +48,15 @@
 	--shadow-md: 0 4px 16px oklch(0% 0 0deg / 7%);
 	--shadow-lg: 0 12px 32px oklch(0% 0 0deg / 10%);
 
+	/* ── 阅读标注语义色（不随主题：认识/不认识/推荐等标记） ── */
+	--t-color-mark-wrong: oklch(45% 0.22 30deg);
+	--t-color-mark-correct: oklch(50% 0.18 150deg);
+	--t-color-mark-teal: oklch(40% 0.1 170deg);
+	--t-color-mark-blue: oklch(50% 0.14 250deg);
+	--t-color-mark-blue-soft: oklch(95% 0.05 250deg / 50%);
+	--t-color-mark-blue-border: oklch(85% 0.08 250deg);
+	--t-color-mark-yellow: oklch(55% 0.16 80deg);
+
 	/* ── 旧全局别名（legacyAliases：跟随主题） ── */
 	--color-bg: var(--t-color-bg);
 	--color-bg-subtle: var(--t-color-bg);
@@ -80,6 +89,7 @@
 	--toast-error-text: oklch(30% 0.09 25deg);
 	--toast-error-icon-bg: var(--t-color-danger);
 	--toast-warning-bg: var(--t-color-warning-subtle);
+	--toast-warning-border: oklch(88% 0.09 85deg);
 	--toast-warning-icon-bg: var(--t-color-warning);
 	--toast-success-bg: var(--t-color-success-subtle);
 	--toast-success-icon-bg: var(--t-color-success);
@@ -155,6 +165,7 @@
 	--toast-error-text: oklch(30% 0.09 25deg);
 	--toast-error-icon-bg: var(--t-color-danger);
 	--toast-warning-bg: var(--t-color-warning-subtle);
+	--toast-warning-border: oklch(88% 0.09 85deg);
 	--toast-warning-icon-bg: var(--t-color-warning);
 	--toast-success-bg: var(--t-color-success-subtle);
 	--toast-success-icon-bg: var(--t-color-success);
@@ -230,6 +241,7 @@
 	--toast-error-text: oklch(30% 0.09 25deg);
 	--toast-error-icon-bg: var(--t-color-danger);
 	--toast-warning-bg: var(--t-color-warning-subtle);
+	--toast-warning-border: oklch(88% 0.09 85deg);
 	--toast-warning-icon-bg: var(--t-color-warning);
 	--toast-success-bg: var(--t-color-success-subtle);
 	--toast-success-icon-bg: var(--t-color-success);

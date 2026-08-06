@@ -37,7 +37,7 @@
 	font: inherit;
 	cursor: pointer;
 	inset: 0;
-	background: oklch(0% 0 0deg / 40%);
+	background: var(--color-overlay);
 	z-index: 100;
 }
 
@@ -52,7 +52,7 @@
 	z-index: 101;
 	width: 90%;
 	max-width: 600px;
-	box-shadow: 0 8px 32px oklch(0% 0 0deg / 15%);
+	box-shadow: var(--shadow-md);
 	border: 1px solid var(--t-color-border);
 }
 
@@ -177,15 +177,15 @@
 }
 
 .ratio[data-known="high"] {
-	color: oklch(50% 0.18 150deg);
+	color: var(--t-color-mark-correct);
 }
 
 .ratio[data-known="mid"] {
-	color: oklch(55% 0.16 80deg);
+	color: var(--t-color-mark-yellow);
 }
 
 .ratio[data-known="low"] {
-	color: oklch(45% 0.22 30deg);
+	color: var(--t-color-mark-wrong);
 }
 
 .header h1 {

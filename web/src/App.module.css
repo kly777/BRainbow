@@ -55,7 +55,7 @@
 	background-color: var(--t-color-surface);
 	border-radius: var(--radius-md);
 	padding: var(--space-xl);
-	box-shadow: 0 3px 10px oklch(0% 0 0deg / 8%);
+	box-shadow: var(--shadow-md);
 	transition:
 		transform 0.3s ease,
 		box-shadow 0.3s ease;
@@ -112,7 +112,7 @@
 
 .feature-card:hover {
 	transform: translateY(-5px);
-	box-shadow: 0 8px 24px oklch(0% 0 0deg / 12%);
+	box-shadow: var(--shadow-md);
 }
 
 @media (width <= 768px) {

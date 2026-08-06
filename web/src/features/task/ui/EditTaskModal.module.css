@@ -103,7 +103,7 @@
 	padding: var(--space-xs) 10px;
 	font-size: var(--text-sm);
 	background: var(--t-color-success-subtle);
-	color: oklch(40% 0.1 170deg);
+	color: var(--t-color-mark-teal);
 	border: 1px solid var(--t-color-success-subtle);
 	border-radius: var(--radius-sm);
 	cursor: pointer;
@@ -253,7 +253,7 @@
 
 .dep-status-completed {
 	background: var(--t-color-success-subtle);
-	color: oklch(40% 0.1 170deg);
+	color: var(--t-color-mark-teal);
 }
 
 .dep-status-archived {
@@ -322,7 +322,7 @@
 
 .preset-btn:hover {
 	background: var(--t-color-success-subtle);
-	border-color: oklch(88% 0.08 160deg);
+	border-color: var(--t-color-mark-correct);
 }
 
 .add-btn:hover {

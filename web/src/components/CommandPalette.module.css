@@ -8,7 +8,7 @@
 	cursor: pointer;
 	inset: 0;
 	z-index: 90;
-	background: oklch(0% 0 0deg / 45%);
+	background: var(--color-overlay);
 	display: flex;
 	justify-content: center;
 	backdrop-filter: blur(2px);
@@ -36,7 +36,7 @@
 	border: 1px solid var(--t-color-border-strong);
 	border-radius: var(--radius-lg);
 	background: var(--t-color-surface);
-	box-shadow: 0 8px 32px oklch(0% 0 0deg / 14%);
+	box-shadow: var(--shadow-md);
 	transition:
 		border-color 0.15s,
 		box-shadow 0.15s;
@@ -66,7 +66,7 @@
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-lg);
-	box-shadow: 0 8px 32px oklch(0% 0 0deg / 12%);
+	box-shadow: var(--shadow-md);
 	margin-top: 6px;
 	max-height: 280px;
 	overflow-y: auto;

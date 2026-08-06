@@ -32,8 +32,8 @@
 	grid-column: 1;
 	display: block;
 	padding: 8px 16px;
-	background: oklch(95% 0.05 250deg / 50%);
-	border: 1px solid oklch(85% 0.08 250deg);
+	background: var(--t-color-mark-blue-soft);
+	border: 1px solid var(--t-color-mark-blue-border);
 	border-radius: 8px;
 	font-size: 0.9rem;
 	color: var(--t-color-accent);
@@ -63,7 +63,7 @@
 
 .unknown-word {
 	cursor: pointer;
-	text-decoration: underline wavy oklch(45% 0.22 30deg) 1.5px;
+	text-decoration: underline wavy var(--t-color-mark-wrong) 1.5px;
 	text-underline-offset: 3px;
 	font-weight: 600;
 }
@@ -97,10 +97,10 @@
 	width: 100%;
 	margin-bottom: 10px;
 	padding: 6px 12px;
-	border: 1px solid oklch(45% 0.22 30deg);
+	border: 1px solid var(--t-color-mark-wrong);
 	border-radius: 6px;
 	background: transparent;
-	color: oklch(45% 0.22 30deg);
+	color: var(--t-color-mark-wrong);
 	font-size: 12px;
 	cursor: pointer;
 }
@@ -135,13 +135,13 @@
 }
 
 .known-icon {
-	color: oklch(50% 0.18 150deg);
+	color: var(--t-color-mark-correct);
 	font-size: 12px;
 	cursor: pointer;
 }
 
 .unknown-icon {
-	color: oklch(45% 0.22 30deg);
+	color: var(--t-color-mark-wrong);
 	font-size: 12px;
 	cursor: pointer;
 }
@@ -205,16 +205,17 @@
 }
 
 .recommend-banner:hover {
-	background: oklch(92% 0.06 250deg / 50%);
+	/* 状态块淡蓝底（词性/标注语义色） */
+	background: var(--t-color-mark-blue-soft);
 }
 
 .word:hover {
-	background: oklch(92% 0.03 200deg / 25%);
+	background: oklch(92% 0.03 200deg / 25%); /* 淡青标注（合理保留） */
 	border-radius: 2px;
 }
 
 .unknown-word:hover {
-	background: oklch(92% 0.05 30deg / 20%);
+	background: oklch(92% 0.05 30deg / 20%); /* 淡红标注（合理保留） */
 	border-radius: 2px;
 }
 
@@ -227,7 +228,7 @@
 }
 
 .upload-unknown-btn:hover {
-	background: oklch(45% 0.22 30deg);
+	background: var(--t-color-mark-wrong);
 	color: var(--t-color-white);
 }
 

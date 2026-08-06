@@ -3,7 +3,7 @@
 .overlay {
 	position: fixed;
 	inset: 0;
-	background: oklch(0% 0 0deg / 50%);
+	background: var(--color-overlay);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -19,7 +19,7 @@
 	gap: var(--space-md);
 	min-width: 300px;
 	max-width: 360px;
-	box-shadow: 0 8px 32px oklch(0% 0 0deg / 15%);
+	box-shadow: var(--shadow-md);
 	border: 1px solid var(--t-color-border);
 }
 

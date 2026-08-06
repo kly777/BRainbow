@@ -52,7 +52,7 @@
 .modal-overlay {
 	position: fixed;
 	inset: 0;
-	background: oklch(0% 0 0deg / 50%);
+	background: var(--color-overlay);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -67,7 +67,7 @@
 	max-width: 500px;
 	max-height: 90vh;
 	overflow-y: auto;
-	box-shadow: 0 var(--space-xs) 24px oklch(0% 0 0deg / 15%);
+	box-shadow: var(--shadow-md);
 	animation: modalSlideIn 0.3s ease;
 }
 

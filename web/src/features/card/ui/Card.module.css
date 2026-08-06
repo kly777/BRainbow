@@ -7,7 +7,7 @@
 .card {
 	background: var(--t-color-surface);
 	border-radius: var(--radius-lg);
-	box-shadow: 0 1px 4px oklch(0% 0 0deg / 6%);
+	box-shadow: var(--shadow-sm);
 	padding: var(--space-lg);
 	transition: all var(--t-transition-normal) ease;
 	cursor: pointer;
@@ -152,7 +152,7 @@
 }
 
 .card:hover {
-	box-shadow: 0 var(--space-xs) 16px oklch(0% 0 0deg / 12%);
+	box-shadow: var(--shadow-md);
 	transform: translateY(-2px);
 	border-color: var(--t-color-accent);
 }

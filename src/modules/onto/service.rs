@@ -67,12 +67,6 @@ mod tests {
     use super::*;
     use sqlx::SqlitePool;
 
-    fn setup_service() -> OntoService {
-        let pool = Arc::new(SqlitePool::connect_lazy("sqlite::memory:").unwrap());
-        // 不能用 lazy，用同步创建
-        OntoService::new(pool)
-    }
-
     async fn real_service() -> (OntoService, Arc<SqlitePool>) {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
         sqlx::query("CREATE TABLE onto (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT)")

@@ -181,7 +181,7 @@ mod tests {
         repo.create("书".into(), "book".into(), None, None, None)
             .await
             .unwrap();
-        let (items, total) = repo
+        let (_, total) = repo
             .find_by_signified_paginated("book", 10, 0)
             .await
             .unwrap();

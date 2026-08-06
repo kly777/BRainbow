@@ -56,7 +56,7 @@
 	font-size: var(--text-lg);
 	font-weight: 600;
 	color: var(--t-color-ink);
-	transition: all 0.15s;
+	transition: all var(--t-transition-fast);
 	min-width: 36px;
 	text-align: center;
 }

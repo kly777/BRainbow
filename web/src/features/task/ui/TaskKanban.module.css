@@ -20,7 +20,7 @@
 	padding: 0;
 	margin: 0;
 	min-width: 0;
-	transition: box-shadow 0.2s;
+	transition: box-shadow var(--t-transition-normal);
 }
 
 .column-header {
@@ -81,9 +81,8 @@
 	padding: var(--space-md);
 	box-shadow: 0 1px 2px oklch(0% 0 0deg / 6%);
 	cursor: grab;
-	transition:
-		transform 0.12s,
-		box-shadow 0.12s;
+	transition: transform var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 	border: 1px solid var(--t-color-border);
 }
 

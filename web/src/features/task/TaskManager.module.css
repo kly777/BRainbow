@@ -37,7 +37,7 @@
 	font-size: var(--text-sm);
 	font-weight: 500;
 	color: var(--t-color-ink-muted);
-	transition: all 0.15s;
+	transition: all var(--t-transition-fast);
 }
 
 .view-active {
@@ -54,14 +54,12 @@
 }
 
 .search-input {
-	width: 100%;
+	composes: field-input from "../../styles/base.module.css";
 	padding: var(--space-xs) 24px var(--space-xs) var(--space-sm);
-	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	font-size: var(--text-sm);
-	outline: none;
 	background: var(--t-color-bg);
-	box-sizing: border-box;
+	outline: none;
 }
 
 .search-clear {
@@ -91,7 +89,7 @@
 	background: none;
 	width: 140px;
 	box-sizing: border-box;
-	transition: all 0.15s;
+	transition: all var(--t-transition-fast);
 }
 
 .quick-add-focus {
@@ -141,7 +139,7 @@
 	font-size: var(--text-sm);
 	font-weight: 500;
 	color: var(--t-color-ink-muted);
-	transition: all 0.15s;
+	transition: all var(--t-transition-fast);
 }
 
 .tab-active {
@@ -166,11 +164,6 @@
 
 .view-btn:hover {
 	color: var(--t-color-ink);
-}
-
-.search-input:focus {
-	border-color: var(--t-color-accent);
-	background: var(--t-color-surface);
 }
 
 .quick-add-input:focus {

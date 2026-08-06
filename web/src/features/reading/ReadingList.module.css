@@ -57,14 +57,9 @@
 }
 
 .input {
-	width: 100%;
-	padding: 8px 12px;
-	border: 1px solid var(--t-color-border);
-	border-radius: 6px;
-	font-size: 1rem;
-	margin-bottom: 12px;
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
+	composes: field-input from "../../styles/base.module.css";
+	border-radius: var(--radius-xs);
+	margin-bottom: var(--space-md);
 }
 
 .textarea {
@@ -111,16 +106,14 @@
 }
 
 .card {
+	composes: card from "../../styles/base.module.css";
 	display: block;
-	padding: 16px;
-	border: 1px solid var(--t-color-border);
-	border-radius: 8px;
-	background: var(--t-color-surface);
+	padding: var(--space-lg);
 	text-decoration: none;
 	color: inherit;
 	transition:
-		border-color 0.15s,
-		box-shadow 0.15s;
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 }
 
 .card-title {
@@ -160,9 +153,9 @@
 }
 
 .empty {
-	text-align: center;
+	composes: empty-state from "../../styles/base.module.css";
 	color: var(--t-color-ink-muted);
-	padding: 40px 0;
+	padding: var(--space-2xl) 0;
 }
 
 .unknown-link:hover {

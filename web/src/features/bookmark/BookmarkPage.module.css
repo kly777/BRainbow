@@ -37,7 +37,7 @@
 	padding: 4px 8px;
 	border-radius: var(--radius-sm);
 	min-width: 0;
-	transition: background 0.12s;
+	transition: background var(--t-transition-fast);
 }
 
 .item-title {
@@ -89,13 +89,11 @@
 }
 
 .item-tag {
+	composes: tag-accent from "../../styles/base.module.css";
 	border: none;
-	background: var(--t-color-accent-soft);
-	padding: 0 6px;
-	border-radius: 999px;
+	padding: 0 var(--space-sm);
 	font-size: 0.7rem;
 	line-height: 18px;
-	color: var(--t-color-accent);
 	cursor: pointer;
 	flex-shrink: 0;
 }
@@ -151,24 +149,15 @@
 }
 
 .form-input {
-	width: 100%;
-	padding: 8px 12px;
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
+	composes: field-input from "../../styles/base.module.css";
+	padding: var(--space-sm) var(--space-md);
 	font-size: 1rem;
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
 }
 
 .form-textarea {
-	width: 100%;
-	padding: 8px 12px;
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
+	composes: field-textarea from "../../styles/base.module.css";
+	padding: var(--space-sm) var(--space-md);
 	font-size: 0.95rem;
-	resize: vertical;
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
 }
 
 .item:hover {

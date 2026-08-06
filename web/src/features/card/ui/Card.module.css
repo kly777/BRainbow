@@ -9,7 +9,7 @@
 	border-radius: var(--radius-lg);
 	box-shadow: 0 1px 4px oklch(0% 0 0deg / 6%);
 	padding: var(--space-lg);
-	transition: all 0.2s ease;
+	transition: all var(--t-transition-normal) ease;
 	cursor: pointer;
 	border: 1px solid var(--t-color-border);
 	display: flex;
@@ -90,7 +90,7 @@
 	border-radius: 999px;
 	border: none;
 	cursor: pointer;
-	transition: all 0.15s ease;
+	transition: all var(--t-transition-fast) ease;
 }
 
 .card-meta {
@@ -136,7 +136,7 @@
 	background: transparent;
 	color: var(--t-color-ink-muted);
 	cursor: pointer;
-	transition: all 0.15s ease;
+	transition: all var(--t-transition-fast) ease;
 }
 
 .delete-button {

@@ -92,9 +92,8 @@
 }
 
 .edit-input {
+	composes: field-input from "../../styles/base.module.css";
 	padding: var(--space-xs) 10px;
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
 	font-size: var(--text-sm);
 	font-family: inherit;
 	outline: none;

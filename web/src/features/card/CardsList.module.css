@@ -111,7 +111,7 @@
 	font-size: 0.875rem;
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
-	transition: all 0.2s ease;
+	transition: all var(--t-transition-normal) ease;
 }
 
 .form-textarea {
@@ -121,7 +121,7 @@
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
 	resize: vertical;
-	transition: all 0.2s ease;
+	transition: all var(--t-transition-normal) ease;
 	font-family: inherit;
 	line-height: 1.5;
 }

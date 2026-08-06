@@ -32,8 +32,7 @@
 	border-radius: var(--radius-lg);
 	padding: var(--space-lg);
 	cursor: pointer;
-	transition:
-		transform 0.15s,
+	transition: transform var(--t-transition-fast),
 		box-shadow 0.15s,
 		border-color 0.15s;
 }

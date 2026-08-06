@@ -29,8 +29,7 @@
 	background: transparent;
 	color: var(--t-color-ink-muted);
 	border-bottom: 2px solid transparent;
-	transition:
-		color 0.15s,
+	transition: color var(--t-transition-fast),
 		border-color 0.15s;
 	white-space: nowrap;
 	user-select: none;
@@ -42,12 +41,11 @@
 }
 
 .rename-input {
+	composes: field-input from "../styles/base.module.css";
 	width: 80px;
 	padding: var(--space-xs) 4px;
-	border: 1px solid var(--t-color-accent);
-	border-radius: var(--radius-sm);
+	border-color: var(--t-color-accent);
 	background: var(--t-color-bg);
-	color: var(--t-color-ink);
 	font-size: var(--text-sm);
 	outline: none;
 }

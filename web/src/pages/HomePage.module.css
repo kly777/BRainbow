@@ -27,8 +27,7 @@
 	font-size: var(--text-base);
 	font-weight: 500;
 	color: var(--t-color-ink-muted);
-	transition:
-		background 0.15s,
+	transition: background var(--t-transition-fast),
 		color 0.15s;
 }
 
@@ -94,7 +93,7 @@
 	font-weight: 500;
 	padding: var(--space-xs) 10px;
 	border-radius: var(--radius-md);
-	transition: all 0.2s ease;
+	transition: all var(--t-transition-normal) ease;
 }
 
 .create-link {
@@ -105,7 +104,7 @@
 	font-weight: 500;
 	padding: var(--space-xs) 14px;
 	border-radius: var(--radius-md);
-	transition: background-color 0.2s ease;
+	transition: background-color var(--t-transition-normal) ease;
 }
 
 .empty-state {

@@ -48,11 +48,10 @@ export default function ReadingList() {
 
 			{/* 上传 Modal */}
 			<Show when={uploadOpen()}>
-				<div
+				<button
+					type="button"
 					class={styles.overlay}
 					onClick={() => setUploadOpen(false)}
-					onKeyDown={(e) => e.key === "Enter" && setUploadOpen(false)}
-					role="button"
 					aria-label="关闭"
 				/>
 				<div class={styles.modal}>

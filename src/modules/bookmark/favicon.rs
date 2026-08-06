@@ -15,7 +15,7 @@ use std::time::Duration;
 use axum::{
     extract::Query,
     http::{StatusCode, header},
-    response::{IntoResponse, Response},
+    response::Response,
 };
 use serde::Deserialize;
 use tokio::io::AsyncWriteExt;

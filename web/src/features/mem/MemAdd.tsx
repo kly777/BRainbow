@@ -4,7 +4,7 @@
 // 业务逻辑复用 useMemAdd，此处只做视图层
 
 import { A } from "@solidjs/router";
-import { createSignal, For, Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
 import { useMemAdd } from "@features/mem/logic/useMemAdd.ts";
 import styles from "@features/mem/MemAdd.module.css";

@@ -1,4 +1,4 @@
-import { put, request } from "@apis/request.ts";
+import { put } from "@apis/request.ts";
 import { CACHE, cachedRequest, tapInvalidate } from "@apis/cache.ts";
 
 export interface TabItem {

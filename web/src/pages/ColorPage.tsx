@@ -32,6 +32,7 @@ export default function ColorPage() {
 					}
 				>
 					{([name, info]) => (
+						// biome-ignore lint/a11y/useSemanticElements: 卡片含嵌套交互元素，button 语义不适用
 						<div
 							class={`${styles.card} ${current() === name ? styles.cardActive : ""}`}
 							onClick={() => select(name)}
@@ -68,6 +69,7 @@ export default function ColorPage() {
 
 			<div class={styles.footer}>
 				<button
+					type="button"
 					class={baseStyles.btnGhost}
 					onClick={() => {
 						applyTheme("paper");

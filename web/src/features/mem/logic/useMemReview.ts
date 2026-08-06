@@ -82,7 +82,7 @@ export interface UseMemReview {
 }
 
 export function useMemReview(): UseMemReview {
-	const [searchParams, setSearchParams] = useSearchParams();
+	const [searchParams] = useSearchParams();
 
 	// ── 核心状态 ──
 	const [due, setDue] = createSignal<MemItem[]>([]);
@@ -374,9 +374,9 @@ export function useMemReview(): UseMemReview {
 	});
 
 	// ── 当标签过滤变化时重新加载 ──
-	// biome-ignore lint/correctness/useExhaustiveDependencies: manual deps tracking
 	createEffect(() => {
-		void (searchParams.tag_ids, searchParams.tag_mode);
+		void searchParams.tag_ids;
+		void searchParams.tag_mode;
 	});
 
 	return {

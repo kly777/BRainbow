@@ -1,4 +1,4 @@
-import { del, patch, post, request } from "@apis/request.ts";
+import { patch, post, request } from "@apis/request.ts";
 import { CACHE, cachedRequest, tapInvalidate } from "@apis/cache.ts";
 import type {
 	CalendarEvent,

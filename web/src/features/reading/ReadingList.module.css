@@ -32,6 +32,10 @@
 
 .overlay {
 	position: fixed;
+	border: none;
+	padding: 0;
+	font: inherit;
+	cursor: pointer;
 	inset: 0;
 	background: oklch(0% 0 0deg / 40%);
 	z-index: 100;

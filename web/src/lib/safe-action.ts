@@ -22,7 +22,7 @@
  */
 
 import { notifyError } from "@lib/notify.ts";
-import { tryAsync, type Result } from "@lib/result.ts";
+import { tryAsync } from "@lib/result.ts";
 import { showConfirm as show } from "@components/ui/confirmStore.ts";
 import type { ConfirmOptions } from "@components/ui/confirmStore.ts";
 
@@ -36,7 +36,7 @@ export {
 	flatMap,
 	unwrapOr,
 	match,
-	type Result,
+
 } from "@lib/result.ts";
 
 /**

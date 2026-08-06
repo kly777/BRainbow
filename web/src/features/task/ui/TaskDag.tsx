@@ -11,7 +11,7 @@ import { notifyError } from "@lib/notify.ts";
 import { tryAsync } from "@lib/result.ts";
 import { getAllTasksE, getDagE } from "@features/task/api.ts";
 import type { Task } from "@features/task/types.ts";
-import type { LayoutNode } from "@features/task/ui/dag-layout.ts";
+
 import { layout } from "@features/task/ui/dag-layout.ts";
 import {
 	calcAutoOffset,

@@ -4,7 +4,7 @@ import { getAllMemsE } from "@features/mem/api.ts";
 import type { MemItem, TagInfo } from "@features/mem/model.ts";
 export type TagMode = "include" | "exclude";
 // (类型原在 v1 MemManageToolbar，已上移至此)
-import { tryAsync, unwrapOr } from "@lib/result.ts";
+import { tryAsync } from "@lib/result.ts";
 import { notifyError } from "@lib/notify.ts";
 
 // ── 类型 ──

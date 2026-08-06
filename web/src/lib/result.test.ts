@@ -17,7 +17,7 @@ import {
 	tapErr,
 	tryAsync,
 	trySync,
-	type Result,
+
 } from "./result.ts";
 
 describe("Result 构造器", () => {

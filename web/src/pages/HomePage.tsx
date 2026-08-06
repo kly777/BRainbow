@@ -1,13 +1,12 @@
 import { A, useNavigate } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
-import { getErrorMessage } from "@apis/types/index.ts";
+
 import { AsyncView } from "@components/ui/AsyncView.tsx";
 import { deleteCardE as apiDeleteCard, getCardsE } from "@features/card/api.ts";
 import type { CardData } from "@features/card/ui/Card.tsx";
 import CardsGrid from "@features/card/ui/CardsGrid.tsx";
 import TaskList from "@features/task/ui/TaskList.tsx";
 import { TaskProvider, useTasks } from "@features/task/ui/TaskProvider.tsx";
-import { notifyError } from "@lib/notify.ts";
 import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
 import styles from "@pages/HomePage.module.css";
 

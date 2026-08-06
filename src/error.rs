@@ -56,27 +56,12 @@ pub fn not_found(message: impl Into<String>) -> Response {
     resp(StatusCode::NOT_FOUND, message)
 }
 
-/// 409
-pub fn conflict(message: impl Into<String>) -> Response {
-    resp(StatusCode::CONFLICT, message)
-}
-
-/// 401
-pub fn unauthorized(message: impl Into<String>) -> Response {
-    resp(StatusCode::UNAUTHORIZED, message)
-}
-
 /// 500，自动拼 "{operation}失败: {error}"
 pub fn internal(e: impl std::fmt::Display, operation: &str) -> Response {
     resp(
         StatusCode::INTERNAL_SERVER_ERROR,
         format!("{}失败: {}", operation, e),
     )
-}
-
-/// 400，自动拼 "{operation}失败: {error}"
-pub fn bad(e: impl std::fmt::Display, operation: &str) -> Response {
-    resp(StatusCode::BAD_REQUEST, format!("{}失败: {}", operation, e))
 }
 
 // ── 统一响应辅助函数（减少 handler 样板代码） ──

@@ -1,7 +1,7 @@
 // ── 记忆管理模块的核心业务逻辑 ──
 
 import { createEffect, createSignal, onMount } from "solid-js";
-import { notifyError } from "@lib/notify.ts";
+
 import { tryAsync } from "@lib/result.ts";
 import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
 import {
@@ -70,7 +70,7 @@ export function useMemManage() {
 	const [editTarget, setEditTarget] = createSignal("");
 	const [showExportModal, setShowExportModal] = createSignal(false);
 	const [showBatchTagModal, setShowBatchTagModal] = createSignal(false);
-	const [batchTagMode, setBatchTagMode] = createSignal<"add" | "remove">("add");
+	const [batchTagMode] = createSignal<"add" | "remove">("add");
 
 	// ── derived ──
 	const allSelected = () =>

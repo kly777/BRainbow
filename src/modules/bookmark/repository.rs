@@ -148,14 +148,14 @@ impl BookmarkRepo {
         let now = Utc::now();
 
         let mut builder = QueryBuilder::new("UPDATE bookmark SET ");
-        let mut first = true;
+        let mut field_count = 0usize;
 
         macro_rules! field {
             ($name:expr, $value:expr) => {{
-                if !first {
+                if field_count > 0 {
                     builder.push(", ");
                 }
-                first = false;
+                field_count += 1;
                 builder.push($name);
                 builder.push_bind($value);
             }};
@@ -171,6 +171,7 @@ impl BookmarkRepo {
             field!("description = ", d);
         }
         field!("updated_at = ", now);
+        assert!(field_count > 0, "update must set at least updated_at");
         builder.push(" WHERE id = ");
         builder.push_bind(id);
         builder.push(" RETURNING id, title, url, description, created_at, updated_at");

@@ -11,7 +11,7 @@ const cacheMock = vi.hoisted(() => ({
 	CACHE: { bookmarks: /^GET \/bookmarks/ },
 	cachedRequest: vi.fn(),
 	invalidateCache: vi.fn(),
-	tapInvalidate: vi.fn((p: RegExp, r: unknown) => r),
+	tapInvalidate: vi.fn((_p: RegExp, r: unknown) => r),
 }));
 
 vi.mock("@apis/request.ts", () => requestMock);

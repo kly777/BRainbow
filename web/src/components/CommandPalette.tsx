@@ -247,11 +247,10 @@ export default function CommandPalette() {
 		<>
 			{/* 遮罩 + 面板 */}
 			<Show when={open()}>
-				<div
+				<button
+					type="button"
 					class={styles.overlay}
 					onClick={close}
-					onKeyDown={(e) => e.key === "Enter" && close()}
-					role="button"
 					aria-label="关闭"
 				/>
 				<div ref={barRef} class={styles.bar}>

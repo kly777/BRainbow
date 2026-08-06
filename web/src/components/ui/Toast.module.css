@@ -164,8 +164,8 @@
 
 .info {
 	background: var(--t-color-accent-soft);
-	border: 1px solid oklch(85% 0.08 165deg);
-	color: oklch(30% 0.07 165deg);
+	border: 1px solid oklch(85% 0.08 165deg); /* success 边框（toast 微调） */
+	color: oklch(30% 0.07 165deg); /* success 文字（toast 微调） */
 }
 
 .close:hover {
@@ -178,7 +178,7 @@
 }
 
 .error .code {
-	background: oklch(55% 0.2 25deg / 12%);
+	background: oklch(55% 0.2 25deg / 12%); /* danger 淡底（toast 微调） */
 }
 
 .warning .icon {
@@ -187,7 +187,7 @@
 }
 
 .warning .code {
-	background: oklch(60% 0.16 85deg / 12%);
+	background: oklch(60% 0.16 85deg / 12%); /* warning 淡底（toast 微调） */
 }
 
 .success .icon {

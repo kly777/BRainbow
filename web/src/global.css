@@ -1,19 +1,28 @@
 /* ===== 布局常量令牌（不随主题；颜色令牌见 styles/tokens.css） ===== */
 :root {
-	/* ── 间距与尺寸令牌 ── */
-	--radius-sm: 4px;
-	--radius-md: 8px;
+	/* ── 间距与尺寸令牌（7 档；radius-xs 为 6px 新增档，sm 保持 4px 兼容旧引用） ── */
+	--radius-xs: 6px;
+	--radius-sm: 4px;	--radius-md: 8px;
 	--radius-lg: 12px;
+	--radius-xl: 16px;
+	--space-2xs: 2px;
 	--space-xs: 4px;
 	--space-sm: 8px;
 	--space-md: 12px;
 	--space-lg: 16px;
 	--space-xl: 24px;
+	--space-2xl: 32px;
 	--text-xs: 11px;
 	--text-sm: 13px;
 	--text-base: 15px;
 	--text-lg: 18px;
 	--text-xl: 22px;
+	--text-2xl: 28px;
+	--text-3xl: 34px;
+
+	/* ── 过渡令牌（统一交互反馈） ── */
+	--t-transition-fast: 120ms ease;
+	--t-transition-normal: 200ms ease;
 }
 
 *,

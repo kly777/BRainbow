@@ -8,39 +8,44 @@
 :root,
 :root[data-theme="paper"] {
 	/* ── 字体（三主题共用） ── */
-	--t-font-display: georgia, "Noto Serif SC", "Songti SC", "SimSun", serif;
+	--t-font-display: system-ui, "Segoe UI", "Roboto", "PingFang SC", "Noto Sans SC", sans-serif;
 	--t-font-mono:
 		ui-monospace, sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
 
 	/* ── 主题契约：paper（暖纸 · 目录绿，默认） ── */
-	--t-color-bg: oklch(97.5% 0.008 95deg);
-	--t-color-surface: oklch(99% 0.004 95deg);
-	--t-color-surface-raised: oklch(95% 0.012 95deg);
-	--t-color-ink: oklch(25% 0.015 85deg);
-	--t-color-ink-muted: oklch(45% 0.012 85deg);
-	--t-color-ink-faint: oklch(60% 0.008 85deg);
-	--t-color-border: oklch(86% 0.015 95deg);
-	--t-color-border-strong: oklch(82% 0.03 95deg);
-	--t-color-accent: oklch(52% 0.1 165deg);
-	--t-color-accent-strong: oklch(42% 0.11 165deg);
-	--t-color-accent-soft: oklch(93% 0.03 165deg);
+	--t-color-bg: oklch(97.2% 0.004 80deg);
+	--t-color-surface: oklch(99.5% 0.002 80deg);
+	--t-color-surface-raised: oklch(95.5% 0.006 80deg);
+	--t-color-ink: oklch(24% 0.008 80deg);
+	--t-color-ink-muted: oklch(45% 0.008 80deg);
+	--t-color-ink-faint: oklch(60% 0.006 80deg);
+	--t-color-border: oklch(88.5% 0.006 80deg);
+	--t-color-border-strong: oklch(83% 0.008 80deg);
+	--t-color-accent: oklch(50% 0.08 165deg);
+	--t-color-accent-strong: oklch(42% 0.09 165deg);
+	--t-color-accent-soft: oklch(94% 0.02 165deg);
 	--t-color-white: oklch(100% 0 0deg);
-	--t-color-badge-new-bg: oklch(93% 0.04 270deg);
-	--t-color-badge-new-text: oklch(45% 0.18 270deg);
-	--t-color-badge-learning-bg: oklch(93% 0.07 65deg);
-	--t-color-badge-learning-text: oklch(45% 0.15 60deg);
-	--t-color-badge-review-bg: oklch(93% 0.06 150deg);
-	--t-color-badge-review-text: oklch(40% 0.12 150deg);
-	--t-color-badge-suspended-bg: oklch(93% 0 0deg);
+	--t-color-badge-new-bg: oklch(94% 0.02 270deg);
+	--t-color-badge-new-text: oklch(45% 0.12 270deg);
+	--t-color-badge-learning-bg: oklch(94% 0.03 65deg);
+	--t-color-badge-learning-text: oklch(45% 0.1 60deg);
+	--t-color-badge-review-bg: oklch(94% 0.03 150deg);
+	--t-color-badge-review-text: oklch(40% 0.08 150deg);
+	--t-color-badge-suspended-bg: oklch(94% 0 0deg);
 	--t-color-badge-suspended-text: oklch(50% 0 0deg);
-	--t-color-badge-relearning-bg: oklch(93% 0.06 20deg);
-	--t-color-badge-relearning-text: oklch(42% 0.15 20deg);
-	--t-color-danger: oklch(55% 0.2 25deg);
-	--t-color-danger-subtle: oklch(96% 0.015 25deg);
-	--t-color-success: oklch(55% 0.17 160deg);
-	--t-color-success-subtle: oklch(95% 0.03 160deg);
-	--t-color-warning: oklch(60% 0.16 85deg);
-	--t-color-warning-subtle: oklch(96% 0.03 85deg);
+	--t-color-badge-relearning-bg: oklch(94% 0.03 20deg);
+	--t-color-badge-relearning-text: oklch(42% 0.1 20deg);
+	--t-color-danger: oklch(55% 0.16 25deg);
+	--t-color-danger-subtle: oklch(96.5% 0.008 25deg);
+	--t-color-success: oklch(55% 0.13 160deg);
+	--t-color-success-subtle: oklch(95.5% 0.015 160deg);
+	--t-color-warning: oklch(60% 0.12 85deg);
+	--t-color-warning-subtle: oklch(96.5% 0.015 85deg);
+
+	/* ── 阴影令牌（浅色主题） ── */
+	--shadow-sm: 0 1px 2px oklch(0% 0 0deg / 5%);
+	--shadow-md: 0 4px 16px oklch(0% 0 0deg / 7%);
+	--shadow-lg: 0 12px 32px oklch(0% 0 0deg / 10%);
 
 	/* ── 旧全局别名（legacyAliases：跟随主题） ── */
 	--color-bg: var(--t-color-bg);
@@ -83,34 +88,39 @@
 
 :root[data-theme="midnight"] {
 	/* ── 主题契约：midnight（暗夜 · 墨绿） ── */
-	--t-color-bg: oklch(17% 0.012 260deg);
-	--t-color-surface: oklch(21% 0.014 260deg);
-	--t-color-surface-raised: oklch(27% 0.016 260deg);
-	--t-color-ink: oklch(93% 0.008 95deg);
-	--t-color-ink-muted: oklch(76% 0.006 95deg);
-	--t-color-ink-faint: oklch(60% 0.005 95deg);
-	--t-color-border: oklch(32% 0.014 260deg);
-	--t-color-border-strong: oklch(40% 0.018 260deg);
-	--t-color-accent: oklch(68% 0.12 165deg);
-	--t-color-accent-strong: oklch(76% 0.12 165deg);
-	--t-color-accent-soft: oklch(30% 0.05 165deg);
+	--t-color-bg: oklch(16.5% 0.008 260deg);
+	--t-color-surface: oklch(20.5% 0.01 260deg);
+	--t-color-surface-raised: oklch(26% 0.012 260deg);
+	--t-color-ink: oklch(93% 0.004 90deg);
+	--t-color-ink-muted: oklch(75% 0.006 90deg);
+	--t-color-ink-faint: oklch(60% 0.005 90deg);
+	--t-color-border: oklch(32% 0.01 260deg);
+	--t-color-border-strong: oklch(40% 0.012 260deg);
+	--t-color-accent: oklch(68% 0.1 165deg);
+	--t-color-accent-strong: oklch(76% 0.1 165deg);
+	--t-color-accent-soft: oklch(30% 0.04 165deg);
 	--t-color-white: oklch(100% 0 0deg);
-	--t-color-badge-new-bg: oklch(32% 0.05 270deg);
-	--t-color-badge-new-text: oklch(72% 0.14 270deg);
-	--t-color-badge-learning-bg: oklch(34% 0.06 65deg);
-	--t-color-badge-learning-text: oklch(76% 0.11 60deg);
-	--t-color-badge-review-bg: oklch(32% 0.05 150deg);
-	--t-color-badge-review-text: oklch(70% 0.1 150deg);
+	--t-color-badge-new-bg: oklch(32% 0.03 270deg);
+	--t-color-badge-new-text: oklch(72% 0.09 270deg);
+	--t-color-badge-learning-bg: oklch(34% 0.04 65deg);
+	--t-color-badge-learning-text: oklch(76% 0.08 60deg);
+	--t-color-badge-review-bg: oklch(32% 0.03 150deg);
+	--t-color-badge-review-text: oklch(70% 0.07 150deg);
 	--t-color-badge-suspended-bg: oklch(30% 0 0deg);
 	--t-color-badge-suspended-text: oklch(65% 0 0deg);
-	--t-color-badge-relearning-bg: oklch(34% 0.06 20deg);
-	--t-color-badge-relearning-text: oklch(75% 0.12 20deg);
-	--t-color-danger: oklch(70% 0.16 25deg);
-	--t-color-danger-subtle: oklch(32% 0.05 25deg);
-	--t-color-success: oklch(72% 0.12 160deg);
-	--t-color-success-subtle: oklch(30% 0.04 160deg);
-	--t-color-warning: oklch(78% 0.12 85deg);
-	--t-color-warning-subtle: oklch(34% 0.05 85deg);
+	--t-color-badge-relearning-bg: oklch(34% 0.04 20deg);
+	--t-color-badge-relearning-text: oklch(75% 0.08 20deg);
+	--t-color-danger: oklch(70% 0.12 25deg);
+	--t-color-danger-subtle: oklch(30% 0.02 25deg);
+	--t-color-success: oklch(72% 0.1 160deg);
+	--t-color-success-subtle: oklch(28% 0.02 160deg);
+	--t-color-warning: oklch(78% 0.1 85deg);
+	--t-color-warning-subtle: oklch(32% 0.025 85deg);
+
+	/* ── 阴影令牌（暗色主题：更暗更扩散） ── */
+	--shadow-sm: 0 1px 3px oklch(0% 0 0deg / 40%);
+	--shadow-md: 0 4px 16px oklch(0% 0 0deg / 50%);
+	--shadow-lg: 0 12px 40px oklch(0% 0 0deg / 60%);
 
 	/* ── 旧全局别名 ── */
 	--color-bg: var(--t-color-bg);
@@ -153,34 +163,39 @@
 
 :root[data-theme="ocean"] {
 	/* ── 主题契约：ocean（冷蓝 · 晴空） ── */
-	--t-color-bg: oklch(97.5% 0.006 250deg);
-	--t-color-surface: oklch(99% 0.003 250deg);
-	--t-color-surface-raised: oklch(95% 0.01 250deg);
-	--t-color-ink: oklch(25% 0.02 250deg);
-	--t-color-ink-muted: oklch(45% 0.015 250deg);
-	--t-color-ink-faint: oklch(60% 0.01 250deg);
-	--t-color-border: oklch(86% 0.012 250deg);
-	--t-color-border-strong: oklch(82% 0.025 250deg);
-	--t-color-accent: oklch(55% 0.18 255deg);
-	--t-color-accent-strong: oklch(45% 0.2 255deg);
-	--t-color-accent-soft: oklch(93% 0.03 255deg);
+	--t-color-bg: oklch(97.2% 0.004 250deg);
+	--t-color-surface: oklch(99.5% 0.002 250deg);
+	--t-color-surface-raised: oklch(95.5% 0.006 250deg);
+	--t-color-ink: oklch(24% 0.01 250deg);
+	--t-color-ink-muted: oklch(45% 0.01 250deg);
+	--t-color-ink-faint: oklch(60% 0.008 250deg);
+	--t-color-border: oklch(88.5% 0.006 250deg);
+	--t-color-border-strong: oklch(83% 0.008 250deg);
+	--t-color-accent: oklch(52% 0.14 255deg);
+	--t-color-accent-strong: oklch(44% 0.16 255deg);
+	--t-color-accent-soft: oklch(93.5% 0.02 255deg);
 	--t-color-white: oklch(100% 0 0deg);
-	--t-color-badge-new-bg: oklch(93% 0.04 270deg);
-	--t-color-badge-new-text: oklch(45% 0.18 270deg);
-	--t-color-badge-learning-bg: oklch(93% 0.07 65deg);
-	--t-color-badge-learning-text: oklch(45% 0.15 60deg);
-	--t-color-badge-review-bg: oklch(93% 0.06 150deg);
-	--t-color-badge-review-text: oklch(40% 0.12 150deg);
-	--t-color-badge-suspended-bg: oklch(93% 0 0deg);
+	--t-color-badge-new-bg: oklch(94% 0.02 270deg);
+	--t-color-badge-new-text: oklch(45% 0.12 270deg);
+	--t-color-badge-learning-bg: oklch(94% 0.03 65deg);
+	--t-color-badge-learning-text: oklch(45% 0.1 60deg);
+	--t-color-badge-review-bg: oklch(94% 0.03 150deg);
+	--t-color-badge-review-text: oklch(40% 0.08 150deg);
+	--t-color-badge-suspended-bg: oklch(94% 0 0deg);
 	--t-color-badge-suspended-text: oklch(50% 0 0deg);
-	--t-color-badge-relearning-bg: oklch(93% 0.06 20deg);
-	--t-color-badge-relearning-text: oklch(42% 0.15 20deg);
-	--t-color-danger: oklch(55% 0.2 25deg);
-	--t-color-danger-subtle: oklch(96% 0.015 25deg);
-	--t-color-success: oklch(55% 0.17 160deg);
-	--t-color-success-subtle: oklch(95% 0.03 160deg);
-	--t-color-warning: oklch(60% 0.16 85deg);
-	--t-color-warning-subtle: oklch(96% 0.03 85deg);
+	--t-color-badge-relearning-bg: oklch(94% 0.03 20deg);
+	--t-color-badge-relearning-text: oklch(42% 0.1 20deg);
+	--t-color-danger: oklch(55% 0.16 25deg);
+	--t-color-danger-subtle: oklch(96.5% 0.008 25deg);
+	--t-color-success: oklch(55% 0.13 160deg);
+	--t-color-success-subtle: oklch(95.5% 0.015 160deg);
+	--t-color-warning: oklch(60% 0.12 85deg);
+	--t-color-warning-subtle: oklch(96.5% 0.015 85deg);
+
+	/* ── 阴影令牌（浅色主题） ── */
+	--shadow-sm: 0 1px 2px oklch(0% 0 0deg / 5%);
+	--shadow-md: 0 4px 16px oklch(0% 0 0deg / 7%);
+	--shadow-lg: 0 12px 32px oklch(0% 0 0deg / 10%);
 
 	/* ── 旧全局别名 ── */
 	--color-bg: var(--t-color-bg);

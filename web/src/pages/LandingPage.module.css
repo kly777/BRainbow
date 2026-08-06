@@ -1,6 +1,6 @@
 /* pages/LandingPage.css.ts — 由 vanilla-extract 迁移 */
 
-.landingPage {
+.landing-page {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -10,7 +10,7 @@
 	text-align: center;
 }
 
-.heroTitle {
+.hero-title {
 	font-size: var(--text-xl);
 	font-weight: 700;
 	color: var(--t-color-ink);
@@ -18,7 +18,7 @@
 	letter-spacing: -0.5px;
 }
 
-.heroSubtitle {
+.hero-subtitle {
 	font-size: var(--text-lg);
 	color: var(--t-color-ink-muted);
 	margin: 0 0 var(--space-xl) 0;
@@ -26,7 +26,7 @@
 	line-height: 1.7;
 }
 
-.ctaRow {
+.cta-row {
 	display: flex;
 	align-items: center;
 	gap: var(--space-lg);
@@ -35,7 +35,7 @@
 	justify-content: center;
 }
 
-.ctaPrimary {
+.cta-primary {
 	padding: var(--space-md) 32px;
 	background: var(--t-color-accent);
 	color: var(--t-color-white);
@@ -48,12 +48,12 @@
 	font-family: inherit;
 }
 
-.ctaDivider {
+.cta-divider {
 	color: var(--t-color-ink-muted);
 	font-size: var(--text-base);
 }
 
-.ctaSecondary {
+.cta-secondary {
 	padding: var(--space-sm) 24px;
 	background: transparent;
 	color: var(--t-color-accent);
@@ -68,7 +68,7 @@
 	font-family: inherit;
 }
 
-.featureGrid {
+.feature-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 	gap: var(--space-lg);
@@ -77,11 +77,11 @@
 	margin-bottom: 40px;
 }
 
-.featureCard {
+.feature-card {
 	background: var(--t-color-surface);
 	border-radius: var(--radius-lg);
 	padding: var(--space-xl) 20px;
-	box-shadow: 0 1px 3px oklch(0 0 0 / 0.08);
+	box-shadow: 0 1px 3px oklch(0% 0 0deg / 8%);
 	border: 1px solid var(--t-color-border);
 	transition:
 		transform 0.2s,
@@ -94,7 +94,7 @@
 	text-align: center;
 }
 
-.featureIcon {
+.feature-icon {
 	font-size: var(--text-xl);
 	margin-bottom: var(--space-md);
 }
@@ -106,48 +106,48 @@
 	line-height: 1.8;
 }
 
-@media (max-width: 640px) {
-	.heroTitle {
+@media (width <= 640px) {
+	.hero-title {
 		font-size: var(--text-xl);
 	}
 }
 
-@media (max-width: 640px) {
-	.heroSubtitle {
+@media (width <= 640px) {
+	.hero-subtitle {
 		font-size: var(--text-base);
 	}
 }
 
-.ctaPrimary:hover {
+.cta-primary:hover {
 	background: var(--t-color-accent-strong);
 }
 
-.ctaSecondary:hover {
+.cta-secondary:hover {
 	background: var(--t-color-accent);
 	color: var(--t-color-white);
 }
 
-@media (max-width: 640px) {
-	.featureGrid {
+@media (width <= 640px) {
+	.feature-grid {
 		grid-template-columns: 1fr 1fr;
 		gap: var(--space-md);
 	}
 }
 
-.featureCard:hover {
+.feature-card:hover {
 	transform: translateY(-3px);
-	box-shadow: 0 8px 24px oklch(0 0 0 / 0.12);
+	box-shadow: 0 8px 24px oklch(0% 0 0deg / 12%);
 	text-decoration: none;
 }
 
-.featureCard h3 {
+.feature-card h3 {
 	font-size: var(--text-lg);
 	font-weight: 600;
 	color: var(--t-color-ink);
 	margin: 0 0 var(--space-sm) 0;
 }
 
-.featureCard p {
+.feature-card p {
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	margin: 0;

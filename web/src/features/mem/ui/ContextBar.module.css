@@ -1,14 +1,14 @@
 /* features/mem/ui/ContextBar.css.ts — 由 vanilla-extract 迁移 */
 
-.btnGhost {
-	composes: btnGhost from "../../../styles/base.module.css";
+.btn-ghost {
+	composes: btn-ghost from "../../../styles/base.module.css";
 }
 
-.btnPrimary {
-	composes: btnPrimary from "../../../styles/base.module.css";
+.btn-primary {
+	composes: btn-primary from "../../../styles/base.module.css";
 }
 
-.contextBar {
+.context-bar {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -20,13 +20,13 @@
 	flex-wrap: wrap;
 }
 
-.ctxStats {
+.ctx-stats {
 	display: flex;
 	align-items: center;
 	gap: var(--space-md);
 }
 
-.ctxStat {
+.ctx-stat {
 	font-size: var(--text-xs);
 	font-family: var(--t-font-mono);
 	color: var(--t-color-ink-faint);
@@ -34,14 +34,14 @@
 	font-variant-numeric: tabular-nums;
 }
 
-.ctxActions {
+.ctx-actions {
 	display: flex;
 	align-items: center;
 	gap: var(--space-xs);
 }
 
-@media (max-width: 600px) {
-	.contextBar {
+@media (width <= 600px) {
+	.context-bar {
 		padding-left: 12px;
 		padding-right: 12px;
 	}

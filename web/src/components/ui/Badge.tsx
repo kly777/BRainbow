@@ -15,8 +15,8 @@ type BadgeVariant =
 
 // vanilla-extract 命名导出不支持动态索引，用映射表
 const variantClass: Record<BadgeVariant, string> = {
-	default: styles.default_,
-	new: styles.new_,
+	default: styles.default,
+	new: styles.new,
 	learning: styles.learning,
 	review: styles.review,
 	relearning: styles.relearning,

@@ -1,12 +1,12 @@
 /* features/task/ui/EditTaskModal.css.ts — 由 vanilla-extract 迁移 */
 
-.editModal {
+.edit-modal {
 	display: flex;
 	flex-direction: column;
 	min-height: 420px;
 }
 
-.tabBar {
+.tab-bar {
 	display: flex;
 	gap: 0;
 	border-bottom: 2px solid var(--t-color-border);
@@ -32,12 +32,12 @@
 	gap: var(--space-xs);
 }
 
-.tabActive {
+.tab-active {
 	color: var(--t-color-accent);
 	border-bottom-color: var(--t-color-accent);
 }
 
-.tabCount {
+.tab-count {
 	font-size: var(--text-xs);
 	background: var(--t-color-accent-soft);
 	color: var(--t-color-accent);
@@ -46,7 +46,7 @@
 	font-weight: 600;
 }
 
-.tabContent {
+.tab-content {
 	padding: var(--space-lg) 0 0 0;
 	flex: 1;
 	overflow-y: auto;
@@ -62,19 +62,17 @@
 	min-width: 0;
 }
 
-.fieldLabel {
+.field-label {
 	font-size: var(--text-sm);
 	font-weight: 500;
 	color: var(--t-color-ink);
 }
 
-.fieldInput {
+.field-input {
+	/* 挂载点类（无样式，供 JS 引用） */
 }
 
-.fieldSelect {
-}
-
-.fieldTextarea {
+.field-textarea {
 	padding: var(--space-sm) 10px;
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
@@ -85,7 +83,7 @@
 	transition: border-color 0.15s;
 }
 
-.fieldRow {
+.field-row {
 	display: flex;
 	gap: var(--space-md);
 }
@@ -98,17 +96,17 @@
 	margin-bottom: var(--space-md);
 }
 
-.presetsLabel {
+.presets-label {
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	flex-shrink: 0;
 }
 
-.presetBtn {
+.preset-btn {
 	padding: var(--space-xs) 10px;
 	font-size: var(--text-sm);
 	background: var(--t-color-success-subtle);
-	color: oklch(0.4 0.1 170);
+	color: oklch(40% 0.1 170deg);
 	border: 1px solid var(--t-color-success-subtle);
 	border-radius: var(--radius-sm);
 	cursor: pointer;
@@ -116,7 +114,7 @@
 	white-space: nowrap;
 }
 
-.addTimeBlock {
+.add-time-block {
 	background: var(--t-color-bg);
 	border: 1px dashed var(--t-color-border);
 	border-radius: var(--radius-md);
@@ -124,7 +122,7 @@
 	margin-bottom: var(--space-md);
 }
 
-.addBtn {
+.add-btn {
 	padding: var(--space-xs) 14px;
 	background: var(--t-color-accent);
 	color: var(--t-color-white);
@@ -137,32 +135,32 @@
 	margin-top: 4px;
 }
 
-.sectionHeader {
+.section-header {
 	display: flex;
 	align-items: baseline;
 	gap: var(--space-sm);
 	margin-bottom: var(--space-sm);
 }
 
-.sectionTitle {
+.section-title {
 	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--t-color-ink);
 }
 
-.sectionHint {
+.section-hint {
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
 }
 
-.timeList {
+.time-list {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-xs);
 	margin-bottom: 4px;
 }
 
-.timeItem {
+.time-item {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -173,12 +171,12 @@
 	font-size: var(--text-sm);
 }
 
-.timeItemText {
+.time-item-text {
 	color: var(--t-color-ink);
 	flex: 1;
 }
 
-.timeDelete {
+.time-delete {
 	background: none;
 	border: none;
 	color: var(--t-color-danger);
@@ -189,14 +187,14 @@
 	flex-shrink: 0;
 }
 
-.emptyMsg {
+.empty-msg {
 	color: var(--t-color-border);
 	font-size: var(--text-sm);
 	padding: var(--space-md) 0;
 	text-align: center;
 }
 
-.errorMsg {
+.error-msg {
 	color: var(--t-color-danger);
 	font-size: var(--text-sm);
 	margin-top: 6px;
@@ -205,14 +203,14 @@
 	border-radius: var(--radius-sm);
 }
 
-.depList {
+.dep-list {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-xs);
 	margin-bottom: var(--space-md);
 }
 
-.depItem {
+.dep-item {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -222,7 +220,7 @@
 	border-radius: var(--radius-md);
 }
 
-.depInfo {
+.dep-info {
 	display: flex;
 	align-items: center;
 	gap: var(--space-sm);
@@ -230,7 +228,7 @@
 	min-width: 0;
 }
 
-.depTitle {
+.dep-title {
 	font-size: var(--text-sm);
 	color: var(--t-color-ink);
 	overflow: hidden;
@@ -238,7 +236,7 @@
 	white-space: nowrap;
 }
 
-.depStatus {
+.dep-status {
 	font-size: var(--text-xs);
 	padding: var(--space-xs) 6px;
 	border-radius: var(--radius-sm);
@@ -246,27 +244,27 @@
 	flex-shrink: 0;
 }
 
-.depStatusBacklog {
+.dep-status-backlog {
 	background: var(--t-color-border);
 	color: var(--t-color-ink-muted);
 }
 
-.depStatusActive {
+.dep-status-active {
 	background: var(--t-color-accent-soft);
 	color: var(--t-color-accent);
 }
 
-.depStatusCompleted {
+.dep-status-completed {
 	background: var(--t-color-success-subtle);
-	color: oklch(0.4 0.1 170);
+	color: oklch(40% 0.1 170deg);
 }
 
-.depStatusArchived {
+.dep-status-archived {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink-muted);
 }
 
-.depRemove {
+.dep-remove {
 	background: none;
 	border: none;
 	color: var(--t-color-danger);
@@ -277,7 +275,7 @@
 	flex-shrink: 0;
 }
 
-.addDepBlock {
+.add-dep-block {
 	margin-top: var(--space-md);
 	padding: var(--space-md);
 	background: var(--t-color-bg);
@@ -285,13 +283,13 @@
 	border-radius: var(--radius-md);
 }
 
-.addDepRow {
+.add-dep-row {
 	display: flex;
 	gap: var(--space-sm);
 	align-items: flex-end;
 }
 
-.cancelBtn {
+.cancel-btn {
 	padding: var(--space-sm) 18px;
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
@@ -303,7 +301,7 @@
 	transition: all 0.15s;
 }
 
-.saveBtn {
+.save-btn {
 	padding: var(--space-sm) 18px;
 	background: var(--t-color-success);
 	color: var(--t-color-white);
@@ -319,34 +317,34 @@
 	color: var(--t-color-ink);
 }
 
-.fieldTextarea:focus {
+.field-textarea:focus {
 	outline: none;
 	border-color: var(--t-color-accent);
 	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
 }
 
-.presetBtn:hover {
+.preset-btn:hover {
 	background: var(--t-color-success-subtle);
-	border-color: oklch(0.88 0.08 160);
+	border-color: oklch(88% 0.08 160deg);
 }
 
-.addBtn:hover {
+.add-btn:hover {
 	background: var(--t-color-accent-strong);
 }
 
-.addBtn:disabled {
+.add-btn:disabled {
 	background: var(--t-color-border);
 	cursor: not-allowed;
 }
 
-.cancelBtn:hover {
+.cancel-btn:hover {
 	background: var(--t-color-border);
 }
 
-.saveBtn:hover {
+.save-btn:hover {
 	background: var(--t-color-success);
 }
 
-.fieldRow > .field {
+.field-row > .field {
 	flex: 1;
 }

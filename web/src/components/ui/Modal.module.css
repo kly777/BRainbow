@@ -1,9 +1,9 @@
 /* components/ui/Modal.css.ts — 由 vanilla-extract 迁移 */
 
-.modalOverlay {
+.modal-overlay {
 	position: fixed;
 	inset: 0;
-	background-color: oklch(0 0 0 / 0.5);
+	background-color: oklch(0% 0 0deg / 50%);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -11,11 +11,11 @@
 	padding: var(--space-xl);
 }
 
-.modalContent {
+.modal-content {
 	background-color: var(--t-color-surface);
 	border-radius: var(--radius-md);
 	border: 1px solid var(--t-color-border);
-	box-shadow: 0 var(--space-xs) 20px oklch(0 0 0 / 0.15);
+	box-shadow: 0 var(--space-xs) 20px oklch(0% 0 0deg / 15%);
 	max-width: 600px;
 	width: 100%;
 	max-height: 90vh;
@@ -24,7 +24,7 @@
 	overflow: hidden;
 }
 
-.modalHeader {
+.modal-header {
 	padding: var(--space-xl);
 	border-bottom: 1px solid var(--t-color-border);
 	display: flex;
@@ -32,14 +32,14 @@
 	justify-content: space-between;
 }
 
-.modalTitle {
+.modal-title {
 	margin: 0;
 	font-size: var(--text-lg);
 	font-weight: 600;
 	color: var(--t-color-ink);
 }
 
-.modalClose {
+.modal-close {
 	background: none;
 	border: none;
 	font-size: var(--text-xl);
@@ -58,13 +58,13 @@
 		color 0.2s;
 }
 
-.modalBody {
+.modal-body {
 	padding: var(--space-xl);
 	flex: 1;
 	overflow-y: auto;
 }
 
-.modalFooter {
+.modal-footer {
 	padding: var(--space-xl);
 	border-top: 1px solid var(--t-color-border);
 	display: flex;
@@ -72,25 +72,25 @@
 	gap: var(--space-sm);
 }
 
-.modalBodyContent {
+.modal-body-content {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-md);
 }
 
-.formGroup {
+.form-group {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-xs);
 }
 
-.formLabel {
+.form-label {
 	font-weight: 500;
 	color: var(--t-color-ink-muted);
 	font-size: var(--text-base);
 }
 
-.taskSelector {
+.task-selector {
 	width: 100%;
 	padding: var(--space-sm);
 	border: 1px solid var(--t-color-border);
@@ -99,11 +99,11 @@
 	background-color: var(--t-color-surface);
 }
 
-.taskOption {
+.task-option {
 	padding: var(--space-sm) 12px;
 }
 
-.infoBox {
+.info-box {
 	background-color: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
@@ -111,7 +111,7 @@
 	margin-top: 15px;
 }
 
-.emptyList {
+.empty-list {
 	text-align: center;
 	padding: var(--space-xl);
 	color: var(--t-color-ink-muted);
@@ -125,7 +125,7 @@
 	color: var(--t-color-ink-muted);
 }
 
-.loadingAfter {
+.loading-after {
 	content: "";
 	width: 20px;
 	height: 20px;
@@ -136,48 +136,48 @@
 	animation: spin 1s linear infinite;
 }
 
-.errorMessage {
+.error-message {
 	background-color: var(--t-color-danger-subtle);
-	color: oklch(0.3 0.07 28);
+	color: oklch(30% 0.07 28deg);
 	padding: var(--space-sm);
 	border-radius: var(--radius-sm);
-	border: 1px solid oklch(0.88 0.04 28);
+	border: 1px solid oklch(88% 0.04 28deg);
 }
 
-.successMessage {
+.success-message {
 	background-color: var(--t-color-success-subtle);
-	color: oklch(0.3 0.07 160);
+	color: oklch(30% 0.07 160deg);
 	padding: var(--space-sm);
 	border-radius: var(--radius-sm);
 	border: 1px solid var(--t-color-success-subtle);
 }
 
-.modalClose:hover {
+.modal-close:hover {
 	background-color: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
 }
 
-.taskSelector:focus {
+.task-selector:focus {
 	outline: none;
 	border-color: var(--t-color-accent);
 	box-shadow: 0 0 0 3px var(--t-color-accent-soft);
 }
 
-.infoBox p {
+.info-box p {
 	margin-bottom: var(--space-sm);
 	font-weight: 500;
 }
 
-.infoBox ul {
+.info-box ul {
 	margin: 0;
 	padding-left: 20px;
 	color: var(--t-color-ink-muted);
 }
 
-.infoBox li {
+.info-box li {
 	margin-bottom: 4px;
 }
 
-.emptyList p {
+.empty-list p {
 	margin-bottom: var(--space-sm);
 }

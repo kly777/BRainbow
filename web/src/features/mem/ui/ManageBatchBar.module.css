@@ -1,6 +1,6 @@
 /* features/mem/ui/ManageBatchBar.css.ts — 由 vanilla-extract 迁移 */
 
-.batchBar {
+.batch-bar {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -15,25 +15,25 @@
 		padding 0.2s ease;
 }
 
-.batchBarVisible {
+.batch-bar-visible {
 	max-height: 56px;
 	padding: var(--space-sm) 20px;
 	border-bottom-color: var(--t-color-border);
 }
 
-.batchCount {
+.batch-count {
 	font-size: 12px;
 	font-family: var(--t-font-mono);
 	color: var(--t-color-accent-strong);
 	font-variant-numeric: tabular-nums;
 }
 
-.batchActions {
+.batch-actions {
 	display: flex;
 	gap: var(--space-xs);
 }
 
-.batchBtn {
+.batch-btn {
 	font-size: var(--text-sm);
 	color: var(--t-color-ink);
 	background: var(--t-color-surface);
@@ -43,7 +43,7 @@
 	cursor: pointer;
 }
 
-.batchBtnDanger {
+.batch-btn-danger {
 	font-size: var(--text-sm);
 	color: var(--t-color-white);
 	background: var(--t-color-danger);
@@ -53,10 +53,10 @@
 	cursor: pointer;
 }
 
-.batchBtn:hover {
+.batch-btn:hover {
 	background: var(--t-color-surface-raised);
 }
 
-.batchBtnDanger:hover {
+.batch-btn-danger:hover {
 	filter: brightness(0.92);
 }

@@ -7,7 +7,7 @@
 	animation: fadeIn 0.2s ease-out;
 }
 
-.topBar {
+.top-bar {
 	display: flex;
 	align-items: center;
 	gap: var(--space-md);
@@ -15,7 +15,7 @@
 	border-bottom: 1px solid var(--t-color-border);
 }
 
-.backLink {
+.back-link {
 	font-size: var(--text-sm);
 	color: var(--t-color-accent);
 	text-decoration: none;
@@ -29,13 +29,13 @@
 	margin: 0;
 }
 
-.searchBar {
+.search-bar {
 	display: flex;
 	gap: var(--space-sm);
 	padding: var(--space-lg) 20px;
 }
 
-.initialHint {
+.initial-hint {
 	padding: 0 20px var(--space-md);
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
@@ -60,7 +60,7 @@
 	border-bottom: none;
 }
 
-.tabActive {
+.tab-active {
 	padding: 6px 16px;
 	font-size: var(--text-sm);
 	border: 1px solid var(--t-color-border);
@@ -72,7 +72,7 @@
 	font-weight: 600;
 }
 
-.inputWrap {
+.input-wrap {
 	flex: 1;
 	position: relative;
 	display: flex;
@@ -90,7 +90,7 @@
 	outline: none;
 }
 
-.clearBtn {
+.clear-btn {
 	position: absolute;
 	right: 8px;
 	width: 22px;
@@ -134,7 +134,7 @@
 	gap: var(--space-md);
 }
 
-.spinnerWrap {
+.spinner-wrap {
 	display: flex;
 	justify-content: center;
 	padding: var(--space-xl);
@@ -161,7 +161,7 @@
 	color: inherit;
 }
 
-.itemTop {
+.item-top {
 	display: flex;
 	gap: var(--space-sm);
 	margin-bottom: 6px;
@@ -176,7 +176,7 @@
 	font-weight: 500;
 }
 
-.tagType {
+.tag-type {
 	font-size: var(--text-xs);
 	padding: 2px 8px;
 	border-radius: var(--radius-sm);
@@ -184,7 +184,7 @@
 	color: var(--t-color-ink-muted);
 }
 
-.itemTitle {
+.item-title {
 	font-size: var(--text-base);
 	font-weight: 600;
 	color: var(--t-color-ink);
@@ -192,7 +192,7 @@
 	line-height: 1.4;
 }
 
-.itemSnippet {
+.item-snippet {
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	line-height: 1.5;
@@ -202,7 +202,7 @@
 	overflow: hidden;
 }
 
-.itemMeta {
+.item-meta {
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
 	margin-top: 6px;
@@ -215,7 +215,7 @@
 	font-size: var(--text-base);
 }
 
-.backLink:hover {
+.back-link:hover {
 	text-decoration: underline;
 }
 
@@ -227,7 +227,7 @@
 	border-color: var(--t-color-accent);
 }
 
-.clearBtn:hover {
+.clear-btn:hover {
 	opacity: 1;
 }
 
@@ -236,5 +236,5 @@
 }
 
 .item:hover {
-	box-shadow: 0 2px 8px oklch(0 0 0 / 0.08);
+	box-shadow: 0 2px 8px oklch(0% 0 0deg / 8%);
 }

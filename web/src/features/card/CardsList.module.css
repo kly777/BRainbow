@@ -49,10 +49,10 @@
 	margin: var(--space-xl) 0;
 }
 
-.modalOverlay {
+.modal-overlay {
 	position: fixed;
 	inset: 0;
-	background: oklch(0 0 0 / 0.5);
+	background: oklch(0% 0 0deg / 50%);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -67,11 +67,11 @@
 	max-width: 500px;
 	max-height: 90vh;
 	overflow-y: auto;
-	box-shadow: 0 var(--space-xs) 24px oklch(0 0 0 / 0.15);
+	box-shadow: 0 var(--space-xs) 24px oklch(0% 0 0deg / 15%);
 	animation: modalSlideIn 0.3s ease;
 }
 
-.modalHeader {
+.modal-header {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -79,11 +79,11 @@
 	border-bottom: 1px solid var(--t-color-border);
 }
 
-.modalContent {
+.modal-content {
 	padding: var(--space-xl);
 }
 
-.errorMessage {
+.error-message {
 	padding: var(--space-md) 16px;
 	background: var(--t-color-danger-subtle);
 	border: 1px solid var(--t-color-danger);
@@ -93,11 +93,11 @@
 	margin-bottom: var(--space-xl);
 }
 
-.formGroup {
+.form-group {
 	margin-bottom: var(--space-xl);
 }
 
-.formLabel {
+.form-label {
 	display: block;
 	font-size: 0.875rem;
 	font-weight: 500;
@@ -105,7 +105,7 @@
 	margin-bottom: var(--space-sm);
 }
 
-.formInput {
+.form-input {
 	width: 100%;
 	padding: var(--space-sm) 12px;
 	font-size: 0.875rem;
@@ -114,7 +114,7 @@
 	transition: all 0.2s ease;
 }
 
-.formTextarea {
+.form-textarea {
 	width: 100%;
 	padding: var(--space-sm) 12px;
 	font-size: 0.875rem;
@@ -126,7 +126,7 @@
 	line-height: 1.5;
 }
 
-.previewSection {
+.preview-section {
 	margin-top: var(--space-md);
 	padding: var(--space-md);
 	border: 1px solid var(--t-color-border);
@@ -134,7 +134,7 @@
 	background: var(--t-color-bg);
 }
 
-.previewLabel {
+.preview-label {
 	display: block;
 	font-size: 0.75rem;
 	color: var(--t-color-ink-faint);
@@ -143,7 +143,7 @@
 	letter-spacing: 0.5px;
 }
 
-.previewContent {
+.preview-content {
 	font-size: 0.875rem;
 	line-height: 1.6;
 	color: var(--t-color-ink);
@@ -161,12 +161,12 @@
 	font-size: var(--text-base);
 }
 
-.errorText {
+.error-text {
 	color: var(--t-color-danger);
 	margin-bottom: 10px;
 }
 
-.modalActions {
+.modal-actions {
 	display: flex;
 	justify-content: flex-end;
 	gap: var(--space-md);
@@ -174,79 +174,79 @@
 	border-top: 1px solid var(--t-color-border);
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
 	.container {
 		margin: 0 auto;
 		padding: var(--space-lg) 12px;
 	}
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
 	.header {
 		align-items: center;
 		gap: var(--space-lg);
 	}
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
 	.actions {
 		justify-content: flex-end;
 	}
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
 	.modal {
 		max-width: 100%;
 	}
 }
 
-@media (max-width: 768px) {
-	.modalHeader {
+@media (width <= 768px) {
+	.modal-header {
 		padding: var(--space-lg) 20px;
 	}
 }
 
-@media (max-width: 768px) {
-	.modalContent {
+@media (width <= 768px) {
+	.modal-content {
 		padding: var(--space-xl);
 	}
 }
 
-.formLabel::after {
+.form-label::after {
 	content: " *";
 	color: var(--t-color-danger);
 }
 
-.formInput:focus {
+.form-input:focus {
 	outline: none;
 	border-color: var(--t-color-accent);
 	box-shadow: 0 0 0 3px var(--t-color-accent-soft);
 }
 
-.formInput:disabled {
+.form-input:disabled {
 	background: var(--t-color-surface-raised);
 	cursor: not-allowed;
 }
 
-.formTextarea:focus {
+.form-textarea:focus {
 	outline: none;
 	border-color: var(--t-color-accent);
 	box-shadow: 0 0 0 3px var(--t-color-accent-soft);
 }
 
-.formTextarea:disabled {
+.form-textarea:disabled {
 	background: var(--t-color-surface-raised);
 	cursor: not-allowed;
 }
 
-@media (max-width: 768px) {
-	.modalActions {
+@media (width <= 768px) {
+	.modal-actions {
 		padding: var(--space-lg) 20px;
 	}
 }
 
-@media (max-width: 480px) {
-	.modalActions {
+@media (width <= 480px) {
+	.modal-actions {
 		flex-direction: column;
 	}
 }
@@ -263,17 +263,17 @@
 	margin-bottom: var(--space-lg);
 }
 
-.modalHeader h2 {
+.modal-header h2 {
 	font-size: 1.25rem;
 	font-weight: 600;
 	color: var(--t-color-ink);
 	margin: 0;
 }
 
-.previewContent p {
+.preview-content p {
 	margin: 0 0 var(--space-sm);
 }
 
-.previewContent p:last-child {
+.preview-content p:last-child {
 	margin-bottom: 0;
 }

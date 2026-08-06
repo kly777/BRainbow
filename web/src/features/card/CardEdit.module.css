@@ -8,7 +8,7 @@
 	flex-direction: column;
 }
 
-.errorMsg {
+.error-msg {
 	padding: var(--space-sm) 16px;
 	background: var(--t-color-danger-subtle);
 	color: var(--t-color-danger);

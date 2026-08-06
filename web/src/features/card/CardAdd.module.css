@@ -8,7 +8,7 @@
 	flex-direction: column;
 }
 
-.errorMsg {
+.error-msg {
 	padding: var(--space-sm) 16px;
 	background: var(--t-color-danger-subtle);
 	color: var(--t-color-danger);
@@ -16,7 +16,7 @@
 	border-bottom: 1px solid var(--t-color-danger);
 }
 
-.editorArea {
+.editor-area {
 	flex: 1;
 	display: flex;
 	min-height: 0;

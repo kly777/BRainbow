@@ -17,7 +17,7 @@
 	padding: 40px 0;
 }
 
-.errorText {
+.error-text {
 	color: var(--t-color-danger);
 	margin-bottom: var(--space-md);
 }
@@ -39,7 +39,7 @@
 	transition: background 0.12s;
 }
 
-.itemTitle {
+.item-title {
 	font-size: 0.85rem;
 	font-weight: 500;
 	color: var(--t-color-ink);
@@ -51,7 +51,7 @@
 	text-overflow: ellipsis;
 }
 
-.itemUrl {
+.item-url {
 	font-size: 0.72rem;
 	color: var(--t-color-ink-muted);
 	flex: 0 1 auto;
@@ -61,7 +61,7 @@
 	text-overflow: ellipsis;
 }
 
-.itemDesc {
+.item-desc {
 	font-size: 0.9rem;
 	color: var(--t-color-ink);
 	margin-top: 6px;
@@ -71,14 +71,14 @@
 	overflow: hidden;
 }
 
-.itemActions {
+.item-actions {
 	display: flex;
 	align-items: center;
 	gap: 2px;
 	flex-shrink: 0;
 }
 
-.itemTags {
+.item-tags {
 	flex: 0 0 auto;
 	max-width: 30%;
 	display: flex;
@@ -87,7 +87,7 @@
 	white-space: nowrap;
 }
 
-.itemTag {
+.item-tag {
 	border: none;
 	background: var(--t-color-accent-soft);
 	padding: 0 6px;
@@ -99,7 +99,7 @@
 	flex-shrink: 0;
 }
 
-.filterBar {
+.filter-bar {
 	display: flex;
 	align-items: center;
 	gap: var(--space-sm);
@@ -109,7 +109,7 @@
 	border-radius: var(--radius-md);
 }
 
-.filterLabel {
+.filter-label {
 	font-size: 0.9rem;
 	color: var(--t-color-accent);
 	font-weight: 600;
@@ -124,12 +124,12 @@
 	color: var(--t-color-ink-muted);
 }
 
-.paginationActions {
+.pagination-actions {
 	display: flex;
 	gap: var(--space-xs);
 }
 
-.formError {
+.form-error {
 	background: var(--t-color-danger-subtle);
 	color: var(--t-color-danger);
 	padding: 8px 12px;
@@ -138,18 +138,18 @@
 	font-size: 0.9rem;
 }
 
-.formGroup {
+.form-group {
 	margin-bottom: var(--space-md);
 }
 
-.formLabel {
+.form-label {
 	display: block;
 	font-size: 0.85rem;
 	color: var(--t-color-ink-muted);
 	margin-bottom: 4px;
 }
 
-.formInput {
+.form-input {
 	width: 100%;
 	padding: 8px 12px;
 	border: 1px solid var(--t-color-border);
@@ -159,7 +159,7 @@
 	color: var(--t-color-ink);
 }
 
-.formTextarea {
+.form-textarea {
 	width: 100%;
 	padding: 8px 12px;
 	border: 1px solid var(--t-color-border);
@@ -174,12 +174,12 @@
 	background: var(--t-color-bg);
 }
 
-.itemTitle:hover {
+.item-title:hover {
 	color: var(--t-color-accent);
 	text-decoration: underline;
 }
 
-.itemTag:hover {
+.item-tag:hover {
 	text-decoration: underline;
 }
 
@@ -189,6 +189,6 @@
 	flex: 1;
 }
 
-.itemActions button:last-child {
+.item-actions button:last-child {
 	color: var(--t-color-danger);
 }

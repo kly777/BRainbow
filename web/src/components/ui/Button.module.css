@@ -63,13 +63,13 @@
 	line-height: 1;
 }
 
-.btn:active:not(:disabled) {
-	transform: scale(0.97);
-}
-
 .btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
+}
+
+.btn:active:not(:disabled) {
+	transform: scale(0.97);
 }
 
 .primary:hover:not(:disabled) {

@@ -1,6 +1,6 @@
 /* features/task/ui/TaskList.css.ts — 由 vanilla-extract 迁移 */
 
-.taskListPanel {
+.task-list-panel {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-xl);
@@ -9,10 +9,11 @@
 	overflow-y: auto;
 }
 
-.statusSection {
+.status-section {
+	/* 挂载点类（无样式，供 JS 引用） */
 }
 
-.statusTitle {
+.status-title {
 	margin: 0 0 var(--space-md);
 	font-size: var(--text-sm);
 	font-weight: 500;
@@ -24,7 +25,7 @@
 	gap: var(--space-sm);
 }
 
-.statusIndicator {
+.status-indicator {
 	width: 6px;
 	height: 6px;
 	border-radius: 50%;
@@ -32,28 +33,28 @@
 	flex-shrink: 0;
 }
 
-.statusBacklog {
+.status-backlog {
 	background: var(--t-color-border);
 }
 
-.statusActive {
+.status-active {
 	background: var(--t-color-accent);
 }
 
-.statusCompleted {
+.status-completed {
 	background: var(--t-color-success);
 }
 
-.statusArchived {
+.status-archived {
 	background: var(--t-color-border);
 }
 
-.taskList {
+.task-list {
 	display: flex;
 	flex-direction: column;
 }
 
-.taskItem {
+.task-item {
 	display: flex;
 	flex-direction: column;
 	padding: var(--space-lg) 0;
@@ -61,19 +62,19 @@
 	transition: background 0.15s ease;
 }
 
-.taskRow {
+.task-row {
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
 	gap: var(--space-xl);
 }
 
-.taskMain {
+.task-main {
 	flex: 1;
 	min-width: 0;
 }
 
-.taskTitle {
+.task-title {
 	margin: 0 0 var(--space-xs);
 	font-size: var(--text-base);
 	font-weight: 500;
@@ -82,33 +83,33 @@
 	letter-spacing: -0.01em;
 }
 
-.taskDescription {
+.task-description {
 	margin: 0 0 var(--space-sm);
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	line-height: 1.6;
 }
 
-.taskMeta {
+.task-meta {
 	display: flex;
 	gap: var(--space-md);
 	align-items: center;
 	flex-wrap: wrap;
 }
 
-.dateBadge {
+.date-badge {
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 }
 
-.timeWindowChips {
+.time-window-chips {
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--space-xs);
 	margin-top: 6px;
 }
 
-.timeWindowChip {
+.time-window-chip {
 	font-size: var(--text-xs);
 	padding: var(--space-xs) 8px;
 	border-radius: var(--radius-sm);
@@ -118,7 +119,7 @@
 	white-space: nowrap;
 }
 
-.subTaskBadge {
+.sub-task-badge {
 	margin-left: 8px;
 	padding: var(--space-xs);
 	border-radius: var(--radius-sm);
@@ -129,28 +130,29 @@
 	vertical-align: middle;
 }
 
-.taskActions {
+.task-actions {
 	display: flex;
 	gap: var(--space-xs);
 	align-items: center;
 	flex-shrink: 0;
 }
 
-.statusSelect {
+.status-select {
 	padding: var(--space-xs) 24px var(--space-xs) 10px;
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	font-size: var(--text-sm);
 	color: var(--t-color-ink);
-	background: var(--t-color-surface) selectArrow no-repeat right 8px center;
+	background: var(--t-color-surface)
+		url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239ca3af' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")
+		no-repeat right 8px center;
 	cursor: pointer;
 	outline: none;
 	transition: border-color 0.15s;
 	appearance: none;
-	-webkit-appearance: none;
 }
 
-.editButton {
+.edit-button {
 	padding: var(--space-xs) 10px;
 	background: none;
 	color: var(--t-color-ink-muted);
@@ -161,7 +163,7 @@
 	transition: all 0.15s;
 }
 
-.subTaskButton {
+.sub-task-button {
 	padding: var(--space-xs) 10px;
 	background: none;
 	color: var(--t-color-ink-muted);
@@ -174,7 +176,7 @@
 	line-height: 1.4;
 }
 
-.deleteButton {
+.delete-button {
 	padding: var(--space-xs) 10px;
 	background: none;
 	color: var(--t-color-ink-muted);
@@ -185,7 +187,7 @@
 	transition: all 0.15s;
 }
 
-.subTaskForm {
+.sub-task-form {
 	display: flex;
 	gap: var(--space-sm);
 	align-items: center;
@@ -194,7 +196,7 @@
 	border-top: 1px solid var(--t-color-surface-raised);
 }
 
-.subTaskInput {
+.sub-task-input {
 	flex: 1;
 	padding: var(--space-sm) var(--space-md);
 	border: 1px solid var(--t-color-border);
@@ -205,7 +207,7 @@
 	transition: border-color 0.15s;
 }
 
-.subTaskCancel {
+.sub-task-cancel {
 	padding: var(--space-sm) var(--space-md);
 	background: none;
 	color: var(--t-color-ink-muted);
@@ -217,7 +219,7 @@
 	transition: all 0.15s;
 }
 
-.childList {
+.child-list {
 	display: flex;
 	flex-direction: column;
 	margin-top: 0;
@@ -226,71 +228,71 @@
 	border-left: 2px solid var(--t-color-surface-raised);
 }
 
-.childItem {
+.child-item {
 	padding: var(--space-md) 0;
 }
 
-.taskItem:first-child {
+.task-item:first-child {
 	border-top: 1px solid var(--t-color-surface-raised);
 }
 
-.taskItem:hover {
+.task-item:hover {
 	background: var(--t-color-surface);
 }
 
-@media (max-width: 768px) {
-	.taskRow {
+@media (width <= 768px) {
+	.task-row {
 		flex-direction: column;
 		gap: var(--space-sm);
 	}
 }
 
-@media (max-width: 768px) {
-	.taskActions {
+@media (width <= 768px) {
+	.task-actions {
 		width: 100%;
 		justify-content: flex-end;
 	}
 }
 
-.statusSelect:hover {
+.status-select:hover {
 	border-color: var(--t-color-border);
 }
 
-.statusSelect:focus {
+.status-select:focus {
 	border-color: var(--t-color-accent);
 	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
 }
 
-.editButton:hover {
+.edit-button:hover {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
 }
 
-.subTaskButton:hover {
+.sub-task-button:hover {
 	background: var(--t-color-bg);
 	color: var(--t-color-ink);
 	border-color: var(--t-color-border);
 }
 
-.deleteButton:hover {
+.delete-button:hover {
 	background: var(--t-color-danger-subtle);
 	color: var(--t-color-danger);
 }
 
-.subTaskInput:focus {
+.sub-task-input:focus {
 	border-color: var(--t-color-accent);
 	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
 }
 
-.subTaskInput::placeholder {
+.sub-task-input::placeholder {
 	color: var(--t-color-border);
 }
 
-.subTaskCancel:hover {
+.sub-task-cancel:hover {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
 }
 
-.childList > .taskItem {
+.child-list > .task-item {
 	padding: var(--space-md) 0;
 }

@@ -1,6 +1,6 @@
 /* features/card/ui/CardMasonry.css.ts — 由 vanilla-extract 迁移 */
 
-.cardsGrid {
+.cards-grid {
 	padding-top: 10px;
 	column-count: auto;
 	column-gap: var(--space-xl);
@@ -12,7 +12,7 @@
 	align-items: flex-start;
 }
 
-.loadingMore {
+.loading-more {
 	width: var(--masonry-column-width, 300px);
 	display: flex;
 	align-items: center;
@@ -22,7 +22,7 @@
 	padding: var(--space-xl);
 }
 
-.emptyState {
+.empty-state {
 	text-align: center;
 	padding: var(--space-xl);
 	background: var(--t-color-surface);
@@ -31,41 +31,41 @@
 	margin: var(--space-xl) 0;
 }
 
-@media (max-width: 1024px) {
-	.cardsGrid {
+@media (width <= 1024px) {
+	.cards-grid {
 		column-width: 260px;
 		column-gap: var(--space-lg);
 	}
 }
 
-@media (max-width: 768px) {
-	.cardsGrid {
+@media (width <= 768px) {
+	.cards-grid {
 		column-width: 240px;
 		column-gap: var(--space-md);
 	}
 }
 
-@media (max-width: 480px) {
-	.cardsGrid {
+@media (width <= 480px) {
+	.cards-grid {
 		column-width: auto;
 		column-gap: var(--space-md);
 	}
 }
 
-@media (max-width: 768px) {
-	.emptyState {
+@media (width <= 768px) {
+	.empty-state {
 		padding: var(--space-xl) 16px;
 	}
 }
 
-.cardsGrid > * {
+.cards-grid > * {
 	width: var(--masonry-column-width, 300px);
 	flex-grow: 1;
 	break-inside: avoid;
 	margin-bottom: var(--space-xl);
 }
 
-.emptyState p {
+.empty-state p {
 	font-size: 1rem;
 	color: var(--t-color-ink-muted);
 	margin-bottom: var(--space-xl);

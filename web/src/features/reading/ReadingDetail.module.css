@@ -28,12 +28,12 @@
 	gap: 16px;
 }
 
-.recommendBanner {
+.recommend-banner {
 	grid-column: 1;
 	display: block;
 	padding: 8px 16px;
-	background: oklch(0.95 0.05 250 / 0.5);
-	border: 1px solid oklch(0.85 0.08 250);
+	background: oklch(95% 0.05 250deg / 50%);
+	border: 1px solid oklch(85% 0.08 250deg);
 	border-radius: 8px;
 	font-size: 0.9rem;
 	color: var(--t-color-accent);
@@ -61,9 +61,9 @@
 	cursor: pointer;
 }
 
-.unknownWord {
+.unknown-word {
 	cursor: pointer;
-	text-decoration: underline wavy oklch(0.45 0.22 30) 1.5px;
+	text-decoration: underline wavy oklch(45% 0.22 30deg) 1.5px;
 	text-underline-offset: 3px;
 	font-weight: 600;
 }
@@ -80,38 +80,38 @@
 	max-height: calc(100vh - 120px);
 }
 
-.wordListArea {
+.word-list-area {
 	flex: 1;
 	overflow-y: auto;
 	min-height: 0;
 }
 
-.sidebarFooter {
+.sidebar-footer {
 	flex-shrink: 0;
 	padding-top: 10px;
 	border-top: 1px solid var(--t-color-border);
 	margin-top: 8px;
 }
 
-.uploadUnknownBtn {
+.upload-unknown-btn {
 	width: 100%;
 	margin-bottom: 10px;
 	padding: 6px 12px;
-	border: 1px solid oklch(0.45 0.22 30);
+	border: 1px solid oklch(45% 0.22 30deg);
 	border-radius: 6px;
 	background: transparent;
-	color: oklch(0.45 0.22 30);
+	color: oklch(45% 0.22 30deg);
 	font-size: 12px;
 	cursor: pointer;
 }
 
-.wordList {
+.word-list {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
 }
 
-.wordItem {
+.word-item {
 	display: flex;
 	align-items: center;
 	gap: 6px;
@@ -120,39 +120,39 @@
 	font-size: 0.9rem;
 }
 
-.wordName {
+.word-name {
 	flex: 1;
 }
 
-.knownWord {
+.known-word {
 	color: var(--t-color-ink-muted);
 	text-decoration: line-through;
 }
 
-.ignoredWordSidebar {
+.ignored-word-sidebar {
 	color: var(--t-color-ink-muted);
 	font-style: italic;
 }
 
-.knownIcon {
-	color: oklch(0.5 0.18 150);
+.known-icon {
+	color: oklch(50% 0.18 150deg);
 	font-size: 12px;
 	cursor: pointer;
 }
 
-.unknownIcon {
-	color: oklch(0.45 0.22 30);
+.unknown-icon {
+	color: oklch(45% 0.22 30deg);
 	font-size: 12px;
 	cursor: pointer;
 }
 
-.ignoredIcon {
+.ignored-icon {
 	color: var(--t-color-ink-muted);
 	font-size: 12px;
 	cursor: pointer;
 }
 
-.ignoreBtn {
+.ignore-btn {
 	border: none;
 	background: none;
 	cursor: pointer;
@@ -163,11 +163,11 @@
 	border-radius: 3px;
 }
 
-.notesSection {
+.notes-section {
 	margin-bottom: 4px;
 }
 
-.notesInput {
+.notes-input {
 	width: 100%;
 	box-sizing: border-box;
 	padding: 8px;
@@ -181,7 +181,7 @@
 	font-family: inherit;
 }
 
-.copyBtn {
+.copy-btn {
 	width: 100%;
 	margin-top: 8px;
 	padding: 8px 12px;
@@ -194,7 +194,7 @@
 	transition: background 0.15s;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
 	.page {
 		grid-template-columns: 1fr;
 	}
@@ -204,21 +204,21 @@
 	text-decoration: underline;
 }
 
-.recommendBanner:hover {
-	background: oklch(0.92 0.06 250 / 0.5);
+.recommend-banner:hover {
+	background: oklch(92% 0.06 250deg / 50%);
 }
 
 .word:hover {
-	background: oklch(0.92 0.03 200 / 0.25);
+	background: oklch(92% 0.03 200deg / 25%);
 	border-radius: 2px;
 }
 
-.unknownWord:hover {
-	background: oklch(0.92 0.05 30 / 0.2);
+.unknown-word:hover {
+	background: oklch(92% 0.05 30deg / 20%);
 	border-radius: 2px;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
 	.sidebar {
 		grid-column: 1;
 		grid-row: auto;
@@ -226,35 +226,35 @@
 	}
 }
 
-.uploadUnknownBtn:hover {
-	background: oklch(0.45 0.22 30);
+.upload-unknown-btn:hover {
+	background: oklch(45% 0.22 30deg);
 	color: var(--t-color-white);
 }
 
-.uploadUnknownBtn:disabled {
+.upload-unknown-btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
 
-.wordItem:hover {
+.word-item:hover {
 	background: var(--t-color-bg);
 }
 
-.wordItem:hover .ignoreBtn {
-	opacity: 1;
-}
-
-.ignoreBtn:hover {
+.ignore-btn:hover {
 	background: var(--t-color-bg);
 	color: var(--t-color-ink);
 }
 
-.notesInput:focus {
+.word-item:hover .ignore-btn {
+	opacity: 1;
+}
+
+.notes-input:focus {
 	outline: none;
 	border-color: var(--t-color-accent);
 }
 
-.copyBtn:hover {
+.copy-btn:hover {
 	background: var(--t-color-bg);
 }
 
@@ -268,7 +268,7 @@
 	font-size: 1rem;
 }
 
-.notesSection h3 {
+.notes-section h3 {
 	font-size: 0.95rem;
 	margin: 0 0 6px;
 }

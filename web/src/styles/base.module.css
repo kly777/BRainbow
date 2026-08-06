@@ -3,7 +3,7 @@
  * btnPrimary / btnGhost / btnNav / btnBack 通过 composes 复用 btnBase。
  */
 
-.btnBase {
+.btn-base {
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	background: transparent;
@@ -18,66 +18,66 @@
 }
 
 /* 实心主按钮 */
-.btnPrimary {
-	composes: btnBase;
+.btn-primary {
+	composes: btn-base;
 	color: var(--t-color-white);
 	background: var(--t-color-accent);
 	border: none;
 	font-weight: 500;
 }
 
-.btnPrimary:hover {
+.btn-primary:hover {
 	background: var(--t-color-accent-strong);
 }
 
-.btnPrimary:disabled {
+.btn-primary:disabled {
 	opacity: 0.5;
 	cursor: default;
 }
 
 /* 幽灵按钮（描边） */
-.btnGhost {
-	composes: btnBase;
+.btn-ghost {
+	composes: btn-base;
 }
 
-.btnGhost:hover {
+.btn-ghost:hover {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
 }
 
-.btnGhost:disabled {
+.btn-ghost:disabled {
 	opacity: 0.35;
 	cursor: default;
 }
 
 /* 导航/翻页大按钮（◀ ▶） */
-.btnNav {
-	composes: btnBase;
+.btn-nav {
+	composes: btn-base;
 	font-size: var(--text-lg);
 	line-height: 1;
 	padding: var(--space-xs) 12px;
 }
 
-.btnNav:hover:not(:disabled) {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
-
-.btnNav:disabled {
+.btn-nav:disabled {
 	opacity: 0.35;
 	cursor: default;
 }
 
+.btn-nav:hover:not(:disabled) {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
 /* 链接式返回按钮 */
-.btnBack {
-	composes: btnBase;
+.btn-back {
+	composes: btn-base;
 	border-color: var(--t-color-border);
 	text-decoration: none;
 	display: inline-block;
 	white-space: nowrap;
 }
 
-.btnBack:hover {
+.btn-back:hover {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
 }
@@ -85,7 +85,7 @@
 /* 底部胶囊条（fixed 贴底，桌面居中胶囊 / 移动全宽） */
 
 /* actionRow（显示答案前）与 ratings（显示答案后）共用，保证高度一致 */
-.bottomBar {
+.bottom-bar {
 	position: fixed;
 	bottom: 0;
 	left: 0;
@@ -109,10 +109,10 @@
 }
 
 /* 窄屏（≤600px）紧凑按钮：32px 高，紧凑内边距 */
-@media (max-width: 600px) {
-	.btnPrimary,
-	.btnGhost,
-	.btnNav {
+@media (width <= 600px) {
+	.btn-primary,
+	.btn-ghost,
+	.btn-nav {
 		padding: 0 10px;
 		font-size: 12px;
 		line-height: 1;
@@ -123,13 +123,13 @@
 		box-sizing: border-box;
 	}
 
-	.btnNav {
+	.btn-nav {
 		font-size: 16px;
 		padding-left: 11px;
 		padding-right: 11px;
 	}
 
-	.bottomBar {
+	.bottom-bar {
 		width: 100%;
 		gap: 4px;
 		padding: 0 12px;

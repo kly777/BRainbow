@@ -9,12 +9,12 @@
 	line-height: 1.2;
 }
 
-.default_ {
+.default {
 	background: var(--t-color-bg);
 	color: var(--t-color-ink-muted);
 }
 
-.new_ {
+.new {
 	background: var(--t-color-badge-new-bg);
 	color: var(--t-color-badge-new-text);
 }

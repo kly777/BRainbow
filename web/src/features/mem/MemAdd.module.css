@@ -1,15 +1,15 @@
 /* features/mem/MemAdd.css.ts — 由 vanilla-extract 迁移 */
 
 .cancel {
-	composes: btnGhost from "../../styles/base.module.css";
+	composes: btn-ghost from "../../styles/base.module.css";
 }
 
 .submit {
-	composes: btnPrimary from "../../styles/base.module.css";
+	composes: btn-primary from "../../styles/base.module.css";
 }
 
-.backLink {
-	composes: btnBack from "../../styles/base.module.css";
+.back-link {
+	composes: btn-back from "../../styles/base.module.css";
 }
 
 .page {
@@ -20,7 +20,7 @@
 	color: var(--t-color-ink);
 }
 
-.topBar {
+.top-bar {
 	display: flex;
 	align-items: center;
 	gap: var(--space-md);
@@ -41,7 +41,7 @@
 	flex: 1;
 }
 
-.modeTabs {
+.mode-tabs {
 	display: flex;
 	gap: 2px;
 	background: var(--t-color-bg);
@@ -50,7 +50,7 @@
 	padding: 2px;
 }
 
-.modeBtn {
+.mode-btn {
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	background: transparent;
@@ -61,7 +61,7 @@
 	white-space: nowrap;
 }
 
-.modeActive {
+.mode-active {
 	font-size: var(--text-sm);
 	color: var(--t-color-white);
 	background: var(--t-color-accent);
@@ -80,7 +80,7 @@
 	justify-content: center;
 }
 
-.cardWrap {
+.card-wrap {
 	width: 100%;
 	max-width: 640px;
 }
@@ -98,7 +98,7 @@
 	flex-direction: column;
 }
 
-.faceTab {
+.face-tab {
 	display: flex;
 	align-items: baseline;
 	justify-content: space-between;
@@ -108,7 +108,7 @@
 	background: var(--t-color-bg);
 }
 
-.faceTabText {
+.face-tab-text {
 	font-family: var(--t-font-display);
 	font-size: var(--text-xs);
 	font-weight: 600;
@@ -117,13 +117,13 @@
 	color: var(--t-color-ink);
 }
 
-.faceTabNo {
+.face-tab-no {
 	font-size: var(--text-xs);
 	font-family: var(--t-font-mono);
 	color: var(--t-color-ink-faint);
 }
 
-.faceBody {
+.face-body {
 	padding: var(--space-md);
 }
 
@@ -155,7 +155,7 @@
 	background: var(--t-color-bg);
 }
 
-.foldMark {
+.fold-mark {
 	font-size: 11px;
 	font-family: var(--t-font-mono);
 	letter-spacing: 0.2em;
@@ -169,14 +169,14 @@
 	margin-top: var(--space-lg);
 }
 
-.inputCard {
+.input-card {
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-lg);
 	padding: var(--space-md);
 }
 
-.fileBtn {
+.file-btn {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--space-sm);
@@ -191,7 +191,7 @@
 	transition: background 0.15s;
 }
 
-.fileInputHidden {
+.file-input-hidden {
 	position: absolute;
 	width: 1px;
 	height: 1px;
@@ -203,13 +203,13 @@
 	border: 0;
 }
 
-.importErrors {
+.import-errors {
 	font-size: var(--text-sm);
 	color: var(--t-color-badge-relearning-text);
 	margin: var(--space-sm) 0 0;
 }
 
-.previewCount {
+.preview-count {
 	font-size: 12px;
 	font-family: var(--t-font-mono);
 	color: var(--t-color-ink-faint);
@@ -224,48 +224,48 @@
 	gap: var(--space-md);
 }
 
-@media (max-width: 600px) {
-	.topBar {
+@media (width <= 600px) {
+	.top-bar {
 		padding-left: 12px;
 		padding-right: 12px;
 	}
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
 	.title {
 		font-size: var(--text-base);
 	}
 }
 
-@media (max-width: 600px) {
-	.modeTabs {
+@media (width <= 600px) {
+	.mode-tabs {
 		order: 3;
 		width: 100%;
 		justify-content: stretch;
 	}
 }
 
-.modeBtn:hover {
+.mode-btn:hover {
 	color: var(--t-color-ink);
 }
 
-@media (max-width: 600px) {
-	.modeBtn {
+@media (width <= 600px) {
+	.mode-btn {
 		flex: 1;
 		text-align: center;
 		padding: var(--space-xs) 6px;
 	}
 }
 
-@media (max-width: 600px) {
-	.modeActive {
+@media (width <= 600px) {
+	.mode-active {
 		flex: 1;
 		text-align: center;
 		padding: var(--space-xs) 6px;
 	}
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
 	.content {
 		padding-left: 12px;
 		padding-right: 12px;
@@ -277,6 +277,6 @@
 	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
 }
 
-.fileBtn:hover {
+.file-btn:hover {
 	background: var(--t-color-accent-strong);
 }

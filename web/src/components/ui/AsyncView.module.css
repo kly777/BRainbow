@@ -7,12 +7,12 @@
 	font-size: var(--text-base);
 }
 
-.errorText {
+.error-text {
 	color: var(--t-color-danger);
 	margin-bottom: 10px;
 }
 
-.retryBtn {
+.retry-btn {
 	padding: var(--space-xs) 16px;
 	background: var(--t-color-accent);
 	color: var(--t-color-white);
@@ -22,6 +22,6 @@
 	font-size: var(--text-sm);
 }
 
-.retryBtn:hover {
+.retry-btn:hover {
 	background: var(--t-color-accent-strong);
 }

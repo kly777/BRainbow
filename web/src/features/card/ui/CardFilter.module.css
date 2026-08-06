@@ -5,25 +5,25 @@
 	border-radius: var(--radius-lg);
 	padding: var(--space-md);
 	margin-bottom: var(--space-lg);
-	box-shadow: 0 1px 4px oklch(0 0 0 / 0.06);
+	box-shadow: 0 1px 4px oklch(0% 0 0deg / 6%);
 	border: 1px solid var(--t-color-border);
 }
 
-.filterRow {
+.filter-row {
 	display: flex;
 	align-items: center;
 	gap: var(--space-md);
 	flex-wrap: wrap;
 }
 
-.filterControls {
+.filter-controls {
 	display: flex;
 	gap: var(--space-md);
 	align-items: center;
 	flex-wrap: wrap;
 }
 
-.searchInput {
+.search-input {
 	flex: 1;
 	min-width: 0;
 	max-width: 220px;
@@ -38,14 +38,14 @@
 	outline: none;
 }
 
-.filterLabel {
+.filter-label {
 	font-size: 0.875rem;
 	font-weight: 500;
 	color: var(--t-color-ink);
 	white-space: nowrap;
 }
 
-.filterSelect {
+.filter-select {
 	padding: var(--space-sm) 12px;
 	font-size: 0.875rem;
 	border: 1px solid var(--t-color-border);
@@ -57,7 +57,7 @@
 	outline: none;
 }
 
-.sortButton {
+.sort-button {
 	padding: var(--space-sm) 12px;
 	font-size: 0.875rem;
 	background: transparent;
@@ -69,7 +69,7 @@
 	min-width: 40px;
 }
 
-.clearButton {
+.clear-button {
 	padding: var(--space-sm) 14px;
 	font-size: 0.875rem;
 	background: transparent;
@@ -82,56 +82,56 @@
 	flex-shrink: 0;
 }
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
 	.filters {
 		padding: var(--space-md);
 	}
 }
 
-.searchInput:focus {
+.search-input:focus {
 	border-color: var(--t-color-accent);
 	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
 }
 
-.searchInput::placeholder {
+.search-input::placeholder {
 	color: var(--t-color-ink-faint);
 }
 
-@media (max-width: 480px) {
-	.searchInput {
+@media (width <= 480px) {
+	.search-input {
 		font-size: 1.125rem;
 		padding: var(--space-sm) 14px;
 	}
 }
 
-.filterSelect:focus {
+.filter-select:focus {
 	border-color: var(--t-color-accent);
 }
 
-@media (max-width: 768px) {
-	.filterSelect {
+@media (width <= 768px) {
+	.filter-select {
 		width: 100%;
 	}
 }
 
-.sortButton:hover {
+.sort-button:hover {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
 }
 
-@media (max-width: 480px) {
-	.sortButton {
+@media (width <= 480px) {
+	.sort-button {
 		flex: 1;
 		text-align: center;
 	}
 }
 
-.clearButton:hover:not(:disabled) {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
-
-.clearButton:disabled {
+.clear-button:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
+}
+
+.clear-button:hover:not(:disabled) {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
 }

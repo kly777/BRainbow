@@ -13,13 +13,13 @@
 	margin-bottom: var(--space-lg);
 }
 
-.unknownLink {
+.unknown-link {
 	font-size: 0.9rem;
 	color: var(--t-color-accent);
 	text-decoration: none;
 }
 
-.uploadBtn {
+.upload-btn {
 	padding: 8px 16px;
 	background: var(--t-color-accent);
 	color: var(--t-color-white);
@@ -33,7 +33,7 @@
 .overlay {
 	position: fixed;
 	inset: 0;
-	background: oklch(0 0 0 / 0.4);
+	background: oklch(0% 0 0deg / 40%);
 	z-index: 100;
 }
 
@@ -48,7 +48,7 @@
 	z-index: 101;
 	width: 90%;
 	max-width: 600px;
-	box-shadow: 0 8px 32px oklch(0 0 0 / 0.15);
+	box-shadow: 0 8px 32px oklch(0% 0 0deg / 15%);
 	border: 1px solid var(--t-color-border);
 }
 
@@ -74,14 +74,14 @@
 	color: var(--t-color-ink);
 }
 
-.modalActions {
+.modal-actions {
 	display: flex;
 	gap: 8px;
 	justify-content: flex-end;
 	margin-top: 16px;
 }
 
-.cancelBtn {
+.cancel-btn {
 	color: var(--t-color-ink-muted);
 	padding: 8px 16px;
 	border: 1px solid var(--t-color-border);
@@ -90,7 +90,7 @@
 	cursor: pointer;
 }
 
-.submitBtn {
+.submit-btn {
 	padding: 8px 16px;
 	background: var(--t-color-accent);
 	color: var(--t-color-white);
@@ -119,13 +119,13 @@
 		box-shadow 0.15s;
 }
 
-.cardTitle {
+.card-title {
 	font-size: 1.05rem;
 	font-weight: 600;
 	margin-bottom: 6px;
 }
 
-.cardMeta {
+.card-meta {
 	display: flex;
 	gap: 16px;
 	font-size: 0.85rem;
@@ -133,13 +133,14 @@
 }
 
 .ratio {
+	/* 挂载点类（无样式，供 JS 引用） */
 }
 
-.unknownCount {
+.unknown-count {
 	color: var(--t-color-ink-muted);
 }
 
-.barOuter {
+.bar-outer {
 	margin-top: 8px;
 	height: 4px;
 	background: var(--t-color-bg);
@@ -147,7 +148,7 @@
 	overflow: hidden;
 }
 
-.barInner {
+.bar-inner {
 	height: 100%;
 	background: var(--t-color-accent);
 	border-radius: 2px;
@@ -160,15 +161,15 @@
 	padding: 40px 0;
 }
 
-.unknownLink:hover {
+.unknown-link:hover {
 	text-decoration: underline;
 }
 
-.uploadBtn:hover {
+.upload-btn:hover {
 	opacity: 0.9;
 }
 
-.submitBtn:disabled {
+.submit-btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
@@ -179,15 +180,15 @@
 }
 
 .ratio[data-known="high"] {
-	color: oklch(0.5 0.18 150);
+	color: oklch(50% 0.18 150deg);
 }
 
 .ratio[data-known="mid"] {
-	color: oklch(0.55 0.16 80);
+	color: oklch(55% 0.16 80deg);
 }
 
 .ratio[data-known="low"] {
-	color: oklch(0.45 0.22 30);
+	color: oklch(45% 0.22 30deg);
 }
 
 .header h1 {

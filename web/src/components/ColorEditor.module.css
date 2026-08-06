@@ -15,7 +15,7 @@
 	margin-bottom: var(--space-md);
 }
 
-.colorRow {
+.color-row {
 	display: flex;
 	align-items: center;
 	gap: var(--space-sm);
@@ -41,7 +41,7 @@
 	flex-shrink: 0;
 }
 
-.segBtn {
+.seg-btn {
 	padding: var(--space-xs) 10px;
 	font-size: var(--text-sm);
 	border: none;
@@ -51,7 +51,7 @@
 	color: var(--t-color-ink-muted);
 }
 
-.segActive {
+.seg-active {
 	border-radius: var(--radius-md);
 	padding: var(--space-xs) 10px;
 	font-size: var(--text-sm);
@@ -69,7 +69,7 @@
 	gap: var(--space-xs);
 }
 
-.rangeHint {
+.range-hint {
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
 	white-space: nowrap;
@@ -77,7 +77,7 @@
 	flex-shrink: 0;
 }
 
-.removeBtn {
+.remove-btn {
 	margin-left: auto;
 	width: 26px;
 	height: 26px;
@@ -93,7 +93,7 @@
 	flex-shrink: 0;
 }
 
-.hexBase {
+.hex-base {
 	padding: var(--space-xs) 6px;
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
@@ -103,30 +103,30 @@
 	font-size: var(--text-sm);
 }
 
-.hexBase:focus {
+.hex-base:focus {
 	outline: none;
 	border-color: var(--t-color-accent);
 	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
 }
 
-.hexInput {
-	composes: hexBase;
+.hex-input {
+	composes: hex-base;
 	width: 68px;
 }
 
 .channel {
-	composes: hexBase;
+	composes: hex-base;
 	width: 58px;
 	text-align: right;
 }
 
 .channel::-webkit-inner-spin-button,
 .channel::-webkit-outer-spin-button {
-	-webkit-appearance: none;
+	appearance: none;
 	margin: 0;
 }
 
-.addBtn {
+.add-btn {
 	padding: var(--space-xs) 14px;
 	border: 1px dashed var(--t-color-border);
 	border-radius: var(--radius-md);
@@ -136,24 +136,24 @@
 	cursor: pointer;
 }
 
-.segBtn:hover {
+.seg-btn:hover {
 	background: var(--t-color-surface-raised);
 }
 
-.segBtn + .segBtn {
+.seg-btn + .seg-btn {
 	border-left: 1px solid var(--t-color-border);
 }
 
-.removeBtn:disabled {
+.remove-btn:disabled {
 	opacity: 0.35;
 	cursor: not-allowed;
 }
 
-.removeBtn:hover:not(:disabled) {
+.remove-btn:hover:not(:disabled) {
 	background: var(--t-color-danger-subtle);
 }
 
-.addBtn:hover {
+.add-btn:hover {
 	border-color: var(--t-color-accent);
 	color: var(--t-color-accent);
 	background: var(--t-color-accent-soft);

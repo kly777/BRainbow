@@ -34,7 +34,7 @@
 	background: var(--t-color-surface);
 }
 
-.wordMain {
+.word-main {
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
@@ -50,12 +50,12 @@
 	color: var(--t-color-ink-muted);
 }
 
-.knownBtn {
+.known-btn {
 	padding: 4px 12px;
-	border: 1px solid oklch(0.5 0.18 150);
+	border: 1px solid oklch(50% 0.18 150deg);
 	border-radius: 6px;
 	background: transparent;
-	color: oklch(0.5 0.18 150);
+	color: oklch(50% 0.18 150deg);
 	cursor: pointer;
 	font-size: 0.85rem;
 	font-weight: 600;
@@ -71,8 +71,8 @@
 	text-decoration: underline;
 }
 
-.knownBtn:hover {
-	background: oklch(0.5 0.18 150);
+.known-btn:hover {
+	background: oklch(50% 0.18 150deg);
 	color: var(--t-color-white);
 }
 

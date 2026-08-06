@@ -3,7 +3,7 @@
 .overlay {
 	position: fixed;
 	inset: 0;
-	background: oklch(0 0 0 / 0.5);
+	background: oklch(0% 0 0deg / 50%);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -15,7 +15,7 @@
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-lg);
-	box-shadow: 0 8px 32px oklch(0 0 0 / 0.15);
+	box-shadow: 0 8px 32px oklch(0% 0 0deg / 15%);
 	max-width: 420px;
 	width: 100%;
 	padding: var(--space-xl);
@@ -30,7 +30,7 @@
 	gap: var(--space-md);
 }
 
-.iconWrap {
+.icon-wrap {
 	flex-shrink: 0;
 	width: 36px;
 	height: 36px;
@@ -42,22 +42,22 @@
 	line-height: 1;
 }
 
-.iconDanger {
+.icon-danger {
 	background: var(--t-color-danger-subtle);
 	color: var(--t-color-danger);
 }
 
-.iconWarning {
+.icon-warning {
 	background: var(--t-color-warning-subtle);
 	color: var(--t-color-warning);
 }
 
-.iconInfo {
+.icon-info {
 	background: var(--t-color-accent-soft);
 	color: var(--t-color-accent);
 }
 
-.titleWrap {
+.title-wrap {
 	flex: 1;
 	min-width: 0;
 }
@@ -101,25 +101,25 @@
 	border: none;
 }
 
-.btnCancel {
+.btn-cancel {
 	background: var(--t-color-bg);
 	color: var(--t-color-ink-muted);
 	border: 1px solid var(--t-color-border);
 }
 
-.btnDanger {
+.btn-danger {
 	background: var(--t-color-danger);
-	color: oklch(1 0 0);
+	color: oklch(100% 0 0deg);
 }
 
-.btnWarning {
+.btn-warning {
 	background: var(--t-color-warning);
-	color: oklch(1 0 0);
+	color: oklch(100% 0 0deg);
 }
 
-.btnPrimary {
+.btn-primary {
 	background: var(--t-color-accent);
-	color: oklch(1 0 0);
+	color: oklch(100% 0 0deg);
 }
 
 .btn:focus-visible {
@@ -127,19 +127,19 @@
 	outline-offset: 2px;
 }
 
-.btnCancel:hover {
+.btn-cancel:hover {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
 }
 
-.btnDanger:hover {
-	background: oklch(0.48 0.18 25);
+.btn-danger:hover {
+	background: oklch(48% 0.18 25deg);
 }
 
-.btnWarning:hover {
-	background: oklch(0.52 0.14 85);
+.btn-warning:hover {
+	background: oklch(52% 0.14 85deg);
 }
 
-.btnPrimary:hover {
+.btn-primary:hover {
 	background: var(--t-color-accent-strong);
 }

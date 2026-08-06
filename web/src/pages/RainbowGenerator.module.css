@@ -27,20 +27,20 @@
 	border: 1px solid var(--t-color-border);
 }
 
-.exportBtns {
+.export-btns {
 	display: flex;
 	gap: var(--space-sm);
 	margin-bottom: var(--space-lg);
 }
 
-.renderLabel {
+.render-label {
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	display: block;
 	margin-bottom: var(--space-xs);
 }
 
-.renderMode {
+.render-mode {
 	margin-bottom: var(--space-lg);
 }
 
@@ -54,14 +54,14 @@
 	padding: var(--space-md) 16px;
 }
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
 	.page {
 		padding: var(--space-md);
 		gap: var(--space-md);
 	}
 }
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
 	.controls {
 		min-width: 0;
 		flex-basis: 100%;

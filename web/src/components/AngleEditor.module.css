@@ -9,6 +9,7 @@
 }
 
 .legend {
+	/* 挂载点类（无样式，供 JS 引用） */
 }
 
 .segmented {
@@ -19,7 +20,7 @@
 	margin-bottom: 10px;
 }
 
-.segBtn {
+.seg-btn {
 	padding: var(--space-xs) 14px;
 	font-size: var(--text-sm);
 	border: none;
@@ -29,7 +30,7 @@
 	color: var(--t-color-ink-muted);
 }
 
-.segActive {
+.seg-active {
 	border-radius: var(--radius-md);
 	padding: var(--space-xs) 14px;
 	font-size: var(--text-sm);
@@ -41,7 +42,7 @@
 	font-weight: 600;
 }
 
-.inputRow {
+.input-row {
 	display: flex;
 	align-items: center;
 	gap: var(--space-xs);
@@ -64,11 +65,11 @@
 	min-width: 24px;
 }
 
-.segBtn:hover {
+.seg-btn:hover {
 	background: var(--t-color-surface-raised);
 }
 
-.segBtn + .segBtn {
+.seg-btn + .seg-btn {
 	border-left: 1px solid var(--t-color-border);
 }
 
@@ -84,7 +85,7 @@
 	padding: 0 var(--space-xs);
 }
 
-.segActive + .segBtn,
-.segBtn + .segActive {
+.seg-active + .seg-btn,
+.seg-btn + .seg-active {
 	border-left-color: transparent;
 }

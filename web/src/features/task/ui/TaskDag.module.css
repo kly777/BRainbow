@@ -1,16 +1,16 @@
 /* features/task/ui/TaskDag.css.ts — 由 vanilla-extract 迁移 */
 
-.dagContainer {
+.dag-container {
 	background: var(--t-color-surface);
 	border-radius: var(--radius-lg);
-	box-shadow: 0 1px 3px oklch(0 0 0 / 0.1);
+	box-shadow: 0 1px 3px oklch(0% 0 0deg / 10%);
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
 	height: var(--cmp-height, 400px);
 }
 
-.dagToolbar {
+.dag-toolbar {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -21,21 +21,21 @@
 	gap: var(--space-md);
 }
 
-.dagTitle {
+.dag-title {
 	margin: 0;
 	font-size: var(--text-lg);
 	color: var(--t-color-ink);
 	font-weight: 600;
 }
 
-.dagControls {
+.dag-controls {
 	display: flex;
 	align-items: center;
 	gap: var(--space-sm);
 	flex-wrap: wrap;
 }
 
-.taskSelect {
+.task-select {
 	padding: var(--space-xs) 12px;
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
@@ -47,7 +47,7 @@
 	max-width: 200px;
 }
 
-.zoomBtn {
+.zoom-btn {
 	padding: var(--space-xs) 12px;
 	background: var(--t-color-surface-raised);
 	border: 1px solid var(--t-color-border);
@@ -61,20 +61,20 @@
 	text-align: center;
 }
 
-.canvasWrap {
+.canvas-wrap {
 	flex: 1;
 	position: relative;
 	overflow: hidden;
 	min-height: 0;
 }
 
-.dagCanvas {
+.dag-canvas {
 	width: 100%;
 	height: 100%;
 	display: block;
 }
 
-.emptyHint {
+.empty-hint {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -84,27 +84,27 @@
 	padding: var(--space-xl);
 }
 
-.hintP {
+.hint-p {
 	margin: 0 0 var(--space-sm) 0;
 	font-size: var(--text-base);
 }
 
-.hintSub {
+.hint-sub {
 	font-size: var(--text-sm);
 	color: var(--t-color-border);
 }
 
-.taskSelect:focus {
+.task-select:focus {
 	border-color: var(--t-color-accent);
 	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
 }
 
-.zoomBtn:hover {
+.zoom-btn:hover {
 	background: var(--t-color-border);
 	border-color: var(--t-color-ink-muted);
 }
 
-.emptyHint p {
+.empty-hint p {
 	margin: 0 0 var(--space-sm) 0;
 	font-size: var(--text-base);
 }

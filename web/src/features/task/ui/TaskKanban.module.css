@@ -23,7 +23,7 @@
 	transition: box-shadow 0.2s;
 }
 
-.columnHeader {
+.column-header {
 	display: flex;
 	align-items: center;
 	gap: var(--space-sm);
@@ -31,18 +31,18 @@
 	flex-shrink: 0;
 }
 
-.columnIcon {
+.column-icon {
 	font-size: var(--text-lg);
 }
 
-.columnLabel {
+.column-label {
 	font-size: var(--text-base);
 	font-weight: 600;
 	color: var(--t-color-ink);
 	flex: 1;
 }
 
-.columnCount {
+.column-count {
 	font-size: var(--text-sm);
 	font-weight: 700;
 	background: var(--t-color-border);
@@ -53,7 +53,7 @@
 	text-align: center;
 }
 
-.columnBody {
+.column-body {
 	flex: 1;
 	overflow-y: auto;
 	padding: 0 var(--space-md) var(--space-md);
@@ -62,7 +62,7 @@
 	gap: var(--space-sm);
 }
 
-.emptyCol {
+.empty-col {
 	text-align: center;
 	color: var(--t-color-ink-muted);
 	font-size: var(--text-sm);
@@ -79,7 +79,7 @@
 	background: var(--t-color-surface);
 	border-radius: var(--radius-md);
 	padding: var(--space-md);
-	box-shadow: 0 1px 2px oklch(0 0 0 / 0.06);
+	box-shadow: 0 1px 2px oklch(0% 0 0deg / 6%);
 	cursor: grab;
 	transition:
 		transform 0.12s,
@@ -87,14 +87,14 @@
 	border: 1px solid var(--t-color-border);
 }
 
-.cardTitle {
+.card-title {
 	display: flex;
 	align-items: flex-start;
 	gap: var(--space-xs);
 	margin-bottom: 4px;
 }
 
-.subBadge {
+.sub-badge {
 	font-size: var(--text-xs);
 	background: var(--t-color-accent-soft);
 	color: var(--t-color-accent);
@@ -105,7 +105,7 @@
 	line-height: 1.5;
 }
 
-.cardTitleText {
+.card-title-text {
 	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--t-color-ink);
@@ -116,7 +116,7 @@
 	-webkit-box-orient: vertical;
 }
 
-.cardDesc {
+.card-desc {
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	margin: 0 0 var(--space-sm) 0;
@@ -127,13 +127,13 @@
 	-webkit-box-orient: vertical;
 }
 
-.cardMeta {
+.card-meta {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 }
 
-.effortTag {
+.effort-tag {
 	font-size: var(--text-xs);
 	background: var(--t-color-accent-soft);
 	color: var(--t-color-accent);
@@ -142,20 +142,20 @@
 	font-weight: 500;
 }
 
-.cardDate {
+.card-date {
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
 }
 
-@media (max-width: 900px) {
+@media (width <= 900px) {
 	.board {
 		grid-template-columns: 1fr;
 		height: auto;
 	}
 }
 
-@media (max-width: 900px) {
-	.columnBody {
+@media (width <= 900px) {
+	.column-body {
 		max-height: 300px;
 	}
 }
@@ -166,5 +166,5 @@
 
 .card:hover {
 	transform: translateY(-1px);
-	box-shadow: 0 2px 6px oklch(0 0 0 / 0.1);
+	box-shadow: 0 2px 6px oklch(0% 0 0deg / 10%);
 }

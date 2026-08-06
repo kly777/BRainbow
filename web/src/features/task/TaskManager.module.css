@@ -1,6 +1,6 @@
 /* features/task/TaskManager.css.ts — 由 vanilla-extract 迁移 */
 
-.taskManager {
+.task-manager {
 	max-width: 1440px;
 	margin: 0 auto;
 	padding: var(--space-md) 16px;
@@ -19,7 +19,7 @@
 	flex-shrink: 0;
 }
 
-.viewSwitch {
+.view-switch {
 	display: flex;
 	gap: var(--space-xs);
 	background: var(--t-color-surface-raised);
@@ -28,7 +28,7 @@
 	flex-shrink: 0;
 }
 
-.viewBtn {
+.view-btn {
 	padding: var(--space-xs) 12px;
 	background: none;
 	border: none;
@@ -40,20 +40,20 @@
 	transition: all 0.15s;
 }
 
-.viewActive {
+.view-active {
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
-	box-shadow: 0 1px 2px oklch(0 0 0 / 0.06);
+	box-shadow: 0 1px 2px oklch(0% 0 0deg / 6%);
 }
 
-.searchBox {
+.search-box {
 	position: relative;
 	flex: 1;
 	min-width: 0;
 	max-width: 240px;
 }
 
-.searchInput {
+.search-input {
 	width: 100%;
 	padding: var(--space-xs) 24px var(--space-xs) var(--space-sm);
 	border: 1px solid var(--t-color-border);
@@ -64,7 +64,7 @@
 	box-sizing: border-box;
 }
 
-.searchClear {
+.search-clear {
 	position: absolute;
 	right: 4px;
 	top: 50%;
@@ -77,11 +77,11 @@
 	padding: var(--space-xs) 4px;
 }
 
-.quickAddBox {
+.quick-add-box {
 	flex-shrink: 0;
 }
 
-.quickAddInput {
+.quick-add-input {
 	padding: var(--space-xs) 10px;
 	border: 1px dashed var(--t-color-border);
 	border-radius: var(--radius-md);
@@ -94,7 +94,7 @@
 	transition: all 0.15s;
 }
 
-.quickAddFocus {
+.quick-add-focus {
 	width: 150px;
 }
 
@@ -105,7 +105,7 @@
 	font-size: var(--text-base);
 }
 
-.splitView {
+.split-view {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	gap: var(--space-lg);
@@ -114,7 +114,7 @@
 	min-height: 0;
 }
 
-.rightPanel {
+.right-panel {
 	min-height: 0;
 	overflow-y: auto;
 	display: flex;
@@ -122,7 +122,7 @@
 	gap: var(--space-sm);
 }
 
-.tabBar {
+.tab-bar {
 	display: flex;
 	gap: var(--space-xs);
 	background: var(--t-color-surface-raised);
@@ -131,7 +131,7 @@
 	flex-shrink: 0;
 }
 
-.tabBtn {
+.tab-btn {
 	flex: 1;
 	padding: var(--space-sm) var(--space-md);
 	background: transparent;
@@ -144,58 +144,58 @@
 	transition: all 0.15s;
 }
 
-.tabActive {
+.tab-active {
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
-	box-shadow: 0 1px 2px oklch(0 0 0 / 0.08);
+	box-shadow: 0 1px 2px oklch(0% 0 0deg / 8%);
 }
 
-@media (max-width: 768px) {
-	.taskManager {
+@media (width <= 768px) {
+	.task-manager {
 		margin: 0 auto;
 		padding: var(--space-sm) 12px;
 		gap: var(--space-sm);
 	}
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
 	.toolbar {
 		flex-wrap: wrap;
 	}
 }
 
-.viewBtn:hover {
+.view-btn:hover {
 	color: var(--t-color-ink);
 }
 
-.searchInput:focus {
+.search-input:focus {
 	border-color: var(--t-color-accent);
 	background: var(--t-color-surface);
 }
 
-.quickAddInput:focus {
+.quick-add-input:focus {
 	border-color: var(--t-color-success);
 	border-style: solid;
 	color: var(--t-color-ink);
 	width: 200px;
 }
 
-.quickAddInput::placeholder {
+.quick-add-input::placeholder {
 	color: var(--t-color-ink-muted);
 }
 
-@media (max-width: 768px) {
-	.quickAddInput {
+@media (width <= 768px) {
+	.quick-add-input {
 		width: 110px;
 	}
 }
 
-@media (max-width: 768px) {
-	.splitView {
+@media (width <= 768px) {
+	.split-view {
 		grid-template-columns: 1fr;
 	}
 }
 
-.tabBtn:hover {
+.tab-btn:hover {
 	color: var(--t-color-ink);
 }

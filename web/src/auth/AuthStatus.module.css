@@ -3,7 +3,7 @@
 .overlay {
 	position: fixed;
 	inset: 0;
-	background: oklch(0 0 0 / 0.5);
+	background: oklch(0% 0 0deg / 50%);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -19,7 +19,7 @@
 	gap: var(--space-md);
 	min-width: 300px;
 	max-width: 360px;
-	box-shadow: 0 8px 32px oklch(0 0 0 / 0.15);
+	box-shadow: 0 8px 32px oklch(0% 0 0deg / 15%);
 	border: 1px solid var(--t-color-border);
 }
 
@@ -53,7 +53,7 @@
 	gap: var(--space-sm);
 }
 
-.btnSubmit {
+.btn-submit {
 	padding: var(--space-sm) 0;
 	border: none;
 	border-radius: var(--radius-md);
@@ -64,7 +64,7 @@
 	cursor: pointer;
 }
 
-.btnLink {
+.btn-link {
 	background: none;
 	border: none;
 	color: var(--t-color-accent);
@@ -73,7 +73,7 @@
 	padding: var(--space-xs);
 }
 
-.btnCancel {
+.btn-cancel {
 	padding: var(--space-sm) 0;
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
@@ -88,14 +88,14 @@
 	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
 }
 
-.btnSubmit:hover {
+.btn-submit:hover {
 	background: var(--t-color-accent-strong);
 }
 
-.btnLink:hover {
+.btn-link:hover {
 	text-decoration: underline;
 }
 
-.btnCancel:hover {
+.btn-cancel:hover {
 	background: var(--t-color-bg);
 }

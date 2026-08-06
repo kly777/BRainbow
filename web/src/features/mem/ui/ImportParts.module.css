@@ -1,21 +1,21 @@
 /* features/mem/ui/ImportParts.css.ts — 由 vanilla-extract 迁移 */
 
 .cancel {
-	composes: btnGhost from "../../../styles/base.module.css";
+	composes: btn-ghost from "../../../styles/base.module.css";
 }
 
 .submit {
-	composes: btnPrimary from "../../../styles/base.module.css";
+	composes: btn-primary from "../../../styles/base.module.css";
 }
 
-.hintCard {
+.hint-card {
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-lg);
 	overflow: hidden;
 }
 
-.hintTab {
+.hint-tab {
 	display: flex;
 	align-items: center;
 	padding: var(--space-sm) var(--space-md);
@@ -23,7 +23,7 @@
 	background: var(--t-color-bg);
 }
 
-.hintTabText {
+.hint-tab-text {
 	font-family: var(--t-font-display);
 	font-size: var(--text-xs);
 	font-weight: 600;
@@ -32,21 +32,21 @@
 	color: var(--t-color-ink);
 }
 
-.hintBody {
+.hint-body {
 	padding: var(--space-md);
 }
 
-.hintLead {
+.hint-lead {
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	margin: 0 0 var(--space-sm);
 }
 
-.hintBlock {
+.hint-block {
 	margin-bottom: var(--space-md);
 }
 
-.hintName {
+.hint-name {
 	font-family: var(--t-font-display);
 	font-size: var(--text-sm);
 	font-weight: 600;
@@ -54,7 +54,7 @@
 	color: var(--t-color-ink);
 }
 
-.hintExample {
+.hint-example {
 	font-family: var(--t-font-mono);
 	font-size: 12px;
 	line-height: 1.6;
@@ -64,7 +64,7 @@
 	padding: var(--space-sm) var(--space-md);
 }
 
-.hintNote {
+.hint-note {
 	font-size: 11px;
 	color: var(--t-color-ink-faint);
 	margin: 0;
@@ -76,7 +76,7 @@
 	color: var(--t-color-ink-muted);
 }
 
-.textInput {
+.text-input {
 	width: 100%;
 	font-size: var(--text-sm);
 	color: var(--t-color-ink);
@@ -86,14 +86,14 @@
 	padding: var(--space-sm) 10px;
 }
 
-.previewCard {
+.preview-card {
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-lg);
 	overflow: hidden;
 }
 
-.previewTab {
+.preview-tab {
 	display: flex;
 	align-items: baseline;
 	justify-content: space-between;
@@ -102,7 +102,7 @@
 	background: var(--t-color-bg);
 }
 
-.previewTabText {
+.preview-tab-text {
 	font-family: var(--t-font-display);
 	font-size: var(--text-xs);
 	font-weight: 600;
@@ -111,24 +111,24 @@
 	color: var(--t-color-ink);
 }
 
-.previewTabNo {
+.preview-tab-no {
 	font-size: var(--text-xs);
 	font-family: var(--t-font-mono);
 	color: var(--t-color-accent);
 }
 
-.previewBody {
+.preview-body {
 	overflow-x: auto;
 	padding: var(--space-sm);
 }
 
-.previewTable {
+.preview-table {
 	width: 100%;
 	border-collapse: collapse;
 	font-size: var(--text-sm);
 }
 
-.previewTh {
+.preview-th {
 	text-align: left;
 	font-size: var(--text-xs);
 	font-family: var(--t-font-mono);
@@ -139,7 +139,7 @@
 	padding: 6px 8px;
 }
 
-.previewTd {
+.preview-td {
 	padding: 6px 8px;
 	border-bottom: 1px solid var(--t-color-border);
 	color: var(--t-color-ink);
@@ -149,7 +149,7 @@
 	white-space: nowrap;
 }
 
-.previewTag {
+.preview-tag {
 	display: inline-block;
 	font-size: var(--text-xs);
 	padding: 1px 6px;
@@ -159,34 +159,34 @@
 	color: var(--t-color-badge-new-text);
 }
 
-.previewCount {
+.preview-count {
 	font-size: 12px;
 	font-family: var(--t-font-mono);
 	color: var(--t-color-ink-faint);
 	margin: var(--space-sm) var(--space-md) 0;
 }
 
-.tagCard {
+.tag-card {
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-lg);
 	padding: var(--space-md);
 }
 
-.importErrors {
+.import-errors {
 	font-size: var(--text-sm);
 	color: var(--t-color-badge-relearning-text);
 	margin: var(--space-sm) 0 0;
 }
 
-.importErrorList {
+.import-error-list {
 	margin: var(--space-xs) 0 0;
 	padding-left: var(--space-lg);
 	font-size: var(--text-sm);
 	color: var(--t-color-badge-relearning-text);
 }
 
-.resultCard {
+.result-card {
 	width: 100%;
 	max-width: 480px;
 	background: var(--t-color-surface);
@@ -197,7 +197,7 @@
 	align-self: flex-start;
 }
 
-.resultMark {
+.result-mark {
 	width: 48px;
 	height: 48px;
 	margin: 0 auto var(--space-md);
@@ -208,18 +208,18 @@
 	line-height: 48px;
 }
 
-.resultTitle {
+.result-title {
 	font-family: var(--t-font-display);
 	font-size: var(--text-lg);
 	color: var(--t-color-ink);
 }
 
-.resultActions {
+.result-actions {
 	display: flex;
 	gap: var(--space-sm);
 	justify-content: center;
 }
 
-.hintBlock:last-child {
+.hint-block:last-child {
 	margin-bottom: 0;
 }

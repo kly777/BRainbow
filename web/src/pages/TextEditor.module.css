@@ -36,12 +36,12 @@
 	user-select: none;
 }
 
-.tabActive {
+.tab-active {
 	color: var(--t-color-ink);
 	border-bottom-color: var(--t-color-accent);
 }
 
-.renameInput {
+.rename-input {
 	width: 80px;
 	padding: var(--space-xs) 4px;
 	border: 1px solid var(--t-color-accent);
@@ -52,7 +52,7 @@
 	outline: none;
 }
 
-.closeBtn {
+.close-btn {
 	width: 18px;
 	height: 18px;
 	border: none;
@@ -68,7 +68,7 @@
 	line-height: 1;
 }
 
-.addBtn {
+.add-btn {
 	width: 28px;
 	height: 28px;
 	border: none;
@@ -106,17 +106,17 @@
 	outline-offset: -2px;
 }
 
-.closeBtn:hover {
+.close-btn:hover {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-danger);
 }
 
-.closeBtn:disabled {
+.close-btn:disabled {
 	opacity: 0.25;
 	cursor: not-allowed;
 }
 
-.addBtn:hover {
+.add-btn:hover {
 	background: var(--t-color-surface-raised);
 }
 

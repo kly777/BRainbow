@@ -1,26 +1,26 @@
 /* features/task/ui/TaskCalendar.css.ts — 由 vanilla-extract 迁移 */
 
-.calendarView {
+.calendar-view {
 	background: var(--t-color-surface);
 	border-radius: var(--radius-lg);
 	padding: var(--space-xl);
-	box-shadow: 0 1px 3px oklch(0 0 0 / 0.1);
+	box-shadow: 0 1px 3px oklch(0% 0 0deg / 10%);
 }
 
-.calendarHeader {
+.calendar-header {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 	margin-bottom: var(--space-xl);
 }
 
-.calendarTitle {
+.calendar-title {
 	margin: 0;
 	font-size: var(--text-xl);
 	color: var(--t-color-ink);
 }
 
-.navButton {
+.nav-button {
 	color: var(--t-color-ink);
 	padding: var(--space-sm) 16px;
 	background: var(--t-color-surface-raised);
@@ -31,7 +31,7 @@
 	transition: all 0.2s;
 }
 
-.calendarGrid {
+.calendar-grid {
 	display: grid;
 	grid-template-columns: repeat(7, 1fr);
 	gap: var(--space-xs);
@@ -41,7 +41,7 @@
 	overflow: hidden;
 }
 
-.dayHeader {
+.day-header {
 	background: var(--t-color-bg);
 	padding: var(--space-md);
 	text-align: center;
@@ -51,12 +51,14 @@
 }
 
 .today {
+	/* 挂载点类（无样式，供 JS 引用） */
 }
 
 .empty {
+	/* 挂载点类（无样式，供 JS 引用） */
 }
 
-.calendarDay {
+.calendar-day {
 	background: var(--t-color-surface);
 	min-height: 100px;
 	padding: var(--space-sm);
@@ -64,24 +66,24 @@
 	border-bottom: 1px solid var(--t-color-border);
 }
 
-.dayNumber {
+.day-number {
 	font-weight: 600;
 	color: var(--t-color-ink);
 	margin-bottom: var(--space-sm);
 	font-size: var(--text-base);
 }
 
-.dayNumberToday {
+.day-number-today {
 	color: var(--t-color-accent);
 }
 
-.dayTasks {
+.day-tasks {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-xs);
 }
 
-.dayTask {
+.day-task {
 	padding: var(--space-xs) 8px;
 	border-radius: var(--radius-sm);
 	font-size: var(--text-xs);
@@ -93,41 +95,41 @@
 	gap: var(--space-xs);
 }
 
-.eventTime {
+.event-time {
 	font-size: var(--text-xs);
 	opacity: 0.8;
 	flex-shrink: 0;
 }
 
-.typeFeasible {
+.type-feasible {
 	background: var(--t-color-border);
 	border-left: 3px solid var(--t-color-ink-muted);
 }
 
-.typePlanned {
+.type-planned {
 	background: var(--t-color-accent-soft);
 	border-left: 3px solid var(--t-color-accent);
 }
 
-.typeActual {
+.type-actual {
 	background: var(--t-color-success-subtle);
 	border-left: 3px solid var(--t-color-success);
 }
 
-.navButton:hover {
+.nav-button:hover {
 	background: var(--t-color-border);
 }
 
-.calendarDay.today {
+.calendar-day.today {
 	background: var(--t-color-accent-soft);
 	box-shadow: inset 0 0 0 2px var(--t-color-accent);
 	border-radius: var(--radius-sm);
 }
 
-.calendarDay.empty {
+.calendar-day.empty {
 	background: var(--t-color-bg);
 }
 
-.today .dayNumber {
+.today .day-number {
 	color: var(--t-color-accent);
 }

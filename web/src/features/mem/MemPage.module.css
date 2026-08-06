@@ -16,7 +16,7 @@
 	overflow: hidden;
 }
 
-.topBar {
+.top-bar {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -47,13 +47,13 @@
 	flex: 1;
 }
 
-.topRight {
+.top-right {
 	display: flex;
 	align-items: center;
 	gap: var(--space-md);
 }
 
-.iconBtn {
+.icon-btn {
 	color: var(--t-color-ink-muted);
 	background: none;
 	border: none;
@@ -63,7 +63,7 @@
 	opacity: 0.7;
 }
 
-.addLink {
+.add-link {
 	font-size: var(--text-sm);
 	color: var(--t-color-white);
 	text-decoration: none;
@@ -74,7 +74,7 @@
 	background: var(--t-color-accent);
 }
 
-.manageLink {
+.manage-link {
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	text-decoration: none;
@@ -83,7 +83,7 @@
 	border-radius: var(--radius-md);
 }
 
-.cardArea {
+.card-area {
 	flex: 1;
 	min-height: 0;
 	padding: var(--space-lg) 20px;
@@ -92,8 +92,8 @@
 	align-items: center;
 }
 
-@media (max-width: 600px) {
-	.topBar {
+@media (width <= 600px) {
+	.top-bar {
 		padding-left: 12px;
 		padding-right: 12px;
 	}
@@ -103,21 +103,21 @@
 	color: var(--t-color-ink);
 }
 
-.iconBtn:hover {
+.icon-btn:hover {
 	opacity: 1;
 }
 
-.addLink:hover {
+.add-link:hover {
 	background: var(--t-color-accent-strong);
 }
 
-.manageLink:hover {
+.manage-link:hover {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
 }
 
-@media (max-width: 600px) {
-	.cardArea {
+@media (width <= 600px) {
+	.card-area {
 		padding: var(--space-md) 12px;
 	}
 }

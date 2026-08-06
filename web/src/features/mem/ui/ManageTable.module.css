@@ -1,10 +1,10 @@
 /* features/mem/ui/ManageTable.css.ts — 由 vanilla-extract 迁移 */
 
-.pageBtn {
-	composes: btnNav from "../../../styles/base.module.css";
+.page-btn {
+	composes: btn-nav from "../../../styles/base.module.css";
 }
 
-.tableCard {
+.table-card {
 	flex: 1;
 	min-height: 0;
 	display: flex;
@@ -14,7 +14,7 @@
 	border-radius: var(--radius-lg);
 }
 
-.tableScroll {
+.table-scroll {
 	flex: 1;
 	min-height: 0;
 	overflow: auto;
@@ -27,14 +27,15 @@
 }
 
 .th {
+	/* 挂载点类（无样式，供 JS 引用） */
 }
 
-.thSort {
+.th-sort {
 	cursor: pointer;
 	user-select: none;
 }
 
-.thCb {
+.th-cb {
 	width: 32px;
 }
 
@@ -47,11 +48,11 @@
 	cursor: pointer;
 }
 
-.tdCb {
+.td-cb {
 	width: 32px;
 }
 
-.tdNum {
+.td-num {
 	font-family: var(--t-font-mono);
 	font-size: 12px;
 	color: var(--t-color-ink-muted);
@@ -59,7 +60,7 @@
 	font-variant-numeric: tabular-nums;
 }
 
-.tdDue {
+.td-due {
 	font-family: var(--t-font-mono);
 	font-size: 12px;
 	color: var(--t-color-ink-muted);
@@ -67,7 +68,7 @@
 	font-variant-numeric: tabular-nums;
 }
 
-.tdAct {
+.td-act {
 	width: 40px;
 	text-align: right;
 }
@@ -76,17 +77,17 @@
 	transition: background 0.1s;
 }
 
-.rowActive {
+.row-active {
 	background: var(--t-color-accent-soft);
 }
 
-.cellTags {
+.cell-tags {
 	display: flex;
 	gap: 4px;
 	flex-wrap: wrap;
 }
 
-.cellTag {
+.cell-tag {
 	font-size: 10px;
 	padding: 1px 6px;
 	border-radius: 999px;
@@ -95,7 +96,7 @@
 	white-space: nowrap;
 }
 
-.delBtn {
+.del-btn {
 	background: none;
 	border: none;
 	color: var(--t-color-ink-faint);
@@ -113,7 +114,7 @@
 	padding: var(--space-md) 0 var(--space-lg);
 }
 
-.pageInfo {
+.page-info {
 	font-size: 12px;
 	font-family: var(--t-font-mono);
 	color: var(--t-color-ink-faint);
@@ -126,7 +127,7 @@
 	color: var(--t-color-ink-faint);
 }
 
-.thSort:hover {
+.th-sort:hover {
 	color: var(--t-color-ink);
 }
 
@@ -134,11 +135,11 @@
 	background: var(--t-color-bg);
 }
 
-.rowActive:hover {
+.row-active:hover {
 	background: var(--t-color-accent-soft);
 }
 
-.delBtn:hover {
+.del-btn:hover {
 	color: var(--t-color-badge-relearning-text);
 	background: var(--t-color-badge-relearning-bg);
 }

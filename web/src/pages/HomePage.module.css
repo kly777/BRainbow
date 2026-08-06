@@ -1,6 +1,6 @@
 /* pages/HomePage.css.ts — 由 vanilla-extract 迁移 */
 
-.homePage {
+.home-page {
 	margin: 0 auto;
 	padding: var(--space-xl) 20px;
 	display: flex;
@@ -10,7 +10,7 @@
 	max-width: 1440px;
 }
 
-.moduleNav {
+.module-nav {
 	display: flex;
 	gap: var(--space-sm);
 	margin-bottom: var(--space-xl);
@@ -18,7 +18,7 @@
 	flex-wrap: wrap;
 }
 
-.moduleCard {
+.module-card {
 	padding: var(--space-xs) 16px;
 	border-radius: var(--radius-md);
 	background: var(--t-color-surface);
@@ -32,19 +32,19 @@
 		color 0.15s;
 }
 
-.moduleIcon {
+.module-icon {
 	display: none;
 }
 
-.moduleLabel {
+.module-label {
 	display: none;
 }
 
-.moduleDesc {
+.module-desc {
 	display: none;
 }
 
-.mainContent {
+.main-content {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	gap: var(--space-xl);
@@ -52,11 +52,11 @@
 	min-height: 0;
 }
 
-.dashboardSection {
+.dashboard-section {
 	background: var(--t-color-surface);
 	border-radius: var(--radius-lg);
 	padding: var(--space-xl);
-	box-shadow: 0 1px 3px oklch(0 0 0 / 0.08);
+	box-shadow: 0 1px 3px oklch(0% 0 0deg / 8%);
 	border: 1px solid var(--t-color-border);
 	display: flex;
 	flex-direction: column;
@@ -64,7 +64,7 @@
 	overflow: hidden;
 }
 
-.sectionHeader {
+.section-header {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -74,20 +74,20 @@
 	flex-shrink: 0;
 }
 
-.sectionTitle {
+.section-title {
 	font-size: var(--text-lg);
 	font-weight: 600;
 	color: var(--t-color-ink);
 	margin: 0;
 }
 
-.sectionActions {
+.section-actions {
 	display: flex;
 	gap: var(--space-md);
 	align-items: center;
 }
 
-.viewAllLink {
+.view-all-link {
 	color: var(--t-color-accent);
 	text-decoration: none;
 	font-size: var(--text-sm);
@@ -97,7 +97,7 @@
 	transition: all 0.2s ease;
 }
 
-.createLink {
+.create-link {
 	background-color: var(--t-color-accent);
 	color: var(--t-color-white);
 	text-decoration: none;
@@ -108,70 +108,70 @@
 	transition: background-color 0.2s ease;
 }
 
-.emptyState {
+.empty-state {
 	text-align: center;
 	padding: var(--space-xl) 20px;
 	color: var(--t-color-ink-muted);
 }
 
-.emptyHint {
+.empty-hint {
 	font-size: var(--text-sm);
 	opacity: 0.7;
 }
 
-@media (max-width: 768px) {
-	.homePage {
+@media (width <= 768px) {
+	.home-page {
 		padding: var(--space-lg) 12px;
 	}
 }
 
-.moduleCard:hover {
+.module-card:hover {
 	background: var(--t-color-accent-soft);
 	color: var(--t-color-accent);
 	border-color: var(--t-color-accent);
 	text-decoration: none;
 }
 
-@media (max-width: 1024px) {
-	.mainContent {
+@media (width <= 1024px) {
+	.main-content {
 		grid-template-columns: 1fr;
 	}
 }
 
-@media (max-width: 768px) {
-	.dashboardSection {
+@media (width <= 768px) {
+	.dashboard-section {
 		padding: var(--space-lg);
 	}
 }
 
-@media (max-width: 768px) {
-	.sectionHeader {
+@media (width <= 768px) {
+	.section-header {
 		flex-direction: column;
 		align-items: flex-start;
 		gap: var(--space-sm);
 	}
 }
 
-@media (max-width: 768px) {
-	.sectionActions {
+@media (width <= 768px) {
+	.section-actions {
 		width: 100%;
 		justify-content: space-between;
 	}
 }
 
-.viewAllLink:hover {
+.view-all-link:hover {
 	background-color: var(--t-color-accent-soft);
 }
 
-.createLink:hover {
+.create-link:hover {
 	background-color: var(--t-color-accent-strong);
 }
 
-.emptyState p {
+.empty-state p {
 	font-size: var(--text-base);
 	margin: 0 0 var(--space-sm) 0;
 }
 
-.emptyHint a {
+.empty-hint a {
 	color: var(--t-color-accent);
 }

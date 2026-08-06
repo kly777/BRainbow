@@ -88,7 +88,7 @@
 
 /* 代码 */
 .markdown-content code {
-	font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+	font-family: sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
 	font-size: 0.875em;
 	padding: 0.2em 0.4em;
 	background-color: var(--color-code-bg);
@@ -97,7 +97,7 @@
 }
 
 .markdown-content pre {
-	font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+	font-family: sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
 	font-size: 0.875em;
 	padding: 1em;
 	background-color: var(--color-code-bg);
@@ -248,7 +248,7 @@
 }
 
 /* 响应式设计 */
-@media (max-width: 768px) {
+@media (width <= 768px) {
 	.markdown-content h1 {
 		font-size: 1.75em;
 	}

@@ -1,8 +1,5 @@
 /* features/bookmark/TagInput.css.ts — 由 vanilla-extract 迁移 */
 
-.tagInput {
-}
-
 .tags {
 	display: flex;
 	flex-wrap: wrap;
@@ -21,7 +18,7 @@
 	font-size: 0.85rem;
 }
 
-.tagRemove {
+.tag-remove {
 	border: none;
 	background: transparent;
 	color: inherit;
@@ -31,7 +28,8 @@
 	padding: 0;
 }
 
-.inputRow {
+.input-row {
+	/* 挂载点类（无样式，供 JS 引用） */
 }
 
 .input {
@@ -51,12 +49,12 @@
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
-	box-shadow: 0 4px 16px oklch(0 0 0 / 0.12);
+	box-shadow: 0 4px 16px oklch(0% 0 0deg / 12%);
 	max-height: 200px;
 	overflow-y: auto;
 }
 
-.dropdownDelete {
+.dropdown-delete {
 	flex-shrink: 0;
 	width: 18px;
 	height: 18px;
@@ -74,7 +72,7 @@
 	transition: opacity 0.12s;
 }
 
-.dropdownItem {
+.dropdown-item {
 	display: flex;
 	align-items: center;
 	gap: 4px;
@@ -84,7 +82,7 @@
 	background: transparent;
 }
 
-.dropdownSelect {
+.dropdown-select {
 	flex: 1;
 	min-width: 0;
 	display: flex;
@@ -99,7 +97,7 @@
 	cursor: pointer;
 }
 
-.dropdownName {
+.dropdown-name {
 	flex: 1;
 	min-width: 0;
 	white-space: nowrap;
@@ -107,34 +105,34 @@
 	text-overflow: ellipsis;
 }
 
-.dropdownCount {
+.dropdown-count {
 	font-size: 0.75rem;
 	color: var(--t-color-ink-muted);
 	flex-shrink: 0;
 }
 
-.createNew {
+.create-new {
 	color: var(--t-color-accent);
 	font-weight: 600;
 }
 
-.tagRemove:hover {
+.tag-remove:hover {
 	opacity: 0.7;
 }
 
-.dropdownDelete:hover {
+.dropdown-delete:hover {
 	background: var(--t-color-danger-subtle);
 	border-radius: 50%;
 }
 
-.dropdownItem:hover {
+.dropdown-item:hover {
 	background: var(--t-color-accent-soft);
 }
 
-.dropdownItem:hover .dropdownDelete {
+.dropdown-item:hover .dropdown-delete {
 	opacity: 1;
 }
 
-.tagInput {
+.tag-input {
 	position: relative;
 }

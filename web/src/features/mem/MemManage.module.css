@@ -1,11 +1,11 @@
 /* features/mem/MemManage.css.ts — 由 vanilla-extract 迁移 */
 
-.backLink {
-	composes: btnGhost from "../../styles/base.module.css";
+.back-link {
+	composes: btn-ghost from "../../styles/base.module.css";
 }
 
-.addLink {
-	composes: btnPrimary from "../../styles/base.module.css";
+.add-link {
+	composes: btn-primary from "../../styles/base.module.css";
 }
 
 .page {
@@ -16,7 +16,7 @@
 	color: var(--t-color-ink);
 }
 
-.topBar {
+.top-bar {
 	display: flex;
 	align-items: center;
 	gap: var(--space-md);
@@ -36,7 +36,7 @@
 	flex: 1;
 }
 
-.topActions {
+.top-actions {
 	display: flex;
 	align-items: center;
 	gap: var(--space-md);
@@ -56,7 +56,7 @@
 	overflow: hidden;
 }
 
-.tableWrap {
+.table-wrap {
 	flex: 1;
 	min-width: 0;
 	display: flex;
@@ -65,18 +65,19 @@
 	overflow-y: auto;
 }
 
-.detailActive {
+.detail-active {
+	/* 挂载点类（无样式，供 JS 引用） */
 }
 
-@media (max-width: 768px) {
-	.topBar {
+@media (width <= 768px) {
+	.top-bar {
 		padding-left: 12px;
 		padding-right: 12px;
 	}
 }
 
-@media (max-width: 768px) {
-	.tableWrap {
+@media (width <= 768px) {
+	.table-wrap {
 		padding-left: 12px;
 		padding-right: 12px;
 	}

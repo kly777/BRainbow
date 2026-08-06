@@ -38,12 +38,12 @@
 		border-color 0.15s;
 }
 
-.cardActive {
+.card-active {
 	border-color: var(--t-color-accent);
 	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
 }
 
-.swatchRow {
+.swatch-row {
 	display: flex;
 	gap: var(--space-xs);
 	margin-bottom: var(--space-md);
@@ -56,7 +56,7 @@
 	border: 1px solid var(--t-color-border);
 }
 
-.cardName {
+.card-name {
 	font-family: var(--t-font-display);
 	font-size: var(--text-base);
 	font-weight: 600;
@@ -64,14 +64,14 @@
 	margin-bottom: 4px;
 }
 
-.cardStatus {
+.card-status {
 	font-size: var(--text-xs);
 	font-family: var(--t-font-mono);
 	color: var(--t-color-accent);
 	min-height: 16px;
 }
 
-.previewBox {
+.preview-box {
 	margin-top: var(--space-md);
 	padding: var(--space-sm);
 	border-radius: var(--radius-md);
@@ -80,7 +80,7 @@
 	gap: var(--space-xs);
 }
 
-.previewBtn {
+.preview-btn {
 	font-size: var(--text-xs);
 	padding: var(--space-xs) 10px;
 	border-radius: var(--radius-sm);
@@ -88,18 +88,18 @@
 	cursor: default;
 }
 
-.previewAccent {
+.preview-accent {
 	background: var(--t-color-accent);
 	color: var(--t-color-white);
 }
 
-.previewMuted {
+.preview-muted {
 	background: transparent;
 	color: var(--t-color-ink-muted);
 	border: 1px solid var(--t-color-border-strong);
 }
 
-.previewPlain {
+.preview-plain {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink-muted);
 }
@@ -111,7 +111,7 @@
 	align-items: center;
 }
 
-.footerHint {
+.footer-hint {
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-faint);
 	align-self: center;

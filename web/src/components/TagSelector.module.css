@@ -1,6 +1,6 @@
 /* components/TagSelector.css.ts — 由 vanilla-extract 迁移 */
 
-.tagSelector {
+.tag-selector {
 	position: relative;
 }
 
@@ -23,7 +23,7 @@
 	white-space: nowrap;
 }
 
-.tagRemove {
+.tag-remove {
 	margin-left: 2px;
 	cursor: pointer;
 	font-size: 0.85em;
@@ -35,7 +35,7 @@
 	line-height: 1;
 }
 
-.inputRow {
+.input-row {
 	display: flex;
 	gap: var(--space-xs);
 }
@@ -60,28 +60,28 @@
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
-	box-shadow: 0 4px 12px oklch(0 0 0 / 0.1);
+	box-shadow: 0 4px 12px oklch(0% 0 0deg / 10%);
 	max-height: 200px;
 	overflow-y: auto;
 }
 
-.dropdownItem {
+.dropdown-item {
 	padding: var(--space-xs) var(--space-sm);
 	font-size: var(--text-sm);
 	cursor: pointer;
 	transition: background 0.1s;
 }
 
-.dropdownItemActive {
+.dropdown-item-active {
 	background: var(--t-color-accent-soft);
 }
 
-.createNew {
+.create-new {
 	color: var(--t-color-accent);
 	font-weight: 500;
 }
 
-.tagRemove:hover {
+.tag-remove:hover {
 	opacity: 1;
 }
 
@@ -89,6 +89,6 @@
 	border-color: var(--t-color-accent);
 }
 
-.dropdownItem:hover {
+.dropdown-item:hover {
 	background: var(--t-color-bg);
 }

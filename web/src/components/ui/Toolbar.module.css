@@ -22,7 +22,7 @@
 	gap: var(--space-sm);
 }
 
-.backBtn {
+.back-btn {
 	padding: var(--space-xs) 10px;
 	font-size: var(--text-sm);
 	background: var(--t-color-bg);
@@ -33,6 +33,6 @@
 	font-family: inherit;
 }
 
-.backBtn:hover {
+.back-btn:hover {
 	background: var(--t-color-surface-raised);
 }

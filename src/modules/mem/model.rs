@@ -310,3 +310,77 @@ impl AppError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn card_state_as_str_matches_api_contract() {
+        // serde 序列化契约是 snake_case，as_str 必须一致（API 响应依赖）
+        for state in [
+            CardState::New,
+            CardState::Learning,
+            CardState::Review,
+            CardState::Relearning,
+            CardState::Suspended,
+        ] {
+            let s = state.as_str();
+            assert_eq!(serde_json::to_value(state).unwrap(), serde_json::Value::String(s.to_string()));
+        }
+    }
+
+    #[test]
+    fn card_state_round_trip_via_from_str() {
+        for (s, expected) in [
+            ("new", CardState::New),
+            ("learning", CardState::Learning),
+            ("review", CardState::Review),
+            ("relearning", CardState::Relearning),
+            ("suspended", CardState::Suspended),
+        ] {
+            assert_eq!(s.parse::<CardState>().unwrap(), expected);
+            assert_eq!(expected.to_string(), s);
+        }
+    }
+
+    #[test]
+    fn card_state_rejects_unknown_and_case_sensitive() {
+        assert!(CardState::from_str("NEW").is_err());
+        assert!(CardState::from_str("").is_err());
+        assert!(CardState::from_str("learning ").is_err());
+        assert!(CardState::from_str("reviewed").is_err());
+    }
+
+    #[test]
+    fn has_steps_only_for_learning_states() {
+        assert!(CardState::Learning.has_steps());
+        assert!(CardState::Relearning.has_steps());
+        assert!(!CardState::New.has_steps());
+        assert!(!CardState::Review.has_steps());
+        assert!(!CardState::Suspended.has_steps());
+    }
+
+    #[test]
+    fn is_active_excludes_suspended_only() {
+        for state in [
+            CardState::New,
+            CardState::Learning,
+            CardState::Review,
+            CardState::Relearning,
+        ] {
+            assert!(state.is_active());
+        }
+        assert!(!CardState::Suspended.is_active());
+    }
+
+    #[test]
+    fn serde_uses_snake_case_contract() {
+        assert_eq!(
+            serde_json::to_value(CardState::Relearning).unwrap(),
+            serde_json::Value::String("relearning".into())
+        );
+        let v: CardState = serde_json::from_value(serde_json::Value::String("suspended".into())).unwrap();
+        assert_eq!(v, CardState::Suspended);
+    }
+}

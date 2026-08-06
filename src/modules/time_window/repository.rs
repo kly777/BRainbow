@@ -437,3 +437,227 @@ impl TimeWindowRepository {
         ))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use super::super::model::{RecurrenceFrequency, RecurrenceRule, TimeWindowType};
+    use chrono::Duration;
+    use sqlx::SqlitePool;
+
+    async fn setup() -> TimeWindowRepository {
+        let pool = SqlitePool::connect("sqlite::memory:").await.expect("db");
+        sqlx::query(
+            "CREATE TABLE time_window (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                start_time TIMESTAMP NOT NULL,
+                end_time TIMESTAMP NOT NULL,
+                type TEXT NOT NULL DEFAULT 'feasible',
+                task_id INTEGER NOT NULL,
+                user_id INTEGER,
+                recurrence_freq TEXT,
+                recurrence_interval INTEGER,
+                recurrence_until TIMESTAMP,
+                recurrence_by_weekdays TEXT
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        TimeWindowRepository::new(Arc::new(pool))
+    }
+
+    fn req(start: DateTime<Utc>, end: DateTime<Utc>) -> CreateTimeWindowRequest {
+        CreateTimeWindowRequest {
+            start_time: start,
+            end_time: end,
+            window_type: TimeWindowType::Feasible,
+            task_id: 1,
+            user_id: None,
+            recurrence_rule: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn create_rejects_inverted_range() {
+        let repo = setup().await;
+        let now = Utc::now();
+        let err = repo
+            .create(req(now + Duration::hours(1), now))
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("earlier than end time"));
+    }
+
+    #[tokio::test]
+    async fn create_rejects_equal_range() {
+        let repo = setup().await;
+        let now = Utc::now();
+        assert!(repo.create(req(now, now)).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn create_and_find_round_trip() {
+        let repo = setup().await;
+        let now = Utc::now();
+        let w = repo.create(req(now, now + Duration::hours(2))).await.unwrap();
+        assert!(w.id > 0);
+        assert_eq!(w.window_type, TimeWindowType::Feasible);
+        assert_eq!(w.task_id, 1);
+
+        let found = repo.find_by_id(w.id).await.unwrap().unwrap();
+        assert_eq!(found.id, w.id);
+        assert_eq!(found.start_time, now);
+        assert_eq!(found.end_time, now + Duration::hours(2));
+    }
+
+    #[tokio::test]
+    async fn find_by_id_missing_returns_none() {
+        let repo = setup().await;
+        assert!(repo.find_by_id(999).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn update_partial_fields() {
+        let repo = setup().await;
+        let now = Utc::now();
+        let w = repo.create(req(now, now + Duration::hours(2))).await.unwrap();
+
+        let new_start = now + Duration::hours(3);
+        let updated = repo
+            .update(
+                w.id,
+                UpdateTimeWindowRequest {
+                    start_time: Some(new_start),
+                    end_time: None,
+                    window_type: Some(TimeWindowType::Planned),
+                    user_id: None,
+                    recurrence_rule: None,
+                },
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(updated.start_time, new_start);
+        assert_eq!(updated.end_time, now + Duration::hours(2));
+        assert_eq!(updated.window_type, TimeWindowType::Planned);
+    }
+
+    #[tokio::test]
+    async fn delete_removes_row() {
+        let repo = setup().await;
+        let now = Utc::now();
+        let w = repo.create(req(now, now + Duration::hours(1))).await.unwrap();
+        assert_eq!(repo.delete(w.id).await.unwrap(), 1);
+        assert_eq!(repo.delete(w.id).await.unwrap(), 0);
+        assert!(repo.find_by_id(w.id).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn delete_by_task_id_removes_all_for_task() {
+        let repo = setup().await;
+        let now = Utc::now();
+        repo.create(req(now, now + Duration::hours(1))).await.unwrap();
+        repo.create(req(now + Duration::hours(2), now + Duration::hours(3)))
+            .await
+            .unwrap();
+        let other = req(now, now + Duration::hours(1));
+        repo.create(CreateTimeWindowRequest {
+            task_id: 2,
+            ..other
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(repo.delete_by_task_id(1).await.unwrap(), 2);
+        assert_eq!(repo.delete_by_task_id(1).await.unwrap(), 0);
+        assert_eq!(repo.delete_by_task_id(2).await.unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn check_time_conflict_detects_overlap() {
+        let repo = setup().await;
+        let now = Utc::now();
+        repo.create(req(now, now + Duration::hours(2))).await.unwrap();
+
+        // 完全包含、部分重叠、边界相接
+        assert!(repo.check_time_conflict(1, now + Duration::minutes(30), now + Duration::hours(1), None).await.unwrap());
+        assert!(repo.check_time_conflict(1, now - Duration::hours(1), now + Duration::hours(1), None).await.unwrap());
+        assert!(!repo.check_time_conflict(1, now + Duration::hours(2), now + Duration::hours(3), None).await.unwrap());
+        assert!(!repo.check_time_conflict(1, now - Duration::hours(2), now - Duration::hours(1), None).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn check_time_conflict_ignores_other_task_and_excluded_id() {
+        let repo = setup().await;
+        let now = Utc::now();
+        let w = repo.create(req(now, now + Duration::hours(2))).await.unwrap();
+
+        assert!(!repo.check_time_conflict(2, now, now + Duration::hours(1), None).await.unwrap());
+        // 编辑自身窗口时排除自身，不应报冲突
+        assert!(!repo.check_time_conflict(1, now, now + Duration::hours(1), Some(w.id)).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn get_task_time_stats_aggregates() {
+        let repo = setup().await;
+        let now = Utc::now();
+        repo.create(req(now, now + Duration::hours(1))).await.unwrap();
+        repo.create(req(now + Duration::hours(4), now + Duration::hours(6))).await.unwrap();
+
+        let (earliest, latest, count) = repo.get_task_time_stats(1).await.unwrap();
+        assert_eq!(earliest, Some(now));
+        assert_eq!(latest, Some(now + Duration::hours(6)));
+        assert_eq!(count, 2);
+
+        let (e2, l2, c2) = repo.get_task_time_stats(2).await.unwrap();
+        assert_eq!(e2, None);
+        assert_eq!(l2, None);
+        assert_eq!(c2, 0);
+    }
+
+    #[tokio::test]
+    async fn create_with_recurrence_rule_round_trip() {
+        let repo = setup().await;
+        let now = Utc::now();
+        let mut r = req(now, now + Duration::hours(1));
+        r.recurrence_rule = Some(RecurrenceRule {
+            freq: RecurrenceFrequency::Weekly,
+            interval: 2,
+            until: Some(now + Duration::days(30)),
+            by_weekdays: Some(vec![1, 3]),
+        });
+
+        let w = repo.create(r).await.unwrap();
+        assert_eq!(w.recurrence_freq, Some(RecurrenceFrequency::Weekly));
+        assert_eq!(w.recurrence_interval, Some(2));
+
+        let rule = w.recurrence_rule().unwrap();
+        assert_eq!(rule.freq, RecurrenceFrequency::Weekly);
+        assert_eq!(rule.interval, 2);
+        assert_eq!(rule.by_weekdays, Some(vec![1, 3]));
+        assert!(rule.until.is_some());
+    }
+
+    #[tokio::test]
+    async fn find_by_task_id_paginated() {
+        let repo = setup().await;
+        let now = Utc::now();
+        for i in 0..5 {
+            repo.create(req(now + Duration::hours(i * 2), now + Duration::hours(i * 2 + 1)))
+                .await
+                .unwrap();
+        }
+
+        let (rows, total) = repo
+            .find_by_task_id_paginated(1, 2, 0)
+            .await
+            .unwrap();
+        assert_eq!(total, 5);
+        assert_eq!(rows.len(), 2);
+
+        let (rows2, _) = repo.find_by_task_id_paginated(1, 2, 4).await.unwrap();
+        assert_eq!(rows2.len(), 1);
+    }
+}

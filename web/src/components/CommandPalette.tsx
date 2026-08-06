@@ -136,27 +136,47 @@ export default function CommandPalette() {
 	const navItems = createMemo<Suggestion[]>(() => {
 		if (mode() !== "nav") return [];
 		const q = query();
+		// 匹配质量排序：路径精确 > 路径前缀 > label 匹配 > desc 匹配 > 路径包含。
+		// 输入 `/m` 时「记忆」(path=/m) 必须排在「书签」(path=/bookmark 含 m) 前面
+		const score = (r: (typeof NAV_ROUTES)[number]): number => {
+			const p = r.path.slice(1);
+			if (p === q) return 0;
+			if (p.startsWith(q)) return 1;
+			if (r.label.includes(q)) return 2;
+			if (r.desc.includes(q)) return 3;
+			return 4; // 仅路径包含
+		};
 		return NAV_ROUTES.filter(
 			(r) =>
 				r.label.includes(q) ||
 				r.desc.includes(q) ||
 				r.path.slice(1).includes(q),
-		).map((r) => ({
-			label: r.label,
-			desc: r.desc,
-			extra: r.path,
-			onSelect: () => {
-				navigate(r.path);
-				close();
-			},
-		}));
+		)
+			.sort((a, b) => score(a) - score(b))
+			.map((r) => ({
+				label: r.label,
+				desc: r.desc,
+				extra: r.path,
+				onSelect: () => {
+					navigate(r.path);
+					close();
+				},
+			}));
 	});
 
 	const cmdItems = createMemo<Suggestion[]>(() => {
 		if (mode() !== "cmd") return [];
 		const q = query();
+		// 命令名（不含 : 前缀）前缀匹配优先于包含匹配
+		const score = (c: ReturnType<typeof commands>[number]): number => {
+			const name = c.label.slice(1);
+			if (name.startsWith(q)) return 0;
+			if (c.label.includes(q)) return 1;
+			return 2; // 仅 desc 匹配
+		};
 		return commands()
 			.filter((c) => c.label.slice(1).includes(q) || c.desc.includes(q))
+			.sort((a, b) => score(a) - score(b))
 			.map((c) => ({
 				label: c.label,
 				desc: c.desc,

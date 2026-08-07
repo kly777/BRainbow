@@ -62,7 +62,8 @@
 	font-size: var(--text-base);
 	font-weight: 500;
 	cursor: pointer;
-	transition: background var(--t-transition-normal),
+	transition:
+		background var(--t-transition-normal),
 		color 0.2s;
 	font-family: inherit;
 }
@@ -82,7 +83,8 @@
 	padding: var(--space-xl) 20px;
 	box-shadow: var(--shadow-sm);
 	border: 1px solid var(--t-color-border);
-	transition: transform var(--t-transition-normal),
+	transition:
+		transform var(--t-transition-normal),
 		box-shadow 0.2s;
 	text-decoration: none;
 	color: inherit;

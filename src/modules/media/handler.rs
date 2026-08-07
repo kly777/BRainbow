@@ -217,7 +217,10 @@ pub async fn delete_handler(
     Query(query): Query<DeleteQuery>,
 ) -> impl IntoResponse {
     let service = &state.media;
-    match service.delete(&stored_id, query.force.unwrap_or(false)).await {
+    match service
+        .delete(&stored_id, query.force.unwrap_or(false))
+        .await
+    {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => e.into_response(),
     }

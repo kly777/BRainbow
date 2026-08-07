@@ -31,11 +31,19 @@ import {
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	cacheMock.cachedRequest.mockImplementation((url: string) => Promise.resolve({ url }));
-	requestMock.post.mockImplementation((_u: string, b: unknown) => Promise.resolve(b));
-	requestMock.patch.mockImplementation((_u: string, b: unknown) => Promise.resolve(b));
+	cacheMock.cachedRequest.mockImplementation((url: string) =>
+		Promise.resolve({ url }),
+	);
+	requestMock.post.mockImplementation((_u: string, b: unknown) =>
+		Promise.resolve(b),
+	);
+	requestMock.patch.mockImplementation((_u: string, b: unknown) =>
+		Promise.resolve(b),
+	);
 	requestMock.del.mockImplementation(() => Promise.resolve());
-	requestMock.request.mockImplementation((_u: string, o: unknown) => Promise.resolve(o));
+	requestMock.request.mockImplementation((_u: string, o: unknown) =>
+		Promise.resolve(o),
+	);
 });
 
 afterEach(() => {
@@ -107,13 +115,21 @@ describe("write operations invalidate cache", () => {
 	it("create posts and invalidates", async () => {
 		await createBookmarkE(bm);
 		expect(requestMock.post).toHaveBeenCalledWith("/bookmarks", bm);
-		expect(cacheMock.tapInvalidate).toHaveBeenCalledWith(cacheMock.CACHE.bookmarks, bm);
+		expect(cacheMock.tapInvalidate).toHaveBeenCalledWith(
+			cacheMock.CACHE.bookmarks,
+			bm,
+		);
 	});
 
 	it("update patches and invalidates", async () => {
 		await updateBookmarkE(1, { title: "new" });
-		expect(requestMock.patch).toHaveBeenCalledWith("/bookmarks/1", { title: "new" });
-		expect(cacheMock.tapInvalidate).toHaveBeenCalledWith(cacheMock.CACHE.bookmarks, { title: "new" });
+		expect(requestMock.patch).toHaveBeenCalledWith("/bookmarks/1", {
+			title: "new",
+		});
+		expect(cacheMock.tapInvalidate).toHaveBeenCalledWith(
+			cacheMock.CACHE.bookmarks,
+			{ title: "new" },
+		);
 	});
 
 	it("delete removes and invalidates", async () => {
@@ -145,7 +161,9 @@ describe("write operations invalidate cache", () => {
 
 describe("importBookmarksE", () => {
 	it("sends multipart form and invalidates on success", async () => {
-		requestMock.request.mockImplementationOnce(() => Promise.resolve({ added: 5, merged: 2 }));
+		requestMock.request.mockImplementationOnce(() =>
+			Promise.resolve({ added: 5, merged: 2 }),
+		);
 		const file = new File(["<html>"], "bookmarks.html", { type: "text/html" });
 		const result = await importBookmarksE(file);
 		expect(result).toEqual({ added: 5, merged: 2 });
@@ -155,6 +173,8 @@ describe("importBookmarksE", () => {
 		expect(opts.method).toBe("POST");
 		expect(opts.body).toBeInstanceOf(FormData);
 		expect((opts.body as FormData).get("file")).toBe(file);
-		expect(cacheMock.invalidateCache).toHaveBeenCalledWith(cacheMock.CACHE.bookmarks);
+		expect(cacheMock.invalidateCache).toHaveBeenCalledWith(
+			cacheMock.CACHE.bookmarks,
+		);
 	});
 });

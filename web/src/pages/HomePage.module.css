@@ -27,7 +27,8 @@
 	font-size: var(--text-base);
 	font-weight: 500;
 	color: var(--t-color-ink-muted);
-	transition: background var(--t-transition-fast),
+	transition:
+		background var(--t-transition-fast),
 		color 0.15s;
 }
 

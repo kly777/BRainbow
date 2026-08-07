@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { boolParam, enumParam, listParam, numParam, strParam } from "./useUrlParams";
+import {
+	boolParam,
+	enumParam,
+	listParam,
+	numParam,
+	strParam,
+} from "./useUrlParams";
 
 describe("strParam", () => {
 	it("reads missing as default", () => {

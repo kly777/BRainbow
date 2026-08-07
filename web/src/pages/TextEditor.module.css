@@ -29,7 +29,8 @@
 	background: transparent;
 	color: var(--t-color-ink-muted);
 	border-bottom: 2px solid transparent;
-	transition: color var(--t-transition-fast),
+	transition:
+		color var(--t-transition-fast),
 		border-color 0.15s;
 	white-space: nowrap;
 	user-select: none;

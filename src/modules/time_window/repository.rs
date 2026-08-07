@@ -441,8 +441,8 @@ impl TimeWindowRepository {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
-    use super::*;
     use super::super::model::{RecurrenceFrequency, RecurrenceRule, TimeWindowType};
+    use super::*;
     use chrono::Duration;
     use sqlx::SqlitePool;
 
@@ -501,7 +501,10 @@ mod tests {
     async fn create_and_find_round_trip() {
         let repo = setup().await;
         let now = Utc::now();
-        let w = repo.create(req(now, now + Duration::hours(2))).await.unwrap();
+        let w = repo
+            .create(req(now, now + Duration::hours(2)))
+            .await
+            .unwrap();
         assert!(w.id > 0);
         assert_eq!(w.window_type, TimeWindowType::Feasible);
         assert_eq!(w.task_id, 1);
@@ -522,7 +525,10 @@ mod tests {
     async fn update_partial_fields() {
         let repo = setup().await;
         let now = Utc::now();
-        let w = repo.create(req(now, now + Duration::hours(2))).await.unwrap();
+        let w = repo
+            .create(req(now, now + Duration::hours(2)))
+            .await
+            .unwrap();
 
         let new_start = now + Duration::hours(3);
         let updated = repo
@@ -548,7 +554,10 @@ mod tests {
     async fn delete_removes_row() {
         let repo = setup().await;
         let now = Utc::now();
-        let w = repo.create(req(now, now + Duration::hours(1))).await.unwrap();
+        let w = repo
+            .create(req(now, now + Duration::hours(1)))
+            .await
+            .unwrap();
         assert_eq!(repo.delete(w.id).await.unwrap(), 1);
         assert_eq!(repo.delete(w.id).await.unwrap(), 0);
         assert!(repo.find_by_id(w.id).await.unwrap().is_none());
@@ -558,7 +567,9 @@ mod tests {
     async fn delete_by_task_id_removes_all_for_task() {
         let repo = setup().await;
         let now = Utc::now();
-        repo.create(req(now, now + Duration::hours(1))).await.unwrap();
+        repo.create(req(now, now + Duration::hours(1)))
+            .await
+            .unwrap();
         repo.create(req(now + Duration::hours(2), now + Duration::hours(3)))
             .await
             .unwrap();
@@ -579,32 +590,74 @@ mod tests {
     async fn check_time_conflict_detects_overlap() {
         let repo = setup().await;
         let now = Utc::now();
-        repo.create(req(now, now + Duration::hours(2))).await.unwrap();
+        repo.create(req(now, now + Duration::hours(2)))
+            .await
+            .unwrap();
 
         // 完全包含、部分重叠、边界相接
-        assert!(repo.check_time_conflict(1, now + Duration::minutes(30), now + Duration::hours(1), None).await.unwrap());
-        assert!(repo.check_time_conflict(1, now - Duration::hours(1), now + Duration::hours(1), None).await.unwrap());
-        assert!(!repo.check_time_conflict(1, now + Duration::hours(2), now + Duration::hours(3), None).await.unwrap());
-        assert!(!repo.check_time_conflict(1, now - Duration::hours(2), now - Duration::hours(1), None).await.unwrap());
+        assert!(
+            repo.check_time_conflict(
+                1,
+                now + Duration::minutes(30),
+                now + Duration::hours(1),
+                None
+            )
+            .await
+            .unwrap()
+        );
+        assert!(
+            repo.check_time_conflict(1, now - Duration::hours(1), now + Duration::hours(1), None)
+                .await
+                .unwrap()
+        );
+        assert!(
+            !repo
+                .check_time_conflict(1, now + Duration::hours(2), now + Duration::hours(3), None)
+                .await
+                .unwrap()
+        );
+        assert!(
+            !repo
+                .check_time_conflict(1, now - Duration::hours(2), now - Duration::hours(1), None)
+                .await
+                .unwrap()
+        );
     }
 
     #[tokio::test]
     async fn check_time_conflict_ignores_other_task_and_excluded_id() {
         let repo = setup().await;
         let now = Utc::now();
-        let w = repo.create(req(now, now + Duration::hours(2))).await.unwrap();
+        let w = repo
+            .create(req(now, now + Duration::hours(2)))
+            .await
+            .unwrap();
 
-        assert!(!repo.check_time_conflict(2, now, now + Duration::hours(1), None).await.unwrap());
+        assert!(
+            !repo
+                .check_time_conflict(2, now, now + Duration::hours(1), None)
+                .await
+                .unwrap()
+        );
         // 编辑自身窗口时排除自身，不应报冲突
-        assert!(!repo.check_time_conflict(1, now, now + Duration::hours(1), Some(w.id)).await.unwrap());
+        assert!(
+            !repo
+                .check_time_conflict(1, now, now + Duration::hours(1), Some(w.id))
+                .await
+                .unwrap()
+        );
     }
 
     #[tokio::test]
     async fn get_task_time_stats_aggregates() {
         let repo = setup().await;
         let now = Utc::now();
-        repo.create(req(now, now + Duration::hours(1))).await.unwrap();
-        repo.create(req(now + Duration::hours(4), now + Duration::hours(6))).await.unwrap();
+        repo.create(req(now, now + Duration::hours(1)))
+            .await
+            .unwrap();
+        repo.create(req(now + Duration::hours(4), now + Duration::hours(6)))
+            .await
+            .unwrap();
 
         let (earliest, latest, count) = repo.get_task_time_stats(1).await.unwrap();
         assert_eq!(earliest, Some(now));
@@ -645,15 +698,15 @@ mod tests {
         let repo = setup().await;
         let now = Utc::now();
         for i in 0..5 {
-            repo.create(req(now + Duration::hours(i * 2), now + Duration::hours(i * 2 + 1)))
-                .await
-                .unwrap();
-        }
-
-        let (rows, total) = repo
-            .find_by_task_id_paginated(1, 2, 0)
+            repo.create(req(
+                now + Duration::hours(i * 2),
+                now + Duration::hours(i * 2 + 1),
+            ))
             .await
             .unwrap();
+        }
+
+        let (rows, total) = repo.find_by_task_id_paginated(1, 2, 0).await.unwrap();
         assert_eq!(total, 5);
         assert_eq!(rows.len(), 2);
 

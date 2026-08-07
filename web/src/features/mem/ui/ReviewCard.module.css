@@ -220,7 +220,8 @@
 	border: 1px solid transparent;
 	border-radius: var(--radius-md);
 	cursor: pointer;
-	transition: filter var(--t-transition-fast),
+	transition:
+		filter var(--t-transition-fast),
 		transform 0.1s;
 }
 

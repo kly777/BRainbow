@@ -36,7 +36,6 @@ export {
 	flatMap,
 	unwrapOr,
 	match,
-
 } from "@lib/result.ts";
 
 /**

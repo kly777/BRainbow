@@ -38,7 +38,10 @@ export function strParam(def = ""): UrlParamReader<string> {
 }
 
 /** 数字参数：非法/缺失回退默认值；非负整数语义（<=0 回退） */
-export function numParam(def: number, opts: { min?: number; integer?: boolean } = {}): UrlParamReader<number> {
+export function numParam(
+	def: number,
+	opts: { min?: number; integer?: boolean } = {},
+): UrlParamReader<number> {
 	const { min = 0, integer = true } = opts;
 	return {
 		read: (raw) => {
@@ -55,7 +58,8 @@ export function numParam(def: number, opts: { min?: number; integer?: boolean } 
 /** 逗号分隔列表参数（如 "a,b,c" → ["a","b","c"]） */
 export function listParam(sep = ","): UrlParamReader<string[]> {
 	return {
-		read: (raw) => (typeof raw === "string" ? raw.split(sep).filter(Boolean) : []),
+		read: (raw) =>
+			typeof raw === "string" ? raw.split(sep).filter(Boolean) : [],
 		write: (vs) => (vs.length === 0 ? undefined : vs.join(sep)),
 	};
 }
@@ -79,7 +83,11 @@ export function boolParam(def = false): UrlParamReader<boolean> {
 	return {
 		read: (raw) => {
 			if (typeof raw !== "string") return def;
-			return raw === "1" || raw === "true" ? true : raw === "0" || raw === "false" ? false : def;
+			return raw === "1" || raw === "true"
+				? true
+				: raw === "0" || raw === "false"
+					? false
+					: def;
 		},
 		write: (v) => (v === def ? undefined : v ? "1" : "0"),
 	};
@@ -107,16 +115,21 @@ export interface UseUrlParamsResult<T extends UrlParamMap> {
 	setSearchParams: (params: Record<string, string | undefined>) => void;
 }
 
-export function useUrlParams<const T extends Record<string, AnyReader>>(readers: T): UseUrlParamsResult<T> {
+export function useUrlParams<const T extends Record<string, AnyReader>>(
+	readers: T,
+): UseUrlParamsResult<T> {
 	const [searchParams, setSearchParams] = useSearchParams();
 
 	const get = <K extends keyof T>(key: K): ParamsOf<T>[K] =>
-		readers[key].read(searchParams[key] as string | undefined) as ParamsOf<T>[K];
+		readers[key].read(
+			searchParams[key] as string | undefined,
+		) as ParamsOf<T>[K];
 
 	const set = (patch: Partial<ParamsOf<T>>, opts?: { replace?: boolean }) => {
 		const next: Record<string, string | undefined> = {};
 		for (const [key, value] of Object.entries(patch)) {
-			next[key] = value === undefined ? undefined : readers[key].write(value as never);
+			next[key] =
+				value === undefined ? undefined : readers[key].write(value as never);
 		}
 		if (opts?.replace) setSearchParams(next, { replace: true });
 		else setSearchParams(next);

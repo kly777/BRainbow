@@ -326,7 +326,10 @@ mod tests {
             CardState::Suspended,
         ] {
             let s = state.as_str();
-            assert_eq!(serde_json::to_value(state).unwrap(), serde_json::Value::String(s.to_string()));
+            assert_eq!(
+                serde_json::to_value(state).unwrap(),
+                serde_json::Value::String(s.to_string())
+            );
         }
     }
 
@@ -380,7 +383,8 @@ mod tests {
             serde_json::to_value(CardState::Relearning).unwrap(),
             serde_json::Value::String("relearning".into())
         );
-        let v: CardState = serde_json::from_value(serde_json::Value::String("suspended".into())).unwrap();
+        let v: CardState =
+            serde_json::from_value(serde_json::Value::String("suspended".into())).unwrap();
         assert_eq!(v, CardState::Suspended);
     }
 }

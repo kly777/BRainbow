@@ -42,19 +42,15 @@ impl Config {
     }
 
     /// 从注入的变量读取器加载配置（测试用，避免全局 env 竞态）。
-    fn from_vars(
-        vars: impl Fn(&str) -> Result<String, std::env::VarError>,
-    ) -> Self {
-        let jwt_secret =
-            vars("JWT_SECRET").unwrap_or_else(|_| uuid::Uuid::new_v4().to_string());
+    fn from_vars(vars: impl Fn(&str) -> Result<String, std::env::VarError>) -> Self {
+        let jwt_secret = vars("JWT_SECRET").unwrap_or_else(|_| uuid::Uuid::new_v4().to_string());
 
         if vars("JWT_SECRET").is_err() {
             tracing::info!("JWT_SECRET 未设置，使用随机密钥（重启后现有 token 将失效）");
         }
 
         Self {
-            database_url: vars("DATABASE_URL")
-                .unwrap_or_else(|_| "sqlite:brainbow.db".into()),
+            database_url: vars("DATABASE_URL").unwrap_or_else(|_| "sqlite:brainbow.db".into()),
 
             jwt_secret,
 
@@ -92,7 +88,9 @@ mod tests {
     use super::*;
 
     /// 注入式变量读取器：测试不触碰全局 env，可并行运行
-    fn vars_with<'a>(overrides: &'a [(&'a str, &'a str)]) -> impl Fn(&str) -> Result<String, std::env::VarError> + 'a {
+    fn vars_with<'a>(
+        overrides: &'a [(&'a str, &'a str)],
+    ) -> impl Fn(&str) -> Result<String, std::env::VarError> + 'a {
         move |key| {
             overrides
                 .iter()

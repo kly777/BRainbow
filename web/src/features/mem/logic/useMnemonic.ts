@@ -28,9 +28,9 @@ export function useMnemonic(): UseMnemonic {
 		new Map(),
 	);
 	const [loading, setLoading] = createSignal(false);
-	const [, setConsecutiveForgets] = createSignal<
-		Map<number, number>
-	>(new Map());
+	const [, setConsecutiveForgets] = createSignal<Map<number, number>>(
+		new Map(),
+	);
 
 	const mnemonicFor = (memId: number | undefined) =>
 		memId === undefined ? undefined : mnemonics().get(memId);

@@ -54,7 +54,7 @@ pub async fn get_backlog_tasks_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     match state
-        .task
+        .task_query
         .by_status(TaskStatus::Backlog, pagination.limit(), pagination.offset())
         .await
     {
@@ -71,7 +71,7 @@ pub async fn get_active_tasks_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     match state
-        .task
+        .task_query
         .by_status(TaskStatus::Active, pagination.limit(), pagination.offset())
         .await
     {
@@ -88,7 +88,7 @@ pub async fn get_completed_tasks_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     match state
-        .task
+        .task_query
         .by_status(
             TaskStatus::Completed,
             pagination.limit(),
@@ -109,7 +109,7 @@ pub async fn get_archived_tasks_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     match state
-        .task
+        .task_query
         .by_status(
             TaskStatus::Archived,
             pagination.limit(),

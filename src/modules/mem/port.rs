@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 
-use super::model::{Chunk, FsrsUpdate, InsertRevlogParams, MemQuery, MemRow, MemTagRow, TagInfo};
+use super::model::{
+    FsrsUpdate, InsertRevlogParams, MemQuery, MemRow, MemTagRow, MemWithChunks, TagInfo,
+};
 
 /// Repository interface for the `mem` module.
 ///
@@ -16,7 +18,6 @@ pub trait MemRepository: Send + Sync {
     // ── Chunks ──
 
     async fn create_chunk(&self, content: &str) -> Result<i32, sqlx::Error>;
-    async fn get_chunk(&self, id: i32) -> Result<Option<Chunk>, sqlx::Error>;
     async fn update_chunk(&self, id: i32, content: &str) -> Result<(), sqlx::Error>;
 
     // ── Mem CRUD ──
@@ -28,6 +29,7 @@ pub trait MemRepository: Send + Sync {
         prerequisites: &[i32],
     ) -> Result<i32, sqlx::Error>;
     async fn get_mem(&self, id: i32) -> Result<Option<MemRow>, sqlx::Error>;
+    async fn get_mems_with_chunks(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, sqlx::Error>;
     async fn delete_mem(&self, id: i32) -> Result<(), sqlx::Error>;
     async fn get_all_mems(
         &self,

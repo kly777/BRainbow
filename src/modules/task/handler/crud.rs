@@ -15,7 +15,7 @@ pub async fn get_tasks_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     match state
-        .task
+        .task_query
         .list(pagination.limit(), pagination.offset())
         .await
     {
@@ -32,7 +32,7 @@ pub async fn get_all_tasks_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     match state
-        .task
+        .task_query
         .list_all(pagination.limit(), pagination.offset())
         .await
     {
@@ -48,7 +48,7 @@ pub async fn get_task_handler(
     Path(id): Path<i32>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    match state.task.by_id(id).await {
+    match state.task_query.by_id(id).await {
         Ok(Some(task)) => Json(TaskResponse::from(task)).into_response(),
         Ok(None) => error::not_found("任务不存在"),
         Err(e) => error::internal(e, "获取任务"),
@@ -59,7 +59,7 @@ pub async fn get_task_detail_handler(
     Path(id): Path<i32>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    match state.task.detail(id).await {
+    match state.task_query.detail(id).await {
         Ok(Some(detail)) => Json(detail).into_response(),
         Ok(None) => error::not_found("任务不存在"),
         Err(e) => error::internal(e, "获取任务详情"),

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use super::model::ConvHit;
 
-use super::service::RawHit;
+use super::query::RawHit;
 
 /// TF 分数：出现次数 / 文本长度（+100 平滑避免短文本过度占优）
 fn tf_score(count: usize, text_len: usize) -> f64 {

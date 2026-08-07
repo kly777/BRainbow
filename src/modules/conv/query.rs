@@ -1,8 +1,147 @@
 use sqlx::SqlitePool;
 
-use super::model::SearchResponse;
+use super::model::{ArticleItem, ConvDetail, QaPair, SearchResponse};
 use super::scoring;
 use crate::error::ServiceError;
+
+/// 查询侧服务——纯读取，无副作用。
+///
+/// conv 模块无写操作（对话数据由 AI 流程写入），全部读取收敛于此。
+#[derive(Clone)]
+pub struct ConvQueryService {
+    pool: SqlitePool,
+}
+
+impl ConvQueryService {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn search(
+        &self,
+        q: &str,
+        limit: i64,
+        offset: i64,
+        search_type: &str,
+    ) -> Result<SearchResponse, ServiceError> {
+        search_conv(&self.pool, q, limit, offset, search_type).await
+    }
+
+    /// 对话详情（QA + 文章）
+    pub async fn detail(&self, id: i64, article_only: bool) -> Result<Option<ConvDetail>, ServiceError> {
+        let pool = &self.pool;
+
+        let title_info: Option<(String, String, String)> = sqlx::query_as(
+            "SELECT title, conv_type, created_at FROM conv_titles WHERE conv_id = ?1 ORDER BY id LIMIT 1",
+        )
+        .bind(id)
+        .fetch_optional(pool)
+        .await?;
+
+        let (title, conv_type, created_at) = match title_info {
+            Some(t) => t,
+            None => return Ok(None),
+        };
+
+        let qa_pairs: Vec<(i32, String, String)> = if article_only {
+            Vec::new()
+        } else {
+            sqlx::query_as("SELECT qa_id, question, answer FROM conv WHERE conv_id = ?1 ORDER BY qa_id")
+                .bind(id)
+                .fetch_all(pool)
+                .await?
+        };
+
+        let articles: Vec<(String, String, String)> =
+            sqlx::query_as("SELECT article_type, title, content FROM articles WHERE conv_id = ?1")
+                .bind(id)
+                .fetch_all(pool)
+                .await?;
+
+        Ok(Some(ConvDetail {
+            conv_id: id,
+            title,
+            conv_type,
+            created_at,
+            qa_pairs: qa_pairs
+                .into_iter()
+                .map(|(id, q, a)| QaPair {
+                    qa_id: id,
+                    question: q,
+                    answer: a,
+                })
+                .collect(),
+            articles: articles
+                .into_iter()
+                .map(|(t, title, c)| ArticleItem {
+                    article_type: t,
+                    title,
+                    content: c,
+                })
+                .collect(),
+        }))
+    }
+
+    /// QA 视图（不含文章）
+    pub async fn qa(&self, id: i64) -> Result<Option<serde_json::Value>, ServiceError> {
+        let pool = &self.pool;
+
+        let title_info: Option<(String, String, String)> = sqlx::query_as(
+            "SELECT title, conv_type, created_at FROM conv_titles WHERE conv_id = ?1 ORDER BY id LIMIT 1",
+        )
+        .bind(id)
+        .fetch_optional(pool)
+        .await?;
+
+        let (title, conv_type, created_at) = match title_info {
+            Some(t) => t,
+            None => return Ok(None),
+        };
+
+        let qa_pairs: Vec<(i32, String, String)> = sqlx::query_as(
+            "SELECT qa_id, question, answer FROM conv WHERE conv_id = ?1 ORDER BY qa_id",
+        )
+        .bind(id)
+        .fetch_all(pool)
+        .await?;
+
+        Ok(Some(serde_json::json!({
+            "conv_id": id,
+            "title": title,
+            "conv_type": conv_type,
+            "created_at": created_at,
+            "qa_pairs": qa_pairs.into_iter().map(|(id, q, a)| serde_json::json!({
+                "qa_id": id, "question": q, "answer": a
+            })).collect::<Vec<_>>(),
+        })))
+    }
+
+    /// 单篇文章
+    pub async fn concept(
+        &self,
+        id: i64,
+        article_title: &str,
+    ) -> Result<Option<serde_json::Value>, ServiceError> {
+        let pool = &self.pool;
+
+        let article: Option<(String, String, String)> = sqlx::query_as(
+            "SELECT article_type, title, content FROM articles WHERE conv_id = ?1 AND title = ?2 LIMIT 1",
+        )
+        .bind(id)
+        .bind(article_title)
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(article.map(|(atype, title, content)| {
+            serde_json::json!({
+                "conv_id": id,
+                "article_type": atype,
+                "title": title,
+                "content": content,
+            })
+        }))
+    }
+}
 
 async fn compute_idf(pool: &SqlitePool, kw: &str) -> f64 {
     let pattern = format!("%{}%", kw);
@@ -145,6 +284,8 @@ pub async fn search_conv(
     let total = hits.len() as i64;
     Ok(SearchResponse { hits, total })
 }
+
+#[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
     #[allow(unused_imports)]

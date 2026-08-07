@@ -54,7 +54,7 @@ pub async fn get_ontos_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let result = state
-        .onto
+        .onto_query
         .list(pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
@@ -69,7 +69,7 @@ pub async fn get_onto_handler(
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let result = state
-        .onto
+        .onto_query
         .by_id(id)
         .await
         .map(|opt| opt.map(OntoResponse::from));

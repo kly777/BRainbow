@@ -5,12 +5,14 @@ use crate::error::ServiceError;
 use super::handler::ColumnInfo;
 use super::repository::DBRepo;
 
+///
+/// db_viewer 是数据库浏览工具，无写操作。
 #[derive(Clone)]
-pub struct DbViewerService {
+pub struct DbViewerQueryService {
     pool: Arc<sqlx::SqlitePool>,
 }
 
-impl DbViewerService {
+impl DbViewerQueryService {
     pub fn new(pool: Arc<sqlx::SqlitePool>) -> Self {
         Self { pool }
     }
@@ -39,7 +41,7 @@ mod tests {
     use super::*;
     use sqlx::SqlitePool;
 
-    async fn setup() -> DbViewerService {
+    async fn setup() -> DbViewerQueryService {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
         sqlx::query("CREATE TABLE test_t (id INTEGER PRIMARY KEY, val TEXT)")
             .execute(&*pool)
@@ -49,7 +51,7 @@ mod tests {
             .execute(&*pool)
             .await
             .unwrap();
-        DbViewerService::new(pool)
+        DbViewerQueryService::new(pool)
     }
 
     #[tokio::test]

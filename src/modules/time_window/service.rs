@@ -114,6 +114,10 @@ impl TimeWindowService {
             .await
             .map_err(ServiceError::Db)
     }
+
+    pub async fn delete(&self, id: i32) -> Result<u64, ServiceError> {
+        self.repo.delete(id).await.map_err(ServiceError::Db)
+    }
 }
 
 pub use crate::error::ServiceError;

@@ -3,7 +3,7 @@ mod model;
 mod repository;
 pub mod service;
 
-pub use service::DbViewerService;
+pub use service::DbViewerQueryService;
 
 use crate::state::AppState;
 use axum::{Router, routing::get};

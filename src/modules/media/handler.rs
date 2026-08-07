@@ -105,7 +105,7 @@ pub async fn list_handler(
     Query(q): Query<ListQuery>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let service = &state.media;
+    let service = &state.media_query;
     let mt = q.media_type.as_deref().filter(|s| !s.is_empty());
 
     match service.list(&q.pagination, mt).await {
@@ -130,7 +130,7 @@ pub async fn get_handler(
     State(state): State<AppState>,
     Path(stored_id): Path<String>,
 ) -> impl IntoResponse {
-    let service = &state.media;
+    let service = &state.media_query;
     match service.get_by_stored_id(&stored_id).await {
         Ok(Some(media)) => Json(to_response(&media)).into_response(),
         Ok(None) => error::not_found("媒体不存在"),
@@ -144,8 +144,7 @@ pub async fn file_handler(
     State(state): State<AppState>,
     Path(stored_id): Path<String>,
 ) -> Response {
-    let service = &state.media;
-    let media = match service.get_by_stored_id(&stored_id).await {
+    let media = match state.media_query.get_by_stored_id(&stored_id).await {
         Ok(Some(m)) => m,
         Ok(None) => return ServiceError::NotFound("媒体不存在".into()).into_response(),
         Err(e) => return e.into_response(),

@@ -26,7 +26,7 @@ pub struct SaveRequest {
 }
 
 pub async fn get_text(State(state): State<AppState>) -> impl IntoResponse {
-    let result = state.text.load_tabs().await.map(|rows| {
+    let result = state.text_query.load_tabs().await.map(|rows| {
         let tabs = rows
             .into_iter()
             .map(|(name, content)| TabItem { name, content })

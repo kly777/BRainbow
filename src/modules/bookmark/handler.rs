@@ -138,7 +138,7 @@ pub async fn get_bookmarks_handler(
         .map(str::trim)
         .filter(|s| !s.is_empty());
     let result = state
-        .bookmark
+        .bookmark_query
         .list(pagination.limit(), pagination.offset(), tag)
         .await
         .map(|(items, total)| {
@@ -154,7 +154,7 @@ pub async fn get_bookmark_handler(
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let result = state
-        .bookmark
+        .bookmark_query
         .by_id(id)
         .await
         .map(|opt| opt.map(BookmarkResponse::from));
@@ -231,7 +231,7 @@ pub async fn search_bookmarks_handler(
         .map(str::trim)
         .filter(|s| !s.is_empty());
     let result = state
-        .bookmark
+        .bookmark_query
         .search(
             params.q.trim(),
             tag,
@@ -310,7 +310,7 @@ pub async fn search_tags_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let q = params.q.as_deref().map(str::trim).filter(|s| !s.is_empty());
-    match state.bookmark.search_tags(q).await {
+    match state.bookmark_query.search_tags(q).await {
         Ok(tags) => {
             let tags: Vec<BookmarkTagWithCountResponse> = tags
                 .into_iter()
@@ -354,7 +354,7 @@ pub async fn get_bookmark_tags_handler(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    match state.bookmark.get_bookmark_tags(id).await {
+    match state.bookmark_query.get_bookmark_tags(id).await {
         Ok(tags) => {
             let tags: Vec<BookmarkTagResponse> =
                 tags.into_iter().map(BookmarkTagResponse::from).collect();

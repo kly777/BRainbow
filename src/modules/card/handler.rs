@@ -54,7 +54,7 @@ pub async fn get_cards_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let result = state
-        .card
+        .card_query
         .list(pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
@@ -69,7 +69,7 @@ pub async fn get_card_handler(
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let result = state
-        .card
+        .card_query
         .by_id(id)
         .await
         .map(|opt| opt.map(CardResponse::from));
@@ -121,7 +121,7 @@ pub async fn search_cards_handler(
     }
     let pagination = params.pagination();
     let result = state
-        .card
+        .card_query
         .search(params.q.trim(), pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {

@@ -1,6 +1,15 @@
 #![allow(clippy::unwrap_used)]
 
 use super::*;
+
+/// 全局 FSRS 参数被多个测试共享（并行时互相污染），
+/// 所有读写全局参数的测试经此锁串行化。
+static FSRS_PARAMS_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// 测试内获取全局参数锁（防止并行测试污染 GLOBAL_FSRS_PARAMS）
+fn lock_params() -> std::sync::MutexGuard<'static, ()> {
+    FSRS_PARAMS_LOCK.lock().unwrap()
+}
 use chrono::Utc;
 use rand::Rng;
 use rand::RngExt;
@@ -56,6 +65,7 @@ fn interval_days(stability: f64) -> f64 {
 
 #[test]
 fn intervals_are_ordered_for_new_card() {
+    let _g = lock_params();
     let intervals: Vec<f64> = (1..=4)
         .map(|r| schedule_secs(0.0, 0.0, CardState::New, None, r, 0))
         .collect();
@@ -66,6 +76,7 @@ fn intervals_are_ordered_for_new_card() {
 
 #[test]
 fn intervals_are_ordered_for_review_card() {
+    let _g = lock_params();
     let intervals: Vec<f64> = (1..=4)
         .map(|r| schedule_secs(5.0, 5.0, CardState::Review, None, r, 3))
         .collect();
@@ -83,6 +94,7 @@ fn intervals_are_ordered_for_review_card() {
 
 #[test]
 fn intervals_are_ordered_for_learning_card() {
+    let _g = lock_params();
     let intervals: Vec<f64> = (1..=4)
         .map(|r| schedule_secs(0.0, 0.0, CardState::Learning, Some(0), r, 0))
         .collect();
@@ -93,6 +105,7 @@ fn intervals_are_ordered_for_learning_card() {
 
 #[test]
 fn larger_days_elapsed_gives_larger_intervals() {
+    let _g = lock_params();
     for rating in [2u8, 3, 4] {
         let iv0 = schedule_secs(2.0, 5.0, CardState::Review, None, rating, 0);
         let iv1 = schedule_secs(2.0, 5.0, CardState::Review, None, rating, 1);
@@ -106,6 +119,7 @@ fn larger_days_elapsed_gives_larger_intervals() {
 
 #[test]
 fn good_grows_faster_than_hard() {
+    let _g = lock_params();
     let config = test_config();
     let mut results = Vec::new();
     for &rating in &[2u8, 3, 4] {
@@ -149,6 +163,7 @@ fn good_grows_faster_than_hard() {
 
 #[test]
 fn forget_in_review_triggers_relearning() {
+    let _g = lock_params();
     let config = test_config();
     let outcome = schedule(
         ScheduleInput {
@@ -169,6 +184,7 @@ fn forget_in_review_triggers_relearning() {
 
 #[test]
 fn relearn_then_recover() {
+    let _g = lock_params();
     let config = test_config();
     let o1 = schedule(
         ScheduleInput {
@@ -202,6 +218,7 @@ fn relearn_then_recover() {
 
 #[test]
 fn preview_returns_four_intervals() {
+    let _g = lock_params();
     let config = test_config();
     let iv = preview(5.0, 5.0, CardState::Review, None, 5, &config);
     assert_eq!(iv.len(), 4);
@@ -210,6 +227,7 @@ fn preview_returns_four_intervals() {
 
 #[test]
 fn preview_review_card_with_days_elapsed() {
+    let _g = lock_params();
     let config = test_config();
     let iv0 = preview(2.0, 5.0, CardState::Review, None, 0, &config);
     let iv5 = preview(2.0, 5.0, CardState::Review, None, 5, &config);
@@ -222,6 +240,7 @@ fn preview_review_card_with_days_elapsed() {
 
 #[test]
 fn long_term_growth_trajectory() {
+    let _g = lock_params();
     let config = test_config();
     let mut s = 0.0;
     let mut d = 0.0;
@@ -286,6 +305,7 @@ fn long_term_growth_trajectory() {
 
 #[test]
 fn days_elapsed_0_vs_1_vs_7_vs_30() {
+    let _g = lock_params();
     for de in [0u32, 1, 3, 7, 30] {
         let ratings: Vec<f64> = (1..=4)
             .map(|r| schedule_secs(2.0, 5.0, CardState::Review, None, r, de))
@@ -432,6 +452,7 @@ impl TrueMemSim {
 
 #[test]
 fn true_memory_simulation_report() {
+    let _g = lock_params();
     let mut rng = StdRng::seed_from_u64(42);
 
     let card_types = [
@@ -533,6 +554,7 @@ fn true_memory_simulation_report() {
 
 #[test]
 fn true_memory_simulation_check() {
+    let _g = lock_params();
     let mut rng = StdRng::seed_from_u64(123);
     let mut total_s = 0.0;
     for _ in 0..50 {
@@ -551,6 +573,7 @@ fn true_memory_simulation_check() {
 
 #[test]
 fn custom_config_produces_different_intervals() {
+    let _g = lock_params();
     let default = SchedulerConfig::default();
     let fast = SchedulerConfig {
         learning_steps: vec![30, 120],
@@ -621,6 +644,7 @@ fn default_fsrs_params() -> Vec<f32> {
 
 #[test]
 fn global_params_can_be_set_after_init() {
+    let _g = lock_params();
     init_global_params(vec![]);
 
     assert!(get_global_params().is_empty());
@@ -635,6 +659,7 @@ fn global_params_can_be_set_after_init() {
 
 #[test]
 fn global_params_overwrites_previous() {
+    let _g = lock_params();
     init_global_params(vec![]);
 
     let first = vec![1.0, 2.0, 3.0];
@@ -653,6 +678,7 @@ fn global_params_overwrites_previous() {
 
 #[test]
 fn make_fsrs_uses_current_global_params() {
+    let _g = lock_params();
     init_global_params(vec![]);
     let _fsrs = make_fsrs();
 

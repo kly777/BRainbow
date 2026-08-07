@@ -2,6 +2,7 @@ mod favicon;
 mod handler;
 mod import_html;
 mod model;
+mod query;
 pub mod repository;
 pub mod service;
 
@@ -13,6 +14,7 @@ pub use handler::{
     update_bookmark_handler,
 };
 pub use service::BookmarkService;
+pub use query::BookmarkQueryService;
 
 use crate::state::AppState;
 use axum::{

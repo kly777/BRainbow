@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTimeWindowRequest};
-use super::repository::TimeWindowRepository;
 use crate::error;
 use crate::pagination::Pagination;
 use crate::state::AppState;
@@ -84,9 +83,7 @@ pub async fn get_time_window_handler(
     Path(id): Path<i32>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let repo = TimeWindowRepository::new(state.db);
-
-    match repo.find_by_id(id).await {
+    match state.time_window_query.by_id(id).await {
         Ok(Some(time_window)) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Ok(None) => error::not_found("时间窗口未找到"),
         Err(e) => error::internal(e, "获取时间窗口"),
@@ -99,17 +96,13 @@ pub async fn get_time_windows_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     use crate::pagination::PaginatedResponse;
-    let repo = TimeWindowRepository::new(state.db);
     let p = &query.pagination;
 
     if let Some(task_id) = query.task_id {
-        let result = if let Some(window_type) = query.window_type {
-            repo.find_by_task_id_and_type_paginated(task_id, window_type, p.limit(), p.offset())
-                .await
-        } else {
-            repo.find_by_task_id_paginated(task_id, p.limit(), p.offset())
-                .await
-        };
+        let result = state
+            .time_window_query
+            .list_by_task(task_id, query.window_type, p.limit(), p.offset())
+            .await;
 
         return match result {
             Ok((windows, total)) => {
@@ -147,9 +140,7 @@ pub async fn delete_time_window_handler(
     Path(id): Path<i32>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let repo = TimeWindowRepository::new(state.db);
-
-    match repo.delete(id).await {
+    match state.time_window.delete(id).await {
         Ok(rows_affected) => {
             if rows_affected > 0 {
                 StatusCode::NO_CONTENT.into_response()
@@ -166,9 +157,7 @@ pub async fn get_time_window_stats_handler(
     Path(task_id): Path<i32>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let repo = TimeWindowRepository::new(state.db);
-
-    match repo.get_task_time_stats(task_id).await {
+    match state.time_window_query.get_task_time_stats(task_id).await {
         Ok((earliest, latest, count)) => {
             #[derive(Debug, Serialize)]
             struct StatsResponse {
@@ -194,8 +183,6 @@ pub async fn check_time_conflict_handler(
     Query(params): Query<HashMap<String, String>>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let repo = TimeWindowRepository::new(state.db);
-
     let start_time_str = params.get("start_time");
     let end_time_str = params.get("end_time");
     let exclude_id_str = params.get("exclude_id");
@@ -229,7 +216,8 @@ pub async fn check_time_conflict_handler(
 
     let exclude_id = exclude_id_str.and_then(|s| s.parse::<i32>().ok());
 
-    match repo
+    match state
+        .time_window_query
         .check_time_conflict(task_id, start_time, end_time, exclude_id)
         .await
     {

@@ -6,7 +6,6 @@ use tracing::warn;
 use super::model::{Media, NewMedia};
 use super::repository::MediaRepository;
 use crate::error::ServiceError;
-use crate::pagination::{PaginatedResponse, Pagination};
 
 pub(crate) const UPLOAD_DIR: &str = "uploads";
 
@@ -65,6 +64,9 @@ fn dir_for_type(media_type: &str) -> &str {
     }
 }
 
+/// 命令侧服务——上传/改名/删除等写操作。
+///
+/// CQRS 分离：纯读方法（list/get_by_stored_id）在 `MediaQueryService` 中。
 #[derive(Clone)]
 pub struct MediaService {
     repo: MediaRepository,
@@ -210,31 +212,6 @@ impl MediaService {
                 (None, None, None)
             }
         }
-    }
-
-    pub async fn list(
-        &self,
-        pagination: &Pagination,
-        media_type: Option<&str>,
-    ) -> Result<PaginatedResponse<Media>, ServiceError> {
-        let total = self
-            .repo
-            .count(media_type)
-            .await
-            .map_err(ServiceError::Db)?;
-        let items = self
-            .repo
-            .find_all(pagination.limit(), pagination.offset(), media_type)
-            .await
-            .map_err(ServiceError::Db)?;
-        Ok(PaginatedResponse::new(items, total, pagination))
-    }
-
-    pub async fn get_by_stored_id(&self, stored_id: &str) -> Result<Option<Media>, ServiceError> {
-        self.repo
-            .find_by_stored_id(stored_id)
-            .await
-            .map_err(ServiceError::Db)
     }
 
     pub async fn rename(&self, stored_id: &str, new_name: &str) -> Result<Media, ServiceError> {

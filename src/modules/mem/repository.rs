@@ -1,7 +1,9 @@
-use sqlx::{QueryBuilder, SqlitePool};
+use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
-use super::model::{Chunk, FsrsUpdate, InsertRevlogParams, MemQuery, MemRow, MemTagRow, TagInfo};
+use super::model::{
+    Chunk, FsrsUpdate, InsertRevlogParams, MemQuery, MemRow, MemTagRow, MemWithChunks, TagInfo,
+};
 use super::port::MemRepository;
 use async_trait::async_trait;
 
@@ -31,6 +33,7 @@ impl MemRepo {
             .await
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     pub async fn get_chunk(&self, id: i32) -> Result<Option<Chunk>, sqlx::Error> {
         sqlx::query_as::<_, (i32, String, String, String)>(
             "SELECT id, content, created_at, updated_at FROM chunk WHERE id = ?",
@@ -85,6 +88,62 @@ impl MemRepo {
         sqlx::query_as::<_, MemRow>(
             "SELECT id, cue_chunk_id, target_chunk_id, state, stability, difficulty, step_index, buried, lapses, leeched, due_at, last_review_at FROM mem WHERE id = ?",
         ).bind(id).fetch_optional(&*self.pool).await
+    }
+
+    /// 读模型：一次 JOIN 批量取回 MemWithChunks，消除 N+1。
+    pub async fn get_mems_with_chunks(
+        &self,
+        ids: &[i32],
+    ) -> Result<Vec<MemWithChunks>, sqlx::Error> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut qb: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
+            "SELECT m.id, m.state, m.stability, m.difficulty, m.due_at, m.lapses, m.leeched,
+                    cc.id AS cue_id, cc.content AS cue_content, cc.created_at AS cue_created_at, cc.updated_at AS cue_updated_at,
+                    ct.id AS target_id, ct.content AS target_content, ct.created_at AS target_created_at, ct.updated_at AS target_updated_at,
+                    mm.content AS mnemonic
+             FROM mem m
+             LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id
+             LEFT JOIN chunk ct ON m.target_chunk_id = ct.id
+             LEFT JOIN mem_mnemonic mm ON mm.mem_id = m.id
+             WHERE m.id IN (",
+        );
+        let mut sep = qb.separated(", ");
+        for &id in ids {
+            sep.push_bind(id);
+        }
+        qb.push(")");
+        qb.push(" ORDER BY m.due_at");
+
+        let rows: Vec<sqlx::sqlite::SqliteRow> = qb.build().fetch_all(&*self.pool).await?;
+        let mut items = Vec::with_capacity(rows.len());
+        for row in rows {
+            let item = MemWithChunks {
+                id: row.try_get("id")?,
+                cue: Chunk {
+                    id: row.try_get("cue_id")?,
+                    content: row.try_get("cue_content")?,
+                    created_at: row.try_get("cue_created_at")?,
+                    updated_at: row.try_get("cue_updated_at")?,
+                },
+                target: Chunk {
+                    id: row.try_get("target_id")?,
+                    content: row.try_get("target_content")?,
+                    created_at: row.try_get("target_created_at")?,
+                    updated_at: row.try_get("target_updated_at")?,
+                },
+                state: row.try_get("state")?,
+                stability: row.try_get("stability")?,
+                difficulty: row.try_get("difficulty")?,
+                due_at: row.try_get("due_at")?,
+                lapses: row.try_get("lapses")?,
+                leeched: row.try_get("leeched")?,
+                mnemonic: row.try_get("mnemonic")?,
+            };
+            items.push(item);
+        }
+        Ok(items)
     }
 
     pub async fn get_all_mems(
@@ -871,9 +930,6 @@ impl MemRepository for MemRepo {
     async fn create_chunk(&self, content: &str) -> Result<i32, sqlx::Error> {
         self.create_chunk(content).await
     }
-    async fn get_chunk(&self, id: i32) -> Result<Option<Chunk>, sqlx::Error> {
-        self.get_chunk(id).await
-    }
     async fn update_chunk(&self, id: i32, content: &str) -> Result<(), sqlx::Error> {
         self.update_chunk(id, content).await
     }
@@ -887,6 +943,12 @@ impl MemRepository for MemRepo {
     }
     async fn get_mem(&self, id: i32) -> Result<Option<MemRow>, sqlx::Error> {
         self.get_mem(id).await
+    }
+    async fn get_mems_with_chunks(
+        &self,
+        ids: &[i32],
+    ) -> Result<Vec<MemWithChunks>, sqlx::Error> {
+        self.get_mems_with_chunks(ids).await
     }
     async fn delete_mem(&self, id: i32) -> Result<(), sqlx::Error> {
         self.delete_mem(id).await
@@ -1892,5 +1954,43 @@ mod tests {
             ids.extend(upcoming);
             panic!("不应拉取 upcoming！新卡足够填满队列");
         }
+    }
+
+    // ── 读模型：get_mems_with_chunks (JOIN) ──
+
+    #[tokio::test]
+    async fn get_mems_with_chunks_joins_chunks_and_mnemonic() {
+        let repo = setup_db().await;
+        let cue_id = repo.create_chunk("线索内容").await.unwrap();
+        let target_id = repo.create_chunk("目标内容").await.unwrap();
+        let mem_id = repo.create_mem(cue_id, target_id, &[]).await.unwrap();
+        repo.upsert_mnemonic(mem_id, "助记内容").await.unwrap();
+
+        let items = repo.get_mems_with_chunks(&[mem_id]).await.unwrap();
+        assert_eq!(items.len(), 1);
+        let item = &items[0];
+        assert_eq!(item.id, mem_id);
+        assert_eq!(item.cue.content, "线索内容");
+        assert_eq!(item.target.content, "目标内容");
+        assert_eq!(item.mnemonic.as_deref(), Some("助记内容"));
+    }
+
+    #[tokio::test]
+    async fn get_mems_with_chunks_empty_ids_returns_empty() {
+        let repo = setup_db().await;
+        let items = repo.get_mems_with_chunks(&[]).await.unwrap();
+        assert!(items.is_empty());
+    }
+
+    #[tokio::test]
+    async fn get_mems_with_chunks_missing_mnemonic_is_none() {
+        let repo = setup_db().await;
+        let cue_id = repo.create_chunk("cue").await.unwrap();
+        let target_id = repo.create_chunk("target").await.unwrap();
+        let mem_id = repo.create_mem(cue_id, target_id, &[]).await.unwrap();
+
+        let items = repo.get_mems_with_chunks(&[mem_id]).await.unwrap();
+        assert_eq!(items.len(), 1);
+        assert!(items[0].mnemonic.is_none());
     }
 }

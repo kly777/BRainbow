@@ -1,10 +1,12 @@
-use chrono::{DateTime, Utc};
 use std::sync::Arc;
 
 use super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
-use super::model::{Task, TaskStatus, TimeWindow, TimeWindowType};
+use super::model::{Task, TimeWindow, TimeWindowType};
 use super::repository::TaskRepository;
 
+/// 命令侧服务——只暴露写操作与参与命令约束的读取。
+///
+/// CQRS 分离：纯读方法（list/detail/tree/stats/search/calendar/dag）在 `TaskQueryService` 中。
 #[derive(Clone)]
 pub struct TaskService {
     repo: TaskRepository,
@@ -15,57 +17,6 @@ impl TaskService {
         Self {
             repo: TaskRepository::new(db),
         }
-    }
-
-    pub async fn list(&self, limit: i64, offset: i64) -> Result<(Vec<Task>, i64), sqlx::Error> {
-        self.repo
-            .find_all_excluding_archived_paginated(limit, offset)
-            .await
-    }
-
-    pub async fn list_all(&self, limit: i64, offset: i64) -> Result<(Vec<Task>, i64), sqlx::Error> {
-        self.repo.find_all_paginated(limit, offset).await
-    }
-
-    pub async fn by_id(&self, id: i32) -> Result<Option<Task>, sqlx::Error> {
-        self.repo.find_by_id(id).await
-    }
-
-    pub async fn detail(
-        &self,
-        id: i32,
-    ) -> Result<Option<super::dto::TaskDetailResponse>, sqlx::Error> {
-        self.repo.find_detail(id).await
-    }
-
-    pub async fn tree(&self, root: Option<i32>) -> Result<Vec<Task>, sqlx::Error> {
-        self.repo.find_tree(root).await
-    }
-
-    pub async fn stats(&self) -> Result<(i64, i64, i64, i64), sqlx::Error> {
-        self.repo.get_stats().await
-    }
-
-    pub async fn by_status(
-        &self,
-        status: TaskStatus,
-        limit: i64,
-        offset: i64,
-    ) -> Result<(Vec<Task>, i64), sqlx::Error> {
-        self.repo
-            .find_by_status_paginated(status, limit, offset)
-            .await
-    }
-
-    pub async fn search(
-        &self,
-        query: &str,
-        limit: i64,
-        offset: i64,
-    ) -> Result<(Vec<Task>, i64), sqlx::Error> {
-        self.repo
-            .search_by_title_paginated(query, limit, offset)
-            .await
     }
 
     pub async fn create(&self, req: CreateTaskRequest) -> Result<Task, ServiceError> {
@@ -154,19 +105,6 @@ impl TaskService {
             .map_err(ServiceError::Db)
     }
 
-    /// 获取日历事件 - 查询指定时间范围内的所有非归档任务的时间窗口
-    pub async fn calendar(
-        &self,
-        start: Option<DateTime<Utc>>,
-        end: Option<DateTime<Utc>>,
-        status: Option<TaskStatus>,
-    ) -> Result<Vec<(Task, TimeWindow)>, ServiceError> {
-        self.repo
-            .find_calendar_events(start, end, status)
-            .await
-            .map_err(ServiceError::Db)
-    }
-
     /// 校验时间窗口约束（C001 + C002）
     /// 在创建/更新 time_window 或更新任务的 time_windows 时调用
     pub async fn validate_time_windows(
@@ -247,81 +185,6 @@ impl TaskService {
         }
 
         Ok(())
-    }
-
-    /// 构建依赖图（DAG）— 批量查询，避免 N+1
-    pub async fn dag(
-        &self,
-        root_task_id: Option<i32>,
-        depth: i32,
-    ) -> Result<super::response::DagView, ServiceError> {
-        use super::response::{DagEdge, DagNode, DagView};
-        use std::collections::{HashMap, HashSet, VecDeque};
-
-        let (all_tasks, _) = self
-            .repo
-            .find_all_paginated(10000, 0)
-            .await
-            .map_err(ServiceError::Db)?;
-        let task_map: HashMap<i32, &Task> = all_tasks.iter().map(|t| (t.id, t)).collect();
-
-        // 批量取全部依赖
-        let all_deps = self
-            .repo
-            .get_all_dependencies()
-            .await
-            .map_err(ServiceError::Db)?;
-
-        let mut nodes_map: HashMap<i32, DagNode> = HashMap::new();
-        let mut edges: Vec<DagEdge> = Vec::new();
-        let mut visited: HashSet<i32> = HashSet::new();
-        let mut queue: VecDeque<(i32, i32)> = VecDeque::new();
-
-        if let Some(root_id) = root_task_id {
-            queue.push_back((root_id, 0));
-        } else {
-            for (&task_id, deps) in &all_deps {
-                if !deps.is_empty() {
-                    queue.push_back((task_id, 0));
-                }
-            }
-        }
-
-        while let Some((task_id, current_depth)) = queue.pop_front() {
-            if current_depth > depth || !visited.insert(task_id) {
-                continue;
-            }
-
-            if let Some(&task) = task_map.get(&task_id) {
-                nodes_map.entry(task_id).or_insert_with(|| DagNode {
-                    id: task.id,
-                    title: task.title.clone(),
-                    status: task.status.clone(),
-                });
-
-                if let Some(deps) = all_deps.get(&task_id) {
-                    for &dep_id in deps {
-                        if let Some(&dep_task) = task_map.get(&dep_id) {
-                            nodes_map.entry(dep_id).or_insert_with(|| DagNode {
-                                id: dep_task.id,
-                                title: dep_task.title.clone(),
-                                status: dep_task.status.clone(),
-                            });
-                        }
-                        edges.push(DagEdge {
-                            from: task_id,
-                            to: dep_id,
-                        });
-                        queue.push_back((dep_id, current_depth + 1));
-                    }
-                }
-            }
-        }
-
-        Ok(DagView {
-            nodes: nodes_map.into_values().collect(),
-            edges,
-        })
     }
 }
 

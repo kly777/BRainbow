@@ -1,8 +1,10 @@
 mod handler;
+mod query;
 mod repository;
 pub mod service;
 
 pub use service::TextService;
+pub use query::TextQueryService;
 
 use crate::state::AppState;
 use axum::{Router, routing::get};

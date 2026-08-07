@@ -64,7 +64,7 @@ pub async fn login_handler(
 }
 
 pub async fn user_handler(State(state): State<AppState>) -> impl IntoResponse {
-    match state.user.list_all().await {
+    match state.user_query.list_all().await {
         Ok(users) => {
             let user_list: Vec<HashMap<String, String>> = users
                 .into_iter()

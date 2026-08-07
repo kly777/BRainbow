@@ -19,6 +19,9 @@ fn unique_words(words: Vec<String>) -> Vec<String> {
         .collect()
 }
 
+/// 命令侧服务——上传/标记单词/笔记等写操作。
+///
+/// CQRS 分离：纯读方法在 `ReadingQueryService` 中。
 #[derive(Clone)]
 pub struct ReadingService {
     pool: Arc<SqlitePool>,
@@ -47,6 +50,18 @@ impl ReadingService {
         repo.get_article(article_id)
             .await
             .map(|a| a.expect("刚插入的文章必须存在"))
+    }
+
+    /// 标记单词
+    pub async fn mark_word(&self, word: &str, status: &str) -> Result<(), sqlx::Error> {
+        let repo = repository::ReadingRepo::new(self.pool.clone());
+        repo.upsert_user_word(word, status).await
+    }
+
+    /// 更新文章笔记
+    pub async fn update_notes(&self, id: i64, notes: &str) -> Result<(), sqlx::Error> {
+        let repo = repository::ReadingRepo::new(self.pool.clone());
+        repo.update_article_notes(id, notes).await
     }
 }
 

@@ -65,7 +65,7 @@ pub async fn get_signs_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let result = state
-        .sign
+        .sign_query
         .list(pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
@@ -80,7 +80,7 @@ pub async fn get_sign_handler(
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let result = state
-        .sign
+        .sign_query
         .by_id(id)
         .await
         .map(|opt| opt.map(SignResponse::from));
@@ -100,7 +100,7 @@ pub async fn get_signs_by_signifier_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let result = state
-        .sign
+        .sign_query
         .by_signifier(&signifier, pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
@@ -116,7 +116,7 @@ pub async fn get_signs_by_signified_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let result = state
-        .sign
+        .sign_query
         .by_signified(&signified, pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {

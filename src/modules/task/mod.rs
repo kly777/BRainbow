@@ -1,6 +1,7 @@
 mod dto;
 mod handler;
 mod model;
+mod query;
 mod repository;
 mod response;
 pub(crate) mod service;
@@ -22,6 +23,7 @@ pub use handler::{
 };
 
 pub use service::TaskService;
+pub use query::TaskQueryService;
 
 pub fn routes() -> Router<AppState> {
     Router::new()

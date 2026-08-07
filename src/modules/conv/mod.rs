@@ -1,6 +1,6 @@
 mod handler;
 mod model;
+pub mod query;
 pub mod scoring;
-pub mod service;
 
 pub use handler::routes;

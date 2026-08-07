@@ -191,29 +191,9 @@ impl MemQueryService {
     // ── 内部辅助 ──
 
     async fn build_items(&self, ids: &[i32]) -> Vec<MemWithChunks> {
-        let mut items = Vec::new();
-        for &id in ids {
-            if let Ok(Some(row)) = self.repo.get_mem(id).await
-                && let (Ok(Some(cue)), Ok(Some(target))) = (
-                    self.repo.get_chunk(row.cue_chunk_id).await,
-                    self.repo.get_chunk(row.target_chunk_id).await,
-                )
-            {
-                let mnemonic = self.repo.get_mnemonic(id).await.unwrap_or(None);
-                items.push(MemWithChunks {
-                    id: row.id,
-                    cue,
-                    target,
-                    state: row.state,
-                    stability: row.stability,
-                    difficulty: row.difficulty,
-                    due_at: row.due_at,
-                    lapses: row.lapses,
-                    leeched: row.leeched,
-                    mnemonic,
-                });
-            }
-        }
-        items
+        self.repo
+            .get_mems_with_chunks(ids)
+            .await
+            .unwrap_or_default()
     }
 }

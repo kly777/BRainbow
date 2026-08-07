@@ -209,6 +209,7 @@ pub struct MemWithTags {
 /// 数据库行：mem 表的一条记录（供 Repository 层使用）
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct MemRow {
+    #[allow(dead_code)]
     pub id: i32,
     pub cue_chunk_id: i32,
     pub target_chunk_id: i32,
@@ -220,6 +221,7 @@ pub struct MemRow {
     pub buried: bool,
     pub lapses: i32,
     pub leeched: bool,
+    #[allow(dead_code)]
     pub due_at: String,
     #[allow(dead_code)]
     pub last_review_at: Option<String>,

@@ -1,6 +1,7 @@
 pub mod handler;
 pub mod model;
 pub mod repository;
+pub mod query;
 pub mod service;
 
 use crate::state::AppState;

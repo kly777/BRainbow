@@ -30,6 +30,13 @@
 	/* 挂载点类（无样式，供 JS 引用） */
 }
 
+.th,
+.th-sort,
+.th-cb {
+	text-align: left;
+	font-weight: 600;
+}
+
 .th-sort {
 	cursor: pointer;
 	user-select: none;
@@ -37,6 +44,7 @@
 
 .th-cb {
 	width: 32px;
+	padding-left: var(--space-sm);
 }
 
 .td {
@@ -50,6 +58,7 @@
 
 .td-cb {
 	width: 32px;
+	padding-left: var(--space-sm);
 }
 
 .td-num {

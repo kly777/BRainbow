@@ -8,10 +8,9 @@ import {
 } from "solid-js";
 import { getErrorMessage } from "@apis/types/index.ts";
 import { AsyncView } from "@components/ui/AsyncView.tsx";
-import Breadcrumb from "@components/ui/Breadcrumb.tsx";
 import Button from "@components/ui/Button.tsx";
 import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
-import Toolbar from "@components/ui/Toolbar.tsx";
+import MarkdownRenderer from "@components/ui/Markdown.tsx";
 import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
 import { tryAsync } from "@lib/result.ts";
 import { deleteCardE, getCardE, updateCardE } from "@features/card/api.ts";
@@ -43,6 +42,35 @@ const CardEditPage: Component = () => {
 		if (c) setContent(c.content);
 	});
 
+	// 是否有未保存修改
+	const dirty = () => !!card() && card()!.content !== content();
+
+	const stampLabel = () => {
+		const c = card();
+		if (!c) return "";
+		return c.created_at === c.updated_at ? "创建于" : "修改于";
+	};
+
+	const stamp = () => {
+		const c = card();
+		if (!c) return "";
+		return c.created_at === c.updated_at ? c.created_at : c.updated_at;
+	};
+
+	const formatDate = (s: string) => {
+		if (!s) return "";
+		try {
+			return new Date(s).toLocaleString("zh-CN", {
+				month: "2-digit",
+				day: "2-digit",
+				hour: "2-digit",
+				minute: "2-digit",
+			});
+		} catch {
+			return s;
+		}
+	};
+
 	const doSave = async () => {
 		if (!content().trim()) {
 			setError("内容不能为空");
@@ -73,33 +101,55 @@ const CardEditPage: Component = () => {
 		if (ok) navigate("/c");
 	};
 
+	const onKeyDown = (e: KeyboardEvent) => {
+		if (e.ctrlKey || e.metaKey) {
+			if (e.key === "Enter" || e.key === "s" || e.key === "S") {
+				e.preventDefault();
+				if (!isSubmitting()) void doSave();
+			}
+		}
+	};
+
 	return (
 		<div class={styles.container}>
-			<Breadcrumb
-				items={[
-					{ label: "首页", href: "/" },
-					{ label: "卡片", href: "/c" },
-					{ label: `#${cardId()}`, href: `/c/${cardId()}` },
-					{ label: "编辑" },
-				]}
-			/>
-			<Toolbar
-				title="编辑卡片"
-				backLabel="返回"
-				onBack={() => navigate(`/c/${cardId()}`)}
-			>
-				<Button variant="danger" size="sm" onClick={handleDelete}>
-					删除
-				</Button>
-				<Button
-					variant="primary"
-					size="sm"
-					onClick={doSave}
-					disabled={isSubmitting()}
-				>
-					{isSubmitting() ? "保存中..." : "保存"}
-				</Button>
-			</Toolbar>
+			<header class={styles.header}>
+				<div class={styles.titleRow}>
+					<h1 class={styles.title}>
+						编辑卡片 <span class={styles.cardNo}>#{cardId()}</span>
+					</h1>
+					<div class={styles.actions}>
+						<Button variant="danger" size="sm" onClick={handleDelete}>
+							删除
+						</Button>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() => navigate(`/c/${cardId()}`)}
+						>
+							查看
+						</Button>
+						<Button
+							variant="primary"
+							size="sm"
+							onClick={doSave}
+							disabled={isSubmitting() || !dirty()}
+						>
+							{isSubmitting() ? "保存中…" : "保存"}
+						</Button>
+					</div>
+				</div>
+				<div class={styles.metaRow}>
+					<span class={styles.meta}>
+						{stampLabel()} {formatDate(stamp())}
+					</span>
+					<Show when={dirty()}>
+						<span class={styles.dirty}>
+							<span class={styles.dirtyDot} />
+							未保存
+						</span>
+					</Show>
+				</div>
+			</header>
 
 			<Show when={error()}>
 				<div class={styles.errorMsg}>{error()}</div>
@@ -113,13 +163,51 @@ const CardEditPage: Component = () => {
 			>
 				{() => (
 					<Show when={!card.loading && !card.error}>
-						<MarkdownEditor
-							value={content()}
-							onInput={setContent}
-							preview
-							rows={20}
-							placeholder="输入 Markdown 内容…支持粘贴和拖拽图片"
-						/>
+						<div class={styles.workspace} onKeyDown={onKeyDown}>
+							<div class={styles.panes}>
+								<section class={styles.pane}>
+									<div class={styles.paneHead}>
+										编辑
+										<span class={styles.paneHint}>
+											Markdown · 粘贴/拖拽图片自动上传
+										</span>
+									</div>
+									<MarkdownEditor
+										editorClass={styles.editor}
+										class={styles.textarea}
+										value={content()}
+										onInput={setContent}
+										rows={8}
+										placeholder="输入 Markdown 内容…"
+									/>
+								</section>
+
+								<div class={styles.fold} />
+
+								<section class={styles.pane}>
+									<div class={styles.paneHead}>实时预览</div>
+									<div class={styles.preview}>
+										<Show
+											when={content().trim()}
+											fallback={
+												<div class={styles.previewEmpty}>
+													开始输入，此处实时渲染 Markdown…
+												</div>
+											}
+										>
+											<MarkdownRenderer content={content()} />
+										</Show>
+									</div>
+								</section>
+							</div>
+
+							<footer class={styles.statusbar}>
+								<span>{content().length} 字</span>
+								<span class={styles.shortcut}>
+									<kbd>Ctrl</kbd> + <kbd>Enter</kbd> 保存
+								</span>
+							</footer>
+						</div>
 					</Show>
 				)}
 			</AsyncView>

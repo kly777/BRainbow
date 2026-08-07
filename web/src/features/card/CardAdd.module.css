@@ -3,6 +3,7 @@
 .container {
 	max-width: 1440px;
 	margin: 0 auto;
+	padding: var(--space-lg) var(--space-xl) 0;
 	height: 100%;
 	display: flex;
 	flex-direction: column;

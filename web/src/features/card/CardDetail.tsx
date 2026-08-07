@@ -1,7 +1,6 @@
 import { useNavigate, useParams } from "@solidjs/router";
 import { type Component, createResource } from "solid-js";
 import { AsyncView } from "@components/ui/AsyncView.tsx";
-import Breadcrumb from "@components/ui/Breadcrumb.tsx";
 import Button from "@components/ui/Button.tsx";
 import MarkdownRenderer from "@components/ui/Markdown.tsx";
 import Toolbar from "@components/ui/Toolbar.tsx";
@@ -51,13 +50,6 @@ const CardDetailPage: Component = () => {
 
 	return (
 		<div class={styles.container}>
-			<Breadcrumb
-				items={[
-					{ label: "首页", href: "/" },
-					{ label: "卡片", href: "/c" },
-					{ label: card()?.content?.slice(0, 20) || `#${cardId()}` },
-				]}
-			/>
 			<Toolbar backLabel="卡片列表" onBack={() => navigate("/c")}>
 				<Button
 					variant="secondary"

@@ -1,8 +1,8 @@
 /* ===== 布局常量令牌（不随主题；颜色令牌见 styles/tokens.css） ===== */
 :root {
-	/* ── 间距与尺寸令牌（7 档；radius-xs 为 6px 新增档，sm 保持 4px 兼容旧引用） ── */
-	--radius-xs: 6px;
-	--radius-sm: 4px;
+	/* ── 圆角令牌（xs < sm < md < lg < xl，语义与档位一致） ── */
+	--radius-xs: 4px;
+	--radius-sm: 6px;
 	--radius-md: 8px;
 	--radius-lg: 12px;
 	--radius-xl: 16px;

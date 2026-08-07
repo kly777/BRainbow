@@ -10,6 +10,7 @@ interface MarkdownEditorProps {
 	rows?: number;
 	placeholder?: string;
 	class?: string;
+	editorClass?: string;
 	id?: string;
 }
 
@@ -113,13 +114,14 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 	const rows = props.rows ?? 6;
 
 	return (
-		<div class={styles.editor}>
+		<div
+			class={props.editorClass ? `${styles.editor} ${props.editorClass}` : styles.editor}
+		>
 			<textarea
 				ref={textareaRef}
 				id={props.id}
-				class={
-					props.class || (dragover() ? styles.textareaDrag : styles.textarea)
-				}
+				class={props.class ?? styles.textarea}
+				classList={{ [styles.textareaDrag]: dragover() }}
 				value={props.value}
 				onInput={onInput}
 				onPaste={onPaste}

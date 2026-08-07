@@ -4,7 +4,7 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-md);
-	padding: var(--space-sm) 1rem;
+	padding: var(--space-sm) var(--space-lg);
 	background: var(--t-color-surface-raised);
 	border-bottom: 1px solid var(--t-color-border);
 	flex-shrink: 0;
@@ -23,7 +23,7 @@
 }
 
 .back-btn {
-	padding: var(--space-xs) 0.625rem;
+	padding: var(--space-xs) var(--space-md);
 	font-size: var(--text-sm);
 	background: var(--t-color-bg);
 	color: var(--t-color-ink-muted);

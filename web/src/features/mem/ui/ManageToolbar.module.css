@@ -5,7 +5,7 @@
 	align-items: center;
 	flex-wrap: wrap;
 	gap: var(--space-sm);
-	padding: var(--space-sm) 1.25rem;
+	padding: var(--space-sm) var(--space-xl);
 	border-bottom: 1px solid var(--t-color-border);
 	background: var(--t-color-surface);
 }
@@ -23,13 +23,13 @@
 	background: var(--t-color-bg);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
-	padding: var(--space-xs) 0.75rem;
+	padding: var(--space-xs) var(--space-md);
 }
 
 .tag-filter {
 	display: flex;
 	align-items: center;
-	gap: 0.25rem;
+	gap: var(--space-xs);
 	position: relative;
 	flex-wrap: wrap;
 }
@@ -41,16 +41,16 @@
 	border-radius: var(--radius-sm);
 	background: transparent;
 	color: var(--t-color-ink-muted);
-	padding: 0.1875rem 0.5rem;
+	padding: var(--space-xs) var(--space-sm);
 	cursor: pointer;
 }
 
 .active-tag {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.25rem;
+	gap: var(--space-xs);
 	font-size: var(--text-xs);
-	padding: 0.125rem 0.5rem;
+	padding: var(--space-2xs) var(--space-sm);
 	border-radius: 999px;
 	background: var(--t-color-badge-new-bg);
 	color: var(--t-color-badge-new-text);
@@ -59,9 +59,9 @@
 .excluded-tag {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.25rem;
+	gap: var(--space-xs);
 	font-size: var(--text-xs);
-	padding: 0.125rem 0.5rem;
+	padding: var(--space-2xs) var(--space-sm);
 	border-radius: 999px;
 	background: var(--t-color-badge-suspended-bg);
 	color: var(--t-color-badge-suspended-text);
@@ -83,7 +83,7 @@
 	background: none;
 	color: var(--t-color-ink-faint);
 	cursor: pointer;
-	padding: 0.125rem 0.375rem;
+	padding: var(--space-2xs) var(--space-sm);
 }
 
 .tag-input {
@@ -93,14 +93,14 @@
 	background: var(--t-color-bg);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
-	padding: 0.1875rem 0.5rem;
+	padding: var(--space-xs) var(--space-sm);
 }
 
 .tag-dropdown {
 	position: absolute;
 	top: calc(100% + 0.25rem);
 	left: 0;
-	z-index: 20;
+	z-index: var(--z-dropdown);
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
@@ -112,7 +112,7 @@
 	width: 100%;
 	text-align: left;
 	font-size: var(--text-sm);
-	padding: 0.375rem 0.75rem;
+	padding: var(--space-sm) var(--space-md);
 	border: none;
 	background: none;
 	cursor: pointer;
@@ -125,13 +125,13 @@
 	background: transparent;
 	border: 1px solid var(--t-color-border-strong);
 	border-radius: var(--radius-md);
-	padding: var(--space-xs) 0.75rem;
+	padding: var(--space-xs) var(--space-md);
 	cursor: pointer;
 }
 
 .filter-group {
 	display: flex;
-	gap: 0.125rem;
+	gap: var(--space-2xs);
 }
 
 .filter-btn {
@@ -141,7 +141,7 @@
 	background: transparent;
 	border: none;
 	border-radius: calc(var(--radius-md) - 0.125rem);
-	padding: 0.1875rem 0.5rem;
+	padding: var(--space-xs) var(--space-sm);
 	cursor: pointer;
 }
 
@@ -152,14 +152,11 @@
 	background: var(--t-color-accent);
 	border: none;
 	border-radius: calc(var(--radius-md) - 0.125rem);
-	padding: 0.1875rem 0.5rem;
+	padding: var(--space-xs) var(--space-sm);
 	cursor: pointer;
 }
 
-.search-input:focus {
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
-}
+
 
 .mode-toggle:hover {
 	color: var(--t-color-ink);
@@ -174,9 +171,7 @@
 	color: var(--t-color-ink);
 }
 
-.tag-input:focus {
-	border-color: var(--t-color-accent);
-}
+
 
 .tag-option:hover {
 	background: var(--t-color-surface-raised);

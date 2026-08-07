@@ -14,11 +14,11 @@
 	font-size: var(--text-base);
 	font-family:
 		ui-monospace, sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
-	line-height: 1.6;
+	line-height: var(--leading-normal);
 	resize: vertical;
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
-	transition: border-color 0.15s;
+	transition: border-color var(--t-transition-fast);
 	box-sizing: border-box;
 }
 
@@ -31,10 +31,7 @@
 	min-height: 2.5rem;
 }
 
-.textarea:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-}
+
 
 .textarea-drag {
 	composes: textarea;

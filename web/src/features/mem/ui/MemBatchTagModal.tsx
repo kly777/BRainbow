@@ -24,7 +24,7 @@ export default function MemBatchTagModal(props: Props) {
 				style={{
 					"margin-bottom": "var(--space-md)",
 					"font-size": "var(--text-sm)",
-					color: "var(--color-text-muted)",
+					color: "var(--t-color-ink-faint))",
 				}}
 			>
 				{desc()}

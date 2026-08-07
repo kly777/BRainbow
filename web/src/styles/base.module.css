@@ -9,7 +9,7 @@
 	background: transparent;
 	border: 1px solid var(--t-color-border-strong);
 	border-radius: var(--radius-md);
-	padding: var(--space-xs) 0.875rem;
+	padding: var(--space-xs) var(--space-lg);
 	cursor: pointer;
 	transition:
 		background 0.15s,
@@ -55,7 +55,7 @@
 	composes: btn-base;
 	font-size: var(--text-lg);
 	line-height: 1;
-	padding: var(--space-xs) 0.75rem;
+	padding: var(--space-xs) var(--space-md);
 }
 
 .btn-nav:disabled {
@@ -93,12 +93,12 @@
 	margin-inline: auto;
 	width: fit-content;
 	min-height: 3rem;
-	z-index: 20;
+	z-index: var(--z-sticky);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: var(--space-sm);
-	padding: 0 1rem; /* 水平内边距（高度由 min-height 决定） */
+	padding: 0 var(--space-lg); /* 水平内边距（高度由 min-height 决定） */
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border-strong);
 	border-bottom: none;
@@ -113,7 +113,7 @@
 	.btn-primary,
 	.btn-ghost,
 	.btn-nav {
-		padding: 0 0.625rem;
+		padding: 0 var(--space-md);
 		font-size: var(--text-xs);
 		line-height: 1;
 		height: 2rem;
@@ -125,14 +125,14 @@
 
 	.btn-nav {
 		font-size: var(--text-base);
-		padding-left: 0.6875rem;
-		padding-right: 0.6875rem;
+		padding-left: var(--space-md);
+		padding-right: var(--space-md);
 	}
 
 	.bottom-bar {
 		width: 100%;
-		gap: 0.25rem;
-		padding: 0 0.75rem;
+		gap: var(--space-xs);
+		padding: 0 var(--space-md);
 		border-radius: 0;
 		border-left: none;
 		border-right: none;

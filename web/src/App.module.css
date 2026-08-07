@@ -16,7 +16,7 @@
 .footer {
 	text-align: center;
 	padding: var(--space-md);
-	margin-top: 0.9375rem;
+	margin-top: var(--space-lg);
 	color: var(--t-color-ink-muted);
 	font-size: var(--text-sm);
 	border-top: 1px solid var(--t-color-border);
@@ -28,7 +28,7 @@
 	align-items: center;
 	justify-content: center;
 	height: 100%;
-	padding: var(--space-xl) 1.25rem;
+	padding: var(--space-xl) var(--space-xl);
 	text-align: center;
 }
 
@@ -36,10 +36,10 @@
 	color: var(--t-color-accent);
 	text-decoration: none;
 	font-weight: 500;
-	padding: var(--space-sm) 1.25rem;
+	padding: var(--space-sm) var(--space-xl);
 	border: 2px solid var(--t-color-accent);
 	border-radius: var(--radius-md);
-	transition: all 0.3s ease;
+	transition: all var(--t-transition-slow);
 }
 
 .feature-grid {
@@ -69,16 +69,16 @@
 	display: inline-block;
 	background-color: var(--t-color-accent);
 	color: var(--t-color-bg);
-	padding: var(--space-sm) 1.25rem;
+	padding: var(--space-sm) var(--space-xl);
 	border-radius: var(--radius-md);
 	text-decoration: none;
 	font-weight: 500;
-	transition: background-color 0.3s ease;
+	transition: background-color var(--t-transition-slow);
 	border: none;
 }
 
 .quick-stats {
-	margin-top: 1.875rem;
+	margin-top: var(--space-2xl);
 	padding: var(--space-md);
 	background-color: var(--t-color-bg);
 	border-radius: var(--radius-md);
@@ -93,7 +93,7 @@
 
 @media (width <= 480px) {
 	.landing-page {
-		padding: var(--space-xl) 0.625rem;
+		padding: var(--space-xl) var(--space-md);
 	}
 }
 
@@ -148,9 +148,9 @@
 .landing-page p {
 	font-size: var(--text-lg);
 	color: var(--t-color-ink-muted);
-	margin-bottom: 2.5rem;
+	margin-bottom: var(--space-3xl);
 	max-width: 600px;
-	line-height: 1.6;
+	line-height: var(--leading-normal);
 }
 
 .feature-card h3 {
@@ -166,7 +166,7 @@
 	font-size: var(--text-base);
 	color: var(--t-color-ink-muted);
 	margin-bottom: var(--space-xl);
-	line-height: 1.5;
+	line-height: var(--leading-normal);
 	flex: 1;
 }
 

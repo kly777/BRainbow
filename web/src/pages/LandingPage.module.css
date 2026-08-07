@@ -23,7 +23,7 @@
 	color: var(--t-color-ink-muted);
 	margin: 0 0 var(--space-xl) 0;
 	max-width: 480px;
-	line-height: 1.7;
+	line-height: var(--leading-normal);
 }
 
 .cta-row {
@@ -54,7 +54,7 @@
 }
 
 .cta-secondary {
-	padding: var(--space-sm) 1.5rem;
+	padding: var(--space-sm) var(--space-xl);
 	background: transparent;
 	color: var(--t-color-accent);
 	border: 2px solid var(--t-color-accent);
@@ -74,13 +74,13 @@
 	gap: var(--space-lg);
 	width: 100%;
 	max-width: 800px;
-	margin-bottom: 2.5rem;
+	margin-bottom: var(--space-3xl);
 }
 
 .feature-card {
 	background: var(--t-color-surface);
 	border-radius: var(--radius-lg);
-	padding: var(--space-xl) 1.25rem;
+	padding: var(--space-xl) var(--space-xl);
 	box-shadow: var(--shadow-sm);
 	border: 1px solid var(--t-color-border);
 	transition:
@@ -103,16 +103,16 @@
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	margin: 0;
-	line-height: 1.8;
+	line-height: var(--leading-relaxed);
 }
 
-@media (width <= 640px) {
+@media (width <= 600px) {
 	.hero-title {
 		font-size: var(--text-xl);
 	}
 }
 
-@media (width <= 640px) {
+@media (width <= 600px) {
 	.hero-subtitle {
 		font-size: var(--text-base);
 	}
@@ -127,7 +127,7 @@
 	color: var(--t-color-white);
 }
 
-@media (width <= 640px) {
+@media (width <= 600px) {
 	.feature-grid {
 		grid-template-columns: 1fr 1fr;
 		gap: var(--space-md);
@@ -151,7 +151,7 @@
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	margin: 0;
-	line-height: 1.5;
+	line-height: var(--leading-normal);
 }
 
 .hint kbd {

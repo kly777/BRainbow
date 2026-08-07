@@ -3,7 +3,7 @@
 .page {
 	max-width: 1440px;
 	margin: 0 auto;
-	padding: var(--space-xl) 1.25rem;
+	padding: var(--space-xl) var(--space-xl);
 }
 
 .title {
@@ -80,7 +80,7 @@
 .actions {
 	display: flex;
 	gap: var(--space-xs);
-	padding: var(--space-sm) 0.75rem;
+	padding: var(--space-sm) var(--space-md);
 	border-top: 1px solid var(--t-color-border);
 }
 
@@ -93,7 +93,7 @@
 
 .edit-input {
 	composes: field-input from "../../styles/base.module.css";
-	padding: var(--space-xs) 0.625rem;
+	padding: var(--space-xs) var(--space-md);
 	font-size: var(--text-sm);
 	font-family: inherit;
 	outline: none;
@@ -105,13 +105,11 @@
 	margin: 0 0 var(--space-md) 0;
 }
 
-@media (width <= 640px) {
+@media (width <= 600px) {
 	.grid {
 		grid-template-columns: repeat(2, 1fr);
 		gap: var(--space-sm);
 	}
 }
 
-.edit-input:focus {
-	border-color: var(--t-color-accent);
-}
+

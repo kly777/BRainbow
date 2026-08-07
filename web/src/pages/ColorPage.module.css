@@ -17,7 +17,7 @@
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	margin: 0 0 var(--space-xl);
-	line-height: 1.7;
+	line-height: var(--leading-normal);
 }
 
 .grid {
@@ -61,7 +61,7 @@
 	font-size: var(--text-base);
 	font-weight: 600;
 	color: var(--t-color-ink);
-	margin-bottom: 0.25rem;
+	margin-bottom: var(--space-xs);
 }
 
 .card-status {
@@ -82,7 +82,7 @@
 
 .preview-btn {
 	font-size: var(--text-xs);
-	padding: var(--space-xs) 0.625rem;
+	padding: var(--space-xs) var(--space-md);
 	border-radius: var(--radius-sm);
 	border: none;
 	cursor: default;

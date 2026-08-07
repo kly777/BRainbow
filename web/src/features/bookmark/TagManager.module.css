@@ -3,14 +3,14 @@
 .state {
 	text-align: center;
 	color: var(--t-color-ink-muted);
-	padding: 1.5rem 0;
+	padding: var(--space-xl) 0;
 	font-size: var(--text-sm);
 }
 
 .list {
 	display: flex;
 	flex-direction: column;
-	gap: 0.25rem;
+	gap: var(--space-xs);
 	max-height: 50vh;
 	overflow-y: auto;
 }
@@ -19,7 +19,7 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-sm);
-	padding: 0.375rem 0.625rem;
+	padding: var(--space-sm) var(--space-md);
 	border-radius: var(--radius-sm);
 }
 

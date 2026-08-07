@@ -22,7 +22,7 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-xs);
-	padding: var(--space-sm) 0.875rem;
+	padding: var(--space-sm) var(--space-lg);
 	font-size: var(--text-sm);
 	cursor: pointer;
 	border: none;
@@ -44,7 +44,7 @@
 .rename-input {
 	composes: field-input from "../styles/base.module.css";
 	width: 5rem;
-	padding: var(--space-xs) 0.25rem;
+	padding: var(--space-xs) var(--space-xs);
 	border-color: var(--t-color-accent);
 	background: var(--t-color-bg);
 	font-size: var(--text-sm);
@@ -79,7 +79,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	margin-left: 0.25rem;
+	margin-left: var(--space-xs);
 	flex-shrink: 0;
 }
 
@@ -88,9 +88,9 @@
 	border: none;
 	outline: none;
 	resize: none;
-	padding: var(--space-xl) 1.5rem;
+	padding: var(--space-xl) var(--space-xl);
 	font-size: var(--text-base);
-	line-height: 1.7;
+	line-height: var(--leading-normal);
 	font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
 	background: var(--t-color-bg);
 	color: var(--t-color-ink);

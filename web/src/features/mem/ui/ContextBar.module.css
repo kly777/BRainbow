@@ -13,7 +13,7 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: var(--space-lg);
-	padding: var(--space-xs) 1.25rem;
+	padding: var(--space-xs) var(--space-xl);
 	border-bottom: 1px solid var(--t-color-border);
 	background: var(--t-color-surface);
 	flex-shrink: 0;
@@ -42,7 +42,7 @@
 
 @media (width <= 600px) {
 	.context-bar {
-		padding-left: 0.75rem;
-		padding-right: 0.75rem;
+		padding-left: var(--space-md);
+		padding-right: var(--space-md);
 	}
 }

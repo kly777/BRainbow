@@ -1,7 +1,7 @@
 /* features/card/ui/CardMasonry.css.ts — 由 vanilla-extract 迁移 */
 
 .cards-grid {
-	padding-top: 0.625rem;
+	padding-top: var(--space-md);
 	column-count: auto;
 	column-gap: var(--space-xl);
 	width: 100%;
@@ -54,7 +54,7 @@
 
 @media (width <= 768px) {
 	.empty-state {
-		padding: var(--space-xl) 1rem;
+		padding: var(--space-xl) var(--space-lg);
 	}
 }
 

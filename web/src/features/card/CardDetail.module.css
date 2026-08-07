@@ -11,7 +11,7 @@
 
 .content {
 	flex: 1;
-	padding: var(--space-lg) 1.5rem;
+	padding: var(--space-lg) var(--space-xl);
 	overflow-y: auto;
 }
 
@@ -23,5 +23,5 @@
 
 .body {
 	font-size: var(--text-base);
-	line-height: 1.8;
+	line-height: var(--leading-relaxed);
 }

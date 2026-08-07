@@ -5,7 +5,7 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: var(--space-md);
-	padding: 0 1.25rem;
+	padding: 0 var(--space-xl);
 	max-height: 0;
 	overflow: hidden;
 	background: var(--t-color-accent-soft);
@@ -17,7 +17,7 @@
 
 .batch-bar-visible {
 	max-height: 3.5rem;
-	padding: var(--space-sm) 1.25rem;
+	padding: var(--space-sm) var(--space-xl);
 	border-bottom-color: var(--t-color-border);
 }
 
@@ -39,7 +39,7 @@
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
-	padding: var(--space-xs) 0.75rem;
+	padding: var(--space-xs) var(--space-md);
 	cursor: pointer;
 }
 
@@ -49,7 +49,7 @@
 	background: var(--t-color-danger);
 	border: none;
 	border-radius: var(--radius-md);
-	padding: var(--space-xs) 0.75rem;
+	padding: var(--space-xs) var(--space-md);
 	cursor: pointer;
 }
 

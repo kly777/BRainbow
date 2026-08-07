@@ -22,7 +22,7 @@
 
 .nav-button {
 	color: var(--t-color-ink);
-	padding: var(--space-sm) 1rem;
+	padding: var(--space-sm) var(--space-lg);
 	background: var(--t-color-surface-raised);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
@@ -84,7 +84,7 @@
 }
 
 .day-task {
-	padding: var(--space-xs) 0.5rem;
+	padding: var(--space-xs) var(--space-sm);
 	border-radius: var(--radius-sm);
 	font-size: var(--text-xs);
 	white-space: nowrap;

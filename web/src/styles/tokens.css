@@ -1,7 +1,6 @@
 /* ===== 语义化设计令牌（由 vanilla-extract tokens.css.ts 迁移） =====
  *
  * --t-color-* / --t-font-*：组件契约（组件样式统一 var(--t-*) 引用）。
- * --color-* / --toast-*：旧全局别名（markdown.css 与内联样式使用），随主题切换。
  * --space-* / --radius-* / --text-*：布局常量（global.css 定义，不随主题）。
  */
 
@@ -26,6 +25,8 @@
 	--t-color-accent-strong: oklch(42% 0.09 165deg);
 	--t-color-accent-soft: oklch(94% 0.02 165deg);
 	--t-color-white: oklch(100% 0 0deg);
+	--t-color-accent-ring: oklch(52% 0.1 165deg / 25%);
+	--t-color-overlay: oklch(0% 0 0deg / 50%);
 	--t-color-badge-new-bg: oklch(94% 0.02 270deg);
 	--t-color-badge-new-text: oklch(45% 0.12 270deg);
 	--t-color-badge-learning-bg: oklch(94% 0.03 65deg);
@@ -57,33 +58,6 @@
 	--t-color-mark-blue-border: oklch(85% 0.08 250deg);
 	--t-color-mark-yellow: oklch(55% 0.16 80deg);
 
-	/* ── 旧全局别名（legacyAliases：跟随主题） ── */
-	--color-bg: var(--t-color-bg);
-	--color-bg-subtle: var(--t-color-bg);
-	--color-surface: var(--t-color-surface);
-	--color-surface-raised: var(--t-color-surface-raised);
-	--color-text: var(--t-color-ink);
-	--color-text-secondary: var(--t-color-ink-muted);
-	--color-text-muted: var(--t-color-ink-faint);
-	--color-border: var(--t-color-border);
-	--color-border-light: var(--t-color-border);
-	--color-border-hover: var(--t-color-border-strong);
-	--color-accent: var(--t-color-accent);
-	--color-accent-hover: var(--t-color-accent-strong);
-	--color-accent-subtle: var(--t-color-accent-soft);
-	--color-accent-ring: oklch(52% 0.1 165deg / 25%);
-	--color-danger: var(--t-color-danger);
-	--color-danger-subtle: var(--t-color-danger-subtle);
-	--color-danger-light: var(--t-color-danger-subtle);
-	--color-danger-border: var(--t-color-danger);
-	--color-success: var(--t-color-success);
-	--color-success-subtle: var(--t-color-success-subtle);
-	--color-warning: var(--t-color-warning);
-	--color-warning-subtle: var(--t-color-warning-subtle);
-	--color-white: var(--t-color-white);
-	--color-code: var(--t-color-ink-muted);
-	--color-code-bg: var(--t-color-surface-raised);
-	--color-overlay: oklch(0% 0 0deg / 50%);
 	--toast-error-bg: var(--t-color-danger-subtle);
 	--toast-error-border: oklch(85% 0.06 25deg);
 	--toast-error-text: oklch(30% 0.09 25deg);
@@ -111,6 +85,8 @@
 	--t-color-accent-strong: oklch(76% 0.1 165deg);
 	--t-color-accent-soft: oklch(30% 0.04 165deg);
 	--t-color-white: oklch(100% 0 0deg);
+	--t-color-accent-ring: oklch(68% 0.12 165deg / 25%);
+	--t-color-overlay: oklch(0% 0 0deg / 50%);
 	--t-color-badge-new-bg: oklch(32% 0.03 270deg);
 	--t-color-badge-new-text: oklch(72% 0.09 270deg);
 	--t-color-badge-learning-bg: oklch(34% 0.04 65deg);
@@ -133,33 +109,6 @@
 	--shadow-md: 0 0.25rem 1rem oklch(0% 0 0deg / 50%);
 	--shadow-lg: 0 0.75rem 2.5rem oklch(0% 0 0deg / 60%);
 
-	/* ── 旧全局别名 ── */
-	--color-bg: var(--t-color-bg);
-	--color-bg-subtle: var(--t-color-bg);
-	--color-surface: var(--t-color-surface);
-	--color-surface-raised: var(--t-color-surface-raised);
-	--color-text: var(--t-color-ink);
-	--color-text-secondary: var(--t-color-ink-muted);
-	--color-text-muted: var(--t-color-ink-faint);
-	--color-border: var(--t-color-border);
-	--color-border-light: var(--t-color-border);
-	--color-border-hover: var(--t-color-border-strong);
-	--color-accent: var(--t-color-accent);
-	--color-accent-hover: var(--t-color-accent-strong);
-	--color-accent-subtle: var(--t-color-accent-soft);
-	--color-accent-ring: oklch(68% 0.12 165deg / 25%);
-	--color-danger: var(--t-color-danger);
-	--color-danger-subtle: var(--t-color-danger-subtle);
-	--color-danger-light: var(--t-color-danger-subtle);
-	--color-danger-border: var(--t-color-danger);
-	--color-success: var(--t-color-success);
-	--color-success-subtle: var(--t-color-success-subtle);
-	--color-warning: var(--t-color-warning);
-	--color-warning-subtle: var(--t-color-warning-subtle);
-	--color-white: var(--t-color-white);
-	--color-code: var(--t-color-ink-muted);
-	--color-code-bg: var(--t-color-surface-raised);
-	--color-overlay: oklch(0% 0 0deg / 50%);
 	--toast-error-bg: var(--t-color-danger-subtle);
 	--toast-error-border: oklch(85% 0.06 25deg);
 	--toast-error-text: oklch(30% 0.09 25deg);
@@ -187,6 +136,8 @@
 	--t-color-accent-strong: oklch(44% 0.16 255deg);
 	--t-color-accent-soft: oklch(93.5% 0.02 255deg);
 	--t-color-white: oklch(100% 0 0deg);
+	--t-color-accent-ring: oklch(55% 0.18 255deg / 25%);
+	--t-color-overlay: oklch(0% 0 0deg / 50%);
 	--t-color-badge-new-bg: oklch(94% 0.02 270deg);
 	--t-color-badge-new-text: oklch(45% 0.12 270deg);
 	--t-color-badge-learning-bg: oklch(94% 0.03 65deg);
@@ -209,33 +160,6 @@
 	--shadow-md: 0 0.25rem 1rem oklch(0% 0 0deg / 7%);
 	--shadow-lg: 0 0.75rem 2rem oklch(0% 0 0deg / 10%);
 
-	/* ── 旧全局别名 ── */
-	--color-bg: var(--t-color-bg);
-	--color-bg-subtle: var(--t-color-bg);
-	--color-surface: var(--t-color-surface);
-	--color-surface-raised: var(--t-color-surface-raised);
-	--color-text: var(--t-color-ink);
-	--color-text-secondary: var(--t-color-ink-muted);
-	--color-text-muted: var(--t-color-ink-faint);
-	--color-border: var(--t-color-border);
-	--color-border-light: var(--t-color-border);
-	--color-border-hover: var(--t-color-border-strong);
-	--color-accent: var(--t-color-accent);
-	--color-accent-hover: var(--t-color-accent-strong);
-	--color-accent-subtle: var(--t-color-accent-soft);
-	--color-accent-ring: oklch(55% 0.18 255deg / 25%);
-	--color-danger: var(--t-color-danger);
-	--color-danger-subtle: var(--t-color-danger-subtle);
-	--color-danger-light: var(--t-color-danger-subtle);
-	--color-danger-border: var(--t-color-danger);
-	--color-success: var(--t-color-success);
-	--color-success-subtle: var(--t-color-success-subtle);
-	--color-warning: var(--t-color-warning);
-	--color-warning-subtle: var(--t-color-warning-subtle);
-	--color-white: var(--t-color-white);
-	--color-code: var(--t-color-ink-muted);
-	--color-code-bg: var(--t-color-surface-raised);
-	--color-overlay: oklch(0% 0 0deg / 50%);
 	--toast-error-bg: var(--t-color-danger-subtle);
 	--toast-error-border: oklch(85% 0.06 25deg);
 	--toast-error-text: oklch(30% 0.09 25deg);
@@ -260,7 +184,7 @@ body {
 	transition:
 		background-color 0.25s ease,
 		color 0.25s ease;
-	line-height: 1.6;
+	line-height: var(--leading-normal);
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 }
@@ -294,15 +218,17 @@ body {
 	background: var(--t-color-border-strong);
 }
 
+/* ── 焦点环（统一 focus ring；输入类用 ring，其余用 outline） ── */
 :focus-visible {
 	outline: 2px solid var(--t-color-accent);
 	outline-offset: 2px;
 }
 
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
+/* 输入类：点击/键盘均显示 ring（替代组件内重复的 :focus 覆盖） */
+input:focus,
+textarea:focus,
+select:focus {
 	outline: none;
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
+	box-shadow: var(--t-focus-ring);
 }

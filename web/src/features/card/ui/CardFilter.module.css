@@ -27,7 +27,7 @@
 	flex: 1;
 	min-width: 0;
 	max-width: 220px;
-	padding: var(--space-sm) 0.75rem;
+	padding: var(--space-sm) var(--space-md);
 	font-size: var(--text-sm);
 	border: 1px solid var(--t-color-border-strong);
 	border-radius: var(--radius-md);
@@ -46,7 +46,7 @@
 }
 
 .filter-select {
-	padding: var(--space-sm) 0.75rem;
+	padding: var(--space-sm) var(--space-md);
 	font-size: var(--text-sm);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
@@ -58,7 +58,7 @@
 }
 
 .sort-button {
-	padding: var(--space-sm) 0.75rem;
+	padding: var(--space-sm) var(--space-md);
 	font-size: var(--text-sm);
 	background: transparent;
 	color: var(--t-color-ink-muted);
@@ -70,7 +70,7 @@
 }
 
 .clear-button {
-	padding: var(--space-sm) 0.875rem;
+	padding: var(--space-sm) var(--space-lg);
 	font-size: var(--text-sm);
 	background: transparent;
 	color: var(--t-color-ink-muted);
@@ -88,10 +88,7 @@
 	}
 }
 
-.search-input:focus {
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
-}
+
 
 .search-input::placeholder {
 	color: var(--t-color-ink-faint);
@@ -100,13 +97,11 @@
 @media (width <= 480px) {
 	.search-input {
 		font-size: var(--text-lg);
-		padding: var(--space-sm) 0.875rem;
+		padding: var(--space-sm) var(--space-lg);
 	}
 }
 
-.filter-select:focus {
-	border-color: var(--t-color-accent);
-}
+
 
 @media (width <= 768px) {
 	.filter-select {

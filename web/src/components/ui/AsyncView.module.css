@@ -1,7 +1,7 @@
 /* components/ui/AsyncView.css.ts — 由 vanilla-extract 迁移 */
 
 .state {
-	padding: var(--space-xl) 1rem;
+	padding: var(--space-xl) var(--space-lg);
 	text-align: center;
 	color: var(--t-color-ink-muted);
 	font-size: var(--text-base);
@@ -9,11 +9,11 @@
 
 .error-text {
 	color: var(--t-color-danger);
-	margin-bottom: 0.625rem;
+	margin-bottom: var(--space-md);
 }
 
 .retry-btn {
-	padding: var(--space-xs) 1rem;
+	padding: var(--space-xs) var(--space-lg);
 	background: var(--t-color-accent);
 	color: var(--t-color-white);
 	border: none;

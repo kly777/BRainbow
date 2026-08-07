@@ -346,14 +346,14 @@ const OntologyListPage: Component = () => {
 					left: 0;
 					right: 0;
 					bottom: 0;
-					background-color: var(--color-overlay);
+					background-color: var(--t-color-overlay));
 					display: flex;
 					justify-content: center;
 					align-items: center;
 					z-index: 1000;
 				}
 				.modal {
-					background-color: var(--color-surface);
+					background-color: var(--t-color-surface));
 					border-radius: 8px;
 					width: 90%;
 					max-width: 500px;
@@ -364,7 +364,7 @@ const OntologyListPage: Component = () => {
 					justify-content: space-between;
 					align-items: center;
 					padding: var(--space-lg) 20px;
-					border-bottom: 1px solid var(--color-border);
+					border-bottom: 1px solid var(--t-color-border));
 				}
 				.modalHeader h2 {
 					font-size: 1.125rem;
@@ -379,7 +379,7 @@ const OntologyListPage: Component = () => {
 					justify-content: flex-end;
 					gap: var(--space-sm);
 					padding: var(--space-lg) 20px;
-					border-top: 1px solid var(--color-border);
+					border-top: 1px solid var(--t-color-border));
 				}
 				.formGroup {
 					margin-bottom: var(--space-lg);
@@ -389,14 +389,14 @@ const OntologyListPage: Component = () => {
 					font-size: 0.875rem;
 					font-weight: 500;
 					margin-bottom: var(--space-sm);
-					color: var(--color-text);
+					color: var(--t-color-ink));
 				}
 				.formInput,
 				.formTextarea {
 					width: 100%;
 					padding: var(--space-sm) 10px;
 					font-size: 0.875rem;
-					border: 1px solid var(--color-border);
+					border: 1px solid var(--t-color-border));
 					border-radius: var(--radius-sm);
 					transition: all 0.2s ease;
 					font-family: inherit;
@@ -404,18 +404,18 @@ const OntologyListPage: Component = () => {
 				.formInput:focus,
 				.formTextarea:focus {
 					outline: none;
-					border-color: var(--color-accent);
-					box-shadow: 0 0 0 3px var(--color-accent-ring, oklch(0.58 0.2 255 / 0.25));
+					border-color: var(--t-color-accent));
+					box-shadow: 0 0 0 3px var(--t-color-accent-ring), oklch(0.58 0.2 255 / 0.25));
 				}
 				.formTextarea {
 					resize: vertical;
 				}
 				.errorMessage {
 					padding: var(--space-sm) 10px;
-					background: var(--color-danger-subtle);
-					border: 1px solid var(--color-danger);
+					background: var(--t-color-danger-subtle));
+					border: 1px solid var(--t-color-danger));
 					border-radius: var(--radius-sm);
-					color: var(--color-danger);
+					color: var(--t-color-danger));
 					font-size: 0.875rem;
 					margin-bottom: var(--space-lg);
 				}

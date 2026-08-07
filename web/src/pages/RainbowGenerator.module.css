@@ -51,7 +51,7 @@
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
-	padding: var(--space-md) 1rem;
+	padding: var(--space-md) var(--space-lg);
 }
 
 @media (width <= 480px) {

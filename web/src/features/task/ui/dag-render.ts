@@ -15,10 +15,10 @@ function readCSSVar(name: string): string {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-	backlog: "var(--color-text-muted)",
-	active: "var(--color-accent)",
-	completed: "var(--color-success)",
-	archived: "var(--color-text-secondary)",
+	backlog: "var(--t-color-ink-faint))",
+	active: "var(--t-color-accent))",
+	completed: "var(--t-color-success))",
+	archived: "var(--t-color-ink-muted))",
 };
 
 function statusColor(s: string): string {

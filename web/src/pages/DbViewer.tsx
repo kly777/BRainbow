@@ -53,8 +53,8 @@ const DB: Component = () => {
 					"flex-shrink": "0",
 					"overflow-y": "auto",
 					padding: "0.625rem",
-					background: "var(--color-bg)",
-					"border-right": "1px solid var(--color-border-light)",
+					background: "var(--t-color-bg))",
+					"border-right": "1px solid var(--t-color-border))",
 				}}
 			>
 				<div
@@ -62,7 +62,7 @@ const DB: Component = () => {
 						"font-weight": "600",
 						padding: "6px 8px",
 						"font-size": "0.8125rem",
-						color: "var(--color-text-secondary)",
+						color: "var(--t-color-ink-muted))",
 					}}
 				>
 					表列表
@@ -79,11 +79,11 @@ const DB: Component = () => {
 								cursor: "pointer",
 								"font-size": "0.8125rem",
 								"border-radius": "0.375rem",
-								color: "var(--color-text)",
+								color: "var(--t-color-ink))",
 								"text-align": "left",
 								background:
 									activeTable() === t
-										? "var(--color-accent-subtle)"
+										? "var(--t-color-accent-soft))"
 										: "transparent",
 								border: "none",
 							}}
@@ -99,8 +99,8 @@ const DB: Component = () => {
 					<div
 						style={{
 							padding: "0.625rem",
-							background: "var(--color-danger-subtle)",
-							color: "var(--color-danger)",
+							background: "var(--t-color-danger-subtle))",
+							color: "var(--t-color-danger))",
 							"border-radius": "0.375rem",
 							"font-size": "0.8125rem",
 							"margin-bottom": "0.75rem",
@@ -112,7 +112,7 @@ const DB: Component = () => {
 				{loading() && (
 					<div
 						style={{
-							color: "var(--color-text-secondary)",
+							color: "var(--t-color-ink-muted))",
 							padding: "0.75rem",
 						}}
 					>
@@ -139,14 +139,14 @@ const DB: Component = () => {
 													style={{
 														padding: "6px 10px",
 														"text-align": "left",
-														background: "var(--color-bg)",
+														background: "var(--t-color-bg))",
 														"border-bottom":
-															"2px solid var(--color-border-light)",
+															"2px solid var(--t-color-border))",
 														"white-space": "nowrap",
 													}}
 												>
 													<div style="font-weight:600">{c.name}</div>
-													<div style="font-size:10px;font-weight:400;color:var(--color-text-muted)">
+													<div style="font-size:10px;font-weight:400;color:var(--t-color-ink-faint))">
 														{c.col_type}
 													</div>
 												</th>
@@ -161,7 +161,7 @@ const DB: Component = () => {
 												colspan={columns().length}
 												style={{
 													padding: "1.25rem",
-													color: "var(--color-text-muted)",
+													color: "var(--t-color-ink-faint))",
 													"text-align": "center",
 												}}
 											>
@@ -178,7 +178,7 @@ const DB: Component = () => {
 															style={{
 																padding: "4px 10px",
 																"border-bottom":
-																	"1px solid var(--color-border-light)",
+																	"1px solid var(--t-color-border))",
 																"white-space": "nowrap",
 																"max-width": "18.75rem",
 																overflow: "hidden",

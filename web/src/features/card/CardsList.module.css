@@ -14,7 +14,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding-bottom: 1rem;
+	padding-bottom: var(--space-lg);
 }
 
 .title {
@@ -42,7 +42,7 @@
 
 .error {
 	text-align: center;
-	padding: var(--space-xl) 1.25rem;
+	padding: var(--space-xl) var(--space-xl);
 	background: var(--t-color-danger-subtle);
 	border: 1px solid var(--t-color-danger);
 	border-radius: var(--radius-md);
@@ -52,11 +52,11 @@
 .modal-overlay {
 	position: fixed;
 	inset: 0;
-	background: var(--color-overlay);
+	background: var(--t-color-overlay));
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	z-index: 1000;
+	z-index: var(--z-overlay);
 	padding: var(--space-xl);
 }
 
@@ -75,7 +75,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: var(--space-xl) 1.5rem;
+	padding: var(--space-xl) var(--space-xl);
 	border-bottom: 1px solid var(--t-color-border);
 }
 
@@ -84,7 +84,7 @@
 }
 
 .error-message {
-	padding: var(--space-md) 1rem;
+	padding: var(--space-md) var(--space-lg);
 	background: var(--t-color-danger-subtle);
 	border: 1px solid var(--t-color-danger);
 	border-radius: var(--radius-sm);
@@ -107,7 +107,7 @@
 
 .form-input {
 	width: 100%;
-	padding: var(--space-sm) 0.75rem;
+	padding: var(--space-sm) var(--space-md);
 	font-size: var(--text-sm);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
@@ -116,14 +116,14 @@
 
 .form-textarea {
 	width: 100%;
-	padding: var(--space-sm) 0.75rem;
+	padding: var(--space-sm) var(--space-md);
 	font-size: var(--text-sm);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
 	resize: vertical;
 	transition: all var(--t-transition-normal) ease;
 	font-family: inherit;
-	line-height: 1.5;
+	line-height: var(--leading-normal);
 }
 
 .preview-section {
@@ -145,7 +145,7 @@
 
 .preview-content {
 	font-size: var(--text-sm);
-	line-height: 1.6;
+	line-height: var(--leading-normal);
 	color: var(--t-color-ink);
 }
 
@@ -155,7 +155,7 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	padding: var(--space-xl) 1rem;
+	padding: var(--space-xl) var(--space-lg);
 	text-align: center;
 	color: var(--t-color-ink-muted);
 	font-size: var(--text-base);
@@ -163,21 +163,21 @@
 
 .error-text {
 	color: var(--t-color-danger);
-	margin-bottom: 0.625rem;
+	margin-bottom: var(--space-md);
 }
 
 .modal-actions {
 	display: flex;
 	justify-content: flex-end;
 	gap: var(--space-md);
-	padding: var(--space-xl) 1.5rem;
+	padding: var(--space-xl) var(--space-xl);
 	border-top: 1px solid var(--t-color-border);
 }
 
 @media (width <= 768px) {
 	.container {
 		margin: 0 auto;
-		padding: var(--space-lg) 0.75rem;
+		padding: var(--space-lg) var(--space-md);
 	}
 }
 
@@ -202,7 +202,7 @@
 
 @media (width <= 768px) {
 	.modal-header {
-		padding: var(--space-lg) 1.25rem;
+		padding: var(--space-lg) var(--space-xl);
 	}
 }
 
@@ -217,22 +217,14 @@
 	color: var(--t-color-danger);
 }
 
-.form-input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-soft);
-}
+
 
 .form-input:disabled {
 	background: var(--t-color-surface-raised);
 	cursor: not-allowed;
 }
 
-.form-textarea:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-soft);
-}
+
 
 .form-textarea:disabled {
 	background: var(--t-color-surface-raised);
@@ -241,7 +233,7 @@
 
 @media (width <= 768px) {
 	.modal-actions {
-		padding: var(--space-lg) 1.25rem;
+		padding: var(--space-lg) var(--space-xl);
 	}
 }
 

@@ -50,14 +50,14 @@
 	font-family: var(--t-font-display);
 	font-size: var(--text-sm);
 	font-weight: 600;
-	margin: 0 0 0.25rem;
+	margin: 0 0 var(--space-xs);
 	color: var(--t-color-ink);
 }
 
 .hint-example {
 	font-family: var(--t-font-mono);
 	font-size: var(--text-xs);
-	line-height: 1.6;
+	line-height: var(--leading-normal);
 	background: var(--t-color-bg);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
@@ -81,7 +81,7 @@
 	font-size: var(--text-sm);
 	background: var(--t-color-bg);
 	border-radius: var(--radius-md);
-	padding: var(--space-sm) 0.625rem;
+	padding: var(--space-sm) var(--space-md);
 }
 
 .preview-card {
@@ -134,11 +134,11 @@
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 	color: var(--t-color-ink-faint);
-	padding: 0.375rem 0.5rem;
+	padding: var(--space-sm) var(--space-sm);
 }
 
 .preview-td {
-	padding: 0.375rem 0.5rem;
+	padding: var(--space-sm) var(--space-sm);
 	border-bottom: 1px solid var(--t-color-border);
 	color: var(--t-color-ink);
 	max-width: 240px;
@@ -150,8 +150,8 @@
 .preview-tag {
 	display: inline-block;
 	font-size: var(--text-xs);
-	padding: 1px 0.375rem;
-	margin-right: 0.25rem;
+	padding: 1px var(--space-sm);
+	margin-right: var(--space-xs);
 	border-radius: 999px;
 	background: var(--t-color-badge-new-bg);
 	color: var(--t-color-badge-new-text);

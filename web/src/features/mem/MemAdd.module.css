@@ -24,7 +24,7 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-md);
-	padding: var(--space-sm) 1.25rem;
+	padding: var(--space-sm) var(--space-xl);
 	border-bottom: 1px solid var(--t-color-border);
 	background: var(--t-color-surface);
 	flex-shrink: 0;
@@ -43,11 +43,11 @@
 
 .mode-tabs {
 	display: flex;
-	gap: 0.125rem;
+	gap: var(--space-2xs);
 	background: var(--t-color-bg);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
-	padding: 0.125rem;
+	padding: var(--space-2xs);
 }
 
 .mode-btn {
@@ -56,7 +56,7 @@
 	background: transparent;
 	border: none;
 	border-radius: calc(var(--radius-md) - 0.125rem);
-	padding: var(--space-xs) 0.75rem;
+	padding: var(--space-xs) var(--space-md);
 	cursor: pointer;
 	white-space: nowrap;
 }
@@ -67,7 +67,7 @@
 	background: var(--t-color-accent);
 	border: none;
 	border-radius: calc(var(--radius-md) - 0.125rem);
-	padding: var(--space-xs) 0.75rem;
+	padding: var(--space-xs) var(--space-md);
 	cursor: pointer;
 	font-weight: 500;
 	white-space: nowrap;
@@ -75,7 +75,7 @@
 
 .content {
 	flex: 1;
-	padding: var(--space-xl) 1.25rem;
+	padding: var(--space-xl) var(--space-xl);
 	display: flex;
 	justify-content: center;
 }
@@ -131,7 +131,7 @@
 	composes: field-textarea from "../../styles/base.module.css";
 	border-color: var(--t-color-border-strong);
 	font-family: var(--t-font-mono);
-	line-height: 1.6;
+	line-height: var(--leading-normal);
 	background: var(--t-color-bg);
 	outline: none;
 }
@@ -175,7 +175,7 @@
 	background: var(--t-color-accent);
 	border: none;
 	border-radius: var(--radius-md);
-	padding: var(--space-sm) 1.25rem;
+	padding: var(--space-sm) var(--space-xl);
 	cursor: pointer;
 	font-weight: 500;
 	transition: background var(--t-transition-fast);
@@ -216,8 +216,8 @@
 
 @media (width <= 600px) {
 	.top-bar {
-		padding-left: 0.75rem;
-		padding-right: 0.75rem;
+		padding-left: var(--space-md);
+		padding-right: var(--space-md);
 	}
 }
 
@@ -243,7 +243,7 @@
 	.mode-btn {
 		flex: 1;
 		text-align: center;
-		padding: var(--space-xs) 0.375rem;
+		padding: var(--space-xs) var(--space-sm);
 	}
 }
 
@@ -251,14 +251,14 @@
 	.mode-active {
 		flex: 1;
 		text-align: center;
-		padding: var(--space-xs) 0.375rem;
+		padding: var(--space-xs) var(--space-sm);
 	}
 }
 
 @media (width <= 600px) {
 	.content {
-		padding-left: 0.75rem;
-		padding-right: 0.75rem;
+		padding-left: var(--space-md);
+		padding-right: var(--space-md);
 	}
 }
 

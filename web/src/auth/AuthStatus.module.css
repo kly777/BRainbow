@@ -3,11 +3,11 @@
 .overlay {
 	position: fixed;
 	inset: 0;
-	background: var(--color-overlay);
+	background: var(--t-color-overlay));
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	z-index: 1000;
+	z-index: var(--z-modal);
 }
 
 .form {
@@ -38,7 +38,7 @@
 }
 
 .input {
-	padding: var(--space-sm) 0.75rem;
+	padding: var(--space-sm) var(--space-md);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	font-size: var(--text-base);
@@ -83,10 +83,7 @@
 	cursor: pointer;
 }
 
-.input:focus {
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
-}
+
 
 .btn-submit:hover {
 	background: var(--t-color-accent-strong);

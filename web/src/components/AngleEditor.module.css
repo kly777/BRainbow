@@ -3,7 +3,7 @@
 .fieldset {
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
-	padding: var(--space-md) 1rem;
+	padding: var(--space-md) var(--space-lg);
 	margin: 0 0 var(--space-lg) 0;
 	background: var(--t-color-surface);
 }
@@ -17,26 +17,26 @@
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	overflow: hidden;
-	margin-bottom: 0.625rem;
+	margin-bottom: var(--space-md);
 }
 
 .seg-btn {
-	padding: var(--space-xs) 0.875rem;
+	padding: var(--space-xs) var(--space-lg);
 	font-size: var(--text-sm);
 	border: none;
 	cursor: pointer;
-	transition: background 0.15s;
+	transition: background var(--t-transition-fast);
 	background: transparent;
 	color: var(--t-color-ink-muted);
 }
 
 .seg-active {
 	border-radius: var(--radius-md);
-	padding: var(--space-xs) 0.875rem;
+	padding: var(--space-xs) var(--space-lg);
 	font-size: var(--text-sm);
 	border: none;
 	cursor: pointer;
-	transition: background 0.15s;
+	transition: background var(--t-transition-fast);
 	background: var(--t-color-accent);
 	color: var(--t-color-white);
 	font-weight: 600;
@@ -50,7 +50,7 @@
 
 .input {
 	width: 6.875rem;
-	padding: var(--space-xs) 0.5rem;
+	padding: var(--space-xs) var(--space-sm);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
 	background: var(--t-color-bg);
@@ -73,11 +73,7 @@
 	border-left: 1px solid var(--t-color-border);
 }
 
-.input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
-}
+
 
 .fieldset legend {
 	font-weight: 600;

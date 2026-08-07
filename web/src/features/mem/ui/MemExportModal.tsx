@@ -38,7 +38,7 @@ export default function MemExportModal(props: Props) {
 				style={{
 					"margin-bottom": "var(--space-md)",
 					"font-size": "var(--text-sm)",
-					color: "var(--color-text-muted)",
+					color: "var(--t-color-ink-faint))",
 				}}
 			>
 				可选：按标签筛选导出（不选则导出全部）
@@ -63,10 +63,10 @@ export default function MemExportModal(props: Props) {
 					style={{
 						padding: "var(--space-sm)",
 						"font-size": "var(--text-sm)",
-						border: "1px solid var(--color-border, #e8dfcc)",
+						border: "1px solid var(--t-color-border), #e8dfcc)",
 						"border-radius": "var(--radius-md)",
-						background: "var(--color-surface, #fffef9)",
-						color: "var(--color-text-secondary, #6b5e4a)",
+						background: "var(--t-color-surface), #fffef9)",
+						color: "var(--t-color-ink-muted), #6b5e4a)",
 						cursor: "pointer",
 					}}
 					onClick={handleExport}

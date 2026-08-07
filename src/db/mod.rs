@@ -515,6 +515,21 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await?;
 
+    // ── API Key 认证 ──
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS api_key (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key_hash TEXT NOT NULL UNIQUE,
+            role TEXT NOT NULL DEFAULT 'user',
+            user_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
     // 迁移：为已有数据库添加 notes 列
     let _ = sqlx::query("ALTER TABLE reading_article ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
         .execute(pool)

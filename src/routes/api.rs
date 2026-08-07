@@ -18,11 +18,17 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         .nest("/media", media::public_file_route())
         .nest("/conv", conv::routes());
 
-    // ── 需登录的路由 ──
+    // ── 需登录的路由（含 API key 管理：统一需登录）──
     let authed = Router::new()
         .route("/user", get(user::user_handler))
         .route("/user/logout", post(user::logout_handler))
         .route("/user/password", post(user::change_password_handler))
+        .route("/auth/key", post(crate::auth::create_api_key))
+        .route("/auth/keys", get(crate::auth::list_api_keys))
+        .route(
+            "/auth/key/{id}",
+            axum::routing::delete(crate::auth::delete_api_key),
+        )
         .nest("/mem", mem::routes())
         .nest("/media", media::routes())
         .nest("/cards", card::routes())

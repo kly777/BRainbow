@@ -178,6 +178,14 @@ export const ROUTES: RouteConfig[] = [
 		component: lazy(() => import("@features/conv/ConvSearch.tsx")),
 	},
 	{
+		path: "/key",
+		label: "API Key",
+		title: "API Key",
+		desc: "生成 API key（测试认证）",
+		nav: true,
+		component: lazy(() => import("@features/key/KeyPage.tsx")),
+	},
+	{
 		path: "/conv/qa/:id",
 		label: "对话详情",
 		title: "Conversation",

@@ -1,4 +1,5 @@
 import { getToken } from "@auth/context.tsx";
+import { getApiKey } from "@auth/context.tsx";
 import { HttpError, NetworkError } from "@apis/types/index.ts";
 
 const API_BASE_URL = "/api";
@@ -225,6 +226,10 @@ export const request = async <T>(
 // ==================== 辅助 ====================
 // ==================== HTTP 方法快捷方式 ====================
 
+/** GET */
+export const get = <T>(endpoint: string, options?: RequestInit): Promise<T> =>
+	request<T>(endpoint, { method: "GET", ...options });
+
 /** POST JSON body */
 export const post = <T>(endpoint: string, body: unknown): Promise<T> =>
 	request<T>(endpoint, {
@@ -274,6 +279,11 @@ function buildHeaders(
 	const token = getToken();
 	if (token) {
 		headers.set("Authorization", `Bearer ${token}`);
+	} else {
+		const apiKey = getApiKey();
+		if (apiKey) {
+			headers.set("X-API-Key", apiKey);
+		}
 	}
 
 	return headers;

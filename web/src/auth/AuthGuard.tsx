@@ -16,8 +16,10 @@ export default function AuthGuard(props: { children: JSX.Element }) {
 	// 防循环：logout() 产生新 auth 对象会重新触发 effect，只 dispatch 一次
 	let notified = false;
 
+	const isAuthed = () => Boolean(auth().user || auth().apiKey);
+
 	createEffect(() => {
-		if (auth().user) {
+		if (isAuthed()) {
 			notified = false;
 			return;
 		}
@@ -27,5 +29,5 @@ export default function AuthGuard(props: { children: JSX.Element }) {
 		}
 	});
 
-	return <Show when={auth().user}>{props.children}</Show>;
+	return <Show when={isAuthed()}>{props.children}</Show>;
 }

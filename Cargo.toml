@@ -21,6 +21,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 bcrypt = "0.19.2"
 jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
+sha2 = "0.10"
+hex = "0.4"
 fsrs = "6.6.1"
 
 nanoid = "0.5"

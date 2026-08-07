@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Request, State},
+    extract::{Extension, Path, Request, State},
     http::StatusCode,
     middleware::Next,
     response::{IntoResponse, Json, Response},
@@ -59,52 +59,76 @@ fn extract_token(req: &Request) -> Option<String> {
         .map(|s| s.to_string())
 }
 
+fn extract_api_key(req: &Request) -> Option<String> {
+    req.headers()
+        .get("X-API-Key")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
+
+/// API key 哈希（SHA-256 hex）
+pub fn hash_api_key(key: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(key.as_bytes());
+    hex::encode(hasher.finalize())
+}
+
 // ============================================================
 // 中间件
 // ============================================================
 
-/// 认证中间件：验证 JWT，将 Claims 注入 request extensions。
-/// 未登录返回 401。
+/// 认证中间件：先验证 JWT，再尝试 X-API-Key，将 Claims 注入 request extensions。
+/// 两者都失败返回 401。
 ///
 /// 用法：挂载到需要登录的路由组上。
 ///   Router::new().nest(…).layer(from_fn_with_state(state, auth::auth))
 pub async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -> Response {
     let secret = &state.jwt_secret;
 
-    let token = match extract_token(&request) {
-        Some(t) => t,
-        None => {
-            drain_rejected_body(&mut request).await;
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(ErrorBody {
-                    code: "UNAUTHORIZED".to_string(),
-                    message: "请先登录".to_string(),
-                    details: None,
-                }),
-            )
-                .into_response();
+    // ── 1. JWT ──
+    if let Some(token) = extract_token(&request) {
+        if let Some(claims) = verify_token(&token, secret) {
+            request.extensions_mut().insert(claims);
+            return next.run(request).await;
         }
-    };
+    }
 
-    let claims = match verify_token(&token, secret) {
-        Some(c) => c,
-        None => {
-            drain_rejected_body(&mut request).await;
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(ErrorBody {
-                    code: "TOKEN_EXPIRED".to_string(),
-                    message: "登录已过期，请重新登录".to_string(),
-                    details: None,
-                }),
-            )
-                .into_response();
+    // ── 2. API key ──
+    if let Some(key) = extract_api_key(&request) {
+        let key_hash = hash_api_key(&key);
+        let row: Option<(i32, String, Option<i32>)> = sqlx::query_as(
+            "SELECT id, role, user_id FROM api_key WHERE key_hash = ?",
+        )
+        .bind(&key_hash)
+        .fetch_optional(&*state.db)
+        .await
+        .ok()
+        .flatten();
+
+        if let Some((_id, role, user_id)) = row {
+            let claims = Claims {
+                sub: user_id.unwrap_or(-1),
+                role,
+                exp: usize::MAX,
+            };
+            request.extensions_mut().insert(claims);
+            return next.run(request).await;
         }
-    };
+    }
 
-    request.extensions_mut().insert(claims);
-    next.run(request).await
+    drain_rejected_body(&mut request).await;
+    (
+        StatusCode::UNAUTHORIZED,
+        Json(ErrorBody {
+            code: "UNAUTHORIZED".to_string(),
+            message: "请先登录".to_string(),
+            details: None,
+        }),
+    )
+        .into_response()
 }
 
 /// 拒绝请求前消费（丢弃）请求体。
@@ -142,6 +166,160 @@ pub async fn require_admin(request: Request, next: Next) -> Response {
             Json(ErrorBody {
                 code: "UNAUTHORIZED".to_string(),
                 message: "请先登录".to_string(),
+                details: None,
+            }),
+        )
+            .into_response(),
+    }
+}
+
+// ============================================================
+// API key 管理端点
+// ============================================================
+
+#[derive(Debug, Serialize)]
+pub struct ApiKeyInfo {
+    pub id: i32,
+    pub role: String,
+    pub created_at: String,
+    /// 生成时一次性返回的明文 key（仅 POST 响应含此字段）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key: Option<String>,
+}
+
+/// 生成 API key。
+///
+/// dev 环境：免登录，生成 admin 角色 key（前端测试便利）。
+/// prod 环境：需登录（auth 中间件已前置），key 绑定当前用户角色。
+pub async fn create_api_key(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+) -> Response {
+    let role = claims.role.clone();
+    let user_id = Some(claims.sub);
+
+    let key = uuid::Uuid::new_v4().to_string().replace('-', "");
+    let key_hash = hash_api_key(&key);
+
+    let id: i64 = match sqlx::query("INSERT INTO api_key (key_hash, role, user_id) VALUES (?, ?, ?)")
+        .bind(&key_hash)
+        .bind(&role)
+        .bind(user_id)
+        .execute(&*state.db)
+        .await
+    {
+        Ok(r) => r.last_insert_rowid(),
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorBody {
+                    code: "INTERNAL".to_string(),
+                    message: format!("创建 key 失败: {}", e),
+                    details: None,
+                }),
+            )
+                .into_response();
+        }
+    };
+
+    Json(ApiKeyInfo {
+        id: id as i32,
+        role,
+        created_at: chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+        key: Some(key),
+    })
+    .into_response()
+}
+
+/// 列出当前用户可见的 key（dev 免登录；prod 仅显示自己的 key）。
+pub async fn list_api_keys(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+) -> Response {
+    let rows: Result<Vec<(i32, String, String, Option<i32>)>, _> = sqlx::query_as(
+        "SELECT id, role, created_at, user_id FROM api_key ORDER BY id DESC",
+    )
+    .fetch_all(&*state.db)
+    .await;
+
+    match rows {
+        Ok(rows) => {
+            let items: Vec<ApiKeyInfo> = rows
+                .into_iter()
+                .filter(|(_, _, _, uid)| {
+                    // 仅自己的 key（admin 可见全部）
+                    claims.role == "admin" || Some(claims.sub) == *uid
+                })
+                .map(|(id, role, created_at, _)| ApiKeyInfo {
+                    id,
+                    role,
+                    created_at,
+                    key: None,
+                })
+                .collect();
+            Json(items).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorBody {
+                code: "INTERNAL".to_string(),
+                message: format!("查询 key 失败: {}", e),
+                details: None,
+            }),
+        )
+            .into_response(),
+    }
+}
+
+/// 删除 API key。prod 下只能删除自己的 key（admin 可删任意）。
+pub async fn delete_api_key(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Path(id): Path<i32>,
+) -> Response {
+    // 非 admin 只能删自己的 key
+    if claims.role != "admin" {
+        let owned: Option<(Option<i32>,)> = sqlx::query_as(
+            "SELECT user_id FROM api_key WHERE id = ?",
+        )
+        .bind(id)
+        .fetch_optional(&*state.db)
+        .await
+        .ok()
+        .flatten();
+        if owned.map(|(uid,)| uid) != Some(Some(claims.sub)) {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ErrorBody {
+                    code: "FORBIDDEN".to_string(),
+                    message: "只能删除自己的 key".to_string(),
+                    details: None,
+                }),
+            )
+                .into_response();
+        }
+    }
+
+    match sqlx::query("DELETE FROM api_key WHERE id = ?")
+        .bind(id)
+        .execute(&*state.db)
+        .await
+    {
+        Ok(r) if r.rows_affected() > 0 => StatusCode::NO_CONTENT.into_response(),
+        Ok(_) => (
+            StatusCode::NOT_FOUND,
+            Json(ErrorBody {
+                code: "Not Found".to_string(),
+                message: "key 不存在".to_string(),
+                details: None,
+            }),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorBody {
+                code: "INTERNAL".to_string(),
+                message: format!("删除 key 失败: {}", e),
                 details: None,
             }),
         )
@@ -269,6 +447,44 @@ mod tests {
             .unwrap();
         // strip_prefix removes exactly "Bearer ", so extra space stays in result
         assert_eq!(extract_token(&req), Some(" my-token".to_string()));
+    }
+
+    // ── API key ──
+
+    #[test]
+    fn extract_api_key_header() {
+        use axum::body::Body;
+        let req = Request::builder()
+            .header("X-API-Key", "abc123")
+            .body(Body::empty())
+            .unwrap();
+        assert_eq!(extract_api_key(&req), Some("abc123".to_string()));
+    }
+
+    #[test]
+    fn extract_api_key_missing() {
+        use axum::body::Body;
+        let req = Request::builder().body(Body::empty()).unwrap();
+        assert_eq!(extract_api_key(&req), None);
+    }
+
+    #[test]
+    fn extract_api_key_trimmed() {
+        use axum::body::Body;
+        let req = Request::builder()
+            .header("X-API-Key", "  abc  ")
+            .body(Body::empty())
+            .unwrap();
+        assert_eq!(extract_api_key(&req), Some("abc".to_string()));
+    }
+
+    #[test]
+    fn api_key_hash_is_stable_and_hex() {
+        let h1 = hash_api_key("secret-key");
+        let h2 = hash_api_key("secret-key");
+        assert_eq!(h1, h2);
+        assert_eq!(h1.len(), 64); // sha256 hex
+        assert_ne!(hash_api_key("other"), h1);
     }
 
     // ── Claims serialization ──

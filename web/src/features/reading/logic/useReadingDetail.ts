@@ -16,6 +16,7 @@ import {
 	updateArticleNotes,
 } from "@features/reading/api.ts";
 import { tryAsync } from "@lib/result.ts";
+import { notifyError } from "@lib/notify.ts";
 
 export function useReadingDetail() {
 	const params = useParams();
@@ -34,19 +35,28 @@ export function useReadingDetail() {
 	const [notes, setNotes] = createSignal("");
 	const [notesLoaded, setNotesLoaded] = createSignal(false);
 	createEffect(() => {
+		if (detail.error) return;
 		if (detail() && !notesLoaded()) {
 			document.title = `${detail()!.article.title} · Brainbow`;
-			getArticleNotes(id()).then((r: { notes: string }) => {
-				setNotes(r.notes);
-				setNotesLoaded(true);
-			});
+			getArticleNotes(id())
+				.then((r: { notes: string }) => {
+					setNotes(r.notes);
+					setNotesLoaded(true);
+				})
+				.catch((e) => {
+					notifyError("加载笔记失败", e);
+					setNotesLoaded(true);
+				});
 		}
 	});
 
 	let saveTimer: ReturnType<typeof setTimeout> | undefined;
 	const handleNotesBlur = () => {
 		if (saveTimer) clearTimeout(saveTimer);
-		saveTimer = setTimeout(() => updateArticleNotes(id(), notes()), 300);
+		saveTimer = setTimeout(async () => {
+			const result = await tryAsync(() => updateArticleNotes(id(), notes()));
+			if (!result.ok) notifyError("保存笔记失败", result.error);
+		}, 300);
 	};
 
 	// 乐观更新
@@ -55,13 +65,16 @@ export function useReadingDetail() {
 	>(new Map());
 	const wordStatusMap = createMemo(() => {
 		const map = new Map<string, "known" | "unknown" | "ignored">();
-		for (const w of detail()?.words ?? [])
-			map.set(w.word, w.status as "known" | "unknown" | "ignored");
+		if (!detail.error) {
+			for (const w of detail()?.words ?? [])
+				map.set(w.word, w.status as "known" | "unknown" | "ignored");
+		}
 		for (const [word, status] of localStatus()) map.set(word, status);
 		return map;
 	});
 
 	const sortedWords = createMemo(() => {
+		if (detail.error) return [];
 		const order: Record<string, number> = { unknown: 0, ignored: 1, known: 2 };
 		const map = wordStatusMap();
 		return [...(detail()?.words ?? [])].sort(
@@ -80,6 +93,7 @@ export function useReadingDetail() {
 		const result = await tryAsync(() => markWord(word, status));
 		if (!result.ok) {
 			setLocalStatus(prev);
+			notifyError("标记单词失败", result.error);
 			return;
 		}
 		refetch();
@@ -124,7 +138,11 @@ export function useReadingDetail() {
 		const result = await tryAsync(() =>
 			Promise.all(unknownWords.map((w) => markWord(w, "unknown"))),
 		);
-		if (result.ok) refetch();
+		if (result.ok) {
+			refetch();
+		} else {
+			notifyError("上传不认识词失败", result.error);
+		}
 		setUploadingUnknown(false);
 	};
 

@@ -198,3 +198,9 @@
 	margin: 0 0 16px;
 	font-size: 1.2rem;
 }
+
+.error-msg {
+	padding: var(--space-lg);
+	color: var(--t-color-danger);
+	font-size: var(--text-base);
+}

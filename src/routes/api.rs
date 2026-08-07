@@ -43,5 +43,10 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         .layer(middleware::from_fn(crate::auth::require_admin))
         .layer(middleware::from_fn_with_state(state, crate::auth::auth));
 
-    Router::new().merge(public).merge(authed).merge(admin)
+    // ── API 未知路径 → JSON 404（避免落入 SPA fallback 返回 HTML）──
+    Router::new()
+        .merge(public)
+        .merge(authed)
+        .merge(admin)
+        .fallback(|| async { crate::error::not_found("接口不存在") })
 }

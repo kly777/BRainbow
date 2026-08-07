@@ -80,3 +80,9 @@
 	margin: 12px 0 4px;
 	font-size: 1.4rem;
 }
+
+.error-msg {
+	padding: var(--space-lg);
+	color: var(--t-color-danger);
+	font-size: var(--text-base);
+}

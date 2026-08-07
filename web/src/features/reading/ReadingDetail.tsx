@@ -2,6 +2,7 @@
 
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
+import { getErrorMessage } from "@apis/types/errors.ts";
 import { useReadingDetail } from "@features/reading/logic/useReadingDetail.ts";
 import styles from "@features/reading/ReadingDetail.module.css";
 
@@ -46,8 +47,12 @@ export default function ReadingDetail() {
 			<A href="/reading" class={styles.back}>
 				← 文章列表
 			</A>
-			<Show when={m.detail()}>
-				{(d) => (
+			{/* 错误时短路：detail() 在 error 存在时会 throw（Solid 1.9 语义） */}
+			<Show
+				when={m.detail.error}
+				fallback={
+					<Show when={m.detail()} fallback={<div class={styles.loading}>加载中…</div>}>
+						{(d) => (
 					<>
 						<div class={styles.header}>
 							<h1>{d().article.title}</h1>
@@ -164,7 +169,11 @@ export default function ReadingDetail() {
 							</div>
 						</div>
 					</>
-				)}
+						)}
+					</Show>
+				}
+			>
+				<div class={styles.errorMsg}>{getErrorMessage(m.detail.error)}</div>
 			</Show>
 		</div>
 	);

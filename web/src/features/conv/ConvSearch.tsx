@@ -1,6 +1,7 @@
 import { A, useNavigate } from "@solidjs/router";
 import { createResource, createSignal, For, onMount, Show } from "solid-js";
 import { strParam, useUrlParams } from "@lib/useUrlParams.ts";
+import { getErrorMessage } from "@apis/types/errors.ts";
 import { type ConvHit, searchConvE } from "@features/conv/api.ts";
 import styles from "@features/conv/ConvSearch.module.css";
 
@@ -153,25 +154,40 @@ export default function ConvSearch() {
 						<div class={styles.spinner} />
 					</div>
 				</Show>
-				<For each={data().hits}>
-					{(hit) => (
-						<A href={itemHref(hit)} class={styles.item}>
-							<div class={styles.itemTop}>
-								<span class={styles.badge}>
-									{fieldLabel[hit.match_field] || hit.match_field}
-								</span>
-								<span class={styles.tagType}>
-									{typeLabel[hit.conv_type] || hit.conv_type}
-								</span>
-							</div>
-							<div class={styles.itemTitle}>{hit.title}</div>
-							<div class={styles.itemSnippet}>{hit.snippet}</div>
-							<div class={styles.itemMeta}>{hit.created_at.slice(0, 10)}</div>
-						</A>
-					)}
-				</For>
-				<Show when={searchQuery() && !data.loading && data().hits.length === 0}>
-					<div class={styles.empty}>没有找到匹配的结果</div>
+				<Show
+					when={data.error}
+					fallback={
+						<>
+							<For each={data().hits}>
+								{(hit) => (
+									<A href={itemHref(hit)} class={styles.item}>
+										<div class={styles.itemTop}>
+											<span class={styles.badge}>
+												{fieldLabel[hit.match_field] || hit.match_field}
+											</span>
+											<span class={styles.tagType}>
+												{typeLabel[hit.conv_type] || hit.conv_type}
+											</span>
+										</div>
+										<div class={styles.itemTitle}>{hit.title}</div>
+										<div class={styles.itemSnippet}>{hit.snippet}</div>
+										<div class={styles.itemMeta}>
+											{hit.created_at.slice(0, 10)}
+										</div>
+									</A>
+								)}
+							</For>
+							<Show
+								when={
+									searchQuery() && !data.loading && data().hits.length === 0
+								}
+							>
+								<div class={styles.empty}>没有找到匹配的结果</div>
+							</Show>
+						</>
+					}
+				>
+					<div class={styles.errorMsg}>{getErrorMessage(data.error)}</div>
 				</Show>
 			</div>
 		</div>

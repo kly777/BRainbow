@@ -233,3 +233,9 @@
 .item:hover {
 	box-shadow: var(--shadow-md);
 }
+
+.error-msg {
+	padding: var(--space-lg);
+	color: var(--t-color-danger);
+	font-size: var(--text-base);
+}

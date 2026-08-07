@@ -163,3 +163,9 @@
 .back-link:hover {
 	text-decoration: underline;
 }
+
+.error-msg {
+	padding: var(--space-xl);
+	color: var(--t-color-danger);
+	font-size: var(--text-base);
+}

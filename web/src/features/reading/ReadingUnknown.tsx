@@ -1,5 +1,6 @@
 import { A } from "@solidjs/router";
-import { createResource, For } from "solid-js";
+import { createResource, For, Show } from "solid-js";
+import { getErrorMessage } from "@apis/types/errors.ts";
 import { listUnknownWords, markWord } from "@features/reading/api.ts";
 import styles from "@features/reading/ReadingUnknown.module.css";
 
@@ -22,30 +23,40 @@ export default function ReadingUnknown() {
 			</p>
 
 			<div class={styles.list}>
-				<For
-					each={data()?.words}
+				<Show
+					when={data.error}
 					fallback={
-						<div class={styles.empty}>暂无不认识词——开始阅读文章吧</div>
+						<For
+							each={data()?.words}
+							fallback={
+								<div class={styles.empty}>
+									暂无不认识词——开始阅读文章吧
+								</div>
+							}
+						>
+							{(w) => (
+								<div class={styles.card}>
+									<div class={styles.wordMain}>
+										<span class={styles.word}>{w.word}</span>
+										<span class={styles.counts}>
+											不认识 {w.unknown_count} 次 / 认识 {w.known_count}{" "}
+											次
+										</span>
+									</div>
+									<button
+										type="button"
+										class={styles.knownBtn}
+										onClick={() => handleMarkKnown(w.word)}
+									>
+										✓ 认识
+									</button>
+								</div>
+							)}
+						</For>
 					}
 				>
-					{(w) => (
-						<div class={styles.card}>
-							<div class={styles.wordMain}>
-								<span class={styles.word}>{w.word}</span>
-								<span class={styles.counts}>
-									不认识 {w.unknown_count} 次 / 认识 {w.known_count} 次
-								</span>
-							</div>
-							<button
-								type="button"
-								class={styles.knownBtn}
-								onClick={() => handleMarkKnown(w.word)}
-							>
-								✓ 认识
-							</button>
-						</div>
-					)}
-				</For>
+					<div class={styles.errorMsg}>{getErrorMessage(data.error)}</div>
+				</Show>
 			</div>
 		</div>
 	);

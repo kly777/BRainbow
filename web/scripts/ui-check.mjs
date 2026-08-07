@@ -14,8 +14,6 @@
  *          UI_USER/UI_PASS(默认 diag/diag1234) UI_VIEWPORT(默认 1280x800)
  */
 import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("./vendor/playwright-core/index.js");
@@ -25,7 +23,9 @@ const API = process.env.API_BASE ?? "http://localhost:3000";
 const USER = process.env.UI_USER ?? "diag";
 const PASS = process.env.UI_PASS ?? "diag1234";
 const [W, H] = (process.env.UI_VIEWPORT ?? "1280x800").split("x").map(Number);
-const CHROME = process.env.CHROME_PATH ?? `${process.env.HOME}/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome`;
+const CHROME =
+	process.env.CHROME_PATH ??
+	`${process.env.HOME}/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome`;
 
 // ── 常用操作 ──────────────────────────────────────────────
 
@@ -45,7 +45,11 @@ export async function login() {
 export async function openApp(page, path = "/m", token) {
 	await page.goto(`${BASE}${path}`, { waitUntil: "domcontentloaded" });
 	await page.evaluate(
-		(t) => localStorage.setItem("brainbow_user", JSON.stringify({ id: 2, name: "diag", role: "user", token: t })),
+		(t) =>
+			localStorage.setItem(
+				"brainbow_user",
+				JSON.stringify({ id: 2, name: "diag", role: "user", token: t }),
+			),
 		token,
 	);
 	await page.reload({ waitUntil: "networkidle" });
@@ -55,7 +59,10 @@ export async function openApp(page, path = "/m", token) {
 /** 点包含指定文本的按钮 */
 export async function clickText(page, text) {
 	await page.evaluate(
-		(t) => [...document.querySelectorAll("button")].find((b) => b.textContent.includes(t))?.click(),
+		(t) =>
+			[...document.querySelectorAll("button")]
+				.find((b) => b.textContent.includes(t))
+				?.click(),
 		text,
 	);
 	await page.waitForTimeout(700);
@@ -67,7 +74,12 @@ export async function rect(page, selector) {
 		const el = document.querySelector(s);
 		if (!el) return null;
 		const r = el.getBoundingClientRect();
-		return { top: Math.round(r.top), bottom: Math.round(r.bottom), left: Math.round(r.left), right: Math.round(r.right) };
+		return {
+			top: Math.round(r.top),
+			bottom: Math.round(r.bottom),
+			left: Math.round(r.left),
+			right: Math.round(r.right),
+		};
 	}, selector);
 }
 
@@ -100,7 +112,10 @@ export async function checkLayout(browser) {
 
 	const face = await rect(p, "[class*=face]");
 	const answer = await rect(p, "[class*=answer_]");
-	const ctx = await styleOf(p, "[class*=ContextBar_]", ["backgroundColor", "borderBottomColor"]);
+	const ctx = await styleOf(p, "[class*=ContextBar_]", [
+		"backgroundColor",
+		"borderBottomColor",
+	]);
 
 	const pass = face && answer && face.bottom <= answer.top;
 	return {
@@ -120,9 +135,17 @@ export async function checkManage(browser) {
 	const p = await browser.newPage({ viewport: { width: W, height: H } });
 	const token = await login();
 	await openApp(p, "/m/manage", token);
-	const rows = await p.evaluate(() => document.querySelectorAll("[class*=row]").length);
-	const hasTable = await p.evaluate(() => !!document.querySelector("[class*=table_]"));
-	return { name: "manage", pass: rows > 0 && hasTable, detail: { rows, hasTable } };
+	const rows = await p.evaluate(
+		() => document.querySelectorAll("[class*=row]").length,
+	);
+	const hasTable = await p.evaluate(
+		() => !!document.querySelector("[class*=table_]"),
+	);
+	return {
+		name: "manage",
+		pass: rows > 0 && hasTable,
+		detail: { rows, hasTable },
+	};
 }
 
 /** /m/add 渲染 */
@@ -142,8 +165,13 @@ export async function checkCard(browser) {
 	const p = await browser.newPage({ viewport: { width: W, height: H } });
 	const token = await login();
 	await openApp(p, "/c", token);
-	const card = await styleOf(p, "[class*=Card_card__]", ["backgroundColor", "borderRadius"]);
-	const count = await p.evaluate(() => document.querySelectorAll("[class*=Card_card__]").length);
+	const card = await styleOf(p, "[class*=Card_card__]", [
+		"backgroundColor",
+		"borderRadius",
+	]);
+	const count = await p.evaluate(
+		() => document.querySelectorAll("[class*=Card_card__]").length,
+	);
 	return {
 		name: "card",
 		pass: card?.backgroundColor === "oklch(0.99 0.004 95)" && count > 0,
@@ -158,7 +186,12 @@ export async function checkInspect(browser, path, selector) {
 	await openApp(p, path, token);
 	const r = await rect(p, selector);
 	const s = await styleOf(p, selector, [
-		"backgroundColor", "color", "borderColor", "borderRadius", "fontFamily", "fontSize",
+		"backgroundColor",
+		"color",
+		"borderColor",
+		"borderRadius",
+		"fontFamily",
+		"fontSize",
 	]);
 	const text = await bodyText(p);
 	await p.close();
@@ -183,23 +216,38 @@ export async function main() {
 	const [cmd, path, selector] = process.argv.slice(2);
 
 	if (cmd === "all") {
-		const browser = await chromium.launch({ executablePath: CHROME, headless: true });
+		const browser = await chromium.launch({
+			executablePath: CHROME,
+			headless: true,
+		});
 		const results = [];
 		for (const key of ["layout", "manage", "add", "card"]) {
 			try {
 				results.push(await checks[key](browser));
 			} catch (e) {
-				results.push({ name: key, pass: false, detail: String(e).slice(0, 80) });
+				results.push({
+					name: key,
+					pass: false,
+					detail: String(e).slice(0, 80),
+				});
 			}
 		}
 		await browser.close();
-		for (const r of results) console.log(`${r.pass ? "✅" : "❌"} ${r.name}: ${JSON.stringify(r.detail)}`);
-		console.log(`═══ 汇总: ${results.filter((r) => r.pass).length}/${results.length} 通过 ═══`);
+		for (const r of results)
+			console.log(
+				`${r.pass ? "✅" : "❌"} ${r.name}: ${JSON.stringify(r.detail)}`,
+			);
+		console.log(
+			`═══ 汇总: ${results.filter((r) => r.pass).length}/${results.length} 通过 ═══`,
+		);
 		return;
 	}
 
 	if (cmd === "inspect" && path && selector) {
-		const browser = await chromium.launch({ executablePath: CHROME, headless: true });
+		const browser = await chromium.launch({
+			executablePath: CHROME,
+			headless: true,
+		});
 		const r = await checks.inspect(browser, path, selector);
 		await browser.close();
 		console.log(JSON.stringify(r, null, 1));
@@ -207,17 +255,23 @@ export async function main() {
 	}
 
 	if (checks[cmd]) {
-		const browser = await chromium.launch({ executablePath: CHROME, headless: true });
+		const browser = await chromium.launch({
+			executablePath: CHROME,
+			headless: true,
+		});
 		const r = await checks[cmd](browser);
 		await browser.close();
 		console.log(JSON.stringify(r, null, 1));
 		return;
 	}
 
-	console.log(`用法: node scripts/ui-check.mjs [layout|manage|add|card|pages|inspect <路径> <选择器>|all]`);
+	console.log(
+		`用法: node scripts/ui-check.mjs [layout|manage|add|card|pages|inspect <路径> <选择器>|all]`,
+	);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main().catch((e) => {
-	console.error("❌", e.message);
-	process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`)
+	main().catch((e) => {
+		console.error("❌", e.message);
+		process.exit(1);
+	});

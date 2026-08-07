@@ -47,7 +47,9 @@ for (const c of candidates) {
 	}
 }
 if (!chromium) {
-	console.error("错误: 找不到 playwright-core（web/scripts/vendor/ 或 /tmp/node_modules）");
+	console.error(
+		"错误: 找不到 playwright-core（web/scripts/vendor/ 或 /tmp/node_modules）",
+	);
 	process.exit(1);
 }
 
@@ -57,7 +59,18 @@ const CHROME_PATH =
 
 // ── CLI 解析 ──
 function parseArgs(argv) {
-	const args = { url: "/", viewport: [1280, 800], selector: null, token: false, layout: false, login: null, base: "http://localhost:3001", api: "http://localhost:3000", out: null, json: false };
+	const args = {
+		url: "/",
+		viewport: [1280, 800],
+		selector: null,
+		token: false,
+		layout: false,
+		login: null,
+		base: "http://localhost:3001",
+		api: "http://localhost:3000",
+		out: null,
+		json: false,
+	};
 	for (let i = 0; i < argv.length; i++) {
 		const a = argv[i];
 		const next = () => argv[++i];
@@ -83,7 +96,7 @@ function parseArgs(argv) {
 // ── 选择器归一化：纯文本 → CSS-module class 匹配 ──
 function normalizeSelector(sel) {
 	if (!sel) return null;
-	if (/^[.#\[>~+]|^[a-zA-Z][\w-]*$/.test(sel) && !sel.includes(" ")) {
+	if (/^[.#[>~+]|^[a-zA-Z][\w-]*$/.test(sel) && !sel.includes(" ")) {
 		// 纯词（如 actionRow）→ 匹配 hash class
 		if (!sel.startsWith(".") && !sel.startsWith("#") && !sel.startsWith("["))
 			return `[class*="${sel}"]`;
@@ -116,7 +129,12 @@ async function collect(page, args) {
 				const r = el.getBoundingClientRect();
 				const out = {
 					className: el.className || el.tagName,
-					rect: { left: Math.round(r.left), top: Math.round(r.top), width: Math.round(r.width), height: Math.round(r.height) },
+					rect: {
+						left: Math.round(r.left),
+						top: Math.round(r.top),
+						width: Math.round(r.width),
+						height: Math.round(r.height),
+					},
 					computed: {},
 					overflow: {
 						scrollWidth: el.scrollWidth,
@@ -126,13 +144,36 @@ async function collect(page, args) {
 					},
 				};
 				const keys = [
-					"display", "position", "width", "height", "min-width", "max-width",
-					"padding", "margin", "gap", "border", "border-radius",
-					"background", "background-color", "color", "opacity",
-					"font-family", "font-size", "font-weight", "line-height",
-					"flex-direction", "flex-wrap", "align-items", "justify-content",
-					"z-index", "box-shadow", "overflow-x", "overflow-y",
-					"transform", "letter-spacing", "text-transform",
+					"display",
+					"position",
+					"width",
+					"height",
+					"min-width",
+					"max-width",
+					"padding",
+					"margin",
+					"gap",
+					"border",
+					"border-radius",
+					"background",
+					"background-color",
+					"color",
+					"opacity",
+					"font-family",
+					"font-size",
+					"font-weight",
+					"line-height",
+					"flex-direction",
+					"flex-wrap",
+					"align-items",
+					"justify-content",
+					"z-index",
+					"box-shadow",
+					"overflow-x",
+					"overflow-y",
+					"transform",
+					"letter-spacing",
+					"text-transform",
 				];
 				for (const k of keys) out.computed[k] = cs[k];
 				// 子元素布局
@@ -160,10 +201,14 @@ async function collect(page, args) {
 
 			if (wantToken) {
 				const vars = {};
-				for (const el of [document.documentElement, ...document.querySelectorAll("*")]) {
+				for (const el of [
+					document.documentElement,
+					...document.querySelectorAll("*"),
+				]) {
 					const cs = getComputedStyle(el);
 					for (const k of cs) {
-						if (k.startsWith("--") && !(k in vars)) vars[k] = cs.getPropertyValue(k).trim();
+						if (k.startsWith("--") && !(k in vars))
+							vars[k] = cs.getPropertyValue(k).trim();
 					}
 				}
 				result.cssVars = Object.fromEntries(
@@ -181,7 +226,8 @@ async function collect(page, args) {
 				// 常用容器布局快照
 				result.body = pick(document.body);
 				result.layout = {
-					bodyScrollable: document.body.scrollHeight > document.body.clientHeight,
+					bodyScrollable:
+						document.body.scrollHeight > document.body.clientHeight,
 					body: pick(document.body),
 				};
 			}
@@ -203,8 +249,7 @@ function humanize(info, args) {
 
 	if (info.cssVars) {
 		L.push("══ CSS 变量 ══");
-		for (const [k, v] of Object.entries(info.cssVars))
-			L.push(`  ${k}: ${v}`);
+		for (const [k, v] of Object.entries(info.cssVars)) L.push(`  ${k}: ${v}`);
 		L.push("");
 	}
 
@@ -217,15 +262,21 @@ function humanize(info, args) {
 			L.push("  计算样式:");
 			for (const [k, v] of Object.entries(el.computed))
 				L.push(`    ${k}: ${v}`);
-			L.push(`  布局: left=${el.rect.left} top=${el.rect.top} w=${el.rect.width} h=${el.rect.height}`);
+			L.push(
+				`  布局: left=${el.rect.left} top=${el.rect.top} w=${el.rect.width} h=${el.rect.height}`,
+			);
 			const ov = el.overflow;
 			const hOverflow = ov.scrollWidth > ov.clientWidth;
 			const vOverflow = ov.scrollHeight > ov.clientHeight;
-			L.push(`  溢出: scrollW=${ov.scrollWidth} clientW=${ov.clientWidth} ${hOverflow ? "⚠️ 横向溢出" : "✓ 无横向溢出"} | scrollH=${ov.scrollHeight} clientH=${ov.clientHeight} ${vOverflow ? "⚠️ 纵向溢出" : "✓ 无纵向溢出"}`);
+			L.push(
+				`  溢出: scrollW=${ov.scrollWidth} clientW=${ov.clientWidth} ${hOverflow ? "⚠️ 横向溢出" : "✓ 无横向溢出"} | scrollH=${ov.scrollHeight} clientH=${ov.clientHeight} ${vOverflow ? "⚠️ 纵向溢出" : "✓ 无纵向溢出"}`,
+			);
 			if (el.children?.length) {
 				L.push(`  子元素 (${el.children.length} 个, ${el.rows ?? 1} 行):`);
 				for (const c of el.children)
-					L.push(`    ${c.text || c.tag.padEnd(8)}  top=${c.top} w=${c.width} h=${c.height}`);
+					L.push(
+						`    ${c.text || c.tag.padEnd(8)}  top=${c.top} w=${c.width} h=${c.height}`,
+					);
 			}
 		}
 		L.push("");
@@ -234,7 +285,9 @@ function humanize(info, args) {
 	if (info.layout) {
 		L.push(`══ 布局诊断 ══`);
 		const b = info.layout.body;
-		L.push(`  body: w=${b.rect.width} h=${b.rect.height} scrollH=${b.overflow.scrollHeight} ${info.layout.bodyScrollable ? "⚠️ 页面可滚动" : "页面固定"}`);
+		L.push(
+			`  body: w=${b.rect.width} h=${b.rect.height} scrollH=${b.overflow.scrollHeight} ${info.layout.bodyScrollable ? "⚠️ 页面可滚动" : "页面固定"}`,
+		);
 		L.push("");
 	}
 	return L.join("\n");
@@ -243,7 +296,9 @@ function humanize(info, args) {
 // ── 主流程 ──
 (async () => {
 	const args = parseArgs(process.argv.slice(2));
-	const url = args.url.startsWith("http") ? args.url : `${args.base}${args.url}`;
+	const url = args.url.startsWith("http")
+		? args.url
+		: `${args.base}${args.url}`;
 
 	const browser = await chromium.launch({
 		executablePath: CHROME_PATH,
@@ -260,7 +315,12 @@ function humanize(info, args) {
 		await page.evaluate((u) => {
 			localStorage.setItem(
 				"brainbow_user",
-				JSON.stringify({ id: u.id, name: u.name, role: u.role, token: u.token }),
+				JSON.stringify({
+					id: u.id,
+					name: u.name,
+					role: u.role,
+					token: u.token,
+				}),
 			);
 		}, user);
 		await page.reload({ waitUntil: "networkidle", timeout: 30000 });

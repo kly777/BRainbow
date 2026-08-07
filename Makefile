@@ -15,7 +15,7 @@ dev:
 
 fmt:
 	cargo fmt
-	cd web && npx @biomejs/biome format --write src/
+	cd web && npx @biomejs/biome format --write .
 
 check:
 	./$(DEPLOY_SCRIPT) check

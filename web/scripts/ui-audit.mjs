@@ -24,7 +24,10 @@ import { writeFileSync } from "node:fs";
 const require = createRequire(import.meta.url);
 
 let chromium;
-for (const c of ["./vendor/playwright-core", "/tmp/node_modules/playwright-core"]) {
+for (const c of [
+	"./vendor/playwright-core",
+	"/tmp/node_modules/playwright-core",
+]) {
 	try {
 		({ chromium } = require(c));
 		break;
@@ -33,7 +36,9 @@ for (const c of ["./vendor/playwright-core", "/tmp/node_modules/playwright-core"
 	}
 }
 if (!chromium) {
-	console.error("错误: 找不到 playwright-core（web/scripts/vendor/ 或 /tmp/node_modules）");
+	console.error(
+		"错误: 找不到 playwright-core（web/scripts/vendor/ 或 /tmp/node_modules）",
+	);
 	process.exit(1);
 }
 
@@ -220,8 +225,10 @@ const AUDIT_FN = () => {
 	for (const el of document.querySelectorAll("input, select, textarea")) {
 		if (!visible(el)) continue;
 		if (el.type === "hidden") continue;
-		const hasLinkedLabel = el.id && document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
-		const hasAria = el.getAttribute("aria-label") || el.getAttribute("aria-labelledby");
+		const hasLinkedLabel =
+			el.id && document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+		const hasAria =
+			el.getAttribute("aria-label") || el.getAttribute("aria-labelledby");
 		const hasPlaceholder = el.getAttribute("placeholder");
 		if (!hasLinkedLabel && !hasAria && !hasPlaceholder) {
 			notes.push({
@@ -236,7 +243,8 @@ const AUDIT_FN = () => {
 	for (const el of document.querySelectorAll("button, a[href]")) {
 		if (!visible(el)) continue;
 		const hasText = el.textContent.trim().length > 0;
-		const hasAria = el.getAttribute("aria-label") || el.getAttribute("aria-labelledby");
+		const hasAria =
+			el.getAttribute("aria-label") || el.getAttribute("aria-labelledby");
 		const hasTitle = el.getAttribute("title");
 		const hasImgAlt = el.querySelector("img[alt]");
 		if (!hasText && !hasAria && !hasTitle && !hasImgAlt) {
@@ -249,12 +257,22 @@ const AUDIT_FN = () => {
 	}
 
 	// ── 6. 文字溢出未省略 ──
-	for (const el of document.querySelectorAll("p, span, div, td, li, a, h1, h2, h3, label")) {
+	for (const el of document.querySelectorAll(
+		"p, span, div, td, li, a, h1, h2, h3, label",
+	)) {
 		if (!visible(el)) continue;
-		if (el.scrollWidth > el.clientWidth + 4 && el.clientWidth > 0 && el.clientWidth < 800) {
+		if (
+			el.scrollWidth > el.clientWidth + 4 &&
+			el.clientWidth > 0 &&
+			el.clientWidth < 800
+		) {
 			const s = getComputedStyle(el);
 			const inline = s.display === "inline" || s.display === "inline-block";
-			if (!inline && s.overflowX === "visible" && s.textOverflow !== "ellipsis") {
+			if (
+				!inline &&
+				s.overflowX === "visible" &&
+				s.textOverflow !== "ellipsis"
+			) {
 				const text = el.textContent.trim();
 				if (text.length > 4 && !text.includes("\n")) {
 					notes.push({
@@ -272,7 +290,11 @@ const AUDIT_FN = () => {
 	for (const el of document.querySelectorAll("body *")) {
 		if (el.scrollWidth > el.clientWidth + 16 && el.clientWidth > 0) {
 			const s = getComputedStyle(el);
-			if (s.overflowX !== "auto" && s.overflowX !== "scroll" && s.overflowX !== "overlay") {
+			if (
+				s.overflowX !== "auto" &&
+				s.overflowX !== "scroll" &&
+				s.overflowX !== "overlay"
+			) {
 				overflowers.push({
 					cls: (el.className || el.tagName).toString().slice(0, 40),
 					sw: el.scrollWidth,
@@ -383,14 +405,21 @@ const AUDIT_FN = () => {
 					total++;
 					continue;
 				}
-				const issues = [...(r.problems || []), ...(r.consoleErrors || []).map((e) => ({ type: "console", label: e }))];
+				const issues = [
+					...(r.problems || []),
+					...(r.consoleErrors || []).map((e) => ({
+						type: "console",
+						label: e,
+					})),
+				];
 				const nts = r.notes || [];
 				if (issues.length === 0) {
 					L.push(`  ✓ ${vp}: ${r.interactives} 个交互元素可达`);
 				} else {
 					total += issues.length;
 					L.push(`  ✗ ${vp}: ${issues.length} 个问题`);
-					for (const p of issues) L.push(`      · ${p.type}: ${p.label} ${p.detail || ""}`);
+					for (const p of issues)
+						L.push(`      · ${p.type}: ${p.label} ${p.detail || ""}`);
 				}
 				// 参考问题限 6 条展示
 				for (const n of nts.slice(0, 6)) {

@@ -2,7 +2,7 @@
 	"$schema": "https://biomejs.dev/schemas/2.5.7/schema.json",
 	"files": {
 		"ignoreUnknown": true,
-		"includes": ["src/**"]
+		"includes": ["**", "!dist", "!node_modules", "!scripts/vendor"]
 	},
 	"linter": {
 		"enabled": true,

@@ -3,7 +3,7 @@
 .page {
 	max-width: 1440px;
 	margin: 0 auto;
-	padding: var(--space-xl) 20px;
+	padding: var(--space-xl) 1.25rem;
 }
 
 .title {
@@ -15,7 +15,7 @@
 
 .grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
 	gap: var(--space-lg);
 }
 
@@ -80,7 +80,7 @@
 .actions {
 	display: flex;
 	gap: var(--space-xs);
-	padding: var(--space-sm) 12px;
+	padding: var(--space-sm) 0.75rem;
 	border-top: 1px solid var(--t-color-border);
 }
 
@@ -93,7 +93,7 @@
 
 .edit-input {
 	composes: field-input from "../../styles/base.module.css";
-	padding: var(--space-xs) 10px;
+	padding: var(--space-xs) 0.625rem;
 	font-size: var(--text-sm);
 	font-family: inherit;
 	outline: none;

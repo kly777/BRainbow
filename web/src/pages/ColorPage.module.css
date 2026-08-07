@@ -22,7 +22,7 @@
 
 .grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(13.75rem, 1fr));
 	gap: var(--space-lg);
 }
 
@@ -50,8 +50,8 @@
 }
 
 .swatch {
-	width: 44px;
-	height: 44px;
+	width: 2.75rem;
+	height: 2.75rem;
 	border-radius: var(--radius-md);
 	border: 1px solid var(--t-color-border);
 }
@@ -61,14 +61,14 @@
 	font-size: var(--text-base);
 	font-weight: 600;
 	color: var(--t-color-ink);
-	margin-bottom: 4px;
+	margin-bottom: 0.25rem;
 }
 
 .card-status {
 	font-size: var(--text-xs);
 	font-family: var(--t-font-mono);
 	color: var(--t-color-accent);
-	min-height: 16px;
+	min-height: 1rem;
 }
 
 .preview-box {
@@ -82,7 +82,7 @@
 
 .preview-btn {
 	font-size: var(--text-xs);
-	padding: var(--space-xs) 10px;
+	padding: var(--space-xs) 0.625rem;
 	border-radius: var(--radius-sm);
 	border: none;
 	cursor: default;
@@ -118,6 +118,6 @@
 }
 
 .card:hover {
-	transform: translateY(-2px);
+	transform: translateY(-0.125rem);
 	box-shadow: 0 4px 16px var(--t-color-accent-soft);
 }

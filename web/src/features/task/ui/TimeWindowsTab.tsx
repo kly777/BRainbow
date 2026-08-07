@@ -248,7 +248,7 @@ export default function TimeWindowsTab(props: TimeWindowsTabProps) {
 			</Show>
 
 			{/* 已有计划时间段 */}
-			<div class={styles.sectionHeader} style={{ "margin-top": "16px" }}>
+			<div class={styles.sectionHeader} style={{ "margin-top": "1rem" }}>
 				<span class={styles.sectionTitle}>计划时间段</span>
 				<span class={styles.sectionHint}>（必须在可进行时间窗口内）</span>
 			</div>

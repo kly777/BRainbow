@@ -1,7 +1,7 @@
 /* features/card/ui/CardMasonry.css.ts — 由 vanilla-extract 迁移 */
 
 .cards-grid {
-	padding-top: 10px;
+	padding-top: 0.625rem;
 	column-count: auto;
 	column-gap: var(--space-xl);
 	width: 100%;
@@ -13,12 +13,12 @@
 }
 
 .loading-more {
-	width: var(--masonry-column-width, 300px);
+	width: var(--masonry-column-width, 18.75rem);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	color: var(--t-color-ink-muted);
-	font-size: 0.875rem;
+	font-size: var(--text-sm);
 	padding: var(--space-xl);
 }
 
@@ -33,14 +33,14 @@
 
 @media (width <= 1024px) {
 	.cards-grid {
-		column-width: 260px;
+		column-width: 16.25rem;
 		column-gap: var(--space-lg);
 	}
 }
 
 @media (width <= 768px) {
 	.cards-grid {
-		column-width: 240px;
+		column-width: 15rem;
 		column-gap: var(--space-md);
 	}
 }
@@ -54,19 +54,19 @@
 
 @media (width <= 768px) {
 	.empty-state {
-		padding: var(--space-xl) 16px;
+		padding: var(--space-xl) 1rem;
 	}
 }
 
 .cards-grid > * {
-	width: var(--masonry-column-width, 300px);
+	width: var(--masonry-column-width, 18.75rem);
 	flex-grow: 1;
 	break-inside: avoid;
 	margin-bottom: var(--space-xl);
 }
 
 .empty-state p {
-	font-size: 1rem;
+	font-size: var(--text-base);
 	color: var(--t-color-ink-muted);
 	margin-bottom: var(--space-xl);
 }

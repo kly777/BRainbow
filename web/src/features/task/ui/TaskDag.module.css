@@ -7,14 +7,14 @@
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
-	height: var(--cmp-height, 400px);
+	height: var(--cmp-height, 25rem);
 }
 
 .dag-toolbar {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: var(--space-lg) 20px;
+	padding: var(--space-lg) 1.25rem;
 	border-bottom: 1px solid var(--t-color-border);
 	flex-shrink: 0;
 	flex-wrap: wrap;
@@ -36,7 +36,7 @@
 }
 
 .task-select {
-	padding: var(--space-xs) 12px;
+	padding: var(--space-xs) 0.75rem;
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	font-size: var(--text-sm);
@@ -48,7 +48,7 @@
 }
 
 .zoom-btn {
-	padding: var(--space-xs) 12px;
+	padding: var(--space-xs) 0.75rem;
 	background: var(--t-color-surface-raised);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);

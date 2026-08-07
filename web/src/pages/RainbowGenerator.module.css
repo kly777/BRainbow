@@ -10,7 +10,7 @@
 }
 
 .controls {
-	flex: 1 1 400px;
+	flex: 1 1 25rem;
 	min-width: 340px;
 }
 
@@ -51,7 +51,7 @@
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
-	padding: var(--space-md) 16px;
+	padding: var(--space-md) 1rem;
 }
 
 @media (width <= 480px) {

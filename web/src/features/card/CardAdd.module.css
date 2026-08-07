@@ -10,7 +10,7 @@
 }
 
 .error-msg {
-	padding: var(--space-sm) 16px;
+	padding: var(--space-sm) 1rem;
 	background: var(--t-color-danger-subtle);
 	color: var(--t-color-danger);
 	font-size: var(--text-sm);

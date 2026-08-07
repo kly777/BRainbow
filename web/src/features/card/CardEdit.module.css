@@ -53,13 +53,13 @@
 .dirty {
 	display: inline-flex;
 	align-items: center;
-	gap: 4px;
+	gap: 0.25rem;
 	color: var(--t-color-accent-strong);
 }
 
 .dirty-dot {
-	width: 6px;
-	height: 6px;
+	width: 0.375rem;
+	height: 0.375rem;
 	border-radius: 50%;
 	background: var(--t-color-accent);
 	animation: blink 1.6s ease-in-out infinite;
@@ -74,7 +74,7 @@
 /* ── 错误提示 ── */
 
 .error-msg {
-	padding: var(--space-sm) 16px;
+	padding: var(--space-sm) 1rem;
 	margin-bottom: var(--space-sm);
 	background: var(--t-color-danger-subtle);
 	color: var(--t-color-danger);
@@ -190,8 +190,8 @@
 	left: 50%;
 	top: 50%;
 	transform: translate(-50%, -50%);
-	width: 8px;
-	height: 8px;
+	width: 0.5rem;
+	height: 0.5rem;
 	border-radius: 50%;
 	background: var(--t-color-accent-soft);
 	border: 1px solid var(--t-color-accent);
@@ -212,7 +212,7 @@
 }
 
 .shortcut kbd {
-	padding: 0 5px;
+	padding: 0 0.3125rem;
 	border: 1px solid var(--t-color-border-strong);
 	border-radius: var(--radius-xs);
 	background: var(--t-color-surface);

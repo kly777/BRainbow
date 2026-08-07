@@ -102,7 +102,7 @@ export function drawGraph(
 		// 文字
 		const text = n.title.length > 6 ? `${n.title.slice(0, 5)}…` : n.title;
 		ctx.fillStyle = readCSSVar("--color-white");
-		ctx.font = `${isHovered ? "bold " : ""}10px sans-serif`;
+		ctx.font = `${isHovered ? "bold " : ""}0.625rem sans-serif`;
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
 		ctx.fillText(text, n.x, n.y);
@@ -110,7 +110,7 @@ export function drawGraph(
 		// hover 时显示完整标题
 		if (isHovered) {
 			ctx.fillStyle = readCSSVar("--color-text");
-			ctx.font = "12px sans-serif";
+			ctx.font = "0.75rem sans-serif";
 			ctx.fillText(n.title, n.x, n.y - r - 12);
 		}
 	}
@@ -118,7 +118,7 @@ export function drawGraph(
 	// 图例
 	ctx.restore();
 	ctx.fillStyle = readCSSVar("--color-text-secondary");
-	ctx.font = "11px sans-serif";
+	ctx.font = "0.6875rem sans-serif";
 	ctx.textAlign = "left";
 
 	const legend = [

@@ -49,10 +49,10 @@ const DB: Component = () => {
 		<div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
 			<div
 				style={{
-					width: "180px",
+					width: "11.25rem",
 					"flex-shrink": "0",
 					"overflow-y": "auto",
-					padding: "10px",
+					padding: "0.625rem",
 					background: "var(--color-bg)",
 					"border-right": "1px solid var(--color-border-light)",
 				}}
@@ -61,7 +61,7 @@ const DB: Component = () => {
 					style={{
 						"font-weight": "600",
 						padding: "6px 8px",
-						"font-size": "13px",
+						"font-size": "0.8125rem",
 						color: "var(--color-text-secondary)",
 					}}
 				>
@@ -77,8 +77,8 @@ const DB: Component = () => {
 								width: "100%",
 								padding: "8px 12px",
 								cursor: "pointer",
-								"font-size": "13px",
-								"border-radius": "6px",
+								"font-size": "0.8125rem",
+								"border-radius": "0.375rem",
 								color: "var(--color-text)",
 								"text-align": "left",
 								background:
@@ -98,12 +98,12 @@ const DB: Component = () => {
 				{error() && (
 					<div
 						style={{
-							padding: "10px",
+							padding: "0.625rem",
 							background: "var(--color-danger-subtle)",
 							color: "var(--color-danger)",
-							"border-radius": "6px",
-							"font-size": "13px",
-							"margin-bottom": "12px",
+							"border-radius": "0.375rem",
+							"font-size": "0.8125rem",
+							"margin-bottom": "0.75rem",
 						}}
 					>
 						{error()}
@@ -113,7 +113,7 @@ const DB: Component = () => {
 					<div
 						style={{
 							color: "var(--color-text-secondary)",
-							padding: "12px",
+							padding: "0.75rem",
 						}}
 					>
 						加载中...
@@ -128,7 +128,7 @@ const DB: Component = () => {
 								style={{
 									"border-collapse": "collapse",
 									width: "100%",
-									"font-size": "13px",
+									"font-size": "0.8125rem",
 								}}
 							>
 								<thead>
@@ -160,7 +160,7 @@ const DB: Component = () => {
 											<td
 												colspan={columns().length}
 												style={{
-													padding: "20px",
+													padding: "1.25rem",
 													color: "var(--color-text-muted)",
 													"text-align": "center",
 												}}
@@ -180,7 +180,7 @@ const DB: Component = () => {
 																"border-bottom":
 																	"1px solid var(--color-border-light)",
 																"white-space": "nowrap",
-																"max-width": "300px",
+																"max-width": "18.75rem",
 																overflow: "hidden",
 																"text-overflow": "ellipsis",
 															}}

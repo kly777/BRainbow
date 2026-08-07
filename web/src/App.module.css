@@ -16,7 +16,7 @@
 .footer {
 	text-align: center;
 	padding: var(--space-md);
-	margin-top: 15px;
+	margin-top: 0.9375rem;
 	color: var(--t-color-ink-muted);
 	font-size: var(--text-sm);
 	border-top: 1px solid var(--t-color-border);
@@ -28,7 +28,7 @@
 	align-items: center;
 	justify-content: center;
 	height: 100%;
-	padding: var(--space-xl) 20px;
+	padding: var(--space-xl) 1.25rem;
 	text-align: center;
 }
 
@@ -36,7 +36,7 @@
 	color: var(--t-color-accent);
 	text-decoration: none;
 	font-weight: 500;
-	padding: var(--space-sm) 20px;
+	padding: var(--space-sm) 1.25rem;
 	border: 2px solid var(--t-color-accent);
 	border-radius: var(--radius-md);
 	transition: all 0.3s ease;
@@ -44,7 +44,7 @@
 
 .feature-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
 	gap: var(--space-xl);
 	margin: var(--space-xl) 0;
 	width: 100%;
@@ -69,7 +69,7 @@
 	display: inline-block;
 	background-color: var(--t-color-accent);
 	color: var(--t-color-bg);
-	padding: var(--space-sm) 20px;
+	padding: var(--space-sm) 1.25rem;
 	border-radius: var(--radius-md);
 	text-decoration: none;
 	font-weight: 500;
@@ -78,7 +78,7 @@
 }
 
 .quick-stats {
-	margin-top: 30px;
+	margin-top: 1.875rem;
 	padding: var(--space-md);
 	background-color: var(--t-color-bg);
 	border-radius: var(--radius-md);
@@ -93,7 +93,7 @@
 
 @media (width <= 480px) {
 	.landing-page {
-		padding: var(--space-xl) 10px;
+		padding: var(--space-xl) 0.625rem;
 	}
 }
 
@@ -111,7 +111,7 @@
 }
 
 .feature-card:hover {
-	transform: translateY(-5px);
+	transform: translateY(-0.3125rem);
 	box-shadow: var(--shadow-md);
 }
 
@@ -148,7 +148,7 @@
 .landing-page p {
 	font-size: var(--text-lg);
 	color: var(--t-color-ink-muted);
-	margin-bottom: 40px;
+	margin-bottom: 2.5rem;
 	max-width: 600px;
 	line-height: 1.6;
 }

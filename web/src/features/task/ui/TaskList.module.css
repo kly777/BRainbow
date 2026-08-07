@@ -26,8 +26,8 @@
 }
 
 .status-indicator {
-	width: 6px;
-	height: 6px;
+	width: 0.375rem;
+	height: 0.375rem;
 	border-radius: 50%;
 	display: inline-block;
 	flex-shrink: 0;
@@ -106,12 +106,12 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--space-xs);
-	margin-top: 6px;
+	margin-top: 0.375rem;
 }
 
 .time-window-chip {
 	font-size: var(--text-xs);
-	padding: var(--space-xs) 8px;
+	padding: var(--space-xs) 0.5rem;
 	border-radius: var(--radius-sm);
 	background: var(--t-color-bg);
 	color: var(--t-color-ink-muted);
@@ -120,7 +120,7 @@
 }
 
 .sub-task-badge {
-	margin-left: 8px;
+	margin-left: 0.5rem;
 	padding: var(--space-xs);
 	border-radius: var(--radius-sm);
 	font-size: var(--text-xs);
@@ -138,14 +138,14 @@
 }
 
 .status-select {
-	padding: var(--space-xs) 24px var(--space-xs) 10px;
+	padding: var(--space-xs) 1.5rem var(--space-xs) 0.625rem;
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	font-size: var(--text-sm);
 	color: var(--t-color-ink);
 	background: var(--t-color-surface)
 		url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239ca3af' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")
-		no-repeat right 8px center;
+		no-repeat right 0.5rem center;
 	cursor: pointer;
 	outline: none;
 	transition: border-color var(--t-transition-fast);
@@ -153,7 +153,7 @@
 }
 
 .edit-button {
-	padding: var(--space-xs) 10px;
+	padding: var(--space-xs) 0.625rem;
 	background: none;
 	color: var(--t-color-ink-muted);
 	border: none;
@@ -164,7 +164,7 @@
 }
 
 .sub-task-button {
-	padding: var(--space-xs) 10px;
+	padding: var(--space-xs) 0.625rem;
 	background: none;
 	color: var(--t-color-ink-muted);
 	border: 1px solid var(--t-color-border);
@@ -177,7 +177,7 @@
 }
 
 .delete-button {
-	padding: var(--space-xs) 10px;
+	padding: var(--space-xs) 0.625rem;
 	background: none;
 	color: var(--t-color-ink-muted);
 	border: none;
@@ -191,7 +191,7 @@
 	display: flex;
 	gap: var(--space-sm);
 	align-items: center;
-	margin-top: 10px;
+	margin-top: 0.625rem;
 	padding: var(--space-sm) 0 0;
 	border-top: 1px solid var(--t-color-surface-raised);
 }
@@ -223,8 +223,8 @@
 	display: flex;
 	flex-direction: column;
 	margin-top: 0;
-	margin-left: 20px;
-	padding-left: 16px;
+	margin-left: 1.25rem;
+	padding-left: 1rem;
 	border-left: 2px solid var(--t-color-surface-raised);
 }
 

@@ -22,7 +22,7 @@
 
 .nav-button {
 	color: var(--t-color-ink);
-	padding: var(--space-sm) 16px;
+	padding: var(--space-sm) 1rem;
 	background: var(--t-color-surface-raised);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
@@ -60,7 +60,7 @@
 
 .calendar-day {
 	background: var(--t-color-surface);
-	min-height: 100px;
+	min-height: 6.25rem;
 	padding: var(--space-sm);
 	border-right: 1px solid var(--t-color-border);
 	border-bottom: 1px solid var(--t-color-border);
@@ -84,7 +84,7 @@
 }
 
 .day-task {
-	padding: var(--space-xs) 8px;
+	padding: var(--space-xs) 0.5rem;
 	border-radius: var(--radius-sm);
 	font-size: var(--text-xs);
 	white-space: nowrap;

@@ -3,7 +3,7 @@
 .edit-modal {
 	display: flex;
 	flex-direction: column;
-	min-height: 420px;
+	min-height: 26.25rem;
 }
 
 .tab-bar {
@@ -16,11 +16,11 @@
 
 .tab {
 	flex: 1;
-	padding: var(--space-sm) 12px;
+	padding: var(--space-sm) 0.75rem;
 	background: none;
 	border: none;
 	border-bottom: 2px solid transparent;
-	margin-bottom: -2px;
+	margin-bottom: -0.125rem;
 	cursor: pointer;
 	font-size: var(--text-sm);
 	font-weight: 500;
@@ -74,9 +74,9 @@
 
 .field-textarea {
 	composes: field-textarea from "../../../styles/base.module.css";
-	padding: var(--space-sm) 10px;
+	padding: var(--space-sm) 0.625rem;
 	font-size: var(--text-sm);
-	min-height: 60px;
+	min-height: 3.75rem;
 	font-family: inherit;
 }
 
@@ -100,7 +100,7 @@
 }
 
 .preset-btn {
-	padding: var(--space-xs) 10px;
+	padding: var(--space-xs) 0.625rem;
 	font-size: var(--text-sm);
 	background: var(--t-color-success-subtle);
 	color: var(--t-color-mark-teal);
@@ -120,7 +120,7 @@
 }
 
 .add-btn {
-	padding: var(--space-xs) 14px;
+	padding: var(--space-xs) 0.875rem;
 	background: var(--t-color-accent);
 	color: var(--t-color-white);
 	border: none;
@@ -129,7 +129,7 @@
 	font-size: var(--text-sm);
 	font-weight: 500;
 	transition: background var(--t-transition-fast);
-	margin-top: 4px;
+	margin-top: 0.25rem;
 }
 
 .section-header {
@@ -154,14 +154,14 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-xs);
-	margin-bottom: 4px;
+	margin-bottom: 0.25rem;
 }
 
 .time-item {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: var(--space-xs) 10px;
+	padding: var(--space-xs) 0.625rem;
 	background: var(--t-color-bg);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
@@ -194,8 +194,8 @@
 .error-msg {
 	color: var(--t-color-danger);
 	font-size: var(--text-sm);
-	margin-top: 6px;
-	padding: var(--space-xs) 10px;
+	margin-top: 0.375rem;
+	padding: var(--space-xs) 0.625rem;
 	background: var(--t-color-danger-subtle);
 	border-radius: var(--radius-sm);
 }
@@ -211,7 +211,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: var(--space-sm) 10px;
+	padding: var(--space-sm) 0.625rem;
 	background: var(--t-color-bg);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
@@ -235,7 +235,7 @@
 
 .dep-status {
 	font-size: var(--text-xs);
-	padding: var(--space-xs) 6px;
+	padding: var(--space-xs) 0.375rem;
 	border-radius: var(--radius-sm);
 	font-weight: 500;
 	flex-shrink: 0;
@@ -287,7 +287,7 @@
 }
 
 .cancel-btn {
-	padding: var(--space-sm) 18px;
+	padding: var(--space-sm) 1.125rem;
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
 	border: 1px solid var(--t-color-border);
@@ -299,7 +299,7 @@
 }
 
 .save-btn {
-	padding: var(--space-sm) 18px;
+	padding: var(--space-sm) 1.125rem;
 	background: var(--t-color-success);
 	color: var(--t-color-white);
 	border: none;

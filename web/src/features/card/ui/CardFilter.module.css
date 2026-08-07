@@ -27,8 +27,8 @@
 	flex: 1;
 	min-width: 0;
 	max-width: 220px;
-	padding: var(--space-sm) 12px;
-	font-size: 0.875rem;
+	padding: var(--space-sm) 0.75rem;
+	font-size: var(--text-sm);
 	border: 1px solid var(--t-color-border-strong);
 	border-radius: var(--radius-md);
 	background: var(--t-color-bg);
@@ -39,15 +39,15 @@
 }
 
 .filter-label {
-	font-size: 0.875rem;
+	font-size: var(--text-sm);
 	font-weight: 500;
 	color: var(--t-color-ink);
 	white-space: nowrap;
 }
 
 .filter-select {
-	padding: var(--space-sm) 12px;
-	font-size: 0.875rem;
+	padding: var(--space-sm) 0.75rem;
+	font-size: var(--text-sm);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	background: var(--t-color-bg);
@@ -58,8 +58,8 @@
 }
 
 .sort-button {
-	padding: var(--space-sm) 12px;
-	font-size: 0.875rem;
+	padding: var(--space-sm) 0.75rem;
+	font-size: var(--text-sm);
 	background: transparent;
 	color: var(--t-color-ink-muted);
 	border: 1px solid var(--t-color-border);
@@ -70,8 +70,8 @@
 }
 
 .clear-button {
-	padding: var(--space-sm) 14px;
-	font-size: 0.875rem;
+	padding: var(--space-sm) 0.875rem;
+	font-size: var(--text-sm);
 	background: transparent;
 	color: var(--t-color-ink-muted);
 	border: 1px solid var(--t-color-border);
@@ -99,8 +99,8 @@
 
 @media (width <= 480px) {
 	.search-input {
-		font-size: 1.125rem;
-		padding: var(--space-sm) 14px;
+		font-size: var(--text-lg);
+		padding: var(--space-sm) 0.875rem;
 	}
 }
 

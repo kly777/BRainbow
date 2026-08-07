@@ -72,8 +72,8 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 				style={{
 					display: "flex",
 					"flex-direction": "column",
-					gap: "16px",
-					"min-width": "480px",
+					gap: "1rem",
+					"min-width": "30rem",
 				}}
 			>
 				{/* API 地址 */}
@@ -134,7 +134,7 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 				</div>
 
 				{/* 测试连接 */}
-				<div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
+				<div style={{ display: "flex", "align-items": "center", gap: "0.5rem" }}>
 					<button
 						type="button"
 						onClick={testConnection}
@@ -145,7 +145,7 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 							background: testStatus() === "testing" ? "#ccc" : "#3b82f6",
 							color: "#fff",
 							border: "none",
-							"border-radius": "6px",
+							"border-radius": "0.375rem",
 						}}
 					>
 						{testStatus() === "testing" ? "测试中…" : "测试连接"}
@@ -154,7 +154,7 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 						<span style={{ color: "#16a34a" }}>{testMsg()}</span>
 					</Show>
 					<Show when={testStatus() === "fail"}>
-						<span style={{ color: "#dc2626", "font-size": "13px" }}>
+						<span style={{ color: "#dc2626", "font-size": "0.8125rem" }}>
 							{testMsg()}
 						</span>
 					</Show>
@@ -177,8 +177,8 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 							style={{
 								"font-weight": "normal",
 								color: "#6b7280",
-								"margin-left": "8px",
-								"font-size": "12px",
+								"margin-left": "0.5rem",
+								"font-size": "0.75rem",
 							}}
 						>
 							（可用 {"{cue}"}、{"{target}"} 作为占位符）
@@ -193,7 +193,7 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 							width: "100%",
 							padding: "8px 10px",
 							"box-sizing": "border-box",
-							"font-size": "13px",
+							"font-size": "0.8125rem",
 							"font-family": "monospace",
 							resize: "vertical",
 						}}
@@ -205,7 +205,7 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 					style={{
 						display: "flex",
 						"justify-content": "space-between",
-						"margin-top": "8px",
+						"margin-top": "0.5rem",
 					}}
 				>
 					<button
@@ -216,13 +216,13 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 							cursor: "pointer",
 							background: "none",
 							border: "1px solid #d1d5db",
-							"border-radius": "6px",
+							"border-radius": "0.375rem",
 							color: "#6b7280",
 						}}
 					>
 						恢复默认
 					</button>
-					<div style={{ display: "flex", gap: "8px" }}>
+					<div style={{ display: "flex", gap: "0.5rem" }}>
 						<button
 							type="button"
 							onClick={props.onClose}
@@ -231,7 +231,7 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 								cursor: "pointer",
 								background: "none",
 								border: "1px solid #d1d5db",
-								"border-radius": "6px",
+								"border-radius": "0.375rem",
 							}}
 						>
 							取消
@@ -245,7 +245,7 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 								background: "#3b82f6",
 								color: "#fff",
 								border: "none",
-								"border-radius": "6px",
+								"border-radius": "0.375rem",
 							}}
 						>
 							保存

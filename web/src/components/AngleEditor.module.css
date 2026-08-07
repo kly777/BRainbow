@@ -3,7 +3,7 @@
 .fieldset {
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
-	padding: var(--space-md) 16px;
+	padding: var(--space-md) 1rem;
 	margin: 0 0 var(--space-lg) 0;
 	background: var(--t-color-surface);
 }
@@ -17,11 +17,11 @@
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	overflow: hidden;
-	margin-bottom: 10px;
+	margin-bottom: 0.625rem;
 }
 
 .seg-btn {
-	padding: var(--space-xs) 14px;
+	padding: var(--space-xs) 0.875rem;
 	font-size: var(--text-sm);
 	border: none;
 	cursor: pointer;
@@ -32,7 +32,7 @@
 
 .seg-active {
 	border-radius: var(--radius-md);
-	padding: var(--space-xs) 14px;
+	padding: var(--space-xs) 0.875rem;
 	font-size: var(--text-sm);
 	border: none;
 	cursor: pointer;
@@ -49,8 +49,8 @@
 }
 
 .input {
-	width: 110px;
-	padding: var(--space-xs) 8px;
+	width: 6.875rem;
+	padding: var(--space-xs) 0.5rem;
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
 	background: var(--t-color-bg);

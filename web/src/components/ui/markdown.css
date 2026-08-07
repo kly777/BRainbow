@@ -282,11 +282,11 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 64px;
-	height: 48px;
+	width: 4rem;
+	height: 3rem;
 	border: 1px dashed var(--t-color-border);
 	border-radius: var(--radius-sm);
 	color: var(--t-color-ink-faint);
-	font-size: 1.2rem;
+	font-size: var(--text-lg);
 	vertical-align: middle;
 }

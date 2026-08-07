@@ -11,7 +11,7 @@
 
 .content {
 	flex: 1;
-	padding: var(--space-lg) 24px;
+	padding: var(--space-lg) 1.5rem;
 	overflow-y: auto;
 }
 

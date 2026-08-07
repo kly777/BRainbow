@@ -28,7 +28,7 @@
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	background: var(--t-color-surface);
-	min-height: 40px;
+	min-height: 2.5rem;
 }
 
 .textarea:focus {

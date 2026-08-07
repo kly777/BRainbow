@@ -14,12 +14,12 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding-bottom: 16px;
+	padding-bottom: 1rem;
 }
 
 .title {
 	font-family: var(--t-font-display);
-	font-size: 1.5rem;
+	font-size: var(--text-xl);
 	font-weight: 600;
 	letter-spacing: 0.08em;
 	color: var(--t-color-ink);
@@ -42,7 +42,7 @@
 
 .error {
 	text-align: center;
-	padding: var(--space-xl) 20px;
+	padding: var(--space-xl) 1.25rem;
 	background: var(--t-color-danger-subtle);
 	border: 1px solid var(--t-color-danger);
 	border-radius: var(--radius-md);
@@ -75,7 +75,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: var(--space-xl) 24px;
+	padding: var(--space-xl) 1.5rem;
 	border-bottom: 1px solid var(--t-color-border);
 }
 
@@ -84,12 +84,12 @@
 }
 
 .error-message {
-	padding: var(--space-md) 16px;
+	padding: var(--space-md) 1rem;
 	background: var(--t-color-danger-subtle);
 	border: 1px solid var(--t-color-danger);
 	border-radius: var(--radius-sm);
 	color: var(--t-color-danger);
-	font-size: 0.875rem;
+	font-size: var(--text-sm);
 	margin-bottom: var(--space-xl);
 }
 
@@ -99,7 +99,7 @@
 
 .form-label {
 	display: block;
-	font-size: 0.875rem;
+	font-size: var(--text-sm);
 	font-weight: 500;
 	color: var(--t-color-ink);
 	margin-bottom: var(--space-sm);
@@ -107,8 +107,8 @@
 
 .form-input {
 	width: 100%;
-	padding: var(--space-sm) 12px;
-	font-size: 0.875rem;
+	padding: var(--space-sm) 0.75rem;
+	font-size: var(--text-sm);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
 	transition: all var(--t-transition-normal) ease;
@@ -116,8 +116,8 @@
 
 .form-textarea {
 	width: 100%;
-	padding: var(--space-sm) 12px;
-	font-size: 0.875rem;
+	padding: var(--space-sm) 0.75rem;
+	font-size: var(--text-sm);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
 	resize: vertical;
@@ -136,7 +136,7 @@
 
 .preview-label {
 	display: block;
-	font-size: 0.75rem;
+	font-size: var(--text-xs);
 	color: var(--t-color-ink-faint);
 	margin-bottom: var(--space-xs);
 	text-transform: uppercase;
@@ -144,7 +144,7 @@
 }
 
 .preview-content {
-	font-size: 0.875rem;
+	font-size: var(--text-sm);
 	line-height: 1.6;
 	color: var(--t-color-ink);
 }
@@ -155,7 +155,7 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	padding: var(--space-xl) 16px;
+	padding: var(--space-xl) 1rem;
 	text-align: center;
 	color: var(--t-color-ink-muted);
 	font-size: var(--text-base);
@@ -163,21 +163,21 @@
 
 .error-text {
 	color: var(--t-color-danger);
-	margin-bottom: 10px;
+	margin-bottom: 0.625rem;
 }
 
 .modal-actions {
 	display: flex;
 	justify-content: flex-end;
 	gap: var(--space-md);
-	padding: var(--space-xl) 24px;
+	padding: var(--space-xl) 1.5rem;
 	border-top: 1px solid var(--t-color-border);
 }
 
 @media (width <= 768px) {
 	.container {
 		margin: 0 auto;
-		padding: var(--space-lg) 12px;
+		padding: var(--space-lg) 0.75rem;
 	}
 }
 
@@ -202,7 +202,7 @@
 
 @media (width <= 768px) {
 	.modal-header {
-		padding: var(--space-lg) 20px;
+		padding: var(--space-lg) 1.25rem;
 	}
 }
 
@@ -241,7 +241,7 @@
 
 @media (width <= 768px) {
 	.modal-actions {
-		padding: var(--space-lg) 20px;
+		padding: var(--space-lg) 1.25rem;
 	}
 }
 
@@ -252,19 +252,19 @@
 }
 
 .loading p {
-	font-size: 1rem;
+	font-size: var(--text-base);
 	color: var(--t-color-ink-muted);
 	margin: 0;
 }
 
 .error p {
-	font-size: 1rem;
+	font-size: var(--text-base);
 	color: var(--t-color-danger);
 	margin-bottom: var(--space-lg);
 }
 
 .modal-header h2 {
-	font-size: 1.25rem;
+	font-size: var(--text-lg);
 	font-weight: 600;
 	color: var(--t-color-ink);
 	margin: 0;

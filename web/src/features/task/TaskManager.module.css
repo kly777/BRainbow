@@ -3,7 +3,7 @@
 .task-manager {
 	max-width: 1440px;
 	margin: 0 auto;
-	padding: var(--space-md) 16px;
+	padding: var(--space-md) 1rem;
 	display: flex;
 	flex-direction: column;
 	flex: 1;
@@ -29,7 +29,7 @@
 }
 
 .view-btn {
-	padding: var(--space-xs) 12px;
+	padding: var(--space-xs) 0.75rem;
 	background: none;
 	border: none;
 	border-radius: var(--radius-md);
@@ -55,7 +55,7 @@
 
 .search-input {
 	composes: field-input from "../../styles/base.module.css";
-	padding: var(--space-xs) 24px var(--space-xs) var(--space-sm);
+	padding: var(--space-xs) 1.5rem var(--space-xs) var(--space-sm);
 	border-radius: var(--radius-md);
 	font-size: var(--text-sm);
 	background: var(--t-color-bg);
@@ -64,7 +64,7 @@
 
 .search-clear {
 	position: absolute;
-	right: 4px;
+	right: 0.25rem;
 	top: 50%;
 	transform: translateY(-50%);
 	background: none;
@@ -72,7 +72,7 @@
 	color: var(--t-color-ink-muted);
 	cursor: pointer;
 	font-size: var(--text-base);
-	padding: var(--space-xs) 4px;
+	padding: var(--space-xs) 0.25rem;
 }
 
 .quick-add-box {
@@ -80,20 +80,20 @@
 }
 
 .quick-add-input {
-	padding: var(--space-xs) 10px;
+	padding: var(--space-xs) 0.625rem;
 	border: 1px dashed var(--t-color-border);
 	border-radius: var(--radius-md);
 	font-size: var(--text-sm);
 	outline: none;
 	color: var(--t-color-ink-muted);
 	background: none;
-	width: 140px;
+	width: 8.75rem;
 	box-sizing: border-box;
 	transition: all var(--t-transition-fast);
 }
 
 .quick-add-focus {
-	width: 150px;
+	width: 9.375rem;
 }
 
 .loading {
@@ -151,7 +151,7 @@
 @media (width <= 768px) {
 	.task-manager {
 		margin: 0 auto;
-		padding: var(--space-sm) 12px;
+		padding: var(--space-sm) 0.75rem;
 		gap: var(--space-sm);
 	}
 }
@@ -170,7 +170,7 @@
 	border-color: var(--t-color-success);
 	border-style: solid;
 	color: var(--t-color-ink);
-	width: 200px;
+	width: 12.5rem;
 }
 
 .quick-add-input::placeholder {
@@ -179,7 +179,7 @@
 
 @media (width <= 768px) {
 	.quick-add-input {
-		width: 110px;
+		width: 6.875rem;
 	}
 }
 

@@ -270,6 +270,12 @@ body {
 	color: var(--t-color-accent);
 }
 
+/* Firefox：细滚动条 + 主题色 */
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--t-color-border) transparent;
+}
+
 ::-webkit-scrollbar {
 	width: 6px;
 	height: 6px;

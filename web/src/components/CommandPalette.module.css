@@ -42,6 +42,12 @@
 		box-shadow 0.15s;
 }
 
+/* 后面跟着建议列表时：与列表连成一体（去底部圆角和边框） */
+.input-row:has(+ .suggestions) {
+	border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+	border-bottom: none;
+}
+
 .prefix {
 	font-size: var(--text-lg);
 	font-family: var(--t-font-mono);
@@ -63,14 +69,53 @@
 }
 
 .suggestions {
+	display: flex;
+	flex-direction: column;
 	background: var(--t-color-surface);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-lg);
+	border: 1px solid var(--t-color-border-strong);
+	border-top: none;
+	border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 	box-shadow: var(--shadow-md);
-	margin-top: 6px;
-	max-height: 280px;
+	overflow: hidden;
+}
+
+/* 列表滚动区：滚动条只在此区域内，不压容器圆角 */
+.sug-scroll {
 	overflow-y: auto;
+	max-height: 280px;
 	padding: var(--space-xs);
+	scrollbar-gutter: stable;
+}
+
+/* 滚动条悬浮样式：thumb 与轨道留间隙 */
+.sug-scroll::-webkit-scrollbar {
+	width: 8px;
+}
+
+.sug-scroll::-webkit-scrollbar-thumb {
+	border-radius: 999px;
+	border: 2px solid transparent;
+	background-clip: padding-box;
+}
+
+.sug-scroll::-webkit-scrollbar-track {
+	background: transparent;
+	margin: 4px 0;
+}
+
+/* 底部快捷键提示行：固定不滚动 */
+.sug-footer {
+	display: flex;
+	gap: var(--space-md);
+	align-items: center;
+	justify-content: center;
+	padding: var(--space-xs) 12px;
+	border-top: 1px solid var(--t-color-border-strong);
+	background: var(--t-color-surface);
+	font-size: var(--text-xs);
+	font-family: var(--t-font-mono);
+	color: var(--t-color-ink-faint);
+	border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .suggestion-item {
@@ -135,6 +180,14 @@
 	border-color: var(--t-color-accent);
 	box-shadow:
 		0 8px 32px oklch(0% 0 0deg / 14%),
+		0 0 0 2px var(--t-color-accent-soft);
+}
+
+/* 连体时：列表随输入框聚焦同步高亮（统一边框描边） */
+.bar:has(.input-row:focus-within) .suggestions {
+	border-color: var(--t-color-accent);
+	box-shadow:
+		0 4px 16px oklch(0% 0 0deg / 7%),
 		0 0 0 2px var(--t-color-accent-soft);
 }
 

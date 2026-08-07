@@ -60,18 +60,25 @@ interface Suggestion {
 function SuggestionList(props: { items: Suggestion[] }) {
 	return (
 		<div class={styles.suggestions}>
-			{props.items.map((s) => (
-				<button
-					type="button"
-					class={styles.suggestionItem}
-					onMouseDown={(e) => e.preventDefault()}
-					onClick={s.onSelect}
-				>
-					<span class={styles.sugLabel}>{s.label}</span>
-					<span class={styles.sugDesc}>{s.desc}</span>
-					{s.extra && <span class={styles.sugPath}>{s.extra}</span>}
-				</button>
-			))}
+			<div class={styles.sugScroll}>
+				{props.items.map((s) => (
+					<button
+						type="button"
+						class={styles.suggestionItem}
+						onMouseDown={(e) => e.preventDefault()}
+						onClick={s.onSelect}
+					>
+						<span class={styles.sugLabel}>{s.label}</span>
+						<span class={styles.sugDesc}>{s.desc}</span>
+						{s.extra && <span class={styles.sugPath}>{s.extra}</span>}
+					</button>
+				))}
+			</div>
+			<div class={styles.sugFooter}>
+				<span>↑↓ 选择</span>
+				<span>Enter 打开</span>
+				<span>Esc 关闭</span>
+			</div>
 		</div>
 	);
 }
@@ -79,7 +86,9 @@ function SuggestionList(props: { items: Suggestion[] }) {
 function EmptyState(props: { text: string }) {
 	return (
 		<div class={styles.suggestions}>
-			<div class={styles.empty}>{props.text}</div>
+			<div class={styles.sugScroll}>
+				<div class={styles.empty}>{props.text}</div>
+			</div>
 		</div>
 	);
 }
@@ -87,8 +96,10 @@ function EmptyState(props: { text: string }) {
 function SearchHint(props: { query: string }) {
 	return (
 		<div class={styles.suggestions}>
-			<div class={styles.searchHint}>
-				<kbd>Enter</kbd> 搜索 「{props.query}」
+			<div class={styles.sugScroll}>
+				<div class={styles.searchHint}>
+					<kbd>Enter</kbd> 搜索 「{props.query}」
+				</div>
 			</div>
 		</div>
 	);

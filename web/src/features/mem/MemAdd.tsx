@@ -7,6 +7,8 @@ import { A } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
 import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
 import { useMemAdd } from "@features/mem/logic/useMemAdd.ts";
+import { useMemAi } from "@features/mem/logic/useMemAi.ts";
+import { AiGenerateView } from "@features/mem/ui/AiGenerateView.tsx";
 import styles from "@features/mem/MemAdd.module.css";
 import {
 	FormatHint,
@@ -17,6 +19,7 @@ import {
 
 export default function MemAdd() {
 	const m = useMemAdd();
+	const ai = useMemAi();
 
 	return (
 		<div class={styles.page}>
@@ -27,7 +30,7 @@ export default function MemAdd() {
 				</A>
 				<h1 class={styles.title}>添加记忆</h1>
 				<div class={styles.modeTabs}>
-					{(["single", "paste", "file"] as const).map((mode) => (
+					{(["single", "paste", "file", "ai"] as const).map((mode) => (
 						<button
 							type="button"
 							class={m.mode() === mode ? styles.modeActive : styles.modeBtn}
@@ -37,7 +40,9 @@ export default function MemAdd() {
 								? "单条创建"
 								: mode === "paste"
 									? "批量粘贴"
-									: "从文件导入"}
+									: mode === "file"
+										? "从文件导入"
+										: "AI 生成"}
 						</button>
 					))}
 				</div>
@@ -116,6 +121,10 @@ export default function MemAdd() {
 
 				<Show when={m.mode() === "file"}>
 					<FileView m={m} />
+				</Show>
+
+				<Show when={m.mode() === "ai"}>
+					<AiGenerateView ai={ai} m={m} />
 				</Show>
 			</div>
 		</div>

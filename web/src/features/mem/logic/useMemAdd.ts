@@ -17,8 +17,8 @@ export interface PreviewRow {
 	selected: boolean;
 }
 
-export type AddMode = "single" | "paste" | "file";
-const VALID_MODES: AddMode[] = ["single", "paste", "file"];
+export type AddMode = "single" | "paste" | "file" | "ai";
+const VALID_MODES: AddMode[] = ["single", "paste", "file", "ai"];
 
 // ── Hook ──
 

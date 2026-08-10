@@ -119,6 +119,17 @@ export function useChatPage() {
 		navigate(`/chat?tree=${result.tree.id}`);
 	};
 
+	/** 一键新建对话：默认标题"新对话"，创建后直接进入 */
+	const quickCreate = async () => {
+		const result = await tryOrNotify(
+			() => createTreeE("新对话", ""),
+			"创建对话",
+		);
+		if (!result) return;
+		setTrees((prev) => [result.tree, ...prev]);
+		navigate(`/chat?tree=${result.tree.id}`);
+	};
+
 	const removeTree = async (id: number) => {
 		const ok = await tryOrNotify(() => deleteTreeE(id), "删除对话");
 		if (!ok) return;
@@ -131,8 +142,34 @@ export function useChatPage() {
 
 	const selectTree = (id: number) => setParams({ tree: String(id) });
 
-	/** 聚焦到某个节点（分支切换） */
+	/** 聚焦到某个节点（当前分支终点） */
 	const focus = (nodeId: number | null) => setFocusId(nodeId);
+
+	/** 切换分支：跳到该节点所在分支的末端（沿子链走到最深叶子），
+	 *  使 activePath 显示从根到分支末端的完整对话 */
+	const focusBranch = (branchRootId: number) => {
+		let cur = branchRootId;
+		let guard = 0;
+		while (guard < 500) {
+			const kids = childrenOf(cur);
+			if (kids.length === 0) break;
+			cur = kids[kids.length - 1].id; // 取最新子节点（最后创建的）
+			guard++;
+		}
+		setFocusId(cur);
+	};
+
+	/** 当前分支是否经过某节点（用于分支条高亮：focusId 回溯链上是否含 rootId） */
+	const isInSubtree = (rootId: number): boolean => {
+		let cur = focusId();
+		let guard = 0;
+		while (cur !== null && guard < 500) {
+			if (cur === rootId) return true;
+			cur = findNode(cur)?.parent_id ?? null;
+			guard++;
+		}
+		return false;
+	};
 
 	/** 发送消息：流式接收 AI 回复（SSE） */
 	const send = async () => {
@@ -289,9 +326,12 @@ export function useChatPage() {
 		loadTrees,
 		loadTree,
 		createTree,
+		quickCreate,
 		removeTree,
 		selectTree,
 		focus,
+		focusBranch,
+		isInSubtree,
 		send,
 		revise,
 		loadPresets,

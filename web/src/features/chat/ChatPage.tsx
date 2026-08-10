@@ -2,6 +2,7 @@
 
 import { For, Show, createSignal, onMount } from "solid-js";
 import { useChatPage } from "@features/chat/logic/useChatPage.ts";
+import MarkdownRenderer from "@ui/atoms/Markdown";
 import type { ChatNode, ChatTree } from "@features/chat/api.ts";
 import styles from "@features/chat/ChatPage.module.css";
 
@@ -61,7 +62,7 @@ export default function ChatPage() {
 					<button
 						type="button"
 						class={styles.newBtn}
-						onClick={() => c.navigate("/chat/new")}
+						onClick={() => void c.quickCreate()}
 					>
 						＋ 新建
 					</button>
@@ -79,7 +80,9 @@ export default function ChatPage() {
 						)}
 					</For>
 					<Show when={c.trees().length === 0 && !c.loadingTrees()}>
-						<div class={styles.treeEmpty}>还没有对话，点击"新建"开始</div>
+						<div class={styles.treeEmpty}>
+							还没有对话，点击"＋ 新建"立即开始
+						</div>
 					</Show>
 				</div>
 			</aside>
@@ -109,8 +112,8 @@ export default function ChatPage() {
 									<div class={styles.messageHead}>
 										<span class={styles.messageRole}>AI · 生成中…</span>
 									</div>
-									<div class={styles.messageContent}>
-										{c.streamingContent()}
+									<div class={styles.messageMd}>
+										<MarkdownRenderer content={c.streamingContent()} />
 										<span class={styles.streamCursor} />
 									</div>
 								</div>
@@ -204,20 +207,15 @@ function TreeListItem(props: {
 	onDelete: () => void;
 }) {
 	return (
-		<div
-			class={props.active ? styles.treeItemActive : styles.treeItem}
-			role="button"
-			tabindex={0}
-			onClick={props.onSelect}
-			onKeyDown={(e) => {
-				if (e.key === "Enter" || e.key === " ") {
-					e.preventDefault();
-					props.onSelect();
-				}
-			}}
-		>
-			<span class={styles.treeItemTitle}>{props.tree.title}</span>
-			<span class={styles.treeItemMeta}>{props.tree.node_count} 条</span>
+		<div class={props.active ? styles.treeItemActive : styles.treeItem}>
+			<button
+				type="button"
+				class={styles.treeSelect}
+				onClick={props.onSelect}
+			>
+				<span class={styles.treeItemTitle}>{props.tree.title}</span>
+				<span class={styles.treeItemMeta}>{props.tree.node_count} 条</span>
+			</button>
 			<button
 				type="button"
 				class={styles.treeDelete}
@@ -328,7 +326,8 @@ function MessageRow(props: {
 }) {
 	const { c, node } = props;
 	const isFocused = () => c.focusId() === node.id;
-	const hasChildren = () => c.childrenOf(node.id).length > 0;
+	const children = () => c.childrenOf(node.id);
+	const branchPoint = () => children().length > 1;
 
 	return (
 		<div
@@ -348,17 +347,6 @@ function MessageRow(props: {
 					{node.revised_from !== null ? " · 修订" : ""}
 				</span>
 				<div class={styles.messageActions}>
-					{/* 分支：assistant 节点可在此继续 */}
-					<Show when={node.role === "assistant"}>
-						<button
-							type="button"
-							class={styles.msgBtn}
-							title="从此分支继续"
-							onClick={() => c.focus(node.id)}
-						>
-							{isFocused() ? "◉ 当前分支" : "◌ 分支"}
-						</button>
-					</Show>
 					{/* 编辑：任意节点可修订 */}
 					<button
 						type="button"
@@ -371,14 +359,46 @@ function MessageRow(props: {
 					>
 						修订
 					</button>
-					<Show when={hasChildren() && !isFocused()}>
-						<span class={styles.childCount}>
-							{c.childrenOf(node.id).length} 分支
-						</span>
-					</Show>
 				</div>
 			</div>
-			<div class={styles.messageContent}>{node.content}</div>
+			<div
+				class={
+					node.role === "assistant"
+						? styles.messageMd
+						: styles.messageContent
+				}
+			>
+				{node.role === "assistant" ? (
+					<MarkdownRenderer content={node.content} />
+				) : (
+					node.content
+				)}
+			</div>
+
+			{/* 分支切换：此节点有多个后续分支时显示切换条 */}
+			<Show when={branchPoint()}>
+				<div class={styles.branchBar}>
+					<span class={styles.branchLabel}>分支</span>
+					<For each={children()}>
+						{(child) => (
+							<button
+								type="button"
+								class={
+									c.isInSubtree(child.id)
+										? styles.branchChipActive
+										: styles.branchChip
+								}
+								title="切换到该分支"
+								onClick={() => c.focusBranch(child.id)}
+							>
+								{child.content.slice(0, 24) ||
+									(child.role === "user" ? "继续提问" : "AI 回复")}
+								{child.content.length > 24 ? "…" : ""}
+							</button>
+						)}
+					</For>
+				</div>
+			</Show>
 		</div>
 	);
 }

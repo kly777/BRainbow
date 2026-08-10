@@ -186,13 +186,6 @@ export const ROUTES: RouteConfig[] = [
 		component: lazy(() => import("@features/chat/ChatPage.tsx")),
 	},
 	{
-		path: "/chat/new",
-		label: "新建对话",
-		title: "New Chat",
-		desc: "",
-		component: lazy(() => import("@features/chat/ChatNewPage.tsx")),
-	},
-	{
 		path: "/chat/prompts",
 		label: "提示词预设",
 		title: "Prompts",

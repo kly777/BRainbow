@@ -156,8 +156,6 @@
 	cursor: pointer;
 }
 
-
-
 .mode-toggle:hover {
 	color: var(--t-color-ink);
 	background: var(--t-color-surface-raised);
@@ -170,8 +168,6 @@
 .clear-all-btn:hover {
 	color: var(--t-color-ink);
 }
-
-
 
 .tag-option:hover {
 	background: var(--t-color-surface-raised);

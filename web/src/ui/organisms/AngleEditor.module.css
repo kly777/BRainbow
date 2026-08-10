@@ -73,8 +73,6 @@
 	border-left: 1px solid var(--t-color-border);
 }
 
-
-
 .fieldset legend {
 	font-weight: 600;
 	color: var(--t-color-ink);

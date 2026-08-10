@@ -29,9 +29,7 @@ export default function ReadingUnknown() {
 						<For
 							each={data()?.words}
 							fallback={
-								<div class={styles.empty}>
-									暂无不认识词——开始阅读文章吧
-								</div>
+								<div class={styles.empty}>暂无不认识词——开始阅读文章吧</div>
 							}
 						>
 							{(w) => (
@@ -39,8 +37,7 @@ export default function ReadingUnknown() {
 									<div class={styles.wordMain}>
 										<span class={styles.word}>{w.word}</span>
 										<span class={styles.counts}>
-											不认识 {w.unknown_count} 次 / 认识 {w.known_count}{" "}
-											次
+											不认识 {w.unknown_count} 次 / 认识 {w.known_count} 次
 										</span>
 									</div>
 									<button

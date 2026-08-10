@@ -163,7 +163,7 @@ const CardEditPage: Component = () => {
 			>
 				{() => (
 					<Show when={!card.loading && !card.error}>
-						<div class={styles.workspace} onKeyDown={onKeyDown}>
+						<div class={styles.workspace} onKeyDown={onKeyDown} role="none">
 							<div class={styles.panes}>
 								<section class={styles.pane}>
 									<div class={styles.paneHead}>

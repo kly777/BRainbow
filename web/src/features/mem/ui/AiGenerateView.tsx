@@ -45,7 +45,9 @@ export function AiGenerateView(props: {
 							id="ai-source-text"
 							class={styles.textarea}
 							rows={6}
-							placeholder={"例如：\n\n光的折射遵循斯涅耳定律：n₁·sinθ₁ = n₂·sinθ₂……"}
+							placeholder={
+								"例如：\n\n光的折射遵循斯涅耳定律：n₁·sinθ₁ = n₂·sinθ₂……"
+							}
 							value={ai.text()}
 							onInput={ai.setText}
 						/>
@@ -63,7 +65,11 @@ export function AiGenerateView(props: {
 								disabled={ai.loading() || !ai.text().trim()}
 								onClick={() => void ai.generate()}
 							>
-								{ai.loading() ? "生成中…" : ai.cards().length > 0 ? "重新生成" : "AI 生成卡片"}
+								{ai.loading()
+									? "生成中…"
+									: ai.cards().length > 0
+										? "重新生成"
+										: "AI 生成卡片"}
 							</button>
 						</div>
 						<Show when={ai.error()}>
@@ -107,7 +113,9 @@ export function AiGenerateView(props: {
 													placeholder="答案"
 													value={card.target}
 													onInput={(e) =>
-														ai.updateCard(i(), { target: e.currentTarget.value })
+														ai.updateCard(i(), {
+															target: e.currentTarget.value,
+														})
 													}
 												/>
 											</div>

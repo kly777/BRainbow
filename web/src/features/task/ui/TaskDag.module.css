@@ -94,8 +94,6 @@
 	color: var(--t-color-border);
 }
 
-
-
 .zoom-btn:hover {
 	background: var(--t-color-border);
 	border-color: var(--t-color-ink-muted);

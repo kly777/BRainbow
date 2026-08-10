@@ -98,48 +98,44 @@ export default function ReadingList() {
 				<Show
 					when={articles.error}
 					fallback={
-						<>
-							<For
-								each={articles()?.articles}
-								fallback={
-									<div class={styles.empty}>
-										还没有文章，上传第一篇吧
+						<For
+							each={articles()?.articles}
+							fallback={
+								<div class={styles.empty}>还没有文章，上传第一篇吧</div>
+							}
+						>
+							{(a: ArticleSummary) => (
+								<A href={`/reading/${a.id}`} class={styles.card}>
+									<div class={styles.cardTitle}>{a.title}</div>
+									<div class={styles.cardMeta}>
+										<span>{a.word_count} 词</span>
+										<span
+											class={styles.ratio}
+											data-known={
+												a.known_ratio >= 0.8
+													? "high"
+													: a.known_ratio >= 0.5
+														? "mid"
+														: "low"
+											}
+										>
+											{(a.known_ratio * 100).toFixed(0)}% 认识
+										</span>
+										<span class={styles.unknownCount}>
+											{a.unknown_word_count} 个不认识
+										</span>
 									</div>
-								}
-							>
-								{(a: ArticleSummary) => (
-									<A href={`/reading/${a.id}`} class={styles.card}>
-										<div class={styles.cardTitle}>{a.title}</div>
-										<div class={styles.cardMeta}>
-											<span>{a.word_count} 词</span>
-											<span
-												class={styles.ratio}
-												data-known={
-													a.known_ratio >= 0.8
-														? "high"
-														: a.known_ratio >= 0.5
-															? "mid"
-															: "low"
-												}
-											>
-												{(a.known_ratio * 100).toFixed(0)}% 认识
-											</span>
-											<span class={styles.unknownCount}>
-												{a.unknown_word_count} 个不认识
-											</span>
-										</div>
-										<div class={styles.barOuter}>
-											<div
-												class={styles.barInner}
-												style={{
-													width: `${(a.known_ratio * 100).toFixed(0)}%`,
-												}}
-											/>
-										</div>
-									</A>
-								)}
-							</For>
-						</>
+									<div class={styles.barOuter}>
+										<div
+											class={styles.barInner}
+											style={{
+												width: `${(a.known_ratio * 100).toFixed(0)}%`,
+											}}
+										/>
+									</div>
+								</A>
+							)}
+						</For>
 					}
 				>
 					<div class={styles.errorMsg}>{getErrorMessage(articles.error)}</div>

@@ -217,14 +217,10 @@
 	color: var(--t-color-danger);
 }
 
-
-
 .form-input:disabled {
 	background: var(--t-color-surface-raised);
 	cursor: not-allowed;
 }
-
-
 
 .form-textarea:disabled {
 	background: var(--t-color-surface-raised);

@@ -57,7 +57,6 @@
 	--t-color-mark-blue-soft: oklch(95% 0.05 250deg / 50%);
 	--t-color-mark-blue-border: oklch(85% 0.08 250deg);
 	--t-color-mark-yellow: oklch(55% 0.16 80deg);
-
 	--toast-error-bg: var(--t-color-danger-subtle);
 	--toast-error-border: oklch(85% 0.06 25deg);
 	--toast-error-text: oklch(30% 0.09 25deg);
@@ -108,7 +107,6 @@
 	--shadow-sm: 0 1px 0.1875rem oklch(0% 0 0deg / 40%);
 	--shadow-md: 0 0.25rem 1rem oklch(0% 0 0deg / 50%);
 	--shadow-lg: 0 0.75rem 2.5rem oklch(0% 0 0deg / 60%);
-
 	--toast-error-bg: var(--t-color-danger-subtle);
 	--toast-error-border: oklch(85% 0.06 25deg);
 	--toast-error-text: oklch(30% 0.09 25deg);
@@ -159,7 +157,6 @@
 	--shadow-sm: 0 1px 0.125rem oklch(0% 0 0deg / 5%);
 	--shadow-md: 0 0.25rem 1rem oklch(0% 0 0deg / 7%);
 	--shadow-lg: 0 0.75rem 2rem oklch(0% 0 0deg / 10%);
-
 	--toast-error-bg: var(--t-color-danger-subtle);
 	--toast-error-border: oklch(85% 0.06 25deg);
 	--toast-error-text: oklch(30% 0.09 25deg);

@@ -38,9 +38,9 @@ export default function ReviewCard(props: ReviewCardProps) {
 							还有 {m.upcoming()} 张卡在未来等待复习
 						</p>
 					</Show>
-				<Button variant="primary" size="sm" onClick={m.loadDue}>
-					再学一轮
-				</Button>
+					<Button variant="primary" size="sm" onClick={m.loadDue}>
+						再学一轮
+					</Button>
 				</div>
 			</Show>
 
@@ -215,7 +215,11 @@ export default function ReviewCard(props: ReviewCardProps) {
 									撤销
 								</Button>
 							</Show>
-							<Button variant="primary" size="sm" onClick={() => m.setShowAnswer(true)}>
+							<Button
+								variant="primary"
+								size="sm"
+								onClick={() => m.setShowAnswer(true)}
+							>
 								显示答案
 							</Button>
 							<button

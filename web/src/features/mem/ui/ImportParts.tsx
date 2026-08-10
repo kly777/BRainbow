@@ -214,7 +214,7 @@ export function ImportActions(props: {
 				disabled={props.disabled || props.loading}
 				onClick={props.onSubmit}
 			>
-				{props.loading ? "导入中…" : props.submitLabel ?? "导入"}
+				{props.loading ? "导入中…" : (props.submitLabel ?? "导入")}
 			</button>
 		</div>
 	);

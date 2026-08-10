@@ -134,7 +134,9 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 				</div>
 
 				{/* 测试连接 */}
-				<div style={{ display: "flex", "align-items": "center", gap: "0.5rem" }}>
+				<div
+					style={{ display: "flex", "align-items": "center", gap: "0.5rem" }}
+				>
 					<button
 						type="button"
 						onClick={testConnection}

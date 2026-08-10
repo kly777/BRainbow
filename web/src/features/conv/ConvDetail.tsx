@@ -48,7 +48,8 @@ export default function ConvDetailPage() {
 													<div class={styles.articleBlock}>
 														<h3 class={styles.articleTitle}>
 															<span class={styles.artTag}>
-																{typeLabel[art.article_type] || art.article_type}
+																{typeLabel[art.article_type] ||
+																	art.article_type}
 															</span>
 															{art.title}
 														</h3>

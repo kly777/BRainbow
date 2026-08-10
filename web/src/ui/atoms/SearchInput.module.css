@@ -11,8 +11,6 @@
 	transition: border-color var(--t-transition-fast);
 }
 
-
-
 .input::placeholder {
 	color: var(--t-color-ink-muted);
 }

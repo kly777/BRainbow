@@ -1,10 +1,16 @@
 /* features/mem/ui/AiGenerateView.css.ts — AI 生成卡片视图 */
 
-.cancel { composes: cancel from "./ImportParts.module.css"; }
+.cancel {
+	composes: cancel from "./ImportParts.module.css";
+}
 
-.submit { composes: submit from "./ImportParts.module.css"; }
+.submit {
+	composes: submit from "./ImportParts.module.css";
+}
 
-.stack { composes: stack from "./ImportParts.module.css"; }
+.stack {
+	composes: stack from "./ImportParts.module.css";
+}
 
 .label {
 	display: block;
@@ -19,7 +25,6 @@
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
 	font-size: var(--text-base);
-	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	transition:
 		border-color var(--t-transition-fast),
@@ -32,11 +37,17 @@
 	outline: none;
 }
 
-.input-card { composes: input-card from "./ImportParts.module.css"; }
+.input-card {
+	composes: input-card from "./ImportParts.module.css";
+}
 
-.actions { composes: actions from "./ImportParts.module.css"; }
+.actions {
+	composes: actions from "./ImportParts.module.css";
+}
 
-.import-errors { composes: import-errors from "./ImportParts.module.css"; }
+.import-errors {
+	composes: import-errors from "./ImportParts.module.css";
+}
 
 /* ── 卡片清单 ── */
 
@@ -115,7 +126,6 @@
 	padding: var(--space-sm) var(--space-md);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
-	font-size: var(--text-base);
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	transition:
@@ -130,9 +140,7 @@
 	padding: var(--space-sm) var(--space-md);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
-	font-size: var(--text-base);
 	background: var(--t-color-surface);
-	color: var(--t-color-ink);
 	transition:
 		border-color var(--t-transition-fast),
 		box-shadow var(--t-transition-fast);
@@ -155,7 +163,6 @@
 	padding: var(--space-sm) var(--space-md);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
-	font-size: var(--text-base);
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	transition:

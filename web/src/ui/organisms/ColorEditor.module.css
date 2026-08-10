@@ -103,8 +103,6 @@
 	font-size: var(--text-sm);
 }
 
-
-
 .hex-input {
 	composes: hex-base;
 	width: 4.25rem;

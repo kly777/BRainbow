@@ -83,8 +83,6 @@
 	cursor: pointer;
 }
 
-
-
 .btn-submit:hover {
 	background: var(--t-color-accent-strong);
 }

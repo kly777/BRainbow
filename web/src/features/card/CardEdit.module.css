@@ -223,7 +223,7 @@
 
 /* ── 窄屏：上下堆叠 ── */
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
 	.panes {
 		flex-direction: column;
 	}

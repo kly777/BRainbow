@@ -140,8 +140,7 @@ const DB: Component = () => {
 														padding: "6px 10px",
 														"text-align": "left",
 														background: "var(--t-color-bg))",
-														"border-bottom":
-															"2px solid var(--t-color-border))",
+														"border-bottom": "2px solid var(--t-color-border))",
 														"white-space": "nowrap",
 													}}
 												>

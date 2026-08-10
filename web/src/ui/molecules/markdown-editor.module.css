@@ -31,8 +31,6 @@
 	min-height: 2.5rem;
 }
 
-
-
 .textarea-drag {
 	composes: textarea;
 	border-color: var(--t-color-accent);

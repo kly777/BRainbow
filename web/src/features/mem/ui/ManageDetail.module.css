@@ -156,7 +156,6 @@
 	align-items: center;
 	gap: var(--space-sm);
 	text-align: center;
-	color: var(--t-color-ink-muted);
 	padding: var(--space-xl) 0;
 	color: var(--t-color-ink-faint);
 }

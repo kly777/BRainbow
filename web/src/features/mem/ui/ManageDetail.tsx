@@ -133,19 +133,35 @@ export default function ManageDetail(props: Props) {
 								when={props.editing}
 								fallback={
 									<>
-										<Button variant="ghost" size="sm" onClick={props.onStartEdit}>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={props.onStartEdit}
+										>
 											编辑
 										</Button>
-										<Button variant="ghost" size="sm" onClick={() => props.onReset(d().id)}>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => props.onReset(d().id)}
+										>
 											忘却
 										</Button>
 										<Show when={d().state !== "suspended"}>
-											<Button variant="ghost" size="sm" onClick={() => props.onSuspend(d().id)}>
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => props.onSuspend(d().id)}
+											>
 												挂起
 											</Button>
 										</Show>
 										<Show when={d().state === "suspended"}>
-											<Button variant="ghost" size="sm" onClick={() => props.onUnsuspend(d().id)}>
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => props.onUnsuspend(d().id)}
+											>
 												恢复
 											</Button>
 										</Show>
@@ -159,12 +175,12 @@ export default function ManageDetail(props: Props) {
 									</>
 								}
 							>
-							<Button variant="primary" size="sm" onClick={props.onSaveEdit}>
-								保存
-							</Button>
-							<Button variant="ghost" size="sm" onClick={props.onCancelEdit}>
-								取消
-							</Button>
+								<Button variant="primary" size="sm" onClick={props.onSaveEdit}>
+									保存
+								</Button>
+								<Button variant="ghost" size="sm" onClick={props.onCancelEdit}>
+									取消
+								</Button>
 							</Show>
 						</div>
 					</div>

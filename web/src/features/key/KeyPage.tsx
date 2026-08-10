@@ -17,7 +17,9 @@ interface ApiKeyInfo {
 
 export default function KeyPage() {
 	const { setApiKey } = useAuth();
-	const [keys, { refetch }] = createResource(async () => get<ApiKeyInfo[]>("/auth/keys"));
+	const [keys, { refetch }] = createResource(async () =>
+		get<ApiKeyInfo[]>("/auth/keys"),
+	);
 	const [newKey, setNewKey] = createSignal<string | null>(null);
 	const [generating, setGenerating] = createSignal(false);
 
@@ -67,8 +69,8 @@ export default function KeyPage() {
 		<div class={styles.page}>
 			<h1 class={styles.title}>API Key</h1>
 			<p class={styles.subtitle}>
-				生成长期有效的 API key（仅登录后可操作）。key 永不过期，测试/脚本
-				请求带 <code class={styles.inlineCode}>X-API-Key</code> 头即可认证，
+				生成长期有效的 API key（仅登录后可操作）。key 永不过期，测试/脚本 请求带{" "}
+				<code class={styles.inlineCode}>X-API-Key</code> 头即可认证，
 				无需再登录。
 			</p>
 
@@ -147,11 +149,11 @@ export default function KeyPage() {
 				<Show when={keys.error}>
 					<div class={styles.error}>{getErrorMessage(keys.error)}</div>
 				</Show>
-				<Show
-					when={keys()}
-					fallback={<div class={styles.muted}>加载中…</div>}
-				>
-					<For each={keys()} fallback={<div class={styles.muted}>暂无 key。</div>}>
+				<Show when={keys()} fallback={<div class={styles.muted}>加载中…</div>}>
+					<For
+						each={keys()}
+						fallback={<div class={styles.muted}>暂无 key。</div>}
+					>
 						{(k) => (
 							<div class={styles.row}>
 								<div class={styles.rowInfo}>

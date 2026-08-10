@@ -39,9 +39,7 @@ describe("parseAiCards", () => {
 	});
 
 	it("容忍前置解释文字", () => {
-		const r = parseAiCards(
-			'好的，以下是卡片：\n[{"cue":"a","target":"b"}]',
-		);
+		const r = parseAiCards('好的，以下是卡片：\n[{"cue":"a","target":"b"}]');
 		expect(r.ok).toBe(true);
 		if (r.ok) expect(r.value).toEqual([{ cue: "a", target: "b" }]);
 	});

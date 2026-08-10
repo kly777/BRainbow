@@ -115,7 +115,11 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 
 	return (
 		<div
-			class={props.editorClass ? `${styles.editor} ${props.editorClass}` : styles.editor}
+			class={
+				props.editorClass
+					? `${styles.editor} ${props.editorClass}`
+					: styles.editor
+			}
 		>
 			<textarea
 				ref={textareaRef}

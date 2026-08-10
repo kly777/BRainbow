@@ -88,8 +88,6 @@
 	}
 }
 
-
-
 .search-input::placeholder {
 	color: var(--t-color-ink-faint);
 }
@@ -100,8 +98,6 @@
 		padding: var(--space-sm) var(--space-lg);
 	}
 }
-
-
 
 @media (width <= 768px) {
 	.filter-select {

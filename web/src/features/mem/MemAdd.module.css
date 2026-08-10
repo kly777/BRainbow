@@ -133,7 +133,6 @@
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
 	font-size: var(--text-base);
-	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	transition:
 		border-color var(--t-transition-fast),
@@ -163,9 +162,13 @@
 	color: var(--t-color-ink-faint);
 }
 
-.actions { composes: actions from "./ui/ImportParts.module.css"; }
+.actions {
+	composes: actions from "./ui/ImportParts.module.css";
+}
 
-.input-card { composes: input-card from "./ui/ImportParts.module.css"; }
+.input-card {
+	composes: input-card from "./ui/ImportParts.module.css";
+}
 
 .file-btn {
 	display: inline-flex;
@@ -194,7 +197,9 @@
 	border: 0;
 }
 
-.import-errors { composes: import-errors from "./ui/ImportParts.module.css"; }
+.import-errors {
+	composes: import-errors from "./ui/ImportParts.module.css";
+}
 
 .preview-count {
 	font-size: var(--text-xs);
@@ -203,7 +208,9 @@
 	margin: var(--space-sm) var(--space-md) 0;
 }
 
-.stack { composes: stack from "./ui/ImportParts.module.css"; }
+.stack {
+	composes: stack from "./ui/ImportParts.module.css";
+}
 
 @media (width <= 600px) {
 	.top-bar {

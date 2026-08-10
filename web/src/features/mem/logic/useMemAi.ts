@@ -73,9 +73,7 @@ export function useMemAi(deps: { callAi?: typeof callAi } = {}): UseMemAi {
 	const reviseAll = async (instruction: string) => {
 		const inst = instruction.trim();
 		if (!inst || cards().length === 0) return;
-		const value = await run(() =>
-			buildRevisePrompt(source(), cards(), inst),
-		);
+		const value = await run(() => buildRevisePrompt(source(), cards(), inst));
 		if (value) setCards(value);
 	};
 

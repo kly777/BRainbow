@@ -258,8 +258,6 @@
 	border-color: var(--t-color-border);
 }
 
-
-
 .edit-button:hover {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
@@ -275,8 +273,6 @@
 	background: var(--t-color-danger-subtle);
 	color: var(--t-color-danger);
 }
-
-
 
 .sub-task-input::placeholder {
 	color: var(--t-color-border);

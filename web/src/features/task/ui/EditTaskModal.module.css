@@ -20,7 +20,7 @@
 	background: none;
 	border: none;
 	border-bottom: 2px solid transparent;
-	margin-bottom: -var(--space-2xs);
+	margin-bottom: calc(-1 * var(--space-2xs));
 	cursor: pointer;
 	font-size: var(--text-sm);
 	font-weight: 500;
@@ -74,10 +74,8 @@
 
 .field-textarea {
 	width: 100%;
-	padding: var(--space-sm) var(--space-md);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
-	font-size: var(--text-base);
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	transition:
@@ -323,8 +321,6 @@
 .tab:hover {
 	color: var(--t-color-ink);
 }
-
-
 
 .preset-btn:hover {
 	background: var(--t-color-success-subtle);

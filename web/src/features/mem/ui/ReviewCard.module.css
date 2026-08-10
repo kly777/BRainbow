@@ -207,7 +207,6 @@
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
 	font-size: var(--text-base);
-	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	transition:
 		border-color var(--t-transition-fast),
@@ -309,17 +308,9 @@
 	background: var(--t-color-surface-raised);
 }
 
-
-
 @media (width <= 600px) {
-	.action-row {
-		composes: bottom-bar from "../../../styles/base.module.css";
-	}
-
 	.ratings {
 		composes: bottom-bar from "../../../styles/base.module.css";
-		max-width: 640px;
-		min-width: 480px;
 	}
 
 	@media (width <= 600px) {

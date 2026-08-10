@@ -6,7 +6,6 @@ import { A } from "@solidjs/router";
 import {
 	createDeferred,
 	createResource,
-	createSignal,
 	onCleanup,
 	onMount,
 } from "solid-js";
@@ -15,7 +14,7 @@ import { useMemReview } from "@features/mem/logic/useMemReview.ts";
 import { notifyError } from "@lib/notify.ts";
 import { tryAsync } from "@lib/result.ts";
 import styles from "@features/mem/MemPage.module.css";
-import AiSettingsModal from "@features/mem/ui/AiSettingsModal.tsx";
+import { openAiSettings } from "@ui/organisms/aiSettingsStore.ts";
 import ContextBar from "@features/mem/ui/ContextBar.tsx";
 import FilterBar from "@features/mem/ui/FilterBar.tsx";
 import ReviewCard from "@features/mem/ui/ReviewCard.tsx";
@@ -23,7 +22,6 @@ import Sidebar from "@features/mem/ui/Sidebar.tsx";
 
 export default function MemPage() {
 	const m = useMemReview();
-	const [showAiSettings, setShowAiSettings] = createSignal(false);
 
 	// 8h/24h 待复习统计：评分会连续改变 due.length，用 createDeferred 合并 + 60s 缓存降频
 	const UPCOMING_TTL = 60_000;
@@ -86,7 +84,7 @@ export default function MemPage() {
 						<button
 							type="button"
 							class={styles.iconBtn}
-							onClick={() => setShowAiSettings(true)}
+							onClick={openAiSettings}
 							title="AI 设置"
 						>
 							🤖
@@ -111,11 +109,6 @@ export default function MemPage() {
 					<ReviewCard m={m} />
 				</div>
 			</div>
-
-			<AiSettingsModal
-				isOpen={showAiSettings()}
-				onClose={() => setShowAiSettings(false)}
-			/>
 		</div>
 	);
 }

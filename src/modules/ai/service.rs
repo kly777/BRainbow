@@ -1,0 +1,190 @@
+use chrono::Utc;
+use sqlx::SqlitePool;
+use tokio::time::{sleep, Duration};
+
+use crate::error::ServiceError;
+
+use super::model::{
+    AiConfig, AiProxyMessage, AiSettingsItem, UpdateAiSettingsRequest,
+};
+
+/// AI 服务：设置 CRUD + LLM 代理调用（所有 AI 功能统一走这里）
+#[derive(Clone)]
+pub struct AiService {
+    pool: SqlitePool,
+    client: reqwest::Client,
+}
+
+impl AiService {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self {
+            pool,
+            client: reqwest::Client::new(),
+        }
+    }
+
+    /// 读取用户的完整 AI 配置
+    pub async fn get_config(&self, user_id: i32) -> Result<Option<AiConfig>, ServiceError> {
+        let row: Option<(String, String, String, String)> = sqlx::query_as(
+            "SELECT endpoint, api_key, model, mnemonic_prompt FROM ai_settings WHERE user_id = ?1",
+        )
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.map(|(endpoint, api_key, model, mnemonic_prompt)| AiConfig {
+            endpoint,
+            api_key,
+            model,
+            mnemonic_prompt,
+        }))
+    }
+
+    /// 返回前端可读设置（api_key 掩码）
+    pub async fn get_settings(&self, user_id: i32) -> Result<AiSettingsItem, ServiceError> {
+        let cfg = self.get_config(user_id).await?;
+        Ok(match cfg {
+            Some(c) => AiSettingsItem {
+                endpoint: c.endpoint,
+                model: c.model,
+                mnemonic_prompt: c.mnemonic_prompt,
+                has_key: !c.api_key.is_empty(),
+            },
+            None => AiSettingsItem {
+                endpoint: String::new(),
+                model: String::new(),
+                mnemonic_prompt: String::new(),
+                has_key: false,
+            },
+        })
+    }
+
+    /// 更新设置：api_key 传空保持原值
+    pub async fn update_settings(
+        &self,
+        user_id: i32,
+        req: UpdateAiSettingsRequest,
+    ) -> Result<AiSettingsItem, ServiceError> {
+        let existing = self.get_config(user_id).await?;
+        let (old_endpoint, old_key, old_model, old_prompt) = match existing {
+            Some(c) => (c.endpoint, c.api_key, c.model, c.mnemonic_prompt),
+            None => (String::new(), String::new(), String::new(), String::new()),
+        };
+
+        let endpoint = req
+            .endpoint
+            .map(|s| s.trim().to_string())
+            .unwrap_or(old_endpoint);
+        let api_key = req
+            .api_key
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or(old_key);
+        let model = req
+            .model
+            .map(|s| s.trim().to_string())
+            .unwrap_or(old_model);
+        let mnemonic_prompt = req
+            .mnemonic_prompt
+            .map(|s| s.trim().to_string())
+            .unwrap_or(old_prompt);
+
+        let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        sqlx::query(
+            "INSERT INTO ai_settings (user_id, endpoint, api_key, model, mnemonic_prompt, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT(user_id) DO UPDATE SET
+                endpoint = excluded.endpoint,
+                api_key = excluded.api_key,
+                model = excluded.model,
+                mnemonic_prompt = excluded.mnemonic_prompt,
+                updated_at = excluded.updated_at",
+        )
+        .bind(user_id)
+        .bind(&endpoint)
+        .bind(&api_key)
+        .bind(&model)
+        .bind(&mnemonic_prompt)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(AiSettingsItem {
+            endpoint,
+            model,
+            mnemonic_prompt,
+            has_key: !api_key.is_empty(),
+        })
+    }
+
+    /// 统一 LLM 调用：读用户配置 → 请求 OpenAI 兼容接口 → 返回回复内容
+    pub async fn chat(
+        &self,
+        user_id: i32,
+        messages: &[AiProxyMessage],
+        temperature: Option<f32>,
+        max_tokens: Option<i32>,
+    ) -> Result<(String, String), ServiceError> {
+        let cfg = self.get_config(user_id).await?.ok_or_else(|| {
+            ServiceError::InvalidInput("请先在 AI 设置中配置 API 地址与 Key".into())
+        })?;
+        if cfg.endpoint.is_empty() || cfg.api_key.is_empty() {
+            return Err(ServiceError::InvalidInput(
+                "请先在 AI 设置中配置 API 地址与 Key".into(),
+            ));
+        }
+
+        let body = serde_json::json!({
+            "model": cfg.model,
+            "messages": messages,
+            "temperature": temperature.unwrap_or(0.7),
+            "max_tokens": max_tokens.unwrap_or(2048),
+        });
+
+        // 简易重试：最多 2 次，间隔 1s
+        let mut last_err = None;
+        for _attempt in 0..2 {
+            match self
+                .client
+                .post(&cfg.endpoint)
+                .header("Content-Type", "application/json")
+                .header("Authorization", format!("Bearer {}", cfg.api_key))
+                .json(&body)
+                .send()
+                .await
+            {
+                Ok(resp) => {
+                    if !resp.status().is_success() {
+                        let status = resp.status().as_u16();
+                        let text = resp.text().await.unwrap_or_default();
+                        last_err = Some(ServiceError::Internal(format!(
+                            "AI 请求失败 ({status}): {}",
+                            text.chars().take(200).collect::<String>()
+                        )));
+                        sleep(Duration::from_millis(1000)).await;
+                        continue;
+                    }
+                    let data: serde_json::Value = resp.json().await.map_err(|e| {
+                        ServiceError::Internal(format!("AI 响应解析失败: {e}"))
+                    })?;
+                    let content = data
+                        .get("choices")
+                        .and_then(|c| c.get(0))
+                        .and_then(|c| c.get("message"))
+                        .and_then(|m| m.get("content"))
+                        .and_then(|c| c.as_str())
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .ok_or_else(|| {
+                            ServiceError::Internal("AI 响应缺少回复内容".into())
+                        })?;
+                    return Ok((content, cfg.model.clone()));
+                }
+                Err(e) => {
+                    last_err = Some(ServiceError::Internal(format!("AI 请求失败: {e}")));
+                    sleep(Duration::from_millis(1000)).await;
+                }
+            }
+        }
+        Err(last_err.unwrap_or_else(|| ServiceError::Internal("AI 请求失败".into())))
+    }
+}

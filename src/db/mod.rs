@@ -515,6 +515,75 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await?;
 
+    // ── Chat 模块：对话树 / 消息节点 / 提示词预设 ──
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS chat_tree (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            system_prompt TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS chat_node (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tree_id INTEGER NOT NULL,
+            parent_id INTEGER,
+            role TEXT NOT NULL CHECK (role IN ('user','assistant')),
+            content TEXT NOT NULL,
+            revised_from INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS prompt_preset (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_chat_node_tree ON chat_node(tree_id)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_chat_tree_user ON chat_tree(user_id)")
+        .execute(pool)
+        .await?;
+
+    // ── AI 设置（每用户一份，后端代理统一使用） ──
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS ai_settings (
+            user_id INTEGER PRIMARY KEY,
+            endpoint TEXT NOT NULL DEFAULT '',
+            api_key TEXT NOT NULL DEFAULT '',
+            model TEXT NOT NULL DEFAULT '',
+            mnemonic_prompt TEXT NOT NULL DEFAULT '',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
     // ── API Key 认证 ──
     sqlx::query(
         r#"

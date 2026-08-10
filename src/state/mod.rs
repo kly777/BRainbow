@@ -3,7 +3,8 @@ use std::sync::Arc;
 
 use crate::config::Config;
 use crate::modules::{
-    bookmark::BookmarkQueryService, bookmark::BookmarkService, card::CardQueryService,
+    ai::service::AiService, bookmark::BookmarkQueryService, bookmark::BookmarkService, card::CardQueryService,
+    chat::query::ChatQueryService, chat::service::ChatService,
     card::CardService, conv::query::ConvQueryService, db_viewer::DbViewerQueryService,
     media::query::MediaQueryService, media::service::MediaService, mem::MemRepo,
     mem::query::MemQueryService, mem::service::MemService, onto::OntoQueryService,
@@ -47,6 +48,9 @@ pub struct AppState {
     pub time_window: TimeWindowService,
     pub time_window_query: TimeWindowQueryService,
     pub conv_query: ConvQueryService,
+    pub ai: AiService,
+    pub chat: ChatService,
+    pub chat_query: ChatQueryService,
 }
 
 impl AppState {
@@ -83,6 +87,9 @@ impl AppState {
             time_window: TimeWindowService::new(db.clone(), task),
             time_window_query: TimeWindowQueryService::new(db.clone()),
             conv_query: ConvQueryService::new(db.as_ref().clone()),
+            ai: AiService::new(db.as_ref().clone()),
+            chat: ChatService::new(db.as_ref().clone()),
+            chat_query: ChatQueryService::new(db.as_ref().clone()),
         }
     }
 }

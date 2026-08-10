@@ -1,50 +1,67 @@
-// ── AI 设置面板 ──
+// ── AI 设置面板（配置存数据库，后端代理） ──
 
-import { createSignal, Show } from "solid-js";
+import { createEffect, createSignal, Show } from "solid-js";
+import { aiSettingsOpen, closeAiSettings } from "@ui/organisms/aiSettingsStore.ts";
 import Modal from "@ui/organisms/Modal";
 import { callAi } from "@lib/ai.ts";
-import {
-	getAiSettings,
-	resetAiSettings,
-	setAiSettings,
-} from "@lib/ai-settings.ts";
+import { getAiSettingsE, updateAiSettingsE } from "@apis/ai.ts";
 import { tryAsync } from "@lib/result.ts";
 
-interface AiSettingsModalProps {
-	isOpen: boolean;
-	onClose: () => void;
-}
+const DEFAULT_MNEMONIC_PROMPT =
+	"你是一个记忆专家。用户在学习一张卡片时连续答错 3 次，请为其生成一个助记技巧（mnemonic）帮助记忆。\n\n卡片内容：\n线索：{cue}\n答案：{target}\n\n请给出一个简短、有创意、易记的助记方法（中英文均可，30 字以内）。直接输出助记内容，不要前缀。";
 
-export default function AiSettingsModal(props: AiSettingsModalProps) {
-	const saved = getAiSettings();
-	const [endpoint, setEndpoint] = createSignal(saved.endpoint);
-	const [apiKey, setApiKey] = createSignal(saved.apiKey);
-	const [model, setModel] = createSignal(saved.model);
-	const [mnemonicPrompt, setMnemonicPrompt] = createSignal(
-		saved.mnemonicPrompt,
-	);
+export default function AiSettingsModal() {
+	const [endpoint, setEndpoint] = createSignal("");
+	const [apiKey, setApiKey] = createSignal("");
+	const [model, setModel] = createSignal("");
+	const [mnemonicPrompt, setMnemonicPrompt] = createSignal("");
+	const [hasKey, setHasKey] = createSignal(false);
+	const [loading, setLoading] = createSignal(false);
 	const [testStatus, setTestStatus] = createSignal<
 		"idle" | "testing" | "ok" | "fail"
 	>("idle");
 	const [testMsg, setTestMsg] = createSignal("");
 
-	const handleSave = () => {
-		setAiSettings({
-			endpoint: endpoint(),
-			apiKey: apiKey(),
-			model: model(),
-			mnemonicPrompt: mnemonicPrompt(),
-		});
-		props.onClose();
+	// 每次打开时从后端加载当前配置
+	createEffect(() => {
+		if (!aiSettingsOpen()) return;
+		void (async () => {
+			setTestStatus("idle");
+			setTestMsg("");
+			const r = await tryAsync(() => getAiSettingsE());
+			if (r.ok) {
+				setEndpoint(r.value.endpoint);
+				setModel(r.value.model);
+				setMnemonicPrompt(r.value.mnemonic_prompt);
+				setHasKey(r.value.has_key);
+			}
+		})();
+	});
+
+	const handleSave = async () => {
+		setLoading(true);
+		const r = await tryAsync(() =>
+			updateAiSettingsE({
+				endpoint: endpoint(),
+				api_key: apiKey(), // 留空 = 保持原 key
+				model: model(),
+				mnemonic_prompt: mnemonicPrompt(),
+			}),
+		);
+		setLoading(false);
+		if (r.ok) {
+			setHasKey(r.value.has_key);
+			setApiKey("");
+			closeAiSettings();
+		}
 	};
 
 	const handleReset = () => {
-		resetAiSettings();
-		const d = getAiSettings();
-		setEndpoint(d.endpoint);
-		setApiKey(d.apiKey);
-		setModel(d.model);
-		setMnemonicPrompt(d.mnemonicPrompt);
+		setEndpoint("");
+		setModel("");
+		setMnemonicPrompt(DEFAULT_MNEMONIC_PROMPT);
+		setApiKey("");
+		setHasKey(false);
 	};
 
 	const testConnection = async () => {
@@ -67,7 +84,7 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 	};
 
 	return (
-		<Modal isOpen={props.isOpen} onClose={props.onClose} title="AI 设置">
+		<Modal isOpen={aiSettingsOpen()} onClose={closeAiSettings} title="AI 设置">
 			<div
 				style={{
 					display: "flex",
@@ -105,7 +122,7 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 						type="password"
 						value={apiKey()}
 						onInput={(e) => setApiKey(e.currentTarget.value)}
-						placeholder="sk-..."
+						placeholder={hasKey() ? "已配置（留空保持不变）" : "sk-..."}
 						style={{
 							width: "100%",
 							padding: "8px 10px",
@@ -227,7 +244,7 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 					<div style={{ display: "flex", gap: "0.5rem" }}>
 						<button
 							type="button"
-							onClick={props.onClose}
+							onClick={closeAiSettings}
 							style={{
 								padding: "8px 16px",
 								cursor: "pointer",
@@ -240,17 +257,18 @@ export default function AiSettingsModal(props: AiSettingsModalProps) {
 						</button>
 						<button
 							type="button"
-							onClick={handleSave}
+							onClick={() => void handleSave()}
+							disabled={loading()}
 							style={{
 								padding: "8px 16px",
 								cursor: "pointer",
-								background: "#3b82f6",
+								background: loading() ? "#ccc" : "#3b82f6",
 								color: "#fff",
 								border: "none",
 								"border-radius": "0.375rem",
 							}}
 						>
-							保存
+							{loading() ? "保存中…" : "保存"}
 						</button>
 					</div>
 				</div>

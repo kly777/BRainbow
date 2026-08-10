@@ -6,6 +6,7 @@ import AuthStatus from "@auth/AuthStatus.tsx";
 import CommandPalette from "@ui/organisms/CommandPalette";
 import ConfirmModalContainer from "@ui/organisms/ConfirmModal";
 import ToastContainer from "@ui/organisms/Toast";
+import AiSettingsModal from "@features/mem/ui/AiSettingsModal.tsx";
 import { RouteTitle } from "./routes.ts";
 
 export default function Layout(props: { children?: JSX.Element }) {
@@ -28,6 +29,7 @@ export default function Layout(props: { children?: JSX.Element }) {
 			<CommandPalette />
 			<ToastContainer />
 			<ConfirmModalContainer />
+			<AiSettingsModal />
 		</div>
 	);
 }

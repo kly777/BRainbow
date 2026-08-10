@@ -3,6 +3,7 @@ import { createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { AUTH_REQUIRED_EVENT } from "@apis/request.ts";
 import { useAuth } from "@auth/context.tsx";
 import { NAV_ROUTES } from "@/routes.ts";
+import { openAiSettings } from "@ui/organisms/aiSettingsStore.ts";
 import styles from "@ui/organisms/CommandPalette.module.css";
 
 const BING = "https://www.bing.com/search?q=";
@@ -129,6 +130,14 @@ export default function CommandPalette() {
 				label: ":reload",
 				desc: "重新加载页面",
 				action: () => globalThis.location.reload(),
+			},
+			{
+				label: ":ai",
+				desc: "打开 AI 设置",
+				action: () => {
+					close();
+					openAiSettings();
+				},
 			},
 		];
 		if (!auth().user) {

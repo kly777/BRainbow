@@ -1,8 +1,7 @@
 // ── 通用 AI 客户端 ──
-// 支持任意兼容 OpenAI Chat Completions API 的服务
+// 统一走后端代理（/api/ai/chat）：AI 配置存数据库、用户端可配置，api_key 不进浏览器。
 
-import { getAiSettings } from "@lib/ai-settings.ts";
-import { tryAsync, unwrapOr } from "@lib/result.ts";
+import { aiChatE } from "@apis/ai.ts";
 
 export interface AiMessage {
 	role: "system" | "user" | "assistant";
@@ -24,46 +23,12 @@ export interface AiResponse {
 
 /** 调用 AI 并返回回复内容。失败时抛出 Error */
 export async function callAi(req: AiRequest): Promise<AiResponse> {
-	const settings = getAiSettings();
-
-	if (!settings.apiKey) {
-		throw new Error("未配置 API Key，请在 AI 设置中配置");
-	}
-	if (!settings.endpoint) {
-		throw new Error("未配置 API 地址");
-	}
-
-	const body: Record<string, unknown> = {
-		model: req.model ?? settings.model,
-		messages: req.messages,
-		temperature: req.temperature ?? 0.7,
-		max_tokens: req.maxTokens ?? 512,
-	};
-
-	const response = await fetch(settings.endpoint, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${settings.apiKey}`,
-		},
-		body: JSON.stringify(body),
+	// model 覆盖暂由后端忽略（当前用数据库配置的 model）
+	const res = await aiChatE(req.messages, {
+		temperature: req.temperature,
+		maxTokens: req.maxTokens,
 	});
-
-	if (!response.ok) {
-		const textResult = await tryAsync(() => response.text());
-		const errText = unwrapOr(textResult, "未知错误");
-		throw new Error(
-			`AI 请求失败 (${response.status}): ${errText.slice(0, 200)}`,
-		);
-	}
-
-	const data = await response.json();
-	const content = data.choices?.[0]?.message?.content;
-	if (typeof content !== "string") {
-		throw new Error("AI 返回格式异常：未找到回复内容");
-	}
-
-	return { content: content.trim(), model: data.model ?? settings.model };
+	return { content: res.content, model: res.model };
 }
 
 /** 快捷方法：使用默认系统提示词发送用户消息 */

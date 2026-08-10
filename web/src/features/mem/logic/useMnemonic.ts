@@ -2,7 +2,8 @@
 
 import { createSignal } from "solid-js";
 import { callAi } from "@lib/ai.ts";
-import { fillPrompt, getAiSettings } from "@lib/ai-settings.ts";
+import { fillPrompt } from "@lib/ai-settings.ts";
+import { getAiSettingsE } from "@apis/ai.ts";
 import { notifyError } from "@lib/notify.ts";
 import { tryAsync } from "@lib/result.ts";
 import { getMnemonicE, setMnemonicE } from "@features/mem/api.ts";
@@ -36,8 +37,12 @@ export function useMnemonic(): UseMnemonic {
 		memId === undefined ? undefined : mnemonics().get(memId);
 
 	const generate = async (item: MemItem) => {
-		const settings = getAiSettings();
-		if (!settings.apiKey) {
+		const settings = await tryAsync(() => getAiSettingsE());
+		if (!settings.ok) {
+			notifyError("获取 AI 设置失败", settings.error);
+			return;
+		}
+		if (!settings.value.has_key) {
 			notifyError(
 				"未配置 API Key",
 				new Error("请在顶栏 🤖 AI 设置中配置 API Key"),
@@ -47,7 +52,7 @@ export function useMnemonic(): UseMnemonic {
 		setLoading(true);
 
 		const aiResult = await tryAsync(async () => {
-			const prompt = fillPrompt(settings.mnemonicPrompt, {
+			const prompt = fillPrompt(settings.value.mnemonic_prompt, {
 				cue: item.cue.content,
 				target: item.target.content,
 			});

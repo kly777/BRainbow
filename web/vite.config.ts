@@ -3,12 +3,15 @@ import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import { fileURLToPath } from "node:url";
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
 	plugins: [solid()],
 
 	css: {
 		modules: {
 			localsConvention: "camelCaseOnly",
+			// dev 模式类名带文件名，build 用短 hash
+			generateScopedName:
+				command === "serve" ? "[name]__[local]" : undefined,
 		},
 		// build 的 CSS minify 用 vite 默认的 lightningcss：
 		// 按内置现代基线（chrome111/safari16.4 等）自动生成/规范化前缀，
@@ -58,4 +61,4 @@ export default defineConfig({
 		outDir: "dist",
 		emptyOutDir: true,
 	},
-});
+}));

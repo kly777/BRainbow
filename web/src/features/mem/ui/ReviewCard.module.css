@@ -205,7 +205,7 @@
 	border-color: var(--t-color-border-strong);
 	font-family: var(--t-font-mono);
 	line-height: var(--leading-normal);
-	background: var(--t-color-bg);
+	background: var(--t-color-surface);
 	outline: none;
 }
 

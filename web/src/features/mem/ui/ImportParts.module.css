@@ -221,3 +221,26 @@
 .hint-block:last-child {
 	margin-bottom: 0;
 }
+
+/* ── 导入视图共享布局 ── */
+
+.stack {
+	width: 100%;
+	max-width: 680px;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
+}
+
+.actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-sm);
+	margin-top: var(--space-lg);
+}
+
+.input-card {
+	composes: card from "../../../styles/base.module.css";
+	border-radius: var(--radius-lg);
+	padding: var(--space-md);
+}

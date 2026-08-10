@@ -114,7 +114,7 @@
 	font-family: var(--t-font-mono);
 	line-height: var(--leading-normal);
 	resize: vertical;
-	background: var(--t-color-bg);
+	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	box-sizing: border-box;
 	outline: none;

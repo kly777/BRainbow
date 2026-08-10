@@ -132,7 +132,7 @@
 	border-color: var(--t-color-border-strong);
 	font-family: var(--t-font-mono);
 	line-height: var(--leading-normal);
-	background: var(--t-color-bg);
+	background: var(--t-color-surface);
 	outline: none;
 }
 
@@ -153,18 +153,9 @@
 	color: var(--t-color-ink-faint);
 }
 
-.actions {
-	display: flex;
-	justify-content: flex-end;
-	gap: var(--space-sm);
-	margin-top: var(--space-lg);
-}
+.actions { composes: actions from "./ui/ImportParts.module.css"; }
 
-.input-card {
-	composes: card from "../../styles/base.module.css";
-	border-radius: var(--radius-lg);
-	padding: var(--space-md);
-}
+.input-card { composes: input-card from "./ui/ImportParts.module.css"; }
 
 .file-btn {
 	display: inline-flex;
@@ -193,11 +184,7 @@
 	border: 0;
 }
 
-.import-errors {
-	font-size: var(--text-sm);
-	color: var(--t-color-badge-relearning-text);
-	margin: var(--space-sm) 0 0;
-}
+.import-errors { composes: import-errors from "./ui/ImportParts.module.css"; }
 
 .preview-count {
 	font-size: var(--text-xs);
@@ -206,13 +193,7 @@
 	margin: var(--space-sm) var(--space-md) 0;
 }
 
-.stack {
-	width: 100%;
-	max-width: 680px;
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-md);
-}
+.stack { composes: stack from "./ui/ImportParts.module.css"; }
 
 @media (width <= 600px) {
 	.top-bar {

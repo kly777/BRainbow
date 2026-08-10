@@ -191,3 +191,31 @@ export function ImportResult(props: {
 		</div>
 	);
 }
+
+// ═══════════════════════════════════════════════
+// 导入操作栏（取消 + 提交按钮，paste/file/ai 共用）
+// ═══════════════════════════════════════════════
+
+export function ImportActions(props: {
+	onCancel: () => void;
+	onSubmit: () => void;
+	loading?: boolean;
+	disabled?: boolean;
+	submitLabel?: string;
+}) {
+	return (
+		<div class={styles.actions}>
+			<button type="button" class={styles.cancel} onClick={props.onCancel}>
+				取消
+			</button>
+			<button
+				type="button"
+				class={styles.submit}
+				disabled={props.disabled || props.loading}
+				onClick={props.onSubmit}
+			>
+				{props.loading ? "导入中…" : props.submitLabel ?? "导入"}
+			</button>
+		</div>
+	);
+}

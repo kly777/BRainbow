@@ -1,20 +1,10 @@
 /* features/mem/ui/AiGenerateView.css.ts — AI 生成卡片视图 */
 
-.cancel {
-	composes: btn-ghost from "../../../styles/base.module.css";
-}
+.cancel { composes: cancel from "./ImportParts.module.css"; }
 
-.submit {
-	composes: btn-primary from "../../../styles/base.module.css";
-}
+.submit { composes: submit from "./ImportParts.module.css"; }
 
-.stack {
-	width: 100%;
-	max-width: 680px;
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-md);
-}
+.stack { composes: stack from "./ImportParts.module.css"; }
 
 .label {
 	display: block;
@@ -28,28 +18,15 @@
 	border-color: var(--t-color-border-strong);
 	font-family: var(--t-font-mono);
 	line-height: var(--leading-normal);
-	background: var(--t-color-bg);
+	background: var(--t-color-surface);
 	outline: none;
 }
 
-.input-card {
-	composes: card from "../../../styles/base.module.css";
-	border-radius: var(--radius-lg);
-	padding: var(--space-md);
-}
+.input-card { composes: input-card from "./ImportParts.module.css"; }
 
-.actions {
-	display: flex;
-	justify-content: flex-end;
-	gap: var(--space-sm);
-	margin-top: var(--space-lg);
-}
+.actions { composes: actions from "./ImportParts.module.css"; }
 
-.import-errors {
-	font-size: var(--text-sm);
-	color: var(--t-color-badge-relearning-text);
-	margin: var(--space-sm) 0 0;
-}
+.import-errors { composes: import-errors from "./ImportParts.module.css"; }
 
 /* ── 卡片清单 ── */
 

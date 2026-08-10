@@ -12,6 +12,7 @@ import { AiGenerateView } from "@features/mem/ui/AiGenerateView.tsx";
 import styles from "@features/mem/MemAdd.module.css";
 import {
 	FormatHint,
+	ImportActions,
 	ImportPreviewTable,
 	ImportTagInput,
 	ImportResult,
@@ -95,23 +96,13 @@ export default function MemAdd() {
 							</div>
 						</div>
 
-						<div class={styles.actions}>
-							<button
-								type="button"
-								class={styles.cancel}
-								onClick={() => m.navigate("/m")}
-							>
-								取消
-							</button>
-							<button
-								type="button"
-								class={styles.submit}
-								onClick={m.handleCreate}
-								disabled={m.creating() || !m.cue().trim() || !m.target().trim()}
-							>
-								{m.creating() ? "创建中..." : "创建"}
-							</button>
-						</div>
+						<ImportActions
+							onCancel={() => m.navigate("/m")}
+							onSubmit={m.handleCreate}
+							loading={m.creating()}
+							disabled={!m.cue().trim() || !m.target().trim()}
+							submitLabel="创建"
+						/>
 					</div>
 				</Show>
 
@@ -179,23 +170,13 @@ function PasteView(props: { m: ReturnType<typeof useMemAdd> }) {
 						value={m.importDefaultTags()}
 						onChange={m.setImportDefaultTags}
 					/>
-					<div class={styles.actions}>
-						<button
-							type="button"
-							class={styles.cancel}
-							onClick={() => m.navigate("/m")}
-						>
-							取消
-						</button>
-						<button
-							type="button"
-							class={styles.submit}
-							disabled={m.selectedCount() === 0 || m.importing()}
-							onClick={m.handlePasteImport}
-						>
-							{m.importing() ? "导入中…" : `导入所选 (${m.selectedCount()} 条)`}
-						</button>
-					</div>
+					<ImportActions
+						onCancel={() => m.navigate("/m")}
+						onSubmit={m.handlePasteImport}
+						loading={m.importing()}
+						disabled={m.selectedCount() === 0}
+						submitLabel={`导入所选 (${m.selectedCount()} 条)`}
+					/>
 				</div>
 			}
 		>
@@ -260,23 +241,13 @@ function FileView(props: { m: ReturnType<typeof useMemAdd> }) {
 						value={m.importDefaultTags()}
 						onChange={m.setImportDefaultTags}
 					/>
-					<div class={styles.actions}>
-						<button
-							type="button"
-							class={styles.cancel}
-							onClick={() => m.navigate("/m")}
-						>
-							取消
-						</button>
-						<button
-							type="button"
-							class={styles.submit}
-							disabled={m.selectedCount() === 0 || m.importing()}
-							onClick={m.handleFileImport}
-						>
-							{m.importing() ? "导入中…" : `导入所选 (${m.selectedCount()} 条)`}
-						</button>
-					</div>
+					<ImportActions
+						onCancel={() => m.navigate("/m")}
+						onSubmit={m.handleFileImport}
+						loading={m.importing()}
+						disabled={m.selectedCount() === 0}
+						submitLabel={`导入所选 (${m.selectedCount()} 条)`}
+					/>
 				</div>
 			}
 		>

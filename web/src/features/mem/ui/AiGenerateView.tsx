@@ -4,6 +4,7 @@
 import { createSignal, For, Show } from "solid-js";
 import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
 import {
+	ImportActions,
 	ImportResult,
 	ImportTagInput,
 } from "@features/mem/ui/ImportParts.tsx";
@@ -142,23 +143,12 @@ export function AiGenerateView(props: {
 							value={m.importDefaultTags()}
 							onChange={m.setImportDefaultTags}
 						/>
-						<div class={styles.actions}>
-							<button
-								type="button"
-								class={styles.cancel}
-								onClick={() => m.navigate("/m")}
-							>
-								取消
-							</button>
-							<button
-								type="button"
-								class={styles.submit}
-								disabled={ai.loading() || m.importing()}
-								onClick={() => void handleImport()}
-							>
-								{m.importing() ? "导入中…" : `导入 ${ai.cards().length} 张卡片`}
-							</button>
-						</div>
+						<ImportActions
+							onCancel={() => m.navigate("/m")}
+							onSubmit={() => void handleImport()}
+							loading={m.importing() || ai.loading()}
+							submitLabel={`导入 ${ai.cards().length} 张卡片`}
+						/>
 					</Show>
 				</div>
 			}

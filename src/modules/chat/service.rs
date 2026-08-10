@@ -4,8 +4,8 @@ use sqlx::SqlitePool;
 use crate::error::ServiceError;
 
 use super::model::{
-    CreateTreeRequest, NodeItem, PresetItem, ReviseRequest, ReviseResponse,
-    TreeDetail, TreeItem, UpdateTreeRequest,
+    CreateTreeRequest, NodeItem, PresetItem, ReviseRequest, ReviseResponse, TreeDetail, TreeItem,
+    UpdateTreeRequest,
 };
 
 #[derive(Clone)]
@@ -18,9 +18,7 @@ impl ChatService {
         Self { pool }
     }
 
-    fn row_to_tree(
-        row: (i64, String, String, String, String, i64),
-    ) -> TreeItem {
+    fn row_to_tree(row: (i64, String, String, String, String, i64)) -> TreeItem {
         TreeItem {
             id: row.0,
             title: row.1,
@@ -45,7 +43,11 @@ impl ChatService {
         Ok(rows.into_iter().map(Self::row_to_tree).collect())
     }
 
-    pub async fn get_tree(&self, user_id: i32, tree_id: i64) -> Result<Option<TreeDetail>, ServiceError> {
+    pub async fn get_tree(
+        &self,
+        user_id: i32,
+        tree_id: i64,
+    ) -> Result<Option<TreeDetail>, ServiceError> {
         let tree: Option<(i64, String, String, String, String, i64)> = sqlx::query_as(
             "SELECT t.id, t.title, t.system_prompt, t.created_at, t.updated_at,
                     (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count
@@ -60,13 +62,14 @@ impl ChatService {
             return Ok(None);
         };
 
-        let nodes: Vec<(i64, i64, Option<i64>, String, String, Option<i64>, String)> = sqlx::query_as(
-            "SELECT id, tree_id, parent_id, role, content, revised_from, created_at
+        let nodes: Vec<(i64, i64, Option<i64>, String, String, Option<i64>, String)> =
+            sqlx::query_as(
+                "SELECT id, tree_id, parent_id, role, content, revised_from, created_at
              FROM chat_node WHERE tree_id = ?1 ORDER BY id",
-        )
-        .bind(tree_id)
-        .fetch_all(&self.pool)
-        .await?;
+            )
+            .bind(tree_id)
+            .fetch_all(&self.pool)
+            .await?;
 
         Ok(Some(TreeDetail {
             tree: Self::row_to_tree(tree),
@@ -125,13 +128,12 @@ impl ChatService {
         tree_id: i64,
         req: UpdateTreeRequest,
     ) -> Result<(), ServiceError> {
-        let exists: Option<i64> = sqlx::query_scalar(
-            "SELECT id FROM chat_tree WHERE id = ?1 AND user_id = ?2",
-        )
-        .bind(tree_id)
-        .bind(user_id)
-        .fetch_optional(&self.pool)
-        .await?;
+        let exists: Option<i64> =
+            sqlx::query_scalar("SELECT id FROM chat_tree WHERE id = ?1 AND user_id = ?2")
+                .bind(tree_id)
+                .bind(user_id)
+                .fetch_optional(&self.pool)
+                .await?;
         if exists.is_none() {
             return Err(ServiceError::NotFound("对话树不存在".into()));
         }
@@ -140,11 +142,13 @@ impl ChatService {
             if title.trim().is_empty() {
                 return Err(ServiceError::InvalidInput("标题不能为空".into()));
             }
-            sqlx::query("UPDATE chat_tree SET title = ?1, updated_at = datetime('now') WHERE id = ?2")
-                .bind(title.trim())
-                .bind(tree_id)
-                .execute(&self.pool)
-                .await?;
+            sqlx::query(
+                "UPDATE chat_tree SET title = ?1, updated_at = datetime('now') WHERE id = ?2",
+            )
+            .bind(title.trim())
+            .bind(tree_id)
+            .execute(&self.pool)
+            .await?;
         }
         if let Some(prompt) = req.system_prompt {
             sqlx::query(
@@ -221,10 +225,7 @@ impl ChatService {
     }
 
     /// 组装节点到根的祖先链（父在前、子在后）
-    async fn ancestor_chain(
-        &self,
-        node_id: Option<i64>,
-    ) -> Result<Vec<NodeItem>, ServiceError> {
+    async fn ancestor_chain(&self, node_id: Option<i64>) -> Result<Vec<NodeItem>, ServiceError> {
         let mut chain = Vec::new();
         let mut cur = node_id;
         let mut guard = 0;
@@ -233,9 +234,10 @@ impl ChatService {
                 return Err(ServiceError::Internal("对话链过长".into()));
             }
             guard += 1;
-            let node = self.fetch_node(id).await?.ok_or_else(|| {
-                ServiceError::NotFound("消息节点不存在".into())
-            })?;
+            let node = self
+                .fetch_node(id)
+                .await?
+                .ok_or_else(|| ServiceError::NotFound("消息节点不存在".into()))?;
             cur = node.parent_id;
             chain.push(node);
         }
@@ -269,9 +271,10 @@ impl ChatService {
         let (user_node, ai_parent_id, inserted_user_id): (NodeItem, Option<i64>, Option<i64>) =
             match parent_id {
                 Some(pid) => {
-                    let parent = self.fetch_node(pid).await?.ok_or_else(|| {
-                        ServiceError::NotFound("父节点不存在".into())
-                    })?;
+                    let parent = self
+                        .fetch_node(pid)
+                        .await?
+                        .ok_or_else(|| ServiceError::NotFound("父节点不存在".into()))?;
                     if parent.tree_id != tree_id {
                         return Err(ServiceError::InvalidInput("节点不属于该对话树".into()));
                     }
@@ -279,9 +282,7 @@ impl ChatService {
                         let text = content
                             .map(|c| c.trim().to_string())
                             .filter(|c| !c.is_empty())
-                            .ok_or_else(|| {
-                                ServiceError::InvalidInput("消息内容不能为空".into())
-                            })?;
+                            .ok_or_else(|| ServiceError::InvalidInput("消息内容不能为空".into()))?;
                         let node = self
                             .insert_node(tree_id, Some(pid), "user", &text, None)
                             .await?;
@@ -360,17 +361,17 @@ impl ChatService {
         node_id: i64,
         req: ReviseRequest,
     ) -> Result<ReviseResponse, ServiceError> {
-        let node = self.fetch_node(node_id).await?.ok_or_else(|| {
-            ServiceError::NotFound("消息节点不存在".into())
-        })?;
+        let node = self
+            .fetch_node(node_id)
+            .await?
+            .ok_or_else(|| ServiceError::NotFound("消息节点不存在".into()))?;
 
         // 校验归属
-        let tree_user: Option<i64> = sqlx::query_scalar(
-            "SELECT user_id FROM chat_tree WHERE id = ?1",
-        )
-        .bind(node.tree_id)
-        .fetch_optional(&self.pool)
-        .await?;
+        let tree_user: Option<i64> =
+            sqlx::query_scalar("SELECT user_id FROM chat_tree WHERE id = ?1")
+                .bind(node.tree_id)
+                .fetch_optional(&self.pool)
+                .await?;
         if tree_user != Some(user_id as i64) {
             return Err(ServiceError::NotFound("消息节点不存在".into()));
         }
@@ -427,21 +428,19 @@ impl ChatService {
         if name.trim().is_empty() {
             return Err(ServiceError::InvalidInput("预设名称不能为空".into()));
         }
-        let id: i64 = sqlx::query(
-            "INSERT INTO prompt_preset (user_id, name, content) VALUES (?1, ?2, ?3)",
-        )
-        .bind(user_id)
-        .bind(name.trim())
-        .bind(content.trim())
-        .execute(&self.pool)
-        .await?
-        .last_insert_rowid();
-        let row: (i64, String, String, String) = sqlx::query_as(
-            "SELECT id, name, content, created_at FROM prompt_preset WHERE id = ?1",
-        )
-        .bind(id)
-        .fetch_one(&self.pool)
-        .await?;
+        let id: i64 =
+            sqlx::query("INSERT INTO prompt_preset (user_id, name, content) VALUES (?1, ?2, ?3)")
+                .bind(user_id)
+                .bind(name.trim())
+                .bind(content.trim())
+                .execute(&self.pool)
+                .await?
+                .last_insert_rowid();
+        let row: (i64, String, String, String) =
+            sqlx::query_as("SELECT id, name, content, created_at FROM prompt_preset WHERE id = ?1")
+                .bind(id)
+                .fetch_one(&self.pool)
+                .await?;
         Ok(PresetItem {
             id: row.0,
             name: row.1,
@@ -512,7 +511,16 @@ mod tests {
     #[tokio::test]
     async fn create_and_get_tree() {
         let svc = setup().await;
-        let detail = svc.create_tree(1, CreateTreeRequest { title: "t".into(), system_prompt: "p".into() }).await.unwrap();
+        let detail = svc
+            .create_tree(
+                1,
+                CreateTreeRequest {
+                    title: "t".into(),
+                    system_prompt: "p".into(),
+                },
+            )
+            .await
+            .unwrap();
         assert_eq!(detail.tree.title, "t");
         assert_eq!(detail.tree.node_count, 0);
 
@@ -527,15 +535,39 @@ mod tests {
     #[tokio::test]
     async fn revise_creates_new_node_keeping_original() {
         let svc = setup().await;
-        let tree = svc.create_tree(1, CreateTreeRequest { title: "t".into(), system_prompt: "".into() }).await.unwrap();
+        let tree = svc
+            .create_tree(
+                1,
+                CreateTreeRequest {
+                    title: "t".into(),
+                    system_prompt: "".into(),
+                },
+            )
+            .await
+            .unwrap();
         let tid = tree.tree.id;
 
         // 插入两个节点模拟历史（绕过 AI）
-        let user = svc.insert_node(tid, None, "user", "原问题", None).await.unwrap();
-        let _assistant = svc.insert_node(tid, Some(user.id), "assistant", "原回答", None).await.unwrap();
+        let user = svc
+            .insert_node(tid, None, "user", "原问题", None)
+            .await
+            .unwrap();
+        let _assistant = svc
+            .insert_node(tid, Some(user.id), "assistant", "原回答", None)
+            .await
+            .unwrap();
 
         // 修订 user 节点
-        let rev = svc.revise_node(1, user.id, ReviseRequest { content: "修订问题".into() }).await.unwrap();
+        let rev = svc
+            .revise_node(
+                1,
+                user.id,
+                ReviseRequest {
+                    content: "修订问题".into(),
+                },
+            )
+            .await
+            .unwrap();
         assert_eq!(rev.node.parent_id, None);
         assert_eq!(rev.node.revised_from, Some(user.id));
         assert_eq!(rev.node.content, "修订问题");
@@ -543,26 +575,61 @@ mod tests {
         // 原节点仍存在
         let got = svc.get_tree(1, tid).await.unwrap().unwrap();
         assert_eq!(got.nodes.len(), 3);
-        assert!(got.nodes.iter().any(|n| n.id == user.id && n.content == "原问题"));
+        assert!(
+            got.nodes
+                .iter()
+                .any(|n| n.id == user.id && n.content == "原问题")
+        );
         assert!(got.nodes.iter().any(|n| n.revised_from == Some(user.id)));
     }
 
     #[tokio::test]
     async fn revise_fails_for_other_user() {
         let svc = setup().await;
-        let tree = svc.create_tree(1, CreateTreeRequest { title: "t".into(), system_prompt: "".into() }).await.unwrap();
+        let tree = svc
+            .create_tree(
+                1,
+                CreateTreeRequest {
+                    title: "t".into(),
+                    system_prompt: "".into(),
+                },
+            )
+            .await
+            .unwrap();
         let tid = tree.tree.id;
         let user = svc.insert_node(tid, None, "user", "q", None).await.unwrap();
-        assert!(svc.revise_node(2, user.id, ReviseRequest { content: "x".into() }).await.is_err());
+        assert!(
+            svc.revise_node(
+                2,
+                user.id,
+                ReviseRequest {
+                    content: "x".into()
+                }
+            )
+            .await
+            .is_err()
+        );
     }
 
     #[tokio::test]
     async fn delete_tree_cascades_nodes() {
         let svc = setup().await;
-        let tree = svc.create_tree(1, CreateTreeRequest { title: "t".into(), system_prompt: "".into() }).await.unwrap();
+        let tree = svc
+            .create_tree(
+                1,
+                CreateTreeRequest {
+                    title: "t".into(),
+                    system_prompt: "".into(),
+                },
+            )
+            .await
+            .unwrap();
         let tid = tree.tree.id;
         let user = svc.insert_node(tid, None, "user", "q", None).await.unwrap();
-        let _a = svc.insert_node(tid, Some(user.id), "assistant", "a", None).await.unwrap();
+        let _a = svc
+            .insert_node(tid, Some(user.id), "assistant", "a", None)
+            .await
+            .unwrap();
 
         svc.delete_tree(1, tid).await.unwrap();
         assert!(svc.get_tree(1, tid).await.unwrap().is_none());
@@ -573,10 +640,22 @@ mod tests {
     async fn chat_prepare_abort_rolls_back_inserted_user() {
         let svc = setup().await;
         // 无 LLM 配置（from_env 返回 None）
-        let tree = svc.create_tree(1, CreateTreeRequest { title: "t".into(), system_prompt: "".into() }).await.unwrap();
+        let tree = svc
+            .create_tree(
+                1,
+                CreateTreeRequest {
+                    title: "t".into(),
+                    system_prompt: "".into(),
+                },
+            )
+            .await
+            .unwrap();
         let tid = tree.tree.id;
         // prepare 成功（插入了 user 节点），但无 AI 配置时 abort 应回滚
-        let ctx = svc.prepare_chat(1, tid, None, Some("hello".into())).await.unwrap();
+        let ctx = svc
+            .prepare_chat(1, tid, None, Some("hello".into()))
+            .await
+            .unwrap();
         assert_eq!(ctx.inserted_user_id, Some(ctx.ai_parent_id.unwrap()));
         svc.abort_chat(&ctx).await;
         let got = svc.get_tree(1, tid).await.unwrap().unwrap();

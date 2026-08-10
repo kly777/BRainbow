@@ -131,5 +131,4 @@ mod tests {
         assert_eq!(cfg.upload_dir, PathBuf::from("uploads"));
         assert!(cfg.jwt_secret.len() >= 36); // 随机 UUID
     }
-
 }

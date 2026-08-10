@@ -1,12 +1,10 @@
 use chrono::Utc;
 use sqlx::SqlitePool;
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 
 use crate::error::ServiceError;
 
-use super::model::{
-    AiConfig, AiProxyMessage, AiSettingsItem, UpdateAiSettingsRequest,
-};
+use super::model::{AiConfig, AiProxyMessage, AiSettingsItem, UpdateAiSettingsRequest};
 
 /// AI 服务：设置 CRUD + LLM 代理调用（所有 AI 功能统一走这里）
 #[derive(Clone)]
@@ -31,12 +29,14 @@ impl AiService {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await?;
-        Ok(row.map(|(endpoint, api_key, model, mnemonic_prompt)| AiConfig {
-            endpoint,
-            api_key,
-            model,
-            mnemonic_prompt,
-        }))
+        Ok(
+            row.map(|(endpoint, api_key, model, mnemonic_prompt)| AiConfig {
+                endpoint,
+                api_key,
+                model,
+                mnemonic_prompt,
+            }),
+        )
     }
 
     /// 返回前端可读设置（api_key 掩码）
@@ -79,10 +79,7 @@ impl AiService {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .unwrap_or(old_key);
-        let model = req
-            .model
-            .map(|s| s.trim().to_string())
-            .unwrap_or(old_model);
+        let model = req.model.map(|s| s.trim().to_string()).unwrap_or(old_model);
         let mnemonic_prompt = req
             .mnemonic_prompt
             .map(|s| s.trim().to_string())
@@ -195,7 +192,7 @@ impl AiService {
                                 Err(e) => {
                                     return Err(ServiceError::Internal(format!(
                                         "AI 流读取失败: {e}"
-                                    )))
+                                    )));
                                 }
                             };
                             let text = String::from_utf8_lossy(&chunk);
@@ -229,16 +226,15 @@ impl AiService {
                         }
                         let content = full.trim().to_string();
                         if content.is_empty() {
-                            return Err(ServiceError::Internal(
-                                "AI 流式响应缺少回复内容".into(),
-                            ));
+                            return Err(ServiceError::Internal("AI 流式响应缺少回复内容".into()));
                         }
                         return Ok((content, cfg.model.clone(), true));
                     } else {
                         // 非流式
-                        let data: serde_json::Value = resp.json().await.map_err(|e| {
-                            ServiceError::Internal(format!("AI 响应解析失败: {e}"))
-                        })?;
+                        let data: serde_json::Value = resp
+                            .json()
+                            .await
+                            .map_err(|e| ServiceError::Internal(format!("AI 响应解析失败: {e}")))?;
                         let content = data
                             .get("choices")
                             .and_then(|c| c.get(0))
@@ -247,9 +243,7 @@ impl AiService {
                             .and_then(|c| c.as_str())
                             .map(|s| s.trim().to_string())
                             .filter(|s| !s.is_empty())
-                            .ok_or_else(|| {
-                                ServiceError::Internal("AI 响应缺少回复内容".into())
-                            })?;
+                            .ok_or_else(|| ServiceError::Internal("AI 响应缺少回复内容".into()))?;
                         return Ok((content, cfg.model.clone(), false));
                     }
                 }

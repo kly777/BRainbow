@@ -78,9 +78,7 @@ impl TaskQueryService {
         end: Option<DateTime<Utc>>,
         status: Option<TaskStatus>,
     ) -> Result<Vec<(Task, TimeWindow)>, sqlx::Error> {
-        self.repo
-            .find_calendar_events(start, end, status)
-            .await
+        self.repo.find_calendar_events(start, end, status).await
     }
 
     /// 构建依赖图（DAG）— 批量查询，避免 N+1

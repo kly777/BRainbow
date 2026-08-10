@@ -41,14 +41,16 @@ impl ChatQueryService {
 
         let mut hits: Vec<SearchHit> = node_hits
             .into_iter()
-            .map(|(tree_id, tree_title, node_id, role, content, created_at)| SearchHit {
-                tree_id,
-                tree_title,
-                node_id: Some(node_id),
-                role,
-                snippet: Self::snippet(&content, q, 60),
-                created_at,
-            })
+            .map(
+                |(tree_id, tree_title, node_id, role, content, created_at)| SearchHit {
+                    tree_id,
+                    tree_title,
+                    node_id: Some(node_id),
+                    role,
+                    snippet: Self::snippet(&content, q, 60),
+                    created_at,
+                },
+            )
             .collect();
 
         // 2. 命中标题（补充，避免与节点结果重复）

@@ -1,11 +1,11 @@
 mod handler;
 mod model;
-pub mod repository;
 pub mod query;
+pub mod repository;
 mod service;
 
-pub use service::CardService;
 pub use query::CardQueryService;
+pub use service::CardService;
 
 pub use handler::{
     create_card_handler, delete_card_handler, get_card_handler, get_cards_handler,

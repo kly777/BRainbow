@@ -944,10 +944,7 @@ impl MemRepository for MemRepo {
     async fn get_mem(&self, id: i32) -> Result<Option<MemRow>, sqlx::Error> {
         self.get_mem(id).await
     }
-    async fn get_mems_with_chunks(
-        &self,
-        ids: &[i32],
-    ) -> Result<Vec<MemWithChunks>, sqlx::Error> {
+    async fn get_mems_with_chunks(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, sqlx::Error> {
         self.get_mems_with_chunks(ids).await
     }
     async fn delete_mem(&self, id: i32) -> Result<(), sqlx::Error> {

@@ -28,7 +28,11 @@ impl ConvQueryService {
     }
 
     /// 对话详情（QA + 文章）
-    pub async fn detail(&self, id: i64, article_only: bool) -> Result<Option<ConvDetail>, ServiceError> {
+    pub async fn detail(
+        &self,
+        id: i64,
+        article_only: bool,
+    ) -> Result<Option<ConvDetail>, ServiceError> {
         let pool = &self.pool;
 
         let title_info: Option<(String, String, String)> = sqlx::query_as(
@@ -46,10 +50,12 @@ impl ConvQueryService {
         let qa_pairs: Vec<(i32, String, String)> = if article_only {
             Vec::new()
         } else {
-            sqlx::query_as("SELECT qa_id, question, answer FROM conv WHERE conv_id = ?1 ORDER BY qa_id")
-                .bind(id)
-                .fetch_all(pool)
-                .await?
+            sqlx::query_as(
+                "SELECT qa_id, question, answer FROM conv WHERE conv_id = ?1 ORDER BY qa_id",
+            )
+            .bind(id)
+            .fetch_all(pool)
+            .await?
         };
 
         let articles: Vec<(String, String, String)> =

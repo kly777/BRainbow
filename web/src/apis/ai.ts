@@ -19,7 +19,9 @@ export interface AiSettingsUpdate {
 export const getAiSettingsE = (): Promise<AiSettingsItem> =>
 	request("/ai/settings", {});
 
-export const updateAiSettingsE = (patch: AiSettingsUpdate): Promise<AiSettingsItem> =>
+export const updateAiSettingsE = (
+	patch: AiSettingsUpdate,
+): Promise<AiSettingsItem> =>
 	request("/ai/settings", { method: "PUT", body: JSON.stringify(patch) });
 
 // ── 通用 AI 代理调用 ──

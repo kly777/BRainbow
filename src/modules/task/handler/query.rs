@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use std::pin::Pin;
 
 use super::super::model::Task;
-use super::super::response::{CalendarEvent, StatsResponse, TaskResponse, TreeNode};
 use super::super::query::TaskQueryService;
+use super::super::response::{CalendarEvent, StatsResponse, TaskResponse, TreeNode};
 use super::dependency::{CalendarQuery, DagQuery, TreeQuery};
 use crate::error;
 use crate::pagination::{PaginatedResponse, Pagination};

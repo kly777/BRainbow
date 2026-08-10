@@ -67,7 +67,6 @@ fn extract_api_key(req: &Request) -> Option<String> {
         .filter(|s| !s.is_empty())
 }
 
-
 /// API key 哈希（SHA-256 hex）
 pub fn hash_api_key(key: &str) -> String {
     use sha2::{Digest, Sha256};
@@ -99,14 +98,13 @@ pub async fn auth(State(state): State<AppState>, mut request: Request, next: Nex
     // ── 2. API key ──
     if let Some(key) = extract_api_key(&request) {
         let key_hash = hash_api_key(&key);
-        let row: Option<(i32, String, Option<i32>)> = sqlx::query_as(
-            "SELECT id, role, user_id FROM api_key WHERE key_hash = ?",
-        )
-        .bind(&key_hash)
-        .fetch_optional(&*state.db)
-        .await
-        .ok()
-        .flatten();
+        let row: Option<(i32, String, Option<i32>)> =
+            sqlx::query_as("SELECT id, role, user_id FROM api_key WHERE key_hash = ?")
+                .bind(&key_hash)
+                .fetch_optional(&*state.db)
+                .await
+                .ok()
+                .flatten();
 
         if let Some((_id, role, user_id)) = row {
             let claims = Claims {
@@ -201,26 +199,27 @@ pub async fn create_api_key(
     let key = uuid::Uuid::new_v4().to_string().replace('-', "");
     let key_hash = hash_api_key(&key);
 
-    let id: i64 = match sqlx::query("INSERT INTO api_key (key_hash, role, user_id) VALUES (?, ?, ?)")
-        .bind(&key_hash)
-        .bind(&role)
-        .bind(user_id)
-        .execute(&*state.db)
-        .await
-    {
-        Ok(r) => r.last_insert_rowid(),
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorBody {
-                    code: "INTERNAL".to_string(),
-                    message: format!("创建 key 失败: {}", e),
-                    details: None,
-                }),
-            )
-                .into_response();
-        }
-    };
+    let id: i64 =
+        match sqlx::query("INSERT INTO api_key (key_hash, role, user_id) VALUES (?, ?, ?)")
+            .bind(&key_hash)
+            .bind(&role)
+            .bind(user_id)
+            .execute(&*state.db)
+            .await
+        {
+            Ok(r) => r.last_insert_rowid(),
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorBody {
+                        code: "INTERNAL".to_string(),
+                        message: format!("创建 key 失败: {}", e),
+                        details: None,
+                    }),
+                )
+                    .into_response();
+            }
+        };
 
     Json(ApiKeyInfo {
         id: id as i32,
@@ -236,11 +235,10 @@ pub async fn list_api_keys(
     State(state): State<AppState>,
     Extension(claims): Extension<Claims>,
 ) -> Response {
-    let rows: Result<Vec<(i32, String, String, Option<i32>)>, _> = sqlx::query_as(
-        "SELECT id, role, created_at, user_id FROM api_key ORDER BY id DESC",
-    )
-    .fetch_all(&*state.db)
-    .await;
+    let rows: Result<Vec<(i32, String, String, Option<i32>)>, _> =
+        sqlx::query_as("SELECT id, role, created_at, user_id FROM api_key ORDER BY id DESC")
+            .fetch_all(&*state.db)
+            .await;
 
     match rows {
         Ok(rows) => {
@@ -279,14 +277,13 @@ pub async fn delete_api_key(
 ) -> Response {
     // 非 admin 只能删自己的 key
     if claims.role != "admin" {
-        let owned: Option<(Option<i32>,)> = sqlx::query_as(
-            "SELECT user_id FROM api_key WHERE id = ?",
-        )
-        .bind(id)
-        .fetch_optional(&*state.db)
-        .await
-        .ok()
-        .flatten();
+        let owned: Option<(Option<i32>,)> =
+            sqlx::query_as("SELECT user_id FROM api_key WHERE id = ?")
+                .bind(id)
+                .fetch_optional(&*state.db)
+                .await
+                .ok()
+                .flatten();
         if owned.map(|(uid,)| uid) != Some(Some(claims.sub)) {
             return (
                 StatusCode::FORBIDDEN,

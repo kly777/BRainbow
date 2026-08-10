@@ -1,7 +1,7 @@
 pub mod ai;
 pub mod bookmark;
-pub mod chat;
 pub mod card;
+pub mod chat;
 pub mod conv;
 pub mod db_viewer;
 pub mod media;

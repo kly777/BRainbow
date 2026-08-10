@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use crate::config::Config;
 use crate::modules::{
-    ai::service::AiService, bookmark::BookmarkQueryService, bookmark::BookmarkService, card::CardQueryService,
-    chat::query::ChatQueryService, chat::service::ChatService,
-    card::CardService, conv::query::ConvQueryService, db_viewer::DbViewerQueryService,
+    ai::service::AiService, bookmark::BookmarkQueryService, bookmark::BookmarkService,
+    card::CardQueryService, card::CardService, chat::query::ChatQueryService,
+    chat::service::ChatService, conv::query::ConvQueryService, db_viewer::DbViewerQueryService,
     media::query::MediaQueryService, media::service::MediaService, mem::MemRepo,
     mem::query::MemQueryService, mem::service::MemService, onto::OntoQueryService,
     onto::OntoService, reading::query::ReadingQueryService, reading::service::ReadingService,

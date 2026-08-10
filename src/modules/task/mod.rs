@@ -22,8 +22,8 @@ pub use handler::{
     update_task_handler,
 };
 
-pub use service::TaskService;
 pub use query::TaskQueryService;
+pub use service::TaskService;
 
 pub fn routes() -> Router<AppState> {
     Router::new()

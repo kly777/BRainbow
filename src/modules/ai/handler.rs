@@ -12,7 +12,10 @@ use super::model::{AiProxyRequest, UpdateAiSettingsRequest};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/settings", get(get_settings_handler).put(update_settings_handler))
+        .route(
+            "/settings",
+            get(get_settings_handler).put(update_settings_handler),
+        )
         .route("/chat", post(chat_proxy_handler))
 }
 
@@ -47,8 +50,9 @@ pub async fn chat_proxy_handler(
         .chat(claims.sub, &req.messages, req.temperature, req.max_tokens)
         .await
     {
-        Ok((content, model)) => Json(serde_json::json!({ "content": content, "model": model }))
-            .into_response(),
+        Ok((content, model)) => {
+            Json(serde_json::json!({ "content": content, "model": model })).into_response()
+        }
         Err(e) => e.into_response(),
     }
 }

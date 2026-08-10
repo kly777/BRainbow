@@ -107,17 +107,19 @@ export default function ChatPage() {
 								<For each={c.activePath()}>
 									{(node) => <MessageRow c={c} node={node} />}
 								</For>
-							<Show when={c.sending() && c.streamingContent()}>
-								<div class={`${styles.message} ${styles.assistant} ${styles.streaming}`}>
-									<div class={styles.messageHead}>
-										<span class={styles.messageRole}>AI · 生成中…</span>
+								<Show when={c.sending() && c.streamingContent()}>
+									<div
+										class={`${styles.message} ${styles.assistant} ${styles.streaming}`}
+									>
+										<div class={styles.messageHead}>
+											<span class={styles.messageRole}>AI · 生成中…</span>
+										</div>
+										<div class={styles.messageMd}>
+											<MarkdownRenderer content={c.streamingContent()} />
+											<span class={styles.streamCursor} />
+										</div>
 									</div>
-									<div class={styles.messageMd}>
-										<MarkdownRenderer content={c.streamingContent()} />
-										<span class={styles.streamCursor} />
-									</div>
-								</div>
-							</Show>
+								</Show>
 							</div>
 							<div class={styles.inputBar}>
 								<textarea
@@ -208,11 +210,7 @@ function TreeListItem(props: {
 }) {
 	return (
 		<div class={props.active ? styles.treeItemActive : styles.treeItem}>
-			<button
-				type="button"
-				class={styles.treeSelect}
-				onClick={props.onSelect}
-			>
+			<button type="button" class={styles.treeSelect} onClick={props.onSelect}>
 				<span class={styles.treeItemTitle}>{props.tree.title}</span>
 				<span class={styles.treeItemMeta}>{props.tree.node_count} 条</span>
 			</button>
@@ -363,9 +361,7 @@ function MessageRow(props: {
 			</div>
 			<div
 				class={
-					node.role === "assistant"
-						? styles.messageMd
-						: styles.messageContent
+					node.role === "assistant" ? styles.messageMd : styles.messageContent
 				}
 			>
 				{node.role === "assistant" ? (

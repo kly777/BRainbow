@@ -2,7 +2,10 @@
 // 仅管 AI 服务本身（API 地址 / Key / 模型）；助记提示词在 /m 页单独配置。
 
 import { createEffect, createSignal, Show } from "solid-js";
-import { aiSettingsOpen, closeAiSettings } from "@ui/organisms/aiSettingsStore.ts";
+import {
+	aiSettingsOpen,
+	closeAiSettings,
+} from "@ui/organisms/aiSettingsStore.ts";
 import Modal from "@ui/organisms/Modal";
 import { callAi } from "@lib/ai.ts";
 import { getAiSettingsE, updateAiSettingsE } from "@apis/ai.ts";

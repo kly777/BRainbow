@@ -48,8 +48,14 @@ impl TimeWindowQueryService {
     pub async fn get_task_time_stats(
         &self,
         task_id: i32,
-    ) -> Result<(Option<chrono::DateTime<chrono::Utc>>, Option<chrono::DateTime<chrono::Utc>>, i64), ServiceError>
-    {
+    ) -> Result<
+        (
+            Option<chrono::DateTime<chrono::Utc>>,
+            Option<chrono::DateTime<chrono::Utc>>,
+            i64,
+        ),
+        ServiceError,
+    > {
         self.repo
             .get_task_time_stats(task_id)
             .await

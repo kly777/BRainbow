@@ -5,10 +5,10 @@ use axum::{
     routing::{get, post},
 };
 
-use axum::extract::Extension;
 use crate::auth::Claims;
 use crate::error;
 use crate::state::AppState;
+use axum::extract::Extension;
 
 use super::model::{
     ChatRequest, CreateTreeRequest, PresetRequest, ReviseRequest, SearchParams, UpdateTreeRequest,
@@ -110,7 +110,10 @@ pub async fn chat_handler(
     let user_id = claims.sub;
 
     // 准备：校验 + 插 user 节点 + 组装链（此时未调 AI）
-    let ctx = match svc.prepare_chat(user_id, id, req.parent_id, req.content).await {
+    let ctx = match svc
+        .prepare_chat(user_id, id, req.parent_id, req.content)
+        .await
+    {
         Ok(ctx) => ctx,
         Err(e) => return e.into_response(),
     };
@@ -142,10 +145,7 @@ pub async fn chat_handler(
     let stream = futures_util::stream::unfold(rx, |mut rx| async move {
         let token = rx.recv().await?;
         if token == "__DONE__" {
-            return Some((
-                Ok::<_, Infallible>(Event::default().data("__DONE__")),
-                rx,
-            ));
+            return Some((Ok::<_, Infallible>(Event::default().data("__DONE__")), rx));
         }
         Some((Ok::<_, Infallible>(Event::default().data(token)), rx))
     });
@@ -177,7 +177,11 @@ pub async fn search_handler(
     if q.is_empty() {
         return Json(serde_json::json!({ "hits": [] })).into_response();
     }
-    match state.chat_query.search(claims.sub, q, params.limit.unwrap_or(20)).await {
+    match state
+        .chat_query
+        .search(claims.sub, q, params.limit.unwrap_or(20))
+        .await
+    {
         Ok(resp) => Json(resp).into_response(),
         Err(e) => e.into_response(),
     }
@@ -200,7 +204,11 @@ pub async fn create_preset_handler(
     Extension(claims): Extension<Claims>,
     Json(req): Json<PresetRequest>,
 ) -> impl IntoResponse {
-    match state.chat.create_preset(claims.sub, &req.name, &req.content).await {
+    match state
+        .chat
+        .create_preset(claims.sub, &req.name, &req.content)
+        .await
+    {
         Ok(preset) => (axum::http::StatusCode::CREATED, Json(preset)).into_response(),
         Err(e) => e.into_response(),
     }

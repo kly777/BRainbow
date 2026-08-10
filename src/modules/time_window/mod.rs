@@ -1,7 +1,7 @@
 mod handler;
 mod model;
-mod repository;
 pub(crate) mod query;
+mod repository;
 pub mod service;
 
 pub use handler::{

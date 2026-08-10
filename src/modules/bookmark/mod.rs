@@ -13,8 +13,8 @@ pub use handler::{
     import_bookmarks_handler, search_bookmarks_handler, search_tags_handler,
     update_bookmark_handler,
 };
-pub use service::BookmarkService;
 pub use query::BookmarkQueryService;
+pub use service::BookmarkService;
 
 use crate::state::AppState;
 use axum::{

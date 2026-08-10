@@ -62,7 +62,11 @@ export default function MnemonicSettingsModal(props: Props) {
 						恢复默认
 					</button>
 					<div class={styles.actionsRight}>
-						<button type="button" class={styles.btnGhost} onClick={props.onClose}>
+						<button
+							type="button"
+							class={styles.btnGhost}
+							onClick={props.onClose}
+						>
 							取消
 						</button>
 						<button

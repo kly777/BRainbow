@@ -19,11 +19,18 @@
 
 /* 实心主按钮 */
 .btn-primary {
-	composes: btn-base;
+	font-size: var(--text-sm);
 	color: var(--t-color-white);
 	background: var(--t-color-accent);
 	border: none;
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) var(--space-lg);
+	cursor: pointer;
 	font-weight: 500;
+	transition:
+		background 0.15s,
+		color 0.15s,
+		border-color 0.15s;
 }
 
 .btn-primary:hover {
@@ -37,7 +44,17 @@
 
 /* 幽灵按钮（描边） */
 .btn-ghost {
-	composes: btn-base;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	background: transparent;
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) var(--space-lg);
+	cursor: pointer;
+	transition:
+		background 0.15s,
+		color 0.15s,
+		border-color 0.15s;
 }
 
 .btn-ghost:hover {
@@ -52,10 +69,18 @@
 
 /* 导航/翻页大按钮（◀ ▶） */
 .btn-nav {
-	composes: btn-base;
 	font-size: var(--text-lg);
+	color: var(--t-color-ink-muted);
+	background: transparent;
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-md);
 	line-height: 1;
 	padding: var(--space-xs) var(--space-md);
+	cursor: pointer;
+	transition:
+		background 0.15s,
+		color 0.15s,
+		border-color 0.15s;
 }
 
 .btn-nav:disabled {
@@ -70,11 +95,20 @@
 
 /* 链接式返回按钮 */
 .btn-back {
-	composes: btn-base;
-	border-color: var(--t-color-border);
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	background: transparent;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) var(--space-lg);
+	cursor: pointer;
 	text-decoration: none;
 	display: inline-block;
 	white-space: nowrap;
+	transition:
+		background 0.15s,
+		color 0.15s,
+		border-color 0.15s;
 }
 
 .btn-back:hover {
@@ -166,7 +200,16 @@
 }
 
 .field-textarea {
-	composes: field-input;
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-base);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 	resize: vertical;
 }
 
@@ -219,19 +262,40 @@
 }
 
 .tag-accent {
-	composes: tag-chip;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	padding: var(--space-2xs) var(--space-sm);
+	border-radius: 999px;
+	font-size: var(--text-xs);
+	line-height: 1.125rem;
+	white-space: nowrap;
 	background: var(--t-color-accent-soft);
 	color: var(--t-color-accent);
 }
 
 .tag-neutral {
-	composes: tag-chip;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	padding: var(--space-2xs) var(--space-sm);
+	border-radius: 999px;
+	font-size: var(--text-xs);
+	line-height: 1.125rem;
+	white-space: nowrap;
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink-muted);
 }
 
 .tag-danger {
-	composes: tag-chip;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	padding: var(--space-2xs) var(--space-sm);
+	border-radius: 999px;
+	font-size: var(--text-xs);
+	line-height: 1.125rem;
+	white-space: nowrap;
 	background: var(--t-color-danger-subtle);
 	color: var(--t-color-danger);
 }

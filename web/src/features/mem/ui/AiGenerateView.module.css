@@ -14,7 +14,17 @@
 }
 
 .textarea {
-	composes: field-textarea from "../../../styles/base.module.css";
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-base);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+	resize: vertical;
 	border-color: var(--t-color-border-strong);
 	font-family: var(--t-font-mono);
 	line-height: var(--leading-normal);
@@ -101,13 +111,31 @@
 }
 
 .cue-input {
-	composes: field-input from "../../../styles/base.module.css";
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-base);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 	font-family: var(--t-font-mono);
 	font-size: var(--text-sm);
 }
 
 .target-input {
-	composes: field-input from "../../../styles/base.module.css";
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-base);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 }
@@ -123,7 +151,16 @@
 }
 
 .revise-input {
-	composes: field-input from "../../../styles/base.module.css";
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-base);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 	flex: 1;
 	font-size: var(--text-sm);
 }

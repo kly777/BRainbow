@@ -131,7 +131,12 @@
 }
 
 .empty {
-	composes: empty-state from "../../../styles/base.module.css";
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--space-sm);
+	text-align: center;
+	color: var(--t-color-ink-muted);
 	padding: var(--space-xl) 0;
 	color: var(--t-color-ink-faint);
 }

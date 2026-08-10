@@ -77,7 +77,16 @@
 }
 
 .text-input {
-	composes: field-input from "../../../styles/base.module.css";
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-base);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 	font-size: var(--text-sm);
 	background: var(--t-color-bg);
 	border-radius: var(--radius-md);

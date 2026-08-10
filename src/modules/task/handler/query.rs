@@ -35,7 +35,7 @@ pub async fn get_tree_handler(
 
     let mut nodes = Vec::new();
     for task in filtered {
-        if let Some(node) = build_tree_node(&svc, task).await {
+        if let Some(node) = build_tree_node(svc, task).await {
             nodes.push(node);
         }
     }

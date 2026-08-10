@@ -94,7 +94,7 @@ impl ChatQueryService {
                 let end = (start + width).min(compact.len());
                 let mut s = compact[start..end].to_string();
                 if start > 0 {
-                    s.insert_str(0, "…");
+                    s.insert(0, '…');
                 }
                 if end < compact.len() {
                     s.push('…');

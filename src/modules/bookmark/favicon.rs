@@ -96,17 +96,15 @@ fn cache_path(host: &str, ext: &str) -> PathBuf {
 fn read_cached(host: &str) -> Option<(Vec<u8>, &'static str)> {
     for ext in ["ico", "png"] {
         let path = cache_path(host, ext);
-        if let Ok(bytes) = std::fs::read(&path) {
-            if !bytes.is_empty() {
-                return Some((
-                    bytes,
-                    if ext == "ico" {
-                        "image/x-icon"
-                    } else {
-                        "image/png"
-                    },
-                ));
-            }
+        if let Ok(bytes) = std::fs::read(&path)
+            && !bytes.is_empty()
+        {
+            let mime = if ext == "ico" {
+                "image/x-icon"
+            } else {
+                "image/png"
+            };
+            return Some((bytes, mime));
         }
     }
     None
@@ -139,14 +137,14 @@ fn file_response(bytes: Vec<u8>, mime: &'static str) -> Response {
     resp
 }
 
-fn build_client() -> Result<reqwest::Client, Response> {
+fn build_client() -> Result<reqwest::Client, Box<dyn std::error::Error + Send + Sync>> {
     reqwest::Client::builder()
         .timeout(FETCH_TIMEOUT)
         .connect_timeout(Duration::from_secs(3))
         .redirect(reqwest::redirect::Policy::limited(3))
         .user_agent("Mozilla/5.0 (compatible; Brainbow/1.0)")
         .build()
-        .map_err(|e| error::internal(e, "创建抓取客户端"))
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
 }
 
 /// 抓取 favicon：先试 /favicon.ico，再解析首页 HTML 的 link rel=icon
@@ -178,15 +176,15 @@ async fn fetch_url_favicon(client: &reqwest::Client, url: &str) -> Option<(Vec<u
         return None;
     }
     // 只接受图片类型
-    if let Some(t) = infer::get(&bytes) {
-        if t.mime_type().starts_with("image/") {
-            let mime = if t.mime_type() == "image/png" {
-                "image/png"
-            } else {
-                "image/x-icon"
-            };
-            return Some((bytes.to_vec(), mime));
-        }
+    if let Some(t) = infer::get(&bytes)
+        && t.mime_type().starts_with("image/")
+    {
+        let mime = if t.mime_type() == "image/png" {
+            "image/png"
+        } else {
+            "image/x-icon"
+        };
+        return Some((bytes.to_vec(), mime));
     }
     // infer 识别不了的（如部分 .ico 变体）也兜底接收
     Some((bytes.to_vec(), "image/x-icon"))
@@ -208,12 +206,11 @@ fn extract_link_icon_href(html: &str) -> Option<String> {
             || tag_lower.contains("rel='icon'")
             || tag_lower.contains("rel=\"shortcut icon\"")
             || tag_lower.contains("rel='shortcut icon'");
-        if has_icon_rel {
-            if let Some(href) = extract_attr(tag_lower, tag, "href") {
-                if !href.is_empty() {
-                    return Some(href);
-                }
-            }
+        if has_icon_rel
+            && let Some(href) = extract_attr(tag_lower, tag, "href")
+            && !href.is_empty()
+        {
+            return Some(href);
         }
         search = link_start + link_end_rel;
     }
@@ -269,7 +266,7 @@ pub async fn favicon_handler(Query(q): Query<FaviconQuery>) -> Response {
 
     let client = match build_client() {
         Ok(c) => c,
-        Err(e) => return e,
+        Err(e) => return error::internal(e, "创建抓取客户端"),
     };
 
     match fetch_favicon(&client, &host).await {

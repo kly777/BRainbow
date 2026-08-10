@@ -13,6 +13,9 @@ pub struct ChatService {
     pool: SqlitePool,
 }
 
+/// chat_node 表的行类型（sqlx query_as 元组）
+type NodeRow = (i64, i64, Option<i64>, String, String, Option<i64>, String);
+
 impl ChatService {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
@@ -62,14 +65,13 @@ impl ChatService {
             return Ok(None);
         };
 
-        let nodes: Vec<(i64, i64, Option<i64>, String, String, Option<i64>, String)> =
-            sqlx::query_as(
-                "SELECT id, tree_id, parent_id, role, content, revised_from, created_at
+        let nodes: Vec<NodeRow> = sqlx::query_as(
+            "SELECT id, tree_id, parent_id, role, content, revised_from, created_at
              FROM chat_node WHERE tree_id = ?1 ORDER BY id",
-            )
-            .bind(tree_id)
-            .fetch_all(&self.pool)
-            .await?;
+        )
+        .bind(tree_id)
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(Some(TreeDetail {
             tree: Self::row_to_tree(tree),
@@ -182,14 +184,13 @@ impl ChatService {
     // ── 节点 ──
 
     async fn fetch_node(&self, node_id: i64) -> Result<Option<NodeItem>, ServiceError> {
-        let row: Option<(i64, i64, Option<i64>, String, String, Option<i64>, String)> =
-            sqlx::query_as(
-                "SELECT id, tree_id, parent_id, role, content, revised_from, created_at
+        let row: Option<NodeRow> = sqlx::query_as(
+            "SELECT id, tree_id, parent_id, role, content, revised_from, created_at
                  FROM chat_node WHERE id = ?1",
-            )
-            .bind(node_id)
-            .fetch_optional(&self.pool)
-            .await?;
+        )
+        .bind(node_id)
+        .fetch_optional(&self.pool)
+        .await?;
         Ok(row.map(|n| NodeItem {
             id: n.0,
             tree_id: n.1,

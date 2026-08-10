@@ -88,11 +88,11 @@ pub async fn auth(State(state): State<AppState>, mut request: Request, next: Nex
     let secret = &state.jwt_secret;
 
     // ── 1. JWT ──
-    if let Some(token) = extract_token(&request) {
-        if let Some(claims) = verify_token(&token, secret) {
-            request.extensions_mut().insert(claims);
-            return next.run(request).await;
-        }
+    if let Some(token) = extract_token(&request)
+        && let Some(claims) = verify_token(&token, secret)
+    {
+        request.extensions_mut().insert(claims);
+        return next.run(request).await;
     }
 
     // ── 2. API key ──
@@ -185,6 +185,9 @@ pub struct ApiKeyInfo {
     pub key: Option<String>,
 }
 
+/// api_key 表行类型（sqlx query_as 元组）
+type ApiKeyRow = (i32, String, String, Option<i32>);
+
 /// 生成 API key。
 ///
 /// dev 环境：免登录，生成 admin 角色 key（前端测试便利）。
@@ -235,7 +238,7 @@ pub async fn list_api_keys(
     State(state): State<AppState>,
     Extension(claims): Extension<Claims>,
 ) -> Response {
-    let rows: Result<Vec<(i32, String, String, Option<i32>)>, _> =
+    let rows: Result<Vec<ApiKeyRow>, _> =
         sqlx::query_as("SELECT id, role, created_at, user_id FROM api_key ORDER BY id DESC")
             .fetch_all(&*state.db)
             .await;

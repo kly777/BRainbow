@@ -98,7 +98,7 @@ impl MemService {
             });
 
         Ok(DueResponse {
-            items: items.into(),
+            items,
             due_count: ids.len(),
             has_more,
             upcoming_count,

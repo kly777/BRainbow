@@ -1,6 +1,6 @@
 use axum::{
     extract::{Multipart, Path, Query, State},
-    response::{IntoResponse, Json, Response},
+    response::{IntoResponse, Json},
 };
 use serde::{Deserialize, Serialize};
 
@@ -70,13 +70,13 @@ impl From<super::model::BookmarkTagWithCount> for BookmarkTagWithCountResponse {
 }
 
 /// 校验 URL：必须带 http/https 协议
-fn validate_url(url: &str) -> Result<(), Response> {
+fn validate_url(url: &str) -> Result<(), String> {
     let url = url.trim();
     if url.is_empty() {
-        return Err(error::bad_request("URL 不能为空"));
+        return Err("URL 不能为空".into());
     }
     if !url.starts_with("http://") && !url.starts_with("https://") {
-        return Err(error::bad_request("URL 必须以 http:// 或 https:// 开头"));
+        return Err("URL 必须以 http:// 或 https:// 开头".into());
     }
     Ok(())
 }
@@ -92,8 +92,8 @@ pub async fn create_bookmark_handler(
     if title.is_empty() {
         return error::bad_request("标题不能为空");
     }
-    if let Err(resp) = validate_url(url) {
-        return resp;
+    if let Err(msg) = validate_url(url) {
+        return error::bad_request(&msg);
     }
 
     let tags: Vec<String> = payload
@@ -178,10 +178,10 @@ pub async fn update_bookmark_handler(
         .filter(|s| !s.is_empty());
     let url = payload.url.as_deref().map(str::trim);
 
-    if let Some(u) = url {
-        if let Err(resp) = validate_url(u) {
-            return resp;
-        }
+    if let Some(u) = url
+        && let Err(msg) = validate_url(u)
+    {
+        return error::bad_request(&msg);
     }
 
     let result = state

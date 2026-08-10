@@ -5,7 +5,7 @@ import {
 	type Setter,
 } from "solid-js";
 import { Angle } from "@lib/angle.ts";
-import styles from "@components/AngleEditor.module.css";
+import styles from "@ui/organisms/AngleEditor.module.css";
 
 type AngleMode = "deg" | "rad" | "slope";
 

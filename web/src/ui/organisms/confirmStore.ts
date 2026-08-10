@@ -5,7 +5,7 @@
  * 类似 toastStore 的模式 —— 全局信号 + Container 组件渲染
  *
  * 用法：
- *   import { showConfirm } from "@components/ui/confirmStore";
+ *   import { showConfirm } from "@ui/organisms/confirmStore";
  *   const ok = await showConfirm({ title: "删除", message: "确定？", variant: "danger" });
  *   if (!ok) return;
  */

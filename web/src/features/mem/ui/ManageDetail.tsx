@@ -2,9 +2,10 @@
 // 线索/答案用目录卡标签页，元数据等宽，操作与标签管理
 
 import { Show } from "solid-js";
-import TagSelector from "@components/TagSelector.tsx";
-import MarkdownRenderer from "@components/ui/Markdown.tsx";
-import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
+import Button from "@ui/atoms/Button";
+import TagSelector from "@ui/molecules/TagSelector";
+import MarkdownRenderer from "@ui/atoms/Markdown";
+import MarkdownEditor from "@ui/molecules/MarkdownEditor";
 import { fmtLocal } from "@lib/time.ts";
 import type { MemItem, TagInfo } from "@features/mem/api.ts";
 import styles from "@features/mem/ui/ManageDetail.module.css";
@@ -132,37 +133,21 @@ export default function ManageDetail(props: Props) {
 								when={props.editing}
 								fallback={
 									<>
-										<button
-											type="button"
-											class={styles.ghostBtn}
-											onClick={props.onStartEdit}
-										>
+										<Button variant="ghost" size="sm" onClick={props.onStartEdit}>
 											编辑
-										</button>
-										<button
-											type="button"
-											class={styles.ghostBtn}
-											onClick={() => props.onReset(d().id)}
-										>
+										</Button>
+										<Button variant="ghost" size="sm" onClick={() => props.onReset(d().id)}>
 											忘却
-										</button>
+										</Button>
 										<Show when={d().state !== "suspended"}>
-											<button
-												type="button"
-												class={styles.ghostBtn}
-												onClick={() => props.onSuspend(d().id)}
-											>
+											<Button variant="ghost" size="sm" onClick={() => props.onSuspend(d().id)}>
 												挂起
-											</button>
+											</Button>
 										</Show>
 										<Show when={d().state === "suspended"}>
-											<button
-												type="button"
-												class={styles.ghostBtn}
-												onClick={() => props.onUnsuspend(d().id)}
-											>
+											<Button variant="ghost" size="sm" onClick={() => props.onUnsuspend(d().id)}>
 												恢复
-											</button>
+											</Button>
 										</Show>
 										<button
 											type="button"
@@ -174,20 +159,12 @@ export default function ManageDetail(props: Props) {
 									</>
 								}
 							>
-								<button
-									type="button"
-									class={styles.primaryBtn}
-									onClick={props.onSaveEdit}
-								>
-									保存
-								</button>
-								<button
-									type="button"
-									class={styles.ghostBtn}
-									onClick={props.onCancelEdit}
-								>
-									取消
-								</button>
+							<Button variant="primary" size="sm" onClick={props.onSaveEdit}>
+								保存
+							</Button>
+							<Button variant="ghost" size="sm" onClick={props.onCancelEdit}>
+								取消
+							</Button>
 							</Show>
 						</div>
 					</div>

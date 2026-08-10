@@ -7,10 +7,10 @@ import {
 	Show,
 } from "solid-js";
 import { getErrorMessage } from "@apis/types/index.ts";
-import { AsyncView } from "@components/ui/AsyncView.tsx";
-import Button from "@components/ui/Button.tsx";
-import FilterGroup from "@components/ui/FilterGroup.tsx";
-import SearchInput from "@components/ui/SearchInput.tsx";
+import { AsyncView } from "@ui/molecules/AsyncView";
+import Button from "@ui/atoms/Button";
+import FilterGroup from "@ui/molecules/FilterGroup";
+import SearchInput from "@ui/atoms/SearchInput";
 import { notifyError, notifySuccess } from "@lib/notify.ts";
 import { tryAsync } from "@lib/result.ts";
 import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";

@@ -37,7 +37,7 @@
 	font: inherit;
 	cursor: pointer;
 	inset: 0;
-	background: var(--t-color-overlay));
+	background: var(--t-color-overlay);
 	z-index: var(--z-dropdown);
 }
 

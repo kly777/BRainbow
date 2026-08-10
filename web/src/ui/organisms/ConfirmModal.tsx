@@ -1,8 +1,8 @@
 import { createEffect, For, onCleanup, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-import styles from "@components/ui/ConfirmModal.module.css";
-import type { ConfirmVariant } from "@components/ui/confirmStore.ts";
-import { confirms } from "@components/ui/confirmStore.ts";
+import styles from "@ui/organisms/ConfirmModal.module.css";
+import type { ConfirmVariant } from "@ui/organisms/confirmStore.ts";
+import { confirms } from "@ui/organisms/confirmStore.ts";
 
 // ==================== 图标/样式映射 ====================
 
@@ -45,7 +45,7 @@ export default function ConfirmModalContainer() {
 function ConfirmDialog(props: {
 	item: {
 		id: number;
-		options: import("@components/ui/confirmStore.ts").ConfirmOptions;
+		options: import("@ui/organisms/confirmStore.ts").ConfirmOptions;
 		resolve: (v: boolean) => void;
 	};
 }) {

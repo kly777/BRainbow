@@ -1,5 +1,5 @@
-import TagSelector from "@components/TagSelector.tsx";
-import Modal from "@components/ui/Modal.tsx";
+import TagSelector from "@ui/molecules/TagSelector";
+import Modal from "@ui/organisms/Modal";
 import type { TagInfo } from "@features/mem/api.ts";
 
 interface Props {

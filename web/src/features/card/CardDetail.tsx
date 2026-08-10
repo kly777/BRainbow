@@ -1,9 +1,9 @@
 import { useNavigate, useParams } from "@solidjs/router";
 import { type Component, createResource } from "solid-js";
-import { AsyncView } from "@components/ui/AsyncView.tsx";
-import Button from "@components/ui/Button.tsx";
-import MarkdownRenderer from "@components/ui/Markdown.tsx";
-import Toolbar from "@components/ui/Toolbar.tsx";
+import { AsyncView } from "@ui/molecules/AsyncView";
+import Button from "@ui/atoms/Button";
+import MarkdownRenderer from "@ui/atoms/Markdown";
+import Toolbar from "@ui/molecules/Toolbar";
 import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
 import { deleteCardE, getCardE } from "@features/card/api.ts";
 import styles from "@features/card/CardDetail.module.css";

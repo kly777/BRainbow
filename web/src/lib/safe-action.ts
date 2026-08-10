@@ -23,8 +23,8 @@
 
 import { notifyError } from "@lib/notify.ts";
 import { tryAsync } from "@lib/result.ts";
-import { showConfirm as show } from "@components/ui/confirmStore.ts";
-import type { ConfirmOptions } from "@components/ui/confirmStore.ts";
+import { showConfirm as show } from "@ui/organisms/confirmStore.ts";
+import type { ConfirmOptions } from "@ui/organisms/confirmStore.ts";
 
 // Re-export 以便统一导入
 export { show as showConfirm };

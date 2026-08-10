@@ -1,9 +1,9 @@
 import { createMemo, createSignal } from "solid-js";
-import AngleEditor from "@components/AngleEditor.tsx";
-import ColorEditor from "@components/ColorEditor.tsx";
-import { RainbowDrawer, type ShapeRender } from "@components/RainbowDrawer.tsx";
-import Button from "@components/ui/Button.tsx";
-import FilterGroup from "@components/ui/FilterGroup.tsx";
+import AngleEditor from "@ui/organisms/AngleEditor";
+import ColorEditor from "@ui/organisms/ColorEditor";
+import { RainbowDrawer, type ShapeRender } from "@ui/molecules/RainbowDrawer";
+import Button from "@ui/atoms/Button";
+import FilterGroup from "@ui/molecules/FilterGroup";
 import { Angle } from "@lib/angle.ts";
 import { Color } from "@lib/color.ts";
 import styles from "@pages/RainbowGenerator.module.css";

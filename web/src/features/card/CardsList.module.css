@@ -52,7 +52,7 @@
 .modal-overlay {
 	position: fixed;
 	inset: 0;
-	background: var(--t-color-overlay));
+	background: var(--t-color-overlay);
 	display: flex;
 	align-items: center;
 	justify-content: center;

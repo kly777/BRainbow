@@ -1,5 +1,5 @@
 import { For } from "solid-js";
-import MarkdownRenderer from "@components/ui/Markdown.tsx";
+import MarkdownRenderer from "@ui/atoms/Markdown";
 import styles from "@features/conv/ConvDetail.module.css";
 
 interface QaPair {

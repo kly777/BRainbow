@@ -3,7 +3,7 @@
 import { useSearchParams } from "@solidjs/router";
 import { createSignal } from "solid-js";
 import { getErrorMessage } from "@apis/types/index.ts";
-import { showToast } from "@components/ui/toastStore.ts";
+import { showToast } from "@ui/organisms/toastStore.ts";
 import { tryAsync } from "@lib/result.ts";
 import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
 import type { Card, CreateCardRequest } from "@features/card/types.ts";

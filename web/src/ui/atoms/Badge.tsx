@@ -1,5 +1,5 @@
 import type { Component, JSX } from "solid-js";
-import styles from "@components/ui/Badge.module.css";
+import styles from "@ui/atoms/Badge.module.css";
 
 type BadgeVariant =
 	| "default"

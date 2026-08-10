@@ -1,5 +1,5 @@
 import { createEffect, createSignal, Show } from "solid-js";
-import Modal from "@components/ui/Modal.tsx";
+import Modal from "@ui/organisms/Modal";
 import { notifyError } from "@lib/notify.ts";
 import { tryAsync } from "@lib/result.ts";
 import { getTimeWindowsE } from "@features/task/timeWindowApi.ts";

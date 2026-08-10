@@ -3,9 +3,9 @@ import { type JSX, Show } from "solid-js";
 import styles from "./App.module.css";
 import AuthGuard from "@auth/AuthGuard.tsx";
 import AuthStatus from "@auth/AuthStatus.tsx";
-import CommandPalette from "@components/CommandPalette.tsx";
-import ConfirmModalContainer from "@components/ui/ConfirmModal.tsx";
-import ToastContainer from "@components/ui/Toast.tsx";
+import CommandPalette from "@ui/organisms/CommandPalette";
+import ConfirmModalContainer from "@ui/organisms/ConfirmModal";
+import ToastContainer from "@ui/organisms/Toast";
 import { RouteTitle } from "./routes.ts";
 
 export default function Layout(props: { children?: JSX.Element }) {

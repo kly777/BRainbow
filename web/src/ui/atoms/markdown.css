@@ -3,7 +3,7 @@
 		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
 		Arial, sans-serif;
 	line-height: var(--leading-normal);
-	color: var(--t-color-ink));
+	color: var(--t-color-ink);
 }
 
 .markdown-content h1,
@@ -16,18 +16,18 @@
 	margin-bottom: 0.5em;
 	font-weight: 600;
 	line-height: var(--leading-tight);
-	color: var(--t-color-ink));
+	color: var(--t-color-ink);
 }
 
 .markdown-content h1 {
 	font-size: 2em;
-	border-bottom: 2px solid var(--t-color-border));
+	border-bottom: 2px solid var(--t-color-border);
 	padding-bottom: 0.3em;
 }
 
 .markdown-content h2 {
 	font-size: 1.5em;
-	border-bottom: 1px solid var(--t-color-border));
+	border-bottom: 1px solid var(--t-color-border);
 	padding-bottom: 0.3em;
 }
 
@@ -45,7 +45,7 @@
 
 .markdown-content h6 {
 	font-size: 0.85em;
-	color: var(--t-color-ink-muted));
+	color: var(--t-color-ink-muted);
 }
 
 /* 段落和换行 */
@@ -61,7 +61,7 @@
 .markdown-content strong,
 .markdown-content b {
 	font-weight: 600;
-	color: var(--t-color-ink));
+	color: var(--t-color-ink);
 }
 
 .markdown-content em,
@@ -71,16 +71,16 @@
 
 .markdown-content del {
 	text-decoration: line-through;
-	color: var(--t-color-ink-muted));
+	color: var(--t-color-ink-muted);
 }
 
 /* 引用 */
 .markdown-content blockquote {
 	margin: 1em 0;
 	padding: 0.5em 1em;
-	border-left: 4px solid var(--t-color-accent));
-	background-color: var(--t-color-surface-raised));
-	color: var(--t-color-ink-muted));
+	border-left: 4px solid var(--t-color-accent);
+	background-color: var(--t-color-surface-raised);
+	color: var(--t-color-ink-muted);
 }
 
 .markdown-content blockquote p {
@@ -92,16 +92,16 @@
 	font-family: sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
 	font-size: 0.875em;
 	padding: 0.2em 0.4em;
-	background-color: var(--t-color-surface-raised));
+	background-color: var(--t-color-surface-raised);
 	border-radius: var(--radius-sm);
-	color: var(--t-color-ink-muted));
+	color: var(--t-color-ink-muted);
 }
 
 .markdown-content pre {
 	font-family: sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
 	font-size: 0.875em;
 	padding: 1em;
-	background-color: var(--t-color-surface-raised));
+	background-color: var(--t-color-surface-raised);
 	border-radius: var(--radius-md);
 	overflow-x: auto;
 	line-height: var(--leading-tight);
@@ -143,13 +143,13 @@
 .markdown-content hr {
 	height: 1px;
 	margin: 2em 0;
-	background-color: var(--t-color-border));
+	background-color: var(--t-color-border);
 	border: none;
 }
 
 /* 链接 */
 .markdown-content a {
-	color: var(--t-color-accent));
+	color: var(--t-color-accent);
 	text-decoration: none;
 	overflow-wrap: break-word;
 }
@@ -159,7 +159,7 @@
 }
 
 .markdown-content a:focus {
-	outline: 2px solid var(--t-color-accent));
+	outline: 2px solid var(--t-color-accent);
 	outline-offset: 0;
 }
 
@@ -181,18 +181,18 @@
 .markdown-content th,
 .markdown-content td {
 	padding: 0.75em;
-	border: 1px solid var(--t-color-border));
+	border: 1px solid var(--t-color-border);
 	text-align: left;
 }
 
 .markdown-content th {
-	background-color: var(--t-color-surface-raised));
+	background-color: var(--t-color-surface-raised);
 	font-weight: 600;
-	color: var(--t-color-ink));
+	color: var(--t-color-ink);
 }
 
 .markdown-content tr:nth-child(even) {
-	background-color: var(--t-color-surface-raised));
+	background-color: var(--t-color-surface-raised);
 }
 
 /* 内联模式 */

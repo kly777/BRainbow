@@ -25,6 +25,7 @@ export default defineConfig(({ command }) => ({
 	resolve: {
 		alias: {
 			"@": fileURLToPath(new URL("./src", import.meta.url)),
+			"@ui": fileURLToPath(new URL("./src/ui", import.meta.url)),
 			"@components": fileURLToPath(
 				new URL("./src/components", import.meta.url),
 			),

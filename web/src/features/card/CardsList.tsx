@@ -2,8 +2,8 @@
 
 import { useNavigate } from "@solidjs/router";
 import { onMount, Show } from "solid-js";
-import Button from "@components/ui/Button.tsx";
-import MarkdownRenderer from "@components/ui/Markdown.tsx";
+import Button from "@ui/atoms/Button";
+import MarkdownRenderer from "@ui/atoms/Markdown";
 import { tryAsync } from "@lib/result.ts";
 import { getCardsE, searchCardsE } from "@features/card/api.ts";
 import styles from "@features/card/CardsList.module.css";

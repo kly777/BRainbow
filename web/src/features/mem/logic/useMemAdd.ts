@@ -2,7 +2,7 @@
 
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createMemo, createSignal } from "solid-js";
-import { showToast } from "@components/ui/toastStore.ts";
+import { showToast } from "@ui/organisms/toastStore.ts";
 import { parseBatch, parseImportFile } from "@lib/delimited.ts";
 import { tryAsync, trySync } from "@lib/result.ts";
 import { tryOrNotify } from "@lib/safe-action.ts";

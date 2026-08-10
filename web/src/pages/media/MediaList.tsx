@@ -7,9 +7,9 @@ import {
 	Show,
 } from "solid-js";
 import { getErrorMessage, HttpError } from "@apis/types/index.ts";
-import { AsyncView } from "@components/ui/AsyncView.tsx";
-import Button from "@components/ui/Button.tsx";
-import FilterGroup from "@components/ui/FilterGroup.tsx";
+import { AsyncView } from "@ui/molecules/AsyncView";
+import Button from "@ui/atoms/Button";
+import FilterGroup from "@ui/molecules/FilterGroup";
 import {
 	deleteMediaE,
 	listMediaE,

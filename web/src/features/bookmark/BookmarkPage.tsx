@@ -1,7 +1,7 @@
 import { createEffect, createSignal, For, Show } from "solid-js";
-import Button from "@components/ui/Button.tsx";
-import Modal from "@components/ui/Modal.tsx";
-import SearchInput from "@components/ui/SearchInput.tsx";
+import Button from "@ui/atoms/Button";
+import Modal from "@ui/organisms/Modal";
+import SearchInput from "@ui/atoms/SearchInput";
 import { strParam, numParam, useUrlParams } from "@lib/useUrlParams.ts";
 import { tryAsync } from "@lib/result.ts";
 import { notifyError, notifySuccess } from "@lib/notify.ts";

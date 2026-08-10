@@ -1,6 +1,6 @@
 import { useParams, useSearchParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
-import MarkdownRenderer from "@components/ui/Markdown.tsx";
+import MarkdownRenderer from "@ui/atoms/Markdown";
 import { getErrorMessage } from "@apis/types/errors.ts";
 import { getConvConceptE } from "@features/conv/api.ts";
 import styles from "@features/conv/ConvDetail.module.css";

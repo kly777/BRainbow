@@ -5,7 +5,7 @@
 
 import { A } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
-import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
+import MarkdownEditor from "@ui/molecules/MarkdownEditor";
 import { useMemAdd } from "@features/mem/logic/useMemAdd.ts";
 import { useMemAi } from "@features/mem/logic/useMemAi.ts";
 import { AiGenerateView } from "@features/mem/ui/AiGenerateView.tsx";

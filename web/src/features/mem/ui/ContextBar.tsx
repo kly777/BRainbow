@@ -1,6 +1,7 @@
 // ── v2 上下文条：卡元数据 + 统计 + 编辑 ──
 
 import { Show } from "solid-js";
+import Button from "@ui/atoms/Button";
 import type { UseMemReview } from "@features/mem/logic/useMemReview.ts";
 import styles from "@features/mem/ui/ContextBar.module.css";
 
@@ -56,21 +57,17 @@ export default function ContextBar(props: ContextBarProps) {
 				<Show
 					when={m.editing()}
 					fallback={
-						<button type="button" class={styles.btnGhost} onClick={m.startEdit}>
+						<Button variant="ghost" size="sm" onClick={m.startEdit}>
 							编辑
-						</button>
+						</Button>
 					}
 				>
-					<button type="button" class={styles.btnPrimary} onClick={m.saveEdit}>
+					<Button variant="primary" size="sm" onClick={m.saveEdit}>
 						保存
-					</button>
-					<button
-						type="button"
-						class={styles.btnGhost}
-						onClick={() => m.setEditing(false)}
-					>
+					</Button>
+					<Button variant="ghost" size="sm" onClick={() => m.setEditing(false)}>
 						取消
-					</button>
+					</Button>
 				</Show>
 			</div>
 		</div>

@@ -2,8 +2,9 @@
 // 线索与答案分居卡片两面，点"显示答案"实体翻转。
 
 import { Show } from "solid-js";
-import MarkdownRenderer from "@components/ui/Markdown.tsx";
-import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
+import Button from "@ui/atoms/Button";
+import MarkdownRenderer from "@ui/atoms/Markdown";
+import MarkdownEditor from "@ui/molecules/MarkdownEditor";
 import { fmtInterval, fmtLocal } from "@lib/time.ts";
 import { useSpeech } from "@features/mem/logic/useSpeech.ts";
 import type { UseMemReview } from "@features/mem/logic/useMemReview.ts";
@@ -37,9 +38,9 @@ export default function ReviewCard(props: ReviewCardProps) {
 							还有 {m.upcoming()} 张卡在未来等待复习
 						</p>
 					</Show>
-					<button type="button" class={styles.primaryBtn} onClick={m.loadDue}>
-						再学一轮
-					</button>
+				<Button variant="primary" size="sm" onClick={m.loadDue}>
+					再学一轮
+				</Button>
 				</div>
 			</Show>
 
@@ -203,28 +204,20 @@ export default function ReviewCard(props: ReviewCardProps) {
 							>
 								‹
 							</button>
-							<button type="button" class={styles.ghostBtn} onClick={m.bury}>
+							<Button variant="ghost" size="sm" onClick={m.bury}>
 								跳过
-							</button>
-							<button
-								type="button"
-								class={styles.ghostBtn}
-								onClick={m.resumeSuspend}
-							>
+							</Button>
+							<Button variant="ghost" size="sm" onClick={m.resumeSuspend}>
 								挂起
-							</button>
+							</Button>
 							<Show when={m.showUndo()}>
-								<button type="button" class={styles.ghostBtn} onClick={m.undo}>
+								<Button variant="ghost" size="sm" onClick={m.undo}>
 									撤销
-								</button>
+								</Button>
 							</Show>
-							<button
-								type="button"
-								class={styles.primaryBtn}
-								onClick={() => m.setShowAnswer(true)}
-							>
+							<Button variant="primary" size="sm" onClick={() => m.setShowAnswer(true)}>
 								显示答案
-							</button>
+							</Button>
 							<button
 								type="button"
 								class={styles.navBtn}

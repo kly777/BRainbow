@@ -1,7 +1,7 @@
 // ── AI 设置面板 ──
 
 import { createSignal, Show } from "solid-js";
-import Modal from "@components/ui/Modal.tsx";
+import Modal from "@ui/organisms/Modal";
 import { callAi } from "@lib/ai.ts";
 import {
 	getAiSettings,

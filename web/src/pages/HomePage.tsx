@@ -1,7 +1,7 @@
 import { A, useNavigate } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 
-import { AsyncView } from "@components/ui/AsyncView.tsx";
+import { AsyncView } from "@ui/molecules/AsyncView";
 import { deleteCardE as apiDeleteCard, getCardsE } from "@features/card/api.ts";
 import type { CardData } from "@features/card/ui/Card.tsx";
 import CardsGrid from "@features/card/ui/CardsGrid.tsx";

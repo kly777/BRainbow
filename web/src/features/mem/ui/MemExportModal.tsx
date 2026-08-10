@@ -1,6 +1,6 @@
 import { createEffect, createSignal } from "solid-js";
-import TagSelector from "@components/TagSelector.tsx";
-import Modal from "@components/ui/Modal.tsx";
+import TagSelector from "@ui/molecules/TagSelector";
+import Modal from "@ui/organisms/Modal";
 import { notifyError } from "@lib/notify.ts";
 import { tryAsync } from "@lib/result.ts";
 import type { TagInfo } from "@features/mem/api.ts";

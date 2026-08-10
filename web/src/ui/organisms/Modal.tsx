@@ -1,6 +1,6 @@
 import { type Component, type JSX, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-import styles from "@components/ui/Modal.module.css";
+import styles from "@ui/organisms/Modal.module.css";
 
 interface ModalProps {
 	isOpen: boolean;

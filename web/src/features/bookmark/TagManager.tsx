@@ -2,8 +2,8 @@
  * 标签管理弹窗：列出所有标签（名称 + 使用数），支持全局删除。
  */
 import { createResource, For, Show } from "solid-js";
-import Button from "@components/ui/Button.tsx";
-import Modal from "@components/ui/Modal.tsx";
+import Button from "@ui/atoms/Button";
+import Modal from "@ui/organisms/Modal";
 import { tryAsync } from "@lib/result.ts";
 import { notifyError, notifySuccess } from "@lib/notify.ts";
 import { showConfirm } from "@lib/safe-action.ts";

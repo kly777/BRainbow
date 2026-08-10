@@ -2,7 +2,7 @@
 // 输入文本 → 生成卡片 → 勾选微调 → 导入（复用 useMemAdd 导入管线）
 
 import { createSignal, For, Show } from "solid-js";
-import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
+import MarkdownEditor from "@ui/molecules/MarkdownEditor";
 import {
 	ImportActions,
 	ImportResult,

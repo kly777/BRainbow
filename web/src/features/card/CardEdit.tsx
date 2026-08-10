@@ -7,10 +7,10 @@ import {
 	Show,
 } from "solid-js";
 import { getErrorMessage } from "@apis/types/index.ts";
-import { AsyncView } from "@components/ui/AsyncView.tsx";
-import Button from "@components/ui/Button.tsx";
-import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
-import MarkdownRenderer from "@components/ui/Markdown.tsx";
+import { AsyncView } from "@ui/molecules/AsyncView";
+import Button from "@ui/atoms/Button";
+import MarkdownEditor from "@ui/molecules/MarkdownEditor";
+import MarkdownRenderer from "@ui/atoms/Markdown";
 import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
 import { tryAsync } from "@lib/result.ts";
 import { deleteCardE, getCardE, updateCardE } from "@features/card/api.ts";

@@ -1,9 +1,9 @@
 import { useNavigate } from "@solidjs/router";
 import { type Component, createSignal, Show } from "solid-js";
 import { getErrorMessage } from "@apis/types/index.ts";
-import Button from "@components/ui/Button.tsx";
-import MarkdownEditor from "@components/ui/MarkdownEditor.tsx";
-import Toolbar from "@components/ui/Toolbar.tsx";
+import Button from "@ui/atoms/Button";
+import MarkdownEditor from "@ui/molecules/MarkdownEditor";
+import Toolbar from "@ui/molecules/Toolbar";
 import { tryAsync } from "@lib/result.ts";
 import { createCardE } from "@features/card/api.ts";
 import styles from "@features/card/CardAdd.module.css";

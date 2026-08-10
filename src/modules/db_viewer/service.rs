@@ -27,7 +27,7 @@ impl DbViewerQueryService {
         table_name: &str,
         limit: i64,
         offset: i64,
-    ) -> Result<(Vec<ColumnInfo>, Vec<Vec<serde_json::Value>>), ServiceError> {
+    ) -> Result<(Vec<ColumnInfo>, Vec<Vec<serde_json::Value>>, i64), ServiceError> {
         let repo = DBRepo::new(self.pool.clone());
         repo.get_table_data(table_name, limit, offset)
             .await
@@ -64,7 +64,7 @@ mod tests {
     #[tokio::test]
     async fn read_table() {
         let svc = setup().await;
-        let (header, rows) = svc.get_table_data("test_t", 10, 0).await.unwrap();
+        let (header, rows, _) = svc.get_table_data("test_t", 10, 0).await.unwrap();
         assert_eq!(header.len(), 2);
         assert_eq!(rows.len(), 1);
     }

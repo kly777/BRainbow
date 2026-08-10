@@ -16,20 +16,20 @@ impl DBRepo {
     }
 
     pub async fn get_table_names(&self) -> Result<Vec<String>, sqlx::Error> {
-        let query = "SELECT name FROM sqlite_master WHERE type='table'";
+        let query = "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name";
         let rows = sqlx::query_as::<_, TableName>(query)
             .fetch_all(&*self.pool)
             .await?;
         Ok(rows.iter().map(|r| r.name.clone()).collect())
     }
 
-    /// 返回 ColumnInfo + 数据行
+    /// 返回 ColumnInfo + 数据行 + 总行数
     pub async fn get_table_data(
         &self,
         table_name: &str,
         limit: i64,
         offset: i64,
-    ) -> Result<(Vec<ColumnInfo>, Vec<Vec<Value>>), sqlx::Error> {
+    ) -> Result<(Vec<ColumnInfo>, Vec<Vec<Value>>, i64), sqlx::Error> {
         // 先校验表名合法，SQLite 不支持参数化表名
         let safe_name = sanitize_table_name(table_name)?;
 
@@ -48,6 +48,14 @@ impl DBRepo {
                 col_type: r.try_get::<String, _>("type").unwrap_or_default(),
             })
             .collect();
+
+        // 总行数
+        let total: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+            "SELECT COUNT(*) FROM {}",
+            safe_name
+        )))
+        .fetch_one(&*self.pool)
+        .await?;
 
         // 查数据
         let rows = sqlx::query(
@@ -89,7 +97,7 @@ impl DBRepo {
             })
             .collect();
 
-        Ok((columns, data))
+        Ok((columns, data, total))
     }
 }
 
@@ -122,16 +130,18 @@ mod tests {
     #[tokio::test]
     async fn get_table_data() {
         let repo = setup().await;
-        let (header, rows) = repo.get_table_data("test_table", 10, 0).await.unwrap();
+        let (header, rows, total) = repo.get_table_data("test_table", 10, 0).await.unwrap();
         assert_eq!(header.len(), 2);
         assert_eq!(rows.len(), 2);
+        assert_eq!(total, 2);
     }
 
     #[tokio::test]
     async fn get_table_data_paginated() {
         let repo = setup().await;
-        let (_, rows) = repo.get_table_data("test_table", 1, 0).await.unwrap();
+        let (_, rows, total) = repo.get_table_data("test_table", 1, 1).await.unwrap();
         assert_eq!(rows.len(), 1);
+        assert_eq!(total, 2);
     }
 
     #[tokio::test]

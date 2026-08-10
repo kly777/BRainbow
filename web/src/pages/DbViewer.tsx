@@ -11,12 +11,18 @@ const DB: Component = () => {
 		const t = searchParams.table;
 		return typeof t === "string" ? t : "";
 	};
-	const setActiveTable = (name: string) =>
-		setSearchParams({ table: name || undefined });
+	const currentPage = () => {
+		const p = Number(searchParams.page);
+		return Number.isInteger(p) && p >= 1 ? p : 1;
+	};
 	const [columns, setColumns] = createSignal<ColumnInfo[]>([]);
 	const [rows, setRows] = createSignal<string[][]>([]);
+	const [total, setTotal] = createSignal(0);
 	const [loading, setLoading] = createSignal(false);
 	const [error, setError] = createSignal("");
+
+	const PAGE_SIZE = 50;
+	const totalPages = () => Math.max(1, Math.ceil(total() / PAGE_SIZE));
 
 	const loadTables = async () => {
 		setLoading(true);
@@ -29,21 +35,29 @@ const DB: Component = () => {
 		setLoading(false);
 	};
 
-	const loadTable = async (name: string) => {
-		setActiveTable(name);
+	const loadTable = async (name: string, targetPage = 1) => {
+		setSearchParams({ table: name || undefined, page: targetPage });
 		setLoading(true);
 		setError("");
-		const result = await tryAsync(() => getTableDataE(name));
+		const result = await tryAsync(() =>
+			getTableDataE(name, { page: targetPage, page_size: PAGE_SIZE }),
+		);
 		if (result.ok) {
 			setColumns([...result.value.header]);
 			setRows(result.value.rows.map((row) => row.map((v) => String(v ?? ""))));
+			setTotal(result.value.total);
 		} else {
 			setError(getErrorMessage(result.error));
 		}
 		setLoading(false);
 	};
 
-	onMount(() => loadTables());
+	onMount(() => {
+		loadTables();
+		if (activeTable()) {
+			loadTable(activeTable(), currentPage());
+		}
+	});
 
 	return (
 		<div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
@@ -193,6 +207,50 @@ const DB: Component = () => {
 									</For>
 								</tbody>
 							</table>
+						</div>
+						<div
+							style={{
+								display: "flex",
+								"align-items": "center",
+								gap: "0.75rem",
+								padding: "0.75rem 0",
+								"font-size": "0.8125rem",
+								color: "var(--t-color-ink-muted))",
+							}}
+						>
+							<span>
+								共 {total()} 行 · 第 {currentPage()} / {totalPages()} 页
+							</span>
+							<button
+								type="button"
+								disabled={currentPage() <= 1 || loading()}
+								onClick={() => loadTable(activeTable(), currentPage() - 1)}
+								style={{
+									padding: "4px 12px",
+									cursor: "pointer",
+									"border-radius": "0.375rem",
+									border: "1px solid var(--t-color-border))",
+									background: "var(--t-color-bg))",
+									color: "var(--t-color-ink))",
+								}}
+							>
+								上一页
+							</button>
+							<button
+								type="button"
+								disabled={currentPage() >= totalPages() || loading()}
+								onClick={() => loadTable(activeTable(), currentPage() + 1)}
+								style={{
+									padding: "4px 12px",
+									cursor: "pointer",
+									"border-radius": "0.375rem",
+									border: "1px solid var(--t-color-border))",
+									background: "var(--t-color-bg))",
+									color: "var(--t-color-ink))",
+								}}
+							>
+								下一页
+							</button>
 						</div>
 					</>
 				)}

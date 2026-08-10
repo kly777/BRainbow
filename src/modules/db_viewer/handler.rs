@@ -18,6 +18,7 @@ pub struct ColumnInfo {
 pub struct TableData {
     pub header: Vec<ColumnInfo>,
     pub rows: Vec<Vec<serde_json::Value>>,
+    pub total: i64,
 }
 
 pub async fn get_table_names(State(state): State<AppState>) -> impl IntoResponse {
@@ -33,6 +34,6 @@ pub async fn get_table_data(
         .db_viewer
         .get_table_data(&table_name, pagination.limit(), pagination.offset())
         .await
-        .map(|(header, rows)| TableData { header, rows });
+        .map(|(header, rows, total)| TableData { header, rows, total });
     error::ok_or(result, "获取表数据")
 }

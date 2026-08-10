@@ -30,8 +30,6 @@ export function useChatPage() {
 
 	// ── 当前树 ──
 	const [current, setCurrent] = createSignal<TreeDetail | null>(null);
-	/** 当前聚焦节点 id（分支的"当前所在位置"）；null = 树根 */
-	const [focusId, setFocusId] = createSignal<number | null>(null);
 
 	// ── 对话 ──
 	const [sending, setSending] = createSignal(false);
@@ -57,6 +55,16 @@ export function useChatPage() {
 		if (!id || !/^\d+$/.test(String(id))) return null;
 		return parseInt(String(id), 10);
 	};
+
+	/** 聚焦节点 id 由 URL 的 node 参数驱动（刷新/分享链接可恢复分支位置）；null = 树根 */
+	const nodeId = (): number | null => {
+		const id = params.node;
+		if (!id || !/^\d+$/.test(String(id))) return null;
+		return parseInt(String(id), 10);
+	};
+	const focusId = nodeId;
+	const setFocusParam = (id: number | null) =>
+		setParams({ node: id === null ? undefined : String(id) });
 
 	const nodes = () => current()?.nodes ?? [];
 	const childrenOf = (parentId: number | null) =>
@@ -88,17 +96,15 @@ export function useChatPage() {
 		setLoadingTrees(false);
 	};
 
-	const loadTree = async (id: number, focus: number | null = null) => {
+	const loadTree = async (id: number) => {
 		const result = await tryAsync(() => getTreeE(id));
 		if (!result.ok) return;
 		setCurrent(result.value);
-		// 聚焦：优先指定节点，否则树中最后一个节点（最新分支）
-		const target =
-			focus ??
-			(result.value.nodes.length > 0
-				? result.value.nodes[result.value.nodes.length - 1].id
-				: null);
-		setFocusId(target);
+		// 聚焦：URL 有 node 则跟随；否则树中最后一个节点（最新分支）
+		if (nodeId() === null && result.value.nodes.length > 0) {
+			const last = result.value.nodes[result.value.nodes.length - 1].id;
+			setFocusParam(last);
+		}
 	};
 
 	// ── 路由同步：tree 参数变化时加载 ──
@@ -143,7 +149,7 @@ export function useChatPage() {
 	const selectTree = (id: number) => setParams({ tree: String(id) });
 
 	/** 聚焦到某个节点（当前分支终点） */
-	const focus = (nodeId: number | null) => setFocusId(nodeId);
+	const focus = (id: number | null) => setFocusParam(id);
 
 	/** 切换分支：跳到该节点所在分支的末端（沿子链走到最深叶子），
 	 *  使 activePath 显示从根到分支末端的完整对话 */
@@ -156,7 +162,7 @@ export function useChatPage() {
 			cur = kids[kids.length - 1].id; // 取最新子节点（最后创建的）
 			guard++;
 		}
-		setFocusId(cur);
+		setFocusParam(cur);
 	};
 
 	/** 当前分支是否经过某节点（用于分支条高亮：focusId 回溯链上是否含 rootId） */
@@ -241,6 +247,9 @@ export function useChatPage() {
 			// 完成：重新拉取树（拿到真实节点 id 与结构）
 			setCurrent(null);
 			await loadTree(id);
+			// 聚焦到最新的 AI 回复节点
+			const nodes = current()?.nodes ?? [];
+			if (nodes.length > 0) setFocusParam(nodes[nodes.length - 1].id);
 		} catch (e) {
 			tryOrNotify(() => Promise.reject(e), "发送消息");
 			setInput(text);
@@ -262,7 +271,7 @@ export function useChatPage() {
 			return { ...prev, nodes: [...prev.nodes, result.node] };
 		});
 		setEditingNode(null);
-		setFocusId(result.node.id);
+		setFocusParam(result.node.id);
 	};
 
 	// ── 预设 ──
@@ -289,13 +298,12 @@ export function useChatPage() {
 		}, 300);
 	};
 
-	/** 搜索命中 → 打开树并定位节点 */
+	/** 搜索命中 → 打开树并定位节点（URL 驱动） */
 	const gotoHit = (hit: SearchHit) => {
-		setParams({ tree: String(hit.tree_id) });
-		if (hit.node_id !== null) {
-			// 需要等树加载后聚焦
-			void loadTree(hit.tree_id, hit.node_id);
-		}
+		setParams({
+			tree: String(hit.tree_id),
+			node: hit.node_id === null ? undefined : String(hit.node_id),
+		});
 		setSearchOpen(false);
 		setSearchQ("");
 		setSearchHits([]);

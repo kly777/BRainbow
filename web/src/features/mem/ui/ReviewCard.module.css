@@ -308,16 +308,21 @@
 	background: var(--t-color-surface-raised);
 }
 
+/* 底栏（actionRow / ratings）：所有屏幕贴底胶囊，窄屏仅调整宽度 */
+.action-row {
+	composes: bottom-bar from "../../../styles/base.module.css";
+}
+
+.ratings {
+	composes: bottom-bar from "../../../styles/base.module.css";
+	max-width: 640px;
+	min-width: 480px;
+}
+
 @media (width <= 600px) {
 	.ratings {
-		composes: bottom-bar from "../../../styles/base.module.css";
-	}
-
-	@media (width <= 600px) {
-		.ratings {
-			max-width: 100%;
-			min-width: 0;
-		}
+		max-width: 100%;
+		min-width: 0;
 	}
 
 	.rating-btn {

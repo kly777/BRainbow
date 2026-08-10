@@ -104,11 +104,17 @@ export default function ChatPage() {
 								<For each={c.activePath()}>
 									{(node) => <MessageRow c={c} node={node} />}
 								</For>
-								<Show when={c.sending()}>
-									<div class={`${styles.message} ${styles.assistant}`}>
-										<div class={styles.thinking}>AI 思考中…</div>
+							<Show when={c.sending() && c.streamingContent()}>
+								<div class={`${styles.message} ${styles.assistant} ${styles.streaming}`}>
+									<div class={styles.messageHead}>
+										<span class={styles.messageRole}>AI · 生成中…</span>
 									</div>
-								</Show>
+									<div class={styles.messageContent}>
+										{c.streamingContent()}
+										<span class={styles.streamCursor} />
+									</div>
+								</div>
+							</Show>
 							</div>
 							<div class={styles.inputBar}>
 								<textarea
@@ -198,10 +204,17 @@ function TreeListItem(props: {
 	onDelete: () => void;
 }) {
 	return (
-		<button
-			type="button"
+		<div
 			class={props.active ? styles.treeItemActive : styles.treeItem}
+			role="button"
+			tabindex={0}
 			onClick={props.onSelect}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					props.onSelect();
+				}
+			}}
 		>
 			<span class={styles.treeItemTitle}>{props.tree.title}</span>
 			<span class={styles.treeItemMeta}>{props.tree.node_count} 条</span>
@@ -216,7 +229,7 @@ function TreeListItem(props: {
 			>
 				✕
 			</button>
-		</button>
+		</div>
 	);
 }
 

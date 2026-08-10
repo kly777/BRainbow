@@ -2,10 +2,10 @@
 
 import { createEffect, createSignal } from "solid-js";
 import { useNavigate, useSearchParams } from "@solidjs/router";
+import { getToken } from "@auth/context.tsx";
 import { tryOrNotify } from "@lib/safe-action.ts";
 import { tryAsync } from "@lib/result.ts";
 import {
-	chatE,
 	createTreeE,
 	deleteTreeE,
 	getTreeE,
@@ -36,6 +36,8 @@ export function useChatPage() {
 	// ── 对话 ──
 	const [sending, setSending] = createSignal(false);
 	const [input, setInput] = createSignal("");
+	/** 流式输出中的 assistant 内容（sending 期间实时累积） */
+	const [streamingContent, setStreamingContent] = createSignal("");
 
 	// ── 预设 ──
 	const [presets, setPresets] = createSignal<PromptPreset[]>([]);
@@ -132,41 +134,83 @@ export function useChatPage() {
 	/** 聚焦到某个节点（分支切换） */
 	const focus = (nodeId: number | null) => setFocusId(nodeId);
 
-	/** 发送消息：在 focusId 节点下继续（assistant 节点 → 新 user；user 节点 → 直接回复） */
+	/** 发送消息：流式接收 AI 回复（SSE） */
 	const send = async () => {
 		const id = treeId();
 		const text = input().trim();
 		if (id === null || sending() || !text) return;
 		setSending(true);
 		const parent = focusId();
-		const result = await tryAsync(() => chatE(id, parent, text));
-		setSending(false);
-		if (!result.ok) {
-			tryOrNotify(() => Promise.reject(result.error), "发送消息");
+
+		const token = getToken();
+		if (!token) {
+			setSending(false);
+			tryOrNotify(() => Promise.reject(new Error("未登录")), "发送消息");
 			return;
 		}
-		setInput("");
-		// 追加节点
-		setCurrent((prev) => {
-			if (!prev) return prev;
-			return {
-				...prev,
-				nodes: [...prev.nodes, result.value.user, result.value.assistant],
-			};
-		});
-		setFocusId(result.value.assistant.id);
-		// 更新列表 node_count/updated_at
-		setTrees((prev) =>
-			prev.map((t) =>
-				t.id === id
-					? {
-							...t,
-							node_count: t.node_count + 2,
-							updated_at: new Date().toISOString(),
-						}
-					: t,
-			),
-		);
+
+		try {
+			const resp = await fetch(`/api/chat/trees/${id}/chat`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({ parent_id: parent, content: text }),
+			});
+			if (!resp.ok) {
+				throw new Error(`请求失败 (${resp.status})`);
+			}
+			if (!resp.body) throw new Error("浏览器不支持流式响应");
+
+			setInput("");
+			// 流式累积的 assistant 内容
+			let acc = "";
+			setStreamingContent("");
+			const reader = resp.body.getReader();
+			const decoder = new TextDecoder();
+
+			let buffer = "";
+			let done = false;
+			let errored = false;
+			while (!done) {
+				const { value, done: streamDone } = await reader.read();
+				if (streamDone) break;
+				buffer += decoder.decode(value, { stream: true });
+				const lines = buffer.split("\n");
+				buffer = lines.pop() ?? "";
+				for (const line of lines) {
+					const trimmed = line.trim();
+					if (!trimmed.startsWith("data:")) continue;
+					const data = trimmed.slice(5).trim();
+					if (data === "__DONE__") {
+						done = true;
+						break;
+					}
+					if (data.startsWith("__ERROR__:")) {
+						errored = true;
+						acc = data.slice(10);
+						break;
+					}
+					acc += data;
+					setStreamingContent(acc);
+				}
+			}
+
+			if (errored) {
+				throw new Error(acc || "AI 生成失败");
+			}
+
+			// 完成：重新拉取树（拿到真实节点 id 与结构）
+			setCurrent(null);
+			await loadTree(id);
+		} catch (e) {
+			tryOrNotify(() => Promise.reject(e), "发送消息");
+			setInput(text);
+		} finally {
+			setStreamingContent("");
+			setSending(false);
+		}
 	};
 
 	/** 编辑节点 → 修订版 */
@@ -226,6 +270,7 @@ export function useChatPage() {
 		current,
 		focusId,
 		sending,
+		streamingContent,
 		input,
 		setInput,
 		presets,

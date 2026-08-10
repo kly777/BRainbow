@@ -4,22 +4,18 @@ use sqlx::SqlitePool;
 use crate::error::ServiceError;
 
 use super::model::{
-    ChatResponse, CreateTreeRequest, NodeItem, PresetItem, ReviseRequest, ReviseResponse,
+    CreateTreeRequest, NodeItem, PresetItem, ReviseRequest, ReviseResponse,
     TreeDetail, TreeItem, UpdateTreeRequest,
 };
 
 #[derive(Clone)]
 pub struct ChatService {
     pool: SqlitePool,
-    ai: crate::modules::ai::service::AiService,
 }
 
 impl ChatService {
     pub fn new(pool: SqlitePool) -> Self {
-        Self {
-            pool: pool.clone(),
-            ai: crate::modules::ai::service::AiService::new(pool),
-        }
+        Self { pool }
     }
 
     fn row_to_tree(
@@ -249,13 +245,14 @@ impl ChatService {
 
     // ── 发送消息 + AI 回复 ──
 
-    pub async fn chat(
+    /// 流式对话准备：校验、插入 user 节点、组装消息链。
+    pub async fn prepare_chat(
         &self,
         user_id: i32,
         tree_id: i64,
         parent_id: Option<i64>,
         content: Option<String>,
-    ) -> Result<ChatResponse, ServiceError> {
+    ) -> Result<PreparedChat, ServiceError> {
         let tree: Option<(String, String)> = sqlx::query_as(
             "SELECT title, system_prompt FROM chat_tree WHERE id = ?1 AND user_id = ?2",
         )
@@ -305,32 +302,55 @@ impl ChatService {
                 }
             };
 
-        // 组装上下文：ai_parent_id 表示"AI 回复的父节点"（user 节点）
+        // 组装消息链（system + 祖先链）
         let chain = self.ancestor_chain(Some(user_node.id)).await?;
-        let assistant = match self.ask_llm(user_id, &system_prompt, &chain).await {
-            Ok(reply) => {
-                self.insert_node(tree_id, ai_parent_id, "assistant", &reply, None)
-                    .await?
-            }
-            Err(e) => {
-                // AI 失败：仅回滚本次新插入的 user 节点（修订重问场景不删除原有节点）
-                if let Some(new_id) = inserted_user_id {
-                    let _ = sqlx::query("DELETE FROM chat_node WHERE id = ?1")
-                        .bind(new_id)
-                        .execute(&self.pool)
-                        .await;
-                }
-                return Err(e);
-            }
-        };
+        let mut messages: Vec<crate::modules::ai::model::AiProxyMessage> = Vec::new();
+        if !system_prompt.trim().is_empty() {
+            messages.push(crate::modules::ai::model::AiProxyMessage {
+                role: "system".into(),
+                content: system_prompt.clone(),
+            });
+        }
+        for node in &chain {
+            messages.push(crate::modules::ai::model::AiProxyMessage {
+                role: node.role.clone(),
+                content: node.content.clone(),
+            });
+        }
 
+        Ok(PreparedChat {
+            tree_id,
+            ai_parent_id,
+            inserted_user_id,
+            messages,
+        })
+    }
+
+    /// 流式完成后落库 assistant 节点；失败回滚新插入的 user 节点
+    pub async fn finish_chat(
+        &self,
+        ctx: &PreparedChat,
+        reply: &str,
+    ) -> Result<NodeItem, ServiceError> {
+        let assistant = self
+            .insert_node(ctx.tree_id, ctx.ai_parent_id, "assistant", reply, None)
+            .await?;
         // 更新树的更新时间
         let _ = sqlx::query("UPDATE chat_tree SET updated_at = datetime('now') WHERE id = ?1")
-            .bind(tree_id)
+            .bind(ctx.tree_id)
             .execute(&self.pool)
             .await;
+        Ok(assistant)
+    }
 
-        Ok(ChatResponse { user: user_node, assistant })
+    /// AI 失败后的清理（回滚新插入的 user 节点）
+    pub async fn abort_chat(&self, ctx: &PreparedChat) {
+        if let Some(new_id) = ctx.inserted_user_id {
+            let _ = sqlx::query("DELETE FROM chat_node WHERE id = ?1")
+                .bind(new_id)
+                .execute(&self.pool)
+                .await;
+        }
     }
 
     /// 编辑节点 → 创建修订版（同父新节点，revised_from = 原节点）
@@ -463,31 +483,15 @@ impl ChatService {
         }
         Ok(())
     }
+}
 
-    // ── LLM 调用（统一走 AiService，读用户数据库配置） ──
-
-    async fn ask_llm(
-        &self,
-        user_id: i32,
-        system_prompt: &str,
-        chain: &[NodeItem],
-    ) -> Result<String, ServiceError> {
-        let mut messages: Vec<crate::modules::ai::model::AiProxyMessage> = Vec::new();
-        if !system_prompt.trim().is_empty() {
-            messages.push(crate::modules::ai::model::AiProxyMessage {
-                role: "system".into(),
-                content: system_prompt.to_string(),
-            });
-        }
-        for node in chain {
-            messages.push(crate::modules::ai::model::AiProxyMessage {
-                role: node.role.clone(),
-                content: node.content.clone(),
-            });
-        }
-        let (content, _model) = self.ai.chat(user_id, &messages, None, None).await?;
-        Ok(content)
-    }
+/// 流式对话的准备结果：prepare_chat 产出，finish_chat / abort_chat 消费
+#[derive(Clone)]
+pub struct PreparedChat {
+    pub tree_id: i64,
+    pub ai_parent_id: Option<i64>,
+    pub inserted_user_id: Option<i64>,
+    pub messages: Vec<crate::modules::ai::model::AiProxyMessage>,
 }
 
 #[cfg(test)]
@@ -566,13 +570,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn chat_without_llm_config_returns_error_and_rolls_back() {
+    async fn chat_prepare_abort_rolls_back_inserted_user() {
         let svc = setup().await;
         // 无 LLM 配置（from_env 返回 None）
         let tree = svc.create_tree(1, CreateTreeRequest { title: "t".into(), system_prompt: "".into() }).await.unwrap();
         let tid = tree.tree.id;
-        let result = svc.chat(1, tid, None, Some("hello".into())).await;
-        assert!(result.is_err());
+        // prepare 成功（插入了 user 节点），但无 AI 配置时 abort 应回滚
+        let ctx = svc.prepare_chat(1, tid, None, Some("hello".into())).await.unwrap();
+        assert_eq!(ctx.inserted_user_id, Some(ctx.ai_parent_id.unwrap()));
+        svc.abort_chat(&ctx).await;
+        let got = svc.get_tree(1, tid).await.unwrap().unwrap();
+        assert_eq!(got.nodes.len(), 0);
 
         // user 节点应被回滚
         let got = svc.get_tree(1, tid).await.unwrap().unwrap();

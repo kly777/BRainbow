@@ -102,14 +102,56 @@ pub async fn chat_handler(
     Path(id): Path<i64>,
     Json(req): Json<ChatRequest>,
 ) -> impl IntoResponse {
-    match state
-        .chat
-        .chat(claims.sub, id, req.parent_id, req.content)
-        .await
-    {
-        Ok(resp) => Json(resp).into_response(),
-        Err(e) => e.into_response(),
-    }
+    use axum::response::sse::{Event, KeepAlive, Sse};
+    use std::convert::Infallible;
+
+    let svc = state.chat.clone();
+    let ai = state.ai.clone();
+    let user_id = claims.sub;
+
+    // 准备：校验 + 插 user 节点 + 组装链（此时未调 AI）
+    let ctx = match svc.prepare_chat(user_id, id, req.parent_id, req.content).await {
+        Ok(ctx) => ctx,
+        Err(e) => return e.into_response(),
+    };
+
+    let (tx, rx) = tokio::sync::mpsc::channel::<String>(64);
+
+    // 后台任务：流式调 AI → 转发 token → 完成后落库
+    let svc2 = svc.clone();
+    let ai2 = ai.clone();
+    let ctx2 = ctx.clone();
+    let tx2 = tx.clone();
+    tokio::spawn(async move {
+        let result = ai2
+            .chat_stream(user_id, &ctx2.messages, None, None, Some(tx2))
+            .await;
+        match result {
+            Ok((full, _model, _)) => {
+                let _ = tx.send("__DONE__".to_string()).await;
+                let _ = svc2.finish_chat(&ctx2, &full).await;
+            }
+            Err(e) => {
+                let _ = tx.send(format!("__ERROR__:{e}")).await;
+                svc2.abort_chat(&ctx2).await;
+            }
+        }
+    });
+
+    // SSE 流：转发 token；__DONE__ / __ERROR__ 为结束标记
+    let stream = futures_util::stream::unfold(rx, |mut rx| async move {
+        let token = rx.recv().await?;
+        if token == "__DONE__" {
+            return Some((
+                Ok::<_, Infallible>(Event::default().data("__DONE__")),
+                rx,
+            ));
+        }
+        Some((Ok::<_, Infallible>(Event::default().data(token)), rx))
+    });
+
+    let body = Sse::new(stream).keep_alive(KeepAlive::default());
+    ([(axum::http::header::CACHE_CONTROL, "no-cache")], body).into_response()
 }
 
 pub async fn revise_node_handler(

@@ -124,6 +124,22 @@ impl AiService {
         temperature: Option<f32>,
         max_tokens: Option<i32>,
     ) -> Result<(String, String), ServiceError> {
+        let (content, model, _) = self
+            .chat_stream(user_id, messages, temperature, max_tokens, None)
+            .await?;
+        Ok((content, model))
+    }
+
+    /// 流式 LLM 调用：逐块把回复内容发送到 tx（若提供），返回完整内容。
+    /// 每个块是增量 token（前端直接拼接）；结束后返回完整文本。
+    pub async fn chat_stream(
+        &self,
+        user_id: i32,
+        messages: &[AiProxyMessage],
+        temperature: Option<f32>,
+        max_tokens: Option<i32>,
+        tx: Option<tokio::sync::mpsc::Sender<String>>,
+    ) -> Result<(String, String, bool), ServiceError> {
         let cfg = self.get_config(user_id).await?.ok_or_else(|| {
             ServiceError::InvalidInput("请先在 AI 设置中配置 API 地址与 Key".into())
         })?;
@@ -138,11 +154,13 @@ impl AiService {
             "messages": messages,
             "temperature": temperature.unwrap_or(0.7),
             "max_tokens": max_tokens.unwrap_or(2048),
+            "stream": tx.is_some(),
         });
 
-        // 简易重试：最多 2 次，间隔 1s
+        // 简易重试：最多 2 次，间隔 1s（流式重试会重复推送已发 token，仅非流式重试）
         let mut last_err = None;
-        for _attempt in 0..2 {
+        let attempts = if tx.is_some() { 1 } else { 2 };
+        for _attempt in 0..attempts {
             match self
                 .client
                 .post(&cfg.endpoint)
@@ -160,28 +178,86 @@ impl AiService {
                             "AI 请求失败 ({status}): {}",
                             text.chars().take(200).collect::<String>()
                         )));
-                        sleep(Duration::from_millis(1000)).await;
+                        if tx.is_none() {
+                            sleep(Duration::from_millis(1000)).await;
+                        }
                         continue;
                     }
-                    let data: serde_json::Value = resp.json().await.map_err(|e| {
-                        ServiceError::Internal(format!("AI 响应解析失败: {e}"))
-                    })?;
-                    let content = data
-                        .get("choices")
-                        .and_then(|c| c.get(0))
-                        .and_then(|c| c.get("message"))
-                        .and_then(|m| m.get("content"))
-                        .and_then(|c| c.as_str())
-                        .map(|s| s.trim().to_string())
-                        .filter(|s| !s.is_empty())
-                        .ok_or_else(|| {
-                            ServiceError::Internal("AI 响应缺少回复内容".into())
+
+                    if let Some(tx) = &tx {
+                        // 流式：逐行解析 SSE data
+                        let mut full = String::new();
+                        let mut stream = resp.bytes_stream();
+                        use futures_util::StreamExt;
+                        while let Some(chunk) = stream.next().await {
+                            let chunk = match chunk {
+                                Ok(c) => c,
+                                Err(e) => {
+                                    return Err(ServiceError::Internal(format!(
+                                        "AI 流读取失败: {e}"
+                                    )))
+                                }
+                            };
+                            let text = String::from_utf8_lossy(&chunk);
+                            for line in text.lines() {
+                                let line = line.trim();
+                                if !line.starts_with("data:") {
+                                    continue;
+                                }
+                                let data = line[5..].trim();
+                                if data == "[DONE]" {
+                                    continue;
+                                }
+                                let v: serde_json::Value = match serde_json::from_str(data) {
+                                    Ok(v) => v,
+                                    Err(_) => continue,
+                                };
+                                if let Some(delta) = v
+                                    .get("choices")
+                                    .and_then(|c| c.get(0))
+                                    .and_then(|c| c.get("delta"))
+                                    .and_then(|d| d.get("content"))
+                                    .and_then(|c| c.as_str())
+                                {
+                                    full.push_str(delta);
+                                    if tx.send(delta.to_string()).await.is_err() {
+                                        // 接收端关闭（客户端断开），停止推送但保留已收内容
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        let content = full.trim().to_string();
+                        if content.is_empty() {
+                            return Err(ServiceError::Internal(
+                                "AI 流式响应缺少回复内容".into(),
+                            ));
+                        }
+                        return Ok((content, cfg.model.clone(), true));
+                    } else {
+                        // 非流式
+                        let data: serde_json::Value = resp.json().await.map_err(|e| {
+                            ServiceError::Internal(format!("AI 响应解析失败: {e}"))
                         })?;
-                    return Ok((content, cfg.model.clone()));
+                        let content = data
+                            .get("choices")
+                            .and_then(|c| c.get(0))
+                            .and_then(|c| c.get("message"))
+                            .and_then(|m| m.get("content"))
+                            .and_then(|c| c.as_str())
+                            .map(|s| s.trim().to_string())
+                            .filter(|s| !s.is_empty())
+                            .ok_or_else(|| {
+                                ServiceError::Internal("AI 响应缺少回复内容".into())
+                            })?;
+                        return Ok((content, cfg.model.clone(), false));
+                    }
                 }
                 Err(e) => {
                     last_err = Some(ServiceError::Internal(format!("AI 请求失败: {e}")));
-                    sleep(Duration::from_millis(1000)).await;
+                    if tx.is_none() {
+                        sleep(Duration::from_millis(1000)).await;
+                    }
                 }
             }
         }

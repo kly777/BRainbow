@@ -52,12 +52,6 @@ pub struct ChatRequest {
     pub content: Option<String>,
 }
 
-#[derive(Serialize)]
-pub struct ChatResponse {
-    pub user: NodeItem,
-    pub assistant: NodeItem,
-}
-
 #[derive(Deserialize)]
 pub struct ReviseRequest {
     pub content: String,

@@ -48,7 +48,7 @@ export default defineConfig(({ command }) => ({
 			"/api": {
 				target: "http://localhost:3000",
 				changeOrigin: true,
-				timeout: 5000,
+				// SSE 流式响应需要长连接：不设 timeout，避免 AI 思考间隔被切断
 			},
 			"/uploads": {
 				target: "http://localhost:3000",

@@ -32,7 +32,7 @@ pub struct AiProxyRequest {
     pub max_tokens: Option<i32>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct AiProxyMessage {
     pub role: String,
     pub content: String,

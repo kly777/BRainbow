@@ -1,4 +1,4 @@
-import { getConvConceptE } from "@features/conv/api.ts";
+import { getConvConceptE } from "@entities/conv/api.ts";
 import styles from "@features/conv/ConvDetail.module.css";
 import { useBackHref } from "@features/conv/logic/useBackHref.ts";
 import ConvTopBar from "@features/conv/ui/ConvTopBar.tsx";

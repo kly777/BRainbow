@@ -1,7 +1,7 @@
 // ── AI 助记：生成、加载、连续忘记自动触发 ──
 
-import { getMnemonicE, setMnemonicE } from "@features/mem/api.ts";
-import type { MemItem } from "@features/mem/model.ts";
+import { getMnemonicE, setMnemonicE } from "@entities/mem/api.ts";
+import type { MemItem } from "@entities/mem/model.ts";
 import { getAiSettingsE } from "@shared/api/ai.ts";
 import { callAi } from "@shared/lib/ai.ts";
 import { fillPrompt } from "@shared/lib/ai-settings.ts";

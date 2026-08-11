@@ -5,7 +5,7 @@ import type {
 	Task,
 	TaskDetail,
 	UpdateTaskRequest,
-} from "@features/task/types.ts";
+} from "@entities/task/types.ts";
 import { CACHE, cachedRequest, tapInvalidate } from "@shared/api/cache.ts";
 import { patch, post, request } from "@shared/api/request.ts";
 

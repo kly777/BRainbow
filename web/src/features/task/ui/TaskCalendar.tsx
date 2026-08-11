@@ -1,5 +1,5 @@
-import { getCalendarEventsE } from "@features/task/api.ts";
-import type { CalendarEvent } from "@features/task/types.ts";
+import { getCalendarEventsE } from "@entities/task/api.ts";
+import type { CalendarEvent } from "@entities/task/types.ts";
 import styles from "@features/task/ui/TaskCalendar.module.css";
 import { notifyError } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";

@@ -13,7 +13,7 @@ import {
 	suspendMemE,
 	type TagInfo,
 	unsuspendMemE,
-} from "@features/mem/api.ts";
+} from "@entities/mem/api.ts";
 import type {
 	PageMeta,
 	TagMode,

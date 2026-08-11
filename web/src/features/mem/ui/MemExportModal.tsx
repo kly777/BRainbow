@@ -1,5 +1,5 @@
-import type { TagInfo } from "@features/mem/api.ts";
-import { downloadExportCsv, listTagsE } from "@features/mem/api.ts";
+import type { TagInfo } from "@entities/mem/api.ts";
+import { downloadExportCsv, listTagsE } from "@entities/mem/api.ts";
 import { notifyError } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import TagSelector from "@shared/ui/molecules/TagSelector";

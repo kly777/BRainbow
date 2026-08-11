@@ -5,7 +5,7 @@ import {
 	deletePresetE,
 	type PromptPreset,
 	updatePresetE,
-} from "@features/chat/api.ts";
+} from "@entities/chat/api.ts";
 import styles from "@features/chat/ChatPrompts.module.css";
 import { tryOrNotify } from "@shared/lib/safe-action.ts";
 import { createSignal, For, onMount, Show } from "solid-js";
@@ -21,7 +21,7 @@ export default function ChatPromptsPage() {
 	onMount(async () => {
 		const r = await import("@shared/lib/result.ts").then((m) =>
 			m.tryAsync(() =>
-				import("@features/chat/api.ts").then((a) => a.listPresetsE()),
+				import("@entities/chat/api.ts").then((a) => a.listPresetsE()),
 			),
 		);
 		if (r.ok) setPresets(r.value);
@@ -43,7 +43,7 @@ export default function ChatPromptsPage() {
 		setContent("");
 		const r = await import("@shared/lib/result.ts").then((m) =>
 			m.tryAsync(() =>
-				import("@features/chat/api.ts").then((a) => a.listPresetsE()),
+				import("@entities/chat/api.ts").then((a) => a.listPresetsE()),
 			),
 		);
 		if (r.ok) setPresets(r.value);

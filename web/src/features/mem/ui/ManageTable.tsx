@@ -1,6 +1,6 @@
 // ── v2 管理表格：档案清单 ──
 
-import type { MemItem, TagInfo } from "@features/mem/api.ts";
+import type { MemItem, TagInfo } from "@entities/mem/api.ts";
 import styles from "@features/mem/ui/ManageTable.module.css";
 import { fmtLocal, fmtRelative } from "@shared/lib/time.ts";
 import Badge from "@shared/ui/atoms/Badge";

@@ -352,7 +352,7 @@ export const importJsonE = (
 
 export const uploadImage = async (file: File): Promise<string | null> => {
 	const result = await tryAsync(async () => {
-		const { uploadMedia } = await import("@features/mem/mediaApi.ts");
+		const { uploadMedia } = await import("@entities/media/api.ts");
 		const item = await uploadMedia(file);
 		return item.url;
 	});

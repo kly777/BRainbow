@@ -1,4 +1,4 @@
-import type { Task } from "@features/task/types.ts";
+import type { Task } from "@entities/task/types.ts";
 import EditTaskModal from "@features/task/ui/EditTaskModal.tsx";
 import TaskItem from "@features/task/ui/TaskItem.tsx";
 import styles from "@features/task/ui/TaskList.module.css";

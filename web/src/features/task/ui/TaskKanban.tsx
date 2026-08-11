@@ -1,4 +1,4 @@
-import type { Task } from "@features/task/types.ts";
+import type { Task } from "@entities/task/types.ts";
 import styles from "@features/task/ui/TaskKanban.module.css";
 import { useTasks } from "@features/task/ui/TaskProvider.tsx";
 import { createMemo, For, Show } from "solid-js";

@@ -1,6 +1,6 @@
 // ── 卡片列表页面（薄壳视图层）──
 
-import { getCardsE, searchCardsE } from "@features/card/api.ts";
+import { getCardsE, searchCardsE } from "@entities/card/api.ts";
 import styles from "@features/card/CardsList.module.css";
 import { useCardsList } from "@features/card/logic/useCardsList.ts";
 import CardsGrid from "@features/card/ui/CardsGrid.tsx";

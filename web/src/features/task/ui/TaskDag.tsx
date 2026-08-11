@@ -1,5 +1,5 @@
-import { getAllTasksE, getDagE } from "@features/task/api.ts";
-import type { Task } from "@features/task/types.ts";
+import { getAllTasksE, getDagE } from "@entities/task/api.ts";
+import type { Task } from "@entities/task/types.ts";
 import { layout } from "@features/task/ui/dag-layout.ts";
 import {
 	calcAutoOffset,

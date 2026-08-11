@@ -6,7 +6,7 @@ import type {
 	ImportResult,
 	PaginatedBookmarks,
 	UpdateBookmarkRequest,
-} from "@features/bookmark/types.ts";
+} from "@entities/bookmark/types.ts";
 import {
 	CACHE,
 	cachedRequest,

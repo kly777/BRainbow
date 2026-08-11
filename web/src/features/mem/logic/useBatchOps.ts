@@ -7,7 +7,7 @@ import {
 	batchRemoveTagFromMemsE,
 	batchResetMemE,
 	type TagInfo,
-} from "@features/mem/api.ts";
+} from "@entities/mem/api.ts";
 import { notifyError } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import { showConfirm } from "@shared/lib/safe-action.ts";

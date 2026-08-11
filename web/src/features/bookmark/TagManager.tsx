@@ -5,9 +5,9 @@
 import {
 	deleteBookmarkTagE,
 	searchBookmarkTagsE,
-} from "@features/bookmark/api.ts";
+} from "@entities/bookmark/api.ts";
+import type { BookmarkTagWithCount } from "@entities/bookmark/types.ts";
 import styles from "@features/bookmark/TagManager.module.css";
-import type { BookmarkTagWithCount } from "@features/bookmark/types.ts";
 import { notifyError, notifySuccess } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import { showConfirm } from "@shared/lib/safe-action.ts";

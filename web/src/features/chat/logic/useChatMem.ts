@@ -11,8 +11,8 @@ import {
 	getTreeE,
 	listTreesByKindE,
 	type TreeDetail,
-} from "@features/chat/api.ts";
-import { importJsonE } from "@features/mem/api.ts";
+} from "@entities/chat/api.ts";
+import { importJsonE } from "@entities/mem/api.ts";
 import {
 	type AiCard,
 	countKnowledgePoints,

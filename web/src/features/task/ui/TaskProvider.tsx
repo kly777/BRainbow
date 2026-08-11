@@ -5,8 +5,8 @@ import {
 	getTaskStatsE,
 	getTasksE,
 	searchTasksE,
-} from "@features/task/api.ts";
-import type { CreateTaskRequest, Task } from "@features/task/types.ts";
+} from "@entities/task/api.ts";
+import type { CreateTaskRequest, Task } from "@entities/task/types.ts";
 import {
 	fetchTasksByFilter,
 	makeTemp,

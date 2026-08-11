@@ -2,8 +2,8 @@ import {
 	addTaskDependencyE,
 	getTaskDetailE,
 	removeTaskDependencyE,
-} from "@features/task/api.ts";
-import type { Task } from "@features/task/types.ts";
+} from "@entities/task/api.ts";
+import type { Task } from "@entities/task/types.ts";
 import styles from "@features/task/ui/EditTaskModal.module.css";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { notifyError } from "@shared/lib/notify.ts";

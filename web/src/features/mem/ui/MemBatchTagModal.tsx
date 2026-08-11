@@ -1,4 +1,4 @@
-import type { TagInfo } from "@features/mem/api.ts";
+import type { TagInfo } from "@entities/mem/api.ts";
 import TagSelector from "@shared/ui/molecules/TagSelector";
 import Modal from "@shared/ui/organisms/Modal";
 

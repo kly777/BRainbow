@@ -1,4 +1,4 @@
-import { uploadMedia } from "@features/mem/mediaApi.ts";
+import { uploadMedia } from "@entities/media/api.ts";
 import MarkdownRenderer from "@shared/ui/atoms/Markdown";
 import styles from "@shared/ui/molecules/markdown-editor.module.css";
 import { createSignal, Show } from "solid-js";

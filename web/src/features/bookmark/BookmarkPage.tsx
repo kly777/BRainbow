@@ -6,12 +6,12 @@ import {
 	searchBookmarksE,
 	setBookmarkTagsE,
 	updateBookmarkE,
-} from "@features/bookmark/api.ts";
+} from "@entities/bookmark/api.ts";
+import type { Bookmark } from "@entities/bookmark/types.ts";
 import styles from "@features/bookmark/BookmarkPage.module.css";
 import Favicon from "@features/bookmark/Favicon.tsx";
 import TagInput from "@features/bookmark/TagInput.tsx";
 import TagManager from "@features/bookmark/TagManager.tsx";
-import type { Bookmark } from "@features/bookmark/types.ts";
 import { notifyError, notifySuccess } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import { showConfirm } from "@shared/lib/safe-action.ts";

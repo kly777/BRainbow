@@ -1,5 +1,5 @@
+import type { DagEdge, DagNode } from "@entities/task/types.ts";
 import { describe, expect, it } from "vitest";
-import type { DagEdge, DagNode } from "../types.ts";
 import { layout } from "./dag-layout.ts";
 
 describe("layout", () => {

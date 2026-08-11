@@ -1,6 +1,6 @@
-import { createCardE } from "@features/card/api.ts";
+import { createCardE } from "@entities/card/api.ts";
+import type { CreateCardRequest } from "@entities/card/types.ts";
 import styles from "@features/card/CardAdd.module.css";
-import type { CreateCardRequest } from "@features/card/types.ts";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import Button from "@shared/ui/atoms/Button";

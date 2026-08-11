@@ -1,6 +1,6 @@
-import { deleteCardE, getCardE, updateCardE } from "@features/card/api.ts";
+import { deleteCardE, getCardE, updateCardE } from "@entities/card/api.ts";
+import type { UpdateCardRequest } from "@entities/card/types.ts";
 import styles from "@features/card/CardEdit.module.css";
-import type { UpdateCardRequest } from "@features/card/types.ts";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";

@@ -1,6 +1,6 @@
 // ── 对话页：AI 多轮对话（树状分支 / 修订 / 搜索 / 预设提示词） ──
 
-import type { ChatNode, ChatTree } from "@features/chat/api.ts";
+import type { ChatNode, ChatTree } from "@entities/chat/api.ts";
 import styles from "@features/chat/ChatPage.module.css";
 import { useChatPage } from "@features/chat/logic/useChatPage.ts";
 import MarkdownRenderer from "@shared/ui/atoms/Markdown";
@@ -261,7 +261,7 @@ function TreeHeader(props: {
 		const ok = await import("@shared/lib/safe-action.ts").then((m) =>
 			m.tryOrNotify(
 				() =>
-					import("@features/chat/api.ts").then((a) =>
+					import("@entities/chat/api.ts").then((a) =>
 						a.updateTreeE(props.tree.id, {
 							system_prompt: promptText(),
 							title: titleText(),

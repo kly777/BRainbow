@@ -1,4 +1,4 @@
-import { getConvDetailE } from "@features/conv/api.ts";
+import { getConvDetailE } from "@entities/conv/api.ts";
 import styles from "@features/conv/ConvDetail.module.css";
 import { typeLabel } from "@features/conv/logic/constants.ts";
 import { useBackHref } from "@features/conv/logic/useBackHref.ts";

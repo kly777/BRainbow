@@ -2,7 +2,7 @@ import {
 	type ArticleSummary,
 	listArticles,
 	uploadArticle,
-} from "@features/reading/api.ts";
+} from "@entities/reading/api.ts";
 import styles from "@features/reading/ReadingList.module.css";
 import { getErrorMessage } from "@shared/api/types/errors.ts";
 import { notifyError } from "@shared/lib/notify.ts";

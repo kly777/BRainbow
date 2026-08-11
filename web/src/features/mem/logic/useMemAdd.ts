@@ -1,6 +1,6 @@
 // ── 记忆添加模块的核心业务逻辑 ──
 
-import { importJsonE } from "@features/mem/api.ts";
+import { importJsonE } from "@entities/mem/api.ts";
 import { parseBatch, parseImportFile } from "@shared/lib/delimited.ts";
 import { tryAsync, trySync } from "@shared/lib/result.ts";
 import { tryOrNotify } from "@shared/lib/safe-action.ts";
@@ -60,7 +60,7 @@ export function useMemAdd() {
 	const handleCreate = async () => {
 		if (!cue().trim() || !target().trim()) return;
 		setCreating(true);
-		const { createMemE } = await import("@features/mem/api.ts");
+		const { createMemE } = await import("@entities/mem/api.ts");
 		const ok = await tryOrNotify(
 			() => createMemE(cue().trim(), target().trim()),
 			"创建记忆",

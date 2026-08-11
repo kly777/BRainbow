@@ -2,7 +2,7 @@ import type {
 	Card,
 	CreateCardRequest,
 	UpdateCardRequest,
-} from "@features/card/types.ts";
+} from "@entities/card/types.ts";
 import { CACHE, cachedRequest, tapInvalidate } from "@shared/api/cache.ts";
 import { del, post, request } from "@shared/api/request.ts";
 

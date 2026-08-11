@@ -1,4 +1,4 @@
-import { type ConvHit, searchConvE } from "@features/conv/api.ts";
+import { type ConvHit, searchConvE } from "@entities/conv/api.ts";
 import styles from "@features/conv/ConvSearch.module.css";
 import { getErrorMessage } from "@shared/api/types/errors.ts";
 import { strParam, useUrlParams } from "@shared/lib/useUrlParams.ts";

@@ -5,8 +5,8 @@ import {
 	deleteCardE,
 	getCardsE,
 	searchCardsE,
-} from "@features/card/api.ts";
-import type { Card, CreateCardRequest } from "@features/card/types.ts";
+} from "@entities/card/api.ts";
+import type { Card, CreateCardRequest } from "@entities/card/types.ts";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";

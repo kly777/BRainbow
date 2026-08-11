@@ -1,12 +1,12 @@
 import {
 	createTimeWindowE,
 	deleteTimeWindowE,
-} from "@features/task/timeWindowApi.ts";
+} from "@entities/task/timeWindowApi.ts";
 import type {
 	CreateTimeWindowRequest,
 	Task,
 	TimeWindow,
-} from "@features/task/types.ts";
+} from "@entities/task/types.ts";
 import styles from "@features/task/ui/EditTaskModal.module.css";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { notifyError } from "@shared/lib/notify.ts";

@@ -1,4 +1,4 @@
-import type { Task } from "@features/task/types.ts";
+import type { Task } from "@entities/task/types.ts";
 import styles from "@features/task/ui/EditTaskModal.module.css";
 import { For } from "solid-js";
 

@@ -1,4 +1,4 @@
-import { deleteCardE, getCardE } from "@features/card/api.ts";
+import { deleteCardE, getCardE } from "@entities/card/api.ts";
 import styles from "@features/card/CardDetail.module.css";
 import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";
 import Button from "@shared/ui/atoms/Button";

@@ -33,7 +33,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Tasks",
 		desc: "任务管理",
 		nav: true,
-		component: lazy(() => import("@features/task/TaskManager.tsx")),
+		component: lazy(() => import("@pages/task/TaskManager.tsx")),
 	},
 	{
 		path: "/o",
@@ -49,7 +49,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Cards",
 		desc: "知识卡片浏览",
 		nav: true,
-		component: lazy(() => import("@features/card/CardsList.tsx")),
+		component: lazy(() => import("@pages/card/CardsList.tsx")),
 	},
 	{
 		path: "/color",
@@ -65,21 +65,21 @@ export const ROUTES: RouteConfig[] = [
 		title: "New Card",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("@features/card/CardAdd.tsx")),
+		component: lazy(() => import("@pages/card/CardAdd.tsx")),
 	},
 	{
 		path: "/c/:id",
 		label: "卡片详情",
 		title: "Card",
 		desc: "",
-		component: lazy(() => import("@features/card/CardDetail.tsx")),
+		component: lazy(() => import("@pages/card/CardDetail.tsx")),
 	},
 	{
 		path: "/c/edit/:id",
 		label: "编辑卡片",
 		title: "Edit Card",
 		desc: "",
-		component: lazy(() => import("@features/card/CardEdit.tsx")),
+		component: lazy(() => import("@pages/card/CardEdit.tsx")),
 	},
 	{
 		path: "/i",
@@ -119,7 +119,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Reading",
 		desc: "英语阅读与单词管理",
 		nav: true,
-		component: lazy(() => import("@features/reading/ReadingList.tsx")),
+		component: lazy(() => import("@pages/reading/ReadingList.tsx")),
 	},
 	{
 		path: "/reading/unknown",
@@ -127,7 +127,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Unknown Words",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("@features/reading/ReadingUnknown.tsx")),
+		component: lazy(() => import("@pages/reading/ReadingUnknown.tsx")),
 	},
 	{
 		path: "/bookmark",
@@ -135,7 +135,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Bookmarks",
 		desc: "网页书签管理",
 		nav: true,
-		component: lazy(() => import("@features/bookmark/BookmarkPage.tsx")),
+		component: lazy(() => import("@pages/bookmark/BookmarkPage.tsx")),
 	},
 	{
 		path: "/reading/:id",
@@ -143,7 +143,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Reading",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("@features/reading/ReadingDetail.tsx")),
+		component: lazy(() => import("@pages/reading/ReadingDetail.tsx")),
 	},
 	{
 		path: "/m",
@@ -151,7 +151,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Memory",
 		desc: "间隔重复记忆系统",
 		nav: true,
-		component: lazy(() => import("@features/mem/MemPage.tsx")),
+		component: lazy(() => import("@pages/mem/MemPage.tsx")),
 	},
 	{
 		path: "/m/add",
@@ -159,7 +159,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "New Mem",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("@features/mem/MemAdd.tsx")),
+		component: lazy(() => import("@pages/mem/MemAdd.tsx")),
 	},
 	{
 		path: "/m/manage",
@@ -167,7 +167,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Manage",
 		desc: "",
 		nav: false,
-		component: lazy(() => import("@features/mem/MemManage.tsx")),
+		component: lazy(() => import("@pages/mem/MemManage.tsx")),
 	},
 	{
 		path: "/conv",
@@ -175,7 +175,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Conversations",
 		desc: "搜索 AI 对话历史",
 		nav: true,
-		component: lazy(() => import("@features/conv/ConvSearch.tsx")),
+		component: lazy(() => import("@pages/conv/ConvSearch.tsx")),
 	},
 	{
 		path: "/chat",
@@ -183,7 +183,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "AI Chat",
 		desc: "多轮对话，树状分支，修改上下文",
 		nav: true,
-		component: lazy(() => import("@features/chat/ChatPage.tsx")),
+		component: lazy(() => import("@pages/chat/ChatPage.tsx")),
 	},
 	{
 		path: "/chat/prompts",
@@ -191,7 +191,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Prompts",
 		desc: "管理自定义提示词预设",
 		nav: true,
-		component: lazy(() => import("@features/chat/ChatPromptsPage.tsx")),
+		component: lazy(() => import("@pages/chat/ChatPromptsPage.tsx")),
 	},
 	{
 		path: "/chat/mem",
@@ -199,7 +199,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Mem Cards",
 		desc: "对话式生成记忆卡片",
 		nav: true,
-		component: lazy(() => import("@features/chat/ChatMemPage.tsx")),
+		component: lazy(() => import("@pages/chat/ChatMemPage.tsx")),
 	},
 	{
 		path: "/key",
@@ -207,28 +207,28 @@ export const ROUTES: RouteConfig[] = [
 		title: "API Key",
 		desc: "生成 API key（测试认证）",
 		nav: true,
-		component: lazy(() => import("@features/key/KeyPage.tsx")),
+		component: lazy(() => import("@pages/key/KeyPage.tsx")),
 	},
 	{
 		path: "/conv/qa/:id",
 		label: "对话详情",
 		title: "Conversation",
 		desc: "",
-		component: lazy(() => import("@features/conv/ConvQa.tsx")),
+		component: lazy(() => import("@pages/conv/ConvQa.tsx")),
 	},
 	{
 		path: "/conv/concept/:id",
 		label: "概念详情",
 		title: "Concept",
 		desc: "",
-		component: lazy(() => import("@features/conv/ConvConcept.tsx")),
+		component: lazy(() => import("@pages/conv/ConvConcept.tsx")),
 	},
 	{
 		path: "/conv/:id",
 		label: "对话详情 (旧)",
 		title: "Conversation",
 		desc: "",
-		component: lazy(() => import("@features/conv/ConvDetail.tsx")),
+		component: lazy(() => import("@pages/conv/ConvDetail.tsx")),
 	},
 ];
 

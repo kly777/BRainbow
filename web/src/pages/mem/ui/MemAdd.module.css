@@ -176,11 +176,11 @@
 }
 
 .actions {
-	composes: actions from "./ui/ImportParts.module.css";
+	composes: actions from "./ImportParts.module.css";
 }
 
 .input-card {
-	composes: input-card from "./ui/ImportParts.module.css";
+	composes: input-card from "./ImportParts.module.css";
 }
 
 .file-btn {
@@ -211,7 +211,7 @@
 }
 
 .import-errors {
-	composes: import-errors from "./ui/ImportParts.module.css";
+	composes: import-errors from "./ImportParts.module.css";
 }
 
 .preview-count {
@@ -222,7 +222,7 @@
 }
 
 .stack {
-	composes: stack from "./ui/ImportParts.module.css";
+	composes: stack from "./ImportParts.module.css";
 }
 
 @media (width <= 600px) {

@@ -1,10 +1,10 @@
 // ── v2 管理表格：档案清单 ──
 
 import type { MemItem, TagInfo } from "@entities/mem";
-import styles from "@pages/mem/ui/ManageTable.module.css";
 import { fmtLocal, fmtRelative } from "@shared/lib";
 import { Badge } from "@shared/ui";
 import { For, Show } from "solid-js";
+import styles from "./ManageTable.module.css";
 
 type SortField = "cue.created_at" | "difficulty" | "due_at" | "state";
 type SortDir = "asc" | "desc";

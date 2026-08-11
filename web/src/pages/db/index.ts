@@ -1,1 +1,1 @@
-export { default as DbViewer } from "./DbViewer.tsx";
+export { default as DbViewer } from "./ui/DbViewer.tsx";

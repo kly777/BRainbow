@@ -1,5 +1,3 @@
-import { createOntoE, deleteOntoE, getOntosE } from "@pages/ontology/api.ts";
-import styles from "@pages/ontology/OntologyList.module.css";
 import { getErrorMessage } from "@shared/api";
 import {
 	notifyError,
@@ -17,6 +15,8 @@ import {
 	For,
 	Show,
 } from "solid-js";
+import { createOntoE, deleteOntoE, getOntosE } from "../api";
+import styles from "./OntologyList.module.css";
 
 const OntologyListPage: Component = () => {
 	const [ontologies, { mutate, refetch }] = createResource(async () => {

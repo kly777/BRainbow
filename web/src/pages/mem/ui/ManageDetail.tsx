@@ -3,10 +3,10 @@
 
 import type { MemItem, TagInfo } from "@entities/mem";
 import { MarkdownEditor } from "@features/markdown-editor";
-import styles from "@pages/mem/ui/ManageDetail.module.css";
 import { fmtLocal } from "@shared/lib";
 import { Button, Markdown as MarkdownRenderer } from "@shared/ui";
 import { Show } from "solid-js";
+import styles from "./ManageDetail.module.css";
 import TagSelector from "./TagSelector.tsx";
 
 interface Props {

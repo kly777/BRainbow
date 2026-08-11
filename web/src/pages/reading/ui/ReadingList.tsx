@@ -1,4 +1,3 @@
-import styles from "@pages/reading/ReadingList.module.css";
 import {
 	type ArticleSummary,
 	getErrorMessage,
@@ -8,6 +7,7 @@ import {
 import { notifyError, tryAsync } from "@shared/lib";
 import { A } from "@solidjs/router";
 import { createResource, createSignal, For, Show } from "solid-js";
+import styles from "./ReadingList.module.css";
 
 export default function ReadingList() {
 	const [articles, { refetch }] = createResource(listArticles);

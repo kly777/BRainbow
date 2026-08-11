@@ -1,10 +1,10 @@
 // ── 阅读详情页面（薄壳视图层）──
 
-import { useReadingDetail } from "@pages/reading/model/useReadingDetail.ts";
-import styles from "@pages/reading/ReadingDetail.module.css";
 import { getErrorMessage } from "@shared/api";
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
+import { useReadingDetail } from "../model/useReadingDetail.ts";
+import styles from "./ReadingDetail.module.css";
 
 function splitSentences(text: string): string[] {
 	return text.split(/(?<=[.!?])\s+/);

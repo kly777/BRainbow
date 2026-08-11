@@ -1,7 +1,7 @@
-import styles from "@pages/reading/ReadingUnknown.module.css";
 import { getErrorMessage, listUnknownWords, markWord } from "@shared/api";
 import { A } from "@solidjs/router";
 import { createResource, For, Show } from "solid-js";
+import styles from "./ReadingUnknown.module.css";
 
 export default function ReadingUnknown() {
 	const [data, { refetch }] = createResource(listUnknownWords);

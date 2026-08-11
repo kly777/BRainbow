@@ -1,10 +1,10 @@
-import styles from "@pages/task/TaskManager.module.css";
-import TaskCalendar from "@pages/task/ui/TaskCalendar.tsx";
-import TaskDag from "@pages/task/ui/TaskDag.tsx";
-import TaskKanban from "@pages/task/ui/TaskKanban.tsx";
 import { enumParam, strParam, useUrlParams } from "@shared/lib";
 import { TaskList, TaskProvider, useTasks } from "@widgets/task-manager";
 import { createSignal, Show } from "solid-js";
+import TaskCalendar from "./TaskCalendar.tsx";
+import TaskDag from "./TaskDag.tsx";
+import TaskKanban from "./TaskKanban.tsx";
+import styles from "./TaskManager.module.css";
 
 function Toolbar(props: {
 	viewMode: "list" | "kanban";

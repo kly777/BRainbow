@@ -1,6 +1,5 @@
 // ── 提示词预设管理：增删改查 ──
 
-import styles from "@pages/chat/ChatPrompts.module.css";
 import {
 	createPresetE,
 	deletePresetE,
@@ -9,6 +8,7 @@ import {
 } from "@shared/api";
 import { tryOrNotify } from "@shared/lib";
 import { createSignal, For, onMount, Show } from "solid-js";
+import styles from "./ChatPrompts.module.css";
 
 export default function ChatPromptsPage() {
 	const [presets, setPresets] = createSignal<PromptPreset[]>([]);

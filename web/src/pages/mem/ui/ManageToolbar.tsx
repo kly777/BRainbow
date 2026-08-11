@@ -1,8 +1,8 @@
 // ── v2 管理工具栏：搜索 / 标签过滤 / 状态筛选 / 导出 ──
 
 import { searchTagsE, type TagInfo } from "@entities/mem";
-import styles from "@pages/mem/ui/ManageToolbar.module.css";
 import { createResource, createSignal, For, Show } from "solid-js";
+import styles from "./ManageToolbar.module.css";
 
 export type TagMode = "include" | "exclude";
 

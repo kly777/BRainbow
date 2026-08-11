@@ -4,13 +4,6 @@
 
 import { getUpcomingCountsE, type UpcomingCounts } from "@entities/mem";
 import { openAiSettings } from "@features/ai-setting";
-import styles from "@pages/mem/MemPage.module.css";
-import { useMemReview } from "@pages/mem/model/useMemReview.ts";
-import ContextBar from "@pages/mem/ui/ContextBar.tsx";
-import FilterBar from "@pages/mem/ui/FilterBar.tsx";
-import MnemonicSettingsModal from "@pages/mem/ui/MnemonicSettingsModal.tsx";
-import ReviewCard from "@pages/mem/ui/ReviewCard.tsx";
-import Sidebar from "@pages/mem/ui/Sidebar.tsx";
 import { notifyError, tryAsync } from "@shared/lib";
 import { A } from "@solidjs/router";
 import {
@@ -20,6 +13,13 @@ import {
 	onCleanup,
 	onMount,
 } from "solid-js";
+import { useMemReview } from "../model/useMemReview.ts";
+import ContextBar from "./ContextBar.tsx";
+import FilterBar from "./FilterBar.tsx";
+import styles from "./MemPage.module.css";
+import MnemonicSettingsModal from "./MnemonicSettingsModal.tsx";
+import ReviewCard from "./ReviewCard.tsx";
+import Sidebar from "./Sidebar.tsx";
 
 export default function MemPage() {
 	const m = useMemReview();

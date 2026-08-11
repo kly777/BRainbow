@@ -1,9 +1,3 @@
-import { layout } from "@pages/task/ui/dag-layout.ts";
-import {
-	calcAutoOffset,
-	drawGraph,
-	hitTestNode,
-} from "@pages/task/ui/dag-render.ts";
 import styles from "@pages/task/ui/TaskDag.module.css";
 import type { Task } from "@shared/api";
 import { getAllTasksE, getDagE } from "@shared/api";
@@ -17,6 +11,8 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
+import { layout } from "./dag-layout.ts";
+import { calcAutoOffset, drawGraph, hitTestNode } from "./dag-render.ts";
 
 // ── 任务选择器 ──
 

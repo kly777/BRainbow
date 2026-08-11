@@ -4,17 +4,17 @@
 // 业务逻辑复用 useMemAdd，此处只做视图层
 
 import { MarkdownEditor } from "@features/markdown-editor";
-import styles from "@pages/mem/MemAdd.module.css";
-import { useMemAdd } from "@pages/mem/model/useMemAdd.ts";
+import { A } from "@solidjs/router";
+import { createSignal, Show } from "solid-js";
+import { useMemAdd } from "../model/useMemAdd.ts";
 import {
 	FormatHint,
 	ImportActions,
 	ImportPreviewTable,
 	ImportResult,
 	ImportTagInput,
-} from "@pages/mem/ui/ImportParts.tsx";
-import { A } from "@solidjs/router";
-import { createSignal, Show } from "solid-js";
+} from "./ImportParts.tsx";
+import styles from "./MemAdd.module.css";
 
 export default function MemAdd() {
 	const m = useMemAdd();

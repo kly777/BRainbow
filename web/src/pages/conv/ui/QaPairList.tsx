@@ -1,6 +1,6 @@
-import styles from "@pages/conv/ConvDetail.module.css";
 import { Markdown as MarkdownRenderer } from "@shared/ui";
 import { For } from "solid-js";
+import styles from "./ConvDetail.module.css";
 
 interface QaPair {
 	question: string;

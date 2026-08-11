@@ -2,10 +2,10 @@
 // 与全局 AI 服务配置分离：这里只编辑助记生成提示词。
 
 import { getAiSettingsE, updateAiSettingsE } from "@entities/ai-setting";
-import styles from "@pages/mem/ui/MnemonicSettingsModal.module.css";
 import { tryAsync, tryOrNotify } from "@shared/lib";
 import { Modal } from "@shared/ui";
 import { createEffect, createSignal } from "solid-js";
+import styles from "./MnemonicSettingsModal.module.css";
 
 const DEFAULT_MNEMONIC_PROMPT =
 	"你是一个记忆专家。用户在学习一张卡片时连续答错 3 次，请为其生成一个助记技巧（mnemonic）帮助记忆。\n\n卡片内容：\n线索：{cue}\n答案：{target}\n\n请给出一个简短、有创意、易记的助记方法（中英文均可，30 字以内）。直接输出助记内容，不要前缀。";

@@ -1,5 +1,4 @@
 import { deleteCardE, getCardE } from "@entities/card";
-import styles from "@pages/card/CardDetail.module.css";
 import { showConfirm, tryOrNotify } from "@shared/lib";
 import {
 	AsyncView,
@@ -9,6 +8,7 @@ import {
 } from "@shared/ui";
 import { useNavigate, useParams } from "@solidjs/router";
 import { type Component, createResource } from "solid-js";
+import styles from "./CardDetail.module.css";
 
 const CardDetailPage: Component = () => {
 	const params = useParams();

@@ -1,18 +1,16 @@
-import styles from "@pages/conv/ConvDetail.module.css";
-import { useBackHref } from "@pages/conv/model/useBackHref.ts";
-import ConvTopBar from "@pages/conv/ui/ConvTopBar.tsx";
-import { getConvConceptE, getErrorMessage } from "@shared/api";
-import { Markdown as MarkdownRenderer } from "@shared/ui";
-import { useParams, useSearchParams } from "@solidjs/router";
+import { getConvQaE, getErrorMessage } from "@shared/api";
+import { useParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
+import { useBackHref } from "../model/useBackHref.ts";
+import styles from "./ConvDetail.module.css";
+import ConvTopBar from "./ConvTopBar.tsx";
+import QaPairList from "./QaPairList.tsx";
 
-export default function ConvConceptPage() {
+export default function ConvQaPage() {
 	const params = useParams();
-	const [searchParams] = useSearchParams();
-
 	const [data] = createResource(
-		() => ({ id: params.id, article: searchParams.article }),
-		({ id, article }) => getConvConceptE(Number(id), String(article || "")),
+		() => params.id,
+		(id) => getConvQaE(Number(id)),
 	);
 	const backHref = useBackHref();
 
@@ -30,13 +28,12 @@ export default function ConvConceptPage() {
 							<>
 								<ConvTopBar
 									title={d().title}
-									type={d().article_type}
+									type={d().conv_type}
+									date={d().created_at.slice(0, 10)}
 									backHref={backHref()}
 								/>
 								<div class={styles.body}>
-									<div class={styles.md}>
-										<MarkdownRenderer content={d().content} />
-									</div>
+									<QaPairList pairs={d().qa_pairs} />
 								</div>
 							</>
 						)}

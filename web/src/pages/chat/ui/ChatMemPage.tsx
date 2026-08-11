@@ -3,11 +3,11 @@
 // 右侧：对话流（user 气泡 / AI 回复），assistant 的 JSON 卡片渲染为可勾选清单，
 //       底部"导入所选"把勾选卡片写入记忆库。
 
-import styles from "@pages/chat/ChatMemPage.module.css";
-import { useChatMem } from "@pages/chat/model/useChatMem.ts";
 import { Markdown as MarkdownRenderer } from "@shared/ui";
 import { A } from "@solidjs/router";
 import { createSignal, For, onMount, Show } from "solid-js";
+import { useChatMem } from "../model/useChatMem.ts";
+import styles from "./ChatMemPage.module.css";
 
 export default function ChatMemPage() {
 	const c = useChatMem();

@@ -1,8 +1,8 @@
-import styles from "@pages/conv/ConvSearch.module.css";
 import { type ConvHit, getErrorMessage, searchConvE } from "@shared/api";
 import { strParam, useUrlParams } from "@shared/lib";
 import { A, useNavigate } from "@solidjs/router";
 import { createResource, createSignal, For, onMount, Show } from "solid-js";
+import styles from "./ConvSearch.module.css";
 
 const VALID_TABS = ["all", "conv", "article"] as const;
 type Tab = (typeof VALID_TABS)[number];

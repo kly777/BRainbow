@@ -1,1 +1,1 @@
-export { default as OntologyListPage } from "./OntologyList.tsx";
+export { default as OntologyListPage } from "./ui/OntologyList.tsx";

@@ -1,7 +1,6 @@
 import type { UpdateCardRequest } from "@entities/card";
 import { deleteCardE, getCardE, updateCardE } from "@entities/card";
 import { MarkdownEditor } from "@features/markdown-editor";
-import styles from "@pages/card/CardEdit.module.css";
 import { getErrorMessage } from "@shared/api";
 import { showConfirm, tryAsync, tryOrNotify } from "@shared/lib";
 import { AsyncView, Button, Markdown as MarkdownRenderer } from "@shared/ui";
@@ -13,6 +12,7 @@ import {
 	createSignal,
 	Show,
 } from "solid-js";
+import styles from "./CardEdit.module.css";
 
 const CardEditPage: Component = () => {
 	const params = useParams();

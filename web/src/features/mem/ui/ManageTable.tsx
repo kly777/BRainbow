@@ -1,10 +1,10 @@
 // ── v2 管理表格：档案清单 ──
 
-import { For, Show } from "solid-js";
-import Badge from "@ui/atoms/Badge";
-import { fmtLocal, fmtRelative } from "@lib/time.ts";
 import type { MemItem, TagInfo } from "@features/mem/api.ts";
 import styles from "@features/mem/ui/ManageTable.module.css";
+import { fmtLocal, fmtRelative } from "@shared/lib/time.ts";
+import Badge from "@shared/ui/atoms/Badge";
+import { For, Show } from "solid-js";
 
 type SortField = "cue.created_at" | "difficulty" | "due_at" | "state";
 type SortDir = "asc" | "desc";

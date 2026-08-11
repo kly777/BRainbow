@@ -1,14 +1,13 @@
-import { A, useNavigate } from "@solidjs/router";
-import { createResource, Show } from "solid-js";
-
-import { AsyncView } from "@ui/molecules/AsyncView";
 import { deleteCardE as apiDeleteCard, getCardsE } from "@features/card/api.ts";
 import type { CardData } from "@features/card/ui/Card.tsx";
 import CardsGrid from "@features/card/ui/CardsGrid.tsx";
 import TaskList from "@features/task/ui/TaskList.tsx";
 import { TaskProvider, useTasks } from "@features/task/ui/TaskProvider.tsx";
-import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
 import styles from "@pages/HomePage.module.css";
+import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";
+import { AsyncView } from "@shared/ui/molecules/AsyncView";
+import { A, useNavigate } from "@solidjs/router";
+import { createResource, Show } from "solid-js";
 
 // 模块入口（纯文字链接）
 const MODULES = [

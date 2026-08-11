@@ -1,6 +1,6 @@
-import TagSelector from "@ui/molecules/TagSelector";
-import Modal from "@ui/organisms/Modal";
 import type { TagInfo } from "@features/mem/api.ts";
+import TagSelector from "@shared/ui/molecules/TagSelector";
+import Modal from "@shared/ui/organisms/Modal";
 
 interface Props {
 	isOpen: boolean;

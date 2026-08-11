@@ -1,5 +1,5 @@
-import { put } from "@apis/request.ts";
-import { CACHE, cachedRequest, tapInvalidate } from "@apis/cache.ts";
+import { CACHE, cachedRequest, tapInvalidate } from "@shared/api/cache.ts";
+import { put } from "@shared/api/request.ts";
 
 export interface TabItem {
 	readonly name: string;

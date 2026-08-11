@@ -1,14 +1,4 @@
 import {
-	createContext,
-	createSignal,
-	type JSX,
-	onMount,
-	useContext,
-} from "solid-js";
-import { tryAsync } from "@lib/result.ts";
-import { notifyError } from "@lib/notify.ts";
-import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
-import {
 	createTaskE as apiCreateTask,
 	deleteTaskE as apiDeleteTask,
 	updateTaskE as apiUpdateTask,
@@ -22,6 +12,16 @@ import {
 	makeTemp,
 	STATUS_API,
 } from "@features/task/ui/task-provider-utils.ts";
+import { notifyError } from "@shared/lib/notify.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";
+import {
+	createContext,
+	createSignal,
+	type JSX,
+	onMount,
+	useContext,
+} from "solid-js";
 
 interface Stats {
 	backlog: number;

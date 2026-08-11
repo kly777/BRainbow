@@ -1,6 +1,6 @@
-import { A } from "@solidjs/router";
-import { typeLabel } from "@features/conv/logic/constants.ts";
 import styles from "@features/conv/ConvDetail.module.css";
+import { typeLabel } from "@features/conv/logic/constants.ts";
+import { A } from "@solidjs/router";
 
 interface Props {
 	title: string;

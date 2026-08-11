@@ -1,10 +1,10 @@
 // ── 对话页：AI 多轮对话（树状分支 / 修订 / 搜索 / 预设提示词） ──
 
-import { For, Show, createSignal, onMount } from "solid-js";
-import { useChatPage } from "@features/chat/logic/useChatPage.ts";
-import MarkdownRenderer from "@ui/atoms/Markdown";
 import type { ChatNode, ChatTree } from "@features/chat/api.ts";
 import styles from "@features/chat/ChatPage.module.css";
+import { useChatPage } from "@features/chat/logic/useChatPage.ts";
+import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { createSignal, For, onMount, Show } from "solid-js";
 
 export default function ChatPage() {
 	const c = useChatPage();
@@ -108,9 +108,7 @@ export default function ChatPage() {
 							<button
 								type="button"
 								class={styles.sidebarToggle}
-								title={
-									sidebarCollapsed() ? "展开侧边栏" : "收起侧边栏"
-								}
+								title={sidebarCollapsed() ? "展开侧边栏" : "收起侧边栏"}
 								onClick={() => setSidebarCollapsed(!sidebarCollapsed())}
 							>
 								{sidebarCollapsed() ? "☰" : "◀"}
@@ -127,15 +125,11 @@ export default function ChatPage() {
 										</span>
 										<div class={styles.messageCol}>
 											<div class={styles.messageHead}>
-												<span class={styles.messageRole}>
-													AI · 生成中…
-												</span>
+												<span class={styles.messageRole}>AI · 生成中…</span>
 											</div>
 											<div class={styles.assistantBubble}>
 												<div class={styles.messageMd}>
-													<MarkdownRenderer
-														content={c.streamingContent()}
-													/>
+													<MarkdownRenderer content={c.streamingContent()} />
 													<span class={styles.streamCursor} />
 												</div>
 											</div>
@@ -264,7 +258,7 @@ function TreeHeader(props: {
 	const [titleText, setTitleText] = createSignal(props.tree.title);
 
 	const savePrompt = async () => {
-		const ok = await import("@lib/safe-action.ts").then((m) =>
+		const ok = await import("@shared/lib/safe-action.ts").then((m) =>
 			m.tryOrNotify(
 				() =>
 					import("@features/chat/api.ts").then((a) =>
@@ -397,11 +391,7 @@ function MessageRow(props: {
 						</button>
 					</span>
 				</div>
-				<div
-					class={
-						isUser ? styles.userBubble : styles.assistantBubble
-					}
-				>
+				<div class={isUser ? styles.userBubble : styles.assistantBubble}>
 					{isUser ? (
 						node.content
 					) : (

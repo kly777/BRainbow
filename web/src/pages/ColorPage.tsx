@@ -1,10 +1,16 @@
 /**
  * ColorPage — 主题/配色切换页（/color）
  */
-import { createSignal, For, onMount } from "solid-js";
-import { themes, type ThemeName } from "@styles/theme.ts";
-import { applyTheme, getTheme, themeInfo } from "@styles/theme.ts";
+
 import baseStyles from "@styles/base.module.css";
+import {
+	applyTheme,
+	getTheme,
+	type ThemeName,
+	themeInfo,
+	themes,
+} from "@styles/theme.ts";
+import { createSignal, For, onMount } from "solid-js";
 import styles from "./ColorPage.module.css";
 
 export default function ColorPage() {

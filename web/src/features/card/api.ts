@@ -1,10 +1,10 @@
-import { del, post, request } from "@apis/request.ts";
-import { CACHE, cachedRequest, tapInvalidate } from "@apis/cache.ts";
 import type {
 	Card,
 	CreateCardRequest,
 	UpdateCardRequest,
 } from "@features/card/types.ts";
+import { CACHE, cachedRequest, tapInvalidate } from "@shared/api/cache.ts";
+import { del, post, request } from "@shared/api/request.ts";
 
 // ==================== 类型 ====================
 

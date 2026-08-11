@@ -1,5 +1,5 @@
-import { del, patch, request } from "@apis/request.ts";
-import { CACHE, cachedRequest, tapInvalidate } from "@apis/cache.ts";
+import { CACHE, cachedRequest, tapInvalidate } from "@shared/api/cache.ts";
+import { del, patch, request } from "@shared/api/request.ts";
 
 // ── 类型 ──
 

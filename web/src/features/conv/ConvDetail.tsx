@@ -1,13 +1,13 @@
-import { useParams, useSearchParams } from "@solidjs/router";
-import { createResource, For, Show } from "solid-js";
-import MarkdownRenderer from "@ui/atoms/Markdown";
-import { getErrorMessage } from "@apis/types/errors.ts";
 import { getConvDetailE } from "@features/conv/api.ts";
 import styles from "@features/conv/ConvDetail.module.css";
 import { typeLabel } from "@features/conv/logic/constants.ts";
 import { useBackHref } from "@features/conv/logic/useBackHref.ts";
 import ConvTopBar from "@features/conv/ui/ConvTopBar.tsx";
 import QaPairList from "@features/conv/ui/QaPairList.tsx";
+import { getErrorMessage } from "@shared/api/types/errors.ts";
+import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { useParams, useSearchParams } from "@solidjs/router";
+import { createResource, For, Show } from "solid-js";
 
 export default function ConvDetailPage() {
 	const params = useParams();

@@ -1,12 +1,5 @@
 // ── URL 搜索参数管理 ──
 
-import {
-	enumParam,
-	numParam,
-	listParam,
-	strParam,
-	useUrlParams,
-} from "@lib/useUrlParams.ts";
 import type { TagMode } from "@features/mem/logic/mem-manage-utils.ts";
 import {
 	type SortDir,
@@ -14,6 +7,13 @@ import {
 	VALID_SORT_FIELDS,
 	VALID_STATES,
 } from "@features/mem/logic/mem-manage-utils.ts";
+import {
+	enumParam,
+	listParam,
+	numParam,
+	strParam,
+	useUrlParams,
+} from "@shared/lib/useUrlParams.ts";
 
 export interface UseMemManageParamsResult {
 	searchQuery: () => string;

@@ -1,9 +1,9 @@
 // ── v2 上下文条：卡元数据 + 统计 + 编辑 ──
 
-import { Show } from "solid-js";
-import Button from "@ui/atoms/Button";
 import type { UseMemReview } from "@features/mem/logic/useMemReview.ts";
 import styles from "@features/mem/ui/ContextBar.module.css";
+import Button from "@shared/ui/atoms/Button";
+import { Show } from "solid-js";
 
 interface ContextBarProps {
 	m: UseMemReview;

@@ -1,24 +1,24 @@
 // ── 对话页核心逻辑 ──
 
-import { createEffect, createSignal } from "solid-js";
-import { useNavigate, useSearchParams } from "@solidjs/router";
 import { getToken } from "@auth/context.tsx";
-import { tryOrNotify } from "@lib/safe-action.ts";
-import { tryAsync } from "@lib/result.ts";
 import {
+	type ChatNode,
+	type ChatTree,
 	createTreeE,
 	deleteTreeE,
 	getTreeE,
 	listPresetsE,
 	listTreesE,
-	reviseNodeE,
-	searchChatE,
-	type ChatNode,
-	type ChatTree,
 	type PromptPreset,
+	reviseNodeE,
 	type SearchHit,
+	searchChatE,
 	type TreeDetail,
 } from "@features/chat/api.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import { tryOrNotify } from "@shared/lib/safe-action.ts";
+import { useNavigate, useSearchParams } from "@solidjs/router";
+import { createEffect, createSignal } from "solid-js";
 
 export function useChatPage() {
 	const navigate = useNavigate();

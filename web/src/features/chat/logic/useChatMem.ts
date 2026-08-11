@@ -2,27 +2,27 @@
 // 每个 mem 树 = 一次卡片生成会话；对话流存入 chat_node。
 // assistant 消息若为 JSON 卡片数组 → 渲染为可勾选清单，导入走 mem 导入管线。
 
-import { createEffect, createSignal } from "solid-js";
-import { useNavigate, useSearchParams } from "@solidjs/router";
 import { getToken } from "@auth/context.tsx";
-import { tryOrNotify } from "@lib/safe-action.ts";
-import { tryAsync } from "@lib/result.ts";
-import { getErrorMessage } from "@apis/types/index.ts";
 import {
+	type ChatNode,
+	type ChatTree,
 	createTreeE,
 	deleteTreeE,
 	getTreeE,
 	listTreesByKindE,
-	type ChatNode,
-	type ChatTree,
 	type TreeDetail,
 } from "@features/chat/api.ts";
 import { importJsonE } from "@features/mem/api.ts";
 import {
+	type AiCard,
 	countKnowledgePoints,
 	parseAiCards,
-	type AiCard,
 } from "@features/mem/logic/ai-cards.ts";
+import { getErrorMessage } from "@shared/api/types/index.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import { tryOrNotify } from "@shared/lib/safe-action.ts";
+import { useNavigate, useSearchParams } from "@solidjs/router";
+import { createEffect, createSignal } from "solid-js";
 
 export interface MemCardRow extends AiCard {
 	selected: boolean;
@@ -363,10 +363,7 @@ export function useChatMem() {
 		if (rows.length === 0) return;
 		setImporting(true);
 		const result = await tryOrNotify(
-			() =>
-				importJsonE(
-					rows.map((r) => ({ cue: r.cue, target: r.target })),
-				),
+			() => importJsonE(rows.map((r) => ({ cue: r.cue, target: r.target }))),
 			"导入记忆",
 		);
 		setImporting(false);

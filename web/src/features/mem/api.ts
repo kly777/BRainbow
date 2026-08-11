@@ -1,13 +1,13 @@
 // ── 记忆模块 API ──
 
-import { del, post, put, request } from "@apis/request.ts";
-import { CACHE, tapInvalidate } from "@apis/cache.ts";
-import { tryAsync, unwrapOrNull } from "@lib/result.ts";
+import { CACHE, tapInvalidate } from "@shared/api/cache.ts";
+import { del, post, put, request } from "@shared/api/request.ts";
 import type {
 	BatchDataResponse,
 	BatchResponse,
 	PaginatedResponse,
-} from "@apis/types/shared.ts";
+} from "@shared/api/types/shared.ts";
+import { tryAsync, unwrapOrNull } from "@shared/lib/result.ts";
 
 // ── 类型 ──
 
@@ -384,4 +384,4 @@ export type {
 	BatchDataResponse,
 	BatchResponse,
 	PaginatedResponse,
-} from "@apis/types/shared.ts";
+} from "@shared/api/types/shared.ts";

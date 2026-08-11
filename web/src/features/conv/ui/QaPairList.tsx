@@ -1,6 +1,6 @@
-import { For } from "solid-js";
-import MarkdownRenderer from "@ui/atoms/Markdown";
 import styles from "@features/conv/ConvDetail.module.css";
+import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { For } from "solid-js";
 
 interface QaPair {
 	question: string;

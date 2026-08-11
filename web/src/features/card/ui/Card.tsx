@@ -1,6 +1,6 @@
-import { type Component, Show } from "solid-js";
-import MarkdownRenderer from "@ui/atoms/Markdown";
 import styles from "@features/card/ui/Card.module.css";
+import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { type Component, Show } from "solid-js";
 
 // 卡片接口，匹配后端API
 export interface CardData {

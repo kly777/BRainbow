@@ -1,10 +1,3 @@
-import { del, patch, post, request } from "@apis/request.ts";
-import {
-	CACHE,
-	cachedRequest,
-	invalidateCache,
-	tapInvalidate,
-} from "@apis/cache.ts";
 import type {
 	Bookmark,
 	BookmarkTag,
@@ -14,6 +7,13 @@ import type {
 	PaginatedBookmarks,
 	UpdateBookmarkRequest,
 } from "@features/bookmark/types.ts";
+import {
+	CACHE,
+	cachedRequest,
+	invalidateCache,
+	tapInvalidate,
+} from "@shared/api/cache.ts";
+import { del, patch, post, request } from "@shared/api/request.ts";
 
 export const getBookmarksE = (
 	page = 1,

@@ -1,9 +1,5 @@
 // ── 记忆管理页的批量操作 ──
 
-import type { ConfirmOptions } from "@ui/organisms/confirmStore.ts";
-import { notifyError } from "@lib/notify.ts";
-import { tryAsync } from "@lib/result.ts";
-import { showConfirm } from "@lib/safe-action.ts";
 import {
 	batchAddTagToMemsE,
 	batchBuryMemE,
@@ -12,6 +8,10 @@ import {
 	batchResetMemE,
 	type TagInfo,
 } from "@features/mem/api.ts";
+import { notifyError } from "@shared/lib/notify.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import { showConfirm } from "@shared/lib/safe-action.ts";
+import type { ConfirmOptions } from "@shared/ui/organisms/confirmStore.ts";
 
 export interface UseBatchOps {
 	batchDelete: () => Promise<void>;

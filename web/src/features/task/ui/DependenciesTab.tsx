@@ -1,20 +1,20 @@
 import {
-	createEffect,
-	createResource,
-	createSignal,
-	For,
-	Show,
-} from "solid-js";
-import { getErrorMessage } from "@apis/types/index.ts";
-import { notifyError } from "@lib/notify.ts";
-import { tryAsync } from "@lib/result.ts";
-import {
 	addTaskDependencyE,
 	getTaskDetailE,
 	removeTaskDependencyE,
 } from "@features/task/api.ts";
 import type { Task } from "@features/task/types.ts";
 import styles from "@features/task/ui/EditTaskModal.module.css";
+import { getErrorMessage } from "@shared/api/types/index.ts";
+import { notifyError } from "@shared/lib/notify.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import {
+	createEffect,
+	createResource,
+	createSignal,
+	For,
+	Show,
+} from "solid-js";
 
 // 依赖状态类映射（vanilla-extract 不支持动态索引）
 const depStatusClass: Record<string, string> = {

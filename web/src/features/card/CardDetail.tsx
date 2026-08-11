@@ -1,12 +1,12 @@
-import { useNavigate, useParams } from "@solidjs/router";
-import { type Component, createResource } from "solid-js";
-import { AsyncView } from "@ui/molecules/AsyncView";
-import Button from "@ui/atoms/Button";
-import MarkdownRenderer from "@ui/atoms/Markdown";
-import Toolbar from "@ui/molecules/Toolbar";
-import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
 import { deleteCardE, getCardE } from "@features/card/api.ts";
 import styles from "@features/card/CardDetail.module.css";
+import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";
+import Button from "@shared/ui/atoms/Button";
+import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { AsyncView } from "@shared/ui/molecules/AsyncView";
+import Toolbar from "@shared/ui/molecules/Toolbar";
+import { useNavigate, useParams } from "@solidjs/router";
+import { type Component, createResource } from "solid-js";
 
 const CardDetailPage: Component = () => {
 	const params = useParams();

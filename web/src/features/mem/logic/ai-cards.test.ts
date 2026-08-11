@@ -58,9 +58,7 @@ describe("parseAiCards", () => {
 	});
 
 	it("修复键名缺冒号（target 后无冒号）", () => {
-		const r = parseAiCards(
-			'[{"cue":"质能方程","target "E=mc²"}]',
-		);
+		const r = parseAiCards('[{"cue":"质能方程","target "E=mc²"}]');
 		expect(r.ok).toBe(true);
 		if (r.ok) expect(r.value).toEqual([{ cue: "质能方程", target: "E=mc²" }]);
 	});
@@ -78,8 +76,7 @@ describe("parseAiCards", () => {
 	});
 
 	it("对象粘连缺逗号时恢复", () => {
-		const raw =
-			'[{"cue":"q1","target":"t1"}{"cue":"q2","target":"t2"}]';
+		const raw = '[{"cue":"q1","target":"t1"}{"cue":"q2","target":"t2"}]';
 		const r = parseAiCards(raw);
 		expect(r.ok).toBe(true);
 		if (r.ok) expect(r.value.length).toBe(2);

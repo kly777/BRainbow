@@ -1,11 +1,11 @@
 // ── API Key 管理页 ──
 // dev 环境免登录可生成（后端 APP_ENV=dev）；prod 需登录（AuthGuard）。
 
-import { createResource, createSignal, For, Show } from "solid-js";
-import { del, get, post } from "@apis/request.ts";
-import { getErrorMessage } from "@apis/types/errors.ts";
 import { getApiKey, useAuth } from "@auth/context.tsx";
-import { notifyError, notifySuccess } from "@lib/notify.ts";
+import { del, get, post } from "@shared/api/request.ts";
+import { getErrorMessage } from "@shared/api/types/errors.ts";
+import { notifyError, notifySuccess } from "@shared/lib/notify.ts";
+import { createResource, createSignal, For, Show } from "solid-js";
 import styles from "./KeyPage.module.css";
 
 interface ApiKeyInfo {

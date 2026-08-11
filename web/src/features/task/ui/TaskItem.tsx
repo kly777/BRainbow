@@ -1,7 +1,7 @@
-import { createSignal, For, Show } from "solid-js";
-import { formatDate } from "@apis/types/index.ts";
 import type { Task, TimeWindow } from "@features/task/types.ts";
 import styles from "@features/task/ui/TaskList.module.css";
+import { formatDate } from "@shared/api/types/index.ts";
+import { createSignal, For, Show } from "solid-js";
 
 const TaskStatus = {
 	BACKLOG: "backlog",

@@ -1,8 +1,9 @@
 /**
  * 书签 favicon：优先显示网站图标，加载失败回退为域名首字母。
  */
-import { createSignal, Show } from "solid-js";
+
 import styles from "@features/bookmark/Favicon.module.css";
+import { createSignal, Show } from "solid-js";
 
 interface Props {
 	url: string;

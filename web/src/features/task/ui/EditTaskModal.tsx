@@ -1,13 +1,13 @@
-import { createEffect, createSignal, Show } from "solid-js";
-import Modal from "@ui/organisms/Modal";
-import { notifyError } from "@lib/notify.ts";
-import { tryAsync } from "@lib/result.ts";
 import { getTimeWindowsE } from "@features/task/timeWindowApi.ts";
 import type { Task, TimeWindow } from "@features/task/types.ts";
 import BasicInfoTab from "@features/task/ui/BasicInfoTab.tsx";
 import DependenciesTab from "@features/task/ui/DependenciesTab.tsx";
 import styles from "@features/task/ui/EditTaskModal.module.css";
 import TimeWindowsTab from "@features/task/ui/TimeWindowsTab.tsx";
+import { notifyError } from "@shared/lib/notify.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import Modal from "@shared/ui/organisms/Modal";
+import { createEffect, createSignal, Show } from "solid-js";
 
 interface EditTaskModalProps {
 	isOpen: boolean;

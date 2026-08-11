@@ -1,10 +1,10 @@
-import { createEffect, createSignal } from "solid-js";
-import TagSelector from "@ui/molecules/TagSelector";
-import Modal from "@ui/organisms/Modal";
-import { notifyError } from "@lib/notify.ts";
-import { tryAsync } from "@lib/result.ts";
 import type { TagInfo } from "@features/mem/api.ts";
 import { downloadExportCsv, listTagsE } from "@features/mem/api.ts";
+import { notifyError } from "@shared/lib/notify.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import TagSelector from "@shared/ui/molecules/TagSelector";
+import Modal from "@shared/ui/organisms/Modal";
+import { createEffect, createSignal } from "solid-js";
 
 interface Props {
 	isOpen: boolean;

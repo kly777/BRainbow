@@ -1,7 +1,7 @@
 // ── AI 生成记忆卡片：纯函数层 ──
 // prompt 构建 + AI 输出容错解析（零副作用，可单测）
 
-import { err, ok, trySync, type Result } from "@lib/result.ts";
+import { err, ok, type Result, trySync } from "@shared/lib/result.ts";
 
 export interface AiCard {
 	cue: string;
@@ -117,7 +117,9 @@ function recoverCards(cleaned: string): AiCard[] {
 	for (const m of fixed.match(cardRe) ?? []) {
 		const parsed = trySync(() => JSON.parse(m));
 		if (!parsed.ok) continue;
-		const cards = toCards(Array.isArray(parsed.value) ? parsed.value : [parsed.value]);
+		const cards = toCards(
+			Array.isArray(parsed.value) ? parsed.value : [parsed.value],
+		);
 		recovered.push(...cards);
 	}
 	return recovered;

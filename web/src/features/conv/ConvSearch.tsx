@@ -1,9 +1,9 @@
-import { A, useNavigate } from "@solidjs/router";
-import { createResource, createSignal, For, onMount, Show } from "solid-js";
-import { strParam, useUrlParams } from "@lib/useUrlParams.ts";
-import { getErrorMessage } from "@apis/types/errors.ts";
 import { type ConvHit, searchConvE } from "@features/conv/api.ts";
 import styles from "@features/conv/ConvSearch.module.css";
+import { getErrorMessage } from "@shared/api/types/errors.ts";
+import { strParam, useUrlParams } from "@shared/lib/useUrlParams.ts";
+import { A, useNavigate } from "@solidjs/router";
+import { createResource, createSignal, For, onMount, Show } from "solid-js";
 
 const VALID_TABS = ["all", "conv", "article"] as const;
 type Tab = (typeof VALID_TABS)[number];

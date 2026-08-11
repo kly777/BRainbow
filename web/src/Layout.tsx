@@ -1,12 +1,12 @@
+import AuthGuard from "@auth/AuthGuard.tsx";
+import AuthStatus from "@auth/AuthStatus.tsx";
+import AiSettingsModal from "@features/mem/ui/AiSettingsModal.tsx";
+import CommandPalette from "@shared/ui/organisms/CommandPalette";
+import ConfirmModalContainer from "@shared/ui/organisms/ConfirmModal";
+import ToastContainer from "@shared/ui/organisms/Toast";
 import { useLocation } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
 import styles from "./App.module.css";
-import AuthGuard from "@auth/AuthGuard.tsx";
-import AuthStatus from "@auth/AuthStatus.tsx";
-import CommandPalette from "@ui/organisms/CommandPalette";
-import ConfirmModalContainer from "@ui/organisms/ConfirmModal";
-import ToastContainer from "@ui/organisms/Toast";
-import AiSettingsModal from "@features/mem/ui/AiSettingsModal.tsx";
 import { RouteTitle } from "./routes.ts";
 
 export default function Layout(props: { children?: JSX.Element }) {

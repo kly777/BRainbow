@@ -1,14 +1,14 @@
 // ── v2 管理详情：档案卡 ──
 // 线索/答案用目录卡标签页，元数据等宽，操作与标签管理
 
-import { Show } from "solid-js";
-import Button from "@ui/atoms/Button";
-import TagSelector from "@ui/molecules/TagSelector";
-import MarkdownRenderer from "@ui/atoms/Markdown";
-import MarkdownEditor from "@ui/molecules/MarkdownEditor";
-import { fmtLocal } from "@lib/time.ts";
 import type { MemItem, TagInfo } from "@features/mem/api.ts";
 import styles from "@features/mem/ui/ManageDetail.module.css";
+import { fmtLocal } from "@shared/lib/time.ts";
+import Button from "@shared/ui/atoms/Button";
+import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import MarkdownEditor from "@shared/ui/molecules/MarkdownEditor";
+import TagSelector from "@shared/ui/molecules/TagSelector";
+import { Show } from "solid-js";
 
 interface Props {
 	mem: MemItem | undefined;

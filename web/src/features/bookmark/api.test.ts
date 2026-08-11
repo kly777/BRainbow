@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const requestMock = vi.hoisted(() => ({
 	request: vi.fn(),
@@ -14,8 +14,8 @@ const cacheMock = vi.hoisted(() => ({
 	tapInvalidate: vi.fn((_p: RegExp, r: unknown) => r),
 }));
 
-vi.mock("@apis/request.ts", () => requestMock);
-vi.mock("@apis/cache.ts", () => cacheMock);
+vi.mock("@shared/api/request.ts", () => requestMock);
+vi.mock("@shared/api/cache.ts", () => cacheMock);
 
 import {
 	createBookmarkE,
@@ -23,8 +23,8 @@ import {
 	deleteBookmarkTagE,
 	getBookmarksE,
 	importBookmarksE,
-	searchBookmarkTagsE,
 	searchBookmarksE,
+	searchBookmarkTagsE,
 	setBookmarkTagsE,
 	updateBookmarkE,
 } from "./api";

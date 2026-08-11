@@ -1,12 +1,5 @@
 // ── 阅读详情页核心逻辑 ──
 
-import { useParams } from "@solidjs/router";
-import {
-	createEffect,
-	createMemo,
-	createResource,
-	createSignal,
-} from "solid-js";
 import type { ArticleDetail } from "@features/reading/api.ts";
 import {
 	getArticle,
@@ -15,8 +8,15 @@ import {
 	recommendNext,
 	updateArticleNotes,
 } from "@features/reading/api.ts";
-import { tryAsync } from "@lib/result.ts";
-import { notifyError } from "@lib/notify.ts";
+import { notifyError } from "@shared/lib/notify.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import { useParams } from "@solidjs/router";
+import {
+	createEffect,
+	createMemo,
+	createResource,
+	createSignal,
+} from "solid-js";
 
 export function useReadingDetail() {
 	const params = useParams();

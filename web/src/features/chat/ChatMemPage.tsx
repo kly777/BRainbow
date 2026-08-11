@@ -3,11 +3,11 @@
 // 右侧：对话流（user 气泡 / AI 回复），assistant 的 JSON 卡片渲染为可勾选清单，
 //       底部"导入所选"把勾选卡片写入记忆库。
 
-import { For, Show, createSignal, onMount } from "solid-js";
-import { A } from "@solidjs/router";
-import MarkdownRenderer from "@ui/atoms/Markdown";
-import { useChatMem } from "@features/chat/logic/useChatMem.ts";
 import styles from "@features/chat/ChatMemPage.module.css";
+import { useChatMem } from "@features/chat/logic/useChatMem.ts";
+import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { A } from "@solidjs/router";
+import { createSignal, For, onMount, Show } from "solid-js";
 
 export default function ChatMemPage() {
 	const c = useChatMem();
@@ -48,12 +48,8 @@ export default function ChatMemPage() {
 									class={styles.sessionSelect}
 									onClick={() => c.selectSession(tree.id)}
 								>
-									<span class={styles.sessionTitle}>
-										{tree.title}
-									</span>
-									<span class={styles.sessionMeta}>
-										{tree.node_count} 条
-									</span>
+									<span class={styles.sessionTitle}>{tree.title}</span>
+									<span class={styles.sessionMeta}>{tree.node_count} 条</span>
 								</button>
 								<button
 									type="button"
@@ -70,9 +66,7 @@ export default function ChatMemPage() {
 						)}
 					</For>
 					<Show when={c.trees().length === 0 && !c.loadingTrees()}>
-						<div class={styles.treeEmpty}>
-							还没有会话，点击"＋ 新会话"开始
-						</div>
+						<div class={styles.treeEmpty}>还没有会话，点击"＋ 新会话"开始</div>
 					</Show>
 				</div>
 			</aside>
@@ -85,8 +79,8 @@ export default function ChatMemPage() {
 						<div class={styles.emptyState}>
 							<p class={styles.emptyTitle}>对话式记忆卡片生成</p>
 							<p class={styles.emptyHint}>
-								左侧新建会话，粘贴任意文本（文章 / 笔记 / 讲义），
-								AI 将生成记忆卡片；可继续对话让 AI 修订，最后勾选导入。
+								左侧新建会话，粘贴任意文本（文章 / 笔记 / 讲义）， AI
+								将生成记忆卡片；可继续对话让 AI 修订，最后勾选导入。
 							</p>
 						</div>
 					}
@@ -102,9 +96,7 @@ export default function ChatMemPage() {
 							</div>
 							<div class={styles.messageList}>
 								<For each={c.activePath()}>
-									{(node) => (
-										<MessageRow c={c} node={node} />
-									)}
+									{(node) => <MessageRow c={c} node={node} />}
 								</For>
 								<Show when={c.sending() && c.streamingContent()}>
 									<div class={`${styles.messageRow} ${styles.streaming}`}>
@@ -113,15 +105,11 @@ export default function ChatMemPage() {
 										</span>
 										<div class={styles.messageCol}>
 											<div class={styles.messageHead}>
-												<span class={styles.messageRole}>
-													AI · 生成中…
-												</span>
+												<span class={styles.messageRole}>AI · 生成中…</span>
 											</div>
 											<div class={styles.assistantBubble}>
 												<div class={styles.messageMd}>
-													<MarkdownRenderer
-														content={c.streamingContent()}
-													/>
+													<MarkdownRenderer content={c.streamingContent()} />
 													<span class={styles.streamCursor} />
 												</div>
 											</div>
@@ -189,7 +177,10 @@ function ImportBar(props: { c: ReturnType<typeof useChatMem> }) {
 				</span>
 				{/* 覆盖不足提示 */}
 				<Show when={cov().expected > 0 && cov().missing > 0}>
-					<span class={styles.coverageWarn} title="AI 可能遗漏了部分知识点，可在对应回复上点「重新生成」">
+					<span
+						class={styles.coverageWarn}
+						title="AI 可能遗漏了部分知识点，可在对应回复上点「重新生成」"
+					>
 						已生成 {cov().generated} / 期望 {cov().expected}
 					</span>
 				</Show>
@@ -231,9 +222,7 @@ function MessageRow(props: {
 	return (
 		<div
 			class={
-				isUser
-					? `${styles.messageRow} ${styles.userRow}`
-					: styles.messageRow
+				isUser ? `${styles.messageRow} ${styles.userRow}` : styles.messageRow
 			}
 		>
 			<Show when={!isUser}>
@@ -243,9 +232,7 @@ function MessageRow(props: {
 			</Show>
 			<div class={styles.messageCol}>
 				<div class={styles.messageHead}>
-					<span class={styles.messageRole}>
-						{isUser ? "你" : "AI"}
-					</span>
+					<span class={styles.messageRole}>{isUser ? "你" : "AI"}</span>
 					<span class={styles.messageActions}>
 						<Show when={!isUser}>
 							<button
@@ -265,44 +252,38 @@ function MessageRow(props: {
 				<Show
 					when={!isUser && cards}
 					fallback={
-						<div
-							class={
-								isUser
-									? styles.userBubble
-									: styles.assistantBubble
-							}
-						>
-						{isUser ? (
-							<div class={styles.userWrap}>
-								<div class={styles.userBubble}>{node.content}</div>
-								<Show when={c.childrenOf(node.id).length > 1}>
-									<div class={styles.branchBar}>
-										<span class={styles.branchLabel}>分支</span>
-										<For each={c.childrenOf(node.id)}>
-											{(child) => (
-												<button
-													type="button"
-													class={
-														c.isInSubtree(child.id)
-															? styles.branchChipActive
-															: styles.branchChip
-													}
-													title="切换到该回复"
-													onClick={() => c.focusBranch(child.id)}
-												>
-													{child.content.slice(0, 24) || "AI 回复"}
-													{child.content.length > 24 ? "…" : ""}
-												</button>
-											)}
-										</For>
-									</div>
-								</Show>
-							</div>
-						) : (
-							<div class={styles.messageMd}>
-								<MarkdownRenderer content={node.content} />
-							</div>
-						)}
+						<div class={isUser ? styles.userBubble : styles.assistantBubble}>
+							{isUser ? (
+								<div class={styles.userWrap}>
+									<div class={styles.userBubble}>{node.content}</div>
+									<Show when={c.childrenOf(node.id).length > 1}>
+										<div class={styles.branchBar}>
+											<span class={styles.branchLabel}>分支</span>
+											<For each={c.childrenOf(node.id)}>
+												{(child) => (
+													<button
+														type="button"
+														class={
+															c.isInSubtree(child.id)
+																? styles.branchChipActive
+																: styles.branchChip
+														}
+														title="切换到该回复"
+														onClick={() => c.focusBranch(child.id)}
+													>
+														{child.content.slice(0, 24) || "AI 回复"}
+														{child.content.length > 24 ? "…" : ""}
+													</button>
+												)}
+											</For>
+										</div>
+									</Show>
+								</div>
+							) : (
+								<div class={styles.messageMd}>
+									<MarkdownRenderer content={node.content} />
+								</div>
+							)}
 						</div>
 					}
 				>

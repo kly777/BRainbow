@@ -1,13 +1,13 @@
-import { useNavigate } from "@solidjs/router";
-import { type Component, createSignal, Show } from "solid-js";
-import { getErrorMessage } from "@apis/types/index.ts";
-import Button from "@ui/atoms/Button";
-import MarkdownEditor from "@ui/molecules/MarkdownEditor";
-import Toolbar from "@ui/molecules/Toolbar";
-import { tryAsync } from "@lib/result.ts";
 import { createCardE } from "@features/card/api.ts";
 import styles from "@features/card/CardAdd.module.css";
 import type { CreateCardRequest } from "@features/card/types.ts";
+import { getErrorMessage } from "@shared/api/types/index.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import Button from "@shared/ui/atoms/Button";
+import MarkdownEditor from "@shared/ui/molecules/MarkdownEditor";
+import Toolbar from "@shared/ui/molecules/Toolbar";
+import { useNavigate } from "@solidjs/router";
+import { type Component, createSignal, Show } from "solid-js";
 
 const CardAddPage: Component = () => {
 	const navigate = useNavigate();

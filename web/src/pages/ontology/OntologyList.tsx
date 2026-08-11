@@ -1,3 +1,13 @@
+import { createOntoE, deleteOntoE, getOntosE } from "@pages/ontology/api.ts";
+import styles from "@pages/ontology/OntologyList.module.css";
+import { getErrorMessage } from "@shared/api/types/index.ts";
+import { notifyError, notifySuccess } from "@shared/lib/notify.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";
+import Button from "@shared/ui/atoms/Button";
+import SearchInput from "@shared/ui/atoms/SearchInput";
+import { AsyncView } from "@shared/ui/molecules/AsyncView";
+import FilterGroup from "@shared/ui/molecules/FilterGroup";
 import { useSearchParams } from "@solidjs/router";
 import {
 	type Component,
@@ -6,16 +16,6 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import { getErrorMessage } from "@apis/types/index.ts";
-import { AsyncView } from "@ui/molecules/AsyncView";
-import Button from "@ui/atoms/Button";
-import FilterGroup from "@ui/molecules/FilterGroup";
-import SearchInput from "@ui/atoms/SearchInput";
-import { notifyError, notifySuccess } from "@lib/notify.ts";
-import { tryAsync } from "@lib/result.ts";
-import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
-import { createOntoE, deleteOntoE, getOntosE } from "@pages/ontology/api.ts";
-import styles from "@pages/ontology/OntologyList.module.css";
 
 const OntologyListPage: Component = () => {
 	const [ontologies, { mutate, refetch }] = createResource(async () => {

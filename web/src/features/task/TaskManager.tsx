@@ -1,11 +1,11 @@
-import { enumParam, strParam, useUrlParams } from "@lib/useUrlParams.ts";
-import { createSignal, Show } from "solid-js";
 import styles from "@features/task/TaskManager.module.css";
 import TaskCalendar from "@features/task/ui/TaskCalendar.tsx";
 import TaskDag from "@features/task/ui/TaskDag.tsx";
 import TaskKanban from "@features/task/ui/TaskKanban.tsx";
 import TaskList from "@features/task/ui/TaskList.tsx";
 import { TaskProvider, useTasks } from "@features/task/ui/TaskProvider.tsx";
+import { enumParam, strParam, useUrlParams } from "@shared/lib/useUrlParams.ts";
+import { createSignal, Show } from "solid-js";
 
 function Toolbar(props: {
 	viewMode: "list" | "kanban";

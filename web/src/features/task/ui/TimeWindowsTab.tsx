@@ -1,7 +1,3 @@
-import { createSignal, For, Show } from "solid-js";
-import { getErrorMessage } from "@apis/types/index.ts";
-import { notifyError } from "@lib/notify.ts";
-import { tryAsync } from "@lib/result.ts";
 import {
 	createTimeWindowE,
 	deleteTimeWindowE,
@@ -12,6 +8,10 @@ import type {
 	TimeWindow,
 } from "@features/task/types.ts";
 import styles from "@features/task/ui/EditTaskModal.module.css";
+import { getErrorMessage } from "@shared/api/types/index.ts";
+import { notifyError } from "@shared/lib/notify.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import { createSignal, For, Show } from "solid-js";
 
 interface TimeWindowsTabProps {
 	task: Task;

@@ -1,4 +1,4 @@
-import { request } from "@apis/request.ts";
+import { request } from "@shared/api/request.ts";
 
 export interface AuthUser {
 	id: number;

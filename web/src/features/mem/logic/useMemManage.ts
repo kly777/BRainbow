@@ -1,9 +1,5 @@
 // ── 记忆管理模块的核心业务逻辑 ──
 
-import { createEffect, createSignal, onMount } from "solid-js";
-
-import { tryAsync } from "@lib/result.ts";
-import { showConfirm, tryOrNotify } from "@lib/safe-action.ts";
 import {
 	addTagToMemE,
 	batchGetMemsTagsE,
@@ -18,11 +14,16 @@ import {
 	type TagInfo,
 	unsuspendMemE,
 } from "@features/mem/api.ts";
-import type { TagMode } from "@features/mem/logic/mem-manage-utils.ts";
-import type { PageMeta } from "@features/mem/logic/mem-manage-utils.ts";
+import type {
+	PageMeta,
+	TagMode,
+} from "@features/mem/logic/mem-manage-utils.ts";
 import { fetchAllMems } from "@features/mem/logic/mem-manage-utils.ts";
 import { useBatchOps } from "@features/mem/logic/useBatchOps.ts";
 import { useMemManageParams } from "@features/mem/logic/useMemManageParams.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";
+import { createEffect, createSignal, onMount } from "solid-js";
 
 let initialLoadDone = false;
 

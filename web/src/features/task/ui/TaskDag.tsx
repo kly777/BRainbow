@@ -1,3 +1,14 @@
+import { getAllTasksE, getDagE } from "@features/task/api.ts";
+import type { Task } from "@features/task/types.ts";
+import { layout } from "@features/task/ui/dag-layout.ts";
+import {
+	calcAutoOffset,
+	drawGraph,
+	hitTestNode,
+} from "@features/task/ui/dag-render.ts";
+import styles from "@features/task/ui/TaskDag.module.css";
+import { notifyError } from "@shared/lib/notify.ts";
+import { tryAsync } from "@shared/lib/result.ts";
 import {
 	createEffect,
 	createMemo,
@@ -7,18 +18,6 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import { notifyError } from "@lib/notify.ts";
-import { tryAsync } from "@lib/result.ts";
-import { getAllTasksE, getDagE } from "@features/task/api.ts";
-import type { Task } from "@features/task/types.ts";
-
-import { layout } from "@features/task/ui/dag-layout.ts";
-import {
-	calcAutoOffset,
-	drawGraph,
-	hitTestNode,
-} from "@features/task/ui/dag-render.ts";
-import styles from "@features/task/ui/TaskDag.module.css";
 
 // ── 任务选择器 ──
 

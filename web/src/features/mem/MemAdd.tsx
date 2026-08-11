@@ -3,18 +3,18 @@
 // 批量/文件模式 = 卡片清单审查（预览 + 勾选入库）
 // 业务逻辑复用 useMemAdd，此处只做视图层
 
-import { A } from "@solidjs/router";
-import { createSignal, Show } from "solid-js";
-import MarkdownEditor from "@ui/molecules/MarkdownEditor";
 import { useMemAdd } from "@features/mem/logic/useMemAdd.ts";
 import styles from "@features/mem/MemAdd.module.css";
 import {
 	FormatHint,
 	ImportActions,
 	ImportPreviewTable,
-	ImportTagInput,
 	ImportResult,
+	ImportTagInput,
 } from "@features/mem/ui/ImportParts.tsx";
+import MarkdownEditor from "@shared/ui/molecules/MarkdownEditor";
+import { A } from "@solidjs/router";
+import { createSignal, Show } from "solid-js";
 
 export default function MemAdd() {
 	const m = useMemAdd();

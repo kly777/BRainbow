@@ -1,5 +1,3 @@
-import { patch, post, request } from "@apis/request.ts";
-import { CACHE, cachedRequest, tapInvalidate } from "@apis/cache.ts";
 import type {
 	CalendarEvent,
 	CreateTaskRequest,
@@ -8,6 +6,8 @@ import type {
 	TaskDetail,
 	UpdateTaskRequest,
 } from "@features/task/types.ts";
+import { CACHE, cachedRequest, tapInvalidate } from "@shared/api/cache.ts";
+import { patch, post, request } from "@shared/api/request.ts";
 
 // ==================== 类型 ====================
 

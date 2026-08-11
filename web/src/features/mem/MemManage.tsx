@@ -2,15 +2,15 @@
 // 清单表格 = 档案索引 · 详情面板 = 档案卡
 // 业务逻辑复用 useMemManage，此处只做视图层
 
-import { A } from "@solidjs/router";
 import { useMemManage } from "@features/mem/logic/useMemManage.ts";
 import styles from "@features/mem/MemManage.module.css";
-import MemBatchTagModal from "@features/mem/ui/MemBatchTagModal.tsx";
-import MemExportModal from "@features/mem/ui/MemExportModal.tsx";
 import ManageBatchBar from "@features/mem/ui/ManageBatchBar.tsx";
 import ManageDetail from "@features/mem/ui/ManageDetail.tsx";
 import ManageTable from "@features/mem/ui/ManageTable.tsx";
 import ManageToolbar from "@features/mem/ui/ManageToolbar.tsx";
+import MemBatchTagModal from "@features/mem/ui/MemBatchTagModal.tsx";
+import MemExportModal from "@features/mem/ui/MemExportModal.tsx";
+import { A } from "@solidjs/router";
 
 export default function MemManage() {
 	const m = useMemManage();

@@ -1,10 +1,10 @@
-import { createSignal, onCleanup, Show } from "solid-js";
-import { Portal } from "solid-js/web";
-import { AUTH_REQUIRED_EVENT } from "@apis/request.ts";
-import { tryAsync } from "@lib/result.ts";
 import styles from "@auth/AuthStatus.module.css";
 import { changePasswordE, loginE, logoutE, registerE } from "@auth/api.ts";
 import { useAuth } from "@auth/context.tsx";
+import { AUTH_REQUIRED_EVENT } from "@shared/api/request.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import { createSignal, onCleanup, Show } from "solid-js";
+import { Portal } from "solid-js/web";
 
 type DialogMode = "login" | "password";
 

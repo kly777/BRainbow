@@ -1,14 +1,3 @@
-import { createEffect, createSignal, For, Show } from "solid-js";
-import Button from "@ui/atoms/Button";
-import Modal from "@ui/organisms/Modal";
-import SearchInput from "@ui/atoms/SearchInput";
-import { strParam, numParam, useUrlParams } from "@lib/useUrlParams.ts";
-import { tryAsync } from "@lib/result.ts";
-import { notifyError, notifySuccess } from "@lib/notify.ts";
-import { showConfirm } from "@lib/safe-action.ts";
-import TagInput from "@features/bookmark/TagInput.tsx";
-import Favicon from "@features/bookmark/Favicon.tsx";
-import TagManager from "@features/bookmark/TagManager.tsx";
 import {
 	createBookmarkE,
 	deleteBookmarkE,
@@ -18,8 +7,19 @@ import {
 	setBookmarkTagsE,
 	updateBookmarkE,
 } from "@features/bookmark/api.ts";
-import type { Bookmark } from "@features/bookmark/types.ts";
 import styles from "@features/bookmark/BookmarkPage.module.css";
+import Favicon from "@features/bookmark/Favicon.tsx";
+import TagInput from "@features/bookmark/TagInput.tsx";
+import TagManager from "@features/bookmark/TagManager.tsx";
+import type { Bookmark } from "@features/bookmark/types.ts";
+import { notifyError, notifySuccess } from "@shared/lib/notify.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import { showConfirm } from "@shared/lib/safe-action.ts";
+import { numParam, strParam, useUrlParams } from "@shared/lib/useUrlParams.ts";
+import Button from "@shared/ui/atoms/Button";
+import SearchInput from "@shared/ui/atoms/SearchInput";
+import Modal from "@shared/ui/organisms/Modal";
+import { createEffect, createSignal, For, Show } from "solid-js";
 
 /** 从 URL 提取域名（用于展示与标题兜底） */
 function extractDomain(url: string): string {

@@ -1,13 +1,13 @@
 // ── AI 助记：生成、加载、连续忘记自动触发 ──
 
-import { createSignal } from "solid-js";
-import { callAi } from "@lib/ai.ts";
-import { fillPrompt } from "@lib/ai-settings.ts";
-import { getAiSettingsE } from "@apis/ai.ts";
-import { notifyError } from "@lib/notify.ts";
-import { tryAsync } from "@lib/result.ts";
 import { getMnemonicE, setMnemonicE } from "@features/mem/api.ts";
 import type { MemItem } from "@features/mem/model.ts";
+import { getAiSettingsE } from "@shared/api/ai.ts";
+import { callAi } from "@shared/lib/ai.ts";
+import { fillPrompt } from "@shared/lib/ai-settings.ts";
+import { notifyError } from "@shared/lib/notify.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import { createSignal } from "solid-js";
 
 /** 连续忘记 N 次后自动生成助记 */
 const AUTO_GENERATE_THRESHOLD = 3;

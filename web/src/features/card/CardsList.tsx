@@ -1,14 +1,14 @@
 // ── 卡片列表页面（薄壳视图层）──
 
-import { useNavigate } from "@solidjs/router";
-import { onMount, Show } from "solid-js";
-import Button from "@ui/atoms/Button";
-import MarkdownRenderer from "@ui/atoms/Markdown";
-import { tryAsync } from "@lib/result.ts";
 import { getCardsE, searchCardsE } from "@features/card/api.ts";
 import styles from "@features/card/CardsList.module.css";
 import { useCardsList } from "@features/card/logic/useCardsList.ts";
 import CardsGrid from "@features/card/ui/CardsGrid.tsx";
+import { tryAsync } from "@shared/lib/result.ts";
+import Button from "@shared/ui/atoms/Button";
+import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { useNavigate } from "@solidjs/router";
+import { onMount, Show } from "solid-js";
 
 export default function CardsListPage() {
 	const navigate = useNavigate();

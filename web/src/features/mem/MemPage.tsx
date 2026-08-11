@@ -2,6 +2,17 @@
 // 全新布局设计：全局头 + 上下文条 + 过滤 + 沉浸式卡片区
 // 业务逻辑全部复用 useMemReview，此处只做组合与交互增强
 
+import { getUpcomingCountsE, type UpcomingCounts } from "@features/mem/api.ts";
+import { useMemReview } from "@features/mem/logic/useMemReview.ts";
+import styles from "@features/mem/MemPage.module.css";
+import ContextBar from "@features/mem/ui/ContextBar.tsx";
+import FilterBar from "@features/mem/ui/FilterBar.tsx";
+import MnemonicSettingsModal from "@features/mem/ui/MnemonicSettingsModal.tsx";
+import ReviewCard from "@features/mem/ui/ReviewCard.tsx";
+import Sidebar from "@features/mem/ui/Sidebar.tsx";
+import { notifyError } from "@shared/lib/notify.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import { openAiSettings } from "@shared/ui/organisms/aiSettingsStore.ts";
 import { A } from "@solidjs/router";
 import {
 	createDeferred,
@@ -10,17 +21,6 @@ import {
 	onCleanup,
 	onMount,
 } from "solid-js";
-import { getUpcomingCountsE, type UpcomingCounts } from "@features/mem/api.ts";
-import { useMemReview } from "@features/mem/logic/useMemReview.ts";
-import { notifyError } from "@lib/notify.ts";
-import { tryAsync } from "@lib/result.ts";
-import styles from "@features/mem/MemPage.module.css";
-import { openAiSettings } from "@ui/organisms/aiSettingsStore.ts";
-import ContextBar from "@features/mem/ui/ContextBar.tsx";
-import FilterBar from "@features/mem/ui/FilterBar.tsx";
-import MnemonicSettingsModal from "@features/mem/ui/MnemonicSettingsModal.tsx";
-import ReviewCard from "@features/mem/ui/ReviewCard.tsx";
-import Sidebar from "@features/mem/ui/Sidebar.tsx";
 
 export default function MemPage() {
 	const m = useMemReview();

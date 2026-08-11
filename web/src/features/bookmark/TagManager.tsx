@@ -1,18 +1,19 @@
 /**
  * 标签管理弹窗：列出所有标签（名称 + 使用数），支持全局删除。
  */
-import { createResource, For, Show } from "solid-js";
-import Button from "@ui/atoms/Button";
-import Modal from "@ui/organisms/Modal";
-import { tryAsync } from "@lib/result.ts";
-import { notifyError, notifySuccess } from "@lib/notify.ts";
-import { showConfirm } from "@lib/safe-action.ts";
+
 import {
 	deleteBookmarkTagE,
 	searchBookmarkTagsE,
 } from "@features/bookmark/api.ts";
-import type { BookmarkTagWithCount } from "@features/bookmark/types.ts";
 import styles from "@features/bookmark/TagManager.module.css";
+import type { BookmarkTagWithCount } from "@features/bookmark/types.ts";
+import { notifyError, notifySuccess } from "@shared/lib/notify.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import { showConfirm } from "@shared/lib/safe-action.ts";
+import Button from "@shared/ui/atoms/Button";
+import Modal from "@shared/ui/organisms/Modal";
+import { createResource, For, Show } from "solid-js";
 
 interface Props {
 	isOpen: boolean;

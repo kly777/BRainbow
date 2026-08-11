@@ -387,7 +387,8 @@
 .user-bubble {
 	background: var(--t-color-accent);
 	color: var(--t-color-white);
-	border-radius: var(--radius-lg) var(--radius-sm) var(--radius-lg) var(--radius-lg);
+	border-radius: var(--radius-lg) var(--radius-sm) var(--radius-lg)
+		var(--radius-lg);
 	padding: var(--space-sm) var(--space-md);
 	font-size: var(--text-base);
 	line-height: var(--leading-normal);

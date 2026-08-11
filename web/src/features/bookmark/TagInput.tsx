@@ -3,16 +3,17 @@
  * 按名称工作，Enter 直接添加（保存时后端自动创建）。
  * 建议下拉中可 hover 删除已存在的标签（全局删除，所有书签移除该标签）。
  */
-import { createResource, createSignal, For, Show } from "solid-js";
-import { tryAsync } from "@lib/result.ts";
-import { notifyError, notifySuccess } from "@lib/notify.ts";
-import { showConfirm } from "@lib/safe-action.ts";
+
 import {
 	deleteBookmarkTagE,
 	searchBookmarkTagsE,
 } from "@features/bookmark/api.ts";
-import type { BookmarkTagWithCount } from "@features/bookmark/types.ts";
 import styles from "@features/bookmark/TagInput.module.css";
+import type { BookmarkTagWithCount } from "@features/bookmark/types.ts";
+import { notifyError, notifySuccess } from "@shared/lib/notify.ts";
+import { tryAsync } from "@shared/lib/result.ts";
+import { showConfirm } from "@shared/lib/safe-action.ts";
+import { createResource, createSignal, For, Show } from "solid-js";
 
 interface Props {
 	tags: string[];

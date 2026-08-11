@@ -1,7 +1,7 @@
 // ── 标签过滤逻辑 ──
 
-import { listTagsE, searchTagsE } from "@entities/mem/api.ts";
-import type { TagInfo } from "@entities/mem/model.ts";
+import type { TagInfo } from "@entities/mem";
+import { listTagsE, searchTagsE } from "@entities/mem";
 import { notifyError } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import {

@@ -1,4 +1,4 @@
-import { uploadMedia } from "@entities/media/api.ts";
+import { uploadMedia } from "@entities/media";
 import MarkdownRenderer from "@shared/ui/atoms/Markdown";
 import { createSignal, Show } from "solid-js";
 import styles from "./markdown-editor.module.css";

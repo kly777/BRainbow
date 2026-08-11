@@ -1,8 +1,10 @@
-import { deleteCardE as apiDeleteCard, getCardsE } from "@entities/card/api.ts";
-import type { CardData } from "@entities/card/ui/Card.tsx";
-import CardsGrid from "@entities/card/ui/CardsGrid.tsx";
-import TaskList from "@entities/task/ui/TaskList.tsx";
-import { TaskProvider, useTasks } from "@entities/task/ui/TaskProvider.tsx";
+import type { CardData } from "@entities/card";
+import {
+	deleteCardE as apiDeleteCard,
+	CardsGrid,
+	getCardsE,
+} from "@entities/card";
+import { TaskList, TaskProvider, useTasks } from "@entities/task";
 import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";
 import { AsyncView } from "@shared/ui/molecules/AsyncView";
 import { A, useNavigate } from "@solidjs/router";

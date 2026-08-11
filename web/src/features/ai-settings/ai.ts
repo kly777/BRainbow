@@ -1,7 +1,7 @@
 // ── 通用 AI 客户端 ──
 // 统一走后端代理（/api/ai/chat）：AI 配置存数据库、用户端可配置，api_key 不进浏览器。
 
-import { aiChatE } from "@entities/ai-settings/api.ts";
+import { aiChatE } from "@entities/ai-settings";
 
 export interface AiMessage {
 	role: "system" | "user" | "assistant";

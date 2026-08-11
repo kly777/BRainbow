@@ -1,6 +1,6 @@
-import { createCardE } from "@entities/card/api.ts";
-import type { CreateCardRequest } from "@entities/card/types.ts";
-import MarkdownEditor from "@features/markdown-editor/MarkdownEditor";
+import type { CreateCardRequest } from "@entities/card";
+import { createCardE } from "@entities/card";
+import { MarkdownEditor } from "@features/markdown-editor";
 import styles from "@pages/card/CardAdd.module.css";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { tryAsync } from "@shared/lib/result.ts";

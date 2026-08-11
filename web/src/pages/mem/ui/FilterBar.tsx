@@ -1,6 +1,6 @@
 // ── v2 标签过滤栏 ──
 
-import type { UseMemReview } from "@pages/mem/logic/useMemReview.ts";
+import type { UseMemReview } from "@pages/mem/model/useMemReview.ts";
 import styles from "@pages/mem/ui/FilterBar.module.css";
 import { For, Show } from "solid-js";
 

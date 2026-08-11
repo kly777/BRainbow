@@ -2,8 +2,8 @@
 // 清单表格 = 档案索引 · 详情面板 = 档案卡
 // 业务逻辑复用 useMemManage，此处只做视图层
 
-import { useMemManage } from "@pages/mem/logic/useMemManage.ts";
 import styles from "@pages/mem/MemManage.module.css";
+import { useMemManage } from "@pages/mem/model/useMemManage.ts";
 import ManageBatchBar from "@pages/mem/ui/ManageBatchBar.tsx";
 import ManageDetail from "@pages/mem/ui/ManageDetail.tsx";
 import ManageTable from "@pages/mem/ui/ManageTable.tsx";

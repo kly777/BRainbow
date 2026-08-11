@@ -1,5 +1,5 @@
-import type { Task } from "@entities/task/types.ts";
-import { useTasks } from "@entities/task/ui/TaskProvider.tsx";
+import type { Task } from "@entities/task";
+import { useTasks } from "@entities/task";
 import styles from "@pages/task/ui/TaskKanban.module.css";
 import { createMemo, For, Show } from "solid-js";
 

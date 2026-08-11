@@ -1,6 +1,6 @@
 // ── 记忆复习模块的核心业务逻辑 ──
 
-import type { DueResponse } from "@entities/mem/api.ts";
+import type { DueResponse, MemCounts, MemItem, TagInfo } from "@entities/mem";
 import {
 	buryMemE,
 	editMemE,
@@ -10,17 +10,16 @@ import {
 	previewMemE,
 	reviewMemE,
 	suspendMemE,
-} from "@entities/mem/api.ts";
-import type { MemCounts, MemItem, TagInfo } from "@entities/mem/model.ts";
+} from "@entities/mem";
 import {
 	ALPHA,
 	calcAvgCardTime,
 	calcMaxLearning,
-} from "@pages/mem/logic/mem-calcs.ts";
-import { useMemTagFilter } from "@pages/mem/logic/useMemTagFilter.ts";
-import { useMnemonic } from "@pages/mem/logic/useMnemonic.ts";
-import { useReviewKeyboard } from "@pages/mem/logic/useReviewKeyboard.ts";
-import { useUndo } from "@pages/mem/logic/useUndo.ts";
+} from "@pages/mem/model/mem-calcs.ts";
+import { useMemTagFilter } from "@pages/mem/model/useMemTagFilter.ts";
+import { useMnemonic } from "@pages/mem/model/useMnemonic.ts";
+import { useReviewKeyboard } from "@pages/mem/model/useReviewKeyboard.ts";
+import { useUndo } from "@pages/mem/model/useUndo.ts";
 import { notifyError } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import {

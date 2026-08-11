@@ -1,13 +1,13 @@
 // ── 阅读详情页核心逻辑 ──
 
-import type { ArticleDetail } from "@entities/reading/api.ts";
+import type { ArticleDetail } from "@entities/reading";
 import {
 	getArticle,
 	getArticleNotes,
 	markWord,
 	recommendNext,
 	updateArticleNotes,
-} from "@entities/reading/api.ts";
+} from "@entities/reading";
 import { notifyError } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import { useParams } from "@solidjs/router";

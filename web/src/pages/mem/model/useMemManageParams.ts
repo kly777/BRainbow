@@ -1,12 +1,12 @@
 // ── URL 搜索参数管理 ──
 
-import type { TagMode } from "@pages/mem/logic/mem-manage-utils.ts";
+import type { TagMode } from "@pages/mem/model/mem-manage-utils.ts";
 import {
 	type SortDir,
 	type SortField,
 	VALID_SORT_FIELDS,
 	VALID_STATES,
-} from "@pages/mem/logic/mem-manage-utils.ts";
+} from "@pages/mem/model/mem-manage-utils.ts";
 import {
 	enumParam,
 	listParam,

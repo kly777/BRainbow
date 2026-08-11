@@ -1,6 +1,6 @@
-import type { TagInfo } from "@entities/mem/api.ts";
-import { downloadExportCsv, listTagsE } from "@entities/mem/api.ts";
-import TagSelector from "@features/tag-selector/TagSelector";
+import type { TagInfo } from "@entities/mem";
+import { downloadExportCsv, listTagsE } from "@entities/mem";
+import { TagSelector } from "@features/tag-selector";
 import { notifyError } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import Modal from "@shared/ui/organisms/Modal";

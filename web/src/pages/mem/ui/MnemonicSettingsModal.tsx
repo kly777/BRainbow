@@ -1,10 +1,7 @@
 // ── 助记提示词配置（挂在 /m 记忆页） ──
 // 与全局 AI 服务配置分离：这里只编辑助记生成提示词。
 
-import {
-	getAiSettingsE,
-	updateAiSettingsE,
-} from "@entities/ai-settings/api.ts";
+import { getAiSettingsE, updateAiSettingsE } from "@entities/ai-settings";
 import styles from "@pages/mem/ui/MnemonicSettingsModal.module.css";
 import { tryAsync } from "@shared/lib/result.ts";
 import { tryOrNotify } from "@shared/lib/safe-action.ts";

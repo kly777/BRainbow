@@ -1,8 +1,8 @@
 // ── 对话页：AI 多轮对话（树状分支 / 修订 / 搜索 / 预设提示词） ──
 
-import type { ChatNode, ChatTree } from "@entities/chat/api.ts";
+import type { ChatNode, ChatTree } from "@entities/chat";
 import styles from "@pages/chat/ChatPage.module.css";
-import { useChatPage } from "@pages/chat/logic/useChatPage.ts";
+import { useChatPage } from "@pages/chat/model/useChatPage.ts";
 import MarkdownRenderer from "@shared/ui/atoms/Markdown";
 import { createSignal, For, onMount, Show } from "solid-js";
 

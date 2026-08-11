@@ -3,9 +3,9 @@
 // 批量/文件模式 = 卡片清单审查（预览 + 勾选入库）
 // 业务逻辑复用 useMemAdd，此处只做视图层
 
-import MarkdownEditor from "@features/markdown-editor/MarkdownEditor";
-import { useMemAdd } from "@pages/mem/logic/useMemAdd.ts";
+import { MarkdownEditor } from "@features/markdown-editor";
 import styles from "@pages/mem/MemAdd.module.css";
+import { useMemAdd } from "@pages/mem/model/useMemAdd.ts";
 import {
 	FormatHint,
 	ImportActions,

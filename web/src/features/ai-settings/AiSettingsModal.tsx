@@ -1,14 +1,11 @@
 // ── AI 服务设置面板（配置存数据库，后端代理） ──
 // 仅管 AI 服务本身（API 地址 / Key / 模型）；助记提示词在 /m 页单独配置。
 
-import {
-	getAiSettingsE,
-	updateAiSettingsE,
-} from "@entities/ai-settings/api.ts";
-import { callAi } from "@features/ai-settings/ai.ts";
+import { getAiSettingsE, updateAiSettingsE } from "@entities/ai-settings";
 import { tryAsync } from "@shared/lib/result.ts";
 import Modal from "@shared/ui/organisms/Modal";
 import { createEffect, createSignal, Show } from "solid-js";
+import { callAi } from "./ai.ts";
 import { aiSettingsOpen, closeAiSettings } from "./aiSettingsStore.ts";
 
 export default function AiSettingsModal() {

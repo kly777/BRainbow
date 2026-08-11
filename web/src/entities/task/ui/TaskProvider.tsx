@@ -1,17 +1,3 @@
-import {
-	createTaskE as apiCreateTask,
-	deleteTaskE as apiDeleteTask,
-	updateTaskE as apiUpdateTask,
-	getTaskStatsE,
-	getTasksE,
-	searchTasksE,
-} from "@entities/task/api.ts";
-import type { CreateTaskRequest, Task } from "@entities/task/types.ts";
-import {
-	fetchTasksByFilter,
-	makeTemp,
-	STATUS_API,
-} from "@entities/task/ui/task-provider-utils.ts";
 import { notifyError } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";
@@ -22,6 +8,20 @@ import {
 	onMount,
 	useContext,
 } from "solid-js";
+import {
+	createTaskE as apiCreateTask,
+	deleteTaskE as apiDeleteTask,
+	updateTaskE as apiUpdateTask,
+	getTaskStatsE,
+	getTasksE,
+	searchTasksE,
+} from "../api.ts";
+import type { CreateTaskRequest, Task } from "../types.ts";
+import {
+	fetchTasksByFilter,
+	makeTemp,
+	STATUS_API,
+} from "./task-provider-utils.ts";
 
 interface Stats {
 	backlog: number;

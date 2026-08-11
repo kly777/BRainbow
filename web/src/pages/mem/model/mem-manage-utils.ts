@@ -1,7 +1,7 @@
 // ── 记忆管理模块的类型、常量和纯数据访问函数 ──
 
-import { getAllMemsE } from "@entities/mem/api.ts";
-import type { MemItem, TagInfo } from "@entities/mem/model.ts";
+import type { MemItem, TagInfo } from "@entities/mem";
+import { getAllMemsE } from "@entities/mem";
 export type TagMode = "include" | "exclude";
 
 import { notifyError } from "@shared/lib/notify.ts";

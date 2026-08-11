@@ -1,9 +1,9 @@
 // ── v2 管理详情：档案卡 ──
 // 线索/答案用目录卡标签页，元数据等宽，操作与标签管理
 
-import type { MemItem, TagInfo } from "@entities/mem/api.ts";
-import MarkdownEditor from "@features/markdown-editor/MarkdownEditor";
-import TagSelector from "@features/tag-selector/TagSelector";
+import type { MemItem, TagInfo } from "@entities/mem";
+import { MarkdownEditor } from "@features/markdown-editor";
+import { TagSelector } from "@features/tag-selector";
 import styles from "@pages/mem/ui/ManageDetail.module.css";
 import { fmtLocal } from "@shared/lib/time.ts";
 import Button from "@shared/ui/atoms/Button";

@@ -1,6 +1,6 @@
-import { getConvQaE } from "@entities/conv/api.ts";
+import { getConvQaE } from "@entities/conv";
 import styles from "@pages/conv/ConvDetail.module.css";
-import { useBackHref } from "@pages/conv/logic/useBackHref.ts";
+import { useBackHref } from "@pages/conv/model/useBackHref.ts";
 import ConvTopBar from "@pages/conv/ui/ConvTopBar.tsx";
 import QaPairList from "@pages/conv/ui/QaPairList.tsx";
 import { getErrorMessage } from "@shared/api/types/errors.ts";

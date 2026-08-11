@@ -1,6 +1,6 @@
 // ── 阅读详情页面（薄壳视图层）──
 
-import { useReadingDetail } from "@pages/reading/logic/useReadingDetail.ts";
+import { useReadingDetail } from "@pages/reading/model/useReadingDetail.ts";
 import styles from "@pages/reading/ReadingDetail.module.css";
 import { getErrorMessage } from "@shared/api/types/errors.ts";
 import { A } from "@solidjs/router";

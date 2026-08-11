@@ -1,6 +1,6 @@
-import { getConvConceptE } from "@entities/conv/api.ts";
+import { getConvConceptE } from "@entities/conv";
 import styles from "@pages/conv/ConvDetail.module.css";
-import { useBackHref } from "@pages/conv/logic/useBackHref.ts";
+import { useBackHref } from "@pages/conv/model/useBackHref.ts";
 import ConvTopBar from "@pages/conv/ui/ConvTopBar.tsx";
 import { getErrorMessage } from "@shared/api/types/errors.ts";
 import MarkdownRenderer from "@shared/ui/atoms/Markdown";

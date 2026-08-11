@@ -1,3 +1,5 @@
+import { CACHE, cachedRequest, tapInvalidate } from "@shared/api/cache.ts";
+import { patch, post, request } from "@shared/api/request.ts";
 import type {
 	CalendarEvent,
 	CreateTaskRequest,
@@ -5,9 +7,7 @@ import type {
 	Task,
 	TaskDetail,
 	UpdateTaskRequest,
-} from "@entities/task/types.ts";
-import { CACHE, cachedRequest, tapInvalidate } from "@shared/api/cache.ts";
-import { patch, post, request } from "@shared/api/request.ts";
+} from "./types.ts";
 
 // ==================== 类型 ====================
 

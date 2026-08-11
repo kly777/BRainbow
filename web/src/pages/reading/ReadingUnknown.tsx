@@ -1,4 +1,4 @@
-import { listUnknownWords, markWord } from "@entities/reading/api.ts";
+import { listUnknownWords, markWord } from "@entities/reading";
 import styles from "@pages/reading/ReadingUnknown.module.css";
 import { getErrorMessage } from "@shared/api/types/errors.ts";
 import { A } from "@solidjs/router";

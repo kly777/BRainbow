@@ -4,7 +4,7 @@
 //       底部"导入所选"把勾选卡片写入记忆库。
 
 import styles from "@pages/chat/ChatMemPage.module.css";
-import { useChatMem } from "@pages/chat/logic/useChatMem.ts";
+import { useChatMem } from "@pages/chat/model/useChatMem.ts";
 import MarkdownRenderer from "@shared/ui/atoms/Markdown";
 import { A } from "@solidjs/router";
 import { createSignal, For, onMount, Show } from "solid-js";

@@ -1,6 +1,6 @@
 // ── 记忆添加模块的核心业务逻辑 ──
 
-import { importJsonE } from "@entities/mem/api.ts";
+import { importJsonE } from "@entities/mem";
 import { parseBatch, parseImportFile } from "@shared/lib/delimited.ts";
 import { tryAsync, trySync } from "@shared/lib/result.ts";
 import { tryOrNotify } from "@shared/lib/safe-action.ts";

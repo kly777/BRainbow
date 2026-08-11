@@ -14,7 +14,7 @@ import {
 	type SearchHit,
 	searchChatE,
 	type TreeDetail,
-} from "@entities/chat/api.ts";
+} from "@entities/chat";
 import { tryAsync } from "@shared/lib/result.ts";
 import { tryOrNotify } from "@shared/lib/safe-action.ts";
 import { useNavigate, useSearchParams } from "@solidjs/router";

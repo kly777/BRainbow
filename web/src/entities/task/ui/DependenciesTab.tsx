@@ -1,10 +1,3 @@
-import {
-	addTaskDependencyE,
-	getTaskDetailE,
-	removeTaskDependencyE,
-} from "@entities/task/api.ts";
-import type { Task } from "@entities/task/types.ts";
-import styles from "@entities/task/ui/EditTaskModal.module.css";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { notifyError } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";
@@ -15,6 +8,13 @@ import {
 	For,
 	Show,
 } from "solid-js";
+import {
+	addTaskDependencyE,
+	getTaskDetailE,
+	removeTaskDependencyE,
+} from "../api.ts";
+import type { Task } from "../types.ts";
+import styles from "./EditTaskModal.module.css";
 
 // 依赖状态类映射（vanilla-extract 不支持动态索引）
 const depStatusClass: Record<string, string> = {

@@ -1,4 +1,4 @@
-import { createTagE, searchTagsE, type TagInfo } from "@entities/mem/api.ts";
+import { createTagE, searchTagsE, type TagInfo } from "@entities/mem";
 import { tryAsync } from "@shared/lib/result.ts";
 import { createResource, createSignal, For, Show } from "solid-js";
 import styles from "./TagSelector.module.css";

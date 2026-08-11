@@ -1,12 +1,12 @@
 // ── 卡片列表核心业务逻辑 ──
 
+import type { Card, CreateCardRequest } from "@entities/card";
 import {
 	createCardE,
 	deleteCardE,
 	getCardsE,
 	searchCardsE,
-} from "@entities/card/api.ts";
-import type { Card, CreateCardRequest } from "@entities/card/types.ts";
+} from "@entities/card";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";

@@ -1,6 +1,6 @@
-import { deleteCardE, getCardE, updateCardE } from "@entities/card/api.ts";
-import type { UpdateCardRequest } from "@entities/card/types.ts";
-import MarkdownEditor from "@features/markdown-editor/MarkdownEditor";
+import type { UpdateCardRequest } from "@entities/card";
+import { deleteCardE, getCardE, updateCardE } from "@entities/card";
+import { MarkdownEditor } from "@features/markdown-editor";
 import styles from "@pages/card/CardEdit.module.css";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { tryAsync } from "@shared/lib/result.ts";

@@ -5,7 +5,7 @@ import {
 	deletePresetE,
 	type PromptPreset,
 	updatePresetE,
-} from "@entities/chat/api.ts";
+} from "@entities/chat";
 import styles from "@pages/chat/ChatPrompts.module.css";
 import { tryOrNotify } from "@shared/lib/safe-action.ts";
 import { createSignal, For, onMount, Show } from "solid-js";

@@ -1,6 +1,6 @@
 // ── v2 上下文条：卡元数据 + 统计 + 编辑 ──
 
-import type { UseMemReview } from "@pages/mem/logic/useMemReview.ts";
+import type { UseMemReview } from "@pages/mem/model/useMemReview.ts";
 import styles from "@pages/mem/ui/ContextBar.module.css";
 import Button from "@shared/ui/atoms/Button";
 import { Show } from "solid-js";

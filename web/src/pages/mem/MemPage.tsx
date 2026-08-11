@@ -2,10 +2,10 @@
 // 全新布局设计：全局头 + 上下文条 + 过滤 + 沉浸式卡片区
 // 业务逻辑全部复用 useMemReview，此处只做组合与交互增强
 
-import { getUpcomingCountsE, type UpcomingCounts } from "@entities/mem/api.ts";
-import { openAiSettings } from "@features/ai-settings/aiSettingsStore.ts";
-import { useMemReview } from "@pages/mem/logic/useMemReview.ts";
+import { getUpcomingCountsE, type UpcomingCounts } from "@entities/mem";
+import { openAiSettings } from "@features/ai-settings";
 import styles from "@pages/mem/MemPage.module.css";
+import { useMemReview } from "@pages/mem/model/useMemReview.ts";
 import ContextBar from "@pages/mem/ui/ContextBar.tsx";
 import FilterBar from "@pages/mem/ui/FilterBar.tsx";
 import MnemonicSettingsModal from "@pages/mem/ui/MnemonicSettingsModal.tsx";

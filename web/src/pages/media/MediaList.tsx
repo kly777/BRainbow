@@ -3,7 +3,7 @@ import {
 	listMediaE,
 	type MediaItem,
 	renameMediaE,
-} from "@entities/media/api.ts";
+} from "@entities/media";
 import styles from "@pages/media/MediaList.module.css";
 import { getErrorMessage, HttpError } from "@shared/api/types/index.ts";
 import { notifyError } from "@shared/lib/notify.ts";

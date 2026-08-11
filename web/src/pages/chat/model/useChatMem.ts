@@ -11,13 +11,13 @@ import {
 	getTreeE,
 	listTreesByKindE,
 	type TreeDetail,
-} from "@entities/chat/api.ts";
+} from "@entities/chat";
 import {
 	type AiCard,
 	countKnowledgePoints,
+	importJsonE,
 	parseAiCards,
-} from "@entities/mem/ai-cards.ts";
-import { importJsonE } from "@entities/mem/api.ts";
+} from "@entities/mem";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import { tryOrNotify } from "@shared/lib/safe-action.ts";

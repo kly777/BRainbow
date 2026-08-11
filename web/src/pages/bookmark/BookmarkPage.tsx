@@ -1,3 +1,4 @@
+import type { Bookmark } from "@entities/bookmark";
 import {
 	createBookmarkE,
 	deleteBookmarkE,
@@ -6,8 +7,7 @@ import {
 	searchBookmarksE,
 	setBookmarkTagsE,
 	updateBookmarkE,
-} from "@entities/bookmark/api.ts";
-import type { Bookmark } from "@entities/bookmark/types.ts";
+} from "@entities/bookmark";
 import styles from "@pages/bookmark/BookmarkPage.module.css";
 import Favicon from "@pages/bookmark/Favicon.tsx";
 import TagInput from "@pages/bookmark/TagInput.tsx";

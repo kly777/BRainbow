@@ -1,9 +1,9 @@
 // ── v2 复习卡片：目录卡 + 3D 翻面 + 卡牌层叠 ──
 // 线索与答案分居卡片两面，点"显示答案"实体翻转。
 
-import MarkdownEditor from "@features/markdown-editor/MarkdownEditor";
-import type { UseMemReview } from "@pages/mem/logic/useMemReview.ts";
-import { useSpeech } from "@pages/mem/logic/useSpeech.ts";
+import { MarkdownEditor } from "@features/markdown-editor";
+import type { UseMemReview } from "@pages/mem/model/useMemReview.ts";
+import { useSpeech } from "@pages/mem/model/useSpeech.ts";
 import styles from "@pages/mem/ui/ReviewCard.module.css";
 import { fmtInterval, fmtLocal } from "@shared/lib/time.ts";
 import Button from "@shared/ui/atoms/Button";

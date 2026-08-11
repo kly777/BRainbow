@@ -1,6 +1,6 @@
-import type { Task } from "@entities/task/types.ts";
-import styles from "@entities/task/ui/EditTaskModal.module.css";
 import { For } from "solid-js";
+import type { Task } from "../types.ts";
+import styles from "./EditTaskModal.module.css";
 
 interface BasicInfoTabProps {
 	title: () => string;

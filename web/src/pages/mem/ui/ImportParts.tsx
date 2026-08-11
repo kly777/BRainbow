@@ -1,6 +1,6 @@
 // ── v2 导入相关子组件：格式说明卡 / 预览清单 / 默认标签 / 结果页 ──
 
-import type { PreviewRow } from "@pages/mem/logic/useMemAdd.ts";
+import type { PreviewRow } from "@pages/mem/model/useMemAdd.ts";
 import styles from "@pages/mem/ui/ImportParts.module.css";
 import { For, Show } from "solid-js";
 

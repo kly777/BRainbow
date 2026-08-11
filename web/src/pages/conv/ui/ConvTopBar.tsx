@@ -1,5 +1,5 @@
 import styles from "@pages/conv/ConvDetail.module.css";
-import { typeLabel } from "@pages/conv/logic/constants.ts";
+import { typeLabel } from "@pages/conv/model/constants.ts";
 import { A } from "@solidjs/router";
 
 interface Props {

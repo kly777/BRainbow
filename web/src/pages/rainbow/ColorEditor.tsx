@@ -1,5 +1,4 @@
 import { Color } from "@shared/lib/color.ts";
-import styles from "@shared/ui/organisms/ColorEditor.module.css";
 import {
 	type Accessor,
 	createEffect,
@@ -7,6 +6,7 @@ import {
 	Index,
 	type Setter,
 } from "solid-js";
+import styles from "./ColorEditor.module.css";
 
 type ColorSpace = "hex" | "rgb" | "hsl" | "oklch";
 

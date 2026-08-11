@@ -1,8 +1,8 @@
-import { type ColumnInfo, getTableDataE, getTablesE } from "./api.ts";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import { useSearchParams } from "@solidjs/router";
 import { type Component, createSignal, For, onMount } from "solid-js";
+import { type ColumnInfo, getTableDataE, getTablesE } from "./api.ts";
 
 const DB: Component = () => {
 	const [searchParams, setSearchParams] = useSearchParams();

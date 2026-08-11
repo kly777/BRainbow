@@ -3,6 +3,7 @@
 // 业务逻辑全部复用 useMemReview，此处只做组合与交互增强
 
 import { getUpcomingCountsE, type UpcomingCounts } from "@entities/mem/api.ts";
+import { openAiSettings } from "@features/ai-settings/aiSettingsStore.ts";
 import { useMemReview } from "@pages/mem/logic/useMemReview.ts";
 import styles from "@pages/mem/MemPage.module.css";
 import ContextBar from "@pages/mem/ui/ContextBar.tsx";
@@ -12,7 +13,6 @@ import ReviewCard from "@pages/mem/ui/ReviewCard.tsx";
 import Sidebar from "@pages/mem/ui/Sidebar.tsx";
 import { notifyError } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";
-import { openAiSettings } from "@shared/ui/organisms/aiSettingsStore.ts";
 import { A } from "@solidjs/router";
 import {
 	createDeferred,

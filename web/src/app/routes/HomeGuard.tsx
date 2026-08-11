@@ -1,5 +1,5 @@
 import { useAuth } from "@app/auth/context.tsx";
-import HomePage from "./HomePage.tsx";
+import HomePage from "@pages/home/HomePage.tsx";
 import LandingPage from "@pages/landing/LandingPage.tsx";
 import { Show } from "solid-js";
 

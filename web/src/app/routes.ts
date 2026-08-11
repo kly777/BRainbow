@@ -25,7 +25,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Brainbow",
 		desc: "首页面板",
 		nav: true,
-		component: lazy(() => import("@pages/home/HomeGuard.tsx")),
+		component: lazy(() => import("@app/routes/HomeGuard.tsx")),
 	},
 	{
 		path: "/t",

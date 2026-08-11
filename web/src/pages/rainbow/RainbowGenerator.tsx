@@ -1,15 +1,12 @@
-import styles from "./RainbowGenerator.module.css";
 import { Angle } from "@shared/lib/angle.ts";
 import { Color } from "@shared/lib/color.ts";
 import Button from "@shared/ui/atoms/Button";
 import FilterGroup from "@shared/ui/molecules/FilterGroup";
-import {
-	RainbowDrawer,
-	type ShapeRender,
-} from "@shared/ui/molecules/RainbowDrawer";
-import AngleEditor from "@shared/ui/organisms/AngleEditor";
-import ColorEditor from "@shared/ui/organisms/ColorEditor";
 import { createMemo, createSignal } from "solid-js";
+import AngleEditor from "./AngleEditor";
+import ColorEditor from "./ColorEditor";
+import { RainbowDrawer, type ShapeRender } from "./RainbowDrawer";
+import styles from "./RainbowGenerator.module.css";
 
 function RainbowGenerator() {
 	const L = 0.7;

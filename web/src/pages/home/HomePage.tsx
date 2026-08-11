@@ -3,11 +3,11 @@ import type { CardData } from "@entities/card/ui/Card.tsx";
 import CardsGrid from "@entities/card/ui/CardsGrid.tsx";
 import TaskList from "@entities/task/ui/TaskList.tsx";
 import { TaskProvider, useTasks } from "@entities/task/ui/TaskProvider.tsx";
-import styles from "./HomePage.module.css";
 import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";
 import { AsyncView } from "@shared/ui/molecules/AsyncView";
 import { A, useNavigate } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
+import styles from "./HomePage.module.css";
 
 // 模块入口（纯文字链接）
 const MODULES = [

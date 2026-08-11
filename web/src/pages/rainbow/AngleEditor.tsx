@@ -1,11 +1,11 @@
 import { Angle } from "@shared/lib/angle.ts";
-import styles from "@shared/ui/organisms/AngleEditor.module.css";
 import {
 	type Accessor,
 	createEffect,
 	createSignal,
 	type Setter,
 } from "solid-js";
+import styles from "./AngleEditor.module.css";
 
 type AngleMode = "deg" | "rad" | "slope";
 

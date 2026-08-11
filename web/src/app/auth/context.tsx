@@ -1,3 +1,11 @@
+import {
+	API_KEY_STORAGE_KEY,
+	clearUser,
+	getApiKey as loadApiKey,
+	setApiKey as persistApiKey,
+	STORAGE_KEY,
+	saveUser,
+} from "@shared/api/token.ts";
 import { createContext, createSignal, type JSX, useContext } from "solid-js";
 
 export interface AuthState {
@@ -14,9 +22,6 @@ const AuthContext = createContext<{
 	setApiKey: (key: string | null) => void;
 }>();
 
-const STORAGE_KEY = "brainbow_user";
-const API_KEY_STORAGE_KEY = "brainbow_api_key";
-
 function loadFromStorage() {
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
@@ -27,14 +32,6 @@ function loadFromStorage() {
 		/* ignore parse errors */
 	}
 	return null;
-}
-
-export function loadApiKey(): string | null {
-	try {
-		return localStorage.getItem(API_KEY_STORAGE_KEY);
-	} catch {
-		return null;
-	}
 }
 
 export function AuthProvider(props: { children: JSX.Element }) {
@@ -49,19 +46,15 @@ export function AuthProvider(props: { children: JSX.Element }) {
 		auth,
 		login: (id: number, name: string, role: string, token: string) => {
 			const user = { id, name, role, token };
-			localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+			saveUser(user);
 			setAuth({ user, isAdmin: role === "admin", apiKey: loadApiKey() });
 		},
 		logout: () => {
-			localStorage.removeItem(STORAGE_KEY);
+			clearUser();
 			setAuth({ user: null, isAdmin: false, apiKey: loadApiKey() });
 		},
 		setApiKey: (key: string | null) => {
-			if (key) {
-				localStorage.setItem(API_KEY_STORAGE_KEY, key);
-			} else {
-				localStorage.removeItem(API_KEY_STORAGE_KEY);
-			}
+			persistApiKey(key);
 			setAuth((prev) => ({ ...prev, apiKey: key }));
 		},
 	};
@@ -87,10 +80,5 @@ export function useAuth() {
 	return ctx;
 }
 
-export function getToken(): string | null {
-	return loadFromStorage()?.token ?? null;
-}
-
-export function getApiKey(): string | null {
-	return loadApiKey();
-}
+export { getApiKey, getToken } from "@shared/api/token.ts";
+export { API_KEY_STORAGE_KEY, loadApiKey };

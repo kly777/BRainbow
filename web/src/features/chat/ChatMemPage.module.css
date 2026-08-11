@@ -41,7 +41,7 @@
 }
 
 .new-btn {
-	composes: btn-ghost from "../../styles/base.module.css";
+	composes: btn-ghost from "@app/styles/base.module.css";
 	padding: var(--space-2xs) var(--space-sm);
 	font-size: var(--text-xs);
 	line-height: 1;
@@ -177,7 +177,7 @@
 }
 
 .empty-state {
-	composes: empty-state from "../../styles/base.module.css";
+	composes: empty-state from "@app/styles/base.module.css";
 	flex: 1;
 	justify-content: center;
 }
@@ -263,7 +263,7 @@
 }
 
 .import-btn {
-	composes: btn-primary from "../../styles/base.module.css";
+	composes: btn-primary from "@app/styles/base.module.css";
 	padding: var(--space-2xs) var(--space-md);
 	font-size: var(--text-xs);
 	line-height: 1;
@@ -587,7 +587,7 @@
 }
 
 .input-area {
-	composes: field-textarea from "../../styles/base.module.css";
+	composes: field-textarea from "@app/styles/base.module.css";
 	width: 100%;
 	min-height: 3rem;
 	max-height: 10rem;
@@ -601,7 +601,7 @@
 }
 
 .send-btn {
-	composes: btn-primary from "../../styles/base.module.css";
+	composes: btn-primary from "@app/styles/base.module.css";
 	position: absolute;
 	right: var(--space-xs);
 	bottom: var(--space-xs);

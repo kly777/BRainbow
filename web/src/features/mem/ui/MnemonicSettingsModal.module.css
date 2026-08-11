@@ -45,9 +45,9 @@
 }
 
 .btn-ghost {
-	composes: btn-ghost from "../../../styles/base.module.css";
+	composes: btn-ghost from "@app/styles/base.module.css";
 }
 
 .btn-primary {
-	composes: btn-primary from "../../../styles/base.module.css";
+	composes: btn-primary from "@app/styles/base.module.css";
 }

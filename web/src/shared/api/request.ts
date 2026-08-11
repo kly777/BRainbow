@@ -1,4 +1,4 @@
-import { getApiKey, getToken } from "@auth/context.tsx";
+import { getApiKey, getToken } from "@shared/api/token.ts";
 import { HttpError, NetworkError } from "@shared/api/types/index.ts";
 
 const API_BASE_URL = "/api";

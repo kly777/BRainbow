@@ -1,6 +1,6 @@
 // ── 对话页核心逻辑 ──
 
-import { getToken } from "@auth/context.tsx";
+import { getToken } from "@app/auth/context.tsx";
 import {
 	type ChatNode,
 	type ChatTree,

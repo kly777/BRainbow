@@ -8,7 +8,7 @@
 }
 
 .tag {
-	composes: tag-accent from "../../styles/base.module.css";
+	composes: tag-accent from "@app/styles/base.module.css";
 	gap: var(--space-xs);
 	padding: var(--space-2xs) var(--space-sm);
 	font-size: var(--text-sm);

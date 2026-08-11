@@ -1,6 +1,6 @@
-import styles from "@auth/AuthStatus.module.css";
-import { changePasswordE, loginE, logoutE, registerE } from "@auth/api.ts";
-import { useAuth } from "@auth/context.tsx";
+import styles from "@app/auth/AuthStatus.module.css";
+import { changePasswordE, loginE, logoutE, registerE } from "@app/auth/api.ts";
+import { useAuth } from "@app/auth/context.tsx";
 import { AUTH_REQUIRED_EVENT } from "@shared/api/request.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import { createSignal, onCleanup, Show } from "solid-js";

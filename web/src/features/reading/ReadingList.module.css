@@ -114,7 +114,7 @@
 }
 
 .card {
-	composes: card from "../../styles/base.module.css";
+	composes: card from "@app/styles/base.module.css";
 	display: block;
 	padding: var(--space-lg);
 	text-decoration: none;

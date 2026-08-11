@@ -65,7 +65,7 @@
 }
 
 .search-input {
-	composes: field-input from "../../styles/base.module.css";
+	composes: field-input from "@app/styles/base.module.css";
 	font-size: var(--text-sm);
 }
 
@@ -138,7 +138,7 @@
 }
 
 .new-btn {
-	composes: btn-ghost from "../../styles/base.module.css";
+	composes: btn-ghost from "@app/styles/base.module.css";
 	padding: var(--space-2xs) var(--space-sm);
 	font-size: var(--text-xs);
 	line-height: 1;
@@ -274,7 +274,7 @@
 }
 
 .empty-state {
-	composes: empty-state from "../../styles/base.module.css";
+	composes: empty-state from "@app/styles/base.module.css";
 	flex: 1;
 	justify-content: center;
 }
@@ -317,7 +317,7 @@
 }
 
 .prompt-btn {
-	composes: btn-ghost from "../../styles/base.module.css";
+	composes: btn-ghost from "@app/styles/base.module.css";
 	padding: var(--space-2xs) var(--space-sm);
 	font-size: var(--text-xs);
 	line-height: 1;
@@ -345,12 +345,12 @@
 }
 
 .prompt-input {
-	composes: field-input from "../../styles/base.module.css";
+	composes: field-input from "@app/styles/base.module.css";
 	font-size: var(--text-sm);
 }
 
 .prompt-textarea {
-	composes: field-textarea from "../../styles/base.module.css";
+	composes: field-textarea from "@app/styles/base.module.css";
 	font-size: var(--text-sm);
 }
 
@@ -696,7 +696,7 @@
 }
 
 .input-area {
-	composes: field-textarea from "../../styles/base.module.css";
+	composes: field-textarea from "@app/styles/base.module.css";
 	width: 100%;
 	min-height: 3rem;
 	max-height: 10rem;
@@ -710,7 +710,7 @@
 }
 
 .send-btn {
-	composes: btn-primary from "../../styles/base.module.css";
+	composes: btn-primary from "@app/styles/base.module.css";
 	position: absolute;
 	right: var(--space-xs);
 	bottom: var(--space-xs);
@@ -758,7 +758,7 @@
 }
 
 .edit-area {
-	composes: field-textarea from "../../styles/base.module.css";
+	composes: field-textarea from "@app/styles/base.module.css";
 	font-size: var(--text-base);
 	line-height: var(--leading-normal);
 }
@@ -770,11 +770,11 @@
 }
 
 .btn-ghost {
-	composes: btn-ghost from "../../styles/base.module.css";
+	composes: btn-ghost from "@app/styles/base.module.css";
 }
 
 .btn-primary {
-	composes: btn-primary from "../../styles/base.module.css";
+	composes: btn-primary from "@app/styles/base.module.css";
 }
 
 /* ── 流式输出 ── */

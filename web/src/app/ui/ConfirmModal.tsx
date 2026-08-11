@@ -1,8 +1,8 @@
-import styles from "@shared/ui/organisms/ConfirmModal.module.css";
 import type { ConfirmVariant } from "@shared/ui/organisms/confirmStore.ts";
 import { confirms } from "@shared/ui/organisms/confirmStore.ts";
 import { createEffect, For, onCleanup, Show } from "solid-js";
 import { Portal } from "solid-js/web";
+import styles from "./ConfirmModal.module.css";
 
 // ==================== 图标/样式映射 ====================
 

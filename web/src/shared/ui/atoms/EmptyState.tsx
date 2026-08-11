@@ -1,4 +1,4 @@
-import base from "@styles/base.module.css";
+import base from "@app/styles/base.module.css";
 import type { JSX } from "solid-js";
 
 /**

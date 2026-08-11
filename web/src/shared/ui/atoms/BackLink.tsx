@@ -1,5 +1,5 @@
+import base from "@app/styles/base.module.css";
 import { A } from "@solidjs/router";
-import base from "@styles/base.module.css";
 
 /** 通用返回链接（← 占位符 + base 的 btn-back 样式） */
 export default function BackLink(props: {

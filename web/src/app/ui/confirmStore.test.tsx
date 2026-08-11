@@ -1,7 +1,11 @@
+import {
+	confirms,
+	dismissAllConfirms,
+	showConfirm,
+} from "@shared/ui/organisms/confirmStore";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import ConfirmModalContainer from "./ConfirmModal";
-import { confirms, dismissAllConfirms, showConfirm } from "./confirmStore";
 
 beforeEach(() => {
 	dismissAllConfirms();

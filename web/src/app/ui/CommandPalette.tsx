@@ -1,10 +1,10 @@
-import { useAuth } from "@auth/context.tsx";
+import { useAuth } from "@app/auth/context.tsx";
+import { NAV_ROUTES } from "@app/routes.ts";
 import { AUTH_REQUIRED_EVENT } from "@shared/api/request.ts";
 import { openAiSettings } from "@shared/ui/organisms/aiSettingsStore.ts";
-import styles from "@shared/ui/organisms/CommandPalette.module.css";
 import { useNavigate } from "@solidjs/router";
 import { createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
-import { NAV_ROUTES } from "@/routes.ts";
+import styles from "./CommandPalette.module.css";
 
 const BING = "https://www.bing.com/search?q=";
 const DUCK = "https://duckduckgo.com/?q=";

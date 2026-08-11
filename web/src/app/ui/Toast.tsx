@@ -1,4 +1,3 @@
-import styles from "@shared/ui/organisms/Toast.module.css";
 import {
 	dismissToast,
 	type ToastItem,
@@ -6,6 +5,7 @@ import {
 } from "@shared/ui/organisms/toastStore.ts";
 import { For, Show } from "solid-js";
 import { Portal } from "solid-js/web";
+import styles from "./Toast.module.css";
 
 const TYPE_CLASS: Record<ToastItem["type"], string> = {
 	error: styles.error,

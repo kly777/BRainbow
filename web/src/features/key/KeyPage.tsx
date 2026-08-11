@@ -1,7 +1,7 @@
 // ── API Key 管理页 ──
 // dev 环境免登录可生成（后端 APP_ENV=dev）；prod 需登录（AuthGuard）。
 
-import { getApiKey, useAuth } from "@auth/context.tsx";
+import { getApiKey, useAuth } from "@app/auth/context.tsx";
 import { del, get, post } from "@shared/api/request.ts";
 import { getErrorMessage } from "@shared/api/types/errors.ts";
 import { notifyError, notifySuccess } from "@shared/lib/notify.ts";

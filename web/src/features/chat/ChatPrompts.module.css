@@ -34,11 +34,11 @@
 }
 
 .input {
-	composes: field-input from "../../styles/base.module.css";
+	composes: field-input from "@app/styles/base.module.css";
 }
 
 .textarea {
-	composes: field-textarea from "../../styles/base.module.css";
+	composes: field-textarea from "@app/styles/base.module.css";
 	line-height: var(--leading-normal);
 }
 
@@ -49,11 +49,11 @@
 }
 
 .btn-ghost {
-	composes: btn-ghost from "../../styles/base.module.css";
+	composes: btn-ghost from "@app/styles/base.module.css";
 }
 
 .btn-primary {
-	composes: btn-primary from "../../styles/base.module.css";
+	composes: btn-primary from "@app/styles/base.module.css";
 }
 
 .list {

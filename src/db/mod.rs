@@ -1,6 +1,6 @@
 pub mod query;
 
-use sqlx::SqlitePool;
+use sqlx::{Row, SqlitePool};
 
 /// 创建表
 pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
@@ -533,9 +533,17 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .await?;
 
     // 迁移：为已有数据库添加 kind 列（chat / mem）
-    let _ = sqlx::query("ALTER TABLE chat_tree ADD COLUMN kind TEXT NOT NULL DEFAULT 'chat'")
-        .execute(pool)
-        .await;
+    // 先查列是否存在：存在 → 幂等跳过；不存在但 ALTER 失败 → 启动失败（迁移必须成功）
+    if !column_exists(pool, "chat_tree", "kind").await? {
+        sqlx::query("ALTER TABLE chat_tree ADD COLUMN kind TEXT NOT NULL DEFAULT 'chat'")
+            .execute(pool)
+            .await
+            .map_err(|e| {
+                sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
+                    "迁移失败: 无法为 chat_tree 添加 kind 列: {e}"
+                ))))
+            })?;
+    }
 
     sqlx::query(
         r#"
@@ -606,9 +614,59 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .await?;
 
     // 迁移：为已有数据库添加 notes 列
-    let _ = sqlx::query("ALTER TABLE reading_article ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
-        .execute(pool)
-        .await;
+    if !column_exists(pool, "reading_article", "notes").await? {
+        sqlx::query("ALTER TABLE reading_article ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+            .execute(pool)
+            .await
+            .map_err(|e| {
+                sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
+                    "迁移失败: 无法为 reading_article 添加 notes 列: {e}"
+                ))))
+            })?;
+    }
 
     Ok(())
+}
+
+/// 检查表中是否存在某列（用于幂等迁移）
+async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> Result<bool, sqlx::Error> {
+    let safe_table = query::sanitize_table_name(table)?;
+    let rows = sqlx::query(
+        // SAFETY: sanitize_table_name 确保 safe_table 只含 [a-zA-Z0-9_]
+        sqlx::AssertSqlSafe(format!("PRAGMA table_info({safe_table})")),
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .iter()
+        .any(|r| r.try_get::<String, _>("name").ok().as_deref() == Some(column)))
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::column_exists;
+    use sqlx::SqlitePool;
+
+    #[tokio::test]
+    async fn column_exists_detects_presence() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE t (id INTEGER, name TEXT)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert!(column_exists(&pool, "t", "id").await.unwrap());
+        assert!(column_exists(&pool, "t", "name").await.unwrap());
+        assert!(!column_exists(&pool, "t", "kind").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn column_exists_rejects_bad_table_name() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        assert!(
+            column_exists(&pool, "bad name; DROP TABLE x", "id")
+                .await
+                .is_err()
+        );
+    }
 }

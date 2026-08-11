@@ -2,7 +2,7 @@
 
 import type { UseMemReview } from "@pages/mem/model/useMemReview.ts";
 import styles from "@pages/mem/ui/ContextBar.module.css";
-import Button from "@shared/ui/atoms/Button";
+import { Button } from "@shared/ui";
 import { Show } from "solid-js";
 
 interface ContextBarProps {

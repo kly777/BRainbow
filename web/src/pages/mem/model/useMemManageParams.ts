@@ -13,7 +13,7 @@ import {
 	numParam,
 	strParam,
 	useUrlParams,
-} from "@shared/lib/useUrlParams.ts";
+} from "@shared/lib";
 
 export interface UseMemManageParamsResult {
 	searchQuery: () => string;

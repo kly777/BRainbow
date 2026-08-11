@@ -21,10 +21,10 @@
  *   );
  */
 
-import { notifyError } from "@shared/lib/notify.ts";
-import { tryAsync } from "@shared/lib/result.ts";
 import type { ConfirmOptions } from "@shared/ui/organisms/confirmStore.ts";
 import { showConfirm as show } from "@shared/ui/organisms/confirmStore.ts";
+import { notifyError } from "./notify.ts";
+import { tryAsync } from "./result.ts";
 
 export {
 	err,
@@ -34,7 +34,7 @@ export {
 	ok,
 	tryAsync,
 	unwrapOr,
-} from "@shared/lib/result.ts";
+} from "./result.ts";
 // Re-export 以便统一导入
 export { show as showConfirm };
 

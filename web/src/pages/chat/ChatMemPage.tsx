@@ -5,7 +5,7 @@
 
 import styles from "@pages/chat/ChatMemPage.module.css";
 import { useChatMem } from "@pages/chat/model/useChatMem.ts";
-import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { Markdown as MarkdownRenderer } from "@shared/ui";
 import { A } from "@solidjs/router";
 import { createSignal, For, onMount, Show } from "solid-js";
 

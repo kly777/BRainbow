@@ -1,6 +1,5 @@
-import { getErrorMessage } from "@shared/api/types/index.ts";
-import { notifyError } from "@shared/lib/notify.ts";
-import { tryAsync } from "@shared/lib/result.ts";
+import { getErrorMessage } from "@shared/api";
+import { notifyError, tryAsync } from "@shared/lib";
 import {
 	createEffect,
 	createResource,
@@ -13,7 +12,7 @@ import {
 	getTaskDetailE,
 	removeTaskDependencyE,
 } from "../api.ts";
-import type { Task } from "../types.ts";
+import type { Task } from "../model.ts";
 import styles from "./EditTaskModal.module.css";
 
 // 依赖状态类映射（vanilla-extract 不支持动态索引）

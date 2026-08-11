@@ -1,14 +1,11 @@
 // ── 记忆模块 API ──
 
-import { CACHE, tapInvalidate } from "@shared/api/cache.ts";
-import { del, post, put, request } from "@shared/api/request.ts";
 import type {
 	BatchDataResponse,
 	BatchResponse,
 	PaginatedResponse,
-} from "@shared/api/types/shared.ts";
-import { tryAsync, unwrapOrNull } from "@shared/lib/result.ts";
-
+} from "@shared/api";
+import { CACHE, del, post, put, request, tapInvalidate } from "@shared/api";
 // ── 类型 ──
 
 export interface Chunk {
@@ -284,7 +281,7 @@ export const batchSetTagsForMemsE = (
 // ── CSV 导入导出 ──
 
 export async function downloadExportCsv(tagIds?: number[]): Promise<void> {
-	const { getToken } = await import("@shared/api/token.ts");
+	const { getToken } = await import("@shared/api");
 	const token = getToken();
 	const headers: Record<string, string> = {};
 	if (token) headers.Authorization = `Bearer ${token}`;
@@ -351,15 +348,6 @@ export const importJsonE = (
 		default_tags: defaultTags ?? [],
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
-export const uploadImage = async (file: File): Promise<string | null> => {
-	const result = await tryAsync(async () => {
-		const { uploadMedia } = await import("@entities/media/api.ts");
-		const item = await uploadMedia(file);
-		return item.url;
-	});
-	return unwrapOrNull(result);
-};
-
 // ── AI 助记 ──
 
 export const getMnemonicE = (
@@ -385,4 +373,4 @@ export type {
 	BatchDataResponse,
 	BatchResponse,
 	PaginatedResponse,
-} from "@shared/api/types/shared.ts";
+} from "@shared/api";

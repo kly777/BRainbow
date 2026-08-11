@@ -1,1 +1,1 @@
-export { default as BookmarkPage } from "./BookmarkPage.tsx";
+export { default as BookmarkPage } from "./ui/BookmarkPage.tsx";

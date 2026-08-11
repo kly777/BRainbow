@@ -1,6 +1,5 @@
 // ── 对话页核心逻辑 ──
 
-import { getToken } from "@app/auth/context.tsx";
 import {
 	type ChatNode,
 	type ChatTree,
@@ -15,8 +14,8 @@ import {
 	searchChatE,
 	type TreeDetail,
 } from "@entities/chat";
-import { tryAsync } from "@shared/lib/result.ts";
-import { tryOrNotify } from "@shared/lib/safe-action.ts";
+import { getToken } from "@shared/api";
+import { tryAsync, tryOrNotify } from "@shared/lib";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal } from "solid-js";
 

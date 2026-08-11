@@ -4,9 +4,8 @@ import {
 	uploadArticle,
 } from "@entities/reading";
 import styles from "@pages/reading/ReadingList.module.css";
-import { getErrorMessage } from "@shared/api/types/errors.ts";
-import { notifyError } from "@shared/lib/notify.ts";
-import { tryAsync } from "@shared/lib/result.ts";
+import { getErrorMessage } from "@shared/api";
+import { notifyError, tryAsync } from "@shared/lib";
 import { A } from "@solidjs/router";
 import { createResource, createSignal, For, Show } from "solid-js";
 

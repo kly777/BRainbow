@@ -2,7 +2,7 @@
 
 import { useReadingDetail } from "@pages/reading/model/useReadingDetail.ts";
 import styles from "@pages/reading/ReadingDetail.module.css";
-import { getErrorMessage } from "@shared/api/types/errors.ts";
+import { getErrorMessage } from "@shared/api";
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 

@@ -1,5 +1,5 @@
-import { getErrorMessage } from "@shared/api/types/index.ts";
-import { tryAsync } from "@shared/lib/result.ts";
+import { getErrorMessage } from "@shared/api";
+import { tryAsync } from "@shared/lib";
 import { useSearchParams } from "@solidjs/router";
 import { type Component, createSignal, For, onMount } from "solid-js";
 import { type ColumnInfo, getTableDataE, getTablesE } from "./api.ts";

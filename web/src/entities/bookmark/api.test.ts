@@ -14,8 +14,7 @@ const cacheMock = vi.hoisted(() => ({
 	tapInvalidate: vi.fn((_p: RegExp, r: unknown) => r),
 }));
 
-vi.mock("@shared/api/request.ts", () => requestMock);
-vi.mock("@shared/api/cache.ts", () => cacheMock);
+vi.mock("@shared/api", () => ({ ...requestMock, ...cacheMock }));
 
 import {
 	createBookmarkE,

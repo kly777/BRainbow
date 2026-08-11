@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Angle } from "./angle";
+import { Angle } from "./format/angle";
 import { buildSvg } from "./icon";
 
 // ── SVG 结构 ──

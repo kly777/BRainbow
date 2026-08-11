@@ -1,5 +1,5 @@
 import { For } from "solid-js";
-import type { Task } from "../types.ts";
+import type { Task } from "../model.ts";
 import styles from "./EditTaskModal.module.css";
 
 interface BasicInfoTabProps {

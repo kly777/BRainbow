@@ -5,9 +5,8 @@ import type { MemItem, TagInfo } from "@entities/mem";
 import { MarkdownEditor } from "@features/markdown-editor";
 import { TagSelector } from "@features/tag-selector";
 import styles from "@pages/mem/ui/ManageDetail.module.css";
-import { fmtLocal } from "@shared/lib/time.ts";
-import Button from "@shared/ui/atoms/Button";
-import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { fmtLocal } from "@shared/lib";
+import { Button, Markdown as MarkdownRenderer } from "@shared/ui";
 import { Show } from "solid-js";
 
 interface Props {

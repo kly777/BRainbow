@@ -5,9 +5,8 @@ import { MarkdownEditor } from "@features/markdown-editor";
 import type { UseMemReview } from "@pages/mem/model/useMemReview.ts";
 import { useSpeech } from "@pages/mem/model/useSpeech.ts";
 import styles from "@pages/mem/ui/ReviewCard.module.css";
-import { fmtInterval, fmtLocal } from "@shared/lib/time.ts";
-import Button from "@shared/ui/atoms/Button";
-import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { fmtInterval, fmtLocal } from "@shared/lib";
+import { Button, Markdown as MarkdownRenderer } from "@shared/ui";
 import { Show } from "solid-js";
 
 interface ReviewCardProps {

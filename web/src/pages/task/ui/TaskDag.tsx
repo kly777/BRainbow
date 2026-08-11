@@ -7,8 +7,7 @@ import {
 	hitTestNode,
 } from "@pages/task/ui/dag-render.ts";
 import styles from "@pages/task/ui/TaskDag.module.css";
-import { notifyError } from "@shared/lib/notify.ts";
-import { tryAsync } from "@shared/lib/result.ts";
+import { notifyError, tryAsync } from "@shared/lib";
 import {
 	createEffect,
 	createMemo,

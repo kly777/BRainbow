@@ -2,7 +2,6 @@
 // 每个 mem 树 = 一次卡片生成会话；对话流存入 chat_node。
 // assistant 消息若为 JSON 卡片数组 → 渲染为可勾选清单，导入走 mem 导入管线。
 
-import { getToken } from "@app/auth/context.tsx";
 import {
 	type ChatNode,
 	type ChatTree,
@@ -18,9 +17,8 @@ import {
 	importJsonE,
 	parseAiCards,
 } from "@entities/mem";
-import { getErrorMessage } from "@shared/api/types/index.ts";
-import { tryAsync } from "@shared/lib/result.ts";
-import { tryOrNotify } from "@shared/lib/safe-action.ts";
+import { getErrorMessage, getToken } from "@shared/api";
+import { tryAsync, tryOrNotify } from "@shared/lib";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal } from "solid-js";
 

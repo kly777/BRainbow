@@ -1,5 +1,11 @@
-import { CACHE, cachedRequest, tapInvalidate } from "@shared/api/cache.ts";
-import { patch, post, request } from "@shared/api/request.ts";
+import {
+	CACHE,
+	cachedRequest,
+	patch,
+	post,
+	request,
+	tapInvalidate,
+} from "@shared/api";
 
 export interface Onto {
 	readonly id: number;

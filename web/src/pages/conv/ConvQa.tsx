@@ -3,7 +3,7 @@ import styles from "@pages/conv/ConvDetail.module.css";
 import { useBackHref } from "@pages/conv/model/useBackHref.ts";
 import ConvTopBar from "@pages/conv/ui/ConvTopBar.tsx";
 import QaPairList from "@pages/conv/ui/QaPairList.tsx";
-import { getErrorMessage } from "@shared/api/types/errors.ts";
+import { getErrorMessage } from "@shared/api";
 import { useParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 

@@ -1,4 +1,4 @@
-import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { Markdown as MarkdownRenderer } from "@shared/ui";
 import { type Component, Show } from "solid-js";
 import styles from "./Card.module.css";
 

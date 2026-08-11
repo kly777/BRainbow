@@ -3,7 +3,7 @@ import styles from "@pages/task/TaskManager.module.css";
 import TaskCalendar from "@pages/task/ui/TaskCalendar.tsx";
 import TaskDag from "@pages/task/ui/TaskDag.tsx";
 import TaskKanban from "@pages/task/ui/TaskKanban.tsx";
-import { enumParam, strParam, useUrlParams } from "@shared/lib/useUrlParams.ts";
+import { enumParam, strParam, useUrlParams } from "@shared/lib";
 import { createSignal, Show } from "solid-js";
 
 function Toolbar(props: {

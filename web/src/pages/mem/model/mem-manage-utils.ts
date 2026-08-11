@@ -4,9 +4,8 @@ import type { MemItem, TagInfo } from "@entities/mem";
 import { getAllMemsE } from "@entities/mem";
 export type TagMode = "include" | "exclude";
 
-import { notifyError } from "@shared/lib/notify.ts";
 // (类型原在 v1 MemManageToolbar，已上移至此)
-import { tryAsync } from "@shared/lib/result.ts";
+import { notifyError, tryAsync } from "@shared/lib";
 
 // ── 类型 ──
 

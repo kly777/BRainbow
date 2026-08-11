@@ -1,5 +1,4 @@
-import { notifyError } from "@shared/lib/notify.ts";
-import { tryAsync } from "@shared/lib/result.ts";
+import { notifyError, tryAsync } from "@shared/lib";
 import { createSignal, For, onCleanup, onMount } from "solid-js";
 import { loadTextE, saveTextE } from "./api.ts";
 import styles from "./TextEditor.module.css";

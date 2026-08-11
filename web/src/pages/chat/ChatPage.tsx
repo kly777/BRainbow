@@ -3,7 +3,7 @@
 import type { ChatNode, ChatTree } from "@entities/chat";
 import styles from "@pages/chat/ChatPage.module.css";
 import { useChatPage } from "@pages/chat/model/useChatPage.ts";
-import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { Markdown as MarkdownRenderer } from "@shared/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
 
 export default function ChatPage() {
@@ -258,10 +258,10 @@ function TreeHeader(props: {
 	const [titleText, setTitleText] = createSignal(props.tree.title);
 
 	const savePrompt = async () => {
-		const ok = await import("@shared/lib/safe-action.ts").then((m) =>
+		const ok = await import("@shared/lib").then((m) =>
 			m.tryOrNotify(
 				() =>
-					import("@entities/chat/api.ts").then((a) =>
+					import("@entities/chat").then((a) =>
 						a.updateTreeE(props.tree.id, {
 							system_prompt: promptText(),
 							title: titleText(),

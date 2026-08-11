@@ -2,8 +2,8 @@
 
 import type { MemItem, TagInfo } from "@entities/mem";
 import styles from "@pages/mem/ui/ManageTable.module.css";
-import { fmtLocal, fmtRelative } from "@shared/lib/time.ts";
-import Badge from "@shared/ui/atoms/Badge";
+import { fmtLocal, fmtRelative } from "@shared/lib";
+import { Badge } from "@shared/ui";
 import { For, Show } from "solid-js";
 
 type SortField = "cue.created_at" | "difficulty" | "due_at" | "state";

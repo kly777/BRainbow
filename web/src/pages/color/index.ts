@@ -1,1 +1,1 @@
-export { default as ColorPage } from "./ColorPage.tsx";
+export { default as ColorPage } from "./ui/ColorPage.tsx";

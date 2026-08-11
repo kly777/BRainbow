@@ -1,6 +1,6 @@
-import { formatDate } from "@shared/api/types/index.ts";
+import { formatDate } from "@shared/api";
 import { createSignal, For, Show } from "solid-js";
-import type { Task, TimeWindow } from "../types.ts";
+import type { Task, TimeWindow } from "../model.ts";
 import styles from "./TaskList.module.css";
 
 const TaskStatus = {

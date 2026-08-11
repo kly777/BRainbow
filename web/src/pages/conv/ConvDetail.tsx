@@ -4,8 +4,8 @@ import { typeLabel } from "@pages/conv/model/constants.ts";
 import { useBackHref } from "@pages/conv/model/useBackHref.ts";
 import ConvTopBar from "@pages/conv/ui/ConvTopBar.tsx";
 import QaPairList from "@pages/conv/ui/QaPairList.tsx";
-import { getErrorMessage } from "@shared/api/types/errors.ts";
-import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { getErrorMessage } from "@shared/api";
+import { Markdown as MarkdownRenderer } from "@shared/ui";
 import { useParams, useSearchParams } from "@solidjs/router";
 import { createResource, For, Show } from "solid-js";
 

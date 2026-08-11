@@ -1,9 +1,8 @@
 import type { TagInfo } from "@entities/mem";
 import { downloadExportCsv, listTagsE } from "@entities/mem";
 import { TagSelector } from "@features/tag-selector";
-import { notifyError } from "@shared/lib/notify.ts";
-import { tryAsync } from "@shared/lib/result.ts";
-import Modal from "@shared/ui/organisms/Modal";
+import { notifyError, tryAsync } from "@shared/lib";
+import { Modal } from "@shared/ui";
 import { createEffect, createSignal } from "solid-js";
 
 interface Props {

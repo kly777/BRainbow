@@ -1,6 +1,4 @@
-import { notifyError } from "@shared/lib/notify.ts";
-import { tryAsync } from "@shared/lib/result.ts";
-import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";
+import { notifyError, showConfirm, tryAsync, tryOrNotify } from "@shared/lib";
 import {
 	createContext,
 	createSignal,
@@ -16,7 +14,7 @@ import {
 	getTasksE,
 	searchTasksE,
 } from "../api.ts";
-import type { CreateTaskRequest, Task } from "../types.ts";
+import type { CreateTaskRequest, Task } from "../model.ts";
 import {
 	fetchTasksByFilter,
 	makeTemp,

@@ -1,13 +1,14 @@
 import { createOntoE, deleteOntoE, getOntosE } from "@pages/ontology/api.ts";
 import styles from "@pages/ontology/OntologyList.module.css";
-import { getErrorMessage } from "@shared/api/types/index.ts";
-import { notifyError, notifySuccess } from "@shared/lib/notify.ts";
-import { tryAsync } from "@shared/lib/result.ts";
-import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";
-import Button from "@shared/ui/atoms/Button";
-import SearchInput from "@shared/ui/atoms/SearchInput";
-import { AsyncView } from "@shared/ui/molecules/AsyncView";
-import FilterGroup from "@shared/ui/molecules/FilterGroup";
+import { getErrorMessage } from "@shared/api";
+import {
+	notifyError,
+	notifySuccess,
+	showConfirm,
+	tryAsync,
+	tryOrNotify,
+} from "@shared/lib";
+import { AsyncView, Button, FilterGroup, SearchInput } from "@shared/ui";
 import { useSearchParams } from "@solidjs/router";
 import {
 	type Component,

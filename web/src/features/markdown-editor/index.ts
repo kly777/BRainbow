@@ -1,1 +1,1 @@
-export { default as MarkdownEditor } from "./MarkdownEditor.tsx";
+export { default as MarkdownEditor } from "./ui/MarkdownEditor.tsx";

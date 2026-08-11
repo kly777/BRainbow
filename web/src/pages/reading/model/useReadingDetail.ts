@@ -8,8 +8,7 @@ import {
 	recommendNext,
 	updateArticleNotes,
 } from "@entities/reading";
-import { notifyError } from "@shared/lib/notify.ts";
-import { tryAsync } from "@shared/lib/result.ts";
+import { notifyError, tryAsync } from "@shared/lib";
 import { useParams } from "@solidjs/router";
 import {
 	createEffect,

@@ -1,12 +1,10 @@
 // ── AI 助记：生成、加载、连续忘记自动触发 ──
 
-import { getAiSettingsE } from "@entities/ai-settings";
+import { getAiSettingsE } from "@entities/ai-setting";
 import type { MemItem } from "@entities/mem";
 import { getMnemonicE, setMnemonicE } from "@entities/mem";
-import { callAi } from "@features/ai-settings";
-import { fillPrompt } from "@shared/lib/ai-settings.ts";
-import { notifyError } from "@shared/lib/notify.ts";
-import { tryAsync } from "@shared/lib/result.ts";
+import { callAi } from "@features/ai-setting";
+import { fillPrompt, notifyError, tryAsync } from "@shared/lib";
 import { createSignal } from "solid-js";
 
 /** 连续忘记 N 次后自动生成助记 */

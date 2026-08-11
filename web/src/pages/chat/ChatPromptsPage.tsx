@@ -7,7 +7,7 @@ import {
 	updatePresetE,
 } from "@entities/chat";
 import styles from "@pages/chat/ChatPrompts.module.css";
-import { tryOrNotify } from "@shared/lib/safe-action.ts";
+import { tryOrNotify } from "@shared/lib";
 import { createSignal, For, onMount, Show } from "solid-js";
 
 export default function ChatPromptsPage() {
@@ -19,10 +19,8 @@ export default function ChatPromptsPage() {
 	const [creating, setCreating] = createSignal(false);
 
 	onMount(async () => {
-		const r = await import("@shared/lib/result.ts").then((m) =>
-			m.tryAsync(() =>
-				import("@entities/chat/api.ts").then((a) => a.listPresetsE()),
-			),
+		const r = await import("@shared/lib").then((m) =>
+			m.tryAsync(() => import("@entities/chat").then((a) => a.listPresetsE())),
 		);
 		if (r.ok) setPresets(r.value);
 		setLoading(false);
@@ -41,10 +39,8 @@ export default function ChatPromptsPage() {
 		setEditing(null);
 		setName("");
 		setContent("");
-		const r = await import("@shared/lib/result.ts").then((m) =>
-			m.tryAsync(() =>
-				import("@entities/chat/api.ts").then((a) => a.listPresetsE()),
-			),
+		const r = await import("@shared/lib").then((m) =>
+			m.tryAsync(() => import("@entities/chat").then((a) => a.listPresetsE())),
 		);
 		if (r.ok) setPresets(r.value);
 	};

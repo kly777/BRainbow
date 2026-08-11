@@ -6,7 +6,7 @@ export {
 	HttpError,
 	NetworkError,
 	ValidationError,
-} from "@shared/api/types/errors.ts";
+} from "./errors.ts";
 export {
 	type BatchDataResponse,
 	type BatchErrorDetail,
@@ -14,4 +14,4 @@ export {
 	formatDate,
 	type PaginatedResponse,
 	type PaginationParams,
-} from "@shared/api/types/shared.ts";
+} from "./shared.ts";

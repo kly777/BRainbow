@@ -1,8 +1,7 @@
 import type { CalendarEvent } from "@entities/task";
 import { getCalendarEventsE } from "@entities/task";
 import styles from "@pages/task/ui/TaskCalendar.module.css";
-import { notifyError } from "@shared/lib/notify.ts";
-import { tryAsync } from "@shared/lib/result.ts";
+import { notifyError, tryAsync } from "@shared/lib";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 
 // 窗口类型对应颜色

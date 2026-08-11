@@ -45,7 +45,7 @@ export default function ConfirmModalContainer() {
 function ConfirmDialog(props: {
 	item: {
 		id: number;
-		options: import("@shared/ui/organisms/confirmStore.ts").ConfirmOptions;
+		options: import("@shared/ui").ConfirmOptions;
 		resolve: (v: boolean) => void;
 	};
 }) {

@@ -3,9 +3,8 @@
 import { CardsGrid, getCardsE, searchCardsE } from "@entities/card";
 import styles from "@pages/card/CardsList.module.css";
 import { useCardsList } from "@pages/card/model/useCardsList.ts";
-import { tryAsync } from "@shared/lib/result.ts";
-import Button from "@shared/ui/atoms/Button";
-import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { tryAsync } from "@shared/lib";
+import { Button, Markdown as MarkdownRenderer } from "@shared/ui";
 import { useNavigate } from "@solidjs/router";
 import { onMount, Show } from "solid-js";
 

@@ -1,5 +1,5 @@
-import { useAuth } from "@app/auth/context.tsx";
-import { AUTH_REQUIRED_EVENT } from "@shared/api/request.ts";
+import { useAuth } from "@entities/user";
+import { AUTH_REQUIRED_EVENT } from "@shared/api";
 import { createEffect, type JSX, Show } from "solid-js";
 
 /**

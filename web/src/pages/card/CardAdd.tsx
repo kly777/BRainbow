@@ -2,10 +2,9 @@ import type { CreateCardRequest } from "@entities/card";
 import { createCardE } from "@entities/card";
 import { MarkdownEditor } from "@features/markdown-editor";
 import styles from "@pages/card/CardAdd.module.css";
-import { getErrorMessage } from "@shared/api/types/index.ts";
-import { tryAsync } from "@shared/lib/result.ts";
-import Button from "@shared/ui/atoms/Button";
-import Toolbar from "@shared/ui/molecules/Toolbar";
+import { getErrorMessage } from "@shared/api";
+import { tryAsync } from "@shared/lib";
+import { Button, Toolbar } from "@shared/ui";
 import { useNavigate } from "@solidjs/router";
 import { type Component, createSignal, Show } from "solid-js";
 

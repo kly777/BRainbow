@@ -1,10 +1,14 @@
 // ── 记忆添加模块的核心业务逻辑 ──
 
 import { importJsonE } from "@entities/mem";
-import { parseBatch, parseImportFile } from "@shared/lib/delimited.ts";
-import { tryAsync, trySync } from "@shared/lib/result.ts";
-import { tryOrNotify } from "@shared/lib/safe-action.ts";
-import { showToast } from "@shared/ui/organisms/toastStore.ts";
+import {
+	parseBatch,
+	parseImportFile,
+	tryAsync,
+	tryOrNotify,
+	trySync,
+} from "@shared/lib";
+import { showToast } from "@shared/ui";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createMemo, createSignal } from "solid-js";
 
@@ -60,7 +64,7 @@ export function useMemAdd() {
 	const handleCreate = async () => {
 		if (!cue().trim() || !target().trim()) return;
 		setCreating(true);
-		const { createMemE } = await import("@entities/mem/api.ts");
+		const { createMemE } = await import("@entities/mem");
 		const ok = await tryOrNotify(
 			() => createMemE(cue().trim(), target().trim()),
 			"创建记忆",

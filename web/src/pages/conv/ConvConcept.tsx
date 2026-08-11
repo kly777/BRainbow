@@ -2,8 +2,8 @@ import { getConvConceptE } from "@entities/conv";
 import styles from "@pages/conv/ConvDetail.module.css";
 import { useBackHref } from "@pages/conv/model/useBackHref.ts";
 import ConvTopBar from "@pages/conv/ui/ConvTopBar.tsx";
-import { getErrorMessage } from "@shared/api/types/errors.ts";
-import MarkdownRenderer from "@shared/ui/atoms/Markdown";
+import { getErrorMessage } from "@shared/api";
+import { Markdown as MarkdownRenderer } from "@shared/ui";
 import { useParams, useSearchParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 

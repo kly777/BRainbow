@@ -1,6 +1,6 @@
 import type { TagInfo } from "@entities/mem";
 import { TagSelector } from "@features/tag-selector";
-import Modal from "@shared/ui/organisms/Modal";
+import { Modal } from "@shared/ui";
 
 interface Props {
 	isOpen: boolean;

@@ -1,9 +1,8 @@
 // ── 评分撤销：记录最近一次评分前的 FSRS 状态，支持回滚 ──
 
 import type { MemItem } from "@entities/mem";
-import { post } from "@shared/api/request.ts";
-import { notifyError } from "@shared/lib/notify.ts";
-import { tryAsync } from "@shared/lib/result.ts";
+import { post } from "@shared/api";
+import { notifyError, tryAsync } from "@shared/lib";
 import { createSignal } from "solid-js";
 
 export interface UseUndo {

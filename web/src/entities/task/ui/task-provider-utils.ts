@@ -10,7 +10,7 @@ import {
 	getCompletedTasksE,
 	moveToBacklogE,
 } from "../api.ts";
-import type { CreateTaskRequest, Task } from "../types.ts";
+import type { CreateTaskRequest, Task } from "../model.ts";
 
 /** 生成临时任务对象（乐观更新用） */
 export function makeTemp(req: CreateTaskRequest): Task {

@@ -1,4 +1,4 @@
-import { request } from "@shared/api/request.ts";
+import { request } from "@shared/api";
 
 // ── 类型 ──
 

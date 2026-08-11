@@ -1,10 +1,12 @@
 import { deleteCardE, getCardE } from "@entities/card";
 import styles from "@pages/card/CardDetail.module.css";
-import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";
-import Button from "@shared/ui/atoms/Button";
-import MarkdownRenderer from "@shared/ui/atoms/Markdown";
-import { AsyncView } from "@shared/ui/molecules/AsyncView";
-import Toolbar from "@shared/ui/molecules/Toolbar";
+import { showConfirm, tryOrNotify } from "@shared/lib";
+import {
+	AsyncView,
+	Button,
+	Markdown as MarkdownRenderer,
+	Toolbar,
+} from "@shared/ui";
 import { useNavigate, useParams } from "@solidjs/router";
 import { type Component, createResource } from "solid-js";
 

@@ -1,9 +1,8 @@
-import { notifyError } from "@shared/lib/notify.ts";
-import { tryAsync } from "@shared/lib/result.ts";
-import Modal from "@shared/ui/organisms/Modal";
+import { notifyError, tryAsync } from "@shared/lib";
+import { Modal } from "@shared/ui";
 import { createEffect, createSignal, Show } from "solid-js";
+import type { Task, TimeWindow } from "../model.ts";
 import { getTimeWindowsE } from "../timeWindowApi.ts";
-import type { Task, TimeWindow } from "../types.ts";
 import BasicInfoTab from "./BasicInfoTab.tsx";
 import DependenciesTab from "./DependenciesTab.tsx";
 import styles from "./EditTaskModal.module.css";

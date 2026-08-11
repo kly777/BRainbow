@@ -1,10 +1,10 @@
 // ── 卡片列表页面（薄壳视图层）──
 
-import { CardsGrid, getCardsE, searchCardsE } from "@entities/card";
+import { getCardsE, searchCardsE } from "@entities/card";
 import styles from "@pages/card/CardsList.module.css";
 import { useCardsList } from "@pages/card/model/useCardsList.ts";
 import { tryAsync } from "@shared/lib";
-import { Button, Markdown as MarkdownRenderer } from "@shared/ui";
+import { Button, CardsGrid, Markdown as MarkdownRenderer } from "@shared/ui";
 import { useNavigate } from "@solidjs/router";
 import { onMount, Show } from "solid-js";
 

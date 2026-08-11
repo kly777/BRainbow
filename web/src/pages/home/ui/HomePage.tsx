@@ -1,12 +1,8 @@
-import type { CardData } from "@entities/card";
-import {
-	deleteCardE as apiDeleteCard,
-	CardsGrid,
-	getCardsE,
-} from "@entities/card";
+import { deleteCardE as apiDeleteCard, getCardsE } from "@entities/card";
 import { TaskList, TaskProvider, useTasks } from "@entities/task";
 import { showConfirm, tryOrNotify } from "@shared/lib";
-import { AsyncView } from "@shared/ui";
+import type { CardData } from "@shared/ui";
+import { AsyncView, CardsGrid } from "@shared/ui";
 import { A, useNavigate } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 import styles from "./HomePage.module.css";

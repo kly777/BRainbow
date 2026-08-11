@@ -151,8 +151,8 @@ impl AiService {
             "messages": messages,
             "temperature": temperature.unwrap_or(0.7),
             // 推理模型（如 deepseek-v4-flash）会把大量 token 花在 reasoning_content 上，
-            // 默认 2048 会被推理吃光导致 content 为空，需留足余量
-            "max_tokens": max_tokens.unwrap_or(8192),
+            // 默认 8192 会被推理吃光导致 content 为空，需留足余量（模型支持 1M 上下文）
+            "max_tokens": max_tokens.unwrap_or(32768),
             "stream": tx.is_some(),
         });
 

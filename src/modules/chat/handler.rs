@@ -11,7 +11,8 @@ use crate::state::AppState;
 use axum::extract::Extension;
 
 use super::model::{
-    ChatRequest, CreateTreeRequest, PresetRequest, ReviseRequest, SearchParams, UpdateTreeRequest,
+    ChatRequest, CreateTreeRequest, ListTreesParams, PresetRequest, ReviseRequest, SearchParams,
+    UpdateTreeRequest,
 };
 
 pub fn routes() -> Router<AppState> {
@@ -41,8 +42,13 @@ pub fn routes() -> Router<AppState> {
 pub async fn list_trees_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<Claims>,
+    Query(params): Query<ListTreesParams>,
 ) -> impl IntoResponse {
-    match state.chat.list_trees(claims.sub).await {
+    let result = match params.kind.as_deref() {
+        Some(k) if k == "mem" || k == "chat" => state.chat.list_trees_by_kind(claims.sub, k).await,
+        _ => state.chat.list_trees(claims.sub).await,
+    };
+    match result {
         Ok(trees) => Json(trees).into_response(),
         Err(e) => e.into_response(),
     }

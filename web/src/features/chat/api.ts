@@ -6,6 +6,7 @@ export interface ChatTree {
 	id: number;
 	title: string;
 	system_prompt: string;
+	kind: string;
 	created_at: string;
 	updated_at: string;
 	node_count: number;
@@ -55,13 +56,22 @@ export interface PromptPreset {
 
 export const listTreesE = (): Promise<ChatTree[]> => request("/chat/trees", {});
 
+/** 按类型列出对话：kind = "chat" | "mem" */
+export const listTreesByKindE = (kind: string): Promise<ChatTree[]> =>
+	request(`/chat/trees?kind=${encodeURIComponent(kind)}`, {});
+
 export const createTreeE = (
 	title: string,
 	system_prompt: string,
+	kind?: string,
 ): Promise<TreeDetail> =>
 	request("/chat/trees", {
 		method: "POST",
-		body: JSON.stringify({ title, system_prompt }),
+		body: JSON.stringify({
+			title,
+			system_prompt,
+			...(kind ? { kind } : {}),
+		}),
 	});
 
 export const getTreeE = (id: number): Promise<TreeDetail> =>

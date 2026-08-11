@@ -5,6 +5,7 @@ pub struct TreeItem {
     pub id: i64,
     pub title: String,
     pub system_prompt: String,
+    pub kind: String,
     pub created_at: String,
     pub updated_at: String,
     pub node_count: i64,
@@ -28,10 +29,20 @@ pub struct TreeDetail {
 }
 
 #[derive(Deserialize)]
+pub struct ListTreesParams {
+    /// 按类型过滤：chat | mem（省略则全部）
+    #[serde(default)]
+    pub kind: Option<String>,
+}
+
+#[derive(Deserialize)]
 pub struct CreateTreeRequest {
     pub title: String,
     #[serde(default)]
     pub system_prompt: String,
+    /// 对话类型：chat（默认）| mem（记忆卡片生成）
+    #[serde(default)]
+    pub kind: Option<String>,
 }
 
 #[derive(Deserialize)]

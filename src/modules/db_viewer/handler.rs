@@ -34,6 +34,10 @@ pub async fn get_table_data(
         .db_viewer
         .get_table_data(&table_name, pagination.limit(), pagination.offset())
         .await
-        .map(|(header, rows, total)| TableData { header, rows, total });
+        .map(|(header, rows, total)| TableData {
+            header,
+            rows,
+            total,
+        });
     error::ok_or(result, "获取表数据")
 }

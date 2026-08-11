@@ -21,26 +21,45 @@ impl ChatService {
         Self { pool }
     }
 
-    fn row_to_tree(row: (i64, String, String, String, String, i64)) -> TreeItem {
+    fn row_to_tree(row: (i64, String, String, String, String, String, i64)) -> TreeItem {
         TreeItem {
             id: row.0,
             title: row.1,
             system_prompt: row.2,
-            created_at: row.3,
-            updated_at: row.4,
-            node_count: row.5,
+            kind: row.3,
+            created_at: row.4,
+            updated_at: row.5,
+            node_count: row.6,
         }
     }
 
     // ── 树 CRUD ──
 
     pub async fn list_trees(&self, user_id: i32) -> Result<Vec<TreeItem>, ServiceError> {
-        let rows: Vec<(i64, String, String, String, String, i64)> = sqlx::query_as(
-            "SELECT t.id, t.title, t.system_prompt, t.created_at, t.updated_at,
+        let rows: Vec<(i64, String, String, String, String, String, i64)> = sqlx::query_as(
+            "SELECT t.id, t.title, t.system_prompt, t.kind, t.created_at, t.updated_at,
                     (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count
              FROM chat_tree t WHERE t.user_id = ?1 ORDER BY t.updated_at DESC",
         )
         .bind(user_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(Self::row_to_tree).collect())
+    }
+
+    /// 按类型列出对话树（chat / mem）
+    pub async fn list_trees_by_kind(
+        &self,
+        user_id: i32,
+        kind: &str,
+    ) -> Result<Vec<TreeItem>, ServiceError> {
+        let rows: Vec<(i64, String, String, String, String, String, i64)> = sqlx::query_as(
+            "SELECT t.id, t.title, t.system_prompt, t.kind, t.created_at, t.updated_at,
+                    (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count
+             FROM chat_tree t WHERE t.user_id = ?1 AND t.kind = ?2 ORDER BY t.updated_at DESC",
+        )
+        .bind(user_id)
+        .bind(kind)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows.into_iter().map(Self::row_to_tree).collect())
@@ -51,8 +70,8 @@ impl ChatService {
         user_id: i32,
         tree_id: i64,
     ) -> Result<Option<TreeDetail>, ServiceError> {
-        let tree: Option<(i64, String, String, String, String, i64)> = sqlx::query_as(
-            "SELECT t.id, t.title, t.system_prompt, t.created_at, t.updated_at,
+        let tree: Option<(i64, String, String, String, String, String, i64)> = sqlx::query_as(
+            "SELECT t.id, t.title, t.system_prompt, t.kind, t.created_at, t.updated_at,
                     (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count
              FROM chat_tree t WHERE t.id = ?1 AND t.user_id = ?2",
         )
@@ -99,13 +118,26 @@ impl ChatService {
         if title.is_empty() {
             return Err(ServiceError::InvalidInput("标题不能为空".into()));
         }
+        let kind = req
+            .kind
+            .as_deref()
+            .filter(|k| *k == "mem")
+            .unwrap_or("chat")
+            .to_string();
+        // mem 树：内置记忆卡片生成指令（用户无需手写 system_prompt）
+        let system_prompt = if kind == "mem" {
+            Self::MEM_SYSTEM_PROMPT.to_string()
+        } else {
+            req.system_prompt.trim().to_string()
+        };
         let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
         let id: i64 = sqlx::query(
-            "INSERT INTO chat_tree (user_id, title, system_prompt, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?4)",
+            "INSERT INTO chat_tree (user_id, title, system_prompt, kind, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?5)",
         )
         .bind(user_id)
         .bind(title)
-        .bind(req.system_prompt.trim())
+        .bind(&system_prompt)
+        .bind(&kind)
         .bind(&now)
         .execute(&self.pool)
         .await?
@@ -115,7 +147,8 @@ impl ChatService {
             tree: TreeItem {
                 id,
                 title: title.to_string(),
-                system_prompt: req.system_prompt.trim().to_string(),
+                system_prompt,
+                kind,
                 created_at: now.clone(),
                 updated_at: now,
                 node_count: 0,
@@ -123,6 +156,20 @@ impl ChatService {
             nodes: Vec::new(),
         })
     }
+
+    /// mem 树内置 system prompt：让 AI 输出结构化记忆卡片 JSON
+    const MEM_SYSTEM_PROMPT: &str = "你是一名记忆卡片生成专家。根据用户提供的文本生成记忆卡片。
+严格要求：
+- 文本中每出现一个独立知识点，就必须对应生成一张卡片，一一对应、绝不合并、绝不遗漏
+- 生成前先数清楚知识点总数，卡片数量必须等于知识点数量
+- 每张卡片包含 cue（线索/问题，可含填空）与 target（简洁准确的答案）
+- 可以自由使用 Markdown 语法（加粗、列表、代码等）来增强表达
+- 数学内容必须优先使用 $$ 包裹的 LaTeX，而不是 Unicode 符号或 ASCII 近似：例如 $$P(X=k)=\\binom{n}{k}p^k(1-p)^{n-k}$$、$$X\\sim B(n,p)$$、$$f(x)=\\frac{1}{\\sqrt{2\\pi}\\sigma}e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}$$；禁止用 C(n,k)、X~B(n,p)、√、σ² 这类简写，所有公式一律写成 LaTeX
+- 行内公式用 $...$，独立公式用 $$...$$
+- 严格输出单个合法 JSON 数组，一行内完成，不要换行、不要缩进、不要代码块标记、不要任何解释文字
+- 格式必须精确为：[{\"cue\":\"...\",\"target\":\"...\"},{\"cue\":\"...\",\"target\":\"...\"}]
+- 所有键名和字符串必须使用半角双引号，键名后必须有冒号；字符串内的 LaTeX 反斜杠需写成 \\\\
+当用户后续给出修改指令时，基于上下文修订卡片并输出完整 JSON 数组。";
 
     pub async fn update_tree(
         &self,
@@ -502,7 +549,7 @@ mod tests {
 
     async fn setup() -> ChatService {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query("CREATE TABLE chat_tree (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, system_prompt TEXT NOT NULL DEFAULT '', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        sqlx::query("CREATE TABLE chat_tree (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, system_prompt TEXT NOT NULL DEFAULT '', kind TEXT NOT NULL DEFAULT 'chat', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
             .execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE chat_node (id INTEGER PRIMARY KEY AUTOINCREMENT, tree_id INTEGER NOT NULL, parent_id INTEGER, role TEXT NOT NULL CHECK (role IN ('user','assistant')), content TEXT NOT NULL, revised_from INTEGER, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
             .execute(&pool).await.unwrap();
@@ -518,6 +565,7 @@ mod tests {
                 CreateTreeRequest {
                     title: "t".into(),
                     system_prompt: "p".into(),
+                    kind: None,
                 },
             )
             .await
@@ -534,6 +582,59 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn create_mem_tree_gets_builtin_prompt_and_kind_filter() {
+        let svc = setup().await;
+        let chat = svc
+            .create_tree(
+                1,
+                CreateTreeRequest {
+                    title: "普通对话".into(),
+                    system_prompt: "自定义".into(),
+                    kind: None,
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(chat.tree.kind, "chat");
+        assert_eq!(chat.tree.system_prompt, "自定义");
+
+        let mem = svc
+            .create_tree(
+                1,
+                CreateTreeRequest {
+                    title: "记忆生成".into(),
+                    system_prompt: "会被覆盖".into(),
+                    kind: Some("mem".into()),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(mem.tree.kind, "mem");
+        assert!(mem.tree.system_prompt.contains("记忆卡片"));
+
+        // 非法 kind 回退 chat
+        let bad = svc
+            .create_tree(
+                1,
+                CreateTreeRequest {
+                    title: "x".into(),
+                    system_prompt: "".into(),
+                    kind: Some("hack".into()),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(bad.tree.kind, "chat");
+
+        // kind 过滤
+        let mems = svc.list_trees_by_kind(1, "mem").await.unwrap();
+        assert_eq!(mems.len(), 1);
+        assert_eq!(mems[0].title, "记忆生成");
+        let chats = svc.list_trees_by_kind(1, "chat").await.unwrap();
+        assert_eq!(chats.len(), 2);
+    }
+
+    #[tokio::test]
     async fn revise_creates_new_node_keeping_original() {
         let svc = setup().await;
         let tree = svc
@@ -542,6 +643,7 @@ mod tests {
                 CreateTreeRequest {
                     title: "t".into(),
                     system_prompt: "".into(),
+                    kind: None,
                 },
             )
             .await
@@ -593,6 +695,7 @@ mod tests {
                 CreateTreeRequest {
                     title: "t".into(),
                     system_prompt: "".into(),
+                    kind: None,
                 },
             )
             .await
@@ -621,6 +724,7 @@ mod tests {
                 CreateTreeRequest {
                     title: "t".into(),
                     system_prompt: "".into(),
+                    kind: None,
                 },
             )
             .await
@@ -647,6 +751,7 @@ mod tests {
                 CreateTreeRequest {
                     title: "t".into(),
                     system_prompt: "".into(),
+                    kind: None,
                 },
             )
             .await

@@ -150,7 +150,9 @@ impl AiService {
             "model": cfg.model,
             "messages": messages,
             "temperature": temperature.unwrap_or(0.7),
-            "max_tokens": max_tokens.unwrap_or(2048),
+            // 推理模型（如 deepseek-v4-flash）会把大量 token 花在 reasoning_content 上，
+            // 默认 2048 会被推理吃光导致 content 为空，需留足余量
+            "max_tokens": max_tokens.unwrap_or(8192),
             "stream": tx.is_some(),
         });
 
@@ -182,45 +184,39 @@ impl AiService {
                     }
 
                     if let Some(tx) = &tx {
-                        // 流式：逐行解析 SSE data
-                        let mut full = String::new();
-                        let mut stream = resp.bytes_stream();
+                        // 流式：用 eventsource-stream 解析 SSE（正确处理字节边界/UTF-8/多行）
+                        use eventsource_stream::{Event, Eventsource};
                         use futures_util::StreamExt;
-                        while let Some(chunk) = stream.next().await {
-                            let chunk = match chunk {
-                                Ok(c) => c,
+                        let mut full = String::new();
+                        let mut stream = resp.bytes_stream().eventsource();
+                        while let Some(evt) = stream.next().await {
+                            let evt = match evt {
+                                Ok(e) => e,
                                 Err(e) => {
                                     return Err(ServiceError::Internal(format!(
                                         "AI 流读取失败: {e}"
                                     )));
                                 }
                             };
-                            let text = String::from_utf8_lossy(&chunk);
-                            for line in text.lines() {
-                                let line = line.trim();
-                                if !line.starts_with("data:") {
-                                    continue;
-                                }
-                                let data = line[5..].trim();
-                                if data == "[DONE]" {
-                                    continue;
-                                }
-                                let v: serde_json::Value = match serde_json::from_str(data) {
-                                    Ok(v) => v,
-                                    Err(_) => continue,
-                                };
-                                if let Some(delta) = v
-                                    .get("choices")
-                                    .and_then(|c| c.get(0))
-                                    .and_then(|c| c.get("delta"))
-                                    .and_then(|d| d.get("content"))
-                                    .and_then(|c| c.as_str())
-                                {
-                                    full.push_str(delta);
-                                    if tx.send(delta.to_string()).await.is_err() {
-                                        // 接收端关闭（客户端断开），停止推送但保留已收内容
-                                        break;
-                                    }
+                            let Event { data, .. } = evt;
+                            if data == "[DONE]" {
+                                continue;
+                            }
+                            let v: serde_json::Value = match serde_json::from_str(&data) {
+                                Ok(v) => v,
+                                Err(_) => continue,
+                            };
+                            if let Some(delta) = v
+                                .get("choices")
+                                .and_then(|c| c.get(0))
+                                .and_then(|c| c.get("delta"))
+                                .and_then(|d| d.get("content"))
+                                .and_then(|c| c.as_str())
+                            {
+                                full.push_str(delta);
+                                if tx.send(delta.to_string()).await.is_err() {
+                                    // 接收端关闭（客户端断开），停止推送但保留已收内容
+                                    break;
                                 }
                             }
                         }
@@ -256,5 +252,66 @@ impl AiService {
             }
         }
         Err(last_err.unwrap_or_else(|| ServiceError::Internal("AI 请求失败".into())))
+    }
+}
+
+/// 从 SSE 字节流中解析出 content 增量（不直接使用，见 chat_stream 中 eventsource-stream；
+/// 此处保留为纯函数，测试直接覆盖库的用法）。
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use eventsource_stream::Eventsource;
+    use futures_util::StreamExt;
+
+    fn sse_event(json: &str) -> Vec<u8> {
+        format!("data: {json}\n\n").into_bytes()
+    }
+
+    async fn collect_events(stream: Vec<u8>) -> Vec<String> {
+        // 按 1 字节切块喂给库（模拟 TCP 分块：命中 UTF-8 中间与行边界）
+        let mut chunks: Vec<Result<Vec<u8>, ()>> =
+            stream.into_iter().map(|b| Ok(vec![b])).collect();
+        chunks.push(Ok(Vec::new())); // 结束信号
+        let mut out = Vec::new();
+        let mut es = futures_util::stream::iter(chunks).eventsource();
+        while let Some(evt) = es.next().await {
+            if let Ok(e) = evt {
+                out.push(e.data);
+            }
+        }
+        out
+    }
+
+    /// 多字节中文被 1 字节切块时不丢字符
+    #[tokio::test]
+    async fn sse_chunks_split_mid_utf8_keep_content() {
+        let payload = serde_json::json!({
+            "choices": [{
+                "delta": { "content": "分布" }
+            }]
+        });
+        let events = collect_events(sse_event(&payload.to_string())).await;
+        assert_eq!(events.len(), 1);
+        assert!(events[0].contains("分布"));
+    }
+
+    /// 多个 delta 事件逐个产出
+    #[tokio::test]
+    async fn sse_multiple_events() {
+        let mk =
+            |s: &str| serde_json::json!({ "choices": [{ "delta": { "content": s } }] }).to_string();
+        let stream: Vec<u8> = [sse_event(&mk("A")), sse_event(&mk("B"))].concat();
+        let events = collect_events(stream).await;
+        assert_eq!(events.len(), 2);
+        assert!(events[0].contains("A"));
+        assert!(events[1].contains("B"));
+    }
+
+    /// [DONE] 结束标记也作为事件产出（上层自行跳过）
+    #[tokio::test]
+    async fn sse_done_marker() {
+        let stream: Vec<u8> = b"data: [DONE]\n\n".to_vec();
+        let events = collect_events(stream).await;
+        assert_eq!(events, vec!["[DONE]"]);
     }
 }

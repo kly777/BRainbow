@@ -194,6 +194,14 @@ export const ROUTES: RouteConfig[] = [
 		component: lazy(() => import("@features/chat/ChatPromptsPage.tsx")),
 	},
 	{
+		path: "/chat/mem",
+		label: "记忆卡片生成",
+		title: "Mem Cards",
+		desc: "对话式生成记忆卡片",
+		nav: true,
+		component: lazy(() => import("@features/chat/ChatMemPage.tsx")),
+	},
+	{
 		path: "/key",
 		label: "API Key",
 		title: "API Key",

@@ -353,7 +353,7 @@ function MessageRow(props: {
 	const isUser = node.role === "user";
 
 	const timeText = () => {
-		const d = new Date(node.created_at.replace(" ", "T"));
+		const d = new Date(`${node.created_at.replace(" ", "T")}Z`);
 		if (Number.isNaN(d.getTime())) return "";
 		return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 	};

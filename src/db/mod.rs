@@ -523,6 +523,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             user_id INTEGER NOT NULL,
             title TEXT NOT NULL,
             system_prompt TEXT NOT NULL DEFAULT '',
+            kind TEXT NOT NULL DEFAULT 'chat',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -530,6 +531,11 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     )
     .execute(pool)
     .await?;
+
+    // 迁移：为已有数据库添加 kind 列（chat / mem）
+    let _ = sqlx::query("ALTER TABLE chat_tree ADD COLUMN kind TEXT NOT NULL DEFAULT 'chat'")
+        .execute(pool)
+        .await;
 
     sqlx::query(
         r#"

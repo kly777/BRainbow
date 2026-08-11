@@ -25,7 +25,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Brainbow",
 		desc: "首页面板",
 		nav: true,
-		component: lazy(() => import("@pages/HomeGuard.tsx")),
+		component: lazy(() => import("@pages/home/HomeGuard.tsx")),
 	},
 	{
 		path: "/t",
@@ -57,7 +57,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Color",
 		desc: "全局主题配色切换",
 		nav: true,
-		component: lazy(() => import("@pages/ColorPage.tsx")),
+		component: lazy(() => import("@pages/color/ColorPage.tsx")),
 	},
 	{
 		path: "/c/add",
@@ -95,7 +95,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Database",
 		desc: "管理员数据库查看",
 		nav: true,
-		component: lazy(() => import("@pages/DbViewer.tsx")),
+		component: lazy(() => import("@pages/db/DbViewer.tsx")),
 	},
 	{
 		path: "/rg",
@@ -103,7 +103,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Rainbow",
 		desc: "Rainbow Generator",
 		nav: true,
-		component: lazy(() => import("@pages/RainbowGenerator.tsx")),
+		component: lazy(() => import("@pages/rainbow/RainbowGenerator.tsx")),
 	},
 	{
 		path: "/text",
@@ -111,7 +111,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Text",
 		desc: "多标签纯文本编辑器",
 		nav: true,
-		component: lazy(() => import("@pages/TextEditor.tsx")),
+		component: lazy(() => import("@pages/text/TextEditor.tsx")),
 	},
 	{
 		path: "/reading",

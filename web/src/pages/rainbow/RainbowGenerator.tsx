@@ -1,4 +1,4 @@
-import styles from "@pages/RainbowGenerator.module.css";
+import styles from "./RainbowGenerator.module.css";
 import { Angle } from "@shared/lib/angle.ts";
 import { Color } from "@shared/lib/color.ts";
 import Button from "@shared/ui/atoms/Button";

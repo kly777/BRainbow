@@ -1,4 +1,4 @@
-import { type ColumnInfo, getTableDataE, getTablesE } from "@pages/dbApi.ts";
+import { type ColumnInfo, getTableDataE, getTablesE } from "./api.ts";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import { useSearchParams } from "@solidjs/router";

@@ -114,10 +114,11 @@ impl MemRepo {
             sep.push_bind(id);
         }
         qb.push(")");
-        qb.push(" ORDER BY m.due_at");
 
+        // 注意：不能用 ORDER BY——返回顺序必须与传入 ids 一致（管理列表按任意字段排序）
         let rows: Vec<sqlx::sqlite::SqliteRow> = qb.build().fetch_all(&*self.pool).await?;
-        let mut items = Vec::with_capacity(rows.len());
+        let mut by_id: std::collections::HashMap<i32, MemWithChunks> =
+            std::collections::HashMap::with_capacity(rows.len());
         for row in rows {
             let item = MemWithChunks {
                 id: row.try_get("id")?,
@@ -141,7 +142,13 @@ impl MemRepo {
                 leeched: row.try_get("leeched")?,
                 mnemonic: row.try_get("mnemonic")?,
             };
-            items.push(item);
+            by_id.insert(item.id, item);
+        }
+        let mut items = Vec::with_capacity(by_id.len());
+        for id in ids {
+            if let Some(item) = by_id.remove(id) {
+                items.push(item);
+            }
         }
         Ok(items)
     }

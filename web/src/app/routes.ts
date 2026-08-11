@@ -78,24 +78,6 @@ export const ROUTES: RouteConfig[] = [
 		),
 	},
 	{
-		path: "/c/:id",
-		label: "卡片详情",
-		title: "Card",
-		desc: "",
-		component: lazy(() =>
-			import("@pages/card").then((m) => ({ default: m.CardDetailPage })),
-		),
-	},
-	{
-		path: "/c/edit/:id",
-		label: "编辑卡片",
-		title: "Edit Card",
-		desc: "",
-		component: lazy(() =>
-			import("@pages/card").then((m) => ({ default: m.CardEditPage })),
-		),
-	},
-	{
 		path: "/i",
 		label: "图片",
 		title: "Images",
@@ -255,37 +237,7 @@ export const ROUTES: RouteConfig[] = [
 			import("@pages/key").then((m) => ({ default: m.KeyPage })),
 		),
 	},
-	{
-		path: "/conv/qa/:id",
-		label: "对话详情",
-		title: "Conversation",
-		desc: "",
-		component: lazy(() =>
-			import("@pages/conv").then((m) => ({ default: m.ConvQaPage })),
-		),
-	},
-	{
-		path: "/conv/concept/:id",
-		label: "概念详情",
-		title: "Concept",
-		desc: "",
-		component: lazy(() =>
-			import("@pages/conv").then((m) => ({ default: m.ConvConceptPage })),
-		),
-	},
-	{
-		path: "/conv/:id",
-		label: "对话详情 (旧)",
-		title: "Conversation",
-		desc: "",
-		component: lazy(() =>
-			import("@pages/conv").then((m) => ({ default: m.ConvDetailPage })),
-		),
-	},
 ];
-
-/** 仅导航入口，用于命令面板 */
-export const NAV_ROUTES = ROUTES.filter((r) => r.nav);
 
 /** 将路由路径模式转为匹配用的正则 */
 function pathToRegex(pattern: string): RegExp {

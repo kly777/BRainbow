@@ -1,9 +1,9 @@
 import AuthGuard from "@app/auth/AuthGuard.tsx";
-import CommandPalette from "@app/CommandPalette";
 import { AiSettingsModal } from "@features/ai-setting";
 import { AuthDialog } from "@features/auth-dialog";
 import { ConfirmModalContainer, ToastContainer } from "@shared/ui";
 import { useLocation } from "@solidjs/router";
+import { CommandPalette } from "@widgets/command-palette";
 import { type JSX, Show } from "solid-js";
 import styles from "./App.module.css";
 import { RouteTitle } from "./routes.ts";

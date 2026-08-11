@@ -1,7 +1,7 @@
-import { NAV_ROUTES } from "@app/routes.ts";
 import { useAuth } from "@entities/user";
 import { openAiSettings } from "@features/ai-setting";
 import { AUTH_REQUIRED_EVENT } from "@shared/api";
+import { NAV_ROUTES } from "@shared/config";
 import { useNavigate } from "@solidjs/router";
 import { createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
 import styles from "./CommandPalette.module.css";

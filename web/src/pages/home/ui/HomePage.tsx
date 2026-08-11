@@ -1,9 +1,9 @@
 import { deleteCardE as apiDeleteCard, getCardsE } from "@entities/card";
-import { TaskList, TaskProvider, useTasks } from "@features/task";
 import { showConfirm, tryOrNotify } from "@shared/lib";
 import type { CardData } from "@shared/ui";
 import { AsyncView, CardsGrid } from "@shared/ui";
 import { A, useNavigate } from "@solidjs/router";
+import { TaskList, TaskProvider, useTasks } from "@widgets/task-manager";
 import { createResource, Show } from "solid-js";
 import styles from "./HomePage.module.css";
 

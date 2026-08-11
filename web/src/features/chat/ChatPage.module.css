@@ -123,6 +123,7 @@
 	border-radius: var(--radius-sm);
 	font-size: var(--text-sm);
 	position: relative;
+	border: 2px solid transparent;
 }
 
 /* 选中按钮占满整行（与删除按钮并排，避免嵌套 button） */
@@ -146,7 +147,8 @@
 }
 
 .tree-item-active {
-	background: var(--t-color-accent-soft);
+	border-color: var(--t-color-accent);
+	background: var(--t-color-surface);
 	color: var(--t-color-accent-strong);
 }
 
@@ -171,7 +173,7 @@
 	position: absolute;
 	right: var(--space-2xs);
 	top: 50%;
-	transform: translateY(-50%);
+	transform: translateY(-50%) translateX(4px);
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -186,16 +188,26 @@
 	padding: 0;
 	opacity: 0;
 	border-radius: var(--radius-sm);
-	transition: opacity var(--t-transition-fast);
+	transition:
+		opacity var(--t-transition-normal),
+		transform var(--t-transition-normal),
+		background var(--t-transition-fast);
 }
 
 .tree-delete:hover {
+	opacity: 1;
 	color: var(--t-color-danger);
 	background: var(--t-color-danger-subtle);
 }
 
 .tree-item-active .tree-delete,
 .tree-item:hover .tree-delete {
+	opacity: 0.5;
+	transform: translateY(-50%) translateX(0);
+}
+
+.tree-item-active .tree-delete:hover,
+.tree-item:hover .tree-delete:hover {
 	opacity: 1;
 }
 
@@ -319,14 +331,14 @@
 .message {
 	border-radius: var(--radius-lg);
 	padding: var(--space-sm) var(--space-md);
-	border: 1px solid var(--t-color-border);
-	background: var(--t-color-surface);
+	border: 1px solid transparent;
+	background: transparent;
 	position: relative;
 }
 
-/* 用户消息：左侧强调条 + 无边框，轻量区分 */
+/* 用户消息：左侧强调条，无边框，轻量区分 */
 .message.user {
-	border-color: var(--t-color-border);
+	border-color: transparent;
 	background: var(--t-color-surface);
 }
 
@@ -342,9 +354,8 @@
 }
 
 .message.assistant {
-	border-color: var(--t-color-border);
-	background: var(--t-color-surface);
-	box-shadow: var(--shadow-sm);
+	border-color: transparent;
+	background: transparent;
 }
 
 /* 聚焦态（当前分支位置）：柔和强调 */
@@ -379,6 +390,18 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-xs);
+	opacity: 0;
+	transform: scale(0.9) translateY(4px);
+	pointer-events: none;
+	transition:
+		opacity var(--t-transition-normal),
+		transform var(--t-transition-normal);
+}
+
+.message:hover .message-actions {
+	opacity: 1;
+	transform: scale(1) translateY(0);
+	pointer-events: auto;
 }
 
 /* 修订按钮：工具式文字按钮（对齐 ReviewCard.tool-btn） */
@@ -390,13 +413,11 @@
 	padding: var(--space-xs) var(--space-sm);
 	font-size: var(--text-xs);
 	line-height: 1;
-	opacity: 0.55;
-	transition: opacity var(--t-transition-fast);
 	border-radius: var(--radius-xs);
+	transition: background var(--t-transition-fast);
 }
 
 .msg-btn:hover {
-	opacity: 1;
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
 }
@@ -586,8 +607,19 @@
 /* ── 流式输出 ── */
 
 .streaming {
-	border-color: var(--t-color-accent);
-	box-shadow: none;
+	border-color: transparent;
+	background: transparent;
+	animation: stream-fade-in var(--t-transition-normal) ease;
+}
+
+@keyframes stream-fade-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
 }
 
 .stream-cursor {

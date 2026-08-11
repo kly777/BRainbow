@@ -16,13 +16,16 @@
 		"resolveJsonModule": true,
 		"paths": {
 			"@/*": ["./src/*"],
+			"@app/*": ["./src/app/*"],
+			"@pages/*": ["./src/pages/*"],
+			"@entities/*": ["./src/entities/*"],
+			"@shared/*": ["./src/shared/*"],
 			"@ui/*": ["./src/ui/*"],
 			"@components/*": ["./src/components/*"],
 			"@features/*": ["./src/features/*"],
 			"@apis/*": ["./src/apis/*"],
 			"@auth/*": ["./src/auth/*"],
 			"@lib/*": ["./src/lib/*"],
-			"@pages/*": ["./src/pages/*"],
 			"@styles/*": ["./src/styles/*"],
 			"@types/*": ["./src/types/*"]
 		}

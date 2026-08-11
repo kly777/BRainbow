@@ -1,4 +1,4 @@
-import styles from "@app/auth/AuthStatus.module.css";
+import styles from "./AuthStatus.module.css";
 import {
 	changePasswordE,
 	loginE,

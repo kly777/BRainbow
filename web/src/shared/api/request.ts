@@ -5,7 +5,7 @@ const API_BASE_URL = "/api";
 
 // ==================== 全局副作用（与业务无关，组件不感知） ====================
 
-/** 登录弹窗事件 —— AuthStatus 监听它自动弹出登录框 */
+/** 登录弹窗事件 —— AuthDialog 监听它自动弹出登录框 */
 export const AUTH_REQUIRED_EVENT = "auth:required";
 
 let _authFiredAt = 0;
@@ -120,7 +120,7 @@ export async function handleGlobalError(
 	// ── 日志：所有错误统一输出 ──
 	console.error(`[API] ${status} ${endpoint} — ${code}: ${message}`);
 
-	// ── 401 → 静默触发登录弹窗（AuthStatus 对话框是唯一的 UI）──
+	// ── 401 → 静默触发登录弹窗（AuthDialog 对话框是唯一的 UI）──
 	if (status === 401) {
 		await triggerAuthRequired();
 		return;

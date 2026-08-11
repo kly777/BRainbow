@@ -1,5 +1,5 @@
 import AuthGuard from "@app/auth/AuthGuard.tsx";
-import AuthStatus from "@app/auth/AuthStatus.tsx";
+import { AuthDialog } from "@features/auth-dialog";
 import CommandPalette from "@app/CommandPalette";
 import { AiSettingsModal } from "@features/ai-setting";
 import { ConfirmModalContainer, ToastContainer } from "@shared/ui";
@@ -24,7 +24,7 @@ export default function Layout(props: { children?: JSX.Element }) {
 					{props.children}
 				</Show>
 			</main>
-			<AuthStatus />
+			<AuthDialog />
 			<CommandPalette />
 			<ToastContainer />
 			<ConfirmModalContainer />

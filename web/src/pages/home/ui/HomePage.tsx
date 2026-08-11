@@ -1,5 +1,5 @@
 import { deleteCardE as apiDeleteCard, getCardsE } from "@entities/card";
-import { TaskList, TaskProvider, useTasks } from "@entities/task";
+import { TaskList, TaskProvider, useTasks } from "@features/task";
 import { showConfirm, tryOrNotify } from "@shared/lib";
 import type { CardData } from "@shared/ui";
 import { AsyncView, CardsGrid } from "@shared/ui";

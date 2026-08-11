@@ -1,6 +1,6 @@
-import type { Task } from "@entities/task";
-import { useTasks } from "@entities/task";
+import { useTasks } from "@features/task";
 import styles from "@pages/task/ui/TaskKanban.module.css";
+import type { Task } from "@shared/api";
 import { createMemo, For, Show } from "solid-js";
 
 // ==================== 状态常量 ====================

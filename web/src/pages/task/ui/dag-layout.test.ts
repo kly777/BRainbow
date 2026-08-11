@@ -1,4 +1,4 @@
-import type { DagEdge, DagNode } from "@entities/task";
+import type { DagEdge, DagNode } from "@shared/api";
 import { describe, expect, it } from "vitest";
 import { layout } from "./dag-layout.ts";
 

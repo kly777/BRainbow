@@ -1,4 +1,4 @@
-import { TaskList, TaskProvider, useTasks } from "@entities/task";
+import { TaskList, TaskProvider, useTasks } from "@features/task";
 import styles from "@pages/task/TaskManager.module.css";
 import TaskCalendar from "@pages/task/ui/TaskCalendar.tsx";
 import TaskDag from "@pages/task/ui/TaskDag.tsx";

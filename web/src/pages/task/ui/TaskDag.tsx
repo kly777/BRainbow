@@ -1,5 +1,3 @@
-import type { Task } from "@entities/task";
-import { getAllTasksE, getDagE } from "@entities/task";
 import { layout } from "@pages/task/ui/dag-layout.ts";
 import {
 	calcAutoOffset,
@@ -7,6 +5,8 @@ import {
 	hitTestNode,
 } from "@pages/task/ui/dag-render.ts";
 import styles from "@pages/task/ui/TaskDag.module.css";
+import type { Task } from "@shared/api";
+import { getAllTasksE, getDagE } from "@shared/api";
 import { notifyError, tryAsync } from "@shared/lib";
 import {
 	createEffect,

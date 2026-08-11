@@ -76,6 +76,58 @@ export {
 	updateArticleNotes,
 	uploadArticle,
 } from "./endpoints/reading.ts";
+export type {
+	CalendarEvent,
+	CreateTaskRequest,
+	CreateTimeWindowRequest,
+	DagEdge,
+	DagNode,
+	DagView,
+	Task,
+	TaskDecomposition,
+	TaskDependency,
+	TaskDetail,
+	TaskListResponse,
+	TaskStatusType,
+	TaskTimeAllocation,
+	TimeWindow,
+	TreeNode,
+	UpdateTaskRequest,
+} from "./endpoints/task.ts";
+export {
+	activateTaskE,
+	addTaskDecompositionE,
+	addTaskDependencyE,
+	addTaskTimeAllocationE,
+	archiveTaskE,
+	completeTaskE,
+	createTaskE,
+	deleteTaskE,
+	getActiveTasksE,
+	getAllTasksE,
+	getArchivedTasksE,
+	getBacklogTasksE,
+	getCalendarEventsE,
+	getCompletedTasksE,
+	getDagE,
+	getStatusText,
+	getTaskDetailE,
+	getTaskStatsE,
+	getTasksE,
+	getTaskTreeE,
+	getUserTasksE,
+	moveToBacklogE,
+	removeTaskDependencyE,
+	searchTasksE,
+	TaskStatus,
+	updateTaskE,
+	updateTaskStatusE,
+} from "./endpoints/task.ts";
+export {
+	createTimeWindowE,
+	deleteTimeWindowE,
+	getTimeWindowsE,
+} from "./endpoints/task-time-window.ts";
 export * from "./request.ts";
 export * from "./token.ts";
 export * from "./types/index.ts";

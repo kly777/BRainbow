@@ -1,5 +1,5 @@
+import type { Task } from "@shared/api";
 import { createMemo, createSignal, For, Show } from "solid-js";
-import type { Task } from "../model.ts";
 import EditTaskModal from "./EditTaskModal.tsx";
 import TaskItem from "./TaskItem.tsx";
 import styles from "./TaskList.module.css";

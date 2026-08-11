@@ -1,4 +1,10 @@
-import { getErrorMessage } from "@shared/api";
+import type { Task } from "@shared/api";
+import {
+	addTaskDependencyE,
+	getErrorMessage,
+	getTaskDetailE,
+	removeTaskDependencyE,
+} from "@shared/api";
 import { notifyError, tryAsync } from "@shared/lib";
 import {
 	createEffect,
@@ -7,12 +13,6 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import {
-	addTaskDependencyE,
-	getTaskDetailE,
-	removeTaskDependencyE,
-} from "../api.ts";
-import type { Task } from "../model.ts";
 import styles from "./EditTaskModal.module.css";
 
 // 依赖状态类映射（vanilla-extract 不支持动态索引）

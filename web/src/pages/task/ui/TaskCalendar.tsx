@@ -1,6 +1,6 @@
-import type { CalendarEvent } from "@entities/task";
-import { getCalendarEventsE } from "@entities/task";
 import styles from "@pages/task/ui/TaskCalendar.module.css";
+import type { CalendarEvent } from "@shared/api";
+import { getCalendarEventsE } from "@shared/api";
 import { notifyError, tryAsync } from "@shared/lib";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 

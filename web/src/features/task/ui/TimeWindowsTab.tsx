@@ -1,8 +1,11 @@
-import { getErrorMessage } from "@shared/api";
+import type { CreateTimeWindowRequest, Task, TimeWindow } from "@shared/api";
+import {
+	createTimeWindowE,
+	deleteTimeWindowE,
+	getErrorMessage,
+} from "@shared/api";
 import { notifyError, tryAsync } from "@shared/lib";
 import { createSignal, For, Show } from "solid-js";
-import type { CreateTimeWindowRequest, Task, TimeWindow } from "../model.ts";
-import { createTimeWindowE, deleteTimeWindowE } from "../timeWindowApi.ts";
 import styles from "./EditTaskModal.module.css";
 
 interface TimeWindowsTabProps {

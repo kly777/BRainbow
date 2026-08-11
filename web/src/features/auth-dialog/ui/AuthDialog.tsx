@@ -1,4 +1,3 @@
-import styles from "./AuthStatus.module.css";
 import {
 	changePasswordE,
 	loginE,
@@ -10,6 +9,7 @@ import { AUTH_REQUIRED_EVENT } from "@shared/api";
 import { tryAsync } from "@shared/lib";
 import { createSignal, onCleanup, Show } from "solid-js";
 import { Portal } from "solid-js/web";
+import styles from "./AuthStatus.module.css";
 
 type DialogMode = "login" | "password";
 

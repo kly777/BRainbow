@@ -1,6 +1,6 @@
 import type { TagInfo } from "@entities/mem";
-import { TagSelector } from "@features/tag-selector";
 import { Modal } from "@shared/ui";
+import TagSelector from "./TagSelector.tsx";
 
 interface Props {
 	isOpen: boolean;

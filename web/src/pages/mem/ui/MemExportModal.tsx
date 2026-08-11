@@ -1,9 +1,9 @@
 import type { TagInfo } from "@entities/mem";
 import { downloadExportCsv, listTagsE } from "@entities/mem";
-import { TagSelector } from "@features/tag-selector";
 import { notifyError, tryAsync } from "@shared/lib";
 import { Modal } from "@shared/ui";
 import { createEffect, createSignal } from "solid-js";
+import TagSelector from "./TagSelector.tsx";
 
 interface Props {
 	isOpen: boolean;

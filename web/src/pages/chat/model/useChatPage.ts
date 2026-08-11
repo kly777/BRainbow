@@ -5,6 +5,7 @@ import {
 	type ChatTree,
 	createTreeE,
 	deleteTreeE,
+	getToken,
 	getTreeE,
 	listPresetsE,
 	listTreesE,
@@ -13,8 +14,7 @@ import {
 	type SearchHit,
 	searchChatE,
 	type TreeDetail,
-} from "@entities/chat";
-import { getToken } from "@shared/api";
+} from "@shared/api";
 import { tryAsync, tryOrNotify } from "@shared/lib";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal } from "solid-js";

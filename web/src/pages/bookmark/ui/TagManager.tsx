@@ -2,8 +2,8 @@
  * 标签管理弹窗：列出所有标签（名称 + 使用数），支持全局删除。
  */
 
-import type { BookmarkTagWithCount } from "@entities/bookmark";
-import { deleteBookmarkTagE, searchBookmarkTagsE } from "@entities/bookmark";
+import type { BookmarkTagWithCount } from "@shared/api";
+import { deleteBookmarkTagE, searchBookmarkTagsE } from "@shared/api";
 import { notifyError, notifySuccess, showConfirm, tryAsync } from "@shared/lib";
 import { Button, Modal } from "@shared/ui";
 import { createResource, For, Show } from "solid-js";

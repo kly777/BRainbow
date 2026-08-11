@@ -1,6 +1,5 @@
-import { type ConvHit, searchConvE } from "@entities/conv";
 import styles from "@pages/conv/ConvSearch.module.css";
-import { getErrorMessage } from "@shared/api";
+import { type ConvHit, getErrorMessage, searchConvE } from "@shared/api";
 import { strParam, useUrlParams } from "@shared/lib";
 import { A, useNavigate } from "@solidjs/router";
 import { createResource, createSignal, For, onMount, Show } from "solid-js";

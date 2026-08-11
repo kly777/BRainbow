@@ -1,10 +1,9 @@
-import { getConvDetailE } from "@entities/conv";
 import styles from "@pages/conv/ConvDetail.module.css";
-import { typeLabel } from "@pages/conv/model/constants.ts";
+import { typeLabel } from "@pages/conv/model/type-labels.ts";
 import { useBackHref } from "@pages/conv/model/useBackHref.ts";
 import ConvTopBar from "@pages/conv/ui/ConvTopBar.tsx";
 import QaPairList from "@pages/conv/ui/QaPairList.tsx";
-import { getErrorMessage } from "@shared/api";
+import { getConvDetailE, getErrorMessage } from "@shared/api";
 import { Markdown as MarkdownRenderer } from "@shared/ui";
 import { useParams, useSearchParams } from "@solidjs/router";
 import { createResource, For, Show } from "solid-js";

@@ -4,8 +4,8 @@
  * 建议下拉中可 hover 删除已存在的标签（全局删除，所有书签移除该标签）。
  */
 
-import type { BookmarkTagWithCount } from "@entities/bookmark";
-import { deleteBookmarkTagE, searchBookmarkTagsE } from "@entities/bookmark";
+import type { BookmarkTagWithCount } from "@shared/api";
+import { deleteBookmarkTagE, searchBookmarkTagsE } from "@shared/api";
 import { notifyError, notifySuccess, showConfirm, tryAsync } from "@shared/lib";
 import { createResource, createSignal, For, Show } from "solid-js";
 import styles from "./TagInput.module.css";

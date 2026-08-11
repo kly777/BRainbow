@@ -1,10 +1,10 @@
+import styles from "@pages/reading/ReadingList.module.css";
 import {
 	type ArticleSummary,
+	getErrorMessage,
 	listArticles,
 	uploadArticle,
-} from "@entities/reading";
-import styles from "@pages/reading/ReadingList.module.css";
-import { getErrorMessage } from "@shared/api";
+} from "@shared/api";
 import { notifyError, tryAsync } from "@shared/lib";
 import { A } from "@solidjs/router";
 import { createResource, createSignal, For, Show } from "solid-js";

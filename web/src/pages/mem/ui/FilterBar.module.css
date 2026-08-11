@@ -23,14 +23,14 @@
 }
 
 .tag-chip-active {
-	composes: tag-chip from "@app/styles/base.module.css";
+	composes: tag-chip from "@shared/styles/base.module.css";
 	gap: var(--space-xs);
 	background: var(--t-color-badge-new-bg);
 	color: var(--t-color-badge-new-text);
 }
 
 .tag-chip-excluded {
-	composes: tag-chip from "@app/styles/base.module.css";
+	composes: tag-chip from "@shared/styles/base.module.css";
 	gap: var(--space-xs);
 	background: var(--t-color-badge-suspended-bg);
 	color: var(--t-color-badge-suspended-text);

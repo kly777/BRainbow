@@ -1,7 +1,7 @@
 import { createTagE, searchTagsE, type TagInfo } from "@entities/mem/api.ts";
 import { tryAsync } from "@shared/lib/result.ts";
-import styles from "@shared/ui/molecules/TagSelector.module.css";
 import { createResource, createSignal, For, Show } from "solid-js";
+import styles from "./TagSelector.module.css";
 
 interface Props {
 	tags: TagInfo[];

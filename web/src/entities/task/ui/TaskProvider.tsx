@@ -11,7 +11,7 @@ import {
 	fetchTasksByFilter,
 	makeTemp,
 	STATUS_API,
-} from "@pages/task/ui/task-provider-utils.ts";
+} from "@entities/task/ui/task-provider-utils.ts";
 import { notifyError } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";

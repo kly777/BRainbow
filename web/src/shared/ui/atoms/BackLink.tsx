@@ -1,4 +1,4 @@
-import base from "@app/styles/base.module.css";
+import base from "@shared/styles/base.module.css";
 import { A } from "@solidjs/router";
 
 /** 通用返回链接（← 占位符 + base 的 btn-back 样式） */

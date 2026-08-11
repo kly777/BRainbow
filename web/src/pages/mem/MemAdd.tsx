@@ -3,6 +3,7 @@
 // 批量/文件模式 = 卡片清单审查（预览 + 勾选入库）
 // 业务逻辑复用 useMemAdd，此处只做视图层
 
+import MarkdownEditor from "@features/markdown-editor/MarkdownEditor";
 import { useMemAdd } from "@pages/mem/logic/useMemAdd.ts";
 import styles from "@pages/mem/MemAdd.module.css";
 import {
@@ -12,7 +13,6 @@ import {
 	ImportResult,
 	ImportTagInput,
 } from "@pages/mem/ui/ImportParts.tsx";
-import MarkdownEditor from "@shared/ui/molecules/MarkdownEditor";
 import { A } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
 

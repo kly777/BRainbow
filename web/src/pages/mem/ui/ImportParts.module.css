@@ -1,15 +1,15 @@
 /* features/mem/ui/ImportParts.css.ts — 由 vanilla-extract 迁移 */
 
 .cancel {
-	composes: btn-ghost from "@app/styles/base.module.css";
+	composes: btn-ghost from "@shared/styles/base.module.css";
 }
 
 .submit {
-	composes: btn-primary from "@app/styles/base.module.css";
+	composes: btn-primary from "@shared/styles/base.module.css";
 }
 
 .hint-card {
-	composes: card from "@app/styles/base.module.css";
+	composes: card from "@shared/styles/base.module.css";
 	padding: 0; /* 内边距由 hint-body 提供 */
 	border-radius: var(--radius-lg);
 	overflow: hidden;
@@ -90,7 +90,7 @@
 }
 
 .preview-card {
-	composes: card from "@app/styles/base.module.css";
+	composes: card from "@shared/styles/base.module.css";
 	padding: 0; /* 内边距由 preview-body 提供 */
 	border-radius: var(--radius-lg);
 	overflow: hidden;
@@ -245,7 +245,7 @@
 }
 
 .input-card {
-	composes: card from "@app/styles/base.module.css";
+	composes: card from "@shared/styles/base.module.css";
 	border-radius: var(--radius-lg);
 	padding: var(--space-md);
 }

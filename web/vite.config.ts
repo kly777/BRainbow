@@ -27,19 +27,9 @@ export default defineConfig(({ command }) => ({
 			// ── FSD 层 alias ──
 			"@app": fileURLToPath(new URL("./src/app", import.meta.url)),
 			"@pages": fileURLToPath(new URL("./src/pages", import.meta.url)),
+			"@features": fileURLToPath(new URL("./src/features", import.meta.url)),
 			"@entities": fileURLToPath(new URL("./src/entities", import.meta.url)),
 			"@shared": fileURLToPath(new URL("./src/shared", import.meta.url)),
-			// ── 旧 alias（迁移完成前保留，逐阶段移除） ──
-			"@ui": fileURLToPath(new URL("./src/ui", import.meta.url)),
-			"@components": fileURLToPath(
-				new URL("./src/components", import.meta.url),
-			),
-			"@features": fileURLToPath(new URL("./src/features", import.meta.url)),
-			"@apis": fileURLToPath(new URL("./src/apis", import.meta.url)),
-			"@auth": fileURLToPath(new URL("./src/auth", import.meta.url)),
-			"@lib": fileURLToPath(new URL("./src/lib", import.meta.url)),
-			"@styles": fileURLToPath(new URL("./src/styles", import.meta.url)),
-			"@types": fileURLToPath(new URL("./src/types", import.meta.url)),
 		},
 	},
 

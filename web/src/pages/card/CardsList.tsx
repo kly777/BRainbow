@@ -1,9 +1,9 @@
 // ── 卡片列表页面（薄壳视图层）──
 
 import { getCardsE, searchCardsE } from "@entities/card/api.ts";
+import CardsGrid from "@entities/card/ui/CardsGrid.tsx";
 import styles from "@pages/card/CardsList.module.css";
 import { useCardsList } from "@pages/card/logic/useCardsList.ts";
-import CardsGrid from "@pages/card/ui/CardsGrid.tsx";
 import { tryAsync } from "@shared/lib/result.ts";
 import Button from "@shared/ui/atoms/Button";
 import MarkdownRenderer from "@shared/ui/atoms/Markdown";

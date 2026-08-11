@@ -2,7 +2,6 @@
  * ColorPage — 主题/配色切换页（/color）
  */
 
-import baseStyles from "@app/styles/base.module.css";
 import {
 	applyTheme,
 	getTheme,
@@ -10,6 +9,7 @@ import {
 	themeInfo,
 	themes,
 } from "@app/styles/theme.ts";
+import baseStyles from "@shared/styles/base.module.css";
 import { createSignal, For, onMount } from "solid-js";
 import styles from "./ColorPage.module.css";
 

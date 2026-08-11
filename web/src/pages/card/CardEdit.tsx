@@ -1,5 +1,6 @@
 import { deleteCardE, getCardE, updateCardE } from "@entities/card/api.ts";
 import type { UpdateCardRequest } from "@entities/card/types.ts";
+import MarkdownEditor from "@features/markdown-editor/MarkdownEditor";
 import styles from "@pages/card/CardEdit.module.css";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { tryAsync } from "@shared/lib/result.ts";
@@ -7,7 +8,6 @@ import { showConfirm, tryOrNotify } from "@shared/lib/safe-action.ts";
 import Button from "@shared/ui/atoms/Button";
 import MarkdownRenderer from "@shared/ui/atoms/Markdown";
 import { AsyncView } from "@shared/ui/molecules/AsyncView";
-import MarkdownEditor from "@shared/ui/molecules/MarkdownEditor";
 import { useNavigate, useParams } from "@solidjs/router";
 import {
 	type Component,

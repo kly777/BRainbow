@@ -12,12 +12,12 @@ import {
 	listTreesByKindE,
 	type TreeDetail,
 } from "@entities/chat/api.ts";
-import { importJsonE } from "@entities/mem/api.ts";
 import {
 	type AiCard,
 	countKnowledgePoints,
 	parseAiCards,
-} from "@pages/mem/logic/ai-cards.ts";
+} from "@entities/mem/ai-cards.ts";
+import { importJsonE } from "@entities/mem/api.ts";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import { tryOrNotify } from "@shared/lib/safe-action.ts";

@@ -1,15 +1,15 @@
 /* features/mem/MemAdd.css.ts — 由 vanilla-extract 迁移 */
 
 .cancel {
-	composes: btn-ghost from "@app/styles/base.module.css";
+	composes: btn-ghost from "@shared/styles/base.module.css";
 }
 
 .submit {
-	composes: btn-primary from "@app/styles/base.module.css";
+	composes: btn-primary from "@shared/styles/base.module.css";
 }
 
 .back-link {
-	composes: btn-back from "@app/styles/base.module.css";
+	composes: btn-back from "@shared/styles/base.module.css";
 }
 
 .page {
@@ -99,7 +99,7 @@
 }
 
 .card {
-	composes: card from "@app/styles/base.module.css";
+	composes: card from "@shared/styles/base.module.css";
 	padding: 0; /* 布局容器：内边距由 face/answer 内部提供 */
 	border-color: var(--t-color-border-strong);
 	border-radius: var(--radius-lg);

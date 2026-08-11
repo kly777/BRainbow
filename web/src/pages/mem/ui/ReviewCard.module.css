@@ -1,15 +1,15 @@
 /* features/mem/ui/ReviewCard.css.ts — 由 vanilla-extract 迁移 */
 
 .ghost-btn {
-	composes: btn-ghost from "@app/styles/base.module.css";
+	composes: btn-ghost from "@shared/styles/base.module.css";
 }
 
 .nav-btn {
-	composes: btn-nav from "@app/styles/base.module.css";
+	composes: btn-nav from "@shared/styles/base.module.css";
 }
 
 .primary-btn {
-	composes: btn-primary from "@app/styles/base.module.css";
+	composes: btn-primary from "@shared/styles/base.module.css";
 }
 
 .card-wrap {
@@ -172,7 +172,7 @@
 }
 
 .card-flat {
-	composes: card from "@app/styles/base.module.css";
+	composes: card from "@shared/styles/base.module.css";
 	border-color: var(--t-color-border-strong);
 	border-radius: var(--radius-lg);
 	padding: var(--space-xl);
@@ -310,11 +310,11 @@
 
 /* 底栏（actionRow / ratings）：所有屏幕贴底胶囊，窄屏仅调整宽度 */
 .action-row {
-	composes: bottom-bar from "@app/styles/base.module.css";
+	composes: bottom-bar from "@shared/styles/base.module.css";
 }
 
 .ratings {
-	composes: bottom-bar from "@app/styles/base.module.css";
+	composes: bottom-bar from "@shared/styles/base.module.css";
 	max-width: 640px;
 	min-width: 480px;
 }

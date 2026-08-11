@@ -1,7 +1,7 @@
 /* features/mem/ui/ManageTable.css.ts — 由 vanilla-extract 迁移 */
 
 .page-btn {
-	composes: btn-nav from "@app/styles/base.module.css";
+	composes: btn-nav from "@shared/styles/base.module.css";
 }
 
 .table-card {

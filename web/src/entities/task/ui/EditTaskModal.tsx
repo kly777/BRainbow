@@ -1,9 +1,9 @@
 import { getTimeWindowsE } from "@entities/task/timeWindowApi.ts";
 import type { Task, TimeWindow } from "@entities/task/types.ts";
-import BasicInfoTab from "@pages/task/ui/BasicInfoTab.tsx";
-import DependenciesTab from "@pages/task/ui/DependenciesTab.tsx";
-import styles from "@pages/task/ui/EditTaskModal.module.css";
-import TimeWindowsTab from "@pages/task/ui/TimeWindowsTab.tsx";
+import BasicInfoTab from "@entities/task/ui/BasicInfoTab.tsx";
+import DependenciesTab from "@entities/task/ui/DependenciesTab.tsx";
+import styles from "@entities/task/ui/EditTaskModal.module.css";
+import TimeWindowsTab from "@entities/task/ui/TimeWindowsTab.tsx";
 import { notifyError } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";
 import Modal from "@shared/ui/organisms/Modal";

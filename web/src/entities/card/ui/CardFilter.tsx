@@ -1,4 +1,4 @@
-import styles from "@pages/card/ui/CardFilter.module.css";
+import styles from "@entities/card/ui/CardFilter.module.css";
 import { type Component, createSignal, onCleanup } from "solid-js";
 
 export interface CardFilterProps {

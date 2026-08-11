@@ -1,5 +1,5 @@
-import Card, { type CardData } from "@pages/card/ui/Card.tsx";
-import styles from "@pages/card/ui/CardMasonry.module.css";
+import Card, { type CardData } from "@entities/card/ui/Card.tsx";
+import styles from "@entities/card/ui/CardMasonry.module.css";
 import { type Component, createEffect, For, Show } from "solid-js";
 
 export interface CardMasonryProps {

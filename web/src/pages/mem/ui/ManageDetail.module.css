@@ -1,11 +1,11 @@
 /* features/mem/ui/ManageDetail.css.ts — 由 vanilla-extract 迁移 */
 
 .ghost-btn {
-	composes: btn-ghost from "@app/styles/base.module.css";
+	composes: btn-ghost from "@shared/styles/base.module.css";
 }
 
 .primary-btn {
-	composes: btn-primary from "@app/styles/base.module.css";
+	composes: btn-primary from "@shared/styles/base.module.css";
 }
 
 .detail {

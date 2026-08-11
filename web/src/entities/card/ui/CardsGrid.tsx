@@ -1,8 +1,8 @@
-import type { CardData } from "@pages/card/ui/Card.tsx";
-import CardFilter from "@pages/card/ui/CardFilter.tsx";
+import type { CardData } from "@entities/card/ui/Card.tsx";
+import CardFilter from "@entities/card/ui/CardFilter.tsx";
 import CardMasonry, {
 	type CardMasonryProps,
-} from "@pages/card/ui/CardMasonry.tsx";
+} from "@entities/card/ui/CardMasonry.tsx";
 import { type Component, createMemo, createSignal } from "solid-js";
 
 export interface CardsGridProps extends Omit<CardMasonryProps, "cards"> {

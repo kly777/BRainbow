@@ -4,7 +4,7 @@ import {
 	removeTaskDependencyE,
 } from "@entities/task/api.ts";
 import type { Task } from "@entities/task/types.ts";
-import styles from "@pages/task/ui/EditTaskModal.module.css";
+import styles from "@entities/task/ui/EditTaskModal.module.css";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { notifyError } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";

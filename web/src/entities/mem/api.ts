@@ -284,7 +284,8 @@ export const batchSetTagsForMemsE = (
 // ── CSV 导入导出 ──
 
 export async function downloadExportCsv(tagIds?: number[]): Promise<void> {
-	const token = (await import("@app/auth/context.tsx")).getToken();
+	const { getToken } = await import("@shared/api/token.ts");
+	const token = getToken();
 	const headers: Record<string, string> = {};
 	if (token) headers.Authorization = `Bearer ${token}`;
 

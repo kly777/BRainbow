@@ -1,9 +1,9 @@
+import TaskList from "@entities/task/ui/TaskList.tsx";
+import { TaskProvider, useTasks } from "@entities/task/ui/TaskProvider.tsx";
 import styles from "@pages/task/TaskManager.module.css";
 import TaskCalendar from "@pages/task/ui/TaskCalendar.tsx";
 import TaskDag from "@pages/task/ui/TaskDag.tsx";
 import TaskKanban from "@pages/task/ui/TaskKanban.tsx";
-import TaskList from "@pages/task/ui/TaskList.tsx";
-import { TaskProvider, useTasks } from "@pages/task/ui/TaskProvider.tsx";
 import { enumParam, strParam, useUrlParams } from "@shared/lib/useUrlParams.ts";
 import { createSignal, Show } from "solid-js";
 

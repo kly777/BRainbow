@@ -1,4 +1,4 @@
-import styles from "@pages/card/ui/Card.module.css";
+import styles from "@entities/card/ui/Card.module.css";
 import MarkdownRenderer from "@shared/ui/atoms/Markdown";
 import { type Component, Show } from "solid-js";
 

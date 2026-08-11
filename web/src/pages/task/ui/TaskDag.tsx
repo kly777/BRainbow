@@ -1,11 +1,11 @@
 import { getAllTasksE, getDagE } from "@entities/task/api.ts";
 import type { Task } from "@entities/task/types.ts";
-import { layout } from "@pages/task/ui/dag-layout.ts";
+import { layout } from "@entities/task/ui/dag-layout.ts";
 import {
 	calcAutoOffset,
 	drawGraph,
 	hitTestNode,
-} from "@pages/task/ui/dag-render.ts";
+} from "@entities/task/ui/dag-render.ts";
 import styles from "@pages/task/ui/TaskDag.module.css";
 import { notifyError } from "@shared/lib/notify.ts";
 import { tryAsync } from "@shared/lib/result.ts";

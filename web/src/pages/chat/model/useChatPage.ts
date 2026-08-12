@@ -1,20 +1,22 @@
 // ── 对话页核心逻辑 ──
 
+import type {
+	ChatNode,
+	ChatTree,
+	PromptPreset,
+	SearchHit,
+	TreeDetail,
+} from "@entities/chat";
 import {
-	type ChatNode,
-	type ChatTree,
 	createTreeE,
 	deleteTreeE,
-	getToken,
 	getTreeE,
 	listPresetsE,
 	listTreesE,
-	type PromptPreset,
 	reviseNodeE,
-	type SearchHit,
 	searchChatE,
-	type TreeDetail,
-} from "@shared/api";
+} from "@entities/chat";
+import { getToken } from "@shared/api";
 import { tryAsync, tryOrNotify } from "@shared/lib";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal } from "solid-js";

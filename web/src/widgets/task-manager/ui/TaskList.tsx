@@ -1,4 +1,4 @@
-import type { Task } from "@shared/api";
+import type { Task } from "@entities/task";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import EditTaskModal from "./EditTaskModal.tsx";
 import TaskItem from "./TaskItem.tsx";

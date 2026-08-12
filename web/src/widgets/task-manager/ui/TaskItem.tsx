@@ -1,4 +1,4 @@
-import type { Task, TimeWindow } from "@shared/api";
+import type { Task, TimeWindow } from "@entities/task";
 import { formatDate } from "@shared/api";
 import { createSignal, For, Show } from "solid-js";
 import styles from "./TaskList.module.css";

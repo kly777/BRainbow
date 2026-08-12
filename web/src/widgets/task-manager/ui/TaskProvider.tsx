@@ -1,4 +1,4 @@
-import type { CreateTaskRequest, Task } from "@shared/api";
+import type { CreateTaskRequest, Task } from "@entities/task";
 import {
 	createTaskE as apiCreateTask,
 	deleteTaskE as apiDeleteTask,
@@ -6,7 +6,7 @@ import {
 	getTaskStatsE,
 	getTasksE,
 	searchTasksE,
-} from "@shared/api";
+} from "@entities/task";
 import { notifyError, showConfirm, tryAsync, tryOrNotify } from "@shared/lib";
 import {
 	createContext,

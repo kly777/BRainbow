@@ -1,9 +1,6 @@
-import type { CreateTimeWindowRequest, Task, TimeWindow } from "@shared/api";
-import {
-	createTimeWindowE,
-	deleteTimeWindowE,
-	getErrorMessage,
-} from "@shared/api";
+import type { CreateTimeWindowRequest, Task, TimeWindow } from "@entities/task";
+import { createTimeWindowE, deleteTimeWindowE } from "@entities/task";
+import { getErrorMessage } from "@shared/api";
 import { notifyError, tryAsync } from "@shared/lib";
 import { createSignal, For, Show } from "solid-js";
 import styles from "./EditTaskModal.module.css";

@@ -1,6 +1,6 @@
+import type { Task } from "@entities/task";
+import { getAllTasksE, getDagE } from "@entities/task";
 import styles from "@pages/task/ui/TaskDag.module.css";
-import type { Task } from "@shared/api";
-import { getAllTasksE, getDagE } from "@shared/api";
 import { notifyError, tryAsync } from "@shared/lib";
 import {
 	createEffect,

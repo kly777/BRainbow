@@ -1,5 +1,5 @@
+import type { Task } from "@entities/task";
 import styles from "@pages/task/ui/TaskKanban.module.css";
-import type { Task } from "@shared/api";
 import { useTasks } from "@widgets/task-manager";
 import { createMemo, For, Show } from "solid-js";
 

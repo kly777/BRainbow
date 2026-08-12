@@ -1,4 +1,5 @@
-import { getConvQaE, getErrorMessage } from "@shared/api";
+import { getConvQaE } from "@entities/conv";
+import { getErrorMessage } from "@shared/api";
 import { useParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 import { useBackHref } from "../model/useBackHref.ts";

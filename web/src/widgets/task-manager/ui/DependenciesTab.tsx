@@ -1,10 +1,10 @@
-import type { Task } from "@shared/api";
+import type { Task } from "@entities/task";
 import {
 	addTaskDependencyE,
-	getErrorMessage,
 	getTaskDetailE,
 	removeTaskDependencyE,
-} from "@shared/api";
+} from "@entities/task";
+import { getErrorMessage } from "@shared/api";
 import { notifyError, tryAsync } from "@shared/lib";
 import {
 	createEffect,

@@ -26,7 +26,7 @@ import {
 	searchBookmarkTagsE,
 	setBookmarkTagsE,
 	updateBookmarkE,
-} from "./bookmark.ts";
+} from "./api.ts";
 
 beforeEach(() => {
 	vi.clearAllMocks();

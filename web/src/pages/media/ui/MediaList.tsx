@@ -1,11 +1,6 @@
-import {
-	deleteMediaE,
-	getErrorMessage,
-	HttpError,
-	listMediaE,
-	type MediaItem,
-	renameMediaE,
-} from "@shared/api";
+import type { MediaItem } from "@entities/media";
+import { deleteMediaE, listMediaE, renameMediaE } from "@entities/media";
+import { getErrorMessage, HttpError } from "@shared/api";
 import { notifyError, showConfirm, tryAsync } from "@shared/lib";
 import { AsyncView, Button, FilterGroup } from "@shared/ui";
 import { useSearchParams } from "@solidjs/router";

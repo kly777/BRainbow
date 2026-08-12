@@ -1,4 +1,4 @@
-import type { Task } from "@shared/api";
+import type { Task } from "@entities/task";
 import { For } from "solid-js";
 import styles from "./EditTaskModal.module.css";
 

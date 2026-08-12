@@ -1,4 +1,5 @@
-import { getConvConceptE, getErrorMessage } from "@shared/api";
+import { getConvConceptE } from "@entities/conv";
+import { getErrorMessage } from "@shared/api";
 import { Markdown as MarkdownRenderer } from "@shared/ui";
 import { useParams, useSearchParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";

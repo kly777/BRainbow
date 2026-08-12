@@ -1,9 +1,6 @@
-import {
-	type ArticleSummary,
-	getErrorMessage,
-	listArticles,
-	uploadArticle,
-} from "@shared/api";
+import type { ArticleSummary } from "@entities/reading";
+import { listArticles, uploadArticle } from "@entities/reading";
+import { getErrorMessage } from "@shared/api";
 import { notifyError, tryAsync } from "@shared/lib";
 import { A } from "@solidjs/router";
 import { createResource, createSignal, For, Show } from "solid-js";

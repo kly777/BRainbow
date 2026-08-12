@@ -1,5 +1,5 @@
-import type { Task, TimeWindow } from "@shared/api";
-import { getTimeWindowsE } from "@shared/api";
+import type { Task, TimeWindow } from "@entities/task";
+import { getTimeWindowsE } from "@entities/task";
 import { notifyError, tryAsync } from "@shared/lib";
 import { Modal } from "@shared/ui";
 import { createEffect, createSignal, Show } from "solid-js";

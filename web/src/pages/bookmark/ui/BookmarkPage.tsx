@@ -1,4 +1,4 @@
-import type { Bookmark } from "@shared/api";
+import type { Bookmark } from "@entities/bookmark";
 import {
 	createBookmarkE,
 	deleteBookmarkE,
@@ -7,7 +7,7 @@ import {
 	searchBookmarksE,
 	setBookmarkTagsE,
 	updateBookmarkE,
-} from "@shared/api";
+} from "@entities/bookmark";
 import {
 	notifyError,
 	notifySuccess,

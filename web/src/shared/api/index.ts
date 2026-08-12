@@ -59,6 +59,18 @@ export {
 	searchConvE,
 } from "./endpoints/conv.ts";
 export type {
+	MediaItem,
+	MediaType,
+	PaginatedMedia,
+} from "./endpoints/media.ts";
+export {
+	deleteMediaE,
+	getMediaE,
+	listMediaE,
+	renameMediaE,
+	uploadMedia,
+} from "./endpoints/media.ts";
+export type {
 	Article,
 	ArticleDetail,
 	ArticleSummary,

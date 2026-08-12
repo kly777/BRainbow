@@ -3,8 +3,8 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "vite",
-		"build": "vite build",
+		"dev": "vite --mode dev",
+		"build": "vite build --mode prod",
 		"preview": "vite preview",
 		"compress": "node scripts/compress-dist.mjs",
 		"typecheck": "tsc --noEmit",

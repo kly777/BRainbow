@@ -66,6 +66,11 @@ async fn shutdown_signal() {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 开发构建自动加载根目录 .env.dev（生产由 systemd 注入环境变量，不读文件）
+    if cfg!(debug_assertions) {
+        dotenvy::from_filename(".env.dev").ok();
+    }
+
     init_logging();
 
     // 加载配置

@@ -3,7 +3,7 @@ import { defineConfig, loadEnv, type Plugin } from "vite";
 import solid from "vite-plugin-solid";
 import { fileURLToPath } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { NAV_ITEMS } from "./src/app/navigation";
+import { NAV_ITEMS } from "./src/app/navigation.ts";
 
 /**
  * 构建时生成 sitemap.xml（数据源自 NAV_ITEMS，路由变更自动保持同步）。
@@ -29,16 +29,22 @@ ${urls}
 }
 
 export default defineConfig(({ command, mode }) => {
-	// 站点域名：由 VITE_SITE_URL 配置（web/.env），缺省回退到生产域名。
-	// 用于生成 sitemap.xml 的绝对 URL
-	const env = loadEnv(mode, ".", "");
+	// 配置读取项目根目录的 .env.dev / .env.prod（package.json 用 --mode dev/prod 选择）
+	const envDir = fileURLToPath(new URL("..", import.meta.url));
+	const env = loadEnv(mode, envDir, "");
+
+	// 站点域名：用于生成 sitemap.xml 的绝对 URL（VITE_SITE_URL，缺省回退生产域名）
 	const siteUrl = (env.VITE_SITE_URL ?? "https://brainbow.top").replace(
 		/\/+$/,
 		"",
 	);
+	// 开发服务器端口与后端代理目标（VITE_PORT / VITE_API_TARGET）
+	const port = Number(env.VITE_PORT ?? 3001);
+	const apiTarget = env.VITE_API_TARGET ?? "http://localhost:3000";
 
 	return {
 		plugins: [solid(), sitemapPlugin(siteUrl)],
+		envDir,
 
 		css: {
 			modules: {
@@ -71,18 +77,18 @@ export default defineConfig(({ command, mode }) => {
 		},
 
 		server: {
-			port: 3001,
+			port,
 			hmr: {
 				host: "localhost",
 			},
 			proxy: {
 				"/api": {
-					target: "http://localhost:3000",
+					target: apiTarget,
 					changeOrigin: true,
 					// SSE 流式响应需要长连接：不设 timeout，避免 AI 思考间隔被切断
 				},
 				"/uploads": {
-					target: "http://localhost:3000",
+					target: apiTarget,
 					changeOrigin: true,
 					timeout: 5000,
 				},

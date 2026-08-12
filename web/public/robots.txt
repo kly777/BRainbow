@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# SPA：所有路由由 index.html 承接，抓取走 JS 渲染（无 SSR）
+# 域名由 Serveo 动态分配，无法维护固定 Sitemap

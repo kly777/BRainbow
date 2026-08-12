@@ -55,5 +55,25 @@ export default defineConfig(({ command }) => ({
 	build: {
 		outDir: "dist",
 		emptyOutDir: true,
+		// JS 兼容基线 = vite 默认的 baseline-widely-available（2026-01-01 基线）：
+		// chrome111 / edge111 / firefox114 / safari16.4 / ios16.4
+		// 与 lightningcss 的 CSS 基线一致，显式写出便于调整
+		target: ["chrome111", "edge111", "firefox114", "safari16.4", "ios16.4"],
+		// 生产不开 sourcemap（内网工具，无排障收益，省一半产物体积）
+		sourcemap: false,
+		rolldownOptions: {
+			output: {
+				manualChunks(id) {
+					// 富文本渲染工具链独立成包：体积大且极少变更，拆出利于长缓存
+					if (/(?:marked|katex|highlight\.js|dompurify|marked-)/.test(id)) {
+						return "markdown-vendor";
+					}
+					if (/node_modules\/solid-js/.test(id)) {
+						return "solid-vendor";
+					}
+					return undefined;
+				},
+			},
+		},
 	},
 }));

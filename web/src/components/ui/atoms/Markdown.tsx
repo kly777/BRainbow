@@ -1,193 +1,27 @@
-import DOMPurify from "dompurify";
-import hljs from "highlight.js";
-import { marked } from "marked";
-import { markedHighlight } from "marked-highlight";
-import markedKatex from "marked-katex-extension";
-import { type Component, createEffect, createMemo, onCleanup } from "solid-js";
-import "highlight.js/styles/github.css";
-import "katex/dist/katex.min.css";
+import { lazy, Suspense } from "solid-js";
 import "./markdown.css";
+import type { MarkdownRendererProps } from "./MarkdownCore.tsx";
 
-// 所有链接在新标签页打开
-DOMPurify.addHook("afterSanitizeAttributes", (node) => {
-	if (node instanceof HTMLAnchorElement) {
-		node.setAttribute("target", "_blank");
-		node.setAttribute("rel", "noopener noreferrer");
-	}
-});
+// 富文本渲染工具链（marked/katex/highlight.js/dompurify）按需加载：
+// 首屏与弹窗确认框不需要渲染 Markdown 时，不下载 ~470KB（brotli 117KB）工具链。
+// Core 模块首次实际渲染时才加载，之后复用缓存。
+const MarkdownCore = lazy(() => import("./MarkdownCore.tsx"));
 
-// 配置 marked
-marked.use(
-	markedHighlight({
-		langPrefix: "hljs language-",
-		highlight(code, lang) {
-			if (lang && hljs.getLanguage(lang)) {
-				return hljs.highlight(code, { language: lang }).value;
-			}
-			return code;
-		},
-	}),
-	markedKatex({
-		throwOnError: false,
-		nonStandard: true,
-	}),
+const MarkdownRenderer = (props: MarkdownRendererProps) => (
+	<Suspense
+		fallback={
+			<div
+				class={props.class}
+				classList={{
+					"markdown-content": true,
+					"markdown-inline": props.inline,
+				}}
+			/>
+		}
+	>
+		<MarkdownCore {...props} />
+	</Suspense>
 );
 
-marked.setOptions({
-	gfm: true,
-	breaks: true,
-});
-
-export interface MarkdownRendererProps {
-	content: string;
-	class?: string;
-	inline?: boolean;
-}
-
-const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
-	const html = createMemo(() => {
-		try {
-			let content = props.content;
-
-			if (props.inline) {
-				content = content.replace(/\n/g, " ");
-			}
-
-			// 1. 将 \(...\) 和 \[...\] 转为 $...$ 和 $$...$$
-			content = content
-				.replace(/\\\(/g, "$")
-				.replace(/\\\)/g, "$")
-				.replace(/\\\[/g, "$$$$")
-				.replace(/\\\]/g, "$$$$");
-
-			// 2. marked 解析（含 markedKatex 插件自动处理 $...$ / $$...$$）
-			const rawHtml = marked.parse(content) as string;
-
-			return DOMPurify.sanitize(rawHtml, {
-				ALLOWED_TAGS: [
-					"h1",
-					"h2",
-					"h3",
-					"h4",
-					"h5",
-					"h6",
-					"p",
-					"br",
-					"hr",
-					"strong",
-					"em",
-					"b",
-					"i",
-					"u",
-					"s",
-					"blockquote",
-					"code",
-					"pre",
-					"ul",
-					"ol",
-					"li",
-					"table",
-					"thead",
-					"tbody",
-					"tr",
-					"th",
-					"td",
-					"a",
-					"img",
-					"div",
-					"span",
-					// KaTeX MathML（无障碍备选）
-					"math",
-					"semantics",
-					"mrow",
-					"mfrac",
-					"mi",
-					"mo",
-					"msup",
-					"msub",
-					"mn",
-					"mtext",
-					"mspace",
-					"msqrt",
-					"mroot",
-					"mover",
-					"munder",
-					"munderover",
-					"mtable",
-					"mtr",
-					"mtd",
-					"mpadded",
-					"mphantom",
-					"annotation",
-					"svg",
-					"path",
-				],
-				ALLOWED_ATTR: [
-					"href",
-					"target",
-					"rel",
-					"title",
-					"src",
-					"alt",
-					"width",
-					"height",
-					"class",
-					"id",
-					"align",
-					// KaTeX 必需
-					"style",
-					"aria-hidden",
-					"encoding",
-					"xmlns",
-					"d",
-					"viewBox",
-					"fill",
-					"stroke",
-					// KaTeX SVG sqrt 必需
-					"preserveAspectRatio",
-				],
-				ALLOWED_URI_REGEXP:
-					/^(?:(?:https?|mailto|ftp|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
-			});
-		} catch {
-			return DOMPurify.sanitize(props.content);
-		}
-	});
-
-	let divRef: HTMLDivElement | undefined;
-
-	// 图片加载失败（文件缺失/被删除）时替换为占位，避免破图
-	createEffect(() => {
-		html();
-		const div = divRef;
-		if (!div) return;
-		const handlers: Array<[HTMLImageElement, () => void]> = [];
-		for (const img of div.querySelectorAll("img")) {
-			const handler = () => {
-				const ph = document.createElement("span");
-				ph.className = "markdown-broken-image";
-				ph.setAttribute("aria-hidden", "true");
-				img.replaceWith(ph);
-			};
-			img.addEventListener("error", handler);
-			handlers.push([img, handler]);
-		}
-		onCleanup(() => {
-			for (const [img, h] of handlers) img.removeEventListener("error", h);
-		});
-	});
-
-	return (
-		<div
-			ref={divRef}
-			class={props.class}
-			classList={{
-				"markdown-content": true,
-				"markdown-inline": props.inline,
-			}}
-			innerHTML={html()}
-		/>
-	);
-};
-
 export default MarkdownRenderer;
+export type { MarkdownRendererProps } from "./MarkdownCore.tsx";

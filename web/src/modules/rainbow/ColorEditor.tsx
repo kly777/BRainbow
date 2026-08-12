@@ -22,6 +22,11 @@ const SPACES: { key: ColorSpace; label: string }[] = [
 	{ key: "oklch", label: "OKLCH" },
 ];
 
+// 各空间展示精度：Color 内部统一 XYZ 存储，反向推导会有浮点噪声
+// （125 → 124.99999999999997），round 到空间粒度后数值稳定不漂移
+const round3 = (n: number) => Math.round(n * 1000) / 1000;
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 // ═══════════════════════════════════════════
 // ColorRow — 单色编辑行
 // ═══════════════════════════════════════════
@@ -51,7 +56,7 @@ function ColorRow(props: {
 	const [okC, setOkC] = createSignal(initOklch().C);
 	const [okH, setOkH] = createSignal(initOklch().h);
 
-	// ── 外部变化时同步（仅在失焦时） ──
+	// ── 外部变化时同步（仅在失焦时）；各空间按粒度 round，避免浮点噪声 ──
 	createEffect(() => {
 		space();
 		props.color;
@@ -60,17 +65,17 @@ function ColorRow(props: {
 		const c = props.color;
 		setHex(c.toHex());
 		const rgb = c.toRgb();
-		setR(rgb.r);
-		setG(rgb.g);
-		setB(rgb.b);
+		setR(Math.round(rgb.r));
+		setG(Math.round(rgb.g));
+		setB(Math.round(rgb.b));
 		const hsl = c.toHsl();
-		setH(hsl.h);
-		setS(hsl.s);
-		setL(hsl.l);
+		setH(Math.round(hsl.h));
+		setS(Math.round(hsl.s));
+		setL(Math.round(hsl.l));
 		const lch = c.toOklch();
-		setOkL(lch.L);
-		setOkC(lch.C);
-		setOkH(lch.h);
+		setOkL(round3(lch.L));
+		setOkC(round3(lch.C));
+		setOkH(round2(lch.h));
 	});
 
 	// ── 提交 ──
@@ -191,6 +196,7 @@ function ColorRow(props: {
 }
 
 // ── 输入行组件 ──
+// 每个通道 = 数值输入 + 滑块（两行 grid 对齐），滑块复用 onInput 提交
 
 function RgbInputs(props: {
 	r: Accessor<number>;
@@ -233,6 +239,42 @@ function RgbInputs(props: {
 				onBlur={props.onBlur}
 			/>
 			<span class={styles.rangeHint}>0–255</span>
+			<input
+				class={styles.slider}
+				type="range"
+				min="0"
+				max="255"
+				step="1"
+				value={props.r()}
+				onInput={(e) => props.onInput("r", e)}
+				onFocus={props.onFocus}
+				onBlur={props.onBlur}
+				aria-label="R"
+			/>
+			<input
+				class={styles.slider}
+				type="range"
+				min="0"
+				max="255"
+				step="1"
+				value={props.g()}
+				onInput={(e) => props.onInput("g", e)}
+				onFocus={props.onFocus}
+				onBlur={props.onBlur}
+				aria-label="G"
+			/>
+			<input
+				class={styles.slider}
+				type="range"
+				min="0"
+				max="255"
+				step="1"
+				value={props.b()}
+				onInput={(e) => props.onInput("b", e)}
+				onFocus={props.onFocus}
+				onBlur={props.onBlur}
+				aria-label="B"
+			/>
 		</span>
 	);
 }
@@ -278,6 +320,42 @@ function HslInputs(props: {
 				onBlur={props.onBlur}
 			/>
 			<span class={styles.rangeHint}>H:0–360 S/L:0–100</span>
+			<input
+				class={styles.slider}
+				type="range"
+				min="0"
+				max="360"
+				step="1"
+				value={props.h()}
+				onInput={(e) => props.onInput("h", e)}
+				onFocus={props.onFocus}
+				onBlur={props.onBlur}
+				aria-label="H"
+			/>
+			<input
+				class={styles.slider}
+				type="range"
+				min="0"
+				max="100"
+				step="1"
+				value={props.s()}
+				onInput={(e) => props.onInput("s", e)}
+				onFocus={props.onFocus}
+				onBlur={props.onBlur}
+				aria-label="S"
+			/>
+			<input
+				class={styles.slider}
+				type="range"
+				min="0"
+				max="100"
+				step="1"
+				value={props.l()}
+				onInput={(e) => props.onInput("l", e)}
+				onFocus={props.onFocus}
+				onBlur={props.onBlur}
+				aria-label="L"
+			/>
 		</span>
 	);
 }
@@ -325,6 +403,42 @@ function OklchInputs(props: {
 				onBlur={props.onBlur}
 			/>
 			<span class={styles.rangeHint}>L:0–1 C:≥0 h:0–360</span>
+			<input
+				class={styles.slider}
+				type="range"
+				min="0"
+				max="1"
+				step="0.01"
+				value={props.L()}
+				onInput={(e) => props.onInput("L", e)}
+				onFocus={props.onFocus}
+				onBlur={props.onBlur}
+				aria-label="L"
+			/>
+			<input
+				class={styles.slider}
+				type="range"
+				min="0"
+				max="0.4"
+				step="0.005"
+				value={props.C()}
+				onInput={(e) => props.onInput("C", e)}
+				onFocus={props.onFocus}
+				onBlur={props.onBlur}
+				aria-label="C"
+			/>
+			<input
+				class={styles.slider}
+				type="range"
+				min="0"
+				max="360"
+				step="0.5"
+				value={props.h()}
+				onInput={(e) => props.onInput("h", e)}
+				onFocus={props.onFocus}
+				onBlur={props.onBlur}
+				aria-label="h"
+			/>
 		</span>
 	);
 }

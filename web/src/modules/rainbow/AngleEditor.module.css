@@ -48,6 +48,14 @@
 	gap: var(--space-xs);
 }
 
+/* 滑块：随输入框整行宽度，accent-color 统一样式 */
+.slider {
+	width: 100%;
+	margin-top: var(--space-sm);
+	accent-color: var(--t-color-accent);
+	cursor: pointer;
+}
+
 .input {
 	width: 6.875rem;
 	padding: var(--space-xs) var(--space-sm);

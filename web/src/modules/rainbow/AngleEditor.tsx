@@ -28,6 +28,13 @@ const MODES: { key: AngleMode; label: string; unit: string }[] = [
 	{ key: "slope", label: "坡度", unit: "%" },
 ];
 
+/** 各模式下滑块的范围（与模式联动） */
+const SLIDER: Record<AngleMode, { min: number; max: number; step: number }> = {
+	deg: { min: 0, max: 90, step: 0.5 },
+	rad: { min: 0, max: 1.6, step: 0.01 },
+	slope: { min: 0, max: 500, step: 1 },
+};
+
 /** 把字符串解析后写入 angle，无法解析则忽略 */
 function commit(raw: string, mode: AngleMode, setAngle: Setter<Angle>) {
 	const v = parseFloat(raw);
@@ -83,6 +90,13 @@ export default function AngleEditor(props: Props) {
 		}
 	};
 
+	// 滑块拖动 → 按当前模式提交
+	const onSliderInput = (e: Event) => {
+		const v = (e.target as HTMLInputElement).value;
+		commit(v, mode(), props.setAngle);
+		setLocal(v);
+	};
+
 	return (
 		<fieldset class={styles.fieldset}>
 			<legend>角度 / Angle</legend>
@@ -114,6 +128,17 @@ export default function AngleEditor(props: Props) {
 					{MODES.find((m) => m.key === mode())?.unit}
 				</span>
 			</label>
+
+			<input
+				type="range"
+				class={styles.slider}
+				min={SLIDER[mode()].min}
+				max={SLIDER[mode()].max}
+				step={SLIDER[mode()].step}
+				value={parseFloat(local())}
+				onInput={onSliderInput}
+				aria-label="角度滑块"
+			/>
 		</fieldset>
 	);
 }

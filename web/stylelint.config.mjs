@@ -21,6 +21,9 @@ export default {
 					"-moz-osx-font-smoothing",
 					"-webkit-font-smoothing",
 					"-webkit-text-size-adjust",
+					// number input spinner 隐藏：WebKit 伪元素属性必须带前缀
+					"-webkit-appearance",
+					"-moz-appearance",
 				],
 			},
 		],

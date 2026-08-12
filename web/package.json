@@ -11,7 +11,7 @@
 		"check": "tsc --noEmit && biome check src/ && stylelint \"src/**/*.css\"",
 		"lint": "biome check --write src/ && stylelint \"src/**/*.css\" --fix",
 		"lint:css": "stylelint \"src/**/*.css\"",
-		"fmt": "biome format --write src/",
+		"fmt": "biome format --write .",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"ui-inspect": "node scripts/ui-inspect.mjs"

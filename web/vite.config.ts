@@ -50,8 +50,7 @@ export default defineConfig(({ command, mode }) => {
 			modules: {
 				localsConvention: "camelCaseOnly",
 				// dev 模式类名带文件名，build 用短 hash
-				generateScopedName:
-					command === "serve" ? "[name]__[local]" : undefined,
+				generateScopedName: command === "serve" ? "[name]__[local]" : undefined,
 			},
 			// build 的 CSS minify 用 vite 默认的 lightningcss：
 			// 按内置现代基线（chrome111/safari16.4 等）自动生成/规范化前缀，
@@ -66,9 +65,7 @@ export default defineConfig(({ command, mode }) => {
 			alias: {
 				"@": fileURLToPath(new URL("./src", import.meta.url)),
 				"@app": fileURLToPath(new URL("./src/app", import.meta.url)),
-				"@modules": fileURLToPath(
-					new URL("./src/modules", import.meta.url),
-				),
+				"@modules": fileURLToPath(new URL("./src/modules", import.meta.url)),
 				"@components": fileURLToPath(
 					new URL("./src/components", import.meta.url),
 				),
@@ -108,11 +105,7 @@ export default defineConfig(({ command, mode }) => {
 				output: {
 					manualChunks(id) {
 						// 富文本渲染工具链独立成包：体积大且极少变更，拆出利于长缓存
-						if (
-							/(?:marked|katex|highlight\.js|dompurify|marked-)/.test(
-								id,
-							)
-						) {
+						if (/(?:marked|katex|highlight\.js|dompurify|marked-)/.test(id)) {
 							return "markdown-vendor";
 						}
 						if (/node_modules\/solid-js/.test(id)) {

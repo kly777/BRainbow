@@ -5,7 +5,15 @@ import type {
 	BatchResponse,
 	PaginatedResponse,
 } from "@lib/api";
-import { CACHE, del, post, put, request, tapInvalidate } from "@lib/api";
+import {
+	CACHE,
+	del,
+	getToken,
+	post,
+	put,
+	request,
+	tapInvalidate,
+} from "@lib/api";
 // ── 类型 ──
 
 export interface Chunk {
@@ -281,7 +289,6 @@ export const batchSetTagsForMemsE = (
 // ── CSV 导入导出 ──
 
 export async function downloadExportCsv(tagIds?: number[]): Promise<void> {
-	const { getToken } = await import("@lib/api");
 	const token = getToken();
 	const headers: Record<string, string> = {};
 	if (token) headers.Authorization = `Bearer ${token}`;

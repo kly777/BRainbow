@@ -1,8 +1,10 @@
 // ── 对话页：AI 多轮对话（树状分支 / 修订 / 搜索 / 预设提示词） ──
 
 import { Markdown as MarkdownRenderer } from "@components/ui";
+import { tryOrNotify } from "@lib/utils";
 import type { ChatNode, ChatTree } from "@modules/chat";
 import { createSignal, For, onMount, Show } from "solid-js";
+import { updateTreeE } from "./api.ts";
 import styles from "./ChatPage.module.css";
 import { useChatPage } from "./hooks/useChatPage.ts";
 
@@ -258,17 +260,13 @@ function TreeHeader(props: {
 	const [titleText, setTitleText] = createSignal(props.tree.title);
 
 	const savePrompt = async () => {
-		const ok = await import("@lib/utils").then((m) =>
-			m.tryOrNotify(
-				() =>
-					import("@modules/chat").then((a) =>
-						a.updateTreeE(props.tree.id, {
-							system_prompt: promptText(),
-							title: titleText(),
-						}),
-					),
-				"保存设置",
-			),
+		const ok = await tryOrNotify(
+			() =>
+				updateTreeE(props.tree.id, {
+					system_prompt: promptText(),
+					title: titleText(),
+				}),
+			"保存设置",
 		);
 		if (ok !== null) setShowPrompt(false);
 	};

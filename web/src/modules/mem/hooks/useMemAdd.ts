@@ -11,6 +11,7 @@ import {
 import { importJsonE } from "@modules/mem";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createMemo, createSignal } from "solid-js";
+import { createMemE } from "../api.ts";
 
 // ── 类型 ──
 
@@ -64,7 +65,6 @@ export function useMemAdd() {
 	const handleCreate = async () => {
 		if (!cue().trim() || !target().trim()) return;
 		setCreating(true);
-		const { createMemE } = await import("@modules/mem");
 		const ok = await tryOrNotify(
 			() => createMemE(cue().trim(), target().trim()),
 			"创建记忆",

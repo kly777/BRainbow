@@ -18,18 +18,9 @@
  *       .then((r) => tapInvalidate(CACHE.cards, r));
  */
 
-// ── 延迟导入 request（避免与 request.ts 循环依赖） ──
+// ── request 直接从具体文件导入（避免 index 的 re-export 循环） ──
 
-type RequestFn = <T>(endpoint: string, options?: RequestInit) => Promise<T>;
-let _request: RequestFn | null = null;
-
-async function getRequest(): Promise<RequestFn> {
-	if (!_request) {
-		const mod = await import("@lib/api");
-		_request = mod.request;
-	}
-	return _request;
-}
+import { request } from "./request.ts";
 
 // ── 类型 ──
 
@@ -157,8 +148,7 @@ export const cachedRequest = async <T>(
 
 	// 非 GET 请求不走缓存
 	if (method !== "GET") {
-		const req = await getRequest();
-		return req<T>(endpoint, options);
+		return request<T>(endpoint, options);
 	}
 
 	const key = buildCacheKey(method, endpoint);
@@ -167,8 +157,7 @@ export const cachedRequest = async <T>(
 		return cached;
 	}
 
-	const req = await getRequest();
-	const data = await req<T>(endpoint, options);
+	const data = await request<T>(endpoint, options);
 	writeCache(key, data);
 	return data;
 };

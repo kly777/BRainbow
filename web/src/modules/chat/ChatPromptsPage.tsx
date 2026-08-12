@@ -1,8 +1,13 @@
 // ── 提示词预设管理：增删改查 ──
 
-import { tryOrNotify } from "@lib/utils";
+import { tryAsync, tryOrNotify } from "@lib/utils";
 import type { PromptPreset } from "@modules/chat";
-import { createPresetE, deletePresetE, updatePresetE } from "@modules/chat";
+import {
+	createPresetE,
+	deletePresetE,
+	listPresetsE,
+	updatePresetE,
+} from "@modules/chat";
 import { createSignal, For, onMount, Show } from "solid-js";
 import styles from "./ChatPrompts.module.css";
 
@@ -15,9 +20,7 @@ export default function ChatPromptsPage() {
 	const [creating, setCreating] = createSignal(false);
 
 	onMount(async () => {
-		const r = await import("@lib/utils").then((m) =>
-			m.tryAsync(() => import("@modules/chat").then((a) => a.listPresetsE())),
-		);
+		const r = await tryAsync(() => listPresetsE());
 		if (r.ok) setPresets(r.value);
 		setLoading(false);
 	});
@@ -35,9 +38,7 @@ export default function ChatPromptsPage() {
 		setEditing(null);
 		setName("");
 		setContent("");
-		const r = await import("@lib/utils").then((m) =>
-			m.tryAsync(() => import("@modules/chat").then((a) => a.listPresetsE())),
-		);
+		const r = await tryAsync(() => listPresetsE());
 		if (r.ok) setPresets(r.value);
 	};
 

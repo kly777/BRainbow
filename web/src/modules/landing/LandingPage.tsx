@@ -1,25 +1,52 @@
+import { PATHS } from "@lib/config";
 import { useAuth } from "@modules/auth";
 import { A } from "@solidjs/router";
 import styles from "./LandingPage.module.css";
 
+// 营销文案（icon/title/desc 仅 Landing 使用），路径来自 PATHS 单一来源
 const modules = [
 	{
-		path: "/t",
+		path: PATHS.task,
 		icon: "📋",
 		title: "任务管理",
 		desc: "列表/看板/日历/DAG多视图管理待办事项",
 	},
-	{ path: "/c", icon: "📇", title: "知识卡片", desc: "记录和浏览知识片段" },
-	{ path: "/o", icon: "🧠", title: "本体系统", desc: "管理概念本体与符号关系" },
 	{
-		path: "/m",
+		path: PATHS.card,
+		icon: "📇",
+		title: "知识卡片",
+		desc: "记录和浏览知识片段",
+	},
+	{
+		path: PATHS.ontology,
+		icon: "🧠",
+		title: "本体系统",
+		desc: "管理概念本体与符号关系",
+	},
+	{
+		path: PATHS.memory,
 		icon: "🧩",
 		title: "间隔记忆",
 		desc: "基于 FSRS 的智能复习系统",
 	},
-	{ path: "/conv", icon: "🔍", title: "对话搜索", desc: "搜索 AI 对话历史" },
-	{ path: "/text", icon: "✍️", title: "文本编辑", desc: "多标签纯文本编辑器" },
-	{ path: "/i", icon: "🖼️", title: "图片管理", desc: "上传和管理图片资源" },
+	{
+		path: PATHS.conversation,
+		icon: "🔍",
+		title: "对话搜索",
+		desc: "搜索 AI 对话历史",
+	},
+	{
+		path: PATHS.text,
+		icon: "✍️",
+		title: "文本编辑",
+		desc: "多标签纯文本编辑器",
+	},
+	{
+		path: PATHS.image,
+		icon: "🖼️",
+		title: "图片管理",
+		desc: "上传和管理图片资源",
+	},
 ];
 
 export default function LandingPage() {

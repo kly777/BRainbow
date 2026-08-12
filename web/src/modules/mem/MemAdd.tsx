@@ -1,3 +1,4 @@
+import { PATHS } from "@lib/config";
 // ── 添加记忆 v2：折痕卡片 ──
 // 单条模式 = 摊开一张空白目录卡（线索/答案中间是折痕）
 // 批量/文件模式 = 卡片清单审查（预览 + 勾选入库）
@@ -23,7 +24,7 @@ export default function MemAdd() {
 		<div class={styles.page}>
 			{/* 头栏 */}
 			<div class={styles.topBar}>
-				<A href="/m" class={styles.backLink}>
+				<A href={PATHS.memory} class={styles.backLink}>
 					← 记忆
 				</A>
 				<h1 class={styles.title}>添加记忆</h1>
@@ -41,7 +42,7 @@ export default function MemAdd() {
 									: "从文件导入"}
 						</button>
 					))}
-					<A href="/chat/mem" class={styles.modeBtnLink}>
+					<A href={PATHS.chatMem} class={styles.modeBtnLink}>
 						AI 生成 ↗
 					</A>
 				</div>
@@ -95,7 +96,7 @@ export default function MemAdd() {
 						</div>
 
 						<ImportActions
-							onCancel={() => m.navigate("/m")}
+							onCancel={() => m.navigate(PATHS.memory)}
 							onSubmit={m.handleCreate}
 							loading={m.creating()}
 							disabled={!m.cue().trim() || !m.target().trim()}
@@ -165,7 +166,7 @@ function PasteView(props: { m: ReturnType<typeof useMemAdd> }) {
 						onChange={m.setImportDefaultTags}
 					/>
 					<ImportActions
-						onCancel={() => m.navigate("/m")}
+						onCancel={() => m.navigate(PATHS.memory)}
 						onSubmit={m.handlePasteImport}
 						loading={m.importing()}
 						disabled={m.selectedCount() === 0}
@@ -236,7 +237,7 @@ function FileView(props: { m: ReturnType<typeof useMemAdd> }) {
 						onChange={m.setImportDefaultTags}
 					/>
 					<ImportActions
-						onCancel={() => m.navigate("/m")}
+						onCancel={() => m.navigate(PATHS.memory)}
 						onSubmit={m.handleFileImport}
 						loading={m.importing()}
 						disabled={m.selectedCount() === 0}

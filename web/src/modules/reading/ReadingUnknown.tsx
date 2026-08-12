@@ -1,4 +1,5 @@
 import { getErrorMessage } from "@lib/api";
+import { PATHS } from "@lib/config";
 import { listUnknownWords, markWord } from "@modules/reading";
 import { A } from "@solidjs/router";
 import { createResource, For, Show } from "solid-js";
@@ -14,7 +15,7 @@ export default function ReadingUnknown() {
 
 	return (
 		<div class={styles.page}>
-			<A href="/reading" class={styles.back}>
+			<A href={PATHS.reading} class={styles.back}>
 				← 文章列表
 			</A>
 			<h1>不认识词表</h1>

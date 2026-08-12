@@ -1,5 +1,5 @@
 import { AUTH_REQUIRED_EVENT } from "@lib/api";
-import { NAV_ROUTES } from "@lib/config";
+import { NAV_ROUTES, PATHS } from "@lib/config";
 import { openAiSettings } from "@modules/ai-setting";
 import { useAuth } from "@modules/auth";
 import { useNavigate } from "@solidjs/router";
@@ -120,7 +120,7 @@ export default function CommandPalette() {
 
 	const commands = createMemo(() => {
 		const list = [
-			{ label: ":home", desc: "回到首页", action: () => navigate("/") },
+			{ label: ":home", desc: "回到首页", action: () => navigate(PATHS.home) },
 			{
 				label: ":top",
 				desc: "滚动到页面顶部",

@@ -1,3 +1,4 @@
+import { PATHS } from "@lib/config";
 // ── /chat/mem：对话式记忆卡片生成 ──
 // 左侧：卡片生成会话列表（新建 / 删除 / 切换）
 // 右侧：对话流（user 气泡 / AI 回复），assistant 的 JSON 卡片渲染为可勾选清单，
@@ -19,7 +20,7 @@ export default function ChatMemPage() {
 			{/* ── 会话列表 ── */}
 			<aside class={styles.sidebar}>
 				<div class={styles.sidebarHead}>
-					<A href="/m" class={styles.backLink}>
+					<A href={PATHS.memory} class={styles.backLink}>
 						← 记忆
 					</A>
 					<button

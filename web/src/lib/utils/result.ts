@@ -9,7 +9,7 @@
  *
  *   const result = await tryAsync(() => deleteCard(id));
  *   if (result.ok) {
- *     navigate("/c");
+ *     navigate(PATHS.card);
  *   } else {
  *     notifyError("删除失败", result.error);
  *   }

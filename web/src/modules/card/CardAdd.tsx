@@ -1,6 +1,7 @@
 import { MarkdownEditor } from "@components";
 import { Button, Toolbar } from "@components/ui";
 import { getErrorMessage } from "@lib/api";
+import { PATHS } from "@lib/config";
 import { tryAsync } from "@lib/utils";
 import type { CreateCardRequest } from "@modules/card";
 import { createCardE } from "@modules/card";
@@ -48,7 +49,7 @@ const CardAddPage: Component = () => {
 			<Toolbar
 				title="新建卡片"
 				backLabel="卡片列表"
-				onBack={() => navigate("/c")}
+				onBack={() => navigate(PATHS.card)}
 			>
 				<Button
 					variant="primary"

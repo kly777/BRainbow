@@ -1,4 +1,5 @@
 import { getErrorMessage } from "@lib/api";
+import { PATHS } from "@lib/config";
 import { notifyError, tryAsync } from "@lib/utils";
 import type { ArticleSummary } from "@modules/reading";
 import { listArticles, uploadArticle } from "@modules/reading";
@@ -34,7 +35,7 @@ export default function ReadingList() {
 		<div class={styles.page}>
 			<div class={styles.header}>
 				<h1>英语阅读</h1>
-				<A href="/reading/unknown" class={styles.unknownLink}>
+				<A href={PATHS.readingUnknown} class={styles.unknownLink}>
 					不认识词表
 				</A>
 				<button

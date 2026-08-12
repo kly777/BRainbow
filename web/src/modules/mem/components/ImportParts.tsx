@@ -1,3 +1,4 @@
+import { PATHS } from "@lib/config";
 // ── v2 导入相关子组件：格式说明卡 / 预览清单 / 默认标签 / 结果页 ──
 
 import { For, Show } from "solid-js";
@@ -184,7 +185,7 @@ export function ImportResult(props: {
 				<button type="button" class={styles.cancel} onClick={props.onContinue}>
 					继续导入
 				</button>
-				<a href="/m" class={styles.submit}>
+				<a href={PATHS.memory} class={styles.submit}>
 					去复习
 				</a>
 			</div>

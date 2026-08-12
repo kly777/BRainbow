@@ -1,3 +1,4 @@
+import { PATHS } from "@lib/config";
 // ── 记忆复习页 v2 ──
 // 全新布局设计：全局头 + 上下文条 + 过滤 + 沉浸式卡片区
 // 业务逻辑全部复用 useMemReview，此处只做组合与交互增强
@@ -99,10 +100,10 @@ export default function MemPage() {
 						>
 							🤖
 						</button>
-						<A href="/m/add" class={styles.addLink}>
+						<A href={PATHS.memoryAdd} class={styles.addLink}>
 							＋ 添加
 						</A>
-						<A href="/m/manage" class={styles.manageLink}>
+						<A href={PATHS.memoryManage} class={styles.manageLink}>
 							管理
 						</A>
 					</div>

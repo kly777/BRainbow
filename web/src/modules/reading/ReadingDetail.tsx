@@ -1,3 +1,4 @@
+import { PATHS } from "@lib/config";
 // ── 阅读详情页面（薄壳视图层）──
 
 import { getErrorMessage } from "@lib/api";
@@ -44,7 +45,7 @@ export default function ReadingDetail() {
 
 	return (
 		<div class={styles.page}>
-			<A href="/reading" class={styles.back}>
+			<A href={PATHS.reading} class={styles.back}>
 				← 文章列表
 			</A>
 			{/* 错误时短路：detail() 在 error 存在时会 throw（Solid 1.9 语义） */}

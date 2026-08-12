@@ -1,3 +1,4 @@
+import { PATHS } from "@lib/config";
 // ── 记忆管理 v2：档案柜 ──
 // 清单表格 = 档案索引 · 详情面板 = 档案卡
 // 业务逻辑复用 useMemManage，此处只做视图层
@@ -19,12 +20,12 @@ export default function MemManage() {
 		<div class={styles.page}>
 			{/* 头栏 */}
 			<div class={styles.topBar}>
-				<A href="/m" class={styles.backLink}>
+				<A href={PATHS.memory} class={styles.backLink}>
 					← 记忆
 				</A>
 				<h1 class={styles.title}>记忆管理</h1>
 				<div class={styles.topActions}>
-					<A href="/m/add" class={styles.addLink}>
+					<A href={PATHS.memoryAdd} class={styles.addLink}>
 						＋ 添加
 					</A>
 					<span class={styles.count}>{m.pageMeta().total} 个</span>

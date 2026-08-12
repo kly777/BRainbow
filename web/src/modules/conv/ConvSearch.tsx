@@ -1,4 +1,5 @@
 import { getErrorMessage } from "@lib/api";
+import { PATHS } from "@lib/config";
 import { strParam, useUrlParams } from "@lib/utils";
 import type { ConvHit } from "@modules/conv";
 import { searchConvE } from "@modules/conv";
@@ -81,7 +82,7 @@ export default function ConvSearch() {
 	return (
 		<div class={styles.page}>
 			<div class={styles.topBar}>
-				<A href="/" class={styles.backLink}>
+				<A href={PATHS.home} class={styles.backLink}>
 					← 主页
 				</A>
 				<h1 class={styles.title}>对话搜索</h1>

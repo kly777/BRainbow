@@ -1,3 +1,4 @@
+import { PATHS } from "@lib/config";
 // ── 卡片列表页面（薄壳视图层）──
 
 import { Button, Markdown as MarkdownRenderer } from "@components/ui";
@@ -35,7 +36,7 @@ export default function CardsListPage() {
 					<Button
 						variant="secondary"
 						size="sm"
-						onClick={() => navigate("/c/add")}
+						onClick={() => navigate(PATHS.cardAdd)}
 					>
 						＋ 新建
 					</Button>

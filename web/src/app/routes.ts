@@ -1,3 +1,4 @@
+import { NAV_ITEMS, PATHS } from "@lib/config";
 import type { RouteDefinition } from "@solidjs/router";
 import { useLocation } from "@solidjs/router";
 import { type Component, createEffect, lazy, onCleanup } from "solid-js";
@@ -13,189 +14,42 @@ export interface RouteConfig {
 	component: Component;
 }
 
+/** 路径 → 页面组件（懒加载）。路径来自 paths.ts，与 NAV_ITEMS 一一对应 */
+const PAGE_LOADERS: Record<string, () => Promise<{ default: Component }>> = {
+	[PATHS.home]: () => import("@app/routes/HomeGuard.tsx"),
+	[PATHS.task]: () => import("@/modules/task/TaskManager.tsx"),
+	[PATHS.ontology]: () => import("@/modules/ontology/OntologyList.tsx"),
+	[PATHS.card]: () => import("@/modules/card/CardsList.tsx"),
+	[PATHS.color]: () => import("@/modules/color/ColorPage.tsx"),
+	[PATHS.cardAdd]: () => import("@/modules/card/CardAdd.tsx"),
+	[PATHS.image]: () => import("@/modules/media/MediaList.tsx"),
+	[PATHS.db]: () => import("@/modules/db/DbViewer.tsx"),
+	[PATHS.rainbow]: () => import("@/modules/rainbow/RainbowGenerator.tsx"),
+	[PATHS.text]: () => import("@/modules/text/TextEditor.tsx"),
+	[PATHS.reading]: () => import("@/modules/reading/ReadingList.tsx"),
+	[PATHS.readingUnknown]: () => import("@/modules/reading/ReadingUnknown.tsx"),
+	[PATHS.bookmark]: () => import("@/modules/bookmark/BookmarkPage.tsx"),
+	[PATHS.readingDetail]: () => import("@/modules/reading/ReadingDetail.tsx"),
+	[PATHS.memory]: () => import("@/modules/mem/MemPage.tsx"),
+	[PATHS.memoryAdd]: () => import("@/modules/mem/MemAdd.tsx"),
+	[PATHS.memoryManage]: () => import("@/modules/mem/MemManage.tsx"),
+	[PATHS.conversation]: () => import("@/modules/conv/ConvSearch.tsx"),
+	[PATHS.chat]: () => import("@/modules/chat/ChatPage.tsx"),
+	[PATHS.chatPrompts]: () => import("@/modules/chat/ChatPromptsPage.tsx"),
+	[PATHS.chatMem]: () => import("@/modules/chat/ChatMemPage.tsx"),
+	[PATHS.key]: () => import("@/modules/key/KeyPage.tsx"),
+};
+
 /** 提取 Router 需要的字段 */
 export function toRouteDefs(config: RouteConfig[]): RouteDefinition[] {
 	return config.map(({ path, component }) => ({ path, component }));
 }
 
-export const ROUTES: RouteConfig[] = [
-	{
-		path: "/",
-		label: "主页",
-		title: "Brainbow",
-		desc: "首页面板",
-		nav: true,
-		component: lazy(() => import("@app/routes/HomeGuard.tsx")),
-	},
-	{
-		path: "/t",
-		label: "任务",
-		title: "Tasks",
-		desc: "任务管理",
-		nav: true,
-		component: lazy(() => import("@/modules/task/TaskManager.tsx")),
-	},
-	{
-		path: "/o",
-		label: "本体",
-		title: "Ontology",
-		desc: "本体与符号系统",
-		nav: true,
-		component: lazy(() => import("@/modules/ontology/OntologyList.tsx")),
-	},
-	{
-		path: "/c",
-		label: "卡片",
-		title: "Cards",
-		desc: "知识卡片浏览",
-		nav: true,
-		component: lazy(() => import("@/modules/card/CardsList.tsx")),
-	},
-	{
-		path: "/color",
-		label: "配色",
-		title: "Color",
-		desc: "全局主题配色切换",
-		nav: true,
-		component: lazy(() => import("@/modules/color/ColorPage.tsx")),
-	},
-	{
-		path: "/c/add",
-		label: "新建卡片",
-		title: "New Card",
-		desc: "",
-		nav: false,
-		component: lazy(() => import("@/modules/card/CardAdd.tsx")),
-	},
-	{
-		path: "/i",
-		label: "图片",
-		title: "Images",
-		desc: "图片管理",
-		nav: true,
-		component: lazy(() => import("@/modules/media/MediaList.tsx")),
-	},
-	{
-		path: "/db",
-		label: "数据库",
-		title: "Database",
-		desc: "管理员数据库查看",
-		nav: true,
-		component: lazy(() => import("@/modules/db/DbViewer.tsx")),
-	},
-	{
-		path: "/rg",
-		label: "彩虹生成器",
-		title: "Rainbow",
-		desc: "Rainbow Generator",
-		nav: true,
-		component: lazy(() => import("@/modules/rainbow/RainbowGenerator.tsx")),
-	},
-	{
-		path: "/text",
-		label: "文本编辑",
-		title: "Text",
-		desc: "多标签纯文本编辑器",
-		nav: true,
-		component: lazy(() => import("@/modules/text/TextEditor.tsx")),
-	},
-	{
-		path: "/reading",
-		label: "英语阅读",
-		title: "Reading",
-		desc: "英语阅读与单词管理",
-		nav: true,
-		component: lazy(() => import("@/modules/reading/ReadingList.tsx")),
-	},
-	{
-		path: "/reading/unknown",
-		label: "不认识词表",
-		title: "Unknown Words",
-		desc: "",
-		nav: false,
-		component: lazy(() => import("@/modules/reading/ReadingUnknown.tsx")),
-	},
-	{
-		path: "/bookmark",
-		label: "书签",
-		title: "Bookmarks",
-		desc: "网页书签管理",
-		nav: true,
-		component: lazy(() => import("@/modules/bookmark/BookmarkPage.tsx")),
-	},
-	{
-		path: "/reading/:id",
-		label: "阅读文章",
-		title: "Reading",
-		desc: "",
-		nav: false,
-		component: lazy(() => import("@/modules/reading/ReadingDetail.tsx")),
-	},
-	{
-		path: "/m",
-		label: "记忆",
-		title: "Memory",
-		desc: "间隔重复记忆系统",
-		nav: true,
-		component: lazy(() => import("@/modules/mem/MemPage.tsx")),
-	},
-	{
-		path: "/m/add",
-		label: "添加记忆",
-		title: "New Mem",
-		desc: "",
-		nav: false,
-		component: lazy(() => import("@/modules/mem/MemAdd.tsx")),
-	},
-	{
-		path: "/m/manage",
-		label: "记忆管理",
-		title: "Manage",
-		desc: "",
-		nav: false,
-		component: lazy(() => import("@/modules/mem/MemManage.tsx")),
-	},
-	{
-		path: "/conv",
-		label: "对话搜索",
-		title: "Conversations",
-		desc: "搜索 AI 对话历史",
-		nav: true,
-		component: lazy(() => import("@/modules/conv/ConvSearch.tsx")),
-	},
-	{
-		path: "/chat",
-		label: "AI 对话",
-		title: "AI Chat",
-		desc: "多轮对话，树状分支，修改上下文",
-		nav: true,
-		component: lazy(() => import("@/modules/chat/ChatPage.tsx")),
-	},
-	{
-		path: "/chat/prompts",
-		label: "提示词预设",
-		title: "Prompts",
-		desc: "管理自定义提示词预设",
-		nav: true,
-		component: lazy(() => import("@/modules/chat/ChatPromptsPage.tsx")),
-	},
-	{
-		path: "/chat/mem",
-		label: "记忆卡片生成",
-		title: "Mem Cards",
-		desc: "对话式生成记忆卡片",
-		nav: true,
-		component: lazy(() => import("@/modules/chat/ChatMemPage.tsx")),
-	},
-	{
-		path: "/key",
-		label: "API Key",
-		title: "API Key",
-		desc: "生成 API key（测试认证）",
-		nav: true,
-		component: lazy(() => import("@/modules/key/KeyPage.tsx")),
-	},
-];
+/** 路由定义：元数据（label/title/desc/nav）来自 navigation.ts 单一来源 */
+export const ROUTES: RouteConfig[] = NAV_ITEMS.map((item) => ({
+	...item,
+	component: lazy(PAGE_LOADERS[item.path]),
+}));
 
 /** 将路由路径模式转为匹配用的正则 */
 function pathToRegex(pattern: string): RegExp {

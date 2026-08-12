@@ -5,6 +5,7 @@ import {
 	Markdown as MarkdownRenderer,
 } from "@components/ui";
 import { getErrorMessage } from "@lib/api";
+import { PATHS } from "@lib/config";
 import { showConfirm, tryAsync, tryOrNotify } from "@lib/utils";
 import type { UpdateCardRequest } from "@modules/card";
 import { deleteCardE, getCardE, updateCardE } from "@modules/card";
@@ -99,7 +100,7 @@ const CardEditPage: Component = () => {
 		});
 		if (!confirmed) return;
 		const ok = await tryOrNotify(() => deleteCardE(cardId()), "删除卡片");
-		if (ok) navigate("/c");
+		if (ok) navigate(PATHS.card);
 	};
 
 	const onKeyDown = (e: KeyboardEvent) => {

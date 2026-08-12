@@ -1,3 +1,4 @@
+import { PATHS } from "@lib/config";
 // ── conv 页面共享逻辑 ──
 
 import { useSearchParams } from "@solidjs/router";
@@ -12,6 +13,6 @@ export function useBackHref(): () => string {
 		if (q) params.set("q", String(q));
 		if (t && t !== "all") params.set("t", String(t));
 		const qs = params.toString();
-		return qs ? `/conv?${qs}` : "/conv";
+		return qs ? `${PATHS.conversation}?${qs}` : PATHS.conversation;
 	};
 }

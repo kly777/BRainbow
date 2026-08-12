@@ -4,6 +4,7 @@ import {
 	Markdown as MarkdownRenderer,
 	Toolbar,
 } from "@components/ui";
+import { PATHS } from "@lib/config";
 import { showConfirm, tryOrNotify } from "@lib/utils";
 import { deleteCardE, getCardE } from "@modules/card";
 import { useNavigate, useParams } from "@solidjs/router";
@@ -34,7 +35,7 @@ const CardDetailPage: Component = () => {
 		});
 		if (!confirmed) return;
 		const ok = await tryOrNotify(() => deleteCardE(cardId()), "删除卡片");
-		if (ok) navigate("/c");
+		if (ok) navigate(PATHS.card);
 	};
 
 	const formatDate = (s: string) => {
@@ -52,7 +53,7 @@ const CardDetailPage: Component = () => {
 
 	return (
 		<div class={styles.container}>
-			<Toolbar backLabel="卡片列表" onBack={() => navigate("/c")}>
+			<Toolbar backLabel="卡片列表" onBack={() => navigate(PATHS.card)}>
 				<Button
 					variant="secondary"
 					size="sm"

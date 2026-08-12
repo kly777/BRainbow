@@ -1,4 +1,5 @@
 import { AsyncView } from "@components/ui";
+import { NAV_ITEMS, PATHS } from "@lib/config";
 import { showConfirm, tryOrNotify } from "@lib/utils";
 import type { CardData } from "@modules/card";
 import {
@@ -11,17 +12,20 @@ import { A, useNavigate } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 import styles from "./HomePage.module.css";
 
-// 模块入口（纯文字链接）
-const MODULES = [
-	{ path: "/t", label: "任务" },
-	{ path: "/c", label: "卡片" },
-	{ path: "/o", label: "本体" },
-	{ path: "/m", label: "记忆" },
-	{ path: "/conv", label: "搜索" },
-	{ path: "/bookmark", label: "书签" },
-	{ path: "/text", label: "文本" },
-	{ path: "/i", label: "图片" },
+// 模块入口（纯文字链接）：保序展示，元数据来自 NAV_ITEMS 单一来源
+const HOME_MODULE_PATHS = [
+	PATHS.task,
+	PATHS.card,
+	PATHS.ontology,
+	PATHS.memory,
+	PATHS.conversation,
+	PATHS.bookmark,
+	PATHS.text,
+	PATHS.image,
 ];
+const MODULES = HOME_MODULE_PATHS.map((path) =>
+	NAV_ITEMS.find((item) => item.path === path),
+).filter((item): item is (typeof NAV_ITEMS)[number] => item !== undefined);
 
 function ModuleNav() {
 	return (
@@ -47,7 +51,7 @@ function TaskOverview() {
 			<div class={styles.sectionHeader}>
 				<h2 class={styles.sectionTitle}>待办事项</h2>
 				<div class={styles.sectionActions}>
-					<A href="/t" class={styles.viewAllLink}>
+					<A href={PATHS.task} class={styles.viewAllLink}>
 						查看全部 →
 					</A>
 				</div>
@@ -60,7 +64,7 @@ function TaskOverview() {
 						<Show when={!loading()}>
 							<p>暂无任务</p>
 							<p class={styles.emptyHint}>
-								前往 <A href="/t">任务管理</A> 创建第一个任务
+								前往 <A href={PATHS.task}>任务管理</A> 创建第一个任务
 							</p>
 						</Show>
 						<Show when={loading()}>
@@ -113,10 +117,10 @@ function CardOverview() {
 			<div class={styles.sectionHeader}>
 				<h2 class={styles.sectionTitle}>最近卡片</h2>
 				<div class={styles.sectionActions}>
-					<A href="/c" class={styles.viewAllLink}>
+					<A href={PATHS.card} class={styles.viewAllLink}>
 						查看全部 →
 					</A>
-					<A href="/c" class={styles.createLink}>
+					<A href={PATHS.cardAdd} class={styles.createLink}>
 						+ 新建
 					</A>
 				</div>
@@ -130,8 +134,8 @@ function CardOverview() {
 					<CardsGrid
 						cards={data}
 						showFilters={false}
-						onCardClick={(id) => navigate(`/c/${id}`)}
-						onCardEdit={(id) => navigate(`/c/edit/${id}`)}
+						onCardClick={(id) => navigate(`${PATHS.card}/${id}`)}
+						onCardEdit={(id) => navigate(`${PATHS.card}/edit/${id}`)}
 						onCardDelete={handleDelete}
 						emptyMessage="暂无知识卡片"
 					/>

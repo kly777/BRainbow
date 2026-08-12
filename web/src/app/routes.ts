@@ -41,7 +41,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Ontology",
 		desc: "本体与符号系统",
 		nav: true,
-		component: lazy(() => import("@/app/pages/ontology/OntologyList.tsx")),
+		component: lazy(() => import("@/modules/ontology/OntologyList.tsx")),
 	},
 	{
 		path: "/c",
@@ -57,7 +57,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Color",
 		desc: "全局主题配色切换",
 		nav: true,
-		component: lazy(() => import("@/app/pages/color/ColorPage.tsx")),
+		component: lazy(() => import("@/modules/color/ColorPage.tsx")),
 	},
 	{
 		path: "/c/add",
@@ -81,7 +81,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Database",
 		desc: "管理员数据库查看",
 		nav: true,
-		component: lazy(() => import("@/app/pages/db/DbViewer.tsx")),
+		component: lazy(() => import("@/modules/db/DbViewer.tsx")),
 	},
 	{
 		path: "/rg",
@@ -89,7 +89,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Rainbow",
 		desc: "Rainbow Generator",
 		nav: true,
-		component: lazy(() => import("@/app/pages/rainbow/RainbowGenerator.tsx")),
+		component: lazy(() => import("@/modules/rainbow/RainbowGenerator.tsx")),
 	},
 	{
 		path: "/text",
@@ -97,7 +97,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Text",
 		desc: "多标签纯文本编辑器",
 		nav: true,
-		component: lazy(() => import("@/app/pages/text/TextEditor.tsx")),
+		component: lazy(() => import("@/modules/text/TextEditor.tsx")),
 	},
 	{
 		path: "/reading",
@@ -193,7 +193,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "API Key",
 		desc: "生成 API key（测试认证）",
 		nav: true,
-		component: lazy(() => import("@/app/pages/key/KeyPage.tsx")),
+		component: lazy(() => import("@/modules/key/KeyPage.tsx")),
 	},
 ];
 

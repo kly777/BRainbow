@@ -77,7 +77,7 @@ export default function LandingPage() {
 				{modules.map((m) => (
 					<A href={m.path} class={styles.featureCard}>
 						<span class={styles.featureIcon}>{m.icon}</span>
-						<h3>{m.title}</h3>
+						<h2>{m.title}</h2>
 						<p>{m.desc}</p>
 					</A>
 				))}

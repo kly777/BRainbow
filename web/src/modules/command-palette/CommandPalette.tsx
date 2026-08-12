@@ -7,6 +7,7 @@ import {
 	createEffect,
 	createMemo,
 	createSignal,
+	For,
 	onCleanup,
 	onMount,
 	Show,
@@ -69,30 +70,29 @@ function SuggestionList(props: {
 	items: Suggestion[];
 	selected: number;
 	onHover: (i: number) => void;
+	listRef: (el: HTMLDivElement) => void;
 }) {
-	let listRef!: HTMLDivElement;
-	// 选中项变化时滚动到可见（不滚动容器本身）
-	createEffect(() => {
-		const el = listRef?.children[props.selected] as HTMLElement | undefined;
-		el?.scrollIntoView({ block: "nearest" });
-	});
 	return (
 		<div class={styles.suggestions}>
-			<div ref={listRef} class={styles.sugScroll}>
-				{props.items.map((s, i) => (
-					<button
-						type="button"
-						class={styles.suggestionItem}
-						classList={{ [styles.suggestionActive]: i === props.selected }}
-						onMouseDown={(e) => e.preventDefault()}
-						onMouseEnter={() => props.onHover(i)}
-						onClick={s.onSelect}
-					>
-						<span class={styles.sugLabel}>{s.label}</span>
-						<span class={styles.sugDesc}>{s.desc}</span>
-						{s.extra && <span class={styles.sugPath}>{s.extra}</span>}
-					</button>
-				))}
+			<div ref={props.listRef} class={styles.sugScroll}>
+				<For each={props.items}>
+					{(s, i) => (
+						<button
+							type="button"
+							class={styles.suggestionItem}
+							classList={{
+								[styles.suggestionActive]: i() === props.selected,
+							}}
+							onMouseDown={(e) => e.preventDefault()}
+							onMouseEnter={() => props.onHover(i())}
+							onClick={s.onSelect}
+						>
+							<span class={styles.sugLabel}>{s.label}</span>
+							<span class={styles.sugDesc}>{s.desc}</span>
+							{s.extra && <span class={styles.sugPath}>{s.extra}</span>}
+						</button>
+					)}
+				</For>
 			</div>
 			<div class={styles.sugFooter}>
 				<span>↑↓ 选择</span>
@@ -133,7 +133,7 @@ export default function CommandPalette() {
 	const [selectedIndex, setSelectedIndex] = createSignal(0);
 
 	let inputRef!: HTMLInputElement;
-	let barRef!: HTMLDivElement;
+	let sugScrollRef: HTMLDivElement | undefined;
 
 	const mode = () => detectMode(value());
 	const query = () => value().slice(1);
@@ -141,6 +141,16 @@ export default function CommandPalette() {
 	/** 当前模式下的建议列表（nav/cmd），其余模式为空 */
 	const currentItems = () =>
 		mode() === "nav" ? navItems() : mode() === "cmd" ? cmdItems() : [];
+
+	// 选中项变化时才滚动到可见（不滚动容器本身）。
+	// 放在顶层而不是 SuggestionList 内：避免每次输入重建列表时
+	// 注册新 effect 触发 scrollIntoView（同步强制布局，造成卡顿）
+	createEffect(() => {
+		const el = sugScrollRef?.children[selectedIndex()] as
+			| HTMLElement
+			| undefined;
+		el?.scrollIntoView({ block: "nearest" });
+	});
 
 	const commands = createMemo(() => {
 		const list = [
@@ -247,11 +257,20 @@ export default function CommandPalette() {
 		setOpen(true);
 		setValue(prefix);
 		setSelectedIndex(0);
-		setTimeout(() => {
-			inputRef?.focus();
-			if (prefix) inputRef?.setSelectionRange(prefix.length, prefix.length);
-		}, 0);
 	};
+
+	// 打开时立即聚焦（同一帧内完成，避免 setTimeout 延迟导致
+	// 输入框边框高亮晚于建议列表出现——即"边框不同步"的来源）
+	let wasOpen = false;
+	createEffect(() => {
+		const isOpen = open();
+		if (isOpen && !wasOpen) {
+			inputRef?.focus();
+			const p = value();
+			if (p) inputRef?.setSelectionRange(p.length, p.length);
+		}
+		wasOpen = isOpen;
+	});
 
 	const close = () => {
 		setOpen(false);
@@ -317,6 +336,9 @@ export default function CommandPalette() {
 						items={navItems()}
 						selected={selectedIndex()}
 						onHover={setSelectedIndex}
+						listRef={(el) => {
+							sugScrollRef = el;
+						}}
 					/>
 				);
 			if (q) return <EmptyState text="未匹配" />;
@@ -328,6 +350,9 @@ export default function CommandPalette() {
 						items={cmdItems()}
 						selected={selectedIndex()}
 						onHover={setSelectedIndex}
+						listRef={(el) => {
+							sugScrollRef = el;
+						}}
 					/>
 				);
 			if (q) return <EmptyState text={auth().user ? "已登录" : "未登录"} />;
@@ -346,7 +371,7 @@ export default function CommandPalette() {
 					onClick={close}
 					aria-label="关闭"
 				/>
-				<div ref={barRef} class={styles.bar}>
+				<div class={styles.bar}>
 					<div class={styles.inputRow}>
 						<span class={styles.prefix}>{MODE_PREFIX[mode()]}</span>
 						<input

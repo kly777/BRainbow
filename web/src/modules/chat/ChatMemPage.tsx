@@ -1,4 +1,4 @@
-import { PATHS } from "@lib/config";
+import { PATHS } from "@app/config";
 // ── /chat/mem：对话式记忆卡片生成 ──
 // 左侧：卡片生成会话列表（新建 / 删除 / 切换）
 // 右侧：对话流（user 气泡 / AI 回复），assistant 的 JSON 卡片渲染为可勾选清单，

@@ -1,4 +1,4 @@
-import { PATHS } from "@lib/config";
+import { PATHS } from "@app/config";
 // ── conv 页面共享逻辑 ──
 
 import { useSearchParams } from "@solidjs/router";

@@ -1,5 +1,5 @@
+import { NAV_ROUTES, PATHS } from "@app/config";
 import { AUTH_REQUIRED_EVENT } from "@lib/api";
-import { NAV_ROUTES, PATHS } from "@lib/config";
 import { openAiSettings } from "@modules/ai-setting";
 import { useAuth } from "@modules/auth";
 import { useNavigate } from "@solidjs/router";

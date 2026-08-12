@@ -1,5 +1,5 @@
+import { PATHS } from "@app/config";
 import { getErrorMessage } from "@lib/api";
-import { PATHS } from "@lib/config";
 import { strParam, useUrlParams } from "@lib/utils";
 import type { ConvHit } from "@modules/conv";
 import { searchConvE } from "@modules/conv";

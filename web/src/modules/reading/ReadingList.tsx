@@ -1,5 +1,5 @@
+import { PATHS } from "@app/config";
 import { getErrorMessage } from "@lib/api";
-import { PATHS } from "@lib/config";
 import { notifyError, tryAsync } from "@lib/utils";
 import type { ArticleSummary } from "@modules/reading";
 import { listArticles, uploadArticle } from "@modules/reading";

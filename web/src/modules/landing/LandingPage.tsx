@@ -1,4 +1,4 @@
-import { PATHS } from "@lib/config";
+import { PATHS } from "@app/config";
 import { useAuth } from "@modules/auth";
 import { A } from "@solidjs/router";
 import styles from "./LandingPage.module.css";

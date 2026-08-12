@@ -1,4 +1,4 @@
-import { PATHS } from "@lib/config";
+import { PATHS } from "@app/config";
 // ── 添加记忆 v2：折痕卡片 ──
 // 单条模式 = 摊开一张空白目录卡（线索/答案中间是折痕）
 // 批量/文件模式 = 卡片清单审查（预览 + 勾选入库）

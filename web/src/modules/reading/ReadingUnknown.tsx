@@ -1,5 +1,5 @@
+import { PATHS } from "@app/config";
 import { getErrorMessage } from "@lib/api";
-import { PATHS } from "@lib/config";
 import { listUnknownWords, markWord } from "@modules/reading";
 import { A } from "@solidjs/router";
 import { createResource, For, Show } from "solid-js";

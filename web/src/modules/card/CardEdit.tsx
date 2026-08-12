@@ -1,3 +1,4 @@
+import { PATHS } from "@app/config";
 import { MarkdownEditor } from "@components";
 import {
 	AsyncView,
@@ -5,7 +6,6 @@ import {
 	Markdown as MarkdownRenderer,
 } from "@components/ui";
 import { getErrorMessage } from "@lib/api";
-import { PATHS } from "@lib/config";
 import { showConfirm, tryAsync, tryOrNotify } from "@lib/utils";
 import type { UpdateCardRequest } from "@modules/card";
 import { deleteCardE, getCardE, updateCardE } from "@modules/card";

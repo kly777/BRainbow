@@ -1,0 +1,196 @@
+/* features/mem/ui/ManageDetail.css.ts — 由 vanilla-extract 迁移 */
+
+.ghost-btn {
+	composes: btn-ghost from "@lib/styles/base.module.css";
+}
+
+.primary-btn {
+	composes: btn-primary from "@lib/styles/base.module.css";
+}
+
+.detail {
+	width: 0;
+	overflow: hidden;
+	flex-shrink: 0;
+	border-left: 1px solid var(--t-color-border);
+	background: var(--t-color-bg);
+	transition: width var(--t-transition-normal) ease;
+	display: flex;
+	flex-direction: column;
+}
+
+.detail-open {
+	width: 23.75rem;
+}
+
+.detail-empty {
+	padding: var(--space-xl);
+	color: var(--t-color-ink-faint);
+	font-size: var(--text-sm);
+	text-align: center;
+}
+
+.detail-card {
+	flex: 1;
+	overflow-y: auto;
+	padding: var(--space-md);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
+}
+
+.detail-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	padding-bottom: var(--space-sm);
+	border-bottom: 1px solid var(--t-color-border);
+}
+
+.detail-head-right {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+}
+
+.detail-close {
+	background: none;
+	border: none;
+	color: var(--t-color-ink-faint);
+	cursor: pointer;
+	font-size: var(--text-sm);
+	padding: var(--space-2xs) var(--space-sm);
+	border-radius: 0.25rem;
+}
+
+.detail-id {
+	font-family: var(--t-font-display);
+	font-size: var(--text-base);
+	font-weight: 600;
+	color: var(--t-color-ink);
+}
+
+.detail-state {
+	font-size: var(--text-xs);
+	font-family: var(--t-font-mono);
+	padding: var(--space-2xs) var(--space-sm);
+	border-radius: 999px;
+	background: var(--t-color-badge-new-bg);
+	color: var(--t-color-badge-new-text);
+}
+
+.detail-section {
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	overflow: hidden;
+}
+
+.detail-tab {
+	font-family: var(--t-font-display);
+	font-size: var(--text-xs);
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--t-color-ink-muted);
+	padding: var(--space-sm) var(--space-md);
+	border-bottom: 1px solid var(--t-color-border);
+	background: var(--t-color-bg);
+}
+
+.detail-body {
+	padding: var(--space-md);
+	font-size: var(--text-sm);
+	line-height: var(--leading-normal);
+	color: var(--t-color-ink);
+}
+
+.edit-area {
+	width: 100%;
+	padding: var(--space-md);
+	border: none;
+	border-radius: 0;
+	font-size: var(--text-base);
+	font-family: var(--t-font-mono);
+	line-height: var(--leading-normal);
+	resize: vertical;
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	box-sizing: border-box;
+	outline: none;
+	transition: box-shadow var(--t-transition-fast);
+}
+
+.meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-xs) var(--space-md);
+	font-size: var(--text-xs);
+	font-family: var(--t-font-mono);
+	color: var(--t-color-ink-faint);
+	font-variant-numeric: tabular-nums;
+}
+
+.detail-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-xs);
+	padding-top: var(--space-sm);
+	border-top: 1px solid var(--t-color-border);
+}
+
+.danger-btn {
+	font-size: var(--text-sm);
+	color: var(--t-color-white);
+	background: var(--t-color-danger);
+	border: none;
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) var(--space-md);
+	cursor: pointer;
+	margin-left: auto;
+}
+
+.empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--space-sm);
+	text-align: center;
+	padding: var(--space-xl) 0;
+	color: var(--t-color-ink-faint);
+}
+
+@media (width <= 768px) {
+	.detail-open {
+		width: min(90vw, 22.5rem);
+	}
+}
+
+.detail-close:hover {
+	color: var(--t-color-ink);
+	background: var(--t-color-surface-raised);
+}
+
+.detail-state[data-state="learning"],
+.detail-state[data-state="relearning"] {
+	background: var(--t-color-badge-learning-bg);
+	color: var(--t-color-badge-learning-text);
+}
+
+.detail-state[data-state="review"] {
+	background: var(--t-color-badge-review-bg);
+	color: var(--t-color-badge-review-text);
+}
+
+.detail-state[data-state="suspended"] {
+	background: var(--t-color-badge-suspended-bg);
+	color: var(--t-color-badge-suspended-text);
+}
+
+.edit-area:focus {
+	box-shadow: inset 0 0 0 2px var(--t-color-accent-soft);
+}
+
+.danger-btn:hover {
+	filter: brightness(0.92);
+}

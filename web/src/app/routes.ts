@@ -33,9 +33,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Tasks",
 		desc: "任务管理",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/task").then((m) => ({ default: m.TaskManager })),
-		),
+		component: lazy(() => import("@/modules/task/TaskManager.tsx")),
 	},
 	{
 		path: "/o",
@@ -43,9 +41,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Ontology",
 		desc: "本体与符号系统",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/ontology").then((m) => ({ default: m.OntologyListPage })),
-		),
+		component: lazy(() => import("@/app/pages/ontology/OntologyList.tsx")),
 	},
 	{
 		path: "/c",
@@ -53,9 +49,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Cards",
 		desc: "知识卡片浏览",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/card").then((m) => ({ default: m.CardsListPage })),
-		),
+		component: lazy(() => import("@/modules/card/CardsList.tsx")),
 	},
 	{
 		path: "/color",
@@ -63,9 +57,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Color",
 		desc: "全局主题配色切换",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/color").then((m) => ({ default: m.ColorPage })),
-		),
+		component: lazy(() => import("@/app/pages/color/ColorPage.tsx")),
 	},
 	{
 		path: "/c/add",
@@ -73,9 +65,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "New Card",
 		desc: "",
 		nav: false,
-		component: lazy(() =>
-			import("@pages/card").then((m) => ({ default: m.CardAddPage })),
-		),
+		component: lazy(() => import("@/modules/card/CardAdd.tsx")),
 	},
 	{
 		path: "/i",
@@ -83,9 +73,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Images",
 		desc: "图片管理",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/media").then((m) => ({ default: m.MediaListPage })),
-		),
+		component: lazy(() => import("@/modules/media/MediaList.tsx")),
 	},
 	{
 		path: "/db",
@@ -93,9 +81,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Database",
 		desc: "管理员数据库查看",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/db").then((m) => ({ default: m.DbViewer })),
-		),
+		component: lazy(() => import("@/app/pages/db/DbViewer.tsx")),
 	},
 	{
 		path: "/rg",
@@ -103,9 +89,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Rainbow",
 		desc: "Rainbow Generator",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/rainbow").then((m) => ({ default: m.RainbowGenerator })),
-		),
+		component: lazy(() => import("@/app/pages/rainbow/RainbowGenerator.tsx")),
 	},
 	{
 		path: "/text",
@@ -113,9 +97,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Text",
 		desc: "多标签纯文本编辑器",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/text").then((m) => ({ default: m.TextEditor })),
-		),
+		component: lazy(() => import("@/app/pages/text/TextEditor.tsx")),
 	},
 	{
 		path: "/reading",
@@ -123,9 +105,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Reading",
 		desc: "英语阅读与单词管理",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/reading").then((m) => ({ default: m.ReadingList })),
-		),
+		component: lazy(() => import("@/modules/reading/ReadingList.tsx")),
 	},
 	{
 		path: "/reading/unknown",
@@ -133,9 +113,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Unknown Words",
 		desc: "",
 		nav: false,
-		component: lazy(() =>
-			import("@pages/reading").then((m) => ({ default: m.ReadingUnknown })),
-		),
+		component: lazy(() => import("@/modules/reading/ReadingUnknown.tsx")),
 	},
 	{
 		path: "/bookmark",
@@ -143,9 +121,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Bookmarks",
 		desc: "网页书签管理",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/bookmark").then((m) => ({ default: m.BookmarkPage })),
-		),
+		component: lazy(() => import("@/modules/bookmark/BookmarkPage.tsx")),
 	},
 	{
 		path: "/reading/:id",
@@ -153,9 +129,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Reading",
 		desc: "",
 		nav: false,
-		component: lazy(() =>
-			import("@pages/reading").then((m) => ({ default: m.ReadingDetail })),
-		),
+		component: lazy(() => import("@/modules/reading/ReadingDetail.tsx")),
 	},
 	{
 		path: "/m",
@@ -163,9 +137,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Memory",
 		desc: "间隔重复记忆系统",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/mem").then((m) => ({ default: m.MemPage })),
-		),
+		component: lazy(() => import("@/modules/mem/MemPage.tsx")),
 	},
 	{
 		path: "/m/add",
@@ -173,9 +145,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "New Mem",
 		desc: "",
 		nav: false,
-		component: lazy(() =>
-			import("@pages/mem").then((m) => ({ default: m.MemAdd })),
-		),
+		component: lazy(() => import("@/modules/mem/MemAdd.tsx")),
 	},
 	{
 		path: "/m/manage",
@@ -183,9 +153,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Manage",
 		desc: "",
 		nav: false,
-		component: lazy(() =>
-			import("@pages/mem").then((m) => ({ default: m.MemManage })),
-		),
+		component: lazy(() => import("@/modules/mem/MemManage.tsx")),
 	},
 	{
 		path: "/conv",
@@ -193,9 +161,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Conversations",
 		desc: "搜索 AI 对话历史",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/conv").then((m) => ({ default: m.ConvSearch })),
-		),
+		component: lazy(() => import("@/modules/conv/ConvSearch.tsx")),
 	},
 	{
 		path: "/chat",
@@ -203,9 +169,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "AI Chat",
 		desc: "多轮对话，树状分支，修改上下文",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/chat").then((m) => ({ default: m.ChatPage })),
-		),
+		component: lazy(() => import("@/modules/chat/ChatPage.tsx")),
 	},
 	{
 		path: "/chat/prompts",
@@ -213,9 +177,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Prompts",
 		desc: "管理自定义提示词预设",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/chat").then((m) => ({ default: m.ChatPromptsPage })),
-		),
+		component: lazy(() => import("@/modules/chat/ChatPromptsPage.tsx")),
 	},
 	{
 		path: "/chat/mem",
@@ -223,9 +185,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "Mem Cards",
 		desc: "对话式生成记忆卡片",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/chat").then((m) => ({ default: m.ChatMemPage })),
-		),
+		component: lazy(() => import("@/modules/chat/ChatMemPage.tsx")),
 	},
 	{
 		path: "/key",
@@ -233,9 +193,7 @@ export const ROUTES: RouteConfig[] = [
 		title: "API Key",
 		desc: "生成 API key（测试认证）",
 		nav: true,
-		component: lazy(() =>
-			import("@pages/key").then((m) => ({ default: m.KeyPage })),
-		),
+		component: lazy(() => import("@/app/pages/key/KeyPage.tsx")),
 	},
 ];
 

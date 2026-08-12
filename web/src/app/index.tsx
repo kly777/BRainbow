@@ -1,13 +1,13 @@
-import { AuthProvider } from "@entities/user";
-import { generateIcon } from "@shared/lib";
-import { initTheme } from "@shared/styles";
+import { initTheme } from "@lib/styles";
+import { generateIcon } from "@lib/utils";
+import { AuthProvider } from "@modules/auth";
 import { Router } from "@solidjs/router";
 import { onMount } from "solid-js";
 import { render } from "solid-js/web";
 import Layout from "./Layout.tsx";
 import { ROUTES, toRouteDefs } from "./routes.ts";
 import "@app/global.css";
-import "@shared/styles/tokens.css";
+import "@lib/styles/tokens.css";
 
 // 应用持久化主题（在渲染前挂主题类，避免闪烁）
 initTheme();

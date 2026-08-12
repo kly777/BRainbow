@@ -17,11 +17,10 @@
 		"paths": {
 			"@/*": ["./src/*"],
 			"@app/*": ["./src/app/*"],
-			"@pages/*": ["./src/pages/*"],
-			"@widgets/*": ["./src/widgets/*"],
-			"@features/*": ["./src/features/*"],
-			"@entities/*": ["./src/entities/*"],
-			"@shared/*": ["./src/shared/*"]
+			"@modules/*": ["./src/modules/*"],
+			"@components": ["./src/components/index.ts"],
+			"@components/*": ["./src/components/*"],
+			"@lib/*": ["./src/lib/*"]
 		}
 	},
 	"include": ["src/**/*.ts", "src/**/*.tsx", "vite-env.d.ts"]

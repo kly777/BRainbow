@@ -1,0 +1,218 @@
+/* features/reading/ReadingList.css.ts — 由 vanilla-extract 迁移 */
+
+.page {
+	max-width: 900px;
+	margin: 0 auto;
+	padding: var(--space-lg);
+}
+
+.header {
+	display: flex;
+	align-items: center;
+	gap: var(--space-md);
+	margin-bottom: var(--space-lg);
+}
+
+.unknown-link {
+	font-size: var(--text-sm);
+	color: var(--t-color-accent);
+	text-decoration: none;
+}
+
+.upload-btn {
+	padding: var(--space-sm) var(--space-lg);
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
+	border: none;
+	border-radius: 0.375rem;
+	cursor: pointer;
+	font-size: var(--text-sm);
+	font-weight: 600;
+}
+
+.overlay {
+	position: fixed;
+	border: none;
+	padding: 0;
+	font: inherit;
+	cursor: pointer;
+	inset: 0;
+	background: var(--t-color-overlay);
+	z-index: var(--z-dropdown);
+}
+
+.modal {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background: var(--t-color-surface);
+	padding: var(--space-xl);
+	border-radius: 0.75rem;
+	z-index: var(--z-dropdown);
+	width: 90%;
+	max-width: 600px;
+	box-shadow: var(--shadow-md);
+	border: 1px solid var(--t-color-border);
+}
+
+.input {
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	font-size: var(--text-base);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+	border-radius: var(--radius-xs);
+	margin-bottom: var(--space-md);
+}
+
+.textarea {
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: 0.375rem;
+	font-size: var(--text-base);
+	resize: vertical;
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+}
+
+.modal-actions {
+	display: flex;
+	gap: var(--space-sm);
+	justify-content: flex-end;
+	margin-top: var(--space-lg);
+}
+
+.cancel-btn {
+	color: var(--t-color-ink-muted);
+	padding: var(--space-sm) var(--space-lg);
+	border: 1px solid var(--t-color-border);
+	border-radius: 0.375rem;
+	background: var(--t-color-surface);
+	cursor: pointer;
+}
+
+.submit-btn {
+	padding: var(--space-sm) var(--space-lg);
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
+	border: none;
+	border-radius: 0.375rem;
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
+}
+
+.card {
+	composes: card from "@lib/styles/base.module.css";
+	display: block;
+	padding: var(--space-lg);
+	text-decoration: none;
+	color: inherit;
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+}
+
+.card-title {
+	font-size: var(--text-base);
+	font-weight: 600;
+	margin-bottom: var(--space-sm);
+}
+
+.card-meta {
+	display: flex;
+	gap: var(--space-lg);
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+}
+
+.ratio {
+	/* 挂载点类（无样式，供 JS 引用） */
+}
+
+.unknown-count {
+	color: var(--t-color-ink-muted);
+}
+
+.bar-outer {
+	margin-top: var(--space-sm);
+	height: 0.25rem;
+	background: var(--t-color-bg);
+	border-radius: 0.125rem;
+	overflow: hidden;
+}
+
+.bar-inner {
+	height: 100%;
+	background: var(--t-color-accent);
+	border-radius: 0.125rem;
+	transition: width var(--t-transition-slow);
+}
+
+.empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--space-sm);
+	text-align: center;
+	color: var(--t-color-ink-muted);
+	padding: var(--space-2xl) 0;
+}
+
+.unknown-link:hover {
+	text-decoration: underline;
+}
+
+.upload-btn:hover {
+	opacity: 0.9;
+}
+
+.submit-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.card:hover {
+	border-color: var(--t-color-accent);
+	box-shadow: 0 2px 8px var(--t-color-accent-soft);
+}
+
+.ratio[data-known="high"] {
+	color: var(--t-color-mark-correct);
+}
+
+.ratio[data-known="mid"] {
+	color: var(--t-color-mark-yellow);
+}
+
+.ratio[data-known="low"] {
+	color: var(--t-color-mark-wrong);
+}
+
+.header h1 {
+	font-size: var(--text-xl);
+	margin: 0;
+	flex: 1;
+}
+
+.modal h2 {
+	margin: 0 0 var(--space-lg);
+	font-size: var(--text-lg);
+}
+
+.error-msg {
+	padding: var(--space-lg);
+	color: var(--t-color-danger);
+	font-size: var(--text-base);
+}

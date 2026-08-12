@@ -1,4 +1,5 @@
 import {
+	clearAllCache,
 	clearUser,
 	getApiKey as loadApiKey,
 	setApiKey as persistApiKey,
@@ -50,6 +51,8 @@ export function AuthProvider(props: { children: JSX.Element }) {
 		},
 		logout: () => {
 			clearUser();
+			// 清空内存缓存，防止换账号后读到上个用户的数据
+			clearAllCache();
 			setAuth({ user: null, isAdmin: false, apiKey: loadApiKey() });
 		},
 		setApiKey: (key: string | null) => {

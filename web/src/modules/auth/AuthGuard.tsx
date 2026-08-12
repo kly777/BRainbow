@@ -1,13 +1,15 @@
 import { AUTH_REQUIRED_EVENT } from "@lib/api";
 import { useAuth } from "@modules/auth";
 import { createEffect, type JSX, Show } from "solid-js";
+import styles from "./AuthStatus.module.css";
 
 /**
- * 路由守卫：未登录时不渲染子组件，并触发登录弹窗。
+ * 路由守卫：未登录时渲染「需要登录」提示页（而非空白），并触发登录弹窗。
  *
  * 与「API 401 后被动弹窗」的区别：
  * - 页面组件根本不挂载 → 零 API 请求、零 401、无空页面闪烁
  * - lazy 路由组件也不会被加载 → 未登录用户不下载页面 chunk
+ * - 提示页持久可见：关闭弹窗后用户仍能明确得知需要登录
  *
  * 登录成功后 auth() 响应式更新，子组件自动挂载，无需刷新。
  */
@@ -29,5 +31,29 @@ export default function AuthGuard(props: { children: JSX.Element }) {
 		}
 	});
 
-	return <Show when={isAuthed()}>{props.children}</Show>;
+	return (
+		<Show
+			when={isAuthed()}
+			fallback={
+				<div class={styles.authRequired}>
+					<h1 class={styles.authRequiredTitle}>需要登录</h1>
+					<p class={styles.authRequiredDesc}>此页面需要登录后才能访问</p>
+					<button
+						type="button"
+						class={styles.authRequiredBtn}
+						onClick={() =>
+							globalThis.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT))
+						}
+					>
+						登录
+					</button>
+					<a href="/" class={styles.authRequiredLink}>
+						返回首页
+					</a>
+				</div>
+			}
+		>
+			{props.children}
+		</Show>
+	);
 }

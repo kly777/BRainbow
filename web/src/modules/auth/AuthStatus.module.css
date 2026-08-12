@@ -94,3 +94,52 @@
 .btn-cancel:hover {
 	background: var(--t-color-bg);
 }
+
+/* ── AuthGuard 未登录提示页 ── */
+
+.auth-required {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-md);
+	min-height: 60vh;
+	padding: var(--space-xl);
+}
+
+.auth-required-title {
+	margin: 0;
+	font-size: var(--text-2xl);
+	color: var(--t-color-ink);
+}
+
+.auth-required-desc {
+	margin: 0;
+	font-size: var(--text-base);
+	color: var(--t-color-ink-muted);
+}
+
+.auth-required-btn {
+	padding: var(--space-sm) var(--space-lg);
+	border: none;
+	border-radius: var(--radius-md);
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
+	font-size: var(--text-base);
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.auth-required-btn:hover {
+	background: var(--t-color-accent-strong);
+}
+
+.auth-required-link {
+	color: var(--t-color-accent);
+	font-size: var(--text-sm);
+	text-decoration: none;
+}
+
+.auth-required-link:hover {
+	text-decoration: underline;
+}

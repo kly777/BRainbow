@@ -3,7 +3,14 @@ import { AUTH_REQUIRED_EVENT } from "@lib/api";
 import { openAiSettings } from "@modules/ai-setting";
 import { useAuth } from "@modules/auth";
 import { useNavigate } from "@solidjs/router";
-import { createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	onCleanup,
+	onMount,
+	Show,
+} from "solid-js";
 import styles from "./CommandPalette.module.css";
 
 const BING = "https://www.bing.com/search?q=";
@@ -58,15 +65,27 @@ interface Suggestion {
 	onSelect: () => void;
 }
 
-function SuggestionList(props: { items: Suggestion[] }) {
+function SuggestionList(props: {
+	items: Suggestion[];
+	selected: number;
+	onHover: (i: number) => void;
+}) {
+	let listRef!: HTMLDivElement;
+	// 选中项变化时滚动到可见（不滚动容器本身）
+	createEffect(() => {
+		const el = listRef?.children[props.selected] as HTMLElement | undefined;
+		el?.scrollIntoView({ block: "nearest" });
+	});
 	return (
 		<div class={styles.suggestions}>
-			<div class={styles.sugScroll}>
-				{props.items.map((s) => (
+			<div ref={listRef} class={styles.sugScroll}>
+				{props.items.map((s, i) => (
 					<button
 						type="button"
 						class={styles.suggestionItem}
+						classList={{ [styles.suggestionActive]: i === props.selected }}
 						onMouseDown={(e) => e.preventDefault()}
+						onMouseEnter={() => props.onHover(i)}
 						onClick={s.onSelect}
 					>
 						<span class={styles.sugLabel}>{s.label}</span>
@@ -111,12 +130,17 @@ export default function CommandPalette() {
 	const { auth, logout } = useAuth();
 	const [value, setValue] = createSignal("");
 	const [open, setOpen] = createSignal(false);
+	const [selectedIndex, setSelectedIndex] = createSignal(0);
 
 	let inputRef!: HTMLInputElement;
 	let barRef!: HTMLDivElement;
 
 	const mode = () => detectMode(value());
 	const query = () => value().slice(1);
+
+	/** 当前模式下的建议列表（nav/cmd），其余模式为空 */
+	const currentItems = () =>
+		mode() === "nav" ? navItems() : mode() === "cmd" ? cmdItems() : [];
 
 	const commands = createMemo(() => {
 		const list = [
@@ -208,16 +232,13 @@ export default function CommandPalette() {
 	});
 
 	const commit = () => {
-		switch (mode()) {
-			case "search":
-				if (query()) searchWeb(query());
-				break;
-			case "nav":
-				if (navItems().length > 0) navItems()[0].onSelect();
-				break;
-			case "cmd":
-				if (cmdItems().length > 0) cmdItems()[0].onSelect();
-				break;
+		if (mode() === "search") {
+			if (query()) searchWeb(query());
+		} else {
+			const items = currentItems();
+			if (items.length > 0) {
+				items[Math.min(selectedIndex(), items.length - 1)].onSelect();
+			}
 		}
 		close();
 	};
@@ -225,6 +246,7 @@ export default function CommandPalette() {
 	const openPalette = (prefix = "") => {
 		setOpen(true);
 		setValue(prefix);
+		setSelectedIndex(0);
 		setTimeout(() => {
 			inputRef?.focus();
 			if (prefix) inputRef?.setSelectionRange(prefix.length, prefix.length);
@@ -237,8 +259,25 @@ export default function CommandPalette() {
 	};
 
 	const onInputKey = (e: KeyboardEvent) => {
-		if (e.key === "Escape") close();
-		if (e.key === "Enter") commit();
+		if (e.key === "Escape") {
+			close();
+			return;
+		}
+		if (e.key === "Enter") {
+			e.preventDefault();
+			commit();
+			return;
+		}
+		const len = currentItems().length;
+		if (len === 0) return;
+		if (e.key === "ArrowDown") {
+			e.preventDefault();
+			setSelectedIndex((i) => (i + 1) % len);
+		}
+		if (e.key === "ArrowUp") {
+			e.preventDefault();
+			setSelectedIndex((i) => (i - 1 + len) % len);
+		}
 	};
 
 	const globalKey = (e: KeyboardEvent) => {
@@ -272,11 +311,25 @@ export default function CommandPalette() {
 		const m = mode();
 		const q = query();
 		if (m === "nav") {
-			if (navItems().length > 0) return <SuggestionList items={navItems()} />;
+			if (navItems().length > 0)
+				return (
+					<SuggestionList
+						items={navItems()}
+						selected={selectedIndex()}
+						onHover={setSelectedIndex}
+					/>
+				);
 			if (q) return <EmptyState text="未匹配" />;
 		}
 		if (m === "cmd") {
-			if (cmdItems().length > 0) return <SuggestionList items={cmdItems()} />;
+			if (cmdItems().length > 0)
+				return (
+					<SuggestionList
+						items={cmdItems()}
+						selected={selectedIndex()}
+						onHover={setSelectedIndex}
+					/>
+				);
 			if (q) return <EmptyState text={auth().user ? "已登录" : "未登录"} />;
 		}
 		if (m === "search" && q) return <SearchHint query={q} />;
@@ -301,7 +354,11 @@ export default function CommandPalette() {
 							class={styles.input}
 							placeholder={MODE_PLACEHOLDER[mode()]}
 							value={value()}
-							onInput={(e) => setValue(e.currentTarget.value)}
+							onInput={(e) => {
+								setValue(e.currentTarget.value);
+								// 输入变化后列表重建，选中回到第一项
+								setSelectedIndex(0);
+							}}
 							onKeyDown={onInputKey}
 						/>
 					</div>

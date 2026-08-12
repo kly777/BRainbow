@@ -10,12 +10,12 @@ DEPLOY_SCRIPT := ./scripts/deploy.sh
 dev:
 	trap 'wait; printf "Finished"; exit 0' INT TERM; \
 	cargo watch -x run --ignore web --ignore build --ignore $(BUILD_DIR) & \
-	cd web && npx vite & \
+	cd web && pnpm run dev & \
 	wait
 
 fmt:
 	cargo fmt
-	cd web && npx @biomejs/biome format --write .
+	cd web && pnpm run fmt
 
 check:
 	./$(DEPLOY_SCRIPT) check
@@ -51,7 +51,7 @@ build-backend:
 	cp target/release/brainbow $(BUILD_DIR)/brainbow
 
 build-web:
-	cd web && npx vite build
+	cd web && pnpm run build
 
 clean:
 	rm -rf $(BUILD_DIR)/

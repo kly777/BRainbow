@@ -214,7 +214,7 @@ cmd_build() {
 
     # 1. 前端类型检查
     log_info "前端类型检查..."
-    (cd "$PROJECT_DIR/web" && npx tsc --noEmit) || {
+    (cd "$PROJECT_DIR/web" && pnpm run typecheck) || {
         log_warn "TypeScript 检查未通过，是否继续构建？(y/n) "
         read -r ans
         [ "$ans" != "y" ] && { log_info "已取消"; exit 1; }
@@ -222,7 +222,7 @@ cmd_build() {
 
     # 2. 前端构建
     log_info "前端构建 (vite)..."
-    (cd "$PROJECT_DIR/web" && npx vite build)
+    (cd "$PROJECT_DIR/web" && pnpm run build)
     log_done "前端构建完成"
 
     # 3. 后端构建

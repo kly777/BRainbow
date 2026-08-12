@@ -4,7 +4,7 @@ import { Markdown as MarkdownRenderer } from "@components/ui";
 import type { ChatNode, ChatTree } from "@modules/chat";
 import { createSignal, For, onMount, Show } from "solid-js";
 import styles from "./ChatPage.module.css";
-import { useChatPage } from "./useChatPage.ts";
+import { useChatPage } from "./hooks/useChatPage.ts";
 
 export default function ChatPage() {
 	const c = useChatPage();

@@ -7,7 +7,7 @@ import { Markdown as MarkdownRenderer } from "@components/ui";
 import { A } from "@solidjs/router";
 import { createSignal, For, onMount, Show } from "solid-js";
 import styles from "./ChatMemPage.module.css";
-import { useChatMem } from "./useChatMem.ts";
+import { useChatMem } from "./hooks/useChatMem.ts";
 
 export default function ChatMemPage() {
 	const c = useChatMem();

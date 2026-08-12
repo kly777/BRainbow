@@ -13,8 +13,8 @@ import {
 	ImportResult,
 	ImportTagInput,
 } from "./components/ImportParts.tsx";
+import { useMemAdd } from "./hooks/useMemAdd.ts";
 import styles from "./MemAdd.module.css";
-import { useMemAdd } from "./model/useMemAdd.ts";
 
 export default function MemAdd() {
 	const m = useMemAdd();

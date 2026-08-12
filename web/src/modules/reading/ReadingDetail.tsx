@@ -3,8 +3,8 @@
 import { getErrorMessage } from "@lib/api";
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
+import { useReadingDetail } from "./hooks/useReadingDetail.ts";
 import styles from "./ReadingDetail.module.css";
-import { useReadingDetail } from "./useReadingDetail.ts";
 
 function splitSentences(text: string): string[] {
 	return text.split(/(?<=[.!?])\s+/);

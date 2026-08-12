@@ -6,7 +6,7 @@ import { CardsGrid, getCardsE, searchCardsE } from "@modules/card";
 import { useNavigate } from "@solidjs/router";
 import { onMount, Show } from "solid-js";
 import styles from "./CardsList.module.css";
-import { useCardsList } from "./useCardsList.ts";
+import { useCardsList } from "./hooks/useCardsList.ts";
 
 export default function CardsListPage() {
 	const navigate = useNavigate();

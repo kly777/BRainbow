@@ -4,8 +4,8 @@ import { getConvConceptE } from "@modules/conv";
 import { useParams, useSearchParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 import styles from "./ConvDetail.module.css";
-import ConvTopBar from "./ConvTopBar.tsx";
-import { useBackHref } from "./useBackHref.ts";
+import ConvTopBar from "./components/ConvTopBar.tsx";
+import { useBackHref } from "./hooks/useBackHref.ts";
 
 export default function ConvConceptPage() {
 	const params = useParams();

@@ -1,9 +1,9 @@
 import { enumParam, strParam, useUrlParams } from "@lib/utils";
 import { TaskList, TaskProvider, useTasks } from "@modules/task";
 import { createSignal, Show } from "solid-js";
-import TaskCalendar from "./TaskCalendar.tsx";
-import TaskDag from "./TaskDag.tsx";
-import TaskKanban from "./TaskKanban.tsx";
+import TaskCalendar from "./components/TaskCalendar.tsx";
+import TaskDag from "./components/TaskDag.tsx";
+import TaskKanban from "./components/TaskKanban.tsx";
 import styles from "./TaskManager.module.css";
 
 function Toolbar(props: {

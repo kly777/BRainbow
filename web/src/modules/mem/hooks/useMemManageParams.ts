@@ -7,13 +7,13 @@ import {
 	strParam,
 	useUrlParams,
 } from "@lib/utils";
-import type { TagMode } from "@modules/mem/model/mem-manage-utils.ts";
+import type { TagMode } from "../lib/mem-manage-utils.ts";
 import {
 	type SortDir,
 	type SortField,
 	VALID_SORT_FIELDS,
 	VALID_STATES,
-} from "@modules/mem/model/mem-manage-utils.ts";
+} from "../lib/mem-manage-utils.ts";
 
 export interface UseMemManageParamsResult {
 	searchQuery: () => string;

@@ -19,7 +19,7 @@ import {
 	fetchTasksByFilter,
 	makeTemp,
 	STATUS_API,
-} from "./task-provider-utils.ts";
+} from "../lib/task-provider-utils.ts";
 
 interface Stats {
 	backlog: number;

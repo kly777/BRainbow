@@ -18,16 +18,12 @@ import {
 	reviewMemE,
 	suspendMemE,
 } from "@modules/mem";
-import {
-	ALPHA,
-	calcAvgCardTime,
-	calcMaxLearning,
-} from "@modules/mem/model/mem-calcs.ts";
-import { useMemTagFilter } from "@modules/mem/model/useMemTagFilter.ts";
-import { useMnemonic } from "@modules/mem/model/useMnemonic.ts";
-import { useReviewKeyboard } from "@modules/mem/model/useReviewKeyboard.ts";
-import { useUndo } from "@modules/mem/model/useUndo.ts";
 import { createEffect, createSignal, onMount } from "solid-js";
+import { ALPHA, calcAvgCardTime, calcMaxLearning } from "../lib/mem-calcs.ts";
+import { useMemTagFilter } from "./useMemTagFilter.ts";
+import { useMnemonic } from "./useMnemonic.ts";
+import { useReviewKeyboard } from "./useReviewKeyboard.ts";
+import { useUndo } from "./useUndo.ts";
 
 // ── Hook ──
 

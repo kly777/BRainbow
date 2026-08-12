@@ -4,10 +4,10 @@ import { getConvDetailE } from "@modules/conv";
 import { useParams, useSearchParams } from "@solidjs/router";
 import { createResource, For, Show } from "solid-js";
 import styles from "./ConvDetail.module.css";
-import ConvTopBar from "./ConvTopBar.tsx";
-import QaPairList from "./QaPairList.tsx";
-import { typeLabel } from "./type-labels.ts";
-import { useBackHref } from "./useBackHref.ts";
+import ConvTopBar from "./components/ConvTopBar.tsx";
+import QaPairList from "./components/QaPairList.tsx";
+import { typeLabel } from "./hooks/type-labels.ts";
+import { useBackHref } from "./hooks/useBackHref.ts";
 
 export default function ConvDetailPage() {
 	const params = useParams();

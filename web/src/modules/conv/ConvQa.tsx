@@ -3,9 +3,9 @@ import { getConvQaE } from "@modules/conv";
 import { useParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 import styles from "./ConvDetail.module.css";
-import ConvTopBar from "./ConvTopBar.tsx";
-import QaPairList from "./QaPairList.tsx";
-import { useBackHref } from "./useBackHref.ts";
+import ConvTopBar from "./components/ConvTopBar.tsx";
+import QaPairList from "./components/QaPairList.tsx";
+import { useBackHref } from "./hooks/useBackHref.ts";
 
 export default function ConvQaPage() {
 	const params = useParams();

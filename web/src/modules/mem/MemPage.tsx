@@ -18,8 +18,8 @@ import FilterBar from "./components/FilterBar.tsx";
 import MnemonicSettingsModal from "./components/MnemonicSettingsModal.tsx";
 import ReviewCard from "./components/ReviewCard.tsx";
 import Sidebar from "./components/Sidebar.tsx";
+import { useMemReview } from "./hooks/useMemReview.ts";
 import styles from "./MemPage.module.css";
-import { useMemReview } from "./model/useMemReview.ts";
 
 export default function MemPage() {
 	const m = useMemReview();

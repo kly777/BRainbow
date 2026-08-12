@@ -15,11 +15,11 @@ import {
 	type TagInfo,
 	unsuspendMemE,
 } from "@modules/mem";
-import type { PageMeta, TagMode } from "@modules/mem/model/mem-manage-utils.ts";
-import { fetchAllMems } from "@modules/mem/model/mem-manage-utils.ts";
-import { useBatchOps } from "@modules/mem/model/useBatchOps.ts";
-import { useMemManageParams } from "@modules/mem/model/useMemManageParams.ts";
 import { createEffect, createSignal, onMount } from "solid-js";
+import type { PageMeta, TagMode } from "../lib/mem-manage-utils.ts";
+import { fetchAllMems } from "../lib/mem-manage-utils.ts";
+import { useBatchOps } from "./useBatchOps.ts";
+import { useMemManageParams } from "./useMemManageParams.ts";
 
 let initialLoadDone = false;
 

@@ -20,9 +20,9 @@ import {
 } from "@modules/bookmark";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import styles from "./BookmarkPage.module.css";
-import Favicon from "./Favicon.tsx";
-import TagInput from "./TagInput.tsx";
-import TagManager from "./TagManager.tsx";
+import Favicon from "./components/Favicon.tsx";
+import TagInput from "./components/TagInput.tsx";
+import TagManager from "./components/TagManager.tsx";
 
 /** 从 URL 提取域名（用于展示与标题兜底） */
 function extractDomain(url: string): string {

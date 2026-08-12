@@ -1,6 +1,6 @@
 export * from "./api.ts";
-export type { CardData } from "./Card.tsx";
-export { default as CardFilter } from "./CardFilter.tsx";
-export { default as CardMasonry } from "./CardMasonry.tsx";
-export { default as CardsGrid } from "./CardsGrid.tsx";
+export type { CardData } from "./components/Card.tsx";
+export { default as CardFilter } from "./components/CardFilter.tsx";
+export { default as CardMasonry } from "./components/CardMasonry.tsx";
+export { default as CardsGrid } from "./components/CardsGrid.tsx";
 export type * from "./model.ts";

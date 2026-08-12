@@ -10,8 +10,8 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import { layout } from "./dag-layout.ts";
-import { calcAutoOffset, drawGraph, hitTestNode } from "./dag-render.ts";
+import { layout } from "../lib/dag-layout.ts";
+import { calcAutoOffset, drawGraph, hitTestNode } from "../lib/dag-render.ts";
 import styles from "./TaskDag.module.css";
 
 // ── 任务选择器 ──

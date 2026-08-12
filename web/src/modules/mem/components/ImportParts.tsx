@@ -1,7 +1,7 @@
 // ── v2 导入相关子组件：格式说明卡 / 预览清单 / 默认标签 / 结果页 ──
 
 import { For, Show } from "solid-js";
-import type { PreviewRow } from "../model/useMemAdd.ts";
+import type { PreviewRow } from "../hooks/useMemAdd.ts";
 import styles from "./ImportParts.module.css";
 
 // ── 格式说明（档案说明卡） ──

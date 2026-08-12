@@ -9,8 +9,8 @@ import ManageTable from "./components/ManageTable.tsx";
 import ManageToolbar from "./components/ManageToolbar.tsx";
 import MemBatchTagModal from "./components/MemBatchTagModal.tsx";
 import MemExportModal from "./components/MemExportModal.tsx";
+import { useMemManage } from "./hooks/useMemManage.ts";
 import styles from "./MemManage.module.css";
-import { useMemManage } from "./model/useMemManage.ts";
 
 export default function MemManage() {
 	const m = useMemManage();

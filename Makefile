@@ -8,8 +8,9 @@ DEPLOY_SCRIPT := scripts/deploy.sh
 .PHONY: dev fmt build build-check build-web build-backend clean deploy deploy-web deploy-backend check status logs db-pull db-push rollback list-backups
 
 dev:
-	trap 'wait; printf "Finished"; exit 0' INT TERM; \
-	cargo watch -x run --ignore web --ignore build --ignore $(BUILD_DIR) & \
+	# Ctrl+C 时：kill -INT 0 把 SIGINT 传给进程组；cargo-watch 8.x 用进程组管理
+	trap 'kill -INT 0 2>/dev/null; wait; printf "Finished"; exit 0' INT TERM; \
+	cargo-watch -x run --ignore web --ignore build --ignore $(BUILD_DIR) & \
 	cd web && pnpm run dev & \
 	wait
 

@@ -17,7 +17,8 @@ dev-backend:
 	@MAKEFLAGS= cargo-watch -x run --ignore web --ignore build --ignore $(BUILD_DIR)
 
 dev-web:
-	@cd web && pnpm run dev
+	# -s 抑制 pnpm 的 "Already up to date"/"$ vite ..." 回显噪音
+	@cd web && pnpm -s run dev
 
 fmt:
 	cargo fmt

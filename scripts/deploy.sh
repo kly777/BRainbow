@@ -426,7 +426,7 @@ cmd_health() {
 
     # 2. 通过 Caddy HTTPS（用域名验证，证书绑定 brainbow.top）
     total=$((total + 1))
-    code=$(remote "curl -s -o /dev/null -w '%{http_code}' --max-time 5 https://brainbow.top/api/health 2>/dev/null || echo '000'")
+    code=$(remote "curl -s -o /dev/null -w '%{http_code}' --max-time 5 https://$DOMAIN/api/health 2>/dev/null || echo '000'")
     if [ "$code" = "200" ]; then
         log_done "后端 API (Caddy) → HTTP $code"
         ok=$((ok + 1))
@@ -436,7 +436,7 @@ cmd_health() {
 
     # 3. 前端 SPA（通过 Caddy HTTPS）
     total=$((total + 1))
-    code=$(remote "curl -s -o /dev/null -w '%{http_code}' --max-time 5 https://brainbow.top/ 2>/dev/null || echo '000'")
+    code=$(remote "curl -s -o /dev/null -w '%{http_code}' --max-time 5 https://$DOMAIN/ 2>/dev/null || echo '000'")
     if [ "$code" = "200" ]; then
         log_done "前端 SPA (Caddy) → HTTP $code"
         ok=$((ok + 1))

@@ -1,14 +1,17 @@
 /// <reference types="vitest" />
+
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import solid from "vite-plugin-solid";
-import { fileURLToPath } from "node:url";
-import { mkdirSync, writeFileSync } from "node:fs";
 import { NAV_ITEMS } from "./src/app/navigation.ts";
 
-/**
- * 构建时生成 sitemap.xml（数据源自 NAV_ITEMS，路由变更自动保持同步）。
- * 只列出静态路径（排除 :id 模式）。
- */
+// ═══════════════════════════════════════════
+// SEO/Agent 产物构建插件（数据源自 NAV_ITEMS + VITE_SITE_URL，路由变更自动同步）
+// ═══════════════════════════════════════════
+
+/** 站点地图：静态路径（排除 :id 模式），输出 dist/sitemap.xml */
 function sitemapPlugin(siteUrl: string): Plugin {
 	return {
 		name: "brainbow:sitemap",
@@ -24,6 +27,78 @@ ${urls}
 `;
 			mkdirSync("dist", { recursive: true });
 			writeFileSync("dist/sitemap.xml", xml);
+		},
+	};
+}
+
+/** 静态 SEO 资产：scripts/seo-assets/ 模板渲染（@@SITE_URL@@ → 站点域名） */
+function seoAssetsPlugin(siteUrl: string): Plugin {
+	// 模板文件 → dist 相对路径
+	const SEO_ASSETS = [
+		["robots.txt", "robots.txt"],
+		["llms.txt", "llms.txt"],
+		["openapi.json", "openapi.json"],
+		["api-catalog", path.join(".well-known", "api-catalog")],
+	] as const;
+
+	return {
+		name: "brainbow:seo-assets",
+		apply: "build",
+		closeBundle() {
+			for (const [src, dst] of SEO_ASSETS) {
+				const tpl = readFileSync(
+					path.join("scripts", "seo-assets", src),
+					"utf8",
+				);
+				const outFile = path.join("dist", dst);
+				mkdirSync(path.dirname(outFile), { recursive: true });
+				writeFileSync(outFile, tpl.replaceAll("@@SITE_URL@@", siteUrl));
+			}
+		},
+	};
+}
+
+/** Markdown for Agents：每路径一个 .md（dist/_md/<path>.md），模板 scripts/seo-assets/*.md */
+function markdownPagesPlugin(siteUrl: string): Plugin {
+	return {
+		name: "brainbow:markdown-pages",
+		apply: "build",
+		closeBundle() {
+			const mdDir = path.join("dist", "_md");
+			mkdirSync(mdDir, { recursive: true });
+
+			// 首页：功能列表由 NAV_ITEMS 派生
+			const features = NAV_ITEMS.filter((i) => i.nav && i.path !== "/")
+				.map((i) => `- [${i.label}](${siteUrl}${i.path}): ${i.desc}`)
+				.join("\n");
+			const homeTpl = readFileSync(
+				path.join("scripts", "seo-assets", "home.md"),
+				"utf8",
+			);
+			writeFileSync(
+				path.join(mdDir, "index.md"),
+				homeTpl.replaceAll("@@FEATURES@@", features),
+			);
+
+			// 功能页：每个静态路径一份
+			const pageTpl = readFileSync(
+				path.join("scripts", "seo-assets", "page.md"),
+				"utf8",
+			);
+			for (const item of NAV_ITEMS) {
+				if (item.path === "/" || item.path.includes(":")) continue;
+				const rel = item.path.slice(1);
+				const file = path.join(mdDir, `${rel}.md`);
+				mkdirSync(path.dirname(file), { recursive: true });
+				writeFileSync(
+					file,
+					pageTpl
+						.replaceAll("@@TITLE@@", item.title)
+						.replaceAll("@@DESC@@", item.desc || item.title)
+						.replaceAll("@@LABEL@@", item.label)
+						.replaceAll("@@SITE_URL@@", siteUrl),
+				);
+			}
 		},
 	};
 }
@@ -47,7 +122,7 @@ export default defineConfig(({ command, mode }) => {
 	const apiTarget = env.VITE_API_TARGET ?? "http://localhost:3000";
 
 	return {
-		plugins: [solid(), sitemapPlugin(siteUrl)],
+		plugins: [solid(), sitemapPlugin(siteUrl), seoAssetsPlugin(siteUrl), markdownPagesPlugin(siteUrl)],
 		envDir,
 
 		css: {

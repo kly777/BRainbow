@@ -1,0 +1,10 @@
+{
+	"linkset": [
+		{
+			"anchor": "@@SITE_URL@@",
+			"service-doc": "@@SITE_URL@@/llms.txt",
+			"service-desc": "@@SITE_URL@@/openapi.json",
+			"status": "@@SITE_URL@@/api/health"
+		}
+	]
+}

@@ -1,0 +1,22 @@
+# Brainbow
+
+> 个人知识管理工具集：任务管理、知识卡片、间隔重复记忆、AI 对话、英语阅读一站式工作台
+
+## 核心功能
+
+- [任务管理](@@SITE_URL@@/task): 列表/看板/日历/DAG 多视图管理待办事项
+- [知识卡片](@@SITE_URL@@/card): 记录和浏览知识片段
+- [本体系统](@@SITE_URL@@/ontology): 管理概念本体与符号关系
+- [间隔记忆](@@SITE_URL@@/memory): 基于 FSRS 的智能复习系统
+- [AI 对话](@@SITE_URL@@/chat): 多轮树状对话，可修改上下文与提示词预设
+- [对话搜索](@@SITE_URL@@/conversation): 搜索 AI 对话历史
+- [英语阅读](@@SITE_URL@@/reading): 英语阅读与单词管理
+- [书签](@@SITE_URL@@/bookmark): 网页书签管理
+- [图片管理](@@SITE_URL@@/image): 上传和管理图片资源
+- [文本编辑](@@SITE_URL@@/text): 多标签纯文本编辑器
+- [配色](@@SITE_URL@@/color): 全局主题配色切换
+
+## 说明
+
+- 站点为 SPA，需登录使用（除首页着陆页外）
+- 数据接口为同源 REST API（/api），AI 对话通过 SSE 流式返回

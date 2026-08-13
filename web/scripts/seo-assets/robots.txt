@@ -1,6 +1,6 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://brainbow.top/sitemap.xml
+Sitemap: @@SITE_URL@@/sitemap.xml
 
 # SPA：所有路由由 index.html 承接，抓取走 JS 渲染（无 SSR）

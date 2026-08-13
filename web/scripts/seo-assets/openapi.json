@@ -1,0 +1,179 @@
+{
+	"openapi": "3.0.3",
+	"info": {
+		"title": "Brainbow API",
+		"description": "Brainbow 个人知识管理工具集的同源 REST API：任务、卡片、间隔重复记忆、AI 对话（SSE 流式）、英语阅读、书签、图片与本体系统。除 /api/user/login、/api/user/register、/api/health 外均需 Bearer Token 认证。",
+		"version": "1.0.0"
+	},
+	"servers": [
+		{
+			"url": "@@SITE_URL@@",
+			"description": "生产环境"
+		}
+	],
+	"paths": {
+		"/api/health": {
+			"get": {
+				"summary": "健康检查（含数据库连通性）",
+				"responses": { "200": { "description": "ok" } }
+			}
+		},
+		"/api/user/login": {
+			"post": {
+				"summary": "登录，返回 JWT token",
+				"responses": { "200": { "description": "token" } }
+			}
+		},
+		"/api/user/register": {
+			"post": {
+				"summary": "注册新用户",
+				"responses": { "200": { "description": "ok" } }
+			}
+		},
+		"/api/user/logout": {
+			"post": {
+				"summary": "登出",
+				"responses": { "200": { "description": "ok" } }
+			}
+		},
+		"/api/cards": {
+			"get": {
+				"summary": "卡片列表（分页/过滤）",
+				"responses": { "200": { "description": "cards" } }
+			},
+			"post": {
+				"summary": "创建卡片",
+				"responses": { "201": { "description": "created" } }
+			}
+		},
+		"/api/cards/{id}": {
+			"get": {
+				"summary": "卡片详情",
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+				],
+				"responses": { "200": { "description": "card" } }
+			},
+			"put": {
+				"summary": "更新卡片",
+				"responses": { "200": { "description": "updated" } }
+			},
+			"delete": {
+				"summary": "删除卡片",
+				"responses": { "204": { "description": "deleted" } }
+			}
+		},
+		"/api/tasks": {
+			"get": {
+				"summary": "任务列表（多视图：list/kanban/calendar/dag）",
+				"responses": { "200": { "description": "tasks" } }
+			},
+			"post": {
+				"summary": "创建任务",
+				"responses": { "201": { "description": "created" } }
+			}
+		},
+		"/api/tasks/{id}": {
+			"parameters": [
+				{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+			],
+			"get": { "summary": "任务详情", "responses": { "200": { "description": "task" } } },
+			"put": { "summary": "更新任务", "responses": { "200": { "description": "updated" } } },
+			"delete": { "summary": "删除任务", "responses": { "204": { "description": "deleted" } } }
+		},
+		"/api/mem/due": {
+			"get": {
+				"summary": "到期待复习的记忆（FSRS 调度）",
+				"responses": { "200": { "description": "due items" } }
+			}
+		},
+		"/api/mem": {
+			"get": {
+				"summary": "记忆列表（分页/标签过滤）",
+				"responses": { "200": { "description": "mem items" } }
+			},
+			"post": {
+				"summary": "创建记忆条目",
+				"responses": { "201": { "description": "created" } }
+			}
+		},
+		"/api/mem/export/csv": {
+			"get": {
+				"summary": "导出记忆为 CSV",
+				"responses": { "200": { "description": "csv" } }
+			}
+		},
+		"/api/mem/import/csv": {
+			"post": {
+				"summary": "从 CSV 导入记忆",
+				"responses": { "200": { "description": "imported" } }
+			}
+		},
+		"/api/chat/trees": {
+			"get": {
+				"summary": "对话树列表",
+				"responses": { "200": { "description": "trees" } }
+			}
+		},
+		"/api/chat/trees/{id}/chat": {
+			"post": {
+				"summary": "发起 AI 对话（SSE 流式响应）",
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+				],
+				"responses": {
+					"200": { "description": "text/event-stream 流式响应" }
+				}
+			}
+		},
+		"/api/chat/prompts": {
+			"get": {
+				"summary": "提示词预设列表",
+				"responses": { "200": { "description": "presets" } }
+			},
+			"post": {
+				"summary": "创建提示词预设",
+				"responses": { "201": { "description": "created" } }
+			}
+		},
+		"/api/reading": {
+			"get": {
+				"summary": "阅读文章列表",
+				"responses": { "200": { "description": "articles" } }
+			}
+		},
+		"/api/bookmarks": {
+			"get": {
+				"summary": "书签列表",
+				"responses": { "200": { "description": "bookmarks" } }
+			}
+		},
+		"/api/conv/search": {
+			"get": {
+				"summary": "搜索 AI 对话历史",
+				"responses": { "200": { "description": "hits" } }
+			}
+		},
+		"/api/media": {
+			"get": {
+				"summary": "媒体列表",
+				"responses": { "200": { "description": "media" } }
+			}
+		},
+		"/api/media/upload": {
+			"post": {
+				"summary": "上传媒体文件（multipart）",
+				"responses": { "201": { "description": "uploaded" } }
+			}
+		}
+	},
+	"components": {
+		"securitySchemes": {
+			"bearerAuth": {
+				"type": "http",
+				"scheme": "bearer",
+				"bearerFormat": "JWT"
+			}
+		}
+	}
+}

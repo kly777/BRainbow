@@ -8,6 +8,7 @@ pub mod media;
 pub mod mem;
 pub mod onto;
 pub mod reading;
+pub mod search;
 pub mod sign;
 pub mod task;
 pub mod text;

@@ -12,6 +12,7 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
+import { type SearchHit, searchE } from "./api.ts";
 import styles from "./CommandPalette.module.css";
 
 const BING = "https://www.bing.com/search?q=";
@@ -57,6 +58,19 @@ const KEY_TO_PREFIX: Record<string, string> = {
 	"?": "?",
 	"：": "?",
 	":": ":",
+};
+
+/** 站内搜索结果的模块中文标签 */
+const KIND_LABEL: Record<string, string> = {
+	mem: "记忆",
+	card: "卡片",
+	task: "任务",
+	bookmark: "书签",
+	onto: "本体",
+	text: "文本",
+	reading: "阅读",
+	conv: "对话",
+	chat: "AI 对话",
 };
 
 interface Suggestion {
@@ -131,6 +145,9 @@ export default function CommandPalette() {
 	const [value, setValue] = createSignal("");
 	const [open, setOpen] = createSignal(false);
 	const [selectedIndex, setSelectedIndex] = createSignal(0);
+	// ── 站内搜索状态 ──
+	const [hits, setHits] = createSignal<SearchHit[]>([]);
+	const [searching, setSearching] = createSignal(false);
 
 	let inputRef!: HTMLInputElement;
 	let sugScrollRef: HTMLDivElement | undefined;
@@ -138,18 +155,28 @@ export default function CommandPalette() {
 	const mode = () => detectMode(value());
 	const query = () => value().slice(1);
 
-	/** 当前模式下的建议列表（nav/cmd），其余模式为空 */
+	/** 当前模式下的建议列表（nav/cmd/search），其余模式为空 */
 	const currentItems = () =>
-		mode() === "nav" ? navItems() : mode() === "cmd" ? cmdItems() : [];
+		mode() === "nav"
+			? navItems()
+			: mode() === "cmd"
+				? cmdItems()
+				: mode() === "search"
+					? searchItems()
+					: [];
 
 	// 选中项变化时才滚动到可见（不滚动容器本身）。
 	// 放在顶层而不是 SuggestionList 内：避免每次输入重建列表时
 	// 注册新 effect 触发 scrollIntoView（同步强制布局，造成卡顿）
 	createEffect(() => {
-		const el = sugScrollRef?.children[selectedIndex()] as
-			| HTMLElement
-			| undefined;
-		el?.scrollIntoView({ block: "nearest" });
+		// 先读 signal 建立订阅：不能写 sugScrollRef?.children[selectedIndex()]，
+		// 可选链在 sugScrollRef 为空时短路，selectedIndex 不会被追踪，
+		// 之后列表出现后按 ↑↓ 也不会再触发滚动
+		const index = selectedIndex();
+		const el = sugScrollRef?.children[index] as HTMLElement | undefined;
+		if (!el) return;
+		// rAF 延后到帧末：输入期间多次选中变化只滚一次，避免同步布局抖动
+		requestAnimationFrame(() => el.scrollIntoView({ block: "nearest" }));
 	});
 
 	const commands = createMemo(() => {
@@ -241,9 +268,69 @@ export default function CommandPalette() {
 			}));
 	});
 
+	// ── 站内搜索：防抖请求 + 结果映射（末尾附加"网页搜索"兜底项） ──
+	let searchTimer: ReturnType<typeof setTimeout> | undefined;
+	let searchSeq = 0;
+	createEffect(() => {
+		if (mode() !== "search") return;
+		const q = query().trim();
+		clearTimeout(searchTimer);
+		if (!q) {
+			setHits([]);
+			setSearching(false);
+			return;
+		}
+		// 输入变化立即清空旧结果：列表只反映当前关键词，不显示上一条查询的残留
+		const seq = ++searchSeq;
+		setHits([]);
+		setSearching(true);
+		searchTimer = setTimeout(async () => {
+			try {
+				const res = await searchE(q);
+				// 竞态保护：仅最新一次输入的结果生效
+				if (seq === searchSeq) setHits(res.hits.slice(0, 24));
+			} catch {
+				if (seq === searchSeq) setHits([]);
+			} finally {
+				if (seq === searchSeq) setSearching(false);
+			}
+		}, 300);
+	});
+
+	const searchItems = createMemo<Suggestion[]>(() => {
+		if (mode() !== "search") return [];
+		const q = query().trim();
+		const items: Suggestion[] = hits().map((h) => ({
+			label: h.title,
+			desc: h.snippet,
+			extra: KIND_LABEL[h.kind] ?? h.kind,
+			onSelect: () => {
+				navigate(h.url);
+				close();
+			},
+		}));
+		if (q && !searching()) {
+			items.push({
+				label: `在浏览器中搜索「${q}」`,
+				desc: "站内未命中时使用外部搜索引擎",
+				extra: "web",
+				onSelect: () => {
+					searchWeb(q);
+					close();
+				},
+			});
+		}
+		return items;
+	});
+
 	const commit = () => {
 		if (mode() === "search") {
-			if (query()) searchWeb(query());
+			const items = currentItems();
+			if (items.length > 0) {
+				items[Math.min(selectedIndex(), items.length - 1)].onSelect();
+			} else if (query()) {
+				searchWeb(query());
+			}
 		} else {
 			const items = currentItems();
 			if (items.length > 0) {
@@ -324,7 +411,10 @@ export default function CommandPalette() {
 		globalThis.addEventListener("keydown", globalKey);
 		probeDuck();
 	});
-	onCleanup(() => globalThis.removeEventListener("keydown", globalKey));
+	onCleanup(() => {
+		globalThis.removeEventListener("keydown", globalKey);
+		clearTimeout(searchTimer);
+	});
 
 	const ActionPanel = () => {
 		const m = mode();
@@ -357,7 +447,21 @@ export default function CommandPalette() {
 				);
 			if (q) return <EmptyState text={auth().user ? "已登录" : "未登录"} />;
 		}
-		if (m === "search" && q) return <SearchHint query={q} />;
+		if (m === "search") {
+			if (searchItems().length > 0)
+				return (
+					<SuggestionList
+						items={searchItems()}
+						selected={selectedIndex()}
+						onHover={setSelectedIndex}
+						listRef={(el) => {
+							sugScrollRef = el;
+						}}
+					/>
+				);
+			if (searching() && q) return <EmptyState text="搜索中…" />;
+			if (q) return <SearchHint query={q} />;
+		}
 		return null;
 	};
 

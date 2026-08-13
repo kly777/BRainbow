@@ -22,7 +22,7 @@
 	z-index: var(--z-palette);
 	display: flex;
 	flex-direction: column;
-	width: var(--cmp-width, 30rem);
+	width: var(--cmp-width, 38rem);
 	max-width: 90vw;
 	max-height: 60vh;
 	overflow-wrap: break-word;
@@ -82,7 +82,7 @@
 /* 列表滚动区：滚动条只在此区域内，不压容器圆角 */
 .sug-scroll {
 	overflow-y: auto;
-	max-height: 17.5rem;
+	max-height: 26rem;
 	padding: var(--space-xs);
 	scrollbar-gutter: stable;
 }
@@ -201,18 +201,14 @@
 	color: var(--t-color-ink-faint);
 }
 
-.suggestion-item:hover,
 .suggestion-item:is(.suggestion-active) {
 	background: var(--t-color-surface-raised);
 }
 
 .suggestion-item:focus-visible {
 	outline: none;
-	background: var(--t-color-surface-raised);
 }
 
-.suggestion-item:hover::before,
-.suggestion-item:focus-visible::before,
 .suggestion-item:is(.suggestion-active)::before {
 	content: "";
 	position: absolute;

@@ -177,6 +177,17 @@ const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 		});
 	});
 
+	// 标题锚点：h1-h3 按出现顺序加 id（供页面级目录导航扫描定位）
+	createEffect(() => {
+		html();
+		const div = divRef;
+		if (!div) return;
+		let n = 0;
+		for (const h of div.querySelectorAll("h1, h2, h3")) {
+			h.id = `md-h-${++n}`;
+		}
+	});
+
 	// 代码块增强：语言标签 + 复制按钮（流式内容变化时重新处理，已增强的跳过）
 	createEffect(() => {
 		html();

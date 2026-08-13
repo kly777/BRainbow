@@ -5,6 +5,41 @@ import type { Accessor } from "solid-js";
 /** 所需样式类：inputBar/inputShell/inputArea/sendBtn/stopBtn */
 export type ComposerStyles = Record<string, string>;
 
+/** 向上箭头（发送） */
+function SendIcon() {
+	return (
+		<svg
+			viewBox="0 0 24 24"
+			width="16"
+			height="16"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2.5"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			aria-hidden="true"
+		>
+			<line x1="12" y1="19" x2="12" y2="5" />
+			<polyline points="5 12 12 5 19 12" />
+		</svg>
+	);
+}
+
+/** 方块（停止） */
+function StopIcon() {
+	return (
+		<svg
+			viewBox="0 0 24 24"
+			width="12"
+			height="12"
+			fill="currentColor"
+			aria-hidden="true"
+		>
+			<rect x="6" y="6" width="12" height="12" rx="1" />
+		</svg>
+	);
+}
+
 export function Composer(props: {
 	styles: ComposerStyles;
 	sending: Accessor<boolean>;
@@ -14,7 +49,6 @@ export function Composer(props: {
 	/** 流式中点击停止生成 */
 	onStop: () => void;
 	placeholder: Accessor<string>;
-	sendLabel: Accessor<string>;
 }) {
 	const { styles } = props;
 
@@ -49,9 +83,9 @@ export function Composer(props: {
 					class={props.sending() ? styles.stopBtn : styles.sendBtn}
 					disabled={!props.sending() && !props.input().trim()}
 					onClick={props.sending() ? props.onStop : props.onSend}
-					title={props.sending() ? "停止生成" : undefined}
+					title={props.sending() ? "停止生成" : "发送"}
 				>
-					{props.sending() ? "停止" : props.sendLabel()}
+					{props.sending() ? <StopIcon /> : <SendIcon />}
 				</button>
 			</div>
 		</div>

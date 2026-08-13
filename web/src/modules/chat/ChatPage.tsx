@@ -3,7 +3,14 @@
 import { Markdown as MarkdownRenderer } from "@components/ui";
 import { notifyError, notifySuccess, tryOrNotify } from "@lib/utils";
 import type { ChatNode, ChatTree } from "@modules/chat";
-import { createSignal, For, onMount, Show } from "solid-js";
+import {
+	createEffect,
+	createSignal,
+	For,
+	onCleanup,
+	onMount,
+	Show,
+} from "solid-js";
 import { updateTreeE } from "./api.ts";
 import styles from "./ChatPage.module.css";
 import { BranchBar } from "./components/BranchBar.tsx";
@@ -103,14 +110,20 @@ export default function ChatPage() {
 			{/* ── 对话区 ── */}
 			<main class={styles.main}>
 				<Show
-					when={c.current()}
+					when={
+						c.current() !== null && c.activePath().length > 0
+							? c.current()
+							: null
+					}
 					fallback={
-						<div class={styles.emptyState}>
-							<p class={styles.emptyTitle}>AI 对话工作台</p>
-							<p class={styles.emptyHint}>
-								左侧选择或新建一个对话。支持多轮对话、分支讨论、修改上下文。
-							</p>
-						</div>
+						<WelcomeText
+							title={
+								c.current()?.tree.title === "新对话"
+									? "AI 对话工作台"
+									: (c.current()?.tree.title ?? "AI 对话工作台")
+							}
+							onPick={(text) => c.setInput(text)}
+						/>
 					}
 				>
 					{(cur) => (
@@ -128,24 +141,26 @@ export default function ChatPage() {
 								<For each={c.activePath()}>
 									{(node) => <MessageRow c={c} node={node} />}
 								</For>
-								<Composer
-									styles={styles}
-									sending={c.sending}
-									input={c.input}
-									onInput={c.setInput}
-									onSend={() => void c.send()}
-									onStop={() => c.stopStreaming()}
-									placeholder={() =>
-										c.focusId() === null
-											? "开始对话…（Enter 发送，Shift+Enter 换行）"
-											: "继续对话…（将追加到当前消息之后）"
-									}
-									sendLabel={() => "发送"}
-								/>
 							</div>
+							<TocNav container={() => listRef} dep={() => c.activePath()} />
 						</>
 					)}
 				</Show>
+				<Composer
+					styles={styles}
+					sending={c.sending}
+					input={c.input}
+					onInput={c.setInput}
+					onSend={() => void c.send()}
+					onStop={() => c.stopStreaming()}
+					placeholder={() =>
+						c.activePath().length === 0
+							? "有什么想问的？Enter 发送，Shift+Enter 换行"
+							: c.focusId() === null
+								? "开始对话…（Enter 发送，Shift+Enter 换行）"
+								: "继续对话…（将追加到当前消息之后）"
+					}
+				/>
 			</main>
 
 			{/* ── 编辑弹层 ── */}
@@ -410,5 +425,129 @@ function MessageRow(props: {
 				)}
 			</div>
 		</MessageShell>
+	);
+}
+
+// ── 空会话欢迎区：居中文案 + 示例问题（输入框恒定在底部） ──
+
+const SAMPLE_PROMPTS = [
+	"总结一下我的任务清单",
+	"解释什么是间隔重复记忆",
+	"帮我梳理一个学习计划",
+	"用通俗的语言讲讲 FSRS 算法",
+];
+
+function WelcomeText(props: { title: string; onPick: (text: string) => void }) {
+	return (
+		<div class={styles.welcome}>
+			<h1 class={styles.welcomeTitle}>{props.title}</h1>
+			<p class={styles.welcomeHint}>
+				支持多轮对话、树状分支、修订上下文；AI 思考过程可折叠查看。
+			</p>
+			<div class={styles.welcomeSamples}>
+				<For each={SAMPLE_PROMPTS}>
+					{(prompt) => (
+						<button
+							type="button"
+							class={styles.welcomeChip}
+							onClick={() => props.onPick(prompt)}
+						>
+							{prompt}
+						</button>
+					)}
+				</For>
+			</div>
+		</div>
+	);
+}
+
+// ── 右侧章节导航（DeepSeek 风格）：扫描消息中的标题，点击定位 ──
+
+interface TocHeading {
+	el: HTMLElement;
+	text: string;
+	level: number;
+}
+
+function TocNav(props: {
+	container: () => HTMLElement | undefined;
+	/** 依赖项（activePath）：消息流变化时重新扫描 */
+	dep: () => unknown;
+}) {
+	const [headings, setHeadings] = createSignal<TocHeading[]>([]);
+	const [activeIdx, setActiveIdx] = createSignal(-1);
+
+	createEffect(() => {
+		void props.dep();
+		// 等 DOM 更新后扫描（流式渲染 + 标题 id 增强）
+		queueMicrotask(() => {
+			const el = props.container();
+			if (!el) {
+				setHeadings([]);
+				return;
+			}
+			const items = [...el.querySelectorAll<HTMLElement>("[id^='md-h-']")].map(
+				(h) => ({
+					el: h,
+					text: (h.textContent ?? "").trim().slice(0, 40),
+					level: Number(h.tagName[1]),
+				}),
+			);
+			setHeadings(items);
+			setActiveIdx(-1);
+		});
+	});
+
+	// 滚动高亮当前章节（IntersectionObserver 跟随）
+	let observer: IntersectionObserver | undefined;
+	createEffect(() => {
+		const list = headings();
+		if (list.length === 0) return;
+		observer?.disconnect();
+		observer = new IntersectionObserver(
+			(entries) => {
+				const visible = entries
+					.filter((e) => e.isIntersecting)
+					.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+				if (visible.length > 0) {
+					const idx = list.findIndex((h) => h.el === visible[0].target);
+					if (idx >= 0) setActiveIdx(idx);
+				}
+			},
+			{ rootMargin: "-80px 0px -70% 0px", threshold: 0 },
+		);
+		for (const h of list) observer.observe(h.el);
+		onCleanup(() => observer?.disconnect());
+	});
+
+	const scrollTo = (h: TocHeading, idx: number) => {
+		setActiveIdx(idx);
+		h.el.scrollIntoView({ behavior: "smooth", block: "start" });
+	};
+
+	return (
+		<Show when={headings().length > 0}>
+			<nav class={styles.toc} aria-label="章节导航">
+				<span class={styles.tocTitle}>本页目录</span>
+				<div class={styles.tocList}>
+					<For each={headings()}>
+						{(h, i) => (
+							<button
+								type="button"
+								class={styles.tocItem}
+								classList={{
+									[styles.tocItemL2]: h.level === 2,
+									[styles.tocItemL3]: h.level === 3,
+									[styles.tocItemActive]: i() === activeIdx(),
+								}}
+								onClick={() => scrollTo(h, i())}
+							>
+								{h.text}
+							</button>
+						)}
+					</For>
+				</div>
+			</nav>
+		</Show>
 	);
 }

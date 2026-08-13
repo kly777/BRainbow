@@ -121,7 +121,6 @@ export default function ChatMemPage() {
 											? "粘贴文本，AI 将生成记忆卡片…（Enter 发送）"
 											: "输入修改指令，如「把答案简化」…"
 									}
-									sendLabel={() => "发送"}
 								/>
 							</div>
 						</>

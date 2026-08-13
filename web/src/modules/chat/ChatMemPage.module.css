@@ -619,13 +619,32 @@
 }
 
 .send-btn {
-	composes: btn-primary from "@lib/styles/base.module.css";
 	position: absolute;
 	right: var(--space-xs);
 	bottom: var(--space-xs);
-	min-height: 2.25rem;
-	padding: var(--space-xs) var(--space-lg);
-	font-size: var(--text-sm);
+	width: 2.5rem;
+	height: 2.5rem;
+	padding: 0;
+	border-radius: 50%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: var(--text-2xs);
+	font-weight: 500;
+	color: var(--t-color-white);
+	background: var(--t-color-accent);
+	border: none;
+	cursor: pointer;
+	transition: background var(--t-transition-fast);
+}
+
+.send-btn:hover {
+	background: var(--t-color-accent-strong);
+}
+
+.send-btn:disabled {
+	opacity: 0.5;
+	cursor: default;
 }
 
 /* 输入区聚焦态：accent 描边 */
@@ -639,13 +658,17 @@
 	position: absolute;
 	right: var(--space-xs);
 	bottom: var(--space-xs);
-	min-height: 2.25rem;
-	padding: var(--space-xs) var(--space-lg);
-	font-size: var(--text-sm);
+	width: 2.5rem;
+	height: 2.5rem;
+	padding: 0;
 	border: 1px solid #d64545;
 	color: #d64545;
 	background: transparent;
-	border-radius: var(--radius-md);
+	border-radius: 50%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: var(--text-2xs);
 	cursor: pointer;
 }
 

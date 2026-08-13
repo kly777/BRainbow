@@ -74,9 +74,9 @@ export default function ConvSearch() {
 		const suffix = qs ? `?${qs}` : "";
 		if (hit.match_field === "article" && hit.article_title) {
 			params.set("article", hit.article_title);
-			return `/conv/concept/${hit.conv_id}?${params.toString()}`;
+			return `${PATHS.convConcept.replace(":id", String(hit.conv_id))}?${params.toString()}`;
 		}
-		return `/conv/qa/${hit.conv_id}${suffix}`;
+		return `${PATHS.convQa.replace(":id", String(hit.conv_id))}${suffix}`;
 	};
 
 	return (

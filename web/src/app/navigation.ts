@@ -139,6 +139,20 @@ export const NAV_ITEMS: NavItem[] = [
 		nav: true,
 	},
 	{
+		path: PATHS.convQa,
+		label: "对话详情",
+		title: "Conversation",
+		desc: "",
+		nav: false,
+	},
+	{
+		path: PATHS.convConcept,
+		label: "概念详情",
+		title: "Concept",
+		desc: "",
+		nav: false,
+	},
+	{
 		path: PATHS.chat,
 		label: "AI 对话",
 		title: "AI Chat",

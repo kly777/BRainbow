@@ -34,6 +34,8 @@ const PAGE_LOADERS: Record<string, () => Promise<{ default: Component }>> = {
 	[PATHS.memoryAdd]: () => import("@/modules/mem/MemAdd.tsx"),
 	[PATHS.memoryManage]: () => import("@/modules/mem/MemManage.tsx"),
 	[PATHS.conversation]: () => import("@/modules/conv/ConvSearch.tsx"),
+	[PATHS.convQa]: () => import("@/modules/conv/ConvDetail.tsx"),
+	[PATHS.convConcept]: () => import("@/modules/conv/ConvConcept.tsx"),
 	[PATHS.chat]: () => import("@/modules/chat/ChatPage.tsx"),
 	[PATHS.chatPrompts]: () => import("@/modules/chat/ChatPromptsPage.tsx"),
 	[PATHS.chatMem]: () => import("@/modules/chat/ChatMemPage.tsx"),

@@ -6,6 +6,9 @@ import type { ChatNode, ChatTree } from "@modules/chat";
 import { createSignal, For, onMount, Show } from "solid-js";
 import { updateTreeE } from "./api.ts";
 import styles from "./ChatPage.module.css";
+import { BranchBar } from "./components/BranchBar.tsx";
+import { Composer } from "./components/Composer.tsx";
+import { MessageShell } from "./components/MessageShell.tsx";
 import { useChatPage } from "./hooks/useChatPage.ts";
 
 export default function ChatPage() {
@@ -67,7 +70,7 @@ export default function ChatPage() {
 					<button
 						type="button"
 						class={styles.newBtn}
-						onClick={() => void c.quickCreate()}
+						onClick={() => void c.createSession()}
 					>
 						＋ 新建
 					</button>
@@ -79,8 +82,8 @@ export default function ChatPage() {
 							<TreeListItem
 								tree={tree}
 								active={c.current()?.tree.id === tree.id}
-								onSelect={() => c.selectTree(tree.id)}
-								onDelete={() => c.removeTree(tree.id)}
+								onSelect={() => c.selectSession(tree.id)}
+								onDelete={() => c.removeSession(tree.id)}
 							/>
 						)}
 					</For>
@@ -120,52 +123,20 @@ export default function ChatPage() {
 								<For each={c.activePath()}>
 									{(node) => <MessageRow c={c} node={node} />}
 								</For>
-								<Show when={c.sending() && c.streamingContent()}>
-									<div class={`${styles.messageRow} ${styles.streaming}`}>
-										<span class={styles.avatar} aria-hidden="true">
-											AI
-										</span>
-										<div class={styles.messageCol}>
-											<div class={styles.messageHead}>
-												<span class={styles.messageRole}>AI · 生成中…</span>
-											</div>
-											<div class={styles.assistantBubble}>
-												<div class={styles.messageMd}>
-													<MarkdownRenderer content={c.streamingContent()} />
-													<span class={styles.streamCursor} />
-												</div>
-											</div>
-										</div>
-									</div>
-								</Show>
-							</div>
-							<div class={styles.inputBar}>
-								<div class={styles.inputShell}>
-									<textarea
-										class={styles.inputArea}
-										placeholder={
-											c.focusId() === null
-												? "开始对话…（Enter 发送，Shift+Enter 换行）"
-												: "继续对话…（将追加到当前消息之后）"
-										}
-										value={c.input()}
-										onInput={(e) => c.setInput(e.currentTarget.value)}
-										onKeyDown={(e) => {
-											if (e.key === "Enter" && !e.shiftKey) {
-												e.preventDefault();
-												void c.send();
-											}
-										}}
-									/>
-									<button
-										type="button"
-										class={styles.sendBtn}
-										disabled={c.sending() || !c.input().trim()}
-										onClick={() => void c.send()}
-									>
-										{c.sending() ? "发送中…" : "发送"}
-									</button>
-								</div>
+								<Composer
+									styles={styles}
+									sending={c.sending}
+									streamingContent={c.streamingContent}
+									input={c.input}
+									onInput={c.setInput}
+									onSend={() => void c.send()}
+									placeholder={() =>
+										c.focusId() === null
+											? "开始对话…（Enter 发送，Shift+Enter 换行）"
+											: "继续对话…（将追加到当前消息之后）"
+									}
+									sendLabel={() => (c.sending() ? "发送中…" : "发送")}
+								/>
 							</div>
 						</>
 					)}
@@ -341,89 +312,49 @@ function MessageRow(props: {
 	const { c, node } = props;
 	const isFocused = () => c.focusId() === node.id;
 	const children = () => c.childrenOf(node.id);
-	const branchPoint = () => children().length > 1;
 	const isUser = node.role === "user";
 
-	const timeText = () => {
-		const d = new Date(`${node.created_at.replace(" ", "T")}Z`);
-		if (Number.isNaN(d.getTime())) return "";
-		return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-	};
-
 	return (
-		<div
-			class={
-				isUser
-					? isFocused()
-						? `${styles.messageRow} ${styles.userRow} ${styles.focused}`
-						: `${styles.messageRow} ${styles.userRow}`
-					: isFocused()
-						? `${styles.messageRow} ${styles.assistantRow} ${styles.focused}`
-						: `${styles.messageRow} ${styles.assistantRow}`
+		<MessageShell
+			styles={styles}
+			node={node}
+			rowClass={isFocused() ? styles.focused : undefined}
+			headExtra={node.revised_from !== null ? " · 修订" : ""}
+			timeFirst
+			actions={
+				<button
+					type="button"
+					class={styles.msgBtn}
+					title="修订此消息（原版保留）"
+					onClick={() => {
+						c.setEditText(node.content);
+						c.setEditingNode(node);
+					}}
+				>
+					修订
+				</button>
+			}
+			footer={
+				<Show when={children().length > 1}>
+					<BranchBar
+						styles={styles}
+						children={children()}
+						isActive={(id) => c.isInSubtree(id)}
+						onSelect={(id) => c.focusBranch(id)}
+						title="切换到该分支"
+					/>
+				</Show>
 			}
 		>
-			{/* 头像（assistant 在左，user 在右） */}
-			<Show when={!isUser}>
-				<span class={styles.avatar} aria-hidden="true">
-					AI
-				</span>
-			</Show>
-			<div class={styles.messageCol}>
-				<div class={styles.messageHead}>
-					<span class={styles.messageRole}>
-						{isUser ? "你" : "AI"}
-						{node.revised_from !== null ? " · 修订" : ""}
-					</span>
-					<span class={styles.messageActions}>
-						<span class={styles.messageTime}>{timeText()}</span>
-						<button
-							type="button"
-							class={styles.msgBtn}
-							title="修订此消息（原版保留）"
-							onClick={() => {
-								c.setEditText(node.content);
-								c.setEditingNode(node);
-							}}
-						>
-							修订
-						</button>
-					</span>
-				</div>
-				<div class={isUser ? styles.userBubble : styles.assistantBubble}>
-					{isUser ? (
-						node.content
-					) : (
-						<div class={styles.messageMd}>
-							<MarkdownRenderer content={node.content} />
-						</div>
-					)}
-				</div>
-
-				{/* 分支切换：此节点有多个后续分支时显示切换条 */}
-				<Show when={branchPoint()}>
-					<div class={styles.branchBar}>
-						<span class={styles.branchLabel}>分支</span>
-						<For each={children()}>
-							{(child) => (
-								<button
-									type="button"
-									class={
-										c.isInSubtree(child.id)
-											? styles.branchChipActive
-											: styles.branchChip
-									}
-									title="切换到该分支"
-									onClick={() => c.focusBranch(child.id)}
-								>
-									{child.content.slice(0, 24) ||
-										(child.role === "user" ? "继续提问" : "AI 回复")}
-									{child.content.length > 24 ? "…" : ""}
-								</button>
-							)}
-						</For>
+			<div class={isUser ? styles.userBubble : styles.assistantBubble}>
+				{isUser ? (
+					node.content
+				) : (
+					<div class={styles.messageMd}>
+						<MarkdownRenderer content={node.content} />
 					</div>
-				</Show>
+				)}
 			</div>
-		</div>
+		</MessageShell>
 	);
 }

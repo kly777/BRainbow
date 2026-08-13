@@ -208,8 +208,13 @@ export function useChatSession(opts: ChatSessionOptions) {
 	 * - content 非空：立即插入临时 user 节点（输入即刻显示，参照 LobeChat 模式）
 	 * - 插入空 assistant 临时节点，流式内容直接 patch 到它（消息流完整，不闪烁）
 	 * - 完成后重拉真实树替换临时节点（不清空 current，页面不闪）
-	 * - 失败：移除临时节点，返回错误
+	 * - 失败：移除临时节点，返回错误；用户主动停止：重拉取真实状态（部分内容可能已落库）
 	 */
+	let abortCtrl: AbortController | null = null;
+
+	/** 停止当前生成（发送按钮流式中切换为停止） */
+	const stopStreaming = () => abortCtrl?.abort();
+
 	const streamChat = async (
 		parentId: number | null,
 		content: string | null,
@@ -262,6 +267,8 @@ export function useChatSession(opts: ChatSessionOptions) {
 			});
 		};
 
+		const controller = new AbortController();
+		abortCtrl = controller;
 		try {
 			const resp = await fetch(`/api/chat/trees/${id}/chat`, {
 				method: "POST",
@@ -270,6 +277,7 @@ export function useChatSession(opts: ChatSessionOptions) {
 					Authorization: `Bearer ${token}`,
 				},
 				body: JSON.stringify({ parent_id: parentId, content }),
+				signal: controller.signal,
 			});
 			if (!resp.ok) throw new Error(`请求失败 (${resp.status})`);
 			if (!resp.body) throw new Error("浏览器不支持流式响应");
@@ -318,10 +326,16 @@ export function useChatSession(opts: ChatSessionOptions) {
 			await loadTree(id);
 			return { ok: true, error: "" };
 		} catch (e) {
+			if ((e as Error)?.name === "AbortError") {
+				// 用户主动停止：后端可能已落库部分内容，重拉取真实状态（静默成功）
+				await loadTree(id);
+				return { ok: true, error: "" };
+			}
 			rollback();
 			return { ok: false, error: getErrorMessage(e) };
 		} finally {
 			setStreamingContent("");
+			if (abortCtrl === controller) abortCtrl = null;
 		}
 	};
 
@@ -352,6 +366,7 @@ export function useChatSession(opts: ChatSessionOptions) {
 		focusBranch,
 		isInSubtree,
 		streamChat,
+		stopStreaming,
 		navigate,
 	};
 }

@@ -5,6 +5,7 @@ import { PATHS } from "@config/paths";
 //       底部"导入所选"把勾选卡片写入记忆库。
 
 import { Markdown as MarkdownRenderer } from "@components/ui";
+import { notifyError, notifySuccess } from "@lib/utils";
 import type { ChatNode } from "@modules/chat";
 import { A } from "@solidjs/router";
 import { createSignal, For, onMount, Show } from "solid-js";
@@ -114,12 +115,13 @@ export default function ChatMemPage() {
 									input={c.input}
 									onInput={c.setInput}
 									onSend={() => void c.send()}
+									onStop={() => c.stopStreaming()}
 									placeholder={() =>
 										c.activePath().length === 0
 											? "粘贴文本，AI 将生成记忆卡片…（Enter 发送）"
 											: "输入修改指令，如「把答案简化」…"
 									}
-									sendLabel={() => (c.sending() ? "生成中…" : "发送")}
+									sendLabel={() => "发送"}
 								/>
 							</div>
 						</>
@@ -176,6 +178,15 @@ function ImportBar(props: { c: ReturnType<typeof useChatMem> }) {
 
 // ── 单条消息：user 气泡 / assistant（卡片或 Markdown） ──
 
+async function copyNode(node: ChatNode) {
+	try {
+		await navigator.clipboard.writeText(node.content);
+		notifySuccess("已复制");
+	} catch {
+		notifyError("复制失败");
+	}
+}
+
 function MessageRow(props: {
 	c: ReturnType<typeof useChatMem>;
 	node: ChatNode;
@@ -194,17 +205,29 @@ function MessageRow(props: {
 			node={node}
 			headExtra={streaming() ? " · 生成中…" : ""}
 			actions={
-				<Show when={!isUser && !streaming()}>
-					<button
-						type="button"
-						class={styles.msgBtn}
-						title="重新生成（作为新分支，原回复保留）"
-						disabled={c.sending()}
-						onClick={() => void c.regenerate(node.id)}
-					>
-						重新生成
-					</button>
-				</Show>
+				<>
+					<Show when={!streaming()}>
+						<button
+							type="button"
+							class={styles.msgBtn}
+							title="复制内容"
+							onClick={() => void copyNode(node)}
+						>
+							复制
+						</button>
+					</Show>
+					<Show when={!isUser && !streaming()}>
+						<button
+							type="button"
+							class={styles.msgBtn}
+							title="重新生成（作为新分支，原回复保留）"
+							disabled={c.sending()}
+							onClick={() => void c.regenerate(node.id)}
+						>
+							重新生成
+						</button>
+					</Show>
+				</>
 			}
 		>
 			{/* assistant + 可解析卡片 → 勾选清单 */}
@@ -244,6 +267,7 @@ function MessageRow(props: {
 								<ThinkingBlock
 									styles={styles}
 									reasoning={() => node.reasoning}
+									done={() => !!node.content}
 									open={streaming()}
 								/>
 								<MarkdownRenderer content={node.content} />

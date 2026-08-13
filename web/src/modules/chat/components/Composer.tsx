@@ -2,7 +2,7 @@
 
 import type { Accessor } from "solid-js";
 
-/** 所需样式类：inputBar/inputShell/inputArea/sendBtn */
+/** 所需样式类：inputBar/inputShell/inputArea/sendBtn/stopBtn */
 export type ComposerStyles = Record<string, string>;
 
 export function Composer(props: {
@@ -11,6 +11,8 @@ export function Composer(props: {
 	input: Accessor<string>;
 	onInput: (value: string) => void;
 	onSend: () => void;
+	/** 流式中点击停止生成 */
+	onStop: () => void;
 	placeholder: Accessor<string>;
 	sendLabel: Accessor<string>;
 }) {
@@ -33,11 +35,12 @@ export function Composer(props: {
 				/>
 				<button
 					type="button"
-					class={styles.sendBtn}
-					disabled={props.sending() || !props.input().trim()}
-					onClick={props.onSend}
+					class={props.sending() ? styles.stopBtn : styles.sendBtn}
+					disabled={!props.sending() && !props.input().trim()}
+					onClick={props.sending() ? props.onStop : props.onSend}
+					title={props.sending() ? "停止生成" : undefined}
 				>
-					{props.sendLabel()}
+					{props.sending() ? "停止" : props.sendLabel()}
 				</button>
 			</div>
 		</div>

@@ -59,6 +59,19 @@ export function useChatPage() {
 		s.setFocusParam(result.node.id);
 	};
 
+	/** 重新生成：以该 assistant 节点的父（user）为 parent，AI 重答 → 同父新节点（分支） */
+	const regenerate = async (nodeId: number) => {
+		if (s.sending()) return;
+		const node = s.nodes().find((n) => n.id === nodeId);
+		if (node?.role !== "assistant") return;
+		s.setSending(true);
+		const result = await s.streamChat(node.parent_id, null);
+		if (!result.ok) {
+			tryOrNotify(() => Promise.reject(new Error(result.error)), "重新生成");
+		}
+		s.setSending(false);
+	};
+
 	// ── 预设 ──
 	const loadPresets = async () => {
 		const result = await tryAsync(() => listPresetsE());
@@ -107,6 +120,7 @@ export function useChatPage() {
 		setEditText,
 		send,
 		revise,
+		regenerate,
 		loadPresets,
 		onSearchInput,
 		gotoHit,

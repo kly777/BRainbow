@@ -1,7 +1,7 @@
 // ── 对话页：AI 多轮对话（树状分支 / 修订 / 搜索 / 预设提示词） ──
 
 import { Markdown as MarkdownRenderer } from "@components/ui";
-import { tryOrNotify } from "@lib/utils";
+import { notifyError, notifySuccess, tryOrNotify } from "@lib/utils";
 import type { ChatNode, ChatTree } from "@modules/chat";
 import { createSignal, For, onMount, Show } from "solid-js";
 import { updateTreeE } from "./api.ts";
@@ -134,12 +134,13 @@ export default function ChatPage() {
 									input={c.input}
 									onInput={c.setInput}
 									onSend={() => void c.send()}
+									onStop={() => c.stopStreaming()}
 									placeholder={() =>
 										c.focusId() === null
 											? "开始对话…（Enter 发送，Shift+Enter 换行）"
 											: "继续对话…（将追加到当前消息之后）"
 									}
-									sendLabel={() => (c.sending() ? "发送中…" : "发送")}
+									sendLabel={() => "发送"}
 								/>
 							</div>
 						</>
@@ -309,6 +310,15 @@ function TreeHeader(props: {
 
 // ── 单条消息 ──
 
+async function copyNode(node: ChatNode) {
+	try {
+		await navigator.clipboard.writeText(node.content);
+		notifySuccess("已复制");
+	} catch {
+		notifyError("复制失败");
+	}
+}
+
 function MessageRow(props: {
 	c: ReturnType<typeof useChatPage>;
 	node: ChatNode;
@@ -332,6 +342,25 @@ function MessageRow(props: {
 			timeFirst
 			actions={
 				<Show when={!streaming()}>
+					<button
+						type="button"
+						class={styles.msgBtn}
+						title="复制内容"
+						onClick={() => void copyNode(node)}
+					>
+						复制
+					</button>
+					<Show when={!isUser}>
+						<button
+							type="button"
+							class={styles.msgBtn}
+							title="重新生成（作为新分支，原回复保留）"
+							disabled={c.sending()}
+							onClick={() => void c.regenerate(node.id)}
+						>
+							重新生成
+						</button>
+					</Show>
 					<button
 						type="button"
 						class={styles.msgBtn}
@@ -365,6 +394,7 @@ function MessageRow(props: {
 						<ThinkingBlock
 							styles={styles}
 							reasoning={() => node.reasoning}
+							done={() => !!node.content}
 							open={streaming()}
 						/>
 						<Show

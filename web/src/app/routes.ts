@@ -1,4 +1,5 @@
-import { NAV_ITEMS, PATHS } from "@app/config";
+import { NAV_ITEMS } from "@config/navigation";
+import { PATHS } from "@config/paths";
 import type { RouteDefinition } from "@solidjs/router";
 import { useLocation } from "@solidjs/router";
 import { type Component, createEffect, lazy, onCleanup } from "solid-js";

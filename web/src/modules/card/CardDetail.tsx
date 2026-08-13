@@ -1,10 +1,10 @@
-import { PATHS } from "@app/config";
 import {
 	AsyncView,
 	Button,
 	Markdown as MarkdownRenderer,
 	Toolbar,
 } from "@components/ui";
+import { PATHS } from "@config/paths";
 import { showConfirm, tryOrNotify } from "@lib/utils";
 import { deleteCardE, getCardE } from "@modules/card";
 import { useNavigate, useParams } from "@solidjs/router";

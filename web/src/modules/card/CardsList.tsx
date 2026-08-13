@@ -1,4 +1,4 @@
-import { PATHS } from "@app/config";
+import { PATHS } from "@config/paths";
 // ── 卡片列表页面（薄壳视图层）──
 
 import { Button, Markdown as MarkdownRenderer } from "@components/ui";

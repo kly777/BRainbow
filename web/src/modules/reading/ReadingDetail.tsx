@@ -1,4 +1,4 @@
-import { PATHS } from "@app/config";
+import { PATHS } from "@config/paths";
 // ── 阅读详情页面（薄壳视图层）──
 
 import { getErrorMessage } from "@lib/api";

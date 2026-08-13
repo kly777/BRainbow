@@ -1,4 +1,4 @@
-import { PATHS } from "@app/config";
+import { PATHS } from "@config/paths";
 // ── 记忆复习页 v2 ──
 // 全新布局设计：全局头 + 上下文条 + 过滤 + 沉浸式卡片区
 // 业务逻辑全部复用 useMemReview，此处只做组合与交互增强

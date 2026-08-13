@@ -1,4 +1,5 @@
-import { NAV_ROUTES, PATHS } from "@app/config";
+import { NAV_ROUTES } from "@config/navigation";
+import { PATHS } from "@config/paths";
 import { AUTH_REQUIRED_EVENT } from "@lib/api";
 import { openAiSettings } from "@modules/ai-setting";
 import { useAuth } from "@modules/auth";

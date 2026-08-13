@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import solid from "vite-plugin-solid";
-import { NAV_ITEMS } from "./src/app/navigation.ts";
+import { NAV_ITEMS } from "./src/config/navigation.ts";
 
 // ═══════════════════════════════════════════
 // SEO/Agent 产物构建插件（数据源自 NAV_ITEMS + VITE_SITE_URL，路由变更自动同步）
@@ -149,6 +149,7 @@ export default defineConfig(({ command, mode }) => {
 					new URL("./src/components", import.meta.url),
 				),
 				"@lib": fileURLToPath(new URL("./src/lib", import.meta.url)),
+				"@config": fileURLToPath(new URL("./src/config", import.meta.url)),
 			},
 		},
 

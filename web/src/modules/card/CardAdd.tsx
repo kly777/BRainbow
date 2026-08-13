@@ -1,6 +1,6 @@
-import { PATHS } from "@app/config";
 import { MarkdownEditor } from "@components";
 import { Button, Toolbar } from "@components/ui";
+import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@lib/api";
 import { tryAsync } from "@lib/utils";
 import type { CreateCardRequest } from "@modules/card";

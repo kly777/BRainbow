@@ -1,5 +1,6 @@
-import { NAV_ITEMS, PATHS } from "@app/config";
 import { AsyncView } from "@components/ui";
+import { NAV_ITEMS } from "@config/navigation";
+import { PATHS } from "@config/paths";
 import { showConfirm, tryOrNotify } from "@lib/utils";
 import type { CardData } from "@modules/card";
 import {

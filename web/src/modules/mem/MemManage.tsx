@@ -1,4 +1,4 @@
-import { PATHS } from "@app/config";
+import { PATHS } from "@config/paths";
 // ── 记忆管理 v2：档案柜 ──
 // 清单表格 = 档案索引 · 详情面板 = 档案卡
 // 业务逻辑复用 useMemManage，此处只做视图层

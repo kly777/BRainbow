@@ -1,10 +1,10 @@
-import { PATHS } from "@app/config";
 import { MarkdownEditor } from "@components";
 import {
 	AsyncView,
 	Button,
 	Markdown as MarkdownRenderer,
 } from "@components/ui";
+import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@lib/api";
 import { showConfirm, tryAsync, tryOrNotify } from "@lib/utils";
 import type { UpdateCardRequest } from "@modules/card";

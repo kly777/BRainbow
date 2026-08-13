@@ -1,4 +1,4 @@
-import { PATHS } from "@app/config";
+import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@lib/api";
 import { notifyError, tryAsync } from "@lib/utils";
 import type { ArticleSummary } from "@modules/reading";

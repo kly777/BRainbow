@@ -1,4 +1,4 @@
-import { PATHS } from "@app/config";
+import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@lib/api";
 import { strParam, useUrlParams } from "@lib/utils";
 import type { ConvHit } from "@modules/conv";

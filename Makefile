@@ -9,14 +9,15 @@ DEPLOY_SCRIPT := scripts/deploy.sh
 
 # 用 make 并行目标跑后端/前端：Ctrl+C 时 make 会给所有并行 job 发信号并等待清理
 # （cargo-watch 8.x 收到 SIGINT 会用进程组清理 cargo run/brainbow）
+# -s 抑制 make 自身的输出（Entering directory/配方回显），job 的实际输出照常显示
 dev:
-	$(MAKE) -j2 dev-backend dev-web
+	@$(MAKE) -s -j2 dev-backend dev-web
 
 dev-backend:
-	cargo-watch -x run --ignore web --ignore build --ignore $(BUILD_DIR)
+	@MAKEFLAGS= cargo-watch -x run --ignore web --ignore build --ignore $(BUILD_DIR)
 
 dev-web:
-	cd web && pnpm run dev
+	@cd web && pnpm run dev
 
 fmt:
 	cargo fmt

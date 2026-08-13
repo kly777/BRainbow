@@ -1,0 +1,22 @@
+[Unit]
+Description=Brainbow Application
+After=network.target
+
+[Service]
+Type=simple
+User=@@REMOTE_USER@@
+WorkingDirectory=@@SERVICE_DIR@@
+ExecStart=@@SERVICE_DIR@@/brainbow
+Restart=on-failure
+RestartSec=5
+MemoryMax=1024M
+CPUQuota=80%
+Environment="RUST_LOG=info"
+Environment="SERVICE_PORT=@@SERVICE_PORT@@"
+Environment="BIND_HOST=@@BIND_HOST@@"
+Environment="DATABASE_URL=@@DATABASE_URL@@"
+Environment="MEM_CONFIG_PATH=@@MEM_CONFIG_PATH@@"
+Environment="CORS_ALLOW_ORIGIN=@@CORS_ALLOW_ORIGIN@@"
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,82 @@
+# Caddy 配置模板（占位符由 deploy.sh 用 .env.prod 渲染后同步到远端）
+
+@@DOMAIN@@ {
+	encode gzip zstd
+
+	# ── 安全响应头（site 级，覆盖所有响应） ──
+	header {
+		# 强制 HTTPS（浏览器记住后拒绝明文连接）
+		Strict-Transport-Security "max-age=31536000"
+		# 禁止 iframe 嵌入（clickjacking）
+		X-Frame-Options "DENY"
+		# 弹窗隔离（reverse tabnabbing）
+		Cross-Origin-Opener-Policy "same-origin"
+		# XSS 防线：白名单管控加载来源
+		# - 'unsafe-inline'：index.html 内联错误处理脚本 + 内联 style
+		# - 'unsafe-eval'：Cloudflare Rocket Loader 延迟执行脚本所需
+		#   （若在 CF 面板关闭 Rocket Loader 可移除）
+		# - static.cloudflareinsights.com：CF Web Analytics beacon
+		# - img https:：Markdown 里可能引用外部图片
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+	}
+
+	handle /uploads/* {
+		reverse_proxy localhost:@@SERVICE_PORT@@
+	}
+	handle /api/* {
+		reverse_proxy localhost:@@SERVICE_PORT@@
+	}
+
+	# hash 文件名资源：不存在直接 404（绝不 fallback 成 HTML，
+	# 否则会被 CF/浏览器以 immutable 缓存，导致 MIME 错误白屏）
+	handle /assets/* {
+		root * @@DIST_DIR@@
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# RFC 9727 API Catalog：无扩展名文件需显式 Content-Type
+	handle /.well-known/api-catalog {
+		root * @@DIST_DIR@@
+		header Content-Type "application/linkset+json"
+		header Cache-Control "no-cache"
+		file_server
+	}
+
+	# ── Markdown for Agents：Accept: text/markdown 协商返回对应页面的 markdown ──
+	# markdown 文件由前端构建时生成（dist/_md/<path>.md），路由变更自动同步
+	@md-home {
+		header Accept *text/markdown*
+		path /
+	}
+	handle @md-home {
+		root * @@DIST_DIR@@
+		rewrite * /_md/index.md
+		header Content-Type "text/markdown; charset=utf-8"
+		header Cache-Control "no-cache"
+		header Vary Accept
+		file_server
+	}
+	@md-page {
+		header Accept *text/markdown*
+		not path /
+	}
+	handle @md-page {
+		root * @@DIST_DIR@@
+		rewrite * /_md{path}.md
+		header Content-Type "text/markdown; charset=utf-8"
+		header Cache-Control "no-cache"
+		header Vary Accept
+		file_server
+	}
+
+	# SPA：所有非 asset 路径统一 no-cache（html/robots/favicon/SPA fallback，
+	# 避免 CF 缓存旧 index.html 导致部署后引用失效资产）
+	handle {
+		root * @@DIST_DIR@@
+		try_files {path} /index.html
+		file_server
+
+		header Cache-Control "no-cache"
+	}
+}

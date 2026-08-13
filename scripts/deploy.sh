@@ -75,6 +75,12 @@ load_config() {
     BACKUP_DIR="$REMOTE_DIR/backup"
     BACKUP_RETAIN_DAYS="${BACKUP_RETAIN_DAYS:-30}"
     BACKUP_RETAIN_COUNT="${BACKUP_RETAIN_COUNT:-20}"
+
+    # 模板渲染用的默认值（.env.prod 可覆盖）
+    DOMAIN="${DOMAIN:-brainbow.top}"
+    DATABASE_URL="${DATABASE_URL:-sqlite:$DATA_DIR/$DATABASE_FILE}"
+    MEM_CONFIG_PATH="${MEM_CONFIG_PATH:-$DATA_DIR/mem_config.json}"
+
     SSH_CMD="ssh -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
     SCP_CMD="scp -P $REMOTE_PORT"
     RSYNC_CMD="rsync -avz -e \"ssh -p $REMOTE_PORT\""
@@ -331,43 +337,51 @@ cmd_deploy() {
     # Step 8: 等待服务就绪
     wait_for_ready
 
-    # Step 9: 重载 Caddy
-    log_info "重载 Caddy..."
-    remote "sudo systemctl reload caddy 2>/dev/null || sudo systemctl restart caddy" && \
-        log_done "Caddy 已重载" || log_warn "Caddy 重载失败"
+    # Step 9: 同步 Caddy 配置并重载
+    if sync_caddyfile; then
+        log_info "重载 Caddy..."
+        remote "sudo systemctl reload caddy 2>/dev/null || sudo systemctl restart caddy" && \
+            log_done "Caddy 已重载" || log_warn "Caddy 重载失败"
+    else
+        log_warn "跳过 Caddy 重载（配置校验失败）"
+    fi
 
     echo ""
     log_done "部署完成"
 }
 
 setup_systemd() {
-    log_info "更新 systemd 服务..."
-    remote "\
-        sudo tee /etc/systemd/system/$APP_NAME.service > /dev/null << 'SERVICE'
-[Unit]
-Description=Brainbow Application
-After=network.target
+    log_info "更新 systemd 服务（模板 deploy/brainbow.service）..."
+    # 本地渲染模板（@@VAR@@ 占位符替换为 .env.prod 值）后同步到远端
+    sed -e "s|@@REMOTE_USER@@|$REMOTE_USER|g" \
+        -e "s|@@SERVICE_DIR@@|$SERVICE_DIR|g" \
+        -e "s|@@SERVICE_PORT@@|$SERVICE_PORT|g" \
+        -e "s|@@BIND_HOST@@|$BIND_HOST|g" \
+        -e "s|@@DATABASE_URL@@|$DATABASE_URL|g" \
+        -e "s|@@MEM_CONFIG_PATH@@|$MEM_CONFIG_PATH|g" \
+        -e "s|@@CORS_ALLOW_ORIGIN@@|$CORS_ALLOW_ORIGIN|g" \
+        "$PROJECT_DIR/deploy/brainbow.service" > /tmp/brainbow.service
+    scp -P "$REMOTE_PORT" /tmp/brainbow.service "$REMOTE_USER@$REMOTE_HOST:/tmp/brainbow.service"
+    remote "sudo tee /etc/systemd/system/$APP_NAME.service < /tmp/brainbow.service > /dev/null"
+    rm -f /tmp/brainbow.service
+}
 
-[Service]
-Type=simple
-User=$REMOTE_USER
-WorkingDirectory=$SERVICE_DIR
-ExecStart=$SERVICE_DIR/brainbow
-Restart=on-failure
-RestartSec=5
-MemoryMax=1024M
-CPUQuota=80%
-Environment=\"RUST_LOG=info\"
-Environment=\"SERVICE_PORT=$SERVICE_PORT\"
-Environment=\"BIND_HOST=$BIND_HOST\"
-Environment=\"DATABASE_URL=sqlite:$DATA_DIR/$DATABASE_FILE\"
-Environment=\"MEM_CONFIG_PATH=$DATA_DIR/mem_config.json\"
-Environment=\"CORS_ALLOW_ORIGIN=$CORS_ALLOW_ORIGIN\"
-
-[Install]
-WantedBy=multi-user.target
-SERVICE
-" > /dev/null 2>&1
+sync_caddyfile() {
+    log_info "同步 Caddy 配置（模板 deploy/Caddyfile）..."
+    # 本地渲染模板（@@VAR@@ 占位符替换为 .env.prod 值）
+    sed -e "s|@@DOMAIN@@|$DOMAIN|g" \
+        -e "s|@@SERVICE_PORT@@|$SERVICE_PORT|g" \
+        -e "s|@@DIST_DIR@@|$SERVICE_DIR/dist|g" \
+        "$PROJECT_DIR/deploy/Caddyfile" > /tmp/Caddyfile
+    scp -P "$REMOTE_PORT" /tmp/Caddyfile "$REMOTE_USER@$REMOTE_HOST:/tmp/Caddyfile.new"
+    rm -f /tmp/Caddyfile
+    remote "sudo tee /etc/caddy/Caddyfile < /tmp/Caddyfile.new > /dev/null"
+    if remote "timeout 10 caddy validate --config /etc/caddy/Caddyfile 2>&1" | grep -q "Valid configuration"; then
+        log_done "Caddy 配置有效"
+    else
+        log_error "Caddy 配置校验失败，保留旧配置运行"
+        return 1
+    fi
 }
 
 wait_for_ready() {

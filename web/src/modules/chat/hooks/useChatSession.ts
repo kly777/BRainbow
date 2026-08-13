@@ -3,7 +3,12 @@
 // 两者差异（提示词、AI 输出处理）由各自页面的 hook 组合实现。
 
 import { getErrorMessage, getToken } from "@lib/api";
-import { tryAsync, tryOrNotify } from "@lib/utils";
+import {
+	confirmAndRun,
+	notifySuccess,
+	tryAsync,
+	tryOrNotify,
+} from "@lib/utils";
 import type { ChatNode, ChatTree, TreeDetail } from "@modules/chat";
 import { createTreeE, deleteTreeE, getTreeE, listTreesE } from "@modules/chat";
 import { useNavigate, useSearchParams } from "@solidjs/router";
@@ -170,8 +175,18 @@ export function useChatSession(opts: ChatSessionOptions) {
 	};
 
 	const removeSession = async (id: number) => {
-		const ok = await tryOrNotify(() => deleteTreeE(id), "删除会话");
+		// 确认后删除；confirmAndRun 成功返回 true（不受 deleteTreeE 返回 undefined 影响）
+		const ok = await confirmAndRun(
+			{
+				title: "删除会话",
+				message: "确定删除该对话？删除后不可恢复。",
+				variant: "danger",
+			},
+			() => deleteTreeE(id),
+			"删除会话",
+		);
 		if (!ok) return;
+		notifySuccess("已删除");
 		setTrees((prev) => prev.filter((t) => t.id !== id));
 		if (treeId() === id) {
 			const next = trees().find((t) => t.id !== id);

@@ -18,6 +18,8 @@ web/dist
 .env.deploy
 .env.local
 .env*
+!.env.dev.example
+!.env.prod.example
 
 *.log
 logs/
@@ -31,3 +33,7 @@ build/
 
 # ui-inspect 工具的浏览器驱动依赖（playwright-core 内嵌副本）
 web/scripts/vendor/
+
+AGENTS.md
+opencode.json
+.*

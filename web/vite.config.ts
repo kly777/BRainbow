@@ -40,6 +40,10 @@ export default defineConfig(({ command, mode }) => {
 	);
 	// 开发服务器端口与后端代理目标（VITE_PORT / VITE_API_TARGET）
 	const port = Number(env.VITE_PORT ?? 3001);
+	// 配置 fail-fast：端口非法时立即报错，而不是静默回退
+	if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+		throw new Error(`VITE_PORT 无效: ${env.VITE_PORT}`);
+	}
 	const apiTarget = env.VITE_API_TARGET ?? "http://localhost:3000";
 
 	return {

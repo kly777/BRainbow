@@ -177,6 +177,50 @@ const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 		});
 	});
 
+	// 代码块增强：语言标签 + 复制按钮（流式内容变化时重新处理，已增强的跳过）
+	createEffect(() => {
+		html();
+		const div = divRef;
+		if (!div) return;
+		const cleanups: Array<() => void> = [];
+		for (const pre of div.querySelectorAll<HTMLPreElement>(
+			"pre:not(.md-code-enhanced)",
+		)) {
+			const code = pre.querySelector("code");
+			if (!code) continue;
+			pre.classList.add("md-code-enhanced");
+
+			const bar = document.createElement("div");
+			bar.className = "md-code-bar";
+			const lang = [...code.classList]
+				.find((c) => c.startsWith("language-"))
+				?.slice(9);
+			if (lang) {
+				const label = document.createElement("span");
+				label.className = "md-code-lang";
+				label.textContent = lang;
+				bar.appendChild(label);
+			}
+			const btn = document.createElement("button");
+			btn.type = "button";
+			btn.className = "md-code-copy";
+			btn.textContent = "复制";
+			const onCopy = () => {
+				void navigator.clipboard.writeText(code.textContent ?? "").then(() => {
+					btn.textContent = "✓ 已复制";
+					setTimeout(() => (btn.textContent = "复制"), 1500);
+				});
+			};
+			btn.addEventListener("click", onCopy);
+			bar.appendChild(btn);
+			pre.prepend(bar);
+			cleanups.push(() => btn.removeEventListener("click", onCopy));
+		}
+		onCleanup(() => {
+			for (const c of cleanups) c();
+		});
+	});
+
 	return (
 		<div
 			ref={divRef}

@@ -108,6 +108,53 @@
 	margin: 1em 0;
 }
 
+/* 代码块增强：顶部工具条（语言标签 + 复制） */
+.markdown-content pre.md-code-enhanced {
+	padding-top: 0;
+}
+
+.markdown-content pre.md-code-enhanced .md-code-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-sm);
+	position: sticky;
+	left: 0;
+	margin-bottom: 0.75em;
+	padding: 0.35em 0;
+	border-bottom: 1px solid var(--t-color-border);
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+		Arial, sans-serif;
+}
+
+.markdown-content .md-code-lang {
+	font-size: 0.75em;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: lowercase;
+	color: var(--t-color-ink-faint);
+}
+
+.markdown-content .md-code-copy {
+	border: none;
+	background: none;
+	padding: 0.2em 0.5em;
+	font-size: 0.75em;
+	line-height: 1;
+	color: var(--t-color-ink-muted);
+	border-radius: var(--radius-xs);
+	cursor: pointer;
+	transition:
+		color var(--t-transition-fast),
+		background var(--t-transition-fast);
+}
+
+.markdown-content .md-code-copy:hover {
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+}
+
 .markdown-content pre code {
 	padding: 0;
 	background-color: transparent;

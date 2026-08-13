@@ -18,14 +18,25 @@ export function Composer(props: {
 }) {
 	const { styles } = props;
 
+	/** textarea 自动增高（1 行 → max-height），超限滚动 */
+	const autoGrow = (el: HTMLTextAreaElement) => {
+		el.style.height = "auto";
+		const max = parseInt(getComputedStyle(el).maxHeight, 10) || 160;
+		el.style.height = `${Math.min(el.scrollHeight, max)}px`;
+	};
+
 	return (
 		<div class={styles.inputBar}>
 			<div class={styles.inputShell}>
 				<textarea
+					ref={(el) => requestAnimationFrame(() => autoGrow(el))}
 					class={styles.inputArea}
 					placeholder={props.placeholder()}
 					value={props.input()}
-					onInput={(e) => props.onInput(e.currentTarget.value)}
+					onInput={(e) => {
+						props.onInput(e.currentTarget.value);
+						autoGrow(e.currentTarget);
+					}}
 					onKeyDown={(e) => {
 						if (e.key === "Enter" && !e.shiftKey) {
 							e.preventDefault();

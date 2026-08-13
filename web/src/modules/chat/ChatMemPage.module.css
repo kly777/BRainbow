@@ -645,6 +645,53 @@
 	}
 }
 
+/* AI 思考占位：推理模型输出前显示脉冲动画 */
+.thinking {
+	display: inline-block;
+	color: var(--t-color-ink-faint);
+	font-size: var(--text-sm);
+	animation: thinking-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes thinking-pulse {
+	0%,
+	100% {
+		opacity: 0.35;
+	}
+
+	50% {
+		opacity: 1;
+	}
+}
+
+/* 思考过程折叠块 */
+.thinking-block {
+	margin: var(--space-sm) 0;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-surface);
+}
+
+.thinking-summary {
+	padding: var(--space-xs) var(--space-sm);
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+	cursor: pointer;
+	user-select: none;
+}
+
+.thinking-body {
+	margin: 0;
+	padding: var(--space-sm);
+	border-top: 1px solid var(--t-color-border);
+	max-height: 12rem;
+	overflow: auto;
+	font-size: var(--text-xs);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	color: var(--t-color-ink-soft);
+}
+
 @media (width <= 768px) {
 	.sidebar {
 		width: 200px;

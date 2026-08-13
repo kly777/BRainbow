@@ -9,6 +9,7 @@ import styles from "./ChatPage.module.css";
 import { BranchBar } from "./components/BranchBar.tsx";
 import { Composer } from "./components/Composer.tsx";
 import { MessageShell } from "./components/MessageShell.tsx";
+import { ThinkingBlock } from "./components/ThinkingBlock.tsx";
 import { useChatPage } from "./hooks/useChatPage.ts";
 
 export default function ChatPage() {
@@ -126,7 +127,6 @@ export default function ChatPage() {
 								<Composer
 									styles={styles}
 									sending={c.sending}
-									streamingContent={c.streamingContent}
 									input={c.input}
 									onInput={c.setInput}
 									onSend={() => void c.send()}
@@ -313,29 +313,36 @@ function MessageRow(props: {
 	const isFocused = () => c.focusId() === node.id;
 	const children = () => c.childrenOf(node.id);
 	const isUser = node.role === "user";
+	/** 临时节点（负数 id）= 乐观插入中：AI 正在流式生成 */
+	const streaming = () =>
+		node.id < 0 && node.role === "assistant" && c.sending();
 
 	return (
 		<MessageShell
 			styles={styles}
 			node={node}
 			rowClass={isFocused() ? styles.focused : undefined}
-			headExtra={node.revised_from !== null ? " · 修订" : ""}
+			headExtra={
+				streaming() ? " · 生成中…" : node.revised_from !== null ? " · 修订" : ""
+			}
 			timeFirst
 			actions={
-				<button
-					type="button"
-					class={styles.msgBtn}
-					title="修订此消息（原版保留）"
-					onClick={() => {
-						c.setEditText(node.content);
-						c.setEditingNode(node);
-					}}
-				>
-					修订
-				</button>
+				<Show when={!streaming()}>
+					<button
+						type="button"
+						class={styles.msgBtn}
+						title="修订此消息（原版保留）"
+						onClick={() => {
+							c.setEditText(node.content);
+							c.setEditingNode(node);
+						}}
+					>
+						修订
+					</button>
+				</Show>
 			}
 			footer={
-				<Show when={children().length > 1}>
+				<Show when={!streaming() && children().length > 1}>
 					<BranchBar
 						styles={styles}
 						children={children()}
@@ -351,7 +358,20 @@ function MessageRow(props: {
 					node.content
 				) : (
 					<div class={styles.messageMd}>
-						<MarkdownRenderer content={node.content} />
+						<ThinkingBlock
+							styles={styles}
+							reasoning={() => node.reasoning}
+							open={streaming()}
+						/>
+						<Show
+							when={node.content}
+							fallback={<span class={styles.thinking}>思考中…</span>}
+						>
+							<MarkdownRenderer content={node.content} />
+						</Show>
+						<Show when={streaming()}>
+							<span class={styles.streamCursor} />
+						</Show>
 					</div>
 				)}
 			</div>

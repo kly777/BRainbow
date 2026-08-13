@@ -121,7 +121,7 @@ impl AiService {
         temperature: Option<f32>,
         max_tokens: Option<i32>,
     ) -> Result<(String, String), ServiceError> {
-        let (content, model, _) = self
+        let (content, model, _, _) = self
             .chat_stream(user_id, messages, temperature, max_tokens, None)
             .await?;
         Ok((content, model))
@@ -136,7 +136,7 @@ impl AiService {
         temperature: Option<f32>,
         max_tokens: Option<i32>,
         tx: Option<tokio::sync::mpsc::Sender<String>>,
-    ) -> Result<(String, String, bool), ServiceError> {
+    ) -> Result<(String, String, Option<String>, bool), ServiceError> {
         let cfg = self.get_config(user_id).await?.ok_or_else(|| {
             ServiceError::InvalidInput("请先在 AI 设置中配置 API 地址与 Key".into())
         })?;
@@ -188,6 +188,7 @@ impl AiService {
                         use eventsource_stream::{Event, Eventsource};
                         use futures_util::StreamExt;
                         let mut full = String::new();
+                        let mut reasoning_full = String::new();
                         let mut stream = resp.bytes_stream().eventsource();
                         while let Some(evt) = stream.next().await {
                             let evt = match evt {
@@ -210,13 +211,26 @@ impl AiService {
                                 .get("choices")
                                 .and_then(|c| c.get(0))
                                 .and_then(|c| c.get("delta"))
-                                .and_then(|d| d.get("content"))
-                                .and_then(|c| c.as_str())
                             {
-                                full.push_str(delta);
-                                if tx.send(delta.to_string()).await.is_err() {
-                                    // 接收端关闭（客户端断开），停止推送但保留已收内容
-                                    break;
+                                // 推理内容（如 deepseek 的 reasoning_content）：单独前缀推送，前端可折叠展示
+                                if let Some(r) = delta
+                                    .get("reasoning_content")
+                                    .and_then(|c| c.as_str())
+                                {
+                                    if !r.is_empty() {
+                                        reasoning_full.push_str(r);
+                                        if tx.send(format!("__R__:{r}")).await.is_err() {
+                                            break;
+                                        }
+                                    }
+                                }
+                                if let Some(delta) = delta.get("content").and_then(|c| c.as_str())
+                                {
+                                    full.push_str(delta);
+                                    if tx.send(delta.to_string()).await.is_err() {
+                                        // 接收端关闭（客户端断开），停止推送但保留已收内容
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -224,7 +238,9 @@ impl AiService {
                         if content.is_empty() {
                             return Err(ServiceError::Internal("AI 流式响应缺少回复内容".into()));
                         }
-                        return Ok((content, cfg.model.clone(), true));
+                        let reasoning = reasoning_full.trim().to_string();
+                        let reasoning = (!reasoning.is_empty()).then_some(reasoning);
+                        return Ok((content, cfg.model.clone(), reasoning, true));
                     } else {
                         // 非流式
                         let data: serde_json::Value = resp
@@ -240,7 +256,15 @@ impl AiService {
                             .map(|s| s.trim().to_string())
                             .filter(|s| !s.is_empty())
                             .ok_or_else(|| ServiceError::Internal("AI 响应缺少回复内容".into()))?;
-                        return Ok((content, cfg.model.clone(), false));
+                        let reasoning = data
+                            .get("choices")
+                            .and_then(|c| c.get(0))
+                            .and_then(|c| c.get("message"))
+                            .and_then(|m| m.get("reasoning_content"))
+                            .and_then(|c| c.as_str())
+                            .map(|s| s.trim().to_string())
+                            .filter(|s| !s.is_empty());
+                        return Ok((content, cfg.model.clone(), reasoning, false));
                     }
                 }
                 Err(e) => {

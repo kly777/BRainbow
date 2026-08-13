@@ -561,6 +561,18 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
+    // 迁移：为 chat_node 添加 reasoning 列（AI 推理思考内容）
+    if !column_exists(pool, "chat_node", "reasoning").await? {
+        sqlx::query("ALTER TABLE chat_node ADD COLUMN reasoning TEXT")
+            .execute(pool)
+            .await
+            .map_err(|e| {
+                sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
+                    "迁移失败: 无法为 chat_node 添加 reasoning 列: {e}"
+                ))))
+            })?;
+    }
+
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS prompt_preset (

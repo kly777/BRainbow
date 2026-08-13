@@ -136,9 +136,9 @@ pub async fn chat_handler(
             .chat_stream(user_id, &ctx2.messages, None, None, Some(tx2))
             .await;
         match result {
-            Ok((full, _model, _)) => {
+            Ok((full, _model, reasoning, _)) => {
                 let _ = tx.send("__DONE__".to_string()).await;
-                let _ = svc2.finish_chat(&ctx2, &full).await;
+                let _ = svc2.finish_chat(&ctx2, &full, reasoning.as_deref()).await;
             }
             Err(e) => {
                 let _ = tx.send(format!("__ERROR__:{e}")).await;

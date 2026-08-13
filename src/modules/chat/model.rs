@@ -19,6 +19,9 @@ pub struct NodeItem {
     pub role: String,
     pub content: String,
     pub revised_from: Option<i64>,
+    /// AI 推理思考内容（reasoning_content）
+    #[serde(default)]
+    pub reasoning: Option<String>,
     pub created_at: String,
 }
 

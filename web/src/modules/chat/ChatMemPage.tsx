@@ -12,6 +12,7 @@ import styles from "./ChatMemPage.module.css";
 import { BranchBar } from "./components/BranchBar.tsx";
 import { Composer } from "./components/Composer.tsx";
 import { MessageShell } from "./components/MessageShell.tsx";
+import { ThinkingBlock } from "./components/ThinkingBlock.tsx";
 import { useChatMem } from "./hooks/useChatMem.ts";
 
 export default function ChatMemPage() {
@@ -106,7 +107,6 @@ export default function ChatMemPage() {
 								<Composer
 									styles={styles}
 									sending={c.sending}
-									streamingContent={c.streamingContent}
 									input={c.input}
 									onInput={c.setInput}
 									onSend={() => void c.send()}
@@ -180,13 +180,17 @@ function MessageRow(props: {
 	const isUser = node.role === "user";
 	const cards = c.parseCards(node.content);
 	const [showRaw, setShowRaw] = createSignal(false);
+	/** 临时节点（负数 id）= 乐观插入中：AI 正在流式生成 */
+	const streaming = () =>
+		node.id < 0 && node.role === "assistant" && c.sending();
 
 	return (
 		<MessageShell
 			styles={styles}
 			node={node}
+			headExtra={streaming() ? " · 生成中…" : ""}
 			actions={
-				<Show when={!isUser}>
+				<Show when={!isUser && !streaming()}>
 					<button
 						type="button"
 						class={styles.msgBtn}
@@ -201,7 +205,7 @@ function MessageRow(props: {
 		>
 			{/* assistant + 可解析卡片 → 勾选清单 */}
 			<Show
-				when={!isUser && cards}
+				when={!isUser && !streaming() ? cards : null}
 				fallback={
 					<div class={isUser ? styles.userBubble : styles.assistantBubble}>
 						{isUser ? (
@@ -220,8 +224,24 @@ function MessageRow(props: {
 									/>
 								</Show>
 							</div>
+						) : streaming() ? (
+							// 流式期间：先显示思考动画，token 到达后实时渲染原始 JSON（零解析开销）
+							<div class={styles.messageMd}>
+								<Show
+									when={node.content}
+									fallback={<span class={styles.thinking}>思考中…</span>}
+								>
+									<pre class={styles.rawBox}>{node.content}</pre>
+								</Show>
+								<span class={styles.streamCursor} />
+							</div>
 						) : (
 							<div class={styles.messageMd}>
+								<ThinkingBlock
+									styles={styles}
+									reasoning={() => node.reasoning}
+									open={streaming()}
+								/>
 								<MarkdownRenderer content={node.content} />
 							</div>
 						)}

@@ -20,6 +20,8 @@ export interface ChatNode {
 	content: string;
 	revised_from: number | null;
 	created_at: string;
+	/** 推理思考内容（流式期间由临时节点携带，后端不落库） */
+	reasoning?: string;
 }
 
 export interface TreeDetail {

@@ -187,8 +187,29 @@ export function useChatSession(opts: ChatSessionOptions) {
 
 	// ── 流式对话 ──
 
-	/** 流式调用后端：AI 回复累积到 streamingContent，完成后重拉树。
-	 *  焦点与错误展示由调用方处理（两页面的输出对待方式不同）。 */
+	/** 创建本地临时节点（负数 id 标记乐观插入，完成后被真实节点替换） */
+	const makeTempNode = (
+		id: number,
+		parentId: number | null,
+		role: "user" | "assistant",
+		content: string,
+	): ChatNode => ({
+		id,
+		tree_id: treeId() ?? 0,
+		parent_id: parentId,
+		role,
+		content,
+		revised_from: null,
+		created_at: new Date().toISOString().slice(0, 19).replace("T", " "),
+	});
+
+	/**
+	 * 流式调用后端（乐观 UI）：
+	 * - content 非空：立即插入临时 user 节点（输入即刻显示，参照 LobeChat 模式）
+	 * - 插入空 assistant 临时节点，流式内容直接 patch 到它（消息流完整，不闪烁）
+	 * - 完成后重拉真实树替换临时节点（不清空 current，页面不闪）
+	 * - 失败：移除临时节点，返回错误
+	 */
 	const streamChat = async (
 		parentId: number | null,
 		content: string | null,
@@ -198,6 +219,48 @@ export function useChatSession(opts: ChatSessionOptions) {
 
 		const token = getToken();
 		if (!token) return { ok: false, error: "未登录" };
+
+		const ts = Date.now();
+		// 临时节点 id 用负数标记（页面以 node.id < 0 识别乐观插入态）
+		const tempUser = content ? -ts : null;
+		const tempAssistant = -ts - 1;
+		const tempIds = new Set(
+			[tempUser, tempAssistant].filter((n): n is number => n !== null),
+		);
+
+		// 乐观插入：user（若有）→ assistant（空内容，随流式累积）
+		setCurrent((prev) => {
+			if (!prev) return prev;
+			const next = [...prev.nodes];
+			if (tempUser !== null) {
+				next.push(makeTempNode(tempUser, parentId, "user", content ?? ""));
+			}
+			next.push(
+				makeTempNode(tempAssistant, tempUser ?? parentId, "assistant", ""),
+			);
+			return { ...prev, nodes: next };
+		});
+		// 聚焦到临时 assistant：让 activePath 立即包含新消息
+		setFocusParam(tempAssistant);
+		setStreamingContent("");
+
+		const patchAssistant = (text: string, reasoning = "") => {
+			setCurrent((prev) => {
+				if (!prev) return prev;
+				return {
+					...prev,
+					nodes: prev.nodes.map((n) =>
+						n.id === tempAssistant ? { ...n, content: text, reasoning } : n,
+					),
+				};
+			});
+		};
+		const rollback = () => {
+			setCurrent((prev) => {
+				if (!prev) return prev;
+				return { ...prev, nodes: prev.nodes.filter((n) => !tempIds.has(n.id)) };
+			});
+		};
 
 		try {
 			const resp = await fetch(`/api/chat/trees/${id}/chat`, {
@@ -212,7 +275,7 @@ export function useChatSession(opts: ChatSessionOptions) {
 			if (!resp.body) throw new Error("浏览器不支持流式响应");
 
 			let acc = "";
-			setStreamingContent("");
+			let reasoning = "";
 			const reader = resp.body.getReader();
 			const decoder = new TextDecoder();
 
@@ -238,18 +301,24 @@ export function useChatSession(opts: ChatSessionOptions) {
 						acc = data.slice(10);
 						break;
 					}
+					if (data.startsWith("__R__:")) {
+						reasoning += data.slice(6);
+						patchAssistant(acc, reasoning);
+						continue;
+					}
 					acc += data;
-					setStreamingContent(acc);
+					patchAssistant(acc, reasoning);
 				}
 			}
 
 			if (errored) throw new Error(acc || "AI 生成失败");
 
-			// 完成：重新拉取树（拿到真实节点 id 与结构）
-			setCurrent(null);
+			// 完成：重拉真实树替换临时节点（保持 current，不触发整页空态）。
+			// reasoning 已随节点入库，真实节点自带思考内容
 			await loadTree(id);
 			return { ok: true, error: "" };
 		} catch (e) {
+			rollback();
 			return { ok: false, error: getErrorMessage(e) };
 		} finally {
 			setStreamingContent("");

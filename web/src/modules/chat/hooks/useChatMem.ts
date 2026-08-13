@@ -2,7 +2,7 @@
 // 每个 mem 树 = 一次卡片生成会话；对话流存入 chat_node。
 // assistant 消息若为 JSON 卡片数组 → 渲染为可勾选清单，导入走 mem 导入管线。
 
-import { tryOrNotify } from "@lib/utils";
+import { notifySuccess, tryOrNotify } from "@lib/utils";
 import { listTreesByKindE } from "@modules/chat";
 import {
 	type AiCard,
@@ -29,7 +29,7 @@ export function useChatMem() {
 	/** 最近一次输入文本中的知识点期望数（用于覆盖度提示） */
 	const [expectedCount, setExpectedCount] = createSignal(0);
 
-	/** 发送新消息：挂到当前分支末端 → AI 生成/修订卡片 JSON */
+	/** 发送新消息：挂到当前分支末端 → AI 生成/修订卡片 JSON（乐观 UI 由 streamChat 提供） */
 	const send = async () => {
 		const id = s.treeId();
 		const text = s.input().trim();
@@ -39,46 +39,11 @@ export function useChatMem() {
 
 		// 挂载点：当前分支末端节点（null = 空树/根）
 		const parent = s.lastNode()?.id ?? null;
-
-		// 乐观插入 user 节点（临时负数 id），保证先显示用户消息，AI 流式内容随后
-		const tempId = -Date.now();
-		const now = new Date();
-		const localNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
-		s.setCurrent((prev) =>
-			prev
-				? {
-						...prev,
-						nodes: [
-							...prev.nodes,
-							{
-								id: tempId,
-								tree_id: id,
-								parent_id: parent,
-								role: "user",
-								content: text,
-								revised_from: null,
-								created_at: localNow,
-							},
-						],
-					}
-				: prev,
-		);
 		s.setInput("");
 		setExpectedCount(countKnowledgePoints(text));
 
 		const result = await s.streamChat(parent, text);
-		if (!result.ok) {
-			// 失败：移除乐观插入的 user 节点（后端已回滚），不回填输入框
-			setError(result.error);
-			s.setCurrent((prev) =>
-				prev
-					? {
-							...prev,
-							nodes: prev.nodes.filter((n) => n.id !== tempId),
-						}
-					: prev,
-			);
-		}
+		if (!result.ok) setError(result.error);
 		s.setSending(false);
 	};
 
@@ -172,7 +137,10 @@ export function useChatMem() {
 			"导入记忆",
 		);
 		setImporting(false);
-		if (result !== null) setImported(true);
+		if (result !== null) {
+			setImported(true);
+			notifySuccess(`已导入 ${rows.length} 张卡片`);
+		}
 	};
 
 	const resetImported = () => setImported(false);

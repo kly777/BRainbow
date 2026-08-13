@@ -14,7 +14,7 @@ pub struct ChatService {
 }
 
 /// chat_node 表的行类型（sqlx query_as 元组）
-type NodeRow = (i64, i64, Option<i64>, String, String, Option<i64>, String);
+type NodeRow = (i64, i64, Option<i64>, String, String, Option<i64>, Option<String>, String);
 
 impl ChatService {
     pub fn new(pool: SqlitePool) -> Self {
@@ -85,7 +85,7 @@ impl ChatService {
         };
 
         let nodes: Vec<NodeRow> = sqlx::query_as(
-            "SELECT id, tree_id, parent_id, role, content, revised_from, created_at
+            "SELECT id, tree_id, parent_id, role, content, revised_from, reasoning, created_at
              FROM chat_node WHERE tree_id = ?1 ORDER BY id",
         )
         .bind(tree_id)
@@ -103,7 +103,8 @@ impl ChatService {
                     role: n.3,
                     content: n.4,
                     revised_from: n.5,
-                    created_at: n.6,
+                    reasoning: n.6,
+                    created_at: n.7,
                 })
                 .collect(),
         }))
@@ -232,7 +233,7 @@ impl ChatService {
 
     async fn fetch_node(&self, node_id: i64) -> Result<Option<NodeItem>, ServiceError> {
         let row: Option<NodeRow> = sqlx::query_as(
-            "SELECT id, tree_id, parent_id, role, content, revised_from, created_at
+            "SELECT id, tree_id, parent_id, role, content, revised_from, reasoning, created_at
                  FROM chat_node WHERE id = ?1",
         )
         .bind(node_id)
@@ -245,7 +246,8 @@ impl ChatService {
             role: n.3,
             content: n.4,
             revised_from: n.5,
-            created_at: n.6,
+            reasoning: n.6,
+            created_at: n.7,
         }))
     }
 
@@ -256,15 +258,17 @@ impl ChatService {
         role: &str,
         content: &str,
         revised_from: Option<i64>,
+        reasoning: Option<&str>,
     ) -> Result<NodeItem, ServiceError> {
         let result = sqlx::query(
-            "INSERT INTO chat_node (tree_id, parent_id, role, content, revised_from) VALUES (?1, ?2, ?3, ?4, ?5)",
+            "INSERT INTO chat_node (tree_id, parent_id, role, content, revised_from, reasoning) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         )
         .bind(tree_id)
         .bind(parent_id)
         .bind(role)
         .bind(content)
         .bind(revised_from)
+        .bind(reasoning)
         .execute(&self.pool)
         .await?;
         self.fetch_node(result.last_insert_rowid())
@@ -332,7 +336,7 @@ impl ChatService {
                             .filter(|c| !c.is_empty())
                             .ok_or_else(|| ServiceError::InvalidInput("消息内容不能为空".into()))?;
                         let node = self
-                            .insert_node(tree_id, Some(pid), "user", &text, None)
+                            .insert_node(tree_id, Some(pid), "user", &text, None, None)
                             .await?;
                         (node.clone(), Some(node.id), Some(node.id))
                     } else {
@@ -346,7 +350,7 @@ impl ChatService {
                         .map(|c| c.trim().to_string())
                         .filter(|c| !c.is_empty())
                         .ok_or_else(|| ServiceError::InvalidInput("消息内容不能为空".into()))?;
-                    let node = self.insert_node(tree_id, None, "user", &text, None).await?;
+                    let node = self.insert_node(tree_id, None, "user", &text, None, None).await?;
                     (node.clone(), Some(node.id), Some(node.id))
                 }
             };
@@ -380,9 +384,10 @@ impl ChatService {
         &self,
         ctx: &PreparedChat,
         reply: &str,
+        reasoning: Option<&str>,
     ) -> Result<NodeItem, ServiceError> {
         let assistant = self
-            .insert_node(ctx.tree_id, ctx.ai_parent_id, "assistant", reply, None)
+            .insert_node(ctx.tree_id, ctx.ai_parent_id, "assistant", reply, None, reasoning)
             .await?;
         // 更新树的更新时间
         let _ = sqlx::query("UPDATE chat_tree SET updated_at = datetime('now') WHERE id = ?1")
@@ -436,6 +441,7 @@ impl ChatService {
                 &node.role,
                 content,
                 Some(node.id),
+                None,
             )
             .await?;
 
@@ -551,7 +557,7 @@ mod tests {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         sqlx::query("CREATE TABLE chat_tree (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, system_prompt TEXT NOT NULL DEFAULT '', kind TEXT NOT NULL DEFAULT 'chat', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
             .execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE chat_node (id INTEGER PRIMARY KEY AUTOINCREMENT, tree_id INTEGER NOT NULL, parent_id INTEGER, role TEXT NOT NULL CHECK (role IN ('user','assistant')), content TEXT NOT NULL, revised_from INTEGER, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        sqlx::query("CREATE TABLE chat_node (id INTEGER PRIMARY KEY AUTOINCREMENT, tree_id INTEGER NOT NULL, parent_id INTEGER, role TEXT NOT NULL CHECK (role IN ('user','assistant')), content TEXT NOT NULL, revised_from INTEGER, reasoning TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
             .execute(&pool).await.unwrap();
         ChatService::new(pool)
     }
@@ -652,11 +658,11 @@ mod tests {
 
         // 插入两个节点模拟历史（绕过 AI）
         let user = svc
-            .insert_node(tid, None, "user", "原问题", None)
+            .insert_node(tid, None, "user", "原问题", None, None)
             .await
             .unwrap();
         let _assistant = svc
-            .insert_node(tid, Some(user.id), "assistant", "原回答", None)
+            .insert_node(tid, Some(user.id), "assistant", "原回答", None, None)
             .await
             .unwrap();
 
@@ -701,7 +707,7 @@ mod tests {
             .await
             .unwrap();
         let tid = tree.tree.id;
-        let user = svc.insert_node(tid, None, "user", "q", None).await.unwrap();
+        let user = svc.insert_node(tid, None, "user", "q", None, None).await.unwrap();
         assert!(
             svc.revise_node(
                 2,
@@ -730,9 +736,9 @@ mod tests {
             .await
             .unwrap();
         let tid = tree.tree.id;
-        let user = svc.insert_node(tid, None, "user", "q", None).await.unwrap();
+        let user = svc.insert_node(tid, None, "user", "q", None, None).await.unwrap();
         let _a = svc
-            .insert_node(tid, Some(user.id), "assistant", "a", None)
+            .insert_node(tid, Some(user.id), "assistant", "a", None, None)
             .await
             .unwrap();
 
@@ -770,5 +776,47 @@ mod tests {
         // user 节点应被回滚
         let got = svc.get_tree(1, tid).await.unwrap().unwrap();
         assert_eq!(got.nodes.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn finish_chat_persists_reasoning() {
+        let svc = setup().await;
+        let tree = svc
+            .create_tree(
+                1,
+                CreateTreeRequest {
+                    title: "t".into(),
+                    system_prompt: "".into(),
+                    kind: None,
+                },
+            )
+            .await
+            .unwrap();
+        let tid = tree.tree.id;
+
+        let user = svc.insert_node(tid, None, "user", "q", None, None).await.unwrap();
+        let ctx = svc
+            .prepare_chat(1, tid, Some(user.id), None)
+            .await
+            .unwrap();
+        svc.finish_chat(&ctx, "回答内容", Some("推理过程内容"))
+            .await
+            .unwrap();
+
+        let got = svc.get_tree(1, tid).await.unwrap().unwrap();
+        let assistant = got.nodes.iter().find(|n| n.role == "assistant").unwrap();
+        assert_eq!(assistant.content, "回答内容");
+        assert_eq!(assistant.reasoning.as_deref(), Some("推理过程内容"));
+
+        // 无推理时落库为 None
+        let ctx2 = svc
+            .prepare_chat(1, tid, Some(assistant.id), Some("追问".into()))
+            .await
+            .unwrap();
+        svc.finish_chat(&ctx2, "再回答", None).await.unwrap();
+        let got = svc.get_tree(1, tid).await.unwrap().unwrap();
+        let last = got.nodes.last().unwrap();
+        assert_eq!(last.content, "再回答");
+        assert!(last.reasoning.is_none());
     }
 }

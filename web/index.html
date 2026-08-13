@@ -43,7 +43,7 @@
 
         <script>
             // 应用初始化失败兜底：仅当 app 容器尚未渲染任何内容时展示
-            (function () {
+            (() => {
                 function showError() {
                     const app = document.getElementById("app");
                     if (!app || app.childElementCount > 0) return;

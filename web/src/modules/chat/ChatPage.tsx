@@ -10,11 +10,15 @@ import { BranchBar } from "./components/BranchBar.tsx";
 import { Composer } from "./components/Composer.tsx";
 import { MessageShell } from "./components/MessageShell.tsx";
 import { ThinkingBlock } from "./components/ThinkingBlock.tsx";
+import { useAutoScroll } from "./hooks/useAutoScroll.ts";
 import { useChatPage } from "./hooks/useChatPage.ts";
 
 export default function ChatPage() {
 	const c = useChatPage();
 	const [sidebarCollapsed, setSidebarCollapsed] = createSignal(false);
+	let listRef: HTMLDivElement | undefined;
+	const autoScroll = useAutoScroll(() => listRef);
+	autoScroll.follow(() => c.activePath());
 
 	onMount(() => {
 		void c.loadTrees();
@@ -120,7 +124,7 @@ export default function ChatPage() {
 								{sidebarCollapsed() ? "☰" : "◀"}
 							</button>
 							<TreeHeader c={c} tree={cur().tree} />
-							<div class={styles.messageList}>
+							<div class={styles.messageList} ref={listRef}>
 								<For each={c.activePath()}>
 									{(node) => <MessageRow c={c} node={node} />}
 								</For>

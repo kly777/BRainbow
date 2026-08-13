@@ -13,10 +13,14 @@ import { BranchBar } from "./components/BranchBar.tsx";
 import { Composer } from "./components/Composer.tsx";
 import { MessageShell } from "./components/MessageShell.tsx";
 import { ThinkingBlock } from "./components/ThinkingBlock.tsx";
+import { useAutoScroll } from "./hooks/useAutoScroll.ts";
 import { useChatMem } from "./hooks/useChatMem.ts";
 
 export default function ChatMemPage() {
 	const c = useChatMem();
+	let listRef: HTMLDivElement | undefined;
+	const autoScroll = useAutoScroll(() => listRef);
+	autoScroll.follow(() => c.activePath());
 
 	onMount(() => void c.loadTrees());
 
@@ -100,7 +104,7 @@ export default function ChatMemPage() {
 								<h2 class={styles.headerTitle}>{cur().tree.title}</h2>
 								<ImportBar c={c} />
 							</div>
-							<div class={styles.messageList}>
+							<div class={styles.messageList} ref={listRef}>
 								<For each={c.activePath()}>
 									{(node) => <MessageRow c={c} node={node} />}
 								</For>

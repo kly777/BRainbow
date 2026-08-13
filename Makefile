@@ -3,7 +3,7 @@ BUILD_DIR := build
 -include .env.prod
 
 time := $(shell date +%y%m%d_%H%M%S)
-DEPLOY_SCRIPT := ./scripts/deploy.sh
+DEPLOY_SCRIPT := scripts/deploy.sh
 
 .PHONY: dev fmt build build-check build-web build-backend clean deploy deploy-web deploy-backend check status logs db-pull db-push rollback list-backups
 
@@ -18,14 +18,14 @@ fmt:
 	cd web && pnpm run fmt
 
 check:
-	./$(DEPLOY_SCRIPT) check
+	$(DEPLOY_SCRIPT) check
 
 build:
-	./$(DEPLOY_SCRIPT) build
+	$(DEPLOY_SCRIPT) build
 
 # 全量部署（构建 → 部署）
 deploy: build
-	./$(DEPLOY_SCRIPT) deploy
+	$(DEPLOY_SCRIPT) deploy
 
 # 仅部署前端（假设 build/ 已存在）
 deploy-web: check-env
@@ -40,7 +40,7 @@ deploy-web: check-env
 # 仅部署后端（假设 build/ 已存在）
 deploy-backend: check-env
 	@[ -f "$(BUILD_DIR)/brainbow" ] || (echo "错误: 请先 make build"; exit 1)
-	./$(DEPLOY_SCRIPT) deploy
+	$(DEPLOY_SCRIPT) deploy
 
 # 仅编译（快速迭代）
 build-backend:
@@ -59,31 +59,31 @@ clean:
 # ── 快捷命令委托给 scripts/deploy.sh ──
 
 status:
-	./$(DEPLOY_SCRIPT) status
+	$(DEPLOY_SCRIPT) status
 
 logs:
-	./$(DEPLOY_SCRIPT) logs $(n)
+	$(DEPLOY_SCRIPT) logs $(n)
 
 db-pull:
-	./$(DEPLOY_SCRIPT) db-pull
+	$(DEPLOY_SCRIPT) db-pull
 
 db-push:
-	./$(DEPLOY_SCRIPT) db-push
+	$(DEPLOY_SCRIPT) db-push
 
 rollback:
-	./$(DEPLOY_SCRIPT) rollback $(name)
+	$(DEPLOY_SCRIPT) rollback $(name)
 
 list-backups:
-	./$(DEPLOY_SCRIPT) list-backups
+	$(DEPLOY_SCRIPT) list-backups
 
 health:
-	./$(DEPLOY_SCRIPT) health
+	$(DEPLOY_SCRIPT) health
 
 db-backup:
-	./$(DEPLOY_SCRIPT) db-backup
+	$(DEPLOY_SCRIPT) db-backup
 
 backup-prune:
-	./$(DEPLOY_SCRIPT) backup-prune
+	$(DEPLOY_SCRIPT) backup-prune
 
 check-env:
 	@test -n "$(REMOTE_HOST)" || (echo "错误: .env.prod 未设置 REMOTE_HOST"; exit 1)

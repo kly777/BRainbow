@@ -220,15 +220,15 @@ cmd_build() {
 
     # 1. 前端类型检查
     log_info "前端类型检查..."
-    (cd "$PROJECT_DIR/web" && pnpm run typecheck) || {
+    (cd "$PROJECT_DIR/web" && pnpm --silent run typecheck) || {
         log_warn "TypeScript 检查未通过，是否继续构建？(y/n) "
         read -r ans
         [ "$ans" != "y" ] && { log_info "已取消"; exit 1; }
     }
 
-    # 2. 前端构建
+    # 2. 前端构建（仅输出结尾摘要，成功时静默）
     log_info "前端构建 (vite)..."
-    (cd "$PROJECT_DIR/web" && pnpm run build)
+    (cd "$PROJECT_DIR/web" && pnpm --silent run build 2>&1 | tail -6)
     log_done "前端构建完成"
 
     # 3. 后端构建
@@ -361,7 +361,7 @@ setup_systemd() {
         -e "s|@@MEM_CONFIG_PATH@@|$MEM_CONFIG_PATH|g" \
         -e "s|@@CORS_ALLOW_ORIGIN@@|$CORS_ALLOW_ORIGIN|g" \
         "$PROJECT_DIR/deploy/brainbow.service" > /tmp/brainbow.service
-    scp -P "$REMOTE_PORT" /tmp/brainbow.service "$REMOTE_USER@$REMOTE_HOST:/tmp/brainbow.service"
+    scp -q -P "$REMOTE_PORT" /tmp/brainbow.service "$REMOTE_USER@$REMOTE_HOST:/tmp/brainbow.service"
     remote "sudo tee /etc/systemd/system/$APP_NAME.service < /tmp/brainbow.service > /dev/null"
     rm -f /tmp/brainbow.service
 }
@@ -373,7 +373,7 @@ sync_caddyfile() {
         -e "s|@@SERVICE_PORT@@|$SERVICE_PORT|g" \
         -e "s|@@DIST_DIR@@|$SERVICE_DIR/dist|g" \
         "$PROJECT_DIR/deploy/Caddyfile" > /tmp/Caddyfile
-    scp -P "$REMOTE_PORT" /tmp/Caddyfile "$REMOTE_USER@$REMOTE_HOST:/tmp/Caddyfile.new"
+    scp -q -P "$REMOTE_PORT" /tmp/Caddyfile "$REMOTE_USER@$REMOTE_HOST:/tmp/Caddyfile.new"
     rm -f /tmp/Caddyfile
     remote "sudo tee /etc/caddy/Caddyfile < /tmp/Caddyfile.new > /dev/null"
     if remote "timeout 10 caddy validate --config /etc/caddy/Caddyfile 2>&1" | grep -q "Valid configuration"; then

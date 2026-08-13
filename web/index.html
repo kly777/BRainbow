@@ -6,6 +6,7 @@
         <title>Brainbow</title>
         <meta name="description" content="Brainbow 个人知识管理：间隔重复记忆、任务管理、知识卡片、AI 对话与英语阅读">
         <meta name="theme-color" content="#2e7d64">
+        <link rel="canonical" href="%VITE_SITE_URL%/">
         <link rel="icon" type="image/svg+xml" href="/favicon.svg">
         <link rel="apple-touch-icon" href="/favicon.svg">
 
@@ -13,8 +14,19 @@
         <meta property="og:site_name" content="Brainbow">
         <meta property="og:type" content="website">
         <meta property="og:title" content="Brainbow">
+        <meta property="og:url" content="%VITE_SITE_URL%/">
         <meta property="og:description" content="Brainbow 个人知识管理：间隔重复记忆、任务管理、知识卡片、AI 对话与英语阅读">
         <meta name="twitter:card" content="summary">
+
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                "name": "Brainbow",
+                "description": "个人知识管理：间隔重复记忆、任务管理、知识卡片、AI 对话与英语阅读",
+                "url": "%VITE_SITE_URL%/"
+            }
+        </script>
     </head>
     <body>
         <div id="app"></div>
@@ -30,11 +42,11 @@
         <script type="module" src="/src/app/index.tsx"></script>
 
         <script>
-            // 错误处理
-            window.addEventListener("error", (event) => {
-                console.error("应用程序错误:", event.error);
-                const app = document.getElementById("app");
-                if (app) {
+            // 应用初始化失败兜底：仅当 app 容器尚未渲染任何内容时展示
+            (function () {
+                function showError() {
+                    const app = document.getElementById("app");
+                    if (!app || app.childElementCount > 0) return;
                     app.innerHTML = `
                     <div style="text-align: center; padding: 50px;">
                         <h1>应用程序错误</h1>
@@ -43,7 +55,7 @@
                         <button onclick="location.reload()" style="
                             margin-top: 20px;
                             padding: 10px 20px;
-                            background-color: #0066cc;
+                            background-color: #2e7d64;
                             color: white;
                             border: none;
                             border-radius: 4px;
@@ -54,7 +66,9 @@
                     </div>
                 `;
                 }
-            });
+                window.addEventListener("error", showError);
+                window.addEventListener("unhandledrejection", showError);
+            })();
         </script>
     </body>
 </html>

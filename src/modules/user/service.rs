@@ -34,8 +34,11 @@ impl UserService {
         if name.is_empty() || password.is_empty() {
             return Err(ServiceError::InvalidInput("用户名和密码不能为空".into()));
         }
-        if password.len() < 4 {
-            return Err(ServiceError::InvalidInput("密码至少4位".into()));
+        if name.chars().count() > 32 {
+            return Err(ServiceError::InvalidInput("用户名最长32个字符".into()));
+        }
+        if password.len() < 8 {
+            return Err(ServiceError::InvalidInput("密码至少8位".into()));
         }
 
         if let Ok(Some(_)) = self.repo.find_by_name(&name).await {
@@ -102,8 +105,8 @@ impl UserService {
             Err(e) => return Err(ServiceError::Internal(e.to_string())),
         }
 
-        if new_password.len() < 4 {
-            return Err(ServiceError::InvalidInput("新密码至少4位".into()));
+        if new_password.len() < 8 {
+            return Err(ServiceError::InvalidInput("新密码至少8位".into()));
         }
 
         let new_hash =
@@ -204,7 +207,7 @@ mod tests {
     #[tokio::test]
     async fn login_wrong_password() {
         let (svc, _qsvc) = setup().await;
-        svc.register("bob".into(), "correct".into(), TEST_SECRET)
+        svc.register("bob".into(), "correct12".into(), TEST_SECRET)
             .await
             .unwrap();
         let err = svc.login("bob", "wrong", TEST_SECRET).await.unwrap_err();

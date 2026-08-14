@@ -43,6 +43,7 @@ const PAGE_LOADERS: Record<string, () => Promise<{ default: Component }>> = {
 	[PATHS.chatPrompts]: () => import("@/modules/chat/ChatPromptsPage.tsx"),
 	[PATHS.chatMem]: () => import("@/modules/chat/ChatMemPage.tsx"),
 	[PATHS.key]: () => import("@/modules/key/KeyPage.tsx"),
+	[PATHS.admin]: () => import("@/modules/admin/AdminPage.tsx"),
 };
 
 /** 提取 Router 需要的字段 */

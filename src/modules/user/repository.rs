@@ -13,6 +13,7 @@ impl UserRepository {
         Self { db }
     }
 
+    #[allow(dead_code)] // 仅测试/管理场景使用
     pub async fn find_all(&self) -> Result<Vec<User>, sqlx::Error> {
         sqlx::query_as::<_, User>("SELECT id, name, password_hash, role FROM user ORDER BY id")
             .fetch_all(&*self.db)

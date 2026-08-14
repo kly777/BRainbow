@@ -19,7 +19,12 @@ impl UserQueryService {
         }
     }
 
+    #[allow(dead_code)] // 仅测试/管理场景使用
     pub async fn list_all(&self) -> Result<Vec<User>, ServiceError> {
         self.repo.find_all().await.map_err(ServiceError::Db)
+    }
+
+    pub async fn find_by_id(&self, id: i32) -> Result<Option<User>, ServiceError> {
+        self.repo.find_by_id(id).await.map_err(ServiceError::Db)
     }
 }

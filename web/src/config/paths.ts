@@ -35,6 +35,7 @@ export const PATHS = {
 	chatPrompts: `${CHAT}/prompts`,
 	chatMem: `${CHAT}/mem`,
 	key: "/key",
+	admin: "/admin",
 } as const;
 
 export type PathKey = keyof typeof PATHS;

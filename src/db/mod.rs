@@ -625,6 +625,18 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
+    // app_settings：管理员可调设置（开放注册 / JWT 轮换），键值对
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL DEFAULT ''
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
     // 迁移：为已有数据库添加 notes 列
     if !column_exists(pool, "reading_article", "notes").await? {
         sqlx::query("ALTER TABLE reading_article ADD COLUMN notes TEXT NOT NULL DEFAULT ''")

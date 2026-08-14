@@ -25,6 +25,8 @@ use crate::error;
 const FAVICON_CACHE_DIR: &str = "uploads/favicons";
 /// 单个 favicon 最大字节数
 const MAX_FAVICON_BYTES: u64 = 512 * 1024;
+/// 磁盘缓存文件数上限：超限清空最旧一半，防止公开端点被滥用填满磁盘
+const MAX_CACHE_FILES: usize = 500;
 const FETCH_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Deserialize)]
@@ -110,7 +112,32 @@ fn read_cached(host: &str) -> Option<(Vec<u8>, &'static str)> {
     None
 }
 
+/// 缓存总量控制：文件数超限时删除最旧的一半（按修改时间）
+async fn enforce_cache_limit() {
+    let dir = cache_dir();
+    let Ok(mut entries) = std::fs::read_dir(&dir).map(|rd| {
+        rd.flatten()
+            .filter(|e| e.path().is_file())
+            .collect::<Vec<_>>()
+    }) else {
+        return;
+    };
+    if entries.len() < MAX_CACHE_FILES {
+        return;
+    }
+    entries.sort_by_key(|e| {
+        e.metadata()
+            .and_then(|m| m.modified())
+            .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+    });
+    let remove_count = entries.len() / 2;
+    for e in entries.into_iter().take(remove_count) {
+        let _ = std::fs::remove_file(e.path());
+    }
+}
+
 async fn save_cache(host: &str, bytes: &[u8]) {
+    enforce_cache_limit().await;
     let dir = cache_dir();
     tokio::fs::create_dir_all(&dir).await.ok();
     // 用 infer 判断类型；未知则按 ico 存

@@ -17,6 +17,7 @@ Environment="BIND_HOST=@@BIND_HOST@@"
 Environment="DATABASE_URL=@@DATABASE_URL@@"
 Environment="MEM_CONFIG_PATH=@@MEM_CONFIG_PATH@@"
 Environment="CORS_ALLOW_ORIGIN=@@CORS_ALLOW_ORIGIN@@"
+Environment="JWT_SECRET=@@JWT_SECRET@@"
 
 [Install]
 WantedBy=multi-user.target

@@ -188,6 +188,13 @@ export const NAV_ITEMS: NavItem[] = [
 		nav: true,
 	},
 	{
+		path: PATHS.admin,
+		label: "管理员设置",
+		title: "Admin",
+		desc: "开放注册 / JWT 密钥管理（仅管理员）",
+		nav: true,
+	},
+	{
 		path: PATHS.key,
 		label: "API Key",
 		title: "API Key",

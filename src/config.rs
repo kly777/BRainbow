@@ -27,6 +27,9 @@ pub struct Config {
     /// 记忆系统配置路径
     pub mem_config_path: PathBuf,
 
+    /// 是否开放注册（默认关闭；公网部署建议保持关闭）
+    pub allow_register: bool,
+
     /// 上传目录（预留，当前使用 `uploads` 硬编码）
     #[allow(dead_code)]
     pub upload_dir: PathBuf,
@@ -70,6 +73,14 @@ impl Config {
                 .ok()
                 .and_then(|h| h.parse().ok())
                 .unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED)),
+
+            allow_register: vars("ALLOW_REGISTER")
+                .ok()
+                .and_then(|v| match v.trim().to_lowercase().as_str() {
+                    "1" | "true" | "yes" | "on" => Some(true),
+                    _ => None,
+                })
+                .unwrap_or(false),
 
             mem_config_path: vars("MEM_CONFIG_PATH")
                 .map(PathBuf::from)

@@ -10,13 +10,19 @@ use crate::modules::{
 use crate::state::AppState;
 
 pub fn create_api_router(state: AppState) -> Router<AppState> {
-    // ── 公开路由：无需认证 ──
-    let public = Router::new()
+    // ── 登录/注册：限速（防暴力破解与批量注册）──
+    let auth_endpoints = Router::new()
         .route("/user/register", post(user::register_handler))
         .route("/user/login", post(user::login_handler))
+        .layer(middleware::from_fn(crate::rate_limit::rate_limit));
+
+    // ── 公开路由：无需认证 ──
+    let public = Router::new()
         .route("/bookmarks/favicon", get(bookmark::favicon_handler))
         .nest("/text", text::routes())
         .nest("/media", media::public_file_route());
+
+    // ── 登录/注册（含限速层）──
 
     // ── 需登录的路由（含 API key 管理：统一需登录）──
     let authed = Router::new()
@@ -50,11 +56,13 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
     // ── 管理员路由：auth + require_admin ──
     let admin = Router::new()
         .nest("/db", db_viewer::routes())
+        .nest("/admin", crate::modules::admin::routes())
         .layer(middleware::from_fn(crate::auth::require_admin))
         .layer(middleware::from_fn_with_state(state, crate::auth::auth));
 
     // ── API 未知路径 → JSON 404（避免落入 SPA fallback 返回 HTML）──
     Router::new()
+        .merge(auth_endpoints)
         .merge(public)
         .merge(authed)
         .merge(admin)

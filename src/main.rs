@@ -8,6 +8,7 @@ mod db;
 mod error;
 mod modules;
 mod pagination;
+mod rate_limit;
 mod routes;
 mod state;
 
@@ -89,6 +90,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState::new(Arc::new(pool), &config);
 
     // 创建路由
+    state.init_runtime_cache().await;
+
     let app = create_router(state.clone());
 
     // 添加 CORS 中间件
@@ -123,9 +126,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
     info!("Listening on http://{}", listener.local_addr()?);
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await?;
 
     Ok(())
 }

@@ -69,6 +69,17 @@ load_config() {
     CORS_ALLOW_ORIGIN="${CORS_ALLOW_ORIGIN:-http://localhost:3000,http://localhost:5173}"
     BUILD_TARGET="${BUILD_TARGET:-native}"
 
+    # JWT_SECRET：未设置则生成随机密钥并写回 .env.prod（保持重启后会话有效）
+    if [[ -z "${JWT_SECRET:-}" ]]; then
+        JWT_SECRET="$(openssl rand -hex 32)"
+        if [[ -n "${env_file:-}" && -f "$env_file" ]]; then
+            printf '\n# 部署时自动生成的 JWT 密钥（勿改，重启后会话保持有效）\nJWT_SECRET=%s\n' "$JWT_SECRET" >> "$env_file"
+            log_warn "已生成 JWT_SECRET 并写入 $env_file"
+        else
+            log_warn "已生成临时 JWT_SECRET（未持久化：重启后会话将失效，建议写入 .env.prod）"
+        fi
+    fi
+
     REMOTE_DIR="$REMOTE_BASE/$APP_NAME"
     SERVICE_DIR="$REMOTE_DIR/service"
     DATA_DIR="$REMOTE_DIR/data"
@@ -360,6 +371,7 @@ setup_systemd() {
         -e "s|@@DATABASE_URL@@|$DATABASE_URL|g" \
         -e "s|@@MEM_CONFIG_PATH@@|$MEM_CONFIG_PATH|g" \
         -e "s|@@CORS_ALLOW_ORIGIN@@|$CORS_ALLOW_ORIGIN|g" \
+        -e "s|@@JWT_SECRET@@|$JWT_SECRET|g" \
         "$PROJECT_DIR/deploy/brainbow.service" > /tmp/brainbow.service
     scp -q -P "$REMOTE_PORT" /tmp/brainbow.service "$REMOTE_USER@$REMOTE_HOST:/tmp/brainbow.service"
     remote "sudo tee /etc/systemd/system/$APP_NAME.service < /tmp/brainbow.service > /dev/null"

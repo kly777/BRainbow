@@ -85,11 +85,12 @@ pub fn hash_api_key(key: &str) -> String {
 /// 用法：挂载到需要登录的路由组上。
 ///   Router::new().nest(…).layer(from_fn_with_state(state, auth::auth))
 pub async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -> Response {
-    let secret = &state.jwt_secret;
+    // DB 持久化的密钥优先（管理员轮换后立即生效）
+    let secret = state.jwt_secret_active();
 
     // ── 1. JWT ──
     if let Some(token) = extract_token(&request)
-        && let Some(claims) = verify_token(&token, secret)
+        && let Some(claims) = verify_token(&token, &secret)
     {
         request.extensions_mut().insert(claims);
         return next.run(request).await;

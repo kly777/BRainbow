@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use crate::config::Config;
 use crate::modules::{
+    admin::service::SettingsService,
     ai::service::AiService, bookmark::BookmarkQueryService, bookmark::BookmarkService,
     card::CardQueryService, card::CardService, chat::query::ChatQueryService,
     chat::service::ChatService, conv::query::ConvQueryService, db_viewer::DbViewerQueryService,
@@ -21,7 +22,14 @@ use crate::modules::{
 #[derive(Clone)]
 pub struct AppState {
     pub db: Arc<SqlitePool>,
+    /// 环境配置中的 JWT 密钥（初始值；DB 中持久化的密钥优先）
     pub jwt_secret: Arc<String>,
+    /// 运行时 JWT 密钥缓存（轮换后更新；None = 使用 env 值）
+    jwt_active_cache: Arc<std::sync::RwLock<Option<String>>>,
+    /// 运行时开放注册缓存（None = 使用 env 值）
+    allow_register_cache: Arc<std::sync::RwLock<Option<bool>>>,
+    /// 设置存取服务（app_settings 表）
+    pub settings: SettingsService,
 
     // ── 预创建的服务实例 ──
     pub card: CardService,
@@ -54,6 +62,71 @@ pub struct AppState {
 }
 
 impl AppState {
+    /// 初始化运行时缓存：DB 中有持久化密钥则优先
+    pub async fn init_runtime_cache(&self) {
+        if let Ok(Some(secret)) = self.settings.get(crate::modules::admin::service::KEY_JWT_SECRET).await
+            && !secret.is_empty()
+        {
+            if let Ok(mut cache) = self.jwt_active_cache.write() {
+                *cache = Some(secret);
+            }
+        }
+        if let Ok(Some(v)) = self.settings.get(crate::modules::admin::service::KEY_ALLOW_REGISTER).await {
+            if let Ok(parsed) = v.parse::<bool>() {
+                if let Ok(mut cache) = self.allow_register_cache.write() {
+                    *cache = Some(parsed);
+                }
+            }
+        }
+    }
+
+    /// 当前生效的 JWT 密钥（DB 持久化优先于 env）
+    pub fn jwt_secret_active(&self) -> String {
+        self.jwt_active_cache
+            .read()
+            .ok()
+            .and_then(|c| c.clone())
+            .unwrap_or_else(|| self.jwt_secret.as_ref().clone())
+    }
+
+    /// 当前是否开放注册（DB 优先于 env 初始值）
+    pub async fn allow_register_active(&self) -> bool {
+        if let Ok(cache) = self.allow_register_cache.read()
+            && let Some(v) = *cache
+        {
+            return v;
+        }
+        false
+    }
+
+    /// 更新开放注册（写 DB + 更新缓存）
+    pub async fn set_allow_register(&self, v: bool) -> Result<(), sqlx::Error> {
+        self.settings
+            .set(crate::modules::admin::service::KEY_ALLOW_REGISTER, &v.to_string())
+            .await?;
+        if let Ok(mut cache) = self.allow_register_cache.write() {
+            *cache = Some(v);
+        }
+        Ok(())
+    }
+
+    /// JWT 密钥状态（已持久化 / 长度）
+    pub async fn settings_jwt_status(&self) -> (bool, usize) {
+        match self.settings.get(crate::modules::admin::service::KEY_JWT_SECRET).await {
+            Ok(Some(v)) => (true, v.len()),
+            _ => (false, self.jwt_secret.len()),
+        }
+    }
+
+    /// 轮换 JWT 密钥：写 DB + 更新缓存（立即生效，旧 token 全部失效）
+    pub async fn rotate_jwt_secret(&self, new_secret: &str) -> Result<(), sqlx::Error> {
+        self.settings.set(crate::modules::admin::service::KEY_JWT_SECRET, new_secret).await?;
+        if let Ok(mut cache) = self.jwt_active_cache.write() {
+            *cache = Some(new_secret.to_string());
+        }
+        Ok(())
+    }
+
     pub fn new(db: Arc<SqlitePool>, config: &Config) -> Self {
         let task = TaskService::new(db.clone());
         // 构建 Repository adapter，通过 trait 分别注入命令侧和查询侧
@@ -63,6 +136,9 @@ impl AppState {
         Self {
             db: db.clone(),
             jwt_secret: Arc::new(config.jwt_secret.clone()),
+            jwt_active_cache: Arc::new(std::sync::RwLock::new(None)),
+            allow_register_cache: Arc::new(std::sync::RwLock::new(Some(config.allow_register))),
+            settings: SettingsService::new(db.clone()),
             card: CardService::new(db.clone()),
             card_query: CardQueryService::new(db.clone()),
             bookmark: BookmarkService::new(db.clone()),

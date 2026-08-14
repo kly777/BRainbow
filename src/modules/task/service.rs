@@ -226,8 +226,8 @@ pub use crate::shared::error_types::ServiceError;
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
-    use axum::response::IntoResponse as _;
     use super::*;
+    use axum::response::IntoResponse as _;
 
     // ── validate_title ──
 

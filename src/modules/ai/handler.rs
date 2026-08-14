@@ -5,8 +5,8 @@ use axum::{
     routing::{get, post},
 };
 
-use crate::shared::claims::Claims;
 use crate::modules::state::AppState;
+use crate::shared::claims::Claims;
 
 use super::model::{AiProxyRequest, UpdateAiSettingsRequest};
 

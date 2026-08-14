@@ -19,9 +19,9 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
-use crate::shared::config::Config;
 use crate::app::http::routes::create_router;
 use crate::modules::state::AppState;
+use crate::shared::config::Config;
 
 fn init_logging() {
     tracing_subscriber::fmt()

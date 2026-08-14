@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTimeWindowRequest};
+use crate::modules::state::AppState;
 use crate::shared::error_types as error;
 use crate::shared::pagination::Pagination;
-use crate::modules::state::AppState;
 
 // ==================== 查询参数结构体 ====================
 
@@ -196,7 +196,10 @@ pub async fn check_time_conflict_handler(
 
     // is_none 已在上方守卫，此处绑定安全（防御性兜底不可达）
     let (Some(start_time_str), Some(end_time_str)) = (start_time_str, end_time_str) else {
-        return error::bad_request_with_code("invalid_time_range", "需要提供start_time和end_time参数");
+        return error::bad_request_with_code(
+            "invalid_time_range",
+            "需要提供start_time和end_time参数",
+        );
     };
 
     let start_time = match start_time_str.parse::<DateTime<Utc>>() {

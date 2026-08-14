@@ -4,9 +4,9 @@ use axum::{
 };
 use serde::Serialize;
 
+use crate::modules::state::AppState;
 use crate::shared::error_types as error;
 use crate::shared::pagination::Pagination;
-use crate::modules::state::AppState;
 
 #[derive(Debug, Serialize)]
 pub struct ColumnInfo {

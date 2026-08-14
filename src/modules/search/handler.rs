@@ -6,8 +6,8 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::shared::claims::Claims;
 use crate::modules::state::AppState;
+use crate::shared::claims::Claims;
 use axum::extract::Extension;
 
 use super::service::SearchQueryService;

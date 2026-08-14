@@ -8,6 +8,6 @@ pub mod batch;
 pub mod claims;
 pub mod config;
 pub mod db_query;
-pub mod jwt;
 pub mod error_types;
+pub mod jwt;
 pub mod pagination;

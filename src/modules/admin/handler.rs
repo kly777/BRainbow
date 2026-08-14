@@ -1,8 +1,7 @@
 // ── 管理员设置接口 ──
 
 use axum::{
-    Extension,
-    Json,
+    Extension, Json,
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -10,8 +9,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::shared::claims::Claims;
 use crate::modules::state::AppState;
+use crate::shared::claims::Claims;
 
 #[derive(Debug, Serialize)]
 pub struct SettingsResponse {
@@ -42,16 +41,17 @@ pub async fn update_settings(
     Json(payload): Json<UpdateSettingsRequest>,
 ) -> Response {
     if let Some(v) = payload.allow_register
-        && let Err(e) = state.set_allow_register(v).await {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "code": "INTERNAL",
-                    "message": format!("保存设置失败: {e}"),
-                })),
-            )
-                .into_response();
-        }
+        && let Err(e) = state.set_allow_register(v).await
+    {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "code": "INTERNAL",
+                "message": format!("保存设置失败: {e}"),
+            })),
+        )
+            .into_response();
+    }
     get_settings(State(state)).await
 }
 

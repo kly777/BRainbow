@@ -1,7 +1,5 @@
 //! 错误类型与统一错误响应（HTTP 响应桥接也在此：纯构造无 IO 副作用）
 
-
-
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -18,7 +16,6 @@ pub struct ErrorBody {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<serde_json::Value>,
 }
-
 
 // ── 服务层错误类型 ──
 
@@ -44,8 +41,6 @@ impl ServiceError {
             Self::Internal(_) | Self::Db(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
-
-    
 }
 
 impl std::fmt::Display for ServiceError {
@@ -209,10 +204,7 @@ mod tests {
 
     #[tokio::test]
     async fn ok_or_returns_500_on_err() {
-        let r = ok_or::<(), _>(
-            Err(std::io::Error::other("oops")),
-            "op",
-        );
+        let r = ok_or::<(), _>(Err(std::io::Error::other("oops")), "op");
         assert_eq!(r.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 
@@ -224,10 +216,7 @@ mod tests {
 
     #[tokio::test]
     async fn created_or_returns_500_on_err() {
-        let r = created_or::<(), _>(
-            Err(std::io::Error::other("fail")),
-            "op",
-        );
+        let r = created_or::<(), _>(Err(std::io::Error::other("fail")), "op");
         assert_eq!(r.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 
@@ -245,10 +234,7 @@ mod tests {
 
     #[tokio::test]
     async fn found_or_returns_500_on_error() {
-        let r = found_or::<(), _>(
-            Err(std::io::Error::other("db")),
-            "find",
-        );
+        let r = found_or::<(), _>(Err(std::io::Error::other("db")), "find");
         assert_eq!(r.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 

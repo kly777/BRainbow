@@ -16,10 +16,10 @@ pub struct DeleteQuery {
 use tokio_util::io::ReaderStream;
 
 use super::service::MediaService;
+use crate::modules::state::AppState;
 use crate::shared::error_types as error;
 use crate::shared::error_types::ServiceError;
 use crate::shared::pagination::Pagination;
-use crate::modules::state::AppState;
 
 // ── 响应 ──
 
@@ -179,7 +179,8 @@ pub async fn file_handler(
         );
     }
 
-    resp.body(body).unwrap_or_else(|_| Response::new(Body::empty()))
+    resp.body(body)
+        .unwrap_or_else(|_| Response::new(Body::empty()))
 }
 
 // ── 重命名 ──

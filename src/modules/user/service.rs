@@ -4,8 +4,8 @@ use bcrypt::{DEFAULT_COST, hash, verify};
 
 use super::model::User;
 use super::repository::UserRepository;
-use crate::shared::jwt::create_token;
 use crate::shared::error_types::ServiceError;
+use crate::shared::jwt::create_token;
 
 /// 命令侧服务——认证与账号写操作。
 ///

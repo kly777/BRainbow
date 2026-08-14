@@ -5,9 +5,9 @@ use axum::{
 
 use super::super::model::TaskStatus;
 use super::super::response::TaskResponse;
+use crate::modules::state::AppState;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
-use crate::modules::state::AppState;
 
 pub async fn complete_task_handler(
     Path(id): Path<i32>,

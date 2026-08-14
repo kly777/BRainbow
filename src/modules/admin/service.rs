@@ -54,10 +54,12 @@ mod tests {
     #[tokio::test]
     async fn settings_set_get_roundtrip() {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
-        sqlx::query("CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')")
-            .execute(&*pool)
-            .await
-            .unwrap();
+        sqlx::query(
+            "CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')",
+        )
+        .execute(&*pool)
+        .await
+        .unwrap();
         let svc = SettingsService::new(pool);
         assert_eq!(svc.get("k").await.unwrap(), None);
         svc.set("k", "v1").await.unwrap();

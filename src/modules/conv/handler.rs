@@ -7,8 +7,8 @@ use axum::{
     routing::get,
 };
 
-use crate::shared::error_types as error;
 use crate::modules::state::AppState;
+use crate::shared::error_types as error;
 
 use super::model::SearchParams;
 

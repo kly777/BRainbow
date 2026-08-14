@@ -315,4 +315,3 @@ mod tests {
         assert!(tw.recurrence_rule().is_none());
     }
 }
-

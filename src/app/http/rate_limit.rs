@@ -28,12 +28,13 @@ fn client_ip(req: &Request) -> String {
         .headers()
         .get("x-forwarded-for")
         .and_then(|v| v.to_str().ok())
-        && let Some(first) = xff.split(',').next() {
-            let ip = first.trim();
-            if !ip.is_empty() {
-                return ip.to_string();
-            }
+        && let Some(first) = xff.split(',').next()
+    {
+        let ip = first.trim();
+        if !ip.is_empty() {
+            return ip.to_string();
         }
+    }
     // 直连：ConnectInfo（into_make_service_with_connect_info 注入）
     req.extensions()
         .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()

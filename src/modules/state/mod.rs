@@ -1,19 +1,18 @@
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
-use crate::shared::config::Config;
 use crate::modules::{
-    admin::service::SettingsService,
-    ai::service::AiService, bookmark::BookmarkQueryService, bookmark::BookmarkService,
-    card::CardQueryService, card::CardService, chat::query::ChatQueryService,
-    chat::service::ChatService, conv::query::ConvQueryService, db_viewer::DbViewerQueryService,
-    media::query::MediaQueryService, media::service::MediaService, mem::MemRepo,
-    mem::query::MemQueryService, mem::service::MemService, onto::OntoQueryService,
+    admin::service::SettingsService, ai::service::AiService, bookmark::BookmarkQueryService,
+    bookmark::BookmarkService, card::CardQueryService, card::CardService,
+    chat::query::ChatQueryService, chat::service::ChatService, conv::query::ConvQueryService,
+    db_viewer::DbViewerQueryService, media::query::MediaQueryService, media::service::MediaService,
+    mem::MemRepo, mem::query::MemQueryService, mem::service::MemService, onto::OntoQueryService,
     onto::OntoService, reading::query::ReadingQueryService, reading::service::ReadingService,
     sign::SignQueryService, sign::SignService, task::TaskQueryService, task::TaskService,
     text::TextQueryService, text::TextService, time_window::query::TimeWindowQueryService,
     time_window::service::TimeWindowService, user::UserQueryService, user::UserService,
 };
+use crate::shared::config::Config;
 
 /// 应用级共享状态。
 ///
@@ -64,16 +63,24 @@ pub struct AppState {
 impl AppState {
     /// 初始化运行时缓存：DB 中有持久化密钥则优先
     pub async fn init_runtime_cache(&self) {
-        if let Ok(Some(secret)) = self.settings.get(crate::modules::admin::service::KEY_JWT_SECRET).await
+        if let Ok(Some(secret)) = self
+            .settings
+            .get(crate::modules::admin::service::KEY_JWT_SECRET)
+            .await
             && !secret.is_empty()
-            && let Ok(mut cache) = self.jwt_active_cache.write() {
-                *cache = Some(secret);
-            }
-        if let Ok(Some(v)) = self.settings.get(crate::modules::admin::service::KEY_ALLOW_REGISTER).await
+            && let Ok(mut cache) = self.jwt_active_cache.write()
+        {
+            *cache = Some(secret);
+        }
+        if let Ok(Some(v)) = self
+            .settings
+            .get(crate::modules::admin::service::KEY_ALLOW_REGISTER)
+            .await
             && let Ok(parsed) = v.parse::<bool>()
-                && let Ok(mut cache) = self.allow_register_cache.write() {
-                    *cache = Some(parsed);
-                }
+            && let Ok(mut cache) = self.allow_register_cache.write()
+        {
+            *cache = Some(parsed);
+        }
     }
 
     /// 当前生效的 JWT 密钥（DB 持久化优先于 env）
@@ -98,7 +105,10 @@ impl AppState {
     /// 更新开放注册（写 DB + 更新缓存）
     pub async fn set_allow_register(&self, v: bool) -> Result<(), sqlx::Error> {
         self.settings
-            .set(crate::modules::admin::service::KEY_ALLOW_REGISTER, &v.to_string())
+            .set(
+                crate::modules::admin::service::KEY_ALLOW_REGISTER,
+                &v.to_string(),
+            )
             .await?;
         if let Ok(mut cache) = self.allow_register_cache.write() {
             *cache = Some(v);
@@ -108,7 +118,11 @@ impl AppState {
 
     /// JWT 密钥状态（已持久化 / 长度）
     pub async fn settings_jwt_status(&self) -> (bool, usize) {
-        match self.settings.get(crate::modules::admin::service::KEY_JWT_SECRET).await {
+        match self
+            .settings
+            .get(crate::modules::admin::service::KEY_JWT_SECRET)
+            .await
+        {
             Ok(Some(v)) => (true, v.len()),
             _ => (false, self.jwt_secret.len()),
         }
@@ -116,7 +130,9 @@ impl AppState {
 
     /// 轮换 JWT 密钥：写 DB + 更新缓存（立即生效，旧 token 全部失效）
     pub async fn rotate_jwt_secret(&self, new_secret: &str) -> Result<(), sqlx::Error> {
-        self.settings.set(crate::modules::admin::service::KEY_JWT_SECRET, new_secret).await?;
+        self.settings
+            .set(crate::modules::admin::service::KEY_JWT_SECRET, new_secret)
+            .await?;
         if let Ok(mut cache) = self.jwt_active_cache.write() {
             *cache = Some(new_secret.to_string());
         }

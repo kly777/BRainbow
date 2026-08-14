@@ -126,8 +126,7 @@ impl TaskRepository {
         status_filter: Option<TaskStatus>,
     ) -> Result<Vec<(Task, TimeWindow)>, sqlx::Error> {
         let default_start = DateTime::from_timestamp(0, 0).unwrap_or_default();
-        let default_end =
-            DateTime::from_timestamp(4102444800, 0).unwrap_or_default();
+        let default_end = DateTime::from_timestamp(4102444800, 0).unwrap_or_default();
         let range_start = start.unwrap_or(default_start);
         let range_end = end.unwrap_or(default_end);
 

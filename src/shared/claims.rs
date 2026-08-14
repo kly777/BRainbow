@@ -8,4 +8,3 @@ pub struct Claims {
     pub role: String, // "admin" | "user"
     pub exp: usize,   // expiry
 }
-

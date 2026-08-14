@@ -9,6 +9,9 @@ use axum::routing::{get, post};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/settings", get(handler::get_settings).patch(handler::update_settings))
+        .route(
+            "/settings",
+            get(handler::get_settings).patch(handler::update_settings),
+        )
         .route("/settings/jwt/rotate", post(handler::rotate_jwt))
 }

@@ -105,14 +105,15 @@ impl MemQueryService {
         let state: CardState = row.state.parse().unwrap_or(CardState::New);
         let days_elapsed = days_elapsed_since(&row.last_review_at);
         let config = fsrs::SchedulerConfig::default();
-        Ok(fsrs::preview(
+        fsrs::preview(
             row.stability,
             row.difficulty,
             state,
             row.step_index.map(|i| i as usize),
             days_elapsed,
             &config,
-        ))
+        )
+        .map_err(AppError::Internal)
     }
 
     // ── 标签查询 ──

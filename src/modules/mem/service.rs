@@ -110,7 +110,9 @@ impl MemService {
 
     pub async fn review(&self, id: i32, rating: u8) -> Result<ReviewResponse, AppError> {
         let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
-        let outcome = self.apply_review(&row, rating);
+        let outcome = self
+            .apply_review(&row, rating)
+            .map_err(AppError::Internal)?;
 
         let new_step = if outcome.state.has_steps() {
             let old = row.step_index.map(|i| i as usize);
@@ -181,7 +183,7 @@ impl MemService {
         })
     }
 
-    fn apply_review(&self, row: &MemRow, rating: u8) -> ReviewOutcome {
+    fn apply_review(&self, row: &MemRow, rating: u8) -> Result<ReviewOutcome, String> {
         let state: CardState = row.state.parse().unwrap_or(CardState::New);
         let step = if state == CardState::New {
             Some(0)

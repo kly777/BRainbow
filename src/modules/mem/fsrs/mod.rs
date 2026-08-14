@@ -72,16 +72,9 @@ fn due_in_secs(secs: i64) -> String {
         .to_string()
 }
 
-fn make_fsrs() -> FSRS {
+fn make_fsrs() -> Result<FSRS, String> {
     let params = get_global_params();
-    match FSRS::new(&params) {
-        Ok(f) => f,
-        Err(e) => {
-            // 参数非法（如优化器写入了坏值）：回退内置默认参数，不 panic
-            tracing::error!("FSRS 参数非法，回退默认参数: {e}");
-            FSRS::default()
-        }
-    }
+    FSRS::new(&params).map_err(|e| format!("FSRS 参数非法: {e}"))
 }
 
 /// 除非有真实的记忆参数，否则传 None（避免 stability=0 / difficulty=0 传给 FSRS）
@@ -101,19 +94,18 @@ fn compute_next(
     rating: u8,
     days_elapsed: u32,
     desired_retention: f64,
-) -> f64 {
-    let fsrs = make_fsrs();
-    let Ok(next) = fsrs.next_states(mem, desired_retention as f32, days_elapsed) else {
-        tracing::error!("FSRS next_states 失败，返回 60 秒兜底");
-        return 60.0;
-    };
+) -> Result<f64, String> {
+    let fsrs = make_fsrs()?;
+    let next = fsrs
+        .next_states(mem, desired_retention as f32, days_elapsed)
+        .map_err(|e| format!("FSRS next_states 失败: {e}"))?;
     let chosen = match rating {
         1 => &next.again,
         2 => &next.hard,
         3 => &next.good,
         _ => &next.easy,
     };
-    (chosen.interval as f64 * 86400.0).max(60.0)
+    Ok((chosen.interval as f64 * 86400.0).max(60.0))
 }
 
 fn compute_next_with_state(
@@ -121,12 +113,11 @@ fn compute_next_with_state(
     rating: u8,
     days_elapsed: u32,
     desired_retention: f64,
-) -> (f64, f64, f64) {
-    let fsrs = make_fsrs();
-    let Ok(next) = fsrs.next_states(mem, desired_retention as f32, days_elapsed) else {
-        tracing::error!("FSRS next_states 失败，返回 (0,0,0) 兜底");
-        return (0.0, 0.0, 0.0);
-    };
+) -> Result<(f64, f64, f64), String> {
+    let fsrs = make_fsrs()?;
+    let next = fsrs
+        .next_states(mem, desired_retention as f32, days_elapsed)
+        .map_err(|e| format!("FSRS next_states 失败: {e}"))?;
     let chosen = match rating {
         1 => &next.again,
         2 => &next.hard,
@@ -134,11 +125,11 @@ fn compute_next_with_state(
         _ => &next.easy,
     };
     let secs = (chosen.interval as f64 * 86400.0).max(60.0);
-    (
+    Ok((
         chosen.memory.stability as f64,
         chosen.memory.difficulty as f64,
         secs,
-    )
+    ))
 }
 
 // ── 公开 API ──
@@ -169,7 +160,10 @@ pub struct ScheduleInput {
     pub cumulative_step_days: u32,
 }
 
-pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> ReviewOutcome {
+pub fn schedule(
+    input: ScheduleInput,
+    config: &SchedulerConfig,
+) -> Result<ReviewOutcome, String> {
     use CardState::*;
     let ScheduleInput {
         s_old,
@@ -183,12 +177,12 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> ReviewOutcome
 
     // 挂起状态不应进入调度（安全兜底）
     if state == Suspended {
-        return ReviewOutcome {
+        return Ok(ReviewOutcome {
             state: Suspended,
             stability: s_old,
             difficulty: d_old,
             due_at: chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string(),
-        };
+        });
     }
 
     // ── 重学阶段 ──
@@ -215,11 +209,11 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> ReviewOutcome
         let total_steps = steps.len();
         let mem = to_memory_state(s_old, d_old);
 
-        return match rating {
+        return Ok(match rating {
             1 => {
                 // Again：用 FSRS 更新状态，回到 step 0
                 let (s, d, _) =
-                    compute_next_with_state(mem, 1, days_elapsed, config.desired_retention);
+                    compute_next_with_state(mem, 1, days_elapsed, config.desired_retention)?;
                 ReviewOutcome {
                     state: Learning,
                     stability: s,
@@ -246,7 +240,7 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> ReviewOutcome
                         rating,
                         cumulative_step_days,
                         config.desired_retention,
-                    );
+                    )?;
                     let secs = secs.max(config.graduating_interval_secs as f64);
                     ReviewOutcome {
                         state: Review,
@@ -264,29 +258,31 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> ReviewOutcome
                     }
                 }
             }
-        };
+        });
     }
 
     // ── 复习阶段 ──
     let mem = to_memory_state(s_old, d_old);
 
     if rating == 1 {
-        let (s, d, _) = compute_next_with_state(mem, 1, days_elapsed, config.desired_retention);
-        return ReviewOutcome {
+        let (s, d, _) =
+            compute_next_with_state(mem, 1, days_elapsed, config.desired_retention)?;
+        return Ok(ReviewOutcome {
             state: Relearning,
             stability: s,
             difficulty: d,
             due_at: due_in_secs(config.relearn_steps[0]),
-        };
+        });
     }
 
-    let (s, d, secs) = compute_next_with_state(mem, rating, days_elapsed, config.desired_retention);
-    ReviewOutcome {
+    let (s, d, secs) =
+        compute_next_with_state(mem, rating, days_elapsed, config.desired_retention)?;
+    Ok(ReviewOutcome {
         state: Review,
         stability: s,
         difficulty: d,
         due_at: due_in_secs(secs as i64),
-    }
+    })
 }
 
 fn relearn(
@@ -297,15 +293,16 @@ fn relearn(
     days_elapsed: u32,
     cumulative_step_days: u32,
     config: &SchedulerConfig,
-) -> ReviewOutcome {
+) -> Result<ReviewOutcome, String> {
     let mem = to_memory_state(s_old, d_old);
     let steps = &config.relearn_steps;
     let total_steps = steps.len();
     use CardState::*;
 
-    match rating {
+    Ok(match rating {
         1 => {
-            let (s, d, _) = compute_next_with_state(mem, 1, days_elapsed, config.desired_retention);
+            let (s, d, _) =
+            compute_next_with_state(mem, 1, days_elapsed, config.desired_retention)?;
             ReviewOutcome {
                 state: Relearning,
                 stability: s,
@@ -330,7 +327,7 @@ fn relearn(
                     rating,
                     cumulative_step_days,
                     config.desired_retention,
-                );
+                )?;
                 ReviewOutcome {
                     state: Review,
                     stability: s,
@@ -346,7 +343,7 @@ fn relearn(
                 }
             }
         }
-    }
+    })
 }
 
 pub fn preview(
@@ -356,32 +353,32 @@ pub fn preview(
     step_index: Option<usize>,
     days_elapsed: u32,
     config: &SchedulerConfig,
-) -> [f64; 4] {
+) -> Result<[f64; 4], String> {
     let mem = to_memory_state(s_old, d_old);
     use CardState::*;
 
     // 挂起状态返回空间隔
     if state == Suspended {
-        return [0.0, 0.0, 0.0, 0.0];
+        return Ok([0.0, 0.0, 0.0, 0.0]);
     }
 
     if state == Relearning {
         let steps = &config.relearn_steps;
         let step = step_index.unwrap_or(0);
-        return [
+        return Ok([
             steps[0] as f64,
             steps[step.min(steps.len() - 1)] as f64,
             if step + 1 >= steps.len() {
-                compute_next(mem, 3, days_elapsed, config.desired_retention)
+                compute_next(mem, 3, days_elapsed, config.desired_retention)?
             } else {
                 steps[step + 1] as f64
             },
             if step + 1 >= steps.len() {
-                compute_next(mem, 4, days_elapsed, config.desired_retention)
+                compute_next(mem, 4, days_elapsed, config.desired_retention)?
             } else {
                 steps[step + 1] as f64
             },
-        ];
+        ]);
     }
 
     if state == Learning || state == New {
@@ -396,21 +393,21 @@ pub fn preview(
         let next = step + 1;
         let (good, easy) = if next >= steps.len() {
             (
-                compute_next(mem, 3, days_elapsed, config.desired_retention),
-                compute_next(mem, 4, days_elapsed, config.desired_retention),
+                compute_next(mem, 3, days_elapsed, config.desired_retention)?,
+                compute_next(mem, 4, days_elapsed, config.desired_retention)?,
             )
         } else {
             (steps[next] as f64, steps[next] as f64)
         };
-        return [again, hard, good, easy];
+        return Ok([again, hard, good, easy]);
     }
 
-    [
+    Ok([
         config.learning_steps[0] as f64,
-        compute_next(mem, 2, days_elapsed, config.desired_retention),
-        compute_next(mem, 3, days_elapsed, config.desired_retention),
-        compute_next(mem, 4, days_elapsed, config.desired_retention),
-    ]
+        compute_next(mem, 2, days_elapsed, config.desired_retention)?,
+        compute_next(mem, 3, days_elapsed, config.desired_retention)?,
+        compute_next(mem, 4, days_elapsed, config.desired_retention)?,
+    ])
 }
 
 #[cfg(test)]

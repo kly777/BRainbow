@@ -374,11 +374,14 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 
     // 迁移：聊天 QA 数据已并入 chat_tree/chat_node，删除旧 conv 表（幂等）
     if table_exists(pool, "conv").await? {
-        sqlx::query("DROP TABLE conv").execute(pool).await.map_err(|e| {
-            sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
-                "迁移失败: 无法删除已废弃的 conv 表: {e}"
-            ))))
-        })?;
+        sqlx::query("DROP TABLE conv")
+            .execute(pool)
+            .await
+            .map_err(|e| {
+                sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
+                    "迁移失败: 无法删除已废弃的 conv 表: {e}"
+                ))))
+            })?;
     }
 
     sqlx::query(

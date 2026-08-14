@@ -95,8 +95,11 @@ impl ConvQueryService {
 async fn compute_idf(pool: &SqlitePool, kw: &str) -> f64 {
     let pattern = format!("%{}%", kw);
     let total: (i64,) = sqlx::query_as(
-        "SELECT (SELECT count(*) FROM conv_titles) + (SELECT count(*) FROM articles)"
-    ).fetch_one(pool).await.unwrap_or((1,));
+        "SELECT (SELECT count(*) FROM conv_titles) + (SELECT count(*) FROM articles)",
+    )
+    .fetch_one(pool)
+    .await
+    .unwrap_or((1,));
     let matched: (i64,) = sqlx::query_as(
         "SELECT (SELECT count(*) FROM conv_titles WHERE title LIKE ?1) + (SELECT count(*) FROM articles WHERE title LIKE ?1 OR content LIKE ?1)"
     ).bind(&pattern).fetch_one(pool).await.unwrap_or((1,));

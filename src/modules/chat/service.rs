@@ -14,7 +14,16 @@ pub struct ChatService {
 }
 
 /// chat_node 表的行类型（sqlx query_as 元组）
-type NodeRow = (i64, i64, Option<i64>, String, String, Option<i64>, Option<String>, String);
+type NodeRow = (
+    i64,
+    i64,
+    Option<i64>,
+    String,
+    String,
+    Option<i64>,
+    Option<String>,
+    String,
+);
 
 impl ChatService {
     pub fn new(pool: SqlitePool) -> Self {
@@ -350,7 +359,9 @@ impl ChatService {
                         .map(|c| c.trim().to_string())
                         .filter(|c| !c.is_empty())
                         .ok_or_else(|| ServiceError::InvalidInput("消息内容不能为空".into()))?;
-                    let node = self.insert_node(tree_id, None, "user", &text, None, None).await?;
+                    let node = self
+                        .insert_node(tree_id, None, "user", &text, None, None)
+                        .await?;
                     (node.clone(), Some(node.id), Some(node.id))
                 }
             };
@@ -387,7 +398,14 @@ impl ChatService {
         reasoning: Option<&str>,
     ) -> Result<NodeItem, ServiceError> {
         let assistant = self
-            .insert_node(ctx.tree_id, ctx.ai_parent_id, "assistant", reply, None, reasoning)
+            .insert_node(
+                ctx.tree_id,
+                ctx.ai_parent_id,
+                "assistant",
+                reply,
+                None,
+                reasoning,
+            )
             .await?;
         // 更新树的更新时间
         let _ = sqlx::query("UPDATE chat_tree SET updated_at = datetime('now') WHERE id = ?1")
@@ -707,7 +725,10 @@ mod tests {
             .await
             .unwrap();
         let tid = tree.tree.id;
-        let user = svc.insert_node(tid, None, "user", "q", None, None).await.unwrap();
+        let user = svc
+            .insert_node(tid, None, "user", "q", None, None)
+            .await
+            .unwrap();
         assert!(
             svc.revise_node(
                 2,
@@ -736,7 +757,10 @@ mod tests {
             .await
             .unwrap();
         let tid = tree.tree.id;
-        let user = svc.insert_node(tid, None, "user", "q", None, None).await.unwrap();
+        let user = svc
+            .insert_node(tid, None, "user", "q", None, None)
+            .await
+            .unwrap();
         let _a = svc
             .insert_node(tid, Some(user.id), "assistant", "a", None, None)
             .await
@@ -794,11 +818,11 @@ mod tests {
             .unwrap();
         let tid = tree.tree.id;
 
-        let user = svc.insert_node(tid, None, "user", "q", None, None).await.unwrap();
-        let ctx = svc
-            .prepare_chat(1, tid, Some(user.id), None)
+        let user = svc
+            .insert_node(tid, None, "user", "q", None, None)
             .await
             .unwrap();
+        let ctx = svc.prepare_chat(1, tid, Some(user.id), None).await.unwrap();
         svc.finish_chat(&ctx, "回答内容", Some("推理过程内容"))
             .await
             .unwrap();

@@ -50,7 +50,12 @@
 			"get": {
 				"summary": "卡片详情",
 				"parameters": [
-					{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": { "type": "integer" }
+					}
 				],
 				"responses": { "200": { "description": "card" } }
 			},
@@ -75,11 +80,25 @@
 		},
 		"/api/tasks/{id}": {
 			"parameters": [
-				{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+				{
+					"name": "id",
+					"in": "path",
+					"required": true,
+					"schema": { "type": "integer" }
+				}
 			],
-			"get": { "summary": "任务详情", "responses": { "200": { "description": "task" } } },
-			"put": { "summary": "更新任务", "responses": { "200": { "description": "updated" } } },
-			"delete": { "summary": "删除任务", "responses": { "204": { "description": "deleted" } } }
+			"get": {
+				"summary": "任务详情",
+				"responses": { "200": { "description": "task" } }
+			},
+			"put": {
+				"summary": "更新任务",
+				"responses": { "200": { "description": "updated" } }
+			},
+			"delete": {
+				"summary": "删除任务",
+				"responses": { "204": { "description": "deleted" } }
+			}
 		},
 		"/api/mem/due": {
 			"get": {
@@ -119,7 +138,12 @@
 			"post": {
 				"summary": "发起 AI 对话（SSE 流式响应）",
 				"parameters": [
-					{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": { "type": "integer" }
+					}
 				],
 				"responses": {
 					"200": { "description": "text/event-stream 流式响应" }

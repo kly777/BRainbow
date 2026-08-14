@@ -122,7 +122,12 @@ export default defineConfig(({ command, mode }) => {
 	const apiTarget = env.VITE_API_TARGET ?? "http://localhost:3000";
 
 	return {
-		plugins: [solid(), sitemapPlugin(siteUrl), seoAssetsPlugin(siteUrl), markdownPagesPlugin(siteUrl)],
+		plugins: [
+			solid(),
+			sitemapPlugin(siteUrl),
+			seoAssetsPlugin(siteUrl),
+			markdownPagesPlugin(siteUrl),
+		],
 		envDir,
 
 		css: {

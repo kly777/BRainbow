@@ -31,17 +31,7 @@ impl SearchQueryService {
         let cap = limit.clamp(1, 20);
         let like = format!("%{kw}%");
 
-        let (
-            mem,
-            card,
-            task,
-            bookmark,
-            onto,
-            text,
-            reading,
-            conv,
-            chat,
-        ) = tokio::join!(
+        let (mem, card, task, bookmark, onto, text, reading, conv, chat) = tokio::join!(
             self.search_mem(user_id, &like, kw, cap),
             self.search_card(user_id, &like, kw, cap),
             self.search_task(user_id, &like, kw, cap),
@@ -54,9 +44,7 @@ impl SearchQueryService {
         );
 
         let mut hits = Vec::new();
-        for res in [
-            mem, card, task, bookmark, onto, text, reading, conv, chat,
-        ] {
+        for res in [mem, card, task, bookmark, onto, text, reading, conv, chat] {
             hits.extend(res?);
         }
         Ok(SearchResponse { hits })
@@ -343,15 +331,17 @@ impl SearchQueryService {
                 url: format!("/chat?tree={tree_id}"),
             })
             .collect();
-        hits.extend(node_hits.into_iter().map(
-            |(node_id, tree_id, title, content)| SearchHit {
-                kind: "chat".into(),
-                id: tree_id,
-                title,
-                snippet: snippet(&content, kw),
-                url: format!("/chat?tree={tree_id}&node={node_id}"),
-            },
-        ));
+        hits.extend(
+            node_hits
+                .into_iter()
+                .map(|(node_id, tree_id, title, content)| SearchHit {
+                    kind: "chat".into(),
+                    id: tree_id,
+                    title,
+                    snippet: snippet(&content, kw),
+                    url: format!("/chat?tree={tree_id}&node={node_id}"),
+                }),
+        );
         Ok(hits)
     }
 }
@@ -378,7 +368,10 @@ fn qs(s: &str) -> String {
 
 /// 关键字上下文片段：命中位置前后各 40 字符，加省略号
 fn snippet(content: &str, kw: &str) -> String {
-    let flat: String = content.chars().map(|c| if c == '\n' { ' ' } else { c }).collect();
+    let flat: String = content
+        .chars()
+        .map(|c| if c == '\n' { ' ' } else { c })
+        .collect();
     let lower = flat.to_lowercase();
     let k = kw.to_lowercase();
     let Some(byte_pos) = lower.find(&k) else {
@@ -394,7 +387,13 @@ fn snippet(content: &str, kw: &str) -> String {
     if start > 0 {
         out.push('…');
     }
-    out.push_str(&flat.chars().skip(start).take(end - start).collect::<String>());
+    out.push_str(
+        &flat
+            .chars()
+            .skip(start)
+            .take(end - start)
+            .collect::<String>(),
+    );
     if end < total {
         out.push('…');
     }
@@ -444,35 +443,67 @@ mod tests {
     async fn search_across_modules_and_user_filter() {
         let svc = setup().await;
         // mem（单用户表，无 user 过滤）
-        let c1: i64 = sqlx::query_scalar("INSERT INTO chunk (content) VALUES ('费曼学习法：以教促学') RETURNING id")
-            .fetch_one(&svc.pool).await.unwrap();
-        let c2: i64 = sqlx::query_scalar("INSERT INTO chunk (content) VALUES ('用自己的话教别人，暴露知识缺口') RETURNING id")
-            .fetch_one(&svc.pool).await.unwrap();
+        let c1: i64 = sqlx::query_scalar(
+            "INSERT INTO chunk (content) VALUES ('费曼学习法：以教促学') RETURNING id",
+        )
+        .fetch_one(&svc.pool)
+        .await
+        .unwrap();
+        let c2: i64 = sqlx::query_scalar(
+            "INSERT INTO chunk (content) VALUES ('用自己的话教别人，暴露知识缺口') RETURNING id",
+        )
+        .fetch_one(&svc.pool)
+        .await
+        .unwrap();
         sqlx::query("INSERT INTO mem (cue_chunk_id, target_chunk_id) VALUES (?1, ?2)")
-            .bind(c1).bind(c2).execute(&svc.pool).await.unwrap();
+            .bind(c1)
+            .bind(c2)
+            .execute(&svc.pool)
+            .await
+            .unwrap();
 
         // card（user 1 命中；user 2 不命中）
-        sqlx::query("INSERT INTO card (content, user_id) VALUES ('费曼学习法是一种高效的学习方法', 1)")
-            .execute(&svc.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO card (content, user_id) VALUES ('费曼学习法是一种高效的学习方法', 1)",
+        )
+        .execute(&svc.pool)
+        .await
+        .unwrap();
         sqlx::query("INSERT INTO card (content, user_id) VALUES ('别人的费曼卡片', 2)")
-            .execute(&svc.pool).await.unwrap();
+            .execute(&svc.pool)
+            .await
+            .unwrap();
         // task（无 user_id 的旧数据也应命中）
         sqlx::query("INSERT INTO task (title, user_id) VALUES ('复习费曼笔记', NULL)")
-            .execute(&svc.pool).await.unwrap();
+            .execute(&svc.pool)
+            .await
+            .unwrap();
         // bookmark（单用户表）
         sqlx::query("INSERT INTO bookmark (title, url) VALUES ('费曼技巧详解', 'https://example.com/feynman')")
             .execute(&svc.pool).await.unwrap();
         // reading（reading_article 表）
-        sqlx::query("INSERT INTO reading_article (title, content) VALUES ('费曼自传', '别闹了费曼先生')")
-            .execute(&svc.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO reading_article (title, content) VALUES ('费曼自传', '别闹了费曼先生')",
+        )
+        .execute(&svc.pool)
+        .await
+        .unwrap();
         // conv
         sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (9, '费曼学习法讨论', 'conv')")
             .execute(&svc.pool).await.unwrap();
         // chat（user 1 树，user 2 树）
-        let t1: i64 = sqlx::query_scalar("INSERT INTO chat_tree (user_id, title) VALUES (1, '学习方法') RETURNING id")
-            .fetch_one(&svc.pool).await.unwrap();
-        let t2: i64 = sqlx::query_scalar("INSERT INTO chat_tree (user_id, title) VALUES (2, '别人的树') RETURNING id")
-            .fetch_one(&svc.pool).await.unwrap();
+        let t1: i64 = sqlx::query_scalar(
+            "INSERT INTO chat_tree (user_id, title) VALUES (1, '学习方法') RETURNING id",
+        )
+        .fetch_one(&svc.pool)
+        .await
+        .unwrap();
+        let t2: i64 = sqlx::query_scalar(
+            "INSERT INTO chat_tree (user_id, title) VALUES (2, '别人的树') RETURNING id",
+        )
+        .fetch_one(&svc.pool)
+        .await
+        .unwrap();
         sqlx::query("INSERT INTO chat_node (tree_id, role, content) VALUES (?1, 'user', '费曼学习法是什么？')")
             .bind(t1).execute(&svc.pool).await.unwrap();
         sqlx::query("INSERT INTO chat_node (tree_id, role, content) VALUES (?1, 'user', '费曼学习法是什么？')")
@@ -526,7 +557,12 @@ mod tests {
     #[tokio::test]
     async fn snippet_boundaries_no_ellipsis_at_edges() {
         // 关键字在开头：无前缀省略号
-        let s = snippet("费曼学习法是一种高效学习方法，后面的内容很长".repeat(4).as_str(), "费曼");
+        let s = snippet(
+            "费曼学习法是一种高效学习方法，后面的内容很长"
+                .repeat(4)
+                .as_str(),
+            "费曼",
+        );
         assert!(s.starts_with("费曼"));
         assert!(s.ends_with('…'));
 
@@ -554,7 +590,11 @@ mod tests {
 
     #[tokio::test]
     async fn snippet_case_insensitive_ascii() {
-        let content = format!("{}The Rust Programming Language is great{}", "x".repeat(60), "y".repeat(60));
+        let content = format!(
+            "{}The Rust Programming Language is great{}",
+            "x".repeat(60),
+            "y".repeat(60)
+        );
         let s = snippet(&content, "rust");
         assert!(s.contains("Rust"));
         assert!(s.starts_with('…'));
@@ -592,8 +632,12 @@ mod tests {
     #[tokio::test]
     async fn onto_and_text_module_hits() {
         let svc = setup().await;
-        sqlx::query("INSERT INTO onto (name, description) VALUES ('费曼学习法', '以教促学，检验理解')")
-            .execute(&svc.pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO onto (name, description) VALUES ('费曼学习法', '以教促学，检验理解')",
+        )
+        .execute(&svc.pool)
+        .await
+        .unwrap();
         sqlx::query("INSERT INTO text_note (name, content) VALUES ('读书笔记', '今天读了费曼物理学讲义第一章')")
             .execute(&svc.pool).await.unwrap();
 
@@ -640,11 +684,17 @@ mod tests {
         let svc = setup().await;
         // NULL user_id 的旧数据对任意用户可见
         sqlx::query("INSERT INTO task (title, user_id) VALUES ('共享任务', NULL)")
-            .execute(&svc.pool).await.unwrap();
+            .execute(&svc.pool)
+            .await
+            .unwrap();
         sqlx::query("INSERT INTO task (title, user_id) VALUES ('用户一的任务', 1)")
-            .execute(&svc.pool).await.unwrap();
+            .execute(&svc.pool)
+            .await
+            .unwrap();
         sqlx::query("INSERT INTO task (title, user_id) VALUES ('用户二的任务', 2)")
-            .execute(&svc.pool).await.unwrap();
+            .execute(&svc.pool)
+            .await
+            .unwrap();
 
         let res = svc.search(1, "任务", 5).await.unwrap();
         let titles: Vec<&str> = res
@@ -674,13 +724,19 @@ mod tests {
         let svc = setup().await;
         let c1: i64 =
             sqlx::query_scalar("INSERT INTO chunk (content) VALUES ('什么是熵') RETURNING id")
-                .fetch_one(&svc.pool).await.unwrap();
+                .fetch_one(&svc.pool)
+                .await
+                .unwrap();
         let c2: i64 = sqlx::query_scalar(
             "INSERT INTO chunk (content) VALUES ('系统无序程度的度量，热力学第二定律的核心概念') RETURNING id",
         )
         .fetch_one(&svc.pool).await.unwrap();
         sqlx::query("INSERT INTO mem (cue_chunk_id, target_chunk_id) VALUES (?1, ?2)")
-            .bind(c1).bind(c2).execute(&svc.pool).await.unwrap();
+            .bind(c1)
+            .bind(c2)
+            .execute(&svc.pool)
+            .await
+            .unwrap();
 
         // 命中 cue
         let res = svc.search(1, "熵", 5).await.unwrap();
@@ -698,11 +754,19 @@ mod tests {
     #[tokio::test]
     async fn chat_multiple_nodes_same_tree_each_own_url() {
         let svc = setup().await;
-        let t: i64 =
-            sqlx::query_scalar("INSERT INTO chat_tree (user_id, title) VALUES (1, '物理讨论') RETURNING id")
-                .fetch_one(&svc.pool).await.unwrap();
-        sqlx::query("INSERT INTO chat_node (tree_id, role, content) VALUES (?1, 'user', '熵是什么？')")
-            .bind(t).execute(&svc.pool).await.unwrap();
+        let t: i64 = sqlx::query_scalar(
+            "INSERT INTO chat_tree (user_id, title) VALUES (1, '物理讨论') RETURNING id",
+        )
+        .fetch_one(&svc.pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO chat_node (tree_id, role, content) VALUES (?1, 'user', '熵是什么？')",
+        )
+        .bind(t)
+        .execute(&svc.pool)
+        .await
+        .unwrap();
         sqlx::query("INSERT INTO chat_node (tree_id, role, content) VALUES (?1, 'assistant', '熵是热力学中的核心概念')")
             .bind(t).execute(&svc.pool).await.unwrap();
 
@@ -741,7 +805,9 @@ mod tests {
         for i in 0..3 {
             sqlx::query("INSERT INTO card (content, user_id) VALUES (?1, 1)")
                 .bind(format!("卡片内容 {i} 共享关键词"))
-                .execute(&svc.pool).await.unwrap();
+                .execute(&svc.pool)
+                .await
+                .unwrap();
         }
         let res = svc.search(1, "共享关键词", 1).await.unwrap();
         let card_hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "card").collect();

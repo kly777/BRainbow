@@ -213,9 +213,8 @@ impl AiService {
                                 .and_then(|c| c.get("delta"))
                             {
                                 // 推理内容（如 deepseek 的 reasoning_content）：单独前缀推送，前端可折叠展示
-                                if let Some(r) = delta
-                                    .get("reasoning_content")
-                                    .and_then(|c| c.as_str())
+                                if let Some(r) =
+                                    delta.get("reasoning_content").and_then(|c| c.as_str())
                                 {
                                     if !r.is_empty() {
                                         reasoning_full.push_str(r);
@@ -224,8 +223,7 @@ impl AiService {
                                         }
                                     }
                                 }
-                                if let Some(delta) = delta.get("content").and_then(|c| c.as_str())
-                                {
+                                if let Some(delta) = delta.get("content").and_then(|c| c.as_str()) {
                                     full.push_str(delta);
                                     if tx.send(delta.to_string()).await.is_err() {
                                         // 接收端关闭（客户端断开），停止推送但保留已收内容

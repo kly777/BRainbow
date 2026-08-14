@@ -39,6 +39,10 @@ pub fn routes() -> Router<AppState> {
 
 // ── 树 ──
 
+/// SSE data 行协议常量（前端 web/src/modules/chat/hooks/streamChatRequest.ts 保持一致）
+const SSE_DONE: &str = "__DONE__";
+const SSE_ERROR_PREFIX: &str = "__ERROR__:";
+
 pub async fn list_trees_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<Claims>,
@@ -137,11 +141,11 @@ pub async fn chat_handler(
             .await;
         match result {
             Ok((full, _model, reasoning, _)) => {
-                let _ = tx.send("__DONE__".to_string()).await;
+                let _ = tx.send(SSE_DONE.to_string()).await;
                 let _ = svc2.finish_chat(&ctx2, &full, reasoning.as_deref()).await;
             }
             Err(e) => {
-                let _ = tx.send(format!("__ERROR__:{e}")).await;
+                let _ = tx.send(format!("{SSE_ERROR_PREFIX}{e}")).await;
                 svc2.abort_chat(&ctx2).await;
             }
         }
@@ -150,8 +154,8 @@ pub async fn chat_handler(
     // SSE 流：转发 token；__DONE__ / __ERROR__ 为结束标记
     let stream = futures_util::stream::unfold(rx, |mut rx| async move {
         let token = rx.recv().await?;
-        if token == "__DONE__" {
-            return Some((Ok::<_, Infallible>(Event::default().data("__DONE__")), rx));
+        if token == SSE_DONE {
+            return Some((Ok::<_, Infallible>(Event::default().data(SSE_DONE)), rx));
         }
         Some((Ok::<_, Infallible>(Event::default().data(token)), rx))
     });

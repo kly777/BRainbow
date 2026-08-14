@@ -218,7 +218,11 @@ impl AiService {
                                 {
                                     if !r.is_empty() {
                                         reasoning_full.push_str(r);
-                                        if tx.send(format!("__R__:{r}")).await.is_err() {
+                                        if tx
+                                            .send(format!("{SSE_REASONING_PREFIX}{r}"))
+                                            .await
+                                            .is_err()
+                                        {
                                             break;
                                         }
                                     }
@@ -276,6 +280,9 @@ impl AiService {
         Err(last_err.unwrap_or_else(|| ServiceError::Internal("AI 请求失败".into())))
     }
 }
+
+/// reasoning 流式前缀（前端 streamChatRequest.ts 的 REASONING_PREFIX 保持一致）
+pub const SSE_REASONING_PREFIX: &str = "__R__:";
 
 /// 从 SSE 字节流中解析出 content 增量（不直接使用，见 chat_stream 中 eventsource-stream；
 /// 此处保留为纯函数，测试直接覆盖库的用法）。

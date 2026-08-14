@@ -1,7 +1,7 @@
 import { getApiKey, getToken } from "./token.ts";
 import { HttpError, NetworkError } from "./types/index.ts";
 
-const API_BASE_URL = "/api";
+export const API_BASE_URL = "/api";
 
 // ==================== 全局副作用（与业务无关，组件不感知） ====================
 

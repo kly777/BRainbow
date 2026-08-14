@@ -6,7 +6,7 @@ import {
 } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
 import { getErrorMessage } from "@lib/api";
-import { showConfirm, tryAsync, tryOrNotify } from "@lib/utils";
+import { fmtLocal, showConfirm, tryAsync, tryOrNotify } from "@lib/utils";
 import type { UpdateCardRequest } from "@modules/card";
 import { deleteCardE, getCardE, updateCardE } from "@modules/card";
 import { useNavigate, useParams } from "@solidjs/router";
@@ -57,20 +57,6 @@ const CardEditPage: Component = () => {
 		const c = card();
 		if (!c) return "";
 		return c.created_at === c.updated_at ? c.created_at : c.updated_at;
-	};
-
-	const formatDate = (s: string) => {
-		if (!s) return "";
-		try {
-			return new Date(s).toLocaleString("zh-CN", {
-				month: "2-digit",
-				day: "2-digit",
-				hour: "2-digit",
-				minute: "2-digit",
-			});
-		} catch {
-			return s;
-		}
 	};
 
 	const doSave = async () => {
@@ -142,7 +128,7 @@ const CardEditPage: Component = () => {
 				</div>
 				<div class={styles.metaRow}>
 					<span class={styles.meta}>
-						{stampLabel()} {formatDate(stamp())}
+						{stampLabel()} {fmtLocal(stamp())}
 					</span>
 					<Show when={dirty()}>
 						<span class={styles.dirty}>

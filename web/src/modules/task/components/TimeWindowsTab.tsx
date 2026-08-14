@@ -1,5 +1,5 @@
 import { getErrorMessage } from "@lib/api";
-import { notifyError, tryAsync } from "@lib/utils";
+import { fmtLocal, notifyError, tryAsync } from "@lib/utils";
 import type { CreateTimeWindowRequest, Task, TimeWindow } from "@modules/task";
 import { createTimeWindowE, deleteTimeWindowE } from "@modules/task";
 import { createSignal, For, Show } from "solid-js";
@@ -21,14 +21,6 @@ const presetTimeSlots = [
 	{ label: "明天 9-11", startT: "09:00", endT: "11:00", dayOffset: 1 },
 	{ label: "明天 14-16", startT: "14:00", endT: "16:00", dayOffset: 1 },
 ];
-
-function formatDateTime(iso: string) {
-	const d = new Date(iso);
-	return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(
-		2,
-		"0",
-	)}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
 
 export default function TimeWindowsTab(props: TimeWindowsTabProps) {
 	const [newStartDate, setNewStartDate] = createSignal("");
@@ -223,8 +215,7 @@ export default function TimeWindowsTab(props: TimeWindowsTabProps) {
 						{(tw) => (
 							<div class={styles.timeItem}>
 								<span class={styles.timeItemText}>
-									🟢 {formatDateTime(tw.start_time)} ~{" "}
-									{formatDateTime(tw.end_time)}
+									🟢 {fmtLocal(tw.start_time)} ~ {fmtLocal(tw.end_time)}
 								</span>
 								<button
 									type="button"
@@ -253,8 +244,7 @@ export default function TimeWindowsTab(props: TimeWindowsTabProps) {
 						{(tw) => (
 							<div class={styles.timeItem}>
 								<span class={styles.timeItemText}>
-									🔵 {formatDateTime(tw.start_time)} ~{" "}
-									{formatDateTime(tw.end_time)}
+									🔵 {fmtLocal(tw.start_time)} ~ {fmtLocal(tw.end_time)}
 								</span>
 								<button
 									type="button"

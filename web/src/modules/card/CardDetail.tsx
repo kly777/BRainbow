@@ -5,7 +5,7 @@ import {
 	Toolbar,
 } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
-import { showConfirm, tryOrNotify } from "@lib/utils";
+import { fmtLocal, showConfirm, tryOrNotify } from "@lib/utils";
 import { deleteCardE, getCardE } from "@modules/card";
 import { useNavigate, useParams } from "@solidjs/router";
 import { type Component, createResource } from "solid-js";
@@ -38,19 +38,6 @@ const CardDetailPage: Component = () => {
 		if (ok) navigate(PATHS.card);
 	};
 
-	const formatDate = (s: string) => {
-		try {
-			return new Date(s).toLocaleString("zh-CN", {
-				month: "2-digit",
-				day: "2-digit",
-				hour: "2-digit",
-				minute: "2-digit",
-			});
-		} catch {
-			return s;
-		}
-	};
-
 	return (
 		<div class={styles.container}>
 			<Toolbar backLabel="卡片列表" onBack={() => navigate(PATHS.card)}>
@@ -78,7 +65,7 @@ const CardDetailPage: Component = () => {
 							<div class={styles.meta}>
 								<span>
 									{c.created_at === c.updated_at ? "创建于" : "修改于"}:{" "}
-									{formatDate(
+									{fmtLocal(
 										c.created_at === c.updated_at ? c.created_at : c.updated_at,
 									)}
 								</span>

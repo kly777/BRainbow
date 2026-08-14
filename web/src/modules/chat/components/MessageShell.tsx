@@ -1,6 +1,7 @@
 // ── 消息骨架：头像 / 头部（角色·时间·操作）/ 内容体 / 底部（分支条）──
 // /chat 与 /chat/mem 共用；样式由调用方注入（两页面 CSS 有细微差异）。
 
+import { parseUtc } from "@lib/utils";
 import type { ChatNode } from "@modules/chat";
 import { type JSX, Show } from "solid-js";
 
@@ -27,7 +28,7 @@ export function MessageShell(props: {
 	const isUser = () => node.role === "user";
 
 	const timeText = () => {
-		const d = new Date(`${node.created_at.replace(" ", "T")}Z`);
+		const d = parseUtc(node.created_at);
 		if (Number.isNaN(d.getTime())) return "";
 		return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 	};

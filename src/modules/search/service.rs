@@ -77,7 +77,7 @@ impl SearchQueryService {
                 id,
                 title: clip(&cue, 60),
                 snippet: merge_snippets(&cue, &target, kw),
-                url: "/memory/manage".into(),
+                url: "/memory/manage".into(), // 前端 PATHS.memoryManage（web/src/config/paths.ts）
             })
             .collect())
     }
@@ -255,7 +255,7 @@ impl SearchQueryService {
                 id,
                 title,
                 snippet: snippet(&content, kw),
-                url: format!("/reading/{id}"),
+                url: format!("/reading/{id}"), // PATHS.readingDetail
             })
             .collect())
     }
@@ -281,7 +281,7 @@ impl SearchQueryService {
                 kind: "conv".into(),
                 id: conv_id,
                 // 前端无对话详情路由：跳搜索页并自动执行该标题的搜索
-                url: format!("/conversation?q={}", qs(&title)),
+                url: format!("/conversation?q={}", qs(&title)), // PATHS.conversation
                 snippet: String::new(),
                 title,
             })
@@ -328,7 +328,7 @@ impl SearchQueryService {
                 id: tree_id,
                 title,
                 snippet: String::new(),
-                url: format!("/chat?tree={tree_id}"),
+                url: format!("/chat?tree={tree_id}"), // PATHS.chat
             })
             .collect();
         hits.extend(
@@ -339,7 +339,7 @@ impl SearchQueryService {
                     id: tree_id,
                     title,
                     snippet: snippet(&content, kw),
-                    url: format!("/chat?tree={tree_id}&node={node_id}"),
+                    url: format!("/chat?tree={tree_id}&node={node_id}"), // PATHS.chat
                 }),
         );
         Ok(hits)

@@ -7,11 +7,10 @@ export {
 	NetworkError,
 	ValidationError,
 } from "./errors.ts";
-export {
-	type BatchDataResponse,
-	type BatchErrorDetail,
-	type BatchResponse,
-	formatDate,
-	type PaginatedResponse,
-	type PaginationParams,
+export type {
+	BatchDataResponse,
+	BatchErrorDetail,
+	BatchResponse,
+	PaginatedResponse,
+	PaginationParams,
 } from "./shared.ts";

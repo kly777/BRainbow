@@ -44,18 +44,16 @@ export function useChatSession(opts: ChatSessionOptions) {
 	/** 流式输出中的思考内容（reasoning），同理走 signal */
 	const [streamingReasoning, setStreamingReasoning] = createSignal("");
 
-	const treeId = (): number | null => {
-		const id = params.tree;
-		if (!id || !/^\d+$/.test(String(id))) return null;
-		return parseInt(String(id), 10);
+	/** URL 数字参数解析：非数字返回 null（tree/node 参数共用） */
+	const parseUrlId = (raw: unknown): number | null => {
+		if (!raw || !/^\d+$/.test(String(raw))) return null;
+		return parseInt(String(raw), 10);
 	};
 
+	const treeId = (): number | null => parseUrlId(params.tree);
+
 	/** 聚焦节点 id 由 URL 的 node 参数驱动（刷新/分享链接可恢复分支位置）；null = 跟随最新节点 */
-	const nodeId = (): number | null => {
-		const id = params.node;
-		if (!id || !/^\d+$/.test(String(id))) return null;
-		return parseInt(String(id), 10);
-	};
+	const nodeId = (): number | null => parseUrlId(params.node);
 	const focusId = nodeId;
 	const setFocusParam = (id: number | null) =>
 		setParams({ node: id === null ? undefined : String(id) });

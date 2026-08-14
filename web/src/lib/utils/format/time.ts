@@ -18,6 +18,23 @@ export function fmtLocal(ts: string): string {
 	});
 }
 
+/** 格式化为完整本地时间 "2026/06/10 22:00"（带年份） */
+export function fmtFull(ts: string): string {
+	try {
+		const d = parseUtc(ts);
+		if (Number.isNaN(d.getTime())) return ts;
+		return d.toLocaleString("zh-CN", {
+			year: "numeric",
+			month: "2-digit",
+			day: "2-digit",
+			hour: "2-digit",
+			minute: "2-digit",
+		});
+	} catch {
+		return ts;
+	}
+}
+
 /** 格式化为相对时间 "3天后" / "待复习" */
 export function fmtRelative(ts: string): string {
 	const d = parseUtc(ts);

@@ -1,11 +1,19 @@
 // ── chat SSE 流式请求：读取 data 行，回调每个增量（content / reasoning） ──
 
+import { API_BASE_URL } from "@lib/api";
 import type { StreamResult } from "./useChatSessionTypes.ts";
+
+// ── SSE data 行协议（与后端 src/modules/ai/service.rs、src/modules/chat/handler.rs 保持一致） ──
+/** 普通行 = content 增量；`__R__:` 前缀 = reasoning 增量 */
+const REASONING_PREFIX = "__R__:";
+/** 流结束标记 */
+const DONE_MARK = "__DONE__";
+/** 错误前缀（后接错误文案） */
+const ERROR_PREFIX = "__ERROR__:";
 
 /**
  * 发起流式请求并逐 token 回调。
- * data 行协议：普通行 = content 增量；`__R__:` 前缀 = reasoning 增量；
- * `__DONE__` 结束；`__ERROR__:<msg>` 出错。
+ * data 行协议见文件头常量（与后端 ai/service.rs、chat/handler.rs 保持一致）
  */
 export async function streamChatRequest(
 	id: number,
@@ -16,7 +24,7 @@ export async function streamChatRequest(
 	onPatch: (text: string, reasoning: string) => void,
 ): Promise<StreamResult> {
 	try {
-		const resp = await fetch(`/api/chat/trees/${id}/chat`, {
+		const resp = await fetch(`${API_BASE_URL}/chat/trees/${id}/chat`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -46,16 +54,16 @@ export async function streamChatRequest(
 				const trimmed = line.trim();
 				if (!trimmed.startsWith("data:")) continue;
 				const data = trimmed.slice(5).trim();
-				if (data === "__DONE__") {
+				if (data === DONE_MARK) {
 					done = true;
 					break;
 				}
-				if (data.startsWith("__ERROR__:")) {
+				if (data.startsWith(ERROR_PREFIX)) {
 					errored = true;
 					acc = data.slice(10);
 					break;
 				}
-				if (data.startsWith("__R__:")) {
+				if (data.startsWith(REASONING_PREFIX)) {
 					reasoning += data.slice(6);
 					onPatch(acc, reasoning);
 					continue;

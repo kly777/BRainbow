@@ -1,4 +1,4 @@
-import { formatDate } from "@lib/api";
+import { fmtFull, fmtLocal } from "@lib/utils";
 import type { Task, TimeWindow } from "@modules/task";
 import { createSignal, For, Show } from "solid-js";
 import styles from "./TaskList.module.css";
@@ -41,7 +41,7 @@ function TaskItem(props: TaskItemProps) {
 					<div class={styles.taskMeta}>
 						<Show when={props.task.created_at}>
 							<span class={styles.dateBadge}>
-								📅 {formatDate(props.task.created_at || "")}
+								📅 {fmtFull(props.task.created_at || "")}
 							</span>
 						</Show>
 					</div>
@@ -52,13 +52,7 @@ function TaskItem(props: TaskItemProps) {
 							<For each={props.feasibleWindows}>
 								{(tw) => (
 									<span class={styles.timeWindowChip} title="可进行">
-										🟢{" "}
-										{new Date(tw.start_time).toLocaleString("zh-CN", {
-											month: "2-digit",
-											day: "2-digit",
-											hour: "2-digit",
-											minute: "2-digit",
-										})}
+										🟢 {fmtLocal(tw.start_time)}
 									</span>
 								)}
 							</For>
@@ -69,13 +63,7 @@ function TaskItem(props: TaskItemProps) {
 							<For each={props.plannedWindows}>
 								{(tw) => (
 									<span class={styles.timeWindowChip} title="计划">
-										🔵{" "}
-										{new Date(tw.start_time).toLocaleString("zh-CN", {
-											month: "2-digit",
-											day: "2-digit",
-											hour: "2-digit",
-											minute: "2-digit",
-										})}
+										🔵 {fmtLocal(tw.start_time)}
 									</span>
 								)}
 							</For>

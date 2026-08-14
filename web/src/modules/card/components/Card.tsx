@@ -1,4 +1,5 @@
 import { Markdown as MarkdownRenderer } from "@components/ui";
+import { fmtFull } from "@lib/utils";
 import { type Component, Show } from "solid-js";
 import styles from "./Card.module.css";
 
@@ -21,21 +22,6 @@ export interface CardProps extends CardData {
 }
 
 const Card: Component<CardProps> = (props) => {
-	const formatDate = (dateString: string): string => {
-		try {
-			const date = new Date(dateString);
-			return date.toLocaleDateString("zh-CN", {
-				year: "numeric",
-				month: "2-digit",
-				day: "2-digit",
-				hour: "2-digit",
-				minute: "2-digit",
-			});
-		} catch {
-			return dateString;
-		}
-	};
-
 	const handleEditClick = (e: MouseEvent) => {
 		e.stopPropagation();
 		if (props.onEdit) {
@@ -84,7 +70,7 @@ const Card: Component<CardProps> = (props) => {
 						{props.created_at === props.updated_at ? "创建于" : "修改于"}:
 					</span>
 					<span class={styles.metaValue}>
-						{formatDate(
+						{fmtFull(
 							props.created_at === props.updated_at
 								? props.created_at
 								: props.updated_at,

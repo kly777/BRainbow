@@ -5,52 +5,27 @@ import {
 	addTagToMemE,
 	batchGetMemsTagsE,
 	deleteMemE,
-	editMemE,
 	getMemTagsE,
 	type MemItem,
 	removeTagFromMemE,
 	resetMemE,
-	searchTagsE,
 	suspendMemE,
 	type TagInfo,
 	unsuspendMemE,
 } from "@modules/mem";
 import { createEffect, createSignal, onMount } from "solid-js";
-import type { PageMeta, TagMode } from "../lib/mem-manage-utils.ts";
+import type { PageMeta } from "../lib/mem-manage-utils.ts";
 import { fetchAllMems } from "../lib/mem-manage-utils.ts";
 import { useBatchOps } from "./useBatchOps.ts";
+import { useMemEdit } from "./useMemEdit.ts";
 import { useMemManageParams } from "./useMemManageParams.ts";
+import { useTagFiltersUrl } from "./useTagFiltersUrl.ts";
 
 let initialLoadDone = false;
 
 export function useMemManage() {
 	const params = useMemManageParams();
-
-	// ── 标签过滤 URL 持久化 ──
-	const [tagFilters, setTagFiltersInternal] = createSignal<TagInfo[]>([]);
-
-	onMount(async () => {
-		const names = params.tagFilterNames();
-		if (names.length === 0) return;
-		const all: TagInfo[] = [];
-		for (const name of names) {
-			const result = await tryAsync(() => searchTagsE(name));
-			if (result.ok) {
-				const found = result.value.find((t: TagInfo) => t.name === name);
-				if (found) all.push(found);
-			}
-			// URL 中的标签名可能已失效，忽略即可
-		}
-		setTagFiltersInternal(all);
-	});
-
-	const setTagFilters = (tags: TagInfo[], mode: TagMode) => {
-		setTagFiltersInternal(tags);
-		params.setSearchParams({
-			tag_names: tags.map((t) => t.name).join(",") || undefined,
-			tag_mode: mode === "exclude" ? "exclude" : undefined,
-		});
-	};
+	const { tagFilters, setTagFilters } = useTagFiltersUrl(params);
 
 	// ── 核心状态 ──
 	const [mems, setMems] = createSignal<MemItem[]>([]);
@@ -62,9 +37,6 @@ export function useMemManage() {
 	const [loading, setLoading] = createSignal(true);
 	const [memTags, setMemTags] = createSignal<Map<number, TagInfo[]>>(new Map());
 	const [batchIds, setBatchIds] = createSignal<Set<number>>(new Set());
-	const [editing, setEditing] = createSignal(false);
-	const [editCue, setEditCue] = createSignal("");
-	const [editTarget, setEditTarget] = createSignal("");
 	const [showExportModal, setShowExportModal] = createSignal(false);
 	const [showBatchTagModal, setShowBatchTagModal] = createSignal(false);
 	const [batchTagMode] = createSignal<"add" | "remove">("add");
@@ -239,25 +211,12 @@ export function useMemManage() {
 		});
 	};
 
-	const startEdit = () => {
-		const d = detail();
-		if (!d) return;
-		setEditCue(d.cue.content);
-		setEditTarget(d.target.content);
-		setEditing(true);
-	};
-
-	const saveEdit = async () => {
-		const d = detail();
-		if (!d) return;
-		const ok = await tryOrNotify(
-			() => editMemE(d.id, editCue(), editTarget()),
-			"保存编辑",
-		);
-		if (!ok) return;
-		setEditing(false);
-		load();
-	};
+	// ── 编辑弹层 ──
+	const editHook = useMemEdit({
+		detailId: params.detailId,
+		mems,
+		reload: load,
+	});
 
 	// ── 批量操作 ──
 	const batchOps = useBatchOps({
@@ -289,12 +248,12 @@ export function useMemManage() {
 		loading,
 		memTags,
 		batchIds,
-		editing,
-		setEditing,
-		editCue,
-		setEditCue,
-		editTarget,
-		setEditTarget,
+		editing: editHook.editing,
+		setEditing: editHook.setEditing,
+		editCue: editHook.editCue,
+		setEditCue: editHook.setEditCue,
+		editTarget: editHook.editTarget,
+		setEditTarget: editHook.setEditTarget,
 		showExportModal,
 		setShowExportModal,
 		showBatchTagModal,
@@ -319,8 +278,8 @@ export function useMemManage() {
 		handleReset,
 		addTag,
 		removeTag,
-		startEdit,
-		saveEdit,
+		startEdit: editHook.startEdit,
+		saveEdit: editHook.saveEdit,
 		suspendMemE,
 		unsuspendMemE,
 

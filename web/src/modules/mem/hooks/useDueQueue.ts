@@ -1,0 +1,146 @@
+// ── 复习队列管理：加载 / 预取 / 前进 / 状态切换（stale-while-revalidate） ──
+
+import { tryAsync } from "@lib/utils";
+import type { DueResponse, MemItem } from "@modules/mem";
+import { getSessionEstimateE } from "@modules/mem";
+import { createSignal } from "solid-js";
+
+// 会话预估缓存：retention 重计算，60s 内不重复请求
+const ESTIMATE_TTL = 60_000;
+// 队列预取：剩余 ≤3 张时提前拉下一批，评完无缝衔接
+const PREFETCH_THRESHOLD = 3;
+
+export function useDueQueue(opts: {
+	/** 拉取队列（参数由调用方组合标签过滤/最大学习量） */
+	fetchDue: () => Promise<DueResponse>;
+	/** 当前卡变化时通知调用方（加载预览/助记） */
+	onItemChange: (item: MemItem | undefined) => void;
+}) {
+	const [due, setDue] = createSignal<MemItem[]>([]);
+	const [current, _setCurrent] = createSignal(0);
+	const [showAnswer, _setShowAnswer] = createSignal(false);
+	const [loading, setLoading] = createSignal(true);
+	const [isPreview, setIsPreview] = createSignal(false);
+	const [done, setDone] = createSignal(false);
+	const [intervals, setIntervals] = createSignal<readonly number[]>([
+		0, 0, 0, 0,
+	]);
+	const [allFar, setAllFar] = createSignal(false);
+	const [upcoming, setUpcoming] = createSignal(0);
+	const [estimatedTotal, setEstimatedTotal] = createSignal(0);
+
+	let lastEstimateAt = 0;
+	let prefetching = false;
+	let prefetched: DueResponse | null = null;
+	// 本轮已评卡片 id：预取结果可能含尚未评完的卡，复用前需过滤
+	const reviewedIds = new Set<number>();
+
+	// 应用队列结果（loadDue / 预取复用共用）
+	const applyQueue = (data: DueResponse) => {
+		if (data.items.length === 0 && !data.has_more) {
+			setDone(true);
+			setDue([]);
+			setEstimatedTotal(0);
+			setUpcoming(data.upcoming_count ?? 0);
+			reviewedIds.clear();
+		} else {
+			setDone(false);
+			setAllFar(data.all_far);
+			void (async () => {
+				// 预估 60s 缓存，避免每次队列重载都重算 retention
+				if (Date.now() - lastEstimateAt < ESTIMATE_TTL) return;
+				lastEstimateAt = Date.now();
+				const estResult = await tryAsync(() => getSessionEstimateE());
+				if (estResult.ok) setEstimatedTotal(estResult.value.total_estimate);
+				// 预估失败不影响复习
+			})();
+			setDue([...data.items]);
+			_setCurrent(0);
+			_setShowAnswer(false);
+			setIsPreview(
+				data.items.length === 1 && data.items[0]?.state !== "learning",
+			);
+			if (data.items.length > 0) {
+				opts.onItemChange(data.items[0]);
+			}
+		}
+		setLoading(false);
+	};
+
+	const loadDue = async () => {
+		// stale-while-revalidate：已有卡片时不清空、不闪加载中，旧卡保持到新队列就绪
+		if (due().length === 0) setLoading(true);
+
+		// 预取复用：仅队列为空且预取已就绪（undo/标签切换时 due 非空，走正常网络拉取）
+		if (due().length === 0 && prefetched) {
+			const data = prefetched;
+			prefetched = null;
+			const fresh = data.items.filter((it) => !reviewedIds.has(it.id));
+			if (fresh.length > 0) {
+				applyQueue({ ...data, items: fresh });
+				return;
+			}
+			// 预取全是已评卡：退回正常拉取
+		}
+
+		const dueResult = await tryAsync(() => opts.fetchDue());
+		// 失败时若已有卡片则保留旧队列（stale-while-revalidate），仅空态标记加载结束
+		if (!dueResult.ok) {
+			setLoading(false);
+			return;
+		}
+		applyQueue(dueResult.value);
+	};
+
+	// 剩余卡 ≤ 阈值且未在预取/已有缓存时，提前请求下一批
+	const prefetchNext = () => {
+		if (prefetching || prefetched) return;
+		if (due().length === 0 || due().length > PREFETCH_THRESHOLD) return;
+		prefetching = true;
+		void tryAsync(() => opts.fetchDue()).then((r) => {
+			prefetching = false;
+			if (r.ok) prefetched = r.value;
+		});
+	};
+
+	const advanceQueue = () => {
+		setDue((prev) => {
+			const next = [...prev];
+			next.splice(current(), 1);
+			return next;
+		});
+		// 剩余卡变短，触发下一批预取（队列空时 loadDue 直接复用缓存）
+		prefetchNext();
+		if (due().length > 0) {
+			const nextItem = due()[current()];
+			if (nextItem) opts.onItemChange(nextItem);
+			_setShowAnswer(false);
+		} else {
+			loadDue();
+		}
+	};
+
+	return {
+		due,
+		current,
+		showAnswer,
+		loading,
+		isPreview,
+		done,
+		intervals,
+		setIntervals,
+		allFar,
+		upcoming,
+		estimatedTotal,
+		reviewedIds,
+		setDue,
+		setCurrent: _setCurrent,
+		setShowAnswer: _setShowAnswer,
+		loadDue,
+		advanceQueue,
+		invalidateCache: () => {
+			reviewedIds.clear();
+			prefetched = null;
+		},
+	};
+}

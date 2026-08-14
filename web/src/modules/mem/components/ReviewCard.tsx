@@ -5,7 +5,7 @@ import { MarkdownEditor } from "@components";
 import { Button, Markdown as MarkdownRenderer } from "@components/ui";
 import { fmtInterval, fmtLocal } from "@lib/utils";
 import { Show } from "solid-js";
-import type { UseMemReview } from "../hooks/useMemReview.ts";
+import type { UseMemReview } from "../hooks/useMemReviewTypes.ts";
 import { useSpeech } from "../hooks/useSpeech.ts";
 import styles from "./ReviewCard.module.css";
 

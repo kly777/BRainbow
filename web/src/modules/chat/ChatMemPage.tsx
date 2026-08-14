@@ -4,16 +4,11 @@ import { PATHS } from "@config/paths";
 // 右侧：对话流（user 气泡 / AI 回复），assistant 的 JSON 卡片渲染为可勾选清单，
 //       底部"导入所选"把勾选卡片写入记忆库。
 
-import { Markdown as MarkdownRenderer } from "@components/ui";
-import { notifyError, notifySuccess } from "@lib/utils";
-import type { ChatNode } from "@modules/chat";
 import { A } from "@solidjs/router";
-import { createSignal, For, onMount, Show } from "solid-js";
+import { For, onMount, Show } from "solid-js";
 import styles from "./ChatMemPage.module.css";
-import { BranchBar } from "./components/BranchBar.tsx";
+import { MessageRow as ChatMemMessageRow } from "./components/ChatMemMessageRow.tsx";
 import { Composer } from "./components/Composer.tsx";
-import { MessageShell } from "./components/MessageShell.tsx";
-import { ThinkingBlock } from "./components/ThinkingBlock.tsx";
 import { useAutoScroll } from "./hooks/useAutoScroll.ts";
 import { useChatMem } from "./hooks/useChatMem.ts";
 
@@ -107,7 +102,7 @@ export default function ChatMemPage() {
 							</div>
 							<div class={styles.messageList} ref={listRef}>
 								<For each={c.activePath()}>
-									{(node) => <MessageRow c={c} node={node} />}
+									{(node) => <ChatMemMessageRow c={c} node={node} />}
 								</For>
 								<Composer
 									styles={styles}
@@ -172,142 +167,5 @@ function ImportBar(props: { c: ReturnType<typeof useChatMem> }) {
 				</button>
 			</div>
 		</Show>
-	);
-}
-
-// ── 单条消息：user 气泡 / assistant（卡片或 Markdown） ──
-
-async function copyNode(node: ChatNode) {
-	try {
-		await navigator.clipboard.writeText(node.content);
-		notifySuccess("已复制");
-	} catch {
-		notifyError("复制失败");
-	}
-}
-
-function MessageRow(props: {
-	c: ReturnType<typeof useChatMem>;
-	node: ChatNode;
-}) {
-	const { c, node } = props;
-	const isUser = node.role === "user";
-	const cards = c.parseCards(node.content);
-	const [showRaw, setShowRaw] = createSignal(false);
-	/** 临时节点（负数 id）= 乐观插入中：AI 正在流式生成 */
-	const streaming = () =>
-		node.id < 0 && node.role === "assistant" && c.sending();
-
-	return (
-		<MessageShell
-			styles={styles}
-			node={node}
-			headExtra={streaming() ? " · 生成中…" : ""}
-			actions={
-				<>
-					<Show when={!streaming()}>
-						<button
-							type="button"
-							class={styles.msgBtn}
-							title="复制内容"
-							onClick={() => void copyNode(node)}
-						>
-							复制
-						</button>
-					</Show>
-					<Show when={!isUser && !streaming()}>
-						<button
-							type="button"
-							class={styles.msgBtn}
-							title="重新生成（作为新分支，原回复保留）"
-							disabled={c.sending()}
-							onClick={() => void c.regenerate(node.id)}
-						>
-							重新生成
-						</button>
-					</Show>
-				</>
-			}
-		>
-			{/* assistant + 可解析卡片 → 勾选清单 */}
-			<Show
-				when={!isUser && !streaming() ? cards : null}
-				fallback={
-					<div class={isUser ? styles.userBubble : styles.assistantBubble}>
-						{isUser ? (
-							<div class={styles.userWrap}>
-								<div class={styles.userBubble}>{node.content}</div>
-								<Show when={c.childrenOf(node.id).length > 1}>
-									<BranchBar
-										styles={styles}
-										children={c.childrenOf(node.id)}
-										isActive={(id) => c.isInSubtree(id)}
-										onSelect={(id) => c.focusBranch(id)}
-										title="切换到该回复"
-										chipText={(child) =>
-											child.content.slice(0, 24) || "AI 回复"
-										}
-									/>
-								</Show>
-							</div>
-						) : streaming() ? (
-							// 流式期间：实时 Markdown 渲染（内容走 signal，零重建）
-							<div class={styles.messageMd}>
-								<Show
-									when={c.streamingContent()}
-									fallback={<span class={styles.thinking}>思考中…</span>}
-								>
-									<MarkdownRenderer content={c.streamingContent()} />
-								</Show>
-								<span class={styles.streamCursor} />
-							</div>
-						) : (
-							<div class={styles.messageMd}>
-								<ThinkingBlock
-									styles={styles}
-									reasoning={() => node.reasoning}
-									done={() => !!node.content}
-									open={streaming()}
-								/>
-								<MarkdownRenderer content={node.content} />
-							</div>
-						)}
-					</div>
-				}
-			>
-				{(parsed) => (
-					<div class={styles.cardsPanel}>
-						<div class={styles.cardsPanelHead}>
-							<span class={styles.cardsPanelTitle}>
-								AI 生成的卡片（{parsed().length} 张）
-							</span>
-							<button
-								type="button"
-								class={styles.msgBtn}
-								onClick={() => setShowRaw(!showRaw())}
-							>
-								{showRaw() ? "收起原文" : "查看原文"}
-							</button>
-						</div>
-						<Show when={showRaw()}>
-							<pre class={styles.rawBox}>{node.content}</pre>
-						</Show>
-						<For each={parsed()}>
-							{(card, i) => (
-								<label class={styles.cardRow}>
-									<input
-										type="checkbox"
-										checked={c.isCardSelected(node.id, i())}
-										onChange={() => c.toggleCard(node.id, i())}
-									/>
-									<span class={styles.cardCue}>{card.cue}</span>
-									<span class={styles.cardTarget}>{card.target}</span>
-								</label>
-							)}
-						</For>
-					</div>
-				)}
-			</Show>
-		</MessageShell>
 	);
 }

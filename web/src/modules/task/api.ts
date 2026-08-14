@@ -1,3 +1,5 @@
+// ── 任务模块 API 入口：子文件实现 + 统一 re-export ──
+
 import {
 	CACHE,
 	cachedRequest,
@@ -6,172 +8,16 @@ import {
 	request,
 	tapInvalidate,
 } from "@lib/api";
+import type {
+	CreateTaskRequest,
+	DagView,
+	Task,
+	TaskDetail,
+	TaskListResponse,
+	UpdateTaskRequest,
+} from "./api-types.ts";
 
-// ==================== 类型 ====================
-
-// ── Task 基础 ──
-
-export interface Task {
-	id: number;
-	title: string;
-	description: string | null;
-	parent_task_id: number | null;
-	status: string;
-	completed_at: string | null;
-	effort_estimate_minutes: number | null;
-	created_at: string;
-	updated_at: string;
-}
-
-export interface CreateTaskRequest {
-	title: string;
-	description?: string | null;
-	parent_task_id?: number | null;
-	effort_estimate_minutes?: number | null;
-}
-
-export interface UpdateTaskRequest {
-	title?: string;
-	description?: string | null;
-	parent_task_id?: number | null;
-	status?: string | null;
-	effort_estimate_minutes?: number | null;
-}
-
-// ── 依赖 & 分解 ──
-
-export interface TaskDependency {
-	id: number;
-	task_id: number;
-	depends_on_task_id: number;
-}
-
-export interface TaskDecomposition {
-	id: number;
-	parent_task_id: number;
-	child_task_id: number;
-}
-
-export interface TaskTimeAllocation {
-	id: number;
-	task_id: number;
-	time_window_id: number;
-	duration_minutes: number;
-}
-
-// ── TaskDetail ──
-
-export interface TaskDetail {
-	task: Task;
-	depends_on: number[];
-	children: Task[];
-	available_slots: TimeWindow[];
-	planned_slots: TimeWindow[];
-	actual_slots: TimeWindow[];
-}
-
-// ── Calendar Event ──
-
-export interface CalendarEvent {
-	task_id: number;
-	title: string;
-	start: string;
-	end: string;
-	window_type: string;
-	status: string;
-}
-
-// ── DAG 依赖图 ──
-
-export interface DagNode {
-	id: number;
-	title: string;
-	status: string;
-}
-
-export interface DagEdge {
-	from: number;
-	to: number;
-}
-
-export interface DagView {
-	nodes: DagNode[];
-	edges: DagEdge[];
-}
-
-// ── 时间窗口 ──
-
-export interface TimeWindow {
-	id: number;
-	start_time: string;
-	end_time: string;
-	window_type: string;
-	task_id: number;
-	user_id: number | null;
-}
-
-export interface CreateTimeWindowRequest {
-	start_time: string;
-	end_time: string;
-	window_type: string;
-	task_id: number;
-	user_id?: number | null;
-}
-
-// ── 常量 & 展示 ──
-
-export const TaskStatus = {
-	BACKLOG: "backlog",
-	ACTIVE: "active",
-	COMPLETED: "completed",
-	ARCHIVED: "archived",
-} as const;
-
-export type TaskStatusType = (typeof TaskStatus)[keyof typeof TaskStatus];
-
-export function getStatusText(status: string): string {
-	switch (status) {
-		case "backlog":
-			return "待办";
-		case "active":
-			return "进行中";
-		case "completed":
-			return "已完成";
-		case "archived":
-			return "已归档";
-		default:
-			return "未知";
-	}
-}
-
-export interface TaskListResponse {
-	items: Task[];
-	total: number;
-	page: number;
-	page_size: number;
-	total_pages: number;
-}
-
-// ==================== Task API Functions ====================
-
-export const getCalendarEventsE = (
-	start?: string,
-	end?: string,
-	status?: string,
-): Promise<readonly CalendarEvent[]> => {
-	const params = new URLSearchParams();
-	if (start) params.set("start", start);
-	if (end) params.set("end", end);
-	if (status) params.set("status", status);
-	const qs = params.toString();
-	return cachedRequest(`/tasks/calendar${qs ? `?${qs}` : ""}`, {});
-};
-
-export const getTasksE = (): Promise<TaskListResponse> =>
-	cachedRequest("/tasks", {});
-
-export const getAllTasksE = (): Promise<TaskListResponse> =>
-	cachedRequest("/tasks/all", {});
+// ==================== Tree API ====================
 
 // ==================== Tree API ====================
 
@@ -300,3 +146,8 @@ export const getDagE = (taskId?: number, depth?: number): Promise<DagView> => {
 	const qs = params.toString();
 	return cachedRequest(`/tasks/dag${qs ? `?${qs}` : ""}`, {}, 15_000);
 };
+
+// ==================== re-export ====================
+
+export * from "./api-funcs.ts";
+export * from "./api-types.ts";

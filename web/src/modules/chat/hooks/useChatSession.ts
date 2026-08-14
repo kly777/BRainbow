@@ -2,7 +2,7 @@
 // 树 CRUD、URL 驱动的焦点/分支导航、SSE 流式调用。
 // 两者差异（提示词、AI 输出处理）由各自页面的 hook 组合实现。
 
-import { getErrorMessage, getToken } from "@lib/api";
+import { getToken } from "@lib/api";
 import {
 	confirmAndRun,
 	notifySuccess,
@@ -13,22 +13,17 @@ import type { ChatNode, ChatTree, TreeDetail } from "@modules/chat";
 import { createTreeE, deleteTreeE, getTreeE, listTreesE } from "@modules/chat";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal } from "solid-js";
-
-export interface ChatSessionOptions {
-	/** 树列表加载器（默认列出全部 kind） */
-	listTreesFn?: () => Promise<ChatTree[]>;
-	/** 新建会话的标题与 kind */
-	createTitle: string;
-	createKind?: "chat" | "mem";
-	/** 新建/删除失败提示的前缀文案 */
-	createLabel: string;
-}
-
-/** streamChat 的返回：ok=false 时 error 为可展示文案 */
-export interface StreamResult {
-	ok: boolean;
-	error: string;
-}
+import {
+	computeActivePath,
+	findBranchLeaf,
+	isNodeInSubtree,
+	makeTempNode,
+} from "./chat-tree.ts";
+import { streamChatRequest } from "./streamChatRequest.ts";
+import type {
+	ChatSessionOptions,
+	StreamResult,
+} from "./useChatSessionTypes.ts";
 
 export function useChatSession(opts: ChatSessionOptions) {
 	const navigate = useNavigate();
@@ -74,27 +69,7 @@ export function useChatSession(opts: ChatSessionOptions) {
 		id === null ? undefined : nodes().find((n) => n.id === id);
 
 	/** 聚焦节点（或最新节点）到根的路径（父在前） */
-	const activePath = (): ChatNode[] => {
-		const all = nodes();
-		if (all.length === 0) return [];
-		const focused = focusId();
-		const anchor =
-			focused !== null && all.some((n) => n.id === focused)
-				? focused
-				: all[all.length - 1].id;
-		const chain: ChatNode[] = [];
-		let cur: ChatNode | undefined = all.find((n) => n.id === anchor);
-		let guard = 0;
-		while (cur !== undefined && guard < 200) {
-			guard++;
-			chain.unshift(cur);
-			cur =
-				cur.parent_id === null
-					? undefined
-					: all.find((n) => n.id === cur!.parent_id);
-		}
-		return chain;
-	};
+	const activePath = (): ChatNode[] => computeActivePath(nodes(), focusId());
 
 	/** 当前分支末端节点（新消息挂载点） */
 	const lastNode = () => {
@@ -103,29 +78,12 @@ export function useChatSession(opts: ChatSessionOptions) {
 	};
 
 	/** 切换分支：跳到该节点所在分支的末端（沿最新子链走到最深叶子） */
-	const focusBranch = (branchRootId: number) => {
-		let cur = branchRootId;
-		let guard = 0;
-		while (guard < 500) {
-			const kids = childrenOf(cur);
-			if (kids.length === 0) break;
-			cur = kids[kids.length - 1].id;
-			guard++;
-		}
-		setFocusParam(cur);
-	};
+	const focusBranch = (branchRootId: number) =>
+		setFocusParam(findBranchLeaf(nodes(), branchRootId));
 
 	/** 当前分支是否经过某节点（分支条高亮） */
-	const isInSubtree = (rootId: number): boolean => {
-		let cur = focusId();
-		let guard = 0;
-		while (cur !== null && guard < 500) {
-			if (cur === rootId) return true;
-			cur = findNode(cur)?.parent_id ?? null;
-			guard++;
-		}
-		return false;
-	};
+	const isInSubtree = (rootId: number): boolean =>
+		isNodeInSubtree(nodes(), focusId(), rootId);
 
 	// ── 加载 ──
 
@@ -204,22 +162,6 @@ export function useChatSession(opts: ChatSessionOptions) {
 
 	// ── 流式对话 ──
 
-	/** 创建本地临时节点（负数 id 标记乐观插入，完成后被真实节点替换） */
-	const makeTempNode = (
-		id: number,
-		parentId: number | null,
-		role: "user" | "assistant",
-		content: string,
-	): ChatNode => ({
-		id,
-		tree_id: treeId() ?? 0,
-		parent_id: parentId,
-		role,
-		content,
-		revised_from: null,
-		created_at: new Date().toISOString().slice(0, 19).replace("T", " "),
-	});
-
 	/**
 	 * 流式调用后端（乐观 UI）：
 	 * - content 非空：立即插入临时 user 节点（输入即刻显示，参照 LobeChat 模式）
@@ -255,10 +197,24 @@ export function useChatSession(opts: ChatSessionOptions) {
 			if (!prev) return prev;
 			const next = [...prev.nodes];
 			if (tempUser !== null) {
-				next.push(makeTempNode(tempUser, parentId, "user", content ?? ""));
+				next.push(
+					makeTempNode(
+						tempUser,
+						parentId,
+						"user",
+						content ?? "",
+						treeId() ?? 0,
+					),
+				);
 			}
 			next.push(
-				makeTempNode(tempAssistant, tempUser ?? parentId, "assistant", ""),
+				makeTempNode(
+					tempAssistant,
+					tempUser ?? parentId,
+					"assistant",
+					"",
+					treeId() ?? 0,
+				),
 			);
 			return { ...prev, nodes: next };
 		});
@@ -282,69 +238,23 @@ export function useChatSession(opts: ChatSessionOptions) {
 		const controller = new AbortController();
 		abortCtrl = controller;
 		try {
-			const resp = await fetch(`/api/chat/trees/${id}/chat`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
-				},
-				body: JSON.stringify({ parent_id: parentId, content }),
-				signal: controller.signal,
-			});
-			if (!resp.ok) throw new Error(`请求失败 (${resp.status})`);
-			if (!resp.body) throw new Error("浏览器不支持流式响应");
+			const result = await streamChatRequest(
+				id,
+				parentId,
+				content,
+				token,
+				controller.signal,
+				patchAssistant,
+			);
 
-			let acc = "";
-			let reasoning = "";
-			const reader = resp.body.getReader();
-			const decoder = new TextDecoder();
-
-			let buffer = "";
-			let done = false;
-			let errored = false;
-			while (!done) {
-				const { value, done: streamDone } = await reader.read();
-				if (streamDone) break;
-				buffer += decoder.decode(value, { stream: true });
-				const lines = buffer.split("\n");
-				buffer = lines.pop() ?? "";
-				for (const line of lines) {
-					const trimmed = line.trim();
-					if (!trimmed.startsWith("data:")) continue;
-					const data = trimmed.slice(5).trim();
-					if (data === "__DONE__") {
-						done = true;
-						break;
-					}
-					if (data.startsWith("__ERROR__:")) {
-						errored = true;
-						acc = data.slice(10);
-						break;
-					}
-					if (data.startsWith("__R__:")) {
-						reasoning += data.slice(6);
-						patchAssistant(acc, reasoning);
-						continue;
-					}
-					acc += data;
-					patchAssistant(acc, reasoning);
-				}
-			}
-
-			if (errored) throw new Error(acc || "AI 生成失败");
-
-			// 完成：重拉真实树替换临时节点（保持 current，不触发整页空态）。
-			// reasoning 已随节点入库，真实节点自带思考内容
-			await loadTree(id);
-			return { ok: true, error: "" };
-		} catch (e) {
-			if ((e as Error)?.name === "AbortError") {
-				// 用户主动停止：后端可能已落库部分内容，重拉取真实状态（静默成功）
+			if (result.ok || controller.signal.aborted) {
+				// 完成或用户主动停止：重拉真实树替换临时节点（保持 current，不触发整页空态）。
+				// reasoning 已随节点入库，真实节点自带思考内容
 				await loadTree(id);
 				return { ok: true, error: "" };
 			}
 			rollback();
-			return { ok: false, error: getErrorMessage(e) };
+			return result;
 		} finally {
 			setStreamingContent("");
 			setStreamingReasoning("");

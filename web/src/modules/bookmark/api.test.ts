@@ -14,7 +14,18 @@ const cacheMock = vi.hoisted(() => ({
 	tapInvalidate: vi.fn((_p: RegExp, r: unknown) => r),
 }));
 
-vi.mock("@lib/api", () => ({ ...requestMock, ...cacheMock }));
+const utilMock = vi.hoisted(() => ({
+	buildQuery: vi.fn(
+		(params: Record<string, unknown>) =>
+			`?${new URLSearchParams(
+				Object.entries(params)
+					.filter(([, v]) => v !== undefined && v !== null && v !== "")
+					.map(([k, v]) => [k, String(v)]),
+			)}`,
+	),
+}));
+
+vi.mock("@lib/api", () => ({ ...requestMock, ...cacheMock, ...utilMock }));
 
 import {
 	createBookmarkE,

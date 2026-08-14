@@ -1,4 +1,5 @@
 import {
+	buildQuery,
 	CACHE,
 	cachedRequest,
 	del,
@@ -64,12 +65,10 @@ export const getBookmarksE = (
 	pageSize = 20,
 	tag?: string,
 ): Promise<PaginatedBookmarks> => {
-	const qs = new URLSearchParams({
-		page: String(page),
-		page_size: String(pageSize),
-	});
-	if (tag) qs.set("tag", tag);
-	return cachedRequest(`/bookmarks?${qs}`, {});
+	return cachedRequest(
+		`/bookmarks${buildQuery({ page, page_size: pageSize, tag })}`,
+		{},
+	);
 };
 
 export const createBookmarkE = (bm: CreateBookmarkRequest): Promise<Bookmark> =>
@@ -94,13 +93,10 @@ export const searchBookmarksE = (
 	pageSize = 20,
 	tag?: string,
 ): Promise<PaginatedBookmarks> => {
-	const qs = new URLSearchParams({
-		q: query,
-		page: String(page),
-		page_size: String(pageSize),
-	});
-	if (tag) qs.set("tag", tag);
-	return cachedRequest(`/bookmarks/search?${qs}`, {});
+	return cachedRequest(
+		`/bookmarks/search${buildQuery({ q: query, page, page_size: pageSize, tag })}`,
+		{},
+	);
 };
 
 // ── 标签 ──

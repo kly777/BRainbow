@@ -5,7 +5,15 @@ export const getMemCountsE = (): Promise<MemCounts> =>
 export const getSessionEstimateE = (): Promise<SessionEstimate> =>
 	request("/mem/session-estimate", {});
 
-import { CACHE, del, post, put, request, tapInvalidate } from "@lib/api";
+import {
+	buildQuery,
+	CACHE,
+	del,
+	post,
+	put,
+	request,
+	tapInvalidate,
+} from "@lib/api";
 import type {
 	BatchResponse,
 	DueResponse,
@@ -32,17 +40,7 @@ export const createMemE = (
 export const getAllMemsE = (
 	params?: MemQuery,
 ): Promise<PaginatedResponse<MemItem>> => {
-	const qs = new URLSearchParams();
-	if (params?.q) qs.set("q", params.q);
-	if (params?.state) qs.set("state", params.state);
-	if (params?.sort) qs.set("sort", params.sort);
-	if (params?.order) qs.set("order", params.order);
-	if (params?.tag_ids) qs.set("tag_ids", params.tag_ids);
-	if (params?.exclude_tag_ids)
-		qs.set("exclude_tag_ids", params.exclude_tag_ids);
-	if (params?.page) qs.set("page", String(params.page));
-	if (params?.page_size) qs.set("page_size", String(params.page_size));
-	const suffix = qs.toString();
+	const suffix = buildQuery({ ...(params ?? {}) }).slice(1);
 	return request(`/mem/all${suffix ? `?${suffix}` : ""}`, {});
 };
 

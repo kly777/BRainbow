@@ -6,11 +6,14 @@ import { showToast } from "@components/ui/organisms/toastStore.ts";
 
 export class NetworkError extends Error {
 	readonly cause: unknown;
+	/** 主动取消（AbortError）：调用方应静默处理，不弹错误提示 */
+	readonly canceled: boolean;
 
-	constructor(args: { readonly cause: unknown }) {
+	constructor(args: { readonly cause: unknown; readonly canceled?: boolean }) {
 		super("Network error");
 		this.name = "NetworkError";
 		this.cause = args.cause;
+		this.canceled = args.canceled ?? false;
 	}
 
 	static fromUnknown(cause: unknown): NetworkError {

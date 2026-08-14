@@ -168,6 +168,10 @@ export const request = async <T>(
 			headers: buildHeaders(options.headers, options.body),
 		});
 	} catch (cause: unknown) {
+		// ── 主动取消（AbortError）：静默抛出，不弹网络错误 toast ──
+		if ((cause as Error)?.name === "AbortError") {
+			throw new NetworkError({ cause, canceled: true });
+		}
 		// ── 网络断开 → 全局 toast + 日志，然后抛出 ──
 		console.error(`[API] NETWORK ${endpoint}:`, cause);
 		// 未登录时大请求体（如书签导入）可能被服务器/代理截断连接，
@@ -214,7 +218,10 @@ export const request = async <T>(
 
 	let json: unknown;
 	try {
-		json = await response.json();
+		// 空响应体（如后端 200 无内容）→ undefined，不误报网络错误
+		const text = await response.text();
+		if (!text) return undefined as unknown as T;
+		json = JSON.parse(text);
 	} catch (cause: unknown) {
 		throw new NetworkError({ cause });
 	}
@@ -260,8 +267,9 @@ function buildHeaders(
 ): Headers {
 	const headers = new Headers();
 
-	// FormData 让浏览器自动设 Content-Type（含 boundary），手动设会破坏上传
-	if (!(body instanceof FormData)) {
+	// FormData 让浏览器自动设 Content-Type（含 boundary），手动设会破坏上传；
+	// GET 等无 body 请求不设 Content-Type
+	if (body && !(body instanceof FormData)) {
 		headers.set("Content-Type", "application/json");
 	}
 

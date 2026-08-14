@@ -1,6 +1,7 @@
 // ── 任务模块 API 入口：子文件实现 + 统一 re-export ──
 
 import {
+	buildQuery,
 	CACHE,
 	cachedRequest,
 	patch,
@@ -140,11 +141,11 @@ export const moveToBacklogE = (id: number): Promise<Task> =>
 
 // DAG 视图缓存 15 秒
 export const getDagE = (taskId?: number, depth?: number): Promise<DagView> => {
-	const params = new URLSearchParams();
-	if (taskId) params.set("task_id", String(taskId));
-	if (depth) params.set("depth", String(depth));
-	const qs = params.toString();
-	return cachedRequest(`/tasks/dag${qs ? `?${qs}` : ""}`, {}, 15_000);
+	return cachedRequest(
+		`/tasks/dag${buildQuery({ task_id: taskId, depth })}`,
+		{},
+		15_000,
+	);
 };
 
 // ==================== re-export ====================

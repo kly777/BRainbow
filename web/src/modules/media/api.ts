@@ -1,4 +1,5 @@
 import {
+	buildQuery,
 	CACHE,
 	cachedRequest,
 	del,
@@ -50,12 +51,7 @@ export const listMediaE = (params?: {
 	page?: number;
 	page_size?: number;
 }): Promise<PaginatedMedia> => {
-	const qs = new URLSearchParams();
-	if (params?.media_type) qs.set("media_type", params.media_type);
-	if (params?.page) qs.set("page", String(params.page));
-	if (params?.page_size) qs.set("page_size", String(params.page_size));
-	const suffix = qs.toString() ? `?${qs.toString()}` : "";
-	return cachedRequest(`/media${suffix}`, {});
+	return cachedRequest(`/media${buildQuery(params ?? {})}`, {});
 };
 
 /** 单条详情（缓存 60 秒） */

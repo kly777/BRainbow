@@ -310,9 +310,7 @@ impl AppError {
     pub fn into_response(self) -> axum::response::Response {
         match self {
             AppError::NotFound => crate::shared::error_types::not_found("记忆项不存在"),
-            AppError::Internal(msg) => {
-                crate::shared::error_types::internal(msg.clone(), &msg)
-            }
+            AppError::Internal(msg) => crate::shared::error_types::internal(msg.clone(), &msg),
             AppError::Db(e) => crate::shared::error_types::internal(e, "数据库操作"),
         }
     }

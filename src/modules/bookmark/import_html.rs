@@ -111,7 +111,9 @@ mod html_escape_decode {
         let chars: Vec<char> = s.chars().collect();
         let mut i = 0;
         while i < chars.len() {
-            let Some(c) = chars.get(i).copied() else { break };
+            let Some(c) = chars.get(i).copied() else {
+                break;
+            };
             if c == '&' {
                 // 找到分号
                 if let Some(semi) = (i + 1..chars.len()).find(|&j| chars.get(j) == Some(&';')) {

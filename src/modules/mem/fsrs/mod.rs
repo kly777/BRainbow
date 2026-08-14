@@ -160,10 +160,7 @@ pub struct ScheduleInput {
     pub cumulative_step_days: u32,
 }
 
-pub fn schedule(
-    input: ScheduleInput,
-    config: &SchedulerConfig,
-) -> Result<ReviewOutcome, String> {
+pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> Result<ReviewOutcome, String> {
     use CardState::*;
     let ScheduleInput {
         s_old,
@@ -265,8 +262,7 @@ pub fn schedule(
     let mem = to_memory_state(s_old, d_old);
 
     if rating == 1 {
-        let (s, d, _) =
-            compute_next_with_state(mem, 1, days_elapsed, config.desired_retention)?;
+        let (s, d, _) = compute_next_with_state(mem, 1, days_elapsed, config.desired_retention)?;
         return Ok(ReviewOutcome {
             state: Relearning,
             stability: s,
@@ -302,7 +298,7 @@ fn relearn(
     Ok(match rating {
         1 => {
             let (s, d, _) =
-            compute_next_with_state(mem, 1, days_elapsed, config.desired_retention)?;
+                compute_next_with_state(mem, 1, days_elapsed, config.desired_retention)?;
             ReviewOutcome {
                 state: Relearning,
                 stability: s,
@@ -397,7 +393,10 @@ pub fn preview(
                 compute_next(mem, 4, days_elapsed, config.desired_retention)?,
             )
         } else {
-            (steps.get(next).copied().unwrap_or(0) as f64, steps.get(next).copied().unwrap_or(0) as f64)
+            (
+                steps.get(next).copied().unwrap_or(0) as f64,
+                steps.get(next).copied().unwrap_or(0) as f64,
+            )
         };
         return Ok([again, hard, good, easy]);
     }

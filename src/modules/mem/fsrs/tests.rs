@@ -41,7 +41,8 @@ fn schedule_secs(
             cumulative_step_days: 0,
         },
         &config,
-    ).unwrap();
+    )
+    .unwrap();
     let due = chrono::DateTime::parse_from_rfc3339(&outcome.due_at)
         .unwrap()
         .with_timezone(&Utc);
@@ -138,7 +139,8 @@ fn good_grows_faster_than_hard() {
                     cumulative_step_days: 0,
                 },
                 &config,
-            ).unwrap();
+            )
+            .unwrap();
             s = o.stability;
             d = o.difficulty;
         }
@@ -176,7 +178,8 @@ fn forget_in_review_triggers_relearning() {
             cumulative_step_days: 0,
         },
         &config,
-    ).unwrap();
+    )
+    .unwrap();
     assert_eq!(outcome.state, CardState::Relearning);
     let secs = schedule_secs(5.0, 5.0, CardState::Review, None, 1, 5);
     assert!(secs <= 3600.0);
@@ -197,7 +200,8 @@ fn relearn_then_recover() {
             cumulative_step_days: 0,
         },
         &config,
-    ).unwrap();
+    )
+    .unwrap();
     assert_eq!(o1.state, CardState::Relearning);
     let o2 = schedule(
         ScheduleInput {
@@ -210,7 +214,8 @@ fn relearn_then_recover() {
             cumulative_step_days: 1,
         },
         &config,
-    ).unwrap();
+    )
+    .unwrap();
     assert_eq!(o2.state, CardState::Review);
 }
 
@@ -258,7 +263,8 @@ fn long_term_growth_trajectory() {
             cumulative_step_days: 0,
         },
         &config,
-    ).unwrap();
+    )
+    .unwrap();
     (s, d, state) = (o1.stability, o1.difficulty, o1.state);
     // Step 1 → 毕业（用 cumulative_step_days=1）
     let o2 = schedule(
@@ -272,7 +278,8 @@ fn long_term_growth_trajectory() {
             cumulative_step_days: 1,
         },
         &config,
-    ).unwrap();
+    )
+    .unwrap();
     (s, d, state) = (o2.stability, o2.difficulty, o2.state);
     assert_eq!(state, CardState::Review, "应毕业到 Review");
 
@@ -289,7 +296,8 @@ fn long_term_growth_trajectory() {
                 cumulative_step_days: 0,
             },
             &config,
-        ).unwrap();
+        )
+        .unwrap();
         s = o.stability;
         d = o.difficulty;
         de = interval_days(s).max(1.0) as u32;
@@ -406,7 +414,8 @@ impl TrueMemSim {
                 cumulative_step_days,
             },
             &self.config,
-        ).unwrap();
+        )
+        .unwrap();
         self.sys_s = outcome.stability;
         self.sys_d = outcome.difficulty;
         self.sys_state = outcome.state;
@@ -595,7 +604,8 @@ fn custom_config_produces_different_intervals() {
             cumulative_step_days: 0,
         },
         &default,
-    ).unwrap();
+    )
+    .unwrap();
     let f1 = schedule(
         ScheduleInput {
             s_old: 0.0,
@@ -607,7 +617,8 @@ fn custom_config_produces_different_intervals() {
             cumulative_step_days: 0,
         },
         &fast,
-    ).unwrap();
+    )
+    .unwrap();
     // 默认 [60, 600]，第一个 step 后 due 在 STEPS[1]=600s
     // 快速 [30, 120]，第一个 step 后 due 在 120s
     let d_due = chrono::DateTime::parse_from_rfc3339(&d1.due_at)

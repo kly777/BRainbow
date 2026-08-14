@@ -144,10 +144,8 @@ impl TaskService {
         // C002: 检查同类型时间段不重叠
         let check_overlap =
             |windows: &[&TimeWindow], type_name: &str| -> Result<(), ServiceError> {
-                for i in 0..windows.len() {
-                    for j in (i + 1)..windows.len() {
-                        let a = windows[i];
-                        let b = windows[j];
+                for (i, a) in windows.iter().enumerate() {
+                    for b in windows.iter().skip(i + 1) {
                         // 跳过同一个 exclude_id 的情况（更新已有窗口时）
                         // 仅比较已入库的 ID（>0），新窗口 id=0 不会被误跳过
                         if let Some(eid) = exclude_id

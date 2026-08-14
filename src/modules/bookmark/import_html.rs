@@ -111,20 +111,21 @@ mod html_escape_decode {
         let chars: Vec<char> = s.chars().collect();
         let mut i = 0;
         while i < chars.len() {
-            if chars[i] == '&' {
+            let Some(c) = chars.get(i).copied() else { break };
+            if c == '&' {
                 // 找到分号
-                if let Some(semi) = (i + 1..chars.len()).find(|&j| chars[j] == ';') {
-                    let entity: String = chars[i + 1..semi].iter().collect();
+                if let Some(semi) = (i + 1..chars.len()).find(|&j| chars.get(j) == Some(&';')) {
+                    let entity: String = chars.get(i + 1..semi).unwrap_or(&[]).iter().collect();
                     if let Some(decoded) = decode_one(&entity) {
                         out.push(decoded);
                         i = semi + 1;
                         continue;
                     }
                 }
-                out.push(chars[i]);
+                out.push(c);
                 i += 1;
             } else {
-                out.push(chars[i]);
+                out.push(c);
                 i += 1;
             }
         }

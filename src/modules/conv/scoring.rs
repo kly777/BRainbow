@@ -24,11 +24,11 @@ pub fn score_and_rank(hits: Vec<RawHit>, idfs: &[f64], limit: usize) -> Vec<Conv
     // 按 conv_id 聚合分数 = TF * IDF，多关键词累加
     let mut scored: HashMap<i64, (f64, RawHit)> = HashMap::new();
     for hit in hits {
-        if hit.keyword_index >= idfs.len() {
+        let Some(idf) = idfs.get(hit.keyword_index) else {
             continue;
-        }
+        };
         let tf = tf_score(hit.ocurrences, hit.source_len);
-        let idf = idfs[hit.keyword_index];
+        let idf = *idf;
         let score = tf * idf;
         if score <= 0.0 {
             continue;

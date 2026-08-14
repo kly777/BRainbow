@@ -28,7 +28,10 @@ async fn load_fsrs_items(pool: &SqlitePool) -> Result<Vec<FSRSItem>, sqlx::Error
     }
 
     let mut items: Vec<FSRSItem> = Vec::new();
-    let mut current_id = rows[0].0;
+    let Some(first_row) = rows.first() else {
+        return Ok(Vec::new());
+    };
+    let mut current_id = first_row.0;
     let mut reviews: Vec<FSRSReview> = Vec::new();
 
     for (mem_id, delta_t, rating) in rows {

@@ -1,5 +1,21 @@
-// 生产代码禁止 .unwrap() / .expect()（cfg(test) 目标豁免：测试模块可直接 unwrap）
-#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
+// 生产代码 lint 门禁（cfg(test) 目标豁免：测试模块可直接 unwrap）
+// - 禁止 panic 捷径：unwrap / expect / panic! / 越界索引
+// - 禁止调试残留：dbg! / todo! / unimplemented! / println / eprintln（统一走 tracing）
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::indexing_slicing,
+        clippy::dbg_macro,
+        clippy::todo,
+        clippy::unimplemented,
+        clippy::print_stdout,
+        clippy::print_stderr,
+        clippy::float_cmp
+    )
+)]
 
 mod app;
 mod modules;
@@ -37,7 +53,7 @@ async fn shutdown_signal() {
         tokio::signal::ctrl_c()
             .await
             .map_err(|e| {
-                eprintln!("failed to install Ctrl+C handler: {e}");
+                tracing::error!("failed to install Ctrl+C handler: {e}");
                 std::process::exit(1);
             })
             .ok();
@@ -50,7 +66,7 @@ async fn shutdown_signal() {
                 sig.recv().await;
             }
             Err(e) => {
-                eprintln!("failed to install SIGTERM handler: {e}");
+                tracing::error!("failed to install SIGTERM handler: {e}");
                 std::process::exit(1);
             }
         }

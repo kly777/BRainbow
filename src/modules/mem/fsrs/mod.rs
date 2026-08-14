@@ -218,12 +218,12 @@ pub fn schedule(
                     state: Learning,
                     stability: s,
                     difficulty: d,
-                    due_at: due_in_secs(steps[0]),
+                    due_at: due_in_secs(*steps.first().unwrap_or(&0)),
                 }
             }
             2 => {
                 // Hard：保持 S/D 不变，留在当前步进
-                let secs = steps[step.min(total_steps - 1)];
+                let secs = steps.get(step.min(total_steps - 1)).copied().unwrap_or(0);
                 ReviewOutcome {
                     state: Learning,
                     stability: s_old,
@@ -254,7 +254,7 @@ pub fn schedule(
                         state: Learning,
                         stability: s_old,
                         difficulty: d_old,
-                        due_at: due_in_secs(steps[next]),
+                        due_at: due_in_secs(steps.get(next).copied().unwrap_or(0)),
                     }
                 }
             }
@@ -271,7 +271,7 @@ pub fn schedule(
             state: Relearning,
             stability: s,
             difficulty: d,
-            due_at: due_in_secs(config.relearn_steps[0]),
+            due_at: due_in_secs(*config.relearn_steps.first().unwrap_or(&0)),
         });
     }
 
@@ -307,11 +307,11 @@ fn relearn(
                 state: Relearning,
                 stability: s,
                 difficulty: d,
-                due_at: due_in_secs(steps[0]),
+                due_at: due_in_secs(*steps.first().unwrap_or(&0)),
             }
         }
         2 => {
-            let secs = steps[step.min(total_steps - 1)];
+            let secs = steps.get(step.min(total_steps - 1)).copied().unwrap_or(0);
             ReviewOutcome {
                 state: Relearning,
                 stability: s_old,
@@ -339,7 +339,7 @@ fn relearn(
                     state: Relearning,
                     stability: s_old,
                     difficulty: d_old,
-                    due_at: due_in_secs(steps[next]),
+                    due_at: due_in_secs(steps.get(next).copied().unwrap_or(0)),
                 }
             }
         }
@@ -366,17 +366,17 @@ pub fn preview(
         let steps = &config.relearn_steps;
         let step = step_index.unwrap_or(0);
         return Ok([
-            steps[0] as f64,
-            steps[step.min(steps.len() - 1)] as f64,
+            *steps.first().unwrap_or(&0) as f64,
+            steps.get(step.min(steps.len() - 1)).copied().unwrap_or(0) as f64,
             if step + 1 >= steps.len() {
                 compute_next(mem, 3, days_elapsed, config.desired_retention)?
             } else {
-                steps[step + 1] as f64
+                steps.get(step + 1).copied().unwrap_or(0) as f64
             },
             if step + 1 >= steps.len() {
                 compute_next(mem, 4, days_elapsed, config.desired_retention)?
             } else {
-                steps[step + 1] as f64
+                steps.get(step + 1).copied().unwrap_or(0) as f64
             },
         ]);
     }
@@ -388,8 +388,8 @@ pub fn preview(
         } else {
             step_index.unwrap_or(0)
         };
-        let again = steps[0] as f64;
-        let hard = steps[step.min(steps.len() - 1)] as f64;
+        let again = *steps.first().unwrap_or(&0) as f64;
+        let hard = steps.get(step.min(steps.len() - 1)).copied().unwrap_or(0) as f64;
         let next = step + 1;
         let (good, easy) = if next >= steps.len() {
             (
@@ -397,13 +397,13 @@ pub fn preview(
                 compute_next(mem, 4, days_elapsed, config.desired_retention)?,
             )
         } else {
-            (steps[next] as f64, steps[next] as f64)
+            (steps.get(next).copied().unwrap_or(0) as f64, steps.get(next).copied().unwrap_or(0) as f64)
         };
         return Ok([again, hard, good, easy]);
     }
 
     Ok([
-        config.learning_steps[0] as f64,
+        *config.learning_steps.first().unwrap_or(&0) as f64,
         compute_next(mem, 2, days_elapsed, config.desired_retention)?,
         compute_next(mem, 3, days_elapsed, config.desired_retention)?,
         compute_next(mem, 4, days_elapsed, config.desired_retention)?,

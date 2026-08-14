@@ -561,16 +561,16 @@ async fn maybe_auto_optimize(repo: Arc<dyn MemRepository>, db: Arc<SqlitePool>, 
     }
 
     tracing::info!("触发自动优化: revlog 共 {} 条", count);
-    let config = MemConfig::load();
+    let config = MemConfig::load_from_db(&db).await;
     match crate::modules::mem::optimizer::optimize_fsrs_params(&db, &config).await {
         Ok(Some(params)) => {
-            let mut cfg = config;
-            let ok = cfg.update_fsrs_params(params.clone()).is_ok();
+            let cfg = config;
+            let ok = cfg.save_to_db(&db).await.is_ok();
             crate::modules::mem::fsrs::set_global_params(params);
             if ok {
-                tracing::info!("自动优化完成, 参数已更新 (文件 + 运行时)");
+                tracing::info!("自动优化完成, 参数已更新 (数据库 + 运行时)");
             } else {
-                tracing::warn!("自动优化完成但保存文件失败, 仅运行时生效");
+                tracing::warn!("自动优化完成但写库失败, 仅运行时生效");
             }
         }
         Ok(None) => {}

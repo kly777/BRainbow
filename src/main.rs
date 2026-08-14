@@ -101,11 +101,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 创建数据库表（如果不存在）
     app::db::create_tables(&pool).await?;
 
-    // 加载记忆配置（FSRS 参数 + 调度配置）
-    modules::mem::config::load_and_init_mem_config(Some(&config.mem_config_path));
+    // 加载记忆配置（FSRS 参数 + 调度配置，存储于 app_settings 表）
+    let mem_config = modules::mem::config::load_and_init_mem_config(&pool).await;
 
     // 创建应用状态
-    let state = AppState::new(Arc::new(pool), &config);
+    let state = AppState::new(Arc::new(pool), &config, mem_config);
 
     // 创建路由
     state.init_runtime_cache().await;

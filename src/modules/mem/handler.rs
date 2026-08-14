@@ -40,7 +40,7 @@ pub async fn get_all(
 
 pub async fn get_session_estimate(State(state): State<AppState>) -> impl IntoResponse {
     let svc = &state.mem_query;
-    match svc.get_session_estimate().await {
+    match svc.get_session_estimate(&state.mem_config).await {
         Ok(est) => Json(est).into_response(),
         Err(e) => err(e, "获取学习预估"),
     }
@@ -506,12 +506,12 @@ pub async fn set_mnemonic(
 
 /// 优化 FSRS 参数（直接使用 state.db，不属于任一服务）
 pub async fn optimize_params(State(state): State<AppState>) -> impl IntoResponse {
-    let config = MemConfig::load();
+    let config = MemConfig::load_from_db(&state.db).await;
     match optimizer::optimize_fsrs_params(&state.db, &config).await {
         Ok(Some(params)) => {
             tracing::info!("FSRS 参数优化完成，共 {} 个参数", params.len());
-            let mut cfg = config;
-            cfg.update_fsrs_params(params.clone()).ok();
+            let cfg = config;
+            cfg.save_to_db(&state.db).await.ok();
             crate::modules::mem::fsrs::set_global_params(params);
             Json(serde_json::json!({
                 "ok": true,

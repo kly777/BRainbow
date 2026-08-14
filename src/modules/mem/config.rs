@@ -1,12 +1,11 @@
 //! 记忆模块配置：FSRS 参数 + 调度器配置的持久化。
 //!
-//! 配置文件路径：`mem_config.json`（工作目录）
+//! 存储位置：`app_settings` 键值表（key = "mem_config"，value = JSON）。
 
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::Path;
+use sqlx::SqlitePool;
 
-const CONFIG_PATH: &str = "mem_config.json";
+const DB_KEY: &str = "mem_config";
 
 /// 持久化配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -58,65 +57,123 @@ impl Default for MemConfig {
 }
 
 impl MemConfig {
-    /// 从默认路径加载；不存在则返回默认值
-    pub fn load() -> Self {
-        Self::load_from(Path::new(CONFIG_PATH))
-    }
+    /// 从数据库加载（app_settings 键值表）；无记录时写默认值并返回。
+    pub async fn load_from_db(pool: &SqlitePool) -> Self {
+        let raw: Option<String> = sqlx::query_scalar(
+            "SELECT value FROM app_settings WHERE key = ?",
+        )
+        .bind(DB_KEY)
+        .fetch_optional(pool)
+        .await
+        .unwrap_or(None);
 
-    /// 从指定路径加载；不存在则返回默认值
-    pub fn load_from(path: &Path) -> Self {
-        if path.exists() {
-            match fs::read_to_string(path) {
-                Ok(content) => match serde_json::from_str::<MemConfig>(&content) {
-                    Ok(cfg) => {
-                        tracing::info!("已加载记忆配置，FSRS 参数数: {}", cfg.fsrs_params.len());
-                        return cfg;
-                    }
-                    Err(e) => {
-                        tracing::warn!("解析 {} 失败 ({}), 使用默认配置", path.display(), e);
-                    }
-                },
+        if let Some(json) = raw {
+            match serde_json::from_str::<MemConfig>(&json) {
+                Ok(cfg) => {
+                    tracing::info!(
+                        "已从数据库加载记忆配置，FSRS 参数数: {}",
+                        cfg.fsrs_params.len()
+                    );
+                    return cfg;
+                }
                 Err(e) => {
-                    tracing::warn!("读取 {} 失败 ({}), 使用默认配置", path.display(), e);
+                    tracing::warn!("解析数据库中的记忆配置失败 ({}), 使用默认值", e);
                 }
             }
-        } else {
-            tracing::info!("{} 不存在，创建默认配置文件", path.display());
-            let cfg = MemConfig::default();
-            if let Err(e) = cfg.save_to(path) {
-                tracing::warn!("创建 {} 失败: {}", path.display(), e);
-            }
-            return cfg;
         }
-        MemConfig::default()
+
+        let cfg = MemConfig::default();
+        if let Err(e) = cfg.save_to_db(pool).await {
+            tracing::warn!("写入默认记忆配置到数据库失败: {}", e);
+        }
+        cfg
     }
 
-    /// 保存到默认路径
-    pub fn save(&self) -> Result<(), String> {
-        self.save_to(Path::new(CONFIG_PATH))
-    }
-
-    /// 保存到指定路径
-    fn save_to(&self, path: &Path) -> Result<(), String> {
-        let content = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
-        fs::write(path, &content).map_err(|e| e.to_string())?;
-        tracing::info!("已保存记忆配置到 {}", path.display());
+    /// 保存到数据库（app_settings 键值表）
+    pub async fn save_to_db(&self, pool: &SqlitePool) -> Result<(), String> {
+        let json = serde_json::to_string(self).map_err(|e| e.to_string())?;
+        sqlx::query("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)")
+            .bind(DB_KEY)
+            .bind(&json)
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        tracing::info!("已保存记忆配置到数据库");
         Ok(())
-    }
-
-    /// 更新 FSRS 参数并保存
-    pub fn update_fsrs_params(&mut self, params: Vec<f32>) -> Result<(), String> {
-        self.fsrs_params = params;
-        self.save()
     }
 }
 
 /// 加载配置并初始化全局 FSRS 参数
-///
-/// `config_path`：配置文件的路径，默认 `mem_config.json`。
-pub fn load_and_init_mem_config(config_path: Option<&Path>) -> MemConfig {
-    let path = config_path.unwrap_or(Path::new(CONFIG_PATH));
-    let cfg = MemConfig::load_from(path);
+pub async fn load_and_init_mem_config(pool: &SqlitePool) -> MemConfig {
+    let cfg = MemConfig::load_from_db(pool).await;
     crate::modules::mem::fsrs::init_global_params(cfg.fsrs_params.clone());
     cfg
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+
+    async fn setup_db() -> SqlitePool {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query(
+            "CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn roundtrip_via_db() {
+        let pool = setup_db().await;
+        let cfg = MemConfig {
+            fsrs_params: vec![0.1, 0.2, 0.3],
+            ..Default::default()
+        };
+        cfg.save_to_db(&pool).await.unwrap();
+
+        let loaded = MemConfig::load_from_db(&pool).await;
+        assert_eq!(loaded.fsrs_params, vec![0.1, 0.2, 0.3]);
+        assert_eq!(loaded.learning_steps, vec![60, 600]);
+    }
+
+    #[tokio::test]
+    async fn first_load_writes_default() {
+        let pool = setup_db().await;
+        let cfg = MemConfig::load_from_db(&pool).await;
+        assert!(cfg.fsrs_params.is_empty());
+        assert_eq!(cfg.desired_retention, 0.9);
+
+        // 默认值已持久化
+        let stored: String = sqlx::query_scalar(
+            "SELECT value FROM app_settings WHERE key = 'mem_config'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(stored.contains("learning_steps"));
+    }
+
+    #[tokio::test]
+    async fn corrupt_json_falls_back_to_default() {
+        let pool = setup_db().await;
+        sqlx::query("INSERT INTO app_settings (key, value) VALUES ('mem_config', '{bad json')")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let cfg = MemConfig::load_from_db(&pool).await;
+        assert!(cfg.fsrs_params.is_empty());
+        // 回退默认值已覆盖坏数据
+        let stored: String =
+            sqlx::query_scalar("SELECT value FROM app_settings WHERE key = 'mem_config'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert!(stored.contains("learning_steps"));
+    }
 }

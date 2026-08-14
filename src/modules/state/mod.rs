@@ -6,7 +6,8 @@ use crate::modules::{
     bookmark::BookmarkService, card::CardQueryService, card::CardService,
     chat::query::ChatQueryService, chat::service::ChatService, conv::query::ConvQueryService,
     db_viewer::DbViewerQueryService, media::query::MediaQueryService, media::service::MediaService,
-    mem::MemRepo, mem::query::MemQueryService, mem::service::MemService, onto::OntoQueryService,
+    mem::MemRepo, mem::config::MemConfig, mem::query::MemQueryService,
+    mem::service::MemService, onto::OntoQueryService,
     onto::OntoService, reading::query::ReadingQueryService, reading::service::ReadingService,
     sign::SignQueryService, sign::SignService, task::TaskQueryService, task::TaskService,
     text::TextQueryService, text::TextService, time_window::query::TimeWindowQueryService,
@@ -29,6 +30,8 @@ pub struct AppState {
     allow_register_cache: Arc<std::sync::RwLock<Option<bool>>>,
     /// 设置存取服务（app_settings 表）
     pub settings: SettingsService,
+    /// 记忆模块配置（FSRS 参数 + 调度，启动时加载）
+    pub mem_config: Arc<MemConfig>,
 
     // ── 预创建的服务实例 ──
     pub card: CardService,
@@ -139,7 +142,7 @@ impl AppState {
         Ok(())
     }
 
-    pub fn new(db: Arc<SqlitePool>, config: &Config) -> Self {
+    pub fn new(db: Arc<SqlitePool>, config: &Config, mem_config: MemConfig) -> Self {
         let task = TaskService::new(db.clone());
         // 构建 Repository adapter，通过 trait 分别注入命令侧和查询侧
         let mem_repo: Arc<dyn crate::modules::mem::port::MemRepository> =
@@ -151,6 +154,7 @@ impl AppState {
             jwt_active_cache: Arc::new(std::sync::RwLock::new(None)),
             allow_register_cache: Arc::new(std::sync::RwLock::new(Some(config.allow_register))),
             settings: SettingsService::new(db.clone()),
+            mem_config: Arc::new(mem_config),
             card: CardService::new(db.clone()),
             card_query: CardQueryService::new(db.clone()),
             bookmark: BookmarkService::new(db.clone()),

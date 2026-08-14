@@ -90,7 +90,6 @@ load_config() {
     # 模板渲染用的默认值（.env.prod 可覆盖）
     DOMAIN="${DOMAIN:-brainbow.top}"
     DATABASE_URL="${DATABASE_URL:-sqlite:$DATA_DIR/$DATABASE_FILE}"
-    MEM_CONFIG_PATH="${MEM_CONFIG_PATH:-$DATA_DIR/mem_config.json}"
 
     SSH_CMD="ssh -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
     SCP_CMD="scp -C -P $REMOTE_PORT"
@@ -369,7 +368,6 @@ setup_systemd() {
         -e "s|@@SERVICE_PORT@@|$SERVICE_PORT|g" \
         -e "s|@@BIND_HOST@@|$BIND_HOST|g" \
         -e "s|@@DATABASE_URL@@|$DATABASE_URL|g" \
-        -e "s|@@MEM_CONFIG_PATH@@|$MEM_CONFIG_PATH|g" \
         -e "s|@@CORS_ALLOW_ORIGIN@@|$CORS_ALLOW_ORIGIN|g" \
         -e "s|@@JWT_SECRET@@|$JWT_SECRET|g" \
         "$PROJECT_DIR/deploy/brainbow.service" > /tmp/brainbow.service

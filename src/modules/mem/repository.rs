@@ -1698,7 +1698,9 @@ mod tests {
         let repo_arc: Arc<dyn crate::modules::mem::port::MemRepository> =
             Arc::new(MemRepo::new(repo.pool.clone()));
         let svc = crate::modules::mem::query::MemQueryService::new(repo_arc);
-        svc.get_session_estimate().await.unwrap()
+        svc.get_session_estimate(&crate::modules::mem::config::MemConfig::default())
+            .await
+            .unwrap()
     }
 
     #[tokio::test]

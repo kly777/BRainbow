@@ -53,14 +53,16 @@ impl MemQueryService {
         })
     }
 
-    pub async fn get_session_estimate(&self) -> Result<SessionEstimate, sqlx::Error> {
+    pub async fn get_session_estimate(
+        &self,
+        config: &crate::modules::mem::config::MemConfig,
+    ) -> Result<SessionEstimate, sqlx::Error> {
         let (new_count, learning_count, due_count, _, _) = self.repo.get_counts().await?;
         let relearning_count = self.repo.count_relearning().await?;
         let pure_learning = learning_count - relearning_count;
 
         let retention = self.repo.get_recent_retention(100).await?;
 
-        let config = crate::modules::mem::config::MemConfig::load();
         let step_count_learning = config.learning_steps.len();
         let step_count_relearning = config.relearn_steps.len();
 

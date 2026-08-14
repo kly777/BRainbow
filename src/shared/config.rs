@@ -24,9 +24,6 @@ pub struct Config {
     /// 绑定地址
     pub bind_host: IpAddr,
 
-    /// 记忆系统配置路径
-    pub mem_config_path: PathBuf,
-
     /// 是否开放注册（默认关闭；公网部署建议保持关闭）
     pub allow_register: bool,
 
@@ -82,10 +79,6 @@ impl Config {
                 })
                 .unwrap_or(false),
 
-            mem_config_path: vars("MEM_CONFIG_PATH")
-                .map(PathBuf::from)
-                .unwrap_or_else(|_| PathBuf::from("mem_config.json")),
-
             upload_dir: vars("UPLOAD_DIR")
                 .map(PathBuf::from)
                 .unwrap_or_else(|_| PathBuf::from("uploads")),
@@ -138,7 +131,6 @@ mod tests {
         assert_eq!(cfg.database_url, "sqlite:brainbow.db");
         assert_eq!(cfg.service_port, 3000);
         assert_eq!(cfg.cors_allow_origin, vec!["http://localhost:3000"]);
-        assert_eq!(cfg.mem_config_path, PathBuf::from("mem_config.json"));
         assert_eq!(cfg.upload_dir, PathBuf::from("uploads"));
         assert!(cfg.jwt_secret.len() >= 36); // 随机 UUID
     }

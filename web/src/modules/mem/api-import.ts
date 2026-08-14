@@ -1,6 +1,7 @@
 // ── CSV 导入导出 API ──
 
 import { CACHE, getToken, post, tapInvalidate } from "@lib/api";
+import { downloadBlob } from "@lib/utils";
 
 // ── CSV 导入导出 ──
 
@@ -20,12 +21,7 @@ export async function downloadExportCsv(tagIds?: number[]): Promise<void> {
 		throw new Error(err || "导出失败");
 	}
 	const blob = await response.blob();
-	const downloadUrl = URL.createObjectURL(blob);
-	const a = document.createElement("a");
-	a.href = downloadUrl;
-	a.download = `mems_${new Date().toISOString().slice(0, 10)}.csv`;
-	a.click();
-	URL.revokeObjectURL(downloadUrl);
+	downloadBlob(blob, `mems_${new Date().toISOString().slice(0, 10)}.csv`);
 }
 
 export interface ImportCsvResult {

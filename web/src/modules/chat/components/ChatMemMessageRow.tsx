@@ -1,7 +1,7 @@
 // ── /chat/mem 单条消息：user 气泡 / assistant（可勾选卡片清单或 Markdown） ──
 
 import { Markdown as MarkdownRenderer } from "@components/ui";
-import { notifyError, notifySuccess } from "@lib/utils";
+import { copyTextWithToast } from "@lib/utils";
 import type { ChatNode } from "@modules/chat";
 import { createSignal, For, Show } from "solid-js";
 import styles from "../ChatMemPage.module.css";
@@ -10,13 +10,8 @@ import { BranchBar } from "./BranchBar.tsx";
 import { MessageShell } from "./MessageShell.tsx";
 import { ThinkingBlock } from "./ThinkingBlock.tsx";
 
-async function copyNode(node: ChatNode) {
-	try {
-		await navigator.clipboard.writeText(node.content);
-		notifySuccess("已复制");
-	} catch {
-		notifyError("复制失败");
-	}
+function copyNode(node: ChatNode) {
+	void copyTextWithToast(node.content);
 }
 
 export function MessageRow(props: {

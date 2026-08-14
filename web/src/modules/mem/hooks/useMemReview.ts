@@ -1,6 +1,7 @@
 // ── 记忆复习模块的核心业务逻辑（队列管理见 useDueQueue） ──
 
 import {
+	copyTextWithToast,
 	enumParam,
 	listParam,
 	notifyError,
@@ -195,7 +196,7 @@ export function useMemReview(): UseMemReview {
 	const handleCopyCard = () => {
 		const it = item();
 		if (!it) return;
-		navigator.clipboard.writeText(
+		void copyTextWithToast(
 			`线索:\n${it.cue.content}\n---\n答案:\n${it.target.content}`,
 		);
 	};

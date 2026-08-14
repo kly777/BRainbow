@@ -6,6 +6,7 @@ import { getToken } from "@lib/api";
 import {
 	confirmAndRun,
 	notifySuccess,
+	parseUrlId,
 	tryAsync,
 	tryOrNotify,
 } from "@lib/utils";
@@ -43,12 +44,6 @@ export function useChatSession(opts: ChatSessionOptions) {
 	const [streamingContent, setStreamingContent] = createSignal("");
 	/** 流式输出中的思考内容（reasoning），同理走 signal */
 	const [streamingReasoning, setStreamingReasoning] = createSignal("");
-
-	/** URL 数字参数解析：非数字返回 null（tree/node 参数共用） */
-	const parseUrlId = (raw: unknown): number | null => {
-		if (!raw || !/^\d+$/.test(String(raw))) return null;
-		return parseInt(String(raw), 10);
-	};
 
 	const treeId = (): number | null => parseUrlId(params.tree);
 

@@ -1,6 +1,6 @@
 // ── ChatPage 的子组件：树列表项 / 树头部（标题+提示词）/ 空会话欢迎区 / 章节导航 ──
 
-import { notifyError, notifySuccess, tryOrNotify } from "@lib/utils";
+import { copyTextWithToast, tryOrNotify } from "@lib/utils";
 import type { ChatNode, ChatTree } from "@modules/chat";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { updateTreeE } from "../api.ts";
@@ -264,11 +264,6 @@ export function TocNav(props: {
 }
 
 /** 复制节点内容（消息操作按钮） */
-export async function copyNode(node: ChatNode) {
-	try {
-		await navigator.clipboard.writeText(node.content);
-		notifySuccess("已复制");
-	} catch {
-		notifyError("复制失败");
-	}
+export function copyNode(node: ChatNode) {
+	return copyTextWithToast(node.content);
 }

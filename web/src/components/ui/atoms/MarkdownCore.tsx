@@ -1,3 +1,4 @@
+import { copyText } from "@lib/utils";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js/lib/common";
 import { marked } from "marked";
@@ -217,7 +218,8 @@ const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 			btn.className = "md-code-copy";
 			btn.textContent = "复制";
 			const onCopy = () => {
-				void navigator.clipboard.writeText(code.textContent ?? "").then(() => {
+				void copyText(code.textContent ?? "").then((ok) => {
+					if (!ok) return;
 					btn.textContent = "✓ 已复制";
 					setTimeout(() => (btn.textContent = "复制"), 1500);
 				});

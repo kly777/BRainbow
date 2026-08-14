@@ -1,6 +1,6 @@
 // ── 阅读详情页核心逻辑 ──
 
-import { notifyError, tryAsync } from "@lib/utils";
+import { copyText, notifyError, tryAsync } from "@lib/utils";
 import type { ArticleDetail } from "@modules/reading";
 import {
 	getArticle,
@@ -153,7 +153,7 @@ export function useReadingDetail() {
 		const text = [unknownWords.join("\n"), notes().trim()]
 			.filter(Boolean)
 			.join("\n\n");
-		if (text) await navigator.clipboard.writeText(text);
+		if (text) await copyText(text);
 	};
 
 	return {

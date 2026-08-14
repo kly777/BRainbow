@@ -3,7 +3,7 @@
 
 import { MarkdownEditor } from "@components";
 import { Button, Markdown as MarkdownRenderer } from "@components/ui";
-import { fmtInterval, fmtLocal } from "@lib/utils";
+import { copyTextWithToast, fmtInterval, fmtLocal } from "@lib/utils";
 import { Show } from "solid-js";
 import type { UseMemReview } from "../hooks/useMemReviewTypes.ts";
 import { useSpeech } from "../hooks/useSpeech.ts";
@@ -129,9 +129,7 @@ export default function ReviewCard(props: ReviewCardProps) {
 											class={styles.toolBtn}
 											title="复制线索"
 											onClick={() =>
-												navigator.clipboard.writeText(
-													m.item()?.cue.content ?? "",
-												)
+												void copyTextWithToast(m.item()?.cue.content ?? "")
 											}
 										>
 											📋

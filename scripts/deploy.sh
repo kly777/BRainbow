@@ -93,7 +93,7 @@ load_config() {
     MEM_CONFIG_PATH="${MEM_CONFIG_PATH:-$DATA_DIR/mem_config.json}"
 
     SSH_CMD="ssh -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
-    SCP_CMD="scp -P $REMOTE_PORT"
+    SCP_CMD="scp -C -P $REMOTE_PORT"
     RSYNC_CMD="rsync -avz -e \"ssh -p $REMOTE_PORT\""
 }
 

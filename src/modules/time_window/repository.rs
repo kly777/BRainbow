@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
-use crate::db::query::QueryBuilderExt;
+use crate::shared::db_query::QueryBuilderExt;
 
 use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTimeWindowRequest};
 

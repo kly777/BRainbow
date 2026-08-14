@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::model::{Bookmark, BookmarkTag, BookmarkTagWithCount};
 use super::repository::BookmarkRepo;
-use crate::error::ServiceError;
+use crate::shared::error_types::ServiceError;
 
 /// 查询侧服务——纯读取，无副作用。
 ///

@@ -8,8 +8,8 @@ use serde::Deserialize;
 
 use super::super::model::TaskStatus;
 use super::super::response::MessageResponse;
-use crate::error;
-use crate::state::AppState;
+use crate::shared::error_types as error;
+use crate::modules::state::AppState;
 
 #[derive(Debug, Deserialize)]
 pub struct TreeQuery {

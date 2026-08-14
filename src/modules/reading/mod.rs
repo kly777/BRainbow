@@ -4,7 +4,7 @@ pub(crate) mod query;
 mod repository;
 pub mod service;
 
-use crate::state::AppState;
+use crate::modules::state::AppState;
 use axum::{
     Router,
     routing::{get, post},

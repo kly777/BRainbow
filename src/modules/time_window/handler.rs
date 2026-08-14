@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTimeWindowRequest};
-use crate::error;
-use crate::pagination::Pagination;
-use crate::state::AppState;
+use crate::shared::error_types as error;
+use crate::shared::pagination::Pagination;
+use crate::modules::state::AppState;
 
 // ==================== 查询参数结构体 ====================
 
@@ -95,7 +95,7 @@ pub async fn get_time_windows_handler(
     Query(query): Query<TimeWindowQuery>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    use crate::pagination::PaginatedResponse;
+    use crate::shared::pagination::PaginatedResponse;
     let p = &query.pagination;
 
     if let Some(task_id) = query.task_id {

@@ -2,7 +2,7 @@ use sqlx::SqlitePool;
 
 use super::model::{ArticleItem, ConvDetail, QaPair, SearchResponse};
 use super::scoring;
-use crate::error::ServiceError;
+use crate::shared::error_types::ServiceError;
 
 /// 查询侧服务——纯读取，无副作用。
 ///

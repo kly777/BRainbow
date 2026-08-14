@@ -219,6 +219,23 @@ pub struct UpdateTimeWindowRequest {
     pub recurrence_rule: Option<Option<RecurrenceRule>>,
 }
 
+impl Default for TimeWindow {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            start_time: chrono::Utc::now(),
+            end_time: chrono::Utc::now(),
+            window_type: TimeWindowType::Feasible,
+            task_id: 0,
+            user_id: None,
+            recurrence_freq: None,
+            recurrence_interval: None,
+            recurrence_until: None,
+            recurrence_by_weekdays: None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
@@ -299,19 +316,3 @@ mod tests {
     }
 }
 
-impl Default for TimeWindow {
-    fn default() -> Self {
-        Self {
-            id: 0,
-            start_time: chrono::Utc::now(),
-            end_time: chrono::Utc::now(),
-            window_type: TimeWindowType::Feasible,
-            task_id: 0,
-            user_id: None,
-            recurrence_freq: None,
-            recurrence_interval: None,
-            recurrence_until: None,
-            recurrence_by_weekdays: None,
-        }
-    }
-}

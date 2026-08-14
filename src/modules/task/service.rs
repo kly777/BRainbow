@@ -221,11 +221,12 @@ async fn check_circular_parent(
     Ok(())
 }
 
-pub use crate::error::ServiceError;
+pub use crate::shared::error_types::ServiceError;
 
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
+    use axum::response::IntoResponse as _;
     use super::*;
 
     // ── validate_title ──

@@ -6,7 +6,7 @@ mod repository;
 mod response;
 pub(crate) mod service;
 
-use crate::state::AppState;
+use crate::modules::state::AppState;
 use axum::{
     Router,
     routing::{delete, get, post},

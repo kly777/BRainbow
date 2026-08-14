@@ -20,7 +20,7 @@ use axum::{
 use serde::Deserialize;
 use tokio::io::AsyncWriteExt;
 
-use crate::error;
+use crate::shared::error_types as error;
 
 const FAVICON_CACHE_DIR: &str = "uploads/favicons";
 /// 单个 favicon 最大字节数

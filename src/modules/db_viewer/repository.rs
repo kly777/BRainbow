@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use super::handler::ColumnInfo;
 use super::model::TableName;
-use crate::db::query::sanitize_table_name;
+use crate::shared::db_query::sanitize_table_name;
 
 #[derive(Clone)]
 pub struct DBRepo {

@@ -1,16 +1,9 @@
-// 禁止生产代码使用 .unwrap()（测试模块内已 #![allow]）
-#![deny(clippy::unwrap_used)]
+// 生产代码禁止 .unwrap()（cfg(test) 目标豁免：测试模块可直接 unwrap）
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
-mod auth;
-mod batch;
-mod config;
-mod db;
-mod error;
+mod app;
 mod modules;
-mod pagination;
-mod rate_limit;
-mod routes;
-mod state;
+mod shared;
 
 use std::net::SocketAddr;
 use std::time::Instant;
@@ -23,12 +16,12 @@ use axum::response::Response;
 use sqlx::SqlitePool;
 use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tracing::{error, info};
+use tracing::info;
 use tracing_subscriber::EnvFilter;
 
-use crate::config::Config;
-use crate::routes::create_router;
-use crate::state::AppState;
+use crate::shared::config::Config;
+use crate::app::http::routes::create_router;
+use crate::modules::state::AppState;
 
 fn init_logging() {
     tracing_subscriber::fmt()
@@ -81,7 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = SqlitePool::connect(&config.database_url).await?;
 
     // 创建数据库表（如果不存在）
-    db::create_tables(&pool).await?;
+    app::db::create_tables(&pool).await?;
 
     // 加载记忆配置（FSRS 参数 + 调度配置）
     modules::mem::config::load_and_init_mem_config(Some(&config.mem_config_path));

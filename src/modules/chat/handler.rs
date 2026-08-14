@@ -5,9 +5,9 @@ use axum::{
     routing::{get, post},
 };
 
-use crate::auth::Claims;
-use crate::error;
-use crate::state::AppState;
+use crate::shared::claims::Claims;
+use crate::shared::error_types as error;
+use crate::modules::state::AppState;
 use axum::extract::Extension;
 
 use super::model::{

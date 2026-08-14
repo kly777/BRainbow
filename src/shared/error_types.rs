@@ -1,15 +1,6 @@
-//! 统一的 API 错误响应格式
-//!
-//! JSON 格式:
-//! ```json
-//! {
-//!   "code": "Bad Request",
-//!   "message": "无效参数"
-//! }
-//! ```
-//!
-//! `code` 字段取自 HTTP 标准状态码短语（`StatusCode::canonical_reason()`），
-//! 不再维护自定义错误码常量。
+//! 错误类型与统一错误响应（HTTP 响应桥接也在此：纯构造无 IO 副作用）
+
+
 
 use axum::Json;
 use axum::http::StatusCode;
@@ -28,86 +19,6 @@ pub struct ErrorBody {
     pub details: Option<serde_json::Value>,
 }
 
-fn resp(status: StatusCode, message: impl Into<String>) -> Response {
-    let code = status.canonical_reason().unwrap_or("Unknown").to_string();
-    (
-        status,
-        axum::Json(ErrorBody {
-            code,
-            message: message.into(),
-            details: None,
-        }),
-    )
-        .into_response()
-}
-
-/// 400
-pub fn bad_request(message: impl Into<String>) -> Response {
-    resp(StatusCode::BAD_REQUEST, message)
-}
-
-/// 400 — 带 code（已弃用，兼容 time_window 模块）
-pub fn bad_request_with_code(_code: impl Into<String>, message: impl Into<String>) -> Response {
-    resp(StatusCode::BAD_REQUEST, message)
-}
-
-/// 404
-pub fn not_found(message: impl Into<String>) -> Response {
-    resp(StatusCode::NOT_FOUND, message)
-}
-
-/// 500，自动拼 "{operation}失败: {error}"
-pub fn internal(e: impl std::fmt::Display, operation: &str) -> Response {
-    resp(
-        StatusCode::INTERNAL_SERVER_ERROR,
-        format!("{}失败: {}", operation, e),
-    )
-}
-
-// ── 统一响应辅助函数（减少 handler 样板代码） ──
-
-/// 200 Json + 错误统一映射（500）。适用于标准读操作。
-pub fn ok_or<T: serde::Serialize, E: std::fmt::Display>(
-    result: Result<T, E>,
-    operation: &str,
-) -> Response {
-    match result {
-        Ok(data) => Json(data).into_response(),
-        Err(e) => internal(e, operation),
-    }
-}
-
-/// 201 Created + 错误统一映射。适用于创建操作。
-pub fn created_or<T: serde::Serialize, E: std::fmt::Display>(
-    result: Result<T, E>,
-    operation: &str,
-) -> Response {
-    match result {
-        Ok(data) => (StatusCode::CREATED, Json(data)).into_response(),
-        Err(e) => internal(e, operation),
-    }
-}
-
-/// 200 Json（Some）/ 404（None）。适用于按 ID 查单条。
-pub fn found_or<T: serde::Serialize, E: std::fmt::Display>(
-    result: Result<Option<T>, E>,
-    operation: &str,
-) -> Response {
-    match result {
-        Ok(Some(data)) => Json(data).into_response(),
-        Ok(None) => not_found(format!("{}失败: 记录不存在", operation)),
-        Err(e) => internal(e, operation),
-    }
-}
-
-/// 204 No Content（rows>0）/ 404（rows==0）。适用于删除操作。
-pub fn deleted_or<E: std::fmt::Display>(result: Result<u64, E>, operation: &str) -> Response {
-    match result {
-        Ok(n) if n > 0 => StatusCode::NO_CONTENT.into_response(),
-        Ok(_) => not_found(format!("{}失败: 记录不存在", operation)),
-        Err(e) => internal(e, operation),
-    }
-}
 
 // ── 服务层错误类型 ──
 
@@ -134,19 +45,7 @@ impl ServiceError {
         }
     }
 
-    pub fn into_response(self) -> Response {
-        match self {
-            Self::InvalidInput(msg) => resp(StatusCode::BAD_REQUEST, msg),
-            Self::NotFound(msg) => resp(StatusCode::NOT_FOUND, msg),
-            Self::AlreadyExists(msg) => resp(StatusCode::CONFLICT, msg),
-            Self::InUse(msg) => resp(StatusCode::CONFLICT, msg),
-            Self::Internal(msg) => resp(StatusCode::INTERNAL_SERVER_ERROR, msg),
-            Self::Db(e) => resp(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("数据库操作失败: {}", e),
-            ),
-        }
-    }
+    
 }
 
 impl std::fmt::Display for ServiceError {
@@ -165,6 +64,107 @@ impl std::fmt::Display for ServiceError {
 impl From<sqlx::Error> for ServiceError {
     fn from(e: sqlx::Error) -> Self {
         ServiceError::Db(e)
+    }
+}
+
+fn resp(status: StatusCode, message: impl Into<String>) -> Response {
+    let code = status.canonical_reason().unwrap_or("Unknown").to_string();
+    (
+        status,
+        Json(ErrorBody {
+            code,
+            message: message.into(),
+            details: None,
+        }),
+    )
+        .into_response()
+}
+
+impl IntoResponse for ServiceError {
+    fn into_response(self) -> Response {
+        match self {
+            Self::InvalidInput(msg) => resp(StatusCode::BAD_REQUEST, msg),
+            Self::NotFound(msg) => resp(StatusCode::NOT_FOUND, msg),
+            Self::AlreadyExists(msg) => resp(StatusCode::CONFLICT, msg),
+            Self::InUse(msg) => resp(StatusCode::CONFLICT, msg),
+            Self::Internal(msg) => resp(StatusCode::INTERNAL_SERVER_ERROR, msg),
+            Self::Db(e) => resp(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("数据库操作失败: {}", e),
+            ),
+        }
+    }
+}
+
+/// 400
+pub fn bad_request(message: impl Into<String>) -> Response {
+    resp(StatusCode::BAD_REQUEST, message)
+}
+
+/// 400（带自定义 code，当前忽略 code 保持与标准短语一致）
+pub fn bad_request_with_code(_code: impl Into<String>, message: impl Into<String>) -> Response {
+    resp(StatusCode::BAD_REQUEST, message)
+}
+
+/// 404
+pub fn not_found(message: impl Into<String>) -> Response {
+    resp(StatusCode::NOT_FOUND, message)
+}
+
+/// 500（统一格式：操作失败 + 底层错误）
+pub fn internal(e: impl std::fmt::Display, operation: &str) -> Response {
+    resp(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        format!("{operation}失败: {e}"),
+    )
+}
+
+/// 201（创建成功）或 500
+pub fn created_or<T, E>(result: Result<T, E>, operation: &str) -> Response
+where
+    T: Serialize,
+    E: std::fmt::Display,
+{
+    match result {
+        Ok(v) => (StatusCode::CREATED, Json(v)).into_response(),
+        Err(e) => internal(e, operation),
+    }
+}
+
+/// 200（查找成功）或 500
+pub fn ok_or<T, E>(result: Result<T, E>, operation: &str) -> Response
+where
+    T: Serialize,
+    E: std::fmt::Display,
+{
+    match result {
+        Ok(v) => Json(v).into_response(),
+        Err(e) => internal(e, operation),
+    }
+}
+
+/// 200（找到）或 404（不存在）或 500
+pub fn found_or<T, E>(result: Result<Option<T>, E>, operation: &str) -> Response
+where
+    T: Serialize,
+    E: std::fmt::Display,
+{
+    match result {
+        Ok(Some(v)) => Json(v).into_response(),
+        Ok(None) => not_found("资源不存在"),
+        Err(e) => internal(e, operation),
+    }
+}
+
+/// 204（删除成功）或 404（不存在）或 500
+pub fn deleted_or<E>(result: Result<u64, E>, operation: &str) -> Response
+where
+    E: std::fmt::Display,
+{
+    match result {
+        Ok(n) if n > 0 => StatusCode::NO_CONTENT.into_response(),
+        Ok(_) => not_found("资源不存在"),
+        Err(e) => internal(e, operation),
     }
 }
 
@@ -193,7 +193,11 @@ mod tests {
         assert_eq!(body.code, "Not Found");
     }
 
-    // ── ok_or ──
+    #[tokio::test]
+    async fn service_error_into_response() {
+        let r = ServiceError::NotFound("x".into()).into_response();
+        assert_eq!(r.status(), StatusCode::NOT_FOUND);
+    }
 
     #[tokio::test]
     async fn ok_or_returns_json_on_ok() {
@@ -206,13 +210,11 @@ mod tests {
     #[tokio::test]
     async fn ok_or_returns_500_on_err() {
         let r = ok_or::<(), _>(
-            Err(std::io::Error::new(std::io::ErrorKind::Other, "oops")),
+            Err(std::io::Error::other("oops")),
             "op",
         );
         assert_eq!(r.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
-
-    // ── created_or ──
 
     #[tokio::test]
     async fn created_or_returns_201() {
@@ -223,13 +225,11 @@ mod tests {
     #[tokio::test]
     async fn created_or_returns_500_on_err() {
         let r = created_or::<(), _>(
-            Err(std::io::Error::new(std::io::ErrorKind::Other, "fail")),
+            Err(std::io::Error::other("fail")),
             "op",
         );
         assert_eq!(r.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
-
-    // ── found_or ──
 
     #[tokio::test]
     async fn found_or_returns_200_for_some() {
@@ -246,13 +246,11 @@ mod tests {
     #[tokio::test]
     async fn found_or_returns_500_on_error() {
         let r = found_or::<(), _>(
-            Err(std::io::Error::new(std::io::ErrorKind::Other, "db")),
+            Err(std::io::Error::other("db")),
             "find",
         );
         assert_eq!(r.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
-
-    // ── deleted_or ──
 
     #[tokio::test]
     async fn deleted_or_returns_204_for_deleted() {

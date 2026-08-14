@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::error::ServiceError;
+use crate::shared::error_types::ServiceError;
 
 use super::repository;
 
@@ -49,7 +49,7 @@ mod tests {
 
     #[tokio::test]
     async fn empty_on_no_data() {
-        let (svc, qsvc) = setup().await;
+        let (_svc, qsvc) = setup().await;
         let loaded = qsvc.load_tabs().await.unwrap();
         assert!(loaded.is_empty());
     }

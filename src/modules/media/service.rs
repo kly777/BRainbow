@@ -5,7 +5,7 @@ use tracing::warn;
 
 use super::model::{Media, NewMedia};
 use super::repository::MediaRepository;
-use crate::error::ServiceError;
+use crate::shared::error_types::ServiceError;
 
 pub(crate) const UPLOAD_DIR: &str = "uploads";
 

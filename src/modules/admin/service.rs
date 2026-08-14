@@ -36,6 +36,7 @@ impl SettingsService {
         .map(|_| ())
     }
 
+    #[allow(dead_code)] // 预留：重置设置回 env 默认值
     pub async fn remove(&self, key: &str) -> Result<(), sqlx::Error> {
         sqlx::query("DELETE FROM app_settings WHERE key = ?")
             .bind(key)

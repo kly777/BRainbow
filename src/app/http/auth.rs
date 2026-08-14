@@ -4,76 +4,15 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Json, Response},
 };
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
-use serde::{Deserialize, Serialize};
 
-use crate::error::ErrorBody;
-use crate::state::AppState;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Claims {
-    pub sub: i32,     // user_id
-    pub role: String, // "admin" | "user"
-    pub exp: usize,   // expiry
-}
 
-// ============================================================
-// JWT 工具函数
-// ============================================================
+pub use crate::shared::jwt::{extract_api_key, extract_token, hash_api_key, verify_token};
+use crate::shared::claims::Claims;
+use serde::Serialize;
+use crate::shared::error_types::ErrorBody;
+use crate::modules::state::AppState;
 
-fn verify_token(token: &str, secret: &str) -> Option<Claims> {
-    decode::<Claims>(
-        token,
-        &DecodingKey::from_secret(secret.as_bytes()),
-        &Validation::default(),
-    )
-    .ok()
-    .map(|d| d.claims)
-}
-
-/// 生成 JWT（240h 有效）
-pub fn create_token(user_id: i32, role: &str, secret: &str) -> String {
-    let exp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("系统时间早于 Unix 纪元")
-        .as_secs() as usize
-        + 864000;
-    let claims = Claims {
-        sub: user_id,
-        role: role.to_string(),
-        exp,
-    };
-    encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret(secret.as_bytes()),
-    )
-    .expect("JWT 编码失败")
-}
-
-fn extract_token(req: &Request) -> Option<String> {
-    req.headers()
-        .get("Authorization")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.strip_prefix("Bearer "))
-        .map(|s| s.to_string())
-}
-
-fn extract_api_key(req: &Request) -> Option<String> {
-    req.headers()
-        .get("X-API-Key")
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-}
-
-/// API key 哈希（SHA-256 hex）
-pub fn hash_api_key(key: &str) -> String {
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.update(key.as_bytes());
-    hex::encode(hasher.finalize())
-}
 
 // ============================================================
 // 中间件
@@ -332,6 +271,7 @@ pub async fn delete_api_key(
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+    use crate::shared::jwt::create_token;
 
     const TEST_SECRET: &str = "test-secret-key-for-unit-tests";
 

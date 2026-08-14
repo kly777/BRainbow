@@ -6,9 +6,9 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::auth::Claims;
+use crate::shared::claims::Claims;
 
-use crate::state::AppState;
+use crate::modules::state::AppState;
 
 #[derive(Debug, Deserialize)]
 pub struct LoginRequest {
@@ -87,7 +87,7 @@ pub async fn user_handler(
             m.insert("role".to_string(), u.role);
             Json(m).into_response()
         }
-        Ok(None) => crate::error::not_found("用户不存在"),
+        Ok(None) => crate::shared::error_types::not_found("用户不存在"),
         Err(e) => e.into_response(),
     }
 }

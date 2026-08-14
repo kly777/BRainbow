@@ -6,7 +6,7 @@ pub mod service;
 pub use query::TextQueryService;
 pub use service::TextService;
 
-use crate::state::AppState;
+use crate::modules::state::AppState;
 use axum::{Router, routing::get};
 
 pub fn routes() -> Router<AppState> {

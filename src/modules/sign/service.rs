@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::model::SignifierSignified;
 use super::repository::SignRepository;
-use crate::error::ServiceError;
+use crate::shared::error_types::ServiceError;
 
 /// 命令侧服务——只暴露写操作。
 ///

@@ -1,7 +1,7 @@
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
-use crate::batch::{BatchResponse, batch_execute, batch_execute_with_code};
+use crate::shared::batch::{BatchResponse, batch_execute, batch_execute_with_code};
 use crate::modules::mem::config::MemConfig;
 use crate::modules::mem::fsrs::{self, ReviewOutcome};
 use crate::modules::mem::model::*;

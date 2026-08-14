@@ -6,9 +6,9 @@ use axum::{
 
 use super::super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
 use super::super::response::TaskResponse;
-use crate::error;
-use crate::pagination::{PaginatedResponse, Pagination};
-use crate::state::AppState;
+use crate::shared::error_types as error;
+use crate::shared::pagination::{PaginatedResponse, Pagination};
+use crate::modules::state::AppState;
 
 pub async fn get_tasks_handler(
     Query(pagination): Query<Pagination>,

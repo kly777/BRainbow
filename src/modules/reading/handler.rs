@@ -5,8 +5,8 @@ use axum::{
 };
 use serde_json::json;
 
-use crate::error;
-use crate::state::AppState;
+use crate::shared::error_types as error;
+use crate::modules::state::AppState;
 
 use super::model::{MarkWordRequest, UploadArticleRequest};
 

@@ -16,7 +16,7 @@ pub use handler::{
 pub use query::BookmarkQueryService;
 pub use service::BookmarkService;
 
-use crate::state::AppState;
+use crate::modules::state::AppState;
 use axum::{
     Router,
     extract::DefaultBodyLimit,

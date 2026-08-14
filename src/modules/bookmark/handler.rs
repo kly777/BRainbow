@@ -4,9 +4,9 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::error;
-use crate::pagination::{PaginatedResponse, Pagination};
-use crate::state::AppState;
+use crate::shared::error_types as error;
+use crate::shared::pagination::{PaginatedResponse, Pagination};
+use crate::modules::state::AppState;
 
 use super::model::{
     Bookmark, CreateBookmarkRequest, SetBookmarkTagsRequest, UpdateBookmarkRequest,

@@ -128,8 +128,8 @@ where
     (results, errors)
 }
 
-impl From<&crate::error::ServiceError> for BatchErrorDetail {
-    fn from(err: &crate::error::ServiceError) -> Self {
+impl From<&crate::shared::error_types::ServiceError> for BatchErrorDetail {
+    fn from(err: &crate::shared::error_types::ServiceError) -> Self {
         let code = err
             .status_code()
             .canonical_reason()
@@ -172,7 +172,7 @@ where
 macro_rules! guard_empty_batch {
     ($items:expr) => {
         if $items.is_empty() {
-            return axum::Json($crate::batch::BatchResponse::empty());
+            return axum::Json($crate::shared::batch::BatchResponse::empty());
         }
     };
 }

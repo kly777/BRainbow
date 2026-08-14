@@ -1,7 +1,7 @@
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
-use crate::config::Config;
+use crate::shared::config::Config;
 use crate::modules::{
     admin::service::SettingsService,
     ai::service::AiService, bookmark::BookmarkQueryService, bookmark::BookmarkService,
@@ -66,18 +66,14 @@ impl AppState {
     pub async fn init_runtime_cache(&self) {
         if let Ok(Some(secret)) = self.settings.get(crate::modules::admin::service::KEY_JWT_SECRET).await
             && !secret.is_empty()
-        {
-            if let Ok(mut cache) = self.jwt_active_cache.write() {
+            && let Ok(mut cache) = self.jwt_active_cache.write() {
                 *cache = Some(secret);
             }
-        }
-        if let Ok(Some(v)) = self.settings.get(crate::modules::admin::service::KEY_ALLOW_REGISTER).await {
-            if let Ok(parsed) = v.parse::<bool>() {
-                if let Ok(mut cache) = self.allow_register_cache.write() {
+        if let Ok(Some(v)) = self.settings.get(crate::modules::admin::service::KEY_ALLOW_REGISTER).await
+            && let Ok(parsed) = v.parse::<bool>()
+                && let Ok(mut cache) = self.allow_register_cache.write() {
                     *cache = Some(parsed);
                 }
-            }
-        }
     }
 
     /// 当前生效的 JWT 密钥（DB 持久化优先于 env）

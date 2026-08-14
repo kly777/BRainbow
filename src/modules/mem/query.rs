@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use crate::batch::BatchDataResponse;
+use crate::shared::batch::BatchDataResponse;
 use crate::modules::mem::fsrs;
 use crate::modules::mem::model::*;
 use crate::modules::mem::port::MemRepository;
-use crate::pagination::{PaginatedResponse, Pagination};
+use crate::shared::pagination::{PaginatedResponse, Pagination};
 
 /// 查询侧服务——纯读取，无副作用。
 ///
@@ -137,7 +137,7 @@ impl MemQueryService {
             Ok(items) => BatchDataResponse::all_ok(items),
             Err(e) => BatchDataResponse::from_results(
                 vec![],
-                vec![crate::batch::BatchErrorDetail {
+                vec![crate::shared::batch::BatchErrorDetail {
                     index: 0,
                     code: "Internal Server Error".into(),
                     message: format!("数据库查询失败: {e}"),

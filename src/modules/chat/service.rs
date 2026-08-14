@@ -1,7 +1,7 @@
 use chrono::Utc;
 use sqlx::SqlitePool;
 
-use crate::error::ServiceError;
+use crate::shared::error_types::ServiceError;
 
 use super::model::{
     CreateTreeRequest, NodeItem, PresetItem, ReviseRequest, ReviseResponse, TreeDetail, TreeItem,

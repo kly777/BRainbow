@@ -4,8 +4,8 @@ use sqlx::SqlitePool;
 
 use super::model::Media;
 use super::repository::MediaRepository;
-use crate::error::ServiceError;
-use crate::pagination::{PaginatedResponse, Pagination};
+use crate::shared::error_types::ServiceError;
+use crate::shared::pagination::{PaginatedResponse, Pagination};
 
 /// 查询侧服务——纯读取，无副作用。
 ///

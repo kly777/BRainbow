@@ -12,7 +12,7 @@ use axum::{
     response::{IntoResponse, Json, Response},
 };
 
-use crate::error::ErrorBody;
+use crate::shared::error_types::ErrorBody;
 
 const WINDOW: Duration = Duration::from_secs(60);
 const MAX_REQUESTS: usize = 10;
@@ -28,14 +28,12 @@ fn client_ip(req: &Request) -> String {
         .headers()
         .get("x-forwarded-for")
         .and_then(|v| v.to_str().ok())
-    {
-        if let Some(first) = xff.split(',').next() {
+        && let Some(first) = xff.split(',').next() {
             let ip = first.trim();
             if !ip.is_empty() {
                 return ip.to_string();
             }
         }
-    }
     // 直连：ConnectInfo（into_make_service_with_connect_info 注入）
     req.extensions()
         .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()

@@ -16,10 +16,10 @@ pub struct DeleteQuery {
 use tokio_util::io::ReaderStream;
 
 use super::service::MediaService;
-use crate::error;
-use crate::error::ServiceError;
-use crate::pagination::Pagination;
-use crate::state::AppState;
+use crate::shared::error_types as error;
+use crate::shared::error_types::ServiceError;
+use crate::shared::pagination::Pagination;
+use crate::modules::state::AppState;
 
 // ── 响应 ──
 

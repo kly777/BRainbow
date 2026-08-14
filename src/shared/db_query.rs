@@ -6,7 +6,7 @@
 //! # 用法
 //!
 //! ```ignore
-//! use crate::db::query::{QueryBuilderExt, sanitize_table_name};
+//! use crate::shared::db_query::{QueryBuilderExt, sanitize_table_name};
 //!
 //! // 条件式 UPDATE SET
 //! let mut builder = QueryBuilder::new("UPDATE card SET ");

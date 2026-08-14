@@ -9,9 +9,9 @@ use super::super::model::Task;
 use super::super::query::TaskQueryService;
 use super::super::response::{CalendarEvent, StatsResponse, TaskResponse, TreeNode};
 use super::dependency::{CalendarQuery, DagQuery, TreeQuery};
-use crate::error;
-use crate::pagination::{PaginatedResponse, Pagination};
-use crate::state::AppState;
+use crate::shared::error_types as error;
+use crate::shared::pagination::{PaginatedResponse, Pagination};
+use crate::modules::state::AppState;
 
 pub async fn get_tree_handler(
     Query(query): Query<TreeQuery>,

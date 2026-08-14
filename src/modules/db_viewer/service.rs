@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::error::ServiceError;
+use crate::shared::error_types::ServiceError;
 
 use super::handler::ColumnInfo;
 use super::repository::DBRepo;

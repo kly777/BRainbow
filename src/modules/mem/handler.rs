@@ -5,16 +5,16 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::auth::Claims;
+use crate::shared::claims::Claims;
 use std::collections::HashMap;
 
-use crate::batch::{BatchDataResponse, BatchRequest, BatchResponse};
-use crate::error;
+use crate::shared::batch::{BatchDataResponse, BatchRequest, BatchResponse};
+use crate::shared::error_types as error;
 use crate::guard_empty_batch;
 use crate::modules::mem::config::MemConfig;
 use crate::modules::mem::model::*;
 use crate::modules::mem::optimizer;
-use crate::state::AppState;
+use crate::modules::state::AppState;
 
 fn ok() -> axum::response::Response {
     Json(serde_json::json!({ "ok": true })).into_response()

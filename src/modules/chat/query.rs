@@ -1,6 +1,6 @@
 use sqlx::SqlitePool;
 
-use crate::error::ServiceError;
+use crate::shared::error_types::ServiceError;
 
 use super::model::{SearchHit, SearchResponse};
 

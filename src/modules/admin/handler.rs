@@ -10,8 +10,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::auth::Claims;
-use crate::state::AppState;
+use crate::shared::claims::Claims;
+use crate::modules::state::AppState;
 
 #[derive(Debug, Serialize)]
 pub struct SettingsResponse {
@@ -41,8 +41,8 @@ pub async fn update_settings(
     State(state): State<AppState>,
     Json(payload): Json<UpdateSettingsRequest>,
 ) -> Response {
-    if let Some(v) = payload.allow_register {
-        if let Err(e) = state.set_allow_register(v).await {
+    if let Some(v) = payload.allow_register
+        && let Err(e) = state.set_allow_register(v).await {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({
@@ -52,7 +52,6 @@ pub async fn update_settings(
             )
                 .into_response();
         }
-    }
     get_settings(State(state)).await
 }
 

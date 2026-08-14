@@ -9,7 +9,6 @@ import {
 	themeInfo,
 	themes,
 } from "@lib/styles";
-import baseStyles from "@lib/styles/base.module.css";
 import { createSignal, For, onMount } from "solid-js";
 import styles from "./ColorPage.module.css";
 
@@ -76,7 +75,7 @@ export default function ColorPage() {
 			<div class={styles.footer}>
 				<button
 					type="button"
-					class={baseStyles.btnGhost}
+					class={styles.btnGhost}
 					onClick={() => {
 						applyTheme("paper");
 						setCurrent("paper");

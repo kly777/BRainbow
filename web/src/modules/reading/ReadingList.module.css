@@ -114,7 +114,10 @@
 }
 
 .card {
-	composes: card from "@lib/styles/base.module.css";
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-sm);
 	display: block;
 	padding: var(--space-lg);
 	text-decoration: none;

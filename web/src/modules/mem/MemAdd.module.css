@@ -1,15 +1,48 @@
 /* features/mem/MemAdd.css.ts — 由 vanilla-extract 迁移 */
 
-.cancel {
-	composes: btn-ghost from "@lib/styles/base.module.css";
+.stack {
+	width: 100%;
+	max-width: 680px;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
 }
 
-.submit {
-	composes: btn-primary from "@lib/styles/base.module.css";
+.actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-sm);
+	margin-top: var(--space-lg);
+}
+
+.input-card {
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	box-shadow: var(--shadow-sm);
+	border-radius: var(--radius-lg);
+	padding: var(--space-md);
 }
 
 .back-link {
-	composes: btn-back from "@lib/styles/base.module.css";
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	background: transparent;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) var(--space-lg);
+	cursor: pointer;
+	text-decoration: none;
+	display: inline-block;
+	white-space: nowrap;
+	transition:
+		background 0.15s,
+		color 0.15s,
+		border-color 0.15s;
+}
+
+.back-link:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
 }
 
 .page {
@@ -63,7 +96,13 @@
 
 /* AI 生成跳转链接：与模式标签同排 */
 .mode-btn-link {
-	composes: mode-btn;
+	font-size: var(--text-sm);
+	background: transparent;
+	border: none;
+	border-radius: calc(var(--radius-md) - 0.125rem);
+	padding: var(--space-xs) var(--space-md);
+	cursor: pointer;
+	white-space: nowrap;
 	color: var(--t-color-accent);
 	text-decoration: none;
 	font-weight: 500;
@@ -99,7 +138,9 @@
 }
 
 .card {
-	composes: card from "@lib/styles/base.module.css";
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	box-shadow: var(--shadow-sm);
 	padding: 0; /* 布局容器：内边距由 face/answer 内部提供 */
 	border-color: var(--t-color-border-strong);
 	border-radius: var(--radius-lg);
@@ -175,14 +216,6 @@
 	color: var(--t-color-ink-faint);
 }
 
-.actions {
-	composes: actions from "./components/ImportParts.module.css";
-}
-
-.input-card {
-	composes: input-card from "./components/ImportParts.module.css";
-}
-
 .file-btn {
 	display: inline-flex;
 	align-items: center;
@@ -211,7 +244,9 @@
 }
 
 .import-errors {
-	composes: import-errors from "./components/ImportParts.module.css";
+	font-size: var(--text-sm);
+	color: var(--t-color-badge-relearning-text);
+	margin: var(--space-sm) 0 0;
 }
 
 .preview-count {
@@ -219,10 +254,6 @@
 	font-family: var(--t-font-mono);
 	color: var(--t-color-ink-faint);
 	margin: var(--space-sm) var(--space-md) 0;
-}
-
-.stack {
-	composes: stack from "./components/ImportParts.module.css";
 }
 
 @media (width <= 600px) {

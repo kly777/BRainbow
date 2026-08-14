@@ -89,7 +89,13 @@
 }
 
 .item-tag {
-	composes: tag-accent from "@lib/styles/base.module.css";
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	border-radius: 999px;
+	white-space: nowrap;
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
 	border: none;
 	padding: 0 var(--space-sm);
 	font-size: var(--text-xs);

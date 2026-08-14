@@ -34,11 +34,40 @@
 }
 
 .input {
-	composes: field-input from "@lib/styles/base.module.css";
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-base);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+}
+
+.input:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 var(--space-2xs) var(--t-color-accent-soft);
+}
+
+.input::placeholder {
+	color: var(--t-color-ink-faint);
 }
 
 .textarea {
-	composes: field-textarea from "@lib/styles/base.module.css";
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-base);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+	resize: vertical;
 	line-height: var(--leading-normal);
 }
 
@@ -49,11 +78,51 @@
 }
 
 .btn-ghost {
-	composes: btn-ghost from "@lib/styles/base.module.css";
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	background: transparent;
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) var(--space-lg);
+	cursor: pointer;
+	transition:
+		background 0.15s,
+		color 0.15s,
+		border-color 0.15s;
+}
+
+.btn-ghost:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.btn-ghost:disabled {
+	opacity: 0.35;
+	cursor: default;
 }
 
 .btn-primary {
-	composes: btn-primary from "@lib/styles/base.module.css";
+	font-size: var(--text-sm);
+	color: var(--t-color-white);
+	background: var(--t-color-accent);
+	border: none;
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) var(--space-lg);
+	cursor: pointer;
+	font-weight: 500;
+	transition:
+		background 0.15s,
+		color 0.15s,
+		border-color 0.15s;
+}
+
+.btn-primary:hover {
+	background: var(--t-color-accent-strong);
+}
+
+.btn-primary:disabled {
+	opacity: 0.5;
+	cursor: default;
 }
 
 .list {
@@ -130,4 +199,18 @@
 	text-align: center;
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-faint);
+}
+
+@media (width <= 600px) {
+	.btn-ghost,
+	.btn-primary {
+		padding: 0 var(--space-md);
+		font-size: var(--text-xs);
+		line-height: 1;
+		height: 2rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
+	}
 }

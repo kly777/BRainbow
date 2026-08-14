@@ -1,15 +1,76 @@
 /* features/mem/ui/ReviewCard.css.ts — 由 vanilla-extract 迁移 */
 
 .ghost-btn {
-	composes: btn-ghost from "@lib/styles/base.module.css";
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	background: transparent;
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) var(--space-lg);
+	cursor: pointer;
+	transition:
+		background 0.15s,
+		color 0.15s,
+		border-color 0.15s;
+}
+
+.ghost-btn:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.ghost-btn:disabled {
+	opacity: 0.35;
+	cursor: default;
 }
 
 .nav-btn {
-	composes: btn-nav from "@lib/styles/base.module.css";
+	font-size: var(--text-lg);
+	color: var(--t-color-ink-muted);
+	background: transparent;
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-md);
+	line-height: 1;
+	padding: var(--space-xs) var(--space-md);
+	cursor: pointer;
+	transition:
+		background 0.15s,
+		color 0.15s,
+		border-color 0.15s;
+}
+
+.nav-btn:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+.nav-btn:hover:not(:disabled) {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
 }
 
 .primary-btn {
-	composes: btn-primary from "@lib/styles/base.module.css";
+	font-size: var(--text-sm);
+	color: var(--t-color-white);
+	background: var(--t-color-accent);
+	border: none;
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) var(--space-lg);
+	cursor: pointer;
+	font-weight: 500;
+	transition:
+		background 0.15s,
+		color 0.15s,
+		border-color 0.15s;
+}
+
+.primary-btn:hover {
+	background: var(--t-color-accent-strong);
+}
+
+.primary-btn:disabled {
+	opacity: 0.5;
+	cursor: default;
 }
 
 .card-wrap {
@@ -172,7 +233,9 @@
 }
 
 .card-flat {
-	composes: card from "@lib/styles/base.module.css";
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	box-shadow: var(--shadow-sm);
 	border-color: var(--t-color-border-strong);
 	border-radius: var(--radius-lg);
 	padding: var(--space-xl);
@@ -310,11 +373,48 @@
 
 /* 底栏（actionRow / ratings）：所有屏幕贴底胶囊，窄屏仅调整宽度 */
 .action-row {
-	composes: bottom-bar from "@lib/styles/base.module.css";
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	margin-inline: auto;
+	width: fit-content;
+	min-height: 3rem;
+	z-index: var(--z-sticky);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-sm);
+	padding: 0 var(--space-lg);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border-strong);
+	border-bottom: none;
+	border-radius: 0.875rem 0.875rem 0 0;
+	box-shadow: 0 -4px 16px rgb(0 0 0 / 8%);
+	flex-wrap: nowrap;
+	max-width: 100vw;
 }
 
 .ratings {
-	composes: bottom-bar from "@lib/styles/base.module.css";
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	margin-inline: auto;
+	width: fit-content;
+	min-height: 3rem;
+	z-index: var(--z-sticky);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-sm);
+	padding: 0 var(--space-lg);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border-strong);
+	border-bottom: none;
+	border-radius: 0.875rem 0.875rem 0 0;
+	box-shadow: 0 -4px 16px rgb(0 0 0 / 8%);
+	flex-wrap: nowrap;
 	max-width: 640px;
 	min-width: 480px;
 }
@@ -352,4 +452,34 @@
 
 .card-body > * {
 	flex-shrink: 0;
+}
+
+@media (width <= 600px) {
+	.ghost-btn,
+	.primary-btn {
+		padding: 0 var(--space-md);
+		font-size: var(--text-xs);
+		line-height: 1;
+		height: 2rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
+	}
+
+	.nav-btn {
+		font-size: var(--text-base);
+		padding-left: var(--space-md);
+		padding-right: var(--space-md);
+	}
+
+	.action-row,
+	.ratings {
+		width: 100%;
+		gap: var(--space-xs);
+		padding: 0 var(--space-md);
+		border-radius: 0;
+		border-left: none;
+		border-right: none;
+	}
 }

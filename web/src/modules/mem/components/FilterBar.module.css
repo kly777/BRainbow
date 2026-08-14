@@ -23,14 +23,26 @@
 }
 
 .tag-chip-active {
-	composes: tag-chip from "@lib/styles/base.module.css";
+	display: inline-flex;
+	align-items: center;
+	padding: var(--space-2xs) var(--space-sm);
+	border-radius: 999px;
+	font-size: var(--text-xs);
+	line-height: 1.125rem;
+	white-space: nowrap;
 	gap: var(--space-xs);
 	background: var(--t-color-badge-new-bg);
 	color: var(--t-color-badge-new-text);
 }
 
 .tag-chip-excluded {
-	composes: tag-chip from "@lib/styles/base.module.css";
+	display: inline-flex;
+	align-items: center;
+	padding: var(--space-2xs) var(--space-sm);
+	border-radius: 999px;
+	font-size: var(--text-xs);
+	line-height: 1.125rem;
+	white-space: nowrap;
 	gap: var(--space-xs);
 	background: var(--t-color-badge-suspended-bg);
 	color: var(--t-color-badge-suspended-text);

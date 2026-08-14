@@ -8,7 +8,13 @@
 }
 
 .tag {
-	composes: tag-accent from "@lib/styles/base.module.css";
+	display: inline-flex;
+	align-items: center;
+	border-radius: 999px;
+	line-height: 1.125rem;
+	white-space: nowrap;
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
 	gap: var(--space-xs);
 	padding: var(--space-2xs) var(--space-sm);
 	font-size: var(--text-sm);

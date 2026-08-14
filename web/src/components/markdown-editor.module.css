@@ -32,7 +32,18 @@
 }
 
 .textarea-drag {
-	composes: textarea;
+	width: 100%;
+	padding: var(--space-md);
+	border: 2px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	font-size: var(--text-base);
+	font-family:
+		ui-monospace, sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
+	line-height: var(--leading-normal);
+	resize: vertical;
+	color: var(--t-color-ink);
+	transition: border-color var(--t-transition-fast);
+	box-sizing: border-box;
 	border-color: var(--t-color-accent);
 	background: var(--t-color-accent-soft);
 }

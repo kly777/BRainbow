@@ -115,13 +115,25 @@
 }
 
 .hex-input {
-	composes: hex-base;
+	padding: var(--space-xs) var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+	font-family: monospace;
+	font-size: var(--text-sm);
 	width: 4.25rem;
 }
 
 /* 数值通道：填满所在列；隐藏调节按钮（WebKit + Firefox），避免遮挡数值 */
 .channel {
-	composes: hex-base;
+	padding: var(--space-xs) var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+	font-family: monospace;
+	font-size: var(--text-sm);
 	width: 100%;
 	text-align: right;
 	appearance: none;

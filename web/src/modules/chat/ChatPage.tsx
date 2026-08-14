@@ -350,7 +350,12 @@ function MessageRow(props: {
 		<MessageShell
 			styles={styles}
 			node={node}
-			rowClass={isFocused() ? styles.focused : undefined}
+			rowClass={[
+				isFocused() ? styles.focused : undefined,
+				streaming() ? styles.streamingRow : undefined,
+			]
+				.filter(Boolean)
+				.join(" ")}
 			headExtra={
 				streaming() ? " · 生成中…" : node.revised_from !== null ? " · 修订" : ""
 			}

@@ -202,6 +202,7 @@ function MessageRow(props: {
 		<MessageShell
 			styles={styles}
 			node={node}
+			rowClass={streaming() ? styles.streamingRow : undefined}
 			headExtra={streaming() ? " · 生成中…" : ""}
 			actions={
 				<>

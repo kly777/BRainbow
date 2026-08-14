@@ -706,6 +706,65 @@ cmd_status() {
     remote "journalctl -u $APP_NAME -n 10 --no-pager"
 }
 
+
+# ===================================================================
+# 子命令: info — 部署服务信息汇总（状态/版本/资源/备份/端点）
+# ===================================================================
+cmd_info() {
+    load_config
+    local domain="${DOMAIN:-brainbow.top}"
+    echo "═══════════════════════════════════════════════"
+    log_info "部署信息: $APP_NAME → $REMOTE_HOST"
+    echo "═══════════════════════════════════════════════"
+
+    # ── 服务状态 ──
+    echo ""
+    echo "── 服务状态 ──"
+    remote "systemctl is-active $APP_NAME; systemctl show $APP_NAME -p ActiveEnterTimestamp -p MainPID -p MemoryCurrent -p CPUUsageNS 2>/dev/null | sed 's/^/  /'" 2>/dev/null
+
+    # ── 版本/构建信息 ──
+    echo ""
+    echo "── 构建产物 ──"
+    remote "ls -lh '$SERVICE_DIR/brainbow' '$SERVICE_DIR/dist/index.html' 2>/dev/null | awk '{print \"  \" \$5, \$6, \$7, \$8, \$9}'" 2>/dev/null
+    remote "stat -c '  部署时间: %y' '$SERVICE_DIR/brainbow' 2>/dev/null" 2>/dev/null
+
+    # ── 数据 ──
+    echo ""
+    echo "── 数据 ──"
+    remote "du -h '$DATA_DIR/$DATABASE_FILE' 2>/dev/null | awk '{print \"  数据库: \" \$1}'" 2>/dev/null
+    remote "ls -1t $BACKUP_DIR/db_*.db 2>/dev/null | head -3 | xargs -I{} basename {} | sed 's/^/  备份: /'" 2>/dev/null
+
+    # ── 磁盘/内存 ──
+    echo ""
+    echo "── 资源 ──"
+    remote "df -h '$SERVICE_DIR' 2>/dev/null | tail -1 | awk '{print \"  磁盘: 已用 \" \$3 \" / \" \$2 \" (\" \$5 \")\"}'" 2>/dev/null
+
+    # ── 配置要点 ──
+    echo ""
+    echo "── 配置 ──"
+    if remote "grep -q JWT_SECRET /etc/systemd/system/$APP_NAME.service" 2>/dev/null; then
+        log_done "JWT_SECRET 已注入 systemd"
+    else
+        log_warn "JWT_SECRET 未注入（重启后会话失效）"
+    fi
+    remote "grep -E 'Environment=\"(BIND_HOST|SERVICE_PORT|RUST_LOG)' /etc/systemd/system/$APP_NAME.service 2>/dev/null | sed 's/Environment=/  /; s/\"//g'" 2>/dev/null
+
+    # ── 端点探测 ──
+    echo ""
+    echo "── 端点探测 ──"
+    for ep in "/api/health" "/" "/.well-known/api-catalog"; do
+        code=$(curl -s -o /dev/null -m 5 -w "%{http_code}" "https://$domain$ep" 2>/dev/null || echo "FAIL")
+        printf "  %-28s %s\n" "$ep" "$code"
+    done
+
+    # ── 最近日志 ──
+    echo ""
+    echo "── 最近日志 ──"
+    remote "journalctl -u $APP_NAME -n 5 --no-pager 2>/dev/null | tail -5 | sed 's/^/  /'" 2>/dev/null
+    echo ""
+}
+
+
 # ===================================================================
 # 子命令: db-pull — 拉取远端数据库
 # ===================================================================
@@ -793,6 +852,7 @@ main() {
         backup-prune) cmd_backup_prune "$@" ;;
         logs)         cmd_logs "$@" ;;
         status)       cmd_status "$@" ;;
+        info)         cmd_info "$@" ;;
         db-pull)      cmd_db_pull "$@" ;;
         db-push)      cmd_db_push "$@" ;;
         --help|-h)    usage ;;

@@ -9,6 +9,8 @@ WorkingDirectory=@@SERVICE_DIR@@
 ExecStart=@@SERVICE_DIR@@/brainbow
 Restart=on-failure
 RestartSec=5
+# 优雅关闭超时：SSE/keep-alive 连接可能卡住 graceful shutdown，15 秒后强制终止
+TimeoutStopSec=15
 MemoryMax=1024M
 CPUQuota=80%
 Environment="RUST_LOG=info"

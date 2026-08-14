@@ -130,7 +130,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
     )
-    .with_graceful_shutdown(shutdown_signal())
+    .with_graceful_shutdown(async {
+        shutdown_signal().await;
+        // 宽限 10 秒后强制退出：SSE/keep-alive 连接可能卡住 graceful shutdown
+        tokio::spawn(async {
+            tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            tracing::info!("优雅关闭超时，强制退出");
+            std::process::exit(0);
+        });
+    })
     .await?;
 
     Ok(())

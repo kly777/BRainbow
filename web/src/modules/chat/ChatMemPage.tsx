@@ -202,7 +202,6 @@ function MessageRow(props: {
 		<MessageShell
 			styles={styles}
 			node={node}
-			rowClass={streaming() ? styles.streamingRow : undefined}
 			headExtra={streaming() ? " · 生成中…" : ""}
 			actions={
 				<>
@@ -252,13 +251,13 @@ function MessageRow(props: {
 								</Show>
 							</div>
 						) : streaming() ? (
-							// 流式期间：先显示思考动画，token 到达后实时渲染原始 JSON（零解析开销）
+							// 流式期间：实时 Markdown 渲染（内容走 signal，零重建）
 							<div class={styles.messageMd}>
 								<Show
-									when={node.content}
+									when={c.streamingContent()}
 									fallback={<span class={styles.thinking}>思考中…</span>}
 								>
-									<pre class={styles.rawBox}>{node.content}</pre>
+									<MarkdownRenderer content={c.streamingContent()} />
 								</Show>
 								<span class={styles.streamCursor} />
 							</div>

@@ -329,25 +329,6 @@
 	display: flex;
 	gap: var(--space-sm);
 	align-items: flex-start;
-	animation: message-in 0.18s ease-out;
-}
-
-/* 流式输出中的行会随每个 chunk 重建（引用更新触发 Solid 重渲染），
-   禁用 message-in 避免每次 token 到达都重播动画 */
-.streaming-row {
-	animation: none;
-}
-
-@keyframes message-in {
-	from {
-		opacity: 0;
-		transform: translateY(8px);
-	}
-
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
 }
 
 .message-row.user-row {
@@ -730,22 +711,6 @@
 /* 停止生成按钮：流式中替换发送按钮（危险色） */
 
 /* ── 流式输出 ── */
-
-.streaming {
-	animation: stream-fade-in var(--t-transition-slow) ease;
-}
-
-@keyframes stream-fade-in {
-	from {
-		opacity: 0;
-		transform: translateY(4px);
-	}
-
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
 
 .stream-cursor {
 	display: inline-block;

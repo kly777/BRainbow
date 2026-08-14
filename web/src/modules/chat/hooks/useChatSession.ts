@@ -44,8 +44,10 @@ export function useChatSession(opts: ChatSessionOptions) {
 	// ── 对话 ──
 	const [sending, setSending] = createSignal(false);
 	const [input, setInput] = createSignal("");
-	/** 流式输出中的 assistant 内容（sending 期间实时累积） */
+	/** 流式输出中的 assistant 内容（sending 期间实时累积，signal 细粒度更新，不重建消息行） */
 	const [streamingContent, setStreamingContent] = createSignal("");
+	/** 流式输出中的思考内容（reasoning），同理走 signal */
+	const [streamingReasoning, setStreamingReasoning] = createSignal("");
 
 	const treeId = (): number | null => {
 		const id = params.tree;
@@ -265,15 +267,10 @@ export function useChatSession(opts: ChatSessionOptions) {
 		setStreamingContent("");
 
 		const patchAssistant = (text: string, reasoning = "") => {
-			setCurrent((prev) => {
-				if (!prev) return prev;
-				return {
-					...prev,
-					nodes: prev.nodes.map((n) =>
-						n.id === tempAssistant ? { ...n, content: text, reasoning } : n,
-					),
-				};
-			});
+			// 只更新 signal：流式期间行不重建（keyed For 按引用匹配），
+			// 内容经 signal 细粒度更新，Markdown 组件不重挂载、动画不重放
+			setStreamingContent(text);
+			setStreamingReasoning(reasoning);
 		};
 		const rollback = () => {
 			setCurrent((prev) => {
@@ -350,6 +347,7 @@ export function useChatSession(opts: ChatSessionOptions) {
 			return { ok: false, error: getErrorMessage(e) };
 		} finally {
 			setStreamingContent("");
+			setStreamingReasoning("");
 			if (abortCtrl === controller) abortCtrl = null;
 		}
 	};
@@ -366,6 +364,7 @@ export function useChatSession(opts: ChatSessionOptions) {
 		sending,
 		setSending,
 		streamingContent,
+		streamingReasoning,
 		input,
 		setInput,
 		nodes,

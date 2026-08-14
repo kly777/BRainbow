@@ -350,12 +350,7 @@ function MessageRow(props: {
 		<MessageShell
 			styles={styles}
 			node={node}
-			rowClass={[
-				isFocused() ? styles.focused : undefined,
-				streaming() ? styles.streamingRow : undefined,
-			]
-				.filter(Boolean)
-				.join(" ")}
+			rowClass={isFocused() ? styles.focused : undefined}
 			headExtra={
 				streaming() ? " · 生成中…" : node.revised_from !== null ? " · 修订" : ""
 			}
@@ -413,15 +408,21 @@ function MessageRow(props: {
 					<div class={styles.messageMd}>
 						<ThinkingBlock
 							styles={styles}
-							reasoning={() => node.reasoning}
-							done={() => !!node.content}
+							reasoning={() =>
+								streaming() ? c.streamingReasoning() : node.reasoning
+							}
+							done={() =>
+								streaming() ? !!c.streamingContent() : !!node.content
+							}
 							open={streaming()}
 						/>
 						<Show
-							when={node.content}
+							when={streaming() || !!node.content}
 							fallback={<span class={styles.thinking}>思考中…</span>}
 						>
-							<MarkdownRenderer content={node.content} />
+							<MarkdownRenderer
+								content={streaming() ? c.streamingContent() : node.content}
+							/>
 						</Show>
 						<Show when={streaming()}>
 							<span class={styles.streamCursor} />

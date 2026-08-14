@@ -1,6 +1,6 @@
 import { MarkdownEditor } from "@components";
 import { Button, Toolbar } from "@components/ui";
-import { PATHS } from "@config/paths";
+import { fillPath, PATHS } from "@config/paths";
 import { getErrorMessage } from "@lib/api";
 import { tryAsync } from "@lib/utils";
 import type { CreateCardRequest } from "@modules/card";
@@ -30,7 +30,7 @@ const CardAddPage: Component = () => {
 			return await createCardE(req);
 		});
 		if (result.ok) {
-			navigate(`/c/${result.value.id}`);
+			navigate(fillPath(PATHS.cardDetail, result.value.id));
 		} else {
 			setError(getErrorMessage(result.error));
 		}

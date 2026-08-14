@@ -1,4 +1,4 @@
-import { PATHS } from "@config/paths";
+import { fillPath, PATHS } from "@config/paths";
 // ── 阅读详情页面（薄壳视图层）──
 
 import { getErrorMessage } from "@lib/api";
@@ -71,7 +71,7 @@ export default function ReadingDetail() {
 								<Show when={m.recommended()?.recommended}>
 									{(rec) => (
 										<A
-											href={`/reading/${rec().id}`}
+											href={fillPath(PATHS.readingDetail, rec().id)}
 											class={styles.recommendBanner}
 										>
 											推荐下一篇：{rec().title}（认识率{" "}

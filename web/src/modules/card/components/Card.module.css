@@ -5,6 +5,7 @@
 }
 
 .card {
+	position: relative;
 	background: var(--t-color-surface);
 	border-radius: var(--radius-lg);
 	box-shadow: var(--shadow-sm);
@@ -121,27 +122,78 @@
 	white-space: nowrap;
 }
 
-.card-actions {
+/* ── 悬浮操作按钮：hover 时右下角浮现（笔 / 垃圾桶圆形按钮） ── */
+.card-fabs {
+	position: absolute;
+	right: var(--space-md);
+	bottom: var(--space-md);
 	display: flex;
-	gap: var(--space-sm);
-	margin-top: auto;
+	gap: var(--space-xs);
+	opacity: 0;
+	visibility: hidden;
+	transition:
+		opacity var(--t-transition-fast) ease,
+		visibility var(--t-transition-fast) ease;
 }
 
-.action-button {
-	flex: 1;
-	padding: var(--space-xs) var(--space-md);
-	font-size: var(--text-sm);
-	border-radius: var(--radius-md);
+.card:hover .card-fabs,
+.card:focus-within .card-fabs {
+	opacity: 1;
+	visibility: visible;
+}
+
+.card-fab {
+	width: 2.25rem;
+	height: 2.25rem;
+	border-radius: 50%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border-strong);
-	background: transparent;
+	box-shadow: var(--shadow-md);
 	color: var(--t-color-ink-muted);
 	cursor: pointer;
 	transition: all var(--t-transition-fast) ease;
 }
 
-.delete-button {
+.card-fab svg {
+	width: 1rem;
+	height: 1rem;
+}
+
+.card-fab:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+	transform: translateY(-1px);
+}
+
+.card-fab:focus {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 1px;
+}
+
+.card-fab-danger {
 	color: var(--t-color-danger);
 	border-color: var(--t-color-danger);
+}
+
+.card-fab-danger:hover {
+	background: var(--t-color-danger);
+	color: var(--t-color-white);
+}
+
+.card-fab-danger:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* 触屏无 hover：操作按钮常显 */
+@media (hover: none) {
+	.card-fabs {
+		opacity: 1;
+		visibility: visible;
+	}
 }
 
 .card.deleting {
@@ -192,44 +244,4 @@
 .tag:focus {
 	outline: 2px solid var(--t-color-accent);
 	outline-offset: 1px;
-}
-
-@media (width <= 768px) {
-	.card-actions {
-		gap: var(--space-xs);
-	}
-}
-
-.action-button:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
-
-.action-button:focus {
-	outline: 2px solid var(--t-color-accent);
-	outline-offset: 1px;
-}
-
-@media (width <= 768px) {
-	.action-button {
-		padding: var(--space-sm);
-	}
-}
-
-.delete-button:hover {
-	background: var(--t-color-danger);
-	color: var(--t-color-bg);
-}
-
-.delete-button:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-	background: var(--t-color-danger-subtle);
-	color: var(--t-color-danger);
-	border-color: var(--t-color-danger);
-}
-
-.delete-button:disabled:hover {
-	background: var(--t-color-danger-subtle);
-	color: var(--t-color-danger);
 }

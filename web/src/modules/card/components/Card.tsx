@@ -93,23 +93,48 @@ const Card: Component<CardProps> = (props) => {
 				</div>
 			</div>
 
-			<div class={styles.cardActions}>
+			<div class={styles.cardFabs}>
 				<button
 					type="button"
-					class={styles.actionButton}
+					class={styles.cardFab}
+					title="编辑"
+					aria-label="编辑"
 					onClick={handleEditClick}
 				>
-					编辑
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
+						<path d="M12 20h9" />
+						<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+					</svg>
 				</button>
 				<button
 					type="button"
-					classList={{
-						[styles.actionButton]: true,
-						[styles.deleteButton]: true,
-					}}
+					classList={{ [styles.cardFab]: true, [styles.cardFabDanger]: true }}
+					title="删除"
+					aria-label="删除"
 					onClick={handleDeleteClick}
+					disabled={props.isDeleting}
 				>
-					删除
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
+						<path d="M3 6h18" />
+						<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+						<path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+					</svg>
 				</button>
 			</div>
 		</div>

@@ -13,6 +13,8 @@ export const PATHS = {
 	task: "/task",
 	ontology: "/ontology",
 	card: CARD,
+	cardDetail: `${CARD}/:id`,
+	cardEdit: `${CARD}/edit/:id`,
 	cardAdd: `${CARD}/add`,
 	color: "/color",
 	image: "/image",
@@ -36,3 +38,8 @@ export const PATHS = {
 } as const;
 
 export type PathKey = keyof typeof PATHS;
+
+/** 将路径模式中的 :id 替换为实际值（如 fillPath(PATHS.readingDetail, 12) → /reading/12） */
+export function fillPath(pattern: string, value: string | number): string {
+	return pattern.replace(":id", String(value));
+}

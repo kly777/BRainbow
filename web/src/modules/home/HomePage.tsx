@@ -1,6 +1,6 @@
 import { AsyncView } from "@components/ui";
 import { NAV_ITEMS } from "@config/navigation";
-import { PATHS } from "@config/paths";
+import { fillPath, PATHS } from "@config/paths";
 import { showConfirm, tryOrNotify } from "@lib/utils";
 import type { CardData } from "@modules/card";
 import {
@@ -135,8 +135,8 @@ function CardOverview() {
 					<CardsGrid
 						cards={data}
 						showFilters={false}
-						onCardClick={(id) => navigate(`${PATHS.card}/${id}`)}
-						onCardEdit={(id) => navigate(`${PATHS.card}/edit/${id}`)}
+						onCardClick={(id) => navigate(fillPath(PATHS.cardDetail, id))}
+						onCardEdit={(id) => navigate(fillPath(PATHS.cardEdit, id))}
 						onCardDelete={handleDelete}
 						emptyMessage="暂无知识卡片"
 					/>

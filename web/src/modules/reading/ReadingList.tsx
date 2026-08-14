@@ -1,4 +1,4 @@
-import { PATHS } from "@config/paths";
+import { fillPath, PATHS } from "@config/paths";
 import { getErrorMessage } from "@lib/api";
 import { notifyError, tryAsync } from "@lib/utils";
 import type { ArticleSummary } from "@modules/reading";
@@ -102,7 +102,10 @@ export default function ReadingList() {
 							}
 						>
 							{(a: ArticleSummary) => (
-								<A href={`/reading/${a.id}`} class={styles.card}>
+								<A
+									href={fillPath(PATHS.readingDetail, a.id)}
+									class={styles.card}
+								>
 									<div class={styles.cardTitle}>{a.title}</div>
 									<div class={styles.cardMeta}>
 										<span>{a.word_count} 词</span>

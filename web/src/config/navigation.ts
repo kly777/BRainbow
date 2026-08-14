@@ -55,6 +55,20 @@ export const NAV_ITEMS: NavItem[] = [
 		nav: false,
 	},
 	{
+		path: PATHS.cardDetail,
+		label: "卡片详情",
+		title: "Card",
+		desc: "",
+		nav: false,
+	},
+	{
+		path: PATHS.cardEdit,
+		label: "编辑卡片",
+		title: "Edit Card",
+		desc: "",
+		nav: false,
+	},
+	{
 		path: PATHS.image,
 		label: "图片",
 		title: "Images",

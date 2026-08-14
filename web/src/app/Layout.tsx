@@ -1,4 +1,5 @@
 import { ConfirmModalContainer, ToastContainer } from "@components/ui";
+import { PATHS } from "@config/paths";
 import { AiSettingsModal } from "@modules/ai-setting";
 import { AuthDialog, AuthGuard } from "@modules/auth";
 import { CommandPalette } from "@modules/command-palette";
@@ -10,7 +11,7 @@ import { RouteTitle } from "./routes.ts";
 export default function Layout(props: { children?: JSX.Element }) {
 	const location = useLocation();
 	// 首页公开（HomeGuard 自行切换着陆页/仪表盘），其余路由均需认证
-	const isPublic = () => location.pathname === "/";
+	const isPublic = () => location.pathname === PATHS.home;
 
 	return (
 		<div class={styles.shell}>

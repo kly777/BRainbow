@@ -11,7 +11,7 @@
  *
  *   // 仅通知错误，成功后拿到返回值
  *   const card = await tryOrNotify(() => createCard(req), "创建卡片");
- *   if (card) navigate(`/c/${card.id}`);
+ *   if (card) navigate(fillPath(PATHS.cardDetail, card.id)); // 路径来自 @config/paths
  *
  *   // 确认 + 通知
  *   const ok = await confirmAndRun(
@@ -48,7 +48,7 @@ export { show as showConfirm };
  *
  * @example
  *   const card = await tryOrNotify(() => createCardE(req), "创建卡片");
- *   if (card) navigate(`/c/${card.id}`);
+ *   if (card) navigate(fillPath(PATHS.cardDetail, card.id)); // 路径来自 @config/paths
  */
 export async function tryOrNotify<T>(
 	fn: () => Promise<T>,

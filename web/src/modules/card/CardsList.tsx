@@ -1,4 +1,4 @@
-import { PATHS } from "@config/paths";
+import { fillPath, PATHS } from "@config/paths";
 // ── 卡片列表页面（薄壳视图层）──
 
 import { Button, Markdown as MarkdownRenderer } from "@components/ui";
@@ -7,6 +7,7 @@ import { CardsGrid, getCardsE, searchCardsE } from "@modules/card";
 import { useNavigate } from "@solidjs/router";
 import { onMount, Show } from "solid-js";
 import styles from "./CardsList.module.css";
+
 import { useCardsList } from "./hooks/useCardsList.ts";
 
 export default function CardsListPage() {
@@ -75,8 +76,8 @@ export default function CardsListPage() {
 					onLoadMore={m.handleLoadMore}
 					loadingMore={m.loadingMore()}
 					initialSearchQuery={m.searchQuery()}
-					onCardClick={(id) => navigate(`/c/${id}`)}
-					onCardEdit={(id) => navigate(`/c/edit/${id}`)}
+					onCardClick={(id) => navigate(fillPath(PATHS.cardDetail, id))}
+					onCardEdit={(id) => navigate(fillPath(PATHS.cardEdit, id))}
 					onCardDelete={m.handleCardDelete}
 					emptyMessage={
 						m.isSearchMode()

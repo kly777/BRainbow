@@ -4,7 +4,7 @@ import {
 	Markdown as MarkdownRenderer,
 	Toolbar,
 } from "@components/ui";
-import { PATHS } from "@config/paths";
+import { fillPath, PATHS } from "@config/paths";
 import { showConfirm, tryOrNotify } from "@lib/utils";
 import { deleteCardE, getCardE } from "@modules/card";
 import { useNavigate, useParams } from "@solidjs/router";
@@ -57,7 +57,7 @@ const CardDetailPage: Component = () => {
 				<Button
 					variant="secondary"
 					size="sm"
-					onClick={() => navigate(`/c/edit/${cardId()}`)}
+					onClick={() => navigate(fillPath(PATHS.cardEdit, cardId()))}
 				>
 					编辑
 				</Button>

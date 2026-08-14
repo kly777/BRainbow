@@ -4,7 +4,7 @@ import {
 	Button,
 	Markdown as MarkdownRenderer,
 } from "@components/ui";
-import { PATHS } from "@config/paths";
+import { fillPath, PATHS } from "@config/paths";
 import { getErrorMessage } from "@lib/api";
 import { showConfirm, tryAsync, tryOrNotify } from "@lib/utils";
 import type { UpdateCardRequest } from "@modules/card";
@@ -85,7 +85,7 @@ const CardEditPage: Component = () => {
 			await updateCardE(cardId(), req);
 		});
 		if (result.ok) {
-			navigate(`/c/${cardId()}`);
+			navigate(fillPath(PATHS.cardDetail, cardId()));
 		} else {
 			setError(getErrorMessage(result.error));
 		}
@@ -126,7 +126,7 @@ const CardEditPage: Component = () => {
 						<Button
 							variant="secondary"
 							size="sm"
-							onClick={() => navigate(`/c/${cardId()}`)}
+							onClick={() => navigate(fillPath(PATHS.cardDetail, cardId()))}
 						>
 							查看
 						</Button>

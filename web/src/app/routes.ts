@@ -21,6 +21,8 @@ const PAGE_LOADERS: Record<string, () => Promise<{ default: Component }>> = {
 	[PATHS.task]: () => import("@/modules/task/TaskManager.tsx"),
 	[PATHS.ontology]: () => import("@/modules/ontology/OntologyList.tsx"),
 	[PATHS.card]: () => import("@/modules/card/CardsList.tsx"),
+	[PATHS.cardDetail]: () => import("@/modules/card/CardDetail.tsx"),
+	[PATHS.cardEdit]: () => import("@/modules/card/CardEdit.tsx"),
 	[PATHS.color]: () => import("@/modules/color/ColorPage.tsx"),
 	[PATHS.cardAdd]: () => import("@/modules/card/CardAdd.tsx"),
 	[PATHS.image]: () => import("@/modules/media/MediaList.tsx"),

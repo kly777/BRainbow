@@ -30,19 +30,11 @@ pub struct SearchResponse {
 }
 
 #[derive(Serialize)]
-pub struct QaPair {
-    pub qa_id: i32,
-    pub question: String,
-    pub answer: String,
-}
-
-#[derive(Serialize)]
 pub struct ConvDetail {
     pub conv_id: i64,
     pub title: String,
     pub conv_type: String,
     pub created_at: String,
-    pub qa_pairs: Vec<QaPair>,
     pub articles: Vec<ArticleItem>,
 }
 

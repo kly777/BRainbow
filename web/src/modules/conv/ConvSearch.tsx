@@ -7,12 +7,11 @@ import { A, useNavigate } from "@solidjs/router";
 import { createResource, createSignal, For, onMount, Show } from "solid-js";
 import styles from "./ConvSearch.module.css";
 
-const VALID_TABS = ["all", "conv", "article"] as const;
+const VALID_TABS = ["all", "article"] as const;
 type Tab = (typeof VALID_TABS)[number];
 
 const fieldLabel: Record<string, string> = {
 	title: "标题",
-	qa: "问答",
 	article: "文章",
 };
 
@@ -76,7 +75,7 @@ export default function ConvSearch() {
 			params.set("article", hit.article_title);
 			return `${PATHS.convConcept.replace(":id", String(hit.conv_id))}?${params.toString()}`;
 		}
-		return `${PATHS.convQa.replace(":id", String(hit.conv_id))}${suffix}`;
+		return `${PATHS.convDetail.replace(":id", String(hit.conv_id))}${suffix}`;
 	};
 
 	return (
@@ -85,17 +84,17 @@ export default function ConvSearch() {
 				<A href={PATHS.home} class={styles.backLink}>
 					← 主页
 				</A>
-				<h1 class={styles.title}>对话搜索</h1>
+				<h1 class={styles.title}>知识搜索</h1>
 			</div>
 
-			<p class={styles.initialHint}>输入关键词，搜索 AI 对话历史、概念和方案</p>
+			<p class={styles.initialHint}>输入关键词，搜索概念与文章</p>
 
 			<form class={styles.searchBar} onSubmit={handleSearch}>
 				<div class={styles.inputWrap}>
 					<input
 						class={styles.input}
 						type="text"
-						placeholder="搜索对话、文章、标签…"
+						placeholder="搜索概念、文章…"
 						value={query()}
 						onInput={(e) => setQuery(e.currentTarget.value)}
 						autofocus
@@ -127,13 +126,6 @@ export default function ConvSearch() {
 				</button>
 				<button
 					type="button"
-					class={tab() === "conv" ? styles.tabActive : styles.tab}
-					onClick={() => setTab("conv")}
-				>
-					对话
-				</button>
-				<button
-					type="button"
 					class={tab() === "article" ? styles.tabActive : styles.tab}
 					onClick={() => setTab("article")}
 				>
@@ -149,7 +141,7 @@ export default function ConvSearch() {
 
 			<div class={styles.results}>
 				<Show when={!searchQuery()}>
-					<div class={styles.empty}>输入关键词搜索对话或文章</div>
+					<div class={styles.empty}>输入关键词搜索概念或文章</div>
 				</Show>
 				<Show when={data.loading}>
 					<div class={styles.spinnerWrap}>

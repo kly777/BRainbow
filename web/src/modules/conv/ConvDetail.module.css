@@ -13,6 +13,12 @@
 	color: var(--t-color-ink-muted);
 }
 
+.empty {
+	padding: var(--space-xl);
+	text-align: center;
+	color: var(--t-color-ink-muted);
+}
+
 .top-bar {
 	padding: var(--space-lg) var(--space-xl);
 	border-bottom: 1px solid var(--t-color-border);

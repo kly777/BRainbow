@@ -1,6 +1,6 @@
 use sqlx::SqlitePool;
 
-use super::model::{ArticleItem, ConvDetail, QaPair, SearchResponse};
+use super::model::{ArticleItem, ConvDetail, SearchResponse};
 use super::scoring;
 use crate::shared::error_types::ServiceError;
 
@@ -27,12 +27,8 @@ impl ConvQueryService {
         search_conv(&self.pool, q, limit, offset, search_type).await
     }
 
-    /// 对话详情（QA + 文章）
-    pub async fn detail(
-        &self,
-        id: i64,
-        article_only: bool,
-    ) -> Result<Option<ConvDetail>, ServiceError> {
+    /// 知识条目详情（标题 + 文章）
+    pub async fn detail(&self, id: i64) -> Result<Option<ConvDetail>, ServiceError> {
         let pool = &self.pool;
 
         let title_info: Option<(String, String, String)> = sqlx::query_as(
@@ -45,17 +41,6 @@ impl ConvQueryService {
         let (title, conv_type, created_at) = match title_info {
             Some(t) => t,
             None => return Ok(None),
-        };
-
-        let qa_pairs: Vec<(i32, String, String)> = if article_only {
-            Vec::new()
-        } else {
-            sqlx::query_as(
-                "SELECT qa_id, question, answer FROM conv WHERE conv_id = ?1 ORDER BY qa_id",
-            )
-            .bind(id)
-            .fetch_all(pool)
-            .await?
         };
 
         let articles: Vec<(String, String, String)> =
@@ -69,14 +54,6 @@ impl ConvQueryService {
             title,
             conv_type,
             created_at,
-            qa_pairs: qa_pairs
-                .into_iter()
-                .map(|(id, q, a)| QaPair {
-                    qa_id: id,
-                    question: q,
-                    answer: a,
-                })
-                .collect(),
             articles: articles
                 .into_iter()
                 .map(|(t, title, c)| ArticleItem {
@@ -86,40 +63,6 @@ impl ConvQueryService {
                 })
                 .collect(),
         }))
-    }
-
-    /// QA 视图（不含文章）
-    pub async fn qa(&self, id: i64) -> Result<Option<serde_json::Value>, ServiceError> {
-        let pool = &self.pool;
-
-        let title_info: Option<(String, String, String)> = sqlx::query_as(
-            "SELECT title, conv_type, created_at FROM conv_titles WHERE conv_id = ?1 ORDER BY id LIMIT 1",
-        )
-        .bind(id)
-        .fetch_optional(pool)
-        .await?;
-
-        let (title, conv_type, created_at) = match title_info {
-            Some(t) => t,
-            None => return Ok(None),
-        };
-
-        let qa_pairs: Vec<(i32, String, String)> = sqlx::query_as(
-            "SELECT qa_id, question, answer FROM conv WHERE conv_id = ?1 ORDER BY qa_id",
-        )
-        .bind(id)
-        .fetch_all(pool)
-        .await?;
-
-        Ok(Some(serde_json::json!({
-            "conv_id": id,
-            "title": title,
-            "conv_type": conv_type,
-            "created_at": created_at,
-            "qa_pairs": qa_pairs.into_iter().map(|(id, q, a)| serde_json::json!({
-                "qa_id": id, "question": q, "answer": a
-            })).collect::<Vec<_>>(),
-        })))
     }
 
     /// 单篇文章
@@ -152,10 +95,10 @@ impl ConvQueryService {
 async fn compute_idf(pool: &SqlitePool, kw: &str) -> f64 {
     let pattern = format!("%{}%", kw);
     let total: (i64,) = sqlx::query_as(
-        "SELECT (SELECT count(*) FROM conv_titles) + (SELECT count(*) FROM conv) + (SELECT count(*) FROM articles)"
+        "SELECT (SELECT count(*) FROM conv_titles) + (SELECT count(*) FROM articles)"
     ).fetch_one(pool).await.unwrap_or((1,));
     let matched: (i64,) = sqlx::query_as(
-        "SELECT (SELECT count(*) FROM conv_titles WHERE title LIKE ?1) + (SELECT count(*) FROM conv WHERE question LIKE ?1 OR answer LIKE ?1) + (SELECT count(*) FROM articles WHERE title LIKE ?1 OR content LIKE ?1)"
+        "SELECT (SELECT count(*) FROM conv_titles WHERE title LIKE ?1) + (SELECT count(*) FROM articles WHERE title LIKE ?1 OR content LIKE ?1)"
     ).bind(&pattern).fetch_one(pool).await.unwrap_or((1,));
     (total.0 as f64 / matched.0.max(1) as f64).ln()
 }
@@ -181,7 +124,8 @@ pub async fn search_conv(
     _offset: i64,
     search_type: &str,
 ) -> Result<SearchResponse, ServiceError> {
-    let search_convs = search_type == "all" || search_type == "conv";
+    // 迁移后聊天 QA 已并入 chat 模块，"conv" 类型退化为标题搜索（兼容旧参数）
+    let search_titles = search_type == "all" || search_type == "conv";
     let search_articles = search_type == "all" || search_type == "article";
 
     let keywords: Vec<&str> = q.split_whitespace().filter(|k| !k.is_empty()).collect();
@@ -195,7 +139,7 @@ pub async fn search_conv(
     let mut raw_hits: Vec<RawHit> = Vec::new();
 
     // 1. 标题匹配
-    if search_convs {
+    if search_titles {
         for (ki, kw) in keywords.iter().enumerate() {
             let pattern = format!("%{}%", kw);
             let rows: Vec<(i64, String, String, String)> = sqlx::query_as(
@@ -220,38 +164,7 @@ pub async fn search_conv(
         }
     }
 
-    // 2. QA 内容匹配
-    if search_convs {
-        for (ki, kw) in keywords.iter().enumerate() {
-            let pattern = format!("%{}%", kw);
-            let rows: Vec<(i64, String, String, String, String, String)> = sqlx::query_as(
-                "SELECT c.conv_id, ct.title, ct.conv_type, ct.created_at, c.question, c.answer FROM conv c JOIN conv_titles ct ON ct.conv_id=c.conv_id WHERE c.question LIKE ?1 OR c.answer LIKE ?1 LIMIT 300"
-            ).bind(&pattern).fetch_all(pool).await?;
-            for (cid, title, ctype, created, question, answer) in rows {
-                let text = format!("{} {}", question, answer);
-                let occ = scoring::count_occurrences(&text, kw);
-                let snippet = if question.contains(kw) {
-                    question
-                } else {
-                    answer
-                };
-                raw_hits.push(RawHit {
-                    conv_id: cid,
-                    title,
-                    conv_type: ctype,
-                    match_field: "qa".into(),
-                    snippet,
-                    created_at: created,
-                    source_len: text.len(),
-                    keyword_index: ki,
-                    ocurrences: occ,
-                    article_title: None,
-                });
-            }
-        }
-    }
-
-    // 3. 文章匹配
+    // 2. 文章匹配
     if search_articles {
         for (ki, kw) in keywords.iter().enumerate() {
             let pattern = format!("%{}%", kw);
@@ -317,18 +230,6 @@ mod tests {
         .unwrap();
 
         sqlx::query(
-            "CREATE TABLE conv (
-                conv_id INTEGER,
-                qa_id INTEGER,
-                question TEXT,
-                answer TEXT
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        sqlx::query(
             "CREATE TABLE articles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 conv_id INTEGER,
@@ -345,37 +246,23 @@ mod tests {
         // conv 1: Go 相关对话
         sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (1, '如何用Go写Web程序', 'solution')")
             .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO conv (conv_id, qa_id, question, answer) VALUES (1, 0, 'Go语言适合写Web程序吗', '是的，Go非常适合写Web程序')")
-            .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO conv (conv_id, qa_id, question, answer) VALUES (1, 1, 'Go比Python快吗', 'Go编译后是二进制，通常比Python快')")
-            .execute(&pool).await.unwrap();
 
         // conv 2: Rust 对话（不含 go）
         sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (2, 'Rust所有权系统', 'concept')")
             .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO conv (conv_id, qa_id, question, answer) VALUES (2, 0, '什么是Rust的所有权', '所有权是Rust的内存管理机制')")
-            .execute(&pool).await.unwrap();
 
-        // conv 3: 标题有 go，但 Q&A 没有
+        // conv 3: 标题有 go
         sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (3, 'Go vs Rust对比', 'concept')")
             .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO conv (conv_id, qa_id, question, answer) VALUES (3, 0, 'Rust和C++哪个更安全', 'Rust在内存安全上更优')")
-            .execute(&pool).await.unwrap();
 
-        // conv 4: Q&A 中提到 go
+        // conv 4
         sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (4, '学习编程的建议', 'concept')")
-            .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO conv (conv_id, qa_id, question, answer) VALUES (4, 0, '新手学什么语言', '建议从Python或Go开始')")
             .execute(&pool).await.unwrap();
 
         // conv 5: 多标题同一对话
         sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (5, 'Go如何替代Bash', 'solution')")
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (5, 'Go实现SSH部署', 'solution')")
-            .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO conv (conv_id, qa_id, question, answer) VALUES (5, 0, 'Python和Bash哪个好', 'Bash适合简单任务，Python更强大')")
-            .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO conv (conv_id, qa_id, question, answer) VALUES (5, 1, 'go如何替代bash', '可以用Go重写复杂的bash脚本')")
             .execute(&pool).await.unwrap();
 
         // article
@@ -417,22 +304,6 @@ mod tests {
                 "  [{:6}] score={:4} title={}",
                 h.match_field, h.score, h.title
             );
-        }
-        assert!(!res.hits.is_empty(), "至少应有一条命中");
-    }
-
-    #[tokio::test]
-    async fn search_qa_match() {
-        let pool = setup_test_db().await;
-        let res = search_conv(&pool, "Go", 20, 0, "all").await.unwrap();
-        eprintln!("\n── search_qa_match 'Go' ──");
-        eprintln!(
-            "  总命中: {}  QA命中: {}",
-            res.hits.len(),
-            res.hits.iter().filter(|h| h.match_field == "qa").count()
-        );
-        for h in &res.hits {
-            eprintln!("  [{:6}] title={}", h.match_field, h.title);
         }
         assert!(!res.hits.is_empty(), "至少应有一条命中");
     }
@@ -481,11 +352,11 @@ mod tests {
     #[tokio::test]
     async fn search_truncate_utf8() {
         let pool = setup_test_db().await;
-        // 填一个很长的 Q&A
+        // 填一篇很长的文章
         let long_q = "这是很长很长的一段测试内容".repeat(20);
         sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (99, '长文本测试', 'concept')")
             .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO conv (conv_id, qa_id, question, answer) VALUES (99, 0, ?, 'ok')")
+        sqlx::query("INSERT INTO articles (conv_id, article_type, title, content) VALUES (99, 'concept', '长文本文章', ?)")
             .bind(&long_q)
             .execute(&pool)
             .await

@@ -18,12 +18,6 @@ export interface SearchResponse {
 	total: number;
 }
 
-export interface QaPair {
-	qa_id: number;
-	question: string;
-	answer: string;
-}
-
 export interface ArticleItem {
 	article_type: string;
 	title: string;
@@ -35,16 +29,7 @@ export interface ConvDetail {
 	title: string;
 	conv_type: string;
 	created_at: string;
-	qa_pairs: QaPair[];
 	articles: ArticleItem[];
-}
-
-export interface ConvQaData {
-	conv_id: number;
-	title: string;
-	conv_type: string;
-	created_at: string;
-	qa_pairs: QaPair[];
 }
 
 export interface ConvConceptData {
@@ -56,7 +41,7 @@ export interface ConvConceptData {
 
 // ── API ──
 
-export type ConvSearchType = "all" | "conv" | "article";
+export type ConvSearchType = "all" | "article";
 
 export const searchConvE = (
 	q: string,
@@ -69,9 +54,6 @@ export const searchConvE = (
 
 export const getConvDetailE = (id: number): Promise<ConvDetail> =>
 	request(`/conv/${id}`);
-
-export const getConvQaE = (id: number): Promise<ConvQaData> =>
-	request(`/conv/qa/${id}`);
 
 export const getConvConceptE = (
 	id: number,

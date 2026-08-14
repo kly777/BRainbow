@@ -372,18 +372,14 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS conv (
-            conv_id INTEGER NOT NULL,
-            qa_id INTEGER NOT NULL,
-            question TEXT,
-            answer TEXT
-        )
-        "#,
-    )
-    .execute(pool)
-    .await?;
+    // 迁移：聊天 QA 数据已并入 chat_tree/chat_node，删除旧 conv 表（幂等）
+    if table_exists(pool, "conv").await? {
+        sqlx::query("DROP TABLE conv").execute(pool).await.map_err(|e| {
+            sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
+                "迁移失败: 无法删除已废弃的 conv 表: {e}"
+            ))))
+        })?;
+    }
 
     sqlx::query(
         r#"
@@ -403,9 +399,6 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .await?;
 
     // 创建索引
-    sqlx::query("CREATE INDEX IF NOT EXISTS idx_conv_conv_id ON conv(conv_id)")
-        .execute(pool)
-        .await?;
     sqlx::query("CREATE INDEX IF NOT EXISTS idx_conv_titles_conv_id ON conv_titles(conv_id)")
         .execute(pool)
         .await?;
@@ -664,6 +657,20 @@ async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> Result<b
     Ok(rows
         .iter()
         .any(|r| r.try_get::<String, _>("name").ok().as_deref() == Some(column)))
+}
+
+/// 检查表是否存在（用于幂等 DROP 迁移）
+async fn table_exists(pool: &SqlitePool, table: &str) -> Result<bool, sqlx::Error> {
+    let safe_table = query::sanitize_table_name(table)?;
+    let count: i64 = sqlx::query_scalar(
+        // SAFETY: sanitize_table_name 确保 safe_table 只含 [a-zA-Z0-9_]
+        sqlx::AssertSqlSafe(format!(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '{safe_table}'"
+        )),
+    )
+    .fetch_one(pool)
+    .await?;
+    Ok(count > 0)
 }
 
 #[cfg(test)]

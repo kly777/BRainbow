@@ -16,7 +16,6 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/search", get(search_handler))
         .route("/{id}", get(conv_detail_handler))
-        .route("/qa/{id}", get(conv_qa_handler))
         .route("/concept/{id}", get(conv_concept_handler))
 }
 
@@ -42,25 +41,11 @@ pub async fn search_handler(
 pub async fn conv_detail_handler(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-    Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
-    let article_only = params.get("mode").map(|s| s.as_str()) == Some("article");
-
-    match state.conv_query.detail(id, article_only).await {
+    match state.conv_query.detail(id).await {
         Ok(Some(detail)) => Json(detail).into_response(),
-        Ok(None) => error::not_found("对话不存在"),
-        Err(e) => error::internal(e, "获取对话详情"),
-    }
-}
-
-pub async fn conv_qa_handler(
-    State(state): State<AppState>,
-    Path(id): Path<i64>,
-) -> impl IntoResponse {
-    match state.conv_query.qa(id).await {
-        Ok(Some(body)) => Json(body).into_response(),
-        Ok(None) => error::not_found("对话不存在"),
-        Err(e) => error::internal(e, "获取 QA 对话"),
+        Ok(None) => error::not_found("知识条目不存在"),
+        Err(e) => error::internal(e, "获取知识详情"),
     }
 }
 

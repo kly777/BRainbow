@@ -29,7 +29,7 @@ export const PATHS = {
 	memoryAdd: `${MEMORY}/add`,
 	memoryManage: `${MEMORY}/manage`,
 	conversation: CONVERSATION,
-	convQa: `${CONVERSATION}/qa/:id`,
+	convDetail: `${CONVERSATION}/detail/:id`,
 	convConcept: `${CONVERSATION}/concept/:id`,
 	chat: CHAT,
 	chatPrompts: `${CHAT}/prompts`,

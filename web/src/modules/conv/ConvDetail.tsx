@@ -1,19 +1,16 @@
 import { Markdown as MarkdownRenderer } from "@components/ui";
 import { getErrorMessage } from "@lib/api";
 import { getConvDetailE } from "@modules/conv";
-import { useParams, useSearchParams } from "@solidjs/router";
+import { useParams } from "@solidjs/router";
 import { createResource, For, Show } from "solid-js";
 import styles from "./ConvDetail.module.css";
 import ConvTopBar from "./components/ConvTopBar.tsx";
-import QaPairList from "./components/QaPairList.tsx";
 import { typeLabel } from "./hooks/type-labels.ts";
 import { useBackHref } from "./hooks/useBackHref.ts";
 
 export default function ConvDetailPage() {
 	const params = useParams();
-	const [searchParams] = useSearchParams();
 	const id = () => params.id;
-	const articleOnly = () => searchParams.mode === "article";
 
 	const [data] = createResource(id, (id) => getConvDetailE(Number(id)));
 	const backHref = useBackHref();
@@ -37,9 +34,6 @@ export default function ConvDetailPage() {
 									backHref={backHref()}
 								/>
 								<div class={styles.body}>
-									<Show when={!articleOnly()}>
-										<QaPairList pairs={d().qa_pairs} />
-									</Show>
 									<Show when={d().articles.length > 0}>
 										<div class={styles.articleSection}>
 											<h2 class={styles.sectionTitle}>总结 / 概念</h2>
@@ -60,6 +54,9 @@ export default function ConvDetailPage() {
 												)}
 											</For>
 										</div>
+									</Show>
+									<Show when={d().articles.length === 0}>
+										<div class={styles.empty}>该条目下暂无文章</div>
 									</Show>
 								</div>
 							</>

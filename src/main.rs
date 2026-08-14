@@ -1,5 +1,5 @@
-// 生产代码禁止 .unwrap()（cfg(test) 目标豁免：测试模块可直接 unwrap）
-#![cfg_attr(not(test), deny(clippy::unwrap_used))]
+// 生产代码禁止 .unwrap() / .expect()（cfg(test) 目标豁免：测试模块可直接 unwrap）
+#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 
 mod app;
 mod modules;
@@ -36,15 +36,24 @@ async fn shutdown_signal() {
     let ctrl_c = async {
         tokio::signal::ctrl_c()
             .await
-            .expect("failed to install Ctrl+C handler");
+            .map_err(|e| {
+                eprintln!("failed to install Ctrl+C handler: {e}");
+                std::process::exit(1);
+            })
+            .ok();
     };
 
     #[cfg(unix)]
     let terminate = async {
-        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-            .expect("failed to install SIGTERM handler")
-            .recv()
-            .await;
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut sig) => {
+                sig.recv().await;
+            }
+            Err(e) => {
+                eprintln!("failed to install SIGTERM handler: {e}");
+                std::process::exit(1);
+            }
+        }
     };
 
     #[cfg(not(unix))]

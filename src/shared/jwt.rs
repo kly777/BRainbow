@@ -23,8 +23,9 @@ pub fn verify_token(token: &str, secret: &str) -> Option<Claims> {
 pub fn create_token(user_id: i32, role: &str, secret: &str) -> String {
     let exp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .expect("系统时间早于 Unix 纪元")
-        .as_secs() as usize
+        .map(|d| d.as_secs() as usize)
+        // 系统时间异常时返回 0（立即过期），不 panic
+        .unwrap_or(0)
         + 864000;
     let claims = Claims {
         sub: user_id,
@@ -36,7 +37,11 @@ pub fn create_token(user_id: i32, role: &str, secret: &str) -> String {
         &claims,
         &EncodingKey::from_secret(secret.as_bytes()),
     )
-    .expect("JWT 编码失败")
+    .map_err(|e| {
+        tracing::error!("JWT 编码失败: {e}");
+    })
+    // 编码失败返回空 token：登录端校验失败走正常 401 流程，不 panic
+    .unwrap_or_default()
 }
 
 pub fn extract_token(req: &Request) -> Option<String> {

@@ -45,7 +45,8 @@ impl RateLimiter {
     /// 返回是否放行（超出窗口次数则拒绝）
     fn allow(&self, key: &str) -> bool {
         let now = Instant::now();
-        let mut buckets = self.buckets.lock().expect("限速器锁中毒");
+        // 锁中毒时恢复内部数据（中毒 = 持有者 panic，数据仍可用）
+        let mut buckets = self.buckets.lock().unwrap_or_else(|e| e.into_inner());
         let bucket = buckets.entry(key.to_string()).or_default();
         bucket.retain(|t| now.duration_since(*t) < WINDOW);
         if bucket.len() >= MAX_REQUESTS {

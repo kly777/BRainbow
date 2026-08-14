@@ -46,10 +46,10 @@ impl ReadingService {
         // 插入文章词
         repo.insert_article_words(article_id, &unique).await?;
 
-        // 返回
+        // 返回（刚插入必须存在；缺失视为数据异常，走 RowNotFound 错误）
         repo.get_article(article_id)
             .await
-            .map(|a| a.expect("刚插入的文章必须存在"))
+            .map(|a| a.ok_or(sqlx::Error::RowNotFound))?
     }
 
     /// 标记单词

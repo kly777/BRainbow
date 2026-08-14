@@ -179,8 +179,7 @@ pub async fn file_handler(
         );
     }
 
-    resp.body(body)
-        .expect("ResponseBuilder 使用已知合法的状态码和头，不会失败")
+    resp.body(body).unwrap_or_else(|_| Response::new(Body::empty()))
 }
 
 // ── 重命名 ──

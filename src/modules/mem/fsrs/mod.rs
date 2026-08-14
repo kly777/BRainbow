@@ -74,7 +74,14 @@ fn due_in_secs(secs: i64) -> String {
 
 fn make_fsrs() -> FSRS {
     let params = get_global_params();
-    FSRS::new(&params).expect("FSRS 参数来自全局配置或默认值，构造不会失败")
+    match FSRS::new(&params) {
+        Ok(f) => f,
+        Err(e) => {
+            // 参数非法（如优化器写入了坏值）：回退内置默认参数，不 panic
+            tracing::error!("FSRS 参数非法，回退默认参数: {e}");
+            FSRS::default()
+        }
+    }
 }
 
 /// 除非有真实的记忆参数，否则传 None（避免 stability=0 / difficulty=0 传给 FSRS）
@@ -96,9 +103,10 @@ fn compute_next(
     desired_retention: f64,
 ) -> f64 {
     let fsrs = make_fsrs();
-    let next = fsrs
-        .next_states(mem, desired_retention as f32, days_elapsed)
-        .expect("FSRS next_states 接收合法参数，不会失败");
+    let Ok(next) = fsrs.next_states(mem, desired_retention as f32, days_elapsed) else {
+        tracing::error!("FSRS next_states 失败，返回 60 秒兜底");
+        return 60.0;
+    };
     let chosen = match rating {
         1 => &next.again,
         2 => &next.hard,
@@ -115,9 +123,10 @@ fn compute_next_with_state(
     desired_retention: f64,
 ) -> (f64, f64, f64) {
     let fsrs = make_fsrs();
-    let next = fsrs
-        .next_states(mem, desired_retention as f32, days_elapsed)
-        .expect("FSRS next_states 接收合法参数，不会失败");
+    let Ok(next) = fsrs.next_states(mem, desired_retention as f32, days_elapsed) else {
+        tracing::error!("FSRS next_states 失败，返回 (0,0,0) 兜底");
+        return (0.0, 0.0, 0.0);
+    };
     let chosen = match rating {
         1 => &next.again,
         2 => &next.hard,

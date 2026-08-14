@@ -194,9 +194,10 @@ pub async fn check_time_conflict_handler(
         );
     }
 
-    // is_none 已在上方守卫，此处取值安全
-    let start_time_str = start_time_str.expect("已在 is_none 守卫后");
-    let end_time_str = end_time_str.expect("已在 is_none 守卫后");
+    // is_none 已在上方守卫，此处绑定安全（防御性兜底不可达）
+    let (Some(start_time_str), Some(end_time_str)) = (start_time_str, end_time_str) else {
+        return error::bad_request_with_code("invalid_time_range", "需要提供start_time和end_time参数");
+    };
 
     let start_time = match start_time_str.parse::<DateTime<Utc>>() {
         Ok(time) => time,

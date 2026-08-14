@@ -3,7 +3,7 @@ BUILD_DIR := build
 -include .env.prod
 
 time := $(shell date +%y%m%d_%H%M%S)
-DEPLOY_SCRIPT := scripts/deploy.sh
+DEPLOY_SCRIPT := deploy/deploy.sh
 
 .PHONY: dev dev-backend dev-web fmt build build-check build-web build-backend clean deploy deploy-web deploy-backend check status info logs db-pull db-push rollback list-backups
 
@@ -63,7 +63,7 @@ build-web:
 clean:
 	rm -rf $(BUILD_DIR)/
 
-# ── 快捷命令委托给 scripts/deploy.sh ──
+# ── 快捷命令委托给 deploy/deploy.sh ──
 
 status:
 	$(DEPLOY_SCRIPT) status

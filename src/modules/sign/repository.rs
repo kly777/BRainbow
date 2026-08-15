@@ -142,8 +142,7 @@ mod tests {
 
     async fn setup() -> SignRepository {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query("CREATE TABLE signifier_signified (id INTEGER PRIMARY KEY AUTOINCREMENT, signifier TEXT NOT NULL, signified TEXT NOT NULL, onto_id INTEGER, weight REAL, relation_type TEXT, created_at TEXT NOT NULL)")
-            .execute(&pool).await.unwrap();
+        crate::app::db::create_tables(&pool).await.unwrap();
         SignRepository::new(Arc::new(pool))
     }
 

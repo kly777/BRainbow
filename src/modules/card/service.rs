@@ -44,8 +44,7 @@ mod tests {
 
     async fn setup() -> (CardService, CardQueryService) {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
-        sqlx::query("CREATE TABLE card (id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)")
-            .execute(&*pool).await.unwrap();
+        crate::app::db::create_tables(&pool).await.unwrap();
         let qsvc = CardQueryService::new(pool.clone());
         (CardService::new(pool), qsvc)
     }

@@ -448,23 +448,16 @@ mod tests {
 
     async fn setup() -> TimeWindowRepository {
         let pool = SqlitePool::connect("sqlite::memory:").await.expect("db");
-        sqlx::query(
-            "CREATE TABLE time_window (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                start_time TIMESTAMP NOT NULL,
-                end_time TIMESTAMP NOT NULL,
-                type TEXT NOT NULL DEFAULT 'feasible',
-                task_id INTEGER NOT NULL,
-                user_id INTEGER,
-                recurrence_freq TEXT,
-                recurrence_interval INTEGER,
-                recurrence_until TIMESTAMP,
-                recurrence_by_weekdays TEXT
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+        crate::app::db::create_tables(&pool).await.expect("schema");
+        // 生产 schema 中 time_window.task_id 有外键约束，先建占位任务（测试用到 1、2）
+        for (id, title) in [(1, "test-task-1"), (2, "test-task-2")] {
+            sqlx::query("INSERT INTO task (id, title) VALUES (?, ?)")
+                .bind(id)
+                .bind(title)
+                .execute(&pool)
+                .await
+                .expect("seed task");
+        }
         TimeWindowRepository::new(Arc::new(pool))
     }
 
@@ -531,12 +524,14 @@ mod tests {
             .unwrap();
 
         let new_start = now + Duration::hours(3);
+        let new_end = now + Duration::hours(5);
         let updated = repo
             .update(
                 w.id,
                 UpdateTimeWindowRequest {
                     start_time: Some(new_start),
-                    end_time: None,
+                    // 生产 schema 有 CHECK(start_time < end_time)：同时把 end_time 后移
+                    end_time: Some(new_end),
                     window_type: Some(TimeWindowType::Planned),
                     user_id: None,
                     recurrence_rule: None,
@@ -546,7 +541,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(updated.start_time, new_start);
-        assert_eq!(updated.end_time, now + Duration::hours(2));
+        assert_eq!(updated.end_time, new_end);
         assert_eq!(updated.window_type, TimeWindowType::Planned);
     }
 

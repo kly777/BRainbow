@@ -32,8 +32,7 @@ mod tests {
 
     async fn setup() -> (TextService, TextQueryService) {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
-        sqlx::query("CREATE TABLE text_note (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '', created_at TEXT, updated_at TEXT)")
-            .execute(&*pool).await.unwrap();
+        crate::app::db::create_tables(&pool).await.unwrap();
         let qsvc = TextQueryService::new(pool.clone());
         (TextService::new(pool), qsvc)
     }

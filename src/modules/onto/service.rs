@@ -62,8 +62,7 @@ mod tests {
 
     async fn real_service() -> (OntoService, OntoQueryService) {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
-        sqlx::query("CREATE TABLE onto (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT)")
-            .execute(&*pool).await.unwrap();
+        crate::app::db::create_tables(&pool).await.unwrap();
         (OntoService::new(pool.clone()), OntoQueryService::new(pool))
     }
 

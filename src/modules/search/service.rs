@@ -422,20 +422,15 @@ mod tests {
 
     async fn setup() -> SearchQueryService {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        for ddl in [
-            "CREATE TABLE chunk (id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL DEFAULT '')",
-            "CREATE TABLE mem (id INTEGER PRIMARY KEY AUTOINCREMENT, cue_chunk_id INTEGER NOT NULL, target_chunk_id INTEGER NOT NULL, state TEXT NOT NULL DEFAULT 'new')",
-            "CREATE TABLE card (id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT, user_id INTEGER)",
-            "CREATE TABLE task (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, description TEXT, user_id INTEGER)",
-            "CREATE TABLE bookmark (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, url TEXT NOT NULL, description TEXT NOT NULL DEFAULT '')",
-            "CREATE TABLE onto (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT)",
-            "CREATE TABLE text_note (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '')",
-            "CREATE TABLE reading_article (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, content TEXT NOT NULL)",
-            "CREATE TABLE conv_titles (id INTEGER PRIMARY KEY AUTOINCREMENT, conv_id INTEGER NOT NULL, title TEXT NOT NULL, conv_type TEXT NOT NULL)",
-            "CREATE TABLE chat_tree (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT NOT NULL)",
-            "CREATE TABLE chat_node (id INTEGER PRIMARY KEY AUTOINCREMENT, tree_id INTEGER NOT NULL, parent_id INTEGER, role TEXT NOT NULL, content TEXT NOT NULL)",
-        ] {
-            sqlx::query(ddl).execute(&pool).await.unwrap();
+        crate::app::db::create_tables(&pool).await.unwrap();
+        // 生产 schema 中 card/task.user_id 有外键约束，先建两个测试用户
+        for (id, name) in [(1, "u1"), (2, "u2")] {
+            sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (?, ?, 'x')")
+                .bind(id)
+                .bind(name)
+                .execute(&pool)
+                .await
+                .unwrap();
         }
         SearchQueryService::new(pool)
     }

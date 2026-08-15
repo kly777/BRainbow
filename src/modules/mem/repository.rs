@@ -1112,126 +1112,17 @@ mod tests {
     use super::*;
     use sqlx::SqlitePool;
 
-    /// 创建测试数据库（含 mem 相关所有表）
+    /// 创建测试数据库（复用生产 schema：crate::app::db::create_tables）
     async fn setup_db() -> MemRepo {
         let pool = SqlitePool::connect("sqlite::memory:")
             .await
             .expect("create in-memory db");
 
-        sqlx::query(
-            "CREATE TABLE user (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
-                password_hash TEXT NOT NULL
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+        crate::app::db::create_tables(&pool)
+            .await
+            .expect("create production schema");
 
-        sqlx::query(
-            "CREATE TABLE chunk (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                content TEXT NOT NULL DEFAULT '',
-                created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-                updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        sqlx::query(
-            "CREATE TABLE mem (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                cue_chunk_id INTEGER NOT NULL,
-                target_chunk_id INTEGER NOT NULL,
-                state TEXT NOT NULL DEFAULT 'new',
-                stability REAL DEFAULT 0,
-                difficulty REAL DEFAULT 0,
-                step_index INTEGER,
-                buried INTEGER NOT NULL DEFAULT 0,
-                lapses INTEGER NOT NULL DEFAULT 0,
-                leeched INTEGER NOT NULL DEFAULT 0,
-                due_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-                last_review_at TEXT,
-                created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-                FOREIGN KEY (cue_chunk_id) REFERENCES chunk(id),
-                FOREIGN KEY (target_chunk_id) REFERENCES chunk(id)
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        sqlx::query(
-            "CREATE TABLE mem_prerequisite (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                mem_id INTEGER NOT NULL,
-                requires_mem_id INTEGER NOT NULL,
-                FOREIGN KEY (mem_id) REFERENCES mem(id),
-                FOREIGN KEY (requires_mem_id) REFERENCES mem(id),
-                UNIQUE(mem_id, requires_mem_id)
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        sqlx::query(
-            "CREATE TABLE revlog (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                mem_id INTEGER NOT NULL,
-                review_time TEXT NOT NULL,
-                rating INTEGER NOT NULL,
-                delta_t INTEGER NOT NULL,
-                FOREIGN KEY (mem_id) REFERENCES mem(id)
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS mem_mnemonic (
-                mem_id INTEGER PRIMARY KEY,
-                content TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-                FOREIGN KEY (mem_id) REFERENCES mem(id) ON DELETE CASCADE
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS tag (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                user_id INTEGER NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES user(id),
-                UNIQUE(name, user_id)
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS mem_tag (
-                mem_id INTEGER NOT NULL,
-                tag_id INTEGER NOT NULL,
-                PRIMARY KEY (mem_id, tag_id),
-                FOREIGN KEY (mem_id) REFERENCES mem(id) ON DELETE CASCADE,
-                FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        // 启用外键约束（SQLite 默认不启用）
+        // 启用外键约束（SQLite 默认不启用，级联删除测试依赖）
         sqlx::query("PRAGMA foreign_keys = ON")
             .execute(&pool)
             .await

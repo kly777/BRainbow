@@ -573,10 +573,7 @@ mod tests {
 
     async fn setup() -> ChatService {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query("CREATE TABLE chat_tree (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, system_prompt TEXT NOT NULL DEFAULT '', kind TEXT NOT NULL DEFAULT 'chat', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
-            .execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE chat_node (id INTEGER PRIMARY KEY AUTOINCREMENT, tree_id INTEGER NOT NULL, parent_id INTEGER, role TEXT NOT NULL CHECK (role IN ('user','assistant')), content TEXT NOT NULL, revised_from INTEGER, reasoning TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
-            .execute(&pool).await.unwrap();
+        crate::app::db::create_tables(&pool).await.unwrap();
         ChatService::new(pool)
     }
 

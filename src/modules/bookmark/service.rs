@@ -146,41 +146,7 @@ mod tests {
 
     async fn setup() -> (BookmarkService, BookmarkQueryService) {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
-        sqlx::query(
-            "CREATE TABLE bookmark (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                url TEXT NOT NULL,
-                description TEXT NOT NULL DEFAULT '',
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )",
-        )
-        .execute(&*pool)
-        .await
-        .unwrap();
-        sqlx::query(
-            "CREATE TABLE bookmark_tag (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
-                created_at TEXT NOT NULL DEFAULT ''
-            )",
-        )
-        .execute(&*pool)
-        .await
-        .unwrap();
-        sqlx::query(
-            "CREATE TABLE bookmark_tag_rel (
-                bookmark_id INTEGER NOT NULL,
-                tag_id INTEGER NOT NULL,
-                PRIMARY KEY (bookmark_id, tag_id),
-                FOREIGN KEY (bookmark_id) REFERENCES bookmark(id) ON DELETE CASCADE,
-                FOREIGN KEY (tag_id) REFERENCES bookmark_tag(id) ON DELETE CASCADE
-            )",
-        )
-        .execute(&*pool)
-        .await
-        .unwrap();
+        crate::app::db::create_tables(&pool).await.unwrap();
         let qsvc = BookmarkQueryService::new(pool.clone());
         (BookmarkService::new(pool), qsvc)
     }

@@ -59,13 +59,12 @@ impl Default for MemConfig {
 impl MemConfig {
     /// 从数据库加载（app_settings 键值表）；无记录时写默认值并返回。
     pub async fn load_from_db(pool: &SqlitePool) -> Self {
-        let raw: Option<String> = sqlx::query_scalar(
-            "SELECT value FROM app_settings WHERE key = ?",
-        )
-        .bind(DB_KEY)
-        .fetch_optional(pool)
-        .await
-        .unwrap_or(None);
+        let raw: Option<String> =
+            sqlx::query_scalar("SELECT value FROM app_settings WHERE key = ?")
+                .bind(DB_KEY)
+                .fetch_optional(pool)
+                .await
+                .unwrap_or(None);
 
         if let Some(json) = raw {
             match serde_json::from_str::<MemConfig>(&json) {
@@ -118,12 +117,7 @@ mod tests {
 
     async fn setup_db() -> SqlitePool {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query(
-            "CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+        crate::app::db::create_tables(&pool).await.unwrap();
         pool
     }
 
@@ -149,12 +143,11 @@ mod tests {
         assert_eq!(cfg.desired_retention, 0.9);
 
         // 默认值已持久化
-        let stored: String = sqlx::query_scalar(
-            "SELECT value FROM app_settings WHERE key = 'mem_config'",
-        )
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+        let stored: String =
+            sqlx::query_scalar("SELECT value FROM app_settings WHERE key = 'mem_config'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert!(stored.contains("learning_steps"));
     }
 

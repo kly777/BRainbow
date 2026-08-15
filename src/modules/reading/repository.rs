@@ -350,47 +350,9 @@ mod tests {
             .await
             .expect("create in-memory db");
 
-        sqlx::query(
-            "CREATE TABLE reading_article (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                content TEXT NOT NULL,
-                word_count INTEGER DEFAULT 0,
-                notes TEXT NOT NULL DEFAULT '',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        sqlx::query(
-            "CREATE TABLE reading_article_word (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                article_id INTEGER NOT NULL,
-                word TEXT NOT NULL,
-                FOREIGN KEY (article_id) REFERENCES reading_article(id) ON DELETE CASCADE,
-                UNIQUE(article_id, word)
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        sqlx::query(
-            "CREATE TABLE reading_user_word (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                word TEXT NOT NULL UNIQUE,
-                status TEXT NOT NULL DEFAULT 'unknown',
-                unknown_count INTEGER NOT NULL DEFAULT 0,
-                known_count INTEGER NOT NULL DEFAULT 0,
-                first_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+        crate::app::db::create_tables(&pool)
+            .await
+            .expect("create production schema");
 
         ReadingRepo::new(Arc::new(pool))
     }

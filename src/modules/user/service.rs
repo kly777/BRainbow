@@ -130,8 +130,7 @@ mod tests {
 
     async fn setup() -> (UserService, UserQueryService) {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
-        sqlx::query("CREATE TABLE user (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'user')")
-            .execute(&*pool).await.unwrap();
+        crate::app::db::create_tables(&pool).await.unwrap();
         let qsvc = UserQueryService::new(pool.clone());
         (UserService::new(pool), qsvc)
     }

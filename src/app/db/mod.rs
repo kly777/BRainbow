@@ -203,12 +203,39 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             signifier TEXT NOT NULL,
             signified TEXT NOT NULL,
             onto_id INTEGER,
+            weight REAL,
+            relation_type TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (onto_id) REFERENCES onto(id)
         )
         "#,
     )
     .execute(pool)
     .await?;
+
+    // 迁移：为历史库补齐 sign 查询/模型实际使用的列（旧 DDL 缺失）
+    for (column, ddl) in [
+        (
+            "weight",
+            "ALTER TABLE signifier_signified ADD COLUMN weight REAL",
+        ),
+        (
+            "relation_type",
+            "ALTER TABLE signifier_signified ADD COLUMN relation_type TEXT",
+        ),
+        (
+            "created_at",
+            "ALTER TABLE signifier_signified ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        ),
+    ] {
+        if !column_exists(pool, "signifier_signified", column).await? {
+            sqlx::query(ddl).execute(pool).await.map_err(|e| {
+                sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
+                    "迁移失败: 无法为 signifier_signified 添加 {column} 列: {e}"
+                ))))
+            })?;
+        }
+    }
 
     // 创建文本笔记表
     sqlx::query(
@@ -680,6 +707,7 @@ async fn table_exists(pool: &SqlitePool, table: &str) -> Result<bool, sqlx::Erro
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::column_exists;
+    use super::create_tables;
     use sqlx::SqlitePool;
 
     #[tokio::test]
@@ -702,5 +730,34 @@ mod tests {
                 .await
                 .is_err()
         );
+    }
+
+    #[tokio::test]
+    async fn create_tables_backfills_legacy_signifier_columns() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        // 模拟历史库：旧版 signifier_signified 缺少 weight/relation_type/created_at
+        sqlx::query(
+            "CREATE TABLE signifier_signified (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                signifier TEXT NOT NULL,
+                signified TEXT NOT NULL,
+                onto_id INTEGER,
+                FOREIGN KEY (onto_id) REFERENCES onto(id)
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        create_tables(&pool).await.unwrap();
+
+        for col in ["weight", "relation_type", "created_at"] {
+            assert!(
+                column_exists(&pool, "signifier_signified", col)
+                    .await
+                    .unwrap(),
+                "迁移后应存在列 {col}"
+            );
+        }
     }
 }

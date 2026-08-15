@@ -184,17 +184,9 @@ mod tests {
             .await
             .expect("create in-memory db");
 
-        sqlx::query(
-            "CREATE TABLE card (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                content TEXT,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+        crate::app::db::create_tables(&pool)
+            .await
+            .expect("create production schema");
 
         CardRepository { db: Arc::new(pool) }
     }

@@ -129,8 +129,7 @@ mod tests {
 
     async fn setup_db() -> OntoRepository {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query("CREATE TABLE onto (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT)")
-            .execute(&pool).await.unwrap();
+        crate::app::db::create_tables(&pool).await.unwrap();
         OntoRepository::new(Arc::new(pool))
     }
 

@@ -221,32 +221,7 @@ mod tests {
     async fn setup_test_db() -> SqlitePool {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
 
-        sqlx::query(
-            "CREATE TABLE conv_titles (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                conv_id INTEGER,
-                title TEXT,
-                conv_type TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        sqlx::query(
-            "CREATE TABLE articles (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                conv_id INTEGER,
-                article_type TEXT,
-                title TEXT,
-                content TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+        crate::app::db::create_tables(&pool).await.unwrap();
 
         // conv 1: Go 相关对话
         sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (1, '如何用Go写Web程序', 'solution')")

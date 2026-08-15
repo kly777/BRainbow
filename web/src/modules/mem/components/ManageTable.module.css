@@ -10,9 +10,9 @@
 	padding: var(--space-xs) var(--space-md);
 	cursor: pointer;
 	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 }
 
 .page-btn:disabled {

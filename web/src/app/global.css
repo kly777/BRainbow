@@ -3,6 +3,7 @@
  * 保障可访问性。1rem = 1rem（浏览器默认）。 */
 :root {
 	/* ── 圆角令牌（xs < sm < md < lg < xl，语义与档位一致） ── */
+	--radius-2xs: 0.125rem;
 	--radius-xs: 0.25rem;
 	--radius-sm: 0.375rem;
 	--radius-md: 0.5rem;

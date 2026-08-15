@@ -30,7 +30,7 @@
 	justify-content: space-between;
 	padding: var(--space-md) var(--space-lg);
 	border: 1px solid var(--t-color-border);
-	border-radius: 0.5rem;
+	border-radius: var(--radius-md);
 	background: var(--t-color-surface);
 }
 
@@ -53,7 +53,7 @@
 .known-btn {
 	padding: var(--space-xs) var(--space-md);
 	border: 1px solid var(--t-color-mark-correct);
-	border-radius: 0.375rem;
+	border-radius: var(--radius-sm);
 	background: transparent;
 	color: var(--t-color-mark-correct);
 	cursor: pointer;

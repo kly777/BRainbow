@@ -1,0 +1,51 @@
+/* AiSettingsModal — AI 设置弹层（配合全局 Modal） */
+
+.body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
+}
+
+.label {
+	font-size: var(--text-sm);
+	font-weight: 500;
+	color: var(--t-color-ink-muted);
+}
+
+.input {
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	font-size: var(--text-sm);
+	font-family: inherit;
+	color: var(--t-color-ink);
+	background: var(--t-color-bg);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+}
+
+.test-row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	flex-wrap: wrap;
+}
+
+.status-ok {
+	color: var(--t-color-success);
+	font-size: var(--text-sm);
+}
+
+.status-fail {
+	color: var(--t-color-danger);
+	font-size: var(--text-sm);
+}
+
+.footer-left {
+	margin-right: auto;
+}

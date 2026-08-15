@@ -9,9 +9,9 @@
 	padding: var(--space-xs) var(--space-lg);
 	cursor: pointer;
 	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 }
 
 .ghost-btn:hover {
@@ -34,9 +34,9 @@
 	padding: var(--space-xs) var(--space-md);
 	cursor: pointer;
 	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 }
 
 .nav-btn:disabled {
@@ -59,9 +59,9 @@
 	cursor: pointer;
 	font-weight: 500;
 	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 }
 
 .primary-btn:hover {
@@ -133,7 +133,7 @@
 	display: flex;
 	flex-direction: column;
 	border-top: 1px solid var(--t-color-border);
-	animation: answerIn 0.3s ease;
+	animation: answerIn var(--t-transition-slow) ease;
 	flex: 1 1 auto;
 	min-height: 0;
 	overflow: hidden;
@@ -295,7 +295,7 @@
 	cursor: pointer;
 	transition:
 		filter var(--t-transition-fast),
-		transform 0.1s;
+		transform var(--t-transition-fast);
 }
 
 .rating-label {
@@ -310,23 +310,23 @@
 }
 
 .again {
-	background: var(--t-color-badge-relearning-bg);
-	color: var(--t-color-badge-relearning-text);
+	background: var(--t-color-danger-subtle);
+	color: var(--t-color-danger);
 }
 
 .hard {
-	background: var(--t-color-badge-learning-bg);
-	color: var(--t-color-badge-learning-text);
+	background: var(--t-color-warning-subtle);
+	color: var(--t-color-warning);
 }
 
 .good {
-	background: var(--t-color-badge-review-bg);
-	color: var(--t-color-badge-review-text);
+	background: var(--t-color-success-subtle);
+	color: var(--t-color-success);
 }
 
 .easy {
-	background: var(--t-color-badge-new-bg);
-	color: var(--t-color-badge-new-text);
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
 }
 
 .empty {
@@ -390,7 +390,7 @@
 	border: 1px solid var(--t-color-border-strong);
 	border-bottom: none;
 	border-radius: 0.875rem 0.875rem 0 0;
-	box-shadow: 0 -4px 16px rgb(0 0 0 / 8%);
+	box-shadow: var(--shadow-lg);
 	flex-wrap: nowrap;
 	max-width: 100vw;
 }
@@ -413,7 +413,7 @@
 	border: 1px solid var(--t-color-border-strong);
 	border-bottom: none;
 	border-radius: 0.875rem 0.875rem 0 0;
-	box-shadow: 0 -4px 16px rgb(0 0 0 / 8%);
+	box-shadow: var(--shadow-lg);
 	flex-wrap: nowrap;
 	max-width: 640px;
 	min-width: 480px;

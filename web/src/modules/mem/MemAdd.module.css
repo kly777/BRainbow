@@ -35,9 +35,9 @@
 	display: inline-block;
 	white-space: nowrap;
 	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 }
 
 .back-link:hover {

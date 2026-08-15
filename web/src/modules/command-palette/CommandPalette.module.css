@@ -179,16 +179,16 @@
 .input-row:focus-within {
 	border-color: var(--t-color-accent);
 	box-shadow:
-		0 0.5rem 2rem oklch(0% 0 0deg / 14%),
-		0 0 0 0.125rem var(--t-color-accent-soft);
+		var(--shadow-lg),
+		0 0 0 var(--space-2xs) var(--t-color-accent-soft);
 }
 
 /* 连体时：列表随输入框聚焦同步高亮（统一边框描边） */
 .bar:has(.input-row:focus-within) .suggestions {
 	border-color: var(--t-color-accent);
 	box-shadow:
-		0 0.25rem 1rem oklch(0% 0 0deg / 7%),
-		0 0 0 0.125rem var(--t-color-accent-soft);
+		var(--shadow-md),
+		0 0 0 var(--space-2xs) var(--t-color-accent-soft);
 }
 
 .input:focus-visible {

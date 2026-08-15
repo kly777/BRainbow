@@ -53,9 +53,9 @@
 	padding: var(--space-xs) var(--space-lg);
 	cursor: pointer;
 	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 }
 
 .btn-ghost:hover {
@@ -78,9 +78,9 @@
 	cursor: pointer;
 	font-weight: 500;
 	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 }
 
 .btn-primary:hover {

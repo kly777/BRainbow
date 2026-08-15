@@ -20,14 +20,15 @@ impl OntoRepository {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Onto>, i64), sqlx::Error> {
-        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM onto")
+        let total: i64 = sqlx::query_scalar!("SELECT COUNT(*) FROM onto")
             .fetch_one(&*self.db)
             .await?;
-        let items = sqlx::query_as::<_, Onto>(
-            "SELECT id, name, description FROM onto ORDER BY id LIMIT ? OFFSET ?",
+        let items = sqlx::query_as!(
+            Onto,
+            r#"SELECT id AS "id: i32", name, description FROM onto ORDER BY id LIMIT ? OFFSET ?"#,
+            limit,
+            offset
         )
-        .bind(limit)
-        .bind(offset)
         .fetch_all(&*self.db)
         .await?;
         Ok((items, total))
@@ -35,10 +36,13 @@ impl OntoRepository {
 
     /// 根据ID获取本体
     pub async fn find_by_id(&self, id: i32) -> Result<Option<Onto>, sqlx::Error> {
-        sqlx::query_as::<_, Onto>("SELECT id, name, description FROM onto WHERE id = ?")
-            .bind(id)
-            .fetch_optional(&*self.db)
-            .await
+        sqlx::query_as!(
+            Onto,
+            r#"SELECT id AS "id: i32", name, description FROM onto WHERE id = ?"#,
+            id
+        )
+        .fetch_optional(&*self.db)
+        .await
     }
 
     /// 创建本体
@@ -47,25 +51,25 @@ impl OntoRepository {
         name: String,
         description: Option<String>,
     ) -> Result<Onto, sqlx::Error> {
-        let result = sqlx::query(
-            "INSERT INTO onto (name, description) VALUES (?, ?) RETURNING id, name, description",
+        let row = sqlx::query!(
+            r#"INSERT INTO onto (name, description) VALUES (?, ?)
+               RETURNING id AS "id: i32", name, description"#,
+            name,
+            description
         )
-        .bind(&name)
-        .bind(&description)
         .fetch_one(&*self.db)
         .await?;
 
         Ok(Onto {
-            id: result.try_get("id")?,
-            name: result.try_get("name")?,
-            description: result.try_get("description")?,
+            id: row.id,
+            name: row.name,
+            description: row.description,
         })
     }
 
     /// 删除本体
     pub async fn delete(&self, id: i32) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM onto WHERE id = ?")
-            .bind(id)
+        let result = sqlx::query!("DELETE FROM onto WHERE id = ?", id)
             .execute(&*self.db)
             .await?;
 

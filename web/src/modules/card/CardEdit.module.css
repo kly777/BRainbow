@@ -3,7 +3,7 @@
 .container {
 	max-width: 1440px;
 	margin: 0 auto;
-	padding: 0 var(--space-xl);
+	padding: var(--space-lg) var(--space-xl) 0;
 	height: 100%;
 	display: flex;
 	flex-direction: column;
@@ -12,7 +12,7 @@
 /* ── 页头 ── */
 
 .header {
-	padding: var(--space-lg) 0 var(--space-md);
+	padding: 0 0 var(--space-md);
 }
 
 .title-row {

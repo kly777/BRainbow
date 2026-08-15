@@ -1,13 +1,14 @@
 /* features/card/CardsList.css.ts — 由 vanilla-extract 迁移 */
 
 .container {
+	max-width: 1440px;
+	margin: 0 auto;
 	width: 100%;
-	height: 100dvh;
+	height: 100%;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
-	padding: var(--space-xl);
-	background: var(--t-color-bg);
+	padding: var(--space-lg) var(--space-xl) 0;
 }
 
 .header {

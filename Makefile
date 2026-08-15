@@ -24,10 +24,13 @@ fmt:
 	cargo fmt
 	cd web && pnpm run fmt
 
-# SQL 编译期校验：刷新 .sqlx offline data（schema 变更后必须重跑并提交）
+# SQL 编译期校验：先生成"迁移到最新版"的 fixture 库，再刷新 .sqlx offline data。
+# schema/迁移变更后必须重跑并提交 .sqlx。
 # 前置：cargo install sqlx-cli --no-default-features --features sqlite
 sqlx-prepare:
-	DATABASE_URL=sqlite:brainbow.db cargo sqlx prepare
+	rm -f target/sqlx-prepare.db target/sqlx-prepare.db-shm target/sqlx-prepare.db-wal
+	cargo test prepare_schema_fixture -- --ignored
+	DATABASE_URL=sqlite:target/sqlx-prepare.db cargo sqlx prepare
 
 check:
 	$(DEPLOY_SCRIPT) check

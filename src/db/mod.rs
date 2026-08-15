@@ -937,4 +937,21 @@ mod tests {
         let err = migrate(&pool).await.unwrap_err();
         assert!(err.to_string().contains("高于程序支持"));
     }
+
+    /// 为 `make sqlx-prepare` 生成最新 schema 的 fixture 库。
+    /// 不跑迁移器而直接使用开发库生成 .sqlx 会拿到历史 schema。
+    #[tokio::test]
+    #[ignore = "only run by `make sqlx-prepare`"]
+    async fn prepare_schema_fixture() {
+        use sqlx::sqlite::SqliteConnectOptions;
+        use std::str::FromStr;
+
+        let path = "target/sqlx-prepare.db";
+        let _ = std::fs::remove_file(path);
+        let options = SqliteConnectOptions::from_str(&format!("sqlite:{path}"))
+            .unwrap()
+            .create_if_missing(true);
+        let pool = SqlitePool::connect_with(options).await.unwrap();
+        migrate(&pool).await.unwrap();
+    }
 }

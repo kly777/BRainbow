@@ -33,7 +33,7 @@ impl MemQueryService {
         let (page, page_size) = pagination.clamp();
         let offset = (page - 1) * page_size;
         let ids = self.repo.get_all_mems(page_size, offset, query).await?;
-        let items = self.build_items(&ids).await;
+        let items = self.build_items(&ids).await?;
         let total = self.repo.count_all_mems(query).await?;
         let pagination_ref = &pagination;
         Ok(PaginatedResponse::new(items, total, pagination_ref))
@@ -193,10 +193,7 @@ impl MemQueryService {
 
     // ── 内部辅助 ──
 
-    async fn build_items(&self, ids: &[i32]) -> Vec<MemWithChunks> {
-        self.repo
-            .get_mems_with_chunks(ids)
-            .await
-            .unwrap_or_default()
+    async fn build_items(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, sqlx::Error> {
+        self.repo.get_mems_with_chunks(ids).await
     }
 }

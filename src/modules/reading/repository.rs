@@ -193,10 +193,7 @@ impl ReadingRepo {
         let mut summaries = Vec::with_capacity(articles.len());
 
         for article in articles {
-            let known_ratio = self
-                .get_article_known_ratio(article.id)
-                .await
-                .unwrap_or(0.0);
+            let known_ratio = self.get_article_known_ratio(article.id).await?;
 
             let unknown_count = sqlx::query_as::<_, CountRow>(
                 r#"
@@ -209,9 +206,8 @@ impl ReadingRepo {
             )
             .bind(article.id)
             .fetch_one(&*self.pool)
-            .await
-            .map(|r| r.count)
-            .unwrap_or(0);
+            .await?
+            .count;
 
             summaries.push(ArticleSummary {
                 id: article.id,

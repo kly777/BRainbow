@@ -684,9 +684,13 @@ async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> Result<b
     )
     .fetch_all(pool)
     .await?;
-    Ok(rows
-        .iter()
-        .any(|r| r.try_get::<String, _>("name").ok().as_deref() == Some(column)))
+    for row in rows {
+        let name: String = row.try_get("name")?;
+        if name == column {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 /// 检查表是否存在（用于幂等 DROP 迁移）

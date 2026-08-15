@@ -43,11 +43,13 @@ impl DBRepo {
 
         let columns: Vec<ColumnInfo> = pragma_rows
             .iter()
-            .map(|r| ColumnInfo {
-                name: r.try_get::<String, _>("name").unwrap_or_default(),
-                col_type: r.try_get::<String, _>("type").unwrap_or_default(),
+            .map(|r| {
+                Ok(ColumnInfo {
+                    name: r.try_get("name")?,
+                    col_type: r.try_get("type")?,
+                })
             })
-            .collect();
+            .collect::<Result<_, sqlx::Error>>()?;
 
         // 总行数
         let total: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
@@ -75,27 +77,29 @@ impl DBRepo {
                     .map(|col| {
                         let name = col.name();
                         match col.type_info().name() {
-                            "INT4" => row
-                                .try_get::<i32, _>(name)
-                                .map(|v| Value::Number(v.into()))
-                                .unwrap_or(Value::Null),
-                            "INTEGER" => row
-                                .try_get::<i64, _>(name)
-                                .map(|v| Value::Number(v.into()))
-                                .unwrap_or(Value::Null),
-                            "TEXT" | "VARCHAR" | "DATETIME" => row
-                                .try_get::<String, _>(name)
-                                .map(Value::String)
-                                .unwrap_or(Value::Null),
-                            _ => row
-                                .try_get::<String, _>(name)
-                                .map(Value::String)
-                                .unwrap_or(Value::Null),
+                            "INT4" => Ok(match row.try_get::<Option<i32>, _>(name)? {
+                                Some(v) => Value::Number(v.into()),
+                                None => Value::Null,
+                            }),
+                            "INTEGER" => Ok(match row.try_get::<Option<i64>, _>(name)? {
+                                Some(v) => Value::Number(v.into()),
+                                None => Value::Null,
+                            }),
+                            "TEXT" | "VARCHAR" | "DATETIME" => {
+                                Ok(match row.try_get::<Option<String>, _>(name)? {
+                                    Some(v) => Value::String(v),
+                                    None => Value::Null,
+                                })
+                            }
+                            _ => Ok(match row.try_get::<Option<String>, _>(name)? {
+                                Some(v) => Value::String(v),
+                                None => Value::Null,
+                            }),
                         }
                     })
-                    .collect()
+                    .collect::<Result<Vec<_>, sqlx::Error>>()
             })
-            .collect();
+            .collect::<Result<Vec<_>, sqlx::Error>>()?;
 
         Ok((columns, data, total))
     }

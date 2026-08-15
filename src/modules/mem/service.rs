@@ -77,15 +77,15 @@ impl MemService {
 
         // 5. 实在没卡了，随便给一张
         if ids.is_empty()
-            && let Ok(Some(id)) = self.repo.get_next_mem().await
+            && let Some(id) = self.repo.get_next_mem().await?
         {
             ids.push(id);
         }
 
-        let items = self.build_items(&ids).await;
+        let items = self.build_items(&ids).await?;
         let has_more = more_to_learn || ids.len() >= cap;
         let upcoming_count = if ids.is_empty() {
-            self.repo.count_upcoming().await.unwrap_or(0) as usize
+            self.repo.count_upcoming().await? as usize
         } else {
             0
         };
@@ -209,11 +209,8 @@ impl MemService {
 
     // ── 内部辅助 ──
 
-    async fn build_items(&self, ids: &[i32]) -> Vec<MemWithChunks> {
-        self.repo
-            .get_mems_with_chunks(ids)
-            .await
-            .unwrap_or_default()
+    async fn build_items(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, sqlx::Error> {
+        self.repo.get_mems_with_chunks(ids).await
     }
 
     // ── 挂起 / 恢复 ──

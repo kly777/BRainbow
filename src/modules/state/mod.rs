@@ -6,12 +6,12 @@ use crate::modules::{
     bookmark::BookmarkService, card::CardQueryService, card::CardService,
     chat::query::ChatQueryService, chat::service::ChatService, conv::query::ConvQueryService,
     db_viewer::DbViewerQueryService, media::query::MediaQueryService, media::service::MediaService,
-    mem::MemRepo, mem::config::MemConfig, mem::query::MemQueryService,
-    mem::service::MemService, onto::OntoQueryService,
-    onto::OntoService, reading::query::ReadingQueryService, reading::service::ReadingService,
-    sign::SignQueryService, sign::SignService, task::TaskQueryService, task::TaskService,
-    text::TextQueryService, text::TextService, time_window::query::TimeWindowQueryService,
-    time_window::service::TimeWindowService, user::UserQueryService, user::UserService,
+    mem::MemRepo, mem::config::MemConfig, mem::query::MemQueryService, mem::service::MemService,
+    onto::OntoQueryService, onto::OntoService, reading::query::ReadingQueryService,
+    reading::service::ReadingService, sign::SignQueryService, sign::SignService,
+    task::TaskQueryService, task::TaskService, text::TextQueryService, text::TextService,
+    time_window::query::TimeWindowQueryService, time_window::service::TimeWindowService,
+    user::UserQueryService, user::UserService,
 };
 use crate::shared::config::Config;
 
@@ -71,8 +71,11 @@ impl AppState {
             .get(crate::modules::admin::service::KEY_JWT_SECRET)
             .await
             && !secret.is_empty()
-            && let Ok(mut cache) = self.jwt_active_cache.write()
         {
+            let mut cache = self
+                .jwt_active_cache
+                .write()
+                .unwrap_or_else(|e| e.into_inner());
             *cache = Some(secret);
         }
         if let Ok(Some(v)) = self
@@ -80,26 +83,33 @@ impl AppState {
             .get(crate::modules::admin::service::KEY_ALLOW_REGISTER)
             .await
             && let Ok(parsed) = v.parse::<bool>()
-            && let Ok(mut cache) = self.allow_register_cache.write()
         {
+            let mut cache = self
+                .allow_register_cache
+                .write()
+                .unwrap_or_else(|e| e.into_inner());
             *cache = Some(parsed);
         }
     }
 
     /// 当前生效的 JWT 密钥（DB 持久化优先于 env）
     pub fn jwt_secret_active(&self) -> String {
-        self.jwt_active_cache
+        let cache = self
+            .jwt_active_cache
             .read()
-            .ok()
-            .and_then(|c| c.clone())
+            .unwrap_or_else(|e| e.into_inner());
+        cache
+            .clone()
             .unwrap_or_else(|| self.jwt_secret.as_ref().clone())
     }
 
     /// 当前是否开放注册（DB 优先于 env 初始值）
     pub async fn allow_register_active(&self) -> bool {
-        if let Ok(cache) = self.allow_register_cache.read()
-            && let Some(v) = *cache
-        {
+        let cache = self
+            .allow_register_cache
+            .read()
+            .unwrap_or_else(|e| e.into_inner());
+        if let Some(v) = *cache {
             return v;
         }
         false
@@ -113,9 +123,11 @@ impl AppState {
                 &v.to_string(),
             )
             .await?;
-        if let Ok(mut cache) = self.allow_register_cache.write() {
-            *cache = Some(v);
-        }
+        let mut cache = self
+            .allow_register_cache
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
+        *cache = Some(v);
         Ok(())
     }
 
@@ -136,9 +148,11 @@ impl AppState {
         self.settings
             .set(crate::modules::admin::service::KEY_JWT_SECRET, new_secret)
             .await?;
-        if let Ok(mut cache) = self.jwt_active_cache.write() {
-            *cache = Some(new_secret.to_string());
-        }
+        let mut cache = self
+            .jwt_active_cache
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
+        *cache = Some(new_secret.to_string());
         Ok(())
     }
 

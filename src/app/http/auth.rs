@@ -35,13 +35,28 @@ pub async fn auth(State(state): State<AppState>, mut request: Request, next: Nex
     // ── 2. API key ──
     if let Some(key) = extract_api_key(&request) {
         let key_hash = hash_api_key(&key);
-        let row: Option<(i32, String, Option<i32>)> =
+        let row: Result<Option<(i32, String, Option<i32>)>, sqlx::Error> =
             sqlx::query_as("SELECT id, role, user_id FROM api_key WHERE key_hash = ?")
                 .bind(&key_hash)
                 .fetch_optional(&*state.db)
-                .await
-                .ok()
-                .flatten();
+                .await;
+        let row = match row {
+            Ok(row) => row,
+            Err(e) => {
+                // DB 故障不能被伪装成"未登录"：显式返回 500
+                tracing::error!("API key 验证查询失败: {e}");
+                drain_rejected_body(&mut request).await;
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorBody {
+                        code: "INTERNAL".to_string(),
+                        message: "服务器内部错误".to_string(),
+                        details: None,
+                    }),
+                )
+                    .into_response();
+            }
+        };
 
         if let Some((_id, role, user_id)) = row {
             let claims = Claims {
@@ -217,13 +232,25 @@ pub async fn delete_api_key(
 ) -> Response {
     // 非 admin 只能删自己的 key
     if claims.role != "admin" {
-        let owned: Option<(Option<i32>,)> =
-            sqlx::query_as("SELECT user_id FROM api_key WHERE id = ?")
-                .bind(id)
-                .fetch_optional(&*state.db)
-                .await
-                .ok()
-                .flatten();
+        let owned = sqlx::query_as("SELECT user_id FROM api_key WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&*state.db)
+            .await;
+        let owned: Option<(Option<i32>,)> = match owned {
+            Ok(row) => row,
+            Err(e) => {
+                tracing::error!("查询 API key 归属失败: {e}");
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorBody {
+                        code: "INTERNAL".to_string(),
+                        message: "服务器内部错误".to_string(),
+                        details: None,
+                    }),
+                )
+                    .into_response();
+            }
+        };
         if owned.map(|(uid,)| uid) != Some(Some(claims.sub)) {
             return (
                 StatusCode::FORBIDDEN,

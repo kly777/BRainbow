@@ -172,7 +172,18 @@ impl AiService {
                 Ok(resp) => {
                     if !resp.status().is_success() {
                         let status = resp.status().as_u16();
-                        let text = resp.text().await.unwrap_or_default();
+                        let text = match resp.text().await {
+                            Ok(text) => text,
+                            Err(e) => {
+                                last_err = Some(ServiceError::Internal(format!(
+                                    "AI 请求失败 ({status})，且读取错误响应失败: {e}"
+                                )));
+                                if tx.is_none() {
+                                    sleep(Duration::from_millis(1000)).await;
+                                }
+                                continue;
+                            }
+                        };
                         last_err = Some(ServiceError::Internal(format!(
                             "AI 请求失败 ({status}): {}",
                             text.chars().take(200).collect::<String>()

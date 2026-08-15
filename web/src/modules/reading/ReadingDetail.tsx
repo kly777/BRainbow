@@ -59,37 +59,39 @@ export default function ReadingDetail() {
 					>
 						{(d) => (
 							<>
-								<div class={styles.header}>
-									<h1>{d().article.title}</h1>
-									<div class={styles.meta}>
-										<span>{d().article.word_count} 词</span>
-										<span>
-											{d().words.filter((w) => w.status === "unknown").length}{" "}
-											个不认识
-										</span>
+								<div class={styles.mainColumn}>
+									<div class={styles.header}>
+										<h1>{d().article.title}</h1>
+										<div class={styles.meta}>
+											<span>{d().article.word_count} 词</span>
+											<span>
+												{d().words.filter((w) => w.status === "unknown").length}{" "}
+												个不认识
+											</span>
+										</div>
 									</div>
-								</div>
-								<Show when={m.recommended()?.recommended}>
-									{(rec) => (
-										<A
-											href={fillPath(PATHS.readingDetail, rec().id)}
-											class={styles.recommendBanner}
-										>
-											推荐下一篇：{rec().title}（认识率{" "}
-											{(rec().known_ratio * 100).toFixed(0)}%）
-										</A>
-									)}
-								</Show>
-								<div
-									class={styles.content}
-									role="application"
-									onClick={m.handleContentClick}
-									onKeyDown={(e) => {
-										if (e.key === "Enter") m.handleContentClick(e as never);
-									}}
-									onContextMenu={m.handleContentContextMenu}
-								>
-									{renderContent(d().article.content)}
+									<Show when={m.recommended()?.recommended}>
+										{(rec) => (
+											<A
+												href={fillPath(PATHS.readingDetail, rec().id)}
+												class={styles.recommendBanner}
+											>
+												推荐下一篇：{rec().title}（认识率{" "}
+												{(rec().known_ratio * 100).toFixed(0)}%）
+											</A>
+										)}
+									</Show>
+									<div
+										class={styles.content}
+										role="application"
+										onClick={m.handleContentClick}
+										onKeyDown={(e) => {
+											if (e.key === "Enter") m.handleContentClick(e as never);
+										}}
+										onContextMenu={m.handleContentContextMenu}
+									>
+										{renderContent(d().article.content)}
+									</div>
 								</div>
 								<div class={styles.sidebar}>
 									<div class={styles.wordListArea}>

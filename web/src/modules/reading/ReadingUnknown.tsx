@@ -42,7 +42,7 @@ export default function ReadingUnknown() {
 										</span>
 									</div>
 									<Button
-										variant="secondary"
+										variant="primary"
 										size="sm"
 										onClick={() => handleMarkKnown(w.word)}
 									>

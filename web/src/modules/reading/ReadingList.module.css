@@ -185,6 +185,18 @@
 	transition: width var(--t-transition-slow);
 }
 
+.card[data-known="high"] .bar-inner {
+	background: var(--t-color-mark-correct);
+}
+
+.card[data-known="mid"] .bar-inner {
+	background: var(--t-color-mark-yellow);
+}
+
+.card[data-known="low"] .bar-inner {
+	background: var(--t-color-mark-wrong);
+}
+
 @media (width <= 768px) {
 	.page {
 		padding: var(--space-md);

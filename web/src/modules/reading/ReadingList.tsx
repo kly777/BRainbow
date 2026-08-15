@@ -120,6 +120,13 @@ export default function ReadingList() {
 									classList={{
 										[styles.recommendedCard]: i() === 0,
 									}}
+									data-known={
+										a.known_ratio >= 0.8
+											? "high"
+											: a.known_ratio >= 0.5
+												? "mid"
+												: "low"
+									}
 								>
 									<div class={styles.cardTitleRow}>
 										<div class={styles.cardTitle}>{a.title}</div>

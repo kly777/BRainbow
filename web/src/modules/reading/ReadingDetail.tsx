@@ -101,7 +101,7 @@ export default function ReadingDetail() {
 											onClick={m.handleUploadUnknown}
 											disabled={m.uploadingUnknown()}
 										>
-											{m.uploadingUnknown() ? "上传中…" : "上传全部不认识词"}
+											{m.uploadingUnknown() ? "标记中…" : "标记全部为不认识"}
 										</Button>
 										<div class={styles.wordList}>
 											<For each={m.sortedWords()}>
@@ -178,6 +178,7 @@ export default function ReadingDetail() {
 													"输入词组或笔记，每行一个\n保存后下次打开仍在"
 												}
 												rows={4}
+												aria-label="词组笔记"
 											/>
 										</div>
 										<Button

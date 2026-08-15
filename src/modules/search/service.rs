@@ -1,9 +1,86 @@
-use sqlx::SqlitePool;
+use sqlx::{FromRow, SqlitePool};
 
 use crate::shared::db_query::like_contains;
 use crate::shared::error_types::ServiceError;
 
 use super::model::{SearchHit, SearchResponse};
+
+#[derive(FromRow)]
+#[allow(dead_code)] // cue_hit 只用于 ORDER BY，不参与业务字段
+struct MemHitRow {
+    id: i64,
+    cue: String,
+    target: String,
+    cue_hit: i64,
+}
+
+#[derive(FromRow)]
+struct CardHitRow {
+    id: i64,
+    content: String,
+}
+
+#[derive(FromRow)]
+#[allow(dead_code)] // title_hit 只用于排序
+struct TaskHitRow {
+    id: i64,
+    title: String,
+    description: Option<String>,
+    title_hit: i64,
+}
+
+#[derive(FromRow)]
+#[allow(dead_code)] // title_hit 只用于排序
+struct BookmarkHitRow {
+    id: i64,
+    title: String,
+    url: String,
+    description: String,
+    title_hit: i64,
+}
+
+#[derive(FromRow)]
+struct OntoHitRow {
+    id: i64,
+    name: String,
+    description: Option<String>,
+}
+
+#[derive(FromRow)]
+struct TextHitRow {
+    id: i64,
+    name: String,
+    content: String,
+}
+
+#[derive(FromRow)]
+#[allow(dead_code)] // title_hit 只用于排序
+struct ReadingHitRow {
+    id: i64,
+    title: String,
+    content: String,
+    title_hit: i64,
+}
+
+#[derive(FromRow)]
+struct ConvHitRow {
+    conv_id: i64,
+    title: String,
+}
+
+#[derive(FromRow)]
+struct ChatTitleHitRow {
+    id: i64,
+    title: String,
+}
+
+#[derive(FromRow)]
+struct ChatNodeHitRow {
+    node_id: i64,
+    tree_id: i64,
+    title: String,
+    content: String,
+}
 
 /// 全局搜索：聚合各模块的 LIKE 查询（个人知识库规模下足够快，无需 FTS）。
 /// 有 user_id 的表按当前用户过滤（兼容历史 NULL 数据），单用户表不过滤。
@@ -59,25 +136,27 @@ impl SearchQueryService {
         cap: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
         // 线索（cue）命中优先于答案（target）命中
-        let rows: Vec<(i64, String, String, bool)> = sqlx::query_as(
-            "SELECT m.id, c1.content, c2.content, c1.content LIKE ?1 ESCAPE '\\' AS cue_hit
-             FROM mem m
-             JOIN chunk c1 ON c1.id = m.cue_chunk_id
-             JOIN chunk c2 ON c2.id = m.target_chunk_id
-             WHERE c1.content LIKE ?1 ESCAPE '\\' OR c2.content LIKE ?1 ESCAPE '\\'
-             ORDER BY cue_hit DESC, m.id DESC LIMIT ?2",
+        let rows: Vec<MemHitRow> = sqlx::query_as!(
+            MemHitRow,
+            r#"SELECT m.id, c1.content AS cue, c2.content AS target,
+                      c1.content LIKE ?1 ESCAPE '\' AS "cue_hit!: i64"
+               FROM mem m
+               JOIN chunk c1 ON c1.id = m.cue_chunk_id
+               JOIN chunk c2 ON c2.id = m.target_chunk_id
+               WHERE c1.content LIKE ?1 ESCAPE '\' OR c2.content LIKE ?1 ESCAPE '\'
+               ORDER BY (c1.content LIKE ?1 ESCAPE '\') DESC, m.id DESC LIMIT ?2"#,
+            like,
+            cap
         )
-        .bind(like)
-        .bind(cap)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows
             .into_iter()
-            .map(|(id, cue, target, _cue_hit)| SearchHit {
+            .map(|r| SearchHit {
                 kind: "mem".into(),
-                id,
-                title: clip(&cue, 60),
-                snippet: merge_snippets(&cue, &target, kw),
+                id: r.id,
+                title: clip(&r.cue, 60),
+                snippet: merge_snippets(&r.cue, &r.target, kw),
                 url: "/memory/manage".into(), // 前端 PATHS.memoryManage（web/src/config/paths.ts）
             })
             .collect())
@@ -90,23 +169,24 @@ impl SearchQueryService {
         kw: &str,
         cap: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
-        let rows: Vec<(i64, String)> = sqlx::query_as(
-            "SELECT id, content FROM card
-             WHERE (user_id = ?1 OR user_id IS NULL) AND content LIKE ?2 ESCAPE '\\'
-             ORDER BY id DESC LIMIT ?3",
+        let rows: Vec<CardHitRow> = sqlx::query_as!(
+            CardHitRow,
+            r#"SELECT id, COALESCE(content, '') AS "content!: String" FROM card
+               WHERE (user_id = ?1 OR user_id IS NULL) AND content LIKE ?2 ESCAPE '\'
+               ORDER BY id DESC LIMIT ?3"#,
+            user_id,
+            like,
+            cap
         )
-        .bind(user_id)
-        .bind(like)
-        .bind(cap)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows
             .into_iter()
-            .map(|(id, content)| SearchHit {
+            .map(|r| SearchHit {
                 kind: "card".into(),
-                id,
-                title: clip(&content, 60),
-                snippet: snippet(&content, kw),
+                id: r.id,
+                title: clip(&r.content, 60),
+                snippet: snippet(&r.content, kw),
                 url: "/card".into(),
             })
             .collect())
@@ -120,25 +200,27 @@ impl SearchQueryService {
         cap: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
         // 标题命中优先于描述命中
-        let rows: Vec<(i64, String, Option<String>, bool)> = sqlx::query_as(
-            "SELECT id, title, description, title LIKE ?2 ESCAPE '\\' AS title_hit
-             FROM task
-             WHERE (user_id = ?1 OR user_id IS NULL)
-               AND (title LIKE ?2 ESCAPE '\\' OR description LIKE ?2 ESCAPE '\\')
-             ORDER BY title_hit DESC, id DESC LIMIT ?3",
+        let rows: Vec<TaskHitRow> = sqlx::query_as!(
+            TaskHitRow,
+            r#"SELECT id, title, description,
+                      title LIKE ?2 ESCAPE '\' AS "title_hit!: i64"
+               FROM task
+               WHERE (user_id = ?1 OR user_id IS NULL)
+                 AND (title LIKE ?2 ESCAPE '\' OR description LIKE ?2 ESCAPE '\')
+               ORDER BY (title LIKE ?2 ESCAPE '\') DESC, id DESC LIMIT ?3"#,
+            user_id,
+            like,
+            cap
         )
-        .bind(user_id)
-        .bind(like)
-        .bind(cap)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows
             .into_iter()
-            .map(|(id, title, desc, _title_hit)| SearchHit {
+            .map(|r| SearchHit {
                 kind: "task".into(),
-                id,
-                title,
-                snippet: snippet(desc.as_deref().unwrap_or(""), kw),
+                id: r.id,
+                title: r.title,
+                snippet: snippet(r.description.as_deref().unwrap_or(""), kw),
                 url: "/task".into(),
             })
             .collect())
@@ -151,26 +233,28 @@ impl SearchQueryService {
         cap: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
         // 标题命中优先于 URL/描述命中
-        let rows: Vec<(i64, String, String, String, bool)> = sqlx::query_as(
-            "SELECT id, title, url, description, title LIKE ?1 ESCAPE '\\' AS title_hit
-             FROM bookmark
-             WHERE title LIKE ?1 ESCAPE '\\' OR url LIKE ?1 ESCAPE '\\' OR description LIKE ?1 ESCAPE '\\'
-             ORDER BY title_hit DESC, id DESC LIMIT ?2",
+        let rows: Vec<BookmarkHitRow> = sqlx::query_as!(
+            BookmarkHitRow,
+            r#"SELECT id, title, url, description,
+                      title LIKE ?1 ESCAPE '\' AS "title_hit!: i64"
+               FROM bookmark
+               WHERE title LIKE ?1 ESCAPE '\' OR url LIKE ?1 ESCAPE '\' OR description LIKE ?1 ESCAPE '\'
+               ORDER BY (title LIKE ?1 ESCAPE '\') DESC, id DESC LIMIT ?2"#,
+            like,
+            cap
         )
-        .bind(like)
-        .bind(cap)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows
             .into_iter()
-            .map(|(id, title, url, desc, _title_hit)| SearchHit {
+            .map(|r| SearchHit {
                 kind: "bookmark".into(),
-                id,
-                title,
-                snippet: if desc.is_empty() {
-                    url
+                id: r.id,
+                title: r.title,
+                snippet: if r.description.is_empty() {
+                    r.url
                 } else {
-                    snippet(&desc, kw)
+                    snippet(&r.description, kw)
                 },
                 url: "/bookmark".into(),
             })
@@ -183,22 +267,23 @@ impl SearchQueryService {
         kw: &str,
         cap: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
-        let rows: Vec<(i64, String, Option<String>)> = sqlx::query_as(
-            "SELECT id, name, description FROM onto
-             WHERE name LIKE ?1 ESCAPE '\\' OR description LIKE ?1 ESCAPE '\\'
-             ORDER BY id DESC LIMIT ?2",
+        let rows: Vec<OntoHitRow> = sqlx::query_as!(
+            OntoHitRow,
+            r#"SELECT id, name, description FROM onto
+               WHERE name LIKE ?1 ESCAPE '\' OR description LIKE ?1 ESCAPE '\'
+               ORDER BY id DESC LIMIT ?2"#,
+            like,
+            cap
         )
-        .bind(like)
-        .bind(cap)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows
             .into_iter()
-            .map(|(id, name, desc)| SearchHit {
+            .map(|r| SearchHit {
                 kind: "onto".into(),
-                id,
-                title: name,
-                snippet: snippet(desc.as_deref().unwrap_or(""), kw),
+                id: r.id,
+                title: r.name,
+                snippet: snippet(r.description.as_deref().unwrap_or(""), kw),
                 url: "/ontology".into(),
             })
             .collect())
@@ -210,22 +295,23 @@ impl SearchQueryService {
         kw: &str,
         cap: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
-        let rows: Vec<(i64, String, String)> = sqlx::query_as(
-            "SELECT id, name, content FROM text_note
-             WHERE name LIKE ?1 ESCAPE '\\' OR content LIKE ?1 ESCAPE '\\'
-             ORDER BY id DESC LIMIT ?2",
+        let rows: Vec<TextHitRow> = sqlx::query_as!(
+            TextHitRow,
+            r#"SELECT id, name, content FROM text_note
+               WHERE name LIKE ?1 ESCAPE '\' OR content LIKE ?1 ESCAPE '\'
+               ORDER BY id DESC LIMIT ?2"#,
+            like,
+            cap
         )
-        .bind(like)
-        .bind(cap)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows
             .into_iter()
-            .map(|(id, name, content)| SearchHit {
+            .map(|r| SearchHit {
                 kind: "text".into(),
-                id,
-                title: name,
-                snippet: snippet(&content, kw),
+                id: r.id,
+                title: r.name,
+                snippet: snippet(&r.content, kw),
                 url: "/text".into(),
             })
             .collect())
@@ -239,24 +325,26 @@ impl SearchQueryService {
     ) -> Result<Vec<SearchHit>, ServiceError> {
         // 标题命中优先于正文命中，避免常见词把正文命中淹没列表
         // 注意：阅读模块的表是 reading_article（conv 模块的 articles 是另一张表）
-        let rows: Vec<(i64, String, String, bool)> = sqlx::query_as(
-            "SELECT id, title, content, title LIKE ?1 ESCAPE '\\' AS title_hit
-             FROM reading_article
-             WHERE title LIKE ?1 ESCAPE '\\' OR content LIKE ?1 ESCAPE '\\'
-             ORDER BY title_hit DESC, id DESC LIMIT ?2",
+        let rows: Vec<ReadingHitRow> = sqlx::query_as!(
+            ReadingHitRow,
+            r#"SELECT id, title, content,
+                      title LIKE ?1 ESCAPE '\' AS "title_hit!: i64"
+               FROM reading_article
+               WHERE title LIKE ?1 ESCAPE '\' OR content LIKE ?1 ESCAPE '\'
+               ORDER BY (title LIKE ?1 ESCAPE '\') DESC, id DESC LIMIT ?2"#,
+            like,
+            cap
         )
-        .bind(like)
-        .bind(cap)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows
             .into_iter()
-            .map(|(id, title, content, _title_hit)| SearchHit {
+            .map(|r| SearchHit {
                 kind: "reading".into(),
-                id,
-                title,
-                snippet: snippet(&content, kw),
-                url: format!("/reading/{id}"), // PATHS.readingDetail
+                id: r.id,
+                title: r.title,
+                snippet: snippet(&r.content, kw),
+                url: format!("/reading/{}", r.id), // PATHS.readingDetail
             })
             .collect())
     }
@@ -267,24 +355,25 @@ impl SearchQueryService {
         _kw: &str,
         cap: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
-        let rows: Vec<(i64, String)> = sqlx::query_as(
-            "SELECT conv_id, title FROM conv_titles
-             WHERE title LIKE ?1 ESCAPE '\\'
-             ORDER BY conv_id DESC LIMIT ?2",
+        let rows: Vec<ConvHitRow> = sqlx::query_as!(
+            ConvHitRow,
+            r#"SELECT conv_id, title FROM conv_titles
+               WHERE title LIKE ?1 ESCAPE '\'
+               ORDER BY conv_id DESC LIMIT ?2"#,
+            like,
+            cap
         )
-        .bind(like)
-        .bind(cap)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows
             .into_iter()
-            .map(|(conv_id, title)| SearchHit {
+            .map(|r| SearchHit {
                 kind: "conv".into(),
-                id: conv_id,
+                id: r.conv_id,
                 // 前端无对话详情路由：跳搜索页并自动执行该标题的搜索
-                url: format!("/conversation?q={}", qs(&title)), // PATHS.conversation
+                url: format!("/conversation?q={}", qs(&r.title)), // PATHS.conversation
                 snippet: String::new(),
-                title,
+                title: r.title,
             })
             .collect())
     }
@@ -297,52 +386,50 @@ impl SearchQueryService {
         cap: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
         // 树标题命中优先
-        let title_hits: Vec<(i64, String)> = sqlx::query_as(
-            "SELECT id, title FROM chat_tree
-             WHERE (user_id = ?1 OR user_id IS NULL) AND title LIKE ?2 ESCAPE '\\'
-             ORDER BY id DESC LIMIT ?3",
+        let title_hits: Vec<ChatTitleHitRow> = sqlx::query_as!(
+            ChatTitleHitRow,
+            r#"SELECT id, title FROM chat_tree
+               WHERE (user_id = ?1 OR user_id IS NULL) AND title LIKE ?2 ESCAPE '\'
+               ORDER BY id DESC LIMIT ?3"#,
+            user_id,
+            like,
+            cap
         )
-        .bind(user_id)
-        .bind(like)
-        .bind(cap)
         .fetch_all(&self.pool)
         .await?;
 
         // 节点内容命中（cap 扣除标题命中数）
         let node_cap = cap - title_hits.len() as i64;
-        let node_hits: Vec<(i64, i64, String, String)> = sqlx::query_as(
-            "SELECT n.id, t.id, t.title, n.content
-             FROM chat_node n JOIN chat_tree t ON t.id = n.tree_id
-             WHERE (t.user_id = ?1 OR t.user_id IS NULL) AND n.content LIKE ?2 ESCAPE '\\'
-             ORDER BY n.id DESC LIMIT ?3",
+        let node_hits: Vec<ChatNodeHitRow> = sqlx::query_as!(
+            ChatNodeHitRow,
+            r#"SELECT n.id AS node_id, t.id AS tree_id, t.title, n.content
+               FROM chat_node n JOIN chat_tree t ON t.id = n.tree_id
+               WHERE (t.user_id = ?1 OR t.user_id IS NULL) AND n.content LIKE ?2 ESCAPE '\'
+               ORDER BY n.id DESC LIMIT ?3"#,
+            user_id,
+            like,
+            node_cap
         )
-        .bind(user_id)
-        .bind(like)
-        .bind(node_cap)
         .fetch_all(&self.pool)
         .await?;
 
         let mut hits: Vec<SearchHit> = title_hits
             .into_iter()
-            .map(|(tree_id, title)| SearchHit {
+            .map(|r| SearchHit {
                 kind: "chat".into(),
-                id: tree_id,
-                title,
+                id: r.id,
+                title: r.title,
                 snippet: String::new(),
-                url: format!("/chat?tree={tree_id}"), // PATHS.chat
+                url: format!("/chat?tree={}", r.id), // PATHS.chat
             })
             .collect();
-        hits.extend(
-            node_hits
-                .into_iter()
-                .map(|(node_id, tree_id, title, content)| SearchHit {
-                    kind: "chat".into(),
-                    id: tree_id,
-                    title,
-                    snippet: snippet(&content, kw),
-                    url: format!("/chat?tree={tree_id}&node={node_id}"), // PATHS.chat
-                }),
-        );
+        hits.extend(node_hits.into_iter().map(|r| SearchHit {
+            kind: "chat".into(),
+            id: r.tree_id,
+            title: r.title,
+            snippet: snippet(&r.content, kw),
+            url: format!("/chat?tree={}&node={}", r.tree_id, r.node_id), // PATHS.chat
+        }));
         Ok(hits)
     }
 }

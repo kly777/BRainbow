@@ -242,10 +242,12 @@ cmd_build() {
     log_done "前端构建完成"
 
     # 3. 后端构建
-    local build_cmd="cargo build --release"
+    # sqlx 编译期宏在 DATABASE_URL 存在时走在线模式；部署机路径不可用，
+    # 必须 unset 让它使用已提交的 .sqlx 离线数据。
+    local build_cmd="env -u DATABASE_URL cargo build --release"
     local bin_path="target/release/brainbow"
     if [ "$BUILD_TARGET" != "native" ] && [ -n "$BUILD_TARGET" ]; then
-        build_cmd="cargo build --release --target $BUILD_TARGET"
+        build_cmd="env -u DATABASE_URL cargo build --release --target $BUILD_TARGET"
         bin_path="target/$BUILD_TARGET/release/brainbow"
         log_info "后端构建 (cross-compile: $BUILD_TARGET)..."
     else

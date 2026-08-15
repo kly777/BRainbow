@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT mem_id AS \"mem_id: i32\", delta_t AS \"delta_t: i32\", rating AS \"rating: i32\"\n           FROM revlog\n           ORDER BY mem_id, review_time ASC",
+  "describe": {
+    "columns": [
+      {
+        "name": "mem_id: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "revlog",
+            "name": "mem_id"
+          }
+        }
+      },
+      {
+        "name": "delta_t: i32",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "revlog",
+            "name": "delta_t"
+          }
+        }
+      },
+      {
+        "name": "rating: i32",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "revlog",
+            "name": "rating"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d395abc2d3d5467134ff584149657e9c4a6effb82144ddc86e2b8caa54fc2216"
+}

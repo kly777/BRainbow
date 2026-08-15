@@ -18,7 +18,10 @@ async fn health_check() -> Json<HealthResponse> {
 }
 
 async fn health_check_db(State(state): State<AppState>) -> Json<serde_json::Value> {
-    let db_ok = sqlx::query("SELECT 1").fetch_one(&*state.db).await.is_ok();
+    let db_ok = sqlx::query_scalar!("SELECT 1")
+        .fetch_one(&*state.db)
+        .await
+        .is_ok();
     Json(serde_json::json!({
         "status": if db_ok { "ok" } else { "degraded" },
         "database": if db_ok { "ok" } else { "unreachable" }

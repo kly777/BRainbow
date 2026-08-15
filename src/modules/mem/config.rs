@@ -60,8 +60,7 @@ impl MemConfig {
     /// 从数据库加载（app_settings 键值表）；无记录时写默认值并返回。
     pub async fn load_from_db(pool: &SqlitePool) -> Self {
         let raw: Option<String> =
-            sqlx::query_scalar("SELECT value FROM app_settings WHERE key = ?")
-                .bind(DB_KEY)
+            sqlx::query_scalar!("SELECT value FROM app_settings WHERE key = ?", DB_KEY)
                 .fetch_optional(pool)
                 .await
                 .unwrap_or(None);
@@ -91,12 +90,14 @@ impl MemConfig {
     /// 保存到数据库（app_settings 键值表）
     pub async fn save_to_db(&self, pool: &SqlitePool) -> Result<(), String> {
         let json = serde_json::to_string(self).map_err(|e| e.to_string())?;
-        sqlx::query("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)")
-            .bind(DB_KEY)
-            .bind(&json)
-            .execute(pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        sqlx::query!(
+            "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)",
+            DB_KEY,
+            json
+        )
+        .execute(pool)
+        .await
+        .map_err(|e| e.to_string())?;
         tracing::info!("已保存记忆配置到数据库");
         Ok(())
     }

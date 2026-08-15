@@ -6,19 +6,26 @@
 use std::sync::Arc;
 
 use fsrs::{FSRSItem, FSRSReview};
-use sqlx::SqlitePool;
+use sqlx::{FromRow, SqlitePool};
 
 use super::config::MemConfig;
+
+/// revlog 行（INTEGER 列用 i32 覆盖以直接进入 FSRSReview）
+#[derive(FromRow)]
+struct RevlogRow {
+    mem_id: i32,
+    delta_t: i32,
+    rating: i32,
+}
 
 /// 从 DB 读取所有复习记录，分组为 FSRSItem 列表
 async fn load_fsrs_items(pool: &SqlitePool) -> Result<Vec<FSRSItem>, sqlx::Error> {
     // 按 mem_id 分组读取
-    let rows: Vec<(i32, i32, i32)> = sqlx::query_as(
-        r#"
-        SELECT mem_id, delta_t, rating
-        FROM revlog
-        ORDER BY mem_id, review_time ASC
-        "#,
+    let rows: Vec<RevlogRow> = sqlx::query_as!(
+        RevlogRow,
+        r#"SELECT mem_id AS "mem_id: i32", delta_t AS "delta_t: i32", rating AS "rating: i32"
+           FROM revlog
+           ORDER BY mem_id, review_time ASC"#
     )
     .fetch_all(pool)
     .await?;
@@ -31,21 +38,21 @@ async fn load_fsrs_items(pool: &SqlitePool) -> Result<Vec<FSRSItem>, sqlx::Error
     let Some(first_row) = rows.first() else {
         return Ok(Vec::new());
     };
-    let mut current_id = first_row.0;
+    let mut current_id = first_row.mem_id;
     let mut reviews: Vec<FSRSReview> = Vec::new();
 
-    for (mem_id, delta_t, rating) in rows {
-        if mem_id != current_id {
+    for row in rows {
+        if row.mem_id != current_id {
             if !reviews.is_empty() {
                 items.push(FSRSItem {
                     reviews: std::mem::take(&mut reviews),
                 });
             }
-            current_id = mem_id;
+            current_id = row.mem_id;
         }
         reviews.push(FSRSReview {
-            rating: rating as u32,
-            delta_t: delta_t as u32,
+            rating: row.rating as u32,
+            delta_t: row.delta_t as u32,
         });
     }
     if !reviews.is_empty() {

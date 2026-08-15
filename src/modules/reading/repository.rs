@@ -39,6 +39,7 @@ struct WordStatusRow {
     status: String,
 }
 
+#[allow(dead_code)] // 单篇认识率查询仍由测试覆盖
 #[derive(Debug, FromRow)]
 struct KnownRatioRow {
     total: i64,
@@ -46,8 +47,14 @@ struct KnownRatioRow {
 }
 
 #[derive(Debug, FromRow)]
-struct CountRow {
-    count: i64,
+struct SummaryAggRow {
+    id: i64,
+    title: String,
+    word_count: i64,
+    created_at: String,
+    total: i64,
+    known: i64,
+    unknown: i64,
 }
 
 #[derive(Debug, FromRow)]
@@ -120,6 +127,7 @@ impl ReadingRepo {
         .map(|row| row.map(Article::from))
     }
 
+    #[cfg_attr(not(test), allow(dead_code))] // 测试保留的整表读取
     pub async fn get_all_articles(&self) -> Result<Vec<Article>, sqlx::Error> {
         sqlx::query_as!(
             ArticleRow,
@@ -176,6 +184,7 @@ impl ReadingRepo {
     }
 
     /// 计算文章认识率（已知词 / (总不同词数 - 忽略词)）
+    #[cfg_attr(not(test), allow(dead_code))] // 单篇路径保留，测试覆盖
     pub async fn get_article_known_ratio(&self, article_id: i64) -> Result<f64, sqlx::Error> {
         let row = sqlx::query_as!(
             KnownRatioRow,
@@ -200,40 +209,42 @@ impl ReadingRepo {
         }
     }
 
-    /// 获取所有文章的认识率摘要
+    /// 获取所有文章的认识率摘要（单条聚合 SQL，避免每篇文章两次查询）
     pub async fn get_all_article_summaries(&self) -> Result<Vec<ArticleSummary>, sqlx::Error> {
-        let articles = self.get_all_articles().await?;
-        let mut summaries = Vec::with_capacity(articles.len());
+        let rows = sqlx::query_as!(
+            SummaryAggRow,
+            r#"
+            SELECT a.id AS "id: i64",
+                   a.title,
+                   COALESCE(a.word_count, 0) AS "word_count!: i64",
+                   COALESCE(a.created_at, CURRENT_TIMESTAMP) AS "created_at!: String",
+                   COALESCE(SUM(CASE WHEN COALESCE(uw.status, 'unknown') != 'ignored' THEN 1 ELSE 0 END), 0) AS "total!: i64",
+                   COALESCE(SUM(CASE WHEN uw.status = 'known' THEN 1 ELSE 0 END), 0) AS "known!: i64",
+                   COALESCE(SUM(CASE WHEN COALESCE(uw.status, 'unknown') = 'unknown' THEN 1 ELSE 0 END), 0) AS "unknown!: i64"
+            FROM reading_article a
+            LEFT JOIN reading_article_word w ON w.article_id = a.id
+            LEFT JOIN reading_user_word uw ON uw.word = w.word
+            GROUP BY a.id, a.title, a.word_count, a.created_at
+            "#
+        )
+        .fetch_all(&*self.pool)
+        .await?;
 
-        for article in articles {
-            let known_ratio = self.get_article_known_ratio(article.id).await?;
-
-            let unknown_count = sqlx::query_as!(
-                CountRow,
-                r#"
-                SELECT COUNT(*) AS "count!: i64"
-                FROM reading_article_word w
-                LEFT JOIN reading_user_word uw ON uw.word = w.word
-                WHERE w.article_id = ?
-                  AND (uw.status IS NULL OR uw.status = 'unknown')
-            "#,
-                article.id
-            )
-            .fetch_one(&*self.pool)
-            .await?
-            .count;
-
-            summaries.push(ArticleSummary {
-                id: article.id,
-                title: article.title,
-                word_count: article.word_count,
-                known_ratio,
-                unknown_word_count: unknown_count,
-                created_at: article.created_at,
-            });
-        }
-
-        Ok(summaries)
+        Ok(rows
+            .into_iter()
+            .map(|r| ArticleSummary {
+                id: r.id,
+                title: r.title,
+                word_count: r.word_count,
+                known_ratio: if r.total == 0 {
+                    0.0
+                } else {
+                    r.known as f64 / r.total as f64
+                },
+                unknown_word_count: r.unknown,
+                created_at: r.created_at,
+            })
+            .collect())
     }
 
     // ── 笔记 ──

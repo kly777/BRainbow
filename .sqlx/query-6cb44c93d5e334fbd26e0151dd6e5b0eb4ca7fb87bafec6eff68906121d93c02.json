@@ -1,0 +1,73 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT a.id AS \"id: i64\",\n                   a.title,\n                   COALESCE(a.word_count, 0) AS \"word_count!: i64\",\n                   COALESCE(a.created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\",\n                   COALESCE(SUM(CASE WHEN COALESCE(uw.status, 'unknown') != 'ignored' THEN 1 ELSE 0 END), 0) AS \"total!: i64\",\n                   COALESCE(SUM(CASE WHEN uw.status = 'known' THEN 1 ELSE 0 END), 0) AS \"known!: i64\",\n                   COALESCE(SUM(CASE WHEN COALESCE(uw.status, 'unknown') = 'unknown' THEN 1 ELSE 0 END), 0) AS \"unknown!: i64\"\n            FROM reading_article a\n            LEFT JOIN reading_article_word w ON w.article_id = a.id\n            LEFT JOIN reading_user_word uw ON uw.word = w.word\n            GROUP BY a.id, a.title, a.word_count, a.created_at\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "reading_article",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_article",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "word_count!: i64",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": "Expression"
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 3,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      },
+      {
+        "name": "total!: i64",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": "Expression"
+      },
+      {
+        "name": "known!: i64",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": "Expression"
+      },
+      {
+        "name": "unknown!: i64",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6cb44c93d5e334fbd26e0151dd6e5b0eb4ca7fb87bafec6eff68906121d93c02"
+}

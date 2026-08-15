@@ -1,7 +1,62 @@
-use sqlx::SqlitePool;
+use sqlx::{FromRow, SqlitePool};
 use std::sync::Arc;
 
 use super::model::{Article, ArticleSummary, ArticleWordStatus, UnknownWord};
+
+// ── 行类型：命名 FromRow（列名与 SELECT 别名一一对应，避免元组列序错误） ──
+
+#[derive(Debug, FromRow)]
+struct ArticleRow {
+    id: i64,
+    title: String,
+    content: String,
+    word_count: i64,
+    notes: String,
+    created_at: String,
+}
+
+impl From<ArticleRow> for Article {
+    fn from(r: ArticleRow) -> Self {
+        Self {
+            id: r.id,
+            title: r.title,
+            content: r.content,
+            word_count: r.word_count,
+            notes: r.notes,
+            created_at: r.created_at,
+        }
+    }
+}
+
+#[derive(Debug, FromRow)]
+struct WordRow {
+    word: String,
+}
+
+#[derive(Debug, FromRow)]
+struct WordStatusRow {
+    word: String,
+    status: String,
+}
+
+#[derive(Debug, FromRow)]
+struct KnownRatioRow {
+    total: i64,
+    known: i64,
+}
+
+#[derive(Debug, FromRow)]
+struct CountRow {
+    count: i64,
+}
+
+#[derive(Debug, FromRow)]
+struct UnknownWordRow {
+    word: String,
+    unknown_count: i64,
+    known_count: i64,
+    first_seen_at: String,
+}
 
 pub struct ReadingRepo {
     pool: Arc<SqlitePool>,
@@ -51,54 +106,34 @@ impl ReadingRepo {
     }
 
     pub async fn get_article(&self, id: i64) -> Result<Option<Article>, sqlx::Error> {
-        sqlx::query_as::<_, (i64, String, String, i64, String, String)>(
+        sqlx::query_as::<_, ArticleRow>(
             "SELECT id, title, content, word_count, notes, created_at FROM reading_article WHERE id = ?",
         )
         .bind(id)
         .fetch_optional(&*self.pool)
         .await
-        .map(|row| {
-            row.map(|(id, title, content, word_count, notes, created_at)| Article {
-                id,
-                title,
-                content,
-                word_count,
-                notes,
-                created_at,
-            })
-        })
+        .map(|row| row.map(Article::from))
     }
 
     pub async fn get_all_articles(&self) -> Result<Vec<Article>, sqlx::Error> {
-        sqlx::query_as::<_, (i64, String, String, i64, String, String)>(
+        sqlx::query_as::<_, ArticleRow>(
             "SELECT id, title, content, word_count, notes, created_at FROM reading_article ORDER BY id DESC",
         )
         .fetch_all(&*self.pool)
         .await
-        .map(|rows| {
-            rows.into_iter()
-                .map(|(id, title, content, word_count, notes, created_at)| Article {
-                    id,
-                    title,
-                    content,
-                    word_count,
-                    notes,
-                    created_at,
-                })
-                .collect()
-        })
+        .map(|rows| rows.into_iter().map(Article::from).collect())
     }
 
     // ── 文章词表 ──
 
     pub async fn get_article_words(&self, article_id: i64) -> Result<Vec<String>, sqlx::Error> {
-        sqlx::query_as::<_, (String,)>(
+        sqlx::query_as::<_, WordRow>(
             "SELECT word FROM reading_article_word WHERE article_id = ? ORDER BY id",
         )
         .bind(article_id)
         .fetch_all(&*self.pool)
         .await
-        .map(|rows| rows.into_iter().map(|(w,)| w).collect())
+        .map(|rows| rows.into_iter().map(|r| r.word).collect())
     }
 
     /// 获取文章每词的认识状态
@@ -106,7 +141,7 @@ impl ReadingRepo {
         &self,
         article_id: i64,
     ) -> Result<Vec<ArticleWordStatus>, sqlx::Error> {
-        let rows = sqlx::query_as::<_, (String, String)>(
+        let rows = sqlx::query_as::<_, WordStatusRow>(
             r#"
             SELECT w.word, COALESCE(uw.status, 'unknown') AS status
             FROM reading_article_word w
@@ -121,13 +156,16 @@ impl ReadingRepo {
 
         Ok(rows
             .into_iter()
-            .map(|(word, status)| ArticleWordStatus { word, status })
+            .map(|r| ArticleWordStatus {
+                word: r.word,
+                status: r.status,
+            })
             .collect())
     }
 
     /// 计算文章认识率（已知词 / (总不同词数 - 忽略词)）
     pub async fn get_article_known_ratio(&self, article_id: i64) -> Result<f64, sqlx::Error> {
-        let row = sqlx::query_as::<_, (i64, i64)>(
+        let row = sqlx::query_as::<_, KnownRatioRow>(
             r#"
             SELECT
                 COUNT(*) AS total,
@@ -142,12 +180,10 @@ impl ReadingRepo {
         .fetch_one(&*self.pool)
         .await?;
 
-        let total = row.0;
-        let known = row.1;
-        if total == 0 {
+        if row.total == 0 {
             Ok(0.0)
         } else {
-            Ok(known as f64 / total as f64)
+            Ok(row.known as f64 / row.total as f64)
         }
     }
 
@@ -162,9 +198,9 @@ impl ReadingRepo {
                 .await
                 .unwrap_or(0.0);
 
-            let unknown_count = sqlx::query_as::<_, (i64,)>(
+            let unknown_count = sqlx::query_as::<_, CountRow>(
                 r#"
-                SELECT COUNT(*)
+                SELECT COUNT(*) AS count
                 FROM reading_article_word w
                 LEFT JOIN reading_user_word uw ON uw.word = w.word
                 WHERE w.article_id = ?
@@ -174,7 +210,7 @@ impl ReadingRepo {
             .bind(article.id)
             .fetch_one(&*self.pool)
             .await
-            .map(|(c,)| c)
+            .map(|r| r.count)
             .unwrap_or(0);
 
             summaries.push(ArticleSummary {
@@ -254,7 +290,7 @@ impl ReadingRepo {
     }
 
     pub async fn get_unknown_words(&self) -> Result<Vec<UnknownWord>, sqlx::Error> {
-        sqlx::query_as::<_, (String, i64, i64, String)>(
+        sqlx::query_as::<_, UnknownWordRow>(
             r#"
             SELECT word, unknown_count, known_count, first_seen_at
             FROM reading_user_word
@@ -266,14 +302,12 @@ impl ReadingRepo {
         .await
         .map(|rows| {
             rows.into_iter()
-                .map(
-                    |(word, unknown_count, known_count, first_seen_at)| UnknownWord {
-                        word,
-                        unknown_count,
-                        known_count,
-                        first_seen_at,
-                    },
-                )
+                .map(|r| UnknownWord {
+                    word: r.word,
+                    unknown_count: r.unknown_count,
+                    known_count: r.known_count,
+                    first_seen_at: r.first_seen_at,
+                })
                 .collect()
         })
     }
@@ -303,6 +337,13 @@ impl ReadingRepo {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+
+    #[derive(sqlx::FromRow)]
+    struct UserWordStateRow {
+        status: String,
+        unknown_count: i64,
+        known_count: i64,
+    }
 
     async fn setup_db() -> ReadingRepo {
         let pool = SqlitePool::connect("sqlite::memory:")
@@ -514,16 +555,16 @@ mod tests {
             "switched to known, should not appear in unknown"
         );
 
-        let row = sqlx::query_as::<_, (String, i64, i64)>(
+        let row = sqlx::query_as::<_, UserWordStateRow>(
             "SELECT status, unknown_count, known_count FROM reading_user_word WHERE word = ?",
         )
         .bind("hello")
         .fetch_one(&*repo.pool)
         .await
         .unwrap();
-        assert_eq!(row.0, "known");
-        assert_eq!(row.1, 1, "unknown_count should be 1");
-        assert_eq!(row.2, 1, "known_count should be 1");
+        assert_eq!(row.status, "known");
+        assert_eq!(row.unknown_count, 1, "unknown_count should be 1");
+        assert_eq!(row.known_count, 1, "known_count should be 1");
     }
 
     #[tokio::test]

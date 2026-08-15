@@ -1,5 +1,11 @@
-use sqlx::SqlitePool;
+use sqlx::{FromRow, SqlitePool};
 use std::sync::Arc;
+
+#[derive(Debug, FromRow)]
+struct TabRow {
+    name: String,
+    content: String,
+}
 
 #[derive(Clone)]
 pub struct TextRepo {
@@ -12,13 +18,11 @@ impl TextRepo {
     }
 
     pub async fn load_tabs(&self) -> Result<Vec<(String, String)>, sqlx::Error> {
-        let rows = sqlx::query_as::<_, (String, String)>(
-            "SELECT name, content FROM text_note ORDER BY id",
-        )
-        .fetch_all(&*self.pool)
-        .await?;
+        let rows = sqlx::query_as::<_, TabRow>("SELECT name, content FROM text_note ORDER BY id")
+            .fetch_all(&*self.pool)
+            .await?;
 
-        Ok(rows)
+        Ok(rows.into_iter().map(|r| (r.name, r.content)).collect())
     }
 
     pub async fn save_tabs(&self, tabs: &[(String, String)]) -> Result<(), sqlx::Error> {

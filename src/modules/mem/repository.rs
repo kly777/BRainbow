@@ -16,6 +16,14 @@ struct TagRow {
     created_at: String,
 }
 
+#[derive(Debug, sqlx::FromRow)]
+struct ChunkRow {
+    id: i32,
+    content: String,
+    created_at: String,
+    updated_at: String,
+}
+
 #[derive(Clone)]
 pub struct MemRepo {
     pool: Arc<SqlitePool>,
@@ -37,18 +45,18 @@ impl MemRepo {
 
     #[cfg_attr(not(test), allow(dead_code))]
     pub async fn get_chunk(&self, id: i32) -> Result<Option<Chunk>, sqlx::Error> {
-        sqlx::query_as::<_, (i32, String, String, String)>(
+        sqlx::query_as::<_, ChunkRow>(
             "SELECT id, content, created_at, updated_at FROM chunk WHERE id = ?",
         )
         .bind(id)
         .fetch_optional(&*self.pool)
         .await
         .map(|r| {
-            r.map(|(id, content, ca, ua)| Chunk {
-                id,
-                content,
-                created_at: ca,
-                updated_at: ua,
+            r.map(|row| Chunk {
+                id: row.id,
+                content: row.content,
+                created_at: row.created_at,
+                updated_at: row.updated_at,
             })
         })
     }

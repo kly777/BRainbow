@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use sqlx::Row;
+
 
 use super::super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
 use super::super::model::{Task, TaskStatus};
@@ -11,16 +11,22 @@ impl TaskRepository {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Task>, i64), sqlx::Error> {
-        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM task")
+        let total: i64 = sqlx::query_scalar!("SELECT COUNT(*) FROM task")
             .fetch_one(&*self.db)
             .await?;
-        let items = sqlx::query_as::<_, Task>(
-            "SELECT id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, created_at, updated_at
-            FROM task ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        let items = sqlx::query_as!(
+            Task,
+            r#"SELECT id AS "id: i32", title, description,
+                      parent_task_id AS "parent_task_id?: i32",
+                      COALESCE(status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
+                      completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
+                      effort_estimate_minutes AS "effort_estimate_minutes?: i32",
+                      COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
+                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
+               FROM task ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
+            limit,
+            offset
         )
-        .bind(limit)
-        .bind(offset)
         .fetch_all(&*self.db)
         .await?;
         Ok((items, total))
@@ -31,97 +37,99 @@ impl TaskRepository {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Task>, i64), sqlx::Error> {
-        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE status != 'archived'")
-            .fetch_one(&*self.db)
-            .await?;
-        let items = sqlx::query_as::<_, Task>(
-            "SELECT id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, created_at, updated_at
-            FROM task WHERE status != 'archived' ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        let total: i64 =
+            sqlx::query_scalar!("SELECT COUNT(*) FROM task WHERE status != 'archived'")
+                .fetch_one(&*self.db)
+                .await?;
+        let items = sqlx::query_as!(
+            Task,
+            r#"SELECT id AS "id: i32", title, description,
+                      parent_task_id AS "parent_task_id?: i32",
+                      COALESCE(status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
+                      completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
+                      effort_estimate_minutes AS "effort_estimate_minutes?: i32",
+                      COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
+                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
+               FROM task WHERE status != 'archived' ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
+            limit,
+            offset
         )
-        .bind(limit)
-        .bind(offset)
         .fetch_all(&*self.db)
         .await?;
         Ok((items, total))
     }
 
     pub async fn find_by_id(&self, id: i32) -> Result<Option<Task>, sqlx::Error> {
-        sqlx::query_as::<_, Task>(
-            "SELECT id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, created_at, updated_at
-            FROM task
-            WHERE id = ?",
+        sqlx::query_as!(
+            Task,
+            r#"SELECT id AS "id: i32", title, description,
+                      parent_task_id AS "parent_task_id?: i32",
+                      COALESCE(status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
+                      completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
+                      effort_estimate_minutes AS "effort_estimate_minutes?: i32",
+                      COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
+                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
+               FROM task WHERE id = ?"#,
+            id
         )
-        .bind(id)
         .fetch_optional(&*self.db)
         .await
     }
 
     pub async fn create(&self, request: CreateTaskRequest) -> Result<Task, sqlx::Error> {
         let now = Utc::now();
-        let result = sqlx::query(
-            "INSERT INTO task (
-                title, description, parent_task_id, status, completed_at,
-                effort_estimate_minutes, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            RETURNING id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, created_at, updated_at",
+        let row = sqlx::query_as!(
+            Task,
+            r#"INSERT INTO task (
+                   title, description, parent_task_id, status, completed_at,
+                   effort_estimate_minutes, created_at, updated_at
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               RETURNING id AS "id: i32", title, description,
+                         parent_task_id AS "parent_task_id?: i32",
+                         COALESCE(status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
+                         completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
+                         effort_estimate_minutes AS "effort_estimate_minutes?: i32",
+                         COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
+                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
+            request.title,
+            request.description,
+            request.parent_task_id,
+            TaskStatus::Backlog.as_str(),
+            Option::<DateTime<Utc>>::None,
+            request.effort_estimate_minutes,
+            now,
+            now
         )
-        .bind(&request.title)
-        .bind(&request.description)
-        .bind(request.parent_task_id)
-        .bind(TaskStatus::Backlog.as_str())
-        .bind::<Option<DateTime<Utc>>>(None::<DateTime<Utc>>)
-        .bind(request.effort_estimate_minutes)
-        .bind(now)
-        .bind(now)
         .fetch_one(&*self.db)
         .await?;
 
-        Ok(Task {
-            id: result.try_get("id")?,
-            title: result.try_get("title")?,
-            description: result.try_get("description")?,
-            parent_task_id: result.try_get("parent_task_id")?,
-            status: TaskStatus::from_str(&result.try_get::<String, _>("status")?)
-                .unwrap_or(TaskStatus::Backlog),
-            completed_at: result.try_get("completed_at")?,
-            effort_estimate_minutes: result.try_get("effort_estimate_minutes")?,
-            created_at: result.try_get("created_at")?,
-            updated_at: result.try_get("updated_at")?,
-        })
+        Ok(row)
     }
 
     pub async fn quick_create(&self, request: QuickCreateTaskRequest) -> Result<Task, sqlx::Error> {
         let now = Utc::now();
-        let result = sqlx::query(
-            "INSERT INTO task (
-                title, description, parent_task_id, status, completed_at,
-                effort_estimate_minutes, created_at, updated_at
-            ) VALUES (?, NULL, NULL, ?, NULL, NULL, ?, ?)
-            RETURNING id, title, description, parent_task_id, status, completed_at,
-            effort_estimate_minutes, created_at, updated_at",
+        let row = sqlx::query_as!(
+            Task,
+            r#"INSERT INTO task (
+                   title, description, parent_task_id, status, completed_at,
+                   effort_estimate_minutes, created_at, updated_at
+               ) VALUES (?, NULL, NULL, ?, NULL, NULL, ?, ?)
+               RETURNING id AS "id: i32", title, description,
+                         parent_task_id AS "parent_task_id?: i32",
+                         COALESCE(status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
+                         completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
+                         effort_estimate_minutes AS "effort_estimate_minutes?: i32",
+                         COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
+                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
+            request.title,
+            TaskStatus::Backlog.as_str(),
+            now,
+            now
         )
-        .bind(&request.title)
-        .bind(TaskStatus::Backlog.as_str())
-        .bind(now)
-        .bind(now)
         .fetch_one(&*self.db)
         .await?;
 
-        Ok(Task {
-            id: result.try_get("id")?,
-            title: result.try_get("title")?,
-            description: result.try_get("description")?,
-            parent_task_id: result.try_get("parent_task_id")?,
-            status: TaskStatus::from_str(&result.try_get::<String, _>("status")?)
-                .unwrap_or(TaskStatus::Backlog),
-            completed_at: result.try_get("completed_at")?,
-            effort_estimate_minutes: result.try_get("effort_estimate_minutes")?,
-            created_at: result.try_get("created_at")?,
-            updated_at: result.try_get("updated_at")?,
-        })
+        Ok(row)
     }
 
     pub async fn update(&self, id: i32, request: UpdateTaskRequest) -> Result<Task, sqlx::Error> {
@@ -240,18 +248,18 @@ impl TaskRepository {
         };
 
         if task.is_completed() {
-            let result = sqlx::query("DELETE FROM task WHERE id = ?")
-                .bind(id)
+            let result = sqlx::query!("DELETE FROM task WHERE id = ?", id)
                 .execute(&*self.db)
                 .await?;
             Ok(result.rows_affected())
         } else {
-            let result =
-                sqlx::query("UPDATE task SET status = 'archived', updated_at = ? WHERE id = ?")
-                    .bind(Utc::now())
-                    .bind(id)
-                    .execute(&*self.db)
-                    .await?;
+            let result = sqlx::query!(
+                "UPDATE task SET status = 'archived', updated_at = ? WHERE id = ?",
+                Utc::now(),
+                id
+            )
+            .execute(&*self.db)
+            .await?;
             Ok(result.rows_affected())
         }
     }

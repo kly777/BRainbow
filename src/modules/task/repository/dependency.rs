@@ -1,7 +1,18 @@
-use sqlx::Row;
+use sqlx::FromRow;
 use std::pin::Pin;
 
 use super::TaskRepository;
+
+#[derive(FromRow)]
+struct DependencyRow {
+    task_id: i32,
+    depends_on_task_id: i32,
+}
+
+#[derive(FromRow)]
+struct ParentRow {
+    parent_task_id: Option<i32>,
+}
 
 impl TaskRepository {
     pub async fn add_dependency(
@@ -23,11 +34,13 @@ impl TaskRepository {
             return Err(sqlx::Error::Protocol("Circular dependency detected".into()));
         }
 
-        sqlx::query("INSERT INTO task_dependency (task_id, depends_on_task_id) VALUES (?, ?)")
-            .bind(task_id)
-            .bind(depends_on_task_id)
-            .execute(&*self.db)
-            .await?;
+        sqlx::query!(
+            "INSERT INTO task_dependency (task_id, depends_on_task_id) VALUES (?, ?)",
+            task_id,
+            depends_on_task_id
+        )
+        .execute(&*self.db)
+        .await?;
 
         Ok(())
     }
@@ -37,43 +50,47 @@ impl TaskRepository {
         task_id: i32,
         depends_on_task_id: i32,
     ) -> Result<u64, sqlx::Error> {
-        let result =
-            sqlx::query("DELETE FROM task_dependency WHERE task_id = ? AND depends_on_task_id = ?")
-                .bind(task_id)
-                .bind(depends_on_task_id)
-                .execute(&*self.db)
-                .await?;
+        let result = sqlx::query!(
+            "DELETE FROM task_dependency WHERE task_id = ? AND depends_on_task_id = ?",
+            task_id,
+            depends_on_task_id
+        )
+        .execute(&*self.db)
+        .await?;
 
         Ok(result.rows_affected())
     }
 
     pub async fn get_dependencies(&self, task_id: i32) -> Result<Vec<i32>, sqlx::Error> {
-        let rows = sqlx::query("SELECT depends_on_task_id FROM task_dependency WHERE task_id = ?")
-            .bind(task_id)
-            .fetch_all(&*self.db)
-            .await?;
+        let rows = sqlx::query_as!(
+            DependencyRow,
+            r#"SELECT task_id AS "task_id: i32", depends_on_task_id AS "depends_on_task_id: i32"
+               FROM task_dependency WHERE task_id = ?"#,
+            task_id
+        )
+        .fetch_all(&*self.db)
+        .await?;
 
-        let dependencies = rows
-            .into_iter()
-            .map(|row| row.try_get::<i32, _>("depends_on_task_id"))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(dependencies)
+        Ok(rows.into_iter().map(|r| r.depends_on_task_id).collect())
     }
 
     /// 一次查询返回所有任务的依赖关系 → Map<task_id, Vec<dep_id>>
     pub async fn get_all_dependencies(
         &self,
     ) -> Result<std::collections::HashMap<i32, Vec<i32>>, sqlx::Error> {
-        let rows = sqlx::query("SELECT task_id, depends_on_task_id FROM task_dependency")
-            .fetch_all(&*self.db)
-            .await?;
+        let rows = sqlx::query_as!(
+            DependencyRow,
+            r#"SELECT task_id AS "task_id: i32", depends_on_task_id AS "depends_on_task_id: i32"
+               FROM task_dependency"#
+        )
+        .fetch_all(&*self.db)
+        .await?;
 
         let mut map: std::collections::HashMap<i32, Vec<i32>> = std::collections::HashMap::new();
         for row in rows {
-            let task_id: i32 = row.try_get("task_id")?;
-            let dep_id: i32 = row.try_get("depends_on_task_id")?;
-            map.entry(task_id).or_default().push(dep_id);
+            map.entry(row.task_id)
+                .or_default()
+                .push(row.depends_on_task_id);
         }
         Ok(map)
     }
@@ -133,10 +150,14 @@ impl TaskRepository {
             visited.insert(id);
 
             // 获取当前任务的父任务
-            current_id = sqlx::query_scalar("SELECT parent_task_id FROM task WHERE id = ?")
-                .bind(id)
-                .fetch_optional(&*self.db)
-                .await?;
+            let parent = sqlx::query_as!(
+                ParentRow,
+                r#"SELECT parent_task_id AS "parent_task_id?: i32" FROM task WHERE id = ?"#,
+                id
+            )
+            .fetch_optional(&*self.db)
+            .await?;
+            current_id = parent.and_then(|r| r.parent_task_id);
         }
 
         Ok(false)

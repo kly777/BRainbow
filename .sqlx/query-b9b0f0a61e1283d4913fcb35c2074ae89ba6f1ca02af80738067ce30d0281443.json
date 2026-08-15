@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT parent_task_id AS \"parent_task_id?: i32\" FROM task WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "parent_task_id?: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "parent_task_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "b9b0f0a61e1283d4913fcb35c2074ae89ba6f1ca02af80738067ce30d0281443"
+}

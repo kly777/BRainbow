@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT task_id AS \"task_id: i32\", depends_on_task_id AS \"depends_on_task_id: i32\"\n               FROM task_dependency",
+  "describe": {
+    "columns": [
+      {
+        "name": "task_id: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "task_dependency",
+            "name": "task_id"
+          }
+        }
+      },
+      {
+        "name": "depends_on_task_id: i32",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "task_dependency",
+            "name": "depends_on_task_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "ea30822f63ab95c15554510d71eaa1eab62e6f5a0210004e0c79526c14b5e2a1"
+}

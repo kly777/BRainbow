@@ -29,7 +29,8 @@ pub struct BookmarkTagWithCount {
     pub count: i64,
 }
 
-/// 数据库行：bookmark 表 + 聚合标签（GROUP_CONCAT，分隔符 char(31)）
+/// 数据库行：bookmark 表 + 聚合标签（GROUP_CONCAT，分隔符 char(31)）。
+/// `tags` 可空：没有标签时 GROUP_CONCAT 返回 NULL。
 #[derive(Debug, FromRow)]
 pub struct BookmarkRow {
     pub id: i32,
@@ -38,17 +39,17 @@ pub struct BookmarkRow {
     pub description: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub tags: String,
+    pub tags: Option<String>,
 }
 
 const TAG_SEP: char = '\u{1f}';
 
 impl BookmarkRow {
     pub fn into_bookmark(self) -> Bookmark {
-        let tags: Vec<String> = if self.tags.is_empty() {
-            Vec::new()
-        } else {
-            self.tags.split(TAG_SEP).map(str::to_string).collect()
+        let tags: Vec<String> = match self.tags {
+            None => Vec::new(),
+            Some(s) if s.is_empty() => Vec::new(),
+            Some(s) => s.split(TAG_SEP).map(str::to_string).collect(),
         };
         Bookmark {
             id: self.id,

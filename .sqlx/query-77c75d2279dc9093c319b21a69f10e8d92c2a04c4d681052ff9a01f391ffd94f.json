@@ -1,0 +1,83 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id: i32\", title, url, description,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\",\n                      (SELECT GROUP_CONCAT(name, char(31)) FROM\n                           (SELECT t.name FROM bookmark_tag_rel r\n                            JOIN bookmark_tag t ON t.id = r.tag_id\n                            WHERE r.bookmark_id = bookmark.id ORDER BY t.name)) AS tags\n               FROM bookmark WHERE url = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "bookmark",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "bookmark",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "url",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "bookmark",
+            "name": "url"
+          }
+        }
+      },
+      {
+        "name": "description",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "bookmark",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "name": "created_at!: chrono::DateTime<chrono::Utc>",
+        "ordinal": 4,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      },
+      {
+        "name": "updated_at!: chrono::DateTime<chrono::Utc>",
+        "ordinal": 5,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      },
+      {
+        "name": "tags",
+        "ordinal": 6,
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "77c75d2279dc9093c319b21a69f10e8d92c2a04c4d681052ff9a01f391ffd94f"
+}

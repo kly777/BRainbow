@@ -1,0 +1,45 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT t.id AS \"id: i32\", t.name, COUNT(r.bookmark_id) AS \"count!: i64\"\n                   FROM bookmark_tag t\n                   LEFT JOIN bookmark_tag_rel r ON r.tag_id = t.id\n                   WHERE t.name LIKE ? ESCAPE '\\'\n                   GROUP BY t.id, t.name\n                   ORDER BY COUNT(r.bookmark_id) DESC, t.name",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "bookmark_tag",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "bookmark_tag",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "count!: i64",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c25ce8b9a11351c737b82fa579cc450204d104fb8f27fbd8784f95d3a90d2eb9"
+}

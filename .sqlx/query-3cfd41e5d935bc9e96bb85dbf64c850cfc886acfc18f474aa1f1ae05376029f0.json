@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO bookmark_tag (name) VALUES (?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "3cfd41e5d935bc9e96bb85dbf64c850cfc886acfc18f474aa1f1ae05376029f0"
+}

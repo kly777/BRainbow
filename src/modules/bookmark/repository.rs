@@ -14,13 +14,6 @@ const BOOKMARK_SELECT: &str = "SELECT id, title, url, description, created_at, u
          WHERE r.bookmark_id = bookmark.id ORDER BY t.name)) AS tags \
      FROM bookmark";
 
-/// 拼接公共 SELECT + WHERE 子句。
-///
-/// 仅由常量拼接，无用户输入；用 sqlx::AssertSqlSafe 显式声明经过审计。
-fn select_with(where_clause: &str) -> sqlx::AssertSqlSafe<String> {
-    sqlx::AssertSqlSafe(format!("{BOOKMARK_SELECT} {where_clause}"))
-}
-
 /// 通过标签名过滤的条件片段
 fn tags_filter_clause(builder: &mut QueryBuilder<Sqlite>, tag: &str) {
     builder.push(" AND EXISTS (SELECT 1 FROM bookmark_tag_rel fr JOIN bookmark_tag ft ON ft.id = fr.tag_id WHERE fr.bookmark_id = bookmark.id AND ft.name = ");
@@ -76,10 +69,20 @@ impl BookmarkRepo {
 
     /// 根据 ID 获取书签
     pub async fn find_by_id(&self, id: i32) -> Result<Option<Bookmark>, sqlx::Error> {
-        let row = sqlx::query_as::<_, BookmarkRow>(select_with("WHERE id = ?"))
-            .bind(id)
-            .fetch_optional(&*self.pool)
-            .await?;
+        let row = sqlx::query_as!(
+            BookmarkRow,
+            r#"SELECT id AS "id: i32", title, url, description,
+                      COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
+                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>",
+                      (SELECT GROUP_CONCAT(name, char(31)) FROM
+                           (SELECT t.name FROM bookmark_tag_rel r
+                            JOIN bookmark_tag t ON t.id = r.tag_id
+                            WHERE r.bookmark_id = bookmark.id ORDER BY t.name)) AS tags
+               FROM bookmark WHERE id = ?"#,
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
 
         Ok(row.map(BookmarkRow::into_bookmark))
     }
@@ -95,33 +98,35 @@ impl BookmarkRepo {
         let now = Utc::now();
         let mut tx = self.pool.begin().await?;
 
-        let result = sqlx::query(
-            "INSERT INTO bookmark (title, url, description, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?) RETURNING id, title, url, description, created_at, updated_at",
+        let row = sqlx::query!(
+            r#"INSERT INTO bookmark (title, url, description, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?)
+               RETURNING id AS "id: i32", title, url, description,
+                         COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
+                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
+            title,
+            url,
+            description,
+            now,
+            now
         )
-        .bind(title)
-        .bind(url)
-        .bind(description)
-        .bind(now)
-        .bind(now)
         .fetch_one(&mut *tx)
         .await?;
 
-        let id: i32 = result.try_get("id")?;
-        self.replace_tags_in_tx(&mut tx, id, tags).await?;
+        self.replace_tags_in_tx(&mut tx, row.id, tags).await?;
         tx.commit().await?;
 
         let mut bookmark = Bookmark {
-            id,
-            title: result.try_get("title")?,
-            url: result.try_get("url")?,
-            description: result.try_get("description")?,
+            id: row.id,
+            title: row.title,
+            url: row.url,
+            description: row.description,
             tags: Vec::new(),
-            created_at: result.try_get("created_at")?,
-            updated_at: result.try_get("updated_at")?,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
         };
         bookmark.tags = self
-            .get_bookmark_tags(id)
+            .get_bookmark_tags(row.id)
             .await?
             .into_iter()
             .map(|t| t.name)
@@ -131,10 +136,20 @@ impl BookmarkRepo {
 
     /// 根据 URL 获取书签（导入时按 URL 去重/合并）
     pub async fn find_by_url(&self, url: &str) -> Result<Option<Bookmark>, sqlx::Error> {
-        let row = sqlx::query_as::<_, BookmarkRow>(select_with("WHERE url = ?"))
-            .bind(url)
-            .fetch_optional(&*self.pool)
-            .await?;
+        let row = sqlx::query_as!(
+            BookmarkRow,
+            r#"SELECT id AS "id: i32", title, url, description,
+                      COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
+                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>",
+                      (SELECT GROUP_CONCAT(name, char(31)) FROM
+                           (SELECT t.name FROM bookmark_tag_rel r
+                            JOIN bookmark_tag t ON t.id = r.tag_id
+                            WHERE r.bookmark_id = bookmark.id ORDER BY t.name)) AS tags
+               FROM bookmark WHERE url = ?"#,
+            url
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
 
         Ok(row.map(BookmarkRow::into_bookmark))
     }
@@ -200,8 +215,7 @@ impl BookmarkRepo {
 
     /// 删除书签（关联标签关系由外键级联删除）
     pub async fn delete(&self, id: i32) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM bookmark WHERE id = ?")
-            .bind(id)
+        let result = sqlx::query!("DELETE FROM bookmark WHERE id = ?", id)
             .execute(&*self.pool)
             .await?;
 
@@ -290,25 +304,27 @@ impl BookmarkRepo {
     ) -> Result<Vec<BookmarkTagWithCount>, sqlx::Error> {
         let q = q.unwrap_or("").trim();
         let rows = if q.is_empty() {
-            sqlx::query_as::<_, BookmarkTagWithCount>(
-                "SELECT t.id, t.name, COUNT(r.bookmark_id) AS count \
-                 FROM bookmark_tag t \
-                 LEFT JOIN bookmark_tag_rel r ON r.tag_id = t.id \
-                 GROUP BY t.id, t.name \
-                 ORDER BY count DESC, t.name",
+            sqlx::query_as!(
+                BookmarkTagWithCount,
+                r#"SELECT t.id AS "id: i32", t.name, COUNT(r.bookmark_id) AS "count!: i64"
+                   FROM bookmark_tag t
+                   LEFT JOIN bookmark_tag_rel r ON r.tag_id = t.id
+                   GROUP BY t.id, t.name
+                   ORDER BY COUNT(r.bookmark_id) DESC, t.name"#
             )
             .fetch_all(&*self.pool)
             .await?
         } else {
-            sqlx::query_as::<_, BookmarkTagWithCount>(
-                "SELECT t.id, t.name, COUNT(r.bookmark_id) AS count \
-                 FROM bookmark_tag t \
-                 LEFT JOIN bookmark_tag_rel r ON r.tag_id = t.id \
-                 WHERE t.name LIKE ? ESCAPE '\\' \
-                 GROUP BY t.id, t.name \
-                 ORDER BY count DESC, t.name",
+            sqlx::query_as!(
+                BookmarkTagWithCount,
+                r#"SELECT t.id AS "id: i32", t.name, COUNT(r.bookmark_id) AS "count!: i64"
+                   FROM bookmark_tag t
+                   LEFT JOIN bookmark_tag_rel r ON r.tag_id = t.id
+                   WHERE t.name LIKE ? ESCAPE '\'
+                   GROUP BY t.id, t.name
+                   ORDER BY COUNT(r.bookmark_id) DESC, t.name"#,
+                like_contains(q)
             )
-            .bind(like_contains(q))
             .fetch_all(&*self.pool)
             .await?
         };
@@ -317,25 +333,25 @@ impl BookmarkRepo {
 
     /// 创建标签；已存在时返回现有标签
     pub async fn create_tag(&self, name: &str) -> Result<BookmarkTag, sqlx::Error> {
-        let result = sqlx::query("INSERT OR IGNORE INTO bookmark_tag (name) VALUES (?)")
-            .bind(name)
+        let result = sqlx::query!("INSERT OR IGNORE INTO bookmark_tag (name) VALUES (?)", name)
             .execute(&*self.pool)
             .await?;
         if result.rows_affected() == 0 {
             return self.find_tag_by_name(name).await;
         }
-        let row =
-            sqlx::query_as::<_, BookmarkTag>("SELECT id, name FROM bookmark_tag WHERE name = ?")
-                .bind(name)
-                .fetch_one(&*self.pool)
-                .await?;
+        let row = sqlx::query_as!(
+            BookmarkTag,
+            r#"SELECT id AS "id: i32", name FROM bookmark_tag WHERE name = ?"#,
+            name
+        )
+        .fetch_one(&*self.pool)
+        .await?;
         Ok(row)
     }
 
     /// 删除标签（关联关系由外键级联删除）
     pub async fn delete_tag(&self, id: i32) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM bookmark_tag WHERE id = ?")
-            .bind(id)
+        let result = sqlx::query!("DELETE FROM bookmark_tag WHERE id = ?", id)
             .execute(&*self.pool)
             .await?;
         Ok(result.rows_affected())
@@ -346,14 +362,15 @@ impl BookmarkRepo {
         &self,
         bookmark_id: i32,
     ) -> Result<Vec<BookmarkTag>, sqlx::Error> {
-        let rows = sqlx::query_as::<_, BookmarkTag>(
-            "SELECT t.id, t.name \
-             FROM bookmark_tag t \
-             JOIN bookmark_tag_rel r ON r.tag_id = t.id \
-             WHERE r.bookmark_id = ? \
-             ORDER BY t.name",
+        let rows = sqlx::query_as!(
+            BookmarkTag,
+            r#"SELECT t.id AS "id: i32", t.name
+               FROM bookmark_tag t
+               JOIN bookmark_tag_rel r ON r.tag_id = t.id
+               WHERE r.bookmark_id = ?
+               ORDER BY t.name"#,
+            bookmark_id
         )
-        .bind(bookmark_id)
         .fetch_all(&*self.pool)
         .await?;
         Ok(rows)
@@ -384,28 +401,31 @@ impl BookmarkRepo {
             if name.is_empty() {
                 continue;
             }
-            sqlx::query("INSERT OR IGNORE INTO bookmark_tag (name) VALUES (?)")
-                .bind(name)
+            sqlx::query!("INSERT OR IGNORE INTO bookmark_tag (name) VALUES (?)", name)
                 .execute(&mut **tx)
                 .await?;
-            let id: i32 = sqlx::query_scalar("SELECT id FROM bookmark_tag WHERE name = ?")
-                .bind(name)
-                .fetch_one(&mut **tx)
-                .await?;
+            let id: i32 = sqlx::query_scalar!(
+                r#"SELECT id AS "id: i32" FROM bookmark_tag WHERE name = ?"#,
+                name
+            )
+            .fetch_one(&mut **tx)
+            .await?;
             tag_ids.push(id);
         }
 
-        sqlx::query("DELETE FROM bookmark_tag_rel WHERE bookmark_id = ?")
-            .bind(bookmark_id)
-            .execute(&mut **tx)
-            .await?;
+        sqlx::query!(
+            "DELETE FROM bookmark_tag_rel WHERE bookmark_id = ?",
+            bookmark_id
+        )
+        .execute(&mut **tx)
+        .await?;
 
         for tag_id in tag_ids {
-            sqlx::query(
+            sqlx::query!(
                 "INSERT OR IGNORE INTO bookmark_tag_rel (bookmark_id, tag_id) VALUES (?, ?)",
+                bookmark_id,
+                tag_id
             )
-            .bind(bookmark_id)
-            .bind(tag_id)
             .execute(&mut **tx)
             .await?;
         }
@@ -413,11 +433,13 @@ impl BookmarkRepo {
     }
 
     async fn find_tag_by_name(&self, name: &str) -> Result<BookmarkTag, sqlx::Error> {
-        let row =
-            sqlx::query_as::<_, BookmarkTag>("SELECT id, name FROM bookmark_tag WHERE name = ?")
-                .bind(name)
-                .fetch_one(&*self.pool)
-                .await?;
+        let row = sqlx::query_as!(
+            BookmarkTag,
+            r#"SELECT id AS "id: i32", name FROM bookmark_tag WHERE name = ?"#,
+            name
+        )
+        .fetch_one(&*self.pool)
+        .await?;
         Ok(row)
     }
 }

@@ -1,5 +1,6 @@
 import { Button, Markdown as MarkdownRenderer } from "@components/ui";
 import { getErrorMessage } from "@lib/api";
+import { fmtLocal } from "@lib/utils";
 import { getConvDetailE } from "@modules/conv";
 import { useParams } from "@solidjs/router";
 import { createResource, For, Show } from "solid-js";
@@ -32,7 +33,7 @@ export default function ConvDetailPage() {
 								<ConvTopBar
 									title={d().title}
 									type={d().conv_type}
-									date={d().created_at.slice(0, 10)}
+									date={fmtLocal(d().created_at)}
 									backHref={backHref()}
 								/>
 								<div class={styles.body}>

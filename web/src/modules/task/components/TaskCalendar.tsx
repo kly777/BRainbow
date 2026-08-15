@@ -1,4 +1,4 @@
-import { notifyError, tryAsync } from "@lib/utils";
+import { fmtLocal, notifyError, tryAsync } from "@lib/utils";
 import type { CalendarEvent } from "@modules/task";
 import { getCalendarEventsE } from "@modules/task";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
@@ -144,10 +144,7 @@ export default function TaskCalendar() {
 												title={`${ev.title} (${ev.window_type})`}
 											>
 												<span class={styles.eventTime}>
-													{new Date(ev.start).toLocaleTimeString("zh-CN", {
-														hour: "2-digit",
-														minute: "2-digit",
-													})}
+													{fmtLocal(ev.start)}
 												</span>
 												{ev.title}
 											</div>

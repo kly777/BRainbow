@@ -1,6 +1,6 @@
 import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@lib/api";
-import { strParam, useUrlParams } from "@lib/utils";
+import { fmtLocal, strParam, useUrlParams } from "@lib/utils";
 import type { ConvHit } from "@modules/conv";
 import { searchConvE } from "@modules/conv";
 import { A, useNavigate } from "@solidjs/router";
@@ -166,7 +166,7 @@ export default function ConvSearch() {
 										<div class={styles.itemTitle}>{hit.title}</div>
 										<div class={styles.itemSnippet}>{hit.snippet}</div>
 										<div class={styles.itemMeta}>
-											{hit.created_at.slice(0, 10)}
+											{fmtLocal(hit.created_at)}
 										</div>
 									</A>
 								)}

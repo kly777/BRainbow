@@ -1,7 +1,7 @@
 import { AsyncView } from "@components/ui";
 import { NAV_ITEMS } from "@config/navigation";
 import { fillPath, PATHS } from "@config/paths";
-import { showConfirm, tryOrNotify } from "@lib/utils";
+import { parseUtc, showConfirm, tryOrNotify } from "@lib/utils";
 import type { CardData } from "@modules/card";
 import {
 	deleteCardE as apiDeleteCard,
@@ -94,7 +94,7 @@ function CardOverview() {
 			const r = (await getCardsE()) as { items: CardData[] };
 			return [...r.items].sort(
 				(a, b) =>
-					new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+					parseUtc(b.updated_at).getTime() - parseUtc(a.updated_at).getTime(),
 			);
 		},
 	);

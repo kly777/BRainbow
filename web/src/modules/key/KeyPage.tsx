@@ -1,8 +1,9 @@
 // ── API Key 管理页 ──
 // dev 环境免登录可生成（后端 APP_ENV=dev）；prod 需登录（AuthGuard）。
 
+import { Button } from "@components/ui";
 import { del, get, getApiKey, getErrorMessage, post } from "@lib/api";
-import { notifyError, notifySuccess } from "@lib/utils";
+import { fmtFull, notifyError, notifySuccess, showConfirm } from "@lib/utils";
 import { useAuth } from "@modules/auth";
 import { createResource, createSignal, For, Show } from "solid-js";
 import styles from "./KeyPage.module.css";
@@ -54,6 +55,12 @@ export default function KeyPage() {
 	};
 
 	const handleDelete = async (id: number) => {
+		const confirmed = await showConfirm({
+			title: "删除 API key",
+			message: "删除后依赖该 key 的脚本将无法认证。确定删除？",
+			variant: "danger",
+		});
+		if (!confirmed) return;
 		try {
 			await del(`/auth/key/${id}`);
 			// 若删除的是当前应用的 key，同步清除本地
@@ -76,14 +83,14 @@ export default function KeyPage() {
 			{/* 生成 */}
 			<div class={styles.card}>
 				<h2 class={styles.cardTitle}>生成新 key</h2>
-				<button
-					type="button"
-					class={styles.genBtn}
+				<Button
+					variant="primary"
+					size="sm"
 					onClick={handleGenerate}
 					disabled={generating()}
 				>
 					{generating() ? "生成中…" : "＋ 生成"}
-				</button>
+				</Button>
 
 				<Show when={newKey()}>
 					{(k) => (
@@ -91,20 +98,20 @@ export default function KeyPage() {
 							<div class={styles.newKeyLabel}>新 key（仅显示一次）：</div>
 							<code class={styles.newKey}>{k()}</code>
 							<div class={styles.actions}>
-								<button
-									type="button"
-									class={styles.btn}
+								<Button
+									variant="secondary"
+									size="sm"
 									onClick={() => handleCopy(k())}
 								>
 									复制
-								</button>
-								<button
-									type="button"
-									class={styles.btnPrimary}
+								</Button>
+								<Button
+									variant="primary"
+									size="sm"
 									onClick={() => handleApply(k())}
 								>
 									应用此 key
-								</button>
+								</Button>
 							</div>
 						</div>
 					)}
@@ -122,20 +129,16 @@ export default function KeyPage() {
 						<div class={styles.activeBox}>
 							<code class={styles.activeKey}>{k()}</code>
 							<div class={styles.actions}>
-								<button
-									type="button"
-									class={styles.btn}
+								<Button
+									variant="secondary"
+									size="sm"
 									onClick={() => handleCopy(k())}
 								>
 									复制
-								</button>
-								<button
-									type="button"
-									class={styles.btnDanger}
-									onClick={handleClear}
-								>
+								</Button>
+								<Button variant="danger" size="sm" onClick={handleClear}>
 									清除
-								</button>
+								</Button>
 							</div>
 						</div>
 					)}
@@ -146,7 +149,12 @@ export default function KeyPage() {
 			<div class={styles.card}>
 				<h2 class={styles.cardTitle}>服务端 key 列表</h2>
 				<Show when={keys.error}>
-					<div class={styles.error}>{getErrorMessage(keys.error)}</div>
+					<div class={styles.error}>
+						{getErrorMessage(keys.error)}
+						<Button variant="primary" size="sm" onClick={refetch}>
+							重试
+						</Button>
+					</div>
 				</Show>
 				<Show when={keys()} fallback={<div class={styles.muted}>加载中…</div>}>
 					<For
@@ -158,16 +166,16 @@ export default function KeyPage() {
 								<div class={styles.rowInfo}>
 									<span class={styles.rowRole}>{k.role}</span>
 									<span class={styles.rowDate}>
-										ID {k.id} · {k.created_at.slice(0, 16).replace("T", " ")}
+										ID {k.id} · {fmtFull(k.created_at)}
 									</span>
 								</div>
-								<button
-									type="button"
-									class={styles.btnDanger}
+								<Button
+									variant="danger"
+									size="sm"
 									onClick={() => handleDelete(k.id)}
 								>
 									删除
-								</button>
+								</Button>
 							</div>
 						)}
 					</For>

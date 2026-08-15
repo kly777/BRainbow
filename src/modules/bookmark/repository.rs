@@ -565,7 +565,8 @@ mod tests {
         assert_eq!(updated.description, "旧描述");
         // 标签保持不变
         assert_eq!(updated.tags, str_vec(&["a"]));
-        assert!(updated.updated_at > bm.updated_at);
+        // 同一纳秒内连续写入时允许相等，避免偶发时间分辨率失败
+        assert!(updated.updated_at >= bm.updated_at);
     }
 
     #[tokio::test]

@@ -24,7 +24,8 @@ impl TaskStatus {
         }
     }
 
-    /// 从字符串创建枚举值
+    /// 从字符串创建枚举值（query_as! 直接 decode 后生产侧不再需要，保留给调用方/测试）
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "backlog" => Some(TaskStatus::Backlog),

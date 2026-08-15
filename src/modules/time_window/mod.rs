@@ -9,7 +9,7 @@ pub use handler::{
     get_time_window_handler, get_time_window_stats_handler, get_time_windows_handler,
     update_time_window_handler,
 };
-pub use model::{TimeWindow, TimeWindowType};
+pub use model::{RecurrenceFrequency, TimeWindow, TimeWindowType};
 
 use crate::modules::state::AppState;
 use axum::{Router, routing::get};

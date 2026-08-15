@@ -573,7 +573,7 @@ mod tests {
 
     async fn setup() -> ChatService {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        crate::app::db::create_tables(&pool).await.unwrap();
+        crate::db::create_tables(&pool).await.unwrap();
         ChatService::new(pool)
     }
 

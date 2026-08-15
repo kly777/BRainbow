@@ -18,6 +18,7 @@
 )]
 
 mod app;
+mod db;
 mod modules;
 mod shared;
 
@@ -99,7 +100,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = SqlitePool::connect(&config.database_url).await?;
 
     // 创建数据库表（如果不存在）
-    app::db::create_tables(&pool).await?;
+    db::create_tables(&pool).await?;
 
     // 加载记忆配置（FSRS 参数 + 调度配置，存储于 app_settings 表）
     let mem_config = modules::mem::config::load_and_init_mem_config(&pool).await;

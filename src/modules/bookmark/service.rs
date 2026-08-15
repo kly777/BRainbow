@@ -146,7 +146,7 @@ mod tests {
 
     async fn setup() -> (BookmarkService, BookmarkQueryService) {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
-        crate::app::db::create_tables(&pool).await.unwrap();
+        crate::db::create_tables(&pool).await.unwrap();
         let qsvc = BookmarkQueryService::new(pool.clone());
         (BookmarkService::new(pool), qsvc)
     }

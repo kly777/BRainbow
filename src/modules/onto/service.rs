@@ -62,7 +62,7 @@ mod tests {
 
     async fn real_service() -> (OntoService, OntoQueryService) {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
-        crate::app::db::create_tables(&pool).await.unwrap();
+        crate::db::create_tables(&pool).await.unwrap();
         (OntoService::new(pool.clone()), OntoQueryService::new(pool))
     }
 

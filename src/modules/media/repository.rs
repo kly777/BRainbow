@@ -207,7 +207,7 @@ mod tests {
 
     async fn setup() -> MediaRepository {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        crate::app::db::create_tables(&pool).await.unwrap();
+        crate::db::create_tables(&pool).await.unwrap();
         // media.user_id 有外键约束，先建测试用户
         sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (7, 'media-user', 'x')")
             .execute(&pool)

@@ -448,7 +448,7 @@ mod tests {
 
     async fn setup() -> TimeWindowRepository {
         let pool = SqlitePool::connect("sqlite::memory:").await.expect("db");
-        crate::app::db::create_tables(&pool).await.expect("schema");
+        crate::db::create_tables(&pool).await.expect("schema");
         // 生产 schema 中 time_window.task_id 有外键约束，先建占位任务（测试用到 1、2）
         for (id, title) in [(1, "test-task-1"), (2, "test-task-2")] {
             sqlx::query("INSERT INTO task (id, title) VALUES (?, ?)")

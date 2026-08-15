@@ -184,7 +184,7 @@ mod tests {
             .await
             .expect("create in-memory db");
 
-        crate::app::db::create_tables(&pool)
+        crate::db::create_tables(&pool)
             .await
             .expect("create production schema");
 

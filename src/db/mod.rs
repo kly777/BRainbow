@@ -1,3 +1,8 @@
+//! 数据库 schema 与幂等迁移。
+//!
+//! `create_tables` 是唯一的 schema 来源：生产启动与各模块测试共用同一份 DDL，
+//! 避免测试建表与生产 schema 漂移。app/modules 都不应自行拼 CREATE TABLE。
+
 pub mod query;
 
 use sqlx::{Row, SqlitePool};

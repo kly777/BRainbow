@@ -16,11 +16,13 @@ impl DBRepo {
     }
 
     pub async fn get_table_names(&self) -> Result<Vec<String>, sqlx::Error> {
-        let query = "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name";
-        let rows = sqlx::query_as::<_, TableName>(query)
-            .fetch_all(&*self.pool)
-            .await?;
-        Ok(rows.iter().map(|r| r.name.clone()).collect())
+        let rows = sqlx::query_as!(
+            TableName,
+            "SELECT name AS \"name!: String\" FROM sqlite_master WHERE type='table' ORDER BY name"
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+        Ok(rows.into_iter().map(|r| r.name).collect())
     }
 
     /// 返回 ColumnInfo + 数据行 + 总行数

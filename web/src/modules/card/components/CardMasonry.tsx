@@ -89,7 +89,7 @@ const CardMasonry: Component<CardMasonryProps> = (props) => {
 					)}
 				</For>
 				<Show when={props.loadingMore}>
-					<div class={styles.loadingMore}>加载中...</div>
+					<div class={styles.loadingMore}>加载中…</div>
 				</Show>
 			</div>
 		</Show>

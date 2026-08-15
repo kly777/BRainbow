@@ -53,7 +53,7 @@ export default function TagManager(props: Props) {
 			}
 		>
 			<Show when={tags.loading} fallback={null}>
-				<div class={styles.state}>加载中...</div>
+				<div class={styles.state}>加载中…</div>
 			</Show>
 			<Show
 				when={!tags.loading && (tags() ?? []).length > 0}

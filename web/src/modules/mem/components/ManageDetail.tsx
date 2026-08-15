@@ -62,6 +62,7 @@ export default function ManageDetail(props: Props) {
 									class={styles.detailClose}
 									onClick={props.onClose}
 									title="关闭面板"
+									aria-label="关闭详情面板"
 								>
 									✕
 								</button>
@@ -164,13 +165,13 @@ export default function ManageDetail(props: Props) {
 												恢复
 											</Button>
 										</Show>
-										<button
-											type="button"
-											class={styles.dangerBtn}
+										<Button
+											variant="danger"
+											size="sm"
 											onClick={() => props.onDelete(d().id)}
 										>
 											删除
-										</button>
+										</Button>
 									</>
 								}
 							>

@@ -69,7 +69,7 @@ function TaskOverview() {
 							</p>
 						</Show>
 						<Show when={loading()}>
-							<p>加载中...</p>
+							<p>加载中…</p>
 						</Show>
 					</div>
 				}

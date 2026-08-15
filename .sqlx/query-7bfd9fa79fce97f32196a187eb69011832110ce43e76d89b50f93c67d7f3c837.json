@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM mem_tag WHERE mem_id = ?1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "7bfd9fa79fce97f32196a187eb69011832110ce43e76d89b50f93c67d7f3c837"
+}

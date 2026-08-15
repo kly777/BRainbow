@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO mem (cue_chunk_id, target_chunk_id) VALUES (?1, ?2) RETURNING id AS \"id!: i32\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "b24197b4b162ad8a73bab805981ea6d9a1e43a18a19847b0f62f3da71f185b6a"
+}

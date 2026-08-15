@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO mem_mnemonic (mem_id, content)\n            VALUES (?1, ?2)\n            ON CONFLICT(mem_id) DO UPDATE SET content = excluded.content\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "f0178bed00e5ab7e4cf4465363a358380766ecaf3b9484f3b32725a6e48a7a37"
+}

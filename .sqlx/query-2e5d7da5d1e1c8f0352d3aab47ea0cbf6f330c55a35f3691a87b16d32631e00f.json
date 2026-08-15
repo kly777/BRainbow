@@ -1,0 +1,45 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO tag (name, user_id) VALUES (?1, ?2)\n               RETURNING id AS \"id!: i32\", name,\n                         COALESCE(created_at, '') AS \"created_at!: String\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "tag",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tag",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 2,
+        "type_info": "Null",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      null,
+      false,
+      null
+    ]
+  },
+  "hash": "2e5d7da5d1e1c8f0352d3aab47ea0cbf6f330c55a35f3691a87b16d32631e00f"
+}

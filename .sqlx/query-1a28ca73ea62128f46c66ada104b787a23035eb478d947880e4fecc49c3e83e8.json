@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM revlog WHERE mem_id = ?1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "1a28ca73ea62128f46c66ada104b787a23035eb478d947880e4fecc49c3e83e8"
+}

@@ -1,0 +1,45 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id: i32\", name,\n                      COALESCE(created_at, '') AS \"created_at!: String\"\n               FROM tag WHERE user_id = ?1 AND name LIKE ?2 ESCAPE '\\'\n               ORDER BY name LIMIT 20",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "tag",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tag",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "38ca4c14d10f57829b3839c456fe5e6980c0f941bbdb4a834600293a58b0df92"
+}

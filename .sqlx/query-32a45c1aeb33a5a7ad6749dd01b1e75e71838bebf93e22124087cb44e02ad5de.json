@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO mem_tag (mem_id, tag_id) VALUES (?1, ?2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "32a45c1aeb33a5a7ad6749dd01b1e75e71838bebf93e22124087cb44e02ad5de"
+}

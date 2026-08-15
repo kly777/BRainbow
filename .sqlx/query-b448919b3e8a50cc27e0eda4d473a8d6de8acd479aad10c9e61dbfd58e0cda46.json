@@ -1,0 +1,153 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id: i32\",\n                      cue_chunk_id AS \"cue_chunk_id: i32\",\n                      target_chunk_id AS \"target_chunk_id: i32\",\n                      state,\n                      stability AS \"stability!: f64\",\n                      difficulty AS \"difficulty!: f64\",\n                      step_index AS \"step_index?: i32\",\n                      buried AS \"buried!: bool\",\n                      lapses AS \"lapses: i32\",\n                      leeched AS \"leeched!: bool\",\n                      COALESCE(due_at, '') AS \"due_at!: String\",\n                      last_review_at AS \"last_review_at?: String\"\n               FROM mem WHERE id = ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "cue_chunk_id: i32",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "cue_chunk_id"
+          }
+        }
+      },
+      {
+        "name": "target_chunk_id: i32",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "target_chunk_id"
+          }
+        }
+      },
+      {
+        "name": "state",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "name": "stability!: f64",
+        "ordinal": 4,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "stability"
+          }
+        }
+      },
+      {
+        "name": "difficulty!: f64",
+        "ordinal": 5,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "difficulty"
+          }
+        }
+      },
+      {
+        "name": "step_index?: i32",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "step_index"
+          }
+        }
+      },
+      {
+        "name": "buried!: bool",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "buried"
+          }
+        }
+      },
+      {
+        "name": "lapses: i32",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "lapses"
+          }
+        }
+      },
+      {
+        "name": "leeched!: bool",
+        "ordinal": 9,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "leeched"
+          }
+        }
+      },
+      {
+        "name": "due_at!: String",
+        "ordinal": 10,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      },
+      {
+        "name": "last_review_at?: String",
+        "ordinal": 11,
+        "type_info": "Datetime",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "last_review_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "b448919b3e8a50cc27e0eda4d473a8d6de8acd479aad10c9e61dbfd58e0cda46"
+}

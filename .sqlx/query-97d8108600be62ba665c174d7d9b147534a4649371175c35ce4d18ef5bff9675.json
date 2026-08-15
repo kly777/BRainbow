@@ -1,0 +1,45 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT t.id AS \"id: i32\", t.name,\n                      COALESCE(t.created_at, '') AS \"created_at!: String\"\n               FROM tag t\n               WHERE t.user_id = ?1\n                 AND EXISTS (SELECT 1 FROM mem_tag WHERE tag_id = t.id)\n               ORDER BY t.name",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "tag",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tag",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "97d8108600be62ba665c174d7d9b147534a4649371175c35ce4d18ef5bff9675"
+}

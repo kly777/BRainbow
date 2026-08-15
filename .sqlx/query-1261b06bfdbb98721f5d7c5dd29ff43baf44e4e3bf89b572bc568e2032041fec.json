@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT rating FROM revlog ORDER BY review_time DESC LIMIT ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "rating",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "revlog",
+            "name": "rating"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1261b06bfdbb98721f5d7c5dd29ff43baf44e4e3bf89b572bc568e2032041fec"
+}

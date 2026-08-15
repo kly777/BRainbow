@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM mem_prerequisite WHERE mem_id = ?1 OR requires_mem_id = ?2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "f7b170ea0bb728eeafe664015f27854895ae2e34077418e55a774c9d15881ffc"
+}

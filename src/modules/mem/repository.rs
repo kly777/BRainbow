@@ -24,6 +24,13 @@ struct ChunkRow {
     updated_at: String,
 }
 
+/// delete_mem 用的 chunk id 行
+#[derive(sqlx::FromRow)]
+struct MemChunkIdsRow {
+    cue_chunk_id: i32,
+    target_chunk_id: i32,
+}
+
 #[derive(Clone)]
 pub struct MemRepo {
     pool: Arc<SqlitePool>,
@@ -37,18 +44,24 @@ impl MemRepo {
     // ── Chunk ──
 
     pub async fn create_chunk(&self, content: &str) -> Result<i32, sqlx::Error> {
-        sqlx::query_scalar::<_, i32>("INSERT INTO chunk (content) VALUES (?) RETURNING id")
-            .bind(content)
-            .fetch_one(&*self.pool)
-            .await
+        sqlx::query_scalar!(
+            r#"INSERT INTO chunk (content) VALUES (?1) RETURNING id AS "id!: i32""#,
+            content
+        )
+        .fetch_one(&*self.pool)
+        .await
     }
 
     #[cfg_attr(not(test), allow(dead_code))]
     pub async fn get_chunk(&self, id: i32) -> Result<Option<Chunk>, sqlx::Error> {
-        sqlx::query_as::<_, ChunkRow>(
-            "SELECT id, content, created_at, updated_at FROM chunk WHERE id = ?",
+        sqlx::query_as!(
+            ChunkRow,
+            r#"SELECT id AS "id: i32", content,
+                      COALESCE(created_at, '') AS "created_at!: String",
+                      COALESCE(updated_at, '') AS "updated_at!: String"
+               FROM chunk WHERE id = ?1"#,
+            id
         )
-        .bind(id)
         .fetch_optional(&*self.pool)
         .await
         .map(|r| {
@@ -62,8 +75,13 @@ impl MemRepo {
     }
 
     pub async fn update_chunk(&self, id: i32, content: &str) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE chunk SET content=?, updated_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?")
-            .bind(content).bind(id).execute(&*self.pool).await?;
+        sqlx::query!(
+            "UPDATE chunk SET content=?1, updated_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?2",
+            content,
+            id
+        )
+        .execute(&*self.pool)
+        .await?;
         Ok(())
     }
 
@@ -75,19 +93,19 @@ impl MemRepo {
         target_id: i32,
         prerequisites: &[i32],
     ) -> Result<i32, sqlx::Error> {
-        let mem_id = sqlx::query_scalar::<_, i32>(
-            "INSERT INTO mem (cue_chunk_id, target_chunk_id) VALUES (?, ?) RETURNING id",
+        let mem_id = sqlx::query_scalar!(
+            r#"INSERT INTO mem (cue_chunk_id, target_chunk_id) VALUES (?1, ?2) RETURNING id AS "id!: i32""#,
+            cue_id,
+            target_id
         )
-        .bind(cue_id)
-        .bind(target_id)
         .fetch_one(&*self.pool)
         .await?;
         for &req_id in prerequisites {
-            sqlx::query(
-                "INSERT OR IGNORE INTO mem_prerequisite (mem_id, requires_mem_id) VALUES (?, ?)",
+            sqlx::query!(
+                "INSERT OR IGNORE INTO mem_prerequisite (mem_id, requires_mem_id) VALUES (?1, ?2)",
+                mem_id,
+                req_id
             )
-            .bind(mem_id)
-            .bind(req_id)
             .execute(&*self.pool)
             .await?;
         }
@@ -95,9 +113,25 @@ impl MemRepo {
     }
 
     pub async fn get_mem(&self, id: i32) -> Result<Option<MemRow>, sqlx::Error> {
-        sqlx::query_as::<_, MemRow>(
-            "SELECT id, cue_chunk_id, target_chunk_id, state, stability, difficulty, step_index, buried, lapses, leeched, due_at, last_review_at FROM mem WHERE id = ?",
-        ).bind(id).fetch_optional(&*self.pool).await
+        sqlx::query_as!(
+            MemRow,
+            r#"SELECT id AS "id: i32",
+                      cue_chunk_id AS "cue_chunk_id: i32",
+                      target_chunk_id AS "target_chunk_id: i32",
+                      state,
+                      stability AS "stability!: f64",
+                      difficulty AS "difficulty!: f64",
+                      step_index AS "step_index?: i32",
+                      buried AS "buried!: bool",
+                      lapses AS "lapses: i32",
+                      leeched AS "leeched!: bool",
+                      COALESCE(due_at, '') AS "due_at!: String",
+                      last_review_at AS "last_review_at?: String"
+               FROM mem WHERE id = ?1"#,
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await
     }
 
     /// 读模型：一次 JOIN 批量取回 MemWithChunks，消除 N+1。
@@ -334,61 +368,64 @@ impl MemRepo {
         let mut tx = self.pool.begin().await?;
 
         // 先查出关联的 chunk id，删除 mem 后清理孤儿 chunk
-        let (cue_id, target_id): (i32, i32) =
-            sqlx::query_as("SELECT cue_chunk_id, target_chunk_id FROM mem WHERE id = ?")
-                .bind(id)
-                .fetch_optional(&mut *tx)
-                .await?
-                .ok_or(sqlx::Error::RowNotFound)?;
+        let ids: MemChunkIdsRow = sqlx::query_as!(
+            MemChunkIdsRow,
+            r#"SELECT cue_chunk_id AS "cue_chunk_id: i32",
+                      target_chunk_id AS "target_chunk_id: i32"
+               FROM mem WHERE id = ?1"#,
+            id
+        )
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or(sqlx::Error::RowNotFound)?;
 
         // 级联删除关联数据
-        sqlx::query("DELETE FROM revlog WHERE mem_id = ?")
-            .bind(id)
+        sqlx::query!("DELETE FROM revlog WHERE mem_id = ?1", id)
             .execute(&mut *tx)
             .await?;
 
         // 记录该 mem 的标签，删除后清理孤儿
-        let mem_tag_ids: Vec<i32> =
-            sqlx::query_scalar("SELECT tag_id FROM mem_tag WHERE mem_id = ?")
-                .bind(id)
-                .fetch_all(&mut *tx)
-                .await?;
-        sqlx::query("DELETE FROM mem_prerequisite WHERE mem_id = ? OR requires_mem_id = ?")
-            .bind(id)
-            .bind(id)
-            .execute(&mut *tx)
-            .await?;
-        sqlx::query("DELETE FROM mem WHERE id = ?")
-            .bind(id)
+        let mem_tag_ids: Vec<i32> = sqlx::query_scalar!(
+            r#"SELECT tag_id AS "tag_id: i32" FROM mem_tag WHERE mem_id = ?1"#,
+            id
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+        sqlx::query!(
+            "DELETE FROM mem_prerequisite WHERE mem_id = ?1 OR requires_mem_id = ?2",
+            id,
+            id
+        )
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query!("DELETE FROM mem WHERE id = ?1", id)
             .execute(&mut *tx)
             .await?;
 
         // 清理孤儿标签（mem_tag 已由 ON DELETE CASCADE 删除）
         for &tid in &mem_tag_ids {
-            let cnt: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM mem_tag WHERE tag_id = ?")
-                .bind(tid)
-                .fetch_one(&mut *tx)
-                .await?;
+            let cnt: i64 =
+                sqlx::query_scalar!("SELECT COUNT(*) FROM mem_tag WHERE tag_id = ?1", tid)
+                    .fetch_one(&mut *tx)
+                    .await?;
             if cnt == 0 {
-                sqlx::query("DELETE FROM tag WHERE id = ?")
-                    .bind(tid)
+                sqlx::query!("DELETE FROM tag WHERE id = ?1", tid)
                     .execute(&mut *tx)
                     .await?;
             }
         }
 
         // 清理不再被任何 mem 引用的孤儿 chunk
-        for chunk_id in [cue_id, target_id] {
-            let usage: i64 = sqlx::query_scalar(
-                "SELECT COUNT(*) FROM mem WHERE cue_chunk_id = ? OR target_chunk_id = ?",
+        for chunk_id in [ids.cue_chunk_id, ids.target_chunk_id] {
+            let usage: i64 = sqlx::query_scalar!(
+                "SELECT COUNT(*) FROM mem WHERE cue_chunk_id = ?1 OR target_chunk_id = ?2",
+                chunk_id,
+                chunk_id
             )
-            .bind(chunk_id)
-            .bind(chunk_id)
             .fetch_one(&mut *tx)
             .await?;
             if usage == 0 {
-                sqlx::query("DELETE FROM chunk WHERE id = ?")
-                    .bind(chunk_id)
+                sqlx::query!("DELETE FROM chunk WHERE id = ?1", chunk_id)
                     .execute(&mut *tx)
                     .await?;
             }
@@ -401,8 +438,7 @@ impl MemRepo {
     // ── 学习池 ──
 
     pub async fn suspend_mem(&self, id: i32) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE mem SET state='suspended' WHERE id=?")
-            .bind(id)
+        sqlx::query!("UPDATE mem SET state='suspended' WHERE id=?1", id)
             .execute(&*self.pool)
             .await?;
         Ok(())
@@ -410,10 +446,10 @@ impl MemRepo {
 
     pub async fn unsuspend_mem(&self, id: i32) -> Result<(), sqlx::Error> {
         // 恢复到新卡状态，保留内容
-        sqlx::query(
-            "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?"
+        sqlx::query!(
+            "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?1",
+            id
         )
-        .bind(id)
         .execute(&*self.pool)
         .await?;
         Ok(())
@@ -519,8 +555,8 @@ impl MemRepo {
     }
 
     pub async fn count_upcoming(&self) -> Result<i64, sqlx::Error> {
-        sqlx::query_scalar::<_, i64>(
-            r#"SELECT COUNT(*) FROM mem WHERE state = 'review' AND buried = 0 AND state != 'suspended'"#,
+        sqlx::query_scalar!(
+            r#"SELECT COUNT(*) FROM mem WHERE state = 'review' AND buried = 0 AND state != 'suspended'"#
         )
         .fetch_one(&*self.pool)
         .await
@@ -528,40 +564,40 @@ impl MemRepo {
 
     /// 统计在 N 小时内到期的 review 卡数量（不含 learning）
     pub async fn count_upcoming_within_hours(&self, hours: i64) -> Result<i64, sqlx::Error> {
-        sqlx::query_scalar::<_, i64>(
+        sqlx::query_scalar!(
             r#"SELECT COUNT(*) FROM mem m
             WHERE m.state IN ('review') AND m.buried = 0
               AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '+' || ? || ' hours')
+              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '+' || ?1 || ' hours')
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#,
+            hours
         )
-        .bind(hours)
         .fetch_one(&*self.pool)
         .await
     }
 
     pub async fn get_counts(&self) -> Result<(i64, i64, i64, i64, i64), sqlx::Error> {
-        let new_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM mem WHERE state = 'new' AND buried = 0 AND state != 'suspended'",
+        let new_count: i64 = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM mem WHERE state = 'new' AND buried = 0 AND state != 'suspended'"
         )
         .fetch_one(&*self.pool)
         .await?;
-        let learning_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM mem WHERE state IN ('learning', 'relearning') AND buried = 0 AND state != 'suspended'",
+        let learning_count: i64 = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM mem WHERE state IN ('learning', 'relearning') AND buried = 0 AND state != 'suspended'"
         )
         .fetch_one(&*self.pool)
         .await?;
-        let due_count: i64 = sqlx::query_scalar(
+        let due_count: i64 = sqlx::query_scalar!(
             r#"SELECT COUNT(*) FROM mem WHERE state = 'review' AND buried = 0 AND state != 'suspended'
-               AND due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#,
+               AND due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#
         )
         .fetch_one(&*self.pool)
         .await?;
-        let buried_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM mem WHERE buried = 1")
+        let buried_count: i64 = sqlx::query_scalar!("SELECT COUNT(*) FROM mem WHERE buried = 1")
             .fetch_one(&*self.pool)
             .await?;
         let suspended_count: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM mem WHERE state = 'suspended'")
+            sqlx::query_scalar!("SELECT COUNT(*) FROM mem WHERE state = 'suspended'")
                 .fetch_one(&*self.pool)
                 .await?;
         Ok((
@@ -574,13 +610,15 @@ impl MemRepo {
     }
 
     pub async fn get_next_mem(&self) -> Result<Option<i32>, sqlx::Error> {
-        sqlx::query_scalar::<_, i32>(
-            r#"SELECT m.id FROM mem m
+        sqlx::query_scalar!(
+            r#"SELECT m.id AS "id: i32" FROM mem m
             WHERE m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
               AND m.buried = 0 AND m.state != 'suspended'
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
             ORDER BY m.due_at LIMIT 1"#
-        ).fetch_optional(&*self.pool).await
+        )
+        .fetch_optional(&*self.pool)
+        .await
     }
 
     // ── 更新 ──
@@ -591,49 +629,55 @@ impl MemRepo {
         state: &str,
         step_index: Option<i32>,
     ) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE mem SET state=?, step_index=?, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?")
-            .bind(state).bind(step_index).bind(id).execute(&*self.pool).await?;
+        sqlx::query!(
+            "UPDATE mem SET state=?1, step_index=?2, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?3",
+            state,
+            step_index,
+            id
+        )
+        .execute(&*self.pool)
+        .await?;
         Ok(())
     }
 
     pub async fn update_mem_fsrs(&self, id: i32, params: &FsrsUpdate) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            "UPDATE mem SET state=?, stability=?, difficulty=?, step_index=?, lapses=?, leeched=?, due_at=?, last_review_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?",
+        sqlx::query!(
+            "UPDATE mem SET state=?1, stability=?2, difficulty=?3, step_index=?4, lapses=?5, leeched=?6, due_at=?7, last_review_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?8",
+            params.state.as_str(),
+            params.stability,
+            params.difficulty,
+            params.step_index,
+            params.lapses,
+            params.leeched,
+            params.due_at.as_str(),
+            id
         )
-        .bind(&params.state)
-        .bind(params.stability)
-        .bind(params.difficulty)
-        .bind(params.step_index)
-        .bind(params.lapses)
-        .bind(params.leeched)
-        .bind(&params.due_at)
-        .bind(id)
-        .execute(&*self.pool).await?;
+        .execute(&*self.pool)
+        .await?;
         Ok(())
     }
 
     pub async fn bury_mem(&self, id: i32) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE mem SET buried = 1 WHERE id = ?")
-            .bind(id)
+        sqlx::query!("UPDATE mem SET buried = 1 WHERE id = ?1", id)
             .execute(&*self.pool)
             .await?;
         Ok(())
     }
 
     pub async fn unbury_mem(&self, id: i32) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE mem SET buried = 0 WHERE id = ?")
-            .bind(id)
+        sqlx::query!("UPDATE mem SET buried = 0 WHERE id = ?1", id)
             .execute(&*self.pool)
             .await?;
         Ok(())
     }
 
     pub async fn get_recent_retention(&self, limit: i64) -> Result<f64, sqlx::Error> {
-        let ratings: Vec<i64> =
-            sqlx::query_scalar("SELECT rating FROM revlog ORDER BY review_time DESC LIMIT ?")
-                .bind(limit)
-                .fetch_all(&*self.pool)
-                .await?;
+        let ratings: Vec<i64> = sqlx::query_scalar!(
+            "SELECT rating FROM revlog ORDER BY review_time DESC LIMIT ?1",
+            limit
+        )
+        .fetch_all(&*self.pool)
+        .await?;
 
         if ratings.is_empty() {
             return Ok(0.0);
@@ -647,11 +691,14 @@ impl MemRepo {
     // ── 标签 ──
 
     pub async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, sqlx::Error> {
-        let row = sqlx::query_as::<_, TagRow>(
-            "INSERT INTO tag (name, user_id) VALUES (?, ?) RETURNING id, name, created_at",
+        let row = sqlx::query_as!(
+            TagRow,
+            r#"INSERT INTO tag (name, user_id) VALUES (?1, ?2)
+               RETURNING id AS "id!: i32", name,
+                         COALESCE(created_at, '') AS "created_at!: String""#,
+            name,
+            user_id
         )
-        .bind(name)
-        .bind(user_id)
         .fetch_one(&*self.pool)
         .await?;
         Ok(TagInfo {
@@ -662,21 +709,23 @@ impl MemRepo {
     }
 
     pub async fn delete_tag(&self, id: i32) -> Result<(), sqlx::Error> {
-        sqlx::query("DELETE FROM tag WHERE id = ?")
-            .bind(id)
+        sqlx::query!("DELETE FROM tag WHERE id = ?1", id)
             .execute(&*self.pool)
             .await?;
         Ok(())
     }
 
     pub async fn list_tags(&self, user_id: i32) -> Result<Vec<TagInfo>, sqlx::Error> {
-        let rows = sqlx::query_as::<_, TagRow>(
-            "SELECT t.id, t.name, t.created_at FROM tag t
-             WHERE t.user_id = ?
-               AND EXISTS (SELECT 1 FROM mem_tag WHERE tag_id = t.id)
-             ORDER BY t.name",
+        let rows = sqlx::query_as!(
+            TagRow,
+            r#"SELECT t.id AS "id: i32", t.name,
+                      COALESCE(t.created_at, '') AS "created_at!: String"
+               FROM tag t
+               WHERE t.user_id = ?1
+                 AND EXISTS (SELECT 1 FROM mem_tag WHERE tag_id = t.id)
+               ORDER BY t.name"#,
+            user_id
         )
-        .bind(user_id)
         .fetch_all(&*self.pool)
         .await?;
         Ok(rows
@@ -693,11 +742,15 @@ impl MemRepo {
         if q.is_empty() {
             return Ok(vec![]);
         }
-        let rows = sqlx::query_as::<_, TagRow>(
-            "SELECT id, name, created_at FROM tag WHERE user_id = ? AND name LIKE ? ESCAPE '\\' ORDER BY name LIMIT 20"
+        let rows = sqlx::query_as!(
+            TagRow,
+            r#"SELECT id AS "id: i32", name,
+                      COALESCE(created_at, '') AS "created_at!: String"
+               FROM tag WHERE user_id = ?1 AND name LIKE ?2 ESCAPE '\'
+               ORDER BY name LIMIT 20"#,
+            user_id,
+            like_contains(q)
         )
-        .bind(user_id)
-        .bind(like_contains(q))
         .fetch_all(&*self.pool)
         .await?;
         Ok(rows
@@ -711,14 +764,16 @@ impl MemRepo {
     }
 
     pub async fn get_mem_tags(&self, mem_id: i32) -> Result<Vec<TagInfo>, sqlx::Error> {
-        let rows = sqlx::query_as::<_, TagRow>(
-            "SELECT t.id, t.name, t.created_at
-             FROM tag t
-             JOIN mem_tag mt ON mt.tag_id = t.id
-             WHERE mt.mem_id = ?
-             ORDER BY t.name",
+        let rows = sqlx::query_as!(
+            TagRow,
+            r#"SELECT t.id AS "id: i32", t.name,
+                      COALESCE(t.created_at, '') AS "created_at!: String"
+               FROM tag t
+               JOIN mem_tag mt ON mt.tag_id = t.id
+               WHERE mt.mem_id = ?1
+               ORDER BY t.name"#,
+            mem_id
         )
-        .bind(mem_id)
         .fetch_all(&*self.pool)
         .await?;
         Ok(rows
@@ -732,32 +787,36 @@ impl MemRepo {
     }
 
     pub async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), sqlx::Error> {
-        sqlx::query("INSERT OR IGNORE INTO mem_tag (mem_id, tag_id) VALUES (?, ?)")
-            .bind(mem_id)
-            .bind(tag_id)
-            .execute(&*self.pool)
-            .await?;
+        sqlx::query!(
+            "INSERT OR IGNORE INTO mem_tag (mem_id, tag_id) VALUES (?1, ?2)",
+            mem_id,
+            tag_id
+        )
+        .execute(&*self.pool)
+        .await?;
         Ok(())
     }
 
     /// 删除无任何 mem 关联的孤儿标签
     async fn delete_orphan_tag(&self, tag_id: i32) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            "DELETE FROM tag WHERE id = ? AND NOT EXISTS (SELECT 1 FROM mem_tag WHERE tag_id = ?)",
+        sqlx::query!(
+            "DELETE FROM tag WHERE id = ?1 AND NOT EXISTS (SELECT 1 FROM mem_tag WHERE tag_id = ?2)",
+            tag_id,
+            tag_id
         )
-        .bind(tag_id)
-        .bind(tag_id)
         .execute(&*self.pool)
         .await?;
         Ok(())
     }
 
     pub async fn remove_tag_from_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), sqlx::Error> {
-        sqlx::query("DELETE FROM mem_tag WHERE mem_id = ? AND tag_id = ?")
-            .bind(mem_id)
-            .bind(tag_id)
-            .execute(&*self.pool)
-            .await?;
+        sqlx::query!(
+            "DELETE FROM mem_tag WHERE mem_id = ?1 AND tag_id = ?2",
+            mem_id,
+            tag_id
+        )
+        .execute(&*self.pool)
+        .await?;
         self.delete_orphan_tag(tag_id).await?;
         Ok(())
     }
@@ -765,23 +824,25 @@ impl MemRepo {
     pub async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         // 记录移除前的旧标签
-        let old_tag_ids: Vec<i32> =
-            sqlx::query_scalar("SELECT tag_id FROM mem_tag WHERE mem_id = ?")
-                .bind(mem_id)
-                .fetch_all(&mut *tx)
-                .await?;
+        let old_tag_ids: Vec<i32> = sqlx::query_scalar!(
+            r#"SELECT tag_id AS "tag_id: i32" FROM mem_tag WHERE mem_id = ?1"#,
+            mem_id
+        )
+        .fetch_all(&mut *tx)
+        .await?;
         // 删除旧的关联
-        sqlx::query("DELETE FROM mem_tag WHERE mem_id = ?")
-            .bind(mem_id)
+        sqlx::query!("DELETE FROM mem_tag WHERE mem_id = ?1", mem_id)
             .execute(&mut *tx)
             .await?;
         // 插入新的
         for &tag_id in tag_ids {
-            sqlx::query("INSERT OR IGNORE INTO mem_tag (mem_id, tag_id) VALUES (?, ?)")
-                .bind(mem_id)
-                .bind(tag_id)
-                .execute(&mut *tx)
-                .await?;
+            sqlx::query!(
+                "INSERT OR IGNORE INTO mem_tag (mem_id, tag_id) VALUES (?1, ?2)",
+                mem_id,
+                tag_id
+            )
+            .execute(&mut *tx)
+            .await?;
         }
         tx.commit().await?;
         // 清理孤儿标签
@@ -845,62 +906,64 @@ impl MemRepo {
     }
 
     pub async fn get_mnemonic(&self, mem_id: i32) -> Result<Option<String>, sqlx::Error> {
-        sqlx::query_scalar::<_, String>("SELECT content FROM mem_mnemonic WHERE mem_id = ?")
-            .bind(mem_id)
+        sqlx::query_scalar!("SELECT content FROM mem_mnemonic WHERE mem_id = ?1", mem_id)
             .fetch_optional(&*self.pool)
             .await
     }
 
     pub async fn upsert_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), sqlx::Error> {
-        sqlx::query(
+        sqlx::query!(
             r#"
             INSERT INTO mem_mnemonic (mem_id, content)
-            VALUES (?, ?)
+            VALUES (?1, ?2)
             ON CONFLICT(mem_id) DO UPDATE SET content = excluded.content
             "#,
+            mem_id,
+            content
         )
-        .bind(mem_id)
-        .bind(content)
         .execute(&*self.pool)
         .await?;
         Ok(())
     }
 
     pub async fn reset_mem(&self, id: i32) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?"
-        ).bind(id).execute(&*self.pool).await?;
+        sqlx::query!(
+            "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?1",
+            id
+        )
+        .execute(&*self.pool)
+        .await?;
         Ok(())
     }
 
     // ── Revlog methods (moved from service.rs direct SQL) ──
 
     pub async fn insert_revlog(&self, params: &InsertRevlogParams) -> Result<(), sqlx::Error> {
-        sqlx::query(
+        sqlx::query!(
             r#"
             INSERT INTO revlog (mem_id, review_time, rating, delta_t,
                 stability_before, difficulty_before, state_before,
                 stability_after, difficulty_after, state_after)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
             "#,
+            params.mem_id,
+            params.review_time.as_str(),
+            params.rating as i32,
+            params.delta_t,
+            params.stability_before,
+            params.difficulty_before,
+            params.state_before.as_str(),
+            params.stability_after,
+            params.difficulty_after,
+            params.state_after.as_str()
         )
-        .bind(params.mem_id)
-        .bind(&params.review_time)
-        .bind(params.rating as i32)
-        .bind(params.delta_t)
-        .bind(params.stability_before)
-        .bind(params.difficulty_before)
-        .bind(&params.state_before)
-        .bind(params.stability_after)
-        .bind(params.difficulty_after)
-        .bind(&params.state_after)
         .execute(&*self.pool)
         .await?;
         Ok(())
     }
 
     pub async fn count_revlogs(&self) -> Result<i64, sqlx::Error> {
-        sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
+        sqlx::query_scalar!("SELECT COUNT(*) FROM revlog")
             .fetch_one(&*self.pool)
             .await
     }
@@ -909,7 +972,7 @@ impl MemRepo {
         const MAX_REVLOGS: i64 = 2000;
         const TARGET_REVLOGS: i64 = 1600;
 
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog")
+        let count: i64 = sqlx::query_scalar!("SELECT COUNT(*) FROM revlog")
             .fetch_one(&*self.pool)
             .await?;
         if count <= MAX_REVLOGS {
@@ -924,17 +987,17 @@ impl MemRepo {
             to_delete
         );
 
-        sqlx::query(
-            "DELETE FROM revlog WHERE id IN (SELECT id FROM revlog ORDER BY id ASC LIMIT ?)",
+        sqlx::query!(
+            "DELETE FROM revlog WHERE id IN (SELECT id FROM revlog ORDER BY id ASC LIMIT ?1)",
+            to_delete
         )
-        .bind(to_delete)
         .execute(&*self.pool)
         .await?;
         Ok(())
     }
 
     pub async fn count_relearning(&self) -> Result<i64, sqlx::Error> {
-        sqlx::query_scalar("SELECT COUNT(*) FROM mem WHERE state = 'relearning' AND buried = 0")
+        sqlx::query_scalar!("SELECT COUNT(*) FROM mem WHERE state = 'relearning' AND buried = 0")
             .fetch_one(&*self.pool)
             .await
     }

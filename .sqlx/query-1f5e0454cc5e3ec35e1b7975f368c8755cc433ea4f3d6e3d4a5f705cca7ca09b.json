@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT tag_id AS \"tag_id: i32\" FROM mem_tag WHERE mem_id = ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "tag_id: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "mem_tag",
+            "name": "tag_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1f5e0454cc5e3ec35e1b7975f368c8755cc433ea4f3d6e3d4a5f705cca7ca09b"
+}

@@ -2,6 +2,8 @@ use chrono::Utc;
 use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
+use crate::shared::db_query::like_contains;
+
 use super::model::Card;
 
 /// Card 数据访问层
@@ -126,7 +128,8 @@ impl CardRepository {
                 count_builder.push(" OR ");
             }
             count_builder.push("content LIKE ");
-            count_builder.push_bind(format!("%{}%", kw));
+            count_builder.push_bind(like_contains(kw));
+            count_builder.push(" ESCAPE '\\'");
         }
         let total: i64 = count_builder
             .build_query_scalar()
@@ -141,7 +144,8 @@ impl CardRepository {
                 fetch_builder.push(" OR ");
             }
             fetch_builder.push("content LIKE ");
-            fetch_builder.push_bind(format!("%{}%", kw));
+            fetch_builder.push_bind(like_contains(kw));
+            fetch_builder.push(" ESCAPE '\\'");
         }
         fetch_builder.push(" ORDER BY (");
         // 评分：每个关键词命中的加 1
@@ -150,8 +154,8 @@ impl CardRepository {
                 fetch_builder.push(" + ");
             }
             fetch_builder.push("CASE WHEN content LIKE ");
-            fetch_builder.push_bind(format!("%{}%", kw));
-            fetch_builder.push(" THEN 1 ELSE 0 END");
+            fetch_builder.push_bind(like_contains(kw));
+            fetch_builder.push(" ESCAPE '\\' THEN 1 ELSE 0 END");
         }
         fetch_builder.push(") DESC, updated_at DESC LIMIT ");
         fetch_builder.push_bind(limit);

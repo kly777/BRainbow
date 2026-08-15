@@ -46,6 +46,28 @@ impl<DB: Database> QueryBuilderExt<DB> for QueryBuilder<DB> {
     }
 }
 
+// ── LIKE 模式转义 ──
+
+/// 把用户输入转义为 LIKE 的字面量片段（`\`、`%`、`_` 前加反斜杠）。
+///
+/// 仅在 SQL 中配合 `ESCAPE '\'` 使用；`%` 前后缀由调用方自行拼接。
+/// 不转义时用户输入中的 `%`/`_` 会被 SQLite 当作通配符。
+pub fn escape_like(needle: &str) -> String {
+    let mut escaped = String::with_capacity(needle.len());
+    for c in needle.chars() {
+        if matches!(c, '\\' | '%' | '_') {
+            escaped.push('\\');
+        }
+        escaped.push(c);
+    }
+    escaped
+}
+
+/// 生成 `%escaped%` 子串匹配模式（配合 `LIKE ? ESCAPE '\'` 使用）。
+pub fn like_contains(needle: &str) -> String {
+    format!("%{}%", escape_like(needle))
+}
+
 // ── 表名家化 ──
 
 /// 校验表名只含合法字符（字母、数字、下划线）。
@@ -98,5 +120,56 @@ mod tests {
     fn sanitize_underscore_allowed() {
         assert_eq!(sanitize_table_name("_").unwrap(), "_");
         assert_eq!(sanitize_table_name("a_b_c").unwrap(), "a_b_c");
+    }
+
+    // ── escape_like / like_contains ──
+
+    #[test]
+    fn escape_like_escapes_wildcards_and_backslash() {
+        assert_eq!(escape_like("50%"), "50\\%");
+        assert_eq!(escape_like("a_b"), "a\\_b");
+        assert_eq!(escape_like(r"a\b"), r"a\\b");
+        assert_eq!(escape_like("normal"), "normal");
+    }
+
+    #[test]
+    fn like_contains_wraps_escaped_needle() {
+        assert_eq!(like_contains("50%"), "%50\\%%");
+        assert_eq!(like_contains("a_b"), "%a\\_b%");
+        assert_eq!(like_contains(""), "%%");
+    }
+
+    #[tokio::test]
+    async fn escaped_pattern_matches_only_literal_wildcard_chars() {
+        let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE t (s TEXT NOT NULL)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        for s in ["50% off", "500 off", "a_b", "aXb"] {
+            sqlx::query("INSERT INTO t (s) VALUES (?)")
+                .bind(s)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+
+        let rows: Vec<String> = sqlx::query_scalar(
+            "SELECT s FROM t WHERE s LIKE ? ESCAPE '\\' ORDER BY s",
+        )
+        .bind(like_contains("50%"))
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(rows, vec!["50% off".to_string()]);
+
+        let rows: Vec<String> = sqlx::query_scalar(
+            "SELECT s FROM t WHERE s LIKE ? ESCAPE '\\' ORDER BY s",
+        )
+        .bind(like_contains("a_b"))
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(rows, vec!["a_b".to_string()]);
     }
 }

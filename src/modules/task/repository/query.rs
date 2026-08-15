@@ -1,6 +1,8 @@
 use chrono::{DateTime, Utc};
 use sqlx::{QueryBuilder, Row};
 
+use crate::shared::db_query::like_contains;
+
 use super::super::dto::TaskDetailResponse;
 use super::super::model::{Task, TaskStatus, TimeWindow, TimeWindowType};
 use super::TaskRepository;
@@ -101,15 +103,16 @@ impl TaskRepository {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Task>, i64), sqlx::Error> {
-        let pattern = format!("%{}%", query);
-        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE title LIKE ?")
-            .bind(&pattern)
-            .fetch_one(&*self.db)
-            .await?;
+        let pattern = like_contains(query);
+        let total: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM task WHERE title LIKE ? ESCAPE '\\'")
+                .bind(&pattern)
+                .fetch_one(&*self.db)
+                .await?;
         let items = sqlx::query_as::<_, Task>(
             "SELECT id, title, description, parent_task_id, status, completed_at,
             effort_estimate_minutes, created_at, updated_at
-            FROM task WHERE title LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            FROM task WHERE title LIKE ? ESCAPE '\\' ORDER BY created_at DESC LIMIT ? OFFSET ?",
         )
         .bind(&pattern)
         .bind(limit)

@@ -2,6 +2,7 @@ use sqlx::SqlitePool;
 
 use super::model::{ArticleItem, ConvDetail, SearchResponse};
 use super::scoring;
+use crate::shared::db_query::like_contains;
 use crate::shared::error_types::ServiceError;
 
 /// 查询侧服务——纯读取，无副作用。
@@ -93,7 +94,7 @@ impl ConvQueryService {
 }
 
 async fn compute_idf(pool: &SqlitePool, kw: &str) -> f64 {
-    let pattern = format!("%{}%", kw);
+    let pattern = like_contains(kw);
     let total: (i64,) = sqlx::query_as(
         "SELECT (SELECT count(*) FROM conv_titles) + (SELECT count(*) FROM articles)",
     )
@@ -101,7 +102,8 @@ async fn compute_idf(pool: &SqlitePool, kw: &str) -> f64 {
     .await
     .unwrap_or((1,));
     let matched: (i64,) = sqlx::query_as(
-        "SELECT (SELECT count(*) FROM conv_titles WHERE title LIKE ?1) + (SELECT count(*) FROM articles WHERE title LIKE ?1 OR content LIKE ?1)"
+        "SELECT (SELECT count(*) FROM conv_titles WHERE title LIKE ?1 ESCAPE '\\') \
+         + (SELECT count(*) FROM articles WHERE title LIKE ?1 ESCAPE '\\' OR content LIKE ?1 ESCAPE '\\')"
     ).bind(&pattern).fetch_one(pool).await.unwrap_or((1,));
     (total.0 as f64 / matched.0.max(1) as f64).ln()
 }
@@ -144,9 +146,9 @@ pub async fn search_conv(
     // 1. 标题匹配
     if search_titles {
         for (ki, kw) in keywords.iter().enumerate() {
-            let pattern = format!("%{}%", kw);
+            let pattern = like_contains(kw);
             let rows: Vec<(i64, String, String, String)> = sqlx::query_as(
-                "SELECT conv_id, title, conv_type, created_at FROM conv_titles WHERE title LIKE ?1 LIMIT 200"
+                "SELECT conv_id, title, conv_type, created_at FROM conv_titles WHERE title LIKE ?1 ESCAPE '\\' LIMIT 200"
             ).bind(&pattern).fetch_all(pool).await?;
             for (cid, title, ctype, created) in rows {
                 let occ = scoring::count_occurrences(&title, kw);
@@ -170,9 +172,9 @@ pub async fn search_conv(
     // 2. 文章匹配
     if search_articles {
         for (ki, kw) in keywords.iter().enumerate() {
-            let pattern = format!("%{}%", kw);
+            let pattern = like_contains(kw);
             let rows: Vec<(i64, String, String, String, String)> = sqlx::query_as(
-                "SELECT conv_id, article_type, title, COALESCE(content,''), created_at FROM articles WHERE title LIKE ?1 OR content LIKE ?1 LIMIT 200"
+                "SELECT conv_id, article_type, title, COALESCE(content,''), created_at FROM articles WHERE title LIKE ?1 ESCAPE '\\' OR content LIKE ?1 ESCAPE '\\' LIMIT 200"
             ).bind(&pattern).fetch_all(pool).await?;
             for (cid, atype, art_title, content, created) in rows {
                 let text = format!("{} {}", art_title, content);

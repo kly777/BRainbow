@@ -1,5 +1,6 @@
 use sqlx::SqlitePool;
 
+use crate::shared::db_query::like_contains;
 use crate::shared::error_types::ServiceError;
 
 use super::model::{SearchHit, SearchResponse};
@@ -22,7 +23,7 @@ impl ChatQueryService {
         q: &str,
         limit: i64,
     ) -> Result<SearchResponse, ServiceError> {
-        let kw = format!("%{}%", q.trim());
+        let kw = like_contains(q.trim());
         let limit = limit.clamp(1, 100);
 
         // 1. 命中节点（消息内容）
@@ -30,7 +31,7 @@ impl ChatQueryService {
             "SELECT n.tree_id, t.title, n.id, n.role, n.content, n.created_at
              FROM chat_node n
              JOIN chat_tree t ON t.id = n.tree_id
-             WHERE t.user_id = ?1 AND n.content LIKE ?2
+             WHERE t.user_id = ?1 AND n.content LIKE ?2 ESCAPE '\\'
              ORDER BY n.id DESC LIMIT ?3",
         )
         .bind(user_id)
@@ -57,7 +58,7 @@ impl ChatQueryService {
         if (hits.len() as i64) < limit {
             let title_hits: Vec<(i64, String, String)> = sqlx::query_as(
                 "SELECT id, title, updated_at FROM chat_tree
-                 WHERE user_id = ?1 AND title LIKE ?2
+                 WHERE user_id = ?1 AND title LIKE ?2 ESCAPE '\\'
                  ORDER BY updated_at DESC LIMIT ?3",
             )
             .bind(user_id)

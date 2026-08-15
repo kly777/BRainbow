@@ -1,6 +1,8 @@
 use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
+use crate::shared::db_query::like_contains;
+
 use super::model::{
     Chunk, FsrsUpdate, InsertRevlogParams, MemQuery, MemRow, MemTagRow, MemWithChunks, TagInfo,
 };
@@ -182,14 +184,14 @@ impl MemRepo {
         if let Some(ref q) = query.q
             && !q.trim().is_empty()
         {
-            let pattern = format!("%{}%", q.trim());
+            let pattern = like_contains(q.trim());
             qb.push(" AND (cc.content LIKE ");
             qb.push_bind(&pattern);
-            qb.push(" OR ct.content LIKE ");
+            qb.push(" ESCAPE '\\' OR ct.content LIKE ");
             qb.push_bind(&pattern);
-            qb.push(" OR EXISTS (SELECT 1 FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id AND t.name LIKE ");
+            qb.push(" ESCAPE '\\' OR EXISTS (SELECT 1 FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id AND t.name LIKE ");
             qb.push_bind(pattern);
-            qb.push("))");
+            qb.push(" ESCAPE '\\'))");
         }
 
         // 标签过滤
@@ -276,14 +278,14 @@ impl MemRepo {
         if let Some(ref q) = query.q
             && !q.trim().is_empty()
         {
-            let pattern = format!("%{}%", q.trim());
+            let pattern = like_contains(q.trim());
             qb.push(" AND (cc.content LIKE ");
             qb.push_bind(&pattern);
-            qb.push(" OR ct.content LIKE ");
+            qb.push(" ESCAPE '\\' OR ct.content LIKE ");
             qb.push_bind(&pattern);
-            qb.push(" OR EXISTS (SELECT 1 FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id AND t.name LIKE ");
+            qb.push(" ESCAPE '\\' OR EXISTS (SELECT 1 FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id AND t.name LIKE ");
             qb.push_bind(pattern);
-            qb.push("))");
+            qb.push(" ESCAPE '\\'))");
         }
 
         // 标签过滤
@@ -684,10 +686,10 @@ impl MemRepo {
             return Ok(vec![]);
         }
         let rows = sqlx::query_as::<_, TagRow>(
-            "SELECT id, name, created_at FROM tag WHERE user_id = ? AND name LIKE ? ORDER BY name LIMIT 20"
+            "SELECT id, name, created_at FROM tag WHERE user_id = ? AND name LIKE ? ESCAPE '\\' ORDER BY name LIMIT 20"
         )
         .bind(user_id)
-        .bind(format!("%{}%", q))
+        .bind(like_contains(q))
         .fetch_all(&*self.pool)
         .await?;
         Ok(rows

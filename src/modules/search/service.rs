@@ -1,5 +1,6 @@
 use sqlx::SqlitePool;
 
+use crate::shared::db_query::like_contains;
 use crate::shared::error_types::ServiceError;
 
 use super::model::{SearchHit, SearchResponse};
@@ -29,7 +30,7 @@ impl SearchQueryService {
             return Ok(SearchResponse { hits: Vec::new() });
         }
         let cap = limit.clamp(1, 20);
-        let like = format!("%{kw}%");
+        let like = like_contains(kw);
 
         let (mem, card, task, bookmark, onto, text, reading, conv, chat) = tokio::join!(
             self.search_mem(user_id, &like, kw, cap),
@@ -59,11 +60,11 @@ impl SearchQueryService {
     ) -> Result<Vec<SearchHit>, ServiceError> {
         // 线索（cue）命中优先于答案（target）命中
         let rows: Vec<(i64, String, String, bool)> = sqlx::query_as(
-            "SELECT m.id, c1.content, c2.content, c1.content LIKE ?1 AS cue_hit
+            "SELECT m.id, c1.content, c2.content, c1.content LIKE ?1 ESCAPE '\\' AS cue_hit
              FROM mem m
              JOIN chunk c1 ON c1.id = m.cue_chunk_id
              JOIN chunk c2 ON c2.id = m.target_chunk_id
-             WHERE c1.content LIKE ?1 OR c2.content LIKE ?1
+             WHERE c1.content LIKE ?1 ESCAPE '\\' OR c2.content LIKE ?1 ESCAPE '\\'
              ORDER BY cue_hit DESC, m.id DESC LIMIT ?2",
         )
         .bind(like)
@@ -91,7 +92,7 @@ impl SearchQueryService {
     ) -> Result<Vec<SearchHit>, ServiceError> {
         let rows: Vec<(i64, String)> = sqlx::query_as(
             "SELECT id, content FROM card
-             WHERE (user_id = ?1 OR user_id IS NULL) AND content LIKE ?2
+             WHERE (user_id = ?1 OR user_id IS NULL) AND content LIKE ?2 ESCAPE '\\'
              ORDER BY id DESC LIMIT ?3",
         )
         .bind(user_id)
@@ -120,10 +121,10 @@ impl SearchQueryService {
     ) -> Result<Vec<SearchHit>, ServiceError> {
         // 标题命中优先于描述命中
         let rows: Vec<(i64, String, Option<String>, bool)> = sqlx::query_as(
-            "SELECT id, title, description, title LIKE ?2 AS title_hit
+            "SELECT id, title, description, title LIKE ?2 ESCAPE '\\' AS title_hit
              FROM task
              WHERE (user_id = ?1 OR user_id IS NULL)
-               AND (title LIKE ?2 OR description LIKE ?2)
+               AND (title LIKE ?2 ESCAPE '\\' OR description LIKE ?2 ESCAPE '\\')
              ORDER BY title_hit DESC, id DESC LIMIT ?3",
         )
         .bind(user_id)
@@ -151,9 +152,9 @@ impl SearchQueryService {
     ) -> Result<Vec<SearchHit>, ServiceError> {
         // 标题命中优先于 URL/描述命中
         let rows: Vec<(i64, String, String, String, bool)> = sqlx::query_as(
-            "SELECT id, title, url, description, title LIKE ?1 AS title_hit
+            "SELECT id, title, url, description, title LIKE ?1 ESCAPE '\\' AS title_hit
              FROM bookmark
-             WHERE title LIKE ?1 OR url LIKE ?1 OR description LIKE ?1
+             WHERE title LIKE ?1 ESCAPE '\\' OR url LIKE ?1 ESCAPE '\\' OR description LIKE ?1 ESCAPE '\\'
              ORDER BY title_hit DESC, id DESC LIMIT ?2",
         )
         .bind(like)
@@ -184,7 +185,7 @@ impl SearchQueryService {
     ) -> Result<Vec<SearchHit>, ServiceError> {
         let rows: Vec<(i64, String, Option<String>)> = sqlx::query_as(
             "SELECT id, name, description FROM onto
-             WHERE name LIKE ?1 OR description LIKE ?1
+             WHERE name LIKE ?1 ESCAPE '\\' OR description LIKE ?1 ESCAPE '\\'
              ORDER BY id DESC LIMIT ?2",
         )
         .bind(like)
@@ -211,7 +212,7 @@ impl SearchQueryService {
     ) -> Result<Vec<SearchHit>, ServiceError> {
         let rows: Vec<(i64, String, String)> = sqlx::query_as(
             "SELECT id, name, content FROM text_note
-             WHERE name LIKE ?1 OR content LIKE ?1
+             WHERE name LIKE ?1 ESCAPE '\\' OR content LIKE ?1 ESCAPE '\\'
              ORDER BY id DESC LIMIT ?2",
         )
         .bind(like)
@@ -239,9 +240,9 @@ impl SearchQueryService {
         // 标题命中优先于正文命中，避免常见词把正文命中淹没列表
         // 注意：阅读模块的表是 reading_article（conv 模块的 articles 是另一张表）
         let rows: Vec<(i64, String, String, bool)> = sqlx::query_as(
-            "SELECT id, title, content, title LIKE ?1 AS title_hit
+            "SELECT id, title, content, title LIKE ?1 ESCAPE '\\' AS title_hit
              FROM reading_article
-             WHERE title LIKE ?1 OR content LIKE ?1
+             WHERE title LIKE ?1 ESCAPE '\\' OR content LIKE ?1 ESCAPE '\\'
              ORDER BY title_hit DESC, id DESC LIMIT ?2",
         )
         .bind(like)
@@ -268,7 +269,7 @@ impl SearchQueryService {
     ) -> Result<Vec<SearchHit>, ServiceError> {
         let rows: Vec<(i64, String)> = sqlx::query_as(
             "SELECT conv_id, title FROM conv_titles
-             WHERE title LIKE ?1
+             WHERE title LIKE ?1 ESCAPE '\\'
              ORDER BY conv_id DESC LIMIT ?2",
         )
         .bind(like)
@@ -298,7 +299,7 @@ impl SearchQueryService {
         // 树标题命中优先
         let title_hits: Vec<(i64, String)> = sqlx::query_as(
             "SELECT id, title FROM chat_tree
-             WHERE (user_id = ?1 OR user_id IS NULL) AND title LIKE ?2
+             WHERE (user_id = ?1 OR user_id IS NULL) AND title LIKE ?2 ESCAPE '\\'
              ORDER BY id DESC LIMIT ?3",
         )
         .bind(user_id)
@@ -312,7 +313,7 @@ impl SearchQueryService {
         let node_hits: Vec<(i64, i64, String, String)> = sqlx::query_as(
             "SELECT n.id, t.id, t.title, n.content
              FROM chat_node n JOIN chat_tree t ON t.id = n.tree_id
-             WHERE (t.user_id = ?1 OR t.user_id IS NULL) AND n.content LIKE ?2
+             WHERE (t.user_id = ?1 OR t.user_id IS NULL) AND n.content LIKE ?2 ESCAPE '\\'
              ORDER BY n.id DESC LIMIT ?3",
         )
         .bind(user_id)

@@ -2,6 +2,8 @@ use chrono::Utc;
 use sqlx::{QueryBuilder, Row, Sqlite, SqlitePool};
 use std::sync::Arc;
 
+use crate::shared::db_query::like_contains;
+
 use super::model::{Bookmark, BookmarkRow, BookmarkTag, BookmarkTagWithCount};
 
 /// 书签行公共 SELECT（含聚合标签子查询，按名称排序保证与 get_bookmark_tags 一致）
@@ -242,12 +244,12 @@ impl BookmarkRepo {
                 fetch_builder.push(" + ");
             }
             fetch_builder.push("CASE WHEN title LIKE ");
-            fetch_builder.push_bind(format!("%{}%", kw));
-            fetch_builder.push(" OR url LIKE ");
-            fetch_builder.push_bind(format!("%{}%", kw));
-            fetch_builder.push(" OR description LIKE ");
-            fetch_builder.push_bind(format!("%{}%", kw));
-            fetch_builder.push(" THEN 1 ELSE 0 END");
+            fetch_builder.push_bind(like_contains(kw));
+            fetch_builder.push(" ESCAPE '\\' OR url LIKE ");
+            fetch_builder.push_bind(like_contains(kw));
+            fetch_builder.push(" ESCAPE '\\' OR description LIKE ");
+            fetch_builder.push_bind(like_contains(kw));
+            fetch_builder.push(" ESCAPE '\\' THEN 1 ELSE 0 END");
         }
         fetch_builder.push(") DESC, created_at DESC LIMIT ");
         fetch_builder.push_bind(limit);
@@ -270,12 +272,12 @@ impl BookmarkRepo {
                 builder.push(" OR ");
             }
             builder.push("(title LIKE ");
-            builder.push_bind(format!("%{}%", kw));
-            builder.push(" OR url LIKE ");
-            builder.push_bind(format!("%{}%", kw));
-            builder.push(" OR description LIKE ");
-            builder.push_bind(format!("%{}%", kw));
-            builder.push(")");
+            builder.push_bind(like_contains(kw));
+            builder.push(" ESCAPE '\\' OR url LIKE ");
+            builder.push_bind(like_contains(kw));
+            builder.push(" ESCAPE '\\' OR description LIKE ");
+            builder.push_bind(like_contains(kw));
+            builder.push(" ESCAPE '\\')");
         }
     }
 
@@ -302,11 +304,11 @@ impl BookmarkRepo {
                 "SELECT t.id, t.name, COUNT(r.bookmark_id) AS count \
                  FROM bookmark_tag t \
                  LEFT JOIN bookmark_tag_rel r ON r.tag_id = t.id \
-                 WHERE t.name LIKE ? \
+                 WHERE t.name LIKE ? ESCAPE '\\' \
                  GROUP BY t.id, t.name \
                  ORDER BY count DESC, t.name",
             )
-            .bind(format!("%{}%", q))
+            .bind(like_contains(q))
             .fetch_all(&*self.pool)
             .await?
         };

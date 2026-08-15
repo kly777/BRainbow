@@ -33,6 +33,9 @@ interface CacheEntry {
 
 const store = new Map<string, CacheEntry>();
 
+/** 缓存条目上限：无限分页/搜索会产生无限 key，超出后按插入顺序淘汰最旧条目 */
+const MAX_ENTRIES = 200;
+
 // ── 缓存键前缀匹配模式（供 invalidateCache 使用） ──
 
 /** 预定义的缓存失效模式，按 API 领域划分 */
@@ -79,10 +82,18 @@ export function readCache<T>(
 }
 
 /**
- * 写入缓存。
+ * 写入缓存；超过 MAX_ENTRIES 时淘汰最早插入的条目，防止 Map 无界增长。
  */
 export function writeCache(key: string, data: unknown): void {
 	store.set(key, { data, fetchedAt: Date.now() });
+	if (store.size <= MAX_ENTRIES) return;
+	const excess = store.size - MAX_ENTRIES;
+	let removed = 0;
+	for (const oldest of store.keys()) {
+		if (removed >= excess) break;
+		store.delete(oldest);
+		removed += 1;
+	}
 }
 
 /**

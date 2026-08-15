@@ -1,0 +1,33 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT type AS \"time_type!: String\", COUNT(*) AS \"count!: i64\"\n               FROM time_window WHERE task_id = ? GROUP BY type ORDER BY type",
+  "describe": {
+    "columns": [
+      {
+        "name": "time_type!: String",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "time_window",
+            "name": "type"
+          }
+        }
+      },
+      {
+        "name": "count!: i64",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "cadce9f6d0cc01c1c459b3a668fcd0d4d2b30e814a01f26c577324a05c9c3731"
+}

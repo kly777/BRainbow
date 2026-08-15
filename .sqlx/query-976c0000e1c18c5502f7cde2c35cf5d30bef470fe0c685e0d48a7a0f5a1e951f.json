@@ -1,0 +1,35 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT MIN(start_time) AS \"earliest?: chrono::DateTime<chrono::Utc>\",\n                      MAX(end_time) AS \"latest?: chrono::DateTime<chrono::Utc>\",\n                      COUNT(*) AS \"count!: i64\"\n               FROM time_window WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "earliest?: chrono::DateTime<chrono::Utc>",
+        "ordinal": 0,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      },
+      {
+        "name": "latest?: chrono::DateTime<chrono::Utc>",
+        "ordinal": 1,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      },
+      {
+        "name": "count!: i64",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "976c0000e1c18c5502f7cde2c35cf5d30bef470fe0c685e0d48a7a0f5a1e951f"
+}

@@ -31,6 +31,8 @@ impl TimeWindowType {
         }
     }
 
+    /// 生产侧已由 query_as! 直接 decode；保留给测试/外部调用
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "feasible" => Some(TimeWindowType::Feasible),

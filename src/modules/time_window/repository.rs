@@ -6,6 +6,19 @@ use crate::shared::db_query::QueryBuilderExt;
 
 use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTimeWindowRequest};
 
+#[derive(sqlx::FromRow)]
+struct TimeStatsRow {
+    earliest: Option<DateTime<Utc>>,
+    latest: Option<DateTime<Utc>>,
+    count: i64,
+}
+
+#[derive(sqlx::FromRow)]
+struct TypeCountRow {
+    time_type: String,
+    count: i64,
+}
+
 /// TimeWindow 数据访问层
 #[derive(Clone)]
 pub struct TimeWindowRepository {
@@ -40,69 +53,56 @@ impl TimeWindowRepository {
             .and_then(|rule| rule.by_weekdays.as_ref())
             .and_then(|days| serde_json::to_string(days).ok());
 
-        let result = sqlx::query(
-            "INSERT INTO time_window (start_time, end_time, type, task_id,
- user_id, recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            RETURNING id, start_time, end_time, type, task_id, user_id, recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays"
+        let row = sqlx::query_as!(
+            TimeWindow,
+            r#"INSERT INTO time_window (start_time, end_time, type, task_id,
+                       user_id, recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+               RETURNING id AS "id!: i32",
+                         start_time AS "start_time!: chrono::DateTime<chrono::Utc>",
+                         end_time AS "end_time!: chrono::DateTime<chrono::Utc>",
+                         type AS "window_type!: crate::modules::time_window::TimeWindowType",
+                         task_id AS "task_id!: i32",
+                         user_id AS "user_id?: i32",
+                         recurrence_freq AS "recurrence_freq?: crate::modules::time_window::RecurrenceFrequency",
+                         recurrence_interval AS "recurrence_interval?: i32",
+                         recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
+                         recurrence_by_weekdays"#,
+            request.start_time,
+            request.end_time,
+            request.window_type.as_str(),
+            request.task_id,
+            request.user_id,
+            recurrence_freq,
+            recurrence_interval,
+            recurrence_until,
+            recurrence_by_weekdays
         )
-            .bind(request.start_time)
-            .bind(request.end_time)
-            .bind(request.window_type.as_str())
-            .bind(request.task_id)
-            .bind(request.user_id)
-            .bind(recurrence_freq)
-            .bind(recurrence_interval)
-            .bind(recurrence_until)
-            .bind(recurrence_by_weekdays)
-            .fetch_one(&*self.db)
-            .await?;
+        .fetch_one(&*self.db)
+        .await?;
 
-        Ok(TimeWindow {
-            id: result.try_get("id")?,
-            start_time: result.try_get("start_time")?,
-            end_time: result.try_get("end_time")?,
-            window_type: TimeWindowType::from_str(&result.try_get::<String, _>("type")?)
-                .unwrap_or(TimeWindowType::Feasible),
-            task_id: result.try_get("task_id")?,
-            user_id: result.try_get("user_id")?,
-            recurrence_freq: result.try_get("recurrence_freq")?,
-            recurrence_interval: result.try_get("recurrence_interval")?,
-            recurrence_until: result.try_get("recurrence_until")?,
-            recurrence_by_weekdays: result.try_get("recurrence_by_weekdays")?,
-        })
+        Ok(row)
     }
 
     /// 根据ID获取时间窗口
     pub async fn find_by_id(&self, id: i32) -> Result<Option<TimeWindow>, sqlx::Error> {
-        let result = sqlx::query(
-            "SELECT id, start_time, end_time, type, task_id, user_id, recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays
-             FROM time_window WHERE id = ?"
+        sqlx::query_as!(
+            TimeWindow,
+            r#"SELECT id AS "id: i32",
+                      start_time AS "start_time!: chrono::DateTime<chrono::Utc>",
+                      end_time AS "end_time!: chrono::DateTime<chrono::Utc>",
+                      type AS "window_type!: crate::modules::time_window::TimeWindowType",
+                      task_id AS "task_id: i32",
+                      user_id AS "user_id?: i32",
+                      recurrence_freq AS "recurrence_freq?: crate::modules::time_window::RecurrenceFrequency",
+                      recurrence_interval AS "recurrence_interval?: i32",
+                      recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
+                      recurrence_by_weekdays
+               FROM time_window WHERE id = ?"#,
+            id
         )
-            .bind(id)
-            .fetch_optional(&*self.db)
-            .await?;
-
-        match result {
-            Some(row) => {
-                let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?)
-                    .unwrap_or(TimeWindowType::Feasible);
-
-                Ok(Some(TimeWindow {
-                    id: row.try_get("id")?,
-                    start_time: row.try_get("start_time")?,
-                    end_time: row.try_get("end_time")?,
-                    window_type,
-                    task_id: row.try_get("task_id")?,
-                    user_id: row.try_get("user_id")?,
-                    recurrence_freq: row.try_get("recurrence_freq")?,
-                    recurrence_interval: row.try_get("recurrence_interval")?,
-                    recurrence_until: row.try_get("recurrence_until")?,
-                    recurrence_by_weekdays: row.try_get("recurrence_by_weekdays")?,
-                }))
-            }
-            None => Ok(None),
-        }
+        .fetch_optional(&*self.db)
+        .await
     }
 
     /// 根据任务ID获取时间窗口（分页）
@@ -112,19 +112,32 @@ impl TimeWindowRepository {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<TimeWindow>, i64), sqlx::Error> {
-        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM time_window WHERE task_id = ?")
-            .bind(task_id)
-            .fetch_one(&*self.db)
-            .await?;
-        let results = sqlx::query(
-            "SELECT id, start_time, end_time, type, task_id, user_id, recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays FROM time_window WHERE task_id = ? ORDER BY start_time LIMIT ? OFFSET ?",
+        let total: i64 = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM time_window WHERE task_id = ?",
+            task_id
         )
-        .bind(task_id)
-        .bind(limit)
-        .bind(offset)
+        .fetch_one(&*self.db)
+        .await?;
+        let results = sqlx::query_as!(
+            TimeWindow,
+            r#"SELECT id AS "id: i32",
+                      start_time AS "start_time!: chrono::DateTime<chrono::Utc>",
+                      end_time AS "end_time!: chrono::DateTime<chrono::Utc>",
+                      type AS "window_type!: crate::modules::time_window::TimeWindowType",
+                      task_id AS "task_id: i32",
+                      user_id AS "user_id?: i32",
+                      recurrence_freq AS "recurrence_freq?: crate::modules::time_window::RecurrenceFrequency",
+                      recurrence_interval AS "recurrence_interval?: i32",
+                      recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
+                      recurrence_by_weekdays
+               FROM time_window WHERE task_id = ? ORDER BY start_time LIMIT ? OFFSET ?"#,
+            task_id,
+            limit,
+            offset
+        )
         .fetch_all(&*self.db)
         .await?;
-        Ok((Self::parse_rows(&results)?, total))
+        Ok((results, total))
     }
 
     /// 根据任务ID和时间类型获取时间窗口（分页）
@@ -136,43 +149,34 @@ impl TimeWindowRepository {
         offset: i64,
     ) -> Result<(Vec<TimeWindow>, i64), sqlx::Error> {
         let tp = window_type.as_str();
-        let total: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM time_window WHERE task_id = ? AND type = ?")
-                .bind(task_id)
-                .bind(tp)
-                .fetch_one(&*self.db)
-                .await?;
-        let results = sqlx::query(
-            "SELECT id, start_time, end_time, type, task_id, user_id, recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays FROM time_window WHERE task_id = ? AND type = ? ORDER BY start_time LIMIT ? OFFSET ?",
+        let total: i64 = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM time_window WHERE task_id = ? AND type = ?",
+            task_id,
+            tp
         )
-        .bind(task_id)
-        .bind(tp)
-        .bind(limit)
-        .bind(offset)
+        .fetch_one(&*self.db)
+        .await?;
+        let results = sqlx::query_as!(
+            TimeWindow,
+            r#"SELECT id AS "id: i32",
+                      start_time AS "start_time!: chrono::DateTime<chrono::Utc>",
+                      end_time AS "end_time!: chrono::DateTime<chrono::Utc>",
+                      type AS "window_type!: crate::modules::time_window::TimeWindowType",
+                      task_id AS "task_id: i32",
+                      user_id AS "user_id?: i32",
+                      recurrence_freq AS "recurrence_freq?: crate::modules::time_window::RecurrenceFrequency",
+                      recurrence_interval AS "recurrence_interval?: i32",
+                      recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
+                      recurrence_by_weekdays
+               FROM time_window WHERE task_id = ? AND type = ? ORDER BY start_time LIMIT ? OFFSET ?"#,
+            task_id,
+            tp,
+            limit,
+            offset
+        )
         .fetch_all(&*self.db)
         .await?;
-        Ok((Self::parse_rows(&results)?, total))
-    }
-
-    fn parse_rows(rows: &[sqlx::sqlite::SqliteRow]) -> Result<Vec<TimeWindow>, sqlx::Error> {
-        let mut time_windows = Vec::new();
-        for row in rows {
-            let window_type = TimeWindowType::from_str(&row.try_get::<String, _>("type")?)
-                .unwrap_or(TimeWindowType::Feasible);
-            time_windows.push(TimeWindow {
-                id: row.try_get("id")?,
-                start_time: row.try_get("start_time")?,
-                end_time: row.try_get("end_time")?,
-                window_type,
-                task_id: row.try_get("task_id")?,
-                user_id: row.try_get("user_id")?,
-                recurrence_freq: row.try_get("recurrence_freq")?,
-                recurrence_interval: row.try_get("recurrence_interval")?,
-                recurrence_until: row.try_get("recurrence_until")?,
-                recurrence_by_weekdays: row.try_get("recurrence_by_weekdays")?,
-            });
-        }
-        Ok(time_windows)
+        Ok((results, total))
     }
 
     // 查找在指定时间范围内的时间窗口
@@ -293,46 +297,41 @@ impl TimeWindowRepository {
                 (None, None, None, None)
             };
 
-        let result = sqlx::query(
-            "UPDATE time_window
-             SET start_time = ?, end_time = ?, type = ?, user_id = ?,
-                 recurrence_freq = ?, recurrence_interval = ?, recurrence_until = ?, recurrence_by_weekdays = ?
-             WHERE id = ?
-             RETURNING id, start_time, end_time, type, task_id, user_id, recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays"
+        let row = sqlx::query_as!(
+            TimeWindow,
+            r#"UPDATE time_window
+               SET start_time = ?, end_time = ?, type = ?, user_id = ?,
+                   recurrence_freq = ?, recurrence_interval = ?, recurrence_until = ?, recurrence_by_weekdays = ?
+               WHERE id = ?
+               RETURNING id AS "id!: i32",
+                         start_time AS "start_time!: chrono::DateTime<chrono::Utc>",
+                         end_time AS "end_time!: chrono::DateTime<chrono::Utc>",
+                         type AS "window_type!: crate::modules::time_window::TimeWindowType",
+                         task_id AS "task_id!: i32",
+                         user_id AS "user_id?: i32",
+                         recurrence_freq AS "recurrence_freq?: crate::modules::time_window::RecurrenceFrequency",
+                         recurrence_interval AS "recurrence_interval?: i32",
+                         recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
+                         recurrence_by_weekdays"#,
+            start_time,
+            end_time,
+            window_type.as_str(),
+            user_id,
+            recurrence_freq,
+            recurrence_interval,
+            recurrence_until,
+            recurrence_by_weekdays,
+            id
         )
-        .bind(start_time)
-        .bind(end_time)
-        .bind(window_type.as_str())
-        .bind(user_id)
-        .bind(recurrence_freq)
-        .bind(recurrence_interval)
-        .bind(recurrence_until)
-        .bind(&recurrence_by_weekdays)
-        .bind(id)
         .fetch_one(&*self.db)
         .await?;
 
-        let window_type = TimeWindowType::from_str(&result.try_get::<String, _>("type")?)
-            .unwrap_or(TimeWindowType::Feasible);
-
-        Ok(TimeWindow {
-            id: result.try_get("id")?,
-            start_time: result.try_get("start_time")?,
-            end_time: result.try_get("end_time")?,
-            window_type,
-            task_id: result.try_get("task_id")?,
-            user_id: result.try_get("user_id")?,
-            recurrence_freq: result.try_get("recurrence_freq")?,
-            recurrence_interval: result.try_get("recurrence_interval")?,
-            recurrence_until: result.try_get("recurrence_until")?,
-            recurrence_by_weekdays: result.try_get("recurrence_by_weekdays")?,
-        })
+        Ok(row)
     }
 
     /// 删除时间窗口
     pub async fn delete(&self, id: i32) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM time_window WHERE id = ?")
-            .bind(id)
+        let result = sqlx::query!("DELETE FROM time_window WHERE id = ?", id)
             .execute(&*self.db)
             .await?;
 
@@ -342,8 +341,7 @@ impl TimeWindowRepository {
     /// 根据任务ID删除所有时间窗口
     #[allow(dead_code)]
     pub async fn delete_by_task_id(&self, task_id: i32) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM time_window WHERE task_id = ?")
-            .bind(task_id)
+        let result = sqlx::query!("DELETE FROM time_window WHERE task_id = ?", task_id)
             .execute(&*self.db)
             .await?;
 
@@ -355,18 +353,18 @@ impl TimeWindowRepository {
         &self,
         task_id: i32,
     ) -> Result<(Option<DateTime<Utc>>, Option<DateTime<Utc>>, i64), sqlx::Error> {
-        let result = sqlx::query(
-            "SELECT MIN(start_time) as earliest, MAX(end_time) as latest, COUNT(*) as count FROM time_window WHERE task_id = ?"
+        let row = sqlx::query_as!(
+            TimeStatsRow,
+            r#"SELECT MIN(start_time) AS "earliest?: chrono::DateTime<chrono::Utc>",
+                      MAX(end_time) AS "latest?: chrono::DateTime<chrono::Utc>",
+                      COUNT(*) AS "count!: i64"
+               FROM time_window WHERE task_id = ?"#,
+            task_id
         )
-            .bind(task_id)
-            .fetch_one(&*self.db)
-            .await?;
+        .fetch_one(&*self.db)
+        .await?;
 
-        Ok((
-            result.try_get("earliest")?,
-            result.try_get("latest")?,
-            result.try_get("count")?,
-        ))
+        Ok((row.earliest, row.latest, row.count))
     }
 
     /// 检查时间窗口是否冲突
@@ -400,21 +398,19 @@ impl TimeWindowRepository {
         &self,
         task_id: i32,
     ) -> Result<Vec<(String, i64)>, sqlx::Error> {
-        let results = sqlx::query(
-            "SELECT type, COUNT(*) as count FROM time_window WHERE task_id = ? GROUP BY type ORDER BY type"
+        let results = sqlx::query_as!(
+            TypeCountRow,
+            r#"SELECT type AS "time_type!: String", COUNT(*) AS "count!: i64"
+               FROM time_window WHERE task_id = ? GROUP BY type ORDER BY type"#,
+            task_id
         )
-            .bind(task_id)
-            .fetch_all(&*self.db)
-            .await?;
+        .fetch_all(&*self.db)
+        .await?;
 
-        let mut stats = Vec::new();
-        for row in results {
-            let time_type: String = row.try_get("type")?;
-            let count: i64 = row.try_get("count")?;
-            stats.push((time_type, count));
-        }
-
-        Ok(stats)
+        Ok(results
+            .into_iter()
+            .map(|r| (r.time_type, r.count))
+            .collect())
     }
 
     /// 获取用户的时间窗口统计
@@ -423,18 +419,18 @@ impl TimeWindowRepository {
         &self,
         user_id: i32,
     ) -> Result<(Option<DateTime<Utc>>, Option<DateTime<Utc>>, i64), sqlx::Error> {
-        let result = sqlx::query(
-            "SELECT MIN(start_time) as earliest, MAX(end_time) as latest, COUNT(*) as count FROM time_window WHERE user_id = ?"
+        let row = sqlx::query_as!(
+            TimeStatsRow,
+            r#"SELECT MIN(start_time) AS "earliest?: chrono::DateTime<chrono::Utc>",
+                      MAX(end_time) AS "latest?: chrono::DateTime<chrono::Utc>",
+                      COUNT(*) AS "count!: i64"
+               FROM time_window WHERE user_id = ?"#,
+            user_id
         )
-            .bind(user_id)
-            .fetch_one(&*self.db)
-            .await?;
+        .fetch_one(&*self.db)
+        .await?;
 
-        Ok((
-            result.try_get("earliest")?,
-            result.try_get("latest")?,
-            result.try_get("count")?,
-        ))
+        Ok((row.earliest, row.latest, row.count))
     }
 }
 

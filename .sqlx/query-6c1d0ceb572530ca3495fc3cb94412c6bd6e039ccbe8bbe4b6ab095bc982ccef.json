@@ -1,0 +1,134 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO time_window (start_time, end_time, type, task_id,\n                       user_id, recurrence_freq, recurrence_interval, recurrence_until, recurrence_by_weekdays)\n               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)\n               RETURNING id AS \"id!: i32\",\n                         start_time AS \"start_time!: chrono::DateTime<chrono::Utc>\",\n                         end_time AS \"end_time!: chrono::DateTime<chrono::Utc>\",\n                         type AS \"window_type!: crate::modules::time_window::TimeWindowType\",\n                         task_id AS \"task_id!: i32\",\n                         user_id AS \"user_id?: i32\",\n                         recurrence_freq AS \"recurrence_freq?: crate::modules::time_window::RecurrenceFrequency\",\n                         recurrence_interval AS \"recurrence_interval?: i32\",\n                         recurrence_until AS \"recurrence_until?: chrono::DateTime<chrono::Utc>\",\n                         recurrence_by_weekdays",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "time_window",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "start_time!: chrono::DateTime<chrono::Utc>",
+        "ordinal": 1,
+        "type_info": "Datetime",
+        "origin": {
+          "Table": {
+            "table": "time_window",
+            "name": "start_time"
+          }
+        }
+      },
+      {
+        "name": "end_time!: chrono::DateTime<chrono::Utc>",
+        "ordinal": 2,
+        "type_info": "Datetime",
+        "origin": {
+          "Table": {
+            "table": "time_window",
+            "name": "end_time"
+          }
+        }
+      },
+      {
+        "name": "window_type!: crate::modules::time_window::TimeWindowType",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "time_window",
+            "name": "type"
+          }
+        }
+      },
+      {
+        "name": "task_id!: i32",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "time_window",
+            "name": "task_id"
+          }
+        }
+      },
+      {
+        "name": "user_id?: i32",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "time_window",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "name": "recurrence_freq?: crate::modules::time_window::RecurrenceFrequency",
+        "ordinal": 6,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "time_window",
+            "name": "recurrence_freq"
+          }
+        }
+      },
+      {
+        "name": "recurrence_interval?: i32",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "time_window",
+            "name": "recurrence_interval"
+          }
+        }
+      },
+      {
+        "name": "recurrence_until?: chrono::DateTime<chrono::Utc>",
+        "ordinal": 8,
+        "type_info": "Datetime",
+        "origin": {
+          "Table": {
+            "table": "time_window",
+            "name": "recurrence_until"
+          }
+        }
+      },
+      {
+        "name": "recurrence_by_weekdays",
+        "ordinal": 9,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "time_window",
+            "name": "recurrence_by_weekdays"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": [
+      null,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "6c1d0ceb572530ca3495fc3cb94412c6bd6e039ccbe8bbe4b6ab095bc982ccef"
+}

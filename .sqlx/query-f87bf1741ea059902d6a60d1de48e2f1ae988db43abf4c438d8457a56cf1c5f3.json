@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM time_window WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "f87bf1741ea059902d6a60d1de48e2f1ae988db43abf4c438d8457a56cf1c5f3"
+}

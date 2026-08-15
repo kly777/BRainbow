@@ -1,7 +1,7 @@
 /* ── 管理员设置页 ── */
 
 .page {
-	max-width: 680px;
+	max-width: var(--page-narrow-max);
 	margin: 0 auto;
 	padding: var(--space-xl) var(--space-lg);
 	display: flex;

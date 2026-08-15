@@ -1,7 +1,7 @@
 /* features/task/TaskManager.css.ts — 由 vanilla-extract 迁移 */
 
 .task-manager {
-	max-width: 1440px;
+	max-width: var(--page-max);
 	margin: 0 auto;
 	padding: var(--space-md) var(--space-lg);
 	display: flex;

@@ -2,7 +2,7 @@
 
 .container {
 	margin: 0 auto;
-	max-width: 1440px;
+	max-width: var(--page-max);
 	padding: var(--space-lg) var(--space-xl) var(--space-xl);
 	display: flex;
 	flex-direction: column;

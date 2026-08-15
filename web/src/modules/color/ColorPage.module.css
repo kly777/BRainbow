@@ -1,7 +1,7 @@
 /* pages/ColorPage.css.ts — 由 vanilla-extract 迁移 */
 
 .page {
-	max-width: 760px;
+	max-width: var(--page-content-max);
 	margin: 0 auto;
 	padding: var(--space-xl);
 }

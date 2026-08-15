@@ -75,7 +75,7 @@
 
 .card-wrap {
 	width: 100%;
-	max-width: 680px;
+	max-width: var(--page-narrow-max);
 	margin-bottom: 6rem;
 	display: flex;
 	flex-direction: column;

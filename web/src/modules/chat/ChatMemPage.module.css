@@ -321,7 +321,7 @@
 	flex-direction: column;
 	gap: var(--space-xl);
 	width: 100%;
-	max-width: 760px;
+	max-width: var(--page-content-max);
 	margin-inline: auto;
 }
 

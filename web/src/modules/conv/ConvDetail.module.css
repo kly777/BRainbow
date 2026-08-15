@@ -1,7 +1,7 @@
 /* features/conv/ConvDetail.css.ts — 由 vanilla-extract 迁移 */
 
 .page {
-	max-width: 900px;
+	max-width: var(--page-text-max);
 	margin: 0 auto;
 	padding: 0;
 	animation: fadeIn 0.2s ease-out;

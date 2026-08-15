@@ -10,6 +10,12 @@
 	--radius-lg: 0.75rem;
 	--radius-xl: 1rem;
 	--radius-full: 999px;
+
+	/* ── 页面宽度档位（统一页面容器节奏） ── */
+	--page-max: 1440px; /* 全幅工作台 */
+	--page-text-max: 900px; /* 长文阅读 / 会话 */
+	--page-content-max: 760px; /* 标准内容页 */
+	--page-narrow-max: 680px; /* 表单 / 学习卡 */
 	--space-2xs: 0.125rem;
 	--space-xs: 0.25rem;
 	--space-sm: 0.5rem;

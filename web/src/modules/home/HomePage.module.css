@@ -7,7 +7,7 @@
 	flex-direction: column;
 	flex: 1;
 	min-height: 0;
-	max-width: 1440px;
+	max-width: var(--page-max);
 }
 
 .module-nav {

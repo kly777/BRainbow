@@ -1,7 +1,7 @@
 /* ReadingList — 英语阅读列表 */
 
 .page {
-	max-width: 900px;
+	max-width: var(--page-text-max);
 	margin: 0 auto;
 	padding: var(--space-lg);
 }

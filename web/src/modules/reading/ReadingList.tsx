@@ -1,6 +1,6 @@
 import { AsyncView, Button, Modal } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
-import { notifyError, tryAsync } from "@lib/utils";
+import { fmtLocal, notifyError, tryAsync } from "@lib/utils";
 import type { ArticleSummary } from "@modules/reading";
 import { listArticles, uploadArticle } from "@modules/reading";
 import { A } from "@solidjs/router";
@@ -99,6 +99,10 @@ export default function ReadingList() {
 				</div>
 			</Modal>
 
+			<p class={styles.sortHint}>
+				按推荐阅读顺序排列：认识率越接近 90% 越靠前，最该读的排在第一张。
+			</p>
+
 			<AsyncView
 				data={articles()?.articles}
 				loading={articles.loading}
@@ -109,12 +113,20 @@ export default function ReadingList() {
 				{(items) => (
 					<div class={styles.list}>
 						<For each={items}>
-							{(a: ArticleSummary) => (
+							{(a: ArticleSummary, i) => (
 								<A
 									href={fillPath(PATHS.readingDetail, a.id)}
 									class={styles.card}
+									classList={{
+										[styles.recommendedCard]: i() === 0,
+									}}
 								>
-									<div class={styles.cardTitle}>{a.title}</div>
+									<div class={styles.cardTitleRow}>
+										<div class={styles.cardTitle}>{a.title}</div>
+										{i() === 0 && (
+											<span class={styles.recommendedTag}>推荐先读</span>
+										)}
+									</div>
 									<div class={styles.cardMeta}>
 										<span>{a.word_count} 词</span>
 										<span
@@ -131,6 +143,9 @@ export default function ReadingList() {
 										</span>
 										<span class={styles.unknownCount}>
 											{a.unknown_word_count} 个不认识
+										</span>
+										<span class={styles.createdAt}>
+											{fmtLocal(a.created_at)}
 										</span>
 									</div>
 									<div class={styles.barOuter}>

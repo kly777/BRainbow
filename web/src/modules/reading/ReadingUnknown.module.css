@@ -38,27 +38,22 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-2xs);
+	min-width: 0;
+	margin-right: var(--space-md);
 }
 
 .word {
 	font-size: var(--text-base);
 	font-weight: 600;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .counts {
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
-}
-
-.known-btn {
-	padding: var(--space-xs) var(--space-md);
-	border: 1px solid var(--t-color-mark-correct);
-	border-radius: var(--radius-sm);
-	background: transparent;
-	color: var(--t-color-mark-correct);
-	cursor: pointer;
-	font-size: var(--text-sm);
-	font-weight: 600;
+	font-variant-numeric: tabular-nums;
 }
 
 .empty {
@@ -69,11 +64,6 @@
 
 .back:hover {
 	text-decoration: underline;
-}
-
-.known-btn:hover {
-	background: var(--t-color-mark-correct);
-	color: var(--t-color-white);
 }
 
 .page h1 {

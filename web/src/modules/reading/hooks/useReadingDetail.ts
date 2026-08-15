@@ -25,7 +25,7 @@ export function useReadingDetail() {
 		id,
 		getArticle,
 	);
-	const [recommended] = createResource<
+	const [recommended, { refetch: refetchRecommended }] = createResource<
 		{ recommended: { id: number; title: string; known_ratio: number } | null },
 		number
 	>(id, recommendNext);
@@ -96,6 +96,7 @@ export function useReadingDetail() {
 			return;
 		}
 		refetch();
+		refetchRecommended();
 	};
 
 	// 单击/双击 debounce
@@ -139,6 +140,7 @@ export function useReadingDetail() {
 		);
 		if (result.ok) {
 			refetch();
+			refetchRecommended();
 		} else {
 			notifyError("上传不认识词失败", result.error);
 		}

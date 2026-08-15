@@ -97,6 +97,7 @@ export default function ReadingDetail() {
 										<Button
 											variant="secondary"
 											size="sm"
+											class={styles.sidebarAction}
 											onClick={m.handleUploadUnknown}
 											disabled={m.uploadingUnknown()}
 										>
@@ -116,13 +117,12 @@ export default function ReadingDetail() {
 														>
 															<button
 																type="button"
-																class={
-																	st === "known"
-																		? styles.knownIcon
-																		: st === "ignored"
-																			? styles.ignoredIcon
-																			: styles.unknownIcon
-																}
+																class={styles.wordIcon}
+																classList={{
+																	[styles.knownIcon]: st === "known",
+																	[styles.ignoredIcon]: st === "ignored",
+																	[styles.unknownIcon]: st === "unknown",
+																}}
 																onClick={() =>
 																	m.handleMark(
 																		w.word,
@@ -136,6 +136,7 @@ export default function ReadingDetail() {
 																aria-label={`将 ${w.word} 标记为${
 																	st === "known" ? "不认识" : "认识"
 																}`}
+																aria-pressed={st === "known"}
 															>
 																{st === "known"
 																	? "✓"
@@ -182,6 +183,7 @@ export default function ReadingDetail() {
 										<Button
 											variant="secondary"
 											size="sm"
+											class={styles.sidebarAction}
 											onClick={m.handleCopyUnknown}
 										>
 											📋 复制不认识词 + 笔记

@@ -15,24 +15,33 @@ impl UserRepository {
 
     #[allow(dead_code)] // 仅测试/管理场景使用
     pub async fn find_all(&self) -> Result<Vec<User>, sqlx::Error> {
-        sqlx::query_as::<_, User>("SELECT id, name, password_hash, role FROM user ORDER BY id")
-            .fetch_all(&*self.db)
-            .await
+        sqlx::query_as!(
+            User,
+            r#"SELECT id AS "id: i32", name, password_hash, role FROM user ORDER BY id"#
+        )
+        .fetch_all(&*self.db)
+        .await
     }
 
     #[allow(dead_code)]
     pub async fn find_by_id(&self, id: i32) -> Result<Option<User>, sqlx::Error> {
-        sqlx::query_as::<_, User>("SELECT id, name, password_hash, role FROM user WHERE id = ?")
-            .bind(id)
-            .fetch_optional(&*self.db)
-            .await
+        sqlx::query_as!(
+            User,
+            r#"SELECT id AS "id: i32", name, password_hash, role FROM user WHERE id = ?"#,
+            id
+        )
+        .fetch_optional(&*self.db)
+        .await
     }
 
     pub async fn find_by_name(&self, name: &str) -> Result<Option<User>, sqlx::Error> {
-        sqlx::query_as::<_, User>("SELECT id, name, password_hash, role FROM user WHERE name = ?")
-            .bind(name)
-            .fetch_optional(&*self.db)
-            .await
+        sqlx::query_as!(
+            User,
+            r#"SELECT id AS "id: i32", name, password_hash, role FROM user WHERE name = ?"#,
+            name
+        )
+        .fetch_optional(&*self.db)
+        .await
     }
 
     pub async fn create(

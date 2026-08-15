@@ -5,7 +5,7 @@ BUILD_DIR := build
 time := $(shell date +%y%m%d_%H%M%S)
 DEPLOY_SCRIPT := deploy/deploy.sh
 
-.PHONY: dev dev-backend dev-web fmt build build-check build-web build-backend clean deploy deploy-web deploy-backend check status info logs db-pull db-push rollback list-backups
+.PHONY: dev dev-backend dev-web fmt build build-check build-web build-backend clean deploy deploy-web deploy-backend check status info logs db-pull db-push rollback list-backups sqlx-prepare
 
 # 用 make 并行目标跑后端/前端：Ctrl+C 时 make 会给所有并行 job 发信号并等待清理
 # （cargo-watch 8.x 收到 SIGINT 会用进程组清理 cargo run/brainbow）
@@ -23,6 +23,11 @@ dev-web:
 fmt:
 	cargo fmt
 	cd web && pnpm run fmt
+
+# SQL 编译期校验：刷新 .sqlx offline data（schema 变更后必须重跑并提交）
+# 前置：cargo install sqlx-cli --no-default-features --features sqlite
+sqlx-prepare:
+	DATABASE_URL=sqlite:brainbow.db cargo sqlx prepare
 
 check:
 	$(DEPLOY_SCRIPT) check

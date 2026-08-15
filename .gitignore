@@ -36,3 +36,6 @@ web/scripts/vendor/
 AGENTS.md
 opencode.json
 .*
+
+# sqlx 编译期查询校验的 offline data（由 `make sqlx-prepare` 生成，必须提交）
+!.sqlx/

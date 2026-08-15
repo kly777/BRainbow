@@ -1,5 +1,5 @@
 use chrono::Utc;
-use sqlx::SqlitePool;
+use sqlx::{FromRow, SqlitePool};
 
 use crate::shared::error_types::ServiceError;
 
@@ -13,47 +13,106 @@ pub struct ChatService {
     pool: SqlitePool,
 }
 
-/// chat_node 表的行类型（sqlx query_as 元组）
-type NodeRow = (
-    i64,
-    i64,
-    Option<i64>,
-    String,
-    String,
-    Option<i64>,
-    Option<String>,
-    String,
-);
+/// chat_tree 行（created_at/updated_at 可能为空，查询时 COALESCE 兜底）
+#[derive(FromRow)]
+struct TreeRow {
+    id: i64,
+    title: String,
+    system_prompt: String,
+    kind: String,
+    created_at: String,
+    updated_at: String,
+    node_count: i64,
+}
+
+/// chat_node 行
+#[derive(FromRow)]
+struct NodeRow {
+    id: i64,
+    tree_id: i64,
+    parent_id: Option<i64>,
+    role: String,
+    content: String,
+    revised_from: Option<i64>,
+    reasoning: Option<String>,
+    created_at: String,
+}
+
+/// prepare_chat 需要的对话树提示词列
+#[derive(FromRow)]
+struct TreePromptRow {
+    system_prompt: String,
+}
+
+/// prompt_preset 行
+#[derive(FromRow)]
+struct PresetRow {
+    id: i64,
+    name: String,
+    content: String,
+    created_at: String,
+}
+
+impl From<TreeRow> for TreeItem {
+    fn from(row: TreeRow) -> Self {
+        Self {
+            id: row.id,
+            title: row.title,
+            system_prompt: row.system_prompt,
+            kind: row.kind,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            node_count: row.node_count,
+        }
+    }
+}
+
+impl From<NodeRow> for NodeItem {
+    fn from(row: NodeRow) -> Self {
+        Self {
+            id: row.id,
+            tree_id: row.tree_id,
+            parent_id: row.parent_id,
+            role: row.role,
+            content: row.content,
+            revised_from: row.revised_from,
+            reasoning: row.reasoning,
+            created_at: row.created_at,
+        }
+    }
+}
+
+impl From<PresetRow> for PresetItem {
+    fn from(row: PresetRow) -> Self {
+        Self {
+            id: row.id,
+            name: row.name,
+            content: row.content,
+            created_at: row.created_at,
+        }
+    }
+}
 
 impl ChatService {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
 
-    fn row_to_tree(row: (i64, String, String, String, String, String, i64)) -> TreeItem {
-        TreeItem {
-            id: row.0,
-            title: row.1,
-            system_prompt: row.2,
-            kind: row.3,
-            created_at: row.4,
-            updated_at: row.5,
-            node_count: row.6,
-        }
-    }
-
     // ── 树 CRUD ──
 
     pub async fn list_trees(&self, user_id: i32) -> Result<Vec<TreeItem>, ServiceError> {
-        let rows: Vec<(i64, String, String, String, String, String, i64)> = sqlx::query_as(
-            "SELECT t.id, t.title, t.system_prompt, t.kind, t.created_at, t.updated_at,
-                    (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count
-             FROM chat_tree t WHERE t.user_id = ?1 ORDER BY t.updated_at DESC",
+        let rows: Vec<TreeRow> = sqlx::query_as!(
+            TreeRow,
+            r#"SELECT t.id, t.title, t.system_prompt, t.kind,
+                      COALESCE(t.created_at, '') AS "created_at!: String",
+                      COALESCE(t.updated_at, '') AS "updated_at!: String",
+                      (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count
+               FROM chat_tree t WHERE t.user_id = ?1 ORDER BY t.updated_at DESC"#,
+            user_id
         )
-        .bind(user_id)
         .fetch_all(&self.pool)
         .await?;
-        Ok(rows.into_iter().map(Self::row_to_tree).collect())
+        Ok(rows.into_iter().map(Into::into).collect())
     }
 
     /// 按类型列出对话树（chat / mem）
@@ -62,16 +121,19 @@ impl ChatService {
         user_id: i32,
         kind: &str,
     ) -> Result<Vec<TreeItem>, ServiceError> {
-        let rows: Vec<(i64, String, String, String, String, String, i64)> = sqlx::query_as(
-            "SELECT t.id, t.title, t.system_prompt, t.kind, t.created_at, t.updated_at,
-                    (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count
-             FROM chat_tree t WHERE t.user_id = ?1 AND t.kind = ?2 ORDER BY t.updated_at DESC",
+        let rows: Vec<TreeRow> = sqlx::query_as!(
+            TreeRow,
+            r#"SELECT t.id, t.title, t.system_prompt, t.kind,
+                      COALESCE(t.created_at, '') AS "created_at!: String",
+                      COALESCE(t.updated_at, '') AS "updated_at!: String",
+                      (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count
+               FROM chat_tree t WHERE t.user_id = ?1 AND t.kind = ?2 ORDER BY t.updated_at DESC"#,
+            user_id,
+            kind
         )
-        .bind(user_id)
-        .bind(kind)
         .fetch_all(&self.pool)
         .await?;
-        Ok(rows.into_iter().map(Self::row_to_tree).collect())
+        Ok(rows.into_iter().map(Into::into).collect())
     }
 
     pub async fn get_tree(
@@ -79,13 +141,16 @@ impl ChatService {
         user_id: i32,
         tree_id: i64,
     ) -> Result<Option<TreeDetail>, ServiceError> {
-        let tree: Option<(i64, String, String, String, String, String, i64)> = sqlx::query_as(
-            "SELECT t.id, t.title, t.system_prompt, t.kind, t.created_at, t.updated_at,
-                    (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count
-             FROM chat_tree t WHERE t.id = ?1 AND t.user_id = ?2",
+        let tree: Option<TreeRow> = sqlx::query_as!(
+            TreeRow,
+            r#"SELECT t.id, t.title, t.system_prompt, t.kind,
+                      COALESCE(t.created_at, '') AS "created_at!: String",
+                      COALESCE(t.updated_at, '') AS "updated_at!: String",
+                      (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count
+               FROM chat_tree t WHERE t.id = ?1 AND t.user_id = ?2"#,
+            tree_id,
+            user_id
         )
-        .bind(tree_id)
-        .bind(user_id)
         .fetch_optional(&self.pool)
         .await?;
 
@@ -93,29 +158,19 @@ impl ChatService {
             return Ok(None);
         };
 
-        let nodes: Vec<NodeRow> = sqlx::query_as(
-            "SELECT id, tree_id, parent_id, role, content, revised_from, reasoning, created_at
-             FROM chat_node WHERE tree_id = ?1 ORDER BY id",
+        let nodes: Vec<NodeRow> = sqlx::query_as!(
+            NodeRow,
+            r#"SELECT id, tree_id, parent_id, role, content, revised_from, reasoning,
+                      COALESCE(created_at, '') AS "created_at!: String"
+               FROM chat_node WHERE tree_id = ?1 ORDER BY id"#,
+            tree_id
         )
-        .bind(tree_id)
         .fetch_all(&self.pool)
         .await?;
 
         Ok(Some(TreeDetail {
-            tree: Self::row_to_tree(tree),
-            nodes: nodes
-                .into_iter()
-                .map(|n| NodeItem {
-                    id: n.0,
-                    tree_id: n.1,
-                    parent_id: n.2,
-                    role: n.3,
-                    content: n.4,
-                    revised_from: n.5,
-                    reasoning: n.6,
-                    created_at: n.7,
-                })
-                .collect(),
+            tree: tree.into(),
+            nodes: nodes.into_iter().map(Into::into).collect(),
         }))
     }
 
@@ -141,14 +196,14 @@ impl ChatService {
             req.system_prompt.trim().to_string()
         };
         let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        let id: i64 = sqlx::query(
+        let id: i64 = sqlx::query!(
             "INSERT INTO chat_tree (user_id, title, system_prompt, kind, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?5)",
+            user_id,
+            title,
+            system_prompt,
+            kind,
+            now
         )
-        .bind(user_id)
-        .bind(title)
-        .bind(&system_prompt)
-        .bind(&kind)
-        .bind(&now)
         .execute(&self.pool)
         .await?
         .last_insert_rowid();
@@ -187,12 +242,13 @@ impl ChatService {
         tree_id: i64,
         req: UpdateTreeRequest,
     ) -> Result<(), ServiceError> {
-        let exists: Option<i64> =
-            sqlx::query_scalar("SELECT id FROM chat_tree WHERE id = ?1 AND user_id = ?2")
-                .bind(tree_id)
-                .bind(user_id)
-                .fetch_optional(&self.pool)
-                .await?;
+        let exists: Option<i64> = sqlx::query_scalar!(
+            "SELECT id FROM chat_tree WHERE id = ?1 AND user_id = ?2",
+            tree_id,
+            user_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
         if exists.is_none() {
             return Err(ServiceError::NotFound("对话树不存在".into()));
         }
@@ -201,20 +257,20 @@ impl ChatService {
             if title.trim().is_empty() {
                 return Err(ServiceError::InvalidInput("标题不能为空".into()));
             }
-            sqlx::query(
+            sqlx::query!(
                 "UPDATE chat_tree SET title = ?1, updated_at = datetime('now') WHERE id = ?2",
+                title.trim(),
+                tree_id
             )
-            .bind(title.trim())
-            .bind(tree_id)
             .execute(&self.pool)
             .await?;
         }
         if let Some(prompt) = req.system_prompt {
-            sqlx::query(
+            sqlx::query!(
                 "UPDATE chat_tree SET system_prompt = ?1, updated_at = datetime('now') WHERE id = ?2",
+                prompt.trim(),
+                tree_id
             )
-            .bind(prompt.trim())
-            .bind(tree_id)
             .execute(&self.pool)
             .await?;
         }
@@ -222,17 +278,18 @@ impl ChatService {
     }
 
     pub async fn delete_tree(&self, user_id: i32, tree_id: i64) -> Result<(), ServiceError> {
-        let result = sqlx::query("DELETE FROM chat_tree WHERE id = ?1 AND user_id = ?2")
-            .bind(tree_id)
-            .bind(user_id)
-            .execute(&self.pool)
-            .await?;
+        let result = sqlx::query!(
+            "DELETE FROM chat_tree WHERE id = ?1 AND user_id = ?2",
+            tree_id,
+            user_id
+        )
+        .execute(&self.pool)
+        .await?;
         if result.rows_affected() == 0 {
             return Err(ServiceError::NotFound("对话树不存在".into()));
         }
         // 级联删除节点
-        sqlx::query("DELETE FROM chat_node WHERE tree_id = ?1")
-            .bind(tree_id)
+        sqlx::query!("DELETE FROM chat_node WHERE tree_id = ?1", tree_id)
             .execute(&self.pool)
             .await?;
         Ok(())
@@ -241,23 +298,16 @@ impl ChatService {
     // ── 节点 ──
 
     async fn fetch_node(&self, node_id: i64) -> Result<Option<NodeItem>, ServiceError> {
-        let row: Option<NodeRow> = sqlx::query_as(
-            "SELECT id, tree_id, parent_id, role, content, revised_from, reasoning, created_at
-                 FROM chat_node WHERE id = ?1",
+        let row: Option<NodeRow> = sqlx::query_as!(
+            NodeRow,
+            r#"SELECT id, tree_id, parent_id, role, content, revised_from, reasoning,
+                      COALESCE(created_at, '') AS "created_at!: String"
+               FROM chat_node WHERE id = ?1"#,
+            node_id
         )
-        .bind(node_id)
         .fetch_optional(&self.pool)
         .await?;
-        Ok(row.map(|n| NodeItem {
-            id: n.0,
-            tree_id: n.1,
-            parent_id: n.2,
-            role: n.3,
-            content: n.4,
-            revised_from: n.5,
-            reasoning: n.6,
-            created_at: n.7,
-        }))
+        Ok(row.map(Into::into))
     }
 
     async fn insert_node(
@@ -269,15 +319,15 @@ impl ChatService {
         revised_from: Option<i64>,
         reasoning: Option<&str>,
     ) -> Result<NodeItem, ServiceError> {
-        let result = sqlx::query(
+        let result = sqlx::query!(
             "INSERT INTO chat_node (tree_id, parent_id, role, content, revised_from, reasoning) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            tree_id,
+            parent_id,
+            role,
+            content,
+            revised_from,
+            reasoning
         )
-        .bind(tree_id)
-        .bind(parent_id)
-        .bind(role)
-        .bind(content)
-        .bind(revised_from)
-        .bind(reasoning)
         .execute(&self.pool)
         .await?;
         self.fetch_node(result.last_insert_rowid())
@@ -316,16 +366,18 @@ impl ChatService {
         parent_id: Option<i64>,
         content: Option<String>,
     ) -> Result<PreparedChat, ServiceError> {
-        let tree: Option<(String, String)> = sqlx::query_as(
-            "SELECT title, system_prompt FROM chat_tree WHERE id = ?1 AND user_id = ?2",
+        let tree: Option<TreePromptRow> = sqlx::query_as!(
+            TreePromptRow,
+            "SELECT system_prompt FROM chat_tree WHERE id = ?1 AND user_id = ?2",
+            tree_id,
+            user_id
         )
-        .bind(tree_id)
-        .bind(user_id)
         .fetch_optional(&self.pool)
         .await?;
-        let Some((_title, system_prompt)) = tree else {
+        let Some(tree) = tree else {
             return Err(ServiceError::NotFound("对话树不存在".into()));
         };
+        let system_prompt = tree.system_prompt;
 
         // 确定插入点与 user 消息内容
         // inserted_user_id: Some = 本次新插入的 user 节点（AI 失败时需回滚）
@@ -408,18 +460,19 @@ impl ChatService {
             )
             .await?;
         // 更新树的更新时间
-        let _ = sqlx::query("UPDATE chat_tree SET updated_at = datetime('now') WHERE id = ?1")
-            .bind(ctx.tree_id)
-            .execute(&self.pool)
-            .await;
+        let _ = sqlx::query!(
+            "UPDATE chat_tree SET updated_at = datetime('now') WHERE id = ?1",
+            ctx.tree_id
+        )
+        .execute(&self.pool)
+        .await;
         Ok(assistant)
     }
 
     /// AI 失败后的清理（回滚新插入的 user 节点）
     pub async fn abort_chat(&self, ctx: &PreparedChat) {
         if let Some(new_id) = ctx.inserted_user_id {
-            let _ = sqlx::query("DELETE FROM chat_node WHERE id = ?1")
-                .bind(new_id)
+            let _ = sqlx::query!("DELETE FROM chat_node WHERE id = ?1", new_id)
                 .execute(&self.pool)
                 .await;
         }
@@ -439,8 +492,7 @@ impl ChatService {
 
         // 校验归属
         let tree_user: Option<i64> =
-            sqlx::query_scalar("SELECT user_id FROM chat_tree WHERE id = ?1")
-                .bind(node.tree_id)
+            sqlx::query_scalar!("SELECT user_id FROM chat_tree WHERE id = ?1", node.tree_id)
                 .fetch_optional(&self.pool)
                 .await?;
         if tree_user != Some(user_id as i64) {
@@ -463,10 +515,12 @@ impl ChatService {
             )
             .await?;
 
-        let _ = sqlx::query("UPDATE chat_tree SET updated_at = datetime('now') WHERE id = ?1")
-            .bind(node.tree_id)
-            .execute(&self.pool)
-            .await;
+        let _ = sqlx::query!(
+            "UPDATE chat_tree SET updated_at = datetime('now') WHERE id = ?1",
+            node.tree_id
+        )
+        .execute(&self.pool)
+        .await;
 
         Ok(ReviseResponse { node: revised })
     }
@@ -474,21 +528,16 @@ impl ChatService {
     // ── 预设提示词 CRUD ──
 
     pub async fn list_presets(&self, user_id: i32) -> Result<Vec<PresetItem>, ServiceError> {
-        let rows: Vec<(i64, String, String, String)> = sqlx::query_as(
-            "SELECT id, name, content, created_at FROM prompt_preset WHERE user_id = ?1 ORDER BY id",
+        let rows: Vec<PresetRow> = sqlx::query_as!(
+            PresetRow,
+            r#"SELECT id, name, content,
+                      COALESCE(created_at, '') AS "created_at!: String"
+               FROM prompt_preset WHERE user_id = ?1 ORDER BY id"#,
+            user_id
         )
-        .bind(user_id)
         .fetch_all(&self.pool)
         .await?;
-        Ok(rows
-            .into_iter()
-            .map(|r| PresetItem {
-                id: r.0,
-                name: r.1,
-                content: r.2,
-                created_at: r.3,
-            })
-            .collect())
+        Ok(rows.into_iter().map(Into::into).collect())
     }
 
     pub async fn create_preset(
@@ -500,25 +549,25 @@ impl ChatService {
         if name.trim().is_empty() {
             return Err(ServiceError::InvalidInput("预设名称不能为空".into()));
         }
-        let id: i64 =
-            sqlx::query("INSERT INTO prompt_preset (user_id, name, content) VALUES (?1, ?2, ?3)")
-                .bind(user_id)
-                .bind(name.trim())
-                .bind(content.trim())
-                .execute(&self.pool)
-                .await?
-                .last_insert_rowid();
-        let row: (i64, String, String, String) =
-            sqlx::query_as("SELECT id, name, content, created_at FROM prompt_preset WHERE id = ?1")
-                .bind(id)
-                .fetch_one(&self.pool)
-                .await?;
-        Ok(PresetItem {
-            id: row.0,
-            name: row.1,
-            content: row.2,
-            created_at: row.3,
-        })
+        let id: i64 = sqlx::query!(
+            "INSERT INTO prompt_preset (user_id, name, content) VALUES (?1, ?2, ?3)",
+            user_id,
+            name.trim(),
+            content.trim()
+        )
+        .execute(&self.pool)
+        .await?
+        .last_insert_rowid();
+        let row = sqlx::query_as!(
+            PresetRow,
+            r#"SELECT id, name, content,
+                      COALESCE(created_at, '') AS "created_at!: String"
+               FROM prompt_preset WHERE id = ?1"#,
+            id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(row.into())
     }
 
     pub async fn update_preset(
@@ -528,13 +577,13 @@ impl ChatService {
         name: &str,
         content: &str,
     ) -> Result<(), ServiceError> {
-        let result = sqlx::query(
+        let result = sqlx::query!(
             "UPDATE prompt_preset SET name = ?1, content = ?2 WHERE id = ?3 AND user_id = ?4",
+            name.trim(),
+            content.trim(),
+            id,
+            user_id
         )
-        .bind(name.trim())
-        .bind(content.trim())
-        .bind(id)
-        .bind(user_id)
         .execute(&self.pool)
         .await?;
         if result.rows_affected() == 0 {
@@ -544,11 +593,13 @@ impl ChatService {
     }
 
     pub async fn delete_preset(&self, user_id: i32, id: i64) -> Result<(), ServiceError> {
-        let result = sqlx::query("DELETE FROM prompt_preset WHERE id = ?1 AND user_id = ?2")
-            .bind(id)
-            .bind(user_id)
-            .execute(&self.pool)
-            .await?;
+        let result = sqlx::query!(
+            "DELETE FROM prompt_preset WHERE id = ?1 AND user_id = ?2",
+            id,
+            user_id
+        )
+        .execute(&self.pool)
+        .await?;
         if result.rows_affected() == 0 {
             return Err(ServiceError::NotFound("预设不存在".into()));
         }

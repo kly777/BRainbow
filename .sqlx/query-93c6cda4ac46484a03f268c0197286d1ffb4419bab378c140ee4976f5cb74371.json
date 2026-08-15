@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO prompt_preset (user_id, name, content) VALUES (?1, ?2, ?3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "93c6cda4ac46484a03f268c0197286d1ffb4419bab378c140ee4976f5cb74371"
+}

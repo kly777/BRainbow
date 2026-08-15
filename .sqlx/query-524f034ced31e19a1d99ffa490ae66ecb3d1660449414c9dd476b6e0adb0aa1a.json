@@ -1,0 +1,83 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT t.id, t.title, t.system_prompt, t.kind,\n                      COALESCE(t.created_at, '') AS \"created_at!: String\",\n                      COALESCE(t.updated_at, '') AS \"updated_at!: String\",\n                      (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count\n               FROM chat_tree t WHERE t.user_id = ?1 AND t.kind = ?2 ORDER BY t.updated_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_tree",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_tree",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "system_prompt",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_tree",
+            "name": "system_prompt"
+          }
+        }
+      },
+      {
+        "name": "kind",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_tree",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "name": "updated_at!: String",
+        "ordinal": 5,
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "name": "node_count",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "524f034ced31e19a1d99ffa490ae66ecb3d1660449414c9dd476b6e0adb0aa1a"
+}

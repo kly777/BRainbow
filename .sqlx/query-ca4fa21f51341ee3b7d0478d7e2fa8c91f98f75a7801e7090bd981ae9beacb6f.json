@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM chat_tree WHERE id = ?1 AND user_id = ?2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "ca4fa21f51341ee3b7d0478d7e2fa8c91f98f75a7801e7090bd981ae9beacb6f"
+}

@@ -1,0 +1,105 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, tree_id, parent_id, role, content, revised_from, reasoning,\n                      COALESCE(created_at, '') AS \"created_at!: String\"\n               FROM chat_node WHERE tree_id = ?1 ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "tree_id",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "tree_id"
+          }
+        }
+      },
+      {
+        "name": "parent_id",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "parent_id"
+          }
+        }
+      },
+      {
+        "name": "role",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "role"
+          }
+        }
+      },
+      {
+        "name": "content",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "name": "revised_from",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "revised_from"
+          }
+        }
+      },
+      {
+        "name": "reasoning",
+        "ordinal": 6,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "reasoning"
+          }
+        }
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 7,
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "e7b75c8ef62f999e19328f1cec5a666be0e9fbfccb184e37080ba2b2654b3edc"
+}

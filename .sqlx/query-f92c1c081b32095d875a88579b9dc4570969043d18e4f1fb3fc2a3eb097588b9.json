@@ -1,0 +1,83 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT t.id, t.title, t.system_prompt, t.kind,\n                      COALESCE(t.created_at, '') AS \"created_at!: String\",\n                      COALESCE(t.updated_at, '') AS \"updated_at!: String\",\n                      (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count\n               FROM chat_tree t WHERE t.user_id = ?1 ORDER BY t.updated_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_tree",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_tree",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "system_prompt",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_tree",
+            "name": "system_prompt"
+          }
+        }
+      },
+      {
+        "name": "kind",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_tree",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 4,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      },
+      {
+        "name": "updated_at!: String",
+        "ordinal": 5,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      },
+      {
+        "name": "node_count",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f92c1c081b32095d875a88579b9dc4570969043d18e4f1fb3fc2a3eb097588b9"
+}

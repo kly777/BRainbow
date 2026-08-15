@@ -48,7 +48,7 @@
 	gap: var(--space-xl);
 	margin: var(--space-xl) 0;
 	width: 100%;
-	max-width: 900px;
+	max-width: var(--page-text-max);
 }
 
 .feature-card {

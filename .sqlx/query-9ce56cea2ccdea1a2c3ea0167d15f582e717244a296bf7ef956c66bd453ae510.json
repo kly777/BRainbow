@@ -1,0 +1,33 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT w.word, COALESCE(uw.status, 'unknown') AS \"status!: String\"\n            FROM reading_article_word w\n            LEFT JOIN reading_user_word uw ON uw.word = w.word\n            WHERE w.article_id = ?\n            ORDER BY w.id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "word",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_article_word",
+            "name": "word"
+          }
+        }
+      },
+      {
+        "name": "status!: String",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "9ce56cea2ccdea1a2c3ea0167d15f582e717244a296bf7ef956c66bd453ae510"
+}

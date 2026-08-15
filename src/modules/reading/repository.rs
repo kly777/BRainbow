@@ -75,12 +75,12 @@ impl ReadingRepo {
         content: &str,
         word_count: i64,
     ) -> Result<i64, sqlx::Error> {
-        let result = sqlx::query(
+        let result = sqlx::query!(
             "INSERT INTO reading_article (title, content, word_count) VALUES (?, ?, ?)",
+            title,
+            content,
+            word_count
         )
-        .bind(title)
-        .bind(content)
-        .bind(word_count)
         .execute(&*self.pool)
         .await?;
         Ok(result.last_insert_rowid())
@@ -93,11 +93,11 @@ impl ReadingRepo {
     ) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         for word in words {
-            sqlx::query(
+            sqlx::query!(
                 "INSERT OR IGNORE INTO reading_article_word (article_id, word) VALUES (?, ?)",
+                article_id,
+                word
             )
-            .bind(article_id)
-            .bind(word)
             .execute(&mut *tx)
             .await?;
         }
@@ -106,18 +106,28 @@ impl ReadingRepo {
     }
 
     pub async fn get_article(&self, id: i64) -> Result<Option<Article>, sqlx::Error> {
-        sqlx::query_as::<_, ArticleRow>(
-            "SELECT id, title, content, word_count, notes, created_at FROM reading_article WHERE id = ?",
+        sqlx::query_as!(
+            ArticleRow,
+            r#"SELECT id, title, content,
+                      COALESCE(word_count, 0) AS "word_count!: i64",
+                      notes,
+                      COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
+               FROM reading_article WHERE id = ?"#,
+            id
         )
-        .bind(id)
         .fetch_optional(&*self.pool)
         .await
         .map(|row| row.map(Article::from))
     }
 
     pub async fn get_all_articles(&self) -> Result<Vec<Article>, sqlx::Error> {
-        sqlx::query_as::<_, ArticleRow>(
-            "SELECT id, title, content, word_count, notes, created_at FROM reading_article ORDER BY id DESC",
+        sqlx::query_as!(
+            ArticleRow,
+            r#"SELECT id, title, content,
+                      COALESCE(word_count, 0) AS "word_count!: i64",
+                      notes,
+                      COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
+               FROM reading_article ORDER BY id DESC"#
         )
         .fetch_all(&*self.pool)
         .await
@@ -127,10 +137,11 @@ impl ReadingRepo {
     // ── 文章词表 ──
 
     pub async fn get_article_words(&self, article_id: i64) -> Result<Vec<String>, sqlx::Error> {
-        sqlx::query_as::<_, WordRow>(
+        sqlx::query_as!(
+            WordRow,
             "SELECT word FROM reading_article_word WHERE article_id = ? ORDER BY id",
+            article_id
         )
-        .bind(article_id)
         .fetch_all(&*self.pool)
         .await
         .map(|rows| rows.into_iter().map(|r| r.word).collect())
@@ -141,16 +152,17 @@ impl ReadingRepo {
         &self,
         article_id: i64,
     ) -> Result<Vec<ArticleWordStatus>, sqlx::Error> {
-        let rows = sqlx::query_as::<_, WordStatusRow>(
+        let rows = sqlx::query_as!(
+            WordStatusRow,
             r#"
-            SELECT w.word, COALESCE(uw.status, 'unknown') AS status
+            SELECT w.word, COALESCE(uw.status, 'unknown') AS "status!: String"
             FROM reading_article_word w
             LEFT JOIN reading_user_word uw ON uw.word = w.word
             WHERE w.article_id = ?
             ORDER BY w.id
             "#,
+            article_id
         )
-        .bind(article_id)
         .fetch_all(&*self.pool)
         .await?;
 
@@ -165,18 +177,19 @@ impl ReadingRepo {
 
     /// 计算文章认识率（已知词 / (总不同词数 - 忽略词)）
     pub async fn get_article_known_ratio(&self, article_id: i64) -> Result<f64, sqlx::Error> {
-        let row = sqlx::query_as::<_, KnownRatioRow>(
+        let row = sqlx::query_as!(
+            KnownRatioRow,
             r#"
             SELECT
-                COUNT(*) AS total,
-                COALESCE(SUM(CASE WHEN uw.status = 'known' THEN 1 ELSE 0 END), 0) AS known
+                COUNT(*) AS "total!: i64",
+                COALESCE(SUM(CASE WHEN uw.status = 'known' THEN 1 ELSE 0 END), 0) AS "known!: i64"
             FROM reading_article_word w
             LEFT JOIN reading_user_word uw ON uw.word = w.word
             WHERE w.article_id = ?
               AND (uw.status IS NULL OR uw.status != 'ignored')
             "#,
+            article_id
         )
-        .bind(article_id)
         .fetch_one(&*self.pool)
         .await?;
 
@@ -195,16 +208,17 @@ impl ReadingRepo {
         for article in articles {
             let known_ratio = self.get_article_known_ratio(article.id).await?;
 
-            let unknown_count = sqlx::query_as::<_, CountRow>(
+            let unknown_count = sqlx::query_as!(
+                CountRow,
                 r#"
-                SELECT COUNT(*) AS count
+                SELECT COUNT(*) AS "count!: i64"
                 FROM reading_article_word w
                 LEFT JOIN reading_user_word uw ON uw.word = w.word
                 WHERE w.article_id = ?
                   AND (uw.status IS NULL OR uw.status = 'unknown')
             "#,
+                article.id
             )
-            .bind(article.id)
             .fetch_one(&*self.pool)
             .await?
             .count;
@@ -225,11 +239,13 @@ impl ReadingRepo {
     // ── 笔记 ──
 
     pub async fn update_article_notes(&self, id: i64, notes: &str) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE reading_article SET notes = ? WHERE id = ?")
-            .bind(notes)
-            .bind(id)
-            .execute(&*self.pool)
-            .await?;
+        sqlx::query!(
+            "UPDATE reading_article SET notes = ? WHERE id = ?",
+            notes,
+            id
+        )
+        .execute(&*self.pool)
+        .await?;
         Ok(())
     }
 
@@ -238,7 +254,7 @@ impl ReadingRepo {
     pub async fn upsert_user_word(&self, word: &str, status: &str) -> Result<(), sqlx::Error> {
         match status {
             "known" => {
-                sqlx::query(
+                sqlx::query!(
                     r#"
                     INSERT INTO reading_user_word (word, status, known_count, unknown_count, updated_at)
                     VALUES (?, 'known', 1, 0, datetime('now'))
@@ -247,13 +263,13 @@ impl ReadingRepo {
                         known_count = known_count + 1,
                         updated_at = datetime('now')
                     "#,
+                    word
                 )
-                .bind(word)
                 .execute(&*self.pool)
                 .await?;
             }
             "ignored" => {
-                sqlx::query(
+                sqlx::query!(
                     r#"
                     INSERT INTO reading_user_word (word, status, known_count, unknown_count, updated_at)
                     VALUES (?, 'ignored', 0, 0, datetime('now'))
@@ -261,13 +277,13 @@ impl ReadingRepo {
                         status = 'ignored',
                         updated_at = datetime('now')
                     "#,
+                    word
                 )
-                .bind(word)
                 .execute(&*self.pool)
                 .await?;
             }
             _ => {
-                sqlx::query(
+                sqlx::query!(
                     r#"
                     INSERT INTO reading_user_word (word, status, unknown_count, known_count, updated_at)
                     VALUES (?, 'unknown', 1, 0, datetime('now'))
@@ -276,8 +292,8 @@ impl ReadingRepo {
                         unknown_count = unknown_count + 1,
                         updated_at = datetime('now')
                     "#,
+                    word
                 )
-                .bind(word)
                 .execute(&*self.pool)
                 .await?;
             }
@@ -286,9 +302,11 @@ impl ReadingRepo {
     }
 
     pub async fn get_unknown_words(&self) -> Result<Vec<UnknownWord>, sqlx::Error> {
-        sqlx::query_as::<_, UnknownWordRow>(
+        sqlx::query_as!(
+            UnknownWordRow,
             r#"
-            SELECT word, unknown_count, known_count, first_seen_at
+            SELECT word, unknown_count, known_count,
+                   COALESCE(first_seen_at, CURRENT_TIMESTAMP) AS "first_seen_at!: String"
             FROM reading_user_word
             WHERE status = 'unknown'
             ORDER BY unknown_count DESC, word ASC

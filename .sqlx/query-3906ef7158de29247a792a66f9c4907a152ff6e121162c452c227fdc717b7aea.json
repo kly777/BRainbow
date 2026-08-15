@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT word FROM reading_article_word WHERE article_id = ? ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "word",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_article_word",
+            "name": "word"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3906ef7158de29247a792a66f9c4907a152ff6e121162c452c227fdc717b7aea"
+}

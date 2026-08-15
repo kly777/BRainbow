@@ -1,0 +1,57 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT word, unknown_count, known_count,\n                   COALESCE(first_seen_at, CURRENT_TIMESTAMP) AS \"first_seen_at!: String\"\n            FROM reading_user_word\n            WHERE status = 'unknown'\n            ORDER BY unknown_count DESC, word ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "word",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_user_word",
+            "name": "word"
+          }
+        }
+      },
+      {
+        "name": "unknown_count",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "reading_user_word",
+            "name": "unknown_count"
+          }
+        }
+      },
+      {
+        "name": "known_count",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "reading_user_word",
+            "name": "known_count"
+          }
+        }
+      },
+      {
+        "name": "first_seen_at!: String",
+        "ordinal": 3,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "781ddd2807840b9db5e07b5a6df3b7d1103d45f89f6d3a4c3d40752f8f942432"
+}

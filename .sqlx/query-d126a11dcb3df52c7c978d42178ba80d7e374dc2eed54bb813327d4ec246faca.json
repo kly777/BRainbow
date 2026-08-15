@@ -1,0 +1,76 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, title, content,\n                      COALESCE(word_count, 0) AS \"word_count!: i64\",\n                      notes,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\"\n               FROM reading_article ORDER BY id DESC",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "reading_article",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_article",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "content",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_article",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "name": "word_count!: i64",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": "Expression"
+      },
+      {
+        "name": "notes",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_article",
+            "name": "notes"
+          }
+        }
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 5,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d126a11dcb3df52c7c978d42178ba80d7e374dc2eed54bb813327d4ec246faca"
+}

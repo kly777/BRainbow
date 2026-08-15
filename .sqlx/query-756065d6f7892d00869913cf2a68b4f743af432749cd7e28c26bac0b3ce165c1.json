@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO reading_article_word (article_id, word) VALUES (?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "756065d6f7892d00869913cf2a68b4f743af432749cd7e28c26bac0b3ce165c1"
+}

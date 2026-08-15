@@ -79,6 +79,7 @@ export default function MemPage() {
 						type="button"
 						class={styles.hamburger}
 						onClick={() => m.setSidebarOpen(!m.sidebarOpen())}
+						aria-label="切换侧边栏"
 					>
 						☰
 					</button>
@@ -89,6 +90,7 @@ export default function MemPage() {
 							class={styles.iconBtn}
 							onClick={() => setShowMnemonicSettings(true)}
 							title="助记提示词设置"
+							aria-label="助记提示词设置"
 						>
 							🧠
 						</button>
@@ -97,6 +99,7 @@ export default function MemPage() {
 							class={styles.iconBtn}
 							onClick={openAiSettings}
 							title="AI 设置"
+							aria-label="AI 设置"
 						>
 							🤖
 						</button>

@@ -94,18 +94,31 @@ export default function TextEditor() {
 					{(tab, i) => (
 						<div
 							role="tab"
-							tabIndex={0}
+							tabIndex={active() === i() ? 0 : -1}
+							aria-selected={active() === i()}
 							class={active() === i() ? styles.tabActive : styles.tab}
 							onClick={() => setActive(i())}
 							onDblClick={() => startRename(i())}
 							onKeyDown={(e) => {
-								if (e.key === "Enter" || e.key === " ") setActive(i());
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+									setActive(i());
+								}
+								if (e.key === "ArrowLeft") {
+									e.preventDefault();
+									setActive((i() - 1 + tabs().length) % tabs().length);
+								}
+								if (e.key === "ArrowRight") {
+									e.preventDefault();
+									setActive((i() + 1) % tabs().length);
+								}
 							}}
 						>
 							{editing() === i() ? (
 								<input
 									ref={editInputRef}
 									class={styles.renameInput}
+									aria-label="重命名标签"
 									value={editValue()}
 									onInput={(e) => setEditValue(e.currentTarget.value)}
 									onBlur={() => commitRename(i())}
@@ -127,13 +140,19 @@ export default function TextEditor() {
 									removeTab(i());
 								}}
 								disabled={tabs().length <= 1}
+								aria-label={`关闭 ${tab.name}`}
 							>
 								×
 							</button>
 						</div>
 					)}
 				</For>
-				<button type="button" class={styles.addBtn} onClick={addTab}>
+				<button
+					type="button"
+					class={styles.addBtn}
+					onClick={addTab}
+					aria-label="新建标签"
+				>
 					+
 				</button>
 			</div>

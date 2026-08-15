@@ -23,6 +23,13 @@
 	border: 1px solid var(--t-color-border);
 }
 
+/* 配合全局 Modal 的认证表单 */
+.auth-form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
+}
+
 .title {
 	margin: 0;
 	font-size: var(--text-lg);

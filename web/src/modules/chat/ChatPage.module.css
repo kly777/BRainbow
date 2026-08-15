@@ -162,9 +162,9 @@
 	border-radius: var(--radius-md);
 	cursor: pointer;
 	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 	padding: var(--space-2xs) var(--space-sm);
 	font-size: var(--text-xs);
 	line-height: 1;
@@ -365,9 +365,9 @@
 	border-radius: var(--radius-md);
 	cursor: pointer;
 	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 	padding: var(--space-2xs) var(--space-sm);
 	font-size: var(--text-xs);
 	line-height: 1;
@@ -488,11 +488,11 @@
 	background: linear-gradient(
 		135deg,
 		var(--t-color-accent),
-		#3fa37e 60%,
-		#5bc0a3
+		var(--t-color-accent) 60%,
+		var(--t-color-accent-strong)
 	);
 	color: var(--t-color-white);
-	box-shadow: 0 1px 4px rgb(0 0 0 / 18%);
+	box-shadow: var(--shadow-sm);
 	user-select: none;
 }
 
@@ -618,7 +618,7 @@
 	display: inline-flex;
 	align-items: center;
 	padding: var(--space-2xs) var(--space-sm);
-	border-radius: 999px;
+	border-radius: var(--radius-full);
 	font-size: var(--text-xs);
 	line-height: 1.125rem;
 	white-space: nowrap;
@@ -793,7 +793,7 @@
 	max-height: 12rem;
 	overflow: auto;
 	font-size: var(--text-xs);
-	color: var(--t-color-ink-soft);
+	color: var(--t-color-ink-muted);
 }
 
 .thinking-active {
@@ -891,8 +891,8 @@
 	width: 2.5rem;
 	height: 2.5rem;
 	padding: 0;
-	border: 1px solid #d64545;
-	color: #d64545;
+	border: 1px solid var(--t-color-danger);
+	color: var(--t-color-danger);
 	background: transparent;
 	border-radius: 50%;
 	display: inline-flex;
@@ -974,9 +974,9 @@
 	padding: var(--space-xs) var(--space-lg);
 	cursor: pointer;
 	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 }
 
 .btn-ghost:hover {
@@ -999,9 +999,9 @@
 	cursor: pointer;
 	font-weight: 500;
 	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 }
 
 .btn-primary:hover {
@@ -1092,8 +1092,8 @@
 .welcome-chip {
 	border: 1px solid var(--t-color-border);
 	background: var(--t-color-surface);
-	color: var(--t-color-ink-soft);
-	border-radius: var(--radius-full, 999px);
+	color: var(--t-color-ink-muted);
+	border-radius: var(--radius-full);
 	padding: var(--space-xs) var(--space-md);
 	font-size: var(--text-sm);
 	cursor: pointer;

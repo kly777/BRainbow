@@ -1,6 +1,6 @@
 // ── 对话页：AI 多轮对话（树状分支 / 修订 / 搜索 / 预设提示词） ──
 
-import { SearchInput } from "@components/ui";
+import { Button, Modal, SearchInput } from "@components/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
 import styles from "./ChatPage.module.css";
 import {
@@ -155,49 +155,36 @@ export default function ChatPage() {
 			</main>
 
 			{/* ── 编辑弹层 ── */}
-			<Show when={c.editingNode()}>
-				{(ed) => (
-					<div
-						class={styles.editOverlay}
-						role="none"
-						onClick={() => c.setEditingNode(null)}
-					>
-						<div
-							class={styles.editCard}
-							role="none"
-							onClick={(e) => e.stopPropagation()}
+			<Modal
+				isOpen={c.editingNode() !== null}
+				onClose={() => c.setEditingNode(null)}
+				title={`修订${
+					c.editingNode()?.role === "assistant" ? " AI 回复" : "消息"
+				}`}
+				actions={
+					<>
+						<Button variant="secondary" onClick={() => c.setEditingNode(null)}>
+							取消
+						</Button>
+						<Button
+							variant="primary"
+							disabled={!c.editText().trim()}
+							onClick={() => void c.revise(c.editingNode()!.id, c.editText())}
 						>
-							<div class={styles.editTitle}>
-								修订{ed().role === "assistant" ? " AI 回复" : "消息"}
-								<span class={styles.editHint}>原版本保留，修订后从此继续</span>
-							</div>
-							<textarea
-								class={styles.editArea}
-								value={c.editText()}
-								onInput={(e) => c.setEditText(e.currentTarget.value)}
-								rows={6}
-							/>
-							<div class={styles.editActions}>
-								<button
-									type="button"
-									class={styles.btnGhost}
-									onClick={() => c.setEditingNode(null)}
-								>
-									取消
-								</button>
-								<button
-									type="button"
-									class={styles.btnPrimary}
-									disabled={!c.editText().trim()}
-									onClick={() => void c.revise(ed().id, c.editText())}
-								>
-									保存修订
-								</button>
-							</div>
-						</div>
-					</div>
-				)}
-			</Show>
+							保存修订
+						</Button>
+					</>
+				}
+			>
+				<p class={styles.editHint}>原版本保留，修订后从此继续</p>
+				<textarea
+					class={styles.editArea}
+					value={c.editText()}
+					onInput={(e) => c.setEditText(e.currentTarget.value)}
+					rows={6}
+					aria-label="修订内容"
+				/>
+			</Modal>
 		</div>
 	);
 }

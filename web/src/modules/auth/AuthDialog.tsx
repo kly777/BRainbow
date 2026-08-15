@@ -1,3 +1,4 @@
+import { Button, Modal } from "@components/ui";
 import { AUTH_REQUIRED_EVENT } from "@lib/api";
 import { tryAsync } from "@lib/utils";
 import {
@@ -8,7 +9,6 @@ import {
 	useAuth,
 } from "@modules/auth";
 import { createSignal, onCleanup, Show } from "solid-js";
-import { Portal } from "solid-js/web";
 import styles from "./AuthStatus.module.css";
 
 type DialogMode = "login" | "password";
@@ -96,93 +96,73 @@ export default function AuthStatus() {
 	};
 
 	return (
-		<Show when={showForm()}>
-			<Portal>
-				<div
-					role="dialog"
-					aria-modal="true"
-					class={styles.overlay}
-					onClick={() => setShowForm(false)}
-					onKeyDown={(e) => {
-						if (e.key === "Escape") setShowForm(false);
-					}}
-				>
-					<form
-						onSubmit={handleSubmit}
-						class={styles.form}
-						onClick={(e) => e.stopPropagation()}
-						onKeyDown={(e) => {
-							if (e.key === "Escape") setShowForm(false);
-						}}
-					>
-						<h3 class={styles.title}>
-							{dialogMode() === "password"
-								? "修改密码"
-								: isRegister()
-									? "注册"
-									: "登录"}
-						</h3>
-						{error() && <p class={styles.error}>{error()}</p>}
+		<Modal
+			isOpen={showForm()}
+			onClose={() => setShowForm(false)}
+			title={
+				dialogMode() === "password"
+					? "修改密码"
+					: isRegister()
+						? "注册"
+						: "登录"
+			}
+		>
+			<form onSubmit={handleSubmit} class={styles.authForm}>
+				{error() && <p class={styles.error}>{error()}</p>}
 
-						<Show when={dialogMode() === "password"}>
-							<input
-								type="password"
-								placeholder="当前密码"
-								value={oldPassword()}
-								onInput={(e) => setOldPassword(e.currentTarget.value)}
-								class={styles.input}
-							/>
-							<input
-								type="password"
-								placeholder="新密码（至少4位）"
-								value={newPassword()}
-								onInput={(e) => setNewPassword(e.currentTarget.value)}
-								class={styles.input}
-							/>
-							<div class={styles.actions}>
-								<button type="submit" class={styles.btnSubmit}>
-									修改密码
-								</button>
-							</div>
-						</Show>
+				<Show when={dialogMode() === "password"}>
+					<input
+						type="password"
+						placeholder="当前密码"
+						aria-label="当前密码"
+						value={oldPassword()}
+						onInput={(e) => setOldPassword(e.currentTarget.value)}
+						class={styles.input}
+					/>
+					<input
+						type="password"
+						placeholder="新密码（至少4位）"
+						aria-label="新密码"
+						value={newPassword()}
+						onInput={(e) => setNewPassword(e.currentTarget.value)}
+						class={styles.input}
+					/>
+					<div class={styles.actions}>
+						<Button type="submit" variant="primary">
+							修改密码
+						</Button>
+					</div>
+				</Show>
 
-						<Show when={dialogMode() !== "password"}>
-							<input
-								placeholder="用户名"
-								value={name()}
-								onInput={(e) => setName(e.currentTarget.value)}
-								class={styles.input}
-							/>
-							<input
-								type="password"
-								placeholder="密码"
-								value={password()}
-								onInput={(e) => setPassword(e.currentTarget.value)}
-								class={styles.input}
-							/>
-							<div class={styles.actions}>
-								<button type="submit" class={styles.btnSubmit}>
-									{isRegister() ? "注册" : "登录"}
-								</button>
-								<button
-									type="button"
-									class={styles.btnLink}
-									onClick={() => setIsRegister(!isRegister())}
-								>
-									{isRegister() ? "已有账号？登录" : "没有账号？注册"}
-								</button>
-							</div>
-						</Show>
-						<button
-							type="button"
-							onClick={() => setShowForm(false)}
-							class={styles.btnCancel}
+				<Show when={dialogMode() !== "password"}>
+					<input
+						placeholder="用户名"
+						aria-label="用户名"
+						value={name()}
+						onInput={(e) => setName(e.currentTarget.value)}
+						class={styles.input}
+					/>
+					<input
+						type="password"
+						placeholder="密码"
+						aria-label="密码"
+						value={password()}
+						onInput={(e) => setPassword(e.currentTarget.value)}
+						class={styles.input}
+					/>
+					<div class={styles.actions}>
+						<Button type="submit" variant="primary">
+							{isRegister() ? "注册" : "登录"}
+						</Button>
+						<Button
+							variant="ghost"
+							onClick={() => setIsRegister(!isRegister())}
 						>
-							取消
-						</button>
-					</form>
-				</div>
-			</Portal>
-		</Show>
+							{isRegister() ? "已有账号？登录" : "没有账号？注册"}
+						</Button>
+					</div>
+				</Show>
+			</form>
+		</Modal>
 	);
 }

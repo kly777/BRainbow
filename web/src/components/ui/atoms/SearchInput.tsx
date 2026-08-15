@@ -34,6 +34,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 			type="search"
 			class={`${styles.input}${props.class ? ` ${props.class}` : ""}`}
 			placeholder={props.placeholder ?? "搜索…"}
+			aria-label={props.placeholder ?? "搜索"}
 			value={local()}
 			onInput={(e) => handleInput((e.target as HTMLInputElement).value)}
 		/>

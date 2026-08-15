@@ -96,8 +96,8 @@
 	cursor: pointer;
 	line-height: var(--leading-tight);
 	transition:
-		background 0.15s,
-		box-shadow 0.15s;
+		background var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 	border: none;
 }
 
@@ -133,11 +133,11 @@
 }
 
 .btn-danger:hover {
-	background: oklch(48% 0.18 25deg); /* danger 深底（组件内微调） */
+	background: var(--t-color-danger-strong);
 }
 
 .btn-warning:hover {
-	background: oklch(52% 0.14 85deg); /* warning 深底（组件内微调） */
+	background: var(--t-color-warning-strong);
 }
 
 .btn-primary:hover {

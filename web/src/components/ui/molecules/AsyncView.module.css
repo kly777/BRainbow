@@ -11,17 +11,3 @@
 	color: var(--t-color-danger);
 	margin-bottom: var(--space-md);
 }
-
-.retry-btn {
-	padding: var(--space-xs) var(--space-lg);
-	background: var(--t-color-accent);
-	color: var(--t-color-white);
-	border: none;
-	border-radius: var(--radius-md);
-	cursor: pointer;
-	font-size: var(--text-sm);
-}
-
-.retry-btn:hover {
-	background: var(--t-color-accent-strong);
-}

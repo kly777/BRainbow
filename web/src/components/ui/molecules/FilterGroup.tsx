@@ -21,8 +21,13 @@ const FilterGroup: Component<FilterGroupProps> = (props) => {
 				{({ value, label }) => (
 					<button
 						type="button"
-						class={props.selected === value ? styles.active : styles.btn}
+						class={
+							props.selected === value
+								? `${styles.btn} ${styles.active}`
+								: styles.btn
+						}
 						onClick={() => props.onChange(value)}
+						aria-pressed={props.selected === value}
 					>
 						{label}
 					</button>

@@ -36,13 +36,13 @@
 
 .container {
 	position: fixed;
-	bottom: 1.25rem;
-	right: 1.25rem;
+	bottom: var(--space-xl);
+	right: var(--space-xl);
 	z-index: var(--z-toast);
 	display: flex;
 	flex-direction: column-reverse;
 	gap: var(--space-sm);
-	max-width: 420px;
+	max-width: 26.25rem;
 	width: 100%;
 	pointer-events: none;
 }
@@ -105,8 +105,7 @@
 	padding: var(--space-xs);
 	border-radius: var(--radius-sm);
 	font-size: var(--text-xs);
-	font-family:
-		ui-monospace, "Cascadia Code", "Source Code Pro", menlo, monospace;
+	font-family: var(--t-font-mono);
 	font-weight: 500;
 	vertical-align: middle;
 	opacity: 0.85;
@@ -153,19 +152,19 @@
 .warning {
 	background: var(--t-color-warning-subtle);
 	border: 1px solid var(--toast-warning-border);
-	color: oklch(35% 0.08 60deg); /* success 文字（保留） */
+	color: var(--toast-warning-text);
 }
 
 .success {
 	background: var(--t-color-success-subtle);
-	border: 1px solid oklch(85% 0.08 160deg); /* success 边框（保留） */
-	color: oklch(30% 0.08 160deg); /* success 文字（保留） */
+	border: 1px solid var(--toast-success-border);
+	color: var(--toast-success-text);
 }
 
 .info {
 	background: var(--t-color-accent-soft);
-	border: 1px solid oklch(85% 0.08 165deg); /* success 边框（toast 微调） */
-	color: oklch(30% 0.07 165deg); /* success 文字（toast 微调） */
+	border: 1px solid var(--toast-info-border);
+	color: var(--toast-info-text);
 }
 
 .close:hover {
@@ -178,7 +177,7 @@
 }
 
 .error .code {
-	background: oklch(55% 0.2 25deg / 12%); /* danger 淡底（toast 微调） */
+	background: var(--toast-error-code-bg);
 }
 
 .warning .icon {
@@ -187,7 +186,7 @@
 }
 
 .warning .code {
-	background: oklch(60% 0.16 85deg / 12%); /* warning 淡底（toast 微调） */
+	background: var(--toast-warning-code-bg);
 }
 
 .success .icon {
@@ -196,7 +195,7 @@
 }
 
 .success .code {
-	background: oklch(55% 0.17 160deg / 12%);
+	background: var(--toast-success-code-bg);
 }
 
 .info .icon {
@@ -205,5 +204,5 @@
 }
 
 .info .code {
-	background: oklch(52% 0.1 165deg / 12%);
+	background: var(--toast-info-code-bg);
 }

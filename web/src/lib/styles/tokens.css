@@ -68,6 +68,17 @@
 	--toast-success-icon-bg: var(--t-color-success);
 	--toast-info-bg: var(--t-color-accent-soft);
 	--toast-info-icon-bg: var(--t-color-accent);
+	--toast-error-code-bg: oklch(55% 0.2 25deg / 12%);
+	--toast-warning-text: oklch(35% 0.08 60deg);
+	--toast-warning-code-bg: oklch(60% 0.16 85deg / 12%);
+	--toast-success-border: oklch(85% 0.08 160deg);
+	--toast-success-text: oklch(30% 0.08 160deg);
+	--toast-success-code-bg: oklch(55% 0.17 160deg / 12%);
+	--toast-info-border: oklch(85% 0.08 165deg);
+	--toast-info-text: oklch(30% 0.07 165deg);
+	--toast-info-code-bg: oklch(52% 0.1 165deg / 12%);
+	--t-color-danger-strong: oklch(48% 0.18 25deg);
+	--t-color-warning-strong: oklch(52% 0.14 85deg);
 }
 
 :root[data-theme="midnight"] {
@@ -108,16 +119,27 @@
 	--shadow-md: 0 0.25rem 1rem oklch(0% 0 0deg / 50%);
 	--shadow-lg: 0 0.75rem 2.5rem oklch(0% 0 0deg / 60%);
 	--toast-error-bg: var(--t-color-danger-subtle);
-	--toast-error-border: oklch(85% 0.06 25deg);
-	--toast-error-text: oklch(30% 0.09 25deg);
+	--toast-error-border: oklch(48% 0.07 25deg);
+	--toast-error-text: oklch(90% 0.04 25deg);
 	--toast-error-icon-bg: var(--t-color-danger);
 	--toast-warning-bg: var(--t-color-warning-subtle);
-	--toast-warning-border: oklch(88% 0.09 85deg);
+	--toast-warning-border: oklch(55% 0.09 85deg);
+	--toast-warning-text: oklch(92% 0.05 85deg);
 	--toast-warning-icon-bg: var(--t-color-warning);
 	--toast-success-bg: var(--t-color-success-subtle);
+	--toast-success-border: oklch(50% 0.07 160deg);
+	--toast-success-text: oklch(90% 0.04 160deg);
 	--toast-success-icon-bg: var(--t-color-success);
 	--toast-info-bg: var(--t-color-accent-soft);
+	--toast-info-border: oklch(42% 0.05 165deg);
+	--toast-info-text: oklch(90% 0.04 165deg);
 	--toast-info-icon-bg: var(--t-color-accent);
+	--toast-error-code-bg: oklch(70% 0.12 25deg / 15%);
+	--toast-warning-code-bg: oklch(78% 0.1 85deg / 15%);
+	--toast-success-code-bg: oklch(72% 0.1 160deg / 15%);
+	--toast-info-code-bg: oklch(68% 0.1 165deg / 15%);
+	--t-color-danger-strong: oklch(60% 0.14 25deg);
+	--t-color-warning-strong: oklch(68% 0.12 85deg);
 }
 
 :root[data-theme="ocean"] {
@@ -165,9 +187,20 @@
 	--toast-warning-border: oklch(88% 0.09 85deg);
 	--toast-warning-icon-bg: var(--t-color-warning);
 	--toast-success-bg: var(--t-color-success-subtle);
+	--toast-success-border: oklch(85% 0.08 160deg);
+	--toast-success-text: oklch(30% 0.08 160deg);
 	--toast-success-icon-bg: var(--t-color-success);
 	--toast-info-bg: var(--t-color-accent-soft);
+	--toast-info-border: oklch(85% 0.08 255deg);
+	--toast-info-text: oklch(30% 0.07 255deg);
 	--toast-info-icon-bg: var(--t-color-accent);
+	--toast-error-code-bg: oklch(55% 0.2 25deg / 12%);
+	--toast-warning-text: oklch(35% 0.08 60deg);
+	--toast-warning-code-bg: oklch(60% 0.16 85deg / 12%);
+	--toast-success-code-bg: oklch(55% 0.17 160deg / 12%);
+	--toast-info-code-bg: oklch(52% 0.14 255deg / 12%);
+	--t-color-danger-strong: oklch(48% 0.18 25deg);
+	--t-color-warning-strong: oklch(52% 0.14 85deg);
 }
 
 /* ===== 全局体验层（主题感知：文本选择/滚动条/焦点 ring） ===== */

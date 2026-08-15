@@ -9,12 +9,13 @@
 	font-family: inherit;
 	font-weight: 500;
 	cursor: pointer;
-	line-height: 1.15;
+	line-height: var(--leading-tight);
 	white-space: nowrap;
 	transition:
-		background 0.15s,
-		border-color 0.15s,
-		transform 0.15s;
+		background var(--t-transition-fast),
+		border-color var(--t-transition-fast),
+		color var(--t-transition-fast),
+		transform var(--t-transition-fast);
 }
 
 .sm {

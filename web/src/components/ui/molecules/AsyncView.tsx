@@ -1,3 +1,4 @@
+import Button from "@components/ui/atoms/Button.tsx";
 import styles from "@components/ui/molecules/AsyncView.module.css";
 import { getErrorMessage } from "@lib/api/types/index.ts";
 import { type JSX, Show } from "solid-js";
@@ -15,7 +16,7 @@ export function AsyncView<T>(props: Props<T>) {
 	return (
 		<Show
 			when={!props.loading}
-			fallback={<div class={styles.state}>加载中...</div>}
+			fallback={<div class={styles.state}>加载中…</div>}
 		>
 			<Show
 				when={!props.error}
@@ -25,13 +26,9 @@ export function AsyncView<T>(props: Props<T>) {
 							加载失败: {getErrorMessage(props.error)}
 						</p>
 						{props.onRetry && (
-							<button
-								type="button"
-								class={styles.retryBtn}
-								onClick={props.onRetry}
-							>
+							<Button variant="primary" size="sm" onClick={props.onRetry}>
 								重试
-							</button>
+							</Button>
 						)}
 					</div>
 				}

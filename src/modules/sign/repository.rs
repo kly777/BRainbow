@@ -1,4 +1,4 @@
-use sqlx::{Row, SqlitePool};
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
 use super::model::SignifierSignified;
@@ -17,10 +17,15 @@ impl SignRepository {
 
     /// 根据ID获取能指所指关系
     pub async fn find_by_id(&self, id: i32) -> Result<Option<SignifierSignified>, sqlx::Error> {
-        sqlx::query_as::<_, SignifierSignified>("SELECT id, signifier, signified, onto_id, weight, relation_type, created_at FROM signifier_signified WHERE id = ?")
-            .bind(id)
-            .fetch_optional(&*self.db)
-            .await
+        sqlx::query_as!(
+            SignifierSignified,
+            r#"SELECT id AS "id: i32", signifier, signified, onto_id AS "onto_id?: i32",
+                      weight, relation_type, created_at AS "created_at!: chrono::DateTime<chrono::Utc>"
+               FROM signifier_signified WHERE id = ?"#,
+            id
+        )
+        .fetch_optional(&*self.db)
+        .await
     }
 
     /// 创建能指所指关系
@@ -35,33 +40,35 @@ impl SignRepository {
         use chrono::Utc;
         let now = Utc::now();
 
-        let result = sqlx::query(
-            "INSERT INTO signifier_signified (signifier, signified, onto_id, weight, relation_type, created_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id, signifier, signified, onto_id, weight, relation_type, created_at"
+        let row = sqlx::query!(
+            r#"INSERT INTO signifier_signified (signifier, signified, onto_id, weight, relation_type, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)
+               RETURNING id AS "id: i32", signifier, signified, onto_id AS "onto_id?: i32",
+                         weight, relation_type, created_at AS "created_at!: chrono::DateTime<chrono::Utc>""#,
+            signifier,
+            signified,
+            onto_id,
+            weight,
+            relation_type,
+            now
         )
-            .bind(&signifier)
-            .bind(&signified)
-            .bind(onto_id)
-            .bind(weight)
-            .bind(&relation_type)
-            .bind(now)
-            .fetch_one(&*self.db)
-            .await?;
+        .fetch_one(&*self.db)
+        .await?;
 
         Ok(SignifierSignified {
-            id: result.try_get("id")?,
-            signifier: result.try_get("signifier")?,
-            signified: result.try_get("signified")?,
-            onto_id: result.try_get("onto_id")?,
-            weight: result.try_get("weight")?,
-            relation_type: result.try_get("relation_type")?,
-            created_at: result.try_get("created_at")?,
+            id: row.id,
+            signifier: row.signifier,
+            signified: row.signified,
+            onto_id: row.onto_id,
+            weight: row.weight,
+            relation_type: row.relation_type,
+            created_at: row.created_at,
         })
     }
 
     /// 删除能指所指关系
     pub async fn delete(&self, id: i32) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM signifier_signified WHERE id = ?")
-            .bind(id)
+        let result = sqlx::query!("DELETE FROM signifier_signified WHERE id = ?", id)
             .execute(&*self.db)
             .await?;
 
@@ -74,14 +81,17 @@ impl SignRepository {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<SignifierSignified>, i64), sqlx::Error> {
-        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM signifier_signified")
+        let total: i64 = sqlx::query_scalar!("SELECT COUNT(*) FROM signifier_signified")
             .fetch_one(&*self.db)
             .await?;
-        let items = sqlx::query_as::<_, SignifierSignified>(
-            "SELECT id, signifier, signified, onto_id, weight, relation_type, created_at FROM signifier_signified ORDER BY id LIMIT ? OFFSET ?",
+        let items = sqlx::query_as!(
+            SignifierSignified,
+            r#"SELECT id AS "id: i32", signifier, signified, onto_id AS "onto_id?: i32",
+                      weight, relation_type, created_at AS "created_at!: chrono::DateTime<chrono::Utc>"
+               FROM signifier_signified ORDER BY id LIMIT ? OFFSET ?"#,
+            limit,
+            offset
         )
-        .bind(limit)
-        .bind(offset)
         .fetch_all(&*self.db)
         .await?;
         Ok((items, total))
@@ -94,17 +104,21 @@ impl SignRepository {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<SignifierSignified>, i64), sqlx::Error> {
-        let total: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM signifier_signified WHERE signifier = ?")
-                .bind(signifier)
-                .fetch_one(&*self.db)
-                .await?;
-        let items = sqlx::query_as::<_, SignifierSignified>(
-            "SELECT id, signifier, signified, onto_id, weight, relation_type, created_at FROM signifier_signified WHERE signifier = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        let total: i64 = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM signifier_signified WHERE signifier = ?",
+            signifier
         )
-        .bind(signifier)
-        .bind(limit)
-        .bind(offset)
+        .fetch_one(&*self.db)
+        .await?;
+        let items = sqlx::query_as!(
+            SignifierSignified,
+            r#"SELECT id AS "id: i32", signifier, signified, onto_id AS "onto_id?: i32",
+                      weight, relation_type, created_at AS "created_at!: chrono::DateTime<chrono::Utc>"
+               FROM signifier_signified WHERE signifier = ? ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
+            signifier,
+            limit,
+            offset
+        )
         .fetch_all(&*self.db)
         .await?;
         Ok((items, total))
@@ -117,17 +131,21 @@ impl SignRepository {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<SignifierSignified>, i64), sqlx::Error> {
-        let total: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM signifier_signified WHERE signified = ?")
-                .bind(signified)
-                .fetch_one(&*self.db)
-                .await?;
-        let items = sqlx::query_as::<_, SignifierSignified>(
-            "SELECT id, signifier, signified, onto_id, weight, relation_type, created_at FROM signifier_signified WHERE signified = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        let total: i64 = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM signifier_signified WHERE signified = ?",
+            signified
         )
-        .bind(signified)
-        .bind(limit)
-        .bind(offset)
+        .fetch_one(&*self.db)
+        .await?;
+        let items = sqlx::query_as!(
+            SignifierSignified,
+            r#"SELECT id AS "id: i32", signifier, signified, onto_id AS "onto_id?: i32",
+                      weight, relation_type, created_at AS "created_at!: chrono::DateTime<chrono::Utc>"
+               FROM signifier_signified WHERE signified = ? ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
+            signified,
+            limit,
+            offset
+        )
         .fetch_all(&*self.db)
         .await?;
         Ok((items, total))

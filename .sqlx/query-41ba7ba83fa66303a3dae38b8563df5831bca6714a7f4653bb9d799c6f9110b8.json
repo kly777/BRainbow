@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM signifier_signified WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "41ba7ba83fa66303a3dae38b8563df5831bca6714a7f4653bb9d799c6f9110b8"
+}

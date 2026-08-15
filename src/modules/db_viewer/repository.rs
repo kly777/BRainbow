@@ -1,10 +1,41 @@
 use serde_json::Value;
-use sqlx::{Column, Row, SqlitePool, TypeInfo};
+use sqlx::{Column, Row, SqlitePool, TypeInfo, Value as SqlxValue, ValueRef as _};
 use std::sync::Arc;
 
 use super::handler::ColumnInfo;
 use super::model::TableName;
 use crate::shared::db_query::sanitize_table_name;
+
+/// 按运行时值类型解码单元格。
+///
+/// 部分系统表（如 sqlite_sequence）的列没有声明类型，sqlx 会给列标 `NULL`，
+/// 但实际值仍是 INTEGER/TEXT；此时必须看 `try_get_raw` 的运行时类型。
+fn cell_to_json(row: &sqlx::sqlite::SqliteRow, name: &str) -> Result<Value, sqlx::Error> {
+    let raw = row.try_get_raw(name)?;
+    match raw.type_info().name() {
+        "NULL" => Ok(Value::Null),
+        "INTEGER" => {
+            let v = raw.to_owned().try_decode::<i64>()?;
+            Ok(Value::Number(v.into()))
+        }
+        "REAL" => {
+            let v = raw.to_owned().try_decode::<f64>()?;
+            Ok(serde_json::Number::from_f64(v)
+                .map(Value::Number)
+                .unwrap_or(Value::Null))
+        }
+        "TEXT" => Ok(Value::String(raw.to_owned().try_decode::<String>()?)),
+        "BLOB" => {
+            let bytes = raw.to_owned().try_decode::<Vec<u8>>()?;
+            Ok(Value::Array(
+                bytes.into_iter().map(|b| Value::Number(b.into())).collect(),
+            ))
+        }
+        other => Err(sqlx::Error::Decode(Box::new(std::io::Error::other(
+            format!("不支持的 SQLite 运行时值类型: {other}"),
+        )))),
+    }
+}
 
 #[derive(Clone)]
 pub struct DBRepo {
@@ -83,20 +114,34 @@ impl DBRepo {
                                 Some(v) => Value::Number(v.into()),
                                 None => Value::Null,
                             }),
-                            "INTEGER" => Ok(match row.try_get::<Option<i64>, _>(name)? {
-                                Some(v) => Value::Number(v.into()),
-                                None => Value::Null,
-                            }),
-                            "TEXT" | "VARCHAR" | "DATETIME" => {
+                            "INTEGER" | "INT8" | "INT2" | "INT1" | "BIGINT"
+                            | "UNSIGNED BIG INT" => {
+                                Ok(match row.try_get::<Option<i64>, _>(name)? {
+                                    Some(v) => Value::Number(v.into()),
+                                    None => Value::Null,
+                                })
+                            }
+                            "REAL" | "FLOAT" | "DOUBLE" | "DOUBLE PRECISION" | "DECIMAL" => {
+                                Ok(match row.try_get::<Option<f64>, _>(name)? {
+                                    Some(v) => serde_json::Number::from_f64(v)
+                                        .map(Value::Number)
+                                        .unwrap_or(Value::Null),
+                                    None => Value::Null,
+                                })
+                            }
+                            "TEXT" | "VARCHAR" | "CHAR" | "CLOB" | "DATE" | "TIME" | "DATETIME" => {
                                 Ok(match row.try_get::<Option<String>, _>(name)? {
                                     Some(v) => Value::String(v),
                                     None => Value::Null,
                                 })
                             }
-                            _ => Ok(match row.try_get::<Option<String>, _>(name)? {
-                                Some(v) => Value::String(v),
-                                None => Value::Null,
-                            }),
+                            "BOOLEAN" | "BOOL" => {
+                                Ok(match row.try_get::<Option<bool>, _>(name)? {
+                                    Some(v) => Value::Bool(v),
+                                    None => Value::Null,
+                                })
+                            }
+                            _ => cell_to_json(row, name),
                         }
                     })
                     .collect::<Result<Vec<_>, sqlx::Error>>()
@@ -155,5 +200,38 @@ mod tests {
         let repo = setup().await;
         let result = repo.get_table_data("nonexistent", 10, 0).await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn get_table_data_decodes_real_and_integer_columns() {
+        let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
+        sqlx::query(
+            "CREATE TABLE typed_table (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                score REAL NOT NULL,
+                count INTEGER NOT NULL,
+                label TEXT
+            )",
+        )
+        .execute(&*pool)
+        .await
+        .unwrap();
+        sqlx::query("INSERT INTO typed_table (score, count, label) VALUES (0.5, 3, 'x')")
+            .execute(&*pool)
+            .await
+            .unwrap();
+        let repo = DBRepo { pool };
+
+        let (_, rows, total) = repo.get_table_data("typed_table", 10, 0).await.unwrap();
+        assert_eq!(total, 1);
+        assert_eq!(rows[0][0], serde_json::json!(1));
+        assert_eq!(rows[0][1], serde_json::json!(0.5));
+        assert_eq!(rows[0][2], serde_json::json!(3));
+        assert_eq!(rows[0][3], serde_json::json!("x"));
+
+        // AUTOINCREMENT 表会生成 sqlite_sequence，其 seq 列为 INTEGER
+        let (_, seq_rows, _) = repo.get_table_data("sqlite_sequence", 10, 0).await.unwrap();
+        assert_eq!(seq_rows.len(), 1);
+        assert_eq!(seq_rows[0][1], serde_json::json!(1));
     }
 }

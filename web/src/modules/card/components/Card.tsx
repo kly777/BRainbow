@@ -36,12 +36,6 @@ const Card: Component<CardProps> = (props) => {
 		}
 	};
 
-	const handleTagClick = (e: MouseEvent, tag: string) => {
-		e.stopPropagation();
-		// 这里可以添加标签点击处理逻辑，比如过滤或搜索
-		console.log(`Tag clicked: ${tag}`);
-	};
-
 	return (
 		<div
 			classList={{ [styles.card]: true, [styles.deleting]: props.isDeleting }}
@@ -56,7 +50,7 @@ const Card: Component<CardProps> = (props) => {
 						<button
 							type="button"
 							class={styles.tag}
-							onClick={(e) => handleTagClick(e, tag)}
+							onClick={(e) => e.stopPropagation()}
 						>
 							{tag}
 						</button>

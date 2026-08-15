@@ -1,6 +1,6 @@
-// ── 认证凭证的 localStorage 存取（纯函数，无 React 依赖） ──
-// 供 shared/api/request.ts（请求层）与 app/auth/context.tsx（React context）共用，
-// 避免请求层反向依赖 app 层。
+// ── 认证凭证的 localStorage 存取（纯函数，无框架依赖） ──
+// 供 lib/api/request.ts（请求层）与 modules/auth（登录状态）共用，
+// 避免请求层反向依赖业务层。读操作做内存缓存，避免每次请求重复 JSON.parse。
 
 export const STORAGE_KEY = "brainbow_user";
 export const API_KEY_STORAGE_KEY = "brainbow_api_key";
@@ -12,44 +12,53 @@ export interface StoredUser {
 	token?: string;
 }
 
+/** undefined = 尚未读取；null = 已读取但无有效用户 */
+let userCache: StoredUser | null | undefined;
+let apiKeyCache: string | null | undefined;
+
 function loadFromStorage(): StoredUser | null {
+	if (userCache !== undefined) return userCache;
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
-		if (!raw) return null;
-		const user = JSON.parse(raw) as StoredUser;
-		if (user?.id && user?.name) return user;
+		const user = raw ? (JSON.parse(raw) as StoredUser) : null;
+		userCache = user?.id && user?.name ? user : null;
 	} catch {
-		/* ignore parse errors */
+		userCache = null;
 	}
-	return null;
+	return userCache;
 }
 
-/** 当前登录 token（localStorage 直读，非响应式） */
+/** 当前登录 token（localStorage 直读 + 内存缓存，非响应式） */
 export function getToken(): string | null {
 	return loadFromStorage()?.token ?? null;
 }
 
-/** 当前 API key（localStorage 直读，非响应式） */
+/** 当前 API key（localStorage 直读 + 内存缓存，非响应式） */
 export function getApiKey(): string | null {
+	if (apiKeyCache !== undefined) return apiKeyCache;
 	try {
-		return localStorage.getItem(API_KEY_STORAGE_KEY);
+		apiKeyCache = localStorage.getItem(API_KEY_STORAGE_KEY);
 	} catch {
-		return null;
+		apiKeyCache = null;
 	}
+	return apiKeyCache;
 }
 
 /** 持久化登录用户 */
 export function saveUser(user: StoredUser): void {
+	userCache = user;
 	localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
 }
 
 /** 清除登录用户 */
 export function clearUser(): void {
+	userCache = null;
 	localStorage.removeItem(STORAGE_KEY);
 }
 
 /** 持久化 / 清除 API key */
 export function setApiKey(key: string | null): void {
+	apiKeyCache = key;
 	if (key) {
 		localStorage.setItem(API_KEY_STORAGE_KEY, key);
 	} else {

@@ -2,7 +2,7 @@ import { NAV_ITEMS } from "@config/navigation";
 import { PATHS, type PathValue } from "@config/paths";
 import type { RouteDefinition } from "@solidjs/router";
 import { useLocation } from "@solidjs/router";
-import { type Component, createEffect, lazy, onCleanup } from "solid-js";
+import { type Component, createEffect, lazy } from "solid-js";
 
 export interface RouteConfig {
 	path: PathValue;
@@ -85,6 +85,5 @@ export function RouteTitle() {
 		const title = route?.title;
 		document.title = title ? `${title} · Brainbow` : "Brainbow";
 	});
-	onCleanup(() => {});
 	return null;
 }

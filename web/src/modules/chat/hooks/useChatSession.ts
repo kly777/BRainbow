@@ -215,11 +215,24 @@ export function useChatSession(opts: ChatSessionOptions) {
 		setFocusParam(tempAssistant);
 		setStreamingContent("");
 
+		// rAF 节流：token 到达频率远高于渲染需求，逐 token 更新会让 Markdown
+		// （marked + DOMPurify）对整段累积文本做 O(n²) 级重复解析。每帧最多刷一次。
+		let pendingFrame: number | null = null;
+		let pendingText = "";
+		let pendingReasoning = "";
+		const flushStreaming = () => {
+			pendingFrame = null;
+			setStreamingContent(pendingText);
+			setStreamingReasoning(pendingReasoning);
+		};
 		const patchAssistant = (text: string, reasoning = "") => {
 			// 只更新 signal：流式期间行不重建（keyed For 按引用匹配），
 			// 内容经 signal 细粒度更新，Markdown 组件不重挂载、动画不重放
-			setStreamingContent(text);
-			setStreamingReasoning(reasoning);
+			pendingText = text;
+			pendingReasoning = reasoning;
+			if (pendingFrame === null) {
+				pendingFrame = requestAnimationFrame(flushStreaming);
+			}
 		};
 		const rollback = () => {
 			setCurrent((prev) => {
@@ -249,6 +262,7 @@ export function useChatSession(opts: ChatSessionOptions) {
 			rollback();
 			return result;
 		} finally {
+			if (pendingFrame !== null) cancelAnimationFrame(pendingFrame);
 			setStreamingContent("");
 			setStreamingReasoning("");
 			if (abortCtrl === controller) abortCtrl = null;

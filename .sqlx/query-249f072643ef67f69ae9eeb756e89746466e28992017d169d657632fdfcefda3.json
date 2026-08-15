@@ -1,0 +1,81 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT n.tree_id, t.title AS tree_title, n.id AS node_id, n.role, n.content,\n                      COALESCE(n.created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\"\n               FROM chat_node n\n               JOIN chat_tree t ON t.id = n.tree_id\n               WHERE t.user_id = ?1 AND n.content LIKE ?2 ESCAPE '\\'\n               ORDER BY n.id DESC LIMIT ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "tree_id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "tree_id"
+          }
+        }
+      },
+      {
+        "name": "tree_title",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_tree",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "node_id",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "role",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "role"
+          }
+        }
+      },
+      {
+        "name": "content",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 5,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "249f072643ef67f69ae9eeb756e89746466e28992017d169d657632fdfcefda3"
+}

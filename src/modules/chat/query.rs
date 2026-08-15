@@ -1,9 +1,26 @@
-use sqlx::SqlitePool;
+use sqlx::{FromRow, SqlitePool};
 
 use crate::shared::db_query::like_contains;
 use crate::shared::error_types::ServiceError;
 
 use super::model::{SearchHit, SearchResponse};
+
+#[derive(FromRow)]
+struct NodeHitRow {
+    tree_id: i64,
+    tree_title: String,
+    node_id: i64,
+    role: String,
+    content: String,
+    created_at: String,
+}
+
+#[derive(FromRow)]
+struct TitleHitRow {
+    tree_id: i64,
+    tree_title: String,
+    updated_at: String,
+}
 
 /// 查询侧服务——纯读取（列表/详情/搜索）。
 #[derive(Clone)]
@@ -27,57 +44,60 @@ impl ChatQueryService {
         let limit = limit.clamp(1, 100);
 
         // 1. 命中节点（消息内容）
-        let node_hits: Vec<(i64, String, i64, String, String, String)> = sqlx::query_as(
-            "SELECT n.tree_id, t.title, n.id, n.role, n.content, n.created_at
-             FROM chat_node n
-             JOIN chat_tree t ON t.id = n.tree_id
-             WHERE t.user_id = ?1 AND n.content LIKE ?2 ESCAPE '\\'
-             ORDER BY n.id DESC LIMIT ?3",
+        let node_hits: Vec<NodeHitRow> = sqlx::query_as!(
+            NodeHitRow,
+            r#"SELECT n.tree_id, t.title AS tree_title, n.id AS node_id, n.role, n.content,
+                      COALESCE(n.created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
+               FROM chat_node n
+               JOIN chat_tree t ON t.id = n.tree_id
+               WHERE t.user_id = ?1 AND n.content LIKE ?2 ESCAPE '\'
+               ORDER BY n.id DESC LIMIT ?3"#,
+            user_id,
+            kw,
+            limit
         )
-        .bind(user_id)
-        .bind(&kw)
-        .bind(limit)
         .fetch_all(&self.pool)
         .await?;
 
         let mut hits: Vec<SearchHit> = node_hits
             .into_iter()
-            .map(
-                |(tree_id, tree_title, node_id, role, content, created_at)| SearchHit {
-                    tree_id,
-                    tree_title,
-                    node_id: Some(node_id),
-                    role,
-                    snippet: Self::snippet(&content, q, 60),
-                    created_at,
-                },
-            )
+            .map(|r| SearchHit {
+                tree_id: r.tree_id,
+                tree_title: r.tree_title,
+                node_id: Some(r.node_id),
+                role: r.role,
+                snippet: Self::snippet(&r.content, q, 60),
+                created_at: r.created_at,
+            })
             .collect();
 
         // 2. 命中标题（补充，避免与节点结果重复）
         if (hits.len() as i64) < limit {
-            let title_hits: Vec<(i64, String, String)> = sqlx::query_as(
-                "SELECT id, title, updated_at FROM chat_tree
-                 WHERE user_id = ?1 AND title LIKE ?2 ESCAPE '\\'
-                 ORDER BY updated_at DESC LIMIT ?3",
+            let title_hits: Vec<TitleHitRow> = sqlx::query_as!(
+                TitleHitRow,
+                r#"SELECT id AS tree_id, title AS tree_title,
+                          COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: String"
+                   FROM chat_tree
+                   WHERE user_id = ?1 AND title LIKE ?2 ESCAPE '\'
+                   ORDER BY updated_at DESC LIMIT ?3"#,
+                user_id,
+                kw,
+                limit - hits.len() as i64
             )
-            .bind(user_id)
-            .bind(&kw)
-            .bind(limit - hits.len() as i64)
             .fetch_all(&self.pool)
             .await?;
 
-            for (tree_id, tree_title, updated_at) in title_hits {
-                if hits.iter().any(|h| h.tree_id == tree_id) {
+            for r in title_hits {
+                if hits.iter().any(|h| h.tree_id == r.tree_id) {
                     continue;
                 }
                 hits.push(SearchHit {
-                    tree_id,
-                    tree_title: tree_title.clone(),
+                    tree_id: r.tree_id,
+                    tree_title: r.tree_title.clone(),
                     node_id: None,
                     role: "tree".into(),
-                    snippet: format!("【标题】{tree_title}"),
-                    created_at: updated_at,
+                    snippet: format!("【标题】{}", r.tree_title),
+                    created_at: r.updated_at,
                 });
             }
         }

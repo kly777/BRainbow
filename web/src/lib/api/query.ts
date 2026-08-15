@@ -13,14 +13,18 @@ export function buildQuery(params: Record<string, unknown>): string {
 
 /**
  * 生成带超时的 AbortSignal：与调用方 signal 合并，任一触发即取消。
- * 超时时间会随 AbortSignal.timeout 传播（调用方捕获 NetworkError.canceled 判断是否超时）。
+ * `onTimeout` 在超时触发（abort 之前）回调一次，用于区分"主动取消"和"超时"。
  */
 export function withTimeout(
 	ms: number,
 	signal?: AbortSignal | null,
+	onTimeout?: () => void,
 ): { signal: AbortSignal; timer: ReturnType<typeof setTimeout> } {
 	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), ms);
+	const timer = setTimeout(() => {
+		onTimeout?.();
+		controller.abort();
+	}, ms);
 	if (signal) {
 		if (signal.aborted) controller.abort();
 		else

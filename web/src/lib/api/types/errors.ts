@@ -9,8 +9,12 @@ export class NetworkError extends Error {
 	/** 主动取消（AbortError）：调用方应静默处理，不弹错误提示 */
 	readonly canceled: boolean;
 
-	constructor(args: { readonly cause: unknown; readonly canceled?: boolean }) {
-		super("Network error");
+	constructor(args: {
+		readonly cause: unknown;
+		readonly canceled?: boolean;
+		readonly message?: string;
+	}) {
+		super(args.message ?? "Network error");
 		this.name = "NetworkError";
 		this.cause = args.cause;
 		this.canceled = args.canceled ?? false;
@@ -63,7 +67,9 @@ export function getErrorMessage(error: unknown): string {
 			: `服务器错误 (${error.status}, ${error.code})`;
 	}
 	if (error instanceof NetworkError) {
-		return "网络连接失败，请检查网络";
+		return error.message === "Network error"
+			? "网络连接失败，请检查网络"
+			: error.message;
 	}
 	if (error instanceof ValidationError) {
 		return "数据格式错误，请联系开发者";

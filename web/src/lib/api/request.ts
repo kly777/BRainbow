@@ -1,3 +1,4 @@
+import { withTimeout } from "./query.ts";
 import { getApiKey, getToken } from "./token.ts";
 import { HttpError, NetworkError } from "./types/index.ts";
 
@@ -155,22 +156,58 @@ export async function handleGlobalError(
 
 // ==================== 核心请求函数 ====================
 
+/** 非流式请求默认超时：普通查询给足余量；大上传/AI 长任务显式关闭 */
+const DEFAULT_TIMEOUT_MS = 15_000;
+
+export interface RequestOptions extends RequestInit {
+	/** 覆盖默认超时毫秒；传 false 关闭超时（大文件上传、AI 长任务） */
+	timeout?: number | false;
+}
+
 export const request = async <T>(
 	endpoint: string,
-	options: RequestInit = {},
+	options: RequestOptions = {},
 ): Promise<T> => {
 	const url = `${API_BASE_URL}${endpoint}`;
+
+	const {
+		timeout = DEFAULT_TIMEOUT_MS,
+		signal: externalSignal,
+		...fetchOptions
+	} = options;
+	let signal: AbortSignal | undefined = externalSignal ?? undefined;
+	let timer: ReturnType<typeof setTimeout> | null = null;
+	let timedOut = false;
+	if (timeout !== false) {
+		const merged = withTimeout(timeout, signal ?? null, () => {
+			timedOut = true;
+		});
+		signal = merged.signal;
+		timer = merged.timer;
+	}
 
 	let response: Response;
 	try {
 		response = await fetch(url, {
-			...options,
-			headers: buildHeaders(options.headers, options.body),
+			...fetchOptions,
+			signal,
+			headers: buildHeaders(fetchOptions.headers, fetchOptions.body),
 		});
 	} catch (cause: unknown) {
-		// ── 主动取消（AbortError）：静默抛出，不弹网络错误 toast ──
 		if ((cause as Error)?.name === "AbortError") {
-			throw new NetworkError({ cause, canceled: true });
+			// ── 主动取消：静默抛出，不弹网络错误 toast ──
+			if (!timedOut) {
+				throw new NetworkError({ cause, canceled: true });
+			}
+			// ── 默认超时：明确提示，而不是伪装成"网络断开" ──
+			await toast({
+				type: "error",
+				title: "请求超时",
+				message: "服务器响应超时，请稍后重试",
+				details: "TIMEOUT",
+				duration: 6000,
+			});
+			throw new NetworkError({ cause, message: "请求超时，请稍后重试" });
 		}
 		// ── 网络断开 → 全局 toast + 日志，然后抛出 ──
 		console.error(`[API] NETWORK ${endpoint}:`, cause);
@@ -188,6 +225,8 @@ export const request = async <T>(
 			});
 		}
 		throw new NetworkError({ cause });
+	} finally {
+		if (timer !== null) clearTimeout(timer);
 	}
 
 	// ── 非 2xx → 全局副作用 + 抛出 ──

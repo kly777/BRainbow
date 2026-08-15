@@ -42,4 +42,6 @@ export const aiChatE = (
 			temperature: opts?.temperature,
 			max_tokens: opts?.maxTokens,
 		}),
+		// 推理模型长回复可能远超 15s，不做默认超时
+		timeout: false,
 	});

@@ -131,6 +131,8 @@ export const importBookmarksE = async (file: File): Promise<ImportResult> => {
 	const result = await request<ImportResult>("/bookmarks/import", {
 		method: "POST",
 		body: formData,
+		// 书签 HTML 导入可到 64MB，不做 15s 默认超时
+		timeout: false,
 	});
 	invalidateCache(CACHE.bookmarks);
 	return result;

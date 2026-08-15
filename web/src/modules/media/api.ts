@@ -42,6 +42,8 @@ export const uploadMedia = async (file: File): Promise<MediaItem> => {
 	return request<MediaItem>("/media/upload", {
 		method: "POST",
 		body: formData,
+		// 大文件上传不做 15s 默认超时
+		timeout: false,
 	});
 };
 

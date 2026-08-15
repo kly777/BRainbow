@@ -54,7 +54,7 @@ mod tests {
     #[tokio::test]
     async fn settings_set_get_roundtrip() {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
-        crate::db::create_tables(&pool).await.unwrap();
+        crate::db::migrate(&pool).await.unwrap();
         let svc = SettingsService::new(pool);
         assert_eq!(svc.get("k").await.unwrap(), None);
         svc.set("k", "v1").await.unwrap();

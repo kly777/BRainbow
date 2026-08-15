@@ -55,7 +55,7 @@ mod tests {
 
     async fn setup() -> TextRepo {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
-        crate::db::create_tables(&pool).await.unwrap();
+        crate::db::migrate(&pool).await.unwrap();
         TextRepo { pool }
     }
 

@@ -422,7 +422,7 @@ mod tests {
 
     async fn setup() -> SearchQueryService {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        crate::db::create_tables(&pool).await.unwrap();
+        crate::db::migrate(&pool).await.unwrap();
         // 生产 schema 中 card/task.user_id 有外键约束，先建两个测试用户
         for (id, name) in [(1, "u1"), (2, "u2")] {
             sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (?, ?, 'x')")

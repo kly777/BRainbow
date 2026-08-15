@@ -221,7 +221,7 @@ mod tests {
     async fn setup_test_db() -> SqlitePool {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
 
-        crate::db::create_tables(&pool).await.unwrap();
+        crate::db::migrate(&pool).await.unwrap();
 
         // conv 1: Go 相关对话
         sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (1, '如何用Go写Web程序', 'solution')")

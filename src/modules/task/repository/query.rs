@@ -275,7 +275,7 @@ mod tests {
 
     async fn setup() -> TaskRepository {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        crate::db::create_tables(&pool).await.unwrap();
+        crate::db::migrate(&pool).await.unwrap();
         TaskRepository::new(Arc::new(pool))
     }
 

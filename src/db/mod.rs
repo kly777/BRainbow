@@ -1,13 +1,13 @@
-//! 数据库 schema 与幂等迁移。
+//! 数据库 schema 与版本化迁移。
 //!
-//! `create_tables` 是唯一的 schema 来源：生产启动与各模块测试共用同一份 DDL，
+//! `migrate` 是唯一的 schema 入口：生产启动与各模块测试共用同一份 DDL 与迁移，
 //! 避免测试建表与生产 schema 漂移。app/modules 都不应自行拼 CREATE TABLE。
 
 pub mod query;
 
-use sqlx::{Row, SqlitePool};
+use sqlx::{Row, SqliteConnection, SqlitePool};
 
-/// 创建表
+/// 基线 schema（v1）：只负责幂等建表，列级变更走版本迁移函数
 pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     // 创建用户表
     sqlx::query(
@@ -218,30 +218,6 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
-    // 迁移：为历史库补齐 sign 查询/模型实际使用的列（旧 DDL 缺失）
-    for (column, ddl) in [
-        (
-            "weight",
-            "ALTER TABLE signifier_signified ADD COLUMN weight REAL",
-        ),
-        (
-            "relation_type",
-            "ALTER TABLE signifier_signified ADD COLUMN relation_type TEXT",
-        ),
-        (
-            "created_at",
-            "ALTER TABLE signifier_signified ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-        ),
-    ] {
-        if !column_exists(pool, "signifier_signified", column).await? {
-            sqlx::query(ddl).execute(pool).await.map_err(|e| {
-                sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
-                    "迁移失败: 无法为 signifier_signified 添加 {column} 列: {e}"
-                ))))
-            })?;
-        }
-    }
-
     // 创建文本笔记表
     sqlx::query(
         r#"
@@ -404,18 +380,6 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
-    // 迁移：聊天 QA 数据已并入 chat_tree/chat_node，删除旧 conv 表（幂等）
-    if table_exists(pool, "conv").await? {
-        sqlx::query("DROP TABLE conv")
-            .execute(pool)
-            .await
-            .map_err(|e| {
-                sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
-                    "迁移失败: 无法删除已废弃的 conv 表: {e}"
-                ))))
-            })?;
-    }
-
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS articles (
@@ -560,19 +524,6 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
-    // 迁移：为已有数据库添加 kind 列（chat / mem）
-    // 先查列是否存在：存在 → 幂等跳过；不存在但 ALTER 失败 → 启动失败（迁移必须成功）
-    if !column_exists(pool, "chat_tree", "kind").await? {
-        sqlx::query("ALTER TABLE chat_tree ADD COLUMN kind TEXT NOT NULL DEFAULT 'chat'")
-            .execute(pool)
-            .await
-            .map_err(|e| {
-                sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
-                    "迁移失败: 无法为 chat_tree 添加 kind 列: {e}"
-                ))))
-            })?;
-    }
-
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS chat_node (
@@ -588,18 +539,6 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     )
     .execute(pool)
     .await?;
-
-    // 迁移：为 chat_node 添加 reasoning 列（AI 推理思考内容）
-    if !column_exists(pool, "chat_node", "reasoning").await? {
-        sqlx::query("ALTER TABLE chat_node ADD COLUMN reasoning TEXT")
-            .execute(pool)
-            .await
-            .map_err(|e| {
-                sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
-                    "迁移失败: 无法为 chat_node 添加 reasoning 列: {e}"
-                ))))
-            })?;
-    }
 
     sqlx::query(
         r#"
@@ -665,29 +604,179 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
-    // 迁移：为已有数据库添加 notes 列
-    if !column_exists(pool, "reading_article", "notes").await? {
-        sqlx::query("ALTER TABLE reading_article ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
-            .execute(pool)
-            .await
-            .map_err(|e| {
-                sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
-                    "迁移失败: 无法为 reading_article 添加 notes 列: {e}"
-                ))))
-            })?;
-    }
-
     Ok(())
 }
 
-/// 检查表中是否存在某列（用于幂等迁移）
-async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> Result<bool, sqlx::Error> {
+// ── 版本化迁移 ──
+//
+// v1 = create_tables 基线；每个后续版本一个迁移函数，各自在事务中执行并更新
+// PRAGMA user_version。迁移必须幂等：列/表已存在则跳过；ALTER 失败必须上抛。
+
+/// 程序支持的最新 schema 版本
+pub const LATEST_USER_VERSION: i64 = 6;
+
+/// 迁移统一入口。
+///
+/// - 新库（user_version = 0）：先建基线 schema，再逐版本走到最新；
+/// - 旧库：按当前 user_version 从下一版本开始升级；
+/// - user_version 高于程序支持版本：启动失败（防止旧程序破坏新库）。
+pub async fn migrate(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    let current: i64 = sqlx::query_scalar("PRAGMA user_version")
+        .fetch_one(pool)
+        .await?;
+    if current > LATEST_USER_VERSION {
+        return Err(sqlx::Error::Configuration(Box::new(std::io::Error::other(
+            format!("数据库 schema 版本 {current} 高于程序支持的 {LATEST_USER_VERSION}"),
+        ))));
+    }
+
+    if current == 0 {
+        create_tables(pool).await?;
+    }
+
+    for target in (current.max(1) + 1)..=LATEST_USER_VERSION {
+        apply_migration(pool, target).await?;
+    }
+    Ok(())
+}
+
+/// 在单事务中执行一个版本迁移并推进 user_version
+async fn apply_migration(pool: &SqlitePool, target: i64) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    match target {
+        2 => migrate_v2_cleanup_conv(&mut tx).await?,
+        3 => migrate_v3_chat_tree_kind(&mut tx).await?,
+        4 => migrate_v4_chat_node_reasoning(&mut tx).await?,
+        5 => migrate_v5_signifier_columns(&mut tx).await?,
+        6 => migrate_v6_reading_notes(&mut tx).await?,
+        _ => {
+            return Err(sqlx::Error::Configuration(Box::new(std::io::Error::other(
+                format!("未知的迁移版本: {target}"),
+            ))));
+        }
+    }
+    set_user_version(&mut tx, target).await?;
+    tx.commit().await
+}
+
+/// v2：聊天 QA 数据已并入 chat_tree/chat_node，删除废弃的 conv 表
+async fn migrate_v2_cleanup_conv(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    if table_exists_on(conn, "conv").await? {
+        sqlx::query("DROP TABLE conv")
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| migration_failed("无法删除已废弃的 conv 表", e))?;
+    }
+    Ok(())
+}
+
+/// v3：chat_tree 添加 kind 列（chat / mem）
+async fn migrate_v3_chat_tree_kind(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    add_column_if_missing(
+        conn,
+        "chat_tree",
+        "kind",
+        "ALTER TABLE chat_tree ADD COLUMN kind TEXT NOT NULL DEFAULT 'chat'",
+    )
+    .await
+}
+
+/// v4：chat_node 添加 reasoning 列（AI 推理思考内容）
+async fn migrate_v4_chat_node_reasoning(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    add_column_if_missing(
+        conn,
+        "chat_node",
+        "reasoning",
+        "ALTER TABLE chat_node ADD COLUMN reasoning TEXT",
+    )
+    .await
+}
+
+/// v5：历史库的 signifier_signified 缺少查询/模型实际使用的三列
+async fn migrate_v5_signifier_columns(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    for (column, ddl) in [
+        (
+            "weight",
+            "ALTER TABLE signifier_signified ADD COLUMN weight REAL",
+        ),
+        (
+            "relation_type",
+            "ALTER TABLE signifier_signified ADD COLUMN relation_type TEXT",
+        ),
+        (
+            "created_at",
+            "ALTER TABLE signifier_signified ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        ),
+    ] {
+        add_column_if_missing(conn, "signifier_signified", column, ddl).await?;
+    }
+    Ok(())
+}
+
+/// v6：reading_article 添加 notes 列
+async fn migrate_v6_reading_notes(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    add_column_if_missing(
+        conn,
+        "reading_article",
+        "notes",
+        "ALTER TABLE reading_article ADD COLUMN notes TEXT NOT NULL DEFAULT ''",
+    )
+    .await
+}
+
+async fn add_column_if_missing(
+    conn: &mut SqliteConnection,
+    table: &str,
+    column: &str,
+    ddl: &'static str,
+) -> Result<(), sqlx::Error> {
+    if !column_exists_on(conn, table, column).await? {
+        sqlx::query(ddl)
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| migration_failed(&format!("无法为 {table} 添加 {column} 列"), e))?;
+    }
+    Ok(())
+}
+
+fn migration_failed(what: &str, e: sqlx::Error) -> sqlx::Error {
+    sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
+        "迁移失败: {what}: {e}"
+    ))))
+}
+
+async fn set_user_version(conn: &mut SqliteConnection, version: i64) -> Result<(), sqlx::Error> {
+    // version 是内部编译期常量，无注入
+    sqlx::query(sqlx::AssertSqlSafe(format!(
+        "PRAGMA user_version = {version}"
+    )))
+    .execute(&mut *conn)
+    .await
+    .map(|_| ())
+}
+
+/// 检查表中是否存在某列（池级封装；迁移内部使用连接级 helper）
+#[cfg_attr(not(test), allow(dead_code))]
+pub async fn column_exists(
+    pool: &SqlitePool,
+    table: &str,
+    column: &str,
+) -> Result<bool, sqlx::Error> {
+    let mut conn = pool.acquire().await?;
+    column_exists_on(&mut conn, table, column).await
+}
+
+async fn column_exists_on(
+    conn: &mut SqliteConnection,
+    table: &str,
+    column: &str,
+) -> Result<bool, sqlx::Error> {
     let safe_table = query::sanitize_table_name(table)?;
     let rows = sqlx::query(
         // SAFETY: sanitize_table_name 确保 safe_table 只含 [a-zA-Z0-9_]
         sqlx::AssertSqlSafe(format!("PRAGMA table_info({safe_table})")),
     )
-    .fetch_all(pool)
+    .fetch_all(&mut *conn)
     .await?;
     for row in rows {
         let name: String = row.try_get("name")?;
@@ -698,8 +787,7 @@ async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> Result<b
     Ok(false)
 }
 
-/// 检查表是否存在（用于幂等 DROP 迁移）
-async fn table_exists(pool: &SqlitePool, table: &str) -> Result<bool, sqlx::Error> {
+async fn table_exists_on(conn: &mut SqliteConnection, table: &str) -> Result<bool, sqlx::Error> {
     let safe_table = query::sanitize_table_name(table)?;
     let count: i64 = sqlx::query_scalar(
         // SAFETY: sanitize_table_name 确保 safe_table 只含 [a-zA-Z0-9_]
@@ -707,7 +795,7 @@ async fn table_exists(pool: &SqlitePool, table: &str) -> Result<bool, sqlx::Erro
             "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '{safe_table}'"
         )),
     )
-    .fetch_one(pool)
+    .fetch_one(&mut *conn)
     .await?;
     Ok(count > 0)
 }
@@ -715,9 +803,15 @@ async fn table_exists(pool: &SqlitePool, table: &str) -> Result<bool, sqlx::Erro
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
-    use super::column_exists;
-    use super::create_tables;
+    use super::{LATEST_USER_VERSION, column_exists, migrate};
     use sqlx::SqlitePool;
+
+    async fn user_version(pool: &SqlitePool) -> i64 {
+        sqlx::query_scalar("PRAGMA user_version")
+            .fetch_one(pool)
+            .await
+            .unwrap()
+    }
 
     #[tokio::test]
     async fn column_exists_detects_presence() {
@@ -742,31 +836,105 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_tables_backfills_legacy_signifier_columns() {
+    async fn migrate_fresh_db_reaches_latest_version() {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        // 模拟历史库：旧版 signifier_signified 缺少 weight/relation_type/created_at
-        sqlx::query(
+        migrate(&pool).await.unwrap();
+        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+        // 新库走 create_tables 后直接具备最新列
+        for (table, col) in [
+            ("chat_tree", "kind"),
+            ("chat_node", "reasoning"),
+            ("reading_article", "notes"),
+        ] {
+            assert!(
+                column_exists(&pool, table, col).await.unwrap(),
+                "{table}.{col} 应存在"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn migrate_upgrades_legacy_db_with_missing_columns() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        // 模拟历史库：四张表都缺后来的列，且存在废弃 conv 表
+        for ddl in [
+            "CREATE TABLE conv (id INTEGER PRIMARY KEY)",
             "CREATE TABLE signifier_signified (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 signifier TEXT NOT NULL,
                 signified TEXT NOT NULL,
-                onto_id INTEGER,
-                FOREIGN KEY (onto_id) REFERENCES onto(id)
+                onto_id INTEGER
             )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+            "CREATE TABLE chat_tree (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                system_prompt TEXT NOT NULL DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )",
+            "CREATE TABLE chat_node (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tree_id INTEGER NOT NULL,
+                parent_id INTEGER,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                revised_from INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )",
+            "CREATE TABLE reading_article (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                word_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )",
+        ] {
+            sqlx::query(ddl).execute(&pool).await.unwrap();
+        }
 
-        create_tables(&pool).await.unwrap();
+        migrate(&pool).await.unwrap();
 
-        for col in ["weight", "relation_type", "created_at"] {
+        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+        for (table, col) in [
+            ("chat_tree", "kind"),
+            ("chat_node", "reasoning"),
+            ("signifier_signified", "weight"),
+            ("signifier_signified", "relation_type"),
+            ("signifier_signified", "created_at"),
+            ("reading_article", "notes"),
+        ] {
             assert!(
-                column_exists(&pool, "signifier_signified", col)
-                    .await
-                    .unwrap(),
-                "迁移后应存在列 {col}"
+                column_exists(&pool, table, col).await.unwrap(),
+                "迁移后 {table}.{col} 应存在"
             );
         }
+        // 废弃 conv 表被删除
+        let conv_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'conv'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(conv_count, 0);
+    }
+
+    #[tokio::test]
+    async fn migrate_is_idempotent() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        migrate(&pool).await.unwrap();
+        migrate(&pool).await.unwrap();
+        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+    }
+
+    #[tokio::test]
+    async fn migrate_rejects_future_version() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query("PRAGMA user_version = 99")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let err = migrate(&pool).await.unwrap_err();
+        assert!(err.to_string().contains("高于程序支持"));
     }
 }

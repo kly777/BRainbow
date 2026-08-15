@@ -32,7 +32,7 @@ mod tests {
 
     async fn setup() -> (TextService, TextQueryService) {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
-        crate::db::create_tables(&pool).await.unwrap();
+        crate::db::migrate(&pool).await.unwrap();
         let qsvc = TextQueryService::new(pool.clone());
         (TextService::new(pool), qsvc)
     }

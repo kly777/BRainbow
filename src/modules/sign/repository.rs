@@ -142,7 +142,7 @@ mod tests {
 
     async fn setup() -> SignRepository {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        crate::db::create_tables(&pool).await.unwrap();
+        crate::db::migrate(&pool).await.unwrap();
         SignRepository::new(Arc::new(pool))
     }
 

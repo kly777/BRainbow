@@ -1112,13 +1112,13 @@ mod tests {
     use super::*;
     use sqlx::SqlitePool;
 
-    /// 创建测试数据库（复用生产 schema：crate::db::create_tables）
+    /// 创建测试数据库（复用生产 schema：crate::db::migrate）
     async fn setup_db() -> MemRepo {
         let pool = SqlitePool::connect("sqlite::memory:")
             .await
             .expect("create in-memory db");
 
-        crate::db::create_tables(&pool)
+        crate::db::migrate(&pool)
             .await
             .expect("create production schema");
 

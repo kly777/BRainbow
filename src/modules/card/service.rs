@@ -44,7 +44,7 @@ mod tests {
 
     async fn setup() -> (CardService, CardQueryService) {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
-        crate::db::create_tables(&pool).await.unwrap();
+        crate::db::migrate(&pool).await.unwrap();
         let qsvc = CardQueryService::new(pool.clone());
         (CardService::new(pool), qsvc)
     }

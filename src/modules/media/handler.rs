@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    extract::{Multipart, Path, Query, State},
+    extract::{Extension, Multipart, Path, Query, State},
     http::{StatusCode, header},
     response::{IntoResponse, Json, Response},
 };
@@ -17,6 +17,7 @@ use tokio_util::io::ReaderStream;
 
 use super::service::MediaService;
 use crate::modules::state::AppState;
+use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::error_types::ServiceError;
 use crate::shared::pagination::Pagination;
@@ -56,6 +57,7 @@ fn to_response(m: &super::model::Media) -> MediaResponse {
 
 pub async fn upload_handler(
     State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
     let service = &state.media;
@@ -78,7 +80,12 @@ pub async fn upload_handler(
         };
 
         match service
-            .upload(&data, &original_name, &content_type, None)
+            .upload(
+                &data,
+                &original_name,
+                &content_type,
+                Some(claims.sub as i64),
+            )
             .await
         {
             Ok(media) => {

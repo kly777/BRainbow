@@ -9,6 +9,10 @@ use crate::shared::error_types::ServiceError;
 
 pub(crate) const UPLOAD_DIR: &str = "uploads";
 
+/// multipart 请求体上限：最大允许单文件（200MiB 视频）+ boundary 与字段名开销。
+/// 与 `/upload` 路由的 `DefaultBodyLimit` 保持一致，避免超 2MB 默认限制。
+pub(crate) const UPLOAD_BODY_LIMIT_BYTES: usize = 210 * 1024 * 1024;
+
 const ALLOWED_MIMES: &[(&str, &str, u64)] = &[
     // (MIME, media_type, max_size_bytes)
     ("image/png", "image", 10_485_760),
@@ -171,9 +175,12 @@ impl MediaService {
             }
         };
 
-        // 5. 原子 rename
+        // 5. 原子 rename；失败则回滚 DB 记录与临时文件，避免留下"有记录无文件"的悬空数据
         if let Err(e) = std::fs::rename(&tmp_path, &final_path) {
             warn!("rename 失败 stored_id={}: {}", stored_id, e);
+            let _ = self.repo.delete(&stored_id).await;
+            let _ = tokio::fs::remove_file(&tmp_path).await;
+            return Err(ServiceError::Internal(format!("保存文件失败: {e}")));
         }
 
         // 6. 元数据解析（非阻塞）
@@ -352,6 +359,17 @@ mod tests {
         let result = find_allowed("image/webp");
         assert!(result.is_some());
         assert_eq!(result.unwrap().0, "image");
+    }
+
+    #[test]
+    fn upload_body_limit_covers_largest_allowed_file() {
+        // 路由 body limit 必须大于任何允许单文件，否则服务层上限永远无法达成
+        let max_file = ALLOWED_MIMES
+            .iter()
+            .map(|(_, _, size)| *size)
+            .max()
+            .unwrap();
+        assert!(UPLOAD_BODY_LIMIT_BYTES as u64 > max_file);
     }
 
     // ── dir_for_type ──

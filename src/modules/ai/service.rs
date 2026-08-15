@@ -23,20 +23,14 @@ impl AiService {
 
     /// 读取用户的完整 AI 配置
     pub async fn get_config(&self, user_id: i32) -> Result<Option<AiConfig>, ServiceError> {
-        let row: Option<(String, String, String, String)> = sqlx::query_as(
+        let row = sqlx::query_as!(
+            AiConfig,
             "SELECT endpoint, api_key, model, mnemonic_prompt FROM ai_settings WHERE user_id = ?1",
+            user_id
         )
-        .bind(user_id)
         .fetch_optional(&self.pool)
         .await?;
-        Ok(
-            row.map(|(endpoint, api_key, model, mnemonic_prompt)| AiConfig {
-                endpoint,
-                api_key,
-                model,
-                mnemonic_prompt,
-            }),
-        )
+        Ok(row)
     }
 
     /// 返回前端可读设置（api_key 掩码）
@@ -86,7 +80,7 @@ impl AiService {
             .unwrap_or(old_prompt);
 
         let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        sqlx::query(
+        sqlx::query!(
             "INSERT INTO ai_settings (user_id, endpoint, api_key, model, mnemonic_prompt, updated_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)
              ON CONFLICT(user_id) DO UPDATE SET
@@ -95,13 +89,13 @@ impl AiService {
                 model = excluded.model,
                 mnemonic_prompt = excluded.mnemonic_prompt,
                 updated_at = excluded.updated_at",
+            user_id,
+            endpoint,
+            api_key,
+            model,
+            mnemonic_prompt,
+            now
         )
-        .bind(user_id)
-        .bind(&endpoint)
-        .bind(&api_key)
-        .bind(&model)
-        .bind(&mnemonic_prompt)
-        .bind(&now)
         .execute(&self.pool)
         .await?;
 

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO ai_settings (user_id, endpoint, api_key, model, mnemonic_prompt, updated_at)\n             VALUES (?1, ?2, ?3, ?4, ?5, ?6)\n             ON CONFLICT(user_id) DO UPDATE SET\n                endpoint = excluded.endpoint,\n                api_key = excluded.api_key,\n                model = excluded.model,\n                mnemonic_prompt = excluded.mnemonic_prompt,\n                updated_at = excluded.updated_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "e49f0054b1a910960845721027d89b801e8ef35eb8e40161d9e53e5899dc9c9e"
+}

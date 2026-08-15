@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT endpoint, api_key, model, mnemonic_prompt FROM ai_settings WHERE user_id = ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "endpoint",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_settings",
+            "name": "endpoint"
+          }
+        }
+      },
+      {
+        "name": "api_key",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_settings",
+            "name": "api_key"
+          }
+        }
+      },
+      {
+        "name": "model",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_settings",
+            "name": "model"
+          }
+        }
+      },
+      {
+        "name": "mnemonic_prompt",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_settings",
+            "name": "mnemonic_prompt"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "816043350a1424b107a016bac2273f4df123cd825c983f688c363abf417c541d"
+}

@@ -1,0 +1,57 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id: i32\", role,\n                  COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\",\n                  user_id AS \"user_id?: i32\"\n           FROM api_key ORDER BY id DESC",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "api_key",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "role",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "api_key",
+            "name": "role"
+          }
+        }
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 2,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      },
+      {
+        "name": "user_id?: i32",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "api_key",
+            "name": "user_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "dffc00bcfc405bf3ca513103437e0addd5f22f8a16e4d20f248ae98a0db5d917"
+}

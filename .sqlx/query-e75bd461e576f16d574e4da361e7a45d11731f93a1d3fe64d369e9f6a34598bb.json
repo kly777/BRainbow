@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT user_id AS \"user_id?: i32\" FROM api_key WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "user_id?: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "api_key",
+            "name": "user_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "e75bd461e576f16d574e4da361e7a45d11731f93a1d3fe64d369e9f6a34598bb"
+}

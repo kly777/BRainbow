@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 
 /// AI 设置（返回给前端；api_key 不回显，只给 has_key）
 #[derive(Serialize)]
@@ -39,7 +40,7 @@ pub struct AiProxyMessage {
 }
 
 /// 完整 AI 配置（服务内部使用，含 api_key）
-#[derive(Clone)]
+#[derive(Clone, FromRow)]
 pub struct AiConfig {
     pub endpoint: String,
     pub api_key: String,

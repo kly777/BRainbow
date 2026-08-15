@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT role, user_id AS \"user_id?: i32\" FROM api_key WHERE key_hash = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "role",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "api_key",
+            "name": "role"
+          }
+        }
+      },
+      {
+        "name": "user_id?: i32",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "api_key",
+            "name": "user_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "180a47acd55d326d944aa57f26ef99fa74c2345c75402f67a76d8fdccccd5df4"
+}

@@ -10,6 +10,26 @@ use crate::shared::claims::Claims;
 use crate::shared::error_types::ErrorBody;
 pub use crate::shared::jwt::{extract_api_key, extract_token, hash_api_key, verify_token};
 use serde::Serialize;
+use sqlx::FromRow;
+
+#[derive(FromRow)]
+struct ApiKeyAuthRow {
+    role: String,
+    user_id: Option<i32>,
+}
+
+#[derive(FromRow)]
+struct ApiKeyListRow {
+    id: i32,
+    role: String,
+    created_at: String,
+    user_id: Option<i32>,
+}
+
+#[derive(FromRow)]
+struct ApiKeyOwnerRow {
+    user_id: Option<i32>,
+}
 
 // ============================================================
 // 中间件
@@ -35,11 +55,13 @@ pub async fn auth(State(state): State<AppState>, mut request: Request, next: Nex
     // ── 2. API key ──
     if let Some(key) = extract_api_key(&request) {
         let key_hash = hash_api_key(&key);
-        let row: Result<Option<(i32, String, Option<i32>)>, sqlx::Error> =
-            sqlx::query_as("SELECT id, role, user_id FROM api_key WHERE key_hash = ?")
-                .bind(&key_hash)
-                .fetch_optional(&*state.db)
-                .await;
+        let row: Result<Option<ApiKeyAuthRow>, sqlx::Error> = sqlx::query_as!(
+            ApiKeyAuthRow,
+            r#"SELECT role, user_id AS "user_id?: i32" FROM api_key WHERE key_hash = ?"#,
+            key_hash
+        )
+        .fetch_optional(&*state.db)
+        .await;
         let row = match row {
             Ok(row) => row,
             Err(e) => {
@@ -58,10 +80,10 @@ pub async fn auth(State(state): State<AppState>, mut request: Request, next: Nex
             }
         };
 
-        if let Some((_id, role, user_id)) = row {
+        if let Some(row) = row {
             let claims = Claims {
-                sub: user_id.unwrap_or(-1),
-                role,
+                sub: row.user_id.unwrap_or(-1),
+                role: row.role,
                 exp: usize::MAX,
             };
             request.extensions_mut().insert(claims);
@@ -137,9 +159,6 @@ pub struct ApiKeyInfo {
     pub key: Option<String>,
 }
 
-/// api_key 表行类型（sqlx query_as 元组）
-type ApiKeyRow = (i32, String, String, Option<i32>);
-
 /// 生成 API key。
 ///
 /// dev 环境：免登录，生成 admin 角色 key（前端测试便利）。
@@ -154,27 +173,28 @@ pub async fn create_api_key(
     let key = uuid::Uuid::new_v4().to_string().replace('-', "");
     let key_hash = hash_api_key(&key);
 
-    let id: i64 =
-        match sqlx::query("INSERT INTO api_key (key_hash, role, user_id) VALUES (?, ?, ?)")
-            .bind(&key_hash)
-            .bind(&role)
-            .bind(user_id)
-            .execute(&*state.db)
-            .await
-        {
-            Ok(r) => r.last_insert_rowid(),
-            Err(e) => {
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ErrorBody {
-                        code: "INTERNAL".to_string(),
-                        message: format!("创建 key 失败: {}", e),
-                        details: None,
-                    }),
-                )
-                    .into_response();
-            }
-        };
+    let id: i64 = match sqlx::query!(
+        "INSERT INTO api_key (key_hash, role, user_id) VALUES (?, ?, ?)",
+        key_hash,
+        role,
+        user_id
+    )
+    .execute(&*state.db)
+    .await
+    {
+        Ok(r) => r.last_insert_rowid(),
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorBody {
+                    code: "INTERNAL".to_string(),
+                    message: format!("创建 key 失败: {}", e),
+                    details: None,
+                }),
+            )
+                .into_response();
+        }
+    };
 
     Json(ApiKeyInfo {
         id: id as i32,
@@ -190,23 +210,28 @@ pub async fn list_api_keys(
     State(state): State<AppState>,
     Extension(claims): Extension<Claims>,
 ) -> Response {
-    let rows: Result<Vec<ApiKeyRow>, _> =
-        sqlx::query_as("SELECT id, role, created_at, user_id FROM api_key ORDER BY id DESC")
-            .fetch_all(&*state.db)
-            .await;
+    let rows: Result<Vec<ApiKeyListRow>, _> = sqlx::query_as!(
+        ApiKeyListRow,
+        r#"SELECT id AS "id: i32", role,
+                  COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String",
+                  user_id AS "user_id?: i32"
+           FROM api_key ORDER BY id DESC"#
+    )
+    .fetch_all(&*state.db)
+    .await;
 
     match rows {
         Ok(rows) => {
             let items: Vec<ApiKeyInfo> = rows
                 .into_iter()
-                .filter(|(_, _, _, uid)| {
+                .filter(|row| {
                     // 仅自己的 key（admin 可见全部）
-                    claims.role == "admin" || Some(claims.sub) == *uid
+                    claims.role == "admin" || Some(claims.sub) == row.user_id
                 })
-                .map(|(id, role, created_at, _)| ApiKeyInfo {
-                    id,
-                    role,
-                    created_at,
+                .map(|row| ApiKeyInfo {
+                    id: row.id,
+                    role: row.role,
+                    created_at: row.created_at,
                     key: None,
                 })
                 .collect();
@@ -232,11 +257,14 @@ pub async fn delete_api_key(
 ) -> Response {
     // 非 admin 只能删自己的 key
     if claims.role != "admin" {
-        let owned = sqlx::query_as("SELECT user_id FROM api_key WHERE id = ?")
-            .bind(id)
-            .fetch_optional(&*state.db)
-            .await;
-        let owned: Option<(Option<i32>,)> = match owned {
+        let owned = sqlx::query_as!(
+            ApiKeyOwnerRow,
+            r#"SELECT user_id AS "user_id?: i32" FROM api_key WHERE id = ?"#,
+            id
+        )
+        .fetch_optional(&*state.db)
+        .await;
+        let owned: Option<ApiKeyOwnerRow> = match owned {
             Ok(row) => row,
             Err(e) => {
                 tracing::error!("查询 API key 归属失败: {e}");
@@ -251,7 +279,7 @@ pub async fn delete_api_key(
                     .into_response();
             }
         };
-        if owned.map(|(uid,)| uid) != Some(Some(claims.sub)) {
+        if owned.map(|row| row.user_id) != Some(Some(claims.sub)) {
             return (
                 StatusCode::FORBIDDEN,
                 Json(ErrorBody {
@@ -264,8 +292,7 @@ pub async fn delete_api_key(
         }
     }
 
-    match sqlx::query("DELETE FROM api_key WHERE id = ?")
-        .bind(id)
+    match sqlx::query!("DELETE FROM api_key WHERE id = ?", id)
         .execute(&*state.db)
         .await
     {

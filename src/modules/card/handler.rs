@@ -31,8 +31,8 @@ impl From<super::model::Card> for CardResponse {
         Self {
             id: c.id,
             content: c.content,
-            created_at: c.created_at.to_string(),
-            updated_at: c.updated_at.to_string(),
+            created_at: c.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+            updated_at: c.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
         }
     }
 }
@@ -129,4 +129,27 @@ pub async fn search_cards_handler(
             PaginatedResponse::new(items, total, &pagination)
         });
     error::ok_or(result, "搜索卡片")
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use chrono::{DateTime, Utc};
+
+    #[test]
+    fn card_response_formats_time_to_seconds_without_fraction_or_suffix() {
+        let dt = DateTime::parse_from_rfc3339("2026-08-07T07:13:43.540234635+00:00")
+            .unwrap()
+            .with_timezone(&Utc);
+        let card = super::super::model::Card {
+            id: 1,
+            content: "x".into(),
+            created_at: dt,
+            updated_at: dt,
+        };
+        let response = CardResponse::from(card);
+        assert_eq!(response.created_at, "2026-08-07 07:13:43");
+        assert_eq!(response.updated_at, "2026-08-07 07:13:43");
+    }
 }

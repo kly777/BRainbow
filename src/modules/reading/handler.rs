@@ -23,8 +23,17 @@ pub async fn upload_article(
     State(state): State<AppState>,
     Json(body): Json<UploadArticleRequest>,
 ) -> impl IntoResponse {
+    let title = body.title.trim();
+    let content = body.content.trim();
+    if title.is_empty() {
+        return error::bad_request("文章标题不能为空");
+    }
+    if content.is_empty() {
+        return error::bad_request("文章内容不能为空");
+    }
+
     let svc = &state.reading;
-    match svc.upload_article(&body.title, &body.content).await {
+    match svc.upload_article(title, content).await {
         Ok(article) => Json(json!({"article": article})).into_response(),
         Err(e) => error::internal(e, "上传文章"),
     }
@@ -56,7 +65,15 @@ pub async fn mark_word(
     Path(word): Path<String>,
     Json(body): Json<MarkWordRequest>,
 ) -> impl IntoResponse {
-    match state.reading.mark_word(&word, &body.status).await {
+    let word = word.trim();
+    if word.is_empty() {
+        return error::bad_request("单词不能为空");
+    }
+    if !matches!(body.status.as_str(), "known" | "unknown" | "ignored") {
+        return error::bad_request("无效的单词状态");
+    }
+
+    match state.reading.mark_word(word, &body.status).await {
         Ok(()) => Json(json!({"ok": true})).into_response(),
         Err(e) => error::internal(e, "标记单词"),
     }

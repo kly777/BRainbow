@@ -24,15 +24,20 @@ impl CardRepository {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Card>, i64), sqlx::Error> {
-        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM card")
+        let total: i64 = sqlx::query_scalar!("SELECT COUNT(*) FROM card")
             .fetch_one(&*self.db)
             .await?;
 
-        let items = sqlx::query_as::<_, Card>(
-            "SELECT id, content, created_at, updated_at FROM card ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+        let items = sqlx::query_as!(
+            Card,
+            r#"SELECT id AS "id: i32",
+                      COALESCE(content, '') AS "content!: String",
+                      COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
+                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
+               FROM card ORDER BY updated_at DESC LIMIT ? OFFSET ?"#,
+            limit,
+            offset
         )
-        .bind(limit)
-        .bind(offset)
         .fetch_all(&*self.db)
         .await?;
 
@@ -41,10 +46,15 @@ impl CardRepository {
 
     /// 根据ID获取卡片
     pub async fn find_by_id(&self, id: i32) -> Result<Option<Card>, sqlx::Error> {
-        sqlx::query_as::<_, Card>(
-            "SELECT id, content, created_at, updated_at FROM card WHERE id = ?",
+        sqlx::query_as!(
+            Card,
+            r#"SELECT id AS "id: i32",
+                      COALESCE(content, '') AS "content!: String",
+                      COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
+                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
+               FROM card WHERE id = ?"#,
+            id
         )
-        .bind(id)
         .fetch_optional(&*self.db)
         .await
     }
@@ -52,20 +62,24 @@ impl CardRepository {
     /// 创建卡片
     pub async fn create(&self, content: String) -> Result<Card, sqlx::Error> {
         let now = Utc::now();
-        let result = sqlx::query(
-            "INSERT INTO card (content, created_at, updated_at) VALUES (?, ?, ?) RETURNING id, content, created_at, updated_at"
+        let row = sqlx::query!(
+            r#"INSERT INTO card (content, created_at, updated_at) VALUES (?, ?, ?)
+               RETURNING id AS "id: i32",
+                         COALESCE(content, '') AS "content!: String",
+                         COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
+                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
+            content,
+            now,
+            now
         )
-            .bind(&content)
-            .bind(now)
-            .bind(now)
-            .fetch_one(&*self.db)
-            .await?;
+        .fetch_one(&*self.db)
+        .await?;
 
         Ok(Card {
-            id: result.try_get("id")?,
-            content: result.try_get("content")?,
-            created_at: result.try_get("created_at")?,
-            updated_at: result.try_get("updated_at")?,
+            id: row.id,
+            content: row.content,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
         })
     }
 
@@ -98,8 +112,7 @@ impl CardRepository {
 
     /// 删除卡片
     pub async fn delete(&self, id: i32) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM card WHERE id = ?")
-            .bind(id)
+        let result = sqlx::query!("DELETE FROM card WHERE id = ?", id)
             .execute(&*self.db)
             .await?;
 

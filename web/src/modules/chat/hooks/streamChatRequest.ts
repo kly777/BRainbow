@@ -53,7 +53,9 @@ export async function streamChatRequest(
 			for (const line of lines) {
 				const trimmed = line.trim();
 				if (!trimmed.startsWith("data:")) continue;
-				const data = trimmed.slice(5).trim();
+				const raw = trimmed.slice(5);
+				// 只按 SSE 规范去掉冒号后的一个空格，保留 token 内容自身的首尾空白
+				const data = raw.startsWith(" ") ? raw.slice(1) : raw;
 				if (data === DONE_MARK) {
 					done = true;
 					break;
@@ -74,6 +76,7 @@ export async function streamChatRequest(
 		}
 
 		if (errored) throw new Error(acc || "AI 生成失败");
+		if (!done) throw new Error("流式连接中断，请重试");
 		return { ok: true, error: "" };
 	} catch (e) {
 		return { ok: false, error: (e as Error)?.message ?? "AI 生成失败" };

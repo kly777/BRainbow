@@ -1,8 +1,10 @@
+import { Button } from "@components/ui";
 import { getErrorMessage } from "@lib/api";
 import { tryAsync } from "@lib/utils";
 import { useSearchParams } from "@solidjs/router";
 import { type Component, createSignal, For, onMount } from "solid-js";
 import { type ColumnInfo, getTableDataE, getTablesE } from "./api";
+import styles from "./DbViewer.module.css";
 
 const DB: Component = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -60,108 +62,42 @@ const DB: Component = () => {
 	});
 
 	return (
-		<div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-			<div
-				style={{
-					width: "11.25rem",
-					"flex-shrink": "0",
-					"overflow-y": "auto",
-					padding: "0.625rem",
-					background: "var(--t-color-bg))",
-					"border-right": "1px solid var(--t-color-border))",
-				}}
-			>
-				<div
-					style={{
-						"font-weight": "600",
-						padding: "6px 8px",
-						"font-size": "0.8125rem",
-						color: "var(--t-color-ink-muted))",
-					}}
-				>
-					表列表
-				</div>
+		<div class={styles.page}>
+			<nav class={styles.sidebar} aria-label="数据库表列表">
+				<div class={styles.sidebarTitle}>表列表</div>
 				<For each={tables()}>
 					{(t) => (
 						<button
 							type="button"
 							onClick={() => loadTable(t)}
-							style={{
-								display: "block",
-								width: "100%",
-								padding: "8px 12px",
-								cursor: "pointer",
-								"font-size": "0.8125rem",
-								"border-radius": "0.375rem",
-								color: "var(--t-color-ink))",
-								"text-align": "left",
-								background:
-									activeTable() === t
-										? "var(--t-color-accent-soft))"
-										: "transparent",
-								border: "none",
+							classList={{
+								[styles.tableItem]: true,
+								[styles.tableItemActive]: activeTable() === t,
 							}}
+							aria-pressed={activeTable() === t}
 						>
 							{t}
 						</button>
 					)}
 				</For>
-			</div>
+			</nav>
 
-			<div style={{ flex: "1", overflow: "auto", padding: "16px 20px" }}>
-				{error() && (
-					<div
-						style={{
-							padding: "0.625rem",
-							background: "var(--t-color-danger-subtle))",
-							color: "var(--t-color-danger))",
-							"border-radius": "0.375rem",
-							"font-size": "0.8125rem",
-							"margin-bottom": "0.75rem",
-						}}
-					>
-						{error()}
-					</div>
-				)}
-				{loading() && (
-					<div
-						style={{
-							color: "var(--t-color-ink-muted))",
-							padding: "0.75rem",
-						}}
-					>
-						加载中...
-					</div>
-				)}
+			<div class={styles.main}>
+				{error() && <div class={styles.errorBox}>{error()}</div>}
+				{loading() && <div class={styles.loading}>加载中…</div>}
 
 				{activeTable() && !loading() && columns().length > 0 && (
 					<>
-						<h3 style={{ margin: "0 0 10px" }}>{activeTable()}</h3>
-						<div style={{ "overflow-x": "auto" }}>
-							<table
-								style={{
-									"border-collapse": "collapse",
-									width: "100%",
-									"font-size": "0.8125rem",
-								}}
-							>
+						<h3 class={styles.tableTitle}>{activeTable()}</h3>
+						<div class={styles.tableWrap}>
+							<table class={styles.table}>
 								<thead>
 									<tr>
 										<For each={columns()}>
 											{(c) => (
-												<th
-													style={{
-														padding: "6px 10px",
-														"text-align": "left",
-														background: "var(--t-color-bg))",
-														"border-bottom": "2px solid var(--t-color-border))",
-														"white-space": "nowrap",
-													}}
-												>
-													<div style="font-weight:600">{c.name}</div>
-													<div style="font-size:10px;font-weight:400;color:var(--t-color-ink-faint))">
-														{c.col_type}
-													</div>
+												<th scope="col">
+													<div class={styles.colName}>{c.name}</div>
+													<div class={styles.colType}>{c.col_type}</div>
 												</th>
 											)}
 										</For>
@@ -170,14 +106,7 @@ const DB: Component = () => {
 								<tbody>
 									{rows().length === 0 && (
 										<tr>
-											<td
-												colspan={columns().length}
-												style={{
-													padding: "1.25rem",
-													color: "var(--t-color-ink-faint))",
-													"text-align": "center",
-												}}
-											>
+											<td class={styles.emptyCell} colspan={columns().length}>
 												无数据
 											</td>
 										</tr>
@@ -187,19 +116,7 @@ const DB: Component = () => {
 											<tr>
 												<For each={row}>
 													{(cell) => (
-														<td
-															style={{
-																padding: "4px 10px",
-																"border-bottom":
-																	"1px solid var(--t-color-border))",
-																"white-space": "nowrap",
-																"max-width": "18.75rem",
-																overflow: "hidden",
-																"text-overflow": "ellipsis",
-															}}
-														>
-															{String(cell)}
-														</td>
+														<td title={String(cell)}>{String(cell)}</td>
 													)}
 												</For>
 											</tr>
@@ -208,49 +125,26 @@ const DB: Component = () => {
 								</tbody>
 							</table>
 						</div>
-						<div
-							style={{
-								display: "flex",
-								"align-items": "center",
-								gap: "0.75rem",
-								padding: "0.75rem 0",
-								"font-size": "0.8125rem",
-								color: "var(--t-color-ink-muted))",
-							}}
-						>
+						<div class={styles.pagination}>
 							<span>
 								共 {total()} 行 · 第 {currentPage()} / {totalPages()} 页
 							</span>
-							<button
-								type="button"
+							<Button
+								variant="secondary"
+								size="sm"
 								disabled={currentPage() <= 1 || loading()}
 								onClick={() => loadTable(activeTable(), currentPage() - 1)}
-								style={{
-									padding: "4px 12px",
-									cursor: "pointer",
-									"border-radius": "0.375rem",
-									border: "1px solid var(--t-color-border))",
-									background: "var(--t-color-bg))",
-									color: "var(--t-color-ink))",
-								}}
 							>
 								上一页
-							</button>
-							<button
-								type="button"
+							</Button>
+							<Button
+								variant="secondary"
+								size="sm"
 								disabled={currentPage() >= totalPages() || loading()}
 								onClick={() => loadTable(activeTable(), currentPage() + 1)}
-								style={{
-									padding: "4px 12px",
-									cursor: "pointer",
-									"border-radius": "0.375rem",
-									border: "1px solid var(--t-color-border))",
-									background: "var(--t-color-bg))",
-									color: "var(--t-color-ink))",
-								}}
 							>
 								下一页
-							</button>
+							</Button>
 						</div>
 					</>
 				)}

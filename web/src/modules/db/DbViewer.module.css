@@ -1,0 +1,160 @@
+/* DbViewer — 数据库浏览器（令牌化，跟随主题） */
+
+.page {
+	display: flex;
+	height: 100%;
+	overflow: hidden;
+}
+
+.sidebar {
+	width: 11.25rem;
+	flex-shrink: 0;
+	overflow-y: auto;
+	padding: var(--space-md);
+	background: var(--t-color-bg);
+	border-right: 1px solid var(--t-color-border);
+}
+
+.sidebar-title {
+	font-weight: 600;
+	padding: var(--space-xs) var(--space-sm);
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+}
+
+.table-item {
+	display: block;
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	cursor: pointer;
+	font-size: var(--text-sm);
+	border-radius: var(--radius-sm);
+	color: var(--t-color-ink);
+	text-align: left;
+	background: transparent;
+	border: none;
+	font-family: inherit;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	transition: background var(--t-transition-fast);
+}
+
+.table-item:hover {
+	background: var(--t-color-surface-raised);
+}
+
+.table-item-active {
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
+}
+
+.table-item-active:hover {
+	background: var(--t-color-accent-soft);
+}
+
+.main {
+	flex: 1;
+	min-width: 0;
+	overflow: auto;
+	padding: var(--space-lg) var(--space-xl);
+}
+
+.error-box {
+	padding: var(--space-sm) var(--space-md);
+	background: var(--t-color-danger-subtle);
+	color: var(--t-color-danger);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-sm);
+	margin-bottom: var(--space-md);
+}
+
+.loading {
+	color: var(--t-color-ink-muted);
+	padding: var(--space-md);
+}
+
+.table-title {
+	margin: 0 0 var(--space-sm);
+	font-size: var(--text-lg);
+	font-weight: 600;
+	color: var(--t-color-ink);
+	overflow-wrap: break-word;
+}
+
+.table-wrap {
+	overflow-x: auto;
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-lg);
+}
+
+.table {
+	border-collapse: collapse;
+	width: 100%;
+	font-size: var(--text-sm);
+}
+
+.table th {
+	padding: var(--space-xs) var(--space-md);
+	text-align: left;
+	background: var(--t-color-surface-raised);
+	border-bottom: 2px solid var(--t-color-border);
+	white-space: nowrap;
+}
+
+.col-name {
+	font-weight: 600;
+	color: var(--t-color-ink);
+}
+
+.col-type {
+	font-size: var(--text-2xs);
+	font-weight: 400;
+	color: var(--t-color-ink-faint);
+}
+
+.table td {
+	padding: var(--space-xs) var(--space-md);
+	border-bottom: 1px solid var(--t-color-border);
+	white-space: nowrap;
+	max-width: 18.75rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.table tbody tr:last-child td {
+	border-bottom: none;
+}
+
+.empty-cell {
+	padding: var(--space-xl);
+	color: var(--t-color-ink-faint);
+	text-align: center;
+}
+
+.pagination {
+	display: flex;
+	align-items: center;
+	gap: var(--space-md);
+	padding: var(--space-md) 0;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+}
+
+@media (width <= 768px) {
+	.page {
+		flex-direction: column;
+	}
+
+	.sidebar {
+		width: 100%;
+		max-height: 12rem;
+		border-right: none;
+		border-bottom: 1px solid var(--t-color-border);
+	}
+
+	.main {
+		padding: var(--space-md);
+	}
+}

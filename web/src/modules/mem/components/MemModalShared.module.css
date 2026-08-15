@@ -1,0 +1,15 @@
+/* mem 模块共享弹层小件（配合全局 Modal 使用） */
+
+.desc {
+	margin: 0 0 var(--space-md);
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-faint);
+	line-height: var(--leading-normal);
+}
+
+.actions {
+	margin-top: var(--space-md);
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-sm);
+}

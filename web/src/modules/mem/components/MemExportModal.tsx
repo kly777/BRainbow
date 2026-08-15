@@ -1,8 +1,9 @@
-import { Modal } from "@components/ui";
+import { Button, Modal } from "@components/ui";
 import { notifyError, tryAsync } from "@lib/utils";
 import type { TagInfo } from "@modules/mem";
 import { downloadExportCsv, listTagsE } from "@modules/mem";
 import { createEffect, createSignal } from "solid-js";
+import styles from "./MemModalShared.module.css";
 import TagSelector from "./TagSelector.tsx";
 
 interface Props {
@@ -32,16 +33,17 @@ export default function MemExportModal(props: Props) {
 	};
 
 	return (
-		<Modal isOpen={props.isOpen} onClose={props.onClose} title="导出记忆">
-			<p
-				style={{
-					"margin-bottom": "var(--space-md)",
-					"font-size": "var(--text-sm)",
-					color: "var(--t-color-ink-faint))",
-				}}
-			>
-				可选：按标签筛选导出（不选则导出全部）
-			</p>
+		<Modal
+			isOpen={props.isOpen}
+			onClose={props.onClose}
+			title="导出记忆"
+			actions={
+				<Button variant="primary" onClick={handleExport}>
+					下载 CSV
+				</Button>
+			}
+		>
+			<p class={styles.desc}>可选：按标签筛选导出（不选则导出全部）</p>
 			<TagSelector
 				tags={allUserTags().filter((t) => exportTagIds().includes(t.id))}
 				onAdd={(tag) => setExportTagIds((prev) => [...prev, tag.id])}
@@ -49,30 +51,6 @@ export default function MemExportModal(props: Props) {
 					setExportTagIds((prev) => prev.filter((id) => id !== tagId))
 				}
 			/>
-			<div
-				style={{
-					"margin-top": "var(--space-md)",
-					display: "flex",
-					"justify-content": "flex-end",
-					gap: "var(--space-sm)",
-				}}
-			>
-				<button
-					type="button"
-					style={{
-						padding: "var(--space-sm)",
-						"font-size": "var(--text-sm)",
-						border: "1px solid var(--t-color-border), #e8dfcc)",
-						"border-radius": "var(--radius-md)",
-						background: "var(--t-color-surface), #fffef9)",
-						color: "var(--t-color-ink-muted), #6b5e4a)",
-						cursor: "pointer",
-					}}
-					onClick={handleExport}
-				>
-					下载 CSV
-				</button>
-			</div>
 		</Modal>
 	);
 }

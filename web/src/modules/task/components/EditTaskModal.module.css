@@ -69,7 +69,17 @@
 }
 
 .field-input {
-	/* 挂载点类（无样式，供 JS 引用） */
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	font-size: var(--text-sm);
+	font-family: inherit;
+	color: var(--t-color-ink);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 }
 
 .field-textarea {
@@ -193,7 +203,7 @@
 }
 
 .empty-msg {
-	color: var(--t-color-border);
+	color: var(--t-color-ink-faint);
 	font-size: var(--text-sm);
 	padding: var(--space-md) 0;
 	text-align: center;

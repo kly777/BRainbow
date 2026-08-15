@@ -1,5 +1,6 @@
 import { Modal } from "@components/ui";
 import type { TagInfo } from "@modules/mem";
+import styles from "./MemModalShared.module.css";
 import TagSelector from "./TagSelector.tsx";
 
 interface Props {
@@ -20,15 +21,7 @@ export default function MemBatchTagModal(props: Props) {
 
 	return (
 		<Modal isOpen={props.isOpen} onClose={props.onClose} title={title()}>
-			<p
-				style={{
-					"margin-bottom": "var(--space-md)",
-					"font-size": "var(--text-sm)",
-					color: "var(--t-color-ink-faint))",
-				}}
-			>
-				{desc()}
-			</p>
+			<p class={styles.desc}>{desc()}</p>
 			<TagSelector
 				tags={[]}
 				onAdd={props.mode === "remove" ? props.onRemoveTag : props.onAddTag}

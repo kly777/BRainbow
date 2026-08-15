@@ -1,6 +1,8 @@
+import { Button, Modal } from "@components/ui";
+import { fmtLocal } from "@lib/utils";
 import type { Task } from "@modules/task";
 import { useTasks } from "@modules/task";
-import { createMemo, For, Show } from "solid-js";
+import { createMemo, createSignal, For, Show } from "solid-js";
 import styles from "./TaskKanban.module.css";
 
 // ==================== 状态常量 ====================
@@ -12,10 +14,10 @@ const COLUMNS = [
 ] as const;
 
 const STATUS_COLORS: Record<string, string> = {
-	backlog: "var(--t-color-ink-muted))",
-	active: "var(--t-color-accent))",
-	completed: "var(--t-color-success))",
-	archived: "var(--t-color-ink-faint))",
+	backlog: "var(--t-color-ink-muted)",
+	active: "var(--t-color-accent)",
+	completed: "var(--t-color-success)",
+	archived: "var(--t-color-ink-faint)",
 };
 
 // ==================== 拖拽卡片 ====================
@@ -56,12 +58,7 @@ function KanbanCard(props: KanbanCardProps) {
 				<Show when={t.effort_estimate_minutes}>
 					<span class={styles.effortTag}>⏱ {t.effort_estimate_minutes}min</span>
 				</Show>
-				<span class={styles.cardDate}>
-					{new Date(t.created_at).toLocaleDateString("zh-CN", {
-						month: "short",
-						day: "numeric",
-					})}
-				</span>
+				<span class={styles.cardDate}>{fmtLocal(t.created_at)}</span>
 			</div>
 		</button>
 	);
@@ -129,6 +126,8 @@ function Column(props: ColumnProps) {
 
 export default function TaskKanban() {
 	const { tasks, updateStatus, updateTaskE } = useTasks();
+	const [editingTask, setEditingTask] = createSignal<Task | null>(null);
+	const [editTitle, setEditTitle] = createSignal("");
 
 	// 按状态分组（排除 archived）
 	const grouped = createMemo(() => {
@@ -151,27 +150,72 @@ export default function TaskKanban() {
 		await updateStatus(taskId, newStatus);
 	};
 
-	const handleEdit = (task: Task) => {
-		// 简单内联编辑：通过 updateTaskE 打开编辑模态
-		// 这里用一个简单的方式 —— console 输出提示
-		const newTitle = prompt("编辑标题", task.title);
-		if (newTitle?.trim() && newTitle !== task.title) {
-			updateTaskE(task.id, { title: newTitle.trim() });
+	const openEdit = (task: Task) => {
+		setEditingTask(task);
+		setEditTitle(task.title);
+	};
+
+	const closeEdit = () => {
+		setEditingTask(null);
+		setEditTitle("");
+	};
+
+	const saveEdit = async () => {
+		const task = editingTask();
+		const title = editTitle().trim();
+		if (!task || !title || title === task.title) {
+			closeEdit();
+			return;
 		}
+		await updateTaskE(task.id, { title });
+		closeEdit();
 	};
 
 	return (
-		<div class={styles.board}>
-			<For each={COLUMNS}>
-				{(col) => (
-					<Column
-						col={col}
-						tasks={grouped()[col.key]}
-						onEdit={handleEdit}
-						onDrop={handleDrop}
-					/>
-				)}
-			</For>
-		</div>
+		<>
+			<div class={styles.board}>
+				<For each={COLUMNS}>
+					{(col) => (
+						<Column
+							col={col}
+							tasks={grouped()[col.key]}
+							onEdit={openEdit}
+							onDrop={handleDrop}
+						/>
+					)}
+				</For>
+			</div>
+
+			<Modal
+				isOpen={editingTask() !== null}
+				onClose={closeEdit}
+				title="编辑任务标题"
+				actions={
+					<>
+						<Button variant="secondary" onClick={closeEdit}>
+							取消
+						</Button>
+						<Button
+							variant="primary"
+							onClick={saveEdit}
+							disabled={!editTitle().trim()}
+						>
+							保存
+						</Button>
+					</>
+				}
+			>
+				<input
+					type="text"
+					class={styles.editTitleInput}
+					value={editTitle()}
+					onInput={(e) => setEditTitle(e.currentTarget.value)}
+					onKeyDown={(e) => {
+						if (e.key === "Enter") void saveEdit();
+					}}
+					aria-label="任务标题"
+				/>
+			</Modal>
+		</>
 	);
 }

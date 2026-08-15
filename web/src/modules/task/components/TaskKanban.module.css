@@ -1,5 +1,17 @@
 /* features/task/ui/TaskKanban.css.ts — 由 vanilla-extract 迁移 */
 
+.edit-title-input {
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	font-size: var(--text-sm);
+	font-family: inherit;
+	color: var(--t-color-ink);
+	background: var(--t-color-bg);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	transition: border-color var(--t-transition-fast);
+}
+
 .board {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
@@ -16,7 +28,7 @@
 	flex-direction: column;
 	overflow: hidden;
 	border: none;
-	border-top: 3px solid var(--col-color, var(--v2-border));
+	border-top: 3px solid var(--col-color, var(--t-color-border-strong));
 	padding: 0;
 	margin: 0;
 	min-width: 0;

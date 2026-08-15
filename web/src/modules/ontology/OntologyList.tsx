@@ -23,8 +23,7 @@ const OntologyListPage: Component = () => {
 	const [ontologies, { mutate, refetch }] = createResource(async () => {
 		const result = await tryAsync(() => getOntosE());
 		if (result.ok) return result.value;
-		notifyError("加载本体列表失败", result.error);
-		return [];
+		throw result.error;
 	});
 
 	const [searchParams, setSearchParams] = useSearchParams();

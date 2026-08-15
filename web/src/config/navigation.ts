@@ -1,10 +1,10 @@
 // ── 导航元数据（纯数据，无组件；路径来自 paths.ts 单一来源） ──
 // 新增页面：paths.ts 定义路径 → 此处加条目 → app/routes.ts 自动派生路由
 
-import { PATHS } from "./paths.ts";
+import { PATHS, type PathValue } from "./paths.ts";
 
 export interface NavItem {
-	path: string;
+	path: PathValue;
 	label: string;
 	title: string;
 	desc: string;

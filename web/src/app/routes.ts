@@ -1,11 +1,11 @@
 import { NAV_ITEMS } from "@config/navigation";
-import { PATHS } from "@config/paths";
+import { PATHS, type PathValue } from "@config/paths";
 import type { RouteDefinition } from "@solidjs/router";
 import { useLocation } from "@solidjs/router";
 import { type Component, createEffect, lazy, onCleanup } from "solid-js";
 
 export interface RouteConfig {
-	path: string;
+	path: PathValue;
 	label: string;
 	desc: string;
 	/** 是否为导航入口（显示在 / 命令面板中） */
@@ -15,35 +15,40 @@ export interface RouteConfig {
 	component: Component;
 }
 
-/** 路径 → 页面组件（懒加载）。路径来自 paths.ts，与 NAV_ITEMS 一一对应 */
-const PAGE_LOADERS: Record<string, () => Promise<{ default: Component }>> = {
+type PageLoader = () => Promise<{ default: Component }>;
+
+/**
+ * 路径 → 页面组件（懒加载）。
+ * Record<PathValue, PageLoader> 让 TS 穷尽检查：PATHS 新增路径但漏加 loader 会编译失败。
+ */
+const PAGE_LOADERS: Record<PathValue, PageLoader> = {
 	[PATHS.home]: () => import("@app/routes/HomeGuard.tsx"),
-	[PATHS.task]: () => import("@/modules/task/TaskManager.tsx"),
-	[PATHS.ontology]: () => import("@/modules/ontology/OntologyList.tsx"),
-	[PATHS.card]: () => import("@/modules/card/CardsList.tsx"),
-	[PATHS.cardDetail]: () => import("@/modules/card/CardDetail.tsx"),
-	[PATHS.cardEdit]: () => import("@/modules/card/CardEdit.tsx"),
-	[PATHS.color]: () => import("@/modules/color/ColorPage.tsx"),
-	[PATHS.cardAdd]: () => import("@/modules/card/CardAdd.tsx"),
-	[PATHS.image]: () => import("@/modules/media/MediaList.tsx"),
-	[PATHS.db]: () => import("@/modules/db/DbViewer.tsx"),
-	[PATHS.rainbow]: () => import("@/modules/rainbow/RainbowGenerator.tsx"),
-	[PATHS.text]: () => import("@/modules/text/TextEditor.tsx"),
-	[PATHS.reading]: () => import("@/modules/reading/ReadingList.tsx"),
-	[PATHS.readingUnknown]: () => import("@/modules/reading/ReadingUnknown.tsx"),
-	[PATHS.bookmark]: () => import("@/modules/bookmark/BookmarkPage.tsx"),
-	[PATHS.readingDetail]: () => import("@/modules/reading/ReadingDetail.tsx"),
-	[PATHS.memory]: () => import("@/modules/mem/MemPage.tsx"),
-	[PATHS.memoryAdd]: () => import("@/modules/mem/MemAdd.tsx"),
-	[PATHS.memoryManage]: () => import("@/modules/mem/MemManage.tsx"),
-	[PATHS.conversation]: () => import("@/modules/conv/ConvSearch.tsx"),
-	[PATHS.convDetail]: () => import("@/modules/conv/ConvDetail.tsx"),
-	[PATHS.convConcept]: () => import("@/modules/conv/ConvConcept.tsx"),
-	[PATHS.chat]: () => import("@/modules/chat/ChatPage.tsx"),
-	[PATHS.chatPrompts]: () => import("@/modules/chat/ChatPromptsPage.tsx"),
-	[PATHS.chatMem]: () => import("@/modules/chat/ChatMemPage.tsx"),
-	[PATHS.key]: () => import("@/modules/key/KeyPage.tsx"),
-	[PATHS.admin]: () => import("@/modules/admin/AdminPage.tsx"),
+	[PATHS.task]: () => import("@modules/task/TaskManager.tsx"),
+	[PATHS.ontology]: () => import("@modules/ontology/OntologyList.tsx"),
+	[PATHS.card]: () => import("@modules/card/CardsList.tsx"),
+	[PATHS.cardDetail]: () => import("@modules/card/CardDetail.tsx"),
+	[PATHS.cardEdit]: () => import("@modules/card/CardEdit.tsx"),
+	[PATHS.color]: () => import("@modules/color/ColorPage.tsx"),
+	[PATHS.cardAdd]: () => import("@modules/card/CardAdd.tsx"),
+	[PATHS.image]: () => import("@modules/media/MediaList.tsx"),
+	[PATHS.db]: () => import("@modules/db/DbViewer.tsx"),
+	[PATHS.rainbow]: () => import("@modules/rainbow/RainbowGenerator.tsx"),
+	[PATHS.text]: () => import("@modules/text/TextEditor.tsx"),
+	[PATHS.reading]: () => import("@modules/reading/ReadingList.tsx"),
+	[PATHS.readingUnknown]: () => import("@modules/reading/ReadingUnknown.tsx"),
+	[PATHS.bookmark]: () => import("@modules/bookmark/BookmarkPage.tsx"),
+	[PATHS.readingDetail]: () => import("@modules/reading/ReadingDetail.tsx"),
+	[PATHS.memory]: () => import("@modules/mem/MemPage.tsx"),
+	[PATHS.memoryAdd]: () => import("@modules/mem/MemAdd.tsx"),
+	[PATHS.memoryManage]: () => import("@modules/mem/MemManage.tsx"),
+	[PATHS.conversation]: () => import("@modules/conv/ConvSearch.tsx"),
+	[PATHS.convDetail]: () => import("@modules/conv/ConvDetail.tsx"),
+	[PATHS.convConcept]: () => import("@modules/conv/ConvConcept.tsx"),
+	[PATHS.chat]: () => import("@modules/chat/ChatPage.tsx"),
+	[PATHS.chatPrompts]: () => import("@modules/chat/ChatPromptsPage.tsx"),
+	[PATHS.chatMem]: () => import("@modules/chat/ChatMemPage.tsx"),
+	[PATHS.key]: () => import("@modules/key/KeyPage.tsx"),
+	[PATHS.admin]: () => import("@modules/admin/AdminPage.tsx"),
 };
 
 /** 提取 Router 需要的字段 */

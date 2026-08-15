@@ -39,6 +39,8 @@ export const PATHS = {
 } as const;
 
 export type PathKey = keyof typeof PATHS;
+/** 所有实际路径字符串（PATHS 值联合），用于给导航/路由表做编译期穷尽检查 */
+export type PathValue = (typeof PATHS)[PathKey];
 
 /** 将路径模式中的 :id 替换为实际值（如 fillPath(PATHS.readingDetail, 12) → /reading/12） */
 export function fillPath(pattern: string, value: string | number): string {

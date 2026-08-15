@@ -147,8 +147,7 @@ export default defineConfig(({ command, mode }) => {
 
 		resolve: {
 			alias: {
-				"@": fileURLToPath(new URL("./src", import.meta.url)),
-				"@app": fileURLToPath(new URL("./src/app", import.meta.url)),
+					"@app": fileURLToPath(new URL("./src/app", import.meta.url)),
 				"@modules": fileURLToPath(new URL("./src/modules", import.meta.url)),
 				"@components": fileURLToPath(
 					new URL("./src/components", import.meta.url),

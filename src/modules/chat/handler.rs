@@ -141,8 +141,17 @@ pub async fn chat_handler(
             .await;
         match result {
             Ok((full, _model, reasoning, _)) => {
-                let _ = tx.send(SSE_DONE.to_string()).await;
-                let _ = svc2.finish_chat(&ctx2, &full, reasoning.as_deref()).await;
+                // 先落库再发 __DONE__：前端收到结束标记会立即重拉树，
+                // 若在 INSERT 提交前查询会丢失刚生成的回复；落库失败则回滚 user 节点。
+                match svc2.finish_chat(&ctx2, &full, reasoning.as_deref()).await {
+                    Ok(_) => {
+                        let _ = tx.send(SSE_DONE.to_string()).await;
+                    }
+                    Err(e) => {
+                        let _ = tx.send(format!("{SSE_ERROR_PREFIX}{e}")).await;
+                        svc2.abort_chat(&ctx2).await;
+                    }
+                }
             }
             Err(e) => {
                 let _ = tx.send(format!("{SSE_ERROR_PREFIX}{e}")).await;

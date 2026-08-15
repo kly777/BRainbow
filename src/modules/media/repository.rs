@@ -198,3 +198,125 @@ impl MediaRepository {
         Ok(row.0 as usize)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use sqlx::SqlitePool;
+
+    async fn setup() -> MediaRepository {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        crate::app::db::create_tables(&pool).await.unwrap();
+        // media.user_id 有外键约束，先建测试用户
+        sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (7, 'media-user', 'x')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        MediaRepository::new(Arc::new(pool))
+    }
+
+    fn new_media<'a>(stored_id: &'a str, media_type: &'a str) -> NewMedia<'a> {
+        NewMedia {
+            stored_id,
+            original_name: "file.bin",
+            media_type,
+            mime_type: "application/octet-stream",
+            size_bytes: 42,
+            width: Some(100),
+            height: Some(80),
+            duration_ms: None,
+            user_id: Some(7),
+        }
+    }
+
+    async fn insert(repo: &MediaRepository, stored_id: &str) -> Media {
+        repo.insert(new_media(stored_id, "image"))
+            .await
+            .expect("insert media")
+    }
+
+    #[tokio::test]
+    async fn insert_and_find_by_stored_id_round_trip() {
+        let repo = setup().await;
+        let created = insert(&repo, "abc123photo").await;
+
+        let found = repo
+            .find_by_stored_id("abc123photo")
+            .await
+            .unwrap()
+            .expect("media should exist");
+        assert_eq!(found.id, created.id);
+        assert_eq!(found.stored_id, "abc123photo");
+        assert_eq!(found.user_id, Some(7));
+        assert_eq!(found.width, Some(100));
+        assert_eq!(found.height, Some(80));
+    }
+
+    #[tokio::test]
+    async fn find_all_and_count_filter_by_media_type() {
+        let repo = setup().await;
+        insert(&repo, "img-1").await;
+        insert(&repo, "img-2").await;
+        repo.insert(new_media("vid-1", "video")).await.unwrap();
+
+        let images = repo.find_all(10, 0, Some("image")).await.unwrap();
+        assert_eq!(images.len(), 2);
+        assert!(images.iter().all(|m| m.stored_id.starts_with("img-")));
+
+        assert_eq!(repo.count(Some("image")).await.unwrap(), 2);
+        assert_eq!(repo.count(Some("video")).await.unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn update_name_returns_renamed_row() {
+        let repo = setup().await;
+        insert(&repo, "abc123photo").await;
+
+        let updated = repo
+            .update_name("abc123photo", "renamed.png")
+            .await
+            .unwrap()
+            .expect("media should exist");
+        assert_eq!(updated.original_name, "renamed.png");
+        assert!(repo.update_name("missing", "x").await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn delete_returns_existing_and_removes_row() {
+        let repo = setup().await;
+        let created = insert(&repo, "abc123photo").await;
+
+        let deleted = repo.delete("abc123photo").await.unwrap().unwrap();
+        assert_eq!(deleted.id, created.id);
+        assert!(
+            repo.find_by_stored_id("abc123photo")
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(repo.delete("abc123photo").await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn count_content_references_across_four_content_tables() {
+        let repo = setup().await;
+        insert(&repo, "abc123photo").await;
+
+        // 同一 stored_id 出现在四张内容表中，应统计为 4 处引用
+        for sql in [
+            "INSERT INTO card (content) VALUES ('![x](/api/media/abc123photo/file)')",
+            "INSERT INTO articles (conv_id, article_type, title, content) VALUES (1, 'concept', 't', 'see abc123photo here')",
+            "INSERT INTO chunk (content) VALUES ('abc123photo')",
+            "INSERT INTO text_note (name, content) VALUES ('n', 'note abc123photo')",
+        ] {
+            sqlx::query(sql).execute(&*repo.db).await.unwrap();
+        }
+
+        assert_eq!(
+            repo.count_content_references("abc123photo").await.unwrap(),
+            4
+        );
+        assert_eq!(repo.count_content_references("other").await.unwrap(), 0);
+    }
+}

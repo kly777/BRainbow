@@ -1,8 +1,8 @@
+import { AsyncView, Button } from "@components/ui";
 import { PATHS } from "@config/paths";
-import { getErrorMessage } from "@lib/api";
 import { listUnknownWords, markWord } from "@modules/reading";
 import { A } from "@solidjs/router";
-import { createResource, For, Show } from "solid-js";
+import { createResource, For } from "solid-js";
 import styles from "./ReadingUnknown.module.css";
 
 export default function ReadingUnknown() {
@@ -23,16 +23,16 @@ export default function ReadingUnknown() {
 				按标记"不认识"次数降序排列。点击 ✓ 改为认识。
 			</p>
 
-			<div class={styles.list}>
-				<Show
-					when={data.error}
-					fallback={
-						<For
-							each={data()?.words}
-							fallback={
-								<div class={styles.empty}>暂无不认识词——开始阅读文章吧</div>
-							}
-						>
+			<AsyncView
+				data={data()?.words}
+				loading={data.loading}
+				error={data.error}
+				onRetry={refetch}
+				emptyMessage="暂无不认识词——开始阅读文章吧"
+			>
+				{(words) => (
+					<div class={styles.list}>
+						<For each={words}>
 							{(w) => (
 								<div class={styles.card}>
 									<div class={styles.wordMain}>
@@ -41,21 +41,19 @@ export default function ReadingUnknown() {
 											不认识 {w.unknown_count} 次 / 认识 {w.known_count} 次
 										</span>
 									</div>
-									<button
-										type="button"
-										class={styles.knownBtn}
+									<Button
+										variant="secondary"
+										size="sm"
 										onClick={() => handleMarkKnown(w.word)}
 									>
 										✓ 认识
-									</button>
+									</Button>
 								</div>
 							)}
 						</For>
-					}
-				>
-					<div class={styles.errorMsg}>{getErrorMessage(data.error)}</div>
-				</Show>
-			</div>
+					</div>
+				)}
+			</AsyncView>
 		</div>
 	);
 }

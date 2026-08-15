@@ -1,4 +1,4 @@
-/* features/reading/ReadingList.css.ts — 由 vanilla-extract 迁移 */
+/* ReadingList — 英语阅读列表 */
 
 .page {
 	max-width: 900px;
@@ -11,100 +11,70 @@
 	align-items: center;
 	gap: var(--space-md);
 	margin-bottom: var(--space-lg);
+	flex-wrap: wrap;
 }
 
-.unknown-link {
-	font-size: var(--text-sm);
+.header h1 {
+	font-size: var(--text-xl);
+	margin: 0;
+	flex: 1;
+}
+
+.header-actions {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+}
+
+.header-link {
 	color: var(--t-color-accent);
 	text-decoration: none;
-}
-
-.upload-btn {
-	padding: var(--space-sm) var(--space-lg);
-	background: var(--t-color-accent);
-	color: var(--t-color-white);
-	border: none;
-	border-radius: 0.375rem;
-	cursor: pointer;
 	font-size: var(--text-sm);
-	font-weight: 600;
-}
-
-.overlay {
-	position: fixed;
-	border: none;
-	padding: 0;
-	font: inherit;
-	cursor: pointer;
-	inset: 0;
-	background: var(--t-color-overlay);
-	z-index: var(--z-dropdown);
-}
-
-.modal {
-	position: fixed;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
-	background: var(--t-color-surface);
-	padding: var(--space-xl);
-	border-radius: 0.75rem;
-	z-index: var(--z-dropdown);
-	width: 90%;
-	max-width: 600px;
-	box-shadow: var(--shadow-md);
+	font-weight: 500;
+	padding: var(--space-xs) var(--space-md);
 	border: 1px solid var(--t-color-border);
-}
-
-.input {
-	width: 100%;
-	padding: var(--space-sm) var(--space-md);
-	border: 1px solid var(--t-color-border);
-	font-size: var(--text-base);
+	border-radius: var(--radius-md);
 	background: var(--t-color-surface);
-	color: var(--t-color-ink);
 	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-	border-radius: var(--radius-xs);
+		background var(--t-transition-fast),
+		border-color var(--t-transition-fast);
+}
+
+.header-link:hover {
+	background: var(--t-color-surface-raised);
+	border-color: var(--t-color-border-strong);
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
 	margin-bottom: var(--space-md);
 }
 
+.field-label {
+	font-size: var(--text-sm);
+	font-weight: 500;
+	color: var(--t-color-ink-muted);
+}
+
+.input,
 .textarea {
 	width: 100%;
 	padding: var(--space-sm) var(--space-md);
 	border: 1px solid var(--t-color-border);
-	border-radius: 0.375rem;
-	font-size: var(--text-base);
-	resize: vertical;
+	font-size: var(--text-sm);
+	font-family: inherit;
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
+	border-radius: var(--radius-sm);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 }
 
-.modal-actions {
-	display: flex;
-	gap: var(--space-sm);
-	justify-content: flex-end;
-	margin-top: var(--space-lg);
-}
-
-.cancel-btn {
-	color: var(--t-color-ink-muted);
-	padding: var(--space-sm) var(--space-lg);
-	border: 1px solid var(--t-color-border);
-	border-radius: 0.375rem;
-	background: var(--t-color-surface);
-	cursor: pointer;
-}
-
-.submit-btn {
-	padding: var(--space-sm) var(--space-lg);
-	background: var(--t-color-accent);
-	color: var(--t-color-white);
-	border: none;
-	border-radius: 0.375rem;
-	cursor: pointer;
-	font-weight: 600;
+.textarea {
+	resize: vertical;
 }
 
 .list {
@@ -127,6 +97,11 @@
 		box-shadow var(--t-transition-fast);
 }
 
+.card:hover {
+	border-color: var(--t-color-accent);
+	box-shadow: var(--shadow-md);
+}
+
 .card-title {
 	font-size: var(--text-base);
 	font-weight: 600;
@@ -138,57 +113,11 @@
 	gap: var(--space-lg);
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
-}
-
-.ratio {
-	/* 挂载点类（无样式，供 JS 引用） */
+	flex-wrap: wrap;
 }
 
 .unknown-count {
 	color: var(--t-color-ink-muted);
-}
-
-.bar-outer {
-	margin-top: var(--space-sm);
-	height: 0.25rem;
-	background: var(--t-color-bg);
-	border-radius: 0.125rem;
-	overflow: hidden;
-}
-
-.bar-inner {
-	height: 100%;
-	background: var(--t-color-accent);
-	border-radius: 0.125rem;
-	transition: width var(--t-transition-slow);
-}
-
-.empty {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: var(--space-sm);
-	text-align: center;
-	color: var(--t-color-ink-muted);
-	padding: var(--space-2xl) 0;
-}
-
-.unknown-link:hover {
-	text-decoration: underline;
-}
-
-.upload-btn:hover {
-	opacity: 0.9;
-}
-
-.submit-btn:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
-
-.card:hover {
-	border-color: var(--t-color-accent);
-	box-shadow: 0 2px 8px var(--t-color-accent-soft);
 }
 
 .ratio[data-known="high"] {
@@ -203,19 +132,23 @@
 	color: var(--t-color-mark-wrong);
 }
 
-.header h1 {
-	font-size: var(--text-xl);
-	margin: 0;
-	flex: 1;
+.bar-outer {
+	margin-top: var(--space-sm);
+	height: 0.25rem;
+	background: var(--t-color-bg);
+	border-radius: var(--radius-xs);
+	overflow: hidden;
 }
 
-.modal h2 {
-	margin: 0 0 var(--space-lg);
-	font-size: var(--text-lg);
+.bar-inner {
+	height: 100%;
+	background: var(--t-color-accent);
+	border-radius: var(--radius-xs);
+	transition: width var(--t-transition-slow);
 }
 
-.error-msg {
-	padding: var(--space-lg);
-	color: var(--t-color-danger);
-	font-size: var(--text-base);
+@media (width <= 768px) {
+	.page {
+		padding: var(--space-md);
+	}
 }

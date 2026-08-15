@@ -1,6 +1,7 @@
 // ── /bookmark：网页书签管理（搜索 / 标签过滤 / 分页 / 导入 Firefox 书签） ──
 
 import { Button, SearchInput } from "@components/ui";
+import { getErrorMessage } from "@lib/api";
 import { For, Show } from "solid-js";
 import styles from "./BookmarkPage.module.css";
 import { BookmarkFormModal } from "./components/BookmarkFormModal.tsx";
@@ -71,11 +72,11 @@ export default function BookmarkPage() {
 			</Show>
 
 			<Show when={b.loading()}>
-				<div class={styles.state}>加载中...</div>
+				<div class={styles.state}>加载中…</div>
 			</Show>
 			<Show when={b.error()}>
 				<div class={styles.state}>
-					<p class={styles.errorText}>加载失败：{b.error()}</p>
+					<p class={styles.errorText}>加载失败：{getErrorMessage(b.error())}</p>
 					<Button variant="secondary" size="sm" onClick={() => b.load()}>
 						重试
 					</Button>

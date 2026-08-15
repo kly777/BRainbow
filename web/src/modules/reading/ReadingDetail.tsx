@@ -1,3 +1,4 @@
+import { Button } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
 // ── 阅读详情页面（薄壳视图层）──
 
@@ -93,14 +94,14 @@ export default function ReadingDetail() {
 								<div class={styles.sidebar}>
 									<div class={styles.wordListArea}>
 										<h3>文章词表</h3>
-										<button
-											type="button"
-											class={styles.uploadUnknownBtn}
+										<Button
+											variant="secondary"
+											size="sm"
 											onClick={m.handleUploadUnknown}
 											disabled={m.uploadingUnknown()}
 										>
 											{m.uploadingUnknown() ? "上传中…" : "上传全部不认识词"}
-										</button>
+										</Button>
 										<div class={styles.wordList}>
 											<For each={m.sortedWords()}>
 												{(w) => {
@@ -132,6 +133,9 @@ export default function ReadingDetail() {
 																				: "known",
 																	)
 																}
+																aria-label={`将 ${w.word} 标记为${
+																	st === "known" ? "不认识" : "认识"
+																}`}
 															>
 																{st === "known"
 																	? "✓"
@@ -146,6 +150,11 @@ export default function ReadingDetail() {
 																onClick={() => m.handleMark(w.word, "ignored")}
 																title={
 																	st === "ignored" ? "取消忽略" : "忽略此词"
+																}
+																aria-label={
+																	st === "ignored"
+																		? `取消忽略 ${w.word}`
+																		: `忽略 ${w.word}`
 																}
 															>
 																{st === "ignored" ? "取消" : "忽略"}
@@ -170,13 +179,13 @@ export default function ReadingDetail() {
 												rows={4}
 											/>
 										</div>
-										<button
-											type="button"
-											class={styles.copyBtn}
+										<Button
+											variant="secondary"
+											size="sm"
 											onClick={m.handleCopyUnknown}
 										>
 											📋 复制不认识词 + 笔记
-										</button>
+										</Button>
 									</div>
 								</div>
 							</>
@@ -184,7 +193,12 @@ export default function ReadingDetail() {
 					</Show>
 				}
 			>
-				<div class={styles.errorMsg}>{getErrorMessage(m.detail.error)}</div>
+				<div class={styles.errorMsg}>
+					加载失败：{getErrorMessage(m.detail.error)}
+					<Button variant="primary" size="sm" onClick={m.refetch}>
+						重试
+					</Button>
+				</div>
 			</Show>
 		</div>
 	);

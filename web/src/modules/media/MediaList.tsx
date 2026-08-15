@@ -44,8 +44,7 @@ const MediaListPage: Component = () => {
 				listMediaE(mt ? { media_type: mt } : {}),
 			);
 			if (result.ok) return result.value.items;
-			notifyError("加载媒体列表失败", result.error);
-			return [];
+			throw result.error;
 		},
 	);
 
@@ -114,6 +113,8 @@ const MediaListPage: Component = () => {
 			<AsyncView
 				data={items()}
 				loading={media.loading}
+				error={media.error}
+				onRetry={refetch}
 				emptyMessage="暂无媒体文件"
 			>
 				{(data) => (
@@ -181,6 +182,7 @@ const MediaListPage: Component = () => {
 												onInput={(e) => setEditName(e.currentTarget.value)}
 												class={styles.editInput}
 												onKeyPress={(e) => e.key === "Enter" && handleRename()}
+												aria-label="媒体名称"
 											/>
 											<Button
 												variant="primary"

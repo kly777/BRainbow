@@ -158,6 +158,7 @@ export function useReadingDetail() {
 
 	return {
 		detail,
+		refetch,
 		recommended,
 		notes,
 		setNotes,

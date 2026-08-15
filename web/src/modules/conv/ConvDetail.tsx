@@ -1,4 +1,4 @@
-import { Markdown as MarkdownRenderer } from "@components/ui";
+import { Button, Markdown as MarkdownRenderer } from "@components/ui";
 import { getErrorMessage } from "@lib/api";
 import { getConvDetailE } from "@modules/conv";
 import { useParams } from "@solidjs/router";
@@ -12,7 +12,9 @@ export default function ConvDetailPage() {
 	const params = useParams();
 	const id = () => params.id;
 
-	const [data] = createResource(id, (id) => getConvDetailE(Number(id)));
+	const [data, { refetch }] = createResource(id, (id) =>
+		getConvDetailE(Number(id)),
+	);
 	const backHref = useBackHref();
 
 	return (
@@ -64,7 +66,12 @@ export default function ConvDetailPage() {
 					</Show>
 				}
 			>
-				<div class={styles.errorMsg}>{getErrorMessage(data.error)}</div>
+				<div class={styles.errorMsg}>
+					加载失败：{getErrorMessage(data.error)}
+					<Button variant="primary" size="sm" onClick={refetch}>
+						重试
+					</Button>
+				</div>
 			</Show>
 		</div>
 	);

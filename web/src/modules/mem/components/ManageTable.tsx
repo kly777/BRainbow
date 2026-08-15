@@ -90,94 +90,108 @@ export default function ManageTable(props: Props) {
 							</tr>
 						</thead>
 						<tbody>
-							<For each={props.mems}>
-								{(mem) => {
-									const tags = () => props.memTags.get(mem.id) ?? [];
-									return (
-										<tr
-											class={
-												props.detailId === mem.id
-													? styles.rowActive
-													: styles.row
-											}
-										>
-											<td class={styles.tdCb}>
-												<input
-													type="checkbox"
-													checked={props.batchIds.has(mem.id)}
-													onInput={() => props.onToggleBatch(mem.id)}
-													onClick={(e) => e.stopPropagation()}
-												/>
-											</td>
-											<td
-												class={styles.td}
-												onClick={() => props.onSelectRow(mem.id)}
-												onKeyDown={(e) => {
-													if (e.key === "Enter") props.onSelectRow(mem.id);
-												}}
+							<Show
+								when={props.mems.length > 0}
+								fallback={
+									<tr>
+										<td class={styles.empty} colspan={9}>
+											暂无数据
+										</td>
+									</tr>
+								}
+							>
+								<For each={props.mems}>
+									{(mem) => {
+										const tags = () => props.memTags.get(mem.id) ?? [];
+										return (
+											<tr
+												class={
+													props.detailId === mem.id
+														? styles.rowActive
+														: styles.row
+												}
 											>
-												{previewText(mem.cue.content)}
-											</td>
-											<td
-												class={styles.td}
-												onClick={() => props.onSelectRow(mem.id)}
-												onKeyDown={(e) => {
-													if (e.key === "Enter") props.onSelectRow(mem.id);
-												}}
-											>
-												{previewText(mem.target.content)}
-											</td>
-											<td class={styles.td}>
-												<Badge
-													variant={
-														mem.state as
-															| "new"
-															| "learning"
-															| "review"
-															| "relearning"
-															| "suspended"
-													}
-												>
-													{mem.state}
-													{mem.leeched && " ⚠️"}
-												</Badge>
-											</td>
-											<td class={styles.tdNum}>{mem.difficulty.toFixed(2)}</td>
-											<td class={styles.tdDue}>{fmtRelative(mem.due_at)}</td>
-											<td class={styles.tdDue}>
-												{fmtLocal(mem.cue.created_at)}
-											</td>
-											<td class={styles.td}>
-												<div class={styles.cellTags}>
-													<For each={tags().slice(0, 3)}>
-														{(tag) => (
-															<span class={styles.cellTag}>{tag.name}</span>
-														)}
-													</For>
-													<Show when={tags().length > 3}>
-														<span class={styles.cellTag}>
-															+{tags().length - 3}
-														</span>
-													</Show>
-												</div>
-											</td>
-											<td class={styles.tdAct}>
-												<button
-													type="button"
-													class={styles.delBtn}
-													onClick={(e) => {
-														e.stopPropagation();
-														props.onDelete(mem.id);
-													}}
-													title="删除"
-												>
-													✕
-												</button>
-											</td>
-										</tr>
-									);
-								}}
-							</For>
+												<td class={styles.tdCb}>
+													<input
+														type="checkbox"
+														checked={props.batchIds.has(mem.id)}
+														onInput={() => props.onToggleBatch(mem.id)}
+														onClick={(e) => e.stopPropagation()}
+													/>
+												</td>
+												<td class={styles.td}>
+													<button
+														type="button"
+														class={styles.cellButton}
+														onClick={() => props.onSelectRow(mem.id)}
+													>
+														{previewText(mem.cue.content)}
+													</button>
+												</td>
+												<td class={styles.td}>
+													<button
+														type="button"
+														class={styles.cellButton}
+														onClick={() => props.onSelectRow(mem.id)}
+													>
+														{previewText(mem.target.content)}
+													</button>
+												</td>
+												<td class={styles.td}>
+													<Badge
+														variant={
+															mem.state as
+																| "new"
+																| "learning"
+																| "review"
+																| "relearning"
+																| "suspended"
+														}
+													>
+														{mem.state}
+														{mem.leeched && " ⚠️"}
+													</Badge>
+												</td>
+												<td class={styles.tdNum}>
+													{mem.difficulty.toFixed(2)}
+												</td>
+												<td class={styles.tdDue}>{fmtRelative(mem.due_at)}</td>
+												<td class={styles.tdDue}>
+													{fmtLocal(mem.cue.created_at)}
+												</td>
+												<td class={styles.td}>
+													<div class={styles.cellTags}>
+														<For each={tags().slice(0, 3)}>
+															{(tag) => (
+																<span class={styles.cellTag}>{tag.name}</span>
+															)}
+														</For>
+														<Show when={tags().length > 3}>
+															<span class={styles.cellTag}>
+																+{tags().length - 3}
+															</span>
+														</Show>
+													</div>
+												</td>
+												<td class={styles.tdAct}>
+													<button
+														type="button"
+														class={styles.delBtn}
+														onClick={(e) => {
+															e.stopPropagation();
+															props.onDelete(mem.id);
+														}}
+														title="删除"
+														aria-label={`删除记忆 ${mem.id}`}
+													>
+														✕
+													</button>
+												</td>
+											</tr>
+										);
+									}}
+								</For>
+							</Show>
 						</tbody>
 					</table>
 				</div>

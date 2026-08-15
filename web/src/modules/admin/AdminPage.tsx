@@ -1,5 +1,6 @@
 // ── 管理员设置页：开放注册开关 / JWT 密钥状态与轮换 ──
 
+import { Button } from "@components/ui";
 import { notifyError, notifySuccess, showConfirm } from "@lib/utils";
 import { useAuth } from "@modules/auth";
 import { createResource, createSignal, Show } from "solid-js";
@@ -66,62 +67,76 @@ export default function AdminPage() {
 
 			<Show when={isAdmin()}>
 				<Show
-					when={settings()}
-					fallback={<div class={styles.loading}>加载设置中…</div>}
-				>
-					{(s) => (
-						<div class={styles.sections}>
-							<section class={styles.card}>
-								<div class={styles.cardHead}>
-									<div>
-										<h2>开放注册</h2>
-										<p class={styles.desc}>
-											控制新用户能否自行注册账号。公网部署建议保持关闭。
-										</p>
-									</div>
-									<button
-										type="button"
-										class={
-											s().allow_register ? styles.toggleOn : styles.toggleOff
-										}
-										classList={{ [styles.disabled]: saving() }}
-										role="switch"
-										aria-checked={s().allow_register}
-										disabled={saving()}
-										onClick={() => void toggleRegister()}
-									>
-										<span class={styles.toggleKnob} />
-										{s().allow_register ? "开放" : "关闭"}
-									</button>
-								</div>
-							</section>
+					when={settings.error}
+					fallback={
+						<Show
+							when={settings()}
+							fallback={<div class={styles.loading}>加载设置中…</div>}
+						>
+							{(s) => (
+								<div class={styles.sections}>
+									<section class={styles.card}>
+										<div class={styles.cardHead}>
+											<div>
+												<h2>开放注册</h2>
+												<p class={styles.desc}>
+													控制新用户能否自行注册账号。公网部署建议保持关闭。
+												</p>
+											</div>
+											<button
+												type="button"
+												class={
+													s().allow_register
+														? styles.toggleOn
+														: styles.toggleOff
+												}
+												classList={{ [styles.disabled]: saving() }}
+												role="switch"
+												aria-checked={s().allow_register}
+												disabled={saving()}
+												onClick={() => void toggleRegister()}
+											>
+												<span class={styles.toggleKnob} />
+												{s().allow_register ? "开放" : "关闭"}
+											</button>
+										</div>
+									</section>
 
-							<section class={styles.card}>
-								<div class={styles.cardHead}>
-									<div>
-										<h2>JWT 密钥</h2>
-										<p class={styles.desc}>
-											状态：
-											{s().jwt_secret_set
-												? `已持久化（${s().jwt_secret_len} 字符）`
-												: "未持久化（环境变量或随机密钥，重启后会话失效）"}
+									<section class={styles.card}>
+										<div class={styles.cardHead}>
+											<div>
+												<h2>JWT 密钥</h2>
+												<p class={styles.desc}>
+													状态：
+													{s().jwt_secret_set
+														? `已持久化（${s().jwt_secret_len} 字符）`
+														: "未持久化（环境变量或随机密钥，重启后会话失效）"}
+												</p>
+											</div>
+											<Button
+												variant="danger"
+												size="sm"
+												disabled={rotating()}
+												onClick={() => void handleRotate()}
+											>
+												{rotating() ? "轮换中…" : "轮换密钥"}
+											</Button>
+										</div>
+										<p class={styles.hint}>
+											轮换后所有现有登录会话立即失效，需要重新登录。
 										</p>
-									</div>
-									<button
-										type="button"
-										class={styles.rotateBtn}
-										disabled={rotating()}
-										onClick={() => void handleRotate()}
-									>
-										{rotating() ? "轮换中…" : "轮换密钥"}
-									</button>
+									</section>
 								</div>
-								<p class={styles.hint}>
-									轮换后所有现有登录会话立即失效，需要重新登录。
-								</p>
-							</section>
-						</div>
-					)}
+							)}
+						</Show>
+					}
+				>
+					<div class={styles.loading}>
+						加载失败
+						<Button variant="primary" size="sm" onClick={refetch}>
+							重试
+						</Button>
+					</div>
 				</Show>
 			</Show>
 		</div>

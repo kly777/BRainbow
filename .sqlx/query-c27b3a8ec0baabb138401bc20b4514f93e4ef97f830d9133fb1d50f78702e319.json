@@ -1,0 +1,64 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT conv_id AS \"conv_id!: i64\", article_type, title,\n                          COALESCE(content, '') AS \"content!: String\",\n                          COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\"\n                   FROM articles\n                   WHERE title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\' LIMIT 200",
+  "describe": {
+    "columns": [
+      {
+        "name": "conv_id!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "articles",
+            "name": "conv_id"
+          }
+        }
+      },
+      {
+        "name": "article_type",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "articles",
+            "name": "article_type"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "articles",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "content!: String",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 4,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c27b3a8ec0baabb138401bc20b4514f93e4ef97f830d9133fb1d50f78702e319"
+}

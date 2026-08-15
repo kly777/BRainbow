@@ -1,9 +1,41 @@
+use sqlx::FromRow;
 use sqlx::SqlitePool;
 
 use super::model::{ArticleItem, ConvDetail, SearchResponse};
 use super::scoring;
 use crate::shared::db_query::like_contains;
 use crate::shared::error_types::ServiceError;
+
+#[derive(FromRow)]
+struct ConvInfoRow {
+    title: String,
+    conv_type: String,
+    created_at: String,
+}
+
+#[derive(FromRow)]
+struct ConvTitleRow {
+    conv_id: i64,
+    title: String,
+    conv_type: String,
+    created_at: String,
+}
+
+#[derive(FromRow)]
+struct ArticleRow {
+    article_type: String,
+    title: String,
+    content: String,
+}
+
+#[derive(FromRow)]
+struct ArticleHitRow {
+    conv_id: i64,
+    article_type: String,
+    title: String,
+    content: String,
+    created_at: String,
+}
 
 /// 查询侧服务——纯读取，无副作用。
 ///
@@ -32,23 +64,32 @@ impl ConvQueryService {
     pub async fn detail(&self, id: i64) -> Result<Option<ConvDetail>, ServiceError> {
         let pool = &self.pool;
 
-        let title_info: Option<(String, String, String)> = sqlx::query_as(
-            "SELECT title, conv_type, created_at FROM conv_titles WHERE conv_id = ?1 ORDER BY id LIMIT 1",
+        let title_info: Option<ConvInfoRow> = sqlx::query_as!(
+            ConvInfoRow,
+            r#"SELECT title, conv_type, COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
+               FROM conv_titles WHERE conv_id = ?1 ORDER BY id LIMIT 1"#,
+            id
         )
-        .bind(id)
         .fetch_optional(pool)
         .await?;
 
-        let (title, conv_type, created_at) = match title_info {
+        let ConvInfoRow {
+            title,
+            conv_type,
+            created_at,
+        } = match title_info {
             Some(t) => t,
             None => return Ok(None),
         };
 
-        let articles: Vec<(String, String, String)> =
-            sqlx::query_as("SELECT article_type, title, content FROM articles WHERE conv_id = ?1")
-                .bind(id)
-                .fetch_all(pool)
-                .await?;
+        let articles = sqlx::query_as!(
+            ArticleRow,
+            r#"SELECT article_type, title, COALESCE(content, '') AS "content!: String"
+               FROM articles WHERE conv_id = ?1"#,
+            id
+        )
+        .fetch_all(pool)
+        .await?;
 
         Ok(Some(ConvDetail {
             conv_id: id,
@@ -57,10 +98,10 @@ impl ConvQueryService {
             created_at,
             articles: articles
                 .into_iter()
-                .map(|(t, title, c)| ArticleItem {
-                    article_type: t,
-                    title,
-                    content: c,
+                .map(|r| ArticleItem {
+                    article_type: r.article_type,
+                    title: r.title,
+                    content: r.content,
                 })
                 .collect(),
         }))
@@ -74,38 +115,47 @@ impl ConvQueryService {
     ) -> Result<Option<serde_json::Value>, ServiceError> {
         let pool = &self.pool;
 
-        let article: Option<(String, String, String)> = sqlx::query_as(
-            "SELECT article_type, title, content FROM articles WHERE conv_id = ?1 AND title = ?2 LIMIT 1",
+        let article: Option<ArticleRow> = sqlx::query_as!(
+            ArticleRow,
+            r#"SELECT article_type, title, COALESCE(content, '') AS "content!: String"
+               FROM articles WHERE conv_id = ?1 AND title = ?2 LIMIT 1"#,
+            id,
+            article_title
         )
-        .bind(id)
-        .bind(article_title)
         .fetch_optional(pool)
         .await?;
 
-        Ok(article.map(|(atype, title, content)| {
+        Ok(article.map(|r| {
             serde_json::json!({
                 "conv_id": id,
-                "article_type": atype,
-                "title": title,
-                "content": content,
+                "article_type": r.article_type,
+                "title": r.title,
+                "content": r.content,
             })
         }))
     }
 }
 
-async fn compute_idf(pool: &SqlitePool, kw: &str) -> f64 {
+async fn compute_idf(pool: &SqlitePool, kw: &str) -> Result<f64, sqlx::Error> {
     let pattern = like_contains(kw);
-    let total: (i64,) = sqlx::query_as(
-        "SELECT (SELECT count(*) FROM conv_titles) + (SELECT count(*) FROM articles)",
+    let total: i64 = sqlx::query_scalar!(
+        "SELECT (SELECT count(*) FROM conv_titles) + (SELECT count(*) FROM articles)"
     )
     .fetch_one(pool)
     .await
-    .unwrap_or((1,));
-    let matched: (i64,) = sqlx::query_as(
-        "SELECT (SELECT count(*) FROM conv_titles WHERE title LIKE ?1 ESCAPE '\\') \
-         + (SELECT count(*) FROM articles WHERE title LIKE ?1 ESCAPE '\\' OR content LIKE ?1 ESCAPE '\\')"
-    ).bind(&pattern).fetch_one(pool).await.unwrap_or((1,));
-    (total.0 as f64 / matched.0.max(1) as f64).ln()
+    .unwrap_or(Some(1))
+    .unwrap_or(1);
+    let matched: Option<i64> = sqlx::query_scalar!(
+        "SELECT (SELECT count(*) FROM conv_titles WHERE title LIKE ? ESCAPE '\\') \
+         + (SELECT count(*) FROM articles WHERE title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')",
+        pattern,
+        pattern,
+        pattern
+    )
+    .fetch_one(pool)
+    .await?;
+    let matched = matched.unwrap_or(1);
+    Ok((total as f64 / matched.max(1) as f64).ln())
 }
 
 #[derive(Debug, Clone)]
@@ -147,19 +197,25 @@ pub async fn search_conv(
     if search_titles {
         for (ki, kw) in keywords.iter().enumerate() {
             let pattern = like_contains(kw);
-            let rows: Vec<(i64, String, String, String)> = sqlx::query_as(
-                "SELECT conv_id, title, conv_type, created_at FROM conv_titles WHERE title LIKE ?1 ESCAPE '\\' LIMIT 200"
-            ).bind(&pattern).fetch_all(pool).await?;
-            for (cid, title, ctype, created) in rows {
-                let occ = scoring::count_occurrences(&title, kw);
-                let len = title.len();
+            let rows: Vec<ConvTitleRow> = sqlx::query_as!(
+                ConvTitleRow,
+                r#"SELECT conv_id, title, conv_type,
+                          COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
+                   FROM conv_titles WHERE title LIKE ? ESCAPE '\' LIMIT 200"#,
+                pattern
+            )
+            .fetch_all(pool)
+            .await?;
+            for r in rows {
+                let occ = scoring::count_occurrences(&r.title, kw);
+                let len = r.title.len();
                 raw_hits.push(RawHit {
-                    conv_id: cid,
-                    title: title.clone(),
-                    conv_type: ctype,
+                    conv_id: r.conv_id,
+                    title: r.title.clone(),
+                    conv_type: r.conv_type,
                     match_field: "title".into(),
-                    snippet: title,
-                    created_at: created,
+                    snippet: r.title,
+                    created_at: r.created_at,
                     source_len: len,
                     keyword_index: ki,
                     ocurrences: occ,
@@ -173,23 +229,32 @@ pub async fn search_conv(
     if search_articles {
         for (ki, kw) in keywords.iter().enumerate() {
             let pattern = like_contains(kw);
-            let rows: Vec<(i64, String, String, String, String)> = sqlx::query_as(
-                "SELECT conv_id, article_type, title, COALESCE(content,''), created_at FROM articles WHERE title LIKE ?1 ESCAPE '\\' OR content LIKE ?1 ESCAPE '\\' LIMIT 200"
-            ).bind(&pattern).fetch_all(pool).await?;
-            for (cid, atype, art_title, content, created) in rows {
-                let text = format!("{} {}", art_title, content);
+            let rows: Vec<ArticleHitRow> = sqlx::query_as!(
+                ArticleHitRow,
+                r#"SELECT conv_id AS "conv_id!: i64", article_type, title,
+                          COALESCE(content, '') AS "content!: String",
+                          COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
+                   FROM articles
+                   WHERE title LIKE ? ESCAPE '\' OR content LIKE ? ESCAPE '\' LIMIT 200"#,
+                pattern,
+                pattern
+            )
+            .fetch_all(pool)
+            .await?;
+            for r in rows {
+                let text = format!("{} {}", r.title, r.content);
                 let occ = scoring::count_occurrences(&text, kw);
                 raw_hits.push(RawHit {
-                    conv_id: cid,
-                    title: art_title.clone(),
-                    conv_type: atype,
+                    conv_id: r.conv_id,
+                    title: r.title.clone(),
+                    conv_type: r.article_type,
                     match_field: "article".into(),
-                    snippet: content,
-                    created_at: created,
+                    snippet: r.content,
+                    created_at: r.created_at,
                     source_len: text.len(),
                     keyword_index: ki,
                     ocurrences: occ,
-                    article_title: Some(art_title),
+                    article_title: Some(r.title),
                 });
             }
         }
@@ -199,7 +264,7 @@ pub async fn search_conv(
     let idfs: Vec<f64> = {
         let mut v = Vec::new();
         for kw in &keywords {
-            v.push(compute_idf(pool, kw).await);
+            v.push(compute_idf(pool, kw).await?);
         }
         v
     };

@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT (SELECT count(*) FROM conv_titles) + (SELECT count(*) FROM articles)",
+  "describe": {
+    "columns": [
+      {
+        "name": "(SELECT count(*) FROM conv_titles) + (SELECT count(*) FROM articles)",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "30230a51f93a0962aa1b8a42929c8d6a71be2a319e30b9c733cfb468bd41d10d"
+}

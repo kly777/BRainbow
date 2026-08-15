@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT (SELECT count(*) FROM conv_titles WHERE title LIKE ? ESCAPE '\\') + (SELECT count(*) FROM articles WHERE title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')",
+  "describe": {
+    "columns": [
+      {
+        "name": "(SELECT count(*) FROM conv_titles WHERE title LIKE ? ESCAPE '\\') + (SELECT count(*) FROM articles WHERE title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "5150ae421a3e245754c1666c66eddfe08486517c763d9c194608627bc6970add"
+}

@@ -154,22 +154,20 @@ mod tests {
                 .unwrap();
         }
 
-        let rows: Vec<String> = sqlx::query_scalar(
-            "SELECT s FROM t WHERE s LIKE ? ESCAPE '\\' ORDER BY s",
-        )
-        .bind(like_contains("50%"))
-        .fetch_all(&pool)
-        .await
-        .unwrap();
+        let rows: Vec<String> =
+            sqlx::query_scalar("SELECT s FROM t WHERE s LIKE ? ESCAPE '\\' ORDER BY s")
+                .bind(like_contains("50%"))
+                .fetch_all(&pool)
+                .await
+                .unwrap();
         assert_eq!(rows, vec!["50% off".to_string()]);
 
-        let rows: Vec<String> = sqlx::query_scalar(
-            "SELECT s FROM t WHERE s LIKE ? ESCAPE '\\' ORDER BY s",
-        )
-        .bind(like_contains("a_b"))
-        .fetch_all(&pool)
-        .await
-        .unwrap();
+        let rows: Vec<String> =
+            sqlx::query_scalar("SELECT s FROM t WHERE s LIKE ? ESCAPE '\\' ORDER BY s")
+                .bind(like_contains("a_b"))
+                .fetch_all(&pool)
+                .await
+                .unwrap();
         assert_eq!(rows, vec!["a_b".to_string()]);
     }
 }

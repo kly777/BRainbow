@@ -18,7 +18,7 @@ impl TextRepo {
     }
 
     pub async fn load_tabs(&self) -> Result<Vec<(String, String)>, sqlx::Error> {
-        let rows = sqlx::query_as::<_, TabRow>("SELECT name, content FROM text_note ORDER BY id")
+        let rows = sqlx::query_as!(TabRow, "SELECT name, content FROM text_note ORDER BY id")
             .fetch_all(&*self.pool)
             .await?;
 
@@ -28,16 +28,16 @@ impl TextRepo {
     pub async fn save_tabs(&self, tabs: &[(String, String)]) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
 
-        sqlx::query("DELETE FROM text_note")
+        sqlx::query!("DELETE FROM text_note")
             .execute(&mut *tx)
             .await?;
 
         for (name, content) in tabs {
-            sqlx::query(
+            sqlx::query!(
                 "INSERT INTO text_note (name, content, created_at, updated_at) VALUES (?, ?, datetime('now'), datetime('now'))",
+                name,
+                content
             )
-            .bind(name)
-            .bind(content)
             .execute(&mut *tx)
             .await?;
         }

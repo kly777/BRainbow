@@ -1,3 +1,4 @@
+import { Button, FilterGroup, SearchInput } from "@components/ui";
 import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@lib/api";
 import { fmtLocal, strParam, useUrlParams } from "@lib/utils";
@@ -90,48 +91,25 @@ export default function ConvSearch() {
 			<p class={styles.initialHint}>输入关键词，搜索概念与文章</p>
 
 			<form class={styles.searchBar} onSubmit={handleSearch}>
-				<div class={styles.inputWrap}>
-					<input
-						class={styles.input}
-						type="text"
-						placeholder="搜索概念、文章…"
-						value={query()}
-						onInput={(e) => setQuery(e.currentTarget.value)}
-						autofocus
-					/>
-					<Show when={query()}>
-						<button
-							type="button"
-							class={styles.clearBtn}
-							onClick={() => {
-								setQuery("");
-							}}
-						>
-							×
-						</button>
-					</Show>
-				</div>
-				<button type="submit" class={styles.btn}>
+				<SearchInput
+					class={styles.input}
+					placeholder="搜索概念、文章…"
+					value={query()}
+					onSearch={setQuery}
+				/>
+				<Button type="submit" variant="primary">
 					搜索
-				</button>
+				</Button>
 			</form>
 
-			<div class={styles.tabs}>
-				<button
-					type="button"
-					class={tab() === "all" ? styles.tabActive : styles.tab}
-					onClick={() => setTab("all")}
-				>
-					全部
-				</button>
-				<button
-					type="button"
-					class={tab() === "article" ? styles.tabActive : styles.tab}
-					onClick={() => setTab("article")}
-				>
-					概念 / 方案
-				</button>
-			</div>
+			<FilterGroup
+				options={[
+					{ value: "all", label: "全部" },
+					{ value: "article", label: "概念 / 方案" },
+				]}
+				selected={tab()}
+				onChange={(t) => setTab(t as Tab)}
+			/>
 
 			<Show when={searchQuery()}>
 				<div class={styles.summary}>

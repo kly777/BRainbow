@@ -1,3 +1,4 @@
+import { FilterGroup, SearchInput } from "@components/ui";
 import { enumParam, strParam, useUrlParams } from "@lib/utils";
 import { TaskList, TaskProvider, useTasks } from "@modules/task";
 import { createSignal, Show } from "solid-js";
@@ -14,7 +15,6 @@ function Toolbar(props: {
 }) {
 	const { add, search, reload } = useTasks();
 	const [title, setTitle] = createSignal("");
-	const [localQ, setLocalQ] = createSignal(props.searchQuery);
 
 	const doSearch = (q: string) => {
 		if (q) search(q);
@@ -24,62 +24,29 @@ function Toolbar(props: {
 
 	return (
 		<div class={styles.toolbar}>
-			<div class={styles.viewSwitch}>
-				<button
-					type="button"
-					classList={{
-						[styles.viewBtn]: true,
-						[styles.viewActive]: props.viewMode === "list",
-					}}
-					onClick={() => props.onViewChange("list")}
-				>
-					列表
-				</button>
-				<button
-					type="button"
-					classList={{
-						[styles.viewBtn]: true,
-						[styles.viewActive]: props.viewMode === "kanban",
-					}}
-					onClick={() => props.onViewChange("kanban")}
-				>
-					看板
-				</button>
-			</div>
+			<FilterGroup
+				options={[
+					{ value: "list", label: "列表" },
+					{ value: "kanban", label: "看板" },
+				]}
+				selected={props.viewMode}
+				onChange={(v) => props.onViewChange(v as "list" | "kanban")}
+			/>
 
 			<div class={styles.searchBox}>
-				<input
-					type="text"
-					placeholder="搜索..."
-					value={localQ()}
-					onInput={(e) => setLocalQ(e.currentTarget.value)}
-					onKeyDown={(e) => {
-						if (e.key === "Enter") doSearch(localQ());
-						if (e.key === "Escape") {
-							setLocalQ("");
-							doSearch("");
-						}
-					}}
+				<SearchInput
+					value={props.searchQuery}
+					onSearch={doSearch}
+					placeholder="搜索任务…"
 					class={styles.searchInput}
 				/>
-				{localQ() && (
-					<button
-						type="button"
-						class={styles.searchClear}
-						onClick={() => {
-							setLocalQ("");
-							doSearch("");
-						}}
-					>
-						×
-					</button>
-				)}
 			</div>
 
 			<div class={styles.quickAddBox}>
 				<input
 					type="text"
-					placeholder="+ 快速添加..."
+					placeholder="+ 快速添加…"
+					aria-label="快速添加任务"
 					value={title()}
 					onInput={(e) => setTitle(e.currentTarget.value)}
 					onKeyDown={(e) => {
@@ -120,28 +87,16 @@ function TaskPanel(props: {
 								onAddSubTask={addSubTask}
 							/>
 							<div class={styles.rightPanel}>
-								<div class={styles.tabBar}>
-									<button
-										type="button"
-										classList={{
-											[styles.tabBtn]: true,
-											[styles.tabActive]: props.rightTab === "calendar",
-										}}
-										onClick={() => props.onRightTabChange("calendar")}
-									>
-										日历
-									</button>
-									<button
-										type="button"
-										classList={{
-											[styles.tabBtn]: true,
-											[styles.tabActive]: props.rightTab === "dag",
-										}}
-										onClick={() => props.onRightTabChange("dag")}
-									>
-										依赖图
-									</button>
-								</div>
+								<FilterGroup
+									options={[
+										{ value: "calendar", label: "日历" },
+										{ value: "dag", label: "依赖图" },
+									]}
+									selected={props.rightTab}
+									onChange={(t) =>
+										props.onRightTabChange(t as "calendar" | "dag")
+									}
+								/>
 								<Show when={props.rightTab === "calendar"}>
 									<TaskCalendar />
 								</Show>
@@ -157,7 +112,7 @@ function TaskPanel(props: {
 				</>
 			}
 		>
-			<div class={styles.loading}>加载中...</div>
+			<div class={styles.loading}>加载中…</div>
 		</Show>
 	);
 }

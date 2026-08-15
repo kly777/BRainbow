@@ -1,5 +1,6 @@
 // ── v2 管理工具栏：搜索 / 标签过滤 / 状态筛选 / 导出 ──
 
+import { Button, FilterGroup, SearchInput } from "@components/ui";
 import { searchTagsE, type TagInfo } from "@modules/mem";
 import { createResource, createSignal, For, Show } from "solid-js";
 import styles from "./ManageToolbar.module.css";
@@ -73,27 +74,25 @@ export default function ManageToolbar(props: Props) {
 		<div class={styles.toolbar}>
 			{/* 搜索 */}
 			<div class={styles.searchBox}>
-				<input
-					type="text"
-					class={styles.searchInput}
-					placeholder="搜索线索或答案…"
+				<SearchInput
 					value={props.searchQuery}
-					onInput={(e) => props.onSearch(e.currentTarget.value)}
+					onSearch={props.onSearch}
+					placeholder="搜索线索或答案…"
 				/>
 			</div>
 
 			{/* 标签过滤 */}
 			<div class={styles.tagFilter}>
-				<button
-					type="button"
-					class={styles.modeToggle}
+				<Button
+					variant="secondary"
+					size="sm"
 					onClick={toggleMode}
 					title={
 						props.tagMode === "include" ? "切换为排除模式" : "切换为包含模式"
 					}
 				>
 					{props.tagMode === "include" ? "☐ 包含" : "☒ 排除"}
-				</button>
+				</Button>
 				<For each={props.tagFilters}>
 					{(tag) => (
 						<span
@@ -108,6 +107,7 @@ export default function ManageToolbar(props: Props) {
 								type="button"
 								class={styles.tagClear}
 								onClick={() => removeTag(tag.id)}
+								aria-label={`移除标签 ${tag.name}`}
 							>
 								✕
 							</button>
@@ -115,19 +115,20 @@ export default function ManageToolbar(props: Props) {
 					)}
 				</For>
 				<Show when={props.tagFilters.length > 0}>
-					<button
-						type="button"
-						class={styles.clearAllBtn}
+					<Button
+						variant="ghost"
+						size="sm"
 						onClick={clearAll}
 						title="清除标签过滤"
 					>
 						清除
-					</button>
+					</Button>
 				</Show>
 				<input
 					type="text"
 					class={styles.tagInput}
 					placeholder="添加标签过滤…"
+					aria-label="添加标签过滤"
 					value={tagQuery()}
 					onInput={(e) => {
 						setTagQuery(e.currentTarget.value);
@@ -156,27 +157,17 @@ export default function ManageToolbar(props: Props) {
 				</Show>
 			</div>
 
-			<button type="button" class={styles.exportBtn} onClick={props.onExport}>
+			<Button variant="secondary" size="sm" onClick={props.onExport}>
 				导出
-			</button>
+			</Button>
 
 			{/* 状态筛选 */}
 			<div class={styles.filterGroup}>
-				<For each={FILTER_OPTIONS}>
-					{(opt) => (
-						<button
-							type="button"
-							class={
-								props.filterState === opt.value
-									? styles.filterActive
-									: styles.filterBtn
-							}
-							onClick={() => props.onFilterChange(opt.value)}
-						>
-							{opt.label}
-						</button>
-					)}
-				</For>
+				<FilterGroup
+					options={FILTER_OPTIONS}
+					selected={props.filterState}
+					onChange={props.onFilterChange}
+				/>
 			</div>
 		</div>
 	);

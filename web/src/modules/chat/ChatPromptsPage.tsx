@@ -1,6 +1,7 @@
 // ── 提示词预设管理：增删改查 ──
 
-import { tryAsync, tryOrNotify } from "@lib/utils";
+import { Button } from "@components/ui";
+import { showConfirm, tryAsync, tryOrNotify } from "@lib/utils";
 import type { PromptPreset } from "@modules/chat";
 import {
 	createPresetE,
@@ -43,6 +44,12 @@ export default function ChatPromptsPage() {
 	};
 
 	const remove = async (preset: PromptPreset) => {
+		const confirmed = await showConfirm({
+			title: "删除预设",
+			message: `确定删除预设「${preset.name}」吗？此操作不可撤销。`,
+			variant: "danger",
+		});
+		if (!confirmed) return;
 		const ok = await tryOrNotify(() => deletePresetE(preset.id), "删除预设");
 		if (ok === null) return;
 		setPresets((prev) => prev.filter((p) => p.id !== preset.id));
@@ -52,9 +59,9 @@ export default function ChatPromptsPage() {
 		<div class={styles.page}>
 			<div class={styles.head}>
 				<h1 class={styles.title}>提示词预设</h1>
-				<button
-					type="button"
-					class={styles.btnPrimary}
+				<Button
+					variant="primary"
+					size="sm"
 					onClick={() => {
 						setEditing(null);
 						setName("");
@@ -63,7 +70,7 @@ export default function ChatPromptsPage() {
 					}}
 				>
 					＋ 新建预设
-				</button>
+				</Button>
 			</div>
 
 			<Show when={creating() || editing()}>
@@ -72,6 +79,7 @@ export default function ChatPromptsPage() {
 						type="text"
 						class={styles.input}
 						placeholder="预设名称（如：代码导师）"
+						aria-label="预设名称"
 						value={name()}
 						onInput={(e) => setName(e.currentTarget.value)}
 					/>
@@ -79,28 +87,29 @@ export default function ChatPromptsPage() {
 						class={styles.textarea}
 						rows={4}
 						placeholder="系统提示词内容…"
+						aria-label="预设内容"
 						value={content()}
 						onInput={(e) => setContent(e.currentTarget.value)}
 					/>
 					<div class={styles.actions}>
-						<button
-							type="button"
-							class={styles.btnGhost}
+						<Button
+							variant="secondary"
+							size="sm"
 							onClick={() => {
 								setCreating(false);
 								setEditing(null);
 							}}
 						>
 							取消
-						</button>
-						<button
-							type="button"
-							class={styles.btnPrimary}
+						</Button>
+						<Button
+							variant="primary"
+							size="sm"
 							disabled={!name().trim() || !content().trim()}
 							onClick={() => void save()}
 						>
 							保存
-						</button>
+						</Button>
 					</div>
 				</div>
 			</Show>
@@ -124,9 +133,9 @@ export default function ChatPromptsPage() {
 										<span class={styles.itemContent}>{preset.content}</span>
 									</div>
 									<div class={styles.itemActions}>
-										<button
-											type="button"
-											class={styles.itemBtn}
+										<Button
+											variant="secondary"
+											size="sm"
 											onClick={() => {
 												setEditing(preset);
 												setName(preset.name);
@@ -134,14 +143,14 @@ export default function ChatPromptsPage() {
 											}}
 										>
 											编辑
-										</button>
-										<button
-											type="button"
-											class={styles.itemBtnDanger}
+										</Button>
+										<Button
+											variant="danger"
+											size="sm"
 											onClick={() => void remove(preset)}
 										>
 											删除
-										</button>
+										</Button>
 									</div>
 								</div>
 							)}

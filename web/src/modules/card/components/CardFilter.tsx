@@ -1,4 +1,5 @@
-import { type Component, createSignal, onCleanup } from "solid-js";
+import { Button, SearchInput } from "@components/ui";
+import { type Component, createSignal } from "solid-js";
 import styles from "./CardFilter.module.css";
 
 export interface CardFilterProps {
@@ -10,24 +11,6 @@ export interface CardFilterProps {
 }
 
 const CardFilter: Component<CardFilterProps> = (props) => {
-	const [searchQuery, setSearchQuery] = createSignal(props.initialQuery ?? "");
-	let searchTimer: ReturnType<typeof setTimeout> | undefined;
-	onCleanup(() => clearTimeout(searchTimer));
-
-	const handleSearchInput = (value: string) => {
-		setSearchQuery(value);
-		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => {
-			props.onSearch?.(value.trim());
-		}, 300);
-	};
-
-	const clearSearch = () => {
-		setSearchQuery("");
-		clearTimeout(searchTimer);
-		props.onSearch?.("");
-	};
-
 	const [sortBy, setSortBy] = createSignal<"created" | "updated">(
 		props.sortBy || "updated",
 	);
@@ -51,15 +34,17 @@ const CardFilter: Component<CardFilterProps> = (props) => {
 		<div class={styles.filters}>
 			<div class={styles.filterRow}>
 				<div class={styles.filterControls}>
-					<input
-						type="text"
+					<SearchInput
 						class={styles.searchInput}
-						placeholder="搜索卡片..."
-						value={searchQuery()}
-						onInput={(e) => handleSearchInput(e.currentTarget.value)}
+						placeholder="搜索卡片…"
+						value={props.initialQuery ?? ""}
+						onSearch={(q) => props.onSearch?.(q)}
 					/>
-					<span class={styles.filterLabel}>排序:</span>
+					<label class={styles.filterLabel} for="card-sort-by">
+						排序:
+					</label>
 					<select
+						id="card-sort-by"
 						class={styles.filterSelect}
 						value={sortBy()}
 						onChange={(e) => handleSortBy(e.currentTarget.value)}
@@ -67,22 +52,14 @@ const CardFilter: Component<CardFilterProps> = (props) => {
 						<option value="updated">更新时间</option>
 						<option value="created">创建时间</option>
 					</select>
-					<button
-						type="button"
-						class={styles.sortButton}
+					<Button
+						variant="icon"
 						onClick={toggleSortOrder}
 						title={sortOrder() === "asc" ? "升序" : "降序"}
+						aria-label={sortOrder() === "asc" ? "切换为降序" : "切换为升序"}
 					>
 						{sortOrder() === "asc" ? "↑" : "↓"}
-					</button>
-					<button
-						type="button"
-						class={styles.clearButton}
-						onClick={clearSearch}
-						disabled={searchQuery() === ""}
-					>
-						清空
-					</button>
+					</Button>
 				</div>
 			</div>
 		</div>

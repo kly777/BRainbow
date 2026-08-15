@@ -1,5 +1,6 @@
 // ── 对话页：AI 多轮对话（树状分支 / 修订 / 搜索 / 预设提示词） ──
 
+import { SearchInput } from "@components/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
 import styles from "./ChatPage.module.css";
 import {
@@ -33,12 +34,12 @@ export default function ChatPage() {
 				class={sidebarCollapsed() ? styles.sidebarCollapsed : styles.sidebar}
 			>
 				<div class={styles.searchBox}>
-					<input
-						type="text"
-						class={styles.searchInput}
-						placeholder="搜索对话 / 消息…"
+					<SearchInput
 						value={c.searchQ()}
-						onInput={(e) => c.onSearchInput(e.currentTarget.value)}
+						onSearch={(q) => c.onSearchInput(q)}
+						debounceMs={0}
+						placeholder="搜索对话 / 消息…"
+						class={styles.searchInput}
 					/>
 					<Show when={c.searchOpen()}>
 						<div class={styles.searchResults}>

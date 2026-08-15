@@ -1,0 +1,141 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, stored_id, original_name, media_type, mime_type, size_bytes AS \"size_bytes!: i64\", width, height, duration_ms, user_id,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\"\n               FROM media WHERE stored_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "media",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "stored_id",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "media",
+            "name": "stored_id"
+          }
+        }
+      },
+      {
+        "name": "original_name",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "media",
+            "name": "original_name"
+          }
+        }
+      },
+      {
+        "name": "media_type",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "media",
+            "name": "media_type"
+          }
+        }
+      },
+      {
+        "name": "mime_type",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "media",
+            "name": "mime_type"
+          }
+        }
+      },
+      {
+        "name": "size_bytes!: i64",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "media",
+            "name": "size_bytes"
+          }
+        }
+      },
+      {
+        "name": "width",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "media",
+            "name": "width"
+          }
+        }
+      },
+      {
+        "name": "height",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "media",
+            "name": "height"
+          }
+        }
+      },
+      {
+        "name": "duration_ms",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "media",
+            "name": "duration_ms"
+          }
+        }
+      },
+      {
+        "name": "user_id",
+        "ordinal": 9,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "media",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "name": "created_at!: chrono::DateTime<chrono::Utc>",
+        "ordinal": 10,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "233340fb7e9adfbc346d97dd02b316c47a97a8720054900650866bfe4680530f"
+}

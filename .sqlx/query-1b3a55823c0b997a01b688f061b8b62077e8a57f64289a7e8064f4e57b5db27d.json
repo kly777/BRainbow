@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n                (SELECT COUNT(*) FROM card WHERE content LIKE ?) +\n                (SELECT COUNT(*) FROM articles WHERE content LIKE ?) +\n                (SELECT COUNT(*) FROM chunk WHERE content LIKE ?) +\n                (SELECT COUNT(*) FROM text_note WHERE content LIKE ?)",
+  "describe": {
+    "columns": [
+      {
+        "name": "(SELECT COUNT(*) FROM card WHERE content LIKE ?) +\n                (SELECT COUNT(*) FROM articles WHERE content LIKE ?) +\n                (SELECT COUNT(*) FROM chunk WHERE content LIKE ?) +\n                (SELECT COUNT(*) FROM text_note WHERE content LIKE ?)",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "1b3a55823c0b997a01b688f061b8b62077e8a57f64289a7e8064f4e57b5db27d"
+}

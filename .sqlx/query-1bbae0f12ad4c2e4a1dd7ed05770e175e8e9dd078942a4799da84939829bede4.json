@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM media WHERE stored_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "1bbae0f12ad4c2e4a1dd7ed05770e175e8e9dd078942a4799da84939829bede4"
+}

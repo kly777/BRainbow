@@ -52,20 +52,22 @@ impl MediaRepository {
     }
 
     pub async fn insert(&self, params: NewMedia<'_>) -> Result<Media, sqlx::Error> {
-        let row = sqlx::query_as::<_, MediaRow>(
+        let row = sqlx::query_as!(
+            MediaRow,
             r#"INSERT INTO media (stored_id, original_name, media_type, mime_type, size_bytes, width, height, duration_ms, user_id)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-               RETURNING id, stored_id, original_name, media_type, mime_type, size_bytes, width, height, duration_ms, user_id, created_at"#,
+               RETURNING id AS "id!: i64", stored_id, original_name, media_type, mime_type, size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                         COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>""#,
+            params.stored_id,
+            params.original_name,
+            params.media_type,
+            params.mime_type,
+            params.size_bytes,
+            params.width,
+            params.height,
+            params.duration_ms,
+            params.user_id
         )
-        .bind(params.stored_id)
-        .bind(params.original_name)
-        .bind(params.media_type)
-        .bind(params.mime_type)
-        .bind(params.size_bytes)
-        .bind(params.width)
-        .bind(params.height)
-        .bind(params.duration_ms)
-        .bind(params.user_id)
         .fetch_one(&*self.db)
         .await?;
 
@@ -79,26 +81,27 @@ impl MediaRepository {
         height: Option<i64>,
         duration_ms: Option<i64>,
     ) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE media SET width = ?, height = ?, duration_ms = ? WHERE id = ?")
-            .bind(width)
-            .bind(height)
-            .bind(duration_ms)
-            .bind(id)
-            .execute(&*self.db)
-            .await?;
+        sqlx::query!(
+            "UPDATE media SET width = ?, height = ?, duration_ms = ? WHERE id = ?",
+            width,
+            height,
+            duration_ms,
+            id
+        )
+        .execute(&*self.db)
+        .await?;
         Ok(())
     }
 
     pub async fn count(&self, media_type: Option<&str>) -> Result<i64, sqlx::Error> {
         match media_type {
             Some(mt) => {
-                sqlx::query_scalar("SELECT COUNT(*) FROM media WHERE media_type = ?")
-                    .bind(mt)
+                sqlx::query_scalar!("SELECT COUNT(*) FROM media WHERE media_type = ?", mt)
                     .fetch_one(&*self.db)
                     .await
             }
             None => {
-                sqlx::query_scalar("SELECT COUNT(*) FROM media")
+                sqlx::query_scalar!("SELECT COUNT(*) FROM media")
                     .fetch_one(&*self.db)
                     .await
             }
@@ -113,25 +116,29 @@ impl MediaRepository {
     ) -> Result<Vec<Media>, sqlx::Error> {
         let rows = match media_type {
             Some(mt) => {
-                sqlx::query_as::<_, MediaRow>(
-                    "SELECT id, stored_id, original_name, media_type, mime_type, size_bytes, width, height, duration_ms, user_id, created_at
-                     FROM media WHERE media_type = ?
-                     ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                sqlx::query_as!(
+                    MediaRow,
+                    r#"SELECT id, stored_id, original_name, media_type, mime_type, size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                              COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>"
+                       FROM media WHERE media_type = ?
+                       ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
+                    mt,
+                    limit,
+                    offset
                 )
-                .bind(mt)
-                .bind(limit)
-                .bind(offset)
                 .fetch_all(&*self.db)
                 .await?
             }
             None => {
-                sqlx::query_as::<_, MediaRow>(
-                    "SELECT id, stored_id, original_name, media_type, mime_type, size_bytes, width, height, duration_ms, user_id, created_at
-                     FROM media
-                     ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                sqlx::query_as!(
+                    MediaRow,
+                    r#"SELECT id, stored_id, original_name, media_type, mime_type, size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                              COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>"
+                       FROM media
+                       ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
+                    limit,
+                    offset
                 )
-                .bind(limit)
-                .bind(offset)
                 .fetch_all(&*self.db)
                 .await?
             }
@@ -140,11 +147,13 @@ impl MediaRepository {
     }
 
     pub async fn find_by_stored_id(&self, stored_id: &str) -> Result<Option<Media>, sqlx::Error> {
-        let row = sqlx::query_as::<_, MediaRow>(
-            "SELECT id, stored_id, original_name, media_type, mime_type, size_bytes, width, height, duration_ms, user_id, created_at
-             FROM media WHERE stored_id = ?",
+        let row = sqlx::query_as!(
+            MediaRow,
+            r#"SELECT id, stored_id, original_name, media_type, mime_type, size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                      COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>"
+               FROM media WHERE stored_id = ?"#,
+            stored_id
         )
-        .bind(stored_id)
         .fetch_optional(&*self.db)
         .await?;
 
@@ -156,12 +165,14 @@ impl MediaRepository {
         stored_id: &str,
         new_name: &str,
     ) -> Result<Option<Media>, sqlx::Error> {
-        let row = sqlx::query_as::<_, MediaRow>(
-            "UPDATE media SET original_name = ? WHERE stored_id = ?
-             RETURNING id, stored_id, original_name, media_type, mime_type, size_bytes, width, height, duration_ms, user_id, created_at",
+        let row = sqlx::query_as!(
+            MediaRow,
+            r#"UPDATE media SET original_name = ? WHERE stored_id = ?
+               RETURNING id AS "id!: i64", stored_id, original_name, media_type, mime_type, size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                         COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>""#,
+            new_name,
+            stored_id
         )
-        .bind(new_name)
-        .bind(stored_id)
         .fetch_optional(&*self.db)
         .await?;
 
@@ -170,8 +181,7 @@ impl MediaRepository {
 
     pub async fn delete(&self, stored_id: &str) -> Result<Option<Media>, sqlx::Error> {
         let existing = self.find_by_stored_id(stored_id).await?;
-        sqlx::query("DELETE FROM media WHERE stored_id = ?")
-            .bind(stored_id)
+        sqlx::query!("DELETE FROM media WHERE stored_id = ?", stored_id)
             .execute(&*self.db)
             .await?;
         Ok(existing)
@@ -182,20 +192,20 @@ impl MediaRepository {
     /// 统计内容表（card/articles/mem/text_note/chunk）中引用该媒体文件的条数
     pub async fn count_content_references(&self, stored_id: &str) -> Result<usize, sqlx::Error> {
         let pattern = format!("%{stored_id}%");
-        let row: (i64,) = sqlx::query_as(
+        let row: Option<i64> = sqlx::query_scalar!(
             "SELECT
                 (SELECT COUNT(*) FROM card WHERE content LIKE ?) +
                 (SELECT COUNT(*) FROM articles WHERE content LIKE ?) +
                 (SELECT COUNT(*) FROM chunk WHERE content LIKE ?) +
                 (SELECT COUNT(*) FROM text_note WHERE content LIKE ?)",
+            pattern,
+            pattern,
+            pattern,
+            pattern
         )
-        .bind(&pattern)
-        .bind(&pattern)
-        .bind(&pattern)
-        .bind(&pattern)
         .fetch_one(&*self.db)
         .await?;
-        Ok(row.0 as usize)
+        Ok(row.unwrap_or(0) as usize)
     }
 }
 

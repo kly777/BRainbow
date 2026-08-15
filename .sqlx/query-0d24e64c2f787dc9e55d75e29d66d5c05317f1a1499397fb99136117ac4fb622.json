@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE media SET width = ?, height = ?, duration_ms = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "0d24e64c2f787dc9e55d75e29d66d5c05317f1a1499397fb99136117ac4fb622"
+}

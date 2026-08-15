@@ -1,4 +1,4 @@
-use sqlx::{Row, SqlitePool};
+use sqlx::SqlitePool;
 use std::sync::Arc;
 
 use super::model::User;
@@ -50,31 +50,37 @@ impl UserRepository {
         password_hash: &str,
         role: &str,
     ) -> Result<User, sqlx::Error> {
-        let result = sqlx::query(
-            "INSERT INTO user (name, password_hash, role) VALUES (?, ?, ?) RETURNING id, name, password_hash, role"
+        let row = sqlx::query!(
+            r#"INSERT INTO user (name, password_hash, role) VALUES (?, ?, ?)
+               RETURNING id AS "id: i32", name, password_hash, role"#,
+            name,
+            password_hash,
+            role
         )
-            .bind(name).bind(password_hash).bind(role)
-            .fetch_one(&*self.db).await?;
+        .fetch_one(&*self.db)
+        .await?;
         Ok(User {
-            id: result.try_get("id")?,
-            name: result.try_get("name")?,
-            password_hash: result.try_get("password_hash")?,
-            role: result.try_get("role")?,
+            id: row.id,
+            name: row.name,
+            password_hash: row.password_hash,
+            role: row.role,
         })
     }
 
     pub async fn count(&self) -> Result<i64, sqlx::Error> {
-        sqlx::query_scalar("SELECT COUNT(*) FROM user")
+        sqlx::query_scalar!("SELECT COUNT(*) FROM user")
             .fetch_one(&*self.db)
             .await
     }
 
     pub async fn update_password(&self, id: i32, new_hash: &str) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE user SET password_hash = ? WHERE id = ?")
-            .bind(new_hash)
-            .bind(id)
-            .execute(&*self.db)
-            .await?;
+        sqlx::query!(
+            "UPDATE user SET password_hash = ? WHERE id = ?",
+            new_hash,
+            id
+        )
+        .execute(&*self.db)
+        .await?;
         Ok(())
     }
 }

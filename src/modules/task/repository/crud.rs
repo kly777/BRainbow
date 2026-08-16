@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 
-
 use super::super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
 use super::super::model::{Task, TaskStatus};
 use super::TaskRepository;

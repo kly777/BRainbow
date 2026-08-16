@@ -26,6 +26,8 @@
 	height: 2rem;
 	padding: 0 var(--space-md);
 	font-size: var(--text-sm);
+	appearance: none;
+	-webkit-appearance: none;
 	background: var(--t-color-bg);
 	color: var(--t-color-ink-muted);
 	border: 1px solid var(--t-color-border);

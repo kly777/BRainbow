@@ -236,6 +236,12 @@ body {
 	color: var(--t-color-accent);
 }
 
+/* 统一去掉浏览器原生 button 外观，避免自定义圆角/边框被原生样式干扰 */
+button {
+	appearance: none;
+	-webkit-appearance: none;
+}
+
 /* Firefox：细滚动条 + 主题色 */
 * {
 	scrollbar-width: thin;

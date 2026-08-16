@@ -9,6 +9,8 @@
 	height: 1.75rem;
 	padding: 0 var(--space-md);
 	font-size: var(--text-xs);
+	appearance: none;
+	-webkit-appearance: none;
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-full);
 	background: var(--t-color-surface);

@@ -115,6 +115,8 @@
 	justify-content: center;
 	height: 2.25rem;
 	padding: 0 var(--space-lg);
+	appearance: none;
+	-webkit-appearance: none;
 	border: 1px solid transparent;
 	border-radius: var(--radius-full);
 	font-family: inherit;

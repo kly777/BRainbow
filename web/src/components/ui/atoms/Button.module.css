@@ -5,6 +5,8 @@
 	align-items: center;
 	justify-content: center;
 	gap: var(--space-xs);
+	appearance: none;
+	-webkit-appearance: none;
 	border: 1px solid transparent;
 	border-radius: var(--radius-full);
 	font-family: inherit;

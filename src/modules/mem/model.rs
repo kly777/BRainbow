@@ -241,6 +241,17 @@ pub struct InsertRevlogParams {
     pub state_after: String,
 }
 
+/// 复习候选（供队列按难度加权采样；比 MemRow 轻，只带排序所需字段）
+#[derive(Debug, Clone)]
+pub struct ReviewCandidate {
+    pub id: i32,
+    pub stability: f64,
+    pub difficulty: f64,
+    pub lapses: i32,
+    pub due_at: String,
+    pub last_review_at: Option<String>,
+}
+
 /// 计算自上次复习以来经过的天数。
 /// 新卡（无 last_review_at）返回 0。
 /// 已复习过的卡即使不到 1 天也返回至少 1，

@@ -6,12 +6,12 @@ use crate::modules::{
     bookmark::BookmarkService, card::CardQueryService, card::CardService,
     chat::query::ChatQueryService, chat::service::ChatService, conv::query::ConvQueryService,
     db_viewer::DbViewerQueryService, media::query::MediaQueryService, media::service::MediaService,
-    mem::MemRepo, mem::config::MemConfig, mem::query::MemQueryService, mem::service::MemService,
-    onto::OntoQueryService, onto::OntoService, reading::query::ReadingQueryService,
-    reading::service::ReadingService, sign::SignQueryService, sign::SignService,
-    task::TaskQueryService, task::TaskService, text::TextQueryService, text::TextService,
-    time_window::query::TimeWindowQueryService, time_window::service::TimeWindowService,
-    user::UserQueryService, user::UserService,
+    mem::MemRepo, mem::config::MemConfig, mem::maintenance::DbMemMaintenance,
+    mem::query::MemQueryService, mem::service::MemService, onto::OntoQueryService,
+    onto::OntoService, reading::query::ReadingQueryService, reading::service::ReadingService,
+    sign::SignQueryService, sign::SignService, task::TaskQueryService, task::TaskService,
+    text::TextQueryService, text::TextService, time_window::query::TimeWindowQueryService,
+    time_window::service::TimeWindowService, user::UserQueryService, user::UserService,
 };
 use crate::shared::config::Config;
 
@@ -51,6 +51,7 @@ pub struct AppState {
     pub task_query: TaskQueryService,
     pub mem: MemService,
     pub mem_query: MemQueryService,
+    pub mem_maintenance: DbMemMaintenance,
     pub media: MediaService,
     pub media_query: MediaQueryService,
     pub reading: ReadingService,
@@ -162,6 +163,7 @@ impl AppState {
         let mem_repo: Arc<dyn crate::modules::mem::port::MemRepository> =
             Arc::new(MemRepo::new(db.clone()));
         let mem_repo_for_query = mem_repo.clone();
+        let mem_maintenance = DbMemMaintenance::new(db.clone());
         Self {
             db: db.clone(),
             jwt_secret: Arc::new(config.jwt_secret.clone()),
@@ -184,8 +186,9 @@ impl AppState {
             db_viewer: DbViewerQueryService::new(db.clone()),
             task: task.clone(),
             task_query: TaskQueryService::new(db.clone()),
-            mem: MemService::new(mem_repo, db.clone()),
+            mem: MemService::new(mem_repo, Arc::new(mem_maintenance.clone())),
             mem_query: MemQueryService::new(mem_repo_for_query),
+            mem_maintenance,
             media: MediaService::new(db.clone()),
             media_query: MediaQueryService::new(db.clone()),
             reading: ReadingService::new(db.clone()),

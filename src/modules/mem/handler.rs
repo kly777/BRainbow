@@ -9,9 +9,9 @@ use crate::shared::claims::Claims;
 use std::collections::HashMap;
 
 use crate::guard_empty_batch;
-use crate::modules::mem::config::MemConfig;
+use crate::modules::mem::dto::*;
 use crate::modules::mem::model::*;
-use crate::modules::mem::optimizer;
+use crate::modules::mem::port::MemMaintenance;
 use crate::modules::state::AppState;
 use crate::shared::batch::{BatchDataResponse, BatchRequest, BatchResponse};
 use crate::shared::error_types as error;
@@ -21,6 +21,16 @@ fn ok() -> axum::response::Response {
 }
 fn err(e: impl std::fmt::Display, op: &str) -> axum::response::Response {
     error::internal(e, op)
+}
+
+impl IntoResponse for MemError {
+    fn into_response(self) -> axum::response::Response {
+        match self {
+            MemError::NotFound => error::not_found("记忆项不存在"),
+            MemError::Internal(msg) => error::internal(msg.clone(), &msg),
+            MemError::Db(msg) => error::internal(msg, "数据库操作"),
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -504,27 +514,20 @@ pub async fn set_mnemonic(
     }
 }
 
-/// 优化 FSRS 参数（直接使用 state.db，不属于任一服务）
+/// 优化 FSRS 参数（通过 maintenance adapter，handler 不直接接触数据库）
 pub async fn optimize_params(State(state): State<AppState>) -> impl IntoResponse {
-    let config = MemConfig::load_from_db(&state.db).await;
-    match optimizer::optimize_fsrs_params(&state.db, &config).await {
-        Ok(Some(params)) => {
-            tracing::info!("FSRS 参数优化完成，共 {} 个参数", params.len());
-            let cfg = config;
-            cfg.save_to_db(&state.db).await.ok();
-            crate::modules::mem::fsrs::set_global_params(params);
-            Json(serde_json::json!({
-                "ok": true,
-                "params": cfg.fsrs_params,
-                "message": format!("优化完成，得到 {} 个参数", cfg.fsrs_params.len()),
-            }))
-            .into_response()
-        }
+    match state.mem_maintenance.optimize_now().await {
+        Ok(Some(params)) => Json(serde_json::json!({
+            "ok": true,
+            "params": params,
+            "message": format!("优化完成，得到 {} 个参数", params.len()),
+        }))
+        .into_response(),
         Ok(None) => Json(serde_json::json!({
             "ok": false,
             "message": "数据不足，至少需要 10 条复习记录"
         }))
         .into_response(),
-        Err(e) => err(e, "优化"),
+        Err(e) => e.into_response(),
     }
 }

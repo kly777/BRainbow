@@ -81,78 +81,7 @@ pub struct MemWithChunks {
     pub mnemonic: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct CreateMemRequest {
-    pub cue_content: String,
-    pub target_content: String,
-    pub prerequisites: Vec<i32>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct ReviewRequest {
-    pub rating: u8,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct EditMemRequest {
-    pub cue_content: String,
-    pub target_content: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct UndoRequest {
-    pub state: String,
-    pub stability: f64,
-    pub difficulty: f64,
-    pub step_index: Option<i32>,
-    pub lapses: i32,
-    pub leeched: bool,
-    pub due_at: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ReviewResponse {
-    pub state: String,
-    pub due_at: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct DueResponse {
-    pub items: Vec<MemWithChunks>,
-    pub due_count: usize,
-    pub has_more: bool,
-    /// 未来还会到期的卡数
-    pub upcoming_count: usize,
-    /// 所有卡的下次复习都在 24h 之后
-    pub all_far: bool,
-}
-
-/// 各状态计数（与 Anki 底部统计类似）
-#[derive(Debug, Clone, Serialize)]
-pub struct MemCounts {
-    pub new: usize,
-    pub learning: usize,
-    pub due: usize,
-    pub buried: usize,
-    pub suspended: usize,
-}
-
-/// 管理页查询参数
-#[derive(Debug, Clone, Deserialize, Default)]
-pub struct MemQuery {
-    pub q: Option<String>,
-    pub state: Option<String>,
-    pub sort: Option<String>,
-    pub order: Option<String>,
-    /// 白名单标签 ID（逗号分隔），仅显示包含这些标签的 mem
-    pub tag_ids: Option<String>,
-    /// 黑名单标签 ID（逗号分隔），排除包含这些标签的 mem
-    pub exclude_tag_ids: Option<String>,
-    pub page: Option<i64>,
-    pub page_size: Option<i64>,
-}
-
-/// 标签
+/// 标签（领域实体，同时作为轻量读模型返回）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TagInfo {
     pub id: i32,
@@ -160,54 +89,8 @@ pub struct TagInfo {
     pub created_at: String,
 }
 
-/// 标签 + mem_id 联合查询结果（供 get_mems_tags_batch 使用）
-#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
-pub struct MemTagRow {
-    pub mem_id: i32,
-    pub id: i32,
-    pub name: String,
-    pub created_at: String,
-}
-
-/// 创建标签请求
-#[derive(Debug, Clone, Deserialize)]
-pub struct CreateTagRequest {
-    pub name: String,
-}
-
-/// 给 mem 打标签请求
-#[derive(Debug, Clone, Deserialize)]
-pub struct TagMemRequest {
-    pub mem_id: i32,
-    pub tag_id: i32,
-}
-
-/// 批量设置标签请求
-#[derive(Debug, Clone, Deserialize)]
-pub struct SetTagsRequest {
-    pub mem_id: i32,
-    pub tag_ids: Vec<i32>,
-}
-
-/// JSON 导入的单条记忆
-#[derive(Debug, Clone, Deserialize)]
-pub struct JsonMemItem {
-    pub cue: String,
-    pub target: String,
-    #[serde(default)]
-    pub tags: Vec<String>,
-}
-
-/// MemWithTags — 供列表用
-#[allow(dead_code)]
-#[derive(Debug, Clone, Serialize)]
-pub struct MemWithTags {
-    pub mem: MemWithChunks,
-    pub tags: Vec<TagInfo>,
-}
-
-/// 数据库行：mem 表的一条记录（供 Repository 层使用）
-#[derive(Debug, Clone, sqlx::FromRow)]
+/// mem 记录读模型（领域层；由 repository 适配器从 DB row 映射而来）
+#[derive(Debug, Clone)]
 pub struct MemRow {
     #[allow(dead_code)]
     pub id: i32,
@@ -293,47 +176,27 @@ pub struct FsrsUpdate {
     pub due_at: String,
 }
 
-/// 本次学习预估
-#[derive(Debug, Clone, Serialize)]
-pub struct SessionEstimate {
-    /// 当前到期的总卡数
-    pub due_count: usize,
-    /// 近期记忆保持率（0~1）
-    pub retention: f64,
-    /// 预估本次学习需要查看的总次数
-    pub total_estimate: usize,
-}
-
-/// mem 模块通用错误
+/// mem 模块领域错误（不携带 sqlx/axum 类型，保持应用层与基础设施解耦）
 #[derive(Debug)]
-pub enum AppError {
+pub enum MemError {
     NotFound,
     Internal(String),
-    Db(sqlx::Error),
+    Db(String),
 }
 
-impl From<sqlx::Error> for AppError {
-    fn from(e: sqlx::Error) -> Self {
-        AppError::Db(e)
+impl MemError {
+    /// 适配器把数据库错误转换为领域错误
+    pub fn db(e: impl std::fmt::Display) -> Self {
+        Self::Db(e.to_string())
     }
 }
 
-impl std::fmt::Display for AppError {
+impl std::fmt::Display for MemError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AppError::NotFound => write!(f, "not found"),
-            AppError::Internal(msg) => write!(f, "{msg}"),
-            AppError::Db(e) => write!(f, "db: {e}"),
-        }
-    }
-}
-
-impl AppError {
-    pub fn into_response(self) -> axum::response::Response {
-        match self {
-            AppError::NotFound => crate::shared::error_types::not_found("记忆项不存在"),
-            AppError::Internal(msg) => crate::shared::error_types::internal(msg.clone(), &msg),
-            AppError::Db(e) => crate::shared::error_types::internal(e, "数据库操作"),
+            MemError::NotFound => write!(f, "not found"),
+            MemError::Internal(msg) => write!(f, "{msg}"),
+            MemError::Db(msg) => write!(f, "db: {msg}"),
         }
     }
 }

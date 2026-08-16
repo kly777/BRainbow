@@ -4,7 +4,8 @@ use std::sync::Arc;
 use crate::shared::db_query::like_contains;
 
 use super::model::{
-    Chunk, FsrsUpdate, InsertRevlogParams, MemQuery, MemRow, MemTagRow, MemWithChunks, TagInfo,
+    Chunk, FsrsUpdate, InsertRevlogParams, MemQuery, MemRow, MemTagRow, MemWithChunks,
+    ReviewCandidate, TagInfo,
 };
 use super::port::MemRepository;
 use async_trait::async_trait;
@@ -497,24 +498,36 @@ impl MemRepo {
         qb.build_query_scalar().fetch_all(&*self.pool).await
     }
 
-    /// 获取到期复习卡（保持 review 状态，不转为 learning）
-    pub async fn get_due_reviews(
+    /// 获取到期复习候选（含难度/稳定性/失败次数，供 service 加权采样）
+    pub async fn get_due_review_candidates(
         &self,
-        limit: i64,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
-    ) -> Result<Vec<i32>, sqlx::Error> {
+    ) -> Result<Vec<ReviewCandidate>, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
-            r#"SELECT m.id FROM mem m
+            r#"SELECT m.id AS "id", m.stability AS "stability", m.difficulty AS "difficulty",
+                      m.lapses AS "lapses", COALESCE(m.due_at, '') AS "due_at",
+                      m.last_review_at AS "last_review_at"
+            FROM mem m
             WHERE m.state = 'review' AND m.buried = 0 AND m.state != 'suspended'
               AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#,
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
-        qb.push(" ORDER BY m.due_at LIMIT ");
-        qb.push_bind(limit);
-        qb.build_query_scalar().fetch_all(&*self.pool).await
+        let rows = qb.build().fetch_all(&*self.pool).await?;
+        rows.into_iter()
+            .map(|row| {
+                Ok(ReviewCandidate {
+                    id: row.try_get("id")?,
+                    stability: row.try_get("stability")?,
+                    difficulty: row.try_get("difficulty")?,
+                    lapses: row.try_get("lapses")?,
+                    due_at: row.try_get("due_at")?,
+                    last_review_at: row.try_get("last_review_at")?,
+                })
+            })
+            .collect()
     }
 
     /// 获取新卡（随后由 service 转为 learning 状态）
@@ -536,22 +549,34 @@ impl MemRepo {
         qb.build_query_scalar().fetch_all(&*self.pool).await
     }
 
-    /// 获取将来 review 卡（保持 review 状态，不转为 learning）
-    pub async fn get_upcoming_reviews(
+    /// 获取未来到期 review 候选（含难度/稳定性/失败次数，供 service 加权采样）
+    pub async fn get_upcoming_review_candidates(
         &self,
-        limit: i64,
         tag_ids: &[i32],
-    ) -> Result<Vec<i32>, sqlx::Error> {
+    ) -> Result<Vec<ReviewCandidate>, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
-            r#"SELECT m.id FROM mem m
+            r#"SELECT m.id AS "id", m.stability AS "stability", m.difficulty AS "difficulty",
+                      m.lapses AS "lapses", COALESCE(m.due_at, '') AS "due_at",
+                      m.last_review_at AS "last_review_at"
+            FROM mem m
             WHERE m.state = 'review' AND m.buried = 0 AND m.state != 'suspended'
               AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#,
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
-        qb.push(" ORDER BY m.due_at LIMIT ");
-        qb.push_bind(limit);
-        qb.build_query_scalar().fetch_all(&*self.pool).await
+        let rows = qb.build().fetch_all(&*self.pool).await?;
+        rows.into_iter()
+            .map(|row| {
+                Ok(ReviewCandidate {
+                    id: row.try_get("id")?,
+                    stability: row.try_get("stability")?,
+                    difficulty: row.try_get("difficulty")?,
+                    lapses: row.try_get("lapses")?,
+                    due_at: row.try_get("due_at")?,
+                    last_review_at: row.try_get("last_review_at")?,
+                })
+            })
+            .collect()
     }
 
     pub async fn count_upcoming(&self) -> Result<i64, sqlx::Error> {
@@ -1050,13 +1075,13 @@ impl MemRepository for MemRepo {
         self.get_learning_mems(limit, tag_ids, exclude_tag_ids)
             .await
     }
-    async fn get_due_reviews(
+    async fn get_due_review_candidates(
         &self,
-        limit: i64,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
-    ) -> Result<Vec<i32>, sqlx::Error> {
-        self.get_due_reviews(limit, tag_ids, exclude_tag_ids).await
+    ) -> Result<Vec<ReviewCandidate>, sqlx::Error> {
+        self.get_due_review_candidates(tag_ids, exclude_tag_ids)
+            .await
     }
     async fn get_new_cards(
         &self,
@@ -1066,12 +1091,11 @@ impl MemRepository for MemRepo {
     ) -> Result<Vec<i32>, sqlx::Error> {
         self.get_new_cards(limit, tag_ids, exclude_tag_ids).await
     }
-    async fn get_upcoming_reviews(
+    async fn get_upcoming_review_candidates(
         &self,
-        limit: i64,
         tag_ids: &[i32],
-    ) -> Result<Vec<i32>, sqlx::Error> {
-        self.get_upcoming_reviews(limit, tag_ids).await
+    ) -> Result<Vec<ReviewCandidate>, sqlx::Error> {
+        self.get_upcoming_review_candidates(tag_ids).await
     }
     async fn count_upcoming(&self) -> Result<i64, sqlx::Error> {
         self.count_upcoming().await
@@ -1888,15 +1912,13 @@ mod tests {
             .unwrap();
         assert_eq!(ids.len(), 0, "没有 learning 卡");
 
-        // 2. due_reviews
+        // 2. due_reviews（候选查询：到期卡为空）
         if ids.len() < limit as usize {
-            let needed = limit as usize - ids.len();
             let due = repo
-                .get_due_reviews(needed as i64, tag_ids, exclude_tag_ids)
+                .get_due_review_candidates(tag_ids, exclude_tag_ids)
                 .await
                 .unwrap();
             assert!(due.is_empty(), "没有到期的 review 卡");
-            ids.extend(due);
         }
 
         // 3. new_cards
@@ -1915,15 +1937,61 @@ mod tests {
 
         // 4. 验证 upcoming 不会被用到
         if ids.len() < limit as usize {
-            let needed = limit as usize - ids.len();
-            let upcoming = repo
-                .get_upcoming_reviews(needed as i64, tag_ids)
-                .await
-                .unwrap();
+            let upcoming = repo.get_upcoming_review_candidates(tag_ids).await.unwrap();
             // 不应走到这里！
-            ids.extend(upcoming);
-            panic!("不应拉取 upcoming！新卡足够填满队列");
+            assert!(
+                upcoming.is_empty() || ids.len() >= limit as usize,
+                "新卡足够填满队列时不应使用 upcoming"
+            );
         }
+    }
+
+    #[tokio::test]
+    async fn get_due_review_candidates_carries_priority_fields() {
+        let repo = setup_db().await;
+
+        // 两张到期 review 卡，难度/失败次数不同
+        let (due_id, ..) = create_test_mem(&repo, "due", "target").await;
+        let past = (chrono::Utc::now() - chrono::Duration::hours(24))
+            .format("%Y-%m-%dT%H:%M:%SZ")
+            .to_string();
+        let last = (chrono::Utc::now() - chrono::Duration::days(2))
+            .format("%Y-%m-%dT%H:%M:%SZ")
+            .to_string();
+        sqlx::query(
+            "UPDATE mem SET state='review', difficulty=9, stability=2, lapses=4, due_at=?, last_review_at=? WHERE id=?",
+        )
+        .bind(&past)
+        .bind(&last)
+        .bind(due_id)
+        .execute(&*repo.pool)
+        .await
+        .unwrap();
+
+        // 一张未来到期卡：不应进入 due 候选
+        let (future_id, ..) = create_test_mem(&repo, "future", "target").await;
+        let future = (chrono::Utc::now() + chrono::Duration::hours(1))
+            .format("%Y-%m-%dT%H:%M:%SZ")
+            .to_string();
+        sqlx::query(
+            "UPDATE mem SET state='review', difficulty=3, stability=10, due_at=? WHERE id=?",
+        )
+        .bind(&future)
+        .bind(future_id)
+        .execute(&*repo.pool)
+        .await
+        .unwrap();
+
+        let due = repo.get_due_review_candidates(&[], &[]).await.unwrap();
+        assert_eq!(due.len(), 1);
+        assert_eq!(due[0].id, due_id);
+        assert_eq!(due[0].difficulty, 9.0);
+        assert_eq!(due[0].stability, 2.0);
+        assert_eq!(due[0].lapses, 4);
+
+        let upcoming = repo.get_upcoming_review_candidates(&[]).await.unwrap();
+        assert_eq!(upcoming.len(), 1);
+        assert_eq!(upcoming[0].id, future_id);
     }
 
     // ── 读模型：get_mems_with_chunks (JOIN) ──

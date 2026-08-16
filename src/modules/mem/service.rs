@@ -5,6 +5,7 @@ use crate::modules::mem::config::MemConfig;
 use crate::modules::mem::fsrs::{self, ReviewOutcome};
 use crate::modules::mem::model::*;
 use crate::modules::mem::port::MemRepository;
+use crate::modules::mem::selection;
 use crate::shared::batch::{BatchResponse, batch_execute, batch_execute_with_code};
 
 #[derive(Clone)]
@@ -42,14 +43,14 @@ impl MemService {
         }
         let more_to_learn = learning.len() > ids.len();
 
-        // 2. 到期 review 填空
+        // 2. 到期 review 填空：难度/遗忘次数/过期程度加权采样
         let review_quota = cap.saturating_sub(ids.len());
         if review_quota > 0 {
-            let due = self
+            let candidates = self
                 .repo
-                .get_due_reviews(review_quota as i64, tag_ids, exclude_tag_ids)
+                .get_due_review_candidates(tag_ids, exclude_tag_ids)
                 .await?;
-            ids.extend(due);
+            ids.extend(sample_review_candidates(candidates, review_quota));
         }
 
         // 3. 新卡填空（标注 learning 状态——这是写操作）
@@ -65,14 +66,11 @@ impl MemService {
             ids.extend(new_cards);
         }
 
-        // 4. 提前复习 (upcoming) 填空
+        // 4. 提前复习 (upcoming) 填空：同样按难度/到期接近度加权采样
         let upcoming_quota = cap.saturating_sub(ids.len());
         if upcoming_quota > 0 {
-            let upcoming = self
-                .repo
-                .get_upcoming_reviews(upcoming_quota as i64, tag_ids)
-                .await?;
-            ids.extend(upcoming);
+            let candidates = self.repo.get_upcoming_review_candidates(tag_ids).await?;
+            ids.extend(sample_review_candidates(candidates, upcoming_quota));
         }
 
         // 5. 实在没卡了，随便给一张
@@ -545,6 +543,23 @@ impl MemService {
     pub async fn set_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), sqlx::Error> {
         self.repo.upsert_mnemonic(mem_id, content).await
     }
+}
+
+/// 对 review 候选做不放回加权采样，返回选中的 mem id（保持采样优先级顺序）。
+fn sample_review_candidates(candidates: Vec<ReviewCandidate>, quota: usize) -> Vec<i32> {
+    if quota == 0 || candidates.is_empty() {
+        return Vec::new();
+    }
+    let now = chrono::Utc::now();
+    let weights: Vec<f64> = candidates
+        .iter()
+        .map(|c| selection::review_candidate_weight(c, now))
+        .collect();
+    let mut rng = rand::rng();
+    selection::weighted_sample_indices(&weights, quota, &mut rng)
+        .into_iter()
+        .map(|i| candidates[i].id)
+        .collect()
 }
 
 /// 如果 revlog 条数达到 `every` 的整数倍，自动触发 FSRS 参数优化。

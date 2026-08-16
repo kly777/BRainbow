@@ -7,6 +7,7 @@ pub mod port;
 pub(crate) mod repository;
 pub(crate) use repository::MemRepo;
 pub mod query;
+pub mod selection;
 pub mod service;
 
 use crate::modules::state::AppState;

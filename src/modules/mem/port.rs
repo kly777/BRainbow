@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 
 use super::model::{
-    FsrsUpdate, InsertRevlogParams, MemQuery, MemRow, MemTagRow, MemWithChunks, TagInfo,
+    FsrsUpdate, InsertRevlogParams, MemQuery, MemRow, MemTagRow, MemWithChunks, ReviewCandidate,
+    TagInfo,
 };
 
 /// Repository interface for the `mem` module.
@@ -47,23 +48,21 @@ pub trait MemRepository: Send + Sync {
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<Vec<i32>, sqlx::Error>;
-    async fn get_due_reviews(
+    async fn get_due_review_candidates(
         &self,
-        limit: i64,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
-    ) -> Result<Vec<i32>, sqlx::Error>;
+    ) -> Result<Vec<ReviewCandidate>, sqlx::Error>;
     async fn get_new_cards(
         &self,
         limit: i64,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<Vec<i32>, sqlx::Error>;
-    async fn get_upcoming_reviews(
+    async fn get_upcoming_review_candidates(
         &self,
-        limit: i64,
         tag_ids: &[i32],
-    ) -> Result<Vec<i32>, sqlx::Error>;
+    ) -> Result<Vec<ReviewCandidate>, sqlx::Error>;
     async fn count_upcoming(&self) -> Result<i64, sqlx::Error>;
     async fn count_upcoming_within_hours(&self, hours: i64) -> Result<i64, sqlx::Error>;
     async fn get_counts(&self) -> Result<(i64, i64, i64, i64, i64), sqlx::Error>;

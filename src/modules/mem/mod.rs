@@ -1,6 +1,8 @@
 pub mod config;
+pub mod dto;
 pub mod fsrs;
 pub mod handler;
+pub mod maintenance;
 pub mod model;
 pub mod optimizer;
 pub mod port;
@@ -9,6 +11,8 @@ pub(crate) use repository::MemRepo;
 pub mod query;
 pub mod selection;
 pub mod service;
+#[cfg(test)]
+pub(crate) mod testing;
 
 use crate::modules::state::AppState;
 use axum::{

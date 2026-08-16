@@ -1,23 +1,22 @@
-use sqlx::SqlitePool;
 use std::sync::Arc;
 
-use crate::modules::mem::config::MemConfig;
+use crate::modules::mem::dto::*;
 use crate::modules::mem::fsrs::{self, ReviewOutcome};
 use crate::modules::mem::model::*;
-use crate::modules::mem::port::MemRepository;
+use crate::modules::mem::port::{MemMaintenance, MemRepository};
 use crate::modules::mem::selection;
 use crate::shared::batch::{BatchResponse, batch_execute, batch_execute_with_code};
 
 #[derive(Clone)]
 pub struct MemService {
     repo: Arc<dyn MemRepository>,
-    /// 数据库连接池（临时保留，供 optimizer 使用。TODO: Phase 2 — 让 optimizer 也通过 Repository trait 访问）
-    db: Arc<SqlitePool>,
+    /// 后台维护（FSRS 参数优化）通过 port 注入，领域服务不持有数据库连接池。
+    maintenance: Arc<dyn MemMaintenance>,
 }
 
 impl MemService {
-    pub fn new(repo: Arc<dyn MemRepository>, db: Arc<SqlitePool>) -> Self {
-        Self { repo, db }
+    pub fn new(repo: Arc<dyn MemRepository>, maintenance: Arc<dyn MemMaintenance>) -> Self {
+        Self { repo, maintenance }
     }
 
     // ── 获取学习池（含侧面：新卡标注 learning 状态） ──
@@ -27,7 +26,7 @@ impl MemService {
         max_learning: i64,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
-    ) -> Result<DueResponse, sqlx::Error> {
+    ) -> Result<DueResponse, MemError> {
         let cap = max_learning as usize;
         let mut ids: Vec<i32> = Vec::with_capacity(cap);
 
@@ -106,11 +105,11 @@ impl MemService {
 
     // ── 复习 ──
 
-    pub async fn review(&self, id: i32, rating: u8) -> Result<ReviewResponse, AppError> {
-        let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
+    pub async fn review(&self, id: i32, rating: u8) -> Result<ReviewResponse, MemError> {
+        let row = self.repo.get_mem(id).await?.ok_or(MemError::NotFound)?;
         let (outcome, new_step) = self
             .apply_review(&row, rating)
-            .map_err(AppError::Internal)?;
+            .map_err(MemError::Internal)?;
 
         let new_state = outcome.state.as_str();
 
@@ -132,7 +131,7 @@ impl MemService {
                     state: new_state.to_string(),
                     stability: outcome.stability,
                     difficulty: outcome.difficulty,
-                    step_index: new_step.map(|s| s as i32),
+                    step_index: new_step,
                     lapses,
                     leeched,
                     due_at: outcome.due_at.clone(),
@@ -157,14 +156,10 @@ impl MemService {
                 state_after: new_state.to_string(),
             })
             .await
-            .map_err(AppError::Db)?;
+            .map_err(MemError::db)?;
 
-        // 每 20 次复习自动触发一次参数优化
-        let repo = self.repo.clone();
-        let db = self.db.clone();
-        tokio::spawn(async move {
-            maybe_auto_optimize(repo, db, 20).await;
-        });
+        // 每 20 次复习自动触发一次参数优化（策略在 adapter 内实现）
+        self.maintenance.schedule_auto_optimize(self.repo.clone());
 
         Ok(ReviewResponse {
             state: new_state.to_string(),
@@ -237,21 +232,21 @@ impl MemService {
 
     // ── 内部辅助 ──
 
-    async fn build_items(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, sqlx::Error> {
+    async fn build_items(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, MemError> {
         self.repo.get_mems_with_chunks(ids).await
     }
 
     // ── 挂起 / 恢复 ──
 
-    pub async fn suspend(&self, id: i32) -> Result<(), AppError> {
-        self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
-        self.repo.suspend_mem(id).await.map_err(AppError::Db)?;
+    pub async fn suspend(&self, id: i32) -> Result<(), MemError> {
+        self.repo.get_mem(id).await?.ok_or(MemError::NotFound)?;
+        self.repo.suspend_mem(id).await.map_err(MemError::db)?;
         Ok(())
     }
 
-    pub async fn unsuspend(&self, id: i32) -> Result<(), AppError> {
-        self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
-        self.repo.unsuspend_mem(id).await.map_err(AppError::Db)?;
+    pub async fn unsuspend(&self, id: i32) -> Result<(), MemError> {
+        self.repo.get_mem(id).await?.ok_or(MemError::NotFound)?;
+        self.repo.unsuspend_mem(id).await.map_err(MemError::db)?;
         Ok(())
     }
 
@@ -283,7 +278,7 @@ impl MemService {
 
     // ── CRUD ──
 
-    pub async fn create(&self, req: CreateMemRequest) -> Result<i32, sqlx::Error> {
+    pub async fn create(&self, req: CreateMemRequest) -> Result<i32, MemError> {
         let cue_id = self.repo.create_chunk(&req.cue_content).await?;
         let target_id = self.repo.create_chunk(&req.target_content).await?;
         self.repo
@@ -291,7 +286,7 @@ impl MemService {
             .await
     }
 
-    pub async fn undo(&self, id: i32, req: UndoRequest) -> Result<(), sqlx::Error> {
+    pub async fn undo(&self, id: i32, req: UndoRequest) -> Result<(), MemError> {
         self.repo
             .update_mem_fsrs(
                 id,
@@ -308,69 +303,69 @@ impl MemService {
             .await
     }
 
-    pub async fn edit(&self, id: i32, req: EditMemRequest) -> Result<(), AppError> {
-        let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
+    pub async fn edit(&self, id: i32, req: EditMemRequest) -> Result<(), MemError> {
+        let row = self.repo.get_mem(id).await?.ok_or(MemError::NotFound)?;
         self.repo
             .update_chunk(row.cue_chunk_id, &req.cue_content)
             .await
-            .map_err(AppError::Db)?;
+            .map_err(MemError::db)?;
         self.repo
             .update_chunk(row.target_chunk_id, &req.target_content)
             .await
-            .map_err(AppError::Db)?;
+            .map_err(MemError::db)?;
         Ok(())
     }
 
-    pub async fn bury(&self, id: i32) -> Result<(), sqlx::Error> {
+    pub async fn bury(&self, id: i32) -> Result<(), MemError> {
         self.repo.bury_mem(id).await
     }
-    pub async fn unbury(&self, id: i32) -> Result<(), sqlx::Error> {
+    pub async fn unbury(&self, id: i32) -> Result<(), MemError> {
         self.repo.unbury_mem(id).await
     }
-    pub async fn delete(&self, id: i32) -> Result<(), sqlx::Error> {
+    pub async fn delete(&self, id: i32) -> Result<(), MemError> {
         self.repo.delete_mem(id).await
     }
-    pub async fn reset(&self, id: i32) -> Result<(), sqlx::Error> {
+    pub async fn reset(&self, id: i32) -> Result<(), MemError> {
         self.repo.reset_mem(id).await
     }
 
     // ── 标签 ──
 
-    pub async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, AppError> {
+    pub async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, MemError> {
         self.repo
             .create_tag(name, user_id)
             .await
-            .map_err(AppError::Db)
+            .map_err(MemError::db)
     }
 
-    pub async fn delete_tag(&self, id: i32) -> Result<(), AppError> {
-        self.repo.delete_tag(id).await.map_err(AppError::Db)?;
+    pub async fn delete_tag(&self, id: i32) -> Result<(), MemError> {
+        self.repo.delete_tag(id).await.map_err(MemError::db)?;
         Ok(())
     }
 
-    pub async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), AppError> {
-        self.repo.get_mem(mem_id).await?.ok_or(AppError::NotFound)?;
+    pub async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), MemError> {
+        self.repo.get_mem(mem_id).await?.ok_or(MemError::NotFound)?;
         self.repo
             .add_tag_to_mem(mem_id, tag_id)
             .await
-            .map_err(AppError::Db)?;
+            .map_err(MemError::db)?;
         Ok(())
     }
 
-    pub async fn remove_tag_from_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), AppError> {
+    pub async fn remove_tag_from_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), MemError> {
         self.repo
             .remove_tag_from_mem(mem_id, tag_id)
             .await
-            .map_err(AppError::Db)?;
+            .map_err(MemError::db)?;
         Ok(())
     }
 
-    pub async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), AppError> {
-        self.repo.get_mem(mem_id).await?.ok_or(AppError::NotFound)?;
+    pub async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), MemError> {
+        self.repo.get_mem(mem_id).await?.ok_or(MemError::NotFound)?;
         self.repo
             .set_mem_tags(mem_id, tag_ids)
             .await
-            .map_err(AppError::Db)?;
+            .map_err(MemError::db)?;
         Ok(())
     }
 
@@ -421,7 +416,7 @@ impl MemService {
         csv_data: &str,
         user_id: i32,
         default_tags: &[String],
-    ) -> Result<(usize, Vec<String>), AppError> {
+    ) -> Result<(usize, Vec<String>), MemError> {
         let mut reader = csv::ReaderBuilder::new()
             .has_headers(true)
             .flexible(true)
@@ -436,7 +431,7 @@ impl MemService {
         psv_data: &str,
         user_id: i32,
         default_tags: &[String],
-    ) -> Result<(usize, Vec<String>), AppError> {
+    ) -> Result<(usize, Vec<String>), MemError> {
         let mut reader = csv::ReaderBuilder::new()
             .delimiter(b'|')
             .has_headers(true)
@@ -452,7 +447,7 @@ impl MemService {
         reader: &mut csv::Reader<&[u8]>,
         user_id: i32,
         default_tags: &[String],
-    ) -> Result<(usize, Vec<String>), AppError> {
+    ) -> Result<(usize, Vec<String>), MemError> {
         let mut count = 0usize;
         let mut errors = Vec::new();
 
@@ -468,13 +463,13 @@ impl MemService {
                         continue;
                     }
 
-                    let cue_id = self.repo.create_chunk(cue).await.map_err(AppError::Db)?;
-                    let target_id = self.repo.create_chunk(target).await.map_err(AppError::Db)?;
+                    let cue_id = self.repo.create_chunk(cue).await.map_err(MemError::db)?;
+                    let target_id = self.repo.create_chunk(target).await.map_err(MemError::db)?;
                     let mem_id = self
                         .repo
                         .create_mem(cue_id, target_id, &[])
                         .await
-                        .map_err(AppError::Db)?;
+                        .map_err(MemError::db)?;
 
                     self.apply_tags_to_mem(mem_id, tags_str, default_tags, user_id)
                         .await?;
@@ -496,7 +491,7 @@ impl MemService {
         tags_str: &str,
         default_tags: &[String],
         user_id: i32,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), MemError> {
         let mut all_names: Vec<String> = tags_str
             .split([';', ','])
             .map(|s| s.trim().to_string())
@@ -512,7 +507,7 @@ impl MemService {
                 .repo
                 .search_tags(user_id, name)
                 .await
-                .map_err(AppError::Db)?
+                .map_err(MemError::db)?
                 .into_iter()
                 .find(|t| t.name == *name)
             {
@@ -521,12 +516,12 @@ impl MemService {
                     .repo
                     .create_tag(name, user_id)
                     .await
-                    .map_err(AppError::Db)?,
+                    .map_err(MemError::db)?,
             };
             self.repo
                 .add_tag_to_mem(mem_id, tag.id)
                 .await
-                .map_err(AppError::Db)?;
+                .map_err(MemError::db)?;
         }
         Ok(())
     }
@@ -537,7 +532,7 @@ impl MemService {
         mems: &[JsonMemItem],
         user_id: i32,
         default_tags: &[String],
-    ) -> Result<(usize, Vec<String>), AppError> {
+    ) -> Result<(usize, Vec<String>), MemError> {
         let mut count = 0usize;
         let mut errors = Vec::new();
 
@@ -550,13 +545,13 @@ impl MemService {
                 continue;
             }
 
-            let cue_id = self.repo.create_chunk(cue).await.map_err(AppError::Db)?;
-            let target_id = self.repo.create_chunk(target).await.map_err(AppError::Db)?;
+            let cue_id = self.repo.create_chunk(cue).await.map_err(MemError::db)?;
+            let target_id = self.repo.create_chunk(target).await.map_err(MemError::db)?;
             let mem_id = self
                 .repo
                 .create_mem(cue_id, target_id, &[])
                 .await
-                .map_err(AppError::Db)?;
+                .map_err(MemError::db)?;
 
             let tags_str = item.tags.join("; ");
             self.apply_tags_to_mem(mem_id, &tags_str, default_tags, user_id)
@@ -570,7 +565,7 @@ impl MemService {
 
     // ── 助记 ──
 
-    pub async fn set_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), sqlx::Error> {
+    pub async fn set_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), MemError> {
         self.repo.upsert_mnemonic(mem_id, content).await
     }
 }
@@ -588,42 +583,8 @@ fn sample_review_candidates(candidates: Vec<ReviewCandidate>, quota: usize) -> V
     let mut rng = rand::rng();
     selection::weighted_sample_indices(&weights, quota, &mut rng)
         .into_iter()
-        .map(|i| candidates[i].id)
+        .filter_map(|i| candidates.get(i).map(|c| c.id))
         .collect()
-}
-
-/// 如果 revlog 条数达到 `every` 的整数倍，自动触发 FSRS 参数优化。
-async fn maybe_auto_optimize(repo: Arc<dyn MemRepository>, db: Arc<SqlitePool>, every: i64) {
-    let count = match repo.count_revlogs().await {
-        Ok(n) => n,
-        Err(_) => return,
-    };
-    if count < 10 || count % every != 0 {
-        return;
-    }
-
-    tracing::info!("触发自动优化: revlog 共 {} 条", count);
-    let config = MemConfig::load_from_db(&db).await;
-    match crate::modules::mem::optimizer::optimize_fsrs_params(&db, &config).await {
-        Ok(Some(params)) => {
-            let cfg = config;
-            let ok = cfg.save_to_db(&db).await.is_ok();
-            crate::modules::mem::fsrs::set_global_params(params);
-            if ok {
-                tracing::info!("自动优化完成, 参数已更新 (数据库 + 运行时)");
-            } else {
-                tracing::warn!("自动优化完成但写库失败, 仅运行时生效");
-            }
-        }
-        Ok(None) => {}
-        Err(e) => {
-            tracing::warn!("自动优化失败: {e}");
-        }
-    }
-
-    if let Err(e) = repo.prune_revlogs().await {
-        tracing::warn!("revlog 修剪失败: {e}");
-    }
 }
 
 #[cfg(test)]
@@ -632,6 +593,8 @@ mod tests {
 
     use super::*;
     use crate::modules::mem::MemRepo;
+    use crate::modules::mem::testing::{FakeRepo, NoopMaintenance, fake_candidate, fake_mem};
+    use sqlx::SqlitePool;
 
     async fn setup_service() -> (MemService, MemRepo, SqlitePool, i32) {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
@@ -641,7 +604,7 @@ mod tests {
             .await
             .unwrap();
         let repo = MemRepo::new(Arc::new(pool.clone()));
-        let service = MemService::new(Arc::new(repo.clone()), Arc::new(pool.clone()));
+        let service = MemService::new(Arc::new(repo.clone()), Arc::new(NoopMaintenance));
         let cue = repo.create_chunk("cue").await.unwrap();
         let target = repo.create_chunk("target").await.unwrap();
         let id = repo.create_mem(cue, target, &[]).await.unwrap();
@@ -707,5 +670,36 @@ mod tests {
             "毕业间隔应至少 1 天，实际 {:.1}h",
             interval as f64 / 3600.0
         );
+    }
+
+    // ── 显式架构收益验证：只用 FakeRepo，不碰 SQLite ──
+
+    #[tokio::test]
+    async fn get_due_orchestrates_priority_through_fake_port() {
+        let repo = Arc::new(FakeRepo::default());
+        repo.learning.lock().unwrap().push(1);
+        repo.due_reviews.lock().unwrap().push(fake_candidate(2));
+        repo.new_cards.lock().unwrap().push(3);
+        repo.mems.lock().unwrap().insert(1, fake_mem(1));
+        repo.mems.lock().unwrap().insert(2, fake_mem(2));
+        repo.mems.lock().unwrap().insert(3, fake_mem(3));
+
+        let service = MemService::new(repo.clone(), Arc::new(NoopMaintenance));
+        let due = service.get_due(3, &[], &[]).await.unwrap();
+
+        assert_eq!(
+            due.items.iter().map(|m| m.id).collect::<Vec<_>>(),
+            vec![1, 2, 3],
+            "应按 learning → due review → new 的顺序组队"
+        );
+        let calls = repo.set_state_calls.lock().unwrap();
+        assert_eq!(calls.as_slice(), &[(3, "learning".into(), Some(0))]);
+    }
+
+    #[tokio::test]
+    async fn review_missing_mem_returns_not_found_without_database() {
+        let service = MemService::new(Arc::new(FakeRepo::default()), Arc::new(NoopMaintenance));
+        let err = service.review(999, 3).await.unwrap_err();
+        assert!(matches!(err, MemError::NotFound));
     }
 }

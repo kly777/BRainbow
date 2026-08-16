@@ -122,32 +122,32 @@ const MediaListPage: Component = () => {
 						<For each={data}>
 							{(item) => (
 								<div class={styles.card}>
+									<div class={styles.preview}>
+										<Show when={item.media_type === "image"}>
+											<a
+												class={styles.previewLink}
+												href={item.url}
+												target="_blank"
+												rel="noopener noreferrer"
+											>
+												<img
+													src={item.url}
+													alt={item.original_name}
+													class={styles.thumb}
+													loading="lazy"
+												/>
+											</a>
+										</Show>
+										<Show when={item.media_type !== "image"}>
+											<span class={styles.iconPreview}>
+												{item.media_type === "video" ? "🎬" : "🎵"}
+											</span>
+										</Show>
+									</div>
 									<Show
 										when={editingId() === item.stored_id}
 										fallback={
 											<>
-												<div class={styles.preview}>
-													<Show when={item.media_type === "image"}>
-														<a
-															class={styles.previewLink}
-															href={item.url}
-															target="_blank"
-															rel="noopener noreferrer"
-														>
-															<img
-																src={item.url}
-																alt={item.original_name}
-																class={styles.thumb}
-																loading="lazy"
-															/>
-														</a>
-													</Show>
-													<Show when={item.media_type !== "image"}>
-														<span class={styles.iconPreview}>
-															{item.media_type === "video" ? "🎬" : "🎵"}
-														</span>
-													</Show>
-												</div>
 												<div class={styles.info}>
 													<p class={styles.name} title={item.original_name}>
 														{item.original_name}
@@ -175,7 +175,7 @@ const MediaListPage: Component = () => {
 											</>
 										}
 									>
-										<div class={styles.editRow}>
+										<div class={styles.info}>
 											<input
 												type="text"
 												value={editName()}
@@ -184,6 +184,11 @@ const MediaListPage: Component = () => {
 												onKeyPress={(e) => e.key === "Enter" && handleRename()}
 												aria-label="媒体名称"
 											/>
+											<p class={styles.meta}>
+												{item.media_type} · {formatSize(item.size_bytes)}
+											</p>
+										</div>
+										<div class={styles.actions}>
 											<Button
 												variant="primary"
 												size="sm"

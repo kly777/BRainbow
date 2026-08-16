@@ -96,7 +96,10 @@ export default function TextEditor() {
 							role="tab"
 							tabIndex={active() === i() ? 0 : -1}
 							aria-selected={active() === i()}
-							class={active() === i() ? styles.tabActive : styles.tab}
+							classList={{
+								[styles.tab]: true,
+								[styles.tabActive]: active() === i(),
+							}}
 							onClick={() => setActive(i())}
 							onDblClick={() => startRename(i())}
 							onKeyDown={(e) => {

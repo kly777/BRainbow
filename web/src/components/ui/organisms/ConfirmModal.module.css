@@ -1,27 +1,52 @@
 /* components/ui/ConfirmModal.css.ts — 由 vanilla-extract 迁移 */
 
+@keyframes confirm-in {
+	from {
+		opacity: 0;
+		transform: translateY(0.5rem) scale(0.98);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
 .overlay {
 	position: fixed;
 	inset: 0;
 	background: var(--t-color-overlay);
+	backdrop-filter: var(--t-mask-blur);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	z-index: var(--z-confirm);
 	padding: var(--space-xl);
+	animation: modal-overlay-in 150ms ease-out;
+}
+
+@keyframes modal-overlay-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
 }
 
 .dialog {
 	background: var(--t-color-surface);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-lg);
-	box-shadow: var(--shadow-md);
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-2xl);
+	box-shadow: var(--shadow-lv3);
 	max-width: 420px;
 	width: 100%;
 	padding: var(--space-xl);
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-lg);
+	animation: confirm-in 180ms ease-out;
 }
 
 .header {
@@ -88,8 +113,10 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	padding: var(--space-xs) var(--space-lg);
-	border-radius: var(--radius-md);
+	height: 2.25rem;
+	padding: 0 var(--space-lg);
+	border: 1px solid transparent;
+	border-radius: var(--radius-full);
 	font-family: inherit;
 	font-size: var(--text-sm);
 	font-weight: 500;
@@ -97,8 +124,8 @@
 	line-height: var(--leading-tight);
 	transition:
 		background var(--t-transition-fast),
+		border-color var(--t-transition-fast),
 		box-shadow var(--t-transition-fast);
-	border: none;
 }
 
 .btn-cancel {

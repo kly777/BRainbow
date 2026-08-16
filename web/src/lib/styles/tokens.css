@@ -12,6 +12,9 @@
 	--t-font-mono:
 		ui-monospace, sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
 
+	/* ── 通用视觉令牌（不随主题） ── */
+	--t-mask-blur: blur(2px);
+
 	/* ── 主题契约：paper（暖纸 · 目录绿，默认） ── */
 	--t-color-bg: oklch(97.2% 0.004 80deg);
 	--t-color-surface: oklch(99.5% 0.002 80deg);
@@ -48,6 +51,9 @@
 	--shadow-sm: 0 1px 0.125rem oklch(0% 0 0deg / 5%);
 	--shadow-md: 0 0.25rem 1rem oklch(0% 0 0deg / 7%);
 	--shadow-lg: 0 0.75rem 2rem oklch(0% 0 0deg / 10%);
+	--shadow-lv3:
+		0 0 1px oklch(0% 0 0deg / 16%), 0 0 4px oklch(0% 0 0deg / 4%),
+		0 12px 32px oklch(0% 0 0deg / 10%);
 
 	/* ── 阅读标注语义色（不随主题：认识/不认识/推荐等标记） ── */
 	--t-color-mark-wrong: oklch(45% 0.22 30deg);
@@ -118,6 +124,9 @@
 	--shadow-sm: 0 1px 0.1875rem oklch(0% 0 0deg / 40%);
 	--shadow-md: 0 0.25rem 1rem oklch(0% 0 0deg / 50%);
 	--shadow-lg: 0 0.75rem 2.5rem oklch(0% 0 0deg / 60%);
+	--shadow-lv3:
+		0 0 1px oklch(0% 0 0deg / 40%), 0 0 4px oklch(0% 0 0deg / 20%),
+		0 12px 32px oklch(0% 0 0deg / 50%);
 	--toast-error-bg: var(--t-color-danger-subtle);
 	--toast-error-border: oklch(48% 0.07 25deg);
 	--toast-error-text: oklch(90% 0.04 25deg);
@@ -179,6 +188,9 @@
 	--shadow-sm: 0 1px 0.125rem oklch(0% 0 0deg / 5%);
 	--shadow-md: 0 0.25rem 1rem oklch(0% 0 0deg / 7%);
 	--shadow-lg: 0 0.75rem 2rem oklch(0% 0 0deg / 10%);
+	--shadow-lv3:
+		0 0 1px oklch(0% 0 0deg / 16%), 0 0 4px oklch(0% 0 0deg / 4%),
+		0 12px 32px oklch(0% 0 0deg / 10%);
 	--toast-error-bg: var(--t-color-danger-subtle);
 	--toast-error-border: oklch(85% 0.06 25deg);
 	--toast-error-text: oklch(30% 0.09 25deg);
@@ -261,4 +273,23 @@ select:focus {
 	outline: none;
 	border-color: var(--t-color-accent);
 	box-shadow: var(--t-focus-ring);
+}
+
+/* ── 动效偏好：用户要求减少动态时收敛所有过渡/动画 ── */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		/* biome-ignore lint/complexity/noImportantStyles: reduced-motion 需覆盖组件级动画/过渡 */
+		animation-duration: 0.01ms !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: reduced-motion 需覆盖组件级动画/过渡 */
+		animation-iteration-count: 1 !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: reduced-motion 需覆盖组件级动画/过渡 */
+		transition-duration: 0.01ms !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: reduced-motion 需覆盖组件级动画/过渡 */
+		scroll-behavior: auto !important;
+	}
 }

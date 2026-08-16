@@ -6,15 +6,20 @@
 }
 
 .btn {
-	padding: var(--space-xs) var(--space-sm);
+	height: 1.75rem;
+	padding: 0 var(--space-md);
 	font-size: var(--text-xs);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
+	border-radius: var(--radius-full);
 	background: var(--t-color-surface);
 	color: var(--t-color-ink-muted);
 	cursor: pointer;
 	font-family: inherit;
 	white-space: nowrap;
+	transition:
+		background var(--t-transition-fast),
+		border-color var(--t-transition-fast),
+		color var(--t-transition-fast);
 }
 
 .active {

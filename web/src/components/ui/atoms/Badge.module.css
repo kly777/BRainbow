@@ -1,12 +1,16 @@
 /* components/ui/Badge.css.ts — 由 vanilla-extract 迁移 */
 
 .badge {
-	display: inline-block;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	height: 1.5rem;
+	padding: 0 var(--space-sm);
+	border-radius: var(--radius-full);
 	font-size: var(--text-xs);
-	padding: var(--space-xs) var(--space-sm);
-	border-radius: var(--radius-md);
 	font-weight: 500;
-	line-height: 1.2;
+	line-height: 1;
+	white-space: nowrap;
 }
 
 .default {

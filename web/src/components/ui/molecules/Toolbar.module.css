@@ -23,14 +23,19 @@
 }
 
 .back-btn {
-	padding: var(--space-xs) var(--space-md);
+	height: 2rem;
+	padding: 0 var(--space-md);
 	font-size: var(--text-sm);
 	background: var(--t-color-bg);
 	color: var(--t-color-ink-muted);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
+	border-radius: var(--radius-full);
 	cursor: pointer;
 	font-family: inherit;
+	transition:
+		background var(--t-transition-fast),
+		border-color var(--t-transition-fast),
+		color var(--t-transition-fast);
 }
 
 .back-btn:hover {

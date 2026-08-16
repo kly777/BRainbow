@@ -1,27 +1,52 @@
 /* components/ui/Modal.css.ts — 由 vanilla-extract 迁移 */
 
+@keyframes modal-in {
+	from {
+		opacity: 0;
+		transform: translateY(0.5rem) scale(0.98);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
 .modal-overlay {
 	position: fixed;
 	inset: 0;
 	background-color: var(--t-color-overlay);
+	backdrop-filter: var(--t-mask-blur);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	z-index: var(--z-modal);
 	padding: var(--space-xl);
+	animation: modal-overlay-in 150ms ease-out;
+}
+
+@keyframes modal-overlay-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
 }
 
 .modal-content {
 	background-color: var(--t-color-surface);
-	border-radius: var(--radius-md);
-	border: 1px solid var(--t-color-border);
-	box-shadow: var(--shadow-md);
+	border-radius: var(--radius-2xl);
+	border: 1px solid var(--t-color-border-strong);
+	box-shadow: var(--shadow-lv3);
 	max-width: 600px;
 	width: 100%;
 	max-height: 90vh;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
+	animation: modal-in 180ms ease-out;
 }
 
 .modal-header {
@@ -47,12 +72,12 @@
 	color: var(--t-color-ink-muted);
 	cursor: pointer;
 	padding: 0;
-	width: 1.875rem;
-	height: 1.875rem;
+	width: 2rem;
+	height: 2rem;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	border-radius: var(--radius-sm);
+	border-radius: var(--radius-full);
 	transition:
 		background-color var(--t-transition-fast),
 		color var(--t-transition-fast);

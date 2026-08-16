@@ -126,11 +126,16 @@ export function useMemReview(): UseMemReview {
 		const elapsed = Math.min((Date.now() - cardStart()) / 1000, 300);
 		setCardDurations((prev) => [...prev, elapsed].slice(-30));
 
-		queue.reviewedIds.add(it.id);
 		mnemonicHook.trackRating(it, rating);
 
 		undoHook.show();
-		queue.advanceQueue();
+		if (rating === 1 || rating === 2) {
+			// Again/Hard：不直接出队，隔几张后回来再刺激一次
+			queue.revisitCurrent(rating);
+		} else {
+			queue.reviewedIds.add(it.id);
+			queue.advanceQueue();
+		}
 		// counts 由下一轮 loadDue（队列空时）或下次进入刷新，避免每张卡一个统计请求
 	};
 

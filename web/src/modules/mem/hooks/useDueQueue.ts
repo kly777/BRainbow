@@ -4,6 +4,11 @@ import { tryAsync } from "@lib/utils";
 import type { DueResponse, MemItem } from "@modules/mem";
 import { getSessionEstimateE } from "@modules/mem";
 import { createSignal } from "solid-js";
+import {
+	insertRevisit,
+	revisitGapFor,
+	shouldDropRevisit,
+} from "../lib/revisit.ts";
 
 // 会话预估缓存：retention 重计算，60s 内不重复请求
 const ESTIMATE_TTL = 60_000;
@@ -34,6 +39,8 @@ export function useDueQueue(opts: {
 	let prefetched: DueResponse | null = null;
 	// 本轮已评卡片 id：预取结果可能含尚未评完的卡，复用前需过滤
 	const reviewedIds = new Set<number>();
+	// 本轮重插计数：同一张卡 Again/Hard 后最多回来几次
+	const revisitCounts = new Map<number, number>();
 
 	// 应用队列结果（loadDue / 预取复用共用）
 	const applyQueue = (data: DueResponse) => {
@@ -43,7 +50,9 @@ export function useDueQueue(opts: {
 			setEstimatedTotal(0);
 			setUpcoming(data.upcoming_count ?? 0);
 			reviewedIds.clear();
+			revisitCounts.clear();
 		} else {
+			revisitCounts.clear();
 			setDone(false);
 			setAllFar(data.all_far);
 			void (async () => {
@@ -120,6 +129,30 @@ export function useDueQueue(opts: {
 		}
 	};
 
+	/** 评分 Again/Hard 后把当前卡重插到队列后面；达到上限则按正常消费移除 */
+	const revisitCurrent = (rating: number) => {
+		const it = due()[current()];
+		if (!it) {
+			advanceQueue();
+			return;
+		}
+		const gap = revisitGapFor(rating, it.id);
+		const count = revisitCounts.get(it.id) ?? 0;
+		if (gap === 0 || shouldDropRevisit(count)) {
+			reviewedIds.add(it.id);
+			advanceQueue();
+			return;
+		}
+		revisitCounts.set(it.id, count + 1);
+		const { next, nextIndex } = insertRevisit(due(), current(), gap);
+		setDue(next);
+		_setShowAnswer(false);
+		prefetchNext();
+		const nextItem = due()[nextIndex];
+		if (nextItem) opts.onItemChange(nextItem);
+		else void loadDue();
+	};
+
 	return {
 		due,
 		current,
@@ -138,8 +171,10 @@ export function useDueQueue(opts: {
 		setShowAnswer: _setShowAnswer,
 		loadDue,
 		advanceQueue,
+		revisitCurrent,
 		invalidateCache: () => {
 			reviewedIds.clear();
+			revisitCounts.clear();
 			prefetched = null;
 		},
 	};

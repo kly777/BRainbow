@@ -108,26 +108,17 @@ impl MemService {
 
     pub async fn review(&self, id: i32, rating: u8) -> Result<ReviewResponse, AppError> {
         let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
-        let outcome = self
+        let (outcome, new_step) = self
             .apply_review(&row, rating)
             .map_err(AppError::Internal)?;
 
-        let new_step = if outcome.state.has_steps() {
-            let old = row.step_index.map(|i| i as usize);
-            Some(match (old, rating) {
-                (_, 1) => 0,
-                (Some(s), _) => s + 1,
-                (None, _) => 0,
-            })
-        } else {
-            None
-        };
-
         let new_state = outcome.state.as_str();
 
+        // 仍在步进状态（Again/Hard，或提前 Good 被保护留在 Relearning）时保留 lapses，
+        // 只有真正毕业回 Review 的 Good/Easy 才重置失败计数。
         let lapses = if rating == 1 {
             row.lapses + 1
-        } else if rating <= 2 {
+        } else if rating <= 2 || new_state == "relearning" {
             row.lapses
         } else {
             0
@@ -181,7 +172,11 @@ impl MemService {
         })
     }
 
-    fn apply_review(&self, row: &MemRow, rating: u8) -> Result<ReviewOutcome, String> {
+    fn apply_review(
+        &self,
+        row: &MemRow,
+        rating: u8,
+    ) -> Result<(ReviewOutcome, Option<i32>), String> {
         let state: CardState = row.state.parse().unwrap_or(CardState::New);
         let step = if state == CardState::New {
             Some(0)
@@ -189,9 +184,10 @@ impl MemService {
             row.step_index.map(|i| i as usize)
         };
         let days_elapsed = days_elapsed_since(&row.last_review_at);
+        let elapsed_secs = elapsed_secs_since(&row.last_review_at);
         let config = fsrs::SchedulerConfig::default();
         let cumulative_step_days = days_elapsed;
-        fsrs::schedule(
+        let mut outcome = fsrs::schedule(
             fsrs::ScheduleInput {
                 s_old: row.stability,
                 d_old: row.difficulty,
@@ -202,7 +198,41 @@ impl MemService {
                 cumulative_step_days,
             },
             &config,
-        )
+        )?;
+
+        let mut new_step: Option<i32> = if outcome.state.has_steps() {
+            let old = row.step_index.map(|i| i as usize);
+            Some(match (old, rating) {
+                (_, 1) => 0,
+                (Some(s), _) => (s + 1) as i32,
+                (None, _) => 0,
+            })
+        } else {
+            None
+        };
+
+        // Relearning 最低步进保护：前端会话内重插后，几秒内点 Good/Easy
+        // 不算通过 10 分钟重学步进——留在 Relearning，等剩余时间走完再毕业。
+        if state == CardState::Relearning
+            && let Some(remaining) = fsrs::relearn_min_step_remaining(
+                row.step_index.map(|i| i as usize),
+                rating,
+                elapsed_secs,
+                &config,
+            )
+        {
+            outcome = ReviewOutcome {
+                state: CardState::Relearning,
+                stability: row.stability,
+                difficulty: row.difficulty,
+                due_at: (chrono::Utc::now() + chrono::Duration::seconds(remaining))
+                    .format("%Y-%m-%dT%H:%M:%SZ")
+                    .to_string(),
+            };
+            new_step = row.step_index;
+        }
+
+        Ok((outcome, new_step))
     }
 
     // ── 内部辅助 ──
@@ -593,5 +623,89 @@ async fn maybe_auto_optimize(repo: Arc<dyn MemRepository>, db: Arc<SqlitePool>, 
 
     if let Err(e) = repo.prune_revlogs().await {
         tracing::warn!("revlog 修剪失败: {e}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+    use crate::modules::mem::MemRepo;
+
+    async fn setup_service() -> (MemService, MemRepo, SqlitePool, i32) {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        crate::db::migrate(&pool).await.unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let repo = MemRepo::new(Arc::new(pool.clone()));
+        let service = MemService::new(Arc::new(repo.clone()), Arc::new(pool.clone()));
+        let cue = repo.create_chunk("cue").await.unwrap();
+        let target = repo.create_chunk("target").await.unwrap();
+        let id = repo.create_mem(cue, target, &[]).await.unwrap();
+        (service, repo, pool, id)
+    }
+
+    async fn set_relearning(pool: &SqlitePool, id: i32, last_review_secs_ago: i64) {
+        let last = (chrono::Utc::now() - chrono::Duration::seconds(last_review_secs_ago))
+            .format("%Y-%m-%dT%H:%M:%SZ")
+            .to_string();
+        sqlx::query(
+            "UPDATE mem SET state='relearning', step_index=0, stability=5, difficulty=5, lapses=3, last_review_at=? WHERE id=?",
+        )
+        .bind(last)
+        .bind(id)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn early_good_in_relearning_stays_in_relearning() {
+        let (service, repo, pool, id) = setup_service().await;
+        set_relearning(&pool, id, 5).await;
+
+        let res = service.review(id, 3).await.unwrap();
+        assert_eq!(res.state, "relearning");
+
+        let row = repo.get_mem(id).await.unwrap().unwrap();
+        assert_eq!(row.state, "relearning");
+        assert_eq!(row.step_index, Some(0));
+        assert_eq!(row.stability, 5.0);
+        assert_eq!(row.difficulty, 5.0);
+        assert_eq!(row.lapses, 3, "提前 Good 未毕业，失败计数应保留");
+
+        let due = chrono::DateTime::parse_from_rfc3339(&res.due_at)
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+        let remaining = (due - chrono::Utc::now()).num_seconds();
+        assert!(
+            (300..=600).contains(&remaining),
+            "应等待剩余重学步进（约 595s），实际 {remaining}s"
+        );
+    }
+
+    #[tokio::test]
+    async fn relearning_good_after_full_step_graduates_with_min_one_day() {
+        let (service, repo, pool, id) = setup_service().await;
+        set_relearning(&pool, id, 610).await;
+
+        let res = service.review(id, 3).await.unwrap();
+        assert_eq!(res.state, "review");
+
+        let row = repo.get_mem(id).await.unwrap().unwrap();
+        assert_eq!(row.state, "review");
+        assert_eq!(row.lapses, 0, "真正毕业回 Review 才重置失败计数");
+        let due = chrono::DateTime::parse_from_rfc3339(&res.due_at)
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+        let interval = (due - chrono::Utc::now()).num_seconds();
+        assert!(
+            interval >= 86400,
+            "毕业间隔应至少 1 天，实际 {:.1}h",
+            interval as f64 / 3600.0
+        );
     }
 }

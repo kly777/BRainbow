@@ -231,11 +231,13 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> Result<Review
             _ => {
                 let next = step + 1;
                 if next >= total_steps {
-                    // 毕业 → Review：使用累积时间
+                    // 毕业 → Review：使用累积时间。
+                    // 不足 1 天时按 1 天计算，避免几秒/几分钟内连续 Good
+                    // 就给出过短的毕业间隔（短期记忆尚未巩固）。
                     let (s, d, secs) = compute_next_with_state(
                         mem,
                         rating,
-                        cumulative_step_days,
+                        cumulative_step_days.max(1),
                         config.desired_retention,
                     )?;
                     let secs = secs.max(config.graduating_interval_secs as f64);
@@ -318,12 +320,14 @@ fn relearn(
         _ => {
             let next = step + 1;
             if next >= total_steps {
+                // 与学习毕业同理：步进期不足 1 天按 1 天算，且至少尊重毕业间隔
                 let (s, d, secs) = compute_next_with_state(
                     mem,
                     rating,
-                    cumulative_step_days,
+                    cumulative_step_days.max(1),
                     config.desired_retention,
                 )?;
+                let secs = secs.max(config.graduating_interval_secs as f64);
                 ReviewOutcome {
                     state: Review,
                     stability: s,
@@ -342,12 +346,41 @@ fn relearn(
     })
 }
 
+/// Relearning 步进的最低停留时间保护。
+///
+/// 前端会话内重插会让「几秒前刚点过 Again」的卡再次出现；此时点 Good/Easy
+/// 不应视为通过了 10 分钟的重学步进。若距上次复习不足当前步进间隔，返回
+/// 还需要等待的秒数（服务层据此把卡留在 Relearning）。
+pub fn relearn_min_step_remaining(
+    step_index: Option<usize>,
+    rating: u8,
+    elapsed_secs: i64,
+    config: &SchedulerConfig,
+) -> Option<i64> {
+    if rating < 3 {
+        return None;
+    }
+    let step = step_index.unwrap_or(0);
+    let required = config
+        .relearn_steps
+        .get(step)
+        .copied()
+        .or_else(|| config.relearn_steps.last().copied())
+        .unwrap_or(0);
+    if required <= 0 || elapsed_secs >= required {
+        None
+    } else {
+        Some(required - elapsed_secs)
+    }
+}
+
 pub fn preview(
     s_old: f64,
     d_old: f64,
     state: CardState,
     step_index: Option<usize>,
     days_elapsed: u32,
+    elapsed_secs: i64,
     config: &SchedulerConfig,
 ) -> Result<[f64; 4], String> {
     let mem = to_memory_state(s_old, d_old);
@@ -361,19 +394,26 @@ pub fn preview(
     if state == Relearning {
         let steps = &config.relearn_steps;
         let step = step_index.unwrap_or(0);
+        // 与 schedule 的保护一致：步进时间未走完时，Good/Easy 显示剩余等待秒数
+        let early_remaining = relearn_min_step_remaining(step_index, 3, elapsed_secs, config);
+        let (good, easy) = if let Some(remaining) = early_remaining {
+            (remaining as f64, remaining as f64)
+        } else if step + 1 >= steps.len() {
+            (
+                compute_next(mem, 3, days_elapsed.max(1), config.desired_retention)?,
+                compute_next(mem, 4, days_elapsed.max(1), config.desired_retention)?,
+            )
+        } else {
+            (
+                steps.get(step + 1).copied().unwrap_or(0) as f64,
+                steps.get(step + 1).copied().unwrap_or(0) as f64,
+            )
+        };
         return Ok([
             *steps.first().unwrap_or(&0) as f64,
             steps.get(step.min(steps.len() - 1)).copied().unwrap_or(0) as f64,
-            if step + 1 >= steps.len() {
-                compute_next(mem, 3, days_elapsed, config.desired_retention)?
-            } else {
-                steps.get(step + 1).copied().unwrap_or(0) as f64
-            },
-            if step + 1 >= steps.len() {
-                compute_next(mem, 4, days_elapsed, config.desired_retention)?
-            } else {
-                steps.get(step + 1).copied().unwrap_or(0) as f64
-            },
+            good,
+            easy,
         ]);
     }
 
@@ -389,8 +429,8 @@ pub fn preview(
         let next = step + 1;
         let (good, easy) = if next >= steps.len() {
             (
-                compute_next(mem, 3, days_elapsed, config.desired_retention)?,
-                compute_next(mem, 4, days_elapsed, config.desired_retention)?,
+                compute_next(mem, 3, days_elapsed.max(1), config.desired_retention)?,
+                compute_next(mem, 4, days_elapsed.max(1), config.desired_retention)?,
             )
         } else {
             (

@@ -106,6 +106,7 @@ impl MemQueryService {
         let row = self.repo.get_mem(id).await?.ok_or(AppError::NotFound)?;
         let state: CardState = row.state.parse().unwrap_or(CardState::New);
         let days_elapsed = days_elapsed_since(&row.last_review_at);
+        let elapsed_secs = elapsed_secs_since(&row.last_review_at);
         let config = fsrs::SchedulerConfig::default();
         fsrs::preview(
             row.stability,
@@ -113,6 +114,7 @@ impl MemQueryService {
             state,
             row.step_index.map(|i| i as usize),
             days_elapsed,
+            elapsed_secs,
             &config,
         )
         .map_err(AppError::Internal)

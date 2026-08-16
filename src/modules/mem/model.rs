@@ -271,6 +271,17 @@ pub(crate) fn days_elapsed_since(last_review_at: &Option<String>) -> u32 {
     }
 }
 
+/// 计算自上次复习以来经过的秒数（步进间隔判断用；无记录/解析失败返回 0）。
+pub(crate) fn elapsed_secs_since(last_review_at: &Option<String>) -> i64 {
+    let Some(s) = last_review_at else {
+        return 0;
+    };
+    let Ok(t) = chrono::DateTime::parse_from_rfc3339(s) else {
+        return 0;
+    };
+    (chrono::Utc::now() - t.with_timezone(&chrono::Utc)).num_seconds()
+}
+
 /// FSRS 更新参数（对应 mem 表中的 FSRS 相关字段）
 pub struct FsrsUpdate {
     pub state: String,
@@ -403,5 +414,29 @@ mod tests {
         let v: CardState =
             serde_json::from_value(serde_json::Value::String("suspended".into())).unwrap();
         assert_eq!(v, CardState::Suspended);
+    }
+
+    #[test]
+    fn elapsed_secs_since_none_or_invalid_is_zero() {
+        assert_eq!(elapsed_secs_since(&None), 0);
+        assert_eq!(elapsed_secs_since(&Some("not-a-time".into())), 0);
+    }
+
+    #[test]
+    fn elapsed_secs_since_recent_review_is_small() {
+        let recent = chrono::Utc::now() - chrono::Duration::seconds(5);
+        let raw = Some(recent.format("%Y-%m-%dT%H:%M:%SZ").to_string());
+        let elapsed = elapsed_secs_since(&raw);
+        assert!(
+            (5..=10).contains(&elapsed),
+            "5 秒前的记录应得到约 5 秒 elapsed，实际 {elapsed}"
+        );
+    }
+
+    #[test]
+    fn days_elapsed_since_recent_review_is_zero_days() {
+        let recent = chrono::Utc::now() - chrono::Duration::seconds(5);
+        let raw = Some(recent.format("%Y-%m-%dT%H:%M:%SZ").to_string());
+        assert_eq!(days_elapsed_since(&raw), 0);
     }
 }

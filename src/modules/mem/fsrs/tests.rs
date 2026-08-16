@@ -219,13 +219,64 @@ fn relearn_then_recover() {
     assert_eq!(o2.state, CardState::Review);
 }
 
+#[test]
+fn relearn_min_step_protects_early_good() {
+    let _g = lock_params();
+    let config = test_config();
+    // relearn_steps = [600]：不足 600s 时返回剩余秒数
+    assert_eq!(
+        relearn_min_step_remaining(Some(0), 3, 0, &config),
+        Some(600)
+    );
+    assert_eq!(
+        relearn_min_step_remaining(Some(0), 4, 120, &config),
+        Some(480)
+    );
+    // 已过完整步进：放行毕业
+    assert_eq!(relearn_min_step_remaining(Some(0), 3, 600, &config), None);
+    // Again/Hard 不需要保护（它们本来就留在 Relearning）
+    assert_eq!(relearn_min_step_remaining(Some(0), 1, 0, &config), None);
+    assert_eq!(relearn_min_step_remaining(Some(0), 2, 0, &config), None);
+}
+
+#[test]
+fn relearn_graduation_uses_minimum_one_day_elapsed() {
+    let _g = lock_params();
+    let config = test_config();
+    // 秒级 elapsed 被前端重插加速的场景：Good 不应给出 17h 这种短间隔
+    let outcome = schedule(
+        ScheduleInput {
+            s_old: 5.0,
+            d_old: 5.0,
+            state: CardState::Relearning,
+            step_index: Some(0),
+            rating: 3,
+            days_elapsed: 0,
+            cumulative_step_days: 0,
+        },
+        &config,
+    )
+    .unwrap();
+    assert_eq!(outcome.state, CardState::Review);
+    let now = Utc::now();
+    let due = chrono::DateTime::parse_from_rfc3339(&outcome.due_at)
+        .unwrap()
+        .with_timezone(&Utc);
+    let secs = (due - now).num_seconds() as f64;
+    assert!(
+        secs >= 86400.0,
+        "重学毕业间隔应至少 1 天（避免短期记忆立即毕业），实际 {:.1}h",
+        secs / 3600.0
+    );
+}
+
 // ── 5. Preview ──
 
 #[test]
 fn preview_returns_four_intervals() {
     let _g = lock_params();
     let config = test_config();
-    let iv = preview(5.0, 5.0, CardState::Review, None, 5, &config).unwrap();
+    let iv = preview(5.0, 5.0, CardState::Review, None, 5, 0, &config).unwrap();
     assert_eq!(iv.len(), 4);
     assert!(iv[0] < iv[1] && iv[1] < iv[2] && iv[2] < iv[3]);
 }
@@ -234,11 +285,42 @@ fn preview_returns_four_intervals() {
 fn preview_review_card_with_days_elapsed() {
     let _g = lock_params();
     let config = test_config();
-    let iv0 = preview(2.0, 5.0, CardState::Review, None, 0, &config).unwrap();
-    let iv5 = preview(2.0, 5.0, CardState::Review, None, 5, &config).unwrap();
+    let iv0 = preview(2.0, 5.0, CardState::Review, None, 0, 0, &config).unwrap();
+    let iv5 = preview(2.0, 5.0, CardState::Review, None, 5, 0, &config).unwrap();
     assert_eq!(iv0[0], 60.0);
     assert_eq!(iv5[0], 60.0);
     assert!(iv0[2] < iv5[2]);
+}
+
+#[test]
+fn preview_relearning_early_good_shows_remaining_step() {
+    let _g = lock_params();
+    let config = test_config();
+    // 10 分钟步进只过了 60s：Good/Easy 应显示剩余 540s，而不是毕业间隔
+    let iv = preview(5.0, 5.0, CardState::Relearning, Some(0), 0, 60, &config).unwrap();
+    assert_eq!(iv[0], 600.0);
+    assert_eq!(iv[1], 600.0);
+    assert_eq!(iv[2], 540.0);
+    assert_eq!(iv[3], 540.0);
+}
+
+#[test]
+fn preview_relearning_full_step_shows_min_one_day_graduation() {
+    let _g = lock_params();
+    let config = test_config();
+    // 步进已走完：Good/Easy 显示毕业间隔，且不应再是 17h 这种短间隔
+    let iv = preview(5.0, 5.0, CardState::Relearning, Some(0), 0, 600, &config).unwrap();
+    assert_eq!(iv[0], 600.0);
+    assert!(
+        iv[2] >= 86400.0,
+        "Good 预览应 ≥1 天，实际 {:.1}h",
+        iv[2] / 3600.0
+    );
+    assert!(
+        iv[3] >= 86400.0,
+        "Easy 预览应 ≥1 天，实际 {:.1}h",
+        iv[3] / 3600.0
+    );
 }
 
 // ── 6. 长期增长 ──

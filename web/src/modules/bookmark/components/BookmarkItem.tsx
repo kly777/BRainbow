@@ -1,6 +1,6 @@
 // ── /bookmark 列表项：favicon + 标题链接 + 域名 + 标签 + 操作 ──
 
-import { Button } from "@components/ui";
+import { Button, Tooltip } from "@components/ui";
 import type { Bookmark } from "@modules/bookmark";
 import { For } from "solid-js";
 import styles from "../BookmarkPage.module.css";
@@ -56,12 +56,16 @@ export function BookmarkItem(props: {
 				</For>
 			</div>
 			<div class={styles.itemActions}>
-				<Button variant="icon" title="编辑" onClick={props.onEdit}>
-					✎
-				</Button>
-				<Button variant="icon" title="删除" onClick={props.onDelete}>
-					✕
-				</Button>
+				<Tooltip label="编辑">
+					<Button variant="icon" onClick={props.onEdit}>
+						✎
+					</Button>
+				</Tooltip>
+				<Tooltip label="删除">
+					<Button variant="icon" onClick={props.onDelete}>
+						✕
+					</Button>
+				</Tooltip>
 			</div>
 		</div>
 	);

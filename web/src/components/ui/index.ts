@@ -5,6 +5,7 @@ export {
 	type MarkdownRendererProps,
 } from "./atoms/Markdown.tsx";
 export { default as SearchInput } from "./atoms/SearchInput.tsx";
+export { default as Tooltip } from "./atoms/Tooltip.tsx";
 export { AsyncView } from "./molecules/AsyncView.tsx";
 export { default as FilterGroup } from "./molecules/FilterGroup.tsx";
 export { default as Toolbar } from "./molecules/Toolbar.tsx";

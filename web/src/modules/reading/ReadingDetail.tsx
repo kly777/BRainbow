@@ -1,4 +1,4 @@
-import { Button } from "@components/ui";
+import { Button, Tooltip } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
 // ── 阅读详情页面（薄壳视图层）──
 
@@ -117,35 +117,41 @@ export default function ReadingDetail() {
 																[styles.ignoredWordSidebar]: st === "ignored",
 															}}
 														>
-															<button
-																type="button"
-																class={styles.wordIcon}
-																classList={{
-																	[styles.knownIcon]: st === "known",
-																	[styles.ignoredIcon]: st === "ignored",
-																	[styles.unknownIcon]: st === "unknown",
-																}}
-																onClick={() =>
-																	m.handleMark(
-																		w.word,
-																		st === "known"
-																			? "unknown"
-																			: st === "ignored"
-																				? "unknown"
-																				: "known",
-																	)
-																}
-																aria-label={`将 ${w.word} 标记为${
+															<Tooltip
+																label={`将 ${w.word} 标记为${
 																	st === "known" ? "不认识" : "认识"
 																}`}
-																aria-pressed={st === "known"}
 															>
-																{st === "known"
-																	? "✓"
-																	: st === "ignored"
-																		? "–"
-																		: "✗"}
-															</button>
+																<button
+																	type="button"
+																	class={styles.wordIcon}
+																	classList={{
+																		[styles.knownIcon]: st === "known",
+																		[styles.ignoredIcon]: st === "ignored",
+																		[styles.unknownIcon]: st === "unknown",
+																	}}
+																	onClick={() =>
+																		m.handleMark(
+																			w.word,
+																			st === "known"
+																				? "unknown"
+																				: st === "ignored"
+																					? "unknown"
+																					: "known",
+																		)
+																	}
+																	aria-label={`将 ${w.word} 标记为${
+																		st === "known" ? "不认识" : "认识"
+																	}`}
+																	aria-pressed={st === "known"}
+																>
+																	{st === "known"
+																		? "✓"
+																		: st === "ignored"
+																			? "–"
+																			: "✗"}
+																</button>
+															</Tooltip>
 															<span class={styles.wordName}>{w.word}</span>
 															<button
 																type="button"

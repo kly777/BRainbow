@@ -1,5 +1,6 @@
 // ── 命令面板（⌘K）：导航 / 站内搜索 / 指令 / 移动端 FAB ──
 
+import { Tooltip } from "@components/ui";
 import { For, Show } from "solid-js";
 import styles from "./CommandPalette.module.css";
 import {
@@ -146,14 +147,15 @@ export default function CommandPalette() {
 			</Show>
 
 			{/* 移动端 FAB（桌面隐藏） */}
-			<button
-				type="button"
-				class={styles.fab}
-				onClick={() => p.openPalette()}
-				title="命令面板"
-			>
-				⌘
-			</button>
+			<Tooltip label="命令面板">
+				<button
+					type="button"
+					class={styles.fab}
+					onClick={() => p.openPalette()}
+				>
+					⌘
+				</button>
+			</Tooltip>
 		</>
 	);
 }

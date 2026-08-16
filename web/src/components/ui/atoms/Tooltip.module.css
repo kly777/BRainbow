@@ -1,0 +1,46 @@
+/* Tooltip: 轻量 hover/focus 提示气泡（portal 到 body，避开 overflow 裁剪） */
+.wrap {
+	display: inline-flex;
+}
+
+.tip {
+	position: fixed;
+	z-index: var(--z-toast);
+	padding: 3px 8px;
+	border-radius: var(--radius-sm);
+	background: var(--t-color-ink);
+	color: var(--t-color-bg);
+	font-size: var(--text-xs);
+	line-height: 1.4;
+	white-space: nowrap;
+	max-width: 50vw;
+	overflow-wrap: break-word;
+	pointer-events: none;
+	animation: tooltip-in 120ms ease-out forwards;
+}
+
+@keyframes tooltip-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+.top {
+	transform: translate(-50%, calc(-100% - 6px));
+}
+
+.bottom {
+	transform: translate(-50%, 6px);
+}
+
+.left {
+	transform: translate(calc(-100% - 6px), -50%);
+}
+
+.right {
+	transform: translate(6px, -50%);
+}

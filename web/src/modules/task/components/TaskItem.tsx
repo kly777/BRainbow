@@ -1,3 +1,4 @@
+import { Tooltip } from "@components/ui";
 import { fmtFull, fmtLocal } from "@lib/utils";
 import type { Task, TimeWindow } from "@modules/task";
 import { createSignal, For, Show } from "solid-js";
@@ -83,30 +84,33 @@ function TaskItem(props: TaskItemProps) {
 						<option value={TaskStatus.COMPLETED}>已完成</option>
 						<option value={TaskStatus.ARCHIVED}>归档</option>
 					</select>
-					<button
-						type="button"
-						onClick={props.onEdit}
-						class={styles.editButton}
-						title="编辑"
-					>
-						✏️
-					</button>
-					<button
-						type="button"
-						onClick={() => props.onDelete(props.task.id)}
-						class={styles.deleteButton}
-						title="删除"
-					>
-						🗑
-					</button>
-					<button
-						type="button"
-						onClick={() => setShowSubTaskInput(true)}
-						class={styles.subTaskButton}
-						title="添加子任务"
-					>
-						+
-					</button>
+					<Tooltip label="编辑">
+						<button
+							type="button"
+							onClick={props.onEdit}
+							class={styles.editButton}
+						>
+							✏️
+						</button>
+					</Tooltip>
+					<Tooltip label="删除">
+						<button
+							type="button"
+							onClick={() => props.onDelete(props.task.id)}
+							class={styles.deleteButton}
+						>
+							🗑
+						</button>
+					</Tooltip>
+					<Tooltip label="添加子任务">
+						<button
+							type="button"
+							onClick={() => setShowSubTaskInput(true)}
+							class={styles.subTaskButton}
+						>
+							+
+						</button>
+					</Tooltip>
 				</div>
 			</div>
 			{/* 子任务输入表单 */}

@@ -1,5 +1,5 @@
-import { notifyError, tryAsync } from "@lib/utils";
-import { createSignal, For, onCleanup, onMount } from "solid-js";
+import { notifyError, numParam, tryAsync, useUrlParams } from "@lib/utils";
+import { createEffect, createSignal, For, onCleanup, onMount } from "solid-js";
 import { loadTextE, saveTextE } from "./api";
 import styles from "./TextEditor.module.css";
 
@@ -32,6 +32,25 @@ export default function TextEditor() {
 	const [tabs, setTabs] = createSignal<{ name: string; content: string }[]>([]);
 	const [editing, setEditing] = createSignal(-1);
 	const [editValue, setEditValue] = createSignal("");
+	const urlParams = useUrlParams({ tab: numParam(1, { min: 1 }) });
+
+	const selectTab = (i: number) => {
+		const next = Math.min(Math.max(i, 0), Math.max(tabs().length - 1, 0));
+		setActive(next);
+		urlParams.set({ tab: next + 1 }, { replace: true });
+	};
+
+	// URL 是 tab 的持久化来源：加载/前进后退/增删 tab 后都按 URL 收敛
+	createEffect(() => {
+		const list = tabs();
+		if (list.length === 0) return;
+		const fromUrl = urlParams.get("tab") - 1;
+		const next = Math.min(Math.max(fromUrl, 0), list.length - 1);
+		if (active() !== next) setActive(next);
+		if (fromUrl !== next) {
+			urlParams.set({ tab: next + 1 }, { replace: true });
+		}
+	});
 
 	let dirty = false;
 	let editInputRef!: HTMLInputElement;
@@ -59,14 +78,20 @@ export default function TextEditor() {
 	const addTab = () => {
 		const n = tabs().length;
 		setTabs((prev) => [...prev, { name: defaultName(n), content: "" }]);
-		setActive(n);
+		selectTab(n);
 		markDirty();
 	};
 
 	const removeTab = (i: number) => {
 		if (tabs().length <= 1) return;
 		setTabs((prev) => prev.filter((_, j) => j !== i));
-		if (active() >= i && active() > 0) setActive(active() - 1);
+		const next =
+			active() > i
+				? active() - 1
+				: active() === i && active() > 0
+					? active() - 1
+					: active();
+		selectTab(next);
 		markDirty();
 	};
 
@@ -100,20 +125,20 @@ export default function TextEditor() {
 								[styles.tab]: true,
 								[styles.tabActive]: active() === i(),
 							}}
-							onClick={() => setActive(i())}
+							onClick={() => selectTab(i())}
 							onDblClick={() => startRename(i())}
 							onKeyDown={(e) => {
 								if (e.key === "Enter" || e.key === " ") {
 									e.preventDefault();
-									setActive(i());
+									selectTab(i());
 								}
 								if (e.key === "ArrowLeft") {
 									e.preventDefault();
-									setActive((i() - 1 + tabs().length) % tabs().length);
+									selectTab((i() - 1 + tabs().length) % tabs().length);
 								}
 								if (e.key === "ArrowRight") {
 									e.preventDefault();
-									setActive((i() + 1) % tabs().length);
+									selectTab((i() + 1) % tabs().length);
 								}
 							}}
 						>

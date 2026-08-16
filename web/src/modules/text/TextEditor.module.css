@@ -23,7 +23,8 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-xs);
-	padding: var(--space-sm) var(--space-lg);
+	height: 2.5rem;
+	padding: 0 var(--space-lg);
 	font-size: var(--text-sm);
 	cursor: pointer;
 	border: none;
@@ -44,18 +45,15 @@
 }
 
 .rename-input {
-	border: 1px solid var(--t-color-border);
+	height: 1.5rem;
+	padding: 0 var(--space-xs);
+	border: 1px solid var(--t-color-accent);
 	border-radius: var(--radius-sm);
 	color: var(--t-color-ink);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-	width: 5rem;
-	padding: var(--space-xs) var(--space-xs);
-	border-color: var(--t-color-accent);
 	background: var(--t-color-bg);
 	font-size: var(--text-sm);
 	outline: none;
+	box-sizing: border-box;
 }
 
 .close-btn {

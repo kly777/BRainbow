@@ -7,49 +7,28 @@ import {
 	createEffect,
 	createSignal,
 	For,
-	Index,
 	onMount,
 	Show,
 } from "solid-js";
 import {
 	type ColumnInfo,
 	downloadTableExport,
-	type FilterOpValue,
 	getTableDataE,
 	getTablesE,
 } from "./api";
+import DbTable from "./components/DbTable";
+import FilterChips from "./components/FilterChips";
+import PaginationBar from "./components/PaginationBar";
 import styles from "./DbViewer.module.css";
-
-const FILTER_OPS: readonly { value: FilterOpValue; label: string }[] = [
-	{ value: "contains", label: "包含" },
-	{ value: "eq", label: "=" },
-	{ value: "ne", label: "≠" },
-	{ value: "prefix", label: "前缀" },
-	{ value: "gt", label: ">" },
-	{ value: "lt", label: "<" },
-	{ value: "null", label: "为空" },
-	{ value: "notnull", label: "非空" },
-];
-
-const isFilterOp = (value: string): value is FilterOpValue =>
-	FILTER_OPS.some((op) => op.value === value);
-
-const isValuelessOp = (op: FilterOpValue): boolean =>
-	op === "null" || op === "notnull";
-
-interface ColumnFilter {
-	col: string;
-	op: FilterOpValue;
-	val: string;
-}
-
-const filterOpLabel = (op: string): string =>
-	FILTER_OPS.find((item) => item.value === op)?.label ?? op;
+import {
+	type ColumnFilter,
+	filtersFromParams,
+	PAGE_SIZES,
+} from "./tableConfig";
 
 const DB: Component = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [tables, setTables] = createSignal<string[]>([]);
-	const PAGE_SIZES = [20, 50, 100, 200] as const;
 	const activeTable = () => {
 		const t = searchParams.table;
 		return typeof t === "string" ? t : "";
@@ -74,24 +53,11 @@ const DB: Component = () => {
 	const sortCol = () =>
 		typeof searchParams.sort === "string" ? searchParams.sort : "";
 	const sortDesc = () => searchParams.order === "desc";
-	const queryArray = (value: unknown): string[] => {
-		if (typeof value === "string") return [value];
-		if (!Array.isArray(value)) return [];
-		return value.filter((item): item is string => typeof item === "string");
-	};
-	const filters = (): ColumnFilter[] => {
-		const cols = queryArray(searchParams.fcol);
-		const ops = queryArray(searchParams.fop);
-		const vals = queryArray(searchParams.fval);
-		return cols.map((col, index) => ({
-			col,
-			op: isFilterOp(ops[index] ?? "contains")
-				? (ops[index] as FilterOpValue)
-				: "contains",
-			val: vals[index] ?? "",
-		}));
-	};
+	const filters = () =>
+		filtersFromParams(searchParams.fcol, searchParams.fop, searchParams.fval);
 	const hasFilters = () => filters().length > 0;
+	const refFilter = () =>
+		filterId() > 0 ? { col: filterCol(), id: filterId() } : null;
 
 	const [columns, setColumns] = createSignal<ColumnInfo[]>([]);
 	const [rows, setRows] = createSignal<string[][]>([]);
@@ -208,14 +174,15 @@ const DB: Component = () => {
 		});
 	};
 
-	const setColumnFilter = (col: string, op: FilterOpValue, value: string) => {
+	const setColumnFilter = (
+		col: string,
+		op: ColumnFilter["op"],
+		value: string,
+	) => {
 		const next = filters().filter((f) => f.col !== col);
-		if (isValuelessOp(op) || value.trim()) {
-			next.push({
-				col,
-				op,
-				val: isValuelessOp(op) ? "" : value,
-			});
+		const valueless = op === "null" || op === "notnull";
+		if (valueless || value.trim()) {
+			next.push({ col, op, val: valueless ? "" : value });
 		}
 		writeFilters(next);
 	};
@@ -351,35 +318,12 @@ const DB: Component = () => {
 						<div class={styles.tableActions}>
 							{/* 过滤状态与标题同排显示，出现/消失不改变表格纵向位置 */}
 							<Show when={filterId() > 0 || hasFilters()}>
-								<div class={styles.filterBar}>
-									<span class={styles.filterText}>
-										<Show when={filterId() > 0}>
-											<code class={styles.filterCode}>
-												{filterCol()} = {filterId()}
-											</code>
-										</Show>
-										<Index each={filters()}>
-											{(f) => (
-												<button
-													type="button"
-													class={styles.filterChip}
-													title="点击移除该筛选条件"
-													onClick={() => removeColumnFilter(f().col)}
-												>
-													{f().col} {filterOpLabel(f().op)}
-													{isValuelessOp(f().op) ? "" : ` ${f().val}`}
-												</button>
-											)}
-										</Index>
-									</span>
-									<button
-										type="button"
-										class={styles.filterClear}
-										onClick={clearFilters}
-									>
-										清除过滤
-									</button>
-								</div>
+								<FilterChips
+									filters={filters()}
+									refFilter={refFilter()}
+									onRemove={removeColumnFilter}
+									onClear={clearFilters}
+								/>
 							</Show>
 
 							<div class={styles.exportGroup}>
@@ -403,220 +347,38 @@ const DB: Component = () => {
 						</div>
 					</div>
 
-					<div
-						class={styles.tableWrap}
-						aria-busy={loading() ? "true" : "false"}
-					>
-						<Show when={loading()}>
-							<div class={styles.tableLoading}>加载中…</div>
-						</Show>
-						<table class={styles.table}>
-							<thead>
-								<tr>
-									<Index each={columns()}>
-										{(c) => (
-											<th scope="col">
-												<button
-													type="button"
-													class={styles.sortBtn}
-													onClick={() => toggleSort(c().name)}
-													title="点击排序"
-												>
-													<span class={styles.colName}>{c().name}</span>
-													<span class={styles.colType}>{c().col_type}</span>
-													<Show when={sortCol() === c().name}>
-														<span class={styles.sortMark}>
-															{sortDesc() ? "↓" : "↑"}
-														</span>
-													</Show>
-												</button>
-												<Show when={c().ref_table}>
-													<div class={styles.refHint}>→ {c().ref_table}</div>
-												</Show>
-											</th>
-										)}
-									</Index>
-								</tr>
-								<tr class={styles.filterRow}>
-									<Index each={columns()}>
-										{(c) => {
-											const active = () =>
-												filters().find((f) => f.col === c().name);
-											const op = () => active()?.op ?? "contains";
-											const val = () => active()?.val ?? "";
-											return (
-												<th scope="col">
-													<div class={styles.filterControls}>
-														<select
-															class={styles.filterOpSelect}
-															value={op()}
-															title="筛选方式"
-															onChange={(e) => {
-																const next = e.currentTarget.value;
-																if (isFilterOp(next)) {
-																	setColumnFilter(c().name, next, val());
-																}
-															}}
-														>
-															<For each={FILTER_OPS}>
-																{(item) => (
-																	<option value={item.value}>
-																		{item.label}
-																	</option>
-																)}
-															</For>
-														</select>
-														<Show when={!isValuelessOp(op())}>
-															<input
-																type="text"
-																class={styles.filterInput}
-																placeholder="筛选…"
-																value={val()}
-																onInput={(e) =>
-																	setColumnFilter(
-																		c().name,
-																		op(),
-																		e.currentTarget.value,
-																	)
-																}
-															/>
-														</Show>
-													</div>
-												</th>
-											);
-										}}
-									</Index>
-								</tr>
-							</thead>
-							<tbody>
-								{rows().length === 0 && (
-									<tr>
-										<td class={styles.emptyCell} colspan={columns().length}>
-											无数据
-										</td>
-									</tr>
-								)}
-								<Index each={rows()}>
-									{(row) => (
-										<tr>
-											<Index each={row()}>
-												{(cell, cellI) => {
-													const col = () => columns()[cellI];
-													const text = () => String(cell());
-													const preview = () =>
-														col()?.ref_table
-															? previewFor(col()!.ref_table!, text())
-															: "";
-													return (
-														<td title={text()}>
-															<Show
-																when={col()?.ref_table && text()}
-																fallback={<span>{text()}</span>}
-															>
-																<button
-																	type="button"
-																	class={styles.cellLink}
-																	title={
-																		preview()
-																			? `${text()} · ${preview()}`
-																			: `跳转到 ${col()?.ref_table}`
-																	}
-																	onClick={() =>
-																		jumpToRef(
-																			col()?.ref_table ?? "",
-																			col()?.ref_column ?? "id",
-																			text(),
-																		)
-																	}
-																>
-																	<span class={styles.cellValue}>{text()}</span>
-																	<Show when={preview()}>
-																		<span class={styles.cellPreview}>
-																			{preview()}
-																		</span>
-																	</Show>
-																</button>
-															</Show>
-														</td>
-													);
-												}}
-											</Index>
-										</tr>
-									)}
-								</Index>
-							</tbody>
-						</table>
-					</div>
-					<div class={styles.pagination}>
-						<span class={styles.paginationInfo}>
-							{filterId() > 0 || hasFilters()
-								? `匹配 ${total()} 行`
-								: `共 ${total()} 行`}
-							· 第 {currentPage()} / {totalPages()} 页
-						</span>
-						<label class={styles.pageSize}>
-							每页
-							<select
-								class={styles.pageSizeSelect}
-								value={String(currentPageSize())}
-								onChange={(e) =>
-									setSearchParams({
-										page: 1,
-										page_size: e.currentTarget.value,
-									})
-								}
-							>
-								<For each={PAGE_SIZES}>
-									{(size) => <option value={size}>{size}</option>}
-								</For>
-							</select>
-						</label>
-						<form
-							class={styles.pageJump}
-							onSubmit={(e) => {
-								e.preventDefault();
-								const n = Number(jumpValue());
-								const target = Number.isInteger(n)
-									? Math.min(Math.max(1, n), totalPages())
-									: currentPage();
-								reloadTable(target);
-							}}
-						>
-							<input
-								type="number"
-								class={styles.pageJumpInput}
-								min="1"
-								max={totalPages()}
-								value={jumpValue()}
-								onInput={(e) => setJumpValue(e.currentTarget.value)}
-								aria-label="跳转页码"
-							/>
-							<Button
-								variant="secondary"
-								size="sm"
-								type="submit"
-								disabled={loading()}
-							>
-								跳转
-							</Button>
-						</form>
-						<Button
-							variant="secondary"
-							size="sm"
-							disabled={currentPage() <= 1 || loading()}
-							onClick={() => reloadTable(currentPage() - 1)}
-						>
-							上一页
-						</Button>
-						<Button
-							variant="secondary"
-							size="sm"
-							disabled={currentPage() >= totalPages() || loading()}
-							onClick={() => reloadTable(currentPage() + 1)}
-						>
-							下一页
-						</Button>
-					</div>
+					<DbTable
+						columns={columns()}
+						rows={rows()}
+						filters={filters()}
+						loading={loading()}
+						sortCol={sortCol()}
+						sortDesc={sortDesc()}
+						previewFor={previewFor}
+						onSort={toggleSort}
+						onSetFilter={setColumnFilter}
+						onJumpToRef={jumpToRef}
+					/>
+
+					<PaginationBar
+						total={total()}
+						page={currentPage()}
+						pageSize={currentPageSize()}
+						totalPages={totalPages()}
+						filtered={filterId() > 0 || hasFilters()}
+						loading={loading()}
+						jumpValue={jumpValue()}
+						onJumpInput={setJumpValue}
+						onJump={reloadTable}
+						onPageSizeChange={(size) =>
+							setSearchParams({
+								page: 1,
+								page_size: String(size),
+							})
+						}
+						onPrev={() => reloadTable(currentPage() - 1)}
+						onNext={() => reloadTable(currentPage() + 1)}
+					/>
 				</Show>
 			</div>
 		</div>

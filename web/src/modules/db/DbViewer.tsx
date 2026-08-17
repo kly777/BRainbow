@@ -11,7 +11,12 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import { type ColumnInfo, getTableDataE, getTablesE } from "./api";
+import {
+	type ColumnInfo,
+	downloadTableExport,
+	getTableDataE,
+	getTablesE,
+} from "./api";
 import styles from "./DbViewer.module.css";
 
 const DB: Component = () => {
@@ -50,6 +55,7 @@ const DB: Component = () => {
 	const [total, setTotal] = createSignal(0);
 	const [loading, setLoading] = createSignal(false);
 	const [error, setError] = createSignal("");
+	const [exporting, setExporting] = createSignal<"" | "csv" | "json">("");
 
 	const PAGE_SIZE = 50;
 	const totalPages = () => Math.max(1, Math.ceil(total() / PAGE_SIZE));
@@ -175,6 +181,28 @@ const DB: Component = () => {
 		return refPreviewMap().get(`${table}:${n}`) ?? "";
 	};
 
+	const exportTable = async (format: "csv" | "json") => {
+		const table = activeTable();
+		if (!table) return;
+		setExporting(format);
+		setError("");
+		try {
+			await downloadTableExport(table, {
+				id: filterId() > 0 ? filterId() : undefined,
+				ref_col: filterId() > 0 ? filterCol() : undefined,
+				sort: sortCol() || undefined,
+				order: sortCol() ? (sortDesc() ? "desc" : "asc") : undefined,
+				fcol: searchCol() || undefined,
+				q: searchValue() || undefined,
+				format,
+			});
+		} catch (cause) {
+			setError(getErrorMessage(cause));
+		} finally {
+			setExporting("");
+		}
+	};
+
 	// URL 是表格状态的唯一来源：前进/后退、浏览器刷新、程序内 setSearchParams
 	// 都走同一个 effect 拉取，避免 URL 变了但表格没变。
 	createEffect(() => {
@@ -228,30 +256,51 @@ const DB: Component = () => {
 							{activeTable()}
 						</h3>
 
-						{/* 过滤状态与标题同排显示，出现/消失不改变表格纵向位置 */}
-						<Show when={filterId() > 0 || searchValue().length > 0}>
-							<div class={styles.filterBar}>
-								<span class={styles.filterText}>
-									<Show when={filterId() > 0}>
-										<code class={styles.filterCode}>
-											{filterCol()} = {filterId()}
-										</code>
-									</Show>
-									<Show when={searchValue().length > 0}>
-										<code class={styles.filterCode}>
-											{searchCol()} 包含 “{searchValue()}”
-										</code>
-									</Show>
-								</span>
-								<button
-									type="button"
-									class={styles.filterClear}
-									onClick={clearFilters}
+						<div class={styles.tableActions}>
+							{/* 过滤状态与标题同排显示，出现/消失不改变表格纵向位置 */}
+							<Show when={filterId() > 0 || searchValue().length > 0}>
+								<div class={styles.filterBar}>
+									<span class={styles.filterText}>
+										<Show when={filterId() > 0}>
+											<code class={styles.filterCode}>
+												{filterCol()} = {filterId()}
+											</code>
+										</Show>
+										<Show when={searchValue().length > 0}>
+											<code class={styles.filterCode}>
+												{searchCol()} 包含 “{searchValue()}”
+											</code>
+										</Show>
+									</span>
+									<button
+										type="button"
+										class={styles.filterClear}
+										onClick={clearFilters}
+									>
+										清除过滤
+									</button>
+								</div>
+							</Show>
+
+							<div class={styles.exportGroup}>
+								<Button
+									variant="secondary"
+									size="sm"
+									disabled={exporting() !== ""}
+									onClick={() => void exportTable("csv")}
 								>
-									清除过滤
-								</button>
+									{exporting() === "csv" ? "导出中…" : "CSV"}
+								</Button>
+								<Button
+									variant="secondary"
+									size="sm"
+									disabled={exporting() !== ""}
+									onClick={() => void exportTable("json")}
+								>
+									{exporting() === "json" ? "导出中…" : "JSON"}
+								</Button>
 							</div>
-						</Show>
+						</div>
 					</div>
 
 					<div

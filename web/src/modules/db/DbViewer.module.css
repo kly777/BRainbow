@@ -85,6 +85,7 @@
 
 .table-title {
 	margin: 0;
+	flex: 1 1 auto;
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -92,6 +93,22 @@
 	font-size: var(--text-lg);
 	font-weight: 600;
 	color: var(--t-color-ink);
+}
+
+.table-actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var(--space-sm);
+	flex-shrink: 0;
+	max-width: 75%;
+}
+
+.export-group {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	flex-shrink: 0;
 }
 
 .table-wrap {
@@ -209,8 +226,9 @@
 	align-items: center;
 	justify-content: flex-end;
 	gap: var(--space-sm);
-	max-width: 70%;
-	flex-shrink: 0;
+	max-width: 24rem;
+	flex-shrink: 1;
+	min-width: 0;
 	padding: var(--space-2xs) var(--space-sm);
 	background: var(--t-color-accent-soft);
 	border: 1px solid var(--t-color-accent);

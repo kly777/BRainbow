@@ -17,6 +17,9 @@ pub struct CreateMemRequest {
 #[derive(Debug, Clone, Deserialize)]
 pub struct ReviewRequest {
     pub rating: u8,
+    /// 本次看这张卡花的秒数（前端记录；0/缺省表示旧客户端未上报）
+    #[serde(default)]
+    pub duration_secs: f64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -139,6 +142,8 @@ pub struct SessionStats {
     pub due_ready: i64,
     /// 最近 200 次评分的分布：[Again, Hard, Good, Easy]
     pub rating_counts: [i64; 4],
+    /// 最近 200 次有耗时的复习的平均单卡秒数（0 = 无历史）
+    pub avg_duration_secs: f64,
 }
 
 /// 本次学习预估
@@ -150,4 +155,6 @@ pub struct SessionEstimate {
     pub retention: f64,
     /// 预估本次学习需要查看的总次数
     pub total_estimate: usize,
+    /// 近期单卡平均耗时（秒；0 = 无历史记录）
+    pub avg_seconds: f64,
 }

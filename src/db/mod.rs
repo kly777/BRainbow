@@ -613,7 +613,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 // PRAGMA user_version。迁移必须幂等：列/表已存在则跳过；ALTER 失败必须上抛。
 
 /// 程序支持的最新 schema 版本
-pub const LATEST_USER_VERSION: i64 = 6;
+pub const LATEST_USER_VERSION: i64 = 7;
 
 /// 迁移统一入口。
 ///
@@ -649,6 +649,7 @@ async fn apply_migration(pool: &SqlitePool, target: i64) -> Result<(), sqlx::Err
         4 => migrate_v4_chat_node_reasoning(&mut tx).await?,
         5 => migrate_v5_signifier_columns(&mut tx).await?,
         6 => migrate_v6_reading_notes(&mut tx).await?,
+        7 => migrate_v7_revlog_duration(&mut tx).await?,
         _ => {
             return Err(sqlx::Error::Configuration(Box::new(std::io::Error::other(
                 format!("未知的迁移版本: {target}"),
@@ -720,6 +721,17 @@ async fn migrate_v6_reading_notes(conn: &mut SqliteConnection) -> Result<(), sql
         "reading_article",
         "notes",
         "ALTER TABLE reading_article ADD COLUMN notes TEXT NOT NULL DEFAULT ''",
+    )
+    .await
+}
+
+/// v7：revlog 添加单卡耗时列（秒，REAL 支持小数）
+async fn migrate_v7_revlog_duration(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    add_column_if_missing(
+        conn,
+        "revlog",
+        "duration_secs",
+        "ALTER TABLE revlog ADD COLUMN duration_secs REAL",
     )
     .await
 }
@@ -845,6 +857,7 @@ mod tests {
             ("chat_tree", "kind"),
             ("chat_node", "reasoning"),
             ("reading_article", "notes"),
+            ("revlog", "duration_secs"),
         ] {
             assert!(
                 column_exists(&pool, table, col).await.unwrap(),
@@ -903,6 +916,7 @@ mod tests {
             ("signifier_signified", "relation_type"),
             ("signifier_signified", "created_at"),
             ("reading_article", "notes"),
+            ("revlog", "duration_secs"),
         ] {
             assert!(
                 column_exists(&pool, table, col).await.unwrap(),

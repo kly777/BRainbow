@@ -766,12 +766,20 @@ impl MemRepo {
             }
         }
 
+        // 最近 200 条有耗时上报的复习的平均单卡秒数
+        let avg_duration_secs: Option<f64> = sqlx::query_scalar(
+            "SELECT AVG(duration_secs) FROM (SELECT duration_secs FROM revlog WHERE duration_secs > 0 ORDER BY review_time DESC LIMIT 200)",
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
         Ok(SessionStats {
             new_ready,
             learning_steps,
             relearning_steps,
             due_ready,
             rating_counts,
+            avg_duration_secs: avg_duration_secs.unwrap_or(0.0),
         })
     }
 
@@ -1120,24 +1128,25 @@ impl MemRepo {
     // ── Revlog methods (moved from service.rs direct SQL) ──
 
     pub async fn insert_revlog(&self, params: &InsertRevlogParams) -> Result<(), sqlx::Error> {
-        sqlx::query!(
+        sqlx::query(
             r#"
-            INSERT INTO revlog (mem_id, review_time, rating, delta_t,
+            INSERT INTO revlog (mem_id, review_time, rating, delta_t, duration_secs,
                 stability_before, difficulty_before, state_before,
                 stability_after, difficulty_after, state_after)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
             "#,
-            params.mem_id,
-            params.review_time.as_str(),
-            params.rating as i32,
-            params.delta_t,
-            params.stability_before,
-            params.difficulty_before,
-            params.state_before.as_str(),
-            params.stability_after,
-            params.difficulty_after,
-            params.state_after.as_str()
         )
+        .bind(params.mem_id)
+        .bind(&params.review_time)
+        .bind(params.rating as i32)
+        .bind(params.delta_t)
+        .bind(params.duration_secs)
+        .bind(params.stability_before)
+        .bind(params.difficulty_before)
+        .bind(&params.state_before)
+        .bind(params.stability_after)
+        .bind(params.difficulty_after)
+        .bind(&params.state_after)
         .execute(&*self.pool)
         .await?;
         Ok(())
@@ -1887,6 +1896,29 @@ mod tests {
         assert_eq!(est.due_count, 3);
         // 无评分历史 → 先验 10% Again/Hard：期望 2.65625 步/新卡，3 张 ≈ 8
         assert_eq!(est.total_estimate, 8);
+    }
+
+    #[tokio::test]
+    async fn session_stats_averages_recent_durations() {
+        let repo = setup_db().await;
+        let mem_id = insert_session_mem(&repo, "review", 0, "2020-01-01T00:00:00Z").await;
+        for (time, duration) in [
+            ("2020-01-01T00:00:01Z", 10.0),
+            ("2020-01-01T00:00:02Z", 20.0),
+            ("2020-01-01T00:00:03Z", 0.0), // 旧记录未上报，不参与平均
+        ] {
+            sqlx::query(
+                "INSERT INTO revlog (mem_id, review_time, rating, delta_t, duration_secs) VALUES (?1, ?2, 3, 1, ?3)",
+            )
+            .bind(mem_id)
+            .bind(time)
+            .bind(duration)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
+        }
+        let stats = repo.get_session_stats(&[], &[]).await.unwrap();
+        assert!((stats.avg_duration_secs - 15.0).abs() < 1e-9);
     }
 
     #[tokio::test]

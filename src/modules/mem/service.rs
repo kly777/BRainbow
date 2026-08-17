@@ -105,7 +105,12 @@ impl MemService {
 
     // ── 复习 ──
 
-    pub async fn review(&self, id: i32, rating: u8) -> Result<ReviewResponse, MemError> {
+    pub async fn review(
+        &self,
+        id: i32,
+        rating: u8,
+        duration_secs: f64,
+    ) -> Result<ReviewResponse, MemError> {
         let row = self.repo.get_mem(id).await?.ok_or(MemError::NotFound)?;
         let (outcome, new_step) = self
             .apply_review(&row, rating)
@@ -148,6 +153,7 @@ impl MemService {
                 review_time: now_str,
                 rating,
                 delta_t,
+                duration_secs,
                 stability_before: row.stability,
                 difficulty_before: row.difficulty,
                 state_before: row.state.clone(),
@@ -630,7 +636,7 @@ mod tests {
         let (service, repo, pool, id) = setup_service().await;
         set_relearning(&pool, id, 5).await;
 
-        let res = service.review(id, 3).await.unwrap();
+        let res = service.review(id, 3, 12.5).await.unwrap();
         assert_eq!(res.state, "relearning");
 
         let row = repo.get_mem(id).await.unwrap().unwrap();
@@ -655,7 +661,7 @@ mod tests {
         let (service, repo, pool, id) = setup_service().await;
         set_relearning(&pool, id, 610).await;
 
-        let res = service.review(id, 3).await.unwrap();
+        let res = service.review(id, 3, 12.5).await.unwrap();
         assert_eq!(res.state, "review");
 
         let row = repo.get_mem(id).await.unwrap().unwrap();
@@ -699,7 +705,7 @@ mod tests {
     #[tokio::test]
     async fn review_missing_mem_returns_not_found_without_database() {
         let service = MemService::new(Arc::new(FakeRepo::default()), Arc::new(NoopMaintenance));
-        let err = service.review(999, 3).await.unwrap_err();
+        let err = service.review(999, 3, 0.0).await.unwrap_err();
         assert!(matches!(err, MemError::NotFound));
     }
 }

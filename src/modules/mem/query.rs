@@ -104,6 +104,7 @@ impl MemQueryService {
             due_count,
             retention,
             total_estimate,
+            avg_seconds: stats.avg_duration_secs,
         })
     }
 

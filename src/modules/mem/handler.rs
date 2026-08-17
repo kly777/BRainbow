@@ -430,7 +430,7 @@ pub async fn review_mem(
     Json(body): Json<ReviewRequest>,
 ) -> impl IntoResponse {
     let svc = &state.mem;
-    match svc.review(id, body.rating).await {
+    match svc.review(id, body.rating, body.duration_secs).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => e.into_response(),
     }

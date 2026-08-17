@@ -116,6 +116,8 @@ pub struct InsertRevlogParams {
     pub review_time: String,
     pub rating: u8,
     pub delta_t: i32,
+    /// 看这张卡耗时（秒，可为 0 = 旧客户端未上报）
+    pub duration_secs: f64,
     pub stability_before: f64,
     pub difficulty_before: f64,
     pub state_before: String,

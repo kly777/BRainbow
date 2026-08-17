@@ -22,6 +22,7 @@ import styles from "./DbViewer.module.css";
 const DB: Component = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [tables, setTables] = createSignal<string[]>([]);
+	const PAGE_SIZES = [20, 50, 100, 200] as const;
 	const activeTable = () => {
 		const t = searchParams.table;
 		return typeof t === "string" ? t : "";
@@ -29,6 +30,10 @@ const DB: Component = () => {
 	const currentPage = () => {
 		const p = Number(searchParams.page);
 		return Number.isInteger(p) && p >= 1 ? p : 1;
+	};
+	const currentPageSize = () => {
+		const raw = Number(searchParams.page_size);
+		return PAGE_SIZES.some((size) => size === raw) ? raw : 50;
 	};
 	const filterId = () => {
 		const raw = searchParams.id;
@@ -56,9 +61,9 @@ const DB: Component = () => {
 	const [loading, setLoading] = createSignal(false);
 	const [error, setError] = createSignal("");
 	const [exporting, setExporting] = createSignal<"" | "csv" | "json">("");
+	const [jumpValue, setJumpValue] = createSignal("1");
 
-	const PAGE_SIZE = 50;
-	const totalPages = () => Math.max(1, Math.ceil(total() / PAGE_SIZE));
+	const totalPages = () => Math.max(1, Math.ceil(total() / currentPageSize()));
 
 	const loadTables = async () => {
 		setLoading(true);
@@ -74,6 +79,7 @@ const DB: Component = () => {
 	const fetchTable = async (
 		name: string,
 		targetPage: number,
+		targetPageSize: number,
 		id: number,
 		refCol: string,
 		sort: string,
@@ -86,7 +92,7 @@ const DB: Component = () => {
 		const result = await tryAsync(() =>
 			getTableDataE(name, {
 				page: targetPage,
-				page_size: PAGE_SIZE,
+				page_size: targetPageSize,
 				id: id > 0 ? id : undefined,
 				ref_col: id > 0 ? refCol : undefined,
 				sort: sort || undefined,
@@ -114,6 +120,7 @@ const DB: Component = () => {
 		setSearchParams({
 			table: name || undefined,
 			page: 1,
+			page_size: undefined,
 			id: undefined,
 			ref_col: undefined,
 			sort: undefined,
@@ -129,6 +136,7 @@ const DB: Component = () => {
 		setSearchParams({
 			table,
 			page: targetPage,
+			page_size: String(currentPageSize()),
 			id: filterId() > 0 ? String(filterId()) : undefined,
 			ref_col: filterId() > 0 ? filterCol() : undefined,
 			sort: sortCol() || undefined,
@@ -163,6 +171,7 @@ const DB: Component = () => {
 			setSearchParams({
 				table: targetTable,
 				page: 1,
+				page_size: undefined,
 				id: String(id),
 				ref_col: refCol,
 				sort: undefined,
@@ -208,14 +217,16 @@ const DB: Component = () => {
 	createEffect(() => {
 		const table = activeTable();
 		const page = currentPage();
+		const pageSize = currentPageSize();
 		const id = filterId();
 		const refCol = filterCol();
 		const sort = sortCol();
 		const desc = sortDesc();
 		const fcol = searchCol();
 		const q = searchValue();
+		setJumpValue(String(page));
 		if (!table) return;
-		void fetchTable(table, page, id, refCol, sort, desc, fcol, q);
+		void fetchTable(table, page, pageSize, id, refCol, sort, desc, fcol, q);
 	});
 
 	onMount(() => {
@@ -415,11 +426,58 @@ const DB: Component = () => {
 						</table>
 					</div>
 					<div class={styles.pagination}>
-						<span>
+						<span class={styles.paginationInfo}>
 							{filterId() > 0 || searchValue().length > 0
 								? `匹配 ${total()} 行`
-								: `共 ${total()} 行 · 第 ${currentPage()} / ${totalPages()} 页`}
+								: `共 ${total()} 行`}
+							· 第 {currentPage()} / {totalPages()} 页
 						</span>
+						<label class={styles.pageSize}>
+							每页
+							<select
+								class={styles.pageSizeSelect}
+								value={String(currentPageSize())}
+								onChange={(e) =>
+									setSearchParams({
+										page: 1,
+										page_size: e.currentTarget.value,
+									})
+								}
+							>
+								<For each={PAGE_SIZES}>
+									{(size) => <option value={size}>{size}</option>}
+								</For>
+							</select>
+						</label>
+						<form
+							class={styles.pageJump}
+							onSubmit={(e) => {
+								e.preventDefault();
+								const n = Number(jumpValue());
+								const target = Number.isInteger(n)
+									? Math.min(Math.max(1, n), totalPages())
+									: currentPage();
+								reloadTable(target);
+							}}
+						>
+							<input
+								type="number"
+								class={styles.pageJumpInput}
+								min="1"
+								max={totalPages()}
+								value={jumpValue()}
+								onInput={(e) => setJumpValue(e.currentTarget.value)}
+								aria-label="跳转页码"
+							/>
+							<Button
+								variant="secondary"
+								size="sm"
+								type="submit"
+								disabled={loading()}
+							>
+								跳转
+							</Button>
+						</form>
 						<Button
 							variant="secondary"
 							size="sm"

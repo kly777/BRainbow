@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 #[derive(Debug, FromRow)]
 struct TabRow {
+    id: i64,
     name: String,
     content: String,
 }
@@ -17,12 +18,16 @@ impl TextRepo {
         Self { pool }
     }
 
-    pub async fn load_tabs(&self) -> Result<Vec<(String, String)>, sqlx::Error> {
-        let rows = sqlx::query_as!(TabRow, "SELECT name, content FROM text_note ORDER BY id")
-            .fetch_all(&*self.pool)
-            .await?;
+    pub async fn load_tabs(&self) -> Result<Vec<(i64, String, String)>, sqlx::Error> {
+        let rows =
+            sqlx::query_as::<_, TabRow>("SELECT id, name, content FROM text_note ORDER BY id")
+                .fetch_all(&*self.pool)
+                .await?;
 
-        Ok(rows.into_iter().map(|r| (r.name, r.content)).collect())
+        Ok(rows
+            .into_iter()
+            .map(|r| (r.id, r.name, r.content))
+            .collect())
     }
 
     pub async fn save_tabs(&self, tabs: &[(String, String)]) -> Result<(), sqlx::Error> {
@@ -69,8 +74,8 @@ mod tests {
         repo.save_tabs(&tabs).await.unwrap();
         let loaded = repo.load_tabs().await.unwrap();
         assert_eq!(loaded.len(), 2);
-        assert_eq!(loaded[0].0, "tab1");
-        assert_eq!(loaded[1].1, "content2");
+        assert_eq!(loaded[0].1, "tab1");
+        assert_eq!(loaded[1].2, "content2");
     }
 
     #[tokio::test]
@@ -79,7 +84,7 @@ mod tests {
         repo.save_tabs(&[("a".into(), "old".into())]).await.unwrap();
         repo.save_tabs(&[("a".into(), "new".into())]).await.unwrap();
         let loaded = repo.load_tabs().await.unwrap();
-        assert_eq!(loaded[0].1, "new");
+        assert_eq!(loaded[0].2, "new");
     }
 
     #[tokio::test]

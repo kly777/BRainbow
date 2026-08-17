@@ -43,7 +43,9 @@ mod tests {
         let tabs = vec![("hello".into(), "world".into())];
         svc.save_tabs(&tabs).await.unwrap();
         let loaded = qsvc.load_tabs().await.unwrap();
-        assert_eq!(loaded, tabs);
+        assert_eq!(loaded.len(), 1);
+        assert_eq!(loaded[0].1, "hello");
+        assert_eq!(loaded[0].2, "world");
     }
 
     #[tokio::test]

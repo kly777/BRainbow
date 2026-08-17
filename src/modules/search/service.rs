@@ -157,7 +157,7 @@ impl SearchQueryService {
                 id: r.id,
                 title: clip(&r.cue, 60),
                 snippet: merge_snippets(&r.cue, &r.target, kw),
-                url: "/memory/manage".into(), // 前端 PATHS.memoryManage（web/src/config/paths.ts）
+                url: format!("/memory/manage?id={}", r.id), // PATHS.memoryManage + detail id
             })
             .collect())
     }
@@ -187,7 +187,7 @@ impl SearchQueryService {
                 id: r.id,
                 title: clip(&r.content, 60),
                 snippet: snippet(&r.content, kw),
-                url: "/card".into(),
+                url: format!("/card/{}", r.id), // PATHS.cardDetail
             })
             .collect())
     }
@@ -221,7 +221,7 @@ impl SearchQueryService {
                 id: r.id,
                 title: r.title,
                 snippet: snippet(r.description.as_deref().unwrap_or(""), kw),
-                url: "/task".into(),
+                url: format!("/task/{}", r.id), // PATHS.taskDetail
             })
             .collect())
     }
@@ -256,7 +256,7 @@ impl SearchQueryService {
                 } else {
                     snippet(&r.description, kw)
                 },
-                url: "/bookmark".into(),
+                url: format!("/bookmark/{}", r.id), // PATHS.bookmarkDetail
             })
             .collect())
     }
@@ -284,7 +284,7 @@ impl SearchQueryService {
                 id: r.id,
                 title: r.name,
                 snippet: snippet(r.description.as_deref().unwrap_or(""), kw),
-                url: "/ontology".into(),
+                url: format!("/ontology/{}", r.id), // PATHS.ontologyDetail
             })
             .collect())
     }
@@ -312,7 +312,7 @@ impl SearchQueryService {
                 id: r.id,
                 title: r.name,
                 snippet: snippet(&r.content, kw),
-                url: "/text".into(),
+                url: format!("/text?id={}", r.id), // PATHS.text + 指定 tab id
             })
             .collect())
     }
@@ -370,8 +370,8 @@ impl SearchQueryService {
             .map(|r| SearchHit {
                 kind: "conv".into(),
                 id: r.conv_id,
-                // 前端无对话详情路由：跳搜索页并自动执行该标题的搜索
-                url: format!("/conversation?q={}", qs(&r.title)), // PATHS.conversation
+                // 直达知识详情页
+                url: format!("/conversation/detail/{}", r.conv_id), // PATHS.convDetail
                 snippet: String::new(),
                 title: r.title,
             })
@@ -438,20 +438,6 @@ impl SearchQueryService {
 fn clip(content: &str, n: usize) -> String {
     let flat = content.chars().take(n).collect::<String>();
     flat.replace('\n', " ")
-}
-
-/// query string 安全编码（URL 特殊字符转义，中文保留原样）
-fn qs(s: &str) -> String {
-    s.chars()
-        .map(|c| match c {
-            '&' => "%26".to_string(),
-            '=' => "%3D".to_string(),
-            '?' => "%3F".to_string(),
-            '#' => "%23".to_string(),
-            ' ' => "%20".to_string(),
-            c => c.to_string(),
-        })
-        .collect()
 }
 
 /// 关键字上下文片段：命中位置前后各 40 字符，加省略号
@@ -612,9 +598,18 @@ mod tests {
         // reading 跳到详情页
         let reading_hit = res.hits.iter().find(|h| h.kind == "reading").unwrap();
         assert!(reading_hit.url.starts_with("/reading/"));
-        // conv 跳搜索页并自动执行搜索（无详情路由）
+        // conv 直达详情页（不再回搜索页）
         let conv_hit = res.hits.iter().find(|h| h.kind == "conv").unwrap();
-        assert_eq!(conv_hit.url, "/conversation?q=费曼学习法讨论");
+        assert_eq!(conv_hit.url, "/conversation/detail/9");
+        // 各模块都带直达 id 的 URL
+        for kind in ["card", "task", "bookmark"] {
+            let hit = res.hits.iter().find(|h| h.kind == kind).unwrap();
+            assert!(
+                hit.url.ends_with(&format!("/{}", hit.id)),
+                "{kind} url 应直达 id: {}",
+                hit.url
+            );
+        }
     }
 
     #[tokio::test]
@@ -727,12 +722,12 @@ mod tests {
         let res = svc.search(1, "费曼", 5).await.unwrap();
         let onto_hit = res.hits.iter().find(|h| h.kind == "onto").unwrap();
         assert_eq!(onto_hit.title, "费曼学习法");
-        assert_eq!(onto_hit.url, "/ontology");
+        assert_eq!(onto_hit.url, format!("/ontology/{}", onto_hit.id));
         assert!(onto_hit.snippet.contains("以教促学"));
 
         let text_hit = res.hits.iter().find(|h| h.kind == "text").unwrap();
         assert_eq!(text_hit.title, "读书笔记");
-        assert_eq!(text_hit.url, "/text");
+        assert_eq!(text_hit.url, format!("/text?id={}", text_hit.id));
         assert!(text_hit.snippet.contains("费曼"));
     }
 
@@ -825,7 +820,7 @@ mod tests {
         let res = svc.search(1, "熵", 5).await.unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "mem").unwrap();
         assert_eq!(hit.id, 1);
-        assert_eq!(hit.url, "/memory/manage");
+        assert_eq!(hit.url, "/memory/manage?id=1");
         assert!(hit.title.contains("什么是熵"));
         // 命中 target
         let res = svc.search(1, "热力学", 5).await.unwrap();

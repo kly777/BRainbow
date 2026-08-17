@@ -5,6 +5,7 @@ use crate::modules::state::AppState;
 
 #[derive(Debug, Serialize)]
 pub struct TabItem {
+    pub id: i64,
     pub name: String,
     pub content: String,
 }
@@ -29,7 +30,7 @@ pub async fn get_text(State(state): State<AppState>) -> impl IntoResponse {
     let result = state.text_query.load_tabs().await.map(|rows| {
         let tabs = rows
             .into_iter()
-            .map(|(name, content)| TabItem { name, content })
+            .map(|(id, name, content)| TabItem { id, name, content })
             .collect();
         Json(TextResponse { tabs })
     });

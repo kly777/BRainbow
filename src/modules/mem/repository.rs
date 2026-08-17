@@ -266,7 +266,10 @@ impl MemRepo {
             "SELECT m.id FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1",
         );
 
-        if let Some(ref state) = query.state {
+        if let Some(id) = query.id {
+            qb.push(" AND m.id = ");
+            qb.push_bind(id);
+        } else if let Some(ref state) = query.state {
             if state == "buried" {
                 qb.push(" AND m.buried = 1");
             } else {
@@ -360,7 +363,10 @@ impl MemRepo {
             "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1",
         );
 
-        if let Some(ref state) = query.state {
+        if let Some(id) = query.id {
+            qb.push(" AND m.id = ");
+            qb.push_bind(id);
+        } else if let Some(ref state) = query.state {
             if state == "buried" {
                 qb.push(" AND m.buried = 1");
             } else {
@@ -1894,6 +1900,22 @@ mod tests {
 
         assert_eq!(ids.len(), 1, "默认应排除已埋葬卡");
         assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    async fn get_all_by_id_finds_buried_directly() {
+        let repo = setup_db().await;
+        insert_session_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
+        let buried_id = insert_session_mem(&repo, "new", 1, "2099-01-01T00:00:00Z").await;
+
+        // 全局搜索直达：指定 id 时应绕过默认的 buried 过滤
+        let query = MemQuery {
+            id: Some(i64::from(buried_id)),
+            ..MemQuery::default()
+        };
+        let ids = repo.get_all_mems(100, 0, &query).await.unwrap();
+        assert_eq!(ids, vec![buried_id]);
+        assert_eq!(repo.count_all_mems(&query).await.unwrap(), 1);
     }
 
     #[tokio::test]

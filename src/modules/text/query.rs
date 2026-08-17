@@ -17,7 +17,7 @@ impl TextQueryService {
         Self { pool }
     }
 
-    pub async fn load_tabs(&self) -> Result<Vec<(String, String)>, ServiceError> {
+    pub async fn load_tabs(&self) -> Result<Vec<(i64, String, String)>, ServiceError> {
         let repo = repository::TextRepo::new(self.pool.clone());
         repo.load_tabs().await.map_err(ServiceError::Db)
     }

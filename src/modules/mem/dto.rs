@@ -70,6 +70,8 @@ pub struct MemQuery {
     pub state: Option<String>,
     pub sort: Option<String>,
     pub order: Option<String>,
+    /// 按 id 直达单条记忆（全局搜索跳转用），设置后忽略 buried/state 过滤
+    pub id: Option<i64>,
     /// 白名单标签 ID（逗号分隔），仅显示包含这些标签的 mem
     pub tag_ids: Option<String>,
     /// 黑名单标签 ID（逗号分隔），排除包含这些标签的 mem

@@ -9,7 +9,7 @@ use std::sync::Mutex;
 
 use async_trait::async_trait;
 
-use super::dto::{MemQuery, MemTagRow};
+use super::dto::{MemQuery, MemTagRow, SessionStats};
 use super::model::{
     Chunk, FsrsUpdate, InsertRevlogParams, MemError, MemRow, MemWithChunks, ReviewCandidate,
     TagInfo,
@@ -24,6 +24,7 @@ pub struct FakeRepo {
     pub mems: Mutex<HashMap<i32, MemWithChunks>>,
     pub mem_rows: Mutex<HashMap<i32, MemRow>>,
     pub set_state_calls: Mutex<Vec<(i32, String, Option<i32>)>>,
+    pub session_stats: Mutex<SessionStats>,
 }
 
 impl Default for FakeRepo {
@@ -36,6 +37,7 @@ impl Default for FakeRepo {
             mems: Mutex::new(HashMap::new()),
             mem_rows: Mutex::new(HashMap::new()),
             set_state_calls: Mutex::new(Vec::new()),
+            session_stats: Mutex::new(SessionStats::default()),
         }
     }
 }
@@ -190,6 +192,14 @@ impl MemRepository for FakeRepo {
         panic!("get_counts not configured in FakeRepo")
     }
 
+    async fn get_session_stats(
+        &self,
+        _tag_ids: &[i32],
+        _exclude_tag_ids: &[i32],
+    ) -> Result<SessionStats, MemError> {
+        Ok(self.session_stats.lock().unwrap().clone())
+    }
+
     async fn get_next_mem(&self) -> Result<Option<i32>, MemError> {
         Ok(None)
     }
@@ -229,10 +239,6 @@ impl MemRepository for FakeRepo {
 
     async fn reset_mem(&self, _id: i32) -> Result<(), MemError> {
         panic!("reset_mem not configured in FakeRepo")
-    }
-
-    async fn get_recent_retention(&self, _limit: i64) -> Result<f64, MemError> {
-        Ok(0.0)
     }
 
     async fn create_tag(&self, _name: &str, _user_id: i32) -> Result<TagInfo, MemError> {
@@ -296,9 +302,5 @@ impl MemRepository for FakeRepo {
 
     async fn prune_revlogs(&self) -> Result<(), MemError> {
         Ok(())
-    }
-
-    async fn count_relearning(&self) -> Result<i64, MemError> {
-        Ok(0)
     }
 }

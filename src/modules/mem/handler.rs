@@ -48,9 +48,23 @@ pub async fn get_all(
     }
 }
 
-pub async fn get_session_estimate(State(state): State<AppState>) -> impl IntoResponse {
+pub async fn get_session_estimate(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let tag_ids: Vec<i32> = params
+        .get("tag_ids")
+        .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
+        .unwrap_or_default();
+    let exclude_tag_ids: Vec<i32> = params
+        .get("exclude_tag_ids")
+        .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
+        .unwrap_or_default();
     let svc = &state.mem_query;
-    match svc.get_session_estimate(&state.mem_config).await {
+    match svc
+        .get_session_estimate(&state.mem_config, &tag_ids, &exclude_tag_ids)
+        .await
+    {
         Ok(est) => Json(est).into_response(),
         Err(e) => err(e, "获取学习预估"),
     }

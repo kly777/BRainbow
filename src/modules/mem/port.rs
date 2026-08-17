@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use super::dto::{MemQuery, MemTagRow};
+use super::dto::{MemQuery, MemTagRow, SessionStats};
 use super::model::{
     FsrsUpdate, InsertRevlogParams, MemError, MemRow, MemWithChunks, ReviewCandidate, TagInfo,
 };
@@ -64,6 +64,12 @@ pub trait MemRepository: Send + Sync {
     async fn count_upcoming_within_hours(&self, hours: i64) -> Result<i64, MemError>;
     async fn get_counts(&self) -> Result<(i64, i64, i64, i64, i64), MemError>;
     async fn get_next_mem(&self) -> Result<Option<i32>, MemError>;
+    /// 会话预估原始统计（带标签过滤、排除前置依赖未满足的卡）
+    async fn get_session_stats(
+        &self,
+        tag_ids: &[i32],
+        exclude_tag_ids: &[i32],
+    ) -> Result<SessionStats, MemError>;
 
     // ── State updates ──
 
@@ -79,7 +85,6 @@ pub trait MemRepository: Send + Sync {
     async fn suspend_mem(&self, id: i32) -> Result<(), MemError>;
     async fn unsuspend_mem(&self, id: i32) -> Result<(), MemError>;
     async fn reset_mem(&self, id: i32) -> Result<(), MemError>;
-    async fn get_recent_retention(&self, limit: i64) -> Result<f64, MemError>;
 
     // ── Tags ──
 
@@ -107,7 +112,6 @@ pub trait MemRepository: Send + Sync {
     async fn insert_revlog(&self, params: &InsertRevlogParams) -> Result<(), MemError>;
     async fn count_revlogs(&self) -> Result<i64, MemError>;
     async fn prune_revlogs(&self) -> Result<(), MemError>;
-    async fn count_relearning(&self) -> Result<i64, MemError>;
 }
 
 /// Maintenance port: FSRS 参数优化与后台维护的 seam。

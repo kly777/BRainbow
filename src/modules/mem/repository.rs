@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::shared::db_query::like_contains;
 
-use super::dto::{MemQuery, MemTagRow};
+use super::dto::{MemQuery, MemTagRow, SessionStats};
 use super::model::{
     Chunk, FsrsUpdate, InsertRevlogParams, MemError, MemRow, MemWithChunks, ReviewCandidate,
     TagInfo,
@@ -698,6 +698,97 @@ impl MemRepo {
         ))
     }
 
+    /// 会话预估原始统计：标签过滤 + 前置依赖未满足的卡不参与本次队列。
+    pub async fn get_session_stats(
+        &self,
+        tag_ids: &[i32],
+        exclude_tag_ids: &[i32],
+    ) -> Result<SessionStats, sqlx::Error> {
+        let new_ready = self
+            .count_session_sql(
+                r#"m.state = 'new' AND m.buried = 0 AND m.state != 'suspended'
+                   AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id = pm.id WHERE mp.mem_id = m.id AND pm.state = 'new')"#,
+                tag_ids,
+                exclude_tag_ids,
+            )
+            .await?;
+        let due_ready = self
+            .count_session_sql(
+                r#"m.state = 'review' AND m.buried = 0 AND m.state != 'suspended'
+                   AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+                   AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id = pm.id WHERE mp.mem_id = m.id AND pm.state = 'new')"#,
+                tag_ids,
+                exclude_tag_ids,
+            )
+            .await?;
+
+        let mut qb = QueryBuilder::<sqlx::Sqlite>::new(
+            r#"SELECT m.state, COALESCE(m.step_index, 0) AS step, COUNT(*) AS n
+               FROM mem m
+               WHERE m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended'
+                 AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#,
+        );
+        Self::tag_filter_sql(&mut qb, tag_ids);
+        Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
+        qb.push(" GROUP BY m.state, step");
+        let rows = qb.build().fetch_all(&*self.pool).await?;
+
+        let mut learning_steps: Vec<i64> = Vec::new();
+        let mut relearning_steps: Vec<i64> = Vec::new();
+        for row in &rows {
+            let state: String = row.try_get("state")?;
+            let step: i64 = row.try_get("step")?;
+            let n: i64 = row.try_get("n")?;
+            let bucket = if state == "relearning" {
+                &mut relearning_steps
+            } else {
+                &mut learning_steps
+            };
+            let idx = step.max(0) as usize;
+            if idx >= bucket.len() {
+                bucket.resize(idx + 1, 0);
+            }
+            if let Some(slot) = bucket.get_mut(idx) {
+                *slot = n;
+            }
+        }
+
+        // 最近 200 次评分分布（rating 1..4 → 索引 0..3）
+        let mut rating_counts = [0_i64; 4];
+        let ratings = sqlx::query_as::<_, (i64, i64)>(
+            "SELECT rating, COUNT(*) FROM (SELECT rating FROM revlog ORDER BY review_time DESC LIMIT 200) GROUP BY rating",
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+        for (rating, n) in ratings {
+            if let Some(slot) = rating_counts.get_mut((rating - 1) as usize) {
+                *slot = n;
+            }
+        }
+
+        Ok(SessionStats {
+            new_ready,
+            learning_steps,
+            relearning_steps,
+            due_ready,
+            rating_counts,
+        })
+    }
+
+    async fn count_session_sql(
+        &self,
+        where_clause: &str,
+        tag_ids: &[i32],
+        exclude_tag_ids: &[i32],
+    ) -> Result<i64, sqlx::Error> {
+        let mut qb = QueryBuilder::<sqlx::Sqlite>::new(format!(
+            "SELECT COUNT(*) FROM mem m WHERE {where_clause}"
+        ));
+        Self::tag_filter_sql(&mut qb, tag_ids);
+        Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
+        qb.build_query_scalar().fetch_one(&*self.pool).await
+    }
+
     pub async fn get_next_mem(&self) -> Result<Option<i32>, sqlx::Error> {
         sqlx::query_scalar!(
             r#"SELECT m.id AS "id: i32" FROM mem m
@@ -760,6 +851,7 @@ impl MemRepo {
         Ok(())
     }
 
+    #[allow(dead_code)] // 仅测试与后续 retention 统计使用
     pub async fn get_recent_retention(&self, limit: i64) -> Result<f64, sqlx::Error> {
         let ratings: Vec<i64> = sqlx::query_scalar!(
             "SELECT rating FROM revlog ORDER BY review_time DESC LIMIT ?1",
@@ -1084,12 +1176,6 @@ impl MemRepo {
         .await?;
         Ok(())
     }
-
-    pub async fn count_relearning(&self) -> Result<i64, sqlx::Error> {
-        sqlx::query_scalar!("SELECT COUNT(*) FROM mem WHERE state = 'relearning' AND buried = 0")
-            .fetch_one(&*self.pool)
-            .await
-    }
 }
 
 // ── MemRepository trait implementation ──
@@ -1182,6 +1268,15 @@ impl MemRepository for MemRepo {
     async fn get_counts(&self) -> Result<(i64, i64, i64, i64, i64), MemError> {
         self.get_counts().await.map_err(MemError::db)
     }
+    async fn get_session_stats(
+        &self,
+        tag_ids: &[i32],
+        exclude_tag_ids: &[i32],
+    ) -> Result<SessionStats, MemError> {
+        self.get_session_stats(tag_ids, exclude_tag_ids)
+            .await
+            .map_err(MemError::db)
+    }
     async fn get_next_mem(&self) -> Result<Option<i32>, MemError> {
         self.get_next_mem().await.map_err(MemError::db)
     }
@@ -1212,9 +1307,6 @@ impl MemRepository for MemRepo {
     }
     async fn reset_mem(&self, id: i32) -> Result<(), MemError> {
         self.reset_mem(id).await.map_err(MemError::db)
-    }
-    async fn get_recent_retention(&self, limit: i64) -> Result<f64, MemError> {
-        self.get_recent_retention(limit).await.map_err(MemError::db)
     }
     async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, MemError> {
         self.create_tag(name, user_id).await.map_err(MemError::db)
@@ -1273,9 +1365,6 @@ impl MemRepository for MemRepo {
     }
     async fn prune_revlogs(&self) -> Result<(), MemError> {
         self.prune_revlogs().await.map_err(MemError::db)
-    }
-    async fn count_relearning(&self) -> Result<i64, MemError> {
-        self.count_relearning().await.map_err(MemError::db)
     }
 }
 
@@ -1774,7 +1863,7 @@ mod tests {
         let repo_arc: Arc<dyn crate::modules::mem::port::MemRepository> =
             Arc::new(MemRepo::new(repo.pool.clone()));
         let svc = crate::modules::mem::query::MemQueryService::new(repo_arc);
-        svc.get_session_estimate(&crate::modules::mem::config::MemConfig::default())
+        svc.get_session_estimate(&crate::modules::mem::config::MemConfig::default(), &[], &[])
             .await
             .unwrap()
     }
@@ -1796,7 +1885,8 @@ mod tests {
         }
         let est = estimate(&repo).await;
         assert_eq!(est.due_count, 3);
-        assert_eq!(est.total_estimate, 3 * 2); // 新卡 × 2 steps
+        // 无评分历史 → 先验 10% Again/Hard：期望 2.65625 步/新卡，3 张 ≈ 8
+        assert_eq!(est.total_estimate, 8);
     }
 
     #[tokio::test]
@@ -1819,7 +1909,7 @@ mod tests {
         }
         let est = estimate(&repo).await;
         assert_eq!(est.due_count, 5);
-        // retention = 1.0 → fail_rate = 0 → total = review_due (5) + 0 失败重学
+        // 全 Good/Easy：retention = 1.0，Again 被平滑到 ~6.7%，仍约等于只看一遍
         assert_eq!(est.total_estimate, 5);
     }
 
@@ -1847,10 +1937,8 @@ mod tests {
         }
         let est = estimate(&repo).await;
         assert_eq!(est.due_count, 5); // 2 new + 3 review
-        // new: 2 × 2 steps = 4
-        // review: 3 + 3 × 0.2 × 1(relearn step) = 3 + 0.6 = ceil(3.6) = 4
-        // total: 4 + 4 = 8
-        assert_eq!(est.total_estimate, 8);
+        // 平滑后 p(Again)≈0.308：new 2×4.0625=8.125，review 3×1.5=4.5，合计 13
+        assert_eq!(est.total_estimate, 13);
     }
 
     #[tokio::test]
@@ -1866,10 +1954,77 @@ mod tests {
         }
         let est = estimate(&repo).await;
         assert_eq!(est.due_count, 5);
-        // relearning: 2 × 1 (默认 1 个 step) = 2
-        // new: 3 × 2 = 6
-        // total: 8
-        assert_eq!(est.total_estimate, 8);
+        // 先验下 relearning 1.25 次/卡，new 2.65625 次/卡 → 2.5 + 7.96875 ≈ 10
+        assert_eq!(est.total_estimate, 10);
+    }
+
+    #[tokio::test]
+    async fn session_stats_filters_prereq_tags_and_steps() {
+        let repo = setup_db().await;
+
+        // 前置未满足的新卡不计；满足前置的新卡计
+        let prereq = insert_session_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
+        let blocked = insert_session_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
+        sqlx::query("INSERT INTO mem_prerequisite (mem_id, requires_mem_id) VALUES (?1, ?2)")
+            .bind(blocked)
+            .bind(prereq)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
+        let ready = insert_session_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
+
+        // 学习步进分布：step 0 / step 1
+        let l0 = insert_session_mem(&repo, "learning", 0, "2020-01-01T00:00:00Z").await;
+        sqlx::query("UPDATE mem SET step_index = 0 WHERE id = ?1")
+            .bind(l0)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
+        let l1 = insert_session_mem(&repo, "learning", 0, "2020-01-01T00:00:00Z").await;
+        sqlx::query("UPDATE mem SET step_index = 1 WHERE id = ?1")
+            .bind(l1)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
+
+        // 重学步进分布：step 0
+        let r0 = insert_session_mem(&repo, "relearning", 0, "2020-01-01T00:00:00Z").await;
+        sqlx::query("UPDATE mem SET step_index = 0 WHERE id = ?1")
+            .bind(r0)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
+
+        // 到期复习卡
+        insert_session_mem(&repo, "review", 0, "2020-01-01T00:00:00Z").await;
+
+        let all = repo.get_session_stats(&[], &[]).await.unwrap();
+        // blocked 被前置依赖排除；其余 2 张新卡可学
+        assert_eq!(all.new_ready, 2);
+        assert_eq!(all.learning_steps, vec![1, 1]);
+        assert_eq!(all.relearning_steps, vec![1]);
+        assert_eq!(all.due_ready, 1);
+
+        // 标签过滤：只统计带 tag1 的卡
+        sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (1, 'u1', 'x')")
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
+        let tag1: i32 =
+            sqlx::query_scalar("INSERT INTO tag (name, user_id) VALUES ('t1', 1) RETURNING id")
+                .fetch_one(&*repo.pool)
+                .await
+                .unwrap();
+        sqlx::query("INSERT INTO mem_tag (mem_id, tag_id) VALUES (?1, ?2)")
+            .bind(ready)
+            .bind(tag1)
+            .execute(&*repo.pool)
+            .await
+            .unwrap();
+        let filtered = repo.get_session_stats(&[tag1], &[]).await.unwrap();
+        assert_eq!(filtered.new_ready, 1, "只统计 ready 这张新卡");
+        assert!(filtered.learning_steps.is_empty());
+        assert_eq!(filtered.due_ready, 0);
     }
 
     #[tokio::test]
@@ -1881,7 +2036,8 @@ mod tests {
         insert_session_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
         let est = estimate(&repo).await;
         assert_eq!(est.due_count, 1);
-        assert_eq!(est.total_estimate, 2);
+        // 先验下 1 张新卡 ≈ 2.65625 → round 3
+        assert_eq!(est.total_estimate, 3);
     }
 
     // ── get_all_mems / count_all_mems 埋葬过滤 ──

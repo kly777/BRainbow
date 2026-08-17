@@ -57,45 +57,51 @@ impl MemQueryService {
     pub async fn get_session_estimate(
         &self,
         config: &crate::modules::mem::config::MemConfig,
+        tag_ids: &[i32],
+        exclude_tag_ids: &[i32],
     ) -> Result<SessionEstimate, MemError> {
-        let (new_count, learning_count, due_count, _, _) = self.repo.get_counts().await?;
-        let relearning_count = self.repo.count_relearning().await?;
-        let pure_learning = learning_count - relearning_count;
+        let stats = self
+            .repo
+            .get_session_stats(tag_ids, exclude_tag_ids)
+            .await?;
+        let p = rating_probs(&stats.rating_counts);
 
-        let retention = self.repo.get_recent_retention(100).await?;
+        let learning_steps = config.learning_steps.len();
+        let relearn_steps = config.relearn_steps.len();
 
-        let step_count_learning = config.learning_steps.len();
-        let step_count_relearning = config.relearn_steps.len();
+        // 每个步进位置的期望查看次数（Markov 模型：Again 回到 step 0，Hard 停留，Good/Easy 前进）
+        let learning_expect = expected_step_presentations(learning_steps, &p);
+        let relearn_expect = expected_step_presentations(relearn_steps, &p);
 
-        let new_total = new_count as usize * step_count_learning;
+        let new_total = stats.new_ready as f64 * step_expect_at(&learning_expect, 0);
+        let learning_total = step_bucket_total(&stats.learning_steps, &learning_expect);
+        let relearning_total = step_bucket_total(&stats.relearning_steps, &relearn_expect);
 
-        let learning_remaining = if step_count_learning > 1 {
-            step_count_learning / 2 + 1
+        // 到期复习卡：至少看一次；Again 后转入重学序列（Hard 不留在本次会话）
+        let again_rate = *p.first().unwrap_or(&0.0);
+        let review_total =
+            stats.due_ready as f64 * (1.0 + again_rate * step_expect_at(&relearn_expect, 0));
+
+        let total_estimate = (new_total + learning_total + relearning_total + review_total)
+            .round()
+            .max((stats.new_ready + stats.due_ready) as f64) as usize;
+
+        let due_count = (stats.new_ready
+            + stats.learning_steps.iter().sum::<i64>()
+            + stats.relearning_steps.iter().sum::<i64>()
+            + stats.due_ready) as usize;
+
+        let rated_total = stats.rating_counts.iter().sum::<i64>();
+        let passed = stats.rating_counts.get(2).copied().unwrap_or(0)
+            + stats.rating_counts.get(3).copied().unwrap_or(0);
+        let retention = if rated_total > 0 {
+            passed as f64 / rated_total as f64
         } else {
-            1
+            0.0
         };
-        let learning_total = pure_learning as usize * learning_remaining;
-
-        let relearn_remaining = if step_count_relearning > 1 {
-            step_count_relearning / 2 + 1
-        } else {
-            1
-        };
-        let relearning_total = relearning_count as usize * relearn_remaining;
-
-        let fail_rate = if retention > 0.0 {
-            1.0 - retention
-        } else {
-            0.2
-        };
-        let review_total = due_count as usize
-            + (due_count as f64 * fail_rate * step_count_relearning as f64).ceil() as usize;
-
-        let total_estimate = new_total + learning_total + relearning_total + review_total;
-        let due_count_total = (new_count + learning_count + due_count) as usize;
 
         Ok(SessionEstimate {
-            due_count: due_count_total,
+            due_count,
             retention,
             total_estimate,
         })
@@ -198,6 +204,88 @@ impl MemQueryService {
     }
 }
 
+// ── 会话预估纯函数（Markov 步进模型） ──
+
+/// 最近评分分布 → [Again, Hard, Good, Easy] 概率。
+/// 用贝叶斯平滑：无历史时回落到常见 FSRS 先验，小样本不全信。
+/// 先验伪计数 [Again=1, Hard=1, Good=7, Easy=1]（总强度 10）。
+fn rating_probs(counts: &[i64; 4]) -> [f64; 4] {
+    const PRIOR: [i64; 4] = [1, 1, 7, 1];
+    let mut smoothed = [0_i64; 4];
+    for ((slot, count), prior) in smoothed.iter_mut().zip(counts.iter()).zip(PRIOR.iter()) {
+        *slot = (*count).max(0) + *prior;
+    }
+    let total = smoothed.iter().sum::<i64>() as f64;
+    let mut probs = [0.0; 4];
+    for (slot, count) in probs.iter_mut().zip(smoothed.iter()) {
+        *slot = *count as f64 / total;
+    }
+    probs
+}
+
+/// 单卡单步进状态最大预估呈现次数：防止极端 Again 历史把预估放大到无意义
+const MAX_EXPECTED_PER_STEP: f64 = 20.0;
+
+/// 期望步进呈现次数。
+///
+/// 状态转移：Again → step 0；Hard → 留在当前 step；Good/Easy → step+1（末步毕业）。
+/// 对每个 step s 求解 E[s] = 1 + p0·E[0] + p1·E[s] + (p2+p3)·E[s+1]。
+fn expected_step_presentations(steps_len: usize, p: &[f64; 4]) -> Vec<f64> {
+    if steps_len == 0 {
+        return Vec::new();
+    }
+    let again = *p.first().unwrap_or(&0.0);
+    let advance = p.get(2).copied().unwrap_or(0.0) + p.get(3).copied().unwrap_or(0.0);
+    let stay = p.get(1).copied().unwrap_or(0.0);
+    // E[s] = A[s] + B[s] * E[0]，从末步倒推（E[steps_len] = 0）
+    let mut a = vec![0.0; steps_len + 1];
+    let mut b = vec![0.0; steps_len + 1];
+    let denom = (1.0 - stay).max(1e-6);
+    for s in (0..steps_len).rev() {
+        let a_next = a.get(s + 1).copied().unwrap_or(0.0);
+        let b_next = b.get(s + 1).copied().unwrap_or(0.0);
+        if let Some(slot) = a.get_mut(s) {
+            *slot = (1.0 + advance * a_next) / denom;
+        }
+        if let Some(slot) = b.get_mut(s) {
+            *slot = (again + advance * b_next) / denom;
+        }
+    }
+    // E[0] = A[0] + B[0]·E[0]
+    let a0 = a.first().copied().unwrap_or(0.0);
+    let b0 = b.first().copied().unwrap_or(0.0);
+    let e0 = if (1.0 - b0).abs() > 1e-9 {
+        a0 / (1.0 - b0)
+    } else {
+        // 状态机退化（如 Again 概率极端高）：退化为步数上界
+        steps_len as f64 * 2.0
+    };
+    (0..steps_len)
+        .map(|s| a.get(s).copied().unwrap_or(0.0) + b.get(s).copied().unwrap_or(0.0) * e0)
+        .map(|v| v.clamp(1.0, MAX_EXPECTED_PER_STEP))
+        .collect()
+}
+
+fn step_expect_at(expect: &[f64], step: usize) -> f64 {
+    if expect.is_empty() {
+        return 0.0;
+    }
+    expect
+        .get(step)
+        .copied()
+        .or_else(|| expect.last().copied())
+        .unwrap_or(0.0)
+}
+
+/// Σ 每个 step 桶的卡数 × 该 step 的期望呈现次数
+fn step_bucket_total(buckets: &[i64], expect: &[f64]) -> f64 {
+    buckets
+        .iter()
+        .enumerate()
+        .map(|(step, count)| *count as f64 * step_expect_at(expect, step))
+        .sum()
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
@@ -210,5 +298,38 @@ mod tests {
         let svc = MemQueryService::new(Arc::new(FakeRepo::default()));
         let err = svc.preview(1).await.unwrap_err();
         assert!(matches!(err, MemError::NotFound));
+    }
+
+    #[test]
+    fn rating_probs_uses_smooth_prior_when_no_history() {
+        let p = rating_probs(&[0, 0, 0, 0]);
+        assert!((p[0] - 0.1).abs() < 1e-12);
+        assert!((p[1] - 0.1).abs() < 1e-12);
+        assert!((p[2] - 0.7).abs() < 1e-12);
+        assert!((p[3] - 0.1).abs() < 1e-12);
+    }
+
+    #[test]
+    fn rating_probs_smooths_small_failure_samples() {
+        let p = rating_probs(&[3, 0, 0, 0]);
+        assert!(p[2] > 0.5, "3 条 Again 不应把 Good/Easy 压到零: {p:?}");
+        assert!(p[0] > p[1]);
+    }
+
+    #[test]
+    fn step_expectations_match_markov_model() {
+        // 先验 p = [0.1, 0.1, 0.7, 0.1]：两步学习步进
+        let p = [0.1, 0.1, 0.7, 0.1];
+        let e = expected_step_presentations(2, &p);
+        assert!((e[0] - 2.65625).abs() < 1e-9);
+        assert!((e[1] - 1.40625).abs() < 1e-9);
+
+        // 单步重学：E[0] = 1 / (Good+Easy) = 1.25
+        let e = expected_step_presentations(1, &p);
+        assert!((e[0] - 1.25).abs() < 1e-9);
+
+        // 全 Again 的极端历史也有上限，不会把预估放大到无意义
+        let e = expected_step_presentations(2, &rating_probs(&[200, 0, 0, 0]));
+        assert!(e.iter().all(|v| *v <= MAX_EXPECTED_PER_STEP));
     }
 }

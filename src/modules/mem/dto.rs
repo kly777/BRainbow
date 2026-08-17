@@ -126,6 +126,21 @@ pub struct MemWithTags {
     pub tags: Vec<TagInfo>,
 }
 
+/// 会话预估所需的原始统计（由 repository 一次性提供）
+#[derive(Debug, Clone, Default)]
+pub struct SessionStats {
+    /// 可立即学习的新卡数（前置依赖未满足的新卡不计入）
+    pub new_ready: i64,
+    /// 学习中卡按 step_index 的分布（索引 = step，末位容纳越界值）
+    pub learning_steps: Vec<i64>,
+    /// 重学中卡按 step_index 的分布（同上）
+    pub relearning_steps: Vec<i64>,
+    /// 到期且前置依赖满足的复习卡数
+    pub due_ready: i64,
+    /// 最近 200 次评分的分布：[Again, Hard, Good, Easy]
+    pub rating_counts: [i64; 4],
+}
+
 /// 本次学习预估
 #[derive(Debug, Clone, Serialize)]
 pub struct SessionEstimate {

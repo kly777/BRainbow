@@ -71,6 +71,9 @@ export const getBookmarksE = (
 	);
 };
 
+export const getBookmarkE = (id: number): Promise<Bookmark> =>
+	cachedRequest<Bookmark>(`/bookmarks/${id}`, {});
+
 export const createBookmarkE = (bm: CreateBookmarkRequest): Promise<Bookmark> =>
 	post<Bookmark>("/bookmarks", bm).then((r) =>
 		tapInvalidate(CACHE.bookmarks, r),

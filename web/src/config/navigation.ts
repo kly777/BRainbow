@@ -27,11 +27,25 @@ export const NAV_ITEMS: NavItem[] = [
 		nav: true,
 	},
 	{
+		path: PATHS.taskDetail,
+		label: "任务详情",
+		title: "Task",
+		desc: "",
+		nav: false,
+	},
+	{
 		path: PATHS.ontology,
 		label: "本体",
 		title: "Ontology",
 		desc: "本体与符号系统",
 		nav: true,
+	},
+	{
+		path: PATHS.ontologyDetail,
+		label: "本体详情",
+		title: "Ontology Item",
+		desc: "",
+		nav: false,
 	},
 	{
 		path: PATHS.card,
@@ -116,6 +130,13 @@ export const NAV_ITEMS: NavItem[] = [
 		title: "Bookmarks",
 		desc: "网页书签管理",
 		nav: true,
+	},
+	{
+		path: PATHS.bookmarkDetail,
+		label: "书签详情",
+		title: "Bookmark",
+		desc: "",
+		nav: false,
 	},
 	{
 		path: PATHS.readingDetail,

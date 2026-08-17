@@ -11,7 +11,9 @@ const CHAT = "/chat";
 export const PATHS = {
 	home: "/",
 	task: "/task",
+	taskDetail: "/task/:id",
 	ontology: "/ontology",
+	ontologyDetail: "/ontology/:id",
 	card: CARD,
 	cardDetail: `${CARD}/:id`,
 	cardEdit: `${CARD}/edit/:id`,
@@ -25,6 +27,7 @@ export const PATHS = {
 	readingUnknown: `${READING}/unknown`,
 	readingDetail: `${READING}/:id`,
 	bookmark: "/bookmark",
+	bookmarkDetail: "/bookmark/:id",
 	memory: MEMORY,
 	memoryAdd: `${MEMORY}/add`,
 	memoryManage: `${MEMORY}/manage`,

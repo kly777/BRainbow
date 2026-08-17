@@ -24,7 +24,9 @@ type PageLoader = () => Promise<{ default: Component }>;
 const PAGE_LOADERS: Record<PathValue, PageLoader> = {
 	[PATHS.home]: () => import("@app/routes/HomeGuard.tsx"),
 	[PATHS.task]: () => import("@modules/task/TaskManager.tsx"),
+	[PATHS.taskDetail]: () => import("@modules/task/TaskDetail.tsx"),
 	[PATHS.ontology]: () => import("@modules/ontology/OntologyList.tsx"),
+	[PATHS.ontologyDetail]: () => import("@modules/ontology/OntologyDetail.tsx"),
 	[PATHS.card]: () => import("@modules/card/CardsList.tsx"),
 	[PATHS.cardDetail]: () => import("@modules/card/CardDetail.tsx"),
 	[PATHS.cardEdit]: () => import("@modules/card/CardEdit.tsx"),
@@ -37,6 +39,7 @@ const PAGE_LOADERS: Record<PathValue, PageLoader> = {
 	[PATHS.reading]: () => import("@modules/reading/ReadingList.tsx"),
 	[PATHS.readingUnknown]: () => import("@modules/reading/ReadingUnknown.tsx"),
 	[PATHS.bookmark]: () => import("@modules/bookmark/BookmarkPage.tsx"),
+	[PATHS.bookmarkDetail]: () => import("@modules/bookmark/BookmarkDetail.tsx"),
 	[PATHS.readingDetail]: () => import("@modules/reading/ReadingDetail.tsx"),
 	[PATHS.memory]: () => import("@modules/mem/MemPage.tsx"),
 	[PATHS.memoryAdd]: () => import("@modules/mem/MemAdd.tsx"),

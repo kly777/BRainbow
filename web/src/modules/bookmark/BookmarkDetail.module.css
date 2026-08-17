@@ -1,0 +1,133 @@
+/* BookmarkDetail — 书签详情页 */
+
+.container {
+	margin: 0 auto;
+	max-width: var(--page-max);
+	padding: var(--space-lg) var(--space-xl) var(--space-xl);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-lg);
+	flex: 1;
+	min-height: 0;
+}
+
+.card {
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-lg);
+	padding: var(--space-lg);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-sm);
+}
+
+.title {
+	margin: 0;
+	font-size: var(--text-xl);
+	font-weight: 600;
+	color: var(--t-color-ink);
+	overflow-wrap: anywhere;
+}
+
+.url {
+	color: var(--t-color-accent);
+	text-decoration: none;
+	font-size: var(--text-sm);
+	overflow-wrap: anywhere;
+}
+
+.url:hover {
+	text-decoration: underline;
+}
+
+.meta {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+}
+
+.description {
+	margin: 0;
+	font-size: var(--text-base);
+	line-height: var(--leading-relaxed);
+	color: var(--t-color-ink);
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+.tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-xs);
+}
+
+.tag {
+	font-size: var(--text-xs);
+	color: var(--t-color-accent-strong);
+	background: var(--t-color-accent-soft);
+	border-radius: var(--radius-full);
+	padding: var(--space-2xs) var(--space-sm);
+}
+
+.form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
+}
+
+.label {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.input,
+.textarea {
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	font-size: var(--text-sm);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+}
+
+.textarea {
+	resize: vertical;
+}
+
+.input:focus,
+.textarea:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 var(--space-2xs) var(--t-color-accent-soft);
+}
+
+.form-error {
+	color: var(--t-color-danger);
+	font-size: var(--text-sm);
+}
+
+.form-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-sm);
+	margin-top: var(--space-sm);
+}
+
+.loading,
+.error {
+	padding: var(--space-2xl);
+	text-align: center;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-sm);
+}
+
+.error {
+	color: var(--t-color-danger);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--space-md);
+}

@@ -18,11 +18,14 @@ export function calcMaxLearning(avg: number): number {
 	return Math.round(MIN_LIMIT + ((avg - 1) / 3) * (MAX_LIMIT - MIN_LIMIT));
 }
 
-/** 先验加权平均单卡耗时：随实测样本增多平滑收敛，避免第一张卡让预估跳变 */
-export function calcAvgCardTime(durations: readonly number[]): number {
+/** 先验加权平均单卡耗时：先验默认 20s，可由最近复习记录平均值替换 */
+export function calcAvgCardTime(
+	durations: readonly number[],
+	priorSeconds = DEFAULT_CARD_TIME_SECS,
+): number {
 	const sum = durations.reduce((a, b) => a + b, 0);
 	return (
-		(DEFAULT_CARD_TIME_SECS * CARD_TIME_PRIOR_WEIGHT + sum) /
+		(priorSeconds * CARD_TIME_PRIOR_WEIGHT + sum) /
 		(CARD_TIME_PRIOR_WEIGHT + durations.length)
 	);
 }

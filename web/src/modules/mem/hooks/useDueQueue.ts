@@ -38,6 +38,7 @@ export function useDueQueue(opts: {
 	const [allFar, setAllFar] = createSignal(false);
 	const [upcoming, setUpcoming] = createSignal(0);
 	const [estimatedTotal, setEstimatedTotal] = createSignal(0);
+	const [estimatedSeconds, setEstimatedSeconds] = createSignal(0);
 
 	let lastEstimateAt = 0;
 	let lastEstimateKey = "";
@@ -76,7 +77,10 @@ export function useDueQueue(opts: {
 				const estResult = await tryAsync(() =>
 					getSessionEstimateE(estimateParams),
 				);
-				if (estResult.ok) setEstimatedTotal(estResult.value.total_estimate);
+				if (estResult.ok) {
+					setEstimatedTotal(estResult.value.total_estimate);
+					setEstimatedSeconds(estResult.value.avg_seconds);
+				}
 				// 预估失败不影响复习
 			})();
 			setDue([...data.items]);
@@ -181,6 +185,7 @@ export function useDueQueue(opts: {
 		allFar,
 		upcoming,
 		estimatedTotal,
+		estimatedSeconds,
 		reviewedIds,
 		setDue,
 		setCurrent: _setCurrent,

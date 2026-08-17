@@ -70,10 +70,12 @@ export const getDueE = (
 export const reviewMemE = (
 	id: number,
 	rating: number,
+	durationSecs = 0,
 ): Promise<{ ok: boolean }> =>
-	post<{ ok: boolean }>(`/mem/${id}/review`, { rating }).then((r) =>
-		tapInvalidate(CACHE.mem, r),
-	);
+	post<{ ok: boolean }>(`/mem/${id}/review`, {
+		rating,
+		duration_secs: durationSecs,
+	}).then((r) => tapInvalidate(CACHE.mem, r));
 
 export const previewMemE = (
 	id: number,

@@ -7,6 +7,7 @@ describe("SessionEstimate type", () => {
 			due_count: 25,
 			retention: 0.82,
 			total_estimate: 31,
+			avg_seconds: 12.5,
 		};
 		expect(data.due_count).toBe(25);
 		expect(data.retention).toBeCloseTo(0.82);
@@ -18,6 +19,7 @@ describe("SessionEstimate type", () => {
 			due_count: 10,
 			retention: 1.0,
 			total_estimate: 10,
+			avg_seconds: 0,
 		};
 		expect(data.total_estimate).toBeGreaterThanOrEqual(data.due_count);
 	});
@@ -27,6 +29,7 @@ describe("SessionEstimate type", () => {
 			due_count: 5,
 			retention: 0.0,
 			total_estimate: 7,
+			avg_seconds: 0,
 		};
 		expect(data.retention).toBeGreaterThanOrEqual(0);
 		expect(data.retention).toBeLessThanOrEqual(1);
@@ -37,6 +40,7 @@ describe("SessionEstimate type", () => {
 			due_count: 20,
 			retention: 0.8,
 			total_estimate: 25,
+			avg_seconds: 20,
 		};
 		const reviewed = 10;
 		const progress = Math.min((reviewed / estimate.total_estimate) * 100, 100);
@@ -48,6 +52,7 @@ describe("SessionEstimate type", () => {
 			due_count: 10,
 			retention: 0.5,
 			total_estimate: 20,
+			avg_seconds: 30,
 		};
 		const reviewed = 25;
 		const progress = Math.min((reviewed / estimate.total_estimate) * 100, 100);

@@ -54,6 +54,8 @@ export interface SessionEstimate {
 	due_count: number;
 	retention: number;
 	total_estimate: number;
+	/** 最近复习记录的平均单卡秒数；0 = 无历史 */
+	avg_seconds: number;
 }
 
 // ── re-export 共享类型 ──

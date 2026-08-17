@@ -19,7 +19,12 @@ import {
 	suspendMemE,
 } from "@modules/mem";
 import { createEffect, createSignal, onMount } from "solid-js";
-import { ALPHA, calcAvgCardTime, calcMaxLearning } from "../lib/mem-calcs.ts";
+import {
+	ALPHA,
+	calcAvgCardTime,
+	calcMaxLearning,
+	DEFAULT_CARD_TIME_SECS,
+} from "../lib/mem-calcs.ts";
 import { useDueQueue } from "./useDueQueue.ts";
 import type { UseMemReview } from "./useMemReviewTypes.ts";
 import { useMemTagFilter } from "./useMemTagFilter.ts";
@@ -48,7 +53,13 @@ export function useMemReview(): UseMemReview {
 	const [cardDurations, setCardDurations] = createSignal<number[]>([]);
 
 	// ── derived ──
-	const avgCardTime = () => calcAvgCardTime(cardDurations());
+	const avgCardTime = () =>
+		calcAvgCardTime(
+			cardDurations(),
+			queue.estimatedSeconds() > 0
+				? queue.estimatedSeconds()
+				: DEFAULT_CARD_TIME_SECS,
+		);
 	const maxLearning = () => calcMaxLearning(avgRating());
 
 	// ── 子 hook：撤销（undo 成功后重载队列）──
@@ -124,16 +135,16 @@ export function useMemReview(): UseMemReview {
 		const it = item();
 		if (!it) return;
 		undoHook.record(it);
+		const elapsed = Math.min((Date.now() - cardStart()) / 1000, 300);
 
 		// Railway: 成功 → 更新本地状态，失败 → 通知用户，状态不变
-		const result = await tryAsync(() => reviewMemE(it.id, rating));
+		const result = await tryAsync(() => reviewMemE(it.id, rating, elapsed));
 		if (!result.ok) {
 			notifyError("评分失败", result.error);
 			return;
 		}
 
 		setAvgRating((prev) => prev * (1 - ALPHA) + rating * ALPHA);
-		const elapsed = Math.min((Date.now() - cardStart()) / 1000, 300);
 		setCardDurations((prev) => [...prev, elapsed].slice(-30));
 
 		mnemonicHook.trackRating(it, rating);

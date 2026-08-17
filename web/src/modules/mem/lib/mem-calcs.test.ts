@@ -61,6 +61,11 @@ describe("calcAvgCardTime", () => {
 		expect(calcAvgCardTime([5])).toBe(17);
 	});
 
+	it("支持用最近记录的平均耗时作为先验", () => {
+		// (12.5×4 + 10) / 5 = 12
+		expect(calcAvgCardTime([10], 12.5)).toBeCloseTo(12);
+	});
+
 	it("averages multiple durations with prior", () => {
 		// (20×4 + 10 + 20 + 30) / 7 = 20
 		expect(calcAvgCardTime([10, 20, 30])).toBe(20);

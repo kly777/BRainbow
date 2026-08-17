@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 import { useDueQueue } from "./useDueQueue.ts";
 
 vi.mock("@modules/mem", () => ({
-	getSessionEstimateE: vi.fn(async () => ({ total_estimate: 10 })),
+	getSessionEstimateE: vi.fn(async () => ({
+		total_estimate: 10,
+		avg_seconds: 12,
+	})),
 }));
 
 function item(id: number): MemItem {

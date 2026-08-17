@@ -24,6 +24,7 @@ pub fn routes() -> Router<AppState> {
                 .patch(update_tree_handler)
                 .delete(delete_tree_handler),
         )
+        .route("/trees/{id}/title", post(generate_title_handler))
         .route("/trees/{id}/chat", post(chat_handler))
         .route("/nodes/{id}/revise", post(revise_node_handler))
         .route("/search", get(search_handler))
@@ -100,6 +101,17 @@ pub async fn delete_tree_handler(
 ) -> impl IntoResponse {
     match state.chat.delete_tree(claims.sub, id).await {
         Ok(()) => axum::http::StatusCode::NO_CONTENT.into_response(),
+        Err(e) => e.into_response(),
+    }
+}
+
+pub async fn generate_title_handler(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Path(id): Path<i64>,
+) -> impl IntoResponse {
+    match state.chat.generate_title(claims.sub, id, &state.ai).await {
+        Ok(title) => Json(serde_json::json!({ "title": title })).into_response(),
         Err(e) => e.into_response(),
     }
 }

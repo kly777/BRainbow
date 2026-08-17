@@ -146,10 +146,10 @@ export default function ChatPage() {
 					onStop={() => c.stopStreaming()}
 					placeholder={() =>
 						c.activePath().length === 0
-							? "有什么想问的？Enter 发送，Shift+Enter 换行"
+							? "有什么想问的？Enter 换行，Shift+Enter 发送"
 							: c.focusId() === null
-								? "开始对话…（Enter 发送，Shift+Enter 换行）"
-								: "继续对话…（将追加到当前消息之后）"
+								? "开始对话…（Enter 换行，Shift+Enter 发送）"
+								: "继续对话…（Enter 换行，Shift+Enter 发送）"
 					}
 				/>
 			</main>

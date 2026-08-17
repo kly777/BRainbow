@@ -113,8 +113,8 @@ export default function ChatMemPage() {
 									onStop={() => c.stopStreaming()}
 									placeholder={() =>
 										c.activePath().length === 0
-											? "粘贴文本，AI 将生成记忆卡片…（Enter 发送）"
-											: "输入修改指令，如「把答案简化」…"
+											? "粘贴文本，AI 将生成记忆卡片…（Enter 换行，Shift+Enter 发送）"
+											: "输入修改指令，如「把答案简化」…（Enter 换行，Shift+Enter 发送）"
 									}
 								/>
 							</div>

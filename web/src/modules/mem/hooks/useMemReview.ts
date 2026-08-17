@@ -80,8 +80,8 @@ export function useMemReview(): UseMemReview {
 		setTimeout(() => void queue.loadDue(), 0);
 	});
 
-	// 队列请求（参数与 loadDue 一致，供预取复用）
-	const fetchDue = () => {
+	// 标签过滤参数：队列与预估共用同一口径
+	const queueFilters = () => {
 		const include =
 			tagFilter.tagMode() === "include" && tagFilter.tagFilterIds().length > 0
 				? tagFilter.tagFilterIds()
@@ -90,12 +90,22 @@ export function useMemReview(): UseMemReview {
 			tagFilter.tagMode() === "exclude" && tagFilter.tagFilterIds().length > 0
 				? tagFilter.tagFilterIds()
 				: undefined;
+		return { include, exclude };
+	};
+
+	// 队列请求（参数与 loadDue 一致，供预取复用）
+	const fetchDue = () => {
+		const { include, exclude } = queueFilters();
 		return getDueE(maxLearning(), include, exclude);
 	};
 
 	// ── 队列 hook：加载 / 预取 / 前进（stale-while-revalidate） ──
 	const queue = useDueQueue({
 		fetchDue,
+		estimateParams: () => {
+			const { include, exclude } = queueFilters();
+			return { tag_ids: include, exclude_tag_ids: exclude };
+		},
 		onItemChange: (item) => {
 			setCardStart(Date.now());
 			if (item) {

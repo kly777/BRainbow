@@ -3,6 +3,7 @@ import {
 	ALPHA,
 	calcAvgCardTime,
 	calcMaxLearning,
+	DEFAULT_CARD_TIME_SECS,
 	DEFAULT_LIMIT,
 	MAX_LIMIT,
 	MIN_LIMIT,
@@ -51,8 +52,8 @@ describe("calcMaxLearning", () => {
 });
 
 describe("calcAvgCardTime", () => {
-	it("empty array → 0", () => {
-		expect(calcAvgCardTime([])).toBe(0);
+	it("empty array → DEFAULT_CARD_TIME_SECS", () => {
+		expect(calcAvgCardTime([])).toBe(DEFAULT_CARD_TIME_SECS);
 	});
 
 	it("single element → that element", () => {

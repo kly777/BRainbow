@@ -2,8 +2,16 @@
 
 export const getMemCountsE = (): Promise<MemCounts> =>
 	request("/mem/counts", {});
-export const getSessionEstimateE = (): Promise<SessionEstimate> =>
-	request("/mem/session-estimate", {});
+export const getSessionEstimateE = (params?: {
+	tag_ids?: number[];
+	exclude_tag_ids?: number[];
+}): Promise<SessionEstimate> => {
+	const suffix = buildQuery({
+		tag_ids: params?.tag_ids?.join(","),
+		exclude_tag_ids: params?.exclude_tag_ids?.join(","),
+	}).slice(1);
+	return request(`/mem/session-estimate${suffix ? `?${suffix}` : ""}`, {});
+};
 
 import {
 	buildQuery,

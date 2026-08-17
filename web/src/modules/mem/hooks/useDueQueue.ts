@@ -18,6 +18,11 @@ const PREFETCH_THRESHOLD = 3;
 export function useDueQueue(opts: {
 	/** 拉取队列（参数由调用方组合标签过滤/最大学习量） */
 	fetchDue: () => Promise<DueResponse>;
+	/** 预估参数（与队列相同的标签过滤，保证预估口径一致） */
+	estimateParams?: () => {
+		tag_ids?: number[];
+		exclude_tag_ids?: number[];
+	};
 	/** 当前卡变化时通知调用方（加载预览/助记） */
 	onItemChange: (item: MemItem | undefined) => void;
 }) {
@@ -35,6 +40,7 @@ export function useDueQueue(opts: {
 	const [estimatedTotal, setEstimatedTotal] = createSignal(0);
 
 	let lastEstimateAt = 0;
+	let lastEstimateKey = "";
 	let prefetching = false;
 	let prefetched: DueResponse | null = null;
 	// 本轮已评卡片 id：预取结果可能含尚未评完的卡，复用前需过滤
@@ -56,10 +62,20 @@ export function useDueQueue(opts: {
 			setDone(false);
 			setAllFar(data.all_far);
 			void (async () => {
-				// 预估 60s 缓存，避免每次队列重载都重算 retention
-				if (Date.now() - lastEstimateAt < ESTIMATE_TTL) return;
+				// 预估 60s 缓存；标签过滤变化时强制刷新，避免沿用旧口径
+				const estimateParams = opts.estimateParams?.() ?? {};
+				const estimateKey = `${estimateParams.tag_ids?.join(",") ?? ""}|${estimateParams.exclude_tag_ids?.join(",") ?? ""}`;
+				if (
+					Date.now() - lastEstimateAt < ESTIMATE_TTL &&
+					estimateKey === lastEstimateKey
+				) {
+					return;
+				}
 				lastEstimateAt = Date.now();
-				const estResult = await tryAsync(() => getSessionEstimateE());
+				lastEstimateKey = estimateKey;
+				const estResult = await tryAsync(() =>
+					getSessionEstimateE(estimateParams),
+				);
 				if (estResult.ok) setEstimatedTotal(estResult.value.total_estimate);
 				// 预估失败不影响复习
 			})();

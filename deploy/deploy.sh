@@ -29,7 +29,7 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # ── 颜色 ──
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'
-BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
+BLUE='\033[0;34m'; NC='\033[0m'
 log_info()  { echo -e "${BLUE}[INFO]${NC} $1"; }
 log_done()  { echo -e "${GREEN}[DONE]${NC} $1"; }
 log_warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
@@ -91,9 +91,10 @@ load_config() {
     DOMAIN="${DOMAIN:-brainbow.top}"
     DATABASE_URL="${DATABASE_URL:-sqlite:$DATA_DIR/$DATABASE_FILE}"
 
+    # REMOTE_HOST 由 load_config 中的 .env.prod source 注入
+    # shellcheck disable=SC2153
     SSH_CMD="ssh -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST"
     SCP_CMD="scp -C -P $REMOTE_PORT"
-    RSYNC_CMD="rsync -avz -e \"ssh -p $REMOTE_PORT\""
 }
 
 # ===================================================================
@@ -194,12 +195,11 @@ db_backup() {
 
 # 清理过期备份：按时间的保留 BACKUP_RETAIN_DAYS 天，按数量的保留 BACKUP_RETAIN_COUNT 个
 prune_backups() {
-    local kept=0 removed=0
     log_info "清理过期备份（保留 ${BACKUP_RETAIN_DAYS}d / ${BACKUP_RETAIN_COUNT} 个）..."
     # 按日期清理
     local cutoff
     cutoff=$(date -u -d "${BACKUP_RETAIN_DAYS} days ago" +%Y%m%d_%H%M%S 2>/dev/null || \
-             date -u -v-${BACKUP_RETAIN_DAYS}d +%Y%m%d_%H%M%S 2>/dev/null)
+             date -u -v-"${BACKUP_RETAIN_DAYS}"d +%Y%m%d_%H%M%S 2>/dev/null)
     if [ -n "$cutoff" ]; then
         # 删除 db_* 文件早于 cutoff
         remote "for f in \$BACKUP_DIR/db_*.db; do
@@ -366,9 +366,11 @@ cmd_deploy() {
         exit 1
     fi
     # 数据库备份（服务已停，直接 cp 即一致）
-    remote "cp '$DATA_DIR/$DATABASE_FILE' '$BACKUP_DIR/db_deploy_${timestamp}.db' 2>/dev/null; echo ok" | grep -q ok && \
-        log_info "数据库备份: db_deploy_${timestamp}.db ($(remote "du -h '$BACKUP_DIR/db_deploy_${timestamp}.db' | cut -f1" 2>/dev/null))" || \
+    if remote "cp '$DATA_DIR/$DATABASE_FILE' '$BACKUP_DIR/db_deploy_${timestamp}.db' 2>/dev/null; echo ok" | grep -q ok; then
+        log_info "数据库备份: db_deploy_${timestamp}.db ($(remote "du -h '$BACKUP_DIR/db_deploy_${timestamp}.db' | cut -f1" 2>/dev/null))"
+    else
         log_warn "数据库备份失败，跳过（可能无数据库文件）"
+    fi
     # 代码：不包含数据库，tarball 小很多
     if remote "[ -f '$SERVICE_DIR/brainbow' ]" 2>/dev/null; then
         remote "tar -czf $BACKUP_DIR/code_${timestamp}.tar.gz \
@@ -416,8 +418,11 @@ cmd_deploy() {
     # Step 9: 同步 Caddy 配置并重载
     if sync_caddyfile; then
         log_info "重载 Caddy..."
-        remote "sudo systemctl reload caddy 2>/dev/null || sudo systemctl restart caddy" && \
-            log_done "Caddy 已重载" || log_warn "Caddy 重载失败"
+        if remote "sudo systemctl reload caddy 2>/dev/null || sudo systemctl restart caddy"; then
+            log_done "Caddy 已重载"
+        else
+            log_warn "Caddy 重载失败"
+        fi
     else
         log_warn "跳过 Caddy 重载（配置校验失败）"
     fi
@@ -564,7 +569,7 @@ cmd_rollback() {
         latest_db=$(remote "ls -1t $BACKUP_DIR/db_*.db 2>/dev/null | head -1" | xargs -r basename | sed 's/\.db$//' 2>/dev/null || true)
         if [ -n "$latest_db" ]; then
             local code_marker
-            code_marker=$(echo "$latest_db" | sed 's/db_/code_/')
+            code_marker=${latest_db/db_/code_}
             if remote "[ -f '$BACKUP_DIR/${code_marker}.tar.gz' ]" 2>/dev/null; then
                 restore_code="$code_marker"
                 restore_db="$latest_db"
@@ -586,16 +591,12 @@ cmd_rollback() {
         fi
     else
         # 用户指定了前缀：尝试新格式 + 旧格式
-        local candidate_db="${prefix}"
-        local candidate_code="${prefix}"
         # 如果用户输入的是时间戳如 20260717_222232，自动补全
         if remote "[ -f '$BACKUP_DIR/db_${prefix}.db' ]" 2>/dev/null; then
             restore_db="db_${prefix}"
             if remote "[ -f '$BACKUP_DIR/code_${prefix}.tar.gz' ]" 2>/dev/null; then
                 restore_code="code_${prefix}"
             fi
-        elif remote "[ -f '$BACKUP_DIR/${prefix}.tar.gz' ]" 2>/dev/null; then
-            restore_code="$prefix"
         elif remote "[ -f '$BACKUP_DIR/${prefix}.tar.gz' ]" 2>/dev/null; then
             restore_code="$prefix"
         else
@@ -611,11 +612,12 @@ cmd_rollback() {
         log_info "恢复数据库: $restore_db.db"
         # 停止服务后直接 cp 覆盖
         remote "sudo systemctl stop $APP_NAME 2>/dev/null || true"
-        remote "cp '$BACKUP_DIR/${restore_db}.db' '$DATA_DIR/$DATABASE_FILE'" && \
-            log_done "数据库已恢复 ($(remote "du -h '$BACKUP_DIR/${restore_db}.db' | cut -f1" 2>/dev/null))" || {
+        if remote "cp '$BACKUP_DIR/${restore_db}.db' '$DATA_DIR/$DATABASE_FILE'"; then
+            log_done "数据库已恢复 ($(remote "du -h '$BACKUP_DIR/${restore_db}.db' | cut -f1" 2>/dev/null))"
+        else
             log_error "数据库恢复失败"
             exit 1
-        }
+        fi
     fi
 
     # ── 回滚代码 ──
@@ -712,7 +714,11 @@ cmd_list_backups() {
         echo "$db_files" | while IFS= read -r f; do
             name=$(basename "$f" .db)
             size=$(remote "du -h '$f' | cut -f1" 2>/dev/null)
-            date_part=$(echo "$name" | sed 's/.*_\([0-9]\{8\}_[0-9]\{6\}\)/\1/')
+            if [[ $name =~ ([0-9]{8}_[0-9]{6})$ ]]; then
+                date_part="${BASH_REMATCH[1]}"
+            else
+                date_part="$name"
+            fi
             printf "  • %s  (%s)\n" "$date_part" "$size"
         done
     fi
@@ -722,7 +728,11 @@ cmd_list_backups() {
         echo "$code_files" | while IFS= read -r f; do
             name=$(basename "$f" .tar.gz)
             size=$(remote "du -h '$f' | cut -f1" 2>/dev/null)
-            date_part=$(echo "$name" | sed 's/code_\([0-9]\{8\}_[0-9]\{6\}\)/\1/')
+            if [[ $name =~ ([0-9]{8}_[0-9]{6})$ ]]; then
+                date_part="${BASH_REMATCH[1]}"
+            else
+                date_part="$name"
+            fi
             printf "  • %s  (%s)\n" "$date_part" "$size"
         done
     fi

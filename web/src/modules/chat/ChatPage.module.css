@@ -143,7 +143,35 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+	gap: var(--space-sm);
 	padding: var(--space-sm) var(--space-md);
+	border-bottom: 1px solid var(--t-color-border);
+}
+
+.sidebar-head-left {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	min-width: 0;
+}
+
+.sidebar-back-link {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.sidebar-back-link:hover {
+	color: var(--t-color-accent);
+}
+
+.sidebar-hint {
+	padding: var(--space-sm) var(--space-md);
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+	border-bottom: 1px solid var(--t-color-border);
+	line-height: var(--leading-tight);
 }
 
 .sidebar-title {
@@ -200,13 +228,14 @@
 	border: 2px solid transparent;
 }
 
-/* 选中按钮占满整行（与删除按钮并排，避免嵌套 button） */
+/* 选中按钮占满整行（与右侧菜单按钮并排，避免嵌套 button） */
 .tree-select {
+	min-width: 0;
 	flex: 1;
 	display: flex;
 	align-items: center;
 	gap: var(--space-sm);
-	padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-md);
+	padding: var(--space-sm) var(--space-xs) var(--space-sm) var(--space-md);
 	border: none;
 	background: transparent;
 	cursor: pointer;
@@ -237,22 +266,30 @@
 	white-space: nowrap;
 }
 
-.tree-item-meta {
-	font-size: var(--text-xs);
-	color: var(--t-color-ink-faint);
+/* 右侧槽位：未 hover 显示上次对话时间，hover 后显示三点按钮 */
+.tree-more-wrap {
+	position: relative;
 	flex: none;
+	display: flex;
+	align-items: center;
 }
 
-.tree-delete {
+.tree-item-time {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+	font-variant-numeric: tabular-nums;
+	flex: none;
+	padding-right: var(--space-xs);
+}
+
+.tree-more-btn {
 	position: absolute;
-	right: var(--space-2xs);
-	top: 50%;
-	transform: translateY(-50%) translateX(4px);
+	right: var(--space-xs);
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 1.25rem;
-	height: 1.25rem;
+	width: 1.5rem;
+	height: 1.5rem;
 	border: none;
 	background: transparent;
 	color: var(--t-color-ink-faint);
@@ -260,35 +297,94 @@
 	font-size: var(--text-xs);
 	line-height: 1;
 	padding: 0;
-	opacity: 0;
 	border-radius: var(--radius-sm);
+	opacity: 0;
+	pointer-events: none;
 	transition:
-		opacity var(--t-transition-normal),
-		transform var(--t-transition-normal),
-		background var(--t-transition-fast);
+		opacity var(--t-transition-fast),
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
 }
 
-.tree-delete:hover {
+.tree-more-btn:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.tree-item:hover .tree-more-btn,
+.tree-item-active:hover .tree-more-btn,
+.tree-item:focus-within .tree-more-btn,
+.tree-item-active:focus-within .tree-more-btn {
 	opacity: 1;
+	pointer-events: auto;
+}
+
+.tree-item:hover .tree-item-time,
+.tree-item-active:hover .tree-item-time {
+	opacity: 0;
+}
+
+.tree-menu {
+	position: absolute;
+	right: 0;
+	top: calc(100% + var(--space-2xs));
+	z-index: var(--z-dropdown);
+	min-width: 8.5rem;
+	padding: var(--space-xs);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-md);
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+}
+
+.tree-menu-item {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: none;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--t-color-ink);
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--text-sm);
+	text-align: left;
+	transition: background var(--t-transition-fast);
+}
+
+.tree-menu-item:hover {
+	background: var(--t-color-surface-raised);
+}
+
+.tree-menu-item:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.tree-menu-item-danger {
 	color: var(--t-color-danger);
+}
+
+.tree-menu-item-danger:hover {
 	background: var(--t-color-danger-subtle);
 }
 
-.tree-item-active .tree-delete,
-.tree-item:hover .tree-delete {
-	opacity: 0.5;
-	transform: translateY(-50%) translateX(0);
-}
-
-.tree-item-active .tree-delete:hover,
-.tree-item:hover .tree-delete:hover {
-	opacity: 1;
-}
-
-/* hover 时给 select 右侧让出图标空间 */
-.tree-item-active .tree-select,
-.tree-item:hover .tree-select {
-	padding-right: calc(var(--space-md) + 1.25rem);
+.tree-rename-input {
+	min-width: 0;
+	flex: 1;
+	padding: var(--space-xs) var(--space-sm);
+	margin: var(--space-xs) var(--space-2xs);
+	border: 1px solid var(--t-color-accent);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	font: inherit;
+	font-size: var(--text-sm);
+	outline: none;
 }
 
 .tree-empty {
@@ -402,29 +498,6 @@
 .prompt-label {
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
-}
-
-.prompt-input {
-	width: 100%;
-	padding: var(--space-sm) var(--space-md);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-	font-size: var(--text-sm);
-}
-
-.prompt-input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 var(--space-2xs) var(--t-color-accent-soft);
-}
-
-.prompt-input::placeholder {
-	color: var(--t-color-ink-faint);
 }
 
 .prompt-textarea {

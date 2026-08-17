@@ -1,6 +1,8 @@
 use chrono::Utc;
 use sqlx::{FromRow, SqlitePool};
 
+use crate::modules::ai::model::AiProxyMessage;
+use crate::modules::ai::service::AiService;
 use crate::shared::error_types::ServiceError;
 
 use super::model::{
@@ -275,6 +277,62 @@ impl ChatService {
             .await?;
         }
         Ok(())
+    }
+
+    /// 用 AI 根据对话内容生成标题，并写回 chat_tree。
+    pub async fn generate_title(
+        &self,
+        user_id: i32,
+        tree_id: i64,
+        ai: &AiService,
+    ) -> Result<String, ServiceError> {
+        let detail = self
+            .get_tree(user_id, tree_id)
+            .await?
+            .ok_or_else(|| ServiceError::NotFound("对话树不存在".into()))?;
+        if detail.nodes.is_empty() {
+            return Err(ServiceError::InvalidInput("对话还没有内容".into()));
+        }
+
+        let mut transcript = String::new();
+        for node in detail.nodes.iter().filter(|n| n.role != "system").take(8) {
+            let role = if node.role == "user" {
+                "用户"
+            } else {
+                "助手"
+            };
+            let content: String = node.content.chars().take(200).collect::<String>();
+            transcript.push_str(&format!("{role}：{content}\n"));
+        }
+
+        let messages = vec![
+            AiProxyMessage {
+                role: "system".into(),
+                content:
+                    "你是对话标题助手。根据对话内容生成一个简洁的中文标题，不超过20个字。直接输出标题，不要引号、标点、换行或任何解释。"
+                        .into(),
+            },
+            AiProxyMessage {
+                role: "user".into(),
+                content: transcript,
+            },
+        ];
+        let (raw, _model) = ai.chat(user_id, &messages, Some(0.3), Some(64)).await?;
+        let title = sanitize_title(&raw);
+        if title.is_empty() {
+            return Err(ServiceError::InvalidInput("AI 未生成有效标题".into()));
+        }
+
+        self.update_tree(
+            user_id,
+            tree_id,
+            UpdateTreeRequest {
+                title: Some(title.clone()),
+                system_prompt: None,
+            },
+        )
+        .await?;
+        Ok(title)
     }
 
     pub async fn delete_tree(&self, user_id: i32, tree_id: i64) -> Result<(), ServiceError> {
@@ -616,6 +674,19 @@ pub struct PreparedChat {
     pub messages: Vec<crate::modules::ai::model::AiProxyMessage>,
 }
 
+/// 清理 AI 返回的标题：去引号/空白/换行，限制 20 字。
+pub(crate) fn sanitize_title(raw: &str) -> String {
+    raw.trim()
+        .trim_matches(|c| c == '"' || c == '\'' || c == '「' || c == '」' || c == '《' || c == '》')
+        .lines()
+        .next()
+        .unwrap_or("")
+        .trim()
+        .chars()
+        .take(20)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
@@ -890,5 +961,19 @@ mod tests {
         let last = got.nodes.last().unwrap();
         assert_eq!(last.content, "再回答");
         assert!(last.reasoning.is_none());
+    }
+
+    #[test]
+    fn sanitize_title_cleans_ai_output() {
+        assert_eq!(sanitize_title("\"如何学习 Rust\"\n"), "如何学习 Rust");
+        assert_eq!(sanitize_title("「一次函数与导数」"), "一次函数与导数");
+        assert_eq!(
+            sanitize_title("  你好，世界！请多指教  "),
+            "你好，世界！请多指教"
+        );
+        assert_eq!(
+            sanitize_title("一二三四五六七八九十一二三四五六七八九十超出"),
+            "一二三四五六七八九十一二三四五六七八九十"
+        );
     }
 }

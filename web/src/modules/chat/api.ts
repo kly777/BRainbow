@@ -88,6 +88,9 @@ export const updateTreeE = (
 		body: JSON.stringify(patch),
 	});
 
+export const generateTreeTitleE = (id: number): Promise<{ title: string }> =>
+	request(`/chat/trees/${id}/title`, { method: "POST" });
+
 export const deleteTreeE = (id: number): Promise<void> =>
 	request(`/chat/trees/${id}`, { method: "DELETE" });
 

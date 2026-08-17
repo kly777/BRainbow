@@ -5,7 +5,7 @@ BUILD_DIR := build
 time := $(shell date +%y%m%d_%H%M%S)
 DEPLOY_SCRIPT := deploy/deploy.sh
 
-.PHONY: dev dev-backend dev-web fmt build build-check build-web build-backend clean deploy deploy-web deploy-backend check status info logs db-pull db-push rollback list-backups sqlx-prepare
+.PHONY: dev dev-backend dev-web fmt build build-check build-web build-backend clean deploy deploy-web deploy-backend check status info logs db-pull db-push rollback list-backups sqlx-prepare db-check db-optimize db-backup backup-prune
 
 # 用 make 并行目标跑后端/前端：Ctrl+C 时 make 会给所有并行 job 发信号并等待清理
 # （cargo-watch 8.x 收到 SIGINT 会用进程组清理 cargo run/brainbow）
@@ -100,6 +100,12 @@ health:
 
 db-backup:
 	$(DEPLOY_SCRIPT) db-backup
+
+db-check:
+	$(DEPLOY_SCRIPT) db-check
+
+db-optimize:
+	$(DEPLOY_SCRIPT) db-optimize
 
 backup-prune:
 	$(DEPLOY_SCRIPT) backup-prune

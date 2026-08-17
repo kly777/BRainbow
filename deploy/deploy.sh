@@ -107,6 +107,59 @@ remote() {
 # 备份/轮转 辅助
 # ===================================================================
 
+# 远端是否有 sqlite3 CLI
+db_has_sqlite3() {
+    remote "command -v sqlite3" >/dev/null 2>&1
+}
+
+# 快速完整性检查（部署/备份前）。远端无 sqlite3 时跳过并返回成功。
+db_quick_check() {
+    if ! db_has_sqlite3; then
+        log_warn "远端无 sqlite3，跳过 quick_check"
+        return 0
+    fi
+    local src="$DATA_DIR/$DATABASE_FILE" out
+    out=$(remote "sqlite3 '$src' 'PRAGMA quick_check;' 2>/dev/null" || true)
+    if [ "$out" = "ok" ]; then
+        log_done "quick_check: ok"
+        return 0
+    fi
+    log_error "quick_check 未通过: $out"
+    return 1
+}
+
+# 全量完整性检查（手动 make db-check）
+db_integrity_check() {
+    if ! db_has_sqlite3; then
+        log_error "远端无 sqlite3，无法执行 integrity_check"
+        return 1
+    fi
+    local src="$DATA_DIR/$DATABASE_FILE" out
+    out=$(remote "sqlite3 '$src' 'PRAGMA integrity_check;' 2>/dev/null" || true)
+    if [ "$out" = "ok" ]; then
+        log_done "integrity_check: ok"
+        return 0
+    fi
+    log_error "integrity_check 未通过: $out"
+    return 1
+}
+
+# 更新 SQLite 统计信息（部署后/低峰期）
+db_optimize() {
+    if ! db_has_sqlite3; then
+        log_warn "远端无 sqlite3，跳过 optimize"
+        return 0
+    fi
+    local src="$DATA_DIR/$DATABASE_FILE"
+    log_info "执行 PRAGMA optimize..."
+    if remote "sqlite3 '$src' 'PRAGMA optimize;' 2>/dev/null"; then
+        log_done "optimize 完成"
+        return 0
+    fi
+    log_warn "optimize 失败（服务可能正在写库，稍后可重试 make db-optimize）"
+    return 1
+}
+
 # 一致性数据库备份
 # 优先用 sqlite3 .backup（事务性快照），无 sqlite3 时回退到 cp 直接复制。
 # 部署时的备份在服务停止后执行，所以 cp 也能得到一致状态。
@@ -116,6 +169,9 @@ db_backup() {
     ts=$(date -u +%Y%m%d_%H%M%S)
     local dest="db_${suffix}_${ts}.db"
     local src="$DATA_DIR/$DATABASE_FILE"
+
+    # 备份前先快速体检：坏库不带病备份
+    db_quick_check || return 1
 
     if remote "command -v sqlite3" >/dev/null 2>&1; then
         log_info "sqlite3 .backup 事务性快照..."
@@ -304,6 +360,11 @@ cmd_deploy() {
     timestamp=$(date -u +%Y%m%d_%H%M%S)
     log_info "备份当前版本..."
     remote "mkdir -p $BACKUP_DIR"
+    # 备份前快速体检：坏库中止部署，避免覆盖/备份坏数据
+    if ! db_quick_check; then
+        log_error "数据库 quick_check 未通过，中止部署（可先执行 make db-check）"
+        exit 1
+    fi
     # 数据库备份（服务已停，直接 cp 即一致）
     remote "cp '$DATA_DIR/$DATABASE_FILE' '$BACKUP_DIR/db_deploy_${timestamp}.db' 2>/dev/null; echo ok" | grep -q ok && \
         log_info "数据库备份: db_deploy_${timestamp}.db ($(remote "du -h '$BACKUP_DIR/db_deploy_${timestamp}.db' | cut -f1" 2>/dev/null))" || \
@@ -348,6 +409,9 @@ cmd_deploy() {
 
     # Step 8: 等待服务就绪
     wait_for_ready
+
+    # Step 8.5: 更新 SQLite 统计信息（失败不阻断部署）
+    db_optimize || true
 
     # Step 9: 同步 Caddy 配置并重载
     if sync_caddyfile; then
@@ -668,6 +732,28 @@ cmd_list_backups() {
 }
 
 # ===================================================================
+# 子命令: db-check — 数据库完整性检查
+# ===================================================================
+cmd_db_check() {
+    load_config
+    echo "═══════════════════════════════════════════"
+    log_info "数据库完整性检查: $DATA_DIR/$DATABASE_FILE"
+    echo "═══════════════════════════════════════════"
+    db_integrity_check
+}
+
+# ===================================================================
+# 子命令: db-optimize — 更新 SQLite 统计信息
+# ===================================================================
+cmd_db_optimize() {
+    load_config
+    echo "═══════════════════════════════════════════"
+    log_info "SQLite 统计信息优化: $DATA_DIR/$DATABASE_FILE"
+    echo "═══════════════════════════════════════════"
+    db_optimize
+}
+
+# ===================================================================
 # 子命令: db-backup — 手动数据库备份
 # ===================================================================
 cmd_db_backup() {
@@ -812,6 +898,8 @@ usage() {
     echo ""
     echo "备份相关:"
     echo "  db-backup         一致性数据库快照 (sqlite3 .backup)"
+    echo "  db-check          数据库完整性检查 (integrity_check)"
+    echo "  db-optimize       更新 SQLite 统计信息 (PRAGMA optimize)"
     echo "  list-backups      查看所有备份"
     echo "  backup-prune      手动清理过期备份"
     echo "  rollback [前缀]   回滚（代码+数据库原子恢复）"
@@ -849,6 +937,8 @@ main() {
         rollback)     cmd_rollback "$@" ;;
         list-backups) cmd_list_backups "$@" ;;
         db-backup)    cmd_db_backup "$@" ;;
+        db-check)     cmd_db_check "$@" ;;
+        db-optimize)  cmd_db_optimize "$@" ;;
         backup-prune) cmd_backup_prune "$@" ;;
         logs)         cmd_logs "$@" ;;
         status)       cmd_status "$@" ;;

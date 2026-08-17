@@ -7,7 +7,13 @@
 import { notifyError, notifySuccess, showConfirm, tryAsync } from "@lib/utils";
 import type { BookmarkTagWithCount } from "@modules/bookmark";
 import { deleteBookmarkTagE, searchBookmarkTagsE } from "@modules/bookmark";
-import { createResource, createSignal, For, Show } from "solid-js";
+import {
+	type Component,
+	createResource,
+	createSignal,
+	For,
+	Show,
+} from "solid-js";
 import styles from "./TagInput.module.css";
 
 interface Props {
@@ -17,6 +23,58 @@ interface Props {
 	/** 标签被全局删除后通知父组件刷新列表 */
 	onTagDeleted?: () => void;
 }
+
+interface TagItemProps {
+	name: string;
+	onRemove: (name: string) => void;
+}
+
+const TagItem: Component<TagItemProps> = (props) => (
+	<span class={styles.tag}>
+		{props.name}
+		<button
+			type="button"
+			class={styles.tagRemove}
+			onClick={() => props.onRemove(props.name)}
+			title="移除标签"
+		>
+			×
+		</button>
+	</span>
+);
+
+interface SuggestionItemProps {
+	tag: BookmarkTagWithCount;
+	onSelect: () => void;
+	onDelete: () => void;
+}
+
+const SuggestionItem: Component<SuggestionItemProps> = (props) => (
+	<div class={styles.dropdownItem}>
+		<button
+			type="button"
+			class={styles.dropdownSelect}
+			onMouseDown={(e) => e.preventDefault()}
+			onClick={props.onSelect}
+		>
+			<span class={styles.dropdownName}>{props.tag.name}</span>
+			<span class={styles.dropdownCount}>{props.tag.count}</span>
+		</button>
+		<button
+			type="button"
+			class={styles.dropdownDelete}
+			title={`删除标签「${props.tag.name}」`}
+			onMouseDown={(e) => e.stopPropagation()}
+			onClick={(e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				props.onDelete();
+			}}
+		>
+			×
+		</button>
+	</div>
+);
 
 export default function TagInput(props: Props) {
 	const [query, setQuery] = createSignal("");
@@ -88,19 +146,7 @@ export default function TagInput(props: Props) {
 			<Show when={props.tags.length > 0}>
 				<div class={styles.tags}>
 					<For each={props.tags}>
-						{(name) => (
-							<span class={styles.tag}>
-								{name}
-								<button
-									type="button"
-									class={styles.tagRemove}
-									onClick={() => props.onRemove(name)}
-									title="移除标签"
-								>
-									×
-								</button>
-							</span>
-						)}
+						{(name) => <TagItem name={name} onRemove={props.onRemove} />}
 					</For>
 				</div>
 			</Show>
@@ -123,34 +169,15 @@ export default function TagInput(props: Props) {
 				<div class={styles.dropdown}>
 					<For each={filteredSuggestions()}>
 						{(tag) => (
-							<div class={styles.dropdownItem}>
-								<button
-									type="button"
-									class={styles.dropdownSelect}
-									onMouseDown={(e) => e.preventDefault()}
-									onClick={() => {
-										props.onAdd(tag.name);
-										setQuery("");
-										setOpen(false);
-									}}
-								>
-									<span class={styles.dropdownName}>{tag.name}</span>
-									<span class={styles.dropdownCount}>{tag.count}</span>
-								</button>
-								<button
-									type="button"
-									class={styles.dropdownDelete}
-									title={`删除标签「${tag.name}」`}
-									onMouseDown={(e) => e.stopPropagation()}
-									onClick={(e) => {
-										e.preventDefault();
-										e.stopPropagation();
-										handleDeleteTag(tag);
-									}}
-								>
-									×
-								</button>
-							</div>
+							<SuggestionItem
+								tag={tag}
+								onSelect={() => {
+									props.onAdd(tag.name);
+									setQuery("");
+									setOpen(false);
+								}}
+								onDelete={() => handleDeleteTag(tag)}
+							/>
 						)}
 					</For>
 					<Show when={!hasExactMatch() && query().trim().length > 0}>

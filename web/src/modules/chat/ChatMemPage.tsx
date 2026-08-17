@@ -69,9 +69,7 @@ export default function ChatMemPage() {
 								<ImportBar c={c} />
 							</div>
 							<div class={styles.messageList} ref={listRef}>
-								<For each={c.activePath()}>
-									{(node) => <ChatMemMessageRow c={c} node={node} />}
-								</For>
+								<MemMessageRows c={c} />
 								<Composer
 									styles={styles}
 									sending={c.sending}
@@ -91,6 +89,16 @@ export default function ChatMemPage() {
 				</Show>
 			</main>
 		</div>
+	);
+}
+
+// ── 消息行列表：提取 For，使 ChatMemPage 的 JSX 嵌套深度不超过 5 ──
+
+function MemMessageRows(props: { c: ReturnType<typeof useChatMem> }) {
+	return (
+		<For each={props.c.activePath()}>
+			{(node) => <ChatMemMessageRow c={props.c} node={node} />}
+		</For>
 	);
 }
 

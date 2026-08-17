@@ -1,7 +1,7 @@
 import { PATHS } from "@config/paths";
 // ── v2 导入相关子组件：格式说明卡 / 预览清单 / 默认标签 / 结果页 ──
 
-import { For, Show } from "solid-js";
+import { type Component, For, Show } from "solid-js";
 import type { PreviewRow } from "../hooks/useMemAdd.ts";
 import styles from "./ImportParts.module.css";
 
@@ -82,6 +82,62 @@ export function FormatHint(props: { mode: "paste" | "file" }) {
 
 // ── 预览清单（待入库卡片） ──
 
+const PreviewTableHead: Component<{
+	allSelected: boolean;
+	onToggleAll: () => void;
+}> = (props) => (
+	<thead>
+		<tr>
+			<th class={styles.previewTh}>
+				<input
+					type="checkbox"
+					checked={props.allSelected}
+					onChange={props.onToggleAll}
+				/>
+			</th>
+			<th class={styles.previewTh}>线索</th>
+			<th class={styles.previewTh}>答案</th>
+			<th class={styles.previewTh}>标签</th>
+		</tr>
+	</thead>
+);
+
+const PreviewRowView: Component<{
+	row: PreviewRow;
+	index: () => number;
+	onToggle: (i: number) => void;
+}> = (props) => (
+	<tr>
+		<td class={styles.previewTd}>
+			<input
+				type="checkbox"
+				checked={props.row.selected}
+				onChange={() => props.onToggle(props.index())}
+			/>
+		</td>
+		<td class={styles.previewTd}>{props.row.cue.slice(0, 60)}</td>
+		<td class={styles.previewTd}>{props.row.target.slice(0, 60)}</td>
+		<td class={styles.previewTd}>
+			<For each={props.row.tags}>
+				{(tag) => <span class={styles.previewTag}>{tag}</span>}
+			</For>
+		</td>
+	</tr>
+);
+
+const PreviewTableBody: Component<{
+	rows: PreviewRow[];
+	onToggle: (i: number) => void;
+}> = (props) => (
+	<tbody>
+		<For each={props.rows}>
+			{(row, i) => (
+				<PreviewRowView row={row} index={i} onToggle={props.onToggle} />
+			)}
+		</For>
+	</tbody>
+);
+
 export function ImportPreviewTable(props: {
 	rows: PreviewRow[];
 	selectedCount: number;
@@ -100,42 +156,11 @@ export function ImportPreviewTable(props: {
 			</div>
 			<div class={styles.previewBody}>
 				<table class={styles.previewTable}>
-					<thead>
-						<tr>
-							<th class={styles.previewTh}>
-								<input
-									type="checkbox"
-									checked={props.selectedCount === props.rows.length}
-									onChange={props.onToggleAll}
-								/>
-							</th>
-							<th class={styles.previewTh}>线索</th>
-							<th class={styles.previewTh}>答案</th>
-							<th class={styles.previewTh}>标签</th>
-						</tr>
-					</thead>
-					<tbody>
-						<For each={props.rows}>
-							{(row, i) => (
-								<tr>
-									<td class={styles.previewTd}>
-										<input
-											type="checkbox"
-											checked={row.selected}
-											onChange={() => props.onToggle(i())}
-										/>
-									</td>
-									<td class={styles.previewTd}>{row.cue.slice(0, 60)}</td>
-									<td class={styles.previewTd}>{row.target.slice(0, 60)}</td>
-									<td class={styles.previewTd}>
-										<For each={row.tags}>
-											{(tag) => <span class={styles.previewTag}>{tag}</span>}
-										</For>
-									</td>
-								</tr>
-							)}
-						</For>
-					</tbody>
+					<PreviewTableHead
+						allSelected={props.selectedCount === props.rows.length}
+						onToggleAll={props.onToggleAll}
+					/>
+					<PreviewTableBody rows={props.rows} onToggle={props.onToggle} />
 				</table>
 			</div>
 		</div>

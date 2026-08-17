@@ -12,7 +12,13 @@ import {
 	updateTaskE,
 } from "@modules/task";
 import { A, useNavigate, useParams } from "@solidjs/router";
-import { createResource, createSignal, For, Show } from "solid-js";
+import {
+	type Component,
+	createResource,
+	createSignal,
+	For,
+	Show,
+} from "solid-js";
 import EditTaskModal from "./components/EditTaskModal.tsx";
 import styles from "./TaskDetail.module.css";
 
@@ -22,6 +28,59 @@ const STATUS_LABEL: Record<string, string> = {
 	completed: "已完成",
 	archived: "已归档",
 };
+
+type ChipItem = { href: string; label: string | number };
+
+const TaskChip: Component<{ href: string; label: string | number }> = (
+	props,
+) => (
+	<A class={styles.chip} href={props.href}>
+		{props.label}
+	</A>
+);
+
+const ChipSection: Component<{ title: string; chips: ChipItem[] }> = (
+	props,
+) => (
+	<section class={styles.section}>
+		<h2 class={styles.sectionTitle}>{props.title}</h2>
+		<div class={styles.chips}>
+			<For each={props.chips}>
+				{(chip) => <TaskChip href={chip.href} label={chip.label} />}
+			</For>
+		</div>
+	</section>
+);
+
+const MetaItem: Component<{ label: string; value: string }> = (props) => (
+	<div class={styles.metaItem}>
+		<span class={styles.metaLabel}>{props.label}</span>
+		<span>{props.value}</span>
+	</div>
+);
+
+const TaskMetaGrid: Component<{
+	createdAt: string;
+	updatedAt: string;
+	effortLabel: string;
+}> = (props) => (
+	<div class={styles.metaGrid}>
+		<MetaItem label="创建时间" value={props.createdAt} />
+		<MetaItem label="更新时间" value={props.updatedAt} />
+		<MetaItem label="预计用时" value={props.effortLabel} />
+	</div>
+);
+
+const TimeSection: Component<{ available: number; planned: number }> = (
+	props,
+) => (
+	<section class={styles.section}>
+		<h2 class={styles.sectionTitle}>时间安排</h2>
+		<span class={styles.metaText}>
+			可行 {props.available} 段 · 计划 {props.planned} 段
+		</span>
+	</section>
+);
 
 export default function TaskDetail() {
 	const params = useParams();
@@ -104,71 +163,43 @@ export default function TaskDetail() {
 							{d().task.description || "暂无描述"}
 						</p>
 
-						<div class={styles.metaGrid}>
-							<div class={styles.metaItem}>
-								<span class={styles.metaLabel}>创建时间</span>
-								<span>{fmtLocal(d().task.created_at)}</span>
-							</div>
-							<div class={styles.metaItem}>
-								<span class={styles.metaLabel}>更新时间</span>
-								<span>{fmtLocal(d().task.updated_at)}</span>
-							</div>
-							<div class={styles.metaItem}>
-								<span class={styles.metaLabel}>预计用时</span>
-								<span>
-									{d().task.effort_estimate_minutes === null
-										? "未设置"
-										: `${d().task.effort_estimate_minutes} 分钟`}
-								</span>
-							</div>
-						</div>
+						<TaskMetaGrid
+							createdAt={fmtLocal(d().task.created_at)}
+							updatedAt={fmtLocal(d().task.updated_at)}
+							effortLabel={
+								d().task.effort_estimate_minutes === null
+									? "未设置"
+									: `${d().task.effort_estimate_minutes} 分钟`
+							}
+						/>
 
 						<Show when={d().children.length > 0}>
-							<section class={styles.section}>
-								<h2 class={styles.sectionTitle}>子任务</h2>
-								<div class={styles.chips}>
-									<For each={d().children}>
-										{(child) => (
-											<A
-												class={styles.chip}
-												href={fillPath(PATHS.taskDetail, child.id)}
-											>
-												{child.title}
-											</A>
-										)}
-									</For>
-								</div>
-							</section>
+							<ChipSection
+								title="子任务"
+								chips={d().children.map((child) => ({
+									href: fillPath(PATHS.taskDetail, child.id),
+									label: child.title,
+								}))}
+							/>
 						</Show>
 
 						<Show when={d().depends_on.length > 0}>
-							<section class={styles.section}>
-								<h2 class={styles.sectionTitle}>依赖任务</h2>
-								<div class={styles.chips}>
-									<For each={d().depends_on}>
-										{(depId) => (
-											<A
-												class={styles.chip}
-												href={fillPath(PATHS.taskDetail, depId)}
-											>
-												# {depId}
-											</A>
-										)}
-									</For>
-								</div>
-							</section>
+							<ChipSection
+								title="依赖任务"
+								chips={d().depends_on.map((depId) => ({
+									href: fillPath(PATHS.taskDetail, depId),
+									label: `# ${depId}`,
+								}))}
+							/>
 						</Show>
 
 						<Show
 							when={d().available_slots.length + d().planned_slots.length > 0}
 						>
-							<section class={styles.section}>
-								<h2 class={styles.sectionTitle}>时间安排</h2>
-								<span class={styles.metaText}>
-									可行 {d().available_slots.length} 段 · 计划{" "}
-									{d().planned_slots.length} 段
-								</span>
-							</section>
+							<TimeSection
+								available={d().available_slots.length}
+								planned={d().planned_slots.length}
+							/>
 						</Show>
 					</div>
 				)}

@@ -5,7 +5,7 @@ import { MarkdownEditor } from "@components";
 import { Button, Markdown as MarkdownRenderer } from "@components/ui";
 import { fmtLocal } from "@lib/utils";
 import type { MemItem, TagInfo } from "@modules/mem";
-import { Show } from "solid-js";
+import { type Component, Show } from "solid-js";
 import styles from "./ManageDetail.module.css";
 import TagSelector from "./TagSelector.tsx";
 
@@ -37,6 +37,156 @@ const stateLabel: Record<string, string> = {
 	suspended: "挂起",
 };
 
+const DetailHead: Component<{
+	id: number;
+	state: string;
+	leeched: boolean;
+	onClose: () => void;
+}> = (props) => (
+	<div class={styles.detailHead}>
+		<span class={styles.detailId}>#{props.id}</span>
+		<div class={styles.detailHeadRight}>
+			<span class={styles.detailState} data-state={props.state}>
+				{stateLabel[props.state] ?? props.state}
+				{props.leeched ? " ⚠️烂卡" : ""}
+			</span>
+			<button
+				type="button"
+				class={styles.detailClose}
+				onClick={props.onClose}
+				title="关闭面板"
+				aria-label="关闭详情面板"
+			>
+				✕
+			</button>
+		</div>
+	</div>
+);
+
+const CueViewSection: Component<{
+	tab: string;
+	content: string;
+}> = (props) => (
+	<div class={styles.detailSection}>
+		<div class={styles.detailTab}>{props.tab}</div>
+		<div class={styles.detailBody}>
+			<MarkdownRenderer content={props.content} />
+		</div>
+	</div>
+);
+
+const CueEditSection: Component<{
+	tab: string;
+	value: string;
+	onInput: (value: string) => void;
+}> = (props) => (
+	<div class={styles.detailSection}>
+		<div class={styles.detailTab}>{props.tab}</div>
+		<MarkdownEditor
+			class={styles.editArea}
+			value={props.value}
+			onInput={props.onInput}
+			rows={4}
+		/>
+	</div>
+);
+
+const CueAnswerSection: Component<{
+	editing: boolean;
+	cueContent: string;
+	targetContent: string;
+	editCue: string;
+	editTarget: string;
+	onEditCueChange: (value: string) => void;
+	onEditTargetChange: (value: string) => void;
+}> = (props) => (
+	<Show
+		when={props.editing}
+		fallback={
+			<>
+				<CueViewSection tab="线索" content={props.cueContent} />
+				<CueViewSection tab="答案" content={props.targetContent} />
+			</>
+		}
+	>
+		<CueEditSection
+			tab="线索"
+			value={props.editCue}
+			onInput={props.onEditCueChange}
+		/>
+		<CueEditSection
+			tab="答案"
+			value={props.editTarget}
+			onInput={props.onEditTargetChange}
+		/>
+	</Show>
+);
+
+const ActionButtons: Component<{
+	editing: boolean;
+	state: string;
+	id: number;
+	onStartEdit: () => void;
+	onSaveEdit: () => void;
+	onCancelEdit: () => void;
+	onReset: (id: number) => void;
+	onSuspend: (id: number) => void;
+	onUnsuspend: (id: number) => void;
+	onDelete: (id: number) => void;
+}> = (props) => (
+	<div class={styles.detailActions}>
+		<Show
+			when={props.editing}
+			fallback={
+				<>
+					<Button variant="ghost" size="sm" onClick={props.onStartEdit}>
+						编辑
+					</Button>
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => props.onReset(props.id)}
+					>
+						忘却
+					</Button>
+					<Show when={props.state !== "suspended"}>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => props.onSuspend(props.id)}
+						>
+							挂起
+						</Button>
+					</Show>
+					<Show when={props.state === "suspended"}>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => props.onUnsuspend(props.id)}
+						>
+							恢复
+						</Button>
+					</Show>
+					<Button
+						variant="danger"
+						size="sm"
+						onClick={() => props.onDelete(props.id)}
+					>
+						删除
+					</Button>
+				</>
+			}
+		>
+			<Button variant="primary" size="sm" onClick={props.onSaveEdit}>
+				保存
+			</Button>
+			<Button variant="ghost" size="sm" onClick={props.onCancelEdit}>
+				取消
+			</Button>
+		</Show>
+	</div>
+);
+
 export default function ManageDetail(props: Props) {
 	return (
 		<aside
@@ -50,64 +200,23 @@ export default function ManageDetail(props: Props) {
 				{(d) => (
 					<div class={styles.detailCard}>
 						{/* 档案卡头：编号 + 状态 + 关闭 */}
-						<div class={styles.detailHead}>
-							<span class={styles.detailId}>#{d().id}</span>
-							<div class={styles.detailHeadRight}>
-								<span class={styles.detailState} data-state={d().state}>
-									{stateLabel[d().state] ?? d().state}
-									{d().leeched ? " ⚠️烂卡" : ""}
-								</span>
-								<button
-									type="button"
-									class={styles.detailClose}
-									onClick={props.onClose}
-									title="关闭面板"
-									aria-label="关闭详情面板"
-								>
-									✕
-								</button>
-							</div>
-						</div>
+						<DetailHead
+							id={d().id}
+							state={d().state}
+							leeched={d().leeched}
+							onClose={props.onClose}
+						/>
 
 						{/* 线索 / 答案 */}
-						<Show
-							when={props.editing}
-							fallback={
-								<>
-									<div class={styles.detailSection}>
-										<div class={styles.detailTab}>线索</div>
-										<div class={styles.detailBody}>
-											<MarkdownRenderer content={d().cue.content} />
-										</div>
-									</div>
-									<div class={styles.detailSection}>
-										<div class={styles.detailTab}>答案</div>
-										<div class={styles.detailBody}>
-											<MarkdownRenderer content={d().target.content} />
-										</div>
-									</div>
-								</>
-							}
-						>
-							<div class={styles.detailSection}>
-								<div class={styles.detailTab}>线索</div>
-								<MarkdownEditor
-									class={styles.editArea}
-									value={props.editCue}
-									onInput={props.onEditCueChange}
-									rows={4}
-								/>
-							</div>
-							<div class={styles.detailSection}>
-								<div class={styles.detailTab}>答案</div>
-								<MarkdownEditor
-									class={styles.editArea}
-									value={props.editTarget}
-									onInput={props.onEditTargetChange}
-									rows={4}
-								/>
-							</div>
-						</Show>
+						<CueAnswerSection
+							editing={props.editing}
+							cueContent={d().cue.content}
+							targetContent={d().target.content}
+							editCue={props.editCue}
+							editTarget={props.editTarget}
+							onEditCueChange={props.onEditCueChange}
+							onEditTargetChange={props.onEditTargetChange}
+						/>
 
 						{/* 元数据（等宽） */}
 						<div class={styles.meta}>
@@ -128,61 +237,18 @@ export default function ManageDetail(props: Props) {
 						</div>
 
 						{/* 操作 */}
-						<div class={styles.detailActions}>
-							<Show
-								when={props.editing}
-								fallback={
-									<>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={props.onStartEdit}
-										>
-											编辑
-										</Button>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => props.onReset(d().id)}
-										>
-											忘却
-										</Button>
-										<Show when={d().state !== "suspended"}>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => props.onSuspend(d().id)}
-											>
-												挂起
-											</Button>
-										</Show>
-										<Show when={d().state === "suspended"}>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => props.onUnsuspend(d().id)}
-											>
-												恢复
-											</Button>
-										</Show>
-										<Button
-											variant="danger"
-											size="sm"
-											onClick={() => props.onDelete(d().id)}
-										>
-											删除
-										</Button>
-									</>
-								}
-							>
-								<Button variant="primary" size="sm" onClick={props.onSaveEdit}>
-									保存
-								</Button>
-								<Button variant="ghost" size="sm" onClick={props.onCancelEdit}>
-									取消
-								</Button>
-							</Show>
-						</div>
+						<ActionButtons
+							editing={props.editing}
+							state={d().state}
+							id={d().id}
+							onStartEdit={props.onStartEdit}
+							onSaveEdit={props.onSaveEdit}
+							onCancelEdit={props.onCancelEdit}
+							onReset={props.onReset}
+							onSuspend={props.onSuspend}
+							onUnsuspend={props.onUnsuspend}
+							onDelete={props.onDelete}
+						/>
 					</div>
 				)}
 			</Show>

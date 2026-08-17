@@ -1,6 +1,12 @@
 import { tryAsync } from "@lib/utils";
 import { createTagE, searchTagsE, type TagInfo } from "@modules/mem";
-import { createResource, createSignal, For, Show } from "solid-js";
+import {
+	type Component,
+	createResource,
+	createSignal,
+	For,
+	Show,
+} from "solid-js";
 import styles from "./TagSelector.module.css";
 
 interface Props {
@@ -8,6 +14,23 @@ interface Props {
 	onAdd: (tag: TagInfo) => void;
 	onRemove: (tagId: number) => void;
 }
+
+const TagItem: Component<{
+	tag: TagInfo;
+	onRemove: (tagId: number) => void;
+}> = (props) => (
+	<span class={styles.tag}>
+		{props.tag.name}
+		<button
+			type="button"
+			class={styles.tagRemove}
+			onClick={() => props.onRemove(props.tag.id)}
+			title="移除标签"
+		>
+			×
+		</button>
+	</span>
+);
 
 export default function TagSelector(props: Props) {
 	const [query, setQuery] = createSignal("");
@@ -71,19 +94,7 @@ export default function TagSelector(props: Props) {
 			<Show when={props.tags.length > 0}>
 				<div class={styles.tags}>
 					<For each={props.tags}>
-						{(tag) => (
-							<span class={styles.tag}>
-								{tag.name}
-								<button
-									type="button"
-									class={styles.tagRemove}
-									onClick={() => props.onRemove(tag.id)}
-									title="移除标签"
-								>
-									×
-								</button>
-							</span>
-						)}
+						{(tag) => <TagItem tag={tag} onRemove={props.onRemove} />}
 					</For>
 				</div>
 			</Show>

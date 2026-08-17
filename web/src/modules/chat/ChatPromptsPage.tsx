@@ -12,6 +12,44 @@ import {
 import { createSignal, For, onMount, Show } from "solid-js";
 import styles from "./ChatPrompts.module.css";
 
+const PromptListBody = (props: {
+	presets: PromptPreset[];
+	onEdit: (preset: PromptPreset) => void;
+	onRemove: (preset: PromptPreset) => void;
+}) => (
+	<Show
+		when={props.presets.length > 0}
+		fallback={<div class={styles.empty}>还没有预设，点击右上角创建</div>}
+	>
+		<For each={props.presets}>
+			{(preset) => (
+				<div class={styles.item}>
+					<div class={styles.itemMain}>
+						<span class={styles.itemName}>{preset.name}</span>
+						<span class={styles.itemContent}>{preset.content}</span>
+					</div>
+					<div class={styles.itemActions}>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() => props.onEdit(preset)}
+						>
+							编辑
+						</Button>
+						<Button
+							variant="danger"
+							size="sm"
+							onClick={() => props.onRemove(preset)}
+						>
+							删除
+						</Button>
+					</div>
+				</div>
+			)}
+		</For>
+	</Show>
+);
+
 export default function ChatPromptsPage() {
 	const [presets, setPresets] = createSignal<PromptPreset[]>([]);
 	const [loading, setLoading] = createSignal(true);
@@ -53,6 +91,12 @@ export default function ChatPromptsPage() {
 		const ok = await tryOrNotify(() => deletePresetE(preset.id), "删除预设");
 		if (ok === null) return;
 		setPresets((prev) => prev.filter((p) => p.id !== preset.id));
+	};
+
+	const startEdit = (preset: PromptPreset) => {
+		setEditing(preset);
+		setName(preset.name);
+		setContent(preset.content);
 	};
 
 	return (
@@ -119,43 +163,11 @@ export default function ChatPromptsPage() {
 					when={!loading}
 					fallback={<div class={styles.empty}>加载中…</div>}
 				>
-					<Show
-						when={presets().length > 0}
-						fallback={
-							<div class={styles.empty}>还没有预设，点击右上角创建</div>
-						}
-					>
-						<For each={presets()}>
-							{(preset) => (
-								<div class={styles.item}>
-									<div class={styles.itemMain}>
-										<span class={styles.itemName}>{preset.name}</span>
-										<span class={styles.itemContent}>{preset.content}</span>
-									</div>
-									<div class={styles.itemActions}>
-										<Button
-											variant="secondary"
-											size="sm"
-											onClick={() => {
-												setEditing(preset);
-												setName(preset.name);
-												setContent(preset.content);
-											}}
-										>
-											编辑
-										</Button>
-										<Button
-											variant="danger"
-											size="sm"
-											onClick={() => void remove(preset)}
-										>
-											删除
-										</Button>
-									</div>
-								</div>
-							)}
-						</For>
-					</Show>
+					<PromptListBody
+						presets={presets()}
+						onEdit={startEdit}
+						onRemove={(preset) => void remove(preset)}
+					/>
 				</Show>
 			</div>
 		</div>

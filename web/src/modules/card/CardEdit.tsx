@@ -19,6 +19,114 @@ import {
 } from "solid-js";
 import styles from "./CardEdit.module.css";
 
+const DirtyBadge: Component<{ dirty: boolean }> = (props) => (
+	<Show when={props.dirty}>
+		<span class={styles.dirty}>
+			<span class={styles.dirtyDot} />
+			未保存
+		</span>
+	</Show>
+);
+
+const CardEditHeader: Component<{
+	cardId: number;
+	dirty: boolean;
+	isSubmitting: boolean;
+	stampLabel: string;
+	stamp: string;
+	onDelete: () => void;
+	onView: () => void;
+	onSave: () => void;
+}> = (props) => (
+	<header class={styles.header}>
+		<div class={styles.titleRow}>
+			<h1 class={styles.title}>
+				编辑卡片 <span class={styles.cardNo}>#{props.cardId}</span>
+			</h1>
+			<div class={styles.actions}>
+				<Button variant="danger" size="sm" onClick={props.onDelete}>
+					删除
+				</Button>
+				<Button variant="secondary" size="sm" onClick={props.onView}>
+					查看
+				</Button>
+				<Button
+					variant="primary"
+					size="sm"
+					onClick={props.onSave}
+					disabled={props.isSubmitting || !props.dirty}
+				>
+					{props.isSubmitting ? "保存中…" : "保存"}
+				</Button>
+			</div>
+		</div>
+		<div class={styles.metaRow}>
+			<span class={styles.meta}>
+				{props.stampLabel} {fmtLocal(props.stamp)}
+			</span>
+			<DirtyBadge dirty={props.dirty} />
+		</div>
+	</header>
+);
+
+const EditorPane: Component<{
+	value: string;
+	onInput: (value: string) => void;
+}> = (props) => (
+	<section class={styles.pane}>
+		<div class={styles.paneHead}>
+			编辑
+			<span class={styles.paneHint}>Markdown · 粘贴/拖拽图片自动上传</span>
+		</div>
+		<MarkdownEditor
+			editorClass={styles.editor}
+			class={styles.textarea}
+			value={props.value}
+			onInput={props.onInput}
+			rows={8}
+			placeholder="输入 Markdown 内容…"
+		/>
+	</section>
+);
+
+const PreviewPane: Component<{ content: string }> = (props) => (
+	<section class={styles.pane}>
+		<div class={styles.paneHead}>实时预览</div>
+		<div class={styles.preview}>
+			<Show
+				when={props.content.trim()}
+				fallback={
+					<div class={styles.previewEmpty}>
+						开始输入，此处实时渲染 Markdown…
+					</div>
+				}
+			>
+				<MarkdownRenderer content={props.content} />
+			</Show>
+		</div>
+	</section>
+);
+
+const CardEditWorkspace: Component<{
+	content: string;
+	onInput: (value: string) => void;
+	onKeyDown: (e: KeyboardEvent) => void;
+}> = (props) => (
+	<div class={styles.workspace} onKeyDown={props.onKeyDown} role="none">
+		<div class={styles.panes}>
+			<EditorPane value={props.content} onInput={props.onInput} />
+			<div class={styles.fold} />
+			<PreviewPane content={props.content} />
+		</div>
+		<footer class={styles.statusbar}>
+			<span>{props.content.length} 字</span>
+			<span class={styles.shortcut}>
+				<kbd>Ctrl</kbd> + <kbd>Enter</kbd> 保存
+			</span>
+		</footer>
+	</div>
+);
+
 const CardEditPage: Component = () => {
 	const params = useParams();
 	const navigate = useNavigate();
@@ -100,44 +208,16 @@ const CardEditPage: Component = () => {
 
 	return (
 		<div class={styles.container}>
-			<header class={styles.header}>
-				<div class={styles.titleRow}>
-					<h1 class={styles.title}>
-						编辑卡片 <span class={styles.cardNo}>#{cardId()}</span>
-					</h1>
-					<div class={styles.actions}>
-						<Button variant="danger" size="sm" onClick={handleDelete}>
-							删除
-						</Button>
-						<Button
-							variant="secondary"
-							size="sm"
-							onClick={() => navigate(fillPath(PATHS.cardDetail, cardId()))}
-						>
-							查看
-						</Button>
-						<Button
-							variant="primary"
-							size="sm"
-							onClick={doSave}
-							disabled={isSubmitting() || !dirty()}
-						>
-							{isSubmitting() ? "保存中…" : "保存"}
-						</Button>
-					</div>
-				</div>
-				<div class={styles.metaRow}>
-					<span class={styles.meta}>
-						{stampLabel()} {fmtLocal(stamp())}
-					</span>
-					<Show when={dirty()}>
-						<span class={styles.dirty}>
-							<span class={styles.dirtyDot} />
-							未保存
-						</span>
-					</Show>
-				</div>
-			</header>
+			<CardEditHeader
+				cardId={cardId()}
+				dirty={dirty()}
+				isSubmitting={isSubmitting()}
+				stampLabel={stampLabel()}
+				stamp={stamp()}
+				onDelete={handleDelete}
+				onView={() => navigate(fillPath(PATHS.cardDetail, cardId()))}
+				onSave={doSave}
+			/>
 
 			<Show when={error()}>
 				<div class={styles.errorMsg}>{error()}</div>
@@ -151,51 +231,11 @@ const CardEditPage: Component = () => {
 			>
 				{() => (
 					<Show when={!card.loading && !card.error}>
-						<div class={styles.workspace} onKeyDown={onKeyDown} role="none">
-							<div class={styles.panes}>
-								<section class={styles.pane}>
-									<div class={styles.paneHead}>
-										编辑
-										<span class={styles.paneHint}>
-											Markdown · 粘贴/拖拽图片自动上传
-										</span>
-									</div>
-									<MarkdownEditor
-										editorClass={styles.editor}
-										class={styles.textarea}
-										value={content()}
-										onInput={setContent}
-										rows={8}
-										placeholder="输入 Markdown 内容…"
-									/>
-								</section>
-
-								<div class={styles.fold} />
-
-								<section class={styles.pane}>
-									<div class={styles.paneHead}>实时预览</div>
-									<div class={styles.preview}>
-										<Show
-											when={content().trim()}
-											fallback={
-												<div class={styles.previewEmpty}>
-													开始输入，此处实时渲染 Markdown…
-												</div>
-											}
-										>
-											<MarkdownRenderer content={content()} />
-										</Show>
-									</div>
-								</section>
-							</div>
-
-							<footer class={styles.statusbar}>
-								<span>{content().length} 字</span>
-								<span class={styles.shortcut}>
-									<kbd>Ctrl</kbd> + <kbd>Enter</kbd> 保存
-								</span>
-							</footer>
-						</div>
+						<CardEditWorkspace
+							content={content()}
+							onInput={setContent}
+							onKeyDown={onKeyDown}
+						/>
 					</Show>
 				)}
 			</AsyncView>

@@ -21,6 +21,41 @@ export interface CardProps extends CardData {
 	isDeleting?: boolean;
 }
 
+const CardFabButton: Component<{
+	label: string;
+	onClick: (e: MouseEvent) => void;
+	paths: string[];
+	danger?: boolean;
+	disabled?: boolean;
+}> = (props) => (
+	<Tooltip label={props.label}>
+		<button
+			type="button"
+			classList={{
+				[styles.cardFab]: true,
+				[styles.cardFabDanger]: !!props.danger,
+			}}
+			aria-label={props.label}
+			onClick={props.onClick}
+			disabled={props.disabled}
+		>
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+			>
+				{props.paths.map((d) => (
+					<path d={d} />
+				))}
+			</svg>
+		</button>
+	</Tooltip>
+);
+
 const Card: Component<CardProps> = (props) => {
 	const handleEditClick = (e: MouseEvent) => {
 		e.stopPropagation();
@@ -74,74 +109,30 @@ const Card: Component<CardProps> = (props) => {
 			</div>
 
 			<div class={styles.cardFabs}>
-				<Tooltip label="打开">
-					<button
-						type="button"
-						class={styles.cardFab}
-						aria-label="打开"
-						onClick={(e) => {
-							e.stopPropagation();
-							props.onClick?.(props.id);
-						}}
-					>
-						<svg
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							aria-hidden="true"
-						>
-							<path d="M7 17 17 7" />
-							<path d="M8 7h9v9" />
-						</svg>
-					</button>
-				</Tooltip>
-				<Tooltip label="编辑">
-					<button
-						type="button"
-						class={styles.cardFab}
-						aria-label="编辑"
-						onClick={handleEditClick}
-					>
-						<svg
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							aria-hidden="true"
-						>
-							<path d="M12 20h9" />
-							<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-						</svg>
-					</button>
-				</Tooltip>
-				<Tooltip label="删除">
-					<button
-						type="button"
-						classList={{ [styles.cardFab]: true, [styles.cardFabDanger]: true }}
-						aria-label="删除"
-						onClick={handleDeleteClick}
-						disabled={props.isDeleting}
-					>
-						<svg
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							aria-hidden="true"
-						>
-							<path d="M3 6h18" />
-							<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-							<path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-						</svg>
-					</button>
-				</Tooltip>
+				<CardFabButton
+					label="打开"
+					paths={["M7 17 17 7", "M8 7h9v9"]}
+					onClick={(e) => {
+						e.stopPropagation();
+						props.onClick?.(props.id);
+					}}
+				/>
+				<CardFabButton
+					label="编辑"
+					paths={["M12 20h9", "M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"]}
+					onClick={handleEditClick}
+				/>
+				<CardFabButton
+					label="删除"
+					paths={[
+						"M3 6h18",
+						"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6",
+						"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2",
+					]}
+					danger
+					onClick={handleDeleteClick}
+					disabled={props.isDeleting}
+				/>
 			</div>
 		</div>
 	);

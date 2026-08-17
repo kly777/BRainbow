@@ -1,7 +1,7 @@
 import { Tooltip } from "@components/ui";
 import { fmtFull, fmtLocal } from "@lib/utils";
 import type { Task, TimeWindow } from "@modules/task";
-import { createSignal, For, Show } from "solid-js";
+import { type Component, createSignal, For, Show } from "solid-js";
 import styles from "./TaskList.module.css";
 
 const TaskStatus = {
@@ -22,6 +22,39 @@ interface TaskItemProps {
 	plannedWindows?: TimeWindow[];
 }
 
+const TaskTitle: Component<{ title: string; isSubTask: boolean }> = (props) => (
+	<h3 class={styles.taskTitle}>
+		{props.title}
+		<Show when={props.isSubTask}>
+			<span class={styles.subTaskBadge}>子任务</span>
+		</Show>
+	</h3>
+);
+
+const DateBadge: Component<{ createdAt?: string }> = (props) => (
+	<Show when={props.createdAt}>
+		<span class={styles.dateBadge}>📅 {fmtFull(props.createdAt || "")}</span>
+	</Show>
+);
+
+const TimeWindowChips: Component<{
+	windows?: TimeWindow[];
+	title: string;
+	emoji: string;
+}> = (props) => (
+	<Show when={props.windows && props.windows.length > 0}>
+		<div class={styles.timeWindowChips}>
+			<For each={props.windows}>
+				{(tw) => (
+					<span class={styles.timeWindowChip} title={props.title}>
+						{props.emoji} {fmtLocal(tw.start_time)}
+					</span>
+				)}
+			</For>
+		</div>
+	</Show>
+);
+
 function TaskItem(props: TaskItemProps) {
 	const [showSubTaskInput, setShowSubTaskInput] = createSignal(false);
 	const [subTaskTitle, setSubTaskTitle] = createSignal("");
@@ -30,46 +63,26 @@ function TaskItem(props: TaskItemProps) {
 		<div class={styles.taskItem}>
 			<div class={styles.taskRow}>
 				<div class={styles.taskMain}>
-					<h3 class={styles.taskTitle}>
-						{props.task.title}
-						<Show when={props.task.parent_task_id}>
-							<span class={styles.subTaskBadge}>子任务</span>
-						</Show>
-					</h3>
+					<TaskTitle
+						title={props.task.title}
+						isSubTask={!!props.task.parent_task_id}
+					/>
 					<Show when={props.task.description}>
 						<p class={styles.taskDescription}>{props.task.description}</p>
 					</Show>
 					<div class={styles.taskMeta}>
-						<Show when={props.task.created_at}>
-							<span class={styles.dateBadge}>
-								📅 {fmtFull(props.task.created_at || "")}
-							</span>
-						</Show>
+						<DateBadge createdAt={props.task.created_at} />
 					</div>
-					<Show
-						when={props.feasibleWindows && props.feasibleWindows.length > 0}
-					>
-						<div class={styles.timeWindowChips}>
-							<For each={props.feasibleWindows}>
-								{(tw) => (
-									<span class={styles.timeWindowChip} title="可进行">
-										🟢 {fmtLocal(tw.start_time)}
-									</span>
-								)}
-							</For>
-						</div>
-					</Show>
-					<Show when={props.plannedWindows && props.plannedWindows.length > 0}>
-						<div class={styles.timeWindowChips}>
-							<For each={props.plannedWindows}>
-								{(tw) => (
-									<span class={styles.timeWindowChip} title="计划">
-										🔵 {fmtLocal(tw.start_time)}
-									</span>
-								)}
-							</For>
-						</div>
-					</Show>
+					<TimeWindowChips
+						windows={props.feasibleWindows}
+						title="可进行"
+						emoji="🟢"
+					/>
+					<TimeWindowChips
+						windows={props.plannedWindows}
+						title="计划"
+						emoji="🔵"
+					/>
 				</div>
 				<div class={styles.taskActions}>
 					<select

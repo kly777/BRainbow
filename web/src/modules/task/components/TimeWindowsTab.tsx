@@ -2,7 +2,7 @@ import { getErrorMessage } from "@lib/api";
 import { fmtLocal, notifyError, tryAsync } from "@lib/utils";
 import type { CreateTimeWindowRequest, Task, TimeWindow } from "@modules/task";
 import { createTimeWindowE, deleteTimeWindowE } from "@modules/task";
-import { createSignal, For, Show } from "solid-js";
+import { type Component, createSignal, For, Show } from "solid-js";
 import styles from "./EditTaskModal.module.css";
 
 interface TimeWindowsTabProps {
@@ -21,6 +21,39 @@ const presetTimeSlots = [
 	{ label: "明天 9-11", startT: "09:00", endT: "11:00", dayOffset: 1 },
 	{ label: "明天 14-16", startT: "14:00", endT: "16:00", dayOffset: 1 },
 ];
+
+const TimeWindowTypeSelect: Component<{
+	value: "feasible" | "planned";
+	onChange: (value: "feasible" | "planned") => void;
+}> = (props) => (
+	<select
+		id="tw-type"
+		value={props.value}
+		onChange={(e) =>
+			props.onChange(e.currentTarget.value as "feasible" | "planned")
+		}
+		class={styles.fieldInput}
+	>
+		<option value="feasible">🟢 可进行</option>
+		<option value="planned">🔵 计划</option>
+	</select>
+);
+
+const TimeWindowItem: Component<{
+	tw: TimeWindow;
+	marker: string;
+	onDelete: () => void;
+}> = (props) => (
+	<div class={styles.timeItem}>
+		<span class={styles.timeItemText}>
+			{props.marker} {fmtLocal(props.tw.start_time)} ~{" "}
+			{fmtLocal(props.tw.end_time)}
+		</span>
+		<button type="button" onClick={props.onDelete} class={styles.timeDelete}>
+			×
+		</button>
+	</div>
+);
 
 export default function TimeWindowsTab(props: TimeWindowsTabProps) {
 	const [newStartDate, setNewStartDate] = createSignal("");
@@ -121,19 +154,10 @@ export default function TimeWindowsTab(props: TimeWindowsTabProps) {
 						<label class={styles.fieldLabel} for="tw-type">
 							类型
 						</label>
-						<select
-							id="tw-type"
+						<TimeWindowTypeSelect
 							value={newWindowType()}
-							onChange={(e) =>
-								setNewWindowType(
-									e.currentTarget.value as "feasible" | "planned",
-								)
-							}
-							class={styles.fieldInput}
-						>
-							<option value="feasible">🟢 可进行</option>
-							<option value="planned">🔵 计划</option>
-						</select>
+							onChange={setNewWindowType}
+						/>
 					</div>
 				</div>
 				<div class={styles.fieldRow}>
@@ -213,18 +237,11 @@ export default function TimeWindowsTab(props: TimeWindowsTabProps) {
 				<div class={styles.timeList}>
 					<For each={props.feasibleWindows()}>
 						{(tw) => (
-							<div class={styles.timeItem}>
-								<span class={styles.timeItemText}>
-									🟢 {fmtLocal(tw.start_time)} ~ {fmtLocal(tw.end_time)}
-								</span>
-								<button
-									type="button"
-									onClick={() => handleDelete(tw.id, "feasible")}
-									class={styles.timeDelete}
-								>
-									×
-								</button>
-							</div>
+							<TimeWindowItem
+								tw={tw}
+								marker="🟢"
+								onDelete={() => handleDelete(tw.id, "feasible")}
+							/>
 						)}
 					</For>
 				</div>
@@ -242,18 +259,11 @@ export default function TimeWindowsTab(props: TimeWindowsTabProps) {
 				<div class={styles.timeList}>
 					<For each={props.plannedWindows()}>
 						{(tw) => (
-							<div class={styles.timeItem}>
-								<span class={styles.timeItemText}>
-									🔵 {fmtLocal(tw.start_time)} ~ {fmtLocal(tw.end_time)}
-								</span>
-								<button
-									type="button"
-									onClick={() => handleDelete(tw.id, "planned")}
-									class={styles.timeDelete}
-								>
-									×
-								</button>
-							</div>
+							<TimeWindowItem
+								tw={tw}
+								marker="🔵"
+								onDelete={() => handleDelete(tw.id, "planned")}
+							/>
 						)}
 					</For>
 				</div>

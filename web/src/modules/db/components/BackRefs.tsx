@@ -9,6 +9,53 @@ interface BackRefsProps {
 	onJump: (targetTable: string, refCol: string, value: string) => void;
 }
 
+type BackRefGroups = Awaited<ReturnType<typeof getBackRefsE>>;
+type BackRefGroupItem = BackRefGroups[number];
+type BackRefRowItem = BackRefGroupItem["rows"][number];
+
+interface BackRefGroupProps {
+	group: BackRefGroupItem;
+	onJump: BackRefsProps["onJump"];
+}
+
+interface BackRefRowProps {
+	group: BackRefGroupItem;
+	row: BackRefRowItem;
+	onJump: BackRefsProps["onJump"];
+}
+
+const BackRefRow: Component<BackRefRowProps> = (props) => (
+	<li>
+		<button
+			type="button"
+			class={styles.backrefItem}
+			title={`跳转到 ${props.group.source_table} 第 ${props.row.key} 行`}
+			onClick={() =>
+				props.onJump(props.group.source_table, "id", String(props.row.key))
+			}
+		>
+			<span class={styles.backrefKey}>#{props.row.key}</span>
+			<span class={styles.backrefSummary}>{props.row.summary}</span>
+		</button>
+	</li>
+);
+
+const BackRefGroup: Component<BackRefGroupProps> = (props) => (
+	<section class={styles.backrefGroup}>
+		<h4 class={styles.backrefGroupTitle}>
+			{props.group.source_table} · {props.group.column}（{props.group.total}{" "}
+			行）
+		</h4>
+		<ul class={styles.backrefList}>
+			<For each={props.group.rows}>
+				{(row) => (
+					<BackRefRow group={props.group} row={row} onJump={props.onJump} />
+				)}
+			</For>
+		</ul>
+	</section>
+);
+
 const BackRefs: Component<BackRefsProps> = (props) => {
 	const [backrefs] = createResource(
 		() => props.rowKey,
@@ -34,38 +81,7 @@ const BackRefs: Component<BackRefsProps> = (props) => {
 					fallback={<div class={styles.backrefEmpty}>没有其他表引用这一行</div>}
 				>
 					<For each={backrefs() ?? []}>
-						{(group) => (
-							<section class={styles.backrefGroup}>
-								<h4 class={styles.backrefGroupTitle}>
-									{group.source_table} · {group.column}（{group.total} 行）
-								</h4>
-								<ul class={styles.backrefList}>
-									<For each={group.rows}>
-										{(row) => (
-											<li>
-												<button
-													type="button"
-													class={styles.backrefItem}
-													title={`跳转到 ${group.source_table} 第 ${row.key} 行`}
-													onClick={() =>
-														props.onJump(
-															group.source_table,
-															"id",
-															String(row.key),
-														)
-													}
-												>
-													<span class={styles.backrefKey}>#{row.key}</span>
-													<span class={styles.backrefSummary}>
-														{row.summary}
-													</span>
-												</button>
-											</li>
-										)}
-									</For>
-								</ul>
-							</section>
-						)}
+						{(group) => <BackRefGroup group={group} onJump={props.onJump} />}
 					</For>
 				</Show>
 			</Show>

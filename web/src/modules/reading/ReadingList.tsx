@@ -4,8 +4,57 @@ import { fmtLocal, notifyError, tryAsync } from "@lib/utils";
 import type { ArticleSummary } from "@modules/reading";
 import { listArticles, uploadArticle } from "@modules/reading";
 import { A } from "@solidjs/router";
-import { createResource, createSignal, For } from "solid-js";
+import { type Component, createResource, createSignal, For } from "solid-js";
 import styles from "./ReadingList.module.css";
+
+const ArticleCard: Component<{ article: ArticleSummary; first: boolean }> = (
+	props,
+) => (
+	<A
+		href={fillPath(PATHS.readingDetail, props.article.id)}
+		class={styles.card}
+		classList={{
+			[styles.recommendedCard]: props.first,
+		}}
+		data-known={
+			props.article.known_ratio >= 0.8
+				? "high"
+				: props.article.known_ratio >= 0.5
+					? "mid"
+					: "low"
+		}
+	>
+		<div class={styles.cardTitleRow}>
+			<div class={styles.cardTitle}>{props.article.title}</div>
+			{props.first && <span class={styles.recommendedTag}>推荐先读</span>}
+		</div>
+		<div class={styles.cardMeta}>
+			<span>{props.article.word_count} 词</span>
+			<span
+				class={styles.ratio}
+				data-known={
+					props.article.known_ratio >= 0.8
+						? "high"
+						: props.article.known_ratio >= 0.5
+							? "mid"
+							: "low"
+				}
+			>
+				{(props.article.known_ratio * 100).toFixed(0)}% 认识
+			</span>
+			<span class={styles.unknownCount}>
+				{props.article.unknown_word_count} 个不认识
+			</span>
+			<span class={styles.createdAt}>{fmtLocal(props.article.created_at)}</span>
+		</div>
+		<div class={styles.barOuter}>
+			<div
+				class={styles.barInner}
+				style={{ width: `${(props.article.known_ratio * 100).toFixed(0)}%` }}
+			/>
+		</div>
+	</A>
+);
 
 export default function ReadingList() {
 	const [articles, { refetch }] = createResource(listArticles);
@@ -114,54 +163,7 @@ export default function ReadingList() {
 					<div class={styles.list}>
 						<For each={items}>
 							{(a: ArticleSummary, i) => (
-								<A
-									href={fillPath(PATHS.readingDetail, a.id)}
-									class={styles.card}
-									classList={{
-										[styles.recommendedCard]: i() === 0,
-									}}
-									data-known={
-										a.known_ratio >= 0.8
-											? "high"
-											: a.known_ratio >= 0.5
-												? "mid"
-												: "low"
-									}
-								>
-									<div class={styles.cardTitleRow}>
-										<div class={styles.cardTitle}>{a.title}</div>
-										{i() === 0 && (
-											<span class={styles.recommendedTag}>推荐先读</span>
-										)}
-									</div>
-									<div class={styles.cardMeta}>
-										<span>{a.word_count} 词</span>
-										<span
-											class={styles.ratio}
-											data-known={
-												a.known_ratio >= 0.8
-													? "high"
-													: a.known_ratio >= 0.5
-														? "mid"
-														: "low"
-											}
-										>
-											{(a.known_ratio * 100).toFixed(0)}% 认识
-										</span>
-										<span class={styles.unknownCount}>
-											{a.unknown_word_count} 个不认识
-										</span>
-										<span class={styles.createdAt}>
-											{fmtLocal(a.created_at)}
-										</span>
-									</div>
-									<div class={styles.barOuter}>
-										<div
-											class={styles.barInner}
-											style={{ width: `${(a.known_ratio * 100).toFixed(0)}%` }}
-										/>
-									</div>
-								</A>
+								<ArticleCard article={a} first={i() === 0} />
 							)}
 						</For>
 					</div>

@@ -51,58 +51,7 @@ export default function MemAdd() {
 			<div class={styles.content}>
 				<Show when={m.mode() === "single"}>
 					{/* ── 单条模式：折痕卡片 ── */}
-					<div class={styles.cardWrap}>
-						<div class={styles.card}>
-							{/* 正面：线索 */}
-							<div class={styles.face}>
-								<div class={styles.faceTab}>
-									<span class={styles.faceTabText}>线索</span>
-									<span class={styles.faceTabNo}>正面</span>
-								</div>
-								<div class={styles.faceBody}>
-									<MarkdownEditor
-										id="add-cue"
-										class={styles.textarea}
-										placeholder="例如：质能方程 E=mc²"
-										value={m.cue()}
-										onInput={m.setCue}
-										rows={4}
-									/>
-								</div>
-							</div>
-
-							{/* 折痕 */}
-							<div class={styles.fold}>
-								<span class={styles.foldMark} />
-							</div>
-
-							{/* 背面：答案 */}
-							<div class={styles.face}>
-								<div class={styles.faceTab}>
-									<span class={styles.faceTabText}>答案</span>
-									<span class={styles.faceTabNo}>背面</span>
-								</div>
-								<div class={styles.faceBody}>
-									<MarkdownEditor
-										id="add-target"
-										class={styles.textarea}
-										placeholder="例如：能量等于质量乘以光速的平方"
-										value={m.target()}
-										onInput={m.setTarget}
-										rows={4}
-									/>
-								</div>
-							</div>
-						</div>
-
-						<ImportActions
-							onCancel={() => m.navigate(PATHS.memory)}
-							onSubmit={m.handleCreate}
-							loading={m.creating()}
-							disabled={!m.cue().trim() || !m.target().trim()}
-							submitLabel="创建"
-						/>
-					</div>
+					<SingleCardView m={m} />
 				</Show>
 
 				<Show when={m.mode() === "paste"}>
@@ -113,6 +62,66 @@ export default function MemAdd() {
 					<FileView m={m} />
 				</Show>
 			</div>
+		</div>
+	);
+}
+
+// ── 单条模式：折痕卡片 ──
+
+function SingleCardView(props: { m: ReturnType<typeof useMemAdd> }) {
+	const m = props.m;
+	return (
+		<div class={styles.cardWrap}>
+			<div class={styles.card}>
+				{/* 正面：线索 */}
+				<div class={styles.face}>
+					<div class={styles.faceTab}>
+						<span class={styles.faceTabText}>线索</span>
+						<span class={styles.faceTabNo}>正面</span>
+					</div>
+					<div class={styles.faceBody}>
+						<MarkdownEditor
+							id="add-cue"
+							class={styles.textarea}
+							placeholder="例如：质能方程 E=mc²"
+							value={m.cue()}
+							onInput={m.setCue}
+							rows={4}
+						/>
+					</div>
+				</div>
+
+				{/* 折痕 */}
+				<div class={styles.fold}>
+					<span class={styles.foldMark} />
+				</div>
+
+				{/* 背面：答案 */}
+				<div class={styles.face}>
+					<div class={styles.faceTab}>
+						<span class={styles.faceTabText}>答案</span>
+						<span class={styles.faceTabNo}>背面</span>
+					</div>
+					<div class={styles.faceBody}>
+						<MarkdownEditor
+							id="add-target"
+							class={styles.textarea}
+							placeholder="例如：能量等于质量乘以光速的平方"
+							value={m.target()}
+							onInput={m.setTarget}
+							rows={4}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<ImportActions
+				onCancel={() => m.navigate(PATHS.memory)}
+				onSubmit={m.handleCreate}
+				loading={m.creating()}
+				disabled={!m.cue().trim() || !m.target().trim()}
+				submitLabel="创建"
+			/>
 		</div>
 	);
 }

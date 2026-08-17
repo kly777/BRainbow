@@ -3,7 +3,7 @@
 import { Markdown as MarkdownRenderer } from "@components/ui";
 import { copyTextWithToast } from "@lib/utils";
 import type { ChatNode } from "@modules/chat";
-import { createSignal, For, Show } from "solid-js";
+import { type Component, createSignal, For, Show } from "solid-js";
 import styles from "../ChatMemPage.module.css";
 import type { useChatMem } from "../hooks/useChatMem.ts";
 import { BranchBar } from "./BranchBar.tsx";
@@ -13,6 +13,26 @@ import { ThinkingBlock } from "./ThinkingBlock.tsx";
 function copyNode(node: ChatNode) {
 	void copyTextWithToast(node.content);
 }
+
+type MemChat = ReturnType<typeof useChatMem>;
+type ParsedCard = NonNullable<ReturnType<MemChat["parseCards"]>>[number];
+
+const CardRow: Component<{
+	c: MemChat;
+	node: ChatNode;
+	card: ParsedCard;
+	index: () => number;
+}> = (props) => (
+	<label class={styles.cardRow}>
+		<input
+			type="checkbox"
+			checked={props.c.isCardSelected(props.node.id, props.index())}
+			onChange={() => props.c.toggleCard(props.node.id, props.index())}
+		/>
+		<span class={styles.cardCue}>{props.card.cue}</span>
+		<span class={styles.cardTarget}>{props.card.target}</span>
+	</label>
+);
 
 export function MessageRow(props: {
 	c: ReturnType<typeof useChatMem>;
@@ -121,17 +141,7 @@ export function MessageRow(props: {
 							<pre class={styles.rawBox}>{node.content}</pre>
 						</Show>
 						<For each={parsed()}>
-							{(card, i) => (
-								<label class={styles.cardRow}>
-									<input
-										type="checkbox"
-										checked={c.isCardSelected(node.id, i())}
-										onChange={() => c.toggleCard(node.id, i())}
-									/>
-									<span class={styles.cardCue}>{card.cue}</span>
-									<span class={styles.cardTarget}>{card.target}</span>
-								</label>
-							)}
+							{(card, i) => <CardRow c={c} node={node} card={card} index={i} />}
 						</For>
 					</div>
 				)}

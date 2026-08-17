@@ -20,6 +20,48 @@ interface TaskListProps {
 	onAddSubTask?: (parentId: number, title: string) => Promise<void>;
 }
 
+interface TaskStatusSectionProps {
+	tasks: Task[];
+	title: string;
+	statusColorClass: string;
+	childrenMap: Map<number, Task[]>;
+	onStatusChange: (taskId: number, status: string) => void;
+	onDelete: (taskId: number) => void;
+	onAddSubTask?: (parentId: number, title: string) => Promise<void>;
+	onEdit: (task: Task) => void;
+}
+
+function TaskStatusSection(props: TaskStatusSectionProps) {
+	return (
+		<Show when={props.tasks.length > 0}>
+			<div class={styles.statusSection}>
+				<h2 class={styles.statusTitle}>
+					<span
+						class={`${styles.statusIndicator} ${props.statusColorClass}`}
+					></span>
+					{`${props.title} (${props.tasks.length})`}
+				</h2>
+				<div class={styles.taskList}>
+					<For each={props.tasks}>
+						{(task) => (
+							<TaskItem
+								task={task}
+								onStatusChange={props.onStatusChange}
+								onDelete={props.onDelete}
+								onEdit={() => props.onEdit(task)}
+								children={props.childrenMap.get(task.id) || []}
+								onAddSubTask={props.onAddSubTask}
+								feasibleWindows={[]}
+								plannedWindows={[]}
+							/>
+						)}
+					</For>
+				</div>
+			</div>
+		</Show>
+	);
+}
+
 export default function TaskList(props: TaskListProps) {
 	const [editingTask, setEditingTask] = createSignal<Task | null>(null);
 	const [showEditModal, setShowEditModal] = createSignal(false);
@@ -70,133 +112,61 @@ export default function TaskList(props: TaskListProps) {
 
 	return (
 		<div class={styles.taskListPanel}>
-			<Show when={groupedTasks().backlog.length > 0}>
-				<div class={styles.statusSection}>
-					<h2 class={styles.statusTitle}>
-						<span
-							class={`${styles.statusIndicator} ${getStatusColorClass(
-								TaskStatus.BACKLOG,
-							)}`}
-						></span>
-						待办列表 ({groupedTasks().backlog.length})
-					</h2>
-					<div class={styles.taskList}>
-						<For each={groupedTasks().backlog}>
-							{(task) => (
-								<TaskItem
-									task={task}
-									onStatusChange={props.onStatusChange}
-									onDelete={props.onDelete}
-									onEdit={() => {
-										setEditingTask(task);
-										setShowEditModal(true);
-									}}
-									children={childrenMap().get(task.id) || []}
-									onAddSubTask={props.onAddSubTask}
-									feasibleWindows={[]}
-									plannedWindows={[]}
-								/>
-							)}
-						</For>
-					</div>
-				</div>
-			</Show>
+			<TaskStatusSection
+				tasks={groupedTasks().backlog}
+				title="待办列表"
+				statusColorClass={getStatusColorClass(TaskStatus.BACKLOG)}
+				childrenMap={childrenMap()}
+				onStatusChange={props.onStatusChange}
+				onDelete={props.onDelete}
+				onAddSubTask={props.onAddSubTask}
+				onEdit={(task) => {
+					setEditingTask(task);
+					setShowEditModal(true);
+				}}
+			/>
 
-			<Show when={groupedTasks().active.length > 0}>
-				<div class={styles.statusSection}>
-					<h2 class={styles.statusTitle}>
-						<span
-							class={`${styles.statusIndicator} ${getStatusColorClass(
-								TaskStatus.ACTIVE,
-							)}`}
-						></span>
-						进行中 ({groupedTasks().active.length})
-					</h2>
-					<div class={styles.taskList}>
-						<For each={groupedTasks().active}>
-							{(task) => (
-								<TaskItem
-									task={task}
-									onStatusChange={props.onStatusChange}
-									onDelete={props.onDelete}
-									onEdit={() => {
-										setEditingTask(task);
-										setShowEditModal(true);
-									}}
-									children={childrenMap().get(task.id) || []}
-									onAddSubTask={props.onAddSubTask}
-									feasibleWindows={[]}
-									plannedWindows={[]}
-								/>
-							)}
-						</For>
-					</div>
-				</div>
-			</Show>
+			<TaskStatusSection
+				tasks={groupedTasks().active}
+				title="进行中"
+				statusColorClass={getStatusColorClass(TaskStatus.ACTIVE)}
+				childrenMap={childrenMap()}
+				onStatusChange={props.onStatusChange}
+				onDelete={props.onDelete}
+				onAddSubTask={props.onAddSubTask}
+				onEdit={(task) => {
+					setEditingTask(task);
+					setShowEditModal(true);
+				}}
+			/>
 
-			<Show when={groupedTasks().completed.length > 0}>
-				<div class={styles.statusSection}>
-					<h2 class={styles.statusTitle}>
-						<span
-							class={`${styles.statusIndicator} ${getStatusColorClass(
-								TaskStatus.COMPLETED,
-							)}`}
-						></span>
-						已完成 ({groupedTasks().completed.length})
-					</h2>
-					<div class={styles.taskList}>
-						<For each={groupedTasks().completed}>
-							{(task) => (
-								<TaskItem
-									task={task}
-									onStatusChange={props.onStatusChange}
-									onDelete={props.onDelete}
-									onEdit={() => {
-										setEditingTask(task);
-										setShowEditModal(true);
-									}}
-									children={childrenMap().get(task.id) || []}
-									onAddSubTask={props.onAddSubTask}
-									feasibleWindows={[]}
-									plannedWindows={[]}
-								/>
-							)}
-						</For>
-					</div>
-				</div>
-			</Show>
+			<TaskStatusSection
+				tasks={groupedTasks().completed}
+				title="已完成"
+				statusColorClass={getStatusColorClass(TaskStatus.COMPLETED)}
+				childrenMap={childrenMap()}
+				onStatusChange={props.onStatusChange}
+				onDelete={props.onDelete}
+				onAddSubTask={props.onAddSubTask}
+				onEdit={(task) => {
+					setEditingTask(task);
+					setShowEditModal(true);
+				}}
+			/>
 
-			<Show when={groupedTasks().archived.length > 0}>
-				<div class={styles.statusSection}>
-					<h2 class={styles.statusTitle}>
-						<span
-							class={`${styles.statusIndicator} ${getStatusColorClass(
-								TaskStatus.ARCHIVED,
-							)}`}
-						></span>
-						已归档 ({groupedTasks().archived.length})
-					</h2>
-					<div class={styles.taskList}>
-						<For each={groupedTasks().archived}>
-							{(task) => (
-								<TaskItem
-									task={task}
-									onStatusChange={props.onStatusChange}
-									onDelete={props.onDelete}
-									onEdit={() => {
-										setEditingTask(task);
-										setShowEditModal(true);
-									}}
-									children={childrenMap().get(task.id) || []}
-									onAddSubTask={props.onAddSubTask}
-									feasibleWindows={[]}
-									plannedWindows={[]}
-								/>
-							)}
-						</For>
-					</div>
-				</div>
-			</Show>
+			<TaskStatusSection
+				tasks={groupedTasks().archived}
+				title="已归档"
+				statusColorClass={getStatusColorClass(TaskStatus.ARCHIVED)}
+				childrenMap={childrenMap()}
+				onStatusChange={props.onStatusChange}
+				onDelete={props.onDelete}
+				onAddSubTask={props.onAddSubTask}
+				onEdit={(task) => {
+					setEditingTask(task);
+					setShowEditModal(true);
+				}}
+			/>
 
 			{/* 编辑任务模态框 */}
 			<EditTaskModal

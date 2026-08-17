@@ -28,6 +28,129 @@ function formatSize(bytes: number): string {
 
 const VALID_TYPES = ["", "image", "video", "audio"];
 
+const MediaPreview: Component<{ item: MediaItem }> = (props) => (
+	<div class={styles.preview}>
+		<Show when={props.item.media_type === "image"}>
+			<a
+				class={styles.previewLink}
+				href={props.item.url}
+				target="_blank"
+				rel="noopener noreferrer"
+			>
+				<img
+					src={props.item.url}
+					alt={props.item.original_name}
+					class={styles.thumb}
+					loading="lazy"
+				/>
+			</a>
+		</Show>
+		<Show when={props.item.media_type !== "image"}>
+			<span class={styles.iconPreview}>
+				{props.item.media_type === "video" ? "🎬" : "🎵"}
+			</span>
+		</Show>
+	</div>
+);
+
+const MediaCardView: Component<{
+	item: MediaItem;
+	onStartRename: (item: MediaItem) => void;
+	onDelete: (stored_id: string) => void;
+}> = (props) => (
+	<>
+		<div class={styles.info}>
+			<p class={styles.name} title={props.item.original_name}>
+				{props.item.original_name}
+			</p>
+			<p class={styles.meta}>
+				{props.item.media_type} · {formatSize(props.item.size_bytes)}
+			</p>
+		</div>
+		<div class={styles.actions}>
+			<Button
+				variant="secondary"
+				size="sm"
+				onClick={() => props.onStartRename(props.item)}
+			>
+				重命名
+			</Button>
+			<Button
+				variant="danger"
+				size="sm"
+				onClick={() => props.onDelete(props.item.stored_id)}
+			>
+				删除
+			</Button>
+		</div>
+	</>
+);
+
+const MediaCardEdit: Component<{
+	item: MediaItem;
+	editName: string;
+	onEditName: (value: string) => void;
+	onRename: () => void;
+	onCancelEdit: () => void;
+}> = (props) => (
+	<>
+		<div class={styles.info}>
+			<input
+				type="text"
+				value={props.editName}
+				onInput={(e) => props.onEditName(e.currentTarget.value)}
+				class={styles.editInput}
+				onKeyPress={(e) => e.key === "Enter" && props.onRename()}
+				aria-label="媒体名称"
+			/>
+			<p class={styles.meta}>
+				{props.item.media_type} · {formatSize(props.item.size_bytes)}
+			</p>
+		</div>
+		<div class={styles.actions}>
+			<Button variant="primary" size="sm" onClick={props.onRename}>
+				保存
+			</Button>
+			<Button variant="secondary" size="sm" onClick={props.onCancelEdit}>
+				取消
+			</Button>
+		</div>
+	</>
+);
+
+const MediaCard: Component<{
+	item: MediaItem;
+	editing: boolean;
+	editName: string;
+	onStartRename: (item: MediaItem) => void;
+	onDelete: (stored_id: string) => void;
+	onRename: () => void;
+	onEditName: (value: string) => void;
+	onCancelEdit: () => void;
+}> = (props) => (
+	<div class={styles.card}>
+		<MediaPreview item={props.item} />
+		<Show
+			when={props.editing}
+			fallback={
+				<MediaCardView
+					item={props.item}
+					onStartRename={props.onStartRename}
+					onDelete={props.onDelete}
+				/>
+			}
+		>
+			<MediaCardEdit
+				item={props.item}
+				editName={props.editName}
+				onEditName={props.onEditName}
+				onRename={props.onRename}
+				onCancelEdit={props.onCancelEdit}
+			/>
+		</Show>
+	</div>
+);
+
 const MediaListPage: Component = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const mediaType = () => {
@@ -121,91 +244,16 @@ const MediaListPage: Component = () => {
 					<div class={styles.grid}>
 						<For each={data}>
 							{(item) => (
-								<div class={styles.card}>
-									<div class={styles.preview}>
-										<Show when={item.media_type === "image"}>
-											<a
-												class={styles.previewLink}
-												href={item.url}
-												target="_blank"
-												rel="noopener noreferrer"
-											>
-												<img
-													src={item.url}
-													alt={item.original_name}
-													class={styles.thumb}
-													loading="lazy"
-												/>
-											</a>
-										</Show>
-										<Show when={item.media_type !== "image"}>
-											<span class={styles.iconPreview}>
-												{item.media_type === "video" ? "🎬" : "🎵"}
-											</span>
-										</Show>
-									</div>
-									<Show
-										when={editingId() === item.stored_id}
-										fallback={
-											<>
-												<div class={styles.info}>
-													<p class={styles.name} title={item.original_name}>
-														{item.original_name}
-													</p>
-													<p class={styles.meta}>
-														{item.media_type} · {formatSize(item.size_bytes)}
-													</p>
-												</div>
-												<div class={styles.actions}>
-													<Button
-														variant="secondary"
-														size="sm"
-														onClick={() => startRename(item)}
-													>
-														重命名
-													</Button>
-													<Button
-														variant="danger"
-														size="sm"
-														onClick={() => handleDelete(item.stored_id)}
-													>
-														删除
-													</Button>
-												</div>
-											</>
-										}
-									>
-										<div class={styles.info}>
-											<input
-												type="text"
-												value={editName()}
-												onInput={(e) => setEditName(e.currentTarget.value)}
-												class={styles.editInput}
-												onKeyPress={(e) => e.key === "Enter" && handleRename()}
-												aria-label="媒体名称"
-											/>
-											<p class={styles.meta}>
-												{item.media_type} · {formatSize(item.size_bytes)}
-											</p>
-										</div>
-										<div class={styles.actions}>
-											<Button
-												variant="primary"
-												size="sm"
-												onClick={handleRename}
-											>
-												保存
-											</Button>
-											<Button
-												variant="secondary"
-												size="sm"
-												onClick={() => setEditingId(null)}
-											>
-												取消
-											</Button>
-										</div>
-									</Show>
-								</div>
+								<MediaCard
+									item={item}
+									editing={editingId() === item.stored_id}
+									editName={editName()}
+									onStartRename={startRename}
+									onDelete={handleDelete}
+									onRename={handleRename}
+									onEditName={(value) => setEditName(value)}
+									onCancelEdit={() => setEditingId(null)}
+								/>
 							)}
 						</For>
 					</div>

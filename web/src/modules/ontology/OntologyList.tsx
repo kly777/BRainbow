@@ -19,6 +19,116 @@ import { createOntoE, deleteOntoE, getOntosE } from "./api";
 import { CreateOntoModal } from "./components/CreateOntoModal.tsx";
 import styles from "./OntologyList.module.css";
 
+type OntologyItem = Awaited<ReturnType<typeof getOntosE>>[number];
+
+const OntologyTableRow: Component<{
+	onto: OntologyItem;
+	deletingOntoId: number | null;
+	onDelete: (id: number) => void;
+}> = (props) => (
+	<tr>
+		<td>{props.onto.id}</td>
+		<td>
+			<strong>{props.onto.name}</strong>
+		</td>
+		<td class={styles.entityDescription}>
+			{props.onto.description
+				? props.onto.description.length > 80
+					? `${props.onto.description.substring(0, 80)}...`
+					: props.onto.description
+				: "-"}
+		</td>
+		<td>
+			<div class={styles.entityActions}>
+				<Button
+					variant="danger"
+					size="sm"
+					onClick={() => props.onDelete(props.onto.id)}
+					disabled={props.deletingOntoId === props.onto.id}
+				>
+					{props.deletingOntoId === props.onto.id ? "删除中..." : "删除"}
+				</Button>
+			</div>
+		</td>
+	</tr>
+);
+
+const OntologyTable: Component<{
+	data: readonly OntologyItem[];
+	deletingOntoId: number | null;
+	onDelete: (id: number) => void;
+}> = (props) => (
+	<div class={styles.entitiesList}>
+		<table class={styles.entitiesTable}>
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>名称</th>
+					<th>描述</th>
+					<th>操作</th>
+				</tr>
+			</thead>
+			<tbody>
+				<For each={props.data}>
+					{(onto) => (
+						<OntologyTableRow
+							onto={onto}
+							deletingOntoId={props.deletingOntoId}
+							onDelete={props.onDelete}
+						/>
+					)}
+				</For>
+			</tbody>
+		</table>
+	</div>
+);
+
+const OntologyCard: Component<{
+	onto: OntologyItem;
+	deletingOntoId: number | null;
+	onDelete: (id: number) => void;
+}> = (props) => (
+	<div class={styles.entityCard}>
+		<div class={styles.entityHeader}>
+			<h3 class={styles.entityName}>{props.onto.name}</h3>
+			<span class={styles.entityType}>ID: {props.onto.id}</span>
+		</div>
+
+		<div class={styles.entityDescription}>
+			<p>{props.onto.description || "暂无描述"}</p>
+		</div>
+
+		<div class={styles.entityActions}>
+			<Button
+				variant="danger"
+				size="sm"
+				onClick={() => props.onDelete(props.onto.id)}
+				disabled={props.deletingOntoId === props.onto.id}
+			>
+				{props.deletingOntoId === props.onto.id ? "删除中..." : "删除"}
+			</Button>
+		</div>
+	</div>
+);
+
+const OntologyGrid: Component<{
+	data: readonly OntologyItem[];
+	deletingOntoId: number | null;
+	onDelete: (id: number) => void;
+}> = (props) => (
+	<div class={styles.entitiesGrid}>
+		<For each={props.data}>
+			{(onto) => (
+				<OntologyCard
+					onto={onto}
+					deletingOntoId={props.deletingOntoId}
+					onDelete={props.onDelete}
+				/>
+			)}
+		</For>
+	</div>
+);
+
 const OntologyListPage: Component = () => {
 	const [ontologies, { mutate, refetch }] = createResource(async () => {
 		const result = await tryAsync(() => getOntosE());
@@ -167,80 +277,18 @@ const OntologyListPage: Component = () => {
 					<Show
 						when={viewMode() === "grid"}
 						fallback={
-							<div class={styles.entitiesList}>
-								<table class={styles.entitiesTable}>
-									<thead>
-										<tr>
-											<th>ID</th>
-											<th>名称</th>
-											<th>描述</th>
-											<th>操作</th>
-										</tr>
-									</thead>
-									<tbody>
-										<For each={filteredOntologies()}>
-											{(onto) => (
-												<tr>
-													<td>{onto.id}</td>
-													<td>
-														<strong>{onto.name}</strong>
-													</td>
-													<td class={styles.entityDescription}>
-														{onto.description
-															? onto.description.length > 80
-																? `${onto.description.substring(0, 80)}...`
-																: onto.description
-															: "-"}
-													</td>
-													<td>
-														<div class={styles.entityActions}>
-															<Button
-																variant="danger"
-																size="sm"
-																onClick={() => handleDeleteOnto(onto.id)}
-																disabled={deletingOntoId() === onto.id}
-															>
-																{deletingOntoId() === onto.id
-																	? "删除中..."
-																	: "删除"}
-															</Button>
-														</div>
-													</td>
-												</tr>
-											)}
-										</For>
-									</tbody>
-								</table>
-							</div>
+							<OntologyTable
+								data={filteredOntologies()}
+								deletingOntoId={deletingOntoId()}
+								onDelete={handleDeleteOnto}
+							/>
 						}
 					>
-						<div class={styles.entitiesGrid}>
-							<For each={filteredOntologies()}>
-								{(onto) => (
-									<div class={styles.entityCard}>
-										<div class={styles.entityHeader}>
-											<h3 class={styles.entityName}>{onto.name}</h3>
-											<span class={styles.entityType}>ID: {onto.id}</span>
-										</div>
-
-										<div class={styles.entityDescription}>
-											<p>{onto.description || "暂无描述"}</p>
-										</div>
-
-										<div class={styles.entityActions}>
-											<Button
-												variant="danger"
-												size="sm"
-												onClick={() => handleDeleteOnto(onto.id)}
-												disabled={deletingOntoId() === onto.id}
-											>
-												{deletingOntoId() === onto.id ? "删除中..." : "删除"}
-											</Button>
-										</div>
-									</div>
-								)}
-							</For>
-						</div>
+						<OntologyGrid
+							data={filteredOntologies()}
+							deletingOntoId={deletingOntoId()}
+							onDelete={handleDeleteOnto}
+						/>
 					</Show>
 				)}
 			</AsyncView>

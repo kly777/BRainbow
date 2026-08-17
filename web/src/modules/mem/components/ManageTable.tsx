@@ -3,7 +3,7 @@
 import { Badge } from "@components/ui";
 import { fmtLocal, fmtRelative } from "@lib/utils";
 import type { MemItem, TagInfo } from "@modules/mem";
-import { For, Show } from "solid-js";
+import { type Component, For, Show } from "solid-js";
 import styles from "./ManageTable.module.css";
 
 type SortField = "cue.created_at" | "difficulty" | "due_at" | "state";
@@ -34,6 +34,55 @@ interface Props {
 	onPageChange: (page: number) => void;
 }
 
+interface TableHeadProps {
+	allSelected: boolean;
+	sortField: SortField;
+	sortDir: SortDir;
+	onToggleSort: (field: SortField) => void;
+	onToggleAll: () => void;
+}
+
+interface TableBodyProps {
+	mems: MemItem[];
+	batchIds: Set<number>;
+	detailId: number | null;
+	memTags: Map<number, TagInfo[]>;
+	onToggleBatch: (id: number) => void;
+	onSelectRow: (id: number) => void;
+	onDelete: (id: number) => void;
+}
+
+interface MemRowProps {
+	mem: MemItem;
+	batchIds: Set<number>;
+	detailId: number | null;
+	memTags: Map<number, TagInfo[]>;
+	onToggleBatch: (id: number) => void;
+	onSelectRow: (id: number) => void;
+	onDelete: (id: number) => void;
+}
+
+interface MemTableProps {
+	mems: MemItem[];
+	batchIds: Set<number>;
+	sortField: SortField;
+	sortDir: SortDir;
+	detailId: number | null;
+	memTags: Map<number, TagInfo[]>;
+	allSelected: boolean;
+	onToggleSort: (field: SortField) => void;
+	onToggleBatch: (id: number) => void;
+	onToggleAll: () => void;
+	onSelectRow: (id: number) => void;
+	onDelete: (id: number) => void;
+}
+
+interface PaginationProps {
+	pageMeta: PageMeta;
+	page: number;
+	onPageChange: (page: number) => void;
+}
+
 function previewText(content: string): string {
 	return content.slice(0, 50).replace(/\n/g, " ") || "（空）";
 }
@@ -50,178 +99,217 @@ function SortIcon(props: { field: SortField; active: boolean; dir: SortDir }) {
 	return <>{props.dir === "asc" ? " ▲" : " ▼"}</>;
 }
 
+const LoadingEmpty: Component = () => <div class={styles.empty}>加载中…</div>;
+
+const EmptyRow: Component = () => (
+	<tr>
+		<td class={styles.empty} colspan={9}>
+			暂无数据
+		</td>
+	</tr>
+);
+
+const TableHead: Component<TableHeadProps> = (props) => (
+	<thead>
+		<tr>
+			<th class={styles.thCb}>
+				<input
+					type="checkbox"
+					checked={props.allSelected}
+					onInput={props.onToggleAll}
+				/>
+			</th>
+			<th class={styles.th}>线索</th>
+			<th class={styles.th}>答案</th>
+			<For each={SORT_COLUMNS}>
+				{({ field, label }) => (
+					<th class={styles.thSort} onClick={() => props.onToggleSort(field)}>
+						{label}
+						<SortIcon
+							field={field}
+							active={props.sortField === field}
+							dir={props.sortDir}
+						/>
+					</th>
+				)}
+			</For>
+			<th class={styles.th}>标签</th>
+			<th class={styles.th} />
+		</tr>
+	</thead>
+);
+
+const TableBody: Component<TableBodyProps> = (props) => (
+	<tbody>
+		<Show when={props.mems.length > 0} fallback={<EmptyRow />}>
+			<For each={props.mems}>
+				{(mem) => (
+					<MemRow
+						mem={mem}
+						batchIds={props.batchIds}
+						detailId={props.detailId}
+						memTags={props.memTags}
+						onToggleBatch={props.onToggleBatch}
+						onSelectRow={props.onSelectRow}
+						onDelete={props.onDelete}
+					/>
+				)}
+			</For>
+		</Show>
+	</tbody>
+);
+
+const MemRow: Component<MemRowProps> = (props) => {
+	const tags = () => props.memTags.get(props.mem.id) ?? [];
+	return (
+		<tr class={props.detailId === props.mem.id ? styles.rowActive : styles.row}>
+			<td class={styles.tdCb}>
+				<input
+					type="checkbox"
+					checked={props.batchIds.has(props.mem.id)}
+					onInput={() => props.onToggleBatch(props.mem.id)}
+					onClick={(e) => e.stopPropagation()}
+				/>
+			</td>
+			<td class={styles.td}>
+				<button
+					type="button"
+					class={styles.cellButton}
+					onClick={() => props.onSelectRow(props.mem.id)}
+				>
+					{previewText(props.mem.cue.content)}
+				</button>
+			</td>
+			<td class={styles.td}>
+				<button
+					type="button"
+					class={styles.cellButton}
+					onClick={() => props.onSelectRow(props.mem.id)}
+				>
+					{previewText(props.mem.target.content)}
+				</button>
+			</td>
+			<td class={styles.td}>
+				<Badge
+					variant={
+						props.mem.state as
+							| "new"
+							| "learning"
+							| "review"
+							| "relearning"
+							| "suspended"
+					}
+				>
+					{props.mem.state}
+					{props.mem.leeched && " ⚠️"}
+				</Badge>
+			</td>
+			<td class={styles.tdNum}>{props.mem.difficulty.toFixed(2)}</td>
+			<td class={styles.tdDue}>{fmtRelative(props.mem.due_at)}</td>
+			<td class={styles.tdDue}>{fmtLocal(props.mem.cue.created_at)}</td>
+			<td class={styles.td}>
+				<div class={styles.cellTags}>
+					<For each={tags().slice(0, 3)}>
+						{(tag) => <span class={styles.cellTag}>{tag.name}</span>}
+					</For>
+					<Show when={tags().length > 3}>
+						<span class={styles.cellTag}>+{tags().length - 3}</span>
+					</Show>
+				</div>
+			</td>
+			<td class={styles.tdAct}>
+				<button
+					type="button"
+					class={styles.delBtn}
+					onClick={(e) => {
+						e.stopPropagation();
+						props.onDelete(props.mem.id);
+					}}
+					title="删除"
+					aria-label={`删除记忆 ${props.mem.id}`}
+				>
+					✕
+				</button>
+			</td>
+		</tr>
+	);
+};
+
+const MemTable: Component<MemTableProps> = (props) => (
+	<div class={styles.tableScroll}>
+		<table class={styles.table}>
+			<TableHead
+				allSelected={props.allSelected}
+				onToggleAll={props.onToggleAll}
+				sortField={props.sortField}
+				sortDir={props.sortDir}
+				onToggleSort={props.onToggleSort}
+			/>
+			<TableBody
+				mems={props.mems}
+				batchIds={props.batchIds}
+				detailId={props.detailId}
+				memTags={props.memTags}
+				onToggleBatch={props.onToggleBatch}
+				onSelectRow={props.onSelectRow}
+				onDelete={props.onDelete}
+			/>
+		</table>
+	</div>
+);
+
+const Pagination: Component<PaginationProps> = (props) => (
+	<Show when={props.pageMeta.total_pages > 1}>
+		<div class={styles.pagination}>
+			<button
+				type="button"
+				class={styles.pageBtn}
+				disabled={props.page <= 1}
+				onClick={() => props.onPageChange(props.page - 1)}
+			>
+				‹
+			</button>
+			<span class={styles.pageInfo}>
+				{props.pageMeta.page} / {props.pageMeta.total_pages} · 共
+				{props.pageMeta.total} 条
+			</span>
+			<button
+				type="button"
+				class={styles.pageBtn}
+				disabled={props.page >= props.pageMeta.total_pages}
+				onClick={() => props.onPageChange(props.page + 1)}
+			>
+				›
+			</button>
+		</div>
+	</Show>
+);
+
 export default function ManageTable(props: Props) {
 	return (
-		<Show
-			when={!props.loading}
-			fallback={<div class={styles.empty}>加载中…</div>}
-		>
+		<Show when={!props.loading} fallback={<LoadingEmpty />}>
 			<div class={styles.tableCard}>
-				<div class={styles.tableScroll}>
-					<table class={styles.table}>
-						<thead>
-							<tr>
-								<th class={styles.thCb}>
-									<input
-										type="checkbox"
-										checked={props.allSelected}
-										onInput={props.onToggleAll}
-									/>
-								</th>
-								<th class={styles.th}>线索</th>
-								<th class={styles.th}>答案</th>
-								<For each={SORT_COLUMNS}>
-									{({ field, label }) => (
-										<th
-											class={styles.thSort}
-											onClick={() => props.onToggleSort(field)}
-										>
-											{label}
-											<SortIcon
-												field={field}
-												active={props.sortField === field}
-												dir={props.sortDir}
-											/>
-										</th>
-									)}
-								</For>
-								<th class={styles.th}>标签</th>
-								<th class={styles.th} />
-							</tr>
-						</thead>
-						<tbody>
-							<Show
-								when={props.mems.length > 0}
-								fallback={
-									<tr>
-										<td class={styles.empty} colspan={9}>
-											暂无数据
-										</td>
-									</tr>
-								}
-							>
-								<For each={props.mems}>
-									{(mem) => {
-										const tags = () => props.memTags.get(mem.id) ?? [];
-										return (
-											<tr
-												class={
-													props.detailId === mem.id
-														? styles.rowActive
-														: styles.row
-												}
-											>
-												<td class={styles.tdCb}>
-													<input
-														type="checkbox"
-														checked={props.batchIds.has(mem.id)}
-														onInput={() => props.onToggleBatch(mem.id)}
-														onClick={(e) => e.stopPropagation()}
-													/>
-												</td>
-												<td class={styles.td}>
-													<button
-														type="button"
-														class={styles.cellButton}
-														onClick={() => props.onSelectRow(mem.id)}
-													>
-														{previewText(mem.cue.content)}
-													</button>
-												</td>
-												<td class={styles.td}>
-													<button
-														type="button"
-														class={styles.cellButton}
-														onClick={() => props.onSelectRow(mem.id)}
-													>
-														{previewText(mem.target.content)}
-													</button>
-												</td>
-												<td class={styles.td}>
-													<Badge
-														variant={
-															mem.state as
-																| "new"
-																| "learning"
-																| "review"
-																| "relearning"
-																| "suspended"
-														}
-													>
-														{mem.state}
-														{mem.leeched && " ⚠️"}
-													</Badge>
-												</td>
-												<td class={styles.tdNum}>
-													{mem.difficulty.toFixed(2)}
-												</td>
-												<td class={styles.tdDue}>{fmtRelative(mem.due_at)}</td>
-												<td class={styles.tdDue}>
-													{fmtLocal(mem.cue.created_at)}
-												</td>
-												<td class={styles.td}>
-													<div class={styles.cellTags}>
-														<For each={tags().slice(0, 3)}>
-															{(tag) => (
-																<span class={styles.cellTag}>{tag.name}</span>
-															)}
-														</For>
-														<Show when={tags().length > 3}>
-															<span class={styles.cellTag}>
-																+{tags().length - 3}
-															</span>
-														</Show>
-													</div>
-												</td>
-												<td class={styles.tdAct}>
-													<button
-														type="button"
-														class={styles.delBtn}
-														onClick={(e) => {
-															e.stopPropagation();
-															props.onDelete(mem.id);
-														}}
-														title="删除"
-														aria-label={`删除记忆 ${mem.id}`}
-													>
-														✕
-													</button>
-												</td>
-											</tr>
-										);
-									}}
-								</For>
-							</Show>
-						</tbody>
-					</table>
-				</div>
+				<MemTable
+					mems={props.mems}
+					batchIds={props.batchIds}
+					sortField={props.sortField}
+					sortDir={props.sortDir}
+					detailId={props.detailId}
+					memTags={props.memTags}
+					allSelected={props.allSelected}
+					onToggleSort={props.onToggleSort}
+					onToggleBatch={props.onToggleBatch}
+					onToggleAll={props.onToggleAll}
+					onSelectRow={props.onSelectRow}
+					onDelete={props.onDelete}
+				/>
 			</div>
-
 			{/* 分页 */}
-			<Show when={props.pageMeta.total_pages > 1}>
-				<div class={styles.pagination}>
-					<button
-						type="button"
-						class={styles.pageBtn}
-						disabled={props.page <= 1}
-						onClick={() => props.onPageChange(props.page - 1)}
-					>
-						‹
-					</button>
-					<span class={styles.pageInfo}>
-						{props.pageMeta.page} / {props.pageMeta.total_pages} · 共
-						{props.pageMeta.total} 条
-					</span>
-					<button
-						type="button"
-						class={styles.pageBtn}
-						disabled={props.page >= props.pageMeta.total_pages}
-						onClick={() => props.onPageChange(props.page + 1)}
-					>
-						›
-					</button>
-				</div>
-			</Show>
+			<Pagination
+				pageMeta={props.pageMeta}
+				page={props.page}
+				onPageChange={props.onPageChange}
+			/>
 		</Show>
 	);
 }

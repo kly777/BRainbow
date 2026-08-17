@@ -9,8 +9,295 @@ import type { UseMemReview } from "../hooks/useMemReviewTypes.ts";
 import { useSpeech } from "../hooks/useSpeech.ts";
 import styles from "./ReviewCard.module.css";
 
+type Speech = ReturnType<typeof useSpeech>;
+
 interface ReviewCardProps {
 	m: UseMemReview;
+}
+
+interface MemProps {
+	m: UseMemReview;
+}
+
+interface CardTabProps {
+	label: string;
+	no: string;
+}
+
+interface ReviewStageProps {
+	m: UseMemReview;
+	speech: Speech;
+}
+
+interface ActionRowProps {
+	m: UseMemReview;
+	goPrev: () => void;
+	goNext: () => void;
+}
+
+interface CueFaceProps {
+	m: UseMemReview;
+	speech: Speech;
+}
+
+function CardTab(props: CardTabProps) {
+	return (
+		<div class={styles.cardTab}>
+			<span class={styles.cardTabText}>{props.label}</span>
+			<span class={styles.cardTabNo}>{props.no}</span>
+		</div>
+	);
+}
+
+function DoneEmpty(props: MemProps) {
+	return (
+		<div class={styles.empty}>
+			<p class={styles.emptyTitle}>🎉 本轮学习完成！</p>
+			<Show when={props.m.upcoming() > 0}>
+				<p class={styles.emptyHint}>
+					还有 {props.m.upcoming()} 张卡在未来等待复习
+				</p>
+			</Show>
+			<Button variant="primary" size="sm" onClick={props.m.loadDue}>
+				再学一轮
+			</Button>
+		</div>
+	);
+}
+
+function EditCard(props: MemProps) {
+	return (
+		<div class={styles.cardWrap}>
+			<div class={styles.cardFlat}>
+				<div class={styles.section}>
+					<div class={styles.sectionLabel}>线索</div>
+					<MarkdownEditor
+						class={styles.editArea}
+						value={props.m.editCue()}
+						onInput={props.m.setEditCue}
+						rows={3}
+					/>
+				</div>
+				<div class={styles.divider} />
+				<div class={styles.section}>
+					<div class={styles.sectionLabel}>答案</div>
+					<MarkdownEditor
+						class={styles.editArea}
+						value={props.m.editTarget()}
+						onInput={props.m.setEditTarget}
+						rows={3}
+					/>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function CueFace(props: CueFaceProps) {
+	const { m, speech } = props;
+	return (
+		<div
+			classList={{
+				[styles.face]: true,
+				[styles.faceFill]: !m.showAnswer(),
+			}}
+		>
+			<CardTab label="线索" no={`#${m.item()?.id}`} />
+			<div class={styles.cardBody}>
+				<div class={styles.content}>
+					<MarkdownRenderer content={m.item()?.cue.content ?? ""} />
+				</div>
+			</div>
+			<div class={styles.cardTools}>
+				<button
+					type="button"
+					class={styles.toolBtn}
+					title="朗读线索"
+					onClick={() => speech.toggle(m.item()?.cue.content ?? "")}
+					disabled={!speech.supported}
+				>
+					{speech.speaking() ? "⏹" : "🔊"}
+				</button>
+				<button
+					type="button"
+					class={styles.toolBtn}
+					title="复制线索"
+					onClick={() => void copyTextWithToast(m.item()?.cue.content ?? "")}
+				>
+					📋
+				</button>
+				<button
+					type="button"
+					class={styles.toolBtn}
+					title="复制整张卡片"
+					onClick={m.handleCopyCard}
+				>
+					📋+
+				</button>
+				<button
+					type="button"
+					class={styles.toolBtn}
+					title={m.mnemonic() ? "重新生成助记" : "AI 生成助记"}
+					onClick={m.generateMnemonic}
+					disabled={m.mnemonicLoading()}
+				>
+					{m.mnemonicLoading() ? "⏳" : "🤖"}
+				</button>
+			</div>
+		</div>
+	);
+}
+
+function MnemonicBlock(props: MemProps) {
+	return (
+		<Show when={props.m.mnemonic() || props.m.mnemonicLoading()}>
+			<div class={styles.mnemonic}>
+				<div class={styles.mnemonicLabel}>💡 AI 助记</div>
+				<Show
+					when={props.m.mnemonicLoading()}
+					fallback={<MarkdownRenderer content={props.m.mnemonic() ?? ""} />}
+				>
+					<span class={styles.mnemonicLoading}>生成中…</span>
+				</Show>
+			</div>
+		</Show>
+	);
+}
+
+function AnswerFace(props: MemProps) {
+	return (
+		<div class={styles.answer}>
+			<CardTab
+				label="答案"
+				no={`#${props.m.item()?.id} · ${props.m.item()?.state}`}
+			/>
+			<div class={styles.cardBody}>
+				<div class={styles.content}>
+					<MarkdownRenderer content={props.m.item()?.target.content ?? ""} />
+				</div>
+				<MnemonicBlock m={props.m} />
+			</div>
+		</div>
+	);
+}
+
+function ActionRow(props: ActionRowProps) {
+	const { m, goPrev, goNext } = props;
+	return (
+		<Show when={!m.showAnswer()}>
+			<div class={styles.actionRow}>
+				<button
+					type="button"
+					class={styles.navBtn}
+					onClick={goPrev}
+					disabled={m.current() <= 0}
+					title="上一张 (←)"
+				>
+					‹
+				</button>
+				<Button variant="ghost" size="sm" onClick={m.bury}>
+					跳过
+				</Button>
+				<Button variant="ghost" size="sm" onClick={m.resumeSuspend}>
+					挂起
+				</Button>
+				<Show when={m.showUndo()}>
+					<Button variant="ghost" size="sm" onClick={m.undo}>
+						撤销
+					</Button>
+				</Show>
+				<Button
+					variant="primary"
+					size="sm"
+					onClick={() => m.setShowAnswer(true)}
+				>
+					显示答案
+				</Button>
+				<button
+					type="button"
+					class={styles.navBtn}
+					onClick={goNext}
+					disabled={m.current() >= m.due().length - 1}
+					title="下一张 (→)"
+				>
+					›
+				</button>
+			</div>
+		</Show>
+	);
+}
+
+function Ratings(props: MemProps) {
+	return (
+		<Show when={props.m.showAnswer()}>
+			<div class={styles.ratings}>
+				<button
+					type="button"
+					class={styles.ratingBtn}
+					classList={{ [styles.again]: true }}
+					onClick={() => props.m.rate(1)}
+				>
+					<span class={styles.ratingLabel}>忘记</span>
+					<span class={styles.ratingTime}>
+						{fmtInterval(props.m.intervals()[0])}
+					</span>
+				</button>
+				<button
+					type="button"
+					class={styles.ratingBtn}
+					classList={{ [styles.hard]: true }}
+					onClick={() => props.m.rate(2)}
+				>
+					<span class={styles.ratingLabel}>困难</span>
+					<span class={styles.ratingTime}>
+						{fmtInterval(props.m.intervals()[1])}
+					</span>
+				</button>
+				<button
+					type="button"
+					class={styles.ratingBtn}
+					classList={{ [styles.good]: true }}
+					onClick={() => props.m.rate(3)}
+				>
+					<span class={styles.ratingLabel}>良好</span>
+					<span class={styles.ratingTime}>
+						{fmtInterval(props.m.intervals()[2])}
+					</span>
+				</button>
+				<button
+					type="button"
+					class={styles.ratingBtn}
+					classList={{ [styles.easy]: true }}
+					onClick={() => props.m.rate(4)}
+				>
+					<span class={styles.ratingLabel}>简单</span>
+					<span class={styles.ratingTime}>
+						{fmtInterval(props.m.intervals()[3])}
+					</span>
+				</button>
+			</div>
+		</Show>
+	);
+}
+
+function ReviewStage(props: ReviewStageProps) {
+	return (
+		<div class={styles.cardWrap}>
+			<Show when={props.m.isPreview() && props.m.current() === 0}>
+				<div class={styles.previewBanner}>
+					将于 {fmtLocal(props.m.item()?.due_at ?? "")} 到期
+				</div>
+			</Show>
+			<div class={styles.cardStage}>
+				<div class={styles.card}>
+					<CueFace m={props.m} speech={props.speech} />
+					<Show when={props.m.showAnswer()}>
+						<AnswerFace m={props.m} />
+					</Show>
+				</div>
+			</div>
+		</div>
+	);
 }
 
 export default function ReviewCard(props: ReviewCardProps) {
@@ -30,17 +317,7 @@ export default function ReviewCard(props: ReviewCardProps) {
 		<>
 			{/* 完成态 */}
 			<Show when={m.done()}>
-				<div class={styles.empty}>
-					<p class={styles.emptyTitle}>🎉 本轮学习完成！</p>
-					<Show when={m.upcoming() > 0}>
-						<p class={styles.emptyHint}>
-							还有 {m.upcoming()} 张卡在未来等待复习
-						</p>
-					</Show>
-					<Button variant="primary" size="sm" onClick={m.loadDue}>
-						再学一轮
-					</Button>
-				</div>
+				<DoneEmpty m={m} />
 			</Show>
 
 			{/* 卡片区：有旧卡时保持显示（stale-while-revalidate），loading 仅作用于无卡空态 */}
@@ -60,226 +337,14 @@ export default function ReviewCard(props: ReviewCardProps) {
 
 				{/* 编辑模式：普通纵向布局 */}
 				<Show when={m.editing()}>
-					<div class={styles.cardWrap}>
-						<div class={styles.cardFlat}>
-							<div class={styles.section}>
-								<div class={styles.sectionLabel}>线索</div>
-								<MarkdownEditor
-									class={styles.editArea}
-									value={m.editCue()}
-									onInput={m.setEditCue}
-									rows={3}
-								/>
-							</div>
-							<div class={styles.divider} />
-							<div class={styles.section}>
-								<div class={styles.sectionLabel}>答案</div>
-								<MarkdownEditor
-									class={styles.editArea}
-									value={m.editTarget()}
-									onInput={m.setEditTarget}
-									rows={3}
-								/>
-							</div>
-						</div>
-					</div>
+					<EditCard m={m} />
 				</Show>
 
 				{/* 复习模式：翻面卡片 */}
 				<Show when={!m.editing()}>
-					<div class={styles.cardWrap}>
-						<Show when={m.isPreview() && m.current() === 0}>
-							<div class={styles.previewBanner}>
-								将于 {fmtLocal(m.item()?.due_at ?? "")} 到期
-							</div>
-						</Show>
-
-						{/* 复习卡片 */}
-						<div class={styles.cardStage}>
-							{/* 目录卡：线索常显 + 答案展开 */}
-							<div class={styles.card}>
-								{/* 线索段 */}
-								<div
-									classList={{
-										[styles.face]: true,
-										[styles.faceFill]: !m.showAnswer(),
-									}}
-								>
-									<div class={styles.cardTab}>
-										<span class={styles.cardTabText}>线索</span>
-										<span class={styles.cardTabNo}>#{m.item()?.id}</span>
-									</div>
-									<div class={styles.cardBody}>
-										<div class={styles.content}>
-											<MarkdownRenderer content={m.item()?.cue.content ?? ""} />
-										</div>
-									</div>
-									<div class={styles.cardTools}>
-										<button
-											type="button"
-											class={styles.toolBtn}
-											title="朗读线索"
-											onClick={() => speech.toggle(m.item()?.cue.content ?? "")}
-											disabled={!speech.supported}
-										>
-											{speech.speaking() ? "⏹" : "🔊"}
-										</button>
-										<button
-											type="button"
-											class={styles.toolBtn}
-											title="复制线索"
-											onClick={() =>
-												void copyTextWithToast(m.item()?.cue.content ?? "")
-											}
-										>
-											📋
-										</button>
-										<button
-											type="button"
-											class={styles.toolBtn}
-											title="复制整张卡片"
-											onClick={m.handleCopyCard}
-										>
-											📋+
-										</button>
-										<button
-											type="button"
-											class={styles.toolBtn}
-											title={m.mnemonic() ? "重新生成助记" : "AI 生成助记"}
-											onClick={m.generateMnemonic}
-											disabled={m.mnemonicLoading()}
-										>
-											{m.mnemonicLoading() ? "⏳" : "🤖"}
-										</button>
-									</div>
-								</div>
-
-								{/* 答案段（显示答案后展开） */}
-								<Show when={m.showAnswer()}>
-									<div class={styles.answer}>
-										<div class={styles.cardTab}>
-											<span class={styles.cardTabText}>答案</span>
-											<span class={styles.cardTabNo}>
-												#{m.item()?.id} · {m.item()?.state}
-											</span>
-										</div>
-										<div class={styles.cardBody}>
-											<div class={styles.content}>
-												<MarkdownRenderer
-													content={m.item()?.target.content ?? ""}
-												/>
-											</div>
-
-											<Show when={m.mnemonic() || m.mnemonicLoading()}>
-												<div class={styles.mnemonic}>
-													<div class={styles.mnemonicLabel}>💡 AI 助记</div>
-													<Show
-														when={m.mnemonicLoading()}
-														fallback={
-															<MarkdownRenderer content={m.mnemonic() ?? ""} />
-														}
-													>
-														<span class={styles.mnemonicLoading}>生成中…</span>
-													</Show>
-												</div>
-											</Show>
-										</div>
-									</div>
-								</Show>
-							</div>
-						</div>
-					</div>
-					{/* 操作行：未翻面时（固定在底部中间） */}
-					<Show when={!m.showAnswer()}>
-						<div class={styles.actionRow}>
-							<button
-								type="button"
-								class={styles.navBtn}
-								onClick={goPrev}
-								disabled={m.current() <= 0}
-								title="上一张 (←)"
-							>
-								‹
-							</button>
-							<Button variant="ghost" size="sm" onClick={m.bury}>
-								跳过
-							</Button>
-							<Button variant="ghost" size="sm" onClick={m.resumeSuspend}>
-								挂起
-							</Button>
-							<Show when={m.showUndo()}>
-								<Button variant="ghost" size="sm" onClick={m.undo}>
-									撤销
-								</Button>
-							</Show>
-							<Button
-								variant="primary"
-								size="sm"
-								onClick={() => m.setShowAnswer(true)}
-							>
-								显示答案
-							</Button>
-							<button
-								type="button"
-								class={styles.navBtn}
-								onClick={goNext}
-								disabled={m.current() >= m.due().length - 1}
-								title="下一张 (→)"
-							>
-								›
-							</button>
-						</div>
-					</Show>
-
-					{/* 评分：翻面后 */}
-					<Show when={m.showAnswer()}>
-						<div class={styles.ratings}>
-							<button
-								type="button"
-								class={styles.ratingBtn}
-								classList={{ [styles.again]: true }}
-								onClick={() => m.rate(1)}
-							>
-								<span class={styles.ratingLabel}>忘记</span>
-								<span class={styles.ratingTime}>
-									{fmtInterval(m.intervals()[0])}
-								</span>
-							</button>
-							<button
-								type="button"
-								class={styles.ratingBtn}
-								classList={{ [styles.hard]: true }}
-								onClick={() => m.rate(2)}
-							>
-								<span class={styles.ratingLabel}>困难</span>
-								<span class={styles.ratingTime}>
-									{fmtInterval(m.intervals()[1])}
-								</span>
-							</button>
-							<button
-								type="button"
-								class={styles.ratingBtn}
-								classList={{ [styles.good]: true }}
-								onClick={() => m.rate(3)}
-							>
-								<span class={styles.ratingLabel}>良好</span>
-								<span class={styles.ratingTime}>
-									{fmtInterval(m.intervals()[2])}
-								</span>
-							</button>
-							<button
-								type="button"
-								class={styles.ratingBtn}
-								classList={{ [styles.easy]: true }}
-								onClick={() => m.rate(4)}
-							>
-								<span class={styles.ratingLabel}>简单</span>
-								<span class={styles.ratingTime}>
-									{fmtInterval(m.intervals()[3])}
-								</span>
-							</button>
-						</div>
-					</Show>
+					<ReviewStage m={m} speech={speech} />
+					<ActionRow m={m} goPrev={goPrev} goNext={goNext} />
+					<Ratings m={m} />
 				</Show>
 			</Show>
 		</>

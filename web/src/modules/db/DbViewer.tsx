@@ -26,6 +26,47 @@ import {
 	PAGE_SIZES,
 } from "./tableConfig";
 
+const TableHeaderActions: Component<{
+	filters: readonly ColumnFilter[];
+	refFilter: { col: string; id: number } | null;
+	showFilterChips: boolean;
+	exporting: "" | "csv" | "json";
+	onRemove: (col: string) => void;
+	onClear: () => void;
+	onExport: (format: "csv" | "json") => void;
+}> = (props) => (
+	<div class={styles.tableActions}>
+		{/* 过滤状态与标题同排显示，出现/消失不改变表格纵向位置 */}
+		<Show when={props.showFilterChips}>
+			<FilterChips
+				filters={props.filters}
+				refFilter={props.refFilter}
+				onRemove={props.onRemove}
+				onClear={props.onClear}
+			/>
+		</Show>
+
+		<div class={styles.exportGroup}>
+			<Button
+				variant="secondary"
+				size="sm"
+				disabled={props.exporting !== ""}
+				onClick={() => void props.onExport("csv")}
+			>
+				{props.exporting === "csv" ? "导出中…" : "CSV"}
+			</Button>
+			<Button
+				variant="secondary"
+				size="sm"
+				disabled={props.exporting !== ""}
+				onClick={() => void props.onExport("json")}
+			>
+				{props.exporting === "json" ? "导出中…" : "JSON"}
+			</Button>
+		</div>
+	</div>
+);
+
 const DB: Component = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [tables, setTables] = createSignal<string[]>([]);
@@ -315,36 +356,15 @@ const DB: Component = () => {
 							{activeTable()}
 						</h3>
 
-						<div class={styles.tableActions}>
-							{/* 过滤状态与标题同排显示，出现/消失不改变表格纵向位置 */}
-							<Show when={filterId() > 0 || hasFilters()}>
-								<FilterChips
-									filters={filters()}
-									refFilter={refFilter()}
-									onRemove={removeColumnFilter}
-									onClear={clearFilters}
-								/>
-							</Show>
-
-							<div class={styles.exportGroup}>
-								<Button
-									variant="secondary"
-									size="sm"
-									disabled={exporting() !== ""}
-									onClick={() => void exportTable("csv")}
-								>
-									{exporting() === "csv" ? "导出中…" : "CSV"}
-								</Button>
-								<Button
-									variant="secondary"
-									size="sm"
-									disabled={exporting() !== ""}
-									onClick={() => void exportTable("json")}
-								>
-									{exporting() === "json" ? "导出中…" : "JSON"}
-								</Button>
-							</div>
-						</div>
+						<TableHeaderActions
+							filters={filters()}
+							refFilter={refFilter()}
+							showFilterChips={filterId() > 0 || hasFilters()}
+							exporting={exporting()}
+							onRemove={removeColumnFilter}
+							onClear={clearFilters}
+							onExport={exportTable}
+						/>
 					</div>
 
 					<DbTable

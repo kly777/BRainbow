@@ -5,7 +5,13 @@ import { Button } from "@components/ui";
 import { del, get, getApiKey, getErrorMessage, post } from "@lib/api";
 import { fmtFull, notifyError, notifySuccess, showConfirm } from "@lib/utils";
 import { useAuth } from "@modules/auth";
-import { createResource, createSignal, For, Show } from "solid-js";
+import {
+	type Component,
+	createResource,
+	createSignal,
+	For,
+	Show,
+} from "solid-js";
 import styles from "./KeyPage.module.css";
 
 interface ApiKeyInfo {
@@ -14,6 +20,76 @@ interface ApiKeyInfo {
 	created_at: string;
 	key?: string;
 }
+
+const NewKeyBox: Component<{
+	k: () => string;
+	onCopy: (key: string) => void;
+	onApply: (key: string) => void;
+}> = (props) => (
+	<div class={styles.newKeyBox}>
+		<div class={styles.newKeyLabel}>新 key（仅显示一次）：</div>
+		<code class={styles.newKey}>{props.k()}</code>
+		<div class={styles.actions}>
+			<Button
+				variant="secondary"
+				size="sm"
+				onClick={() => props.onCopy(props.k())}
+			>
+				复制
+			</Button>
+			<Button
+				variant="primary"
+				size="sm"
+				onClick={() => props.onApply(props.k())}
+			>
+				应用此 key
+			</Button>
+		</div>
+	</div>
+);
+
+const ActiveKeyBox: Component<{
+	k: () => string;
+	onCopy: (key: string) => void;
+	onClear: () => void;
+}> = (props) => (
+	<div class={styles.activeBox}>
+		<code class={styles.activeKey}>{props.k()}</code>
+		<div class={styles.actions}>
+			<Button
+				variant="secondary"
+				size="sm"
+				onClick={() => props.onCopy(props.k())}
+			>
+				复制
+			</Button>
+			<Button variant="danger" size="sm" onClick={props.onClear}>
+				清除
+			</Button>
+		</div>
+	</div>
+);
+
+const KeyRow: Component<{
+	k: ApiKeyInfo;
+	onDelete: (id: number) => void;
+}> = (props) => (
+	<div class={styles.row}>
+		<div class={styles.rowInfo}>
+			<span class={styles.rowRole}>{props.k.role}</span>
+			<span class={styles.rowDate}>
+				ID {props.k.id} · {fmtFull(props.k.created_at)}
+			</span>
+		</div>
+		<Button
+			variant="danger"
+			size="sm"
+			onClick={() => props.onDelete(props.k.id)}
+		>
+			删除
+		</Button>
+	</div>
+);
 
 export default function KeyPage() {
 	const { setApiKey } = useAuth();
@@ -71,6 +147,8 @@ export default function KeyPage() {
 		}
 	};
 
+	const emptyKeys = <div class={styles.muted}>暂无 key。</div>;
+
 	return (
 		<div class={styles.page}>
 			<h1 class={styles.title}>API Key</h1>
@@ -93,28 +171,7 @@ export default function KeyPage() {
 				</Button>
 
 				<Show when={newKey()}>
-					{(k) => (
-						<div class={styles.newKeyBox}>
-							<div class={styles.newKeyLabel}>新 key（仅显示一次）：</div>
-							<code class={styles.newKey}>{k()}</code>
-							<div class={styles.actions}>
-								<Button
-									variant="secondary"
-									size="sm"
-									onClick={() => handleCopy(k())}
-								>
-									复制
-								</Button>
-								<Button
-									variant="primary"
-									size="sm"
-									onClick={() => handleApply(k())}
-								>
-									应用此 key
-								</Button>
-							</div>
-						</div>
-					)}
+					{(k) => <NewKeyBox k={k} onCopy={handleCopy} onApply={handleApply} />}
 				</Show>
 			</div>
 
@@ -126,21 +183,7 @@ export default function KeyPage() {
 					fallback={<div class={styles.muted}>未设置——请求将要求登录。</div>}
 				>
 					{(k) => (
-						<div class={styles.activeBox}>
-							<code class={styles.activeKey}>{k()}</code>
-							<div class={styles.actions}>
-								<Button
-									variant="secondary"
-									size="sm"
-									onClick={() => handleCopy(k())}
-								>
-									复制
-								</Button>
-								<Button variant="danger" size="sm" onClick={handleClear}>
-									清除
-								</Button>
-							</div>
-						</div>
+						<ActiveKeyBox k={k} onCopy={handleCopy} onClear={handleClear} />
 					)}
 				</Show>
 			</div>
@@ -157,27 +200,8 @@ export default function KeyPage() {
 					</div>
 				</Show>
 				<Show when={keys()} fallback={<div class={styles.muted}>加载中…</div>}>
-					<For
-						each={keys()}
-						fallback={<div class={styles.muted}>暂无 key。</div>}
-					>
-						{(k) => (
-							<div class={styles.row}>
-								<div class={styles.rowInfo}>
-									<span class={styles.rowRole}>{k.role}</span>
-									<span class={styles.rowDate}>
-										ID {k.id} · {fmtFull(k.created_at)}
-									</span>
-								</div>
-								<Button
-									variant="danger"
-									size="sm"
-									onClick={() => handleDelete(k.id)}
-								>
-									删除
-								</Button>
-							</div>
-						)}
+					<For each={keys()} fallback={emptyKeys}>
+						{(k) => <KeyRow k={k} onDelete={handleDelete} />}
 					</For>
 				</Show>
 			</div>

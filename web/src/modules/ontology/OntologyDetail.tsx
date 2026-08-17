@@ -9,6 +9,53 @@ import { createResource, createSignal, Show } from "solid-js";
 import { deleteOntoE, getOntoE, updateOntoE } from "./api";
 import styles from "./OntologyDetail.module.css";
 
+type EditFormProps = {
+	name: string;
+	description: string;
+	saving: boolean;
+	onNameInput: (value: string) => void;
+	onDescriptionInput: (value: string) => void;
+	onCancel: () => void;
+	onSave: () => void;
+};
+
+const EditForm = (props: EditFormProps) => (
+	<div class={styles.form}>
+		<label class={styles.label} for="onto-name">
+			名称
+		</label>
+		<input
+			id="onto-name"
+			class={styles.input}
+			value={props.name}
+			onInput={(e) => props.onNameInput(e.currentTarget.value)}
+		/>
+		<label class={styles.label} for="onto-desc">
+			描述
+		</label>
+		<textarea
+			id="onto-desc"
+			class={styles.textarea}
+			value={props.description}
+			onInput={(e) => props.onDescriptionInput(e.currentTarget.value)}
+			rows={4}
+		/>
+		<div class={styles.formActions}>
+			<Button variant="secondary" size="sm" onClick={props.onCancel}>
+				取消
+			</Button>
+			<Button
+				variant="primary"
+				size="sm"
+				onClick={props.onSave}
+				disabled={props.saving || !props.name.trim()}
+			>
+				{props.saving ? "保存中…" : "保存"}
+			</Button>
+		</div>
+	</div>
+);
+
 export default function OntologyDetail() {
 	const params = useParams();
 	const navigate = useNavigate();
@@ -113,44 +160,15 @@ export default function OntologyDetail() {
 								</>
 							}
 						>
-							<div class={styles.form}>
-								<label class={styles.label} for="onto-name">
-									名称
-								</label>
-								<input
-									id="onto-name"
-									class={styles.input}
-									value={name()}
-									onInput={(e) => setName(e.currentTarget.value)}
-								/>
-								<label class={styles.label} for="onto-desc">
-									描述
-								</label>
-								<textarea
-									id="onto-desc"
-									class={styles.textarea}
-									value={description()}
-									onInput={(e) => setDescription(e.currentTarget.value)}
-									rows={4}
-								/>
-								<div class={styles.formActions}>
-									<Button
-										variant="secondary"
-										size="sm"
-										onClick={() => setEditing(false)}
-									>
-										取消
-									</Button>
-									<Button
-										variant="primary"
-										size="sm"
-										onClick={save}
-										disabled={saving() || !name().trim()}
-									>
-										{saving() ? "保存中…" : "保存"}
-									</Button>
-								</div>
-							</div>
+							<EditForm
+								name={name()}
+								description={description()}
+								saving={saving()}
+								onNameInput={(value) => setName(value)}
+								onDescriptionInput={(value) => setDescription(value)}
+								onCancel={() => setEditing(false)}
+								onSave={save}
+							/>
 						</Show>
 					</div>
 				)}

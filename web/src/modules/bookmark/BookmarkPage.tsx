@@ -2,12 +2,70 @@
 
 import { Button, SearchInput } from "@components/ui";
 import { getErrorMessage } from "@lib/api";
-import { For, Show } from "solid-js";
+import { type Component, For, Show } from "solid-js";
 import styles from "./BookmarkPage.module.css";
 import { BookmarkFormModal } from "./components/BookmarkFormModal.tsx";
 import { BookmarkItem } from "./components/BookmarkItem.tsx";
 import TagManager from "./components/TagManager.tsx";
 import { useBookmarkPage } from "./hooks/useBookmarkPage.ts";
+
+const BookmarkMainSection: Component<{
+	b: ReturnType<typeof useBookmarkPage>;
+}> = (props) => {
+	const b = props.b;
+
+	return (
+		<Show
+			when={b.bookmarks().length > 0}
+			fallback={
+				<div class={styles.state}>
+					{b.searchQuery().trim() || b.tagFilter()
+						? "没有找到匹配的书签"
+						: "还没有书签，点击上方按钮添加第一个吧！"}
+				</div>
+			}
+		>
+			<div class={styles.list}>
+				<For each={b.bookmarks()}>
+					{(bm) => (
+						<BookmarkItem
+							bm={bm}
+							onEdit={() => b.openEdit(bm)}
+							onDelete={() => b.handleDelete(bm)}
+							onTagFilter={b.handleTagFilter}
+						/>
+					)}
+				</For>
+			</div>
+
+			<Show when={b.totalPages() > 1}>
+				<div class={styles.pagination}>
+					<span>
+						第 {b.page()} / {b.totalPages()} 页（共 {b.total()} 条）
+					</span>
+					<div class={styles.paginationActions}>
+						<Button
+							variant="secondary"
+							size="sm"
+							disabled={b.page() <= 1}
+							onClick={() => b.goPage(b.page() - 1)}
+						>
+							← 上一页
+						</Button>
+						<Button
+							variant="secondary"
+							size="sm"
+							disabled={b.page() >= b.totalPages()}
+							onClick={() => b.goPage(b.page() + 1)}
+						>
+							下一页 →
+						</Button>
+					</div>
+				</div>
+			</Show>
+		</Show>
+	);
+};
 
 export default function BookmarkPage() {
 	const b = useBookmarkPage();
@@ -84,55 +142,7 @@ export default function BookmarkPage() {
 			</Show>
 
 			<Show when={!b.loading() && !b.error()}>
-				<Show
-					when={b.bookmarks().length > 0}
-					fallback={
-						<div class={styles.state}>
-							{b.searchQuery().trim() || b.tagFilter()
-								? "没有找到匹配的书签"
-								: "还没有书签，点击上方按钮添加第一个吧！"}
-						</div>
-					}
-				>
-					<div class={styles.list}>
-						<For each={b.bookmarks()}>
-							{(bm) => (
-								<BookmarkItem
-									bm={bm}
-									onEdit={() => b.openEdit(bm)}
-									onDelete={() => b.handleDelete(bm)}
-									onTagFilter={b.handleTagFilter}
-								/>
-							)}
-						</For>
-					</div>
-
-					<Show when={b.totalPages() > 1}>
-						<div class={styles.pagination}>
-							<span>
-								第 {b.page()} / {b.totalPages()} 页（共 {b.total()} 条）
-							</span>
-							<div class={styles.paginationActions}>
-								<Button
-									variant="secondary"
-									size="sm"
-									disabled={b.page() <= 1}
-									onClick={() => b.goPage(b.page() - 1)}
-								>
-									← 上一页
-								</Button>
-								<Button
-									variant="secondary"
-									size="sm"
-									disabled={b.page() >= b.totalPages()}
-									onClick={() => b.goPage(b.page() + 1)}
-								>
-									下一页 →
-								</Button>
-							</div>
-						</div>
-					</Show>
-				</Show>
+				<BookmarkMainSection b={b} />
 			</Show>
 
 			<BookmarkFormModal b={b} />

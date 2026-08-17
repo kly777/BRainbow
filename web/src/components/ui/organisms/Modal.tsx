@@ -10,6 +10,35 @@ interface ModalProps {
 	actions?: JSX.Element;
 }
 
+const ModalHeader: Component<{ title: string; onClose: () => void }> = (
+	props,
+) => (
+	<div class={styles.modalHeader}>
+		<h2 id="modal-title" class={styles.modalTitle}>
+			{props.title}
+		</h2>
+		<button
+			type="button"
+			class={styles.modalClose}
+			onClick={props.onClose}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					props.onClose();
+				}
+			}}
+			aria-label="关闭"
+		>
+			×
+		</button>
+	</div>
+);
+
+const ModalFooter: Component<{ actions?: JSX.Element }> = (props) => (
+	<Show when={props.actions}>
+		<div class={styles.modalFooter}>{props.actions}</div>
+	</Show>
+);
+
 const Modal: Component<ModalProps> = (props) => {
 	return (
 		<Show when={props.isOpen}>
@@ -33,28 +62,9 @@ const Modal: Component<ModalProps> = (props) => {
 						onKeyDown={(e) => e.stopPropagation()}
 						role="document"
 					>
-						<div class={styles.modalHeader}>
-							<h2 id="modal-title" class={styles.modalTitle}>
-								{props.title}
-							</h2>
-							<button
-								type="button"
-								class={styles.modalClose}
-								onClick={props.onClose}
-								onKeyDown={(e) => {
-									if (e.key === "Enter" || e.key === " ") {
-										props.onClose();
-									}
-								}}
-								aria-label="关闭"
-							>
-								×
-							</button>
-						</div>
+						<ModalHeader title={props.title} onClose={props.onClose} />
 						<div class={styles.modalBody}>{props.children}</div>
-						<Show when={props.actions}>
-							<div class={styles.modalFooter}>{props.actions}</div>
-						</Show>
+						<ModalFooter actions={props.actions} />
 					</div>
 				</div>
 			</Portal>

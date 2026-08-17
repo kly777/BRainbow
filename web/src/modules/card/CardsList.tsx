@@ -15,6 +15,15 @@ import styles from "./CardsList.module.css";
 
 import { useCardsList } from "./hooks/useCardsList.ts";
 
+const CardPreview = (props: { content: string }) => (
+	<div class={styles.previewSection}>
+		<span class={styles.previewLabel}>预览</span>
+		<div class={styles.previewContent}>
+			<MarkdownRenderer content={props.content} />
+		</div>
+	</div>
+);
+
 export default function CardsListPage() {
 	const navigate = useNavigate();
 	const m = useCardsList();
@@ -137,12 +146,7 @@ export default function CardsListPage() {
 					/>
 				</div>
 				<Show when={m.newCardContent().trim()}>
-					<div class={styles.previewSection}>
-						<span class={styles.previewLabel}>预览</span>
-						<div class={styles.previewContent}>
-							<MarkdownRenderer content={m.newCardContent()} />
-						</div>
-					</div>
+					<CardPreview content={m.newCardContent()} />
 				</Show>
 			</Modal>
 		</div>

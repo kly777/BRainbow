@@ -1,7 +1,14 @@
 import { fmtLocal, notifyError, tryAsync } from "@lib/utils";
 import type { CalendarEvent } from "@modules/task";
 import { getCalendarEventsE } from "@modules/task";
-import { createMemo, createResource, createSignal, For, Show } from "solid-js";
+import {
+	type Component,
+	createMemo,
+	createResource,
+	createSignal,
+	For,
+	Show,
+} from "solid-js";
 import styles from "./TaskCalendar.module.css";
 
 // 窗口类型对应颜色
@@ -22,6 +29,41 @@ function isSameDay(a: Date, b: Date): boolean {
 		a.getDate() === b.getDate()
 	);
 }
+
+const CalendarEventItem: Component<{ ev: CalendarEvent }> = (props) => (
+	<div
+		class={`${styles.dayTask} ${getWindowTypeColor(props.ev.window_type)}`}
+		title={`${props.ev.title} (${props.ev.window_type})`}
+	>
+		<span class={styles.eventTime}>{fmtLocal(props.ev.start)}</span>
+		{props.ev.title}
+	</div>
+);
+
+type CalendarDayCellProps = {
+	date: Date | null;
+	today: Date;
+	events: readonly CalendarEvent[];
+};
+
+const CalendarDayCell: Component<CalendarDayCellProps> = (props) => (
+	<div
+		classList={{
+			[styles.calendarDay]: true,
+			[styles.today]: props.date !== null && isSameDay(props.date, props.today),
+			[styles.empty]: props.date === null,
+		}}
+	>
+		<Show when={props.date !== null}>
+			<div class={styles.dayNumber}>{props.date?.getDate()}</div>
+			<div class={styles.dayTasks}>
+				<For each={props.date ? props.events : []}>
+					{(ev) => <CalendarEventItem ev={ev} />}
+				</For>
+			</div>
+		</Show>
+	</div>
+);
 
 export default function TaskCalendar() {
 	const [currentDate, setCurrentDate] = createSignal<Date>(new Date());
@@ -125,34 +167,11 @@ export default function TaskCalendar() {
 
 				<For each={daysInMonth()}>
 					{(date) => (
-						<div
-							classList={{
-								[styles.calendarDay]: true,
-								[styles.today]: date !== null && isSameDay(date, today),
-								[styles.empty]: date === null,
-							}}
-						>
-							<Show when={date !== null}>
-								<div class={styles.dayNumber}>{date?.getDate()}</div>
-								<div class={styles.dayTasks}>
-									<For each={date ? getEventsForDate(date) : []}>
-										{(ev) => (
-											<div
-												class={`${styles.dayTask} ${getWindowTypeColor(
-													ev.window_type,
-												)}`}
-												title={`${ev.title} (${ev.window_type})`}
-											>
-												<span class={styles.eventTime}>
-													{fmtLocal(ev.start)}
-												</span>
-												{ev.title}
-											</div>
-										)}
-									</For>
-								</div>
-							</Show>
-						</div>
+						<CalendarDayCell
+							date={date}
+							today={today}
+							events={date ? getEventsForDate(date) : []}
+						/>
 					)}
 				</For>
 			</div>

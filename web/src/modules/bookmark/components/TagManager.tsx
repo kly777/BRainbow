@@ -16,6 +16,44 @@ interface Props {
 	onDeleted: () => void;
 }
 
+interface TagRowProps {
+	tag: BookmarkTagWithCount;
+	onDelete: (tag: BookmarkTagWithCount) => void;
+}
+
+function TagRow(props: TagRowProps) {
+	return (
+		<div class={styles.row}>
+			<span class={styles.name} title={props.tag.name}>
+				{props.tag.name}
+			</span>
+			<span class={styles.count}>{props.tag.count} 个书签</span>
+			<Button
+				variant="danger"
+				size="sm"
+				onClick={() => props.onDelete(props.tag)}
+			>
+				删除
+			</Button>
+		</div>
+	);
+}
+
+interface TagListProps {
+	tags: BookmarkTagWithCount[];
+	onDelete: (tag: BookmarkTagWithCount) => void;
+}
+
+function TagList(props: TagListProps) {
+	return (
+		<div class={styles.list}>
+			<For each={props.tags}>
+				{(tag) => <TagRow tag={tag} onDelete={props.onDelete} />}
+			</For>
+		</div>
+	);
+}
+
 export default function TagManager(props: Props) {
 	// 每次打开重新加载全部标签
 	const [tags, { refetch }] = createResource(
@@ -63,25 +101,7 @@ export default function TagManager(props: Props) {
 					</div>
 				}
 			>
-				<div class={styles.list}>
-					<For each={tags()}>
-						{(tag) => (
-							<div class={styles.row}>
-								<span class={styles.name} title={tag.name}>
-									{tag.name}
-								</span>
-								<span class={styles.count}>{tag.count} 个书签</span>
-								<Button
-									variant="danger"
-									size="sm"
-									onClick={() => handleDelete(tag)}
-								>
-									删除
-								</Button>
-							</div>
-						)}
-					</For>
-				</div>
+				<TagList tags={tags() ?? []} onDelete={handleDelete} />
 			</Show>
 		</Modal>
 	);

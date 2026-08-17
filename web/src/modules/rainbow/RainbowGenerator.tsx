@@ -1,10 +1,41 @@
 import { Button, FilterGroup } from "@components/ui";
 import { Angle, Color } from "@lib/utils";
-import { createMemo, createSignal } from "solid-js";
+import { type Component, createMemo, createSignal } from "solid-js";
 import AngleEditor from "./AngleEditor";
 import ColorEditor from "./ColorEditor";
 import { RainbowDrawer, type ShapeRender } from "./RainbowDrawer";
 import styles from "./RainbowGenerator.module.css";
+
+const StatsSection: Component<{
+	rectWidth: number;
+	rectHeight: number;
+	heightSum: number;
+	colorCount: number;
+}> = (props) => (
+	<section class={styles.stats}>
+		<h3>计算结果</h3>
+		<table>
+			<tbody>
+				<tr>
+					<td>色条宽度</td>
+					<td>{props.rectWidth.toFixed(1)} px</td>
+				</tr>
+				<tr>
+					<td>色条高度</td>
+					<td>{props.rectHeight.toFixed(1)} px</td>
+				</tr>
+				<tr>
+					<td>总高度</td>
+					<td>{props.heightSum.toFixed(1)} px</td>
+				</tr>
+				<tr>
+					<td>色条数</td>
+					<td>{props.colorCount}</td>
+				</tr>
+			</tbody>
+		</table>
+	</section>
+);
 
 function RainbowGenerator() {
 	const L = 0.7;
@@ -129,29 +160,12 @@ function RainbowGenerator() {
 					/>
 				</div>
 
-				<section class={styles.stats}>
-					<h3>计算结果</h3>
-					<table>
-						<tbody>
-							<tr>
-								<td>色条宽度</td>
-								<td>{rectWidth().toFixed(1)} px</td>
-							</tr>
-							<tr>
-								<td>色条高度</td>
-								<td>{rectHeight().toFixed(1)} px</td>
-							</tr>
-							<tr>
-								<td>总高度</td>
-								<td>{height_sum().toFixed(1)} px</td>
-							</tr>
-							<tr>
-								<td>色条数</td>
-								<td>{colors().length}</td>
-							</tr>
-						</tbody>
-					</table>
-				</section>
+				<StatsSection
+					rectWidth={rectWidth()}
+					rectHeight={rectHeight()}
+					heightSum={height_sum()}
+					colorCount={colors().length}
+				/>
 			</div>
 			<div class={styles.preview}>
 				<RainbowDrawer

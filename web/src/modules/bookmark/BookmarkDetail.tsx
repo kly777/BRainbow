@@ -11,9 +11,106 @@ import {
 	updateBookmarkE,
 } from "@modules/bookmark";
 import { useNavigate, useParams } from "@solidjs/router";
-import { createResource, createSignal, Show } from "solid-js";
+import { type Component, createResource, createSignal, Show } from "solid-js";
 import styles from "./BookmarkDetail.module.css";
 import TagInput from "./components/TagInput.tsx";
+
+type BookmarkItem = Awaited<ReturnType<typeof getBookmarkE>>;
+
+const BookmarkView: Component<{ bm: BookmarkItem }> = (props) => (
+	<>
+		<h1 class={styles.title}>{props.bm.title}</h1>
+		<a
+			class={styles.url}
+			href={props.bm.url}
+			target="_blank"
+			rel="noopener noreferrer"
+		>
+			{props.bm.url}
+		</a>
+		<div class={styles.meta}>
+			<span>
+				创建于 {fmtLocal(props.bm.created_at)} · 更新于{" "}
+				{fmtLocal(props.bm.updated_at)}
+			</span>
+		</div>
+		<p class={styles.description}>{props.bm.description || "暂无备注"}</p>
+		<div class={styles.tags}>
+			{props.bm.tags.map((t) => (
+				<span class={styles.tag}>#{t}</span>
+			))}
+		</div>
+	</>
+);
+
+const EditForm: Component<{
+	title: string;
+	url: string;
+	description: string;
+	tags: string[];
+	saving: boolean;
+	formError: string;
+	onTitle: (value: string) => void;
+	onUrl: (value: string) => void;
+	onDescription: (value: string) => void;
+	onAddTag: (name: string) => void;
+	onRemoveTag: (name: string) => void;
+	onCancel: () => void;
+	onSave: () => void;
+}> = (props) => (
+	<div class={styles.form}>
+		<label class={styles.label} for="bm-title">
+			标题
+		</label>
+		<input
+			id="bm-title"
+			class={styles.input}
+			value={props.title}
+			onInput={(e) => props.onTitle(e.currentTarget.value)}
+		/>
+		<label class={styles.label} for="bm-url">
+			URL
+		</label>
+		<input
+			id="bm-url"
+			class={styles.input}
+			value={props.url}
+			onInput={(e) => props.onUrl(e.currentTarget.value)}
+		/>
+		<label class={styles.label} for="bm-desc">
+			备注
+		</label>
+		<textarea
+			id="bm-desc"
+			class={styles.textarea}
+			value={props.description}
+			onInput={(e) => props.onDescription(e.currentTarget.value)}
+			rows={3}
+		/>
+		<span class={styles.label}>标签</span>
+		<TagInput
+			tags={props.tags}
+			onAdd={props.onAddTag}
+			onRemove={props.onRemoveTag}
+		/>
+		<Show when={props.formError}>
+			<div class={styles.formError}>{props.formError}</div>
+		</Show>
+		<div class={styles.formActions}>
+			<Button variant="secondary" size="sm" onClick={props.onCancel}>
+				取消
+			</Button>
+			<Button
+				variant="primary"
+				size="sm"
+				onClick={props.onSave}
+				disabled={props.saving}
+			>
+				{props.saving ? "保存中…" : "保存"}
+			</Button>
+		</div>
+	</div>
+);
 
 export default function BookmarkDetail() {
 	const params = useParams();
@@ -122,98 +219,28 @@ export default function BookmarkDetail() {
 			<Show when={data()}>
 				{(bm) => (
 					<div class={styles.card}>
-						<Show
-							when={editing()}
-							fallback={
-								<>
-									<h1 class={styles.title}>{bm().title}</h1>
-									<a
-										class={styles.url}
-										href={bm().url}
-										target="_blank"
-										rel="noopener noreferrer"
-									>
-										{bm().url}
-									</a>
-									<div class={styles.meta}>
-										<span>
-											创建于 {fmtLocal(bm().created_at)} · 更新于{" "}
-											{fmtLocal(bm().updated_at)}
-										</span>
-									</div>
-									<p class={styles.description}>
-										{bm().description || "暂无备注"}
-									</p>
-									<div class={styles.tags}>
-										{bm().tags.map((t) => (
-											<span class={styles.tag}>#{t}</span>
-										))}
-									</div>
-								</>
-							}
-						>
-							<div class={styles.form}>
-								<label class={styles.label} for="bm-title">
-									标题
-								</label>
-								<input
-									id="bm-title"
-									class={styles.input}
-									value={title()}
-									onInput={(e) => setTitle(e.currentTarget.value)}
-								/>
-								<label class={styles.label} for="bm-url">
-									URL
-								</label>
-								<input
-									id="bm-url"
-									class={styles.input}
-									value={url()}
-									onInput={(e) => setUrl(e.currentTarget.value)}
-								/>
-								<label class={styles.label} for="bm-desc">
-									备注
-								</label>
-								<textarea
-									id="bm-desc"
-									class={styles.textarea}
-									value={description()}
-									onInput={(e) => setDescription(e.currentTarget.value)}
-									rows={3}
-								/>
-								<span class={styles.label}>标签</span>
-								<TagInput
-									tags={tags()}
-									onAdd={(name) =>
-										setTags((prev) =>
-											prev.includes(name) ? prev : [...prev, name],
-										)
-									}
-									onRemove={(name) =>
-										setTags((prev) => prev.filter((t) => t !== name))
-									}
-								/>
-								<Show when={formError()}>
-									<div class={styles.formError}>{formError()}</div>
-								</Show>
-								<div class={styles.formActions}>
-									<Button
-										variant="secondary"
-										size="sm"
-										onClick={() => setEditing(false)}
-									>
-										取消
-									</Button>
-									<Button
-										variant="primary"
-										size="sm"
-										onClick={save}
-										disabled={saving()}
-									>
-										{saving() ? "保存中…" : "保存"}
-									</Button>
-								</div>
-							</div>
+						<Show when={editing()} fallback={<BookmarkView bm={bm()} />}>
+							<EditForm
+								title={title()}
+								url={url()}
+								description={description()}
+								tags={tags()}
+								saving={saving()}
+								formError={formError()}
+								onTitle={(value) => setTitle(value)}
+								onUrl={(value) => setUrl(value)}
+								onDescription={(value) => setDescription(value)}
+								onAddTag={(name) =>
+									setTags((prev) =>
+										prev.includes(name) ? prev : [...prev, name],
+									)
+								}
+								onRemoveTag={(name) =>
+									setTags((prev) => prev.filter((t) => t !== name))
+								}
+								onCancel={() => setEditing(false)}
+								onSave={save}
+							/>
 						</Show>
 					</div>
 				)}

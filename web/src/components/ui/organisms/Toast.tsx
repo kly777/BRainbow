@@ -3,7 +3,7 @@ import {
 	type ToastItem,
 	toasts,
 } from "@components/ui/organisms/toastStore.ts";
-import { For, Show } from "solid-js";
+import { type Component, For, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import styles from "./Toast.module.css";
 
@@ -27,59 +27,59 @@ function iconForType(type: ToastItem["type"]): string {
 	}
 }
 
+const ToastCard: Component<{ toast: ToastItem }> = (props) => (
+	<div
+		classList={{
+			[styles.toast]: true,
+			[TYPE_CLASS[props.toast.type]]: true,
+			[styles.leaving]: props.toast.leaving,
+		}}
+		role="alert"
+	>
+		<div class={styles.body}>
+			<span class={styles.icon}>{iconForType(props.toast.type)}</span>
+			<div class={styles.content}>
+				<div class={styles.title}>
+					{props.toast.details ? (
+						<>
+							{props.toast.title}
+							<code class={styles.code}>{props.toast.details}</code>
+						</>
+					) : (
+						props.toast.title
+					)}
+				</div>
+				<Show when={props.toast.message}>
+					<div class={styles.message}>{props.toast.message}</div>
+				</Show>
+			</div>
+		</div>
+		<button
+			type="button"
+			class={styles.close}
+			onClick={() => dismissToast(props.toast.id)}
+			aria-label="关闭通知"
+		>
+			✕
+		</button>
+		{/* 倒计时进度条 */}
+		<Show when={props.toast.duration > 0}>
+			<div
+				class={styles.progress}
+				style={{
+					"animation-duration": `${props.toast.duration}ms`,
+				}}
+			/>
+		</Show>
+	</div>
+);
+
 export default function ToastContainer() {
 	return (
 		<Show when={toasts().length > 0}>
 			<Portal>
 				<div class={styles.container} aria-live="polite" role="status">
-					<For each={toasts()}>
-						{(toast) => (
-							<div
-								classList={{
-									[styles.toast]: true,
-									[TYPE_CLASS[toast.type]]: true,
-									[styles.leaving]: toast.leaving,
-								}}
-								role="alert"
-							>
-								<div class={styles.body}>
-									<span class={styles.icon}>{iconForType(toast.type)}</span>
-									<div class={styles.content}>
-										<div class={styles.title}>
-											{toast.details ? (
-												<>
-													{toast.title}
-													<code class={styles.code}>{toast.details}</code>
-												</>
-											) : (
-												toast.title
-											)}
-										</div>
-										<Show when={toast.message}>
-											<div class={styles.message}>{toast.message}</div>
-										</Show>
-									</div>
-								</div>
-								<button
-									type="button"
-									class={styles.close}
-									onClick={() => dismissToast(toast.id)}
-									aria-label="关闭通知"
-								>
-									✕
-								</button>
-								{/* 倒计时进度条 */}
-								<Show when={toast.duration > 0}>
-									<div
-										class={styles.progress}
-										style={{
-											"animation-duration": `${toast.duration}ms`,
-										}}
-									/>
-								</Show>
-							</div>
-						)}
-					</For>
+					<For each={toasts()}>{(toast) => <ToastCard toast={toast} />}</For>
 				</div>
 			</Portal>
 		</Show>

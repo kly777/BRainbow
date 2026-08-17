@@ -1,9 +1,30 @@
 import { AsyncView, Button } from "@components/ui";
 import { PATHS } from "@config/paths";
-import { listUnknownWords, markWord } from "@modules/reading";
+import { listUnknownWords, markWord, type UnknownWord } from "@modules/reading";
 import { A } from "@solidjs/router";
 import { createResource, For } from "solid-js";
 import styles from "./ReadingUnknown.module.css";
+
+const WordCard = (props: {
+	w: UnknownWord;
+	onMarkKnown: (word: string) => void;
+}) => (
+	<div class={styles.card}>
+		<div class={styles.wordMain}>
+			<span class={styles.word}>{props.w.word}</span>
+			<span class={styles.counts}>
+				不认识 {props.w.unknown_count} 次 / 认识 {props.w.known_count} 次
+			</span>
+		</div>
+		<Button
+			variant="primary"
+			size="sm"
+			onClick={() => props.onMarkKnown(props.w.word)}
+		>
+			✓ 认识
+		</Button>
+	</div>
+);
 
 export default function ReadingUnknown() {
 	const [data, { refetch }] = createResource(listUnknownWords);
@@ -33,23 +54,7 @@ export default function ReadingUnknown() {
 				{(words) => (
 					<div class={styles.list}>
 						<For each={words}>
-							{(w) => (
-								<div class={styles.card}>
-									<div class={styles.wordMain}>
-										<span class={styles.word}>{w.word}</span>
-										<span class={styles.counts}>
-											不认识 {w.unknown_count} 次 / 认识 {w.known_count} 次
-										</span>
-									</div>
-									<Button
-										variant="primary"
-										size="sm"
-										onClick={() => handleMarkKnown(w.word)}
-									>
-										✓ 认识
-									</Button>
-								</div>
-							)}
+							{(w) => <WordCard w={w} onMarkKnown={handleMarkKnown} />}
 						</For>
 					</div>
 				)}

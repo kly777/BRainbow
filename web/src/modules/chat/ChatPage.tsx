@@ -14,6 +14,12 @@ import { MessageRow } from "./components/MessageRow.tsx";
 import { useAutoScroll } from "./hooks/useAutoScroll.ts";
 import { useChatPage } from "./hooks/useChatPage.ts";
 
+const ChatNodeList = (props: { c: ReturnType<typeof useChatPage> }) => (
+	<For each={props.c.activePath()}>
+		{(node) => <MessageRow c={props.c} node={node} />}
+	</For>
+);
+
 export default function ChatPage() {
 	const c = useChatPage();
 	const [sidebarCollapsed, setSidebarCollapsed] = createSignal(false);
@@ -111,9 +117,7 @@ export default function ChatPage() {
 							/>
 							<TreeHeader c={c} tree={cur().tree} />
 							<div class={styles.messageList} ref={listRef}>
-								<For each={c.activePath()}>
-									{(node) => <MessageRow c={c} node={node} />}
-								</For>
+								<ChatNodeList c={c} />
 							</div>
 							<TocNav container={() => listRef} dep={() => c.activePath()} />
 						</>

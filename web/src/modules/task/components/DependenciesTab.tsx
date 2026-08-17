@@ -29,6 +29,42 @@ interface DependenciesTabProps {
 	onDependencyChange?: () => void;
 }
 
+const DepItem = (props: {
+	t: Task;
+	onRemove: (id: number) => void | Promise<void>;
+}) => (
+	<div class={styles.depItem}>
+		<div class={styles.depInfo}>
+			<span class={styles.depTitle}>{props.t.title}</span>
+			<span
+				class={`${styles.depStatus} ${
+					depStatusClass[props.t.status || "backlog"]
+				}`}
+			>
+				{props.t.status || "backlog"}
+			</span>
+		</div>
+		<button
+			type="button"
+			onClick={() => props.onRemove(props.t.id)}
+			class={styles.depRemove}
+			title="移除依赖"
+		>
+			×
+		</button>
+	</div>
+);
+
+const DepOptions = (props: { tasks: Task[] }) => (
+	<For each={props.tasks}>
+		{(t) => (
+			<option value={t.id}>
+				[{t.status || "backlog"}] {t.title}
+			</option>
+		)}
+	</For>
+);
+
 export default function DependenciesTab(props: DependenciesTabProps) {
 	const [depIds, setDepIds] = createSignal<number[]>([]);
 	const [depTasks, setDepTasks] = createSignal<Task[]>([]);
@@ -124,28 +160,7 @@ export default function DependenciesTab(props: DependenciesTabProps) {
 			>
 				<div class={styles.depList}>
 					<For each={depTasks()}>
-						{(t) => (
-							<div class={styles.depItem}>
-								<div class={styles.depInfo}>
-									<span class={styles.depTitle}>{t.title}</span>
-									<span
-										class={`${styles.depStatus} ${
-											depStatusClass[t.status || "backlog"]
-										}`}
-									>
-										{t.status || "backlog"}
-									</span>
-								</div>
-								<button
-									type="button"
-									onClick={() => handleRemove(t.id)}
-									class={styles.depRemove}
-									title="移除依赖"
-								>
-									×
-								</button>
-							</div>
-						)}
+						{(t) => <DepItem t={t} onRemove={handleRemove} />}
 					</For>
 				</div>
 			</Show>
@@ -169,13 +184,7 @@ export default function DependenciesTab(props: DependenciesTabProps) {
 						class={styles.fieldInput}
 					>
 						<option value="">选择要依赖的任务...</option>
-						<For each={availableDepTasks()}>
-							{(t) => (
-								<option value={t.id}>
-									[{t.status || "backlog"}] {t.title}
-								</option>
-							)}
-						</For>
+						<DepOptions tasks={availableDepTasks()} />
 					</select>
 					<button
 						type="button"

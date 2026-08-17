@@ -2,7 +2,7 @@ import { Modal } from "@components/ui";
 import { notifyError, tryAsync } from "@lib/utils";
 import type { Task, TimeWindow } from "@modules/task";
 import { getTimeWindowsE } from "@modules/task";
-import { createEffect, createSignal, Show } from "solid-js";
+import { type Component, createEffect, createSignal, Show } from "solid-js";
 import BasicInfoTab from "./BasicInfoTab.tsx";
 import DependenciesTab from "./DependenciesTab.tsx";
 import styles from "./EditTaskModal.module.css";
@@ -16,6 +16,12 @@ interface EditTaskModalProps {
 	onSave: (taskId: number, updates: Partial<Task>) => void;
 	onDependencyChange?: () => void;
 }
+
+const TabCountBadge: Component<{ count: number }> = (props) => (
+	<Show when={props.count > 0}>
+		<span class={styles.tabCount}>{props.count}</span>
+	</Show>
+);
 
 export default function EditTaskModal(props: EditTaskModalProps) {
 	// ── Tab 切换 ──
@@ -119,11 +125,9 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 						onClick={() => setActiveTab("time")}
 					>
 						时间段
-						<Show when={feasibleWindows().length + plannedWindows().length > 0}>
-							<span class={styles.tabCount}>
-								{feasibleWindows().length + plannedWindows().length}
-							</span>
-						</Show>
+						<TabCountBadge
+							count={feasibleWindows().length + plannedWindows().length}
+						/>
 					</button>
 					<button
 						type="button"

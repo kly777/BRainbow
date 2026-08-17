@@ -56,20 +56,24 @@ describe("calcAvgCardTime", () => {
 		expect(calcAvgCardTime([])).toBe(DEFAULT_CARD_TIME_SECS);
 	});
 
-	it("single element → that element", () => {
-		expect(calcAvgCardTime([5])).toBe(5);
+	it("先验加权：第一张实测卡不会让预估跳变", () => {
+		// (20×4 + 5) / 5 = 17，而不是直接跳到 5
+		expect(calcAvgCardTime([5])).toBe(17);
 	});
 
-	it("averages multiple durations", () => {
+	it("averages multiple durations with prior", () => {
+		// (20×4 + 10 + 20 + 30) / 7 = 20
 		expect(calcAvgCardTime([10, 20, 30])).toBe(20);
 	});
 
 	it("handles fractional values", () => {
-		expect(calcAvgCardTime([1.5, 2.5])).toBeCloseTo(2);
+		// (80 + 1.5 + 2.5) / 6 = 14
+		expect(calcAvgCardTime([1.5, 2.5])).toBeCloseTo(14);
 	});
 
-	it("large numbers", () => {
-		expect(calcAvgCardTime([100, 200, 300])).toBe(200);
+	it("large numbers converge toward observed mean", () => {
+		// (80 + 600) / 7 ≈ 97.14，实测数据仍占主导
+		expect(calcAvgCardTime([100, 200, 300])).toBeCloseTo(680 / 7);
 	});
 });
 

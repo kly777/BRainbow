@@ -10,14 +10,19 @@ export const MAX_LIMIT = 15;
 export const DEFAULT_LIMIT = 7;
 /** 没有历史耗时数据时的单卡耗时先验（秒） */
 export const DEFAULT_CARD_TIME_SECS = 20;
+/** 先验的伪样本权重：前几张实测卡不会瞬间拉偏预估 */
+export const CARD_TIME_PRIOR_WEIGHT = 4;
 
 /** 动态队列大小：基于评分 EMA 计算 */
 export function calcMaxLearning(avg: number): number {
 	return Math.round(MIN_LIMIT + ((avg - 1) / 3) * (MAX_LIMIT - MIN_LIMIT));
 }
 
-/** 平均单张卡耗时（秒）；无实测数据时回落到常见先验，让时间预估从一开始可用 */
+/** 先验加权平均单卡耗时：随实测样本增多平滑收敛，避免第一张卡让预估跳变 */
 export function calcAvgCardTime(durations: readonly number[]): number {
-	if (durations.length === 0) return DEFAULT_CARD_TIME_SECS;
-	return durations.reduce((a, b) => a + b, 0) / durations.length;
+	const sum = durations.reduce((a, b) => a + b, 0);
+	return (
+		(DEFAULT_CARD_TIME_SECS * CARD_TIME_PRIOR_WEIGHT + sum) /
+		(CARD_TIME_PRIOR_WEIGHT + durations.length)
+	);
 }

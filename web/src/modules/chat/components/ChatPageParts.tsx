@@ -1,6 +1,6 @@
 // ── ChatPage 的子组件：树列表项 / 树头部（标题+提示词）/ 空会话欢迎区 / 章节导航 ──
 
-import { copyTextWithToast, tryOrNotify } from "@lib/utils";
+import { copyTextWithToast, fmtLocal, tryOrNotify } from "@lib/utils";
 import type { ChatNode, ChatTree } from "@modules/chat";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { updateTreeE } from "../api.ts";
@@ -9,46 +9,143 @@ import type { useChatPage } from "../hooks/useChatPage.ts";
 
 // ── 树列表项 ──
 
-/** 侧边栏收起/展开按钮 */
-export function ToggleSidebar(props: {
-	collapsed: boolean;
-	onClick: () => void;
-}) {
-	return (
-		<button
-			type="button"
-			class={styles.sidebarToggle}
-			title={props.collapsed ? "展开侧边栏" : "收起侧边栏"}
-			onClick={props.onClick}
-		>
-			{props.collapsed ? "☰" : "◀"}
-		</button>
-	);
-}
-
 export function TreeListItem(props: {
 	tree: ChatTree;
 	active: boolean;
 	onSelect: () => void;
+	onRename: (title: string) => void;
+	onAiTitle: () => void;
 	onDelete: () => void;
 }) {
+	const [menuOpen, setMenuOpen] = createSignal(false);
+	const [renaming, setRenaming] = createSignal(false);
+	const [renameText, setRenameText] = createSignal(props.tree.title);
+	const [aiBusy, setAiBusy] = createSignal(false);
+	let menuRef!: HTMLDivElement;
+	let renameRef!: HTMLInputElement;
+
+	// 点击菜单外部关闭
+	createEffect(() => {
+		if (!menuOpen()) return;
+		const onDown = (e: MouseEvent) => {
+			const target = e.target;
+			if (!(target instanceof Node) || !menuRef.contains(target)) {
+				setMenuOpen(false);
+			}
+		};
+		document.addEventListener("pointerdown", onDown);
+		onCleanup(() => document.removeEventListener("pointerdown", onDown));
+	});
+
+	createEffect(() => {
+		if (renaming()) renameRef?.focus();
+	});
+
+	const startRename = () => {
+		setRenameText(props.tree.title);
+		setRenaming(true);
+		setMenuOpen(false);
+	};
+
+	const commitRename = () => {
+		const title = renameText().trim();
+		setRenaming(false);
+		if (title && title !== props.tree.title) props.onRename(title);
+	};
+
+	const runAiTitle = async () => {
+		setAiBusy(true);
+		setMenuOpen(false);
+		await props.onAiTitle();
+		setAiBusy(false);
+	};
+
+	const timeText = () =>
+		props.tree.updated_at ? fmtLocal(props.tree.updated_at) : "—";
+
 	return (
 		<div class={props.active ? styles.treeItemActive : styles.treeItem}>
-			<button type="button" class={styles.treeSelect} onClick={props.onSelect}>
-				<span class={styles.treeItemTitle}>{props.tree.title}</span>
-				<span class={styles.treeItemMeta}>{props.tree.node_count} 条</span>
-			</button>
-			<button
-				type="button"
-				class={styles.treeDelete}
-				title="删除对话"
-				onClick={(e) => {
-					e.stopPropagation();
-					void props.onDelete();
-				}}
+			<Show
+				when={!renaming()}
+				fallback={
+					<input
+						ref={renameRef}
+						type="text"
+						class={styles.treeRenameInput}
+						value={renameText()}
+						aria-label="重命名对话"
+						onInput={(e) => setRenameText(e.currentTarget.value)}
+						onClick={(e) => e.stopPropagation()}
+						onBlur={commitRename}
+						onKeyDown={(e) => {
+							e.stopPropagation();
+							if (e.key === "Enter") commitRename();
+							if (e.key === "Escape") {
+								setRenameText(props.tree.title);
+								setRenaming(false);
+							}
+						}}
+					/>
+				}
 			>
-				✕
-			</button>
+				<button
+					type="button"
+					class={styles.treeSelect}
+					onClick={() => {
+						setMenuOpen(false);
+						props.onSelect();
+					}}
+				>
+					<span class={styles.treeItemTitle} title={props.tree.title}>
+						{props.tree.title}
+					</span>
+					<span class={styles.treeItemTime}>{timeText()}</span>
+				</button>
+			</Show>
+			<div class={styles.treeMoreWrap} ref={menuRef}>
+				<button
+					type="button"
+					class={styles.treeMoreBtn}
+					title="更多操作"
+					aria-label="更多操作"
+					aria-expanded={menuOpen()}
+					onClick={(e) => {
+						e.stopPropagation();
+						setMenuOpen(!menuOpen());
+					}}
+				>
+					•••
+				</button>
+				<Show when={menuOpen()}>
+					<div class={styles.treeMenu}>
+						<button
+							type="button"
+							class={styles.treeMenuItem}
+							onClick={() => startRename()}
+						>
+							重命名
+						</button>
+						<button
+							type="button"
+							class={styles.treeMenuItem}
+							disabled={aiBusy()}
+							onClick={() => void runAiTitle()}
+						>
+							{aiBusy() ? "生成中…" : "AI 取标题"}
+						</button>
+						<button
+							type="button"
+							class={`${styles.treeMenuItem} ${styles.treeMenuItemDanger}`}
+							onClick={() => {
+								setMenuOpen(false);
+								void props.onDelete();
+							}}
+						>
+							删除
+						</button>
+					</div>
+				</Show>
+			</div>
 		</div>
 	);
 }
@@ -61,14 +158,12 @@ export function TreeHeader(props: {
 }) {
 	const [showPrompt, setShowPrompt] = createSignal(false);
 	const [promptText, setPromptText] = createSignal(props.tree.system_prompt);
-	const [titleText, setTitleText] = createSignal(props.tree.title);
 
 	const savePrompt = async () => {
 		const ok = await tryOrNotify(
 			() =>
 				updateTreeE(props.tree.id, {
 					system_prompt: promptText(),
-					title: titleText(),
 				}),
 			"保存设置",
 		);
@@ -84,7 +179,6 @@ export function TreeHeader(props: {
 					class={styles.promptBtn}
 					onClick={() => {
 						setPromptText(props.tree.system_prompt);
-						setTitleText(props.tree.title);
 						setShowPrompt(true);
 					}}
 				>
@@ -93,16 +187,6 @@ export function TreeHeader(props: {
 			</div>
 			<Show when={showPrompt()}>
 				<div class={styles.promptPanel}>
-					<label class={styles.promptLabel} for="chat-prompt-title">
-						标题
-					</label>
-					<input
-						id="chat-prompt-title"
-						type="text"
-						class={styles.promptInput}
-						value={titleText()}
-						onInput={(e) => setTitleText(e.currentTarget.value)}
-					/>
 					<label class={styles.promptLabel} for="chat-prompt-text">
 						系统提示词（影响之后的对话）
 					</label>

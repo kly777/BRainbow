@@ -5,13 +5,21 @@
 import { getToken } from "@lib/api";
 import {
 	confirmAndRun,
+	notifyError,
 	notifySuccess,
 	parseUrlId,
 	tryAsync,
 	tryOrNotify,
 } from "@lib/utils";
 import type { ChatNode, ChatTree, TreeDetail } from "@modules/chat";
-import { createTreeE, deleteTreeE, getTreeE, listTreesE } from "@modules/chat";
+import {
+	createTreeE,
+	deleteTreeE,
+	generateTreeTitleE,
+	getTreeE,
+	listTreesE,
+	updateTreeE,
+} from "@modules/chat";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal } from "solid-js";
 import {
@@ -151,6 +159,42 @@ export function useChatSession(opts: ChatSessionOptions) {
 		}
 	};
 
+	const renameSession = async (id: number, title: string) => {
+		const clean = title.trim();
+		if (!clean) return;
+		const ok = await tryOrNotify(
+			() => updateTreeE(id, { title: clean }),
+			"重命名会话",
+		);
+		if (ok === null) return;
+		setTrees((prev) =>
+			prev.map((t) => (t.id === id ? { ...t, title: clean } : t)),
+		);
+		if (current()?.tree.id === id) {
+			setCurrent((prev) =>
+				prev ? { ...prev, tree: { ...prev.tree, title: clean } } : prev,
+			);
+		}
+	};
+
+	/** AI 取标题；silent 用于首轮对话后的自动调用（失败不弹错误） */
+	const aiTitleSession = async (id: number, silent = false) => {
+		const result = await tryAsync(() => generateTreeTitleE(id));
+		if (!result.ok) {
+			if (!silent) notifyError("AI 取标题失败", result.error);
+			return false;
+		}
+		const title = result.value.title;
+		setTrees((prev) => prev.map((t) => (t.id === id ? { ...t, title } : t)));
+		if (current()?.tree.id === id) {
+			setCurrent((prev) =>
+				prev ? { ...prev, tree: { ...prev.tree, title } } : prev,
+			);
+		}
+		if (!silent) notifySuccess("标题已更新");
+		return true;
+	};
+
 	const selectSession = (id: number) => setParams({ tree: String(id) });
 
 	// ── 流式对话 ──
@@ -176,6 +220,10 @@ export function useChatSession(opts: ChatSessionOptions) {
 
 		const token = getToken();
 		if (!token) return { ok: false, error: "未登录" };
+
+		// 首轮有效对话后自动用 AI 给默认标题的会话取名（/chat 与 /chat/mem 共用）
+		const tree = current()?.tree;
+		const needsTitle = tree?.title === opts.createTitle;
 
 		const ts = Date.now();
 		// 临时节点 id 用负数标记（页面以 node.id < 0 识别乐观插入态）
@@ -257,6 +305,7 @@ export function useChatSession(opts: ChatSessionOptions) {
 				// 完成或用户主动停止：重拉真实树替换临时节点（保持 current，不触发整页空态）。
 				// reasoning 已随节点入库，真实节点自带思考内容
 				await loadTree(id);
+				if (needsTitle && tree) void aiTitleSession(id, true);
 				return { ok: true, error: "" };
 			}
 			rollback();
@@ -293,6 +342,8 @@ export function useChatSession(opts: ChatSessionOptions) {
 		loadTree,
 		createSession,
 		removeSession,
+		renameSession,
+		aiTitleSession,
 		selectSession,
 		focusBranch,
 		isInSubtree,

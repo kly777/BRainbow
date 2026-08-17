@@ -1,19 +1,19 @@
 import { PATHS } from "@config/paths";
 // ── /chat/mem：对话式记忆卡片生成 ──
-// 左侧：卡片生成会话列表（新建 / 删除 / 切换）
-// 右侧：对话流（user 气泡 / AI 回复），assistant 的 JSON 卡片渲染为可勾选清单，
-//       底部"导入所选"把勾选卡片写入记忆库。
+// 与 /chat 是同一主页面的两个分支：共用 ChatSidebar / useChatSession，
+// 差异仅在会话 kind（mem）与右侧内容（卡片清单 / 导入）。
 
-import { A } from "@solidjs/router";
-import { For, onMount, Show } from "solid-js";
+import { createSignal, For, onMount, Show } from "solid-js";
 import styles from "./ChatMemPage.module.css";
 import { MessageRow as ChatMemMessageRow } from "./components/ChatMemMessageRow.tsx";
+import { ChatSidebar, ToggleSidebar } from "./components/ChatSidebar.tsx";
 import { Composer } from "./components/Composer.tsx";
 import { useAutoScroll } from "./hooks/useAutoScroll.ts";
 import { useChatMem } from "./hooks/useChatMem.ts";
 
 export default function ChatMemPage() {
 	const c = useChatMem();
+	const [sidebarCollapsed, setSidebarCollapsed] = createSignal(false);
 	let listRef: HTMLDivElement | undefined;
 	const autoScroll = useAutoScroll(() => listRef);
 	autoScroll.follow(() => c.activePath());
@@ -22,60 +22,24 @@ export default function ChatMemPage() {
 
 	return (
 		<div class={styles.page}>
-			{/* ── 会话列表 ── */}
-			<aside class={styles.sidebar}>
-				<div class={styles.sidebarHead}>
-					<A href={PATHS.memory} class={styles.backLink}>
-						← 记忆
-					</A>
-					<button
-						type="button"
-						class={styles.newBtn}
-						onClick={() => void c.createSession()}
-					>
-						＋ 新会话
-					</button>
-				</div>
-				<div class={styles.sidebarHint}>
-					粘贴文本 → AI 生成卡片 → 对话修订 → 勾选导入
-				</div>
-				<div class={styles.treeList}>
-					<For each={c.trees()}>
-						{(tree) => (
-							<div
-								class={
-									c.current()?.tree.id === tree.id
-										? styles.sessionActive
-										: styles.session
-								}
-							>
-								<button
-									type="button"
-									class={styles.sessionSelect}
-									onClick={() => c.selectSession(tree.id)}
-								>
-									<span class={styles.sessionTitle}>{tree.title}</span>
-									<span class={styles.sessionMeta}>{tree.node_count} 条</span>
-								</button>
-								<button
-									type="button"
-									class={styles.sessionDelete}
-									title="删除会话"
-									onClick={(e) => {
-										e.stopPropagation();
-										void c.removeSession(tree.id);
-									}}
-								>
-									✕
-								</button>
-							</div>
-						)}
-					</For>
-					<Show when={c.trees().length === 0 && !c.loadingTrees()}>
-						<div class={styles.treeEmpty}>还没有会话，点击"＋ 新会话"开始</div>
-					</Show>
-				</div>
-			</aside>
+			{/* ── 会话列表（与 /chat 共用 ChatSidebar） ── */}
+			<ChatSidebar
+				trees={c.trees}
+				loadingTrees={c.loadingTrees}
+				currentTreeId={() => c.current()?.tree.id}
+				collapsed={sidebarCollapsed()}
+				title="记忆卡片会话"
+				backHref={PATHS.memory}
+				backLabel="← 记忆"
+				newLabel="＋ 新会话"
+				emptyText="还没有会话，点击“＋ 新会话”开始"
+				hint="粘贴文本 → AI 生成卡片 → 对话修订 → 勾选导入"
+				onCreate={() => void c.createSession()}
+				onSelect={(id) => c.selectSession(id)}
+				onRename={(id, title) => void c.renameSession(id, title)}
+				onAiTitle={(id) => c.aiTitleSession(id)}
+				onDelete={(id) => c.removeSession(id)}
+			/>
 
 			{/* ── 对话区 ── */}
 			<main class={styles.main}>
@@ -97,6 +61,10 @@ export default function ChatMemPage() {
 								<div class={styles.errorBanner}>{c.error()}</div>
 							</Show>
 							<div class={styles.header}>
+								<ToggleSidebar
+									collapsed={sidebarCollapsed()}
+									onClick={() => setSidebarCollapsed(!sidebarCollapsed())}
+								/>
 								<h2 class={styles.headerTitle}>{cur().tree.title}</h2>
 								<ImportBar c={c} />
 							</div>

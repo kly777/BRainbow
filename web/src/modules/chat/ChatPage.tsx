@@ -5,11 +5,10 @@ import { createSignal, For, onMount, Show } from "solid-js";
 import styles from "./ChatPage.module.css";
 import {
 	TocNav,
-	ToggleSidebar,
 	TreeHeader,
-	TreeListItem,
 	WelcomeText,
 } from "./components/ChatPageParts.tsx";
+import { ChatSidebar, ToggleSidebar } from "./components/ChatSidebar.tsx";
 import { Composer } from "./components/Composer.tsx";
 import { MessageRow } from "./components/MessageRow.tsx";
 import { useAutoScroll } from "./hooks/useAutoScroll.ts";
@@ -29,78 +28,61 @@ export default function ChatPage() {
 
 	return (
 		<div class={styles.page}>
-			{/* ── 侧边栏：搜索 + 树列表 ── */}
-			<aside
-				class={sidebarCollapsed() ? styles.sidebarCollapsed : styles.sidebar}
-			>
-				<div class={styles.searchBox}>
-					<SearchInput
-						value={c.searchQ()}
-						onSearch={(q) => c.onSearchInput(q)}
-						debounceMs={0}
-						placeholder="搜索对话 / 消息…"
-						class={styles.searchInput}
-					/>
-					<Show when={c.searchOpen()}>
-						<div class={styles.searchResults}>
-							<Show
-								when={!c.searching() && c.searchHits().length === 0}
-								fallback={
-									<For each={c.searchHits()}>
-										{(hit) => (
-											<button
-												type="button"
-												class={styles.searchHit}
-												onClick={() => c.gotoHit(hit)}
-											>
-												<span class={styles.searchHitTitle}>
-													{hit.tree_title}
-												</span>
-												<span class={styles.searchHitSnippet}>
-													{hit.snippet}
-												</span>
-											</button>
-										)}
-									</For>
-								}
-							>
-								<div class={styles.searchEmpty}>
-									{c.searching() ? "搜索中…" : "无结果"}
-								</div>
-							</Show>
-						</div>
-					</Show>
-				</div>
-
-				<div class={styles.sidebarHead}>
-					<span class={styles.sidebarTitle}>对话</span>
-					<button
-						type="button"
-						class={styles.newBtn}
-						onClick={() => void c.createSession()}
-					>
-						＋ 新建
-					</button>
-				</div>
-
-				<div class={styles.treeList}>
-					<For each={c.trees()}>
-						{(tree) => (
-							<TreeListItem
-								tree={tree}
-								active={c.current()?.tree.id === tree.id}
-								onSelect={() => c.selectSession(tree.id)}
-								onDelete={() => c.removeSession(tree.id)}
-							/>
-						)}
-					</For>
-					<Show when={c.trees().length === 0 && !c.loadingTrees()}>
-						<div class={styles.treeEmpty}>
-							还没有对话，点击"＋ 新建"立即开始
-						</div>
-					</Show>
-				</div>
-			</aside>
+			{/* ── 侧边栏：搜索 + 树列表（与 /chat/mem 共用 ChatSidebar） ── */}
+			<ChatSidebar
+				trees={c.trees}
+				loadingTrees={c.loadingTrees}
+				currentTreeId={() => c.current()?.tree.id}
+				collapsed={sidebarCollapsed()}
+				title="对话"
+				newLabel="＋ 新建"
+				emptyText="还没有对话，点击“＋ 新建”立即开始"
+				preHead={
+					<div class={styles.searchBox}>
+						<SearchInput
+							value={c.searchQ()}
+							onSearch={(q) => c.onSearchInput(q)}
+							debounceMs={0}
+							placeholder="搜索对话 / 消息…"
+							class={styles.searchInput}
+						/>
+						<Show when={c.searchOpen()}>
+							<div class={styles.searchResults}>
+								<Show
+									when={!c.searching() && c.searchHits().length === 0}
+									fallback={
+										<For each={c.searchHits()}>
+											{(hit) => (
+												<button
+													type="button"
+													class={styles.searchHit}
+													onClick={() => c.gotoHit(hit)}
+												>
+													<span class={styles.searchHitTitle}>
+														{hit.tree_title}
+													</span>
+													<span class={styles.searchHitSnippet}>
+														{hit.snippet}
+													</span>
+												</button>
+											)}
+										</For>
+									}
+								>
+									<div class={styles.searchEmpty}>
+										{c.searching() ? "搜索中…" : "无结果"}
+									</div>
+								</Show>
+							</div>
+						</Show>
+					</div>
+				}
+				onCreate={() => void c.createSession()}
+				onSelect={(id) => c.selectSession(id)}
+				onRename={(id, title) => void c.renameSession(id, title)}
+				onAiTitle={(id) => c.aiTitleSession(id)}
+				onDelete={(id) => c.removeSession(id)}
+			/>
 
 			{/* ── 对话区 ── */}
 			<main class={styles.main}>

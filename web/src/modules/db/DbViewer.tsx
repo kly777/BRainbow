@@ -2,7 +2,14 @@ import { Button } from "@components/ui";
 import { getErrorMessage } from "@lib/api";
 import { tryAsync } from "@lib/utils";
 import { useSearchParams } from "@solidjs/router";
-import { type Component, createSignal, For, onMount } from "solid-js";
+import {
+	type Component,
+	createEffect,
+	createSignal,
+	For,
+	onMount,
+	Show,
+} from "solid-js";
 import { type ColumnInfo, getTableDataE, getTablesE } from "./api";
 import styles from "./DbViewer.module.css";
 
@@ -17,6 +24,16 @@ const DB: Component = () => {
 		const p = Number(searchParams.page);
 		return Number.isInteger(p) && p >= 1 ? p : 1;
 	};
+	const filterId = () => {
+		const raw = searchParams.id;
+		const n = Number(raw);
+		return typeof raw === "string" && Number.isInteger(n) && n >= 1 ? n : 0;
+	};
+	const filterCol = () => {
+		const raw = searchParams.ref_col;
+		return typeof raw === "string" && raw ? raw : "id";
+	};
+
 	const [columns, setColumns] = createSignal<ColumnInfo[]>([]);
 	const [rows, setRows] = createSignal<string[][]>([]);
 	const [total, setTotal] = createSignal(0);
@@ -37,12 +54,21 @@ const DB: Component = () => {
 		setLoading(false);
 	};
 
-	const loadTable = async (name: string, targetPage = 1) => {
-		setSearchParams({ table: name || undefined, page: targetPage });
+	const fetchTable = async (
+		name: string,
+		targetPage: number,
+		id: number,
+		refCol: string,
+	) => {
 		setLoading(true);
 		setError("");
 		const result = await tryAsync(() =>
-			getTableDataE(name, { page: targetPage, page_size: PAGE_SIZE }),
+			getTableDataE(name, {
+				page: targetPage,
+				page_size: PAGE_SIZE,
+				id: id > 0 ? id : undefined,
+				ref_col: id > 0 ? refCol : undefined,
+			}),
 		);
 		if (result.ok) {
 			setColumns([...result.value.header]);
@@ -54,11 +80,53 @@ const DB: Component = () => {
 		setLoading(false);
 	};
 
-	onMount(() => {
-		loadTables();
-		if (activeTable()) {
-			loadTable(activeTable(), currentPage());
+	const openTable = (name: string) => {
+		setSearchParams({
+			table: name || undefined,
+			page: 1,
+			id: undefined,
+			ref_col: undefined,
+		});
+	};
+
+	const reloadTable = (targetPage: number) => {
+		const table = activeTable();
+		if (!table) return;
+		setSearchParams({
+			table,
+			page: targetPage,
+			id: filterId() > 0 ? String(filterId()) : undefined,
+			ref_col: filterId() > 0 ? filterCol() : undefined,
+		});
+	};
+
+	const jumpToRef = (targetTable: string, refCol: string, value: string) => {
+		const id = Number(value);
+		if (Number.isInteger(id) && id >= 1) {
+			setSearchParams({
+				table: targetTable,
+				page: 1,
+				id: String(id),
+				ref_col: refCol,
+			});
+		} else {
+			openTable(targetTable);
 		}
+	};
+
+	// URL 是表格状态的唯一来源：前进/后退、浏览器刷新、程序内 setSearchParams
+	// 都走同一个 effect 拉取，避免 URL 变了但表格没变。
+	createEffect(() => {
+		const table = activeTable();
+		const page = currentPage();
+		const id = filterId();
+		const refCol = filterCol();
+		if (!table) return;
+		void fetchTable(table, page, id, refCol);
+	});
+
+	onMount(() => {
+		void loadTables();
 	});
 
 	return (
@@ -69,7 +137,7 @@ const DB: Component = () => {
 					{(t) => (
 						<button
 							type="button"
-							onClick={() => loadTable(t)}
+							onClick={() => openTable(t)}
 							classList={{
 								[styles.tableItem]: true,
 								[styles.tableItemActive]: activeTable() === t,
@@ -89,6 +157,27 @@ const DB: Component = () => {
 				{activeTable() && !loading() && columns().length > 0 && (
 					<>
 						<h3 class={styles.tableTitle}>{activeTable()}</h3>
+
+						{/* 跳转过滤提示：给用户明确的退出入口 */}
+						<Show when={filterId() > 0}>
+							<div class={styles.filterBar}>
+								<span>
+									正在查看 {activeTable()} 中{" "}
+									<code class={styles.filterCode}>
+										{filterCol()} = {filterId()}
+									</code>{" "}
+									的记录
+								</span>
+								<button
+									type="button"
+									class={styles.filterClear}
+									onClick={() => openTable(activeTable())}
+								>
+									清除过滤 · 查看全部
+								</button>
+							</div>
+						</Show>
+
 						<div class={styles.tableWrap}>
 							<table class={styles.table}>
 								<thead>
@@ -98,6 +187,9 @@ const DB: Component = () => {
 												<th scope="col">
 													<div class={styles.colName}>{c.name}</div>
 													<div class={styles.colType}>{c.col_type}</div>
+													<Show when={c.ref_table}>
+														<div class={styles.refHint}>→ {c.ref_table}</div>
+													</Show>
 												</th>
 											)}
 										</For>
@@ -115,9 +207,33 @@ const DB: Component = () => {
 										{(row) => (
 											<tr>
 												<For each={row}>
-													{(cell) => (
-														<td title={String(cell)}>{String(cell)}</td>
-													)}
+													{(cell, i) => {
+														const col = () => columns()[i()];
+														const text = () => String(cell);
+														return (
+															<td title={text()}>
+																<Show
+																	when={col()?.ref_table && text()}
+																	fallback={<span>{text()}</span>}
+																>
+																	<button
+																		type="button"
+																		class={styles.cellLink}
+																		title={`跳转到 ${col()?.ref_table}`}
+																		onClick={() =>
+																			jumpToRef(
+																				col()?.ref_table ?? "",
+																				col()?.ref_column ?? "id",
+																				text(),
+																			)
+																		}
+																	>
+																		{text()}
+																	</button>
+																</Show>
+															</td>
+														);
+													}}
 												</For>
 											</tr>
 										)}
@@ -127,13 +243,15 @@ const DB: Component = () => {
 						</div>
 						<div class={styles.pagination}>
 							<span>
-								共 {total()} 行 · 第 {currentPage()} / {totalPages()} 页
+								{filterId() > 0
+									? `匹配 ${total()} 行`
+									: `共 ${total()} 行 · 第 ${currentPage()} / ${totalPages()} 页`}
 							</span>
 							<Button
 								variant="secondary"
 								size="sm"
 								disabled={currentPage() <= 1 || loading()}
-								onClick={() => loadTable(activeTable(), currentPage() - 1)}
+								onClick={() => reloadTable(currentPage() - 1)}
 							>
 								上一页
 							</Button>
@@ -141,7 +259,7 @@ const DB: Component = () => {
 								variant="secondary"
 								size="sm"
 								disabled={currentPage() >= totalPages() || loading()}
-								onClick={() => loadTable(activeTable(), currentPage() + 1)}
+								onClick={() => reloadTable(currentPage() + 1)}
 							>
 								下一页
 							</Button>

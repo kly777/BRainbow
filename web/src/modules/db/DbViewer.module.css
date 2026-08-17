@@ -114,6 +114,69 @@
 	color: var(--t-color-ink-faint);
 }
 
+.ref-hint {
+	font-size: var(--text-2xs);
+	font-weight: 500;
+	color: var(--t-color-accent);
+}
+
+.filter-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-md);
+	padding: var(--space-sm) var(--space-md);
+	margin-bottom: var(--space-sm);
+	background: var(--t-color-accent-soft);
+	border: 1px solid var(--t-color-accent);
+	border-radius: var(--radius-md);
+	font-size: var(--text-sm);
+	color: var(--t-color-accent-strong);
+}
+
+.filter-code {
+	font-family: var(--t-font-mono);
+	font-size: var(--text-xs);
+}
+
+.filter-clear {
+	color: var(--t-color-accent-strong);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-accent);
+	border-radius: var(--radius-full);
+	padding: var(--space-2xs) var(--space-sm);
+	cursor: pointer;
+	font-size: var(--text-xs);
+	white-space: nowrap;
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
+}
+
+.filter-clear:hover {
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
+}
+
+.cell-link {
+	display: inline-block;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--t-color-accent);
+	cursor: pointer;
+	font: inherit;
+	text-decoration: underline dotted;
+	text-underline-offset: 3px;
+}
+
+.cell-link:hover {
+	color: var(--t-color-accent-strong);
+}
+
 .table td {
 	padding: var(--space-xs) var(--space-md);
 	border-bottom: 1px solid var(--t-color-border);

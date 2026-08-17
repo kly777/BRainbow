@@ -7,6 +7,7 @@ import {
 	createEffect,
 	createSignal,
 	For,
+	Index,
 	onMount,
 	Show,
 } from "solid-js";
@@ -33,9 +34,19 @@ const DB: Component = () => {
 		const raw = searchParams.ref_col;
 		return typeof raw === "string" && raw ? raw : "id";
 	};
+	const sortCol = () =>
+		typeof searchParams.sort === "string" ? searchParams.sort : "";
+	const sortDesc = () => searchParams.order === "desc";
+	const searchCol = () =>
+		typeof searchParams.fcol === "string" ? searchParams.fcol : "";
+	const searchValue = () =>
+		typeof searchParams.q === "string" ? searchParams.q : "";
 
 	const [columns, setColumns] = createSignal<ColumnInfo[]>([]);
 	const [rows, setRows] = createSignal<string[][]>([]);
+	const [refPreviewMap, setRefPreviewMap] = createSignal<Map<string, string>>(
+		new Map(),
+	);
 	const [total, setTotal] = createSignal(0);
 	const [loading, setLoading] = createSignal(false);
 	const [error, setError] = createSignal("");
@@ -59,6 +70,10 @@ const DB: Component = () => {
 		targetPage: number,
 		id: number,
 		refCol: string,
+		sort: string,
+		desc: boolean,
+		fcol: string,
+		q: string,
 	) => {
 		setLoading(true);
 		setError("");
@@ -68,12 +83,21 @@ const DB: Component = () => {
 				page_size: PAGE_SIZE,
 				id: id > 0 ? id : undefined,
 				ref_col: id > 0 ? refCol : undefined,
+				sort: sort || undefined,
+				order: sort ? (desc ? "desc" : "asc") : undefined,
+				fcol: fcol || undefined,
+				q: q || undefined,
 			}),
 		);
 		if (result.ok) {
 			setColumns([...result.value.header]);
 			setRows(result.value.rows.map((row) => row.map((v) => String(v ?? ""))));
 			setTotal(result.value.total);
+			const previews = new Map<string, string>();
+			for (const ref of result.value.refs) {
+				previews.set(`${ref.table}:${ref.id}`, ref.summary);
+			}
+			setRefPreviewMap(previews);
 		} else {
 			setError(getErrorMessage(result.error));
 		}
@@ -86,6 +110,10 @@ const DB: Component = () => {
 			page: 1,
 			id: undefined,
 			ref_col: undefined,
+			sort: undefined,
+			order: undefined,
+			fcol: undefined,
+			q: undefined,
 		});
 	};
 
@@ -97,8 +125,31 @@ const DB: Component = () => {
 			page: targetPage,
 			id: filterId() > 0 ? String(filterId()) : undefined,
 			ref_col: filterId() > 0 ? filterCol() : undefined,
+			sort: sortCol() || undefined,
+			order: sortCol() ? (sortDesc() ? "desc" : "asc") : undefined,
+			fcol: searchCol() || undefined,
+			q: searchValue() || undefined,
 		});
 	};
+
+	const toggleSort = (col: string) => {
+		const nextDesc = sortCol() === col ? !sortDesc() : false;
+		setSearchParams({
+			sort: col,
+			order: nextDesc ? "desc" : "asc",
+			page: 1,
+		});
+	};
+
+	const setSearchFilter = (col: string, value: string) => {
+		setSearchParams({
+			fcol: value ? col : undefined,
+			q: value || undefined,
+			page: 1,
+		});
+	};
+
+	const clearFilters = () => openTable(activeTable());
 
 	const jumpToRef = (targetTable: string, refCol: string, value: string) => {
 		const id = Number(value);
@@ -108,10 +159,20 @@ const DB: Component = () => {
 				page: 1,
 				id: String(id),
 				ref_col: refCol,
+				sort: undefined,
+				order: undefined,
+				fcol: undefined,
+				q: undefined,
 			});
 		} else {
 			openTable(targetTable);
 		}
+	};
+
+	const previewFor = (table: string, value: string) => {
+		const n = Number(value);
+		if (!Number.isInteger(n) || n < 1) return "";
+		return refPreviewMap().get(`${table}:${n}`) ?? "";
 	};
 
 	// URL 是表格状态的唯一来源：前进/后退、浏览器刷新、程序内 setSearchParams
@@ -121,8 +182,12 @@ const DB: Component = () => {
 		const page = currentPage();
 		const id = filterId();
 		const refCol = filterCol();
+		const sort = sortCol();
+		const desc = sortDesc();
+		const fcol = searchCol();
+		const q = searchValue();
 		if (!table) return;
-		void fetchTable(table, page, id, refCol);
+		void fetchTable(table, page, id, refCol, sort, desc, fcol, q);
 	});
 
 	onMount(() => {
@@ -152,120 +217,178 @@ const DB: Component = () => {
 
 			<div class={styles.main}>
 				{error() && <div class={styles.errorBox}>{error()}</div>}
-				{loading() && <div class={styles.loading}>加载中…</div>}
+				{loading() && columns().length === 0 && (
+					<div class={styles.loading}>加载中…</div>
+				)}
 
-				{activeTable() && !loading() && columns().length > 0 && (
-					<>
-						<h3 class={styles.tableTitle}>{activeTable()}</h3>
+				{/* 首次数据到达前不渲染表格；之后请求期间保留旧表格，避免输入框/布局被重建 */}
+				<Show when={activeTable() && columns().length > 0}>
+					<div class={styles.tableHeader}>
+						<h3 class={styles.tableTitle} title={activeTable()}>
+							{activeTable()}
+						</h3>
 
-						{/* 跳转过滤提示：给用户明确的退出入口 */}
-						<Show when={filterId() > 0}>
+						{/* 过滤状态与标题同排显示，出现/消失不改变表格纵向位置 */}
+						<Show when={filterId() > 0 || searchValue().length > 0}>
 							<div class={styles.filterBar}>
-								<span>
-									正在查看 {activeTable()} 中{" "}
-									<code class={styles.filterCode}>
-										{filterCol()} = {filterId()}
-									</code>{" "}
-									的记录
+								<span class={styles.filterText}>
+									<Show when={filterId() > 0}>
+										<code class={styles.filterCode}>
+											{filterCol()} = {filterId()}
+										</code>
+									</Show>
+									<Show when={searchValue().length > 0}>
+										<code class={styles.filterCode}>
+											{searchCol()} 包含 “{searchValue()}”
+										</code>
+									</Show>
 								</span>
 								<button
 									type="button"
 									class={styles.filterClear}
-									onClick={() => openTable(activeTable())}
+									onClick={clearFilters}
 								>
-									清除过滤 · 查看全部
+									清除过滤
 								</button>
 							</div>
 						</Show>
+					</div>
 
-						<div class={styles.tableWrap}>
-							<table class={styles.table}>
-								<thead>
-									<tr>
-										<For each={columns()}>
-											{(c) => (
-												<th scope="col">
-													<div class={styles.colName}>{c.name}</div>
-													<div class={styles.colType}>{c.col_type}</div>
-													<Show when={c.ref_table}>
-														<div class={styles.refHint}>→ {c.ref_table}</div>
+					<div
+						class={styles.tableWrap}
+						aria-busy={loading() ? "true" : "false"}
+					>
+						<Show when={loading()}>
+							<div class={styles.tableLoading}>加载中…</div>
+						</Show>
+						<table class={styles.table}>
+							<thead>
+								<tr>
+									<Index each={columns()}>
+										{(c) => (
+											<th scope="col">
+												<button
+													type="button"
+													class={styles.sortBtn}
+													onClick={() => toggleSort(c().name)}
+													title="点击排序"
+												>
+													<span class={styles.colName}>{c().name}</span>
+													<span class={styles.colType}>{c().col_type}</span>
+													<Show when={sortCol() === c().name}>
+														<span class={styles.sortMark}>
+															{sortDesc() ? "↓" : "↑"}
+														</span>
 													</Show>
-												</th>
-											)}
-										</For>
+												</button>
+												<Show when={c().ref_table}>
+													<div class={styles.refHint}>→ {c().ref_table}</div>
+												</Show>
+											</th>
+										)}
+									</Index>
+								</tr>
+								<tr class={styles.filterRow}>
+									<Index each={columns()}>
+										{(c) => (
+											<th scope="col">
+												<input
+													type="text"
+													class={styles.filterInput}
+													placeholder="筛选…"
+													value={searchCol() === c().name ? searchValue() : ""}
+													onInput={(e) =>
+														setSearchFilter(c().name, e.currentTarget.value)
+													}
+												/>
+											</th>
+										)}
+									</Index>
+								</tr>
+							</thead>
+							<tbody>
+								{rows().length === 0 && (
+									<tr>
+										<td class={styles.emptyCell} colspan={columns().length}>
+											无数据
+										</td>
 									</tr>
-								</thead>
-								<tbody>
-									{rows().length === 0 && (
+								)}
+								<Index each={rows()}>
+									{(row) => (
 										<tr>
-											<td class={styles.emptyCell} colspan={columns().length}>
-												无数据
-											</td>
+											<Index each={row()}>
+												{(cell, cellI) => {
+													const col = () => columns()[cellI];
+													const text = () => String(cell());
+													const preview = () =>
+														col()?.ref_table
+															? previewFor(col()!.ref_table!, text())
+															: "";
+													return (
+														<td title={text()}>
+															<Show
+																when={col()?.ref_table && text()}
+																fallback={<span>{text()}</span>}
+															>
+																<button
+																	type="button"
+																	class={styles.cellLink}
+																	title={
+																		preview()
+																			? `${text()} · ${preview()}`
+																			: `跳转到 ${col()?.ref_table}`
+																	}
+																	onClick={() =>
+																		jumpToRef(
+																			col()?.ref_table ?? "",
+																			col()?.ref_column ?? "id",
+																			text(),
+																		)
+																	}
+																>
+																	<span class={styles.cellValue}>{text()}</span>
+																	<Show when={preview()}>
+																		<span class={styles.cellPreview}>
+																			{preview()}
+																		</span>
+																	</Show>
+																</button>
+															</Show>
+														</td>
+													);
+												}}
+											</Index>
 										</tr>
 									)}
-									<For each={rows()}>
-										{(row) => (
-											<tr>
-												<For each={row}>
-													{(cell, i) => {
-														const col = () => columns()[i()];
-														const text = () => String(cell);
-														return (
-															<td title={text()}>
-																<Show
-																	when={col()?.ref_table && text()}
-																	fallback={<span>{text()}</span>}
-																>
-																	<button
-																		type="button"
-																		class={styles.cellLink}
-																		title={`跳转到 ${col()?.ref_table}`}
-																		onClick={() =>
-																			jumpToRef(
-																				col()?.ref_table ?? "",
-																				col()?.ref_column ?? "id",
-																				text(),
-																			)
-																		}
-																	>
-																		{text()}
-																	</button>
-																</Show>
-															</td>
-														);
-													}}
-												</For>
-											</tr>
-										)}
-									</For>
-								</tbody>
-							</table>
-						</div>
-						<div class={styles.pagination}>
-							<span>
-								{filterId() > 0
-									? `匹配 ${total()} 行`
-									: `共 ${total()} 行 · 第 ${currentPage()} / ${totalPages()} 页`}
-							</span>
-							<Button
-								variant="secondary"
-								size="sm"
-								disabled={currentPage() <= 1 || loading()}
-								onClick={() => reloadTable(currentPage() - 1)}
-							>
-								上一页
-							</Button>
-							<Button
-								variant="secondary"
-								size="sm"
-								disabled={currentPage() >= totalPages() || loading()}
-								onClick={() => reloadTable(currentPage() + 1)}
-							>
-								下一页
-							</Button>
-						</div>
-					</>
-				)}
+								</Index>
+							</tbody>
+						</table>
+					</div>
+					<div class={styles.pagination}>
+						<span>
+							{filterId() > 0 || searchValue().length > 0
+								? `匹配 ${total()} 行`
+								: `共 ${total()} 行 · 第 ${currentPage()} / ${totalPages()} 页`}
+						</span>
+						<Button
+							variant="secondary"
+							size="sm"
+							disabled={currentPage() <= 1 || loading()}
+							onClick={() => reloadTable(currentPage() - 1)}
+						>
+							上一页
+						</Button>
+						<Button
+							variant="secondary"
+							size="sm"
+							disabled={currentPage() >= totalPages() || loading()}
+							onClick={() => reloadTable(currentPage() + 1)}
+						>
+							下一页
+						</Button>
+					</div>
+				</Show>
 			</div>
 		</div>
 	);

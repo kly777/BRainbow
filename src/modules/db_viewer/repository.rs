@@ -1,10 +1,10 @@
 use serde_json::Value;
-use sqlx::{Column, Row, SqlitePool, TypeInfo, Value as SqlxValue, ValueRef as _};
+use sqlx::{Column, QueryBuilder, Row, SqlitePool, TypeInfo, Value as SqlxValue, ValueRef as _};
 use std::sync::Arc;
 
-use super::handler::ColumnInfo;
+use super::handler::{ColumnInfo, RefPreview, TableData, TableReadOptions};
 use super::model::TableName;
-use crate::shared::db_query::sanitize_table_name;
+use crate::shared::db_query::{like_contains, sanitize_table_name};
 
 /// 按运行时值类型解码单元格。
 ///
@@ -56,18 +56,16 @@ impl DBRepo {
         Ok(rows.into_iter().map(|r| r.name).collect())
     }
 
-    /// 返回 ColumnInfo + 数据行 + 总行数。
+    /// 返回表格数据（带排序/文本筛选/外键行内摘要）。
     ///
-    /// `filter_col` / `filter_id` 由前端跳转服务传入：只接受与现有列名完全一致的
-    /// 合法标识符，且 id 为 None 时忽略过滤。
+    /// 所有动态标识符都先校验是否真实存在且只含合法字符；值全部走绑定参数。
     pub async fn get_table_data(
         &self,
         table_name: &str,
         limit: i64,
         offset: i64,
-        filter_col: Option<&str>,
-        filter_id: Option<i64>,
-    ) -> Result<(Vec<ColumnInfo>, Vec<Vec<Value>>, i64), sqlx::Error> {
+        options: &TableReadOptions,
+    ) -> Result<TableData, sqlx::Error> {
         // 先校验表名合法，SQLite 不支持参数化表名
         let safe_name = sanitize_table_name(table_name)?;
 
@@ -121,58 +119,67 @@ impl DBRepo {
             })
             .collect::<Result<_, sqlx::Error>>()?;
 
-        // 跳转过滤：列名必须真实存在且为合法标识符
-        let filter = match (filter_col, filter_id) {
+        // 校验动态标识符：跳转过滤 / 排序 / 文本筛选
+        let filter = match (&options.filter_col, options.filter_id) {
             (Some(col), Some(id)) if column_names.iter().any(|c| c == col) => {
                 Some((sanitize_table_name(col)?, id))
             }
             _ => None,
         };
-
-        // 总行数
-        let total: i64 = match &filter {
-            Some((col, id)) => {
-                let sql = format!("SELECT COUNT(*) FROM {} WHERE \"{}\" = $1", safe_name, col);
-                sqlx::query_scalar(sqlx::AssertSqlSafe(sql))
-                    .bind(id)
-                    .fetch_one(&*self.pool)
-                    .await?
+        let search = match (&options.search_col, &options.search) {
+            (Some(col), Some(value))
+                if column_names.iter().any(|c| c == col) && !value.trim().is_empty() =>
+            {
+                Some((sanitize_table_name(col)?, like_contains(value.trim())))
             }
-            None => {
-                sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
-                    "SELECT COUNT(*) FROM {}",
-                    safe_name
-                )))
-                .fetch_one(&*self.pool)
-                .await?
+            _ => None,
+        };
+        let sort = match &options.sort_col {
+            Some(col) if column_names.iter().any(|c| c == col) => {
+                Some((sanitize_table_name(col)?, options.sort_desc))
+            }
+            _ => None,
+        };
+
+        // 统一构造 WHERE（COUNT 与数据查询共用同一口径）
+        let push_where = |qb: &mut QueryBuilder<sqlx::Sqlite>,
+                          filter: &Option<(String, i64)>,
+                          search: &Option<(String, String)>| {
+            if let Some((col, id)) = filter {
+                qb.push(" AND \"");
+                qb.push(col);
+                qb.push("\" = ");
+                qb.push_bind(id);
+            }
+            if let Some((col, pattern)) = search {
+                qb.push(" AND CAST(\"");
+                qb.push(col);
+                qb.push("\" AS TEXT) LIKE ");
+                qb.push_bind(pattern);
+                qb.push(" ESCAPE '\\'");
             }
         };
 
-        // 查数据
-        let rows = match &filter {
-            Some((col, id)) => {
-                let sql = format!(
-                    "SELECT * FROM {} WHERE \"{}\" = $1 LIMIT $2 OFFSET $3",
-                    safe_name, col
-                );
-                sqlx::query(sqlx::AssertSqlSafe(sql))
-                    .bind(id)
-                    .bind(limit)
-                    .bind(offset)
-                    .fetch_all(&*self.pool)
-                    .await?
-            }
-            None => {
-                sqlx::query(
-                    // SAFETY: sanitize_table_name 确保 safe_name 只含 [a-zA-Z0-9_]
-                    sqlx::AssertSqlSafe(format!("SELECT * FROM {} LIMIT $1 OFFSET $2", safe_name)),
-                )
-                .bind(limit)
-                .bind(offset)
-                .fetch_all(&*self.pool)
-                .await?
-            }
-        };
+        let mut count_qb = QueryBuilder::<sqlx::Sqlite>::new(format!(
+            "SELECT COUNT(*) FROM {} WHERE 1=1",
+            safe_name
+        ));
+        push_where(&mut count_qb, &filter, &search);
+        let total: i64 = count_qb.build_query_scalar().fetch_one(&*self.pool).await?;
+
+        let mut data_qb =
+            QueryBuilder::<sqlx::Sqlite>::new(format!("SELECT * FROM {} WHERE 1=1", safe_name));
+        push_where(&mut data_qb, &filter, &search);
+        if let Some((col, desc)) = &sort {
+            data_qb.push(" ORDER BY \"");
+            data_qb.push(col);
+            data_qb.push(if *desc { "\" DESC" } else { "\" ASC" });
+        }
+        data_qb.push(" LIMIT ");
+        data_qb.push_bind(limit);
+        data_qb.push(" OFFSET ");
+        data_qb.push_bind(offset);
+        let rows = data_qb.build().fetch_all(&*self.pool).await?;
 
         let data: Vec<Vec<Value>> = rows
             .iter()
@@ -220,7 +227,155 @@ impl DBRepo {
             })
             .collect::<Result<Vec<_>, sqlx::Error>>()?;
 
-        Ok((columns, data, total))
+        // 外键行内摘要：按 ref_table 批量取当前页引用的目标行信息
+        let refs = self.preview_refs(&columns, &data).await?;
+
+        Ok(TableData {
+            header: columns,
+            rows: data,
+            total,
+            refs,
+        })
+    }
+
+    /// 收集当前页外键值，批量查询目标表的前几个可读列作为摘要。
+    async fn preview_refs(
+        &self,
+        columns: &[ColumnInfo],
+        data: &[Vec<Value>],
+    ) -> Result<Vec<RefPreview>, sqlx::Error> {
+        let mut ids_by_table: std::collections::HashMap<String, std::collections::HashSet<i64>> =
+            std::collections::HashMap::new();
+        for row in data {
+            for (col_idx, col) in columns.iter().enumerate() {
+                let (Some(table), Some(_ref_col)) = (&col.ref_table, &col.ref_column) else {
+                    continue;
+                };
+                let Some(Value::Number(n)) = row.get(col_idx) else {
+                    continue;
+                };
+                let Some(id) = n.as_i64() else {
+                    continue;
+                };
+                ids_by_table.entry(table.clone()).or_default().insert(id);
+            }
+        }
+
+        let mut refs = Vec::new();
+        for (table, ids) in ids_by_table {
+            let safe_table = match sanitize_table_name(&table) {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+            let key_col = "id";
+            let display_cols = self.display_columns(&safe_table, key_col).await?;
+            if ids.is_empty() {
+                continue;
+            }
+
+            let mut qb =
+                QueryBuilder::<sqlx::Sqlite>::new(format!("SELECT \"{}\" AS __key", key_col));
+            for col in &display_cols {
+                qb.push(", \"");
+                qb.push(col);
+                qb.push("\"");
+            }
+            qb.push(" FROM ");
+            qb.push(&safe_table);
+            qb.push(" WHERE \"");
+            qb.push(key_col);
+            qb.push("\" IN (");
+            let mut sep = qb.separated(", ");
+            for id in &ids {
+                sep.push_bind(id);
+            }
+            qb.push(")");
+            let rows = qb.build().fetch_all(&*self.pool).await?;
+
+            for row in &rows {
+                let id: i64 = row.try_get("__key")?;
+                let mut parts = Vec::new();
+                for col in &display_cols {
+                    if let Ok(value) = cell_to_json(row, col)
+                        && let Some(text) = preview_value_text(&value)
+                    {
+                        parts.push(text);
+                    }
+                }
+                let summary = if parts.is_empty() {
+                    format!("#{id}")
+                } else {
+                    parts.join(" · ")
+                };
+                refs.push(RefPreview {
+                    table: table.clone(),
+                    id,
+                    summary,
+                });
+            }
+        }
+        Ok(refs)
+    }
+
+    /// 为目标表选择适合展示的 1~2 个列。
+    async fn display_columns(
+        &self,
+        table: &str,
+        key_col: &str,
+    ) -> Result<Vec<String>, sqlx::Error> {
+        let rows = sqlx::query(
+            // SAFETY: table 已经 sanitize_table_name 校验
+            sqlx::AssertSqlSafe(format!("PRAGMA table_info({})", table)),
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        let mut names: Vec<String> = Vec::new();
+        let mut texty: Vec<String> = Vec::new();
+        for row in &rows {
+            let name: String = row.try_get("name")?;
+            let typ: String = row.try_get("type")?;
+            if name == key_col {
+                continue;
+            }
+            names.push(name.clone());
+            let upper = typ.to_uppercase();
+            if ["TEXT", "VARCHAR", "CHAR", "CLOB", "DATE", "DATETIME"]
+                .iter()
+                .any(|t| upper.contains(t))
+            {
+                texty.push(name);
+            }
+        }
+
+        let mut chosen: Vec<String> = Vec::new();
+        for preferred in ["name", "title", "content", "cue", "label", "summary"] {
+            if chosen.len() >= 2 {
+                break;
+            }
+            if let Some(name) = texty.iter().find(|n| n.as_str() == preferred)
+                && !chosen.contains(name)
+            {
+                chosen.push(name.clone());
+            }
+        }
+        for name in &texty {
+            if chosen.len() >= 2 {
+                break;
+            }
+            if !chosen.contains(name) {
+                chosen.push(name.clone());
+            }
+        }
+        for name in &names {
+            if chosen.len() >= 2 {
+                break;
+            }
+            if !chosen.contains(name) {
+                chosen.push(name.clone());
+            }
+        }
+        Ok(chosen)
     }
 }
 
@@ -232,6 +387,35 @@ fn infer_ref_by_name(column: &str, tables: &[String]) -> Option<(String, String)
         return None;
     }
     Some((stem.to_string(), "id".to_string()))
+}
+
+/// 摘要单元格值：空值不展示，长文本截断。
+fn preview_value_text(value: &Value) -> Option<String> {
+    match value {
+        Value::Null => None,
+        Value::String(s) => Some(clip_text(s, 60)),
+        Value::Number(n) => Some(n.to_string()),
+        Value::Bool(b) => Some(b.to_string()),
+        Value::Array(items) => {
+            if items.is_empty() {
+                None
+            } else {
+                Some(format!("[{} bytes]", items.len()))
+            }
+        }
+        Value::Object(_) => Some("{…}".to_string()),
+    }
+}
+
+fn clip_text(s: &str, max: usize) -> String {
+    let flat = s.replace('\n', " ");
+    if flat.chars().count() <= max {
+        flat
+    } else {
+        let mut out: String = flat.chars().take(max).collect();
+        out.push('…');
+        out
+    }
 }
 
 #[cfg(test)]
@@ -263,30 +447,68 @@ mod tests {
     #[tokio::test]
     async fn get_table_data() {
         let repo = setup().await;
-        let (header, rows, total) = repo
-            .get_table_data("test_table", 10, 0, None, None)
+        let data = repo
+            .get_table_data("test_table", 10, 0, &TableReadOptions::default())
             .await
             .unwrap();
-        assert_eq!(header.len(), 2);
-        assert_eq!(rows.len(), 2);
-        assert_eq!(total, 2);
+        assert_eq!(data.header.len(), 2);
+        assert_eq!(data.rows.len(), 2);
+        assert_eq!(data.total, 2);
+        assert!(data.refs.is_empty());
     }
 
     #[tokio::test]
     async fn get_table_data_paginated() {
         let repo = setup().await;
-        let (_, rows, total) = repo
-            .get_table_data("test_table", 1, 1, None, None)
+        let data = repo
+            .get_table_data("test_table", 1, 1, &TableReadOptions::default())
             .await
             .unwrap();
-        assert_eq!(rows.len(), 1);
-        assert_eq!(total, 2);
+        assert_eq!(data.rows.len(), 1);
+        assert_eq!(data.total, 2);
+    }
+
+    #[tokio::test]
+    async fn get_table_data_sorts_and_filters() {
+        let repo = setup().await;
+        let desc = repo
+            .get_table_data(
+                "test_table",
+                10,
+                0,
+                &TableReadOptions {
+                    sort_col: Some("name".into()),
+                    sort_desc: true,
+                    ..TableReadOptions::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(desc.rows[0][1], serde_json::json!("bob"));
+
+        let filtered = repo
+            .get_table_data(
+                "test_table",
+                10,
+                0,
+                &TableReadOptions {
+                    search_col: Some("name".into()),
+                    search: Some("b".into()),
+                    ..TableReadOptions::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(filtered.total, 1);
+        assert_eq!(filtered.rows[0][1], serde_json::json!("bob"));
     }
 
     #[tokio::test]
     async fn table_not_found() {
         let repo = setup().await;
-        let result = repo.get_table_data("nonexistent", 10, 0, None, None).await;
+        let result = repo
+            .get_table_data("nonexistent", 10, 0, &TableReadOptions::default())
+            .await;
         assert!(result.is_err());
     }
 
@@ -310,29 +532,33 @@ mod tests {
             .unwrap();
         let repo = DBRepo { pool };
 
-        let (_, rows, total) = repo
-            .get_table_data("typed_table", 10, 0, None, None)
+        let data = repo
+            .get_table_data("typed_table", 10, 0, &TableReadOptions::default())
             .await
             .unwrap();
-        assert_eq!(total, 1);
-        assert_eq!(rows[0][0], serde_json::json!(1));
-        assert_eq!(rows[0][1], serde_json::json!(0.5));
-        assert_eq!(rows[0][2], serde_json::json!(3));
-        assert_eq!(rows[0][3], serde_json::json!("x"));
+        assert_eq!(data.total, 1);
+        assert_eq!(data.rows[0][0], serde_json::json!(1));
+        assert_eq!(data.rows[0][1], serde_json::json!(0.5));
+        assert_eq!(data.rows[0][2], serde_json::json!(3));
+        assert_eq!(data.rows[0][3], serde_json::json!("x"));
 
         // AUTOINCREMENT 表会生成 sqlite_sequence，其 seq 列为 INTEGER
-        let (_, seq_rows, _) = repo
-            .get_table_data("sqlite_sequence", 10, 0, None, None)
+        let seq = repo
+            .get_table_data("sqlite_sequence", 10, 0, &TableReadOptions::default())
             .await
             .unwrap();
-        assert_eq!(seq_rows.len(), 1);
-        assert_eq!(seq_rows[0][1], serde_json::json!(1));
+        assert_eq!(seq.rows.len(), 1);
+        assert_eq!(seq.rows[0][1], serde_json::json!(1));
     }
 
     #[tokio::test]
     async fn detects_ref_by_foreign_key_and_column_name() {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
         sqlx::query("CREATE TABLE author (id INTEGER PRIMARY KEY, name TEXT)")
+            .execute(&*pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO author VALUES (1, 'Ada Lovelace')")
             .execute(&*pool)
             .await
             .unwrap();
@@ -352,6 +578,10 @@ mod tests {
         .execute(&*pool)
         .await
         .unwrap();
+        sqlx::query("INSERT INTO book VALUES (1, 1, 1)")
+            .execute(&*pool)
+            .await
+            .unwrap();
         sqlx::query("CREATE TABLE not_a_table (id INTEGER PRIMARY KEY)")
             .execute(&*pool)
             .await
@@ -364,22 +594,30 @@ mod tests {
         .unwrap();
 
         let repo = DBRepo { pool };
-        let (header, _, _) = repo
-            .get_table_data("book", 10, 0, None, None)
+        let book = repo
+            .get_table_data("book", 10, 0, &TableReadOptions::default())
             .await
             .unwrap();
-        let author = header.iter().find(|c| c.name == "author_id").unwrap();
+        let author = book.header.iter().find(|c| c.name == "author_id").unwrap();
         assert_eq!(author.ref_table.as_deref(), Some("author"));
         assert_eq!(author.ref_column.as_deref(), Some("id"));
         // 无外键声明但命名符合 `<表名>_id` → 启发式识别
-        let owner = header.iter().find(|c| c.name == "owner_id").unwrap();
+        let owner = book.header.iter().find(|c| c.name == "owner_id").unwrap();
         assert_eq!(owner.ref_table.as_deref(), Some("owner"));
+        // 外键单元格附带目标行摘要（优先展示 name 列）
+        let preview = book
+            .refs
+            .iter()
+            .find(|r| r.table == "author" && r.id == 1)
+            .unwrap();
+        assert!(preview.summary.contains("Ada Lovelace"));
 
-        let (thing_header, _, _) = repo
-            .get_table_data("thing", 10, 0, None, None)
+        let thing = repo
+            .get_table_data("thing", 10, 0, &TableReadOptions::default())
             .await
             .unwrap();
-        let wrong = thing_header
+        let wrong = thing
+            .header
             .iter()
             .find(|c| c.name == "missing_table_id")
             .unwrap();
@@ -399,20 +637,38 @@ mod tests {
             .unwrap();
         let repo = DBRepo { pool };
 
-        let (_, rows, total) = repo
-            .get_table_data("parent", 10, 0, Some("id"), Some(2))
+        let data = repo
+            .get_table_data(
+                "parent",
+                10,
+                0,
+                &TableReadOptions {
+                    filter_col: Some("id".into()),
+                    filter_id: Some(2),
+                    ..TableReadOptions::default()
+                },
+            )
             .await
             .unwrap();
-        assert_eq!(total, 1);
-        assert_eq!(rows.len(), 1);
-        assert_eq!(rows[0][0], serde_json::json!(2));
+        assert_eq!(data.total, 1);
+        assert_eq!(data.rows.len(), 1);
+        assert_eq!(data.rows[0][0], serde_json::json!(2));
 
         // 列名不合法/不存在时忽略过滤，不注入 SQL
-        let (_, rows, total) = repo
-            .get_table_data("parent", 10, 0, Some("id; DROP TABLE parent"), Some(1))
+        let data = repo
+            .get_table_data(
+                "parent",
+                10,
+                0,
+                &TableReadOptions {
+                    filter_col: Some("id; DROP TABLE parent".into()),
+                    filter_id: Some(1),
+                    ..TableReadOptions::default()
+                },
+            )
             .await
             .unwrap();
-        assert_eq!(total, 2);
-        assert_eq!(rows.len(), 2);
+        assert_eq!(data.total, 2);
+        assert_eq!(data.rows.len(), 2);
     }
 }

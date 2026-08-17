@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::shared::error_types::ServiceError;
 
-use super::handler::ColumnInfo;
+use super::handler::{TableData, TableReadOptions};
 use super::repository::DBRepo;
 
 ///
@@ -27,11 +27,10 @@ impl DbViewerQueryService {
         table_name: &str,
         limit: i64,
         offset: i64,
-        filter_col: Option<&str>,
-        filter_id: Option<i64>,
-    ) -> Result<(Vec<ColumnInfo>, Vec<Vec<serde_json::Value>>, i64), ServiceError> {
+        options: &TableReadOptions,
+    ) -> Result<TableData, ServiceError> {
         let repo = DBRepo::new(self.pool.clone());
-        repo.get_table_data(table_name, limit, offset, filter_col, filter_id)
+        repo.get_table_data(table_name, limit, offset, options)
             .await
             .map_err(ServiceError::Db)
     }
@@ -66,11 +65,12 @@ mod tests {
     #[tokio::test]
     async fn read_table() {
         let svc = setup().await;
-        let (header, rows, _) = svc
-            .get_table_data("test_t", 10, 0, None, None)
+        let data = svc
+            .get_table_data("test_t", 10, 0, &TableReadOptions::default())
             .await
             .unwrap();
-        assert_eq!(header.len(), 2);
-        assert_eq!(rows.len(), 1);
+        assert_eq!(data.header.len(), 2);
+        assert_eq!(data.rows.len(), 1);
+        assert!(data.refs.is_empty());
     }
 }

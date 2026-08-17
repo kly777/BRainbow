@@ -22,6 +22,41 @@ pub struct ColumnInfo {
     pub ref_column: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FilterOp {
+    Eq,
+    Ne,
+    Contains,
+    Prefix,
+    IsNull,
+    NotNull,
+    Gt,
+    Lt,
+}
+
+impl FilterOp {
+    pub fn parse(raw: &str) -> Option<Self> {
+        match raw {
+            "eq" => Some(Self::Eq),
+            "ne" => Some(Self::Ne),
+            "contains" => Some(Self::Contains),
+            "prefix" => Some(Self::Prefix),
+            "null" => Some(Self::IsNull),
+            "notnull" => Some(Self::NotNull),
+            "gt" => Some(Self::Gt),
+            "lt" => Some(Self::Lt),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TableFilter {
+    pub column: String,
+    pub op: FilterOp,
+    pub value: Option<String>,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct TableReadOptions {
     /// 跳转过滤：目标行 id
@@ -32,10 +67,12 @@ pub struct TableReadOptions {
     pub sort_col: Option<String>,
     /// 是否降序
     pub sort_desc: bool,
-    /// 文本筛选列
+    /// 文本筛选列（旧版单条件筛选，保留兼容）
     pub search_col: Option<String>,
     /// 文本筛选值（子串匹配）
     pub search: Option<String>,
+    /// 多条件筛选
+    pub filters: Vec<TableFilter>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -52,22 +89,62 @@ pub struct TableDataQuery {
     pub sort: Option<String>,
     /// 排序方向：asc / desc
     pub order: Option<String>,
-    /// 筛选列
-    pub fcol: Option<String>,
-    /// 筛选值（子串）
+    /// 多条件筛选列（可重复）
+    #[serde(default)]
+    pub fcol: Vec<String>,
+    /// 多条件筛选操作符（可重复，与 fcol 对齐）
+    #[serde(default)]
+    pub fop: Vec<String>,
+    /// 多条件筛选值（可重复，与 fcol 对齐）
+    #[serde(default)]
+    pub fval: Vec<String>,
+    /// 旧版单列筛选值（fcol/fop/fval 为空时的兼容回退）
     pub q: Option<String>,
     /// 导出格式（仅 /export 使用）：csv / json
     pub format: Option<String>,
 }
 
 fn options_from_query(query: &TableDataQuery) -> TableReadOptions {
+    let mut filters = query
+        .fcol
+        .iter()
+        .enumerate()
+        .filter_map(|(index, col)| {
+            let op = query.fop.get(index).and_then(|raw| FilterOp::parse(raw))?;
+            let value = query
+                .fval
+                .get(index)
+                .cloned()
+                .filter(|v| !v.trim().is_empty());
+            Some(TableFilter {
+                column: col.clone(),
+                op,
+                value,
+            })
+        })
+        .collect::<Vec<_>>();
+
+    // 兼容旧版单列筛选：fcol=cue&q=xxx → cue 包含 xxx
+    if filters.is_empty()
+        && query.fcol.len() == 1
+        && let Some(value) = query.q.as_ref().filter(|v| !v.trim().is_empty())
+        && let Some(col) = query.fcol.first()
+    {
+        filters.push(TableFilter {
+            column: col.clone(),
+            op: FilterOp::Contains,
+            value: Some(value.clone()),
+        });
+    }
+
     TableReadOptions {
         filter_id: query.id.as_deref().and_then(|s| s.parse::<i64>().ok()),
         filter_col: query.ref_col.clone().filter(|s| !s.trim().is_empty()),
         sort_col: query.sort.clone().filter(|s| !s.trim().is_empty()),
         sort_desc: query.order.as_deref() == Some("desc"),
-        search_col: query.fcol.clone().filter(|s| !s.trim().is_empty()),
-        search: query.q.clone().filter(|s| !s.trim().is_empty()),
+        search_col: None,
+        search: None,
+        filters,
     }
 }
 
@@ -283,5 +360,49 @@ mod tests {
         let parsed: serde_json::Value = serde_json::from_str(&build_json(&data).unwrap()).unwrap();
         assert_eq!(parsed["header"][0], "id");
         assert_eq!(parsed["rows"][0]["name"], "a,b");
+    }
+
+    #[test]
+    fn options_from_query_parses_aligned_filter_triplets() {
+        let query = TableDataQuery {
+            page: 1,
+            page_size: 50,
+            id: None,
+            ref_col: None,
+            sort: None,
+            order: None,
+            fcol: vec!["id".into(), "name".into()],
+            fop: vec!["gt".into(), "prefix".into()],
+            fval: vec!["1".into(), "ali".into()],
+            q: None,
+            format: None,
+        };
+        let options = options_from_query(&query);
+        assert_eq!(options.filters.len(), 2);
+        assert_eq!(options.filters[0].column, "id");
+        assert_eq!(options.filters[0].op, FilterOp::Gt);
+        assert_eq!(options.filters[1].op, FilterOp::Prefix);
+        assert_eq!(options.filters[1].value.as_deref(), Some("ali"));
+    }
+
+    #[test]
+    fn options_from_query_falls_back_to_legacy_single_search() {
+        let query = TableDataQuery {
+            page: 1,
+            page_size: 50,
+            id: None,
+            ref_col: None,
+            sort: None,
+            order: None,
+            fcol: vec!["name".into()],
+            fop: Vec::new(),
+            fval: Vec::new(),
+            q: Some("bob".into()),
+            format: None,
+        };
+        let options = options_from_query(&query);
+        assert_eq!(options.filters.len(), 1);
+        assert_eq!(options.filters[0].op, FilterOp::Contains);
+        assert_eq!(options.filters[0].value.as_deref(), Some("bob"));
     }
 }

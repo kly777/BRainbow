@@ -68,6 +68,11 @@ pub fn like_contains(needle: &str) -> String {
     format!("%{}%", escape_like(needle))
 }
 
+/// 生成 `escaped%` 前缀匹配模式（配合 `LIKE ? ESCAPE '\'` 使用）。
+pub fn like_prefix(needle: &str) -> String {
+    format!("{}%", escape_like(needle))
+}
+
 // ── 表名家化 ──
 
 /// 校验表名只含合法字符（字母、数字、下划线）。
@@ -137,6 +142,13 @@ mod tests {
         assert_eq!(like_contains("50%"), "%50\\%%");
         assert_eq!(like_contains("a_b"), "%a\\_b%");
         assert_eq!(like_contains(""), "%%");
+    }
+
+    #[test]
+    fn like_prefix_only_wraps_after_needle() {
+        assert_eq!(like_prefix("50%"), "50\\%%");
+        assert_eq!(like_prefix("a_b"), "a\\_b%");
+        assert_eq!(like_prefix(""), "%");
     }
 
     #[tokio::test]

@@ -14,10 +14,37 @@ import {
 import {
 	type ColumnInfo,
 	downloadTableExport,
+	type FilterOpValue,
 	getTableDataE,
 	getTablesE,
 } from "./api";
 import styles from "./DbViewer.module.css";
+
+const FILTER_OPS: readonly { value: FilterOpValue; label: string }[] = [
+	{ value: "contains", label: "包含" },
+	{ value: "eq", label: "=" },
+	{ value: "ne", label: "≠" },
+	{ value: "prefix", label: "前缀" },
+	{ value: "gt", label: ">" },
+	{ value: "lt", label: "<" },
+	{ value: "null", label: "为空" },
+	{ value: "notnull", label: "非空" },
+];
+
+const isFilterOp = (value: string): value is FilterOpValue =>
+	FILTER_OPS.some((op) => op.value === value);
+
+const isValuelessOp = (op: FilterOpValue): boolean =>
+	op === "null" || op === "notnull";
+
+interface ColumnFilter {
+	col: string;
+	op: FilterOpValue;
+	val: string;
+}
+
+const filterOpLabel = (op: string): string =>
+	FILTER_OPS.find((item) => item.value === op)?.label ?? op;
 
 const DB: Component = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -47,10 +74,24 @@ const DB: Component = () => {
 	const sortCol = () =>
 		typeof searchParams.sort === "string" ? searchParams.sort : "";
 	const sortDesc = () => searchParams.order === "desc";
-	const searchCol = () =>
-		typeof searchParams.fcol === "string" ? searchParams.fcol : "";
-	const searchValue = () =>
-		typeof searchParams.q === "string" ? searchParams.q : "";
+	const queryArray = (value: unknown): string[] => {
+		if (typeof value === "string") return [value];
+		if (!Array.isArray(value)) return [];
+		return value.filter((item): item is string => typeof item === "string");
+	};
+	const filters = (): ColumnFilter[] => {
+		const cols = queryArray(searchParams.fcol);
+		const ops = queryArray(searchParams.fop);
+		const vals = queryArray(searchParams.fval);
+		return cols.map((col, index) => ({
+			col,
+			op: isFilterOp(ops[index] ?? "contains")
+				? (ops[index] as FilterOpValue)
+				: "contains",
+			val: vals[index] ?? "",
+		}));
+	};
+	const hasFilters = () => filters().length > 0;
 
 	const [columns, setColumns] = createSignal<ColumnInfo[]>([]);
 	const [rows, setRows] = createSignal<string[][]>([]);
@@ -84,8 +125,7 @@ const DB: Component = () => {
 		refCol: string,
 		sort: string,
 		desc: boolean,
-		fcol: string,
-		q: string,
+		targetFilters: readonly ColumnFilter[],
 	) => {
 		setLoading(true);
 		setError("");
@@ -97,8 +137,9 @@ const DB: Component = () => {
 				ref_col: id > 0 ? refCol : undefined,
 				sort: sort || undefined,
 				order: sort ? (desc ? "desc" : "asc") : undefined,
-				fcol: fcol || undefined,
-				q: q || undefined,
+				fcol: targetFilters.map((f) => f.col),
+				fop: targetFilters.map((f) => f.op),
+				fval: targetFilters.map((f) => f.val),
 			}),
 		);
 		if (result.ok) {
@@ -125,14 +166,25 @@ const DB: Component = () => {
 			ref_col: undefined,
 			sort: undefined,
 			order: undefined,
-			fcol: undefined,
-			q: undefined,
+			fcol: [],
+			fop: [],
+			fval: [],
+		});
+	};
+
+	const writeFilters = (next: readonly ColumnFilter[]) => {
+		setSearchParams({
+			page: 1,
+			fcol: next.map((f) => f.col),
+			fop: next.map((f) => f.op),
+			fval: next.map((f) => f.val),
 		});
 	};
 
 	const reloadTable = (targetPage: number) => {
 		const table = activeTable();
 		if (!table) return;
+		const activeFilters = filters();
 		setSearchParams({
 			table,
 			page: targetPage,
@@ -141,8 +193,9 @@ const DB: Component = () => {
 			ref_col: filterId() > 0 ? filterCol() : undefined,
 			sort: sortCol() || undefined,
 			order: sortCol() ? (sortDesc() ? "desc" : "asc") : undefined,
-			fcol: searchCol() || undefined,
-			q: searchValue() || undefined,
+			fcol: activeFilters.map((f) => f.col),
+			fop: activeFilters.map((f) => f.op),
+			fval: activeFilters.map((f) => f.val),
 		});
 	};
 
@@ -155,15 +208,32 @@ const DB: Component = () => {
 		});
 	};
 
-	const setSearchFilter = (col: string, value: string) => {
-		setSearchParams({
-			fcol: value ? col : undefined,
-			q: value || undefined,
-			page: 1,
-		});
+	const setColumnFilter = (col: string, op: FilterOpValue, value: string) => {
+		const next = filters().filter((f) => f.col !== col);
+		if (isValuelessOp(op) || value.trim()) {
+			next.push({
+				col,
+				op,
+				val: isValuelessOp(op) ? "" : value,
+			});
+		}
+		writeFilters(next);
 	};
 
-	const clearFilters = () => openTable(activeTable());
+	const removeColumnFilter = (col: string) => {
+		writeFilters(filters().filter((f) => f.col !== col));
+	};
+
+	const clearFilters = () => {
+		setSearchParams({
+			page: 1,
+			id: undefined,
+			ref_col: undefined,
+			fcol: [],
+			fop: [],
+			fval: [],
+		});
+	};
 
 	const jumpToRef = (targetTable: string, refCol: string, value: string) => {
 		const id = Number(value);
@@ -176,8 +246,9 @@ const DB: Component = () => {
 				ref_col: refCol,
 				sort: undefined,
 				order: undefined,
-				fcol: undefined,
-				q: undefined,
+				fcol: [],
+				fop: [],
+				fval: [],
 			});
 		} else {
 			openTable(targetTable);
@@ -195,14 +266,16 @@ const DB: Component = () => {
 		if (!table) return;
 		setExporting(format);
 		setError("");
+		const activeFilters = filters();
 		try {
 			await downloadTableExport(table, {
 				id: filterId() > 0 ? filterId() : undefined,
 				ref_col: filterId() > 0 ? filterCol() : undefined,
 				sort: sortCol() || undefined,
 				order: sortCol() ? (sortDesc() ? "desc" : "asc") : undefined,
-				fcol: searchCol() || undefined,
-				q: searchValue() || undefined,
+				fcol: activeFilters.map((f) => f.col),
+				fop: activeFilters.map((f) => f.op),
+				fval: activeFilters.map((f) => f.val),
 				format,
 			});
 		} catch (cause) {
@@ -222,11 +295,19 @@ const DB: Component = () => {
 		const refCol = filterCol();
 		const sort = sortCol();
 		const desc = sortDesc();
-		const fcol = searchCol();
-		const q = searchValue();
+		const activeFilters = filters();
 		setJumpValue(String(page));
 		if (!table) return;
-		void fetchTable(table, page, pageSize, id, refCol, sort, desc, fcol, q);
+		void fetchTable(
+			table,
+			page,
+			pageSize,
+			id,
+			refCol,
+			sort,
+			desc,
+			activeFilters,
+		);
 	});
 
 	onMount(() => {
@@ -269,7 +350,7 @@ const DB: Component = () => {
 
 						<div class={styles.tableActions}>
 							{/* 过滤状态与标题同排显示，出现/消失不改变表格纵向位置 */}
-							<Show when={filterId() > 0 || searchValue().length > 0}>
+							<Show when={filterId() > 0 || hasFilters()}>
 								<div class={styles.filterBar}>
 									<span class={styles.filterText}>
 										<Show when={filterId() > 0}>
@@ -277,11 +358,19 @@ const DB: Component = () => {
 												{filterCol()} = {filterId()}
 											</code>
 										</Show>
-										<Show when={searchValue().length > 0}>
-											<code class={styles.filterCode}>
-												{searchCol()} 包含 “{searchValue()}”
-											</code>
-										</Show>
+										<Index each={filters()}>
+											{(f) => (
+												<button
+													type="button"
+													class={styles.filterChip}
+													title="点击移除该筛选条件"
+													onClick={() => removeColumnFilter(f().col)}
+												>
+													{f().col} {filterOpLabel(f().op)}
+													{isValuelessOp(f().op) ? "" : ` ${f().val}`}
+												</button>
+											)}
+										</Index>
 									</span>
 									<button
 										type="button"
@@ -350,19 +439,52 @@ const DB: Component = () => {
 								</tr>
 								<tr class={styles.filterRow}>
 									<Index each={columns()}>
-										{(c) => (
-											<th scope="col">
-												<input
-													type="text"
-													class={styles.filterInput}
-													placeholder="筛选…"
-													value={searchCol() === c().name ? searchValue() : ""}
-													onInput={(e) =>
-														setSearchFilter(c().name, e.currentTarget.value)
-													}
-												/>
-											</th>
-										)}
+										{(c) => {
+											const active = () =>
+												filters().find((f) => f.col === c().name);
+											const op = () => active()?.op ?? "contains";
+											const val = () => active()?.val ?? "";
+											return (
+												<th scope="col">
+													<div class={styles.filterControls}>
+														<select
+															class={styles.filterOpSelect}
+															value={op()}
+															title="筛选方式"
+															onChange={(e) => {
+																const next = e.currentTarget.value;
+																if (isFilterOp(next)) {
+																	setColumnFilter(c().name, next, val());
+																}
+															}}
+														>
+															<For each={FILTER_OPS}>
+																{(item) => (
+																	<option value={item.value}>
+																		{item.label}
+																	</option>
+																)}
+															</For>
+														</select>
+														<Show when={!isValuelessOp(op())}>
+															<input
+																type="text"
+																class={styles.filterInput}
+																placeholder="筛选…"
+																value={val()}
+																onInput={(e) =>
+																	setColumnFilter(
+																		c().name,
+																		op(),
+																		e.currentTarget.value,
+																	)
+																}
+															/>
+														</Show>
+													</div>
+												</th>
+											);
+										}}
 									</Index>
 								</tr>
 							</thead>
@@ -427,7 +549,7 @@ const DB: Component = () => {
 					</div>
 					<div class={styles.pagination}>
 						<span class={styles.paginationInfo}>
-							{filterId() > 0 || searchValue().length > 0
+							{filterId() > 0 || hasFilters()
 								? `匹配 ${total()} 行`
 								: `共 ${total()} 行`}
 							· 第 {currentPage()} / {totalPages()} 页

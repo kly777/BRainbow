@@ -2,9 +2,9 @@ use serde_json::Value;
 use sqlx::{Column, QueryBuilder, Row, SqlitePool, TypeInfo, Value as SqlxValue, ValueRef as _};
 use std::sync::Arc;
 
-use super::handler::{ColumnInfo, RefPreview, TableData, TableReadOptions};
+use super::handler::{ColumnInfo, FilterOp, RefPreview, TableData, TableReadOptions};
 use super::model::TableName;
-use crate::shared::db_query::{like_contains, sanitize_table_name};
+use crate::shared::db_query::{like_contains, like_prefix, sanitize_table_name};
 
 /// 按运行时值类型解码单元格。
 ///
@@ -140,36 +140,90 @@ impl DBRepo {
             }
             _ => None,
         };
+        // 多条件筛选：列名必须真实存在且通过标识符白名单，值全部绑定
+        let advanced_filters: Vec<(String, FilterOp, Option<String>)> = options
+            .filters
+            .iter()
+            .filter_map(|f| {
+                if !column_names.iter().any(|c| c == &f.column) {
+                    return None;
+                }
+                let col = sanitize_table_name(&f.column).ok()?;
+                let value = f
+                    .value
+                    .as_ref()
+                    .filter(|v| !v.trim().is_empty())
+                    .map(|v| v.trim().to_string());
+                Some((col, f.op.clone(), value))
+            })
+            .collect();
 
         // 统一构造 WHERE（COUNT 与数据查询共用同一口径）
-        let push_where = |qb: &mut QueryBuilder<sqlx::Sqlite>,
-                          filter: &Option<(String, i64)>,
-                          search: &Option<(String, String)>| {
-            if let Some((col, id)) = filter {
-                qb.push(" AND \"");
-                qb.push(col);
-                qb.push("\" = ");
-                qb.push_bind(id);
-            }
-            if let Some((col, pattern)) = search {
-                qb.push(" AND CAST(\"");
-                qb.push(col);
-                qb.push("\" AS TEXT) LIKE ");
-                qb.push_bind(pattern);
-                qb.push(" ESCAPE '\\'");
-            }
-        };
+        let push_where =
+            |qb: &mut QueryBuilder<sqlx::Sqlite>,
+             filter: &Option<(String, i64)>,
+             search: &Option<(String, String)>,
+             advanced: &[(String, FilterOp, Option<String>)]| {
+                if let Some((col, id)) = filter {
+                    qb.push(" AND \"");
+                    qb.push(col);
+                    qb.push("\" = ");
+                    qb.push_bind(id);
+                }
+                if let Some((col, pattern)) = search {
+                    qb.push(" AND CAST(\"");
+                    qb.push(col);
+                    qb.push("\" AS TEXT) LIKE ");
+                    qb.push_bind(pattern);
+                    qb.push(" ESCAPE '\\'");
+                }
+                for (col, op, value) in advanced {
+                    qb.push(" AND \"");
+                    qb.push(col);
+                    qb.push("\" ");
+                    match op {
+                        FilterOp::IsNull => {
+                            qb.push("IS NULL");
+                        }
+                        FilterOp::NotNull => {
+                            qb.push("IS NOT NULL");
+                        }
+                        FilterOp::Eq | FilterOp::Ne | FilterOp::Gt | FilterOp::Lt => {
+                            let symbol = match op {
+                                FilterOp::Eq => "=",
+                                FilterOp::Ne => "<>",
+                                FilterOp::Gt => ">",
+                                FilterOp::Lt => "<",
+                                _ => "",
+                            };
+                            qb.push(symbol);
+                            qb.push(" ");
+                            qb.push_bind(value.as_deref().unwrap_or(""));
+                        }
+                        FilterOp::Contains | FilterOp::Prefix => {
+                            let pattern = if matches!(op, FilterOp::Contains) {
+                                like_contains(value.as_deref().unwrap_or(""))
+                            } else {
+                                like_prefix(value.as_deref().unwrap_or(""))
+                            };
+                            qb.push("LIKE ");
+                            qb.push_bind(pattern);
+                            qb.push(" ESCAPE '\\'");
+                        }
+                    }
+                }
+            };
 
         let mut count_qb = QueryBuilder::<sqlx::Sqlite>::new(format!(
             "SELECT COUNT(*) FROM {} WHERE 1=1",
             safe_name
         ));
-        push_where(&mut count_qb, &filter, &search);
+        push_where(&mut count_qb, &filter, &search, &advanced_filters);
         let total: i64 = count_qb.build_query_scalar().fetch_one(&*self.pool).await?;
 
         let mut data_qb =
             QueryBuilder::<sqlx::Sqlite>::new(format!("SELECT * FROM {} WHERE 1=1", safe_name));
-        push_where(&mut data_qb, &filter, &search);
+        push_where(&mut data_qb, &filter, &search, &advanced_filters);
         if let Some((col, desc)) = &sort {
             data_qb.push(" ORDER BY \"");
             data_qb.push(col);
@@ -422,6 +476,7 @@ fn clip_text(s: &str, max: usize) -> String {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+    use crate::modules::db_viewer::handler::TableFilter;
     use sqlx::SqlitePool;
 
     async fn setup() -> DBRepo {
@@ -501,6 +556,113 @@ mod tests {
             .unwrap();
         assert_eq!(filtered.total, 1);
         assert_eq!(filtered.rows[0][1], serde_json::json!("bob"));
+    }
+
+    #[tokio::test]
+    async fn get_table_data_applies_multiple_filters() {
+        let repo = setup().await;
+        let filtered = repo
+            .get_table_data(
+                "test_table",
+                10,
+                0,
+                &TableReadOptions {
+                    filters: vec![
+                        TableFilter {
+                            column: "id".into(),
+                            op: FilterOp::Gt,
+                            value: Some("1".into()),
+                        },
+                        TableFilter {
+                            column: "name".into(),
+                            op: FilterOp::Prefix,
+                            value: Some("b".into()),
+                        },
+                    ],
+                    ..TableReadOptions::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(filtered.total, 1);
+        assert_eq!(filtered.rows[0][1], serde_json::json!("bob"));
+
+        let none = repo
+            .get_table_data(
+                "test_table",
+                10,
+                0,
+                &TableReadOptions {
+                    filters: vec![
+                        TableFilter {
+                            column: "id".into(),
+                            op: FilterOp::Eq,
+                            value: Some("1".into()),
+                        },
+                        TableFilter {
+                            column: "name".into(),
+                            op: FilterOp::Ne,
+                            value: Some("alice".into()),
+                        },
+                    ],
+                    ..TableReadOptions::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(none.total, 0);
+    }
+
+    #[tokio::test]
+    async fn get_table_data_filters_null_and_not_null() {
+        let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
+        sqlx::query("CREATE TABLE t (id INTEGER PRIMARY KEY, note TEXT)")
+            .execute(&*pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO t VALUES (1, 'x'), (2, NULL)")
+            .execute(&*pool)
+            .await
+            .unwrap();
+        let repo = DBRepo { pool };
+
+        let nulls = repo
+            .get_table_data(
+                "t",
+                10,
+                0,
+                &TableReadOptions {
+                    filters: vec![TableFilter {
+                        column: "note".into(),
+                        op: FilterOp::IsNull,
+                        value: None,
+                    }],
+                    ..TableReadOptions::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(nulls.total, 1);
+        assert_eq!(nulls.rows[0][0], serde_json::json!(2));
+
+        let not_nulls = repo
+            .get_table_data(
+                "t",
+                10,
+                0,
+                &TableReadOptions {
+                    filters: vec![TableFilter {
+                        column: "note".into(),
+                        op: FilterOp::NotNull,
+                        value: None,
+                    }],
+                    ..TableReadOptions::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(not_nulls.total, 1);
+        assert_eq!(not_nulls.rows[0][0], serde_json::json!(1));
     }
 
     #[tokio::test]

@@ -35,14 +35,39 @@ export interface TableData {
 	readonly refs: readonly RefPreview[];
 }
 
+export type FilterOpValue =
+	| "eq"
+	| "ne"
+	| "contains"
+	| "prefix"
+	| "null"
+	| "notnull"
+	| "gt"
+	| "lt";
+
 export interface TableQueryParams {
 	id?: number;
 	ref_col?: string;
 	sort?: string;
 	order?: "asc" | "desc";
-	fcol?: string;
-	q?: string;
+	/** 多条件筛选列（可重复，与 fop/fval 对齐） */
+	fcol?: readonly string[];
+	/** 多条件筛选操作符（可重复） */
+	fop?: readonly FilterOpValue[];
+	/** 多条件筛选值（可重复） */
+	fval?: readonly string[];
 }
+
+const appendFilters = (
+	query: URLSearchParams,
+	params: TableQueryParams | undefined,
+): void => {
+	params?.fcol?.forEach((col, index) => {
+		query.append("fcol", col);
+		query.append("fop", params.fop?.[index] ?? "contains");
+		query.append("fval", params.fval?.[index] ?? "");
+	});
+};
 
 export const getTableDataE = (
 	name: string,
@@ -57,8 +82,7 @@ export const getTableDataE = (
 	if (params?.ref_col) query.set("ref_col", params.ref_col);
 	if (params?.sort) query.set("sort", params.sort);
 	if (params?.order) query.set("order", params.order);
-	if (params?.fcol) query.set("fcol", params.fcol);
-	if (params?.q) query.set("q", params.q);
+	appendFilters(query, params);
 	return cachedRequest(`/db/${name}?${query.toString()}`, {});
 };
 
@@ -95,8 +119,7 @@ export const downloadTableExport = async (
 	if (params.ref_col) query.set("ref_col", params.ref_col);
 	if (params.sort) query.set("sort", params.sort);
 	if (params.order) query.set("order", params.order);
-	if (params.fcol) query.set("fcol", params.fcol);
-	if (params.q) query.set("q", params.q);
+	appendFilters(query, params);
 
 	const headers = new Headers();
 	const token = getToken();

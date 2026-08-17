@@ -23,14 +23,15 @@ mod modules;
 mod shared;
 
 use std::net::SocketAddr;
-use std::time::Instant;
+use std::str::FromStr;
+use std::time::{Duration, Instant};
 
 use axum::extract::Request;
 use axum::http::{HeaderValue, Method};
 use axum::middleware;
 use axum::middleware::Next;
 use axum::response::Response;
-use sqlx::SqlitePool;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
@@ -96,8 +97,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 加载配置
     let config = Config::from_env();
 
-    // 连接数据库
-    let pool = SqlitePool::connect(&config.database_url).await?;
+    // 连接数据库：busy_timeout 3s，降低部署/后台优化/并发请求偶发 database is locked
+    let options =
+        SqliteConnectOptions::from_str(&config.database_url)?.busy_timeout(Duration::from_secs(3));
+    let pool = SqlitePoolOptions::new().connect_with(options).await?;
 
     // 创建数据库表（如果不存在）
     db::migrate(&pool).await?;

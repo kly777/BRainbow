@@ -61,6 +61,7 @@ export function useMemManage() {
 			tagFilters(),
 			params.tagMode(),
 			params.page(),
+			params.detailId(),
 		);
 		setMems(items);
 		setPageMeta(meta);
@@ -98,6 +99,7 @@ export function useMemManage() {
 			tagFilters(),
 			params.tagMode(),
 			params.page(),
+			params.detailId(),
 		);
 		setMems(items);
 		setPageMeta(meta);
@@ -114,6 +116,7 @@ export function useMemManage() {
 		void params.sortField();
 		void params.sortDir();
 		void params.page();
+		void params.detailId();
 		void tagFilters();
 		void params.tagMode();
 		if (!initialLoadDone) return;

@@ -48,6 +48,7 @@ export async function fetchAllMems(
 	tagFilters: TagInfo[],
 	tagMode: TagMode,
 	page: number,
+	id: number | null = null,
 ): Promise<{ items: MemItem[]; meta: PageMeta }> {
 	const tagIds = tagFilters.map((t) => t.id).join(",");
 	const result = await tryAsync(() =>
@@ -56,6 +57,7 @@ export async function fetchAllMems(
 			order: sortDir,
 			q: search || undefined,
 			state: stateFilter !== "all" ? stateFilter : undefined,
+			id: id ?? undefined,
 			tag_ids: tagMode === "include" ? tagIds || undefined : undefined,
 			exclude_tag_ids: tagMode === "exclude" ? tagIds || undefined : undefined,
 			page,

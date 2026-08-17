@@ -1,6 +1,7 @@
 import { CACHE, cachedRequest, put, tapInvalidate } from "@lib/api";
 
 export interface TabItem {
+	readonly id: number;
 	readonly name: string;
 	readonly content: string;
 }

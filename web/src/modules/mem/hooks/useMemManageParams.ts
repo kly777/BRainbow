@@ -54,7 +54,8 @@ export function useMemManageParams(): UseMemManageParamsResult {
 		const id = params.get("id");
 		return id > 0 ? id : null;
 	};
-	const setDetailId = (id: number | null) => params.set({ id: id ?? 0 });
+	const setDetailId = (id: number | null) =>
+		params.set({ id: id ?? undefined });
 
 	const tagMode = (): TagMode => params.get("tag_mode");
 	const tagFilterNames = () => params.get("tag_names");

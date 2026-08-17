@@ -34,6 +34,8 @@ export interface MemQuery {
 	state?: string;
 	sort?: string;
 	order?: string;
+	/** 按 id 直达单条记忆（全局搜索跳转用） */
+	id?: number;
 	tag_ids?: string;
 	exclude_tag_ids?: string;
 	page?: number;

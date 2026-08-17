@@ -5,16 +5,22 @@ import styles from "./TextEditor.module.css";
 
 let _saveTimer: ReturnType<typeof setInterval> | null = null;
 
-async function load(): Promise<{ name: string; content: string }[]> {
+type Tab = { id: number; name: string; content: string };
+
+async function load(): Promise<Tab[]> {
 	const result = await tryAsync(() => loadTextE());
 	if (result.ok && result.value.tabs.length > 0) {
-		return result.value.tabs.map((t) => ({ name: t.name, content: t.content }));
+		return result.value.tabs.map((t) => ({
+			id: t.id,
+			name: t.name,
+			content: t.content,
+		}));
 	}
 	if (!result.ok) notifyError("加载文本失败", result.error);
 	return [
-		{ name: "笔记 1", content: "" },
-		{ name: "笔记 2", content: "" },
-		{ name: "笔记 3", content: "" },
+		{ id: 0, name: "笔记 1", content: "" },
+		{ id: 0, name: "笔记 2", content: "" },
+		{ id: 0, name: "笔记 3", content: "" },
 	];
 }
 
@@ -29,10 +35,13 @@ function defaultName(i: number): string {
 
 export default function TextEditor() {
 	const [active, setActive] = createSignal(0);
-	const [tabs, setTabs] = createSignal<{ name: string; content: string }[]>([]);
+	const [tabs, setTabs] = createSignal<Tab[]>([]);
 	const [editing, setEditing] = createSignal(-1);
 	const [editValue, setEditValue] = createSignal("");
-	const urlParams = useUrlParams({ tab: numParam(1, { min: 1 }) });
+	const urlParams = useUrlParams({
+		tab: numParam(1, { min: 1 }),
+		id: numParam(0, { min: 0 }),
+	});
 
 	const selectTab = (i: number) => {
 		const next = Math.min(Math.max(i, 0), Math.max(tabs().length - 1, 0));
@@ -40,11 +49,22 @@ export default function TextEditor() {
 		urlParams.set({ tab: next + 1 }, { replace: true });
 	};
 
-	// URL 是 tab 的持久化来源：加载/前进后退/增删 tab 后都按 URL 收敛
+	// URL 是 tab 的持久化来源：加载/前进后退/增删 tab 后都按 URL 收敛。
+	// 支持全局搜索直达：?id=<text_note.id> 定位到对应 tab 后归一化为 tab 序号。
 	createEffect(() => {
 		const list = tabs();
 		if (list.length === 0) return;
-		const fromUrl = urlParams.get("tab") - 1;
+		const urlId = urlParams.get("id");
+		let fromUrl = urlParams.get("tab") - 1;
+		if (urlId > 0) {
+			const idx = list.findIndex((t) => t.id === urlId);
+			if (idx >= 0) {
+				fromUrl = idx;
+				urlParams.set({ id: undefined, tab: idx + 1 }, { replace: true });
+			} else {
+				urlParams.set({ id: undefined }, { replace: true });
+			}
+		}
 		const next = Math.min(Math.max(fromUrl, 0), list.length - 1);
 		if (active() !== next) setActive(next);
 		if (fromUrl !== next) {
@@ -77,7 +97,7 @@ export default function TextEditor() {
 
 	const addTab = () => {
 		const n = tabs().length;
-		setTabs((prev) => [...prev, { name: defaultName(n), content: "" }]);
+		setTabs((prev) => [...prev, { id: 0, name: defaultName(n), content: "" }]);
 		selectTab(n);
 		markDirty();
 	};

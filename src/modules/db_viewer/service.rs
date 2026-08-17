@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::shared::error_types::ServiceError;
 
-use super::handler::{TableData, TableReadOptions};
+use super::handler::{BackRefGroup, TableData, TableReadOptions};
 use super::repository::DBRepo;
 
 ///
@@ -54,6 +54,17 @@ impl DbViewerQueryService {
         }
         Ok(data)
     }
+
+    pub async fn get_backrefs(
+        &self,
+        table_name: &str,
+        id: i64,
+    ) -> Result<Vec<BackRefGroup>, ServiceError> {
+        let repo = DBRepo::new(self.pool.clone());
+        repo.get_backrefs(table_name, id)
+            .await
+            .map_err(ServiceError::Db)
+    }
 }
 
 #[cfg(test)]
@@ -103,5 +114,12 @@ mod tests {
             .unwrap();
         assert_eq!(data.total, 1);
         assert_eq!(data.rows.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn backrefs_endpoint_shape() {
+        let svc = setup().await;
+        let groups = svc.get_backrefs("test_t", 1).await.unwrap();
+        assert!(groups.is_empty());
     }
 }

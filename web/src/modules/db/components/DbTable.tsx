@@ -1,4 +1,11 @@
-import { type Component, For, Index, Show } from "solid-js";
+import {
+	type Component,
+	createEffect,
+	createSignal,
+	For,
+	Index,
+	Show,
+} from "solid-js";
 import type { ColumnInfo, FilterOpValue } from "../api";
 import styles from "../DbViewer.module.css";
 import {
@@ -7,8 +14,10 @@ import {
 	isFilterOp,
 	isValuelessOp,
 } from "../tableConfig";
+import BackRefs from "./BackRefs";
 
 interface DbTableProps {
+	tableName: string;
 	columns: readonly ColumnInfo[];
 	rows: readonly string[][];
 	filters: readonly ColumnFilter[];
@@ -22,6 +31,14 @@ interface DbTableProps {
 }
 
 const DbTable: Component<DbTableProps> = (props) => {
+	const [expandedRow, setExpandedRow] = createSignal<number | null>(null);
+	// 数据刷新或换表后展开状态失效，自动收起
+	createEffect(() => {
+		props.rows;
+		props.tableName;
+		setExpandedRow(null);
+	});
+
 	return (
 		<div class={styles.tableWrap} aria-busy={props.loading ? "true" : "false"}>
 			<Show when={props.loading}>
@@ -30,6 +47,11 @@ const DbTable: Component<DbTableProps> = (props) => {
 			<table class={styles.table}>
 				<thead>
 					<tr>
+						<th
+							class={styles.rowToggleHead}
+							scope="col"
+							aria-label="反向引用"
+						/>
 						<Index each={props.columns}>
 							{(c) => (
 								<th scope="col">
@@ -55,6 +77,7 @@ const DbTable: Component<DbTableProps> = (props) => {
 						</Index>
 					</tr>
 					<tr class={styles.filterRow}>
+						<th scope="col" />
 						<Index each={props.columns}>
 							{(c) => {
 								const active = () =>
@@ -106,58 +129,98 @@ const DbTable: Component<DbTableProps> = (props) => {
 				<tbody>
 					{props.rows.length === 0 && (
 						<tr>
-							<td class={styles.emptyCell} colspan={props.columns.length}>
+							<td class={styles.emptyCell} colspan={props.columns.length + 1}>
 								无数据
 							</td>
 						</tr>
 					)}
 					<Index each={props.rows}>
-						{(row) => (
-							<tr>
-								<Index each={row()}>
-									{(cell, cellI) => {
-										const col = () => props.columns[cellI];
-										const text = () => String(cell());
-										const preview = () =>
-											col()?.ref_table
-												? props.previewFor(col()!.ref_table!, text())
-												: "";
-										return (
-											<td title={text()}>
-												<Show
-													when={col()?.ref_table && text()}
-													fallback={<span>{text()}</span>}
-												>
-													<button
-														type="button"
-														class={styles.cellLink}
-														title={
-															preview()
-																? `${text()} · ${preview()}`
-																: `跳转到 ${col()?.ref_table}`
-														}
-														onClick={() =>
-															props.onJumpToRef(
-																col()?.ref_table ?? "",
-																col()?.ref_column ?? "id",
-																text(),
-															)
-														}
-													>
-														<span class={styles.cellValue}>{text()}</span>
-														<Show when={preview()}>
-															<span class={styles.cellPreview}>
-																{preview()}
-															</span>
+						{(row, rowI) => {
+							const primaryIndex = () =>
+								props.columns.findIndex((c) => c.is_primary);
+							const primaryValue = () => {
+								const index = primaryIndex();
+								return index >= 0 ? (row()[index] ?? "") : "";
+							};
+							const expanded = () => expandedRow() === rowI;
+							return (
+								<>
+									<tr>
+										<td class={styles.rowToggleCell}>
+											<button
+												type="button"
+												class={styles.rowToggleBtn}
+												title="查看哪些行引用了本行"
+												aria-expanded={expanded()}
+												onClick={() =>
+													setExpandedRow((prev) =>
+														prev === rowI ? null : rowI,
+													)
+												}
+											>
+												{expanded() ? "▾" : "↳"}
+											</button>
+										</td>
+										<Index each={row()}>
+											{(cell, cellI) => {
+												const col = () => props.columns[cellI];
+												const text = () => String(cell());
+												const preview = () =>
+													col()?.ref_table
+														? props.previewFor(col()!.ref_table!, text())
+														: "";
+												return (
+													<td title={text()}>
+														<Show
+															when={col()?.ref_table && text()}
+															fallback={<span>{text()}</span>}
+														>
+															<button
+																type="button"
+																class={styles.cellLink}
+																title={
+																	preview()
+																		? `${text()} · ${preview()}`
+																		: `跳转到 ${col()?.ref_table}`
+																}
+																onClick={() =>
+																	props.onJumpToRef(
+																		col()?.ref_table ?? "",
+																		col()?.ref_column ?? "id",
+																		text(),
+																	)
+																}
+															>
+																<span class={styles.cellValue}>{text()}</span>
+																<Show when={preview()}>
+																	<span class={styles.cellPreview}>
+																		{preview()}
+																	</span>
+																</Show>
+															</button>
 														</Show>
-													</button>
-												</Show>
+													</td>
+												);
+											}}
+										</Index>
+									</tr>
+									<Show when={expanded()}>
+										<tr class={styles.backrefRow}>
+											<td
+												class={styles.backrefCell}
+												colspan={props.columns.length + 1}
+											>
+												<BackRefs
+													table={props.tableName}
+													rowKey={primaryValue()}
+													onJump={props.onJumpToRef}
+												/>
 											</td>
-										);
-									}}
-								</Index>
-							</tr>
-						)}
+										</tr>
+									</Show>
+								</>
+							);
+						}}
 					</Index>
 				</tbody>
 			</table>

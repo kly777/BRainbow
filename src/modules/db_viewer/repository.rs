@@ -2,7 +2,9 @@ use serde_json::Value;
 use sqlx::{Column, QueryBuilder, Row, SqlitePool, TypeInfo, Value as SqlxValue, ValueRef as _};
 use std::sync::Arc;
 
-use super::handler::{ColumnInfo, FilterOp, RefPreview, TableData, TableReadOptions};
+use super::handler::{
+    BackRefGroup, BackRefRow, ColumnInfo, FilterOp, RefPreview, TableData, TableReadOptions,
+};
 use super::model::TableName;
 use crate::shared::db_query::{like_contains, like_prefix, sanitize_table_name};
 
@@ -104,6 +106,7 @@ impl DBRepo {
             .map(|r| {
                 let name: String = r.try_get("name")?;
                 let col_type: String = r.try_get("type")?;
+                let pk: i64 = r.try_get("pk")?;
                 let (ref_table, ref_column) = fk_map
                     .get(&name)
                     .filter(|(table, _)| tables.contains(table))
@@ -113,6 +116,7 @@ impl DBRepo {
                 Ok(ColumnInfo {
                     name,
                     col_type,
+                    is_primary: pk == 1,
                     ref_table,
                     ref_column,
                 })
@@ -290,6 +294,120 @@ impl DBRepo {
             total,
             refs,
         })
+    }
+
+    /// 找出其他表里引用 `table_name` 中 `id` 这一行的记录。
+    ///
+    /// 实际外键（PRAGMA foreign_key_list）优先；缺少外键声明但存在
+    /// `<表名>_id` 列时按启发式补齐。每组最多返回 50 条摘要。
+    pub async fn get_backrefs(
+        &self,
+        table_name: &str,
+        id: i64,
+    ) -> Result<Vec<BackRefGroup>, sqlx::Error> {
+        let target = sanitize_table_name(table_name)?;
+        let tables = self.get_table_names().await?;
+        let mut groups = Vec::new();
+
+        for source in tables.iter().filter(|t| t.as_str() != target.as_str()) {
+            let source_safe = sanitize_table_name(source)?;
+            let source_pragma = sqlx::query(
+                // SAFETY: source_safe 只含 [a-zA-Z0-9_]
+                sqlx::AssertSqlSafe(format!("PRAGMA table_info({})", source_safe)),
+            )
+            .fetch_all(&*self.pool)
+            .await?;
+            let mut column_names = Vec::new();
+            let mut has_id = false;
+            for row in &source_pragma {
+                let name: String = row.try_get("name")?;
+                if name == "id" {
+                    has_id = true;
+                }
+                column_names.push(name);
+            }
+            // 跳转回来源表需要主键 id；没有 id 列的表暂时跳过
+            if !has_id {
+                continue;
+            }
+
+            let fk_rows = sqlx::query(
+                // SAFETY: source_safe 已校验
+                sqlx::AssertSqlSafe(format!("PRAGMA foreign_key_list({})", source_safe)),
+            )
+            .fetch_all(&*self.pool)
+            .await?;
+            let mut from_cols = Vec::new();
+            for row in &fk_rows {
+                let fk_table: String = row.try_get("table")?;
+                if fk_table == target {
+                    let from: String = row.try_get("from")?;
+                    if !from_cols.contains(&from) {
+                        from_cols.push(from);
+                    }
+                }
+            }
+            let heuristic = format!("{target}_id");
+            if !from_cols.contains(&heuristic) && column_names.iter().any(|c| c == &heuristic) {
+                from_cols.push(heuristic);
+            }
+
+            for from_col in from_cols {
+                let from_safe = sanitize_table_name(&from_col)?;
+                let display_cols = self.display_columns(&source_safe, "id").await?;
+
+                let mut select = QueryBuilder::<sqlx::Sqlite>::new("SELECT \"id\" AS __key");
+                for col in &display_cols {
+                    select.push(", \"");
+                    select.push(col);
+                    select.push("\"");
+                }
+                select.push(" FROM ");
+                select.push(&source_safe);
+                select.push(" WHERE \"");
+                select.push(&from_safe);
+                select.push("\" = ");
+                select.push_bind(id);
+                select.push(" LIMIT ");
+                select.push_bind(50_i64);
+                let rows = select.build().fetch_all(&*self.pool).await?;
+
+                let mut count_qb = QueryBuilder::<sqlx::Sqlite>::new(format!(
+                    "SELECT COUNT(*) FROM {} WHERE \"",
+                    source_safe
+                ));
+                count_qb.push(&from_safe);
+                count_qb.push("\" = ");
+                count_qb.push_bind(id);
+                let total: i64 = count_qb.build_query_scalar().fetch_one(&*self.pool).await?;
+
+                let mut back_rows = Vec::new();
+                for row in &rows {
+                    let key: i64 = row.try_get("__key")?;
+                    let mut parts = Vec::new();
+                    for col in &display_cols {
+                        if let Ok(value) = cell_to_json(row, col)
+                            && let Some(text) = preview_value_text(&value)
+                        {
+                            parts.push(text);
+                        }
+                    }
+                    let summary = if parts.is_empty() {
+                        format!("#{key}")
+                    } else {
+                        parts.join(" · ")
+                    };
+                    back_rows.push(BackRefRow { key, summary });
+                }
+                groups.push(BackRefGroup {
+                    source_table: source.clone(),
+                    column: from_col,
+                    total,
+                    rows: back_rows,
+                });
+            }
+        }
+        Ok(groups)
     }
 
     /// 收集当前页外键值，批量查询目标表的前几个可读列作为摘要。
@@ -784,6 +902,53 @@ mod tests {
             .find(|c| c.name == "missing_table_id")
             .unwrap();
         assert_eq!(wrong.ref_table, None, "目标表不存在时不应提供跳转");
+    }
+
+    #[tokio::test]
+    async fn get_backrefs_finds_foreign_keys_and_heuristics() {
+        let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
+        sqlx::query("CREATE TABLE author (id INTEGER PRIMARY KEY, name TEXT)")
+            .execute(&*pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO author VALUES (1, 'Ada Lovelace')")
+            .execute(&*pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE TABLE book (
+                id INTEGER PRIMARY KEY,
+                title TEXT,
+                author_id INTEGER REFERENCES author(id)
+            )",
+        )
+        .execute(&*pool)
+        .await
+        .unwrap();
+        sqlx::query("INSERT INTO book VALUES (1, 'Notes', 1)")
+            .execute(&*pool)
+            .await
+            .unwrap();
+        // article.author_id 没有外键声明，但 `<表名>_id` 启发式应命中
+        sqlx::query("CREATE TABLE article (id INTEGER PRIMARY KEY, title TEXT, author_id INTEGER)")
+            .execute(&*pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO article VALUES (1, 'Sketch', 1)")
+            .execute(&*pool)
+            .await
+            .unwrap();
+        let repo = DBRepo { pool };
+
+        let groups = repo.get_backrefs("author", 1).await.unwrap();
+        assert_eq!(groups.len(), 2);
+        let book = groups.iter().find(|g| g.source_table == "book").unwrap();
+        assert_eq!(book.column, "author_id");
+        assert_eq!(book.total, 1);
+        assert!(book.rows[0].summary.contains("Notes"));
+        let article = groups.iter().find(|g| g.source_table == "article").unwrap();
+        assert_eq!(article.column, "author_id");
+        assert!(article.rows[0].summary.contains("Sketch"));
     }
 
     #[tokio::test]

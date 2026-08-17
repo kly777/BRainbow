@@ -12,5 +12,6 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(handler::get_table_names))
         .route("/{table_name}/export", get(handler::export_table_data))
+        .route("/{table_name}/backrefs", get(handler::get_table_backrefs))
         .route("/{table_name}", get(handler::get_table_data))
 }

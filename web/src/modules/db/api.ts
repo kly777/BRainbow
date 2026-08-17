@@ -15,6 +15,8 @@ export const getTablesE = (): Promise<readonly string[]> =>
 export interface ColumnInfo {
 	readonly name: string;
 	readonly col_type: string;
+	/** 是否主键（复合主键时为第一个组件） */
+	readonly is_primary: boolean;
 	/** 跳转目标表（外键列，由后端识别） */
 	readonly ref_table?: string | null;
 	/** 目标表中被引用的列 */
@@ -33,6 +35,18 @@ export interface TableData {
 	readonly total: number;
 	/** 外键单元格的目标行摘要 */
 	readonly refs: readonly RefPreview[];
+}
+
+export interface BackRefRow {
+	readonly key: number;
+	readonly summary: string;
+}
+
+export interface BackRefGroup {
+	readonly source_table: string;
+	readonly column: string;
+	readonly total: number;
+	readonly rows: readonly BackRefRow[];
 }
 
 export type FilterOpValue =
@@ -85,6 +99,13 @@ export const getTableDataE = (
 	appendFilters(query, params);
 	return cachedRequest(`/db/${name}?${query.toString()}`, {});
 };
+
+/** 查询其他表对当前表某行（主键 id）的反向引用。 */
+export const getBackRefsE = (
+	name: string,
+	id: number,
+): Promise<readonly BackRefGroup[]> =>
+	cachedRequest(`/db/${encodeURIComponent(name)}/backrefs?id=${id}`, {});
 
 const downloadBlob = (blob: Blob, filename: string): void => {
 	const url = URL.createObjectURL(blob);

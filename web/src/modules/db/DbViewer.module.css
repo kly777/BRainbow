@@ -362,6 +362,13 @@
 	text-overflow: ellipsis;
 }
 
+.backref-row td {
+	padding: var(--space-sm) var(--space-md);
+	background: var(--t-color-surface-raised);
+	border-bottom: 1px solid var(--t-color-border);
+	white-space: normal;
+}
+
 .table tbody tr:last-child td {
 	border-bottom: none;
 }
@@ -370,6 +377,95 @@
 	padding: var(--space-xl);
 	color: var(--t-color-ink-faint);
 	text-align: center;
+}
+
+.row-toggle-head,
+.row-toggle-cell {
+	width: 2.25rem;
+	min-width: 2.25rem;
+	text-align: center;
+}
+
+.row-toggle-btn {
+	border: none;
+	background: none;
+	cursor: pointer;
+	color: var(--t-color-ink-faint);
+	font-size: var(--text-sm);
+	line-height: 1;
+	padding: var(--space-2xs);
+}
+
+.row-toggle-btn:hover {
+	color: var(--t-color-accent);
+}
+
+.backrefs {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-sm);
+	max-height: 16rem;
+	overflow-y: auto;
+}
+
+.backref-loading,
+.backref-error,
+.backref-empty {
+	padding: var(--space-sm) 0;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-sm);
+}
+
+.backref-error {
+	color: var(--t-color-danger);
+}
+
+.backref-group-title {
+	margin: 0 0 var(--space-2xs);
+	font-size: var(--text-xs);
+	font-weight: 600;
+	color: var(--t-color-ink-muted);
+}
+
+.backref-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2xs);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.backref-item {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-sm);
+	max-width: 22rem;
+	padding: var(--space-2xs) var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-surface);
+	cursor: pointer;
+	font-size: var(--text-xs);
+	font-family: inherit;
+	color: var(--t-color-ink);
+}
+
+.backref-item:hover {
+	border-color: var(--t-color-accent);
+}
+
+.backref-key {
+	flex-shrink: 0;
+	color: var(--t-color-accent-strong);
+	font-family: var(--t-font-mono);
+}
+
+.backref-summary {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--t-color-ink-muted);
 }
 
 .pagination {

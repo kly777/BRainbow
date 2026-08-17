@@ -348,6 +348,7 @@ const DB: Component = () => {
 					</div>
 
 					<DbTable
+						tableName={activeTable()}
 						columns={columns()}
 						rows={rows()}
 						filters={filters()}

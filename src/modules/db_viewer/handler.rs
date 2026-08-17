@@ -14,6 +14,8 @@ use crate::shared::pagination::Pagination;
 pub struct ColumnInfo {
     pub name: String,
     pub col_type: String,
+    /// 是否主键（复合主键时为第一个组件）
+    pub is_primary: bool,
     /// 该列引用的目标表（实际外键优先，否则按 `<表名>_id` 启发式识别）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ref_table: Option<String>,
@@ -175,6 +177,30 @@ pub struct TableData {
     pub refs: Vec<RefPreview>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct BackRefRow {
+    /// 来源表行的主键值（用于点击跳回来源表）
+    pub key: i64,
+    /// 来源行的简短摘要
+    pub summary: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BackRefGroup {
+    /// 引用当前表的来源表
+    pub source_table: String,
+    /// 来源表中的外键列
+    pub column: String,
+    /// 匹配总数（行数可能被截断到 50 条）
+    pub total: i64,
+    pub rows: Vec<BackRefRow>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BackRefQuery {
+    pub id: Option<String>,
+}
+
 pub async fn get_table_names(State(state): State<AppState>) -> impl IntoResponse {
     error::ok_or(state.db_viewer.get_table_names().await, "获取表名")
 }
@@ -199,6 +225,21 @@ pub async fn get_table_data(
         )
         .await;
     error::ok_or(result, "获取表数据")
+}
+
+pub async fn get_table_backrefs(
+    Path(table_name): Path<String>,
+    Query(query): Query<BackRefQuery>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let Some(raw) = query.id.as_deref() else {
+        return error::bad_request("缺少 id 参数");
+    };
+    let Some(id) = raw.parse::<i64>().ok().filter(|n| *n >= 1) else {
+        return error::bad_request("id 参数必须是正整数");
+    };
+    let result = state.db_viewer.get_backrefs(&table_name, id).await;
+    error::ok_or(result, "获取反向引用")
 }
 
 /// CSV 字段转义：逗号/引号/换行出现时加引号，并把内部 `"` 翻倍。
@@ -343,12 +384,14 @@ mod tests {
                 ColumnInfo {
                     name: "id".into(),
                     col_type: "INTEGER".into(),
+                    is_primary: true,
                     ref_table: None,
                     ref_column: None,
                 },
                 ColumnInfo {
                     name: "name".into(),
                     col_type: "TEXT".into(),
+                    is_primary: false,
                     ref_table: None,
                     ref_column: None,
                 },

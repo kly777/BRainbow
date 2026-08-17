@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fmtInterval, fmtRelative, parseUtc } from "./time.ts";
 
 describe("parseUtc", () => {
@@ -78,8 +78,12 @@ describe("fmtRelative", () => {
 	});
 
 	it("handles exactly 0 seconds (now = just happened)", () => {
-		// diff === 0, not less than 0, so it falls to 1分钟
-		expect(fmtRelative(future(0))).toBe("1分钟");
+		// ISO 字符串只有秒级精度，把“现在”对齐到整秒并固定 Date.now，
+		// 避免调用间隙跨过毫秒边界导致 diff 恰好为负的偶发失败。
+		const now = Math.ceil(Date.now() / 1000) * 1000;
+		vi.spyOn(Date, "now").mockReturnValue(now);
+		expect(fmtRelative(new Date(now).toISOString())).toBe("1分钟");
+		vi.restoreAllMocks();
 	});
 });
 

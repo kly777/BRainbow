@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) FROM mem WHERE state = 'review' AND buried = 0 AND state != 'suspended'\n               AND due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')",
+  "query": "SELECT COUNT(*) FROM mem WHERE state = 'review' AND buried = 0 AND state != 'suspended'\n               AND due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')",
   "describe": {
     "columns": [
       {
@@ -17,5 +17,5 @@
       false
     ]
   },
-  "hash": "72f7733e612d23a4db7a0f0234d051bf67eb814acee121f0efdd0798d8d2bc72"
+  "hash": "0672741da11437bc8e20b15a348d70c65b3bb34681178f3ae8f0a057fdb2f3a0"
 }

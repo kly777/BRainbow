@@ -199,7 +199,9 @@ pub async fn create_api_key(
     Json(ApiKeyInfo {
         id: id as i32,
         role,
-        created_at: chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+        created_at: chrono::Utc::now()
+            .format("%Y-%m-%dT%H:%M:%S+00:00")
+            .to_string(),
         key: Some(key),
     })
     .into_response()

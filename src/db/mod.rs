@@ -613,7 +613,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 // PRAGMA user_version。迁移必须幂等：列/表已存在则跳过；ALTER 失败必须上抛。
 
 /// 程序支持的最新 schema 版本
-pub const LATEST_USER_VERSION: i64 = 9;
+pub const LATEST_USER_VERSION: i64 = 10;
 
 /// 迁移统一入口。
 ///
@@ -652,6 +652,7 @@ async fn apply_migration(pool: &SqlitePool, target: i64) -> Result<(), sqlx::Err
         7 => migrate_v7_revlog_duration(&mut tx).await?,
         8 => migrate_v8_time_iso_utc(&mut tx).await?,
         9 => migrate_v9_time_normalize_suffix(&mut tx).await?,
+        10 => migrate_v10_time_utc_offset_only(&mut tx).await?,
         _ => {
             return Err(sqlx::Error::Configuration(Box::new(std::io::Error::other(
                 format!("未知的迁移版本: {target}"),
@@ -767,15 +768,6 @@ const TIME_COLUMNS: &[(&str, &str, &[&str])] = &[
     ("api_key", "id", &["created_at"]),
 ];
 
-/// 使用 `Z` 后缀（而非 sqlx 默认的 `+00:00`）作为规范格式的表。
-/// 这些表的业务代码/查询直接把时间写成 `...Z` 字符串，必须保持 Z 才能与
-/// `strftime('...Z','now')`、Rust 端 `format("%Y-%m-%dT%H:%M:%SZ")` 对齐。
-const TIME_TAIL_Z_TABLES: &[&str] = &["chunk", "mem", "revlog", "mem_mnemonic"];
-
-fn time_tail_is_z(table: &str) -> bool {
-    TIME_TAIL_Z_TABLES.contains(&table)
-}
-
 /// v8：统一时间列存储为 RFC 3339 UTC（`+00:00` 形式）。
 ///
 /// 1. 把历史库中的 `YYYY-MM-DD HH:MM:SS`、`...Z` 等格式批量规范化为
@@ -784,9 +776,8 @@ fn time_tail_is_z(table: &str) -> bool {
 ///    都会在数据库层统一。
 async fn migrate_v8_time_iso_utc(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
     for (table, pk, columns) in TIME_COLUMNS {
-        let z_tail = time_tail_is_z(table);
-        let own_suffix = if z_tail { "Z" } else { "+00:00" };
-        let other_suffix = if z_tail { "+00:00" } else { "Z" };
+        let own_suffix = "+00:00";
+        let other_suffix = "Z";
 
         for column in *columns {
             let sql = format!(
@@ -853,13 +844,26 @@ async fn migrate_v8_time_iso_utc(conn: &mut SqliteConnection) -> Result<(), sqlx
     Ok(())
 }
 
-/// v9：修复 v8 在部分表上把 `Z`/`+00:00` 统一成错误后缀的问题，
-/// 按各表业务格式规整，并重建触发器。
+/// v9：确保所有时间列统一成 `+00:00`，并重建触发器（先删旧触发器再改数据，
+/// 避免历史遗留的坏触发器在数据更新时被触发）。
 async fn migrate_v9_time_normalize_suffix(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
     for (table, pk, columns) in TIME_COLUMNS {
-        let z_tail = time_tail_is_z(table);
-        let own_suffix = if z_tail { "Z" } else { "+00:00" };
-        let other_suffix = if z_tail { "+00:00" } else { "Z" };
+        let own_suffix = "+00:00";
+        let other_suffix = "Z";
+
+        // 先删除旧触发器，避免历史库中遗留的 `WHERE id = NEW.id` 触发器在
+        // 后面的数据 UPDATE 时被触发而报 “no such column”。
+        for name in [
+            format!("trg_{table}_time_iso_ins"),
+            format!("trg_{table}_time_iso_upd"),
+        ] {
+            sqlx::query(sqlx::AssertSqlSafe(format!(
+                "DROP TRIGGER IF EXISTS {name}"
+            )))
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| migration_failed(&format!("v9 删除触发器 {name}"), e))?;
+        }
 
         // 数据：把 other 后缀统一成 own 后缀
         for column in *columns {
@@ -871,19 +875,6 @@ async fn migrate_v9_time_normalize_suffix(conn: &mut SqliteConnection) -> Result
                 .execute(&mut *conn)
                 .await
                 .map_err(|e| migration_failed(&format!("v9 规范化 {table}.{column}"), e))?;
-        }
-
-        // 重建触发器（旧 v8 触发器逻辑对所有表统一，需要替换）
-        for name in [
-            format!("trg_{table}_time_iso_ins"),
-            format!("trg_{table}_time_iso_upd"),
-        ] {
-            sqlx::query(sqlx::AssertSqlSafe(format!(
-                "DROP TRIGGER IF EXISTS {name}"
-            )))
-            .execute(&mut *conn)
-            .await
-            .map_err(|e| migration_failed(&format!("v9 删除触发器 {name}"), e))?;
         }
 
         let set_clause = columns
@@ -932,6 +923,12 @@ async fn migrate_v9_time_normalize_suffix(conn: &mut SqliteConnection) -> Result
             .map_err(|e| migration_failed(&format!("v9 创建 {table} 时间 UPDATE 触发器"), e))?;
     }
     Ok(())
+}
+
+/// v10：全局收尾，确保线上库（可能已跑过旧 v9）也统一成 `+00:00`。
+/// 复用 v9 的逻辑（先删旧触发器 → 数据替换 → 重建触发器）。
+async fn migrate_v10_time_utc_offset_only(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    migrate_v9_time_normalize_suffix(conn).await
 }
 
 async fn add_column_if_missing(
@@ -1132,7 +1129,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn v9_converts_offset_utc_to_z() {
+    async fn v9_converts_z_to_offset_utc() {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         super::create_tables(&pool).await.unwrap();
         sqlx::query("PRAGMA user_version = 8")

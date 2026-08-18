@@ -134,7 +134,7 @@ impl MemRepo {
 
     pub async fn update_chunk(&self, id: i32, content: &str) -> Result<(), sqlx::Error> {
         sqlx::query!(
-            "UPDATE chunk SET content=?1, updated_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?2",
+            "UPDATE chunk SET content=?1, updated_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?2",
             content,
             id
         )
@@ -275,7 +275,7 @@ impl MemRepo {
             } else {
                 qb.push(" AND m.buried = 0");
                 if state == "today_done" {
-                    qb.push(" AND m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')");
+                    qb.push(" AND m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')");
                 } else if state != "all" && !state.is_empty() {
                     qb.push(" AND m.state = ");
                     qb.push_bind(state);
@@ -372,7 +372,7 @@ impl MemRepo {
             } else {
                 qb.push(" AND m.buried = 0");
                 if state == "today_done" {
-                    qb.push(" AND m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')");
+                    qb.push(" AND m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')");
                 } else if state != "all" && !state.is_empty() {
                     qb.push(" AND m.state = ");
                     qb.push_bind(state);
@@ -512,7 +512,7 @@ impl MemRepo {
     pub async fn unsuspend_mem(&self, id: i32) -> Result<(), sqlx::Error> {
         // 恢复到新卡状态，保留内容
         sqlx::query!(
-            "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?1",
+            "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?1",
             id
         )
         .execute(&*self.pool)
@@ -553,7 +553,7 @@ impl MemRepo {
     ) -> Result<Vec<i32>, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.id FROM mem m WHERE m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended'
-              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#,
+              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')"#,
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
@@ -574,7 +574,7 @@ impl MemRepo {
                       m.last_review_at AS "last_review_at"
             FROM mem m
             WHERE m.state = 'review' AND m.buried = 0 AND m.state != 'suspended'
-              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#,
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
@@ -624,7 +624,7 @@ impl MemRepo {
                       m.last_review_at AS "last_review_at"
             FROM mem m
             WHERE m.state = 'review' AND m.buried = 0 AND m.state != 'suspended'
-              AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+              AND m.due_at > strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#,
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
@@ -656,8 +656,8 @@ impl MemRepo {
         sqlx::query_scalar!(
             r#"SELECT COUNT(*) FROM mem m
             WHERE m.state IN ('review') AND m.buried = 0
-              AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '+' || ?1 || ' hours')
+              AND m.due_at > strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')
+              AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now', '+' || ?1 || ' hours')
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#,
             hours
         )
@@ -678,7 +678,7 @@ impl MemRepo {
         .await?;
         let due_count: i64 = sqlx::query_scalar!(
             r#"SELECT COUNT(*) FROM mem WHERE state = 'review' AND buried = 0 AND state != 'suspended'
-               AND due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#
+               AND due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')"#
         )
         .fetch_one(&*self.pool)
         .await?;
@@ -715,7 +715,7 @@ impl MemRepo {
         let due_ready = self
             .count_session_sql(
                 r#"m.state = 'review' AND m.buried = 0 AND m.state != 'suspended'
-                   AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+                   AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')
                    AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id = pm.id WHERE mp.mem_id = m.id AND pm.state = 'new')"#,
                 tag_ids,
                 exclude_tag_ids,
@@ -726,7 +726,7 @@ impl MemRepo {
             r#"SELECT m.state, COALESCE(m.step_index, 0) AS step, COUNT(*) AS n
                FROM mem m
                WHERE m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended'
-                 AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"#,
+                 AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')"#,
         );
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
@@ -800,7 +800,7 @@ impl MemRepo {
     pub async fn get_next_mem(&self) -> Result<Option<i32>, sqlx::Error> {
         sqlx::query_scalar!(
             r#"SELECT m.id AS "id: i32" FROM mem m
-            WHERE m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+            WHERE m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')
               AND m.buried = 0 AND m.state != 'suspended'
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
             ORDER BY m.due_at LIMIT 1"#
@@ -818,7 +818,7 @@ impl MemRepo {
         step_index: Option<i32>,
     ) -> Result<(), sqlx::Error> {
         sqlx::query!(
-            "UPDATE mem SET state=?1, step_index=?2, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?3",
+            "UPDATE mem SET state=?1, step_index=?2, due_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?3",
             state,
             step_index,
             id
@@ -830,7 +830,7 @@ impl MemRepo {
 
     pub async fn update_mem_fsrs(&self, id: i32, params: &FsrsUpdate) -> Result<(), sqlx::Error> {
         sqlx::query!(
-            "UPDATE mem SET state=?1, stability=?2, difficulty=?3, step_index=?4, lapses=?5, leeched=?6, due_at=?7, last_review_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?8",
+            "UPDATE mem SET state=?1, stability=?2, difficulty=?3, step_index=?4, lapses=?5, leeched=?6, due_at=?7, last_review_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?8",
             params.state.as_str(),
             params.stability,
             params.difficulty,
@@ -1117,7 +1117,7 @@ impl MemRepo {
 
     pub async fn reset_mem(&self, id: i32) -> Result<(), sqlx::Error> {
         sqlx::query!(
-            "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id=?1",
+            "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?1",
             id
         )
         .execute(&*self.pool)
@@ -2178,7 +2178,7 @@ mod tests {
             // 设为 review 状态，due_at 在 1 分钟后（使用 TZ 格式，与真实代码一致）
             // 1 分钟 = 60 秒
             let future = (chrono::Utc::now() + chrono::Duration::seconds(60))
-                .format("%Y-%m-%dT%H:%M:%SZ")
+                .format("%Y-%m-%dT%H:%M:%S+00:00")
                 .to_string();
             sqlx::query("UPDATE mem SET state = 'review', due_at = ? WHERE id = ?")
                 .bind(&future)
@@ -2245,10 +2245,10 @@ mod tests {
         // 两张到期 review 卡，难度/失败次数不同
         let (due_id, ..) = create_test_mem(&repo, "due", "target").await;
         let past = (chrono::Utc::now() - chrono::Duration::hours(24))
-            .format("%Y-%m-%dT%H:%M:%SZ")
+            .format("%Y-%m-%dT%H:%M:%S+00:00")
             .to_string();
         let last = (chrono::Utc::now() - chrono::Duration::days(2))
-            .format("%Y-%m-%dT%H:%M:%SZ")
+            .format("%Y-%m-%dT%H:%M:%S+00:00")
             .to_string();
         sqlx::query(
             "UPDATE mem SET state='review', difficulty=9, stability=2, lapses=4, due_at=?, last_review_at=? WHERE id=?",
@@ -2263,7 +2263,7 @@ mod tests {
         // 一张未来到期卡：不应进入 due 候选
         let (future_id, ..) = create_test_mem(&repo, "future", "target").await;
         let future = (chrono::Utc::now() + chrono::Duration::hours(1))
-            .format("%Y-%m-%dT%H:%M:%SZ")
+            .format("%Y-%m-%dT%H:%M:%S+00:00")
             .to_string();
         sqlx::query(
             "UPDATE mem SET state='review', difficulty=3, stability=10, due_at=? WHERE id=?",

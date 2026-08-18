@@ -68,7 +68,7 @@ impl Default for SchedulerConfig {
 
 fn due_in_secs(secs: i64) -> String {
     (Utc::now() + Duration::seconds(secs))
-        .format("%Y-%m-%dT%H:%M:%SZ")
+        .format("%Y-%m-%dT%H:%M:%S+00:00")
         .to_string()
 }
 
@@ -178,7 +178,9 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> Result<Review
             state: Suspended,
             stability: s_old,
             difficulty: d_old,
-            due_at: chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+            due_at: chrono::Utc::now()
+                .format("%Y-%m-%dT%H:%M:%S+00:00")
+                .to_string(),
         });
     }
 

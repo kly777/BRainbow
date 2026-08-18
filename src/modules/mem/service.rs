@@ -146,7 +146,9 @@ impl MemService {
 
         // 写 revlog（通过 Repository trait）
         let delta_t = days_elapsed_since(&row.last_review_at) as i32;
-        let now_str = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
+        let now_str = chrono::Utc::now()
+            .format("%Y-%m-%dT%H:%M:%S+00:00")
+            .to_string();
         self.repo
             .insert_revlog(&InsertRevlogParams {
                 mem_id: id,
@@ -227,7 +229,7 @@ impl MemService {
                 stability: row.stability,
                 difficulty: row.difficulty,
                 due_at: (chrono::Utc::now() + chrono::Duration::seconds(remaining))
-                    .format("%Y-%m-%dT%H:%M:%SZ")
+                    .format("%Y-%m-%dT%H:%M:%S+00:00")
                     .to_string(),
             };
             new_step = row.step_index;
@@ -619,7 +621,7 @@ mod tests {
 
     async fn set_relearning(pool: &SqlitePool, id: i32, last_review_secs_ago: i64) {
         let last = (chrono::Utc::now() - chrono::Duration::seconds(last_review_secs_ago))
-            .format("%Y-%m-%dT%H:%M:%SZ")
+            .format("%Y-%m-%dT%H:%M:%S+00:00")
             .to_string();
         sqlx::query(
             "UPDATE mem SET state='relearning', step_index=0, stability=5, difficulty=5, lapses=3, last_review_at=? WHERE id=?",

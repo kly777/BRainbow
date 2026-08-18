@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE chunk SET content=?1, updated_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "1c88eafeaeb90b1d45a2f82db8d30822ecd4ac713a4621ddab4ca81c3810388c"
+}

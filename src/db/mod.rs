@@ -30,8 +30,8 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             content TEXT,
             user_id INTEGER,
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             FOREIGN KEY (user_id) REFERENCES user(id)
         )
         "#,
@@ -74,8 +74,8 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             user_id INTEGER,
 
             -- 元数据
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
 
             -- 外键约束
             FOREIGN KEY (parent_task_id) REFERENCES task(id),
@@ -182,7 +182,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             height          INTEGER,
             duration_ms     INTEGER,
             user_id         INTEGER,
-            created_at      TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            created_at      TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             FOREIGN KEY (user_id) REFERENCES user(id)
         )
         "#,
@@ -210,7 +210,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             onto_id INTEGER,
             weight REAL,
             relation_type TEXT,
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             FOREIGN KEY (onto_id) REFERENCES onto(id)
         )
         "#,
@@ -225,8 +225,8 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL DEFAULT '',
             content TEXT NOT NULL DEFAULT '',
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
         "#,
     )
@@ -241,8 +241,8 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         CREATE TABLE IF NOT EXISTS chunk (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             content TEXT NOT NULL DEFAULT '',
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
         "#,
     )
@@ -264,9 +264,9 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             lapses INTEGER NOT NULL DEFAULT 0,
             leeched INTEGER NOT NULL DEFAULT 0,
             in_pool INTEGER NOT NULL DEFAULT 0,
-            due_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            due_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             last_review_at TIMESTAMP,
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             FOREIGN KEY (cue_chunk_id) REFERENCES chunk(id),
             FOREIGN KEY (target_chunk_id) REFERENCES chunk(id)
         )
@@ -324,7 +324,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         CREATE TABLE IF NOT EXISTS mem_mnemonic (
             mem_id INTEGER PRIMARY KEY,
             content TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             FOREIGN KEY (mem_id) REFERENCES mem(id) ON DELETE CASCADE
         )
         "#,
@@ -340,7 +340,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             user_id INTEGER NOT NULL,
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             FOREIGN KEY (user_id) REFERENCES user(id),
             UNIQUE(name, user_id)
         )
@@ -372,7 +372,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             conv_id INTEGER NOT NULL,
             title TEXT NOT NULL,
             conv_type TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             UNIQUE(conv_id, title)
         )
         "#,
@@ -389,7 +389,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             title TEXT NOT NULL,
             content TEXT,
             word_count INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             UNIQUE(conv_id, title)
         )
         "#,
@@ -413,8 +413,8 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             title TEXT NOT NULL,
             url TEXT NOT NULL,
             description TEXT NOT NULL DEFAULT '',
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
         "#,
     )
@@ -431,7 +431,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         CREATE TABLE IF NOT EXISTS bookmark_tag (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
         "#,
     )
@@ -466,7 +466,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             content TEXT NOT NULL,
             word_count INTEGER DEFAULT 0,
             notes TEXT NOT NULL DEFAULT '',
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
         "#,
     )
@@ -495,8 +495,8 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             status TEXT NOT NULL DEFAULT 'unknown',
             unknown_count INTEGER NOT NULL DEFAULT 0,
             known_count INTEGER NOT NULL DEFAULT 0,
-            first_seen_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            first_seen_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
         "#,
     )
@@ -516,8 +516,8 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             title TEXT NOT NULL,
             system_prompt TEXT NOT NULL DEFAULT '',
             kind TEXT NOT NULL DEFAULT 'chat',
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
         "#,
     )
@@ -533,7 +533,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             role TEXT NOT NULL CHECK (role IN ('user','assistant')),
             content TEXT NOT NULL,
             revised_from INTEGER,
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
         "#,
     )
@@ -547,7 +547,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             user_id INTEGER NOT NULL,
             name TEXT NOT NULL,
             content TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
         "#,
     )
@@ -570,7 +570,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             api_key TEXT NOT NULL DEFAULT '',
             model TEXT NOT NULL DEFAULT '',
             mnemonic_prompt TEXT NOT NULL DEFAULT '',
-            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
         "#,
     )
@@ -585,7 +585,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             key_hash TEXT NOT NULL UNIQUE,
             role TEXT NOT NULL DEFAULT 'user',
             user_id INTEGER,
-            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
         "#,
     )
@@ -613,7 +613,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 // PRAGMA user_version。迁移必须幂等：列/表已存在则跳过；ALTER 失败必须上抛。
 
 /// 程序支持的最新 schema 版本
-pub const LATEST_USER_VERSION: i64 = 8;
+pub const LATEST_USER_VERSION: i64 = 9;
 
 /// 迁移统一入口。
 ///
@@ -651,6 +651,7 @@ async fn apply_migration(pool: &SqlitePool, target: i64) -> Result<(), sqlx::Err
         6 => migrate_v6_reading_notes(&mut tx).await?,
         7 => migrate_v7_revlog_duration(&mut tx).await?,
         8 => migrate_v8_time_iso_utc(&mut tx).await?,
+        9 => migrate_v9_time_normalize_suffix(&mut tx).await?,
         _ => {
             return Err(sqlx::Error::Configuration(Box::new(std::io::Error::other(
                 format!("未知的迁移版本: {target}"),
@@ -707,7 +708,7 @@ async fn migrate_v5_signifier_columns(conn: &mut SqliteConnection) -> Result<(),
         ),
         (
             "created_at",
-            "ALTER TABLE signifier_signified ADD COLUMN created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))",
+            "ALTER TABLE signifier_signified ADD COLUMN created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))",
         ),
     ] {
         add_column_if_missing(conn, "signifier_signified", column, ddl).await?;
@@ -737,53 +738,66 @@ async fn migrate_v7_revlog_duration(conn: &mut SqliteConnection) -> Result<(), s
     .await
 }
 
-/// v8：统一时间列存储为 ISO 8601 UTC。
-///
-/// 1. 把历史库中的 `YYYY-MM-DD HH:MM:SS` 等旧格式批量规范化为
-///    `YYYY-MM-DDTHH:MM:SSZ`；
-/// 2. 为每张表创建 INSERT/UPDATE 触发器，后续无论应用层是否显式写 ISO，
-///    只要写入的是可解析的日期时间，都会在数据库层规范化。
-async fn migrate_v8_time_iso_utc(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
-    const TIME_COLUMNS: &[(&str, &str, &[&str])] = &[
-        ("card", "id", &["created_at", "updated_at"]),
-        ("task", "id", &["completed_at", "created_at", "updated_at"]),
-        (
-            "time_window",
-            "id",
-            &["start_time", "end_time", "recurrence_until"],
-        ),
-        ("media", "id", &["created_at"]),
-        ("signifier_signified", "id", &["created_at"]),
-        ("text_note", "id", &["created_at", "updated_at"]),
-        ("chunk", "id", &["created_at", "updated_at"]),
-        ("mem", "id", &["due_at", "last_review_at", "created_at"]),
-        ("revlog", "id", &["review_time"]),
-        ("mem_mnemonic", "mem_id", &["created_at"]),
-        ("tag", "id", &["created_at"]),
-        ("conv_titles", "id", &["created_at"]),
-        ("articles", "id", &["created_at"]),
-        ("bookmark", "id", &["created_at", "updated_at"]),
-        ("bookmark_tag", "id", &["created_at"]),
-        ("reading_article", "id", &["created_at"]),
-        ("reading_user_word", "id", &["first_seen_at", "updated_at"]),
-        ("chat_tree", "id", &["created_at", "updated_at"]),
-        ("chat_node", "id", &["created_at"]),
-        ("prompt_preset", "id", &["created_at"]),
-        ("ai_settings", "user_id", &["updated_at"]),
-        ("api_key", "id", &["created_at"]),
-    ];
+const TIME_COLUMNS: &[(&str, &str, &[&str])] = &[
+    ("card", "id", &["created_at", "updated_at"]),
+    ("task", "id", &["completed_at", "created_at", "updated_at"]),
+    (
+        "time_window",
+        "id",
+        &["start_time", "end_time", "recurrence_until"],
+    ),
+    ("media", "id", &["created_at"]),
+    ("signifier_signified", "id", &["created_at"]),
+    ("text_note", "id", &["created_at", "updated_at"]),
+    ("chunk", "id", &["created_at", "updated_at"]),
+    ("mem", "id", &["due_at", "last_review_at", "created_at"]),
+    ("revlog", "id", &["review_time"]),
+    ("mem_mnemonic", "mem_id", &["created_at"]),
+    ("tag", "id", &["created_at"]),
+    ("conv_titles", "id", &["created_at"]),
+    ("articles", "id", &["created_at"]),
+    ("bookmark", "id", &["created_at", "updated_at"]),
+    ("bookmark_tag", "id", &["created_at"]),
+    ("reading_article", "id", &["created_at"]),
+    ("reading_user_word", "id", &["first_seen_at", "updated_at"]),
+    ("chat_tree", "id", &["created_at", "updated_at"]),
+    ("chat_node", "id", &["created_at"]),
+    ("prompt_preset", "id", &["created_at"]),
+    ("ai_settings", "user_id", &["updated_at"]),
+    ("api_key", "id", &["created_at"]),
+];
 
+/// 使用 `Z` 后缀（而非 sqlx 默认的 `+00:00`）作为规范格式的表。
+/// 这些表的业务代码/查询直接把时间写成 `...Z` 字符串，必须保持 Z 才能与
+/// `strftime('...Z','now')`、Rust 端 `format("%Y-%m-%dT%H:%M:%SZ")` 对齐。
+const TIME_TAIL_Z_TABLES: &[&str] = &["chunk", "mem", "revlog", "mem_mnemonic"];
+
+fn time_tail_is_z(table: &str) -> bool {
+    TIME_TAIL_Z_TABLES.contains(&table)
+}
+
+/// v8：统一时间列存储为 RFC 3339 UTC（`+00:00` 形式）。
+///
+/// 1. 把历史库中的 `YYYY-MM-DD HH:MM:SS`、`...Z` 等格式批量规范化为
+///    `YYYY-MM-DDTHH:MM:SS(+00:00)`；
+/// 2. 为每张表创建 INSERT/UPDATE 触发器，后续无论应用层写入哪种可解析格式，
+///    都会在数据库层统一。
+async fn migrate_v8_time_iso_utc(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
     for (table, pk, columns) in TIME_COLUMNS {
+        let z_tail = time_tail_is_z(table);
+        let own_suffix = if z_tail { "Z" } else { "+00:00" };
+        let other_suffix = if z_tail { "+00:00" } else { "Z" };
+
         for column in *columns {
             let sql = format!(
                 "UPDATE {table} SET {column} = CASE \
-                 WHEN {column} GLOB '????-??-??T??:??:??*Z' THEN {column} \
-                 WHEN {column} GLOB '????-??-??T??:??:??*+00:00' THEN replace({column}, '+00:00', 'Z') \
-                 ELSE strftime('%Y-%m-%dT%H:%M:%SZ', {column}) END \
+                 WHEN {column} GLOB '????-??-??T??:??:??*{own_suffix}' THEN {column} \
+                 WHEN {column} GLOB '????-??-??T??:??:??*{other_suffix}' \
+                   THEN replace({column}, '{other_suffix}', '{own_suffix}') \
+                 ELSE strftime('%Y-%m-%dT%H:%M:%S{own_suffix}', {column}) END \
                  WHERE {column} IS NOT NULL AND {column} <> '' \
                  AND {column} GLOB '????-??-??*' \
-                 AND {column} NOT GLOB '????-??-??T??:??:??*Z' \
-                 AND {column} NOT GLOB '????-??-??T??:??:??*+00:00'"
+                 AND {column} NOT GLOB '????-??-??T??:??:??*{own_suffix}'"
             );
             sqlx::query(sqlx::AssertSqlSafe(sql))
                 .execute(&mut *conn)
@@ -797,10 +811,10 @@ async fn migrate_v8_time_iso_utc(conn: &mut SqliteConnection) -> Result<(), sqlx
                 format!(
                     "{column} = CASE WHEN NEW.{column} IS NULL THEN NULL \
                      WHEN NEW.{column} = '' THEN '' \
-                     WHEN NEW.{column} GLOB '????-??-??T??:??:??*Z' THEN NEW.{column} \
-                     WHEN NEW.{column} GLOB '????-??-??T??:??:??*+00:00' \
-                       THEN replace(NEW.{column}, '+00:00', 'Z') \
-                     ELSE strftime('%Y-%m-%dT%H:%M:%SZ', NEW.{column}) END"
+                     WHEN NEW.{column} GLOB '????-??-??T??:??:??*{own_suffix}' THEN NEW.{column} \
+                     WHEN NEW.{column} GLOB '????-??-??T??:??:??*{other_suffix}' \
+                       THEN replace(NEW.{column}, '{other_suffix}', '{own_suffix}') \
+                     ELSE strftime('%Y-%m-%dT%H:%M:%S{own_suffix}', NEW.{column}) END"
                 )
             })
             .collect::<Vec<_>>()
@@ -811,8 +825,7 @@ async fn migrate_v8_time_iso_utc(conn: &mut SqliteConnection) -> Result<(), sqlx
                 format!(
                     "(NEW.{column} IS NOT NULL AND NEW.{column} <> '' \
                      AND NEW.{column} GLOB '????-??-??*' \
-                     AND NEW.{column} NOT GLOB '????-??-??T??:??:??*Z' \
-                     AND NEW.{column} NOT GLOB '????-??-??T??:??:??*+00:00')"
+                     AND NEW.{column} NOT GLOB '????-??-??T??:??:??*{own_suffix}')"
                 )
             })
             .collect::<Vec<_>>()
@@ -836,6 +849,87 @@ async fn migrate_v8_time_iso_utc(conn: &mut SqliteConnection) -> Result<(), sqlx
             .execute(&mut *conn)
             .await
             .map_err(|e| migration_failed(&format!("v8 创建 {table} 时间 UPDATE 触发器"), e))?;
+    }
+    Ok(())
+}
+
+/// v9：修复 v8 在部分表上把 `Z`/`+00:00` 统一成错误后缀的问题，
+/// 按各表业务格式规整，并重建触发器。
+async fn migrate_v9_time_normalize_suffix(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    for (table, pk, columns) in TIME_COLUMNS {
+        let z_tail = time_tail_is_z(table);
+        let own_suffix = if z_tail { "Z" } else { "+00:00" };
+        let other_suffix = if z_tail { "+00:00" } else { "Z" };
+
+        // 数据：把 other 后缀统一成 own 后缀
+        for column in *columns {
+            let sql = format!(
+                "UPDATE {table} SET {column} = replace({column}, '{other_suffix}', '{own_suffix}') \
+                 WHERE {column} GLOB '????-??-??T??:??:??*{other_suffix}'"
+            );
+            sqlx::query(sqlx::AssertSqlSafe(sql))
+                .execute(&mut *conn)
+                .await
+                .map_err(|e| migration_failed(&format!("v9 规范化 {table}.{column}"), e))?;
+        }
+
+        // 重建触发器（旧 v8 触发器逻辑对所有表统一，需要替换）
+        for name in [
+            format!("trg_{table}_time_iso_ins"),
+            format!("trg_{table}_time_iso_upd"),
+        ] {
+            sqlx::query(sqlx::AssertSqlSafe(format!(
+                "DROP TRIGGER IF EXISTS {name}"
+            )))
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| migration_failed(&format!("v9 删除触发器 {name}"), e))?;
+        }
+
+        let set_clause = columns
+            .iter()
+            .map(|column| {
+                format!(
+                    "{column} = CASE WHEN NEW.{column} IS NULL THEN NULL \
+                     WHEN NEW.{column} = '' THEN '' \
+                     WHEN NEW.{column} GLOB '????-??-??T??:??:??*{own_suffix}' THEN NEW.{column} \
+                     WHEN NEW.{column} GLOB '????-??-??T??:??:??*{other_suffix}' \
+                       THEN replace(NEW.{column}, '{other_suffix}', '{own_suffix}') \
+                     ELSE strftime('%Y-%m-%dT%H:%M:%S{own_suffix}', NEW.{column}) END"
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        let when_clause = columns
+            .iter()
+            .map(|column| {
+                format!(
+                    "(NEW.{column} IS NOT NULL AND NEW.{column} <> '' \
+                     AND NEW.{column} GLOB '????-??-??*' \
+                     AND NEW.{column} NOT GLOB '????-??-??T??:??:??*{own_suffix}')"
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(" OR ");
+
+        let insert_trigger = format!(
+            "CREATE TRIGGER IF NOT EXISTS trg_{table}_time_iso_ins \
+             AFTER INSERT ON {table} FOR EACH ROW WHEN {when_clause} \
+             BEGIN UPDATE {table} SET {set_clause} WHERE {pk} = NEW.{pk}; END"
+        );
+        let update_trigger = format!(
+            "CREATE TRIGGER IF NOT EXISTS trg_{table}_time_iso_upd \
+             AFTER UPDATE ON {table} FOR EACH ROW WHEN {when_clause} \
+             BEGIN UPDATE {table} SET {set_clause} WHERE {pk} = NEW.{pk}; END"
+        );
+        sqlx::query(sqlx::AssertSqlSafe(insert_trigger))
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| migration_failed(&format!("v9 创建 {table} 时间 INSERT 触发器"), e))?;
+        sqlx::query(sqlx::AssertSqlSafe(update_trigger))
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| migration_failed(&format!("v9 创建 {table} 时间 UPDATE 触发器"), e))?;
     }
     Ok(())
 }
@@ -999,16 +1093,16 @@ mod tests {
                 .fetch_one(&pool)
                 .await
                 .unwrap();
-        assert_eq!(card_times.0, "2026-08-17T15:22:22Z");
-        assert_eq!(card_times.1, "2026-08-17T15:22:22Z");
+        assert_eq!(card_times.0, "2026-08-17T15:22:22+00:00");
+        assert_eq!(card_times.1, "2026-08-17T15:22:22+00:00");
 
         let chat_times: (String, String) =
             sqlx::query_as("SELECT created_at, updated_at FROM chat_tree WHERE id = 1")
                 .fetch_one(&pool)
                 .await
                 .unwrap();
-        assert_eq!(chat_times.0, "2026-08-17T15:22:22Z");
-        assert_eq!(chat_times.1, "2026-08-17T15:22:22Z");
+        assert_eq!(chat_times.0, "2026-08-17T15:22:22+00:00");
+        assert_eq!(chat_times.1, "2026-08-17T15:22:22+00:00");
 
         // 触发器应存在
         let triggers: i64 = sqlx::query_scalar(
@@ -1034,7 +1128,32 @@ mod tests {
             .fetch_one(&pool)
             .await
             .unwrap();
-        assert_eq!(created, "2026-08-17T15:22:22Z");
+        assert_eq!(created, "2026-08-17T15:22:22+00:00");
+    }
+
+    #[tokio::test]
+    async fn v9_converts_offset_utc_to_z() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        super::create_tables(&pool).await.unwrap();
+        sqlx::query("PRAGMA user_version = 8")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO card (content, created_at, updated_at) VALUES ('x', '2026-08-17T15:22:22.123Z', '2026-08-17T15:22:22.123Z')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        migrate(&pool).await.unwrap();
+        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+
+        let created: String = sqlx::query_scalar("SELECT created_at FROM card WHERE id = 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(created, "2026-08-17T15:22:22.123+00:00");
     }
 
     #[tokio::test]
@@ -1054,8 +1173,8 @@ mod tests {
                 user_id INTEGER NOT NULL,
                 title TEXT NOT NULL,
                 system_prompt TEXT NOT NULL DEFAULT '',
-                created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-                updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+                created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+                updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
             )",
             "CREATE TABLE chat_node (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1064,14 +1183,14 @@ mod tests {
                 role TEXT NOT NULL,
                 content TEXT NOT NULL,
                 revised_from INTEGER,
-                created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+                created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
             )",
             "CREATE TABLE reading_article (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 content TEXT NOT NULL,
                 word_count INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+                created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
             )",
         ] {
             sqlx::query(ddl).execute(&pool).await.unwrap();

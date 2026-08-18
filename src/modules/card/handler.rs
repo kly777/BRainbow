@@ -150,7 +150,7 @@ mod tests {
             updated_at: dt,
         };
         let response = CardResponse::from(card);
-        assert_eq!(response.created_at, "2026-08-07T07:13:43Z");
-        assert_eq!(response.updated_at, "2026-08-07T07:13:43Z");
+        assert_eq!(response.created_at, "2026-08-07T07:13:43+00:00");
+        assert_eq!(response.updated_at, "2026-08-07T07:13:43+00:00");
     }
 }

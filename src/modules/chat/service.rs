@@ -1,9 +1,9 @@
-use chrono::Utc;
 use sqlx::{FromRow, SqlitePool};
 
 use crate::modules::ai::model::AiProxyMessage;
 use crate::modules::ai::service::AiService;
 use crate::shared::error_types::ServiceError;
+use crate::shared::time_text::utc_now_iso;
 
 use super::model::{
     CreateTreeRequest, NodeItem, PresetItem, ReviseRequest, ReviseResponse, TreeDetail, TreeItem,
@@ -197,7 +197,7 @@ impl ChatService {
         } else {
             req.system_prompt.trim().to_string()
         };
-        let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        let now = utc_now_iso();
         let id: i64 = sqlx::query!(
             "INSERT INTO chat_tree (user_id, title, system_prompt, kind, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?5)",
             user_id,

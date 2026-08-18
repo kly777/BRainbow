@@ -1,8 +1,8 @@
-use chrono::Utc;
 use sqlx::SqlitePool;
 use tokio::time::{Duration, sleep};
 
 use crate::shared::error_types::ServiceError;
+use crate::shared::time_text::utc_now_iso;
 
 use super::model::{AiConfig, AiProxyMessage, AiSettingsItem, UpdateAiSettingsRequest};
 
@@ -79,7 +79,7 @@ impl AiService {
             .map(|s| s.trim().to_string())
             .unwrap_or(old_prompt);
 
-        let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        let now = utc_now_iso();
         sqlx::query!(
             "INSERT INTO ai_settings (user_id, endpoint, api_key, model, mnemonic_prompt, updated_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)

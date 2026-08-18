@@ -21,6 +21,7 @@ use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::error_types::ServiceError;
 use crate::shared::pagination::Pagination;
+use crate::shared::time_text::to_utc_iso;
 
 // ── 响应 ──
 
@@ -49,7 +50,7 @@ fn to_response(m: &super::model::Media) -> MediaResponse {
         width: m.width,
         height: m.height,
         duration_ms: m.duration_ms,
-        created_at: m.created_at.to_rfc3339(),
+        created_at: to_utc_iso(m.created_at),
     }
 }
 

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::modules::state::AppState;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
+use crate::shared::time_text::to_utc_iso;
 
 #[derive(Debug, Deserialize)]
 pub struct CreateCardRequest {
@@ -31,8 +32,8 @@ impl From<super::model::Card> for CardResponse {
         Self {
             id: c.id,
             content: c.content,
-            created_at: c.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
-            updated_at: c.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+            created_at: to_utc_iso(c.created_at),
+            updated_at: to_utc_iso(c.updated_at),
         }
     }
 }
@@ -138,7 +139,7 @@ mod tests {
     use chrono::{DateTime, Utc};
 
     #[test]
-    fn card_response_formats_time_to_seconds_without_fraction_or_suffix() {
+    fn card_response_formats_time_to_iso_utc_without_fraction() {
         let dt = DateTime::parse_from_rfc3339("2026-08-07T07:13:43.540234635+00:00")
             .unwrap()
             .with_timezone(&Utc);
@@ -149,7 +150,7 @@ mod tests {
             updated_at: dt,
         };
         let response = CardResponse::from(card);
-        assert_eq!(response.created_at, "2026-08-07 07:13:43");
-        assert_eq!(response.updated_at, "2026-08-07 07:13:43");
+        assert_eq!(response.created_at, "2026-08-07T07:13:43Z");
+        assert_eq!(response.updated_at, "2026-08-07T07:13:43Z");
     }
 }

@@ -1,84 +1,28 @@
 import { PATHS } from "@config/paths";
-// ── 记忆复习页 v2 ──
-// 全新布局设计：全局头 + 上下文条 + 过滤 + 沉浸式卡片区
-// 业务逻辑全部复用 useMemReview，此处只做组合与交互增强
-
-import { notifyError, tryAsync } from "@lib/utils";
 import { openAiSettings } from "@modules/ai-setting";
-import { getUpcomingCountsE, type UpcomingCounts } from "@modules/mem";
 import { A } from "@solidjs/router";
-import {
-	createDeferred,
-	createResource,
-	createSignal,
-	onCleanup,
-	onMount,
-} from "solid-js";
 import ContextBar from "./components/ContextBar.tsx";
 import FilterBar from "./components/FilterBar.tsx";
 import MnemonicSettingsModal from "./components/MnemonicSettingsModal.tsx";
 import ReviewCard from "./components/ReviewCard.tsx";
 import Sidebar from "./components/Sidebar.tsx";
-import { useMemReview } from "./hooks/useMemReview.ts";
+import { useMemPage } from "./hooks/useMemPage.ts";
 import styles from "./MemPage.module.css";
 
 export default function MemPage() {
-	const m = useMemReview();
-	const [showMnemonicSettings, setShowMnemonicSettings] = createSignal(false);
-
-	// 8h/24h 待复习统计：评分会连续改变 due.length，用 createDeferred 合并 + 60s 缓存降频
-	const UPCOMING_TTL = 60_000;
-	let lastUpcomingAt = 0;
-	let lastUpcoming: UpcomingCounts | null = null;
-	const dueLen = createDeferred(() => m.due().length);
-	const [upcomingCounts] = createResource(
-		() => dueLen(),
-		async () => {
-			if (lastUpcoming && Date.now() - lastUpcomingAt < UPCOMING_TTL)
-				return lastUpcoming;
-			const result = await tryAsync(() => getUpcomingCountsE());
-			if (result.ok) {
-				lastUpcoming = result.value;
-				lastUpcomingAt = Date.now();
-				return result.value;
-			}
-			notifyError("获取待复习统计失败", result.error);
-			return { within_8h: 0, within_24h: 0 };
-		},
-	);
-
-	// ── 队列导航：键盘 ←/→（不干扰空格翻面与 1-4 评分） ──
-	const nav = (dir: -1 | 1) => {
-		const next = Math.min(
-			Math.max(0, m.current() + dir),
-			Math.max(0, m.due().length - 1),
-		);
-		m.setCurrent(next);
-		m.setShowAnswer(false);
-	};
-	const onKey = (e: KeyboardEvent) => {
-		if (
-			e.target instanceof HTMLTextAreaElement ||
-			(e.target as HTMLElement)?.tagName === "INPUT"
-		)
-			return;
-		if (e.key === "ArrowLeft") nav(-1);
-		else if (e.key === "ArrowRight") nav(1);
-	};
-	onMount(() => globalThis.addEventListener("keydown", onKey));
-	onCleanup(() => globalThis.removeEventListener("keydown", onKey));
+	const m = useMemPage();
+	const review = m.review;
 
 	return (
 		<div class={styles.page}>
-			<Sidebar m={m} />
+			<Sidebar m={review} />
 
 			<div class={styles.main}>
-				{/* 全局头：只留导航 */}
 				<div class={styles.topBar}>
 					<button
 						type="button"
 						class={styles.hamburger}
-						onClick={() => m.setSidebarOpen(!m.sidebarOpen())}
+						onClick={() => review.setSidebarOpen(!review.sidebarOpen())}
 						aria-label="切换侧边栏"
 					>
 						☰
@@ -88,7 +32,7 @@ export default function MemPage() {
 						<button
 							type="button"
 							class={styles.iconBtn}
-							onClick={() => setShowMnemonicSettings(true)}
+							onClick={() => m.setShowMnemonicSettings(true)}
 							title="助记提示词设置"
 							aria-label="助记提示词设置"
 						>
@@ -112,21 +56,17 @@ export default function MemPage() {
 					</div>
 				</div>
 
-				{/* 上下文条：统计 + 编辑 */}
-				<ContextBar m={m} upcomingCounts={upcomingCounts()} />
+				<ContextBar m={review} upcomingCounts={m.upcomingCounts()} />
+				<FilterBar m={review} />
 
-				{/* 过滤 */}
-				<FilterBar m={m} />
-
-				{/* 卡片区 */}
 				<div class={styles.cardArea}>
-					<ReviewCard m={m} />
+					<ReviewCard m={review} />
 				</div>
 			</div>
 
 			<MnemonicSettingsModal
-				isOpen={showMnemonicSettings()}
-				onClose={() => setShowMnemonicSettings(false)}
+				isOpen={m.showMnemonicSettings()}
+				onClose={() => m.setShowMnemonicSettings(false)}
 			/>
 		</div>
 	);

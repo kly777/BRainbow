@@ -2,12 +2,10 @@
 
 import type { ChatNode } from "@modules/chat";
 import { For } from "solid-js";
-
-/** 所需样式类：branchBar/branchLabel/branchChip/branchChipActive */
-export type BranchBarStyles = Record<string, string>;
+import pageStyles from "./BranchBar.module.css";
+import memStyles from "./BranchBarMem.module.css";
 
 export function BranchBar(props: {
-	styles: BranchBarStyles;
 	children: ChatNode[];
 	isActive: (id: number) => boolean;
 	onSelect: (id: number) => void;
@@ -15,7 +13,10 @@ export function BranchBar(props: {
 	title: string;
 	/** 分支标签文本（缺省：内容前 24 字 + 角色兜底） */
 	chipText?: (node: ChatNode) => string;
+	/** 会话页/记忆页视觉变体 */
+	variant?: "page" | "mem";
 }) {
+	const styles = props.variant === "mem" ? memStyles : pageStyles;
 	const text = (node: ChatNode) => {
 		if (props.chipText) return props.chipText(node);
 		return (
@@ -25,16 +26,16 @@ export function BranchBar(props: {
 	};
 
 	return (
-		<div class={props.styles.branchBar}>
-			<span class={props.styles.branchLabel}>分支</span>
+		<div class={styles.branchBar}>
+			<span class={styles.branchLabel}>分支</span>
 			<For each={props.children}>
 				{(child) => (
 					<button
 						type="button"
 						class={
 							props.isActive(child.id)
-								? props.styles.branchChipActive
-								: props.styles.branchChip
+								? styles.branchChipActive
+								: styles.branchChip
 						}
 						title={props.title}
 						onClick={() => props.onSelect(child.id)}

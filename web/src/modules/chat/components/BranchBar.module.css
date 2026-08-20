@@ -1,0 +1,55 @@
+/* BranchBar — 分支切换条（普通会话页样式） */
+
+.branch-bar {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--space-xs);
+	margin-top: var(--space-sm);
+	padding-top: var(--space-sm);
+	border-top: 1px dashed var(--t-color-border);
+}
+
+.branch-label {
+	font-size: var(--text-xs);
+	font-family: var(--t-font-mono);
+	color: var(--t-color-ink-faint);
+	flex: none;
+}
+
+.branch-chip,
+.branch-chip-active {
+	display: inline-flex;
+	align-items: center;
+	padding: var(--space-2xs) var(--space-sm);
+	border-radius: var(--radius-full);
+	font-size: var(--text-xs);
+	line-height: 1.125rem;
+	white-space: nowrap;
+	cursor: pointer;
+	border: 1px solid var(--t-color-border-strong);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink-muted);
+	max-width: 220px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.branch-chip:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.branch-chip-active {
+	border-color: var(--t-color-accent);
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
+	font-weight: 600;
+	box-shadow: var(--shadow-sm);
+}
+
+.branch-chip-active:hover {
+	background: var(--t-color-accent-strong);
+	border-color: var(--t-color-accent-strong);
+	color: var(--t-color-white);
+}

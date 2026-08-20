@@ -68,7 +68,6 @@ export function MessageRow(props: {
 			footer={
 				<Show when={!streaming() && children().length > 1}>
 					<BranchBar
-						styles={styles}
 						children={children()}
 						isActive={(id) => c.isInSubtree(id)}
 						onSelect={(id) => c.focusBranch(id)}
@@ -83,7 +82,6 @@ export function MessageRow(props: {
 				) : (
 					<div class={styles.messageMd}>
 						<ThinkingBlock
-							styles={styles}
 							reasoning={() =>
 								streaming() ? c.streamingReasoning() : node.reasoning
 							}

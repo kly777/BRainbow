@@ -8,12 +8,9 @@ import {
 	onCleanup,
 	Show,
 } from "solid-js";
-
-/** 所需样式类：thinkingBlock/thinkingSummary/thinkingBody/thinkingActive */
-export type ThinkingBlockStyles = Record<string, string>;
+import styles from "./ThinkingBlock.module.css";
 
 export function ThinkingBlock(props: {
-	styles: ThinkingBlockStyles;
 	/** 思考内容（空则不渲染） */
 	reasoning: Accessor<string | undefined>;
 	/** 思考是否已结束（content 开始输出）；true 后停止计时 */
@@ -23,7 +20,6 @@ export function ThinkingBlock(props: {
 }) {
 	const [elapsed, setElapsed] = createSignal(0);
 
-	// 思考期间每秒计时
 	createEffect(() => {
 		const reasoning = props.reasoning();
 		if (!reasoning) {
@@ -45,17 +41,17 @@ export function ThinkingBlock(props: {
 
 	return (
 		<Show when={props.reasoning()}>
-			<details class={props.styles.thinkingBlock} open={props.open ?? false}>
+			<details class={styles.thinkingBlock} open={props.open ?? false}>
 				<summary
 					class={
 						props.done?.()
-							? props.styles.thinkingSummary
-							: `${props.styles.thinkingSummary} ${props.styles.thinkingActive}`
+							? styles.thinkingSummary
+							: `${styles.thinkingSummary} ${styles.thinkingActive}`
 					}
 				>
 					{title()}
 				</summary>
-				<div class={props.styles.thinkingBody}>
+				<div class={styles.thinkingBody}>
 					<MarkdownRenderer content={props.reasoning() ?? ""} />
 				</div>
 			</details>

@@ -87,7 +87,7 @@ export function MessageRow(props: {
 								<div class={styles.userBubble}>{node.content}</div>
 								<Show when={c.childrenOf(node.id).length > 1}>
 									<BranchBar
-										styles={styles}
+										variant="mem"
 										children={c.childrenOf(node.id)}
 										isActive={(id) => c.isInSubtree(id)}
 										onSelect={(id) => c.focusBranch(id)}
@@ -112,7 +112,6 @@ export function MessageRow(props: {
 						) : (
 							<div class={styles.messageMd}>
 								<ThinkingBlock
-									styles={styles}
 									reasoning={() => node.reasoning}
 									done={() => !!node.content}
 									open={streaming()}

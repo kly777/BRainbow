@@ -1,74 +1,33 @@
 import { MarkdownEditor } from "@components";
 import { Button, Toolbar } from "@components/ui";
-import { fillPath, PATHS } from "@config/paths";
-import { getErrorMessage } from "@lib/api";
-import { tryAsync } from "@lib/utils";
-import type { CreateCardRequest } from "@modules/card";
-import { createCardE } from "@modules/card";
-import { useNavigate } from "@solidjs/router";
-import { type Component, createSignal, Show } from "solid-js";
+import { type Component, Show } from "solid-js";
 import styles from "./CardAdd.module.css";
+import { useCardAdd } from "./hooks/useCardAdd.ts";
 
 const CardAddPage: Component = () => {
-	const navigate = useNavigate();
-
-	const [content, setContent] = createSignal("");
-	const [isSubmitting, setIsSubmitting] = createSignal(false);
-	const [error, setError] = createSignal("");
-
-	const canSave = () => content().trim().length > 0;
-
-	const doCreate = async () => {
-		if (!canSave()) {
-			setError("内容不能为空");
-			return;
-		}
-		setIsSubmitting(true);
-		setError("");
-		const result = await tryAsync(async () => {
-			const req: CreateCardRequest = { content: content().trim() };
-			return await createCardE(req);
-		});
-		if (result.ok) {
-			navigate(fillPath(PATHS.cardDetail, result.value.id));
-		} else {
-			setError(getErrorMessage(result.error));
-		}
-		setIsSubmitting(false);
-	};
-
-	const handleKeyDown = (e: KeyboardEvent) => {
-		if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-			e.preventDefault();
-			doCreate();
-		}
-	};
+	const m = useCardAdd();
 
 	return (
-		<div class={styles.container} onKeyDown={handleKeyDown} role="none">
-			<Toolbar
-				title="新建卡片"
-				backLabel="卡片列表"
-				onBack={() => navigate(PATHS.card)}
-			>
+		<div class={styles.container} onKeyDown={m.handleKeyDown} role="none">
+			<Toolbar title="新建卡片" backLabel="卡片列表" onBack={m.handleBack}>
 				<Button
 					variant="primary"
 					size="sm"
-					onClick={doCreate}
-					disabled={isSubmitting() || !canSave()}
+					onClick={m.doCreate}
+					disabled={m.isSubmitting() || !m.canSave()}
 				>
-					{isSubmitting() ? "保存中..." : "保存"}
+					{m.isSubmitting() ? "保存中..." : "保存"}
 				</Button>
 			</Toolbar>
 
-			<Show when={error()}>
-				<div class={styles.errorMsg}>{error()}</div>
+			<Show when={m.error()}>
+				<div class={styles.errorMsg}>{m.error()}</div>
 			</Show>
 
 			<div class={styles.editorArea}>
 				<MarkdownEditor
-					value={content()}
-					onInput={setContent}
+					value={m.content()}
+					onInput={m.setContent}
 					preview
 					rows={20}
 					placeholder="输入 Markdown 内容…支持粘贴和拖拽图片"

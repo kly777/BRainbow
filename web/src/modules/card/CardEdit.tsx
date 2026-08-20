@@ -4,20 +4,10 @@ import {
 	Button,
 	Markdown as MarkdownRenderer,
 } from "@components/ui";
-import { fillPath, PATHS } from "@config/paths";
-import { getErrorMessage } from "@lib/api";
-import { fmtLocal, showConfirm, tryAsync, tryOrNotify } from "@lib/utils";
-import type { UpdateCardRequest } from "@modules/card";
-import { deleteCardE, getCardE, updateCardE } from "@modules/card";
-import { useNavigate, useParams } from "@solidjs/router";
-import {
-	type Component,
-	createEffect,
-	createResource,
-	createSignal,
-	Show,
-} from "solid-js";
+import { fmtLocal } from "@lib/utils";
+import { type Component, Show } from "solid-js";
 import styles from "./CardEdit.module.css";
+import { useCardEdit } from "./hooks/useCardEdit.ts";
 
 const DirtyBadge: Component<{ dirty: boolean }> = (props) => (
 	<Show when={props.dirty}>
@@ -128,113 +118,37 @@ const CardEditWorkspace: Component<{
 );
 
 const CardEditPage: Component = () => {
-	const params = useParams();
-	const navigate = useNavigate();
-
-	const cardId = () => {
-		const id = params.id;
-		if (!id || !/^\d+$/.test(id)) return NaN;
-		return parseInt(id, 10);
-	};
-
-	const [card, { refetch }] = createResource(async () => {
-		const id = cardId();
-		if (Number.isNaN(id)) throw new Error("无效ID");
-		return await getCardE(id);
-	});
-
-	const [content, setContent] = createSignal("");
-	const [isSubmitting, setIsSubmitting] = createSignal(false);
-	const [error, setError] = createSignal("");
-
-	createEffect(() => {
-		const c = card();
-		if (c) setContent(c.content);
-	});
-
-	// 是否有未保存修改
-	const dirty = () => !!card() && card()!.content !== content();
-
-	const stampLabel = () => {
-		const c = card();
-		if (!c) return "";
-		return c.created_at === c.updated_at ? "创建于" : "修改于";
-	};
-
-	const stamp = () => {
-		const c = card();
-		if (!c) return "";
-		return c.created_at === c.updated_at ? c.created_at : c.updated_at;
-	};
-
-	const doSave = async () => {
-		if (!content().trim()) {
-			setError("内容不能为空");
-			return;
-		}
-		setIsSubmitting(true);
-		setError("");
-		const result = await tryAsync(async () => {
-			const req: UpdateCardRequest = { content: content().trim() };
-			await updateCardE(cardId(), req);
-		});
-		if (result.ok) {
-			navigate(fillPath(PATHS.cardDetail, cardId()));
-		} else {
-			setError(getErrorMessage(result.error));
-		}
-		setIsSubmitting(false);
-	};
-
-	const handleDelete = async () => {
-		const confirmed = await showConfirm({
-			title: "删除卡片",
-			message: "确定要删除这个卡片吗？此操作不可撤销。",
-			variant: "danger",
-		});
-		if (!confirmed) return;
-		const ok = await tryOrNotify(() => deleteCardE(cardId()), "删除卡片");
-		if (ok) navigate(PATHS.card);
-	};
-
-	const onKeyDown = (e: KeyboardEvent) => {
-		if (e.ctrlKey || e.metaKey) {
-			if (e.key === "Enter" || e.key === "s" || e.key === "S") {
-				e.preventDefault();
-				if (!isSubmitting()) void doSave();
-			}
-		}
-	};
+	const m = useCardEdit();
 
 	return (
 		<div class={styles.container}>
 			<CardEditHeader
-				cardId={cardId()}
-				dirty={dirty()}
-				isSubmitting={isSubmitting()}
-				stampLabel={stampLabel()}
-				stamp={stamp()}
-				onDelete={handleDelete}
-				onView={() => navigate(fillPath(PATHS.cardDetail, cardId()))}
-				onSave={doSave}
+				cardId={m.cardId()}
+				dirty={m.dirty()}
+				isSubmitting={m.isSubmitting()}
+				stampLabel={m.stampLabel()}
+				stamp={m.stamp()}
+				onDelete={m.handleDelete}
+				onView={m.handleView}
+				onSave={m.doSave}
 			/>
 
-			<Show when={error()}>
-				<div class={styles.errorMsg}>{error()}</div>
+			<Show when={m.error()}>
+				<div class={styles.errorMsg}>{m.error()}</div>
 			</Show>
 
 			<AsyncView
-				data={card() ? [card()] : []}
-				loading={card.loading}
-				error={card.error}
-				onRetry={refetch}
+				data={m.card() ? [m.card()] : []}
+				loading={m.cardLoading}
+				error={m.cardError}
+				onRetry={m.refetch}
 			>
 				{() => (
-					<Show when={!card.loading && !card.error}>
+					<Show when={!m.cardLoading && !m.cardError}>
 						<CardEditWorkspace
-							content={content()}
-							onInput={setContent}
-							onKeyDown={onKeyDown}
+							content={m.content()}
+							onInput={m.setContent}
+							onKeyDown={m.onKeyDown}
 						/>
 					</Show>
 				)}

@@ -4,60 +4,30 @@ import {
 	Markdown as MarkdownRenderer,
 	Toolbar,
 } from "@components/ui";
-import { fillPath, PATHS } from "@config/paths";
-import { fmtLocal, showConfirm, tryOrNotify } from "@lib/utils";
-import { deleteCardE, getCardE } from "@modules/card";
-import { useNavigate, useParams } from "@solidjs/router";
-import { type Component, createResource } from "solid-js";
+import { fmtLocal } from "@lib/utils";
+import type { Component } from "solid-js";
 import styles from "./CardDetail.module.css";
+import { useCardDetail } from "./hooks/useCardDetail.ts";
 
 const CardDetailPage: Component = () => {
-	const params = useParams();
-	const navigate = useNavigate();
-
-	const cardId = () => {
-		const id = params.id;
-		if (!id || !/^\d+$/.test(id)) return NaN;
-		return parseInt(id, 10);
-	};
-
-	const [card, { refetch }] = createResource(async () => {
-		const id = cardId();
-		if (Number.isNaN(id)) throw new Error("无效ID");
-		return await getCardE(id);
-	});
-
-	const handleDelete = async () => {
-		const confirmed = await showConfirm({
-			title: "删除卡片",
-			message: "确定要删除这个卡片吗？此操作不可撤销。",
-			variant: "danger",
-		});
-		if (!confirmed) return;
-		const ok = await tryOrNotify(() => deleteCardE(cardId()), "删除卡片");
-		if (ok) navigate(PATHS.card);
-	};
+	const m = useCardDetail();
 
 	return (
 		<div class={styles.container}>
-			<Toolbar backLabel="卡片列表" onBack={() => navigate(PATHS.card)}>
-				<Button
-					variant="secondary"
-					size="sm"
-					onClick={() => navigate(fillPath(PATHS.cardEdit, cardId()))}
-				>
+			<Toolbar backLabel="卡片列表" onBack={m.handleBack}>
+				<Button variant="secondary" size="sm" onClick={m.handleEdit}>
 					编辑
 				</Button>
-				<Button variant="danger" size="sm" onClick={handleDelete}>
+				<Button variant="danger" size="sm" onClick={m.handleDelete}>
 					删除
 				</Button>
 			</Toolbar>
 
 			<AsyncView
-				data={card() ? [card()] : []}
-				loading={card.loading}
-				error={card.error}
-				onRetry={refetch}
+				data={m.card() ? [m.card()] : []}
+				loading={m.cardLoading}
+				error={m.cardError}
+				onRetry={m.refetch}
 			>
 				{([c]) =>
 					c && (

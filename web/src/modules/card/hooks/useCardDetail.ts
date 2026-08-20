@@ -1,0 +1,64 @@
+import { fillPath, PATHS } from "@config/paths";
+import { showConfirm, tryOrNotify } from "@lib/utils";
+import { deleteCardE, getCardE } from "@modules/card";
+import { useNavigate, useParams } from "@solidjs/router";
+import { createResource } from "solid-js";
+import type { Card } from "../model.ts";
+
+export interface CardDetailApi {
+	cardId: () => number;
+	card: () => Card | undefined;
+	cardLoading: boolean;
+	cardError: Error | undefined;
+	refetch: () => void;
+	handleDelete: () => Promise<void>;
+	handleEdit: () => void;
+	handleBack: () => void;
+}
+
+export function useCardDetail(): CardDetailApi {
+	const params = useParams();
+	const navigate = useNavigate();
+
+	const cardId = () => {
+		const id = params.id;
+		if (!id || !/^\d+$/.test(id)) return NaN;
+		return parseInt(id, 10);
+	};
+
+	const [card, { refetch }] = createResource(async () => {
+		const id = cardId();
+		if (Number.isNaN(id)) throw new Error("无效ID");
+		return await getCardE(id);
+	});
+
+	const handleDelete = async () => {
+		const confirmed = await showConfirm({
+			title: "删除卡片",
+			message: "确定要删除这个卡片吗？此操作不可撤销。",
+			variant: "danger",
+		});
+		if (!confirmed) return;
+		const ok = await tryOrNotify(() => deleteCardE(cardId()), "删除卡片");
+		if (ok) navigate(PATHS.card);
+	};
+
+	const handleEdit = () => {
+		navigate(fillPath(PATHS.cardEdit, cardId()));
+	};
+
+	const handleBack = () => {
+		navigate(PATHS.card);
+	};
+
+	return {
+		cardId,
+		card,
+		cardLoading: card.loading,
+		cardError: card.error,
+		refetch,
+		handleDelete,
+		handleEdit,
+		handleBack,
+	};
+}

@@ -1,21 +1,15 @@
 // ── /bookmark/:id：书签详情（全局搜索直达） ──
 
 import { Button, Toolbar } from "@components/ui";
-import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@lib/api";
-import { fmtLocal, notifySuccess, showConfirm, tryOrNotify } from "@lib/utils";
-import {
-	deleteBookmarkE,
-	getBookmarkE,
-	setBookmarkTagsE,
-	updateBookmarkE,
-} from "@modules/bookmark";
-import { useNavigate, useParams } from "@solidjs/router";
-import { type Component, createResource, createSignal, Show } from "solid-js";
+import { fmtLocal } from "@lib/utils";
+import { type Component, Show } from "solid-js";
 import styles from "./BookmarkDetail.module.css";
 import TagInput from "./components/TagInput.tsx";
-
-type BookmarkItem = Awaited<ReturnType<typeof getBookmarkE>>;
+import {
+	type BookmarkItem,
+	useBookmarkDetail,
+} from "./hooks/useBookmarkDetail.ts";
 
 const BookmarkView: Component<{ bm: BookmarkItem }> = (props) => (
 	<>
@@ -113,133 +107,59 @@ const EditForm: Component<{
 );
 
 export default function BookmarkDetail() {
-	const params = useParams();
-	const navigate = useNavigate();
-	const id = () => Number(params.id);
-
-	const [data, { refetch }] = createResource(id, (v) => {
-		if (!Number.isInteger(v) || v < 1) throw new Error("无效的书签 ID");
-		return getBookmarkE(v);
-	});
-
-	const [editing, setEditing] = createSignal(false);
-	const [title, setTitle] = createSignal("");
-	const [url, setUrl] = createSignal("");
-	const [description, setDescription] = createSignal("");
-	const [tags, setTags] = createSignal<string[]>([]);
-	const [saving, setSaving] = createSignal(false);
-	const [formError, setFormError] = createSignal("");
-
-	const startEdit = () => {
-		const bm = data();
-		if (!bm) return;
-		setTitle(bm.title);
-		setUrl(bm.url);
-		setDescription(bm.description);
-		setTags([...bm.tags]);
-		setFormError("");
-		setEditing(true);
-	};
-
-	const save = async () => {
-		const cleanTitle = title().trim();
-		const cleanUrl = url().trim();
-		if (!cleanTitle) {
-			setFormError("标题不能为空");
-			return;
-		}
-		if (!/^https?:\/\//i.test(cleanUrl)) {
-			setFormError("URL 必须以 http:// 或 https:// 开头");
-			return;
-		}
-		setSaving(true);
-		setFormError("");
-		const ok = await tryOrNotify(async () => {
-			const updated = await updateBookmarkE(id(), {
-				title: cleanTitle,
-				url: cleanUrl,
-				description: description().trim(),
-			});
-			await setBookmarkTagsE(updated.id, tags());
-			return updated;
-		}, "保存书签");
-		setSaving(false);
-		if (ok) {
-			notifySuccess("书签已更新");
-			setEditing(false);
-			refetch();
-		}
-	};
-
-	const remove = async () => {
-		const bm = data();
-		const confirmed = await showConfirm({
-			title: "删除书签",
-			message: `确定删除「${bm?.title ?? id()}」？此操作不可撤销。`,
-			variant: "danger",
-		});
-		if (!confirmed) return;
-		const ok = await tryOrNotify(() => deleteBookmarkE(id()), "删除书签");
-		if (ok) navigate(PATHS.bookmark);
-	};
+	const m = useBookmarkDetail();
 
 	return (
 		<div class={styles.container}>
 			<Toolbar
-				title={data()?.title}
+				title={m.data()?.title}
 				backLabel="书签列表"
-				onBack={() => navigate(PATHS.bookmark)}
+				onBack={m.handleBack}
 			>
 				<Button
 					variant="secondary"
 					size="sm"
-					onClick={startEdit}
-					disabled={editing()}
+					onClick={m.startEdit}
+					disabled={m.editing()}
 				>
 					编辑
 				</Button>
-				<Button variant="danger" size="sm" onClick={remove}>
+				<Button variant="danger" size="sm" onClick={m.remove}>
 					删除
 				</Button>
 			</Toolbar>
 
-			<Show when={data.error}>
+			<Show when={m.dataError}>
 				<div class={styles.error}>
-					加载失败：{getErrorMessage(data.error)}
-					<Button variant="primary" size="sm" onClick={refetch}>
+					加载失败：{getErrorMessage(m.dataError)}
+					<Button variant="primary" size="sm" onClick={m.refetch}>
 						重试
 					</Button>
 				</div>
 			</Show>
 
-			<Show when={data.loading}>
+			<Show when={m.dataLoading}>
 				<div class={styles.loading}>加载中…</div>
 			</Show>
 
-			<Show when={data()}>
+			<Show when={m.data()}>
 				{(bm) => (
 					<div class={styles.card}>
-						<Show when={editing()} fallback={<BookmarkView bm={bm()} />}>
+						<Show when={m.editing()} fallback={<BookmarkView bm={bm()} />}>
 							<EditForm
-								title={title()}
-								url={url()}
-								description={description()}
-								tags={tags()}
-								saving={saving()}
-								formError={formError()}
-								onTitle={(value) => setTitle(value)}
-								onUrl={(value) => setUrl(value)}
-								onDescription={(value) => setDescription(value)}
-								onAddTag={(name) =>
-									setTags((prev) =>
-										prev.includes(name) ? prev : [...prev, name],
-									)
-								}
-								onRemoveTag={(name) =>
-									setTags((prev) => prev.filter((t) => t !== name))
-								}
-								onCancel={() => setEditing(false)}
-								onSave={save}
+								title={m.title()}
+								url={m.url()}
+								description={m.description()}
+								tags={m.tags()}
+								saving={m.saving()}
+								formError={m.formError()}
+								onTitle={m.setTitle}
+								onUrl={m.setUrl}
+								onDescription={m.setDescription}
+								onAddTag={m.addTag}
+								onRemoveTag={m.removeTag}
+								onCancel={m.cancelEdit}
+								onSave={m.save}
 							/>
 						</Show>
 					</div>

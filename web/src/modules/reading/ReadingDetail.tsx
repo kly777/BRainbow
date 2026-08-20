@@ -5,44 +5,12 @@ import { fillPath, PATHS } from "@config/paths";
 import { getErrorMessage } from "@lib/api";
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
+import ArticleContent from "./components/ArticleContent";
 import { useReadingDetail } from "./hooks/useReadingDetail.ts";
 import styles from "./ReadingDetail.module.css";
 
-function splitSentences(text: string): string[] {
-	return text.split(/(?<=[.!?])\s+/);
-}
-
 export default function ReadingDetail() {
 	const m = useReadingDetail();
-
-	// 内容渲染（纯视图，data-word + 事件委托）
-	const renderContent = (text: string) =>
-		text.split(/\n/).map((para) => {
-			if (para.trim().length === 0) return <br />;
-			const sentences = splitSentences(para);
-			const rendered = sentences.map((sentence) => {
-				const tokens = sentence.split(/(\s+)/);
-				const renderedTokens = tokens.flatMap((token) =>
-					token.split(/([^a-zA-Z'-]+)/).map((part) => {
-						const isWord = part.length > 0 && /[a-zA-Z']/.test(part);
-						if (!isWord) return part;
-						const clean = part.toLowerCase();
-						const s = m.wordStatusMap().get(clean);
-						const cls =
-							s === "known" || s === "ignored"
-								? styles.word
-								: styles.unknownWord;
-						return (
-							<span class={cls} data-word={clean}>
-								{part}
-							</span>
-						);
-					}),
-				);
-				return <span>{renderedTokens} </span>;
-			});
-			return <div class={styles.paragraph}>{rendered}</div>;
-		});
 
 	return (
 		<div class={styles.page}>
@@ -90,7 +58,10 @@ export default function ReadingDetail() {
 										}}
 										onContextMenu={m.handleContentContextMenu}
 									>
-										{renderContent(d().article.content)}
+										<ArticleContent
+											content={d().article.content}
+											wordStatusMap={m.wordStatusMap}
+										/>
 									</div>
 								</div>
 								<div class={styles.sidebar}>

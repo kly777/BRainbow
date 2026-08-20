@@ -1,7 +1,7 @@
 import { getErrorMessage } from "@lib/api";
 import { type Component, createResource, For, Show } from "solid-js";
 import { getBackRefsE } from "../api";
-import styles from "../DbViewer.module.css";
+import styles from "./BackRefs.module.css";
 
 interface BackRefsProps {
 	table: string;

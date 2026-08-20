@@ -1,0 +1,431 @@
+/* features/chat/components/ChatPageParts.module.css — 对话页子组件 */
+
+.tree-item,
+.tree-item-active {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-sm);
+	position: relative;
+	border: 2px solid transparent;
+}
+
+/* 选中按钮占满整行（与右侧菜单按钮并排，避免嵌套 button） */
+.tree-select {
+	min-width: 0;
+	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	padding: var(--space-sm) var(--space-xs) var(--space-sm) var(--space-md);
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	text-align: left;
+	color: inherit;
+	font: inherit;
+	border-radius: var(--radius-sm);
+}
+
+.tree-item:hover {
+	background: var(--t-color-surface-raised);
+}
+
+.tree-item-active {
+	border-color: var(--t-color-accent);
+	background: var(--t-color-surface);
+	color: var(--t-color-accent-strong);
+}
+
+.tree-item-active .tree-select {
+	font-weight: 500;
+}
+
+.tree-item-title {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* 右侧槽位：未 hover 显示上次对话时间，hover 后显示三点按钮 */
+.tree-more-wrap {
+	position: relative;
+	flex: none;
+	display: flex;
+	align-items: center;
+}
+
+.tree-item-time {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+	font-variant-numeric: tabular-nums;
+	flex: none;
+	padding-right: var(--space-xs);
+}
+
+.tree-more-btn {
+	position: absolute;
+	right: var(--space-xs);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	border: none;
+	background: transparent;
+	color: var(--t-color-ink-faint);
+	cursor: pointer;
+	font-size: var(--text-xs);
+	line-height: 1;
+	padding: 0;
+	border-radius: var(--radius-sm);
+	opacity: 0;
+	pointer-events: none;
+	transition:
+		opacity var(--t-transition-fast),
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
+}
+
+.tree-more-btn:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.tree-item:hover .tree-more-btn,
+.tree-item-active:hover .tree-more-btn,
+.tree-item:focus-within .tree-more-btn,
+.tree-item-active:focus-within .tree-more-btn {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.tree-item:hover .tree-item-time,
+.tree-item-active:hover .tree-item-time {
+	opacity: 0;
+}
+
+.tree-menu {
+	position: absolute;
+	right: 0;
+	top: calc(100% + var(--space-2xs));
+	z-index: var(--z-dropdown);
+	min-width: 8.5rem;
+	padding: var(--space-xs);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-md);
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+}
+
+.tree-menu-item {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: none;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--t-color-ink);
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--text-sm);
+	text-align: left;
+	transition: background var(--t-transition-fast);
+}
+
+.tree-menu-item:hover {
+	background: var(--t-color-surface-raised);
+}
+
+.tree-menu-item:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.tree-menu-item-danger {
+	color: var(--t-color-danger);
+}
+
+.tree-menu-item-danger:hover {
+	background: var(--t-color-danger-subtle);
+}
+
+.tree-rename-input {
+	min-width: 0;
+	flex: 1;
+	padding: var(--space-xs) var(--space-sm);
+	margin: var(--space-xs) var(--space-2xs);
+	border: 1px solid var(--t-color-accent);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	font: inherit;
+	font-size: var(--text-sm);
+	outline: none;
+}
+
+/* ── 树头部 ── */
+
+.tree-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--space-sm) var(--space-lg) var(--space-sm)
+		calc(var(--space-lg) + 2.25rem);
+	border-bottom: 1px solid var(--t-color-border);
+	background: var(--t-color-bg);
+	flex: none;
+	position: relative;
+}
+
+.tree-header-title {
+	font-size: var(--text-base);
+	font-weight: 600;
+	margin: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.prompt-btn {
+	color: var(--t-color-ink-muted);
+	background: transparent;
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
+	padding: var(--space-2xs) var(--space-sm);
+	font-size: var(--text-xs);
+	line-height: 1;
+}
+
+.prompt-btn:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.prompt-btn:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+.prompt-panel {
+	position: absolute;
+	top: calc(100% + var(--space-xs));
+	right: var(--space-lg);
+	z-index: var(--z-dropdown);
+	width: 320px;
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-lg);
+	padding: var(--space-md);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
+}
+
+.prompt-label {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.prompt-textarea {
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+	resize: vertical;
+	font-size: var(--text-sm);
+}
+
+.edit-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-sm);
+}
+
+.btn-ghost {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	background: transparent;
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) var(--space-lg);
+	cursor: pointer;
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
+}
+
+.btn-ghost:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.btn-ghost:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+.btn-primary {
+	font-size: var(--text-sm);
+	color: var(--t-color-white);
+	background: var(--t-color-accent);
+	border: none;
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) var(--space-lg);
+	cursor: pointer;
+	font-weight: 500;
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
+}
+
+.btn-primary:hover {
+	background: var(--t-color-accent-strong);
+}
+
+.btn-primary:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+/* ── 空会话欢迎区：居中大输入框 ── */
+.welcome {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-lg);
+	flex: 1;
+	padding: var(--space-xl);
+}
+
+.welcome-title {
+	font-size: 1.75rem;
+	font-weight: 700;
+	margin: 0;
+	letter-spacing: 0.02em;
+}
+
+.welcome-hint {
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-sm);
+	margin: 0;
+}
+
+.welcome-samples {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: var(--space-sm);
+	max-width: 640px;
+}
+
+.welcome-chip {
+	border: 1px solid var(--t-color-border);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink-muted);
+	border-radius: var(--radius-full);
+	padding: var(--space-xs) var(--space-md);
+	font-size: var(--text-sm);
+	cursor: pointer;
+	transition:
+		border-color var(--t-transition-fast),
+		background var(--t-transition-fast);
+}
+
+.welcome-chip:hover {
+	border-color: var(--t-color-accent);
+	background: var(--t-color-surface-raised);
+}
+
+/* ── 右侧章节导航 ── */
+.toc {
+	position: absolute;
+	top: var(--space-lg);
+	right: var(--space-lg);
+	width: 13rem;
+	max-height: calc(100vh - 8rem);
+	overflow-y: auto;
+	display: none;
+}
+
+@media (width >= 1360px) {
+	.toc {
+		display: block;
+	}
+}
+
+.toc-title {
+	display: block;
+	font-size: var(--text-2xs);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--t-color-ink-faint);
+	margin-bottom: var(--space-sm);
+}
+
+.toc-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.toc-item {
+	display: block;
+	width: 100%;
+	text-align: left;
+	border: none;
+	background: none;
+	padding: var(--space-xs) var(--space-sm);
+	font-size: var(--text-xs);
+	line-height: var(--leading-tight);
+	color: var(--t-color-ink-muted);
+	border-radius: var(--radius-xs);
+	border-left: 2px solid transparent;
+	cursor: pointer;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	transition:
+		color var(--t-transition-fast),
+		background var(--t-transition-fast);
+}
+
+.toc-item:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.toc-item-active {
+	color: var(--t-color-accent);
+	border-left-color: var(--t-color-accent);
+	background: var(--t-color-surface-raised);
+}
+
+.toc-item-l2 {
+	padding-left: calc(var(--space-sm) + var(--space-md));
+}
+
+.toc-item-l3 {
+	padding-left: calc(var(--space-sm) + var(--space-lg));
+}

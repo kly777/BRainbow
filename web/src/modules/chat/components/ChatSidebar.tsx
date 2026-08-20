@@ -5,8 +5,8 @@
 import type { ChatTree } from "@modules/chat";
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
-import styles from "../ChatPage.module.css";
 import { TreeListItem } from "./ChatPageParts.tsx";
+import styles from "./ChatSidebar.module.css";
 
 export interface ChatSidebarProps {
 	trees: () => ChatTree[];

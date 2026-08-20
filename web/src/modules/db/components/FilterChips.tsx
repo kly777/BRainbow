@@ -1,10 +1,10 @@
 import { type Component, Index, Show } from "solid-js";
-import styles from "../DbViewer.module.css";
 import {
 	type ColumnFilter,
 	filterOpLabel,
 	isValuelessOp,
 } from "../tableConfig";
+import styles from "./FilterChips.module.css";
 
 interface FilterChipsProps {
 	filters: readonly ColumnFilter[];

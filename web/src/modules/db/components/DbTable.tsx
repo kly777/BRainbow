@@ -7,7 +7,6 @@ import {
 	Show,
 } from "solid-js";
 import type { ColumnInfo, FilterOpValue } from "../api";
-import styles from "../DbViewer.module.css";
 import {
 	type ColumnFilter,
 	FILTER_OPS,
@@ -15,6 +14,7 @@ import {
 	isValuelessOp,
 } from "../tableConfig";
 import BackRefs from "./BackRefs";
+import styles from "./DbTable.module.css";
 import RowDetail from "./RowDetail";
 
 interface DbTableProps {

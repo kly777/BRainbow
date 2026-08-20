@@ -3,10 +3,10 @@
 import { Markdown as MarkdownRenderer } from "@components/ui";
 import type { ChatNode } from "@modules/chat";
 import { Show } from "solid-js";
-import styles from "../ChatPage.module.css";
 import type { useChatPage } from "../hooks/useChatPage.ts";
 import { BranchBar } from "./BranchBar.tsx";
 import { copyNode } from "./ChatPageParts.tsx";
+import styles from "./MessageRow.module.css";
 import { MessageShell } from "./MessageShell.tsx";
 import { ThinkingBlock } from "./ThinkingBlock.tsx";
 

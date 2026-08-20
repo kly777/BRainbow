@@ -1,7 +1,7 @@
 import { Button } from "@components/ui";
 import { type Component, For } from "solid-js";
-import styles from "../DbViewer.module.css";
 import { PAGE_SIZES } from "../tableConfig";
+import styles from "./PaginationBar.module.css";
 
 interface PaginationBarProps {
 	total: number;

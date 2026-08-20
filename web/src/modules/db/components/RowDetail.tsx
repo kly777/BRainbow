@@ -8,8 +8,8 @@ import {
 	Show,
 } from "solid-js";
 import { getTableDataE } from "../api";
-import styles from "../DbViewer.module.css";
 import BackRefs from "./BackRefs";
+import styles from "./RowDetail.module.css";
 
 interface RowDetailProps {
 	table: string;

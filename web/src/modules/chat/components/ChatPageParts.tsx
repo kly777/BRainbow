@@ -4,8 +4,8 @@ import { copyTextWithToast, fmtLocal, tryOrNotify } from "@lib/utils";
 import type { ChatNode, ChatTree } from "@modules/chat";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { updateTreeE } from "../api.ts";
-import styles from "../ChatPage.module.css";
 import type { useChatPage } from "../hooks/useChatPage.ts";
+import styles from "./ChatPageParts.module.css";
 
 // ── 树列表项 ──
 

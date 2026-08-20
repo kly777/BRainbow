@@ -1,0 +1,88 @@
+import { PATHS } from "@config/paths";
+import { strParam, useUrlParams } from "@lib/utils";
+import type { ConvHit } from "@modules/conv";
+import { searchConvE } from "@modules/conv";
+import { createResource, createSignal, onMount } from "solid-js";
+
+const VALID_TABS = ["all", "article"] as const;
+export type ConvSearchTab = (typeof VALID_TABS)[number];
+
+export interface ConvSearchApi {
+	query: () => string;
+	setQuery: (value: string) => void;
+	tab: () => ConvSearchTab;
+	setTab: (t: ConvSearchTab) => void;
+	searchQuery: () => string;
+	data: () => { hits: ConvHit[]; total: number };
+	loading: boolean;
+	error: Error | undefined;
+	handleSearch: (e: SubmitEvent) => void;
+	itemHref: (hit: ConvHit) => string;
+}
+
+export function useConvSearch(): ConvSearchApi {
+	const [query, setQuery] = createSignal("");
+	const urlParams = useUrlParams({ q: strParam(""), t: strParam("") });
+
+	const tab = () => {
+		const tv = urlParams.get("t");
+		return VALID_TABS.includes(tv as ConvSearchTab)
+			? (tv as ConvSearchTab)
+			: "all";
+	};
+	const setTab = (t: ConvSearchTab) => {
+		urlParams.set({ q: urlParams.get("q"), t });
+	};
+
+	const searchQuery = () => urlParams.get("q");
+
+	onMount(() => {
+		const q = urlParams.get("q");
+		if (q) setQuery(q);
+	});
+
+	const [data] = createResource(
+		() => (searchQuery() ? `${searchQuery()}|${tab()}` : null),
+		(key) => {
+			if (!key) return { hits: [], total: 0 };
+			const [q, t] = key.split("|");
+			return searchConvE(q, t as ConvSearchTab);
+		},
+		{ initialValue: { hits: [], total: 0 } },
+	);
+
+	const handleSearch = (e: SubmitEvent) => {
+		e.preventDefault();
+		const q = query().trim();
+		if (!q) return;
+		urlParams.set({ q, t: tab() !== "all" ? tab() : "all" }, { replace: true });
+	};
+
+	const itemHref = (hit: ConvHit) => {
+		const q = searchQuery();
+		const t = tab();
+		const params = new URLSearchParams();
+		if (q) params.set("q", String(q));
+		if (t !== "all") params.set("t", t);
+		const qs = params.toString();
+		const suffix = qs ? `?${qs}` : "";
+		if (hit.match_field === "article" && hit.article_title) {
+			params.set("article", hit.article_title);
+			return `${PATHS.convConcept.replace(":id", String(hit.conv_id))}?${params.toString()}`;
+		}
+		return `${PATHS.convDetail.replace(":id", String(hit.conv_id))}${suffix}`;
+	};
+
+	return {
+		query,
+		setQuery,
+		tab,
+		setTab,
+		searchQuery,
+		data: () => data(),
+		loading: data.loading,
+		error: data.error,
+		handleSearch,
+		itemHref,
+	};
+}

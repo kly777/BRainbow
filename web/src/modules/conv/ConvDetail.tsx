@@ -1,31 +1,22 @@
 import { Button, Markdown as MarkdownRenderer } from "@components/ui";
 import { getErrorMessage } from "@lib/api";
 import { fmtLocal } from "@lib/utils";
-import { getConvDetailE } from "@modules/conv";
-import { useParams } from "@solidjs/router";
-import { createResource, For, Show } from "solid-js";
+import { For, Show } from "solid-js";
 import styles from "./ConvDetail.module.css";
 import ConvTopBar from "./components/ConvTopBar.tsx";
 import { typeLabel } from "./hooks/type-labels.ts";
-import { useBackHref } from "./hooks/useBackHref.ts";
+import { useConvDetail } from "./hooks/useConvDetail.ts";
 
 export default function ConvDetailPage() {
-	const params = useParams();
-	const id = () => params.id;
-
-	const [data, { refetch }] = createResource(id, (id) =>
-		getConvDetailE(Number(id)),
-	);
-	const backHref = useBackHref();
+	const m = useConvDetail();
 
 	return (
 		<div class={styles.page}>
-			{/* 错误时短路：data() 在 error 存在时会 throw（Solid 1.9 语义） */}
 			<Show
-				when={data.error}
+				when={m.dataError}
 				fallback={
 					<Show
-						when={data()}
+						when={m.data()}
 						fallback={<div class={styles.loading}>加载中…</div>}
 					>
 						{(d) => (
@@ -34,7 +25,7 @@ export default function ConvDetailPage() {
 									title={d().title}
 									type={d().conv_type}
 									date={fmtLocal(d().created_at)}
-									backHref={backHref()}
+									backHref={m.backHref()}
 								/>
 								<div class={styles.body}>
 									<Show when={d().articles.length > 0}>
@@ -68,8 +59,8 @@ export default function ConvDetailPage() {
 				}
 			>
 				<div class={styles.errorMsg}>
-					加载失败：{getErrorMessage(data.error)}
-					<Button variant="primary" size="sm" onClick={refetch}>
+					加载失败：{getErrorMessage(m.dataError)}
+					<Button variant="primary" size="sm" onClick={m.refetch}>
 						重试
 					</Button>
 				</div>

@@ -1,15 +1,11 @@
 import { Button, FilterGroup, SearchInput } from "@components/ui";
 import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@lib/api";
-import { fmtLocal, strParam, useUrlParams } from "@lib/utils";
-import type { ConvHit } from "@modules/conv";
-import { searchConvE } from "@modules/conv";
-import { A, useNavigate } from "@solidjs/router";
-import { createResource, createSignal, For, onMount, Show } from "solid-js";
+import { fmtLocal } from "@lib/utils";
+import { A } from "@solidjs/router";
+import { For, Show } from "solid-js";
 import styles from "./ConvSearch.module.css";
-
-const VALID_TABS = ["all", "article"] as const;
-type Tab = (typeof VALID_TABS)[number];
+import { useConvSearch } from "./hooks/useConvSearch.ts";
 
 const fieldLabel: Record<string, string> = {
 	title: "标题",
@@ -24,60 +20,7 @@ const typeLabel: Record<string, string> = {
 };
 
 export default function ConvSearch() {
-	const [query, setQuery] = createSignal("");
-	const urlParams = useUrlParams({ q: strParam(""), t: strParam("") });
-	const _navigate = useNavigate();
-
-	// 从 URL 恢复 tab
-	const tab = () => {
-		const tv = urlParams.get("t");
-		return VALID_TABS.includes(tv as Tab) ? (tv as Tab) : "all";
-	};
-	const setTab = (t: Tab) => {
-		urlParams.set({ q: urlParams.get("q"), t: t === "all" ? "all" : t });
-	};
-
-	// 从 URL 恢复 query
-	const searchQuery = () => urlParams.get("q");
-
-	onMount(() => {
-		const q = urlParams.get("q");
-		if (q) {
-			setQuery(q);
-		}
-	});
-
-	const [data] = createResource(
-		() => (searchQuery() ? `${searchQuery()}|${tab()}` : null),
-		(key) => {
-			if (!key) return { hits: [], total: 0 };
-			const [q, t] = key.split("|");
-			return searchConvE(q, t as Tab);
-		},
-		{ initialValue: { hits: [], total: 0 } },
-	);
-
-	const handleSearch = (e: SubmitEvent) => {
-		e.preventDefault();
-		const q = query().trim();
-		if (!q) return;
-		urlParams.set({ q, t: tab() !== "all" ? tab() : "all" }, { replace: true });
-	};
-
-	const itemHref = (hit: ConvHit) => {
-		const q = searchQuery();
-		const t = tab();
-		const params = new URLSearchParams();
-		if (q) params.set("q", String(q));
-		if (t !== "all") params.set("t", t);
-		const qs = params.toString();
-		const suffix = qs ? `?${qs}` : "";
-		if (hit.match_field === "article" && hit.article_title) {
-			params.set("article", hit.article_title);
-			return `${PATHS.convConcept.replace(":id", String(hit.conv_id))}?${params.toString()}`;
-		}
-		return `${PATHS.convDetail.replace(":id", String(hit.conv_id))}${suffix}`;
-	};
+	const m = useConvSearch();
 
 	return (
 		<div class={styles.page}>
@@ -90,12 +33,12 @@ export default function ConvSearch() {
 
 			<p class={styles.initialHint}>输入关键词，搜索概念与文章</p>
 
-			<form class={styles.searchBar} onSubmit={handleSearch}>
+			<form class={styles.searchBar} onSubmit={m.handleSearch}>
 				<SearchInput
 					class={styles.input}
 					placeholder="搜索概念、文章…"
-					value={query()}
-					onSearch={setQuery}
+					value={m.query()}
+					onSearch={m.setQuery}
 				/>
 				<Button type="submit" variant="primary">
 					搜索
@@ -107,32 +50,32 @@ export default function ConvSearch() {
 					{ value: "all", label: "全部" },
 					{ value: "article", label: "概念 / 方案" },
 				]}
-				selected={tab()}
-				onChange={(t) => setTab(t as Tab)}
+				selected={m.tab()}
+				onChange={(t) => m.setTab(t as "all" | "article")}
 			/>
 
-			<Show when={searchQuery()}>
+			<Show when={m.searchQuery()}>
 				<div class={styles.summary}>
-					搜索 "{searchQuery()}" — 共 {data().total} 条结果
+					搜索 "{m.searchQuery()}" — 共 {m.data().total} 条结果
 				</div>
 			</Show>
 
 			<div class={styles.results}>
-				<Show when={!searchQuery()}>
+				<Show when={!m.searchQuery()}>
 					<div class={styles.empty}>输入关键词搜索概念或文章</div>
 				</Show>
-				<Show when={data.loading}>
+				<Show when={m.loading}>
 					<div class={styles.spinnerWrap}>
 						<div class={styles.spinner} />
 					</div>
 				</Show>
 				<Show
-					when={data.error}
+					when={m.error}
 					fallback={
 						<>
-							<For each={data().hits}>
+							<For each={m.data().hits}>
 								{(hit) => (
-									<A href={itemHref(hit)} class={styles.item}>
+									<A href={m.itemHref(hit)} class={styles.item}>
 										<div class={styles.itemTop}>
 											<span class={styles.badge}>
 												{fieldLabel[hit.match_field] || hit.match_field}
@@ -151,7 +94,7 @@ export default function ConvSearch() {
 							</For>
 							<Show
 								when={
-									searchQuery() && !data.loading && data().hits.length === 0
+									m.searchQuery() && !m.loading && m.data().hits.length === 0
 								}
 							>
 								<div class={styles.empty}>没有找到匹配的结果</div>
@@ -159,7 +102,7 @@ export default function ConvSearch() {
 						</>
 					}
 				>
-					<div class={styles.errorMsg}>{getErrorMessage(data.error)}</div>
+					<div class={styles.errorMsg}>{getErrorMessage(m.error)}</div>
 				</Show>
 			</div>
 		</div>

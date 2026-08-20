@@ -76,7 +76,6 @@
 	cursor: pointer;
 	text-decoration: underline wavy var(--t-color-mark-wrong) 1.5px;
 	text-underline-offset: 0.1875rem;
-	font-weight: 600;
 }
 
 .sidebar {

@@ -1,8 +1,8 @@
 import { Button, FilterGroup } from "@components/ui";
-import { Angle, Color } from "@lib/utils";
-import { type Component, createMemo, createSignal } from "solid-js";
+import type { Component } from "solid-js";
 import AngleEditor from "./AngleEditor";
 import ColorEditor from "./ColorEditor";
+import { useRainbowGenerator } from "./hooks/useRainbowGenerator.ts";
 import { RainbowDrawer, type ShapeRender } from "./RainbowDrawer";
 import styles from "./RainbowGenerator.module.css";
 
@@ -37,116 +37,29 @@ const StatsSection: Component<{
 	</section>
 );
 
+const RENDER_MODES = [
+	{ value: "geometricPrecision" as const, label: "精度" },
+	{ value: "auto" as const, label: "自动" },
+	{ value: "crispEdges" as const, label: "锐利" },
+	{ value: "optimizeSpeed" as const, label: "速度" },
+];
+
 function RainbowGenerator() {
-	const L = 0.7;
-	const C = 0.173;
-	const h_offset = 29;
-
-	const [colors, setColors] = createSignal<Color[]>([
-		Color.fromOklch({ L, C, h: h_offset }),
-		Color.fromOklch({ L, C, h: 360 / 7 + h_offset }),
-		Color.fromOklch({ L, C, h: (360 / 7) * 2 + h_offset }),
-		Color.fromOklch({ L, C, h: (360 / 7) * 3 + h_offset }),
-		Color.fromOklch({ L, C, h: (360 / 7) * 4 + h_offset }),
-		Color.fromOklch({ L, C, h: (360 / 7) * 5 + h_offset }),
-		Color.fromOklch({ L, C, h: (360 / 7) * 6 + h_offset }),
-	]);
-
+	const m = useRainbowGenerator();
 	const squareSize = 10240;
 	const exportSize = 400;
-
-	const [angle, setAngle] = createSignal<Angle>(
-		new Angle(Math.PI * (43.5 / 360)),
-	);
-
-	const [shapeRender, setShapeRender] =
-		createSignal<ShapeRender>("geometricPrecision");
-	const RENDER_MODES = [
-		{ value: "geometricPrecision" as const, label: "精度" },
-		{ value: "auto" as const, label: "自动" },
-		{ value: "crispEdges" as const, label: "锐利" },
-		{ value: "optimizeSpeed" as const, label: "速度" },
-	];
-
-	let svgEl: SVGSVGElement | null = null;
-
-	const height_sum = createMemo(
-		() => squareSize * (Math.sin(angle().radian) + Math.cos(angle().radian)),
-	);
-	const rectHeight = createMemo(() => height_sum() / colors().length);
-	const rectWidth = createMemo(
-		() =>
-			squareSize / Math.cos(angle().radian) +
-			2 * rectHeight() * Math.tan(angle().radian),
-	);
-
-	// ── 导出 ──
-
-	const toBase64 = (bytes: Uint8Array): string => {
-		const CHUNK = 0x8000;
-		const parts: string[] = [];
-		for (let i = 0; i < bytes.length; i += CHUNK) {
-			parts.push(String.fromCharCode(...bytes.subarray(i, i + CHUNK)));
-		}
-		return btoa(parts.join(""));
-	};
-
-	const download = (url: string, filename: string) => {
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = filename;
-		a.click();
-		URL.revokeObjectURL(url);
-	};
-
-	const exportSvg = () => {
-		if (!svgEl) return;
-		const clone = svgEl.cloneNode(true) as SVGSVGElement;
-		clone.setAttribute("width", String(squareSize));
-		clone.setAttribute("height", String(squareSize));
-		const xml = new XMLSerializer().serializeToString(clone);
-		const blob = new Blob([`<?xml version="1.0" encoding="UTF-8"?>\n${xml}`], {
-			type: "image/svg+xml",
-		});
-		download(URL.createObjectURL(blob), "rainbow.svg");
-	};
-
-	const exportPng = () => {
-		if (!svgEl) return;
-		const clone = svgEl.cloneNode(true) as SVGSVGElement;
-		clone.setAttribute("width", String(squareSize));
-		clone.setAttribute("height", String(squareSize));
-		const xml = new XMLSerializer().serializeToString(clone);
-		const dataUrl = `data:image/svg+xml;base64,${toBase64(
-			new TextEncoder().encode(xml),
-		)}`;
-
-		const img = new Image();
-		img.onload = () => {
-			const canvas = document.createElement("canvas");
-			canvas.width = squareSize;
-			canvas.height = squareSize;
-			const ctx = canvas.getContext("2d");
-			if (!ctx) return;
-			ctx.drawImage(img, 0, 0);
-			canvas.toBlob((blob) => {
-				if (blob) download(URL.createObjectURL(blob), "rainbow.png");
-			}, "image/png");
-		};
-		img.src = dataUrl;
-	};
 
 	return (
 		<div class={styles.page}>
 			<div class={styles.controls}>
-				<AngleEditor angle={angle} setAngle={setAngle} />
-				<ColorEditor colors={colors} setColors={setColors} />
+				<AngleEditor angle={m.angle} setAngle={m.setAngle} />
+				<ColorEditor colors={m.colors} setColors={m.setColors} />
 
 				<div class={styles.exportBtns}>
-					<Button variant="secondary" size="sm" onClick={exportSvg}>
+					<Button variant="secondary" size="sm" onClick={m.exportSvg}>
 						导出 SVG
 					</Button>
-					<Button variant="secondary" size="sm" onClick={exportPng}>
+					<Button variant="secondary" size="sm" onClick={m.exportPng}>
 						导出 PNG
 					</Button>
 				</div>
@@ -155,28 +68,26 @@ function RainbowGenerator() {
 					<span class={styles.renderLabel}>渲染模式</span>
 					<FilterGroup
 						options={RENDER_MODES}
-						selected={shapeRender()}
-						onChange={(v) => setShapeRender(v as ShapeRender)}
+						selected={m.shapeRender()}
+						onChange={(v) => m.setShapeRender(v as ShapeRender)}
 					/>
 				</div>
 
 				<StatsSection
-					rectWidth={rectWidth()}
-					rectHeight={rectHeight()}
-					heightSum={height_sum()}
-					colorCount={colors().length}
+					rectWidth={m.rectWidth()}
+					rectHeight={m.rectHeight()}
+					heightSum={m.heightSum()}
+					colorCount={m.colors().length}
 				/>
 			</div>
 			<div class={styles.preview}>
 				<RainbowDrawer
-					colors={colors()}
-					angle={angle()}
+					colors={m.colors()}
+					angle={m.angle()}
 					squareSize={squareSize}
 					eleSize={exportSize}
-					svgRef={(el) => {
-						svgEl = el;
-					}}
-					shapeRendering={shapeRender()}
+					svgRef={m.bindSvg}
+					shapeRendering={m.shapeRender()}
 				/>
 			</div>
 		</div>

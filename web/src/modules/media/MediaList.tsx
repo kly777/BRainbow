@@ -1,16 +1,7 @@
 import { AsyncView, Button, FilterGroup } from "@components/ui";
-import { getErrorMessage, HttpError } from "@lib/api";
-import { notifyError, showConfirm, tryAsync } from "@lib/utils";
 import type { MediaItem } from "@modules/media";
-import { deleteMediaE, listMediaE, renameMediaE } from "@modules/media";
-import { useSearchParams } from "@solidjs/router";
-import {
-	type Component,
-	createResource,
-	createSignal,
-	For,
-	Show,
-} from "solid-js";
+import { type Component, For, Show } from "solid-js";
+import { useMediaList } from "./hooks/useMediaList.ts";
 import styles from "./MediaList.module.css";
 
 const TABS = [
@@ -25,8 +16,6 @@ function formatSize(bytes: number): string {
 	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
 	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
-
-const VALID_TYPES = ["", "image", "video", "audio"];
 
 const MediaPreview: Component<{ item: MediaItem }> = (props) => (
 	<div class={styles.preview}>
@@ -152,72 +141,7 @@ const MediaCard: Component<{
 );
 
 const MediaListPage: Component = () => {
-	const [searchParams, setSearchParams] = useSearchParams();
-	const mediaType = () => {
-		const t = searchParams.type;
-		return typeof t === "string" && VALID_TYPES.includes(t) ? t : "";
-	};
-	const setMediaType = (t: string) => {
-		setSearchParams({ type: t || undefined });
-	};
-	const [media, { refetch }] = createResource(
-		() => mediaType(),
-		async (mt): Promise<MediaItem[]> => {
-			const result = await tryAsync(() =>
-				listMediaE(mt ? { media_type: mt } : {}),
-			);
-			if (result.ok) return result.value.items;
-			throw result.error;
-		},
-	);
-
-	const [editingId, setEditingId] = createSignal<string | null>(null);
-	const [editName, setEditName] = createSignal("");
-	const [error, setError] = createSignal("");
-
-	const handleDelete = async (stored_id: string) => {
-		let force = false;
-		for (;;) {
-			const confirmed = await showConfirm({
-				title: force ? "强制删除媒体" : "删除媒体",
-				message: force
-					? "该文件仍被内容引用，强制删除后引用处将无法显示。仍要删除吗？"
-					: "确定要删除这个媒体文件吗？此操作不可撤销。",
-				variant: "danger",
-			});
-			if (!confirmed) return;
-			const result = await tryAsync(() => deleteMediaE(stored_id, force));
-			if (result.ok) break;
-			// 409：仍被引用 → 升级为强制删除确认
-			if (result.error instanceof HttpError && result.error.status === 409) {
-				force = true;
-				continue;
-			}
-			notifyError("删除媒体失败", getErrorMessage(result.error));
-			return;
-		}
-		refetch();
-	};
-
-	const startRename = (item: MediaItem) => {
-		setEditingId(item.stored_id);
-		setEditName(item.original_name);
-		setError("");
-	};
-
-	const handleRename = async () => {
-		const id = editingId();
-		if (!id || !editName().trim()) return;
-		const result = await tryAsync(() => renameMediaE(id, editName().trim()));
-		if (result.ok) {
-			setEditingId(null);
-			refetch();
-		} else {
-			setError(getErrorMessage(result.error));
-		}
-	};
-
-	const items = () => media() ?? [];
+	const m = useMediaList();
 
 	return (
 		<div class={styles.page}>
@@ -225,19 +149,19 @@ const MediaListPage: Component = () => {
 
 			<FilterGroup
 				options={TABS}
-				selected={mediaType()}
-				onChange={setMediaType}
+				selected={m.mediaType()}
+				onChange={m.setMediaType}
 			/>
 
-			<Show when={error()}>
-				<p class={styles.error}>{error()}</p>
+			<Show when={m.errorMessage()}>
+				<p class={styles.error}>{m.errorMessage()}</p>
 			</Show>
 
 			<AsyncView
-				data={items()}
-				loading={media.loading}
-				error={media.error}
-				onRetry={refetch}
+				data={m.items()}
+				loading={m.loading}
+				error={m.error}
+				onRetry={m.refetch}
 				emptyMessage="暂无媒体文件"
 			>
 				{(data) => (
@@ -246,13 +170,13 @@ const MediaListPage: Component = () => {
 							{(item) => (
 								<MediaCard
 									item={item}
-									editing={editingId() === item.stored_id}
-									editName={editName()}
-									onStartRename={startRename}
-									onDelete={handleDelete}
-									onRename={handleRename}
-									onEditName={(value) => setEditName(value)}
-									onCancelEdit={() => setEditingId(null)}
+									editing={m.editingId() === item.stored_id}
+									editName={m.editName()}
+									onStartRename={m.startRename}
+									onDelete={m.handleDelete}
+									onRename={m.handleRename}
+									onEditName={m.setEditName}
+									onCancelEdit={m.cancelEdit}
 								/>
 							)}
 						</For>

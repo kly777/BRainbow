@@ -1,0 +1,113 @@
+import { getErrorMessage, HttpError } from "@lib/api";
+import { notifyError, showConfirm, tryAsync } from "@lib/utils";
+import type { MediaItem } from "@modules/media";
+import { deleteMediaE, listMediaE, renameMediaE } from "@modules/media";
+import { useSearchParams } from "@solidjs/router";
+import { createResource, createSignal } from "solid-js";
+
+const VALID_TYPES = ["", "image", "video", "audio"];
+
+export interface MediaListApi {
+	mediaType: () => string;
+	setMediaType: (type: string) => void;
+	items: () => MediaItem[];
+	loading: boolean;
+	error: Error | undefined;
+	refetch: () => void;
+	editingId: () => string | null;
+	editName: () => string;
+	setEditName: (value: string) => void;
+	errorMessage: () => string;
+	handleDelete: (storedId: string) => Promise<void>;
+	startRename: (item: MediaItem) => void;
+	handleRename: () => Promise<void>;
+	cancelEdit: () => void;
+}
+
+export function useMediaList(): MediaListApi {
+	const [searchParams, setSearchParams] = useSearchParams();
+	const mediaType = () => {
+		const t = searchParams.type;
+		return typeof t === "string" && VALID_TYPES.includes(t) ? t : "";
+	};
+	const setMediaType = (t: string) => {
+		setSearchParams({ type: t || undefined });
+	};
+
+	const [media, { refetch }] = createResource(
+		() => mediaType(),
+		async (mt): Promise<MediaItem[]> => {
+			const result = await tryAsync(() =>
+				listMediaE(mt ? { media_type: mt } : {}),
+			);
+			if (result.ok) return result.value.items;
+			throw result.error;
+		},
+	);
+
+	const [editingId, setEditingId] = createSignal<string | null>(null);
+	const [editName, setEditName] = createSignal("");
+	const [errorMessage, setErrorMessage] = createSignal("");
+
+	const handleDelete = async (stored_id: string) => {
+		let force = false;
+		for (;;) {
+			const confirmed = await showConfirm({
+				title: force ? "强制删除媒体" : "删除媒体",
+				message: force
+					? "该文件仍被内容引用，强制删除后引用处将无法显示。仍要删除吗？"
+					: "确定要删除这个媒体文件吗？此操作不可撤销。",
+				variant: "danger",
+			});
+			if (!confirmed) return;
+			const result = await tryAsync(() => deleteMediaE(stored_id, force));
+			if (result.ok) break;
+			if (result.error instanceof HttpError && result.error.status === 409) {
+				force = true;
+				continue;
+			}
+			notifyError("删除媒体失败", getErrorMessage(result.error));
+			return;
+		}
+		refetch();
+	};
+
+	const startRename = (item: MediaItem) => {
+		setEditingId(item.stored_id);
+		setEditName(item.original_name);
+		setErrorMessage("");
+	};
+
+	const handleRename = async () => {
+		const id = editingId();
+		if (!id || !editName().trim()) return;
+		const result = await tryAsync(() => renameMediaE(id, editName().trim()));
+		if (result.ok) {
+			setEditingId(null);
+			refetch();
+		} else {
+			setErrorMessage(getErrorMessage(result.error));
+		}
+	};
+
+	const cancelEdit = () => {
+		setEditingId(null);
+	};
+
+	return {
+		mediaType,
+		setMediaType,
+		items: () => media() ?? [],
+		loading: media.loading,
+		error: media.error,
+		refetch,
+		editingId,
+		editName,
+		setEditName,
+		errorMessage,
+		handleDelete,
+		startRename,
+		handleRename,
+		cancelEdit,
+	};
+}

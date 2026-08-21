@@ -6,13 +6,15 @@
 	z-index: var(--z-overlay);
 	display: flex;
 	justify-content: flex-end;
+	background: var(--t-color-overlay);
 }
 
 .row-detail-backdrop {
+	/* 只作为点击关闭的透明热区，不遮挡面板 */
 	position: absolute;
 	inset: 0;
 	border: none;
-	background: var(--t-color-overlay);
+	background: transparent;
 	cursor: default;
 }
 

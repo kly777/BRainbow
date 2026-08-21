@@ -21,7 +21,10 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
     // ── 公开路由：无需认证 ──
     let public = Router::new()
         .route("/bookmarks/favicon", get(bookmark::favicon_handler))
-        .nest("/text", text::routes())
+        .nest_service(
+            "/text",
+            text::routes(state.text.clone(), state.text_query.clone()),
+        )
         .nest("/media", media::public_file_route());
 
     // ── 登录/注册（含限速层）──

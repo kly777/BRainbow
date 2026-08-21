@@ -1,7 +1,8 @@
 use axum::{Json, extract::State, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 
-use crate::modules::state::AppState;
+use super::query::TextQueryService;
+use super::service::TextService;
 
 #[derive(Debug, Serialize)]
 pub struct TabItem {
@@ -26,8 +27,10 @@ pub struct SaveRequest {
     pub tabs: Vec<TabItemInput>,
 }
 
-pub async fn get_text(State(state): State<AppState>) -> impl IntoResponse {
-    let result = state.text_query.load_tabs().await.map(|rows| {
+pub async fn get_text(
+    State((_service, query)): State<(TextService, TextQueryService)>,
+) -> impl IntoResponse {
+    let result = query.load_tabs().await.map(|rows| {
         let tabs = rows
             .into_iter()
             .map(|(id, name, content)| TabItem { id, name, content })
@@ -41,11 +44,11 @@ pub async fn get_text(State(state): State<AppState>) -> impl IntoResponse {
 }
 
 pub async fn save_text(
-    State(state): State<AppState>,
+    State((service, _query)): State<(TextService, TextQueryService)>,
     Json(body): Json<SaveRequest>,
 ) -> impl IntoResponse {
     let tabs: Vec<(String, String)> = body.tabs.into_iter().map(|t| (t.name, t.content)).collect();
-    match state.text.save_tabs(&tabs).await {
+    match service.save_tabs(&tabs).await {
         Ok(()) => Json(serde_json::json!({"ok": true})).into_response(),
         Err(e) => e.into_response(),
     }

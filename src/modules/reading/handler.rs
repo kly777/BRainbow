@@ -5,14 +5,15 @@ use axum::{
 };
 use serde_json::json;
 
-use crate::modules::state::AppState;
 use crate::shared::error_types as error;
 
 use super::model::{MarkWordRequest, UploadArticleRequest};
+use super::query::ReadingQueryService;
+use super::service::ReadingService;
 
 /// 文章列表（含认识率）
-pub async fn list_articles(State(state): State<AppState>) -> impl IntoResponse {
-    match state.reading_query.list_articles().await {
+pub async fn list_articles(State(query): State<ReadingQueryService>) -> impl IntoResponse {
+    match query.list_articles().await {
         Ok(summaries) => Json(json!({"articles": summaries})).into_response(),
         Err(e) => error::internal(e, "获取文章列表"),
     }
@@ -20,7 +21,7 @@ pub async fn list_articles(State(state): State<AppState>) -> impl IntoResponse {
 
 /// 上传文章
 pub async fn upload_article(
-    State(state): State<AppState>,
+    State(service): State<ReadingService>,
     Json(body): Json<UploadArticleRequest>,
 ) -> impl IntoResponse {
     let title = body.title.trim();
@@ -32,16 +33,18 @@ pub async fn upload_article(
         return error::bad_request("文章内容不能为空");
     }
 
-    let svc = &state.reading;
-    match svc.upload_article(title, content).await {
+    match service.upload_article(title, content).await {
         Ok(article) => Json(json!({"article": article})).into_response(),
         Err(e) => error::internal(e, "上传文章"),
     }
 }
 
 /// 获取单篇文章详情（含词状态 + notes）
-pub async fn get_article(State(state): State<AppState>, Path(id): Path<i64>) -> impl IntoResponse {
-    match state.reading_query.article_detail(id).await {
+pub async fn get_article(
+    State(query): State<ReadingQueryService>,
+    Path(id): Path<i64>,
+) -> impl IntoResponse {
+    match query.article_detail(id).await {
         Ok(Some(detail)) => Json(detail).into_response(),
         Ok(None) => error::not_found("文章未找到"),
         Err(e) => error::internal(e, "获取文章"),
@@ -50,10 +53,10 @@ pub async fn get_article(State(state): State<AppState>, Path(id): Path<i64>) -> 
 
 /// 获取文章中的所有词
 pub async fn get_article_words(
-    State(state): State<AppState>,
+    State(query): State<ReadingQueryService>,
     Path(id): Path<i64>,
 ) -> impl IntoResponse {
-    match state.reading_query.article_words(id).await {
+    match query.article_words(id).await {
         Ok(words) => Json(json!({"words": words})).into_response(),
         Err(e) => error::internal(e, "获取文章词表"),
     }
@@ -61,7 +64,7 @@ pub async fn get_article_words(
 
 /// 标记单词
 pub async fn mark_word(
-    State(state): State<AppState>,
+    State(service): State<ReadingService>,
     Path(word): Path<String>,
     Json(body): Json<MarkWordRequest>,
 ) -> impl IntoResponse {
@@ -73,15 +76,15 @@ pub async fn mark_word(
         return error::bad_request("无效的单词状态");
     }
 
-    match state.reading.mark_word(word, &body.status).await {
+    match service.mark_word(word, &body.status).await {
         Ok(()) => Json(json!({"ok": true})).into_response(),
         Err(e) => error::internal(e, "标记单词"),
     }
 }
 
 /// 获取所有不认识词
-pub async fn list_unknown_words(State(state): State<AppState>) -> impl IntoResponse {
-    match state.reading_query.unknown_words().await {
+pub async fn list_unknown_words(State(query): State<ReadingQueryService>) -> impl IntoResponse {
+    match query.unknown_words().await {
         Ok(words) => Json(json!({"words": words})).into_response(),
         Err(e) => error::internal(e, "获取不认识词列表"),
     }
@@ -89,18 +92,21 @@ pub async fn list_unknown_words(State(state): State<AppState>) -> impl IntoRespo
 
 /// 推荐下一篇（认识率最接近 90%）
 pub async fn recommend_next(
-    State(state): State<AppState>,
+    State(query): State<ReadingQueryService>,
     Path(id): Path<i64>,
 ) -> impl IntoResponse {
-    match state.reading_query.recommend_next(id).await {
+    match query.recommend_next(id).await {
         Ok(article) => Json(json!({"recommended": article})).into_response(),
         Err(e) => error::internal(e, "推荐下一篇"),
     }
 }
 
 /// 获取文章笔记
-pub async fn get_notes(State(state): State<AppState>, Path(id): Path<i64>) -> impl IntoResponse {
-    match state.reading_query.article(id).await {
+pub async fn get_notes(
+    State(query): State<ReadingQueryService>,
+    Path(id): Path<i64>,
+) -> impl IntoResponse {
+    match query.article(id).await {
         Ok(Some(article)) => Json(json!({"notes": article.notes})).into_response(),
         Ok(None) => error::not_found("文章未找到"),
         Err(e) => error::internal(e, "获取笔记"),
@@ -109,12 +115,12 @@ pub async fn get_notes(State(state): State<AppState>, Path(id): Path<i64>) -> im
 
 /// 更新文章笔记
 pub async fn update_notes(
-    State(state): State<AppState>,
+    State(service): State<ReadingService>,
     Path(id): Path<i64>,
     Json(body): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let notes = body.get("notes").and_then(|v| v.as_str()).unwrap_or("");
-    match state.reading.update_notes(id, notes).await {
+    match service.update_notes(id, notes).await {
         Ok(()) => Json(json!({"ok": true})).into_response(),
         Err(e) => error::internal(e, "更新笔记"),
     }

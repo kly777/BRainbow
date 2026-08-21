@@ -16,14 +16,18 @@ pub use handler::{
 pub use query::BookmarkQueryService;
 pub use service::BookmarkService;
 
-use crate::modules::state::AppState;
 use axum::{
     Router,
-    extract::DefaultBodyLimit,
+    extract::{DefaultBodyLimit, FromRef},
     routing::{get, post},
 };
 
-pub fn routes() -> Router<AppState> {
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    BookmarkService: FromRef<S>,
+    BookmarkQueryService: FromRef<S>,
+{
     Router::new()
         // 静态路径优先于 /{id}，避免 "tags" 被当作 id 解析
         .route("/tags", get(search_tags_handler).post(create_tag_handler))

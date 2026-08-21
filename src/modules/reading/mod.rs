@@ -4,13 +4,21 @@ pub(crate) mod query;
 mod repository;
 pub mod service;
 
-use crate::modules::state::AppState;
 use axum::{
     Router,
+    extract::FromRef,
     routing::{get, post},
 };
 
-pub fn routes() -> Router<AppState> {
+use self::query::ReadingQueryService;
+use self::service::ReadingService;
+
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    ReadingService: FromRef<S>,
+    ReadingQueryService: FromRef<S>,
+{
     Router::new()
         .route(
             "/",

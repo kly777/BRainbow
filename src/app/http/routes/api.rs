@@ -3,7 +3,7 @@ use axum::{
     routing::{get, post},
 };
 
-use crate::modules::state::AppState;
+use crate::app::context::AppState;
 use crate::modules::{
     ai, bookmark, card, chat, conv, db_viewer, media, mem, onto, reading, search, sign, task, text,
     time_window, user,
@@ -21,11 +21,8 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
     // ── 公开路由：无需认证 ──
     let public = Router::new()
         .route("/bookmarks/favicon", get(bookmark::favicon_handler))
-        .nest_service(
-            "/text",
-            text::routes(state.text.clone(), state.text_query.clone()),
-        )
-        .nest("/media", media::public_file_route());
+        .nest("/text", text::routes::<AppState>())
+        .nest("/media", media::public_file_route::<AppState>());
 
     // ── 登录/注册（含限速层）──
 
@@ -40,22 +37,19 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
             "/auth/key/{id}",
             axum::routing::delete(crate::app::http::auth::delete_api_key),
         )
-        .nest("/mem", mem::routes())
-        .nest("/media", media::routes())
-        .nest("/conv", conv::routes())
-        .nest_service(
-            "/cards",
-            card::routes(state.card.clone(), state.card_query.clone()),
-        )
-        .nest("/onto", onto::routes())
-        .nest("/sign", sign::routes())
-        .nest("/reading", reading::routes())
-        .nest_service("/search", search::routes(state.search_query.clone()))
-        .nest("/bookmarks", bookmark::routes())
-        .nest("/tasks", task::routes())
-        .nest("/chat", chat::routes())
-        .nest("/ai", ai::routes())
-        .nest("/time-windows", time_window::routes())
+        .nest("/mem", mem::routes::<AppState>())
+        .nest("/media", media::routes::<AppState>())
+        .nest("/conv", conv::routes::<AppState>())
+        .nest("/cards", card::routes::<AppState>())
+        .nest("/onto", onto::routes::<AppState>())
+        .nest("/sign", sign::routes::<AppState>())
+        .nest("/reading", reading::routes::<AppState>())
+        .nest("/search", search::routes::<AppState>())
+        .nest("/bookmarks", bookmark::routes::<AppState>())
+        .nest("/tasks", task::routes::<AppState>())
+        .nest("/chat", chat::routes::<AppState>())
+        .nest("/ai", ai::routes::<AppState>())
+        .nest("/time-windows", time_window::routes::<AppState>())
         .layer(middleware::from_fn_with_state(
             state.clone(),
             crate::app::http::auth::auth,
@@ -63,8 +57,8 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
 
     // ── 管理员路由：auth + require_admin ──
     let admin = Router::new()
-        .nest("/db", db_viewer::routes())
-        .nest("/admin", crate::modules::admin::routes())
+        .nest("/db", db_viewer::routes::<AppState>())
+        .nest("/admin", crate::modules::admin::routes::<AppState>())
         .layer(middleware::from_fn(crate::app::http::auth::require_admin))
         .layer(middleware::from_fn_with_state(
             state,

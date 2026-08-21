@@ -6,13 +6,13 @@ pub mod service;
 pub use query::TextQueryService;
 pub use service::TextService;
 
-use axum::{Router, routing::get};
+use axum::{Router, extract::FromRef, routing::get};
 
-pub fn routes(
-    text_service: TextService,
-    text_query: TextQueryService,
-) -> Router<()> {
-    Router::new()
-        .route("/", get(handler::get_text).put(handler::save_text))
-        .with_state((text_service, text_query))
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    TextService: FromRef<S>,
+    TextQueryService: FromRef<S>,
+{
+    Router::new().route("/", get(handler::get_text).put(handler::save_text))
 }

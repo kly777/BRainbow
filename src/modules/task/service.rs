@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
+
 use super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
 use super::model::{Task, TimeWindow, TimeWindowType};
+use super::port::TaskTimeWindowValidator;
 use super::repository::TaskRepository;
 
 /// 命令侧服务——只暴露写操作与参与命令约束的读取。
@@ -202,6 +205,19 @@ fn validate_effort(minutes: Option<i32>) -> Result<(), ServiceError> {
         return Err(ServiceError::InvalidInput("精力估算值不能为负数".into()));
     }
     Ok(())
+}
+
+#[async_trait]
+impl TaskTimeWindowValidator for TaskService {
+    async fn validate_time_windows(
+        &self,
+        task_id: i32,
+        time_windows: &[TimeWindow],
+        exclude_id: Option<i32>,
+    ) -> Result<(), ServiceError> {
+        self.validate_time_windows(task_id, time_windows, exclude_id)
+            .await
+    }
 }
 
 async fn check_circular_parent(

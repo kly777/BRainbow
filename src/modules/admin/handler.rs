@@ -9,7 +9,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::modules::state::AppState;
+use super::port::AdminServicePort;
+use super::service::AdminService;
 use crate::shared::claims::Claims;
 
 #[derive(Debug, Serialize)]
@@ -26,10 +27,10 @@ pub struct UpdateSettingsRequest {
     pub allow_register: Option<bool>,
 }
 
-pub async fn get_settings(State(state): State<AppState>) -> Response {
-    let (set, len) = state.settings_jwt_status().await;
+pub async fn get_settings(State(admin): State<AdminService>) -> Response {
+    let (set, len) = admin.settings_jwt_status().await;
     Json(SettingsResponse {
-        allow_register: state.allow_register_active().await,
+        allow_register: admin.allow_register_active().await,
         jwt_secret_set: set,
         jwt_secret_len: len,
     })
@@ -37,11 +38,11 @@ pub async fn get_settings(State(state): State<AppState>) -> Response {
 }
 
 pub async fn update_settings(
-    State(state): State<AppState>,
+    State(admin): State<AdminService>,
     Json(payload): Json<UpdateSettingsRequest>,
 ) -> Response {
     if let Some(v) = payload.allow_register
-        && let Err(e) = state.set_allow_register(v).await
+        && let Err(e) = admin.set_allow_register(v).await
     {
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -52,16 +53,16 @@ pub async fn update_settings(
         )
             .into_response();
     }
-    get_settings(State(state)).await
+    get_settings(State(admin)).await
 }
 
 /// 轮换 JWT 密钥：新密钥持久化到 DB 并立即生效（所有现有登录会话失效）
 pub async fn rotate_jwt(
-    State(state): State<AppState>,
+    State(admin): State<AdminService>,
     Extension(_claims): Extension<Claims>,
 ) -> Response {
     let new_secret = Uuid::new_v4().to_string() + &Uuid::new_v4().to_string();
-    match state.rotate_jwt_secret(&new_secret).await {
+    match admin.rotate_jwt_secret(&new_secret).await {
         Ok(()) => Json(serde_json::json!({
             "ok": true,
             "message": "JWT 密钥已轮换，所有会话需重新登录",

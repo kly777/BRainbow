@@ -2,17 +2,21 @@ use std::collections::HashMap;
 
 use axum::{
     Json, Router,
-    extract::{Path, Query, State},
+    extract::{FromRef, Path, Query, State},
     response::IntoResponse,
     routing::get,
 };
 
-use crate::modules::state::AppState;
 use crate::shared::error_types as error;
 
 use super::model::SearchParams;
+use super::query::ConvQueryService;
 
-pub fn routes() -> Router<AppState> {
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    ConvQueryService: FromRef<S>,
+{
     Router::new()
         .route("/search", get(search_handler))
         .route("/{id}", get(conv_detail_handler))
@@ -20,7 +24,7 @@ pub fn routes() -> Router<AppState> {
 }
 
 pub async fn search_handler(
-    State(state): State<AppState>,
+    State(query): State<ConvQueryService>,
     Query(params): Query<SearchParams>,
 ) -> impl IntoResponse {
     let q = match params.q {
@@ -32,17 +36,17 @@ pub async fn search_handler(
     let offset = params.offset.unwrap_or(0);
     let search_type = params.search_type.as_deref().unwrap_or("all");
 
-    match state.conv_query.search(q, limit, offset, search_type).await {
+    match query.search(q, limit, offset, search_type).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => e.into_response(),
     }
 }
 
 pub async fn conv_detail_handler(
-    State(state): State<AppState>,
+    State(query): State<ConvQueryService>,
     Path(id): Path<i64>,
 ) -> impl IntoResponse {
-    match state.conv_query.detail(id).await {
+    match query.detail(id).await {
         Ok(Some(detail)) => Json(detail).into_response(),
         Ok(None) => error::not_found("知识条目不存在"),
         Err(e) => error::internal(e, "获取知识详情"),
@@ -50,7 +54,7 @@ pub async fn conv_detail_handler(
 }
 
 pub async fn conv_concept_handler(
-    State(state): State<AppState>,
+    State(query): State<ConvQueryService>,
     Path(id): Path<i64>,
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
@@ -59,7 +63,7 @@ pub async fn conv_concept_handler(
         None => return error::not_found("缺少 article 参数"),
     };
 
-    match state.conv_query.concept(id, article_title).await {
+    match query.concept(id, article_title).await {
         Ok(Some(body)) => Json(body).into_response(),
         Ok(None) => error::not_found("文章不存在"),
         Err(e) => error::internal(e, "获取文章"),

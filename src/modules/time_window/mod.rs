@@ -10,11 +10,17 @@ pub use handler::{
     update_time_window_handler,
 };
 pub use model::{RecurrenceFrequency, TimeWindow, TimeWindowType};
+pub use query::TimeWindowQueryService;
+pub use service::TimeWindowService;
 
-use crate::modules::state::AppState;
-use axum::{Router, routing::get};
+use axum::{Router, extract::FromRef, routing::get};
 
-pub fn routes() -> Router<AppState> {
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    TimeWindowService: FromRef<S>,
+    TimeWindowQueryService: FromRef<S>,
+{
     Router::new()
         .route(
             "/",

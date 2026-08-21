@@ -1,15 +1,17 @@
+use std::sync::Arc;
+
 use super::model::{CreateTimeWindowRequest, TimeWindow, UpdateTimeWindowRequest};
 use super::repository::TimeWindowRepository;
-use crate::modules::task::TaskService;
+use crate::modules::task::port::TaskTimeWindowValidator;
 
 #[derive(Clone)]
 pub struct TimeWindowService {
     repo: TimeWindowRepository,
-    task: TaskService,
+    task: Arc<dyn TaskTimeWindowValidator>,
 }
 
 impl TimeWindowService {
-    pub fn new(db: std::sync::Arc<sqlx::SqlitePool>, task: TaskService) -> Self {
+    pub fn new(db: Arc<sqlx::SqlitePool>, task: Arc<dyn TaskTimeWindowValidator>) -> Self {
         Self {
             repo: TimeWindowRepository::new(db),
             task,

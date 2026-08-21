@@ -27,9 +27,7 @@ pub struct SaveRequest {
     pub tabs: Vec<TabItemInput>,
 }
 
-pub async fn get_text(
-    State((_service, query)): State<(TextService, TextQueryService)>,
-) -> impl IntoResponse {
+pub async fn get_text(State(query): State<TextQueryService>) -> impl IntoResponse {
     let result = query.load_tabs().await.map(|rows| {
         let tabs = rows
             .into_iter()
@@ -44,7 +42,7 @@ pub async fn get_text(
 }
 
 pub async fn save_text(
-    State((service, _query)): State<(TextService, TextQueryService)>,
+    State(service): State<TextService>,
     Json(body): Json<SaveRequest>,
 ) -> impl IntoResponse {
     let tabs: Vec<(String, String)> = body.tabs.into_iter().map(|t| (t.name, t.content)).collect();

@@ -15,8 +15,8 @@ pub struct DeleteQuery {
 }
 use tokio_util::io::ReaderStream;
 
+use super::query::MediaQueryService;
 use super::service::MediaService;
-use crate::modules::state::AppState;
 use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::error_types::ServiceError;
@@ -57,12 +57,10 @@ fn to_response(m: &super::model::Media) -> MediaResponse {
 // ── 上传 ──
 
 pub async fn upload_handler(
-    State(state): State<AppState>,
+    State(service): State<MediaService>,
     Extension(claims): Extension<Claims>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
-    let service = &state.media;
-
     while let Ok(Some(field)) = multipart.next_field().await {
         let name = field.name().unwrap_or("").to_string();
         if name != "file" {
@@ -111,12 +109,11 @@ pub struct ListQuery {
 
 pub async fn list_handler(
     Query(q): Query<ListQuery>,
-    State(state): State<AppState>,
+    State(query): State<MediaQueryService>,
 ) -> impl IntoResponse {
-    let service = &state.media_query;
     let mt = q.media_type.as_deref().filter(|s| !s.is_empty());
 
-    match service.list(&q.pagination, mt).await {
+    match query.list(&q.pagination, mt).await {
         Ok(response) => {
             let items: Vec<MediaResponse> = response.items.iter().map(to_response).collect();
             Json(serde_json::json!({
@@ -135,11 +132,10 @@ pub async fn list_handler(
 // ── 详情 ──
 
 pub async fn get_handler(
-    State(state): State<AppState>,
+    State(query): State<MediaQueryService>,
     Path(stored_id): Path<String>,
 ) -> impl IntoResponse {
-    let service = &state.media_query;
-    match service.get_by_stored_id(&stored_id).await {
+    match query.get_by_stored_id(&stored_id).await {
         Ok(Some(media)) => Json(to_response(&media)).into_response(),
         Ok(None) => error::not_found("媒体不存在"),
         Err(e) => e.into_response(),
@@ -149,10 +145,10 @@ pub async fn get_handler(
 // ── 文件服务 ──
 
 pub async fn file_handler(
-    State(state): State<AppState>,
+    State(query): State<MediaQueryService>,
     Path(stored_id): Path<String>,
 ) -> Response {
-    let media = match state.media_query.get_by_stored_id(&stored_id).await {
+    let media = match query.get_by_stored_id(&stored_id).await {
         Ok(Some(m)) => m,
         Ok(None) => return ServiceError::NotFound("媒体不存在".into()).into_response(),
         Err(e) => return e.into_response(),
@@ -199,14 +195,13 @@ pub struct RenameRequest {
 }
 
 pub async fn rename_handler(
-    State(state): State<AppState>,
+    State(service): State<MediaService>,
     Path(stored_id): Path<String>,
     Json(payload): Json<RenameRequest>,
 ) -> impl IntoResponse {
     if payload.original_name.trim().is_empty() {
         return error::bad_request("名称不能为空");
     }
-    let service = &state.media;
     match service
         .rename(&stored_id, payload.original_name.trim())
         .await
@@ -219,11 +214,10 @@ pub async fn rename_handler(
 // ── 删除 ──
 
 pub async fn delete_handler(
-    State(state): State<AppState>,
+    State(service): State<MediaService>,
     Path(stored_id): Path<String>,
     Query(query): Query<DeleteQuery>,
 ) -> impl IntoResponse {
-    let service = &state.media;
     match service
         .delete(&stored_id, query.force.unwrap_or(false))
         .await

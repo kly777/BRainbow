@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::modules::state::AppState;
+use super::service::DbViewerQueryService;
 use crate::shared::db_query::sanitize_table_name;
 use crate::shared::error_types as error;
 use crate::shared::pagination::Pagination;
@@ -201,22 +201,21 @@ pub struct BackRefQuery {
     pub id: Option<String>,
 }
 
-pub async fn get_table_names(State(state): State<AppState>) -> impl IntoResponse {
-    error::ok_or(state.db_viewer.get_table_names().await, "获取表名")
+pub async fn get_table_names(State(service): State<DbViewerQueryService>) -> impl IntoResponse {
+    error::ok_or(service.get_table_names().await, "获取表名")
 }
 
 pub async fn get_table_data(
     Path(table_name): Path<String>,
     Query(query): Query<TableDataQuery>,
-    State(state): State<AppState>,
+    State(service): State<DbViewerQueryService>,
 ) -> impl IntoResponse {
     let pagination = Pagination {
         page: query.page,
         page_size: query.page_size,
     };
     let options = options_from_query(&query);
-    let result = state
-        .db_viewer
+    let result = service
         .get_table_data(
             &table_name,
             pagination.limit(),
@@ -230,7 +229,7 @@ pub async fn get_table_data(
 pub async fn get_table_backrefs(
     Path(table_name): Path<String>,
     Query(query): Query<BackRefQuery>,
-    State(state): State<AppState>,
+    State(service): State<DbViewerQueryService>,
 ) -> impl IntoResponse {
     let Some(raw) = query.id.as_deref() else {
         return error::bad_request("缺少 id 参数");
@@ -238,7 +237,7 @@ pub async fn get_table_backrefs(
     let Some(id) = raw.parse::<i64>().ok().filter(|n| *n >= 1) else {
         return error::bad_request("id 参数必须是正整数");
     };
-    let result = state.db_viewer.get_backrefs(&table_name, id).await;
+    let result = service.get_backrefs(&table_name, id).await;
     error::ok_or(result, "获取反向引用")
 }
 
@@ -316,18 +315,14 @@ fn download_response(filename: &str, content_type: HeaderValue, body: String) ->
 pub async fn export_table_data(
     Path(table_name): Path<String>,
     Query(query): Query<TableDataQuery>,
-    State(state): State<AppState>,
+    State(service): State<DbViewerQueryService>,
 ) -> Response {
     let safe_name = match sanitize_table_name(&table_name) {
         Ok(name) => name,
         Err(e) => return error::bad_request(e.to_string()),
     };
     let options = options_from_query(&query);
-    let data = match state
-        .db_viewer
-        .export_table_data(&safe_name, &options)
-        .await
-    {
+    let data = match service.export_table_data(&safe_name, &options).await {
         Ok(data) => data,
         Err(e) => return e.into_response(),
     };

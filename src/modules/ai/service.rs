@@ -3,8 +3,10 @@ use tokio::time::{Duration, sleep};
 
 use crate::shared::error_types::ServiceError;
 use crate::shared::time_text::utc_now_iso;
+use async_trait::async_trait;
 
 use super::model::{AiConfig, AiProxyMessage, AiSettingsItem, UpdateAiSettingsRequest};
+use super::port::AiChatPort;
 
 /// AI 服务：设置 CRUD + LLM 代理调用（所有 AI 功能统一走这里）
 #[derive(Clone)]
@@ -279,6 +281,19 @@ impl AiService {
             }
         }
         Err(last_err.unwrap_or_else(|| ServiceError::Internal("AI 请求失败".into())))
+    }
+}
+
+#[async_trait]
+impl AiChatPort for AiService {
+    async fn chat(
+        &self,
+        user_id: i32,
+        messages: &[AiProxyMessage],
+        temperature: Option<f32>,
+        max_tokens: Option<i32>,
+    ) -> Result<(String, String), ServiceError> {
+        self.chat(user_id, messages, temperature, max_tokens).await
     }
 }
 

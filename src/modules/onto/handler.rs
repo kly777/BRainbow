@@ -4,9 +4,11 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::modules::state::AppState;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
+
+use super::query::OntoQueryService;
+use super::service::OntoService;
 
 #[derive(Debug, Deserialize)]
 pub struct CreateOntoRequest {
@@ -38,11 +40,10 @@ impl From<super::model::Onto> for OntoResponse {
 }
 
 pub async fn create_onto_handler(
-    State(state): State<AppState>,
+    State(service): State<OntoService>,
     Json(payload): Json<CreateOntoRequest>,
 ) -> impl IntoResponse {
-    let result = state
-        .onto
+    let result = service
         .create(payload.name, payload.description)
         .await
         .map(OntoResponse::from);
@@ -51,10 +52,9 @@ pub async fn create_onto_handler(
 
 pub async fn get_ontos_handler(
     Query(pagination): Query<Pagination>,
-    State(state): State<AppState>,
+    State(query): State<OntoQueryService>,
 ) -> impl IntoResponse {
-    let result = state
-        .onto_query
+    let result = query
         .list(pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
@@ -65,24 +65,19 @@ pub async fn get_ontos_handler(
 }
 
 pub async fn get_onto_handler(
-    State(state): State<AppState>,
+    State(query): State<OntoQueryService>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let result = state
-        .onto_query
-        .by_id(id)
-        .await
-        .map(|opt| opt.map(OntoResponse::from));
+    let result = query.by_id(id).await.map(|opt| opt.map(OntoResponse::from));
     error::found_or(result, "获取本体")
 }
 
 pub async fn update_onto_handler(
-    State(state): State<AppState>,
+    State(service): State<OntoService>,
     Path(id): Path<i32>,
     Json(payload): Json<UpdateOntoRequest>,
 ) -> impl IntoResponse {
-    let result = state
-        .onto
+    let result = service
         .update(id, payload.name, payload.description)
         .await
         .map(OntoResponse::from);
@@ -90,8 +85,8 @@ pub async fn update_onto_handler(
 }
 
 pub async fn delete_onto_handler(
-    State(state): State<AppState>,
+    State(service): State<OntoService>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    error::deleted_or(state.onto.delete(id).await, "删除本体")
+    error::deleted_or(service.delete(id).await, "删除本体")
 }

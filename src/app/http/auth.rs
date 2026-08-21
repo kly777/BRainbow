@@ -5,7 +5,7 @@ use axum::{
     response::{IntoResponse, Json, Response},
 };
 
-use crate::modules::state::AppState;
+use crate::app::context::AppState;
 use crate::shared::claims::Claims;
 use crate::shared::error_types::ErrorBody;
 pub use crate::shared::jwt::{extract_api_key, extract_token, hash_api_key, verify_token};

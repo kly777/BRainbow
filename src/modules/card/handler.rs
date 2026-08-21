@@ -41,16 +41,19 @@ impl From<super::model::Card> for CardResponse {
 }
 
 pub async fn create_card_handler(
-    State((service, _query)): State<(CardService, CardQueryService)>,
+    State(service): State<CardService>,
     Json(payload): Json<CreateCardRequest>,
 ) -> impl IntoResponse {
-    let result = service.create(payload.content).await.map(CardResponse::from);
+    let result = service
+        .create(payload.content)
+        .await
+        .map(CardResponse::from);
     error::created_or(result, "创建卡片")
 }
 
 pub async fn get_cards_handler(
     Query(pagination): Query<Pagination>,
-    State((_service, query)): State<(CardService, CardQueryService)>,
+    State(query): State<CardQueryService>,
 ) -> impl IntoResponse {
     let result = query
         .list(pagination.limit(), pagination.offset())
@@ -63,7 +66,7 @@ pub async fn get_cards_handler(
 }
 
 pub async fn get_card_handler(
-    State((_service, query)): State<(CardService, CardQueryService)>,
+    State(query): State<CardQueryService>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let result = query.by_id(id).await.map(|opt| opt.map(CardResponse::from));
@@ -71,16 +74,19 @@ pub async fn get_card_handler(
 }
 
 pub async fn update_card_handler(
-    State((service, _query)): State<(CardService, CardQueryService)>,
+    State(service): State<CardService>,
     Path(id): Path<i32>,
     Json(payload): Json<UpdateCardRequest>,
 ) -> impl IntoResponse {
-    let result = service.update(id, payload.content).await.map(CardResponse::from);
+    let result = service
+        .update(id, payload.content)
+        .await
+        .map(CardResponse::from);
     error::ok_or(result, "更新卡片")
 }
 
 pub async fn delete_card_handler(
-    State((service, _query)): State<(CardService, CardQueryService)>,
+    State(service): State<CardService>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     error::deleted_or(service.delete(id).await, "删除卡片")
@@ -104,7 +110,7 @@ impl SearchCardsQuery {
 
 pub async fn search_cards_handler(
     Query(params): Query<SearchCardsQuery>,
-    State((_service, query)): State<(CardService, CardQueryService)>,
+    State(query): State<CardQueryService>,
 ) -> impl IntoResponse {
     if params.q.trim().is_empty() {
         return error::bad_request("搜索关键词不能为空");

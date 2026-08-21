@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::{Query, State},
+    extract::{FromRef, Query, State},
     response::IntoResponse,
     routing::get,
 };
@@ -11,10 +11,12 @@ use axum::extract::Extension;
 
 use super::service::SearchQueryService;
 
-pub fn routes(service: SearchQueryService) -> Router<()> {
-    Router::new()
-        .route("/", get(search_handler))
-        .with_state(service)
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    SearchQueryService: FromRef<S>,
+{
+    Router::new().route("/", get(search_handler))
 }
 
 #[derive(Deserialize)]

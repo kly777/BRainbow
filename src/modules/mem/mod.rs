@@ -14,19 +14,40 @@ pub mod service;
 #[cfg(test)]
 pub(crate) mod testing;
 
-use crate::modules::state::AppState;
+use std::sync::Arc;
+
 use axum::{
     Router,
+    extract::FromRef,
     routing::{delete, get, post, put},
 };
 
+use crate::modules::mem::config::MemConfig;
+use crate::modules::mem::maintenance::DbMemMaintenance;
+use crate::modules::mem::query::MemQueryService;
+use crate::modules::mem::service::MemService;
+
 /// mem 路由：按「读用例 / 写用例」拆分，再按资源前缀 nest。
-pub fn routes() -> Router<AppState> {
-    Router::new().merge(read_routes()).merge(write_routes())
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    MemService: FromRef<S>,
+    MemQueryService: FromRef<S>,
+    DbMemMaintenance: FromRef<S>,
+    Arc<MemConfig>: FromRef<S>,
+{
+    Router::new()
+        .merge(read_routes::<S>())
+        .merge(write_routes::<S>())
 }
 
 /// 无副作用读操作（MemQueryService）。
-fn read_routes() -> Router<AppState> {
+fn read_routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    MemQueryService: FromRef<S>,
+    Arc<MemConfig>: FromRef<S>,
+{
     Router::new()
         .route("/all", get(handler::get_all))
         .route("/counts", get(handler::get_counts))
@@ -35,12 +56,17 @@ fn read_routes() -> Router<AppState> {
         .route("/export/csv", get(handler::export_csv))
         .route("/{id}/preview", get(handler::preview_mem))
         .route("/{id}/mnemonic", get(handler::get_mnemonic))
-        .nest("/tag", tag_read_routes())
+        .nest("/tag", tag_read_routes::<S>())
 }
 
 /// 有副作用的写操作（MemService / maintenance）。`GET /due` 虽为读取入口，
 /// 但会推进新卡状态，因此归入写侧。
-fn write_routes() -> Router<AppState> {
+fn write_routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    MemService: FromRef<S>,
+    DbMemMaintenance: FromRef<S>,
+{
     Router::new()
         .route("/", post(handler::create_mem))
         .route("/due", get(handler::get_due))
@@ -58,12 +84,16 @@ fn write_routes() -> Router<AppState> {
         .route("/batch-bury", post(handler::batch_bury))
         .route("/batch-delete", post(handler::batch_delete))
         .route("/batch-reset", post(handler::batch_reset))
-        .nest("/tag", tag_write_routes())
-        .nest("/import", import_routes())
+        .nest("/tag", tag_write_routes::<S>())
+        .nest("/import", import_routes::<S>())
 }
 
 /// 标签读操作（list / search / mem 查询 / 批量反查）。
-fn tag_read_routes() -> Router<AppState> {
+fn tag_read_routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    MemQueryService: FromRef<S>,
+{
     Router::new()
         .route("/list", get(handler::list_tags))
         .route("/search", get(handler::search_tags))
@@ -72,7 +102,11 @@ fn tag_read_routes() -> Router<AppState> {
 }
 
 /// 标签写操作（增删 / 打标 / 批量标签）。
-fn tag_write_routes() -> Router<AppState> {
+fn tag_write_routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    MemService: FromRef<S>,
+{
     Router::new()
         .route("/create", post(handler::create_tag))
         .route("/delete/{id}", delete(handler::delete_tag))
@@ -85,7 +119,11 @@ fn tag_write_routes() -> Router<AppState> {
 }
 
 /// CSV / PSV / JSON 导入。
-fn import_routes() -> Router<AppState> {
+fn import_routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    MemService: FromRef<S>,
+{
     Router::new()
         .route("/csv", post(handler::import_csv))
         .route("/psv", post(handler::import_psv))
@@ -100,6 +138,32 @@ mod tests {
     fn read_and_write_routes_merge_without_conflict() {
         // 同一路径上的 GET / PUT（/{id}/mnemonic）分属两个子 Router，
         // 这里确保 merge 不会因方法集合冲突而 panic。
-        let _router = routes();
+        struct TestState;
+        impl Clone for TestState {
+            fn clone(&self) -> Self {
+                TestState
+            }
+        }
+        impl FromRef<TestState> for MemService {
+            fn from_ref(_: &TestState) -> Self {
+                unreachable!()
+            }
+        }
+        impl FromRef<TestState> for MemQueryService {
+            fn from_ref(_: &TestState) -> Self {
+                unreachable!()
+            }
+        }
+        impl FromRef<TestState> for DbMemMaintenance {
+            fn from_ref(_: &TestState) -> Self {
+                unreachable!()
+            }
+        }
+        impl FromRef<TestState> for Arc<MemConfig> {
+            fn from_ref(_: &TestState) -> Self {
+                unreachable!()
+            }
+        }
+        let _router = routes::<TestState>();
     }
 }

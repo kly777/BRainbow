@@ -4,9 +4,11 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::modules::state::AppState;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
+
+use super::query::SignQueryService;
+use super::service::SignService;
 
 #[derive(Debug, Deserialize)]
 pub struct CreateSignRequest {
@@ -43,11 +45,10 @@ impl From<super::model::SignifierSignified> for SignResponse {
 }
 
 pub async fn create_sign_handler(
-    State(state): State<AppState>,
+    State(service): State<SignService>,
     Json(payload): Json<CreateSignRequest>,
 ) -> impl IntoResponse {
-    let result = state
-        .sign
+    let result = service
         .create(
             payload.signifier,
             payload.signified,
@@ -62,10 +63,9 @@ pub async fn create_sign_handler(
 
 pub async fn get_signs_handler(
     Query(pagination): Query<Pagination>,
-    State(state): State<AppState>,
+    State(query): State<SignQueryService>,
 ) -> impl IntoResponse {
-    let result = state
-        .sign_query
+    let result = query
         .list(pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
@@ -76,31 +76,26 @@ pub async fn get_signs_handler(
 }
 
 pub async fn get_sign_handler(
-    State(state): State<AppState>,
+    State(query): State<SignQueryService>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let result = state
-        .sign_query
-        .by_id(id)
-        .await
-        .map(|opt| opt.map(SignResponse::from));
+    let result = query.by_id(id).await.map(|opt| opt.map(SignResponse::from));
     error::found_or(result, "获取符号关系")
 }
 
 pub async fn delete_sign_handler(
-    State(state): State<AppState>,
+    State(service): State<SignService>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    error::deleted_or(state.sign.delete(id).await, "删除符号关系")
+    error::deleted_or(service.delete(id).await, "删除符号关系")
 }
 
 pub async fn get_signs_by_signifier_handler(
     Path(signifier): Path<String>,
     Query(pagination): Query<Pagination>,
-    State(state): State<AppState>,
+    State(query): State<SignQueryService>,
 ) -> impl IntoResponse {
-    let result = state
-        .sign_query
+    let result = query
         .by_signifier(&signifier, pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
@@ -113,10 +108,9 @@ pub async fn get_signs_by_signifier_handler(
 pub async fn get_signs_by_signified_handler(
     Path(signified): Path<String>,
     Query(pagination): Query<Pagination>,
-    State(state): State<AppState>,
+    State(query): State<SignQueryService>,
 ) -> impl IntoResponse {
-    let result = state
-        .sign_query
+    let result = query
         .by_signified(&signified, pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {

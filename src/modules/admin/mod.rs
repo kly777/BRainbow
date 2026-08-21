@@ -1,13 +1,20 @@
 // ── 管理员设置模块：开放注册开关 / JWT 密钥轮换（admin-only） ──
 
 pub mod handler;
+pub mod port;
 pub mod service;
 
-use crate::modules::state::AppState;
 use axum::Router;
+use axum::extract::FromRef;
 use axum::routing::{get, post};
 
-pub fn routes() -> Router<AppState> {
+use self::service::AdminService;
+
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    AdminService: FromRef<S>,
+{
     Router::new()
         .route(
             "/settings",

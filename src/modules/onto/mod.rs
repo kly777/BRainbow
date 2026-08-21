@@ -12,10 +12,14 @@ pub use handler::{
     update_onto_handler,
 };
 
-use crate::modules::state::AppState;
-use axum::{Router, routing::get};
+use axum::{Router, extract::FromRef, routing::get};
 
-pub fn routes() -> Router<AppState> {
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    OntoService: FromRef<S>,
+    OntoQueryService: FromRef<S>,
+{
     Router::new()
         .route("/", get(get_ontos_handler).post(create_onto_handler))
         .route(

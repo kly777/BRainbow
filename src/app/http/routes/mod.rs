@@ -6,7 +6,7 @@ use serde::Serialize;
 use tower_http::services::ServeDir;
 use tower_http::services::ServeFile;
 
-use crate::modules::state::AppState;
+use crate::app::context::AppState;
 
 #[derive(Serialize)]
 struct HealthResponse {

@@ -1,21 +1,29 @@
+use axum::extract::{Extension, FromRef, State};
 use axum::{
     Json, Router,
-    extract::{Path, Query, State},
+    extract::{Path, Query},
     response::IntoResponse,
     routing::{get, post},
 };
 
-use crate::modules::state::AppState;
+use crate::modules::ai::service::AiService;
+use crate::modules::chat::query::ChatQueryService;
+use crate::modules::chat::service::ChatService;
 use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
-use axum::extract::Extension;
 
 use super::model::{
     ChatRequest, CreateTreeRequest, ListTreesParams, PresetRequest, ReviseRequest, SearchParams,
     UpdateTreeRequest,
 };
 
-pub fn routes() -> Router<AppState> {
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    ChatService: FromRef<S>,
+    ChatQueryService: FromRef<S>,
+    AiService: FromRef<S>,
+{
     Router::new()
         .route("/trees", get(list_trees_handler).post(create_tree_handler))
         .route(
@@ -45,13 +53,13 @@ const SSE_DONE: &str = "__DONE__";
 const SSE_ERROR_PREFIX: &str = "__ERROR__:";
 
 pub async fn list_trees_handler(
-    State(state): State<AppState>,
+    State(chat): State<ChatService>,
     Extension(claims): Extension<Claims>,
     Query(params): Query<ListTreesParams>,
 ) -> impl IntoResponse {
     let result = match params.kind.as_deref() {
-        Some(k) if k == "mem" || k == "chat" => state.chat.list_trees_by_kind(claims.sub, k).await,
-        _ => state.chat.list_trees(claims.sub).await,
+        Some(k) if k == "mem" || k == "chat" => chat.list_trees_by_kind(claims.sub, k).await,
+        _ => chat.list_trees(claims.sub).await,
     };
     match result {
         Ok(trees) => Json(trees).into_response(),
@@ -60,22 +68,22 @@ pub async fn list_trees_handler(
 }
 
 pub async fn create_tree_handler(
-    State(state): State<AppState>,
+    State(chat): State<ChatService>,
     Extension(claims): Extension<Claims>,
     Json(req): Json<CreateTreeRequest>,
 ) -> impl IntoResponse {
-    match state.chat.create_tree(claims.sub, req).await {
+    match chat.create_tree(claims.sub, req).await {
         Ok(tree) => (axum::http::StatusCode::CREATED, Json(tree)).into_response(),
         Err(e) => e.into_response(),
     }
 }
 
 pub async fn get_tree_handler(
-    State(state): State<AppState>,
+    State(chat): State<ChatService>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<i64>,
 ) -> impl IntoResponse {
-    match state.chat.get_tree(claims.sub, id).await {
+    match chat.get_tree(claims.sub, id).await {
         Ok(Some(tree)) => Json(tree).into_response(),
         Ok(None) => error::not_found("对话树不存在"),
         Err(e) => e.into_response(),
@@ -83,34 +91,37 @@ pub async fn get_tree_handler(
 }
 
 pub async fn update_tree_handler(
-    State(state): State<AppState>,
+    State(chat): State<ChatService>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<i64>,
     Json(req): Json<UpdateTreeRequest>,
 ) -> impl IntoResponse {
-    match state.chat.update_tree(claims.sub, id, req).await {
+    match chat.update_tree(claims.sub, id, req).await {
         Ok(()) => axum::http::StatusCode::NO_CONTENT.into_response(),
         Err(e) => e.into_response(),
     }
 }
 
 pub async fn delete_tree_handler(
-    State(state): State<AppState>,
+    State(chat): State<ChatService>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<i64>,
 ) -> impl IntoResponse {
-    match state.chat.delete_tree(claims.sub, id).await {
+    match chat.delete_tree(claims.sub, id).await {
         Ok(()) => axum::http::StatusCode::NO_CONTENT.into_response(),
         Err(e) => e.into_response(),
     }
 }
 
 pub async fn generate_title_handler(
-    State(state): State<AppState>,
+    State(chat): State<ChatService>,
+    State(ai): State<AiService>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<i64>,
 ) -> impl IntoResponse {
-    match state.chat.generate_title(claims.sub, id, &state.ai).await {
+    // generate_title 接受 &dyn AiChatPort，AiService 实现了它
+    let ai_port: &dyn crate::modules::ai::port::AiChatPort = &ai;
+    match chat.generate_title(claims.sub, id, ai_port).await {
         Ok(title) => Json(serde_json::json!({ "title": title })).into_response(),
         Err(e) => e.into_response(),
     }
@@ -119,7 +130,8 @@ pub async fn generate_title_handler(
 // ── 对话 ──
 
 pub async fn chat_handler(
-    State(state): State<AppState>,
+    State(chat): State<ChatService>,
+    State(ai): State<AiService>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<i64>,
     Json(req): Json<ChatRequest>,
@@ -127,8 +139,8 @@ pub async fn chat_handler(
     use axum::response::sse::{Event, KeepAlive, Sse};
     use std::convert::Infallible;
 
-    let svc = state.chat.clone();
-    let ai = state.ai.clone();
+    let svc = chat.clone();
+    let ai = ai.clone();
     let user_id = claims.sub;
 
     // 准备：校验 + 插 user 节点 + 组装链（此时未调 AI）
@@ -153,8 +165,6 @@ pub async fn chat_handler(
             .await;
         match result {
             Ok((full, _model, reasoning, _)) => {
-                // 先落库再发 __DONE__：前端收到结束标记会立即重拉树，
-                // 若在 INSERT 提交前查询会丢失刚生成的回复；落库失败则回滚 user 节点。
                 match svc2.finish_chat(&ctx2, &full, reasoning.as_deref()).await {
                     Ok(_) => {
                         let _ = tx.send(SSE_DONE.to_string()).await;
@@ -186,12 +196,12 @@ pub async fn chat_handler(
 }
 
 pub async fn revise_node_handler(
-    State(state): State<AppState>,
+    State(chat): State<ChatService>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<i64>,
     Json(req): Json<ReviseRequest>,
 ) -> impl IntoResponse {
-    match state.chat.revise_node(claims.sub, id, req).await {
+    match chat.revise_node(claims.sub, id, req).await {
         Ok(resp) => Json(resp).into_response(),
         Err(e) => e.into_response(),
     }
@@ -200,7 +210,7 @@ pub async fn revise_node_handler(
 // ── 搜索 ──
 
 pub async fn search_handler(
-    State(state): State<AppState>,
+    State(query): State<ChatQueryService>,
     Extension(claims): Extension<Claims>,
     Query(params): Query<SearchParams>,
 ) -> impl IntoResponse {
@@ -208,8 +218,7 @@ pub async fn search_handler(
     if q.is_empty() {
         return Json(serde_json::json!({ "hits": [] })).into_response();
     }
-    match state
-        .chat_query
+    match query
         .search(claims.sub, q, params.limit.unwrap_or(20))
         .await
     {
@@ -221,22 +230,21 @@ pub async fn search_handler(
 // ── 预设提示词 ──
 
 pub async fn list_presets_handler(
-    State(state): State<AppState>,
+    State(chat): State<ChatService>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match state.chat.list_presets(claims.sub).await {
+    match chat.list_presets(claims.sub).await {
         Ok(presets) => Json(presets).into_response(),
         Err(e) => e.into_response(),
     }
 }
 
 pub async fn create_preset_handler(
-    State(state): State<AppState>,
+    State(chat): State<ChatService>,
     Extension(claims): Extension<Claims>,
     Json(req): Json<PresetRequest>,
 ) -> impl IntoResponse {
-    match state
-        .chat
+    match chat
         .create_preset(claims.sub, &req.name, &req.content)
         .await
     {
@@ -246,13 +254,12 @@ pub async fn create_preset_handler(
 }
 
 pub async fn update_preset_handler(
-    State(state): State<AppState>,
+    State(chat): State<ChatService>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<i64>,
     Json(req): Json<PresetRequest>,
 ) -> impl IntoResponse {
-    match state
-        .chat
+    match chat
         .update_preset(claims.sub, id, &req.name, &req.content)
         .await
     {
@@ -262,11 +269,11 @@ pub async fn update_preset_handler(
 }
 
 pub async fn delete_preset_handler(
-    State(state): State<AppState>,
+    State(chat): State<ChatService>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<i64>,
 ) -> impl IntoResponse {
-    match state.chat.delete_preset(claims.sub, id).await {
+    match chat.delete_preset(claims.sub, id).await {
         Ok(()) => axum::http::StatusCode::NO_CONTENT.into_response(),
         Err(e) => e.into_response(),
     }

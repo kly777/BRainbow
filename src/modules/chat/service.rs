@@ -1,7 +1,7 @@
 use sqlx::{FromRow, SqlitePool};
 
 use crate::modules::ai::model::AiProxyMessage;
-use crate::modules::ai::service::AiService;
+use crate::modules::ai::port::AiChatPort;
 use crate::shared::error_types::ServiceError;
 use crate::shared::time_text::utc_now_iso;
 
@@ -284,7 +284,7 @@ impl ChatService {
         &self,
         user_id: i32,
         tree_id: i64,
-        ai: &AiService,
+        ai: &dyn AiChatPort,
     ) -> Result<String, ServiceError> {
         let detail = self
             .get_tree(user_id, tree_id)

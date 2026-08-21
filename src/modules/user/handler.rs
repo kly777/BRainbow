@@ -8,7 +8,11 @@ use std::collections::HashMap;
 
 use crate::shared::claims::Claims;
 
-use crate::modules::state::AppState;
+use crate::modules::admin::port::AdminServicePort;
+use crate::modules::admin::service::AdminService;
+
+use super::query::UserQueryService;
+use super::service::UserService;
 
 #[derive(Debug, Deserialize)]
 pub struct LoginRequest {
@@ -25,10 +29,11 @@ pub struct LoginResponse {
 }
 
 pub async fn register_handler(
-    State(state): State<AppState>,
+    State(admin): State<AdminService>,
+    State(user): State<UserService>,
     Json(payload): Json<LoginRequest>,
 ) -> impl IntoResponse {
-    if !state.allow_register_active().await {
+    if !admin.allow_register_active().await {
         return (
             axum::http::StatusCode::FORBIDDEN,
             Json(serde_json::json!({
@@ -38,9 +43,8 @@ pub async fn register_handler(
         )
             .into_response();
     }
-    match state
-        .user
-        .register(payload.name, payload.password, &state.jwt_secret_active())
+    match user
+        .register(payload.name, payload.password, &admin.jwt_secret_active())
         .await
     {
         Ok((user, token)) => Json(LoginResponse {
@@ -55,12 +59,12 @@ pub async fn register_handler(
 }
 
 pub async fn login_handler(
-    State(state): State<AppState>,
+    State(admin): State<AdminService>,
+    State(user): State<UserService>,
     Json(payload): Json<LoginRequest>,
 ) -> impl IntoResponse {
-    match state
-        .user
-        .login(&payload.name, &payload.password, &state.jwt_secret_active())
+    match user
+        .login(&payload.name, &payload.password, &admin.jwt_secret_active())
         .await
     {
         Ok((user, token)) => Json(LoginResponse {
@@ -76,10 +80,10 @@ pub async fn login_handler(
 
 /// 返回当前登录用户信息（原为全部用户列表 —— 最小化，避免用户枚举）
 pub async fn user_handler(
-    State(state): State<AppState>,
+    State(query): State<UserQueryService>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match state.user_query.find_by_id(claims.sub).await {
+    match query.find_by_id(claims.sub).await {
         Ok(Some(u)) => {
             let mut m = HashMap::new();
             m.insert("id".to_string(), u.id.to_string());
@@ -103,12 +107,11 @@ pub struct ChangePasswordRequest {
 }
 
 pub async fn change_password_handler(
-    State(state): State<AppState>,
+    State(user): State<UserService>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ChangePasswordRequest>,
 ) -> impl IntoResponse {
-    match state
-        .user
+    match user
         .change_password(claims.sub, &payload.old_password, &payload.new_password)
         .await
     {

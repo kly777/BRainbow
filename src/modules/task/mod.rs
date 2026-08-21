@@ -1,14 +1,15 @@
 mod dto;
 mod handler;
 mod model;
+pub mod port;
 mod query;
 mod repository;
 mod response;
 pub(crate) mod service;
 
-use crate::modules::state::AppState;
 use axum::{
     Router,
+    extract::FromRef,
     routing::{delete, get, post},
 };
 
@@ -25,7 +26,12 @@ pub use handler::{
 pub use query::TaskQueryService;
 pub use service::TaskService;
 
-pub fn routes() -> Router<AppState> {
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    TaskService: FromRef<S>,
+    TaskQueryService: FromRef<S>,
+{
     Router::new()
         .route("/", get(get_tasks_handler).post(create_task_handler))
         .route("/all", get(get_all_tasks_handler))

@@ -9,15 +9,14 @@ use super::super::model::Task;
 use super::super::query::TaskQueryService;
 use super::super::response::{CalendarEvent, StatsResponse, TaskResponse, TreeNode};
 use super::dependency::{CalendarQuery, DagQuery, TreeQuery};
-use crate::modules::state::AppState;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 
 pub async fn get_tree_handler(
     Query(query): Query<TreeQuery>,
-    State(state): State<AppState>,
+    State(query_service): State<TaskQueryService>,
 ) -> impl IntoResponse {
-    let svc = &state.task_query;
+    let svc = &query_service;
 
     let root_tasks = match svc.tree(None).await {
         Ok(tasks) => tasks,
@@ -67,9 +66,9 @@ fn build_tree_node<'a>(
 
 pub async fn get_calendar_handler(
     Query(query): Query<CalendarQuery>,
-    State(state): State<AppState>,
+    State(query_service): State<TaskQueryService>,
 ) -> impl IntoResponse {
-    let svc = &state.task_query;
+    let svc = &query_service;
 
     match svc.calendar(query.start, query.end, query.status).await {
         Ok(entries) => {
@@ -92,9 +91,9 @@ pub async fn get_calendar_handler(
 
 pub async fn get_dag_handler(
     Query(query): Query<DagQuery>,
-    State(state): State<AppState>,
+    State(query_service): State<TaskQueryService>,
 ) -> impl IntoResponse {
-    let svc = &state.task_query;
+    let svc = &query_service;
 
     match svc.dag(query.task_id, query.depth.unwrap_or(3)).await {
         Ok(view) => Json(view).into_response(),
@@ -102,8 +101,8 @@ pub async fn get_dag_handler(
     }
 }
 
-pub async fn get_stats_handler(State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.task_query;
+pub async fn get_stats_handler(State(query_service): State<TaskQueryService>) -> impl IntoResponse {
+    let svc = &query_service;
     match svc.stats().await {
         Ok((backlog, active, completed, archived)) => Json(StatsResponse {
             backlog,
@@ -118,7 +117,7 @@ pub async fn get_stats_handler(State(state): State<AppState>) -> impl IntoRespon
 
 pub async fn search_tasks_handler(
     Query(mut params): Query<HashMap<String, String>>,
-    State(state): State<AppState>,
+    State(query_service): State<TaskQueryService>,
 ) -> impl IntoResponse {
     let query = match params.remove("q") {
         Some(q) if !q.is_empty() => q,
@@ -135,7 +134,7 @@ pub async fn search_tasks_handler(
             .unwrap_or(20),
     };
 
-    let svc = &state.task_query;
+    let svc = &query_service;
     match svc
         .search(&query, pagination.limit(), pagination.offset())
         .await

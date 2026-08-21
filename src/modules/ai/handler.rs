@@ -1,16 +1,20 @@
 use axum::{
     Json, Router,
-    extract::{Extension, State},
+    extract::{Extension, FromRef, State},
     response::IntoResponse,
     routing::{get, post},
 };
 
-use crate::modules::state::AppState;
 use crate::shared::claims::Claims;
 
 use super::model::{AiProxyRequest, UpdateAiSettingsRequest};
+use super::service::AiService;
 
-pub fn routes() -> Router<AppState> {
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    AiService: FromRef<S>,
+{
     Router::new()
         .route(
             "/settings",
@@ -20,33 +24,32 @@ pub fn routes() -> Router<AppState> {
 }
 
 pub async fn get_settings_handler(
-    State(state): State<AppState>,
+    State(ai): State<AiService>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match state.ai.get_settings(claims.sub).await {
+    match ai.get_settings(claims.sub).await {
         Ok(s) => Json(s).into_response(),
         Err(e) => e.into_response(),
     }
 }
 
 pub async fn update_settings_handler(
-    State(state): State<AppState>,
+    State(ai): State<AiService>,
     Extension(claims): Extension<Claims>,
     Json(req): Json<UpdateAiSettingsRequest>,
 ) -> impl IntoResponse {
-    match state.ai.update_settings(claims.sub, req).await {
+    match ai.update_settings(claims.sub, req).await {
         Ok(s) => Json(s).into_response(),
         Err(e) => e.into_response(),
     }
 }
 
 pub async fn chat_proxy_handler(
-    State(state): State<AppState>,
+    State(ai): State<AiService>,
     Extension(claims): Extension<Claims>,
     Json(req): Json<AiProxyRequest>,
 ) -> impl IntoResponse {
-    match state
-        .ai
+    match ai
         .chat(claims.sub, &req.messages, req.temperature, req.max_tokens)
         .await
     {

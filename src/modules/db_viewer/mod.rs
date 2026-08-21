@@ -5,10 +5,13 @@ pub mod service;
 
 pub use service::DbViewerQueryService;
 
-use crate::modules::state::AppState;
-use axum::{Router, routing::get};
+use axum::{Router, extract::FromRef, routing::get};
 
-pub fn routes() -> Router<AppState> {
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    DbViewerQueryService: FromRef<S>,
+{
     Router::new()
         .route("/", get(handler::get_table_names))
         .route("/{table_name}/export", get(handler::export_table_data))

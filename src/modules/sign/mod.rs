@@ -12,10 +12,14 @@ pub use handler::{
     get_signs_by_signifier_handler, get_signs_handler,
 };
 
-use crate::modules::state::AppState;
-use axum::{Router, routing::get};
+use axum::{Router, extract::FromRef, routing::get};
 
-pub fn routes() -> Router<AppState> {
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    SignService: FromRef<S>,
+    SignQueryService: FromRef<S>,
+{
     Router::new()
         .route("/", get(get_signs_handler).post(create_sign_handler))
         .route("/{id}", get(get_sign_handler).delete(delete_sign_handler))

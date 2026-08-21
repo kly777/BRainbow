@@ -4,16 +4,17 @@ use axum::{
 };
 
 use super::super::model::TaskStatus;
+use super::super::query::TaskQueryService;
 use super::super::response::TaskResponse;
-use crate::modules::state::AppState;
+use super::super::service::TaskService;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 
 pub async fn complete_task_handler(
     Path(id): Path<i32>,
-    State(state): State<AppState>,
+    State(service): State<TaskService>,
 ) -> impl IntoResponse {
-    match state.task.complete(id).await {
+    match service.complete(id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -21,9 +22,9 @@ pub async fn complete_task_handler(
 
 pub async fn activate_task_handler(
     Path(id): Path<i32>,
-    State(state): State<AppState>,
+    State(service): State<TaskService>,
 ) -> impl IntoResponse {
-    match state.task.activate(id).await {
+    match service.activate(id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -31,9 +32,9 @@ pub async fn activate_task_handler(
 
 pub async fn archive_task_handler(
     Path(id): Path<i32>,
-    State(state): State<AppState>,
+    State(service): State<TaskService>,
 ) -> impl IntoResponse {
-    match state.task.archive(id).await {
+    match service.archive(id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -41,9 +42,9 @@ pub async fn archive_task_handler(
 
 pub async fn move_to_backlog_handler(
     Path(id): Path<i32>,
-    State(state): State<AppState>,
+    State(service): State<TaskService>,
 ) -> impl IntoResponse {
-    match state.task.move_to_backlog(id).await {
+    match service.move_to_backlog(id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -51,10 +52,9 @@ pub async fn move_to_backlog_handler(
 
 pub async fn get_backlog_tasks_handler(
     Query(pagination): Query<Pagination>,
-    State(state): State<AppState>,
+    State(query): State<TaskQueryService>,
 ) -> impl IntoResponse {
-    match state
-        .task_query
+    match query
         .by_status(TaskStatus::Backlog, pagination.limit(), pagination.offset())
         .await
     {
@@ -68,10 +68,9 @@ pub async fn get_backlog_tasks_handler(
 
 pub async fn get_active_tasks_handler(
     Query(pagination): Query<Pagination>,
-    State(state): State<AppState>,
+    State(query): State<TaskQueryService>,
 ) -> impl IntoResponse {
-    match state
-        .task_query
+    match query
         .by_status(TaskStatus::Active, pagination.limit(), pagination.offset())
         .await
     {
@@ -85,10 +84,9 @@ pub async fn get_active_tasks_handler(
 
 pub async fn get_completed_tasks_handler(
     Query(pagination): Query<Pagination>,
-    State(state): State<AppState>,
+    State(query): State<TaskQueryService>,
 ) -> impl IntoResponse {
-    match state
-        .task_query
+    match query
         .by_status(
             TaskStatus::Completed,
             pagination.limit(),
@@ -106,10 +104,9 @@ pub async fn get_completed_tasks_handler(
 
 pub async fn get_archived_tasks_handler(
     Query(pagination): Query<Pagination>,
-    State(state): State<AppState>,
+    State(query): State<TaskQueryService>,
 ) -> impl IntoResponse {
-    match state
-        .task_query
+    match query
         .by_status(
             TaskStatus::Archived,
             pagination.limit(),

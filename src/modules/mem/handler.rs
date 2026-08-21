@@ -11,8 +11,13 @@ use std::collections::HashMap;
 use crate::guard_empty_batch;
 use crate::modules::mem::dto::*;
 use crate::modules::mem::model::*;
-use crate::modules::mem::port::MemMaintenance;
-use crate::modules::state::AppState;
+use std::sync::Arc;
+
+use super::config::MemConfig;
+use super::maintenance::DbMemMaintenance;
+use super::port::MemMaintenance;
+use super::query::MemQueryService;
+use super::service::MemService;
 use crate::shared::batch::{BatchDataResponse, BatchRequest, BatchResponse};
 use crate::shared::error_types as error;
 
@@ -38,10 +43,10 @@ impl IntoResponse for MemError {
 // ═══════════════════════════════════════════════════════════════
 
 pub async fn get_all(
-    State(state): State<AppState>,
+    State(query): State<MemQueryService>,
     Query(p): Query<MemQuery>,
 ) -> impl IntoResponse {
-    let svc = &state.mem_query;
+    let svc = &query;
     match svc.get_all(&p).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => err(e, "获取全部"),
@@ -49,7 +54,8 @@ pub async fn get_all(
 }
 
 pub async fn get_session_estimate(
-    State(state): State<AppState>,
+    State(query): State<MemQueryService>,
+    State(config): State<Arc<MemConfig>>,
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
     let tag_ids: Vec<i32> = params
@@ -60,9 +66,9 @@ pub async fn get_session_estimate(
         .get("exclude_tag_ids")
         .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
         .unwrap_or_default();
-    let svc = &state.mem_query;
+    let svc = &query;
     match svc
-        .get_session_estimate(&state.mem_config, &tag_ids, &exclude_tag_ids)
+        .get_session_estimate(&*config, &tag_ids, &exclude_tag_ids)
         .await
     {
         Ok(est) => Json(est).into_response(),
@@ -70,8 +76,8 @@ pub async fn get_session_estimate(
     }
 }
 
-pub async fn get_counts(State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem_query;
+pub async fn get_counts(State(query): State<MemQueryService>) -> impl IntoResponse {
+    let svc = &query;
     match svc.get_counts().await {
         Ok(counts) => Json(counts).into_response(),
         Err(e) => err(e, "获取统计"),
@@ -79,10 +85,10 @@ pub async fn get_counts(State(state): State<AppState>) -> impl IntoResponse {
 }
 
 pub async fn list_tags(
-    State(state): State<AppState>,
+    State(query): State<MemQueryService>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    let svc = &state.mem_query;
+    let svc = &query;
     match svc.list_tags(claims.sub).await {
         Ok(tags) => Json(tags).into_response(),
         Err(e) => err(e, "列出标签"),
@@ -90,20 +96,23 @@ pub async fn list_tags(
 }
 
 pub async fn search_tags(
-    State(state): State<AppState>,
+    State(query): State<MemQueryService>,
     Extension(claims): Extension<Claims>,
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
     let q = params.get("q").map(|s| s.as_str()).unwrap_or("");
-    let svc = &state.mem_query;
+    let svc = &query;
     match svc.search_tags(claims.sub, q).await {
         Ok(tags) => Json(tags).into_response(),
         Err(e) => err(e, "搜索标签"),
     }
 }
 
-pub async fn get_mem_tags(State(state): State<AppState>, Path(id): Path<i32>) -> impl IntoResponse {
-    let svc = &state.mem_query;
+pub async fn get_mem_tags(
+    State(query): State<MemQueryService>,
+    Path(id): Path<i32>,
+) -> impl IntoResponse {
+    let svc = &query;
     match svc.get_mem_tags(id).await {
         Ok(tags) => Json(tags).into_response(),
         Err(e) => err(e, "获取记忆标签"),
@@ -111,18 +120,18 @@ pub async fn get_mem_tags(State(state): State<AppState>, Path(id): Path<i32>) ->
 }
 
 pub async fn batch_get_mems_tags(
-    State(state): State<AppState>,
+    State(query): State<MemQueryService>,
     Json(payload): Json<BatchRequest<i32>>,
 ) -> Json<BatchDataResponse<MemTagRow>> {
     if payload.items.is_empty() {
         return Json(BatchDataResponse::empty());
     }
-    let svc = &state.mem_query;
+    let svc = &query;
     Json(svc.get_mems_tags_batch(&payload.items).await)
 }
 
 pub async fn export_csv(
-    State(state): State<AppState>,
+    State(query): State<MemQueryService>,
     Extension(_claims): Extension<Claims>,
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
@@ -130,7 +139,7 @@ pub async fn export_csv(
         .get("tag_ids")
         .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
         .unwrap_or_default();
-    let svc = &state.mem_query;
+    let svc = &query;
     match svc.export_csv(&tag_ids).await {
         Ok(psv) => (
             [
@@ -144,16 +153,22 @@ pub async fn export_csv(
     }
 }
 
-pub async fn preview_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem_query;
+pub async fn preview_mem(
+    Path(id): Path<i32>,
+    State(query): State<MemQueryService>,
+) -> impl IntoResponse {
+    let svc = &query;
     match svc.preview(id).await {
         Ok(secs) => Json(serde_json::json!({ "intervals": secs })).into_response(),
         Err(e) => e.into_response(),
     }
 }
 
-pub async fn get_mnemonic(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem_query;
+pub async fn get_mnemonic(
+    Path(id): Path<i32>,
+    State(query): State<MemQueryService>,
+) -> impl IntoResponse {
+    let svc = &query;
     match svc.get_mnemonic(id).await {
         Ok(Some(content)) => Json(serde_json::json!({ "content": content })).into_response(),
         Ok(None) => Json(serde_json::json!({ "content": null })).into_response(),
@@ -161,8 +176,8 @@ pub async fn get_mnemonic(Path(id): Path<i32>, State(state): State<AppState>) ->
     }
 }
 
-pub async fn upcoming_counts(State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem_query;
+pub async fn upcoming_counts(State(query): State<MemQueryService>) -> impl IntoResponse {
+    let svc = &query;
     match svc.upcoming_counts().await {
         Ok(v) => Json(v).into_response(),
         Err(e) => err(e, "查询 upcoming 数量"),
@@ -174,41 +189,41 @@ pub async fn upcoming_counts(State(state): State<AppState>) -> impl IntoResponse
 // ═══════════════════════════════════════════════════════════════
 
 pub async fn batch_bury(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Json(payload): Json<BatchRequest<i32>>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
-    let svc = &state.mem;
+    let svc = &service;
     Json(svc.batch_bury(&payload.items).await)
 }
 
 pub async fn batch_delete(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Json(payload): Json<BatchRequest<i32>>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
-    let svc = &state.mem;
+    let svc = &service;
     Json(svc.batch_delete(&payload.items).await)
 }
 
 pub async fn batch_reset(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Json(payload): Json<BatchRequest<i32>>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
-    let svc = &state.mem;
+    let svc = &service;
     Json(svc.batch_reset(&payload.items).await)
 }
 
 pub async fn create_tag(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateTagRequest>,
 ) -> impl IntoResponse {
     if payload.name.trim().is_empty() {
         return error::bad_request("标签名不能为空");
     }
-    let svc = &state.mem;
+    let svc = &service;
     match svc.create_tag(payload.name.trim(), claims.sub).await {
         Ok(tag) => Json(tag).into_response(),
         Err(e) => err(e, "创建标签"),
@@ -216,11 +231,11 @@ pub async fn create_tag(
 }
 
 pub async fn delete_tag(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Extension(_claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let svc = &state.mem;
+    let svc = &service;
     match svc.delete_tag(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "删除标签"),
@@ -228,10 +243,10 @@ pub async fn delete_tag(
 }
 
 pub async fn add_mem_tag(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Json(payload): Json<TagMemRequest>,
 ) -> impl IntoResponse {
-    let svc = &state.mem;
+    let svc = &service;
     match svc.add_tag_to_mem(payload.mem_id, payload.tag_id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "添加标签"),
@@ -239,10 +254,10 @@ pub async fn add_mem_tag(
 }
 
 pub async fn remove_mem_tag(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Json(payload): Json<TagMemRequest>,
 ) -> impl IntoResponse {
-    let svc = &state.mem;
+    let svc = &service;
     match svc
         .remove_tag_from_mem(payload.mem_id, payload.tag_id)
         .await
@@ -253,10 +268,10 @@ pub async fn remove_mem_tag(
 }
 
 pub async fn set_mem_tags(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Json(payload): Json<SetTagsRequest>,
 ) -> impl IntoResponse {
-    let svc = &state.mem;
+    let svc = &service;
     match svc.set_mem_tags(payload.mem_id, &payload.tag_ids).await {
         Ok(()) => ok(),
         Err(e) => err(e, "设置标签"),
@@ -278,11 +293,11 @@ pub struct BatchSetTagsRequest {
 }
 
 pub async fn batch_add_tag(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Json(payload): Json<BatchTagRequest>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
-    let svc = &state.mem;
+    let svc = &service;
     Json(
         svc.batch_add_tag_to_mems(&payload.items, payload.tag_id)
             .await,
@@ -290,11 +305,11 @@ pub async fn batch_add_tag(
 }
 
 pub async fn batch_remove_tag(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Json(payload): Json<BatchTagRequest>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
-    let svc = &state.mem;
+    let svc = &service;
     Json(
         svc.batch_remove_tag_from_mems(&payload.items, payload.tag_id)
             .await,
@@ -302,11 +317,11 @@ pub async fn batch_remove_tag(
 }
 
 pub async fn batch_set_tags(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Json(payload): Json<BatchSetTagsRequest>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
-    let svc = &state.mem;
+    let svc = &service;
     Json(
         svc.batch_set_tags_for_mems(&payload.items, &payload.tag_ids)
             .await,
@@ -323,11 +338,11 @@ pub struct ImportCsvPayload {
 }
 
 pub async fn import_csv(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ImportCsvPayload>,
 ) -> impl IntoResponse {
-    let svc = &state.mem;
+    let svc = &service;
     match svc
         .import_csv(&payload.csv, claims.sub, &payload.default_tags)
         .await
@@ -342,11 +357,11 @@ pub async fn import_csv(
 }
 
 pub async fn import_psv(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ImportCsvPayload>,
 ) -> impl IntoResponse {
-    let svc = &state.mem;
+    let svc = &service;
     match svc
         .import_psv(&payload.csv, claims.sub, &payload.default_tags)
         .await
@@ -368,11 +383,11 @@ pub struct ImportJsonPayload {
 }
 
 pub async fn import_json(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ImportJsonPayload>,
 ) -> impl IntoResponse {
-    let svc = &state.mem;
+    let svc = &service;
     match svc
         .import_json(&payload.mems, claims.sub, &payload.default_tags)
         .await
@@ -389,7 +404,7 @@ pub async fn import_json(
 // ── get_due（含侧面写操作：新卡标注 learning）──
 
 pub async fn get_due(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
     let limit = params
@@ -404,7 +419,7 @@ pub async fn get_due(
         .get("exclude_tag_ids")
         .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
         .unwrap_or_default();
-    let svc = &state.mem;
+    let svc = &service;
     match svc.get_due(limit, &tag_ids, &exclude_tag_ids).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => err(e, "获取待复习"),
@@ -414,10 +429,10 @@ pub async fn get_due(
 // ── 纯写操作 ──
 
 pub async fn create_mem(
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Json(body): Json<CreateMemRequest>,
 ) -> impl IntoResponse {
-    let svc = &state.mem;
+    let svc = &service;
     match svc.create(body).await {
         Ok(id) => Json(serde_json::json!({ "id": id })).into_response(),
         Err(e) => err(e, "创建记忆项"),
@@ -426,10 +441,10 @@ pub async fn create_mem(
 
 pub async fn review_mem(
     Path(id): Path<i32>,
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Json(body): Json<ReviewRequest>,
 ) -> impl IntoResponse {
-    let svc = &state.mem;
+    let svc = &service;
     match svc.review(id, body.rating, body.duration_secs).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => e.into_response(),
@@ -438,10 +453,10 @@ pub async fn review_mem(
 
 pub async fn undo_review(
     Path(id): Path<i32>,
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Json(body): Json<UndoRequest>,
 ) -> impl IntoResponse {
-    let svc = &state.mem;
+    let svc = &service;
     match svc.undo(id, body).await {
         Ok(()) => ok(),
         Err(e) => err(e, "撤销"),
@@ -450,34 +465,40 @@ pub async fn undo_review(
 
 pub async fn edit_mem(
     Path(id): Path<i32>,
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Json(body): Json<EditMemRequest>,
 ) -> impl IntoResponse {
-    let svc = &state.mem;
+    let svc = &service;
     match svc.edit(id, body).await {
         Ok(()) => ok(),
         Err(e) => e.into_response(),
     }
 }
 
-pub async fn bury_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem;
+pub async fn bury_mem(Path(id): Path<i32>, State(service): State<MemService>) -> impl IntoResponse {
+    let svc = &service;
     match svc.bury(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "跳过"),
     }
 }
 
-pub async fn unbury_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem;
+pub async fn unbury_mem(
+    Path(id): Path<i32>,
+    State(service): State<MemService>,
+) -> impl IntoResponse {
+    let svc = &service;
     match svc.unbury(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "取消跳过"),
     }
 }
 
-pub async fn suspend_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem;
+pub async fn suspend_mem(
+    Path(id): Path<i32>,
+    State(service): State<MemService>,
+) -> impl IntoResponse {
+    let svc = &service;
     match svc.suspend(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "挂起"),
@@ -486,25 +507,31 @@ pub async fn suspend_mem(Path(id): Path<i32>, State(state): State<AppState>) -> 
 
 pub async fn unsuspend_mem(
     Path(id): Path<i32>,
-    State(state): State<AppState>,
+    State(service): State<MemService>,
 ) -> impl IntoResponse {
-    let svc = &state.mem;
+    let svc = &service;
     match svc.unsuspend(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "恢复"),
     }
 }
 
-pub async fn reset_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem;
+pub async fn reset_mem(
+    Path(id): Path<i32>,
+    State(service): State<MemService>,
+) -> impl IntoResponse {
+    let svc = &service;
     match svc.reset(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "重置"),
     }
 }
 
-pub async fn delete_mem(Path(id): Path<i32>, State(state): State<AppState>) -> impl IntoResponse {
-    let svc = &state.mem;
+pub async fn delete_mem(
+    Path(id): Path<i32>,
+    State(service): State<MemService>,
+) -> impl IntoResponse {
+    let svc = &service;
     match svc.delete(id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "删除"),
@@ -513,12 +540,12 @@ pub async fn delete_mem(Path(id): Path<i32>, State(state): State<AppState>) -> i
 
 pub async fn set_mnemonic(
     Path(id): Path<i32>,
-    State(state): State<AppState>,
+    State(service): State<MemService>,
     Json(body): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     match body.get("content").and_then(|v| v.as_str()) {
         Some(content) => {
-            let svc = &state.mem;
+            let svc = &service;
             match svc.set_mnemonic(id, content).await {
                 Ok(()) => ok(),
                 Err(e) => err(e, "保存助记"),
@@ -529,8 +556,8 @@ pub async fn set_mnemonic(
 }
 
 /// 优化 FSRS 参数（通过 maintenance adapter，handler 不直接接触数据库）
-pub async fn optimize_params(State(state): State<AppState>) -> impl IntoResponse {
-    match state.mem_maintenance.optimize_now().await {
+pub async fn optimize_params(State(maintenance): State<DbMemMaintenance>) -> impl IntoResponse {
+    match maintenance.optimize_now().await {
         Ok(Some(params)) => Json(serde_json::json!({
             "ok": true,
             "params": params,

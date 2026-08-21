@@ -4,9 +4,11 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::modules::state::AppState;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
+
+use super::query::BookmarkQueryService;
+use super::service::BookmarkService;
 
 use super::model::{
     Bookmark, CreateBookmarkRequest, SetBookmarkTagsRequest, UpdateBookmarkRequest,
@@ -82,7 +84,7 @@ fn validate_url(url: &str) -> Result<(), String> {
 }
 
 pub async fn create_bookmark_handler(
-    State(state): State<AppState>,
+    State(service): State<BookmarkService>,
     Json(payload): Json<CreateBookmarkRequest>,
 ) -> impl IntoResponse {
     let title = payload.title.trim();
@@ -102,8 +104,7 @@ pub async fn create_bookmark_handler(
         .filter(|t| !t.trim().is_empty())
         .collect();
 
-    let result = state
-        .bookmark
+    let result = service
         .create(title, url, description, &tags)
         .await
         .map(BookmarkResponse::from);
@@ -129,7 +130,7 @@ impl ListBookmarksQuery {
 
 pub async fn get_bookmarks_handler(
     Query(params): Query<ListBookmarksQuery>,
-    State(state): State<AppState>,
+    State(query): State<BookmarkQueryService>,
 ) -> impl IntoResponse {
     let pagination = params.pagination();
     let tag = params
@@ -137,8 +138,7 @@ pub async fn get_bookmarks_handler(
         .as_deref()
         .map(str::trim)
         .filter(|s| !s.is_empty());
-    let result = state
-        .bookmark_query
+    let result = query
         .list(pagination.limit(), pagination.offset(), tag)
         .await
         .map(|(items, total)| {
@@ -150,11 +150,10 @@ pub async fn get_bookmarks_handler(
 }
 
 pub async fn get_bookmark_handler(
-    State(state): State<AppState>,
+    State(query): State<BookmarkQueryService>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let result = state
-        .bookmark_query
+    let result = query
         .by_id(id)
         .await
         .map(|opt| opt.map(BookmarkResponse::from));
@@ -162,7 +161,7 @@ pub async fn get_bookmark_handler(
 }
 
 pub async fn update_bookmark_handler(
-    State(state): State<AppState>,
+    State(service): State<BookmarkService>,
     Path(id): Path<i32>,
     Json(payload): Json<UpdateBookmarkRequest>,
 ) -> impl IntoResponse {
@@ -184,8 +183,7 @@ pub async fn update_bookmark_handler(
         return error::bad_request(&msg);
     }
 
-    let result = state
-        .bookmark
+    let result = service
         .update(id, title, url, description)
         .await
         .map(BookmarkResponse::from);
@@ -193,10 +191,10 @@ pub async fn update_bookmark_handler(
 }
 
 pub async fn delete_bookmark_handler(
-    State(state): State<AppState>,
+    State(service): State<BookmarkService>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    error::deleted_or(state.bookmark.delete(id).await, "删除书签")
+    error::deleted_or(service.delete(id).await, "删除书签")
 }
 
 #[derive(Debug, Deserialize)]
@@ -219,7 +217,7 @@ impl SearchBookmarksQuery {
 
 pub async fn search_bookmarks_handler(
     Query(params): Query<SearchBookmarksQuery>,
-    State(state): State<AppState>,
+    State(query): State<BookmarkQueryService>,
 ) -> impl IntoResponse {
     if params.q.trim().is_empty() {
         return error::bad_request("搜索关键词不能为空");
@@ -230,8 +228,7 @@ pub async fn search_bookmarks_handler(
         .as_deref()
         .map(str::trim)
         .filter(|s| !s.is_empty());
-    let result = state
-        .bookmark_query
+    let result = query
         .search(
             params.q.trim(),
             tag,
@@ -253,7 +250,7 @@ pub async fn search_bookmarks_handler(
 ///
 /// 文件夹路径作为标签；按 URL 去重合并。
 pub async fn import_bookmarks_handler(
-    State(state): State<AppState>,
+    State(service): State<BookmarkService>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
     let mut html: Option<String> = None;
@@ -294,7 +291,7 @@ pub async fn import_bookmarks_handler(
         ));
     }
 
-    match state.bookmark.import_netscape_html(&html).await {
+    match service.import_netscape_html(&html).await {
         Ok(result) => Json(result).into_response(),
         Err(e) => e.into_response(),
     }
@@ -307,10 +304,10 @@ pub struct SearchTagsQuery {
 
 pub async fn search_tags_handler(
     Query(params): Query<SearchTagsQuery>,
-    State(state): State<AppState>,
+    State(query): State<BookmarkQueryService>,
 ) -> impl IntoResponse {
     let q = params.q.as_deref().map(str::trim).filter(|s| !s.is_empty());
-    match state.bookmark_query.search_tags(q).await {
+    match query.search_tags(q).await {
         Ok(tags) => {
             let tags: Vec<BookmarkTagWithCountResponse> = tags
                 .into_iter()
@@ -328,15 +325,14 @@ pub struct CreateTagRequest {
 }
 
 pub async fn create_tag_handler(
-    State(state): State<AppState>,
+    State(service): State<BookmarkService>,
     Json(payload): Json<CreateTagRequest>,
 ) -> impl IntoResponse {
     let name = payload.name.trim();
     if name.is_empty() {
         return error::bad_request("标签名不能为空");
     }
-    let result = state
-        .bookmark
+    let result = service
         .create_tag(name)
         .await
         .map(BookmarkTagResponse::from);
@@ -344,17 +340,17 @@ pub async fn create_tag_handler(
 }
 
 pub async fn delete_tag_handler(
-    State(state): State<AppState>,
+    State(service): State<BookmarkService>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    error::deleted_or(state.bookmark.delete_tag(id).await, "删除标签")
+    error::deleted_or(service.delete_tag(id).await, "删除标签")
 }
 
 pub async fn get_bookmark_tags_handler(
-    State(state): State<AppState>,
+    State(query): State<BookmarkQueryService>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    match state.bookmark_query.get_bookmark_tags(id).await {
+    match query.get_bookmark_tags(id).await {
         Ok(tags) => {
             let tags: Vec<BookmarkTagResponse> =
                 tags.into_iter().map(BookmarkTagResponse::from).collect();
@@ -365,11 +361,11 @@ pub async fn get_bookmark_tags_handler(
 }
 
 pub async fn set_bookmark_tags_handler(
-    State(state): State<AppState>,
+    State(service): State<BookmarkService>,
     Path(id): Path<i32>,
     Json(payload): Json<SetBookmarkTagsRequest>,
 ) -> impl IntoResponse {
-    match state.bookmark.set_bookmark_tags(id, &payload.tags).await {
+    match service.set_bookmark_tags(id, &payload.tags).await {
         Ok(tags) => {
             let tags: Vec<BookmarkTagResponse> =
                 tags.into_iter().map(BookmarkTagResponse::from).collect();

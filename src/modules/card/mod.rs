@@ -12,9 +12,14 @@ pub use handler::{
     search_cards_handler, update_card_handler,
 };
 
-use axum::{Router, routing::get};
+use axum::{Router, extract::FromRef, routing::get};
 
-pub fn routes(card_service: CardService, card_query: CardQueryService) -> Router<()> {
+pub fn routes<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    CardService: FromRef<S>,
+    CardQueryService: FromRef<S>,
+{
     Router::new()
         .route("/", get(get_cards_handler).post(create_card_handler))
         .route(
@@ -24,5 +29,4 @@ pub fn routes(card_service: CardService, card_query: CardQueryService) -> Router
                 .delete(delete_card_handler),
         )
         .route("/search", get(search_cards_handler))
-        .with_state((card_service, card_query))
 }

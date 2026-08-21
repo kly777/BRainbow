@@ -45,6 +45,11 @@ use crate::shared::search::SearchPort;
 // ─────────────────────────────────────────────────────────────
 
 #[derive(Clone)]
+pub struct AuthState {
+    pub auth: AuthService,
+}
+
+#[derive(Clone)]
 pub struct AdminState {
     pub admin: AdminService,
 }
@@ -150,7 +155,7 @@ pub struct SearchState {
 #[derive(Clone)]
 pub struct AppState {
     pub db: Arc<SqlitePool>,
-    pub auth: AuthService,
+    pub auth: AuthState,
     pub admin: AdminState,
     pub ai: AiState,
     pub chat: ChatState,
@@ -184,7 +189,7 @@ impl FromRef<AppState> for AdminService {
 
 impl FromRef<AppState> for AuthService {
     fn from_ref(state: &AppState) -> Self {
-        state.auth.clone()
+        state.auth.auth.clone()
     }
 }
 
@@ -436,7 +441,7 @@ impl AppState {
 
         Self {
             db: db.clone(),
-            auth,
+            auth: AuthState { auth },
             admin: AdminState { admin },
             ai: AiState { ai },
             chat: ChatState { chat, chat_query },

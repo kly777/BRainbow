@@ -10,9 +10,10 @@
 }
 
 .row-detail-backdrop {
-	/* 只作为点击关闭的透明热区，不遮挡面板 */
+	/* 沉到面板后面：面板区域外点击穿透到此元素触发关闭 */
 	position: absolute;
 	inset: 0;
+	z-index: -1;
 	border: none;
 	background: transparent;
 	cursor: default;

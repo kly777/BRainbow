@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\",\n                      cue_chunk_id AS \"cue_chunk_id: i32\",\n                      target_chunk_id AS \"target_chunk_id: i32\",\n                      state,\n                      stability AS \"stability!: f64\",\n                      difficulty AS \"difficulty!: f64\",\n                      step_index AS \"step_index?: i32\",\n                      buried AS \"buried!: bool\",\n                      lapses AS \"lapses: i32\",\n                      leeched AS \"leeched!: bool\",\n                      COALESCE(due_at, '') AS \"due_at!: String\",\n                      last_review_at AS \"last_review_at?: String\"\n               FROM mem WHERE id = ?1",
+  "query": "SELECT id AS \"id: i32\",\n                      cue_chunk_id AS \"cue_chunk_id: i32\",\n                      target_chunk_id AS \"target_chunk_id: i32\",\n                      state,\n                      stability AS \"stability!: f64\",\n                      difficulty AS \"difficulty!: f64\",\n                      step_index AS \"step_index?: i32\",\n                      buried AS \"buried!: bool\",\n                      lapses AS \"lapses: i32\",\n                      leeched AS \"leeched!: bool\",\n                      COALESCE(due_at, '') AS \"due_at!: String\",\n                      last_review_at AS \"last_review_at?: String\"\n               FROM mem WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)",
   "describe": {
     "columns": [
       {
@@ -132,7 +132,7 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false,
@@ -149,5 +149,5 @@
       true
     ]
   },
-  "hash": "b448919b3e8a50cc27e0eda4d473a8d6de8acd479aad10c9e61dbfd58e0cda46"
+  "hash": "90f368a16101e7880504a4ed4db0c9308d08c4cc31f6d523e9a0dd065c3b3a86"
 }

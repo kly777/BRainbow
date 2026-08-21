@@ -8,14 +8,16 @@ use super::super::*;
 impl super::super::MemRepo {
     pub async fn create_mem(
         &self,
+        user_id: i32,
         cue_id: i32,
         target_id: i32,
         prerequisites: &[i32],
     ) -> Result<i32, sqlx::Error> {
         let mem_id = sqlx::query_scalar!(
-            r#"INSERT INTO mem (cue_chunk_id, target_chunk_id) VALUES (?1, ?2) RETURNING id AS "id!: i32""#,
+            r#"INSERT INTO mem (cue_chunk_id, target_chunk_id, user_id) VALUES (?1, ?2, ?3) RETURNING id AS "id!: i32""#,
             cue_id,
-            target_id
+            target_id,
+            user_id
         )
         .fetch_one(&*self.pool)
         .await?;
@@ -31,7 +33,7 @@ impl super::super::MemRepo {
         Ok(mem_id)
     }
 
-    pub async fn get_mem(&self, id: i32) -> Result<Option<MemRow>, sqlx::Error> {
+    pub async fn get_mem(&self, user_id: i32, id: i32) -> Result<Option<MemRow>, sqlx::Error> {
         sqlx::query_as!(
             MemDbRow,
             r#"SELECT id AS "id: i32",
@@ -46,8 +48,9 @@ impl super::super::MemRepo {
                       leeched AS "leeched!: bool",
                       COALESCE(due_at, '') AS "due_at!: String",
                       last_review_at AS "last_review_at?: String"
-               FROM mem WHERE id = ?1"#,
-            id
+               FROM mem WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+            id,
+            user_id
         )
         .fetch_optional(&*self.pool)
         .await
@@ -57,6 +60,7 @@ impl super::super::MemRepo {
     /// 读模型：一次 JOIN 批量取回 MemWithChunks，消除 N+1。
     pub async fn get_mems_with_chunks(
         &self,
+        user_id: i32,
         ids: &[i32],
     ) -> Result<Vec<MemWithChunks>, sqlx::Error> {
         if ids.is_empty() {
@@ -71,8 +75,10 @@ impl super::super::MemRepo {
              LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id
              LEFT JOIN chunk ct ON m.target_chunk_id = ct.id
              LEFT JOIN mem_mnemonic mm ON mm.mem_id = m.id
-             WHERE m.id IN (",
+             WHERE (m.user_id = ",
         );
+        qb.push_bind(user_id);
+        qb.push(" OR m.user_id IS NULL) AND m.id IN (");
         let mut sep = qb.separated(", ");
         for &id in ids {
             sep.push_bind(id);
@@ -119,13 +125,16 @@ impl super::super::MemRepo {
 
     pub async fn get_all_mems(
         &self,
+        user_id: i32,
         limit: i64,
         offset: i64,
         query: &MemQuery,
     ) -> Result<Vec<i32>, sqlx::Error> {
         let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
-            "SELECT m.id FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1",
+            "SELECT m.id FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1 AND (m.user_id = ",
         );
+        qb.push_bind(user_id);
+        qb.push(" OR m.user_id IS NULL)");
 
         if let Some(id) = query.id {
             qb.push(" AND m.id = ");
@@ -174,7 +183,7 @@ impl super::super::MemRepo {
                 qb.push("))");
             }
         }
-        // 黑名��过滤
+        // 黑名单过滤
         if let Some(ref exclude_str) = query.exclude_tag_ids {
             let ids: Vec<i32> = exclude_str
                 .split(',')
@@ -219,10 +228,12 @@ impl super::super::MemRepo {
         qb.build_query_scalar().fetch_all(&*self.pool).await
     }
 
-    pub async fn count_all_mems(&self, query: &MemQuery) -> Result<i64, sqlx::Error> {
+    pub async fn count_all_mems(&self, user_id: i32, query: &MemQuery) -> Result<i64, sqlx::Error> {
         let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
-            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1",
+            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1 AND (m.user_id = ",
         );
+        qb.push_bind(user_id);
+        qb.push(" OR m.user_id IS NULL)");
 
         if let Some(id) = query.id {
             qb.push(" AND m.id = ");
@@ -290,16 +301,17 @@ impl super::super::MemRepo {
         qb.build_query_scalar().fetch_one(&*self.pool).await
     }
 
-    pub async fn delete_mem(&self, id: i32) -> Result<(), sqlx::Error> {
+    pub async fn delete_mem(&self, user_id: i32, id: i32) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
 
-        // 先查出关联的 chunk id，删除 mem 后清理孤儿 chunk
+        // 先查出关联的 chunk id，删除 mem 后清理孤儿 chunk（所有权校验：本人或共享）
         let ids: MemChunkIdsRow = sqlx::query_as!(
             MemChunkIdsRow,
             r#"SELECT cue_chunk_id AS "cue_chunk_id: i32",
                       target_chunk_id AS "target_chunk_id: i32"
-               FROM mem WHERE id = ?1"#,
-            id
+               FROM mem WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+            id,
+            user_id
         )
         .fetch_optional(&mut *tx)
         .await?
@@ -363,13 +375,15 @@ impl super::super::MemRepo {
 
     // ── 学习池 ──
 
-    pub async fn get_next_mem(&self) -> Result<Option<i32>, sqlx::Error> {
+    pub async fn get_next_mem(&self, user_id: i32) -> Result<Option<i32>, sqlx::Error> {
         sqlx::query_scalar!(
             r#"SELECT m.id AS "id: i32" FROM mem m
-            WHERE m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')
+            WHERE (m.user_id = ?1 OR m.user_id IS NULL)
+              AND m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')
               AND m.buried = 0 AND m.state != 'suspended'
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
-            ORDER BY m.due_at LIMIT 1"#
+            ORDER BY m.due_at LIMIT 1"#,
+            user_id
         )
         .fetch_optional(&*self.pool)
         .await

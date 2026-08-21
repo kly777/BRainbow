@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO chunk (content) VALUES (?1) RETURNING id AS \"id!: i32\"",
+  "query": "INSERT INTO mem (cue_chunk_id, target_chunk_id, user_id) VALUES (?1, ?2, ?3) RETURNING id AS \"id!: i32\"",
   "describe": {
     "columns": [
       {
@@ -9,18 +9,18 @@
         "type_info": "Integer",
         "origin": {
           "Table": {
-            "table": "chunk",
+            "table": "mem",
             "name": "id"
           }
         }
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 3
     },
     "nullable": [
-      false
+      null
     ]
   },
-  "hash": "d2d93fdf97d1a7ff48962b80f6665e97428aa159fabf02094b8d057c16a79e4b"
+  "hash": "53cf8e9e67d322119674aeea2a576bacfe164bd0e777be561d19749555085897"
 }

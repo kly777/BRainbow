@@ -6,10 +6,11 @@
 use super::super::super::model::*;
 use super::super::*;
 impl super::super::MemRepo {
-    pub async fn create_chunk(&self, content: &str) -> Result<i32, sqlx::Error> {
+    pub async fn create_chunk(&self, user_id: i32, content: &str) -> Result<i32, sqlx::Error> {
         sqlx::query_scalar!(
-            r#"INSERT INTO chunk (content) VALUES (?1) RETURNING id AS "id!: i32""#,
-            content
+            r#"INSERT INTO chunk (content, user_id) VALUES (?1, ?2) RETURNING id AS "id!: i32""#,
+            content,
+            user_id
         )
         .fetch_one(&*self.pool)
         .await
@@ -37,11 +38,12 @@ impl super::super::MemRepo {
         })
     }
 
-    pub async fn update_chunk(&self, id: i32, content: &str) -> Result<(), sqlx::Error> {
+    pub async fn update_chunk(&self, user_id: i32, id: i32, content: &str) -> Result<(), sqlx::Error> {
         sqlx::query!(
-            "UPDATE chunk SET content=?1, updated_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?2",
+            "UPDATE chunk SET content=?1, updated_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?2 AND (user_id = ?3 OR user_id IS NULL)",
             content,
-            id
+            id,
+            user_id
         )
         .execute(&*self.pool)
         .await?;

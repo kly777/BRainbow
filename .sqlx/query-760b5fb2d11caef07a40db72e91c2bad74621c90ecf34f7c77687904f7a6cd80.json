@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) FROM mem WHERE state IN ('learning', 'relearning') AND buried = 0 AND state != 'suspended'",
+  "query": "SELECT COUNT(*) FROM mem WHERE (user_id = ?1 OR user_id IS NULL) AND buried = 1",
   "describe": {
     "columns": [
       {
@@ -11,11 +11,11 @@
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       false
     ]
   },
-  "hash": "ea4e2b0894bcb4c43e652cca6aa9631089d72ce7d3ca9ae0e7a58b32f0603c81"
+  "hash": "760b5fb2d11caef07a40db72e91c2bad74621c90ecf34f7c77687904f7a6cd80"
 }

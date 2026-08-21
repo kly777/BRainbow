@@ -34,7 +34,7 @@
       {
         "name": "created_at!: String",
         "ordinal": 3,
-        "type_info": "Datetime",
+        "type_info": "Text",
         "origin": "Expression"
       },
       {

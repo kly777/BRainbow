@@ -33,10 +33,11 @@ fn err(e: impl std::fmt::Display, op: &str) -> axum::response::Response {
 
 pub async fn get_all(
     State(query): State<MemQueryService>,
+    Extension(claims): Extension<Claims>,
     Query(p): Query<MemQuery>,
 ) -> impl IntoResponse {
     let svc = &query;
-    match svc.get_all(&p).await {
+    match svc.get_all(claims.sub, &p).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => err(e, "获取全部"),
     }
@@ -45,6 +46,7 @@ pub async fn get_all(
 pub async fn get_session_estimate(
     State(query): State<MemQueryService>,
     State(config): State<Arc<MemConfig>>,
+    Extension(claims): Extension<Claims>,
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
     let tag_ids: Vec<i32> = params
@@ -57,7 +59,7 @@ pub async fn get_session_estimate(
         .unwrap_or_default();
     let svc = &query;
     match svc
-        .get_session_estimate(&config, &tag_ids, &exclude_tag_ids)
+        .get_session_estimate(claims.sub, &config, &tag_ids, &exclude_tag_ids)
         .await
     {
         Ok(est) => Json(est).into_response(),
@@ -65,9 +67,12 @@ pub async fn get_session_estimate(
     }
 }
 
-pub async fn get_counts(State(query): State<MemQueryService>) -> impl IntoResponse {
+pub async fn get_counts(
+    State(query): State<MemQueryService>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
     let svc = &query;
-    match svc.get_counts().await {
+    match svc.get_counts(claims.sub).await {
         Ok(counts) => Json(counts).into_response(),
         Err(e) => err(e, "获取统计"),
     }
@@ -99,10 +104,11 @@ pub async fn search_tags(
 
 pub async fn get_mem_tags(
     State(query): State<MemQueryService>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let svc = &query;
-    match svc.get_mem_tags(id).await {
+    match svc.get_mem_tags(claims.sub, id).await {
         Ok(tags) => Json(tags).into_response(),
         Err(e) => err(e, "获取记忆标签"),
     }
@@ -110,18 +116,19 @@ pub async fn get_mem_tags(
 
 pub async fn batch_get_mems_tags(
     State(query): State<MemQueryService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<BatchRequest<i32>>,
 ) -> Json<BatchDataResponse<MemTagRow>> {
     if payload.items.is_empty() {
         return Json(BatchDataResponse::empty());
     }
     let svc = &query;
-    Json(svc.get_mems_tags_batch(&payload.items).await)
+    Json(svc.get_mems_tags_batch(claims.sub, &payload.items).await)
 }
 
 pub async fn export_csv(
     State(query): State<MemQueryService>,
-    Extension(_claims): Extension<Claims>,
+    Extension(claims): Extension<Claims>,
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
     let tag_ids: Vec<i32> = params
@@ -129,7 +136,7 @@ pub async fn export_csv(
         .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
         .unwrap_or_default();
     let svc = &query;
-    match svc.export_csv(&tag_ids).await {
+    match svc.export_csv(claims.sub, &tag_ids).await {
         Ok(psv) => (
             [
                 ("Content-Type", "text/tab-separated-values; charset=utf-8"),
@@ -145,9 +152,10 @@ pub async fn export_csv(
 pub async fn preview_mem(
     Path(id): Path<i32>,
     State(query): State<MemQueryService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &query;
-    match svc.preview(id).await {
+    match svc.preview(claims.sub, id).await {
         Ok(secs) => Json(serde_json::json!({ "intervals": secs })).into_response(),
         Err(e) => e.into_response(),
     }
@@ -156,18 +164,22 @@ pub async fn preview_mem(
 pub async fn get_mnemonic(
     Path(id): Path<i32>,
     State(query): State<MemQueryService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &query;
-    match svc.get_mnemonic(id).await {
+    match svc.get_mnemonic(claims.sub, id).await {
         Ok(Some(content)) => Json(serde_json::json!({ "content": content })).into_response(),
         Ok(None) => Json(serde_json::json!({ "content": null })).into_response(),
         Err(e) => err(e, "查询助记"),
     }
 }
 
-pub async fn upcoming_counts(State(query): State<MemQueryService>) -> impl IntoResponse {
+pub async fn upcoming_counts(
+    State(query): State<MemQueryService>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
     let svc = &query;
-    match svc.upcoming_counts().await {
+    match svc.upcoming_counts(claims.sub).await {
         Ok(v) => Json(v).into_response(),
         Err(e) => err(e, "查询 upcoming 数量"),
     }
@@ -179,29 +191,32 @@ pub async fn upcoming_counts(State(query): State<MemQueryService>) -> impl IntoR
 
 pub async fn batch_bury(
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<BatchRequest<i32>>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
     let svc = &service;
-    Json(svc.batch_bury(&payload.items).await)
+    Json(svc.batch_bury(claims.sub, &payload.items).await)
 }
 
 pub async fn batch_delete(
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<BatchRequest<i32>>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
     let svc = &service;
-    Json(svc.batch_delete(&payload.items).await)
+    Json(svc.batch_delete(claims.sub, &payload.items).await)
 }
 
 pub async fn batch_reset(
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<BatchRequest<i32>>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
     let svc = &service;
-    Json(svc.batch_reset(&payload.items).await)
+    Json(svc.batch_reset(claims.sub, &payload.items).await)
 }
 
 pub async fn create_tag(
@@ -233,10 +248,14 @@ pub async fn delete_tag(
 
 pub async fn add_mem_tag(
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<TagMemRequest>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.add_tag_to_mem(payload.mem_id, payload.tag_id).await {
+    match svc
+        .add_tag_to_mem(claims.sub, payload.mem_id, payload.tag_id)
+        .await
+    {
         Ok(()) => ok(),
         Err(e) => err(e, "添加标签"),
     }
@@ -258,10 +277,11 @@ pub async fn remove_mem_tag(
 
 pub async fn set_mem_tags(
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<SetTagsRequest>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.set_mem_tags(payload.mem_id, &payload.tag_ids).await {
+    match svc.set_mem_tags(claims.sub, payload.mem_id, &payload.tag_ids).await {
         Ok(()) => ok(),
         Err(e) => err(e, "设置标签"),
     }
@@ -394,6 +414,7 @@ pub async fn import_json(
 
 pub async fn get_due(
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
     let limit = params
@@ -409,7 +430,7 @@ pub async fn get_due(
         .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
         .unwrap_or_default();
     let svc = &service;
-    match svc.get_due(limit, &tag_ids, &exclude_tag_ids).await {
+    match svc.get_due(claims.sub, limit, &tag_ids, &exclude_tag_ids).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => err(e, "获取待复习"),
     }
@@ -419,10 +440,11 @@ pub async fn get_due(
 
 pub async fn create_mem(
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Json(body): Json<CreateMemRequest>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.create(body).await {
+    match svc.create(claims.sub, body).await {
         Ok(id) => Json(serde_json::json!({ "id": id })).into_response(),
         Err(e) => err(e, "创建记忆项"),
     }
@@ -431,10 +453,11 @@ pub async fn create_mem(
 pub async fn review_mem(
     Path(id): Path<i32>,
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Json(body): Json<ReviewRequest>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.review(id, body.rating, body.duration_secs).await {
+    match svc.review(claims.sub, id, body.rating, body.duration_secs).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => e.into_response(),
     }
@@ -443,10 +466,11 @@ pub async fn review_mem(
 pub async fn undo_review(
     Path(id): Path<i32>,
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Json(body): Json<UndoRequest>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.undo(id, body).await {
+    match svc.undo(claims.sub, id, body).await {
         Ok(()) => ok(),
         Err(e) => err(e, "撤销"),
     }
@@ -455,18 +479,23 @@ pub async fn undo_review(
 pub async fn edit_mem(
     Path(id): Path<i32>,
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Json(body): Json<EditMemRequest>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.edit(id, body).await {
+    match svc.edit(claims.sub, id, body).await {
         Ok(()) => ok(),
         Err(e) => e.into_response(),
     }
 }
 
-pub async fn bury_mem(Path(id): Path<i32>, State(service): State<MemService>) -> impl IntoResponse {
+pub async fn bury_mem(
+    Path(id): Path<i32>,
+    State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
     let svc = &service;
-    match svc.bury(id).await {
+    match svc.bury(claims.sub, id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "跳过"),
     }
@@ -475,9 +504,10 @@ pub async fn bury_mem(Path(id): Path<i32>, State(service): State<MemService>) ->
 pub async fn unbury_mem(
     Path(id): Path<i32>,
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.unbury(id).await {
+    match svc.unbury(claims.sub, id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "取消跳过"),
     }
@@ -486,9 +516,10 @@ pub async fn unbury_mem(
 pub async fn suspend_mem(
     Path(id): Path<i32>,
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.suspend(id).await {
+    match svc.suspend(claims.sub, id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "挂起"),
     }
@@ -497,9 +528,10 @@ pub async fn suspend_mem(
 pub async fn unsuspend_mem(
     Path(id): Path<i32>,
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.unsuspend(id).await {
+    match svc.unsuspend(claims.sub, id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "恢复"),
     }
@@ -508,9 +540,10 @@ pub async fn unsuspend_mem(
 pub async fn reset_mem(
     Path(id): Path<i32>,
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.reset(id).await {
+    match svc.reset(claims.sub, id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "重置"),
     }
@@ -519,9 +552,10 @@ pub async fn reset_mem(
 pub async fn delete_mem(
     Path(id): Path<i32>,
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.delete(id).await {
+    match svc.delete(claims.sub, id).await {
         Ok(()) => ok(),
         Err(e) => err(e, "删除"),
     }
@@ -530,12 +564,13 @@ pub async fn delete_mem(
 pub async fn set_mnemonic(
     Path(id): Path<i32>,
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Json(body): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     match body.get("content").and_then(|v| v.as_str()) {
         Some(content) => {
             let svc = &service;
-            match svc.set_mnemonic(id, content).await {
+            match svc.set_mnemonic(claims.sub, id, content).await {
                 Ok(()) => ok(),
                 Err(e) => err(e, "保存助记"),
             }

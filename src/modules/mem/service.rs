@@ -24,6 +24,7 @@ impl MemService {
 
     pub async fn get_due(
         &self,
+        user_id: i32,
         max_learning: i64,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
@@ -34,7 +35,7 @@ impl MemService {
         // 1. 学习卡优先：learning + relearning（按 due_at 排序）
         let learning = self
             .repo
-            .get_learning_mems(max_learning, tag_ids, exclude_tag_ids)
+            .get_learning_mems(user_id, max_learning, tag_ids, exclude_tag_ids)
             .await?;
         for id in &learning {
             if ids.len() < cap {
@@ -48,7 +49,7 @@ impl MemService {
         if review_quota > 0 {
             let candidates = self
                 .repo
-                .get_due_review_candidates(tag_ids, exclude_tag_ids)
+                .get_due_review_candidates(user_id, tag_ids, exclude_tag_ids)
                 .await?;
             ids.extend(sample_review_candidates(candidates, review_quota));
         }
@@ -58,10 +59,10 @@ impl MemService {
         if new_quota > 0 {
             let new_cards = self
                 .repo
-                .get_new_cards(new_quota as i64, tag_ids, exclude_tag_ids)
+                .get_new_cards(user_id, new_quota as i64, tag_ids, exclude_tag_ids)
                 .await?;
             for id in &new_cards {
-                self.repo.set_state(*id, "learning", Some(0)).await?;
+                self.repo.set_state(user_id, *id, "learning", Some(0)).await?;
             }
             ids.extend(new_cards);
         }
@@ -69,21 +70,21 @@ impl MemService {
         // 4. 提前复习 (upcoming) 填空：同样按难度/到期接近度加权采样
         let upcoming_quota = cap.saturating_sub(ids.len());
         if upcoming_quota > 0 {
-            let candidates = self.repo.get_upcoming_review_candidates(tag_ids).await?;
+            let candidates = self.repo.get_upcoming_review_candidates(user_id, tag_ids).await?;
             ids.extend(sample_review_candidates(candidates, upcoming_quota));
         }
 
         // 5. 实在没卡了，随便给一张
         if ids.is_empty()
-            && let Some(id) = self.repo.get_next_mem().await?
+            && let Some(id) = self.repo.get_next_mem(user_id).await?
         {
             ids.push(id);
         }
 
-        let items = self.build_items(&ids).await?;
+        let items = self.build_items(user_id, &ids).await?;
         let has_more = more_to_learn || ids.len() >= cap;
         let upcoming_count = if ids.is_empty() {
-            self.repo.count_upcoming().await? as usize
+            self.repo.count_upcoming(user_id).await? as usize
         } else {
             0
         };
@@ -108,13 +109,14 @@ impl MemService {
 
     pub async fn review(
         &self,
+        user_id: i32,
         id: i32,
         rating: u8,
         duration_secs: f64,
     ) -> Result<ReviewResponse, ServiceError> {
         let row = self
             .repo
-            .get_mem(id)
+            .get_mem(user_id, id)
             .await?
             .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
         let (outcome, new_step) = self
@@ -136,6 +138,7 @@ impl MemService {
 
         self.repo
             .update_mem_fsrs(
+                user_id,
                 id,
                 &FsrsUpdate {
                     state: new_state.to_string(),
@@ -244,51 +247,51 @@ impl MemService {
 
     // ── 内部辅助 ──
 
-    async fn build_items(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, ServiceError> {
-        self.repo.get_mems_with_chunks(ids).await
+    async fn build_items(&self, user_id: i32, ids: &[i32]) -> Result<Vec<MemWithChunks>, ServiceError> {
+        self.repo.get_mems_with_chunks(user_id, ids).await
     }
 
     // ── 挂起 / 恢复 ──
 
-    pub async fn suspend(&self, id: i32) -> Result<(), ServiceError> {
+    pub async fn suspend(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
         self.repo
-            .get_mem(id)
+            .get_mem(user_id, id)
             .await?
             .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
-        self.repo.suspend_mem(id).await?;
+        self.repo.suspend_mem(user_id, id).await?;
         Ok(())
     }
 
-    pub async fn unsuspend(&self, id: i32) -> Result<(), ServiceError> {
+    pub async fn unsuspend(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
         self.repo
-            .get_mem(id)
+            .get_mem(user_id, id)
             .await?
             .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
-        self.repo.unsuspend_mem(id).await?;
+        self.repo.unsuspend_mem(user_id, id).await?;
         Ok(())
     }
 
     // ── 批量操作 ──
 
-    pub async fn batch_delete(&self, ids: &[i32]) -> BatchResponse {
+    pub async fn batch_delete(&self, user_id: i32, ids: &[i32]) -> BatchResponse {
         let (_, errors) = batch_execute(ids.iter().copied(), |id| async move {
-            self.repo.delete_mem(id).await.map_err(|e| format!("{e}"))
+            self.repo.delete_mem(user_id, id).await.map_err(|e| format!("{e}"))
         })
         .await;
         BatchResponse::from_results(errors, ids.len())
     }
 
-    pub async fn batch_bury(&self, ids: &[i32]) -> BatchResponse {
+    pub async fn batch_bury(&self, user_id: i32, ids: &[i32]) -> BatchResponse {
         let (_, errors) = batch_execute(ids.iter().copied(), |id| async move {
-            self.repo.bury_mem(id).await.map_err(|e| format!("{e}"))
+            self.repo.bury_mem(user_id, id).await.map_err(|e| format!("{e}"))
         })
         .await;
         BatchResponse::from_results(errors, ids.len())
     }
 
-    pub async fn batch_reset(&self, ids: &[i32]) -> BatchResponse {
+    pub async fn batch_reset(&self, user_id: i32, ids: &[i32]) -> BatchResponse {
         let (_, errors) = batch_execute(ids.iter().copied(), |id| async move {
-            self.repo.reset_mem(id).await.map_err(|e| format!("{e}"))
+            self.repo.reset_mem(user_id, id).await.map_err(|e| format!("{e}"))
         })
         .await;
         BatchResponse::from_results(errors, ids.len())
@@ -296,17 +299,18 @@ impl MemService {
 
     // ── CRUD ──
 
-    pub async fn create(&self, req: CreateMemRequest) -> Result<i32, ServiceError> {
-        let cue_id = self.repo.create_chunk(&req.cue_content).await?;
-        let target_id = self.repo.create_chunk(&req.target_content).await?;
+    pub async fn create(&self, user_id: i32, req: CreateMemRequest) -> Result<i32, ServiceError> {
+        let cue_id = self.repo.create_chunk(user_id, &req.cue_content).await?;
+        let target_id = self.repo.create_chunk(user_id, &req.target_content).await?;
         self.repo
-            .create_mem(cue_id, target_id, &req.prerequisites)
+            .create_mem(user_id, cue_id, target_id, &req.prerequisites)
             .await
     }
 
-    pub async fn undo(&self, id: i32, req: UndoRequest) -> Result<(), ServiceError> {
+    pub async fn undo(&self, user_id: i32, id: i32, req: UndoRequest) -> Result<(), ServiceError> {
         self.repo
             .update_mem_fsrs(
+                user_id,
                 id,
                 &FsrsUpdate {
                     state: req.state.clone(),
@@ -321,32 +325,32 @@ impl MemService {
             .await
     }
 
-    pub async fn edit(&self, id: i32, req: EditMemRequest) -> Result<(), ServiceError> {
+    pub async fn edit(&self, user_id: i32, id: i32, req: EditMemRequest) -> Result<(), ServiceError> {
         let row = self
             .repo
-            .get_mem(id)
+            .get_mem(user_id, id)
             .await?
             .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
         self.repo
-            .update_chunk(row.cue_chunk_id, &req.cue_content)
+            .update_chunk(user_id, row.cue_chunk_id, &req.cue_content)
             .await?;
         self.repo
-            .update_chunk(row.target_chunk_id, &req.target_content)
+            .update_chunk(user_id, row.target_chunk_id, &req.target_content)
             .await?;
         Ok(())
     }
 
-    pub async fn bury(&self, id: i32) -> Result<(), ServiceError> {
-        self.repo.bury_mem(id).await
+    pub async fn bury(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+        self.repo.bury_mem(user_id, id).await
     }
-    pub async fn unbury(&self, id: i32) -> Result<(), ServiceError> {
-        self.repo.unbury_mem(id).await
+    pub async fn unbury(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+        self.repo.unbury_mem(user_id, id).await
     }
-    pub async fn delete(&self, id: i32) -> Result<(), ServiceError> {
-        self.repo.delete_mem(id).await
+    pub async fn delete(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+        self.repo.delete_mem(user_id, id).await
     }
-    pub async fn reset(&self, id: i32) -> Result<(), ServiceError> {
-        self.repo.reset_mem(id).await
+    pub async fn reset(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+        self.repo.reset_mem(user_id, id).await
     }
 
     // ── 标签 ──
@@ -360,9 +364,9 @@ impl MemService {
         Ok(())
     }
 
-    pub async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), ServiceError> {
+    pub async fn add_tag_to_mem(&self, user_id: i32, mem_id: i32, tag_id: i32) -> Result<(), ServiceError> {
         self.repo
-            .get_mem(mem_id)
+            .get_mem(user_id, mem_id)
             .await?
             .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
         self.repo.add_tag_to_mem(mem_id, tag_id).await?;
@@ -374,9 +378,9 @@ impl MemService {
         Ok(())
     }
 
-    pub async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), ServiceError> {
+    pub async fn set_mem_tags(&self, user_id: i32, mem_id: i32, tag_ids: &[i32]) -> Result<(), ServiceError> {
         self.repo
-            .get_mem(mem_id)
+            .get_mem(user_id, mem_id)
             .await?
             .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
         self.repo.set_mem_tags(mem_id, tag_ids).await?;
@@ -477,9 +481,9 @@ impl MemService {
                         continue;
                     }
 
-                    let cue_id = self.repo.create_chunk(cue).await?;
-                    let target_id = self.repo.create_chunk(target).await?;
-                    let mem_id = self.repo.create_mem(cue_id, target_id, &[]).await?;
+                    let cue_id = self.repo.create_chunk(user_id, cue).await?;
+                    let target_id = self.repo.create_chunk(user_id, target).await?;
+                    let mem_id = self.repo.create_mem(user_id, cue_id, target_id, &[]).await?;
 
                     self.apply_tags_to_mem(mem_id, tags_str, default_tags, user_id)
                         .await?;
@@ -547,9 +551,9 @@ impl MemService {
                 continue;
             }
 
-            let cue_id = self.repo.create_chunk(cue).await?;
-            let target_id = self.repo.create_chunk(target).await?;
-            let mem_id = self.repo.create_mem(cue_id, target_id, &[]).await?;
+            let cue_id = self.repo.create_chunk(user_id, cue).await?;
+            let target_id = self.repo.create_chunk(user_id, target).await?;
+            let mem_id = self.repo.create_mem(user_id, cue_id, target_id, &[]).await?;
 
             let tags_str = item.tags.join("; ");
             self.apply_tags_to_mem(mem_id, &tags_str, default_tags, user_id)
@@ -563,7 +567,11 @@ impl MemService {
 
     // ── 助记 ──
 
-    pub async fn set_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), ServiceError> {
+    pub async fn set_mnemonic(&self, user_id: i32, mem_id: i32, content: &str) -> Result<(), ServiceError> {
+        self.repo
+            .get_mem(user_id, mem_id)
+            .await?
+            .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
         self.repo.upsert_mnemonic(mem_id, content).await
     }
 }
@@ -603,9 +611,9 @@ mod tests {
             .unwrap();
         let repo = MemRepo::new(Arc::new(pool.clone()));
         let service = MemService::new(Arc::new(repo.clone()), Arc::new(NoopMaintenance));
-        let cue = repo.create_chunk("cue").await.unwrap();
-        let target = repo.create_chunk("target").await.unwrap();
-        let id = repo.create_mem(cue, target, &[]).await.unwrap();
+        let cue = repo.create_chunk(1, "cue").await.unwrap();
+        let target = repo.create_chunk(1, "target").await.unwrap();
+        let id = repo.create_mem(1, cue, target, &[]).await.unwrap();
         (service, repo, pool, id)
     }
 
@@ -628,10 +636,10 @@ mod tests {
         let (service, repo, pool, id) = setup_service().await;
         set_relearning(&pool, id, 5).await;
 
-        let res = service.review(id, 3, 12.5).await.unwrap();
+        let res = service.review(1, id, 3, 12.5).await.unwrap();
         assert_eq!(res.state, "relearning");
 
-        let row = repo.get_mem(id).await.unwrap().unwrap();
+        let row = repo.get_mem(1, id).await.unwrap().unwrap();
         assert_eq!(row.state, "relearning");
         assert_eq!(row.step_index, Some(0));
         assert_eq!(row.stability, 5.0);
@@ -653,10 +661,10 @@ mod tests {
         let (service, repo, pool, id) = setup_service().await;
         set_relearning(&pool, id, 610).await;
 
-        let res = service.review(id, 3, 12.5).await.unwrap();
+        let res = service.review(1, id, 3, 12.5).await.unwrap();
         assert_eq!(res.state, "review");
 
-        let row = repo.get_mem(id).await.unwrap().unwrap();
+        let row = repo.get_mem(1, id).await.unwrap().unwrap();
         assert_eq!(row.state, "review");
         assert_eq!(row.lapses, 0, "真正毕业回 Review 才重置失败计数");
         let due = chrono::DateTime::parse_from_rfc3339(&res.due_at)
@@ -683,7 +691,7 @@ mod tests {
         repo.mems.lock().unwrap().insert(3, fake_mem(3));
 
         let service = MemService::new(repo.clone(), Arc::new(NoopMaintenance));
-        let due = service.get_due(3, &[], &[]).await.unwrap();
+        let due = service.get_due(1, 3, &[], &[]).await.unwrap();
 
         assert_eq!(
             due.items.iter().map(|m| m.id).collect::<Vec<_>>(),
@@ -697,7 +705,7 @@ mod tests {
     #[tokio::test]
     async fn review_missing_mem_returns_not_found_without_database() {
         let service = MemService::new(Arc::new(FakeRepo::default()), Arc::new(NoopMaintenance));
-        let err = service.review(999, 3, 0.0).await.unwrap_err();
+        let err = service.review(1, 999, 3, 0.0).await.unwrap_err();
         assert!(matches!(err, ServiceError::NotFound(_)));
     }
 }

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE mem SET state='suspended' WHERE id=?1 AND (user_id = ?2 OR user_id IS NULL)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "6271b0b199b718af92e6e9e60335839c0920a12d8d5dc40ec9242bd8ddaed8a3"
+}

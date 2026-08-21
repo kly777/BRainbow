@@ -173,6 +173,7 @@ impl super::super::MemRepo {
 
     pub async fn get_mems_tags_batch(
         &self,
+        user_id: i32,
         mem_ids: &[i32],
     ) -> Result<Vec<MemTagRow>, sqlx::Error> {
         if mem_ids.is_empty() {
@@ -182,8 +183,11 @@ impl super::super::MemRepo {
             "SELECT mt.mem_id, t.id, t.name, t.created_at
              FROM mem_tag mt
              JOIN tag t ON t.id = mt.tag_id
-             WHERE mt.mem_id IN (",
+             JOIN mem m ON m.id = mt.mem_id
+             WHERE (m.user_id = ",
         );
+        qb.push_bind(user_id);
+        qb.push(" OR m.user_id IS NULL) AND mt.mem_id IN (");
         let mut separated = qb.separated(", ");
         for &id in mem_ids {
             separated.push_bind(id);
@@ -197,6 +201,7 @@ impl super::super::MemRepo {
 
     pub async fn export_all_mems(
         &self,
+        user_id: i32,
         tag_ids: &[i32],
     ) -> Result<Vec<(String, String, String)>, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
@@ -204,11 +209,14 @@ impl super::super::MemRepo {
                 COALESCE((SELECT GROUP_CONCAT(t.name, '; ') FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id), '') AS tags
              FROM mem m
              JOIN chunk cc ON cc.id = m.cue_chunk_id
-             JOIN chunk ct ON ct.id = m.target_chunk_id"
+             JOIN chunk ct ON ct.id = m.target_chunk_id
+             WHERE (m.user_id = ",
         );
+        qb.push_bind(user_id);
+        qb.push(" OR m.user_id IS NULL)");
 
         if !tag_ids.is_empty() {
-            qb.push(" WHERE m.id IN (SELECT mem_id FROM mem_tag WHERE tag_id IN (");
+            qb.push(" AND m.id IN (SELECT mem_id FROM mem_tag WHERE tag_id IN (");
             let mut sep = qb.separated(", ");
             for &tid in tag_ids {
                 sep.push_bind(tid);

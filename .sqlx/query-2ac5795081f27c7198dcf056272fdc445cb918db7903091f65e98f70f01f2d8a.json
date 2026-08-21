@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) FROM mem WHERE buried = 1",
+  "query": "SELECT COUNT(*) FROM mem WHERE (user_id = ?1 OR user_id IS NULL) AND state = 'suspended'",
   "describe": {
     "columns": [
       {
@@ -11,11 +11,11 @@
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       false
     ]
   },
-  "hash": "0c0129b4ab93e25c14f78b54233159317826ed4d961ba78b284a4832dbf49343"
+  "hash": "2ac5795081f27c7198dcf056272fdc445cb918db7903091f65e98f70f01f2d8a"
 }

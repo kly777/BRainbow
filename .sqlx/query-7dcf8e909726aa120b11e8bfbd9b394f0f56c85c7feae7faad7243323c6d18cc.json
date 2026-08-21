@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT cue_chunk_id AS \"cue_chunk_id: i32\",\n                      target_chunk_id AS \"target_chunk_id: i32\"\n               FROM mem WHERE id = ?1",
+  "query": "SELECT cue_chunk_id AS \"cue_chunk_id: i32\",\n                      target_chunk_id AS \"target_chunk_id: i32\"\n               FROM mem WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)",
   "describe": {
     "columns": [
       {
@@ -27,12 +27,12 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false,
       false
     ]
   },
-  "hash": "416f295563b3ba3b4bbc03487cf9176e015e48501c5f78a7853c69d8cc5cd522"
+  "hash": "7dcf8e909726aa120b11e8bfbd9b394f0f56c85c7feae7faad7243323c6d18cc"
 }

@@ -29,6 +29,7 @@ impl MemQueryService {
 
     pub async fn get_all(
         &self,
+        user_id: i32,
         query: &MemQuery,
     ) -> Result<PaginatedResponse<MemWithChunks>, ServiceError> {
         let pagination = Pagination {
@@ -37,18 +38,18 @@ impl MemQueryService {
         };
         let (page, page_size) = pagination.clamp();
         let offset = (page - 1) * page_size;
-        let ids = self.repo.get_all_mems(page_size, offset, query).await?;
-        let items = self.build_items(&ids).await?;
-        let total = self.repo.count_all_mems(query).await?;
+        let ids = self.repo.get_all_mems(user_id, page_size, offset, query).await?;
+        let items = self.build_items(user_id, &ids).await?;
+        let total = self.repo.count_all_mems(user_id, query).await?;
         let pagination_ref = &pagination;
         Ok(PaginatedResponse::new(items, total, pagination_ref))
     }
 
     // ── 统计 ──
 
-    pub async fn get_counts(&self) -> Result<MemCounts, ServiceError> {
+    pub async fn get_counts(&self, user_id: i32) -> Result<MemCounts, ServiceError> {
         let (new_count, learning_count, due_count, buried_count, suspended_count) =
-            self.repo.get_counts().await?;
+            self.repo.get_counts(user_id).await?;
         Ok(MemCounts {
             new: new_count as usize,
             learning: learning_count as usize,
@@ -60,13 +61,14 @@ impl MemQueryService {
 
     pub async fn get_session_estimate(
         &self,
+        user_id: i32,
         config: &crate::modules::mem::config::MemConfig,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<SessionEstimate, ServiceError> {
         let stats = self
             .repo
-            .get_session_stats(tag_ids, exclude_tag_ids)
+            .get_session_stats(user_id, tag_ids, exclude_tag_ids)
             .await?;
         let p = rating_probs(&stats.rating_counts);
 
@@ -114,10 +116,10 @@ impl MemQueryService {
 
     // ── 预览 ──
 
-    pub async fn preview(&self, id: i32) -> Result<[f64; 4], ServiceError> {
+    pub async fn preview(&self, user_id: i32, id: i32) -> Result<[f64; 4], ServiceError> {
         let row = self
             .repo
-            .get_mem(id)
+            .get_mem(user_id, id)
             .await?
             .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
         let state: CardState = row.state.parse().unwrap_or(CardState::New);
@@ -146,12 +148,14 @@ impl MemQueryService {
         self.repo.search_tags(user_id, q).await
     }
 
-    pub async fn get_mem_tags(&self, mem_id: i32) -> Result<Vec<TagInfo>, ServiceError> {
+    pub async fn get_mem_tags(&self, user_id: i32, mem_id: i32) -> Result<Vec<TagInfo>, ServiceError> {
+        // 先通过 get_mem 校验所有权（共享数据可见），再返回标签
+        self.repo.get_mem(user_id, mem_id).await?;
         self.repo.get_mem_tags(mem_id).await
     }
 
-    pub async fn get_mems_tags_batch(&self, mem_ids: &[i32]) -> BatchDataResponse<MemTagRow> {
-        match self.repo.get_mems_tags_batch(mem_ids).await {
+    pub async fn get_mems_tags_batch(&self, user_id: i32, mem_ids: &[i32]) -> BatchDataResponse<MemTagRow> {
+        match self.repo.get_mems_tags_batch(user_id, mem_ids).await {
             Ok(items) => BatchDataResponse::all_ok(items),
             Err(e) => BatchDataResponse::from_results(
                 vec![],
@@ -167,8 +171,8 @@ impl MemQueryService {
 
     // ── CSV/PSV 导出 ──
 
-    pub async fn export_csv(&self, tag_ids: &[i32]) -> Result<String, ServiceError> {
-        let rows = self.repo.export_all_mems(tag_ids).await?;
+    pub async fn export_csv(&self, user_id: i32, tag_ids: &[i32]) -> Result<String, ServiceError> {
+        let rows = self.repo.export_all_mems(user_id, tag_ids).await?;
         let mut wtr = csv::WriterBuilder::new()
             .delimiter(b'|')
             .from_writer(Vec::new());
@@ -190,22 +194,23 @@ impl MemQueryService {
 
     // ── 助记 ──
 
-    pub async fn get_mnemonic(&self, mem_id: i32) -> Result<Option<String>, ServiceError> {
+    pub async fn get_mnemonic(&self, user_id: i32, mem_id: i32) -> Result<Option<String>, ServiceError> {
+        self.repo.get_mem(user_id, mem_id).await?;
         self.repo.get_mnemonic(mem_id).await
     }
 
     // ── upcoming ──
 
-    pub async fn upcoming_counts(&self) -> Result<serde_json::Value, ServiceError> {
-        let h8 = self.repo.count_upcoming_within_hours(8).await?;
-        let h24 = self.repo.count_upcoming_within_hours(24).await?;
+    pub async fn upcoming_counts(&self, user_id: i32) -> Result<serde_json::Value, ServiceError> {
+        let h8 = self.repo.count_upcoming_within_hours(user_id, 8).await?;
+        let h24 = self.repo.count_upcoming_within_hours(user_id, 24).await?;
         Ok(serde_json::json!({"within_8h": h8, "within_24h": h24}))
     }
 
     // ── 内部辅助 ──
 
-    async fn build_items(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, ServiceError> {
-        self.repo.get_mems_with_chunks(ids).await
+    async fn build_items(&self, user_id: i32, ids: &[i32]) -> Result<Vec<MemWithChunks>, ServiceError> {
+        self.repo.get_mems_with_chunks(user_id, ids).await
     }
 }
 
@@ -213,7 +218,7 @@ impl MemQueryService {
 impl SearchPort for MemQueryService {
     async fn search(
         &self,
-        _user_id: i32,
+        user_id: i32,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
@@ -225,7 +230,7 @@ impl SearchPort for MemQueryService {
         let like = crate::shared::db_query::like_contains(kw);
         let rows = self
             .repo
-            .search_hits(&like, cap)
+            .search_hits(user_id, &like, cap)
             .await
             .map_err(|e| ServiceError::Internal(e.to_string()))?;
         Ok(rows
@@ -333,7 +338,7 @@ mod tests {
     #[tokio::test]
     async fn preview_missing_mem_returns_not_found_through_fake_port() {
         let svc = MemQueryService::new(Arc::new(FakeRepo::default()));
-        let err = svc.preview(1).await.unwrap_err();
+        let err = svc.preview(1, 1).await.unwrap_err();
         assert!(matches!(err, ServiceError::NotFound(_)));
     }
 

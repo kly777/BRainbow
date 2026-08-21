@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT m.id, c1.content AS cue, c2.content AS target\n               FROM mem m\n               JOIN chunk c1 ON c1.id = m.cue_chunk_id\n               JOIN chunk c2 ON c2.id = m.target_chunk_id\n               WHERE c1.content LIKE ?1 ESCAPE '\\' OR c2.content LIKE ?1 ESCAPE '\\'\n               ORDER BY (c1.content LIKE ?1 ESCAPE '\\') DESC, m.id DESC LIMIT ?2",
+  "query": "SELECT m.id, c1.content AS cue, c2.content AS target\n               FROM mem m\n               JOIN chunk c1 ON c1.id = m.cue_chunk_id\n               JOIN chunk c2 ON c2.id = m.target_chunk_id\n               WHERE (m.user_id = ?1 OR m.user_id IS NULL)\n                 AND (c1.content LIKE ?2 ESCAPE '\\' OR c2.content LIKE ?2 ESCAPE '\\')\n               ORDER BY (c1.content LIKE ?2 ESCAPE '\\') DESC, m.id DESC LIMIT ?3",
   "describe": {
     "columns": [
       {
@@ -38,7 +38,7 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 3
     },
     "nullable": [
       false,
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "b68b07dad1b977403120a3c817450bea50b9a48d62538e3d6bee9ff782b1c6a5"
+  "hash": "623188252aebd4d5a66153546c1bdbf06d679d7350abb3a8b3ec7503863d21ed"
 }

@@ -12,107 +12,98 @@ use async_trait::async_trait;
 
 #[async_trait]
 impl MemRepository for MemRepo {
-    async fn create_chunk(&self, content: &str) -> Result<i32, ServiceError> {
-        self.create_chunk(content).await.map_err(ServiceError::Db)
+    async fn create_chunk(&self, user_id: i32, content: &str) -> Result<i32, ServiceError> {
+        self.create_chunk(user_id, content).await.map_err(ServiceError::Db)
     }
-    async fn update_chunk(&self, id: i32, content: &str) -> Result<(), ServiceError> {
-        self.update_chunk(id, content)
-            .await
-            .map_err(ServiceError::Db)
+    async fn update_chunk(&self, user_id: i32, id: i32, content: &str) -> Result<(), ServiceError> {
+        self.update_chunk(user_id, id, content).await.map_err(ServiceError::Db)
     }
     async fn create_mem(
         &self,
+        user_id: i32,
         cue_id: i32,
         target_id: i32,
         prerequisites: &[i32],
     ) -> Result<i32, ServiceError> {
-        self.create_mem(cue_id, target_id, prerequisites)
-            .await
-            .map_err(ServiceError::Db)
+        self.create_mem(user_id, cue_id, target_id, prerequisites).await.map_err(ServiceError::Db)
     }
-    async fn get_mem(&self, id: i32) -> Result<Option<MemRow>, ServiceError> {
-        self.get_mem(id).await.map_err(ServiceError::Db)
+    async fn get_mem(&self, user_id: i32, id: i32) -> Result<Option<MemRow>, ServiceError> {
+        self.get_mem(user_id, id).await.map_err(ServiceError::Db)
     }
-    async fn get_mems_with_chunks(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, ServiceError> {
-        self.get_mems_with_chunks(ids)
-            .await
-            .map_err(ServiceError::Db)
+    async fn get_mems_with_chunks(&self, user_id: i32, ids: &[i32]) -> Result<Vec<MemWithChunks>, ServiceError> {
+        self.get_mems_with_chunks(user_id, ids).await.map_err(ServiceError::Db)
     }
-    async fn delete_mem(&self, id: i32) -> Result<(), ServiceError> {
-        self.delete_mem(id).await.map_err(ServiceError::Db)
+    async fn delete_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+        self.delete_mem(user_id, id).await.map_err(ServiceError::Db)
     }
     async fn get_all_mems(
         &self,
+        user_id: i32,
         limit: i64,
         offset: i64,
         query: &MemQuery,
     ) -> Result<Vec<i32>, ServiceError> {
-        self.get_all_mems(limit, offset, query)
-            .await
-            .map_err(ServiceError::Db)
+        self.get_all_mems(user_id, limit, offset, query).await.map_err(ServiceError::Db)
     }
-    async fn count_all_mems(&self, query: &MemQuery) -> Result<i64, ServiceError> {
-        self.count_all_mems(query).await.map_err(ServiceError::Db)
+    async fn count_all_mems(&self, user_id: i32, query: &MemQuery) -> Result<i64, ServiceError> {
+        self.count_all_mems(user_id, query).await.map_err(ServiceError::Db)
     }
     async fn get_learning_mems(
         &self,
+        user_id: i32,
         limit: i64,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<Vec<i32>, ServiceError> {
-        self.get_learning_mems(limit, tag_ids, exclude_tag_ids)
-            .await
-            .map_err(ServiceError::Db)
+        self.get_learning_mems(user_id, limit, tag_ids, exclude_tag_ids).await.map_err(ServiceError::Db)
     }
     async fn get_due_review_candidates(
         &self,
+        user_id: i32,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<Vec<ReviewCandidate>, ServiceError> {
-        self.get_due_review_candidates(tag_ids, exclude_tag_ids)
-            .await
-            .map_err(ServiceError::Db)
+        self.get_due_review_candidates(user_id, tag_ids, exclude_tag_ids).await.map_err(ServiceError::Db)
     }
     async fn get_new_cards(
         &self,
+        user_id: i32,
         limit: i64,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<Vec<i32>, ServiceError> {
-        self.get_new_cards(limit, tag_ids, exclude_tag_ids)
-            .await
-            .map_err(ServiceError::Db)
+        self.get_new_cards(user_id, limit, tag_ids, exclude_tag_ids).await.map_err(ServiceError::Db)
     }
     async fn get_upcoming_review_candidates(
         &self,
+        user_id: i32,
         tag_ids: &[i32],
     ) -> Result<Vec<ReviewCandidate>, ServiceError> {
-        self.get_upcoming_review_candidates(tag_ids)
-            .await
-            .map_err(ServiceError::Db)
+        self.get_upcoming_review_candidates(user_id, tag_ids).await.map_err(ServiceError::Db)
     }
-    async fn count_upcoming(&self) -> Result<i64, ServiceError> {
-        self.count_upcoming().await.map_err(ServiceError::Db)
+    async fn count_upcoming(&self, user_id: i32) -> Result<i64, ServiceError> {
+        self.count_upcoming(user_id).await.map_err(ServiceError::Db)
     }
-    async fn count_upcoming_within_hours(&self, hours: i64) -> Result<i64, ServiceError> {
-        self.count_upcoming_within_hours(hours)
-            .await
-            .map_err(ServiceError::Db)
+    async fn count_upcoming_within_hours(&self, user_id: i32, hours: i64) -> Result<i64, ServiceError> {
+        self.count_upcoming_within_hours(user_id, hours).await.map_err(ServiceError::Db)
     }
-    async fn get_counts(&self) -> Result<(i64, i64, i64, i64, i64), ServiceError> {
-        self.get_counts().await.map_err(ServiceError::Db)
+    async fn get_counts(&self, user_id: i32) -> Result<(i64, i64, i64, i64, i64), ServiceError> {
+        self.get_counts(user_id).await.map_err(ServiceError::Db)
+    }
+    async fn get_next_mem(&self, user_id: i32) -> Result<Option<i32>, ServiceError> {
+        self.get_next_mem(user_id).await.map_err(ServiceError::Db)
     }
     async fn get_session_stats(
         &self,
+        user_id: i32,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<SessionStats, ServiceError> {
-        self.get_session_stats(tag_ids, exclude_tag_ids)
-            .await
-            .map_err(ServiceError::Db)
+        self.get_session_stats(user_id, tag_ids, exclude_tag_ids).await.map_err(ServiceError::Db)
     }
     async fn search_hits(
         &self,
+        user_id: i32,
         like: &str,
         cap: i64,
     ) -> Result<Vec<(i64, String, String)>, ServiceError> {
@@ -122,8 +113,10 @@ impl MemRepository for MemRepo {
                FROM mem m
                JOIN chunk c1 ON c1.id = m.cue_chunk_id
                JOIN chunk c2 ON c2.id = m.target_chunk_id
-               WHERE c1.content LIKE ?1 ESCAPE '\' OR c2.content LIKE ?1 ESCAPE '\'
-               ORDER BY (c1.content LIKE ?1 ESCAPE '\') DESC, m.id DESC LIMIT ?2"#,
+               WHERE (m.user_id = ?1 OR m.user_id IS NULL)
+                 AND (c1.content LIKE ?2 ESCAPE '\' OR c2.content LIKE ?2 ESCAPE '\')
+               ORDER BY (c1.content LIKE ?2 ESCAPE '\') DESC, m.id DESC LIMIT ?3"#,
+            user_id,
             like,
             cap
         )
@@ -132,43 +125,35 @@ impl MemRepository for MemRepo {
         .map_err(ServiceError::Db)?;
         Ok(rows.into_iter().map(|r| (r.id, r.cue, r.target)).collect())
     }
-    async fn get_next_mem(&self) -> Result<Option<i32>, ServiceError> {
-        self.get_next_mem().await.map_err(ServiceError::Db)
-    }
     async fn set_state(
         &self,
+        user_id: i32,
         id: i32,
         state: &str,
         step_index: Option<i32>,
     ) -> Result<(), ServiceError> {
-        self.set_state(id, state, step_index)
-            .await
-            .map_err(ServiceError::Db)
+        self.set_state(user_id, id, state, step_index).await.map_err(ServiceError::Db)
     }
-    async fn update_mem_fsrs(&self, id: i32, params: &FsrsUpdate) -> Result<(), ServiceError> {
-        self.update_mem_fsrs(id, params)
-            .await
-            .map_err(ServiceError::Db)
+    async fn update_mem_fsrs(&self, user_id: i32, id: i32, params: &FsrsUpdate) -> Result<(), ServiceError> {
+        self.update_mem_fsrs(user_id, id, params).await.map_err(ServiceError::Db)
     }
-    async fn bury_mem(&self, id: i32) -> Result<(), ServiceError> {
-        self.bury_mem(id).await.map_err(ServiceError::Db)
+    async fn bury_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+        self.bury_mem(user_id, id).await.map_err(ServiceError::Db)
     }
-    async fn unbury_mem(&self, id: i32) -> Result<(), ServiceError> {
-        self.unbury_mem(id).await.map_err(ServiceError::Db)
+    async fn unbury_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+        self.unbury_mem(user_id, id).await.map_err(ServiceError::Db)
     }
-    async fn suspend_mem(&self, id: i32) -> Result<(), ServiceError> {
-        self.suspend_mem(id).await.map_err(ServiceError::Db)
+    async fn suspend_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+        self.suspend_mem(user_id, id).await.map_err(ServiceError::Db)
     }
-    async fn unsuspend_mem(&self, id: i32) -> Result<(), ServiceError> {
-        self.unsuspend_mem(id).await.map_err(ServiceError::Db)
+    async fn unsuspend_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+        self.unsuspend_mem(user_id, id).await.map_err(ServiceError::Db)
     }
-    async fn reset_mem(&self, id: i32) -> Result<(), ServiceError> {
-        self.reset_mem(id).await.map_err(ServiceError::Db)
+    async fn reset_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+        self.reset_mem(user_id, id).await.map_err(ServiceError::Db)
     }
     async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, ServiceError> {
-        self.create_tag(name, user_id)
-            .await
-            .map_err(ServiceError::Db)
+        self.create_tag(name, user_id).await.map_err(ServiceError::Db)
     }
     async fn delete_tag(&self, id: i32) -> Result<(), ServiceError> {
         self.delete_tag(id).await.map_err(ServiceError::Db)
@@ -183,40 +168,29 @@ impl MemRepository for MemRepo {
         self.get_mem_tags(mem_id).await.map_err(ServiceError::Db)
     }
     async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), ServiceError> {
-        self.add_tag_to_mem(mem_id, tag_id)
-            .await
-            .map_err(ServiceError::Db)
+        self.add_tag_to_mem(mem_id, tag_id).await.map_err(ServiceError::Db)
     }
     async fn remove_tag_from_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), ServiceError> {
-        self.remove_tag_from_mem(mem_id, tag_id)
-            .await
-            .map_err(ServiceError::Db)
+        self.remove_tag_from_mem(mem_id, tag_id).await.map_err(ServiceError::Db)
     }
     async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), ServiceError> {
-        self.set_mem_tags(mem_id, tag_ids)
-            .await
-            .map_err(ServiceError::Db)
+        self.set_mem_tags(mem_id, tag_ids).await.map_err(ServiceError::Db)
     }
-    async fn get_mems_tags_batch(&self, mem_ids: &[i32]) -> Result<Vec<MemTagRow>, ServiceError> {
-        self.get_mems_tags_batch(mem_ids)
-            .await
-            .map_err(ServiceError::Db)
+    async fn get_mems_tags_batch(&self, user_id: i32, mem_ids: &[i32]) -> Result<Vec<MemTagRow>, ServiceError> {
+        self.get_mems_tags_batch(user_id, mem_ids).await.map_err(ServiceError::Db)
     }
     async fn export_all_mems(
         &self,
+        user_id: i32,
         tag_ids: &[i32],
     ) -> Result<Vec<(String, String, String)>, ServiceError> {
-        self.export_all_mems(tag_ids)
-            .await
-            .map_err(ServiceError::Db)
+        self.export_all_mems(user_id, tag_ids).await.map_err(ServiceError::Db)
     }
     async fn get_mnemonic(&self, mem_id: i32) -> Result<Option<String>, ServiceError> {
         self.get_mnemonic(mem_id).await.map_err(ServiceError::Db)
     }
     async fn upsert_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), ServiceError> {
-        self.upsert_mnemonic(mem_id, content)
-            .await
-            .map_err(ServiceError::Db)
+        self.upsert_mnemonic(mem_id, content).await.map_err(ServiceError::Db)
     }
     async fn insert_revlog(&self, params: &InsertRevlogParams) -> Result<(), ServiceError> {
         self.insert_revlog(params).await.map_err(ServiceError::Db)

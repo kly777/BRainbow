@@ -4,6 +4,9 @@ use crate::modules::mem::dto::MemQuery;
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
+/// 测试统一用户（数据隔离后共享数据仍对任意登录用户可见）
+const TEST_USER_ID: i32 = 1;
+
 /// 创建测试数据库（复用生产 schema：crate::db::migrate）
 async fn setup_db() -> MemRepo {
     let pool = SqlitePool::connect("sqlite::memory:")
@@ -26,26 +29,26 @@ async fn setup_db() -> MemRepo {
 }
 
 /// 创建一条测试 mem 记录，返回 (mem_id, cue_chunk_id, target_chunk_id)
-async fn create_test_mem(repo: &MemRepo, cue: &str, target: &str) -> (i32, i32, i32) {
-    let cue_id = repo.create_chunk(cue).await.unwrap();
-    let target_id = repo.create_chunk(target).await.unwrap();
-    let mem_id = repo.create_mem(cue_id, target_id, &[]).await.unwrap();
+async fn create_test_mem(repo: &MemRepo, user_id: i32, cue: &str, target: &str) -> (i32, i32, i32) {
+    let cue_id = repo.create_chunk(user_id, cue).await.unwrap();
+    let target_id = repo.create_chunk(user_id, target).await.unwrap();
+    let mem_id = repo.create_mem(TEST_USER_ID, cue_id, target_id, &[]).await.unwrap();
     (mem_id, cue_id, target_id)
 }
 
 #[tokio::test]
 async fn delete_mem_basic() {
     let repo = setup_db().await;
-    let (mem_id, cue_id, target_id) = create_test_mem(&repo, "cue", "target").await;
+    let (mem_id, cue_id, target_id) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
 
     // 验证 mem 存在
-    assert!(repo.get_mem(mem_id).await.unwrap().is_some());
+    assert!(repo.get_mem(TEST_USER_ID, mem_id).await.unwrap().is_some());
 
     // 删除
-    repo.delete_mem(mem_id).await.unwrap();
+    repo.delete_mem(TEST_USER_ID, mem_id).await.unwrap();
 
     // 验证 mem 已被删除
-    assert!(repo.get_mem(mem_id).await.unwrap().is_none());
+    assert!(repo.get_mem(TEST_USER_ID, mem_id).await.unwrap().is_none());
 
     // 验证 chunk 已被清理
     assert!(repo.get_chunk(cue_id).await.unwrap().is_none());
@@ -55,7 +58,7 @@ async fn delete_mem_basic() {
 #[tokio::test]
 async fn delete_mem_with_revlog() {
     let repo = setup_db().await;
-    let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+    let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
 
     // 插入复习日志
     sqlx::query("INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, ?)")
@@ -68,10 +71,10 @@ async fn delete_mem_with_revlog() {
         .unwrap();
 
     // 删除——之前因 FK 约束会失败
-    repo.delete_mem(mem_id).await.unwrap();
+    repo.delete_mem(TEST_USER_ID, mem_id).await.unwrap();
 
     // 验证 mem 已删
-    assert!(repo.get_mem(mem_id).await.unwrap().is_none());
+    assert!(repo.get_mem(TEST_USER_ID, mem_id).await.unwrap().is_none());
 
     // 验证 revlog 也被级联删除
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog WHERE mem_id = ?")
@@ -85,8 +88,8 @@ async fn delete_mem_with_revlog() {
 #[tokio::test]
 async fn delete_mem_with_prerequisite() {
     let repo = setup_db().await;
-    let (mem_id, ..) = create_test_mem(&repo, "main", "main-target").await;
-    let (dep_id, ..) = create_test_mem(&repo, "dep", "dep-target").await;
+    let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "main", "main-target").await;
+    let (dep_id, ..) = create_test_mem(&repo, TEST_USER_ID, "dep", "dep-target").await;
 
     // 添加前提约束：mem 依赖 dep
     sqlx::query("INSERT INTO mem_prerequisite (mem_id, requires_mem_id) VALUES (?, ?)")
@@ -97,10 +100,10 @@ async fn delete_mem_with_prerequisite() {
         .unwrap();
 
     // 删除依赖的 mem (dep)
-    repo.delete_mem(dep_id).await.unwrap();
+    repo.delete_mem(TEST_USER_ID, dep_id).await.unwrap();
 
     // 验证 dep 已删
-    assert!(repo.get_mem(dep_id).await.unwrap().is_none());
+    assert!(repo.get_mem(TEST_USER_ID, dep_id).await.unwrap().is_none());
 
     // 验证前提约束也被清理
     let count: i64 = sqlx::query_scalar(
@@ -117,31 +120,31 @@ async fn delete_mem_with_prerequisite() {
 #[tokio::test]
 async fn delete_mem_preserves_shared_chunk() {
     let repo = setup_db().await;
-    let cue_id = repo.create_chunk("shared-cue").await.unwrap();
+    let cue_id = repo.create_chunk(TEST_USER_ID, "shared-cue").await.unwrap();
 
     // 两个 mem 共用同一个 cue chunk
-    let target1 = repo.create_chunk("target1").await.unwrap();
-    let target2 = repo.create_chunk("target2").await.unwrap();
-    let mem1 = repo.create_mem(cue_id, target1, &[]).await.unwrap();
-    let mem2 = repo.create_mem(cue_id, target2, &[]).await.unwrap();
+    let target1 = repo.create_chunk(TEST_USER_ID, "target1").await.unwrap();
+    let target2 = repo.create_chunk(TEST_USER_ID, "target2").await.unwrap();
+    let mem1 = repo.create_mem(TEST_USER_ID, cue_id, target1, &[]).await.unwrap();
+    let mem2 = repo.create_mem(TEST_USER_ID, cue_id, target2, &[]).await.unwrap();
 
     // 删除第一个 mem
-    repo.delete_mem(mem1).await.unwrap();
+    repo.delete_mem(TEST_USER_ID, mem1).await.unwrap();
 
     // 验证 mem1 已删
-    assert!(repo.get_mem(mem1).await.unwrap().is_none());
+    assert!(repo.get_mem(TEST_USER_ID, mem1).await.unwrap().is_none());
 
     // 验证共享的 cue chunk 仍存在（因为 mem2 还在引用）
     assert!(repo.get_chunk(cue_id).await.unwrap().is_some());
 
     // 验证 mem2 正常
-    assert!(repo.get_mem(mem2).await.unwrap().is_some());
+    assert!(repo.get_mem(TEST_USER_ID, mem2).await.unwrap().is_some());
 }
 
 #[tokio::test]
 async fn delete_nonexistent_mem_returns_error() {
     let repo = setup_db().await;
-    let result = repo.delete_mem(999).await;
+    let result = repo.delete_mem(TEST_USER_ID, 999).await;
     assert!(result.is_err());
 }
 
@@ -156,7 +159,7 @@ async fn get_recent_retention_empty() {
 #[tokio::test]
 async fn get_recent_retention_all_pass() {
     let repo = setup_db().await;
-    let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+    let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
 
     for i in 0..10 {
         let time_str = format!("2025-01-01T00:00:{:02}Z", i);
@@ -177,7 +180,7 @@ async fn get_recent_retention_all_pass() {
 #[tokio::test]
 async fn get_recent_retention_mixed() {
     let repo = setup_db().await;
-    let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+    let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
 
     // 6 pass, 4 fail → retention = 0.6
     for i in 0..10 {
@@ -201,7 +204,7 @@ async fn get_recent_retention_mixed() {
 #[tokio::test]
 async fn get_recent_retention_respects_limit() {
     let repo = setup_db().await;
-    let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+    let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
 
     for i in 0..20 {
         let time_str = format!("2025-01-01T00:00:{:02}Z", i);
@@ -256,7 +259,7 @@ async fn create_and_list_tags() {
     assert!(repo.list_tags(uid).await.unwrap().is_empty());
 
     // 给一个 mem 打上标签后，才会出现
-    let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+    let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
     repo.add_tag_to_mem(mem_id, t1.id).await.unwrap();
     let tags = repo.list_tags(uid).await.unwrap();
     assert_eq!(tags.len(), 1);
@@ -328,7 +331,7 @@ async fn delete_tag_removes_tag_and_cascades() {
     let uid = create_user(&repo).await;
 
     let tag = repo.create_tag("移除", uid).await.unwrap();
-    let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+    let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
     repo.add_tag_to_mem(mem_id, tag.id).await.unwrap();
 
     // 验证关联存在
@@ -353,7 +356,7 @@ async fn add_and_get_mem_tags() {
 
     let t1 = repo.create_tag("标签A", uid).await.unwrap();
     let t2 = repo.create_tag("标签B", uid).await.unwrap();
-    let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+    let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
 
     // 初始无标签
     assert!(repo.get_mem_tags(mem_id).await.unwrap().is_empty());
@@ -372,7 +375,7 @@ async fn add_duplicate_tag_is_idempotent() {
     let uid = create_user(&repo).await;
 
     let tag = repo.create_tag("幂等", uid).await.unwrap();
-    let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+    let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
 
     repo.add_tag_to_mem(mem_id, tag.id).await.unwrap();
     repo.add_tag_to_mem(mem_id, tag.id).await.unwrap(); // 第二次不应报错
@@ -388,7 +391,7 @@ async fn remove_tag_from_mem() {
 
     let t1 = repo.create_tag("保留", uid).await.unwrap();
     let t2 = repo.create_tag("移除", uid).await.unwrap();
-    let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+    let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
 
     repo.add_tag_to_mem(mem_id, t1.id).await.unwrap();
     repo.add_tag_to_mem(mem_id, t2.id).await.unwrap();
@@ -409,7 +412,7 @@ async fn set_mem_tags_replaces_all() {
     let t1 = repo.create_tag("旧标签", uid).await.unwrap();
     let t2 = repo.create_tag("新标签A", uid).await.unwrap();
     let t3 = repo.create_tag("新标签B", uid).await.unwrap();
-    let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+    let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
 
     repo.add_tag_to_mem(mem_id, t1.id).await.unwrap();
 
@@ -427,7 +430,7 @@ async fn set_mem_tags_empty_clears_all() {
     let uid = create_user(&repo).await;
 
     let tag = repo.create_tag("清空", uid).await.unwrap();
-    let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+    let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
     repo.add_tag_to_mem(mem_id, tag.id).await.unwrap();
 
     repo.set_mem_tags(mem_id, &[]).await.unwrap();
@@ -440,8 +443,8 @@ async fn mem_tags_are_independent_per_mem() {
     let uid = create_user(&repo).await;
 
     let tag = repo.create_tag("共享", uid).await.unwrap();
-    let (m1, ..) = create_test_mem(&repo, "a", "a-target").await;
-    let (m2, ..) = create_test_mem(&repo, "b", "b-target").await;
+    let (m1, ..) = create_test_mem(&repo, TEST_USER_ID, "a", "a-target").await;
+    let (m2, ..) = create_test_mem(&repo, TEST_USER_ID, "b", "b-target").await;
 
     repo.add_tag_to_mem(m1, tag.id).await.unwrap();
 
@@ -455,11 +458,11 @@ async fn delete_mem_cleans_orphan_tag() {
     let uid = create_user(&repo).await;
 
     let tag = repo.create_tag("孤儿", uid).await.unwrap();
-    let (mem_id, ..) = create_test_mem(&repo, "cue", "target").await;
+    let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
     repo.add_tag_to_mem(mem_id, tag.id).await.unwrap();
 
     // 删除 mem → mem_tag 级联删除 → 标签无 mem 关联 → 自动清理
-    repo.delete_mem(mem_id).await.unwrap();
+    repo.delete_mem(TEST_USER_ID, mem_id).await.unwrap();
 
     // 标签已被自动删除
     let tags = repo.list_tags(uid).await.unwrap();
@@ -470,8 +473,8 @@ async fn delete_mem_cleans_orphan_tag() {
 
 /// 插入一条 mem（仅基本字段），返回 id
 async fn insert_session_mem(repo: &MemRepo, state: &str, buried: i32, due_at: &str) -> i32 {
-    let cue_id = repo.create_chunk("cue").await.unwrap();
-    let target_id = repo.create_chunk("target").await.unwrap();
+    let cue_id = repo.create_chunk(TEST_USER_ID, "cue").await.unwrap();
+    let target_id = repo.create_chunk(TEST_USER_ID, "target").await.unwrap();
     sqlx::query_scalar::<_, i32>(
             "INSERT INTO mem (cue_chunk_id, target_chunk_id, state, buried, due_at) VALUES (?, ?, ?, ?, ?) RETURNING id"
         )
@@ -489,7 +492,7 @@ async fn estimate(repo: &MemRepo) -> crate::modules::mem::dto::SessionEstimate {
     let repo_arc: Arc<dyn crate::modules::mem::port::MemRepository> =
         Arc::new(MemRepo::new(repo.pool().clone()));
     let svc = crate::modules::mem::query::MemQueryService::new(repo_arc);
-    svc.get_session_estimate(&crate::modules::mem::config::MemConfig::default(), &[], &[])
+    svc.get_session_estimate(TEST_USER_ID, &crate::modules::mem::config::MemConfig::default(), &[], &[])
         .await
         .unwrap()
 }
@@ -534,7 +537,7 @@ async fn session_stats_averages_recent_durations() {
             .await
             .unwrap();
     }
-    let stats = repo.get_session_stats(&[], &[]).await.unwrap();
+    let stats = repo.get_session_stats(TEST_USER_ID, &[], &[]).await.unwrap();
     assert!((stats.avg_duration_secs - 15.0).abs() < 1e-9);
 }
 
@@ -647,7 +650,7 @@ async fn session_stats_filters_prereq_tags_and_steps() {
     // 到期复习卡
     insert_session_mem(&repo, "review", 0, "2020-01-01T00:00:00Z").await;
 
-    let all = repo.get_session_stats(&[], &[]).await.unwrap();
+    let all = repo.get_session_stats(TEST_USER_ID, &[], &[]).await.unwrap();
     // blocked 被前置依赖排除；其余 2 张新卡可学
     assert_eq!(all.new_ready, 2);
     assert_eq!(all.learning_steps, vec![1, 1]);
@@ -670,7 +673,7 @@ async fn session_stats_filters_prereq_tags_and_steps() {
         .execute(&**repo.pool())
         .await
         .unwrap();
-    let filtered = repo.get_session_stats(&[tag1], &[]).await.unwrap();
+    let filtered = repo.get_session_stats(TEST_USER_ID, &[tag1], &[]).await.unwrap();
     assert_eq!(filtered.new_ready, 1, "只统计 ready 这张新卡");
     assert!(filtered.learning_steps.is_empty());
     assert_eq!(filtered.due_ready, 0);
@@ -700,8 +703,8 @@ async fn get_all_excludes_buried_by_default() {
     insert_session_mem(&repo, "new", 1, "2099-01-01T00:00:00Z").await;
 
     let query = MemQuery::default();
-    let ids = repo.get_all_mems(100, 0, &query).await.unwrap();
-    let count = repo.count_all_mems(&query).await.unwrap();
+    let ids = repo.get_all_mems(TEST_USER_ID, 100, 0, &query).await.unwrap();
+    let count = repo.count_all_mems(TEST_USER_ID, &query).await.unwrap();
 
     assert_eq!(ids.len(), 1, "默认应排除已埋葬卡");
     assert_eq!(count, 1);
@@ -718,9 +721,9 @@ async fn get_all_by_id_finds_buried_directly() {
         id: Some(i64::from(buried_id)),
         ..MemQuery::default()
     };
-    let ids = repo.get_all_mems(100, 0, &query).await.unwrap();
+    let ids = repo.get_all_mems(TEST_USER_ID, 100, 0, &query).await.unwrap();
     assert_eq!(ids, vec![buried_id]);
-    assert_eq!(repo.count_all_mems(&query).await.unwrap(), 1);
+    assert_eq!(repo.count_all_mems(TEST_USER_ID, &query).await.unwrap(), 1);
 }
 
 #[tokio::test]
@@ -731,7 +734,7 @@ async fn count_all_excludes_buried_by_default() {
     insert_session_mem(&repo, "review", 0, "2020-01-01T00:00:00Z").await;
 
     let query = MemQuery::default();
-    let count = repo.count_all_mems(&query).await.unwrap();
+    let count = repo.count_all_mems(TEST_USER_ID, &query).await.unwrap();
     assert_eq!(count, 2, "2 张正常卡，1 张已埋葬");
 }
 
@@ -747,10 +750,10 @@ async fn get_all_finds_buried_with_state_filter() {
         state: Some("buried".into()),
         ..MemQuery::default()
     };
-    let ids = repo.get_all_mems(100, 0, &query).await.unwrap();
+    let ids = repo.get_all_mems(TEST_USER_ID, 100, 0, &query).await.unwrap();
     assert_eq!(ids.len(), 2, "2 张已埋葬卡");
 
-    let count = repo.count_all_mems(&query).await.unwrap();
+    let count = repo.count_all_mems(TEST_USER_ID, &query).await.unwrap();
     assert_eq!(count, 2);
 }
 
@@ -765,7 +768,7 @@ async fn get_all_state_review_still_excludes_buried() {
         state: Some("review".into()),
         ..MemQuery::default()
     };
-    let ids = repo.get_all_mems(100, 0, &query).await.unwrap();
+    let ids = repo.get_all_mems(TEST_USER_ID, 100, 0, &query).await.unwrap();
     assert_eq!(ids.len(), 1, "只有 1 张未埋葬的 review 卡");
 }
 
@@ -776,22 +779,22 @@ async fn test_due_does_not_pull_upcoming_when_new_cards_exist() {
 
     // 创建 20 张新卡
     for i in 0..20 {
-        let cue_id = repo.create_chunk(&format!("cue_{}", i)).await.unwrap();
-        let target_id = repo.create_chunk(&format!("target_{}", i)).await.unwrap();
-        repo.create_mem(cue_id, target_id, &[]).await.unwrap();
+        let cue_id = repo.create_chunk(TEST_USER_ID, &format!("cue_{}", i)).await.unwrap();
+        let target_id = repo.create_chunk(TEST_USER_ID, &format!("target_{}", i)).await.unwrap();
+        repo.create_mem(TEST_USER_ID, cue_id, target_id, &[]).await.unwrap();
     }
 
     // 创建 5 张 review 卡（未来的 due_at，本不应出现在本轮）
     for i in 0..5 {
         let cue_id = repo
-            .create_chunk(&format!("upcoming_cue_{}", i))
+            .create_chunk(TEST_USER_ID, &format!("upcoming_cue_{}", i))
             .await
             .unwrap();
         let target_id = repo
-            .create_chunk(&format!("upcoming_target_{}", i))
+            .create_chunk(TEST_USER_ID, &format!("upcoming_target_{}", i))
             .await
             .unwrap();
-        let id = repo.create_mem(cue_id, target_id, &[]).await.unwrap();
+        let id = repo.create_mem(TEST_USER_ID, cue_id, target_id, &[]).await.unwrap();
         // 设为 review 状态，due_at 在 1 分钟后（使用 TZ 格式，与真实代码一致）
         // 1 分钟 = 60 秒
         let future = (chrono::Utc::now() + chrono::Duration::seconds(60))
@@ -806,7 +809,7 @@ async fn test_due_does_not_pull_upcoming_when_new_cards_exist() {
     }
 
     // 验证新卡有 20 张
-    let (n, _l, _d, _b, _s) = repo.get_counts().await.unwrap();
+    let (n, _l, _d, _b, _s) = repo.get_counts(TEST_USER_ID).await.unwrap();
     assert_eq!(n, 20, "应有 20 张新卡");
 
     // 模拟 get_due 逻辑（简化版）：先取 learning，再取 due_reviews，再取 new_cards
@@ -816,7 +819,7 @@ async fn test_due_does_not_pull_upcoming_when_new_cards_exist() {
 
     // 1. learning
     let mut ids = repo
-        .get_learning_mems(limit, tag_ids, exclude_tag_ids)
+        .get_learning_mems(TEST_USER_ID, limit, tag_ids, exclude_tag_ids)
         .await
         .unwrap();
     assert_eq!(ids.len(), 0, "没有 learning 卡");
@@ -824,7 +827,7 @@ async fn test_due_does_not_pull_upcoming_when_new_cards_exist() {
     // 2. due_reviews（候选查询：到期卡为空）
     if ids.len() < limit as usize {
         let due = repo
-            .get_due_review_candidates(tag_ids, exclude_tag_ids)
+            .get_due_review_candidates(TEST_USER_ID, tag_ids, exclude_tag_ids)
             .await
             .unwrap();
         assert!(due.is_empty(), "没有到期的 review 卡");
@@ -834,7 +837,7 @@ async fn test_due_does_not_pull_upcoming_when_new_cards_exist() {
     if ids.len() < limit as usize {
         let needed = limit as usize - ids.len();
         let new_cards = repo
-            .get_new_cards(needed as i64, tag_ids, exclude_tag_ids)
+            .get_new_cards(TEST_USER_ID, needed as i64, tag_ids, exclude_tag_ids)
             .await
             .unwrap();
         // 关键断言：应该拿到足够的卡填满队列
@@ -846,7 +849,7 @@ async fn test_due_does_not_pull_upcoming_when_new_cards_exist() {
 
     // 4. 验证 upcoming 不会被用到
     if ids.len() < limit as usize {
-        let upcoming = repo.get_upcoming_review_candidates(tag_ids).await.unwrap();
+        let upcoming = repo.get_upcoming_review_candidates(TEST_USER_ID, tag_ids).await.unwrap();
         // 不应走到这里！
         assert!(
             upcoming.is_empty() || ids.len() >= limit as usize,
@@ -860,7 +863,7 @@ async fn get_due_review_candidates_carries_priority_fields() {
     let repo = setup_db().await;
 
     // 两张到期 review 卡，难度/失败次数不同
-    let (due_id, ..) = create_test_mem(&repo, "due", "target").await;
+    let (due_id, ..) = create_test_mem(&repo, TEST_USER_ID, "due", "target").await;
     let past = (chrono::Utc::now() - chrono::Duration::hours(24))
         .format("%Y-%m-%dT%H:%M:%S+00:00")
         .to_string();
@@ -878,7 +881,7 @@ async fn get_due_review_candidates_carries_priority_fields() {
         .unwrap();
 
     // 一张未来到期卡：不应进入 due 候选
-    let (future_id, ..) = create_test_mem(&repo, "future", "target").await;
+    let (future_id, ..) = create_test_mem(&repo, TEST_USER_ID, "future", "target").await;
     let future = (chrono::Utc::now() + chrono::Duration::hours(1))
         .format("%Y-%m-%dT%H:%M:%S+00:00")
         .to_string();
@@ -889,14 +892,14 @@ async fn get_due_review_candidates_carries_priority_fields() {
         .await
         .unwrap();
 
-    let due = repo.get_due_review_candidates(&[], &[]).await.unwrap();
+    let due = repo.get_due_review_candidates(TEST_USER_ID, &[], &[]).await.unwrap();
     assert_eq!(due.len(), 1);
     assert_eq!(due[0].id, due_id);
     assert_eq!(due[0].difficulty, 9.0);
     assert_eq!(due[0].stability, 2.0);
     assert_eq!(due[0].lapses, 4);
 
-    let upcoming = repo.get_upcoming_review_candidates(&[]).await.unwrap();
+    let upcoming = repo.get_upcoming_review_candidates(TEST_USER_ID, &[]).await.unwrap();
     assert_eq!(upcoming.len(), 1);
     assert_eq!(upcoming[0].id, future_id);
 }
@@ -906,12 +909,12 @@ async fn get_due_review_candidates_carries_priority_fields() {
 #[tokio::test]
 async fn get_mems_with_chunks_joins_chunks_and_mnemonic() {
     let repo = setup_db().await;
-    let cue_id = repo.create_chunk("线索内容").await.unwrap();
-    let target_id = repo.create_chunk("目标内容").await.unwrap();
-    let mem_id = repo.create_mem(cue_id, target_id, &[]).await.unwrap();
+    let cue_id = repo.create_chunk(TEST_USER_ID, "线索内容").await.unwrap();
+    let target_id = repo.create_chunk(TEST_USER_ID, "目标内容").await.unwrap();
+    let mem_id = repo.create_mem(TEST_USER_ID, cue_id, target_id, &[]).await.unwrap();
     repo.upsert_mnemonic(mem_id, "助记内容").await.unwrap();
 
-    let items = repo.get_mems_with_chunks(&[mem_id]).await.unwrap();
+    let items = repo.get_mems_with_chunks(TEST_USER_ID, &[mem_id]).await.unwrap();
     assert_eq!(items.len(), 1);
     let item = &items[0];
     assert_eq!(item.id, mem_id);
@@ -923,18 +926,18 @@ async fn get_mems_with_chunks_joins_chunks_and_mnemonic() {
 #[tokio::test]
 async fn get_mems_with_chunks_empty_ids_returns_empty() {
     let repo = setup_db().await;
-    let items = repo.get_mems_with_chunks(&[]).await.unwrap();
+    let items = repo.get_mems_with_chunks(TEST_USER_ID, &[]).await.unwrap();
     assert!(items.is_empty());
 }
 
 #[tokio::test]
 async fn get_mems_with_chunks_missing_mnemonic_is_none() {
     let repo = setup_db().await;
-    let cue_id = repo.create_chunk("cue").await.unwrap();
-    let target_id = repo.create_chunk("target").await.unwrap();
-    let mem_id = repo.create_mem(cue_id, target_id, &[]).await.unwrap();
+    let cue_id = repo.create_chunk(TEST_USER_ID, "cue").await.unwrap();
+    let target_id = repo.create_chunk(TEST_USER_ID, "target").await.unwrap();
+    let mem_id = repo.create_mem(TEST_USER_ID, cue_id, target_id, &[]).await.unwrap();
 
-    let items = repo.get_mems_with_chunks(&[mem_id]).await.unwrap();
+    let items = repo.get_mems_with_chunks(TEST_USER_ID, &[mem_id]).await.unwrap();
     assert_eq!(items.len(), 1);
     assert!(items[0].mnemonic.is_none());
 }

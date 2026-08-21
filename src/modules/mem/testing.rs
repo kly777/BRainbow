@@ -90,16 +90,17 @@ impl MemMaintenance for NoopMaintenance {
 
 #[async_trait]
 impl MemRepository for FakeRepo {
-    async fn create_chunk(&self, _content: &str) -> Result<i32, ServiceError> {
+    async fn create_chunk(&self, _user_id: i32, _content: &str) -> Result<i32, ServiceError> {
         panic!("create_chunk not configured in FakeRepo")
     }
 
-    async fn update_chunk(&self, _id: i32, _content: &str) -> Result<(), ServiceError> {
+    async fn update_chunk(&self, _user_id: i32, _id: i32, _content: &str) -> Result<(), ServiceError> {
         panic!("update_chunk not configured in FakeRepo")
     }
 
     async fn create_mem(
         &self,
+        _user_id: i32,
         _cue_id: i32,
         _target_id: i32,
         _prerequisites: &[i32],
@@ -107,21 +108,22 @@ impl MemRepository for FakeRepo {
         panic!("create_mem not configured in FakeRepo")
     }
 
-    async fn get_mem(&self, id: i32) -> Result<Option<MemRow>, ServiceError> {
+    async fn get_mem(&self, _user_id: i32, id: i32) -> Result<Option<MemRow>, ServiceError> {
         Ok(self.mem_rows.lock().unwrap().get(&id).cloned())
     }
 
-    async fn get_mems_with_chunks(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, ServiceError> {
+    async fn get_mems_with_chunks(&self, _user_id: i32, ids: &[i32]) -> Result<Vec<MemWithChunks>, ServiceError> {
         let mems = self.mems.lock().unwrap();
         Ok(ids.iter().filter_map(|id| mems.get(id).cloned()).collect())
     }
 
-    async fn delete_mem(&self, _id: i32) -> Result<(), ServiceError> {
+    async fn delete_mem(&self, _user_id: i32, _id: i32) -> Result<(), ServiceError> {
         panic!("delete_mem not configured in FakeRepo")
     }
 
     async fn get_all_mems(
         &self,
+        _user_id: i32,
         _limit: i64,
         _offset: i64,
         _query: &MemQuery,
@@ -129,12 +131,13 @@ impl MemRepository for FakeRepo {
         panic!("get_all_mems not configured in FakeRepo")
     }
 
-    async fn count_all_mems(&self, _query: &MemQuery) -> Result<i64, ServiceError> {
+    async fn count_all_mems(&self, _user_id: i32, _query: &MemQuery) -> Result<i64, ServiceError> {
         panic!("count_all_mems not configured in FakeRepo")
     }
 
     async fn get_learning_mems(
         &self,
+        _user_id: i32,
         limit: i64,
         _tag_ids: &[i32],
         _exclude_tag_ids: &[i32],
@@ -151,6 +154,7 @@ impl MemRepository for FakeRepo {
 
     async fn get_due_review_candidates(
         &self,
+        _user_id: i32,
         _tag_ids: &[i32],
         _exclude_tag_ids: &[i32],
     ) -> Result<Vec<ReviewCandidate>, ServiceError> {
@@ -159,6 +163,7 @@ impl MemRepository for FakeRepo {
 
     async fn get_new_cards(
         &self,
+        _user_id: i32,
         limit: i64,
         _tag_ids: &[i32],
         _exclude_tag_ids: &[i32],
@@ -175,25 +180,27 @@ impl MemRepository for FakeRepo {
 
     async fn get_upcoming_review_candidates(
         &self,
+        _user_id: i32,
         _tag_ids: &[i32],
     ) -> Result<Vec<ReviewCandidate>, ServiceError> {
         Ok(self.upcoming.lock().unwrap().clone())
     }
 
-    async fn count_upcoming(&self) -> Result<i64, ServiceError> {
+    async fn count_upcoming(&self, _user_id: i32) -> Result<i64, ServiceError> {
         Ok(0)
     }
 
-    async fn count_upcoming_within_hours(&self, _hours: i64) -> Result<i64, ServiceError> {
+    async fn count_upcoming_within_hours(&self, _user_id: i32, _hours: i64) -> Result<i64, ServiceError> {
         Ok(0)
     }
 
-    async fn get_counts(&self) -> Result<(i64, i64, i64, i64, i64), ServiceError> {
+    async fn get_counts(&self, _user_id: i32) -> Result<(i64, i64, i64, i64, i64), ServiceError> {
         panic!("get_counts not configured in FakeRepo")
     }
 
     async fn get_session_stats(
         &self,
+        _user_id: i32,
         _tag_ids: &[i32],
         _exclude_tag_ids: &[i32],
     ) -> Result<SessionStats, ServiceError> {
@@ -202,18 +209,20 @@ impl MemRepository for FakeRepo {
 
     async fn search_hits(
         &self,
+        _user_id: i32,
         _like: &str,
         _cap: i64,
     ) -> Result<Vec<(i64, String, String)>, ServiceError> {
         Ok(vec![])
     }
 
-    async fn get_next_mem(&self) -> Result<Option<i32>, ServiceError> {
+    async fn get_next_mem(&self, _user_id: i32) -> Result<Option<i32>, ServiceError> {
         Ok(None)
     }
 
     async fn set_state(
         &self,
+        _user_id: i32,
         id: i32,
         state: &str,
         step_index: Option<i32>,
@@ -225,27 +234,27 @@ impl MemRepository for FakeRepo {
         Ok(())
     }
 
-    async fn update_mem_fsrs(&self, _id: i32, _params: &FsrsUpdate) -> Result<(), ServiceError> {
+    async fn update_mem_fsrs(&self, _user_id: i32, _id: i32, _params: &FsrsUpdate) -> Result<(), ServiceError> {
         panic!("update_mem_fsrs not configured in FakeRepo")
     }
 
-    async fn bury_mem(&self, _id: i32) -> Result<(), ServiceError> {
+    async fn bury_mem(&self, _user_id: i32, _id: i32) -> Result<(), ServiceError> {
         panic!("bury_mem not configured in FakeRepo")
     }
 
-    async fn unbury_mem(&self, _id: i32) -> Result<(), ServiceError> {
+    async fn unbury_mem(&self, _user_id: i32, _id: i32) -> Result<(), ServiceError> {
         panic!("unbury_mem not configured in FakeRepo")
     }
 
-    async fn suspend_mem(&self, _id: i32) -> Result<(), ServiceError> {
+    async fn suspend_mem(&self, _user_id: i32, _id: i32) -> Result<(), ServiceError> {
         panic!("suspend_mem not configured in FakeRepo")
     }
 
-    async fn unsuspend_mem(&self, _id: i32) -> Result<(), ServiceError> {
+    async fn unsuspend_mem(&self, _user_id: i32, _id: i32) -> Result<(), ServiceError> {
         panic!("unsuspend_mem not configured in FakeRepo")
     }
 
-    async fn reset_mem(&self, _id: i32) -> Result<(), ServiceError> {
+    async fn reset_mem(&self, _user_id: i32, _id: i32) -> Result<(), ServiceError> {
         panic!("reset_mem not configured in FakeRepo")
     }
 
@@ -281,12 +290,13 @@ impl MemRepository for FakeRepo {
         panic!("set_mem_tags not configured in FakeRepo")
     }
 
-    async fn get_mems_tags_batch(&self, _mem_ids: &[i32]) -> Result<Vec<MemTagRow>, ServiceError> {
+    async fn get_mems_tags_batch(&self, _user_id: i32, _mem_ids: &[i32]) -> Result<Vec<MemTagRow>, ServiceError> {
         Ok(Vec::new())
     }
 
     async fn export_all_mems(
         &self,
+        _user_id: i32,
         _tag_ids: &[i32],
     ) -> Result<Vec<(String, String, String)>, ServiceError> {
         Ok(Vec::new())

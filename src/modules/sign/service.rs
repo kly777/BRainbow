@@ -21,6 +21,7 @@ impl SignService {
 
     pub async fn create(
         &self,
+        user_id: i32,
         signifier: String,
         signified: String,
         onto_id: Option<i32>,
@@ -34,13 +35,13 @@ impl SignService {
             return Err(ServiceError::InvalidInput("所指不能为空".into()));
         }
         self.repo
-            .create(signifier, signified, onto_id, weight, relation_type)
+            .create(user_id, signifier, signified, onto_id, weight, relation_type)
             .await
             .map_err(ServiceError::Db)
     }
 
-    pub async fn delete(&self, id: i32) -> Result<u64, ServiceError> {
-        self.repo.delete(id).await.map_err(ServiceError::Db)
+    pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, ServiceError> {
+        self.repo.delete(user_id, id).await.map_err(ServiceError::Db)
     }
 }
 
@@ -62,7 +63,7 @@ mod tests {
     async fn create_valid() {
         let (svc, _qsvc) = setup().await;
         let s = svc
-            .create("日".into(), "sun".into(), None, None, None)
+            .create(1, "日".into(), "sun".into(), None, None, None)
             .await
             .unwrap();
         assert_eq!(s.signifier, "日");
@@ -72,7 +73,7 @@ mod tests {
     async fn create_empty_signifier_rejected() {
         let (svc, _qsvc) = setup().await;
         let err = svc
-            .create("".into(), "sun".into(), None, None, None)
+            .create(1, "".into(), "sun".into(), None, None, None)
             .await
             .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
@@ -82,7 +83,7 @@ mod tests {
     async fn create_empty_signified_rejected() {
         let (svc, _qsvc) = setup().await;
         let err = svc
-            .create("日".into(), "  ".into(), None, None, None)
+            .create(1, "日".into(), "  ".into(), None, None, None)
             .await
             .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
@@ -91,13 +92,13 @@ mod tests {
     #[tokio::test]
     async fn list_paginated() {
         let (svc, qsvc) = setup().await;
-        svc.create("a".into(), "1".into(), None, None, None)
+        svc.create(1, "a".into(), "1".into(), None, None, None)
             .await
             .unwrap();
-        svc.create("b".into(), "2".into(), None, None, None)
+        svc.create(1, "b".into(), "2".into(), None, None, None)
             .await
             .unwrap();
-        let (items, total) = qsvc.list(1, 0).await.unwrap();
+        let (items, total) = qsvc.list(1, 1, 0).await.unwrap();
         assert_eq!(total, 2);
         assert_eq!(items.len(), 1);
     }
@@ -105,10 +106,10 @@ mod tests {
     #[tokio::test]
     async fn by_signifier_query() {
         let (svc, qsvc) = setup().await;
-        svc.create("月".into(), "moon".into(), None, None, None)
+        svc.create(1, "月".into(), "moon".into(), None, None, None)
             .await
             .unwrap();
-        let (items, _) = qsvc.by_signifier("月", 10, 0).await.unwrap();
+        let (items, _) = qsvc.by_signifier(1, "月", 10, 0).await.unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].signified, "moon");
     }
@@ -117,10 +118,10 @@ mod tests {
     async fn delete_sign() {
         let (svc, qsvc) = setup().await;
         let s = svc
-            .create("x".into(), "y".into(), None, None, None)
+            .create(1, "x".into(), "y".into(), None, None, None)
             .await
             .unwrap();
-        assert_eq!(svc.delete(s.id).await.unwrap(), 1);
-        assert!(qsvc.by_id(s.id).await.unwrap().is_none());
+        assert_eq!(svc.delete(1, s.id).await.unwrap(), 1);
+        assert!(qsvc.by_id(1, s.id).await.unwrap().is_none());
     }
 }

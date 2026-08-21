@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\", signifier, signified, onto_id AS \"onto_id?: i32\",\n                      weight, relation_type, created_at AS \"created_at!: chrono::DateTime<chrono::Utc>\"\n               FROM signifier_signified WHERE signifier = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+  "query": "SELECT id AS \"id: i32\", signifier, signified, onto_id AS \"onto_id?: i32\",\n                      weight, relation_type, created_at AS \"created_at!: chrono::DateTime<chrono::Utc>\"\n               FROM signifier_signified WHERE (user_id = ?1 OR user_id IS NULL)\n               ORDER BY id LIMIT ?2 OFFSET ?3",
   "describe": {
     "columns": [
       {
@@ -94,5 +94,5 @@
       true
     ]
   },
-  "hash": "ab88fa120e0674483ed0187525fde59ce4c8f2d3f8dd9db3551dbd80b359d6de"
+  "hash": "19c8eca2b041420621311660605c7f20fd4989e5bd36bcfc0a0e271a8462759d"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\", signifier, signified, onto_id AS \"onto_id?: i32\",\n                      weight, relation_type, created_at AS \"created_at!: chrono::DateTime<chrono::Utc>\"\n               FROM signifier_signified WHERE id = ?",
+  "query": "INSERT INTO signifier_signified (signifier, signified, onto_id, weight, relation_type, user_id, created_at)\n               VALUES (?, ?, ?, ?, ?, ?, ?)\n               RETURNING id AS \"id: i32\", signifier, signified, onto_id AS \"onto_id?: i32\",\n                         weight, relation_type, created_at AS \"created_at!: chrono::DateTime<chrono::Utc>\"",
   "describe": {
     "columns": [
       {
@@ -82,17 +82,17 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 7
     },
     "nullable": [
       false,
       false,
       false,
-      true,
+      false,
       true,
       true,
       true
     ]
   },
-  "hash": "bcf70e91073bbece9d09e31ef461da21a164f8f8246b8dd4f231e329eb7f555b"
+  "hash": "8f016c6744c70c3fbbb5285b95f133e5f157f936b89861188c75b918e0a84db2"
 }

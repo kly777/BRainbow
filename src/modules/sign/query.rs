@@ -21,39 +21,42 @@ impl SignQueryService {
 
     pub async fn list(
         &self,
+        user_id: i32,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<SignifierSignified>, i64), ServiceError> {
         self.repo
-            .find_all_paginated(limit, offset)
+            .find_all_paginated(user_id, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }
 
-    pub async fn by_id(&self, id: i32) -> Result<Option<SignifierSignified>, ServiceError> {
-        self.repo.find_by_id(id).await.map_err(ServiceError::Db)
+    pub async fn by_id(&self, user_id: i32, id: i32) -> Result<Option<SignifierSignified>, ServiceError> {
+        self.repo.find_by_id(user_id, id).await.map_err(ServiceError::Db)
     }
 
     pub async fn by_signifier(
         &self,
+        user_id: i32,
         signifier: &str,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<SignifierSignified>, i64), ServiceError> {
         self.repo
-            .find_by_signifier_paginated(signifier, limit, offset)
+            .find_by_signifier_paginated(user_id, signifier, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }
 
     pub async fn by_signified(
         &self,
+        user_id: i32,
         signified: &str,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<SignifierSignified>, i64), ServiceError> {
         self.repo
-            .find_by_signified_paginated(signified, limit, offset)
+            .find_by_signified_paginated(user_id, signified, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }

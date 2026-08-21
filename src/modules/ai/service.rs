@@ -276,6 +276,18 @@ impl AiChatPort for AiService {
     ) -> Result<(String, String), ServiceError> {
         self.chat(user_id, messages, temperature, max_tokens).await
     }
+
+    async fn chat_stream(
+        &self,
+        user_id: i32,
+        messages: &[AiProxyMessage],
+        temperature: Option<f32>,
+        max_tokens: Option<i32>,
+        tx: Option<tokio::sync::mpsc::Sender<String>>,
+    ) -> Result<(String, String, Option<String>, bool), ServiceError> {
+        self.chat_stream(user_id, messages, temperature, max_tokens, tx)
+            .await
+    }
 }
 
 /// reasoning 流式前缀（前端 streamChatRequest.ts 的 REASONING_PREFIX 保持一致）

@@ -2,6 +2,10 @@ use sqlx::SqlitePool;
 
 use crate::modules::ai::model::AiProxyMessage;
 use crate::modules::ai::port::AiChatPort;
+
+/// SSE 协议常量（前端 streamChatRequest.ts 保持一致）：流结束标记 / 错误前缀
+pub const SSE_DONE: &str = "__DONE__";
+pub const SSE_ERROR_PREFIX: &str = "__ERROR__:";
 use crate::shared::error_types::ServiceError;
 use crate::shared::time_text::utc_now_iso;
 
@@ -294,6 +298,47 @@ impl ChatService {
     pub async fn abort_chat(&self, ctx: &PreparedChat) {
         if let Some(new_id) = ctx.inserted_user_id {
             self.repo.delete_node(new_id).await;
+        }
+    }
+
+    /// 流式对话编排（下沉自 handler）：准备 → 调 AI 流式转发 → 完成落库 / 失败回滚。
+    ///
+    /// 协议常量与 handler 共享（见 handler 的 SSE_DONE / SSE_ERROR_PREFIX）。
+    pub async fn stream_chat(
+        &self,
+        user_id: i32,
+        ai: &dyn AiChatPort,
+        tree_id: i64,
+        parent_id: Option<i64>,
+        content: Option<String>,
+        tx: tokio::sync::mpsc::Sender<String>,
+    ) -> Result<(), ServiceError> {
+        let ctx = self
+            .prepare_chat(user_id, tree_id, parent_id, content)
+            .await?;
+
+        let result = ai
+            .chat_stream(user_id, &ctx.messages, None, None, Some(tx.clone()))
+            .await;
+        match result {
+            Ok((full, _model, reasoning, _)) => {
+                match self.finish_chat(&ctx, &full, reasoning.as_deref()).await {
+                    Ok(_) => {
+                        let _ = tx.send(SSE_DONE.to_string()).await;
+                        Ok(())
+                    }
+                    Err(e) => {
+                        let _ = tx.send(format!("{SSE_ERROR_PREFIX}{e}")).await;
+                        self.abort_chat(&ctx).await;
+                        Err(e)
+                    }
+                }
+            }
+            Err(e) => {
+                let _ = tx.send(format!("{SSE_ERROR_PREFIX}{e}")).await;
+                self.abort_chat(&ctx).await;
+                Err(e)
+            }
         }
     }
 

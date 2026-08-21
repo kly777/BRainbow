@@ -48,10 +48,6 @@ where
 
 // ── 树 ──
 
-/// SSE data 行协议常量（前端 web/src/modules/chat/hooks/streamChatRequest.ts 保持一致）
-const SSE_DONE: &str = "__DONE__";
-const SSE_ERROR_PREFIX: &str = "__ERROR__:";
-
 pub async fn list_trees_handler(
     State(chat): State<ChatService>,
     Extension(claims): Extension<Claims>,
@@ -136,50 +132,27 @@ pub async fn chat_handler(
     Path(id): Path<i64>,
     Json(req): Json<ChatRequest>,
 ) -> impl IntoResponse {
+    use crate::modules::chat::service::SSE_DONE;
     use axum::response::sse::{Event, KeepAlive, Sse};
     use std::convert::Infallible;
 
-    let svc = chat.clone();
-    let ai = ai.clone();
-    let user_id = claims.sub;
-
-    // 准备：校验 + 插 user 节点 + 组装链（此时未调 AI）
-    let ctx = match svc
-        .prepare_chat(user_id, id, req.parent_id, req.content)
-        .await
-    {
-        Ok(ctx) => ctx,
-        Err(e) => return e.into_response(),
-    };
-
     let (tx, rx) = tokio::sync::mpsc::channel::<String>(64);
 
-    // 后台任务：流式调 AI → 转发 token → 完成后落库
-    let svc2 = svc.clone();
-    let ai2 = ai.clone();
-    let ctx2 = ctx.clone();
-    let tx2 = tx.clone();
+    // 编排（准备 → 流式 AI → 落库/回滚）下沉到 ChatService::stream_chat
+    let svc = chat.clone();
+    let ai_port: std::sync::Arc<dyn crate::modules::ai::port::AiChatPort> =
+        std::sync::Arc::new(ai);
     tokio::spawn(async move {
-        let result = ai2
-            .chat_stream(user_id, &ctx2.messages, None, None, Some(tx2))
+        let _ = svc
+            .stream_chat(
+                claims.sub,
+                &*ai_port,
+                id,
+                req.parent_id,
+                req.content,
+                tx,
+            )
             .await;
-        match result {
-            Ok((full, _model, reasoning, _)) => {
-                match svc2.finish_chat(&ctx2, &full, reasoning.as_deref()).await {
-                    Ok(_) => {
-                        let _ = tx.send(SSE_DONE.to_string()).await;
-                    }
-                    Err(e) => {
-                        let _ = tx.send(format!("{SSE_ERROR_PREFIX}{e}")).await;
-                        svc2.abort_chat(&ctx2).await;
-                    }
-                }
-            }
-            Err(e) => {
-                let _ = tx.send(format!("{SSE_ERROR_PREFIX}{e}")).await;
-                svc2.abort_chat(&ctx2).await;
-            }
-        }
     });
 
     // SSE 流：转发 token；__DONE__ / __ERROR__ 为结束标记

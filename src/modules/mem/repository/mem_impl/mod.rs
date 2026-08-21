@@ -19,10 +19,8 @@ impl MemRepo {
 }
 
 mod chunk;
-mod crud;
 mod fsrs;
 mod helpers;
 mod learning;
-mod mnemonic;
-mod revlog;
 mod tag;
+mod trait_impl;

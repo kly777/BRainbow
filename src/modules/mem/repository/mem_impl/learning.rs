@@ -268,7 +268,7 @@ impl super::super::MemRepo {
         })
     }
 
-    async fn count_session_sql(
+    pub(crate) async fn count_session_sql(
         &self,
         user_id: i32,
         where_clause: &str,

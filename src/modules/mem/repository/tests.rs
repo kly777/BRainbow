@@ -1,6 +1,7 @@
 #![allow(clippy::unwrap_used)]
 use super::MemRepo;
 use crate::modules::mem::dto::MemQuery;
+use crate::modules::mem::port::MemRepository;
 use sqlx::SqlitePool;
 use std::sync::Arc;
 

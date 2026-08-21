@@ -100,5 +100,3 @@ mod mem_impl;
 
 #[cfg(test)]
 mod tests;
-
-mod trait_impl;

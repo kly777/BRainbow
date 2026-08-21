@@ -115,7 +115,7 @@ impl super::super::MemRepo {
     }
 
     /// 删除无任何 mem 关联的孤儿标签
-    async fn delete_orphan_tag(&self, tag_id: i32) -> Result<(), sqlx::Error> {
+    pub(crate) async fn delete_orphan_tag(&self, tag_id: i32) -> Result<(), sqlx::Error> {
         sqlx::query!(
             "DELETE FROM tag WHERE id = ?1 AND NOT EXISTS (SELECT 1 FROM mem_tag WHERE tag_id = ?2)",
             tag_id,

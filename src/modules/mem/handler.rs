@@ -281,7 +281,10 @@ pub async fn set_mem_tags(
     Json(payload): Json<SetTagsRequest>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.set_mem_tags(claims.sub, payload.mem_id, &payload.tag_ids).await {
+    match svc
+        .set_mem_tags(claims.sub, payload.mem_id, &payload.tag_ids)
+        .await
+    {
         Ok(()) => ok(),
         Err(e) => err(e, "设置标签"),
     }
@@ -430,7 +433,10 @@ pub async fn get_due(
         .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
         .unwrap_or_default();
     let svc = &service;
-    match svc.get_due(claims.sub, limit, &tag_ids, &exclude_tag_ids).await {
+    match svc
+        .get_due(claims.sub, limit, &tag_ids, &exclude_tag_ids)
+        .await
+    {
         Ok(res) => Json(res).into_response(),
         Err(e) => err(e, "获取待复习"),
     }
@@ -457,7 +463,10 @@ pub async fn review_mem(
     Json(body): Json<ReviewRequest>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.review(claims.sub, id, body.rating, body.duration_secs).await {
+    match svc
+        .review(claims.sub, id, body.rating, body.duration_secs)
+        .await
+    {
         Ok(res) => Json(res).into_response(),
         Err(e) => e.into_response(),
     }

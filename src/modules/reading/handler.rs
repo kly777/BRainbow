@@ -29,7 +29,10 @@ pub async fn upload_article(
     Extension(claims): Extension<Claims>,
     Json(body): Json<UploadArticleRequest>,
 ) -> impl IntoResponse {
-    match service.upload_article(claims.sub, &body.title, &body.content).await {
+    match service
+        .upload_article(claims.sub, &body.title, &body.content)
+        .await
+    {
         Ok(article) => Json(json!({"article": article})).into_response(),
         Err(e) => error::internal(e, "上传文章"),
     }

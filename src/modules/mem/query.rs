@@ -43,7 +43,10 @@ impl MemQueryService {
         };
         let (page, page_size) = pagination.clamp();
         let offset = (page - 1) * page_size;
-        let ids = self.repo.get_all_mems(user_id, page_size, offset, query).await?;
+        let ids = self
+            .repo
+            .get_all_mems(user_id, page_size, offset, query)
+            .await?;
         let items = self.build_items(user_id, &ids).await?;
         let total = self.repo.count_all_mems(user_id, query).await?;
         let pagination_ref = &pagination;
@@ -159,13 +162,21 @@ impl MemQueryService {
         self.repo.search_tags(user_id, q).await
     }
 
-    pub async fn get_mem_tags(&self, user_id: i32, mem_id: i32) -> Result<Vec<TagInfo>, ServiceError> {
+    pub async fn get_mem_tags(
+        &self,
+        user_id: i32,
+        mem_id: i32,
+    ) -> Result<Vec<TagInfo>, ServiceError> {
         // 先通过 get_mem 校验所有权（共享数据可见），再返回标签
         self.repo.get_mem(user_id, mem_id).await?;
         self.repo.get_mem_tags(mem_id).await
     }
 
-    pub async fn get_mems_tags_batch(&self, user_id: i32, mem_ids: &[i32]) -> BatchDataResponse<MemTagRow> {
+    pub async fn get_mems_tags_batch(
+        &self,
+        user_id: i32,
+        mem_ids: &[i32],
+    ) -> BatchDataResponse<MemTagRow> {
         match self.repo.get_mems_tags_batch(user_id, mem_ids).await {
             Ok(items) => BatchDataResponse::all_ok(items),
             Err(e) => BatchDataResponse::from_results(
@@ -205,7 +216,11 @@ impl MemQueryService {
 
     // ── 助记 ──
 
-    pub async fn get_mnemonic(&self, user_id: i32, mem_id: i32) -> Result<Option<String>, ServiceError> {
+    pub async fn get_mnemonic(
+        &self,
+        user_id: i32,
+        mem_id: i32,
+    ) -> Result<Option<String>, ServiceError> {
         self.repo.get_mem(user_id, mem_id).await?;
         self.repo.get_mnemonic(mem_id).await
     }
@@ -220,7 +235,11 @@ impl MemQueryService {
 
     // ── 内部辅助 ──
 
-    async fn build_items(&self, user_id: i32, ids: &[i32]) -> Result<Vec<MemWithChunks>, ServiceError> {
+    async fn build_items(
+        &self,
+        user_id: i32,
+        ids: &[i32],
+    ) -> Result<Vec<MemWithChunks>, ServiceError> {
         self.repo.get_mems_with_chunks(user_id, ids).await
     }
 }
@@ -348,7 +367,10 @@ mod tests {
 
     #[tokio::test]
     async fn preview_missing_mem_returns_not_found_through_fake_port() {
-        let svc = MemQueryService::new(Arc::new(FakeRepo::default()), Arc::new(crate::modules::mem::config::MemConfig::default()));
+        let svc = MemQueryService::new(
+            Arc::new(FakeRepo::default()),
+            Arc::new(crate::modules::mem::config::MemConfig::default()),
+        );
         let err = svc.preview(1, 1).await.unwrap_err();
         assert!(matches!(err, ServiceError::NotFound(_)));
     }

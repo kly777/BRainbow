@@ -17,7 +17,10 @@ pub async fn get_tasks_handler(
     State(query): State<TaskQueryService>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match query.list(claims.sub, pagination.limit(), pagination.offset()).await {
+    match query
+        .list(claims.sub, pagination.limit(), pagination.offset())
+        .await
+    {
         Ok((tasks, total)) => {
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()

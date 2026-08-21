@@ -341,7 +341,10 @@ pub async fn set_bookmark_tags_handler(
     Path(id): Path<i32>,
     Json(payload): Json<SetBookmarkTagsRequest>,
 ) -> impl IntoResponse {
-    match service.set_bookmark_tags(claims.sub, id, &payload.tags).await {
+    match service
+        .set_bookmark_tags(claims.sub, id, &payload.tags)
+        .await
+    {
         Ok(tags) => {
             let tags: Vec<BookmarkTagResponse> =
                 tags.into_iter().map(BookmarkTagResponse::from).collect();

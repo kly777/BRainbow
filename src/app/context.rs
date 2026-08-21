@@ -232,7 +232,6 @@ impl FromRef<AppState> for DbViewerQueryService {
     }
 }
 
-
 impl AppState {
     /// 初始化运行时缓存：DB 中有持久化密钥则优先
     pub async fn init_runtime_cache(&self) {
@@ -282,7 +281,7 @@ impl AppState {
         let text = TextService::new(db.clone());
         let text_query = TextQueryService::new(db.clone());
         #[cfg(feature = "db-viewer")]
-    let db_viewer = DbViewerQueryService::new(db.clone());
+        let db_viewer = DbViewerQueryService::new(db.clone());
         let task_query = TaskQueryService::new(db.clone());
         let mem = MemService::new(
             mem_repo,

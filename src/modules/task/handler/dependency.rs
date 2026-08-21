@@ -63,7 +63,10 @@ pub async fn remove_dependency_handler(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.remove_dependency(claims.sub, task_id, depends_on_task_id).await {
+    match svc
+        .remove_dependency(claims.sub, task_id, depends_on_task_id)
+        .await
+    {
         Ok(rows) if rows > 0 => Json(MessageResponse {
             message: "依赖关系已删除".into(),
         })

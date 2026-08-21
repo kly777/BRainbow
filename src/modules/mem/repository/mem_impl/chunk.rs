@@ -38,7 +38,12 @@ impl super::super::MemRepo {
         })
     }
 
-    pub async fn update_chunk(&self, user_id: i32, id: i32, content: &str) -> Result<(), sqlx::Error> {
+    pub async fn update_chunk(
+        &self,
+        user_id: i32,
+        id: i32,
+        content: &str,
+    ) -> Result<(), sqlx::Error> {
         sqlx::query!(
             "UPDATE chunk SET content=?1, updated_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?2 AND (user_id = ?3 OR user_id IS NULL)",
             content,

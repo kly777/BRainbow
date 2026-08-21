@@ -229,7 +229,10 @@ impl MemRepository for super::super::MemRepo {
         qb.push(" OFFSET ");
         qb.push_bind(offset);
 
-        qb.build_query_scalar().fetch_all(&*self.pool).await.map_err(ServiceError::Db)
+        qb.build_query_scalar()
+            .fetch_all(&*self.pool)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     async fn count_all_mems(&self, user_id: i32, query: &MemQuery) -> Result<i64, ServiceError> {
@@ -302,7 +305,10 @@ impl MemRepository for super::super::MemRepo {
             }
         }
 
-        qb.build_query_scalar().fetch_one(&*self.pool).await.map_err(ServiceError::Db)
+        qb.build_query_scalar()
+            .fetch_one(&*self.pool)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     async fn delete_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
@@ -396,7 +402,9 @@ impl MemRepository for super::super::MemRepo {
             content,
             user_id
         )
-        .fetch_one(&*self.pool).await.map_err(ServiceError::Db)
+        .fetch_one(&*self.pool)
+        .await
+        .map_err(ServiceError::Db)
     }
 
     async fn update_chunk(&self, user_id: i32, id: i32, content: &str) -> Result<(), ServiceError> {
@@ -427,7 +435,10 @@ impl MemRepository for super::super::MemRepo {
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         qb.push(" ORDER BY due_at LIMIT ");
         qb.push_bind(limit);
-        qb.build_query_scalar().fetch_all(&*self.pool).await.map_err(ServiceError::Db)
+        qb.build_query_scalar()
+            .fetch_all(&*self.pool)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     async fn get_due_review_candidates(
@@ -479,7 +490,10 @@ impl MemRepository for super::super::MemRepo {
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         qb.push(" ORDER BY RANDOM() LIMIT ");
         qb.push_bind(limit);
-        qb.build_query_scalar().fetch_all(&*self.pool).await.map_err(ServiceError::Db)
+        qb.build_query_scalar()
+            .fetch_all(&*self.pool)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     async fn get_upcoming_review_candidates(
@@ -520,7 +534,11 @@ impl MemRepository for super::super::MemRepo {
         .fetch_one(&*self.pool).await.map_err(ServiceError::Db)
     }
 
-    async fn count_upcoming_within_hours(&self, user_id: i32, hours: i64) -> Result<i64, ServiceError> {
+    async fn count_upcoming_within_hours(
+        &self,
+        user_id: i32,
+        hours: i64,
+    ) -> Result<i64, ServiceError> {
         sqlx::query_scalar!(
             r#"SELECT COUNT(*) FROM mem m
             WHERE (m.user_id = ?1 OR m.user_id IS NULL)
@@ -970,7 +988,9 @@ impl MemRepository for super::super::MemRepo {
 
         qb.push(" ORDER BY m.id");
         qb.build_query_as::<(String, String, String)>()
-            .fetch_all(&*self.pool).await.map_err(ServiceError::Db)
+            .fetch_all(&*self.pool)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     async fn insert_revlog(&self, params: &InsertRevlogParams) -> Result<(), ServiceError> {
@@ -1000,7 +1020,9 @@ impl MemRepository for super::super::MemRepo {
 
     async fn count_revlogs(&self) -> Result<i64, ServiceError> {
         sqlx::query_scalar!("SELECT COUNT(*) FROM revlog")
-            .fetch_one(&*self.pool).await.map_err(ServiceError::Db)
+            .fetch_one(&*self.pool)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     async fn prune_revlogs(&self) -> Result<(), ServiceError> {
@@ -1033,7 +1055,9 @@ impl MemRepository for super::super::MemRepo {
 
     async fn get_mnemonic(&self, mem_id: i32) -> Result<Option<String>, ServiceError> {
         sqlx::query_scalar!("SELECT content FROM mem_mnemonic WHERE mem_id = ?1", mem_id)
-            .fetch_optional(&*self.pool).await.map_err(ServiceError::Db)
+            .fetch_optional(&*self.pool)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     async fn upsert_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), ServiceError> {

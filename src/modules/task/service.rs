@@ -29,7 +29,10 @@ impl TaskService {
         if let Some(parent_id) = req.parent_task_id {
             check_circular_parent(&self.repo, user_id, 0, parent_id).await?;
         }
-        self.repo.create(user_id, req).await.map_err(ServiceError::Db)
+        self.repo
+            .create(user_id, req)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     pub async fn quick_create(
@@ -38,7 +41,10 @@ impl TaskService {
         req: QuickCreateTaskRequest,
     ) -> Result<Task, ServiceError> {
         validate_title(&req.title)?;
-        self.repo.quick_create(user_id, req).await.map_err(ServiceError::Db)
+        self.repo
+            .quick_create(user_id, req)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     pub async fn update(
@@ -59,10 +65,13 @@ impl TaskService {
             }
             check_circular_parent(&self.repo, user_id, id, parent_id).await?;
         }
-        self.repo.update(user_id, id, req).await.map_err(|e| match e {
-            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
-            other => ServiceError::from(other),
-        })
+        self.repo
+            .update(user_id, id, req)
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
+                other => ServiceError::from(other),
+            })
     }
 
     pub async fn complete(&self, user_id: i32, id: i32) -> Result<Task, ServiceError> {
@@ -87,14 +96,20 @@ impl TaskService {
     }
 
     pub async fn move_to_backlog(&self, user_id: i32, id: i32) -> Result<Task, ServiceError> {
-        self.repo.move_to_backlog(user_id, id).await.map_err(|e| match e {
-            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
-            other => ServiceError::from(other),
-        })
+        self.repo
+            .move_to_backlog(user_id, id)
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
+                other => ServiceError::from(other),
+            })
     }
 
     pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, ServiceError> {
-        self.repo.delete(user_id, id).await.map_err(ServiceError::Db)
+        self.repo
+            .delete(user_id, id)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     pub async fn add_dependency(

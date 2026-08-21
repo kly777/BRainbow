@@ -13,6 +13,7 @@ import {
 	filtersFromParams,
 	PAGE_SIZES,
 } from "../tableConfig";
+import { useTableFilters } from "./useTableFilters.ts";
 
 export interface DbViewerApi {
 	tables: () => string[];
@@ -76,7 +77,6 @@ export function useDbViewer(): DbViewerApi {
 	const sortDesc = () => searchParams.order === "desc";
 	const filters = () =>
 		filtersFromParams(searchParams.fcol, searchParams.fop, searchParams.fval);
-	const hasFilters = () => filters().length > 0;
 	const refFilter = () =>
 		filterId() > 0 ? { col: filterCol(), id: filterId() } : null;
 
@@ -92,6 +92,28 @@ export function useDbViewer(): DbViewerApi {
 	const [jumpValue, setJumpValue] = createSignal("1");
 
 	const totalPages = () => Math.max(1, Math.ceil(total() / currentPageSize()));
+
+	// ── 子 hook：筛选/排序 ──
+	const tableFilters = useTableFilters({
+		filters,
+		sortCol,
+		sortDesc,
+		writeFilters: (next) => {
+			setSearchParams({
+				page: 1,
+				fcol: next.map((f) => f.col),
+				fop: next.map((f) => f.op),
+				fval: next.map((f) => f.val),
+			});
+		},
+		writeSort: (col, desc) => {
+			setSearchParams({
+				sort: col,
+				order: desc ? "desc" : "asc",
+				page: 1,
+			});
+		},
+	});
 
 	const loadTables = async () => {
 		setLoading(true);
@@ -159,15 +181,6 @@ export function useDbViewer(): DbViewerApi {
 		});
 	};
 
-	const writeFilters = (next: readonly ColumnFilter[]) => {
-		setSearchParams({
-			page: 1,
-			fcol: next.map((f) => f.col),
-			fop: next.map((f) => f.op),
-			fval: next.map((f) => f.val),
-		});
-	};
-
 	const reloadTable = (targetPage: number) => {
 		const table = activeTable();
 		if (!table) return;
@@ -183,43 +196,6 @@ export function useDbViewer(): DbViewerApi {
 			fcol: activeFilters.map((f) => f.col),
 			fop: activeFilters.map((f) => f.op),
 			fval: activeFilters.map((f) => f.val),
-		});
-	};
-
-	const toggleSort = (col: string) => {
-		const nextDesc = sortCol() === col ? !sortDesc() : false;
-		setSearchParams({
-			sort: col,
-			order: nextDesc ? "desc" : "asc",
-			page: 1,
-		});
-	};
-
-	const setColumnFilter = (
-		col: string,
-		op: ColumnFilter["op"],
-		value: string,
-	) => {
-		const next = filters().filter((f) => f.col !== col);
-		const valueless = op === "null" || op === "notnull";
-		if (valueless || value.trim()) {
-			next.push({ col, op, val: valueless ? "" : value });
-		}
-		writeFilters(next);
-	};
-
-	const removeColumnFilter = (col: string) => {
-		writeFilters(filters().filter((f) => f.col !== col));
-	};
-
-	const clearFilters = () => {
-		setSearchParams({
-			page: 1,
-			id: undefined,
-			ref_col: undefined,
-			fcol: [],
-			fop: [],
-			fval: [],
 		});
 	};
 
@@ -273,8 +249,7 @@ export function useDbViewer(): DbViewerApi {
 		}
 	};
 
-	// URL 是表格状态的唯一来源：前进/后退、浏览器刷新、程序内 setSearchParams
-	// 都走同一个 effect 拉取，避免 URL 变了但表格没变。
+	// URL 是表格状态的唯一来源
 	createEffect(() => {
 		const table = activeTable();
 		const page = currentPage();
@@ -317,7 +292,7 @@ export function useDbViewer(): DbViewerApi {
 		totalPages,
 		filterId,
 		filterCol,
-		hasFilters,
+		hasFilters: tableFilters.hasFilters,
 		sortCol,
 		sortDesc,
 		filters,
@@ -331,10 +306,10 @@ export function useDbViewer(): DbViewerApi {
 		jumpValue,
 		openTable,
 		reloadTable,
-		toggleSort,
-		setColumnFilter,
-		removeColumnFilter,
-		clearFilters,
+		toggleSort: tableFilters.toggleSort,
+		setColumnFilter: tableFilters.setColumnFilter,
+		removeColumnFilter: tableFilters.removeColumnFilter,
+		clearFilters: tableFilters.clearFilters,
 		jumpToRef,
 		previewFor,
 		exportTable,

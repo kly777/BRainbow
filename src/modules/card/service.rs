@@ -20,7 +20,10 @@ impl CardService {
     }
 
     pub async fn create(&self, user_id: i32, content: String) -> Result<Card, ServiceError> {
-        self.repo.create(user_id, content).await.map_err(ServiceError::Db)
+        self.repo
+            .create(user_id, content)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     pub async fn update(
@@ -29,14 +32,20 @@ impl CardService {
         id: i32,
         content: Option<String>,
     ) -> Result<Card, ServiceError> {
-        self.repo.update(user_id, id, content).await.map_err(|e| match e {
-            sqlx::Error::RowNotFound => ServiceError::NotFound("卡片不存在".into()),
-            other => ServiceError::Db(other),
-        })
+        self.repo
+            .update(user_id, id, content)
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::RowNotFound => ServiceError::NotFound("卡片不存在".into()),
+                other => ServiceError::Db(other),
+            })
     }
 
     pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, ServiceError> {
-        self.repo.delete(user_id, id).await.map_err(ServiceError::Db)
+        self.repo
+            .delete(user_id, id)
+            .await
+            .map_err(ServiceError::Db)
     }
 }
 
@@ -51,7 +60,9 @@ mod tests {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
         crate::db::migrate(&pool).await.unwrap();
         sqlx::query("INSERT OR IGNORE INTO user (id, name, password_hash) VALUES (1, 'test', 'x')")
-            .execute(&*pool).await.unwrap();
+            .execute(&*pool)
+            .await
+            .unwrap();
         let qsvc = CardQueryService::new(pool.clone());
         (CardService::new(pool), qsvc)
     }

@@ -33,7 +33,10 @@ async fn setup_db() -> MemRepo {
 async fn create_test_mem(repo: &MemRepo, user_id: i32, cue: &str, target: &str) -> (i32, i32, i32) {
     let cue_id = repo.create_chunk(user_id, cue).await.unwrap();
     let target_id = repo.create_chunk(user_id, target).await.unwrap();
-    let mem_id = repo.create_mem(TEST_USER_ID, cue_id, target_id, &[]).await.unwrap();
+    let mem_id = repo
+        .create_mem(TEST_USER_ID, cue_id, target_id, &[])
+        .await
+        .unwrap();
     (mem_id, cue_id, target_id)
 }
 
@@ -126,8 +129,14 @@ async fn delete_mem_preserves_shared_chunk() {
     // 两个 mem 共用同一个 cue chunk
     let target1 = repo.create_chunk(TEST_USER_ID, "target1").await.unwrap();
     let target2 = repo.create_chunk(TEST_USER_ID, "target2").await.unwrap();
-    let mem1 = repo.create_mem(TEST_USER_ID, cue_id, target1, &[]).await.unwrap();
-    let mem2 = repo.create_mem(TEST_USER_ID, cue_id, target2, &[]).await.unwrap();
+    let mem1 = repo
+        .create_mem(TEST_USER_ID, cue_id, target1, &[])
+        .await
+        .unwrap();
+    let mem2 = repo
+        .create_mem(TEST_USER_ID, cue_id, target2, &[])
+        .await
+        .unwrap();
 
     // 删除第一个 mem
     repo.delete_mem(TEST_USER_ID, mem1).await.unwrap();
@@ -492,10 +501,18 @@ async fn insert_session_mem(repo: &MemRepo, state: &str, buried: i32, due_at: &s
 async fn estimate(repo: &MemRepo) -> crate::modules::mem::dto::SessionEstimate {
     let repo_arc: Arc<dyn crate::modules::mem::port::MemRepository> =
         Arc::new(MemRepo::new(repo.pool().clone()));
-    let svc = crate::modules::mem::query::MemQueryService::new(repo_arc, Arc::new(crate::modules::mem::config::MemConfig::default()));
-    svc.get_session_estimate(TEST_USER_ID, &crate::modules::mem::config::MemConfig::default(), &[], &[])
-        .await
-        .unwrap()
+    let svc = crate::modules::mem::query::MemQueryService::new(
+        repo_arc,
+        Arc::new(crate::modules::mem::config::MemConfig::default()),
+    );
+    svc.get_session_estimate(
+        TEST_USER_ID,
+        &crate::modules::mem::config::MemConfig::default(),
+        &[],
+        &[],
+    )
+    .await
+    .unwrap()
 }
 
 #[tokio::test]
@@ -538,7 +555,10 @@ async fn session_stats_averages_recent_durations() {
             .await
             .unwrap();
     }
-    let stats = repo.get_session_stats(TEST_USER_ID, &[], &[]).await.unwrap();
+    let stats = repo
+        .get_session_stats(TEST_USER_ID, &[], &[])
+        .await
+        .unwrap();
     assert!((stats.avg_duration_secs - 15.0).abs() < 1e-9);
 }
 
@@ -651,7 +671,10 @@ async fn session_stats_filters_prereq_tags_and_steps() {
     // 到期复习卡
     insert_session_mem(&repo, "review", 0, "2020-01-01T00:00:00Z").await;
 
-    let all = repo.get_session_stats(TEST_USER_ID, &[], &[]).await.unwrap();
+    let all = repo
+        .get_session_stats(TEST_USER_ID, &[], &[])
+        .await
+        .unwrap();
     // blocked 被前置依赖排除；其余 2 张新卡可学
     assert_eq!(all.new_ready, 2);
     assert_eq!(all.learning_steps, vec![1, 1]);
@@ -674,7 +697,10 @@ async fn session_stats_filters_prereq_tags_and_steps() {
         .execute(&**repo.pool())
         .await
         .unwrap();
-    let filtered = repo.get_session_stats(TEST_USER_ID, &[tag1], &[]).await.unwrap();
+    let filtered = repo
+        .get_session_stats(TEST_USER_ID, &[tag1], &[])
+        .await
+        .unwrap();
     assert_eq!(filtered.new_ready, 1, "只统计 ready 这张新卡");
     assert!(filtered.learning_steps.is_empty());
     assert_eq!(filtered.due_ready, 0);
@@ -704,7 +730,10 @@ async fn get_all_excludes_buried_by_default() {
     insert_session_mem(&repo, "new", 1, "2099-01-01T00:00:00Z").await;
 
     let query = MemQuery::default();
-    let ids = repo.get_all_mems(TEST_USER_ID, 100, 0, &query).await.unwrap();
+    let ids = repo
+        .get_all_mems(TEST_USER_ID, 100, 0, &query)
+        .await
+        .unwrap();
     let count = repo.count_all_mems(TEST_USER_ID, &query).await.unwrap();
 
     assert_eq!(ids.len(), 1, "默认应排除已埋葬卡");
@@ -722,7 +751,10 @@ async fn get_all_by_id_finds_buried_directly() {
         id: Some(i64::from(buried_id)),
         ..MemQuery::default()
     };
-    let ids = repo.get_all_mems(TEST_USER_ID, 100, 0, &query).await.unwrap();
+    let ids = repo
+        .get_all_mems(TEST_USER_ID, 100, 0, &query)
+        .await
+        .unwrap();
     assert_eq!(ids, vec![buried_id]);
     assert_eq!(repo.count_all_mems(TEST_USER_ID, &query).await.unwrap(), 1);
 }
@@ -751,7 +783,10 @@ async fn get_all_finds_buried_with_state_filter() {
         state: Some("buried".into()),
         ..MemQuery::default()
     };
-    let ids = repo.get_all_mems(TEST_USER_ID, 100, 0, &query).await.unwrap();
+    let ids = repo
+        .get_all_mems(TEST_USER_ID, 100, 0, &query)
+        .await
+        .unwrap();
     assert_eq!(ids.len(), 2, "2 张已埋葬卡");
 
     let count = repo.count_all_mems(TEST_USER_ID, &query).await.unwrap();
@@ -769,7 +804,10 @@ async fn get_all_state_review_still_excludes_buried() {
         state: Some("review".into()),
         ..MemQuery::default()
     };
-    let ids = repo.get_all_mems(TEST_USER_ID, 100, 0, &query).await.unwrap();
+    let ids = repo
+        .get_all_mems(TEST_USER_ID, 100, 0, &query)
+        .await
+        .unwrap();
     assert_eq!(ids.len(), 1, "只有 1 张未埋葬的 review 卡");
 }
 
@@ -780,9 +818,17 @@ async fn test_due_does_not_pull_upcoming_when_new_cards_exist() {
 
     // 创建 20 张新卡
     for i in 0..20 {
-        let cue_id = repo.create_chunk(TEST_USER_ID, &format!("cue_{}", i)).await.unwrap();
-        let target_id = repo.create_chunk(TEST_USER_ID, &format!("target_{}", i)).await.unwrap();
-        repo.create_mem(TEST_USER_ID, cue_id, target_id, &[]).await.unwrap();
+        let cue_id = repo
+            .create_chunk(TEST_USER_ID, &format!("cue_{}", i))
+            .await
+            .unwrap();
+        let target_id = repo
+            .create_chunk(TEST_USER_ID, &format!("target_{}", i))
+            .await
+            .unwrap();
+        repo.create_mem(TEST_USER_ID, cue_id, target_id, &[])
+            .await
+            .unwrap();
     }
 
     // 创建 5 张 review 卡（未来的 due_at，本不应出现在本轮）
@@ -795,7 +841,10 @@ async fn test_due_does_not_pull_upcoming_when_new_cards_exist() {
             .create_chunk(TEST_USER_ID, &format!("upcoming_target_{}", i))
             .await
             .unwrap();
-        let id = repo.create_mem(TEST_USER_ID, cue_id, target_id, &[]).await.unwrap();
+        let id = repo
+            .create_mem(TEST_USER_ID, cue_id, target_id, &[])
+            .await
+            .unwrap();
         // 设为 review 状态，due_at 在 1 分钟后（使用 TZ 格式，与真实代码一致）
         // 1 分钟 = 60 秒
         let future = (chrono::Utc::now() + chrono::Duration::seconds(60))
@@ -850,7 +899,10 @@ async fn test_due_does_not_pull_upcoming_when_new_cards_exist() {
 
     // 4. 验证 upcoming 不会被用到
     if ids.len() < limit as usize {
-        let upcoming = repo.get_upcoming_review_candidates(TEST_USER_ID, tag_ids).await.unwrap();
+        let upcoming = repo
+            .get_upcoming_review_candidates(TEST_USER_ID, tag_ids)
+            .await
+            .unwrap();
         // 不应走到这里！
         assert!(
             upcoming.is_empty() || ids.len() >= limit as usize,
@@ -893,14 +945,20 @@ async fn get_due_review_candidates_carries_priority_fields() {
         .await
         .unwrap();
 
-    let due = repo.get_due_review_candidates(TEST_USER_ID, &[], &[]).await.unwrap();
+    let due = repo
+        .get_due_review_candidates(TEST_USER_ID, &[], &[])
+        .await
+        .unwrap();
     assert_eq!(due.len(), 1);
     assert_eq!(due[0].id, due_id);
     assert_eq!(due[0].difficulty, 9.0);
     assert_eq!(due[0].stability, 2.0);
     assert_eq!(due[0].lapses, 4);
 
-    let upcoming = repo.get_upcoming_review_candidates(TEST_USER_ID, &[]).await.unwrap();
+    let upcoming = repo
+        .get_upcoming_review_candidates(TEST_USER_ID, &[])
+        .await
+        .unwrap();
     assert_eq!(upcoming.len(), 1);
     assert_eq!(upcoming[0].id, future_id);
 }
@@ -912,10 +970,16 @@ async fn get_mems_with_chunks_joins_chunks_and_mnemonic() {
     let repo = setup_db().await;
     let cue_id = repo.create_chunk(TEST_USER_ID, "线索内容").await.unwrap();
     let target_id = repo.create_chunk(TEST_USER_ID, "目标内容").await.unwrap();
-    let mem_id = repo.create_mem(TEST_USER_ID, cue_id, target_id, &[]).await.unwrap();
+    let mem_id = repo
+        .create_mem(TEST_USER_ID, cue_id, target_id, &[])
+        .await
+        .unwrap();
     repo.upsert_mnemonic(mem_id, "助记内容").await.unwrap();
 
-    let items = repo.get_mems_with_chunks(TEST_USER_ID, &[mem_id]).await.unwrap();
+    let items = repo
+        .get_mems_with_chunks(TEST_USER_ID, &[mem_id])
+        .await
+        .unwrap();
     assert_eq!(items.len(), 1);
     let item = &items[0];
     assert_eq!(item.id, mem_id);
@@ -936,9 +1000,15 @@ async fn get_mems_with_chunks_missing_mnemonic_is_none() {
     let repo = setup_db().await;
     let cue_id = repo.create_chunk(TEST_USER_ID, "cue").await.unwrap();
     let target_id = repo.create_chunk(TEST_USER_ID, "target").await.unwrap();
-    let mem_id = repo.create_mem(TEST_USER_ID, cue_id, target_id, &[]).await.unwrap();
+    let mem_id = repo
+        .create_mem(TEST_USER_ID, cue_id, target_id, &[])
+        .await
+        .unwrap();
 
-    let items = repo.get_mems_with_chunks(TEST_USER_ID, &[mem_id]).await.unwrap();
+    let items = repo
+        .get_mems_with_chunks(TEST_USER_ID, &[mem_id])
+        .await
+        .unwrap();
     assert_eq!(items.len(), 1);
     assert!(items[0].mnemonic.is_none());
 }

@@ -9,7 +9,15 @@ impl super::DBRepo {
     pub async fn get_table_names(&self) -> Result<Vec<String>, sqlx::Error> {
         let rows = sqlx::query_as!(
             TableName,
-            "SELECT name AS \"name!: String\" FROM sqlite_master WHERE type='table' ORDER BY name"
+            "SELECT name AS \"name!: String\" FROM sqlite_master
+             WHERE type='table'
+               AND name NOT LIKE '%_fts'
+               AND name NOT LIKE '%_fts_config'
+               AND name NOT LIKE '%_fts_data'
+               AND name NOT LIKE '%_fts_docsize'
+               AND name NOT LIKE '%_fts_idx'
+               AND name NOT LIKE '%_fts_content'
+             ORDER BY name"
         )
         .fetch_all(&*self.pool)
         .await?;

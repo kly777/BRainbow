@@ -224,7 +224,10 @@ impl ReadingRepo {
     }
 
     /// 获取所有文章的认识率摘要（单条聚合 SQL，避免每篇文章两次查询）
-    pub async fn get_all_article_summaries(&self, user_id: i32) -> Result<Vec<ArticleSummary>, sqlx::Error> {
+    pub async fn get_all_article_summaries(
+        &self,
+        user_id: i32,
+    ) -> Result<Vec<ArticleSummary>, sqlx::Error> {
         let rows = sqlx::query_as!(
             SummaryAggRow,
             r#"
@@ -540,7 +543,9 @@ mod tests {
         let repo = setup_db().await;
         let id = insert_article(&repo, "Test", "hello world").await;
 
-        repo.upsert_user_word(TEST_USER_ID, "world", "known").await.unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "world", "known")
+            .await
+            .unwrap();
 
         let statuses = repo.get_article_word_statuses(id).await.unwrap();
         let hello = statuses.iter().find(|w| w.word == "hello").unwrap();
@@ -564,8 +569,12 @@ mod tests {
         let repo = setup_db().await;
         let id = insert_article(&repo, "Test", "hello world foo").await;
 
-        repo.upsert_user_word(TEST_USER_ID, "hello", "known").await.unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "foo", "known").await.unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "hello", "known")
+            .await
+            .unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "foo", "known")
+            .await
+            .unwrap();
 
         let ratio = repo.get_article_known_ratio(id).await.unwrap();
         assert!((ratio - 2.0 / 3.0).abs() < 0.001);
@@ -576,7 +585,9 @@ mod tests {
     #[tokio::test]
     async fn test_upsert_user_word_new_unknown() {
         let repo = setup_db().await;
-        repo.upsert_user_word(TEST_USER_ID, "hello", "unknown").await.unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "hello", "unknown")
+            .await
+            .unwrap();
 
         let words = repo.get_unknown_words(TEST_USER_ID).await.unwrap();
         assert_eq!(words.len(), 1);
@@ -588,8 +599,12 @@ mod tests {
     #[tokio::test]
     async fn test_upsert_user_word_twice_increments_count() {
         let repo = setup_db().await;
-        repo.upsert_user_word(TEST_USER_ID, "hello", "unknown").await.unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "hello", "unknown").await.unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "hello", "unknown")
+            .await
+            .unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "hello", "unknown")
+            .await
+            .unwrap();
 
         let words = repo.get_unknown_words(TEST_USER_ID).await.unwrap();
         assert_eq!(words.len(), 1);
@@ -599,8 +614,12 @@ mod tests {
     #[tokio::test]
     async fn test_upsert_user_word_switch_to_known() {
         let repo = setup_db().await;
-        repo.upsert_user_word(TEST_USER_ID, "hello", "unknown").await.unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "hello", "known").await.unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "hello", "unknown")
+            .await
+            .unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "hello", "known")
+            .await
+            .unwrap();
 
         let words = repo.get_unknown_words(TEST_USER_ID).await.unwrap();
         assert!(
@@ -623,10 +642,18 @@ mod tests {
     #[tokio::test]
     async fn test_get_unknown_words_ordered_by_count() {
         let repo = setup_db().await;
-        repo.upsert_user_word(TEST_USER_ID, "rare", "unknown").await.unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "common", "unknown").await.unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "common", "unknown").await.unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "common", "unknown").await.unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "rare", "unknown")
+            .await
+            .unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "common", "unknown")
+            .await
+            .unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "common", "unknown")
+            .await
+            .unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "common", "unknown")
+            .await
+            .unwrap();
 
         let words = repo.get_unknown_words(TEST_USER_ID).await.unwrap();
         assert_eq!(words[0].word, "common");
@@ -643,8 +670,12 @@ mod tests {
         let id = insert_article(&repo, "Test", "alice bob charlie dave").await;
 
         // 标记 alice 为 ignored，bob 为 known
-        repo.upsert_user_word(TEST_USER_ID, "alice", "ignored").await.unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "bob", "known").await.unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "alice", "ignored")
+            .await
+            .unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "bob", "known")
+            .await
+            .unwrap();
 
         // ratio: only bob counts as known, alice excluded, charlie and dave unknown
         // total after exclusion: 3 (bob, charlie, dave), known: 1 (bob)
@@ -672,7 +703,9 @@ mod tests {
         let repo = setup_db().await;
         let _id = insert_article(&repo, "Test", "hello world foo").await;
 
-        repo.upsert_user_word(TEST_USER_ID, "hello", "known").await.unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "hello", "known")
+            .await
+            .unwrap();
 
         let summaries = repo.get_all_article_summaries(TEST_USER_ID).await.unwrap();
         assert_eq!(summaries.len(), 1);
@@ -698,17 +731,35 @@ mod tests {
         let id3 = insert_article(&repo, "C", "one two three").await;
 
         // article B: 4/5 = 80%
-        repo.upsert_user_word(TEST_USER_ID, "hello", "known").await.unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "world", "known").await.unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "alpha", "known").await.unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "beta", "known").await.unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "hello", "known")
+            .await
+            .unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "world", "known")
+            .await
+            .unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "alpha", "known")
+            .await
+            .unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "beta", "known")
+            .await
+            .unwrap();
 
         // article C: 3/3 = 100%
-        repo.upsert_user_word(TEST_USER_ID, "one", "known").await.unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "two", "known").await.unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "three", "known").await.unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "one", "known")
+            .await
+            .unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "two", "known")
+            .await
+            .unwrap();
+        repo.upsert_user_word(TEST_USER_ID, "three", "known")
+            .await
+            .unwrap();
 
-        let rec = repo.recommend_article(TEST_USER_ID, id1, 0.9).await.unwrap().unwrap();
+        let rec = repo
+            .recommend_article(TEST_USER_ID, id1, 0.9)
+            .await
+            .unwrap()
+            .unwrap();
         // both B (80%, diff=0.1) and C (100%, diff=0.1) are equally close
         assert!(rec.id == id2 || rec.id == id3);
     }

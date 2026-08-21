@@ -35,13 +35,23 @@ impl SignService {
             return Err(ServiceError::InvalidInput("所指不能为空".into()));
         }
         self.repo
-            .create(user_id, signifier, signified, onto_id, weight, relation_type)
+            .create(
+                user_id,
+                signifier,
+                signified,
+                onto_id,
+                weight,
+                relation_type,
+            )
             .await
             .map_err(ServiceError::Db)
     }
 
     pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, ServiceError> {
-        self.repo.delete(user_id, id).await.map_err(ServiceError::Db)
+        self.repo
+            .delete(user_id, id)
+            .await
+            .map_err(ServiceError::Db)
     }
 }
 

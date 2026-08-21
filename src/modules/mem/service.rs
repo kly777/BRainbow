@@ -72,7 +72,9 @@ impl MemService {
                 .get_new_cards(user_id, new_quota as i64, tag_ids, exclude_tag_ids)
                 .await?;
             for id in &new_cards {
-                self.repo.set_state(user_id, *id, "learning", Some(0)).await?;
+                self.repo
+                    .set_state(user_id, *id, "learning", Some(0))
+                    .await?;
             }
             ids.extend(new_cards);
         }
@@ -80,7 +82,10 @@ impl MemService {
         // 4. 提前复习 (upcoming) 填空：同样按难度/到期接近度加权采样
         let upcoming_quota = cap.saturating_sub(ids.len());
         if upcoming_quota > 0 {
-            let candidates = self.repo.get_upcoming_review_candidates(user_id, tag_ids).await?;
+            let candidates = self
+                .repo
+                .get_upcoming_review_candidates(user_id, tag_ids)
+                .await?;
             ids.extend(sample_review_candidates(candidates, upcoming_quota));
         }
 
@@ -263,7 +268,11 @@ impl MemService {
 
     // ── 内部辅助 ──
 
-    async fn build_items(&self, user_id: i32, ids: &[i32]) -> Result<Vec<MemWithChunks>, ServiceError> {
+    async fn build_items(
+        &self,
+        user_id: i32,
+        ids: &[i32],
+    ) -> Result<Vec<MemWithChunks>, ServiceError> {
         self.repo.get_mems_with_chunks(user_id, ids).await
     }
 
@@ -291,7 +300,10 @@ impl MemService {
 
     pub async fn batch_delete(&self, user_id: i32, ids: &[i32]) -> BatchResponse {
         let (_, errors) = batch_execute(ids.iter().copied(), |id| async move {
-            self.repo.delete_mem(user_id, id).await.map_err(|e| format!("{e}"))
+            self.repo
+                .delete_mem(user_id, id)
+                .await
+                .map_err(|e| format!("{e}"))
         })
         .await;
         BatchResponse::from_results(errors, ids.len())
@@ -299,7 +311,10 @@ impl MemService {
 
     pub async fn batch_bury(&self, user_id: i32, ids: &[i32]) -> BatchResponse {
         let (_, errors) = batch_execute(ids.iter().copied(), |id| async move {
-            self.repo.bury_mem(user_id, id).await.map_err(|e| format!("{e}"))
+            self.repo
+                .bury_mem(user_id, id)
+                .await
+                .map_err(|e| format!("{e}"))
         })
         .await;
         BatchResponse::from_results(errors, ids.len())
@@ -307,7 +322,10 @@ impl MemService {
 
     pub async fn batch_reset(&self, user_id: i32, ids: &[i32]) -> BatchResponse {
         let (_, errors) = batch_execute(ids.iter().copied(), |id| async move {
-            self.repo.reset_mem(user_id, id).await.map_err(|e| format!("{e}"))
+            self.repo
+                .reset_mem(user_id, id)
+                .await
+                .map_err(|e| format!("{e}"))
         })
         .await;
         BatchResponse::from_results(errors, ids.len())
@@ -341,7 +359,12 @@ impl MemService {
             .await
     }
 
-    pub async fn edit(&self, user_id: i32, id: i32, req: EditMemRequest) -> Result<(), ServiceError> {
+    pub async fn edit(
+        &self,
+        user_id: i32,
+        id: i32,
+        req: EditMemRequest,
+    ) -> Result<(), ServiceError> {
         let row = self
             .repo
             .get_mem(user_id, id)
@@ -380,7 +403,12 @@ impl MemService {
         Ok(())
     }
 
-    pub async fn add_tag_to_mem(&self, user_id: i32, mem_id: i32, tag_id: i32) -> Result<(), ServiceError> {
+    pub async fn add_tag_to_mem(
+        &self,
+        user_id: i32,
+        mem_id: i32,
+        tag_id: i32,
+    ) -> Result<(), ServiceError> {
         self.repo
             .get_mem(user_id, mem_id)
             .await?
@@ -394,7 +422,12 @@ impl MemService {
         Ok(())
     }
 
-    pub async fn set_mem_tags(&self, user_id: i32, mem_id: i32, tag_ids: &[i32]) -> Result<(), ServiceError> {
+    pub async fn set_mem_tags(
+        &self,
+        user_id: i32,
+        mem_id: i32,
+        tag_ids: &[i32],
+    ) -> Result<(), ServiceError> {
         self.repo
             .get_mem(user_id, mem_id)
             .await?
@@ -499,7 +532,10 @@ impl MemService {
 
                     let cue_id = self.repo.create_chunk(user_id, cue).await?;
                     let target_id = self.repo.create_chunk(user_id, target).await?;
-                    let mem_id = self.repo.create_mem(user_id, cue_id, target_id, &[]).await?;
+                    let mem_id = self
+                        .repo
+                        .create_mem(user_id, cue_id, target_id, &[])
+                        .await?;
 
                     self.apply_tags_to_mem(mem_id, tags_str, default_tags, user_id)
                         .await?;
@@ -569,7 +605,10 @@ impl MemService {
 
             let cue_id = self.repo.create_chunk(user_id, cue).await?;
             let target_id = self.repo.create_chunk(user_id, target).await?;
-            let mem_id = self.repo.create_mem(user_id, cue_id, target_id, &[]).await?;
+            let mem_id = self
+                .repo
+                .create_mem(user_id, cue_id, target_id, &[])
+                .await?;
 
             let tags_str = item.tags.join("; ");
             self.apply_tags_to_mem(mem_id, &tags_str, default_tags, user_id)
@@ -583,7 +622,12 @@ impl MemService {
 
     // ── 助记 ──
 
-    pub async fn set_mnemonic(&self, user_id: i32, mem_id: i32, content: &str) -> Result<(), ServiceError> {
+    pub async fn set_mnemonic(
+        &self,
+        user_id: i32,
+        mem_id: i32,
+        content: &str,
+    ) -> Result<(), ServiceError> {
         self.repo
             .get_mem(user_id, mem_id)
             .await?
@@ -626,7 +670,11 @@ mod tests {
             .await
             .unwrap();
         let repo = MemRepo::new(Arc::new(pool.clone()));
-        let service = MemService::new(Arc::new(repo.clone()), Arc::new(NoopMaintenance), Arc::new(crate::modules::mem::config::MemConfig::default()));
+        let service = MemService::new(
+            Arc::new(repo.clone()),
+            Arc::new(NoopMaintenance),
+            Arc::new(crate::modules::mem::config::MemConfig::default()),
+        );
         let cue = repo.create_chunk(1, "cue").await.unwrap();
         let target = repo.create_chunk(1, "target").await.unwrap();
         let id = repo.create_mem(1, cue, target, &[]).await.unwrap();
@@ -706,7 +754,11 @@ mod tests {
         repo.mems.lock().unwrap().insert(2, fake_mem(2));
         repo.mems.lock().unwrap().insert(3, fake_mem(3));
 
-        let service = MemService::new(repo.clone(), Arc::new(NoopMaintenance), Arc::new(crate::modules::mem::config::MemConfig::default()));
+        let service = MemService::new(
+            repo.clone(),
+            Arc::new(NoopMaintenance),
+            Arc::new(crate::modules::mem::config::MemConfig::default()),
+        );
         let due = service.get_due(1, 3, &[], &[]).await.unwrap();
 
         assert_eq!(
@@ -720,7 +772,11 @@ mod tests {
 
     #[tokio::test]
     async fn review_missing_mem_returns_not_found_without_database() {
-        let service = MemService::new(Arc::new(FakeRepo::default()), Arc::new(NoopMaintenance), Arc::new(crate::modules::mem::config::MemConfig::default()));
+        let service = MemService::new(
+            Arc::new(FakeRepo::default()),
+            Arc::new(NoopMaintenance),
+            Arc::new(crate::modules::mem::config::MemConfig::default()),
+        );
         let err = service.review(1, 999, 3, 0.0).await.unwrap_err();
         assert!(matches!(err, ServiceError::NotFound(_)));
     }

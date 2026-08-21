@@ -22,7 +22,12 @@ impl CardQueryService {
         }
     }
 
-    pub async fn list(&self, user_id: i32, limit: i64, offset: i64) -> Result<(Vec<Card>, i64), ServiceError> {
+    pub async fn list(
+        &self,
+        user_id: i32,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<Card>, i64), ServiceError> {
         self.repo
             .find_all_paginated(user_id, limit, offset)
             .await
@@ -30,7 +35,10 @@ impl CardQueryService {
     }
 
     pub async fn by_id(&self, user_id: i32, id: i32) -> Result<Option<Card>, ServiceError> {
-        self.repo.find_by_id(user_id, id).await.map_err(ServiceError::Db)
+        self.repo
+            .find_by_id(user_id, id)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     pub async fn search(

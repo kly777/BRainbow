@@ -140,18 +140,10 @@ pub async fn chat_handler(
 
     // 编排（准备 → 流式 AI → 落库/回滚）下沉到 ChatService::stream_chat
     let svc = chat.clone();
-    let ai_port: std::sync::Arc<dyn crate::modules::ai::port::AiChatPort> =
-        std::sync::Arc::new(ai);
+    let ai_port: std::sync::Arc<dyn crate::modules::ai::port::AiChatPort> = std::sync::Arc::new(ai);
     tokio::spawn(async move {
         let _ = svc
-            .stream_chat(
-                claims.sub,
-                &*ai_port,
-                id,
-                req.parent_id,
-                req.content,
-                tx,
-            )
+            .stream_chat(claims.sub, &*ai_port, id, req.parent_id, req.content, tx)
             .await;
     });
 

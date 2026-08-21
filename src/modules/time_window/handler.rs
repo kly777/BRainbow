@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTimeWindowRequest};
-use crate::shared::claims::Claims;
 use super::query::TimeWindowQueryService;
 use super::service::TimeWindowService;
+use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::pagination::Pagination;
 

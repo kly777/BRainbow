@@ -76,7 +76,10 @@ mod tests {
                 .unwrap();
         }
 
-        let mem_query = MemQueryService::new(Arc::new(MemRepo::new(Arc::new(pool.clone()))), Arc::new(crate::modules::mem::config::MemConfig::default()));
+        let mem_query = MemQueryService::new(
+            Arc::new(MemRepo::new(Arc::new(pool.clone()))),
+            Arc::new(crate::modules::mem::config::MemConfig::default()),
+        );
         let card_query = CardQueryService::new(Arc::new(pool.clone()));
         let task_query = TaskQueryService::new(Arc::new(pool.clone()));
         let bookmark_query = BookmarkQueryService::new(Arc::new(pool.clone()));

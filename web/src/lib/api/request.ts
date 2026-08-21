@@ -300,7 +300,7 @@ export const patch = <T>(endpoint: string, body: unknown): Promise<T> =>
 export const del = <T>(endpoint: string): Promise<T> =>
 	request<T>(endpoint, { method: "DELETE" });
 
-function buildHeaders(
+export function buildHeaders(
 	extra?: RequestInit["headers"],
 	body?: BodyInit | null,
 ): Headers {

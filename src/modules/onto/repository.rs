@@ -184,7 +184,9 @@ mod tests {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         crate::db::migrate(&pool).await.unwrap();
         sqlx::query("INSERT OR IGNORE INTO user (id, name, password_hash) VALUES (1, 'test', 'x')")
-            .execute(&pool).await.unwrap();
+            .execute(&pool)
+            .await
+            .unwrap();
         OntoRepository::new(Arc::new(pool))
     }
 
@@ -199,7 +201,11 @@ mod tests {
         assert_eq!(onto.name, "test-name");
         assert_eq!(onto.description, Some("desc".into()));
 
-        let found = repo.find_by_id(TEST_USER_ID, onto.id).await.unwrap().unwrap();
+        let found = repo
+            .find_by_id(TEST_USER_ID, onto.id)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(found.name, "test-name");
     }
 
@@ -227,7 +233,12 @@ mod tests {
             .await
             .unwrap();
         let updated = repo
-            .update(TEST_USER_ID, onto.id, Some("new".into()), Some("new-desc".into()))
+            .update(
+                TEST_USER_ID,
+                onto.id,
+                Some("new".into()),
+                Some("new-desc".into()),
+            )
             .await
             .unwrap();
         assert_eq!(updated.name, "new");
@@ -237,7 +248,11 @@ mod tests {
     #[tokio::test]
     async fn update_nonexistent_fails() {
         let repo = setup_db().await;
-        assert!(repo.update(TEST_USER_ID, 999, Some("x".into()), None).await.is_err());
+        assert!(
+            repo.update(TEST_USER_ID, 999, Some("x".into()), None)
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test]
@@ -245,7 +260,12 @@ mod tests {
         let repo = setup_db().await;
         let onto = repo.create(TEST_USER_ID, "x".into(), None).await.unwrap();
         assert_eq!(repo.delete(TEST_USER_ID, onto.id).await.unwrap(), 1);
-        assert!(repo.find_by_id(TEST_USER_ID, onto.id).await.unwrap().is_none());
+        assert!(
+            repo.find_by_id(TEST_USER_ID, onto.id)
+                .await
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[tokio::test]

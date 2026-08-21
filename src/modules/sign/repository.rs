@@ -16,7 +16,11 @@ impl SignRepository {
     }
 
     /// 根据ID获取能指所指关系
-    pub async fn find_by_id(&self, user_id: i32, id: i32) -> Result<Option<SignifierSignified>, sqlx::Error> {
+    pub async fn find_by_id(
+        &self,
+        user_id: i32,
+        id: i32,
+    ) -> Result<Option<SignifierSignified>, sqlx::Error> {
         sqlx::query_as!(
             SignifierSignified,
             r#"SELECT id AS "id: i32", signifier, signified, onto_id AS "onto_id?: i32",
@@ -185,7 +189,9 @@ mod tests {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         crate::db::migrate(&pool).await.unwrap();
         sqlx::query("INSERT OR IGNORE INTO user (id, name, password_hash) VALUES (1, 'test', 'x')")
-            .execute(&pool).await.unwrap();
+            .execute(&pool)
+            .await
+            .unwrap();
         SignRepository::new(Arc::new(pool))
     }
 
@@ -212,7 +218,10 @@ mod tests {
         repo.create(TEST_USER_ID, "狗".into(), "chien".into(), None, None, None)
             .await
             .unwrap();
-        let (items, total) = repo.find_by_signifier_paginated(TEST_USER_ID, "狗", 10, 0).await.unwrap();
+        let (items, total) = repo
+            .find_by_signifier_paginated(TEST_USER_ID, "狗", 10, 0)
+            .await
+            .unwrap();
         assert_eq!(total, 2);
         assert_eq!(items.len(), 2);
     }

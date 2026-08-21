@@ -6,14 +6,16 @@
 	z-index: var(--z-overlay);
 	display: flex;
 	justify-content: flex-end;
+	background: var(--t-color-overlay);
 }
 
 .row-detail-backdrop {
+	/* 沉到面板后面：面板区域外点击穿透到此元素触发关闭 */
 	position: absolute;
 	inset: 0;
+	z-index: -1;
 	border: none;
-	background: var(--t-color-overlay);
-	backdrop-filter: blur(0.125rem);
+	background: transparent;
 	cursor: default;
 }
 

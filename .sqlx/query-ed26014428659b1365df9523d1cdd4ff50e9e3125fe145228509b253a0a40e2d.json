@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) FROM task WHERE status = 'active'",
+  "query": "SELECT COUNT(*) FROM task WHERE status = 'backlog' AND (user_id = ? OR user_id IS NULL)",
   "describe": {
     "columns": [
       {
@@ -11,11 +11,11 @@
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       false
     ]
   },
-  "hash": "4ab693ff7937032eaa55f9a2f224664a108557c58ce3cd4a7cd63e7628a799c5"
+  "hash": "ed26014428659b1365df9523d1cdd4ff50e9e3125fe145228509b253a0a40e2d"
 }

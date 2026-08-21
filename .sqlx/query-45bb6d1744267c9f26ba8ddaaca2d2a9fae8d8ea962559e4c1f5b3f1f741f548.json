@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "UPDATE task SET status = 'completed', completed_at = ?, updated_at = ?\n               WHERE id = ?\n               RETURNING id AS \"id: i32\", title, description,\n                         parent_task_id AS \"parent_task_id?: i32\",\n                         COALESCE(status, 'backlog') AS \"status!: crate::modules::task::model::TaskStatus\",\n                         completed_at AS \"completed_at?: chrono::DateTime<chrono::Utc>\",\n                         effort_estimate_minutes AS \"effort_estimate_minutes?: i32\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
+  "query": "INSERT INTO task (\n                   title, description, parent_task_id, status, completed_at,\n                   effort_estimate_minutes, user_id, created_at, updated_at\n               ) VALUES (?, NULL, NULL, ?, NULL, NULL, ?, ?, ?)\n               RETURNING id AS \"id: i32\", title, description,\n                         parent_task_id AS \"parent_task_id?: i32\",\n                         COALESCE(status, 'backlog') AS \"status!: crate::modules::task::model::TaskStatus\",\n                         completed_at AS \"completed_at?: chrono::DateTime<chrono::Utc>\",\n                         effort_estimate_minutes AS \"effort_estimate_minutes?: i32\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
   "describe": {
     "columns": [
       {
@@ -78,7 +78,7 @@
       {
         "name": "created_at!: chrono::DateTime<chrono::Utc>",
         "ordinal": 7,
-        "type_info": "Datetime",
+        "type_info": "Null",
         "origin": "Expression"
       },
       {
@@ -89,19 +89,19 @@
       }
     ],
     "parameters": {
-      "Right": 3
+      "Right": 5
     },
     "nullable": [
       false,
       false,
       true,
-      true,
+      false,
       false,
       true,
-      true,
       false,
+      null,
       null
     ]
   },
-  "hash": "60eedb9874907e1914d1cef85d75090feb7d4fefc11faac655176cccb79fd0dc"
+  "hash": "45bb6d1744267c9f26ba8ddaaca2d2a9fae8d8ea962559e4c1f5b3f1f741f548"
 }

@@ -20,6 +20,7 @@ impl TimeWindowService {
 
     pub async fn create(
         &self,
+        user_id: i32,
         request: CreateTimeWindowRequest,
     ) -> Result<TimeWindow, ServiceError> {
         // 基础校验：开始时间必须早于结束时间
@@ -48,7 +49,7 @@ impl TimeWindowService {
         };
 
         self.task
-            .validate_time_windows(request.task_id, &[new_window], None)
+            .validate_time_windows(user_id, request.task_id, &[new_window], None)
             .await
             .map_err(|e| match e {
                 crate::modules::task::service::ServiceError::InvalidInput(msg) => {
@@ -62,6 +63,7 @@ impl TimeWindowService {
 
     pub async fn update(
         &self,
+        user_id: i32,
         id: i32,
         request: UpdateTimeWindowRequest,
     ) -> Result<TimeWindow, ServiceError> {
@@ -101,7 +103,7 @@ impl TimeWindowService {
             };
 
             self.task
-                .validate_time_windows(existing.task_id, &[new_window], Some(id))
+                .validate_time_windows(user_id, existing.task_id, &[new_window], Some(id))
                 .await
                 .map_err(|e| match e {
                     crate::modules::task::service::ServiceError::InvalidInput(msg) => {

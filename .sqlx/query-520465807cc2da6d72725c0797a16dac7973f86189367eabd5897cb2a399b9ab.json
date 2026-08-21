@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT task_id AS \"task_id: i32\", depends_on_task_id AS \"depends_on_task_id: i32\"\n               FROM task_dependency",
+  "query": "SELECT td.task_id AS \"task_id: i32\", td.depends_on_task_id AS \"depends_on_task_id: i32\"\n               FROM task_dependency td\n               JOIN task t ON t.id = td.task_id\n               WHERE td.task_id = ? AND (t.user_id = ? OR t.user_id IS NULL)",
   "describe": {
     "columns": [
       {
@@ -27,12 +27,12 @@
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 2
     },
     "nullable": [
       false,
       false
     ]
   },
-  "hash": "ea30822f63ab95c15554510d71eaa1eab62e6f5a0210004e0c79526c14b5e2a1"
+  "hash": "520465807cc2da6d72725c0797a16dac7973f86189367eabd5897cb2a399b9ab"
 }

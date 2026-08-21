@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Json},
 };
@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTimeWindowRequest};
+use crate::shared::claims::Claims;
 use super::query::TimeWindowQueryService;
 use super::service::TimeWindowService;
 use crate::shared::error_types as error;
@@ -71,9 +72,10 @@ impl From<TimeWindow> for TimeWindowResponse {
 /// 创建时间窗口
 pub async fn create_time_window_handler(
     State(service): State<TimeWindowService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateTimeWindowRequest>,
 ) -> impl IntoResponse {
-    match service.create(payload).await {
+    match service.create(claims.sub, payload).await {
         Ok(time_window) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -127,9 +129,10 @@ pub async fn get_time_windows_handler(
 pub async fn update_time_window_handler(
     Path(id): Path<i32>,
     State(service): State<TimeWindowService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<UpdateTimeWindowRequest>,
 ) -> impl IntoResponse {
-    match service.update(id, payload).await {
+    match service.update(claims.sub, id, payload).await {
         Ok(time_window) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Err(e) => e.into_response(),
     }

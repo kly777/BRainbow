@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO task (\n                   title, description, parent_task_id, status, completed_at,\n                   effort_estimate_minutes, created_at, updated_at\n               ) VALUES (?, NULL, NULL, ?, NULL, NULL, ?, ?)\n               RETURNING id AS \"id: i32\", title, description,\n                         parent_task_id AS \"parent_task_id?: i32\",\n                         COALESCE(status, 'backlog') AS \"status!: crate::modules::task::model::TaskStatus\",\n                         completed_at AS \"completed_at?: chrono::DateTime<chrono::Utc>\",\n                         effort_estimate_minutes AS \"effort_estimate_minutes?: i32\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
+  "query": "SELECT id AS \"id: i32\", title, description,\n                      parent_task_id AS \"parent_task_id?: i32\",\n                      COALESCE(status, 'backlog') AS \"status!: crate::modules::task::model::TaskStatus\",\n                      completed_at AS \"completed_at?: chrono::DateTime<chrono::Utc>\",\n                      effort_estimate_minutes AS \"effort_estimate_minutes?: i32\",\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM task WHERE (user_id = ?1 OR user_id IS NULL)\n               ORDER BY created_at DESC LIMIT ?2 OFFSET ?3",
   "describe": {
     "columns": [
       {
@@ -78,30 +78,30 @@
       {
         "name": "created_at!: chrono::DateTime<chrono::Utc>",
         "ordinal": 7,
-        "type_info": "Null",
+        "type_info": "Datetime",
         "origin": "Expression"
       },
       {
         "name": "updated_at!: chrono::DateTime<chrono::Utc>",
         "ordinal": 8,
-        "type_info": "Null",
+        "type_info": "Datetime",
         "origin": "Expression"
       }
     ],
     "parameters": {
-      "Right": 4
+      "Right": 3
     },
     "nullable": [
       false,
       false,
       true,
-      false,
-      false,
       true,
       false,
-      null,
-      null
+      true,
+      true,
+      false,
+      false
     ]
   },
-  "hash": "b19e6763ce9e4ab0fc13be3873fc40e23f331b4a222e1ee7669b88f009ac54a1"
+  "hash": "5f6d957154639fd64f2f811f7bdb4a7d3c6f2747d615d647dee44404251367b5"
 }

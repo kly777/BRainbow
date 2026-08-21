@@ -1,9 +1,10 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     response::{IntoResponse, Json},
 };
 
 use super::super::model::TaskStatus;
+use crate::shared::claims::Claims;
 use super::super::query::TaskQueryService;
 use super::super::response::TaskResponse;
 use super::super::service::TaskService;
@@ -13,8 +14,9 @@ use crate::shared::pagination::{PaginatedResponse, Pagination};
 pub async fn complete_task_handler(
     Path(id): Path<i32>,
     State(service): State<TaskService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match service.complete(id).await {
+    match service.complete(claims.sub, id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -23,8 +25,9 @@ pub async fn complete_task_handler(
 pub async fn activate_task_handler(
     Path(id): Path<i32>,
     State(service): State<TaskService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match service.activate(id).await {
+    match service.activate(claims.sub, id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -33,8 +36,9 @@ pub async fn activate_task_handler(
 pub async fn archive_task_handler(
     Path(id): Path<i32>,
     State(service): State<TaskService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match service.archive(id).await {
+    match service.archive(claims.sub, id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -43,8 +47,9 @@ pub async fn archive_task_handler(
 pub async fn move_to_backlog_handler(
     Path(id): Path<i32>,
     State(service): State<TaskService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match service.move_to_backlog(id).await {
+    match service.move_to_backlog(claims.sub, id).await {
         Ok(task) => Json(TaskResponse::from(task)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -53,9 +58,10 @@ pub async fn move_to_backlog_handler(
 pub async fn get_backlog_tasks_handler(
     Query(pagination): Query<Pagination>,
     State(query): State<TaskQueryService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     match query
-        .by_status(TaskStatus::Backlog, pagination.limit(), pagination.offset())
+        .by_status(claims.sub, TaskStatus::Backlog, pagination.limit(), pagination.offset())
         .await
     {
         Ok((tasks, total)) => {
@@ -69,9 +75,10 @@ pub async fn get_backlog_tasks_handler(
 pub async fn get_active_tasks_handler(
     Query(pagination): Query<Pagination>,
     State(query): State<TaskQueryService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     match query
-        .by_status(TaskStatus::Active, pagination.limit(), pagination.offset())
+        .by_status(claims.sub, TaskStatus::Active, pagination.limit(), pagination.offset())
         .await
     {
         Ok((tasks, total)) => {
@@ -85,9 +92,11 @@ pub async fn get_active_tasks_handler(
 pub async fn get_completed_tasks_handler(
     Query(pagination): Query<Pagination>,
     State(query): State<TaskQueryService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     match query
         .by_status(
+            claims.sub,
             TaskStatus::Completed,
             pagination.limit(),
             pagination.offset(),
@@ -105,9 +114,11 @@ pub async fn get_completed_tasks_handler(
 pub async fn get_archived_tasks_handler(
     Query(pagination): Query<Pagination>,
     State(query): State<TaskQueryService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     match query
         .by_status(
+            claims.sub,
             TaskStatus::Archived,
             pagination.limit(),
             pagination.offset(),

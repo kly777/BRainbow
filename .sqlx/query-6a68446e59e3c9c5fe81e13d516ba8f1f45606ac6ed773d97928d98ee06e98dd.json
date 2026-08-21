@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT t.id AS \"id: i32\", t.title, t.description,\n                          t.parent_task_id AS \"parent_task_id?: i32\",\n                          COALESCE(t.status, 'backlog') AS \"status!: crate::modules::task::model::TaskStatus\",\n                          t.completed_at AS \"completed_at?: chrono::DateTime<chrono::Utc>\",\n                          t.effort_estimate_minutes AS \"effort_estimate_minutes?: i32\",\n                          COALESCE(t.created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                          COALESCE(t.updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\",\n                          tw.id AS \"tw_id: i32\",\n                          tw.start_time AS \"start_time!: chrono::DateTime<chrono::Utc>\",\n                          tw.end_time AS \"end_time!: chrono::DateTime<chrono::Utc>\",\n                          tw.type AS \"window_type!: crate::modules::time_window::TimeWindowType\",\n                          tw.task_id AS \"tw_task_id: i32\",\n                          tw.user_id AS \"tw_user_id?: i32\",\n                          tw.recurrence_freq AS \"recurrence_freq?: crate::modules::time_window::RecurrenceFrequency\",\n                          tw.recurrence_interval AS \"recurrence_interval?: i32\",\n                          tw.recurrence_until AS \"recurrence_until?: chrono::DateTime<chrono::Utc>\",\n                          tw.recurrence_by_weekdays\n                   FROM task t\n                   INNER JOIN time_window tw ON t.id = tw.task_id\n                   WHERE t.status != 'archived'\n                     AND tw.start_time < ?\n                     AND tw.end_time > ?\n                   ORDER BY tw.start_time",
+  "query": "SELECT t.id AS \"id: i32\", t.title, t.description,\n                          t.parent_task_id AS \"parent_task_id?: i32\",\n                          COALESCE(t.status, 'backlog') AS \"status!: crate::modules::task::model::TaskStatus\",\n                          t.completed_at AS \"completed_at?: chrono::DateTime<chrono::Utc>\",\n                          t.effort_estimate_minutes AS \"effort_estimate_minutes?: i32\",\n                          COALESCE(t.created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                          COALESCE(t.updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\",\n                          tw.id AS \"tw_id: i32\",\n                          tw.start_time AS \"start_time!: chrono::DateTime<chrono::Utc>\",\n                          tw.end_time AS \"end_time!: chrono::DateTime<chrono::Utc>\",\n                          tw.type AS \"window_type!: crate::modules::time_window::TimeWindowType\",\n                          tw.task_id AS \"tw_task_id: i32\",\n                          tw.user_id AS \"tw_user_id?: i32\",\n                          tw.recurrence_freq AS \"recurrence_freq?: crate::modules::time_window::RecurrenceFrequency\",\n                          tw.recurrence_interval AS \"recurrence_interval?: i32\",\n                          tw.recurrence_until AS \"recurrence_until?: chrono::DateTime<chrono::Utc>\",\n                          tw.recurrence_by_weekdays\n                   FROM task t\n                   INNER JOIN time_window tw ON t.id = tw.task_id\n                   WHERE t.status = ?1\n                     AND (t.user_id = ?2 OR t.user_id IS NULL)\n                     AND tw.start_time < ?3\n                     AND tw.end_time > ?4\n                   ORDER BY tw.start_time",
   "describe": {
     "columns": [
       {
@@ -199,7 +199,7 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 4
     },
     "nullable": [
       false,
@@ -223,5 +223,5 @@
       true
     ]
   },
-  "hash": "ced5c62ae2fa69c21798853ef8e3749070e67cc7472112463b9a9abbab343383"
+  "hash": "6a68446e59e3c9c5fe81e13d516ba8f1f45606ac6ed773d97928d98ee06e98dd"
 }

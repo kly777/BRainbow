@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Query, State},
+    extract::{Extension, Query, State},
     response::{IntoResponse, Json},
 };
 use std::collections::HashMap;
@@ -9,16 +9,19 @@ use super::super::model::Task;
 use super::super::query::TaskQueryService;
 use super::super::response::{CalendarEvent, StatsResponse, TaskResponse, TreeNode};
 use super::dependency::{CalendarQuery, DagQuery, TreeQuery};
+use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 
 pub async fn get_tree_handler(
     Query(query): Query<TreeQuery>,
     State(query_service): State<TaskQueryService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &query_service;
+    let user_id = claims.sub;
 
-    let root_tasks = match svc.tree(None).await {
+    let root_tasks = match svc.tree(user_id, None).await {
         Ok(tasks) => tasks,
         Err(e) => return error::internal(e, "获取树形结构"),
     };
@@ -34,7 +37,7 @@ pub async fn get_tree_handler(
 
     let mut nodes = Vec::new();
     for task in filtered {
-        if let Some(node) = build_tree_node(svc, task).await {
+        if let Some(node) = build_tree_node(svc, user_id, task).await {
             nodes.push(node);
         }
     }
@@ -44,16 +47,17 @@ pub async fn get_tree_handler(
 
 fn build_tree_node<'a>(
     svc: &'a TaskQueryService,
+    user_id: i32,
     task: Task,
 ) -> Pin<Box<dyn std::future::Future<Output = Option<TreeNode>> + Send + 'a>> {
     Box::pin(async move {
-        let children = match svc.tree(Some(task.id)).await {
+        let children = match svc.tree(user_id, Some(task.id)).await {
             Ok(t) => t,
             Err(_) => return None,
         };
         let mut child_nodes = Vec::new();
         for child in children {
-            if let Some(node) = build_tree_node(svc, child).await {
+            if let Some(node) = build_tree_node(svc, user_id, child).await {
                 child_nodes.push(node);
             }
         }
@@ -67,10 +71,11 @@ fn build_tree_node<'a>(
 pub async fn get_calendar_handler(
     Query(query): Query<CalendarQuery>,
     State(query_service): State<TaskQueryService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &query_service;
 
-    match svc.calendar(query.start, query.end, query.status).await {
+    match svc.calendar(claims.sub, query.start, query.end, query.status).await {
         Ok(entries) => {
             let events: Vec<CalendarEvent> = entries
                 .into_iter()
@@ -92,18 +97,22 @@ pub async fn get_calendar_handler(
 pub async fn get_dag_handler(
     Query(query): Query<DagQuery>,
     State(query_service): State<TaskQueryService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &query_service;
 
-    match svc.dag(query.task_id, query.depth.unwrap_or(3)).await {
+    match svc.dag(claims.sub, query.task_id, query.depth.unwrap_or(3)).await {
         Ok(view) => Json(view).into_response(),
         Err(e) => error::internal(e, "获取依赖图"),
     }
 }
 
-pub async fn get_stats_handler(State(query_service): State<TaskQueryService>) -> impl IntoResponse {
+pub async fn get_stats_handler(
+    State(query_service): State<TaskQueryService>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
     let svc = &query_service;
-    match svc.stats().await {
+    match svc.stats(claims.sub).await {
         Ok((backlog, active, completed, archived)) => Json(StatsResponse {
             backlog,
             active,
@@ -118,6 +127,7 @@ pub async fn get_stats_handler(State(query_service): State<TaskQueryService>) ->
 pub async fn search_tasks_handler(
     Query(mut params): Query<HashMap<String, String>>,
     State(query_service): State<TaskQueryService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let query = match params.remove("q") {
         Some(q) if !q.is_empty() => q,
@@ -136,7 +146,7 @@ pub async fn search_tasks_handler(
 
     let svc = &query_service;
     match svc
-        .search(&query, pagination.limit(), pagination.offset())
+        .search(claims.sub, &query, pagination.limit(), pagination.offset())
         .await
     {
         Ok((tasks, total)) => {

@@ -46,14 +46,20 @@ struct CalendarRow {
 }
 
 impl TaskRepository {
-    pub async fn find_tree(&self, root_task_id: Option<i32>) -> Result<Vec<Task>, sqlx::Error> {
+    pub async fn find_tree(
+        &self,
+        user_id: i32,
+        root_task_id: Option<i32>,
+    ) -> Result<Vec<Task>, sqlx::Error> {
         let mut builder = QueryBuilder::new(
             "WITH RECURSIVE task_tree AS (
                 SELECT id, title, description, parent_task_id, status, completed_at,
                        effort_estimate_minutes, created_at, updated_at
                 FROM task
-                WHERE ",
+                WHERE (user_id = ",
         );
+        builder.push_bind(user_id);
+        builder.push(" OR user_id IS NULL) AND (");
 
         if let Some(root_id) = root_task_id {
             builder.push("id = ");
@@ -61,6 +67,8 @@ impl TaskRepository {
         } else {
             builder.push("parent_task_id IS NULL");
         }
+        builder.push(")");
+        // 注意：下面原有 builder.push("... UNION ALL ...") 继续拼接
 
         builder.push(
             "
@@ -76,8 +84,12 @@ impl TaskRepository {
         builder.build_query_as::<Task>().fetch_all(&*self.db).await
     }
 
-    pub async fn find_detail(&self, id: i32) -> Result<Option<TaskDetailResponse>, sqlx::Error> {
-        let task = match self.find_by_id(id).await? {
+    pub async fn find_detail(
+        &self,
+        user_id: i32,
+        id: i32,
+    ) -> Result<Option<TaskDetailResponse>, sqlx::Error> {
+        let task = match self.find_by_id(user_id, id).await? {
             Some(task) => task,
             None => return Ok(None),
         };
@@ -175,14 +187,16 @@ impl TaskRepository {
 
     pub async fn search_by_title_paginated(
         &self,
+        user_id: i32,
         query: &str,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Task>, i64), sqlx::Error> {
         let pattern = like_contains(query);
         let total: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM task WHERE title LIKE ? ESCAPE '\\'",
-            pattern
+            "SELECT COUNT(*) FROM task WHERE title LIKE ? ESCAPE '\\' AND (user_id = ? OR user_id IS NULL)",
+            pattern,
+            user_id
         )
         .fetch_one(&*self.db)
         .await?;
@@ -195,8 +209,10 @@ impl TaskRepository {
                       effort_estimate_minutes AS "effort_estimate_minutes?: i32",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-               FROM task WHERE title LIKE ? ESCAPE '\' ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
+               FROM task WHERE title LIKE ?1 ESCAPE '\' AND (user_id = ?2 OR user_id IS NULL)
+               ORDER BY created_at DESC LIMIT ?3 OFFSET ?4"#,
             pattern,
+            user_id,
             limit,
             offset
         )
@@ -207,6 +223,7 @@ impl TaskRepository {
 
     pub async fn find_calendar_events(
         &self,
+        user_id: i32,
         start: Option<DateTime<Utc>>,
         end: Option<DateTime<Utc>>,
         status_filter: Option<TaskStatus>,
@@ -239,11 +256,13 @@ impl TaskRepository {
                           tw.recurrence_by_weekdays
                    FROM task t
                    INNER JOIN time_window tw ON t.id = tw.task_id
-                   WHERE t.status = ?
-                     AND tw.start_time < ?
-                     AND tw.end_time > ?
+                   WHERE t.status = ?1
+                     AND (t.user_id = ?2 OR t.user_id IS NULL)
+                     AND tw.start_time < ?3
+                     AND tw.end_time > ?4
                    ORDER BY tw.start_time"#,
                 s.as_str(),
+                user_id,
                 range_end,
                 range_start
             )
@@ -272,9 +291,11 @@ impl TaskRepository {
                    FROM task t
                    INNER JOIN time_window tw ON t.id = tw.task_id
                    WHERE t.status != 'archived'
-                     AND tw.start_time < ?
-                     AND tw.end_time > ?
+                     AND (t.user_id = ?1 OR t.user_id IS NULL)
+                     AND tw.start_time < ?2
+                     AND tw.end_time > ?3
                    ORDER BY tw.start_time"#,
+                user_id,
                 range_end,
                 range_start
             )
@@ -317,6 +338,7 @@ impl TaskRepository {
 
     pub async fn find_time_windows_by_task(
         &self,
+        user_id: i32,
         task_id: i32,
     ) -> Result<Vec<TimeWindow>, sqlx::Error> {
         let rows = sqlx::query_as!(
@@ -340,25 +362,34 @@ impl TaskRepository {
         Ok(rows)
     }
 
-    pub async fn get_stats(&self) -> Result<(i64, i64, i64, i64), sqlx::Error> {
-        let backlog: i64 =
-            sqlx::query_scalar!("SELECT COUNT(*) FROM task WHERE status = 'backlog'")
-                .fetch_one(&*self.db)
-                .await?;
+    pub async fn get_stats(&self, user_id: i32) -> Result<(i64, i64, i64, i64), sqlx::Error> {
+        let backlog: i64 = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM task WHERE status = 'backlog' AND (user_id = ? OR user_id IS NULL)",
+            user_id
+        )
+        .fetch_one(&*self.db)
+        .await?;
 
-        let active: i64 = sqlx::query_scalar!("SELECT COUNT(*) FROM task WHERE status = 'active'")
-            .fetch_one(&*self.db)
-            .await?;
+        let active: i64 = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM task WHERE status = 'active' AND (user_id = ? OR user_id IS NULL)",
+            user_id
+        )
+        .fetch_one(&*self.db)
+        .await?;
 
-        let completed: i64 =
-            sqlx::query_scalar!("SELECT COUNT(*) FROM task WHERE status = 'completed'")
-                .fetch_one(&*self.db)
-                .await?;
+        let completed: i64 = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM task WHERE status = 'completed' AND (user_id = ? OR user_id IS NULL)",
+            user_id
+        )
+        .fetch_one(&*self.db)
+        .await?;
 
-        let archived: i64 =
-            sqlx::query_scalar!("SELECT COUNT(*) FROM task WHERE status = 'archived'")
-                .fetch_one(&*self.db)
-                .await?;
+        let archived: i64 = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM task WHERE status = 'archived' AND (user_id = ? OR user_id IS NULL)",
+            user_id
+        )
+        .fetch_one(&*self.db)
+        .await?;
 
         Ok((backlog, active, completed, archived))
     }
@@ -371,9 +402,15 @@ mod tests {
     use sqlx::SqlitePool;
     use std::sync::Arc;
 
+    const TEST_USER_ID: i32 = 1;
+
     async fn setup() -> TaskRepository {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         crate::db::migrate(&pool).await.unwrap();
+        sqlx::query("INSERT OR IGNORE INTO user (id, name, password_hash) VALUES (1, 'test', 'x')")
+            .execute(&pool)
+            .await
+            .unwrap();
         TaskRepository::new(Arc::new(pool))
     }
 
@@ -396,7 +433,7 @@ mod tests {
         let other = insert_task(&repo, "other", None).await;
 
         let ids: Vec<i32> = repo
-            .find_tree(None)
+            .find_tree(TEST_USER_ID, None)
             .await
             .unwrap()
             .into_iter()
@@ -415,7 +452,7 @@ mod tests {
         let other = insert_task(&repo, "other", None).await;
 
         let ids: Vec<i32> = repo
-            .find_tree(Some(root))
+            .find_tree(TEST_USER_ID, Some(root))
             .await
             .unwrap()
             .into_iter()
@@ -434,11 +471,11 @@ mod tests {
         insert_task(&repo, "a_b", None).await;
         insert_task(&repo, "aXb", None).await;
 
-        let (hits, total) = repo.search_by_title_paginated("50%", 10, 0).await.unwrap();
+        let (hits, total) = repo.search_by_title_paginated(TEST_USER_ID, "50%", 10, 0).await.unwrap();
         assert_eq!(total, 1);
         assert_eq!(hits[0].title, "50% complete");
 
-        let (hits, total) = repo.search_by_title_paginated("a_b", 10, 0).await.unwrap();
+        let (hits, total) = repo.search_by_title_paginated(TEST_USER_ID, "a_b", 10, 0).await.unwrap();
         assert_eq!(total, 1);
         assert_eq!(hits[0].title, "a_b");
     }
@@ -462,7 +499,7 @@ mod tests {
         .await
         .unwrap();
 
-        let detail = repo.find_detail(root).await.unwrap().unwrap();
+        let detail = repo.find_detail(TEST_USER_ID, root).await.unwrap().unwrap();
         assert_eq!(detail.task.id, root);
         assert_eq!(detail.depends_on, vec![child]);
         assert_eq!(detail.children.len(), 1);
@@ -506,7 +543,7 @@ mod tests {
 
         // 默认排除 archived
         let events = repo
-            .find_calendar_events(Some(start), Some(end), None)
+            .find_calendar_events(TEST_USER_ID, Some(start), Some(end), None)
             .await
             .unwrap();
         assert_eq!(events.len(), 1);
@@ -514,7 +551,7 @@ mod tests {
 
         // 显式按 archived 过滤
         let events = repo
-            .find_calendar_events(Some(start), Some(end), Some(TaskStatus::Archived))
+            .find_calendar_events(TEST_USER_ID, Some(start), Some(end), Some(TaskStatus::Archived))
             .await
             .unwrap();
         assert_eq!(events.len(), 1);
@@ -540,6 +577,6 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(repo.get_stats().await.unwrap(), (1, 1, 1, 1));
+        assert_eq!(repo.get_stats(TEST_USER_ID).await.unwrap(), (1, 1, 1, 1));
     }
 }

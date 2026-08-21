@@ -23,21 +23,30 @@ impl TaskService {
         }
     }
 
-    pub async fn create(&self, req: CreateTaskRequest) -> Result<Task, ServiceError> {
+    pub async fn create(&self, user_id: i32, req: CreateTaskRequest) -> Result<Task, ServiceError> {
         validate_title(&req.title)?;
         validate_effort(req.effort_estimate_minutes)?;
         if let Some(parent_id) = req.parent_task_id {
-            check_circular_parent(&self.repo, 0, parent_id).await?;
+            check_circular_parent(&self.repo, user_id, 0, parent_id).await?;
         }
-        self.repo.create(req).await.map_err(ServiceError::Db)
+        self.repo.create(user_id, req).await.map_err(ServiceError::Db)
     }
 
-    pub async fn quick_create(&self, req: QuickCreateTaskRequest) -> Result<Task, ServiceError> {
+    pub async fn quick_create(
+        &self,
+        user_id: i32,
+        req: QuickCreateTaskRequest,
+    ) -> Result<Task, ServiceError> {
         validate_title(&req.title)?;
-        self.repo.quick_create(req).await.map_err(ServiceError::Db)
+        self.repo.quick_create(user_id, req).await.map_err(ServiceError::Db)
     }
 
-    pub async fn update(&self, id: i32, req: UpdateTaskRequest) -> Result<Task, ServiceError> {
+    pub async fn update(
+        &self,
+        user_id: i32,
+        id: i32,
+        req: UpdateTaskRequest,
+    ) -> Result<Task, ServiceError> {
         if let Some(ref title) = req.title {
             validate_title(title)?;
         }
@@ -48,63 +57,69 @@ impl TaskService {
             if parent_id == id {
                 return Err(ServiceError::InvalidInput("不能设置自己为父任务".into()));
             }
-            check_circular_parent(&self.repo, id, parent_id).await?;
+            check_circular_parent(&self.repo, user_id, id, parent_id).await?;
         }
-        self.repo.update(id, req).await.map_err(|e| match e {
+        self.repo.update(user_id, id, req).await.map_err(|e| match e {
             sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
             other => ServiceError::from(other),
         })
     }
 
-    pub async fn complete(&self, id: i32) -> Result<Task, ServiceError> {
-        self.repo.complete(id).await.map_err(|e| match e {
+    pub async fn complete(&self, user_id: i32, id: i32) -> Result<Task, ServiceError> {
+        self.repo.complete(user_id, id).await.map_err(|e| match e {
             sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
             other => ServiceError::from(other),
         })
     }
 
-    pub async fn activate(&self, id: i32) -> Result<Task, ServiceError> {
-        self.repo.activate(id).await.map_err(|e| match e {
+    pub async fn activate(&self, user_id: i32, id: i32) -> Result<Task, ServiceError> {
+        self.repo.activate(user_id, id).await.map_err(|e| match e {
             sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
             other => ServiceError::from(other),
         })
     }
 
-    pub async fn archive(&self, id: i32) -> Result<Task, ServiceError> {
-        self.repo.archive(id).await.map_err(|e| match e {
+    pub async fn archive(&self, user_id: i32, id: i32) -> Result<Task, ServiceError> {
+        self.repo.archive(user_id, id).await.map_err(|e| match e {
             sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
             other => ServiceError::from(other),
         })
     }
 
-    pub async fn move_to_backlog(&self, id: i32) -> Result<Task, ServiceError> {
-        self.repo.move_to_backlog(id).await.map_err(|e| match e {
+    pub async fn move_to_backlog(&self, user_id: i32, id: i32) -> Result<Task, ServiceError> {
+        self.repo.move_to_backlog(user_id, id).await.map_err(|e| match e {
             sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
             other => ServiceError::from(other),
         })
     }
 
-    pub async fn delete(&self, id: i32) -> Result<u64, ServiceError> {
-        self.repo.delete(id).await.map_err(ServiceError::Db)
+    pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, ServiceError> {
+        self.repo.delete(user_id, id).await.map_err(ServiceError::Db)
     }
 
-    pub async fn add_dependency(&self, task_id: i32, depends_on: i32) -> Result<(), ServiceError> {
+    pub async fn add_dependency(
+        &self,
+        user_id: i32,
+        task_id: i32,
+        depends_on: i32,
+    ) -> Result<(), ServiceError> {
         if task_id == depends_on {
             return Err(ServiceError::InvalidInput("不能依赖自己".into()));
         }
         self.repo
-            .add_dependency(task_id, depends_on)
+            .add_dependency(user_id, task_id, depends_on)
             .await
             .map_err(ServiceError::Db)
     }
 
     pub async fn remove_dependency(
         &self,
+        user_id: i32,
         task_id: i32,
         depends_on: i32,
     ) -> Result<u64, ServiceError> {
         self.repo
-            .remove_dependency(task_id, depends_on)
+            .remove_dependency(user_id, task_id, depends_on)
             .await
             .map_err(ServiceError::Db)
     }
@@ -113,6 +128,7 @@ impl TaskService {
     /// 在创建/更新 time_window 或更新任务的 time_windows 时调用
     pub async fn validate_time_windows(
         &self,
+        user_id: i32,
         task_id: i32,
         time_windows: &[TimeWindow],
         exclude_id: Option<i32>,
@@ -120,7 +136,7 @@ impl TaskService {
         // 获取任务已有的 available slots 和 planned slots
         let existing = self
             .repo
-            .find_time_windows_by_task(task_id)
+            .find_time_windows_by_task(user_id, task_id)
             .await
             .map_err(ServiceError::Db)?;
 
@@ -212,22 +228,24 @@ fn validate_effort(minutes: Option<i32>) -> Result<(), ServiceError> {
 impl TaskTimeWindowValidator for TaskService {
     async fn validate_time_windows(
         &self,
+        user_id: i32,
         task_id: i32,
         time_windows: &[TimeWindow],
         exclude_id: Option<i32>,
     ) -> Result<(), ServiceError> {
-        self.validate_time_windows(task_id, time_windows, exclude_id)
+        self.validate_time_windows(user_id, task_id, time_windows, exclude_id)
             .await
     }
 }
 
 async fn check_circular_parent(
     repo: &TaskRepository,
+    user_id: i32,
     task_id: i32,
     parent_id: i32,
 ) -> Result<(), ServiceError> {
     let is_circular = repo
-        .check_circular_parent(task_id, parent_id)
+        .check_circular_parent(user_id, task_id, parent_id)
         .await
         .map_err(ServiceError::Db)?;
     if is_circular {

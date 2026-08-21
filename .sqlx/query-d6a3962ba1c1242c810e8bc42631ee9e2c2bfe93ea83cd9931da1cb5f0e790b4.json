@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM task_dependency WHERE task_id = ? AND depends_on_task_id = ? AND EXISTS (SELECT 1 FROM task WHERE id = ? AND (user_id = ? OR user_id IS NULL))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "d6a3962ba1c1242c810e8bc42631ee9e2c2bfe93ea83cd9931da1cb5f0e790b4"
+}

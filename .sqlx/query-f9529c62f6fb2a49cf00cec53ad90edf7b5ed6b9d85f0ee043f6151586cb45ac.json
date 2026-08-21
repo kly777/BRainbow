@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) FROM task",
+  "query": "SELECT COUNT(*) FROM task WHERE title LIKE ? ESCAPE '\\' AND (user_id = ? OR user_id IS NULL)",
   "describe": {
     "columns": [
       {
@@ -11,11 +11,11 @@
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 2
     },
     "nullable": [
       false
     ]
   },
-  "hash": "1b409f5a99bc61a14386ade217c533c4fad09e5a30d9c7285db12335ed425b9b"
+  "hash": "f9529c62f6fb2a49cf00cec53ad90edf7b5ed6b9d85f0ee043f6151586cb45ac"
 }

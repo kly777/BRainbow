@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) FROM task WHERE title LIKE ? ESCAPE '\\'",
+  "query": "SELECT COUNT(*) FROM task WHERE status = 'archived' AND (user_id = ? OR user_id IS NULL)",
   "describe": {
     "columns": [
       {
@@ -17,5 +17,5 @@
       false
     ]
   },
-  "hash": "59b40d9c390f0ec0f9906ba3b2b9c9dfc74557b367424297ddeec7fafdb6759d"
+  "hash": "a90babd652941c8685cdd702abf26cbe24551352ebe55418bd0a41fa87985b60"
 }

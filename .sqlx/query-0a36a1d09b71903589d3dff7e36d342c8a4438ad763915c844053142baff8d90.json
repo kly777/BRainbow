@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) FROM task WHERE status != 'archived'",
+  "query": "SELECT COUNT(*) FROM task WHERE status = ? AND (user_id = ? OR user_id IS NULL)",
   "describe": {
     "columns": [
       {
@@ -11,11 +11,11 @@
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 2
     },
     "nullable": [
       false
     ]
   },
-  "hash": "b2ebb1af93d115a9ffc11185482671d2e7821246bfa54adf6bf0abcfe419bc3f"
+  "hash": "0a36a1d09b71903589d3dff7e36d342c8a4438ad763915c844053142baff8d90"
 }

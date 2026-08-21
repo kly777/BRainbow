@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Extension, Path, State},
     http::StatusCode,
     response::{IntoResponse, Json},
 };
@@ -9,6 +9,7 @@ use serde::Deserialize;
 use super::super::model::TaskStatus;
 use super::super::response::MessageResponse;
 use super::super::service::TaskService;
+use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 
 #[derive(Debug, Deserialize)]
@@ -39,11 +40,12 @@ pub struct DependencyRequest {
 pub async fn add_dependency_handler(
     Path(task_id): Path<i32>,
     State(service): State<TaskService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<DependencyRequest>,
 ) -> impl IntoResponse {
     let svc = &service;
     match svc
-        .add_dependency(task_id, payload.depends_on_task_id)
+        .add_dependency(claims.sub, task_id, payload.depends_on_task_id)
         .await
     {
         Ok(_) => (
@@ -58,9 +60,10 @@ pub async fn add_dependency_handler(
 pub async fn remove_dependency_handler(
     Path((task_id, depends_on_task_id)): Path<(i32, i32)>,
     State(service): State<TaskService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.remove_dependency(task_id, depends_on_task_id).await {
+    match svc.remove_dependency(claims.sub, task_id, depends_on_task_id).await {
         Ok(rows) if rows > 0 => Json(MessageResponse {
             message: "依赖关系已删除".into(),
         })

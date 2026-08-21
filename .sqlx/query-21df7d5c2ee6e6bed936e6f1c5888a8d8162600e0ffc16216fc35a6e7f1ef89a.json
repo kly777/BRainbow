@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO task (\n                   title, description, parent_task_id, status, completed_at,\n                   effort_estimate_minutes, created_at, updated_at\n               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)\n               RETURNING id AS \"id: i32\", title, description,\n                         parent_task_id AS \"parent_task_id?: i32\",\n                         COALESCE(status, 'backlog') AS \"status!: crate::modules::task::model::TaskStatus\",\n                         completed_at AS \"completed_at?: chrono::DateTime<chrono::Utc>\",\n                         effort_estimate_minutes AS \"effort_estimate_minutes?: i32\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
+  "query": "INSERT INTO task (\n                   title, description, parent_task_id, status, completed_at,\n                   effort_estimate_minutes, user_id, created_at, updated_at\n               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)\n               RETURNING id AS \"id: i32\", title, description,\n                         parent_task_id AS \"parent_task_id?: i32\",\n                         COALESCE(status, 'backlog') AS \"status!: crate::modules::task::model::TaskStatus\",\n                         completed_at AS \"completed_at?: chrono::DateTime<chrono::Utc>\",\n                         effort_estimate_minutes AS \"effort_estimate_minutes?: i32\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
   "describe": {
     "columns": [
       {
@@ -89,7 +89,7 @@
       }
     ],
     "parameters": {
-      "Right": 8
+      "Right": 9
     },
     "nullable": [
       false,
@@ -103,5 +103,5 @@
       null
     ]
   },
-  "hash": "e98061ac6e3ce136060d56466ae84a3343402b039e1bc3a41f2130f949cbf884"
+  "hash": "21df7d5c2ee6e6bed936e6f1c5888a8d8162600e0ffc16216fc35a6e7f1ef89a"
 }

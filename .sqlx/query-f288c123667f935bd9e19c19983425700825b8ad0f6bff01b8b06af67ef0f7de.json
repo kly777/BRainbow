@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\", title, description,\n                      parent_task_id AS \"parent_task_id?: i32\",\n                      COALESCE(status, 'backlog') AS \"status!: crate::modules::task::model::TaskStatus\",\n                      completed_at AS \"completed_at?: chrono::DateTime<chrono::Utc>\",\n                      effort_estimate_minutes AS \"effort_estimate_minutes?: i32\",\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM task WHERE id = ?",
+  "query": "UPDATE task SET status = 'archived', updated_at = ?1\n               WHERE id = ?2 AND (user_id = ?3 OR user_id IS NULL)\n               RETURNING id AS \"id: i32\", title, description,\n                         parent_task_id AS \"parent_task_id?: i32\",\n                         COALESCE(status, 'backlog') AS \"status!: crate::modules::task::model::TaskStatus\",\n                         completed_at AS \"completed_at?: chrono::DateTime<chrono::Utc>\",\n                         effort_estimate_minutes AS \"effort_estimate_minutes?: i32\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
   "describe": {
     "columns": [
       {
@@ -84,12 +84,12 @@
       {
         "name": "updated_at!: chrono::DateTime<chrono::Utc>",
         "ordinal": 8,
-        "type_info": "Datetime",
+        "type_info": "Null",
         "origin": "Expression"
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 3
     },
     "nullable": [
       false,
@@ -100,8 +100,8 @@
       true,
       true,
       false,
-      false
+      null
     ]
   },
-  "hash": "762c17b814045d5ababdbe3def70dcd5a5bc9066579862ee9b22ab8f8aff9ba5"
+  "hash": "f288c123667f935bd9e19c19983425700825b8ad0f6bff01b8b06af67ef0f7de"
 }

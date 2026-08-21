@@ -11,6 +11,7 @@ pub trait TaskTimeWindowValidator: Send + Sync {
     /// 校验时间窗口约束（C001 + C002）
     async fn validate_time_windows(
         &self,
+        user_id: i32,
         task_id: i32,
         time_windows: &[TimeWindow],
         exclude_id: Option<i32>,

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE task SET status = 'archived', updated_at = ? WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "b6b3f9d20fc351da188ecc6ded8da6bcd0dedbada0980505516ae249bd648a2e"
+}

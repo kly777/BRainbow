@@ -54,3 +54,17 @@
   - `cargo test`
   - `cargo clippy`
   - `cargo fmt`
+
+## 评估结论（2026-08）
+
+### SearchPort registry
+
+- 现状：`AppState::new` 手动组装 9 个 `Arc<dyn SearchPort>`。
+- 评估：当前模块数量固定、规模适中，手动组装直观且编译期可检查；引入 registry 会额外增加一层注册/查找逻辑，收益有限。
+- 结论：**暂不引入**。若未来模块超过 15 个或搜索源需要动态注册，再考虑 `SearchPortRegistry`。
+
+### TimeWindowService 泛型化
+
+- 现状：`TimeWindowService` 持有 `Arc<dyn TaskTimeWindowValidator>`。
+- 评估：去掉 dyn 需要把 `TimeWindowService` 改为 `TimeWindowService<V: TaskTimeWindowValidator>`，会波及 AppState 字段类型、`FromRef`、组合根构造；当前只有一个实现（`TaskService`），动态分派开销可忽略。
+- 结论：**暂不改**。保留 `Arc<dyn TaskTimeWindowValidator>` 作为跨模块 port。

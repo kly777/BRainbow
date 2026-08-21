@@ -2,11 +2,12 @@ use std::collections::HashMap;
 
 use axum::{
     Json, Router,
-    extract::{FromRef, Path, Query, State},
+    extract::{Extension, FromRef, Path, Query, State},
     response::IntoResponse,
     routing::get,
 };
 
+use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 
 use super::model::SearchParams;
@@ -25,6 +26,7 @@ where
 
 pub async fn search_handler(
     State(query): State<ConvQueryService>,
+    Extension(claims): Extension<Claims>,
     Query(params): Query<SearchParams>,
 ) -> impl IntoResponse {
     let q = match params.q {
@@ -36,7 +38,7 @@ pub async fn search_handler(
     let offset = params.offset.unwrap_or(0);
     let search_type = params.search_type.as_deref().unwrap_or("all");
 
-    match query.search(q, limit, offset, search_type).await {
+    match query.search(claims.sub, q, limit, offset, search_type).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => e.into_response(),
     }
@@ -44,9 +46,10 @@ pub async fn search_handler(
 
 pub async fn conv_detail_handler(
     State(query): State<ConvQueryService>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<i64>,
 ) -> impl IntoResponse {
-    match query.detail(id).await {
+    match query.detail(claims.sub, id).await {
         Ok(Some(detail)) => Json(detail).into_response(),
         Ok(None) => error::not_found("知识条目不存在"),
         Err(e) => error::internal(e, "获取知识详情"),
@@ -55,6 +58,7 @@ pub async fn conv_detail_handler(
 
 pub async fn conv_concept_handler(
     State(query): State<ConvQueryService>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<i64>,
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
@@ -63,7 +67,7 @@ pub async fn conv_concept_handler(
         None => return error::not_found("缺少 article 参数"),
     };
 
-    match query.concept(id, article_title).await {
+    match query.concept(claims.sub, id, article_title).await {
         Ok(Some(body)) => Json(body).into_response(),
         Ok(None) => error::not_found("文章不存在"),
         Err(e) => error::internal(e, "获取文章"),

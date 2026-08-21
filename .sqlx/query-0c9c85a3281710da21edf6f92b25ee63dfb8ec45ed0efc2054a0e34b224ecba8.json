@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT article_type, title, COALESCE(content, '') AS \"content!: String\"\n               FROM articles WHERE conv_id = ?1",
+  "query": "SELECT article_type, title, COALESCE(content, '') AS \"content!: String\"\n               FROM articles WHERE conv_id = ?1 AND (user_id = ?2 OR user_id IS NULL)",
   "describe": {
     "columns": [
       {
@@ -33,7 +33,7 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false,
@@ -41,5 +41,5 @@
       false
     ]
   },
-  "hash": "090f77ccb9bd0441de93973d8efbdfd01039b0b40575bf022aba36aaf749a395"
+  "hash": "0c9c85a3281710da21edf6f92b25ee63dfb8ec45ed0efc2054a0e34b224ecba8"
 }

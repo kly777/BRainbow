@@ -23,26 +23,28 @@ impl ConvQueryService {
 
     pub async fn search(
         &self,
+        user_id: i32,
         q: &str,
         limit: i64,
         offset: i64,
         search_type: &str,
     ) -> Result<SearchResponse, ServiceError> {
-        self.repo.search(q, limit, offset, search_type).await
+        self.repo.search(user_id, q, limit, offset, search_type).await
     }
 
     /// 知识条目详情（标题 + 文章）
-    pub async fn detail(&self, id: i64) -> Result<Option<ConvDetail>, ServiceError> {
-        self.repo.detail(id).await
+    pub async fn detail(&self, user_id: i32, id: i64) -> Result<Option<ConvDetail>, ServiceError> {
+        self.repo.detail(user_id, id).await
     }
 
     /// 单篇文章
     pub async fn concept(
         &self,
+        user_id: i32,
         id: i64,
         article_title: &str,
     ) -> Result<Option<serde_json::Value>, ServiceError> {
-        self.repo.concept(id, article_title).await
+        self.repo.concept(user_id, id, article_title).await
     }
 }
 
@@ -50,13 +52,14 @@ impl ConvQueryService {
 #[cfg(test)]
 pub async fn search_conv(
     pool: &SqlitePool,
+    user_id: i32,
     q: &str,
     limit: i64,
     offset: i64,
     search_type: &str,
 ) -> Result<SearchResponse, ServiceError> {
     ConvRepo::new(pool.clone())
-        .search(q, limit, offset, search_type)
+        .search(user_id, q, limit, offset, search_type)
         .await
 }
 
@@ -64,7 +67,7 @@ pub async fn search_conv(
 impl SearchPort for ConvQueryService {
     async fn search(
         &self,
-        _user_id: i32,
+        user_id: i32,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
@@ -74,7 +77,7 @@ impl SearchPort for ConvQueryService {
         }
         let cap = limit.clamp(1, 20);
         let like = crate::shared::db_query::like_contains(kw);
-        self.repo.search_hits(&like, cap).await
+        self.repo.search_hits(user_id, &like, cap).await
     }
 }
 
@@ -125,17 +128,17 @@ mod tests {
     async fn search_type_conv_only() {
         let pool = setup_test_db().await;
         // "中间件"只在文章中出现
-        let res_all = search_conv(&pool, "中间件", 20, 0, "all").await.unwrap();
+        let res_all = search_conv(&pool, 1, "中间件", 20, 0, "all").await.unwrap();
         assert!(
             res_all.hits.iter().any(|h| h.match_field == "article"),
             "全部模式下应有文章匹配"
         );
 
-        let res_conv = search_conv(&pool, "中间件", 20, 0, "conv").await.unwrap();
+        let res_conv = search_conv(&pool, 1, "中间件", 20, 0, "conv").await.unwrap();
         assert!(res_conv.hits.is_empty(), "conv 模式下不应有文章匹配");
 
         // "Go" 在对话和文章中都有
-        let res_article = search_conv(&pool, "Go", 20, 0, "article").await.unwrap();
+        let res_article = search_conv(&pool, 1, "Go", 20, 0, "article").await.unwrap();
         assert!(
             res_article.hits.iter().all(|h| h.match_field == "article"),
             "article 模式应只返回文章"
@@ -145,14 +148,14 @@ mod tests {
     #[tokio::test]
     async fn search_type_all() {
         let pool = setup_test_db().await;
-        let res = search_conv(&pool, "Go", 20, 0, "all").await.unwrap();
+        let res = search_conv(&pool, 1, "Go", 20, 0, "all").await.unwrap();
         assert!(res.total >= 2, "all 模式应同时包含标题和文章命中");
     }
 
     #[tokio::test]
     async fn no_match_empty() {
         let pool = setup_test_db().await;
-        let res = search_conv(&pool, "xyznonexistent", 20, 0, "all")
+        let res = search_conv(&pool, 1, "xyznonexistent", 20, 0, "all")
             .await
             .unwrap();
         assert_eq!(res.total, 0);
@@ -161,7 +164,7 @@ mod tests {
     #[tokio::test]
     async fn search_returns_expected_hits() {
         let pool = setup_test_db().await;
-        let res = search_conv(&pool, "Bash", 20, 0, "all").await.unwrap();
+        let res = search_conv(&pool, 1, "Bash", 20, 0, "all").await.unwrap();
         assert!(res.hits.iter().any(|h| h.title.contains("Bash")));
     }
 
@@ -178,7 +181,7 @@ mod tests {
             .await
             .unwrap();
 
-        let res = search_conv(&pool, "测试内容", 20, 0, "all").await.unwrap();
+        let res = search_conv(&pool, 1, "测试内容", 20, 0, "all").await.unwrap();
         eprintln!("\n── search_truncate_utf8 '测试内容' ──");
         eprintln!("  命中: {} (期望 ≥1)", res.hits.len());
         eprintln!("  注: bundled SQLite 对追加插入的 FTS 数据可能不可见，生产环境正常");

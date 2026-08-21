@@ -71,6 +71,7 @@ impl ConvRepo {
 
     pub async fn search(
         &self,
+        user_id: i32,
         q: &str,
         limit: i64,
         _offset: i64,
@@ -97,7 +98,8 @@ impl ConvRepo {
                     ConvTitleRow,
                     r#"SELECT conv_id, title, conv_type,
                               COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
-                       FROM conv_titles WHERE title LIKE ? ESCAPE '\' LIMIT 200"#,
+                       FROM conv_titles WHERE (user_id = ?1 OR user_id IS NULL) AND title LIKE ?2 ESCAPE '\' LIMIT 200"#,
+                    user_id,
                     pattern
                 )
                 .fetch_all(pool)
@@ -130,8 +132,8 @@ impl ConvRepo {
                               COALESCE(content, '') AS "content!: String",
                               COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
                        FROM articles
-                       WHERE title LIKE ? ESCAPE '\' OR content LIKE ? ESCAPE '\' LIMIT 200"#,
-                    pattern,
+                       WHERE (user_id = ?1 OR user_id IS NULL) AND (title LIKE ?2 ESCAPE '\' OR content LIKE ?2 ESCAPE '\') LIMIT 200"#,
+                    user_id,
                     pattern
                 )
                 .fetch_all(pool)
@@ -168,14 +170,15 @@ impl ConvRepo {
         Ok(SearchResponse { hits, total })
     }
 
-    pub async fn detail(&self, id: i64) -> Result<Option<ConvDetail>, ServiceError> {
+    pub async fn detail(&self, user_id: i32, id: i64) -> Result<Option<ConvDetail>, ServiceError> {
         let pool = &self.pool;
 
         let title_info: Option<ConvInfoRow> = sqlx::query_as!(
             ConvInfoRow,
             r#"SELECT title, conv_type, COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
-               FROM conv_titles WHERE conv_id = ?1 ORDER BY id LIMIT 1"#,
-            id
+               FROM conv_titles WHERE conv_id = ?1 AND (user_id = ?2 OR user_id IS NULL) ORDER BY id LIMIT 1"#,
+            id,
+            user_id
         )
         .fetch_optional(pool)
         .await?;
@@ -192,8 +195,9 @@ impl ConvRepo {
         let articles = sqlx::query_as!(
             ArticleRow,
             r#"SELECT article_type, title, COALESCE(content, '') AS "content!: String"
-               FROM articles WHERE conv_id = ?1"#,
-            id
+               FROM articles WHERE conv_id = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+            id,
+            user_id
         )
         .fetch_all(pool)
         .await?;
@@ -216,6 +220,7 @@ impl ConvRepo {
 
     pub async fn concept(
         &self,
+        user_id: i32,
         id: i64,
         article_title: &str,
     ) -> Result<Option<serde_json::Value>, ServiceError> {
@@ -224,8 +229,9 @@ impl ConvRepo {
         let article: Option<ArticleRow> = sqlx::query_as!(
             ArticleRow,
             r#"SELECT article_type, title, COALESCE(content, '') AS "content!: String"
-               FROM articles WHERE conv_id = ?1 AND title = ?2 LIMIT 1"#,
+               FROM articles WHERE conv_id = ?1 AND (user_id = ?2 OR user_id IS NULL) AND title = ?3 LIMIT 1"#,
             id,
+            user_id,
             article_title
         )
         .fetch_optional(pool)
@@ -242,12 +248,13 @@ impl ConvRepo {
     }
 
     /// 全局搜索命中
-    pub async fn search_hits(&self, like: &str, cap: i64) -> Result<Vec<SearchHit>, ServiceError> {
+    pub async fn search_hits(&self, user_id: i32, like: &str, cap: i64) -> Result<Vec<SearchHit>, ServiceError> {
         let rows = sqlx::query_as!(
             ConvHitRow,
             r#"SELECT conv_id, title FROM conv_titles
-               WHERE title LIKE ?1 ESCAPE '\'
-               ORDER BY conv_id DESC LIMIT ?2"#,
+               WHERE (user_id = ?1 OR user_id IS NULL) AND title LIKE ?2 ESCAPE '\'
+               ORDER BY conv_id DESC LIMIT ?3"#,
+            user_id,
             like,
             cap
         )

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT article_type, title, COALESCE(content, '') AS \"content!: String\"\n               FROM articles WHERE conv_id = ?1 AND title = ?2 LIMIT 1",
+  "query": "SELECT article_type, title, COALESCE(content, '') AS \"content!: String\"\n               FROM articles WHERE conv_id = ?1 AND (user_id = ?2 OR user_id IS NULL) AND title = ?3 LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -33,7 +33,7 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 3
     },
     "nullable": [
       false,
@@ -41,5 +41,5 @@
       false
     ]
   },
-  "hash": "fdd98a8523a64c19238201d2abbb929c01a3782f87385e369edf380ac8f7fbf3"
+  "hash": "f1c12a3b1e5111c63da30643ac23f25911f95e88ba00039a8649af7adfc28054"
 }

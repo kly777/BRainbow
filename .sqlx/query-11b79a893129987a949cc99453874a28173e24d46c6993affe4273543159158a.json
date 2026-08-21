@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT title, conv_type, COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\"\n               FROM conv_titles WHERE conv_id = ?1 ORDER BY id LIMIT 1",
+  "query": "SELECT title, conv_type, COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\"\n               FROM conv_titles WHERE conv_id = ?1 AND (user_id = ?2 OR user_id IS NULL) ORDER BY id LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -33,7 +33,7 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false,
@@ -41,5 +41,5 @@
       false
     ]
   },
-  "hash": "4100cf0d8bb566b3c25c4547468fa8001bff9b6c60daa1d5a7d20a825267fc60"
+  "hash": "11b79a893129987a949cc99453874a28173e24d46c6993affe4273543159158a"
 }

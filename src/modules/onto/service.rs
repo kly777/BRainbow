@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use super::model::Onto;
-use super::port::OntoRepositoryPort;
 use super::repository::OntoRepository;
 use crate::shared::error_types::ServiceError;
 
@@ -10,13 +9,14 @@ use crate::shared::error_types::ServiceError;
 /// CQRS 分离：纯读方法（list/by_id）在 `OntoQueryService` 中。
 #[derive(Clone)]
 pub struct OntoService {
-    repo: Arc<dyn OntoRepositoryPort>,
+    repo: OntoRepository,
 }
 
 impl OntoService {
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
-        let repo: Arc<dyn OntoRepositoryPort> = Arc::new(OntoRepository::new(db));
-        Self { repo }
+        Self {
+            repo: OntoRepository::new(db),
+        }
     }
 
     pub async fn create(

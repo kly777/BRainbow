@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use super::model::User;
-use super::port::UserRepositoryPort;
 use super::repository::UserRepository;
 use crate::shared::error_types::ServiceError;
 
@@ -10,13 +9,14 @@ use crate::shared::error_types::ServiceError;
 /// CQRS 分离：注册/登录/改密（认证命令）保留在 `UserService` 中。
 #[derive(Clone)]
 pub struct UserQueryService {
-    repo: Arc<dyn UserRepositoryPort>,
+    repo: UserRepository,
 }
 
 impl UserQueryService {
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
-        let repo: Arc<dyn UserRepositoryPort> = Arc::new(UserRepository::new(db));
-        Self { repo }
+        Self {
+            repo: UserRepository::new(db),
+        }
     }
 
     #[allow(dead_code)] // 仅测试/管理场景使用

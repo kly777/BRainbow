@@ -1,10 +1,7 @@
 use sqlx::{FromRow, SqlitePool};
 use std::sync::Arc;
 
-use async_trait::async_trait;
-
 use super::model::{Media, NewMedia};
-use super::port::MediaRepositoryPort;
 
 #[derive(Debug, FromRow)]
 struct MediaRow {
@@ -209,52 +206,6 @@ impl MediaRepository {
         .fetch_one(&*self.db)
         .await?;
         Ok(row.unwrap_or(0) as usize)
-    }
-}
-
-#[async_trait]
-impl MediaRepositoryPort for MediaRepository {
-    async fn insert(&self, params: NewMedia<'_>) -> Result<Media, sqlx::Error> {
-        self.insert(params).await
-    }
-
-    async fn update_metadata(
-        &self,
-        id: i64,
-        width: Option<i64>,
-        height: Option<i64>,
-        duration_ms: Option<i64>,
-    ) -> Result<(), sqlx::Error> {
-        self.update_metadata(id, width, height, duration_ms).await
-    }
-
-    async fn count(&self, media_type: Option<&str>) -> Result<i64, sqlx::Error> {
-        self.count(media_type).await
-    }
-
-    async fn find_all(
-        &self,
-        limit: i64,
-        offset: i64,
-        media_type: Option<&str>,
-    ) -> Result<Vec<Media>, sqlx::Error> {
-        self.find_all(limit, offset, media_type).await
-    }
-
-    async fn find_by_stored_id(&self, stored_id: &str) -> Result<Option<Media>, sqlx::Error> {
-        self.find_by_stored_id(stored_id).await
-    }
-
-    async fn update_name(&self, stored_id: &str, new_name: &str) -> Result<Option<Media>, sqlx::Error> {
-        self.update_name(stored_id, new_name).await
-    }
-
-    async fn delete(&self, stored_id: &str) -> Result<Option<Media>, sqlx::Error> {
-        self.delete(stored_id).await
-    }
-
-    async fn count_content_references(&self, stored_id: &str) -> Result<usize, sqlx::Error> {
-        self.count_content_references(stored_id).await
     }
 }
 

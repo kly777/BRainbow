@@ -1,10 +1,7 @@
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
-use async_trait::async_trait;
-
 use super::model::SignifierSignified;
-use super::port::SignRepositoryPort;
 
 /// SignifierSignified 数据访问层
 #[derive(Clone)]
@@ -152,57 +149,6 @@ impl SignRepository {
         .fetch_all(&*self.db)
         .await?;
         Ok((items, total))
-    }
-}
-
-#[async_trait]
-impl SignRepositoryPort for SignRepository {
-    async fn find_by_id(&self, id: i32) -> Result<Option<SignifierSignified>, sqlx::Error> {
-        self.find_by_id(id).await
-    }
-
-    async fn create(
-        &self,
-        signifier: String,
-        signified: String,
-        onto_id: Option<i32>,
-        weight: Option<f64>,
-        relation_type: Option<String>,
-    ) -> Result<SignifierSignified, sqlx::Error> {
-        self.create(signifier, signified, onto_id, weight, relation_type)
-            .await
-    }
-
-    async fn delete(&self, id: i32) -> Result<u64, sqlx::Error> {
-        self.delete(id).await
-    }
-
-    async fn find_all_paginated(
-        &self,
-        limit: i64,
-        offset: i64,
-    ) -> Result<(Vec<SignifierSignified>, i64), sqlx::Error> {
-        self.find_all_paginated(limit, offset).await
-    }
-
-    async fn find_by_signifier_paginated(
-        &self,
-        signifier: &str,
-        limit: i64,
-        offset: i64,
-    ) -> Result<(Vec<SignifierSignified>, i64), sqlx::Error> {
-        self.find_by_signifier_paginated(signifier, limit, offset)
-            .await
-    }
-
-    async fn find_by_signified_paginated(
-        &self,
-        signified: &str,
-        limit: i64,
-        offset: i64,
-    ) -> Result<(Vec<SignifierSignified>, i64), sqlx::Error> {
-        self.find_by_signified_paginated(signified, limit, offset)
-            .await
     }
 }
 

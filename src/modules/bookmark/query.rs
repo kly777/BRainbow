@@ -3,7 +3,6 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use super::model::{Bookmark, BookmarkTag, BookmarkTagWithCount};
-use super::port::BookmarkRepository;
 use super::repository::BookmarkRepo;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{SearchHit, SearchPort, snippet};
@@ -13,13 +12,14 @@ use crate::shared::search::{SearchHit, SearchPort, snippet};
 /// CQRS 分离：写操作（create/update/delete/tag 变更/导入）保留在 `BookmarkService` 中。
 #[derive(Clone)]
 pub struct BookmarkQueryService {
-    repo: Arc<dyn BookmarkRepository>,
+    repo: BookmarkRepo,
 }
 
 impl BookmarkQueryService {
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
-        let repo: Arc<dyn BookmarkRepository> = Arc::new(BookmarkRepo::new(db));
-        Self { repo }
+        Self {
+            repo: BookmarkRepo::new(db),
+        }
     }
 
     pub async fn list(

@@ -1,12 +1,11 @@
-use sqlx::SqlitePool;
+use sqlx::{FromRow, SqlitePool};
 use std::cmp::Ordering;
 use std::sync::Arc;
 
 use async_trait::async_trait;
 
 use super::model::{Article, ArticleDetail, ArticleSummary, UnknownWord};
-use super::port::ReadingRepositoryPort;
-use super::repository::ReadingRepo;
+use super::repository;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{SearchHit, SearchPort, snippet};
 
@@ -22,18 +21,17 @@ fn recommendation_distance(summary: &ArticleSummary) -> f64 {
 /// CQRS 分离：写操作（upload_article/mark_word/update_notes）在 `ReadingService` 中。
 #[derive(Clone)]
 pub struct ReadingQueryService {
-    repo: Arc<dyn ReadingRepositoryPort>,
+    pool: Arc<SqlitePool>,
 }
 
 impl ReadingQueryService {
     pub fn new(pool: Arc<SqlitePool>) -> Self {
-        let repo: Arc<dyn ReadingRepositoryPort> = Arc::new(ReadingRepo::new(pool));
-        Self { repo }
+        Self { pool }
     }
 
     /// 文章列表：按「最该阅读的下一篇」排序（认识率最接近 90% 优先，同分新文章优先）
     pub async fn list_articles(&self) -> Result<Vec<ArticleSummary>, sqlx::Error> {
-        let repo = self.repo.clone();
+        let repo = repository::ReadingRepo::new(self.pool.clone());
         let mut articles = repo.get_all_article_summaries().await?;
         articles.sort_by(|a, b| {
             recommendation_distance(a)
@@ -46,7 +44,7 @@ impl ReadingQueryService {
 
     /// 获取单篇文章详情（含词状态 + notes）
     pub async fn article_detail(&self, id: i64) -> Result<Option<ArticleDetail>, sqlx::Error> {
-        let repo = self.repo.clone();
+        let repo = repository::ReadingRepo::new(self.pool.clone());
         match repo.get_article(id).await? {
             Some(article) => {
                 let words = repo.get_article_word_statuses(id).await?;
@@ -57,27 +55,36 @@ impl ReadingQueryService {
     }
 
     pub async fn article(&self, id: i64) -> Result<Option<Article>, sqlx::Error> {
-        let repo = self.repo.clone();
+        let repo = repository::ReadingRepo::new(self.pool.clone());
         repo.get_article(id).await
     }
 
     /// 获取文章中的所有词
     pub async fn article_words(&self, id: i64) -> Result<Vec<String>, sqlx::Error> {
-        let repo = self.repo.clone();
+        let repo = repository::ReadingRepo::new(self.pool.clone());
         repo.get_article_words(id).await
     }
 
     /// 获取所有不认识词
     pub async fn unknown_words(&self) -> Result<Vec<UnknownWord>, sqlx::Error> {
-        let repo = self.repo.clone();
+        let repo = repository::ReadingRepo::new(self.pool.clone());
         repo.get_unknown_words().await
     }
 
     /// 推荐下一篇（认识率最接近 90%）
     pub async fn recommend_next(&self, id: i64) -> Result<Option<ArticleSummary>, sqlx::Error> {
-        let repo = self.repo.clone();
+        let repo = repository::ReadingRepo::new(self.pool.clone());
         repo.recommend_article(id, TARGET_KNOWN_RATIO).await
     }
+}
+
+#[derive(FromRow)]
+struct ReadingHitRow {
+    id: i64,
+    title: String,
+    content: String,
+    #[allow(dead_code)]
+    title_hit: i64,
 }
 
 #[async_trait]
@@ -94,19 +101,26 @@ impl SearchPort for ReadingQueryService {
         }
         let cap = limit.clamp(1, 20);
         let like = crate::shared::db_query::like_contains(kw);
-        let rows = self
-            .repo
-            .search_hits(&like, cap)
-            .await
-            .map_err(ServiceError::Db)?;
+        let rows = sqlx::query_as!(
+            ReadingHitRow,
+            r#"SELECT id, title, content,
+                      title LIKE ?1 ESCAPE '\' AS "title_hit!: i64"
+               FROM reading_article
+               WHERE title LIKE ?1 ESCAPE '\' OR content LIKE ?1 ESCAPE '\'
+               ORDER BY (title LIKE ?1 ESCAPE '\') DESC, id DESC LIMIT ?2"#,
+            like,
+            cap
+        )
+        .fetch_all(&*self.pool)
+        .await?;
         Ok(rows
             .into_iter()
-            .map(|(id, title, content)| SearchHit {
+            .map(|r| SearchHit {
                 kind: "reading".into(),
-                id,
-                title,
-                snippet: snippet(&content, kw),
-                url: format!("/reading/{}", id),
+                id: r.id,
+                title: r.title,
+                snippet: snippet(&r.content, kw),
+                url: format!("/reading/{}", r.id),
             })
             .collect())
     }

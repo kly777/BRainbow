@@ -1,10 +1,7 @@
 use sqlx::{FromRow, SqlitePool};
 use std::sync::Arc;
 
-use async_trait::async_trait;
-
 use super::model::{Article, ArticleSummary, ArticleWordStatus, UnknownWord};
-use super::port::ReadingRepositoryPort;
 
 // ── 行类型：命名 FromRow（列名与 SELECT 别名一一对应，避免元组列序错误） ──
 
@@ -40,15 +37,6 @@ struct WordRow {
 struct WordStatusRow {
     word: String,
     status: String,
-}
-
-#[derive(Debug, FromRow)]
-struct ReadingSearchRow {
-    id: i64,
-    title: String,
-    content: String,
-    #[allow(dead_code)]
-    title_hit: i64,
 }
 
 #[allow(dead_code)] // 单篇认识率查询仍由测试覆盖
@@ -367,82 +355,6 @@ impl ReadingRepo {
                 da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
             });
         Ok(best)
-    }
-
-    /// 全局搜索命中：返回 (id, title, content)
-    pub async fn search_hits(
-        &self,
-        like: &str,
-        cap: i64,
-    ) -> Result<Vec<(i64, String, String)>, sqlx::Error> {
-        let rows = sqlx::query_as!(
-            ReadingSearchRow,
-            r#"SELECT id, title, content,
-                      title LIKE ?1 ESCAPE '\' AS "title_hit!: i64"
-               FROM reading_article
-               WHERE title LIKE ?1 ESCAPE '\' OR content LIKE ?1 ESCAPE '\'
-               ORDER BY (title LIKE ?1 ESCAPE '\') DESC, id DESC LIMIT ?2"#,
-            like,
-            cap
-        )
-        .fetch_all(&*self.pool)
-        .await?;
-        Ok(rows.into_iter().map(|r| (r.id, r.title, r.content)).collect())
-    }
-}
-
-#[async_trait]
-impl ReadingRepositoryPort for ReadingRepo {
-    async fn insert_article(&self, title: &str, content: &str, word_count: i64) -> Result<i64, sqlx::Error> {
-        self.insert_article(title, content, word_count).await
-    }
-
-    async fn insert_article_words(&self, article_id: i64, words: &[String]) -> Result<(), sqlx::Error> {
-        self.insert_article_words(article_id, words).await
-    }
-
-    async fn get_article(&self, id: i64) -> Result<Option<Article>, sqlx::Error> {
-        self.get_article(id).await
-    }
-
-    async fn get_all_articles(&self) -> Result<Vec<Article>, sqlx::Error> {
-        self.get_all_articles().await
-    }
-
-    async fn get_article_words(&self, article_id: i64) -> Result<Vec<String>, sqlx::Error> {
-        self.get_article_words(article_id).await
-    }
-
-    async fn get_article_word_statuses(&self, article_id: i64) -> Result<Vec<ArticleWordStatus>, sqlx::Error> {
-        self.get_article_word_statuses(article_id).await
-    }
-
-    async fn get_article_known_ratio(&self, article_id: i64) -> Result<f64, sqlx::Error> {
-        self.get_article_known_ratio(article_id).await
-    }
-
-    async fn get_all_article_summaries(&self) -> Result<Vec<ArticleSummary>, sqlx::Error> {
-        self.get_all_article_summaries().await
-    }
-
-    async fn update_article_notes(&self, id: i64, notes: &str) -> Result<(), sqlx::Error> {
-        self.update_article_notes(id, notes).await
-    }
-
-    async fn upsert_user_word(&self, word: &str, status: &str) -> Result<(), sqlx::Error> {
-        self.upsert_user_word(word, status).await
-    }
-
-    async fn get_unknown_words(&self) -> Result<Vec<UnknownWord>, sqlx::Error> {
-        self.get_unknown_words().await
-    }
-
-    async fn recommend_article(&self, article_id: i64, target_ratio: f64) -> Result<Option<ArticleSummary>, sqlx::Error> {
-        self.recommend_article(article_id, target_ratio).await
-    }
-
-    async fn search_hits(&self, like: &str, cap: i64) -> Result<Vec<(i64, String, String)>, sqlx::Error> {
-        self.search_hits(like, cap).await
     }
 }
 

@@ -2,11 +2,9 @@ use chrono::Utc;
 use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use crate::shared::db_query::like_contains;
 
 use super::model::Card;
-use super::port::CardRepositoryPort;
 
 #[derive(sqlx::FromRow)]
 pub(crate) struct CardHitRow {
@@ -210,55 +208,6 @@ impl CardRepository {
             .await?;
 
         Ok((items, total))
-    }
-}
-
-#[async_trait]
-impl CardRepositoryPort for CardRepository {
-    async fn search_hits(
-        &self,
-        user_id: i32,
-        like: &str,
-        cap: i64,
-    ) -> Result<Vec<CardHitRow>, sqlx::Error> {
-        self.search_hits(user_id, like, cap).await
-    }
-
-    async fn find_all_paginated(
-        &self,
-        limit: i64,
-        offset: i64,
-    ) -> Result<(Vec<Card>, i64), sqlx::Error> {
-        self.find_all_paginated(limit, offset).await
-    }
-
-    async fn find_by_id(&self, id: i32) -> Result<Option<Card>, sqlx::Error> {
-        self.find_by_id(id).await
-    }
-
-    async fn create(&self, content: String) -> Result<Card, sqlx::Error> {
-        self.create(content).await
-    }
-
-    async fn update(
-        &self,
-        id: i32,
-        content: Option<String>,
-    ) -> Result<Card, sqlx::Error> {
-        self.update(id, content).await
-    }
-
-    async fn delete(&self, id: i32) -> Result<u64, sqlx::Error> {
-        self.delete(id).await
-    }
-
-    async fn search_by_content_paginated(
-        &self,
-        query: &str,
-        limit: i64,
-        offset: i64,
-    ) -> Result<(Vec<Card>, i64), sqlx::Error> {
-        self.search_by_content_paginated(query, limit, offset).await
     }
 }
 

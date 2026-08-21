@@ -2,8 +2,7 @@ use sqlx::SqlitePool;
 use std::sync::Arc;
 
 use super::model::Article;
-use super::port::ReadingRepositoryPort;
-use super::repository::ReadingRepo;
+use super::repository;
 
 fn extract_words(text: &str) -> Vec<String> {
     text.split(|c: char| !c.is_ascii_alphabetic() && c != '\'' && c != '-')
@@ -25,17 +24,16 @@ fn unique_words(words: Vec<String>) -> Vec<String> {
 /// CQRS 分离：纯读方法在 `ReadingQueryService` 中。
 #[derive(Clone)]
 pub struct ReadingService {
-    repo: Arc<dyn ReadingRepositoryPort>,
+    pool: Arc<SqlitePool>,
 }
 
 impl ReadingService {
     pub fn new(pool: Arc<SqlitePool>) -> Self {
-        let repo: Arc<dyn ReadingRepositoryPort> = Arc::new(ReadingRepo::new(pool));
-        Self { repo }
+        Self { pool }
     }
 
     pub async fn upload_article(&self, title: &str, content: &str) -> Result<Article, sqlx::Error> {
-        let repo = self.repo.clone();
+        let repo = repository::ReadingRepo::new(self.pool.clone());
 
         // 切词
         let all_words = extract_words(content);
@@ -56,13 +54,13 @@ impl ReadingService {
 
     /// 标记单词
     pub async fn mark_word(&self, word: &str, status: &str) -> Result<(), sqlx::Error> {
-        let repo = self.repo.clone();
+        let repo = repository::ReadingRepo::new(self.pool.clone());
         repo.upsert_user_word(word, status).await
     }
 
     /// 更新文章笔记
     pub async fn update_notes(&self, id: i64, notes: &str) -> Result<(), sqlx::Error> {
-        let repo = self.repo.clone();
+        let repo = repository::ReadingRepo::new(self.pool.clone());
         repo.update_article_notes(id, notes).await
     }
 }

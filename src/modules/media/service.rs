@@ -4,7 +4,6 @@ use sqlx::SqlitePool;
 use tracing::warn;
 
 use super::model::{Media, NewMedia};
-use super::port::MediaRepositoryPort;
 use super::repository::MediaRepository;
 use crate::shared::error_types::ServiceError;
 
@@ -74,7 +73,7 @@ fn dir_for_type(media_type: &str) -> &str {
 /// CQRS 分离：纯读方法（list/get_by_stored_id）在 `MediaQueryService` 中。
 #[derive(Clone)]
 pub struct MediaService {
-    repo: Arc<dyn MediaRepositoryPort>,
+    repo: MediaRepository,
 }
 
 impl MediaService {
@@ -85,8 +84,9 @@ impl MediaService {
         }
         // 清理孤儿临时文件
         Self::cleanup_temp_files();
-        let repo: Arc<dyn MediaRepositoryPort> = Arc::new(MediaRepository::new(db));
-        Self { repo }
+        Self {
+            repo: MediaRepository::new(db),
+        }
     }
 
     fn cleanup_temp_files() {

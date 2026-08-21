@@ -71,6 +71,15 @@ pub trait MemRepository: Send + Sync {
         exclude_tag_ids: &[i32],
     ) -> Result<SessionStats, MemError>;
 
+    // ── Global search ──
+
+    /// 全局搜索命中：返回 (mem_id, cue, target)
+    async fn search_hits(
+        &self,
+        like: &str,
+        cap: i64,
+    ) -> Result<Vec<(i64, String, String)>, MemError>;
+
     // ── State updates ──
 
     async fn set_state(

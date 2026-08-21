@@ -1,11 +1,15 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
+
 use crate::modules::mem::dto::*;
 use crate::modules::mem::fsrs;
 use crate::modules::mem::model::*;
 use crate::modules::mem::port::MemRepository;
 use crate::shared::batch::BatchDataResponse;
+use crate::shared::error_types::ServiceError;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
+use crate::shared::search::{SearchHit, SearchPort, clip, merge_snippets};
 
 /// 查询侧服务——纯读取，无副作用。
 ///
@@ -202,6 +206,38 @@ impl MemQueryService {
 
     async fn build_items(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, MemError> {
         self.repo.get_mems_with_chunks(ids).await
+    }
+}
+
+#[async_trait]
+impl SearchPort for MemQueryService {
+    async fn search(
+        &self,
+        _user_id: i32,
+        q: &str,
+        limit: i64,
+    ) -> Result<Vec<SearchHit>, ServiceError> {
+        let kw = q.trim();
+        if kw.is_empty() {
+            return Ok(vec![]);
+        }
+        let cap = limit.clamp(1, 20);
+        let like = crate::shared::db_query::like_contains(kw);
+        let rows = self
+            .repo
+            .search_hits(&like, cap)
+            .await
+            .map_err(|e| ServiceError::Internal(e.to_string()))?;
+        Ok(rows
+            .into_iter()
+            .map(|(id, cue, target)| SearchHit {
+                kind: "mem".into(),
+                id,
+                title: clip(&cue, 60),
+                snippet: merge_snippets(&cue, &target, kw),
+                url: format!("/memory/manage?id={}", id),
+            })
+            .collect())
     }
 }
 

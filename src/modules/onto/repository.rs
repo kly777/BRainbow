@@ -3,6 +3,13 @@ use std::sync::Arc;
 
 use super::model::Onto;
 
+#[derive(sqlx::FromRow)]
+pub(crate) struct OntoHitRow {
+    pub(crate) id: i64,
+    pub(crate) name: String,
+    pub(crate) description: Option<String>,
+}
+
 /// Onto 数据访问层
 #[derive(Clone)]
 pub struct OntoRepository {
@@ -13,6 +20,21 @@ impl OntoRepository {
     /// 创建新的 Onto 数据访问层实例
     pub fn new(db: Arc<SqlitePool>) -> Self {
         Self { db }
+    }
+
+    /// 全局搜索命中
+    pub async fn search_hits(&self, like: &str, cap: i64) -> Result<Vec<OntoHitRow>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            OntoHitRow,
+            r#"SELECT id, name, description FROM onto
+               WHERE name LIKE ?1 ESCAPE '\' OR description LIKE ?1 ESCAPE '\'
+               ORDER BY id DESC LIMIT ?2"#,
+            like,
+            cap
+        )
+        .fetch_all(&*self.db)
+        .await?;
+        Ok(rows)
     }
 
     pub async fn find_all_paginated(

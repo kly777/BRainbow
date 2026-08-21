@@ -2,6 +2,8 @@ use sqlx::{FromRow, SqlitePool};
 
 use crate::shared::db_query::like_contains;
 use crate::shared::error_types::ServiceError;
+use crate::shared::search::{SearchHit as GlobalSearchHit, SearchPort, snippet};
+use async_trait::async_trait;
 
 use super::model::{SearchHit, SearchResponse};
 
@@ -20,6 +22,20 @@ struct TitleHitRow {
     tree_id: i64,
     tree_title: String,
     updated_at: String,
+}
+
+#[derive(FromRow)]
+struct GlobalChatTitleHitRow {
+    id: i64,
+    title: String,
+}
+
+#[derive(FromRow)]
+struct GlobalChatNodeHitRow {
+    node_id: i64,
+    tree_id: i64,
+    title: String,
+    content: String,
 }
 
 /// 查询侧服务——纯读取（列表/详情/搜索）。
@@ -126,6 +142,68 @@ impl ChatQueryService {
             }
             None => compact.chars().take(width).collect(),
         }
+    }
+}
+
+#[async_trait]
+impl SearchPort for ChatQueryService {
+    async fn search(
+        &self,
+        user_id: i32,
+        q: &str,
+        limit: i64,
+    ) -> Result<Vec<GlobalSearchHit>, ServiceError> {
+        let kw = q.trim();
+        if kw.is_empty() {
+            return Ok(vec![]);
+        }
+        let cap = limit.clamp(1, 20);
+        let like = like_contains(kw);
+
+        let title_hits: Vec<GlobalChatTitleHitRow> = sqlx::query_as!(
+            GlobalChatTitleHitRow,
+            r#"SELECT id, title FROM chat_tree
+               WHERE (user_id = ?1 OR user_id IS NULL) AND title LIKE ?2 ESCAPE '\'
+               ORDER BY id DESC LIMIT ?3"#,
+            user_id,
+            like,
+            cap
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let node_cap = cap - title_hits.len() as i64;
+        let node_hits: Vec<GlobalChatNodeHitRow> = sqlx::query_as!(
+            GlobalChatNodeHitRow,
+            r#"SELECT n.id AS node_id, t.id AS tree_id, t.title, n.content
+               FROM chat_node n JOIN chat_tree t ON t.id = n.tree_id
+               WHERE (t.user_id = ?1 OR t.user_id IS NULL) AND n.content LIKE ?2 ESCAPE '\'
+               ORDER BY n.id DESC LIMIT ?3"#,
+            user_id,
+            like,
+            node_cap
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut hits: Vec<GlobalSearchHit> = title_hits
+            .into_iter()
+            .map(|r| GlobalSearchHit {
+                kind: "chat".into(),
+                id: r.id,
+                title: r.title,
+                snippet: String::new(),
+                url: format!("/chat?tree={}", r.id),
+            })
+            .collect();
+        hits.extend(node_hits.into_iter().map(|r| GlobalSearchHit {
+            kind: "chat".into(),
+            id: r.tree_id,
+            title: r.title,
+            snippet: snippet(&r.content, kw),
+            url: format!("/chat?tree={}&node={}", r.tree_id, r.node_id),
+        }));
+        Ok(hits)
     }
 }
 

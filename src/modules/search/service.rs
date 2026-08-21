@@ -1,100 +1,22 @@
-use sqlx::{FromRow, SqlitePool};
+use std::sync::Arc;
 
-use crate::shared::db_query::like_contains;
+use futures_util::future::join_all;
+
 use crate::shared::error_types::ServiceError;
+use crate::shared::search::{SearchPort, SearchResponse};
 
-use super::model::{SearchHit, SearchResponse};
-
-#[derive(FromRow)]
-#[allow(dead_code)] // cue_hit 只用于 ORDER BY，不参与业务字段
-struct MemHitRow {
-    id: i64,
-    cue: String,
-    target: String,
-    cue_hit: i64,
-}
-
-#[derive(FromRow)]
-struct CardHitRow {
-    id: i64,
-    content: String,
-}
-
-#[derive(FromRow)]
-#[allow(dead_code)] // title_hit 只用于排序
-struct TaskHitRow {
-    id: i64,
-    title: String,
-    description: Option<String>,
-    title_hit: i64,
-}
-
-#[derive(FromRow)]
-#[allow(dead_code)] // title_hit 只用于排序
-struct BookmarkHitRow {
-    id: i64,
-    title: String,
-    url: String,
-    description: String,
-    title_hit: i64,
-}
-
-#[derive(FromRow)]
-struct OntoHitRow {
-    id: i64,
-    name: String,
-    description: Option<String>,
-}
-
-#[derive(FromRow)]
-struct TextHitRow {
-    id: i64,
-    name: String,
-    content: String,
-}
-
-#[derive(FromRow)]
-#[allow(dead_code)] // title_hit 只用于排序
-struct ReadingHitRow {
-    id: i64,
-    title: String,
-    content: String,
-    title_hit: i64,
-}
-
-#[derive(FromRow)]
-struct ConvHitRow {
-    conv_id: i64,
-    title: String,
-}
-
-#[derive(FromRow)]
-struct ChatTitleHitRow {
-    id: i64,
-    title: String,
-}
-
-#[derive(FromRow)]
-struct ChatNodeHitRow {
-    node_id: i64,
-    tree_id: i64,
-    title: String,
-    content: String,
-}
-
-/// 全局搜索：聚合各模块的 LIKE 查询（个人知识库规模下足够快，无需 FTS）。
-/// 有 user_id 的表按当前用户过滤（兼容历史 NULL 数据），单用户表不过滤。
+/// 全局搜索：只负责聚合各模块的 `SearchPort`，不再直接触碰任何业务表。
 #[derive(Clone)]
 pub struct SearchQueryService {
-    pool: SqlitePool,
+    ports: Vec<Arc<dyn SearchPort>>,
 }
 
 impl SearchQueryService {
-    pub fn new(pool: SqlitePool) -> Self {
-        Self { pool }
+    pub fn new(ports: Vec<Arc<dyn SearchPort>>) -> Self {
+        Self { ports }
     }
 
-    /// 全局搜索入口：并行聚合 9 类数据源。
+    /// 全局搜索入口：并行聚合所有数据源。
     /// `limit` 为每类数据源的结果上限。
     pub async fn search(
         &self,
@@ -107,383 +29,14 @@ impl SearchQueryService {
             return Ok(SearchResponse { hits: Vec::new() });
         }
         let cap = limit.clamp(1, 20);
-        let like = like_contains(kw);
 
-        let (mem, card, task, bookmark, onto, text, reading, conv, chat) = tokio::join!(
-            self.search_mem(user_id, &like, kw, cap),
-            self.search_card(user_id, &like, kw, cap),
-            self.search_task(user_id, &like, kw, cap),
-            self.search_bookmark(&like, kw, cap),
-            self.search_onto(&like, kw, cap),
-            self.search_text(&like, kw, cap),
-            self.search_reading(&like, kw, cap),
-            self.search_conv(&like, kw, cap),
-            self.search_chat(user_id, &like, kw, cap),
-        );
+        let results = join_all(self.ports.iter().map(|port| port.search(user_id, kw, cap))).await;
 
         let mut hits = Vec::new();
-        for res in [mem, card, task, bookmark, onto, text, reading, conv, chat] {
+        for res in results {
             hits.extend(res?);
         }
         Ok(SearchResponse { hits })
-    }
-
-    async fn search_mem(
-        &self,
-        _user_id: i32,
-        like: &str,
-        kw: &str,
-        cap: i64,
-    ) -> Result<Vec<SearchHit>, ServiceError> {
-        // 线索（cue）命中优先于答案（target）命中
-        let rows: Vec<MemHitRow> = sqlx::query_as!(
-            MemHitRow,
-            r#"SELECT m.id, c1.content AS cue, c2.content AS target,
-                      c1.content LIKE ?1 ESCAPE '\' AS "cue_hit!: i64"
-               FROM mem m
-               JOIN chunk c1 ON c1.id = m.cue_chunk_id
-               JOIN chunk c2 ON c2.id = m.target_chunk_id
-               WHERE c1.content LIKE ?1 ESCAPE '\' OR c2.content LIKE ?1 ESCAPE '\'
-               ORDER BY (c1.content LIKE ?1 ESCAPE '\') DESC, m.id DESC LIMIT ?2"#,
-            like,
-            cap
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows
-            .into_iter()
-            .map(|r| SearchHit {
-                kind: "mem".into(),
-                id: r.id,
-                title: clip(&r.cue, 60),
-                snippet: merge_snippets(&r.cue, &r.target, kw),
-                url: format!("/memory/manage?id={}", r.id), // PATHS.memoryManage + detail id
-            })
-            .collect())
-    }
-
-    async fn search_card(
-        &self,
-        user_id: i32,
-        like: &str,
-        kw: &str,
-        cap: i64,
-    ) -> Result<Vec<SearchHit>, ServiceError> {
-        let rows: Vec<CardHitRow> = sqlx::query_as!(
-            CardHitRow,
-            r#"SELECT id, COALESCE(content, '') AS "content!: String" FROM card
-               WHERE (user_id = ?1 OR user_id IS NULL) AND content LIKE ?2 ESCAPE '\'
-               ORDER BY id DESC LIMIT ?3"#,
-            user_id,
-            like,
-            cap
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows
-            .into_iter()
-            .map(|r| SearchHit {
-                kind: "card".into(),
-                id: r.id,
-                title: clip(&r.content, 60),
-                snippet: snippet(&r.content, kw),
-                url: format!("/card/{}", r.id), // PATHS.cardDetail
-            })
-            .collect())
-    }
-
-    async fn search_task(
-        &self,
-        user_id: i32,
-        like: &str,
-        kw: &str,
-        cap: i64,
-    ) -> Result<Vec<SearchHit>, ServiceError> {
-        // 标题命中优先于描述命中
-        let rows: Vec<TaskHitRow> = sqlx::query_as!(
-            TaskHitRow,
-            r#"SELECT id, title, description,
-                      title LIKE ?2 ESCAPE '\' AS "title_hit!: i64"
-               FROM task
-               WHERE (user_id = ?1 OR user_id IS NULL)
-                 AND (title LIKE ?2 ESCAPE '\' OR description LIKE ?2 ESCAPE '\')
-               ORDER BY (title LIKE ?2 ESCAPE '\') DESC, id DESC LIMIT ?3"#,
-            user_id,
-            like,
-            cap
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows
-            .into_iter()
-            .map(|r| SearchHit {
-                kind: "task".into(),
-                id: r.id,
-                title: r.title,
-                snippet: snippet(r.description.as_deref().unwrap_or(""), kw),
-                url: format!("/task/{}", r.id), // PATHS.taskDetail
-            })
-            .collect())
-    }
-
-    async fn search_bookmark(
-        &self,
-        like: &str,
-        kw: &str,
-        cap: i64,
-    ) -> Result<Vec<SearchHit>, ServiceError> {
-        // 标题命中优先于 URL/描述命中
-        let rows: Vec<BookmarkHitRow> = sqlx::query_as!(
-            BookmarkHitRow,
-            r#"SELECT id, title, url, description,
-                      title LIKE ?1 ESCAPE '\' AS "title_hit!: i64"
-               FROM bookmark
-               WHERE title LIKE ?1 ESCAPE '\' OR url LIKE ?1 ESCAPE '\' OR description LIKE ?1 ESCAPE '\'
-               ORDER BY (title LIKE ?1 ESCAPE '\') DESC, id DESC LIMIT ?2"#,
-            like,
-            cap
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows
-            .into_iter()
-            .map(|r| SearchHit {
-                kind: "bookmark".into(),
-                id: r.id,
-                title: r.title,
-                snippet: if r.description.is_empty() {
-                    r.url
-                } else {
-                    snippet(&r.description, kw)
-                },
-                url: format!("/bookmark/{}", r.id), // PATHS.bookmarkDetail
-            })
-            .collect())
-    }
-
-    async fn search_onto(
-        &self,
-        like: &str,
-        kw: &str,
-        cap: i64,
-    ) -> Result<Vec<SearchHit>, ServiceError> {
-        let rows: Vec<OntoHitRow> = sqlx::query_as!(
-            OntoHitRow,
-            r#"SELECT id, name, description FROM onto
-               WHERE name LIKE ?1 ESCAPE '\' OR description LIKE ?1 ESCAPE '\'
-               ORDER BY id DESC LIMIT ?2"#,
-            like,
-            cap
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows
-            .into_iter()
-            .map(|r| SearchHit {
-                kind: "onto".into(),
-                id: r.id,
-                title: r.name,
-                snippet: snippet(r.description.as_deref().unwrap_or(""), kw),
-                url: format!("/ontology/{}", r.id), // PATHS.ontologyDetail
-            })
-            .collect())
-    }
-
-    async fn search_text(
-        &self,
-        like: &str,
-        kw: &str,
-        cap: i64,
-    ) -> Result<Vec<SearchHit>, ServiceError> {
-        let rows: Vec<TextHitRow> = sqlx::query_as!(
-            TextHitRow,
-            r#"SELECT id, name, content FROM text_note
-               WHERE name LIKE ?1 ESCAPE '\' OR content LIKE ?1 ESCAPE '\'
-               ORDER BY id DESC LIMIT ?2"#,
-            like,
-            cap
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows
-            .into_iter()
-            .map(|r| SearchHit {
-                kind: "text".into(),
-                id: r.id,
-                title: r.name,
-                snippet: snippet(&r.content, kw),
-                url: format!("/text?id={}", r.id), // PATHS.text + 指定 tab id
-            })
-            .collect())
-    }
-
-    async fn search_reading(
-        &self,
-        like: &str,
-        kw: &str,
-        cap: i64,
-    ) -> Result<Vec<SearchHit>, ServiceError> {
-        // 标题命中优先于正文命中，避免常见词把正文命中淹没列表
-        // 注意：阅读模块的表是 reading_article（conv 模块的 articles 是另一张表）
-        let rows: Vec<ReadingHitRow> = sqlx::query_as!(
-            ReadingHitRow,
-            r#"SELECT id, title, content,
-                      title LIKE ?1 ESCAPE '\' AS "title_hit!: i64"
-               FROM reading_article
-               WHERE title LIKE ?1 ESCAPE '\' OR content LIKE ?1 ESCAPE '\'
-               ORDER BY (title LIKE ?1 ESCAPE '\') DESC, id DESC LIMIT ?2"#,
-            like,
-            cap
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows
-            .into_iter()
-            .map(|r| SearchHit {
-                kind: "reading".into(),
-                id: r.id,
-                title: r.title,
-                snippet: snippet(&r.content, kw),
-                url: format!("/reading/{}", r.id), // PATHS.readingDetail
-            })
-            .collect())
-    }
-
-    async fn search_conv(
-        &self,
-        like: &str,
-        _kw: &str,
-        cap: i64,
-    ) -> Result<Vec<SearchHit>, ServiceError> {
-        let rows: Vec<ConvHitRow> = sqlx::query_as!(
-            ConvHitRow,
-            r#"SELECT conv_id, title FROM conv_titles
-               WHERE title LIKE ?1 ESCAPE '\'
-               ORDER BY conv_id DESC LIMIT ?2"#,
-            like,
-            cap
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows
-            .into_iter()
-            .map(|r| SearchHit {
-                kind: "conv".into(),
-                id: r.conv_id,
-                // 直达知识详情页
-                url: format!("/conversation/detail/{}", r.conv_id), // PATHS.convDetail
-                snippet: String::new(),
-                title: r.title,
-            })
-            .collect())
-    }
-
-    async fn search_chat(
-        &self,
-        user_id: i32,
-        like: &str,
-        kw: &str,
-        cap: i64,
-    ) -> Result<Vec<SearchHit>, ServiceError> {
-        // 树标题命中优先
-        let title_hits: Vec<ChatTitleHitRow> = sqlx::query_as!(
-            ChatTitleHitRow,
-            r#"SELECT id, title FROM chat_tree
-               WHERE (user_id = ?1 OR user_id IS NULL) AND title LIKE ?2 ESCAPE '\'
-               ORDER BY id DESC LIMIT ?3"#,
-            user_id,
-            like,
-            cap
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        // 节点内容命中（cap 扣除标题命中数）
-        let node_cap = cap - title_hits.len() as i64;
-        let node_hits: Vec<ChatNodeHitRow> = sqlx::query_as!(
-            ChatNodeHitRow,
-            r#"SELECT n.id AS node_id, t.id AS tree_id, t.title, n.content
-               FROM chat_node n JOIN chat_tree t ON t.id = n.tree_id
-               WHERE (t.user_id = ?1 OR t.user_id IS NULL) AND n.content LIKE ?2 ESCAPE '\'
-               ORDER BY n.id DESC LIMIT ?3"#,
-            user_id,
-            like,
-            node_cap
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        let mut hits: Vec<SearchHit> = title_hits
-            .into_iter()
-            .map(|r| SearchHit {
-                kind: "chat".into(),
-                id: r.id,
-                title: r.title,
-                snippet: String::new(),
-                url: format!("/chat?tree={}", r.id), // PATHS.chat
-            })
-            .collect();
-        hits.extend(node_hits.into_iter().map(|r| SearchHit {
-            kind: "chat".into(),
-            id: r.tree_id,
-            title: r.title,
-            snippet: snippet(&r.content, kw),
-            url: format!("/chat?tree={}&node={}", r.tree_id, r.node_id), // PATHS.chat
-        }));
-        Ok(hits)
-    }
-}
-
-/// 截取内容前 n 字符作为标题（单行化）
-fn clip(content: &str, n: usize) -> String {
-    let flat = content.chars().take(n).collect::<String>();
-    flat.replace('\n', " ")
-}
-
-/// 关键字上下文片段：命中位置前后各 40 字符，加省略号
-fn snippet(content: &str, kw: &str) -> String {
-    let flat: String = content
-        .chars()
-        .map(|c| if c == '\n' { ' ' } else { c })
-        .collect();
-    let lower = flat.to_lowercase();
-    let k = kw.to_lowercase();
-    let Some(byte_pos) = lower.find(&k) else {
-        return clip(content, 80);
-    };
-    // 换算为字符索引：to_lowercase 可能改变字节长度（如 'İ' → "i̇"），
-    // 直接混用字节/字符偏移会错位甚至下溢
-    let char_pos = lower[..byte_pos].chars().count();
-    let total = flat.chars().count();
-    let start = char_pos.saturating_sub(40);
-    let end = (char_pos + k.chars().count() + 40).min(total).max(start);
-    let mut out = String::new();
-    if start > 0 {
-        out.push('…');
-    }
-    out.push_str(
-        &flat
-            .chars()
-            .skip(start)
-            .take(end - start)
-            .collect::<String>(),
-    );
-    if end < total {
-        out.push('…');
-    }
-    out
-}
-
-/// mem 的线索+答案合并片段：优先命中侧，不足时拼接另一侧
-fn merge_snippets(cue: &str, target: &str, kw: &str) -> String {
-    let cue_hit = cue.to_lowercase().contains(&kw.to_lowercase());
-    let primary = if cue_hit { cue } else { target };
-    let secondary = if cue_hit { target } else { cue };
-    let snip = snippet(primary, kw);
-    if snip.chars().count() < 60 {
-        format!("{snip} ｜ {}", clip(secondary, 60))
-    } else {
-        snip
     }
 }
 
@@ -491,9 +44,26 @@ fn merge_snippets(cue: &str, target: &str, kw: &str) -> String {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+    use crate::modules::bookmark::BookmarkQueryService;
+    use crate::modules::card::CardQueryService;
+    use crate::modules::chat::query::ChatQueryService;
+    use crate::modules::conv::query::ConvQueryService;
+    use crate::modules::mem::MemRepo;
+    use crate::modules::mem::query::MemQueryService;
+    use crate::modules::onto::OntoQueryService;
+    use crate::modules::reading::query::ReadingQueryService;
+    use crate::modules::task::TaskQueryService;
+    use crate::modules::text::TextQueryService;
+    use crate::shared::search::{clip, merge_snippets, snippet};
     use sqlx::SqlitePool;
+    use std::sync::Arc;
 
-    async fn setup() -> SearchQueryService {
+    struct TestCtx {
+        svc: SearchQueryService,
+        pool: SqlitePool,
+    }
+
+    async fn setup() -> TestCtx {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         crate::db::migrate(&pool).await.unwrap();
         // 生产 schema 中 card/task.user_id 有外键约束，先建两个测试用户
@@ -505,29 +75,55 @@ mod tests {
                 .await
                 .unwrap();
         }
-        SearchQueryService::new(pool)
+
+        let mem_query = MemQueryService::new(Arc::new(MemRepo::new(Arc::new(pool.clone()))));
+        let card_query = CardQueryService::new(Arc::new(pool.clone()));
+        let task_query = TaskQueryService::new(Arc::new(pool.clone()));
+        let bookmark_query = BookmarkQueryService::new(Arc::new(pool.clone()));
+        let onto_query = OntoQueryService::new(Arc::new(pool.clone()));
+        let text_query = TextQueryService::new(Arc::new(pool.clone()));
+        let reading_query = ReadingQueryService::new(Arc::new(pool.clone()));
+        let conv_query = ConvQueryService::new(pool.clone());
+        let chat_query = ChatQueryService::new(pool.clone());
+
+        let ports: Vec<Arc<dyn SearchPort>> = vec![
+            Arc::new(mem_query),
+            Arc::new(card_query),
+            Arc::new(task_query),
+            Arc::new(bookmark_query),
+            Arc::new(onto_query),
+            Arc::new(text_query),
+            Arc::new(reading_query),
+            Arc::new(conv_query),
+            Arc::new(chat_query),
+        ];
+
+        TestCtx {
+            svc: SearchQueryService::new(ports),
+            pool,
+        }
     }
 
     #[tokio::test]
     async fn search_across_modules_and_user_filter() {
-        let svc = setup().await;
+        let ctx = setup().await;
         // mem（单用户表，无 user 过滤）
         let c1: i64 = sqlx::query_scalar(
             "INSERT INTO chunk (content) VALUES ('费曼学习法：以教促学') RETURNING id",
         )
-        .fetch_one(&svc.pool)
+        .fetch_one(&ctx.pool)
         .await
         .unwrap();
         let c2: i64 = sqlx::query_scalar(
             "INSERT INTO chunk (content) VALUES ('用自己的话教别人，暴露知识缺口') RETURNING id",
         )
-        .fetch_one(&svc.pool)
+        .fetch_one(&ctx.pool)
         .await
         .unwrap();
         sqlx::query("INSERT INTO mem (cue_chunk_id, target_chunk_id) VALUES (?1, ?2)")
             .bind(c1)
             .bind(c2)
-            .execute(&svc.pool)
+            .execute(&ctx.pool)
             .await
             .unwrap();
 
@@ -535,50 +131,50 @@ mod tests {
         sqlx::query(
             "INSERT INTO card (content, user_id) VALUES ('费曼学习法是一种高效的学习方法', 1)",
         )
-        .execute(&svc.pool)
+        .execute(&ctx.pool)
         .await
         .unwrap();
         sqlx::query("INSERT INTO card (content, user_id) VALUES ('别人的费曼卡片', 2)")
-            .execute(&svc.pool)
+            .execute(&ctx.pool)
             .await
             .unwrap();
         // task（无 user_id 的旧数据也应命中）
         sqlx::query("INSERT INTO task (title, user_id) VALUES ('复习费曼笔记', NULL)")
-            .execute(&svc.pool)
+            .execute(&ctx.pool)
             .await
             .unwrap();
         // bookmark（单用户表）
         sqlx::query("INSERT INTO bookmark (title, url) VALUES ('费曼技巧详解', 'https://example.com/feynman')")
-            .execute(&svc.pool).await.unwrap();
+            .execute(&ctx.pool).await.unwrap();
         // reading（reading_article 表）
         sqlx::query(
             "INSERT INTO reading_article (title, content) VALUES ('费曼自传', '别闹了费曼先生')",
         )
-        .execute(&svc.pool)
+        .execute(&ctx.pool)
         .await
         .unwrap();
         // conv
         sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (9, '费曼学习法讨论', 'conv')")
-            .execute(&svc.pool).await.unwrap();
+            .execute(&ctx.pool).await.unwrap();
         // chat（user 1 树，user 2 树）
         let t1: i64 = sqlx::query_scalar(
             "INSERT INTO chat_tree (user_id, title) VALUES (1, '学习方法') RETURNING id",
         )
-        .fetch_one(&svc.pool)
+        .fetch_one(&ctx.pool)
         .await
         .unwrap();
         let t2: i64 = sqlx::query_scalar(
             "INSERT INTO chat_tree (user_id, title) VALUES (2, '别人的树') RETURNING id",
         )
-        .fetch_one(&svc.pool)
+        .fetch_one(&ctx.pool)
         .await
         .unwrap();
         sqlx::query("INSERT INTO chat_node (tree_id, role, content) VALUES (?1, 'user', '费曼学习法是什么？')")
-            .bind(t1).execute(&svc.pool).await.unwrap();
+            .bind(t1).execute(&ctx.pool).await.unwrap();
         sqlx::query("INSERT INTO chat_node (tree_id, role, content) VALUES (?1, 'user', '费曼学习法是什么？')")
-            .bind(t2).execute(&svc.pool).await.unwrap();
+            .bind(t2).execute(&ctx.pool).await.unwrap();
 
-        let res = svc.search(1, "费曼", 5).await.unwrap();
+        let res = ctx.svc.search(1, "费曼", 5).await.unwrap();
         let kinds: Vec<&str> = res.hits.iter().map(|h| h.kind.as_str()).collect();
         assert!(kinds.contains(&"mem"));
         assert!(kinds.contains(&"card"));
@@ -614,8 +210,8 @@ mod tests {
 
     #[tokio::test]
     async fn empty_query_returns_empty() {
-        let svc = setup().await;
-        let res = svc.search(1, "  ", 5).await.unwrap();
+        let ctx = setup().await;
+        let res = ctx.svc.search(1, "  ", 5).await.unwrap();
         assert!(res.hits.is_empty());
     }
 
@@ -630,11 +226,8 @@ mod tests {
         assert!(s.ends_with('…'));
     }
 
-    // ── snippet / clip 边界 ──
-
     #[tokio::test]
     async fn snippet_boundaries_no_ellipsis_at_edges() {
-        // 关键字在开头：无前缀省略号
         let s = snippet(
             "费曼学习法是一种高效学习方法，后面的内容很长"
                 .repeat(4)
@@ -644,13 +237,11 @@ mod tests {
         assert!(s.starts_with("费曼"));
         assert!(s.ends_with('…'));
 
-        // 关键字在结尾（40 字符内）：无后缀省略号
         let head = "前".repeat(60);
         let s = snippet(&format!("{head}费曼"), "费曼");
         assert!(s.starts_with('…'));
         assert!(!s.ends_with('…'));
 
-        // 换行被替换为空格
         let s = snippet("第一行\n第二行费曼内容\n第三行", "费曼");
         assert!(!s.contains('\n'));
         assert!(s.contains("费曼内容"));
@@ -658,8 +249,7 @@ mod tests {
 
     #[tokio::test]
     async fn snippet_multibyte_prefix_no_panic_regression() {
-        // 回归：多字节前缀导致字节偏移 ≠ 字符偏移，曾引发 end - start 下溢 panic
-        let prefix = "漢字".repeat(30); // 60 个多字节字符
+        let prefix = "漢字".repeat(30);
         let content = format!("{prefix}关键内容在这里");
         let s = snippet(&content, "关键");
         assert!(s.contains("关键内容"));
@@ -687,39 +277,33 @@ mod tests {
         assert_eq!(s, "短");
     }
 
-    // ── merge_snippets ──
-
     #[tokio::test]
     async fn merge_snippets_prefers_hit_side() {
         let cue = "费曼学习法是什么";
         let target = "以教促学的学习方法";
-        // cue 命中 → 主片段是 cue，拼接 target
         let s = merge_snippets(cue, target, "费曼");
         assert!(s.contains("费曼"));
         assert!(s.contains("｜"));
         assert!(s.contains("以教促学"));
-        // target 命中 → 主片段是 target，拼接 cue
         let s = merge_snippets(cue, target, "教促");
         assert!(s.contains("以教促学的学习方法"));
         assert!(s.contains("｜"));
         assert!(s.contains("费曼学习法"));
     }
 
-    // ── 各模块命中细节 ──
-
     #[tokio::test]
     async fn onto_and_text_module_hits() {
-        let svc = setup().await;
+        let ctx = setup().await;
         sqlx::query(
             "INSERT INTO onto (name, description) VALUES ('费曼学习法', '以教促学，检验理解')",
         )
-        .execute(&svc.pool)
+        .execute(&ctx.pool)
         .await
         .unwrap();
         sqlx::query("INSERT INTO text_note (name, content) VALUES ('读书笔记', '今天读了费曼物理学讲义第一章')")
-            .execute(&svc.pool).await.unwrap();
+            .execute(&ctx.pool).await.unwrap();
 
-        let res = svc.search(1, "费曼", 5).await.unwrap();
+        let res = ctx.svc.search(1, "费曼", 5).await.unwrap();
         let onto_hit = res.hits.iter().find(|h| h.kind == "onto").unwrap();
         assert_eq!(onto_hit.title, "费曼学习法");
         assert_eq!(onto_hit.url, format!("/ontology/{}", onto_hit.id));
@@ -733,25 +317,22 @@ mod tests {
 
     #[tokio::test]
     async fn bookmark_matches_url_and_description() {
-        let svc = setup().await;
+        let ctx = setup().await;
         sqlx::query(
             "INSERT INTO bookmark (title, url, description) VALUES
              ('无关标题', 'https://feynman-technique.com/', ''),
              ('普通书签', 'https://other.com/', '费曼技巧的详细说明')",
         )
-        .execute(&svc.pool)
+        .execute(&ctx.pool)
         .await
         .unwrap();
 
-        // URL 命中
-        let res = svc.search(1, "feynman-technique", 5).await.unwrap();
+        let res = ctx.svc.search(1, "feynman-technique", 5).await.unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "bookmark").unwrap();
         assert_eq!(hit.id, 1);
-        // desc 为空时 snippet 回退为 URL
         assert_eq!(hit.snippet, "https://feynman-technique.com/");
 
-        // 描述命中
-        let res = svc.search(1, "费曼技巧", 5).await.unwrap();
+        let res = ctx.svc.search(1, "费曼技巧", 5).await.unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "bookmark").unwrap();
         assert_eq!(hit.id, 2);
         assert!(hit.snippet.contains("详细说明"));
@@ -759,22 +340,21 @@ mod tests {
 
     #[tokio::test]
     async fn task_user_scoping_null_visible_to_all() {
-        let svc = setup().await;
-        // NULL user_id 的旧数据对任意用户可见
+        let ctx = setup().await;
         sqlx::query("INSERT INTO task (title, user_id) VALUES ('共享任务', NULL)")
-            .execute(&svc.pool)
+            .execute(&ctx.pool)
             .await
             .unwrap();
         sqlx::query("INSERT INTO task (title, user_id) VALUES ('用户一的任务', 1)")
-            .execute(&svc.pool)
+            .execute(&ctx.pool)
             .await
             .unwrap();
         sqlx::query("INSERT INTO task (title, user_id) VALUES ('用户二的任务', 2)")
-            .execute(&svc.pool)
+            .execute(&ctx.pool)
             .await
             .unwrap();
 
-        let res = svc.search(1, "任务", 5).await.unwrap();
+        let res = ctx.svc.search(1, "任务", 5).await.unwrap();
         let titles: Vec<&str> = res
             .hits
             .iter()
@@ -785,7 +365,7 @@ mod tests {
         assert!(titles.contains(&"用户一的任务"));
         assert!(!titles.contains(&"用户二的任务"));
 
-        let res = svc.search(2, "任务", 5).await.unwrap();
+        let res = ctx.svc.search(2, "任务", 5).await.unwrap();
         let titles: Vec<&str> = res
             .hits
             .iter()
@@ -799,31 +379,30 @@ mod tests {
 
     #[tokio::test]
     async fn mem_hits_both_cue_and_target_sides() {
-        let svc = setup().await;
+        let ctx = setup().await;
         let c1: i64 =
             sqlx::query_scalar("INSERT INTO chunk (content) VALUES ('什么是熵') RETURNING id")
-                .fetch_one(&svc.pool)
+                .fetch_one(&ctx.pool)
                 .await
                 .unwrap();
         let c2: i64 = sqlx::query_scalar(
             "INSERT INTO chunk (content) VALUES ('系统无序程度的度量，热力学第二定律的核心概念') RETURNING id",
         )
-        .fetch_one(&svc.pool).await.unwrap();
+        .fetch_one(&ctx.pool).await.unwrap();
         sqlx::query("INSERT INTO mem (cue_chunk_id, target_chunk_id) VALUES (?1, ?2)")
             .bind(c1)
             .bind(c2)
-            .execute(&svc.pool)
+            .execute(&ctx.pool)
             .await
             .unwrap();
 
-        // 命中 cue
-        let res = svc.search(1, "熵", 5).await.unwrap();
+        let res = ctx.svc.search(1, "熵", 5).await.unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "mem").unwrap();
         assert_eq!(hit.id, 1);
         assert_eq!(hit.url, "/memory/manage?id=1");
         assert!(hit.title.contains("什么是熵"));
-        // 命中 target
-        let res = svc.search(1, "热力学", 5).await.unwrap();
+
+        let res = ctx.svc.search(1, "热力学", 5).await.unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "mem").unwrap();
         assert_eq!(hit.id, 1);
         assert!(hit.snippet.contains("热力学"));
@@ -831,24 +410,24 @@ mod tests {
 
     #[tokio::test]
     async fn chat_multiple_nodes_same_tree_each_own_url() {
-        let svc = setup().await;
+        let ctx = setup().await;
         let t: i64 = sqlx::query_scalar(
             "INSERT INTO chat_tree (user_id, title) VALUES (1, '物理讨论') RETURNING id",
         )
-        .fetch_one(&svc.pool)
+        .fetch_one(&ctx.pool)
         .await
         .unwrap();
         sqlx::query(
             "INSERT INTO chat_node (tree_id, role, content) VALUES (?1, 'user', '熵是什么？')",
         )
         .bind(t)
-        .execute(&svc.pool)
+        .execute(&ctx.pool)
         .await
         .unwrap();
         sqlx::query("INSERT INTO chat_node (tree_id, role, content) VALUES (?1, 'assistant', '熵是热力学中的核心概念')")
-            .bind(t).execute(&svc.pool).await.unwrap();
+            .bind(t).execute(&ctx.pool).await.unwrap();
 
-        let res = svc.search(1, "熵", 5).await.unwrap();
+        let res = ctx.svc.search(1, "熵", 5).await.unwrap();
         let hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "chat").collect();
         assert_eq!(hits.len(), 2);
         assert_eq!(hits[0].url, format!("/chat?tree={t}&node=2"));
@@ -858,14 +437,13 @@ mod tests {
 
     #[tokio::test]
     async fn reading_title_hits_rank_before_content_hits() {
-        let svc = setup().await;
-        // 正文命中（id 较小）与标题命中（id 较大）交错 —— 标题命中必须排前
+        let ctx = setup().await;
         sqlx::query("INSERT INTO reading_article (title, content) VALUES ('无关文章', '这段文字提到了关键词XYZ的用法')")
-            .execute(&svc.pool).await.unwrap();
+            .execute(&ctx.pool).await.unwrap();
         sqlx::query("INSERT INTO reading_article (title, content) VALUES ('关键词XYZ完全指南', '正文没有命中词')")
-            .execute(&svc.pool).await.unwrap();
+            .execute(&ctx.pool).await.unwrap();
 
-        let res = svc.search(1, "关键词XYZ", 5).await.unwrap();
+        let res = ctx.svc.search(1, "关键词XYZ", 5).await.unwrap();
         let hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "reading").collect();
         assert_eq!(hits.len(), 2);
         assert_eq!(hits[0].title, "关键词XYZ完全指南");
@@ -874,20 +452,18 @@ mod tests {
 
     #[tokio::test]
     async fn limit_caps_each_module_and_empty_db() {
-        let svc = setup().await;
-        // 空库：任何查询都返回空
-        let res = svc.search(1, "任意", 5).await.unwrap();
+        let ctx = setup().await;
+        let res = ctx.svc.search(1, "任意", 5).await.unwrap();
         assert!(res.hits.is_empty());
 
-        // limit=1：每模块最多 1 条
         for i in 0..3 {
             sqlx::query("INSERT INTO card (content, user_id) VALUES (?1, 1)")
                 .bind(format!("卡片内容 {i} 共享关键词"))
-                .execute(&svc.pool)
+                .execute(&ctx.pool)
                 .await
                 .unwrap();
         }
-        let res = svc.search(1, "共享关键词", 1).await.unwrap();
+        let res = ctx.svc.search(1, "共享关键词", 1).await.unwrap();
         let card_hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "card").collect();
         assert_eq!(card_hits.len(), 1);
     }

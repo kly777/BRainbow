@@ -200,6 +200,14 @@ impl MemRepository for FakeRepo {
         Ok(self.session_stats.lock().unwrap().clone())
     }
 
+    async fn search_hits(
+        &self,
+        _like: &str,
+        _cap: i64,
+    ) -> Result<Vec<(i64, String, String)>, MemError> {
+        Ok(vec![])
+    }
+
     async fn get_next_mem(&self) -> Result<Option<i32>, MemError> {
         Ok(None)
     }

@@ -13,6 +13,15 @@ struct TaskDepRow {
 }
 
 #[derive(FromRow)]
+pub(crate) struct TaskHitRow {
+    pub(crate) id: i64,
+    pub(crate) title: String,
+    pub(crate) description: Option<String>,
+    #[allow(dead_code)]
+    pub(crate) title_hit: i64,
+}
+
+#[derive(FromRow)]
 struct CalendarRow {
     id: i32,
     title: String,
@@ -137,6 +146,30 @@ impl TaskRepository {
             planned_slots,
             actual_slots,
         }))
+    }
+
+    /// 全局搜索命中：标题命中优先于描述命中
+    pub async fn search_hits(
+        &self,
+        user_id: i32,
+        like: &str,
+        cap: i64,
+    ) -> Result<Vec<TaskHitRow>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            TaskHitRow,
+            r#"SELECT id, title, description,
+                      title LIKE ?2 ESCAPE '\' AS "title_hit!: i64"
+               FROM task
+               WHERE (user_id = ?1 OR user_id IS NULL)
+                 AND (title LIKE ?2 ESCAPE '\' OR description LIKE ?2 ESCAPE '\')
+               ORDER BY (title LIKE ?2 ESCAPE '\') DESC, id DESC LIMIT ?3"#,
+            user_id,
+            like,
+            cap
+        )
+        .fetch_all(&*self.db)
+        .await?;
+        Ok(rows)
     }
 
     pub async fn search_by_title_paginated(

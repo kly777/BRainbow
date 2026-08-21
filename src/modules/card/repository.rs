@@ -6,6 +6,12 @@ use crate::shared::db_query::like_contains;
 
 use super::model::Card;
 
+#[derive(sqlx::FromRow)]
+pub(crate) struct CardHitRow {
+    pub(crate) id: i64,
+    pub(crate) content: String,
+}
+
 /// Card 数据访问层
 #[derive(Clone)]
 pub struct CardRepository {
@@ -16,6 +22,27 @@ impl CardRepository {
     /// 创建新的 Card 数据访问层实例
     pub fn new(db: Arc<SqlitePool>) -> Self {
         Self { db }
+    }
+
+    /// 全局搜索命中（按用户过滤，兼容历史 NULL）
+    pub async fn search_hits(
+        &self,
+        user_id: i32,
+        like: &str,
+        cap: i64,
+    ) -> Result<Vec<CardHitRow>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            CardHitRow,
+            r#"SELECT id, COALESCE(content, '') AS "content!: String" FROM card
+               WHERE (user_id = ?1 OR user_id IS NULL) AND content LIKE ?2 ESCAPE '\'
+               ORDER BY id DESC LIMIT ?3"#,
+            user_id,
+            like,
+            cap
+        )
+        .fetch_all(&*self.db)
+        .await?;
+        Ok(rows)
     }
 
     /// 获取所有卡片（分页）

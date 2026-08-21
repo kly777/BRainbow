@@ -1,10 +1,19 @@
 use sqlx::FromRow;
 use sqlx::SqlitePool;
 
+use async_trait::async_trait;
+
 use super::model::{ArticleItem, ConvDetail, SearchResponse};
 use super::scoring;
 use crate::shared::db_query::like_contains;
 use crate::shared::error_types::ServiceError;
+use crate::shared::search::{SearchHit, SearchPort};
+
+#[derive(FromRow)]
+struct ConvHitRow {
+    conv_id: i64,
+    title: String,
+}
 
 #[derive(FromRow)]
 struct ConvInfoRow {
@@ -272,6 +281,43 @@ pub async fn search_conv(
     let hits = scoring::score_and_rank(raw_hits, &idfs, limit as usize);
     let total = hits.len() as i64;
     Ok(SearchResponse { hits, total })
+}
+
+#[async_trait]
+impl SearchPort for ConvQueryService {
+    async fn search(
+        &self,
+        _user_id: i32,
+        q: &str,
+        limit: i64,
+    ) -> Result<Vec<SearchHit>, ServiceError> {
+        let kw = q.trim();
+        if kw.is_empty() {
+            return Ok(vec![]);
+        }
+        let cap = limit.clamp(1, 20);
+        let like = crate::shared::db_query::like_contains(kw);
+        let rows = sqlx::query_as!(
+            ConvHitRow,
+            r#"SELECT conv_id, title FROM conv_titles
+               WHERE title LIKE ?1 ESCAPE '\'
+               ORDER BY conv_id DESC LIMIT ?2"#,
+            like,
+            cap
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| SearchHit {
+                kind: "conv".into(),
+                id: r.conv_id,
+                title: r.title,
+                snippet: String::new(),
+                url: format!("/conversation/detail/{}", r.conv_id),
+            })
+            .collect())
+    }
 }
 
 #[cfg(test)]

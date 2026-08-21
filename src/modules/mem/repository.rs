@@ -19,6 +19,13 @@ struct TagRow {
 }
 
 #[derive(Debug, sqlx::FromRow)]
+struct MemSearchRow {
+    id: i64,
+    cue: String,
+    target: String,
+}
+
+#[derive(Debug, sqlx::FromRow)]
 struct ChunkRow {
     id: i32,
     content: String,
@@ -1285,6 +1292,27 @@ impl MemRepository for MemRepo {
         self.get_session_stats(tag_ids, exclude_tag_ids)
             .await
             .map_err(MemError::db)
+    }
+    async fn search_hits(
+        &self,
+        like: &str,
+        cap: i64,
+    ) -> Result<Vec<(i64, String, String)>, MemError> {
+        let rows = sqlx::query_as!(
+            MemSearchRow,
+            r#"SELECT m.id, c1.content AS cue, c2.content AS target
+               FROM mem m
+               JOIN chunk c1 ON c1.id = m.cue_chunk_id
+               JOIN chunk c2 ON c2.id = m.target_chunk_id
+               WHERE c1.content LIKE ?1 ESCAPE '\' OR c2.content LIKE ?1 ESCAPE '\'
+               ORDER BY (c1.content LIKE ?1 ESCAPE '\') DESC, m.id DESC LIMIT ?2"#,
+            like,
+            cap
+        )
+        .fetch_all(&*self.pool)
+        .await
+        .map_err(MemError::db)?;
+        Ok(rows.into_iter().map(|r| (r.id, r.cue, r.target)).collect())
     }
     async fn get_next_mem(&self) -> Result<Option<i32>, MemError> {
         self.get_next_mem().await.map_err(MemError::db)

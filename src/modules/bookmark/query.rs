@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
+
 use super::model::{Bookmark, BookmarkTag, BookmarkTagWithCount};
 use super::repository::BookmarkRepo;
 use crate::shared::error_types::ServiceError;
+use crate::shared::search::{SearchHit, SearchPort, snippet};
 
 /// 查询侧服务——纯读取，无副作用。
 ///
@@ -65,5 +68,41 @@ impl BookmarkQueryService {
             .get_bookmark_tags(bookmark_id)
             .await
             .map_err(ServiceError::Db)
+    }
+}
+
+#[async_trait]
+impl SearchPort for BookmarkQueryService {
+    async fn search(
+        &self,
+        _user_id: i32,
+        q: &str,
+        limit: i64,
+    ) -> Result<Vec<SearchHit>, ServiceError> {
+        let kw = q.trim();
+        if kw.is_empty() {
+            return Ok(vec![]);
+        }
+        let cap = limit.clamp(1, 20);
+        let like = crate::shared::db_query::like_contains(kw);
+        let rows = self
+            .repo
+            .search_hits(&like, cap)
+            .await
+            .map_err(ServiceError::Db)?;
+        Ok(rows
+            .into_iter()
+            .map(|r| SearchHit {
+                kind: "bookmark".into(),
+                id: r.id,
+                title: r.title,
+                snippet: if r.description.is_empty() {
+                    r.url
+                } else {
+                    snippet(&r.description, kw)
+                },
+                url: format!("/bookmark/{}", r.id),
+            })
+            .collect())
     }
 }

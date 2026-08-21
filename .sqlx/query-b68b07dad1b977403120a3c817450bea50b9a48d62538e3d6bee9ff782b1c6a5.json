@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT m.id, c1.content AS cue, c2.content AS target,\n                      c1.content LIKE ?1 ESCAPE '\\' AS \"cue_hit!: i64\"\n               FROM mem m\n               JOIN chunk c1 ON c1.id = m.cue_chunk_id\n               JOIN chunk c2 ON c2.id = m.target_chunk_id\n               WHERE c1.content LIKE ?1 ESCAPE '\\' OR c2.content LIKE ?1 ESCAPE '\\'\n               ORDER BY (c1.content LIKE ?1 ESCAPE '\\') DESC, m.id DESC LIMIT ?2",
+  "query": "SELECT m.id, c1.content AS cue, c2.content AS target\n               FROM mem m\n               JOIN chunk c1 ON c1.id = m.cue_chunk_id\n               JOIN chunk c2 ON c2.id = m.target_chunk_id\n               WHERE c1.content LIKE ?1 ESCAPE '\\' OR c2.content LIKE ?1 ESCAPE '\\'\n               ORDER BY (c1.content LIKE ?1 ESCAPE '\\') DESC, m.id DESC LIMIT ?2",
   "describe": {
     "columns": [
       {
@@ -35,12 +35,6 @@
             "name": "content"
           }
         }
-      },
-      {
-        "name": "cue_hit!: i64",
-        "ordinal": 3,
-        "type_info": "Null",
-        "origin": "Expression"
       }
     ],
     "parameters": {
@@ -49,9 +43,8 @@
     "nullable": [
       false,
       false,
-      false,
-      null
+      false
     ]
   },
-  "hash": "e7bd89e06e1c8e410bd3c5526c512f0e2b64e8d1c7895fce29159ff178524315"
+  "hash": "b68b07dad1b977403120a3c817450bea50b9a48d62538e3d6bee9ff782b1c6a5"
 }

@@ -1,9 +1,13 @@
-use sqlx::SqlitePool;
+use sqlx::{FromRow, SqlitePool};
 use std::cmp::Ordering;
 use std::sync::Arc;
 
+use async_trait::async_trait;
+
 use super::model::{Article, ArticleDetail, ArticleSummary, UnknownWord};
 use super::repository;
+use crate::shared::error_types::ServiceError;
+use crate::shared::search::{SearchHit, SearchPort, snippet};
 
 /// 目标认识率：越接近该值的文章越适合作为下一篇阅读。
 pub(crate) const TARGET_KNOWN_RATIO: f64 = 0.9;
@@ -71,6 +75,54 @@ impl ReadingQueryService {
     pub async fn recommend_next(&self, id: i64) -> Result<Option<ArticleSummary>, sqlx::Error> {
         let repo = repository::ReadingRepo::new(self.pool.clone());
         repo.recommend_article(id, TARGET_KNOWN_RATIO).await
+    }
+}
+
+#[derive(FromRow)]
+struct ReadingHitRow {
+    id: i64,
+    title: String,
+    content: String,
+    #[allow(dead_code)]
+    title_hit: i64,
+}
+
+#[async_trait]
+impl SearchPort for ReadingQueryService {
+    async fn search(
+        &self,
+        _user_id: i32,
+        q: &str,
+        limit: i64,
+    ) -> Result<Vec<SearchHit>, ServiceError> {
+        let kw = q.trim();
+        if kw.is_empty() {
+            return Ok(vec![]);
+        }
+        let cap = limit.clamp(1, 20);
+        let like = crate::shared::db_query::like_contains(kw);
+        let rows = sqlx::query_as!(
+            ReadingHitRow,
+            r#"SELECT id, title, content,
+                      title LIKE ?1 ESCAPE '\' AS "title_hit!: i64"
+               FROM reading_article
+               WHERE title LIKE ?1 ESCAPE '\' OR content LIKE ?1 ESCAPE '\'
+               ORDER BY (title LIKE ?1 ESCAPE '\') DESC, id DESC LIMIT ?2"#,
+            like,
+            cap
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| SearchHit {
+                kind: "reading".into(),
+                id: r.id,
+                title: r.title,
+                snippet: snippet(&r.content, kw),
+                url: format!("/reading/{}", r.id),
+            })
+            .collect())
     }
 }
 

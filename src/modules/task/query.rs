@@ -1,8 +1,12 @@
 use chrono::{DateTime, Utc};
 use std::sync::Arc;
 
+use async_trait::async_trait;
+
 use super::model::{Task, TaskStatus, TimeWindow};
 use super::repository::TaskRepository;
+use crate::shared::error_types::ServiceError;
+use crate::shared::search::{SearchHit, SearchPort, snippet};
 
 /// 查询侧服务——纯读取，无副作用。
 ///
@@ -146,5 +150,37 @@ impl TaskQueryService {
             nodes: nodes_map.into_values().collect(),
             edges,
         })
+    }
+}
+
+#[async_trait]
+impl SearchPort for TaskQueryService {
+    async fn search(
+        &self,
+        user_id: i32,
+        q: &str,
+        limit: i64,
+    ) -> Result<Vec<SearchHit>, ServiceError> {
+        let kw = q.trim();
+        if kw.is_empty() {
+            return Ok(vec![]);
+        }
+        let cap = limit.clamp(1, 20);
+        let like = crate::shared::db_query::like_contains(kw);
+        let rows = self
+            .repo
+            .search_hits(user_id, &like, cap)
+            .await
+            .map_err(ServiceError::Db)?;
+        Ok(rows
+            .into_iter()
+            .map(|r| SearchHit {
+                kind: "task".into(),
+                id: r.id,
+                title: r.title,
+                snippet: snippet(r.description.as_deref().unwrap_or(""), kw),
+                url: format!("/task/{}", r.id),
+            })
+            .collect())
     }
 }

@@ -36,6 +36,7 @@ use crate::modules::time_window::service::TimeWindowService;
 use crate::modules::user::UserQueryService;
 use crate::modules::user::UserService;
 use crate::shared::config::Config;
+use crate::shared::search::SearchPort;
 
 // ─────────────────────────────────────────────────────────────
 // 子状态：按模块聚合服务实例，避免 AppState 变成扁平“上帝对象”。
@@ -411,7 +412,18 @@ impl AppState {
         let time_window = TimeWindowService::new(db.clone(), task_validator);
         let time_window_query = TimeWindowQueryService::new(db.clone());
         let conv = ConvQueryService::new(db.as_ref().clone());
-        let search = SearchQueryService::new(db.as_ref().clone());
+        let search_ports: Vec<Arc<dyn SearchPort>> = vec![
+            Arc::new(mem_query.clone()),
+            Arc::new(card_query.clone()),
+            Arc::new(task_query.clone()),
+            Arc::new(bookmark_query.clone()),
+            Arc::new(onto_query.clone()),
+            Arc::new(text_query.clone()),
+            Arc::new(reading_query.clone()),
+            Arc::new(conv.clone()),
+            Arc::new(chat_query.clone()),
+        ];
+        let search = SearchQueryService::new(search_ports);
 
         Self {
             db: db.clone(),

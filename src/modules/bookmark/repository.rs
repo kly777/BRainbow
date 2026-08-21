@@ -27,9 +27,40 @@ pub struct BookmarkRepo {
     pool: Arc<SqlitePool>,
 }
 
+#[derive(sqlx::FromRow)]
+pub(crate) struct BookmarkHitRow {
+    pub(crate) id: i64,
+    pub(crate) title: String,
+    pub(crate) url: String,
+    pub(crate) description: String,
+    #[allow(dead_code)]
+    pub(crate) title_hit: i64,
+}
+
 impl BookmarkRepo {
     pub fn new(pool: Arc<SqlitePool>) -> Self {
         Self { pool }
+    }
+
+    /// 全局搜索命中
+    pub async fn search_hits(
+        &self,
+        like: &str,
+        cap: i64,
+    ) -> Result<Vec<BookmarkHitRow>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            BookmarkHitRow,
+            r#"SELECT id, title, url, description,
+                      title LIKE ?1 ESCAPE '\' AS "title_hit!: i64"
+               FROM bookmark
+               WHERE title LIKE ?1 ESCAPE '\' OR url LIKE ?1 ESCAPE '\' OR description LIKE ?1 ESCAPE '\'
+               ORDER BY (title LIKE ?1 ESCAPE '\') DESC, id DESC LIMIT ?2"#,
+            like,
+            cap
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+        Ok(rows)
     }
 
     /// 获取所有书签（分页，按创建时间倒序；可选按标签过滤）

@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use super::model::Article;
 use super::repository::ReadingRepo;
+use crate::shared::error_types::ServiceError;
 
 fn extract_words(text: &str) -> Vec<String> {
     text.split(|c: char| !c.is_ascii_alphabetic() && c != '\'' && c != '-')
@@ -34,7 +35,11 @@ impl ReadingService {
         }
     }
 
-    pub async fn upload_article(&self, title: &str, content: &str) -> Result<Article, sqlx::Error> {
+    pub async fn upload_article(
+        &self,
+        title: &str,
+        content: &str,
+    ) -> Result<Article, ServiceError> {
         let repo = &self.repo;
 
         // 切词
@@ -43,27 +48,37 @@ impl ReadingService {
         let unique = unique_words(all_words);
 
         // 插入文章
-        let article_id = repo.insert_article(title, content, word_count).await?;
+        let article_id = repo
+            .insert_article(title, content, word_count)
+            .await
+            .map_err(ServiceError::Db)?;
 
         // 插入文章词
-        repo.insert_article_words(article_id, &unique).await?;
+        repo.insert_article_words(article_id, &unique)
+            .await
+            .map_err(ServiceError::Db)?;
 
         // 返回（刚插入必须存在；缺失视为数据异常，走 RowNotFound 错误）
         repo.get_article(article_id)
             .await
-            .map(|a| a.ok_or(sqlx::Error::RowNotFound))?
+            .map_err(ServiceError::Db)?
+            .ok_or_else(|| ServiceError::Internal("文章写入后读取失败".into()))
     }
 
     /// 标记单词
-    pub async fn mark_word(&self, word: &str, status: &str) -> Result<(), sqlx::Error> {
+    pub async fn mark_word(&self, word: &str, status: &str) -> Result<(), ServiceError> {
         let repo = &self.repo;
-        repo.upsert_user_word(word, status).await
+        repo.upsert_user_word(word, status)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     /// 更新文章笔记
-    pub async fn update_notes(&self, id: i64, notes: &str) -> Result<(), sqlx::Error> {
+    pub async fn update_notes(&self, id: i64, notes: &str) -> Result<(), ServiceError> {
         let repo = &self.repo;
-        repo.update_article_notes(id, notes).await
+        repo.update_article_notes(id, notes)
+            .await
+            .map_err(ServiceError::Db)
     }
 }
 

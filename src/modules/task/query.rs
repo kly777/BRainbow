@@ -24,33 +24,41 @@ impl TaskQueryService {
         }
     }
 
-    pub async fn list(&self, limit: i64, offset: i64) -> Result<(Vec<Task>, i64), sqlx::Error> {
+    pub async fn list(&self, limit: i64, offset: i64) -> Result<(Vec<Task>, i64), ServiceError> {
         self.repo
             .find_all_excluding_archived_paginated(limit, offset)
             .await
+            .map_err(ServiceError::Db)
     }
 
-    pub async fn list_all(&self, limit: i64, offset: i64) -> Result<(Vec<Task>, i64), sqlx::Error> {
-        self.repo.find_all_paginated(limit, offset).await
+    pub async fn list_all(
+        &self,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<Task>, i64), ServiceError> {
+        self.repo
+            .find_all_paginated(limit, offset)
+            .await
+            .map_err(ServiceError::Db)
     }
 
-    pub async fn by_id(&self, id: i32) -> Result<Option<Task>, sqlx::Error> {
-        self.repo.find_by_id(id).await
+    pub async fn by_id(&self, id: i32) -> Result<Option<Task>, ServiceError> {
+        self.repo.find_by_id(id).await.map_err(ServiceError::Db)
     }
 
     pub async fn detail(
         &self,
         id: i32,
-    ) -> Result<Option<super::dto::TaskDetailResponse>, sqlx::Error> {
-        self.repo.find_detail(id).await
+    ) -> Result<Option<super::dto::TaskDetailResponse>, ServiceError> {
+        self.repo.find_detail(id).await.map_err(ServiceError::Db)
     }
 
-    pub async fn tree(&self, root: Option<i32>) -> Result<Vec<Task>, sqlx::Error> {
-        self.repo.find_tree(root).await
+    pub async fn tree(&self, root: Option<i32>) -> Result<Vec<Task>, ServiceError> {
+        self.repo.find_tree(root).await.map_err(ServiceError::Db)
     }
 
-    pub async fn stats(&self) -> Result<(i64, i64, i64, i64), sqlx::Error> {
-        self.repo.get_stats().await
+    pub async fn stats(&self) -> Result<(i64, i64, i64, i64), ServiceError> {
+        self.repo.get_stats().await.map_err(ServiceError::Db)
     }
 
     pub async fn by_status(
@@ -58,10 +66,11 @@ impl TaskQueryService {
         status: TaskStatus,
         limit: i64,
         offset: i64,
-    ) -> Result<(Vec<Task>, i64), sqlx::Error> {
+    ) -> Result<(Vec<Task>, i64), ServiceError> {
         self.repo
             .find_by_status_paginated(status, limit, offset)
             .await
+            .map_err(ServiceError::Db)
     }
 
     pub async fn search(
@@ -69,10 +78,11 @@ impl TaskQueryService {
         query: &str,
         limit: i64,
         offset: i64,
-    ) -> Result<(Vec<Task>, i64), sqlx::Error> {
+    ) -> Result<(Vec<Task>, i64), ServiceError> {
         self.repo
             .search_by_title_paginated(query, limit, offset)
             .await
+            .map_err(ServiceError::Db)
     }
 
     /// 获取日历事件 - 查询指定时间范围内的所有非归档任务的时间窗口
@@ -81,8 +91,11 @@ impl TaskQueryService {
         start: Option<DateTime<Utc>>,
         end: Option<DateTime<Utc>>,
         status: Option<TaskStatus>,
-    ) -> Result<Vec<(Task, TimeWindow)>, sqlx::Error> {
-        self.repo.find_calendar_events(start, end, status).await
+    ) -> Result<Vec<(Task, TimeWindow)>, ServiceError> {
+        self.repo
+            .find_calendar_events(start, end, status)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     /// 构建依赖图（DAG）— 批量查询，避免 N+1
@@ -90,15 +103,23 @@ impl TaskQueryService {
         &self,
         root_task_id: Option<i32>,
         depth: i32,
-    ) -> Result<super::response::DagView, sqlx::Error> {
+    ) -> Result<super::response::DagView, ServiceError> {
         use super::response::{DagEdge, DagNode, DagView};
         use std::collections::{HashMap, HashSet, VecDeque};
 
-        let (all_tasks, _) = self.repo.find_all_paginated(10000, 0).await?;
+        let (all_tasks, _) = self
+            .repo
+            .find_all_paginated(10000, 0)
+            .await
+            .map_err(ServiceError::Db)?;
         let task_map: HashMap<i32, &Task> = all_tasks.iter().map(|t| (t.id, t)).collect();
 
         // 批量取全部依赖
-        let all_deps = self.repo.get_all_dependencies().await?;
+        let all_deps = self
+            .repo
+            .get_all_dependencies()
+            .await
+            .map_err(ServiceError::Db)?;
 
         let mut nodes_map: HashMap<i32, DagNode> = HashMap::new();
         let mut edges: Vec<DagEdge> = Vec::new();

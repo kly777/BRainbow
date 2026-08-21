@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+use crate::shared::error_types::ServiceError;
+
 // ── 卡片状态枚举 ──
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -199,6 +201,16 @@ impl std::fmt::Display for MemError {
             MemError::NotFound => write!(f, "not found"),
             MemError::Internal(msg) => write!(f, "{msg}"),
             MemError::Db(msg) => write!(f, "db: {msg}"),
+        }
+    }
+}
+
+impl From<MemError> for ServiceError {
+    fn from(e: MemError) -> Self {
+        match e {
+            MemError::NotFound => ServiceError::NotFound("记忆项不存在".into()),
+            MemError::Internal(msg) => ServiceError::Internal(msg),
+            MemError::Db(msg) => ServiceError::Db(sqlx::Error::Protocol(msg)),
         }
     }
 }

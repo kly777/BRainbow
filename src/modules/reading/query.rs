@@ -32,9 +32,12 @@ impl ReadingQueryService {
     }
 
     /// 文章列表：按「最该阅读的下一篇」排序（认识率最接近 90% 优先，同分新文章优先）
-    pub async fn list_articles(&self) -> Result<Vec<ArticleSummary>, sqlx::Error> {
+    pub async fn list_articles(&self) -> Result<Vec<ArticleSummary>, ServiceError> {
         let repo = &self.repo;
-        let mut articles = repo.get_all_article_summaries().await?;
+        let mut articles = repo
+            .get_all_article_summaries()
+            .await
+            .map_err(ServiceError::Db)?;
         articles.sort_by(|a, b| {
             recommendation_distance(a)
                 .partial_cmp(&recommendation_distance(b))
@@ -45,38 +48,43 @@ impl ReadingQueryService {
     }
 
     /// 获取单篇文章详情（含词状态 + notes）
-    pub async fn article_detail(&self, id: i64) -> Result<Option<ArticleDetail>, sqlx::Error> {
+    pub async fn article_detail(&self, id: i64) -> Result<Option<ArticleDetail>, ServiceError> {
         let repo = &self.repo;
-        match repo.get_article(id).await? {
+        match repo.get_article(id).await.map_err(ServiceError::Db)? {
             Some(article) => {
-                let words = repo.get_article_word_statuses(id).await?;
+                let words = repo
+                    .get_article_word_statuses(id)
+                    .await
+                    .map_err(ServiceError::Db)?;
                 Ok(Some(ArticleDetail { article, words }))
             }
             None => Ok(None),
         }
     }
 
-    pub async fn article(&self, id: i64) -> Result<Option<Article>, sqlx::Error> {
+    pub async fn article(&self, id: i64) -> Result<Option<Article>, ServiceError> {
         let repo = &self.repo;
-        repo.get_article(id).await
+        repo.get_article(id).await.map_err(ServiceError::Db)
     }
 
     /// 获取文章中的所有词
-    pub async fn article_words(&self, id: i64) -> Result<Vec<String>, sqlx::Error> {
+    pub async fn article_words(&self, id: i64) -> Result<Vec<String>, ServiceError> {
         let repo = &self.repo;
-        repo.get_article_words(id).await
+        repo.get_article_words(id).await.map_err(ServiceError::Db)
     }
 
     /// 获取所有不认识词
-    pub async fn unknown_words(&self) -> Result<Vec<UnknownWord>, sqlx::Error> {
+    pub async fn unknown_words(&self) -> Result<Vec<UnknownWord>, ServiceError> {
         let repo = &self.repo;
-        repo.get_unknown_words().await
+        repo.get_unknown_words().await.map_err(ServiceError::Db)
     }
 
     /// 推荐下一篇（认识率最接近 90%）
-    pub async fn recommend_next(&self, id: i64) -> Result<Option<ArticleSummary>, sqlx::Error> {
+    pub async fn recommend_next(&self, id: i64) -> Result<Option<ArticleSummary>, ServiceError> {
         let repo = &self.repo;
-        repo.recommend_article(id, TARGET_KNOWN_RATIO).await
+        repo.recommend_article(id, TARGET_KNOWN_RATIO)
+            .await
+            .map_err(ServiceError::Db)
     }
 }
 

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use super::model::Card;
+use super::port::CardRepositoryPort;
 use super::repository::CardRepository;
 use crate::shared::error_types::ServiceError;
 
@@ -9,14 +10,13 @@ use crate::shared::error_types::ServiceError;
 /// CQRS 分离：纯读方法（list/by_id/search）在 `CardQueryService` 中。
 #[derive(Clone)]
 pub struct CardService {
-    repo: CardRepository,
+    repo: Arc<dyn CardRepositoryPort>,
 }
 
 impl CardService {
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
-        Self {
-            repo: CardRepository::new(db),
-        }
+        let repo: Arc<dyn CardRepositoryPort> = Arc::new(CardRepository::new(db));
+        Self { repo }
     }
 
     pub async fn create(&self, content: String) -> Result<Card, ServiceError> {

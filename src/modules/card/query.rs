@@ -3,6 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use super::model::Card;
+use super::port::CardRepositoryPort;
 use super::repository::CardRepository;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{SearchHit, SearchPort, clip, snippet};
@@ -12,14 +13,13 @@ use crate::shared::search::{SearchHit, SearchPort, clip, snippet};
 /// CQRS 分离：写操作（create/update/delete）保留在 `CardService` 中。
 #[derive(Clone)]
 pub struct CardQueryService {
-    repo: CardRepository,
+    repo: Arc<dyn CardRepositoryPort>,
 }
 
 impl CardQueryService {
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
-        Self {
-            repo: CardRepository::new(db),
-        }
+        let repo: Arc<dyn CardRepositoryPort> = Arc::new(CardRepository::new(db));
+        Self { repo }
     }
 
     pub async fn list(&self, limit: i64, offset: i64) -> Result<(Vec<Card>, i64), ServiceError> {

@@ -1,5 +1,6 @@
 mod handler;
 mod model;
+mod port;
 pub mod query;
 mod repository;
 mod service;

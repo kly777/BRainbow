@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use super::model::{Bookmark, BookmarkTag};
+use super::port::BookmarkRepository;
 use super::repository::BookmarkRepo;
 use crate::shared::error_types::ServiceError;
 
@@ -10,14 +11,13 @@ use crate::shared::error_types::ServiceError;
 /// 在 `BookmarkQueryService` 中。
 #[derive(Clone)]
 pub struct BookmarkService {
-    repo: BookmarkRepo,
+    repo: Arc<dyn BookmarkRepository>,
 }
 
 impl BookmarkService {
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
-        Self {
-            repo: BookmarkRepo::new(db),
-        }
+        let repo: Arc<dyn BookmarkRepository> = Arc::new(BookmarkRepo::new(db));
+        Self { repo }
     }
 
     pub async fn create(

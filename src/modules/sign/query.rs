@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use super::model::SignifierSignified;
+use super::port::SignRepositoryPort;
 use super::repository::SignRepository;
 use crate::shared::error_types::ServiceError;
 
@@ -9,14 +10,13 @@ use crate::shared::error_types::ServiceError;
 /// CQRS 分离：写操作（create/delete）保留在 `SignService` 中。
 #[derive(Clone)]
 pub struct SignQueryService {
-    repo: SignRepository,
+    repo: Arc<dyn SignRepositoryPort>,
 }
 
 impl SignQueryService {
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
-        Self {
-            repo: SignRepository::new(db),
-        }
+        let repo: Arc<dyn SignRepositoryPort> = Arc::new(SignRepository::new(db));
+        Self { repo }
     }
 
     pub async fn list(

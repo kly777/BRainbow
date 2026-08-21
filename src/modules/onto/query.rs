@@ -3,6 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use super::model::Onto;
+use super::port::OntoRepositoryPort;
 use super::repository::OntoRepository;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{SearchHit, SearchPort, snippet};
@@ -12,14 +13,13 @@ use crate::shared::search::{SearchHit, SearchPort, snippet};
 /// CQRS 分离：写操作（create/update/delete）保留在 `OntoService` 中。
 #[derive(Clone)]
 pub struct OntoQueryService {
-    repo: OntoRepository,
+    repo: Arc<dyn OntoRepositoryPort>,
 }
 
 impl OntoQueryService {
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
-        Self {
-            repo: OntoRepository::new(db),
-        }
+        let repo: Arc<dyn OntoRepositoryPort> = Arc::new(OntoRepository::new(db));
+        Self { repo }
     }
 
     pub async fn list(&self, limit: i64, offset: i64) -> Result<(Vec<Onto>, i64), ServiceError> {

@@ -1,7 +1,10 @@
 use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
+use async_trait::async_trait;
+
 use super::model::Onto;
+use super::port::OntoRepositoryPort;
 
 #[derive(sqlx::FromRow)]
 pub(crate) struct OntoHitRow {
@@ -144,6 +147,46 @@ impl OntoRepository {
             name: result.try_get("name")?,
             description: result.try_get("description")?,
         })
+    }
+}
+
+#[async_trait]
+impl OntoRepositoryPort for OntoRepository {
+    async fn search_hits(&self, like: &str, cap: i64) -> Result<Vec<OntoHitRow>, sqlx::Error> {
+        self.search_hits(like, cap).await
+    }
+
+    async fn find_all_paginated(
+        &self,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<Onto>, i64), sqlx::Error> {
+        self.find_all_paginated(limit, offset).await
+    }
+
+    async fn find_by_id(&self, id: i32) -> Result<Option<Onto>, sqlx::Error> {
+        self.find_by_id(id).await
+    }
+
+    async fn create(
+        &self,
+        name: String,
+        description: Option<String>,
+    ) -> Result<Onto, sqlx::Error> {
+        self.create(name, description).await
+    }
+
+    async fn delete(&self, id: i32) -> Result<u64, sqlx::Error> {
+        self.delete(id).await
+    }
+
+    async fn update(
+        &self,
+        id: i32,
+        name: Option<String>,
+        description: Option<String>,
+    ) -> Result<Onto, sqlx::Error> {
+        self.update(id, name, description).await
     }
 }
 

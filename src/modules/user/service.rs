@@ -3,6 +3,7 @@ use std::sync::Arc;
 use bcrypt::{DEFAULT_COST, hash, verify};
 
 use super::model::User;
+use super::port::UserRepositoryPort;
 use super::repository::UserRepository;
 use crate::shared::error_types::ServiceError;
 use crate::shared::jwt::create_token;
@@ -12,14 +13,13 @@ use crate::shared::jwt::create_token;
 /// CQRS 分离：纯读方法（list_all）在 `UserQueryService` 中。
 #[derive(Clone)]
 pub struct UserService {
-    repo: UserRepository,
+    repo: Arc<dyn UserRepositoryPort>,
 }
 
 impl UserService {
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
-        Self {
-            repo: UserRepository::new(db),
-        }
+        let repo: Arc<dyn UserRepositoryPort> = Arc::new(UserRepository::new(db));
+        Self { repo }
     }
 
     pub async fn register(

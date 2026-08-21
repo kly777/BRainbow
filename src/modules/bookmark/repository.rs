@@ -2,9 +2,11 @@ use chrono::Utc;
 use sqlx::{QueryBuilder, Row, Sqlite, SqlitePool};
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use crate::shared::db_query::like_contains;
 
 use super::model::{Bookmark, BookmarkRow, BookmarkTag, BookmarkTagWithCount};
+use super::port::BookmarkRepository;
 
 /// 书签行公共 SELECT（含聚合标签子查询，按名称排序保证与 get_bookmark_tags 一致）
 const BOOKMARK_SELECT: &str = "SELECT id, title, url, description, created_at, updated_at, \
@@ -472,6 +474,98 @@ impl BookmarkRepo {
         .fetch_one(&*self.pool)
         .await?;
         Ok(row)
+    }
+}
+
+#[async_trait]
+impl BookmarkRepository for BookmarkRepo {
+    async fn search_hits(
+        &self,
+        like: &str,
+        cap: i64,
+    ) -> Result<Vec<BookmarkHitRow>, sqlx::Error> {
+        self.search_hits(like, cap).await
+    }
+
+    async fn find_all_paginated(
+        &self,
+        limit: i64,
+        offset: i64,
+        tag: Option<&str>,
+    ) -> Result<(Vec<Bookmark>, i64), sqlx::Error> {
+        self.find_all_paginated(limit, offset, tag).await
+    }
+
+    async fn find_by_id(&self, id: i32) -> Result<Option<Bookmark>, sqlx::Error> {
+        self.find_by_id(id).await
+    }
+
+    async fn create(
+        &self,
+        title: &str,
+        url: &str,
+        description: &str,
+        tags: &[String],
+    ) -> Result<Bookmark, sqlx::Error> {
+        self.create(title, url, description, tags).await
+    }
+
+    async fn find_by_url(&self, url: &str) -> Result<Option<Bookmark>, sqlx::Error> {
+        self.find_by_url(url).await
+    }
+
+    async fn update(
+        &self,
+        id: i32,
+        title: Option<&str>,
+        url: Option<&str>,
+        description: Option<&str>,
+    ) -> Result<Bookmark, sqlx::Error> {
+        self.update(id, title, url, description).await
+    }
+
+    async fn delete(&self, id: i32) -> Result<u64, sqlx::Error> {
+        self.delete(id).await
+    }
+
+    async fn search_paginated(
+        &self,
+        query: &str,
+        tag: Option<&str>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<Bookmark>, i64), sqlx::Error> {
+        self.search_paginated(query, tag, limit, offset).await
+    }
+
+    async fn search_tags(
+        &self,
+        q: Option<&str>,
+    ) -> Result<Vec<BookmarkTagWithCount>, sqlx::Error> {
+        self.search_tags(q).await
+    }
+
+    async fn create_tag(&self, name: &str) -> Result<BookmarkTag, sqlx::Error> {
+        self.create_tag(name).await
+    }
+
+    async fn delete_tag(&self, id: i32) -> Result<u64, sqlx::Error> {
+        self.delete_tag(id).await
+    }
+
+    async fn get_bookmark_tags(
+        &self,
+        bookmark_id: i32,
+    ) -> Result<Vec<BookmarkTag>, sqlx::Error> {
+        self.get_bookmark_tags(bookmark_id).await
+    }
+
+    async fn set_bookmark_tags(
+        &self,
+        bookmark_id: i32,
+        names: &[String],
+    ) -> Result<Vec<BookmarkTag>, sqlx::Error> {
+        self.set_bookmark_tags(bookmark_id, names).await
     }
 }
 

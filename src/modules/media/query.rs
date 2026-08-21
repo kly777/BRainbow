@@ -3,6 +3,7 @@ use std::sync::Arc;
 use sqlx::SqlitePool;
 
 use super::model::Media;
+use super::port::MediaRepositoryPort;
 use super::repository::MediaRepository;
 use crate::shared::error_types::ServiceError;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
@@ -12,14 +13,13 @@ use crate::shared::pagination::{PaginatedResponse, Pagination};
 /// CQRS 分离：写操作（upload/rename/delete）保留在 `MediaService` 中。
 #[derive(Clone)]
 pub struct MediaQueryService {
-    repo: MediaRepository,
+    repo: Arc<dyn MediaRepositoryPort>,
 }
 
 impl MediaQueryService {
     pub fn new(db: Arc<SqlitePool>) -> Self {
-        Self {
-            repo: MediaRepository::new(db),
-        }
+        let repo: Arc<dyn MediaRepositoryPort> = Arc::new(MediaRepository::new(db));
+        Self { repo }
     }
 
     pub async fn list(

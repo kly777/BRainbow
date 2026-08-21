@@ -2,6 +2,7 @@ mod favicon;
 mod handler;
 mod import_html;
 mod model;
+mod port;
 mod query;
 pub mod repository;
 pub mod service;

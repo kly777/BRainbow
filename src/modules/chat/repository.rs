@@ -473,7 +473,7 @@ impl ChatRepo {
                 tree_title: r.tree_title,
                 node_id: Some(r.node_id),
                 role: r.role,
-                snippet: Self::snippet(&r.content, q.trim(), 60),
+                snippet: crate::shared::search::snippet_with_width(&r.content, q.trim(), 60),
                 created_at: r.created_at,
             })
             .collect();
@@ -561,26 +561,5 @@ impl ChatRepo {
             url: format!("/chat?tree={}&node={}", r.tree_id, r.node_id),
         }));
         Ok(hits)
-    }
-
-    fn snippet(content: &str, q: &str, width: usize) -> String {
-        let compact = content.trim().replace(['\n', '\r'], " ");
-        let compact: String = compact.chars().take(500).collect();
-        match compact.find(q) {
-            Some(pos) => {
-                let char_pos = compact[..pos].chars().count();
-                let start = char_pos.saturating_sub(width / 2);
-                let end = (start + width).min(compact.chars().count());
-                let mut s: String = compact.chars().skip(start).take(end - start).collect();
-                if start > 0 {
-                    s.insert(0, '…');
-                }
-                if end < compact.chars().count() {
-                    s.push('…');
-                }
-                s
-            }
-            None => compact.chars().take(width).collect(),
-        }
     }
 }

@@ -43,6 +43,11 @@ pub fn clip(content: &str, n: usize) -> String {
 
 /// 关键字上下文片段：命中位置前后各 40 字符，加省略号
 pub fn snippet(content: &str, kw: &str) -> String {
+    snippet_with_width(content, kw, 40)
+}
+
+/// 关键字上下文片段（自定义上下文宽度）
+pub fn snippet_with_width(content: &str, kw: &str, width: usize) -> String {
     let flat: String = content
         .chars()
         .map(|c| if c == '\n' { ' ' } else { c })
@@ -56,8 +61,8 @@ pub fn snippet(content: &str, kw: &str) -> String {
     // 直接混用字节/字符偏移会错位甚至下溢
     let char_pos = lower[..byte_pos].chars().count();
     let total = flat.chars().count();
-    let start = char_pos.saturating_sub(40);
-    let end = (char_pos + k.chars().count() + 40).min(total).max(start);
+    let start = char_pos.saturating_sub(width);
+    let end = (char_pos + k.chars().count() + width).min(total).max(start);
     let mut out = String::new();
     if start > 0 {
         out.push('…');

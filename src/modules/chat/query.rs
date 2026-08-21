@@ -29,28 +29,6 @@ impl ChatQueryService {
     ) -> Result<SearchResponse, ServiceError> {
         self.repo.search(user_id, q, limit).await
     }
-
-    /// 截取关键词附近文本作为摘要（按字符边界切，避免多字节 UTF-8 panic）
-    pub fn snippet(content: &str, q: &str, width: usize) -> String {
-        let compact = content.trim().replace(['\n', '\r'], " ");
-        let compact: String = compact.chars().take(500).collect();
-        match compact.find(q) {
-            Some(pos) => {
-                let char_pos = compact[..pos].chars().count();
-                let start = char_pos.saturating_sub(width / 2);
-                let end = (start + width).min(compact.chars().count());
-                let mut s: String = compact.chars().skip(start).take(end - start).collect();
-                if start > 0 {
-                    s.insert(0, '…');
-                }
-                if end < compact.chars().count() {
-                    s.push('…');
-                }
-                s
-            }
-            None => compact.chars().take(width).collect(),
-        }
-    }
 }
 
 #[async_trait]
@@ -73,31 +51,31 @@ impl SearchPort for ChatQueryService {
 
 #[cfg(test)]
 mod tests {
-    use super::ChatQueryService;
+    use crate::shared::search::snippet_with_width;
 
     #[test]
     fn snippet_cjk_does_not_panic() {
         let content = "你好，这是一条用于测试的中文消息内容，包含关键词你好以及一些上下文文字。";
-        let s = ChatQueryService::snippet(content, "你好", 60);
+        let s = snippet_with_width(content, "你好", 60);
         assert!(s.contains("你好"));
     }
 
     #[test]
     fn snippet_latin_ok() {
         let content = "hello world, this is a test message with the keyword hello inside.";
-        let s = ChatQueryService::snippet(content, "hello", 60);
+        let s = snippet_with_width(content, "hello", 60);
         assert!(s.contains("hello"));
     }
 
     #[test]
     fn snippet_keyword_at_start() {
-        let s = ChatQueryService::snippet("你好开头的内容", "你好", 60);
+        let s = snippet_with_width("你好开头的内容", "你好", 60);
         assert!(s.starts_with("你好"));
     }
 
     #[test]
     fn snippet_no_match_falls_back() {
-        let s = ChatQueryService::snippet("没有关键词的内容", "missing", 10);
+        let s = snippet_with_width("没有关键词的内容", "missing", 10);
         assert_eq!(s, "没有关键词的内容");
     }
 }

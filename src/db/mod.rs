@@ -45,7 +45,8 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         CREATE TABLE IF NOT EXISTS onto (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            description TEXT
+            description TEXT,
+            user_id INTEGER
         )
         "#,
     )
@@ -210,6 +211,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             onto_id INTEGER,
             weight REAL,
             relation_type TEXT,
+            user_id INTEGER,
             created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             FOREIGN KEY (onto_id) REFERENCES onto(id)
         )
@@ -225,6 +227,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL DEFAULT '',
             content TEXT NOT NULL DEFAULT '',
+            user_id INTEGER,
             created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
@@ -241,6 +244,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         CREATE TABLE IF NOT EXISTS chunk (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             content TEXT NOT NULL DEFAULT '',
+            user_id INTEGER,
             created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
@@ -256,6 +260,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             cue_chunk_id INTEGER NOT NULL,
             target_chunk_id INTEGER NOT NULL,
+            user_id INTEGER,
             state TEXT NOT NULL DEFAULT 'new',
             stability REAL DEFAULT 0,
             difficulty REAL DEFAULT 0,
@@ -372,6 +377,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             conv_id INTEGER NOT NULL,
             title TEXT NOT NULL,
             conv_type TEXT NOT NULL,
+            user_id INTEGER,
             created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             UNIQUE(conv_id, title)
         )
@@ -387,6 +393,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             conv_id INTEGER NOT NULL,
             article_type TEXT NOT NULL,
             title TEXT NOT NULL,
+            user_id INTEGER,
             content TEXT,
             word_count INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
@@ -413,6 +420,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             title TEXT NOT NULL,
             url TEXT NOT NULL,
             description TEXT NOT NULL DEFAULT '',
+            user_id INTEGER,
             created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
@@ -431,6 +439,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         CREATE TABLE IF NOT EXISTS bookmark_tag (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
+            user_id INTEGER,
             created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
         "#,
@@ -466,6 +475,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             content TEXT NOT NULL,
             word_count INTEGER DEFAULT 0,
             notes TEXT NOT NULL DEFAULT '',
+            user_id INTEGER,
             created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
         "#,
@@ -492,6 +502,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         CREATE TABLE IF NOT EXISTS reading_user_word (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             word TEXT NOT NULL UNIQUE,
+            user_id INTEGER,
             status TEXT NOT NULL DEFAULT 'unknown',
             unknown_count INTEGER NOT NULL DEFAULT 0,
             known_count INTEGER NOT NULL DEFAULT 0,
@@ -613,7 +624,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 // PRAGMA user_version。迁移必须幂等：列/表已存在则跳过；ALTER 失败必须上抛。
 
 /// 程序支持的最新 schema 版本
-pub const LATEST_USER_VERSION: i64 = 10;
+pub const LATEST_USER_VERSION: i64 = 11;
 
 /// 迁移统一入口。
 ///
@@ -653,6 +664,7 @@ async fn apply_migration(pool: &SqlitePool, target: i64) -> Result<(), sqlx::Err
         8 => migrate_v8_time_iso_utc(&mut tx).await?,
         9 => migrate_v9_time_normalize_suffix(&mut tx).await?,
         10 => migrate_v10_time_utc_offset_only(&mut tx).await?,
+        11 => migrate_v11_user_scope(&mut tx).await?,
         _ => {
             return Err(sqlx::Error::Configuration(Box::new(std::io::Error::other(
                 format!("未知的迁移版本: {target}"),
@@ -931,14 +943,52 @@ async fn migrate_v10_time_utc_offset_only(conn: &mut SqliteConnection) -> Result
     migrate_v9_time_normalize_suffix(conn).await
 }
 
+/// v11：数据隔离——为全局共享表补 user_id 列（可空；NULL = 共享/系统数据）。
+///
+/// 只给顶层实体表加列；关联表（revlog/mem_prerequisite/mem_mnemonic/mem_tag/
+/// bookmark_tag_rel/reading_article_word）经父表隔离，不冗余加列。
+/// 新数据由服务层强制带 user_id（应用层约束）。
+async fn migrate_v11_user_scope(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    for table in [
+        "chunk",
+        "mem",
+        "onto",
+        "signifier_signified",
+        "text_note",
+        "bookmark",
+        "bookmark_tag",
+        "reading_article",
+        "reading_user_word",
+        "conv_titles",
+        "articles",
+    ] {
+        // 表名/列名均为编译期常量，无注入
+        add_column_if_missing(
+            conn,
+            table,
+            "user_id",
+            &format!("ALTER TABLE {table} ADD COLUMN user_id INTEGER"),
+        )
+        .await?;
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "CREATE INDEX IF NOT EXISTS idx_{table}_user_id ON {table}(user_id)"
+        )))
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| migration_failed(&format!("v11 为 {table} 建 user_id 索引"), e))?;
+    }
+    Ok(())
+}
+
 async fn add_column_if_missing(
     conn: &mut SqliteConnection,
     table: &str,
     column: &str,
-    ddl: &'static str,
+    ddl: &str,
 ) -> Result<(), sqlx::Error> {
     if !column_exists_on(conn, table, column).await? {
-        sqlx::query(ddl)
+        // 表名/列名由调用方保证为内部常量或经 sanitize 校验，无注入
+        sqlx::query(sqlx::AssertSqlSafe(ddl.to_string()))
             .execute(&mut *conn)
             .await
             .map_err(|e| migration_failed(&format!("无法为 {table} 添加 {column} 列"), e))?;
@@ -1053,6 +1103,17 @@ mod tests {
             ("chat_node", "reasoning"),
             ("reading_article", "notes"),
             ("revlog", "duration_secs"),
+            ("mem", "user_id"),
+            ("chunk", "user_id"),
+            ("onto", "user_id"),
+            ("signifier_signified", "user_id"),
+            ("text_note", "user_id"),
+            ("bookmark", "user_id"),
+            ("bookmark_tag", "user_id"),
+            ("reading_article", "user_id"),
+            ("reading_user_word", "user_id"),
+            ("conv_titles", "user_id"),
+            ("articles", "user_id"),
         ] {
             assert!(
                 column_exists(&pool, table, col).await.unwrap(),
@@ -1204,6 +1265,15 @@ mod tests {
             ("signifier_signified", "created_at"),
             ("reading_article", "notes"),
             ("revlog", "duration_secs"),
+            ("mem", "user_id"),
+            ("chunk", "user_id"),
+            ("onto", "user_id"),
+            ("text_note", "user_id"),
+            ("bookmark", "user_id"),
+            ("bookmark_tag", "user_id"),
+            ("reading_user_word", "user_id"),
+            ("conv_titles", "user_id"),
+            ("articles", "user_id"),
         ] {
             assert!(
                 column_exists(&pool, table, col).await.unwrap(),

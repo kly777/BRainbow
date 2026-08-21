@@ -139,7 +139,7 @@ pub async fn chat_handler(
     let (tx, rx) = tokio::sync::mpsc::channel::<String>(64);
 
     // 编排（准备 → 流式 AI → 落库/回滚）下沉到 ChatService::stream_chat
-    let svc = chat.clone();
+    let svc = chat;
     let ai_port: std::sync::Arc<dyn crate::modules::ai::port::AiChatPort> = std::sync::Arc::new(ai);
     tokio::spawn(async move {
         let _ = svc

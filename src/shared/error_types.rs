@@ -58,12 +58,12 @@ impl ServiceError {
 impl std::fmt::Display for ServiceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::InvalidInput(msg) => write!(f, "{}", msg),
-            Self::NotFound(msg) => write!(f, "{}", msg),
-            Self::AlreadyExists(msg) => write!(f, "{}", msg),
-            Self::InUse(msg) => write!(f, "{}", msg),
-            Self::Internal(msg) => write!(f, "{}", msg),
-            Self::Db(e) => write!(f, "数据库错误: {}", e),
+            Self::InvalidInput(msg)
+            | Self::NotFound(msg)
+            | Self::AlreadyExists(msg)
+            | Self::InUse(msg)
+            | Self::Internal(msg) => write!(f, "{msg}"),
+            Self::Db(e) => write!(f, "数据库错误: {e}"),
         }
     }
 }

@@ -216,38 +216,35 @@ impl ChatService {
             .ok_or_else(|| ServiceError::NotFound("对话树不存在".into()))?;
 
         let (user_node, ai_parent_id, inserted_user_id): (NodeItem, Option<i64>, Option<i64>) =
-            match parent_id {
-                Some(pid) => {
-                    let parent = self
-                        .fetch_node(pid)
-                        .await?
-                        .ok_or_else(|| ServiceError::NotFound("父节点不存在".into()))?;
-                    if parent.tree_id != tree_id {
-                        return Err(ServiceError::InvalidInput("节点不属于该对话树".into()));
-                    }
-                    if parent.role == "assistant" {
-                        let text = content
-                            .map(|c| c.trim().to_string())
-                            .filter(|c| !c.is_empty())
-                            .ok_or_else(|| ServiceError::InvalidInput("消息内容不能为空".into()))?;
-                        let node = self
-                            .insert_node(tree_id, Some(pid), "user", &text, None, None)
-                            .await?;
-                        (node.clone(), Some(node.id), Some(node.id))
-                    } else {
-                        (parent.clone(), Some(pid), None)
-                    }
+            if let Some(pid) = parent_id {
+                let parent = self
+                    .fetch_node(pid)
+                    .await?
+                    .ok_or_else(|| ServiceError::NotFound("父节点不存在".into()))?;
+                if parent.tree_id != tree_id {
+                    return Err(ServiceError::InvalidInput("节点不属于该对话树".into()));
                 }
-                None => {
+                if parent.role == "assistant" {
                     let text = content
                         .map(|c| c.trim().to_string())
                         .filter(|c| !c.is_empty())
                         .ok_or_else(|| ServiceError::InvalidInput("消息内容不能为空".into()))?;
                     let node = self
-                        .insert_node(tree_id, None, "user", &text, None, None)
+                        .insert_node(tree_id, Some(pid), "user", &text, None, None)
                         .await?;
                     (node.clone(), Some(node.id), Some(node.id))
+                } else {
+                    (parent.clone(), Some(pid), None)
                 }
+            } else {
+                let text = content
+                    .map(|c| c.trim().to_string())
+                    .filter(|c| !c.is_empty())
+                    .ok_or_else(|| ServiceError::InvalidInput("消息内容不能为空".into()))?;
+                let node = self
+                    .insert_node(tree_id, None, "user", &text, None, None)
+                    .await?;
+                (node.clone(), Some(node.id), Some(node.id))
             };
 
         let chain = self.ancestor_chain(Some(user_node.id)).await?;

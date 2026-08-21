@@ -19,7 +19,7 @@ impl super::DBRepo {
             let source_safe = sanitize_table_name(source)?;
             let source_pragma = sqlx::query(
                 // SAFETY: source_safe 只含 [a-zA-Z0-9_]
-                sqlx::AssertSqlSafe(format!("PRAGMA table_info({})", source_safe)),
+                sqlx::AssertSqlSafe(format!("PRAGMA table_info({source_safe})")),
             )
             .fetch_all(&*self.pool)
             .await?;
@@ -39,7 +39,7 @@ impl super::DBRepo {
 
             let fk_rows = sqlx::query(
                 // SAFETY: source_safe 已校验
-                sqlx::AssertSqlSafe(format!("PRAGMA foreign_key_list({})", source_safe)),
+                sqlx::AssertSqlSafe(format!("PRAGMA foreign_key_list({source_safe})")),
             )
             .fetch_all(&*self.pool)
             .await?;
@@ -79,8 +79,7 @@ impl super::DBRepo {
                 let rows = select.build().fetch_all(&*self.pool).await?;
 
                 let mut count_qb = QueryBuilder::<sqlx::Sqlite>::new(format!(
-                    "SELECT COUNT(*) FROM {} WHERE \"",
-                    source_safe
+                    "SELECT COUNT(*) FROM {source_safe} WHERE \""
                 ));
                 count_qb.push(&from_safe);
                 count_qb.push("\" = ");
@@ -141,9 +140,8 @@ impl super::DBRepo {
 
         let mut refs = Vec::new();
         for (table, ids) in ids_by_table {
-            let safe_table = match sanitize_table_name(&table) {
-                Ok(t) => t,
-                Err(_) => continue,
+            let Ok(safe_table) = sanitize_table_name(&table) else {
+                continue;
             };
             let key_col = "id";
             let display_cols = self.display_columns(&safe_table, key_col).await?;
@@ -152,7 +150,7 @@ impl super::DBRepo {
             }
 
             let mut qb =
-                QueryBuilder::<sqlx::Sqlite>::new(format!("SELECT \"{}\" AS __key", key_col));
+                QueryBuilder::<sqlx::Sqlite>::new(format!("SELECT \"{key_col}\" AS __key"));
             for col in &display_cols {
                 qb.push(", \"");
                 qb.push(col);
@@ -203,7 +201,7 @@ impl super::DBRepo {
     ) -> Result<Vec<String>, sqlx::Error> {
         let rows = sqlx::query(
             // SAFETY: table 已经 sanitize_table_name 校验
-            sqlx::AssertSqlSafe(format!("PRAGMA table_info({})", table)),
+            sqlx::AssertSqlSafe(format!("PRAGMA table_info({table})")),
         )
         .fetch_all(&*self.pool)
         .await?;

@@ -311,7 +311,7 @@ impl AppState {
         let search = SearchQueryService::new(search_ports);
 
         Self {
-            db: db.clone(),
+            db,
             auth: AuthState { auth },
             admin: AdminState { admin },
             ai: AiState { ai },

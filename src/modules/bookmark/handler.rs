@@ -238,7 +238,7 @@ pub async fn import_bookmarks_handler(
         file_name = field.file_name().unwrap_or("").to_string();
         let data = match field.bytes().await {
             Ok(d) => d,
-            Err(e) => return error::bad_request(format!("读取文件失败: {}", e)),
+            Err(e) => return error::bad_request(format!("读取文件失败: {e}")),
         };
         html = match String::from_utf8(data.to_vec()) {
             Ok(s) => Some(s),

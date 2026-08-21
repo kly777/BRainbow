@@ -205,20 +205,14 @@ pub async fn check_time_conflict_handler(
         );
     };
 
-    let start_time = match start_time_str.parse::<DateTime<Utc>>() {
-        Ok(time) => time,
-        Err(_) => {
-            return error::bad_request_with_code("invalid_time_range", "无效的开始时间格式")
-                .into_response();
-        }
+    let Ok(start_time) = start_time_str.parse::<DateTime<Utc>>() else {
+        return error::bad_request_with_code("invalid_time_range", "无效的开始时间格式")
+            .into_response();
     };
 
-    let end_time = match end_time_str.parse::<DateTime<Utc>>() {
-        Ok(time) => time,
-        Err(_) => {
-            return error::bad_request_with_code("invalid_time_range", "无效的结束时间格式")
-                .into_response();
-        }
+    let Ok(end_time) = end_time_str.parse::<DateTime<Utc>>() else {
+        return error::bad_request_with_code("invalid_time_range", "无效的结束时间格式")
+            .into_response();
     };
 
     let exclude_id = exclude_id_str.and_then(|s| s.parse::<i32>().ok());

@@ -55,7 +55,7 @@ impl TimeWindowService {
                 crate::modules::task::service::ServiceError::InvalidInput(msg) => {
                     ServiceError::InvalidInput(msg)
                 }
-                other => ServiceError::Internal(format!("约束校验失败: {}", other)),
+                other => ServiceError::Internal(format!("约束校验失败: {other}")),
             })?;
 
         self.repo.create(request).await.map_err(ServiceError::Db)
@@ -68,9 +68,8 @@ impl TimeWindowService {
         request: UpdateTimeWindowRequest,
     ) -> Result<TimeWindow, ServiceError> {
         let existing = self.repo.find_by_id(id).await.map_err(ServiceError::Db)?;
-        let existing = match existing {
-            Some(w) => w,
-            None => return Err(ServiceError::NotFound("时间窗口未找到".into())),
+        let Some(existing) = existing else {
+            return Err(ServiceError::NotFound("时间窗口未找到".into()));
         };
 
         // 如果更新了时间范围，做约束校验
@@ -109,7 +108,7 @@ impl TimeWindowService {
                     crate::modules::task::service::ServiceError::InvalidInput(msg) => {
                         ServiceError::InvalidInput(msg)
                     }
-                    other => ServiceError::Internal(format!("约束校验失败: {}", other)),
+                    other => ServiceError::Internal(format!("约束校验失败: {other}")),
                 })?;
         }
 

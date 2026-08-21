@@ -52,7 +52,7 @@ impl FromStr for TaskStatus {
             "active" => Ok(TaskStatus::Active),
             "completed" => Ok(TaskStatus::Completed),
             "archived" => Ok(TaskStatus::Archived),
-            _ => Err(format!("无效的任务状态: {}", s)),
+            _ => Err(format!("无效的任务状态: {s}")),
         }
     }
 }
@@ -60,11 +60,10 @@ impl FromStr for TaskStatus {
 impl From<String> for TaskStatus {
     fn from(s: String) -> Self {
         match s.to_lowercase().as_str() {
-            "backlog" => TaskStatus::Backlog,
             "active" => TaskStatus::Active,
             "completed" => TaskStatus::Completed,
             "archived" => TaskStatus::Archived,
-            _ => TaskStatus::Backlog, // 默认值
+            _ => TaskStatus::Backlog, // 默认值（含 "backlog" 及未知值）
         }
     }
 }

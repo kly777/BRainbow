@@ -270,7 +270,7 @@ impl SearchPort for MemQueryService {
                 id,
                 title: clip(&cue, 60),
                 snippet: merge_snippets(&cue, &target, kw),
-                url: format!("/memory/manage?id={}", id),
+                url: format!("/memory/manage?id={id}"),
             })
             .collect())
     }

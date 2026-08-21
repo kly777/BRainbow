@@ -61,7 +61,7 @@ impl MemService {
                 .repo
                 .get_due_review_candidates(user_id, tag_ids, exclude_tag_ids)
                 .await?;
-            ids.extend(sample_review_candidates(candidates, review_quota));
+            ids.extend(sample_review_candidates(&candidates, review_quota));
         }
 
         // 3. 新卡填空（标注 learning 状态——这是写操作）
@@ -86,7 +86,7 @@ impl MemService {
                 .repo
                 .get_upcoming_review_candidates(user_id, tag_ids)
                 .await?;
-            ids.extend(sample_review_candidates(candidates, upcoming_quota));
+            ids.extend(sample_review_candidates(&candidates, upcoming_quota));
         }
 
         // 5. 实在没卡了，随便给一张
@@ -234,9 +234,8 @@ impl MemService {
         let mut new_step: Option<i32> = if outcome.state.has_steps() {
             let old = row.step_index.map(|i| i as usize);
             Some(match (old, rating) {
-                (_, 1) => 0,
+                (_, 1) | (None, _) => 0,
                 (Some(s), _) => (s + 1) as i32,
-                (None, _) => 0,
             })
         } else {
             None
@@ -637,7 +636,7 @@ impl MemService {
 }
 
 /// 对 review 候选做不放回加权采样，返回选中的 mem id（保持采样优先级顺序）。
-fn sample_review_candidates(candidates: Vec<ReviewCandidate>, quota: usize) -> Vec<i32> {
+fn sample_review_candidates(candidates: &[ReviewCandidate], quota: usize) -> Vec<i32> {
     if quota == 0 || candidates.is_empty() {
         return Vec::new();
     }

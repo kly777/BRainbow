@@ -682,7 +682,7 @@ async fn migrate_v2_cleanup_conv(conn: &mut SqliteConnection) -> Result<(), sqlx
         sqlx::query("DROP TABLE conv")
             .execute(&mut *conn)
             .await
-            .map_err(|e| migration_failed("无法删除已废弃的 conv 表", e))?;
+            .map_err(|e| migration_failed("无法删除已废弃的 conv 表", &e))?;
     }
     Ok(())
 }
@@ -806,7 +806,7 @@ async fn migrate_v8_time_iso_utc(conn: &mut SqliteConnection) -> Result<(), sqlx
             sqlx::query(sqlx::AssertSqlSafe(sql))
                 .execute(&mut *conn)
                 .await
-                .map_err(|e| migration_failed(&format!("v8 规范化 {table}.{column}"), e))?;
+                .map_err(|e| migration_failed(&format!("v8 规范化 {table}.{column}"), &e))?;
         }
 
         let set_clause = columns
@@ -848,11 +848,11 @@ async fn migrate_v8_time_iso_utc(conn: &mut SqliteConnection) -> Result<(), sqlx
         sqlx::query(sqlx::AssertSqlSafe(insert_trigger))
             .execute(&mut *conn)
             .await
-            .map_err(|e| migration_failed(&format!("v8 创建 {table} 时间 INSERT 触发器"), e))?;
+            .map_err(|e| migration_failed(&format!("v8 创建 {table} 时间 INSERT 触发器"), &e))?;
         sqlx::query(sqlx::AssertSqlSafe(update_trigger))
             .execute(&mut *conn)
             .await
-            .map_err(|e| migration_failed(&format!("v8 创建 {table} 时间 UPDATE 触发器"), e))?;
+            .map_err(|e| migration_failed(&format!("v8 创建 {table} 时间 UPDATE 触发器"), &e))?;
     }
     Ok(())
 }
@@ -875,7 +875,7 @@ async fn migrate_v9_time_normalize_suffix(conn: &mut SqliteConnection) -> Result
             )))
             .execute(&mut *conn)
             .await
-            .map_err(|e| migration_failed(&format!("v9 删除触发器 {name}"), e))?;
+            .map_err(|e| migration_failed(&format!("v9 删除触发器 {name}"), &e))?;
         }
 
         // 数据：把 other 后缀统一成 own 后缀
@@ -887,7 +887,7 @@ async fn migrate_v9_time_normalize_suffix(conn: &mut SqliteConnection) -> Result
             sqlx::query(sqlx::AssertSqlSafe(sql))
                 .execute(&mut *conn)
                 .await
-                .map_err(|e| migration_failed(&format!("v9 规范化 {table}.{column}"), e))?;
+                .map_err(|e| migration_failed(&format!("v9 规范化 {table}.{column}"), &e))?;
         }
 
         let set_clause = columns
@@ -929,11 +929,11 @@ async fn migrate_v9_time_normalize_suffix(conn: &mut SqliteConnection) -> Result
         sqlx::query(sqlx::AssertSqlSafe(insert_trigger))
             .execute(&mut *conn)
             .await
-            .map_err(|e| migration_failed(&format!("v9 创建 {table} 时间 INSERT 触发器"), e))?;
+            .map_err(|e| migration_failed(&format!("v9 创建 {table} 时间 INSERT 触发器"), &e))?;
         sqlx::query(sqlx::AssertSqlSafe(update_trigger))
             .execute(&mut *conn)
             .await
-            .map_err(|e| migration_failed(&format!("v9 创建 {table} 时间 UPDATE 触发器"), e))?;
+            .map_err(|e| migration_failed(&format!("v9 创建 {table} 时间 UPDATE 触发器"), &e))?;
     }
     Ok(())
 }
@@ -976,7 +976,7 @@ async fn migrate_v11_user_scope(conn: &mut SqliteConnection) -> Result<(), sqlx:
         )))
         .execute(&mut *conn)
         .await
-        .map_err(|e| migration_failed(&format!("v11 为 {table} 建 user_id 索引"), e))?;
+        .map_err(|e| migration_failed(&format!("v11 为 {table} 建 user_id 索引"), &e))?;
     }
     Ok(())
 }
@@ -1045,7 +1045,7 @@ async fn migrate_v12_fts5(conn: &mut SqliteConnection) -> Result<(), sqlx::Error
         sqlx::query(sqlx::AssertSqlSafe(create))
             .execute(&mut *conn)
             .await
-            .map_err(|e| migration_failed(&format!("v12 创建 {fts}"), e))?;
+            .map_err(|e| migration_failed(&format!("v12 创建 {fts}"), &e))?;
 
         // INSERT 触发器
         let ins_cols = cols.to_vec().join(", ");
@@ -1067,7 +1067,7 @@ async fn migrate_v12_fts5(conn: &mut SqliteConnection) -> Result<(), sqlx::Error
         sqlx::query(sqlx::AssertSqlSafe(ins_trigger))
             .execute(&mut *conn)
             .await
-            .map_err(|e| migration_failed(&format!("v12 创建 {prefix}_fts_ai"), e))?;
+            .map_err(|e| migration_failed(&format!("v12 创建 {prefix}_fts_ai"), &e))?;
 
         // DELETE 触发器
         let del_old = cols
@@ -1083,7 +1083,7 @@ async fn migrate_v12_fts5(conn: &mut SqliteConnection) -> Result<(), sqlx::Error
         sqlx::query(sqlx::AssertSqlSafe(del_trigger))
             .execute(&mut *conn)
             .await
-            .map_err(|e| migration_failed(&format!("v12 创建 {prefix}_fts_ad"), e))?;
+            .map_err(|e| migration_failed(&format!("v12 创建 {prefix}_fts_ad"), &e))?;
 
         // UPDATE 触发器
         let upd_trigger = format!(
@@ -1095,7 +1095,7 @@ async fn migrate_v12_fts5(conn: &mut SqliteConnection) -> Result<(), sqlx::Error
         sqlx::query(sqlx::AssertSqlSafe(upd_trigger))
             .execute(&mut *conn)
             .await
-            .map_err(|e| migration_failed(&format!("v12 创建 {prefix}_fts_au"), e))?;
+            .map_err(|e| migration_failed(&format!("v12 创建 {prefix}_fts_au"), &e))?;
     }
 
     // 重建索引（从源表回填）
@@ -1105,7 +1105,7 @@ async fn migrate_v12_fts5(conn: &mut SqliteConnection) -> Result<(), sqlx::Error
         )))
         .execute(&mut *conn)
         .await
-        .map_err(|e| migration_failed(&format!("v12 重建 {fts} 索引"), e))?;
+        .map_err(|e| migration_failed(&format!("v12 重建 {fts} 索引"), &e))?;
     }
     Ok(())
 }
@@ -1121,12 +1121,12 @@ async fn add_column_if_missing(
         sqlx::query(sqlx::AssertSqlSafe(ddl.to_string()))
             .execute(&mut *conn)
             .await
-            .map_err(|e| migration_failed(&format!("无法为 {table} 添加 {column} 列"), e))?;
+            .map_err(|e| migration_failed(&format!("无法为 {table} 添加 {column} 列"), &e))?;
     }
     Ok(())
 }
 
-fn migration_failed(what: &str, e: sqlx::Error) -> sqlx::Error {
+fn migration_failed(what: &str, e: &sqlx::Error) -> sqlx::Error {
     sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
         "迁移失败: {what}: {e}"
     ))))

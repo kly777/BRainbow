@@ -132,7 +132,7 @@ impl SearchPort for ReadingQueryService {
                 id,
                 title,
                 snippet: snippet(&content, kw),
-                url: format!("/reading/{}", id),
+                url: format!("/reading/{id}"),
             })
             .collect())
     }

@@ -65,9 +65,8 @@ pub async fn conv_concept_handler(
     Path(id): Path<i64>,
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
-    let article_title = match params.get("article") {
-        Some(t) => t,
-        None => return error::not_found("缺少 article 参数"),
+    let Some(article_title) = params.get("article") else {
+        return error::not_found("缺少 article 参数");
     };
 
     match query.concept(claims.sub, id, article_title).await {

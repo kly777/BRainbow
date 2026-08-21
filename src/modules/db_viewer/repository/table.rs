@@ -40,7 +40,7 @@ impl super::DBRepo {
         // 用 PRAGMA 获取列信息（即使表为空也能拿到）
         let pragma_rows = sqlx::query(
             // SAFETY: sanitize_table_name 确保 safe_name 只含 [a-zA-Z0-9_]
-            sqlx::AssertSqlSafe(format!("PRAGMA table_info({})", safe_name)),
+            sqlx::AssertSqlSafe(format!("PRAGMA table_info({safe_name})")),
         )
         .fetch_all(&*self.pool)
         .await?;
@@ -54,7 +54,7 @@ impl super::DBRepo {
         let tables = self.get_table_names().await?;
         let fk_rows = sqlx::query(
             // SAFETY: safe_name 已校验
-            sqlx::AssertSqlSafe(format!("PRAGMA foreign_key_list({})", safe_name)),
+            sqlx::AssertSqlSafe(format!("PRAGMA foreign_key_list({safe_name})")),
         )
         .fetch_all(&*self.pool)
         .await?;
@@ -185,14 +185,13 @@ impl super::DBRepo {
             };
 
         let mut count_qb = QueryBuilder::<sqlx::Sqlite>::new(format!(
-            "SELECT COUNT(*) FROM {} WHERE 1=1",
-            safe_name
+            "SELECT COUNT(*) FROM {safe_name} WHERE 1=1"
         ));
         push_where(&mut count_qb, &filter, &search, &advanced_filters);
         let total: i64 = count_qb.build_query_scalar().fetch_one(&*self.pool).await?;
 
         let mut data_qb =
-            QueryBuilder::<sqlx::Sqlite>::new(format!("SELECT * FROM {} WHERE 1=1", safe_name));
+            QueryBuilder::<sqlx::Sqlite>::new(format!("SELECT * FROM {safe_name} WHERE 1=1"));
         push_where(&mut data_qb, &filter, &search, &advanced_filters);
         if let Some((col, desc)) = &sort {
             data_qb.push(" ORDER BY \"");

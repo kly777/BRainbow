@@ -151,7 +151,7 @@ pub async fn create_api_key(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorBody {
                 code: "INTERNAL".to_string(),
-                message: format!("创建 key 失败: {}", e),
+                message: format!("创建 key 失败: {e}"),
                 details: None,
             }),
         )
@@ -181,7 +181,7 @@ pub async fn list_api_keys(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorBody {
                 code: "INTERNAL".to_string(),
-                message: format!("查询 key 失败: {}", e),
+                message: format!("查询 key 失败: {e}"),
                 details: None,
             }),
         )
@@ -219,7 +219,7 @@ pub async fn delete_api_key(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorBody {
                 code: "INTERNAL".to_string(),
-                message: format!("删除 key 失败: {}", e),
+                message: format!("删除 key 失败: {e}"),
                 details: None,
             }),
         )

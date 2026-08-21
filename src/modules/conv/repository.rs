@@ -183,13 +183,12 @@ impl ConvRepo {
         .fetch_optional(pool)
         .await?;
 
-        let ConvInfoRow {
+        let Some(ConvInfoRow {
             title,
             conv_type,
             created_at,
-        } = match title_info {
-            Some(t) => t,
-            None => return Ok(None),
+        }) = title_info else {
+            return Ok(None);
         };
 
         let articles = sqlx::query_as!(

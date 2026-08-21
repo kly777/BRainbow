@@ -53,7 +53,7 @@ impl SearchPort for TextQueryService {
                 id,
                 title: name,
                 snippet: snippet(&content, kw),
-                url: format!("/text?id={}", id),
+                url: format!("/text?id={id}"),
             })
             .collect())
     }

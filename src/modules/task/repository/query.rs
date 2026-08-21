@@ -89,9 +89,8 @@ impl TaskRepository {
         user_id: i32,
         id: i32,
     ) -> Result<Option<TaskDetailResponse>, sqlx::Error> {
-        let task = match self.find_by_id(user_id, id).await? {
-            Some(task) => task,
-            None => return Ok(None),
+        let Some(task) = self.find_by_id(user_id, id).await? else {
+            return Ok(None);
         };
 
         let dependencies = sqlx::query_as!(

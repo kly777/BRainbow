@@ -75,7 +75,7 @@ pub async fn upload_handler(
 
         let data = match field.bytes().await {
             Ok(d) => d,
-            Err(e) => return error::bad_request(format!("读取文件失败: {}", e)),
+            Err(e) => return error::bad_request(format!("读取文件失败: {e}")),
         };
 
         match service
@@ -156,9 +156,8 @@ pub async fn file_handler(
 
     let path = query.file_path(media.media_type.as_str(), &stored_id);
 
-    let file = match tokio::fs::File::open(&path).await {
-        Ok(f) => f,
-        Err(_) => return ServiceError::NotFound("文件不存在".into()).into_response(),
+    let Ok(file) = tokio::fs::File::open(&path).await else {
+        return ServiceError::NotFound("文件不存在".into()).into_response();
     };
 
     let ct = if media.media_type.as_str() == "image" && media.mime_type != "image/svg+xml" {

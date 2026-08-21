@@ -51,7 +51,7 @@ impl FromStr for TimeWindowType {
             "feasible" => Ok(TimeWindowType::Feasible),
             "planned" => Ok(TimeWindowType::Planned),
             "actual" => Ok(TimeWindowType::Actual),
-            _ => Err(format!("Invalid time window type: {}", s)),
+            _ => Err(format!("Invalid time window type: {s}")),
         }
     }
 }
@@ -91,7 +91,7 @@ impl FromStr for RecurrenceFrequency {
             "daily" => Ok(RecurrenceFrequency::Daily),
             "weekly" => Ok(RecurrenceFrequency::Weekly),
             "monthly" => Ok(RecurrenceFrequency::Monthly),
-            _ => Err(format!("Invalid recurrence frequency: {}", s)),
+            _ => Err(format!("Invalid recurrence frequency: {s}")),
         }
     }
 }

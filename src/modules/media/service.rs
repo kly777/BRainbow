@@ -81,7 +81,7 @@ impl MediaService {
     pub fn new(db: Arc<SqlitePool>, upload_dir: String) -> Self {
         // 确保上传子目录存在
         for d in &["image", "video", "audio"] {
-            std::fs::create_dir_all(format!("{}/{d}", upload_dir)).ok();
+            std::fs::create_dir_all(format!("{upload_dir}/{d}")).ok();
         }
         let svc = Self {
             repo: MediaRepository::new(db),
@@ -126,13 +126,12 @@ impl MediaService {
 
         if real_mime != client_mime {
             return Err(ServiceError::InvalidInput(format!(
-                "文件类型不符：声明 {}, 实际 {}",
-                client_mime, real_mime
+                "文件类型不符：声明 {client_mime}, 实际 {real_mime}"
             )));
         }
 
         let (media_type_str, max_size) = find_allowed(&real_mime).ok_or_else(|| {
-            ServiceError::InvalidInput(format!("不支持的文件类型: {}", real_mime))
+            ServiceError::InvalidInput(format!("不支持的文件类型: {real_mime}"))
         })?;
 
         // 2. 大小校验
@@ -153,7 +152,7 @@ impl MediaService {
         // 3. 写临时文件
         tokio::fs::write(&tmp_path, data)
             .await
-            .map_err(|e| ServiceError::Internal(format!("写入文件失败: {}", e)))?;
+            .map_err(|e| ServiceError::Internal(format!("写入文件失败: {e}")))?;
 
         // 4. 插库
         let media = match self
@@ -211,16 +210,12 @@ impl MediaService {
         if media_type != "image" {
             return (None, None, None);
         }
-        match image::ImageReader::new(std::io::Cursor::new(data))
+        if let Some((w, h)) = image::ImageReader::new(std::io::Cursor::new(data))
             .with_guessed_format()
             .ok()
-            .and_then(|r| r.into_dimensions().ok())
-        {
-            Some((w, h)) => (Some(w as i64), Some(h as i64), None),
-            None => {
-                warn!("图片尺寸解析失败 mime={}", mime);
-                (None, None, None)
-            }
+            .and_then(|r| r.into_dimensions().ok()) { (Some(w as i64), Some(h as i64), None) } else {
+            warn!("图片尺寸解析失败 mime={}", mime);
+            (None, None, None)
         }
     }
 

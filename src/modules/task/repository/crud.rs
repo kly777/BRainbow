@@ -159,9 +159,8 @@ impl TaskRepository {
         id: i32,
         request: UpdateTaskRequest,
     ) -> Result<Task, sqlx::Error> {
-        let current_task = match self.find_by_id(user_id, id).await? {
-            Some(task) => task,
-            None => return Err(sqlx::Error::RowNotFound),
+        let Some(current_task) = self.find_by_id(user_id, id).await? else {
+            return Err(sqlx::Error::RowNotFound);
         };
 
         let (new_status, completed_at) = match request.status {
@@ -271,9 +270,8 @@ impl TaskRepository {
     }
 
     pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, sqlx::Error> {
-        let task = match self.find_by_id(user_id, id).await? {
-            Some(task) => task,
-            None => return Ok(0),
+        let Some(task) = self.find_by_id(user_id, id).await? else {
+            return Ok(0);
         };
 
         if task.is_completed() {

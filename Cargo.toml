@@ -38,3 +38,19 @@ infer = "0.19"
 rand = "0.10"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
 eventsource-stream = "0.2.3"
+
+[lints.clippy]
+# 自动修复类（cargo clippy --fix 一键修完）
+uninlined_format_args = "warn"
+redundant_closure = "warn"
+manual_let_else = "warn"
+match_same_arms = "warn"
+single_match_else = "warn"
+unnecessary_struct_initialization = "warn"
+needless_return = "warn"
+redundant_clone = "warn"
+# 值得关注的（手动修复）
+needless_pass_by_value = "warn"
+# cast 相关：FSRS 数学 + 分页计算全部有意使用 as，降为 allow
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"

@@ -134,6 +134,7 @@ pub struct ScheduleInput {
     pub cumulative_step_days: u32,
 }
 
+#[allow(clippy::needless_pass_by_value)] // ScheduleInput 全字段 Copy，按值传更高效
 pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> Result<ReviewOutcome, String> {
     use CardState::*;
     let ScheduleInput {

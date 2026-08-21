@@ -51,9 +51,8 @@ fn build_tree_node<'a>(
     task: Task,
 ) -> Pin<Box<dyn std::future::Future<Output = Option<TreeNode>> + Send + 'a>> {
     Box::pin(async move {
-        let children = match svc.tree(user_id, Some(task.id)).await {
-            Ok(t) => t,
-            Err(_) => return None,
+        let Ok(children) = svc.tree(user_id, Some(task.id)).await else {
+            return None;
         };
         let mut child_nodes = Vec::new();
         for child in children {

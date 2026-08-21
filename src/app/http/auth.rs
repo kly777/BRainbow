@@ -5,30 +5,20 @@ use axum::{
     response::{IntoResponse, Json, Response},
 };
 
-use crate::app::context::AppState;
+use crate::app::auth::service::{AuthService, DeleteApiKeyResult};
 use crate::shared::claims::Claims;
 use crate::shared::error_types::ErrorBody;
+#[allow(unused_imports)] // hash_api_key 主要被测试使用
 pub use crate::shared::jwt::{extract_api_key, extract_token, hash_api_key, verify_token};
 use serde::Serialize;
-use sqlx::FromRow;
 
-#[derive(FromRow)]
-struct ApiKeyAuthRow {
-    role: String,
-    user_id: Option<i32>,
-}
-
-#[derive(FromRow)]
-struct ApiKeyListRow {
-    id: i32,
-    role: String,
-    created_at: String,
-    user_id: Option<i32>,
-}
-
-#[derive(FromRow)]
-struct ApiKeyOwnerRow {
-    user_id: Option<i32>,
+#[derive(Serialize)]
+pub struct ApiKeyResponse {
+    pub id: i32,
+    pub role: String,
+    pub created_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key: Option<String>,
 }
 
 // ============================================================
@@ -40,9 +30,12 @@ struct ApiKeyOwnerRow {
 ///
 /// 用法：挂载到需要登录的路由组上。
 ///   Router::new().nest(…).layer(from_fn_with_state(state, auth::auth))
-pub async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -> Response {
-    // DB 持久化的密钥优先（管理员轮换后立即生效）
-    let secret = state.jwt_secret_active();
+pub async fn auth(
+    State(auth_service): State<AuthService>,
+    mut request: Request,
+    next: Next,
+) -> Response {
+    let secret = auth_service.jwt_secret_active();
 
     // ── 1. JWT ──
     if let Some(token) = extract_token(&request)
@@ -54,18 +47,10 @@ pub async fn auth(State(state): State<AppState>, mut request: Request, next: Nex
 
     // ── 2. API key ──
     if let Some(key) = extract_api_key(&request) {
-        let key_hash = hash_api_key(&key);
-        let row: Result<Option<ApiKeyAuthRow>, sqlx::Error> = sqlx::query_as!(
-            ApiKeyAuthRow,
-            r#"SELECT role, user_id AS "user_id?: i32" FROM api_key WHERE key_hash = ?"#,
-            key_hash
-        )
-        .fetch_optional(&*state.db)
-        .await;
+        let row = auth_service.authenticate_api_key(&key).await;
         let row = match row {
             Ok(row) => row,
             Err(e) => {
-                // DB 故障不能被伪装成"未登录"：显式返回 500
                 tracing::error!("API key 验证查询失败: {e}");
                 drain_rejected_body(&mut request).await;
                 return (
@@ -80,12 +65,7 @@ pub async fn auth(State(state): State<AppState>, mut request: Request, next: Nex
             }
         };
 
-        if let Some(row) = row {
-            let claims = Claims {
-                sub: row.user_id.unwrap_or(-1),
-                role: row.role,
-                exp: usize::MAX,
-            };
+        if let Some(claims) = row {
             request.extensions_mut().insert(claims);
             return next.run(request).await;
         }
@@ -146,94 +126,53 @@ pub async fn require_admin(request: Request, next: Next) -> Response {
 }
 
 // ============================================================
-// API key 管理端点
+// API key 管理
 // ============================================================
-
-#[derive(Debug, Serialize)]
-pub struct ApiKeyInfo {
-    pub id: i32,
-    pub role: String,
-    pub created_at: String,
-    /// 生成时一次性返回的明文 key（仅 POST 响应含此字段）
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub key: Option<String>,
-}
 
 /// 生成 API key。
 ///
 /// dev 环境：免登录，生成 admin 角色 key（前端测试便利）。
 /// prod 环境：需登录（auth 中间件已前置），key 绑定当前用户角色。
 pub async fn create_api_key(
-    State(state): State<AppState>,
+    State(auth_service): State<AuthService>,
     Extension(claims): Extension<Claims>,
 ) -> Response {
-    let role = claims.role.clone();
-    let user_id = Some(claims.sub);
-
-    let key = uuid::Uuid::new_v4().to_string().replace('-', "");
-    let key_hash = hash_api_key(&key);
-
-    let id: i64 = match sqlx::query!(
-        "INSERT INTO api_key (key_hash, role, user_id) VALUES (?, ?, ?)",
-        key_hash,
-        role,
-        user_id
-    )
-    .execute(&*state.db)
-    .await
+    match auth_service
+        .create_api_key(&claims.role, Some(claims.sub))
+        .await
     {
-        Ok(r) => r.last_insert_rowid(),
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorBody {
-                    code: "INTERNAL".to_string(),
-                    message: format!("创建 key 失败: {}", e),
-                    details: None,
-                }),
-            )
-                .into_response();
-        }
-    };
-
-    Json(ApiKeyInfo {
-        id: id as i32,
-        role,
-        created_at: chrono::Utc::now()
-            .format("%Y-%m-%dT%H:%M:%S+00:00")
-            .to_string(),
-        key: Some(key),
-    })
-    .into_response()
+        Ok(info) => Json(ApiKeyResponse {
+            id: info.id,
+            role: info.role,
+            created_at: info.created_at,
+            key: info.key,
+        })
+        .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorBody {
+                code: "INTERNAL".to_string(),
+                message: format!("创建 key 失败: {}", e),
+                details: None,
+            }),
+        )
+            .into_response(),
+    }
 }
 
 /// 列出当前用户可见的 key（dev 免登录；prod 仅显示自己的 key）。
 pub async fn list_api_keys(
-    State(state): State<AppState>,
+    State(auth_service): State<AuthService>,
     Extension(claims): Extension<Claims>,
 ) -> Response {
-    let rows: Result<Vec<ApiKeyListRow>, _> = sqlx::query_as!(
-        ApiKeyListRow,
-        r#"SELECT id AS "id: i32", role,
-                  COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String",
-                  user_id AS "user_id?: i32"
-           FROM api_key ORDER BY id DESC"#
-    )
-    .fetch_all(&*state.db)
-    .await;
-
-    match rows {
-        Ok(rows) => {
-            let items: Vec<ApiKeyInfo> = rows
+    match auth_service.list_api_keys(&claims).await {
+        Ok(items) => {
+            let items: Vec<ApiKeyResponse> = items
                 .into_iter()
-                .filter(|row| {
-                    // 仅自己的 key（admin 可见全部）
-                    claims.role == "admin" || Some(claims.sub) == row.user_id
-                })
-                .map(|row| ApiKeyInfo {
-                    id: row.id,
-                    role: row.role,
-                    created_at: row.created_at,
+                .map(|info| ApiKeyResponse {
+                    id: info.id,
+                    role: info.role,
+                    created_at: info.created_at,
                     key: None,
                 })
                 .collect();
@@ -253,57 +192,26 @@ pub async fn list_api_keys(
 
 /// 删除 API key。prod 下只能删除自己的 key（admin 可删任意）。
 pub async fn delete_api_key(
-    State(state): State<AppState>,
+    State(auth_service): State<AuthService>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> Response {
-    // 非 admin 只能删自己的 key
-    if claims.role != "admin" {
-        let owned = sqlx::query_as!(
-            ApiKeyOwnerRow,
-            r#"SELECT user_id AS "user_id?: i32" FROM api_key WHERE id = ?"#,
-            id
-        )
-        .fetch_optional(&*state.db)
-        .await;
-        let owned: Option<ApiKeyOwnerRow> = match owned {
-            Ok(row) => row,
-            Err(e) => {
-                tracing::error!("查询 API key 归属失败: {e}");
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ErrorBody {
-                        code: "INTERNAL".to_string(),
-                        message: "服务器内部错误".to_string(),
-                        details: None,
-                    }),
-                )
-                    .into_response();
-            }
-        };
-        if owned.map(|row| row.user_id) != Some(Some(claims.sub)) {
-            return (
-                StatusCode::FORBIDDEN,
-                Json(ErrorBody {
-                    code: "FORBIDDEN".to_string(),
-                    message: "只能删除自己的 key".to_string(),
-                    details: None,
-                }),
-            )
-                .into_response();
-        }
-    }
-
-    match sqlx::query!("DELETE FROM api_key WHERE id = ?", id)
-        .execute(&*state.db)
-        .await
-    {
-        Ok(r) if r.rows_affected() > 0 => StatusCode::NO_CONTENT.into_response(),
-        Ok(_) => (
+    match auth_service.delete_api_key(&claims, id).await {
+        Ok(DeleteApiKeyResult::Deleted) => StatusCode::NO_CONTENT.into_response(),
+        Ok(DeleteApiKeyResult::NotFound) => (
             StatusCode::NOT_FOUND,
             Json(ErrorBody {
                 code: "Not Found".to_string(),
                 message: "key 不存在".to_string(),
+                details: None,
+            }),
+        )
+            .into_response(),
+        Ok(DeleteApiKeyResult::Forbidden) => (
+            StatusCode::FORBIDDEN,
+            Json(ErrorBody {
+                code: "FORBIDDEN".to_string(),
+                message: "只能删除自己的 key".to_string(),
                 details: None,
             }),
         )

@@ -2,6 +2,7 @@ use axum::extract::FromRef;
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
+use crate::app::auth::service::AuthService;
 use crate::modules::admin::port::AdminServicePort;
 use crate::modules::admin::service::AdminService;
 use crate::modules::ai::service::AiService;
@@ -149,6 +150,7 @@ pub struct SearchState {
 #[derive(Clone)]
 pub struct AppState {
     pub db: Arc<SqlitePool>,
+    pub auth: AuthService,
     pub admin: AdminState,
     pub ai: AiState,
     pub chat: ChatState,
@@ -177,6 +179,12 @@ impl FromRef<AppState> for SearchQueryService {
 impl FromRef<AppState> for AdminService {
     fn from_ref(state: &AppState) -> Self {
         state.admin.admin.clone()
+    }
+}
+
+impl FromRef<AppState> for AuthService {
+    fn from_ref(state: &AppState) -> Self {
+        state.auth.clone()
     }
 }
 
@@ -382,6 +390,7 @@ impl AppState {
 
         // 管理员服务
         let admin = AdminService::new(db.clone(), config.jwt_secret.clone(), config.allow_register);
+        let auth = AuthService::new(admin.clone(), db.clone());
 
         // AI/chat 服务
         let ai = AiService::new(db.as_ref().clone());
@@ -427,6 +436,7 @@ impl AppState {
 
         Self {
             db: db.clone(),
+            auth,
             admin: AdminState { admin },
             ai: AiState { ai },
             chat: ChatState { chat, chat_query },

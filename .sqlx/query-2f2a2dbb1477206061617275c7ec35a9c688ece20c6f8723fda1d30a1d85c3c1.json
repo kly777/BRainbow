@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\", role,\n                  COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\",\n                  user_id AS \"user_id?: i32\"\n           FROM api_key ORDER BY id DESC",
+  "query": "SELECT id AS \"id: i32\", role,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\",\n                      user_id AS \"user_id?: i32\"\n               FROM api_key ORDER BY id DESC",
   "describe": {
     "columns": [
       {
@@ -53,5 +53,5 @@
       true
     ]
   },
-  "hash": "dffc00bcfc405bf3ca513103437e0addd5f22f8a16e4d20f248ae98a0db5d917"
+  "hash": "2f2a2dbb1477206061617275c7ec35a9c688ece20c6f8723fda1d30a1d85c3c1"
 }

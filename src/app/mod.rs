@@ -3,5 +3,6 @@
 //! 业务域在 `crate::modules`；数据库 schema/迁移在 `crate::db`；
 //! 纯类型/无副作用工具在 `crate::shared`。
 
+pub mod auth;
 pub mod context;
 pub mod http;

@@ -22,8 +22,8 @@ impl TextQueryService {
         }
     }
 
-    pub async fn load_tabs(&self, user_id: i32) -> Result<Vec<(i64, String, String)>, ServiceError> {
-        self.repo.load_tabs(user_id).await.map_err(ServiceError::Db)
+    pub async fn load_tabs(&self) -> Result<Vec<(i64, String, String)>, ServiceError> {
+        self.repo.load_tabs().await.map_err(ServiceError::Db)
     }
 }
 

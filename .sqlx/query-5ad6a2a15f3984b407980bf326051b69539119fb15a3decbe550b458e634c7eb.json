@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO onto (name, description) VALUES (?, ?)\n               RETURNING id AS \"id: i32\", name, description",
+  "query": "SELECT id AS \"id: i32\", name, description FROM onto\n               WHERE (user_id = ?1 OR user_id IS NULL) ORDER BY id LIMIT ?2 OFFSET ?3",
   "describe": {
     "columns": [
       {
@@ -38,7 +38,7 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 3
     },
     "nullable": [
       false,
@@ -46,5 +46,5 @@
       true
     ]
   },
-  "hash": "44d29db56d56823e33ee53e48976ef58549b5b84652af999636e21bb1d90cd6f"
+  "hash": "5ad6a2a15f3984b407980bf326051b69539119fb15a3decbe550b458e634c7eb"
 }

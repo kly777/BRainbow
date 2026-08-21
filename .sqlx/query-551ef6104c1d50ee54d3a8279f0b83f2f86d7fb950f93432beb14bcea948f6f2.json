@@ -1,10 +1,10 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, name, description FROM onto\n               WHERE name LIKE ?1 ESCAPE '\\' OR description LIKE ?1 ESCAPE '\\'\n               ORDER BY id DESC LIMIT ?2",
+  "query": "INSERT INTO onto (name, description, user_id) VALUES (?, ?, ?)\n               RETURNING id AS \"id: i32\", name, description",
   "describe": {
     "columns": [
       {
-        "name": "id",
+        "name": "id: i32",
         "ordinal": 0,
         "type_info": "Integer",
         "origin": {
@@ -38,7 +38,7 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 3
     },
     "nullable": [
       false,
@@ -46,5 +46,5 @@
       true
     ]
   },
-  "hash": "1cd6337a53142f91680ed5601afc9c8793c71f971c23ce8e4cf800a2102b70bf"
+  "hash": "551ef6104c1d50ee54d3a8279f0b83f2f86d7fb950f93432beb14bcea948f6f2"
 }

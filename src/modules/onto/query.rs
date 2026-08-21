@@ -22,15 +22,15 @@ impl OntoQueryService {
         }
     }
 
-    pub async fn list(&self, limit: i64, offset: i64) -> Result<(Vec<Onto>, i64), ServiceError> {
+    pub async fn list(&self, user_id: i32, limit: i64, offset: i64) -> Result<(Vec<Onto>, i64), ServiceError> {
         self.repo
-            .find_all_paginated(limit, offset)
+            .find_all_paginated(user_id, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }
 
-    pub async fn by_id(&self, id: i32) -> Result<Option<Onto>, ServiceError> {
-        self.repo.find_by_id(id).await.map_err(ServiceError::Db)
+    pub async fn by_id(&self, user_id: i32, id: i32) -> Result<Option<Onto>, ServiceError> {
+        self.repo.find_by_id(user_id, id).await.map_err(ServiceError::Db)
     }
 }
 
@@ -38,7 +38,7 @@ impl OntoQueryService {
 impl SearchPort for OntoQueryService {
     async fn search(
         &self,
-        _user_id: i32,
+        user_id: i32,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
@@ -50,7 +50,7 @@ impl SearchPort for OntoQueryService {
         let like = crate::shared::db_query::like_contains(kw);
         let rows = self
             .repo
-            .search_hits(&like, cap)
+            .search_hits(user_id, &like, cap)
             .await
             .map_err(ServiceError::Db)?;
         Ok(rows

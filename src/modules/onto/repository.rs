@@ -23,12 +23,19 @@ impl OntoRepository {
     }
 
     /// 全局搜索命中
-    pub async fn search_hits(&self, like: &str, cap: i64) -> Result<Vec<OntoHitRow>, sqlx::Error> {
+    pub async fn search_hits(
+        &self,
+        user_id: i32,
+        like: &str,
+        cap: i64,
+    ) -> Result<Vec<OntoHitRow>, sqlx::Error> {
         let rows = sqlx::query_as!(
             OntoHitRow,
             r#"SELECT id, name, description FROM onto
-               WHERE name LIKE ?1 ESCAPE '\' OR description LIKE ?1 ESCAPE '\'
-               ORDER BY id DESC LIMIT ?2"#,
+               WHERE (user_id = ?1 OR user_id IS NULL)
+                 AND (name LIKE ?2 ESCAPE '\' OR description LIKE ?2 ESCAPE '\')
+               ORDER BY id DESC LIMIT ?3"#,
+            user_id,
             like,
             cap
         )
@@ -39,15 +46,21 @@ impl OntoRepository {
 
     pub async fn find_all_paginated(
         &self,
+        user_id: i32,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Onto>, i64), sqlx::Error> {
-        let total: i64 = sqlx::query_scalar!("SELECT COUNT(*) FROM onto")
-            .fetch_one(&*self.db)
-            .await?;
+        let total: i64 = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM onto WHERE user_id = ? OR user_id IS NULL",
+            user_id
+        )
+        .fetch_one(&*self.db)
+        .await?;
         let items = sqlx::query_as!(
             Onto,
-            r#"SELECT id AS "id: i32", name, description FROM onto ORDER BY id LIMIT ? OFFSET ?"#,
+            r#"SELECT id AS "id: i32", name, description FROM onto
+               WHERE (user_id = ?1 OR user_id IS NULL) ORDER BY id LIMIT ?2 OFFSET ?3"#,
+            user_id,
             limit,
             offset
         )
@@ -57,11 +70,13 @@ impl OntoRepository {
     }
 
     /// 根据ID获取本体
-    pub async fn find_by_id(&self, id: i32) -> Result<Option<Onto>, sqlx::Error> {
+    pub async fn find_by_id(&self, user_id: i32, id: i32) -> Result<Option<Onto>, sqlx::Error> {
         sqlx::query_as!(
             Onto,
-            r#"SELECT id AS "id: i32", name, description FROM onto WHERE id = ?"#,
-            id
+            r#"SELECT id AS "id: i32", name, description FROM onto
+               WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+            id,
+            user_id
         )
         .fetch_optional(&*self.db)
         .await
@@ -70,14 +85,16 @@ impl OntoRepository {
     /// 创建本体
     pub async fn create(
         &self,
+        user_id: i32,
         name: String,
         description: Option<String>,
     ) -> Result<Onto, sqlx::Error> {
         let row = sqlx::query!(
-            r#"INSERT INTO onto (name, description) VALUES (?, ?)
+            r#"INSERT INTO onto (name, description, user_id) VALUES (?, ?, ?)
                RETURNING id AS "id: i32", name, description"#,
             name,
-            description
+            description,
+            user_id
         )
         .fetch_one(&*self.db)
         .await?;
@@ -90,10 +107,14 @@ impl OntoRepository {
     }
 
     /// 删除本体
-    pub async fn delete(&self, id: i32) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query!("DELETE FROM onto WHERE id = ?", id)
-            .execute(&*self.db)
-            .await?;
+    pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, sqlx::Error> {
+        let result = sqlx::query!(
+            "DELETE FROM onto WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+            id,
+            user_id
+        )
+        .execute(&*self.db)
+        .await?;
 
         Ok(result.rows_affected())
     }
@@ -101,6 +122,7 @@ impl OntoRepository {
     /// 更新本体
     pub async fn update(
         &self,
+        user_id: i32,
         id: i32,
         name: Option<String>,
         description: Option<String>,
@@ -128,13 +150,16 @@ impl OntoRepository {
 
         if !has_updates {
             return self
-                .find_by_id(id)
+                .find_by_id(user_id, id)
                 .await?
                 .ok_or_else(|| sqlx::Error::RowNotFound);
         }
 
         builder.push(" WHERE id = ");
         builder.push_bind(id);
+        builder.push(" AND (user_id = ");
+        builder.push_bind(user_id);
+        builder.push(" OR user_id IS NULL)");
         builder.push(" RETURNING id, name, description");
 
         let result = builder.build().fetch_one(&*self.db).await?;
@@ -153,9 +178,13 @@ mod tests {
     use super::*;
     use sqlx::SqlitePool;
 
+    const TEST_USER_ID: i32 = 1;
+
     async fn setup_db() -> OntoRepository {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         crate::db::migrate(&pool).await.unwrap();
+        sqlx::query("INSERT OR IGNORE INTO user (id, name, password_hash) VALUES (1, 'test', 'x')")
+            .execute(&pool).await.unwrap();
         OntoRepository::new(Arc::new(pool))
     }
 
@@ -163,23 +192,23 @@ mod tests {
     async fn create_and_find() {
         let repo = setup_db().await;
         let onto = repo
-            .create("test-name".into(), Some("desc".into()))
+            .create(TEST_USER_ID, "test-name".into(), Some("desc".into()))
             .await
             .unwrap();
         assert!(onto.id > 0);
         assert_eq!(onto.name, "test-name");
         assert_eq!(onto.description, Some("desc".into()));
 
-        let found = repo.find_by_id(onto.id).await.unwrap().unwrap();
+        let found = repo.find_by_id(TEST_USER_ID, onto.id).await.unwrap().unwrap();
         assert_eq!(found.name, "test-name");
     }
 
     #[tokio::test]
     async fn find_all_paginated() {
         let repo = setup_db().await;
-        repo.create("A".into(), None).await.unwrap();
-        repo.create("B".into(), None).await.unwrap();
-        let (items, total) = repo.find_all_paginated(10, 0).await.unwrap();
+        repo.create(TEST_USER_ID, "A".into(), None).await.unwrap();
+        repo.create(TEST_USER_ID, "B".into(), None).await.unwrap();
+        let (items, total) = repo.find_all_paginated(TEST_USER_ID, 10, 0).await.unwrap();
         assert_eq!(total, 2);
         assert_eq!(items.len(), 2);
     }
@@ -187,18 +216,18 @@ mod tests {
     #[tokio::test]
     async fn find_by_id_not_found() {
         let repo = setup_db().await;
-        assert!(repo.find_by_id(999).await.unwrap().is_none());
+        assert!(repo.find_by_id(TEST_USER_ID, 999).await.unwrap().is_none());
     }
 
     #[tokio::test]
     async fn update_name_and_description() {
         let repo = setup_db().await;
         let onto = repo
-            .create("old".into(), Some("old-desc".into()))
+            .create(TEST_USER_ID, "old".into(), Some("old-desc".into()))
             .await
             .unwrap();
         let updated = repo
-            .update(onto.id, Some("new".into()), Some("new-desc".into()))
+            .update(TEST_USER_ID, onto.id, Some("new".into()), Some("new-desc".into()))
             .await
             .unwrap();
         assert_eq!(updated.name, "new");
@@ -208,20 +237,20 @@ mod tests {
     #[tokio::test]
     async fn update_nonexistent_fails() {
         let repo = setup_db().await;
-        assert!(repo.update(999, Some("x".into()), None).await.is_err());
+        assert!(repo.update(TEST_USER_ID, 999, Some("x".into()), None).await.is_err());
     }
 
     #[tokio::test]
     async fn delete_existing() {
         let repo = setup_db().await;
-        let onto = repo.create("x".into(), None).await.unwrap();
-        assert_eq!(repo.delete(onto.id).await.unwrap(), 1);
-        assert!(repo.find_by_id(onto.id).await.unwrap().is_none());
+        let onto = repo.create(TEST_USER_ID, "x".into(), None).await.unwrap();
+        assert_eq!(repo.delete(TEST_USER_ID, onto.id).await.unwrap(), 1);
+        assert!(repo.find_by_id(TEST_USER_ID, onto.id).await.unwrap().is_none());
     }
 
     #[tokio::test]
     async fn delete_nonexistent() {
         let repo = setup_db().await;
-        assert_eq!(repo.delete(999).await.unwrap(), 0);
+        assert_eq!(repo.delete(TEST_USER_ID, 999).await.unwrap(), 0);
     }
 }

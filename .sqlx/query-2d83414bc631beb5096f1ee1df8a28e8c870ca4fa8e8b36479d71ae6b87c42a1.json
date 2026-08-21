@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\", name, description FROM onto ORDER BY id LIMIT ? OFFSET ?",
+  "query": "SELECT id AS \"id: i32\", name, description FROM onto\n               WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)",
   "describe": {
     "columns": [
       {
@@ -46,5 +46,5 @@
       true
     ]
   },
-  "hash": "f03c623c6d975855ac1ed81c5f638284d182c2699cbb74eafbce908d0d8ccbef"
+  "hash": "2d83414bc631beb5096f1ee1df8a28e8c870ca4fa8e8b36479d71ae6b87c42a1"
 }

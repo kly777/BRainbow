@@ -1,9 +1,10 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     response::{IntoResponse, Json},
 };
 use serde::{Deserialize, Serialize};
 
+use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 
@@ -41,10 +42,11 @@ impl From<super::model::Onto> for OntoResponse {
 
 pub async fn create_onto_handler(
     State(service): State<OntoService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateOntoRequest>,
 ) -> impl IntoResponse {
     let result = service
-        .create(payload.name, payload.description)
+        .create(claims.sub, payload.name, payload.description)
         .await
         .map(OntoResponse::from);
     error::created_or(result, "创建本体")
@@ -53,9 +55,10 @@ pub async fn create_onto_handler(
 pub async fn get_ontos_handler(
     Query(pagination): Query<Pagination>,
     State(query): State<OntoQueryService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let result = query
-        .list(pagination.limit(), pagination.offset())
+        .list(claims.sub, pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
             let items: Vec<OntoResponse> = items.into_iter().map(OntoResponse::from).collect();
@@ -66,19 +69,21 @@ pub async fn get_ontos_handler(
 
 pub async fn get_onto_handler(
     State(query): State<OntoQueryService>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let result = query.by_id(id).await.map(|opt| opt.map(OntoResponse::from));
+    let result = query.by_id(claims.sub, id).await.map(|opt| opt.map(OntoResponse::from));
     error::found_or(result, "获取本体")
 }
 
 pub async fn update_onto_handler(
     State(service): State<OntoService>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
     Json(payload): Json<UpdateOntoRequest>,
 ) -> impl IntoResponse {
     let result = service
-        .update(id, payload.name, payload.description)
+        .update(claims.sub, id, payload.name, payload.description)
         .await
         .map(OntoResponse::from);
     error::ok_or(result, "更新本体")
@@ -86,7 +91,8 @@ pub async fn update_onto_handler(
 
 pub async fn delete_onto_handler(
     State(service): State<OntoService>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    error::deleted_or(service.delete(id).await, "删除本体")
+    error::deleted_or(service.delete(claims.sub, id).await, "删除本体")
 }

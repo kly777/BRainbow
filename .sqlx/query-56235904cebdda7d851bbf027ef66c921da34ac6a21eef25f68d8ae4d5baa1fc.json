@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM onto WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "56235904cebdda7d851bbf027ef66c921da34ac6a21eef25f68d8ae4d5baa1fc"
+}

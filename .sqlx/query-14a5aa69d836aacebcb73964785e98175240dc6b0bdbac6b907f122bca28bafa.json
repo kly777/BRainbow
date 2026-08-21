@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) FROM onto",
+  "query": "SELECT COUNT(*) FROM onto WHERE user_id = ? OR user_id IS NULL",
   "describe": {
     "columns": [
       {
@@ -11,11 +11,11 @@
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       false
     ]
   },
-  "hash": "d9048042261ddb8fa26008aeaaed52b0a3162b7bc084826d1a0522c223e3f0e7"
+  "hash": "14a5aa69d836aacebcb73964785e98175240dc6b0bdbac6b907f122bca28bafa"
 }

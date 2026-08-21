@@ -13,6 +13,7 @@ use crate::modules::card::CardService;
 use crate::modules::chat::query::ChatQueryService;
 use crate::modules::chat::service::ChatService;
 use crate::modules::conv::query::ConvQueryService;
+#[cfg(feature = "db-viewer")]
 use crate::modules::db_viewer::DbViewerQueryService;
 use crate::modules::media::query::MediaQueryService;
 use crate::modules::media::service::MediaService;
@@ -133,6 +134,7 @@ pub struct MemState {
     pub config: Arc<MemConfig>,
 }
 
+#[cfg(feature = "db-viewer")]
 #[derive(Clone)]
 pub struct DbViewerState {
     pub service: DbViewerQueryService,
@@ -170,6 +172,7 @@ pub struct AppState {
     pub time_window: TimeWindowState,
     pub task: TaskState,
     pub mem: MemState,
+    #[cfg(feature = "db-viewer")]
     pub db_viewer: DbViewerState,
     pub conv: ConvState,
     pub search: SearchState,
@@ -204,7 +207,6 @@ impl_from_ref! {
     sign.service => SignService,
     sign.query => SignQueryService,
     conv.service => ConvQueryService,
-    db_viewer.service => DbViewerQueryService,
     media.service => MediaService,
     media.query => MediaQueryService,
     reading.service => ReadingService,
@@ -221,6 +223,13 @@ impl_from_ref! {
     mem.query => MemQueryService,
     mem.maintenance => DbMemMaintenance,
     mem.config => Arc<MemConfig>,
+}
+
+#[cfg(feature = "db-viewer")]
+impl FromRef<AppState> for DbViewerQueryService {
+    fn from_ref(state: &AppState) -> Self {
+        state.db_viewer.service.clone()
+    }
 }
 
 
@@ -272,7 +281,8 @@ impl AppState {
         let user_query = UserQueryService::new(db.clone());
         let text = TextService::new(db.clone());
         let text_query = TextQueryService::new(db.clone());
-        let db_viewer = DbViewerQueryService::new(db.clone());
+        #[cfg(feature = "db-viewer")]
+    let db_viewer = DbViewerQueryService::new(db.clone());
         let task_query = TaskQueryService::new(db.clone());
         let mem = MemService::new(
             mem_repo,
@@ -352,6 +362,7 @@ impl AppState {
                 maintenance: mem_maintenance,
                 config: Arc::new(mem_config),
             },
+            #[cfg(feature = "db-viewer")]
             db_viewer: DbViewerState { service: db_viewer },
             conv: ConvState { service: conv },
             search: SearchState { service: search },

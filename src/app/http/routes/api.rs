@@ -5,9 +5,11 @@ use axum::{
 
 use crate::app::context::AppState;
 use crate::modules::{
-    ai, bookmark, card, chat, conv, db_viewer, media, mem, onto, reading, search, sign, task, text,
-    time_window, user,
+    ai, bookmark, card, chat, conv, media, mem, onto, reading, search, sign, task, text, time_window,
+    user,
 };
+#[cfg(feature = "db-viewer")]
+use crate::modules::db_viewer;
 
 pub fn create_api_router(state: AppState) -> Router<AppState> {
     // ── 登录/注册：限速（防暴力破解与批量注册）──
@@ -56,9 +58,12 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         ));
 
     // ── 管理员路由：auth + require_admin ──
-    let admin = Router::new()
-        .nest("/db", db_viewer::routes::<AppState>())
-        .nest("/admin", crate::modules::admin::routes::<AppState>())
+    let mut admin = Router::new().nest("/admin", crate::modules::admin::routes::<AppState>());
+    #[cfg(feature = "db-viewer")]
+    {
+        admin = admin.nest("/db", db_viewer::routes::<AppState>());
+    }
+    let admin = admin
         .layer(middleware::from_fn(crate::app::http::auth::require_admin))
         .layer(middleware::from_fn_with_state(
             state,

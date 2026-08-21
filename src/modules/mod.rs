@@ -7,6 +7,7 @@ pub mod bookmark;
 pub mod card;
 pub mod chat;
 pub mod conv;
+#[cfg(feature = "db-viewer")]
 pub mod db_viewer;
 pub mod media;
 pub mod mem;

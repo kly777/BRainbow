@@ -107,6 +107,8 @@ impl BookmarkService {
         bookmark_id: i32,
         names: &[String],
     ) -> Result<Vec<BookmarkTag>, ServiceError> {
+        // 先校验书签所有权（共享数据可见）
+        self.repo.find_by_id(user_id, bookmark_id).await?;
         self.repo
             .set_bookmark_tags(bookmark_id, names)
             .await

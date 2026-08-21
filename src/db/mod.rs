@@ -624,7 +624,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 // PRAGMA user_version。迁移必须幂等：列/表已存在则跳过；ALTER 失败必须上抛。
 
 /// 程序支持的最新 schema 版本
-pub const LATEST_USER_VERSION: i64 = 11;
+pub const LATEST_USER_VERSION: i64 = 12;
 
 /// 迁移统一入口。
 ///
@@ -665,6 +665,7 @@ async fn apply_migration(pool: &SqlitePool, target: i64) -> Result<(), sqlx::Err
         9 => migrate_v9_time_normalize_suffix(&mut tx).await?,
         10 => migrate_v10_time_utc_offset_only(&mut tx).await?,
         11 => migrate_v11_user_scope(&mut tx).await?,
+        12 => migrate_v12_fts5(&mut tx).await?,
         _ => {
             return Err(sqlx::Error::Configuration(Box::new(std::io::Error::other(
                 format!("未知的迁移版本: {target}"),
@@ -980,6 +981,124 @@ async fn migrate_v11_user_scope(conn: &mut SqliteConnection) -> Result<(), sqlx:
     Ok(())
 }
 
+/// v12：FTS5 全文搜索索引（外部内容表 + 触发器 + 重建）。
+///
+/// 为各搜索表建 FTS5 虚拟表，INSERT/UPDATE/DELETE 触发器保持索引同步；
+/// `rebuild` 命令从源表重建索引（含已有数据）。
+async fn migrate_v12_fts5(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    // (fts 表, 源表, rowid 列, 索引列, 触发器前缀)
+    const SPECS: &[(&str, &str, &str, &[&str], &str)] = &[
+        ("card_fts", "card", "id", &["content"], "card"),
+        ("task_fts", "task", "id", &["title", "description"], "task"),
+        (
+            "bookmark_fts",
+            "bookmark",
+            "id",
+            &["title", "url", "description"],
+            "bookmark",
+        ),
+        ("onto_fts", "onto", "id", &["name", "description"], "onto"),
+        (
+            "text_note_fts",
+            "text_note",
+            "id",
+            &["name", "content"],
+            "text_note",
+        ),
+        (
+            "reading_article_fts",
+            "reading_article",
+            "id",
+            &["title", "content"],
+            "reading_article",
+        ),
+        ("conv_titles_fts", "conv_titles", "id", &["title"], "conv_titles"),
+        (
+            "articles_fts",
+            "articles",
+            "id",
+            &["title", "content"],
+            "articles",
+        ),
+        ("chat_node_fts", "chat_node", "id", &["content"], "chat_node"),
+        ("chunk_fts", "chunk", "id", &["content"], "chunk"),
+    ];
+
+    for (fts, src, rowid, cols, prefix) in SPECS {
+        let col_def = cols.iter().copied().collect::<Vec<_>>().join(", ");
+        // 建虚拟表（外部内容表：索引引用源表）
+        let create = format!(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS {fts} USING fts5({col_def}, content='{src}', content_rowid='{rowid}')"
+        );
+        sqlx::query(sqlx::AssertSqlSafe(create))
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| migration_failed(&format!("v12 创建 {fts}"), e))?;
+
+        // INSERT 触发器
+        let ins_cols = cols.iter().copied().collect::<Vec<_>>().join(", ");
+        let ins_vals = (1..=cols.len())
+            .map(|i| format!("new.c{i}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        // 触发器列名与源列名相同（FTS 列名 = 源列名）
+        let ins_new = cols
+            .iter()
+            .map(|c| format!("new.{c}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let ins_trigger = format!(
+            "CREATE TRIGGER IF NOT EXISTS {prefix}_fts_ai AFTER INSERT ON {src} BEGIN
+               INSERT INTO {fts}(rowid, {ins_cols}) VALUES (new.{rowid}, {ins_new});
+             END"
+        );
+        sqlx::query(sqlx::AssertSqlSafe(ins_trigger))
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| migration_failed(&format!("v12 创建 {prefix}_fts_ai"), e))?;
+
+        // DELETE 触发器
+        let del_old = cols
+            .iter()
+            .map(|c| format!("old.{c}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let del_trigger = format!(
+            "CREATE TRIGGER IF NOT EXISTS {prefix}_fts_ad AFTER DELETE ON {src} BEGIN
+               INSERT INTO {fts}({fts}, rowid, {ins_cols}) VALUES ('delete', old.{rowid}, {del_old});
+             END"
+        );
+        sqlx::query(sqlx::AssertSqlSafe(del_trigger))
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| migration_failed(&format!("v12 创建 {prefix}_fts_ad"), e))?;
+
+        // UPDATE 触发器
+        let upd_trigger = format!(
+            "CREATE TRIGGER IF NOT EXISTS {prefix}_fts_au AFTER UPDATE ON {src} BEGIN
+               INSERT INTO {fts}({fts}, rowid, {ins_cols}) VALUES ('delete', old.{rowid}, {del_old});
+               INSERT INTO {fts}(rowid, {ins_cols}) VALUES (new.{rowid}, {ins_new});
+             END"
+        );
+        sqlx::query(sqlx::AssertSqlSafe(upd_trigger))
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| migration_failed(&format!("v12 创建 {prefix}_fts_au"), e))?;
+    }
+
+    // 重建索引（从源表回填）
+    for (fts, _, _, _, _) in SPECS {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "INSERT INTO {fts}({fts}) VALUES('rebuild')"
+        )))
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| migration_failed(&format!("v12 重建 {fts} 索引"), e))?;
+    }
+    Ok(())
+}
+
+
 async fn add_column_if_missing(
     conn: &mut SqliteConnection,
     table: &str,
@@ -1119,6 +1238,29 @@ mod tests {
                 column_exists(&pool, table, col).await.unwrap(),
                 "{table}.{col} 应存在"
             );
+        }
+
+        // v12：FTS5 虚拟表应存在
+        for fts in [
+            "card_fts",
+            "task_fts",
+            "bookmark_fts",
+            "onto_fts",
+            "text_note_fts",
+            "reading_article_fts",
+            "conv_titles_fts",
+            "articles_fts",
+            "chat_node_fts",
+            "chunk_fts",
+        ] {
+            let count: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?",
+            )
+            .bind(fts)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+            assert_eq!(count, 1, "{fts} 应存在");
         }
     }
 

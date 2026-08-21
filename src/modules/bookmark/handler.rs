@@ -71,41 +71,17 @@ impl From<super::model::BookmarkTagWithCount> for BookmarkTagWithCountResponse {
     }
 }
 
-/// 校验 URL：必须带 http/https 协议
-fn validate_url(url: &str) -> Result<(), String> {
-    let url = url.trim();
-    if url.is_empty() {
-        return Err("URL 不能为空".into());
-    }
-    if !url.starts_with("http://") && !url.starts_with("https://") {
-        return Err("URL 必须以 http:// 或 https:// 开头".into());
-    }
-    Ok(())
-}
-
 pub async fn create_bookmark_handler(
     State(service): State<BookmarkService>,
     Json(payload): Json<CreateBookmarkRequest>,
 ) -> impl IntoResponse {
-    let title = payload.title.trim();
-    let url = payload.url.trim();
-    let description = payload.description.trim();
-
-    if title.is_empty() {
-        return error::bad_request("标题不能为空");
-    }
-    if let Err(msg) = validate_url(url) {
-        return error::bad_request(&msg);
-    }
-
-    let tags: Vec<String> = payload
-        .tags
-        .into_iter()
-        .filter(|t| !t.trim().is_empty())
-        .collect();
-
     let result = service
-        .create(title, url, description, &tags)
+        .create(
+            payload.title.trim(),
+            payload.url.trim(),
+            payload.description.trim(),
+            &payload.tags,
+        )
         .await
         .map(BookmarkResponse::from);
     error::created_or(result, "创建书签")
@@ -165,26 +141,13 @@ pub async fn update_bookmark_handler(
     Path(id): Path<i32>,
     Json(payload): Json<UpdateBookmarkRequest>,
 ) -> impl IntoResponse {
-    let title = payload
-        .title
-        .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty());
-    let description = payload
-        .description
-        .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty());
-    let url = payload.url.as_deref().map(str::trim);
-
-    if let Some(u) = url
-        && let Err(msg) = validate_url(u)
-    {
-        return error::bad_request(&msg);
-    }
-
     let result = service
-        .update(id, title, url, description)
+        .update(
+            id,
+            payload.title.as_deref(),
+            payload.url.as_deref(),
+            payload.description.as_deref(),
+        )
         .await
         .map(BookmarkResponse::from);
     error::ok_or(result, "更新书签")

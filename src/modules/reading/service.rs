@@ -40,6 +40,14 @@ impl ReadingService {
         title: &str,
         content: &str,
     ) -> Result<Article, ServiceError> {
+        if title.trim().is_empty() {
+            return Err(ServiceError::InvalidInput("文章标题不能为空".into()));
+        }
+        if content.trim().is_empty() {
+            return Err(ServiceError::InvalidInput("文章内容不能为空".into()));
+        }
+        let title = title.trim();
+        let content = content.trim();
         let repo = &self.repo;
 
         // 切词
@@ -67,6 +75,13 @@ impl ReadingService {
 
     /// 标记单词
     pub async fn mark_word(&self, word: &str, status: &str) -> Result<(), ServiceError> {
+        if word.trim().is_empty() {
+            return Err(ServiceError::InvalidInput("单词不能为空".into()));
+        }
+        if !matches!(status, "known" | "unknown" | "ignored") {
+            return Err(ServiceError::InvalidInput("无效的单词状态".into()));
+        }
+        let word = word.trim();
         let repo = &self.repo;
         repo.upsert_user_word(word, status)
             .await

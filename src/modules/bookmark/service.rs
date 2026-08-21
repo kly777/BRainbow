@@ -13,6 +13,25 @@ pub struct BookmarkService {
     repo: BookmarkRepo,
 }
 
+fn validate_title(title: &str) -> Result<(), ServiceError> {
+    if title.is_empty() {
+        return Err(ServiceError::InvalidInput("标题不能为空".into()));
+    }
+    Ok(())
+}
+
+fn validate_url(url: &str) -> Result<(), ServiceError> {
+    if url.is_empty() {
+        return Err(ServiceError::InvalidInput("URL 不能为空".into()));
+    }
+    if !url.starts_with("http://") && !url.starts_with("https://") {
+        return Err(ServiceError::InvalidInput(
+            "URL 必须以 http:// 或 https:// 开头".into(),
+        ));
+    }
+    Ok(())
+}
+
 impl BookmarkService {
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
         Self {
@@ -27,8 +46,18 @@ impl BookmarkService {
         description: &str,
         tags: &[String],
     ) -> Result<Bookmark, ServiceError> {
+        let title = title.trim();
+        let url = url.trim();
+        let description = description.trim();
+        validate_title(title)?;
+        validate_url(url)?;
+        let tags: Vec<String> = tags
+            .iter()
+            .map(|t| t.trim().to_string())
+            .filter(|t| !t.is_empty())
+            .collect();
         self.repo
-            .create(title, url, description, tags)
+            .create(title, url, description, &tags)
             .await
             .map_err(ServiceError::Db)
     }
@@ -40,6 +69,15 @@ impl BookmarkService {
         url: Option<&str>,
         description: Option<&str>,
     ) -> Result<Bookmark, ServiceError> {
+        if let Some(title) = title {
+            validate_title(title.trim())?;
+        }
+        if let Some(url) = url {
+            validate_url(url.trim())?;
+        }
+        let title = title.map(str::trim);
+        let url = url.map(str::trim);
+        let description = description.map(str::trim);
         self.repo
             .update(id, title, url, description)
             .await

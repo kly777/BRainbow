@@ -43,7 +43,10 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         .nest("/mem", mem::routes())
         .nest("/media", media::routes())
         .nest("/conv", conv::routes())
-        .nest("/cards", card::routes())
+        .nest_service(
+            "/cards",
+            card::routes(state.card.clone(), state.card_query.clone()),
+        )
         .nest("/onto", onto::routes())
         .nest("/sign", sign::routes())
         .nest("/reading", reading::routes())

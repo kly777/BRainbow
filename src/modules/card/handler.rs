@@ -4,10 +4,12 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::modules::state::AppState;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 use crate::shared::time_text::to_utc_iso;
+
+use super::query::CardQueryService;
+use super::service::CardService;
 
 #[derive(Debug, Deserialize)]
 pub struct CreateCardRequest {
@@ -39,23 +41,18 @@ impl From<super::model::Card> for CardResponse {
 }
 
 pub async fn create_card_handler(
-    State(state): State<AppState>,
+    State((service, _query)): State<(CardService, CardQueryService)>,
     Json(payload): Json<CreateCardRequest>,
 ) -> impl IntoResponse {
-    let result = state
-        .card
-        .create(payload.content)
-        .await
-        .map(CardResponse::from);
+    let result = service.create(payload.content).await.map(CardResponse::from);
     error::created_or(result, "创建卡片")
 }
 
 pub async fn get_cards_handler(
     Query(pagination): Query<Pagination>,
-    State(state): State<AppState>,
+    State((_service, query)): State<(CardService, CardQueryService)>,
 ) -> impl IntoResponse {
-    let result = state
-        .card_query
+    let result = query
         .list(pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
@@ -66,35 +63,27 @@ pub async fn get_cards_handler(
 }
 
 pub async fn get_card_handler(
-    State(state): State<AppState>,
+    State((_service, query)): State<(CardService, CardQueryService)>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let result = state
-        .card_query
-        .by_id(id)
-        .await
-        .map(|opt| opt.map(CardResponse::from));
+    let result = query.by_id(id).await.map(|opt| opt.map(CardResponse::from));
     error::found_or(result, "获取卡片")
 }
 
 pub async fn update_card_handler(
-    State(state): State<AppState>,
+    State((service, _query)): State<(CardService, CardQueryService)>,
     Path(id): Path<i32>,
     Json(payload): Json<UpdateCardRequest>,
 ) -> impl IntoResponse {
-    let result = state
-        .card
-        .update(id, payload.content)
-        .await
-        .map(CardResponse::from);
+    let result = service.update(id, payload.content).await.map(CardResponse::from);
     error::ok_or(result, "更新卡片")
 }
 
 pub async fn delete_card_handler(
-    State(state): State<AppState>,
+    State((service, _query)): State<(CardService, CardQueryService)>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    error::deleted_or(state.card.delete(id).await, "删除卡片")
+    error::deleted_or(service.delete(id).await, "删除卡片")
 }
 
 #[derive(Debug, Deserialize)]
@@ -115,14 +104,13 @@ impl SearchCardsQuery {
 
 pub async fn search_cards_handler(
     Query(params): Query<SearchCardsQuery>,
-    State(state): State<AppState>,
+    State((_service, query)): State<(CardService, CardQueryService)>,
 ) -> impl IntoResponse {
     if params.q.trim().is_empty() {
         return error::bad_request("搜索关键词不能为空");
     }
     let pagination = params.pagination();
-    let result = state
-        .card_query
+    let result = query
         .search(params.q.trim(), pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {

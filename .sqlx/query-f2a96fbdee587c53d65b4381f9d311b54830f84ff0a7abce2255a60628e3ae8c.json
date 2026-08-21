@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM card WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "f2a96fbdee587c53d65b4381f9d311b54830f84ff0a7abce2255a60628e3ae8c"
+}

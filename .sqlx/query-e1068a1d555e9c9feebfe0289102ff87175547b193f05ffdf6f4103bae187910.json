@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO card (content, created_at, updated_at) VALUES (?, ?, ?)\n               RETURNING id AS \"id: i32\",\n                         COALESCE(content, '') AS \"content!: String\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
+  "query": "INSERT INTO card (content, user_id, created_at, updated_at) VALUES (?, ?, ?, ?)\n               RETURNING id AS \"id: i32\",\n                         COALESCE(content, '') AS \"content!: String\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
   "describe": {
     "columns": [
       {
@@ -34,7 +34,7 @@
       }
     ],
     "parameters": {
-      "Right": 3
+      "Right": 4
     },
     "nullable": [
       false,
@@ -43,5 +43,5 @@
       null
     ]
   },
-  "hash": "189d310aa5f87dda2f3f5152a36bed282e3070d1b28dd45d9541d75c10036628"
+  "hash": "e1068a1d555e9c9feebfe0289102ff87175547b193f05ffdf6f4103bae187910"
 }

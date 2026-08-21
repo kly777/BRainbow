@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\",\n                      COALESCE(content, '') AS \"content!: String\",\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM card WHERE id = ?",
+  "query": "SELECT id AS \"id: i32\",\n                      COALESCE(content, '') AS \"content!: String\",\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM card WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)",
   "describe": {
     "columns": [
       {
@@ -34,7 +34,7 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false,
@@ -43,5 +43,5 @@
       false
     ]
   },
-  "hash": "07d7d3d8196e1af92c38c17e43d9e68028b7b1eb95fccde57baed7cfb599439e"
+  "hash": "ed5aedfdb647d22b888b86a97f2616c7a956eff8988296e6b4c8b58a3c7bcfb1"
 }

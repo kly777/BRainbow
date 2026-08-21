@@ -1,9 +1,10 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     response::{IntoResponse, Json},
 };
 use serde::{Deserialize, Serialize};
 
+use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 use crate::shared::time_text::to_utc_iso;
@@ -42,10 +43,11 @@ impl From<super::model::Card> for CardResponse {
 
 pub async fn create_card_handler(
     State(service): State<CardService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateCardRequest>,
 ) -> impl IntoResponse {
     let result = service
-        .create(payload.content)
+        .create(claims.sub, payload.content)
         .await
         .map(CardResponse::from);
     error::created_or(result, "创建卡片")
@@ -54,9 +56,10 @@ pub async fn create_card_handler(
 pub async fn get_cards_handler(
     Query(pagination): Query<Pagination>,
     State(query): State<CardQueryService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let result = query
-        .list(pagination.limit(), pagination.offset())
+        .list(claims.sub, pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
             let items: Vec<CardResponse> = items.into_iter().map(CardResponse::from).collect();
@@ -67,19 +70,21 @@ pub async fn get_cards_handler(
 
 pub async fn get_card_handler(
     State(query): State<CardQueryService>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let result = query.by_id(id).await.map(|opt| opt.map(CardResponse::from));
+    let result = query.by_id(claims.sub, id).await.map(|opt| opt.map(CardResponse::from));
     error::found_or(result, "获取卡片")
 }
 
 pub async fn update_card_handler(
     State(service): State<CardService>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
     Json(payload): Json<UpdateCardRequest>,
 ) -> impl IntoResponse {
     let result = service
-        .update(id, payload.content)
+        .update(claims.sub, id, payload.content)
         .await
         .map(CardResponse::from);
     error::ok_or(result, "更新卡片")
@@ -87,9 +92,10 @@ pub async fn update_card_handler(
 
 pub async fn delete_card_handler(
     State(service): State<CardService>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    error::deleted_or(service.delete(id).await, "删除卡片")
+    error::deleted_or(service.delete(claims.sub, id).await, "删除卡片")
 }
 
 #[derive(Debug, Deserialize)]
@@ -111,13 +117,14 @@ impl SearchCardsQuery {
 pub async fn search_cards_handler(
     Query(params): Query<SearchCardsQuery>,
     State(query): State<CardQueryService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     if params.q.trim().is_empty() {
         return error::bad_request("搜索关键词不能为空");
     }
     let pagination = params.pagination();
     let result = query
-        .search(params.q.trim(), pagination.limit(), pagination.offset())
+        .search(claims.sub, params.q.trim(), pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
             let items: Vec<CardResponse> = items.into_iter().map(CardResponse::from).collect();

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\",\n                      COALESCE(content, '') AS \"content!: String\",\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM card ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+  "query": "SELECT id AS \"id: i32\",\n                      COALESCE(content, '') AS \"content!: String\",\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM card WHERE (user_id = ?1 OR user_id IS NULL)\n               ORDER BY updated_at DESC LIMIT ?2 OFFSET ?3",
   "describe": {
     "columns": [
       {
@@ -34,7 +34,7 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 3
     },
     "nullable": [
       false,
@@ -43,5 +43,5 @@
       false
     ]
   },
-  "hash": "a7a456ad79f540db026f4721492d37ae55d627b7f4e6fc4a50ce3d23bcff3fb0"
+  "hash": "c50dd64e96d68c711fa5a4c4c52376cfa50d68c1f705b466d9e8aab63fd8be94"
 }

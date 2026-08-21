@@ -75,7 +75,10 @@ pub async fn get_calendar_handler(
 ) -> impl IntoResponse {
     let svc = &query_service;
 
-    match svc.calendar(claims.sub, query.start, query.end, query.status).await {
+    match svc
+        .calendar(claims.sub, query.start, query.end, query.status)
+        .await
+    {
         Ok(entries) => {
             let events: Vec<CalendarEvent> = entries
                 .into_iter()
@@ -101,7 +104,10 @@ pub async fn get_dag_handler(
 ) -> impl IntoResponse {
     let svc = &query_service;
 
-    match svc.dag(claims.sub, query.task_id, query.depth.unwrap_or(3)).await {
+    match svc
+        .dag(claims.sub, query.task_id, query.depth.unwrap_or(3))
+        .await
+    {
         Ok(view) => Json(view).into_response(),
         Err(e) => error::internal(e, "获取依赖图"),
     }

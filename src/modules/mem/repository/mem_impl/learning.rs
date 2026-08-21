@@ -121,7 +121,11 @@ impl super::super::MemRepo {
     }
 
     /// 统计在 N 小时内到期的 review 卡数量（不含 learning）
-    pub async fn count_upcoming_within_hours(&self, user_id: i32, hours: i64) -> Result<i64, sqlx::Error> {
+    pub async fn count_upcoming_within_hours(
+        &self,
+        user_id: i32,
+        hours: i64,
+    ) -> Result<i64, sqlx::Error> {
         sqlx::query_scalar!(
             r#"SELECT COUNT(*) FROM mem m
             WHERE (m.user_id = ?1 OR m.user_id IS NULL)
@@ -275,9 +279,8 @@ impl super::super::MemRepo {
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<i64, sqlx::Error> {
-        let mut qb = QueryBuilder::<sqlx::Sqlite>::new(
-            "SELECT COUNT(*) FROM mem m WHERE (m.user_id = ",
-        );
+        let mut qb =
+            QueryBuilder::<sqlx::Sqlite>::new("SELECT COUNT(*) FROM mem m WHERE (m.user_id = ");
         qb.push_bind(user_id);
         qb.push(format!(" OR m.user_id IS NULL) AND {where_clause}"));
         Self::tag_filter_sql(&mut qb, tag_ids);

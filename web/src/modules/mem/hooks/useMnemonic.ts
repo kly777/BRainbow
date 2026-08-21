@@ -1,7 +1,7 @@
 // ── AI 助记：生成、加载、连续忘记自动触发 ──
 
+import { callAi, getAiSettingsE } from "@lib/ai";
 import { fillPrompt, notifyError, tryAsync } from "@lib/utils";
-import { callAi, getAiSettingsE } from "@modules/ai-setting";
 import type { MemItem } from "@modules/mem";
 import { getMnemonicE, setMnemonicE } from "@modules/mem";
 import { createSignal } from "solid-js";

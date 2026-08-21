@@ -94,7 +94,12 @@ impl MemRepository for FakeRepo {
         panic!("create_chunk not configured in FakeRepo")
     }
 
-    async fn update_chunk(&self, _user_id: i32, _id: i32, _content: &str) -> Result<(), ServiceError> {
+    async fn update_chunk(
+        &self,
+        _user_id: i32,
+        _id: i32,
+        _content: &str,
+    ) -> Result<(), ServiceError> {
         panic!("update_chunk not configured in FakeRepo")
     }
 
@@ -112,7 +117,11 @@ impl MemRepository for FakeRepo {
         Ok(self.mem_rows.lock().unwrap().get(&id).cloned())
     }
 
-    async fn get_mems_with_chunks(&self, _user_id: i32, ids: &[i32]) -> Result<Vec<MemWithChunks>, ServiceError> {
+    async fn get_mems_with_chunks(
+        &self,
+        _user_id: i32,
+        ids: &[i32],
+    ) -> Result<Vec<MemWithChunks>, ServiceError> {
         let mems = self.mems.lock().unwrap();
         Ok(ids.iter().filter_map(|id| mems.get(id).cloned()).collect())
     }
@@ -190,7 +199,11 @@ impl MemRepository for FakeRepo {
         Ok(0)
     }
 
-    async fn count_upcoming_within_hours(&self, _user_id: i32, _hours: i64) -> Result<i64, ServiceError> {
+    async fn count_upcoming_within_hours(
+        &self,
+        _user_id: i32,
+        _hours: i64,
+    ) -> Result<i64, ServiceError> {
         Ok(0)
     }
 
@@ -234,7 +247,12 @@ impl MemRepository for FakeRepo {
         Ok(())
     }
 
-    async fn update_mem_fsrs(&self, _user_id: i32, _id: i32, _params: &FsrsUpdate) -> Result<(), ServiceError> {
+    async fn update_mem_fsrs(
+        &self,
+        _user_id: i32,
+        _id: i32,
+        _params: &FsrsUpdate,
+    ) -> Result<(), ServiceError> {
         panic!("update_mem_fsrs not configured in FakeRepo")
     }
 
@@ -290,7 +308,11 @@ impl MemRepository for FakeRepo {
         panic!("set_mem_tags not configured in FakeRepo")
     }
 
-    async fn get_mems_tags_batch(&self, _user_id: i32, _mem_ids: &[i32]) -> Result<Vec<MemTagRow>, ServiceError> {
+    async fn get_mems_tags_batch(
+        &self,
+        _user_id: i32,
+        _mem_ids: &[i32],
+    ) -> Result<Vec<MemTagRow>, ServiceError> {
         Ok(Vec::new())
     }
 

@@ -4,12 +4,12 @@ use axum::{
 };
 
 use crate::app::context::AppState;
-use crate::modules::{
-    ai, bookmark, card, chat, conv, media, mem, onto, reading, search, sign, task, text, time_window,
-    user,
-};
 #[cfg(feature = "db-viewer")]
 use crate::modules::db_viewer;
+use crate::modules::{
+    ai, bookmark, card, chat, conv, media, mem, onto, reading, search, sign, task, text,
+    time_window, user,
+};
 
 pub fn create_api_router(state: AppState) -> Router<AppState> {
     // ── 登录/注册：限速（防暴力破解与批量注册）──

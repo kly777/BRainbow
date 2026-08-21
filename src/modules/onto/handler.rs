@@ -72,7 +72,10 @@ pub async fn get_onto_handler(
     Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let result = query.by_id(claims.sub, id).await.map(|opt| opt.map(OntoResponse::from));
+    let result = query
+        .by_id(claims.sub, id)
+        .await
+        .map(|opt| opt.map(OntoResponse::from));
     error::found_or(result, "获取本体")
 }
 

@@ -50,7 +50,10 @@ impl TaskQueryService {
     }
 
     pub async fn by_id(&self, user_id: i32, id: i32) -> Result<Option<Task>, ServiceError> {
-        self.repo.find_by_id(user_id, id).await.map_err(ServiceError::Db)
+        self.repo
+            .find_by_id(user_id, id)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     pub async fn detail(
@@ -58,11 +61,17 @@ impl TaskQueryService {
         user_id: i32,
         id: i32,
     ) -> Result<Option<super::dto::TaskDetailResponse>, ServiceError> {
-        self.repo.find_detail(user_id, id).await.map_err(ServiceError::Db)
+        self.repo
+            .find_detail(user_id, id)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     pub async fn tree(&self, user_id: i32, root: Option<i32>) -> Result<Vec<Task>, ServiceError> {
-        self.repo.find_tree(user_id, root).await.map_err(ServiceError::Db)
+        self.repo
+            .find_tree(user_id, root)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     pub async fn stats(&self, user_id: i32) -> Result<(i64, i64, i64, i64), ServiceError> {

@@ -4,10 +4,10 @@ use axum::{
 };
 
 use super::super::model::TaskStatus;
-use crate::shared::claims::Claims;
 use super::super::query::TaskQueryService;
 use super::super::response::TaskResponse;
 use super::super::service::TaskService;
+use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 
@@ -61,7 +61,12 @@ pub async fn get_backlog_tasks_handler(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     match query
-        .by_status(claims.sub, TaskStatus::Backlog, pagination.limit(), pagination.offset())
+        .by_status(
+            claims.sub,
+            TaskStatus::Backlog,
+            pagination.limit(),
+            pagination.offset(),
+        )
         .await
     {
         Ok((tasks, total)) => {
@@ -78,7 +83,12 @@ pub async fn get_active_tasks_handler(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     match query
-        .by_status(claims.sub, TaskStatus::Active, pagination.limit(), pagination.offset())
+        .by_status(
+            claims.sub,
+            TaskStatus::Active,
+            pagination.limit(),
+            pagination.offset(),
+        )
         .await
     {
         Ok((tasks, total)) => {

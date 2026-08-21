@@ -88,7 +88,10 @@ impl BookmarkService {
     }
 
     pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, ServiceError> {
-        self.repo.delete(user_id, id).await.map_err(ServiceError::Db)
+        self.repo
+            .delete(user_id, id)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     // ── 标签（命令） ──
@@ -158,7 +161,9 @@ impl BookmarkService {
                 } else {
                     item.title
                 };
-                self.repo.create(user_id, &title, &item.url, "", &tags).await?;
+                self.repo
+                    .create(user_id, &title, &item.url, "", &tags)
+                    .await?;
                 created += 1;
             }
         }
@@ -193,7 +198,9 @@ mod tests {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
         crate::db::migrate(&pool).await.unwrap();
         sqlx::query("INSERT OR IGNORE INTO user (id, name, password_hash) VALUES (1, 'test', 'x')")
-            .execute(&*pool).await.unwrap();
+            .execute(&*pool)
+            .await
+            .unwrap();
         let qsvc = BookmarkQueryService::new(pool.clone());
         (BookmarkService::new(pool), qsvc)
     }
@@ -206,7 +213,13 @@ mod tests {
     async fn create_with_tags_and_list() {
         let (svc, qsvc) = setup().await;
         let bm = svc
-            .create(1, "标题", "https://example.com", "备注", &str_vec(&["编程"]))
+            .create(
+                1,
+                "标题",
+                "https://example.com",
+                "备注",
+                &str_vec(&["编程"]),
+            )
             .await
             .unwrap();
         assert!(bm.id > 0);
@@ -246,7 +259,10 @@ mod tests {
             .create(1, "t", "https://e.com", "", &str_vec(&["a"]))
             .await
             .unwrap();
-        let updated = svc.update(1, bm.id, Some("新标题"), None, None).await.unwrap();
+        let updated = svc
+            .update(1, bm.id, Some("新标题"), None, None)
+            .await
+            .unwrap();
         assert_eq!(updated.title, "新标题");
         assert_eq!(updated.tags, str_vec(&["a"]));
 

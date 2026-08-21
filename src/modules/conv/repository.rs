@@ -248,7 +248,12 @@ impl ConvRepo {
     }
 
     /// 全局搜索命中
-    pub async fn search_hits(&self, user_id: i32, like: &str, cap: i64) -> Result<Vec<SearchHit>, ServiceError> {
+    pub async fn search_hits(
+        &self,
+        user_id: i32,
+        like: &str,
+        cap: i64,
+    ) -> Result<Vec<SearchHit>, ServiceError> {
         let rows = sqlx::query_as!(
             ConvHitRow,
             r#"SELECT conv_id, title FROM conv_titles

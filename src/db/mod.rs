@@ -1012,7 +1012,13 @@ async fn migrate_v12_fts5(conn: &mut SqliteConnection) -> Result<(), sqlx::Error
             &["title", "content"],
             "reading_article",
         ),
-        ("conv_titles_fts", "conv_titles", "id", &["title"], "conv_titles"),
+        (
+            "conv_titles_fts",
+            "conv_titles",
+            "id",
+            &["title"],
+            "conv_titles",
+        ),
         (
             "articles_fts",
             "articles",
@@ -1020,7 +1026,13 @@ async fn migrate_v12_fts5(conn: &mut SqliteConnection) -> Result<(), sqlx::Error
             &["title", "content"],
             "articles",
         ),
-        ("chat_node_fts", "chat_node", "id", &["content"], "chat_node"),
+        (
+            "chat_node_fts",
+            "chat_node",
+            "id",
+            &["content"],
+            "chat_node",
+        ),
         ("chunk_fts", "chunk", "id", &["content"], "chunk"),
     ];
 
@@ -1097,7 +1109,6 @@ async fn migrate_v12_fts5(conn: &mut SqliteConnection) -> Result<(), sqlx::Error
     }
     Ok(())
 }
-
 
 async fn add_column_if_missing(
     conn: &mut SqliteConnection,

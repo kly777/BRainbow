@@ -48,9 +48,17 @@ impl ReadingQueryService {
     }
 
     /// 获取单篇文章详情（含词状态 + notes）
-    pub async fn article_detail(&self, user_id: i32, id: i64) -> Result<Option<ArticleDetail>, ServiceError> {
+    pub async fn article_detail(
+        &self,
+        user_id: i32,
+        id: i64,
+    ) -> Result<Option<ArticleDetail>, ServiceError> {
         let repo = &self.repo;
-        match repo.get_article(user_id, id).await.map_err(ServiceError::Db)? {
+        match repo
+            .get_article(user_id, id)
+            .await
+            .map_err(ServiceError::Db)?
+        {
             Some(article) => {
                 let words = repo
                     .get_article_word_statuses(id)
@@ -64,7 +72,9 @@ impl ReadingQueryService {
 
     pub async fn article(&self, user_id: i32, id: i64) -> Result<Option<Article>, ServiceError> {
         let repo = &self.repo;
-        repo.get_article(user_id, id).await.map_err(ServiceError::Db)
+        repo.get_article(user_id, id)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     /// 获取文章中的所有词
@@ -78,11 +88,17 @@ impl ReadingQueryService {
     /// 获取所有不认识词
     pub async fn unknown_words(&self, user_id: i32) -> Result<Vec<UnknownWord>, ServiceError> {
         let repo = &self.repo;
-        repo.get_unknown_words(user_id).await.map_err(ServiceError::Db)
+        repo.get_unknown_words(user_id)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     /// 推荐下一篇（认识率最接近 90%）
-    pub async fn recommend_next(&self, user_id: i32, id: i64) -> Result<Option<ArticleSummary>, ServiceError> {
+    pub async fn recommend_next(
+        &self,
+        user_id: i32,
+        id: i64,
+    ) -> Result<Option<ArticleSummary>, ServiceError> {
         let repo = &self.repo;
         repo.recommend_article(user_id, id, TARGET_KNOWN_RATIO)
             .await
@@ -133,7 +149,9 @@ mod tests {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
         crate::db::migrate(&pool).await.unwrap();
         sqlx::query("INSERT OR IGNORE INTO user (id, name, password_hash) VALUES (1, 'test', 'x')")
-            .execute(&*pool).await.unwrap();
+            .execute(&*pool)
+            .await
+            .unwrap();
         (pool.clone(), ReadingService::new(pool))
     }
 

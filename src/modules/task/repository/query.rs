@@ -471,11 +471,17 @@ mod tests {
         insert_task(&repo, "a_b", None).await;
         insert_task(&repo, "aXb", None).await;
 
-        let (hits, total) = repo.search_by_title_paginated(TEST_USER_ID, "50%", 10, 0).await.unwrap();
+        let (hits, total) = repo
+            .search_by_title_paginated(TEST_USER_ID, "50%", 10, 0)
+            .await
+            .unwrap();
         assert_eq!(total, 1);
         assert_eq!(hits[0].title, "50% complete");
 
-        let (hits, total) = repo.search_by_title_paginated(TEST_USER_ID, "a_b", 10, 0).await.unwrap();
+        let (hits, total) = repo
+            .search_by_title_paginated(TEST_USER_ID, "a_b", 10, 0)
+            .await
+            .unwrap();
         assert_eq!(total, 1);
         assert_eq!(hits[0].title, "a_b");
     }
@@ -551,7 +557,12 @@ mod tests {
 
         // 显式按 archived 过滤
         let events = repo
-            .find_calendar_events(TEST_USER_ID, Some(start), Some(end), Some(TaskStatus::Archived))
+            .find_calendar_events(
+                TEST_USER_ID,
+                Some(start),
+                Some(end),
+                Some(TaskStatus::Archived),
+            )
             .await
             .unwrap();
         assert_eq!(events.len(), 1);

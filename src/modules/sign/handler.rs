@@ -84,7 +84,10 @@ pub async fn get_sign_handler(
     Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let result = query.by_id(claims.sub, id).await.map(|opt| opt.map(SignResponse::from));
+    let result = query
+        .by_id(claims.sub, id)
+        .await
+        .map(|opt| opt.map(SignResponse::from));
     error::found_or(result, "获取符号关系")
 }
 
@@ -103,7 +106,12 @@ pub async fn get_signs_by_signifier_handler(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let result = query
-        .by_signifier(claims.sub, &signifier, pagination.limit(), pagination.offset())
+        .by_signifier(
+            claims.sub,
+            &signifier,
+            pagination.limit(),
+            pagination.offset(),
+        )
         .await
         .map(|(items, total)| {
             let items: Vec<SignResponse> = items.into_iter().map(SignResponse::from).collect();
@@ -119,7 +127,12 @@ pub async fn get_signs_by_signified_handler(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let result = query
-        .by_signified(claims.sub, &signified, pagination.limit(), pagination.offset())
+        .by_signified(
+            claims.sub,
+            &signified,
+            pagination.limit(),
+            pagination.offset(),
+        )
         .await
         .map(|(items, total)| {
             let items: Vec<SignResponse> = items.into_iter().map(SignResponse::from).collect();

@@ -32,7 +32,11 @@ pub trait MemRepository: Send + Sync {
         prerequisites: &[i32],
     ) -> Result<i32, ServiceError>;
     async fn get_mem(&self, user_id: i32, id: i32) -> Result<Option<MemRow>, ServiceError>;
-    async fn get_mems_with_chunks(&self, user_id: i32, ids: &[i32]) -> Result<Vec<MemWithChunks>, ServiceError>;
+    async fn get_mems_with_chunks(
+        &self,
+        user_id: i32,
+        ids: &[i32],
+    ) -> Result<Vec<MemWithChunks>, ServiceError>;
     async fn delete_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError>;
     async fn get_all_mems(
         &self,
@@ -71,7 +75,11 @@ pub trait MemRepository: Send + Sync {
         tag_ids: &[i32],
     ) -> Result<Vec<ReviewCandidate>, ServiceError>;
     async fn count_upcoming(&self, user_id: i32) -> Result<i64, ServiceError>;
-    async fn count_upcoming_within_hours(&self, user_id: i32, hours: i64) -> Result<i64, ServiceError>;
+    async fn count_upcoming_within_hours(
+        &self,
+        user_id: i32,
+        hours: i64,
+    ) -> Result<i64, ServiceError>;
     async fn get_counts(&self, user_id: i32) -> Result<(i64, i64, i64, i64, i64), ServiceError>;
     async fn get_next_mem(&self, user_id: i32) -> Result<Option<i32>, ServiceError>;
     async fn get_session_stats(
@@ -99,7 +107,12 @@ pub trait MemRepository: Send + Sync {
         state: &str,
         step_index: Option<i32>,
     ) -> Result<(), ServiceError>;
-    async fn update_mem_fsrs(&self, user_id: i32, id: i32, params: &FsrsUpdate) -> Result<(), ServiceError>;
+    async fn update_mem_fsrs(
+        &self,
+        user_id: i32,
+        id: i32,
+        params: &FsrsUpdate,
+    ) -> Result<(), ServiceError>;
     async fn bury_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError>;
     async fn unbury_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError>;
     async fn suspend_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError>;
@@ -116,7 +129,11 @@ pub trait MemRepository: Send + Sync {
     async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), ServiceError>;
     async fn remove_tag_from_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), ServiceError>;
     async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), ServiceError>;
-    async fn get_mems_tags_batch(&self, user_id: i32, mem_ids: &[i32]) -> Result<Vec<MemTagRow>, ServiceError>;
+    async fn get_mems_tags_batch(
+        &self,
+        user_id: i32,
+        mem_ids: &[i32],
+    ) -> Result<Vec<MemTagRow>, ServiceError>;
     async fn export_all_mems(
         &self,
         user_id: i32,

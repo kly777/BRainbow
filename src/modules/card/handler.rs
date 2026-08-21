@@ -58,7 +58,10 @@ pub async fn get_cards_handler(
     State(query): State<CardQueryService>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match query.list(claims.sub, pagination.limit(), pagination.offset()).await {
+    match query
+        .list(claims.sub, pagination.limit(), pagination.offset())
+        .await
+    {
         Ok((items, total)) => {
             let items: Vec<CardResponse> = items.into_iter().map(CardResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
@@ -74,11 +77,15 @@ pub async fn get_card_handler(
 ) -> impl IntoResponse {
     match query.by_id(claims.sub, id).await {
         Ok(Some(card)) => Json(CardResponse::from(card)).into_response(),
-        Ok(None) => (StatusCode::NOT_FOUND, Json(ErrorBody {
-            code: "NOT_FOUND".into(),
-            message: "卡片不存在".into(),
-            details: None,
-        })).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(ErrorBody {
+                code: "NOT_FOUND".into(),
+                message: "卡片不存在".into(),
+                details: None,
+            }),
+        )
+            .into_response(),
         Err(e) => e.into_response(),
     }
 }
@@ -102,11 +109,15 @@ pub async fn delete_card_handler(
 ) -> impl IntoResponse {
     match service.delete(claims.sub, id).await {
         Ok(n) if n > 0 => StatusCode::NO_CONTENT.into_response(),
-        Ok(_) => (StatusCode::NOT_FOUND, Json(ErrorBody {
-            code: "NOT_FOUND".into(),
-            message: "卡片不存在".into(),
-            details: None,
-        })).into_response(),
+        Ok(_) => (
+            StatusCode::NOT_FOUND,
+            Json(ErrorBody {
+                code: "NOT_FOUND".into(),
+                message: "卡片不存在".into(),
+                details: None,
+            }),
+        )
+            .into_response(),
         Err(e) => e.into_response(),
     }
 }
@@ -133,14 +144,26 @@ pub async fn search_cards_handler(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     if params.q.trim().is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(ErrorBody {
-            code: "INVALID_INPUT".into(),
-            message: "搜索关键词不能为空".into(),
-            details: None,
-        })).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorBody {
+                code: "INVALID_INPUT".into(),
+                message: "搜索关键词不能为空".into(),
+                details: None,
+            }),
+        )
+            .into_response();
     }
     let pagination = params.pagination();
-    match query.search(claims.sub, params.q.trim(), pagination.limit(), pagination.offset()).await {
+    match query
+        .search(
+            claims.sub,
+            params.q.trim(),
+            pagination.limit(),
+            pagination.offset(),
+        )
+        .await
+    {
         Ok((items, total)) => {
             let items: Vec<CardResponse> = items.into_iter().map(CardResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()

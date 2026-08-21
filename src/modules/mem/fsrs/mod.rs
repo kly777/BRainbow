@@ -185,8 +185,13 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> Result<Review
         return Ok(match rating {
             1 => {
                 // Again：用 FSRS 更新状态，回到 step 0
-                let (s, d, _) =
-                    compute_next_with_state(mem, 1, days_elapsed, config.desired_retention, &config.fsrs_params)?;
+                let (s, d, _) = compute_next_with_state(
+                    mem,
+                    1,
+                    days_elapsed,
+                    config.desired_retention,
+                    &config.fsrs_params,
+                )?;
                 ReviewOutcome {
                     state: Learning,
                     stability: s,
@@ -241,7 +246,13 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> Result<Review
     let mem = to_memory_state(s_old, d_old);
 
     if rating == 1 {
-        let (s, d, _) = compute_next_with_state(mem, 1, days_elapsed, config.desired_retention, &config.fsrs_params)?;
+        let (s, d, _) = compute_next_with_state(
+            mem,
+            1,
+            days_elapsed,
+            config.desired_retention,
+            &config.fsrs_params,
+        )?;
         return Ok(ReviewOutcome {
             state: Relearning,
             stability: s,
@@ -250,8 +261,13 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> Result<Review
         });
     }
 
-    let (s, d, secs) =
-        compute_next_with_state(mem, rating, days_elapsed, config.desired_retention, &config.fsrs_params)?;
+    let (s, d, secs) = compute_next_with_state(
+        mem,
+        rating,
+        days_elapsed,
+        config.desired_retention,
+        &config.fsrs_params,
+    )?;
     Ok(ReviewOutcome {
         state: Review,
         stability: s,
@@ -276,8 +292,13 @@ fn relearn(
 
     Ok(match rating {
         1 => {
-            let (s, d, _) =
-                compute_next_with_state(mem, 1, days_elapsed, config.desired_retention, &config.fsrs_params)?;
+            let (s, d, _) = compute_next_with_state(
+                mem,
+                1,
+                days_elapsed,
+                config.desired_retention,
+                &config.fsrs_params,
+            )?;
             ReviewOutcome {
                 state: Relearning,
                 stability: s,
@@ -378,8 +399,20 @@ pub fn preview(
             (remaining as f64, remaining as f64)
         } else if step + 1 >= steps.len() {
             (
-                compute_next(mem, 3, days_elapsed.max(1), config.desired_retention, &config.fsrs_params)?,
-                compute_next(mem, 4, days_elapsed.max(1), config.desired_retention, &config.fsrs_params)?,
+                compute_next(
+                    mem,
+                    3,
+                    days_elapsed.max(1),
+                    config.desired_retention,
+                    &config.fsrs_params,
+                )?,
+                compute_next(
+                    mem,
+                    4,
+                    days_elapsed.max(1),
+                    config.desired_retention,
+                    &config.fsrs_params,
+                )?,
             )
         } else {
             (
@@ -407,8 +440,20 @@ pub fn preview(
         let next = step + 1;
         let (good, easy) = if next >= steps.len() {
             (
-                compute_next(mem, 3, days_elapsed.max(1), config.desired_retention, &config.fsrs_params)?,
-                compute_next(mem, 4, days_elapsed.max(1), config.desired_retention, &config.fsrs_params)?,
+                compute_next(
+                    mem,
+                    3,
+                    days_elapsed.max(1),
+                    config.desired_retention,
+                    &config.fsrs_params,
+                )?,
+                compute_next(
+                    mem,
+                    4,
+                    days_elapsed.max(1),
+                    config.desired_retention,
+                    &config.fsrs_params,
+                )?,
             )
         } else {
             (
@@ -421,9 +466,27 @@ pub fn preview(
 
     Ok([
         *config.learning_steps.first().unwrap_or(&0) as f64,
-        compute_next(mem, 2, days_elapsed, config.desired_retention, &config.fsrs_params)?,
-        compute_next(mem, 3, days_elapsed, config.desired_retention, &config.fsrs_params)?,
-        compute_next(mem, 4, days_elapsed, config.desired_retention, &config.fsrs_params)?,
+        compute_next(
+            mem,
+            2,
+            days_elapsed,
+            config.desired_retention,
+            &config.fsrs_params,
+        )?,
+        compute_next(
+            mem,
+            3,
+            days_elapsed,
+            config.desired_retention,
+            &config.fsrs_params,
+        )?,
+        compute_next(
+            mem,
+            4,
+            days_elapsed,
+            config.desired_retention,
+            &config.fsrs_params,
+        )?,
     ])
 }
 

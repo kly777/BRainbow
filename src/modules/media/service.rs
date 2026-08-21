@@ -262,7 +262,12 @@ impl MediaService {
 
     /// 文件路径
     pub fn file_path(&self, media_type: &str, stored_id: &str) -> String {
-        format!("{}/{}/{}", self.upload_dir, dir_for_type(media_type), stored_id)
+        format!(
+            "{}/{}/{}",
+            self.upload_dir,
+            dir_for_type(media_type),
+            stored_id
+        )
     }
 }
 

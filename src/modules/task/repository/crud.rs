@@ -87,7 +87,11 @@ impl TaskRepository {
         .await
     }
 
-    pub async fn create(&self, user_id: i32, request: CreateTaskRequest) -> Result<Task, sqlx::Error> {
+    pub async fn create(
+        &self,
+        user_id: i32,
+        request: CreateTaskRequest,
+    ) -> Result<Task, sqlx::Error> {
         let now = Utc::now();
         let row = sqlx::query_as!(
             Task,

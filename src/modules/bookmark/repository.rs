@@ -74,7 +74,8 @@ impl BookmarkRepo {
         offset: i64,
         tag: Option<&str>,
     ) -> Result<(Vec<Bookmark>, i64), sqlx::Error> {
-        let mut count_builder = QueryBuilder::new("SELECT COUNT(*) FROM bookmark WHERE (user_id = ");
+        let mut count_builder =
+            QueryBuilder::new("SELECT COUNT(*) FROM bookmark WHERE (user_id = ");
         count_builder.push_bind(user_id);
         count_builder.push(" OR user_id IS NULL)");
         if let Some(t) = tag {
@@ -177,7 +178,11 @@ impl BookmarkRepo {
     }
 
     /// 根据 URL 获取书签（导入时按 URL 去重/合并）
-    pub async fn find_by_url(&self, user_id: i32, url: &str) -> Result<Option<Bookmark>, sqlx::Error> {
+    pub async fn find_by_url(
+        &self,
+        user_id: i32,
+        url: &str,
+    ) -> Result<Option<Bookmark>, sqlx::Error> {
         let row = sqlx::query_as!(
             BookmarkRow,
             r#"SELECT id AS "id: i32", title, url, description,
@@ -287,7 +292,8 @@ impl BookmarkRepo {
             return self.find_all_paginated(user_id, limit, offset, tag).await;
         }
 
-        let mut count_builder = QueryBuilder::new("SELECT COUNT(*) FROM bookmark WHERE (user_id = ");
+        let mut count_builder =
+            QueryBuilder::new("SELECT COUNT(*) FROM bookmark WHERE (user_id = ");
         count_builder.push_bind(user_id);
         count_builder.push(" OR user_id IS NULL) AND (");
         Self::append_keyword_where(&mut count_builder, &keywords);
@@ -548,7 +554,11 @@ mod tests {
             .unwrap();
         assert_eq!(bm.tags, str_vec(&["rust", "编程"])); // 按名称排序
 
-        let found = repo.find_by_id(TEST_USER_ID, bm.id).await.unwrap().expect("应找到");
+        let found = repo
+            .find_by_id(TEST_USER_ID, bm.id)
+            .await
+            .unwrap()
+            .expect("应找到");
         assert_eq!(found.tags, str_vec(&["rust", "编程"]));
     }
 
@@ -564,12 +574,23 @@ mod tests {
         repo.create(TEST_USER_ID, "A", "https://a.com", "", &str_vec(&["x"]))
             .await
             .unwrap();
-        repo.create(TEST_USER_ID, "B", "https://b.com", "", &[]).await.unwrap();
-        repo.create(TEST_USER_ID, "C", "https://c.com", "", &str_vec(&["y", "x"]))
+        repo.create(TEST_USER_ID, "B", "https://b.com", "", &[])
             .await
             .unwrap();
+        repo.create(
+            TEST_USER_ID,
+            "C",
+            "https://c.com",
+            "",
+            &str_vec(&["y", "x"]),
+        )
+        .await
+        .unwrap();
 
-        let (items, total) = repo.find_all_paginated(TEST_USER_ID, 10, 0, None).await.unwrap();
+        let (items, total) = repo
+            .find_all_paginated(TEST_USER_ID, 10, 0, None)
+            .await
+            .unwrap();
         assert_eq!(total, 3);
         assert_eq!(items[0].title, "C");
         assert_eq!(items[0].tags, str_vec(&["x", "y"]));
@@ -582,12 +603,23 @@ mod tests {
         repo.create(TEST_USER_ID, "A", "https://a.com", "", &str_vec(&["编程"]))
             .await
             .unwrap();
-        repo.create(TEST_USER_ID, "B", "https://b.com", "", &[]).await.unwrap();
-        repo.create(TEST_USER_ID, "C", "https://c.com", "", &str_vec(&["编程", "rust"]))
+        repo.create(TEST_USER_ID, "B", "https://b.com", "", &[])
             .await
             .unwrap();
+        repo.create(
+            TEST_USER_ID,
+            "C",
+            "https://c.com",
+            "",
+            &str_vec(&["编程", "rust"]),
+        )
+        .await
+        .unwrap();
 
-        let (items, total) = repo.find_all_paginated(TEST_USER_ID, 10, 0, Some("编程")).await.unwrap();
+        let (items, total) = repo
+            .find_all_paginated(TEST_USER_ID, 10, 0, Some("编程"))
+            .await
+            .unwrap();
         assert_eq!(total, 2);
         assert!(items.iter().all(|b| b.tags.contains(&"编程".to_string())));
 
@@ -607,7 +639,10 @@ mod tests {
                 .await
                 .unwrap();
         }
-        let (items, total) = repo.find_all_paginated(TEST_USER_ID, 3, 2, None).await.unwrap();
+        let (items, total) = repo
+            .find_all_paginated(TEST_USER_ID, 3, 2, None)
+            .await
+            .unwrap();
         assert_eq!(total, 10);
         assert_eq!(items.len(), 3);
         assert_eq!(items[0].title, "bm7");
@@ -617,7 +652,13 @@ mod tests {
     async fn update_partial_fields() {
         let repo = setup_db().await;
         let bm = repo
-            .create(TEST_USER_ID, "旧标题", "https://old.com", "旧描述", &str_vec(&["a"]))
+            .create(
+                TEST_USER_ID,
+                "旧标题",
+                "https://old.com",
+                "旧描述",
+                &str_vec(&["a"]),
+            )
             .await
             .unwrap();
 
@@ -638,7 +679,11 @@ mod tests {
     #[tokio::test]
     async fn update_nonexistent_fails() {
         let repo = setup_db().await;
-        assert!(repo.update(TEST_USER_ID, 999, Some("x"), None, None).await.is_err());
+        assert!(
+            repo.update(TEST_USER_ID, 999, Some("x"), None, None)
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test]
@@ -649,7 +694,12 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(repo.delete(TEST_USER_ID, bm.id).await.unwrap(), 1);
-        assert!(repo.find_by_id(TEST_USER_ID, bm.id).await.unwrap().is_none());
+        assert!(
+            repo.find_by_id(TEST_USER_ID, bm.id)
+                .await
+                .unwrap()
+                .is_none()
+        );
         // 标签本身保留，关联清除
         let tags = repo.search_tags(None).await.unwrap();
         assert_eq!(tags.len(), 1);
@@ -665,8 +715,13 @@ mod tests {
     #[tokio::test]
     async fn search_empty_query_falls_back() {
         let repo = setup_db().await;
-        repo.create(TEST_USER_ID, "A", "https://a.com", "", &[]).await.unwrap();
-        let (items, total) = repo.search_paginated(TEST_USER_ID, "", None, 10, 0).await.unwrap();
+        repo.create(TEST_USER_ID, "A", "https://a.com", "", &[])
+            .await
+            .unwrap();
+        let (items, total) = repo
+            .search_paginated(TEST_USER_ID, "", None, 10, 0)
+            .await
+            .unwrap();
         assert_eq!(total, 1);
         assert_eq!(items.len(), 1);
     }
@@ -674,17 +729,32 @@ mod tests {
     #[tokio::test]
     async fn search_matches_title_url_description() {
         let repo = setup_db().await;
-        repo.create(TEST_USER_ID, "Rust 教程", "https://rust.example.com", "入门指南", &[])
-            .await
-            .unwrap();
+        repo.create(
+            TEST_USER_ID,
+            "Rust 教程",
+            "https://rust.example.com",
+            "入门指南",
+            &[],
+        )
+        .await
+        .unwrap();
         repo.create(TEST_USER_ID, "Go 官网", "https://go.dev", "", &[])
             .await
             .unwrap();
-        repo.create(TEST_USER_ID, "其它", "https://other.example.com", "提到 rust 语言", &[])
+        repo.create(
+            TEST_USER_ID,
+            "其它",
+            "https://other.example.com",
+            "提到 rust 语言",
+            &[],
+        )
+        .await
+        .unwrap();
+
+        let (items, total) = repo
+            .search_paginated(TEST_USER_ID, "rust", None, 10, 0)
             .await
             .unwrap();
-
-        let (items, total) = repo.search_paginated(TEST_USER_ID, "rust", None, 10, 0).await.unwrap();
         assert_eq!(total, 2);
         assert!(items[0].title.contains("Rust") || items[0].description.contains("rust"));
 
@@ -701,9 +771,15 @@ mod tests {
     #[tokio::test]
     async fn search_combined_with_tag_filter() {
         let repo = setup_db().await;
-        repo.create(TEST_USER_ID, "Rust 教程", "https://a.com", "", &str_vec(&["编程"]))
-            .await
-            .unwrap();
+        repo.create(
+            TEST_USER_ID,
+            "Rust 教程",
+            "https://a.com",
+            "",
+            &str_vec(&["编程"]),
+        )
+        .await
+        .unwrap();
         repo.create(TEST_USER_ID, "Rust 新闻", "https://b.com", "", &[])
             .await
             .unwrap();
@@ -719,8 +795,13 @@ mod tests {
     #[tokio::test]
     async fn search_no_match() {
         let repo = setup_db().await;
-        repo.create(TEST_USER_ID, "x", "https://x.com", "", &[]).await.unwrap();
-        let (items, total) = repo.search_paginated(TEST_USER_ID, "不存在", None, 10, 0).await.unwrap();
+        repo.create(TEST_USER_ID, "x", "https://x.com", "", &[])
+            .await
+            .unwrap();
+        let (items, total) = repo
+            .search_paginated(TEST_USER_ID, "不存在", None, 10, 0)
+            .await
+            .unwrap();
         assert_eq!(total, 0);
         assert!(items.is_empty());
     }
@@ -739,9 +820,15 @@ mod tests {
     #[tokio::test]
     async fn search_tags_with_counts() {
         let repo = setup_db().await;
-        repo.create(TEST_USER_ID, "A", "https://a.com", "", &str_vec(&["编程", "rust"]))
-            .await
-            .unwrap();
+        repo.create(
+            TEST_USER_ID,
+            "A",
+            "https://a.com",
+            "",
+            &str_vec(&["编程", "rust"]),
+        )
+        .await
+        .unwrap();
         repo.create(TEST_USER_ID, "B", "https://b.com", "", &str_vec(&["编程"]))
             .await
             .unwrap();
@@ -761,7 +848,10 @@ mod tests {
     #[tokio::test]
     async fn get_and_set_bookmark_tags() {
         let repo = setup_db().await;
-        let bm = repo.create(TEST_USER_ID, "A", "https://a.com", "", &[]).await.unwrap();
+        let bm = repo
+            .create(TEST_USER_ID, "A", "https://a.com", "", &[])
+            .await
+            .unwrap();
 
         let tags = repo
             .set_bookmark_tags(bm.id, &str_vec(&["编程", "rust"]))
@@ -794,7 +884,10 @@ mod tests {
     #[tokio::test]
     async fn set_tags_ignores_blank_names() {
         let repo = setup_db().await;
-        let bm = repo.create(TEST_USER_ID, "A", "https://a.com", "", &[]).await.unwrap();
+        let bm = repo
+            .create(TEST_USER_ID, "A", "https://a.com", "", &[])
+            .await
+            .unwrap();
         let tags = repo
             .set_bookmark_tags(bm.id, &str_vec(&["", "  ", "有效"]))
             .await
@@ -807,7 +900,13 @@ mod tests {
     async fn delete_tag_cascades_rels() {
         let repo = setup_db().await;
         let bm = repo
-            .create(TEST_USER_ID, "A", "https://a.com", "", &str_vec(&["编程", "rust"]))
+            .create(
+                TEST_USER_ID,
+                "A",
+                "https://a.com",
+                "",
+                &str_vec(&["编程", "rust"]),
+            )
             .await
             .unwrap();
         let tag = repo.search_tags(Some("编程")).await.unwrap().remove(0);

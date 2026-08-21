@@ -75,7 +75,12 @@ impl ReadingService {
     }
 
     /// 标记单词
-    pub async fn mark_word(&self, user_id: i32, word: &str, status: &str) -> Result<(), ServiceError> {
+    pub async fn mark_word(
+        &self,
+        user_id: i32,
+        word: &str,
+        status: &str,
+    ) -> Result<(), ServiceError> {
         if word.trim().is_empty() {
             return Err(ServiceError::InvalidInput("单词不能为空".into()));
         }
@@ -90,7 +95,12 @@ impl ReadingService {
     }
 
     /// 更新文章笔记
-    pub async fn update_notes(&self, user_id: i32, id: i64, notes: &str) -> Result<(), ServiceError> {
+    pub async fn update_notes(
+        &self,
+        user_id: i32,
+        id: i64,
+        notes: &str,
+    ) -> Result<(), ServiceError> {
         let repo = &self.repo;
         repo.update_article_notes(user_id, id, notes)
             .await

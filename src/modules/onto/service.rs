@@ -51,7 +51,10 @@ impl OntoService {
     }
 
     pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, ServiceError> {
-        self.repo.delete(user_id, id).await.map_err(ServiceError::Db)
+        self.repo
+            .delete(user_id, id)
+            .await
+            .map_err(ServiceError::Db)
     }
 }
 
@@ -66,7 +69,9 @@ mod tests {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
         crate::db::migrate(&pool).await.unwrap();
         sqlx::query("INSERT OR IGNORE INTO user (id, name, password_hash) VALUES (1, 'test', 'x')")
-            .execute(&*pool).await.unwrap();
+            .execute(&*pool)
+            .await
+            .unwrap();
         (OntoService::new(pool.clone()), OntoQueryService::new(pool))
     }
 
@@ -102,7 +107,9 @@ mod tests {
     async fn update_and_delete() {
         let (svc, qsvc) = real_service().await;
         let onto = svc.create(1, "x".into(), None).await.unwrap();
-        svc.update(1, onto.id, Some("y".into()), None).await.unwrap();
+        svc.update(1, onto.id, Some("y".into()), None)
+            .await
+            .unwrap();
         let u = qsvc.by_id(1, onto.id).await.unwrap().unwrap();
         assert_eq!(u.name, "y");
         svc.delete(1, onto.id).await.unwrap();

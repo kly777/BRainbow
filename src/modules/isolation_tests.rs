@@ -88,7 +88,10 @@ async fn bookmark_isolation_between_users() {
     let svc = crate::modules::bookmark::BookmarkService::new(pool.clone());
     let qsvc = crate::modules::bookmark::BookmarkQueryService::new(pool);
 
-    let bm_a = svc.create(1, "A 的书签", "https://a.example.com", "", &[]).await.unwrap();
+    let bm_a = svc
+        .create(1, "A 的书签", "https://a.example.com", "", &[])
+        .await
+        .unwrap();
 
     let (_, total) = qsvc.list(2, 10, 0, None).await.unwrap();
     assert_eq!(total, 0, "B 不应看到 A 的书签");

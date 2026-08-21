@@ -183,8 +183,7 @@ impl CardRepository {
         // 用 QueryBuilder 动态拼 OR 子句。注意：每个 push + push_bind 算一次
         // 分隔插入，所以这里不用 Separated（Separated 的 push_bind 会把 "content LIKE"
         // 和 "?" 当成两个独立项）。改为直接在 QueryBuilder 上 push，手动控制 OR。
-        let mut count_builder =
-            QueryBuilder::new("SELECT COUNT(*) FROM card WHERE (user_id = ");
+        let mut count_builder = QueryBuilder::new("SELECT COUNT(*) FROM card WHERE (user_id = ");
         count_builder.push_bind(user_id);
         count_builder.push(" OR user_id IS NULL) AND (");
         for (i, kw) in keywords.iter().enumerate() {
@@ -202,8 +201,9 @@ impl CardRepository {
             .await?;
 
         // ── Fetch ──
-        let mut fetch_builder =
-            QueryBuilder::new("SELECT id, content, created_at, updated_at FROM card WHERE (user_id = ");
+        let mut fetch_builder = QueryBuilder::new(
+            "SELECT id, content, created_at, updated_at FROM card WHERE (user_id = ",
+        );
         fetch_builder.push_bind(user_id);
         fetch_builder.push(" OR user_id IS NULL) AND (");
         for (i, kw) in keywords.iter().enumerate() {
@@ -272,11 +272,18 @@ mod tests {
     async fn create_and_find_by_id() {
         let repo = setup_db().await;
 
-        let card = repo.create(TEST_USER_ID, "测试内容".to_string()).await.unwrap();
+        let card = repo
+            .create(TEST_USER_ID, "测试内容".to_string())
+            .await
+            .unwrap();
         assert!(card.id > 0);
         assert_eq!(card.content, "测试内容");
 
-        let found = repo.find_by_id(TEST_USER_ID, card.id).await.unwrap().expect("应找到");
+        let found = repo
+            .find_by_id(TEST_USER_ID, card.id)
+            .await
+            .unwrap()
+            .expect("应找到");
         assert_eq!(found.id, card.id);
         assert_eq!(found.content, "测试内容");
     }
@@ -332,7 +339,10 @@ mod tests {
     #[tokio::test]
     async fn update_card_content() {
         let repo = setup_db().await;
-        let card = repo.create(TEST_USER_ID, "旧内容".to_string()).await.unwrap();
+        let card = repo
+            .create(TEST_USER_ID, "旧内容".to_string())
+            .await
+            .unwrap();
 
         let updated = repo
             .update(TEST_USER_ID, card.id, Some("新内容".to_string()))
@@ -344,14 +354,21 @@ mod tests {
         assert!(updated.updated_at > card.updated_at);
 
         // 再查一次确认持久化
-        let found = repo.find_by_id(TEST_USER_ID, card.id).await.unwrap().unwrap();
+        let found = repo
+            .find_by_id(TEST_USER_ID, card.id)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(found.content, "新内容");
     }
 
     #[tokio::test]
     async fn update_card_content_none_keeps_original() {
         let repo = setup_db().await;
-        let card = repo.create(TEST_USER_ID, "原内容".to_string()).await.unwrap();
+        let card = repo
+            .create(TEST_USER_ID, "原内容".to_string())
+            .await
+            .unwrap();
 
         // content=None → 只更新时间，不修改内容
         let updated = repo.update(TEST_USER_ID, card.id, None).await.unwrap();
@@ -362,20 +379,30 @@ mod tests {
     #[tokio::test]
     async fn update_nonexistent_card_fails() {
         let repo = setup_db().await;
-        let result = repo.update(TEST_USER_ID, 999, Some("内容".to_string())).await;
+        let result = repo
+            .update(TEST_USER_ID, 999, Some("内容".to_string()))
+            .await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn delete_existing_card() {
         let repo = setup_db().await;
-        let card = repo.create(TEST_USER_ID, "待删除".to_string()).await.unwrap();
+        let card = repo
+            .create(TEST_USER_ID, "待删除".to_string())
+            .await
+            .unwrap();
 
         let affected = repo.delete(TEST_USER_ID, card.id).await.unwrap();
         assert_eq!(affected, 1);
 
         // 验证已删除
-        assert!(repo.find_by_id(TEST_USER_ID, card.id).await.unwrap().is_none());
+        assert!(
+            repo.find_by_id(TEST_USER_ID, card.id)
+                .await
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[tokio::test]
@@ -392,7 +419,10 @@ mod tests {
         repo.create(TEST_USER_ID, "B".to_string()).await.unwrap();
 
         // 空关键词 → 等价于 find_all_paginated
-        let (items, total) = repo.search_by_content_paginated(TEST_USER_ID, "", 10, 0).await.unwrap();
+        let (items, total) = repo
+            .search_by_content_paginated(TEST_USER_ID, "", 10, 0)
+            .await
+            .unwrap();
         assert_eq!(total, 2);
         assert_eq!(items.len(), 2);
     }
@@ -400,9 +430,15 @@ mod tests {
     #[tokio::test]
     async fn search_by_content_single_keyword() {
         let repo = setup_db().await;
-        repo.create(TEST_USER_ID, "rust学习".to_string()).await.unwrap();
-        repo.create(TEST_USER_ID, "go开发".to_string()).await.unwrap();
-        repo.create(TEST_USER_ID, "rust入门".to_string()).await.unwrap();
+        repo.create(TEST_USER_ID, "rust学习".to_string())
+            .await
+            .unwrap();
+        repo.create(TEST_USER_ID, "go开发".to_string())
+            .await
+            .unwrap();
+        repo.create(TEST_USER_ID, "rust入门".to_string())
+            .await
+            .unwrap();
 
         let (items, total) = repo
             .search_by_content_paginated(TEST_USER_ID, "rust", 10, 0)
@@ -417,9 +453,15 @@ mod tests {
     #[tokio::test]
     async fn search_by_content_multi_keyword_scores() {
         let repo = setup_db().await;
-        repo.create(TEST_USER_ID, "rust入门教程".to_string()).await.unwrap();
-        repo.create(TEST_USER_ID, "go高级编程".to_string()).await.unwrap();
-        repo.create(TEST_USER_ID, "rust进阶".to_string()).await.unwrap();
+        repo.create(TEST_USER_ID, "rust入门教程".to_string())
+            .await
+            .unwrap();
+        repo.create(TEST_USER_ID, "go高级编程".to_string())
+            .await
+            .unwrap();
+        repo.create(TEST_USER_ID, "rust进阶".to_string())
+            .await
+            .unwrap();
 
         // "教程" 仅匹配 卡0 → 得分1；"rust" 匹配 卡0 和 卡2 → 得分各1
         // 所以搜索 "rust 教程" 时：卡0 得分2，卡2 得分1（按得分 DESC）
@@ -450,7 +492,9 @@ mod tests {
         let repo = setup_db().await;
 
         for i in 0..10 {
-            repo.create(TEST_USER_ID, format!("rust_{i}")).await.unwrap();
+            repo.create(TEST_USER_ID, format!("rust_{i}"))
+                .await
+                .unwrap();
         }
 
         let (items, total) = repo

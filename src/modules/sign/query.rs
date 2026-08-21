@@ -31,8 +31,15 @@ impl SignQueryService {
             .map_err(ServiceError::Db)
     }
 
-    pub async fn by_id(&self, user_id: i32, id: i32) -> Result<Option<SignifierSignified>, ServiceError> {
-        self.repo.find_by_id(user_id, id).await.map_err(ServiceError::Db)
+    pub async fn by_id(
+        &self,
+        user_id: i32,
+        id: i32,
+    ) -> Result<Option<SignifierSignified>, ServiceError> {
+        self.repo
+            .find_by_id(user_id, id)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     pub async fn by_signifier(

@@ -200,7 +200,10 @@ mod tests {
         svc.register("bob".into(), "secret123".into(), TEST_SECRET, 864000)
             .await
             .unwrap();
-        let (user, token) = svc.login("bob", "secret123", TEST_SECRET, 864000).await.unwrap();
+        let (user, token) = svc
+            .login("bob", "secret123", TEST_SECRET, 864000)
+            .await
+            .unwrap();
         assert_eq!(user.name, "bob");
         assert!(!token.is_empty());
     }
@@ -211,14 +214,20 @@ mod tests {
         svc.register("bob".into(), "correct12".into(), TEST_SECRET, 864000)
             .await
             .unwrap();
-        let err = svc.login("bob", "wrong", TEST_SECRET, 864000).await.unwrap_err();
+        let err = svc
+            .login("bob", "wrong", TEST_SECRET, 864000)
+            .await
+            .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
     }
 
     #[tokio::test]
     async fn login_nonexistent_user() {
         let (svc, _qsvc) = setup().await;
-        let err = svc.login("nobody", "pass", TEST_SECRET, 864000).await.unwrap_err();
+        let err = svc
+            .login("nobody", "pass", TEST_SECRET, 864000)
+            .await
+            .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
     }
 
@@ -246,7 +255,10 @@ mod tests {
             .await
             .unwrap();
         // 用新密码登录验证
-        let (_, token) = svc.login("alice", "newPass2", TEST_SECRET, 864000).await.unwrap();
+        let (_, token) = svc
+            .login("alice", "newPass2", TEST_SECRET, 864000)
+            .await
+            .unwrap();
         assert!(!token.is_empty());
     }
 

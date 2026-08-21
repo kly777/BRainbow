@@ -29,7 +29,9 @@ impl ConvQueryService {
         offset: i64,
         search_type: &str,
     ) -> Result<SearchResponse, ServiceError> {
-        self.repo.search(user_id, q, limit, offset, search_type).await
+        self.repo
+            .search(user_id, q, limit, offset, search_type)
+            .await
     }
 
     /// 知识条目详情（标题 + 文章）
@@ -134,7 +136,9 @@ mod tests {
             "全部模式下应有文章匹配"
         );
 
-        let res_conv = search_conv(&pool, 1, "中间件", 20, 0, "conv").await.unwrap();
+        let res_conv = search_conv(&pool, 1, "中间件", 20, 0, "conv")
+            .await
+            .unwrap();
         assert!(res_conv.hits.is_empty(), "conv 模式下不应有文章匹配");
 
         // "Go" 在对话和文章中都有
@@ -181,7 +185,9 @@ mod tests {
             .await
             .unwrap();
 
-        let res = search_conv(&pool, 1, "测试内容", 20, 0, "all").await.unwrap();
+        let res = search_conv(&pool, 1, "测试内容", 20, 0, "all")
+            .await
+            .unwrap();
         eprintln!("\n── search_truncate_utf8 '测试内容' ──");
         eprintln!("  命中: {} (期望 ≥1)", res.hits.len());
         eprintln!("  注: bundled SQLite 对追加插入的 FTS 数据可能不可见，生产环境正常");

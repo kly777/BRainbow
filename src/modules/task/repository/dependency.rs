@@ -65,7 +65,11 @@ impl TaskRepository {
         Ok(result.rows_affected())
     }
 
-    pub async fn get_dependencies(&self, user_id: i32, task_id: i32) -> Result<Vec<i32>, sqlx::Error> {
+    pub async fn get_dependencies(
+        &self,
+        user_id: i32,
+        task_id: i32,
+    ) -> Result<Vec<i32>, sqlx::Error> {
         let rows = sqlx::query_as!(
             DependencyRow,
             r#"SELECT td.task_id AS "task_id: i32", td.depends_on_task_id AS "depends_on_task_id: i32"

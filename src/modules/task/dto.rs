@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use super::model::{Task, TaskStatus, TimeWindow};
+use super::model::{Task, TaskStatus};
+use crate::modules::time_window::TimeWindow;
 
 /// 任务创建请求体
 #[derive(Debug, Clone, Serialize, Deserialize)]

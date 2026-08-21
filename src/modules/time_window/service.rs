@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use super::model::{CreateTimeWindowRequest, TimeWindow, UpdateTimeWindowRequest};
+use super::port::TaskTimeWindowValidator;
 use super::repository::TimeWindowRepository;
-use crate::modules::task::port::TaskTimeWindowValidator;
 
 #[derive(Clone)]
 pub struct TimeWindowService {

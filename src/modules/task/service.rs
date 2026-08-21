@@ -3,9 +3,10 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
-use super::model::{Task, TimeWindow, TimeWindowType};
-use super::port::TaskTimeWindowValidator;
+use super::model::Task;
 use super::repository::TaskRepository;
+use crate::modules::time_window::port::TaskTimeWindowValidator;
+use crate::modules::time_window::{TimeWindow, TimeWindowType};
 
 /// 命令侧服务——只暴露写操作与参与命令约束的读取。
 ///

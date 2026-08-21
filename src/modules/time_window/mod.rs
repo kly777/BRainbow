@@ -1,5 +1,6 @@
 mod handler;
 mod model;
+pub mod port;
 pub(crate) mod query;
 mod repository;
 pub mod service;

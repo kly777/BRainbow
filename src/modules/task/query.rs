@@ -3,8 +3,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use super::model::{Task, TaskStatus, TimeWindow};
+use super::model::{Task, TaskStatus};
 use super::repository::TaskRepository;
+use crate::modules::time_window::TimeWindow;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{SearchHit, SearchPort, snippet};
 

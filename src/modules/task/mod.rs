@@ -1,7 +1,6 @@
 mod dto;
 mod handler;
 mod model;
-pub mod port;
 mod query;
 mod repository;
 mod response;

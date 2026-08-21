@@ -1,10 +1,11 @@
 use chrono::{DateTime, Utc};
 use sqlx::{FromRow, QueryBuilder};
 
+use crate::modules::time_window::{TimeWindow, TimeWindowType};
 use crate::shared::db_query::like_contains;
 
 use super::super::dto::TaskDetailResponse;
-use super::super::model::{Task, TaskStatus, TimeWindow, TimeWindowType};
+use super::super::model::{Task, TaskStatus};
 use super::TaskRepository;
 
 #[derive(FromRow)]

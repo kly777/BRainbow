@@ -380,7 +380,7 @@ impl AppState {
 
     pub fn new(db: Arc<SqlitePool>, config: &Config, mem_config: MemConfig) -> Self {
         let task = TaskService::new(db.clone());
-        let task_validator: Arc<dyn crate::modules::task::port::TaskTimeWindowValidator> =
+        let task_validator: Arc<dyn crate::modules::time_window::port::TaskTimeWindowValidator> =
             Arc::new(task.clone());
         // 构建 Repository adapter，通过 trait 分别注入命令侧和查询侧
         let mem_repo: Arc<dyn crate::modules::mem::port::MemRepository> =

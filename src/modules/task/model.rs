@@ -124,9 +124,6 @@ impl Task {
     }
 }
 
-// Re-export TimeWindow and TimeWindowType for TaskDetailResponse and repository
-pub use crate::modules::time_window::{TimeWindow, TimeWindowType};
-
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]

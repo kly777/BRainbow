@@ -41,6 +41,18 @@ impl ServiceError {
             Self::Internal(_) | Self::Db(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
+
+    /// 机器可读错误码（前端分支依据；比 HTTP 状态短语更精确）
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::InvalidInput(_) => "INVALID_INPUT",
+            Self::NotFound(_) => "NOT_FOUND",
+            Self::AlreadyExists(_) => "ALREADY_EXISTS",
+            Self::InUse(_) => "RESOURCE_IN_USE",
+            Self::Internal(_) => "INTERNAL",
+            Self::Db(_) => "DB_ERROR",
+        }
+    }
 }
 
 impl std::fmt::Display for ServiceError {
@@ -77,17 +89,22 @@ fn resp(status: StatusCode, message: impl Into<String>) -> Response {
 
 impl IntoResponse for ServiceError {
     fn into_response(self) -> Response {
-        match self {
-            Self::InvalidInput(msg) => resp(StatusCode::BAD_REQUEST, msg),
-            Self::NotFound(msg) => resp(StatusCode::NOT_FOUND, msg),
-            Self::AlreadyExists(msg) => resp(StatusCode::CONFLICT, msg),
-            Self::InUse(msg) => resp(StatusCode::CONFLICT, msg),
-            Self::Internal(msg) => resp(StatusCode::INTERNAL_SERVER_ERROR, msg),
-            Self::Db(e) => resp(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("数据库操作失败: {}", e),
-            ),
-        }
+        // 错误码：机器可读（code()），面向用户消息不回显原始 sqlx 错误
+        let status = self.status_code();
+        let code = self.code();
+        let message = match &self {
+            Self::Db(_) => "数据库操作失败".to_string(),
+            other => other.to_string(),
+        };
+        (
+            status,
+            Json(ErrorBody {
+                code: code.to_string(),
+                message,
+                details: None,
+            }),
+        )
+            .into_response()
     }
 }
 

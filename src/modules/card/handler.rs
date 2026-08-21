@@ -1,11 +1,12 @@
 use axum::{
     extract::{Extension, Path, Query, State},
+    http::StatusCode,
     response::{IntoResponse, Json},
 };
 use serde::{Deserialize, Serialize};
 
 use crate::shared::claims::Claims;
-use crate::shared::error_types as error;
+use crate::shared::error_types::{ErrorBody, ServiceError};
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 use crate::shared::time_text::to_utc_iso;
 
@@ -46,11 +47,10 @@ pub async fn create_card_handler(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateCardRequest>,
 ) -> impl IntoResponse {
-    let result = service
-        .create(claims.sub, payload.content)
-        .await
-        .map(CardResponse::from);
-    error::created_or(result, "创建卡片")
+    match service.create(claims.sub, payload.content).await {
+        Ok(card) => (StatusCode::CREATED, Json(CardResponse::from(card))).into_response(),
+        Err(e) => e.into_response(),
+    }
 }
 
 pub async fn get_cards_handler(
@@ -58,14 +58,13 @@ pub async fn get_cards_handler(
     State(query): State<CardQueryService>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    let result = query
-        .list(claims.sub, pagination.limit(), pagination.offset())
-        .await
-        .map(|(items, total)| {
+    match query.list(claims.sub, pagination.limit(), pagination.offset()).await {
+        Ok((items, total)) => {
             let items: Vec<CardResponse> = items.into_iter().map(CardResponse::from).collect();
-            PaginatedResponse::new(items, total, &pagination)
-        });
-    error::ok_or(result, "获取卡片列表")
+            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
+        }
+        Err(e) => e.into_response(),
+    }
 }
 
 pub async fn get_card_handler(
@@ -73,8 +72,15 @@ pub async fn get_card_handler(
     Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let result = query.by_id(claims.sub, id).await.map(|opt| opt.map(CardResponse::from));
-    error::found_or(result, "获取卡片")
+    match query.by_id(claims.sub, id).await {
+        Ok(Some(card)) => Json(CardResponse::from(card)).into_response(),
+        Ok(None) => (StatusCode::NOT_FOUND, Json(ErrorBody {
+            code: "NOT_FOUND".into(),
+            message: "卡片不存在".into(),
+            details: None,
+        })).into_response(),
+        Err(e) => e.into_response(),
+    }
 }
 
 pub async fn update_card_handler(
@@ -83,11 +89,10 @@ pub async fn update_card_handler(
     Path(id): Path<i32>,
     Json(payload): Json<UpdateCardRequest>,
 ) -> impl IntoResponse {
-    let result = service
-        .update(claims.sub, id, payload.content)
-        .await
-        .map(CardResponse::from);
-    error::ok_or(result, "更新卡片")
+    match service.update(claims.sub, id, payload.content).await {
+        Ok(card) => Json(CardResponse::from(card)).into_response(),
+        Err(e) => e.into_response(),
+    }
 }
 
 pub async fn delete_card_handler(
@@ -95,7 +100,15 @@ pub async fn delete_card_handler(
     Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    error::deleted_or(service.delete(claims.sub, id).await, "删除卡片")
+    match service.delete(claims.sub, id).await {
+        Ok(n) if n > 0 => StatusCode::NO_CONTENT.into_response(),
+        Ok(_) => (StatusCode::NOT_FOUND, Json(ErrorBody {
+            code: "NOT_FOUND".into(),
+            message: "卡片不存在".into(),
+            details: None,
+        })).into_response(),
+        Err(e) => e.into_response(),
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -120,17 +133,20 @@ pub async fn search_cards_handler(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     if params.q.trim().is_empty() {
-        return error::bad_request("搜索关键词不能为空");
+        return (StatusCode::BAD_REQUEST, Json(ErrorBody {
+            code: "INVALID_INPUT".into(),
+            message: "搜索关键词不能为空".into(),
+            details: None,
+        })).into_response();
     }
     let pagination = params.pagination();
-    let result = query
-        .search(claims.sub, params.q.trim(), pagination.limit(), pagination.offset())
-        .await
-        .map(|(items, total)| {
+    match query.search(claims.sub, params.q.trim(), pagination.limit(), pagination.offset()).await {
+        Ok((items, total)) => {
             let items: Vec<CardResponse> = items.into_iter().map(CardResponse::from).collect();
-            PaginatedResponse::new(items, total, &pagination)
-        });
-    error::ok_or(result, "搜索卡片")
+            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
+        }
+        Err(e) => e.into_response(),
+    }
 }
 
 #[cfg(test)]

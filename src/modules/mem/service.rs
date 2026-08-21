@@ -13,11 +13,21 @@ pub struct MemService {
     repo: Arc<dyn MemRepository>,
     /// 后台维护（FSRS 参数优化）通过 port 注入，领域服务不持有数据库连接池。
     maintenance: Arc<dyn MemMaintenance>,
+    /// 记忆配置（FSRS 参数 + 步进），调度时显式传入（不再有全局 static）。
+    mem_config: Arc<crate::modules::mem::config::MemConfig>,
 }
 
 impl MemService {
-    pub fn new(repo: Arc<dyn MemRepository>, maintenance: Arc<dyn MemMaintenance>) -> Self {
-        Self { repo, maintenance }
+    pub fn new(
+        repo: Arc<dyn MemRepository>,
+        maintenance: Arc<dyn MemMaintenance>,
+        mem_config: Arc<crate::modules::mem::config::MemConfig>,
+    ) -> Self {
+        Self {
+            repo,
+            maintenance,
+            mem_config,
+        }
     }
 
     // ── 获取学习池（含侧面：新卡标注 learning 状态） ──
@@ -195,7 +205,13 @@ impl MemService {
         };
         let days_elapsed = days_elapsed_since(&row.last_review_at);
         let elapsed_secs = elapsed_secs_since(&row.last_review_at);
-        let config = fsrs::SchedulerConfig::default();
+        let config = fsrs::SchedulerConfig {
+            learning_steps: self.mem_config.learning_steps.clone(),
+            relearn_steps: self.mem_config.relearn_steps.clone(),
+            graduating_interval_secs: self.mem_config.graduating_interval_secs,
+            desired_retention: self.mem_config.desired_retention,
+            fsrs_params: self.mem_config.fsrs_params.clone(),
+        };
         let cumulative_step_days = days_elapsed;
         let mut outcome = fsrs::schedule(
             fsrs::ScheduleInput {
@@ -610,7 +626,7 @@ mod tests {
             .await
             .unwrap();
         let repo = MemRepo::new(Arc::new(pool.clone()));
-        let service = MemService::new(Arc::new(repo.clone()), Arc::new(NoopMaintenance));
+        let service = MemService::new(Arc::new(repo.clone()), Arc::new(NoopMaintenance), Arc::new(crate::modules::mem::config::MemConfig::default()));
         let cue = repo.create_chunk(1, "cue").await.unwrap();
         let target = repo.create_chunk(1, "target").await.unwrap();
         let id = repo.create_mem(1, cue, target, &[]).await.unwrap();
@@ -690,7 +706,7 @@ mod tests {
         repo.mems.lock().unwrap().insert(2, fake_mem(2));
         repo.mems.lock().unwrap().insert(3, fake_mem(3));
 
-        let service = MemService::new(repo.clone(), Arc::new(NoopMaintenance));
+        let service = MemService::new(repo.clone(), Arc::new(NoopMaintenance), Arc::new(crate::modules::mem::config::MemConfig::default()));
         let due = service.get_due(1, 3, &[], &[]).await.unwrap();
 
         assert_eq!(
@@ -704,7 +720,7 @@ mod tests {
 
     #[tokio::test]
     async fn review_missing_mem_returns_not_found_without_database() {
-        let service = MemService::new(Arc::new(FakeRepo::default()), Arc::new(NoopMaintenance));
+        let service = MemService::new(Arc::new(FakeRepo::default()), Arc::new(NoopMaintenance), Arc::new(crate::modules::mem::config::MemConfig::default()));
         let err = service.review(1, 999, 3, 0.0).await.unwrap_err();
         assert!(matches!(err, ServiceError::NotFound(_)));
     }

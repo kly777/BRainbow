@@ -109,8 +109,12 @@ async fn mem_isolation_between_users() {
     let service = crate::modules::mem::service::MemService::new(
         repo.clone(),
         Arc::new(crate::modules::mem::testing::NoopMaintenance),
+        Arc::new(crate::modules::mem::config::MemConfig::default()),
     );
-    let query = crate::modules::mem::query::MemQueryService::new(repo);
+    let query = crate::modules::mem::query::MemQueryService::new(
+        repo,
+        Arc::new(crate::modules::mem::config::MemConfig::default()),
+    );
 
     use crate::modules::mem::dto::CreateMemRequest;
     let mem_a = service

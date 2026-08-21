@@ -274,8 +274,12 @@ impl AppState {
         let text_query = TextQueryService::new(db.clone());
         let db_viewer = DbViewerQueryService::new(db.clone());
         let task_query = TaskQueryService::new(db.clone());
-        let mem = MemService::new(mem_repo, Arc::new(mem_maintenance.clone()));
-        let mem_query = MemQueryService::new(mem_repo_for_query);
+        let mem = MemService::new(
+            mem_repo,
+            Arc::new(mem_maintenance.clone()),
+            Arc::new(mem_config.clone()),
+        );
+        let mem_query = MemQueryService::new(mem_repo_for_query, Arc::new(mem_config.clone()));
         let media = MediaService::new(db.clone());
         let media_query = MediaQueryService::new(db.clone());
         let reading = ReadingService::new(db.clone());

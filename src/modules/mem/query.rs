@@ -18,11 +18,16 @@ use crate::shared::search::{SearchHit, SearchPort, clip, merge_snippets};
 #[derive(Clone)]
 pub struct MemQueryService {
     repo: Arc<dyn MemRepository>,
+    /// 记忆配置（FSRS 参数），调度时显式传入
+    mem_config: Arc<crate::modules::mem::config::MemConfig>,
 }
 
 impl MemQueryService {
-    pub fn new(repo: Arc<dyn MemRepository>) -> Self {
-        Self { repo }
+    pub fn new(
+        repo: Arc<dyn MemRepository>,
+        mem_config: Arc<crate::modules::mem::config::MemConfig>,
+    ) -> Self {
+        Self { repo, mem_config }
     }
 
     // ── 管理列表 ──
@@ -125,7 +130,13 @@ impl MemQueryService {
         let state: CardState = row.state.parse().unwrap_or(CardState::New);
         let days_elapsed = days_elapsed_since(&row.last_review_at);
         let elapsed_secs = elapsed_secs_since(&row.last_review_at);
-        let config = fsrs::SchedulerConfig::default();
+        let config = fsrs::SchedulerConfig {
+            learning_steps: self.mem_config.learning_steps.clone(),
+            relearn_steps: self.mem_config.relearn_steps.clone(),
+            graduating_interval_secs: self.mem_config.graduating_interval_secs,
+            desired_retention: self.mem_config.desired_retention,
+            fsrs_params: self.mem_config.fsrs_params.clone(),
+        };
         fsrs::preview(
             row.stability,
             row.difficulty,
@@ -337,7 +348,7 @@ mod tests {
 
     #[tokio::test]
     async fn preview_missing_mem_returns_not_found_through_fake_port() {
-        let svc = MemQueryService::new(Arc::new(FakeRepo::default()));
+        let svc = MemQueryService::new(Arc::new(FakeRepo::default()), Arc::new(crate::modules::mem::config::MemConfig::default()));
         let err = svc.preview(1, 1).await.unwrap_err();
         assert!(matches!(err, ServiceError::NotFound(_)));
     }

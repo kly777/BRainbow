@@ -7,36 +7,6 @@
 use crate::modules::mem::model::CardState;
 use chrono::{Duration, Utc};
 use fsrs::{FSRS, MemoryState};
-use std::sync::RwLock;
-
-/// 全局 FSRS 参数，启动时由 `init_global_params` 设置，
-/// 优化后可运行时更新（不重启即生效）。
-static GLOBAL_FSRS_PARAMS: RwLock<Vec<f32>> = RwLock::new(Vec::new());
-
-/// 设置全局 FSRS 参数（启动时调用）
-pub fn init_global_params(params: Vec<f32>) {
-    if let Ok(mut p) = GLOBAL_FSRS_PARAMS.write() {
-        *p = params;
-    }
-}
-
-/// 运行时更新全局 FSRS 参数（优化后调用）
-pub fn set_global_params(params: Vec<f32>) {
-    let count = params.len();
-    if let Ok(mut p) = GLOBAL_FSRS_PARAMS.write() {
-        *p = params;
-    }
-    tracing::info!("FSRS 参数已运行时更新 ({count} 个)");
-}
-
-/// 获取当前 FSRS 参数（返回空 Vec 表示用默认值）
-pub fn get_global_params() -> Vec<f32> {
-    GLOBAL_FSRS_PARAMS
-        .read()
-        .ok()
-        .map(|p| p.clone())
-        .unwrap_or_default()
-}
 
 // ── 可配置参数 ──
 
@@ -51,6 +21,8 @@ pub struct SchedulerConfig {
     pub graduating_interval_secs: i64,
     /// 期望回忆率
     pub desired_retention: f64,
+    /// FSRS 参数（19 个 f32；空 = 库默认值）
+    pub fsrs_params: Vec<f32>,
 }
 
 impl Default for SchedulerConfig {
@@ -60,6 +32,7 @@ impl Default for SchedulerConfig {
             relearn_steps: vec![600],
             graduating_interval_secs: 7200,
             desired_retention: 0.9,
+            fsrs_params: Vec::new(),
         }
     }
 }
@@ -72,9 +45,8 @@ fn due_in_secs(secs: i64) -> String {
         .to_string()
 }
 
-fn make_fsrs() -> Result<FSRS, String> {
-    let params = get_global_params();
-    FSRS::new(&params).map_err(|e| format!("FSRS 参数非法: {e}"))
+fn make_fsrs(fsrs_params: &[f32]) -> Result<FSRS, String> {
+    FSRS::new(fsrs_params).map_err(|e| format!("FSRS 参数非法: {e}"))
 }
 
 /// 除非有真实的记忆参数，否则传 None（避免 stability=0 / difficulty=0 传给 FSRS）
@@ -94,8 +66,9 @@ fn compute_next(
     rating: u8,
     days_elapsed: u32,
     desired_retention: f64,
+    fsrs_params: &[f32],
 ) -> Result<f64, String> {
-    let fsrs = make_fsrs()?;
+    let fsrs = make_fsrs(fsrs_params)?;
     let next = fsrs
         .next_states(mem, desired_retention as f32, days_elapsed)
         .map_err(|e| format!("FSRS next_states 失败: {e}"))?;
@@ -113,8 +86,9 @@ fn compute_next_with_state(
     rating: u8,
     days_elapsed: u32,
     desired_retention: f64,
+    fsrs_params: &[f32],
 ) -> Result<(f64, f64, f64), String> {
-    let fsrs = make_fsrs()?;
+    let fsrs = make_fsrs(fsrs_params)?;
     let next = fsrs
         .next_states(mem, desired_retention as f32, days_elapsed)
         .map_err(|e| format!("FSRS next_states 失败: {e}"))?;
@@ -212,7 +186,7 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> Result<Review
             1 => {
                 // Again：用 FSRS 更新状态，回到 step 0
                 let (s, d, _) =
-                    compute_next_with_state(mem, 1, days_elapsed, config.desired_retention)?;
+                    compute_next_with_state(mem, 1, days_elapsed, config.desired_retention, &config.fsrs_params)?;
                 ReviewOutcome {
                     state: Learning,
                     stability: s,
@@ -241,6 +215,7 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> Result<Review
                         rating,
                         cumulative_step_days.max(1),
                         config.desired_retention,
+                        &config.fsrs_params,
                     )?;
                     let secs = secs.max(config.graduating_interval_secs as f64);
                     ReviewOutcome {
@@ -266,7 +241,7 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> Result<Review
     let mem = to_memory_state(s_old, d_old);
 
     if rating == 1 {
-        let (s, d, _) = compute_next_with_state(mem, 1, days_elapsed, config.desired_retention)?;
+        let (s, d, _) = compute_next_with_state(mem, 1, days_elapsed, config.desired_retention, &config.fsrs_params)?;
         return Ok(ReviewOutcome {
             state: Relearning,
             stability: s,
@@ -276,7 +251,7 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> Result<Review
     }
 
     let (s, d, secs) =
-        compute_next_with_state(mem, rating, days_elapsed, config.desired_retention)?;
+        compute_next_with_state(mem, rating, days_elapsed, config.desired_retention, &config.fsrs_params)?;
     Ok(ReviewOutcome {
         state: Review,
         stability: s,
@@ -302,7 +277,7 @@ fn relearn(
     Ok(match rating {
         1 => {
             let (s, d, _) =
-                compute_next_with_state(mem, 1, days_elapsed, config.desired_retention)?;
+                compute_next_with_state(mem, 1, days_elapsed, config.desired_retention, &config.fsrs_params)?;
             ReviewOutcome {
                 state: Relearning,
                 stability: s,
@@ -328,6 +303,7 @@ fn relearn(
                     rating,
                     cumulative_step_days.max(1),
                     config.desired_retention,
+                    &config.fsrs_params,
                 )?;
                 let secs = secs.max(config.graduating_interval_secs as f64);
                 ReviewOutcome {
@@ -402,8 +378,8 @@ pub fn preview(
             (remaining as f64, remaining as f64)
         } else if step + 1 >= steps.len() {
             (
-                compute_next(mem, 3, days_elapsed.max(1), config.desired_retention)?,
-                compute_next(mem, 4, days_elapsed.max(1), config.desired_retention)?,
+                compute_next(mem, 3, days_elapsed.max(1), config.desired_retention, &config.fsrs_params)?,
+                compute_next(mem, 4, days_elapsed.max(1), config.desired_retention, &config.fsrs_params)?,
             )
         } else {
             (
@@ -431,8 +407,8 @@ pub fn preview(
         let next = step + 1;
         let (good, easy) = if next >= steps.len() {
             (
-                compute_next(mem, 3, days_elapsed.max(1), config.desired_retention)?,
-                compute_next(mem, 4, days_elapsed.max(1), config.desired_retention)?,
+                compute_next(mem, 3, days_elapsed.max(1), config.desired_retention, &config.fsrs_params)?,
+                compute_next(mem, 4, days_elapsed.max(1), config.desired_retention, &config.fsrs_params)?,
             )
         } else {
             (
@@ -445,9 +421,9 @@ pub fn preview(
 
     Ok([
         *config.learning_steps.first().unwrap_or(&0) as f64,
-        compute_next(mem, 2, days_elapsed, config.desired_retention)?,
-        compute_next(mem, 3, days_elapsed, config.desired_retention)?,
-        compute_next(mem, 4, days_elapsed, config.desired_retention)?,
+        compute_next(mem, 2, days_elapsed, config.desired_retention, &config.fsrs_params)?,
+        compute_next(mem, 3, days_elapsed, config.desired_retention, &config.fsrs_params)?,
+        compute_next(mem, 4, days_elapsed, config.desired_retention, &config.fsrs_params)?,
     ])
 }
 

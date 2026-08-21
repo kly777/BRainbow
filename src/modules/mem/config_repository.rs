@@ -3,7 +3,6 @@
 use sqlx::SqlitePool;
 
 use super::config::MemConfig;
-use super::fsrs;
 
 const DB_KEY: &str = "mem_config";
 
@@ -68,10 +67,8 @@ impl MemConfigRepo {
         Ok(())
     }
 
-    /// 加载配置并初始化全局 FSRS 参数。
+    /// 加载配置（FSRS 参数不再写入全局 static；由 AppState 持有并在调度时显式传入）。
     pub async fn load_and_init(&self) -> MemConfig {
-        let cfg = self.load().await;
-        fsrs::init_global_params(cfg.fsrs_params.clone());
-        cfg
+        self.load().await
     }
 }

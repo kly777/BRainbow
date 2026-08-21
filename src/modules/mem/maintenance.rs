@@ -9,7 +9,6 @@ use async_trait::async_trait;
 use sqlx::SqlitePool;
 
 use super::config_repository::MemConfigRepo;
-use super::fsrs;
 use super::optimizer;
 use super::port::{MemMaintenance, MemRepository};
 use crate::shared::error_types::ServiceError;
@@ -29,12 +28,13 @@ impl DbMemMaintenance {
 impl MemMaintenance for DbMemMaintenance {
     async fn optimize_now(&self) -> Result<Option<Vec<f32>>, ServiceError> {
         let repo = MemConfigRepo::new(self.db.as_ref().clone());
-        let config = repo.load().await;
+        let mut config = repo.load().await;
         match optimizer::optimize_fsrs_params(&self.db, &config).await {
             Ok(Some(params)) => {
-                let updated = config;
-                repo.save(&updated).await.map_err(ServiceError::Internal)?;
-                fsrs::set_global_params(params.clone());
+                // 新参数写回持久化配置（AppState 持有，调度时显式传入）
+                config.fsrs_params = params.clone();
+                repo.save(&config).await.map_err(ServiceError::Internal)?;
+                tracing::info!("FSRS 参数优化完成并持久化 ({} 个)", params.len());
                 Ok(Some(params))
             }
             Ok(None) => Ok(None),
@@ -65,13 +65,12 @@ async fn maybe_auto_optimize(repo: Arc<dyn MemRepository>, db: Arc<SqlitePool>, 
     let config = config_repo.load().await;
     match optimizer::optimize_fsrs_params(&db, &config).await {
         Ok(Some(params)) => {
-            let cfg = config;
-            let ok = config_repo.save(&cfg).await.is_ok();
-            fsrs::set_global_params(params);
-            if ok {
-                tracing::info!("自动优化完成, 参数已更新 (数据库 + 运行时)");
+            let mut cfg = config;
+            cfg.fsrs_params = params;
+            if config_repo.save(&cfg).await.is_ok() {
+                tracing::info!("自动优化完成, 参数已持久化");
             } else {
-                tracing::warn!("自动优化完成但写库失败, 仅运行时生效");
+                tracing::warn!("自动优化完成但写库失败");
             }
         }
         Ok(None) => {}

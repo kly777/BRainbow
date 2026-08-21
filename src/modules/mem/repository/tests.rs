@@ -492,7 +492,7 @@ async fn insert_session_mem(repo: &MemRepo, state: &str, buried: i32, due_at: &s
 async fn estimate(repo: &MemRepo) -> crate::modules::mem::dto::SessionEstimate {
     let repo_arc: Arc<dyn crate::modules::mem::port::MemRepository> =
         Arc::new(MemRepo::new(repo.pool().clone()));
-    let svc = crate::modules::mem::query::MemQueryService::new(repo_arc);
+    let svc = crate::modules::mem::query::MemQueryService::new(repo_arc, Arc::new(crate::modules::mem::config::MemConfig::default()));
     svc.get_session_estimate(TEST_USER_ID, &crate::modules::mem::config::MemConfig::default(), &[], &[])
         .await
         .unwrap()

@@ -2,6 +2,8 @@
 // 供 lib/api/request.ts（请求层）与 modules/auth（登录状态）共用，
 // 避免请求层反向依赖业务层。读操作做内存缓存，避免每次请求重复 JSON.parse。
 
+import { trySync, unwrapOr } from "@lib/utils/result.ts";
+
 export const STORAGE_KEY = "brainbow_user";
 export const API_KEY_STORAGE_KEY = "brainbow_api_key";
 
@@ -18,13 +20,12 @@ let apiKeyCache: string | null | undefined;
 
 function loadFromStorage(): StoredUser | null {
 	if (userCache !== undefined) return userCache;
-	try {
+	const result = trySync(() => {
 		const raw = localStorage.getItem(STORAGE_KEY);
 		const user = raw ? (JSON.parse(raw) as StoredUser) : null;
-		userCache = user?.id && user?.name ? user : null;
-	} catch {
-		userCache = null;
-	}
+		return user?.id && user?.name ? user : null;
+	});
+	userCache = unwrapOr(result, null);
 	return userCache;
 }
 
@@ -36,11 +37,8 @@ export function getToken(): string | null {
 /** 当前 API key（localStorage 直读 + 内存缓存，非响应式） */
 export function getApiKey(): string | null {
 	if (apiKeyCache !== undefined) return apiKeyCache;
-	try {
-		apiKeyCache = localStorage.getItem(API_KEY_STORAGE_KEY);
-	} catch {
-		apiKeyCache = null;
-	}
+	const result = trySync(() => localStorage.getItem(API_KEY_STORAGE_KEY));
+	apiKeyCache = unwrapOr(result, null);
 	return apiKeyCache;
 }
 

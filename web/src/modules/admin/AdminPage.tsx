@@ -1,7 +1,7 @@
 // ── 管理员设置页：开放注册开关 / JWT 密钥状态与轮换 ──
 
 import { Button } from "@components/ui";
-import { notifyError, notifySuccess, showConfirm } from "@lib/utils";
+import { notifyError, notifySuccess, showConfirm, tryAsync } from "@lib/utils";
 import { useAuth } from "@modules/auth";
 import { createResource, createSignal, Show } from "solid-js";
 import styles from "./AdminPage.module.css";
@@ -19,19 +19,20 @@ export default function AdminPage() {
 		const current = settings();
 		if (!current) return;
 		setSaving(true);
-		try {
-			const updated = await updateAdminSettingsE(!current.allow_register);
-			mutate(updated);
+		const result = await tryAsync(() =>
+			updateAdminSettingsE(!current.allow_register),
+		);
+		setSaving(false);
+		if (result.ok) {
+			mutate(result.value);
 			notifySuccess(
-				updated.allow_register ? "已开放注册" : "已关闭注册",
-				updated.allow_register
+				result.value.allow_register ? "已开放注册" : "已关闭注册",
+				result.value.allow_register
 					? "任何人现在可以注册账号"
 					: "仅管理员可创建用户",
 			);
-		} catch (e) {
-			notifyError("更新失败", e);
-		} finally {
-			setSaving(false);
+		} else {
+			notifyError("更新失败", result.error);
 		}
 	};
 
@@ -44,14 +45,13 @@ export default function AdminPage() {
 		});
 		if (!confirmed) return;
 		setRotating(true);
-		try {
-			const res = await rotateJwtE();
-			notifySuccess("密钥已轮换", res.message);
+		const result = await tryAsync(() => rotateJwtE());
+		setRotating(false);
+		if (result.ok) {
+			notifySuccess("密钥已轮换", result.value.message);
 			refetch();
-		} catch (e) {
-			notifyError("轮换失败", e);
-		} finally {
-			setRotating(false);
+		} else {
+			notifyError("轮换失败", result.error);
 		}
 	};
 

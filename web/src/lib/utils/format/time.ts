@@ -1,5 +1,7 @@
 /** 统一时间处理 */
 
+import { trySync, unwrapOr } from "../result.ts";
+
 /** 解析可能有缺 Z 的 UTC 时间字符串 */
 export function parseUtc(ts: string): Date {
 	if (!ts.endsWith("Z") && !ts.includes("+") && !ts.includes("-", 10)) {
@@ -20,7 +22,7 @@ export function fmtLocal(ts: string): string {
 
 /** 格式化为完整本地时间 "2026/06/10 22:00"（带年份） */
 export function fmtFull(ts: string): string {
-	try {
+	const result = trySync(() => {
 		const d = parseUtc(ts);
 		if (Number.isNaN(d.getTime())) return ts;
 		return d.toLocaleString("zh-CN", {
@@ -30,9 +32,8 @@ export function fmtFull(ts: string): string {
 			hour: "2-digit",
 			minute: "2-digit",
 		});
-	} catch {
-		return ts;
-	}
+	});
+	return unwrapOr(result, ts);
 }
 
 /** 格式化为相对时间 "3天后" / "待复习" */

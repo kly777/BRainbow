@@ -6,6 +6,7 @@ import {
 	STORAGE_KEY,
 	saveUser,
 } from "@lib/api";
+import { trySync, unwrapOr } from "@lib/utils/result.ts";
 import { createContext, createSignal, type JSX, useContext } from "solid-js";
 
 export interface AuthState {
@@ -23,15 +24,13 @@ const AuthContext = createContext<{
 }>();
 
 function loadFromStorage() {
-	try {
+	const result = trySync(() => {
 		const raw = localStorage.getItem(STORAGE_KEY);
 		if (!raw) return null;
 		const user = JSON.parse(raw);
-		if (user?.id && user?.name) return user;
-	} catch {
-		/* ignore parse errors */
-	}
-	return null;
+		return user?.id && user?.name ? user : null;
+	});
+	return unwrapOr(result, null);
 }
 
 export function AuthProvider(props: { children: JSX.Element }) {

@@ -3,7 +3,13 @@
 
 import { Button } from "@components/ui";
 import { del, get, getApiKey, getErrorMessage, post } from "@lib/api";
-import { fmtFull, notifyError, notifySuccess, showConfirm } from "@lib/utils";
+import {
+	fmtFull,
+	notifyError,
+	notifySuccess,
+	showConfirm,
+	tryAsync,
+} from "@lib/utils";
 import { useAuth } from "@modules/auth";
 import {
 	type Component,
@@ -103,15 +109,14 @@ export default function KeyPage() {
 
 	const handleGenerate = async () => {
 		setGenerating(true);
-		try {
-			const info = await post<ApiKeyInfo>("/auth/key", {});
-			setNewKey(info.key ?? null);
+		const result = await tryAsync(() => post<ApiKeyInfo>("/auth/key", {}));
+		setGenerating(false);
+		if (result.ok) {
+			setNewKey(result.value.key ?? null);
 			refetch();
 			notifySuccess("已生成 API key", "复制后保存，仅显示一次");
-		} catch (e) {
-			notifyError("生成 key 失败", e);
-		} finally {
-			setGenerating(false);
+		} else {
+			notifyError("生成 key 失败", result.error);
 		}
 	};
 
@@ -137,13 +142,12 @@ export default function KeyPage() {
 			variant: "danger",
 		});
 		if (!confirmed) return;
-		try {
-			await del(`/auth/key/${id}`);
-			// 若删除的是当前应用的 key，同步清除本地
+		const result = await tryAsync(() => del(`/auth/key/${id}`));
+		if (result.ok) {
 			refetch();
 			notifySuccess("已删除");
-		} catch (e) {
-			notifyError("删除失败", e);
+		} else {
+			notifyError("删除失败", result.error);
 		}
 	};
 

@@ -1,6 +1,7 @@
 // ── /bookmark 列表项：favicon + 标题链接 + 域名 + 标签 + 操作 ──
 
 import { Button, Tooltip } from "@components/ui";
+import { trySync } from "@lib/utils";
 import type { Bookmark } from "@modules/bookmark";
 import { For } from "solid-js";
 import styles from "../BookmarkPage.module.css";
@@ -8,11 +9,8 @@ import Favicon from "./Favicon.tsx";
 
 /** 从 URL 提取域名（用于展示与标题兜底） */
 function extractDomain(url: string): string {
-	try {
-		return new URL(url).hostname.replace(/^www\./, "");
-	} catch {
-		return url;
-	}
+	const result = trySync(() => new URL(url).hostname.replace(/^www\./, ""));
+	return result.ok ? result.value : url;
 }
 
 export function BookmarkItem(props: {

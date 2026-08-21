@@ -9,16 +9,18 @@ use super::repository::DBRepo;
 /// db_viewer 是数据库浏览工具，无写操作。
 #[derive(Clone)]
 pub struct DbViewerQueryService {
-    pool: Arc<sqlx::SqlitePool>,
+    repo: DBRepo,
 }
 
 impl DbViewerQueryService {
     pub fn new(pool: Arc<sqlx::SqlitePool>) -> Self {
-        Self { pool }
+        Self {
+            repo: DBRepo::new(pool),
+        }
     }
 
     pub async fn get_table_names(&self) -> Result<Vec<String>, ServiceError> {
-        let repo = DBRepo::new(self.pool.clone());
+        let repo = &self.repo;
         repo.get_table_names().await.map_err(ServiceError::Db)
     }
 
@@ -29,7 +31,7 @@ impl DbViewerQueryService {
         offset: i64,
         options: &TableReadOptions,
     ) -> Result<TableData, ServiceError> {
-        let repo = DBRepo::new(self.pool.clone());
+        let repo = &self.repo;
         repo.get_table_data(table_name, limit, offset, options)
             .await
             .map_err(ServiceError::Db)
@@ -42,7 +44,7 @@ impl DbViewerQueryService {
         options: &TableReadOptions,
     ) -> Result<TableData, ServiceError> {
         const EXPORT_MAX_ROWS: i64 = 10_000;
-        let repo = DBRepo::new(self.pool.clone());
+        let repo = &self.repo;
         let data = repo
             .get_table_data(table_name, EXPORT_MAX_ROWS + 1, 0, options)
             .await
@@ -60,7 +62,7 @@ impl DbViewerQueryService {
         table_name: &str,
         id: i64,
     ) -> Result<Vec<BackRefGroup>, ServiceError> {
-        let repo = DBRepo::new(self.pool.clone());
+        let repo = &self.repo;
         repo.get_backrefs(table_name, id)
             .await
             .map_err(ServiceError::Db)

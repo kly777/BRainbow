@@ -68,7 +68,7 @@ pub async fn get_session_estimate(
         .unwrap_or_default();
     let svc = &query;
     match svc
-        .get_session_estimate(&*config, &tag_ids, &exclude_tag_ids)
+        .get_session_estimate(&config, &tag_ids, &exclude_tag_ids)
         .await
     {
         Ok(est) => Json(est).into_response(),

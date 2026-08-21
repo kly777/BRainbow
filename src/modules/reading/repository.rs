@@ -39,6 +39,15 @@ struct WordStatusRow {
     status: String,
 }
 
+#[derive(Debug, FromRow)]
+struct ReadingSearchRow {
+    id: i64,
+    title: String,
+    content: String,
+    #[allow(dead_code)]
+    title_hit: i64,
+}
+
 #[allow(dead_code)] // 单篇认识率查询仍由测试覆盖
 #[derive(Debug, FromRow)]
 struct KnownRatioRow {
@@ -65,6 +74,7 @@ struct UnknownWordRow {
     first_seen_at: String,
 }
 
+#[derive(Clone)]
 pub struct ReadingRepo {
     pool: Arc<SqlitePool>,
 }
@@ -355,6 +365,30 @@ impl ReadingRepo {
                 da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
             });
         Ok(best)
+    }
+
+    /// 全局搜索命中：返回 (id, title, content)
+    pub async fn search_hits(
+        &self,
+        like: &str,
+        cap: i64,
+    ) -> Result<Vec<(i64, String, String)>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            ReadingSearchRow,
+            r#"SELECT id, title, content,
+                      title LIKE ?1 ESCAPE '\' AS "title_hit!: i64"
+               FROM reading_article
+               WHERE title LIKE ?1 ESCAPE '\' OR content LIKE ?1 ESCAPE '\'
+               ORDER BY (title LIKE ?1 ESCAPE '\') DESC, id DESC LIMIT ?2"#,
+            like,
+            cap
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| (r.id, r.title, r.content))
+            .collect())
     }
 }
 

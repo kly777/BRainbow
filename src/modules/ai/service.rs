@@ -2,37 +2,33 @@ use sqlx::SqlitePool;
 use tokio::time::{Duration, sleep};
 
 use crate::shared::error_types::ServiceError;
-use crate::shared::time_text::utc_now_iso;
 use async_trait::async_trait;
 
 use super::model::{AiConfig, AiProxyMessage, AiSettingsItem, UpdateAiSettingsRequest};
 use super::port::AiChatPort;
+use super::repository::AiRepo;
 
 /// AI 服务：设置 CRUD + LLM 代理调用（所有 AI 功能统一走这里）
 #[derive(Clone)]
 pub struct AiService {
-    pool: SqlitePool,
+    repo: AiRepo,
     client: reqwest::Client,
 }
 
 impl AiService {
     pub fn new(pool: SqlitePool) -> Self {
         Self {
-            pool,
+            repo: AiRepo::new(pool),
             client: reqwest::Client::new(),
         }
     }
 
     /// 读取用户的完整 AI 配置
     pub async fn get_config(&self, user_id: i32) -> Result<Option<AiConfig>, ServiceError> {
-        let row = sqlx::query_as!(
-            AiConfig,
-            "SELECT endpoint, api_key, model, mnemonic_prompt FROM ai_settings WHERE user_id = ?1",
-            user_id
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-        Ok(row)
+        self.repo
+            .get_config(user_id)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     /// 返回前端可读设置（api_key 掩码）
@@ -81,25 +77,10 @@ impl AiService {
             .map(|s| s.trim().to_string())
             .unwrap_or(old_prompt);
 
-        let now = utc_now_iso();
-        sqlx::query!(
-            "INSERT INTO ai_settings (user_id, endpoint, api_key, model, mnemonic_prompt, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-             ON CONFLICT(user_id) DO UPDATE SET
-                endpoint = excluded.endpoint,
-                api_key = excluded.api_key,
-                model = excluded.model,
-                mnemonic_prompt = excluded.mnemonic_prompt,
-                updated_at = excluded.updated_at",
-            user_id,
-            endpoint,
-            api_key,
-            model,
-            mnemonic_prompt,
-            now
-        )
-        .execute(&self.pool)
-        .await?;
+        self.repo
+            .upsert_settings(user_id, &endpoint, &api_key, &model, &mnemonic_prompt)
+            .await
+            .map_err(ServiceError::Db)?;
 
         Ok(AiSettingsItem {
             endpoint,

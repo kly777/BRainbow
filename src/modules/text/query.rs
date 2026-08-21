@@ -1,36 +1,29 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use sqlx::FromRow;
 
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{SearchHit, SearchPort, snippet};
 
-use super::repository;
-
-#[derive(FromRow)]
-struct TextHitRow {
-    id: i64,
-    name: String,
-    content: String,
-}
+use super::repository::TextRepo;
 
 /// 查询侧服务——纯读取，无副作用。
 ///
 /// CQRS 分离：写操作（save_tabs）保留在 `TextService` 中。
 #[derive(Clone)]
 pub struct TextQueryService {
-    pool: Arc<sqlx::SqlitePool>,
+    repo: TextRepo,
 }
 
 impl TextQueryService {
     pub fn new(pool: Arc<sqlx::SqlitePool>) -> Self {
-        Self { pool }
+        Self {
+            repo: TextRepo::new(pool),
+        }
     }
 
     pub async fn load_tabs(&self) -> Result<Vec<(i64, String, String)>, ServiceError> {
-        let repo = repository::TextRepo::new(self.pool.clone());
-        repo.load_tabs().await.map_err(ServiceError::Db)
+        self.repo.load_tabs().await.map_err(ServiceError::Db)
     }
 }
 
@@ -48,24 +41,19 @@ impl SearchPort for TextQueryService {
         }
         let cap = limit.clamp(1, 20);
         let like = crate::shared::db_query::like_contains(kw);
-        let rows = sqlx::query_as!(
-            TextHitRow,
-            r#"SELECT id, name, content FROM text_note
-               WHERE name LIKE ?1 ESCAPE '\' OR content LIKE ?1 ESCAPE '\'
-               ORDER BY id DESC LIMIT ?2"#,
-            like,
-            cap
-        )
-        .fetch_all(&*self.pool)
-        .await?;
+        let rows = self
+            .repo
+            .search_hits(&like, cap)
+            .await
+            .map_err(ServiceError::Db)?;
         Ok(rows
             .into_iter()
-            .map(|r| SearchHit {
+            .map(|(id, name, content)| SearchHit {
                 kind: "text".into(),
-                id: r.id,
-                title: r.name,
-                snippet: snippet(&r.content, kw),
-                url: format!("/text?id={}", r.id),
+                id,
+                title: name,
+                snippet: snippet(&content, kw),
+                url: format!("/text?id={}", id),
             })
             .collect())
     }

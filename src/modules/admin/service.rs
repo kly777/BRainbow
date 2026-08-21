@@ -10,12 +10,13 @@ use super::port::AdminServicePort;
 pub const KEY_ALLOW_REGISTER: &str = "allow_register";
 pub const KEY_JWT_SECRET: &str = "jwt_secret";
 
+/// app_settings 键值表的 repository（具体类型，不引入 dyn）。
 #[derive(Clone)]
-pub struct SettingsService {
+pub struct SettingsRepo {
     pool: Arc<SqlitePool>,
 }
 
-impl SettingsService {
+impl SettingsRepo {
     pub fn new(pool: Arc<SqlitePool>) -> Self {
         Self { pool }
     }
@@ -44,6 +45,32 @@ impl SettingsService {
             .execute(&*self.pool)
             .await
             .map(|_| ())
+    }
+}
+
+#[derive(Clone)]
+pub struct SettingsService {
+    repo: SettingsRepo,
+}
+
+impl SettingsService {
+    pub fn new(pool: Arc<SqlitePool>) -> Self {
+        Self {
+            repo: SettingsRepo::new(pool),
+        }
+    }
+
+    pub async fn get(&self, key: &str) -> Result<Option<String>, sqlx::Error> {
+        self.repo.get(key).await
+    }
+
+    pub async fn set(&self, key: &str, value: &str) -> Result<(), sqlx::Error> {
+        self.repo.set(key, value).await
+    }
+
+    #[allow(dead_code)] // 预留：重置设置回 env 默认值
+    pub async fn remove(&self, key: &str) -> Result<(), sqlx::Error> {
+        self.repo.remove(key).await
     }
 }
 

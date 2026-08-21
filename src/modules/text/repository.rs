@@ -8,6 +8,13 @@ struct TabRow {
     content: String,
 }
 
+#[derive(Debug, FromRow)]
+struct TextSearchRow {
+    id: i64,
+    name: String,
+    content: String,
+}
+
 #[derive(Clone)]
 pub struct TextRepo {
     pool: Arc<SqlitePool>,
@@ -49,6 +56,28 @@ impl TextRepo {
 
         tx.commit().await?;
         Ok(())
+    }
+
+    /// 全局搜索命中：返回 (id, name, content)
+    pub async fn search_hits(
+        &self,
+        like: &str,
+        cap: i64,
+    ) -> Result<Vec<(i64, String, String)>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            TextSearchRow,
+            r#"SELECT id, name, content FROM text_note
+               WHERE name LIKE ?1 ESCAPE '\' OR content LIKE ?1 ESCAPE '\'
+               ORDER BY id DESC LIMIT ?2"#,
+            like,
+            cap
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| (r.id, r.name, r.content))
+            .collect())
     }
 }
 

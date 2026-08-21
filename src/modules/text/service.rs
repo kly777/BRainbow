@@ -2,24 +2,25 @@ use std::sync::Arc;
 
 use crate::shared::error_types::ServiceError;
 
-use super::repository;
+use super::repository::TextRepo;
 
 /// 命令侧服务——只暴露写操作。
 ///
 /// CQRS 分离：纯读方法（load_tabs）在 `TextQueryService` 中。
 #[derive(Clone)]
 pub struct TextService {
-    pool: Arc<sqlx::SqlitePool>,
+    repo: TextRepo,
 }
 
 impl TextService {
     pub fn new(pool: Arc<sqlx::SqlitePool>) -> Self {
-        Self { pool }
+        Self {
+            repo: TextRepo::new(pool),
+        }
     }
 
     pub async fn save_tabs(&self, tabs: &[(String, String)]) -> Result<(), ServiceError> {
-        let repo = repository::TextRepo::new(self.pool.clone());
-        repo.save_tabs(tabs).await.map_err(ServiceError::Db)
+        self.repo.save_tabs(tabs).await.map_err(ServiceError::Db)
     }
 }
 

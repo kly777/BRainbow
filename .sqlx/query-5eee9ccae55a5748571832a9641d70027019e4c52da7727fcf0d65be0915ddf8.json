@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT name AS \"name!: String\" FROM sqlite_master\n             WHERE type='table'\n               AND name NOT LIKE '%_fts'\n               AND name NOT LIKE '%_fts_config'\n               AND name NOT LIKE '%_fts_data'\n               AND name NOT LIKE '%_fts_docsize'\n               AND name NOT LIKE '%_fts_idx'\n               AND name NOT LIKE '%_fts_content'\n             ORDER BY name",
+  "describe": {
+    "columns": [
+      {
+        "name": "name!: String",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "sqlite_master",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "5eee9ccae55a5748571832a9641d70027019e4c52da7727fcf0d65be0915ddf8"
+}

@@ -174,198 +174,55 @@ pub struct AppState {
     pub conv: ConvState,
     pub search: SearchState,
 }
-
-impl FromRef<AppState> for SearchQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.search.service.clone()
-    }
+/// 批量生成 FromRef<AppState>：`(路径 => 类型)` 列表。
+/// 路径为 AppState 字段链（如 `mem.query` → `state.mem.query.clone()`）。
+macro_rules! impl_from_ref {
+    ($($path:ident $(.$field:ident)* => $ty:ty),* $(,)?) => {
+        $(
+            impl FromRef<AppState> for $ty {
+                fn from_ref(state: &AppState) -> Self {
+                    state.$path$(.$field)*.clone()
+                }
+            }
+        )*
+    };
 }
 
-impl FromRef<AppState> for AdminService {
-    fn from_ref(state: &AppState) -> Self {
-        state.admin.admin.clone()
-    }
+impl_from_ref! {
+    search.service => SearchQueryService,
+    admin.admin => AdminService,
+    auth.auth => AuthService,
+    ai.ai => AiService,
+    chat.chat => ChatService,
+    chat.chat_query => ChatQueryService,
+    bookmark.service => BookmarkService,
+    bookmark.query => BookmarkQueryService,
+    card.service => CardService,
+    card.query => CardQueryService,
+    onto.service => OntoService,
+    onto.query => OntoQueryService,
+    sign.service => SignService,
+    sign.query => SignQueryService,
+    conv.service => ConvQueryService,
+    db_viewer.service => DbViewerQueryService,
+    media.service => MediaService,
+    media.query => MediaQueryService,
+    reading.service => ReadingService,
+    reading.query => ReadingQueryService,
+    text.service => TextService,
+    text.query => TextQueryService,
+    task.service => TaskService,
+    task.query => TaskQueryService,
+    time_window.service => TimeWindowService,
+    time_window.query => TimeWindowQueryService,
+    user.service => UserService,
+    user.query => UserQueryService,
+    mem.service => MemService,
+    mem.query => MemQueryService,
+    mem.maintenance => DbMemMaintenance,
+    mem.config => Arc<MemConfig>,
 }
 
-impl FromRef<AppState> for AuthService {
-    fn from_ref(state: &AppState) -> Self {
-        state.auth.auth.clone()
-    }
-}
-
-impl FromRef<AppState> for AiService {
-    fn from_ref(state: &AppState) -> Self {
-        state.ai.ai.clone()
-    }
-}
-
-impl FromRef<AppState> for ChatService {
-    fn from_ref(state: &AppState) -> Self {
-        state.chat.chat.clone()
-    }
-}
-
-impl FromRef<AppState> for ChatQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.chat.chat_query.clone()
-    }
-}
-
-impl FromRef<AppState> for BookmarkService {
-    fn from_ref(state: &AppState) -> Self {
-        state.bookmark.service.clone()
-    }
-}
-
-impl FromRef<AppState> for BookmarkQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.bookmark.query.clone()
-    }
-}
-
-impl FromRef<AppState> for CardService {
-    fn from_ref(state: &AppState) -> Self {
-        state.card.service.clone()
-    }
-}
-
-impl FromRef<AppState> for CardQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.card.query.clone()
-    }
-}
-
-impl FromRef<AppState> for OntoService {
-    fn from_ref(state: &AppState) -> Self {
-        state.onto.service.clone()
-    }
-}
-
-impl FromRef<AppState> for OntoQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.onto.query.clone()
-    }
-}
-
-impl FromRef<AppState> for SignService {
-    fn from_ref(state: &AppState) -> Self {
-        state.sign.service.clone()
-    }
-}
-
-impl FromRef<AppState> for SignQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.sign.query.clone()
-    }
-}
-
-impl FromRef<AppState> for ConvQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.conv.service.clone()
-    }
-}
-
-impl FromRef<AppState> for DbViewerQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.db_viewer.service.clone()
-    }
-}
-
-impl FromRef<AppState> for MediaService {
-    fn from_ref(state: &AppState) -> Self {
-        state.media.service.clone()
-    }
-}
-
-impl FromRef<AppState> for MediaQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.media.query.clone()
-    }
-}
-
-impl FromRef<AppState> for ReadingService {
-    fn from_ref(state: &AppState) -> Self {
-        state.reading.service.clone()
-    }
-}
-
-impl FromRef<AppState> for ReadingQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.reading.query.clone()
-    }
-}
-
-impl FromRef<AppState> for TextService {
-    fn from_ref(state: &AppState) -> Self {
-        state.text.service.clone()
-    }
-}
-
-impl FromRef<AppState> for TextQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.text.query.clone()
-    }
-}
-
-impl FromRef<AppState> for TaskService {
-    fn from_ref(state: &AppState) -> Self {
-        state.task.service.clone()
-    }
-}
-
-impl FromRef<AppState> for TaskQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.task.query.clone()
-    }
-}
-
-impl FromRef<AppState> for TimeWindowService {
-    fn from_ref(state: &AppState) -> Self {
-        state.time_window.service.clone()
-    }
-}
-
-impl FromRef<AppState> for TimeWindowQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.time_window.query.clone()
-    }
-}
-
-impl FromRef<AppState> for UserService {
-    fn from_ref(state: &AppState) -> Self {
-        state.user.service.clone()
-    }
-}
-
-impl FromRef<AppState> for UserQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.user.query.clone()
-    }
-}
-
-impl FromRef<AppState> for MemService {
-    fn from_ref(state: &AppState) -> Self {
-        state.mem.service.clone()
-    }
-}
-
-impl FromRef<AppState> for MemQueryService {
-    fn from_ref(state: &AppState) -> Self {
-        state.mem.query.clone()
-    }
-}
-
-impl FromRef<AppState> for DbMemMaintenance {
-    fn from_ref(state: &AppState) -> Self {
-        state.mem.maintenance.clone()
-    }
-}
-
-impl FromRef<AppState> for Arc<MemConfig> {
-    fn from_ref(state: &AppState) -> Self {
-        state.mem.config.clone()
-    }
-}
 
 impl AppState {
     /// 初始化运行时缓存：DB 中有持久化密钥则优先

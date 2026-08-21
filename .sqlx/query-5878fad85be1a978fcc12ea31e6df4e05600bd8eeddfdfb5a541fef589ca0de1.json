@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT word, unknown_count, known_count,\n                   COALESCE(first_seen_at, CURRENT_TIMESTAMP) AS \"first_seen_at!: String\"\n            FROM reading_user_word\n            WHERE status = 'unknown'\n            ORDER BY unknown_count DESC, word ASC\n            ",
+  "query": "\n            SELECT word, unknown_count, known_count,\n                   COALESCE(first_seen_at, CURRENT_TIMESTAMP) AS \"first_seen_at!: String\"\n            FROM reading_user_word\n            WHERE status = 'unknown' AND (user_id = ?1 OR user_id IS NULL)\n            ORDER BY unknown_count DESC, word ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -44,7 +44,7 @@
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       false,
@@ -53,5 +53,5 @@
       false
     ]
   },
-  "hash": "781ddd2807840b9db5e07b5a6df3b7d1103d45f89f6d3a4c3d40752f8f942432"
+  "hash": "5878fad85be1a978fcc12ea31e6df4e05600bd8eeddfdfb5a541fef589ca0de1"
 }

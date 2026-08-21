@@ -37,6 +37,7 @@ impl ReadingService {
 
     pub async fn upload_article(
         &self,
+        user_id: i32,
         title: &str,
         content: &str,
     ) -> Result<Article, ServiceError> {
@@ -57,7 +58,7 @@ impl ReadingService {
 
         // 插入文章
         let article_id = repo
-            .insert_article(title, content, word_count)
+            .insert_article(user_id, title, content, word_count)
             .await
             .map_err(ServiceError::Db)?;
 
@@ -67,14 +68,14 @@ impl ReadingService {
             .map_err(ServiceError::Db)?;
 
         // 返回（刚插入必须存在；缺失视为数据异常，走 RowNotFound 错误）
-        repo.get_article(article_id)
+        repo.get_article(user_id, article_id)
             .await
             .map_err(ServiceError::Db)?
             .ok_or_else(|| ServiceError::Internal("文章写入后读取失败".into()))
     }
 
     /// 标记单词
-    pub async fn mark_word(&self, word: &str, status: &str) -> Result<(), ServiceError> {
+    pub async fn mark_word(&self, user_id: i32, word: &str, status: &str) -> Result<(), ServiceError> {
         if word.trim().is_empty() {
             return Err(ServiceError::InvalidInput("单词不能为空".into()));
         }
@@ -83,15 +84,15 @@ impl ReadingService {
         }
         let word = word.trim();
         let repo = &self.repo;
-        repo.upsert_user_word(word, status)
+        repo.upsert_user_word(user_id, word, status)
             .await
             .map_err(ServiceError::Db)
     }
 
     /// 更新文章笔记
-    pub async fn update_notes(&self, id: i64, notes: &str) -> Result<(), ServiceError> {
+    pub async fn update_notes(&self, user_id: i32, id: i64, notes: &str) -> Result<(), ServiceError> {
         let repo = &self.repo;
-        repo.update_article_notes(id, notes)
+        repo.update_article_notes(user_id, id, notes)
             .await
             .map_err(ServiceError::Db)
     }

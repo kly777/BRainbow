@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT a.id AS \"id: i64\",\n                   a.title,\n                   COALESCE(a.word_count, 0) AS \"word_count!: i64\",\n                   COALESCE(a.created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\",\n                   COALESCE(SUM(CASE WHEN COALESCE(uw.status, 'unknown') != 'ignored' THEN 1 ELSE 0 END), 0) AS \"total!: i64\",\n                   COALESCE(SUM(CASE WHEN uw.status = 'known' THEN 1 ELSE 0 END), 0) AS \"known!: i64\",\n                   COALESCE(SUM(CASE WHEN COALESCE(uw.status, 'unknown') = 'unknown' THEN 1 ELSE 0 END), 0) AS \"unknown!: i64\"\n            FROM reading_article a\n            LEFT JOIN reading_article_word w ON w.article_id = a.id\n            LEFT JOIN reading_user_word uw ON uw.word = w.word\n            GROUP BY a.id, a.title, a.word_count, a.created_at\n            ",
+  "query": "\n            SELECT a.id AS \"id: i64\",\n                   a.title,\n                   COALESCE(a.word_count, 0) AS \"word_count!: i64\",\n                   COALESCE(a.created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\",\n                   COALESCE(SUM(CASE WHEN COALESCE(uw.status, 'unknown') != 'ignored' THEN 1 ELSE 0 END), 0) AS \"total!: i64\",\n                   COALESCE(SUM(CASE WHEN uw.status = 'known' THEN 1 ELSE 0 END), 0) AS \"known!: i64\",\n                   COALESCE(SUM(CASE WHEN COALESCE(uw.status, 'unknown') = 'unknown' THEN 1 ELSE 0 END), 0) AS \"unknown!: i64\"\n            FROM reading_article a\n            LEFT JOIN reading_article_word w ON w.article_id = a.id\n            LEFT JOIN reading_user_word uw ON uw.word = w.word\n            WHERE (a.user_id = ?1 OR a.user_id IS NULL)\n            GROUP BY a.id, a.title, a.word_count, a.created_at\n            ",
   "describe": {
     "columns": [
       {
@@ -57,7 +57,7 @@
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       false,
@@ -69,5 +69,5 @@
       false
     ]
   },
-  "hash": "6cb44c93d5e334fbd26e0151dd6e5b0eb4ca7fb87bafec6eff68906121d93c02"
+  "hash": "d23778950416950f560be538a86a91d3a58e893992fb0386090e234c4e6fd6df"
 }

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                    INSERT INTO reading_user_word (word, user_id, status, unknown_count, known_count, updated_at)\n                    VALUES (?, ?, 'unknown', 1, 0, datetime('now'))\n                    ON CONFLICT(word) DO UPDATE SET\n                        status = 'unknown',\n                        unknown_count = unknown_count + 1,\n                        updated_at = datetime('now')\n                    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "58256928122b69a239a4ff15b9185f12e54bfe195b77cda909107c9d7b58fbeb"
+}

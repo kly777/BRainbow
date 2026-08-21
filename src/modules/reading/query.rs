@@ -32,10 +32,10 @@ impl ReadingQueryService {
     }
 
     /// 文章列表：按「最该阅读的下一篇」排序（认识率最接近 90% 优先，同分新文章优先）
-    pub async fn list_articles(&self) -> Result<Vec<ArticleSummary>, ServiceError> {
+    pub async fn list_articles(&self, user_id: i32) -> Result<Vec<ArticleSummary>, ServiceError> {
         let repo = &self.repo;
         let mut articles = repo
-            .get_all_article_summaries()
+            .get_all_article_summaries(user_id)
             .await
             .map_err(ServiceError::Db)?;
         articles.sort_by(|a, b| {
@@ -48,9 +48,9 @@ impl ReadingQueryService {
     }
 
     /// 获取单篇文章详情（含词状态 + notes）
-    pub async fn article_detail(&self, id: i64) -> Result<Option<ArticleDetail>, ServiceError> {
+    pub async fn article_detail(&self, user_id: i32, id: i64) -> Result<Option<ArticleDetail>, ServiceError> {
         let repo = &self.repo;
-        match repo.get_article(id).await.map_err(ServiceError::Db)? {
+        match repo.get_article(user_id, id).await.map_err(ServiceError::Db)? {
             Some(article) => {
                 let words = repo
                     .get_article_word_statuses(id)
@@ -62,27 +62,29 @@ impl ReadingQueryService {
         }
     }
 
-    pub async fn article(&self, id: i64) -> Result<Option<Article>, ServiceError> {
+    pub async fn article(&self, user_id: i32, id: i64) -> Result<Option<Article>, ServiceError> {
         let repo = &self.repo;
-        repo.get_article(id).await.map_err(ServiceError::Db)
+        repo.get_article(user_id, id).await.map_err(ServiceError::Db)
     }
 
     /// 获取文章中的所有词
-    pub async fn article_words(&self, id: i64) -> Result<Vec<String>, ServiceError> {
+    pub async fn article_words(&self, user_id: i32, id: i64) -> Result<Vec<String>, ServiceError> {
         let repo = &self.repo;
+        // 先校验文章所有权
+        repo.get_article(user_id, id).await?;
         repo.get_article_words(id).await.map_err(ServiceError::Db)
     }
 
     /// 获取所有不认识词
-    pub async fn unknown_words(&self) -> Result<Vec<UnknownWord>, ServiceError> {
+    pub async fn unknown_words(&self, user_id: i32) -> Result<Vec<UnknownWord>, ServiceError> {
         let repo = &self.repo;
-        repo.get_unknown_words().await.map_err(ServiceError::Db)
+        repo.get_unknown_words(user_id).await.map_err(ServiceError::Db)
     }
 
     /// 推荐下一篇（认识率最接近 90%）
-    pub async fn recommend_next(&self, id: i64) -> Result<Option<ArticleSummary>, ServiceError> {
+    pub async fn recommend_next(&self, user_id: i32, id: i64) -> Result<Option<ArticleSummary>, ServiceError> {
         let repo = &self.repo;
-        repo.recommend_article(id, TARGET_KNOWN_RATIO)
+        repo.recommend_article(user_id, id, TARGET_KNOWN_RATIO)
             .await
             .map_err(ServiceError::Db)
     }
@@ -92,7 +94,7 @@ impl ReadingQueryService {
 impl SearchPort for ReadingQueryService {
     async fn search(
         &self,
-        _user_id: i32,
+        user_id: i32,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
@@ -104,7 +106,7 @@ impl SearchPort for ReadingQueryService {
         let like = crate::shared::db_query::like_contains(kw);
         let rows = self
             .repo
-            .search_hits(&like, cap)
+            .search_hits(user_id, &like, cap)
             .await
             .map_err(ServiceError::Db)?;
         Ok(rows
@@ -130,6 +132,8 @@ mod tests {
     async fn setup() -> (Arc<SqlitePool>, ReadingService) {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
         crate::db::migrate(&pool).await.unwrap();
+        sqlx::query("INSERT OR IGNORE INTO user (id, name, password_hash) VALUES (1, 'test', 'x')")
+            .execute(&*pool).await.unwrap();
         (pool.clone(), ReadingService::new(pool))
     }
 
@@ -139,27 +143,27 @@ mod tests {
         let query = ReadingQueryService::new(pool);
 
         let a = service
-            .upload_article("A: all unknown", "foo bar")
+            .upload_article(1, "A: all unknown", "foo bar")
             .await
             .unwrap();
         let b = service
-            .upload_article("B: mostly known", "alpha beta gamma delta")
+            .upload_article(1, "B: mostly known", "alpha beta gamma delta")
             .await
             .unwrap();
         let c = service
-            .upload_article("C: fully known", "one two")
+            .upload_article(1, "C: fully known", "one two")
             .await
             .unwrap();
 
         // B: 75% 认识（距离 0.15），C: 100% 认识（距离 0.1），A: 0%（距离 0.9）
         for word in ["alpha", "beta", "gamma"] {
-            service.mark_word(word, "known").await.unwrap();
+            service.mark_word(1, word, "known").await.unwrap();
         }
         for word in ["one", "two"] {
-            service.mark_word(word, "known").await.unwrap();
+            service.mark_word(1, word, "known").await.unwrap();
         }
 
-        let list = query.list_articles().await.unwrap();
+        let list = query.list_articles(1).await.unwrap();
         assert_eq!(list.len(), 3);
         assert_eq!(list[0].id, c.id);
         assert_eq!(list[1].id, b.id);

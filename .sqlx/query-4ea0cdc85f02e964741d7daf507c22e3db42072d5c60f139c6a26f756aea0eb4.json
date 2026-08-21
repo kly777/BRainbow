@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO reading_article (title, content, word_count, user_id) VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "4ea0cdc85f02e964741d7daf507c22e3db42072d5c60f139c6a26f756aea0eb4"
+}

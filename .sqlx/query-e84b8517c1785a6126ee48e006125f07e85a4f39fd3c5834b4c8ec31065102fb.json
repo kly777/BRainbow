@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE reading_article SET notes = ? WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "e84b8517c1785a6126ee48e006125f07e85a4f39fd3c5834b4c8ec31065102fb"
+}

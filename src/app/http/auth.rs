@@ -8,8 +8,7 @@ use axum::{
 use crate::app::auth::service::{AuthService, DeleteApiKeyResult};
 use crate::shared::claims::Claims;
 use crate::shared::error_types::ErrorBody;
-#[allow(unused_imports)] // hash_api_key 主要被测试使用
-pub use crate::shared::jwt::{extract_api_key, extract_token, hash_api_key, verify_token};
+pub use crate::shared::jwt::{extract_api_key, extract_token, verify_token};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -232,7 +231,7 @@ pub async fn delete_api_key(
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
-    use crate::shared::jwt::create_token;
+    use crate::shared::jwt::{create_token, hash_api_key};
 
     const TEST_SECRET: &str = "test-secret-key-for-unit-tests";
 

@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
-use crate::shared::error_types::ServiceError;
-
 // ── 卡片状态枚举 ──
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -178,41 +176,6 @@ pub struct FsrsUpdate {
     pub lapses: i32,
     pub leeched: bool,
     pub due_at: String,
-}
-
-/// mem 模块领域错误（不携带 sqlx/axum 类型，保持应用层与基础设施解耦）
-#[derive(Debug)]
-pub enum MemError {
-    NotFound,
-    Internal(String),
-    Db(String),
-}
-
-impl MemError {
-    /// 适配器把数据库错误转换为领域错误
-    pub fn db(e: impl std::fmt::Display) -> Self {
-        Self::Db(e.to_string())
-    }
-}
-
-impl std::fmt::Display for MemError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MemError::NotFound => write!(f, "not found"),
-            MemError::Internal(msg) => write!(f, "{msg}"),
-            MemError::Db(msg) => write!(f, "db: {msg}"),
-        }
-    }
-}
-
-impl From<MemError> for ServiceError {
-    fn from(e: MemError) -> Self {
-        match e {
-            MemError::NotFound => ServiceError::NotFound("记忆项不存在".into()),
-            MemError::Internal(msg) => ServiceError::Internal(msg),
-            MemError::Db(msg) => ServiceError::Db(sqlx::Error::Protocol(msg)),
-        }
-    }
 }
 
 #[cfg(test)]

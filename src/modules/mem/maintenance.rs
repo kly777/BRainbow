@@ -10,9 +10,9 @@ use sqlx::SqlitePool;
 
 use super::config::MemConfig;
 use super::fsrs;
-use super::model::MemError;
 use super::optimizer;
 use super::port::{MemMaintenance, MemRepository};
+use crate::shared::error_types::ServiceError;
 
 #[derive(Clone)]
 pub struct DbMemMaintenance {
@@ -27,7 +27,7 @@ impl DbMemMaintenance {
 
 #[async_trait]
 impl MemMaintenance for DbMemMaintenance {
-    async fn optimize_now(&self) -> Result<Option<Vec<f32>>, MemError> {
+    async fn optimize_now(&self) -> Result<Option<Vec<f32>>, ServiceError> {
         let config = MemConfig::load_from_db(&self.db).await;
         match optimizer::optimize_fsrs_params(&self.db, &config).await {
             Ok(Some(params)) => {
@@ -35,12 +35,12 @@ impl MemMaintenance for DbMemMaintenance {
                 updated
                     .save_to_db(&self.db)
                     .await
-                    .map_err(MemError::Internal)?;
+                    .map_err(ServiceError::Internal)?;
                 fsrs::set_global_params(params.clone());
                 Ok(Some(params))
             }
             Ok(None) => Ok(None),
-            Err(e) => Err(MemError::Internal(e)),
+            Err(e) => Err(ServiceError::Internal(e)),
         }
     }
 

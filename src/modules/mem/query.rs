@@ -30,7 +30,7 @@ impl MemQueryService {
     pub async fn get_all(
         &self,
         query: &MemQuery,
-    ) -> Result<PaginatedResponse<MemWithChunks>, MemError> {
+    ) -> Result<PaginatedResponse<MemWithChunks>, ServiceError> {
         let pagination = Pagination {
             page: query.page.unwrap_or(1),
             page_size: query.page_size.unwrap_or(50),
@@ -46,7 +46,7 @@ impl MemQueryService {
 
     // ── 统计 ──
 
-    pub async fn get_counts(&self) -> Result<MemCounts, MemError> {
+    pub async fn get_counts(&self) -> Result<MemCounts, ServiceError> {
         let (new_count, learning_count, due_count, buried_count, suspended_count) =
             self.repo.get_counts().await?;
         Ok(MemCounts {
@@ -63,7 +63,7 @@ impl MemQueryService {
         config: &crate::modules::mem::config::MemConfig,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
-    ) -> Result<SessionEstimate, MemError> {
+    ) -> Result<SessionEstimate, ServiceError> {
         let stats = self
             .repo
             .get_session_stats(tag_ids, exclude_tag_ids)
@@ -114,8 +114,12 @@ impl MemQueryService {
 
     // ── 预览 ──
 
-    pub async fn preview(&self, id: i32) -> Result<[f64; 4], MemError> {
-        let row = self.repo.get_mem(id).await?.ok_or(MemError::NotFound)?;
+    pub async fn preview(&self, id: i32) -> Result<[f64; 4], ServiceError> {
+        let row = self
+            .repo
+            .get_mem(id)
+            .await?
+            .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
         let state: CardState = row.state.parse().unwrap_or(CardState::New);
         let days_elapsed = days_elapsed_since(&row.last_review_at);
         let elapsed_secs = elapsed_secs_since(&row.last_review_at);
@@ -129,24 +133,21 @@ impl MemQueryService {
             elapsed_secs,
             &config,
         )
-        .map_err(MemError::Internal)
+        .map_err(ServiceError::Internal)
     }
 
     // ── 标签查询 ──
 
-    pub async fn list_tags(&self, user_id: i32) -> Result<Vec<TagInfo>, MemError> {
-        self.repo.list_tags(user_id).await.map_err(MemError::db)
+    pub async fn list_tags(&self, user_id: i32) -> Result<Vec<TagInfo>, ServiceError> {
+        self.repo.list_tags(user_id).await
     }
 
-    pub async fn search_tags(&self, user_id: i32, q: &str) -> Result<Vec<TagInfo>, MemError> {
-        self.repo
-            .search_tags(user_id, q)
-            .await
-            .map_err(MemError::db)
+    pub async fn search_tags(&self, user_id: i32, q: &str) -> Result<Vec<TagInfo>, ServiceError> {
+        self.repo.search_tags(user_id, q).await
     }
 
-    pub async fn get_mem_tags(&self, mem_id: i32) -> Result<Vec<TagInfo>, MemError> {
-        self.repo.get_mem_tags(mem_id).await.map_err(MemError::db)
+    pub async fn get_mem_tags(&self, mem_id: i32) -> Result<Vec<TagInfo>, ServiceError> {
+        self.repo.get_mem_tags(mem_id).await
     }
 
     pub async fn get_mems_tags_batch(&self, mem_ids: &[i32]) -> BatchDataResponse<MemTagRow> {
@@ -166,37 +167,36 @@ impl MemQueryService {
 
     // ── CSV/PSV 导出 ──
 
-    pub async fn export_csv(&self, tag_ids: &[i32]) -> Result<String, MemError> {
-        let rows = self
-            .repo
-            .export_all_mems(tag_ids)
-            .await
-            .map_err(MemError::db)?;
+    pub async fn export_csv(&self, tag_ids: &[i32]) -> Result<String, ServiceError> {
+        let rows = self.repo.export_all_mems(tag_ids).await?;
         let mut wtr = csv::WriterBuilder::new()
             .delimiter(b'|')
             .from_writer(Vec::new());
         wtr.write_record(["cue", "target", "tags"])
-            .map_err(MemError::db)?;
+            .map_err(|e| ServiceError::Internal(e.to_string()))?;
 
         for (cue, target, tags) in &rows {
             wtr.write_record([cue, target, tags])
-                .map_err(MemError::db)?;
+                .map_err(|e| ServiceError::Internal(e.to_string()))?;
         }
 
-        wtr.flush().map_err(MemError::db)?;
-        let data = wtr.into_inner().map_err(MemError::db)?;
-        String::from_utf8(data).map_err(MemError::db)
+        wtr.flush()
+            .map_err(|e| ServiceError::Internal(e.to_string()))?;
+        let data = wtr
+            .into_inner()
+            .map_err(|e| ServiceError::Internal(e.to_string()))?;
+        String::from_utf8(data).map_err(|e| ServiceError::Internal(e.to_string()))
     }
 
     // ── 助记 ──
 
-    pub async fn get_mnemonic(&self, mem_id: i32) -> Result<Option<String>, MemError> {
+    pub async fn get_mnemonic(&self, mem_id: i32) -> Result<Option<String>, ServiceError> {
         self.repo.get_mnemonic(mem_id).await
     }
 
     // ── upcoming ──
 
-    pub async fn upcoming_counts(&self) -> Result<serde_json::Value, MemError> {
+    pub async fn upcoming_counts(&self) -> Result<serde_json::Value, ServiceError> {
         let h8 = self.repo.count_upcoming_within_hours(8).await?;
         let h24 = self.repo.count_upcoming_within_hours(24).await?;
         Ok(serde_json::json!({"within_8h": h8, "within_24h": h24}))
@@ -204,7 +204,7 @@ impl MemQueryService {
 
     // ── 内部辅助 ──
 
-    async fn build_items(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, MemError> {
+    async fn build_items(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, ServiceError> {
         self.repo.get_mems_with_chunks(ids).await
     }
 }
@@ -334,7 +334,7 @@ mod tests {
     async fn preview_missing_mem_returns_not_found_through_fake_port() {
         let svc = MemQueryService::new(Arc::new(FakeRepo::default()));
         let err = svc.preview(1).await.unwrap_err();
-        assert!(matches!(err, MemError::NotFound));
+        assert!(matches!(err, ServiceError::NotFound(_)));
     }
 
     #[test]

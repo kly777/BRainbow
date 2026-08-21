@@ -6,6 +6,7 @@ use crate::modules::mem::model::*;
 use crate::modules::mem::port::{MemMaintenance, MemRepository};
 use crate::modules::mem::selection;
 use crate::shared::batch::{BatchResponse, batch_execute, batch_execute_with_code};
+use crate::shared::error_types::ServiceError;
 
 #[derive(Clone)]
 pub struct MemService {
@@ -26,7 +27,7 @@ impl MemService {
         max_learning: i64,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
-    ) -> Result<DueResponse, MemError> {
+    ) -> Result<DueResponse, ServiceError> {
         let cap = max_learning as usize;
         let mut ids: Vec<i32> = Vec::with_capacity(cap);
 
@@ -110,11 +111,15 @@ impl MemService {
         id: i32,
         rating: u8,
         duration_secs: f64,
-    ) -> Result<ReviewResponse, MemError> {
-        let row = self.repo.get_mem(id).await?.ok_or(MemError::NotFound)?;
+    ) -> Result<ReviewResponse, ServiceError> {
+        let row = self
+            .repo
+            .get_mem(id)
+            .await?
+            .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
         let (outcome, new_step) = self
             .apply_review(&row, rating)
-            .map_err(MemError::Internal)?;
+            .map_err(ServiceError::Internal)?;
 
         let new_state = outcome.state.as_str();
 
@@ -163,8 +168,7 @@ impl MemService {
                 difficulty_after: outcome.difficulty,
                 state_after: new_state.to_string(),
             })
-            .await
-            .map_err(MemError::db)?;
+            .await?;
 
         // 每 20 次复习自动触发一次参数优化（策略在 adapter 内实现）
         self.maintenance.schedule_auto_optimize(self.repo.clone());
@@ -240,21 +244,27 @@ impl MemService {
 
     // ── 内部辅助 ──
 
-    async fn build_items(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, MemError> {
+    async fn build_items(&self, ids: &[i32]) -> Result<Vec<MemWithChunks>, ServiceError> {
         self.repo.get_mems_with_chunks(ids).await
     }
 
     // ── 挂起 / 恢复 ──
 
-    pub async fn suspend(&self, id: i32) -> Result<(), MemError> {
-        self.repo.get_mem(id).await?.ok_or(MemError::NotFound)?;
-        self.repo.suspend_mem(id).await.map_err(MemError::db)?;
+    pub async fn suspend(&self, id: i32) -> Result<(), ServiceError> {
+        self.repo
+            .get_mem(id)
+            .await?
+            .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
+        self.repo.suspend_mem(id).await?;
         Ok(())
     }
 
-    pub async fn unsuspend(&self, id: i32) -> Result<(), MemError> {
-        self.repo.get_mem(id).await?.ok_or(MemError::NotFound)?;
-        self.repo.unsuspend_mem(id).await.map_err(MemError::db)?;
+    pub async fn unsuspend(&self, id: i32) -> Result<(), ServiceError> {
+        self.repo
+            .get_mem(id)
+            .await?
+            .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
+        self.repo.unsuspend_mem(id).await?;
         Ok(())
     }
 
@@ -286,7 +296,7 @@ impl MemService {
 
     // ── CRUD ──
 
-    pub async fn create(&self, req: CreateMemRequest) -> Result<i32, MemError> {
+    pub async fn create(&self, req: CreateMemRequest) -> Result<i32, ServiceError> {
         let cue_id = self.repo.create_chunk(&req.cue_content).await?;
         let target_id = self.repo.create_chunk(&req.target_content).await?;
         self.repo
@@ -294,7 +304,7 @@ impl MemService {
             .await
     }
 
-    pub async fn undo(&self, id: i32, req: UndoRequest) -> Result<(), MemError> {
+    pub async fn undo(&self, id: i32, req: UndoRequest) -> Result<(), ServiceError> {
         self.repo
             .update_mem_fsrs(
                 id,
@@ -311,69 +321,65 @@ impl MemService {
             .await
     }
 
-    pub async fn edit(&self, id: i32, req: EditMemRequest) -> Result<(), MemError> {
-        let row = self.repo.get_mem(id).await?.ok_or(MemError::NotFound)?;
+    pub async fn edit(&self, id: i32, req: EditMemRequest) -> Result<(), ServiceError> {
+        let row = self
+            .repo
+            .get_mem(id)
+            .await?
+            .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
         self.repo
             .update_chunk(row.cue_chunk_id, &req.cue_content)
-            .await
-            .map_err(MemError::db)?;
+            .await?;
         self.repo
             .update_chunk(row.target_chunk_id, &req.target_content)
-            .await
-            .map_err(MemError::db)?;
+            .await?;
         Ok(())
     }
 
-    pub async fn bury(&self, id: i32) -> Result<(), MemError> {
+    pub async fn bury(&self, id: i32) -> Result<(), ServiceError> {
         self.repo.bury_mem(id).await
     }
-    pub async fn unbury(&self, id: i32) -> Result<(), MemError> {
+    pub async fn unbury(&self, id: i32) -> Result<(), ServiceError> {
         self.repo.unbury_mem(id).await
     }
-    pub async fn delete(&self, id: i32) -> Result<(), MemError> {
+    pub async fn delete(&self, id: i32) -> Result<(), ServiceError> {
         self.repo.delete_mem(id).await
     }
-    pub async fn reset(&self, id: i32) -> Result<(), MemError> {
+    pub async fn reset(&self, id: i32) -> Result<(), ServiceError> {
         self.repo.reset_mem(id).await
     }
 
     // ── 标签 ──
 
-    pub async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, MemError> {
-        self.repo
-            .create_tag(name, user_id)
-            .await
-            .map_err(MemError::db)
+    pub async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, ServiceError> {
+        self.repo.create_tag(name, user_id).await
     }
 
-    pub async fn delete_tag(&self, id: i32) -> Result<(), MemError> {
-        self.repo.delete_tag(id).await.map_err(MemError::db)?;
+    pub async fn delete_tag(&self, id: i32) -> Result<(), ServiceError> {
+        self.repo.delete_tag(id).await?;
         Ok(())
     }
 
-    pub async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), MemError> {
-        self.repo.get_mem(mem_id).await?.ok_or(MemError::NotFound)?;
+    pub async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), ServiceError> {
         self.repo
-            .add_tag_to_mem(mem_id, tag_id)
-            .await
-            .map_err(MemError::db)?;
+            .get_mem(mem_id)
+            .await?
+            .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
+        self.repo.add_tag_to_mem(mem_id, tag_id).await?;
         Ok(())
     }
 
-    pub async fn remove_tag_from_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), MemError> {
-        self.repo
-            .remove_tag_from_mem(mem_id, tag_id)
-            .await
-            .map_err(MemError::db)?;
+    pub async fn remove_tag_from_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), ServiceError> {
+        self.repo.remove_tag_from_mem(mem_id, tag_id).await?;
         Ok(())
     }
 
-    pub async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), MemError> {
-        self.repo.get_mem(mem_id).await?.ok_or(MemError::NotFound)?;
+    pub async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), ServiceError> {
         self.repo
-            .set_mem_tags(mem_id, tag_ids)
-            .await
-            .map_err(MemError::db)?;
+            .get_mem(mem_id)
+            .await?
+            .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
+        self.repo.set_mem_tags(mem_id, tag_ids).await?;
         Ok(())
     }
 
@@ -424,7 +430,7 @@ impl MemService {
         csv_data: &str,
         user_id: i32,
         default_tags: &[String],
-    ) -> Result<(usize, Vec<String>), MemError> {
+    ) -> Result<(usize, Vec<String>), ServiceError> {
         let mut reader = csv::ReaderBuilder::new()
             .has_headers(true)
             .flexible(true)
@@ -439,7 +445,7 @@ impl MemService {
         psv_data: &str,
         user_id: i32,
         default_tags: &[String],
-    ) -> Result<(usize, Vec<String>), MemError> {
+    ) -> Result<(usize, Vec<String>), ServiceError> {
         let mut reader = csv::ReaderBuilder::new()
             .delimiter(b'|')
             .has_headers(true)
@@ -455,7 +461,7 @@ impl MemService {
         reader: &mut csv::Reader<&[u8]>,
         user_id: i32,
         default_tags: &[String],
-    ) -> Result<(usize, Vec<String>), MemError> {
+    ) -> Result<(usize, Vec<String>), ServiceError> {
         let mut count = 0usize;
         let mut errors = Vec::new();
 
@@ -471,13 +477,9 @@ impl MemService {
                         continue;
                     }
 
-                    let cue_id = self.repo.create_chunk(cue).await.map_err(MemError::db)?;
-                    let target_id = self.repo.create_chunk(target).await.map_err(MemError::db)?;
-                    let mem_id = self
-                        .repo
-                        .create_mem(cue_id, target_id, &[])
-                        .await
-                        .map_err(MemError::db)?;
+                    let cue_id = self.repo.create_chunk(cue).await?;
+                    let target_id = self.repo.create_chunk(target).await?;
+                    let mem_id = self.repo.create_mem(cue_id, target_id, &[]).await?;
 
                     self.apply_tags_to_mem(mem_id, tags_str, default_tags, user_id)
                         .await?;
@@ -499,7 +501,7 @@ impl MemService {
         tags_str: &str,
         default_tags: &[String],
         user_id: i32,
-    ) -> Result<(), MemError> {
+    ) -> Result<(), ServiceError> {
         let mut all_names: Vec<String> = tags_str
             .split([';', ','])
             .map(|s| s.trim().to_string())
@@ -514,22 +516,14 @@ impl MemService {
             let tag = match self
                 .repo
                 .search_tags(user_id, name)
-                .await
-                .map_err(MemError::db)?
+                .await?
                 .into_iter()
                 .find(|t| t.name == *name)
             {
                 Some(t) => t,
-                None => self
-                    .repo
-                    .create_tag(name, user_id)
-                    .await
-                    .map_err(MemError::db)?,
+                None => self.repo.create_tag(name, user_id).await?,
             };
-            self.repo
-                .add_tag_to_mem(mem_id, tag.id)
-                .await
-                .map_err(MemError::db)?;
+            self.repo.add_tag_to_mem(mem_id, tag.id).await?;
         }
         Ok(())
     }
@@ -540,7 +534,7 @@ impl MemService {
         mems: &[JsonMemItem],
         user_id: i32,
         default_tags: &[String],
-    ) -> Result<(usize, Vec<String>), MemError> {
+    ) -> Result<(usize, Vec<String>), ServiceError> {
         let mut count = 0usize;
         let mut errors = Vec::new();
 
@@ -553,13 +547,9 @@ impl MemService {
                 continue;
             }
 
-            let cue_id = self.repo.create_chunk(cue).await.map_err(MemError::db)?;
-            let target_id = self.repo.create_chunk(target).await.map_err(MemError::db)?;
-            let mem_id = self
-                .repo
-                .create_mem(cue_id, target_id, &[])
-                .await
-                .map_err(MemError::db)?;
+            let cue_id = self.repo.create_chunk(cue).await?;
+            let target_id = self.repo.create_chunk(target).await?;
+            let mem_id = self.repo.create_mem(cue_id, target_id, &[]).await?;
 
             let tags_str = item.tags.join("; ");
             self.apply_tags_to_mem(mem_id, &tags_str, default_tags, user_id)
@@ -573,7 +563,7 @@ impl MemService {
 
     // ── 助记 ──
 
-    pub async fn set_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), MemError> {
+    pub async fn set_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), ServiceError> {
         self.repo.upsert_mnemonic(mem_id, content).await
     }
 }
@@ -708,6 +698,6 @@ mod tests {
     async fn review_missing_mem_returns_not_found_without_database() {
         let service = MemService::new(Arc::new(FakeRepo::default()), Arc::new(NoopMaintenance));
         let err = service.review(999, 3, 0.0).await.unwrap_err();
-        assert!(matches!(err, MemError::NotFound));
+        assert!(matches!(err, ServiceError::NotFound(_)));
     }
 }

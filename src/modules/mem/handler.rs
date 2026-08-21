@@ -10,7 +10,6 @@ use std::collections::HashMap;
 
 use crate::guard_empty_batch;
 use crate::modules::mem::dto::*;
-use crate::modules::mem::model::*;
 use std::sync::Arc;
 
 use super::config::MemConfig;
@@ -26,16 +25,6 @@ fn ok() -> axum::response::Response {
 }
 fn err(e: impl std::fmt::Display, op: &str) -> axum::response::Response {
     error::internal(e, op)
-}
-
-impl IntoResponse for MemError {
-    fn into_response(self) -> axum::response::Response {
-        match self {
-            MemError::NotFound => error::not_found("记忆项不存在"),
-            MemError::Internal(msg) => error::internal(msg.clone(), &msg),
-            MemError::Db(msg) => error::internal(msg, "数据库操作"),
-        }
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════

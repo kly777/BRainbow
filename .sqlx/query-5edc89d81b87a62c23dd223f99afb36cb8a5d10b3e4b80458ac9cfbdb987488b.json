@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT conv_id, title, conv_type,\n                          COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\"\n                   FROM conv_titles WHERE title LIKE ? ESCAPE '\\' LIMIT 200",
+  "query": "SELECT conv_id, title, conv_type,\n                              COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\"\n                       FROM conv_titles WHERE title LIKE ? ESCAPE '\\' LIMIT 200",
   "describe": {
     "columns": [
       {
@@ -53,5 +53,5 @@
       false
     ]
   },
-  "hash": "6269bfc57322a0f4315529674d59a1433d5eb52ceb3a4420c739a864db9a8601"
+  "hash": "5edc89d81b87a62c23dd223f99afb36cb8a5d10b3e4b80458ac9cfbdb987488b"
 }

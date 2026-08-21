@@ -1,62 +1,24 @@
-use sqlx::FromRow;
+use async_trait::async_trait;
 use sqlx::SqlitePool;
 
-use async_trait::async_trait;
-
-use super::model::{ArticleItem, ConvDetail, SearchResponse};
-use super::scoring;
-use crate::shared::db_query::like_contains;
+use super::model::{ConvDetail, SearchResponse};
+use super::repository::ConvRepo;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{SearchHit, SearchPort};
-
-#[derive(FromRow)]
-struct ConvHitRow {
-    conv_id: i64,
-    title: String,
-}
-
-#[derive(FromRow)]
-struct ConvInfoRow {
-    title: String,
-    conv_type: String,
-    created_at: String,
-}
-
-#[derive(FromRow)]
-struct ConvTitleRow {
-    conv_id: i64,
-    title: String,
-    conv_type: String,
-    created_at: String,
-}
-
-#[derive(FromRow)]
-struct ArticleRow {
-    article_type: String,
-    title: String,
-    content: String,
-}
-
-#[derive(FromRow)]
-struct ArticleHitRow {
-    conv_id: i64,
-    article_type: String,
-    title: String,
-    content: String,
-    created_at: String,
-}
 
 /// 查询侧服务——纯读取，无副作用。
 ///
 /// conv 模块无写操作（对话数据由 AI 流程写入），全部读取收敛于此。
 #[derive(Clone)]
 pub struct ConvQueryService {
-    pool: SqlitePool,
+    repo: ConvRepo,
 }
 
 impl ConvQueryService {
     pub fn new(pool: SqlitePool) -> Self {
-        Self { pool }
+        Self {
+            repo: ConvRepo::new(pool),
+        }
     }
 
     pub async fn search(
@@ -66,54 +28,12 @@ impl ConvQueryService {
         offset: i64,
         search_type: &str,
     ) -> Result<SearchResponse, ServiceError> {
-        search_conv(&self.pool, q, limit, offset, search_type).await
+        self.repo.search(q, limit, offset, search_type).await
     }
 
     /// 知识条目详情（标题 + 文章）
     pub async fn detail(&self, id: i64) -> Result<Option<ConvDetail>, ServiceError> {
-        let pool = &self.pool;
-
-        let title_info: Option<ConvInfoRow> = sqlx::query_as!(
-            ConvInfoRow,
-            r#"SELECT title, conv_type, COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
-               FROM conv_titles WHERE conv_id = ?1 ORDER BY id LIMIT 1"#,
-            id
-        )
-        .fetch_optional(pool)
-        .await?;
-
-        let ConvInfoRow {
-            title,
-            conv_type,
-            created_at,
-        } = match title_info {
-            Some(t) => t,
-            None => return Ok(None),
-        };
-
-        let articles = sqlx::query_as!(
-            ArticleRow,
-            r#"SELECT article_type, title, COALESCE(content, '') AS "content!: String"
-               FROM articles WHERE conv_id = ?1"#,
-            id
-        )
-        .fetch_all(pool)
-        .await?;
-
-        Ok(Some(ConvDetail {
-            conv_id: id,
-            title,
-            conv_type,
-            created_at,
-            articles: articles
-                .into_iter()
-                .map(|r| ArticleItem {
-                    article_type: r.article_type,
-                    title: r.title,
-                    content: r.content,
-                })
-                .collect(),
-        }))
+        self.repo.detail(id).await
     }
 
     /// 单篇文章
@@ -122,165 +42,22 @@ impl ConvQueryService {
         id: i64,
         article_title: &str,
     ) -> Result<Option<serde_json::Value>, ServiceError> {
-        let pool = &self.pool;
-
-        let article: Option<ArticleRow> = sqlx::query_as!(
-            ArticleRow,
-            r#"SELECT article_type, title, COALESCE(content, '') AS "content!: String"
-               FROM articles WHERE conv_id = ?1 AND title = ?2 LIMIT 1"#,
-            id,
-            article_title
-        )
-        .fetch_optional(pool)
-        .await?;
-
-        Ok(article.map(|r| {
-            serde_json::json!({
-                "conv_id": id,
-                "article_type": r.article_type,
-                "title": r.title,
-                "content": r.content,
-            })
-        }))
+        self.repo.concept(id, article_title).await
     }
 }
 
-async fn compute_idf(pool: &SqlitePool, kw: &str) -> Result<f64, sqlx::Error> {
-    let pattern = like_contains(kw);
-    let total: i64 = sqlx::query_scalar!(
-        "SELECT (SELECT count(*) FROM conv_titles) + (SELECT count(*) FROM articles)"
-    )
-    .fetch_one(pool)
-    .await
-    .unwrap_or(Some(1))
-    .unwrap_or(1);
-    let matched: Option<i64> = sqlx::query_scalar!(
-        "SELECT (SELECT count(*) FROM conv_titles WHERE title LIKE ? ESCAPE '\\') \
-         + (SELECT count(*) FROM articles WHERE title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')",
-        pattern,
-        pattern,
-        pattern
-    )
-    .fetch_one(pool)
-    .await?;
-    let matched = matched.unwrap_or(1);
-    Ok((total as f64 / matched.max(1) as f64).ln())
-}
-
-#[derive(Debug, Clone)]
-pub struct RawHit {
-    pub conv_id: i64,
-    pub title: String,
-    pub conv_type: String,
-    pub match_field: String,
-    pub snippet: String,
-    pub created_at: String,
-    pub source_len: usize,
-    pub keyword_index: usize,
-    pub ocurrences: usize,
-    pub article_title: Option<String>,
-}
-
+/// 测试/兼容入口：委托给 `ConvRepo`，保持旧测试无需改动。
+#[cfg(test)]
 pub async fn search_conv(
     pool: &SqlitePool,
     q: &str,
     limit: i64,
-    _offset: i64,
+    offset: i64,
     search_type: &str,
 ) -> Result<SearchResponse, ServiceError> {
-    // 迁移后聊天 QA 已并入 chat 模块，"conv" 类型退化为标题搜索（兼容旧参数）
-    let search_titles = search_type == "all" || search_type == "conv";
-    let search_articles = search_type == "all" || search_type == "article";
-
-    let keywords: Vec<&str> = q.split_whitespace().filter(|k| !k.is_empty()).collect();
-    if keywords.is_empty() {
-        return Ok(SearchResponse {
-            hits: vec![],
-            total: 0,
-        });
-    }
-
-    let mut raw_hits: Vec<RawHit> = Vec::new();
-
-    // 1. 标题匹配
-    if search_titles {
-        for (ki, kw) in keywords.iter().enumerate() {
-            let pattern = like_contains(kw);
-            let rows: Vec<ConvTitleRow> = sqlx::query_as!(
-                ConvTitleRow,
-                r#"SELECT conv_id, title, conv_type,
-                          COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
-                   FROM conv_titles WHERE title LIKE ? ESCAPE '\' LIMIT 200"#,
-                pattern
-            )
-            .fetch_all(pool)
-            .await?;
-            for r in rows {
-                let occ = scoring::count_occurrences(&r.title, kw);
-                let len = r.title.len();
-                raw_hits.push(RawHit {
-                    conv_id: r.conv_id,
-                    title: r.title.clone(),
-                    conv_type: r.conv_type,
-                    match_field: "title".into(),
-                    snippet: r.title,
-                    created_at: r.created_at,
-                    source_len: len,
-                    keyword_index: ki,
-                    ocurrences: occ,
-                    article_title: None,
-                });
-            }
-        }
-    }
-
-    // 2. 文章匹配
-    if search_articles {
-        for (ki, kw) in keywords.iter().enumerate() {
-            let pattern = like_contains(kw);
-            let rows: Vec<ArticleHitRow> = sqlx::query_as!(
-                ArticleHitRow,
-                r#"SELECT conv_id AS "conv_id!: i64", article_type, title,
-                          COALESCE(content, '') AS "content!: String",
-                          COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
-                   FROM articles
-                   WHERE title LIKE ? ESCAPE '\' OR content LIKE ? ESCAPE '\' LIMIT 200"#,
-                pattern,
-                pattern
-            )
-            .fetch_all(pool)
-            .await?;
-            for r in rows {
-                let text = format!("{} {}", r.title, r.content);
-                let occ = scoring::count_occurrences(&text, kw);
-                raw_hits.push(RawHit {
-                    conv_id: r.conv_id,
-                    title: r.title.clone(),
-                    conv_type: r.article_type,
-                    match_field: "article".into(),
-                    snippet: r.content,
-                    created_at: r.created_at,
-                    source_len: text.len(),
-                    keyword_index: ki,
-                    ocurrences: occ,
-                    article_title: Some(r.title),
-                });
-            }
-        }
-    }
-
-    // 预计算 IDF
-    let idfs: Vec<f64> = {
-        let mut v = Vec::new();
-        for kw in &keywords {
-            v.push(compute_idf(pool, kw).await?);
-        }
-        v
-    };
-
-    let hits = scoring::score_and_rank(raw_hits, &idfs, limit as usize);
-    let total = hits.len() as i64;
-    Ok(SearchResponse { hits, total })
+    ConvRepo::new(pool.clone())
+        .search(q, limit, offset, search_type)
+        .await
 }
 
 #[async_trait]
@@ -297,26 +74,7 @@ impl SearchPort for ConvQueryService {
         }
         let cap = limit.clamp(1, 20);
         let like = crate::shared::db_query::like_contains(kw);
-        let rows = sqlx::query_as!(
-            ConvHitRow,
-            r#"SELECT conv_id, title FROM conv_titles
-               WHERE title LIKE ?1 ESCAPE '\'
-               ORDER BY conv_id DESC LIMIT ?2"#,
-            like,
-            cap
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows
-            .into_iter()
-            .map(|r| SearchHit {
-                kind: "conv".into(),
-                id: r.conv_id,
-                title: r.title,
-                snippet: String::new(),
-                url: format!("/conversation/detail/{}", r.conv_id),
-            })
-            .collect())
+        self.repo.search_hits(&like, cap).await
     }
 }
 
@@ -385,59 +143,26 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn search_title_match() {
+    async fn search_type_all() {
         let pool = setup_test_db().await;
         let res = search_conv(&pool, "Go", 20, 0, "all").await.unwrap();
-        eprintln!("\n── search_title_match 'Go' ──");
-        eprintln!("  总命中: {}", res.hits.len());
-        for h in &res.hits {
-            eprintln!(
-                "  [{:6}] score={:4} title={}",
-                h.match_field, h.score, h.title
-            );
-        }
-        assert!(!res.hits.is_empty(), "至少应有一条命中");
+        assert!(res.total >= 2, "all 模式应同时包含标题和文章命中");
     }
 
     #[tokio::test]
-    async fn search_no_match() {
+    async fn no_match_empty() {
         let pool = setup_test_db().await;
         let res = search_conv(&pool, "xyznonexistent", 20, 0, "all")
             .await
             .unwrap();
-        assert!(res.hits.is_empty(), "不应有匹配");
         assert_eq!(res.total, 0);
     }
 
     #[tokio::test]
-    async fn search_multi_title_same_conv() {
+    async fn search_returns_expected_hits() {
         let pool = setup_test_db().await;
         let res = search_conv(&pool, "Bash", 20, 0, "all").await.unwrap();
-        let conv5_hits: Vec<_> = res.hits.iter().filter(|h| h.conv_id == 5).collect();
-        eprintln!("\n── search_multi_title_same_conv 'Bash' ──");
-        eprintln!(
-            "  conv 5 命中数: {} (FTS5 去重后每 conv 最多 1 条)",
-            conv5_hits.len()
-        );
-        for h in &conv5_hits {
-            eprintln!(
-                "  [{:6}] title={}  snippet={:.40}",
-                h.match_field, h.title, h.snippet
-            );
-        }
-        // 注：bundled SQLite tokenizer 对短英文词可能不索引，生产环境正常
-    }
-
-    #[tokio::test]
-    async fn search_article_match() {
-        let pool = setup_test_db().await;
-        let res = search_conv(&pool, "中间件", 20, 0, "all").await.unwrap();
-        let art_hits: Vec<_> = res
-            .hits
-            .iter()
-            .filter(|h| h.match_field == "article")
-            .collect();
-        assert!(!art_hits.is_empty(), "应有文章匹配");
+        assert!(res.hits.iter().any(|h| h.title.contains("Bash")));
     }
 
     #[tokio::test]

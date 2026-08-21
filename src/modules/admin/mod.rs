@@ -2,6 +2,7 @@
 
 pub mod handler;
 pub mod port;
+mod repository;
 pub mod service;
 
 use axum::Router;

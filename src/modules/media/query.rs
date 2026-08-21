@@ -13,13 +13,25 @@ use crate::shared::pagination::{PaginatedResponse, Pagination};
 #[derive(Clone)]
 pub struct MediaQueryService {
     repo: MediaRepository,
+    upload_dir: String,
 }
 
 impl MediaQueryService {
-    pub fn new(db: Arc<SqlitePool>) -> Self {
+    pub fn new(db: Arc<SqlitePool>, upload_dir: String) -> Self {
         Self {
             repo: MediaRepository::new(db),
+            upload_dir,
         }
+    }
+
+    /// 文件路径（与 MediaService 逻辑一致）
+    pub fn file_path(&self, media_type: &str, stored_id: &str) -> String {
+        let dir = match media_type {
+            "video" => "video",
+            "audio" => "audio",
+            _ => "image",
+        };
+        format!("{}/{dir}/{stored_id}", self.upload_dir)
     }
 
     pub async fn list(

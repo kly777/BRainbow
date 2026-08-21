@@ -7,7 +7,7 @@ use super::model::{Media, NewMedia};
 use super::repository::MediaRepository;
 use crate::shared::error_types::ServiceError;
 
-pub(crate) const UPLOAD_DIR: &str = "uploads";
+/// 上传目录（默认 uploads，可经 UPLOAD_DIR env 配置）
 
 /// multipart 请求体上限：最大允许单文件（200MiB 视频）+ boundary 与字段名开销。
 /// 与 `/upload` 路由的 `DefaultBodyLimit` 保持一致，避免超 2MB 默认限制。
@@ -74,25 +74,28 @@ fn dir_for_type(media_type: &str) -> &str {
 #[derive(Clone)]
 pub struct MediaService {
     repo: MediaRepository,
+    upload_dir: String,
 }
 
 impl MediaService {
-    pub fn new(db: Arc<SqlitePool>) -> Self {
+    pub fn new(db: Arc<SqlitePool>, upload_dir: String) -> Self {
         // 确保上传子目录存在
         for d in &["image", "video", "audio"] {
-            std::fs::create_dir_all(format!("{}/{}", UPLOAD_DIR, d)).ok();
+            std::fs::create_dir_all(format!("{}/{d}", upload_dir)).ok();
         }
-        // 清理孤儿临时文件
-        Self::cleanup_temp_files();
-        Self {
+        let svc = Self {
             repo: MediaRepository::new(db),
-        }
+            upload_dir,
+        };
+        // 清理孤儿临时文件
+        svc.cleanup_temp_files();
+        svc
     }
 
-    fn cleanup_temp_files() {
+    fn cleanup_temp_files(&self) {
         let dirs = ["image", "video", "audio"];
         for d in &dirs {
-            let path = format!("{}/{}", UPLOAD_DIR, d);
+            let path = format!("{}/{}", self.upload_dir, d);
             if let Ok(entries) = std::fs::read_dir(&path) {
                 for entry in entries.flatten() {
                     let name = entry.file_name().to_string_lossy().to_string();
@@ -144,8 +147,8 @@ impl MediaService {
         let safe_name = sanitize_name(original_name);
         let stored_id = generate_stored_id();
         let dir = dir_for_type(media_type_str);
-        let tmp_path = format!("{}/{}/tmp_{}.tmp", UPLOAD_DIR, dir, stored_id);
-        let final_path = format!("{}/{}/{}", UPLOAD_DIR, dir, stored_id);
+        let tmp_path = format!("{}/{}/tmp_{}.tmp", self.upload_dir, dir, stored_id);
+        let final_path = format!("{}/{}/{}", self.upload_dir, dir, stored_id);
 
         // 3. 写临时文件
         tokio::fs::write(&tmp_path, data)
@@ -250,7 +253,7 @@ impl MediaService {
             .map_err(ServiceError::Db)?
             .ok_or_else(|| ServiceError::NotFound("媒体不存在".into()))?;
         let dir = dir_for_type(media.media_type.as_str());
-        let path = format!("{}/{}/{}", UPLOAD_DIR, dir, stored_id);
+        let path = format!("{}/{}/{}", self.upload_dir, dir, stored_id);
         if let Err(e) = std::fs::remove_file(&path) {
             warn!("删除文件失败 stored_id={}: {}", stored_id, e);
         }
@@ -258,8 +261,8 @@ impl MediaService {
     }
 
     /// 文件路径
-    pub fn file_path(media_type: &str, stored_id: &str) -> String {
-        format!("{}/{}/{}", UPLOAD_DIR, dir_for_type(media_type), stored_id)
+    pub fn file_path(&self, media_type: &str, stored_id: &str) -> String {
+        format!("{}/{}/{}", self.upload_dir, dir_for_type(media_type), stored_id)
     }
 }
 
@@ -409,23 +412,35 @@ mod tests {
         assert_eq!(ids.len(), 100);
     }
 
-    // ── MediaService::file_path (静态方法) ──
+    // ── MediaService::file_path (实例方法) ──
 
-    #[test]
-    fn file_path_image() {
-        let path = MediaService::file_path("image", "abc123");
+    #[tokio::test]
+    async fn file_path_image() {
+        let svc = MediaService::new(
+            Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap()),
+            "uploads".into(),
+        );
+        let path = svc.file_path("image", "abc123");
         assert_eq!(path, "uploads/image/abc123");
     }
 
-    #[test]
-    fn file_path_video() {
-        let path = MediaService::file_path("video", "vid456");
+    #[tokio::test]
+    async fn file_path_video() {
+        let svc = MediaService::new(
+            Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap()),
+            "uploads".into(),
+        );
+        let path = svc.file_path("video", "vid456");
         assert_eq!(path, "uploads/video/vid456");
     }
 
-    #[test]
-    fn file_path_audio() {
-        let path = MediaService::file_path("audio", "aud789");
+    #[tokio::test]
+    async fn file_path_audio() {
+        let svc = MediaService::new(
+            Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap()),
+            "uploads".into(),
+        );
+        let path = svc.file_path("audio", "aud789");
         assert_eq!(path, "uploads/audio/aud789");
     }
 }

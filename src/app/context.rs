@@ -290,8 +290,9 @@ impl AppState {
             Arc::new(mem_config.clone()),
         );
         let mem_query = MemQueryService::new(mem_repo_for_query, Arc::new(mem_config.clone()));
-        let media = MediaService::new(db.clone());
-        let media_query = MediaQueryService::new(db.clone());
+        let upload_dir = config.upload_dir.to_string_lossy().to_string();
+        let media = MediaService::new(db.clone(), upload_dir.clone());
+        let media_query = MediaQueryService::new(db.clone(), upload_dir);
         let reading = ReadingService::new(db.clone());
         let reading_query = ReadingQueryService::new(db.clone());
         let time_window = TimeWindowService::new(db.clone(), task_validator);

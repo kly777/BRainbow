@@ -154,7 +154,7 @@ pub async fn file_handler(
         Err(e) => return e.into_response(),
     };
 
-    let path = MediaService::file_path(media.media_type.as_str(), &stored_id);
+    let path = query.file_path(media.media_type.as_str(), &stored_id);
 
     let file = match tokio::fs::File::open(&path).await {
         Ok(f) => f,

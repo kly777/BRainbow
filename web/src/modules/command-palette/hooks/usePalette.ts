@@ -1,4 +1,5 @@
-// ── 命令面板的状态与事件逻辑（建议构建见 suggestions.ts） ──
+// ── 命令面板的状态与事件逻辑 ──
+// 组合入口：模式检测 + 命令列表 + 站内搜索（usePaletteSearch）。
 
 import { PATHS } from "@config/paths";
 import { AUTH_REQUIRED_EVENT } from "@lib/api";
@@ -12,14 +13,8 @@ import {
 	onCleanup,
 	onMount,
 } from "solid-js";
-import { type SearchHit, searchE } from "../api.ts";
-import {
-	buildCmdItems,
-	buildNavItems,
-	buildSearchItems,
-	probeDuck,
-	searchWeb,
-} from "./suggestions.ts";
+import { buildCmdItems, buildNavItems, probeDuck } from "./suggestions.ts";
+import { usePaletteSearch } from "./usePaletteSearch.ts";
 
 export type Mode = "idle" | "nav" | "search" | "cmd";
 
@@ -63,9 +58,6 @@ export function usePalette() {
 	const [value, setValue] = createSignal("");
 	const [open, setOpen] = createSignal(false);
 	const [selectedIndex, setSelectedIndex] = createSignal(0);
-	// ── 站内搜索状态 ──
-	const [hits, setHits] = createSignal<SearchHit[]>([]);
-	const [searching, setSearching] = createSignal(false);
 
 	let inputRef!: HTMLInputElement;
 	let sugScrollRef: HTMLDivElement | undefined;
@@ -121,78 +113,38 @@ export function usePalette() {
 		mode() === "cmd" ? buildCmdItems(query(), commands()) : [],
 	);
 
-	const searchItems = createMemo<Suggestion[]>(() =>
-		mode() === "search"
-			? buildSearchItems(hits(), query().trim(), searching(), navigate, close)
-			: [],
-	);
+	// ── 子 hook：站内搜索 ──
+	const search = usePaletteSearch({
+		mode,
+		query,
+		navigate,
+		close,
+	});
 
-	/** 当前模式下的建议列表（nav/cmd/search），其余模式为空 */
+	/** 当前模式下的建议列表 */
 	const currentItems = () =>
 		mode() === "nav"
 			? navItems()
 			: mode() === "cmd"
 				? cmdItems()
 				: mode() === "search"
-					? searchItems()
+					? search.searchItems()
 					: [];
 
-	// 选中项变化时才滚动到可见（不滚动容器本身）。
-	// 放在顶层而不是 SuggestionList 内：避免每次输入重建列表时
-	// 注册新 effect 触发 scrollIntoView（同步强制布局，造成卡顿）
+	// 选中项变化时滚动到可见
 	createEffect(() => {
-		// 先读 signal 建立订阅：不能写 sugScrollRef?.children[selectedIndex()]，
-		// 可选链在 sugScrollRef 为空时短路，selectedIndex 不会被追踪，
-		// 之后列表出现后按 ↑↓ 也不会再触发滚动
 		const index = selectedIndex();
 		const el = sugScrollRef?.children[index] as HTMLElement | undefined;
 		if (!el) return;
-		// rAF 延后到帧末：输入期间多次选中变化只滚一次，避免同步布局抖动
 		requestAnimationFrame(() => el.scrollIntoView({ block: "nearest" }));
 	});
 
-	// ── 站内搜索：防抖请求 + 结果映射 ──
-	let searchTimer: ReturnType<typeof setTimeout> | undefined;
-	let searchSeq = 0;
-	createEffect(() => {
-		if (mode() !== "search") return;
-		const q = query().trim();
-		clearTimeout(searchTimer);
-		if (!q) {
-			setHits([]);
-			setSearching(false);
-			return;
-		}
-		// 输入变化立即清空旧结果：列表只反映当前关键词，不显示上一条查询的残留
-		const seq = ++searchSeq;
-		setHits([]);
-		setSearching(true);
-		searchTimer = setTimeout(async () => {
-			try {
-				const res = await searchE(q);
-				// 竞态保护：仅最新一次输入的结果生效
-				if (seq === searchSeq) setHits(res.hits.slice(0, 24));
-			} catch {
-				if (seq === searchSeq) setHits([]);
-			} finally {
-				if (seq === searchSeq) setSearching(false);
-			}
-		}, 300);
-	});
-
 	const commit = () => {
-		if (mode() === "search") {
-			const items = currentItems();
-			if (items.length > 0) {
-				items[Math.min(selectedIndex(), items.length - 1)].onSelect();
-			} else if (query()) {
-				searchWeb(query());
-			}
-		} else {
-			const items = currentItems();
-			if (items.length > 0) {
-				items[Math.min(selectedIndex(), items.length - 1)].onSelect();
-			}
+		const items = currentItems();
+		if (items.length > 0) {
+			items[Math.min(selectedIndex(), items.length - 1)].onSelect();
+		} else if (mode() === "search" && query()) {
+			search.fallbackSearch(query());
 		}
 		close();
 	};
@@ -203,8 +155,7 @@ export function usePalette() {
 		setSelectedIndex(0);
 	};
 
-	// 打开时立即聚焦（同一帧内完成，避免 setTimeout 延迟导致
-	// 输入框边框高亮晚于建议列表出现——即"边框不同步"的来源）
+	// 打开时立即聚焦
 	let wasOpen = false;
 	createEffect(() => {
 		const isOpen = open();
@@ -265,7 +216,6 @@ export function usePalette() {
 	});
 	onCleanup(() => {
 		globalThis.removeEventListener("keydown", globalKey);
-		clearTimeout(searchTimer);
 	});
 
 	return {
@@ -274,13 +224,13 @@ export function usePalette() {
 		open,
 		selectedIndex,
 		setSelectedIndex,
-		searching,
+		searching: search.searching,
 		mode,
 		query,
 		currentItems,
 		navItems,
 		cmdItems,
-		searchItems,
+		searchItems: search.searchItems,
 		auth,
 		onInputKey,
 		openPalette,

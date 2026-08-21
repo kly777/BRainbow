@@ -19,8 +19,8 @@ impl TextService {
         }
     }
 
-    pub async fn save_tabs(&self, tabs: &[(String, String)]) -> Result<(), ServiceError> {
-        self.repo.save_tabs(tabs).await.map_err(ServiceError::Db)
+    pub async fn save_tabs(&self, user_id: i32, tabs: &[(String, String)]) -> Result<(), ServiceError> {
+        self.repo.save_tabs(user_id, tabs).await.map_err(ServiceError::Db)
     }
 }
 
@@ -34,6 +34,8 @@ mod tests {
     async fn setup() -> (TextService, TextQueryService) {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
         crate::db::migrate(&pool).await.unwrap();
+        sqlx::query("INSERT OR IGNORE INTO user (id, name, password_hash) VALUES (1, 'test', 'x')")
+            .execute(&*pool).await.unwrap();
         let qsvc = TextQueryService::new(pool.clone());
         (TextService::new(pool), qsvc)
     }
@@ -42,8 +44,8 @@ mod tests {
     async fn roundtrip() {
         let (svc, qsvc) = setup().await;
         let tabs = vec![("hello".into(), "world".into())];
-        svc.save_tabs(&tabs).await.unwrap();
-        let loaded = qsvc.load_tabs().await.unwrap();
+        svc.save_tabs(1, &tabs).await.unwrap();
+        let loaded = qsvc.load_tabs(1).await.unwrap();
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded[0].1, "hello");
         assert_eq!(loaded[0].2, "world");
@@ -52,7 +54,7 @@ mod tests {
     #[tokio::test]
     async fn empty_on_no_data() {
         let (_svc, qsvc) = setup().await;
-        let loaded = qsvc.load_tabs().await.unwrap();
+        let loaded = qsvc.load_tabs(1).await.unwrap();
         assert!(loaded.is_empty());
     }
 }

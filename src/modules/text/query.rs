@@ -22,8 +22,8 @@ impl TextQueryService {
         }
     }
 
-    pub async fn load_tabs(&self) -> Result<Vec<(i64, String, String)>, ServiceError> {
-        self.repo.load_tabs().await.map_err(ServiceError::Db)
+    pub async fn load_tabs(&self, user_id: i32) -> Result<Vec<(i64, String, String)>, ServiceError> {
+        self.repo.load_tabs(user_id).await.map_err(ServiceError::Db)
     }
 }
 
@@ -31,7 +31,7 @@ impl TextQueryService {
 impl SearchPort for TextQueryService {
     async fn search(
         &self,
-        _user_id: i32,
+        user_id: i32,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
@@ -43,7 +43,7 @@ impl SearchPort for TextQueryService {
         let like = crate::shared::db_query::like_contains(kw);
         let rows = self
             .repo
-            .search_hits(&like, cap)
+            .search_hits(user_id, &like, cap)
             .await
             .map_err(ServiceError::Db)?;
         Ok(rows

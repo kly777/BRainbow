@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO text_note (name, content, user_id, created_at, updated_at) VALUES (?, ?, ?, datetime('now'), datetime('now'))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "e30b25ec23ec38ae7a0e7df0ba1996d563043d59745a7c4f470fb85d531edb4c"
+}

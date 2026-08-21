@@ -1,3 +1,4 @@
+use axum::extract::FromRef;
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
@@ -9,9 +10,10 @@ use crate::modules::{
     mem::MemRepo, mem::config::MemConfig, mem::maintenance::DbMemMaintenance,
     mem::query::MemQueryService, mem::service::MemService, onto::OntoQueryService,
     onto::OntoService, reading::query::ReadingQueryService, reading::service::ReadingService,
-    sign::SignQueryService, sign::SignService, task::TaskQueryService, task::TaskService,
-    text::TextQueryService, text::TextService, time_window::query::TimeWindowQueryService,
-    time_window::service::TimeWindowService, user::UserQueryService, user::UserService,
+    search::service::SearchQueryService, sign::SignQueryService, sign::SignService,
+    task::TaskQueryService, task::TaskService, text::TextQueryService, text::TextService,
+    time_window::query::TimeWindowQueryService, time_window::service::TimeWindowService,
+    user::UserQueryService, user::UserService,
 };
 use crate::shared::config::Config;
 
@@ -62,6 +64,13 @@ pub struct AppState {
     pub ai: AiService,
     pub chat: ChatService,
     pub chat_query: ChatQueryService,
+    pub search_query: SearchQueryService,
+}
+
+impl FromRef<AppState> for SearchQueryService {
+    fn from_ref(state: &AppState) -> Self {
+        state.search_query.clone()
+    }
 }
 
 impl AppState {
@@ -199,6 +208,7 @@ impl AppState {
             ai: AiService::new(db.as_ref().clone()),
             chat: ChatService::new(db.as_ref().clone()),
             chat_query: ChatQueryService::new(db.as_ref().clone()),
+            search_query: SearchQueryService::new(db.as_ref().clone()),
         }
     }
 }

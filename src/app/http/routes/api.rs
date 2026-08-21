@@ -44,7 +44,7 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         .nest("/onto", onto::routes())
         .nest("/sign", sign::routes())
         .nest("/reading", reading::routes())
-        .nest("/search", search::routes())
+        .nest_service("/search", search::routes(state.search_query.clone()))
         .nest("/bookmarks", bookmark::routes())
         .nest("/tasks", task::routes())
         .nest("/chat", chat::routes())

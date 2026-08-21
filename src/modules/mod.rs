@@ -1,3 +1,6 @@
+#[cfg(test)]
+pub(crate) mod isolation_tests;
+
 pub mod admin;
 pub mod ai;
 pub mod bookmark;

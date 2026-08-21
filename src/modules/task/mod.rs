@@ -1,4 +1,4 @@
-mod dto;
+pub mod dto;
 mod handler;
 mod model;
 mod query;

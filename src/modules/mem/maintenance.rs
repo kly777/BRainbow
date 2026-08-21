@@ -8,7 +8,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use sqlx::SqlitePool;
 
-use super::config::MemConfig;
+use super::config_repository::MemConfigRepo;
 use super::fsrs;
 use super::optimizer;
 use super::port::{MemMaintenance, MemRepository};
@@ -28,14 +28,12 @@ impl DbMemMaintenance {
 #[async_trait]
 impl MemMaintenance for DbMemMaintenance {
     async fn optimize_now(&self) -> Result<Option<Vec<f32>>, ServiceError> {
-        let config = MemConfig::load_from_db(&self.db).await;
+        let repo = MemConfigRepo::new(self.db.as_ref().clone());
+        let config = repo.load().await;
         match optimizer::optimize_fsrs_params(&self.db, &config).await {
             Ok(Some(params)) => {
                 let updated = config;
-                updated
-                    .save_to_db(&self.db)
-                    .await
-                    .map_err(ServiceError::Internal)?;
+                repo.save(&updated).await.map_err(ServiceError::Internal)?;
                 fsrs::set_global_params(params.clone());
                 Ok(Some(params))
             }
@@ -63,11 +61,12 @@ async fn maybe_auto_optimize(repo: Arc<dyn MemRepository>, db: Arc<SqlitePool>, 
     }
 
     tracing::info!("触发自动优化: revlog 共 {} 条", count);
-    let config = MemConfig::load_from_db(&db).await;
+    let config_repo = MemConfigRepo::new(db.as_ref().clone());
+    let config = config_repo.load().await;
     match optimizer::optimize_fsrs_params(&db, &config).await {
         Ok(Some(params)) => {
             let cfg = config;
-            let ok = cfg.save_to_db(&db).await.is_ok();
+            let ok = config_repo.save(&cfg).await.is_ok();
             fsrs::set_global_params(params);
             if ok {
                 tracing::info!("自动优化完成, 参数已更新 (数据库 + 运行时)");

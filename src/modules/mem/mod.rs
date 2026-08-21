@@ -1,4 +1,5 @@
 pub mod config;
+pub mod config_repository;
 pub mod dto;
 pub mod fsrs;
 pub mod handler;

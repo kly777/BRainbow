@@ -106,7 +106,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     db::migrate(&pool).await?;
 
     // 加载记忆配置（FSRS 参数 + 调度配置，存储于 app_settings 表）
-    let mem_config = modules::mem::config::load_and_init_mem_config(&pool).await;
+    let mem_config = modules::mem::config_repository::MemConfigRepo::new(pool.clone())
+        .load_and_init()
+        .await;
 
     // 创建应用状态
     let state = AppState::new(Arc::new(pool), &config, mem_config);

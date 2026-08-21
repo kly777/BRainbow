@@ -37,251 +37,336 @@ use crate::modules::user::UserQueryService;
 use crate::modules::user::UserService;
 use crate::shared::config::Config;
 
+// ─────────────────────────────────────────────────────────────
+// 子状态：按模块聚合服务实例，避免 AppState 变成扁平“上帝对象”。
+// Handler 仍然通过 FromRef 提取具体服务；子状态主要让组合根更清晰。
+// ─────────────────────────────────────────────────────────────
+
+#[derive(Clone)]
+pub struct AdminState {
+    pub admin: AdminService,
+}
+
+#[derive(Clone)]
+pub struct AiState {
+    pub ai: AiService,
+}
+
+#[derive(Clone)]
+pub struct ChatState {
+    pub chat: ChatService,
+    pub chat_query: ChatQueryService,
+}
+
+#[derive(Clone)]
+pub struct BookmarkState {
+    pub service: BookmarkService,
+    pub query: BookmarkQueryService,
+}
+
+#[derive(Clone)]
+pub struct CardState {
+    pub service: CardService,
+    pub query: CardQueryService,
+}
+
+#[derive(Clone)]
+pub struct OntoState {
+    pub service: OntoService,
+    pub query: OntoQueryService,
+}
+
+#[derive(Clone)]
+pub struct SignState {
+    pub service: SignService,
+    pub query: SignQueryService,
+}
+
+#[derive(Clone)]
+pub struct UserState {
+    pub service: UserService,
+    pub query: UserQueryService,
+}
+
+#[derive(Clone)]
+pub struct TextState {
+    pub service: TextService,
+    pub query: TextQueryService,
+}
+
+#[derive(Clone)]
+pub struct MediaState {
+    pub service: MediaService,
+    pub query: MediaQueryService,
+}
+
+#[derive(Clone)]
+pub struct ReadingState {
+    pub service: ReadingService,
+    pub query: ReadingQueryService,
+}
+
+#[derive(Clone)]
+pub struct TimeWindowState {
+    pub service: TimeWindowService,
+    pub query: TimeWindowQueryService,
+}
+
+#[derive(Clone)]
+pub struct TaskState {
+    pub service: TaskService,
+    pub query: TaskQueryService,
+}
+
+#[derive(Clone)]
+pub struct MemState {
+    pub service: MemService,
+    pub query: MemQueryService,
+    pub maintenance: DbMemMaintenance,
+    pub config: Arc<MemConfig>,
+}
+
+#[derive(Clone)]
+pub struct DbViewerState {
+    pub service: DbViewerQueryService,
+}
+
+#[derive(Clone)]
+pub struct ConvState {
+    pub service: ConvQueryService,
+}
+
+#[derive(Clone)]
+pub struct SearchState {
+    pub service: SearchQueryService,
+}
+
 /// 应用级共享状态（组合根）。
 ///
-/// 逐步从 `modules::state` 迁移而来。handler 通过 `FromRef<AppState>` 提取
-/// 具体服务类型（静态分发），不依赖 AppState 本体；只有真正跨模块的调用缝
-/// 才使用 trait（例如 chat→ai 的 `AiChatPort`）。
+/// 只作为容器：按模块聚合子状态。Handler 通过 `FromRef<AppState>` 提取
+/// 具体服务类型（静态分发），不依赖 AppState 本体。
 #[derive(Clone)]
 pub struct AppState {
     pub db: Arc<SqlitePool>,
-    /// 管理员设置服务（JWT 密钥/开放注册的运行时缓存与 DB 持久化）
-    pub admin: AdminService,
-    /// 记忆模块配置（FSRS 参数 + 调度，启动时加载）
-    pub mem_config: Arc<MemConfig>,
-
-    // ── 预创建的服务实例 ──
-    pub card: CardService,
-    pub card_query: CardQueryService,
-    pub bookmark: BookmarkService,
-    pub bookmark_query: BookmarkQueryService,
-    pub onto: OntoService,
-    pub onto_query: OntoQueryService,
-    pub sign: SignService,
-    pub sign_query: SignQueryService,
-    pub user: UserService,
-    pub user_query: UserQueryService,
-    pub text: TextService,
-    pub text_query: TextQueryService,
-    pub db_viewer: DbViewerQueryService,
-    pub task: TaskService,
-    pub task_query: TaskQueryService,
-    pub mem: MemService,
-    pub mem_query: MemQueryService,
-    pub mem_maintenance: DbMemMaintenance,
-    pub media: MediaService,
-    pub media_query: MediaQueryService,
-    pub reading: ReadingService,
-    pub reading_query: ReadingQueryService,
-    pub time_window: TimeWindowService,
-    pub time_window_query: TimeWindowQueryService,
-    pub conv_query: ConvQueryService,
-    pub ai: AiService,
-    pub chat: ChatService,
-    pub chat_query: ChatQueryService,
-    pub search_query: SearchQueryService,
+    pub admin: AdminState,
+    pub ai: AiState,
+    pub chat: ChatState,
+    pub bookmark: BookmarkState,
+    pub card: CardState,
+    pub onto: OntoState,
+    pub sign: SignState,
+    pub user: UserState,
+    pub text: TextState,
+    pub media: MediaState,
+    pub reading: ReadingState,
+    pub time_window: TimeWindowState,
+    pub task: TaskState,
+    pub mem: MemState,
+    pub db_viewer: DbViewerState,
+    pub conv: ConvState,
+    pub search: SearchState,
 }
 
 impl FromRef<AppState> for SearchQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.search_query.clone()
+        state.search.service.clone()
     }
 }
 
 impl FromRef<AppState> for AdminService {
     fn from_ref(state: &AppState) -> Self {
-        state.admin.clone()
+        state.admin.admin.clone()
     }
 }
 
 impl FromRef<AppState> for AiService {
     fn from_ref(state: &AppState) -> Self {
-        state.ai.clone()
+        state.ai.ai.clone()
     }
 }
 
 impl FromRef<AppState> for ChatService {
     fn from_ref(state: &AppState) -> Self {
-        state.chat.clone()
+        state.chat.chat.clone()
     }
 }
 
 impl FromRef<AppState> for ChatQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.chat_query.clone()
+        state.chat.chat_query.clone()
     }
 }
 
 impl FromRef<AppState> for BookmarkService {
     fn from_ref(state: &AppState) -> Self {
-        state.bookmark.clone()
+        state.bookmark.service.clone()
     }
 }
 
 impl FromRef<AppState> for BookmarkQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.bookmark_query.clone()
+        state.bookmark.query.clone()
     }
 }
 
 impl FromRef<AppState> for CardService {
     fn from_ref(state: &AppState) -> Self {
-        state.card.clone()
+        state.card.service.clone()
     }
 }
 
 impl FromRef<AppState> for CardQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.card_query.clone()
+        state.card.query.clone()
     }
 }
 
 impl FromRef<AppState> for OntoService {
     fn from_ref(state: &AppState) -> Self {
-        state.onto.clone()
+        state.onto.service.clone()
     }
 }
 
 impl FromRef<AppState> for OntoQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.onto_query.clone()
+        state.onto.query.clone()
     }
 }
 
 impl FromRef<AppState> for SignService {
     fn from_ref(state: &AppState) -> Self {
-        state.sign.clone()
+        state.sign.service.clone()
     }
 }
 
 impl FromRef<AppState> for SignQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.sign_query.clone()
+        state.sign.query.clone()
     }
 }
 
 impl FromRef<AppState> for ConvQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.conv_query.clone()
+        state.conv.service.clone()
     }
 }
 
 impl FromRef<AppState> for DbViewerQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.db_viewer.clone()
+        state.db_viewer.service.clone()
     }
 }
 
 impl FromRef<AppState> for MediaService {
     fn from_ref(state: &AppState) -> Self {
-        state.media.clone()
+        state.media.service.clone()
     }
 }
 
 impl FromRef<AppState> for MediaQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.media_query.clone()
+        state.media.query.clone()
     }
 }
 
 impl FromRef<AppState> for ReadingService {
     fn from_ref(state: &AppState) -> Self {
-        state.reading.clone()
+        state.reading.service.clone()
     }
 }
 
 impl FromRef<AppState> for ReadingQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.reading_query.clone()
+        state.reading.query.clone()
     }
 }
 
 impl FromRef<AppState> for TextService {
     fn from_ref(state: &AppState) -> Self {
-        state.text.clone()
+        state.text.service.clone()
     }
 }
 
 impl FromRef<AppState> for TextQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.text_query.clone()
+        state.text.query.clone()
     }
 }
 
 impl FromRef<AppState> for TaskService {
     fn from_ref(state: &AppState) -> Self {
-        state.task.clone()
+        state.task.service.clone()
     }
 }
 
 impl FromRef<AppState> for TaskQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.task_query.clone()
+        state.task.query.clone()
     }
 }
 
 impl FromRef<AppState> for TimeWindowService {
     fn from_ref(state: &AppState) -> Self {
-        state.time_window.clone()
+        state.time_window.service.clone()
     }
 }
 
 impl FromRef<AppState> for TimeWindowQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.time_window_query.clone()
+        state.time_window.query.clone()
     }
 }
 
 impl FromRef<AppState> for UserService {
     fn from_ref(state: &AppState) -> Self {
-        state.user.clone()
+        state.user.service.clone()
     }
 }
 
 impl FromRef<AppState> for UserQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.user_query.clone()
+        state.user.query.clone()
     }
 }
 
 impl FromRef<AppState> for MemService {
     fn from_ref(state: &AppState) -> Self {
-        state.mem.clone()
+        state.mem.service.clone()
     }
 }
 
 impl FromRef<AppState> for MemQueryService {
     fn from_ref(state: &AppState) -> Self {
-        state.mem_query.clone()
+        state.mem.query.clone()
     }
 }
 
 impl FromRef<AppState> for DbMemMaintenance {
     fn from_ref(state: &AppState) -> Self {
-        state.mem_maintenance.clone()
+        state.mem.maintenance.clone()
     }
 }
 
 impl FromRef<AppState> for Arc<MemConfig> {
     fn from_ref(state: &AppState) -> Self {
-        state.mem_config.clone()
+        state.mem.config.clone()
     }
 }
 
 impl AppState {
     /// 初始化运行时缓存：DB 中有持久化密钥则优先
     pub async fn init_runtime_cache(&self) {
-        self.admin.init_runtime_cache().await;
+        self.admin.admin.init_runtime_cache().await;
     }
 
     /// 当前生效的 JWT 密钥（DB 持久化优先于 env）
     pub fn jwt_secret_active(&self) -> String {
-        self.admin.jwt_secret_active()
+        self.admin.admin.jwt_secret_active()
     }
 
     /// 当前是否开放注册（DB 优先于 env 初始值）
     pub async fn allow_register_active(&self) -> bool {
-        self.admin.allow_register_active().await
+        self.admin.admin.allow_register_active().await
     }
 
     pub fn new(db: Arc<SqlitePool>, config: &Config, mem_config: MemConfig) -> Self {
@@ -302,39 +387,86 @@ impl AppState {
         let chat = ChatService::new(db.as_ref().clone());
         let chat_query = ChatQueryService::new(db.as_ref().clone());
 
+        // 各模块服务
+        let card = CardService::new(db.clone());
+        let card_query = CardQueryService::new(db.clone());
+        let bookmark = BookmarkService::new(db.clone());
+        let bookmark_query = BookmarkQueryService::new(db.clone());
+        let onto = OntoService::new(db.clone());
+        let onto_query = OntoQueryService::new(db.clone());
+        let sign = SignService::new(db.clone());
+        let sign_query = SignQueryService::new(db.clone());
+        let user = UserService::new(db.clone());
+        let user_query = UserQueryService::new(db.clone());
+        let text = TextService::new(db.clone());
+        let text_query = TextQueryService::new(db.clone());
+        let db_viewer = DbViewerQueryService::new(db.clone());
+        let task_query = TaskQueryService::new(db.clone());
+        let mem = MemService::new(mem_repo, Arc::new(mem_maintenance.clone()));
+        let mem_query = MemQueryService::new(mem_repo_for_query);
+        let media = MediaService::new(db.clone());
+        let media_query = MediaQueryService::new(db.clone());
+        let reading = ReadingService::new(db.clone());
+        let reading_query = ReadingQueryService::new(db.clone());
+        let time_window = TimeWindowService::new(db.clone(), task_validator);
+        let time_window_query = TimeWindowQueryService::new(db.clone());
+        let conv = ConvQueryService::new(db.as_ref().clone());
+        let search = SearchQueryService::new(db.as_ref().clone());
+
         Self {
             db: db.clone(),
-            admin,
-            mem_config: Arc::new(mem_config),
-            card: CardService::new(db.clone()),
-            card_query: CardQueryService::new(db.clone()),
-            bookmark: BookmarkService::new(db.clone()),
-            bookmark_query: BookmarkQueryService::new(db.clone()),
-            onto: OntoService::new(db.clone()),
-            onto_query: OntoQueryService::new(db.clone()),
-            sign: SignService::new(db.clone()),
-            sign_query: SignQueryService::new(db.clone()),
-            user: UserService::new(db.clone()),
-            user_query: UserQueryService::new(db.clone()),
-            text: TextService::new(db.clone()),
-            text_query: TextQueryService::new(db.clone()),
-            db_viewer: DbViewerQueryService::new(db.clone()),
-            task: task.clone(),
-            task_query: TaskQueryService::new(db.clone()),
-            mem: MemService::new(mem_repo, Arc::new(mem_maintenance.clone())),
-            mem_query: MemQueryService::new(mem_repo_for_query),
-            mem_maintenance,
-            media: MediaService::new(db.clone()),
-            media_query: MediaQueryService::new(db.clone()),
-            reading: ReadingService::new(db.clone()),
-            reading_query: ReadingQueryService::new(db.clone()),
-            time_window: TimeWindowService::new(db.clone(), task_validator),
-            time_window_query: TimeWindowQueryService::new(db.clone()),
-            conv_query: ConvQueryService::new(db.as_ref().clone()),
-            ai: ai.clone(),
-            chat: chat.clone(),
-            chat_query: chat_query.clone(),
-            search_query: SearchQueryService::new(db.as_ref().clone()),
+            admin: AdminState { admin },
+            ai: AiState { ai },
+            chat: ChatState { chat, chat_query },
+            bookmark: BookmarkState {
+                service: bookmark,
+                query: bookmark_query,
+            },
+            card: CardState {
+                service: card,
+                query: card_query,
+            },
+            onto: OntoState {
+                service: onto,
+                query: onto_query,
+            },
+            sign: SignState {
+                service: sign,
+                query: sign_query,
+            },
+            user: UserState {
+                service: user,
+                query: user_query,
+            },
+            text: TextState {
+                service: text,
+                query: text_query,
+            },
+            media: MediaState {
+                service: media,
+                query: media_query,
+            },
+            reading: ReadingState {
+                service: reading,
+                query: reading_query,
+            },
+            time_window: TimeWindowState {
+                service: time_window,
+                query: time_window_query,
+            },
+            task: TaskState {
+                service: task,
+                query: task_query,
+            },
+            mem: MemState {
+                service: mem,
+                query: mem_query,
+                maintenance: mem_maintenance,
+                config: Arc::new(mem_config),
+            },
+            db_viewer: DbViewerState { service: db_viewer },
+            conv: ConvState { service: conv },
+            search: SearchState { service: search },
         }
     }
 }

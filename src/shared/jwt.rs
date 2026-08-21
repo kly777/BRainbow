@@ -20,13 +20,13 @@ pub fn verify_token(token: &str, secret: &str) -> Option<Claims> {
 }
 
 /// 生成 JWT（240h 有效）
-pub fn create_token(user_id: i32, role: &str, secret: &str) -> String {
+pub fn create_token(user_id: i32, role: &str, secret: &str, ttl_secs: i64) -> String {
     let exp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs() as usize)
         // 系统时间异常时返回 0（立即过期），不 panic
         .unwrap_or(0)
-        + 864000;
+        + ttl_secs.max(60) as usize;
     let claims = Claims {
         sub: user_id,
         role: role.to_string(),

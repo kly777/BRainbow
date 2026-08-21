@@ -50,7 +50,12 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         .nest("/bookmarks", bookmark::routes::<AppState>())
         .nest("/tasks", task::routes::<AppState>())
         .nest("/chat", chat::routes::<AppState>())
-        .nest("/ai", ai::routes::<AppState>())
+        .nest(
+            "/ai",
+            ai::routes::<AppState>().layer(middleware::from_fn(
+                crate::app::http::rate_limit::rate_limit_ai,
+            )),
+        )
         .nest("/time-windows", time_window::routes::<AppState>())
         .layer(middleware::from_fn_with_state(
             state.clone(),

@@ -27,6 +27,9 @@ pub struct Config {
     /// 是否开放注册（默认关闭；公网部署建议保持关闭）
     pub allow_register: bool,
 
+    /// JWT 有效期（秒），默认 10 天
+    pub jwt_ttl_secs: i64,
+
     /// 上传目录（预留，当前使用 `uploads` 硬编码）
     #[allow(dead_code)]
     pub upload_dir: PathBuf,
@@ -78,6 +81,12 @@ impl Config {
                     _ => None,
                 })
                 .unwrap_or(false),
+
+            jwt_ttl_secs: vars("JWT_TTL_SECS")
+                .ok()
+                .and_then(|p| p.parse().ok())
+                .filter(|v| *v > 0)
+                .unwrap_or(864000),
 
             upload_dir: vars("UPLOAD_DIR")
                 .map(PathBuf::from)

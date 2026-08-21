@@ -125,26 +125,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .filter_map(|s| s.parse::<HeaderValue>().ok())
         .collect();
 
-    let cors = if cors_origins.is_empty() {
-        CorsLayer::permissive()
+    // CORS 默认拒绝跨域：仅当显式配置 CORS_ALLOW_ORIGIN 时放行；
+    // 空配置 = 不加 CORS 头（浏览器同源策略默认拒绝跨域读取）。
+    let app = if cors_origins.is_empty() {
+        tracing::info!("CORS_ALLOW_ORIGIN 未配置，默认拒绝跨域");
+        app
     } else {
-        CorsLayer::new()
-            .allow_origin(AllowOrigin::list(cors_origins))
-            .allow_methods([
-                Method::GET,
-                Method::POST,
-                Method::PUT,
-                Method::PATCH,
-                Method::DELETE,
-                Method::OPTIONS,
-            ])
-            .allow_headers([
-                axum::http::header::CONTENT_TYPE,
-                axum::http::header::AUTHORIZATION,
-            ])
+        app.layer(
+            CorsLayer::new()
+                .allow_origin(AllowOrigin::list(cors_origins))
+                .allow_methods([
+                    Method::GET,
+                    Method::POST,
+                    Method::PUT,
+                    Method::PATCH,
+                    Method::DELETE,
+                    Method::OPTIONS,
+                ])
+                .allow_headers([
+                    axum::http::header::CONTENT_TYPE,
+                    axum::http::header::AUTHORIZATION,
+                ]),
+        )
     };
 
-    let app = app.layer(middleware::from_fn(logger)).layer(cors);
+    // cors 已内联到 app 构建逻辑中（空配置不加 CORS 层）
 
     let addr = SocketAddr::from((config.bind_host, config.service_port));
     let listener = tokio::net::TcpListener::bind(addr).await?;

@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn create_and_verify_user_token() {
-        let token = create_token(42, "user", TEST_SECRET);
+        let token = create_token(42, "user", TEST_SECRET, 864000);
         let claims = verify_token(&token, TEST_SECRET).expect("应能验证 token");
         assert_eq!(claims.sub, 42);
         assert_eq!(claims.role, "user");
@@ -248,7 +248,7 @@ mod tests {
 
     #[test]
     fn create_and_verify_admin_token() {
-        let token = create_token(1, "admin", TEST_SECRET);
+        let token = create_token(1, "admin", TEST_SECRET, 864000);
         let claims = verify_token(&token, TEST_SECRET).expect("应能验证 token");
         assert_eq!(claims.sub, 1);
         assert_eq!(claims.role, "admin");
@@ -256,7 +256,7 @@ mod tests {
 
     #[test]
     fn verify_with_wrong_secret_returns_none() {
-        let token = create_token(7, "user", TEST_SECRET);
+        let token = create_token(7, "user", TEST_SECRET, 864000);
         assert!(verify_token(&token, "wrong-secret").is_none());
     }
 
@@ -272,8 +272,8 @@ mod tests {
 
     #[test]
     fn tokens_with_different_secrets_are_independent() {
-        let token_a = create_token(1, "user", "secret-a");
-        let token_b = create_token(2, "admin", "secret-b");
+        let token_a = create_token(1, "user", "secret-a", 864000);
+        let token_b = create_token(2, "admin", "secret-b", 864000);
         assert!(verify_token(&token_a, "secret-a").is_some());
         assert!(verify_token(&token_a, "secret-b").is_none());
         assert!(verify_token(&token_b, "secret-b").is_some());
@@ -283,7 +283,7 @@ mod tests {
     #[test]
     fn token_contains_correct_user_id() {
         for id in [1, 100, 9999] {
-            let token = create_token(id, "user", TEST_SECRET);
+            let token = create_token(id, "user", TEST_SECRET, 864000);
             let claims = verify_token(&token, TEST_SECRET).unwrap();
             assert_eq!(claims.sub, id, "user_id {} 应正确编码", id);
         }

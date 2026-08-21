@@ -44,7 +44,7 @@ pub async fn register_handler(
             .into_response();
     }
     match user
-        .register(payload.name, payload.password, &admin.jwt_secret_active())
+        .register(payload.name, payload.password, &admin.jwt_secret_active(), 864000)
         .await
     {
         Ok((user, token)) => Json(LoginResponse {
@@ -64,7 +64,7 @@ pub async fn login_handler(
     Json(payload): Json<LoginRequest>,
 ) -> impl IntoResponse {
     match user
-        .login(&payload.name, &payload.password, &admin.jwt_secret_active())
+        .login(&payload.name, &payload.password, &admin.jwt_secret_active(), 864000)
         .await
     {
         Ok((user, token)) => Json(LoginResponse {

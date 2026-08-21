@@ -69,15 +69,13 @@ impl BookmarkService {
         url: Option<&str>,
         description: Option<&str>,
     ) -> Result<Bookmark, ServiceError> {
-        if let Some(title) = title {
-            validate_title(title.trim())?;
-        }
         if let Some(url) = url {
             validate_url(url.trim())?;
         }
-        let title = title.map(str::trim);
+        // 保持旧行为：空标题/描述视为不更新
+        let title = title.map(str::trim).filter(|s| !s.is_empty());
         let url = url.map(str::trim);
-        let description = description.map(str::trim);
+        let description = description.map(str::trim).filter(|s| !s.is_empty());
         self.repo
             .update(id, title, url, description)
             .await

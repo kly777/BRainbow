@@ -93,7 +93,7 @@ mod tests {
         // 默认值已持久化
         let stored: String =
             sqlx::query_scalar("SELECT value FROM app_settings WHERE key = 'mem_config'")
-                .fetch_one(&repo.pool)
+                .fetch_one(repo.pool())
                 .await
                 .unwrap();
         assert!(stored.contains("learning_steps"));
@@ -112,7 +112,7 @@ mod tests {
         // 回退默认值已覆盖坏数据
         let stored: String =
             sqlx::query_scalar("SELECT value FROM app_settings WHERE key = 'mem_config'")
-                .fetch_one(&repo.pool)
+                .fetch_one(repo.pool())
                 .await
                 .unwrap();
         assert!(stored.contains("learning_steps"));

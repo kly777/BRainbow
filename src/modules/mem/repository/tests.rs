@@ -63,7 +63,7 @@ async fn delete_mem_with_revlog() {
         .bind("2025-01-01")
         .bind(3)
         .bind(1)
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
 
@@ -76,7 +76,7 @@ async fn delete_mem_with_revlog() {
     // 验证 revlog 也被级联删除
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog WHERE mem_id = ?")
         .bind(mem_id)
-        .fetch_one(&*repo.pool)
+        .fetch_one(&**repo.pool())
         .await
         .unwrap();
     assert_eq!(count, 0);
@@ -92,7 +92,7 @@ async fn delete_mem_with_prerequisite() {
     sqlx::query("INSERT INTO mem_prerequisite (mem_id, requires_mem_id) VALUES (?, ?)")
         .bind(mem_id)
         .bind(dep_id)
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
 
@@ -108,7 +108,7 @@ async fn delete_mem_with_prerequisite() {
     )
     .bind(mem_id)
     .bind(dep_id)
-    .fetch_one(&*repo.pool)
+    .fetch_one(&**repo.pool())
     .await
     .unwrap();
     assert_eq!(count, 0);
@@ -166,7 +166,7 @@ async fn get_recent_retention_all_pass() {
         .bind(mem_id)
         .bind(&time_str)
         .bind(3)
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
     }
@@ -189,7 +189,7 @@ async fn get_recent_retention_mixed() {
         .bind(mem_id)
         .bind(&time_str)
         .bind(rating)
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
     }
@@ -211,7 +211,7 @@ async fn get_recent_retention_respects_limit() {
         .bind(mem_id)
         .bind(&time_str)
         .bind(4)
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
     }
@@ -230,7 +230,7 @@ async fn create_user(repo: &MemRepo) -> i32 {
     sqlx::query("INSERT INTO user (name, password_hash) VALUES (?, ?)")
         .bind(format!("user_{n}"))
         .bind("hash")
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap()
         .last_insert_rowid() as i32
@@ -480,14 +480,14 @@ async fn insert_session_mem(repo: &MemRepo, state: &str, buried: i32, due_at: &s
         .bind(state)
         .bind(buried)
         .bind(due_at)
-        .fetch_one(&*repo.pool)
+        .fetch_one(&**repo.pool())
         .await
         .unwrap()
 }
 
 async fn estimate(repo: &MemRepo) -> crate::modules::mem::dto::SessionEstimate {
     let repo_arc: Arc<dyn crate::modules::mem::port::MemRepository> =
-        Arc::new(MemRepo::new(repo.pool.clone()));
+        Arc::new(MemRepo::new(repo.pool().clone()));
     let svc = crate::modules::mem::query::MemQueryService::new(repo_arc);
     svc.get_session_estimate(&crate::modules::mem::config::MemConfig::default(), &[], &[])
         .await
@@ -530,7 +530,7 @@ async fn session_stats_averages_recent_durations() {
             .bind(mem_id)
             .bind(time)
             .bind(duration)
-            .execute(&*repo.pool)
+            .execute(&**repo.pool())
             .await
             .unwrap();
     }
@@ -552,7 +552,7 @@ async fn estimate_all_review_no_failures() {
         .bind("2020-01-01T00:00:00Z")
         .bind(4i32) // easy = pass
         .bind(1i32)
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
     }
@@ -580,7 +580,7 @@ async fn estimate_mixed_new_and_review() {
         .bind("2020-01-01T00:00:00Z")
         .bind(1i32) // again = fail
         .bind(1i32)
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
     }
@@ -617,7 +617,7 @@ async fn session_stats_filters_prereq_tags_and_steps() {
     sqlx::query("INSERT INTO mem_prerequisite (mem_id, requires_mem_id) VALUES (?1, ?2)")
         .bind(blocked)
         .bind(prereq)
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
     let ready = insert_session_mem(&repo, "new", 0, "2099-01-01T00:00:00Z").await;
@@ -626,13 +626,13 @@ async fn session_stats_filters_prereq_tags_and_steps() {
     let l0 = insert_session_mem(&repo, "learning", 0, "2020-01-01T00:00:00Z").await;
     sqlx::query("UPDATE mem SET step_index = 0 WHERE id = ?1")
         .bind(l0)
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
     let l1 = insert_session_mem(&repo, "learning", 0, "2020-01-01T00:00:00Z").await;
     sqlx::query("UPDATE mem SET step_index = 1 WHERE id = ?1")
         .bind(l1)
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
 
@@ -640,7 +640,7 @@ async fn session_stats_filters_prereq_tags_and_steps() {
     let r0 = insert_session_mem(&repo, "relearning", 0, "2020-01-01T00:00:00Z").await;
     sqlx::query("UPDATE mem SET step_index = 0 WHERE id = ?1")
         .bind(r0)
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
 
@@ -656,18 +656,18 @@ async fn session_stats_filters_prereq_tags_and_steps() {
 
     // 标签过滤：只统计带 tag1 的卡
     sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (1, 'u1', 'x')")
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
     let tag1: i32 =
         sqlx::query_scalar("INSERT INTO tag (name, user_id) VALUES ('t1', 1) RETURNING id")
-            .fetch_one(&*repo.pool)
+            .fetch_one(&**repo.pool())
             .await
             .unwrap();
     sqlx::query("INSERT INTO mem_tag (mem_id, tag_id) VALUES (?1, ?2)")
         .bind(ready)
         .bind(tag1)
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
     let filtered = repo.get_session_stats(&[tag1], &[]).await.unwrap();
@@ -800,7 +800,7 @@ async fn test_due_does_not_pull_upcoming_when_new_cards_exist() {
         sqlx::query("UPDATE mem SET state = 'review', due_at = ? WHERE id = ?")
             .bind(&future)
             .bind(id)
-            .execute(&*repo.pool)
+            .execute(&**repo.pool())
             .await
             .unwrap();
     }
@@ -873,7 +873,7 @@ async fn get_due_review_candidates_carries_priority_fields() {
         .bind(&past)
         .bind(&last)
         .bind(due_id)
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
 
@@ -885,7 +885,7 @@ async fn get_due_review_candidates_carries_priority_fields() {
     sqlx::query("UPDATE mem SET state='review', difficulty=3, stability=10, due_at=? WHERE id=?")
         .bind(&future)
         .bind(future_id)
-        .execute(&*repo.pool)
+        .execute(&**repo.pool())
         .await
         .unwrap();
 

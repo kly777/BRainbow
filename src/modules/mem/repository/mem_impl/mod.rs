@@ -10,6 +10,12 @@ impl MemRepo {
     pub fn new(pool: Arc<SqlitePool>) -> Self {
         Self { pool }
     }
+
+    /// 测试/内部工具访问数据库连接池。
+    #[cfg(test)]
+    pub(crate) fn pool(&self) -> &Arc<SqlitePool> {
+        &self.pool
+    }
 }
 
 mod chunk;

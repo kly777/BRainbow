@@ -45,16 +45,19 @@ impl BookmarkRepo {
     /// 全局搜索命中
     pub async fn search_hits(
         &self,
+        user_id: i32,
         like: &str,
         cap: i64,
     ) -> Result<Vec<BookmarkHitRow>, sqlx::Error> {
         let rows = sqlx::query_as!(
             BookmarkHitRow,
             r#"SELECT id, title, url, description,
-                      title LIKE ?1 ESCAPE '\' AS "title_hit!: i64"
+                      title LIKE ?2 ESCAPE '\' AS "title_hit!: i64"
                FROM bookmark
-               WHERE title LIKE ?1 ESCAPE '\' OR url LIKE ?1 ESCAPE '\' OR description LIKE ?1 ESCAPE '\'
-               ORDER BY (title LIKE ?1 ESCAPE '\') DESC, id DESC LIMIT ?2"#,
+               WHERE (user_id = ?1 OR user_id IS NULL)
+                 AND (title LIKE ?2 ESCAPE '\' OR url LIKE ?2 ESCAPE '\' OR description LIKE ?2 ESCAPE '\')
+               ORDER BY (title LIKE ?2 ESCAPE '\') DESC, id DESC LIMIT ?3"#,
+            user_id,
             like,
             cap
         )
@@ -66,11 +69,14 @@ impl BookmarkRepo {
     /// 获取所有书签（分页，按创建时间倒序；可选按标签过滤）
     pub async fn find_all_paginated(
         &self,
+        user_id: i32,
         limit: i64,
         offset: i64,
         tag: Option<&str>,
     ) -> Result<(Vec<Bookmark>, i64), sqlx::Error> {
-        let mut count_builder = QueryBuilder::new("SELECT COUNT(*) FROM bookmark WHERE 1=1");
+        let mut count_builder = QueryBuilder::new("SELECT COUNT(*) FROM bookmark WHERE (user_id = ");
+        count_builder.push_bind(user_id);
+        count_builder.push(" OR user_id IS NULL)");
         if let Some(t) = tag {
             tags_filter_clause(&mut count_builder, t);
         }
@@ -80,7 +86,9 @@ impl BookmarkRepo {
             .await?;
 
         let mut fetch_builder = QueryBuilder::new(BOOKMARK_SELECT);
-        fetch_builder.push(" WHERE 1=1");
+        fetch_builder.push(" WHERE (user_id = ");
+        fetch_builder.push_bind(user_id);
+        fetch_builder.push(" OR user_id IS NULL)");
         if let Some(t) = tag {
             tags_filter_clause(&mut fetch_builder, t);
         }
@@ -99,7 +107,7 @@ impl BookmarkRepo {
     }
 
     /// 根据 ID 获取书签
-    pub async fn find_by_id(&self, id: i32) -> Result<Option<Bookmark>, sqlx::Error> {
+    pub async fn find_by_id(&self, user_id: i32, id: i32) -> Result<Option<Bookmark>, sqlx::Error> {
         let row = sqlx::query_as!(
             BookmarkRow,
             r#"SELECT id AS "id: i32", title, url, description,
@@ -109,8 +117,9 @@ impl BookmarkRepo {
                            (SELECT t.name FROM bookmark_tag_rel r
                             JOIN bookmark_tag t ON t.id = r.tag_id
                             WHERE r.bookmark_id = bookmark.id ORDER BY t.name)) AS tags
-               FROM bookmark WHERE id = ?"#,
-            id
+               FROM bookmark WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+            id,
+            user_id
         )
         .fetch_optional(&*self.pool)
         .await?;
@@ -121,6 +130,7 @@ impl BookmarkRepo {
     /// 创建书签
     pub async fn create(
         &self,
+        user_id: i32,
         title: &str,
         url: &str,
         description: &str,
@@ -130,14 +140,15 @@ impl BookmarkRepo {
         let mut tx = self.pool.begin().await?;
 
         let row = sqlx::query!(
-            r#"INSERT INTO bookmark (title, url, description, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?)
+            r#"INSERT INTO bookmark (title, url, description, user_id, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?)
                RETURNING id AS "id: i32", title, url, description,
                          COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                          COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
             title,
             url,
             description,
+            user_id,
             now,
             now
         )
@@ -166,7 +177,7 @@ impl BookmarkRepo {
     }
 
     /// 根据 URL 获取书签（导入时按 URL 去重/合并）
-    pub async fn find_by_url(&self, url: &str) -> Result<Option<Bookmark>, sqlx::Error> {
+    pub async fn find_by_url(&self, user_id: i32, url: &str) -> Result<Option<Bookmark>, sqlx::Error> {
         let row = sqlx::query_as!(
             BookmarkRow,
             r#"SELECT id AS "id: i32", title, url, description,
@@ -176,8 +187,9 @@ impl BookmarkRepo {
                            (SELECT t.name FROM bookmark_tag_rel r
                             JOIN bookmark_tag t ON t.id = r.tag_id
                             WHERE r.bookmark_id = bookmark.id ORDER BY t.name)) AS tags
-               FROM bookmark WHERE url = ?"#,
-            url
+               FROM bookmark WHERE url = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+            url,
+            user_id
         )
         .fetch_optional(&*self.pool)
         .await?;
@@ -188,6 +200,7 @@ impl BookmarkRepo {
     /// 更新书签（仅更新提供的字段）
     pub async fn update(
         &self,
+        user_id: i32,
         id: i32,
         title: Option<&str>,
         url: Option<&str>,
@@ -222,6 +235,9 @@ impl BookmarkRepo {
         assert!(field_count > 0, "update must set at least updated_at");
         builder.push(" WHERE id = ");
         builder.push_bind(id);
+        builder.push(" AND (user_id = ");
+        builder.push_bind(user_id);
+        builder.push(" OR user_id IS NULL)");
         builder.push(" RETURNING id, title, url, description, created_at, updated_at");
 
         let result = builder.build().fetch_one(&*self.pool).await?;
@@ -245,10 +261,14 @@ impl BookmarkRepo {
     }
 
     /// 删除书签（关联标签关系由外键级联删除）
-    pub async fn delete(&self, id: i32) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query!("DELETE FROM bookmark WHERE id = ?", id)
-            .execute(&*self.pool)
-            .await?;
+    pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, sqlx::Error> {
+        let result = sqlx::query!(
+            "DELETE FROM bookmark WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+            id,
+            user_id
+        )
+        .execute(&*self.pool)
+        .await?;
 
         Ok(result.rows_affected())
     }
@@ -256,6 +276,7 @@ impl BookmarkRepo {
     /// 按关键词搜索书签（匹配标题/URL/备注，命中越多得分越高；可选按标签过滤）
     pub async fn search_paginated(
         &self,
+        user_id: i32,
         query: &str,
         tag: Option<&str>,
         limit: i64,
@@ -263,11 +284,14 @@ impl BookmarkRepo {
     ) -> Result<(Vec<Bookmark>, i64), sqlx::Error> {
         let keywords: Vec<&str> = query.split_whitespace().collect();
         if keywords.is_empty() {
-            return self.find_all_paginated(limit, offset, tag).await;
+            return self.find_all_paginated(user_id, limit, offset, tag).await;
         }
 
-        let mut count_builder = QueryBuilder::new("SELECT COUNT(*) FROM bookmark WHERE ");
+        let mut count_builder = QueryBuilder::new("SELECT COUNT(*) FROM bookmark WHERE (user_id = ");
+        count_builder.push_bind(user_id);
+        count_builder.push(" OR user_id IS NULL) AND (");
         Self::append_keyword_where(&mut count_builder, &keywords);
+        count_builder.push(")");
         if let Some(t) = tag {
             tags_filter_clause(&mut count_builder, t);
         }
@@ -277,8 +301,11 @@ impl BookmarkRepo {
             .await?;
 
         let mut fetch_builder = QueryBuilder::new(BOOKMARK_SELECT);
-        fetch_builder.push(" WHERE ");
+        fetch_builder.push(" WHERE (user_id = ");
+        fetch_builder.push_bind(user_id);
+        fetch_builder.push(" OR user_id IS NULL) AND (");
         Self::append_keyword_where(&mut fetch_builder, &keywords);
+        fetch_builder.push(")");
         if let Some(t) = tag {
             tags_filter_clause(&mut fetch_builder, t);
         }
@@ -481,6 +508,8 @@ mod tests {
     use super::*;
     use sqlx::SqlitePool;
 
+    const TEST_USER_ID: i32 = 1;
+
     async fn setup_db() -> BookmarkRepo {
         let pool = SqlitePool::connect("sqlite::memory:")
             .await
@@ -489,6 +518,11 @@ mod tests {
         crate::db::migrate(&pool)
             .await
             .expect("create production schema");
+
+        sqlx::query("INSERT OR IGNORE INTO user (id, name, password_hash) VALUES (1, 'test', 'x')")
+            .execute(&pool)
+            .await
+            .expect("insert test user");
 
         BookmarkRepo {
             pool: Arc::new(pool),
@@ -504,6 +538,7 @@ mod tests {
         let repo = setup_db().await;
         let bm = repo
             .create(
+                TEST_USER_ID,
                 "Rust 官网",
                 "https://www.rust-lang.org/",
                 "学习",
@@ -513,28 +548,28 @@ mod tests {
             .unwrap();
         assert_eq!(bm.tags, str_vec(&["rust", "编程"])); // 按名称排序
 
-        let found = repo.find_by_id(bm.id).await.unwrap().expect("应找到");
+        let found = repo.find_by_id(TEST_USER_ID, bm.id).await.unwrap().expect("应找到");
         assert_eq!(found.tags, str_vec(&["rust", "编程"]));
     }
 
     #[tokio::test]
     async fn find_by_id_not_found() {
         let repo = setup_db().await;
-        assert!(repo.find_by_id(999).await.unwrap().is_none());
+        assert!(repo.find_by_id(TEST_USER_ID, 999).await.unwrap().is_none());
     }
 
     #[tokio::test]
     async fn find_all_paginated_with_tags() {
         let repo = setup_db().await;
-        repo.create("A", "https://a.com", "", &str_vec(&["x"]))
+        repo.create(TEST_USER_ID, "A", "https://a.com", "", &str_vec(&["x"]))
             .await
             .unwrap();
-        repo.create("B", "https://b.com", "", &[]).await.unwrap();
-        repo.create("C", "https://c.com", "", &str_vec(&["y", "x"]))
+        repo.create(TEST_USER_ID, "B", "https://b.com", "", &[]).await.unwrap();
+        repo.create(TEST_USER_ID, "C", "https://c.com", "", &str_vec(&["y", "x"]))
             .await
             .unwrap();
 
-        let (items, total) = repo.find_all_paginated(10, 0, None).await.unwrap();
+        let (items, total) = repo.find_all_paginated(TEST_USER_ID, 10, 0, None).await.unwrap();
         assert_eq!(total, 3);
         assert_eq!(items[0].title, "C");
         assert_eq!(items[0].tags, str_vec(&["x", "y"]));
@@ -544,20 +579,20 @@ mod tests {
     #[tokio::test]
     async fn find_all_filtered_by_tag() {
         let repo = setup_db().await;
-        repo.create("A", "https://a.com", "", &str_vec(&["编程"]))
+        repo.create(TEST_USER_ID, "A", "https://a.com", "", &str_vec(&["编程"]))
             .await
             .unwrap();
-        repo.create("B", "https://b.com", "", &[]).await.unwrap();
-        repo.create("C", "https://c.com", "", &str_vec(&["编程", "rust"]))
+        repo.create(TEST_USER_ID, "B", "https://b.com", "", &[]).await.unwrap();
+        repo.create(TEST_USER_ID, "C", "https://c.com", "", &str_vec(&["编程", "rust"]))
             .await
             .unwrap();
 
-        let (items, total) = repo.find_all_paginated(10, 0, Some("编程")).await.unwrap();
+        let (items, total) = repo.find_all_paginated(TEST_USER_ID, 10, 0, Some("编程")).await.unwrap();
         assert_eq!(total, 2);
         assert!(items.iter().all(|b| b.tags.contains(&"编程".to_string())));
 
         let (items, total) = repo
-            .find_all_paginated(10, 0, Some("不存在的"))
+            .find_all_paginated(TEST_USER_ID, 10, 0, Some("不存在的"))
             .await
             .unwrap();
         assert_eq!(total, 0);
@@ -568,11 +603,11 @@ mod tests {
     async fn find_all_paginated_respects_limit_offset() {
         let repo = setup_db().await;
         for i in 0..10 {
-            repo.create(&format!("bm{i}"), "https://x.com", "", &[])
+            repo.create(TEST_USER_ID, &format!("bm{i}"), "https://x.com", "", &[])
                 .await
                 .unwrap();
         }
-        let (items, total) = repo.find_all_paginated(3, 2, None).await.unwrap();
+        let (items, total) = repo.find_all_paginated(TEST_USER_ID, 3, 2, None).await.unwrap();
         assert_eq!(total, 10);
         assert_eq!(items.len(), 3);
         assert_eq!(items[0].title, "bm7");
@@ -582,13 +617,13 @@ mod tests {
     async fn update_partial_fields() {
         let repo = setup_db().await;
         let bm = repo
-            .create("旧标题", "https://old.com", "旧描述", &str_vec(&["a"]))
+            .create(TEST_USER_ID, "旧标题", "https://old.com", "旧描述", &str_vec(&["a"]))
             .await
             .unwrap();
 
         // 只更新标题
         let updated = repo
-            .update(bm.id, Some("新标题"), None, None)
+            .update(TEST_USER_ID, bm.id, Some("新标题"), None, None)
             .await
             .unwrap();
         assert_eq!(updated.title, "新标题");
@@ -603,18 +638,18 @@ mod tests {
     #[tokio::test]
     async fn update_nonexistent_fails() {
         let repo = setup_db().await;
-        assert!(repo.update(999, Some("x"), None, None).await.is_err());
+        assert!(repo.update(TEST_USER_ID, 999, Some("x"), None, None).await.is_err());
     }
 
     #[tokio::test]
     async fn delete_existing_cascades_tag_rels() {
         let repo = setup_db().await;
         let bm = repo
-            .create("x", "https://x.com", "", &str_vec(&["编程"]))
+            .create(TEST_USER_ID, "x", "https://x.com", "", &str_vec(&["编程"]))
             .await
             .unwrap();
-        assert_eq!(repo.delete(bm.id).await.unwrap(), 1);
-        assert!(repo.find_by_id(bm.id).await.unwrap().is_none());
+        assert_eq!(repo.delete(TEST_USER_ID, bm.id).await.unwrap(), 1);
+        assert!(repo.find_by_id(TEST_USER_ID, bm.id).await.unwrap().is_none());
         // 标签本身保留，关联清除
         let tags = repo.search_tags(None).await.unwrap();
         assert_eq!(tags.len(), 1);
@@ -624,14 +659,14 @@ mod tests {
     #[tokio::test]
     async fn delete_nonexistent_returns_zero() {
         let repo = setup_db().await;
-        assert_eq!(repo.delete(999).await.unwrap(), 0);
+        assert_eq!(repo.delete(TEST_USER_ID, 999).await.unwrap(), 0);
     }
 
     #[tokio::test]
     async fn search_empty_query_falls_back() {
         let repo = setup_db().await;
-        repo.create("A", "https://a.com", "", &[]).await.unwrap();
-        let (items, total) = repo.search_paginated("", None, 10, 0).await.unwrap();
+        repo.create(TEST_USER_ID, "A", "https://a.com", "", &[]).await.unwrap();
+        let (items, total) = repo.search_paginated(TEST_USER_ID, "", None, 10, 0).await.unwrap();
         assert_eq!(total, 1);
         assert_eq!(items.len(), 1);
     }
@@ -639,23 +674,23 @@ mod tests {
     #[tokio::test]
     async fn search_matches_title_url_description() {
         let repo = setup_db().await;
-        repo.create("Rust 教程", "https://rust.example.com", "入门指南", &[])
+        repo.create(TEST_USER_ID, "Rust 教程", "https://rust.example.com", "入门指南", &[])
             .await
             .unwrap();
-        repo.create("Go 官网", "https://go.dev", "", &[])
+        repo.create(TEST_USER_ID, "Go 官网", "https://go.dev", "", &[])
             .await
             .unwrap();
-        repo.create("其它", "https://other.example.com", "提到 rust 语言", &[])
+        repo.create(TEST_USER_ID, "其它", "https://other.example.com", "提到 rust 语言", &[])
             .await
             .unwrap();
 
-        let (items, total) = repo.search_paginated("rust", None, 10, 0).await.unwrap();
+        let (items, total) = repo.search_paginated(TEST_USER_ID, "rust", None, 10, 0).await.unwrap();
         assert_eq!(total, 2);
         assert!(items[0].title.contains("Rust") || items[0].description.contains("rust"));
 
         // 多关键词命中得分排序
         let (items, total) = repo
-            .search_paginated("rust 教程", None, 10, 0)
+            .search_paginated(TEST_USER_ID, "rust 教程", None, 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 2);
@@ -666,15 +701,15 @@ mod tests {
     #[tokio::test]
     async fn search_combined_with_tag_filter() {
         let repo = setup_db().await;
-        repo.create("Rust 教程", "https://a.com", "", &str_vec(&["编程"]))
+        repo.create(TEST_USER_ID, "Rust 教程", "https://a.com", "", &str_vec(&["编程"]))
             .await
             .unwrap();
-        repo.create("Rust 新闻", "https://b.com", "", &[])
+        repo.create(TEST_USER_ID, "Rust 新闻", "https://b.com", "", &[])
             .await
             .unwrap();
 
         let (items, total) = repo
-            .search_paginated("rust", Some("编程"), 10, 0)
+            .search_paginated(TEST_USER_ID, "rust", Some("编程"), 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 1);
@@ -684,8 +719,8 @@ mod tests {
     #[tokio::test]
     async fn search_no_match() {
         let repo = setup_db().await;
-        repo.create("x", "https://x.com", "", &[]).await.unwrap();
-        let (items, total) = repo.search_paginated("不存在", None, 10, 0).await.unwrap();
+        repo.create(TEST_USER_ID, "x", "https://x.com", "", &[]).await.unwrap();
+        let (items, total) = repo.search_paginated(TEST_USER_ID, "不存在", None, 10, 0).await.unwrap();
         assert_eq!(total, 0);
         assert!(items.is_empty());
     }
@@ -704,10 +739,10 @@ mod tests {
     #[tokio::test]
     async fn search_tags_with_counts() {
         let repo = setup_db().await;
-        repo.create("A", "https://a.com", "", &str_vec(&["编程", "rust"]))
+        repo.create(TEST_USER_ID, "A", "https://a.com", "", &str_vec(&["编程", "rust"]))
             .await
             .unwrap();
-        repo.create("B", "https://b.com", "", &str_vec(&["编程"]))
+        repo.create(TEST_USER_ID, "B", "https://b.com", "", &str_vec(&["编程"]))
             .await
             .unwrap();
 
@@ -726,7 +761,7 @@ mod tests {
     #[tokio::test]
     async fn get_and_set_bookmark_tags() {
         let repo = setup_db().await;
-        let bm = repo.create("A", "https://a.com", "", &[]).await.unwrap();
+        let bm = repo.create(TEST_USER_ID, "A", "https://a.com", "", &[]).await.unwrap();
 
         let tags = repo
             .set_bookmark_tags(bm.id, &str_vec(&["编程", "rust"]))
@@ -759,7 +794,7 @@ mod tests {
     #[tokio::test]
     async fn set_tags_ignores_blank_names() {
         let repo = setup_db().await;
-        let bm = repo.create("A", "https://a.com", "", &[]).await.unwrap();
+        let bm = repo.create(TEST_USER_ID, "A", "https://a.com", "", &[]).await.unwrap();
         let tags = repo
             .set_bookmark_tags(bm.id, &str_vec(&["", "  ", "有效"]))
             .await
@@ -772,7 +807,7 @@ mod tests {
     async fn delete_tag_cascades_rels() {
         let repo = setup_db().await;
         let bm = repo
-            .create("A", "https://a.com", "", &str_vec(&["编程", "rust"]))
+            .create(TEST_USER_ID, "A", "https://a.com", "", &str_vec(&["编程", "rust"]))
             .await
             .unwrap();
         let tag = repo.search_tags(Some("编程")).await.unwrap().remove(0);

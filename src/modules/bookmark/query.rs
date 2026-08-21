@@ -24,29 +24,31 @@ impl BookmarkQueryService {
 
     pub async fn list(
         &self,
+        user_id: i32,
         limit: i64,
         offset: i64,
         tag: Option<&str>,
     ) -> Result<(Vec<Bookmark>, i64), ServiceError> {
         self.repo
-            .find_all_paginated(limit, offset, tag)
+            .find_all_paginated(user_id, limit, offset, tag)
             .await
             .map_err(ServiceError::Db)
     }
 
-    pub async fn by_id(&self, id: i32) -> Result<Option<Bookmark>, ServiceError> {
-        self.repo.find_by_id(id).await.map_err(ServiceError::Db)
+    pub async fn by_id(&self, user_id: i32, id: i32) -> Result<Option<Bookmark>, ServiceError> {
+        self.repo.find_by_id(user_id, id).await.map_err(ServiceError::Db)
     }
 
     pub async fn search(
         &self,
+        user_id: i32,
         query: &str,
         tag: Option<&str>,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Bookmark>, i64), ServiceError> {
         self.repo
-            .search_paginated(query, tag, limit, offset)
+            .search_paginated(user_id, query, tag, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }
@@ -62,8 +64,11 @@ impl BookmarkQueryService {
 
     pub async fn get_bookmark_tags(
         &self,
+        user_id: i32,
         bookmark_id: i32,
     ) -> Result<Vec<BookmarkTag>, ServiceError> {
+        // 先校验书签所有权（共享数据可见），再返回标签
+        self.repo.find_by_id(user_id, bookmark_id).await?;
         self.repo
             .get_bookmark_tags(bookmark_id)
             .await
@@ -75,7 +80,7 @@ impl BookmarkQueryService {
 impl SearchPort for BookmarkQueryService {
     async fn search(
         &self,
-        _user_id: i32,
+        user_id: i32,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
@@ -87,7 +92,7 @@ impl SearchPort for BookmarkQueryService {
         let like = crate::shared::db_query::like_contains(kw);
         let rows = self
             .repo
-            .search_hits(&like, cap)
+            .search_hits(user_id, &like, cap)
             .await
             .map_err(ServiceError::Db)?;
         Ok(rows

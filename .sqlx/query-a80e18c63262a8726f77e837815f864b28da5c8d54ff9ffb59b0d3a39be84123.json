@@ -1,10 +1,10 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, title, url, description,\n                      title LIKE ?1 ESCAPE '\\' AS \"title_hit!: i64\"\n               FROM bookmark\n               WHERE title LIKE ?1 ESCAPE '\\' OR url LIKE ?1 ESCAPE '\\' OR description LIKE ?1 ESCAPE '\\'\n               ORDER BY (title LIKE ?1 ESCAPE '\\') DESC, id DESC LIMIT ?2",
+  "query": "INSERT INTO bookmark (title, url, description, user_id, created_at, updated_at)\n               VALUES (?, ?, ?, ?, ?, ?)\n               RETURNING id AS \"id: i32\", title, url, description,\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
   "describe": {
     "columns": [
       {
-        "name": "id",
+        "name": "id: i32",
         "ordinal": 0,
         "type_info": "Integer",
         "origin": {
@@ -48,22 +48,29 @@
         }
       },
       {
-        "name": "title_hit!: i64",
+        "name": "created_at!: chrono::DateTime<chrono::Utc>",
         "ordinal": 4,
+        "type_info": "Null",
+        "origin": "Expression"
+      },
+      {
+        "name": "updated_at!: chrono::DateTime<chrono::Utc>",
+        "ordinal": 5,
         "type_info": "Null",
         "origin": "Expression"
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 6
     },
     "nullable": [
       false,
       false,
       false,
       false,
+      null,
       null
     ]
   },
-  "hash": "393c8987796722fa2117eed1db2c2e06e919f7646191c16ba980c71664814b8e"
+  "hash": "a80e18c63262a8726f77e837815f864b28da5c8d54ff9ffb59b0d3a39be84123"
 }

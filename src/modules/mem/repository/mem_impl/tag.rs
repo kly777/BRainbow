@@ -6,6 +6,7 @@
 use super::super::super::dto::*;
 use super::super::super::model::*;
 use super::super::*;
+#[allow(dead_code)]
 impl super::super::MemRepo {
     pub async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, sqlx::Error> {
         let row = sqlx::query_as!(

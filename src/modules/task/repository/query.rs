@@ -338,7 +338,7 @@ impl TaskRepository {
 
     pub async fn find_time_windows_by_task(
         &self,
-        user_id: i32,
+        _user_id: i32,
         task_id: i32,
     ) -> Result<Vec<TimeWindow>, sqlx::Error> {
         let rows = sqlx::query_as!(

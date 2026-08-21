@@ -6,6 +6,7 @@
 use super::super::super::dto::*;
 use super::super::super::model::*;
 use super::super::*;
+#[allow(dead_code)]
 impl super::super::MemRepo {
     pub async fn get_learning_mems(
         &self,

@@ -6,7 +6,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::shared::claims::Claims;
-use crate::shared::error_types::{ErrorBody, ServiceError};
+use crate::shared::error_types::ErrorBody;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 use crate::shared::time_text::to_utc_iso;
 

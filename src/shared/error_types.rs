@@ -74,19 +74,6 @@ impl From<sqlx::Error> for ServiceError {
     }
 }
 
-fn resp(status: StatusCode, message: impl Into<String>) -> Response {
-    let code = status.canonical_reason().unwrap_or("Unknown").to_string();
-    (
-        status,
-        Json(ErrorBody {
-            code,
-            message: message.into(),
-            details: None,
-        }),
-    )
-        .into_response()
-}
-
 impl IntoResponse for ServiceError {
     fn into_response(self) -> Response {
         // 错误码：机器可读（code()），面向用户消息不回显原始 sqlx 错误

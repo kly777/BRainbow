@@ -1037,7 +1037,7 @@ async fn migrate_v12_fts5(conn: &mut SqliteConnection) -> Result<(), sqlx::Error
     ];
 
     for (fts, src, rowid, cols, prefix) in SPECS {
-        let col_def = cols.iter().copied().collect::<Vec<_>>().join(", ");
+        let col_def = cols.to_vec().join(", ");
         // 建虚拟表（外部内容表：索引引用源表）
         let create = format!(
             "CREATE VIRTUAL TABLE IF NOT EXISTS {fts} USING fts5({col_def}, content='{src}', content_rowid='{rowid}')"
@@ -1048,8 +1048,8 @@ async fn migrate_v12_fts5(conn: &mut SqliteConnection) -> Result<(), sqlx::Error
             .map_err(|e| migration_failed(&format!("v12 创建 {fts}"), e))?;
 
         // INSERT 触发器
-        let ins_cols = cols.iter().copied().collect::<Vec<_>>().join(", ");
-        let ins_vals = (1..=cols.len())
+        let ins_cols = cols.to_vec().join(", ");
+        let _ins_vals = (1..=cols.len())
             .map(|i| format!("new.c{i}"))
             .collect::<Vec<_>>()
             .join(", ");

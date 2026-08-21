@@ -5,6 +5,7 @@
 
 use super::super::super::model::*;
 use super::super::*;
+#[allow(dead_code)]
 impl super::super::MemRepo {
     pub async fn create_chunk(&self, user_id: i32, content: &str) -> Result<i32, sqlx::Error> {
         sqlx::query_scalar!(

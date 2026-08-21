@@ -3,6 +3,7 @@
 //! 每个子文件实现 `impl super::super::MemRepo` 的一个方法组。
 
 use super::super::super::model::*;
+#[allow(dead_code)]
 impl super::super::MemRepo {
     pub async fn suspend_mem(&self, user_id: i32, id: i32) -> Result<(), sqlx::Error> {
         sqlx::query!(

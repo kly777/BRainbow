@@ -24,13 +24,9 @@ mod shared;
 
 use std::net::SocketAddr;
 use std::str::FromStr;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use axum::extract::Request;
 use axum::http::{HeaderValue, Method};
-use axum::middleware;
-use axum::middleware::Next;
-use axum::response::Response;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -173,16 +169,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn logger(req: Request, next: Next) -> Result<Response, axum::response::Response> {
-    let start = Instant::now();
-    let method = req.method().clone();
-    let path = req.uri().path().to_string();
-    let res = next.run(req).await;
 
-    let duration = start.elapsed();
-    let status = res.status();
-
-    info!("← {} {} - {} ({:?})", method, path, status, duration);
-
-    Ok(res)
-}

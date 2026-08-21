@@ -11,5 +11,6 @@ pub mod db_query;
 pub mod error_types;
 pub mod jwt;
 pub mod pagination;
+pub mod response;
 pub mod search;
 pub mod time_text;

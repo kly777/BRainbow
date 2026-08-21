@@ -19,9 +19,10 @@ use super::query::MemQueryService;
 use super::service::MemService;
 use crate::shared::batch::{BatchDataResponse, BatchRequest, BatchResponse};
 use crate::shared::error_types as error;
+use crate::shared::response;
 
 fn ok() -> axum::response::Response {
-    Json(serde_json::json!({ "ok": true })).into_response()
+    response::ok().into_response()
 }
 fn err(e: impl std::fmt::Display, op: &str) -> axum::response::Response {
     error::internal(e, op)
@@ -451,7 +452,7 @@ pub async fn create_mem(
 ) -> impl IntoResponse {
     let svc = &service;
     match svc.create(claims.sub, body).await {
-        Ok(id) => Json(serde_json::json!({ "id": id })).into_response(),
+        Ok(id) => response::id(id).into_response(),
         Err(e) => err(e, "创建记忆项"),
     }
 }

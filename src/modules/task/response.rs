@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use super::model::{Task, TaskStatus};
 
@@ -73,11 +73,6 @@ pub struct StatsResponse {
     pub active: i64,
     pub completed: i64,
     pub archived: i64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MessageResponse {
-    pub message: String,
 }
 
 #[cfg(test)]

@@ -1,7 +1,8 @@
 // ── 任务 API 函数 ──
 
+import type { PaginatedResponse } from "@lib/api";
 import { buildQuery, cachedRequest } from "@lib/api";
-import type { CalendarEvent, TaskListResponse } from "./api-types.ts";
+import type { CalendarEvent, Task } from "./api-types.ts";
 
 // ==================== Task API Functions ====================
 
@@ -16,8 +17,8 @@ export const getCalendarEventsE = (
 	);
 };
 
-export const getTasksE = (): Promise<TaskListResponse> =>
+export const getTasksE = (): Promise<PaginatedResponse<Task>> =>
 	cachedRequest("/tasks", {});
 
-export const getAllTasksE = (): Promise<TaskListResponse> =>
+export const getAllTasksE = (): Promise<PaginatedResponse<Task>> =>
 	cachedRequest("/tasks/all", {});

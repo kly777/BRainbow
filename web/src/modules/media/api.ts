@@ -3,6 +3,7 @@ import {
 	CACHE,
 	cachedRequest,
 	del,
+	type PaginatedResponse,
 	patch,
 	request,
 	tapInvalidate,
@@ -25,14 +26,6 @@ export interface MediaItem {
 	created_at: string;
 }
 
-export interface PaginatedMedia {
-	items: MediaItem[];
-	total: number;
-	page: number;
-	page_size: number;
-	total_pages: number;
-}
-
 // ── API ──
 
 /** 上传媒体文件 */
@@ -52,7 +45,7 @@ export const listMediaE = (params?: {
 	media_type?: string;
 	page?: number;
 	page_size?: number;
-}): Promise<PaginatedMedia> => {
+}): Promise<PaginatedResponse<MediaItem>> => {
 	return cachedRequest(`/media${buildQuery(params ?? {})}`, {});
 };
 

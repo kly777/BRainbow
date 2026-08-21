@@ -2,25 +2,19 @@ import {
 	CACHE,
 	cachedRequest,
 	del,
+	type PaginatedResponse,
 	post,
 	request,
 	tapInvalidate,
 } from "@lib/api";
 import type { Card, CreateCardRequest, UpdateCardRequest } from "./model.ts";
 
-// ==================== 类型 ====================
-
-export interface PaginatedCards {
-	items: Card[];
-	total: number;
-	page: number;
-	page_size: number;
-	total_pages: number;
-}
-
 // ==================== Card API Functions ====================
 
-export const getCardsE = (page = 1, pageSize = 20): Promise<PaginatedCards> =>
+export const getCardsE = (
+	page = 1,
+	pageSize = 20,
+): Promise<PaginatedResponse<Card>> =>
 	cachedRequest(`/cards?page=${page}&page_size=${pageSize}`, {});
 
 // 单张卡片缓存 60 秒，不常变
@@ -46,7 +40,7 @@ export const searchCardsE = (
 	query: string,
 	page = 1,
 	pageSize = 20,
-): Promise<PaginatedCards> =>
+): Promise<PaginatedResponse<Card>> =>
 	cachedRequest(
 		`/cards/search?q=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}`,
 		{},

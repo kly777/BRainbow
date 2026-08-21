@@ -7,6 +7,7 @@ use serde_json::json;
 
 use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
+use crate::shared::response;
 
 use super::model::{MarkWordRequest, UploadArticleRequest};
 use super::query::ReadingQueryService;
@@ -71,7 +72,7 @@ pub async fn mark_word(
     Json(body): Json<MarkWordRequest>,
 ) -> impl IntoResponse {
     match service.mark_word(claims.sub, &word, &body.status).await {
-        Ok(()) => Json(json!({"ok": true})).into_response(),
+        Ok(()) => response::ok().into_response(),
         Err(e) => error::internal(e, "标记单词"),
     }
 }
@@ -121,7 +122,7 @@ pub async fn update_notes(
 ) -> impl IntoResponse {
     let notes = body.get("notes").and_then(|v| v.as_str()).unwrap_or("");
     match service.update_notes(claims.sub, id, notes).await {
-        Ok(()) => Json(json!({"ok": true})).into_response(),
+        Ok(()) => response::ok().into_response(),
         Err(e) => error::internal(e, "更新笔记"),
     }
 }

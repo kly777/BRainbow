@@ -1,6 +1,7 @@
 use axum::{Json, extract::State, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 
+use crate::shared::response;
 use super::query::TextQueryService;
 use super::service::TextService;
 
@@ -47,7 +48,7 @@ pub async fn save_text(
 ) -> impl IntoResponse {
     let tabs: Vec<(String, String)> = body.tabs.into_iter().map(|t| (t.name, t.content)).collect();
     match service.save_tabs(&tabs).await {
-        Ok(()) => Json(serde_json::json!({"ok": true})).into_response(),
+        Ok(()) => response::ok().into_response(),
         Err(e) => e.into_response(),
     }
 }

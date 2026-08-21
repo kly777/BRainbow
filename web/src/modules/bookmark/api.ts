@@ -4,6 +4,7 @@ import {
 	cachedRequest,
 	del,
 	invalidateCache,
+	type PaginatedResponse,
 	patch,
 	post,
 	request,
@@ -52,19 +53,11 @@ export interface ImportResult {
 	merged: number;
 }
 
-export interface PaginatedBookmarks {
-	items: Bookmark[];
-	total: number;
-	page: number;
-	page_size: number;
-	total_pages: number;
-}
-
 export const getBookmarksE = (
 	page = 1,
 	pageSize = 20,
 	tag?: string,
-): Promise<PaginatedBookmarks> => {
+): Promise<PaginatedResponse<Bookmark>> => {
 	return cachedRequest(
 		`/bookmarks${buildQuery({ page, page_size: pageSize, tag })}`,
 		{},
@@ -95,7 +88,7 @@ export const searchBookmarksE = (
 	page = 1,
 	pageSize = 20,
 	tag?: string,
-): Promise<PaginatedBookmarks> => {
+): Promise<PaginatedResponse<Bookmark>> => {
 	return cachedRequest(
 		`/bookmarks/search${buildQuery({ q: query, page, page_size: pageSize, tag })}`,
 		{},

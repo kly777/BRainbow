@@ -4,6 +4,7 @@ import {
 	buildQuery,
 	CACHE,
 	cachedRequest,
+	type PaginatedResponse,
 	patch,
 	post,
 	request,
@@ -14,7 +15,6 @@ import type {
 	DagView,
 	Task,
 	TaskDetail,
-	TaskListResponse,
 	UpdateTaskRequest,
 } from "./api-types.ts";
 
@@ -93,19 +93,19 @@ export const updateTaskStatusE = (id: number, status: string): Promise<Task> =>
 		tapInvalidate(CACHE.tasks, r),
 	);
 
-export const searchTasksE = (query: string): Promise<TaskListResponse> =>
+export const searchTasksE = (query: string): Promise<PaginatedResponse<Task>> =>
 	cachedRequest(`/tasks/search?q=${encodeURIComponent(query)}`, {});
 
-export const getBacklogTasksE = (): Promise<TaskListResponse> =>
+export const getBacklogTasksE = (): Promise<PaginatedResponse<Task>> =>
 	cachedRequest("/tasks/status/backlog", {});
 
-export const getActiveTasksE = (): Promise<TaskListResponse> =>
+export const getActiveTasksE = (): Promise<PaginatedResponse<Task>> =>
 	cachedRequest("/tasks/status/active", {});
 
-export const getCompletedTasksE = (): Promise<TaskListResponse> =>
+export const getCompletedTasksE = (): Promise<PaginatedResponse<Task>> =>
 	cachedRequest("/tasks/status/completed", {});
 
-export const getArchivedTasksE = (): Promise<TaskListResponse> =>
+export const getArchivedTasksE = (): Promise<PaginatedResponse<Task>> =>
 	cachedRequest("/tasks/status/archived", {});
 
 // 任务统计缓存 15 秒

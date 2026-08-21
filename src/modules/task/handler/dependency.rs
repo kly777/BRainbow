@@ -1,13 +1,12 @@
 use axum::{
-    extract::{Extension, Path, State},
-    http::StatusCode,
-    response::{IntoResponse, Json},
+    extract::{Extension, Json, Path, State},
+    response::IntoResponse,
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 use super::super::model::TaskStatus;
-use super::super::response::MessageResponse;
+use crate::shared::response;
 use super::super::service::TaskService;
 use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
@@ -48,11 +47,7 @@ pub async fn add_dependency_handler(
         .add_dependency(claims.sub, task_id, payload.depends_on_task_id)
         .await
     {
-        Ok(_) => (
-            StatusCode::OK,
-            Json(serde_json::json!({"message": "依赖关系已添加"})),
-        )
-            .into_response(),
+        Ok(_) => response::message("依赖关系已添加").into_response(),
         Err(e) => e.into_response(),
     }
 }
@@ -67,10 +62,7 @@ pub async fn remove_dependency_handler(
         .remove_dependency(claims.sub, task_id, depends_on_task_id)
         .await
     {
-        Ok(rows) if rows > 0 => Json(MessageResponse {
-            message: "依赖关系已删除".into(),
-        })
-        .into_response(),
+        Ok(rows) if rows > 0 => response::message("依赖关系已删除").into_response(),
         Ok(_) => error::not_found("任务不存在"),
         Err(e) => e.into_response(),
     }

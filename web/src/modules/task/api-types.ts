@@ -137,10 +137,4 @@ export function getStatusText(status: string): string {
 	}
 }
 
-export interface TaskListResponse {
-	items: Task[];
-	total: number;
-	page: number;
-	page_size: number;
-	total_pages: number;
-}
+// TaskListResponse 已移除，使用 PaginatedResponse<Task> 代替（来自 @lib/api）

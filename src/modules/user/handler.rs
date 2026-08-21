@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::shared::claims::Claims;
+use crate::shared::response;
 
 use crate::modules::admin::port::AdminServicePort;
 use crate::modules::admin::service::AdminService;
@@ -107,7 +108,7 @@ pub async fn user_handler(
 }
 
 pub async fn logout_handler() -> impl IntoResponse {
-    Json(serde_json::json!({ "ok": true }))
+    response::ok()
 }
 
 #[derive(Debug, Deserialize)]
@@ -125,7 +126,7 @@ pub async fn change_password_handler(
         .change_password(claims.sub, &payload.old_password, &payload.new_password)
         .await
     {
-        Ok(()) => Json(serde_json::json!({ "ok": true })).into_response(),
+        Ok(()) => response::ok().into_response(),
         Err(e) => e.into_response(),
     }
 }

@@ -165,7 +165,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tokio::spawn(async {
             tokio::time::sleep(std::time::Duration::from_secs(10)).await;
             tracing::info!("优雅关闭超时，强制退出");
-            std::process::exit(0);
+            // 非零退出：让 systemd Restart=on-failure 识别为失败并拉起，
+            // 而不是伪装成干净停止掩盖挂死问题（审计 E8）
+            std::process::exit(1);
         });
     })
     .await?;

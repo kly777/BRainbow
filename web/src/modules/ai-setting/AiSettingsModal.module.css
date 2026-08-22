@@ -1,4 +1,4 @@
-/* AiSettingsModal — AI 设置弹层（配合全局 Modal） */
+/* AiSettingsModal — AI 设置弹层（增强版） */
 
 .body {
 	display: flex;
@@ -26,7 +26,20 @@
 	color: var(--t-color-ink);
 	background: var(--t-color-bg);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
+	border-radius: var(--radius-md);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+}
+
+.input:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+}
+
+.input::placeholder {
+	color: var(--t-color-ink-faint);
 }
 
 .test-row {
@@ -39,11 +52,13 @@
 .status-ok {
 	color: var(--t-color-success);
 	font-size: var(--text-sm);
+	font-weight: 500;
 }
 
 .status-fail {
 	color: var(--t-color-danger);
 	font-size: var(--text-sm);
+	font-weight: 500;
 }
 
 .footer-left {

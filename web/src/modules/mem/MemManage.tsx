@@ -4,7 +4,6 @@ import { PATHS } from "@config/paths";
 // 业务逻辑复用 useMemManage，此处只做视图层
 
 import { A } from "@solidjs/router";
-import { Show } from "solid-js";
 import ManageBatchBar from "./components/ManageBatchBar.tsx";
 import ManageDetail from "./components/ManageDetail.tsx";
 import ManageTable from "./components/ManageTable.tsx";
@@ -32,22 +31,6 @@ export default function MemManage() {
 					<span class={styles.count}>{m.pageMeta().total} 个</span>
 				</div>
 			</div>
-
-			{/* 全局搜索直达提示：点击“查看全部”退出只看这一张 */}
-			<Show when={m.detailId() !== null}>
-				<div class={styles.directViewBar}>
-					<span class={styles.directViewText}>
-						正在直达查看 #{m.detailId()}，列表已只显示这张卡片
-					</span>
-					<button
-						type="button"
-						class={styles.directViewExit}
-						onClick={() => m.setDetailId(null)}
-					>
-						退出直达 · 查看全部
-					</button>
-				</div>
-			</Show>
 
 			{/* 工具栏 */}
 			<ManageToolbar

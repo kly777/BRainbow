@@ -61,7 +61,9 @@ export function useMemManage() {
 			tagFilters(),
 			params.tagMode(),
 			params.page(),
-			params.detailId(),
+			// 不传递 detailId，让列表始终显示所有记录
+			// detailId 只用于客户端过滤详情对象
+			null,
 		);
 		setMems(items);
 		setPageMeta(meta);
@@ -99,7 +101,8 @@ export function useMemManage() {
 			tagFilters(),
 			params.tagMode(),
 			params.page(),
-			params.detailId(),
+			// 不传递 detailId，让列表始终显示所有记录
+			null,
 		);
 		setMems(items);
 		setPageMeta(meta);
@@ -116,7 +119,7 @@ export function useMemManage() {
 		void params.sortField();
 		void params.sortDir();
 		void params.page();
-		void params.detailId();
+		// 不监听 detailId，点击列表项时不会重新加载列表
 		void tagFilters();
 		void params.tagMode();
 		if (!initialLoadDone) return;

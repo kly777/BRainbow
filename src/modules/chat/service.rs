@@ -719,4 +719,141 @@ mod tests {
             "一二三四五六七八九十一二三四五六七八九十"
         );
     }
+
+    // ── prepare_chat 分支矩阵（测试覆盖扩充）──
+
+    async fn mk_tree(svc: &ChatService, prompt: &str) -> i64 {
+        svc.create_tree(
+            1,
+            CreateTreeRequest {
+                title: "t".into(),
+                system_prompt: prompt.into(),
+                kind: None,
+            },
+        )
+        .await
+        .unwrap()
+        .tree
+        .id
+    }
+
+    #[tokio::test]
+    async fn prepare_chat_tree_not_found() {
+        let svc = setup().await;
+        let err = match svc
+            .prepare_chat(1, 999_999, None, Some("x".into()))
+            .await
+        {
+            Err(e) => e,
+            Ok(_) => panic!("应因树不存在而失败"),
+        };
+        assert!(matches!(err, ServiceError::NotFound(_)));
+    }
+
+    #[tokio::test]
+    async fn prepare_chat_parent_from_other_tree_rejected() {
+        let svc = setup().await;
+        let tid_a = mk_tree(&svc, "").await;
+        let tid_b = mk_tree(&svc, "").await;
+        let node_a = svc
+            .insert_node(tid_a, None, "user", "A 树的节点", None, None)
+            .await
+            .unwrap();
+
+        let err = match svc
+            .prepare_chat(1, tid_b, Some(node_a.id), Some("x".into()))
+            .await
+        {
+            Err(e) => e,
+            Ok(_) => panic!("应因跨树父节点而失败"),
+        };
+        match err {
+            ServiceError::InvalidInput(msg) => assert!(msg.contains("不属于")),
+            other => panic!("期望 InvalidInput，实际 {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn prepare_chat_blank_content_rejected() {
+        let svc = setup().await;
+        let tid = mk_tree(&svc, "").await;
+        for content in [None, Some("".into()), Some("   \n".into())] {
+            let err = match svc.prepare_chat(1, tid, None, content).await {
+                Err(e) => e,
+                Ok(_) => panic!("空内容应被拒绝"),
+            };
+            assert!(matches!(err, ServiceError::InvalidInput(_)));
+        }
+    }
+
+    #[tokio::test]
+    async fn prepare_chat_continuing_user_node_inserts_nothing() {
+        let svc = setup().await;
+        let tid = mk_tree(&svc, "").await;
+        let user = svc
+            .insert_node(tid, None, "user", "q", None, None)
+            .await
+            .unwrap();
+
+        // 继续 user 节点：不插入新节点，inserted_user_id 为 None
+        let ctx = svc
+            .prepare_chat(1, tid, Some(user.id), None)
+            .await
+            .unwrap();
+        assert_eq!(ctx.inserted_user_id, None);
+        assert_eq!(ctx.ai_parent_id, Some(user.id));
+        // 消息链只有该 user 节点自己
+        assert_eq!(ctx.messages.len(), 1);
+        assert_eq!(ctx.messages[0].role, "user");
+        assert_eq!(ctx.messages[0].content, "q");
+
+        let got = svc.get_tree(1, tid).await.unwrap().unwrap();
+        assert_eq!(got.nodes.len(), 1); // 没有新增
+    }
+
+    #[tokio::test]
+    async fn prepare_chat_replying_to_assistant_inserts_new_user_node() {
+        let svc = setup().await;
+        let tid = mk_tree(&svc, "").await;
+        let user = svc
+            .insert_node(tid, None, "user", "q", None, None)
+            .await
+            .unwrap();
+        let ctx1 = svc
+            .prepare_chat(1, tid, Some(user.id), None)
+            .await
+            .unwrap();
+        let assistant = svc.finish_chat(&ctx1, "a", None).await.unwrap();
+
+        // 回复 assistant：必须带内容，并新插一个 user 节点挂在其下
+        let ctx2 = svc
+            .prepare_chat(1, tid, Some(assistant.id), Some("追问".into()))
+            .await
+            .unwrap();
+        let new_id = ctx2.inserted_user_id.expect("应插入新 user 节点");
+        assert_eq!(ctx2.ai_parent_id, Some(new_id));
+        // 消息链：q → a → 追问
+        let contents: Vec<&str> = ctx2
+            .messages
+            .iter()
+            .map(|m| m.content.as_str())
+            .collect();
+        assert_eq!(contents, vec!["q", "a", "追问"]);
+        let roles: Vec<&str> = ctx2.messages.iter().map(|m| m.role.as_str()).collect();
+        assert_eq!(roles, vec!["user", "assistant", "user"]);
+    }
+
+    #[tokio::test]
+    async fn prepare_chat_message_chain_starts_with_system_prompt() {
+        let svc = setup().await;
+        let tid = mk_tree(&svc, "系统提示词").await;
+        let ctx = svc
+            .prepare_chat(1, tid, None, Some("q".into()))
+            .await
+            .unwrap();
+        assert_eq!(ctx.messages.len(), 2);
+        assert_eq!(ctx.messages[0].role, "system");
+        assert_eq!(ctx.messages[0].content, "系统提示词");
+        assert_eq!(ctx.messages[1].role, "user");
+    }
 }

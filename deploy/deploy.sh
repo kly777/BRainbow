@@ -162,8 +162,8 @@ db_optimize() {
 }
 
 # 一致性数据库备份
-# 优先用 sqlite3 .backup（事务性快照），无 sqlite3 时回退到 cp 直接复制。
-# 部署时的备份在服务停止后执行，所以 cp 也能得到一致状态。
+# 优先用 sqlite3 .backup（事务性快照）；无 sqlite3 时回退到 cp，
+# 且 cp 需同时复制 -wal/-shm（WAL 模式下尾部事务可能尚未合并进主库）。
 db_backup() {
     local suffix="${1:-manual}"
     local ts
@@ -178,14 +178,14 @@ db_backup() {
         log_info "sqlite3 .backup 事务性快照..."
         remote "sqlite3 '$src' '.backup $BACKUP_DIR/$dest'" 2>/dev/null || {
             log_warn "sqlite3 .backup 失败，回退到 cp"
-            remote "cp '$src' '$BACKUP_DIR/$dest'" 2>/dev/null || {
+            remote "cp '$src' '$BACKUP_DIR/$dest' && { [ ! -f '$src-wal' ] || cp '$src-wal' '$BACKUP_DIR/$dest-wal'; } && { [ ! -f '$src-shm' ] || cp '$src-shm' '$BACKUP_DIR/$dest-shm'; }" 2>/dev/null || {
                 log_error "数据库备份失败"
                 return 1
             }
         }
     else
-        log_info "cp 直接备份（停止服务后操作可保证一致性）"
-        remote "cp '$src' '$BACKUP_DIR/$dest'" 2>/dev/null || {
+        log_info "cp 备份（连同 -wal/-shm 一起复制，避免漏掉 WAL 尾部事务）"
+        remote "cp '$src' '$BACKUP_DIR/$dest' && { [ ! -f '$src-wal' ] || cp '$src-wal' '$BACKUP_DIR/$dest-wal'; } && { [ ! -f '$src-shm' ] || cp '$src-shm' '$BACKUP_DIR/$dest-shm'; }" 2>/dev/null || {
             log_error "数据库备份失败"
             return 1
         }
@@ -202,7 +202,7 @@ prune_backups() {
              date -u -v-"${BACKUP_RETAIN_DAYS}"d +%Y%m%d_%H%M%S 2>/dev/null)
     if [ -n "$cutoff" ]; then
         # 删除 db_* 文件早于 cutoff
-        remote "for f in \$BACKUP_DIR/db_*.db; do
+        remote "for f in $BACKUP_DIR/db_*.db; do
             ts=\$(basename \"\$f\" | sed 's/.*_\([0-9]\{8\}_[0-9]\{6\}\).*/\1/' 2>/dev/null)
             if [ -n \"\$ts\" ] && [ \"\$ts\" \< \"$cutoff\" ]; then
                 rm -f \"\$f\"
@@ -365,11 +365,14 @@ cmd_deploy() {
         log_error "数据库 quick_check 未通过，中止部署（可先执行 make db-check）"
         exit 1
     fi
-    # 数据库备份（服务已停，直接 cp 即一致）
-    if remote "cp '$DATA_DIR/$DATABASE_FILE' '$BACKUP_DIR/db_deploy_${timestamp}.db' 2>/dev/null; echo ok" | grep -q ok; then
-        log_info "数据库备份: db_deploy_${timestamp}.db ($(remote "du -h '$BACKUP_DIR/db_deploy_${timestamp}.db' | cut -f1" 2>/dev/null))"
+    # 数据库备份：复用一致性备份函数（sqlite3 .backup 优先），失败中止部署
+    if remote "[ -f '$DATA_DIR/$DATABASE_FILE' ]" 2>/dev/null; then
+        if ! db_backup deploy; then
+            log_error "部署前数据库备份失败，中止部署（防止带病覆盖）"
+            exit 1
+        fi
     else
-        log_warn "数据库备份失败，跳过（可能无数据库文件）"
+        log_info "远端无数据库文件，跳过备份（首次部署）"
     fi
     # 代码：不包含数据库，tarball 小很多
     if remote "[ -f '$SERVICE_DIR/brainbow' ]" 2>/dev/null; then
@@ -610,9 +613,14 @@ cmd_rollback() {
     local tmp_dir="$REMOTE_BASE/${APP_NAME}_rollback_$$"
     if [ -n "$restore_db" ]; then
         log_info "恢复数据库: $restore_db.db"
-        # 停止服务后直接 cp 覆盖
+        # 覆盖前清理目标库残留 -wal/-shm：旧 WAL 对新主库 recovery 会重放旧事务（审计 D2）
         remote "sudo systemctl stop $APP_NAME 2>/dev/null || true"
-        if remote "cp '$BACKUP_DIR/${restore_db}.db' '$DATA_DIR/$DATABASE_FILE'"; then
+        if remote "command -v sqlite3 >/dev/null 2>&1 && ! sqlite3 '$BACKUP_DIR/${restore_db}.db' 'PRAGMA quick_check' | grep -q '^ok$'"; then
+            log_error "备份库 quick_check 未通过，中止恢复"
+            exit 1
+        fi
+        remote "rm -f '$DATA_DIR/$DATABASE_FILE-wal' '$DATA_DIR/$DATABASE_FILE-shm'"
+        if remote "cp '$BACKUP_DIR/${restore_db}.db' '$DATA_DIR/$DATABASE_FILE' && { [ ! -f '$BACKUP_DIR/${restore_db}.db-wal' ] || cp '$BACKUP_DIR/${restore_db}.db-wal' '$DATA_DIR/$DATABASE_FILE-wal'; } && { [ ! -f '$BACKUP_DIR/${restore_db}.db-shm' ] || cp '$BACKUP_DIR/${restore_db}.db-shm' '$DATA_DIR/$DATABASE_FILE-shm'; }"; then
             log_done "数据库已恢复 ($(remote "du -h '$BACKUP_DIR/${restore_db}.db' | cut -f1" 2>/dev/null))"
         else
             log_error "数据库恢复失败"
@@ -656,9 +664,16 @@ cmd_rollback() {
         remote "sudo systemctl stop $APP_NAME 2>/dev/null || true"
 
         # 原子性替换（只替换 service/，不动 data/ backup/）
+        # uploads 与代码分离：真实数据迁到 shared/uploads，service/uploads 为符号链接，
+        # 回滚重建目录不再丢失用户上传（审计 D1）
         log_info "替换应用目录..."
-        remote "rm -rf '$SERVICE_DIR' && mkdir -p '$SERVICE_DIR' && cp -r '$tmp_dir/'* '$SERVICE_DIR/' && rm -rf '$tmp_dir'"
-        log_done "目录已替换"
+        remote "mkdir -p '$REMOTE_DIR/shared/uploads'; \
+            if [ -d '$SERVICE_DIR/uploads' ] && [ ! -L '$SERVICE_DIR/uploads' ]; then \
+                cp -a '$SERVICE_DIR/uploads/.' '$REMOTE_DIR/shared/uploads/' && rm -rf '$SERVICE_DIR/uploads'; \
+            fi; \
+            rm -rf '$SERVICE_DIR' && mkdir -p '$SERVICE_DIR' && cp -r '$tmp_dir/'* '$SERVICE_DIR/' && rm -rf '$tmp_dir' && \
+            ln -sfn '$REMOTE_DIR/shared/uploads' '$SERVICE_DIR/uploads'"
+        log_done "目录已替换（uploads 保留于 shared/uploads）"
     else
         # 只有数据库回滚，需要重启服务
         log_info "重启服务..."
@@ -893,7 +908,18 @@ cmd_db_push() {
     [ "$ans" != "y" ] && { log_info "已取消"; exit 1; }
 
     remote "sudo systemctl stop $APP_NAME"
-    $SCP_CMD "$src" "$REMOTE_USER@$REMOTE_HOST:$DATA_DIR/$DATABASE_FILE"
+    # 推送前先做一致性备份；覆盖前清理残留 -wal/-shm（审计 D2）
+    if ! db_backup prepush; then
+        remote "sudo systemctl start $APP_NAME"
+        log_error "推送前备份失败，已取消推送并重启服务"
+        exit 1
+    fi
+    remote "rm -f '$DATA_DIR/$DATABASE_FILE-wal' '$DATA_DIR/$DATABASE_FILE-shm'"
+    if ! $SCP_CMD "$src" "$REMOTE_USER@$REMOTE_HOST:$DATA_DIR/$DATABASE_FILE"; then
+        remote "sudo systemctl start $APP_NAME"
+        log_error "推送失败，已重启服务（远端库未变动）"
+        exit 1
+    fi
     remote "sudo systemctl start $APP_NAME"
     log_done "数据库已推送并重启服务"
 }

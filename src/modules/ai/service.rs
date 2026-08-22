@@ -352,4 +352,26 @@ mod tests {
         let events = collect_events(stream).await;
         assert_eq!(events, vec!["[DONE]"]);
     }
+
+    /// 注释行（`: keep-alive`）是 SSE 规范的心跳，不产出事件（审计 T3）
+    #[tokio::test]
+    async fn sse_comment_keepalive_produces_no_event() {
+        let mut stream = b": keep-alive\n\n".to_vec();
+        stream.extend(sse_event(
+            &serde_json::json!({
+                "choices": [{ "delta": { "content": "x" } }]
+            })
+            .to_string(),
+        ));
+        let events = collect_events(stream).await;
+        assert_eq!(events.len(), 1);
+        assert!(events[0].contains("x"));
+    }
+
+    /// 多行 data 按 SSE 规范以 \n 拼接为单事件
+    #[tokio::test]
+    async fn sse_multiline_data_joined_with_newline() {
+        let events = collect_events(b"data: l1\ndata: l2\n\n".to_vec()).await;
+        assert_eq!(events, vec!["l1\nl2"]);
+    }
 }

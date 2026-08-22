@@ -151,8 +151,26 @@ impl MemService {
         };
         let leeched = row.leeched || lapses >= 5;
 
-        self.repo
-            .update_mem_fsrs(
+        // FSRS 更新与 revlog 同事务提交；stability/last_review_at 双守卫做乐观锁，
+        // 并发复习（双开标签页）时后到者收到冲突而非静默丢失更新（审计 B4）
+        let revlog = InsertRevlogParams {
+            mem_id: id,
+            review_time: chrono::Utc::now()
+                .format("%Y-%m-%dT%H:%M:%S+00:00")
+                .to_string(),
+            rating,
+            delta_t: days_elapsed_since(&row.last_review_at) as i32,
+            duration_secs,
+            stability_before: row.stability,
+            difficulty_before: row.difficulty,
+            state_before: row.state.clone(),
+            stability_after: outcome.stability,
+            difficulty_after: outcome.difficulty,
+            state_after: new_state.to_string(),
+        };
+        let applied = self
+            .repo
+            .review_mem_atomic(
                 user_id,
                 id,
                 &FsrsUpdate {
@@ -164,29 +182,16 @@ impl MemService {
                     leeched,
                     due_at: outcome.due_at.clone(),
                 },
+                row.stability,
+                row.last_review_at.as_deref(),
+                &revlog,
             )
             .await?;
-
-        // 写 revlog（通过 Repository trait）
-        let delta_t = days_elapsed_since(&row.last_review_at) as i32;
-        let now_str = chrono::Utc::now()
-            .format("%Y-%m-%dT%H:%M:%S+00:00")
-            .to_string();
-        self.repo
-            .insert_revlog(&InsertRevlogParams {
-                mem_id: id,
-                review_time: now_str,
-                rating,
-                delta_t,
-                duration_secs,
-                stability_before: row.stability,
-                difficulty_before: row.difficulty,
-                state_before: row.state.clone(),
-                stability_after: outcome.stability,
-                difficulty_after: outcome.difficulty,
-                state_after: new_state.to_string(),
-            })
-            .await?;
+        if !applied {
+            return Err(ServiceError::Conflict(
+                "该记忆项刚被其他会话复习，请刷新后重试".into(),
+            ));
+        }
 
         // 每 20 次复习自动触发一次参数优化（策略在 adapter 内实现）
         self.maintenance.schedule_auto_optimize(self.repo.clone());

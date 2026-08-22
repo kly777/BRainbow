@@ -24,6 +24,7 @@ pub struct FakeRepo {
     pub mems: Mutex<HashMap<i32, MemWithChunks>>,
     pub mem_rows: Mutex<HashMap<i32, MemRow>>,
     pub set_state_calls: Mutex<Vec<(i32, String, Option<i32>)>>,
+    pub update_mem_fsrs_calls: Mutex<Vec<(i32, String, u8)>>,
     pub session_stats: Mutex<SessionStats>,
 }
 
@@ -37,6 +38,7 @@ impl Default for FakeRepo {
             mems: Mutex::new(HashMap::new()),
             mem_rows: Mutex::new(HashMap::new()),
             set_state_calls: Mutex::new(Vec::new()),
+            update_mem_fsrs_calls: Mutex::new(Vec::new()),
             session_stats: Mutex::new(SessionStats::default()),
         }
     }
@@ -263,6 +265,23 @@ impl MemRepository for FakeRepo {
         _params: &FsrsUpdate,
     ) -> Result<(), ServiceError> {
         panic!("update_mem_fsrs not configured in FakeRepo")
+    }
+
+    async fn review_mem_atomic(
+        &self,
+        _user_id: i32,
+        id: i32,
+        params: &FsrsUpdate,
+        _stability_guard: f64,
+        _last_review_guard: Option<&str>,
+        revlog: &InsertRevlogParams,
+    ) -> Result<bool, ServiceError> {
+        // FakeRepo 无并发：记录调用供断言，恒定成功
+        self.update_mem_fsrs_calls
+            .lock()
+            .unwrap()
+            .push((id, params.state.clone(), revlog.rating));
+        Ok(true)
     }
 
     async fn bury_mem(&self, _user_id: i32, _id: i32) -> Result<(), ServiceError> {

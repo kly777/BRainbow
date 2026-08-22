@@ -121,6 +121,18 @@ pub trait MemRepository: Send + Sync {
         id: i32,
         params: &FsrsUpdate,
     ) -> Result<(), ServiceError>;
+    /// 原子复习：单事务内完成 FSRS UPDATE 与 revlog 插入（审计 B4）。
+    /// stability/last_review_at 双守卫做乐观锁；返回 false 表示并发冲突
+    /// （读取基线已被其他请求改写），调用方应提示用户刷新重试。
+    async fn review_mem_atomic(
+        &self,
+        user_id: i32,
+        id: i32,
+        params: &FsrsUpdate,
+        stability_guard: f64,
+        last_review_guard: Option<&str>,
+        revlog: &InsertRevlogParams,
+    ) -> Result<bool, ServiceError>;
     async fn bury_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError>;
     async fn unbury_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError>;
     async fn suspend_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError>;

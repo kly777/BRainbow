@@ -864,6 +864,58 @@ impl MemRepository for super::super::MemRepo {
         Ok(())
     }
 
+    async fn review_mem_atomic(
+        &self,
+        user_id: i32,
+        id: i32,
+        params: &FsrsUpdate,
+        stability_guard: f64,
+        last_review_guard: Option<&str>,
+        revlog: &InsertRevlogParams,
+    ) -> Result<bool, ServiceError> {
+        let mut tx = self.pool.begin().await?;
+        // 乐观锁：stability + last_review_at 与读取基线一致才写入；
+        // IS 比较（而非 =）使 NULL 基线（新卡未复习过）同样可作守卫
+        let res = sqlx::query!(
+            "UPDATE mem SET state=?1, stability=?2, difficulty=?3, step_index=?4, lapses=?5, leeched=?6, due_at=?7, last_review_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?8 AND (user_id = ?9 OR user_id IS NULL) AND stability IS ?10 AND last_review_at IS ?11",
+            params.state.as_str(),
+            params.stability,
+            params.difficulty,
+            params.step_index,
+            params.lapses,
+            params.leeched,
+            params.due_at.as_str(),
+            id,
+            user_id,
+            stability_guard,
+            last_review_guard,
+        )
+        .execute(&mut *tx)
+        .await?;
+        if res.rows_affected() == 0 {
+            // 守卫未命中：并发已被改写，回滚并报告冲突
+            return Ok(false);
+        }
+        sqlx::query!(
+            "INSERT INTO revlog (mem_id, review_time, rating, delta_t, duration_secs, stability_before, difficulty_before, state_before, stability_after, difficulty_after, state_after) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            revlog.mem_id,
+            revlog.review_time,
+            revlog.rating as i32,
+            revlog.delta_t,
+            revlog.duration_secs,
+            revlog.stability_before,
+            revlog.difficulty_before,
+            revlog.state_before,
+            revlog.stability_after,
+            revlog.difficulty_after,
+            revlog.state_after,
+        )
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(true)
+    }
+
     async fn bury_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
         sqlx::query!(
             "UPDATE mem SET buried = 1 WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)",

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE mem SET state=?1, stability=?2, difficulty=?3, step_index=?4, lapses=?5, leeched=?6, due_at=?7, last_review_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?8 AND (user_id = ?9 OR user_id IS NULL) AND stability IS ?10 AND last_review_at IS ?11",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 11
+    },
+    "nullable": []
+  },
+  "hash": "89b035b6bc6304cb3ea901ea8fbd1641aaf1276a4b9321c179e75c21f7383627"
+}

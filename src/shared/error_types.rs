@@ -27,6 +27,8 @@ pub enum ServiceError {
     AlreadyExists(String),
     /// 资源仍被内容引用，删除被拒绝（409）
     InUse(String),
+    /// 并发修改冲突：乐观锁守卫未命中，客户端应刷新基线后重试（409）
+    Conflict(String),
     Internal(String),
     Db(sqlx::Error),
 }
@@ -37,7 +39,7 @@ impl ServiceError {
         match self {
             Self::InvalidInput(_) => StatusCode::BAD_REQUEST,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
-            Self::AlreadyExists(_) | Self::InUse(_) => StatusCode::CONFLICT,
+            Self::AlreadyExists(_) | Self::InUse(_) | Self::Conflict(_) => StatusCode::CONFLICT,
             Self::Internal(_) | Self::Db(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -49,6 +51,7 @@ impl ServiceError {
             Self::NotFound(_) => "NOT_FOUND",
             Self::AlreadyExists(_) => "ALREADY_EXISTS",
             Self::InUse(_) => "RESOURCE_IN_USE",
+            Self::Conflict(_) => "CONFLICT",
             Self::Internal(_) => "INTERNAL",
             Self::Db(_) => "DB_ERROR",
         }
@@ -62,6 +65,7 @@ impl std::fmt::Display for ServiceError {
             | Self::NotFound(msg)
             | Self::AlreadyExists(msg)
             | Self::InUse(msg)
+            | Self::Conflict(msg)
             | Self::Internal(msg) => write!(f, "{msg}"),
             Self::Db(e) => write!(f, "数据库错误: {e}"),
         }

@@ -479,6 +479,107 @@ async fn delete_mem_cleans_orphan_tag() {
     assert!(tags.is_empty());
 }
 
+// ── review_mem_atomic（乐观锁 + 事务，审计 B4）──
+
+/// 插入带 FSRS 基线的 mem，返回 id
+async fn insert_fsrs_mem(repo: &MemRepo, stability: f64, last_review: Option<&str>) -> i32 {
+    let cue_id = repo.create_chunk(TEST_USER_ID, "cue").await.unwrap();
+    let target_id = repo.create_chunk(TEST_USER_ID, "target").await.unwrap();
+    sqlx::query_scalar::<_, i32>(
+            "INSERT INTO mem (cue_chunk_id, target_chunk_id, state, stability, difficulty, lapses, due_at, last_review_at) VALUES (?, ?, 'review', ?, 5.0, 1, '2030-01-01T00:00:00+00:00', ?) RETURNING id",
+        )
+        .bind(cue_id)
+        .bind(target_id)
+        .bind(stability)
+        .bind(last_review)
+        .fetch_one(&**repo.pool())
+        .await
+        .unwrap()
+}
+
+fn fsrs_params(stability: f64) -> crate::modules::mem::model::FsrsUpdate {
+    crate::modules::mem::model::FsrsUpdate {
+        state: "review".into(),
+        stability,
+        difficulty: 5.5,
+        step_index: None,
+        lapses: 1,
+        leeched: false,
+        due_at: "2031-01-01T00:00:00+00:00".into(),
+    }
+}
+
+#[tokio::test]
+async fn review_mem_atomic_applies_and_guards() {
+    let repo = setup_db().await;
+    let mem_id = insert_fsrs_mem(&repo, 3.0, Some("2026-01-01T00:00:00+00:00")).await;
+
+    let revlog = crate::modules::mem::model::InsertRevlogParams {
+        mem_id,
+        review_time: "2026-08-22T00:00:00+00:00".into(),
+        rating: 3,
+        delta_t: 30,
+        duration_secs: 5.0,
+        stability_before: 3.0,
+        difficulty_before: 5.0,
+        state_before: "review".into(),
+        stability_after: 10.0,
+        difficulty_after: 5.5,
+        state_after: "review".into(),
+    };
+
+    // 基线匹配：写入成功，UPDATE 与 revlog 同事务生效
+    let applied = repo
+        .review_mem_atomic(
+            TEST_USER_ID,
+            mem_id,
+            &fsrs_params(10.0),
+            3.0,
+            Some("2026-01-01T00:00:00+00:00"),
+            &revlog,
+        )
+        .await
+        .unwrap();
+    assert!(applied);
+
+    let (stability, lapses): (f64, i32) = sqlx::query_as(
+            "SELECT stability, lapses FROM mem WHERE id = ?",
+        )
+        .bind(mem_id)
+        .fetch_one(&**repo.pool())
+        .await
+        .unwrap();
+    assert_eq!((stability, lapses), (10.0, 1));
+
+    let revlogs: i32 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog WHERE mem_id = ?")
+        .bind(mem_id)
+        .fetch_one(&**repo.pool())
+        .await
+        .unwrap();
+    assert_eq!(revlogs, 1);
+
+    // 旧基线重放（模拟并发第二个请求）：守卫未命中返回 false，且不产生第二条 revlog
+    let applied = repo
+        .review_mem_atomic(
+            TEST_USER_ID,
+            mem_id,
+            &fsrs_params(99.0),
+            3.0,
+            Some("2026-01-01T00:00:00+00:00"),
+            &revlog,
+        )
+        .await
+        .unwrap();
+    assert!(!applied);
+
+    let revlogs: i32 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog WHERE mem_id = ?")
+        .bind(mem_id)
+        .fetch_one(&**repo.pool())
+        .await
+        .unwrap();
+    assert_eq!(revlogs, 1);
+}
+
 // ── get_session_estimate ──
 
 /// 插入一条 mem（仅基本字段），返回 id

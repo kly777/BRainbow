@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO revlog (mem_id, review_time, rating, delta_t, duration_secs, stability_before, difficulty_before, state_before, stability_after, difficulty_after, state_after) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 11
+    },
+    "nullable": []
+  },
+  "hash": "bc39104d4a428771c82f34f21f0710f81c5431ce430022c980f788faecbc99ff"
+}

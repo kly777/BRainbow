@@ -128,4 +128,5 @@ backup-prune:
 check-env:
 	@test -n "$(REMOTE_HOST)" || (echo "错误: .env.prod 未设置 REMOTE_HOST"; exit 1)
 	@test -n "$(REMOTE_USER)" || (echo "错误: .env.prod 未设置 REMOTE_USER"; exit 1)
+	@test -n "$(REMOTE_BASE)" || (echo "错误: .env.prod 未设置 REMOTE_BASE"; exit 1)
 	@test -n "$(APP_NAME)"   || (echo "错误: .env.prod 未设置 APP_NAME"; exit 1)

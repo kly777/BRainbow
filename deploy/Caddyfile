@@ -22,8 +22,10 @@
 		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
 	}
 
-	# API 与上传（同源反向代理到后端）
-	@backend path /api/* /uploads/*
+	# API 反代到后端。/uploads/* 不再代理：后端无此路由（唯一文件路由是
+	# /api/media/{id}/file），原配置只会让 axum fallback 返回 SPA HTML 被
+	# CF 按扩展名缓存（审计 D11）
+	@backend path /api/*
 	handle @backend {
 		reverse_proxy localhost:@@SERVICE_PORT@@
 	}

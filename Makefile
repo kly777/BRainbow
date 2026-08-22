@@ -71,11 +71,13 @@ deploy-backend: check-env
 	$(DEPLOY_SCRIPT) deploy
 
 # 仅编译（快速迭代）
+# 仅构建后端产物（与 deploy.sh build 同口径：env -u DATABASE_URL 强制走 .sqlx 离线快照；
+# dist 缺失直接报错而非吞掉——deploy-backend 链路必须要有 build/dist）
 build-backend:
-	cargo build --release
+	env -u DATABASE_URL cargo build --release
 	rm -rf $(BUILD_DIR)
-	mkdir -p $(BUILD_DIR)
-	cp web/dist/index.html $(BUILD_DIR)/dist/ 2>/dev/null || true
+	mkdir -p $(BUILD_DIR)/dist
+	cp -r web/dist/. $(BUILD_DIR)/dist/
 	cp target/release/brainbow $(BUILD_DIR)/brainbow
 
 build-web:

@@ -1,4 +1,4 @@
-/* DbTable — 表格主体（表头、筛选行、数据行、展开行） */
+/* DbTable — 表格主体（增强版） */
 
 .table-wrap {
 	position: relative;
@@ -20,6 +20,7 @@
 	border-radius: var(--radius-full);
 	font-size: var(--text-xs);
 	color: var(--t-color-accent-strong);
+	font-weight: 500;
 }
 
 .table {
@@ -29,7 +30,7 @@
 }
 
 .table th {
-	padding: var(--space-xs) var(--space-md);
+	padding: var(--space-sm) var(--space-md);
 	text-align: left;
 	background: var(--t-color-surface-raised);
 	border-bottom: 2px solid var(--t-color-border);
@@ -59,6 +60,7 @@
 	font: inherit;
 	text-align: left;
 	color: inherit;
+	transition: color var(--t-transition-fast);
 }
 
 .sort-btn:hover .col-name {
@@ -88,7 +90,7 @@
 	height: 2rem;
 	padding: 0 var(--space-sm);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
+	border-radius: var(--radius-md);
 	background: var(--t-color-bg);
 	color: var(--t-color-ink);
 	font-size: var(--text-xs);
@@ -105,6 +107,10 @@
 	flex: 1 1 auto;
 }
 
+.filter-input::placeholder {
+	color: var(--t-color-ink-faint);
+}
+
 .filter-op-select {
 	width: 4.5rem;
 	flex-shrink: 0;
@@ -119,11 +125,7 @@
 .filter-input:focus,
 .filter-op-select:focus {
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 var(--space-2xs) var(--t-color-accent-soft);
-}
-
-.filter-input::placeholder {
-	color: var(--t-color-ink-faint);
+	box-shadow: 0 0 0 2px var(--t-color-accent-ring);
 }
 
 .ref-hint {
@@ -145,6 +147,7 @@
 	font: inherit;
 	text-decoration: underline dotted;
 	text-underline-offset: 3px;
+	transition: color var(--t-transition-fast);
 }
 
 .cell-link:hover {
@@ -164,6 +167,7 @@
 	font-family: var(--t-font-mono);
 	text-decoration: underline dotted;
 	text-underline-offset: 3px;
+	transition: color var(--t-transition-fast);
 }
 
 .primary-key-link:hover {
@@ -192,12 +196,13 @@
 }
 
 .table td {
-	padding: var(--space-xs) var(--space-md);
+	padding: var(--space-sm) var(--space-md);
 	border-bottom: 1px solid var(--t-color-border);
 	white-space: nowrap;
 	max-width: 18.75rem;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	transition: background var(--t-transition-fast);
 }
 
 .backref-row td {
@@ -205,6 +210,10 @@
 	background: var(--t-color-surface-raised);
 	border-bottom: 1px solid var(--t-color-border);
 	white-space: normal;
+}
+
+.table tbody tr:hover td {
+	background: var(--t-color-surface-raised);
 }
 
 .table tbody tr:last-child td {
@@ -232,6 +241,7 @@
 	font-size: var(--text-sm);
 	line-height: 1;
 	padding: var(--space-2xs);
+	transition: color var(--t-transition-fast);
 }
 
 .row-toggle-btn:hover {

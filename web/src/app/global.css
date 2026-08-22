@@ -398,3 +398,97 @@ summary {
 .content > * {
 	animation: fade-in-up var(--duration-slide-up) var(--ease-out-expo) both;
 }
+
+/* ══════════════════════════════════════════
+ * 全局滚动行为优化
+ * ══════════════════════════════════════════ */
+
+/* 平滑滚动（用户偏好） */
+@media (prefers-reduced-motion: no-preference) {
+	html {
+		scroll-behavior: smooth;
+	}
+}
+
+/* 滚动锚点偏移（避免 sticky 头遮挡） */
+[id] {
+	scroll-margin-top: var(--space-xl);
+}
+
+/* ══════════════════════════════════════════
+ * 全局无障碍增强
+ * ══════════════════════════════════════════ */
+
+/* 焦点环增强（仅键盘导航时显示） */
+:focus:not(:focus-visible) {
+	outline: none;
+}
+
+:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 2px;
+}
+
+/* 链接下划线增强（无障碍） */
+a:not([class]) {
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+a:not([class]):hover {
+	text-decoration-thickness: 2px;
+}
+
+/* 跳过链接（屏幕阅读器） */
+.skip-link {
+	position: absolute;
+	top: -100%;
+	left: var(--space-md);
+	z-index: 9999;
+	padding: var(--space-sm) var(--space-md);
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
+	border-radius: var(--radius-md);
+	text-decoration: none;
+	font-weight: 600;
+}
+
+.skip-link:focus {
+	top: var(--space-md);
+}
+
+/* 表单元素增强 */
+input:where(:not([type="checkbox"], [type="radio"])),
+select,
+textarea {
+	min-height: 2.25rem;
+}
+
+/* 禁用状态增强 */
+[disabled] {
+	cursor: not-allowed;
+}
+
+/* 加载状态增强 */
+[aria-busy="true"] {
+	opacity: 0.7;
+	pointer-events: none;
+}
+
+/* 隐藏元素（无障碍） */
+[aria-hidden="true"] {
+	pointer-events: none;
+}
+
+/* 视觉隐藏但可屏幕阅读 */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}

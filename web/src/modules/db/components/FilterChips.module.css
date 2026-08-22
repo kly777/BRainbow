@@ -1,4 +1,4 @@
-/* FilterChips — 顶部过滤状态 chips */
+/* FilterChips — 顶部过滤状态 chips（增强版） */
 
 .filter-bar {
 	display: flex;
@@ -39,6 +39,9 @@
 	font-size: var(--text-xs);
 	font-family: inherit;
 	white-space: nowrap;
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
 }
 
 .filter-chip:hover {

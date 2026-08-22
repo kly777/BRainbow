@@ -1,4 +1,4 @@
-/* PaginationBar — 分页、页大小、页码跳转 */
+/* PaginationBar — 分页、页大小、页码跳转（增强版） */
 
 .pagination {
 	display: flex;
@@ -28,7 +28,7 @@
 	height: 2rem;
 	padding: 0 var(--space-sm);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
+	border-radius: var(--radius-md);
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	font-size: var(--text-sm);
@@ -52,7 +52,7 @@
 .page-size-select:focus,
 .page-jump-input:focus {
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 var(--space-2xs) var(--t-color-accent-soft);
+	box-shadow: 0 0 0 2px var(--t-color-accent-ring);
 }
 
 .page-jump {

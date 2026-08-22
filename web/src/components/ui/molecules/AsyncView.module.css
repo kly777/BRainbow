@@ -1,7 +1,7 @@
-/* components/ui/AsyncView.css.ts — 由 vanilla-extract 迁移 */
+/* components/ui/AsyncView.css.ts — 增强版 */
 
 .state {
-	padding: var(--space-xl) var(--space-lg);
+	padding: var(--space-2xl) var(--space-lg);
 	text-align: center;
 	color: var(--t-color-ink-muted);
 	font-size: var(--text-base);
@@ -10,4 +10,5 @@
 .error-text {
 	color: var(--t-color-danger);
 	margin-bottom: var(--space-md);
+	font-weight: 500;
 }

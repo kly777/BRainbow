@@ -288,7 +288,7 @@ a {
 
 /* ── 全局卡片/容器 hover 微交互（通过 CSS 属性选择器提升特异性） ── */
 [role="button"],
-button:not(:disabled):not(.no-hover-lift) {
+button:not(:disabled, .no-hover-lift) {
 	transition:
 		background var(--t-transition-fast),
 		border-color var(--t-transition-fast),

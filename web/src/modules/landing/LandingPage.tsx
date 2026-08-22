@@ -68,7 +68,10 @@ const modules = [
 const highlights = [
 	{ value: "FSRS", label: "\u95F4\u9694\u91CD\u590D\u7B97\u6CD5" },
 	{ value: "SSE", label: "\u6D41\u5F0F AI \u5BF9\u8BDD" },
-	{ value: "3 \u4E3B\u9898", label: "\u7EB8\u5F20 / \u6697\u591C / \u6674\u7A7A" },
+	{
+		value: "3 \u4E3B\u9898",
+		label: "\u7EB8\u5F20 / \u6697\u591C / \u6674\u7A7A",
+	},
 	{ value: "\u2318K", label: "\u5168\u5C40\u547D\u4EE4\u9762\u677F" },
 ];
 
@@ -99,14 +102,18 @@ export default function LandingPage() {
 		<div class={styles.landingPage}>
 			{/* ── Hero \u533A ── */}
 			<header class={styles.hero}>
-				<div class={styles.heroBadge}>\u4E2A\u4EBA\u77E5\u8BC6\u5DE5\u4F5C\u53F0</div>
+				<div class={styles.heroBadge}>
+					\u4E2A\u4EBA\u77E5\u8BC6\u5DE5\u4F5C\u53F0
+				</div>
 				<h1 class={styles.heroTitle}>
-				\u7528<span class={styles.gradientText}>\u5F69\u8679</span>
-				\u7F16\u7EC7\u4F60\u7684\u77E5\u8BC6\u7F51\u7EDC
+					\u7528<span class={styles.gradientText}>\u5F69\u8679</span>
+					\u7F16\u7EC7\u4F60\u7684\u77E5\u8BC6\u7F51\u7EDC
 				</h1>
 				<p class={styles.heroSubtitle}>
-				Brainbow \u662F\u4E00\u5957\u96C6\u6210\u7684\u4EFB\u52A1\u7BA1\u7406\u3001\u77E5\u8BC6\u5361\u7247\u3001\u95F4\u9694\u8BB0\u5FC6\u3001AI \u5BF9\u8BDD\u548C\u672C\u4F53\u7CFB\u7EDF\u2014\u2014
-				\u8BA9\u788E\u7247\u5316\u7684\u77E5\u8BC6\u5F62\u6210\u7ED3\u6784\uFF0C\u8BA9\u601D\u8003\u770B\u5F97\u89C1\u3002
+					Brainbow
+					\u662F\u4E00\u5957\u96C6\u6210\u7684\u4EFB\u52A1\u7BA1\u7406\u3001\u77E5\u8BC6\u5361\u7247\u3001\u95F4\u9694\u8BB0\u5FC6\u3001AI
+					\u5BF9\u8BDD\u548C\u672C\u4F53\u7CFB\u7EDF\u2014\u2014
+					\u8BA9\u788E\u7247\u5316\u7684\u77E5\u8BC6\u5F62\u6210\u7ED3\u6784\uFF0C\u8BA9\u601D\u8003\u770B\u5F97\u89C1\u3002
 				</p>
 				<div class={styles.ctaRow}>
 					<button
@@ -131,7 +138,9 @@ export default function LandingPage() {
 							<path d="M5 12h14M12 5l7 7-7 7" />
 						</svg>
 					</button>
-					<span class={styles.ctaHint}>\u6309 Ctrl+K \u968F\u65F6\u5524\u51FA\u547D\u4EE4\u9762\u677F</span>
+					<span class={styles.ctaHint}>
+						\u6309 Ctrl+K \u968F\u65F6\u5524\u51FA\u547D\u4EE4\u9762\u677F
+					</span>
 				</div>
 			</header>
 
@@ -151,7 +160,7 @@ export default function LandingPage() {
 			<section class={styles.featuresSection}>
 				<h2 class={styles.sectionTitle}>\u529F\u80FD\u6A21\u5757</h2>
 				<p class={styles.sectionDesc}>
-				\u6BCF\u4E2A\u6A21\u5757\u72EC\u7ACB\u53C8\u4E92\u8054\uFF0C\u56F4\u7ED5\u300C\u77E5\u8BC6\u300D\u8FD9\u4E00\u4E2A\u6838\u5FC3\u7EC4\u7EC7\u4F60\u7684\u6570\u5B57\u751F\u6D3B
+					\u6BCF\u4E2A\u6A21\u5757\u72EC\u7ACB\u53C8\u4E92\u8054\uFF0C\u56F4\u7ED5\u300C\u77E5\u8BC6\u300D\u8FD9\u4E00\u4E2A\u6838\u5FC3\u7EC4\u7EC7\u4F60\u7684\u6570\u5B57\u751F\u6D3B
 				</p>
 				<div class={styles.featureGrid}>
 					<For each={modules}>
@@ -178,8 +187,9 @@ export default function LandingPage() {
 			{/* ── \u5E95\u90E8\u63D0\u793A ── */}
 			<footer class={styles.footer}>
 				<p class={styles.hint}>
-				\u6309 <kbd>Ctrl+K</kbd> \u6253\u5F00\u547D\u4EE4\u9762\u677F \u00B7 <kbd>/</kbd> \u5BFC\u822A \u00B7{" "}
-				<kbd>?</kbd> \u641C\u7D22 \u00B7 <kbd>:</kbd> \u6307\u4EE4
+					\u6309 <kbd>Ctrl+K</kbd> \u6253\u5F00\u547D\u4EE4\u9762\u677F \u00B7{" "}
+					<kbd>/</kbd> \u5BFC\u822A \u00B7 <kbd>?</kbd> \u641C\u7D22 \u00B7{" "}
+					<kbd>:</kbd> \u6307\u4EE4
 				</p>
 			</footer>
 		</div>

@@ -12,7 +12,7 @@
 	display: flex;
 	justify-content: center;
 	backdrop-filter: blur(0.25rem);
-	animation: fadeIn 150ms ease both;
+	animation: fade-in 150ms ease both;
 }
 
 .bar {
@@ -27,7 +27,7 @@
 	max-width: 90vw;
 	max-height: 60vh;
 	overflow-wrap: break-word;
-	animation: slideInDown 200ms var(--ease-out-expo) both;
+	animation: slide-in-down 200ms var(--ease-out-expo) both;
 }
 
 .input-row {

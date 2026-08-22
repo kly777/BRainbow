@@ -21,7 +21,7 @@
 	max-width: 380px;
 	box-shadow: var(--shadow-lg);
 	border: 1px solid var(--t-color-border);
-	animation: fadeInScale var(--duration-scale-in) var(--ease-spring) both;
+	animation: fade-in-scale var(--duration-scale-in) var(--ease-spring) both;
 }
 
 /* \u914D\u5408\u5168\u5C40 Modal \u7684\u8BA4\u8BC1\u8868\u5355 */
@@ -142,7 +142,7 @@
 	gap: var(--space-lg);
 	min-height: 60vh;
 	padding: var(--space-2xl);
-	animation: fadeInUp 500ms var(--ease-out-expo) both;
+	animation: fade-in-up 500ms var(--ease-out-expo) both;
 }
 
 .auth-required-title {

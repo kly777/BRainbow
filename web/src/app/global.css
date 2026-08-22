@@ -291,49 +291,58 @@ summary {
  * 全局入场动画（供组件 CSS animation 属性引用）
  * ════════════════════════════════════════════════════════════════ */
 
-@keyframes fadeIn {
-	from { opacity: 0; }
-	to { opacity: 1; }
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
 }
 
-@keyframes fadeInUp {
+@keyframes fade-in-up {
 	from {
 		opacity: 0;
 		transform: translateY(0.75rem);
 	}
+
 	to {
 		opacity: 1;
 		transform: translateY(0);
 	}
 }
 
-@keyframes fadeInScale {
+@keyframes fade-in-scale {
 	from {
 		opacity: 0;
 		transform: scale(0.92);
 	}
+
 	to {
 		opacity: 1;
 		transform: scale(1);
 	}
 }
 
-@keyframes slideInRight {
+@keyframes slide-in-right {
 	from {
 		opacity: 0;
 		transform: translateX(1rem);
 	}
+
 	to {
 		opacity: 1;
 		transform: translateX(0);
 	}
 }
 
-@keyframes slideInDown {
+@keyframes slide-in-down {
 	from {
 		opacity: 0;
 		transform: translateY(-0.5rem);
 	}
+
 	to {
 		opacity: 1;
 		transform: translateY(0);
@@ -341,16 +350,27 @@ summary {
 }
 
 @keyframes shimmer {
-	0% { background-position: -200% 0; }
-	100% { background-position: 200% 0; }
+	0% {
+		background-position: -200% 0;
+	}
+
+	100% {
+		background-position: 200% 0;
+	}
 }
 
 @keyframes pulse-soft {
-	0%, 100% { opacity: 1; }
-	50% { opacity: 0.6; }
+	0%,
+	100% {
+		opacity: 1;
+	}
+
+	50% {
+		opacity: 0.6;
+	}
 }
 
 /* ── 页面容器入场（Layout 内容区） ── */
 .content > * {
-	animation: fadeInUp var(--duration-slide-up) var(--ease-out-expo) both;
+	animation: fade-in-up var(--duration-slide-up) var(--ease-out-expo) both;
 }

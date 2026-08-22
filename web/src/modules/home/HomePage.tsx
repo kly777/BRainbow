@@ -147,7 +147,8 @@ function TaskOverview() {
 						<Show when={!loading()}>
 							<p>\u6682\u65E0\u4EFB\u52A1</p>
 							<p class={styles.emptyHint}>
-							\u524D\u5F80 <A href={PATHS.task}>\u4EFB\u52A1\u7BA1\u7406</A> \u521B\u5EFA\u7B2C\u4E00\u4E2A\u4EFB\u52A1
+								\u524D\u5F80 <A href={PATHS.task}>\u4EFB\u52A1\u7BA1\u7406</A>{" "}
+								\u521B\u5EFA\u7B2C\u4E00\u4E2A\u4EFB\u52A1
 							</p>
 						</Show>
 						<Show when={loading()}>
@@ -186,12 +187,16 @@ function CardOverview() {
 	const handleDelete = async (id: number) => {
 		const confirmed = await showConfirm({
 			title: "\u5220\u9664\u5361\u7247",
-			message: "\u786E\u5B9A\u8981\u5220\u9664\u8FD9\u4E2A\u5361\u7247\u5417\uFF1F\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\u3002",
+			message:
+				"\u786E\u5B9A\u8981\u5220\u9664\u8FD9\u4E2A\u5361\u7247\u5417\uFF1F\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\u3002",
 			variant: "danger",
 		});
 		if (!confirmed) return;
 		mutate((prev) => prev?.filter((c) => c.id !== id));
-		const ok = await tryOrNotify(() => apiDeleteCard(id), "\u5220\u9664\u5361\u7247");
+		const ok = await tryOrNotify(
+			() => apiDeleteCard(id),
+			"\u5220\u9664\u5361\u7247",
+		);
 		if (!ok) refetch();
 	};
 
@@ -239,7 +244,9 @@ const HomePage = () => {
 				<h1 class={styles.welcomeTitle}>
 					{getGreeting()}\uFF0C{userName()}
 				</h1>
-				<p class={styles.welcomeHint}>\u9009\u62E9\u4E00\u4E2A\u6A21\u5757\u5F00\u59CB\u5DE5\u4F5C</p>
+				<p class={styles.welcomeHint}>
+					\u9009\u62E9\u4E00\u4E2A\u6A21\u5757\u5F00\u59CB\u5DE5\u4F5C
+				</p>
 			</div>
 
 			<ModuleNav />

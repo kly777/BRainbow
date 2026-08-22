@@ -25,6 +25,8 @@ use crate::shared::error_types as error;
 const FAVICON_CACHE_DIR: &str = "uploads/favicons";
 /// 单个 favicon 最大字节数
 const MAX_FAVICON_BYTES: u64 = 512 * 1024;
+/// 首页 HTML 最大抓取字节数（<link> 在 head 中，1MB 足够）
+const MAX_HOME_HTML_BYTES: u64 = 1024 * 1024;
 /// 磁盘缓存文件数上限：超限清空最旧一半，防止公开端点被滥用填满磁盘
 const MAX_CACHE_FILES: usize = 500;
 const FETCH_TIMEOUT: Duration = Duration::from_secs(5);
@@ -164,6 +166,22 @@ fn file_response(bytes: Vec<u8>, mime: &'static str) -> Response {
     resp
 }
 
+/// 流式读取响应体，累计超过 max_bytes 立即放弃并断开连接。
+/// 防 chunked 无长度声明的恶意超大响应把内存打爆（审计 B2）。
+async fn read_bounded(mut resp: reqwest::Response, max_bytes: u64) -> Option<Vec<u8>> {
+    if resp.content_length().is_some_and(|l| l > max_bytes) {
+        return None;
+    }
+    let mut out: Vec<u8> = Vec::new();
+    while let Some(chunk) = resp.chunk().await.ok()? {
+        if out.len() as u64 + chunk.len() as u64 > max_bytes {
+            return None;
+        }
+        out.extend_from_slice(&chunk);
+    }
+    Some(out)
+}
+
 fn build_client() -> Result<reqwest::Client, Box<dyn std::error::Error + Send + Sync>> {
     reqwest::Client::builder()
         .timeout(FETCH_TIMEOUT)
@@ -184,7 +202,9 @@ async fn fetch_favicon(client: &reqwest::Client, host: &str) -> Option<(Vec<u8>,
     if !resp.status().is_success() {
         return None;
     }
-    let html = resp.text().await.ok()?;
+    // 流式限读：恶意超大 chunked 首页不再整包进内存（审计 B2）
+    let html_bytes = read_bounded(resp, MAX_HOME_HTML_BYTES).await?;
+    let html = String::from_utf8_lossy(&html_bytes);
     let href = extract_link_icon_href(&html)?;
     let abs = resolve_href(host, &href)?;
     fetch_url_favicon(client, &abs).await
@@ -195,11 +215,9 @@ async fn fetch_url_favicon(client: &reqwest::Client, url: &str) -> Option<(Vec<u
     if !resp.status().is_success() {
         return None;
     }
-    if resp.content_length().is_some_and(|l| l > MAX_FAVICON_BYTES) {
-        return None;
-    }
-    let bytes = resp.bytes().await.ok()?;
-    if bytes.is_empty() || bytes.len() as u64 > MAX_FAVICON_BYTES {
+    // 流式读取并在超限时立即放弃：无 Content-Length 的超大响应不再整包入内存（审计 B2）
+    let bytes = read_bounded(resp, MAX_FAVICON_BYTES).await?;
+    if bytes.is_empty() {
         return None;
     }
     // 只接受图片类型

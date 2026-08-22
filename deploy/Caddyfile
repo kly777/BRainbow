@@ -5,7 +5,7 @@
 
 	# ── 安全响应头（site 级，覆盖所有响应） ──
 	header {
-		Strict-Transport-Security "max-age=31536000"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		# 禁止 iframe 嵌入（clickjacking，与 CSP frame-ancestors 双保险）
 		X-Frame-Options "DENY"
 		# 弹窗隔离（reverse tabnabbing）
@@ -62,11 +62,20 @@
 	}
 	handle @md-page {
 		root * @@DIST_DIR@@
-		rewrite * /_md{path}.md
-		header Content-Type "text/markdown; charset=utf-8"
-		header Cache-Control "no-cache"
-		header Vary Accept
-		file_server
+		@mdfile file /_md{path}.md
+		handle @mdfile {
+			rewrite * /_md{path}.md
+			header Content-Type "text/markdown; charset=utf-8"
+			header Cache-Control "no-cache"
+			header Vary Accept
+			file_server
+		}
+		# 动态路由无预生成 .md：回落 SPA（审计 E7，不再裸 404）
+		handle {
+			try_files {path} /index.html
+			file_server
+			header Cache-Control "no-cache"
+		}
 	}
 
 	# SPA：非 asset 路径统一 no-cache（防 CF 缓存旧 index.html）

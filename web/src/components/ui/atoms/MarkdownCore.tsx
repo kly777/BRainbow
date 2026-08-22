@@ -17,6 +17,27 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
 	}
 });
 
+// style 属性仅 KaTeX 渲染需要：非 KaTeX 子树的 style 一律剥离。
+// 否则 AI/笔记内容可携带内联 CSS（background:url 外呼、position:fixed
+// 页内覆盖层钓鱼）——白名单无法按标签收敛，改用子树判定（审计 F5）
+const isKaTeXContext = (el: Element): boolean => {
+	if (/(^|\\s)katex(-|\\s|$)/.test(el.getAttribute("class") ?? "")) return true;
+	return el.closest?.(".katex") != null;
+};
+DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+	const el = node as Element;
+	if (
+		el.nodeType !== 1 ||
+		!(el instanceof Element) ||
+		!el.hasAttribute("style")
+	) {
+		return;
+	}
+	if (!isKaTeXContext(el)) {
+		el.removeAttribute("style");
+	}
+});
+
 // 配置 marked
 marked.use(
 	markedHighlight({
@@ -45,7 +66,11 @@ export interface MarkdownRendererProps {
 	inline?: boolean;
 }
 
+/// 实例序号：聊天页多条消息各自一个渲染实例，锚点必须跨实例唯一
+let mdInstanceSeq = 0;
+
 const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
+	const instanceId = ++mdInstanceSeq;
 	const html = createMemo(() => {
 		try {
 			let content = props.content;
@@ -133,7 +158,7 @@ const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 					"width",
 					"height",
 					"class",
-					"id",
+					// "id" 不放行：内容自带 id 会与标题锚点碰撞；标题 id 由组件统一分配
 					"align",
 					// KaTeX 必需
 					"style",
@@ -178,14 +203,15 @@ const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 		});
 	});
 
-	// 标题锚点：h1-h3 按出现顺序加 id（供页面级目录导航扫描定位）
+	// 标题锚点：h1-h3 按出现顺序加实例唯一 id（供页面级目录导航扫描定位；
+	// 同页多实例不再产生重复 DOM id——审计 F8）
 	createEffect(() => {
 		html();
 		const div = divRef;
 		if (!div) return;
 		let n = 0;
 		for (const h of div.querySelectorAll("h1, h2, h3")) {
-			h.id = `md-h-${++n}`;
+			h.id = `md-${instanceId}-h-${++n}`;
 		}
 	});
 

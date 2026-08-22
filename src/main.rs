@@ -27,7 +27,9 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use axum::http::{HeaderValue, Method};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::sqlite::{
+    SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
+};
 use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
@@ -94,8 +96,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = Config::from_env();
 
     // 连接数据库：busy_timeout 3s，降低部署/后台优化/并发请求偶发 database is locked
-    let options =
-        SqliteConnectOptions::from_str(&config.database_url)?.busy_timeout(Duration::from_secs(3));
+    // 显式启用 WAL（审计 B6）：journal_mode 是文件级持久属性且 sqlx 默认不设置，
+    // 新建部署会落回 DELETE journal 造成读写互斥；NORMAL 同步级别是 WAL 官方推荐组合
+    let options = SqliteConnectOptions::from_str(&config.database_url)?
+        .busy_timeout(Duration::from_secs(3))
+        .journal_mode(SqliteJournalMode::Wal)
+        .synchronous(SqliteSynchronous::Normal);
     let pool = SqlitePoolOptions::new().connect_with(options).await?;
 
     // 创建数据库表（如果不存在）

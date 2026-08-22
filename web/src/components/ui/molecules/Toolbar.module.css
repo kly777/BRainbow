@@ -1,19 +1,19 @@
-/* components/ui/Toolbar.css.ts — 由 vanilla-extract 迁移 */
+/* components/ui/Toolbar.css.ts — \u589E\u5F3A\u7248 */
 
 .toolbar {
 	display: flex;
 	align-items: center;
 	gap: var(--space-md);
 	padding: var(--space-sm) var(--space-lg);
-	background: var(--t-color-surface-raised);
+	background: var(--t-color-surface);
 	border-bottom: 1px solid var(--t-color-border);
 	flex-shrink: 0;
 }
 
 .title {
 	font-size: var(--text-base);
-	font-weight: 500;
-	color: var(--t-color-ink-muted);
+	font-weight: 600;
+	color: var(--t-color-ink);
 }
 
 .actions {
@@ -28,7 +28,7 @@
 	font-size: var(--text-sm);
 	appearance: none;
 	-webkit-appearance: none;
-	background: var(--t-color-bg);
+	background: var(--t-color-surface);
 	color: var(--t-color-ink-muted);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-full);
@@ -42,4 +42,6 @@
 
 .back-btn:hover {
 	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+	border-color: var(--t-color-border-strong);
 }

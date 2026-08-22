@@ -1,28 +1,46 @@
-/* ThinkingBlock — 思考过程折叠块 */
+/* ThinkingBlock — \u601D\u8003\u8FC7\u7A0B\u6298\u53E0\u5757\uFF08\u589E\u5F3A\u7248\uFF09 */
 
 .thinking-block {
 	margin: var(--space-sm) 0;
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
+	border-radius: var(--radius-md);
 	background: var(--t-color-surface);
+	overflow: hidden;
+	transition: border-color var(--t-transition-fast);
+}
+
+.thinking-block:hover {
+	border-color: var(--t-color-border-strong);
 }
 
 .thinking-summary {
-	padding: var(--space-xs) var(--space-sm);
+	padding: var(--space-sm) var(--space-md);
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-faint);
 	cursor: pointer;
 	user-select: none;
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
+}
+
+.thinking-summary:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink-muted);
 }
 
 .thinking-body {
 	margin: 0;
-	padding: var(--space-sm);
+	padding: var(--space-md);
 	border-top: 1px solid var(--t-color-border);
 	max-height: 12rem;
 	overflow: auto;
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
+	line-height: var(--leading-relaxed);
 }
 
 .thinking-active {
@@ -32,7 +50,7 @@
 @keyframes thinking-pulse {
 	0%,
 	100% {
-		opacity: 0.35;
+		opacity: 0.4;
 	}
 
 	50% {

@@ -1,4 +1,5 @@
-/* Tooltip: 轻量 hover/focus 提示气泡（portal 到 body，避开 overflow 裁剪） */
+/* Tooltip: \u8F7B\u91CF hover/focus \u63D0\u793A\u6C14\u6CE1\uFF08portal \u5230 body\uFF0C\u907F\u5F00 overflow \u88C1\u526A\uFF09 */
+
 .wrap {
 	display: inline-flex;
 }
@@ -6,8 +7,8 @@
 .tip {
 	position: fixed;
 	z-index: var(--z-toast);
-	padding: 3px 8px;
-	border-radius: var(--radius-sm);
+	padding: var(--space-xs) var(--space-sm);
+	border-radius: var(--radius-md);
 	background: var(--t-color-ink);
 	color: var(--t-color-bg);
 	font-size: var(--text-xs);
@@ -16,31 +17,34 @@
 	max-width: 50vw;
 	overflow-wrap: break-word;
 	pointer-events: none;
-	animation: tooltip-in 120ms ease-out forwards;
+	box-shadow: var(--shadow-md);
+	animation: tooltip-in 150ms var(--ease-out-expo) forwards;
 }
 
 @keyframes tooltip-in {
 	from {
 		opacity: 0;
+		transform: scale(0.95);
 	}
 
 	to {
 		opacity: 1;
+		transform: scale(1);
 	}
 }
 
 .top {
-	transform: translate(-50%, calc(-100% - 6px));
+	transform: translate(-50%, calc(-100% - 8px));
 }
 
 .bottom {
-	transform: translate(-50%, 6px);
+	transform: translate(-50%, 8px);
 }
 
 .left {
-	transform: translate(calc(-100% - 6px), -50%);
+	transform: translate(calc(-100% - 8px), -50%);
 }
 
 .right {
-	transform: translate(6px, -50%);
+	transform: translate(8px, -50%);
 }

@@ -1,10 +1,11 @@
-/* features/task/ui/TaskCalendar.css.ts — 由 vanilla-extract 迁移 */
+/* features/task/ui/TaskCalendar.css.ts — \u589E\u5F3A\u7248 */
 
 .calendar-view {
 	background: var(--t-color-surface);
-	border-radius: var(--radius-lg);
+	border-radius: var(--radius-xl);
 	padding: var(--space-xl);
 	box-shadow: var(--shadow-sm);
+	border: 1px solid var(--t-color-border);
 }
 
 .calendar-header {
@@ -17,24 +18,34 @@
 .calendar-title {
 	margin: 0;
 	font-size: var(--text-xl);
+	font-weight: 700;
 	color: var(--t-color-ink);
+	letter-spacing: -0.01em;
 }
 
 .nav-button {
 	color: var(--t-color-ink);
 	padding: var(--space-sm) var(--space-lg);
-	background: var(--t-color-surface-raised);
+	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	cursor: pointer;
 	font-size: var(--text-base);
-	transition: all var(--t-transition-normal);
+	transition:
+		background var(--t-transition-fast),
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+}
+
+.nav-button:hover {
+	background: var(--t-color-surface-raised);
+	border-color: var(--t-color-border-strong);
 }
 
 .calendar-grid {
 	display: grid;
 	grid-template-columns: repeat(7, 1fr);
-	gap: var(--space-xs);
+	gap: 1px;
 	background: var(--t-color-border);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
@@ -42,68 +53,77 @@
 }
 
 .day-header {
-	background: var(--t-color-bg);
+	background: var(--t-color-surface-raised);
 	padding: var(--space-md);
 	text-align: center;
 	font-weight: 600;
 	color: var(--t-color-ink);
-	font-size: var(--text-base);
+	font-size: var(--text-sm);
 }
 
 .today {
-	/* 挂载点类（无样式，供 JS 引用） */
+	/* \u6302\u8F7D\u70B9\u7C7B\uFF08\u65E0\u6837\u5F0F\uFF0C\u4F9B JS \u5F15\u7528\uFF09 */
 }
 
 .empty {
-	/* 挂载点类（无样式，供 JS 引用） */
+	/* \u6302\u8F7D\u70B9\u7C7B\uFF08\u65E0\u6837\u5F0F\uFF0C\u4F9B JS \u5F15\u7528\uFF09 */
 }
 
 .calendar-day {
 	background: var(--t-color-surface);
 	min-height: 6.25rem;
 	padding: var(--space-sm);
-	border-right: 1px solid var(--t-color-border);
-	border-bottom: 1px solid var(--t-color-border);
+	transition: background var(--t-transition-fast);
+}
+
+.calendar-day:hover {
+	background: var(--t-color-surface-raised);
 }
 
 .day-number {
 	font-weight: 600;
 	color: var(--t-color-ink);
 	margin-bottom: var(--space-sm);
-	font-size: var(--text-base);
+	font-size: var(--text-sm);
 }
 
 .day-number-today {
 	color: var(--t-color-accent);
+	font-weight: 700;
 }
 
 .day-tasks {
 	display: flex;
 	flex-direction: column;
-	gap: var(--space-xs);
+	gap: var(--space-2xs);
 }
 
 .day-task {
-	padding: var(--space-xs) var(--space-sm);
-	border-radius: var(--radius-sm);
-	font-size: var(--text-xs);
+	padding: var(--space-2xs) var(--space-xs);
+	border-radius: var(--radius-xs);
+	font-size: var(--text-2xs);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	display: flex;
 	align-items: center;
-	gap: var(--space-xs);
+	gap: var(--space-2xs);
+	transition: filter var(--t-transition-fast);
+}
+
+.day-task:hover {
+	filter: brightness(0.95);
 }
 
 .event-time {
-	font-size: var(--text-xs);
+	font-size: var(--text-2xs);
 	opacity: 0.8;
 	flex-shrink: 0;
 }
 
 .type-feasible {
-	background: var(--t-color-border);
-	border-left: 3px solid var(--t-color-ink-muted);
+	background: var(--t-color-surface-raised);
+	border-left: 3px solid var(--t-color-ink-faint);
 }
 
 .type-planned {
@@ -116,18 +136,14 @@
 	border-left: 3px solid var(--t-color-success);
 }
 
-.nav-button:hover {
-	background: var(--t-color-border);
-}
-
 .calendar-day.today {
 	background: var(--t-color-accent-soft);
 	box-shadow: inset 0 0 0 2px var(--t-color-accent);
-	border-radius: var(--radius-sm);
 }
 
 .calendar-day.empty {
 	background: var(--t-color-bg);
+	opacity: 0.6;
 }
 
 .today .day-number {

@@ -9,73 +9,70 @@ const modules = [
 	{
 		path: PATHS.task,
 		icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4",
-		title: "\u4EFB\u52A1\u7BA1\u7406",
-		desc: "\u5217\u8868\u3001\u770B\u677F\u3001\u65E5\u5386\u3001DAG \u56DB\u79CD\u89C6\u56FE\uFF0C\u7075\u6D3B\u7BA1\u7406\u5F85\u529E\u4E8B\u9879",
+		title: "任务管理",
+		desc: "列表、看板、日历、DAG 四种视图，灵活管理待办事项",
 		color: "var(--t-color-accent)",
 	},
 	{
 		path: PATHS.card,
 		icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10",
-		title: "\u77E5\u8BC6\u5361\u7247",
-		desc: "\u8BB0\u5F55\u77E5\u8BC6\u7247\u6BB5\uFF0C\u6784\u5EFA\u4F60\u7684\u4E2A\u4EBA\u77E5\u8BC6\u5E93",
+		title: "知识卡片",
+		desc: "记录知识片段，构建你的个人知识库",
 		color: "oklch(55% 0.13 160deg)",
 	},
 	{
 		path: PATHS.memory,
 		icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",
-		title: "\u95F4\u9694\u8BB0\u5FC6",
-		desc: "\u57FA\u4E8E FSRS \u7B97\u6CD5\u7684\u667A\u80FD\u95F4\u9694\u590D\u4E60\u7CFB\u7EDF",
+		title: "间隔记忆",
+		desc: "基于 FSRS 算法的智能间隔复习系统",
 		color: "oklch(60% 0.12 85deg)",
 	},
 	{
 		path: PATHS.ontology,
 		icon: "M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4",
-		title: "\u672C\u4F53\u7CFB\u7EDF",
-		desc: "\u7BA1\u7406\u6982\u5FF5\u672C\u4F53\u4E0E\u7B26\u53F7\u5173\u7CFB\uFF0C\u7ED3\u6784\u5316\u601D\u7EF4",
+		title: "本体系统",
+		desc: "管理概念本体与符号关系，结构化思维",
 		color: "oklch(50% 0.14 255deg)",
 	},
 	{
 		path: PATHS.conversation,
 		icon: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z",
-		title: "\u77E5\u8BC6\u641C\u7D22",
-		desc: "\u641C\u7D22 AI \u5BF9\u8BDD\u5386\u53F2\uFF0C\u5FEB\u901F\u5B9A\u4F4D\u77E5\u8BC6",
+		title: "知识搜索",
+		desc: "搜索 AI 对话历史，快速定位知识",
 		color: "oklch(55% 0.16 25deg)",
 	},
 	{
 		path: PATHS.chat,
 		icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
-		title: "AI \u5BF9\u8BDD",
-		desc: "\u591A\u8F6E\u5BF9\u8BDD\u3001\u6811\u72B6\u5206\u652F\u3001\u4FEE\u8BA2\u4E0A\u4E0B\u6587",
+		title: "AI 对话",
+		desc: "多轮对话、树状分支、修订上下文",
 		color: "oklch(55% 0.12 300deg)",
 	},
 	{
 		path: PATHS.text,
 		icon: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z",
-		title: "\u6587\u672C\u7F16\u8F91",
-		desc: "\u591A\u6807\u7B7E\u7EAF\u6587\u672C\u7F16\u8F91\u5668\uFF0C\u9AD8\u6548\u4E66\u5199",
+		title: "文本编辑",
+		desc: "多标签纯文本编辑器，高效书写",
 		color: "oklch(45% 0.1 200deg)",
 	},
 	{
 		path: PATHS.bookmark,
 		icon: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z",
-		title: "\u4E66\u7B7E\u7BA1\u7406",
-		desc: "\u6536\u85CF\u548C\u6574\u7406\u7F51\u9875\u4E66\u7B7E",
+		title: "书签管理",
+		desc: "收藏和整理网页书签",
 		color: "oklch(55% 0.1 80deg)",
 	},
 ];
 
 // ── 亮点数据 ──
 const highlights = [
-	{ value: "FSRS", label: "\u95F4\u9694\u91CD\u590D\u7B97\u6CD5" },
-	{ value: "SSE", label: "\u6D41\u5F0F AI \u5BF9\u8BDD" },
-	{
-		value: "3 \u4E3B\u9898",
-		label: "\u7EB8\u5F20 / \u6697\u591C / \u6674\u7A7A",
-	},
-	{ value: "\u2318K", label: "\u5168\u5C40\u547D\u4EE4\u9762\u677F" },
+	{ value: "FSRS", label: "间隔重复算法" },
+	{ value: "SSE", label: "流式 AI 对话" },
+	{ value: "3 主题", label: "纸张 / 暗夜 / 晴空" },
+	{ value: "⌘K", label: "全局命令面板" },
 ];
 
-/** SVG \u56FE\u6807\u7EC4\u4EF6\uFF08Heroicons outline \u98CE\u683C\uFF09 */
+/** SVG 图标组件（Heroicons outline 风格） */
 function ModuleIcon(props: { d: string; color?: string }) {
 	return (
 		<svg
@@ -100,20 +97,16 @@ export default function LandingPage() {
 
 	return (
 		<div class={styles.landingPage}>
-			{/* ── Hero \u533A ── */}
+			{/* ── Hero 区 ── */}
 			<header class={styles.hero}>
-				<div class={styles.heroBadge}>
-					\u4E2A\u4EBA\u77E5\u8BC6\u5DE5\u4F5C\u53F0
-				</div>
+				<div class={styles.heroBadge}>个人知识工作台</div>
 				<h1 class={styles.heroTitle}>
-					\u7528<span class={styles.gradientText}>\u5F69\u8679</span>
-					\u7F16\u7EC7\u4F60\u7684\u77E5\u8BC6\u7F51\u7EDC
+					用<span class={styles.gradientText}>彩虹</span>
+					编织你的知识网络
 				</h1>
 				<p class={styles.heroSubtitle}>
-					Brainbow
-					\u662F\u4E00\u5957\u96C6\u6210\u7684\u4EFB\u52A1\u7BA1\u7406\u3001\u77E5\u8BC6\u5361\u7247\u3001\u95F4\u9694\u8BB0\u5FC6\u3001AI
-					\u5BF9\u8BDD\u548C\u672C\u4F53\u7CFB\u7EDF\u2014\u2014
-					\u8BA9\u788E\u7247\u5316\u7684\u77E5\u8BC6\u5F62\u6210\u7ED3\u6784\uFF0C\u8BA9\u601D\u8003\u770B\u5F97\u89C1\u3002
+					Brainbow 是一套集成的任务管理、知识卡片、间隔记忆、AI 对话和本体系统——
+					让碎片化的知识形成结构，让思考看得见。
 				</p>
 				<div class={styles.ctaRow}>
 					<button
@@ -123,7 +116,7 @@ export default function LandingPage() {
 							globalThis.dispatchEvent(new CustomEvent("auth:required"))
 						}
 					>
-						\u5F00\u59CB\u4F7F\u7528
+						开始使用
 						<svg
 							width="16"
 							height="16"
@@ -138,13 +131,11 @@ export default function LandingPage() {
 							<path d="M5 12h14M12 5l7 7-7 7" />
 						</svg>
 					</button>
-					<span class={styles.ctaHint}>
-						\u6309 Ctrl+K \u968F\u65F6\u5524\u51FA\u547D\u4EE4\u9762\u677F
-					</span>
+					<span class={styles.ctaHint}>按 Ctrl+K 随时唤出命令面板</span>
 				</div>
 			</header>
 
-			{/* ── \u4EAE\u70B9\u6761 ── */}
+			{/* ── 亮点条 ── */}
 			<div class={styles.highlights}>
 				<For each={highlights}>
 					{(h) => (
@@ -156,11 +147,11 @@ export default function LandingPage() {
 				</For>
 			</div>
 
-			{/* ── \u529F\u80FD\u7F51\u683C ── */}
+			{/* ── 功能网格 ── */}
 			<section class={styles.featuresSection}>
-				<h2 class={styles.sectionTitle}>\u529F\u80FD\u6A21\u5757</h2>
+				<h2 class={styles.sectionTitle}>功能模块</h2>
 				<p class={styles.sectionDesc}>
-					\u6BCF\u4E2A\u6A21\u5757\u72EC\u7ACB\u53C8\u4E92\u8054\uFF0C\u56F4\u7ED5\u300C\u77E5\u8BC6\u300D\u8FD9\u4E00\u4E2A\u6838\u5FC3\u7EC4\u7EC7\u4F60\u7684\u6570\u5B57\u751F\u6D3B
+					每个模块独立又互联，围绕「知识」这一个核心组织你的数字生活
 				</p>
 				<div class={styles.featureGrid}>
 					<For each={modules}>
@@ -184,12 +175,11 @@ export default function LandingPage() {
 				</div>
 			</section>
 
-			{/* ── \u5E95\u90E8\u63D0\u793A ── */}
+			{/* ── 底部提示 ── */}
 			<footer class={styles.footer}>
 				<p class={styles.hint}>
-					\u6309 <kbd>Ctrl+K</kbd> \u6253\u5F00\u547D\u4EE4\u9762\u677F \u00B7{" "}
-					<kbd>/</kbd> \u5BFC\u822A \u00B7 <kbd>?</kbd> \u641C\u7D22 \u00B7{" "}
-					<kbd>:</kbd> \u6307\u4EE4
+					按 <kbd>Ctrl+K</kbd> 打开命令面板 · <kbd>/</kbd> 导航 · <kbd>?</kbd>{" "}
+					搜索 · <kbd>:</kbd> 指令
 				</p>
 			</footer>
 		</div>

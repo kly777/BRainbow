@@ -235,10 +235,17 @@ async fn fetch_url_favicon(client: &reqwest::Client, url: &str) -> Option<(Vec<u
     Some((bytes.to_vec(), "image/x-icon"))
 }
 
+/// 仅 ASCII 小写化：字节长度与 UTF-8 边界不变，lower 的字节索引可安全
+/// 用于原串。`str::to_lowercase` 会改写 İ(U+0130) 等字符的字节长度，
+/// 切片可能落在非 char boundary 造成 panic（审计 B11）。
+fn ascii_lower(s: &str) -> String {
+    s.chars().map(|c| c.to_ascii_lowercase()).collect()
+}
+
 /// 从 HTML 中提取第一个 `<link … rel="icon" … href="…">`
 fn extract_link_icon_href(html: &str) -> Option<String> {
-    // 小写化匹配，但保留原始 href 大小写
-    let lower = html.to_lowercase();
+    // ASCII 小写化匹配，保留原始 href 大小写与字节对齐
+    let lower = ascii_lower(html);
     let mut search = 0usize;
     while let Some(start) = lower[search..].find("<link") {
         let link_start = search + start;

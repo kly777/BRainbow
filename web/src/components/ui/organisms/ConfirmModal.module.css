@@ -1,9 +1,9 @@
-/* components/ui/ConfirmModal.css.ts — 由 vanilla-extract 迁移 */
+/* components/ui/ConfirmModal.css.ts — \u589E\u5F3A\u7248 */
 
 @keyframes confirm-in {
 	from {
 		opacity: 0;
-		transform: translateY(0.5rem) scale(0.98);
+		transform: translateY(0.75rem) scale(0.96);
 	}
 
 	to {
@@ -16,23 +16,13 @@
 	position: fixed;
 	inset: 0;
 	background: var(--t-color-overlay);
-	backdrop-filter: var(--t-mask-blur);
+	backdrop-filter: blur(0.25rem);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	z-index: var(--z-confirm);
 	padding: var(--space-xl);
-	animation: modal-overlay-in 150ms ease-out;
-}
-
-@keyframes modal-overlay-in {
-	from {
-		opacity: 0;
-	}
-
-	to {
-		opacity: 1;
-	}
+	animation: fadeIn 150ms ease-out;
 }
 
 .dialog {
@@ -46,7 +36,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-lg);
-	animation: confirm-in 180ms ease-out;
+	animation: confirm-in 250ms var(--ease-out-expo);
 }
 
 .header {
@@ -57,8 +47,8 @@
 
 .icon-wrap {
 	flex-shrink: 0;
-	width: 2.25rem;
-	height: 2.25rem;
+	width: 2.5rem;
+	height: 2.5rem;
 	border-radius: 50%;
 	display: flex;
 	align-items: center;
@@ -70,16 +60,19 @@
 .icon-danger {
 	background: var(--t-color-danger-subtle);
 	color: var(--t-color-danger);
+	box-shadow: 0 0 0 3px oklch(55% 0.16 25deg / 10%);
 }
 
 .icon-warning {
 	background: var(--t-color-warning-subtle);
 	color: var(--t-color-warning);
+	box-shadow: 0 0 0 3px oklch(60% 0.12 85deg / 10%);
 }
 
 .icon-info {
 	background: var(--t-color-accent-soft);
 	color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px oklch(50% 0.08 165deg / 10%);
 }
 
 .title-wrap {
@@ -90,7 +83,7 @@
 .title {
 	margin: 0;
 	font-size: var(--text-lg);
-	font-weight: 600;
+	font-weight: 700;
 	color: var(--t-color-ink);
 	line-height: var(--leading-tight);
 }
@@ -127,33 +120,14 @@
 	transition:
 		background var(--t-transition-fast),
 		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
+		box-shadow var(--t-transition-normal),
+		transform var(--t-transition-fast);
 }
 
 .btn-cancel {
-	background: var(--t-color-bg);
+	background: var(--t-color-surface);
 	color: var(--t-color-ink-muted);
 	border: 1px solid var(--t-color-border);
-}
-
-.btn-danger {
-	background: var(--t-color-danger);
-	color: var(--t-color-white);
-}
-
-.btn-warning {
-	background: var(--t-color-warning);
-	color: var(--t-color-white);
-}
-
-.btn-primary {
-	background: var(--t-color-accent);
-	color: var(--t-color-white);
-}
-
-.btn:focus-visible {
-	outline: 2px solid var(--t-color-accent);
-	outline-offset: 2px;
 }
 
 .btn-cancel:hover {
@@ -161,14 +135,47 @@
 	color: var(--t-color-ink);
 }
 
+.btn-danger {
+	background: var(--t-color-danger);
+	color: var(--t-color-white);
+	box-shadow: 0 2px 8px oklch(55% 0.16 25deg / 20%);
+}
+
 .btn-danger:hover {
 	background: var(--t-color-danger-strong);
+	box-shadow: 0 4px 12px oklch(55% 0.16 25deg / 30%);
+	transform: translateY(-1px);
+}
+
+.btn-warning {
+	background: var(--t-color-warning);
+	color: var(--t-color-white);
+	box-shadow: 0 2px 8px oklch(60% 0.12 85deg / 20%);
 }
 
 .btn-warning:hover {
 	background: var(--t-color-warning-strong);
+	box-shadow: 0 4px 12px oklch(60% 0.12 85deg / 30%);
+	transform: translateY(-1px);
+}
+
+.btn-primary {
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
+	box-shadow: 0 2px 8px oklch(50% 0.08 165deg / 20%);
 }
 
 .btn-primary:hover {
 	background: var(--t-color-accent-strong);
+	box-shadow: 0 4px 12px oklch(50% 0.08 165deg / 30%);
+	transform: translateY(-1px);
+}
+
+.btn:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 2px;
+}
+
+.btn:active:not(:disabled) {
+	transform: scale(0.97);
 }

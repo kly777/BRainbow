@@ -1,9 +1,9 @@
-/* components/ui/Modal.css.ts — 由 vanilla-extract 迁移 */
+/* components/ui/Modal.css.ts — \u589E\u5F3A\u7248 */
 
 @keyframes modal-in {
 	from {
 		opacity: 0;
-		transform: translateY(0.5rem) scale(0.98);
+		transform: translateY(0.75rem) scale(0.96);
 	}
 
 	to {
@@ -16,23 +16,13 @@
 	position: fixed;
 	inset: 0;
 	background-color: var(--t-color-overlay);
-	backdrop-filter: var(--t-mask-blur);
+	backdrop-filter: blur(0.25rem);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	z-index: var(--z-modal);
 	padding: var(--space-xl);
-	animation: modal-overlay-in 150ms ease-out;
-}
-
-@keyframes modal-overlay-in {
-	from {
-		opacity: 0;
-	}
-
-	to {
-		opacity: 1;
-	}
+	animation: fadeIn 150ms ease-out;
 }
 
 .modal-content {
@@ -46,7 +36,7 @@
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
-	animation: modal-in 180ms ease-out;
+	animation: modal-in 250ms var(--ease-out-expo);
 }
 
 .modal-header {
@@ -60,8 +50,9 @@
 .modal-title {
 	margin: 0;
 	font-size: var(--text-lg);
-	font-weight: 600;
+	font-weight: 700;
 	color: var(--t-color-ink);
+	letter-spacing: -0.01em;
 }
 
 .modal-close {
@@ -81,6 +72,11 @@
 	transition:
 		background-color var(--t-transition-fast),
 		color var(--t-transition-fast);
+}
+
+.modal-close:hover {
+	background-color: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
 }
 
 .modal-body {
@@ -131,7 +127,7 @@
 .info-box {
 	background-color: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
+	border-radius: var(--radius-md);
 	padding: var(--space-md);
 	margin-top: var(--space-lg);
 }
@@ -164,22 +160,19 @@
 .error-message {
 	background-color: var(--t-color-danger-subtle);
 	color: var(--t-color-danger);
-	padding: var(--space-sm);
-	border-radius: var(--radius-sm);
-	border: 1px solid var(--t-color-danger-subtle);
+	padding: var(--space-sm) var(--space-md);
+	border-radius: var(--radius-md);
+	border: 1px solid oklch(85% 0.06 25deg);
+	font-size: var(--text-sm);
 }
 
 .success-message {
 	background-color: var(--t-color-success-subtle);
 	color: var(--t-color-success);
-	padding: var(--space-sm);
-	border-radius: var(--radius-sm);
-	border: 1px solid var(--t-color-success-subtle);
-}
-
-.modal-close:hover {
-	background-color: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
+	padding: var(--space-sm) var(--space-md);
+	border-radius: var(--radius-md);
+	border: 1px solid oklch(85% 0.08 160deg);
+	font-size: var(--text-sm);
 }
 
 .info-box p {

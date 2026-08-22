@@ -122,3 +122,51 @@ pub async fn rate_limit_ai(req: Request, next: Next) -> Response {
     }
     next.run(req).await
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use axum::body::Body;
+
+    #[test]
+    fn xff_only_accepts_valid_ips() {
+        assert!(is_valid_ip("203.0.113.7"));
+        assert!(is_valid_ip("2001:db8::1"));
+        assert!(!is_valid_ip("not-an-ip"));
+        assert!(!is_valid_ip(""));
+    }
+
+    fn req_with_xff(value: Option<&str>) -> Request<Body> {
+        let mut b = Request::builder();
+        if let Some(v) = value {
+            b = b.header("x-forwarded-for", v);
+        }
+        let mut req = b.body(Body::empty()).unwrap();
+        req.extensions_mut().insert(axum::extract::ConnectInfo(
+            "9.9.9.9:4444".parse::<std::net::SocketAddr>().unwrap(),
+        ));
+        req
+    }
+
+    #[test]
+    fn client_ip_takes_first_valid_xff_entry() {
+        assert_eq!(client_ip(&req_with_xff(Some("1.2.3.4, 5.6.7.8"))), "1.2.3.4");
+        // 首个非法则跳过取后续合法值：伪造者无法借垃圾值绕过限速键
+        assert_eq!(client_ip(&req_with_xff(Some("garbage, 5.6.7.8"))), "5.6.7.8");
+        // 全部非法 / 无 XFF 回退直连地址
+        assert_eq!(client_ip(&req_with_xff(Some("a, b"))), "9.9.9.9");
+        assert_eq!(client_ip(&req_with_xff(None)), "9.9.9.9");
+    }
+
+    #[test]
+    fn limiter_blocks_after_window_quota() {
+        let limiter = RateLimiter::default();
+        for _ in 0..MAX_REQUESTS {
+            assert!(limiter.allow("1.1.1.1"));
+        }
+        assert!(!limiter.allow("1.1.1.1"));
+        // 其他 key 独立计数
+        assert!(limiter.allow("2.2.2.2"));
+    }
+}

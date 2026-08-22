@@ -2,7 +2,7 @@
 
 import { showToast } from "@components/ui";
 import { getErrorMessage } from "@lib/api";
-import { showConfirm, tryAsync, tryOrNotify } from "@lib/utils";
+import { notifyError, showConfirm, tryAsync } from "@lib/utils";
 import type { Card, CreateCardRequest } from "@modules/card";
 import {
 	createCardE,
@@ -56,16 +56,19 @@ export function useCardsList() {
 		const cardToDelete = current.find((c) => c.id === id);
 		if (cardToDelete) setCards(current.filter((c) => c.id !== id));
 
-		const ok = await tryOrNotify(() => deleteCardE(id), "删除卡片");
-		if (!ok) {
-			if (cardToDelete) setCards([...current]);
-		} else {
+		// 注意：deleteCardE 返回 void，tryOrNotify 成功时也是 undefined，
+		// 用它做成败判据会把成功当失败（回滚已删卡片）。改用 tryAsync 显式分支。
+		const result = await tryAsync(() => deleteCardE(id));
+		if (result.ok) {
 			showToast({
 				type: "success",
 				title: "卡片已删除",
 				message: "",
 				duration: 3000,
 			});
+		} else {
+			if (cardToDelete) setCards([...current]);
+			notifyError("删除卡片失败", result.error);
 		}
 		setDeletingCardId(null);
 	};

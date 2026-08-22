@@ -14,16 +14,18 @@ import {
 
 /** 生成临时任务对象（乐观更新用） */
 export function makeTemp(req: CreateTaskRequest): Task {
+	// 同一时刻取一次，避免两次 new Date() 跨毫秒导致时间戳不一致
+	const now = Date.now();
 	return {
-		id: Date.now(),
+		id: now,
 		title: req.title,
 		description: req.description ?? null,
 		parent_task_id: req.parent_task_id ?? null,
 		status: "backlog",
 		completed_at: null,
 		effort_estimate_minutes: req.effort_estimate_minutes ?? null,
-		created_at: new Date().toISOString(),
-		updated_at: new Date().toISOString(),
+		created_at: new Date(now).toISOString(),
+		updated_at: new Date(now).toISOString(),
 	};
 }
 

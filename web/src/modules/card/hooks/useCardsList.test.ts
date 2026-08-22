@@ -45,7 +45,23 @@ const mockedCreate = vi.mocked(createCardE);
 const mockedDelete = vi.mocked(deleteCardE);
 const mockedGet = vi.mocked(getCardsE);
 const mockedSearch = vi.mocked(searchCardsE);
-const card = (id: number) => ({ id, content: `c${id}` });
+const card = (id: number) => ({
+	id,
+	content: `c${id}`,
+	created_at: "2026-08-22T00:00:00+00:00",
+	updated_at: "2026-08-22T00:00:00+00:00",
+});
+const paginated = (
+	items: ReturnType<typeof card>[],
+	page: number,
+	total_pages: number,
+) => ({
+	items,
+	page,
+	total_pages,
+	total: items.length,
+	page_size: 20,
+});
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -85,7 +101,7 @@ describe("handleCardDelete", () => {
 	it("成功删除走乐观移除并复位删除态", () => {
 		return withHook(async (h) => {
 			h.setCards([card(1), card(2)]);
-			mockedDelete.mockResolvedValue(1);
+			mockedDelete.mockResolvedValue(undefined);
 			await h.handleCardDelete(1);
 			expect(mockedDelete).toHaveBeenCalledWith(1);
 			expect(h.cards().map((c) => c.id)).toEqual([2]);
@@ -96,10 +112,7 @@ describe("handleCardDelete", () => {
 	it("删除失败回滚原列表", () => {
 		return withHook(async (h) => {
 			h.setCards([card(1), card(2)]);
-			tryOrNotifyImpl.mockImplementation(async (fn: () => Promise<unknown>) => {
-				await fn(); // 请求已发出但以失败告终
-				return null;
-			});
+			mockedDelete.mockRejectedValue(new Error("外键约束"));
 			await h.handleCardDelete(1);
 			expect(mockedDelete).toHaveBeenCalledOnce();
 			expect(h.cards().map((c) => c.id)).toEqual([1, 2]);
@@ -147,11 +160,7 @@ describe("分页与加载更多", () => {
 	it("handlePageChange 合法页按当前模式加载", () => {
 		return withHook(async (h) => {
 			h.setTotalPages(3);
-			mockedGet.mockResolvedValue({
-				items: [card(5)],
-				page: 2,
-				total_pages: 3,
-			});
+			mockedGet.mockResolvedValue(paginated([card(5)], 2, 3));
 			await h.handlePageChange(2);
 			expect(mockedGet).toHaveBeenCalledWith(2);
 			expect(h.cards()[0].id).toBe(5);
@@ -165,11 +174,7 @@ describe("分页与加载更多", () => {
 			h.setCards([card(1)]);
 			h.setPage(1);
 			h.setTotalPages(2);
-			mockedGet.mockResolvedValue({
-				items: [card(2)],
-				page: 2,
-				total_pages: 2,
-			});
+			mockedGet.mockResolvedValue(paginated([card(2)], 2, 2));
 			await h.handleLoadMore();
 			expect(h.cards().map((c) => c.id)).toEqual([1, 2]);
 			expect(h.hasMore()).toBe(false);
@@ -183,20 +188,12 @@ describe("分页与加载更多", () => {
 		return withHook(async (h) => {
 			urlQ = "量子";
 			h.setTotalPages(3);
-			mockedSearch.mockResolvedValue({
-				items: [card(7)],
-				page: 2,
-				total_pages: 3,
-			});
+			mockedSearch.mockResolvedValue(paginated([card(7)], 2, 3));
 			await h.handlePageChange(2);
 			expect(mockedSearch).toHaveBeenCalledWith("量子", 2);
 			expect(mockedGet).not.toHaveBeenCalled();
 
-			mockedSearch.mockResolvedValue({
-				items: [card(8)],
-				page: 3,
-				total_pages: 3,
-			});
+			mockedSearch.mockResolvedValue(paginated([card(8)], 3, 3));
 			await h.handleLoadMore();
 			expect(mockedSearch).toHaveBeenLastCalledWith("量子", 3);
 			expect(h.cards().at(-1)?.id).toBe(8);

@@ -21,9 +21,9 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         ));
 
     // ── 公开路由：无需认证 ──
+    // 注意：text 曾误挂公开组导致匿名可读写全部文本笔记（审计 B1），已移入认证组
     let public = Router::new()
         .route("/bookmarks/favicon", get(bookmark::favicon_handler))
-        .nest("/text", text::routes::<AppState>())
         .nest("/media", media::public_file_route::<AppState>());
 
     // ── 登录/注册（含限速层）──
@@ -49,6 +49,7 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         .nest("/search", search::routes::<AppState>())
         .nest("/bookmarks", bookmark::routes::<AppState>())
         .nest("/tasks", task::routes::<AppState>())
+        .nest("/text", text::routes::<AppState>())
         .nest("/chat", chat::routes::<AppState>())
         .nest(
             "/ai",

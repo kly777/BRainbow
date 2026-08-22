@@ -152,4 +152,61 @@ mod tests {
         svc.remove("k").await.unwrap();
         assert_eq!(svc.get("k").await.unwrap(), None);
     }
+
+    // ── AdminService（审计 T3：注册开关与 JWT 轮换此前无人守护）──
+
+    use crate::modules::admin::port::AdminServicePort;
+
+    async fn admin_pool() -> Arc<SqlitePool> {
+        let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
+        crate::db::migrate(&pool).await.unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn allow_register_toggle_persists_across_instances() {
+        let pool = admin_pool().await;
+        // env 缺省 false
+        let svc = AdminService::new(pool.clone(), "env-secret".into(), false);
+        assert!(!svc.allow_register_active().await);
+
+        // 管理员开启 → 运行时立即生效并落库
+        svc.set_allow_register(true).await.unwrap();
+        assert!(svc.allow_register_active().await);
+
+        // 新实例（模拟重启）：init_runtime_cache 从 DB 恢复为 true，而非 env 的 false
+        let fresh = AdminService::new(pool, "env-secret".into(), false);
+        assert!(!fresh.allow_register_active().await);
+        fresh.init_runtime_cache().await;
+        assert!(fresh.allow_register_active().await);
+    }
+
+    #[tokio::test]
+    async fn jwt_rotation_changes_active_secret_and_survives_restart() {
+        let pool = admin_pool().await;
+        let svc = AdminService::new(pool.clone(), "env-secret".into(), false);
+        assert_eq!(svc.jwt_secret_active(), "env-secret");
+
+        svc.rotate_jwt_secret("rotated-secret-abc").await.unwrap();
+        assert_eq!(svc.jwt_secret_active(), "rotated-secret-abc");
+
+        let (persisted, len) = svc.settings_jwt_status().await;
+        assert!(persisted);
+        assert_eq!(len, "rotated-secret-abc".len());
+
+        // 重启后 init_runtime_cache 恢复持久化密钥：旧 token 全部失效的语义成立
+        let fresh = AdminService::new(pool, "env-secret".into(), false);
+        assert_eq!(fresh.jwt_secret_active(), "env-secret");
+        fresh.init_runtime_cache().await;
+        assert_eq!(fresh.jwt_secret_active(), "rotated-secret-abc");
+    }
+
+    #[tokio::test]
+    async fn jwt_status_unpersisted_reports_env_secret_len() {
+        let pool = admin_pool().await;
+        let svc = AdminService::new(pool, "env-secret".into(), false);
+        let (persisted, len) = svc.settings_jwt_status().await;
+        assert!(!persisted);
+        assert_eq!(len, "env-secret".len());
+    }
 }

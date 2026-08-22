@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 
 use super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
 use super::model::Task;
@@ -176,43 +177,65 @@ impl TaskService {
             }
         }
 
-        // C002: 检查同类型时间段不重叠
-        let check_overlap =
-            |windows: &[&TimeWindow], type_name: &str| -> Result<(), ServiceError> {
-                for (i, a) in windows.iter().enumerate() {
-                    for b in windows.iter().skip(i + 1) {
-                        // 跳过同一个 exclude_id 的情况（更新已有窗口时）
-                        // 仅比较已入库的 ID（>0），新窗口 id=0 不会被误跳过
-                        if let Some(eid) = exclude_id
-                            && eid > 0
-                            && (a.id == eid || b.id == eid)
-                        {
-                            continue;
-                        }
-                        if a.start_time < b.end_time && b.start_time < a.end_time {
-                            return Err(ServiceError::InvalidInput(format!(
-                                "{} 时间段 [{}, {}] 与 [{}, {}] 重叠",
-                                type_name, a.start_time, a.end_time, b.start_time, b.end_time
-                            )));
-                        }
+        // B5：循环规则（daily/weekly/monthly）先确定性展开为具体时间段，
+        // 否则重叠检测只比基线形同虚设。展开上限：所有窗口 end 的最大值，
+        // 单窗最多 500 个具体段。
+        let horizon = all_feasible
+            .iter()
+            .chain(&all_planned)
+            .chain(&all_actual)
+            .map(|w| w.end_time)
+            .max()
+            .unwrap_or_else(Utc::now);
+        let to_intervals = |windows: &[&TimeWindow]| -> Vec<(i32, DateTime<Utc>, DateTime<Utc>)> {
+            windows
+                .iter()
+                .flat_map(|w| {
+                    w.expand_between(horizon, 500)
+                        .into_iter()
+                        .map(move |(s, e)| (w.id, s, e))
+                })
+                .collect()
+        };
+        let feasible_iv = to_intervals(&all_feasible);
+        let planned_iv = to_intervals(&all_planned);
+        let actual_iv = to_intervals(&all_actual);
+
+        // C002: 检查同类型时间段（含循环展开）不重叠
+        let check_overlap = |windows: &[(i32, DateTime<Utc>, DateTime<Utc>)],
+                             type_name: &str|
+         -> Result<(), ServiceError> {
+            for (i, (ida, sa, ea)) in windows.iter().enumerate() {
+                for (idb, sb, eb) in windows.iter().skip(i + 1) {
+                    // 跳过同一个 exclude_id 的情况（更新已有窗口时）
+                    // 仅比较已入库的 ID（>0），新窗口 id=0 不会被误跳过；
+                    // 同一循环窗口的各次展开 id 相同，更新时一并豁免
+                    if let Some(eid) = exclude_id
+                        && eid > 0
+                        && (*ida == eid || *idb == eid)
+                    {
+                        continue;
+                    }
+                    if *sa < *eb && *sb < *ea {
+                        return Err(ServiceError::InvalidInput(format!(
+                            "{type_name} 时间段 [{sa}, {ea}] 与 [{sb}, {eb}] 重叠"
+                        )));
                     }
                 }
-                Ok(())
-            };
+            }
+            Ok(())
+        };
 
-        check_overlap(&all_feasible, "feasible")?;
-        check_overlap(&all_planned, "planned")?;
-        check_overlap(&all_actual, "actual")?;
+        check_overlap(&feasible_iv, "feasible")?;
+        check_overlap(&planned_iv, "planned")?;
+        check_overlap(&actual_iv, "actual")?;
 
-        // C001: planned 必须在 feasible 内部
-        for planned in &all_planned {
-            let covered = all_feasible
-                .iter()
-                .any(|f| f.start_time <= planned.start_time && f.end_time >= planned.end_time);
+        // C001: planned 必须在 feasible 内部（逐展开段判断）
+        for (_, ps, pe) in &planned_iv {
+            let covered = feasible_iv.iter().any(|(_, fs, fe)| fs <= ps && fe >= pe);
             if !covered {
                 return Err(ServiceError::InvalidInput(format!(
-                    "计划时间段 [{}, {}] 不在任何可行时间窗口内",
-                    planned.start_time, planned.end_time
+                    "计划时间段 [{ps}, {pe}] 不在任何可行时间窗口内"
                 )));
             }
         }

@@ -312,20 +312,33 @@ impl MemRepository for super::super::MemRepo {
     }
     
     async fn get_mem_position(&self, user_id: i32, mem_id: i64, query: &MemQuery) -> Result<i64, ServiceError> {
-        // 构建排序条件
-        let sort_expr = match query.sort.as_deref() {
-            Some("difficulty") => "m.difficulty",
-            Some("state") => "m.state",
-            _ => "m.due_at",
+        // 构建排序字段 + 目标记录的值（子查询 join chunk 处理 cue.created_at）
+        let (sort_field, target_subquery) = match query.sort.as_deref() {
+            Some("difficulty") => (
+                "COALESCE(m.difficulty, 0)",
+                "SELECT COALESCE(m2.difficulty, 0) FROM mem m2 WHERE m2.id = ",
+            ),
+            Some("state") => (
+                "COALESCE(m.state, '')",
+                "SELECT COALESCE(m2.state, '') FROM mem m2 WHERE m2.id = ",
+            ),
+            Some("cue.created_at") => (
+                "COALESCE(cc.created_at, '')",
+                "SELECT COALESCE(cc2.created_at, '') FROM mem m2 LEFT JOIN chunk cc2 ON m2.cue_chunk_id = cc2.id WHERE m2.id = ",
+            ),
+            _ => (
+                "COALESCE(m.due_at, '')",
+                "SELECT COALESCE(m2.due_at, '') FROM mem m2 WHERE m2.id = ",
+            ),
         };
         let order_dir = if query.order.as_deref() == Some("desc") { "DESC" } else { "ASC" };
-        
+
         let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
             "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1 AND (m.user_id = "
         );
         qb.push_bind(user_id);
         qb.push(" OR m.user_id IS NULL)");
-        
+
         // 应用过滤条件（与 get_all_mems 相同，但不包括 id 过滤）
         if let Some(ref state) = query.state {
             if state == "buried" {
@@ -349,11 +362,11 @@ impl MemRepository for super::super::MemRepo {
             let pattern = like_contains(q.trim());
             qb.push(" AND (cc.content LIKE ");
             qb.push_bind(&pattern);
-            qb.push(" ESCAPE '\' OR ct.content LIKE ");
+            qb.push(" ESCAPE '\\' OR ct.content LIKE ");
             qb.push_bind(&pattern);
-            qb.push(" ESCAPE '\' OR EXISTS (SELECT 1 FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id AND t.name LIKE ");
+            qb.push(" ESCAPE '\\' OR EXISTS (SELECT 1 FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id AND t.name LIKE ");
             qb.push_bind(pattern);
-            qb.push(" ESCAPE '\'))");
+            qb.push(" ESCAPE '\\'))");
         }
 
         // 标签过滤
@@ -386,21 +399,24 @@ impl MemRepository for super::super::MemRepo {
             }
         }
 
-        // 添加排序条件比较：计算在目标记录之前的记录数量
-        let sort_field = sort_expr.replace("m.", "");
+        // 计算目标记录之前的记录数量：(sort_col < 目标值) OR (sort_col = 目标值 AND id < 目标 id)
         qb.push(format!(
-            " AND (m.{} < (SELECT m2.{} FROM mem m2 WHERE m2.id = ",
-            sort_field, sort_field
+            " AND ({} < ({}", sort_field, target_subquery
         ));
         qb.push_bind(mem_id);
+        qb.push(")");
+        qb.push(format!(" OR ({} = ({}", sort_field, target_subquery));
+        qb.push_bind(mem_id);
+        qb.push(") AND m.id < ");
+        qb.push_bind(mem_id);
         qb.push("))");
-        qb.push(format!(" ORDER BY {} {}", sort_expr, order_dir));
+        qb.push(format!(" ORDER BY {} {}", sort_field, order_dir));
 
         let row: (i64,) = qb.build_query_as().fetch_one(&*self.pool).await.map_err(ServiceError::Db)?;
         Ok(row.0)
     }
 
-    async fn delete_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+        async fn delete_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
         let mut tx = self.pool.begin().await?;
 
         // 先查出关联的 chunk id，删除 mem 后清理孤儿 chunk（所有权校验：本人或共享）

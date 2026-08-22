@@ -79,7 +79,6 @@ interface MemTableProps {
 
 interface PaginationProps {
 	pageMeta: PageMeta;
-	page: number;
 	onPageChange: (page: number) => void;
 }
 
@@ -258,32 +257,34 @@ const MemTable: Component<MemTableProps> = (props) => (
 	</div>
 );
 
-const Pagination: Component<PaginationProps> = (props) => (
-	<Show when={props.pageMeta.total_pages > 1}>
-		<div class={styles.pagination}>
-			<button
-				type="button"
-				class={styles.pageBtn}
-				disabled={props.page <= 1}
-				onClick={() => props.onPageChange(props.page - 1)}
-			>
-				‹
-			</button>
-			<span class={styles.pageInfo}>
-				{props.pageMeta.page} / {props.pageMeta.total_pages} · 共
-				{props.pageMeta.total} 条
-			</span>
-			<button
-				type="button"
-				class={styles.pageBtn}
-				disabled={props.page >= props.pageMeta.total_pages}
-				onClick={() => props.onPageChange(props.page + 1)}
-			>
-				›
-			</button>
-		</div>
-	</Show>
-);
+const Pagination: Component<PaginationProps> = (props) => {
+	const meta = () => props.pageMeta;
+	return (
+		<Show when={meta().total_pages > 1}>
+			<div class={styles.pagination}>
+				<button
+					type="button"
+					class={styles.pageBtn}
+					disabled={meta().page <= 1}
+					onClick={() => props.onPageChange(meta().page - 1)}
+				>
+					‹
+				</button>
+				<span class={styles.pageInfo}>
+					{meta().page} / {meta().total_pages} · 共 {meta().total} 条
+				</span>
+				<button
+					type="button"
+					class={styles.pageBtn}
+					disabled={meta().page >= meta().total_pages}
+					onClick={() => props.onPageChange(meta().page + 1)}
+				>
+					›
+				</button>
+			</div>
+		</Show>
+	);
+};
 
 export default function ManageTable(props: Props) {
 	return (
@@ -304,12 +305,8 @@ export default function ManageTable(props: Props) {
 					onDelete={props.onDelete}
 				/>
 			</div>
-			{/* 分页 */}
-			<Pagination
-				pageMeta={props.pageMeta}
-				page={props.page}
-				onPageChange={props.onPageChange}
-			/>
+			{/* 分页（pageMeta 唯一权威） */}
+			<Pagination pageMeta={props.pageMeta} onPageChange={props.onPageChange} />
 		</Show>
 	);
 }

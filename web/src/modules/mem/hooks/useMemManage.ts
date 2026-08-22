@@ -1,10 +1,13 @@
 // ── 记忆管理模块的核心业务逻辑 ──
 //
-// 职责分离：
-// - useMemManageParams: 只管 URL 查询参数（q/state/sort/page/tag）
-// - useMemManage（本文件）: 管理详情状态 + 数据加载 + 业务操作
-//
-// detailId 用独立信号管理，不走 URL 响应式链路，避免点击列表项时触发列表重新加载。
+// 架构原则：
+// 1. URL 是唯一权威状态源（useMemManageParams 统一读写，无 replaceState 旁路）
+// 2. 列表用 createResource 声明式加载：查询参数 memo 作 source，参数变化自动重取
+//    - source 不含 id：点详情不会触发列表重载
+//    - refetch 时保留旧值：无闪烁
+// 3. 直达（?id=xxx）首次加载传 id 定位页码，同步 URL 后转入正常分页加载
+// 4. 无模块级可变状态（initialLoadDone / skipNextLoad 已消灭）
+// 5. load 单一职责：列表 / 标签 / 直达各自独立
 
 import { showConfirm, tryAsync, tryOrNotify } from "@lib/utils";
 import {
@@ -19,19 +22,36 @@ import {
 	type TagInfo,
 	unsuspendMemE,
 } from "@modules/mem";
-import { createEffect, createSignal, onMount } from "solid-js";
-import type { PageMeta } from "../lib/mem-manage-utils.ts";
+import {
+	createEffect,
+	createMemo,
+	createResource,
+	createSignal,
+} from "solid-js";
+import type {
+	PageMeta,
+	SortDir,
+	SortField,
+	TagMode,
+} from "../lib/mem-manage-utils.ts";
 import { fetchAllMems } from "../lib/mem-manage-utils.ts";
 import { useBatchOps } from "./useBatchOps.ts";
 import { useMemEdit } from "./useMemEdit.ts";
 import { useMemManageParams } from "./useMemManageParams.ts";
 import { useTagFiltersUrl } from "./useTagFiltersUrl.ts";
 
-let initialLoadDone = false;
-// 直达模式同步 URL 页码后，跳过随之触发的一次重复加载
-let skipNextLoad = false;
+/** 列表查询参数快照类型（不含 id） */
+interface ListKey {
+	q: string;
+	state: string;
+	sort: SortField;
+	order: SortDir;
+	page: number;
+	tagMode: TagMode;
+	tagFilters: TagInfo[];
+}
 
-// ── 从 URL 读取初始 detailId（只读一次） ──
+// ── 初始 URL 的直达 id（组件挂载时读一次，仅用于直达定位） ──
 function readInitialDetailId(): number | null {
 	const raw = new URL(window.location.href).searchParams.get("id");
 	if (!raw) return null;
@@ -43,174 +63,118 @@ export function useMemManage() {
 	const params = useMemManageParams();
 	const { tagFilters, setTagFilters } = useTagFiltersUrl(params);
 
-	// ── detailId：独立信号，不参与 URL 响应式链路 ──
-	const [detailId, _setDetailId] = createSignal<number | null>(
-		readInitialDetailId(),
-	);
-
-	const setDetailId = (id: number | null) => {
-		_setDetailId(id);
-		// 同步到 URL（replaceState，不触发 SolidJS 响应式）
-		const url = new URL(window.location.href);
-		if (id != null && id > 0) {
-			url.searchParams.set("id", String(id));
-		} else {
-			url.searchParams.delete("id");
-		}
-		history.replaceState(null, "", url.toString());
-	};
-
 	// ── 核心状态 ──
-	const [mems, setMems] = createSignal<MemItem[]>([]);
-	const [pageMeta, setPageMeta] = createSignal<PageMeta>({
-		page: 1,
-		total_pages: 0,
-		total: 0,
-	});
-	const [loading, setLoading] = createSignal(true);
 	const [memTags, setMemTags] = createSignal<Map<number, TagInfo[]>>(new Map());
 	const [batchIds, setBatchIds] = createSignal<Set<number>>(new Set());
 	const [showExportModal, setShowExportModal] = createSignal(false);
 	const [showBatchTagModal, setShowBatchTagModal] = createSignal(false);
 	const [batchTagMode] = createSignal<"add" | "remove">("add");
 
-	// ── derived ──
+	// ── 直达标记：初始 URL 有 id 时，首次请求传 id 定位页码 ──
+	const [directId, setDirectId] = createSignal<number | null>(
+		readInitialDetailId(),
+	);
+
+	// ── 列表查询参数快照（不含 id —— 点详情不重载列表） ──
+	const listQuery = createMemo(
+		(): ListKey => ({
+			q: params.searchQuery(),
+			state: params.filterState(),
+			sort: params.sortField(),
+			order: params.sortDir(),
+			page: params.page(),
+			tagMode: params.tagMode(),
+			tagFilters: tagFilters(),
+		}),
+	);
+
+	// ── 列表资源：参数变化自动重取；refetch 时保留旧值（无闪烁） ──
+	const [list, { refetch }] = createResource<
+		{
+			items: MemItem[];
+			meta: PageMeta;
+		},
+		ListKey
+	>(
+		() => listQuery(),
+		async (key) => {
+			const direct = directId();
+			if (direct != null) {
+				// 直达定位：page 固定 1，传 id；后端返回实际页数据 + meta.page
+				const res = await fetchAllMems(
+					key.sort as SortField,
+					key.order,
+					key.q,
+					key.state,
+					key.tagFilters,
+					key.tagMode,
+					1,
+					direct,
+				);
+				// 定位完成：清除直达标记；若实际页 ≠ URL 页，同步 URL（触发静默 refetch，数据一致）
+				setDirectId(null);
+				if (res.meta.page !== key.page) {
+					params.setSearchParams({ page: String(res.meta.page) });
+				}
+				return res;
+			}
+			return fetchAllMems(
+				key.sort as SortField,
+				key.order,
+				key.q,
+				key.state,
+				key.tagFilters,
+				key.tagMode,
+				key.page,
+			);
+		},
+	);
+
+	// ── 派生 ──
+	const mems = (): MemItem[] => list()?.items ?? [];
+	const pageMeta = (): PageMeta =>
+		list()?.meta ?? { page: 1, total_pages: 0, total: 0 };
+	/** 仅首次无数据时显示 loading（refetch 保留旧值不闪） */
+	const loading = () => list.loading && !list();
 	const allSelected = () =>
 		mems().length > 0 && batchIds().size === mems().length;
-	const detail = () => mems().find((m) => m.id === detailId());
+	const detail = () => mems().find((m) => m.id === params.detailId());
 	const tagsForDetail = () => {
-		const id = detailId();
+		const id = params.detailId();
 		return id !== null ? (memTags().get(id) ?? []) : [];
 	};
 
-	// ── 数据加载（只根据查询参数加载，不传 detailId） ──
-	const load = async () => {
-		setLoading(true);
-		const { items, meta } = await fetchAllMems(
-			params.sortField(),
-			params.sortDir(),
-			params.searchQuery(),
-			params.filterState(),
-			tagFilters(),
-			params.tagMode(),
-			params.page(),
-		);
-		setMems(items);
-		setPageMeta(meta);
-		if (items.length > 0) {
-			(async () => {
-				const result = await tryAsync(() =>
-					batchGetMemsTagsE(items.map((m) => m.id)),
-				);
-				if (!result.ok) return;
-				const res = result.value;
-				const map = new Map<number, TagInfo[]>();
-				for (const row of res.items) {
-					const tags = map.get(row.mem_id) ?? [];
-					tags.push({
-						id: row.id,
-						name: row.name,
-						created_at: row.created_at,
-					});
-					map.set(row.mem_id, tags);
-				}
-				setMemTags(map);
-			})();
-		} else {
-			setMemTags(new Map());
-		}
-		setLoading(false);
-	};
-
-	const silentLoad = async () => {
-		const { items, meta } = await fetchAllMems(
-			params.sortField(),
-			params.sortDir(),
-			params.searchQuery(),
-			params.filterState(),
-			tagFilters(),
-			params.tagMode(),
-			params.page(),
-		);
-		setMems(items);
-		setPageMeta(meta);
-	};
-
-	// ── 初始化：如果有 detailId（URL 直达），加载对应页 ──
-	onMount(async () => {
-		const initId = detailId();
-		if (initId != null) {
-			// 直达模式：传递 id 给 API，后端自动定位页码
-			setLoading(true);
-			const { items, meta } = await fetchAllMems(
-				params.sortField(),
-				params.sortDir(),
-				params.searchQuery(),
-				params.filterState(),
-				tagFilters(),
-				params.tagMode(),
-				1,
-				initId,
-			);
-			setMems(items);
-			setPageMeta(meta);
-			if (items.length > 0) {
-				const result = await tryAsync(() =>
-					batchGetMemsTagsE(items.map((m) => m.id)),
-				);
-				if (result.ok) {
-					const map = new Map<number, TagInfo[]>();
-					for (const row of result.value.items) {
-						const tags = map.get(row.mem_id) ?? [];
-						tags.push({
-							id: row.id,
-							name: row.name,
-							created_at: row.created_at,
-						});
-						map.set(row.mem_id, tags);
-					}
-					setMemTags(map);
-				}
-			}
-			setLoading(false);
-			// 同步 URL page 参数为实际页码（router 内部状态一致，分页按钮才正确）
-			// 同步会触发一次 createEffect → 用 skipNextLoad 跳过重复加载
-			if (meta.page > 1 && params.page() !== meta.page) {
-				skipNextLoad = true;
-				params.setSearchParams({
-					page: String(meta.page),
-					id: String(initId),
-				});
-			}
-		} else {
-			await load();
-		}
-		initialLoadDone = true;
-	});
-
-	// ── 查询参数变化时重新加载（不监听 detailId） ──
+	// ── 列表标签批量填充 ──
 	createEffect(() => {
-		void params.searchQuery();
-		void params.filterState();
-		void params.sortField();
-		void params.sortDir();
-		void params.page();
-		void tagFilters();
-		void params.tagMode();
-		if (!initialLoadDone) return;
-		// 直达模式同步 URL 后跳过这次重复加载（数据已就绪）
-		if (skipNextLoad) {
-			skipNextLoad = false;
+		const items = mems();
+		if (items.length === 0) {
+			setMemTags(new Map());
 			return;
 		}
-		load();
+		void (async () => {
+			const result = await tryAsync(() =>
+				batchGetMemsTagsE(items.map((m) => m.id)),
+			);
+			if (!result.ok) return;
+			const map = new Map<number, TagInfo[]>();
+			for (const row of result.value.items) {
+				const tags = map.get(row.mem_id) ?? [];
+				tags.push({
+					id: row.id,
+					name: row.name,
+					created_at: row.created_at,
+				});
+				map.set(row.mem_id, tags);
+			}
+			setMemTags(map);
+		})();
 	});
 
-	// ── detailId 变化时加载详情标签 ──
+	// ── 详情标签补充 ──
 	createEffect(() => {
-		const id = detailId();
+		const id = params.detailId();
 		if (id === null) return;
-		(async () => {
+		void (async () => {
 			const result = await tryAsync(() => getMemTagsE(id));
 			if (!result.ok) return;
 			setMemTags((prev) => {
@@ -246,15 +210,16 @@ export function useMemManage() {
 		const ok = await tryOrNotify(() => deleteMemE(id), "删除");
 		if (!ok) return;
 
-		if (detailId() === id) setDetailId(null);
+		if (params.detailId() === id) params.setDetailId(null);
 		setBatchIds((prev) => {
 			const n = new Set(prev);
 			n.delete(id);
 			return n;
 		});
+		// 当前页删空且不在第一页 → 回退一页；否则静默刷新
 		if (mems().length <= 1 && params.page() > 1)
-			params.setSearchParams({ page: String(params.page() - 1) });
-		else silentLoad();
+			params.goToPage(params.page() - 1);
+		else void refetch();
 	};
 
 	const handleReset = async (id: number) => {
@@ -266,11 +231,11 @@ export function useMemManage() {
 		if (!confirmed) return;
 
 		await tryOrNotify(() => resetMemE(id), "重置");
-		load();
+		void refetch();
 	};
 
 	const addTag = async (tag: TagInfo) => {
-		const id = detailId();
+		const id = params.detailId();
 		if (id === null) return;
 		const ok = await tryOrNotify(() => addTagToMemE(id, tag.id), "添加标签");
 		if (!ok) return;
@@ -283,7 +248,7 @@ export function useMemManage() {
 	};
 
 	const removeTag = async (tagId: number) => {
-		const id = detailId();
+		const id = params.detailId();
 		if (id === null) return;
 		const ok = await tryOrNotify(
 			() => removeTagFromMemE(id, tagId),
@@ -300,22 +265,22 @@ export function useMemManage() {
 
 	// ── 编辑弹层 ──
 	const editHook = useMemEdit({
-		detailId,
+		detailId: params.detailId,
 		mems,
-		reload: load,
+		reload: () => refetch(),
 	});
 
 	// ── 批量操作 ──
 	const batchOps = useBatchOps({
 		selectedIds: () => [...batchIds()],
 		clearSelection: () => setBatchIds(new Set<number>()),
-		reload: load,
-		closeDetail: () => setDetailId(null),
+		reload: () => refetch(),
+		closeDetail: () => params.setDetailId(null),
 		closeTagModal: () => setShowBatchTagModal(false),
 	});
 
 	return {
-		// 查询参数（来自 params hook）
+		// 查询参数（来自 params hook，URL 唯一权威）
 		searchQuery: params.searchQuery,
 		filterState: params.filterState,
 		sortField: params.sortField,
@@ -323,9 +288,9 @@ export function useMemManage() {
 		page: params.page,
 		tagMode: params.tagMode,
 
-		// 详情状态（独立管理）
-		detailId,
-		setDetailId,
+		// 详情状态（URL ?id=）
+		detailId: params.detailId,
+		setDetailId: params.setDetailId,
 
 		// 标签过滤
 		tagFilters,
@@ -354,15 +319,11 @@ export function useMemManage() {
 		detail,
 		tagsForDetail,
 
-		// 搜索/排序/翻页
+		// 搜索/排序/翻页（换页时 params 内清除 id）
 		handleSearchInput: params.handleSearchInput,
 		setFilter: params.setFilter,
 		toggleSort: params.toggleSort,
-		goToPage: (p: number) => {
-			_setDetailId(null);
-			// 一次调用同时设置 page 并删除 id，避免 id 残留
-			params.setSearchParams({ page: String(p), id: undefined });
-		},
+		goToPage: params.goToPage,
 
 		// 操作
 		toggleBatch,

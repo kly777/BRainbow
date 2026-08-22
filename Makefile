@@ -1,5 +1,9 @@
 BUILD_DIR := build
 
+# 与 deploy.sh load_config 保持一致的后备值（.env.prod 可覆盖）
+REMOTE_BASE ?= /opt
+REMOTE_PORT ?= 22
+
 -include .env.prod
 
 time := $(shell date +%y%m%d_%H%M%S)
@@ -43,14 +47,23 @@ deploy: build
 	$(DEPLOY_SCRIPT) deploy
 
 # 仅部署前端（假设 build/ 已存在）
+# 目标必须是 SERVICE_DIR/dist（Caddy DIST_DIR 同源），否则同步到不服务的目录造成静默失败
 deploy-web: check-env
 	@[ -d "$(BUILD_DIR)/dist" ] || (echo "错误: 请先 make build"; exit 1)
-	echo "=== 仅部署前端 ==="
+	@if [ "$(BUILD_DIR)/dist/index.html" -ot web/dist/index.html ]; then \
+		echo "错误: build/dist 落后于 web/dist，请先 make build-web"; exit 1; fi
+	echo "=== 仅部署前端 -> $(REMOTE_BASE)/$(APP_NAME)/service/dist ==="
 	rsync -avz --delete -e "ssh -p $(REMOTE_PORT)" \
 		$(BUILD_DIR)/dist/ \
-		$(REMOTE_USER)@$(REMOTE_HOST):$(REMOTE_BASE)/$(APP_NAME)/dist/
-	ssh -p $(REMOTE_PORT) $(REMOTE_USER)@$(REMOTE_HOST) \
-		"sudo systemctl reload caddy 2>/dev/null || true"
+		$(REMOTE_USER)@$(REMOTE_HOST):$(REMOTE_BASE)/$(APP_NAME)/service/dist/
+	@echo "=== 校验远端与本地 index.html 一致 ==="
+	@remote_md5=$$(ssh -p $(REMOTE_PORT) $(REMOTE_USER)@$(REMOTE_HOST) \
+		"md5sum $(REMOTE_BASE)/$(APP_NAME)/service/dist/index.html" | awk '{print $$1}'); \
+	local_md5=$$(md5sum $(BUILD_DIR)/dist/index.html | awk '{print $$1}'); \
+	if [ "$$remote_md5" = "$$local_md5" ] && [ -n "$$remote_md5" ]; then \
+		echo "校验通过：远端与本地一致"; \
+	else \
+		echo "错误: 远端前端与本地不一致，部署疑似失败"; exit 1; fi
 
 # 仅部署后端（假设 build/ 已存在）
 deploy-backend: check-env
@@ -112,4 +125,5 @@ backup-prune:
 
 check-env:
 	@test -n "$(REMOTE_HOST)" || (echo "错误: .env.prod 未设置 REMOTE_HOST"; exit 1)
+	@test -n "$(REMOTE_USER)" || (echo "错误: .env.prod 未设置 REMOTE_USER"; exit 1)
 	@test -n "$(APP_NAME)"   || (echo "错误: .env.prod 未设置 APP_NAME"; exit 1)

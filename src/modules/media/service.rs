@@ -19,7 +19,9 @@ const ALLOWED_MIMES: &[(&str, &str, u64)] = &[
     ("image/jpeg", "image", 10_485_760),
     ("image/gif", "image", 10_485_760),
     ("image/webp", "image", 10_485_760),
-    ("image/svg+xml", "image", 10_485_760),
+    // "image/svg+xml" 不再声明：SVG 文本无固定 magic bytes，infer 推断不出、
+    // 与声明 MIME 一致性检查永远不过，属死选项（审计 B12）；存量 SVG 走
+    // octet-stream + attachment 已有缓解，服务端分支保留兼容旧数据
     ("image/bmp", "image", 10_485_760),
     ("image/tiff", "image", 10_485_760),
     ("video/mp4", "video", 209_715_200),

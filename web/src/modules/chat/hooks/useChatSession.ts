@@ -3,7 +3,6 @@
 // 两者差异（提示词、AI 输出处理）由各自页面的 hook 组合实现。
 
 import { parseUrlId } from "@lib/utils";
-import type { ChatNode } from "@modules/chat";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import type { ChatSessionOptions } from "./useChatSessionTypes.ts";
 import { useStreamChat } from "./useStreamChat.ts";

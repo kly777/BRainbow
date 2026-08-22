@@ -2,7 +2,6 @@
 // 从 useChatSession 拆分：流式调用、临时节点插入、rAF 节流、停止生成。
 
 import { getToken } from "@lib/api";
-import { notifyError } from "@lib/utils";
 import type { ChatNode, TreeDetail } from "@modules/chat";
 import { createSignal, onCleanup } from "solid-js";
 import { makeTempNode } from "./chat-tree.ts";

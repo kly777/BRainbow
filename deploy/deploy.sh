@@ -350,14 +350,35 @@ cmd_deploy() {
         exit 1
     fi
 
+    # D5：关键区（停服→就绪）中途失败自动恢复。ERR trap 不在显式 exit 时触发，
+    # 故备份体检等"有意中止"不受影响。恢复顺序：先尝试直接拉起（旧产物尚在时
+    # 即可恢复）；仍不健康则用本次部署前备份完整回滚；再失败给人工指引。
+    deploy_recover() {
+        local ts="$1"
+        log_warn "部署中途失败，尝试自动恢复..."
+        remote "sudo systemctl restart $APP_NAME 2>/dev/null || sudo systemctl start $APP_NAME" || true
+        if wait_for_ready; then
+            log_done "服务已用当前磁盘产物拉起（新版本可能异常，请查日志）"
+            exit 1
+        fi
+        if remote "[ -f '$BACKUP_DIR/code_${ts}.tar.gz' ]" 2>/dev/null; then
+            log_warn "当前产物无法启动，自动回滚到部署前备份 code_${ts}..."
+            cmd_rollback "code_${ts}" || true
+        else
+            log_error "无可用代码备份，请人工介入：make logs / make rollback"
+        fi
+        exit 1
+    }
+    local timestamp
+    timestamp=$(date -u +%Y%m%d_%H%M%S)
+    trap 'deploy_recover "$timestamp"' ERR
+
     # Step 1: 停止远程服务
     log_info "停止远程服务..."
     remote "sudo systemctl stop $APP_NAME 2>/dev/null || true"
     log_done "已停止"
 
-    # Step 2: 备份（数据库独立一致性备份 + 代码归档）
-    local timestamp
-    timestamp=$(date -u +%Y%m%d_%H%M%S)
+    # Step 2: 备份（数据库独立一致性备份 + 代码归档；timestamp 已在头部生成）
     log_info "备份当前版本..."
     remote "mkdir -p $BACKUP_DIR"
     # 备份前快速体检：坏库中止部署，避免覆盖/备份坏数据
@@ -412,8 +433,9 @@ cmd_deploy() {
     remote "sudo systemctl daemon-reload && sudo systemctl enable $APP_NAME && sudo systemctl start $APP_NAME"
     log_done "服务已启动"
 
-    # Step 8: 等待服务就绪
+    # Step 8: 等待服务就绪（超时触发 ERR trap 走自动恢复）
     wait_for_ready
+    trap - ERR
 
     # Step 8.5: 更新 SQLite 统计信息（失败不阻断部署）
     db_optimize || true

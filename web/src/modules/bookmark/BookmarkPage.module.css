@@ -1,4 +1,4 @@
-/* features/bookmark/BookmarkPage.css.ts — 由 vanilla-extract 迁移 */
+/* features/bookmark/BookmarkPage.css.ts — \u589E\u5F3A\u7248 */
 
 .page {
 	padding: var(--space-lg);
@@ -10,6 +10,14 @@
 	gap: var(--space-md);
 	margin-bottom: var(--space-lg);
 	flex-wrap: wrap;
+}
+
+.header h1 {
+	font-size: var(--text-xl);
+	font-weight: 700;
+	margin: 0;
+	flex: 1;
+	letter-spacing: -0.01em;
 }
 
 .state {
@@ -34,10 +42,17 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-sm);
-	padding: var(--space-xs) var(--space-sm);
-	border-radius: var(--radius-sm);
+	padding: var(--space-sm) var(--space-md);
+	border-radius: var(--radius-md);
 	min-width: 0;
-	transition: background var(--t-transition-fast);
+	transition:
+		background var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+}
+
+.item:hover {
+	background: var(--t-color-surface);
+	box-shadow: var(--shadow-sm);
 }
 
 .item-title {
@@ -50,6 +65,12 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	transition: color var(--t-transition-fast);
+}
+
+.item-title:hover {
+	color: var(--t-color-accent);
+	text-decoration: underline;
 }
 
 .item-url {
@@ -77,6 +98,12 @@
 	align-items: center;
 	gap: var(--space-2xs);
 	flex-shrink: 0;
+	opacity: 0;
+	transition: opacity var(--t-transition-fast);
+}
+
+.item:hover .item-actions {
+	opacity: 1;
 }
 
 .item-tags {
@@ -102,6 +129,12 @@
 	line-height: 1.125rem;
 	cursor: pointer;
 	flex-shrink: 0;
+	transition: background var(--t-transition-fast);
+}
+
+.item-tag:hover {
+	background: var(--t-color-accent);
+	color: var(--t-color-white);
 }
 
 .filter-bar {
@@ -138,9 +171,10 @@
 	background: var(--t-color-danger-subtle);
 	color: var(--t-color-danger);
 	padding: var(--space-sm) var(--space-md);
-	border-radius: var(--radius-sm);
+	border-radius: var(--radius-md);
 	margin-bottom: var(--space-md);
 	font-size: var(--text-sm);
+	border: 1px solid oklch(85% 0.06 25deg);
 }
 
 .form-group {
@@ -157,7 +191,7 @@
 .form-input {
 	width: 100%;
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
+	border-radius: var(--radius-md);
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	transition:
@@ -167,10 +201,16 @@
 	font-size: var(--text-base);
 }
 
+.form-input:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+}
+
 .form-textarea {
 	width: 100%;
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
+	border-radius: var(--radius-md);
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	transition:
@@ -181,23 +221,10 @@
 	font-size: var(--text-base);
 }
 
-.item:hover {
-	background: var(--t-color-bg);
-}
-
-.item-title:hover {
-	color: var(--t-color-accent);
-	text-decoration: underline;
-}
-
-.item-tag:hover {
-	text-decoration: underline;
-}
-
-.header h1 {
-	font-size: var(--text-xl);
-	margin: 0;
-	flex: 1;
+.form-textarea:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .item-actions button:last-child {

@@ -1,4 +1,4 @@
-/* OntologyList — 本体管理页（与全局页面容器/页头规范保持一致） */
+/* OntologyList — \u672C\u4F53\u7BA1\u7406\u9875\uFF08\u589E\u5F3A\u7248\uFF09 */
 
 .container {
 	margin: 0 auto;
@@ -22,8 +22,9 @@
 .header h1 {
 	margin: 0;
 	font-size: var(--text-xl);
-	font-weight: 600;
+	font-weight: 700;
 	color: var(--t-color-ink);
+	letter-spacing: -0.01em;
 }
 
 .actions {
@@ -46,7 +47,7 @@
 	min-width: 12rem;
 }
 
-/* 列表视图 */
+/* \u5217\u8868\u89C6\u56FE */
 .entities-list {
 	overflow-x: auto;
 	background: var(--t-color-surface);
@@ -80,11 +81,15 @@
 	border-bottom: none;
 }
 
+.entities-table tbody tr {
+	transition: background var(--t-transition-fast);
+}
+
 .entities-table tbody tr:hover {
 	background: var(--t-color-surface-raised);
 }
 
-/* 网格视图 */
+/* \u7F51\u683C\u89C6\u56FE */
 .entities-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
@@ -101,13 +106,15 @@
 	border-radius: var(--radius-lg);
 	box-shadow: var(--shadow-sm);
 	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
+		border-color var(--t-transition-normal),
+		box-shadow var(--t-transition-normal),
+		transform var(--t-transition-fast);
 }
 
 .entity-card:hover {
-	border-color: var(--t-color-border-strong);
+	border-color: var(--t-color-accent);
 	box-shadow: var(--shadow-md);
+	transform: translateY(-2px);
 }
 
 .entity-header {
@@ -157,12 +164,12 @@
 	margin: 0;
 }
 
-/* 创建弹层内的表单（与 Modal 共享组件配合） */
+/* \u521B\u5EFA\u5F39\u5C42\u5185\u7684\u8868\u5355\uFF08\u4E0E Modal \u5171\u4EAB\u7EC4\u4EF6\u914D\u5408\uFF09 */
 .form-error {
 	padding: var(--space-sm) var(--space-md);
 	background: var(--t-color-danger-subtle);
-	border: 1px solid var(--t-color-danger);
-	border-radius: var(--radius-sm);
+	border: 1px solid oklch(85% 0.06 25deg);
+	border-radius: var(--radius-md);
 	color: var(--t-color-danger);
 	font-size: var(--text-sm);
 	margin-bottom: var(--space-lg);
@@ -194,12 +201,21 @@
 	color: var(--t-color-ink);
 	background: var(--t-color-bg);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
-	transition: border-color var(--t-transition-fast);
+	border-radius: var(--radius-md);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 }
 
 .form-textarea {
 	resize: vertical;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 @media (width <= 768px) {

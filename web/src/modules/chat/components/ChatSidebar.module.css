@@ -1,6 +1,6 @@
-/* features/chat/components/ChatSidebar.module.css — 对话侧边栏 */
+/* features/chat/components/ChatSidebar.module.css — \u5BF9\u8BDD\u4FA7\u8FB9\u680F\uFF08\u589E\u5F3A\u7248\uFF09 */
 
-/* ── 侧边栏 ── */
+/* ── \u4FA7\u8FB9\u680F ── */
 
 .sidebar {
 	width: 260px;
@@ -21,7 +21,7 @@
 	transition: width var(--t-transition-normal);
 }
 
-/* 折叠按钮：位于对话区左上角，贴侧边栏右边框 */
+/* \u6298\u53E0\u6309\u94AE\uFF1A\u4F4D\u4E8E\u5BF9\u8BDD\u533A\u5DE6\u4E0A\u89D2\uFF0C\u8D34\u4FA7\u8FB9\u680F\u53F3\u8FB9\u6846 */
 .sidebar-toggle {
 	position: absolute;
 	left: var(--space-sm);
@@ -41,12 +41,14 @@
 	line-height: 1;
 	transition:
 		background var(--t-transition-fast),
-		color var(--t-transition-fast);
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 }
 
 .sidebar-toggle:hover {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
+	border-color: var(--t-color-border-strong);
 }
 
 .sidebar-head {
@@ -70,6 +72,7 @@
 	color: var(--t-color-ink-muted);
 	text-decoration: none;
 	white-space: nowrap;
+	transition: color var(--t-transition-fast);
 }
 
 .sidebar-back-link:hover {
@@ -111,6 +114,7 @@
 .new-btn:hover {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
+	border-color: var(--t-color-border-strong);
 }
 
 .new-btn:disabled {

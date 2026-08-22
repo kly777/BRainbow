@@ -28,7 +28,7 @@ export interface MediaItem {
 
 // ── API ──
 
-/** 上传媒体文件 */
+/** 上传媒体文件（成功后失效媒体列表缓存，否则 30-60s 内看不到新条目） */
 export const uploadMedia = async (file: File): Promise<MediaItem> => {
 	const formData = new FormData();
 	formData.append("file", file);
@@ -37,7 +37,7 @@ export const uploadMedia = async (file: File): Promise<MediaItem> => {
 		body: formData,
 		// 大文件上传不做 15s 默认超时
 		timeout: false,
-	});
+	}).then((r) => tapInvalidate(CACHE.media, r));
 };
 
 /** 媒体列表（缓存 30 秒） */

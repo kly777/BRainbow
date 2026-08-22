@@ -57,6 +57,8 @@ export function useTreeList(opts: ChatSessionOptions) {
 	const loadTree = async (id: number) => {
 		const result = await tryAsync(() => getTreeE(id));
 		if (!result.ok) return;
+		// 时效守卫：请求期间用户已切换会话，晚到响应不得覆盖新树（审计 F3）
+		if (treeId() !== id) return;
 		setCurrent(result.value);
 		if (nodeId() === null && result.value.nodes.length > 0) {
 			const last = result.value.nodes[result.value.nodes.length - 1].id;

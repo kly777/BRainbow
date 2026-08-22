@@ -120,8 +120,13 @@ export function useStreamChat(opts: UseStreamChatOpts) {
 			);
 
 			if (result.ok || controller.signal.aborted) {
-				await opts.loadTree(id);
-				if (needsTitle && tree) void opts.aiTitleSession(id, true);
+				// 流式期间用户可能已切到其他会话：此时不回拉旧树，
+				// 避免界面被拽回发起时会话（审计 F3；数据本身已落库，
+				// 切回时 createEffect 会重新加载）
+				if (opts.treeId() === id) {
+					await opts.loadTree(id);
+					if (needsTitle && tree) void opts.aiTitleSession(id, true);
+				}
 				return { ok: true, error: "" };
 			}
 			rollback();

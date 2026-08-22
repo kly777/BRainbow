@@ -55,6 +55,13 @@
 
 	/* ── 焦点环令牌（输入框 focus ring；由 tokens.css 全局规则消费） ── */
 	--t-focus-ring: 0 0 0 var(--space-2xs) var(--t-color-accent-soft);
+
+	/* ── 动画令牌（入场/微交互统一缓动） ── */
+	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+	--duration-fade-in: 400ms;
+	--duration-slide-up: 500ms;
+	--duration-scale-in: 350ms;
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -278,4 +285,72 @@ Add the correct display in Chrome and Safari.
 
 summary {
 	display: list-item;
+}
+
+/* ════════════════════════════════════════════════════════════════
+ * 全局入场动画（供组件 CSS animation 属性引用）
+ * ════════════════════════════════════════════════════════════════ */
+
+@keyframes fadeIn {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+	from {
+		opacity: 0;
+		transform: translateY(0.75rem);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes fadeInScale {
+	from {
+		opacity: 0;
+		transform: scale(0.92);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes slideInRight {
+	from {
+		opacity: 0;
+		transform: translateX(1rem);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@keyframes slideInDown {
+	from {
+		opacity: 0;
+		transform: translateY(-0.5rem);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes shimmer {
+	0% { background-position: -200% 0; }
+	100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-soft {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.6; }
+}
+
+/* ── 页面容器入场（Layout 内容区） ── */
+.content > * {
+	animation: fadeInUp var(--duration-slide-up) var(--ease-out-expo) both;
 }

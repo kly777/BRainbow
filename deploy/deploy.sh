@@ -22,7 +22,7 @@
 #   SERVICE_PORT, BIND_HOST, DATABASE_FILE, CORS_ALLOW_ORIGIN,
 #   BACKUP_RETAIN_DAYS, BACKUP_RETAIN_COUNT
 # ============================================================================
-set -euo pipefail
+set -Eeuo pipefail  # -E：ERR trap 传入函数，cmd_deploy 内失败才触发 deploy_recover（D5）
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -471,7 +471,8 @@ setup_systemd() {
         "$PROJECT_DIR/deploy/brainbow.service" > /tmp/brainbow.service
     scp -q -P "$REMOTE_PORT" /tmp/brainbow.service "$REMOTE_USER@$REMOTE_HOST:/tmp/brainbow.service"
     # unit 内含 JWT_SECRET：限 root 可读；并清理远端 /tmp 明文残留（审计 D7）
-    remote "sudo tee /etc/systemd/system/$APP_NAME.service < /tmp/brainbow.service > /dev/null && \\\n        sudo chmod 600 /etc/systemd/system/$APP_NAME.service && rm -f /tmp/brainbow.service"
+    # 注意：串内不得出现字面 \\n——远端 bash 会把 \\n 当命令名执行（127）
+    remote "sudo tee /etc/systemd/system/$APP_NAME.service < /tmp/brainbow.service > /dev/null && sudo chmod 600 /etc/systemd/system/$APP_NAME.service && rm -f /tmp/brainbow.service"
     rm -f /tmp/brainbow.service
 }
 

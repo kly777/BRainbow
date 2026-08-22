@@ -1,4 +1,4 @@
-/* features/card/ui/CardFilter.css.ts — 由 vanilla-extract 迁移 */
+/* features/card/ui/CardFilter.css.ts — 增强版 */
 
 .filters {
 	background: var(--t-color-surface);
@@ -38,6 +38,15 @@
 	outline: none;
 }
 
+.search-input::placeholder {
+	color: var(--t-color-ink-faint);
+}
+
+.search-input:focus {
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+}
+
 .filter-label {
 	font-size: var(--text-sm);
 	font-weight: 500;
@@ -55,6 +64,14 @@
 	cursor: pointer;
 	min-width: 120px;
 	outline: none;
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+}
+
+.filter-select:focus {
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .sort-button {
@@ -67,6 +84,11 @@
 	cursor: pointer;
 	transition: all var(--t-transition-fast) ease;
 	min-width: 40px;
+}
+
+.sort-button:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
 }
 
 .clear-button {
@@ -82,41 +104,6 @@
 	flex-shrink: 0;
 }
 
-@media (width <= 480px) {
-	.filters {
-		padding: var(--space-md);
-	}
-}
-
-.search-input::placeholder {
-	color: var(--t-color-ink-faint);
-}
-
-@media (width <= 480px) {
-	.search-input {
-		font-size: var(--text-lg);
-		padding: var(--space-sm) var(--space-lg);
-	}
-}
-
-@media (width <= 768px) {
-	.filter-select {
-		width: 100%;
-	}
-}
-
-.sort-button:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
-
-@media (width <= 480px) {
-	.sort-button {
-		flex: 1;
-		text-align: center;
-	}
-}
-
 .clear-button:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
@@ -125,4 +112,27 @@
 .clear-button:hover:not(:disabled) {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
+}
+
+/* 响应式 */
+@media (width <= 768px) {
+	.filter-select {
+		width: 100%;
+	}
+}
+
+@media (width <= 480px) {
+	.filters {
+		padding: var(--space-md);
+	}
+
+	.search-input {
+		font-size: var(--text-lg);
+		padding: var(--space-sm) var(--space-lg);
+	}
+
+	.sort-button {
+		flex: 1;
+		text-align: center;
+	}
 }

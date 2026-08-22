@@ -1,4 +1,4 @@
-/* features/mem/ui/ContextBar.css.ts — 由 vanilla-extract 迁移 */
+/* features/mem/ui/ContextBar.css.ts — 增强版 */
 
 .btn-ghost {
 	font-size: var(--text-sm);
@@ -35,12 +35,13 @@
 	font-weight: 500;
 	transition:
 		background var(--t-transition-fast),
-		color var(--t-transition-fast),
-		border-color var(--t-transition-fast);
+		box-shadow var(--t-transition-fast);
+	box-shadow: 0 1px 3px oklch(50% 0.08 165deg / 20%);
 }
 
 .btn-primary:hover {
 	background: var(--t-color-accent-strong);
+	box-shadow: 0 2px 8px oklch(50% 0.08 165deg / 30%);
 }
 
 .btn-primary:disabled {
@@ -53,7 +54,7 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: var(--space-lg);
-	padding: var(--space-xs) var(--space-xl);
+	padding: var(--space-sm) var(--space-xl);
 	border-bottom: 1px solid var(--t-color-border);
 	background: var(--t-color-surface);
 	flex-shrink: 0;
@@ -80,14 +81,13 @@
 	gap: var(--space-xs);
 }
 
+/* 响应式 */
 @media (width <= 600px) {
 	.context-bar {
 		padding-left: var(--space-md);
 		padding-right: var(--space-md);
 	}
-}
 
-@media (width <= 600px) {
 	.btn-ghost,
 	.btn-primary {
 		padding: 0 var(--space-md);

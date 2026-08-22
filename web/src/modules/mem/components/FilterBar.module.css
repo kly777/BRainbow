@@ -1,11 +1,11 @@
-/* features/mem/ui/FilterBar.css.ts — 由 vanilla-extract 迁移 */
+/* features/mem/ui/FilterBar.css.ts — 增强版 */
 
 .filter-bar {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	gap: var(--space-xs);
-	padding: var(--space-xs) var(--space-xl);
+	padding: var(--space-sm) var(--space-xl);
 	border-bottom: 1px solid var(--t-color-border);
 	background: var(--t-color-surface);
 	flex-shrink: 0;
@@ -15,11 +15,21 @@
 	font-size: var(--text-xs);
 	font-family: var(--t-font-mono);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
+	border-radius: var(--radius-md);
 	background: transparent;
 	color: var(--t-color-ink-muted);
 	padding: var(--space-2xs) var(--space-sm);
 	cursor: pointer;
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
+}
+
+.tag-mode-btn:hover {
+	color: var(--t-color-ink);
+	background: var(--t-color-surface-raised);
+	border-color: var(--t-color-border-strong);
 }
 
 .tag-chip-active {
@@ -33,6 +43,11 @@
 	gap: var(--space-xs);
 	background: var(--t-color-badge-new-bg);
 	color: var(--t-color-badge-new-text);
+	transition: filter var(--t-transition-fast);
+}
+
+.tag-chip-active:hover {
+	filter: brightness(0.95);
 }
 
 .tag-chip-excluded {
@@ -46,6 +61,11 @@
 	gap: var(--space-xs);
 	background: var(--t-color-badge-suspended-bg);
 	color: var(--t-color-badge-suspended-text);
+	transition: filter var(--t-transition-fast);
+}
+
+.tag-chip-excluded:hover {
+	filter: brightness(0.95);
 }
 
 .tag-clear {
@@ -56,6 +76,11 @@
 	color: inherit;
 	padding: 0;
 	opacity: 0.6;
+	transition: opacity var(--t-transition-fast);
+}
+
+.tag-clear:hover {
+	opacity: 1;
 }
 
 .tag-clear-all {
@@ -65,6 +90,11 @@
 	color: var(--t-color-ink-faint);
 	cursor: pointer;
 	padding: var(--space-2xs) var(--space-sm);
+	transition: color var(--t-transition-fast);
+}
+
+.tag-clear-all:hover {
+	color: var(--t-color-ink);
 }
 
 .tag-search-input {
@@ -72,10 +102,23 @@
 	min-width: 120px;
 	font-size: var(--text-xs);
 	border: 1px solid transparent;
-	border-radius: var(--radius-sm);
+	border-radius: var(--radius-md);
 	background: transparent;
 	color: var(--t-color-ink);
 	padding: var(--space-2xs) var(--space-sm);
+	transition:
+		border-color var(--t-transition-fast),
+		background var(--t-transition-fast);
+}
+
+.tag-search-input::placeholder {
+	color: var(--t-color-ink-faint);
+}
+
+.tag-search-input:focus {
+	border-color: var(--t-color-accent);
+	background: var(--t-color-surface);
+	outline: none;
 }
 
 .tag-dropdown {
@@ -85,9 +128,9 @@
 	right: 1.25rem;
 	z-index: var(--z-dropdown);
 	background: var(--t-color-surface);
-	border: 1px solid var(--t-color-border);
+	border: 1px solid var(--t-color-border-strong);
 	border-radius: var(--radius-md);
-	box-shadow: var(--shadow-md);
+	box-shadow: var(--shadow-lg);
 	max-height: 12.5rem;
 	overflow-y: auto;
 }
@@ -102,37 +145,17 @@
 	background: none;
 	cursor: pointer;
 	color: var(--t-color-ink);
+	transition: background var(--t-transition-fast);
 }
 
+.tag-option:hover {
+	background: var(--t-color-surface-raised);
+}
+
+/* 响应式 */
 @media (width <= 600px) {
 	.filter-bar {
 		padding-left: var(--space-md);
 		padding-right: var(--space-md);
 	}
-}
-
-.tag-mode-btn:hover {
-	color: var(--t-color-ink);
-	background: var(--t-color-surface-raised);
-}
-
-.tag-clear:hover {
-	opacity: 1;
-}
-
-.tag-clear-all:hover {
-	color: var(--t-color-ink);
-}
-
-.tag-search-input::placeholder {
-	color: var(--t-color-ink-faint);
-}
-
-.tag-search-input:focus {
-	border-color: var(--t-color-border-strong);
-	background: var(--t-color-surface-raised);
-}
-
-.tag-option:hover {
-	background: var(--t-color-surface-raised);
 }

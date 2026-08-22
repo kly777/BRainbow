@@ -370,6 +370,30 @@ summary {
 	}
 }
 
+/* ── 骨架屏动画 ── */
+@keyframes skeleton-pulse {
+	0%,
+	100% {
+		opacity: 0.4;
+	}
+
+	50% {
+		opacity: 0.8;
+	}
+}
+
+.skeleton {
+	background: linear-gradient(
+		90deg,
+		var(--t-color-surface-raised) 25%,
+		var(--t-color-surface) 50%,
+		var(--t-color-surface-raised) 75%
+	);
+	background-size: 200% 100%;
+	animation: skeleton-pulse 1.5s ease-in-out infinite;
+	border-radius: var(--radius-md);
+}
+
 /* ── 页面容器入场（Layout 内容区） ── */
 .content > * {
 	animation: fade-in-up var(--duration-slide-up) var(--ease-out-expo) both;

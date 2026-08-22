@@ -1,4 +1,4 @@
-/* features/mem/ui/ManageTable.css.ts — 由 vanilla-extract 迁移 */
+/* features/mem/ui/ManageTable.css.ts — 增强版 */
 
 .page-btn {
 	font-size: var(--text-lg);
@@ -61,6 +61,11 @@
 .th-sort {
 	cursor: pointer;
 	user-select: none;
+	transition: color var(--t-transition-fast);
+}
+
+.th-sort:hover {
+	color: var(--t-color-ink);
 }
 
 .th-cb {
@@ -107,7 +112,15 @@
 	transition: background var(--t-transition-fast);
 }
 
+.row:hover {
+	background: var(--t-color-surface-raised);
+}
+
 .row-active {
+	background: var(--t-color-accent-soft);
+}
+
+.row-active:hover {
 	background: var(--t-color-accent-soft);
 }
 
@@ -134,6 +147,14 @@
 	font-size: var(--text-xs);
 	padding: var(--space-2xs) var(--space-xs);
 	border-radius: var(--radius-xs);
+	transition:
+		color var(--t-transition-fast),
+		background var(--t-transition-fast);
+}
+
+.del-btn:hover {
+	color: var(--t-color-danger);
+	background: var(--t-color-danger-subtle);
 }
 
 .cell-button {
@@ -173,23 +194,7 @@
 	font-size: var(--text-sm);
 }
 
-.th-sort:hover {
-	color: var(--t-color-ink);
-}
-
-.row:hover {
-	background: var(--t-color-bg);
-}
-
-.row-active:hover {
-	background: var(--t-color-accent-soft);
-}
-
-.del-btn:hover {
-	color: var(--t-color-danger);
-	background: var(--t-color-danger-subtle);
-}
-
+/* 响应式 */
 @media (width <= 600px) {
 	.page-btn {
 		font-size: var(--text-base);

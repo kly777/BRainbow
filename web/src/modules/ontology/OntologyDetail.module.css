@@ -1,4 +1,4 @@
-/* OntologyDetail — 本体详情页 */
+/* OntologyDetail — 本体详情页（增强版） */
 
 .container {
 	margin: 0 auto;
@@ -14,8 +14,9 @@
 .card {
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-lg);
-	padding: var(--space-lg);
+	border-radius: var(--radius-xl);
+	padding: var(--space-xl);
+	box-shadow: var(--shadow-sm);
 }
 
 .head {
@@ -28,9 +29,10 @@
 .title {
 	margin: 0;
 	font-size: var(--text-xl);
-	font-weight: 600;
+	font-weight: 700;
 	color: var(--t-color-ink);
 	overflow-wrap: anywhere;
+	letter-spacing: -0.01em;
 }
 
 .meta {
@@ -51,12 +53,13 @@
 .form {
 	display: flex;
 	flex-direction: column;
-	gap: var(--space-xs);
+	gap: var(--space-sm);
 }
 
 .label {
-	font-size: var(--text-xs);
+	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
+	font-weight: 500;
 }
 
 .input,
@@ -64,8 +67,8 @@
 	width: 100%;
 	padding: var(--space-sm) var(--space-md);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
-	background: var(--t-color-surface);
+	border-radius: var(--radius-md);
+	background: var(--t-color-bg);
 	color: var(--t-color-ink);
 	font-size: var(--text-sm);
 	transition:
@@ -81,7 +84,7 @@
 .textarea:focus {
 	outline: none;
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 var(--space-2xs) var(--t-color-accent-soft);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .form-actions {

@@ -1,4 +1,4 @@
-/* TaskDetail — 任务详情页 */
+/* TaskDetail — 任务详情页（增强版） */
 
 .container {
 	margin: 0 auto;
@@ -14,11 +14,12 @@
 .card {
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-lg);
-	padding: var(--space-lg);
+	border-radius: var(--radius-xl);
+	padding: var(--space-xl);
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-md);
+	box-shadow: var(--shadow-sm);
 }
 
 .head {
@@ -31,9 +32,10 @@
 .title {
 	margin: 0;
 	font-size: var(--text-xl);
-	font-weight: 600;
+	font-weight: 700;
 	color: var(--t-color-ink);
 	overflow-wrap: anywhere;
+	letter-spacing: -0.01em;
 }
 
 .status {
@@ -43,6 +45,7 @@
 	border-radius: var(--radius-full);
 	padding: var(--space-2xs) var(--space-sm);
 	white-space: nowrap;
+	font-weight: 500;
 }
 
 .description {
@@ -107,11 +110,15 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	transition:
+		border-color var(--t-transition-fast),
+		background var(--t-transition-fast);
 }
 
 .chip:hover {
 	border-color: var(--t-color-accent);
 	background: var(--t-color-accent-soft);
+	text-decoration: none;
 }
 
 .meta-text {

@@ -1,4 +1,4 @@
-/* ── 管理员设置页 ── */
+/* 管理员设置页（增强版） */
 
 .page {
 	max-width: var(--page-narrow-max);
@@ -13,6 +13,7 @@
 	font-size: var(--text-xl);
 	font-weight: 700;
 	margin: 0;
+	letter-spacing: -0.01em;
 }
 
 .forbidden {
@@ -44,6 +45,11 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-sm);
+	transition: box-shadow var(--t-transition-normal);
+}
+
+.card:hover {
+	box-shadow: var(--shadow-sm);
 }
 
 .card-head {
@@ -135,4 +141,5 @@
 .rotate-btn:hover:not(:disabled) {
 	background: var(--t-color-danger);
 	color: var(--t-color-white);
+	box-shadow: 0 2px 8px oklch(55% 0.16 25deg / 20%);
 }

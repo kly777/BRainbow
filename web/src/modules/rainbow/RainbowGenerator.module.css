@@ -1,4 +1,4 @@
-/* pages/RainbowGenerator.css.ts — 由 vanilla-extract 迁移 */
+/* pages/RainbowGenerator.css.ts — 增强版 */
 
 .page {
 	display: flex;
@@ -23,7 +23,7 @@
 	justify-content: center;
 	padding: var(--space-lg);
 	background: var(--t-color-surface-raised);
-	border-radius: var(--radius-lg);
+	border-radius: var(--radius-xl);
 	border: 1px solid var(--t-color-border);
 }
 
@@ -50,27 +50,14 @@
 	color: var(--t-color-ink-muted);
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
+	border-radius: var(--radius-lg);
 	padding: var(--space-md) var(--space-lg);
-}
-
-@media (width <= 480px) {
-	.page {
-		padding: var(--space-md);
-		gap: var(--space-md);
-	}
-}
-
-@media (width <= 480px) {
-	.controls {
-		min-width: 0;
-		flex-basis: 100%;
-	}
 }
 
 .stats h3 {
 	margin: 0 0 var(--space-sm) 0;
 	font-size: var(--text-base);
+	font-weight: 600;
 	color: var(--t-color-ink);
 }
 
@@ -90,6 +77,19 @@
 
 .stats td:last-child {
 	text-align: right;
-	font-family: monospace;
+	font-family: var(--t-font-mono);
 	color: var(--t-color-ink);
+}
+
+/* 响应式 */
+@media (width <= 480px) {
+	.page {
+		padding: var(--space-md);
+		gap: var(--space-md);
+	}
+
+	.controls {
+		min-width: 0;
+		flex-basis: 100%;
+	}
 }

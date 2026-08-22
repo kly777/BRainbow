@@ -463,6 +463,20 @@ pub async fn review_mem(
     Extension(claims): Extension<Claims>,
     Json(body): Json<ReviewRequest>,
 ) -> impl IntoResponse {
+    // 审计 B9：rating 限 1..=4；duration 拒绝 NaN/负数并封顶一天，
+    // 防止污染 FSRS 统计（fsrs 兜底臂会把越界值全按 Easy 处理还清零 lapses）
+    if !(1..=4).contains(&body.rating) {
+        return crate::shared::error_types::ServiceError::InvalidInput(
+            "rating 必须在 1-4 之间".into(),
+        )
+        .into_response();
+    }
+    if !body.duration_secs.is_finite() || !(0.0..=86_400.0).contains(&body.duration_secs) {
+        return crate::shared::error_types::ServiceError::InvalidInput(
+            "duration_secs 必须在 0-86400 秒之间".into(),
+        )
+        .into_response();
+    }
     let svc = &service;
     match svc
         .review(claims.sub, id, body.rating, body.duration_secs)

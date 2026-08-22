@@ -138,6 +138,11 @@ impl BookmarkService {
         let mut merged = 0u64;
 
         for item in parsed {
+            // 导入源可能不可信（他人分享的导出文件）：与 create/update 一致只允许 http(s)，
+            // 防止 javascript: 等危险 scheme 经前端 <a href> 渲染成存储型 XSS（审计 B3）
+            if validate_url(&item.url).is_err() {
+                continue;
+            }
             let tags: Vec<String> = item
                 .folder_path
                 .iter()
@@ -313,6 +318,23 @@ mod tests {
         let (items, total) = qsvc.search(1, "rust", Some("不存在"), 10, 0).await.unwrap();
         assert_eq!(total, 0);
         assert!(items.is_empty());
+    }
+
+    #[tokio::test]
+    async fn import_skips_non_http_schemes() {
+        let (svc, qsvc) = setup().await;
+        let html = r#"<DL><p>
+<DT><A HREF="javascript:alert(1)">bad</A>
+<DT><A HREF="https://example.com/a">good</A>
+</DL><p>"#;
+
+        let result = svc.import_netscape_html(1, html).await.unwrap();
+        assert_eq!(result.created, 1);
+
+        // 危险 scheme 不入库
+        let (items, total) = qsvc.list(1, 10, 0, None).await.unwrap();
+        assert_eq!(total, 1);
+        assert_eq!(items[0].url, "https://example.com/a");
     }
 
     #[tokio::test]

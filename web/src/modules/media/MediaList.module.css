@@ -1,4 +1,4 @@
-/* pages/media/MediaList.css.ts — 由 vanilla-extract 迁移 */
+/* pages/media/MediaList.css.ts — \u589E\u5F3A\u7248 */
 
 .page {
 	max-width: var(--page-max);
@@ -11,6 +11,7 @@
 	font-weight: 700;
 	color: var(--t-color-ink);
 	margin: 0 0 var(--space-xl) 0;
+	letter-spacing: -0.01em;
 }
 
 .grid {
@@ -21,11 +22,21 @@
 
 .card {
 	background: var(--t-color-surface);
-	border-radius: var(--radius-md);
+	border-radius: var(--radius-lg);
 	border: 1px solid var(--t-color-border);
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
+	transition:
+		border-color var(--t-transition-normal),
+		box-shadow var(--t-transition-normal),
+		transform var(--t-transition-fast);
+}
+
+.card:hover {
+	border-color: var(--t-color-border-strong);
+	box-shadow: var(--shadow-md);
+	transform: translateY(-2px);
 }
 
 .preview {
@@ -63,7 +74,7 @@
 
 .name {
 	font-size: var(--text-sm);
-	font-weight: 500;
+	font-weight: 600;
 	color: var(--t-color-ink);
 	margin: 0 0 var(--space-xs) 0;
 	overflow: hidden;
@@ -95,7 +106,7 @@
 	width: 100%;
 	margin-bottom: var(--space-xs);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
+	border-radius: var(--radius-md);
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	transition:
@@ -106,6 +117,12 @@
 	font-family: inherit;
 	outline: none;
 	box-sizing: border-box;
+}
+
+.edit-input:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .error {

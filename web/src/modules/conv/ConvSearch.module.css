@@ -1,10 +1,10 @@
-/* features/conv/ConvSearch.css.ts — 由 vanilla-extract 迁移 */
+/* features/conv/ConvSearch.css.ts — \u589E\u5F3A\u7248 */
 
 .page {
 	max-width: 800px;
 	margin: 0 auto;
 	padding: 0;
-	animation: fade-in 0.2s ease-out;
+	animation: fade-in 200ms ease-out;
 }
 
 .top-bar {
@@ -21,10 +21,16 @@
 	text-decoration: none;
 	font-weight: 500;
 	white-space: nowrap;
+	transition: color var(--t-transition-fast);
+}
+
+.back-link:hover {
+	text-decoration: underline;
 }
 
 .title {
 	font-size: var(--text-lg);
+	font-weight: 600;
 	color: var(--t-color-ink);
 	margin: 0;
 }
@@ -58,6 +64,14 @@
 	cursor: pointer;
 	border-radius: var(--radius-md) var(--radius-md) 0 0;
 	border-bottom: none;
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
+}
+
+.tab:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
 }
 
 .tab-active {
@@ -94,6 +108,11 @@
 	outline: none;
 }
 
+.input:focus {
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+}
+
 .clear-btn {
 	position: absolute;
 	right: 0.5rem;
@@ -114,6 +133,10 @@
 	transition: opacity var(--t-transition-fast);
 }
 
+.clear-btn:hover {
+	opacity: 1;
+}
+
 .btn {
 	padding: var(--space-md) var(--space-xl);
 	font-size: var(--text-base);
@@ -123,6 +146,15 @@
 	color: var(--t-color-white);
 	cursor: pointer;
 	font-weight: 500;
+	transition:
+		background var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+	box-shadow: 0 2px 8px oklch(50% 0.08 165deg / 20%);
+}
+
+.btn:hover {
+	opacity: 0.9;
+	box-shadow: 0 4px 12px oklch(50% 0.08 165deg / 30%);
 }
 
 .summary {
@@ -159,10 +191,20 @@
 	border-radius: var(--radius-md);
 	background: var(--t-color-surface);
 	cursor: pointer;
-	transition: box-shadow var(--t-transition-fast);
+	transition:
+		box-shadow var(--t-transition-normal),
+		border-color var(--t-transition-fast),
+		transform var(--t-transition-fast);
 	text-decoration: none;
 	display: block;
 	color: inherit;
+}
+
+.item:hover {
+	box-shadow: var(--shadow-md);
+	border-color: var(--t-color-accent);
+	transform: translateY(-1px);
+	text-decoration: none;
 }
 
 .item-top {
@@ -221,26 +263,6 @@
 	color: var(--t-color-ink-muted);
 	padding: var(--space-xl);
 	font-size: var(--text-base);
-}
-
-.back-link:hover {
-	text-decoration: underline;
-}
-
-.tab:hover {
-	background: var(--t-color-bg);
-}
-
-.clear-btn:hover {
-	opacity: 1;
-}
-
-.btn:hover {
-	opacity: 0.9;
-}
-
-.item:hover {
-	box-shadow: var(--shadow-md);
 }
 
 .error-msg {

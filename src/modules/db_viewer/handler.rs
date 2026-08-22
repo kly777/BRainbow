@@ -241,12 +241,14 @@ pub async fn get_table_backrefs(
     error::ok_or(result, "获取反向引用")
 }
 
-/// CSV 字段转义：逗号/引号/换行出现时加引号，并把内部 `"` 翻倍。
+/// CSV 字段转义：逗号/引号/换行出现时加引号，并把内部 `"` 翻倍；
+/// 公式危险前缀先经 shared::csv 中和（审计 B8）。
 fn csv_escape(value: &str) -> String {
+    let value = crate::shared::csv::sanitize_cell(value);
     if value.contains(',') || value.contains('"') || value.contains('\n') || value.contains('\r') {
         format!("\"{}\"", value.replace('"', "\"\""))
     } else {
-        value.to_string()
+        value
     }
 }
 

@@ -222,8 +222,13 @@ impl MemQueryService {
             .map_err(|e| ServiceError::Internal(e.to_string()))?;
 
         for (cue, target, tags) in &rows {
-            wtr.write_record([cue, target, tags])
-                .map_err(|e| ServiceError::Internal(e.to_string()))?;
+            // 防公式注入：= + - @ 等前缀补 '（审计 B8，见 shared::csv）
+            wtr.write_record([
+                crate::shared::csv::sanitize_cell(cue),
+                crate::shared::csv::sanitize_cell(target),
+                crate::shared::csv::sanitize_cell(tags),
+            ])
+            .map_err(|e| ServiceError::Internal(e.to_string()))?;
         }
 
         wtr.flush()

@@ -7,6 +7,7 @@
 pub mod batch;
 pub mod claims;
 pub mod config;
+pub mod csv;
 pub mod db_query;
 pub mod error_types;
 pub mod jwt;

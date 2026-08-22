@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	buildCacheKey,
 	cacheSize,
@@ -61,5 +61,88 @@ describe("cache", () => {
 		expect(readCache("GET /page/9")).toBeNull();
 		expect(readCache("GET /page/10")).toBe(10);
 		expect(readCache("GET /page/209")).toBe(209);
+	});
+});
+
+// ── CACHE 正则边界与写路径配对（测试覆盖扩充）──
+
+import { CACHE, cachedRequest, tapInvalidate } from "./cache.ts";
+import { request } from "./request.ts";
+
+vi.mock("./request.ts", () => ({ request: vi.fn() }));
+const mockedRequest = vi.mocked(request);
+
+// 每个域：[正则, 本域真实端点样例（含子路径与查询串）, 真正易混淆的他域端点]。
+// 注意：前缀命中子路径（/cards 命中 /cards/9）是失效语义的预期行为，
+// 这里只验证不会越界到"同域易混淆"的端点。
+describe("CACHE 预定义正则边界", () => {
+	const cases: [RegExp, string, string[]][] = [
+		[CACHE.cards, "/cards?page=1&size=20", ["/card/5"]],
+		[CACHE.bookmarks, "/bookmarks?tag=3", []],
+		[CACHE.tasks, "/tasks/5/children", ["/time-windows"]],
+		[CACHE.timeWindows, "/time-windows?from=1", ["/text/1"]],
+		[CACHE.text, "/text/42", ["/time-windows"]],
+		[CACHE.media, "/media/7/file", ["/mem/due"]],
+		[CACHE.mem, "/mem/due?limit=10", ["/media/list"]],
+		[CACHE.onto, "/onto/tree/3", []],
+		[CACHE.sign, "/sign/pairs?tag=1", ["/search?q=x"]],
+		[CACHE.db, "/db/tables", []],
+	];
+
+	it.each(cases)("%# 命中本域、不越界到易混淆端点", (re, own, foreign) => {
+		expect(re.test(buildCacheKey("GET", own))).toBe(true);
+		for (const f of foreign) {
+			expect(re.test(buildCacheKey("GET", f))).toBe(false);
+		}
+	});
+
+	it("失效正则只清本域，他域缓存保留", () => {
+		writeCache(buildCacheKey("GET", "/cards"), [{ id: 1 }]);
+		writeCache(buildCacheKey("GET", "/mem/due"), []);
+		invalidateCache(CACHE.cards);
+		expect(readCache(buildCacheKey("GET", "/cards"))).toBeNull();
+		expect(readCache(buildCacheKey("GET", "/mem/due"))).toEqual([]);
+	});
+});
+
+describe("tapInvalidate 写路径配对", () => {
+	it("失效后透传原结果引用", () => {
+		writeCache(buildCacheKey("GET", "/cards"), "旧数据");
+		const payload = { id: 9 };
+		const out = tapInvalidate(CACHE.cards, payload);
+		expect(out).toBe(payload); // 原引用透传，链式调用不断
+		expect(readCache<string>(buildCacheKey("GET", "/cards"))).toBeNull();
+	});
+});
+
+describe("cachedRequest", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		clearAllCache();
+	});
+
+	it("GET 命中缓存时第二次不再发请求", async () => {
+		mockedRequest.mockResolvedValue({ items: [1] });
+		const first = await cachedRequest<{ items: number[] }>("/cards");
+		const second = await cachedRequest<{ items: number[] }>("/cards");
+		expect(first).toEqual({ items: [1] });
+		expect(second).toEqual({ items: [1] });
+		expect(mockedRequest).toHaveBeenCalledTimes(1);
+	});
+
+	it("非 GET 直接透传且不写缓存", async () => {
+		mockedRequest.mockResolvedValue({ ok: true });
+		const out = await cachedRequest("/cards", { method: "POST" });
+		expect(out).toEqual({ ok: true });
+		expect(mockedRequest).toHaveBeenCalledTimes(1);
+		expect(cacheSize()).toBe(0); // 写操作不进缓存
+	});
+
+	it("不同端点各自缓存互不干扰", async () => {
+		mockedRequest.mockResolvedValueOnce("A").mockResolvedValueOnce("B");
+		expect(await cachedRequest("/cards")).toBe("A");
+		expect(await cachedRequest("/mem/due")).toBe("B");
+		expect(await cachedRequest("/cards")).toBe("A"); // 仍命中第一次的缓存
+		expect(mockedRequest).toHaveBeenCalledTimes(2);
 	});
 });

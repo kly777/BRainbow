@@ -79,7 +79,8 @@ export function useMemManageParams(): UseMemManageParamsResult {
 	};
 
 	const goToPage = (p: number) => {
-		params.set({ page: p });
+		// 换页时清除 id 参数，避免后端根据 id 计算页码
+		params.set({ page: p, id: undefined });
 	};
 
 	return {

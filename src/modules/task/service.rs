@@ -462,7 +462,10 @@ mod tests {
         assert_eq!(t.status, crate::modules::task::model::TaskStatus::Backlog);
 
         let done = svc.complete(1, t.id).await.unwrap();
-        assert_eq!(done.status, crate::modules::task::model::TaskStatus::Completed);
+        assert_eq!(
+            done.status,
+            crate::modules::task::model::TaskStatus::Completed
+        );
         assert!(done.completed_at.is_some(), "完成应落 completed_at");
 
         assert_eq!(

@@ -740,10 +740,7 @@ mod tests {
     #[tokio::test]
     async fn prepare_chat_tree_not_found() {
         let svc = setup().await;
-        let err = match svc
-            .prepare_chat(1, 999_999, None, Some("x".into()))
-            .await
-        {
+        let err = match svc.prepare_chat(1, 999_999, None, Some("x".into())).await {
             Err(e) => e,
             Ok(_) => panic!("应因树不存在而失败"),
         };
@@ -796,10 +793,7 @@ mod tests {
             .unwrap();
 
         // 继续 user 节点：不插入新节点，inserted_user_id 为 None
-        let ctx = svc
-            .prepare_chat(1, tid, Some(user.id), None)
-            .await
-            .unwrap();
+        let ctx = svc.prepare_chat(1, tid, Some(user.id), None).await.unwrap();
         assert_eq!(ctx.inserted_user_id, None);
         assert_eq!(ctx.ai_parent_id, Some(user.id));
         // 消息链只有该 user 节点自己
@@ -819,10 +813,7 @@ mod tests {
             .insert_node(tid, None, "user", "q", None, None)
             .await
             .unwrap();
-        let ctx1 = svc
-            .prepare_chat(1, tid, Some(user.id), None)
-            .await
-            .unwrap();
+        let ctx1 = svc.prepare_chat(1, tid, Some(user.id), None).await.unwrap();
         let assistant = svc.finish_chat(&ctx1, "a", None).await.unwrap();
 
         // 回复 assistant：必须带内容，并新插一个 user 节点挂在其下
@@ -833,11 +824,7 @@ mod tests {
         let new_id = ctx2.inserted_user_id.expect("应插入新 user 节点");
         assert_eq!(ctx2.ai_parent_id, Some(new_id));
         // 消息链：q → a → 追问
-        let contents: Vec<&str> = ctx2
-            .messages
-            .iter()
-            .map(|m| m.content.as_str())
-            .collect();
+        let contents: Vec<&str> = ctx2.messages.iter().map(|m| m.content.as_str()).collect();
         assert_eq!(contents, vec!["q", "a", "追问"]);
         let roles: Vec<&str> = ctx2.messages.iter().map(|m| m.role.as_str()).collect();
         assert_eq!(roles, vec!["user", "assistant", "user"]);

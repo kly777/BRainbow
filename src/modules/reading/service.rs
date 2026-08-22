@@ -153,8 +153,7 @@ mod tests {
         assert!(words.iter().any(|w| w == "of"));
         assert!(
             words.iter().any(|w| w == "well-known"),
-            "hyphenated word should be one token: {:?}",
-            words
+            "hyphenated word should be one token: {words:?}"
         );
     }
 
@@ -193,7 +192,7 @@ mod tests {
     fn test_unique_words_deduplicates() {
         let words = vec!["the".into(), "hello".into(), "the".into(), "world".into()];
         let unique = unique_words(words);
-        let mut sorted = unique.clone();
+        let mut sorted = unique;
         sorted.sort();
         assert_eq!(sorted, vec!["hello", "the", "world"]);
     }

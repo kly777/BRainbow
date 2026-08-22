@@ -347,43 +347,43 @@ mod tests {
     #[test]
     fn service_error_invalid_input_display() {
         let e = ServiceError::InvalidInput("标题太短".into());
-        assert_eq!(format!("{}", e), "标题太短");
+        assert_eq!(format!("{e}"), "标题太短");
     }
 
     #[test]
     fn service_error_not_found_display() {
         let e = ServiceError::NotFound("任务不存在".into());
-        assert_eq!(format!("{}", e), "任务不存在");
+        assert_eq!(format!("{e}"), "任务不存在");
     }
 
     #[test]
     fn service_error_circular_parent_display() {
         let e = ServiceError::InvalidInput("检测到父子循环引用".into());
-        assert_eq!(format!("{}", e), "检测到父子循环引用");
+        assert_eq!(format!("{e}"), "检测到父子循环引用");
     }
 
     #[test]
     fn service_error_self_parent_display() {
         let e = ServiceError::InvalidInput("不能设置自己为父任务".into());
-        assert_eq!(format!("{}", e), "不能设置自己为父任务");
+        assert_eq!(format!("{e}"), "不能设置自己为父任务");
     }
 
     #[test]
     fn service_error_self_dependency_display() {
         let e = ServiceError::InvalidInput("不能依赖自己".into());
-        assert_eq!(format!("{}", e), "不能依赖自己");
+        assert_eq!(format!("{e}"), "不能依赖自己");
     }
 
     #[test]
     fn service_error_planned_outside_available_display() {
         let e = ServiceError::InvalidInput("超出范围".into());
-        assert!(format!("{}", e).contains("超出"));
+        assert!(format!("{e}").contains("超出"));
     }
 
     #[test]
     fn service_error_slot_overlap_display() {
         let e = ServiceError::InvalidInput("重叠".into());
-        assert!(format!("{}", e).contains("重叠"));
+        assert!(format!("{e}").contains("重叠"));
     }
 
     // ── ServiceError::into_response ──

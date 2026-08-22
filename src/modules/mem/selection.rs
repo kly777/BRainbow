@@ -224,8 +224,8 @@ mod tests {
             (0..10).map(|i| candidate(i, 2.0, 0, -72.0, 2.0)).collect();
         let hard: Vec<ReviewCandidate> =
             (10..20).map(|i| candidate(i, 9.0, 5, -24.0, 2.0)).collect();
-        let mut all = easy.clone();
-        all.extend(hard.clone());
+        let mut all = easy;
+        all.extend(hard);
         all.sort_by(|a, b| a.due_at.cmp(&b.due_at));
 
         // 旧策略：到期最早优先，quota=5 → 每次都是 5 张简单卡
@@ -261,7 +261,7 @@ mod tests {
         let mut rng = StdRng::seed_from_u64(1);
         let idx = weighted_sample_indices(&weights, 10, &mut rng);
         assert_eq!(idx.len(), 3);
-        let mut sorted = idx.clone();
+        let mut sorted = idx;
         sorted.sort_unstable();
         assert_eq!(sorted, vec![0, 1, 2]);
     }

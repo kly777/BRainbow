@@ -27,9 +27,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use axum::http::{HeaderValue, Method};
-use sqlx::sqlite::{
-    SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
-};
+use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
 use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;

@@ -172,7 +172,7 @@ async fn get_recent_retention_all_pass() {
     let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
 
     for i in 0..10 {
-        let time_str = format!("2025-01-01T00:00:{:02}Z", i);
+        let time_str = format!("2025-01-01T00:00:{i:02}Z");
         sqlx::query(
             "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, 1)",
         )
@@ -195,7 +195,7 @@ async fn get_recent_retention_mixed() {
     // 6 pass, 4 fail → retention = 0.6
     for i in 0..10 {
         let rating = if i < 6 { 3 } else { 1 };
-        let time_str = format!("2025-01-01T00:00:{:02}Z", i);
+        let time_str = format!("2025-01-01T00:00:{i:02}Z");
         sqlx::query(
             "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, 1)",
         )
@@ -217,7 +217,7 @@ async fn get_recent_retention_respects_limit() {
     let (mem_id, ..) = create_test_mem(&repo, TEST_USER_ID, "cue", "target").await;
 
     for i in 0..20 {
-        let time_str = format!("2025-01-01T00:00:{:02}Z", i);
+        let time_str = format!("2025-01-01T00:00:{i:02}Z");
         sqlx::query(
             "INSERT INTO revlog (mem_id, review_time, rating, delta_t) VALUES (?, ?, ?, 1)",
         )
@@ -819,11 +819,11 @@ async fn test_due_does_not_pull_upcoming_when_new_cards_exist() {
     // 创建 20 张新卡
     for i in 0..20 {
         let cue_id = repo
-            .create_chunk(TEST_USER_ID, &format!("cue_{}", i))
+            .create_chunk(TEST_USER_ID, &format!("cue_{i}"))
             .await
             .unwrap();
         let target_id = repo
-            .create_chunk(TEST_USER_ID, &format!("target_{}", i))
+            .create_chunk(TEST_USER_ID, &format!("target_{i}"))
             .await
             .unwrap();
         repo.create_mem(TEST_USER_ID, cue_id, target_id, &[])
@@ -834,11 +834,11 @@ async fn test_due_does_not_pull_upcoming_when_new_cards_exist() {
     // 创建 5 张 review 卡（未来的 due_at，本不应出现在本轮）
     for i in 0..5 {
         let cue_id = repo
-            .create_chunk(TEST_USER_ID, &format!("upcoming_cue_{}", i))
+            .create_chunk(TEST_USER_ID, &format!("upcoming_cue_{i}"))
             .await
             .unwrap();
         let target_id = repo
-            .create_chunk(TEST_USER_ID, &format!("upcoming_target_{}", i))
+            .create_chunk(TEST_USER_ID, &format!("upcoming_target_{i}"))
             .await
             .unwrap();
         let id = repo

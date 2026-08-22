@@ -409,15 +409,15 @@ impl MemRepository for super::super::MemRepo {
         }
 
         // 计算目标记录之前的记录数量：(sort_col < 目标值) OR (sort_col = 目标值 AND id < 目标 id)
-        qb.push(format!(" AND ({} < ({}", sort_field, target_subquery));
+        qb.push(format!(" AND ({sort_field} < ({target_subquery}"));
         qb.push_bind(mem_id);
         qb.push(")");
-        qb.push(format!(" OR ({} = ({}", sort_field, target_subquery));
+        qb.push(format!(" OR ({sort_field} = ({target_subquery}"));
         qb.push_bind(mem_id);
         qb.push(") AND m.id < ");
         qb.push_bind(mem_id);
         qb.push("))");
-        qb.push(format!(" ORDER BY {} {}", sort_field, order_dir));
+        qb.push(format!(" ORDER BY {sort_field} {order_dir}"));
 
         let row: (i64,) = qb
             .build_query_as()

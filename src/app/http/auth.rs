@@ -285,7 +285,7 @@ mod tests {
         for id in [1, 100, 9999] {
             let token = create_token(id, "user", TEST_SECRET, 864000);
             let claims = verify_token(&token, TEST_SECRET).unwrap();
-            assert_eq!(claims.sub, id, "user_id {} 应正确编码", id);
+            assert_eq!(claims.sub, id, "user_id {id} 应正确编码");
         }
     }
 

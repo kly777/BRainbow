@@ -238,7 +238,7 @@ mod tests {
     async fn batch_execute_partial_failure() {
         async fn maybe_fail(x: i32) -> Result<i32, String> {
             if x == 2 {
-                Err(format!("{} 出错了", x))
+                Err(format!("{x} 出错了"))
             } else {
                 Ok(x * 10)
             }

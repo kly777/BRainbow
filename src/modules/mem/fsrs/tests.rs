@@ -400,9 +400,9 @@ fn days_elapsed_0_vs_1_vs_7_vs_30() {
         let ratings: Vec<f64> = (1..=4)
             .map(|r| schedule_secs(2.0, 5.0, CardState::Review, None, r, de))
             .collect();
-        assert!(ratings[0] < ratings[1], "de={}: Again < Hard", de);
-        assert!(ratings[1] < ratings[2], "de={}: Hard < Good", de);
-        assert!(ratings[2] < ratings[3], "de={}: Good < Easy", de);
+        assert!(ratings[0] < ratings[1], "de={de}: Again < Hard");
+        assert!(ratings[1] < ratings[2], "de={de}: Hard < Good");
+        assert!(ratings[2] < ratings[3], "de={de}: Good < Easy");
     }
 }
 
@@ -625,13 +625,13 @@ fn true_memory_simulation_report() {
         let mut sim = TrueMemSim::new(true_s);
         sim.finish_learning(&mut rng);
 
-        print!("{:<12} ", name);
+        print!("{name:<12} ");
         for i in 1..=12 {
             sim.review(&mut rng);
             if sim.sys_state == CardState::Review {
                 print!("#{}={:.0}d ", i, sim.current_interval_days().max(0.1));
             } else {
-                print!("#{}=step ", i);
+                print!("#{i}=step ");
             }
         }
         println!();
@@ -655,9 +655,9 @@ fn true_memory_simulation_check() {
         total_s += sim.sys_s;
     }
     let avg_s = total_s / 50.0;
-    eprintln!("50 张卡 10 次 review 后平均 S={:.2}", avg_s);
+    eprintln!("50 张卡 10 次 review 后平均 S={avg_s:.2}");
     // 系统应学到一些稳定性（> 初始值 0）
-    assert!(avg_s > 0.1, "S 应 > 0: {}", avg_s);
+    assert!(avg_s > 0.1, "S 应 > 0: {avg_s}");
 }
 
 // ── 9. 配置验证 ──

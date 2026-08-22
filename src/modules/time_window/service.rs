@@ -136,37 +136,37 @@ mod tests {
     #[test]
     fn error_invalid_time_range_display() {
         let e = ServiceError::InvalidInput("开始 > 结束".into());
-        assert!(format!("{}", e).contains("开始 > 结束"));
+        assert!(format!("{e}").contains("开始 > 结束"));
     }
 
     #[test]
     fn error_planned_outside_available_display() {
         let e = ServiceError::InvalidInput("不可行".into());
-        assert!(format!("{}", e).contains("不可行"));
+        assert!(format!("{e}").contains("不可行"));
     }
 
     #[test]
     fn error_slot_overlap_display() {
         let e = ServiceError::InvalidInput("重叠".into());
-        assert!(format!("{}", e).contains("重叠"));
+        assert!(format!("{e}").contains("重叠"));
     }
 
     #[test]
     fn error_not_found_display() {
         let e = ServiceError::NotFound("时间窗口未找到".into());
-        assert_eq!(format!("{}", e), "时间窗口未找到");
+        assert_eq!(format!("{e}"), "时间窗口未找到");
     }
 
     #[test]
     fn error_internal_display() {
         let e = ServiceError::Internal("内部错误".into());
-        assert!(format!("{}", e).contains("内部错误"));
+        assert!(format!("{e}").contains("内部错误"));
     }
 
     #[test]
     fn error_db_display() {
         let e = ServiceError::from(sqlx::Error::Protocol("db err".into()));
-        assert!(format!("{}", e).contains("db err"));
+        assert!(format!("{e}").contains("db err"));
     }
 
     // ── ServiceError::into_response ──

@@ -48,6 +48,9 @@ impl MemRepository for MemRepo {
     async fn count_all_mems(&self, user_id: i32, query: &MemQuery) -> Result<i64, ServiceError> {
         self.count_all_mems(user_id, query).await.map_err(ServiceError::Db)
     }
+    async fn get_mem_position(&self, user_id: i32, mem_id: i64, query: &MemQuery) -> Result<i64, ServiceError> {
+        self.get_mem_position(user_id, mem_id, query).await.map_err(ServiceError::Db)
+    }
     async fn get_learning_mems(
         &self,
         user_id: i32,

@@ -37,18 +37,35 @@ impl MemQueryService {
         user_id: i32,
         query: &MemQuery,
     ) -> Result<PaginatedResponse<MemWithChunks>, ServiceError> {
+        let page_size = query.page_size.unwrap_or(50);
+        
+        // 如果有 id 参数，先找到这条记录的位置，计算页码
+        let actual_page = if let Some(target_id) = query.id {
+            // 查询这条记录在排序后的位置
+            let position = self.repo.get_mem_position(user_id, target_id, query).await?;
+            // 计算页码（从1开始）
+            (position / page_size) + 1
+        } else {
+            query.page.unwrap_or(1)
+        };
+        
         let pagination = Pagination {
-            page: query.page.unwrap_or(1),
-            page_size: query.page_size.unwrap_or(50),
+            page: actual_page,
+            page_size,
         };
         let (page, page_size) = pagination.clamp();
         let offset = (page - 1) * page_size;
+        
+        // 创建一个新的 query，移除 id 参数，以便获取整页数据
+        let mut query_without_id = query.clone();
+        query_without_id.id = None;
+        
         let ids = self
             .repo
-            .get_all_mems(user_id, page_size, offset, query)
+            .get_all_mems(user_id, page_size, offset, &query_without_id)
             .await?;
         let items = self.build_items(user_id, &ids).await?;
-        let total = self.repo.count_all_mems(user_id, query).await?;
+        let total = self.repo.count_all_mems(user_id, &query_without_id).await?;
         let pagination_ref = &pagination;
         Ok(PaginatedResponse::new(items, total, pagination_ref))
     }

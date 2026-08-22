@@ -310,6 +310,95 @@ impl MemRepository for super::super::MemRepo {
             .await
             .map_err(ServiceError::Db)
     }
+    
+    async fn get_mem_position(&self, user_id: i32, mem_id: i64, query: &MemQuery) -> Result<i64, ServiceError> {
+        // 构建排序条件
+        let sort_expr = match query.sort.as_deref() {
+            Some("difficulty") => "m.difficulty",
+            Some("state") => "m.state",
+            _ => "m.due_at",
+        };
+        let order_dir = if query.order.as_deref() == Some("desc") { "DESC" } else { "ASC" };
+        
+        let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
+            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1 AND (m.user_id = "
+        );
+        qb.push_bind(user_id);
+        qb.push(" OR m.user_id IS NULL)");
+        
+        // 应用过滤条件（与 get_all_mems 相同，但不包括 id 过滤）
+        if let Some(ref state) = query.state {
+            if state == "buried" {
+                qb.push(" AND m.buried = 1");
+            } else {
+                qb.push(" AND m.buried = 0");
+                if state == "today_done" {
+                    qb.push(" AND m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')");
+                } else if state != "all" && !state.is_empty() {
+                    qb.push(" AND m.state = ");
+                    qb.push_bind(state.clone());
+                }
+            }
+        } else {
+            qb.push(" AND m.buried = 0");
+        }
+
+        if let Some(ref q) = query.q
+            && !q.trim().is_empty()
+        {
+            let pattern = like_contains(q.trim());
+            qb.push(" AND (cc.content LIKE ");
+            qb.push_bind(&pattern);
+            qb.push(" ESCAPE '\' OR ct.content LIKE ");
+            qb.push_bind(&pattern);
+            qb.push(" ESCAPE '\' OR EXISTS (SELECT 1 FROM mem_tag mt JOIN tag t ON t.id = mt.tag_id WHERE mt.mem_id = m.id AND t.name LIKE ");
+            qb.push_bind(pattern);
+            qb.push(" ESCAPE '\'))");
+        }
+
+        // 标签过滤
+        if let Some(ref tag_ids_str) = query.tag_ids {
+            let ids: Vec<i32> = tag_ids_str
+                .split(',')
+                .filter_map(|s| s.trim().parse().ok())
+                .collect();
+            if !ids.is_empty() {
+                qb.push(" AND m.id IN (SELECT mem_id FROM mem_tag WHERE tag_id IN (");
+                let mut sep = qb.separated(", ");
+                for &id in &ids {
+                    sep.push_bind(id);
+                }
+                qb.push("))");
+            }
+        }
+        if let Some(ref exclude_str) = query.exclude_tag_ids {
+            let ids: Vec<i32> = exclude_str
+                .split(',')
+                .filter_map(|s| s.trim().parse().ok())
+                .collect();
+            if !ids.is_empty() {
+                qb.push(" AND m.id NOT IN (SELECT mem_id FROM mem_tag WHERE tag_id IN (");
+                let mut sep = qb.separated(", ");
+                for &id in &ids {
+                    sep.push_bind(id);
+                }
+                qb.push("))");
+            }
+        }
+
+        // 添加排序条件比较：计算在目标记录之前的记录数量
+        let sort_field = sort_expr.replace("m.", "");
+        qb.push(format!(
+            " AND (m.{} < (SELECT m2.{} FROM mem m2 WHERE m2.id = ",
+            sort_field, sort_field
+        ));
+        qb.push_bind(mem_id);
+        qb.push("))");
+        qb.push(format!(" ORDER BY {} {}", sort_expr, order_dir));
+
+        let row: (i64,) = qb.build_query_as().fetch_one(&*self.pool).await.map_err(ServiceError::Db)?;
+        Ok(row.0)
+    }
 
     async fn delete_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
         let mut tx = self.pool.begin().await?;

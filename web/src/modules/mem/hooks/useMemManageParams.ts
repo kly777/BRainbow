@@ -1,4 +1,4 @@
-// ── URL 搜索参数管理 ──
+// ── URL 搜索参数管理（只管理查询参数，不管理 detailId） ──
 
 import {
 	enumParam,
@@ -21,8 +21,6 @@ export interface UseMemManageParamsResult {
 	sortField: () => SortField;
 	sortDir: () => SortDir;
 	page: () => number;
-	detailId: () => number | null;
-	setDetailId: (id: number | null) => void;
 	tagMode: () => TagMode;
 	tagFilterNames: () => string[];
 	setSearchParams: (params: Record<string, string | undefined>) => void;
@@ -39,7 +37,6 @@ export function useMemManageParams(): UseMemManageParamsResult {
 		sort: enumParam(VALID_SORT_FIELDS, "due_at"),
 		order: enumParam(["asc", "desc"] as const, "asc"),
 		page: numParam(1, { min: 1 }),
-		id: numParam(0, { min: 1 }),
 		tag_mode: enumParam(["include", "exclude"] as const, "include"),
 		tag_names: listParam(),
 	});
@@ -49,14 +46,6 @@ export function useMemManageParams(): UseMemManageParamsResult {
 	const sortField = () => params.get("sort");
 	const sortDir = (): SortDir => params.get("order");
 	const page = () => params.get("page");
-
-	const detailId = () => {
-		const id = params.get("id");
-		return id > 0 ? id : null;
-	};
-	const setDetailId = (id: number | null) =>
-		params.set({ id: id ?? undefined });
-
 	const tagMode = (): TagMode => params.get("tag_mode");
 	const tagFilterNames = () => params.get("tag_names");
 
@@ -79,8 +68,7 @@ export function useMemManageParams(): UseMemManageParamsResult {
 	};
 
 	const goToPage = (p: number) => {
-		// 换页时清除 id 参数，避免后端根据 id 计算页码
-		params.set({ page: p, id: undefined });
+		params.set({ page: p });
 	};
 
 	return {
@@ -89,8 +77,6 @@ export function useMemManageParams(): UseMemManageParamsResult {
 		sortField,
 		sortDir,
 		page,
-		detailId,
-		setDetailId,
 		tagMode,
 		tagFilterNames,
 		setSearchParams: params.setSearchParams,

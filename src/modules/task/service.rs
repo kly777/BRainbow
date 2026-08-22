@@ -428,4 +428,116 @@ mod tests {
             let _ = e.into_response();
         }
     }
+
+    // ── 业务流转（内存库）（测试覆盖扩充）──
+
+    async fn task_svc() -> TaskService {
+        let pool = Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap());
+        crate::db::migrate(&pool).await.unwrap();
+        // task.user_id 有外键约束，先建两个测试用户（同 search 测试范式）
+        for (id, name) in [(1, "u1"), (2, "u2")] {
+            sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (?, ?, 'x')")
+                .bind(id)
+                .bind(name)
+                .execute(&*pool)
+                .await
+                .unwrap();
+        }
+        TaskService::new(pool)
+    }
+
+    fn mk_req(title: &str) -> CreateTaskRequest {
+        CreateTaskRequest {
+            title: title.into(),
+            description: None,
+            parent_task_id: None,
+            effort_estimate_minutes: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn status_transitions_roundtrip() {
+        let svc = task_svc().await;
+        let t = svc.create(1, mk_req("流转")).await.unwrap();
+        assert_eq!(t.status, crate::modules::task::model::TaskStatus::Backlog);
+
+        let done = svc.complete(1, t.id).await.unwrap();
+        assert_eq!(done.status, crate::modules::task::model::TaskStatus::Completed);
+        assert!(done.completed_at.is_some(), "完成应落 completed_at");
+
+        assert_eq!(
+            svc.activate(1, t.id).await.unwrap().status,
+            crate::modules::task::model::TaskStatus::Active
+        );
+        assert_eq!(
+            svc.archive(1, t.id).await.unwrap().status,
+            crate::modules::task::model::TaskStatus::Archived
+        );
+        assert_eq!(
+            svc.move_to_backlog(1, t.id).await.unwrap().status,
+            crate::modules::task::model::TaskStatus::Backlog
+        );
+    }
+
+    #[tokio::test]
+    async fn foreign_user_gets_not_found() {
+        let svc = task_svc().await;
+        let t = svc.create(1, mk_req("我的")).await.unwrap();
+
+        // 他人操作 → NotFound（归属守卫 user_id = ? OR user_id IS NULL）
+        for op_result in [
+            svc.complete(2, t.id).await.err(),
+            svc.activate(2, t.id).await.err(),
+            svc.archive(2, t.id).await.err(),
+            svc.move_to_backlog(2, t.id).await.err(),
+        ] {
+            assert!(matches!(op_result, Some(ServiceError::NotFound(_))));
+        }
+    }
+
+    #[tokio::test]
+    async fn dependency_self_and_persistence() {
+        let svc = task_svc().await;
+        let a = svc.create(1, mk_req("A")).await.unwrap();
+        let b = svc.create(1, mk_req("B")).await.unwrap();
+
+        // 自依赖在 service 层被拒
+        let err = svc.add_dependency(1, a.id, a.id).await.unwrap_err();
+        assert!(matches!(err, ServiceError::InvalidInput(_)));
+
+        // 持久化 + 移除影响行数验证
+        svc.add_dependency(1, b.id, a.id).await.unwrap();
+        assert_eq!(svc.remove_dependency(1, b.id, a.id).await.unwrap(), 1);
+        assert_eq!(svc.remove_dependency(1, b.id, a.id).await.unwrap(), 0);
+    }
+
+    #[tokio::test]
+    async fn circular_parent_detection() {
+        let svc = task_svc().await;
+        let a = svc.create(1, mk_req("A")).await.unwrap();
+        let b = svc
+            .create(
+                1,
+                CreateTaskRequest {
+                    parent_task_id: Some(a.id),
+                    ..mk_req("B")
+                },
+            )
+            .await
+            .unwrap();
+
+        // A 挂到 B 下会成环：A → B → A
+        let err = check_circular_parent(&svc.repo, 1, a.id, b.id)
+            .await
+            .unwrap_err();
+        match err {
+            ServiceError::InvalidInput(msg) => assert!(msg.contains("循环")),
+            other => panic!("期望 InvalidInput，实际 {other:?}"),
+        }
+        // 无关任务不成环
+        let c = svc.create(1, mk_req("C")).await.unwrap();
+        check_circular_parent(&svc.repo, 1, a.id, c.id)
+            .await
+            .unwrap();
+    }
 }

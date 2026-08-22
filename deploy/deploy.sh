@@ -444,9 +444,12 @@ setup_systemd() {
         -e "s|@@DATABASE_URL@@|$DATABASE_URL|g" \
         -e "s|@@CORS_ALLOW_ORIGIN@@|$CORS_ALLOW_ORIGIN|g" \
         -e "s|@@JWT_SECRET@@|$JWT_SECRET|g" \
+        -e "s|@@ALLOW_REGISTER@@|${ALLOW_REGISTER:-false}|g" \
+        -e "s|@@JWT_TTL_SECS@@|${JWT_TTL_SECS:-864000}|g" \
         "$PROJECT_DIR/deploy/brainbow.service" > /tmp/brainbow.service
     scp -q -P "$REMOTE_PORT" /tmp/brainbow.service "$REMOTE_USER@$REMOTE_HOST:/tmp/brainbow.service"
-    remote "sudo tee /etc/systemd/system/$APP_NAME.service < /tmp/brainbow.service > /dev/null"
+    # unit 内含 JWT_SECRET：限 root 可读；并清理远端 /tmp 明文残留（审计 D7）
+    remote "sudo tee /etc/systemd/system/$APP_NAME.service < /tmp/brainbow.service > /dev/null && \\\n        sudo chmod 600 /etc/systemd/system/$APP_NAME.service && rm -f /tmp/brainbow.service"
     rm -f /tmp/brainbow.service
 }
 

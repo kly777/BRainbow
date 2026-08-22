@@ -19,6 +19,8 @@ Environment="BIND_HOST=@@BIND_HOST@@"
 Environment="DATABASE_URL=@@DATABASE_URL@@"
 Environment="CORS_ALLOW_ORIGIN=@@CORS_ALLOW_ORIGIN@@"
 Environment="JWT_SECRET=@@JWT_SECRET@@"
+Environment="ALLOW_REGISTER=@@ALLOW_REGISTER@@"
+Environment="JWT_TTL_SECS=@@JWT_TTL_SECS@@"
 
 [Install]
 WantedBy=multi-user.target

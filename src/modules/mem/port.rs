@@ -46,9 +46,14 @@ pub trait MemRepository: Send + Sync {
         query: &MemQuery,
     ) -> Result<Vec<i32>, ServiceError>;
     async fn count_all_mems(&self, user_id: i32, query: &MemQuery) -> Result<i64, ServiceError>;
-    
+
     /// 查询指定记录在排序后的位置（从0开始）
-    async fn get_mem_position(&self, user_id: i32, mem_id: i64, query: &MemQuery) -> Result<i64, ServiceError>;
+    async fn get_mem_position(
+        &self,
+        user_id: i32,
+        mem_id: i64,
+        query: &MemQuery,
+    ) -> Result<i64, ServiceError>;
 
     // ── Learning pool ──
 

@@ -6,10 +6,10 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 use super::super::model::TaskStatus;
-use crate::shared::response;
 use super::super::service::TaskService;
 use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
+use crate::shared::response;
 
 #[derive(Debug, Deserialize)]
 pub struct TreeQuery {

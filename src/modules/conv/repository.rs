@@ -187,7 +187,8 @@ impl ConvRepo {
             title,
             conv_type,
             created_at,
-        }) = title_info else {
+        }) = title_info
+        else {
             return Ok(None);
         };
 

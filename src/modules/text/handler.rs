@@ -1,9 +1,9 @@
 use axum::{Json, extract::State, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 
-use crate::shared::response;
 use super::query::TextQueryService;
 use super::service::TextService;
+use crate::shared::response;
 
 #[derive(Debug, Serialize)]
 pub struct TabItem {

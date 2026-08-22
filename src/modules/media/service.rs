@@ -130,9 +130,8 @@ impl MediaService {
             )));
         }
 
-        let (media_type_str, max_size) = find_allowed(&real_mime).ok_or_else(|| {
-            ServiceError::InvalidInput(format!("不支持的文件类型: {real_mime}"))
-        })?;
+        let (media_type_str, max_size) = find_allowed(&real_mime)
+            .ok_or_else(|| ServiceError::InvalidInput(format!("不支持的文件类型: {real_mime}")))?;
 
         // 2. 大小校验
         if data.len() as u64 > max_size {
@@ -213,7 +212,10 @@ impl MediaService {
         if let Some((w, h)) = image::ImageReader::new(std::io::Cursor::new(data))
             .with_guessed_format()
             .ok()
-            .and_then(|r| r.into_dimensions().ok()) { (Some(w as i64), Some(h as i64), None) } else {
+            .and_then(|r| r.into_dimensions().ok())
+        {
+            (Some(w as i64), Some(h as i64), None)
+        } else {
             warn!("图片尺寸解析失败 mime={}", mime);
             (None, None, None)
         }

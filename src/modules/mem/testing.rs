@@ -143,8 +143,13 @@ impl MemRepository for FakeRepo {
     async fn count_all_mems(&self, _user_id: i32, _query: &MemQuery) -> Result<i64, ServiceError> {
         panic!("count_all_mems not configured in FakeRepo")
     }
-    
-    async fn get_mem_position(&self, _user_id: i32, _mem_id: i64, _query: &MemQuery) -> Result<i64, ServiceError> {
+
+    async fn get_mem_position(
+        &self,
+        _user_id: i32,
+        _mem_id: i64,
+        _query: &MemQuery,
+    ) -> Result<i64, ServiceError> {
         panic!("get_mem_position not configured in FakeRepo")
     }
 

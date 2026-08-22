@@ -310,8 +310,13 @@ impl MemRepository for super::super::MemRepo {
             .await
             .map_err(ServiceError::Db)
     }
-    
-    async fn get_mem_position(&self, user_id: i32, mem_id: i64, query: &MemQuery) -> Result<i64, ServiceError> {
+
+    async fn get_mem_position(
+        &self,
+        user_id: i32,
+        mem_id: i64,
+        query: &MemQuery,
+    ) -> Result<i64, ServiceError> {
         // 构建排序字段 + 目标记录的值（子查询 join chunk 处理 cue.created_at）
         let (sort_field, target_subquery) = match query.sort.as_deref() {
             Some("difficulty") => (
@@ -331,10 +336,14 @@ impl MemRepository for super::super::MemRepo {
                 "SELECT COALESCE(m2.due_at, '') FROM mem m2 WHERE m2.id = ",
             ),
         };
-        let order_dir = if query.order.as_deref() == Some("desc") { "DESC" } else { "ASC" };
+        let order_dir = if query.order.as_deref() == Some("desc") {
+            "DESC"
+        } else {
+            "ASC"
+        };
 
         let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
-            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1 AND (m.user_id = "
+            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1 AND (m.user_id = ",
         );
         qb.push_bind(user_id);
         qb.push(" OR m.user_id IS NULL)");
@@ -400,9 +409,7 @@ impl MemRepository for super::super::MemRepo {
         }
 
         // 计算目标记录之前的记录数量：(sort_col < 目标值) OR (sort_col = 目标值 AND id < 目标 id)
-        qb.push(format!(
-            " AND ({} < ({}", sort_field, target_subquery
-        ));
+        qb.push(format!(" AND ({} < ({}", sort_field, target_subquery));
         qb.push_bind(mem_id);
         qb.push(")");
         qb.push(format!(" OR ({} = ({}", sort_field, target_subquery));
@@ -412,11 +419,15 @@ impl MemRepository for super::super::MemRepo {
         qb.push("))");
         qb.push(format!(" ORDER BY {} {}", sort_field, order_dir));
 
-        let row: (i64,) = qb.build_query_as().fetch_one(&*self.pool).await.map_err(ServiceError::Db)?;
+        let row: (i64,) = qb
+            .build_query_as()
+            .fetch_one(&*self.pool)
+            .await
+            .map_err(ServiceError::Db)?;
         Ok(row.0)
     }
 
-        async fn delete_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+    async fn delete_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
         let mut tx = self.pool.begin().await?;
 
         // 先查出关联的 chunk id，删除 mem 后清理孤儿 chunk（所有权校验：本人或共享）

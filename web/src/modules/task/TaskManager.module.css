@@ -1,4 +1,4 @@
-/* features/task/TaskManager.css.ts — 由 vanilla-extract 迁移 */
+/* features/task/TaskManager.css.ts — \u589E\u5F3A\u7248 */
 
 .task-manager {
 	max-width: var(--page-max);
@@ -24,7 +24,7 @@
 	gap: var(--space-xs);
 	background: var(--t-color-surface-raised);
 	border-radius: var(--radius-md);
-	padding: var(--space-xs);
+	padding: var(--space-2xs);
 	flex-shrink: 0;
 }
 
@@ -37,13 +37,22 @@
 	font-size: var(--text-sm);
 	font-weight: 500;
 	color: var(--t-color-ink-muted);
-	transition: all var(--t-transition-fast);
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 }
 
 .view-active {
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	box-shadow: var(--shadow-sm);
+	font-weight: 600;
+}
+
+.view-btn:hover:not(.view-active) {
+	color: var(--t-color-ink);
+	background: var(--t-color-surface);
 }
 
 .search-box {
@@ -67,6 +76,11 @@
 	outline: none;
 }
 
+.search-input:focus {
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+}
+
 .search-clear {
 	position: absolute;
 	right: 0.25rem;
@@ -78,6 +92,11 @@
 	cursor: pointer;
 	font-size: var(--text-base);
 	padding: var(--space-xs) var(--space-xs);
+	transition: color var(--t-transition-fast);
+}
+
+.search-clear:hover {
+	color: var(--t-color-ink);
 }
 
 .quick-add-box {
@@ -130,7 +149,7 @@
 	gap: var(--space-xs);
 	background: var(--t-color-surface-raised);
 	border-radius: var(--radius-md);
-	padding: var(--space-xs);
+	padding: var(--space-2xs);
 	flex-shrink: 0;
 }
 
@@ -144,56 +163,41 @@
 	font-size: var(--text-sm);
 	font-weight: 500;
 	color: var(--t-color-ink-muted);
-	transition: all var(--t-transition-fast);
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 }
 
 .tab-active {
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	box-shadow: var(--shadow-sm);
+	font-weight: 600;
 }
 
+.tab-btn:hover:not(.tab-active) {
+	color: var(--t-color-ink);
+	background: var(--t-color-surface);
+}
+
+/* \u54CD\u5E94\u5F0F */
 @media (width <= 768px) {
 	.task-manager {
 		margin: 0 auto;
 		padding: var(--space-sm) var(--space-md);
 		gap: var(--space-sm);
 	}
-}
 
-@media (width <= 768px) {
 	.toolbar {
 		flex-wrap: wrap;
 	}
-}
 
-.view-btn:hover {
-	color: var(--t-color-ink);
-}
-
-.quick-add-input:focus {
-	border-color: var(--t-color-success);
-	border-style: solid;
-	color: var(--t-color-ink);
-	width: 12.5rem;
-}
-
-.quick-add-input::placeholder {
-	color: var(--t-color-ink-muted);
-}
-
-@media (width <= 768px) {
 	.quick-add-input {
 		width: 6.875rem;
 	}
-}
 
-@media (width <= 768px) {
 	.split-view {
 		grid-template-columns: 1fr;
 	}
-}
-
-.tab-btn:hover {
-	color: var(--t-color-ink);
 }

@@ -1,4 +1,4 @@
-/* features/mem/MemPage.css.ts — 由 vanilla-extract 迁移 */
+/* features/mem/MemPage.css.ts — \u589E\u5F3A\u7248 */
 
 .page {
 	display: flex;
@@ -36,6 +36,11 @@
 	cursor: pointer;
 	padding: var(--space-xs) var(--space-sm);
 	margin-right: var(--space-xs);
+	transition: color var(--t-transition-fast);
+}
+
+.hamburger:hover {
+	color: var(--t-color-ink);
 }
 
 .title {
@@ -61,6 +66,11 @@
 	cursor: pointer;
 	padding: var(--space-2xs) var(--space-xs);
 	opacity: 0.7;
+	transition: opacity var(--t-transition-fast);
+}
+
+.icon-btn:hover {
+	opacity: 1;
 }
 
 .add-link {
@@ -72,6 +82,14 @@
 	border: none;
 	border-radius: var(--radius-md);
 	background: var(--t-color-accent);
+	transition:
+		background var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+}
+
+.add-link:hover {
+	background: var(--t-color-accent-strong);
+	box-shadow: 0 2px 8px oklch(50% 0.08 165deg / 20%);
 }
 
 .manage-link {
@@ -81,6 +99,14 @@
 	padding: var(--space-xs) var(--space-md);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
+}
+
+.manage-link:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
 }
 
 .card-area {
@@ -92,31 +118,13 @@
 	align-items: center;
 }
 
+/* \u54CD\u5E94\u5F0F */
 @media (width <= 600px) {
 	.top-bar {
 		padding-left: var(--space-md);
 		padding-right: var(--space-md);
 	}
-}
 
-.hamburger:hover {
-	color: var(--t-color-ink);
-}
-
-.icon-btn:hover {
-	opacity: 1;
-}
-
-.add-link:hover {
-	background: var(--t-color-accent-strong);
-}
-
-.manage-link:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
-
-@media (width <= 600px) {
 	.card-area {
 		padding: var(--space-md) var(--space-md);
 	}

@@ -8,9 +8,11 @@ import { Show } from "solid-js";
  */
 export default function HomeGuard() {
 	const { auth } = useAuth();
+	// 与 AuthGuard 判定保持一致：纯 API Key 场景也算已登录（审计 F9）
+	const isAuthed = () => Boolean(auth().user || auth().apiKey);
 
 	return (
-		<Show when={auth().user} fallback={<LandingPage />}>
+		<Show when={isAuthed()} fallback={<LandingPage />}>
 			<HomePage />
 		</Show>
 	);

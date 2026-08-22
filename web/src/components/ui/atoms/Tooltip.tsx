@@ -10,6 +10,9 @@ import styles from "./Tooltip.module.css";
 
 type TooltipPosition = "top" | "bottom" | "left" | "right";
 
+/** 实例序号：生成跨实例唯一的 tooltip id */
+let tipSeq = 0;
+
 interface TooltipProps {
 	label: string;
 	position?: TooltipPosition;
@@ -79,12 +82,16 @@ export default function Tooltip(props: TooltipProps) {
 
 	onCleanup(() => clearTimeout(timer));
 
+	// 读屏可达：气泡 id 与 aria-describedby 关联（审计 F10）
+	const tipId = `tooltip-${++tipSeq}`;
+
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: 仅作为 tooltip 承载层，hover/focus 用于显示气泡
 		<span
 			ref={wrapRef}
 			class={styles.wrap}
 			role="presentation"
+			aria-describedby={visible() ? tipId : undefined}
 			onMouseEnter={show}
 			onMouseLeave={hide}
 			onFocusIn={show}
@@ -94,6 +101,7 @@ export default function Tooltip(props: TooltipProps) {
 			<Show when={visible() && pos()}>
 				<Portal>
 					<span
+						id={tipId}
 						class={`${styles.tip} ${POSITION_CLASS[props.position ?? "top"]}`}
 						style={{ left: `${pos()!.left}px`, top: `${pos()!.top}px` }}
 						role="tooltip"

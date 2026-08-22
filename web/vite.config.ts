@@ -152,6 +152,11 @@ export default defineConfig(({ command, mode }) => {
 				"@components": fileURLToPath(
 					new URL("./src/components", import.meta.url),
 				),
+				// tsconfig 同时放行 @components 与 @components/*，vite 需等价映射
+				// 否则子路径导入构建期解析失败（审计 E2）
+				"@components/": fileURLToPath(
+					new URL("./src/components/", import.meta.url),
+				),
 				"@lib": fileURLToPath(new URL("./src/lib", import.meta.url)),
 				"@config": fileURLToPath(new URL("./src/config", import.meta.url)),
 			},

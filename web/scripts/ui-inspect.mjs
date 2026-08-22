@@ -28,7 +28,7 @@
  */
 
 import { createRequire } from "node:module";
-import { writeFileSync } from "node:fs";
+import { existsSync, readdirSync, writeFileSync } from "node:fs";
 
 const require = createRequire(import.meta.url);
 
@@ -53,9 +53,28 @@ if (!chromium) {
 	process.exit(1);
 }
 
-const CHROME_PATH =
-	process.env.CHROME_PATH ||
-	"/home/kly/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome";
+// CHROME_PATH 可覆盖；缺省在 playwright 缓存中挑最新 chromium，不钉死版本号（审计 E4）
+function resolveChromePath() {
+	if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+	const base = `${process.env.HOME}/.cache/ms-playwright`;
+	try {
+		const dirs = readdirSync(base)
+			.filter((d) => d.startsWith("chromium-"))
+			.sort()
+			.reverse();
+		for (const d of dirs) {
+			for (const sub of ["chrome-linux64/chrome", "chrome-linux/chrome"]) {
+				const p = `${base}/${d}/${sub}`;
+				if (existsSync(p)) return p;
+			}
+		}
+	} catch {
+		// 缓存目录不存在：落到默认拼接路径，由 launch 时报错提示安装
+	}
+	return `${base}/chromium-1228/chrome-linux64/chrome`;
+}
+
+const CHROME_PATH = resolveChromePath();
 
 // ── CLI 解析 ──
 function parseArgs(argv) {

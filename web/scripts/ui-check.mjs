@@ -14,6 +14,7 @@
  *          UI_USER/UI_PASS(默认 diag/diag1234) UI_VIEWPORT(默认 1280x800)
  */
 import { createRequire } from "node:module";
+import { existsSync, readdirSync } from "node:fs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("./vendor/playwright-core/index.js");
@@ -23,9 +24,27 @@ const API = process.env.API_BASE ?? "http://localhost:3000";
 const USER = process.env.UI_USER ?? "diag";
 const PASS = process.env.UI_PASS ?? "diag1234";
 const [W, H] = (process.env.UI_VIEWPORT ?? "1280x800").split("x").map(Number);
-const CHROME =
-	process.env.CHROME_PATH ??
-	`${process.env.HOME}/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome`;
+// CHROME_PATH 可覆盖；缺省在 playwright 缓存中挑最新 chromium，不钉死版本号（审计 E4）
+function resolveChromePath() {
+	if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+	const base = `${process.env.HOME}/.cache/ms-playwright`;
+	try {
+		const dirs = readdirSync(base)
+			.filter((d) => d.startsWith("chromium-"))
+			.sort()
+			.reverse();
+		for (const d of dirs) {
+			for (const sub of ["chrome-linux64/chrome", "chrome-linux/chrome"]) {
+				const p = `${base}/${d}/${sub}`;
+				if (existsSync(p)) return p;
+			}
+		}
+	} catch {
+		// 缓存目录不存在：落到默认拼接路径，由 launch 时报错提示安装
+	}
+	return `${base}/chromium-1228/chrome-linux64/chrome`;
+}
+
 
 // ── 常用操作 ──────────────────────────────────────────────
 

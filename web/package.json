@@ -6,7 +6,6 @@
 		"dev": "vite --mode dev",
 		"build": "vite build --mode prod",
 		"preview": "vite preview",
-		"compress": "node scripts/compress-dist.mjs",
 		"typecheck": "tsc --noEmit",
 		"check": "tsc --noEmit && biome check src/ index.html && stylelint \"src/**/*.css\"",
 		"lint": "biome check --write src/ index.html && stylelint \"src/**/*.css\" --fix",

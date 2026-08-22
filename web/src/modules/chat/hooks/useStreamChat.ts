@@ -4,7 +4,7 @@
 import { getToken } from "@lib/api";
 import { notifyError } from "@lib/utils";
 import type { ChatNode, TreeDetail } from "@modules/chat";
-import { createSignal } from "solid-js";
+import { createSignal, onCleanup } from "solid-js";
 import { makeTempNode } from "./chat-tree.ts";
 import { streamChatRequest } from "./streamChatRequest.ts";
 import type { StreamResult } from "./useChatSessionTypes.ts";
@@ -38,6 +38,10 @@ export function useStreamChat(opts: UseStreamChatOpts) {
 
 	/** 停止当前生成 */
 	const stopStreaming = () => abortCtrl?.abort();
+
+	// 组件卸载时中止进行中的流式请求：否则后端持续生成烧 token，
+	// 回调还会更新已卸载页面的 signal（审计 F1）
+	onCleanup(() => abortCtrl?.abort());
 
 	/**
 	 * 流式调用后端（乐观 UI）：

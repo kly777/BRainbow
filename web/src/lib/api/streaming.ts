@@ -53,20 +53,26 @@ export async function streamRequest(opts: StreamRequestOptions): Promise<void> {
 	const decoder = new TextDecoder();
 	let buffer = "";
 
-	while (true) {
-		const { value, done } = await reader.read();
-		if (done) break;
-		buffer += decoder.decode(value, { stream: true });
-		const lines = buffer.split("\n");
-		buffer = lines.pop() ?? "";
-		for (const line of lines) {
-			const trimmed = line.trim();
-			if (!trimmed.startsWith("data:")) continue;
-			// 只按 SSE 规范去掉冒号后的一个空格，保留 token 内容自身的首尾空白
-			const data = trimmed.startsWith("data: ")
-				? trimmed.slice(6)
-				: trimmed.slice(5);
-			opts.onChunk(data);
+	try {
+		while (true) {
+			const { value, done } = await reader.read();
+			if (done) break;
+			buffer += decoder.decode(value, { stream: true });
+			const lines = buffer.split("\n");
+			buffer = lines.pop() ?? "";
+			for (const line of lines) {
+				const trimmed = line.trim();
+				if (!trimmed.startsWith("data:")) continue;
+				// 只按 SSE 规范去掉冒号后的一个空格，保留 token 内容自身的首尾空白
+				const data = trimmed.startsWith("data: ")
+					? trimmed.slice(6)
+					: trimmed.slice(5);
+				opts.onChunk(data);
+			}
 		}
+	} finally {
+		// onChunk 抛错（如 __ERROR__ 路径）或上层中止时也要释放连接，
+		// 否则响应体挂起直到服务端生成完毕（审计 F2）
+		reader.cancel().catch(() => {});
 	}
 }

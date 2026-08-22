@@ -1,4 +1,4 @@
-/* components/CommandPalette.css.ts — 由 vanilla-extract 迁移 */
+/* components/CommandPalette.css.ts — \u589E\u5F3A\u7248 */
 
 .overlay {
 	position: fixed;
@@ -11,7 +11,8 @@
 	background: var(--t-color-overlay);
 	display: flex;
 	justify-content: center;
-	backdrop-filter: blur(0.125rem);
+	backdrop-filter: blur(0.25rem);
+	animation: fadeIn 150ms ease both;
 }
 
 .bar {
@@ -26,25 +27,26 @@
 	max-width: 90vw;
 	max-height: 60vh;
 	overflow-wrap: break-word;
+	animation: slideInDown 200ms var(--ease-out-expo) both;
 }
 
 .input-row {
 	display: flex;
 	align-items: center;
 	gap: var(--space-sm);
-	padding: var(--space-sm) var(--space-lg);
+	padding: var(--space-md) var(--space-lg);
 	border: 1px solid var(--t-color-border-strong);
-	border-radius: var(--radius-lg);
+	border-radius: var(--radius-xl);
 	background: var(--t-color-surface);
-	box-shadow: var(--shadow-md);
+	box-shadow: var(--shadow-lg);
 	transition:
 		border-color 0.15s,
 		box-shadow 0.15s;
 }
 
-/* 后面跟着建议列表时：与列表连成一体（去底部圆角和边框） */
+/* \u540E\u9762\u8DDF\u7740\u5EFA\u8BAE\u5217\u8868\u65F6\uFF1A\u4E0E\u5217\u8868\u8FDE\u6210\u4E00\u4F53\uFF08\u53BB\u5E95\u90E8\u5706\u89D2\u548C\u8FB9\u6846\uFF09 */
 .input-row:has(+ .suggestions) {
-	border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+	border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 	border-bottom: none;
 }
 
@@ -52,7 +54,7 @@
 	font-size: var(--text-lg);
 	font-family: var(--t-font-mono);
 	color: var(--t-color-accent);
-	font-weight: 600;
+	font-weight: 700;
 	min-width: 14px;
 	text-align: center;
 }
@@ -74,12 +76,12 @@
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border-strong);
 	border-top: none;
-	border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-	box-shadow: var(--shadow-md);
+	border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+	box-shadow: var(--shadow-lg);
 	overflow: hidden;
 }
 
-/* 列表滚动区：滚动条只在此区域内，不压容器圆角 */
+/* \u5217\u8868\u6EDA\u52A8\u533A\uFF1A\u6EDA\u52A8\u6761\u53EA\u5728\u6B64\u533A\u57DF\u5185\uFF0C\u4E0D\u538B\u5BB9\u5668\u5706\u89D2 */
 .sug-scroll {
 	overflow-y: auto;
 	max-height: 26rem;
@@ -87,7 +89,7 @@
 	scrollbar-gutter: stable;
 }
 
-/* 滚动条悬浮样式：thumb 与轨道留间隙 */
+/* \u6EDA\u52A8\u6761\u60AC\u6D6E\u6837\u5F0F\uFF1Athumb \u4E0E\u8F68\u9053\u7559\u95F4\u9699 */
 .sug-scroll::-webkit-scrollbar {
 	width: 0.5rem;
 }
@@ -103,19 +105,19 @@
 	margin: var(--space-xs) 0;
 }
 
-/* 底部快捷键提示行：固定不滚动 */
+/* \u5E95\u90E8\u5FEB\u6377\u952E\u63D0\u793A\u884C\uFF1A\u56FA\u5B9A\u4E0D\u6EDA\u52A8 */
 .sug-footer {
 	display: flex;
 	gap: var(--space-md);
 	align-items: center;
 	justify-content: center;
-	padding: var(--space-xs) var(--space-md);
+	padding: var(--space-sm) var(--space-md);
 	border-top: 1px solid var(--t-color-border-strong);
 	background: var(--t-color-surface);
 	font-size: var(--text-xs);
 	font-family: var(--t-font-mono);
 	color: var(--t-color-ink-faint);
-	border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+	border-radius: 0 0 var(--radius-xl) var(--radius-xl);
 }
 
 .suggestion-item {
@@ -156,7 +158,7 @@
 }
 
 .empty {
-	padding: var(--space-md) var(--space-lg);
+	padding: var(--space-lg) var(--space-lg);
 	text-align: center;
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-faint);
@@ -180,15 +182,15 @@
 	border-color: var(--t-color-accent);
 	box-shadow:
 		var(--shadow-lg),
-		0 0 0 var(--space-2xs) var(--t-color-accent-soft);
+		0 0 0 3px var(--t-color-accent-ring);
 }
 
-/* 连体时：列表随输入框聚焦同步高亮（统一边框描边） */
+/* \u8FDE\u4F53\u65F6\uFF1A\u5217\u8868\u968F\u8F93\u5165\u6846\u805A\u7126\u540C\u6B65\u9AD8\u4EAE\uFF08\u7EDF\u4E00\u8FB9\u6846\u63CF\u8FB9\uFF09 */
 .bar:has(.input-row:focus-within) .suggestions {
 	border-color: var(--t-color-accent);
 	box-shadow:
-		var(--shadow-md),
-		0 0 0 var(--space-2xs) var(--t-color-accent-soft);
+		var(--shadow-lg),
+		0 0 0 3px var(--t-color-accent-ring);
 }
 
 .input:focus-visible {
@@ -202,7 +204,7 @@
 }
 
 .suggestion-item:is(.suggestion-active) {
-	background: var(--t-color-surface-raised);
+	background: var(--t-color-accent-soft);
 }
 
 .suggestion-item:focus-visible {
@@ -218,6 +220,10 @@
 	width: 0.1875rem;
 	border-radius: 0.125rem;
 	background: var(--t-color-accent);
+}
+
+.suggestion-item:hover:not(:is(.suggestion-active)) {
+	background: var(--t-color-surface-raised);
 }
 
 @media (width <= 768px) {
@@ -236,9 +242,20 @@
 		background: var(--t-color-accent);
 		color: var(--t-color-white);
 		font-size: var(--text-xl);
-		box-shadow: 0 2px 12px var(--t-color-accent-soft);
+		box-shadow: 0 4px 16px oklch(50% 0.08 165deg / 30%);
 		cursor: pointer;
-		transition: transform var(--t-transition-fast);
+		transition:
+			transform var(--t-transition-fast),
+			box-shadow var(--t-transition-fast);
+	}
+
+	.fab:hover {
+		transform: scale(1.05);
+		box-shadow: 0 6px 20px oklch(50% 0.08 165deg / 40%);
+	}
+
+	.fab:active {
+		transform: scale(0.95);
 	}
 }
 

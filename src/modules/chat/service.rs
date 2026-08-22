@@ -843,4 +843,136 @@ mod tests {
         assert_eq!(ctx.messages[0].content, "系统提示词");
         assert_eq!(ctx.messages[1].role, "user");
     }
+
+    // ── generate_title（测试覆盖扩充）──
+
+    use crate::shared::error_types::ServiceError as SE;
+
+    /// 可编程回包的 AI 端口假实现
+    struct FakeAi {
+        reply: &'static str,
+        captured: std::sync::Mutex<Vec<(Vec<String>, Option<f32>, Option<i32>)>>,
+    }
+    impl FakeAi {
+        fn new(reply: &'static str) -> Self {
+            Self {
+                reply,
+                captured: std::sync::Mutex::new(Vec::new()),
+            }
+        }
+        fn calls(&self) -> Vec<(Vec<String>, Option<f32>, Option<i32>)> {
+            self.captured.lock().unwrap().clone()
+        }
+    }
+    #[async_trait::async_trait]
+    impl AiChatPort for FakeAi {
+        async fn chat(
+            &self,
+            _user_id: i32,
+            messages: &[AiProxyMessage],
+            temperature: Option<f32>,
+            max_tokens: Option<i32>,
+        ) -> Result<(String, String), SE> {
+            self.captured.lock().unwrap().push((
+                messages
+                    .iter()
+                    .map(|m| format!("{}:{}", m.role, m.content))
+                    .collect(),
+                temperature,
+                max_tokens,
+            ));
+            Ok((self.reply.to_string(), "fake-model".into()))
+        }
+
+        async fn chat_stream(
+            &self,
+            _user_id: i32,
+            _messages: &[AiProxyMessage],
+            _temperature: Option<f32>,
+            _max_tokens: Option<i32>,
+            _tx: Option<tokio::sync::mpsc::Sender<String>>,
+        ) -> Result<(String, String, Option<String>, bool), SE> {
+            Ok((self.reply.to_string(), "fake-model".into(), None, false))
+        }
+    }
+
+    #[tokio::test]
+    async fn generate_title_rejects_empty_or_missing_tree() {
+        let svc = setup().await;
+        let ai = FakeAi::new("标题");
+
+        let err = match svc.generate_title(1, 777, &ai).await {
+            Err(e) => e,
+            Ok(_) => panic!("树不存在应 NotFound"),
+        };
+        assert!(matches!(err, ServiceError::NotFound(_)));
+
+        let tid = mk_tree(&svc, "").await;
+        let err = match svc.generate_title(1, tid, &ai).await {
+            Err(e) => e,
+            Ok(_) => panic!("空树应 InvalidInput"),
+        };
+        assert!(matches!(err, ServiceError::InvalidInput(_)));
+        assert!(ai.calls().is_empty(), "拒绝路径不应调用 AI");
+    }
+
+    #[tokio::test]
+    async fn generate_title_sanitizes_and_persists() {
+        let svc = setup().await;
+        let tid = mk_tree(&svc, "").await;
+        let user = svc
+            .insert_node(tid, None, "user", "什么是一次函数？", None, None)
+            .await
+            .unwrap();
+        let ctx = svc.prepare_chat(1, tid, Some(user.id), None).await.unwrap();
+        svc.finish_chat(&ctx, "一次函数是……", None).await.unwrap();
+
+        let ai = FakeAi::new("「一次函数与导数」\n");
+        let title = svc.generate_title(1, tid, &ai).await.unwrap();
+        assert_eq!(title, "一次函数与导数"); // 去引号与换行
+
+        // 标题已落库
+        let got = svc.get_tree(1, tid).await.unwrap().unwrap();
+        assert_eq!(got.tree.title, "一次函数与导数");
+
+        // AI 收到：system 提示 + 转写文本（用户/助手 前缀）
+        let (msgs, temp, max) = &ai.calls()[0];
+        assert_eq!(msgs.len(), 2);
+        assert!(msgs[0].starts_with("system:"));
+        assert!(msgs[1].contains("用户：什么是一次函数？"));
+        assert!(msgs[1].contains("助手：一次函数是……"));
+        assert_eq!(*temp, Some(0.3));
+        assert_eq!(*max, Some(64));
+    }
+
+    #[tokio::test]
+    async fn generate_title_blank_reply_rejected() {
+        let svc = setup().await;
+        let tid = mk_tree(&svc, "").await;
+        svc.prepare_chat(1, tid, None, Some("q".into()))
+            .await
+            .unwrap();
+        // 树里已有节点（上面 prepare 插入了 user 节点）
+        let ai = FakeAi::new("   ");
+        let err = match svc.generate_title(1, tid, &ai).await {
+            Err(e) => e,
+            Ok(_) => panic!("空白标题应被拒绝"),
+        };
+        assert!(matches!(err, ServiceError::InvalidInput(_)));
+    }
+
+    #[tokio::test]
+    async fn generate_title_foreign_tree_not_found() {
+        let svc = setup().await;
+        let tid = mk_tree(&svc, "").await; // 属于用户 1
+        svc.prepare_chat(1, tid, None, Some("q".into()))
+            .await
+            .unwrap();
+        let ai = FakeAi::new("x");
+        let err = match svc.generate_title(2, tid, &ai).await {
+            Err(e) => e,
+            Ok(_) => panic!("他人树应 NotFound"),
+        };
+        assert!(matches!(err, ServiceError::NotFound(_)));
+    }
 }

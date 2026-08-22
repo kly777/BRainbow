@@ -151,9 +151,15 @@ mod tests {
 
     #[test]
     fn client_ip_takes_first_valid_xff_entry() {
-        assert_eq!(client_ip(&req_with_xff(Some("1.2.3.4, 5.6.7.8"))), "1.2.3.4");
+        assert_eq!(
+            client_ip(&req_with_xff(Some("1.2.3.4, 5.6.7.8"))),
+            "1.2.3.4"
+        );
         // 首个非法则跳过取后续合法值：伪造者无法借垃圾值绕过限速键
-        assert_eq!(client_ip(&req_with_xff(Some("garbage, 5.6.7.8"))), "5.6.7.8");
+        assert_eq!(
+            client_ip(&req_with_xff(Some("garbage, 5.6.7.8"))),
+            "5.6.7.8"
+        );
         // 全部非法 / 无 XFF 回退直连地址
         assert_eq!(client_ip(&req_with_xff(Some("a, b"))), "9.9.9.9");
         assert_eq!(client_ip(&req_with_xff(None)), "9.9.9.9");

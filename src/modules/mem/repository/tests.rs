@@ -542,13 +542,12 @@ async fn review_mem_atomic_applies_and_guards() {
         .unwrap();
     assert!(applied);
 
-    let (stability, lapses): (f64, i32) = sqlx::query_as(
-            "SELECT stability, lapses FROM mem WHERE id = ?",
-        )
-        .bind(mem_id)
-        .fetch_one(&**repo.pool())
-        .await
-        .unwrap();
+    let (stability, lapses): (f64, i32) =
+        sqlx::query_as("SELECT stability, lapses FROM mem WHERE id = ?")
+            .bind(mem_id)
+            .fetch_one(&**repo.pool())
+            .await
+            .unwrap();
     assert_eq!((stability, lapses), (10.0, 1));
 
     let revlogs: i32 = sqlx::query_scalar("SELECT COUNT(*) FROM revlog WHERE mem_id = ?")

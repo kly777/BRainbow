@@ -1,6 +1,6 @@
 import { fillPath, PATHS } from "@config/paths";
 import { getErrorMessage } from "@lib/api";
-import { showConfirm, tryAsync, tryOrNotify } from "@lib/utils";
+import { notifyError, showConfirm, tryAsync } from "@lib/utils";
 import type { UpdateCardRequest } from "@modules/card";
 import { deleteCardE, getCardE, updateCardE } from "@modules/card";
 import { useNavigate, useParams } from "@solidjs/router";
@@ -91,8 +91,14 @@ export function useCardEdit(): CardEditApi {
 			variant: "danger",
 		});
 		if (!confirmed) return;
-		const ok = await tryOrNotify(() => deleteCardE(cardId()), "删除卡片");
-		if (ok) navigate(PATHS.card);
+		// deleteCardE 返回 void：tryOrNotify 成功时也是 undefined，
+		// 不能做成败判据（会把成功当失败，删了却不跳转）。改 tryAsync。
+		const result = await tryAsync(() => deleteCardE(cardId()));
+		if (result.ok) {
+			navigate(PATHS.card);
+		} else {
+			notifyError("删除卡片失败", result.error);
+		}
 	};
 
 	const handleView = () => {

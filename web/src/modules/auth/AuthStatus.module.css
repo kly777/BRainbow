@@ -1,4 +1,4 @@
-/* auth/AuthStatus.css.ts — 由 vanilla-extract 迁移 */
+/* auth/AuthStatus.css.ts — \u589E\u5F3A\u7248 */
 
 .overlay {
 	position: fixed;
@@ -12,18 +12,19 @@
 
 .form {
 	background: var(--t-color-surface);
-	padding: var(--space-xl);
-	border-radius: var(--radius-lg);
+	padding: var(--space-2xl);
+	border-radius: var(--radius-xl);
 	display: flex;
 	flex-direction: column;
-	gap: var(--space-md);
-	min-width: 300px;
-	max-width: 360px;
-	box-shadow: var(--shadow-md);
+	gap: var(--space-lg);
+	min-width: 320px;
+	max-width: 380px;
+	box-shadow: var(--shadow-lg);
 	border: 1px solid var(--t-color-border);
+	animation: fadeInScale var(--duration-scale-in) var(--ease-spring) both;
 }
 
-/* 配合全局 Modal 的认证表单 */
+/* \u914D\u5408\u5168\u5C40 Modal \u7684\u8BA4\u8BC1\u8868\u5355 */
 .auth-form {
 	display: flex;
 	flex-direction: column;
@@ -32,9 +33,11 @@
 
 .title {
 	margin: 0;
-	font-size: var(--text-lg);
+	font-size: var(--text-xl);
+	font-weight: 700;
 	color: var(--t-color-ink);
 	text-align: center;
+	letter-spacing: -0.01em;
 }
 
 .error {
@@ -42,6 +45,10 @@
 	font-size: var(--text-sm);
 	margin: 0;
 	text-align: center;
+	padding: var(--space-sm) var(--space-md);
+	background: var(--t-color-danger-subtle);
+	border-radius: var(--radius-md);
+	border: 1px solid oklch(85% 0.06 25deg);
 }
 
 .input {
@@ -52,16 +59,29 @@
 	background: var(--t-color-bg);
 	color: var(--t-color-ink);
 	outline: none;
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+}
+
+.input:focus {
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+}
+
+.input::placeholder {
+	color: var(--t-color-ink-faint);
 }
 
 .actions {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-sm);
+	margin-top: var(--space-sm);
 }
 
 .btn-submit {
-	padding: var(--space-sm) 0;
+	padding: var(--space-md) 0;
 	border: none;
 	border-radius: var(--radius-md);
 	background: var(--t-color-accent);
@@ -69,6 +89,15 @@
 	font-size: var(--text-base);
 	font-weight: 600;
 	cursor: pointer;
+	transition:
+		background var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+	box-shadow: 0 2px 8px oklch(50% 0.08 165deg / 20%);
+}
+
+.btn-submit:hover {
+	background: var(--t-color-accent-strong);
+	box-shadow: 0 4px 12px oklch(50% 0.08 165deg / 30%);
 }
 
 .btn-link {
@@ -78,6 +107,11 @@
 	font-size: var(--text-sm);
 	cursor: pointer;
 	padding: var(--space-xs);
+	transition: color var(--t-transition-fast);
+}
+
+.btn-link:hover {
+	text-decoration: underline;
 }
 
 .btn-cancel {
@@ -88,63 +122,72 @@
 	color: var(--t-color-ink-muted);
 	font-size: var(--text-sm);
 	cursor: pointer;
-}
-
-.btn-submit:hover {
-	background: var(--t-color-accent-strong);
-}
-
-.btn-link:hover {
-	text-decoration: underline;
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
 }
 
 .btn-cancel:hover {
-	background: var(--t-color-bg);
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
 }
 
-/* ── AuthGuard 未登录提示页 ── */
+/* ── AuthGuard \u672A\u767B\u5F55\u63D0\u793A\u9875 ── */
 
 .auth-required {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: var(--space-md);
+	gap: var(--space-lg);
 	min-height: 60vh;
-	padding: var(--space-xl);
+	padding: var(--space-2xl);
+	animation: fadeInUp 500ms var(--ease-out-expo) both;
 }
 
 .auth-required-title {
 	margin: 0;
 	font-size: var(--text-2xl);
+	font-weight: 700;
 	color: var(--t-color-ink);
+	letter-spacing: -0.02em;
 }
 
 .auth-required-desc {
 	margin: 0;
 	font-size: var(--text-base);
 	color: var(--t-color-ink-muted);
+	text-align: center;
+	max-width: 400px;
 }
 
 .auth-required-btn {
-	padding: var(--space-sm) var(--space-lg);
+	padding: var(--space-md) var(--space-xl);
 	border: none;
-	border-radius: var(--radius-md);
+	border-radius: var(--radius-lg);
 	background: var(--t-color-accent);
 	color: var(--t-color-white);
 	font-size: var(--text-base);
 	font-weight: 600;
 	cursor: pointer;
+	transition:
+		background var(--t-transition-fast),
+		box-shadow var(--t-transition-fast),
+		transform var(--t-transition-fast);
+	box-shadow: 0 2px 8px oklch(50% 0.08 165deg / 20%);
 }
 
 .auth-required-btn:hover {
 	background: var(--t-color-accent-strong);
+	box-shadow: 0 4px 12px oklch(50% 0.08 165deg / 30%);
+	transform: translateY(-1px);
 }
 
 .auth-required-link {
 	color: var(--t-color-accent);
 	font-size: var(--text-sm);
 	text-decoration: none;
+	transition: color var(--t-transition-fast);
 }
 
 .auth-required-link:hover {

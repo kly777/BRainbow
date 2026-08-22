@@ -51,7 +51,8 @@ export function useMemManage() {
 	};
 
 	// ── 数据加载 ──
-	const load = async () => {
+	// initialLoad: 初始加载时传递 detailId，确保直接访问 ?id=xxx 时能获取到记录
+	const load = async (initialLoad = false) => {
 		setLoading(true);
 		const { items, meta } = await fetchAllMems(
 			params.sortField(),
@@ -61,9 +62,9 @@ export function useMemManage() {
 			tagFilters(),
 			params.tagMode(),
 			params.page(),
-			// 不传递 detailId，让列表始终显示所有记录
-			// detailId 只用于客户端过滤详情对象
-			null,
+			// 初始加载时传递 detailId，确保直接访问 ?id=xxx 时能获取到记录
+			// 后续加载不传递，避免点击列表项时列表闪烁
+			initialLoad ? params.detailId() : null,
 		);
 		setMems(items);
 		setPageMeta(meta);
@@ -109,7 +110,7 @@ export function useMemManage() {
 	};
 
 	onMount(() => {
-		load();
+		load(true);
 		initialLoadDone = true;
 	});
 

@@ -62,7 +62,9 @@
 	border-radius: var(--radius-md);
 	box-shadow: var(--shadow-md);
 	max-height: 12.5rem;
-	overflow-y: auto;
+
+	/* 纵向滚动同时裁剪方角，遵循圆角 */
+	overflow: hidden auto;
 }
 
 .dropdown-item {

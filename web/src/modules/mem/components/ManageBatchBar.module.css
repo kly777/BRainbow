@@ -41,6 +41,10 @@
 	border-radius: var(--radius-md);
 	padding: var(--space-xs) var(--space-md);
 	cursor: pointer;
+	transition:
+		background var(--t-transition-fast),
+		border-color var(--t-transition-fast),
+		transform var(--t-transition-fast);
 }
 
 .batch-btn-danger {
@@ -51,6 +55,9 @@
 	border-radius: var(--radius-md);
 	padding: var(--space-xs) var(--space-md);
 	cursor: pointer;
+	transition:
+		filter var(--t-transition-fast),
+		transform var(--t-transition-fast);
 }
 
 .batch-btn:hover {
@@ -59,4 +66,9 @@
 
 .batch-btn-danger:hover {
 	filter: brightness(0.92);
+}
+
+.batch-btn:active,
+.batch-btn-danger:active {
+	transform: translateY(1px);
 }

@@ -38,6 +38,39 @@ export const VALID_SORT_FIELDS: SortField[] = [
 	"state",
 ];
 
+/** Badge 变量子集（与 components/ui/atoms/Badge 的变体对齐） */
+export type MemBadgeVariant =
+	| "default"
+	| "new"
+	| "learning"
+	| "review"
+	| "relearning"
+	| "suspended"
+	| "success"
+	| "warning";
+
+// ── 记忆状态元数据：中文标签 + 徽章变体（表格/详情共用，替代各处散落的 stateLabel） ──
+
+export const MEM_STATE_META: Record<
+	string,
+	{ label: string; badge: MemBadgeVariant }
+> = {
+	new: { label: "新", badge: "new" },
+	learning: { label: "学习", badge: "learning" },
+	review: { label: "复习", badge: "review" },
+	relearning: { label: "重学", badge: "relearning" },
+	suspended: { label: "挂起", badge: "suspended" },
+	buried: { label: "已埋葬", badge: "warning" },
+	today_done: { label: "已复习", badge: "success" },
+};
+
+export function memStateMeta(state: string): {
+	label: string;
+	badge: MemBadgeVariant;
+} {
+	return MEM_STATE_META[state] ?? { label: state, badge: "default" };
+}
+
 // ── 纯数据获取 ──
 
 export async function fetchAllMems(

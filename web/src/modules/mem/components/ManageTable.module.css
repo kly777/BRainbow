@@ -1,18 +1,24 @@
-/* features/mem/ui/ManageTable.css.ts — 增强版 */
+/* features/mem/ui/ManageTable.module.css — 档案清单 */
 
 .page-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 2rem;
+	min-height: 2rem;
 	font-size: var(--text-lg);
 	color: var(--t-color-ink-muted);
 	background: transparent;
 	border: 1px solid var(--t-color-border-strong);
 	border-radius: var(--radius-md);
 	line-height: 1;
-	padding: var(--space-xs) var(--space-md);
+	padding: 0 var(--space-sm);
 	cursor: pointer;
 	transition:
 		background var(--t-transition-fast),
 		color var(--t-transition-fast),
-		border-color var(--t-transition-fast);
+		border-color var(--t-transition-fast),
+		transform var(--t-transition-fast);
 }
 
 .page-btn:disabled {
@@ -25,6 +31,10 @@
 	color: var(--t-color-ink);
 }
 
+.page-btn:active:not(:disabled) {
+	transform: translateY(1px);
+}
+
 .table-card {
 	flex: 1;
 	min-height: 0;
@@ -33,6 +43,9 @@
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-lg);
+
+	/* 裁剪后代（含吸顶表头的方形底色）以遵循圆角 */
+	overflow: hidden;
 }
 
 .table-scroll {
@@ -47,6 +60,8 @@
 	font-size: var(--text-sm);
 }
 
+/* ── 表头：吸顶 + 排序按钮 ── */
+
 .th {
 	/* 挂载点类（无样式，供 JS 引用） */
 }
@@ -54,23 +69,63 @@
 .th,
 .th-sort,
 .th-cb {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: var(--t-color-surface);
 	text-align: left;
 	font-weight: 600;
-}
-
-.th-sort {
-	cursor: pointer;
-	user-select: none;
-	transition: color var(--t-transition-fast);
-}
-
-.th-sort:hover {
-	color: var(--t-color-ink);
+	white-space: nowrap;
+	padding: var(--space-sm) var(--space-md);
+	border-bottom: 1px solid var(--t-color-border-strong);
 }
 
 .th-cb {
 	width: 2rem;
-	padding-left: var(--space-sm);
+}
+
+.th-sort {
+	cursor: default;
+}
+
+.sort-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	font: inherit;
+	font-weight: inherit;
+	color: var(--t-color-ink-muted);
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+	transition: color var(--t-transition-fast);
+}
+
+.sort-btn:focus-visible {
+	color: var(--t-color-ink);
+}
+
+.th-sort:hover .sort-btn {
+	color: var(--t-color-ink);
+}
+
+.sort-icon {
+	font-size: var(--text-2xs);
+	color: var(--t-color-accent-strong);
+}
+
+/* ── 单元格 ── */
+
+.td,
+.td-state,
+.td-num,
+.td-due,
+.td-cb,
+.td-act {
+	padding: var(--space-sm) var(--space-md);
+	border-bottom: 1px solid var(--t-color-border);
+	vertical-align: middle;
 }
 
 .td {
@@ -82,9 +137,26 @@
 	cursor: pointer;
 }
 
-.td-cb {
-	width: 2rem;
-	padding-left: var(--space-sm);
+.td-state {
+	white-space: nowrap;
+}
+
+.state-cell {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-xs);
+}
+
+.leech-mark {
+	font-size: var(--text-2xs);
+	font-weight: 700;
+	line-height: 1;
+	padding: 2px var(--space-xs);
+	border-radius: var(--radius-xs);
+	background: var(--t-color-warning-subtle);
+	color: var(--t-color-warning);
+	cursor: help;
+	white-space: nowrap;
 }
 
 .td-num {
@@ -103,10 +175,32 @@
 	font-variant-numeric: tabular-nums;
 }
 
+/* 已到期：危险色提示（fmtRelative 此时显示"待复习"） */
+.td-overdue {
+	color: var(--t-color-danger);
+	font-weight: 600;
+}
+
+.td-cb {
+	width: 2rem;
+}
+
 .td-act {
 	width: 2.5rem;
 	text-align: right;
 }
+
+/* 首列与卡片左缘对齐 */
+.th:first-child,
+.th-sort:first-child,
+.th-cb:first-child,
+.td:first-child,
+.td-state:first-child,
+.td-cb:first-child {
+	padding-left: var(--space-lg);
+}
+
+/* ── 行状态 ── */
 
 .row {
 	transition: background var(--t-transition-fast);
@@ -124,18 +218,24 @@
 	background: var(--t-color-accent-soft);
 }
 
+/* 选中行：左侧档案标签指示条 */
+.row-active > td:first-child {
+	box-shadow: inset 2px 0 0 0 var(--t-color-accent);
+}
+
 .cell-tags {
 	display: flex;
 	gap: var(--space-xs);
 	flex-wrap: wrap;
 }
 
+/* 标签用中性底色，避免与状态徽章的彩色语义冲突 */
 .cell-tag {
 	font-size: var(--text-2xs);
 	padding: 1px var(--space-sm);
-	border-radius: 999px;
-	background: var(--t-color-badge-new-bg);
-	color: var(--t-color-badge-new-text);
+	border-radius: var(--radius-full);
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink-muted);
 	white-space: nowrap;
 }
 
@@ -149,12 +249,17 @@
 	border-radius: var(--radius-xs);
 	transition:
 		color var(--t-transition-fast),
-		background var(--t-transition-fast);
+		background var(--t-transition-fast),
+		transform var(--t-transition-fast);
 }
 
 .del-btn:hover {
 	color: var(--t-color-danger);
 	background: var(--t-color-danger-subtle);
+}
+
+.del-btn:active {
+	transform: translateY(1px);
 }
 
 .cell-button {
@@ -172,6 +277,78 @@
 	white-space: nowrap;
 }
 
+/* ── 骨架屏（形状对齐最终表格：勾选框 / 两列文本 / 徽章） ── */
+
+.sk-head,
+.sk-row {
+	display: grid;
+	grid-template-columns: 2rem 1.4fr 1fr 4rem;
+	gap: var(--space-md);
+	align-items: center;
+	padding: var(--space-sm) var(--space-lg);
+}
+
+.sk-head {
+	border-bottom: 1px solid var(--t-color-border);
+	padding-top: var(--space-md);
+	padding-bottom: var(--space-md);
+}
+
+.sk-bar {
+	display: block;
+	height: 0.625rem;
+}
+
+.sk-cb {
+	display: block;
+	width: 0.875rem;
+	height: 0.875rem;
+}
+
+.sk-chip {
+	display: block;
+	width: 3rem;
+	height: 0.875rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.sk-bar,
+	.sk-cb,
+	.sk-chip {
+		animation: none;
+		opacity: 0.6;
+	}
+}
+
+/* ── 空态 ── */
+
+.empty {
+	padding: var(--space-3xl) var(--space-xl);
+	text-align: center;
+}
+
+.empty-title {
+	margin: 0;
+	font-family: var(--t-font-display);
+	font-size: var(--text-base);
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	color: var(--t-color-ink-muted);
+}
+
+.empty-hint {
+	margin: var(--space-xs) 0 0;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-faint);
+}
+
+.empty-hint a {
+	color: var(--t-color-accent-strong);
+	font-weight: 500;
+}
+
+/* ── 分页 ── */
+
 .pagination {
 	display: flex;
 	align-items: center;
@@ -185,13 +362,6 @@
 	font-family: var(--t-font-mono);
 	color: var(--t-color-ink-faint);
 	font-variant-numeric: tabular-nums;
-}
-
-.empty {
-	text-align: center;
-	padding: var(--space-xl) 0;
-	color: var(--t-color-ink-faint);
-	font-size: var(--text-sm);
 }
 
 /* 响应式 */

@@ -4,6 +4,7 @@ import { PATHS } from "@config/paths";
 // 业务逻辑复用 useMemManage，此处只做视图层
 
 import { A } from "@solidjs/router";
+import { Show } from "solid-js";
 import ManageBatchBar from "./components/ManageBatchBar.tsx";
 import ManageDetail from "./components/ManageDetail.tsx";
 import ManageTable from "./components/ManageTable.tsx";
@@ -15,6 +16,12 @@ import styles from "./MemManage.module.css";
 
 export default function MemManage() {
 	const m = useMemManage();
+
+	// 是否处于搜索/筛选态（决定表格空态文案）
+	const filtered = () =>
+		m.searchQuery().trim() !== "" ||
+		m.filterState() !== "all" ||
+		m.tagFilters().length > 0;
 
 	return (
 		<div class={styles.page}>
@@ -28,7 +35,7 @@ export default function MemManage() {
 					<A href={PATHS.memoryAdd} class={styles.addLink}>
 						＋ 添加
 					</A>
-					<span class={styles.count}>{m.pageMeta().total} 个</span>
+					<span class={styles.count}>共 {m.pageMeta().total} 条</span>
 				</div>
 			</div>
 
@@ -59,6 +66,14 @@ export default function MemManage() {
 				class={styles.split}
 				classList={{ [styles.detailActive]: m.detailId() !== null }}
 			>
+				{/* 移动端抽屉遮罩（桌面端 display:none） */}
+				<Show when={m.detailId() !== null}>
+					<div
+						class={styles.backdrop}
+						onClick={() => m.setDetailId(null)}
+						aria-hidden="true"
+					/>
+				</Show>
 				<div class={styles.tableWrap}>
 					<ManageTable
 						mems={m.mems()}
@@ -71,6 +86,7 @@ export default function MemManage() {
 						loading={m.loading()}
 						pageMeta={m.pageMeta()}
 						page={m.page()}
+						filtered={filtered()}
 						onToggleSort={m.toggleSort}
 						onToggleBatch={m.toggleBatch}
 						onToggleAll={m.toggleAll}

@@ -16,25 +16,6 @@
 	max-width: 280px;
 }
 
-.search-input {
-	width: 100%;
-	font-size: var(--text-sm);
-	color: var(--t-color-ink);
-	background: var(--t-color-bg);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-md);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-}
-
-.search-input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-}
-
 .tag-filter {
 	display: flex;
 	align-items: center;
@@ -43,27 +24,7 @@
 	flex-wrap: wrap;
 }
 
-.mode-toggle {
-	font-size: var(--text-xs);
-	font-family: var(--t-font-mono);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: transparent;
-	color: var(--t-color-ink-muted);
-	padding: var(--space-xs) var(--space-sm);
-	cursor: pointer;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast),
-		border-color var(--t-transition-fast);
-}
-
-.mode-toggle:hover {
-	color: var(--t-color-ink);
-	background: var(--t-color-surface-raised);
-	border-color: var(--t-color-border-strong);
-}
-
+/* 包含标签：跟随主题强调色（与品牌色一致，区别于状态徽章语义） */
 .active-tag {
 	display: inline-flex;
 	align-items: center;
@@ -71,8 +32,8 @@
 	font-size: var(--text-xs);
 	padding: var(--space-2xs) var(--space-sm);
 	border-radius: 999px;
-	background: var(--t-color-badge-new-bg);
-	color: var(--t-color-badge-new-text);
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent-strong);
 	transition: filter var(--t-transition-fast);
 }
 
@@ -111,20 +72,6 @@
 	opacity: 1;
 }
 
-.clear-all-btn {
-	font-size: var(--text-xs);
-	border: none;
-	background: none;
-	color: var(--t-color-ink-faint);
-	cursor: pointer;
-	padding: var(--space-2xs) var(--space-sm);
-	transition: color var(--t-transition-fast);
-}
-
-.clear-all-btn:hover {
-	color: var(--t-color-ink);
-}
-
 .tag-input {
 	font-size: var(--text-xs);
 	width: 7.5rem;
@@ -153,6 +100,7 @@
 	border: 1px solid var(--t-color-border-strong);
 	border-radius: var(--radius-md);
 	box-shadow: var(--shadow-lg);
+	overflow: hidden;
 }
 
 .tag-option {
@@ -172,57 +120,14 @@
 	background: var(--t-color-surface-raised);
 }
 
-.export-btn {
-	font-size: var(--text-sm);
-	color: var(--t-color-ink-muted);
-	background: transparent;
-	border: 1px solid var(--t-color-border-strong);
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-md);
-	cursor: pointer;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast),
-		border-color var(--t-transition-fast);
-}
-
-.export-btn:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
+/* 导出：动作区靠右 */
+.export-wrap {
+	margin-left: auto;
 }
 
 .filter-group {
 	display: flex;
 	gap: var(--space-2xs);
-}
-
-.filter-btn {
-	font-size: var(--text-xs);
-	font-family: var(--t-font-mono);
-	color: var(--t-color-ink-muted);
-	background: transparent;
-	border: none;
-	border-radius: calc(var(--radius-md) - 0.125rem);
-	padding: var(--space-xs) var(--space-sm);
-	cursor: pointer;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast);
-}
-
-.filter-btn:hover {
-	color: var(--t-color-ink);
-}
-
-.filter-active {
-	font-size: var(--text-xs);
-	font-family: var(--t-font-mono);
-	color: var(--t-color-on-solid);
-	background: var(--t-color-accent);
-	border: none;
-	border-radius: calc(var(--radius-md) - 0.125rem);
-	padding: var(--space-xs) var(--space-sm);
-	cursor: pointer;
 }
 
 /* 响应式 */

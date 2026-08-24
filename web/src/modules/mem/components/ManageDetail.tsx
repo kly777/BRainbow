@@ -6,6 +6,7 @@ import { Button, Markdown as MarkdownRenderer } from "@components/ui";
 import { fmtLocal } from "@lib/utils";
 import type { MemItem, TagInfo } from "@modules/mem";
 import { type Component, Show } from "solid-js";
+import { memStateMeta } from "../lib/mem-manage-utils.ts";
 import styles from "./ManageDetail.module.css";
 import TagSelector from "./TagSelector.tsx";
 
@@ -29,14 +30,6 @@ interface Props {
 	onClose: () => void;
 }
 
-const stateLabel: Record<string, string> = {
-	new: "新",
-	learning: "学习",
-	relearning: "重学",
-	review: "复习",
-	suspended: "挂起",
-};
-
 const DetailHead: Component<{
 	id: number;
 	state: string;
@@ -47,9 +40,13 @@ const DetailHead: Component<{
 		<span class={styles.detailId}>#{props.id}</span>
 		<div class={styles.detailHeadRight}>
 			<span class={styles.detailState} data-state={props.state}>
-				{stateLabel[props.state] ?? props.state}
-				{props.leeched ? " ⚠️烂卡" : ""}
+				{memStateMeta(props.state).label}
 			</span>
+			<Show when={props.leeched}>
+				<span class={styles.leechMark} title="烂卡：多次遗忘">
+					烂卡
+				</span>
+			</Show>
 			<button
 				type="button"
 				class={styles.detailClose}
@@ -218,12 +215,28 @@ export default function ManageDetail(props: Props) {
 							onEditTargetChange={props.onEditTargetChange}
 						/>
 
-						{/* 元数据（等宽） */}
+						{/* 元数据（label/value 网格，数值等宽） */}
 						<div class={styles.meta}>
-							<span>遗忘 {d().lapses} 次</span>
-							<span>难度 {d().difficulty.toFixed(2)}</span>
-							<span>创建 {fmtLocal(d().cue.created_at)}</span>
-							<span>到期 {fmtLocal(d().due_at)}</span>
+							<div class={styles.metaItem}>
+								<span class={styles.metaLabel}>遗忘</span>
+								<span class={styles.metaValue}>{d().lapses} 次</span>
+							</div>
+							<div class={styles.metaItem}>
+								<span class={styles.metaLabel}>难度</span>
+								<span class={styles.metaValue}>
+									{d().difficulty.toFixed(2)}
+								</span>
+							</div>
+							<div class={styles.metaItem}>
+								<span class={styles.metaLabel}>创建</span>
+								<span class={styles.metaValue}>
+									{fmtLocal(d().cue.created_at)}
+								</span>
+							</div>
+							<div class={styles.metaItem}>
+								<span class={styles.metaLabel}>到期</span>
+								<span class={styles.metaValue}>{fmtLocal(d().due_at)}</span>
+							</div>
 						</div>
 
 						{/* 标签 */}

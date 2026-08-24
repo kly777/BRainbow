@@ -81,6 +81,15 @@ export default function ManageToolbar(props: Props) {
 				/>
 			</div>
 
+			{/* 状态筛选 */}
+			<div class={styles.filterGroup}>
+				<FilterGroup
+					options={FILTER_OPTIONS}
+					selected={props.filterState}
+					onChange={props.onFilterChange}
+				/>
+			</div>
+
 			{/* 标签过滤 */}
 			<div class={styles.tagFilter}>
 				<Button
@@ -91,7 +100,7 @@ export default function ManageToolbar(props: Props) {
 						props.tagMode === "include" ? "切换为排除模式" : "切换为包含模式"
 					}
 				>
-					{props.tagMode === "include" ? "☐ 包含" : "☒ 排除"}
+					{props.tagMode === "include" ? "包含" : "排除"}
 				</Button>
 				<For each={props.tagFilters}>
 					{(tag) => (
@@ -157,17 +166,10 @@ export default function ManageToolbar(props: Props) {
 				</Show>
 			</div>
 
-			<Button variant="secondary" size="sm" onClick={props.onExport}>
-				导出
-			</Button>
-
-			{/* 状态筛选 */}
-			<div class={styles.filterGroup}>
-				<FilterGroup
-					options={FILTER_OPTIONS}
-					selected={props.filterState}
-					onChange={props.onFilterChange}
-				/>
+			<div class={styles.exportWrap}>
+				<Button variant="secondary" size="sm" onClick={props.onExport}>
+					导出
+				</Button>
 			</div>
 		</div>
 	);

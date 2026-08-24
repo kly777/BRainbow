@@ -40,9 +40,16 @@ function SuggestionList(props: {
 				</For>
 			</div>
 			<div class={styles.sugFooter}>
-				<span>↑↓ 选择</span>
-				<span>Enter 打开</span>
-				<span>Esc 关闭</span>
+				<span>
+					<kbd>↑</kbd>
+					<kbd>↓</kbd> 选择
+				</span>
+				<span>
+					<kbd>Enter</kbd> 打开
+				</span>
+				<span>
+					<kbd>Esc</kbd> 关闭
+				</span>
 			</div>
 		</div>
 	);
@@ -152,6 +159,7 @@ export default function CommandPalette() {
 					type="button"
 					class={styles.fab}
 					onClick={() => p.openPalette()}
+					aria-label="打开命令面板"
 				>
 					⌘
 				</button>

@@ -1,4 +1,4 @@
-/* components/ui/Toast.css.ts — \u589E\u5F3A\u7248 */
+/* components/ui/Toast.css.ts — 增强版 */
 
 @keyframes slide-in {
 	from {
@@ -147,7 +147,7 @@
 	animation: shrink linear forwards;
 }
 
-/* ── \u9519\u8BEF ── */
+/* ── 错误 ── */
 .error {
 	background: var(--t-color-danger-subtle);
 	border: 1px solid var(--toast-error-border);
@@ -163,7 +163,7 @@
 	background: var(--toast-error-code-bg);
 }
 
-/* ── \u8B66\u544A ── */
+/* ── 警告 ── */
 .warning {
 	background: var(--t-color-warning-subtle);
 	border: 1px solid var(--toast-warning-border);
@@ -179,7 +179,7 @@
 	background: var(--toast-warning-code-bg);
 }
 
-/* ── \u6210\u529F ── */
+/* ── 成功 ── */
 .success {
 	background: var(--t-color-success-subtle);
 	border: 1px solid var(--toast-success-border);
@@ -195,7 +195,7 @@
 	background: var(--toast-success-code-bg);
 }
 
-/* ── \u4FE1\u606F ── */
+/* ── 信息 ── */
 .info {
 	background: var(--t-color-accent-soft);
 	border: 1px solid var(--toast-info-border);
@@ -211,7 +211,7 @@
 	background: var(--toast-info-code-bg);
 }
 
-/* \u54CD\u5E94\u5F0F */
+/* 响应式 */
 @media (width <= 768px) {
 	.container {
 		left: var(--space-md);

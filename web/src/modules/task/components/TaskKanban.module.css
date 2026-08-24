@@ -1,4 +1,4 @@
-/* features/task/ui/TaskKanban.css.ts — \u589E\u5F3A\u7248 */
+/* features/task/ui/TaskKanban.css.ts — 增强版 */
 
 .edit-title-input {
 	width: 100%;
@@ -175,7 +175,7 @@
 	color: var(--t-color-ink-faint);
 }
 
-/* ── \u54CD\u5E94\u5F0F ── */
+/* ── 响应式 ── */
 @media (width <= 1024px) {
 	.board {
 		grid-template-columns: 1fr;
@@ -187,7 +187,7 @@
 	}
 }
 
-/* ── \u4EA4\u4E92 ── */
+/* ── 交互 ── */
 .card:active {
 	cursor: grabbing;
 }

@@ -1,4 +1,4 @@
-/* pages/TextEditor.css.ts — \u589E\u5F3A\u7248 */
+/* pages/TextEditor.css.ts — 增强版 */
 
 .page {
 	display: flex;
@@ -107,7 +107,7 @@
 	color: var(--t-color-ink);
 }
 
-/* \u4EA4\u4E92 */
+/* 交互 */
 .tab:hover {
 	color: var(--t-color-ink);
 	background: var(--t-color-surface-raised);

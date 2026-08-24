@@ -1,5 +1,6 @@
 // ── ChatPage 的子组件：树列表项 / 树头部（标题+提示词）/ 空会话欢迎区 / 章节导航 ──
 
+import { Button } from "@components/ui";
 import { copyTextWithToast, fmtLocal, tryOrNotify } from "@lib/utils";
 import type { ChatNode, ChatTree } from "@modules/chat";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
@@ -61,7 +62,7 @@ export function TreeListItem(props: {
 	};
 
 	const timeText = () =>
-		props.tree.updated_at ? fmtLocal(props.tree.updated_at) : "—";
+		props.tree.updated_at ? fmtLocal(props.tree.updated_at) : "";
 
 	return (
 		<div class={props.active ? styles.treeItemActive : styles.treeItem}>
@@ -200,20 +201,12 @@ export function TreeHeader(props: {
 						placeholder="例如：你是一个严谨的代码导师…"
 					/>
 					<div class={styles.editActions}>
-						<button
-							type="button"
-							class={styles.btnGhost}
-							onClick={() => setShowPrompt(false)}
-						>
+						<Button variant="secondary" onClick={() => setShowPrompt(false)}>
 							取消
-						</button>
-						<button
-							type="button"
-							class={styles.btnPrimary}
-							onClick={() => void savePrompt()}
-						>
+						</Button>
+						<Button variant="primary" onClick={() => void savePrompt()}>
 							保存
-						</button>
+						</Button>
 					</div>
 				</div>
 			</Show>
@@ -221,14 +214,24 @@ export function TreeHeader(props: {
 	);
 }
 
-// ── 空会话欢迎区：居中文案 + 示例问题（输入框恒定在底部） ──
+// ── 空会话欢迎区：时段问候 + 接地各模块的示例问题（输入框恒定在底部） ──
 
 const SAMPLE_PROMPTS = [
-	"总结一下我的任务清单",
-	"解释什么是间隔重复记忆",
-	"帮我梳理一个学习计划",
-	"用通俗的语言讲讲 FSRS 算法",
+	"总结我近期的任务，标出今天要做的",
+	"把我的知识卡片整理成一份复习计划",
+	"用通俗的语言解释 FSRS 间隔重复算法",
+	"帮我拆解一句英语长难句的结构",
 ];
+
+function greeting() {
+	const h = new Date().getHours();
+	if (h < 5) return "凌晨好";
+	if (h < 9) return "早上好";
+	if (h < 12) return "上午好";
+	if (h < 14) return "中午好";
+	if (h < 18) return "下午好";
+	return "晚上好";
+}
 
 export function WelcomeText(props: {
 	title: string;
@@ -236,16 +239,15 @@ export function WelcomeText(props: {
 }) {
 	return (
 		<div class={styles.welcome}>
-			<h1 class={styles.welcomeTitle}>{props.title}</h1>
-			<p class={styles.welcomeHint}>
-				支持多轮对话、树状分支、修订上下文；AI 思考过程可折叠查看。
-			</p>
+			<h1 class={styles.welcomeTitle}>{greeting()}</h1>
+			<p class={styles.welcomeContext}>{props.title}</p>
 			<div class={styles.welcomeSamples}>
 				<For each={SAMPLE_PROMPTS}>
-					{(prompt) => (
+					{(prompt, i) => (
 						<button
 							type="button"
 							class={styles.welcomeChip}
+							style={{ "animation-delay": `${120 + i() * 60}ms` }}
 							onClick={() => props.onPick(prompt)}
 						>
 							{prompt}

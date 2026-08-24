@@ -1,4 +1,4 @@
-/* features/task/TaskManager.css.ts — \u589E\u5F3A\u7248 */
+/* features/task/TaskManager.css.ts — 增强版 */
 
 .task-manager {
 	max-width: var(--page-max);
@@ -181,7 +181,7 @@
 	background: var(--t-color-surface);
 }
 
-/* \u54CD\u5E94\u5F0F */
+/* 响应式 */
 @media (width <= 768px) {
 	.task-manager {
 		margin: 0 auto;

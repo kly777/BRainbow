@@ -1,4 +1,4 @@
-/* features/mem/MemPage.css.ts — \u589E\u5F3A\u7248 */
+/* features/mem/MemPage.css.ts — 增强版 */
 
 .page {
 	display: flex;
@@ -118,7 +118,7 @@
 	align-items: center;
 }
 
-/* \u54CD\u5E94\u5F0F */
+/* 响应式 */
 @media (width <= 600px) {
 	.top-bar {
 		padding-left: var(--space-md);

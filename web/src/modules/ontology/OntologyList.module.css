@@ -1,4 +1,4 @@
-/* OntologyList — \u672C\u4F53\u7BA1\u7406\u9875\uFF08\u589E\u5F3A\u7248\uFF09 */
+/* OntologyList — 本体管理页（增强版） */
 
 .container {
 	margin: 0 auto;
@@ -47,7 +47,7 @@
 	min-width: 12rem;
 }
 
-/* \u5217\u8868\u89C6\u56FE */
+/* 列表视图 */
 .entities-list {
 	overflow-x: auto;
 	background: var(--t-color-surface);
@@ -89,7 +89,7 @@
 	background: var(--t-color-surface-raised);
 }
 
-/* \u7F51\u683C\u89C6\u56FE */
+/* 网格视图 */
 .entities-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
@@ -164,7 +164,7 @@
 	margin: 0;
 }
 
-/* \u521B\u5EFA\u5F39\u5C42\u5185\u7684\u8868\u5355\uFF08\u4E0E Modal \u5171\u4EAB\u7EC4\u4EF6\u914D\u5408\uFF09 */
+/* 创建弹层内的表单（与 Modal 共享组件配合） */
 .form-error {
 	padding: var(--space-sm) var(--space-md);
 	background: var(--t-color-danger-subtle);

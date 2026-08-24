@@ -1,6 +1,6 @@
-/* features/chat/components/ChatSidebar.module.css — \u5BF9\u8BDD\u4FA7\u8FB9\u680F\uFF08\u589E\u5F3A\u7248\uFF09 */
+/* features/chat/components/ChatSidebar.module.css — 对话侧边栏（增强版） */
 
-/* ── \u4FA7\u8FB9\u680F ── */
+/* ── 侧边栏 ── */
 
 .sidebar {
 	width: 260px;
@@ -21,7 +21,7 @@
 	transition: width var(--t-transition-normal);
 }
 
-/* \u6298\u53E0\u6309\u94AE\uFF1A\u4F4D\u4E8E\u5BF9\u8BDD\u533A\u5DE6\u4E0A\u89D2\uFF0C\u8D34\u4FA7\u8FB9\u680F\u53F3\u8FB9\u6846 */
+/* 折叠按钮：位于对话区左上角，贴侧边栏右边框 */
 .sidebar-toggle {
 	position: absolute;
 	left: var(--space-sm);

@@ -1,4 +1,5 @@
-/* features/chat/components/ChatPageParts.module.css — 对话页子组件 */
+/* features/chat/components/ChatPageParts.module.css — 对话页子组件
+ * 圆角/accent 规则见 ChatPage.module.css 头注 */
 
 .tree-item,
 .tree-item-active {
@@ -33,13 +34,13 @@
 }
 
 .tree-item-active {
-	border-color: var(--t-color-accent);
-	background: var(--t-color-surface);
-	color: var(--t-color-accent-strong);
+	border-color: transparent;
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-ink);
 }
 
 .tree-item-active .tree-select {
-	font-weight: 500;
+	font-weight: 600;
 }
 
 .tree-item-title {
@@ -242,7 +243,7 @@
 	width: 320px;
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border-strong);
-	border-radius: var(--radius-lg);
+	border-radius: var(--radius-md);
 	box-shadow: var(--shadow-lg);
 	padding: var(--space-md);
 	display: flex;
@@ -275,76 +276,35 @@
 	gap: var(--space-sm);
 }
 
-.btn-ghost {
-	font-size: var(--text-sm);
-	color: var(--t-color-ink-muted);
-	background: transparent;
-	border: 1px solid var(--t-color-border-strong);
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-lg);
-	cursor: pointer;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast),
-		border-color var(--t-transition-fast);
-}
-
-.btn-ghost:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
-
-.btn-ghost:disabled {
-	opacity: 0.35;
-	cursor: default;
-}
-
-.btn-primary {
-	font-size: var(--text-sm);
-	color: var(--t-color-on-solid);
-	background: var(--t-color-accent);
-	border: none;
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-lg);
-	cursor: pointer;
-	font-weight: 500;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast),
-		border-color var(--t-transition-fast);
-}
-
-.btn-primary:hover {
-	background: var(--t-color-accent-strong);
-}
-
-.btn-primary:disabled {
-	opacity: 0.5;
-	cursor: default;
-}
-
-/* ── 空会话欢迎区：居中大输入框 ── */
+/* ── 空会话欢迎区：时段问候 + 接地模块的示例问题 ── */
 .welcome {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: var(--space-lg);
+	gap: var(--space-sm);
 	flex: 1;
 	padding: var(--space-xl);
+	text-align: center;
 }
 
+/* display 层：问候语；tracking 收紧，行高给 CJK 留呼吸 */
 .welcome-title {
-	font-size: var(--text-2xl);
+	font-size: clamp(1.75rem, 3vw, 2.5rem);
 	font-weight: 700;
+	letter-spacing: -0.01em;
+	line-height: var(--leading-tight);
 	margin: 0;
-	letter-spacing: 0.02em;
+	color: var(--t-color-ink);
+	animation: fade-in-up var(--duration-slide-up) var(--ease-out-expo) both;
 }
 
-.welcome-hint {
-	color: var(--t-color-ink-muted);
+/* 次级语境行：当前工作台 / 会话标题 */
+.welcome-context {
 	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
 	margin: 0;
+	animation: fade-in-up var(--duration-slide-up) var(--ease-out-expo) 80ms both;
 }
 
 .welcome-samples {
@@ -352,7 +312,8 @@
 	flex-wrap: wrap;
 	justify-content: center;
 	gap: var(--space-sm);
-	max-width: 640px;
+	max-width: var(--page-content-max);
+	margin-top: var(--space-md);
 }
 
 .welcome-chip {
@@ -365,12 +326,20 @@
 	cursor: pointer;
 	transition:
 		border-color var(--t-transition-fast),
-		background var(--t-transition-fast);
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		transform var(--t-transition-fast);
+	animation: fade-in-up 500ms var(--ease-out-expo) both;
 }
 
 .welcome-chip:hover {
 	border-color: var(--t-color-accent);
 	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.welcome-chip:active {
+	transform: scale(0.97);
 }
 
 /* ── 右侧章节导航 ── */

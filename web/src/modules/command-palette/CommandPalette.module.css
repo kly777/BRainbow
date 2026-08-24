@@ -1,4 +1,4 @@
-/* components/CommandPalette.css.ts — \u589E\u5F3A\u7248 */
+/* components/CommandPalette.css.ts — 增强版 */
 
 .overlay {
 	position: fixed;
@@ -44,7 +44,7 @@
 		box-shadow var(--t-transition-normal);
 }
 
-/* \u540E\u9762\u8DDF\u7740\u5EFA\u8BAE\u5217\u8868\u65F6\uFF1A\u4E0E\u5217\u8868\u8FDE\u6210\u4E00\u4F53\uFF08\u53BB\u5E95\u90E8\u5706\u89D2\u548C\u8FB9\u6846\uFF09 */
+/* 后面跟着建议列表时：与列表连成一体（去底部圆角和边框） */
 .input-row:has(+ .suggestions) {
 	border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 	border-bottom: none;
@@ -81,7 +81,7 @@
 	overflow: hidden;
 }
 
-/* \u5217\u8868\u6EDA\u52A8\u533A\uFF1A\u6EDA\u52A8\u6761\u53EA\u5728\u6B64\u533A\u57DF\u5185\uFF0C\u4E0D\u538B\u5BB9\u5668\u5706\u89D2 */
+/* 列表滚动区：滚动条只在此区域内，不压容器圆角 */
 .sug-scroll {
 	overflow-y: auto;
 	max-height: 26rem;
@@ -93,7 +93,7 @@
 	scrollbar-color: var(--t-color-border-strong) transparent;
 }
 
-/* \u6EDA\u52A8\u6761\u60AC\u6D6E\u6837\u5F0F\uFF1Athumb \u4E0E\u8F68\u9053\u7559\u95F4\u9699 */
+/* 滚动条悬浮样式：thumb 与轨道留间隙 */
 .sug-scroll::-webkit-scrollbar {
 	width: 0.5rem;
 }
@@ -110,7 +110,7 @@
 	margin: var(--space-xs) 0;
 }
 
-/* \u5E95\u90E8\u5FEB\u6377\u952E\u63D0\u793A\u884C\uFF1A\u56FA\u5B9A\u4E0D\u6EDA\u52A8 */
+/* 底部快捷键提示行：固定不滚动 */
 .sug-footer {
 	display: flex;
 	gap: var(--space-md);
@@ -197,7 +197,7 @@
 		0 0 0 3px var(--t-color-accent-ring);
 }
 
-/* \u8FDE\u4F53\u65F6\uFF1A\u5217\u8868\u968F\u8F93\u5165\u6846\u805A\u7126\u540C\u6B65\u9AD8\u4EAE\uFF08\u7EDF\u4E00\u8FB9\u6846\u63CF\u8FB9\uFF09 */
+/* 连体时：列表随输入框聚焦同步高亮（统一边框描边） */
 .bar:has(.input-row:focus-within) .suggestions {
 	border-color: var(--t-color-accent);
 	box-shadow:

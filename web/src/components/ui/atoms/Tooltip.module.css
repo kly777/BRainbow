@@ -1,4 +1,4 @@
-/* Tooltip: \u8F7B\u91CF hover/focus \u63D0\u793A\u6C14\u6CE1\uFF08portal \u5230 body\uFF0C\u907F\u5F00 overflow \u88C1\u526A\uFF09 */
+/* Tooltip: 轻量 hover/focus 提示气泡（portal 到 body，避开 overflow 裁剪） */
 
 .wrap {
 	display: inline-flex;

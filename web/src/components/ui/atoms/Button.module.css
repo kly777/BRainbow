@@ -1,4 +1,4 @@
-/* components/ui/Button.css.ts — \u589E\u5F3A\u7248 */
+/* components/ui/Button.css.ts — 增强版 */
 
 .btn {
 	display: inline-flex;
@@ -35,7 +35,7 @@
 	font-size: var(--text-sm);
 }
 
-/* ── Primary：accent \u5E26\u5FAE\u9634\u5F71 ── */
+/* ── Primary：accent 带微阴影 ── */
 .primary {
 	background: var(--t-color-accent);
 	color: var(--t-color-on-solid);
@@ -86,7 +86,7 @@
 	color: var(--t-color-ink);
 }
 
-/* ── Icon \u6309\u94AE ── */
+/* ── Icon 按钮 ── */
 .icon {
 	background: transparent;
 	color: var(--t-color-ink-faint);
@@ -104,7 +104,7 @@
 	color: var(--t-color-ink);
 }
 
-/* ── \u7981\u7528\u6001 ── */
+/* ── 禁用态 ── */
 .btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
@@ -112,7 +112,7 @@
 	box-shadow: none;
 }
 
-/* ── \u6309\u4E0B\u53CD\u9988 ── */
+/* ── 按下反馈 ── */
 .btn:active:not(:disabled) {
 	transform: scale(0.97);
 	box-shadow: none;

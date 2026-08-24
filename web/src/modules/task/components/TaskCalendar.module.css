@@ -1,4 +1,4 @@
-/* features/task/ui/TaskCalendar.css.ts — \u589E\u5F3A\u7248 */
+/* features/task/ui/TaskCalendar.css.ts — 增强版 */
 
 .calendar-view {
 	background: var(--t-color-surface);
@@ -62,11 +62,11 @@
 }
 
 .today {
-	/* \u6302\u8F7D\u70B9\u7C7B\uFF08\u65E0\u6837\u5F0F\uFF0C\u4F9B JS \u5F15\u7528\uFF09 */
+	/* 挂载点类（无样式，供 JS 引用） */
 }
 
 .empty {
-	/* \u6302\u8F7D\u70B9\u7C7B\uFF08\u65E0\u6837\u5F0F\uFF0C\u4F9B JS \u5F15\u7528\uFF09 */
+	/* 挂载点类（无样式，供 JS 引用） */
 }
 
 .calendar-day {

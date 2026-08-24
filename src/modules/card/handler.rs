@@ -131,10 +131,7 @@ pub struct SearchCardsQuery {
 
 impl SearchCardsQuery {
     fn pagination(&self) -> Pagination {
-        Pagination {
-            page: self.page.unwrap_or(1),
-            page_size: self.page_size.unwrap_or(20),
-        }
+        Pagination::from_options(self.page, self.page_size)
     }
 }
 

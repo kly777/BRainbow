@@ -141,13 +141,10 @@ pub async fn search_tasks_handler(
         }
     };
 
-    let pagination = Pagination {
-        page: params.get("page").and_then(|s| s.parse().ok()).unwrap_or(1),
-        page_size: params
-            .get("page_size")
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(20),
-    };
+    let pagination = Pagination::from_options(
+        params.get("page").and_then(|s| s.parse().ok()),
+        params.get("page_size").and_then(|s| s.parse().ok()),
+    );
 
     let svc = &query_service;
     match svc

@@ -19,6 +19,14 @@ pub struct Pagination {
 }
 
 impl Pagination {
+    /// 从可选查询参数构造（None 落到默认值：page=1 / page_size=default_page_size()）
+    pub fn from_options(page: Option<i64>, page_size: Option<i64>) -> Self {
+        Self {
+            page: page.unwrap_or(1),
+            page_size: page_size.unwrap_or_else(default_page_size),
+        }
+    }
+
     /// 钳制 page ≥ 1, 1 ≤ page_size ≤ MAX_PAGE_SIZE
     pub fn clamp(&self) -> (i64, i64) {
         let page = self.page.max(1);
@@ -69,6 +77,20 @@ mod tests {
     use super::*;
 
     // ── Pagination::clamp ──
+
+    // ── Pagination::from_options ──
+
+    #[test]
+    fn from_options_none_falls_back_to_defaults() {
+        assert_eq!(Pagination::from_options(None, None).clamp(), (1, 20));
+    }
+
+    #[test]
+    fn from_options_some_passes_through_before_clamp() {
+        let p = Pagination::from_options(Some(0), Some(999));
+        assert_eq!((p.page, p.page_size), (0, 999)); // 钳制交给 clamp()
+        assert_eq!(p.clamp(), (1, 100));
+    }
 
     #[test]
     fn clamp_defaults() {

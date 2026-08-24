@@ -10,4 +10,5 @@ export * from "./notify.ts";
 export * from "./result.ts";
 export * from "./safe-action.ts";
 export * from "./speech.ts";
+export * from "./timing.ts";
 export * from "./useUrlParams.ts";

@@ -1,4 +1,4 @@
-import { tryAsync } from "@lib/utils";
+import { blurClose, tryAsync } from "@lib/utils";
 import { createTagE, searchTagsE, type TagInfo } from "@modules/mem";
 import {
 	type Component,
@@ -109,7 +109,7 @@ export default function TagSelector(props: Props) {
 						setOpen(true);
 					}}
 					onFocus={() => setOpen(true)}
-					onBlur={() => setTimeout(() => setOpen(false), 200)}
+					onBlur={blurClose(() => setOpen(false))}
 					onKeyDown={handleKeyDown}
 				/>
 			</div>

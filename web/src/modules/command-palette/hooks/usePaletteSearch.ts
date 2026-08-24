@@ -1,6 +1,7 @@
 // ── 命令面板站内搜索 ──
 // 从 usePalette 拆分：防抖搜索请求 + 竞态保护 + 结果映射。
 
+import { SEARCH_DEBOUNCE_MS } from "@lib/utils";
 import type { Accessor } from "solid-js";
 import { createEffect, createSignal, onCleanup } from "solid-js";
 import type { SearchHit } from "../api.ts";
@@ -55,7 +56,7 @@ export function usePaletteSearch(opts: UsePaletteSearchOpts) {
 			} finally {
 				if (seq === searchSeq) setSearching(false);
 			}
-		}, 300);
+		}, SEARCH_DEBOUNCE_MS);
 	});
 
 	onCleanup(() => clearTimeout(searchTimer));

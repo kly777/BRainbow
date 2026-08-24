@@ -1,4 +1,5 @@
 import styles from "@components/ui/atoms/SearchInput.module.css";
+import { debounce, SEARCH_DEBOUNCE_MS } from "@lib/utils";
 import type { Component } from "solid-js";
 import { createEffect, createSignal, onCleanup } from "solid-js";
 
@@ -12,21 +13,21 @@ interface SearchInputProps {
 
 const SearchInput: Component<SearchInputProps> = (props) => {
 	const [local, setLocal] = createSignal(props.value);
-	let timer: ReturnType<typeof setTimeout> | undefined;
+	// debounceMs 为静态 prop，创建期读取一次即可
+	const emitSearch = debounce(
+		(v: string) => props.onSearch(v.trim()),
+		props.debounceMs ?? SEARCH_DEBOUNCE_MS,
+	);
 
 	createEffect(() => {
 		setLocal(props.value);
 	});
 
-	onCleanup(() => clearTimeout(timer));
+	onCleanup(() => emitSearch.cancel());
 
 	const handleInput = (value: string) => {
 		setLocal(value);
-		clearTimeout(timer);
-		timer = setTimeout(
-			() => props.onSearch(value.trim()),
-			props.debounceMs ?? 300,
-		);
+		emitSearch(value);
 	};
 
 	return (

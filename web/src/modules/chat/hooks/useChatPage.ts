@@ -1,9 +1,14 @@
 // ── /chat 对话页逻辑：组合公共会话 hook + 搜索 / 预设 / 修订 ──
 
-import { tryAsync, tryOrNotify } from "@lib/utils";
+import {
+	debounce,
+	SEARCH_DEBOUNCE_MS,
+	tryAsync,
+	tryOrNotify,
+} from "@lib/utils";
 import type { ChatNode, PromptPreset, SearchHit } from "@modules/chat";
 import { listPresetsE, reviseNodeE, searchChatE } from "@modules/chat";
-import { createSignal } from "solid-js";
+import { createSignal, onCleanup } from "solid-js";
 import { useChatSession } from "./useChatSession.ts";
 
 export function useChatPage() {
@@ -79,21 +84,26 @@ export function useChatPage() {
 	};
 
 	// ── 搜索 ──
-	let searchTimer: ReturnType<typeof setTimeout> | undefined;
+	let searchSeq = 0;
+	const searchDebounced = debounce(async (q: string) => {
+		const seq = ++searchSeq;
+		setSearching(true);
+		const result = await tryAsync(() => searchChatE(q));
+		if (seq !== searchSeq) return; // 竞态保护：乱序旧响应不得覆盖新结果
+		setSearching(false);
+		if (result.ok) setSearchHits(result.value.hits);
+	}, SEARCH_DEBOUNCE_MS);
+	onCleanup(() => searchDebounced.cancel());
 	const onSearchInput = (q: string) => {
 		setSearchQ(q);
 		setSearchOpen(q.trim().length > 0);
-		clearTimeout(searchTimer);
+		searchSeq++; // 使在途请求结果失效（含清空输入场景）
 		if (!q.trim()) {
+			searchDebounced.cancel();
 			setSearchHits([]);
 			return;
 		}
-		searchTimer = setTimeout(async () => {
-			setSearching(true);
-			const result = await tryAsync(() => searchChatE(q.trim()));
-			setSearching(false);
-			if (result.ok) setSearchHits(result.value.hits);
-		}, 300);
+		searchDebounced(q.trim());
 	};
 
 	/** 搜索命中 → 打开树并定位节点（URL 驱动） */

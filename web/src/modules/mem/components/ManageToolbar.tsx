@@ -1,6 +1,7 @@
 // ── v2 管理工具栏：搜索 / 标签过滤 / 状态筛选 / 导出 ──
 
 import { Button, FilterGroup, SearchInput } from "@components/ui";
+import { blurClose } from "@lib/utils";
 import { searchTagsE, type TagInfo } from "@modules/mem";
 import { createResource, createSignal, For, Show } from "solid-js";
 import styles from "./ManageToolbar.module.css";
@@ -135,7 +136,7 @@ export default function ManageToolbar(props: Props) {
 						setTagOpen(true);
 					}}
 					onFocus={() => setTagOpen(true)}
-					onBlur={() => setTimeout(() => setTagOpen(false), 200)}
+					onBlur={blurClose(() => setTagOpen(false))}
 					onKeyDown={(e) => {
 						if (e.key === "Enter" && suggestions().length > 0) {
 							addTag(suggestions()[0]);

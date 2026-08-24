@@ -77,6 +77,14 @@ export const reviewMemE = (
 		duration_secs: durationSecs,
 	}).then((r) => tapInvalidate(CACHE.mem, r));
 
+export const undoReviewE = (
+	id: number,
+	undoData: Record<string, unknown>,
+): Promise<{ ok: boolean }> =>
+	post<{ ok: boolean }>(`/mem/${id}/undo`, undoData).then((r) =>
+		tapInvalidate(CACHE.mem, r),
+	);
+
 export const previewMemE = (
 	id: number,
 ): Promise<{ intervals: readonly number[] }> =>

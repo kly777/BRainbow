@@ -1,5 +1,6 @@
 // ── v2 标签过滤栏 ──
 
+import { blurClose } from "@lib/utils";
 import { For, Show } from "solid-js";
 import type { UseMemReview } from "../hooks/useMemReviewTypes.ts";
 import styles from "./FilterBar.module.css";
@@ -66,7 +67,7 @@ export default function FilterBar(props: FilterBarProps) {
 						m.setTagOpen(true);
 					}}
 					onFocus={() => m.setTagOpen(true)}
-					onBlur={() => setTimeout(() => m.setTagOpen(false), 200)}
+					onBlur={blurClose(() => m.setTagOpen(false))}
 					onKeyDown={(e) => {
 						if (e.key === "Enter" && m.tagSuggestions().length > 0) {
 							m.addTagFilter(m.tagSuggestions()[0]);

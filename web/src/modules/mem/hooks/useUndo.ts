@@ -1,8 +1,7 @@
 // ── 评分撤销：记录最近一次评分前的 FSRS 状态，支持回滚 ──
 
-import { post } from "@lib/api";
 import { notifyError, tryAsync } from "@lib/utils";
-import type { MemItem } from "@modules/mem";
+import { type MemItem, undoReviewE } from "@modules/mem";
 import { createSignal } from "solid-js";
 
 export interface UseUndo {
@@ -42,7 +41,7 @@ export function useUndo(onUndone: () => void): UseUndo {
 		if (!lastAction) return;
 		const action = lastAction;
 		const result = await tryAsync(() =>
-			post(`/mem/${action.id}/undo`, action.undoData),
+			undoReviewE(action.id, action.undoData),
 		);
 		if (!result.ok) {
 			notifyError("撤销评分失败", result.error);

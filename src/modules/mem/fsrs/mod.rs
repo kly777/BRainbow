@@ -154,9 +154,7 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> Result<Review
             state: Suspended,
             stability: s_old,
             difficulty: d_old,
-            due_at: chrono::Utc::now()
-                .format(ISO_UTC_FORMAT)
-                .to_string(),
+            due_at: chrono::Utc::now().format(ISO_UTC_FORMAT).to_string(),
         });
     }
 

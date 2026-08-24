@@ -156,9 +156,7 @@ impl MemService {
         // 并发复习（双开标签页）时后到者收到冲突而非静默丢失更新（审计 B4）
         let revlog = InsertRevlogParams {
             mem_id: id,
-            review_time: chrono::Utc::now()
-                .format(ISO_UTC_FORMAT)
-                .to_string(),
+            review_time: chrono::Utc::now().format(ISO_UTC_FORMAT).to_string(),
             rating,
             delta_t: days_elapsed_since(&row.last_review_at) as i32,
             duration_secs,

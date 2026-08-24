@@ -75,9 +75,7 @@ impl AuthService {
         Ok(ApiKeyInfo {
             id: id as i32,
             role: role.to_string(),
-            created_at: chrono::Utc::now()
-                .format(ISO_UTC_FORMAT)
-                .to_string(),
+            created_at: chrono::Utc::now().format(ISO_UTC_FORMAT).to_string(),
             key: Some(key),
         })
     }

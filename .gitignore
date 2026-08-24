@@ -1,19 +1,16 @@
-/target
-**/*.rs.bk
+target/
 
 *.db*
 
-/uploads/*
+uploads/
 !/uploads/.gitkeep
 
-/doc
+doc/
 
-/dist
-web/dist
+dist/
+web/dist/
+build/
 
-/server
-
-# 真实环境文件全部忽略、仅模板放行（勿用裸 .* 规则：会把下面的白名单一并重新忽略）
 .env*
 !.env.dev.example
 !.env.prod.example
@@ -21,16 +18,7 @@ web/dist
 *.log
 logs/
 
-/tmp
-/temp
-
 .pi/
 .zed/
-.playwright-mcp/
-build/
-
-# ui-inspect 工具的浏览器驱动依赖（playwright-core 内嵌副本）
-web/scripts/vendor/
-
 AGENTS.md
 opencode.json

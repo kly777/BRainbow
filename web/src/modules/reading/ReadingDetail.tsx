@@ -23,7 +23,26 @@ export default function ReadingDetail() {
 				fallback={
 					<Show
 						when={m.detail()}
-						fallback={<div class={styles.loading}>加载中…</div>}
+						fallback={
+							<div
+								class={styles.skeletonWrap}
+								role="status"
+								aria-label="文章加载中"
+							>
+								<div class={`skeleton ${styles.skBack}`} />
+								<div class={styles.mainColumn}>
+									<div class={`skeleton ${styles.skTitle}`} />
+									<div class={`skeleton ${styles.skArticle}`} />
+								</div>
+								<div class={styles.sidebar}>
+									<div class={`skeleton ${styles.skSideHead}`} />
+									<div class={`skeleton ${styles.skRow}`} />
+									<div class={`skeleton ${styles.skRow}`} />
+									<div class={`skeleton ${styles.skRow}`} />
+									<div class={`skeleton ${styles.skRow}`} />
+								</div>
+							</div>
+						}
 					>
 						{(d) => (
 							<>
@@ -166,7 +185,7 @@ export default function ReadingDetail() {
 											class={styles.sidebarAction}
 											onClick={m.handleCopyUnknown}
 										>
-											📋 复制不认识词 + 笔记
+											复制不认识词 + 笔记
 										</Button>
 									</div>
 								</div>
@@ -175,9 +194,9 @@ export default function ReadingDetail() {
 					</Show>
 				}
 			>
-				<div class={styles.errorMsg}>
-					加载失败：{getErrorMessage(m.detail.error)}
-					<Button variant="primary" size="sm" onClick={m.refetch}>
+				<div class={styles.errorMsg} role="alert">
+					<p>加载失败：{getErrorMessage(m.detail.error)}</p>
+					<Button variant="secondary" size="sm" onClick={m.refetch}>
 						重试
 					</Button>
 				</div>

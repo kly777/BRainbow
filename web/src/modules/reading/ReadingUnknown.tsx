@@ -41,7 +41,7 @@ export default function ReadingUnknown() {
 			</A>
 			<h1>不认识词表</h1>
 			<p class={styles.subtitle}>
-				按标记"不认识"次数降序排列。点击 ✓ 改为认识。
+				按标记「不认识」次数降序排列。点击 ✓ 改为认识。
 			</p>
 
 			<AsyncView
@@ -49,7 +49,7 @@ export default function ReadingUnknown() {
 				loading={data.loading}
 				error={data.error}
 				onRetry={refetch}
-				emptyMessage="暂无不认识词——开始阅读文章吧"
+				emptyMessage="暂无不认识词，去读一篇文章吧"
 			>
 				{(words) => (
 					<div class={styles.list}>

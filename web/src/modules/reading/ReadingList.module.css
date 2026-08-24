@@ -195,7 +195,6 @@
 	height: 100%;
 	background: var(--t-color-accent);
 	border-radius: var(--radius-xs);
-	transition: width var(--t-transition-slow);
 }
 
 .card[data-known="high"] .bar-inner {

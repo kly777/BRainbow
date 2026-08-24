@@ -55,18 +55,21 @@
 .recommend-banner {
 	display: block;
 	padding: var(--space-sm) var(--space-lg);
-	background: var(--t-color-mark-blue-soft);
-	border: 1px solid var(--t-color-mark-blue-border);
+	background: var(--t-color-accent-soft);
+	border: 1px solid var(--t-color-accent);
 	border-radius: var(--radius-md);
 	font-size: var(--text-sm);
 	color: var(--t-color-accent);
 	text-decoration: none;
 	flex-shrink: 0;
-	transition: background var(--t-transition-fast);
+	transition:
+		box-shadow var(--t-transition-fast),
+		transform var(--t-transition-fast);
 }
 
 .recommend-banner:hover {
-	background: var(--t-color-accent-soft);
+	transform: translateY(-1px);
+	box-shadow: var(--shadow-sm);
 }
 
 .content {
@@ -248,6 +251,46 @@
 	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
+/* 加载骨架：display:contents 让子块直接落入页面 grid，形状对齐最终布局 */
+.skeleton-wrap {
+	display: contents;
+}
+
+.sk-back {
+	grid-column: 1 / -1;
+	height: 1rem;
+	width: 6rem;
+	border-radius: var(--radius-xs);
+}
+
+.sk-title {
+	height: 1.75rem;
+	width: 55%;
+	border-radius: var(--radius-sm);
+}
+
+.sk-article {
+	flex: 1;
+	min-height: 20rem;
+	border-radius: var(--radius-lg);
+}
+
+.sk-side-head {
+	height: 1.25rem;
+	width: 5rem;
+	border-radius: var(--radius-xs);
+	margin-bottom: var(--space-md);
+}
+
+.sk-row {
+	height: 2.125rem;
+	border-radius: var(--radius-sm);
+}
+
+.sk-row + .sk-row {
+	margin-top: var(--space-xs);
+}
+
 /* 响应式 */
 @media (width <= 768px) {
 	.page {
@@ -274,7 +317,21 @@
 }
 
 .error-msg {
-	padding: var(--space-lg);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-md);
+	padding: var(--space-md) var(--space-lg);
+	background: var(--t-color-danger-subtle);
+	border: 1px solid var(--t-color-danger);
+	border-radius: var(--radius-md);
 	color: var(--t-color-danger);
-	font-size: var(--text-base);
+	font-size: var(--text-sm);
+	grid-column: 1 / -1;
+}
+
+.error-msg p {
+	margin: 0;
+	min-width: 0;
+	overflow-wrap: break-word;
 }

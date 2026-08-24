@@ -10,6 +10,7 @@
 	font-size: var(--text-sm);
 	color: var(--t-color-accent);
 	text-decoration: none;
+	transition: color var(--t-transition-fast);
 }
 
 .subtitle {
@@ -30,7 +31,7 @@
 	justify-content: space-between;
 	padding: var(--space-md) var(--space-lg);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
+	border-radius: var(--radius-lg);
 	background: var(--t-color-surface);
 }
 
@@ -56,12 +57,6 @@
 	font-variant-numeric: tabular-nums;
 }
 
-.empty {
-	text-align: center;
-	color: var(--t-color-ink-muted);
-	padding: var(--space-3xl) 0;
-}
-
 .back:hover {
 	text-decoration: underline;
 }
@@ -69,10 +64,4 @@
 .page h1 {
 	margin: var(--space-md) 0 var(--space-xs);
 	font-size: var(--text-xl);
-}
-
-.error-msg {
-	padding: var(--space-lg);
-	color: var(--t-color-danger);
-	font-size: var(--text-base);
 }

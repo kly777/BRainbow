@@ -1,16 +1,35 @@
-/* ===== 语义化设计令牌（由 vanilla-extract tokens.css.ts 迁移） =====
+/* Hallmark · genre: editorial · design-system: design.md · designed-as-app
+ * ===== 语义化设计令牌 =====
  *
  * --t-color-* / --t-font-*：组件契约（组件样式统一 var(--t-*) 引用）。
  * --space-* / --radius-* / --text-*：布局常量（global.css 定义，不随主题）。
+ *
+ * 硬规则：语义色的阴影/描边/软底一律 color-mix 从实底令牌派生，
+ * 组件内禁止内联 oklch/hex（防主题色相泄漏）。
  */
 
 :root,
 :root[data-theme="paper"] {
-	/* ── 字体（三主题共用） ── */
+	/* ── 字体（三主题共用；自托管 @fontsource-variable，CSP 安全） ── */
 	--t-font-display:
-		system-ui, "Segoe UI", "Roboto", "PingFang SC", "Noto Sans SC", sans-serif;
+		"Fraunces Variable", "Noto Serif SC Variable", georgia, "Songti SC",
+		"SimSun", serif;
 	--t-font-mono:
-		ui-monospace, sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
+		"JetBrains Mono Variable", ui-monospace, sfmono-regular, consolas,
+		"Liberation Mono", menlo, monospace;
+	--t-font-body:
+		system-ui, "Segoe UI", "Roboto", "PingFang SC", "Noto Sans SC", sans-serif;
+
+	/* ── 模块识别色（品牌彩虹族；landing/home 共用，主题无关） ── */
+	--m-task: var(--t-color-accent);
+	--m-card: oklch(55% 0.13 160deg);
+	--m-mem: oklch(60% 0.12 85deg);
+	--m-onto: oklch(50% 0.14 255deg);
+	--m-search: oklch(55% 0.16 25deg);
+	--m-chat: oklch(55% 0.12 300deg);
+	--m-bookmark: oklch(55% 0.1 80deg);
+	--m-text: oklch(45% 0.1 200deg);
+	--m-image: oklch(50% 0.12 330deg);
 
 	/* ── 通用视觉令牌（不随主题） ── */
 	--t-mask-blur: blur(2px);
@@ -20,6 +39,7 @@
 	--t-color-surface: oklch(99.5% 0.002 80deg);
 	--t-color-surface-raised: oklch(95.5% 0.006 80deg);
 	--t-color-ink: oklch(24% 0.008 80deg);
+	--t-color-ink-strong: oklch(16% 0.012 80deg);
 	--t-color-ink-muted: oklch(45% 0.008 80deg);
 	--t-color-ink-faint: oklch(60% 0.006 80deg);
 	--t-color-border: oklch(88.5% 0.006 80deg);
@@ -96,6 +116,7 @@
 	--t-color-surface: oklch(20.5% 0.01 260deg);
 	--t-color-surface-raised: oklch(26% 0.012 260deg);
 	--t-color-ink: oklch(93% 0.004 90deg);
+	--t-color-ink-strong: oklch(98% 0.003 90deg);
 	--t-color-ink-muted: oklch(75% 0.006 90deg);
 	--t-color-ink-faint: oklch(60% 0.005 90deg);
 	--t-color-border: oklch(32% 0.01 260deg);
@@ -163,6 +184,7 @@
 	--t-color-surface: oklch(99.5% 0.002 250deg);
 	--t-color-surface-raised: oklch(95.5% 0.006 250deg);
 	--t-color-ink: oklch(24% 0.01 250deg);
+	--t-color-ink-strong: oklch(16% 0.014 250deg);
 	--t-color-ink-muted: oklch(45% 0.01 250deg);
 	--t-color-ink-faint: oklch(60% 0.008 250deg);
 	--t-color-border: oklch(88.5% 0.006 250deg);
@@ -225,16 +247,15 @@
 }
 
 /* ===== 全局体验层（主题感知：文本选择/滚动条/焦点 ring） ===== */
-html {
-	scroll-behavior: smooth;
-}
+
+/* 平滑滚动统一由 global.css 在 prefers-reduced-motion 卫语句内声明 */
 
 body {
 	background: var(--t-color-bg);
 	color: var(--t-color-ink);
 	transition:
-		background-color 0.25s ease,
-		color 0.25s ease;
+		background-color 0.25s var(--ease-out-expo),
+		color 0.25s var(--ease-out-expo);
 	line-height: var(--leading-normal);
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;

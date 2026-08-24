@@ -89,7 +89,8 @@
 
 .add-link:hover {
 	background: var(--t-color-accent-strong);
-	box-shadow: 0 2px 8px oklch(50% 0.08 165deg / 20%);
+	box-shadow: 0 2px 8px
+		color-mix(in srgb, var(--t-color-accent) 20%, transparent);
 }
 
 .manage-link {

@@ -152,7 +152,7 @@ function MnemonicBlock(props: MemProps) {
 	return (
 		<Show when={props.m.mnemonic() || props.m.mnemonicLoading()}>
 			<div class={styles.mnemonic}>
-				<div class={styles.mnemonicLabel}>💡 AI 助记</div>
+				<div class={styles.mnemonicLabel}>AI 助记</div>
 				<Show
 					when={props.m.mnemonicLoading()}
 					fallback={<MarkdownRenderer content={props.m.mnemonic() ?? ""} />}

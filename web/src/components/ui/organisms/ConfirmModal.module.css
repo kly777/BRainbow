@@ -60,19 +60,22 @@
 .icon-danger {
 	background: var(--t-color-danger-subtle);
 	color: var(--t-color-danger);
-	box-shadow: 0 0 0 3px oklch(55% 0.16 25deg / 10%);
+	box-shadow: 0 0 0 3px
+		color-mix(in srgb, var(--t-color-danger) 10%, transparent);
 }
 
 .icon-warning {
 	background: var(--t-color-warning-subtle);
 	color: var(--t-color-warning);
-	box-shadow: 0 0 0 3px oklch(60% 0.12 85deg / 10%);
+	box-shadow: 0 0 0 3px
+		color-mix(in srgb, var(--t-color-warning) 10%, transparent);
 }
 
 .icon-info {
 	background: var(--t-color-accent-soft);
 	color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px oklch(50% 0.08 165deg / 10%);
+	box-shadow: 0 0 0 3px
+		color-mix(in srgb, var(--t-color-accent) 10%, transparent);
 }
 
 .title-wrap {
@@ -138,37 +141,31 @@
 .btn-danger {
 	background: var(--t-color-danger);
 	color: var(--t-color-on-solid);
-	box-shadow: 0 2px 8px oklch(55% 0.16 25deg / 20%);
+	box-shadow: var(--shadow-sm);
 }
 
 .btn-danger:hover {
 	background: var(--t-color-danger-strong);
-	box-shadow: 0 4px 12px oklch(55% 0.16 25deg / 30%);
-	transform: translateY(-1px);
 }
 
 .btn-warning {
 	background: var(--t-color-warning);
 	color: var(--t-color-on-solid);
-	box-shadow: 0 2px 8px oklch(60% 0.12 85deg / 20%);
+	box-shadow: var(--shadow-sm);
 }
 
 .btn-warning:hover {
 	background: var(--t-color-warning-strong);
-	box-shadow: 0 4px 12px oklch(60% 0.12 85deg / 30%);
-	transform: translateY(-1px);
 }
 
 .btn-primary {
 	background: var(--t-color-accent);
 	color: var(--t-color-on-solid);
-	box-shadow: 0 2px 8px oklch(50% 0.08 165deg / 20%);
+	box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover {
 	background: var(--t-color-accent-strong);
-	box-shadow: 0 4px 12px oklch(50% 0.08 165deg / 30%);
-	transform: translateY(-1px);
 }
 
 .btn:focus-visible {

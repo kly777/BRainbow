@@ -176,12 +176,14 @@
 		background var(--t-transition-fast),
 		box-shadow var(--t-transition-fast);
 	margin-top: var(--space-xs);
-	box-shadow: 0 1px 3px oklch(50% 0.08 165deg / 20%);
+	box-shadow: 0 1px 3px
+		color-mix(in srgb, var(--t-color-accent) 20%, transparent);
 }
 
 .add-btn:hover {
 	background: var(--t-color-accent-strong);
-	box-shadow: 0 2px 8px oklch(50% 0.08 165deg / 30%);
+	box-shadow: 0 2px 8px
+		color-mix(in srgb, var(--t-color-accent) 30%, transparent);
 }
 
 .add-btn:disabled {
@@ -266,7 +268,7 @@
 	padding: var(--space-sm) var(--space-md);
 	background: var(--t-color-danger-subtle);
 	border-radius: var(--radius-md);
-	border: 1px solid oklch(85% 0.06 25deg);
+	border: 1px solid color-mix(in srgb, var(--t-color-danger) 35%, transparent);
 }
 
 .dep-list {
@@ -393,10 +395,12 @@
 	transition:
 		background var(--t-transition-fast),
 		box-shadow var(--t-transition-fast);
-	box-shadow: 0 1px 3px oklch(55% 0.13 160deg / 20%);
+	box-shadow: 0 1px 3px
+		color-mix(in srgb, var(--t-color-success) 20%, transparent);
 }
 
 .save-btn:hover {
 	background: var(--t-color-success);
-	box-shadow: 0 2px 8px oklch(55% 0.13 160deg / 30%);
+	box-shadow: 0 2px 8px
+		color-mix(in srgb, var(--t-color-success) 30%, transparent);
 }

@@ -8,9 +8,9 @@ import styles from "./TaskKanban.module.css";
 // ==================== 状态常量 ====================
 
 const COLUMNS = [
-	{ key: "backlog", label: "待办", icon: "📋" },
-	{ key: "active", label: "进行中", icon: "🚀" },
-	{ key: "completed", label: "已完成", icon: "✅" },
+	{ key: "backlog", label: "待办" },
+	{ key: "active", label: "进行中" },
+	{ key: "completed", label: "已完成" },
 ] as const;
 
 const STATUS_COLORS: Record<string, string> = {
@@ -98,7 +98,7 @@ function Column(props: ColumnProps) {
 			style={{ "--col-color": color }}
 		>
 			<div class={styles.columnHeader}>
-				<span class={styles.columnIcon}>{props.col.icon}</span>
+				<span class={styles.columnDot} aria-hidden="true" />
 				<span class={styles.columnLabel}>{props.col.label}</span>
 				<span class={styles.columnCount}>{props.tasks.length}</span>
 			</div>

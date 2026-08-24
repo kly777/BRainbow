@@ -162,7 +162,7 @@
 	color: var(--t-color-danger);
 	padding: var(--space-sm) var(--space-md);
 	border-radius: var(--radius-md);
-	border: 1px solid oklch(85% 0.06 25deg);
+	border: 1px solid color-mix(in srgb, var(--t-color-danger) 35%, transparent);
 	font-size: var(--text-sm);
 }
 
@@ -171,7 +171,7 @@
 	color: var(--t-color-success);
 	padding: var(--space-sm) var(--space-md);
 	border-radius: var(--radius-md);
-	border: 1px solid oklch(85% 0.08 160deg);
+	border: 1px solid color-mix(in srgb, var(--t-color-success) 35%, transparent);
 	font-size: var(--text-sm);
 }
 

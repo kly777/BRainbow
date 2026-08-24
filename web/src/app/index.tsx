@@ -6,6 +6,9 @@ import { onMount } from "solid-js";
 import { render } from "solid-js/web";
 import Layout from "./Layout.tsx";
 import { ROUTES, toRouteDefs } from "./routes.ts";
+import "@fontsource-variable/fraunces";
+import "@fontsource-variable/jetbrains-mono";
+import "@fontsource-variable/noto-serif-sc";
 import "@app/global.css";
 import "@lib/styles/tokens.css";
 

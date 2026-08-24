@@ -1,4 +1,7 @@
-/* components/ui/Button.css.ts — 增强版 */
+/* Hallmark · component: button · genre: editorial · design-system: design.md
+ * states: default · hover · focus · active · disabled · loading(外部 aria-busy) · error/success(由调用方语义变体承载)
+ * CTA voice: 墨色填充小圆角矩形；accent 不进按钮
+ */
 
 .btn {
 	display: inline-flex;
@@ -8,7 +11,7 @@
 	appearance: none;
 	-webkit-appearance: none;
 	border: 1px solid transparent;
-	border-radius: var(--radius-full);
+	border-radius: var(--radius-sm);
 	font-family: inherit;
 	font-weight: 500;
 	cursor: pointer;
@@ -35,21 +38,19 @@
 	font-size: var(--text-sm);
 }
 
-/* ── Primary：accent 带微阴影 ── */
+/* ── Primary：墨色填充（editorial 语音；hover 仅加深一档） ── */
 .primary {
-	background: var(--t-color-accent);
-	color: var(--t-color-on-solid);
+	background: var(--t-color-ink);
+	color: var(--t-color-bg);
 	border-color: transparent;
-	box-shadow: 0 1px 3px oklch(50% 0.08 165deg / 20%);
+	box-shadow: var(--shadow-sm);
 }
 
 .primary:hover:not(:disabled) {
-	background: var(--t-color-accent-strong);
-	box-shadow: 0 2px 8px oklch(50% 0.08 165deg / 30%);
-	transform: translateY(-1px);
+	background: var(--t-color-ink-strong);
 }
 
-/* ── Secondary ── */
+/* ── Secondary：hairline 矩形 ── */
 .secondary {
 	background: var(--t-color-surface);
 	color: var(--t-color-ink-muted);
@@ -62,7 +63,7 @@
 	border-color: var(--t-color-border-strong);
 }
 
-/* ── Danger ── */
+/* ── Danger：danger 描边 ghost，hover 染软底 ── */
 .danger {
 	background: var(--t-color-surface);
 	color: var(--t-color-danger);
@@ -71,7 +72,6 @@
 
 .danger:hover:not(:disabled) {
 	background: var(--t-color-danger-subtle);
-	box-shadow: 0 2px 8px oklch(55% 0.16 25deg / 15%);
 }
 
 /* ── Ghost ── */
@@ -86,7 +86,7 @@
 	color: var(--t-color-ink);
 }
 
-/* ── Icon 按钮 ── */
+/* ── Icon 按钮：保留 pill 形（chip 家族） ── */
 .icon {
 	background: transparent;
 	color: var(--t-color-ink-faint);

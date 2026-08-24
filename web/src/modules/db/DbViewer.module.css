@@ -72,7 +72,7 @@
 	border-radius: var(--radius-md);
 	font-size: var(--text-sm);
 	margin-bottom: var(--space-md);
-	border: 1px solid oklch(85% 0.06 25deg);
+	border: 1px solid color-mix(in srgb, var(--t-color-danger) 35%, transparent);
 }
 
 .loading {

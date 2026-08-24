@@ -141,5 +141,6 @@
 .rotate-btn:hover:not(:disabled) {
 	background: var(--t-color-danger);
 	color: var(--t-color-on-solid);
-	box-shadow: 0 2px 8px oklch(55% 0.16 25deg / 20%);
+	box-shadow: 0 2px 8px
+		color-mix(in srgb, var(--t-color-danger) 20%, transparent);
 }

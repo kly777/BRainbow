@@ -149,12 +149,12 @@
 	transition:
 		background var(--t-transition-fast),
 		box-shadow var(--t-transition-fast);
-	box-shadow: 0 2px 8px oklch(50% 0.08 165deg / 20%);
+	box-shadow: var(--shadow-sm);
 }
 
 .btn:hover {
 	opacity: 0.9;
-	box-shadow: 0 4px 12px oklch(50% 0.08 165deg / 30%);
+	background: var(--t-color-accent-strong);
 }
 
 .summary {

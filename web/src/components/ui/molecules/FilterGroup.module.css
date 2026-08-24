@@ -34,7 +34,8 @@
 	background: var(--t-color-accent);
 	color: var(--t-color-on-solid);
 	border-color: var(--t-color-accent);
-	box-shadow: 0 1px 3px oklch(50% 0.08 165deg / 20%);
+	box-shadow: 0 1px 3px
+		color-mix(in srgb, var(--t-color-accent) 20%, transparent);
 }
 
 .active:hover {

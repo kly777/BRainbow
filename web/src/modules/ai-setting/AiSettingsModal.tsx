@@ -77,7 +77,7 @@ export default function AiSettingsModal() {
 		);
 		if (result.ok) {
 			setTestStatus("ok");
-			setTestMsg("连接成功 ✅");
+			setTestMsg("连接成功");
 		} else {
 			setTestStatus("fail");
 			setTestMsg(getErrorMessage(result.error));

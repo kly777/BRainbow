@@ -55,8 +55,12 @@
 	flex-shrink: 0;
 }
 
-.column-icon {
-	font-size: var(--text-lg);
+.column-dot {
+	width: 0.5rem;
+	height: 0.5rem;
+	flex: none;
+	border-radius: var(--radius-full);
+	background: var(--col-color, var(--t-color-border-strong));
 }
 
 .column-label {
@@ -193,7 +197,5 @@
 }
 
 .card:hover {
-	transform: translateY(-2px);
-	box-shadow: var(--shadow-md);
 	border-color: var(--t-color-accent);
 }

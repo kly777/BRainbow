@@ -1,6 +1,7 @@
-/* ===== 布局常量令牌（不随主题；颜色令牌见 styles/tokens.css） =====
+/* Hallmark · genre: editorial · design-system: design.md · designed-as-app
+ * ===== 布局常量令牌（不随主题；颜色令牌见 styles/tokens.css） =====
  * 全部使用 rem：跟随浏览器根字号（默认 1rem），用户放大默认字号时全局缩放，
- * 保障可访问性。1rem = 1rem（浏览器默认）。 */
+ * 保障可访问性。 */
 :root {
 	/* ── 圆角令牌（xs < sm < md < lg < xl，语义与档位一致） ── */
 	--radius-2xs: 0.125rem;
@@ -56,8 +57,7 @@
 	/* ── 焦点环令牌（输入框 focus ring；由 tokens.css 全局规则消费） ── */
 	--t-focus-ring: 0 0 0 var(--space-2xs) var(--t-color-accent-soft);
 
-	/* ── 动画令牌（入场/微交互统一缓动） ── */
-	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+	/* ── 动画令牌（入场统一缓动；motion-cut：无弹跳贝塞尔） ── */
 	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 	--duration-fade-in: 400ms;
 	--duration-slide-up: 500ms;
@@ -104,6 +104,21 @@ html {
 	-webkit-text-size-adjust: 100%; /* 3 */
 	text-size-adjust: 100%;
 	tab-size: 4; /* 4 */
+}
+
+/* 横向溢出兜底：clip 而非 hidden（保留 sticky 子元素可用） */
+html,
+body {
+	overflow-x: clip;
+}
+
+/* ── 展示字体：标题层全局走 display 面（editorial 语音的核心载体） ── */
+h1,
+h2,
+h3 {
+	font-family: var(--t-font-display);
+	font-weight: 600;
+	letter-spacing: -0.01em;
 }
 
 /*
@@ -394,10 +409,7 @@ summary {
 	border-radius: var(--radius-md);
 }
 
-/* ── 页面容器入场（Layout 内容区） ── */
-.content > * {
-	animation: fade-in-up var(--duration-slide-up) var(--ease-out-expo) both;
-}
+/* ── 页面容器入场（motion-cut：已废除全局内容入场动画） ── */
 
 /* ══════════════════════════════════════════
  * 全局滚动行为优化
@@ -444,7 +456,7 @@ a:not([class]):hover {
 	position: absolute;
 	top: -100%;
 	left: var(--space-md);
-	z-index: 9999;
+	z-index: var(--z-toast);
 	padding: var(--space-sm) var(--space-md);
 	background: var(--t-color-accent);
 	color: var(--t-color-on-solid);

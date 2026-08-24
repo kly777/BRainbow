@@ -1,8 +1,7 @@
 // ── 卡片列表核心业务逻辑 ──
 
-import { showToast } from "@components/ui";
 import { getErrorMessage } from "@lib/api";
-import { notifyError, showConfirm, tryAsync } from "@lib/utils";
+import { notifyError, notifySuccess, showConfirm, tryAsync } from "@lib/utils";
 import type { Card, CreateCardRequest } from "@modules/card";
 import {
 	createCardE,
@@ -60,12 +59,7 @@ export function useCardsList() {
 		// 用它做成败判据会把成功当失败（回滚已删卡片）。改用 tryAsync 显式分支。
 		const result = await tryAsync(() => deleteCardE(id));
 		if (result.ok) {
-			showToast({
-				type: "success",
-				title: "卡片已删除",
-				message: "",
-				duration: 3000,
-			});
+			notifySuccess("卡片已删除");
 		} else {
 			if (cardToDelete) setCards([...current]);
 			notifyError("删除卡片失败", result.error);
@@ -90,12 +84,7 @@ export function useCardsList() {
 			setNewCardContent("");
 			setShowCreateModal(false);
 			setCards([result.value, ...cards()]);
-			showToast({
-				type: "success",
-				title: "卡片已创建",
-				message: "",
-				duration: 3000,
-			});
+			notifySuccess("卡片已创建");
 		} else {
 			setModalError(getErrorMessage(result.error));
 		}

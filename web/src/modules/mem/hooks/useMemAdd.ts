@@ -1,7 +1,7 @@
 // ── 记忆添加模块的核心业务逻辑 ──
 
-import { showToast } from "@components/ui";
 import {
+	notifyError,
 	parseBatch,
 	parseImportFile,
 	tryAsync,
@@ -116,12 +116,7 @@ export function useMemAdd() {
 		if (result.ok) {
 			setImportResult(result.value);
 		} else {
-			showToast({
-				type: "error",
-				title: "导入失败",
-				message: result.error.message,
-				duration: 5000,
-			});
+			notifyError("导入失败", result.error);
 		}
 		setImporting(false);
 	};

@@ -75,7 +75,7 @@
 
 .add-link {
 	font-size: var(--text-sm);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	text-decoration: none;
 	font-weight: 500;
 	padding: var(--space-xs) var(--space-md);

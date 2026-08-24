@@ -134,7 +134,7 @@
 
 .item-tag:hover {
 	background: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 }
 
 .filter-bar {

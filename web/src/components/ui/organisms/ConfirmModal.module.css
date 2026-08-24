@@ -137,7 +137,7 @@
 
 .btn-danger {
 	background: var(--t-color-danger);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	box-shadow: 0 2px 8px oklch(55% 0.16 25deg / 20%);
 }
 
@@ -149,7 +149,7 @@
 
 .btn-warning {
 	background: var(--t-color-warning);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	box-shadow: 0 2px 8px oklch(60% 0.12 85deg / 20%);
 }
 
@@ -161,7 +161,7 @@
 
 .btn-primary {
 	background: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	box-shadow: 0 2px 8px oklch(50% 0.08 165deg / 20%);
 }
 

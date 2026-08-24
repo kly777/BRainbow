@@ -179,7 +179,7 @@
 
 .card-fab-danger:hover {
 	background: var(--t-color-danger);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 }
 
 .card-fab-danger:disabled {

@@ -26,7 +26,7 @@
 
 .submit {
 	font-size: var(--text-sm);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	background: var(--t-color-accent);
 	border: none;
 	border-radius: var(--radius-md);
@@ -250,7 +250,7 @@
 	margin: 0 auto var(--space-md);
 	border-radius: 50%;
 	background: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	font-size: var(--text-xl);
 	line-height: 3rem;
 }

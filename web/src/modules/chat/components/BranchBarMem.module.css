@@ -41,7 +41,7 @@
 .branch-chip-active {
 	border-color: var(--t-color-accent);
 	background: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	font-weight: 600;
 	box-shadow: var(--shadow-sm);
 }
@@ -49,5 +49,5 @@
 .branch-chip-active:hover {
 	background: var(--t-color-accent-strong);
 	border-color: var(--t-color-accent-strong);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 }

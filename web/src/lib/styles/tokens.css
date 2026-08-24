@@ -28,6 +28,9 @@
 	--t-color-accent-strong: oklch(42% 0.09 165deg);
 	--t-color-accent-soft: oklch(94% 0.02 165deg);
 	--t-color-white: oklch(100% 0 0deg);
+
+	/* 实底饱和色（accent/danger/warning/success）上的文字/图标 */
+	--t-color-on-solid: oklch(100% 0 0deg);
 	--t-color-accent-ring: oklch(52% 0.1 165deg / 25%);
 	--t-color-overlay: oklch(0% 0 0deg / 50%);
 	--t-color-badge-new-bg: oklch(94% 0.02 270deg);
@@ -101,6 +104,9 @@
 	--t-color-accent-strong: oklch(76% 0.1 165deg);
 	--t-color-accent-soft: oklch(30% 0.04 165deg);
 	--t-color-white: oklch(100% 0 0deg);
+
+	/* 暗色主题实底均为亮色（L 68-78%），配深墨字保证对比度（≥6:1） */
+	--t-color-on-solid: oklch(20% 0.015 165deg);
 	--t-color-accent-ring: oklch(68% 0.12 165deg / 25%);
 	--t-color-overlay: oklch(0% 0 0deg / 50%);
 	--t-color-badge-new-bg: oklch(32% 0.03 270deg);
@@ -165,6 +171,9 @@
 	--t-color-accent-strong: oklch(44% 0.16 255deg);
 	--t-color-accent-soft: oklch(93.5% 0.02 255deg);
 	--t-color-white: oklch(100% 0 0deg);
+
+	/* 实底饱和色（accent/danger/warning/success）上的文字/图标 */
+	--t-color-on-solid: oklch(100% 0 0deg);
 	--t-color-accent-ring: oklch(55% 0.18 255deg / 25%);
 	--t-color-overlay: oklch(0% 0 0deg / 50%);
 	--t-color-badge-new-bg: oklch(94% 0.02 270deg);

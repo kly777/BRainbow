@@ -38,7 +38,7 @@
 	cursor: pointer;
 	transition: background var(--t-transition-fast);
 	background: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	font-weight: 600;
 }
 

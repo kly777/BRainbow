@@ -24,7 +24,7 @@
 
 .add-link {
 	font-size: var(--text-sm);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	background: var(--t-color-accent);
 	border: none;
 	border-radius: var(--radius-md);
@@ -113,7 +113,7 @@
 
 .direct-view-exit:hover {
 	background: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 }
 
 .count {

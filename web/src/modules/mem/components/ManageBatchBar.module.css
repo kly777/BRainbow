@@ -45,7 +45,7 @@
 
 .batch-btn-danger {
 	font-size: var(--text-sm);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	background: var(--t-color-danger);
 	border: none;
 	border-radius: var(--radius-md);

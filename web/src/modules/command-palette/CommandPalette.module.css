@@ -240,7 +240,7 @@
 		border: none;
 		border-radius: 50%;
 		background: var(--t-color-accent);
-		color: var(--t-color-white);
+		color: var(--t-color-on-solid);
 		font-size: var(--text-xl);
 		box-shadow: 0 4px 16px oklch(50% 0.08 165deg / 30%);
 		cursor: pointer;

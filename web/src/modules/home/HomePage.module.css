@@ -171,7 +171,7 @@
 	align-items: center;
 	height: 2rem;
 	background-color: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	text-decoration: none;
 	font-size: var(--text-sm);
 	font-weight: 500;

@@ -36,7 +36,7 @@
 		var(--t-color-accent) 60%,
 		var(--t-color-accent-strong)
 	);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	box-shadow: var(--shadow-sm);
 	user-select: none;
 }
@@ -105,7 +105,7 @@
 /* user 气泡：右对齐 accent 底 */
 .user-bubble {
 	background: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	border-radius: var(--radius-lg) var(--radius-sm) var(--radius-lg)
 		var(--radius-lg);
 	padding: var(--space-sm) var(--space-md);
@@ -179,7 +179,7 @@
 .branch-chip-active {
 	border-color: var(--t-color-accent);
 	background: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	font-weight: 600;
 	box-shadow: var(--shadow-sm);
 }
@@ -187,7 +187,7 @@
 .branch-chip-active:hover {
 	background: var(--t-color-accent-strong);
 	border-color: var(--t-color-accent-strong);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 }
 
 /* Markdown 渲染的消息体（assistant 回复） */

@@ -148,7 +148,7 @@
 	padding: var(--space-2xs) var(--space-sm);
 	border-radius: var(--radius-full);
 	background: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 }
 
 .card-meta {

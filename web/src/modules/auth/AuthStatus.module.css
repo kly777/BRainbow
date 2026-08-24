@@ -85,7 +85,7 @@
 	border: none;
 	border-radius: var(--radius-md);
 	background: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	font-size: var(--text-base);
 	font-weight: 600;
 	cursor: pointer;
@@ -166,7 +166,7 @@
 	border: none;
 	border-radius: var(--radius-lg);
 	background: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	font-size: var(--text-base);
 	font-weight: 600;
 	cursor: pointer;

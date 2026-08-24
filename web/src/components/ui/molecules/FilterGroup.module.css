@@ -32,12 +32,12 @@
 
 .active {
 	background: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	border-color: var(--t-color-accent);
 	box-shadow: 0 1px 3px oklch(50% 0.08 165deg / 20%);
 }
 
 .active:hover {
 	background: var(--t-color-accent-strong);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 }

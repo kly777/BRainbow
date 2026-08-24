@@ -81,7 +81,7 @@
 	gap: var(--space-sm);
 	padding: var(--space-md) 2rem;
 	background: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	border: none;
 	border-radius: var(--radius-lg);
 	font-size: var(--text-lg);

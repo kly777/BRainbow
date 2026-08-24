@@ -115,7 +115,7 @@
 
 .mode-active {
 	font-size: var(--text-sm);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	background: var(--t-color-accent);
 	border: none;
 	border-radius: calc(var(--radius-md) - 0.125rem);
@@ -221,7 +221,7 @@
 	align-items: center;
 	gap: var(--space-sm);
 	font-size: var(--text-sm);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	background: var(--t-color-accent);
 	border: none;
 	border-radius: var(--radius-md);

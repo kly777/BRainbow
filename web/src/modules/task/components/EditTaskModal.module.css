@@ -166,7 +166,7 @@
 .add-btn {
 	padding: var(--space-xs) var(--space-lg);
 	background: var(--t-color-accent);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	border: none;
 	border-radius: var(--radius-md);
 	cursor: pointer;
@@ -384,7 +384,7 @@
 .save-btn {
 	padding: var(--space-sm) 1.125rem;
 	background: var(--t-color-success);
-	color: var(--t-color-white);
+	color: var(--t-color-on-solid);
 	border: none;
 	border-radius: var(--radius-md);
 	cursor: pointer;

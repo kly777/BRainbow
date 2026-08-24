@@ -8,6 +8,7 @@ import styles from "../ChatMemPage.module.css";
 import type { useChatMem } from "../hooks/useChatMem.ts";
 import { BranchBar } from "./BranchBar.tsx";
 import { MessageShell } from "./MessageShell.tsx";
+import { PREVIEW_LEN } from "./preview.ts";
 import { ThinkingBlock } from "./ThinkingBlock.tsx";
 
 function copyNode(node: ChatNode) {
@@ -93,7 +94,7 @@ export function MessageRow(props: {
 										onSelect={(id) => c.focusBranch(id)}
 										title="切换到该回复"
 										chipText={(child) =>
-											child.content.slice(0, 24) || "AI 回复"
+											child.content.slice(0, PREVIEW_LEN) || "AI 回复"
 										}
 									/>
 								</Show>

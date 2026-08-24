@@ -2,6 +2,11 @@
 
 import { trySync, unwrapOr } from "../result.ts";
 
+/** 当前时间按后端存储格式输出（YYYY-MM-DDTHH:MM:SS+00:00，UTC） */
+export function nowIsoUtc(): string {
+	return `${new Date().toISOString().slice(0, 19)}+00:00`;
+}
+
 /** 解析可能有缺 Z 的 UTC 时间字符串 */
 export function parseUtc(ts: string): Date {
 	if (!ts.endsWith("Z") && !ts.includes("+") && !ts.includes("-", 10)) {

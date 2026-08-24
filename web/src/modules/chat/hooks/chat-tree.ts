@@ -1,5 +1,6 @@
 // ── 对话树纯函数：路径计算 / 分支末端 / 子树判断（无 Solid 依赖，便于单测） ──
 
+import { nowIsoUtc } from "@lib/utils";
 import type { ChatNode } from "@modules/chat";
 
 /** 聚焦节点（或最新节点）到根的路径（父在前） */
@@ -70,6 +71,6 @@ export function makeTempNode(
 		role,
 		content,
 		revised_from: null,
-		created_at: new Date().toISOString().slice(0, 19).replace("T", " "),
+		created_at: nowIsoUtc(),
 	};
 }

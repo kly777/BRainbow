@@ -4,6 +4,7 @@ import type { ChatNode } from "@modules/chat";
 import { For } from "solid-js";
 import pageStyles from "./BranchBar.module.css";
 import memStyles from "./BranchBarMem.module.css";
+import { PREVIEW_LEN } from "./preview.ts";
 
 export function BranchBar(props: {
 	children: ChatNode[];
@@ -20,7 +21,7 @@ export function BranchBar(props: {
 	const text = (node: ChatNode) => {
 		if (props.chipText) return props.chipText(node);
 		return (
-			node.content.slice(0, 24) ||
+			node.content.slice(0, PREVIEW_LEN) ||
 			(node.role === "user" ? "继续提问" : "AI 回复")
 		);
 	};

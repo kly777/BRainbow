@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fmtInterval, fmtRelative, parseUtc } from "./time.ts";
+import { fmtInterval, fmtRelative, nowIsoUtc, parseUtc } from "./time.ts";
 
 describe("parseUtc", () => {
 	function ymd(d: Date): string {
@@ -115,5 +115,15 @@ describe("fmtInterval", () => {
 		expect(fmtInterval(2592000)).toBe("1个月");
 		expect(fmtInterval(5184000)).toBe("2个月");
 		expect(fmtInterval(31536000)).toBe("12个月");
+	});
+});
+
+describe("nowIsoUtc", () => {
+	it("matches backend storage format (T separator, +00:00 offset)", () => {
+		const now = nowIsoUtc();
+		expect(now).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$/);
+		// 与真实 UTC 一致（允许秒级进位）
+		const parsed = Date.parse(now);
+		expect(Math.abs(parsed - Date.now())).toBeLessThan(2000);
 	});
 });

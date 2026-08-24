@@ -105,7 +105,7 @@ export default function LandingPage() {
 					编织你的知识网络
 				</h1>
 				<p class={styles.heroSubtitle}>
-					Brainbow 是一套集成的任务管理、知识卡片、间隔记忆、AI 对话和本体系统——
+					任务、卡片、记忆、对话在一处生长，
 					让碎片化的知识形成结构，让思考看得见。
 				</p>
 				<div class={styles.ctaRow}>
@@ -131,7 +131,6 @@ export default function LandingPage() {
 							<path d="M5 12h14M12 5l7 7-7 7" />
 						</svg>
 					</button>
-					<span class={styles.ctaHint}>按 Ctrl+K 随时唤出命令面板</span>
 				</div>
 			</header>
 
@@ -163,7 +162,7 @@ export default function LandingPage() {
 							>
 								<div
 									class={styles.featureIconWrap}
-									style={{ background: `${m.color}14` }}
+									style={{ "--module-color": m.color }}
 								>
 									<ModuleIcon d={m.icon} color={m.color} />
 								</div>
@@ -178,8 +177,18 @@ export default function LandingPage() {
 			{/* ── 底部提示 ── */}
 			<footer class={styles.footer}>
 				<p class={styles.hint}>
-					按 <kbd>Ctrl+K</kbd> 打开命令面板 · <kbd>/</kbd> 导航 · <kbd>?</kbd>{" "}
-					搜索 · <kbd>:</kbd> 指令
+					<span>
+						<kbd>Ctrl+K</kbd> 命令面板
+					</span>
+					<span>
+						<kbd>/</kbd> 导航
+					</span>
+					<span>
+						<kbd>?</kbd> 搜索
+					</span>
+					<span>
+						<kbd>:</kbd> 指令
+					</span>
 				</p>
 			</footer>
 		</div>

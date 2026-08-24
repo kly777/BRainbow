@@ -7,7 +7,6 @@
 //! `ln(U) / weight` 作为 key，key 越小优先级越高），等价于不放回加权采样。
 
 use crate::modules::mem::model::ReviewCandidate;
-use crate::shared::time_text::ISO_UTC_FORMAT;
 use chrono::{DateTime, Utc};
 use rand::{Rng, RngExt};
 
@@ -104,6 +103,7 @@ mod tests {
     #![allow(clippy::unwrap_used)]
 
     use super::*;
+    use crate::shared::time_text::ISO_UTC_FORMAT;
     use rand::SeedableRng;
     use rand::rngs::StdRng;
 

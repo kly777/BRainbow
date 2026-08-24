@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
-use crate::shared::time_text::ISO_UTC_FORMAT;
-
 // ── 卡片状态枚举 ──
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -184,6 +182,7 @@ pub struct FsrsUpdate {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+    use crate::shared::time_text::ISO_UTC_FORMAT;
 
     #[test]
     fn card_state_as_str_matches_api_contract() {

@@ -31,7 +31,7 @@
 .search-input:focus {
 	outline: none;
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 var(--space-2xs) var(--t-color-accent-soft);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .search-input::placeholder {
@@ -101,32 +101,6 @@
 	position: relative;
 }
 
-.empty-state {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: var(--space-sm);
-	text-align: center;
-	color: var(--t-color-ink-muted);
-	padding: var(--space-2xl) var(--space-lg);
-	flex: 1;
-	justify-content: center;
-}
-
-.empty-title {
-	font-size: var(--text-xl);
-	font-weight: 700;
-	color: var(--t-color-ink);
-	margin: 0;
-}
-
-.empty-hint {
-	font-size: var(--text-sm);
-	color: var(--t-color-ink-faint);
-	max-width: 360px;
-	margin: 0;
-}
-
 /* ── 消息流 ── */
 
 .message-list {
@@ -139,11 +113,6 @@
 	width: 100%;
 	max-width: var(--page-content-max);
 	margin-inline: auto;
-}
-
-.child-count {
-	font-size: var(--text-xs);
-	color: var(--t-color-ink-faint);
 }
 
 /* ── 输入栏 ── */
@@ -237,41 +206,7 @@
 	cursor: pointer;
 }
 
-/* 输入区聚焦态：accent 描边 */
-
-/* 停止生成按钮：流式中替换发送按钮（危险色） */
-
 /* ── 编辑弹层 ── */
-
-.edit-overlay {
-	position: fixed;
-	inset: 0;
-	z-index: var(--z-overlay);
-	background: var(--t-color-overlay);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.edit-card {
-	width: min(520px, 90vw);
-	background: var(--t-color-surface);
-	border-radius: var(--radius-lg);
-	border: 1px solid var(--t-color-border-strong);
-	box-shadow: var(--shadow-lg);
-	padding: var(--space-lg);
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-sm);
-}
-
-.edit-title {
-	font-size: var(--text-base);
-	font-weight: 600;
-	display: flex;
-	align-items: baseline;
-	gap: var(--space-sm);
-}
 
 .edit-hint {
 	font-size: var(--text-xs);

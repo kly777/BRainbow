@@ -63,6 +63,16 @@
 	font-variant-numeric: tabular-nums;
 	flex: none;
 	padding-right: var(--space-xs);
+	opacity: 1;
+	transition: opacity var(--t-transition-fast);
+}
+
+/* 与 .tree-more-btn 的显形条件严格互补（含 :focus-within），避免两者同屏 */
+.tree-item:hover .tree-item-time,
+.tree-item-active:hover .tree-item-time,
+.tree-item:focus-within .tree-item-time,
+.tree-item-active:focus-within .tree-item-time {
+	opacity: 0;
 }
 
 .tree-more-btn {
@@ -98,6 +108,12 @@
 .tree-item-active:hover .tree-more-btn,
 .tree-item:focus-within .tree-more-btn,
 .tree-item-active:focus-within .tree-more-btn {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+/* 菜单展开期间按钮保持可见（基态之后声明，同特异性下后者胜出） */
+.tree-more-btn-open {
 	opacity: 1;
 	pointer-events: auto;
 }
@@ -319,7 +335,7 @@
 }
 
 .welcome-title {
-	font-size: 1.75rem;
+	font-size: var(--text-2xl);
 	font-weight: 700;
 	margin: 0;
 	letter-spacing: 0.02em;

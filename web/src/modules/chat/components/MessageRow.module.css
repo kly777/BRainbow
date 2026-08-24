@@ -72,7 +72,8 @@
 		transform var(--t-transition-normal);
 }
 
-.message-row:hover .message-actions {
+.message-row:hover .message-actions,
+.message-row:focus-within .message-actions {
 	opacity: 1;
 	transform: scale(1) translateY(0);
 	pointer-events: auto;
@@ -367,6 +368,14 @@
 @keyframes stream-blink {
 	50% {
 		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.thinking,
+	.thinking-active,
+	.stream-cursor {
+		animation: none;
 	}
 }
 

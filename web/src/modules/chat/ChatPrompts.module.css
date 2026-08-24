@@ -49,7 +49,7 @@
 .input:focus {
 	outline: none;
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 var(--space-2xs) var(--t-color-accent-soft);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .input::placeholder {
@@ -75,54 +75,6 @@
 	display: flex;
 	justify-content: flex-end;
 	gap: var(--space-sm);
-}
-
-.btn-ghost {
-	font-size: var(--text-sm);
-	color: var(--t-color-ink-muted);
-	background: transparent;
-	border: 1px solid var(--t-color-border-strong);
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-lg);
-	cursor: pointer;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast),
-		border-color var(--t-transition-fast);
-}
-
-.btn-ghost:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
-
-.btn-ghost:disabled {
-	opacity: 0.35;
-	cursor: default;
-}
-
-.btn-primary {
-	font-size: var(--text-sm);
-	color: var(--t-color-on-solid);
-	background: var(--t-color-accent);
-	border: none;
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-lg);
-	cursor: pointer;
-	font-weight: 500;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast),
-		border-color var(--t-transition-fast);
-}
-
-.btn-primary:hover {
-	background: var(--t-color-accent-strong);
-}
-
-.btn-primary:disabled {
-	opacity: 0.5;
-	cursor: default;
 }
 
 .list {
@@ -170,47 +122,9 @@
 	flex: none;
 }
 
-.item-btn,
-.item-btn-danger {
-	font-size: var(--text-xs);
-	border-radius: var(--radius-sm);
-	padding: var(--space-2xs) var(--space-sm);
-	cursor: pointer;
-	border: 1px solid var(--t-color-border);
-	background: transparent;
-	color: var(--t-color-ink-muted);
-}
-
-.item-btn:hover {
-	background: var(--t-color-surface-raised);
-}
-
-.item-btn-danger {
-	color: var(--t-color-danger);
-	border-color: var(--t-color-danger);
-}
-
-.item-btn-danger:hover {
-	background: var(--t-color-danger-subtle);
-}
-
 .empty {
 	padding: var(--space-xl);
 	text-align: center;
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-faint);
-}
-
-@media (width <= 600px) {
-	.btn-ghost,
-	.btn-primary {
-		padding: 0 var(--space-md);
-		font-size: var(--text-xs);
-		line-height: 1;
-		height: 2rem;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		box-sizing: border-box;
-	}
 }

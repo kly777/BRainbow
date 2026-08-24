@@ -106,6 +106,7 @@ export function TreeListItem(props: {
 				<button
 					type="button"
 					class={styles.treeMoreBtn}
+					classList={{ [styles.treeMoreBtnOpen]: menuOpen() }}
 					title="更多操作"
 					aria-label="更多操作"
 					aria-expanded={menuOpen()}

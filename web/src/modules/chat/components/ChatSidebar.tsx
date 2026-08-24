@@ -63,6 +63,14 @@ export function ChatSidebar(props: ChatSidebarProps) {
 						/>
 					)}
 				</For>
+				<Show when={props.loadingTrees()}>
+					<div class={styles.treeSkeleton} aria-hidden="true">
+						<div class={`skeleton ${styles.skRow}`} />
+						<div class={`skeleton ${styles.skRow}`} />
+						<div class={`skeleton ${styles.skRow}`} />
+						<div class={`skeleton ${styles.skRow}`} />
+					</div>
+				</Show>
 				<Show when={props.trees().length === 0 && !props.loadingTrees()}>
 					<div class={styles.treeEmpty}>{props.emptyText}</div>
 				</Show>
@@ -81,9 +89,27 @@ export function ToggleSidebar(props: {
 			type="button"
 			class={styles.sidebarToggle}
 			title={props.collapsed ? "展开侧边栏" : "收起侧边栏"}
+			aria-label={props.collapsed ? "展开侧边栏" : "收起侧边栏"}
 			onClick={props.onClick}
 		>
-			{props.collapsed ? "☰" : "◀"}
+			<svg
+				viewBox="0 0 24 24"
+				width="14"
+				height="14"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2.5"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+			>
+				<Show
+					when={props.collapsed}
+					fallback={<polyline points="15 18 9 12 15 6" />}
+				>
+					<path d="M3 5h18M3 12h18M3 19h18" />
+				</Show>
+			</svg>
 		</button>
 	);
 }

@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+use crate::shared::time_text::ISO_UTC_FORMAT;
+
 // ── 卡片状态枚举 ──
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -265,7 +267,7 @@ mod tests {
     #[test]
     fn elapsed_secs_since_recent_review_is_small() {
         let recent = chrono::Utc::now() - chrono::Duration::seconds(5);
-        let raw = Some(recent.format("%Y-%m-%dT%H:%M:%S+00:00").to_string());
+        let raw = Some(recent.format(ISO_UTC_FORMAT).to_string());
         let elapsed = elapsed_secs_since(&raw);
         assert!(
             (5..=10).contains(&elapsed),
@@ -276,7 +278,7 @@ mod tests {
     #[test]
     fn days_elapsed_since_recent_review_is_zero_days() {
         let recent = chrono::Utc::now() - chrono::Duration::seconds(5);
-        let raw = Some(recent.format("%Y-%m-%dT%H:%M:%S+00:00").to_string());
+        let raw = Some(recent.format(ISO_UTC_FORMAT).to_string());
         assert_eq!(days_elapsed_since(&raw), 0);
     }
 }

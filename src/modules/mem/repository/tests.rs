@@ -2,6 +2,7 @@
 use super::MemRepo;
 use crate::modules::mem::dto::MemQuery;
 use crate::modules::mem::port::MemRepository;
+use crate::shared::time_text::ISO_UTC_FORMAT;
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
@@ -948,7 +949,7 @@ async fn test_due_does_not_pull_upcoming_when_new_cards_exist() {
         // 设为 review 状态，due_at 在 1 分钟后（使用 TZ 格式，与真实代码一致）
         // 1 分钟 = 60 秒
         let future = (chrono::Utc::now() + chrono::Duration::seconds(60))
-            .format("%Y-%m-%dT%H:%M:%S+00:00")
+            .format(ISO_UTC_FORMAT)
             .to_string();
         sqlx::query("UPDATE mem SET state = 'review', due_at = ? WHERE id = ?")
             .bind(&future)
@@ -1018,10 +1019,10 @@ async fn get_due_review_candidates_carries_priority_fields() {
     // 两张到期 review 卡，难度/失败次数不同
     let (due_id, ..) = create_test_mem(&repo, TEST_USER_ID, "due", "target").await;
     let past = (chrono::Utc::now() - chrono::Duration::hours(24))
-        .format("%Y-%m-%dT%H:%M:%S+00:00")
+        .format(ISO_UTC_FORMAT)
         .to_string();
     let last = (chrono::Utc::now() - chrono::Duration::days(2))
-        .format("%Y-%m-%dT%H:%M:%S+00:00")
+        .format(ISO_UTC_FORMAT)
         .to_string();
     sqlx::query(
             "UPDATE mem SET state='review', difficulty=9, stability=2, lapses=4, due_at=?, last_review_at=? WHERE id=?",
@@ -1036,7 +1037,7 @@ async fn get_due_review_candidates_carries_priority_fields() {
     // 一张未来到期卡：不应进入 due 候选
     let (future_id, ..) = create_test_mem(&repo, TEST_USER_ID, "future", "target").await;
     let future = (chrono::Utc::now() + chrono::Duration::hours(1))
-        .format("%Y-%m-%dT%H:%M:%S+00:00")
+        .format(ISO_UTC_FORMAT)
         .to_string();
     sqlx::query("UPDATE mem SET state='review', difficulty=3, stability=10, due_at=? WHERE id=?")
         .bind(&future)

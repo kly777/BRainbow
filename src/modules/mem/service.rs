@@ -7,6 +7,7 @@ use crate::modules::mem::port::{MemMaintenance, MemRepository};
 use crate::modules::mem::selection;
 use crate::shared::batch::{BatchResponse, batch_execute, batch_execute_with_code};
 use crate::shared::error_types::ServiceError;
+use crate::shared::time_text::ISO_UTC_FORMAT;
 
 #[derive(Clone)]
 pub struct MemService {
@@ -156,7 +157,7 @@ impl MemService {
         let revlog = InsertRevlogParams {
             mem_id: id,
             review_time: chrono::Utc::now()
-                .format("%Y-%m-%dT%H:%M:%S+00:00")
+                .format(ISO_UTC_FORMAT)
                 .to_string(),
             rating,
             delta_t: days_elapsed_since(&row.last_review_at) as i32,
@@ -261,7 +262,7 @@ impl MemService {
                 stability: row.stability,
                 difficulty: row.difficulty,
                 due_at: (chrono::Utc::now() + chrono::Duration::seconds(remaining))
-                    .format("%Y-%m-%dT%H:%M:%S+00:00")
+                    .format(ISO_UTC_FORMAT)
                     .to_string(),
             };
             new_step = row.step_index;
@@ -687,7 +688,7 @@ mod tests {
 
     async fn set_relearning(pool: &SqlitePool, id: i32, last_review_secs_ago: i64) {
         let last = (chrono::Utc::now() - chrono::Duration::seconds(last_review_secs_ago))
-            .format("%Y-%m-%dT%H:%M:%S+00:00")
+            .format(ISO_UTC_FORMAT)
             .to_string();
         sqlx::query(
             "UPDATE mem SET state='relearning', step_index=0, stability=5, difficulty=5, lapses=3, last_review_at=? WHERE id=?",

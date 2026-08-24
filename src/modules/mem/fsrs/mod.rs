@@ -5,6 +5,7 @@
 //! Again 始终走 FSRS 降 stability
 
 use crate::modules::mem::model::CardState;
+use crate::shared::time_text::ISO_UTC_FORMAT;
 use chrono::{Duration, Utc};
 use fsrs::{FSRS, MemoryState};
 
@@ -41,7 +42,7 @@ impl Default for SchedulerConfig {
 
 fn due_in_secs(secs: i64) -> String {
     (Utc::now() + Duration::seconds(secs))
-        .format("%Y-%m-%dT%H:%M:%S+00:00")
+        .format(ISO_UTC_FORMAT)
         .to_string()
 }
 
@@ -154,7 +155,7 @@ pub fn schedule(input: ScheduleInput, config: &SchedulerConfig) -> Result<Review
             stability: s_old,
             difficulty: d_old,
             due_at: chrono::Utc::now()
-                .format("%Y-%m-%dT%H:%M:%S+00:00")
+                .format(ISO_UTC_FORMAT)
                 .to_string(),
         });
     }

@@ -9,6 +9,7 @@ use crate::modules::admin::port::AdminServicePort;
 use crate::modules::admin::service::AdminService;
 use crate::shared::claims::Claims;
 use crate::shared::jwt::hash_api_key;
+use crate::shared::time_text::ISO_UTC_FORMAT;
 
 use super::repository::ApiKeyRepo;
 
@@ -75,7 +76,7 @@ impl AuthService {
             id: id as i32,
             role: role.to_string(),
             created_at: chrono::Utc::now()
-                .format("%Y-%m-%dT%H:%M:%S+00:00")
+                .format(ISO_UTC_FORMAT)
                 .to_string(),
             key: Some(key),
         })

@@ -6,14 +6,9 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use axum::{
-    extract::Request,
-    http::StatusCode,
-    middleware::Next,
-    response::{IntoResponse, Json, Response},
-};
+use axum::{extract::Request, middleware::Next, response::Response};
 
-use crate::shared::error_types::ErrorBody;
+use crate::shared::error_types::too_many_requests;
 
 const WINDOW: Duration = Duration::from_secs(60);
 const MAX_REQUESTS: usize = 10;
@@ -72,15 +67,7 @@ pub async fn rate_limit(req: Request, next: Next) -> Response {
     let limiter = LIMITER.get_or_init(RateLimiter::default);
     let ip = client_ip(&req);
     if !limiter.allow(&ip) {
-        return (
-            StatusCode::TOO_MANY_REQUESTS,
-            Json(ErrorBody {
-                code: "RATE_LIMITED".to_string(),
-                message: "请求过于频繁，请稍后再试".to_string(),
-                details: None,
-            }),
-        )
-            .into_response();
+        return too_many_requests("请求过于频繁，请稍后再试");
     }
     next.run(req).await
 }
@@ -110,15 +97,7 @@ pub async fn rate_limit_ai(req: Request, next: Next) -> Response {
         }
     };
     if !allowed {
-        return (
-            StatusCode::TOO_MANY_REQUESTS,
-            Json(ErrorBody {
-                code: "RATE_LIMITED".to_string(),
-                message: "AI 请求过于频繁，请稍后再试".to_string(),
-                details: None,
-            }),
-        )
-            .into_response();
+        return too_many_requests("AI 请求过于频繁，请稍后再试");
     }
     next.run(req).await
 }

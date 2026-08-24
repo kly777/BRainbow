@@ -7,7 +7,7 @@ use axum::{
 
 use crate::app::auth::service::{AuthService, DeleteApiKeyResult};
 use crate::shared::claims::Claims;
-use crate::shared::error_types::ErrorBody;
+use crate::shared::error_types::{forbidden, internal, json_error, not_found, unauthorized};
 pub use crate::shared::jwt::{extract_api_key, extract_token, verify_token};
 use serde::Serialize;
 
@@ -52,15 +52,11 @@ pub async fn auth(
             Err(e) => {
                 tracing::error!("API key 验证查询失败: {e}");
                 drain_rejected_body(&mut request).await;
-                return (
+                return json_error(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ErrorBody {
-                        code: "INTERNAL".to_string(),
-                        message: "服务器内部错误".to_string(),
-                        details: None,
-                    }),
-                )
-                    .into_response();
+                    "INTERNAL",
+                    "服务器内部错误",
+                );
             }
         };
 
@@ -71,15 +67,7 @@ pub async fn auth(
     }
 
     drain_rejected_body(&mut request).await;
-    (
-        StatusCode::UNAUTHORIZED,
-        Json(ErrorBody {
-            code: "UNAUTHORIZED".to_string(),
-            message: "请先登录".to_string(),
-            details: None,
-        }),
-    )
-        .into_response()
+    unauthorized("请先登录")
 }
 
 /// 拒绝请求前消费（丢弃）请求体。
@@ -103,24 +91,8 @@ async fn drain_rejected_body(request: &mut Request) {
 pub async fn require_admin(request: Request, next: Next) -> Response {
     match request.extensions().get::<Claims>() {
         Some(c) if c.role == "admin" => next.run(request).await,
-        Some(_) => (
-            StatusCode::FORBIDDEN,
-            Json(ErrorBody {
-                code: "FORBIDDEN".to_string(),
-                message: "仅管理员可访问".to_string(),
-                details: None,
-            }),
-        )
-            .into_response(),
-        None => (
-            StatusCode::UNAUTHORIZED,
-            Json(ErrorBody {
-                code: "UNAUTHORIZED".to_string(),
-                message: "请先登录".to_string(),
-                details: None,
-            }),
-        )
-            .into_response(),
+        Some(_) => forbidden("仅管理员可访问"),
+        None => unauthorized("请先登录"),
     }
 }
 
@@ -147,15 +119,7 @@ pub async fn create_api_key(
             key: info.key,
         })
         .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorBody {
-                code: "INTERNAL".to_string(),
-                message: format!("创建 key 失败: {e}"),
-                details: None,
-            }),
-        )
-            .into_response(),
+        Err(e) => internal(e, "创建 key"),
     }
 }
 
@@ -177,15 +141,7 @@ pub async fn list_api_keys(
                 .collect();
             Json(items).into_response()
         }
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorBody {
-                code: "INTERNAL".to_string(),
-                message: format!("查询 key 失败: {e}"),
-                details: None,
-            }),
-        )
-            .into_response(),
+        Err(e) => internal(e, "查询 key"),
     }
 }
 
@@ -197,33 +153,9 @@ pub async fn delete_api_key(
 ) -> Response {
     match auth_service.delete_api_key(&claims, id).await {
         Ok(DeleteApiKeyResult::Deleted) => StatusCode::NO_CONTENT.into_response(),
-        Ok(DeleteApiKeyResult::NotFound) => (
-            StatusCode::NOT_FOUND,
-            Json(ErrorBody {
-                code: "Not Found".to_string(),
-                message: "key 不存在".to_string(),
-                details: None,
-            }),
-        )
-            .into_response(),
-        Ok(DeleteApiKeyResult::Forbidden) => (
-            StatusCode::FORBIDDEN,
-            Json(ErrorBody {
-                code: "FORBIDDEN".to_string(),
-                message: "只能删除自己的 key".to_string(),
-                details: None,
-            }),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorBody {
-                code: "INTERNAL".to_string(),
-                message: format!("删除 key 失败: {e}"),
-                details: None,
-            }),
-        )
-            .into_response(),
+        Ok(DeleteApiKeyResult::NotFound) => not_found("key 不存在"),
+        Ok(DeleteApiKeyResult::Forbidden) => forbidden("只能删除自己的 key"),
+        Err(e) => internal(e, "删除 key"),
     }
 }
 

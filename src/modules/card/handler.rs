@@ -6,7 +6,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::shared::claims::Claims;
-use crate::shared::error_types::ErrorBody;
+use crate::shared::error_types::{bad_request, not_found};
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 use crate::shared::time_text::to_utc_iso;
 
@@ -77,15 +77,7 @@ pub async fn get_card_handler(
 ) -> impl IntoResponse {
     match query.by_id(claims.sub, id).await {
         Ok(Some(card)) => Json(CardResponse::from(card)).into_response(),
-        Ok(None) => (
-            StatusCode::NOT_FOUND,
-            Json(ErrorBody {
-                code: "NOT_FOUND".into(),
-                message: "卡片不存在".into(),
-                details: None,
-            }),
-        )
-            .into_response(),
+        Ok(None) => not_found("卡片不存在").into_response(),
         Err(e) => e.into_response(),
     }
 }
@@ -109,15 +101,7 @@ pub async fn delete_card_handler(
 ) -> impl IntoResponse {
     match service.delete(claims.sub, id).await {
         Ok(n) if n > 0 => StatusCode::NO_CONTENT.into_response(),
-        Ok(_) => (
-            StatusCode::NOT_FOUND,
-            Json(ErrorBody {
-                code: "NOT_FOUND".into(),
-                message: "卡片不存在".into(),
-                details: None,
-            }),
-        )
-            .into_response(),
+        Ok(_) => not_found("卡片不存在").into_response(),
         Err(e) => e.into_response(),
     }
 }
@@ -141,15 +125,7 @@ pub async fn search_cards_handler(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     if params.q.trim().is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(ErrorBody {
-                code: "INVALID_INPUT".into(),
-                message: "搜索关键词不能为空".into(),
-                details: None,
-            }),
-        )
-            .into_response();
+        return bad_request("搜索关键词不能为空");
     }
     let pagination = params.pagination();
     match query

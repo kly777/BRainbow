@@ -104,19 +104,41 @@ pub fn bad_request(message: impl Into<String>) -> Response {
     ServiceError::InvalidInput(message.into()).into_response()
 }
 
-/// 400（带自定义错误码）
-pub fn bad_request_with_code(code: impl Into<String>, message: impl Into<String>) -> Response {
-    let code = code.into();
-    let message = message.into();
+/// 底层统一错误响应构造：便捷 helper 与特殊状态码组合共用
+pub fn json_error(
+    status: StatusCode,
+    code: impl Into<String>,
+    message: impl Into<String>,
+) -> Response {
     (
-        StatusCode::BAD_REQUEST,
+        status,
         Json(ErrorBody {
-            code,
-            message,
+            code: code.into(),
+            message: message.into(),
             details: None,
         }),
     )
         .into_response()
+}
+
+/// 400（带自定义错误码）
+pub fn bad_request_with_code(code: impl Into<String>, message: impl Into<String>) -> Response {
+    json_error(StatusCode::BAD_REQUEST, code, message)
+}
+
+/// 401（机器可读错误码 UNAUTHORIZED）
+pub fn unauthorized(message: impl Into<String>) -> Response {
+    json_error(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", message)
+}
+
+/// 403（机器可读错误码 FORBIDDEN）
+pub fn forbidden(message: impl Into<String>) -> Response {
+    json_error(StatusCode::FORBIDDEN, "FORBIDDEN", message)
+}
+
+/// 429（机器可读错误码 RATE_LIMITED，限速中间件语义）
+pub fn too_many_requests(message: impl Into<String>) -> Response {
+    json_error(StatusCode::TOO_MANY_REQUESTS, "RATE_LIMITED", message)
 }
 
 /// 404（机器可读错误码 NOT_FOUND）

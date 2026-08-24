@@ -300,6 +300,44 @@ export const patch = <T>(endpoint: string, body: unknown): Promise<T> =>
 export const del = <T>(endpoint: string): Promise<T> =>
 	request<T>(endpoint, { method: "DELETE" });
 
+/**
+ * 文件/二进制下载：与 request() 同一套认证头与非 2xx 全局错误处理，
+ * 成功返回原始 Response（调用方自取 blob / 响应头）。
+ * 导出以供 CSV 导出等无法走 JSON request() 的场景复用。
+ */
+export const requestFile = async (endpoint: string): Promise<Response> => {
+	const url = `${API_BASE_URL}${endpoint}`;
+	let response: Response;
+	try {
+		response = await fetch(url, { headers: buildHeaders() });
+	} catch (cause: unknown) {
+		console.error(`[API] NETWORK ${endpoint}:`, cause);
+		throw new NetworkError({ cause });
+	}
+
+	if (!response.ok) {
+		let errorBody: { code: string; message: string; details?: unknown };
+		try {
+			errorBody = await extractErrorBody(response);
+		} catch (cause: unknown) {
+			throw new NetworkError({ cause });
+		}
+
+		const httpError = new HttpError({
+			status: response.status,
+			code: errorBody.code,
+			message: errorBody.message,
+			details: errorBody.details,
+		});
+
+		await handleGlobalError(endpoint, httpError);
+
+		throw httpError;
+	}
+
+	return response;
+};
+
 export function buildHeaders(
 	extra?: RequestInit["headers"],
 	body?: BodyInit | null,

@@ -1,25 +1,16 @@
 // ── CSV 导入导出 API ──
 
-import { CACHE, getToken, post, tapInvalidate } from "@lib/api";
+import { CACHE, post, requestFile, tapInvalidate } from "@lib/api";
 import { downloadBlob } from "@lib/utils";
 
 // ── CSV 导入导出 ──
 
 export async function downloadExportCsv(tagIds?: number[]): Promise<void> {
-	const token = getToken();
-	const headers: Record<string, string> = {};
-	if (token) headers.Authorization = `Bearer ${token}`;
-
-	let url = "/api/mem/export/csv";
+	let endpoint = "/mem/export/csv";
 	if (tagIds && tagIds.length > 0) {
-		url += `?tag_ids=${tagIds.join(",")}`;
+		endpoint += `?tag_ids=${tagIds.join(",")}`;
 	}
-
-	const response = await fetch(url, { headers });
-	if (!response.ok) {
-		const err = await response.text();
-		throw new Error(err || "导出失败");
-	}
+	const response = await requestFile(endpoint);
 	const blob = await response.blob();
 	downloadBlob(blob, `mems_${new Date().toISOString().slice(0, 10)}.csv`);
 }

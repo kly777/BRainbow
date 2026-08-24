@@ -1,13 +1,5 @@
-import {
-	API_BASE_URL,
-	cachedRequest,
-	extractErrorBody,
-	getApiKey,
-	getToken,
-	HttpError,
-	handleGlobalError,
-	type PaginationParams,
-} from "@lib/api";
+import { cachedRequest, type PaginationParams, requestFile } from "@lib/api";
+import { downloadBlob } from "@lib/utils";
 
 export const getTablesE = (): Promise<readonly string[]> =>
 	cachedRequest("/db", {});
@@ -107,17 +99,6 @@ export const getBackRefsE = (
 ): Promise<readonly BackRefGroup[]> =>
 	cachedRequest(`/db/${encodeURIComponent(name)}/backrefs?id=${id}`, {});
 
-const downloadBlob = (blob: Blob, filename: string): void => {
-	const url = URL.createObjectURL(blob);
-	const anchor = document.createElement("a");
-	anchor.href = url;
-	anchor.download = filename;
-	document.body.appendChild(anchor);
-	anchor.click();
-	anchor.remove();
-	URL.revokeObjectURL(url);
-};
-
 const filenameFromDisposition = (
 	disposition: string | null,
 	fallback: string,
@@ -128,7 +109,7 @@ const filenameFromDisposition = (
 
 /**
  * 下载当前筛选 + 排序下的全部匹配行（后端限制最多 10000 行）。
- * 使用原生 fetch：request() 只解析 JSON，无法拿到文件流。
+ * 走 requestFile：request() 只解析 JSON，无法拿到文件流。
  */
 export const downloadTableExport = async (
 	name: string,
@@ -142,28 +123,10 @@ export const downloadTableExport = async (
 	if (params.order) query.set("order", params.order);
 	appendFilters(query, params);
 
-	const headers = new Headers();
-	const token = getToken();
-	const apiKey = getApiKey();
-	if (token) headers.set("Authorization", `Bearer ${token}`);
-	if (apiKey) headers.set("X-API-Key", apiKey);
-
 	const endpoint = `/db/${encodeURIComponent(name)}/export?${query.toString()}`;
-	const response = await fetch(`${API_BASE_URL}${endpoint}`, { headers });
-	if (!response.ok) {
-		const errorBody = await extractErrorBody(response);
-		const httpError = new HttpError({
-			status: response.status,
-			code: errorBody.code,
-			message: errorBody.message,
-			details: errorBody.details,
-		});
-		await handleGlobalError(endpoint, httpError);
-		throw httpError;
-	}
-	const blob = await response.blob();
+	const response = await requestFile(endpoint);
 	downloadBlob(
-		blob,
+		await response.blob(),
 		filenameFromDisposition(
 			response.headers.get("content-disposition"),
 			`${name}.${params.format}`,

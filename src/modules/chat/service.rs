@@ -740,9 +740,8 @@ mod tests {
     #[tokio::test]
     async fn prepare_chat_tree_not_found() {
         let svc = setup().await;
-        let err = match svc.prepare_chat(1, 999_999, None, Some("x".into())).await {
-            Err(e) => e,
-            Ok(_) => panic!("应因树不存在而失败"),
+        let Err(err) = svc.prepare_chat(1, 999_999, None, Some("x".into())).await else {
+            panic!("应因树不存在而失败");
         };
         assert!(matches!(err, ServiceError::NotFound(_)));
     }
@@ -757,12 +756,11 @@ mod tests {
             .await
             .unwrap();
 
-        let err = match svc
+        let Err(err) = svc
             .prepare_chat(1, tid_b, Some(node_a.id), Some("x".into()))
             .await
-        {
-            Err(e) => e,
-            Ok(_) => panic!("应因跨树父节点而失败"),
+        else {
+            panic!("应因跨树父节点而失败");
         };
         match err {
             ServiceError::InvalidInput(msg) => assert!(msg.contains("不属于")),
@@ -775,9 +773,8 @@ mod tests {
         let svc = setup().await;
         let tid = mk_tree(&svc, "").await;
         for content in [None, Some("".into()), Some("   \n".into())] {
-            let err = match svc.prepare_chat(1, tid, None, content).await {
-                Err(e) => e,
-                Ok(_) => panic!("空内容应被拒绝"),
+            let Err(err) = svc.prepare_chat(1, tid, None, content).await else {
+                panic!("空内容应被拒绝");
             };
             assert!(matches!(err, ServiceError::InvalidInput(_)));
         }
@@ -848,10 +845,13 @@ mod tests {
 
     use crate::shared::error_types::ServiceError as SE;
 
+    /// 一次被捕获的 AI 调用：messages、temperature?、max_tokens?
+    type CapturedCall = (Vec<String>, Option<f32>, Option<i32>);
+
     /// 可编程回包的 AI 端口假实现
     struct FakeAi {
         reply: &'static str,
-        captured: std::sync::Mutex<Vec<(Vec<String>, Option<f32>, Option<i32>)>>,
+        captured: std::sync::Mutex<Vec<CapturedCall>>,
     }
     impl FakeAi {
         fn new(reply: &'static str) -> Self {
@@ -860,7 +860,7 @@ mod tests {
                 captured: std::sync::Mutex::new(Vec::new()),
             }
         }
-        fn calls(&self) -> Vec<(Vec<String>, Option<f32>, Option<i32>)> {
+        fn calls(&self) -> Vec<CapturedCall> {
             self.captured.lock().unwrap().clone()
         }
     }

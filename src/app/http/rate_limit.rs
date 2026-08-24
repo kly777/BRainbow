@@ -10,8 +10,13 @@ use axum::{extract::Request, middleware::Next, response::Response};
 
 use crate::shared::error_types::too_many_requests;
 
+/// 登录/注册限速窗口与额度
 const WINDOW: Duration = Duration::from_secs(60);
 const MAX_REQUESTS: usize = 10;
+
+/// AI 端点独立桶（成本面防护）：20 次/分钟，额度放宽
+const AI_WINDOW: Duration = Duration::from_secs(60);
+const AI_MAX: usize = 20;
 
 #[derive(Default)]
 pub struct RateLimiter {
@@ -46,14 +51,14 @@ fn client_ip(req: &Request) -> String {
 }
 
 impl RateLimiter {
-    /// 返回是否放行（超出窗口次数则拒绝）
-    fn allow(&self, key: &str) -> bool {
+    /// 返回是否放行（超出窗口次数则拒绝）；窗口/额度由调用方给定
+    fn allow(&self, key: &str, window: Duration, max: usize) -> bool {
         let now = Instant::now();
         // 锁中毒时恢复内部数据（中毒 = 持有者 panic，数据仍可用）
         let mut buckets = self.buckets.lock().unwrap_or_else(|e| e.into_inner());
         let bucket = buckets.entry(key.to_string()).or_default();
-        bucket.retain(|t| now.duration_since(*t) < WINDOW);
-        if bucket.len() >= MAX_REQUESTS {
+        bucket.retain(|t| now.duration_since(*t) < window);
+        if bucket.len() >= max {
             return false;
         }
         bucket.push(now);
@@ -66,7 +71,7 @@ pub async fn rate_limit(req: Request, next: Next) -> Response {
     static LIMITER: std::sync::OnceLock<RateLimiter> = std::sync::OnceLock::new();
     let limiter = LIMITER.get_or_init(RateLimiter::default);
     let ip = client_ip(&req);
-    if !limiter.allow(&ip) {
+    if !limiter.allow(&ip, WINDOW, MAX_REQUESTS) {
         return too_many_requests("请求过于频繁，请稍后再试");
     }
     next.run(req).await
@@ -77,26 +82,9 @@ pub async fn rate_limit(req: Request, next: Next) -> Response {
 /// 与登录限速独立 bucket；AI 生成耗时长，额度放宽。
 pub async fn rate_limit_ai(req: Request, next: Next) -> Response {
     static AI_LIMITER: std::sync::OnceLock<RateLimiter> = std::sync::OnceLock::new();
-    let limiter = AI_LIMITER.get_or_init(|| RateLimiter {
-        buckets: Mutex::new(HashMap::new()),
-    });
-    // AI 限速独立窗口：20 次/分钟
-    const AI_WINDOW: Duration = Duration::from_secs(60);
-    const AI_MAX: usize = 20;
-    let now = Instant::now();
+    let limiter = AI_LIMITER.get_or_init(RateLimiter::default);
     let ip = client_ip(&req);
-    let allowed = {
-        let mut buckets = limiter.buckets.lock().unwrap_or_else(|e| e.into_inner());
-        let bucket = buckets.entry(ip).or_default();
-        bucket.retain(|t| now.duration_since(*t) < AI_WINDOW);
-        if bucket.len() >= AI_MAX {
-            false
-        } else {
-            bucket.push(now);
-            true
-        }
-    };
-    if !allowed {
+    if !limiter.allow(&ip, AI_WINDOW, AI_MAX) {
         return too_many_requests("AI 请求过于频繁，请稍后再试");
     }
     next.run(req).await
@@ -148,10 +136,10 @@ mod tests {
     fn limiter_blocks_after_window_quota() {
         let limiter = RateLimiter::default();
         for _ in 0..MAX_REQUESTS {
-            assert!(limiter.allow("1.1.1.1"));
+            assert!(limiter.allow("1.1.1.1", WINDOW, MAX_REQUESTS));
         }
-        assert!(!limiter.allow("1.1.1.1"));
+        assert!(!limiter.allow("1.1.1.1", WINDOW, MAX_REQUESTS));
         // 其他 key 独立计数
-        assert!(limiter.allow("2.2.2.2"));
+        assert!(limiter.allow("2.2.2.2", WINDOW, MAX_REQUESTS));
     }
 }

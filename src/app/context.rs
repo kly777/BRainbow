@@ -276,7 +276,7 @@ impl AppState {
         let onto_query = OntoQueryService::new(db.clone());
         let sign = SignService::new(db.clone());
         let sign_query = SignQueryService::new(db.clone());
-        let user = UserService::new(db.clone());
+        let user = UserService::new(db.clone(), config.jwt_ttl_secs);
         let user_query = UserQueryService::new(db.clone());
         let text = TextService::new(db.clone());
         let text_query = TextQueryService::new(db.clone());

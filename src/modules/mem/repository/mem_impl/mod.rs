@@ -21,6 +21,5 @@ impl MemRepo {
 mod chunk;
 mod fsrs;
 mod helpers;
-mod learning;
 mod tag;
 mod trait_impl;

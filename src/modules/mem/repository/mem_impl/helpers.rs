@@ -29,4 +29,21 @@ impl super::super::MemRepo {
         }
         qb.push("))");
     }
+
+    /// 会话计数通用骨架：用户可见范围 + 标签过滤 + 指定 where 条件。
+    pub(super) async fn count_session_sql(
+        &self,
+        user_id: i32,
+        where_clause: &str,
+        tag_ids: &[i32],
+        exclude_tag_ids: &[i32],
+    ) -> Result<i64, sqlx::Error> {
+        let mut qb =
+            sqlx::QueryBuilder::<sqlx::Sqlite>::new("SELECT COUNT(*) FROM mem m WHERE (m.user_id = ");
+        qb.push_bind(user_id);
+        qb.push(format!(" OR m.user_id IS NULL) AND {where_clause}"));
+        Self::tag_filter_sql(&mut qb, tag_ids);
+        Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
+        qb.build_query_scalar().fetch_one(&*self.pool).await
+    }
 }

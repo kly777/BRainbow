@@ -1,4 +1,4 @@
-import { blurClose, tryAsync } from "@lib/utils";
+import { blurClose, trimmedQuery, tryAsync } from "@lib/utils";
 import { createTagE, searchTagsE, type TagInfo } from "@modules/mem";
 import {
 	type Component,
@@ -37,9 +37,8 @@ export default function TagSelector(props: Props) {
 	const [open, setOpen] = createSignal(false);
 	const [creating, setCreating] = createSignal(false);
 
-	const [searchResults] = createResource(
-		() => (query().trim().length > 0 ? query().trim() : null),
-		(q) => searchTagsE(q),
+	const [searchResults] = createResource(trimmedQuery(query), (q) =>
+		searchTagsE(q),
 	);
 
 	const filteredSuggestions = () => {

@@ -1,7 +1,7 @@
 // ── v2 管理工具栏：搜索 / 标签过滤 / 状态筛选 / 导出 ──
 
 import { Button, FilterGroup, SearchInput } from "@components/ui";
-import { blurClose } from "@lib/utils";
+import { blurClose, trimmedQuery } from "@lib/utils";
 import { searchTagsE, type TagInfo } from "@modules/mem";
 import { createResource, createSignal, For, Show } from "solid-js";
 import styles from "./ManageToolbar.module.css";
@@ -34,9 +34,8 @@ export default function ManageToolbar(props: Props) {
 	const [tagQuery, setTagQuery] = createSignal("");
 	const [tagOpen, setTagOpen] = createSignal(false);
 
-	const [searchResults] = createResource(
-		() => (tagQuery().trim().length > 0 ? tagQuery().trim() : null),
-		(q) => searchTagsE(q),
+	const [searchResults] = createResource(trimmedQuery(tagQuery), (q) =>
+		searchTagsE(q),
 	);
 
 	const ownIds = () => new Set(props.tagFilters.map((t) => t.id));

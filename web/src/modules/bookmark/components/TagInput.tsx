@@ -9,6 +9,7 @@ import {
 	notifyError,
 	notifySuccess,
 	showConfirm,
+	trimmedQuery,
 	tryAsync,
 } from "@lib/utils";
 import type { BookmarkTagWithCount } from "@modules/bookmark";
@@ -87,7 +88,7 @@ export default function TagInput(props: Props) {
 	const [open, setOpen] = createSignal(false);
 
 	const [searchResults, { refetch }] = createResource(
-		() => (query().trim().length > 0 ? query().trim() : null),
+		trimmedQuery(query),
 		(q) => searchBookmarkTagsE(q),
 	);
 

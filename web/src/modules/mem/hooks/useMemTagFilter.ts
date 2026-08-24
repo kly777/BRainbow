@@ -4,6 +4,7 @@ import {
 	enumParam,
 	listParam,
 	notifyError,
+	trimmedQuery,
 	tryAsync,
 	useUrlParams,
 } from "@lib/utils";
@@ -51,9 +52,8 @@ export function useMemTagFilter(loadDue: () => void): UseMemTagFilterResult {
 		allTags().filter((t) => tagFilterIds().includes(t.id)),
 	);
 
-	const [tagSearchResults] = createResource(
-		() => (tagQuery().trim().length > 0 ? tagQuery().trim() : null),
-		(q) => searchTagsE(q),
+	const [tagSearchResults] = createResource(trimmedQuery(tagQuery), (q) =>
+		searchTagsE(q),
 	);
 
 	const tagSuggestions = () =>

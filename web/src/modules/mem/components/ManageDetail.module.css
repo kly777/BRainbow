@@ -100,6 +100,10 @@
 	padding: var(--space-sm) var(--space-md);
 	border-bottom: 1px solid var(--t-color-border);
 	background: var(--t-color-bg);
+
+	/* 底色条自行收进节的圆角内缘（同心 -1px），
+	   方角不再贴边框曲线，避免分节容器圆角处边框被遮窄 */
+	border-radius: calc(var(--radius-md) - 1px) calc(var(--radius-md) - 1px) 0 0;
 }
 
 .detail-body {

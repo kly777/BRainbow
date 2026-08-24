@@ -36,22 +36,35 @@
 }
 
 .table-card {
+	position: relative;
 	flex: 1;
 	min-height: 0;
 	display: flex;
 	flex-direction: column;
 	background: var(--t-color-surface);
-	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-lg);
+}
 
-	/* 裁剪后代（含吸顶表头的方形底色）以遵循圆角 */
-	overflow: hidden;
+/* 边框以覆盖环绘制在最顶层：整卡仅此一条反锯齿曲线可见，
+   不与滚动层裁剪曲线叠加（消除圆角处边框被多层叠细的观感） */
+.table-card::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 2; /* 高于吸顶表头(z-index:1)；卡片内无更高浮层 */
+	border: 1px solid var(--t-color-border);
+	border-radius: inherit;
+	pointer-events: none;
 }
 
 .table-scroll {
 	flex: 1;
 	min-height: 0;
 	overflow: auto;
+
+	/* 圆角裁剪在此层完成：曲线比外框内缩 1px 保持同心，
+	   吸顶表头的方形底色不再贴着边框反锯齿（避免圆角处边框变细） */
+	border-radius: calc(var(--radius-lg) - 1px);
 }
 
 .table {

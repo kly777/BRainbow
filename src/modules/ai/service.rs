@@ -14,6 +14,8 @@ const UPSTREAM_CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 /// 只能施加在非流式请求上 —— RequestBuilder::timeout 覆盖整个请求-响应周期，
 /// 加到流式请求会在长思考间隔切断 SSE（AGENTS.md「SSE 代理不能设 timeout」）
 const UPSTREAM_NON_STREAM_TIMEOUT: Duration = Duration::from_secs(180);
+/// 非流式重试间隔
+const RETRY_DELAY_MS: u64 = 1000;
 
 /// 流式请求永不设总超时（思考间隔会断流）；仅非流式受总超时兜底
 fn request_timeout(is_stream: bool) -> Option<Duration> {
@@ -178,7 +180,7 @@ impl AiService {
                                     "AI 请求失败 ({status})，且读取错误响应失败: {e}"
                                 )));
                                 if tx.is_none() {
-                                    sleep(Duration::from_millis(1000)).await;
+                                    sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
                                 }
                                 continue;
                             }
@@ -188,7 +190,7 @@ impl AiService {
                             text.chars().take(200).collect::<String>()
                         )));
                         if tx.is_none() {
-                            sleep(Duration::from_millis(1000)).await;
+                            sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
                         }
                         continue;
                     }
@@ -278,7 +280,7 @@ impl AiService {
                 Err(e) => {
                     last_err = Some(ServiceError::Internal(format!("AI 请求失败: {e}")));
                     if tx.is_none() {
-                        sleep(Duration::from_millis(1000)).await;
+                        sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
                     }
                 }
             }

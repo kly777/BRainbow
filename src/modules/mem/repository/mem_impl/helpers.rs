@@ -2,6 +2,8 @@
 //!
 //! 每个子文件实现 `impl super::super::MemRepo` 的一个方法组。
 
+use crate::shared::db_query::push_user_visible;
+
 impl super::super::MemRepo {
     pub(super) fn tag_filter_sql(qb: &mut sqlx::QueryBuilder<sqlx::Sqlite>, tag_ids: &[i32]) {
         if tag_ids.is_empty() {
@@ -38,10 +40,9 @@ impl super::super::MemRepo {
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<i64, sqlx::Error> {
-        let mut qb =
-            sqlx::QueryBuilder::<sqlx::Sqlite>::new("SELECT COUNT(*) FROM mem m WHERE (m.user_id = ");
-        qb.push_bind(user_id);
-        qb.push(format!(" OR m.user_id IS NULL) AND {where_clause}"));
+        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new("SELECT COUNT(*) FROM mem m WHERE ");
+        push_user_visible(&mut qb, "m.user_id", user_id);
+        qb.push(format!(" AND {where_clause}"));
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         qb.build_query_scalar().fetch_one(&*self.pool).await

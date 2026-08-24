@@ -73,6 +73,16 @@ pub fn like_prefix(needle: &str) -> String {
     format!("{}%", escape_like(needle))
 }
 
+/// 追加行级可见性过滤：`( {column} = ?N OR {column} IS NULL )`。
+///
+/// 统一「用户自有行 + 全局共享行（user_id 为 NULL 的公共数据）」双语义；
+/// 占位符按追加次序自然编号。调用方负责 WHERE / AND 等连接词与后续条件。
+pub fn push_user_visible(qb: &mut QueryBuilder<sqlx::Sqlite>, column: &str, user_id: i32) {
+    qb.push(format!("({column} = "));
+    qb.push_bind(user_id);
+    qb.push(format!(" OR {column} IS NULL)"));
+}
+
 // ── 表名家化 ──
 
 /// 校验表名只含合法字符（字母、数字、下划线）。

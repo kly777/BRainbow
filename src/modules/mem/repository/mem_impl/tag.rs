@@ -6,6 +6,7 @@
 use super::super::super::dto::*;
 use super::super::super::model::*;
 use super::super::*;
+use crate::shared::db_query::push_user_visible;
 #[allow(dead_code)]
 impl super::super::MemRepo {
     pub async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, sqlx::Error> {
@@ -185,10 +186,10 @@ impl super::super::MemRepo {
              FROM mem_tag mt
              JOIN tag t ON t.id = mt.tag_id
              JOIN mem m ON m.id = mt.mem_id
-             WHERE (m.user_id = ",
+             WHERE ",
         );
-        qb.push_bind(user_id);
-        qb.push(" OR m.user_id IS NULL) AND mt.mem_id IN (");
+        push_user_visible(&mut qb, "m.user_id", user_id);
+        qb.push(" AND mt.mem_id IN (");
         let mut separated = qb.separated(", ");
         for &id in mem_ids {
             separated.push_bind(id);
@@ -211,10 +212,9 @@ impl super::super::MemRepo {
              FROM mem m
              JOIN chunk cc ON cc.id = m.cue_chunk_id
              JOIN chunk ct ON ct.id = m.target_chunk_id
-             WHERE (m.user_id = ",
+             WHERE ",
         );
-        qb.push_bind(user_id);
-        qb.push(" OR m.user_id IS NULL)");
+        push_user_visible(&mut qb, "m.user_id", user_id);
 
         if !tag_ids.is_empty() {
             qb.push(" AND m.id IN (SELECT mem_id FROM mem_tag WHERE tag_id IN (");

@@ -6,6 +6,7 @@ use super::super::super::dto::*;
 use super::super::super::model::*;
 use super::super::super::port::MemRepository;
 use super::super::*;
+use crate::shared::db_query::push_user_visible;
 use crate::shared::error_types::ServiceError;
 use async_trait::async_trait;
 
@@ -79,10 +80,10 @@ impl MemRepository for super::super::MemRepo {
              LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id
              LEFT JOIN chunk ct ON m.target_chunk_id = ct.id
              LEFT JOIN mem_mnemonic mm ON mm.mem_id = m.id
-             WHERE (m.user_id = ",
+             WHERE ",
         );
-        qb.push_bind(user_id);
-        qb.push(" OR m.user_id IS NULL) AND m.id IN (");
+        push_user_visible(&mut qb, "m.user_id", user_id);
+        qb.push(" AND m.id IN (");
         let mut sep = qb.separated(", ");
         for &id in ids {
             sep.push_bind(id);
@@ -135,10 +136,9 @@ impl MemRepository for super::super::MemRepo {
         query: &MemQuery,
     ) -> Result<Vec<i32>, ServiceError> {
         let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
-            "SELECT m.id FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1 AND (m.user_id = ",
+            "SELECT m.id FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE ",
         );
-        qb.push_bind(user_id);
-        qb.push(" OR m.user_id IS NULL)");
+        push_user_visible(&mut qb, "m.user_id", user_id);
 
         if let Some(id) = query.id {
             qb.push(" AND m.id = ");
@@ -237,10 +237,9 @@ impl MemRepository for super::super::MemRepo {
 
     async fn count_all_mems(&self, user_id: i32, query: &MemQuery) -> Result<i64, ServiceError> {
         let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
-            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1 AND (m.user_id = ",
+            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE ",
         );
-        qb.push_bind(user_id);
-        qb.push(" OR m.user_id IS NULL)");
+        push_user_visible(&mut qb, "m.user_id", user_id);
 
         if let Some(id) = query.id {
             qb.push(" AND m.id = ");
@@ -343,10 +342,9 @@ impl MemRepository for super::super::MemRepo {
         };
 
         let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
-            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1=1 AND (m.user_id = ",
+            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE ",
         );
-        qb.push_bind(user_id);
-        qb.push(" OR m.user_id IS NULL)");
+        push_user_visible(&mut qb, "m.user_id", user_id);
 
         // 应用过滤条件（与 get_all_mems 相同，但不包括 id 过滤）
         if let Some(ref state) = query.state {
@@ -542,11 +540,9 @@ impl MemRepository for super::super::MemRepo {
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<Vec<i32>, ServiceError> {
-        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
-            r#"SELECT m.id FROM mem m WHERE (m.user_id = "#,
-        );
-        qb.push_bind(user_id);
-        qb.push(" OR m.user_id IS NULL) AND m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended' AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')");
+        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(r#"SELECT m.id FROM mem m WHERE "#);
+        push_user_visible(&mut qb, "m.user_id", user_id);
+        qb.push(" AND m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended' AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')");
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         qb.push(" ORDER BY due_at LIMIT ");
@@ -568,10 +564,10 @@ impl MemRepository for super::super::MemRepo {
                       m.lapses AS "lapses", COALESCE(m.due_at, '') AS "due_at",
                       m.last_review_at AS "last_review_at"
             FROM mem m
-            WHERE (m.user_id = "#,
+            WHERE "#,
         );
-        qb.push_bind(user_id);
-        qb.push(" OR m.user_id IS NULL) AND m.state = 'review' AND m.buried = 0 AND m.state != 'suspended' AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')");
+        push_user_visible(&mut qb, "m.user_id", user_id);
+        qb.push(" AND m.state = 'review' AND m.buried = 0 AND m.state != 'suspended' AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')");
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         let rows = qb.build().fetch_all(&*self.pool).await?;
@@ -598,10 +594,10 @@ impl MemRepository for super::super::MemRepo {
     ) -> Result<Vec<i32>, ServiceError> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.id FROM mem m
-            WHERE (m.user_id = "#,
+            WHERE "#,
         );
-        qb.push_bind(user_id);
-        qb.push(" OR m.user_id IS NULL) AND m.state = 'new' AND m.buried = 0 AND m.state != 'suspended' AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')");
+        push_user_visible(&mut qb, "m.user_id", user_id);
+        qb.push(" AND m.state = 'new' AND m.buried = 0 AND m.state != 'suspended' AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')");
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         qb.push(" ORDER BY RANDOM() LIMIT ");
@@ -622,10 +618,10 @@ impl MemRepository for super::super::MemRepo {
                       m.lapses AS "lapses", COALESCE(m.due_at, '') AS "due_at",
                       m.last_review_at AS "last_review_at"
             FROM mem m
-            WHERE (m.user_id = "#,
+            WHERE "#,
         );
-        qb.push_bind(user_id);
-        qb.push(" OR m.user_id IS NULL) AND m.state = 'review' AND m.buried = 0 AND m.state != 'suspended' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')");
+        push_user_visible(&mut qb, "m.user_id", user_id);
+        qb.push(" AND m.state = 'review' AND m.buried = 0 AND m.state != 'suspended' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')");
         Self::tag_filter_sql(&mut qb, tag_ids);
         let rows = qb.build().fetch_all(&*self.pool).await?;
         rows.into_iter()
@@ -738,10 +734,10 @@ impl MemRepository for super::super::MemRepo {
         let mut qb = QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.state, COALESCE(m.step_index, 0) AS step, COUNT(*) AS n
                FROM mem m
-               WHERE (m.user_id = "#,
+               WHERE "#,
         );
-        qb.push_bind(user_id);
-        qb.push(" OR m.user_id IS NULL) AND m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended' AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')");
+        push_user_visible(&mut qb, "m.user_id", user_id);
+        qb.push(" AND m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended' AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')");
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         qb.push(" GROUP BY m.state, step");
@@ -1114,10 +1110,10 @@ impl MemRepository for super::super::MemRepo {
              FROM mem_tag mt
              JOIN tag t ON t.id = mt.tag_id
              JOIN mem m ON m.id = mt.mem_id
-             WHERE (m.user_id = ",
+             WHERE ",
         );
-        qb.push_bind(user_id);
-        qb.push(" OR m.user_id IS NULL) AND mt.mem_id IN (");
+        push_user_visible(&mut qb, "m.user_id", user_id);
+        qb.push(" AND mt.mem_id IN (");
         let mut separated = qb.separated(", ");
         for &id in mem_ids {
             separated.push_bind(id);
@@ -1140,10 +1136,9 @@ impl MemRepository for super::super::MemRepo {
              FROM mem m
              JOIN chunk cc ON cc.id = m.cue_chunk_id
              JOIN chunk ct ON ct.id = m.target_chunk_id
-             WHERE (m.user_id = ",
+             WHERE ",
         );
-        qb.push_bind(user_id);
-        qb.push(" OR m.user_id IS NULL)");
+        push_user_visible(&mut qb, "m.user_id", user_id);
 
         if !tag_ids.is_empty() {
             qb.push(" AND m.id IN (SELECT mem_id FROM mem_tag WHERE tag_id IN (");

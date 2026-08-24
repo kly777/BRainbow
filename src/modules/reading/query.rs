@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use super::model::{Article, ArticleDetail, ArticleSummary, UnknownWord};
 use super::repository::ReadingRepo;
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit, SearchPort, snippet};
+use crate::shared::search::{SearchHit, SearchPort, normalize_search, snippet};
 
 /// 目标认识率：越接近该值的文章越适合作为下一篇阅读。
 pub(crate) const TARGET_KNOWN_RATIO: f64 = 0.9;
@@ -114,12 +114,9 @@ impl SearchPort for ReadingQueryService {
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
-        let kw = q.trim();
-        if kw.is_empty() {
+        let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
-        }
-        let cap = limit.clamp(1, 20);
-        let like = crate::shared::db_query::like_contains(kw);
+        };
         let rows = self
             .repo
             .search_hits(user_id, &like, cap)

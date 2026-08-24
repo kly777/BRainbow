@@ -4,7 +4,7 @@ use sqlx::SqlitePool;
 use super::model::{ConvDetail, SearchResponse};
 use super::repository::ConvRepo;
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit, SearchPort};
+use crate::shared::search::{SearchHit, SearchPort, normalize_search};
 
 /// 查询侧服务——纯读取，无副作用。
 ///
@@ -73,12 +73,9 @@ impl SearchPort for ConvQueryService {
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
-        let kw = q.trim();
-        if kw.is_empty() {
+        let Some((like, _, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
-        }
-        let cap = limit.clamp(1, 20);
-        let like = crate::shared::db_query::like_contains(kw);
+        };
         self.repo.search_hits(user_id, &like, cap).await
     }
 }

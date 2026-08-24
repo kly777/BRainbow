@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit, SearchPort, snippet};
+use crate::shared::search::{SearchHit, SearchPort, normalize_search, snippet};
 
 use super::repository::TextRepo;
 
@@ -35,12 +35,9 @@ impl SearchPort for TextQueryService {
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
-        let kw = q.trim();
-        if kw.is_empty() {
+        let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
-        }
-        let cap = limit.clamp(1, 20);
-        let like = crate::shared::db_query::like_contains(kw);
+        };
         let rows = self
             .repo
             .search_hits(user_id, &like, cap)

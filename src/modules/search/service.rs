@@ -3,7 +3,7 @@ use std::sync::Arc;
 use futures_util::future::join_all;
 
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchPort, SearchResponse};
+use crate::shared::search::{SearchPort, SearchResponse, clamp_search_limit, trim_query};
 
 /// 全局搜索：只负责聚合各模块的 `SearchPort`，不再直接触碰任何业务表。
 #[derive(Clone)]
@@ -24,11 +24,10 @@ impl SearchQueryService {
         q: &str,
         limit: i64,
     ) -> Result<SearchResponse, ServiceError> {
-        let kw = q.trim();
-        if kw.is_empty() {
+        let Some(kw) = trim_query(q) else {
             return Ok(SearchResponse { hits: Vec::new() });
-        }
-        let cap = limit.clamp(1, 20);
+        };
+        let cap = clamp_search_limit(limit);
 
         let results = join_all(self.ports.iter().map(|port| port.search(user_id, kw, cap))).await;
 

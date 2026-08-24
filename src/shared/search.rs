@@ -3,7 +3,29 @@
 use async_trait::async_trait;
 use serde::Serialize;
 
+use crate::shared::db_query::like_contains;
 use crate::shared::error_types::ServiceError;
+
+/// 全局搜索单端口返回条数上限
+pub const SEARCH_LIMIT_CAP: i64 = 20;
+
+/// 搜索词归一化第一步：trim 后为空视为无效输入（返回 None）
+pub fn trim_query(q: &str) -> Option<&str> {
+    let kw = q.trim();
+    (!kw.is_empty()).then_some(kw)
+}
+
+/// 搜索条目上限钳制到 [1, SEARCH_LIMIT_CAP]
+pub fn clamp_search_limit(limit: i64) -> i64 {
+    limit.clamp(1, SEARCH_LIMIT_CAP)
+}
+
+/// 端口实现便捷组合：空查询返回 None（调用方直接返回空结果）；
+/// 否则返回 `(LIKE 匹配串, trim 后的关键字, 钳制后的 limit)`。
+pub fn normalize_search(q: &str, limit: i64) -> Option<(String, &str, i64)> {
+    let kw = trim_query(q)?;
+    Some((like_contains(kw), kw, clamp_search_limit(limit)))
+}
 
 /// 全局搜索命中项：跨模块统一结构
 #[derive(Serialize, Clone)]
@@ -90,5 +112,37 @@ pub fn merge_snippets(cue: &str, target: &str, kw: &str) -> String {
         format!("{snip} ｜ {}", clip(secondary, 60))
     } else {
         snip
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+
+    #[test]
+    fn normalize_search_blank_returns_none() {
+        assert!(normalize_search("", 10).is_none());
+        assert!(normalize_search("   ", 10).is_none());
+    }
+
+    #[test]
+    fn normalize_search_escapes_and_clamps() {
+        let (like, kw, cap) = normalize_search(" a%b_ ", 999).unwrap();
+        assert_eq!(kw, "a%b_");
+        assert_eq!(cap, SEARCH_LIMIT_CAP);
+        // 通配符被转义并包裹为 %..% 子串模式
+        assert_eq!(like, "%a\\%b\\_%");
+        assert_eq!(normalize_search("x", 0).unwrap().2, 1);
+        assert_eq!(normalize_search("x", -3).unwrap().2, 1);
+    }
+
+    #[test]
+    fn trim_query_and_clamp_helpers() {
+        assert!(trim_query("   ").is_none());
+        assert_eq!(trim_query(" hi "), Some("hi"));
+        assert_eq!(clamp_search_limit(-5), 1);
+        assert_eq!(clamp_search_limit(SEARCH_LIMIT_CAP + 1), SEARCH_LIMIT_CAP);
+        assert_eq!(clamp_search_limit(7), 7);
     }
 }

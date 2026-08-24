@@ -1,5 +1,5 @@
 import { getErrorMessage } from "@lib/api";
-import { tryAsync } from "@lib/utils";
+import { copyText } from "@lib/utils";
 import {
 	type Component,
 	createResource,
@@ -179,14 +179,13 @@ const RowDetail: Component<RowDetailProps> = (props) => {
 	const row = () => detail()?.rows[0];
 	const header = () => detail()?.header ?? [];
 
-	const copyText = async (key: string, text: string) => {
+	const copyField = async (key: string, text: string) => {
 		setCopyError("");
-		const result = await tryAsync(() => navigator.clipboard.writeText(text));
-		if (result.ok) {
+		if (await copyText(text)) {
 			setCopiedKey(key);
 			setTimeout(() => setCopiedKey(""), 1200);
 		} else {
-			setCopyError(getErrorMessage(result.error));
+			setCopyError("复制失败");
 		}
 	};
 
@@ -197,7 +196,7 @@ const RowDetail: Component<RowDetailProps> = (props) => {
 		for (let i = 0; i < data.header.length; i++) {
 			record[data.header[i].name] = data.rows[0][i] ?? null;
 		}
-		await copyText("__row", JSON.stringify(record, null, 2));
+		await copyField("__row", JSON.stringify(record, null, 2));
 	};
 
 	return (
@@ -243,7 +242,7 @@ const RowDetail: Component<RowDetailProps> = (props) => {
 						copiedKey={copiedKey}
 						copyError={copyError}
 						onCopyRowJson={() => void copyRowJson()}
-						onCopyField={(key, text) => void copyText(key, text)}
+						onCopyField={(key, text) => void copyField(key, text)}
 						onJump={props.onJump}
 						previewFor={props.previewFor}
 						table={props.table}

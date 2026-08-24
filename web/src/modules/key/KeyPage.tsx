@@ -2,8 +2,9 @@
 // dev 环境免登录可生成（后端 APP_ENV=dev）；prod 需登录（AuthGuard）。
 
 import { Button } from "@components/ui";
-import { del, get, getApiKey, getErrorMessage, post } from "@lib/api";
+import { getApiKey, getErrorMessage } from "@lib/api";
 import {
+	copyText,
 	fmtFull,
 	notifyError,
 	notifySuccess,
@@ -18,14 +19,9 @@ import {
 	For,
 	Show,
 } from "solid-js";
+import type { ApiKeyInfo } from "./api.ts";
+import { createKeyE, deleteKeyE, listKeysE } from "./api.ts";
 import styles from "./KeyPage.module.css";
-
-interface ApiKeyInfo {
-	id: number;
-	role: string;
-	created_at: string;
-	key?: string;
-}
 
 const NewKeyBox: Component<{
 	k: () => string;
@@ -99,9 +95,7 @@ const KeyRow: Component<{
 
 export default function KeyPage() {
 	const { setApiKey } = useAuth();
-	const [keys, { refetch }] = createResource(async () =>
-		get<ApiKeyInfo[]>("/auth/keys"),
-	);
+	const [keys, { refetch }] = createResource(() => listKeysE());
 	const [newKey, setNewKey] = createSignal<string | null>(null);
 	const [generating, setGenerating] = createSignal(false);
 
@@ -109,7 +103,7 @@ export default function KeyPage() {
 
 	const handleGenerate = async () => {
 		setGenerating(true);
-		const result = await tryAsync(() => post<ApiKeyInfo>("/auth/key", {}));
+		const result = await tryAsync(() => createKeyE());
 		setGenerating(false);
 		if (result.ok) {
 			setNewKey(result.value.key ?? null);
@@ -121,8 +115,11 @@ export default function KeyPage() {
 	};
 
 	const handleCopy = async (key: string) => {
-		await navigator.clipboard.writeText(key);
-		notifySuccess("已复制到剪贴板");
+		if (await copyText(key)) {
+			notifySuccess("已复制到剪贴板");
+		} else {
+			notifyError("复制失败");
+		}
 	};
 
 	const handleApply = async (key: string) => {
@@ -142,7 +139,7 @@ export default function KeyPage() {
 			variant: "danger",
 		});
 		if (!confirmed) return;
-		const result = await tryAsync(() => del(`/auth/key/${id}`));
+		const result = await tryAsync(() => deleteKeyE(id));
 		if (result.ok) {
 			refetch();
 			notifySuccess("已删除");

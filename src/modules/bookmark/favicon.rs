@@ -30,6 +30,10 @@ const MAX_HOME_HTML_BYTES: u64 = 1024 * 1024;
 /// 磁盘缓存文件数上限：超限清空最旧一半，防止公开端点被滥用填满磁盘
 const MAX_CACHE_FILES: usize = 500;
 const FETCH_TIMEOUT: Duration = Duration::from_secs(5);
+/// 建连超时（DNS+TCP 握手）
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
+/// 单次抓取重定向上限
+const MAX_REDIRECTS: usize = 3;
 
 #[derive(Debug, Deserialize)]
 pub struct FaviconQuery {
@@ -185,8 +189,8 @@ async fn read_bounded(mut resp: reqwest::Response, max_bytes: u64) -> Option<Vec
 fn build_client() -> Result<reqwest::Client, Box<dyn std::error::Error + Send + Sync>> {
     reqwest::Client::builder()
         .timeout(FETCH_TIMEOUT)
-        .connect_timeout(Duration::from_secs(3))
-        .redirect(reqwest::redirect::Policy::limited(3))
+        .connect_timeout(CONNECT_TIMEOUT)
+        .redirect(reqwest::redirect::Policy::limited(MAX_REDIRECTS))
         .user_agent("Mozilla/5.0 (compatible; Brainbow/1.0)")
         .build()
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)

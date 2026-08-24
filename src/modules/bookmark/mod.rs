@@ -22,6 +22,10 @@ use axum::{
     routing::{get, post},
 };
 
+/// 书签 HTML 导入的 body 上限：Firefox 导出可达数 MB，取整放宽到 64MiB
+/// （与 media 的 UPLOAD_BODY_LIMIT_BYTES 同一命名约定）
+pub(crate) const IMPORT_HTML_BODY_LIMIT_BYTES: usize = 64 * 1024 * 1024;
+
 pub fn routes<S>() -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -35,7 +39,8 @@ where
         // 导入：Firefox 书签 HTML 可能很大（数 MB），放宽 body 限制
         .route(
             "/import",
-            post(import_bookmarks_handler).layer(DefaultBodyLimit::max(64 * 1024 * 1024)),
+            post(import_bookmarks_handler)
+                .layer(DefaultBodyLimit::max(IMPORT_HTML_BODY_LIMIT_BYTES)),
         )
         .route(
             "/",

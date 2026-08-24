@@ -14,12 +14,20 @@
 
 .loading-more {
 	width: var(--masonry-column-width, 18.75rem);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	color: var(--t-color-ink-muted);
-	font-size: var(--text-sm);
 	padding: var(--space-xl);
+}
+
+.sk-card {
+	display: block;
+	height: 10rem;
+	border-radius: var(--radius-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.sk-card {
+		animation: none;
+		opacity: 0.6;
+	}
 }
 
 .empty-state {
@@ -31,23 +39,28 @@
 	margin: var(--space-xl) 0;
 }
 
+/* 列宽经自定义变量下发（flex 容器不消费 multicol 的 column-* 属性） */
 @media (width <= 1024px) {
 	.cards-grid {
-		column-width: 16.25rem;
+		--masonry-column-width: 16.25rem;
+
 		column-gap: var(--space-lg);
 	}
 }
 
 @media (width <= 768px) {
 	.cards-grid {
-		column-width: 15rem;
+		--masonry-column-width: 15rem;
+
 		column-gap: var(--space-md);
 	}
 }
 
 @media (width <= 480px) {
 	.cards-grid {
-		column-width: auto;
+		/* 留出下一张卡的探出边，暗示可横滑 */
+		--masonry-column-width: min(78vw, 15rem);
+
 		column-gap: var(--space-md);
 	}
 }
@@ -68,5 +81,5 @@
 .empty-state p {
 	font-size: var(--text-base);
 	color: var(--t-color-ink-muted);
-	margin-bottom: var(--space-xl);
+	margin: 0;
 }

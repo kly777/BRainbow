@@ -41,7 +41,7 @@ const CardFilter: Component<CardFilterProps> = (props) => {
 						onSearch={(q) => props.onSearch?.(q)}
 					/>
 					<label class={styles.filterLabel} for="card-sort-by">
-						排序:
+						排序：
 					</label>
 					<select
 						id="card-sort-by"

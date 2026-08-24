@@ -96,7 +96,7 @@ const Card: Component<CardProps> = (props) => {
 			<div class={styles.cardMeta}>
 				<div class={styles.metaItem}>
 					<span class={styles.metaLabel}>
-						{props.created_at === props.updated_at ? "创建于" : "修改于"}:
+						{props.created_at === props.updated_at ? "创建于" : "修改于"}：
 					</span>
 					<span class={styles.metaValue}>
 						{fmtFull(

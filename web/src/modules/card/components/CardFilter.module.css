@@ -23,28 +23,12 @@
 	flex-wrap: wrap;
 }
 
+/* 布局覆写；输入框外观由共享 SearchInput atom 负责 */
 .search-input {
 	flex: 1;
 	min-width: 0;
 	max-width: 220px;
-	padding: var(--space-sm) var(--space-md);
-	font-size: var(--text-sm);
-	border: 1px solid var(--t-color-border-strong);
-	border-radius: var(--radius-md);
-	background: var(--t-color-bg);
-	color: var(--t-color-ink);
-	transition: all var(--t-transition-fast) ease;
 	flex-shrink: 0;
-	outline: none;
-}
-
-.search-input::placeholder {
-	color: var(--t-color-ink-faint);
-}
-
-.search-input:focus {
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .filter-label {
@@ -74,46 +58,6 @@
 	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
-.sort-button {
-	padding: var(--space-sm) var(--space-md);
-	font-size: var(--text-sm);
-	background: transparent;
-	color: var(--t-color-ink-muted);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	cursor: pointer;
-	transition: all var(--t-transition-fast) ease;
-	min-width: 40px;
-}
-
-.sort-button:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
-
-.clear-button {
-	padding: var(--space-sm) var(--space-lg);
-	font-size: var(--text-sm);
-	background: transparent;
-	color: var(--t-color-ink-muted);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	cursor: pointer;
-	transition: all var(--t-transition-fast) ease;
-	white-space: nowrap;
-	flex-shrink: 0;
-}
-
-.clear-button:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
-
-.clear-button:hover:not(:disabled) {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
-
 /* 响应式 */
 @media (width <= 768px) {
 	.filter-select {
@@ -126,13 +70,8 @@
 		padding: var(--space-md);
 	}
 
-	.search-input {
-		font-size: var(--text-lg);
-		padding: var(--space-sm) var(--space-lg);
-	}
-
-	.sort-button {
-		flex: 1;
-		text-align: center;
+	/* 触屏 16px 输入字号，防 iOS 聚焦自动放大 */
+	.filter-select {
+		font-size: var(--text-base);
 	}
 }

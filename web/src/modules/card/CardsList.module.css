@@ -1,4 +1,4 @@
-/* features/card/CardsList.css.ts — 由 vanilla-extract 迁移 */
+/* features/card/CardsList.module.css — 列表页壳（弹窗由共享 Modal 渲染） */
 
 .container {
 	max-width: var(--page-max);
@@ -15,6 +15,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+	gap: var(--space-lg);
 	padding-bottom: var(--space-lg);
 }
 
@@ -32,57 +33,7 @@
 	gap: var(--space-md);
 }
 
-.loading {
-	text-align: center;
-	padding: var(--space-xl) var(--space-xl);
-	background: var(--t-color-surface);
-	border-radius: var(--radius-md);
-	border: 1px solid var(--t-color-border);
-	margin: var(--space-xl) 0;
-}
-
-.error {
-	text-align: center;
-	padding: var(--space-xl) var(--space-xl);
-	background: var(--t-color-danger-subtle);
-	border: 1px solid var(--t-color-danger);
-	border-radius: var(--radius-md);
-	margin: var(--space-xl) 0;
-}
-
-.modal-overlay {
-	position: fixed;
-	inset: 0;
-	background: var(--t-color-overlay);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	z-index: var(--z-overlay);
-	padding: var(--space-xl);
-}
-
-.modal {
-	background: var(--t-color-surface);
-	border-radius: var(--radius-lg);
-	width: 100%;
-	max-width: 500px;
-	max-height: 90vh;
-	overflow-y: auto;
-	box-shadow: var(--shadow-md);
-	animation: modalSlideIn 0.3s ease;
-}
-
-.modal-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: var(--space-xl) var(--space-xl);
-	border-bottom: 1px solid var(--t-color-border);
-}
-
-.modal-content {
-	padding: var(--space-xl);
-}
+/* ── 快速创建弹窗内容 ── */
 
 .error-message {
 	padding: var(--space-md) var(--space-lg);
@@ -106,13 +57,9 @@
 	margin-bottom: var(--space-sm);
 }
 
-.form-input {
-	width: 100%;
-	padding: var(--space-sm) var(--space-md);
-	font-size: var(--text-sm);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
-	transition: all var(--t-transition-normal) ease;
+.form-label::after {
+	content: " *";
+	color: var(--t-color-danger);
 }
 
 .form-textarea {
@@ -122,9 +69,16 @@
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
 	resize: vertical;
-	transition: all var(--t-transition-normal) ease;
+	transition:
+		border-color var(--t-transition-normal) ease,
+		box-shadow var(--t-transition-normal) ease;
 	font-family: inherit;
 	line-height: var(--leading-normal);
+}
+
+.form-textarea:disabled {
+	background: var(--t-color-surface-raised);
+	cursor: not-allowed;
 }
 
 .preview-section {
@@ -150,119 +104,17 @@
 	color: var(--t-color-ink);
 }
 
-.state {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: var(--space-xl) var(--space-lg);
-	text-align: center;
-	color: var(--t-color-ink-muted);
-	font-size: var(--text-base);
-}
-
-.error-text {
-	color: var(--t-color-danger);
-	margin-bottom: var(--space-md);
-}
-
-.modal-actions {
-	display: flex;
-	justify-content: flex-end;
-	gap: var(--space-md);
-	padding: var(--space-xl) var(--space-xl);
-	border-top: 1px solid var(--t-color-border);
-}
-
-@media (width <= 768px) {
-	.container {
-		margin: 0 auto;
-		padding: var(--space-lg) var(--space-md);
-	}
-}
-
-@media (width <= 768px) {
-	.header {
-		align-items: center;
-		gap: var(--space-lg);
-	}
-}
-
-@media (width <= 768px) {
-	.actions {
-		justify-content: flex-end;
-	}
-}
-
-@media (width <= 768px) {
-	.modal {
-		max-width: 100%;
-	}
-}
-
-@media (width <= 768px) {
-	.modal-header {
-		padding: var(--space-lg) var(--space-xl);
-	}
-}
-
-@media (width <= 768px) {
-	.modal-content {
-		padding: var(--space-xl);
-	}
-}
-
-.form-label::after {
-	content: " *";
-	color: var(--t-color-danger);
-}
-
-.form-input:disabled {
-	background: var(--t-color-surface-raised);
-	cursor: not-allowed;
-}
-
-.form-textarea:disabled {
-	background: var(--t-color-surface-raised);
-	cursor: not-allowed;
-}
-
-@media (width <= 768px) {
-	.modal-actions {
-		padding: var(--space-lg) var(--space-xl);
-	}
-}
-
-@media (width <= 480px) {
-	.modal-actions {
-		flex-direction: column;
-	}
-}
-
-.loading p {
-	font-size: var(--text-base);
-	color: var(--t-color-ink-muted);
-	margin: 0;
-}
-
-.error p {
-	font-size: var(--text-base);
-	color: var(--t-color-danger);
-	margin-bottom: var(--space-lg);
-}
-
-.modal-header h2 {
-	font-size: var(--text-lg);
-	font-weight: 600;
-	color: var(--t-color-ink);
-	margin: 0;
-}
-
 .preview-content p {
 	margin: 0 0 var(--space-sm);
 }
 
 .preview-content p:last-child {
 	margin-bottom: 0;
+}
+
+/* 响应式 */
+@media (width <= 768px) {
+	.container {
+		padding: var(--space-lg) var(--space-md);
+	}
 }

@@ -89,7 +89,9 @@ const CardMasonry: Component<CardMasonryProps> = (props) => {
 					)}
 				</For>
 				<Show when={props.loadingMore}>
-					<div class={styles.loadingMore}>加载中…</div>
+					<div class={styles.loadingMore} aria-hidden="true">
+						<div class={`skeleton ${styles.skCard}`} />
+					</div>
 				</Show>
 			</div>
 		</Show>

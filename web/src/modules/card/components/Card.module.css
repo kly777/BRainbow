@@ -10,7 +10,11 @@
 	border-radius: var(--radius-lg);
 	box-shadow: var(--shadow-sm);
 	padding: var(--space-lg);
-	transition: all var(--t-transition-normal) ease;
+	transition:
+		box-shadow var(--t-transition-normal) ease,
+		border-color var(--t-transition-normal) ease,
+		transform var(--t-transition-normal) ease,
+		opacity var(--t-transition-normal) ease;
 	cursor: pointer;
 	border: 1px solid var(--t-color-border);
 	display: flex;
@@ -18,7 +22,6 @@
 	text-align: left;
 	width: 100%;
 	overflow-wrap: break-word;
-	overflow-y: auto;
 }
 
 .card-header {
@@ -84,14 +87,14 @@
 }
 
 .tag {
-	background: var(--t-color-badge-new-bg);
-	color: var(--t-color-badge-new-text);
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink-muted);
 	font-size: var(--text-xs);
 	padding: var(--space-2xs) var(--space-sm);
 	border-radius: 999px;
 	border: none;
 	cursor: pointer;
-	transition: all var(--t-transition-fast) ease;
+	transition: filter var(--t-transition-fast) ease;
 }
 
 .card-meta {
@@ -167,11 +170,6 @@
 	transform: translateY(-1px);
 }
 
-.card-fab:focus {
-	outline: 2px solid var(--t-color-accent);
-	outline-offset: 1px;
-}
-
 .card-fab-danger {
 	color: var(--t-color-danger);
 	border-color: var(--t-color-danger);
@@ -207,7 +205,7 @@
 	border-color: var(--t-color-accent);
 }
 
-.card:focus {
+.card:focus-visible {
 	outline: 2px solid var(--t-color-accent);
 	outline-offset: 2px;
 }
@@ -236,10 +234,4 @@
 
 .tag:hover {
 	filter: brightness(0.94);
-	color: var(--t-color-badge-new-text);
-}
-
-.tag:focus {
-	outline: 2px solid var(--t-color-accent);
-	outline-offset: 1px;
 }

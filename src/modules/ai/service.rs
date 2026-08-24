@@ -8,6 +8,18 @@ use super::model::{AiConfig, AiProxyMessage, AiSettingsItem, UpdateAiSettingsReq
 use super::port::AiChatPort;
 use super::repository::AiRepo;
 
+/// 上游建连超时（DNS+TCP 握手）：只约束建连阶段，对流式 SSE 安全
+const UPSTREAM_CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+/// 非流式上游调用总超时：推理模型思考+生成可达分钟级，放宽到 3 分钟。
+/// 只能施加在非流式请求上 —— RequestBuilder::timeout 覆盖整个请求-响应周期，
+/// 加到流式请求会在长思考间隔切断 SSE（AGENTS.md「SSE 代理不能设 timeout」）
+const UPSTREAM_NON_STREAM_TIMEOUT: Duration = Duration::from_secs(180);
+
+/// 流式请求永不设总超时（思考间隔会断流）；仅非流式受总超时兜底
+fn request_timeout(is_stream: bool) -> Option<Duration> {
+    (!is_stream).then_some(UPSTREAM_NON_STREAM_TIMEOUT)
+}
+
 /// AI 服务：设置 CRUD + LLM 代理调用（所有 AI 功能统一走这里）
 #[derive(Clone)]
 pub struct AiService {
@@ -19,7 +31,12 @@ impl AiService {
     pub fn new(pool: SqlitePool) -> Self {
         Self {
             repo: AiRepo::new(pool),
-            client: reqwest::Client::new(),
+            // 建连超时对两条路径都安全；总超时按请求粒度只在非流式分支施加。
+            // build() 仅在 TLS 后端初始化失败时报错，此时退回默认构造（不劣于旧行为）
+            client: reqwest::Client::builder()
+                .connect_timeout(UPSTREAM_CONNECT_TIMEOUT)
+                .build()
+                .unwrap_or_else(|_| reqwest::Client::new()),
         }
     }
 
@@ -106,6 +123,9 @@ impl AiService {
 
     /// 流式 LLM 调用：逐块把回复内容发送到 tx（若提供），返回完整内容。
     /// 每个块是增量 token（前端直接拼接）；结束后返回完整文本。
+    ///
+    /// 超时分治：客户端统一 5s 建连超时；非流式请求另加 180s 总超时（重试由此可触发）；
+    /// 流式请求不带任何总超时，避免 AI 思考间隔断流。
     pub async fn chat_stream(
         &self,
         user_id: i32,
@@ -137,15 +157,17 @@ impl AiService {
         let mut last_err = None;
         let attempts = if tx.is_some() { 1 } else { 2 };
         for _attempt in 0..attempts {
-            match self
+            let mut req = self
                 .client
                 .post(&cfg.endpoint)
                 .header("Content-Type", "application/json")
                 .header("Authorization", format!("Bearer {}", cfg.api_key))
-                .json(&body)
-                .send()
-                .await
-            {
+                .json(&body);
+            // 总超时仅挂非流式：流式若设会在思考间隔切断连接，且使重试形同虚设
+            if let Some(t) = request_timeout(tx.is_some()) {
+                req = req.timeout(t);
+            }
+            match req.send().await {
                 Ok(resp) => {
                     if !resp.status().is_success() {
                         let status = resp.status().as_u16();
@@ -373,5 +395,15 @@ mod tests {
     async fn sse_multiline_data_joined_with_newline() {
         let events = collect_events(b"data: l1\ndata: l2\n\n".to_vec()).await;
         assert_eq!(events, vec!["l1\nl2"]);
+    }
+
+    /// 总超时决策：流式永不设总超时（SSE 长思考间隔会被切断），非流式才有兜底
+    #[test]
+    fn request_timeout_only_for_non_stream() {
+        assert_eq!(super::request_timeout(true), None);
+        assert_eq!(
+            super::request_timeout(false),
+            Some(super::UPSTREAM_NON_STREAM_TIMEOUT)
+        );
     }
 }

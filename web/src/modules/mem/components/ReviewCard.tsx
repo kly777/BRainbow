@@ -2,7 +2,7 @@
 // 线索与答案分居卡片两面，点"显示答案"实体翻转。
 
 import { MarkdownEditor } from "@components";
-import { Button, Markdown as MarkdownRenderer } from "@components/ui";
+import { Button, Icon, Markdown as MarkdownRenderer } from "@components/ui";
 import { copyTextWithToast, fmtInterval, fmtLocal } from "@lib/utils";
 import { Show } from "solid-js";
 import type { UseMemReview } from "../hooks/useMemReviewTypes.ts";
@@ -116,7 +116,11 @@ function CueFace(props: CueFaceProps) {
 					onClick={() => speech.toggle(m.item()?.cue.content ?? "")}
 					disabled={!speech.supported}
 				>
-					{speech.speaking() ? "⏹" : "🔊"}
+					{speech.speaking() ? (
+						<Icon name="stop" size={15} />
+					) : (
+						<Icon name="speaker" size={15} />
+					)}
 				</button>
 				<button
 					type="button"
@@ -124,7 +128,7 @@ function CueFace(props: CueFaceProps) {
 					title="复制线索"
 					onClick={() => void copyTextWithToast(m.item()?.cue.content ?? "")}
 				>
-					📋
+					<Icon name="clipboard" size={15} />
 				</button>
 				<button
 					type="button"
@@ -132,7 +136,7 @@ function CueFace(props: CueFaceProps) {
 					title="复制整张卡片"
 					onClick={m.handleCopyCard}
 				>
-					📋+
+					<Icon name="stack" size={15} />
 				</button>
 				<button
 					type="button"
@@ -141,7 +145,11 @@ function CueFace(props: CueFaceProps) {
 					onClick={m.generateMnemonic}
 					disabled={m.mnemonicLoading()}
 				>
-					{m.mnemonicLoading() ? "⏳" : "🤖"}
+					{m.mnemonicLoading() ? (
+						<Icon name="clock" size={15} />
+					) : (
+						<Icon name="bot" size={15} />
+					)}
 				</button>
 			</div>
 		</div>

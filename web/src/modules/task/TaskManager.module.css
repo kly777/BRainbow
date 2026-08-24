@@ -113,7 +113,9 @@
 	background: none;
 	width: 8.75rem;
 	box-sizing: border-box;
-	transition: all var(--t-transition-fast);
+	transition:
+		border-color var(--t-transition-fast),
+		color var(--t-transition-fast);
 }
 
 .quick-add-focus {
@@ -129,7 +131,7 @@
 
 .split-view {
 	display: grid;
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: minmax(0, 1fr) 21rem;
 	gap: var(--space-lg);
 	align-items: start;
 	flex: 1;

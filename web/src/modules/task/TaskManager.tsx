@@ -1,4 +1,4 @@
-import { FilterGroup, SearchInput } from "@components/ui";
+import { FilterGroup, PageHead, SearchInput } from "@components/ui";
 import { enumParam, strParam, useUrlParams } from "@lib/utils";
 import { TaskList, TaskProvider, useTasks } from "@modules/task";
 import { createSignal, Show } from "solid-js";
@@ -136,6 +136,7 @@ export default function TaskManager() {
 	return (
 		<TaskProvider>
 			<div class={styles.taskManager}>
+				<PageHead title="任务" desc="列表 · 看板 · 日历 · 依赖图" />
 				<Toolbar
 					viewMode={viewMode()}
 					onViewChange={setViewMode}

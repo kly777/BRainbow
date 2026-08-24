@@ -1,4 +1,4 @@
-import { Tooltip } from "@components/ui";
+import { Icon, Tooltip } from "@components/ui";
 import { fmtFull, fmtLocal } from "@lib/utils";
 import type { Task, TimeWindow } from "@modules/task";
 import { type Component, createSignal, For, Show } from "solid-js";
@@ -103,7 +103,7 @@ function TaskItem(props: TaskItemProps) {
 							onClick={props.onEdit}
 							class={styles.editButton}
 						>
-							✏️
+							<Icon name="pencil" size={14} />
 						</button>
 					</Tooltip>
 					<Tooltip label="删除">
@@ -112,7 +112,7 @@ function TaskItem(props: TaskItemProps) {
 							onClick={() => props.onDelete(props.task.id)}
 							class={styles.deleteButton}
 						>
-							🗑
+							<Icon name="trash" size={14} />
 						</button>
 					</Tooltip>
 					<Tooltip label="添加子任务">

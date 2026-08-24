@@ -191,6 +191,9 @@
 }
 
 .tool-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	color: var(--t-color-ink-muted);
 	border: none;
 	background: none;

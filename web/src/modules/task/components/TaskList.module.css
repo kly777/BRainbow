@@ -153,18 +153,25 @@
 }
 
 .edit-button {
-	padding: var(--space-xs) var(--space-md);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--space-xs) var(--space-sm);
 	background: none;
 	color: var(--t-color-ink-muted);
 	border: none;
 	border-radius: var(--radius-md);
 	cursor: pointer;
-	font-size: var(--text-base);
-	transition: all var(--t-transition-fast);
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
 }
 
 .sub-task-button {
-	padding: var(--space-xs) var(--space-md);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--space-xs) var(--space-sm);
 	background: none;
 	color: var(--t-color-ink-muted);
 	border: 1px solid var(--t-color-border);
@@ -177,14 +184,18 @@
 }
 
 .delete-button {
-	padding: var(--space-xs) var(--space-md);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--space-xs) var(--space-sm);
 	background: none;
 	color: var(--t-color-ink-muted);
 	border: none;
 	border-radius: var(--radius-md);
 	cursor: pointer;
-	font-size: var(--text-base);
-	transition: all var(--t-transition-fast);
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
 }
 
 .sub-task-form {

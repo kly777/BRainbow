@@ -296,7 +296,6 @@
 	line-height: var(--leading-tight);
 	margin: 0;
 	color: var(--t-color-ink);
-	animation: fade-in-up var(--duration-slide-up) var(--ease-out-expo) both;
 }
 
 /* 次级语境行：当前工作台 / 会话标题 */
@@ -304,7 +303,6 @@
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	margin: 0;
-	animation: fade-in-up var(--duration-slide-up) var(--ease-out-expo) 80ms both;
 }
 
 .welcome-samples {
@@ -327,9 +325,7 @@
 	transition:
 		border-color var(--t-transition-fast),
 		background var(--t-transition-fast),
-		color var(--t-transition-fast),
-		transform var(--t-transition-fast);
-	animation: fade-in-up 500ms var(--ease-out-expo) both;
+		color var(--t-transition-fast);
 }
 
 .welcome-chip:hover {

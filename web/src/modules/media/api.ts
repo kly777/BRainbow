@@ -6,7 +6,7 @@ import {
 	type PaginatedResponse,
 	patch,
 	request,
-	tapInvalidate,
+	withInvalidate,
 } from "@lib/api";
 
 // ── 类型 ──
@@ -32,12 +32,15 @@ export interface MediaItem {
 export const uploadMedia = async (file: File): Promise<MediaItem> => {
 	const formData = new FormData();
 	formData.append("file", file);
-	return request<MediaItem>("/media/upload", {
-		method: "POST",
-		body: formData,
-		// 大文件上传不做 15s 默认超时
-		timeout: false,
-	}).then((r) => tapInvalidate(CACHE.media, r));
+	return withInvalidate(
+		CACHE.media,
+		request<MediaItem>("/media/upload", {
+			method: "POST",
+			body: formData,
+			// 大文件上传不做 15s 默认超时
+			timeout: false,
+		}),
+	);
 };
 
 /** 媒体列表（缓存 30 秒） */
@@ -58,12 +61,14 @@ export const renameMediaE = (
 	stored_id: string,
 	original_name: string,
 ): Promise<MediaItem> =>
-	patch<MediaItem>(`/media/${stored_id}`, { original_name }).then((r) =>
-		tapInvalidate(CACHE.media, r),
+	withInvalidate(
+		CACHE.media,
+		patch<MediaItem>(`/media/${stored_id}`, { original_name }),
 	);
 
 /** 删除；force=true 跳过引用检查强制删除 */
 export const deleteMediaE = (stored_id: string, force = false): Promise<void> =>
-	del<void>(`/media/${stored_id}${force ? "?force=true" : ""}`).then((r) =>
-		tapInvalidate(CACHE.media, r),
+	withInvalidate(
+		CACHE.media,
+		del<void>(`/media/${stored_id}${force ? "?force=true" : ""}`),
 	);

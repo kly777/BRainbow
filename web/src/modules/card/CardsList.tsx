@@ -6,6 +6,7 @@ import {
 	Button,
 	Markdown as MarkdownRenderer,
 	Modal,
+	PageHead,
 } from "@components/ui";
 import { tryAsync } from "@lib/utils";
 import { CardsGrid, getCardsE, searchCardsE } from "@modules/card";
@@ -49,27 +50,29 @@ export default function CardsListPage() {
 
 	return (
 		<div class={styles.container}>
-			<div class={styles.header}>
-				<h1 class={styles.title}>卡片列表</h1>
-				<div class={styles.actions}>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={() => navigate(PATHS.cardAdd)}
-					>
-						＋ 新建
-					</Button>
-					<Button
-						variant="primary"
-						size="sm"
-						onClick={() => {
-							m.setShowCreateModal(true);
-						}}
-					>
-						快速创建
-					</Button>
-				</div>
-			</div>
+			<PageHead
+				title="卡片列表"
+				actions={
+					<>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() => navigate(PATHS.cardAdd)}
+						>
+							＋ 新建
+						</Button>
+						<Button
+							variant="primary"
+							size="sm"
+							onClick={() => {
+								m.setShowCreateModal(true);
+							}}
+						>
+							快速创建
+						</Button>
+					</>
+				}
+			/>
 
 			<AsyncView
 				data={m.loading() ? undefined : (m.cards() ?? [])}

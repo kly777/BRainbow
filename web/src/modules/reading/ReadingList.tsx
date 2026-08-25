@@ -1,4 +1,4 @@
-import { AsyncView, Button, Modal } from "@components/ui";
+import { AsyncView, Button, Modal, PageHead } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
 import { fmtLocal, notifyError, tryAsync } from "@lib/utils";
 import type { ArticleSummary } from "@modules/reading";
@@ -82,21 +82,23 @@ export default function ReadingList() {
 
 	return (
 		<div class={styles.page}>
-			<div class={styles.header}>
-				<h1>英语阅读</h1>
-				<div class={styles.headerActions}>
-					<A href={PATHS.readingUnknown} class={styles.headerLink}>
-						不认识词表
-					</A>
-					<Button
-						variant="primary"
-						size="sm"
-						onClick={() => setUploadOpen(true)}
-					>
-						+ 上传文章
-					</Button>
-				</div>
-			</div>
+			<PageHead
+				title="英语阅读"
+				actions={
+					<>
+						<A href={PATHS.readingUnknown} class={styles.headerLink}>
+							不认识词表
+						</A>
+						<Button
+							variant="primary"
+							size="sm"
+							onClick={() => setUploadOpen(true)}
+						>
+							+ 上传文章
+						</Button>
+					</>
+				}
+			/>
 
 			<Modal
 				isOpen={uploadOpen()}

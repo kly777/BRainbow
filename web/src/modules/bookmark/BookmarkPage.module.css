@@ -4,22 +4,6 @@
 	padding: var(--space-lg);
 }
 
-.header {
-	display: flex;
-	align-items: center;
-	gap: var(--space-md);
-	margin-bottom: var(--space-lg);
-	flex-wrap: wrap;
-}
-
-.header h1 {
-	font-size: var(--text-xl);
-	font-weight: 700;
-	margin: 0;
-	flex: 1;
-	letter-spacing: -0.01em;
-}
-
 .state {
 	text-align: center;
 	color: var(--t-color-ink-muted);

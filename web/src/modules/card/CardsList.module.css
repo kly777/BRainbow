@@ -11,28 +11,6 @@
 	padding: var(--space-lg) var(--space-xl) 0;
 }
 
-.header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	gap: var(--space-lg);
-	padding-bottom: var(--space-lg);
-}
-
-.title {
-	font-family: var(--t-font-display);
-	font-size: var(--text-xl);
-	font-weight: 600;
-	letter-spacing: 0.08em;
-	color: var(--t-color-ink);
-	margin: 0;
-}
-
-.actions {
-	display: flex;
-	gap: var(--space-md);
-}
-
 /* ── 快速创建弹窗内容 ── */
 
 .error-message {

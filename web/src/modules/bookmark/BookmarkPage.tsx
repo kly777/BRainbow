@@ -1,6 +1,6 @@
 // ── /bookmark：网页书签管理（搜索 / 标签过滤 / 分页 / 导入 Firefox 书签） ──
 
-import { Button, SearchInput } from "@components/ui";
+import { Button, PageHead, SearchInput } from "@components/ui";
 import { getErrorMessage } from "@lib/api";
 import { type Component, For, Show } from "solid-js";
 import styles from "./BookmarkPage.module.css";
@@ -72,53 +72,57 @@ export default function BookmarkPage() {
 
 	return (
 		<div class={styles.page}>
-			<div class={styles.header}>
-				<h1>网页书签</h1>
-				<SearchInput
-					value={b.searchQuery()}
-					onSearch={b.handleSearch}
-					placeholder="搜索标题 / URL / 备注…"
-				/>
-				<Show when={b.searchQuery().trim()}>
-					<Button
-						variant="icon"
-						title="清空搜索"
-						onClick={() => b.handleSearch("")}
-					>
-						✕
-					</Button>
-				</Show>
-				<Button
-					variant="secondary"
-					size="sm"
-					onClick={() =>
-						document.getElementById("bookmark-import-input")?.click()
-					}
-					disabled={b.importing()}
-				>
-					{b.importing() ? "导入中..." : "导入 Firefox 书签"}
-				</Button>
-				<input
-					id="bookmark-import-input"
-					type="file"
-					accept=".html,.htm,text/html"
-					style={{ display: "none" }}
-					onChange={(e) => {
-						b.handleImportFile(e.currentTarget.files?.[0]);
-						e.currentTarget.value = "";
-					}}
-				/>
-				<Button
-					variant="secondary"
-					size="sm"
-					onClick={() => b.setTagManagerOpen(true)}
-				>
-					标签管理
-				</Button>
-				<Button variant="primary" size="sm" onClick={b.openCreate}>
-					＋ 新建书签
-				</Button>
-			</div>
+			<PageHead
+				title="网页书签"
+				actions={
+					<>
+						<SearchInput
+							value={b.searchQuery()}
+							onSearch={b.handleSearch}
+							placeholder="搜索标题 / URL / 备注…"
+						/>
+						<Show when={b.searchQuery().trim()}>
+							<Button
+								variant="icon"
+								title="清空搜索"
+								onClick={() => b.handleSearch("")}
+							>
+								✕
+							</Button>
+						</Show>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() =>
+								document.getElementById("bookmark-import-input")?.click()
+							}
+							disabled={b.importing()}
+						>
+							{b.importing() ? "导入中..." : "导入 Firefox 书签"}
+						</Button>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() => b.setTagManagerOpen(true)}
+						>
+							标签管理
+						</Button>
+						<Button variant="primary" size="sm" onClick={b.openCreate}>
+							＋ 新建书签
+						</Button>
+					</>
+				}
+			/>
+			<input
+				id="bookmark-import-input"
+				type="file"
+				accept=".html,.htm,text/html"
+				style={{ display: "none" }}
+				onChange={(e) => {
+					b.handleImportFile(e.currentTarget.files?.[0]);
+					e.currentTarget.value = "";
+				}}
+			/>
 
 			<Show when={b.tagFilter()}>
 				<div class={styles.filterBar}>

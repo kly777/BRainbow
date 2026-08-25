@@ -6,33 +6,11 @@
 	padding: var(--space-lg);
 }
 
-.header {
-	display: flex;
-	align-items: center;
-	gap: var(--space-md);
-	margin-bottom: var(--space-sm);
-	flex-wrap: wrap;
-}
-
-.header h1 {
-	font-size: var(--text-xl);
-	font-weight: 700;
-	margin: 0;
-	flex: 1;
-	letter-spacing: -0.01em;
-}
-
 .sort-hint {
 	margin: 0 0 var(--space-lg);
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-faint);
 	line-height: var(--leading-normal);
-}
-
-.header-actions {
-	display: flex;
-	align-items: center;
-	gap: var(--space-sm);
 }
 
 .header-link {

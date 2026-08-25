@@ -5,7 +5,7 @@ import {
 	type PaginatedResponse,
 	post,
 	request,
-	tapInvalidate,
+	withInvalidate,
 } from "@lib/api";
 import type { Card, CreateCardRequest, UpdateCardRequest } from "./model.ts";
 
@@ -22,19 +22,22 @@ export const getCardE = (id: number): Promise<Card> =>
 	cachedRequest(`/cards/${id}`, {}, 60_000);
 
 export const createCardE = (card: CreateCardRequest): Promise<Card> =>
-	post<Card>("/cards", card).then((r) => tapInvalidate(CACHE.cards, r));
+	withInvalidate(CACHE.cards, post<Card>("/cards", card));
 
 export const updateCardE = (
 	id: number,
 	card: UpdateCardRequest,
 ): Promise<Card> =>
-	request<Card>(`/cards/${id}`, {
-		method: "PATCH",
-		body: JSON.stringify(card),
-	}).then((r) => tapInvalidate(CACHE.cards, r));
+	withInvalidate(
+		CACHE.cards,
+		request<Card>(`/cards/${id}`, {
+			method: "PATCH",
+			body: JSON.stringify(card),
+		}),
+	);
 
 export const deleteCardE = (id: number): Promise<void> =>
-	del<void>(`/cards/${id}`).then((r) => tapInvalidate(CACHE.cards, r));
+	withInvalidate(CACHE.cards, del<void>(`/cards/${id}`));
 
 export const searchCardsE = (
 	query: string,

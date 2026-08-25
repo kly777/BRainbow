@@ -185,3 +185,26 @@ export function tapInvalidate<T>(pattern: RegExp, result: T): T {
 	invalidateCache(pattern);
 	return result;
 }
+
+/**
+ * 包装写操作的 Promise，自动失效相关缓存。
+ * 替代 `.then((r) => tapInvalidate(CACHE.xxx, r))` 模式，减少样板代码。
+ *
+ * @example
+ *   // Before:
+ *   export const createCardE = (card) =>
+ *     post<Card>("/cards", card).then((r) => tapInvalidate(CACHE.cards, r));
+ *
+ *   // After:
+ *   export const createCardE = (card) =>
+ *     withInvalidate(CACHE.cards, post<Card>("/cards", card));
+ */
+export function withInvalidate<T>(
+	pattern: RegExp,
+	promise: Promise<T>,
+): Promise<T> {
+	return promise.then((result) => {
+		invalidateCache(pattern);
+		return result;
+	});
+}

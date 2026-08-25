@@ -1,6 +1,7 @@
 // ── API Key 管理页 ──
 // dev 环境免登录可生成（后端 APP_ENV=dev）；prod 需登录（AuthGuard）。
 
+import { useAuth } from "@app/context/auth.tsx";
 import { Button, PageHead } from "@components/ui";
 import { getApiKey, getErrorMessage } from "@lib/api";
 import {
@@ -11,7 +12,6 @@ import {
 	showConfirm,
 	tryAsync,
 } from "@lib/utils";
-import { useAuth } from "@modules/auth";
 import {
 	type Component,
 	createResource,

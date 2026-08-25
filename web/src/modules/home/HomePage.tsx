@@ -1,7 +1,7 @@
+import { useAuth } from "@app/context/auth.tsx";
 import { AsyncView } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
 import { parseUtc, showConfirm, tryOrNotify } from "@lib/utils";
-import { useAuth } from "@modules/auth";
 import type { CardData } from "@modules/card";
 import {
 	deleteCardE as apiDeleteCard,

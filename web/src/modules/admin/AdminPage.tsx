@@ -1,8 +1,8 @@
 // ── 管理员设置页：开放注册开关 / JWT 密钥状态与轮换 ──
 
+import { useAuth } from "@app/context/auth.tsx";
 import { Button, PageHead } from "@components/ui";
 import { notifyError, notifySuccess, showConfirm, tryAsync } from "@lib/utils";
-import { useAuth } from "@modules/auth";
 import { createResource, createSignal, Show } from "solid-js";
 import styles from "./AdminPage.module.css";
 import { getAdminSettingsE, rotateJwtE, updateAdminSettingsE } from "./api.ts";

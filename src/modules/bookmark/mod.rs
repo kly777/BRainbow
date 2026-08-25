@@ -6,6 +6,15 @@ mod query;
 pub mod repository;
 pub mod service;
 
+use std::sync::Arc;
+
+use axum::{
+    Router,
+    extract::{DefaultBodyLimit, FromRef},
+    routing::{get, post},
+};
+use sqlx::SqlitePool;
+
 pub use favicon::favicon_handler;
 pub use handler::{
     create_bookmark_handler, create_tag_handler, delete_bookmark_handler, delete_tag_handler,
@@ -16,15 +25,25 @@ pub use handler::{
 pub use query::BookmarkQueryService;
 pub use service::BookmarkService;
 
-use axum::{
-    Router,
-    extract::{DefaultBodyLimit, FromRef},
-    routing::{get, post},
-};
-
 /// 书签 HTML 导入的 body 上限：Firefox 导出可达数 MB，取整放宽到 64MiB
 /// （与 media 的 UPLOAD_BODY_LIMIT_BYTES 同一命名约定）
 pub(crate) const IMPORT_HTML_BODY_LIMIT_BYTES: usize = 64 * 1024 * 1024;
+
+/// Bookmark 模块状态聚合。
+#[derive(Clone)]
+pub struct BookmarkState {
+    pub service: BookmarkService,
+    pub query: BookmarkQueryService,
+}
+
+impl BookmarkState {
+    pub fn new(db: Arc<SqlitePool>) -> Self {
+        Self {
+            service: BookmarkService::new(db.clone()),
+            query: BookmarkQueryService::new(db),
+        }
+    }
+}
 
 pub fn routes<S>() -> Router<S>
 where

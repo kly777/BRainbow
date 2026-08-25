@@ -6,10 +6,8 @@ use crate::app::auth::service::AuthService;
 use crate::modules::admin::port::AdminServicePort;
 use crate::modules::admin::service::AdminService;
 use crate::modules::ai::service::AiService;
-use crate::modules::bookmark::BookmarkQueryService;
-use crate::modules::bookmark::BookmarkService;
-use crate::modules::card::CardQueryService;
-use crate::modules::card::CardService;
+use crate::modules::bookmark::BookmarkState;
+use crate::modules::card::CardState;
 use crate::modules::chat::query::ChatQueryService;
 use crate::modules::chat::service::ChatService;
 use crate::modules::conv::query::ConvQueryService;
@@ -22,26 +20,20 @@ use crate::modules::mem::config::MemConfig;
 use crate::modules::mem::maintenance::DbMemMaintenance;
 use crate::modules::mem::query::MemQueryService;
 use crate::modules::mem::service::MemService;
-use crate::modules::onto::OntoQueryService;
-use crate::modules::onto::OntoService;
-use crate::modules::reading::query::ReadingQueryService;
-use crate::modules::reading::service::ReadingService;
+use crate::modules::onto::OntoState;
+use crate::modules::reading::ReadingState;
 use crate::modules::search::service::SearchQueryService;
-use crate::modules::sign::SignQueryService;
-use crate::modules::sign::SignService;
-use crate::modules::task::TaskQueryService;
-use crate::modules::task::TaskService;
-use crate::modules::text::TextQueryService;
-use crate::modules::text::TextService;
+use crate::modules::sign::SignState;
+use crate::modules::task::TaskState;
+use crate::modules::text::TextState;
 use crate::modules::time_window::query::TimeWindowQueryService;
 use crate::modules::time_window::service::TimeWindowService;
-use crate::modules::user::UserQueryService;
-use crate::modules::user::UserService;
+use crate::modules::user::UserState;
 use crate::shared::config::Config;
 use crate::shared::search::SearchPort;
 
 // ─────────────────────────────────────────────────────────────
-// 子状态：按模块聚合服务实例，避免 AppState 变成扁平“上帝对象”。
+// 子状态：按模块聚合服务实例，避免 AppState 变成扁平"上帝对象"。
 // Handler 仍然通过 FromRef 提取具体服务；子状态主要让组合根更清晰。
 // ─────────────────────────────────────────────────────────────
 
@@ -67,63 +59,15 @@ pub struct ChatState {
 }
 
 #[derive(Clone)]
-pub struct BookmarkState {
-    pub service: BookmarkService,
-    pub query: BookmarkQueryService,
-}
-
-#[derive(Clone)]
-pub struct CardState {
-    pub service: CardService,
-    pub query: CardQueryService,
-}
-
-#[derive(Clone)]
-pub struct OntoState {
-    pub service: OntoService,
-    pub query: OntoQueryService,
-}
-
-#[derive(Clone)]
-pub struct SignState {
-    pub service: SignService,
-    pub query: SignQueryService,
-}
-
-#[derive(Clone)]
-pub struct UserState {
-    pub service: UserService,
-    pub query: UserQueryService,
-}
-
-#[derive(Clone)]
-pub struct TextState {
-    pub service: TextService,
-    pub query: TextQueryService,
-}
-
-#[derive(Clone)]
 pub struct MediaState {
     pub service: MediaService,
     pub query: MediaQueryService,
 }
 
 #[derive(Clone)]
-pub struct ReadingState {
-    pub service: ReadingService,
-    pub query: ReadingQueryService,
-}
-
-#[derive(Clone)]
 pub struct TimeWindowState {
     pub service: TimeWindowService,
     pub query: TimeWindowQueryService,
-}
-
-#[derive(Clone)]
-pub struct TaskState {
-    pub service: TaskService,
-    pub query: TaskQueryService,
 }
 
 #[derive(Clone)]
@@ -198,27 +142,27 @@ impl_from_ref! {
     ai.ai => AiService,
     chat.chat => ChatService,
     chat.chat_query => ChatQueryService,
-    bookmark.service => BookmarkService,
-    bookmark.query => BookmarkQueryService,
-    card.service => CardService,
-    card.query => CardQueryService,
-    onto.service => OntoService,
-    onto.query => OntoQueryService,
-    sign.service => SignService,
-    sign.query => SignQueryService,
+    bookmark.service => crate::modules::bookmark::BookmarkService,
+    bookmark.query => crate::modules::bookmark::BookmarkQueryService,
+    card.service => crate::modules::card::CardService,
+    card.query => crate::modules::card::CardQueryService,
+    onto.service => crate::modules::onto::OntoService,
+    onto.query => crate::modules::onto::OntoQueryService,
+    sign.service => crate::modules::sign::SignService,
+    sign.query => crate::modules::sign::SignQueryService,
     conv.service => ConvQueryService,
     media.service => MediaService,
     media.query => MediaQueryService,
-    reading.service => ReadingService,
-    reading.query => ReadingQueryService,
-    text.service => TextService,
-    text.query => TextQueryService,
-    task.service => TaskService,
-    task.query => TaskQueryService,
+    reading.service => crate::modules::reading::service::ReadingService,
+    reading.query => crate::modules::reading::query::ReadingQueryService,
+    text.service => crate::modules::text::TextService,
+    text.query => crate::modules::text::TextQueryService,
+    task.service => crate::modules::task::TaskService,
+    task.query => crate::modules::task::TaskQueryService,
     time_window.service => TimeWindowService,
     time_window.query => TimeWindowQueryService,
-    user.service => UserService,
-    user.query => UserQueryService,
+    user.service => crate::modules::user::UserService,
+    user.query => crate::modules::user::UserQueryService,
     mem.service => MemService,
     mem.query => MemQueryService,
     mem.maintenance => DbMemMaintenance,
@@ -248,10 +192,17 @@ impl AppState {
         self.admin.admin.allow_register_active().await
     }
 
-    pub fn new(db: Arc<SqlitePool>, config: &Config, mem_config: MemConfig) -> Self {
-        let task = TaskService::new(db.clone());
-        let task_validator: Arc<dyn crate::modules::time_window::port::TaskTimeWindowValidator> =
-            Arc::new(task.clone());
+    pub fn new(db: &Arc<SqlitePool>, config: &Config, mem_config: MemConfig) -> Self {
+        // 使用模块构造器构建简单模块
+        let task = TaskState::new(db.clone());
+        let card = CardState::new(db.clone());
+        let bookmark = BookmarkState::new(db.clone());
+        let onto = OntoState::new(db.clone());
+        let sign = SignState::new(db.clone());
+        let user = UserState::new(db.clone(), config.jwt_ttl_secs);
+        let text = TextState::new(db.clone());
+        let reading = ReadingState::new(db.clone());
+
         // 构建 Repository adapter，通过 trait 分别注入命令侧和查询侧
         let mem_repo: Arc<dyn crate::modules::mem::port::MemRepository> =
             Arc::new(MemRepo::new(db.clone()));
@@ -267,95 +218,61 @@ impl AppState {
         let chat = ChatService::new(db.as_ref().clone());
         let chat_query = ChatQueryService::new(db.as_ref().clone());
 
-        // 各模块服务
-        let card = CardService::new(db.clone());
-        let card_query = CardQueryService::new(db.clone());
-        let bookmark = BookmarkService::new(db.clone());
-        let bookmark_query = BookmarkQueryService::new(db.clone());
-        let onto = OntoService::new(db.clone());
-        let onto_query = OntoQueryService::new(db.clone());
-        let sign = SignService::new(db.clone());
-        let sign_query = SignQueryService::new(db.clone());
-        let user = UserService::new(db.clone(), config.jwt_ttl_secs);
-        let user_query = UserQueryService::new(db.clone());
-        let text = TextService::new(db.clone());
-        let text_query = TextQueryService::new(db.clone());
-        #[cfg(feature = "db-viewer")]
-        let db_viewer = DbViewerQueryService::new(db.clone());
-        let task_query = TaskQueryService::new(db.clone());
+        // 需要特殊构造的模块
+        let task_validator: Arc<dyn crate::modules::time_window::port::TaskTimeWindowValidator> =
+            Arc::new(task.service.clone());
+        let time_window = TimeWindowService::new(db.clone(), task_validator);
+        let time_window_query = TimeWindowQueryService::new(db.clone());
+
         let mem = MemService::new(
             mem_repo,
             Arc::new(mem_maintenance.clone()),
             Arc::new(mem_config.clone()),
         );
         let mem_query = MemQueryService::new(mem_repo_for_query, Arc::new(mem_config.clone()));
+
         let upload_dir = config.upload_dir.to_string_lossy().to_string();
         let media = MediaService::new(db.clone(), upload_dir.clone());
         let media_query = MediaQueryService::new(db.clone(), upload_dir);
-        let reading = ReadingService::new(db.clone());
-        let reading_query = ReadingQueryService::new(db.clone());
-        let time_window = TimeWindowService::new(db.clone(), task_validator);
-        let time_window_query = TimeWindowQueryService::new(db.clone());
+
         let conv = ConvQueryService::new(db.as_ref().clone());
+
+        // 搜索服务：聚合所有查询服务的 SearchPort 实现
         let search_ports: Vec<Arc<dyn SearchPort>> = vec![
             Arc::new(mem_query.clone()),
-            Arc::new(card_query.clone()),
-            Arc::new(task_query.clone()),
-            Arc::new(bookmark_query.clone()),
-            Arc::new(onto_query.clone()),
-            Arc::new(text_query.clone()),
-            Arc::new(reading_query.clone()),
+            Arc::new(card.query.clone()),
+            Arc::new(task.query.clone()),
+            Arc::new(bookmark.query.clone()),
+            Arc::new(onto.query.clone()),
+            Arc::new(text.query.clone()),
+            Arc::new(reading.query.clone()),
             Arc::new(conv.clone()),
             Arc::new(chat_query.clone()),
         ];
         let search = SearchQueryService::new(search_ports);
 
         Self {
-            db,
+            db: db.clone(),
             auth: AuthState { auth },
             admin: AdminState { admin },
             ai: AiState { ai },
             chat: ChatState { chat, chat_query },
-            bookmark: BookmarkState {
-                service: bookmark,
-                query: bookmark_query,
-            },
-            card: CardState {
-                service: card,
-                query: card_query,
-            },
-            onto: OntoState {
-                service: onto,
-                query: onto_query,
-            },
-            sign: SignState {
-                service: sign,
-                query: sign_query,
-            },
-            user: UserState {
-                service: user,
-                query: user_query,
-            },
-            text: TextState {
-                service: text,
-                query: text_query,
-            },
+            bookmark,
+            card,
+            onto,
+            sign,
+            user,
+            text,
             media: MediaState {
                 service: media,
                 query: media_query,
             },
-            reading: ReadingState {
-                service: reading,
-                query: reading_query,
-            },
+            reading,
             time_window: TimeWindowState {
                 service: time_window,
                 query: time_window_query,
             },
-            task: TaskState {
-                service: task,
-                query: task_query,
-            },
+            task,
             mem: MemState {
                 service: mem,
                 query: mem_query,
@@ -363,7 +280,9 @@ impl AppState {
                 config: Arc::new(mem_config),
             },
             #[cfg(feature = "db-viewer")]
-            db_viewer: DbViewerState { service: db_viewer },
+            db_viewer: DbViewerState {
+                service: DbViewerQueryService::new(db.clone()),
+            },
             conv: ConvState { service: conv },
             search: SearchState { service: search },
         }

@@ -4,6 +4,11 @@ pub mod query;
 pub mod repository;
 mod service;
 
+use std::sync::Arc;
+
+use axum::{Router, extract::FromRef, routing::get};
+use sqlx::SqlitePool;
+
 pub use query::CardQueryService;
 pub use service::CardService;
 
@@ -12,7 +17,21 @@ pub use handler::{
     search_cards_handler, update_card_handler,
 };
 
-use axum::{Router, extract::FromRef, routing::get};
+/// Card 模块状态聚合。
+#[derive(Clone)]
+pub struct CardState {
+    pub service: CardService,
+    pub query: CardQueryService,
+}
+
+impl CardState {
+    pub fn new(db: Arc<SqlitePool>) -> Self {
+        Self {
+            service: CardService::new(db.clone()),
+            query: CardQueryService::new(db),
+        }
+    }
+}
 
 pub fn routes<S>() -> Router<S>
 where

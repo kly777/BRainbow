@@ -6,11 +6,14 @@ mod repository;
 mod response;
 pub(crate) mod service;
 
+use std::sync::Arc;
+
 use axum::{
     Router,
     extract::FromRef,
     routing::{delete, get, post},
 };
+use sqlx::SqlitePool;
 
 pub use handler::{
     activate_task_handler, add_dependency_handler, archive_task_handler, complete_task_handler,
@@ -24,6 +27,22 @@ pub use handler::{
 
 pub use query::TaskQueryService;
 pub use service::TaskService;
+
+/// Task 模块状态聚合。
+#[derive(Clone)]
+pub struct TaskState {
+    pub service: TaskService,
+    pub query: TaskQueryService,
+}
+
+impl TaskState {
+    pub fn new(db: Arc<SqlitePool>) -> Self {
+        Self {
+            service: TaskService::new(db.clone()),
+            query: TaskQueryService::new(db),
+        }
+    }
+}
 
 pub fn routes<S>() -> Router<S>
 where

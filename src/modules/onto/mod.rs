@@ -4,6 +4,11 @@ pub mod query;
 mod repository;
 mod service;
 
+use std::sync::Arc;
+
+use axum::{Router, extract::FromRef, routing::get};
+use sqlx::SqlitePool;
+
 pub use query::OntoQueryService;
 pub use service::OntoService;
 
@@ -12,7 +17,21 @@ pub use handler::{
     update_onto_handler,
 };
 
-use axum::{Router, extract::FromRef, routing::get};
+/// Onto 模块状态聚合。
+#[derive(Clone)]
+pub struct OntoState {
+    pub service: OntoService,
+    pub query: OntoQueryService,
+}
+
+impl OntoState {
+    pub fn new(db: Arc<SqlitePool>) -> Self {
+        Self {
+            service: OntoService::new(db.clone()),
+            query: OntoQueryService::new(db),
+        }
+    }
+}
 
 pub fn routes<S>() -> Router<S>
 where

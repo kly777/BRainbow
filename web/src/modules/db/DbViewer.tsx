@@ -1,4 +1,4 @@
-import { type Component, For, Show } from "solid-js";
+import { type Component, createMemo, createSignal, For, Show } from "solid-js";
 import DbTable from "./components/DbTable";
 import PaginationBar from "./components/PaginationBar";
 import TableHeaderActions from "./components/TableHeaderActions";
@@ -7,26 +7,58 @@ import { useDbViewer } from "./hooks/useDbViewer.ts";
 
 const DB: Component = () => {
 	const m = useDbViewer();
+	const [tableSearch, setTableSearch] = createSignal("");
+
+	const filteredTables = createMemo(() => {
+		const q = tableSearch().toLowerCase().trim();
+		const list = m.tables();
+		if (!q) return list;
+		return list.filter((t) => t.toLowerCase().includes(q));
+	});
 
 	return (
 		<div class={styles.page}>
 			<nav class={styles.sidebar} aria-label="数据库表列表">
 				<div class={styles.sidebarTitle}>表列表</div>
-				<For each={m.tables()}>
-					{(t) => (
-						<button
-							type="button"
-							onClick={() => m.openTable(t)}
-							classList={{
-								[styles.tableItem]: true,
-								[styles.tableItemActive]: m.activeTable() === t,
-							}}
-							aria-pressed={m.activeTable() === t}
-						>
-							{t}
-						</button>
-					)}
-				</For>
+				<Show when={m.tables().length > 5}>
+					<input
+						type="search"
+						class={styles.sidebarSearch}
+						placeholder="搜索表…"
+						aria-label="搜索表名"
+						value={tableSearch()}
+						onInput={(e) => setTableSearch(e.currentTarget.value)}
+					/>
+				</Show>
+				<Show
+					when={m.tables().length > 0}
+					fallback={
+						<Show when={!m.loading()}>
+							<div class={styles.sidebarEmpty}>
+								{m.error() ? "加载失败" : "暂无表"}
+							</div>
+						</Show>
+					}
+				>
+					<Show when={filteredTables().length === 0 && tableSearch()}>
+						<div class={styles.sidebarEmpty}>未匹配</div>
+					</Show>
+					<For each={filteredTables()}>
+						{(t) => (
+							<button
+								type="button"
+								onClick={() => m.openTable(t)}
+								classList={{
+									[styles.tableItem]: true,
+									[styles.tableItemActive]: m.activeTable() === t,
+								}}
+								aria-pressed={m.activeTable() === t}
+							>
+								{t}
+							</button>
+						)}
+					</For>
+				</Show>
 			</nav>
 
 			<div class={styles.main}>
@@ -35,8 +67,18 @@ const DB: Component = () => {
 					<div class={styles.loading}>加载中…</div>
 				)}
 
-				{/* 首次数据到达前不渲染表格；之后请求期间保留旧表格，避免输入框/布局被重建 */}
-				<Show when={m.activeTable() && m.columns().length > 0}>
+				<Show
+					when={m.activeTable() && m.columns().length > 0}
+					fallback={
+						<Show when={!m.loading() && !m.activeTable()}>
+							<div class={styles.welcome}>
+								<div class={styles.welcomeIcon}>⛁</div>
+								<h3 class={styles.welcomeTitle}>数据库浏览器</h3>
+								<p class={styles.welcomeDesc}>从左侧选择一张表开始浏览</p>
+							</div>
+						</Show>
+					}
+				>
 					<div class={styles.tableHeader}>
 						<h3 class={styles.tableTitle} title={m.activeTable()}>
 							{m.activeTable()}

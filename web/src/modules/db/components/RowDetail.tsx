@@ -2,9 +2,11 @@ import { getErrorMessage } from "@lib/api";
 import { copyText } from "@lib/utils";
 import {
 	type Component,
+	createEffect,
 	createResource,
 	createSignal,
 	Index,
+	onCleanup,
 	Show,
 } from "solid-js";
 import { getTableDataE } from "../api";
@@ -199,6 +201,46 @@ const RowDetail: Component<RowDetailProps> = (props) => {
 		await copyField("__row", JSON.stringify(record, null, 2));
 	};
 
+	// Escape 关闭 + Tab 焦点陷阱
+	let panelRef: HTMLElement | undefined;
+	const handleKeyDown = (e: KeyboardEvent) => {
+		if (e.key === "Escape") {
+			e.preventDefault();
+			props.onClose();
+			return;
+		}
+		if (e.key === "Tab" && panelRef) {
+			const focusable = panelRef.querySelectorAll<HTMLElement>(
+				'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+			);
+			if (focusable.length === 0) return;
+			const first = focusable[0];
+			const last = focusable[focusable.length - 1];
+			if (e.shiftKey) {
+				if (document.activeElement === first) {
+					e.preventDefault();
+					last.focus();
+				}
+			} else {
+				if (document.activeElement === last) {
+					e.preventDefault();
+					first.focus();
+				}
+			}
+		}
+	};
+
+	// 打开时自动聚焦面板、注册全局键盘事件
+	createEffect(() => {
+		// 触发依赖收集
+		props.table;
+		props.rowKey;
+		panelRef?.focus();
+		const handler = (e: KeyboardEvent) => handleKeyDown(e);
+		document.addEventListener("keydown", handler);
+		onCleanup(() => document.removeEventListener("keydown", handler));
+	});
+
 	return (
 		<div class={styles.rowDetailOverlay}>
 			<button
@@ -208,10 +250,12 @@ const RowDetail: Component<RowDetailProps> = (props) => {
 				onClick={props.onClose}
 			/>
 			<aside
+				ref={panelRef}
 				class={styles.rowDetailPanel}
 				role="dialog"
 				aria-modal="true"
 				aria-label={`${props.table} 行详情`}
+				tabindex="-1"
 			>
 				<header class={styles.rowDetailHeader}>
 					<h4 class={styles.rowDetailTitle}>
@@ -220,7 +264,7 @@ const RowDetail: Component<RowDetailProps> = (props) => {
 					<button
 						type="button"
 						class={styles.rowDetailClose}
-						title="关闭"
+						title="关闭 (Esc)"
 						onClick={props.onClose}
 					>
 						×

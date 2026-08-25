@@ -1,7 +1,7 @@
 import { getErrorMessage } from "@lib/api";
-import { tryAsync } from "@lib/utils";
+import { debounce, tryAsync } from "@lib/utils";
 import { useSearchParams } from "@solidjs/router";
-import { createEffect, createSignal, onMount } from "solid-js";
+import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import {
 	type ColumnInfo,
 	downloadTableExport,
@@ -90,6 +90,8 @@ export function useDbViewer(): DbViewerApi {
 	const [error, setError] = createSignal("");
 	const [exporting, setExporting] = createSignal<"" | "csv" | "json">("");
 	const [jumpValue, setJumpValue] = createSignal("1");
+	// 显式操作（翻页、跳转）直接调用 fetchTable 后，跳过 effect 中的重复 fetch
+	const [skipEffect, setSkipEffect] = createSignal(false);
 
 	const totalPages = () => Math.max(1, Math.ceil(total() / currentPageSize()));
 
@@ -167,6 +169,7 @@ export function useDbViewer(): DbViewerApi {
 	};
 
 	const openTable = (name: string) => {
+		debouncedFetch.cancel();
 		setSearchParams({
 			table: name || undefined,
 			page: 1,
@@ -185,6 +188,8 @@ export function useDbViewer(): DbViewerApi {
 		const table = activeTable();
 		if (!table) return;
 		const activeFilters = filters();
+		debouncedFetch.cancel();
+		setSkipEffect(true);
 		setSearchParams({
 			table,
 			page: targetPage,
@@ -197,11 +202,24 @@ export function useDbViewer(): DbViewerApi {
 			fop: activeFilters.map((f) => f.op),
 			fval: activeFilters.map((f) => f.val),
 		});
+		// 翻页立即 fetch，不走防抖
+		void fetchTable(
+			table,
+			targetPage,
+			currentPageSize(),
+			filterId(),
+			filterCol(),
+			sortCol(),
+			sortDesc(),
+			activeFilters,
+		);
 	};
 
 	const jumpToRef = (targetTable: string, refCol: string, value: string) => {
 		const id = Number(value);
 		if (Number.isInteger(id) && id >= 1) {
+			debouncedFetch.cancel();
+			setSkipEffect(true);
 			setSearchParams({
 				table: targetTable,
 				page: 1,
@@ -214,6 +232,16 @@ export function useDbViewer(): DbViewerApi {
 				fop: [],
 				fval: [],
 			});
+			void fetchTable(
+				targetTable,
+				1,
+				currentPageSize(),
+				id,
+				refCol,
+				"",
+				false,
+				[],
+			);
 		} else {
 			openTable(targetTable);
 		}
@@ -250,6 +278,33 @@ export function useDbViewer(): DbViewerApi {
 	};
 
 	// URL 是表格状态的唯一来源
+	// 筛选输入防抖：URL 立即更新，fetch 延迟 200ms；显式操作（翻页/排序）绕过防抖
+	const debouncedFetch = debounce(
+		(
+			name: string,
+			targetPage: number,
+			targetPageSize: number,
+			id: number,
+			refCol: string,
+			sort: string,
+			desc: boolean,
+			targetFilters: readonly ColumnFilter[],
+		) => {
+			void fetchTable(
+				name,
+				targetPage,
+				targetPageSize,
+				id,
+				refCol,
+				sort,
+				desc,
+				targetFilters,
+			);
+		},
+		200,
+	);
+	onCleanup(() => debouncedFetch.cancel());
+
 	createEffect(() => {
 		const table = activeTable();
 		const page = currentPage();
@@ -261,7 +316,11 @@ export function useDbViewer(): DbViewerApi {
 		const activeFilters = filters();
 		setJumpValue(String(page));
 		if (!table) return;
-		void fetchTable(
+		if (skipEffect()) {
+			setSkipEffect(false);
+			return;
+		}
+		debouncedFetch(
 			table,
 			page,
 			pageSize,
@@ -309,7 +368,17 @@ export function useDbViewer(): DbViewerApi {
 		toggleSort: tableFilters.toggleSort,
 		setColumnFilter: tableFilters.setColumnFilter,
 		removeColumnFilter: tableFilters.removeColumnFilter,
-		clearFilters: tableFilters.clearFilters,
+		clearFilters: () => {
+			debouncedFetch.cancel();
+			setSearchParams({
+				page: 1,
+				id: undefined,
+				ref_col: undefined,
+				fcol: undefined,
+				fop: undefined,
+				fval: undefined,
+			});
+		},
 		jumpToRef,
 		previewFor,
 		exportTable,

@@ -1,5 +1,5 @@
+import { useAuth } from "@app/context/auth.tsx";
 import { PATHS } from "@config/paths";
-import { useAuth } from "@modules/auth";
 import { A } from "@solidjs/router";
 import { For } from "solid-js";
 import styles from "./LandingPage.module.css";

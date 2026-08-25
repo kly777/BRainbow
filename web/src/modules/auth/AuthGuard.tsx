@@ -1,6 +1,6 @@
+import { useAuth } from "@app/context/auth.tsx";
 import { PATHS } from "@config/paths";
 import { AUTH_REQUIRED_EVENT } from "@lib/api";
-import { useAuth } from "@modules/auth";
 import { createEffect, type JSX, Show } from "solid-js";
 import styles from "./AuthStatus.module.css";
 

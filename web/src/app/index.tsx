@@ -1,6 +1,6 @@
+import { AuthProvider } from "@app/context/auth.tsx";
 import { initTheme } from "@lib/styles";
 import { generateIcon } from "@lib/utils";
-import { AuthProvider } from "@modules/auth";
 import { Router } from "@solidjs/router";
 import { onMount } from "solid-js";
 import { render } from "solid-js/web";

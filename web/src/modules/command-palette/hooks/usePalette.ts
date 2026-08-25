@@ -1,10 +1,10 @@
 // ── 命令面板的状态与事件逻辑 ──
 // 组合入口：模式检测 + 命令列表 + 站内搜索（usePaletteSearch）。
 
+import { useAuth } from "@app/context/auth.tsx";
 import { PATHS } from "@config/paths";
 import { AUTH_REQUIRED_EVENT } from "@lib/api";
 import { openAiSettings } from "@modules/ai-setting";
-import { useAuth } from "@modules/auth";
 import { useNavigate } from "@solidjs/router";
 import {
 	createEffect,

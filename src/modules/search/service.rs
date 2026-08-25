@@ -53,7 +53,7 @@ mod tests {
     use crate::modules::reading::query::ReadingQueryService;
     use crate::modules::task::TaskQueryService;
     use crate::modules::text::TextQueryService;
-    use crate::shared::search::{clip, merge_snippets, snippet};
+    use crate::shared::search::{SearchTarget, clip, merge_snippets, snippet};
     use sqlx::SqlitePool;
     use std::sync::Arc;
 
@@ -192,21 +192,30 @@ mod tests {
         // chat 也只剩 user 1 的树
         let chat_hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "chat").collect();
         assert_eq!(chat_hits.len(), 1);
-        assert_eq!(chat_hits[0].url, format!("/chat?tree={t1}&node=1"));
+        assert!(matches!(
+            chat_hits[0].target,
+            SearchTarget::ChatNode {
+                tree_id: t1,
+                node_id: 1
+            }
+        ));
         // reading 跳到详情页
         let reading_hit = res.hits.iter().find(|h| h.kind == "reading").unwrap();
-        assert!(reading_hit.url.starts_with("/reading/"));
-        // conv 直达详情页（不再回搜索页）
+        assert!(matches!(reading_hit.target, SearchTarget::Reading { .. }));
+        // conv 直达详情页
         let conv_hit = res.hits.iter().find(|h| h.kind == "conv").unwrap();
-        assert_eq!(conv_hit.url, "/conversation/detail/9");
-        // 各模块都带直达 id 的 URL
+        assert!(matches!(conv_hit.target, SearchTarget::Conv { id: 9 }));
+        // 各模块都带正确的 target
         for kind in ["card", "task", "bookmark"] {
             let hit = res.hits.iter().find(|h| h.kind == kind).unwrap();
-            assert!(
-                hit.url.ends_with(&format!("/{}", hit.id)),
-                "{kind} url 应直达 id: {}",
-                hit.url
-            );
+            match &hit.target {
+                SearchTarget::Card { id }
+                | SearchTarget::Task { id }
+                | SearchTarget::Bookmark { id } => {
+                    assert_eq!(*id, hit.id, "{kind} target id 应匹配 hit.id");
+                }
+                _ => panic!("{kind} 应有对应的 target"),
+            }
         }
     }
 
@@ -308,12 +317,15 @@ mod tests {
         let res = ctx.svc.search(1, "费曼", 5).await.unwrap();
         let onto_hit = res.hits.iter().find(|h| h.kind == "onto").unwrap();
         assert_eq!(onto_hit.title, "费曼学习法");
-        assert_eq!(onto_hit.url, format!("/ontology/{}", onto_hit.id));
+        assert!(matches!(
+            onto_hit.target,
+            SearchTarget::Onto { id } if id == onto_hit.id
+        ));
         assert!(onto_hit.snippet.contains("以教促学"));
 
         let text_hit = res.hits.iter().find(|h| h.kind == "text").unwrap();
         assert_eq!(text_hit.title, "读书笔记");
-        assert_eq!(text_hit.url, format!("/text?id={}", text_hit.id));
+        assert!(matches!(text_hit.target, SearchTarget::Text));
         assert!(text_hit.snippet.contains("费曼"));
     }
 
@@ -401,7 +413,7 @@ mod tests {
         let res = ctx.svc.search(1, "熵", 5).await.unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "mem").unwrap();
         assert_eq!(hit.id, 1);
-        assert_eq!(hit.url, "/memory/manage?id=1");
+        assert!(matches!(hit.target, SearchTarget::Memory { id: 1 }));
         assert!(hit.title.contains("什么是熵"));
 
         let res = ctx.svc.search(1, "热力学", 5).await.unwrap();
@@ -432,8 +444,20 @@ mod tests {
         let res = ctx.svc.search(1, "熵", 5).await.unwrap();
         let hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "chat").collect();
         assert_eq!(hits.len(), 2);
-        assert_eq!(hits[0].url, format!("/chat?tree={t}&node=2"));
-        assert_eq!(hits[1].url, format!("/chat?tree={t}&node=1"));
+        assert!(matches!(
+            hits[0].target,
+            SearchTarget::ChatNode {
+                tree_id: t,
+                node_id: 2
+            }
+        ));
+        assert!(matches!(
+            hits[1].target,
+            SearchTarget::ChatNode {
+                tree_id: t,
+                node_id: 1
+            }
+        ));
         assert!(hits.iter().all(|h| h.title == "物理讨论"));
     }
 

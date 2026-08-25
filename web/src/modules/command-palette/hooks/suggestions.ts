@@ -1,7 +1,8 @@
 // ── 建议列表构建（nav / cmd / 站内搜索）：纯函数，usePalette 以 memo 组合 ──
 
 import { NAV_ROUTES } from "@config/navigation";
-import type { SearchHit } from "../api.ts";
+import { fillPath, PATHS } from "@config/paths";
+import type { SearchHit, SearchTarget } from "../api.ts";
 import type { Suggestion } from "./usePalette.ts";
 
 const BING = "https://www.bing.com/search?q=";
@@ -32,6 +33,34 @@ export const KIND_LABEL: Record<string, string> = {
 	conv: "对话",
 	chat: "AI 对话",
 };
+
+/** 将 SearchTarget 解析为前端 URL */
+export function resolveTargetUrl(target: SearchTarget): string {
+	switch (target.type) {
+		case "Task":
+			return fillPath(PATHS.taskDetail, target.params.id);
+		case "Card":
+			return fillPath(PATHS.cardDetail, target.params.id);
+		case "Onto":
+			return fillPath(PATHS.ontologyDetail, target.params.id);
+		case "Bookmark":
+			return fillPath(PATHS.bookmarkDetail, target.params.id);
+		case "Reading":
+			return fillPath(PATHS.readingDetail, target.params.id);
+		case "Memory":
+			return `${PATHS.memoryManage}?id=${target.params.id}`;
+		case "ChatTree":
+			return `${PATHS.chat}?tree=${target.params.tree_id}`;
+		case "ChatNode":
+			return `${PATHS.chat}?tree=${target.params.tree_id}&node=${target.params.node_id}`;
+		case "Conv":
+			return fillPath(PATHS.convDetail, target.params.id);
+		case "Text":
+			return PATHS.text;
+		default:
+			return PATHS.home;
+	}
+}
 
 /** 路由导航建议（/ 前缀模式） */
 export function buildNavItems(
@@ -103,7 +132,7 @@ export function buildSearchItems(
 		desc: h.snippet,
 		extra: KIND_LABEL[h.kind] ?? h.kind,
 		onSelect: () => {
-			navigate(h.url);
+			navigate(resolveTargetUrl(h.target));
 			close();
 		},
 	}));

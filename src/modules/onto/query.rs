@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use super::model::Onto;
 use super::repository::OntoRepository;
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit, SearchPort, normalize_search, snippet};
+use crate::shared::search::{SearchHit, SearchPort, SearchTarget, normalize_search, snippet};
 
 /// 查询侧服务——纯读取，无副作用。
 ///
@@ -65,7 +65,7 @@ impl SearchPort for OntoQueryService {
                 id: r.id,
                 title: r.name,
                 snippet: snippet(r.description.as_deref().unwrap_or(""), kw),
-                url: format!("/ontology/{}", r.id),
+                target: SearchTarget::Onto { id: r.id },
             })
             .collect())
     }

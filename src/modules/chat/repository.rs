@@ -2,7 +2,7 @@ use sqlx::{FromRow, SqlitePool};
 
 use crate::shared::db_query::like_contains;
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit as GlobalSearchHit, snippet};
+use crate::shared::search::{SearchHit as GlobalSearchHit, SearchTarget, snippet};
 
 use super::model::{NodeItem, PresetItem, SearchResponse, TreeDetail, TreeItem, UpdateTreeRequest};
 
@@ -550,7 +550,7 @@ impl ChatRepo {
                 id: r.id,
                 title: r.title,
                 snippet: String::new(),
-                url: format!("/chat?tree={}", r.id),
+                target: SearchTarget::ChatTree { tree_id: r.id },
             })
             .collect();
         hits.extend(node_hits.into_iter().map(|r| GlobalSearchHit {
@@ -558,7 +558,10 @@ impl ChatRepo {
             id: r.tree_id,
             title: r.title,
             snippet: snippet(&r.content, ""),
-            url: format!("/chat?tree={}&node={}", r.tree_id, r.node_id),
+            target: SearchTarget::ChatNode {
+                tree_id: r.tree_id,
+                node_id: r.node_id,
+            },
         }));
         Ok(hits)
     }

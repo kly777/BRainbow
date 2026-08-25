@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use super::model::Card;
 use super::repository::CardRepository;
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit, SearchPort, clip, normalize_search, snippet};
+use crate::shared::search::{SearchHit, SearchPort, SearchTarget, clip, normalize_search, snippet};
 
 /// 查询侧服务——纯读取，无副作用。
 ///
@@ -78,7 +78,7 @@ impl SearchPort for CardQueryService {
                 id: r.id,
                 title: clip(&r.content, 60),
                 snippet: snippet(&r.content, kw),
-                url: format!("/card/{}", r.id),
+                target: SearchTarget::Card { id: r.id },
             })
             .collect())
     }

@@ -4,7 +4,7 @@ import {
 	patch,
 	post,
 	request,
-	tapInvalidate,
+	withInvalidate,
 } from "@lib/api";
 
 export interface Onto {
@@ -29,17 +29,18 @@ export const createOntoE = (
 	name: string,
 	description?: string,
 ): Promise<Onto> =>
-	post<Onto>("/onto", { name, description }).then((r) =>
-		tapInvalidate(CACHE.onto, r),
-	);
+	withInvalidate(CACHE.onto, post<Onto>("/onto", { name, description }));
 
 export const updateOntoE = (
 	id: number,
 	data: { name?: string; description?: string },
 ): Promise<Onto> =>
-	patch<Onto>(`/onto/${id}`, data).then((r) => tapInvalidate(CACHE.onto, r));
+	withInvalidate(CACHE.onto, patch<Onto>(`/onto/${id}`, data));
 
 export const deleteOntoE = (id: number): Promise<void> =>
-	request<void>(`/onto/${id}`, {
-		method: "DELETE",
-	}).then((r) => tapInvalidate(CACHE.onto, r));
+	withInvalidate(
+		CACHE.onto,
+		request<void>(`/onto/${id}`, {
+			method: "DELETE",
+		}),
+	);

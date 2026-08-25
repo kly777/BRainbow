@@ -3,12 +3,11 @@ import {
 	CACHE,
 	cachedRequest,
 	del,
-	invalidateCache,
 	type PaginatedResponse,
 	patch,
 	post,
 	request,
-	tapInvalidate,
+	withInvalidate,
 } from "@lib/api";
 
 export interface Bookmark {
@@ -68,20 +67,16 @@ export const getBookmarkE = (id: number): Promise<Bookmark> =>
 	cachedRequest<Bookmark>(`/bookmarks/${id}`, {});
 
 export const createBookmarkE = (bm: CreateBookmarkRequest): Promise<Bookmark> =>
-	post<Bookmark>("/bookmarks", bm).then((r) =>
-		tapInvalidate(CACHE.bookmarks, r),
-	);
+	withInvalidate(CACHE.bookmarks, post<Bookmark>("/bookmarks", bm));
 
 export const updateBookmarkE = (
 	id: number,
 	bm: UpdateBookmarkRequest,
 ): Promise<Bookmark> =>
-	patch<Bookmark>(`/bookmarks/${id}`, bm).then((r) =>
-		tapInvalidate(CACHE.bookmarks, r),
-	);
+	withInvalidate(CACHE.bookmarks, patch<Bookmark>(`/bookmarks/${id}`, bm));
 
 export const deleteBookmarkE = (id: number): Promise<void> =>
-	del<void>(`/bookmarks/${id}`).then((r) => tapInvalidate(CACHE.bookmarks, r));
+	withInvalidate(CACHE.bookmarks, del<void>(`/bookmarks/${id}`));
 
 export const searchBookmarksE = (
 	query: string,
@@ -109,27 +104,29 @@ export const setBookmarkTagsE = (
 	id: number,
 	tags: string[],
 ): Promise<BookmarkTag[]> =>
-	request<BookmarkTag[]>(`/bookmarks/${id}/tags`, {
-		method: "PUT",
-		body: JSON.stringify({ tags }),
-	}).then((r) => tapInvalidate(CACHE.bookmarks, r));
+	withInvalidate(
+		CACHE.bookmarks,
+		request<BookmarkTag[]>(`/bookmarks/${id}/tags`, {
+			method: "PUT",
+			body: JSON.stringify({ tags }),
+		}),
+	);
 
 /** 删除标签 */
 export const deleteBookmarkTagE = (id: number): Promise<void> =>
-	del<void>(`/bookmarks/tags/${id}`).then((r) =>
-		tapInvalidate(CACHE.bookmarks, r),
-	);
+	withInvalidate(CACHE.bookmarks, del<void>(`/bookmarks/tags/${id}`));
 
 /** 导入 Firefox 书签 HTML */
 export const importBookmarksE = async (file: File): Promise<ImportResult> => {
 	const formData = new FormData();
 	formData.append("file", file);
-	const result = await request<ImportResult>("/bookmarks/import", {
-		method: "POST",
-		body: formData,
-		// 书签 HTML 导入可到 64MB，不做 15s 默认超时
-		timeout: false,
-	});
-	invalidateCache(CACHE.bookmarks);
-	return result;
+	return withInvalidate(
+		CACHE.bookmarks,
+		request<ImportResult>("/bookmarks/import", {
+			method: "POST",
+			body: formData,
+			// 书签 HTML 导入可到 64MB，不做 15s 默认超时
+			timeout: false,
+		}),
+	);
 };

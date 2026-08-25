@@ -1,6 +1,6 @@
 // ── 标签 API ──
 
-import { CACHE, del, post, request, tapInvalidate } from "@lib/api";
+import { CACHE, del, post, request, withInvalidate } from "@lib/api";
 import type { BatchDataResponse, BatchResponse } from "./api-types.ts";
 
 // ── 标签 ──
@@ -40,46 +40,61 @@ export const addTagToMemE = (
 	memId: number,
 	tagId: number,
 ): Promise<{ ok: boolean }> =>
-	post<{ ok: boolean }>("/mem/tag/mem/add", {
-		mem_id: memId,
-		tag_id: tagId,
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	withInvalidate(
+		CACHE.mem,
+		post<{ ok: boolean }>("/mem/tag/mem/add", {
+			mem_id: memId,
+			tag_id: tagId,
+		}),
+	);
 
 export const removeTagFromMemE = (
 	memId: number,
 	tagId: number,
 ): Promise<{ ok: boolean }> =>
-	post<{ ok: boolean }>("/mem/tag/mem/remove", {
-		mem_id: memId,
-		tag_id: tagId,
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	withInvalidate(
+		CACHE.mem,
+		post<{ ok: boolean }>("/mem/tag/mem/remove", {
+			mem_id: memId,
+			tag_id: tagId,
+		}),
+	);
 
 export const setMemTagsE = (
 	memId: number,
 	tagIds: number[],
 ): Promise<{ ok: boolean }> =>
-	post<{ ok: boolean }>("/mem/tag/mem/set", {
-		mem_id: memId,
-		tag_ids: tagIds,
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	withInvalidate(
+		CACHE.mem,
+		post<{ ok: boolean }>("/mem/tag/mem/set", {
+			mem_id: memId,
+			tag_ids: tagIds,
+		}),
+	);
 
 export const batchAddTagToMemsE = (
 	memIds: number[],
 	tagId: number,
 ): Promise<BatchResponse> =>
-	post<BatchResponse>("/mem/tag/batch-add", {
-		items: memIds,
-		tag_id: tagId,
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	withInvalidate(
+		CACHE.mem,
+		post<BatchResponse>("/mem/tag/batch-add", {
+			items: memIds,
+			tag_id: tagId,
+		}),
+	);
 
 export const batchRemoveTagFromMemsE = (
 	memIds: number[],
 	tagId: number,
 ): Promise<BatchResponse> =>
-	post<BatchResponse>("/mem/tag/batch-remove", {
-		items: memIds,
-		tag_id: tagId,
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	withInvalidate(
+		CACHE.mem,
+		post<BatchResponse>("/mem/tag/batch-remove", {
+			items: memIds,
+			tag_id: tagId,
+		}),
+	);
 
 export interface MemTagRow {
 	mem_id: number;
@@ -100,7 +115,10 @@ export const batchSetTagsForMemsE = (
 	memIds: number[],
 	tagIds: number[],
 ): Promise<BatchResponse> =>
-	post<BatchResponse>("/mem/tag/batch-set", {
-		items: memIds,
-		tag_ids: tagIds,
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	withInvalidate(
+		CACHE.mem,
+		post<BatchResponse>("/mem/tag/batch-set", {
+			items: memIds,
+			tag_ids: tagIds,
+		}),
+	);

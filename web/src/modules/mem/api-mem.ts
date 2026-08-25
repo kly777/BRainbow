@@ -20,7 +20,7 @@ import {
 	post,
 	put,
 	request,
-	tapInvalidate,
+	withInvalidate,
 } from "@lib/api";
 import type {
 	BatchResponse,
@@ -39,11 +39,14 @@ export const createMemE = (
 	targetMd: string,
 	prerequisites: number[] = [],
 ): Promise<{ id: number }> =>
-	post<{ id: number }>("/mem", {
-		cue_content: cueMd,
-		target_content: targetMd,
-		prerequisites,
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	withInvalidate(
+		CACHE.mem,
+		post<{ id: number }>("/mem", {
+			cue_content: cueMd,
+			target_content: targetMd,
+			prerequisites,
+		}),
+	);
 
 export const getAllMemsE = (
 	params?: MemQuery,
@@ -72,18 +75,19 @@ export const reviewMemE = (
 	rating: number,
 	durationSecs = 0,
 ): Promise<{ ok: boolean }> =>
-	post<{ ok: boolean }>(`/mem/${id}/review`, {
-		rating,
-		duration_secs: durationSecs,
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	withInvalidate(
+		CACHE.mem,
+		post<{ ok: boolean }>(`/mem/${id}/review`, {
+			rating,
+			duration_secs: durationSecs,
+		}),
+	);
 
 export const undoReviewE = (
 	id: number,
 	undoData: Record<string, unknown>,
 ): Promise<{ ok: boolean }> =>
-	post<{ ok: boolean }>(`/mem/${id}/undo`, undoData).then((r) =>
-		tapInvalidate(CACHE.mem, r),
-	);
+	withInvalidate(CACHE.mem, post<{ ok: boolean }>(`/mem/${id}/undo`, undoData));
 
 export const previewMemE = (
 	id: number,
@@ -91,46 +95,54 @@ export const previewMemE = (
 	request(`/mem/${id}/preview`, {});
 
 export const deleteMemE = (id: number): Promise<{ ok: boolean }> =>
-	del<{ ok: boolean }>(`/mem/${id}`).then((r) => tapInvalidate(CACHE.mem, r));
+	withInvalidate(CACHE.mem, del<{ ok: boolean }>(`/mem/${id}`));
 
 export const buryMemE = (id: number): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>(`/mem/${id}/bury`, { method: "POST" }).then((r) =>
-		tapInvalidate(CACHE.mem, r),
+	withInvalidate(
+		CACHE.mem,
+		request<{ ok: boolean }>(`/mem/${id}/bury`, { method: "POST" }),
 	);
 
 export const suspendMemE = (id: number): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>(`/mem/${id}/suspend`, { method: "POST" }).then((r) =>
-		tapInvalidate(CACHE.mem, r),
+	withInvalidate(
+		CACHE.mem,
+		request<{ ok: boolean }>(`/mem/${id}/suspend`, { method: "POST" }),
 	);
 
 export const unsuspendMemE = (id: number): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>(`/mem/${id}/unsuspend`, { method: "POST" }).then(
-		(r) => tapInvalidate(CACHE.mem, r),
+	withInvalidate(
+		CACHE.mem,
+		request<{ ok: boolean }>(`/mem/${id}/unsuspend`, { method: "POST" }),
 	);
 
 export const unburyMemE = (id: number): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>(`/mem/${id}/unbury`, { method: "POST" }).then((r) =>
-		tapInvalidate(CACHE.mem, r),
+	withInvalidate(
+		CACHE.mem,
+		request<{ ok: boolean }>(`/mem/${id}/unbury`, { method: "POST" }),
 	);
 
 export const resetMemE = (id: number): Promise<{ ok: boolean }> =>
-	request<{ ok: boolean }>(`/mem/${id}/reset`, { method: "POST" }).then((r) =>
-		tapInvalidate(CACHE.mem, r),
+	withInvalidate(
+		CACHE.mem,
+		request<{ ok: boolean }>(`/mem/${id}/reset`, { method: "POST" }),
 	);
 
 export const batchBuryMemE = (ids: number[]): Promise<BatchResponse> =>
-	post<BatchResponse>("/mem/batch-bury", { items: ids }).then((r) =>
-		tapInvalidate(CACHE.mem, r),
+	withInvalidate(
+		CACHE.mem,
+		post<BatchResponse>("/mem/batch-bury", { items: ids }),
 	);
 
 export const batchDeleteMemE = (ids: number[]): Promise<BatchResponse> =>
-	post<BatchResponse>("/mem/batch-delete", { items: ids }).then((r) =>
-		tapInvalidate(CACHE.mem, r),
+	withInvalidate(
+		CACHE.mem,
+		post<BatchResponse>("/mem/batch-delete", { items: ids }),
 	);
 
 export const batchResetMemE = (ids: number[]): Promise<BatchResponse> =>
-	post<BatchResponse>("/mem/batch-reset", { items: ids }).then((r) =>
-		tapInvalidate(CACHE.mem, r),
+	withInvalidate(
+		CACHE.mem,
+		post<BatchResponse>("/mem/batch-reset", { items: ids }),
 	);
 
 export const editMemE = (
@@ -138,7 +150,10 @@ export const editMemE = (
 	cue: string,
 	target: string,
 ): Promise<{ ok: boolean }> =>
-	put<{ ok: boolean }>(`/mem/${id}/edit`, {
-		cue_content: cue,
-		target_content: target,
-	}).then((r) => tapInvalidate(CACHE.mem, r));
+	withInvalidate(
+		CACHE.mem,
+		put<{ ok: boolean }>(`/mem/${id}/edit`, {
+			cue_content: cue,
+			target_content: target,
+		}),
+	);

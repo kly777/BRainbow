@@ -1,4 +1,4 @@
-import { CACHE, cachedRequest, put, tapInvalidate } from "@lib/api";
+import { CACHE, cachedRequest, put, withInvalidate } from "@lib/api";
 
 export interface TabItem {
 	readonly id: number;
@@ -16,6 +16,4 @@ export const loadTextE = (): Promise<TextResponse> =>
 export const saveTextE = (
 	tabs: readonly { name: string; content: string }[],
 ): Promise<{ readonly ok: boolean }> =>
-	put<{ readonly ok: boolean }>("/text", { tabs }).then((r) =>
-		tapInvalidate(CACHE.text, r),
-	);
+	withInvalidate(CACHE.text, put<{ readonly ok: boolean }>("/text", { tabs }));

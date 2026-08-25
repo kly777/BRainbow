@@ -111,7 +111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await;
 
     // 创建应用状态
-    let state = AppState::new(Arc::new(pool), &config, mem_config);
+    let state = AppState::new(&Arc::new(pool), &config, mem_config);
 
     // 创建路由
     state.init_runtime_cache().await;

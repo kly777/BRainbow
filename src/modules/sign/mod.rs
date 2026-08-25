@@ -4,6 +4,11 @@ pub mod query;
 mod repository;
 mod service;
 
+use std::sync::Arc;
+
+use axum::{Router, extract::FromRef, routing::get};
+use sqlx::SqlitePool;
+
 pub use query::SignQueryService;
 pub use service::SignService;
 
@@ -12,7 +17,21 @@ pub use handler::{
     get_signs_by_signifier_handler, get_signs_handler,
 };
 
-use axum::{Router, extract::FromRef, routing::get};
+/// Sign 模块状态聚合。
+#[derive(Clone)]
+pub struct SignState {
+    pub service: SignService,
+    pub query: SignQueryService,
+}
+
+impl SignState {
+    pub fn new(db: Arc<SqlitePool>) -> Self {
+        Self {
+            service: SignService::new(db.clone()),
+            query: SignQueryService::new(db),
+        }
+    }
+}
 
 pub fn routes<S>() -> Router<S>
 where

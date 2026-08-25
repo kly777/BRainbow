@@ -4,14 +4,33 @@ pub(crate) mod query;
 mod repository;
 pub mod service;
 
+use std::sync::Arc;
+
 use axum::{
     Router,
     extract::FromRef,
     routing::{get, post},
 };
+use sqlx::SqlitePool;
 
 use self::query::ReadingQueryService;
 use self::service::ReadingService;
+
+/// Reading 模块状态聚合。
+#[derive(Clone)]
+pub struct ReadingState {
+    pub service: ReadingService,
+    pub query: ReadingQueryService,
+}
+
+impl ReadingState {
+    pub fn new(db: Arc<SqlitePool>) -> Self {
+        Self {
+            service: ReadingService::new(db.clone()),
+            query: ReadingQueryService::new(db),
+        }
+    }
+}
 
 pub fn routes<S>() -> Router<S>
 where

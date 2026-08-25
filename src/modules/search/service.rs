@@ -3,20 +3,20 @@ use std::sync::Arc;
 use futures_util::future::join_all;
 
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchPort, SearchResponse, clamp_search_limit, trim_query};
+use crate::shared::search::{SearchRegistry, SearchResponse, clamp_search_limit, trim_query};
 
-/// 全局搜索：只负责聚合各模块的 `SearchPort`，不再直接触碰任何业务表。
+/// 全局搜索：通过 `SearchRegistry` 获取所有已注册的提供者，不再直接依赖各模块。
 #[derive(Clone)]
 pub struct SearchQueryService {
-    ports: Vec<Arc<dyn SearchPort>>,
+    registry: SearchRegistry,
 }
 
 impl SearchQueryService {
-    pub fn new(ports: Vec<Arc<dyn SearchPort>>) -> Self {
-        Self { ports }
+    pub fn new(registry: SearchRegistry) -> Self {
+        Self { registry }
     }
 
-    /// 全局搜索入口：并行聚合所有数据源。
+    /// 全局搜索入口：并行聚合所有已注册数据源。
     /// `limit` 为每类数据源的结果上限。
     pub async fn search(
         &self,
@@ -29,7 +29,8 @@ impl SearchQueryService {
         };
         let cap = clamp_search_limit(limit);
 
-        let results = join_all(self.ports.iter().map(|port| port.search(user_id, kw, cap))).await;
+        let ports = self.registry.providers();
+        let results = join_all(ports.iter().map(|port| port.search(user_id, kw, cap))).await;
 
         let mut hits = Vec::new();
         for res in results {
@@ -53,7 +54,7 @@ mod tests {
     use crate::modules::reading::query::ReadingQueryService;
     use crate::modules::task::TaskQueryService;
     use crate::modules::text::TextQueryService;
-    use crate::shared::search::{SearchTarget, clip, merge_snippets, snippet};
+    use crate::shared::search::{SearchRegistry, SearchTarget, clip, merge_snippets, snippet};
     use sqlx::SqlitePool;
     use std::sync::Arc;
 
@@ -88,20 +89,19 @@ mod tests {
         let conv_query = ConvQueryService::new(pool.clone());
         let chat_query = ChatQueryService::new(pool.clone());
 
-        let ports: Vec<Arc<dyn SearchPort>> = vec![
-            Arc::new(mem_query),
-            Arc::new(card_query),
-            Arc::new(task_query),
-            Arc::new(bookmark_query),
-            Arc::new(onto_query),
-            Arc::new(text_query),
-            Arc::new(reading_query),
-            Arc::new(conv_query),
-            Arc::new(chat_query),
-        ];
+        let registry = SearchRegistry::new();
+        registry.register(Arc::new(mem_query));
+        registry.register(Arc::new(card_query));
+        registry.register(Arc::new(task_query));
+        registry.register(Arc::new(bookmark_query));
+        registry.register(Arc::new(onto_query));
+        registry.register(Arc::new(text_query));
+        registry.register(Arc::new(reading_query));
+        registry.register(Arc::new(conv_query));
+        registry.register(Arc::new(chat_query));
 
         TestCtx {
-            svc: SearchQueryService::new(ports),
+            svc: SearchQueryService::new(registry),
             pool,
         }
     }

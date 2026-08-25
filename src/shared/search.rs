@@ -1,5 +1,7 @@
 //! 全局搜索端口：各模块实现 `SearchPort`，`SearchQueryService` 只负责聚合。
 
+use std::sync::{Arc, RwLock};
+
 use async_trait::async_trait;
 use serde::Serialize;
 
@@ -84,6 +86,39 @@ pub trait SearchPort: Send + Sync {
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError>;
+}
+
+/// 搜索提供者注册表：各模块启动时注册自己的 `SearchPort` 实现。
+///
+/// `SearchQueryService` 通过注册表获取所有提供者，不再直接依赖各模块的具体类型。
+/// 这解耦了搜索聚合层与各业务模块。
+#[derive(Clone)]
+pub struct SearchRegistry {
+    providers: Arc<RwLock<Vec<Arc<dyn SearchPort>>>>,
+}
+
+impl SearchRegistry {
+    pub fn new() -> Self {
+        Self {
+            providers: Arc::new(RwLock::new(Vec::new())),
+        }
+    }
+
+    /// 注册一个搜索提供者
+    pub fn register(&self, provider: Arc<dyn SearchPort>) {
+        self.providers.write().unwrap().push(provider);
+    }
+
+    /// 获取所有已注册的提供者
+    pub fn providers(&self) -> Vec<Arc<dyn SearchPort>> {
+        self.providers.read().unwrap().clone()
+    }
+}
+
+impl Default for SearchRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// 截取内容前 n 字符作为标题（单行化）

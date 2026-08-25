@@ -30,7 +30,7 @@ use crate::modules::time_window::query::TimeWindowQueryService;
 use crate::modules::time_window::service::TimeWindowService;
 use crate::modules::user::UserState;
 use crate::shared::config::Config;
-use crate::shared::search::SearchPort;
+use crate::shared::search::SearchRegistry;
 
 // ─────────────────────────────────────────────────────────────
 // 子状态：按模块聚合服务实例，避免 AppState 变成扁平"上帝对象"。
@@ -237,19 +237,18 @@ impl AppState {
 
         let conv = ConvQueryService::new(db.as_ref().clone());
 
-        // 搜索服务：聚合所有查询服务的 SearchPort 实现
-        let search_ports: Vec<Arc<dyn SearchPort>> = vec![
-            Arc::new(mem_query.clone()),
-            Arc::new(card.query.clone()),
-            Arc::new(task.query.clone()),
-            Arc::new(bookmark.query.clone()),
-            Arc::new(onto.query.clone()),
-            Arc::new(text.query.clone()),
-            Arc::new(reading.query.clone()),
-            Arc::new(conv.clone()),
-            Arc::new(chat_query.clone()),
-        ];
-        let search = SearchQueryService::new(search_ports);
+        // 搜索服务：通过注册表解耦各模块
+        let search_registry = SearchRegistry::new();
+        search_registry.register(Arc::new(mem_query.clone()));
+        search_registry.register(Arc::new(card.query.clone()));
+        search_registry.register(Arc::new(task.query.clone()));
+        search_registry.register(Arc::new(bookmark.query.clone()));
+        search_registry.register(Arc::new(onto.query.clone()));
+        search_registry.register(Arc::new(text.query.clone()));
+        search_registry.register(Arc::new(reading.query.clone()));
+        search_registry.register(Arc::new(conv.clone()));
+        search_registry.register(Arc::new(chat_query.clone()));
+        let search = SearchQueryService::new(search_registry);
 
         Self {
             db: db.clone(),

@@ -1,4 +1,10 @@
-import { AsyncView, Button, FilterGroup, SearchInput } from "@components/ui";
+import {
+	AsyncView,
+	Button,
+	FilterGroup,
+	PageHead,
+	SearchInput,
+} from "@components/ui";
 import { type Component, For, Show } from "solid-js";
 import { CreateOntoModal } from "./components/CreateOntoModal.tsx";
 import { type OntologyItem, useOntologyList } from "./hooks/useOntologyList.ts";
@@ -115,14 +121,14 @@ const OntologyListPage: Component = () => {
 
 	return (
 		<div class={styles.container}>
-			<div class={styles.header}>
-				<h1>知识管理</h1>
-				<div class={styles.actions}>
+			<PageHead
+				title="知识管理"
+				actions={
 					<Button variant="primary" onClick={m.openCreateModal}>
 						新建本体
 					</Button>
-				</div>
-			</div>
+				}
+			/>
 
 			<div class={styles.filters}>
 				<div class={styles.searchSection}>

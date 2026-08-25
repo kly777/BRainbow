@@ -1,6 +1,6 @@
 // ── 管理员设置页：开放注册开关 / JWT 密钥状态与轮换 ──
 
-import { Button } from "@components/ui";
+import { Button, PageHead } from "@components/ui";
 import { notifyError, notifySuccess, showConfirm, tryAsync } from "@lib/utils";
 import { useAuth } from "@modules/auth";
 import { createResource, createSignal, Show } from "solid-js";
@@ -57,7 +57,7 @@ export default function AdminPage() {
 
 	return (
 		<div class={styles.page}>
-			<h1 class={styles.title}>管理员设置</h1>
+			<PageHead title="管理员设置" />
 
 			<Show when={!isAdmin()} fallback={null}>
 				<div class={styles.forbidden}>

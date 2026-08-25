@@ -9,13 +9,6 @@
 	gap: var(--space-lg);
 }
 
-.title {
-	font-size: var(--text-xl);
-	font-weight: 700;
-	margin: 0;
-	letter-spacing: -0.01em;
-}
-
 .forbidden {
 	padding: var(--space-xl);
 	text-align: center;

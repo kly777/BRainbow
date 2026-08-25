@@ -9,18 +9,6 @@
 	gap: var(--space-lg);
 }
 
-.title {
-	font-size: var(--text-2xl);
-	color: var(--t-color-ink);
-	margin: 0;
-}
-
-.subtitle {
-	font-size: var(--text-sm);
-	color: var(--t-color-ink-muted);
-	margin: 0;
-}
-
 .inline-code {
 	font-family: var(--t-font-mono);
 	font-size: var(--text-xs);

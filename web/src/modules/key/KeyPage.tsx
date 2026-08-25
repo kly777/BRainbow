@@ -1,7 +1,7 @@
 // ── API Key 管理页 ──
 // dev 环境免登录可生成（后端 APP_ENV=dev）；prod 需登录（AuthGuard）。
 
-import { Button } from "@components/ui";
+import { Button, PageHead } from "@components/ui";
 import { getApiKey, getErrorMessage } from "@lib/api";
 import {
 	copyText,
@@ -152,12 +152,10 @@ export default function KeyPage() {
 
 	return (
 		<div class={styles.page}>
-			<h1 class={styles.title}>API Key</h1>
-			<p class={styles.subtitle}>
-				生成长期有效的 API key（仅登录后可操作）。key 永不过期，测试/脚本 请求带{" "}
-				<code class={styles.inlineCode}>X-API-Key</code> 头即可认证，
-				无需再登录。
-			</p>
+			<PageHead
+				title="API Key"
+				desc="生成长期有效的 API key（仅登录后可操作）。key 永不过期，测试/脚本请求带 X-API-Key 头即可认证，无需再登录。"
+			/>
 
 			{/* 生成 */}
 			<div class={styles.card}>

@@ -33,12 +33,10 @@ const CardDetailPage: Component = () => {
 					c && (
 						<div class={styles.content}>
 							<div class={styles.meta}>
-								<span>
-									{c.created_at === c.updated_at ? "创建于" : "修改于"}:{" "}
-									{fmtLocal(
-										c.created_at === c.updated_at ? c.created_at : c.updated_at,
-									)}
-								</span>
+								{c.created_at === c.updated_at ? "创建于" : "修改于"}:{" "}
+								{fmtLocal(
+									c.created_at === c.updated_at ? c.created_at : c.updated_at,
+								)}
 							</div>
 							<div class={styles.body}>
 								<MarkdownRenderer content={c.content} />

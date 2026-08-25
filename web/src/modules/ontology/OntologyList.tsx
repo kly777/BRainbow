@@ -82,9 +82,7 @@ const OntologyCard: Component<{
 			<h3 class={styles.entityName}>{props.onto.name}</h3>
 			<span class={styles.entityType}>ID: {props.onto.id}</span>
 		</div>
-		<div class={styles.entityDescription}>
-			<p>{props.onto.description || "暂无描述"}</p>
-		</div>
+		<p class={styles.entityDescription}>{props.onto.description || "暂无描述"}</p>
 		<div class={styles.entityActions}>
 			<Button
 				variant="danger"

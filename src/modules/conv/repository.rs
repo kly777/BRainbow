@@ -2,7 +2,7 @@ use sqlx::{FromRow, SqlitePool};
 
 use crate::shared::db_query::like_contains;
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::SearchHit;
+use crate::shared::search::{SearchHit, SearchTarget};
 
 use super::model::{ArticleItem, ConvDetail, SearchResponse};
 use super::scoring;
@@ -272,7 +272,7 @@ impl ConvRepo {
                 id: r.conv_id,
                 title: r.title,
                 snippet: String::new(),
-                url: format!("/conversation/detail/{}", r.conv_id),
+                target: SearchTarget::Conv { id: r.conv_id },
             })
             .collect())
     }

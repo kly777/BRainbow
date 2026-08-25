@@ -27,6 +27,35 @@ pub fn normalize_search(q: &str, limit: i64) -> Option<(String, &str, i64)> {
     Some((like_contains(kw), kw, clamp_search_limit(limit)))
 }
 
+/// 搜索命中项的导航目标：前端根据此枚举解析为具体 URL。
+///
+/// 使用枚举而非 URL 字符串，解耦后端模块与前端路由。
+/// 前端 `paths.ts` 是 URL 的单一来源。
+#[derive(Serialize, Clone, Debug)]
+#[serde(tag = "type", content = "params")]
+pub enum SearchTarget {
+    /// 任务详情 `/task/:id`
+    Task { id: i64 },
+    /// 卡片详情 `/card/:id`
+    Card { id: i64 },
+    /// 本体详情 `/ontology/:id`
+    Onto { id: i64 },
+    /// 书签详情 `/bookmark/:id`
+    Bookmark { id: i64 },
+    /// 阅读文章详情 `/reading/:id`
+    Reading { id: i64 },
+    /// 记忆管理 `/memory/manage?id=:id`
+    Memory { id: i64 },
+    /// AI 对话树 `/chat?tree=:tree_id`
+    ChatTree { tree_id: i64 },
+    /// AI 对话节点 `/chat?tree=:tree_id&node=:node_id`
+    ChatNode { tree_id: i64, node_id: i64 },
+    /// 对话详情 `/conversation/detail/:id`
+    Conv { id: i64 },
+    /// 文本笔记 `/text`（无 ID）
+    Text,
+}
+
 /// 全局搜索命中项：跨模块统一结构
 #[derive(Serialize, Clone)]
 pub struct SearchHit {
@@ -37,8 +66,8 @@ pub struct SearchHit {
     pub title: String,
     /// 关键字上下文片段
     pub snippet: String,
-    /// 前端跳转 URL
-    pub url: String,
+    /// 导航目标（前端解析为 URL）
+    pub target: SearchTarget,
 }
 
 #[derive(Serialize)]

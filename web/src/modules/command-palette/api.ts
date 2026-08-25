@@ -2,12 +2,31 @@ import { request } from "@lib/api";
 
 // ── 全局搜索 API ──
 
+/** 搜索命中项的导航目标类型 */
+export type SearchTargetType =
+	| "Task"
+	| "Card"
+	| "Onto"
+	| "Bookmark"
+	| "Reading"
+	| "Memory"
+	| "ChatTree"
+	| "ChatNode"
+	| "Conv"
+	| "Text";
+
+/** 搜索命中项的导航目标 */
+export interface SearchTarget {
+	type: SearchTargetType;
+	params: Record<string, number>;
+}
+
 export interface SearchHit {
 	kind: string;
 	id: number;
 	title: string;
 	snippet: string;
-	url: string;
+	target: SearchTarget;
 }
 
 export interface SearchResponse {

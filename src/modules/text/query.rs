@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit, SearchPort, normalize_search, snippet};
+use crate::shared::search::{SearchHit, SearchPort, SearchTarget, normalize_search, snippet};
 
 use super::repository::TextRepo;
 
@@ -50,7 +50,7 @@ impl SearchPort for TextQueryService {
                 id,
                 title: name,
                 snippet: snippet(&content, kw),
-                url: format!("/text?id={id}"),
+                target: SearchTarget::Text,
             })
             .collect())
     }

@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use super::model::{Bookmark, BookmarkTag, BookmarkTagWithCount};
 use super::repository::BookmarkRepo;
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit, SearchPort, normalize_search, snippet};
+use crate::shared::search::{SearchHit, SearchPort, SearchTarget, normalize_search, snippet};
 
 /// 查询侧服务——纯读取，无副作用。
 ///
@@ -106,7 +106,7 @@ impl SearchPort for BookmarkQueryService {
                 } else {
                     snippet(&r.description, kw)
                 },
-                url: format!("/bookmark/{}", r.id),
+                target: SearchTarget::Bookmark { id: r.id },
             })
             .collect())
     }

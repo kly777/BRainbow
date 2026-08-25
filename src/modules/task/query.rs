@@ -7,7 +7,7 @@ use super::model::{Task, TaskStatus};
 use super::repository::TaskRepository;
 use crate::modules::time_window::TimeWindow;
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit, SearchPort, normalize_search, snippet};
+use crate::shared::search::{SearchHit, SearchPort, SearchTarget, normalize_search, snippet};
 
 /// 查询侧服务——纯读取，无副作用。
 ///
@@ -218,7 +218,7 @@ impl SearchPort for TaskQueryService {
                 id: r.id,
                 title: r.title,
                 snippet: snippet(r.description.as_deref().unwrap_or(""), kw),
-                url: format!("/task/{}", r.id),
+                target: SearchTarget::Task { id: r.id },
             })
             .collect())
     }

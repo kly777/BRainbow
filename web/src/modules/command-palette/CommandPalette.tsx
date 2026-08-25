@@ -11,6 +11,31 @@ import {
 	usePalette,
 } from "./hooks/usePalette.ts";
 
+function SuggestionItem(props: {
+	item: Suggestion;
+	active: boolean;
+	onHover: () => void;
+}) {
+	return (
+		<button
+			type="button"
+			class={styles.suggestionItem}
+			classList={{ [styles.suggestionActive]: props.active }}
+			onMouseDown={(e) => e.preventDefault()}
+			onMouseEnter={props.onHover}
+			onClick={props.item.onSelect}
+			role="option"
+			aria-selected={props.active}
+		>
+			<span class={styles.sugLabel}>{props.item.label}</span>
+			<span class={styles.sugDesc}>{props.item.desc}</span>
+			{props.item.extra && (
+				<span class={styles.sugPath}>{props.item.extra}</span>
+			)}
+		</button>
+	);
+}
+
 function SuggestionList(props: {
 	items: Suggestion[];
 	selected: number;
@@ -18,24 +43,15 @@ function SuggestionList(props: {
 	listRef: (el: HTMLDivElement) => void;
 }) {
 	return (
-		<div class={styles.suggestions}>
+		<div class={styles.suggestions} role="listbox">
 			<div ref={props.listRef} class={styles.sugScroll}>
 				<For each={props.items}>
 					{(s, i) => (
-						<button
-							type="button"
-							class={styles.suggestionItem}
-							classList={{
-								[styles.suggestionActive]: i() === props.selected,
-							}}
-							onMouseDown={(e) => e.preventDefault()}
-							onMouseEnter={() => props.onHover(i())}
-							onClick={s.onSelect}
-						>
-							<span class={styles.sugLabel}>{s.label}</span>
-							<span class={styles.sugDesc}>{s.desc}</span>
-							{s.extra && <span class={styles.sugPath}>{s.extra}</span>}
-						</button>
+						<SuggestionItem
+							item={s}
+							active={i() === props.selected}
+							onHover={() => props.onHover(i())}
+						/>
 					)}
 				</For>
 			</div>
@@ -75,6 +91,17 @@ function SearchHint(props: { query: string }) {
 			</div>
 		</div>
 	);
+}
+
+function ModeTag(props: { mode: Mode }) {
+	const labels: Record<Mode, string> = {
+		idle: "",
+		nav: "导航",
+		search: "搜索",
+		cmd: "指令",
+	};
+	if (!labels[props.mode]) return null;
+	return <span class={styles.modeTag}>{labels[props.mode]}</span>;
 }
 
 export default function CommandPalette() {
@@ -131,11 +158,17 @@ export default function CommandPalette() {
 					type="button"
 					class={styles.overlay}
 					onClick={p.close}
-					aria-label="关闭"
+					aria-label="关闭命令面板"
 				/>
-				<div class={styles.bar}>
+				<div
+					class={styles.bar}
+					role="dialog"
+					aria-modal="true"
+					aria-label="命令面板"
+				>
 					<div class={styles.inputRow}>
 						<span class={styles.prefix}>{MODE_PREFIX[p.mode() as Mode]}</span>
+						<ModeTag mode={p.mode()} />
 						<input
 							ref={p.bindInput}
 							class={styles.input}
@@ -143,10 +176,13 @@ export default function CommandPalette() {
 							value={p.value()}
 							onInput={(e) => {
 								p.setValue(e.currentTarget.value);
-								// 输入变化后列表重建，选中回到第一项
 								p.setSelectedIndex(0);
 							}}
 							onKeyDown={p.onInputKey}
+							role="combobox"
+							aria-expanded={true}
+							aria-haspopup="listbox"
+							aria-autocomplete="list"
 						/>
 					</div>
 					{ActionPanel()}

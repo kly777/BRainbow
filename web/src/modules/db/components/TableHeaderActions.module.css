@@ -12,6 +12,14 @@
 .export-group {
 	display: flex;
 	align-items: center;
-	gap: var(--space-2xs);
+	gap: 1px;
 	flex-shrink: 0;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	overflow: hidden;
+}
+
+.export-group button {
+	border-radius: 0;
+	border: none;
 }

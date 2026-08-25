@@ -1,4 +1,12 @@
-import { type Component, createMemo, createSignal, For, Show } from "solid-js";
+import {
+	type Component,
+	createMemo,
+	createSignal,
+	For,
+	onCleanup,
+	onMount,
+	Show,
+} from "solid-js";
 import DbTable from "./components/DbTable";
 import PaginationBar from "./components/PaginationBar";
 import TableHeaderActions from "./components/TableHeaderActions";
@@ -8,6 +16,8 @@ import { useDbViewer } from "./hooks/useDbViewer.ts";
 const DB: Component = () => {
 	const m = useDbViewer();
 	const [tableSearch, setTableSearch] = createSignal("");
+	const [focusIndex, setFocusIndex] = createSignal(-1);
+	let listRef: HTMLDivElement | undefined;
 
 	const filteredTables = createMemo(() => {
 		const q = tableSearch().toLowerCase().trim();
@@ -16,49 +26,115 @@ const DB: Component = () => {
 		return list.filter((t) => t.toLowerCase().includes(q));
 	});
 
+	// Keyboard navigation for table list
+	const handleListKeyDown = (e: KeyboardEvent) => {
+		const list = filteredTables();
+		if (list.length === 0) return;
+		if (e.key === "ArrowDown") {
+			e.preventDefault();
+			setFocusIndex((i) => Math.min(i + 1, list.length - 1));
+		} else if (e.key === "ArrowUp") {
+			e.preventDefault();
+			setFocusIndex((i) => Math.max(i - 1, 0));
+		} else if (e.key === "Enter") {
+			e.preventDefault();
+			const idx = focusIndex();
+			if (idx >= 0 && idx < list.length) {
+				m.openTable(list[idx]);
+			}
+		}
+	};
+
+	// Focus the active item when focusIndex changes
+	const handleItemRef = (el: HTMLButtonElement, idx: number) => {
+		if (idx === focusIndex()) {
+			el.focus();
+		}
+	};
+
+	onMount(() => {
+		// Focus search on / key
+		const handler = (e: KeyboardEvent) => {
+			if (
+				e.key === "/" &&
+				!(e.target instanceof HTMLInputElement) &&
+				!(e.target instanceof HTMLTextAreaElement)
+			) {
+				e.preventDefault();
+				listRef?.querySelector<HTMLInputElement>("input")?.focus();
+			}
+		};
+		document.addEventListener("keydown", handler);
+		onCleanup(() => document.removeEventListener("keydown", handler));
+	});
+
 	return (
 		<div class={styles.page}>
 			<nav class={styles.sidebar} aria-label="数据库表列表">
-				<div class={styles.sidebarTitle}>表列表</div>
-				<Show when={m.tables().length > 5}>
+				<div class={styles.sidebarHeader}>
+					<div class={styles.sidebarTitleRow}>
+						<span class={styles.sidebarTitle}>表列表</span>
+						<Show when={m.tables().length > 0}>
+							<span class={styles.tableCount}>{m.tables().length}</span>
+						</Show>
+					</div>
 					<input
 						type="search"
 						class={styles.sidebarSearch}
-						placeholder="搜索表…"
+						placeholder="搜索表… /"
 						aria-label="搜索表名"
 						value={tableSearch()}
-						onInput={(e) => setTableSearch(e.currentTarget.value)}
+						onInput={(e) => {
+							setTableSearch(e.currentTarget.value);
+							setFocusIndex(-1);
+						}}
+						onKeyDown={handleListKeyDown}
 					/>
-				</Show>
-				<Show
-					when={m.tables().length > 0}
-					fallback={
-						<Show when={!m.loading()}>
-							<div class={styles.sidebarEmpty}>
-								{m.error() ? "加载失败" : "暂无表"}
-							</div>
-						</Show>
-					}
+				</div>
+				<div
+					ref={listRef}
+					class={styles.tableList}
+					role="listbox"
+					aria-label="数据库表"
+					onKeyDown={handleListKeyDown}
 				>
-					<Show when={filteredTables().length === 0 && tableSearch()}>
-						<div class={styles.sidebarEmpty}>未匹配</div>
+					<Show
+						when={m.tables().length > 0}
+						fallback={
+							<Show when={!m.loading()}>
+								<div class={styles.sidebarEmpty}>
+									{m.error() ? "加载失败" : "暂无表"}
+								</div>
+							</Show>
+						}
+					>
+						<Show when={filteredTables().length === 0 && tableSearch()}>
+							<div class={styles.sidebarEmpty}>未匹配</div>
+						</Show>
+						<For each={filteredTables()}>
+							{(t, i) => (
+								<button
+									type="button"
+									role="option"
+									aria-selected={m.activeTable() === t}
+									onClick={() => m.openTable(t)}
+									onFocus={() => setFocusIndex(i())}
+									onBlur={() => setFocusIndex(-1)}
+									ref={(el) => handleItemRef(el, i())}
+									classList={{
+										[styles.tableItem]: true,
+										[styles.tableItemActive]: m.activeTable() === t,
+									}}
+								>
+									<span class={styles.tableName}>{t}</span>
+									<Show when={m.activeTable() === t}>
+										<span class={styles.activeIndicator} />
+									</Show>
+								</button>
+							)}
+						</For>
 					</Show>
-					<For each={filteredTables()}>
-						{(t) => (
-							<button
-								type="button"
-								onClick={() => m.openTable(t)}
-								classList={{
-									[styles.tableItem]: true,
-									[styles.tableItemActive]: m.activeTable() === t,
-								}}
-								aria-pressed={m.activeTable() === t}
-							>
-								{t}
-							</button>
-						)}
-					</For>
-				</Show>
+				</div>
 			</nav>
 
 			<div class={styles.main}>
@@ -72,9 +148,12 @@ const DB: Component = () => {
 					fallback={
 						<Show when={!m.loading() && !m.activeTable()}>
 							<div class={styles.welcome}>
-								<div class={styles.welcomeIcon}>⛁</div>
+								<div class={styles.welcomeIcon} />
 								<h3 class={styles.welcomeTitle}>数据库浏览器</h3>
 								<p class={styles.welcomeDesc}>从左侧选择一张表开始浏览</p>
+								<div class={styles.welcomeHint}>
+									<kbd>/</kbd> 搜索表
+								</div>
 							</div>
 						</Show>
 					}

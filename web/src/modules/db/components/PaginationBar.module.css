@@ -1,9 +1,9 @@
-/* PaginationBar — 分页、页大小、页码跳转（增强版） */
+/* PaginationBar — 分页控制 */
 
 .pagination {
 	display: flex;
 	align-items: center;
-	flex-wrap: wrap;
+	justify-content: space-between;
 	gap: var(--space-md);
 	padding: var(--space-md) 0;
 	font-size: var(--text-sm);
@@ -11,9 +11,36 @@
 }
 
 .pagination-info {
-	flex: 1 1 auto;
+	display: flex;
+	align-items: center;
+	gap: var(--space-2xs);
 	min-width: 0;
 	white-space: nowrap;
+}
+
+.info-total {
+	color: var(--t-color-ink-muted);
+}
+
+.info-count {
+	font-family: var(--t-font-mono);
+	font-weight: 600;
+	color: var(--t-color-ink);
+}
+
+.info-sep {
+	color: var(--t-color-ink-faint);
+}
+
+.info-page {
+	font-family: var(--t-font-mono);
+	font-size: var(--text-xs);
+}
+
+.pagination-controls {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
 }
 
 .page-size {
@@ -23,34 +50,32 @@
 	white-space: nowrap;
 }
 
-.page-size-select,
-.page-jump-input {
-	height: 2rem;
-	padding: 0 var(--space-sm);
+.page-size-label {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+}
+
+.page-size-select {
+	height: 1.75rem;
+	padding: 0 var(--space-xs);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
-	font-size: var(--text-sm);
+	font-size: var(--text-xs);
 	font-family: inherit;
 	outline: none;
+	cursor: pointer;
 	transition:
 		border-color var(--t-transition-fast),
 		box-shadow var(--t-transition-fast);
 }
 
-.page-jump-input {
-	width: 4.5rem;
-	text-align: center;
-}
-
-.page-size-select:hover,
-.page-jump-input:hover {
+.page-size-select:hover {
 	border-color: var(--t-color-border-strong);
 }
 
-.page-size-select:focus,
-.page-jump-input:focus {
+.page-size-select:focus {
 	border-color: var(--t-color-accent);
 	box-shadow: 0 0 0 2px var(--t-color-accent-ring);
 }
@@ -59,4 +84,116 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-2xs);
+}
+
+.page-jump-input {
+	width: 3.5rem;
+	height: 1.75rem;
+	padding: 0 var(--space-xs);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	font-size: var(--text-xs);
+	font-family: var(--t-font-mono);
+	text-align: center;
+	outline: none;
+	-moz-appearance: textfield;
+}
+
+.page-jump-input::-webkit-inner-spin-button,
+.page-jump-input::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+.page-jump-input::placeholder {
+	color: var(--t-color-ink-faint);
+}
+
+.page-jump-input:hover {
+	border-color: var(--t-color-border-strong);
+}
+
+.page-jump-input:focus {
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 2px var(--t-color-accent-ring);
+}
+
+.page-jump-btn {
+	height: 1.75rem;
+	padding: 0 var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink-muted);
+	cursor: pointer;
+	font-size: var(--text-xs);
+	font-family: inherit;
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
+}
+
+.page-jump-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.page-jump-btn:hover:not(:disabled) {
+	background: var(--t-color-surface-raised);
+	border-color: var(--t-color-border-strong);
+	color: var(--t-color-ink);
+}
+
+.page-nav {
+	display: flex;
+	align-items: center;
+	gap: 1px;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	overflow: hidden;
+}
+
+.page-nav-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 1.75rem;
+	border: none;
+	background: var(--t-color-surface);
+	color: var(--t-color-ink-muted);
+	cursor: pointer;
+	font-size: var(--text-sm);
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
+}
+
+.page-nav-btn + .page-nav-btn {
+	border-left: 1px solid var(--t-color-border);
+}
+
+.page-nav-btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.page-nav-btn:hover:not(:disabled) {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+@media (width <= 768px) {
+	.pagination {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.pagination-controls {
+		justify-content: center;
+		flex-wrap: wrap;
+	}
 }

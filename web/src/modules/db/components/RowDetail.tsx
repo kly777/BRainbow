@@ -40,14 +40,14 @@ const formatValue = (value: unknown): string => {
 	return JSON.stringify(value, null, 2);
 };
 
-const FieldPreview: Component<{ summary: () => string }> = (props) => (
-	<span class={styles.rowDetailPreview}>{props.summary()}</span>
-);
-
-const FieldName: Component<{ name: string; colType: string }> = (props) => (
-	<dt class={styles.rowDetailFieldName}>
-		<span>{props.name}</span>
-		<span class={styles.rowDetailFieldType}>{props.colType}</span>
+const FieldName: Component<{ name: string; colType: string; isPk: boolean }> = (
+	props,
+) => (
+	<dt class={styles.fieldName}>
+		<span class={props.isPk ? styles.fieldNamePk : undefined}>
+			{props.name}
+		</span>
+		<span class={styles.fieldType}>{props.colType}</span>
 	</dt>
 );
 
@@ -58,37 +58,47 @@ const FieldValue: Component<{
 	onCopy: (key: string, text: string) => void;
 	onJump: RowDetailProps["onJump"];
 	previewFor: RowDetailProps["previewFor"];
-}> = (props) => (
-	<dd class={styles.rowDetailFieldValue}>
-		<pre class={styles.rowDetailPre}>{props.text()}</pre>
-		<button
-			type="button"
-			class={styles.rowDetailCopySmall}
-			title="复制该字段"
-			onClick={() => void props.onCopy(props.col().name, props.text())}
-		>
-			{props.copiedKey() === props.col().name ? "已复制" : "复制"}
-		</button>
-		<Show when={props.col().ref_table}>
-			<button
-				type="button"
-				class={styles.rowDetailJump}
-				onClick={() =>
-					props.onJump(
-						props.col().ref_table ?? "",
-						props.col().ref_column ?? "id",
-						props.text(),
-					)
-				}
-			>
-				跳转
-			</button>
-			<Show when={props.previewFor(props.col().ref_table ?? "", props.text())}>
-				{(summary) => <FieldPreview summary={summary} />}
+}> = (props) => {
+	const preview = () =>
+		props.col().ref_table
+			? props.previewFor(props.col().ref_table ?? "", props.text())
+			: "";
+	return (
+		<dd class={styles.fieldValue}>
+			<pre class={styles.fieldPre}>{props.text()}</pre>
+			<div class={styles.fieldActions}>
+				<button
+					type="button"
+					class={styles.fieldBtn}
+					title="复制该字段"
+					onClick={() => void props.onCopy(props.col().name, props.text())}
+				>
+					{props.copiedKey() === props.col().name ? "已复制" : "复制"}
+				</button>
+				<Show when={props.col().ref_table}>
+					<button
+						type="button"
+						class={styles.fieldBtn}
+						onClick={() =>
+							props.onJump(
+								props.col().ref_table ?? "",
+								props.col().ref_column ?? "id",
+								props.text(),
+							)
+						}
+					>
+						跳转 →
+					</button>
+				</Show>
+			</div>
+			<Show when={preview()}>
+				<span class={styles.fieldPreview} title={preview()}>
+					{preview()}
+				</span>
 			</Show>
-		</Show>
-	</dd>
-);
+		</dd>
+	);
+};
 
 const FieldRow: Component<{
 	col: () => ColumnLike;
@@ -100,8 +110,12 @@ const FieldRow: Component<{
 }> = (props) => {
 	const text = () => formatValue(props.value());
 	return (
-		<div class={styles.rowDetailField}>
-			<FieldName name={props.col().name} colType={props.col().col_type} />
+		<div class={styles.field}>
+			<FieldName
+				name={props.col().name}
+				colType={props.col().col_type}
+				isPk={false}
+			/>
 			<FieldValue
 				col={props.col}
 				text={text}
@@ -126,19 +140,21 @@ const RowDetailBody: Component<{
 	table: string;
 	rowKey: string;
 }> = (props) => (
-	<div class={styles.rowDetailBody}>
-		<button
-			type="button"
-			class={styles.rowDetailCopy}
-			onClick={() => void props.onCopyRowJson()}
-		>
-			{props.copiedKey() === "__row" ? "已复制 ✓" : "复制整行 JSON"}
-		</button>
-		{props.copyError() && (
-			<div class={styles.rowDetailError}>{props.copyError()}</div>
-		)}
+	<div class={styles.body}>
+		<div class={styles.bodyToolbar}>
+			<button
+				type="button"
+				class={styles.copyBtn}
+				onClick={() => void props.onCopyRowJson()}
+			>
+				{props.copiedKey() === "__row" ? "已复制 ✓" : "复制 JSON"}
+			</button>
+			<Show when={props.copyError()}>
+				<span class={styles.copyError}>{props.copyError()}</span>
+			</Show>
+		</div>
 
-		<dl class={styles.rowDetailFields}>
+		<dl class={styles.fields}>
 			<Index each={props.header()}>
 				{(col, i) => {
 					const value = () => props.row()?.[i];
@@ -156,8 +172,14 @@ const RowDetailBody: Component<{
 			</Index>
 		</dl>
 
-		<h5 class={styles.rowDetailBackrefTitle}>反向引用</h5>
-		<BackRefs table={props.table} rowKey={props.rowKey} onJump={props.onJump} />
+		<div class={styles.backrefSection}>
+			<h5 class={styles.backrefTitle}>反向引用</h5>
+			<BackRefs
+				table={props.table}
+				rowKey={props.rowKey}
+				onJump={props.onJump}
+			/>
+		</div>
 	</div>
 );
 
@@ -232,7 +254,6 @@ const RowDetail: Component<RowDetailProps> = (props) => {
 
 	// 打开时自动聚焦面板、注册全局键盘事件
 	createEffect(() => {
-		// 触发依赖收集
 		props.table;
 		props.rowKey;
 		panelRef?.focus();
@@ -242,28 +263,29 @@ const RowDetail: Component<RowDetailProps> = (props) => {
 	});
 
 	return (
-		<div class={styles.rowDetailOverlay}>
+		<div class={styles.overlay}>
 			<button
 				type="button"
-				class={styles.rowDetailBackdrop}
+				class={styles.backdrop}
 				aria-label="关闭行详情"
 				onClick={props.onClose}
 			/>
 			<aside
 				ref={panelRef}
-				class={styles.rowDetailPanel}
+				class={styles.panel}
 				role="dialog"
 				aria-modal="true"
 				aria-label={`${props.table} 行详情`}
 				tabindex="-1"
 			>
-				<header class={styles.rowDetailHeader}>
-					<h4 class={styles.rowDetailTitle}>
-						{props.table} · #{props.rowKey}
-					</h4>
+				<header class={styles.header}>
+					<div class={styles.headerLeft}>
+						<span class={styles.tableBadge}>{props.table}</span>
+						<span class={styles.rowId}>#{props.rowKey}</span>
+					</div>
 					<button
 						type="button"
-						class={styles.rowDetailClose}
+						class={styles.closeBtn}
 						title="关闭 (Esc)"
 						onClick={props.onClose}
 					>
@@ -272,12 +294,10 @@ const RowDetail: Component<RowDetailProps> = (props) => {
 				</header>
 
 				<Show when={detail.loading}>
-					<div class={styles.rowDetailLoading}>加载行详情…</div>
+					<div class={styles.loading}>加载行详情…</div>
 				</Show>
 				<Show when={detail.error}>
-					<div class={styles.rowDetailError}>
-						{getErrorMessage(detail.error)}
-					</div>
+					<div class={styles.error}>{getErrorMessage(detail.error)}</div>
 				</Show>
 				<Show when={detail() && row()}>
 					<RowDetailBody

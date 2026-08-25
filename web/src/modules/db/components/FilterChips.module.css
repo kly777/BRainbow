@@ -1,9 +1,8 @@
-/* FilterChips — 顶部过滤状态 chips（增强版） */
+/* FilterChips — 顶部过滤状态 chips */
 
 .filter-bar {
 	display: flex;
 	align-items: center;
-	justify-content: flex-end;
 	gap: var(--space-sm);
 	max-width: 24rem;
 	flex-shrink: 1;
@@ -12,7 +11,7 @@
 	background: var(--t-color-accent-soft);
 	border: 1px solid var(--t-color-accent);
 	border-radius: var(--radius-md);
-	font-size: var(--text-sm);
+	font-size: var(--text-xs);
 	color: var(--t-color-accent-strong);
 	white-space: nowrap;
 }
@@ -36,7 +35,7 @@
 	background: var(--t-color-surface);
 	color: var(--t-color-accent-strong);
 	cursor: pointer;
-	font-size: var(--text-xs);
+	font-size: var(--text-2xs);
 	font-family: inherit;
 	white-space: nowrap;
 	transition:
@@ -51,7 +50,10 @@
 
 .filter-code {
 	font-family: var(--t-font-mono);
-	font-size: var(--text-xs);
+	font-size: var(--text-2xs);
+	padding: var(--space-2xs) var(--space-xs);
+	background: var(--t-color-surface);
+	border-radius: var(--radius-sm);
 }
 
 .filter-clear {
@@ -61,7 +63,8 @@
 	border-radius: var(--radius-full);
 	padding: var(--space-2xs) var(--space-sm);
 	cursor: pointer;
-	font-size: var(--text-xs);
+	font-size: var(--text-2xs);
+	font-family: inherit;
 	white-space: nowrap;
 	transition:
 		background var(--t-transition-fast),

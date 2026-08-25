@@ -38,25 +38,30 @@ interface SortHeaderCellProps {
 	onSort: (col: string) => void;
 }
 
-const SortHeaderCell: Component<SortHeaderCellProps> = (props) => (
-	<th scope="col">
-		<button
-			type="button"
-			class={styles.sortBtn}
-			onClick={() => props.onSort(props.col.name)}
-			title="点击排序"
-		>
-			<span class={styles.colName}>{props.col.name}</span>
-			<span class={styles.colType}>{props.col.col_type}</span>
-			<Show when={props.sortCol === props.col.name}>
-				<span class={styles.sortMark}>{props.sortDesc ? "↓" : "↑"}</span>
+const SortHeaderCell: Component<SortHeaderCellProps> = (props) => {
+	const isActive = () => props.sortCol === props.col.name;
+	return (
+		<th scope="col" class={isActive() ? styles.thActive : undefined}>
+			<button
+				type="button"
+				class={styles.sortBtn}
+				onClick={() => props.onSort(props.col.name)}
+				title={`排序 ${props.col.name}`}
+			>
+				<span class={styles.colName}>{props.col.name}</span>
+				<span class={styles.colType}>{props.col.col_type}</span>
+				<Show when={isActive()}>
+					<span class={styles.sortMark}>{props.sortDesc ? "↓" : "↑"}</span>
+				</Show>
+			</button>
+			<Show when={props.col.ref_table}>
+				<div class={styles.refHint} title={`外键 → ${props.col.ref_table}`}>
+					→ {props.col.ref_table}
+				</div>
 			</Show>
-		</button>
-		<Show when={props.col.ref_table}>
-			<div class={styles.refHint}>→ {props.col.ref_table}</div>
-		</Show>
-	</th>
-);
+		</th>
+	);
+};
 
 interface FilterHeaderCellProps {
 	col: ColumnInfo;
@@ -109,6 +114,7 @@ interface TableHeadProps {
 	onSort: (col: string) => void;
 	filters: readonly ColumnFilter[];
 	onSetFilter: (col: string, op: FilterOpValue, value: string) => void;
+	showFilters: boolean;
 }
 
 const TableHead: Component<TableHeadProps> = (props) => (
@@ -126,18 +132,20 @@ const TableHead: Component<TableHeadProps> = (props) => (
 				)}
 			</Index>
 		</tr>
-		<tr class={styles.filterRow}>
-			<th scope="col" />
-			<Index each={props.columns}>
-				{(c) => (
-					<FilterHeaderCell
-						col={c()}
-						filters={props.filters}
-						onSetFilter={props.onSetFilter}
-					/>
-				)}
-			</Index>
-		</tr>
+		<Show when={props.showFilters}>
+			<tr class={styles.filterRow}>
+				<th scope="col" />
+				<Index each={props.columns}>
+					{(c) => (
+						<FilterHeaderCell
+							col={c()}
+							filters={props.filters}
+							onSetFilter={props.onSetFilter}
+						/>
+					)}
+				</Index>
+			</tr>
+		</Show>
 	</thead>
 );
 
@@ -277,6 +285,7 @@ const TableRows: Component<TableRowsProps> = (props) => (
 const DbTable: Component<DbTableProps> = (props) => {
 	const [expandedRow, setExpandedRow] = createSignal<number | null>(null);
 	const [detailKey, setDetailKey] = createSignal<string | null>(null);
+	const [showFilters, setShowFilters] = createSignal(false);
 	// 数据刷新或换表后展开/抽屉状态失效，自动收起
 	createEffect(() => {
 		props.rows;
@@ -295,9 +304,23 @@ const DbTable: Component<DbTableProps> = (props) => {
 				class={styles.tableWrap}
 				aria-busy={props.loading ? "true" : "false"}
 			>
-				<Show when={props.loading}>
-					<div class={styles.tableLoading}>加载中…</div>
-				</Show>
+				<div class={styles.tableToolbar}>
+					<button
+						type="button"
+						class={styles.filterToggle}
+						classList={{ [styles.filterToggleActive]: showFilters() }}
+						onClick={() => setShowFilters((v) => !v)}
+						title={showFilters() ? "隐藏筛选" : "显示筛选"}
+					>
+						筛选
+						<Show when={props.filters.length > 0}>
+							<span class={styles.filterBadge}>{props.filters.length}</span>
+						</Show>
+					</button>
+					<Show when={props.loading}>
+						<span class={styles.tableLoading}>加载中…</span>
+					</Show>
+				</div>
 				<table class={styles.table}>
 					<TableHead
 						columns={props.columns}
@@ -306,6 +329,7 @@ const DbTable: Component<DbTableProps> = (props) => {
 						onSort={props.onSort}
 						filters={props.filters}
 						onSetFilter={props.onSetFilter}
+						showFilters={showFilters()}
 					/>
 					<tbody>
 						{props.rows.length === 0 && (

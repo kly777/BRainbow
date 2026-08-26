@@ -1,7 +1,13 @@
 // ── 卡片列表核心业务逻辑 ──
 
 import { getErrorMessage } from "@lib/api";
-import { notifyError, notifySuccess, showConfirm, tryAsync } from "@lib/utils";
+import {
+	notifyError,
+	notifySuccess,
+	parseUtc,
+	showConfirm,
+	tryAsync,
+} from "@lib/utils";
 import type { Card, CreateCardRequest } from "@modules/card";
 import {
 	createCardE,
@@ -10,7 +16,7 @@ import {
 	searchCardsE,
 } from "@modules/card";
 import { useSearchParams } from "@solidjs/router";
-import { createSignal } from "solid-js";
+import { createMemo, createSignal } from "solid-js";
 
 export function useCardsList() {
 	const [cards, setCards] = createSignal<Card[]>([]);
@@ -23,6 +29,36 @@ export function useCardsList() {
 	const [isCreating, setIsCreating] = createSignal(false);
 	const [modalError, setModalError] = createSignal("");
 	const [deletingCardId, setDeletingCardId] = createSignal<number | null>(null);
+
+	// 排序状态：过滤栏与列表共用此单一来源
+	const [sortBy, setSortBy] = createSignal<"created" | "updated">("updated");
+	const [sortOrder, setSortOrder] = createSignal<"asc" | "desc">("desc");
+	const handleSortChange = (
+		by: "created" | "updated",
+		order: "asc" | "desc",
+	) => {
+		setSortBy(by);
+		setSortOrder(order);
+	};
+
+	/** 排序后的卡片：视图层直接消费 */
+	const sortedCards = createMemo(() => {
+		const list = [...cards()];
+		const sb = sortBy();
+		const so = sortOrder();
+		list.sort((a, b) => {
+			const av =
+				sb === "created"
+					? parseUtc(a.created_at).getTime()
+					: parseUtc(a.updated_at).getTime();
+			const bv =
+				sb === "created"
+					? parseUtc(b.created_at).getTime()
+					: parseUtc(b.updated_at).getTime();
+			return so === "asc" ? av - bv : bv - av;
+		});
+		return list;
+	});
 
 	const [searchParams, setSearchParams] = useSearchParams();
 	// 本地搜索信号：驱动搜索请求，不触发路由重渲染
@@ -158,6 +194,10 @@ export function useCardsList() {
 	return {
 		cards,
 		setCards,
+		sortedCards,
+		sortBy,
+		sortOrder,
+		handleSortChange,
 		page,
 		setPage,
 		totalPages,

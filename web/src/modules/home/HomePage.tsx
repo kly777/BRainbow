@@ -5,7 +5,7 @@ import { parseUtc, showConfirm, tryOrNotify } from "@lib/utils";
 import type { CardData } from "@modules/card";
 import {
 	deleteCardE as apiDeleteCard,
-	CardsGrid,
+	CardMasonry,
 	getCardsE,
 } from "@modules/card";
 import { TaskList, TaskProvider, useTasks } from "@modules/task";
@@ -210,9 +210,8 @@ function CardOverview() {
 				emptyMessage="暂无知识卡片"
 			>
 				{(data) => (
-					<CardsGrid
-						cards={data}
-						showFilters={false}
+					<CardMasonry
+						cards={[...data]}
 						onCardClick={(id) => navigate(fillPath(PATHS.cardDetail, id))}
 						onCardEdit={(id) => navigate(fillPath(PATHS.cardEdit, id))}
 						onCardDelete={handleDelete}

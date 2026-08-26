@@ -1,5 +1,7 @@
 import { fillPath, PATHS } from "@config/paths";
 // ── 卡片列表页面（薄壳视图层）──
+// 结构：PageHead / CardFilter(受控) / AsyncView→CardMasonry / 创建 Modal
+// 过滤栏在 AsyncView 外：数据刷新重建网格时搜索框不失焦
 
 import {
 	AsyncView,
@@ -9,11 +11,12 @@ import {
 	PageHead,
 } from "@components/ui";
 import { tryAsync } from "@lib/utils";
-import { CardsGrid, getCardsE, searchCardsE } from "@modules/card";
+import { getCardsE, searchCardsE } from "@modules/card";
 import { useNavigate } from "@solidjs/router";
-import { createSignal, onMount, Show } from "solid-js";
+import { onMount, Show } from "solid-js";
 import styles from "./CardsList.module.css";
 import CardFilter from "./components/CardFilter.tsx";
+import CardMasonry from "./components/CardMasonry.tsx";
 
 import { useCardsList } from "./hooks/useCardsList.ts";
 
@@ -29,8 +32,6 @@ const CardPreview = (props: { content: string }) => (
 export default function CardsListPage() {
 	const navigate = useNavigate();
 	const m = useCardsList();
-	const [sortBy, setSortBy] = createSignal<"created" | "updated">("updated");
-	const [sortOrder, setSortOrder] = createSignal<"asc" | "desc">("desc");
 
 	const loadInitial = async () => {
 		m.setLoading(true);
@@ -77,16 +78,12 @@ export default function CardsListPage() {
 				}
 			/>
 
-			{/* 过滤栏在 AsyncView 外：数据刷新重建网格时搜索框不失焦 */}
 			<CardFilter
+				query={m.searchQuery()}
 				onSearch={m.handleSearch}
-				initialQuery={m.searchQuery()}
-				sortBy={sortBy()}
-				sortOrder={sortOrder()}
-				onSortChange={(by, order) => {
-					setSortBy(by);
-					setSortOrder(order);
-				}}
+				sortBy={m.sortBy()}
+				sortOrder={m.sortOrder()}
+				onSortChange={m.handleSortChange}
 			/>
 
 			<AsyncView
@@ -100,12 +97,9 @@ export default function CardsListPage() {
 						: "还没有卡片，点击上方按钮创建一个吧！"
 				}
 			>
-				{(cards) => (
-					<CardsGrid
-						cards={[...cards]}
-						showFilters={false}
-						sortBy={sortBy()}
-						sortOrder={sortOrder()}
+				{() => (
+					<CardMasonry
+						cards={[...m.sortedCards()]}
 						onLoadMore={m.handleLoadMore}
 						loadingMore={m.loadingMore()}
 						onCardClick={(id) => navigate(fillPath(PATHS.cardDetail, id))}

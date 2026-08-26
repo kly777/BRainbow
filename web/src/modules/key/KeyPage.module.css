@@ -13,8 +13,8 @@
 	font-family: var(--t-font-mono);
 	font-size: var(--text-xs);
 	background: var(--t-color-bg);
-	padding: 1px 0.3125rem;
-	border-radius: 0.25rem;
+	padding: var(--space-2xs) var(--space-xs);
+	border-radius: var(--radius-xs);
 }
 
 .card {
@@ -199,7 +199,7 @@
 .row-role {
 	font-size: var(--text-xs);
 	padding: var(--space-2xs) var(--space-sm);
-	border-radius: 999px;
+	border-radius: var(--radius-full);
 	background: var(--t-color-badge-new-bg);
 	color: var(--t-color-badge-new-text);
 }

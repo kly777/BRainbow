@@ -31,7 +31,7 @@
 	gap: var(--space-xs);
 	font-size: var(--text-xs);
 	padding: var(--space-2xs) var(--space-sm);
-	border-radius: 999px;
+	border-radius: var(--radius-full);
 	background: var(--t-color-accent-soft);
 	color: var(--t-color-accent-strong);
 	transition: filter var(--t-transition-fast);
@@ -47,7 +47,7 @@
 	gap: var(--space-xs);
 	font-size: var(--text-xs);
 	padding: var(--space-2xs) var(--space-sm);
-	border-radius: 999px;
+	border-radius: var(--radius-full);
 	background: var(--t-color-badge-suspended-bg);
 	color: var(--t-color-badge-suspended-text);
 	transition: filter var(--t-transition-fast);

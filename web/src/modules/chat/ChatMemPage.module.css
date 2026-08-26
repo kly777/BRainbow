@@ -545,7 +545,7 @@
 	margin-left: 2px;
 	vertical-align: text-bottom;
 	background: var(--t-color-accent);
-	border-radius: 1px;
+	border-radius: var(--radius-2xs);
 	animation: stream-blink 0.8s step-end infinite;
 }
 

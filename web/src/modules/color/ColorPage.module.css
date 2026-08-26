@@ -42,7 +42,7 @@
 
 .card-active {
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 2px var(--t-color-accent-soft);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .swatch-row {

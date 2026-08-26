@@ -36,7 +36,7 @@
 	display: inline-flex;
 	align-items: center;
 	padding: var(--space-2xs) var(--space-sm);
-	border-radius: 999px;
+	border-radius: var(--radius-full);
 	font-size: var(--text-xs);
 	line-height: 1.125rem;
 	white-space: nowrap;
@@ -54,7 +54,7 @@
 	display: inline-flex;
 	align-items: center;
 	padding: var(--space-2xs) var(--space-sm);
-	border-radius: 999px;
+	border-radius: var(--radius-full);
 	font-size: var(--text-xs);
 	line-height: 1.125rem;
 	white-space: nowrap;

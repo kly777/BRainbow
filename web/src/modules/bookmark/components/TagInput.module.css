@@ -10,7 +10,7 @@
 .tag {
 	display: inline-flex;
 	align-items: center;
-	border-radius: 999px;
+	border-radius: var(--radius-full);
 	line-height: 1.125rem;
 	white-space: nowrap;
 	background: var(--t-color-accent-soft);

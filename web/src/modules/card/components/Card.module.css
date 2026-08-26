@@ -91,10 +91,10 @@
 	color: var(--t-color-ink-muted);
 	font-size: var(--text-xs);
 	padding: var(--space-2xs) var(--space-sm);
-	border-radius: 999px;
+	border-radius: var(--radius-full);
 	border: none;
 	cursor: pointer;
-	transition: filter var(--t-transition-fast) ease;
+	transition: filter var(--t-transition-fast);
 }
 
 .card-meta {
@@ -156,7 +156,7 @@
 	box-shadow: var(--shadow-md);
 	color: var(--t-color-ink-muted);
 	cursor: pointer;
-	transition: all var(--t-transition-fast) ease;
+	transition: all var(--t-transition-fast);
 }
 
 .card-fab svg {
@@ -197,7 +197,9 @@
 	opacity: 0.5;
 	pointer-events: none;
 	transform: scale(0.98);
-	transition: all var(--t-transition-slow);
+	transition:
+		opacity var(--t-transition-slow),
+		transform var(--t-transition-slow);
 }
 
 .card:hover {

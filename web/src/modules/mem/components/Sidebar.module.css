@@ -5,7 +5,7 @@
 	overflow: hidden;
 	border-right: 1px solid var(--t-color-border);
 	background: var(--t-color-surface);
-	transition: width var(--t-transition-normal) ease;
+	transition: width var(--t-transition-normal);
 	display: flex;
 	flex-direction: column;
 	flex-shrink: 0;

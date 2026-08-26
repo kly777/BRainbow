@@ -73,7 +73,7 @@
 
 .sidebar-search:focus {
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 2px var(--t-color-accent-ring);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .table-list {
@@ -293,7 +293,7 @@
 	height: 1.25rem;
 	padding: 0 var(--space-2xs);
 	border: 1px solid var(--t-color-border);
-	border-radius: 3px;
+	border-radius: var(--radius-xs);
 	background: var(--t-color-surface);
 	font-size: var(--text-2xs);
 	font-family: inherit;

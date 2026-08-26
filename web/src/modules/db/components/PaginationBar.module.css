@@ -77,7 +77,7 @@
 
 .page-size-select:focus {
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 2px var(--t-color-accent-ring);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .page-jump {
@@ -117,7 +117,7 @@
 
 .page-jump-input:focus {
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 2px var(--t-color-accent-ring);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .page-jump-btn {

@@ -26,7 +26,7 @@
 	overflow-y: auto;
 	background: var(--t-color-bg);
 	border-left: 1px solid var(--t-color-border);
-	box-shadow: var(--t-shadow-lg, 0 0 2rem oklch(0% 0 0deg / 10%));
+	box-shadow: var(--shadow-lg);
 }
 
 .header {

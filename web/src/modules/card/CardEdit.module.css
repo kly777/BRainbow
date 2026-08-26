@@ -212,7 +212,7 @@
 }
 
 .shortcut kbd {
-	padding: 0 0.3125rem;
+	padding: 0 var(--space-xs);
 	border: 1px solid var(--t-color-border-strong);
 	border-radius: var(--radius-xs);
 	background: var(--t-color-surface);

@@ -25,7 +25,9 @@
 	font-size: var(--text-sm);
 	font-weight: 500;
 	color: var(--t-color-ink-muted);
-	transition: all var(--t-transition-fast);
+	transition:
+		color var(--t-transition-fast),
+		transform var(--t-transition-fast);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -146,7 +148,10 @@
 	border: 1px solid var(--t-color-success-subtle);
 	border-radius: var(--radius-md);
 	cursor: pointer;
-	transition: all var(--t-transition-fast);
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 	white-space: nowrap;
 }
 
@@ -376,7 +381,10 @@
 	cursor: pointer;
 	font-size: var(--text-sm);
 	font-weight: 500;
-	transition: all var(--t-transition-fast);
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 }
 
 .cancel-btn:hover {

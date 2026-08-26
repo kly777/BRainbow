@@ -152,7 +152,7 @@
 }
 
 .sug-scroll::-webkit-scrollbar-thumb {
-	border-radius: 999px;
+	border-radius: var(--radius-full);
 	border: 2px solid transparent;
 	background-clip: padding-box;
 	background-color: var(--t-color-border-strong);
@@ -181,9 +181,9 @@
 .sug-footer kbd,
 .search-hint kbd {
 	display: inline-block;
-	padding: 1px var(--space-sm);
+	padding: var(--space-2xs) var(--space-sm);
 	border: 1px solid var(--t-color-border);
-	border-radius: 0.25rem;
+	border-radius: var(--radius-xs);
 	background: var(--t-color-bg);
 	font-family: var(--t-font-mono);
 	font-size: var(--text-xs);

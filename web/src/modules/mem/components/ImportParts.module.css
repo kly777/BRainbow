@@ -199,9 +199,9 @@
 .preview-tag {
 	display: inline-block;
 	font-size: var(--text-xs);
-	padding: 1px var(--space-sm);
+	padding: var(--space-2xs) var(--space-sm);
 	margin-right: var(--space-xs);
-	border-radius: 999px;
+	border-radius: var(--radius-full);
 	background: var(--t-color-badge-new-bg);
 	color: var(--t-color-badge-new-text);
 }

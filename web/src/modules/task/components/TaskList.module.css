@@ -59,7 +59,7 @@
 	flex-direction: column;
 	padding: var(--space-lg) 0;
 	border-bottom: 1px solid var(--t-color-surface-raised);
-	transition: background var(--t-transition-fast) ease;
+	transition: background var(--t-transition-fast);
 }
 
 .task-row {
@@ -179,7 +179,10 @@
 	cursor: pointer;
 	font-size: var(--text-base);
 	font-weight: 500;
-	transition: all var(--t-transition-fast);
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 	line-height: var(--leading-tight);
 }
 
@@ -227,7 +230,10 @@
 	cursor: pointer;
 	font-size: var(--text-sm);
 	white-space: nowrap;
-	transition: all var(--t-transition-fast);
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 }
 
 .child-list {

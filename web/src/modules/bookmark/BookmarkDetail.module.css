@@ -101,7 +101,7 @@
 .textarea:focus {
 	outline: none;
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 var(--space-2xs) var(--t-color-accent-soft);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .form-error {

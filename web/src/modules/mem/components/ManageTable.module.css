@@ -245,7 +245,7 @@
 /* 标签用中性底色，避免与状态徽章的彩色语义冲突 */
 .cell-tag {
 	font-size: var(--text-2xs);
-	padding: 1px var(--space-sm);
+	padding: var(--space-2xs) var(--space-sm);
 	border-radius: var(--radius-full);
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink-muted);

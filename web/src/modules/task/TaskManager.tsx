@@ -7,7 +7,7 @@ import TaskDag from "./components/TaskDag.tsx";
 import TaskKanban from "./components/TaskKanban.tsx";
 import styles from "./TaskManager.module.css";
 
-function Toolbar(props: {
+function TaskToolbar(props: {
 	viewMode: "list" | "kanban";
 	onViewChange: (v: "list" | "kanban") => void;
 	searchQuery: string;
@@ -137,7 +137,7 @@ export default function TaskManager() {
 		<TaskProvider>
 			<div class={styles.taskManager}>
 				<PageHead title="任务" desc="列表 · 看板 · 日历 · 依赖图" />
-				<Toolbar
+				<TaskToolbar
 					viewMode={viewMode()}
 					onViewChange={setViewMode}
 					searchQuery={searchQuery()}

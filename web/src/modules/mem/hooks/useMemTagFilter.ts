@@ -1,27 +1,21 @@
-// ── 标签过滤逻辑 ──
+// ── 标签过滤逻辑（URL 为唯一权威；输入/下拉交互在 TagPicker 组件内） ──
 
 import {
 	enumParam,
 	listParam,
 	notifyError,
-	trimmedQuery,
 	tryAsync,
 	useUrlParams,
 } from "@lib/utils";
 import type { TagInfo } from "@modules/mem";
-import { listTagsE, searchTagsE } from "@modules/mem";
-import { createMemo, createResource, createSignal } from "solid-js";
+import { listTagsE } from "@modules/mem";
+import { createMemo, createSignal } from "solid-js";
 
 interface UseMemTagFilterResult {
 	allTags: () => TagInfo[];
-	tagQuery: () => string;
-	setTagQuery: (v: string) => void;
-	tagOpen: () => boolean;
-	setTagOpen: (v: boolean) => void;
 	tagFilterIds: () => number[];
 	tagMode: () => "include" | "exclude";
 	tagFilterTags: () => TagInfo[];
-	tagSuggestions: () => TagInfo[];
 	addTagFilter: (tag: TagInfo) => void;
 	removeTagFilter: (tagId: number) => void;
 	toggleTagMode: () => void;
@@ -34,8 +28,6 @@ export function useMemTagFilter(loadDue: () => void): UseMemTagFilterResult {
 		tag_mode: enumParam(["include", "exclude"] as const, "include"),
 	});
 	const [allTags, setAllTags] = createSignal<TagInfo[]>([]);
-	const [tagQuery, setTagQuery] = createSignal("");
-	const [tagOpen, setTagOpen] = createSignal(false);
 
 	// 首次加载所有标签
 	(async () => {
@@ -52,20 +44,10 @@ export function useMemTagFilter(loadDue: () => void): UseMemTagFilterResult {
 		allTags().filter((t) => tagFilterIds().includes(t.id)),
 	);
 
-	const [tagSearchResults] = createResource(trimmedQuery(tagQuery), (q) =>
-		searchTagsE(q),
-	);
-
-	const tagSuggestions = () =>
-		(tagQuery().trim()
-			? (tagSearchResults() ?? []).filter((t) => !tagFilterIds().includes(t.id))
-			: []) as TagInfo[];
-
 	const addTagFilter = (tag: TagInfo) => {
+		if (tagFilterIds().includes(tag.id)) return;
 		const next = [...tagFilterIds(), tag.id];
 		params.set({ tag_ids: next.map(String), tag_mode: tagMode() });
-		setTagQuery("");
-		setTagOpen(false);
 		setTimeout(loadDue, 0);
 	};
 
@@ -87,14 +69,9 @@ export function useMemTagFilter(loadDue: () => void): UseMemTagFilterResult {
 
 	return {
 		allTags,
-		tagQuery,
-		setTagQuery,
-		tagOpen,
-		setTagOpen,
 		tagFilterIds,
 		tagMode,
 		tagFilterTags,
-		tagSuggestions,
 		addTagFilter,
 		removeTagFilter,
 		toggleTagMode,

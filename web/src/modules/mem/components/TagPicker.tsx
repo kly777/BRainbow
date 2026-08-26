@@ -6,13 +6,7 @@
 import { Button } from "@components/ui";
 import { blurClose, trimmedQuery, tryAsync } from "@lib/utils";
 import { createTagE, searchTagsE, type TagInfo } from "@modules/mem";
-import {
-	type Component,
-	createResource,
-	createSignal,
-	For,
-	Show,
-} from "solid-js";
+import { createResource, createSignal, For, Show } from "solid-js";
 import styles from "./TagPicker.module.css";
 
 export interface TagPickerProps {

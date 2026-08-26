@@ -12,3 +12,34 @@
 	margin-bottom: var(--space-md);
 	font-weight: 500;
 }
+
+/* ── 骨架屏加载态 ── */
+.skeleton-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
+	padding: var(--space-lg);
+}
+
+.skeleton-row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-md);
+}
+
+.skeleton-bar {
+	height: 0.875rem;
+	border-radius: var(--radius-sm);
+	flex: 1;
+}
+
+.skeleton-bar-short {
+	width: 40%;
+}
+
+.skeleton-avatar {
+	width: 2rem;
+	height: 2rem;
+	border-radius: var(--radius-full);
+	flex-shrink: 0;
+}

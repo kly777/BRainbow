@@ -52,19 +52,30 @@ function ConfirmDialog(props: {
 	const { options, resolve } = props.item;
 	const variant = options.variant ?? "info";
 
-	// 焦点陷阱 + Escape 关闭
+	// 焦点管理：保存打开前焦点，关闭/卸载时恢复
 	let dialogRef!: HTMLDivElement;
 	let cancelBtnRef!: HTMLButtonElement;
+	let lastFocused: HTMLElement | null = null;
 
 	createEffect(() => {
-		// 自动聚焦取消按钮
+		// 组件挂载时保存当前焦点
+		lastFocused = document.activeElement as HTMLElement | null;
 		cancelBtnRef?.focus();
 	});
+
+	onCleanup(() => {
+		lastFocused?.focus?.();
+	});
+
+	const doResolve = (v: boolean) => {
+		resolve(v);
+		lastFocused?.focus?.();
+	};
 
 	const onKeyDown = (e: KeyboardEvent) => {
 		if (e.key === "Escape") {
 			e.preventDefault();
-			resolve(false);
+			doResolve(false);
 		}
 		// 基础焦点陷阱
 		if (e.key === "Tab") {
@@ -83,14 +94,10 @@ function ConfirmDialog(props: {
 		}
 	};
 
-	onCleanup(() => {
-		// 确保组件卸载时 resolve
-	});
-
 	return (
 		<div
 			class={styles.overlay}
-			onClick={() => resolve(false)}
+			onClick={() => doResolve(false)}
 			onKeyDown={onKeyDown}
 			role="dialog"
 			aria-modal="true"
@@ -123,14 +130,14 @@ function ConfirmDialog(props: {
 						ref={cancelBtnRef}
 						type="button"
 						class={`${styles.btn} ${styles.btnCancel}`}
-						onClick={() => resolve(false)}
+						onClick={() => doResolve(false)}
 					>
 						{options.cancelLabel ?? "取消"}
 					</button>
 					<button
 						type="button"
 						class={`${styles.btn} ${BTN_CLASS[variant]}`}
-						onClick={() => resolve(true)}
+						onClick={() => doResolve(true)}
 					>
 						{options.confirmLabel ?? DEFAULT_CONFIRM[variant]}
 					</button>

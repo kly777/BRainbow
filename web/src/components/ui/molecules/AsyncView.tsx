@@ -12,12 +12,30 @@ interface Props<T> {
 	children: (data: readonly T[]) => JSX.Element;
 }
 
+function SkeletonLoader() {
+	return (
+		<div class={styles.skeletonWrap} aria-hidden="true">
+			{[1, 2, 3].map((i) => (
+				<div class={styles.skeletonRow}>
+					<div class={`skeleton ${styles.skeletonAvatar}`} />
+					<div
+						class={`skeleton ${styles.skeletonBar}`}
+						style={{ width: `${70 - i * 10}%` }}
+					/>
+				</div>
+			))}
+			<div class={styles.skeletonRow}>
+				<div
+					class={`skeleton ${styles.skeletonBar} ${styles.skeletonBarShort}`}
+				/>
+			</div>
+		</div>
+	);
+}
+
 export function AsyncView<T>(props: Props<T>) {
 	return (
-		<Show
-			when={!props.loading}
-			fallback={<div class={styles.state}>加载中…</div>}
-		>
+		<Show when={!props.loading} fallback={<SkeletonLoader />}>
 			<Show
 				when={!props.error}
 				fallback={

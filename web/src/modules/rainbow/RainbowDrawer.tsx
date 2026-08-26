@@ -1,6 +1,7 @@
 import type { Angle, Color } from "@lib/utils";
 import { createMemo } from "solid-js";
 import { For } from "solid-js/web";
+import { rainbowGeometry } from "./lib/geometry.ts";
 
 export type ShapeRender =
 	| "auto"
@@ -20,18 +21,8 @@ interface RainbowDrawerProps {
 function RainbowDrawer(props: RainbowDrawerProps) {
 	const size = () => props.squareSize ?? 200;
 	const eleSize = () => props.eleSize ?? size();
-	const height_sum = createMemo(
-		() =>
-			size() * (Math.sin(props.angle.radian) + Math.cos(props.angle.radian)),
-	);
-	const rectHeight = createMemo(() => height_sum() / props.colors.length);
-	const rectWidth = createMemo(
-		() =>
-			size() / Math.cos(props.angle.radian) +
-			2 * rectHeight() * Math.tan(props.angle.radian),
-	);
-	const y_offset = createMemo(
-		() => rectHeight() / Math.cos(props.angle.radian),
+	const geo = createMemo(() =>
+		rainbowGeometry(size(), props.angle.radian, props.colors.length),
 	);
 
 	/** 预计算每条色带旋转+平移后的多边形顶点，消除 runtime transform */
@@ -40,9 +31,9 @@ function RainbowDrawer(props: RainbowDrawerProps) {
 		const cos = Math.cos(deg);
 		const sin = Math.sin(deg);
 		const tan = Math.tan(deg);
-		const rh = rectHeight();
-		const rw = rectWidth();
-		const yo = y_offset();
+		const rh = geo().rectHeight;
+		const rw = geo().rectWidth;
+		const yo = geo().yOffset;
 		const xOff = tan * rh;
 
 		return props.colors.map((_, i) => {

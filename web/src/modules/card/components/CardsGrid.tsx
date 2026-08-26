@@ -10,13 +10,22 @@ export interface CardsGridProps extends Omit<CardMasonryProps, "cards"> {
 	showFilters?: boolean;
 	onSearch?: (query: string) => void;
 	initialSearchQuery?: string;
+	/** 受控排序（外部持有状态时传入，如过滤栏在组件外渲染的场景） */
+	sortBy?: "created" | "updated";
+	sortOrder?: "asc" | "desc";
 	onLoadMore?: () => void;
 	loadingMore?: boolean;
 }
 
 const CardsGrid: Component<CardsGridProps> = (props) => {
-	const [sortBy, setSortBy] = createSignal<"created" | "updated">("updated");
-	const [sortOrder, setSortOrder] = createSignal<"asc" | "desc">("desc");
+	const [innerSortBy, setInnerSortBy] = createSignal<"created" | "updated">(
+		"updated",
+	);
+	const [innerSortOrder, setInnerSortOrder] = createSignal<"asc" | "desc">(
+		"desc",
+	);
+	const sortBy = () => props.sortBy ?? innerSortBy();
+	const sortOrder = () => props.sortOrder ?? innerSortOrder();
 
 	const sortedCards = createMemo(() => {
 		const list = [...props.cards];
@@ -45,8 +54,8 @@ const CardsGrid: Component<CardsGridProps> = (props) => {
 					sortBy={sortBy()}
 					sortOrder={sortOrder()}
 					onSortChange={(by, order) => {
-						setSortBy(by);
-						setSortOrder(order);
+						setInnerSortBy(by);
+						setInnerSortOrder(order);
 					}}
 				/>
 			)}

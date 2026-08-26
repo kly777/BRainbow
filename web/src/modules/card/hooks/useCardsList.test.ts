@@ -184,13 +184,16 @@ describe("分页与加载更多", () => {
 		});
 	});
 
-	it("URL 带 q 时翻页与加载更多走 searchCardsE", () => {
+	it("搜索态下翻页与加载更多走 searchCardsE", () => {
 		return withHook(async (h) => {
-			urlQ = "量子";
+			mockedSearch.mockResolvedValue(paginated([card(6)], 1, 3));
+			await h.handleSearch("量子");
+			expect(mockedSearch).toHaveBeenCalledWith("量子", 1);
+
 			h.setTotalPages(3);
 			mockedSearch.mockResolvedValue(paginated([card(7)], 2, 3));
 			await h.handlePageChange(2);
-			expect(mockedSearch).toHaveBeenCalledWith("量子", 2);
+			expect(mockedSearch).toHaveBeenLastCalledWith("量子", 2);
 			expect(mockedGet).not.toHaveBeenCalled();
 
 			mockedSearch.mockResolvedValue(paginated([card(8)], 3, 3));
@@ -200,13 +203,17 @@ describe("分页与加载更多", () => {
 		});
 	});
 
-	it("isSearchMode 反映 URL 查询词状态", () => {
-		return withHook((h) => {
-			urlQ = "";
-			expect(h.isSearchMode()).toBe(false);
-			urlQ = "关键词";
-			expect(h.isSearchMode()).toBe(true);
+	it("初始 URL q 作深链接种子；清空后退出搜索态并清理 URL", () => {
+		urlQ = "关键词";
+		return withHook(async (h) => {
 			expect(h.searchQuery()).toBe("关键词");
+			expect(h.isSearchMode()).toBe(true);
+
+			mockedGet.mockResolvedValue(paginated([], 1, 0));
+			await h.handleSearch("");
+			expect(h.searchQuery()).toBe("");
+			expect(h.isSearchMode()).toBe(false);
+			expect(mockedGet).toHaveBeenCalledWith(1);
 		});
 	});
 });

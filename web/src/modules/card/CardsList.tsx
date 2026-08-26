@@ -11,8 +11,9 @@ import {
 import { tryAsync } from "@lib/utils";
 import { CardsGrid, getCardsE, searchCardsE } from "@modules/card";
 import { useNavigate } from "@solidjs/router";
-import { onMount, Show } from "solid-js";
+import { createSignal, onMount, Show } from "solid-js";
 import styles from "./CardsList.module.css";
+import CardFilter from "./components/CardFilter.tsx";
 
 import { useCardsList } from "./hooks/useCardsList.ts";
 
@@ -28,6 +29,8 @@ const CardPreview = (props: { content: string }) => (
 export default function CardsListPage() {
 	const navigate = useNavigate();
 	const m = useCardsList();
+	const [sortBy, setSortBy] = createSignal<"created" | "updated">("updated");
+	const [sortOrder, setSortOrder] = createSignal<"asc" | "desc">("desc");
 
 	const loadInitial = async () => {
 		m.setLoading(true);
@@ -74,6 +77,18 @@ export default function CardsListPage() {
 				}
 			/>
 
+			{/* 过滤栏在 AsyncView 外：数据刷新重建网格时搜索框不失焦 */}
+			<CardFilter
+				onSearch={m.handleSearch}
+				initialQuery={m.searchQuery()}
+				sortBy={sortBy()}
+				sortOrder={sortOrder()}
+				onSortChange={(by, order) => {
+					setSortBy(by);
+					setSortOrder(order);
+				}}
+			/>
+
 			<AsyncView
 				data={m.loading() ? undefined : (m.cards() ?? [])}
 				loading={m.loading()}
@@ -88,19 +103,14 @@ export default function CardsListPage() {
 				{(cards) => (
 					<CardsGrid
 						cards={[...cards]}
-						showFilters
-						onSearch={m.handleSearch}
+						showFilters={false}
+						sortBy={sortBy()}
+						sortOrder={sortOrder()}
 						onLoadMore={m.handleLoadMore}
 						loadingMore={m.loadingMore()}
-						initialSearchQuery={m.searchQuery()}
 						onCardClick={(id) => navigate(fillPath(PATHS.cardDetail, id))}
 						onCardEdit={(id) => navigate(fillPath(PATHS.cardEdit, id))}
 						onCardDelete={m.handleCardDelete}
-						emptyMessage={
-							m.isSearchMode()
-								? "没有找到匹配的卡片"
-								: "还没有卡片，点击上方按钮创建一个吧！"
-						}
 						deletingCardId={m.deletingCardId()}
 					/>
 				)}

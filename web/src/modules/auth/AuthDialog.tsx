@@ -30,6 +30,7 @@ export default function AuthStatus() {
 	const [oldPassword, setOldPassword] = createSignal("");
 	const [newPassword, setNewPassword] = createSignal("");
 	const [error, setError] = createSignal("");
+	const [isSubmitting, setIsSubmitting] = createSignal(false);
 
 	const open = (mode: "login" | "register" = "login") => {
 		setDialogMode("login");
@@ -59,14 +60,22 @@ export default function AuthStatus() {
 		globalThis.removeEventListener(AUTH_REQUIRED_EVENT, onAuthRequired),
 	);
 
+	const canSubmitPassword = () =>
+		oldPassword().length > 0 && newPassword().length >= 4 && !isSubmitting();
+
+	const canSubmitAuth = () =>
+		name().trim().length > 0 && password().length >= 4 && !isSubmitting();
+
 	const handleSubmit = async (e: Event) => {
 		e.preventDefault();
 		setError("");
 
 		if (dialogMode() === "password") {
+			setIsSubmitting(true);
 			const result = await tryAsync(() =>
 				changePasswordE(oldPassword(), newPassword()),
 			);
+			setIsSubmitting(false);
 			if (result.ok) {
 				setShowForm(false);
 			} else {
@@ -75,15 +84,15 @@ export default function AuthStatus() {
 			return;
 		}
 
+		setIsSubmitting(true);
 		const result = await tryAsync(() =>
 			(isRegister() ? registerE : loginE)(name(), password()),
 		);
+		setIsSubmitting(false);
 		if (result.ok) {
 			const { id, name: uname, role, token } = result.value;
 			authLogin(id, uname, role, token);
 			setShowForm(false);
-			// 登录后刷新页面
-			window.location.reload();
 		} else {
 			setError(result.error.message);
 		}
@@ -118,6 +127,7 @@ export default function AuthStatus() {
 						value={oldPassword()}
 						onInput={(e) => setOldPassword(e.currentTarget.value)}
 						class={styles.input}
+						disabled={isSubmitting()}
 					/>
 					<input
 						type="password"
@@ -126,10 +136,15 @@ export default function AuthStatus() {
 						value={newPassword()}
 						onInput={(e) => setNewPassword(e.currentTarget.value)}
 						class={styles.input}
+						disabled={isSubmitting()}
 					/>
 					<div class={styles.actions}>
-						<Button type="submit" variant="primary">
-							修改密码
+						<Button
+							type="submit"
+							variant="primary"
+							disabled={!canSubmitPassword()}
+						>
+							{isSubmitting() ? "修改中..." : "修改密码"}
 						</Button>
 					</div>
 				</Show>
@@ -141,6 +156,7 @@ export default function AuthStatus() {
 						value={name()}
 						onInput={(e) => setName(e.currentTarget.value)}
 						class={styles.input}
+						disabled={isSubmitting()}
 					/>
 					<input
 						type="password"
@@ -149,14 +165,22 @@ export default function AuthStatus() {
 						value={password()}
 						onInput={(e) => setPassword(e.currentTarget.value)}
 						class={styles.input}
+						disabled={isSubmitting()}
 					/>
 					<div class={styles.actions}>
-						<Button type="submit" variant="primary">
-							{isRegister() ? "注册" : "登录"}
+						<Button type="submit" variant="primary" disabled={!canSubmitAuth()}>
+							{isSubmitting()
+								? isRegister()
+									? "注册中..."
+									: "登录中..."
+								: isRegister()
+									? "注册"
+									: "登录"}
 						</Button>
 						<Button
 							variant="ghost"
 							onClick={() => setIsRegister(!isRegister())}
+							disabled={isSubmitting()}
 						>
 							{isRegister() ? "已有账号？登录" : "没有账号？注册"}
 						</Button>

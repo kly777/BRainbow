@@ -1,6 +1,6 @@
 import { Icon, Tooltip } from "@components/ui";
-import { fmtFull, fmtLocal } from "@lib/utils";
-import type { Task, TimeWindow } from "@modules/task";
+import { fmtFull } from "@lib/utils";
+import type { Task } from "@modules/task";
 import { type Component, createSignal, For, Show } from "solid-js";
 import styles from "./TaskList.module.css";
 
@@ -18,8 +18,6 @@ interface TaskItemProps {
 	onEdit: () => void;
 	children: Task[];
 	onAddSubTask?: (parentId: number, title: string) => Promise<void>;
-	feasibleWindows?: TimeWindow[];
-	plannedWindows?: TimeWindow[];
 }
 
 const TaskTitle: Component<{ title: string; isSubTask: boolean }> = (props) => (
@@ -34,24 +32,6 @@ const TaskTitle: Component<{ title: string; isSubTask: boolean }> = (props) => (
 const DateBadge: Component<{ createdAt?: string }> = (props) => (
 	<Show when={props.createdAt}>
 		<span class={styles.dateBadge}>📅 {fmtFull(props.createdAt || "")}</span>
-	</Show>
-);
-
-const TimeWindowChips: Component<{
-	windows?: TimeWindow[];
-	title: string;
-	emoji: string;
-}> = (props) => (
-	<Show when={props.windows && props.windows.length > 0}>
-		<div class={styles.timeWindowChips}>
-			<For each={props.windows}>
-				{(tw) => (
-					<span class={styles.timeWindowChip} title={props.title}>
-						{props.emoji} {fmtLocal(tw.start_time)}
-					</span>
-				)}
-			</For>
-		</div>
 	</Show>
 );
 
@@ -73,16 +53,6 @@ function TaskItem(props: TaskItemProps) {
 					<div class={styles.taskMeta}>
 						<DateBadge createdAt={props.task.created_at} />
 					</div>
-					<TimeWindowChips
-						windows={props.feasibleWindows}
-						title="可进行"
-						emoji="🟢"
-					/>
-					<TimeWindowChips
-						windows={props.plannedWindows}
-						title="计划"
-						emoji="🔵"
-					/>
 				</div>
 				<div class={styles.taskActions}>
 					<select
@@ -176,8 +146,6 @@ function TaskItem(props: TaskItemProps) {
 								onEdit={props.onEdit}
 								children={[]}
 								onAddSubTask={props.onAddSubTask}
-								feasibleWindows={[]}
-								plannedWindows={[]}
 							/>
 						)}
 					</For>

@@ -6,7 +6,7 @@ import {
 	post,
 	request,
 	withInvalidate,
-} from "@lib/api";
+} from "@shared/api";
 import type { Card, CreateCardRequest, UpdateCardRequest } from "./model.ts";
 
 // ==================== Card API Functions ====================

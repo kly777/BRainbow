@@ -13,7 +13,7 @@ import {
 	numParam,
 	strParam,
 	useUrlParams,
-} from "@lib/utils";
+} from "@shared/utils";
 import type { TagMode } from "../lib/mem-manage-utils.ts";
 import {
 	type SortDir,

@@ -1,4 +1,4 @@
-import { Color } from "@lib/utils";
+import { Color } from "@shared/utils";
 import {
 	type Accessor,
 	createEffect,

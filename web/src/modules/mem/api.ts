@@ -1,6 +1,6 @@
 // ── 记忆模块 API 入口：子文件实现 + 统一 re-export ──
 
-import { put, request } from "@lib/api";
+import { put, request } from "@shared/api";
 
 // ── AI 助记 ──
 

@@ -2,8 +2,8 @@
 
 import { Badge } from "@components/ui";
 import { PATHS } from "@config/paths";
-import { fmtLocal, fmtRelative, parseUtc } from "@lib/utils";
 import type { MemItem, TagInfo } from "@modules/mem";
+import { fmtLocal, fmtRelative, parseUtc } from "@shared/utils";
 import { A } from "@solidjs/router";
 import { type Component, For, Show } from "solid-js";
 import { memStateMeta } from "../lib/mem-manage-utils.ts";

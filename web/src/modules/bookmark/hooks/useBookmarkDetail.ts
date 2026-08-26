@@ -1,11 +1,11 @@
 import { PATHS } from "@config/paths";
-import { notifySuccess, showConfirm, tryOrNotify } from "@lib/utils";
 import {
 	deleteBookmarkE,
 	getBookmarkE,
 	setBookmarkTagsE,
 	updateBookmarkE,
 } from "@modules/bookmark";
+import { notifySuccess, showConfirm, tryOrNotify } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal } from "solid-js";
 

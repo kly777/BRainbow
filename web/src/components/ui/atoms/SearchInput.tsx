@@ -1,5 +1,5 @@
 import styles from "@components/ui/atoms/SearchInput.module.css";
-import { debounce, SEARCH_DEBOUNCE_MS } from "@lib/utils";
+import { debounce, SEARCH_DEBOUNCE_MS } from "@shared/utils";
 import type { Component } from "solid-js";
 import { createEffect, createSignal, onCleanup } from "solid-js";
 

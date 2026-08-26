@@ -1,14 +1,6 @@
 // ── 树列表 CRUD + 选择 ──
 // 从 useChatSession 拆分：树列表加载、创建、删除、重命名、AI 取标题。
 
-import {
-	confirmAndRun,
-	notifyError,
-	notifySuccess,
-	parseUrlId,
-	tryAsync,
-	tryOrNotify,
-} from "@lib/utils";
 import type { ChatTree, TreeDetail } from "@modules/chat";
 import {
 	createTreeE,
@@ -18,6 +10,14 @@ import {
 	listTreesE,
 	updateTreeE,
 } from "@modules/chat";
+import {
+	confirmAndRun,
+	notifyError,
+	notifySuccess,
+	parseUrlId,
+	tryAsync,
+	tryOrNotify,
+} from "@shared/utils";
 import { useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal } from "solid-js";
 import type { ChatSessionOptions } from "./useChatSessionTypes.ts";

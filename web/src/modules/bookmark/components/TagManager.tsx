@@ -3,9 +3,14 @@
  */
 
 import { Button, Modal } from "@components/ui";
-import { notifyError, notifySuccess, showConfirm, tryAsync } from "@lib/utils";
 import type { BookmarkTagWithCount } from "@modules/bookmark";
 import { deleteBookmarkTagE, searchBookmarkTagsE } from "@modules/bookmark";
+import {
+	notifyError,
+	notifySuccess,
+	showConfirm,
+	tryAsync,
+} from "@shared/utils";
 import { createResource, For, Show } from "solid-js";
 import styles from "./TagManager.module.css";
 

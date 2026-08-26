@@ -1,9 +1,9 @@
 // ── 复习操作：评分、埋葬、暂停、编辑、复制 ──
 // 从 useMemReview 拆分：所有用户操作（不包含队列管理和计时逻辑）。
 
-import { copyTextWithToast, notifyError, tryAsync } from "@lib/utils";
 import type { MemItem } from "@modules/mem";
 import { buryMemE, editMemE, reviewMemE, suspendMemE } from "@modules/mem";
+import { copyTextWithToast, notifyError, tryAsync } from "@shared/utils";
 import type { Accessor, Setter } from "solid-js";
 
 const ALPHA = 0.15;

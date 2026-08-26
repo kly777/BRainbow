@@ -1,4 +1,4 @@
-import { CACHE, cachedRequest, put, withInvalidate } from "@lib/api";
+import { CACHE, cachedRequest, put, withInvalidate } from "@shared/api";
 
 export interface TabItem {
 	readonly id: number;

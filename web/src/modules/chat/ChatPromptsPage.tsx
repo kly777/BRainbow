@@ -1,7 +1,6 @@
 // ── 提示词预设管理：增删改查 ──
 
 import { Button } from "@components/ui";
-import { showConfirm, tryAsync, tryOrNotify } from "@lib/utils";
 import type { PromptPreset } from "@modules/chat";
 import {
 	createPresetE,
@@ -9,6 +8,7 @@ import {
 	listPresetsE,
 	updatePresetE,
 } from "@modules/chat";
+import { showConfirm, tryAsync, tryOrNotify } from "@shared/utils";
 import { createSignal, For, onMount, Show } from "solid-js";
 import styles from "./ChatPrompts.module.css";
 

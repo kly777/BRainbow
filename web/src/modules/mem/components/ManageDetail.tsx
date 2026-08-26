@@ -3,8 +3,8 @@
 
 import { MarkdownEditor } from "@components";
 import { Button, Markdown as MarkdownRenderer } from "@components/ui";
-import { fmtLocal } from "@lib/utils";
 import type { MemItem, TagInfo } from "@modules/mem";
+import { fmtLocal } from "@shared/utils";
 import { type Component, Show } from "solid-js";
 import { memStateMeta } from "../lib/mem-manage-utils.ts";
 import styles from "./ManageDetail.module.css";

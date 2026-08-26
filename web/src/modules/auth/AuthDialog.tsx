@@ -1,6 +1,4 @@
 import { Button, Modal } from "@components/ui";
-import { AUTH_REQUIRED_EVENT } from "@lib/api";
-import { tryAsync } from "@lib/utils";
 import {
 	changePasswordE,
 	loginE,
@@ -8,6 +6,8 @@ import {
 	registerE,
 	useAuth,
 } from "@modules/auth";
+import { AUTH_REQUIRED_EVENT } from "@shared/api";
+import { tryAsync } from "@shared/utils";
 import { createSignal, onCleanup, Show } from "solid-js";
 import styles from "./AuthStatus.module.css";
 

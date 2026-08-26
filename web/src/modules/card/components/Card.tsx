@@ -1,5 +1,5 @@
 import { Markdown as MarkdownRenderer, Tooltip } from "@components/ui";
-import { fmtFull } from "@lib/utils";
+import { fmtFull } from "@shared/utils";
 import { type Component, Show } from "solid-js";
 import styles from "./Card.module.css";
 

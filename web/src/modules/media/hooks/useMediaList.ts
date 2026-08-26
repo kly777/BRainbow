@@ -1,7 +1,7 @@
-import { getErrorMessage, HttpError } from "@lib/api";
-import { notifyError, showConfirm, tryAsync } from "@lib/utils";
 import type { MediaItem } from "@modules/media";
 import { deleteMediaE, listMediaE, renameMediaE } from "@modules/media";
+import { getErrorMessage, HttpError } from "@shared/api";
+import { notifyError, showConfirm, tryAsync } from "@shared/utils";
 import { useSearchParams } from "@solidjs/router";
 import { createResource, createSignal } from "solid-js";
 

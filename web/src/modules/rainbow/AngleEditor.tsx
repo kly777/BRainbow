@@ -1,4 +1,4 @@
-import { Angle } from "@lib/utils";
+import { Angle } from "@shared/utils";
 import {
 	type Accessor,
 	createEffect,

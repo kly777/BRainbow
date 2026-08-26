@@ -1,7 +1,7 @@
 // ── AI 生成记忆卡片：纯函数层 ──
 // prompt 构建 + AI 输出容错解析（零副作用，可单测）
 
-import { err, ok, type Result, trySync } from "@lib/utils";
+import { err, ok, type Result, trySync } from "@shared/utils";
 
 export interface AiCard {
 	cue: string;

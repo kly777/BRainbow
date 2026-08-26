@@ -2,7 +2,7 @@
 // 组合入口：树列表 + 焦点导航 + 流式对话。
 // 两者差异（提示词、AI 输出处理）由各自页面的 hook 组合实现。
 
-import { parseUrlId } from "@lib/utils";
+import { parseUrlId } from "@shared/utils";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import type { ChatSessionOptions } from "./useChatSessionTypes.ts";
 import { useStreamChat } from "./useStreamChat.ts";

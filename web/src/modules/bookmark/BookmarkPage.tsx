@@ -1,7 +1,7 @@
 // ── /bookmark：网页书签管理（搜索 / 标签过滤 / 分页 / 导入 Firefox 书签） ──
 
 import { Button, PageHead, SearchInput } from "@components/ui";
-import { getErrorMessage } from "@lib/api";
+import { getErrorMessage } from "@shared/api";
 import { type Component, For, Show } from "solid-js";
 import styles from "./BookmarkPage.module.css";
 import { BookmarkFormModal } from "./components/BookmarkFormModal.tsx";

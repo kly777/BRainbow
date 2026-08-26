@@ -1,8 +1,8 @@
 // ── /bookmark/:id：书签详情（全局搜索直达） ──
 
 import { Button, Toolbar } from "@components/ui";
-import { getErrorMessage } from "@lib/api";
-import { fmtLocal } from "@lib/utils";
+import { getErrorMessage } from "@shared/api";
+import { fmtLocal } from "@shared/utils";
 import { type Component, Show } from "solid-js";
 import styles from "./BookmarkDetail.module.css";
 import TagInput from "./components/TagInput.tsx";

@@ -1,4 +1,4 @@
-import { Angle, Color } from "@lib/utils";
+import { Angle, Color } from "@shared/utils";
 import { createMemo, createSignal, type Setter } from "solid-js";
 import { RAINBOW_SQUARE_SIZE, rainbowGeometry } from "../lib/geometry.ts";
 import type { ShapeRender } from "../RainbowDrawer";

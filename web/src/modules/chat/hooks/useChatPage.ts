@@ -1,13 +1,13 @@
 // ── /chat 对话页逻辑：组合公共会话 hook + 搜索 / 预设 / 修订 ──
 
+import type { ChatNode, PromptPreset, SearchHit } from "@modules/chat";
+import { listPresetsE, reviseNodeE, searchChatE } from "@modules/chat";
 import {
 	debounce,
 	SEARCH_DEBOUNCE_MS,
 	tryAsync,
 	tryOrNotify,
-} from "@lib/utils";
-import type { ChatNode, PromptPreset, SearchHit } from "@modules/chat";
-import { listPresetsE, reviseNodeE, searchChatE } from "@modules/chat";
+} from "@shared/utils";
 import { createSignal, onCleanup } from "solid-js";
 import { useChatSession } from "./useChatSession.ts";
 

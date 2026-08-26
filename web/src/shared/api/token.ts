@@ -2,7 +2,7 @@
 // 供 lib/api/request.ts（请求层）与 modules/auth（登录状态）共用，
 // 避免请求层反向依赖业务层。读操作做内存缓存，避免每次请求重复 JSON.parse。
 
-import { trySync, unwrapOr } from "@lib/utils/result.ts";
+import { trySync, unwrapOr } from "@shared/utils/result.ts";
 
 export const STORAGE_KEY = "brainbow_user";
 export const API_KEY_STORAGE_KEY = "brainbow_api_key";

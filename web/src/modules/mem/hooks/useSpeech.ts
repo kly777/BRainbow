@@ -1,6 +1,6 @@
 // ── 朗读 cue 的 hook（Web Speech API）──
 
-import { isSpeechSupported, speakText, stopSpeaking } from "@lib/utils";
+import { isSpeechSupported, speakText, stopSpeaking } from "@shared/utils";
 import { createSignal, onCleanup } from "solid-js";
 
 export interface UseSpeech {

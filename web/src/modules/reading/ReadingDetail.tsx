@@ -2,7 +2,7 @@ import { Button, Tooltip } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
 // ── 阅读详情页面（薄壳视图层）──
 
-import { getErrorMessage } from "@lib/api";
+import { getErrorMessage } from "@shared/api";
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 import ArticleContent from "./components/ArticleContent";

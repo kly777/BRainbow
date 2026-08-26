@@ -1,6 +1,6 @@
 import Button from "@components/ui/atoms/Button.tsx";
 import styles from "@components/ui/molecules/AsyncView.module.css";
-import { getErrorMessage } from "@lib/api/types/index.ts";
+import { getErrorMessage } from "@shared/api/types/index.ts";
 import { type JSX, Show } from "solid-js";
 
 interface Props<T> {

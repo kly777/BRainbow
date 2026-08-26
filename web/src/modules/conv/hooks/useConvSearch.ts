@@ -1,7 +1,7 @@
 import { PATHS } from "@config/paths";
-import { strParam, useUrlParams } from "@lib/utils";
 import type { ConvHit } from "@modules/conv";
 import { searchConvE } from "@modules/conv";
+import { strParam, useUrlParams } from "@shared/utils";
 import { createResource, createSignal, onMount } from "solid-js";
 
 const VALID_TABS = ["all", "article"] as const;

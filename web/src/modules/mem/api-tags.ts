@@ -1,6 +1,6 @@
 // ── 标签 API ──
 
-import { CACHE, del, post, request, withInvalidate } from "@lib/api";
+import { CACHE, del, post, request, withInvalidate } from "@shared/api";
 import type { BatchDataResponse, BatchResponse } from "./api-types.ts";
 
 // ── 标签 ──

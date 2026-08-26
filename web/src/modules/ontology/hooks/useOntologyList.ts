@@ -1,11 +1,11 @@
-import { getErrorMessage } from "@lib/api";
+import { getErrorMessage } from "@shared/api";
 import {
 	notifyError,
 	notifySuccess,
 	showConfirm,
 	tryAsync,
 	tryOrNotify,
-} from "@lib/utils";
+} from "@shared/utils";
 import { useSearchParams } from "@solidjs/router";
 import { createResource, createSignal, type Setter } from "solid-js";
 import { createOntoE, deleteOntoE, getOntosE } from "../api";

@@ -2,8 +2,8 @@
 // 与全局 AI 服务配置分离：这里只编辑助记生成提示词。
 
 import { Modal } from "@components/ui";
-import { getAiSettingsE, updateAiSettingsE } from "@lib/ai";
-import { tryAsync, tryOrNotify } from "@lib/utils";
+import { getAiSettingsE, updateAiSettingsE } from "@shared/ai";
+import { tryAsync, tryOrNotify } from "@shared/utils";
 import { createEffect, createSignal } from "solid-js";
 import styles from "./MnemonicSettingsModal.module.css";
 

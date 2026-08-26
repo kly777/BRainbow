@@ -1,6 +1,6 @@
 import { Markdown as MarkdownRenderer } from "@components/ui";
-import { getErrorMessage } from "@lib/api";
 import { getConvConceptE } from "@modules/conv";
+import { getErrorMessage } from "@shared/api";
 import { useParams, useSearchParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 import styles from "./ConvDetail.module.css";

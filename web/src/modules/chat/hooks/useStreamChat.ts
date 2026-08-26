@@ -1,8 +1,8 @@
 // ── SSE 流式对话 + 乐观 UI ──
 // 从 useChatSession 拆分：流式调用、临时节点插入、rAF 节流、停止生成。
 
-import { getToken } from "@lib/api";
 import type { ChatNode, TreeDetail } from "@modules/chat";
+import { getToken } from "@shared/api";
 import { createSignal, onCleanup } from "solid-js";
 import { makeTempNode } from "./chat-tree.ts";
 import { streamChatRequest } from "./streamChatRequest.ts";

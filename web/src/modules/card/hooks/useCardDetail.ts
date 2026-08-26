@@ -1,6 +1,6 @@
 import { fillPath, PATHS } from "@config/paths";
-import { showConfirm, tryOrNotify } from "@lib/utils";
 import { deleteCardE, getCardE } from "@modules/card";
+import { showConfirm, tryOrNotify } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource } from "solid-js";
 import type { Card } from "../model.ts";

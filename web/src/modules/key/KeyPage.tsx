@@ -3,7 +3,7 @@
 
 import { useAuth } from "@app/context/auth.tsx";
 import { Button, PageHead } from "@components/ui";
-import { getApiKey, getErrorMessage } from "@lib/api";
+import { getApiKey, getErrorMessage } from "@shared/api";
 import {
 	copyText,
 	fmtFull,
@@ -11,7 +11,7 @@ import {
 	notifySuccess,
 	showConfirm,
 	tryAsync,
-} from "@lib/utils";
+} from "@shared/utils";
 import {
 	type Component,
 	createResource,

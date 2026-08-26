@@ -1,11 +1,11 @@
-import { getErrorMessage } from "@lib/api";
-import { notifyError, tryAsync } from "@lib/utils";
 import type { Task } from "@modules/task";
 import {
 	addTaskDependencyE,
 	getTaskDetailE,
 	removeTaskDependencyE,
 } from "@modules/task";
+import { getErrorMessage } from "@shared/api";
+import { notifyError, tryAsync } from "@shared/utils";
 import {
 	createEffect,
 	createResource,

@@ -1,7 +1,7 @@
 // ── 记忆详情编辑状态（编辑弹层：线索/答案） ──
 
-import { tryOrNotify } from "@lib/utils";
 import { editMemE, type MemItem } from "@modules/mem";
+import { tryOrNotify } from "@shared/utils";
 import { createSignal } from "solid-js";
 
 export function useMemEdit(deps: {

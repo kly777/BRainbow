@@ -1,5 +1,5 @@
-import { cachedRequest, type PaginationParams, requestFile } from "@lib/api";
-import { downloadBlob } from "@lib/utils";
+import { cachedRequest, type PaginationParams, requestFile } from "@shared/api";
+import { downloadBlob } from "@shared/utils";
 
 export const getTablesE = (): Promise<readonly string[]> =>
 	cachedRequest("/db", {});

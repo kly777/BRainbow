@@ -2,7 +2,6 @@
 // 每个 mem 树 = 一次卡片生成会话；对话流存入 chat_node。
 // assistant 消息若为 JSON 卡片数组 → 渲染为可勾选清单，导入走 mem 导入管线。
 
-import { notifySuccess, tryOrNotify } from "@lib/utils";
 import { listTreesByKindE } from "@modules/chat";
 import {
 	type AiCard,
@@ -10,6 +9,7 @@ import {
 	importJsonE,
 	parseAiCards,
 } from "@modules/mem";
+import { notifySuccess, tryOrNotify } from "@shared/utils";
 import { createSignal } from "solid-js";
 import { useChatSession } from "./useChatSession.ts";
 

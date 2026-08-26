@@ -4,8 +4,8 @@
 // bookmark 的 TagInput 为名字键控领域变体，刻意不并入（模块隔离）。
 
 import { Button } from "@components/ui";
-import { blurClose, trimmedQuery, tryAsync } from "@lib/utils";
 import { createTagE, searchTagsE, type TagInfo } from "@modules/mem";
+import { blurClose, trimmedQuery, tryAsync } from "@shared/utils";
 import { createResource, createSignal, For, Show } from "solid-js";
 import styles from "./TagPicker.module.css";
 

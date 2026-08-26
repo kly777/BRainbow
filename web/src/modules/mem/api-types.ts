@@ -63,4 +63,4 @@ export type {
 	BatchDataResponse,
 	BatchResponse,
 	PaginatedResponse,
-} from "@lib/api";
+} from "@shared/api";

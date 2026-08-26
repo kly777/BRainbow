@@ -1,7 +1,7 @@
 // ── 任务 API 函数 ──
 
-import type { PaginatedResponse } from "@lib/api";
-import { buildQuery, cachedRequest } from "@lib/api";
+import type { PaginatedResponse } from "@shared/api";
+import { buildQuery, cachedRequest } from "@shared/api";
 import type { CalendarEvent, Task } from "./api-types.ts";
 
 // ==================== Task API Functions ====================

@@ -20,7 +20,7 @@
 			"@modules/*": ["./src/modules/*"],
 			"@components": ["./src/components/index.ts"],
 			"@components/*": ["./src/components/*"],
-			"@lib/*": ["./src/lib/*"],
+			"@shared/*": ["./src/shared/*"],
 			"@config/*": ["./src/config/*"]
 		}
 	},

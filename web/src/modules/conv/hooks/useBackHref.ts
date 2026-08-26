@@ -1,7 +1,7 @@
 import { PATHS } from "@config/paths";
 // ── conv 页面共享逻辑 ──
 
-import { buildQuery } from "@lib/api";
+import { buildQuery } from "@shared/api";
 import { useSearchParams } from "@solidjs/router";
 
 /** 生成返回搜索页的链接（保留 q 和 t 参数） */

@@ -2,7 +2,7 @@
 // 封装 toastStore.showToast，提供简洁的业务层 API
 
 import { showToast } from "@components/ui/organisms/toastStore.ts";
-import { getErrorMessage, HttpError } from "@lib/api";
+import { getErrorMessage, HttpError } from "@shared/api";
 
 /**
  * 显示错误通知（带可选的原始 error 对象提取详情）。

@@ -1,8 +1,8 @@
 // ── /bookmark 列表项：favicon + 标题链接 + 域名 + 标签 + 操作 ──
 
 import { Button, Tooltip } from "@components/ui";
-import { trySync } from "@lib/utils";
 import type { Bookmark } from "@modules/bookmark";
+import { trySync } from "@shared/utils";
 import { For } from "solid-js";
 import styles from "../BookmarkPage.module.css";
 import Favicon from "./Favicon.tsx";

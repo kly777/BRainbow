@@ -1,6 +1,6 @@
 // ── API Key 管理 API ──
 
-import { del, get, post } from "@lib/api";
+import { del, get, post } from "@shared/api";
 
 export interface ApiKeyInfo {
 	id: number;

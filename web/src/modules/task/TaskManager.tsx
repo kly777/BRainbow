@@ -1,6 +1,6 @@
 import { FilterGroup, PageHead, SearchInput } from "@components/ui";
-import { enumParam, strParam, useUrlParams } from "@lib/utils";
 import { TaskList, TaskProvider, useTasks } from "@modules/task";
+import { enumParam, strParam, useUrlParams } from "@shared/utils";
 import { createSignal, Show } from "solid-js";
 import TaskCalendar from "./components/TaskCalendar.tsx";
 import TaskDag from "./components/TaskDag.tsx";

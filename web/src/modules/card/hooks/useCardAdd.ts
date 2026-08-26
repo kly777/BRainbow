@@ -1,8 +1,8 @@
 import { fillPath, PATHS } from "@config/paths";
-import { getErrorMessage } from "@lib/api";
-import { tryAsync } from "@lib/utils";
 import type { CreateCardRequest } from "@modules/card";
 import { createCardE } from "@modules/card";
+import { getErrorMessage } from "@shared/api";
+import { tryAsync } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
 import { createSignal } from "solid-js";
 

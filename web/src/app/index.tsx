@@ -1,6 +1,6 @@
 import { AuthProvider } from "@app/context/auth.tsx";
-import { initTheme } from "@lib/styles";
-import { generateIcon } from "@lib/utils";
+import { initTheme } from "@shared/styles";
+import { generateIcon } from "@shared/utils";
 import { Router } from "@solidjs/router";
 import { onMount } from "solid-js";
 import { render } from "solid-js/web";
@@ -10,7 +10,7 @@ import "@fontsource-variable/fraunces";
 import "@fontsource-variable/jetbrains-mono";
 import "@fontsource-variable/noto-serif-sc";
 import "@app/global.css";
-import "@lib/styles/tokens.css";
+import "@shared/styles/tokens.css";
 
 // 应用持久化主题（在渲染前挂主题类，避免闪烁）
 initTheme();

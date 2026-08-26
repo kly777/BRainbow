@@ -8,7 +8,7 @@ import {
 	post,
 	request,
 	withInvalidate,
-} from "@lib/api";
+} from "@shared/api";
 
 export interface Bookmark {
 	id: number;

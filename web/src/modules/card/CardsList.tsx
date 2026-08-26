@@ -10,8 +10,8 @@ import {
 	Modal,
 	PageHead,
 } from "@components/ui";
-import { tryAsync } from "@lib/utils";
 import { getCardsE, searchCardsE } from "@modules/card";
+import { tryAsync } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
 import { onMount, Show } from "solid-js";
 import styles from "./CardsList.module.css";

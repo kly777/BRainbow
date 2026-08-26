@@ -8,7 +8,7 @@ import {
 	type ThemeName,
 	themeInfo,
 	themes,
-} from "@lib/styles";
+} from "@shared/styles";
 import { createSignal, For, onMount } from "solid-js";
 import styles from "./ColorPage.module.css";
 

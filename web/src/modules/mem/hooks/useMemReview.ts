@@ -1,10 +1,10 @@
 // ── 记忆复习模块的核心业务逻辑（队列管理见 useDueQueue） ──
 // 组合入口：队列管理 + 复习操作（useReviewActions）。
 
-import { enumParam, listParam, tryAsync, useUrlParams } from "@lib/utils";
+import { tryAsync } from "@lib/utils";
 import type { MemCounts } from "@modules/mem";
 import { getDueE, getMemCountsE, previewMemE } from "@modules/mem";
-import { createEffect, createSignal, onMount } from "solid-js";
+import { createSignal, onMount } from "solid-js";
 import {
 	calcAvgCardTime,
 	calcMaxLearning,
@@ -19,11 +19,6 @@ import { useReviewKeyboard } from "./useReviewKeyboard.ts";
 import { useUndo } from "./useUndo.ts";
 
 export function useMemReview(): UseMemReview {
-	const params = useUrlParams({
-		tag_ids: listParam(),
-		tag_mode: enumParam(["include", "exclude"] as const, "include"),
-	});
-
 	// ── 核心状态 ──
 	const [editing, setEditing] = createSignal(false);
 	const [editCue, setEditCue] = createSignal("");
@@ -135,11 +130,6 @@ export function useMemReview(): UseMemReview {
 	onMount(() => {
 		void queue.loadDue();
 		void loadCounts();
-	});
-
-	createEffect(() => {
-		void params.get("tag_ids");
-		void params.get("tag_mode");
 	});
 
 	return {

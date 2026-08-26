@@ -1,6 +1,12 @@
 import { getErrorMessage } from "@shared/api";
-import { debounce, tryAsync } from "@shared/utils";
-import { useSearchParams } from "@solidjs/router";
+import {
+	debounce,
+	numParam,
+	strParam,
+	tryAsync,
+	type UrlParamReader,
+	useUrlParams,
+} from "@shared/utils";
 import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import {
 	type ColumnInfo,
@@ -49,34 +55,53 @@ export interface DbViewerApi {
 }
 
 export function useDbViewer(): DbViewerApi {
-	const [searchParams, setSearchParams] = useSearchParams();
+	/**
+	 * db 专用多值参数 reader：兼容旧链接（重复参数 fcol=a&fcol=b）与新格式（逗号分隔），
+	 * 保留空槽位（fval 与 fop/fcol 对齐，"null" 类操作的空值依赖它）。
+	 */
+	function arrayParam(): UrlParamReader<string[]> {
+		return {
+			read: (raw) => {
+				const value: unknown = raw;
+				if (typeof value === "string") return value.split(",");
+				if (Array.isArray(value)) {
+					return value.filter((x): x is string => typeof x === "string");
+				}
+				return [];
+			},
+			write: (vs) => (vs.length === 0 ? undefined : vs.join(",")),
+		};
+	}
+
+	const params = useUrlParams({
+		table: strParam(""),
+		page: numParam(1, { min: 1 }),
+		page_size: numParam(50, { min: 1 }),
+		id: numParam(0, { min: 1 }),
+		ref_col: strParam("id"),
+		sort: strParam(""),
+		order: strParam(""),
+		fcol: arrayParam(),
+		fop: arrayParam(),
+		fval: arrayParam(),
+	});
 	const [tables, setTables] = createSignal<string[]>([]);
-	const activeTable = () => {
-		const t = searchParams.table;
-		return typeof t === "string" ? t : "";
-	};
-	const currentPage = () => {
-		const p = Number(searchParams.page);
-		return Number.isInteger(p) && p >= 1 ? p : 1;
-	};
+	const activeTable = () => params.get("table");
+	const currentPage = () => params.get("page");
 	const currentPageSize = () => {
-		const raw = Number(searchParams.page_size);
+		const raw = params.get("page_size");
 		return PAGE_SIZES.some((size) => size === raw) ? raw : 50;
 	};
-	const filterId = () => {
-		const raw = searchParams.id;
-		const n = Number(raw);
-		return typeof raw === "string" && Number.isInteger(n) && n >= 1 ? n : 0;
-	};
-	const filterCol = () => {
-		const raw = searchParams.ref_col;
-		return typeof raw === "string" && raw ? raw : "id";
-	};
-	const sortCol = () =>
-		typeof searchParams.sort === "string" ? searchParams.sort : "";
-	const sortDesc = () => searchParams.order === "desc";
+	const filterId = () => params.get("id");
+	const filterCol = () => params.get("ref_col");
+	const sortCol = () => params.get("sort");
+	const sortDesc = () => params.get("order") === "desc";
 	const filters = () =>
-		filtersFromParams(searchParams.fcol, searchParams.fop, searchParams.fval);
+		filtersFromParams(
+			params.get("fcol"),
+			params.get("fop"),
+			params.get("fval"),
+		);
 	const refFilter = () =>
 		filterId() > 0 ? { col: filterCol(), id: filterId() } : null;
 
@@ -101,7 +126,7 @@ export function useDbViewer(): DbViewerApi {
 		sortCol,
 		sortDesc,
 		writeFilters: (next) => {
-			setSearchParams({
+			params.set({
 				page: 1,
 				fcol: next.map((f) => f.col),
 				fop: next.map((f) => f.op),
@@ -109,7 +134,7 @@ export function useDbViewer(): DbViewerApi {
 			});
 		},
 		writeSort: (col, desc) => {
-			setSearchParams({
+			params.set({
 				sort: col,
 				order: desc ? "desc" : "asc",
 				page: 1,
@@ -170,8 +195,8 @@ export function useDbViewer(): DbViewerApi {
 
 	const openTable = (name: string) => {
 		debouncedFetch.cancel();
-		setSearchParams({
-			table: name || undefined,
+		params.set({
+			table: name,
 			page: 1,
 			page_size: undefined,
 			id: undefined,
@@ -190,11 +215,11 @@ export function useDbViewer(): DbViewerApi {
 		const activeFilters = filters();
 		debouncedFetch.cancel();
 		setSkipEffect(true);
-		setSearchParams({
+		params.set({
 			table,
 			page: targetPage,
-			page_size: String(currentPageSize()),
-			id: filterId() > 0 ? String(filterId()) : undefined,
+			page_size: currentPageSize(),
+			id: filterId() > 0 ? filterId() : undefined,
 			ref_col: filterId() > 0 ? filterCol() : undefined,
 			sort: sortCol() || undefined,
 			order: sortCol() ? (sortDesc() ? "desc" : "asc") : undefined,
@@ -220,11 +245,11 @@ export function useDbViewer(): DbViewerApi {
 		if (Number.isInteger(id) && id >= 1) {
 			debouncedFetch.cancel();
 			setSkipEffect(true);
-			setSearchParams({
+			params.set({
 				table: targetTable,
 				page: 1,
 				page_size: undefined,
-				id: String(id),
+				id,
 				ref_col: refCol,
 				sort: undefined,
 				order: undefined,
@@ -337,9 +362,9 @@ export function useDbViewer(): DbViewerApi {
 	});
 
 	const changePageSize = (size: number) => {
-		setSearchParams({
+		params.set({
 			page: 1,
-			page_size: String(size),
+			page_size: size,
 		});
 	};
 
@@ -370,7 +395,7 @@ export function useDbViewer(): DbViewerApi {
 		removeColumnFilter: tableFilters.removeColumnFilter,
 		clearFilters: () => {
 			debouncedFetch.cancel();
-			setSearchParams({
+			params.set({
 				page: 1,
 				id: undefined,
 				ref_col: undefined,

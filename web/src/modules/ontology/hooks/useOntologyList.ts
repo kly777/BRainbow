@@ -1,12 +1,14 @@
 import { getErrorMessage } from "@shared/api";
 import {
+	enumParam,
 	notifyError,
 	notifySuccess,
 	showConfirm,
+	strParam,
 	tryAsync,
 	tryOrNotify,
+	useUrlParams,
 } from "@shared/utils";
-import { useSearchParams } from "@solidjs/router";
 import { createResource, createSignal, type Setter } from "solid-js";
 import { createOntoE, deleteOntoE, getOntosE } from "../api";
 
@@ -43,22 +45,14 @@ export function useOntologyList(): OntologyListApi {
 		throw result.error;
 	});
 
-	const [searchParams, setSearchParams] = useSearchParams();
-	const searchQuery = () => {
-		const q = searchParams.q;
-		if (Array.isArray(q)) return q[0] ?? "";
-		return q ?? "";
-	};
-	const setSearchQuery = (q: string) => setSearchParams({ q: q || undefined });
-	const viewMode = () => {
-		const v = searchParams.view;
-		return (v === "list" ? "list" : "grid") as "grid" | "list";
-	};
-	const setViewMode = (v: "grid" | "list") =>
-		setSearchParams({
-			q: searchQuery() || undefined,
-			view: v === "grid" ? undefined : v,
-		});
+	const params = useUrlParams({
+		q: strParam(""),
+		view: enumParam(["grid", "list"] as const, "grid"),
+	});
+	const searchQuery = () => params.get("q");
+	const setSearchQuery = (q: string) => params.set({ q });
+	const viewMode = () => params.get("view");
+	const setViewMode = (v: "grid" | "list") => params.set({ view: v });
 
 	const [showCreateModal, setShowCreateModal] = createSignal(false);
 	const [newName, setNewName] = createSignal("");

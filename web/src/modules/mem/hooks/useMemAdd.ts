@@ -2,14 +2,16 @@
 
 import { importJsonE } from "@modules/mem";
 import {
+	enumParam,
 	notifyError,
 	parseBatch,
 	parseImportFile,
 	tryAsync,
 	tryOrNotify,
 	trySync,
+	useUrlParams,
 } from "@shared/utils";
-import { useNavigate, useSearchParams } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import { createMemo, createSignal } from "solid-js";
 import { createMemE } from "../api.ts";
 
@@ -29,17 +31,11 @@ const VALID_MODES: AddMode[] = ["single", "paste", "file", "ai"];
 
 export function useMemAdd() {
 	const navigate = useNavigate();
-	const [searchParams, setSearchParams] = useSearchParams();
+	const params = useUrlParams({ mode: enumParam(VALID_MODES, "single") });
 
 	// ── 模式 ──
-	const mode = (): AddMode => {
-		const m = searchParams.mode;
-		return typeof m === "string" && VALID_MODES.includes(m as AddMode)
-			? (m as AddMode)
-			: "single";
-	};
-	const setMode = (m: AddMode) =>
-		setSearchParams({ mode: m === "single" ? undefined : m });
+	const mode = (): AddMode => params.get("mode");
+	const setMode = (m: AddMode) => params.set({ mode: m });
 
 	// ── 单条创建 ──
 	const [cue, setCue] = createSignal("");

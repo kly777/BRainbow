@@ -2,7 +2,7 @@ import { PATHS } from "@config/paths";
 import type { ConvHit } from "@modules/conv";
 import { searchConvE } from "@modules/conv";
 import { strParam, useUrlParams } from "@shared/utils";
-import { createResource, createSignal, onMount } from "solid-js";
+import { createResource } from "solid-js";
 
 const VALID_TABS = ["all", "article"] as const;
 export type ConvSearchTab = (typeof VALID_TABS)[number];
@@ -21,8 +21,11 @@ export interface ConvSearchApi {
 }
 
 export function useConvSearch(): ConvSearchApi {
-	const [query, setQuery] = createSignal("");
 	const urlParams = useUrlParams({ q: strParam(""), t: strParam("") });
+
+	const query = () => urlParams.get("q");
+	const setQuery = (value: string) =>
+		urlParams.set({ q: value.trim() }, { replace: true });
 
 	const tab = () => {
 		const tv = urlParams.get("t");
@@ -35,11 +38,6 @@ export function useConvSearch(): ConvSearchApi {
 	};
 
 	const searchQuery = () => urlParams.get("q");
-
-	onMount(() => {
-		const q = urlParams.get("q");
-		if (q) setQuery(q);
-	});
 
 	const [data] = createResource(
 		() => (searchQuery() ? `${searchQuery()}|${tab()}` : null),

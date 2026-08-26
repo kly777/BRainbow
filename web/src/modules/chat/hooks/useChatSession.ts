@@ -2,8 +2,8 @@
 // 组合入口：树列表 + 焦点导航 + 流式对话。
 // 两者差异（提示词、AI 输出处理）由各自页面的 hook 组合实现。
 
-import { parseUrlId } from "@shared/utils";
-import { useNavigate, useSearchParams } from "@solidjs/router";
+import { parseUrlId, strParam, useUrlParams } from "@shared/utils";
+import { useNavigate } from "@solidjs/router";
 import type { ChatSessionOptions } from "./useChatSessionTypes.ts";
 import { useStreamChat } from "./useStreamChat.ts";
 import { useTreeFocus } from "./useTreeFocus.ts";
@@ -11,18 +11,21 @@ import { useTreeList } from "./useTreeList.ts";
 
 export function useChatSession(opts: ChatSessionOptions) {
 	const navigate = useNavigate();
-	const [params, setParams] = useSearchParams();
+	const urlParams = useUrlParams({ tree: strParam(""), node: strParam("") });
 
 	// ── 子 hook 1：树列表 CRUD ──
 	const treeList = useTreeList(opts);
 
 	// ── 子 hook 2：焦点/分支导航 ──
-	const focusId = (): number | null => parseUrlId(params.node);
+	const focusId = (): number | null => {
+		const n = urlParams.get("node");
+		return n ? parseUrlId(n) : null;
+	};
 	const focus = useTreeFocus({
 		nodes: () => treeList.current()?.nodes ?? [],
 		focusId,
 		setFocusParam: (id: number | null) =>
-			setParams({ node: id === null ? undefined : String(id) }),
+			urlParams.set({ node: id ? String(id) : undefined }),
 	});
 
 	// ── 子 hook 3：流式对话 ──
@@ -32,7 +35,7 @@ export function useChatSession(opts: ChatSessionOptions) {
 		setCurrent: treeList.setCurrent,
 		focusId,
 		setFocusParam: (id: number | null) =>
-			setParams({ node: id === null ? undefined : String(id) }),
+			urlParams.set({ node: id ? String(id) : undefined }),
 		nodes: () => treeList.current()?.nodes ?? [],
 		activePath: focus.activePath,
 		loadTree: treeList.loadTree,
@@ -57,8 +60,8 @@ export function useChatSession(opts: ChatSessionOptions) {
 		// 焦点导航
 		focusId,
 		setFocusParam: (id: number | null) =>
-			setParams({ node: id === null ? undefined : String(id) }),
-		setParams,
+			urlParams.set({ node: id ? String(id) : undefined }),
+		urlParams,
 		nodes: () => treeList.current()?.nodes ?? [],
 		childrenOf: focus.childrenOf,
 		activePath: focus.activePath,

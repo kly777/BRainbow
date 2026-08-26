@@ -54,8 +54,10 @@ describe("useDbViewer filters", () => {
 		const m = useDbViewer();
 		m.clearFilters();
 		// 回归：ref 过滤（外键跳转）也必须一并清除，否则"清除过滤"无效
+		// useUrlParams 经描述器序列化：page 写回默认值 1 → undefined（移除），
+		// fcol/fop/fval 为 undefined → 移除；filters 全清且 ref 跳转一并清除
 		expect(mockSetSearchParams).toHaveBeenCalledWith({
-			page: 1,
+			page: undefined,
 			id: undefined,
 			ref_col: undefined,
 			fcol: undefined,

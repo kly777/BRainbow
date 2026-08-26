@@ -15,15 +15,16 @@ import {
 	notifyError,
 	notifySuccess,
 	parseUrlId,
+	strParam,
 	tryAsync,
 	tryOrNotify,
+	useUrlParams,
 } from "@shared/utils";
-import { useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal } from "solid-js";
 import type { ChatSessionOptions } from "./useChatSessionTypes.ts";
 
 export function useTreeList(opts: ChatSessionOptions) {
-	const [params, setParams] = useSearchParams();
+	const params = useUrlParams({ tree: strParam(""), node: strParam("") });
 
 	// ── 树列表 ──
 	const [trees, setTrees] = createSignal<ChatTree[]>([]);
@@ -32,8 +33,14 @@ export function useTreeList(opts: ChatSessionOptions) {
 	// ── 当前树 ──
 	const [current, setCurrent] = createSignal<TreeDetail | null>(null);
 
-	const treeId = (): number | null => parseUrlId(params.tree);
-	const nodeId = (): number | null => parseUrlId(params.node);
+	const treeId = (): number | null => {
+		const t = params.get("tree");
+		return t ? parseUrlId(t) : null;
+	};
+	const nodeId = (): number | null => {
+		const n = params.get("node");
+		return n ? parseUrlId(n) : null;
+	};
 
 	// ── 加载 ──
 
@@ -45,7 +52,7 @@ export function useTreeList(opts: ChatSessionOptions) {
 			const active = treeId();
 			if (active !== null && !result.value.some((t) => t.id === active)) {
 				if (result.value.length > 0) {
-					setParams({ tree: String(result.value[0].id) });
+					params.set({ tree: String(result.value[0].id) });
 				} else {
 					setCurrent(null);
 				}
@@ -62,7 +69,7 @@ export function useTreeList(opts: ChatSessionOptions) {
 		setCurrent(result.value);
 		if (nodeId() === null && result.value.nodes.length > 0) {
 			const last = result.value.nodes[result.value.nodes.length - 1].id;
-			setParams({ node: String(last) });
+			params.set({ node: String(last) });
 		}
 	};
 
@@ -81,7 +88,7 @@ export function useTreeList(opts: ChatSessionOptions) {
 		);
 		if (!result) return;
 		setTrees((prev) => [result.tree, ...prev]);
-		setParams({ tree: String(result.tree.id) });
+		params.set({ tree: String(result.tree.id) });
 	};
 
 	const removeSession = async (id: number) => {
@@ -99,10 +106,10 @@ export function useTreeList(opts: ChatSessionOptions) {
 		setTrees((prev) => prev.filter((t) => t.id !== id));
 		if (treeId() === id) {
 			const next = trees().find((t) => t.id !== id);
-			if (next) setParams({ tree: String(next.id) });
+			if (next) params.set({ tree: String(next.id) });
 			else {
 				setCurrent(null);
-				setParams({});
+				params.set({ tree: undefined, node: undefined });
 			}
 		}
 	};
@@ -142,7 +149,7 @@ export function useTreeList(opts: ChatSessionOptions) {
 		return true;
 	};
 
-	const selectSession = (id: number) => setParams({ tree: String(id) });
+	const selectSession = (id: number) => params.set({ tree: String(id) });
 
 	return {
 		trees,
@@ -150,8 +157,7 @@ export function useTreeList(opts: ChatSessionOptions) {
 		current,
 		setCurrent,
 		treeId,
-		params,
-		setParams,
+		urlParams: params,
 		loadTrees,
 		loadTree,
 		createSession,

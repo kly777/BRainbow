@@ -1,8 +1,13 @@
 import type { MediaItem } from "@modules/media";
 import { deleteMediaE, listMediaE, renameMediaE } from "@modules/media";
 import { getErrorMessage, HttpError } from "@shared/api";
-import { notifyError, showConfirm, tryAsync } from "@shared/utils";
-import { useSearchParams } from "@solidjs/router";
+import {
+	notifyError,
+	showConfirm,
+	strParam,
+	tryAsync,
+	useUrlParams,
+} from "@shared/utils";
 import { createResource, createSignal } from "solid-js";
 
 const VALID_TYPES = ["", "image", "video", "audio"];
@@ -25,14 +30,10 @@ export interface MediaListApi {
 }
 
 export function useMediaList(): MediaListApi {
-	const [searchParams, setSearchParams] = useSearchParams();
-	const mediaType = () => {
-		const t = searchParams.type;
-		return typeof t === "string" && VALID_TYPES.includes(t) ? t : "";
-	};
-	const setMediaType = (t: string) => {
-		setSearchParams({ type: t || undefined });
-	};
+	const params = useUrlParams({ type: strParam("") });
+	const mediaType = () =>
+		VALID_TYPES.includes(params.get("type")) ? params.get("type") : "";
+	const setMediaType = (t: string) => params.set({ type: t });
 
 	const [media, { refetch }] = createResource(
 		() => mediaType(),

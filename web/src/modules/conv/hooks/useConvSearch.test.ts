@@ -13,7 +13,17 @@ vi.mock("@shared/utils", async (importOriginal) => {
 		...mod,
 		useUrlParams: () => ({
 			get: (k: string) => paramStore[k] ?? "",
-			set: setSpy,
+			set: (
+				patch: Record<string, string | undefined>,
+				opts?: { replace?: boolean },
+			) => {
+				// 模拟真实 URL 语义：undefined 删除参数，其余写入
+				for (const [k, v] of Object.entries(patch)) {
+					if (v === undefined) delete paramStore[k];
+					else paramStore[k] = String(v);
+				}
+				setSpy(patch, opts);
+			},
 		}),
 	};
 });
@@ -27,7 +37,7 @@ function withHook<T>(
 	return new Promise<T>((resolve) => {
 		createRoot(async (dispose) => {
 			const api = useConvSearch();
-			await Promise.resolve(); // 让 onMount 入队回调执行
+			await Promise.resolve();
 			try {
 				resolve(await fn(api));
 			} finally {
@@ -55,31 +65,37 @@ describe("tab 解析", () => {
 	});
 });
 
-describe("handleSearch", () => {
-	it("空白查询不写入 URL", () => {
+describe("URL 驱动搜索", () => {
+	it("键入即写 URL（trim 后），空白查询清空不触发搜索", () => {
 		return withHook((h) => {
 			h.setQuery("   ");
+			// trim 后为空 → 写入空串（真实 useUrlParams 会移除该参数）
+			expect(setSpy).toHaveBeenCalledWith({ q: "" }, { replace: true });
 			h.handleSearch({ preventDefault() {} } as SubmitEvent);
-			expect(setSpy).not.toHaveBeenCalled();
+			// 空白不追加写入（handleSearch 读到空 q 提前返回）
+			expect(setSpy).toHaveBeenCalledTimes(1);
+			expect(h.searchQuery()).toBe("");
 		});
 	});
 
-	it("非空查询 trim 后写入并保留当前 tab", () => {
+	it("非空查询 trim 后写入，提交时同步保留当前 tab", () => {
 		return withHook((h) => {
 			paramStore.t = "article";
 			h.setQuery("  量子力学  ");
+			expect(setSpy.mock.calls[0][0]).toEqual({ q: "量子力学" });
 			h.handleSearch({ preventDefault() {} } as SubmitEvent);
-			expect(setSpy).toHaveBeenCalledOnce();
-			const arg = setSpy.mock.calls[0][0] as Record<string, string>;
-			expect(arg.q).toBe("量子力学");
-			expect(arg.t).toBe("article");
+			expect(setSpy.mock.calls[1][0]).toEqual({
+				q: "量子力学",
+				t: "article",
+			});
 		});
 	});
 
-	it("onMount 从 URL 恢复初始查询词", () => {
+	it("初始 URL q 即输入值与搜索词（URL 单一来源）", () => {
 		paramStore.q = "恢复的词";
 		return withHook((h) => {
 			expect(h.query()).toBe("恢复的词");
+			expect(h.searchQuery()).toBe("恢复的词");
 		});
 	});
 });

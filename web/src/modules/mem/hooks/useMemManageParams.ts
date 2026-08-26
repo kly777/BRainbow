@@ -33,6 +33,9 @@ export interface UseMemManageParamsResult {
 	/** 设置/清除详情 id（null 或 undefined 从 URL 移除） */
 	setDetailId: (id: number | null) => void;
 	tagMode: () => TagMode;
+	/** 标签过滤 id（规范 schema） */
+	tagFilterIds: () => number[];
+	/** 旧链接兼容读取：tag_names（迁移完成后恒为空） */
 	tagFilterNames: () => string[];
 	setSearchParams: (params: Record<string, string | undefined>) => void;
 	handleSearchInput: (value: string) => void;
@@ -51,6 +54,8 @@ export function useMemManageParams(): UseMemManageParamsResult {
 		page: numParam(1, { min: 1 }),
 		id: numParam(0, { min: 1 }),
 		tag_mode: enumParam(["include", "exclude"] as const, "include"),
+		tag_ids: listParam(),
+		// 旧链接兼容：tag_names → tag_ids 迁移前仍可读取（迁移后不再写入）
 		tag_names: listParam(),
 	});
 
@@ -68,6 +73,13 @@ export function useMemManageParams(): UseMemManageParamsResult {
 		params.set({ id: id ?? undefined });
 
 	const tagMode = (): TagMode => params.get("tag_mode");
+	/** 标签过滤 id（规范 schema；管理页/复习页统一 tag_ids） */
+	const tagFilterIds = () =>
+		params
+			.get("tag_ids")
+			.map(Number)
+			.filter((n) => Number.isInteger(n));
+	/** 旧链接兼容读取：tag_names（迁移完成后恒为空） */
 	const tagFilterNames = () => params.get("tag_names");
 
 	// ── 便捷操作 ──
@@ -102,6 +114,7 @@ export function useMemManageParams(): UseMemManageParamsResult {
 		detailId,
 		setDetailId,
 		tagMode,
+		tagFilterIds,
 		tagFilterNames,
 		setSearchParams: params.setSearchParams,
 		handleSearchInput,

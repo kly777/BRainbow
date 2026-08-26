@@ -108,7 +108,7 @@ export function useChatPage() {
 
 	/** 搜索命中 → 打开树并定位节点（URL 驱动） */
 	const gotoHit = (hit: SearchHit) => {
-		s.setParams({
+		s.urlParams.set({
 			tree: String(hit.tree_id),
 			node: hit.node_id === null ? undefined : String(hit.node_id),
 		});

@@ -13,9 +13,10 @@ import {
 	notifySuccess,
 	parseUtc,
 	showConfirm,
+	strParam,
 	tryAsync,
+	useUrlParams,
 } from "@shared/utils";
-import { useSearchParams } from "@solidjs/router";
 import { createMemo, createSignal } from "solid-js";
 
 export function useCardsList() {
@@ -60,11 +61,9 @@ export function useCardsList() {
 		return list;
 	});
 
-	const [searchParams, setSearchParams] = useSearchParams();
+	const params = useUrlParams({ q: strParam("") });
 	// 本地搜索信号：驱动搜索请求，不触发路由重渲染
-	const [searchQuery, setSearchQuery] = createSignal(
-		typeof searchParams.q === "string" ? searchParams.q : "",
-	);
+	const [searchQuery, setSearchQuery] = createSignal(params.get("q"));
 	const isSearchMode = () => searchQuery().trim().length > 0;
 
 	const loadCards = async (p = 1) => {
@@ -136,7 +135,7 @@ export function useCardsList() {
 		setHasMore(true);
 		if (!query) {
 			// 清空搜索时同步 URL（支持深链接）
-			setSearchParams({});
+			params.set({ q: "" });
 			await loadCards(1);
 			return;
 		}

@@ -1,5 +1,6 @@
 import { Angle, Color } from "@lib/utils";
 import { createMemo, createSignal, type Setter } from "solid-js";
+import { RAINBOW_SQUARE_SIZE, rainbowGeometry } from "../lib/geometry.ts";
 import type { ShapeRender } from "../RainbowDrawer";
 
 export interface RainbowGeneratorApi {
@@ -32,7 +33,7 @@ export function useRainbowGenerator(): RainbowGeneratorApi {
 		Color.fromOklch({ L, C, h: (360 / 7) * 6 + h_offset }),
 	]);
 
-	const squareSize = 10240;
+	const squareSize = RAINBOW_SQUARE_SIZE;
 
 	const [angle, setAngle] = createSignal<Angle>(
 		new Angle(Math.PI * (43.5 / 360)),
@@ -42,14 +43,9 @@ export function useRainbowGenerator(): RainbowGeneratorApi {
 
 	let svgEl: SVGSVGElement | null = null;
 
-	const heightSum = createMemo(
-		() => squareSize * (Math.sin(angle().radian) + Math.cos(angle().radian)),
-	);
-	const rectHeight = createMemo(() => heightSum() / colors().length);
-	const rectWidth = createMemo(
-		() =>
-			squareSize / Math.cos(angle().radian) +
-			2 * rectHeight() * Math.tan(angle().radian),
+	// 几何尺寸：与 RainbowDrawer 共用 rainbowGeometry 单一来源
+	const geo = createMemo(() =>
+		rainbowGeometry(squareSize, angle().radian, colors().length),
 	);
 
 	const toBase64 = (bytes: Uint8Array): string => {
@@ -117,9 +113,9 @@ export function useRainbowGenerator(): RainbowGeneratorApi {
 		setAngle,
 		shapeRender,
 		setShapeRender,
-		rectWidth,
-		rectHeight,
-		heightSum,
+		rectWidth: () => geo().rectWidth,
+		rectHeight: () => geo().rectHeight,
+		heightSum: () => geo().heightSum,
 		exportSvg,
 		exportPng,
 		bindSvg,

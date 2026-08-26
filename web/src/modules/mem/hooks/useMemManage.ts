@@ -68,7 +68,7 @@ export function useMemManage() {
 	const [batchIds, setBatchIds] = createSignal<Set<number>>(new Set());
 	const [showExportModal, setShowExportModal] = createSignal(false);
 	const [showBatchTagModal, setShowBatchTagModal] = createSignal(false);
-	const [batchTagMode] = createSignal<"add" | "remove">("add");
+	const [batchTagMode, setBatchTagMode] = createSignal<"add" | "remove">("add");
 
 	// ── 直达标记：初始 URL 有 id 时，首次请求传 id 定位页码 ──
 	const [directId, setDirectId] = createSignal<number | null>(
@@ -313,6 +313,7 @@ export function useMemManage() {
 		showBatchTagModal,
 		setShowBatchTagModal,
 		batchTagMode,
+		setBatchTagMode,
 
 		// derived
 		allSelected,

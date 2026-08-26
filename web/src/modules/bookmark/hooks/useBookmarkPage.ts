@@ -30,7 +30,7 @@ export function useBookmarkPage() {
 	const searchQuery = () => params.get("q");
 	const tagFilter = () => params.get("tag");
 	const page = () => params.get("page");
-	const [pageSize] = createSignal(500);
+	const PAGE_SIZE = 500;
 
 	const [bookmarks, setBookmarks] = createSignal<Bookmark[]>([]);
 	const [total, setTotal] = createSignal(0);
@@ -51,8 +51,8 @@ export function useBookmarkPage() {
 		setError(null);
 		const result = await tryAsync(() =>
 			q
-				? searchBookmarksE(q, pageNum, pageSize(), tag || undefined)
-				: getBookmarksE(pageNum, pageSize(), tag || undefined),
+				? searchBookmarksE(q, pageNum, PAGE_SIZE, tag || undefined)
+				: getBookmarksE(pageNum, PAGE_SIZE, tag || undefined),
 		);
 		if (seq !== loadSeq) return;
 		if (result.ok) {
@@ -92,13 +92,7 @@ export function useBookmarkPage() {
 
 	// ── 子 hook：表单 CRUD ──
 	const form = useBookmarkForm({
-		onSaved: () => {
-			if (searchQuery() || tagFilter()) {
-				load({ silent: true });
-			} else {
-				load({ silent: true });
-			}
-		},
+		onSaved: () => load({ silent: true }),
 	});
 
 	// ── 子 hook：导入 ──

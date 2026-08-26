@@ -5,10 +5,6 @@ import {
 	activateTaskE,
 	archiveTaskE,
 	completeTaskE,
-	getActiveTasksE,
-	getAllTasksE,
-	getBacklogTasksE,
-	getCompletedTasksE,
 	moveToBacklogE,
 } from "@modules/task";
 
@@ -36,19 +32,3 @@ export const STATUS_API: Record<string, (id: number) => Promise<Task>> = {
 	archived: (id) => archiveTaskE(id),
 	backlog: (id) => moveToBacklogE(id),
 };
-
-/** 筛选条件 → API 调用映射 */
-export function fetchTasksByFilter(
-	status: string,
-): Promise<{ readonly items: readonly Task[] }> {
-	switch (status) {
-		case "backlog":
-			return getBacklogTasksE();
-		case "active":
-			return getActiveTasksE();
-		case "completed":
-			return getCompletedTasksE();
-		default:
-			return getAllTasksE();
-	}
-}

@@ -51,8 +51,6 @@ function TaskStatusSection(props: TaskStatusSectionProps) {
 								onEdit={() => props.onEdit(task)}
 								children={props.childrenMap.get(task.id) || []}
 								onAddSubTask={props.onAddSubTask}
-								feasibleWindows={[]}
-								plannedWindows={[]}
 							/>
 						)}
 					</For>

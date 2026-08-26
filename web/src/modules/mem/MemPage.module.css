@@ -60,24 +60,6 @@
 	gap: var(--space-md);
 }
 
-.icon-btn {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	color: var(--t-color-ink-muted);
-	background: none;
-	border: none;
-	font-size: var(--text-base);
-	cursor: pointer;
-	padding: var(--space-2xs) var(--space-xs);
-	opacity: 0.7;
-	transition: opacity var(--t-transition-fast);
-}
-
-.icon-btn:hover {
-	opacity: 1;
-}
-
 .add-link {
 	font-size: var(--text-sm);
 	color: var(--t-color-on-solid);

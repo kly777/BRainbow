@@ -15,11 +15,7 @@ import {
 	onMount,
 	useContext,
 } from "solid-js";
-import {
-	fetchTasksByFilter,
-	makeTemp,
-	STATUS_API,
-} from "../lib/task-provider-utils.ts";
+import { makeTemp, STATUS_API } from "../lib/task-provider-utils.ts";
 
 interface Stats {
 	backlog: number;
@@ -39,7 +35,6 @@ interface TaskCtxValue {
 	removeTask(id: number): Promise<void>;
 	updateTaskE(id: number, updates: Partial<Task>): Promise<void>;
 	addSubTask(parentId: number, title: string): Promise<void>;
-	filterByStatus(status: string): Promise<void>;
 	search(query: string): Promise<void>;
 }
 
@@ -165,15 +160,6 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		}
 	};
 
-	const filterByStatus = async (status: string) => {
-		const result = await tryAsync(() => fetchTasksByFilter(status));
-		if (result.ok) {
-			setTasks([...result.value.items]);
-		} else {
-			notifyError("筛选任务失败", result.error);
-		}
-	};
-
 	const handleSearch = async (query: string) => {
 		if (!query) {
 			await reload();
@@ -200,7 +186,6 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		removeTask,
 		updateTaskE,
 		addSubTask,
-		filterByStatus,
 		search: handleSearch,
 	};
 
@@ -224,7 +209,6 @@ export function useTasks() {
 			removeTask: async () => {},
 			updateTaskE: async () => {},
 			addSubTask: async () => {},
-			filterByStatus: async () => {},
 			search: async () => {},
 		};
 	}

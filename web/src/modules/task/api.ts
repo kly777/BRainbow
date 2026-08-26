@@ -109,15 +109,6 @@ export const updateTaskStatusE = (id: number, status: string): Promise<Task> =>
 export const searchTasksE = (query: string): Promise<PaginatedResponse<Task>> =>
 	cachedRequest(`/tasks/search?q=${encodeURIComponent(query)}`, {});
 
-export const getBacklogTasksE = (): Promise<PaginatedResponse<Task>> =>
-	cachedRequest("/tasks/status/backlog", {});
-
-export const getActiveTasksE = (): Promise<PaginatedResponse<Task>> =>
-	cachedRequest("/tasks/status/active", {});
-
-export const getCompletedTasksE = (): Promise<PaginatedResponse<Task>> =>
-	cachedRequest("/tasks/status/completed", {});
-
 export const getArchivedTasksE = (): Promise<PaginatedResponse<Task>> =>
 	cachedRequest("/tasks/status/archived", {});
 

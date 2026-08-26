@@ -102,23 +102,6 @@
 	color: var(--t-color-ink-muted);
 }
 
-.time-window-chips {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--space-xs);
-	margin-top: var(--space-sm);
-}
-
-.time-window-chip {
-	font-size: var(--text-xs);
-	padding: var(--space-xs) var(--space-sm);
-	border-radius: var(--radius-sm);
-	background: var(--t-color-bg);
-	color: var(--t-color-ink-muted);
-	border: 1px solid var(--t-color-surface-raised);
-	white-space: nowrap;
-}
-
 .sub-task-badge {
 	margin-left: var(--space-sm);
 	padding: var(--space-xs);
@@ -243,10 +226,6 @@
 	margin-left: var(--space-xl);
 	padding-left: var(--space-lg);
 	border-left: 2px solid var(--t-color-surface-raised);
-}
-
-.child-item {
-	padding: var(--space-md) 0;
 }
 
 .task-item:first-child {

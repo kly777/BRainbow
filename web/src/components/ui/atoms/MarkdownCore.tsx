@@ -62,8 +62,6 @@ marked.setOptions({
 
 export interface MarkdownRendererProps {
 	content: string;
-	class?: string;
-	inline?: boolean;
 }
 
 /// 实例序号：聊天页多条消息各自一个渲染实例，锚点必须跨实例唯一
@@ -74,10 +72,6 @@ const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 	const html = createMemo(() => {
 		try {
 			let content = props.content;
-
-			if (props.inline) {
-				content = content.replace(/\n/g, " ");
-			}
 
 			// 1. 将 \(...\) 和 \[...\] 转为 $...$ 和 $$...$$
 			content = content
@@ -263,10 +257,8 @@ const MarkdownRenderer: Component<MarkdownRendererProps> = (props) => {
 	return (
 		<div
 			ref={divRef}
-			class={props.class}
 			classList={{
 				"markdown-content": true,
-				"markdown-inline": props.inline,
 			}}
 			innerHTML={html()}
 		/>

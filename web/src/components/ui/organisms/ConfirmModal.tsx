@@ -132,7 +132,7 @@ function ConfirmDialog(props: {
 						class={`${styles.btn} ${styles.btnCancel}`}
 						onClick={() => doResolve(false)}
 					>
-						{options.cancelLabel ?? "取消"}
+						取消
 					</button>
 					<button
 						type="button"

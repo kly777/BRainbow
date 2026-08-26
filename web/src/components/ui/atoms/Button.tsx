@@ -24,6 +24,8 @@ interface ButtonProps {
 	onClick?: (e: MouseEvent) => void;
 	type?: "button" | "submit";
 	title?: string;
+	/** 图标按钮的无可见文案时的可访问名 */
+	ariaLabel?: string;
 	class?: string;
 	children: JSX.Element;
 }
@@ -36,6 +38,7 @@ const Button: Component<ButtonProps> = (props) => {
 			disabled={props.disabled}
 			onClick={props.onClick}
 			title={props.title}
+			aria-label={props.ariaLabel}
 		>
 			{props.children}
 		</button>

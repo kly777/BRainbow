@@ -3,6 +3,7 @@ import type { Component } from "solid-js";
 import AngleEditor from "./AngleEditor";
 import ColorEditor from "./ColorEditor";
 import { useRainbowGenerator } from "./hooks/useRainbowGenerator.ts";
+import { RAINBOW_SQUARE_SIZE } from "./lib/geometry.ts";
 import { RainbowDrawer, type ShapeRender } from "./RainbowDrawer";
 import styles from "./RainbowGenerator.module.css";
 
@@ -46,7 +47,6 @@ const RENDER_MODES = [
 
 function RainbowGenerator() {
 	const m = useRainbowGenerator();
-	const squareSize = 10240;
 	const exportSize = 400;
 
 	return (
@@ -84,7 +84,7 @@ function RainbowGenerator() {
 				<RainbowDrawer
 					colors={m.colors()}
 					angle={m.angle()}
-					squareSize={squareSize}
+					squareSize={RAINBOW_SQUARE_SIZE}
 					eleSize={exportSize}
 					svgRef={m.bindSvg}
 					shapeRendering={m.shapeRender()}

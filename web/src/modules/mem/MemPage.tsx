@@ -1,4 +1,4 @@
-import { Icon } from "@components/ui";
+import { Button, Icon } from "@components/ui";
 import { PATHS } from "@config/paths";
 import { openAiSettings } from "@modules/ai-setting";
 import { A } from "@solidjs/router";
@@ -30,24 +30,22 @@ export default function MemPage() {
 					</button>
 					<h1 class={styles.title}>记忆复习</h1>
 					<div class={styles.topRight}>
-						<button
-							type="button"
-							class={styles.iconBtn}
+						<Button
+							variant="icon"
 							onClick={() => m.setShowMnemonicSettings(true)}
 							title="助记提示词设置"
-							aria-label="助记提示词设置"
+							ariaLabel="助记提示词设置"
 						>
 							<Icon name="bulb" size={16} />
-						</button>
-						<button
-							type="button"
-							class={styles.iconBtn}
+						</Button>
+						<Button
+							variant="icon"
 							onClick={openAiSettings}
 							title="AI 设置"
-							aria-label="AI 设置"
+							ariaLabel="AI 设置"
 						>
 							<Icon name="bot" size={16} />
-						</button>
+						</Button>
 						<A href={PATHS.memoryAdd} class={styles.addLink}>
 							＋ 添加
 						</A>

@@ -3,6 +3,7 @@
 import { NAV_ROUTES } from "@config/navigation";
 import { fillPath, PATHS } from "@config/paths";
 import type { SearchHit, SearchTarget } from "../api.ts";
+import { fuzzyFilter } from "./fuzzy.ts";
 import type { Suggestion } from "./usePalette.ts";
 
 const BING = "https://www.bing.com/search?q=";
@@ -68,22 +69,8 @@ export function buildNavItems(
 	navigate: (path: string) => void,
 	close: () => void,
 ): Suggestion[] {
-	// 匹配质量排序：路径精确 > 路径前缀 > label 匹配 > desc 匹配 > 路径包含。
-	// 输入 `/m` 时「记忆」(path=/m) 必须排在「书签」(path=/bookmark 含 m) 前面
-	const score = (r: (typeof NAV_ROUTES)[number]): number => {
-		const p = r.path.slice(1);
-		if (p === q) return 0;
-		if (p.startsWith(q)) return 1;
-		if (r.label.includes(q)) return 2;
-		if (r.desc.includes(q)) return 3;
-		return 4; // 仅路径包含
-	};
-	return NAV_ROUTES.filter(
-		(r) =>
-			r.label.includes(q) || r.desc.includes(q) || r.path.slice(1).includes(q),
-	)
-		.sort((a, b) => score(a) - score(b))
-		.map((r) => ({
+	if (!q) {
+		return NAV_ROUTES.map((r) => ({
 			label: r.label,
 			desc: r.desc,
 			extra: r.path,
@@ -92,6 +79,21 @@ export function buildNavItems(
 				close();
 			},
 		}));
+	}
+	const filtered = fuzzyFilter(NAV_ROUTES, q, (r) => [
+		r.path.slice(1),
+		r.label,
+		r.desc,
+	]);
+	return filtered.map((r) => ({
+		label: r.label,
+		desc: r.desc,
+		extra: r.path,
+		onSelect: () => {
+			navigate(r.path);
+			close();
+		},
+	}));
 }
 
 interface CmdEntry {
@@ -102,21 +104,19 @@ interface CmdEntry {
 
 /** 指令建议（: 前缀模式） */
 export function buildCmdItems(q: string, commands: CmdEntry[]): Suggestion[] {
-	// 命令名（不含 : 前缀）前缀匹配优先于包含匹配
-	const score = (c: CmdEntry): number => {
-		const name = c.label.slice(1);
-		if (name.startsWith(q)) return 0;
-		if (c.label.includes(q)) return 1;
-		return 2; // 仅 desc 匹配
-	};
-	return commands
-		.filter((c) => c.label.slice(1).includes(q) || c.desc.includes(q))
-		.sort((a, b) => score(a) - score(b))
-		.map((c) => ({
+	if (!q) {
+		return commands.map((c) => ({
 			label: c.label,
 			desc: c.desc,
 			onSelect: c.action,
 		}));
+	}
+	const filtered = fuzzyFilter(commands, q, (c) => [c.label.slice(1), c.desc]);
+	return filtered.map((c) => ({
+		label: c.label,
+		desc: c.desc,
+		onSelect: c.action,
+	}));
 }
 
 /** 站内搜索建议（? 前缀模式），末尾附加"网页搜索"兜底项 */

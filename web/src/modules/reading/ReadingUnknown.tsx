@@ -53,7 +53,7 @@ export default function ReadingUnknown() {
 			>
 				{(words) => (
 					<div class={styles.list}>
-						<For each={words}>
+						<For each={words()}>
 							{(w) => <WordCard w={w} onMarkKnown={handleMarkKnown} />}
 						</For>
 					</div>

@@ -1,7 +1,7 @@
 import Button from "@components/ui/atoms/Button.tsx";
 import styles from "@components/ui/molecules/AsyncView.module.css";
 import { getErrorMessage } from "@shared/api/types/index.ts";
-import { type JSX, Show } from "solid-js";
+import { type JSX, Show, untrack } from "solid-js";
 
 interface Props<T> {
 	data: readonly T[] | null | undefined;
@@ -9,8 +9,15 @@ interface Props<T> {
 	error?: unknown;
 	onRetry?: () => void;
 	emptyMessage?: string;
-	children: (data: readonly T[]) => JSX.Element;
+	/**
+	 * children 接收 accessor 而非快照数组：子树只在四态切换时挂载一次，
+	 * 数据刷新由调用方内部的表达式（如 <For each={data()}>）做行级 diff，
+	 * 不再整棵重建——输入框焦点/DOM 身份因此跨刷新保持。
+	 */
+	children: (data: () => readonly T[]) => JSX.Element;
 }
+
+const EMPTY: readonly unknown[] = [];
 
 function SkeletonLoader() {
 	return (
@@ -57,7 +64,11 @@ export function AsyncView<T>(props: Props<T>) {
 						<div class={styles.state}>{props.emptyMessage || "暂无数据"}</div>
 					}
 				>
-					{props.children(props.data ?? [])}
+					{/* untrack：children 只在此分支挂载时求值一次；
+					    后续数据读取经由传入的 accessor 在调用方的响应式作用域内发生 */}
+					{untrack(() =>
+						props.children(() => (props.data ?? EMPTY) as readonly T[]),
+					)}
 				</Show>
 			</Show>
 		</Show>

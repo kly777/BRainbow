@@ -5,7 +5,7 @@ import {
 	Toolbar,
 } from "@components/ui";
 import { fmtLocal } from "@shared/utils";
-import type { Component } from "solid-js";
+import { type Component, Show } from "solid-js";
 import styles from "./CardDetail.module.css";
 import { useCardDetail } from "./hooks/useCardDetail.ts";
 
@@ -29,21 +29,28 @@ const CardDetailPage: Component = () => {
 				error={m.cardError}
 				onRetry={m.refetch}
 			>
-				{([c]) =>
-					c && (
-						<div class={styles.content}>
-							<div class={styles.meta}>
-								{c.created_at === c.updated_at ? "创建于" : "修改于"}:{" "}
-								{fmtLocal(
-									c.created_at === c.updated_at ? c.created_at : c.updated_at,
-								)}
-							</div>
-							<div class={styles.body}>
-								<MarkdownRenderer content={c.content} />
-							</div>
-						</div>
-					)
-				}
+				{(data) => {
+					const c = () => data()[0];
+					return (
+						<Show when={c()} keyed>
+							{(cc) => (
+								<div class={styles.content}>
+									<div class={styles.meta}>
+										{cc.created_at === cc.updated_at ? "创建于" : "修改于"}:{" "}
+										{fmtLocal(
+											cc.created_at === cc.updated_at
+												? cc.created_at
+												: cc.updated_at,
+										)}
+									</div>
+									<div class={styles.body}>
+										<MarkdownRenderer content={cc.content} />
+									</div>
+								</div>
+							)}
+						</Show>
+					);
+				}}
 			</AsyncView>
 		</div>
 	);

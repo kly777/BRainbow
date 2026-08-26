@@ -145,7 +145,7 @@ function CardOverview() {
 			>
 				{(data) => (
 					<CardMasonry
-						cards={[...data]}
+						cards={[...data()]}
 						onCardClick={(id) => navigate(fillPath(PATHS.cardDetail, id))}
 						onCardEdit={(id) => navigate(fillPath(PATHS.cardEdit, id))}
 						onCardDelete={handleDelete}

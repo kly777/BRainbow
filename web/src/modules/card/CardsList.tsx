@@ -1,7 +1,7 @@
 import { fillPath, PATHS } from "@config/paths";
 // ── 卡片列表页面（薄壳视图层）──
 // 结构：PageHead / CardFilter(受控) / AsyncView→CardMasonry / 创建 Modal
-// 过滤栏在 AsyncView 外：数据刷新重建网格时搜索框不失焦
+// 过滤栏置于 AsyncView 外：布局上与 PageHead 同级，且不受四态切换影响
 
 import {
 	AsyncView,

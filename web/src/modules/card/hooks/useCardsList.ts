@@ -128,7 +128,9 @@ export function useCardsList() {
 	};
 
 	const handleSearch = async (query: string) => {
-		// 用本地信号驱动搜索，不触发路由重渲染（避免输入框失焦）
+		// 本地信号驱动搜索；URL 仅在清空时回写（保持 ?q= 深链接语义）。
+		// 注：AsyncView 已改为 accessor seam，数据刷新不再重建子树，
+		// 此处的本地信号只是搜索状态的归属选择，不再是焦点规避手段。
 		setSearchQuery(query);
 		setPage(1);
 		setHasMore(true);

@@ -166,7 +166,7 @@ const MediaListPage: Component = () => {
 			>
 				{(data) => (
 					<div class={styles.grid}>
-						<For each={data}>
+						<For each={data()}>
 							{(item) => (
 								<MediaCard
 									item={item}

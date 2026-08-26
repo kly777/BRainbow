@@ -144,13 +144,11 @@ const CardEditPage: Component = () => {
 				onRetry={m.refetch}
 			>
 				{() => (
-					<Show when={!m.cardLoading && !m.cardError}>
-						<CardEditWorkspace
-							content={m.content()}
-							onInput={m.setContent}
-							onKeyDown={m.onKeyDown}
-						/>
-					</Show>
+					<CardEditWorkspace
+						content={m.content()}
+						onInput={m.setContent}
+						onKeyDown={m.onKeyDown}
+					/>
 				)}
 			</AsyncView>
 		</div>

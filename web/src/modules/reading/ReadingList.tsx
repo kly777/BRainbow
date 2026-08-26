@@ -163,7 +163,7 @@ export default function ReadingList() {
 			>
 				{(items) => (
 					<div class={styles.list}>
-						<For each={items}>
+						<For each={items()}>
 							{(a: ArticleSummary, i) => (
 								<ArticleCard article={a} first={i() === 0} />
 							)}

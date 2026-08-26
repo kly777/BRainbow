@@ -1,7 +1,7 @@
 import { Modal } from "@components/ui";
 import type { TagInfo } from "@modules/mem";
 import styles from "./MemModalShared.module.css";
-import TagSelector from "./TagSelector.tsx";
+import TagPicker from "./TagPicker.tsx";
 
 interface Props {
 	isOpen: boolean;
@@ -22,10 +22,11 @@ export default function MemBatchTagModal(props: Props) {
 	return (
 		<Modal isOpen={props.isOpen} onClose={props.onClose} title={title()}>
 			<p class={styles.desc}>{desc()}</p>
-			<TagSelector
-				tags={[]}
+			<TagPicker
+				selected={[]}
 				onAdd={props.mode === "remove" ? props.onRemoveTag : props.onAddTag}
 				onRemove={() => {}}
+				placeholder="搜索或创建标签…"
 			/>
 		</Modal>
 	);

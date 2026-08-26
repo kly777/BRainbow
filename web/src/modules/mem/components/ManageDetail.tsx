@@ -8,7 +8,7 @@ import type { MemItem, TagInfo } from "@modules/mem";
 import { type Component, Show } from "solid-js";
 import { memStateMeta } from "../lib/mem-manage-utils.ts";
 import styles from "./ManageDetail.module.css";
-import TagSelector from "./TagSelector.tsx";
+import TagPicker from "./TagPicker.tsx";
 
 interface Props {
 	mem: MemItem | undefined;
@@ -242,10 +242,11 @@ export default function ManageDetail(props: Props) {
 						{/* 标签 */}
 						<div class={styles.detailSection}>
 							<div class={styles.detailTab}>标签</div>
-							<TagSelector
-								tags={props.memTags}
+							<TagPicker
+								selected={props.memTags}
 								onAdd={props.onAddTag}
 								onRemove={props.onRemoveTag}
+								placeholder="搜索或创建标签…"
 							/>
 						</div>
 

@@ -9,9 +9,7 @@ type BadgeVariant =
 	| "relearning"
 	| "suspended"
 	| "success"
-	| "warning"
-	| "danger"
-	| "info";
+	| "warning";
 
 // vanilla-extract 命名导出不支持动态索引，用映射表
 const variantClass: Record<BadgeVariant, string> = {
@@ -23,21 +21,16 @@ const variantClass: Record<BadgeVariant, string> = {
 	suspended: styles.suspended,
 	success: styles.success,
 	warning: styles.warning,
-	danger: styles.danger,
-	info: styles.info,
 };
 
 interface BadgeProps {
 	variant?: BadgeVariant;
-	class?: string;
 	children: JSX.Element;
 }
 
 const Badge: Component<BadgeProps> = (props) => {
 	return (
-		<span
-			class={`${styles.badge} ${variantClass[props.variant ?? "default"]}${props.class ? ` ${props.class}` : ""}`}
-		>
+		<span class={`${styles.badge} ${variantClass[props.variant ?? "default"]}`}>
 			{props.children}
 		</span>
 	);

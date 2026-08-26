@@ -56,13 +56,3 @@
 	background: var(--t-color-warning-subtle);
 	color: var(--t-color-warning);
 }
-
-.danger {
-	background: var(--t-color-danger-subtle);
-	color: var(--t-color-danger);
-}
-
-.info {
-	background: var(--t-color-accent-soft);
-	color: var(--t-color-accent);
-}

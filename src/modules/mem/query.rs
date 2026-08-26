@@ -9,7 +9,9 @@ use crate::modules::mem::port::MemRepository;
 use crate::shared::batch::BatchDataResponse;
 use crate::shared::error_types::ServiceError;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
-use crate::shared::search::{SearchHit, SearchPort, SearchTarget, clip, merge_snippets, normalize_search};
+use crate::shared::search::{
+    SearchHit, SearchPort, SearchTarget, clip, merge_snippets, normalize_search,
+};
 
 /// 查询侧服务——纯读取，无副作用。
 ///

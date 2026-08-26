@@ -1,5 +1,5 @@
-import { fmtLocal } from "@lib/utils";
 import type { CalendarEvent } from "@modules/task";
+import { fmtLocal } from "@shared/utils";
 import { type Component, For, Show } from "solid-js";
 import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
 import styles from "./TaskCalendar.module.css";

@@ -1,6 +1,6 @@
 import { Button, Markdown as MarkdownRenderer } from "@components/ui";
-import { getErrorMessage } from "@lib/api";
-import { fmtLocal } from "@lib/utils";
+import { getErrorMessage } from "@shared/api";
+import { fmtLocal } from "@shared/utils";
 import { For, Show } from "solid-js";
 import styles from "./ConvDetail.module.css";
 import ConvTopBar from "./components/ConvTopBar.tsx";

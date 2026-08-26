@@ -21,7 +21,7 @@ import {
 	put,
 	request,
 	withInvalidate,
-} from "@lib/api";
+} from "@shared/api";
 import type {
 	BatchResponse,
 	DueResponse,

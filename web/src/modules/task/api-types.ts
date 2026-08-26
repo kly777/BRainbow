@@ -137,4 +137,4 @@ export function getStatusText(status: string): string {
 	}
 }
 
-// TaskListResponse 已移除，使用 PaginatedResponse<Task> 代替（来自 @lib/api）
+// TaskListResponse 已移除，使用 PaginatedResponse<Task> 代替（来自 @shared/api）

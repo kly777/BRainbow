@@ -1,4 +1,4 @@
-import { CACHE, cachedRequest, request, withInvalidate } from "@lib/api";
+import { CACHE, cachedRequest, request, withInvalidate } from "@shared/api";
 import type { CreateTimeWindowRequest, TimeWindow } from "./api.ts";
 
 // ==================== Time Window API Functions ====================

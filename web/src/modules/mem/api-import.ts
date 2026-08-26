@@ -1,7 +1,7 @@
 // ── CSV 导入导出 API ──
 
-import { CACHE, post, requestFile, withInvalidate } from "@lib/api";
-import { downloadBlob } from "@lib/utils";
+import { CACHE, post, requestFile, withInvalidate } from "@shared/api";
+import { downloadBlob } from "@shared/utils";
 
 // ── CSV 导入导出 ──
 

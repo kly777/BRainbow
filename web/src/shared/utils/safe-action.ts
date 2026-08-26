@@ -7,7 +7,7 @@
  * - showConfirm: 弹出确认对话框（re-export）
  *
  * 用法：
- *   import { tryOrNotify, confirmAndRun, showConfirm } from "@lib/utils";
+ *   import { tryOrNotify, confirmAndRun, showConfirm } from "@shared/utils";
  *
  *   // 仅通知错误，成功后拿到返回值
  *   const card = await tryOrNotify(() => createCard(req), "创建卡片");

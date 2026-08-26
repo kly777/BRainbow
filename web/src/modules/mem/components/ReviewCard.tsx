@@ -3,7 +3,7 @@
 
 import { MarkdownEditor } from "@components";
 import { Button, Icon, Markdown as MarkdownRenderer } from "@components/ui";
-import { copyTextWithToast, fmtInterval, fmtLocal } from "@lib/utils";
+import { copyTextWithToast, fmtInterval, fmtLocal } from "@shared/utils";
 import { Show } from "solid-js";
 import type { UseMemReview } from "../hooks/useMemReviewTypes.ts";
 import { useSpeech } from "../hooks/useSpeech.ts";

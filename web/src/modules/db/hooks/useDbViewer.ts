@@ -1,5 +1,5 @@
-import { getErrorMessage } from "@lib/api";
-import { debounce, tryAsync } from "@lib/utils";
+import { getErrorMessage } from "@shared/api";
+import { debounce, tryAsync } from "@shared/utils";
 import { useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import {

@@ -1,9 +1,9 @@
 // ── 记忆复习模块的核心业务逻辑（队列管理见 useDueQueue） ──
 // 组合入口：队列管理 + 复习操作（useReviewActions）。
 
-import { tryAsync } from "@lib/utils";
 import type { MemCounts } from "@modules/mem";
 import { getDueE, getMemCountsE, previewMemE } from "@modules/mem";
+import { tryAsync } from "@shared/utils";
 import { createSignal, onMount } from "solid-js";
 import {
 	calcAvgCardTime,
@@ -150,12 +150,9 @@ export function useMemReview(): UseMemReview {
 		counts,
 		estimatedTotal: queue.estimatedTotal,
 		allTags: tagFilter.allTags,
-		tagQuery: tagFilter.tagQuery,
-		tagOpen: tagFilter.tagOpen,
 		tagFilterIds: tagFilter.tagFilterIds,
 		tagMode: tagFilter.tagMode,
 		tagFilterTags: tagFilter.tagFilterTags,
-		tagSuggestions: tagFilter.tagSuggestions,
 		avgCardTime,
 		estRemaining,
 		maxLearning,
@@ -170,8 +167,6 @@ export function useMemReview(): UseMemReview {
 		setEditing,
 		setEditCue,
 		setEditTarget,
-		setTagQuery: tagFilter.setTagQuery,
-		setTagOpen: tagFilter.setTagOpen,
 		loadDue: queue.loadDue,
 		rate: actions.rate,
 		bury: actions.bury,

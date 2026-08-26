@@ -7,7 +7,7 @@ import {
 	patch,
 	request,
 	withInvalidate,
-} from "@lib/api";
+} from "@shared/api";
 
 // ── 类型 ──
 

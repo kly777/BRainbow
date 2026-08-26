@@ -5,7 +5,7 @@
  * 让错误处理变成显式的、可组合的数据流。
  *
  * 用法：
- *   import { ok, err, tryAsync, type Result } from "@lib/utils/result";
+ *   import { ok, err, tryAsync, type Result } from "@shared/utils/result";
  *
  *   const result = await tryAsync(() => deleteCard(id));
  *   if (result.ok) {

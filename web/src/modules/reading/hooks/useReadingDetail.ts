@@ -1,6 +1,5 @@
 // ── 阅读详情页核心逻辑 ──
 
-import { copyText, notifyError, tryAsync } from "@lib/utils";
 import type { ArticleDetail } from "@modules/reading";
 import {
 	getArticle,
@@ -9,6 +8,7 @@ import {
 	recommendNext,
 	updateArticleNotes,
 } from "@modules/reading";
+import { copyText, notifyError, tryAsync } from "@shared/utils";
 import { useParams } from "@solidjs/router";
 import {
 	createEffect,

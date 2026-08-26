@@ -20,8 +20,8 @@ vi.mock("@modules/card", () => ({
 	updateCardE: vi.fn(),
 }));
 const confirmResolve = vi.fn();
-vi.mock("@lib/utils", async (importOriginal) => {
-	const mod = await importOriginal<typeof import("@lib/utils")>();
+vi.mock("@shared/utils", async (importOriginal) => {
+	const mod = await importOriginal<typeof import("@shared/utils")>();
 	return { ...mod, showConfirm: () => confirmResolve() };
 });
 

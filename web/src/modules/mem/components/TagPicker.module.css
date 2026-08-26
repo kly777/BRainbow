@@ -1,0 +1,124 @@
+/* TagPicker — 标签选择/过滤统一组件 */
+
+.picker {
+	position: relative;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-xs);
+}
+
+/* 中性 chip（无 mode 场景） */
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	padding: var(--space-2xs) var(--space-sm);
+	font-size: var(--text-xs);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink-muted);
+	white-space: nowrap;
+}
+
+/* 过滤模式 chips：包含=强调色，排除=中性灰 */
+.chip-active,
+.chip-excluded {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-xs);
+	font-size: var(--text-xs);
+	padding: var(--space-2xs) var(--space-sm);
+	border-radius: var(--radius-full);
+	white-space: nowrap;
+	transition: filter var(--t-transition-fast);
+}
+
+.chip-active {
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent-strong);
+}
+
+.chip-excluded {
+	background: var(--t-color-badge-suspended-bg);
+	color: var(--t-color-badge-suspended-text);
+}
+
+.chip-active:hover,
+.chip-excluded:hover {
+	filter: brightness(0.95);
+}
+
+.chip-clear {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: var(--text-2xs);
+	color: inherit;
+	padding: 0;
+	opacity: 0.6;
+	line-height: 1;
+	transition: opacity var(--t-transition-fast);
+}
+
+.chip-clear:hover {
+	opacity: 1;
+}
+
+.input {
+	flex: 1;
+	min-width: 7.5rem;
+	padding: var(--space-xs) var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	font-size: var(--text-sm);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	outline: none;
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+}
+
+.input:focus {
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+}
+
+.dropdown {
+	position: absolute;
+	top: calc(100% + 0.25rem);
+	left: 0;
+	right: 0;
+	z-index: var(--z-dropdown);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-md);
+	max-height: 12.5rem;
+
+	/* 纵向滚动同时裁剪方角，遵循圆角 */
+	overflow: hidden auto;
+}
+
+.item {
+	display: block;
+	width: 100%;
+	text-align: left;
+	padding: var(--space-xs) var(--space-sm);
+	font-size: var(--text-sm);
+	cursor: pointer;
+	background: none;
+	border: none;
+	color: inherit;
+	transition: background var(--t-transition-fast);
+}
+
+.item:hover {
+	background: var(--t-color-bg);
+}
+
+.create-new {
+	color: var(--t-color-accent);
+	font-weight: 500;
+}

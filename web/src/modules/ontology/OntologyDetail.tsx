@@ -2,8 +2,8 @@
 
 import { Button, Toolbar } from "@components/ui";
 import { PATHS } from "@config/paths";
-import { getErrorMessage } from "@lib/api";
-import { notifySuccess, showConfirm, tryOrNotify } from "@lib/utils";
+import { getErrorMessage } from "@shared/api";
+import { notifySuccess, showConfirm, tryOrNotify } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal, Show } from "solid-js";
 import { deleteOntoE, getOntoE, updateOntoE } from "./api";

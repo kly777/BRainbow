@@ -1,8 +1,8 @@
 // ── 消息骨架：头像 / 头部（角色·时间·操作）/ 内容体 / 底部（分支条）──
 // /chat 与 /chat/mem 共用；样式由调用方注入（两页面 CSS 有细微差异）。
 
-import { parseUtc } from "@lib/utils";
 import type { ChatNode } from "@modules/chat";
+import { parseUtc } from "@shared/utils";
 import { type JSX, Show } from "solid-js";
 
 /** 所需样式类：messageRow/userRow/assistantRow/avatar/messageCol/messageHead/messageRole/messageActions/messageTime */

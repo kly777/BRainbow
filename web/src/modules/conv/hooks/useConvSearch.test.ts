@@ -7,8 +7,8 @@ import { type ConvSearchTab, useConvSearch } from "./useConvSearch.ts";
 
 const paramStore: Record<string, string> = {};
 const setSpy = vi.fn();
-vi.mock("@lib/utils", async (importOriginal) => {
-	const mod = await importOriginal<typeof import("@lib/utils")>();
+vi.mock("@shared/utils", async (importOriginal) => {
+	const mod = await importOriginal<typeof import("@shared/utils")>();
 	return {
 		...mod,
 		useUrlParams: () => ({

@@ -4,7 +4,7 @@ import {
 	Markdown as MarkdownRenderer,
 	Toolbar,
 } from "@components/ui";
-import { fmtLocal } from "@lib/utils";
+import { fmtLocal } from "@shared/utils";
 import type { Component } from "solid-js";
 import styles from "./CardDetail.module.css";
 import { useCardDetail } from "./hooks/useCardDetail.ts";

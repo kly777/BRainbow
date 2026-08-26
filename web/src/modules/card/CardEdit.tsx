@@ -4,7 +4,7 @@ import {
 	Button,
 	Markdown as MarkdownRenderer,
 } from "@components/ui";
-import { fmtLocal } from "@lib/utils";
+import { fmtLocal } from "@shared/utils";
 import { type Component, Show } from "solid-js";
 import styles from "./CardEdit.module.css";
 import { useCardEdit } from "./hooks/useCardEdit.ts";

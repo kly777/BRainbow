@@ -1,4 +1,4 @@
-import { request } from "@lib/api";
+import { request } from "@shared/api";
 
 // ── AI 设置（数据库存储，后端代理） ──
 

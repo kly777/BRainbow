@@ -1,7 +1,7 @@
 // ── chat SSE 流式请求：读取 data 行，回调每个增量（content / reasoning） ──
 // 复用 lib/api/streaming.ts 的全局认证和错误处理。
 
-import { streamRequest } from "@lib/api";
+import { streamRequest } from "@shared/api";
 import type { StreamResult } from "./useChatSessionTypes.ts";
 
 // ── SSE data 行协议（与后端 src/modules/ai/service.rs、src/modules/chat/handler.rs 保持一致） ──

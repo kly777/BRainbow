@@ -4,6 +4,8 @@
  * 建议下拉中可 hover 删除已存在的标签（全局删除，所有书签移除该标签）。
  */
 
+import type { BookmarkTagWithCount } from "@modules/bookmark";
+import { deleteBookmarkTagE, searchBookmarkTagsE } from "@modules/bookmark";
 import {
 	blurClose,
 	notifyError,
@@ -11,9 +13,7 @@ import {
 	showConfirm,
 	trimmedQuery,
 	tryAsync,
-} from "@lib/utils";
-import type { BookmarkTagWithCount } from "@modules/bookmark";
-import { deleteBookmarkTagE, searchBookmarkTagsE } from "@modules/bookmark";
+} from "@shared/utils";
 import {
 	type Component,
 	createResource,

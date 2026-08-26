@@ -9,7 +9,6 @@
 // 4. 无模块级可变状态（initialLoadDone / skipNextLoad 已消灭）
 // 5. load 单一职责：列表 / 标签 / 直达各自独立
 
-import { showConfirm, tryAsync, tryOrNotify } from "@lib/utils";
 import {
 	addTagToMemE,
 	batchGetMemsTagsE,
@@ -22,6 +21,7 @@ import {
 	type TagInfo,
 	unsuspendMemE,
 } from "@modules/mem";
+import { showConfirm, tryAsync, tryOrNotify } from "@shared/utils";
 import {
 	createEffect,
 	createMemo,

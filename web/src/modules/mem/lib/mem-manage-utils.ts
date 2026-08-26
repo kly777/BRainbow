@@ -5,7 +5,7 @@ import { getAllMemsE } from "@modules/mem";
 export type TagMode = "include" | "exclude";
 
 // (类型原在 v1 MemManageToolbar，已上移至此)
-import { notifyError, tryAsync } from "@lib/utils";
+import { notifyError, tryAsync } from "@shared/utils";
 
 // ── 类型 ──
 

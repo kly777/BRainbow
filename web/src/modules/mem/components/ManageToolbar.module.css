@@ -1,4 +1,4 @@
-/* features/mem/ui/ManageToolbar.css.ts — 增强版 */
+/* ManageToolbar — 搜索 / 标签过滤 / 状态筛选 / 导出 */
 
 .toolbar {
 	display: flex;
@@ -16,108 +16,16 @@
 	max-width: 280px;
 }
 
+/* 标签过滤区：占剩余宽度，picker 内部自带 flex-wrap */
 .tag-filter {
 	display: flex;
 	align-items: center;
-	gap: var(--space-xs);
-	position: relative;
-	flex-wrap: wrap;
+	flex: 1;
+	min-width: 0;
 }
 
-/* 包含标签：跟随主题强调色（与品牌色一致，区别于状态徽章语义） */
-.active-tag {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--space-xs);
-	font-size: var(--text-xs);
-	padding: var(--space-2xs) var(--space-sm);
-	border-radius: var(--radius-full);
-	background: var(--t-color-accent-soft);
-	color: var(--t-color-accent-strong);
-	transition: filter var(--t-transition-fast);
-}
-
-.active-tag:hover {
-	filter: brightness(0.95);
-}
-
-.excluded-tag {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--space-xs);
-	font-size: var(--text-xs);
-	padding: var(--space-2xs) var(--space-sm);
-	border-radius: var(--radius-full);
-	background: var(--t-color-badge-suspended-bg);
-	color: var(--t-color-badge-suspended-text);
-	transition: filter var(--t-transition-fast);
-}
-
-.excluded-tag:hover {
-	filter: brightness(0.95);
-}
-
-.tag-clear {
-	background: none;
-	border: none;
-	cursor: pointer;
-	font-size: var(--text-2xs);
-	color: inherit;
-	padding: 0;
-	opacity: 0.6;
-	transition: opacity var(--t-transition-fast);
-}
-
-.tag-clear:hover {
-	opacity: 1;
-}
-
-.tag-input {
-	font-size: var(--text-xs);
-	width: 7.5rem;
-	color: var(--t-color-ink);
-	background: var(--t-color-bg);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-sm);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-}
-
-.tag-input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-}
-
-.tag-dropdown {
-	position: absolute;
-	top: calc(100% + 0.25rem);
-	left: 0;
-	z-index: var(--z-dropdown);
-	background: var(--t-color-surface);
-	border: 1px solid var(--t-color-border-strong);
-	border-radius: var(--radius-md);
-	box-shadow: var(--shadow-lg);
-	overflow: hidden;
-}
-
-.tag-option {
-	display: block;
-	width: 100%;
-	text-align: left;
-	font-size: var(--text-sm);
-	padding: var(--space-sm) var(--space-md);
-	border: none;
-	background: none;
-	cursor: pointer;
-	color: var(--t-color-ink);
-	transition: background var(--t-transition-fast);
-}
-
-.tag-option:hover {
-	background: var(--t-color-surface-raised);
+.tag-filter > * {
+	min-width: 0;
 }
 
 /* 导出：动作区靠右 */

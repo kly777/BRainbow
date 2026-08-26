@@ -1,8 +1,8 @@
 import { AsyncView, Button, Modal, PageHead } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
-import { fmtLocal, notifyError, tryAsync } from "@lib/utils";
 import type { ArticleSummary } from "@modules/reading";
 import { listArticles, uploadArticle } from "@modules/reading";
+import { fmtLocal, notifyError, tryAsync } from "@shared/utils";
 import { A } from "@solidjs/router";
 import { type Component, createResource, createSignal, For } from "solid-js";
 import styles from "./ReadingList.module.css";

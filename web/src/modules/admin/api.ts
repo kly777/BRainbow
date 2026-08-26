@@ -1,6 +1,6 @@
 // ── 管理员设置 API ──
 
-import { request } from "@lib/api";
+import { request } from "@shared/api";
 
 export interface AdminSettings {
 	allow_register: boolean;

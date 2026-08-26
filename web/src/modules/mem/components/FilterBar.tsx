@@ -1,9 +1,9 @@
-// ── v2 标签过滤栏 ──
+// ── v2 标签过滤栏：外壳 + TagPicker（模式切换/chips/清空由 picker 承担） ──
 
-import { blurClose } from "@lib/utils";
-import { For, Show } from "solid-js";
+import { Show } from "solid-js";
 import type { UseMemReview } from "../hooks/useMemReviewTypes.ts";
 import styles from "./FilterBar.module.css";
+import TagPicker from "./TagPicker.tsx";
 
 interface FilterBarProps {
 	m: UseMemReview;
@@ -15,80 +15,15 @@ export default function FilterBar(props: FilterBarProps) {
 	return (
 		<Show when={m.allTags().length > 0 || m.estimatedTotal() > 0}>
 			<div class={styles.filterBar}>
-				<button
-					type="button"
-					class={styles.tagModeBtn}
-					onClick={m.toggleTagMode}
-					title={
-						m.tagMode() === "include" ? "切换为排除模式" : "切换为包含模式"
-					}
-				>
-					{m.tagMode() === "include" ? "☐ 包含" : "☒ 排除"}
-				</button>
-
-				<For each={m.tagFilterTags()}>
-					{(tag) => (
-						<span
-							class={
-								m.tagMode() === "include"
-									? styles.tagChipActive
-									: styles.tagChipExcluded
-							}
-						>
-							{tag.name}
-							<button
-								type="button"
-								class={styles.tagClear}
-								onClick={() => m.removeTagFilter(tag.id)}
-							>
-								✕
-							</button>
-						</span>
-					)}
-				</For>
-
-				<Show when={m.tagFilterTags().length > 0}>
-					<button
-						type="button"
-						class={styles.tagClearAll}
-						onClick={m.clearTagFilters}
-					>
-						清除
-					</button>
-				</Show>
-
-				<input
-					type="text"
-					class={styles.tagSearchInput}
+				<TagPicker
+					selected={m.tagFilterTags()}
+					onAdd={m.addTagFilter}
+					onRemove={m.removeTagFilter}
+					mode={m.tagMode()}
+					onModeToggle={m.toggleTagMode}
+					onClearAll={m.clearTagFilters}
 					placeholder="添加标签过滤…"
-					value={m.tagQuery()}
-					onInput={(e) => {
-						m.setTagQuery(e.currentTarget.value);
-						m.setTagOpen(true);
-					}}
-					onFocus={() => m.setTagOpen(true)}
-					onBlur={blurClose(() => m.setTagOpen(false))}
-					onKeyDown={(e) => {
-						if (e.key === "Enter" && m.tagSuggestions().length > 0) {
-							m.addTagFilter(m.tagSuggestions()[0]);
-						}
-					}}
 				/>
-
-				<Show when={m.tagOpen() && m.tagSuggestions().length > 0}>
-					<div class={styles.tagDropdown}>
-						{m.tagSuggestions().map((t) => (
-							<button
-								type="button"
-								class={styles.tagOption}
-								tabIndex={-1}
-								onMouseDown={() => m.addTagFilter(t)}
-							>
-								{t.name}
-							</button>
-						))}
-					</div>
-				</Show>
 			</div>
 		</Show>
 	);

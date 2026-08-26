@@ -2,7 +2,12 @@
 
 import { useAuth } from "@app/context/auth.tsx";
 import { Button, PageHead } from "@components/ui";
-import { notifyError, notifySuccess, showConfirm, tryAsync } from "@lib/utils";
+import {
+	notifyError,
+	notifySuccess,
+	showConfirm,
+	tryAsync,
+} from "@shared/utils";
 import { createResource, createSignal, Show } from "solid-js";
 import styles from "./AdminPage.module.css";
 import { getAdminSettingsE, rotateJwtE, updateAdminSettingsE } from "./api.ts";

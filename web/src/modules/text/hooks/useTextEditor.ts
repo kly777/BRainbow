@@ -1,4 +1,4 @@
-import { notifyError, numParam, tryAsync, useUrlParams } from "@lib/utils";
+import { notifyError, numParam, tryAsync, useUrlParams } from "@shared/utils";
 import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { loadTextE, saveTextE } from "../api";
 

@@ -1,7 +1,7 @@
 // ── 对话树纯函数：路径计算 / 分支末端 / 子树判断（无 Solid 依赖，便于单测） ──
 
-import { nowIsoUtc } from "@lib/utils";
 import type { ChatNode } from "@modules/chat";
+import { nowIsoUtc } from "@shared/utils";
 
 /** 聚焦节点（或最新节点）到根的路径（父在前） */
 export function computeActivePath(

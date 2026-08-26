@@ -2,8 +2,6 @@
 
 import { Button, Toolbar } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
-import { getErrorMessage } from "@lib/api";
-import { fmtLocal, notifySuccess, showConfirm, tryOrNotify } from "@lib/utils";
 import {
 	deleteTaskE,
 	getAllTasksE,
@@ -11,6 +9,13 @@ import {
 	type Task,
 	updateTaskE,
 } from "@modules/task";
+import { getErrorMessage } from "@shared/api";
+import {
+	fmtLocal,
+	notifySuccess,
+	showConfirm,
+	tryOrNotify,
+} from "@shared/utils";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import {
 	type Component,

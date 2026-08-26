@@ -1,7 +1,7 @@
 import { Button, Modal } from "@components/ui";
-import { fmtLocal } from "@lib/utils";
 import type { Task } from "@modules/task";
 import { useTasks } from "@modules/task";
+import { fmtLocal } from "@shared/utils";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import styles from "./TaskKanban.module.css";
 

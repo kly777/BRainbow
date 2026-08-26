@@ -30,8 +30,8 @@ vi.mock("@solidjs/router", () => ({
 }));
 const confirmResolve = vi.fn();
 const tryOrNotifyImpl = vi.fn();
-vi.mock("@lib/utils", async (importOriginal) => {
-	const mod = await importOriginal<typeof import("@lib/utils")>();
+vi.mock("@shared/utils", async (importOriginal) => {
+	const mod = await importOriginal<typeof import("@shared/utils")>();
 	return {
 		...mod,
 		showConfirm: () => confirmResolve(),

@@ -20,12 +20,9 @@ export interface UseMemReview {
 	counts: () => MemCounts | null;
 	estimatedTotal: () => number;
 	allTags: () => TagInfo[];
-	tagQuery: () => string;
-	tagOpen: () => boolean;
 	tagFilterIds: () => number[];
 	tagMode: () => "include" | "exclude";
 	tagFilterTags: () => TagInfo[];
-	tagSuggestions: () => TagInfo[];
 	avgCardTime: () => number;
 	estRemaining: () => number;
 	maxLearning: () => number;
@@ -40,8 +37,6 @@ export interface UseMemReview {
 	setEditing: (v: boolean) => void;
 	setEditCue: (v: string) => void;
 	setEditTarget: (v: string) => void;
-	setTagQuery: (v: string) => void;
-	setTagOpen: (v: boolean) => void;
 	loadDue: () => Promise<void>;
 	rate: (rating: number) => Promise<void>;
 	bury: () => Promise<void>;

@@ -1,7 +1,7 @@
 import { Button, FilterGroup, SearchInput } from "@components/ui";
 import { PATHS } from "@config/paths";
-import { getErrorMessage } from "@lib/api";
-import { fmtLocal } from "@lib/utils";
+import { getErrorMessage } from "@shared/api";
+import { fmtLocal } from "@shared/utils";
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 import styles from "./ConvSearch.module.css";

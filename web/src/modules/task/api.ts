@@ -9,7 +9,7 @@ import {
 	post,
 	request,
 	withInvalidate,
-} from "@lib/api";
+} from "@shared/api";
 import type {
 	CreateTaskRequest,
 	DagView,

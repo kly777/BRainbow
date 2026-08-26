@@ -3,8 +3,8 @@
 
 import { useAuth } from "@app/context/auth.tsx";
 import { PATHS } from "@config/paths";
-import { AUTH_REQUIRED_EVENT } from "@lib/api";
 import { openAiSettings } from "@modules/ai-setting";
+import { AUTH_REQUIRED_EVENT } from "@shared/api";
 import { useNavigate } from "@solidjs/router";
 import {
 	createEffect,

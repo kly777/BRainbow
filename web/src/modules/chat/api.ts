@@ -1,4 +1,4 @@
-import { request } from "@lib/api";
+import { request } from "@shared/api";
 
 // ── 类型 ──
 

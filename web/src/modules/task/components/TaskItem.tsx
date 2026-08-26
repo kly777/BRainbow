@@ -1,6 +1,6 @@
 import { Icon, Tooltip } from "@components/ui";
-import { fmtFull } from "@lib/utils";
 import type { Task } from "@modules/task";
+import { fmtFull } from "@shared/utils";
 import { type Component, createSignal, For, Show } from "solid-js";
 import styles from "./TaskList.module.css";
 

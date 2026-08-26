@@ -1,8 +1,8 @@
 // ── 复习队列管理：加载 / 预取 / 前进 / 状态切换（stale-while-revalidate） ──
 
-import { tryAsync } from "@lib/utils";
 import type { DueResponse, MemItem } from "@modules/mem";
 import { getSessionEstimateE } from "@modules/mem";
+import { tryAsync } from "@shared/utils";
 import { createSignal } from "solid-js";
 import {
 	insertRevisit,

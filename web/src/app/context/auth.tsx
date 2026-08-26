@@ -5,8 +5,8 @@ import {
 	setApiKey as persistApiKey,
 	STORAGE_KEY,
 	saveUser,
-} from "@lib/api";
-import { trySync, unwrapOr } from "@lib/utils/result.ts";
+} from "@shared/api";
+import { trySync, unwrapOr } from "@shared/utils/result.ts";
 import { createContext, createSignal, type JSX, useContext } from "solid-js";
 
 export interface AuthState {

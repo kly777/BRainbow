@@ -1,10 +1,10 @@
 import { Button, Modal } from "@components/ui";
-import { notifyError, tryAsync } from "@lib/utils";
 import type { TagInfo } from "@modules/mem";
 import { downloadExportCsv, listTagsE } from "@modules/mem";
+import { notifyError, tryAsync } from "@shared/utils";
 import { createEffect, createSignal } from "solid-js";
 import styles from "./MemModalShared.module.css";
-import TagSelector from "./TagSelector.tsx";
+import TagPicker from "./TagPicker.tsx";
 
 interface Props {
 	isOpen: boolean;
@@ -44,12 +44,13 @@ export default function MemExportModal(props: Props) {
 			}
 		>
 			<p class={styles.desc}>可选：按标签筛选导出（不选则导出全部）</p>
-			<TagSelector
-				tags={allUserTags().filter((t) => exportTagIds().includes(t.id))}
+			<TagPicker
+				selected={allUserTags().filter((t) => exportTagIds().includes(t.id))}
 				onAdd={(tag) => setExportTagIds((prev) => [...prev, tag.id])}
 				onRemove={(tagId) =>
 					setExportTagIds((prev) => prev.filter((id) => id !== tagId))
 				}
+				placeholder="搜索或创建标签…"
 			/>
 		</Modal>
 	);

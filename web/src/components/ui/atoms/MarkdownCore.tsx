@@ -1,4 +1,4 @@
-import { copyText } from "@lib/utils";
+import { copyText } from "@shared/utils";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js/lib/common";
 import { marked } from "marked";

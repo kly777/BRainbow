@@ -1,5 +1,5 @@
-import { getErrorMessage } from "@lib/api";
-import { copyText } from "@lib/utils";
+import { getErrorMessage } from "@shared/api";
+import { copyText } from "@shared/utils";
 import {
 	type Component,
 	createEffect,

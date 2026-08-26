@@ -1,13 +1,13 @@
 // ── 书签表单状态 + CRUD ──
 // 从 useBookmarkPage 拆分：创建/编辑弹窗、表单验证、保存。
 
-import { notifySuccess, tryAsync } from "@lib/utils";
 import type { Bookmark } from "@modules/bookmark";
 import {
 	createBookmarkE,
 	setBookmarkTagsE,
 	updateBookmarkE,
 } from "@modules/bookmark";
+import { notifySuccess, tryAsync } from "@shared/utils";
 import { createStore } from "solid-js/store";
 
 export interface UseBookmarkFormOpts {

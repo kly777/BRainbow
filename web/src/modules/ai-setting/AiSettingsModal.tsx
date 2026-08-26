@@ -2,9 +2,9 @@
 // 仅管 AI 服务本身（API 地址 / Key / 模型）；助记提示词在 /m 页单独配置。
 
 import { Button, Modal } from "@components/ui";
-import { getErrorMessage } from "@lib/api";
-import { notifyError, notifySuccess, tryAsync } from "@lib/utils";
 import { getAiSettingsE, updateAiSettingsE } from "@modules/ai-setting";
+import { getErrorMessage } from "@shared/api";
+import { notifyError, notifySuccess, tryAsync } from "@shared/utils";
 import { createEffect, createSignal, Show } from "solid-js";
 import styles from "./AiSettingsModal.module.css";
 import { callAi } from "./ai.ts";

@@ -1,5 +1,5 @@
-import { notifyError, tryAsync } from "@lib/utils";
 import { type CalendarEvent, getCalendarEventsE } from "@modules/task";
+import { notifyError, tryAsync } from "@shared/utils";
 import { createMemo, createResource, createSignal } from "solid-js";
 
 export interface TaskCalendarApi {

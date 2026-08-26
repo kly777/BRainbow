@@ -56,8 +56,14 @@ export default function MemManage() {
 				selectedCount={m.batchIds().size}
 				onReset={m.batchReset}
 				onBury={m.batchBury}
-				onTag={() => m.setShowBatchTagModal(true)}
-				onTagRemove={() => m.setShowBatchTagModal(true)}
+				onTag={() => {
+					m.setBatchTagMode("add");
+					m.setShowBatchTagModal(true);
+				}}
+				onTagRemove={() => {
+					m.setBatchTagMode("remove");
+					m.setShowBatchTagModal(true);
+				}}
 				onDelete={m.batchDelete}
 			/>
 

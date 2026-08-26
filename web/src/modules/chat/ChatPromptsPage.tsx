@@ -160,7 +160,7 @@ export default function ChatPromptsPage() {
 
 			<div class={styles.list}>
 				<Show
-					when={!loading}
+					when={!loading()}
 					fallback={<div class={styles.empty}>加载中…</div>}
 				>
 					<PromptListBody

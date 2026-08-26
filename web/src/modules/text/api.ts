@@ -1,6 +1,4 @@
-import { cachedRequest, put, resource } from "@shared/api";
-
-const text = resource("text");
+import { cachedRequest, domains, put } from "@shared/api";
 
 export interface TabItem {
 	readonly id: number;
@@ -18,4 +16,4 @@ export const loadTextE = (): Promise<TextResponse> =>
 export const saveTextE = (
 	tabs: readonly { name: string; content: string }[],
 ): Promise<{ readonly ok: boolean }> =>
-	text.invalidate(put<{ readonly ok: boolean }>("/text", { tabs }));
+	domains.text.invalidate(put<{ readonly ok: boolean }>("/text", { tabs }));

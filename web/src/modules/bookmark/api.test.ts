@@ -29,7 +29,7 @@ vi.mock("@shared/api", () => ({
 	...requestMock,
 	...cacheMock,
 	...utilMock,
-	resource: () => ({ invalidate: invalidateMock }),
+	domains: { bookmarks: { invalidate: invalidateMock } },
 }));
 
 import {

@@ -2,19 +2,22 @@
  * 前端内存缓存层
  *
  * 提供 TTL 缓存 + 模式匹配失效，用于减少重复 API 请求。
- * 只缓存 GET 请求，增删改操作通过 resource().invalidate 使相关缓存失效。
+ * 只缓存 GET 请求，增删改操作通过 domains（见 domains.ts）使相关缓存失效。
+ *
+ * cachedRequest 是"读穿缓存"：
+ *   - 单一飞行：同一 key 的并发请求合并为一次网络请求，N 个读者共享同一个 Promise；
+ *   - 陈旧重验证：命中过期条目时立即返回旧值，后台静默刷新（失败保留旧值，下次再试）。
  *
  * 使用方式（在 API 模块中）：
  *
- *   import { cachedRequest, resource } from "@shared/api";
+ *   import { cachedRequest, domains } from "@shared/api";
  *
  *   // GET → 走缓存
  *   export const getCardsE = () => cachedRequest<PaginatedCards>("/cards", {});
  *
  *   // 写操作 → 失效相关缓存
- *   const cards = resource("cards");
  *   export const createCardE = (card) =>
- *     cards.invalidate(post<Card>("/cards", card));
+ *     domains.cards.invalidate(post<Card>("/cards", card));
  */
 
 // ── request 直接从具体文件导入（避免 index 的 re-export 循环） ──
@@ -32,24 +35,11 @@ interface CacheEntry {
 
 const store = new Map<string, CacheEntry>();
 
+/** 飞行中的请求：单一飞行合并（同一 key 的并发读者共享同一 Promise） */
+const inFlight = new Map<string, Promise<unknown>>();
+
 /** 缓存条目上限：无限分页/搜索会产生无限 key，超出后按插入顺序淘汰最旧条目 */
 const MAX_ENTRIES = 200;
-
-// ── 缓存键前缀匹配模式（供 invalidateCache 使用） ──
-
-/** 预定义的缓存失效模式，按 API 领域划分 */
-export const CACHE = {
-	cards: /^GET \/cards/,
-	bookmarks: /^GET \/bookmarks/,
-	tasks: /^GET \/tasks/,
-	db: /^GET \/db/,
-	onto: /^GET \/onto/,
-	sign: /^GET \/sign/,
-	text: /^GET \/text/,
-	timeWindows: /^GET \/time-windows/,
-	media: /^GET \/media/,
-	mem: /^GET \/mem/,
-} as const;
 
 // ── 默认 TTL ──
 
@@ -98,10 +88,10 @@ export function writeCache(key: string, data: unknown): void {
 /**
  * 使匹配正则表达式的缓存条目失效。
  * 在增删改操作完成后调用，确保下次读取拿到最新数据。
+ * 失效模式由 domains.ts 统一声明。
  *
  * @example
  *   invalidateCache(/^GET \/cards/)  // 使所有卡片相关缓存失效
- *   invalidateCache(CACHE.cards)     // 同上，使用预定义模式
  */
 export function invalidateCache(pattern: RegExp): void {
 	for (const key of store.keys()) {
@@ -112,10 +102,11 @@ export function invalidateCache(pattern: RegExp): void {
 }
 
 /**
- * 清除所有缓存。
+ * 清除所有缓存（含飞行中的请求）。
  */
 export function clearAllCache(): void {
 	store.clear();
+	inFlight.clear();
 }
 
 /**
@@ -140,10 +131,70 @@ export function cacheSnapshot(): ReadonlyMap<
 	return snapshot;
 }
 
-// ==================== cachedRequest ====================
+// ==================== cachedRequest（读穿缓存） ====================
+
+interface CacheLookup<T> {
+	/** 命中的缓存数据 */
+	readonly data: T;
+	/** 是否仍在 staleMs 有效期内（false = 过期，可先回旧值再后台刷新） */
+	readonly fresh: boolean;
+}
+
+/**
+ * 读取缓存，返回 { data, fresh }；不存在返回 null。
+ * 与 readCache 不同：不删除过期条目（供陈旧重验证使用）。
+ */
+function lookup<T>(key: string, staleMs: number): CacheLookup<T> | null {
+	const entry = store.get(key);
+	if (!entry) return null;
+	return {
+		data: entry.data as T,
+		fresh: Date.now() - entry.fetchedAt <= staleMs,
+	};
+}
+
+/**
+ * 发起请求并写入缓存，同一 key 的并发调用共享同一 Promise（单一飞行）。
+ */
+function runInFlight<T>(
+	key: string,
+	endpoint: string,
+	options: RequestInit,
+): Promise<T> {
+	const pending = inFlight.get(key);
+	if (pending) return pending as Promise<T>;
+	const promise = request<T>(endpoint, options)
+		.then((data) => {
+			writeCache(key, data);
+			return data;
+		})
+		.finally(() => {
+			inFlight.delete(key);
+		});
+	inFlight.set(key, promise);
+	return promise;
+}
+
+/**
+ * 后台静默刷新：失败不打断用户，保留旧值待下次读取再试。
+ */
+function refreshInBackground<T>(
+	key: string,
+	endpoint: string,
+	options: RequestInit,
+): void {
+	void runInFlight<T>(key, endpoint, options).catch((error: unknown) => {
+		console.error(`[CACHE] 后台刷新失败 ${endpoint}:`, error);
+	});
+}
 
 /**
  * 带缓存的 GET 请求。对于非 GET 请求，行为与 request() 相同。
+ *
+ * 命中语义：
+ * - 有效期内 → 直接返回缓存值；
+ * - 已过期但存在 → 立即返回旧值，并在后台静默刷新（陈旧重验证）；
+ * - 未命中 → 发起请求（同一 key 的并发调用合并为一次）。
  *
  * @param endpoint - API 路径（不含 /api 前缀）
  * @param options - fetch options
@@ -162,12 +213,14 @@ export const cachedRequest = async <T>(
 	}
 
 	const key = buildCacheKey(method, endpoint);
-	const cached = readCache<T>(key, staleMs);
-	if (cached !== null) {
-		return cached;
+	const hit = lookup<T>(key, staleMs);
+	if (hit === null) {
+		return runInFlight<T>(key, endpoint, options);
 	}
-
-	const data = await request<T>(endpoint, options);
-	writeCache(key, data);
-	return data;
+	if (hit.fresh) {
+		return hit.data;
+	}
+	// 已过期 → 先回旧值，后台静默刷新
+	refreshInBackground<T>(key, endpoint, options);
+	return hit.data;
 };

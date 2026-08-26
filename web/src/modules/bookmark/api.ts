@@ -2,14 +2,12 @@ import {
 	buildQuery,
 	cachedRequest,
 	del,
+	domains,
 	type PaginatedResponse,
 	patch,
 	post,
 	request,
-	resource,
 } from "@shared/api";
-
-const bookmarks = resource("bookmarks");
 
 export interface Bookmark {
 	id: number;
@@ -68,16 +66,16 @@ export const getBookmarkE = (id: number): Promise<Bookmark> =>
 	cachedRequest<Bookmark>(`/bookmarks/${id}`, {});
 
 export const createBookmarkE = (bm: CreateBookmarkRequest): Promise<Bookmark> =>
-	bookmarks.invalidate(post<Bookmark>("/bookmarks", bm));
+	domains.bookmarks.invalidate(post<Bookmark>("/bookmarks", bm));
 
 export const updateBookmarkE = (
 	id: number,
 	bm: UpdateBookmarkRequest,
 ): Promise<Bookmark> =>
-	bookmarks.invalidate(patch<Bookmark>(`/bookmarks/${id}`, bm));
+	domains.bookmarks.invalidate(patch<Bookmark>(`/bookmarks/${id}`, bm));
 
 export const deleteBookmarkE = (id: number): Promise<void> =>
-	bookmarks.invalidate(del<void>(`/bookmarks/${id}`));
+	domains.bookmarks.invalidate(del<void>(`/bookmarks/${id}`));
 
 export const searchBookmarksE = (
 	query: string,
@@ -105,7 +103,7 @@ export const setBookmarkTagsE = (
 	id: number,
 	tags: string[],
 ): Promise<BookmarkTag[]> =>
-	bookmarks.invalidate(
+	domains.bookmarks.invalidate(
 		request<BookmarkTag[]>(`/bookmarks/${id}/tags`, {
 			method: "PUT",
 			body: JSON.stringify({ tags }),
@@ -114,13 +112,13 @@ export const setBookmarkTagsE = (
 
 /** 删除标签 */
 export const deleteBookmarkTagE = (id: number): Promise<void> =>
-	bookmarks.invalidate(del<void>(`/bookmarks/tags/${id}`));
+	domains.bookmarks.invalidate(del<void>(`/bookmarks/tags/${id}`));
 
 /** 导入 Firefox 书签 HTML */
 export const importBookmarksE = async (file: File): Promise<ImportResult> => {
 	const formData = new FormData();
 	formData.append("file", file);
-	return bookmarks.invalidate(
+	return domains.bookmarks.invalidate(
 		request<ImportResult>("/bookmarks/import", {
 			method: "POST",
 			body: formData,

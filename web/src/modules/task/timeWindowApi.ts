@@ -1,6 +1,4 @@
-import { cachedRequest, request, resource } from "@shared/api";
-
-const timeWindows = resource("timeWindows");
+import { cachedRequest, domains, request } from "@shared/api";
 
 import type { CreateTimeWindowRequest, TimeWindow } from "./api.ts";
 
@@ -21,7 +19,7 @@ export const getTimeWindowsE = (
 export const createTimeWindowE = (
 	data: CreateTimeWindowRequest,
 ): Promise<TimeWindow> =>
-	timeWindows.invalidate(
+	domains.timeWindows.invalidate(
 		request<TimeWindow>("/time-windows", {
 			method: "POST",
 			body: JSON.stringify(data),
@@ -29,7 +27,7 @@ export const createTimeWindowE = (
 	);
 
 export const deleteTimeWindowE = (id: number): Promise<void> =>
-	timeWindows.invalidate(
+	domains.timeWindows.invalidate(
 		request<void>(`/time-windows/${id}`, {
 			method: "DELETE",
 		}),

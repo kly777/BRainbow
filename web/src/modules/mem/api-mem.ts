@@ -13,9 +13,7 @@ export const getSessionEstimateE = (params?: {
 	return request(`/mem/session-estimate${suffix ? `?${suffix}` : ""}`, {});
 };
 
-import { buildQuery, del, post, put, request, resource } from "@shared/api";
-
-const mem = resource("mem");
+import { buildQuery, del, post, put, request } from "@shared/api";
 
 import type {
 	BatchResponse,
@@ -28,19 +26,18 @@ import type {
 } from "./api-types.ts";
 
 // ── API ──
+// mem 读取全部走 request（不经缓存），写入无需失效仪式（见 domains.ts 修剪记录）。
 
 export const createMemE = (
 	cueMd: string,
 	targetMd: string,
 	prerequisites: number[] = [],
 ): Promise<{ id: number }> =>
-	mem.invalidate(
-		post<{ id: number }>("/mem", {
-			cue_content: cueMd,
-			target_content: targetMd,
-			prerequisites,
-		}),
-	);
+	post<{ id: number }>("/mem", {
+		cue_content: cueMd,
+		target_content: targetMd,
+		prerequisites,
+	});
 
 export const getAllMemsE = (
 	params?: MemQuery,
@@ -69,18 +66,16 @@ export const reviewMemE = (
 	rating: number,
 	durationSecs = 0,
 ): Promise<{ ok: boolean }> =>
-	mem.invalidate(
-		post<{ ok: boolean }>(`/mem/${id}/review`, {
-			rating,
-			duration_secs: durationSecs,
-		}),
-	);
+	post<{ ok: boolean }>(`/mem/${id}/review`, {
+		rating,
+		duration_secs: durationSecs,
+	});
 
 export const undoReviewE = (
 	id: number,
 	undoData: Record<string, unknown>,
 ): Promise<{ ok: boolean }> =>
-	mem.invalidate(post<{ ok: boolean }>(`/mem/${id}/undo`, undoData));
+	post<{ ok: boolean }>(`/mem/${id}/undo`, undoData);
 
 export const previewMemE = (
 	id: number,
@@ -88,50 +83,38 @@ export const previewMemE = (
 	request(`/mem/${id}/preview`, {});
 
 export const deleteMemE = (id: number): Promise<{ ok: boolean }> =>
-	mem.invalidate(del<{ ok: boolean }>(`/mem/${id}`));
+	del<{ ok: boolean }>(`/mem/${id}`);
 
 export const buryMemE = (id: number): Promise<{ ok: boolean }> =>
-	mem.invalidate(
-		request<{ ok: boolean }>(`/mem/${id}/bury`, { method: "POST" }),
-	);
+	request<{ ok: boolean }>(`/mem/${id}/bury`, { method: "POST" });
 
 export const suspendMemE = (id: number): Promise<{ ok: boolean }> =>
-	mem.invalidate(
-		request<{ ok: boolean }>(`/mem/${id}/suspend`, { method: "POST" }),
-	);
+	request<{ ok: boolean }>(`/mem/${id}/suspend`, { method: "POST" });
 
 export const unsuspendMemE = (id: number): Promise<{ ok: boolean }> =>
-	mem.invalidate(
-		request<{ ok: boolean }>(`/mem/${id}/unsuspend`, { method: "POST" }),
-	);
+	request<{ ok: boolean }>(`/mem/${id}/unsuspend`, { method: "POST" });
 
 export const unburyMemE = (id: number): Promise<{ ok: boolean }> =>
-	mem.invalidate(
-		request<{ ok: boolean }>(`/mem/${id}/unbury`, { method: "POST" }),
-	);
+	request<{ ok: boolean }>(`/mem/${id}/unbury`, { method: "POST" });
 
 export const resetMemE = (id: number): Promise<{ ok: boolean }> =>
-	mem.invalidate(
-		request<{ ok: boolean }>(`/mem/${id}/reset`, { method: "POST" }),
-	);
+	request<{ ok: boolean }>(`/mem/${id}/reset`, { method: "POST" });
 
 export const batchBuryMemE = (ids: number[]): Promise<BatchResponse> =>
-	mem.invalidate(post<BatchResponse>("/mem/batch-bury", { items: ids }));
+	post<BatchResponse>("/mem/batch-bury", { items: ids });
 
 export const batchDeleteMemE = (ids: number[]): Promise<BatchResponse> =>
-	mem.invalidate(post<BatchResponse>("/mem/batch-delete", { items: ids }));
+	post<BatchResponse>("/mem/batch-delete", { items: ids });
 
 export const batchResetMemE = (ids: number[]): Promise<BatchResponse> =>
-	mem.invalidate(post<BatchResponse>("/mem/batch-reset", { items: ids }));
+	post<BatchResponse>("/mem/batch-reset", { items: ids });
 
 export const editMemE = (
 	id: number,
 	cue: string,
 	target: string,
 ): Promise<{ ok: boolean }> =>
-	mem.invalidate(
-		put<{ ok: boolean }>(`/mem/${id}/edit`, {
-			cue_content: cue,
-			target_content: target,
-		}),
-	);
+	put<{ ok: boolean }>(`/mem/${id}/edit`, {
+		cue_content: cue,
+		target_content: target,
+	});

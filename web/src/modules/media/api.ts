@@ -2,13 +2,11 @@ import {
 	buildQuery,
 	cachedRequest,
 	del,
+	domains,
 	type PaginatedResponse,
 	patch,
 	request,
-	resource,
 } from "@shared/api";
-
-const media = resource("media");
 
 // ── 类型 ──
 
@@ -33,7 +31,7 @@ export interface MediaItem {
 export const uploadMedia = async (file: File): Promise<MediaItem> => {
 	const formData = new FormData();
 	formData.append("file", file);
-	return media.invalidate(
+	return domains.media.invalidate(
 		request<MediaItem>("/media/upload", {
 			method: "POST",
 			body: formData,
@@ -61,10 +59,12 @@ export const renameMediaE = (
 	stored_id: string,
 	original_name: string,
 ): Promise<MediaItem> =>
-	media.invalidate(patch<MediaItem>(`/media/${stored_id}`, { original_name }));
+	domains.media.invalidate(
+		patch<MediaItem>(`/media/${stored_id}`, { original_name }),
+	);
 
 /** 删除；force=true 跳过引用检查强制删除 */
 export const deleteMediaE = (stored_id: string, force = false): Promise<void> =>
-	media.invalidate(
+	domains.media.invalidate(
 		del<void>(`/media/${stored_id}${force ? "?force=true" : ""}`),
 	);

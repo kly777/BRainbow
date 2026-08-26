@@ -1,8 +1,7 @@
 // ── CSV 导入导出 API ──
+// mem 读取全部走 request（不经缓存），写入无需失效仪式（见 domains.ts 修剪记录）。
 
-import { post, requestFile, resource } from "@shared/api";
-
-const mem = resource("mem");
+import { post, requestFile } from "@shared/api";
 
 import { downloadBlob } from "@shared/utils";
 
@@ -27,23 +26,19 @@ export const importCsvE = (
 	csvContent: string,
 	defaultTags?: string[],
 ): Promise<ImportCsvResult> =>
-	mem.invalidate(
-		post<ImportCsvResult>("/mem/import/csv", {
-			csv: csvContent,
-			default_tags: defaultTags ?? [],
-		}),
-	);
+	post<ImportCsvResult>("/mem/import/csv", {
+		csv: csvContent,
+		default_tags: defaultTags ?? [],
+	});
 
 export const importPsvE = (
 	psvContent: string,
 	defaultTags?: string[],
 ): Promise<ImportCsvResult> =>
-	mem.invalidate(
-		post<ImportCsvResult>("/mem/import/psv", {
-			csv: psvContent,
-			default_tags: defaultTags ?? [],
-		}),
-	);
+	post<ImportCsvResult>("/mem/import/psv", {
+		csv: psvContent,
+		default_tags: defaultTags ?? [],
+	});
 
 export interface ImportJsonItem {
 	cue: string;
@@ -60,9 +55,7 @@ export const importJsonE = (
 	mems: ImportJsonItem[],
 	defaultTags?: string[],
 ): Promise<ImportJsonResult> =>
-	mem.invalidate(
-		post<ImportJsonResult>("/mem/import/json", {
-			mems,
-			default_tags: defaultTags ?? [],
-		}),
-	);
+	post<ImportJsonResult>("/mem/import/json", {
+		mems,
+		default_tags: defaultTags ?? [],
+	});

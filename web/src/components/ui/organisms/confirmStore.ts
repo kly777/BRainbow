@@ -21,7 +21,6 @@ export interface ConfirmOptions {
 	message: string;
 	variant?: ConfirmVariant;
 	confirmLabel?: string;
-	cancelLabel?: string;
 }
 
 interface ConfirmItem {

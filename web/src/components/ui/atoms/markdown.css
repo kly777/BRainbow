@@ -242,37 +242,6 @@
 	background-color: var(--t-color-surface-raised);
 }
 
-/* 内联模式 */
-.markdown-content.markdown-inline {
-	display: inline;
-}
-
-.markdown-content.markdown-inline p {
-	display: inline;
-	margin: 0;
-}
-
-.markdown-content.markdown-inline h1,
-.markdown-content.markdown-inline h2,
-.markdown-content.markdown-inline h3,
-.markdown-content.markdown-inline h4,
-.markdown-content.markdown-inline h5,
-.markdown-content.markdown-inline h6 {
-	display: inline;
-	font-size: inherit;
-	border: none;
-	padding: 0;
-	margin: 0;
-}
-
-.markdown-content.markdown-inline blockquote,
-.markdown-content.markdown-inline pre,
-.markdown-content.markdown-inline ul,
-.markdown-content.markdown-inline ol,
-.markdown-content.markdown-inline table {
-	display: none;
-}
-
 /* 数学公式（KaTeX） */
 .markdown-content .katex-display {
 	overflow: auto hidden;

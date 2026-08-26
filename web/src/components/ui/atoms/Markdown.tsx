@@ -8,17 +8,7 @@ import type { MarkdownRendererProps } from "./MarkdownCore.tsx";
 const MarkdownCore = lazy(() => import("./MarkdownCore.tsx"));
 
 const MarkdownRenderer = (props: MarkdownRendererProps) => (
-	<Suspense
-		fallback={
-			<div
-				class={props.class}
-				classList={{
-					"markdown-content": true,
-					"markdown-inline": props.inline,
-				}}
-			/>
-		}
-	>
+	<Suspense fallback={<div class="markdown-content" />}>
 		<MarkdownCore {...props} />
 	</Suspense>
 );

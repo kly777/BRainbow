@@ -2,14 +2,16 @@
 
 import {
 	buildQuery,
-	CACHE,
 	cachedRequest,
 	type PaginatedResponse,
 	patch,
 	post,
 	request,
-	withInvalidate,
+	resource,
 } from "@shared/api";
+
+const tasks = resource("tasks");
+
 import type {
 	CreateTaskRequest,
 	DagView,
@@ -36,17 +38,15 @@ export const getTaskDetailE = (id: number): Promise<TaskDetail> =>
 	cachedRequest(`/tasks/${id}/detail`, {}, 60_000);
 
 export const createTaskE = (task: CreateTaskRequest): Promise<Task> =>
-	withInvalidate(CACHE.tasks, post<Task>("/tasks", task));
+	tasks.invalidate(post<Task>("/tasks", task));
 
 export const updateTaskE = (
 	id: number,
 	task: UpdateTaskRequest,
-): Promise<Task> =>
-	withInvalidate(CACHE.tasks, patch<Task>(`/tasks/${id}`, task));
+): Promise<Task> => tasks.invalidate(patch<Task>(`/tasks/${id}`, task));
 
 export const deleteTaskE = (id: number): Promise<void> =>
-	withInvalidate(
-		CACHE.tasks,
+	tasks.invalidate(
 		request<void>(`/tasks/${id}`, {
 			method: "DELETE",
 		}),
@@ -56,8 +56,7 @@ export const addTaskDependencyE = (
 	taskId: number,
 	dependsOnTaskId: number,
 ): Promise<void> =>
-	withInvalidate(
-		CACHE.tasks,
+	tasks.invalidate(
 		post<void>(`/tasks/${taskId}/dependencies`, {
 			depends_on_task_id: dependsOnTaskId,
 		}),
@@ -67,8 +66,7 @@ export const removeTaskDependencyE = (
 	taskId: number,
 	dependsOnTaskId: number,
 ): Promise<void> =>
-	withInvalidate(
-		CACHE.tasks,
+	tasks.invalidate(
 		request<void>(`/tasks/${taskId}/dependencies/${dependsOnTaskId}`, {
 			method: "DELETE",
 		}),
@@ -78,8 +76,7 @@ export const addTaskDecompositionE = (
 	parentTaskId: number,
 	childTaskId: number,
 ): Promise<void> =>
-	withInvalidate(
-		CACHE.tasks,
+	tasks.invalidate(
 		request<void>(`/tasks/${parentTaskId}/decomposition/${childTaskId}`, {
 			method: "POST",
 		}),
@@ -90,8 +87,7 @@ export const addTaskTimeAllocationE = (
 	timeWindowId: number,
 	durationMinutes: number,
 ): Promise<void> =>
-	withInvalidate(
-		CACHE.tasks,
+	tasks.invalidate(
 		request<void>(
 			`/tasks/${taskId}/time-allocation/${timeWindowId}/${durationMinutes}`,
 			{
@@ -104,7 +100,7 @@ export const getUserTasksE = (userId: number): Promise<readonly Task[]> =>
 	cachedRequest(`/tasks/user/${userId}`, {});
 
 export const updateTaskStatusE = (id: number, status: string): Promise<Task> =>
-	withInvalidate(CACHE.tasks, patch<Task>(`/tasks/${id}`, { status }));
+	tasks.invalidate(patch<Task>(`/tasks/${id}`, { status }));
 
 export const searchTasksE = (query: string): Promise<PaginatedResponse<Task>> =>
 	cachedRequest(`/tasks/search?q=${encodeURIComponent(query)}`, {});
@@ -122,32 +118,28 @@ export const getTaskStatsE = (): Promise<{
 
 // 任务状态操作
 export const completeTaskE = (id: number): Promise<Task> =>
-	withInvalidate(
-		CACHE.tasks,
+	tasks.invalidate(
 		request<Task>(`/tasks/${id}/complete`, {
 			method: "POST",
 		}),
 	);
 
 export const activateTaskE = (id: number): Promise<Task> =>
-	withInvalidate(
-		CACHE.tasks,
+	tasks.invalidate(
 		request<Task>(`/tasks/${id}/activate`, {
 			method: "POST",
 		}),
 	);
 
 export const archiveTaskE = (id: number): Promise<Task> =>
-	withInvalidate(
-		CACHE.tasks,
+	tasks.invalidate(
 		request<Task>(`/tasks/${id}/archive`, {
 			method: "POST",
 		}),
 	);
 
 export const moveToBacklogE = (id: number): Promise<Task> =>
-	withInvalidate(
-		CACHE.tasks,
+	tasks.invalidate(
 		request<Task>(`/tasks/${id}/move-to-backlog`, {
 			method: "POST",
 		}),

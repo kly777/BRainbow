@@ -13,15 +13,10 @@ export const getSessionEstimateE = (params?: {
 	return request(`/mem/session-estimate${suffix ? `?${suffix}` : ""}`, {});
 };
 
-import {
-	buildQuery,
-	CACHE,
-	del,
-	post,
-	put,
-	request,
-	withInvalidate,
-} from "@shared/api";
+import { buildQuery, del, post, put, request, resource } from "@shared/api";
+
+const mem = resource("mem");
+
 import type {
 	BatchResponse,
 	DueResponse,
@@ -39,8 +34,7 @@ export const createMemE = (
 	targetMd: string,
 	prerequisites: number[] = [],
 ): Promise<{ id: number }> =>
-	withInvalidate(
-		CACHE.mem,
+	mem.invalidate(
 		post<{ id: number }>("/mem", {
 			cue_content: cueMd,
 			target_content: targetMd,
@@ -75,8 +69,7 @@ export const reviewMemE = (
 	rating: number,
 	durationSecs = 0,
 ): Promise<{ ok: boolean }> =>
-	withInvalidate(
-		CACHE.mem,
+	mem.invalidate(
 		post<{ ok: boolean }>(`/mem/${id}/review`, {
 			rating,
 			duration_secs: durationSecs,
@@ -87,7 +80,7 @@ export const undoReviewE = (
 	id: number,
 	undoData: Record<string, unknown>,
 ): Promise<{ ok: boolean }> =>
-	withInvalidate(CACHE.mem, post<{ ok: boolean }>(`/mem/${id}/undo`, undoData));
+	mem.invalidate(post<{ ok: boolean }>(`/mem/${id}/undo`, undoData));
 
 export const previewMemE = (
 	id: number,
@@ -95,63 +88,48 @@ export const previewMemE = (
 	request(`/mem/${id}/preview`, {});
 
 export const deleteMemE = (id: number): Promise<{ ok: boolean }> =>
-	withInvalidate(CACHE.mem, del<{ ok: boolean }>(`/mem/${id}`));
+	mem.invalidate(del<{ ok: boolean }>(`/mem/${id}`));
 
 export const buryMemE = (id: number): Promise<{ ok: boolean }> =>
-	withInvalidate(
-		CACHE.mem,
+	mem.invalidate(
 		request<{ ok: boolean }>(`/mem/${id}/bury`, { method: "POST" }),
 	);
 
 export const suspendMemE = (id: number): Promise<{ ok: boolean }> =>
-	withInvalidate(
-		CACHE.mem,
+	mem.invalidate(
 		request<{ ok: boolean }>(`/mem/${id}/suspend`, { method: "POST" }),
 	);
 
 export const unsuspendMemE = (id: number): Promise<{ ok: boolean }> =>
-	withInvalidate(
-		CACHE.mem,
+	mem.invalidate(
 		request<{ ok: boolean }>(`/mem/${id}/unsuspend`, { method: "POST" }),
 	);
 
 export const unburyMemE = (id: number): Promise<{ ok: boolean }> =>
-	withInvalidate(
-		CACHE.mem,
+	mem.invalidate(
 		request<{ ok: boolean }>(`/mem/${id}/unbury`, { method: "POST" }),
 	);
 
 export const resetMemE = (id: number): Promise<{ ok: boolean }> =>
-	withInvalidate(
-		CACHE.mem,
+	mem.invalidate(
 		request<{ ok: boolean }>(`/mem/${id}/reset`, { method: "POST" }),
 	);
 
 export const batchBuryMemE = (ids: number[]): Promise<BatchResponse> =>
-	withInvalidate(
-		CACHE.mem,
-		post<BatchResponse>("/mem/batch-bury", { items: ids }),
-	);
+	mem.invalidate(post<BatchResponse>("/mem/batch-bury", { items: ids }));
 
 export const batchDeleteMemE = (ids: number[]): Promise<BatchResponse> =>
-	withInvalidate(
-		CACHE.mem,
-		post<BatchResponse>("/mem/batch-delete", { items: ids }),
-	);
+	mem.invalidate(post<BatchResponse>("/mem/batch-delete", { items: ids }));
 
 export const batchResetMemE = (ids: number[]): Promise<BatchResponse> =>
-	withInvalidate(
-		CACHE.mem,
-		post<BatchResponse>("/mem/batch-reset", { items: ids }),
-	);
+	mem.invalidate(post<BatchResponse>("/mem/batch-reset", { items: ids }));
 
 export const editMemE = (
 	id: number,
 	cue: string,
 	target: string,
 ): Promise<{ ok: boolean }> =>
-	withInvalidate(
-		CACHE.mem,
+	mem.invalidate(
 		put<{ ok: boolean }>(`/mem/${id}/edit`, {
 			cue_content: cue,
 			target_content: target,

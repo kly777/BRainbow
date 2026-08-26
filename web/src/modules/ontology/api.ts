@@ -1,11 +1,6 @@
-import {
-	CACHE,
-	cachedRequest,
-	patch,
-	post,
-	request,
-	withInvalidate,
-} from "@shared/api";
+import { cachedRequest, patch, post, request, resource } from "@shared/api";
+
+const onto = resource("onto");
 
 export interface Onto {
 	readonly id: number;
@@ -28,18 +23,15 @@ export const getOntoE = (id: number): Promise<Onto> =>
 export const createOntoE = (
 	name: string,
 	description?: string,
-): Promise<Onto> =>
-	withInvalidate(CACHE.onto, post<Onto>("/onto", { name, description }));
+): Promise<Onto> => onto.invalidate(post<Onto>("/onto", { name, description }));
 
 export const updateOntoE = (
 	id: number,
 	data: { name?: string; description?: string },
-): Promise<Onto> =>
-	withInvalidate(CACHE.onto, patch<Onto>(`/onto/${id}`, data));
+): Promise<Onto> => onto.invalidate(patch<Onto>(`/onto/${id}`, data));
 
 export const deleteOntoE = (id: number): Promise<void> =>
-	withInvalidate(
-		CACHE.onto,
+	onto.invalidate(
 		request<void>(`/onto/${id}`, {
 			method: "DELETE",
 		}),

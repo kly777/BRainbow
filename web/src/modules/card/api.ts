@@ -1,12 +1,14 @@
 import {
-	CACHE,
 	cachedRequest,
 	del,
 	type PaginatedResponse,
 	post,
 	request,
-	withInvalidate,
+	resource,
 } from "@shared/api";
+
+const cards = resource("cards");
+
 import type { Card, CreateCardRequest, UpdateCardRequest } from "./model.ts";
 
 // ==================== Card API Functions ====================
@@ -22,14 +24,13 @@ export const getCardE = (id: number): Promise<Card> =>
 	cachedRequest(`/cards/${id}`, {}, 60_000);
 
 export const createCardE = (card: CreateCardRequest): Promise<Card> =>
-	withInvalidate(CACHE.cards, post<Card>("/cards", card));
+	cards.invalidate(post<Card>("/cards", card));
 
 export const updateCardE = (
 	id: number,
 	card: UpdateCardRequest,
 ): Promise<Card> =>
-	withInvalidate(
-		CACHE.cards,
+	cards.invalidate(
 		request<Card>(`/cards/${id}`, {
 			method: "PATCH",
 			body: JSON.stringify(card),
@@ -37,7 +38,7 @@ export const updateCardE = (
 	);
 
 export const deleteCardE = (id: number): Promise<void> =>
-	withInvalidate(CACHE.cards, del<void>(`/cards/${id}`));
+	cards.invalidate(del<void>(`/cards/${id}`));
 
 export const searchCardsE = (
 	query: string,

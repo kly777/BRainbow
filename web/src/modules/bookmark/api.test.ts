@@ -7,12 +7,11 @@ const requestMock = vi.hoisted(() => ({
 	del: vi.fn(),
 }));
 
+const invalidateMock = vi.hoisted(() => vi.fn((p: unknown) => p));
+
 const cacheMock = vi.hoisted(() => ({
-	CACHE: { bookmarks: /^GET \/bookmarks/ },
 	cachedRequest: vi.fn(),
 	invalidateCache: vi.fn(),
-	tapInvalidate: vi.fn((_p: RegExp, r: unknown) => r),
-	withInvalidate: vi.fn((_p: RegExp, r: unknown) => r),
 }));
 
 const utilMock = vi.hoisted(() => ({
@@ -26,7 +25,12 @@ const utilMock = vi.hoisted(() => ({
 	),
 }));
 
-vi.mock("@shared/api", () => ({ ...requestMock, ...cacheMock, ...utilMock }));
+vi.mock("@shared/api", () => ({
+	...requestMock,
+	...cacheMock,
+	...utilMock,
+	resource: () => ({ invalidate: invalidateMock }),
+}));
 
 import {
 	createBookmarkE,
@@ -126,10 +130,7 @@ describe("write operations invalidate cache", () => {
 	it("create posts and invalidates", async () => {
 		await createBookmarkE(bm);
 		expect(requestMock.post).toHaveBeenCalledWith("/bookmarks", bm);
-		expect(cacheMock.withInvalidate).toHaveBeenCalledWith(
-			cacheMock.CACHE.bookmarks,
-			expect.any(Promise),
-		);
+		expect(invalidateMock).toHaveBeenCalledWith(expect.any(Promise));
 	});
 
 	it("update patches and invalidates", async () => {
@@ -137,16 +138,13 @@ describe("write operations invalidate cache", () => {
 		expect(requestMock.patch).toHaveBeenCalledWith("/bookmarks/1", {
 			title: "new",
 		});
-		expect(cacheMock.withInvalidate).toHaveBeenCalledWith(
-			cacheMock.CACHE.bookmarks,
-			expect.any(Promise),
-		);
+		expect(invalidateMock).toHaveBeenCalledWith(expect.any(Promise));
 	});
 
 	it("delete removes and invalidates", async () => {
 		await deleteBookmarkE(7);
 		expect(requestMock.del).toHaveBeenCalledWith("/bookmarks/7");
-		expect(cacheMock.withInvalidate).toHaveBeenCalled();
+		expect(invalidateMock).toHaveBeenCalled();
 	});
 
 	it("setTags PUTs tag list and invalidates", async () => {
@@ -155,16 +153,13 @@ describe("write operations invalidate cache", () => {
 			method: "PUT",
 			body: JSON.stringify({ tags: ["a", "b"] }),
 		});
-		expect(cacheMock.withInvalidate).toHaveBeenCalledWith(
-			cacheMock.CACHE.bookmarks,
-			expect.anything(),
-		);
+		expect(invalidateMock).toHaveBeenCalledWith(expect.anything());
 	});
 
 	it("deleteTag removes and invalidates", async () => {
 		await deleteBookmarkTagE(3);
 		expect(requestMock.del).toHaveBeenCalledWith("/bookmarks/tags/3");
-		expect(cacheMock.withInvalidate).toHaveBeenCalled();
+		expect(invalidateMock).toHaveBeenCalled();
 	});
 });
 
@@ -184,9 +179,6 @@ describe("importBookmarksE", () => {
 		expect(opts.method).toBe("POST");
 		expect(opts.body).toBeInstanceOf(FormData);
 		expect((opts.body as FormData).get("file")).toBe(file);
-		expect(cacheMock.withInvalidate).toHaveBeenCalledWith(
-			cacheMock.CACHE.bookmarks,
-			expect.any(Promise),
-		);
+		expect(invalidateMock).toHaveBeenCalledWith(expect.any(Promise));
 	});
 });

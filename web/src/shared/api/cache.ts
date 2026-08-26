@@ -2,20 +2,19 @@
  * 前端内存缓存层
  *
  * 提供 TTL 缓存 + 模式匹配失效，用于减少重复 API 请求。
- * 只缓存 GET 请求，增删改操作通过 invalidateCache 使相关缓存失效。
+ * 只缓存 GET 请求，增删改操作通过 resource().invalidate 使相关缓存失效。
  *
  * 使用方式（在 API 模块中）：
  *
- *   import { cachedRequest, CACHE, tapInvalidate } from "./cache.ts";
- *   import { request } from "./request.ts";
+ *   import { cachedRequest, resource } from "@shared/api";
  *
  *   // GET → 走缓存
  *   export const getCardsE = () => cachedRequest<PaginatedCards>("/cards", {});
  *
  *   // 写操作 → 失效相关缓存
+ *   const cards = resource("cards");
  *   export const createCardE = (card) =>
- *     request("/cards", { method: "POST", body: JSON.stringify(card) })
- *       .then((r) => tapInvalidate(CACHE.cards, r));
+ *     cards.invalidate(post<Card>("/cards", card));
  */
 
 // ── request 直接从具体文件导入（避免 index 的 re-export 循环） ──
@@ -172,39 +171,3 @@ export const cachedRequest = async <T>(
 	writeCache(key, data);
 	return data;
 };
-
-/**
- * 在 Promise 链中使缓存失效并透传结果。
- * 用于增删改操作完成后自动失效相关缓存。
- *
- * @example
- *   request("/cards", { method: "POST", body })
- *     .then((r) => tapInvalidate(CACHE.cards, r))
- */
-export function tapInvalidate<T>(pattern: RegExp, result: T): T {
-	invalidateCache(pattern);
-	return result;
-}
-
-/**
- * 包装写操作的 Promise，自动失效相关缓存。
- * 替代 `.then((r) => tapInvalidate(CACHE.xxx, r))` 模式，减少样板代码。
- *
- * @example
- *   // Before:
- *   export const createCardE = (card) =>
- *     post<Card>("/cards", card).then((r) => tapInvalidate(CACHE.cards, r));
- *
- *   // After:
- *   export const createCardE = (card) =>
- *     withInvalidate(CACHE.cards, post<Card>("/cards", card));
- */
-export function withInvalidate<T>(
-	pattern: RegExp,
-	promise: Promise<T>,
-): Promise<T> {
-	return promise.then((result) => {
-		invalidateCache(pattern);
-		return result;
-	});
-}

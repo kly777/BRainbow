@@ -66,7 +66,7 @@ describe("cache", () => {
 
 // ── CACHE 正则边界与写路径配对（测试覆盖扩充）──
 
-import { CACHE, cachedRequest, tapInvalidate } from "./cache.ts";
+import { CACHE, cachedRequest } from "./cache.ts";
 import { request } from "./request.ts";
 
 vi.mock("./request.ts", () => ({ request: vi.fn() }));
@@ -102,16 +102,6 @@ describe("CACHE 预定义正则边界", () => {
 		invalidateCache(CACHE.cards);
 		expect(readCache(buildCacheKey("GET", "/cards"))).toBeNull();
 		expect(readCache(buildCacheKey("GET", "/mem/due"))).toEqual([]);
-	});
-});
-
-describe("tapInvalidate 写路径配对", () => {
-	it("失效后透传原结果引用", () => {
-		writeCache(buildCacheKey("GET", "/cards"), "旧数据");
-		const payload = { id: 9 };
-		const out = tapInvalidate(CACHE.cards, payload);
-		expect(out).toBe(payload); // 原引用透传，链式调用不断
-		expect(readCache<string>(buildCacheKey("GET", "/cards"))).toBeNull();
 	});
 });
 

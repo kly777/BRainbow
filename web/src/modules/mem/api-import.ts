@@ -1,6 +1,9 @@
 // ── CSV 导入导出 API ──
 
-import { CACHE, post, requestFile, withInvalidate } from "@shared/api";
+import { post, requestFile, resource } from "@shared/api";
+
+const mem = resource("mem");
+
 import { downloadBlob } from "@shared/utils";
 
 // ── CSV 导入导出 ──
@@ -24,8 +27,7 @@ export const importCsvE = (
 	csvContent: string,
 	defaultTags?: string[],
 ): Promise<ImportCsvResult> =>
-	withInvalidate(
-		CACHE.mem,
+	mem.invalidate(
 		post<ImportCsvResult>("/mem/import/csv", {
 			csv: csvContent,
 			default_tags: defaultTags ?? [],
@@ -36,8 +38,7 @@ export const importPsvE = (
 	psvContent: string,
 	defaultTags?: string[],
 ): Promise<ImportCsvResult> =>
-	withInvalidate(
-		CACHE.mem,
+	mem.invalidate(
 		post<ImportCsvResult>("/mem/import/psv", {
 			csv: psvContent,
 			default_tags: defaultTags ?? [],
@@ -59,8 +60,7 @@ export const importJsonE = (
 	mems: ImportJsonItem[],
 	defaultTags?: string[],
 ): Promise<ImportJsonResult> =>
-	withInvalidate(
-		CACHE.mem,
+	mem.invalidate(
 		post<ImportJsonResult>("/mem/import/json", {
 			mems,
 			default_tags: defaultTags ?? [],

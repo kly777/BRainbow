@@ -25,10 +25,10 @@ export function useCardsList() {
 	const [deletingCardId, setDeletingCardId] = createSignal<number | null>(null);
 
 	const [searchParams, setSearchParams] = useSearchParams();
-	const searchQuery = () => {
-		const q = searchParams.q;
-		return typeof q === "string" ? q : "";
-	};
+	// 本地搜索信号：驱动搜索请求，不触发路由重渲染
+	const [searchQuery, setSearchQuery] = createSignal(
+		typeof searchParams.q === "string" ? searchParams.q : "",
+	);
 	const isSearchMode = () => searchQuery().trim().length > 0;
 
 	const loadCards = async (p = 1) => {
@@ -92,10 +92,13 @@ export function useCardsList() {
 	};
 
 	const handleSearch = async (query: string) => {
-		setSearchParams({ q: query || undefined });
+		// 用本地信号驱动搜索，不触发路由重渲染（避免输入框失焦）
+		setSearchQuery(query);
 		setPage(1);
 		setHasMore(true);
 		if (!query) {
+			// 清空搜索时同步 URL（支持深链接）
+			setSearchParams({});
 			await loadCards(1);
 			return;
 		}

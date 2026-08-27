@@ -30,12 +30,26 @@ export function debounce<A extends unknown[]>(
 	return run;
 }
 
-/** onBlur 场景专用：延迟关闭下拉，避免点击选项先触发的 blur 把点击吞掉 */
+/**
+ * onBlur 场景专用：延迟关闭下拉，避免点击选项先触发的 blur 把点击吞掉。
+ * 返回 { schedule, cancel }：schedule 触发延迟关闭；cancel 取消挂起的关闭。
+ */
 export function blurClose(
 	close: () => void,
 	delayMs = BLUR_CLOSE_DELAY_MS,
-): () => void {
-	return () => {
-		window.setTimeout(() => close(), delayMs);
+): { schedule: () => void; cancel: () => void } {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	return {
+		schedule: () => {
+			if (timer !== undefined) clearTimeout(timer);
+			timer = setTimeout(() => {
+				timer = undefined;
+				close();
+			}, delayMs);
+		},
+		cancel: () => {
+			if (timer !== undefined) clearTimeout(timer);
+			timer = undefined;
+		},
 	};
 }

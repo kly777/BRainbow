@@ -168,7 +168,7 @@ export default function TagInput(props: Props) {
 						setOpen(true);
 					}}
 					onFocus={() => setOpen(true)}
-					onBlur={blurClose(() => setOpen(false))}
+					onBlur={blurClose(() => setOpen(false)).schedule}
 					onKeyDown={handleKeyDown}
 				/>
 			</div>

@@ -3,7 +3,7 @@
 import { Badge } from "@components/ui";
 import { PATHS } from "@config/paths";
 import type { MemItem, TagInfo } from "@modules/mem";
-import { fmtLocal, fmtRelative, parseUtc } from "@shared/utils";
+import { fmtRelative, parseUtc } from "@shared/utils";
 import { A } from "@solidjs/router";
 import { type Component, For, Show } from "solid-js";
 import { memStateMeta } from "../lib/mem-manage-utils.ts";
@@ -97,7 +97,6 @@ const SORT_COLUMNS: { field: SortField; label: string }[] = [
 	{ field: "state", label: "状态" },
 	{ field: "difficulty", label: "难度" },
 	{ field: "due_at", label: "复习" },
-	{ field: "cue.created_at", label: "创建" },
 ];
 
 // 骨架屏行宽（%），模拟最终表格的行节奏
@@ -129,7 +128,7 @@ const LoadingSkeleton: Component = () => (
 
 const EmptyState: Component<{ filtered: boolean }> = (props) => (
 	<tr>
-		<td colspan={9}>
+		<td colspan={8}>
 			<div class={styles.empty}>
 				<p class={styles.emptyTitle}>
 					{props.filtered ? "没有匹配的记忆" : "档案柜还是空的"}
@@ -261,10 +260,12 @@ const MemRow: Component<MemRowProps> = (props) => {
 					</Show>
 				</span>
 			</td>
+			<td class={styles.td} title="难度">
+				{props.mem.difficulty.toFixed(2)}
+			</td>
 			<td class={`${styles.tdDue} ${overdue() ? styles.tdOverdue : ""}`}>
 				{fmtRelative(props.mem.due_at)}
 			</td>
-			<td class={styles.tdDue}>{fmtLocal(props.mem.cue.created_at)}</td>
 			<td class={styles.td}>
 				<div class={styles.cellTags}>
 					<For each={tags().slice(0, 3)}>

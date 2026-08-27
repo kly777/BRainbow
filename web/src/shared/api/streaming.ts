@@ -14,8 +14,13 @@ export interface StreamRequestOptions {
 	endpoint: string;
 	body?: unknown;
 	signal?: AbortSignal;
+	/** SSE 连接超时毫秒；默认 60s，传 false 关闭超时 */
+	timeout?: number | false;
 	onChunk: (chunk: string) => void;
 }
+
+/** SSE 连接默认超时 60 秒 */
+const DEFAULT_STREAM_TIMEOUT_MS = 60_000;
 
 /**
  * 发起 SSE 流式请求，逐 chunk 回调。
@@ -24,6 +29,21 @@ export interface StreamRequestOptions {
 export async function streamRequest(opts: StreamRequestOptions): Promise<void> {
 	const url = `${API_BASE_URL}${opts.endpoint}`;
 	const headers = buildHeaders();
+	const timeout = opts.timeout ?? DEFAULT_STREAM_TIMEOUT_MS;
+
+	// 组合外部 signal 与超时 signal
+	let signal = opts.signal;
+	let timer: ReturnType<typeof setTimeout> | null = null;
+	if (timeout !== false) {
+		const controller = new AbortController();
+		if (signal) {
+			signal.addEventListener("abort", () => controller.abort(), {
+				once: true,
+			});
+		}
+		timer = setTimeout(() => controller.abort(), timeout);
+		signal = controller.signal;
+	}
 
 	const resp = await fetch(url, {
 		method: "POST",
@@ -73,6 +93,7 @@ export async function streamRequest(opts: StreamRequestOptions): Promise<void> {
 	} finally {
 		// onChunk 抛错（如 __ERROR__ 路径）或上层中止时也要释放连接，
 		// 否则响应体挂起直到服务端生成完毕（审计 F2）
+		if (timer !== null) clearTimeout(timer);
 		reader.cancel().catch(() => {});
 	}
 }

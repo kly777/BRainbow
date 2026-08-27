@@ -22,8 +22,21 @@ function loadFromStorage(): StoredUser | null {
 	if (userCache !== undefined) return userCache;
 	const result = trySync(() => {
 		const raw = localStorage.getItem(STORAGE_KEY);
-		const user = raw ? (JSON.parse(raw) as StoredUser) : null;
-		return user?.id && user?.name ? user : null;
+		if (!raw) return null;
+		try {
+			const parsed = JSON.parse(raw);
+			if (
+				parsed &&
+				typeof parsed === "object" &&
+				typeof parsed.id === "number" &&
+				typeof parsed.name === "string"
+			) {
+				return parsed as StoredUser;
+			}
+		} catch {
+			// JSON 解析失败，返回 null
+		}
+		return null;
 	});
 	userCache = unwrapOr(result, null);
 	return userCache;

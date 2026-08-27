@@ -59,8 +59,13 @@ export function useMnemonic(): UseMnemonic {
 		});
 
 		if (aiResult.ok) {
-			// 保存助记到后端（失败不影响用户体验——本地已缓存）
-			tryAsync(() => setMnemonicE(item.id, aiResult.value.content));
+			// 保存助记到后端（失败记录日志，本地已缓存）
+			const saveResult = await tryAsync(() =>
+				setMnemonicE(item.id, aiResult.value.content),
+			);
+			if (!saveResult.ok) {
+				console.error("保存助记失败:", saveResult.error);
+			}
 			setMnemonics((prev) => {
 				const next = new Map(prev);
 				next.set(item.id, aiResult.value.content);

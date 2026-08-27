@@ -104,3 +104,67 @@ describe("domains 写→失效配对", () => {
 		expect(mockedRequest).toHaveBeenCalledTimes(1);
 	});
 });
+
+describe("分级失效（reads vs singles + entity）", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		clearAllCache();
+	});
+
+	it("无 entity 的写入连坐清列表/搜索，但不动单条", async () => {
+		mockedRequest.mockResolvedValue("data");
+		await cachedRequest("/cards"); // 列表
+		await cachedRequest("/cards/5"); // 单条
+		await cachedRequest("/cards/search?q=x"); // 搜索
+		expect(mockedRequest).toHaveBeenCalledTimes(3);
+
+		await domains.cards.invalidate(Promise.resolve({ ok: true })); // 无 entity
+
+		// 列表和搜索被连坐清
+		await cachedRequest("/cards");
+		expect(mockedRequest).toHaveBeenCalledTimes(4); // 重取
+		await cachedRequest("/cards/search?q=x");
+		expect(mockedRequest).toHaveBeenCalledTimes(5); // 重取
+
+		// 单条未被清
+		await cachedRequest("/cards/5");
+		expect(mockedRequest).toHaveBeenCalledTimes(5); // 命中缓存
+	});
+
+	it("有 entity 的写入精确清单条，他域单条不受影响", async () => {
+		mockedRequest.mockResolvedValue("data");
+		await cachedRequest("/cards"); // 列表
+		await cachedRequest("/cards/5"); // 单条（被写实体）
+		await cachedRequest("/cards/7"); // 单条（他域实体）
+		expect(mockedRequest).toHaveBeenCalledTimes(3);
+
+		await domains.cards.invalidate(
+			Promise.resolve({ ok: true }),
+			{ entity: "/cards/5" }, // 只写实体 5
+		);
+
+		// 列表被连坐清
+		await cachedRequest("/cards");
+		expect(mockedRequest).toHaveBeenCalledTimes(4);
+
+		// 被写实体精确清
+		await cachedRequest("/cards/5");
+		expect(mockedRequest).toHaveBeenCalledTimes(5); // 重取
+
+		// 他域单条不受影响
+		await cachedRequest("/cards/7");
+		expect(mockedRequest).toHaveBeenCalledTimes(5); // 命中缓存
+	});
+
+	it("tasks 写入连带失效 timeWindows 广域（跨域），不影响 timeWindows 单条", async () => {
+		mockedRequest.mockResolvedValue("tw");
+		await cachedRequest("/time-windows?task_id=1"); // 广域（列表）
+		expect(mockedRequest).toHaveBeenCalledTimes(1);
+
+		await domains.tasks.invalidate(Promise.resolve({ ok: true }));
+
+		// timeWindows 广域被跨域连坐
+		await cachedRequest("/time-windows?task_id=1");
+		expect(mockedRequest).toHaveBeenCalledTimes(2); // 重取
+	});
+});

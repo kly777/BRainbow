@@ -22,6 +22,7 @@
 
 // ── request 直接从具体文件导入（避免 index 的 re-export 循环） ──
 
+import { DEFAULT_STALE_MS, resolveStaleMs } from "./domainPatterns.ts";
 import { request } from "./request.ts";
 
 // ── 类型 ──
@@ -41,17 +42,27 @@ const inFlight = new Map<string, Promise<unknown>>();
 /** 缓存条目上限：无限分页/搜索会产生无限 key，超出后按插入顺序淘汰最旧条目 */
 const MAX_ENTRIES = 200;
 
-// ── 默认 TTL ──
-
-const DEFAULT_STALE_MS = 30_000;
+// ── 默认 TTL（单一来源：domainPatterns.ts） ──
 
 // ── API ──
 
 /**
- * 构建标准化的缓存键。
+ * 构建标准化的缓存键：查询参数排序后再编码，参数顺序不影响身份
+ * （?page=1&page_size=20 与 ?page_size=20&page=1 视为同一份数据）。
  */
 export function buildCacheKey(method: string, endpoint: string): string {
-	return `${method.toUpperCase()} ${endpoint}`;
+	const [path, query = ""] = endpoint.split("?");
+	const sp = new URLSearchParams(query);
+	sp.sort();
+	const sorted = sp.toString();
+	return `${method.toUpperCase()} ${path}${sorted ? `?${sorted}` : ""}`;
+}
+
+/**
+ * 精确删除单个缓存键（供实体级失效使用）。
+ */
+export function deleteCacheKey(key: string): void {
+	store.delete(key);
 }
 
 /**
@@ -203,7 +214,7 @@ function refreshInBackground<T>(
 export const cachedRequest = async <T>(
 	endpoint: string,
 	options: RequestInit = {},
-	staleMs = DEFAULT_STALE_MS,
+	staleMs?: number,
 ): Promise<T> => {
 	const method = (options.method ?? "GET").toUpperCase();
 
@@ -213,7 +224,9 @@ export const cachedRequest = async <T>(
 	}
 
 	const key = buildCacheKey(method, endpoint);
-	const hit = lookup<T>(key, staleMs);
+	// 未显式传陈旧时长 → 按端点匹配域级默认（见 domainPatterns.ts）
+	const effectiveStaleMs = resolveStaleMs(key, staleMs);
+	const hit = lookup<T>(key, effectiveStaleMs);
 	if (hit === null) {
 		return runInFlight<T>(key, endpoint, options);
 	}

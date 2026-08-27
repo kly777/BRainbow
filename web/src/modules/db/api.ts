@@ -2,7 +2,7 @@ import { cachedRequest, type PaginationParams, requestFile } from "@shared/api";
 import { downloadBlob } from "@shared/utils";
 
 export const getTablesE = (): Promise<readonly string[]> =>
-	cachedRequest("/db", {});
+	cachedRequest("/db");
 
 export interface ColumnInfo {
 	readonly name: string;
@@ -89,7 +89,7 @@ export const getTableDataE = (
 	if (params?.sort) query.set("sort", params.sort);
 	if (params?.order) query.set("order", params.order);
 	appendFilters(query, params);
-	return cachedRequest(`/db/${name}?${query.toString()}`, {});
+	return cachedRequest(`/db/${name}?${query.toString()}`);
 };
 
 /** 查询其他表对当前表某行（主键 id）的反向引用。 */
@@ -97,7 +97,7 @@ export const getBackRefsE = (
 	name: string,
 	id: number,
 ): Promise<readonly BackRefGroup[]> =>
-	cachedRequest(`/db/${encodeURIComponent(name)}/backrefs?id=${id}`, {});
+	cachedRequest(`/db/${encodeURIComponent(name)}/backrefs?id=${id}`);
 
 const filenameFromDisposition = (
 	disposition: string | null,

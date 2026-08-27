@@ -47,12 +47,12 @@ export const listMediaE = (params?: {
 	page?: number;
 	page_size?: number;
 }): Promise<PaginatedResponse<MediaItem>> => {
-	return cachedRequest(`/media${buildQuery(params ?? {})}`, {});
+	return cachedRequest(`/media${buildQuery(params ?? {})}`);
 };
 
 /** 单条详情（缓存 60 秒） */
 export const getMediaE = (stored_id: string): Promise<MediaItem> =>
-	cachedRequest(`/media/${stored_id}`, {}, 60_000);
+	cachedRequest(`/media/${stored_id}`);
 
 /** 重命名 */
 export const renameMediaE = (
@@ -61,10 +61,12 @@ export const renameMediaE = (
 ): Promise<MediaItem> =>
 	domains.media.invalidate(
 		patch<MediaItem>(`/media/${stored_id}`, { original_name }),
+		{ entity: `/media/${stored_id}` },
 	);
 
 /** 删除；force=true 跳过引用检查强制删除 */
 export const deleteMediaE = (stored_id: string, force = false): Promise<void> =>
 	domains.media.invalidate(
 		del<void>(`/media/${stored_id}${force ? "?force=true" : ""}`),
+		{ entity: `/media/${stored_id}` },
 	);

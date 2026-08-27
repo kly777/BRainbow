@@ -11,14 +11,11 @@ export const getCalendarEventsE = (
 	end?: string,
 	status?: string,
 ): Promise<readonly CalendarEvent[]> => {
-	return cachedRequest(
-		`/tasks/calendar${buildQuery({ start, end, status })}`,
-		{},
-	);
+	return cachedRequest(`/tasks/calendar${buildQuery({ start, end, status })}`);
 };
 
 export const getTasksE = (): Promise<PaginatedResponse<Task>> =>
-	cachedRequest("/tasks", {});
+	cachedRequest("/tasks");
 
 export const getAllTasksE = (): Promise<PaginatedResponse<Task>> =>
-	cachedRequest("/tasks/all", {});
+	cachedRequest("/tasks/all");

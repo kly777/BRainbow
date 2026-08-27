@@ -58,12 +58,11 @@ export const getBookmarksE = (
 ): Promise<PaginatedResponse<Bookmark>> => {
 	return cachedRequest(
 		`/bookmarks${buildQuery({ page, page_size: pageSize, tag })}`,
-		{},
 	);
 };
 
 export const getBookmarkE = (id: number): Promise<Bookmark> =>
-	cachedRequest<Bookmark>(`/bookmarks/${id}`, {});
+	cachedRequest<Bookmark>(`/bookmarks/${id}`);
 
 export const createBookmarkE = (bm: CreateBookmarkRequest): Promise<Bookmark> =>
 	domains.bookmarks.invalidate(post<Bookmark>("/bookmarks", bm));
@@ -72,10 +71,14 @@ export const updateBookmarkE = (
 	id: number,
 	bm: UpdateBookmarkRequest,
 ): Promise<Bookmark> =>
-	domains.bookmarks.invalidate(patch<Bookmark>(`/bookmarks/${id}`, bm));
+	domains.bookmarks.invalidate(patch<Bookmark>(`/bookmarks/${id}`, bm), {
+		entity: `/bookmarks/${id}`,
+	});
 
 export const deleteBookmarkE = (id: number): Promise<void> =>
-	domains.bookmarks.invalidate(del<void>(`/bookmarks/${id}`));
+	domains.bookmarks.invalidate(del<void>(`/bookmarks/${id}`), {
+		entity: `/bookmarks/${id}`,
+	});
 
 export const searchBookmarksE = (
 	query: string,
@@ -85,7 +88,6 @@ export const searchBookmarksE = (
 ): Promise<PaginatedResponse<Bookmark>> => {
 	return cachedRequest(
 		`/bookmarks/search${buildQuery({ q: query, page, page_size: pageSize, tag })}`,
-		{},
 	);
 };
 
@@ -95,7 +97,6 @@ export const searchBookmarksE = (
 export const searchBookmarkTagsE = (q = ""): Promise<BookmarkTagWithCount[]> =>
 	cachedRequest(
 		`/bookmarks/tags${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ""}`,
-		{},
 	);
 
 /** 设置书签标签（按名称整体替换，自动创建新标签） */
@@ -108,6 +109,7 @@ export const setBookmarkTagsE = (
 			method: "PUT",
 			body: JSON.stringify({ tags }),
 		}),
+		{ entity: `/bookmarks/${id}` },
 	);
 
 /** 删除标签 */

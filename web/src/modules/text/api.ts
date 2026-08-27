@@ -11,7 +11,7 @@ export interface TextResponse {
 }
 
 export const loadTextE = (): Promise<TextResponse> =>
-	cachedRequest<TextResponse>("/text", {});
+	cachedRequest<TextResponse>("/text");
 
 export const saveTextE = (
 	tabs: readonly { name: string; content: string }[],

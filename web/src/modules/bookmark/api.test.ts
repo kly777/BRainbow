@@ -138,7 +138,9 @@ describe("write operations invalidate cache", () => {
 		expect(requestMock.patch).toHaveBeenCalledWith("/bookmarks/1", {
 			title: "new",
 		});
-		expect(invalidateMock).toHaveBeenCalledWith(expect.any(Promise));
+		expect(invalidateMock).toHaveBeenCalledWith(expect.any(Promise), {
+			entity: "/bookmarks/1",
+		});
 	});
 
 	it("delete removes and invalidates", async () => {
@@ -153,7 +155,9 @@ describe("write operations invalidate cache", () => {
 			method: "PUT",
 			body: JSON.stringify({ tags: ["a", "b"] }),
 		});
-		expect(invalidateMock).toHaveBeenCalledWith(expect.anything());
+		expect(invalidateMock).toHaveBeenCalledWith(expect.any(Promise), {
+			entity: "/bookmarks/1",
+		});
 	});
 
 	it("deleteTag removes and invalidates", async () => {

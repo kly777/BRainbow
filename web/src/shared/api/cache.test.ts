@@ -164,3 +164,78 @@ describe("cachedRequest", () => {
 		await expect(cachedRequest("/cards")).resolves.toEqual({ ok: true });
 	});
 });
+
+describe("buildCacheKey 规范化（查询参数排序）", () => {
+	it("查询参数顺序不影响 key 身份", () => {
+		const a = buildCacheKey("GET", "/cards?page=1&page_size=20");
+		const b = buildCacheKey("GET", "/cards?page_size=20&page=1");
+		expect(a).toBe(b);
+	});
+
+	it("规范化后 page 在 page_size 前面（字母序）", () => {
+		const key = buildCacheKey("GET", "/cards?page_size=20&page=1");
+		expect(key).toBe("GET /cards?page=1&page_size=20");
+	});
+
+	it("无查询参数时 key 不含 ?", () => {
+		expect(buildCacheKey("GET", "/cards")).toBe("GET /cards");
+	});
+
+	it("DELETE 方法保留路径", () => {
+		expect(buildCacheKey("DELETE", "/cards/1")).toBe("DELETE /cards/1");
+	});
+});
+
+describe("cachedRequest 域级陈旧时长（resolveStaleMs）", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		clearAllCache();
+	});
+
+	it("cards 域默认 30s（无显式 staleMs 参数）", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+		mockedRequest.mockResolvedValue("v1");
+
+		await cachedRequest("/cards"); // 预热
+		expect(mockedRequest).toHaveBeenCalledTimes(1);
+
+		vi.setSystemTime(new Date("2026-01-01T00:00:29Z")); // 29s — 未过期
+		await cachedRequest("/cards");
+		expect(mockedRequest).toHaveBeenCalledTimes(1); // 命中缓存
+
+		vi.setSystemTime(new Date("2026-01-01T00:00:31Z")); // 31s — 过期
+		await cachedRequest("/cards");
+		expect(mockedRequest).toHaveBeenCalledTimes(2); // 重取
+	});
+
+	it("tasks 域默认 60s（修正聚合查询 15s 倒挂）", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+		mockedRequest.mockResolvedValue("tree");
+
+		await cachedRequest("/tasks/tree");
+		expect(mockedRequest).toHaveBeenCalledTimes(1);
+
+		vi.setSystemTime(new Date("2026-01-01T00:00:45Z")); // 45s — cards 已过期，tasks 未过期
+		await cachedRequest("/tasks/tree");
+		expect(mockedRequest).toHaveBeenCalledTimes(1); // tasks 60s 未过期
+
+		vi.setSystemTime(new Date("2026-01-01T00:01:01Z")); // 61s — 过期
+		await cachedRequest("/tasks/tree");
+		expect(mockedRequest).toHaveBeenCalledTimes(2);
+	});
+
+	it("显式 staleMs 参数优先于域默认", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+		mockedRequest.mockResolvedValue("custom");
+
+		await cachedRequest("/tasks/tree", {}, 15_000); // 显式 15s
+		expect(mockedRequest).toHaveBeenCalledTimes(1);
+
+		vi.setSystemTime(new Date("2026-01-01T00:00:16Z")); // 16s — 显式值已过期
+		await cachedRequest("/tasks/tree", {}, 15_000);
+		expect(mockedRequest).toHaveBeenCalledTimes(2);
+	});
+});

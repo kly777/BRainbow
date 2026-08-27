@@ -11,12 +11,12 @@ export interface Onto {
  */
 // 本体数据不常变，缓存 60 秒
 export const getOntosE = (): Promise<readonly Onto[]> =>
-	cachedRequest<{ readonly items: readonly Onto[] }>("/onto", {}, 60_000).then(
+	cachedRequest<{ readonly items: readonly Onto[] }>("/onto").then(
 		(r) => r.items,
 	);
 
 export const getOntoE = (id: number): Promise<Onto> =>
-	cachedRequest<Onto>(`/onto/${id}`, {}, 60_000);
+	cachedRequest<Onto>(`/onto/${id}`);
 
 export const createOntoE = (
 	name: string,
@@ -27,11 +27,15 @@ export const createOntoE = (
 export const updateOntoE = (
 	id: number,
 	data: { name?: string; description?: string },
-): Promise<Onto> => domains.onto.invalidate(patch<Onto>(`/onto/${id}`, data));
+): Promise<Onto> =>
+	domains.onto.invalidate(patch<Onto>(`/onto/${id}`, data), {
+		entity: `/onto/${id}`,
+	});
 
 export const deleteOntoE = (id: number): Promise<void> =>
 	domains.onto.invalidate(
 		request<void>(`/onto/${id}`, {
 			method: "DELETE",
 		}),
+		{ entity: `/onto/${id}` },
 	);

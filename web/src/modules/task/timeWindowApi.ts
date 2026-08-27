@@ -12,7 +12,6 @@ export const getTimeWindowsE = (
 	if (windowType) endpoint += `&window_type=${windowType}`;
 	return cachedRequest<{ readonly items: readonly TimeWindow[] }>(
 		endpoint,
-		{},
 	).then((r) => r.items);
 };
 

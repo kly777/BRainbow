@@ -9,7 +9,7 @@ import {
 	tryAsync,
 	useUrlParams,
 } from "@shared/utils";
-import { createMemo, createSignal } from "solid-js";
+import { createMemo, createSignal, onMount } from "solid-js";
 
 interface UseMemTagFilterResult {
 	allTags: () => TagInfo[];
@@ -30,11 +30,11 @@ export function useMemTagFilter(loadDue: () => void): UseMemTagFilterResult {
 	const [allTags, setAllTags] = createSignal<TagInfo[]>([]);
 
 	// 首次加载所有标签
-	(async () => {
+	onMount(async () => {
 		const result = await tryAsync(() => listTagsE());
 		if (result.ok) setAllTags(result.value);
 		else notifyError("加载标签列表失败", result.error);
-	})();
+	});
 
 	const tagFilterIds = () => params.get("tag_ids").map(Number);
 

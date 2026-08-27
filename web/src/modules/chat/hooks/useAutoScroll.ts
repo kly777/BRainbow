@@ -1,6 +1,6 @@
 // ── 消息列表自动滚动：跟随最新内容，用户主动上滚看历史时不打扰 ──
 
-import { type Accessor, createEffect } from "solid-js";
+import { type Accessor, createEffect, onCleanup } from "solid-js";
 
 const NEAR_BOTTOM_PX = 100;
 
@@ -30,9 +30,11 @@ export function useAutoScroll(container: Accessor<HTMLElement | undefined>) {
 			const el = container();
 			if (el && bound !== el) {
 				bound = el;
-				el.addEventListener("scroll", () => {
+				const handler = () => {
 					wasNearBottom = isNearBottom();
-				});
+				};
+				el.addEventListener("scroll", handler);
+				onCleanup(() => el.removeEventListener("scroll", handler));
 			}
 			void dep();
 			if (wasNearBottom) {

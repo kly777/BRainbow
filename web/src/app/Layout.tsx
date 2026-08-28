@@ -4,6 +4,7 @@ import { PATHS } from "@config/paths";
 import { AiSettingsModal } from "@modules/ai-setting";
 import { AuthDialog, AuthGuard } from "@modules/auth";
 import { CommandPalette } from "@modules/command-palette";
+import { QuickCapture } from "@modules/quick-capture";
 import { useLocation } from "@solidjs/router";
 import { createEffect, type JSX, Show, untrack } from "solid-js";
 import styles from "./App.module.css";
@@ -34,6 +35,7 @@ export default function Layout(props: { children?: JSX.Element }) {
 			</main>
 			<AuthDialog />
 			<CommandPalette />
+			<QuickCapture />
 			<ToastContainer />
 			<ConfirmModalContainer />
 			<AiSettingsModal />

@@ -54,3 +54,16 @@ needless_pass_by_value = "warn"
 # cast 相关：FSRS 数学 + 分页计算全部有意使用 as，降为 allow
 cast_possible_truncation = "allow"
 cast_precision_loss = "allow"
+
+[profile.release]
+# Strip debug symbols to reduce binary size by ~30%
+strip = "symbols"
+
+# Thin LTO for better optimization with reasonable compile time
+# Use "fat" for maximum optimization (slower compile)
+lto = "thin"
+
+# Optimize for size without sacrificing too much performance
+# opt-level = "z"  # Uncomment for minimum size
+# opt-level = 3    # Default: maximum performance
+

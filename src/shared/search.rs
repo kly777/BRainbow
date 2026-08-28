@@ -105,11 +105,20 @@ pub struct SearchHit {
     pub snippet: String,
     /// 导航目标（前端解析为 URL）
     pub target: SearchTarget,
+    /// 排序分值（FTS5 rank 取反使其越大越好，LIKE 查询用标题命中加分）
+    pub score: f64,
 }
 
 #[derive(Serialize)]
 pub struct SearchResponse {
     pub hits: Vec<SearchHit>,
+}
+
+impl SearchResponse {
+    pub fn new(mut hits: Vec<SearchHit>) -> Self {
+        hits.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        Self { hits }
+    }
 }
 
 /// 各模块向全局搜索暴露的端口。

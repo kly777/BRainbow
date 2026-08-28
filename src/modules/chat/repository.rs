@@ -550,6 +550,7 @@ impl ChatRepo {
                 id: r.id,
                 title: r.title,
                 snippet: String::new(),
+                score: 0.0,
                 target: SearchTarget::ChatTree { tree_id: r.id },
             })
             .collect();
@@ -558,6 +559,7 @@ impl ChatRepo {
             id: r.tree_id,
             title: r.title,
             snippet: snippet(&r.content, ""),
+            score: 0.0,
             target: SearchTarget::ChatNode {
                 tree_id: r.tree_id,
                 node_id: r.node_id,
@@ -609,6 +611,7 @@ impl ChatRepo {
                 id: r.id,
                 title: r.title,
                 snippet: String::new(),
+                score: 1.0,
                 target: SearchTarget::ChatTree { tree_id: r.id },
             })
             .collect();
@@ -617,6 +620,7 @@ impl ChatRepo {
             id: r.tree_id,
             title: r.title,
             snippet: snippet(&r.content, ""),
+            score: 1.0,
             target: SearchTarget::ChatNode {
                 tree_id: r.tree_id,
                 node_id: r.node_id,

@@ -273,6 +273,7 @@ impl ConvRepo {
                 title: r.title,
                 snippet: String::new(),
                 target: SearchTarget::Conv { id: r.conv_id },
+                score: 0.0,
             })
             .collect())
     }
@@ -306,6 +307,7 @@ impl ConvRepo {
                 title: r.title,
                 snippet: String::new(),
                 target: SearchTarget::Conv { id: r.conv_id },
+                score: 1.0,
             })
             .collect())
     }

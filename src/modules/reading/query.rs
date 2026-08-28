@@ -117,16 +117,22 @@ impl SearchPort for ReadingQueryService {
         let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
-        let rows = if let Some(fts) = fts_query(q) {
-            self.repo
-                .search_hits_fts(user_id, &fts, cap)
-                .await
-                .map_err(ServiceError::Db)?
+        let (rows, score) = if let Some(fts) = fts_query(q) {
+            (
+                self.repo
+                    .search_hits_fts(user_id, &fts, cap)
+                    .await
+                    .map_err(ServiceError::Db)?,
+                1.0f64,
+            )
         } else {
-            self.repo
-                .search_hits(user_id, &like, cap)
-                .await
-                .map_err(ServiceError::Db)?
+            (
+                self.repo
+                    .search_hits(user_id, &like, cap)
+                    .await
+                    .map_err(ServiceError::Db)?,
+                0.0f64,
+            )
         };
         Ok(rows
             .into_iter()
@@ -136,6 +142,7 @@ impl SearchPort for ReadingQueryService {
                 title,
                 snippet: snippet(&content, kw),
                 target: SearchTarget::Reading { id },
+                score,
             })
             .collect())
     }

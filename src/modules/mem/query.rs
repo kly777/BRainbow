@@ -282,27 +282,41 @@ impl SearchPort for MemQueryService {
         let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
-        let rows = if let Some(fts) = fts_query(q) {
-            self.repo
+        if let Some(fts) = fts_query(q) {
+            let rows = self
+                .repo
                 .search_hits_fts(user_id, &fts, cap)
                 .await
-                .map_err(|e| ServiceError::Internal(e.to_string()))?
+                .map_err(|e| ServiceError::Internal(e.to_string()))?;
+            Ok(rows
+                .into_iter()
+                .map(|(id, cue, target)| SearchHit {
+                    kind: "mem".into(),
+                    id,
+                    title: clip(&cue, 60),
+                    snippet: merge_snippets(&cue, &target, kw),
+                    target: SearchTarget::Memory { id },
+                    score: 1.0,
+                })
+                .collect())
         } else {
-            self.repo
+            let rows = self
+                .repo
                 .search_hits(user_id, &like, cap)
                 .await
-                .map_err(|e| ServiceError::Internal(e.to_string()))?
-        };
-        Ok(rows
-            .into_iter()
-            .map(|(id, cue, target)| SearchHit {
-                kind: "mem".into(),
-                id,
-                title: clip(&cue, 60),
-                snippet: merge_snippets(&cue, &target, kw),
-                target: SearchTarget::Memory { id },
-            })
-            .collect())
+                .map_err(|e| ServiceError::Internal(e.to_string()))?;
+            Ok(rows
+                .into_iter()
+                .map(|(id, cue, target)| SearchHit {
+                    kind: "mem".into(),
+                    id,
+                    title: clip(&cue, 60),
+                    snippet: merge_snippets(&cue, &target, kw),
+                    target: SearchTarget::Memory { id },
+                    score: 0.0,
+                })
+                .collect())
+        }
     }
 }
 

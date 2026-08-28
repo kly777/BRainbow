@@ -209,16 +209,22 @@ impl SearchPort for TaskQueryService {
             return Ok(vec![]);
         };
         // 3+字符使用FTS5，短查询退化为LIKE
-        let rows = if let Some(fts) = fts_query(q) {
-            self.repo
-                .search_hits_fts(user_id, &fts, cap)
-                .await
-                .map_err(ServiceError::Db)?
+        let (rows, is_fts) = if let Some(fts) = fts_query(q) {
+            (
+                self.repo
+                    .search_hits_fts(user_id, &fts, cap)
+                    .await
+                    .map_err(ServiceError::Db)?,
+                true,
+            )
         } else {
-            self.repo
-                .search_hits(user_id, &like, cap)
-                .await
-                .map_err(ServiceError::Db)?
+            (
+                self.repo
+                    .search_hits(user_id, &like, cap)
+                    .await
+                    .map_err(ServiceError::Db)?,
+                false,
+            )
         };
         Ok(rows
             .into_iter()
@@ -228,6 +234,7 @@ impl SearchPort for TaskQueryService {
                 title: r.title,
                 snippet: snippet(r.description.as_deref().unwrap_or(""), kw),
                 target: SearchTarget::Task { id: r.id },
+                score: if is_fts { 1.0 } else { r.title_hit as f64 },
             })
             .collect())
     }

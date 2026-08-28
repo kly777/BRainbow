@@ -38,16 +38,22 @@ impl SearchPort for TextQueryService {
         let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
-        let rows = if let Some(fts) = fts_query(q) {
-            self.repo
-                .search_hits_fts(user_id, &fts, cap)
-                .await
-                .map_err(ServiceError::Db)?
+        let (rows, use_fts) = if let Some(fts) = fts_query(q) {
+            (
+                self.repo
+                    .search_hits_fts(user_id, &fts, cap)
+                    .await
+                    .map_err(ServiceError::Db)?,
+                true,
+            )
         } else {
-            self.repo
-                .search_hits(user_id, &like, cap)
-                .await
-                .map_err(ServiceError::Db)?
+            (
+                self.repo
+                    .search_hits(user_id, &like, cap)
+                    .await
+                    .map_err(ServiceError::Db)?,
+                false,
+            )
         };
         Ok(rows
             .into_iter()
@@ -57,6 +63,7 @@ impl SearchPort for TextQueryService {
                 title: name,
                 snippet: snippet(&content, kw),
                 target: SearchTarget::Text,
+                score: if use_fts { 1.0 } else { 0.0 },
             })
             .collect())
     }

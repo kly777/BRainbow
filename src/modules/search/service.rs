@@ -23,7 +23,7 @@ impl SearchQueryService {
         limit: i64,
     ) -> Result<SearchResponse, ServiceError> {
         let Some(kw) = trim_query(q) else {
-            return Ok(SearchResponse { hits: Vec::new() });
+            return Ok(SearchResponse::new(Vec::new()));
         };
         let cap = clamp_search_limit(limit);
 
@@ -34,7 +34,7 @@ impl SearchQueryService {
         for res in results {
             hits.extend(res?);
         }
-        Ok(SearchResponse { hits })
+        Ok(SearchResponse::new(hits))
     }
 }
 

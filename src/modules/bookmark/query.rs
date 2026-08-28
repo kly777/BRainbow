@@ -101,9 +101,11 @@ impl SearchPort for BookmarkQueryService {
         let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
-        let rows = if let Some(fts) = fts_query(q) {
+        let fts = fts_query(q);
+        let is_fts = fts.is_some();
+        let rows = if let Some(fts_q) = fts {
             self.repo
-                .search_hits_fts(user_id, &fts, cap)
+                .search_hits_fts(user_id, &fts_q, cap)
                 .await
                 .map_err(ServiceError::Db)?
         } else {
@@ -124,6 +126,7 @@ impl SearchPort for BookmarkQueryService {
                     snippet(&r.description, kw)
                 },
                 target: SearchTarget::Bookmark { id: r.id },
+                score: if is_fts { 1.0 } else { r.title_hit as f64 },
             })
             .collect())
     }

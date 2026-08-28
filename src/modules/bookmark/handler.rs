@@ -98,6 +98,8 @@ pub struct ListBookmarksQuery {
     pub page_size: Option<i64>,
     /// 按标签名过滤
     pub tag: Option<String>,
+    /// 排序方式：created_at（默认）/ visit_count
+    pub sort: Option<String>,
 }
 
 impl ListBookmarksQuery {
@@ -117,8 +119,9 @@ pub async fn get_bookmarks_handler(
         .as_deref()
         .map(str::trim)
         .filter(|s| !s.is_empty());
+    let sort = params.sort.as_deref().unwrap_or("created_at");
     let result = query
-        .list(claims.sub, pagination.limit(), pagination.offset(), tag)
+        .list(claims.sub, pagination.limit(), pagination.offset(), tag, sort)
         .await
         .map(|(items, total)| {
             let items: Vec<BookmarkResponse> =
@@ -428,4 +431,21 @@ pub async fn batch_delete_handler(
         service.batch_delete(claims.sub, &payload.ids).await,
         "批量删除书签",
     )
+}
+
+/// `POST /bookmarks/{id}/visit` 记录书签访问（visit_count += 1）
+pub async fn increment_visit_handler(
+    State(service): State<BookmarkService>,
+    Extension(claims): Extension<Claims>,
+    Path(id): Path<i32>,
+) -> impl IntoResponse {
+    error::ok_or(service.increment_visit(claims.sub, id).await, "记录访问")
+}
+
+/// `GET /bookmarks/grouped-by-tag` 按标签分组获取书签
+pub async fn grouped_by_tag_handler(
+    State(query): State<BookmarkQueryService>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    error::ok_or(query.grouped_by_tag(claims.sub).await, "获取分组书签")
 }

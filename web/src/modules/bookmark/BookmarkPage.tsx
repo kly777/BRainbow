@@ -1,112 +1,96 @@
-// ── /bookmark：网页书签管理（搜索 / 标签过滤 / 分页 / 导入 Firefox 书签 / 批量管理） ──
+// ── /bookmark：按标签分组展示书签（默认视图） ──
 
 import { Button, PageHead, SearchInput } from "@components/ui";
+import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@shared/api";
-import { type Component, For, Show } from "solid-js";
+import { type Component, createEffect, createResource, createSignal, For, Show } from "solid-js";
+import type { Bookmark, GroupedBookmarksResponse } from "./api.ts";
+import { getGroupedBookmarksE, incrementBookmarkVisitE, searchBookmarksE } from "./api.ts";
 import styles from "./BookmarkPage.module.css";
-import { BookmarkFormModal } from "./components/BookmarkFormModal.tsx";
-import { BookmarkItem } from "./components/BookmarkItem.tsx";
-import TagManager from "./components/TagManager.tsx";
-import { useBookmarkPage } from "./hooks/useBookmarkPage.ts";
+import Favicon from "./components/Favicon.tsx";
+import { trySync } from "@shared/utils";
 
-const BatchBar: Component<{
-	b: ReturnType<typeof useBookmarkPage>;
-}> = (props) => {
-	const b = props.b;
-	const count = () => b.selectedIds().size;
+function extractDomain(url: string): string {
+	const result = trySync(() => new URL(url).hostname.replace(/^www\./, ""));
+	return result.ok ? result.value : url;
+}
 
-	return (
-		<Show when={count() > 0}>
-			<div class={styles.batchBar}>
-				<span class={styles.batchInfo}>已选 {count()} 个书签</span>
-				<div class={styles.batchActions}>
-					<Button variant="secondary" size="sm" onClick={b.clearSelection}>
-						取消选择
-					</Button>
-					<Button variant="danger" size="sm" onClick={b.handleBatchDelete}>
-						批量删除
-					</Button>
-				</div>
-			</div>
-		</Show>
-	);
-};
-
-const BookmarkMainSection: Component<{
-	b: ReturnType<typeof useBookmarkPage>;
-}> = (props) => {
-	const b = props.b;
+const BookmarkLink: Component<{ bm: Bookmark }> = (props) => {
+	const handleClick = () => {
+		// 异步记录访问，不阻塞跳转
+		void incrementBookmarkVisitE(props.bm.id);
+	};
 
 	return (
-		<Show
-			when={b.bookmarks().length > 0}
-			fallback={
-				<div class={styles.state}>
-					{b.searchQuery().trim() || b.tagFilter()
-						? "没有找到匹配的书签"
-						: "还没有书签，点击上方按钮添加第一个吧！"}
-				</div>
-			}
+		<a
+			class={styles.groupItem}
+			href={props.bm.url}
+			target="_blank"
+			rel="noopener noreferrer"
+			onClick={handleClick}
+			title={`${props.bm.title}\n${props.bm.url}`}
 		>
-			<BatchBar b={b} />
-			<div class={styles.listHeader}>
-				<input
-					type="checkbox"
-					class={styles.itemCheckbox}
-					checked={b.isAllSelected()}
-					onChange={b.toggleSelectAll}
-					aria-label="全选/取消全选"
-				/>
-				<span class={styles.listHeaderLabel}>全选</span>
-			</div>
-			<div class={styles.list}>
-				<For each={b.bookmarks()}>
-					{(bm) => (
-						<BookmarkItem
-							bm={bm}
-							selected={b.selectedIds().has(bm.id)}
-							onToggleSelect={() => b.toggleSelect(bm.id)}
-							onEdit={() => b.openEdit(bm)}
-							onDelete={() => b.handleDelete(bm)}
-							onTagFilter={b.handleTagFilter}
-							onRefreshTitle={() => b.handleRefreshTitle(bm)}
-							onCheckAccessibility={() => b.handleCheckAccessibility(bm)}
-						/>
-					)}
-				</For>
-			</div>
-
-			<Show when={b.totalPages() > 1}>
-				<div class={styles.pagination}>
-					<span>
-						第 {b.page()} / {b.totalPages()} 页（共 {b.total()} 条）
-					</span>
-					<div class={styles.paginationActions}>
-						<Button
-							variant="secondary"
-							size="sm"
-							disabled={b.page() <= 1}
-							onClick={() => b.goPage(b.page() - 1)}
-						>
-							← 上一页
-						</Button>
-						<Button
-							variant="secondary"
-							size="sm"
-							disabled={b.page() >= b.totalPages()}
-							onClick={() => b.goPage(b.page() + 1)}
-						>
-							下一页 →
-						</Button>
-					</div>
-				</div>
+			<Favicon url={props.bm.url} letter={extractDomain(props.bm.url)} />
+			<span class={styles.groupItemTitle}>{props.bm.title}</span>
+			<Show when={props.bm.visit_count > 0}>
+				<span class={styles.visitBadge}>{props.bm.visit_count}</span>
 			</Show>
-		</Show>
+		</a>
 	);
 };
+
+const TagGroupCard: Component<{
+	tag: string;
+	totalVisits: number;
+	bookmarks: Bookmark[];
+}> = (props) => (
+	<div class={styles.tagGroup}>
+		<div class={styles.tagGroupHeader}>
+			<span class={styles.tagGroupName}>#{props.tag}</span>
+			<span class={styles.tagGroupMeta}>
+				{props.bookmarks.length} 个书签
+				<Show when={props.totalVisits > 0}>
+					{" "}· {props.totalVisits} 次访问
+				</Show>
+			</span>
+		</div>
+		<div class={styles.tagGroupList}>
+			<For each={props.bookmarks}>
+				{(bm) => <BookmarkLink bm={bm} />}
+			</For>
+		</div>
+	</div>
+);
 
 export default function BookmarkPage() {
-	const b = useBookmarkPage();
+	const [searchQuery, setSearchQuery] = createSignal("");
+	const [searchResults, setSearchResults] = createSignal<Bookmark[] | null>(null);
+	const [searching, setSearching] = createSignal(false);
+	const [searchError, setSearchError] = createSignal<string | null>(null);
+
+	const [grouped, { refetch }] = createResource(() => getGroupedBookmarksE());
+
+	// 搜索模式
+	let searchSeq = 0;
+	async function handleSearch(q: string) {
+		setSearchQuery(q);
+		if (!q.trim()) {
+			setSearchResults(null);
+			return;
+		}
+		const seq = ++searchSeq;
+		setSearching(true);
+		setSearchError(null);
+		try {
+			const res = await searchBookmarksE(q.trim(), 1, 200);
+			if (seq !== searchSeq) return;
+			setSearchResults(res.items);
+		} catch (e: unknown) {
+			if (seq !== searchSeq) return;
+			setSearchError(e instanceof Error ? e.message : "搜索失败");
+		}
+		setSearching(false);
+	}
 
 	return (
 		<div class={styles.page}>
@@ -115,15 +99,15 @@ export default function BookmarkPage() {
 				actions={
 					<>
 						<SearchInput
-							value={b.searchQuery()}
-							onSearch={b.handleSearch}
+							value={searchQuery()}
+							onSearch={handleSearch}
 							placeholder="搜索标题 / URL / 备注…"
 						/>
-						<Show when={b.searchQuery().trim()}>
+						<Show when={searchQuery().trim()}>
 							<Button
 								variant="icon"
 								title="清空搜索"
-								onClick={() => b.handleSearch("")}
+								onClick={() => handleSearch("")}
 							>
 								✕
 							</Button>
@@ -131,69 +115,79 @@ export default function BookmarkPage() {
 						<Button
 							variant="secondary"
 							size="sm"
-							onClick={() =>
-								document.getElementById("bookmark-import-input")?.click()
-							}
-							disabled={b.importing()}
+							onClick={() => window.location.href = PATHS.bookmarkManage}
 						>
-							{b.importing() ? "导入中..." : "导入 Firefox 书签"}
-						</Button>
-						<Button
-							variant="secondary"
-							size="sm"
-							onClick={() => b.setTagManagerOpen(true)}
-						>
-							标签管理
-						</Button>
-						<Button variant="primary" size="sm" onClick={b.openCreate}>
-							＋ 新建书签
+							⚙ 管理
 						</Button>
 					</>
 				}
 			/>
-			<input
-				id="bookmark-import-input"
-				type="file"
-				accept=".html,.htm,text/html"
-				style={{ display: "none" }}
-				onChange={(e) => {
-					b.handleImportFile(e.currentTarget.files?.[0]);
-					e.currentTarget.value = "";
-				}}
-			/>
 
-			<Show when={b.tagFilter()}>
-				<div class={styles.filterBar}>
-					<span class={styles.filterLabel}>标签：{b.tagFilter()}</span>
-					<Button variant="ghost" size="sm" onClick={b.clearTagFilter}>
-						清除过滤 ×
-					</Button>
-				</div>
+			{/* 搜索结果 */}
+			<Show when={searchResults() !== null}>
+				<Show when={searching()}>
+					<div class={styles.state}>搜索中…</div>
+				</Show>
+				<Show when={searchError()}>
+					<div class={styles.state}>
+						<p class={styles.errorText}>{searchError()}</p>
+					</div>
+				</Show>
+				<Show when={!searching() && !searchError()}>
+					<div class={styles.searchResults}>
+						<div class={styles.searchResultsHeader}>
+							搜索结果：{searchResults()?.length ?? 0} 条
+						</div>
+						<div class={styles.list}>
+							<For each={searchResults() ?? []}>
+								{(bm) => <BookmarkLink bm={bm} />}
+							</For>
+						</div>
+					</div>
+				</Show>
 			</Show>
 
-			<Show when={b.loading()}>
-				<div class={styles.state}>加载中…</div>
+			{/* 分组展示 */}
+			<Show when={searchResults() === null}>
+				<Show when={grouped.loading}>
+					<div class={styles.state}>加载中…</div>
+				</Show>
+				<Show when={grouped.error}>
+					<div class={styles.state}>
+						<p class={styles.errorText}>加载失败：{getErrorMessage(grouped.error)}</p>
+						<Button variant="secondary" size="sm" onClick={() => refetch()}>
+							重试
+						</Button>
+					</div>
+				</Show>
+				<Show when={grouped()}>
+					{(data) => (
+						<div class={styles.groupsContainer}>
+							<For each={data().groups}>
+								{(group) => (
+									<TagGroupCard
+										tag={group.tag}
+										totalVisits={group.total_visits}
+										bookmarks={group.bookmarks}
+									/>
+								)}
+							</For>
+							<Show when={data().untagged.length > 0}>
+								<TagGroupCard
+									tag="未分类"
+									totalVisits={0}
+									bookmarks={data().untagged}
+								/>
+							</Show>
+							<Show when={data().groups.length === 0 && data().untagged.length === 0}>
+								<div class={styles.state}>
+									还没有书签，点击右上角"管理"按钮添加第一个吧！
+								</div>
+							</Show>
+						</div>
+					)}
+				</Show>
 			</Show>
-			<Show when={b.error()}>
-				<div class={styles.state}>
-					<p class={styles.errorText}>加载失败：{getErrorMessage(b.error())}</p>
-					<Button variant="secondary" size="sm" onClick={() => b.load()}>
-						重试
-					</Button>
-				</div>
-			</Show>
-
-			<Show when={!b.loading() && !b.error()}>
-				<BookmarkMainSection b={b} />
-			</Show>
-
-			<BookmarkFormModal b={b} />
-
-			<TagManager
-				isOpen={b.tagManagerOpen()}
-				onClose={() => b.setTagManagerOpen(false)}
-				onDeleted={() => b.load({ silent: true })}
-			/>
 		</div>
 	);
 }

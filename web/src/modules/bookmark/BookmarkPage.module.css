@@ -295,3 +295,90 @@
 .item-actions button:last-child {
 	color: var(--t-color-danger);
 }
+
+/* ── 分组视图 ── */
+
+.groups-container {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-lg);
+}
+
+.tag-group {
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-lg);
+	overflow: hidden;
+}
+
+.tag-group-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--space-sm) var(--space-md);
+	background: var(--t-color-accent-soft);
+	border-bottom: 1px solid var(--t-color-border);
+}
+
+.tag-group-name {
+	font-size: var(--text-base);
+	font-weight: 600;
+	color: var(--t-color-accent);
+}
+
+.tag-group-meta {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.tag-group-list {
+	display: flex;
+	flex-direction: column;
+}
+
+.group-item {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	padding: var(--space-xs) var(--space-md);
+	text-decoration: none;
+	color: var(--t-color-ink);
+	transition: background var(--t-transition-fast);
+}
+
+.group-item:hover {
+	background: var(--t-color-surface);
+}
+
+.group-item-title {
+	flex: 1;
+	min-width: 0;
+	font-size: var(--text-sm);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.group-item-title:hover {
+	color: var(--t-color-accent);
+}
+
+.visit-badge {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+	background: var(--t-color-surface);
+	border-radius: var(--radius-full);
+	padding: 0 var(--space-xs);
+	flex-shrink: 0;
+}
+
+.search-results {
+	margin-top: var(--space-md);
+}
+
+.search-results-header {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	margin-bottom: var(--space-sm);
+	padding: 0 var(--space-xs);
+}

@@ -1,0 +1,33 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT t.name AS \"name: String\", COALESCE(SUM(b.visit_count), 0) AS \"total_visits!: i64\"\n               FROM bookmark_tag t\n               JOIN bookmark_tag_rel r ON r.tag_id = t.id\n               JOIN bookmark b ON b.id = r.bookmark_id AND (b.user_id = ?1 OR b.user_id IS NULL)\n               GROUP BY t.id, t.name\n               ORDER BY COALESCE(SUM(b.visit_count), 0) DESC, t.name",
+  "describe": {
+    "columns": [
+      {
+        "name": "name: String",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "bookmark_tag",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "total_visits!: i64",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "8223744092c616cb8081da94bb4956346ea36b79a1d6e622b7494d659905c6b9"
+}

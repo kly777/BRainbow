@@ -10,6 +10,7 @@ pub struct Bookmark {
     pub url: String,
     pub description: String,
     pub tags: Vec<String>,
+    pub visit_count: i64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -37,6 +38,7 @@ pub struct BookmarkRow {
     pub title: String,
     pub url: String,
     pub description: String,
+    pub visit_count: i64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub tags: Option<String>,
@@ -57,6 +59,7 @@ impl BookmarkRow {
             url: self.url,
             description: self.description,
             tags,
+            visit_count: self.visit_count,
             created_at: self.created_at,
             updated_at: self.updated_at,
         }
@@ -118,4 +121,20 @@ pub struct FetchUrlResponse {
 #[derive(Debug, Serialize)]
 pub struct SuggestTagsResponse {
     pub tags: Vec<String>,
+}
+
+/// 按标签分组的书签（用于默认页面展示）
+#[derive(Debug, Serialize)]
+pub struct TagGroup {
+    pub tag: String,
+    pub total_visits: i64,
+    pub bookmarks: Vec<Bookmark>,
+}
+
+/// 按标签分组的书签列表响应
+#[derive(Debug, Serialize)]
+pub struct GroupedBookmarksResponse {
+    pub groups: Vec<TagGroup>,
+    /// 没有标签的书签
+    pub untagged: Vec<Bookmark>,
 }

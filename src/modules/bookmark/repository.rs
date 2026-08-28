@@ -4,10 +4,10 @@ use std::sync::Arc;
 
 use crate::shared::db_query::like_contains;
 
-use super::model::{Bookmark, BookmarkRow, BookmarkTag, BookmarkTagWithCount};
+use super::model::{Bookmark, BookmarkRow, BookmarkTag, BookmarkTagWithCount, GroupedBookmarksResponse, TagGroup};
 
 /// 书签行公共 SELECT（含聚合标签子查询，按名称排序保证与 get_bookmark_tags 一致）
-const BOOKMARK_SELECT: &str = "SELECT id, title, url, description, created_at, updated_at, \
+const BOOKMARK_SELECT: &str = "SELECT id, title, url, description, visit_count, created_at, updated_at, \
     (SELECT GROUP_CONCAT(name, char(31)) FROM \
         (SELECT t.name FROM bookmark_tag_rel r \
          JOIN bookmark_tag t ON t.id = r.tag_id \
@@ -66,13 +66,14 @@ impl BookmarkRepo {
         Ok(rows)
     }
 
-    /// 获取所有书签（分页，按创建时间倒序；可选按标签过滤）
+    /// 获取所有书签（分页，可选按标签过滤，支持排序）
     pub async fn find_all_paginated(
         &self,
         user_id: i32,
         limit: i64,
         offset: i64,
         tag: Option<&str>,
+        sort: &str,
     ) -> Result<(Vec<Bookmark>, i64), sqlx::Error> {
         let mut count_builder =
             QueryBuilder::new("SELECT COUNT(*) FROM bookmark WHERE (user_id = ");
@@ -93,7 +94,11 @@ impl BookmarkRepo {
         if let Some(t) = tag {
             tags_filter_clause(&mut fetch_builder, t);
         }
-        fetch_builder.push(" ORDER BY created_at DESC LIMIT ");
+        fetch_builder.push(" ORDER BY ");
+        if sort == "visit_count" {
+            fetch_builder.push("visit_count DESC, ");
+        }
+        fetch_builder.push("created_at DESC LIMIT ");
         fetch_builder.push_bind(limit);
         fetch_builder.push(" OFFSET ");
         fetch_builder.push_bind(offset);
@@ -112,6 +117,7 @@ impl BookmarkRepo {
         let row = sqlx::query_as!(
             BookmarkRow,
             r#"SELECT id AS "id: i32", title, url, description,
+                      COALESCE(visit_count, 0) AS "visit_count!: i64",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>",
                       (SELECT GROUP_CONCAT(name, char(31)) FROM
@@ -165,6 +171,7 @@ impl BookmarkRepo {
             url: row.url,
             description: row.description,
             tags: Vec::new(),
+            visit_count: 0,
             created_at: row.created_at,
             updated_at: row.updated_at,
         };
@@ -186,6 +193,7 @@ impl BookmarkRepo {
         let row = sqlx::query_as!(
             BookmarkRow,
             r#"SELECT id AS "id: i32", title, url, description,
+                      COALESCE(visit_count, 0) AS "visit_count!: i64",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>",
                       (SELECT GROUP_CONCAT(name, char(31)) FROM
@@ -243,7 +251,7 @@ impl BookmarkRepo {
         builder.push(" AND (user_id = ");
         builder.push_bind(user_id);
         builder.push(" OR user_id IS NULL)");
-        builder.push(" RETURNING id, title, url, description, created_at, updated_at");
+        builder.push(" RETURNING id, title, url, description, visit_count, created_at, updated_at");
 
         let result = builder.build().fetch_one(&*self.pool).await?;
 
@@ -253,6 +261,7 @@ impl BookmarkRepo {
             url: result.try_get("url")?,
             description: result.try_get("description")?,
             tags: Vec::new(),
+            visit_count: result.try_get("visit_count")?,
             created_at: result.try_get("created_at")?,
             updated_at: result.try_get("updated_at")?,
         };
@@ -297,6 +306,76 @@ impl BookmarkRepo {
         Ok(total)
     }
 
+    /// 增加书签访问次数
+    pub async fn increment_visit(&self, user_id: i32, id: i32) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "UPDATE bookmark SET visit_count = visit_count + 1 WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+            id,
+            user_id
+        )
+        .execute(&*self.pool)
+        .await?;
+        Ok(())
+    }
+
+    /// 按标签分组获取书签（标签按该标签下书签总访问频率排序）
+    pub async fn find_grouped_by_tag(
+        &self,
+        user_id: i32,
+    ) -> Result<GroupedBookmarksResponse, sqlx::Error> {
+        // 获取所有标签，按该标签下书签总 visit_count 排序
+        let tag_rows = sqlx::query!(
+            r#"SELECT t.name AS "name: String", COALESCE(SUM(b.visit_count), 0) AS "total_visits!: i64"
+               FROM bookmark_tag t
+               JOIN bookmark_tag_rel r ON r.tag_id = t.id
+               JOIN bookmark b ON b.id = r.bookmark_id AND (b.user_id = ?1 OR b.user_id IS NULL)
+               GROUP BY t.id, t.name
+               ORDER BY COALESCE(SUM(b.visit_count), 0) DESC, t.name"#,
+            user_id
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        let mut groups = Vec::new();
+        for tag_row in tag_rows {
+            // 获取该标签下的书签
+            let mut builder = QueryBuilder::new(BOOKMARK_SELECT);
+            builder.push(" WHERE (user_id = ");
+            builder.push_bind(user_id);
+            builder.push(" OR user_id IS NULL)");
+            tags_filter_clause(&mut builder, &tag_row.name);
+            builder.push(" ORDER BY visit_count DESC, created_at DESC");
+
+            let items: Vec<BookmarkRow> = builder
+                .build_query_as()
+                .fetch_all(&*self.pool)
+                .await?;
+            let bookmarks = items.into_iter().map(BookmarkRow::into_bookmark).collect();
+
+            groups.push(TagGroup {
+                tag: tag_row.name,
+                total_visits: tag_row.total_visits,
+                bookmarks,
+            });
+        }
+
+        // 获取没有标签的书签
+        let mut untagged_builder = QueryBuilder::new(BOOKMARK_SELECT);
+        untagged_builder.push(" WHERE (user_id = ");
+        untagged_builder.push_bind(user_id);
+        untagged_builder.push(" OR user_id IS NULL)");
+        untagged_builder.push(" AND NOT EXISTS (SELECT 1 FROM bookmark_tag_rel WHERE bookmark_id = bookmark.id)");
+        untagged_builder.push(" ORDER BY visit_count DESC, created_at DESC");
+
+        let untagged_rows: Vec<BookmarkRow> = untagged_builder
+            .build_query_as()
+            .fetch_all(&*self.pool)
+            .await?;
+        let untagged = untagged_rows.into_iter().map(BookmarkRow::into_bookmark).collect();
+
+        Ok(GroupedBookmarksResponse { groups, untagged })
+    }
+
     /// 按关键词搜索书签（匹配标题/URL/备注，命中越多得分越高；可选按标签过滤）
     pub async fn search_paginated(
         &self,
@@ -308,7 +387,7 @@ impl BookmarkRepo {
     ) -> Result<(Vec<Bookmark>, i64), sqlx::Error> {
         let keywords: Vec<&str> = query.split_whitespace().collect();
         if keywords.is_empty() {
-            return self.find_all_paginated(user_id, limit, offset, tag).await;
+            return self.find_all_paginated(user_id, limit, offset, tag, "created_at").await;
         }
 
         let mut count_builder =
@@ -607,7 +686,7 @@ mod tests {
         .unwrap();
 
         let (items, total) = repo
-            .find_all_paginated(TEST_USER_ID, 10, 0, None)
+            .find_all_paginated(TEST_USER_ID, 10, 0, None, "created_at")
             .await
             .unwrap();
         assert_eq!(total, 3);
@@ -636,14 +715,14 @@ mod tests {
         .unwrap();
 
         let (items, total) = repo
-            .find_all_paginated(TEST_USER_ID, 10, 0, Some("编程"))
+            .find_all_paginated(TEST_USER_ID, 10, 0, Some("编程"), "created_at")
             .await
             .unwrap();
         assert_eq!(total, 2);
         assert!(items.iter().all(|b| b.tags.contains(&"编程".to_string())));
 
         let (items, total) = repo
-            .find_all_paginated(TEST_USER_ID, 10, 0, Some("不存在的"))
+            .find_all_paginated(TEST_USER_ID, 10, 0, Some("不存在的"), "created_at")
             .await
             .unwrap();
         assert_eq!(total, 0);
@@ -659,7 +738,7 @@ mod tests {
                 .unwrap();
         }
         let (items, total) = repo
-            .find_all_paginated(TEST_USER_ID, 3, 2, None)
+            .find_all_paginated(TEST_USER_ID, 3, 2, None, "created_at")
             .await
             .unwrap();
         assert_eq!(total, 10);

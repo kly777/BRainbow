@@ -418,6 +418,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             url TEXT NOT NULL,
             description TEXT NOT NULL DEFAULT '',
             user_id INTEGER,
+            visit_count INTEGER NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )

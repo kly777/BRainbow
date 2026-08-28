@@ -39,6 +39,7 @@ export const DOMAIN_DEFS: Record<DomainName, DomainDef> = {
 			/^GET \/bookmarks(?:\?|$)/,
 			/^GET \/bookmarks\/search/,
 			/^GET \/bookmarks\/tags/,
+			/^GET \/bookmarks\/grouped-by-tag/,
 		],
 		singles: [/^GET \/bookmarks\/\d+/],
 	},

@@ -224,6 +224,13 @@ impl BookmarkService {
             .map_err(ServiceError::Db)
     }
 
+    pub async fn increment_visit(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+        self.repo
+            .increment_visit(user_id, id)
+            .await
+            .map_err(ServiceError::Db)
+    }
+
     // ── 标签（命令） ──
 
     pub async fn create_tag(&self, name: &str) -> Result<BookmarkTag, ServiceError> {
@@ -391,7 +398,7 @@ mod tests {
         assert!(bm.id > 0);
         assert_eq!(bm.tags, str_vec(&["编程"]));
 
-        let (items, total) = qsvc.list(1, 10, 0, None).await.unwrap();
+        let (items, total) = qsvc.list(1, 10, 0, None, "created_at").await.unwrap();
         assert_eq!(total, 1);
         assert_eq!(items[0].url, "https://example.com");
         assert_eq!(items[0].tags, str_vec(&["编程"]));
@@ -405,7 +412,7 @@ mod tests {
             .unwrap();
         svc.create(1, "B", "https://b.com", "", &[]).await.unwrap();
 
-        let (items, total) = qsvc.list(1, 10, 0, Some("编程")).await.unwrap();
+        let (items, total) = qsvc.list(1, 10, 0, Some("编程"), "created_at").await.unwrap();
         assert_eq!(total, 1);
         assert_eq!(items[0].title, "A");
     }
@@ -493,7 +500,7 @@ mod tests {
         assert_eq!(result.created, 1);
 
         // 危险 scheme 不入库
-        let (items, total) = qsvc.list(1, 10, 0, None).await.unwrap();
+        let (items, total) = qsvc.list(1, 10, 0, None, "created_at").await.unwrap();
         assert_eq!(total, 1);
         assert_eq!(items[0].url, "https://example.com/a");
     }

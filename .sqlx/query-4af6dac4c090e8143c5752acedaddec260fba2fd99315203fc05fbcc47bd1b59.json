@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\", title, url, description,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\",\n                      (SELECT GROUP_CONCAT(name, char(31)) FROM\n                           (SELECT t.name FROM bookmark_tag_rel r\n                            JOIN bookmark_tag t ON t.id = r.tag_id\n                            WHERE r.bookmark_id = bookmark.id ORDER BY t.name)) AS tags\n               FROM bookmark WHERE url = ?1 AND (user_id = ?2 OR user_id IS NULL)",
+  "query": "SELECT id AS \"id: i32\", title, url, description,\n                      COALESCE(visit_count, 0) AS \"visit_count!: i64\",\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\",\n                      (SELECT GROUP_CONCAT(name, char(31)) FROM\n                           (SELECT t.name FROM bookmark_tag_rel r\n                            JOIN bookmark_tag t ON t.id = r.tag_id\n                            WHERE r.bookmark_id = bookmark.id ORDER BY t.name)) AS tags\n               FROM bookmark WHERE url = ?1 AND (user_id = ?2 OR user_id IS NULL)",
   "describe": {
     "columns": [
       {
@@ -48,20 +48,26 @@
         }
       },
       {
-        "name": "created_at!: chrono::DateTime<chrono::Utc>",
+        "name": "visit_count!: i64",
         "ordinal": 4,
-        "type_info": "Datetime",
+        "type_info": "Integer",
         "origin": "Expression"
       },
       {
-        "name": "updated_at!: chrono::DateTime<chrono::Utc>",
+        "name": "created_at!: chrono::DateTime<chrono::Utc>",
         "ordinal": 5,
         "type_info": "Datetime",
         "origin": "Expression"
       },
       {
-        "name": "tags",
+        "name": "updated_at!: chrono::DateTime<chrono::Utc>",
         "ordinal": 6,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      },
+      {
+        "name": "tags",
+        "ordinal": 7,
         "type_info": "Text",
         "origin": "Expression"
       }
@@ -76,8 +82,9 @@
       false,
       false,
       false,
+      false,
       true
     ]
   },
-  "hash": "fc93f078c1ac47dde27818a4fe7af8439c6c01350f1d74035d52c2f860c9702c"
+  "hash": "4af6dac4c090e8143c5752acedaddec260fba2fd99315203fc05fbcc47bd1b59"
 }

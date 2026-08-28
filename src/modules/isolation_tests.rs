@@ -93,7 +93,7 @@ async fn bookmark_isolation_between_users() {
         .await
         .unwrap();
 
-    let (_, total) = qsvc.list(2, 10, 0, None).await.unwrap();
+    let (_, total) = qsvc.list(2, 10, 0, None, "created_at").await.unwrap();
     assert_eq!(total, 0, "B 不应看到 A 的书签");
     assert!(qsvc.by_id(2, bm_a.id).await.unwrap().is_none());
     assert_eq!(svc.delete(2, bm_a.id).await.unwrap(), 0);

@@ -19,8 +19,9 @@ pub use favicon::favicon_handler;
 pub use handler::{
     batch_delete_handler, check_url_handler, create_bookmark_handler, create_tag_handler,
     delete_bookmark_handler, delete_tag_handler, fetch_url_handler, get_bookmark_handler,
-    get_bookmark_tags_handler, get_bookmarks_handler, import_bookmarks_handler,
-    search_bookmarks_handler, search_tags_handler, suggest_tags_handler, update_bookmark_handler,
+    get_bookmark_tags_handler, get_bookmarks_handler, grouped_by_tag_handler,
+    import_bookmarks_handler, increment_visit_handler, search_bookmarks_handler,
+    search_tags_handler, suggest_tags_handler, update_bookmark_handler,
 };
 pub use query::BookmarkQueryService;
 pub use service::BookmarkService;
@@ -66,6 +67,7 @@ where
         .route("/check-url", get(check_url_handler))
         .route("/fetch-url", post(fetch_url_handler))
         .route("/batch-delete", post(batch_delete_handler))
+        .route("/grouped-by-tag", get(grouped_by_tag_handler))
         .route(
             "/",
             get(get_bookmarks_handler).post(create_bookmark_handler),
@@ -81,5 +83,6 @@ where
             get(get_bookmark_tags_handler).put(handler::set_bookmark_tags_handler),
         )
         .route("/{id}/suggest-tags", post(suggest_tags_handler))
+        .route("/{id}/visit", post(increment_visit_handler))
         .route("/search", get(search_bookmarks_handler))
 }

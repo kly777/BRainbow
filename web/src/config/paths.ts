@@ -27,6 +27,7 @@ export const PATHS = {
 	readingUnknown: `${READING}/unknown`,
 	readingDetail: `${READING}/:id`,
 	bookmark: "/bookmark",
+	bookmarkManage: "/bookmark/manage",
 	bookmarkDetail: "/bookmark/:id",
 	memory: MEMORY,
 	memoryAdd: `${MEMORY}/add`,

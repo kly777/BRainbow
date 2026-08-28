@@ -39,6 +39,7 @@ const PAGE_LOADERS: Record<PathValue, PageLoader> = {
 	[PATHS.reading]: () => import("@modules/reading/ReadingList.tsx"),
 	[PATHS.readingUnknown]: () => import("@modules/reading/ReadingUnknown.tsx"),
 	[PATHS.bookmark]: () => import("@modules/bookmark/BookmarkPage.tsx"),
+	[PATHS.bookmarkManage]: () => import("@modules/bookmark/BookmarkManagePage.tsx"),
 	[PATHS.bookmarkDetail]: () => import("@modules/bookmark/BookmarkDetail.tsx"),
 	[PATHS.readingDetail]: () => import("@modules/reading/ReadingDetail.tsx"),
 	[PATHS.memory]: () => import("@modules/mem/MemPage.tsx"),

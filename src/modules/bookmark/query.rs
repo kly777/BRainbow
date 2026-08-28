@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use super::model::{Bookmark, BookmarkTag, BookmarkTagWithCount};
+use super::model::{Bookmark, BookmarkTag, BookmarkTagWithCount, GroupedBookmarksResponse};
 use super::repository::BookmarkRepo;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{SearchHit, SearchPort, SearchTarget, normalize_search, snippet};
@@ -28,9 +28,20 @@ impl BookmarkQueryService {
         limit: i64,
         offset: i64,
         tag: Option<&str>,
+        sort: &str,
     ) -> Result<(Vec<Bookmark>, i64), ServiceError> {
         self.repo
-            .find_all_paginated(user_id, limit, offset, tag)
+            .find_all_paginated(user_id, limit, offset, tag, sort)
+            .await
+            .map_err(ServiceError::Db)
+    }
+
+    pub async fn grouped_by_tag(
+        &self,
+        user_id: i32,
+    ) -> Result<GroupedBookmarksResponse, ServiceError> {
+        self.repo
+            .find_grouped_by_tag(user_id)
             .await
             .map_err(ServiceError::Db)
     }

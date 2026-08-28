@@ -15,6 +15,7 @@ export interface Bookmark {
 	url: string;
 	description: string;
 	tags: string[];
+	visit_count: number;
 	created_at: string;
 	updated_at: string;
 }
@@ -171,3 +172,22 @@ export const batchDeleteBookmarksE = (ids: number[]): Promise<void> =>
 			body: JSON.stringify({ ids }),
 		}),
 	);
+
+/** 记录书签访问（visit_count += 1） */
+export const incrementBookmarkVisitE = (id: number): Promise<void> =>
+	request<void>(`/bookmarks/${id}/visit`, { method: "POST" });
+
+export interface TagGroup {
+	tag: string;
+	total_visits: number;
+	bookmarks: Bookmark[];
+}
+
+export interface GroupedBookmarksResponse {
+	groups: TagGroup[];
+	untagged: Bookmark[];
+}
+
+/** 按标签分组获取书签 */
+export const getGroupedBookmarksE = (): Promise<GroupedBookmarksResponse> =>
+	cachedRequest<GroupedBookmarksResponse>("/bookmarks/grouped-by-tag");

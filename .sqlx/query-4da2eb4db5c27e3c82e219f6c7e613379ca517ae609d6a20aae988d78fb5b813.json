@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE bookmark SET visit_count = visit_count + 1 WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "4da2eb4db5c27e3c82e219f6c7e613379ca517ae609d6a20aae988d78fb5b813"
+}

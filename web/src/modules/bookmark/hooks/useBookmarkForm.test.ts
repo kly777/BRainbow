@@ -82,6 +82,7 @@ describe("useBookmarkForm", () => {
 					url: "https://example.com",
 					description: "测试描述",
 					tags: ["tag1", "tag2"],
+					visit_count: 0,
 					created_at: "2024-01-01",
 					updated_at: "2024-01-01",
 				};
@@ -144,6 +145,7 @@ describe("useBookmarkForm", () => {
 			url: "https://example.com",
 			description: "测试描述",
 			tags: ["tag1"],
+			visit_count: 0,
 			created_at: "2024-01-01",
 			updated_at: "2024-01-01",
 		};

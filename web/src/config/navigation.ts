@@ -139,6 +139,13 @@ export const NAV_ITEMS: NavItem[] = [
 		nav: false,
 	},
 	{
+		path: PATHS.bookmarkManage,
+		label: "书签管理",
+		title: "Bookmark Manage",
+		desc: "书签批量管理",
+		nav: false,
+	},
+	{
 		path: PATHS.readingDetail,
 		label: "阅读文章",
 		title: "Reading",

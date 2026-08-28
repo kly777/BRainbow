@@ -299,9 +299,20 @@
 /* ── 分组视图 ── */
 
 .groups-container {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-lg);
+	columns: 3;
+	column-gap: var(--space-lg);
+}
+
+@media (max-width: 900px) {
+	.groups-container {
+		columns: 2;
+	}
+}
+
+@media (max-width: 560px) {
+	.groups-container {
+		columns: 1;
+	}
 }
 
 .tag-group {
@@ -309,6 +320,8 @@
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-lg);
 	overflow: hidden;
+	break-inside: avoid;
+	margin-bottom: var(--space-lg);
 }
 
 .tag-group-header {

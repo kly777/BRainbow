@@ -15,10 +15,15 @@ const BOOKMARK_SELECT: &str = "SELECT id, title, url, description, visit_count, 
      FROM bookmark";
 
 /// 通过标签名过滤的条件片段
+/// 特殊值 "__untagged__" 表示筛选没有标签的书签
 fn tags_filter_clause(builder: &mut QueryBuilder<Sqlite>, tag: &str) {
-    builder.push(" AND EXISTS (SELECT 1 FROM bookmark_tag_rel fr JOIN bookmark_tag ft ON ft.id = fr.tag_id WHERE fr.bookmark_id = bookmark.id AND ft.name = ");
-    builder.push_bind(tag);
-    builder.push(")");
+    if tag == "__untagged__" {
+        builder.push(" AND NOT EXISTS (SELECT 1 FROM bookmark_tag_rel WHERE bookmark_id = bookmark.id)");
+    } else {
+        builder.push(" AND EXISTS (SELECT 1 FROM bookmark_tag_rel fr JOIN bookmark_tag ft ON ft.id = fr.tag_id WHERE fr.bookmark_id = bookmark.id AND ft.name = ");
+        builder.push_bind(tag);
+        builder.push(")");
+    }
 }
 
 /// Bookmark 数据访问层

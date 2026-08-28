@@ -6,6 +6,7 @@ import { type Component, For, Show } from "solid-js";
 import styles from "./BookmarkPage.module.css";
 import { BookmarkFormModal } from "./components/BookmarkFormModal.tsx";
 import { BookmarkItem } from "./components/BookmarkItem.tsx";
+import TagFilter from "./components/TagFilter.tsx";
 import TagManager from "./components/TagManager.tsx";
 import { useBookmarkPage } from "./hooks/useBookmarkPage.ts";
 
@@ -20,6 +21,14 @@ const BatchBar: Component<{
 			<div class={styles.batchBar}>
 				<span class={styles.batchInfo}>已选 {count()} 个书签</span>
 				<div class={styles.batchActions}>
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={b.handleBatchAiTag}
+						disabled={b.batchTagging()}
+					>
+						{b.batchTagging() ? "AI 标签中..." : "🤖 AI 批量标签"}
+					</Button>
 					<Button variant="secondary" size="sm" onClick={b.clearSelection}>
 						取消选择
 					</Button>
@@ -129,6 +138,10 @@ export default function BookmarkPage() {
 								✕
 							</Button>
 						</Show>
+						<TagFilter
+							value={b.tagFilter()}
+							onChange={b.handleTagFilter}
+						/>
 						<Button
 							variant="secondary"
 							size="sm"
@@ -137,7 +150,7 @@ export default function BookmarkPage() {
 							}
 							disabled={b.importing()}
 						>
-							{b.importing() ? "导入中..." : "导入 Firefox 书签"}
+							{b.importing() ? "导入中..." : "导入"}
 						</Button>
 						<Button
 							variant="secondary"
@@ -162,15 +175,6 @@ export default function BookmarkPage() {
 					e.currentTarget.value = "";
 				}}
 			/>
-
-			<Show when={b.tagFilter()}>
-				<div class={styles.filterBar}>
-					<span class={styles.filterLabel}>标签：{b.tagFilter()}</span>
-					<Button variant="ghost" size="sm" onClick={b.clearTagFilter}>
-						清除过滤 ×
-					</Button>
-				</div>
-			</Show>
 
 			<Show when={b.loading()}>
 				<div class={styles.state}>加载中…</div>

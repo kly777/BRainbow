@@ -8,6 +8,8 @@ import {
 	fetchUrlTitleE,
 	getBookmarksE,
 	searchBookmarksE,
+	setBookmarkTagsE,
+	suggestBookmarkTagsE,
 	updateBookmarkE,
 } from "@modules/bookmark";
 import {
@@ -152,6 +154,56 @@ export function useBookmarkPage() {
 		}
 	}
 
+	// ── 批量 AI 标签 ──
+	const [batchTagging, setBatchTagging] = createSignal(false);
+
+	async function handleBatchAiTag() {
+		const ids = Array.from(selectedIds());
+		if (ids.length === 0) return;
+
+		setBatchTagging(true);
+		let successCount = 0;
+		let failCount = 0;
+		let totalTagsAdded = 0;
+
+		// 构建 id→bookmark 映射
+		const bmMap = new Map(bookmarks().map((b) => [b.id, b]));
+
+		for (const id of ids) {
+			const bm = bmMap.get(id);
+			if (!bm) continue;
+
+			try {
+				const suggestResult = await suggestBookmarkTagsE(id);
+				const existing = new Set(bm.tags);
+				const newTags = suggestResult.tags.filter((t) => !existing.has(t));
+				if (newTags.length === 0) continue;
+
+				const merged = [...bm.tags, ...newTags];
+				await setBookmarkTagsE(id, merged);
+				successCount++;
+				totalTagsAdded += newTags.length;
+			} catch {
+				failCount++;
+			}
+		}
+
+		setBatchTagging(false);
+		clearSelection();
+
+		if (successCount > 0) {
+			notifySuccess(
+				`AI 标签完成：${successCount} 个书签添加了 ${totalTagsAdded} 个标签` +
+					(failCount > 0 ? `，${failCount} 个失败` : ""),
+			);
+			load({ silent: true });
+		} else if (failCount > 0) {
+			notifyError(`AI 标签失败：${failCount} 个书签`);
+		} else {
+			notifySuccess("AI 建议的标签都已存在，无需添加");
+		}
+	}
+
 	// ── 刷新标题 ──
 	async function handleRefreshTitle(bm: Bookmark) {
 		const result = await tryAsync(() => fetchUrlTitleE(bm.url));
@@ -258,6 +310,9 @@ export function useBookmarkPage() {
 		isAllSelected,
 		clearSelection,
 		handleBatchDelete,
+		// 批量 AI 标签
+		batchTagging,
+		handleBatchAiTag,
 		// 刷新标题 & 检测可访问性
 		handleRefreshTitle,
 		handleCheckAccessibility,

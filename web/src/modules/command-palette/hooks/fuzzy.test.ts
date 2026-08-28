@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fuzzyMatch, fuzzyFilter } from "./fuzzy.ts";
-import { buildNavItems, buildCmdItems } from "./suggestions.ts";
+import { fuzzyFilter, fuzzyMatch } from "./fuzzy.ts";
+import { buildCmdItems, buildNavItems } from "./suggestions.ts";
 
 describe("command-palette hooks", () => {
 	beforeEach(() => {

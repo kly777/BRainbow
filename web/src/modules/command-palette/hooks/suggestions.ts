@@ -2,10 +2,10 @@
 
 import { NAV_ITEMS, NAV_ROUTES } from "@config/navigation";
 import { fillPath, PATHS } from "@config/paths";
+import { getRecentPages } from "@shared/utils/recent-pages.ts";
 import type { SearchHit, SearchTarget } from "../api.ts";
 import { fuzzyFilter } from "./fuzzy.ts";
 import type { Suggestion } from "./usePalette.ts";
-import { getRecentPages } from "@shared/utils/recent-pages.ts";
 
 const BING = "https://www.bing.com/search?q=";
 const DUCK = "https://duckduckgo.com/?q=";
@@ -131,10 +131,7 @@ function highlightKeywords(text: string, query: string): string {
 	const terms = query.trim().split(/\s+/).filter(Boolean);
 	let result = escaped;
 	for (const term of terms) {
-		const re = new RegExp(
-			term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-			"gi",
-		);
+		const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
 		result = result.replace(re, (m) => `<mark>${m}</mark>`);
 	}
 	return result;

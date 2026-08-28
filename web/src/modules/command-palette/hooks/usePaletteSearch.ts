@@ -54,13 +54,7 @@ export function usePaletteSearch(opts: UsePaletteSearchOpts) {
 		if (opts.mode() !== "search") return [];
 		const q = opts.query().trim();
 		if (!q) return historyItems();
-		return buildSearchItems(
-			hits(),
-			q,
-			searching(),
-			opts.navigate,
-			opts.close,
-		);
+		return buildSearchItems(hits(), q, searching(), opts.navigate, opts.close);
 	};
 
 	// 防抖搜索 + 竞态保护

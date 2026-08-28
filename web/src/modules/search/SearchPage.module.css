@@ -39,7 +39,9 @@
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	cursor: pointer;
-	transition: background var(--t-transition-fast), color var(--t-transition-fast);
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
 }
 
 .filter-btn:hover {

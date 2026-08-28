@@ -6,7 +6,9 @@ export function getSearchHistory(): string[] {
 		const raw = localStorage.getItem(STORAGE_KEY);
 		if (!raw) return [];
 		const parsed = JSON.parse(raw);
-		return Array.isArray(parsed) ? parsed.filter((s) => typeof s === "string") : [];
+		return Array.isArray(parsed)
+			? parsed.filter((s) => typeof s === "string")
+			: [];
 	} catch {
 		return [];
 	}

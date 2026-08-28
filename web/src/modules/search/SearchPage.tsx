@@ -1,13 +1,13 @@
-import styles from "@modules/search/SearchPage.module.css";
 import { PATHS } from "@config/paths";
+import type { SearchHit } from "@modules/command-palette/api.ts";
+import { searchE } from "@modules/command-palette/api.ts";
 import {
 	KIND_LABEL,
 	resolveTargetUrl,
 } from "@modules/command-palette/hooks/suggestions.ts";
-import type { SearchHit } from "@modules/command-palette/api.ts";
-import { searchE } from "@modules/command-palette/api.ts";
-import { createEffect, createSignal, For, Show } from "solid-js";
+import styles from "@modules/search/SearchPage.module.css";
 import { useNavigate, useSearchParams } from "@solidjs/router";
+import { createEffect, createSignal, For, Show } from "solid-js";
 
 const MODULES = [
 	{ key: "all", label: "全部" },
@@ -31,10 +31,7 @@ function highlightKeywords(text: string, query: string): string {
 	const terms = query.trim().split(/\s+/).filter(Boolean);
 	let result = escaped;
 	for (const term of terms) {
-		const re = new RegExp(
-			term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-			"gi",
-		);
+		const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
 		result = result.replace(re, (m) => `<mark>${m}</mark>`);
 	}
 	return result;

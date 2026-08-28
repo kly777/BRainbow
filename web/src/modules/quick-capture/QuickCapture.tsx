@@ -38,9 +38,7 @@ export default function QuickCapture() {
 				</div>
 
 				<div class={styles.inputRow}>
-					<span class={styles.typeIndicator}>
-						{getTypeEmoji(qc.type())}
-					</span>
+					<span class={styles.typeIndicator}>{getTypeEmoji(qc.type())}</span>
 					<input
 						class={styles.input}
 						value={qc.inputValue()}
@@ -52,15 +50,9 @@ export default function QuickCapture() {
 				</div>
 
 				<div class={styles.footer}>
-					<div class={styles.typeHint}>
-						{getTypeHint(qc.type())}
-					</div>
+					<div class={styles.typeHint}>{getTypeHint(qc.type())}</div>
 					<div class={styles.actions}>
-						<button
-							type="button"
-							class={styles.cancelBtn}
-							onClick={qc.close}
-						>
+						<button type="button" class={styles.cancelBtn} onClick={qc.close}>
 							取消
 						</button>
 						<button

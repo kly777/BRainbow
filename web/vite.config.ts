@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
+import purgecss from "vite-plugin-purgecss";
 import solid from "vite-plugin-solid";
 import { NAV_ITEMS } from "./src/config/navigation.ts";
 
@@ -127,6 +128,16 @@ export default defineConfig(({ command, mode }) => {
 			sitemapPlugin(siteUrl),
 			seoAssetsPlugin(siteUrl),
 			markdownPagesPlugin(siteUrl),
+			purgecss({
+				content: [
+					"./src/**/*.tsx",
+					"./src/**/*.ts",
+					"./index.html",
+				],
+				safelist: {
+					standard: [/^data-/, /^aria-/],
+				},
+			}),
 		],
 		envDir,
 
@@ -194,11 +205,46 @@ export default defineConfig(({ command, mode }) => {
 				output: {
 					manualChunks(id) {
 						// 富文本渲染工具链独立成包：体积大且极少变更，拆出利于长缓存
-						if (/(?:marked|katex|highlight\.js|dompurify|marked-)/.test(id)) {
+						if (/(?:marked|highlight\.js|dompurify|marked-)/.test(id)) {
 							return "markdown-vendor";
+						}
+						// katex 独立成包：数学公式渲染，按需加载
+						if (/katex/.test(id)) {
+							return "katex";
 						}
 						if (/node_modules\/solid-js/.test(id)) {
 							return "solid-vendor";
+						}
+						// 共享模块拆分：UI 组件、工具函数、任务模块
+						if (/src\/components\/ui/.test(id)) {
+							return "shared-ui";
+						}
+						if (/src\/shared\/utils/.test(id)) {
+							return "shared-utils";
+						}
+						if (/src\/modules\/task\/(api|hooks|lib)/.test(id)) {
+							return "task-shared";
+						}
+						// mem 模块拆分：hooks 和 API 独立
+						if (/src\/modules\/mem\/(api|hooks)/.test(id)) {
+							return "mem-shared";
+						}
+						// mem 模块拆分：复习页面和管理页面分离
+						if (/src\/modules\/mem\/(MemPage|components\/(ReviewCard|Sidebar|ContextBar|FilterBar|MnemonicSettingsModal))/.test(id)) {
+							return "mem-review";
+						}
+						if (/src\/modules\/mem\/(MemManage|MemAdd|components\/(ManageTable|ManageDetail|ManageBatchBar|ImportParts|MemBatchTagModal|MemExportModal))/.test(id)) {
+							return "mem-manage";
+						}
+						// task 模块拆分：不同视图分离
+						if (/src\/modules\/task\/components\/TaskCalendar/.test(id)) {
+							return "task-calendar";
+						}
+						if (/src\/modules\/task\/components\/TaskKanban/.test(id)) {
+							return "task-kanban";
+						}
+						if (/src\/modules\/task\/components\/TaskDag/.test(id)) {
+							return "task-dag";
 						}
 						return undefined;
 					},

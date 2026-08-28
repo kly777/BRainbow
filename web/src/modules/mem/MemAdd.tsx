@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-solid";
 import { PATHS } from "@config/paths";
 // ── 添加记忆 v2：折痕卡片 ──
 // 单条模式 = 摊开一张空白目录卡（线索/答案中间是折痕）
@@ -25,7 +26,7 @@ export default function MemAdd() {
 			{/* 头栏 */}
 			<div class={styles.topBar}>
 				<A href={PATHS.memory} class={styles.backLink}>
-					← 记忆
+					<ArrowLeft size={14} /> 记忆
 				</A>
 				<h1 class={styles.title}>添加记忆</h1>
 				<div class={styles.modeTabs}>

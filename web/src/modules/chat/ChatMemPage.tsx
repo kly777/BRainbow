@@ -10,6 +10,7 @@ import { ChatSidebar, ToggleSidebar } from "./components/ChatSidebar.tsx";
 import { Composer } from "./components/Composer.tsx";
 import { useAutoScroll } from "./hooks/useAutoScroll.ts";
 import { useChatMem } from "./hooks/useChatMem.ts";
+import { ArrowLeft } from "lucide-solid";
 
 export default function ChatMemPage() {
 	const c = useChatMem();
@@ -30,7 +31,7 @@ export default function ChatMemPage() {
 				collapsed={sidebarCollapsed()}
 				title="记忆卡片会话"
 				backHref={PATHS.memory}
-				backLabel="← 记忆"
+				backLabel={<><ArrowLeft size={14} /> 记忆</>}
 				newLabel="＋ 新会话"
 				emptyText="还没有会话，点击“＋ 新会话”开始"
 				hint="粘贴文本 → AI 生成卡片 → 对话修订 → 勾选导入"

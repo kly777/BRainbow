@@ -2,6 +2,7 @@ import { AsyncView, Button } from "@components/ui";
 import { PATHS } from "@config/paths";
 import { listUnknownWords, markWord, type UnknownWord } from "@modules/reading";
 import { A } from "@solidjs/router";
+import { ArrowLeft, Check } from "lucide-solid";
 import { createResource, For } from "solid-js";
 import styles from "./ReadingUnknown.module.css";
 
@@ -21,7 +22,7 @@ const WordCard = (props: {
 			size="sm"
 			onClick={() => props.onMarkKnown(props.w.word)}
 		>
-			✓ 认识
+			<Check size={14} /> 认识
 		</Button>
 	</div>
 );
@@ -37,11 +38,11 @@ export default function ReadingUnknown() {
 	return (
 		<div class={styles.page}>
 			<A href={PATHS.reading} class={styles.back}>
-				← 文章列表
+				<ArrowLeft size={16} /> 文章列表
 			</A>
 			<h1>不认识词表</h1>
 			<p class={styles.subtitle}>
-				按标记「不认识」次数降序排列。点击 ✓ 改为认识。
+				按标记「不认识」次数降序排列。点击 <Check size={14} /> 改为认识。
 			</p>
 
 			<AsyncView

@@ -20,7 +20,7 @@ export interface ChatSidebarProps {
 	hint?: string;
 	/** 头部左侧的返回链接（可选，如 /chat/mem 返回记忆页） */
 	backHref?: string;
-	backLabel?: string;
+	backLabel?: JSX.Element;
 	/** 插入在侧边栏头部之前的内容（如 /chat 的搜索框） */
 	preHead?: JSX.Element;
 	onCreate: () => void;

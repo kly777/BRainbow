@@ -1,3 +1,4 @@
+import { X } from "lucide-solid";
 // ── 标签选择器：chips + 搜索下拉 + 可选创建/过滤模式，mem 模块统一入口 ──
 // 消费者：ManageDetail / MemExportModal / MemBatchTagModal（纯选择），
 // ManageToolbar / FilterBar（过滤模式外观）。
@@ -113,7 +114,7 @@ export default function TagPicker(props: TagPickerProps) {
 							aria-label={`移除标签 ${tag.name}`}
 							title="移除标签"
 						>
-							✕
+							<X size={14} />
 						</button>
 					</span>
 				)}

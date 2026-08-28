@@ -4,6 +4,7 @@ import { fillPath, PATHS } from "@config/paths";
 
 import { getErrorMessage } from "@shared/api";
 import { A } from "@solidjs/router";
+import { ArrowLeft, Check, X } from "lucide-solid";
 import { For, Show } from "solid-js";
 import ArticleContent from "./components/ArticleContent";
 import { useReadingDetail } from "./hooks/useReadingDetail.ts";
@@ -15,7 +16,7 @@ export default function ReadingDetail() {
 	return (
 		<div class={styles.page}>
 			<A href={PATHS.reading} class={styles.back}>
-				← 文章列表
+				<ArrowLeft size={16} /> 文章列表
 			</A>
 			{/* 错误时短路：detail() 在 error 存在时会 throw（Solid 1.9 语义） */}
 			<Show
@@ -136,10 +137,10 @@ export default function ReadingDetail() {
 																	aria-pressed={st === "known"}
 																>
 																	{st === "known"
-																		? "✓"
+																		? <Check size={14} />
 																		: st === "ignored"
 																			? "–"
-																			: "✗"}
+																			: <X size={14} />}
 																</button>
 															</Tooltip>
 															<span class={styles.wordName}>{w.word}</span>

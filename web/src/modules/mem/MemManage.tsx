@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-solid";
 import { PATHS } from "@config/paths";
 // ── 记忆管理 v2：档案柜 ──
 // 清单表格 = 档案索引 · 详情面板 = 档案卡
@@ -28,7 +29,7 @@ export default function MemManage() {
 			{/* 头栏 */}
 			<div class={styles.topBar}>
 				<A href={PATHS.memory} class={styles.backLink}>
-					← 记忆
+					<ArrowLeft size={14} /> 记忆
 				</A>
 				<h1 class={styles.title}>记忆管理</h1>
 				<div class={styles.topActions}>

@@ -3,6 +3,7 @@ import {
 	type ToastItem,
 	toasts,
 } from "@components/ui/organisms/toastStore.ts";
+import { X, Check, AlertTriangle, Info, XCircle } from "@components/ui/icons";
 import { type Component, For, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import styles from "./Toast.module.css";
@@ -14,16 +15,18 @@ const TYPE_CLASS: Record<ToastItem["type"], string> = {
 	info: styles.info,
 };
 
-function iconForType(type: ToastItem["type"]): string {
+const ICON_SIZE = 16;
+
+function IconForType(type: ToastItem["type"]) {
 	switch (type) {
 		case "error":
-			return "✕";
+			return <XCircle size={ICON_SIZE} />;
 		case "warning":
-			return "⚠";
+			return <AlertTriangle size={ICON_SIZE} />;
 		case "success":
-			return "✓";
+			return <Check size={ICON_SIZE} />;
 		case "info":
-			return "ℹ";
+			return <Info size={ICON_SIZE} />;
 	}
 }
 
@@ -37,7 +40,7 @@ const ToastCard: Component<{ toast: ToastItem }> = (props) => (
 		role="alert"
 	>
 		<div class={styles.body}>
-			<span class={styles.icon}>{iconForType(props.toast.type)}</span>
+			<span class={styles.icon}>{IconForType(props.toast.type)}</span>
 			<div class={styles.content}>
 				<div class={styles.title}>
 					{props.toast.details ? (
@@ -60,7 +63,7 @@ const ToastCard: Component<{ toast: ToastItem }> = (props) => (
 			onClick={() => dismissToast(props.toast.id)}
 			aria-label="关闭通知"
 		>
-			✕
+			<X size={14} />
 		</button>
 		{/* 倒计时进度条 */}
 		<Show when={props.toast.duration > 0}>

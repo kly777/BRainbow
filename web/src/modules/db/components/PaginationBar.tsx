@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from "lucide-solid";
 import { type Component, For, onCleanup, onMount, Show } from "solid-js";
 import { PAGE_SIZES } from "../tableConfig";
 import styles from "./PaginationBar.module.css";
@@ -113,18 +114,18 @@ const PaginationBar: Component<PaginationBarProps> = (props) => {
 							class={styles.pageNavBtn}
 							disabled={props.page <= 1 || props.loading}
 							onClick={props.onPrev}
-							title="上一页 (←)"
+							title="上一页"
 						>
-							←
+							<ChevronLeft size={14} />
 						</button>
 						<button
 							type="button"
 							class={styles.pageNavBtn}
 							disabled={props.page >= props.totalPages || props.loading}
 							onClick={props.onNext}
-							title="下一页 (→)"
+							title="下一页"
 						>
-							→
+							<ChevronRight size={14} />
 						</button>
 					</div>
 				</Show>

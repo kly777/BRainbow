@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-solid";
 import { A } from "@solidjs/router";
 import styles from "../ConvDetail.module.css";
 import { typeLabel } from "../hooks/type-labels.ts";
@@ -14,7 +15,7 @@ export default function ConvTopBar(props: Props) {
 	return (
 		<div class={styles.topBar}>
 			<A href={props.backHref} class={styles.backLink}>
-				← 搜索
+				<ArrowLeft size={14} /> 搜索
 			</A>
 			<div class={styles.titleArea}>
 				<h1 class={styles.title}>{props.title}</h1>

@@ -1,5 +1,6 @@
 import type { CalendarEvent } from "@modules/task";
 import { fmtLocal } from "@shared/utils";
+import { ChevronLeft, ChevronRight } from "lucide-solid";
 import { type Component, For, Show } from "solid-js";
 import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
 import styles from "./TaskCalendar.module.css";
@@ -70,7 +71,7 @@ export default function TaskCalendar() {
 					onClick={() => m.changeMonth(-1)}
 					class={styles.navButton}
 				>
-					← 上月
+					<ChevronLeft size={14} /> 上月
 				</button>
 				<h2 class={styles.calendarTitle}>{m.monthTitle()}</h2>
 				<button
@@ -78,7 +79,7 @@ export default function TaskCalendar() {
 					onClick={() => m.changeMonth(1)}
 					class={styles.navButton}
 				>
-					下月 →
+					下月 <ChevronRight size={14} />
 				</button>
 			</div>
 

@@ -11,6 +11,7 @@ import {
 import { TaskList, TaskProvider, useTasks } from "@modules/task";
 import { parseUtc, showConfirm, tryOrNotify } from "@shared/utils";
 import { A, useNavigate } from "@solidjs/router";
+import { ArrowRight } from "lucide-solid";
 import { createResource, Show } from "solid-js";
 import styles from "./HomePage.module.css";
 
@@ -65,7 +66,7 @@ function TaskOverview() {
 				<h2 class={styles.sectionTitle}>待办事项</h2>
 				<div class={styles.sectionActions}>
 					<A href={PATHS.task} class={styles.viewAllLink}>
-						查看全部 →
+						查看全部 <ArrowRight size={14} />
 					</A>
 				</div>
 			</div>
@@ -131,7 +132,7 @@ function CardOverview() {
 				<h2 class={styles.sectionTitle}>最近卡片</h2>
 				<div class={styles.sectionActions}>
 					<A href={PATHS.card} class={styles.viewAllLink}>
-						查看全部 →
+						查看全部 <ArrowRight size={14} />
 					</A>
 					<A href={PATHS.cardAdd} class={styles.createLink}>
 						+ 新建

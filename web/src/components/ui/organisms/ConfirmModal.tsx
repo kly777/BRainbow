@@ -1,16 +1,22 @@
 import type { ConfirmVariant } from "@components/ui/organisms/confirmStore.ts";
 import { confirms } from "@components/ui/organisms/confirmStore.ts";
+import { AlertTriangle, Info } from "@components/ui/icons";
 import { createEffect, For, onCleanup, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import styles from "./ConfirmModal.module.css";
 
 // ==================== 图标/样式映射 ====================
 
-const ICON: Record<ConfirmVariant, string> = {
-	danger: "⚠",
-	warning: "⚠",
-	info: "ℹ",
-};
+function IconForVariant(variant: ConfirmVariant) {
+	const size = 20;
+	switch (variant) {
+		case "danger":
+		case "warning":
+			return <AlertTriangle size={size} />;
+		case "info":
+			return <Info size={size} />;
+	}
+}
 
 const BTN_CLASS: Record<ConfirmVariant, string> = {
 	danger: styles.btnDanger,
@@ -113,7 +119,7 @@ function ConfirmDialog(props: {
 			>
 				<div class={styles.header}>
 					<div class={`${styles.iconWrap} ${ICON_CLASS[variant]}`}>
-						{ICON[variant]}
+						{IconForVariant(variant)}
 					</div>
 					<div class={styles.titleWrap}>
 						<h2 id={`confirm-title-${props.item.id}`} class={styles.title}>

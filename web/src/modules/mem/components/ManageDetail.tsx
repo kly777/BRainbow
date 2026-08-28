@@ -1,3 +1,4 @@
+import { X } from "lucide-solid";
 // ── v2 管理详情：档案卡 ──
 // 线索/答案用目录卡标签页，元数据等宽，操作与标签管理
 
@@ -54,7 +55,7 @@ const DetailHead: Component<{
 				title="关闭面板"
 				aria-label="关闭详情面板"
 			>
-				✕
+				<X size={14} />
 			</button>
 		</div>
 	</div>

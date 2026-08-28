@@ -6,6 +6,7 @@ import {
 	Index,
 	Show,
 } from "solid-js";
+import { ArrowRight } from "lucide-solid";
 import type { ColumnInfo, FilterOpValue } from "../api";
 import {
 	type ColumnFilter,
@@ -56,7 +57,7 @@ const SortHeaderCell: Component<SortHeaderCellProps> = (props) => {
 			</button>
 			<Show when={props.col.ref_table}>
 				<div class={styles.refHint} title={`外键 → ${props.col.ref_table}`}>
-					→ {props.col.ref_table}
+					<ArrowRight size={12} /> {props.col.ref_table}
 				</div>
 			</Show>
 		</th>

@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-solid";
 import { Button, FilterGroup, SearchInput } from "@components/ui";
 import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@shared/api";
@@ -26,7 +27,7 @@ export default function ConvSearch() {
 		<div class={styles.page}>
 			<div class={styles.topBar}>
 				<A href={PATHS.home} class={styles.backLink}>
-					← 主页
+					<ArrowLeft size={14} /> 主页
 				</A>
 				<h1 class={styles.title}>知识搜索</h1>
 			</div>

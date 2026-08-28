@@ -1,4 +1,5 @@
 import { Color } from "@shared/utils";
+import { X } from "lucide-solid";
 import {
 	type Accessor,
 	createEffect,
@@ -194,7 +195,7 @@ function ColorRow(props: {
 				disabled={!props.canRemove}
 				title="删除"
 			>
-				✕
+				<X size={14} />
 			</button>
 		</div>
 	);

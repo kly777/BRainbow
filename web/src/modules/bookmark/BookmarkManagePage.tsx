@@ -8,7 +8,7 @@ import { BookmarkFormModal } from "./components/BookmarkFormModal.tsx";
 import { BookmarkItem } from "./components/BookmarkItem.tsx";
 import TagFilter from "./components/TagFilter.tsx";
 import TagManager from "./components/TagManager.tsx";
-import { IconSparkles, IconX } from "./components/icons.tsx";
+import { ChevronLeft, ChevronRight, Sparkles, X } from "lucide-solid";
 import { useBookmarkPage } from "./hooks/useBookmarkPage.ts";
 
 const BatchBar: Component<{
@@ -32,7 +32,7 @@ const BatchBar: Component<{
 							"AI 标签中..."
 						) : (
 							<>
-								<IconSparkles size={14} /> AI 批量标签
+								<Sparkles size={14} /> AI 批量标签
 							</>
 						)}
 					</Button>
@@ -105,7 +105,7 @@ const BookmarkMainSection: Component<{
 							disabled={b.page() <= 1}
 							onClick={() => b.goPage(b.page() - 1)}
 						>
-							← 上一页
+							<ChevronLeft size={14} /> 上一页
 						</Button>
 						<Button
 							variant="secondary"
@@ -113,7 +113,7 @@ const BookmarkMainSection: Component<{
 							disabled={b.page() >= b.totalPages()}
 							onClick={() => b.goPage(b.page() + 1)}
 						>
-							下一页 →
+							下一页 <ChevronRight size={14} />
 						</Button>
 					</div>
 				</div>
@@ -142,7 +142,7 @@ export default function BookmarkPage() {
 								title="清空搜索"
 								onClick={() => b.handleSearch("")}
 							>
-								<IconX size={14} />
+								<X size={14} />
 							</Button>
 						</Show>
 						<TagFilter value={b.tagFilter()} onChange={b.handleTagFilter} />

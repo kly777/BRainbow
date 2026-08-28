@@ -22,3 +22,4 @@ logs/
 .zed/
 AGENTS.md
 opencode.json
+.pnpm-store

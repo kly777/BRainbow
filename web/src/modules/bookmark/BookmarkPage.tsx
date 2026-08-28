@@ -19,7 +19,7 @@ import {
 } from "./api.ts";
 import styles from "./BookmarkPage.module.css";
 import Favicon from "./components/Favicon.tsx";
-import { IconSettings, IconX } from "./components/icons.tsx";
+import { Settings, X } from "lucide-solid";
 import { trySync } from "@shared/utils";
 
 function extractDomain(url: string): string {
@@ -119,7 +119,7 @@ export default function BookmarkPage() {
 								title="清空搜索"
 								onClick={() => handleSearch("")}
 							>
-								<IconX size={14} />
+								<X size={14} />
 							</Button>
 						</Show>
 						<Button
@@ -127,7 +127,7 @@ export default function BookmarkPage() {
 							size="sm"
 							onClick={() => (window.location.href = PATHS.bookmarkManage)}
 						>
-							<IconSettings size={14} /> 管理
+							<Settings size={14} /> 管理
 						</Button>
 					</>
 				}

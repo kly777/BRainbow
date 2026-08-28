@@ -42,7 +42,7 @@ export function useMnemonic(): UseMnemonic {
 		if (!settings.value.has_key) {
 			notifyError(
 				"未配置 API Key",
-				new Error("请在顶栏 🤖 AI 设置中配置 API Key"),
+				new Error("请在顶栏 AI 设置中配置 API Key"),
 			);
 			return;
 		}

@@ -1,6 +1,7 @@
 import { useAuth } from "@app/context/auth.tsx";
 import { MODULE_CARDS } from "@config/module-cards.ts";
 import { A } from "@solidjs/router";
+import { ArrowRight } from "lucide-solid";
 import { For } from "solid-js";
 import styles from "./LandingPage.module.css";
 
@@ -107,7 +108,7 @@ export default function LandingPage() {
 									<strong class={styles.tocName}>{m.title}</strong>
 									<span class={styles.tocDescItem}>{m.detail}</span>
 									<span class={styles.tocArrow} aria-hidden="true">
-										→
+										<ArrowRight size={16} />
 									</span>
 								</A>
 							</li>

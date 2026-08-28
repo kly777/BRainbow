@@ -1,6 +1,7 @@
 // ── /bookmark 表单弹窗（新建/编辑）──
 
 import { Button, Modal } from "@components/ui";
+import { AlertTriangle } from "lucide-solid";
 import { Show } from "solid-js";
 import { fillPath, PATHS } from "@config/paths";
 import styles from "../BookmarkPage.module.css";
@@ -83,7 +84,7 @@ export function BookmarkFormModal(props: {
 					</Show>
 					<Show when={b.urlExists()}>
 						<div class={styles.urlWarning}>
-							⚠ 该 URL 已被收藏：
+							<AlertTriangle size={14} /> 该 URL 已被收藏：
 							<a
 								href={fillPath(
 									PATHS.bookmarkDetail,

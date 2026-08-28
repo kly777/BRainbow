@@ -6,7 +6,7 @@ import { fmtLocal } from "@shared/utils";
 import { type Component, For, Show } from "solid-js";
 import styles from "./BookmarkDetail.module.css";
 import TagInput from "./components/TagInput.tsx";
-import { IconSparkles } from "./components/icons.tsx";
+import { Sparkles } from "lucide-solid";
 import {
 	type BookmarkItem,
 	useBookmarkDetail,
@@ -103,7 +103,7 @@ const EditForm: Component<{
 					"AI 分析中..."
 				) : (
 					<>
-						<IconSparkles size={14} /> AI 建议标签
+						<Sparkles size={14} /> AI 建议标签
 					</>
 				)}
 			</Button>

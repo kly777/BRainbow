@@ -1,3 +1,4 @@
+import { X } from "lucide-solid";
 // ── v2 管理表格：档案清单 ──
 
 import { Badge } from "@components/ui";
@@ -287,7 +288,7 @@ const MemRow: Component<MemRowProps> = (props) => {
 					title="删除"
 					aria-label={`删除记忆：${previewText(props.mem.cue.content)}`}
 				>
-					✕
+					<X size={14} />
 				</button>
 			</td>
 		</tr>

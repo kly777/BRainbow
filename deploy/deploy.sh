@@ -281,23 +281,21 @@ cmd_check() {
 cmd_build() {
     load_config
     echo "═══════════════════════════════════════════"
-    log_info "构建 $APP_NAME"
+    log_info "构建 $APP_NAME（并行模式）"
     echo "═══════════════════════════════════════════"
 
-    # 1. 前端类型检查
-    log_info "前端类型检查..."
-    (cd "$PROJECT_DIR/web" && pnpm --silent run typecheck) || {
-        log_warn "TypeScript 检查未通过，是否继续构建？(y/n) "
-        read -r ans
-        [ "$ans" != "y" ] && { log_info "已取消"; exit 1; }
-    }
-
-    # 2. 前端构建（仅输出结尾摘要，成功时静默）
-    log_info "前端构建 (vite)..."
-    (cd "$PROJECT_DIR/web" && pnpm --silent run build 2>&1 | tail -6)
-    log_done "前端构建完成"
-
-    # 3. 后端构建
+    # 并行构建前端和后端
+    log_info "并行构建前端 + 后端..."
+    
+    # 前端构建（后台运行）
+    (
+        cd "$PROJECT_DIR/web" && \
+        pnpm --silent run typecheck && \
+        pnpm --silent run build
+    ) &
+    local frontend_pid=$!
+    
+    # 后端构建（后台运行）
     # sqlx 编译期宏在 DATABASE_URL 存在时走在线模式；部署机路径不可用，
     # 必须 unset 让它使用已提交的 .sqlx 离线数据。
     local build_cmd="env -u DATABASE_URL cargo build --release"
@@ -309,10 +307,29 @@ cmd_build() {
     else
         log_info "后端构建 (cargo --release)..."
     fi
-    (cd "$PROJECT_DIR" && eval "$build_cmd")
-    log_done "后端构建完成"
+    (cd "$PROJECT_DIR" && eval "$build_cmd") &
+    local backend_pid=$!
 
-    # 4. 清理并复制产物到 build/
+    # 等待两个任务完成
+    local frontend_status=0
+    local backend_status=0
+    
+    wait $frontend_pid || frontend_status=$?
+    wait $backend_pid || backend_status=$?
+
+    # 检查构建结果
+    if [ $frontend_status -ne 0 ]; then
+        log_error "前端构建失败 (exit code: $frontend_status)"
+        exit 1
+    fi
+    if [ $backend_status -ne 0 ]; then
+        log_error "后端构建失败 (exit code: $backend_status)"
+        exit 1
+    fi
+
+    log_done "并行构建完成"
+
+    # 清理并复制产物到 build/
     rm -rf "$PROJECT_DIR/build"
     mkdir -p "$PROJECT_DIR/build"
     cp -r "$PROJECT_DIR/web/dist" "$PROJECT_DIR/build/dist"
@@ -326,10 +343,6 @@ cmd_build() {
     log_info "  binary: build/brainbow ($(du -h "$PROJECT_DIR/build/brainbow" | cut -f1))"
     log_info "  dist:   build/dist ($(du -sh "$PROJECT_DIR/build/dist" | cut -f1))"
 }
-
-# ===================================================================
-# 子命令: deploy — 全量部署
-# ===================================================================
 cmd_deploy() {
     load_config
     echo "═══════════════════════════════════════════"

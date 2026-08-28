@@ -85,6 +85,42 @@ build-web:
 
 clean:
 	rm -rf $(BUILD_DIR)/
+# 完全清理（包括 node_modules 和 target）
+clean-all: clean
+	cd web && rm -rf node_modules dist
+	cargo clean
+
+# 使用 cargo-nextest 运行测试（比 cargo test 快 2-3 倍）
+# 安装: cargo install cargo-nextest
+test:
+	cargo nextest run
+
+# 使用 cargo-nextest 运行测试（带输出）
+test-verbose:
+	cargo nextest run --no-capture
+
+# 检查未使用的依赖
+# 安装: cargo install cargo-udeps
+udeps:
+	cargo +nightly udeps --all-targets
+
+# 检查二进制大小
+bloat:
+	cargo bloat --release -n 20
+
+# 清理旧的编译缓存
+clean-cache:
+	rm -rf target/release/.fingerprint/brainbow-*
+	rm -rf target/debug/.fingerprint/brainbow-*
+
+# 显示构建统计
+build-stats:
+	@echo "=== 构建统计 ==="
+	@echo "后端二进制大小: $$(du -h target/release/brainbow 2>/dev/null | cut -f1 || echo 'N/A')"
+	@echo "前端 dist 大小: $$(du -sh web/dist 2>/dev/null | cut -f1 || echo 'N/A')"
+	@echo "target/ 目录大小: $$(du -sh target/ 2>/dev/null | cut -f1 || echo 'N/A')"
+	@echo "node_modules 大小: $$(du -sh web/node_modules 2>/dev/null | cut -f1 || echo 'N/A')"
+
 
 # ── 快捷命令委托给 deploy/deploy.sh ──
 

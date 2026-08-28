@@ -1,0 +1,23 @@
+# BRainbow Cargo Configuration
+# Optimized for development speed and release builds
+
+[build]
+# Use all available CPU cores for parallel compilation
+# Default is already number of CPUs, but explicit is better
+jobs = 16
+
+# Uncomment to use mold linker (faster linking)
+# Requires: sudo apt install mold (Ubuntu) or cargo install mold
+# [target.x86_64-unknown-linux-gnu]
+# linker = "clang"
+# rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+# Uncomment to use sccache for compilation caching
+# Requires: cargo install sccache
+# [build]
+# rustc-wrapper = "sccache"
+
+# Uncomment to enable incremental compilation for release builds
+# Warning: May increase binary size slightly
+# [profile.release]
+# incremental = true

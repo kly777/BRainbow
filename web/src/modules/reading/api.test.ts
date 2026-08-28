@@ -1,14 +1,14 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	listArticles,
 	getArticle,
-	getArticleWords,
-	uploadArticle,
-	markWord,
-	listUnknownWords,
-	recommendNext,
 	getArticleNotes,
+	getArticleWords,
+	listArticles,
+	listUnknownWords,
+	markWord,
+	recommendNext,
 	updateArticleNotes,
+	uploadArticle,
 } from "./api.ts";
 
 // 模拟依赖

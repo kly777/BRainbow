@@ -1,5 +1,5 @@
 import { createRoot } from "solid-js";
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useTaskCalendar } from "./useTaskCalendar.ts";
 
 // 模拟依赖

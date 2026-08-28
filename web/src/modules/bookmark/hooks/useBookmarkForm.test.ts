@@ -1,5 +1,5 @@
 import { createRoot } from "solid-js";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useBookmarkForm } from "./useBookmarkForm.ts";
 
 // 模拟依赖

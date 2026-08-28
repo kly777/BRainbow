@@ -1,6 +1,6 @@
 import type { DueResponse, MemItem } from "@modules/mem";
 import { createRoot } from "solid-js";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useDueQueue } from "./useDueQueue.ts";
 
 // 模拟getSessionEstimateE

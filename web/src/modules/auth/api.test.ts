@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { loginE, registerE, logoutE, changePasswordE } from "./api.ts";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { changePasswordE, loginE, logoutE, registerE } from "./api.ts";
 
 // 模拟依赖
 vi.mock("@shared/api", () => ({

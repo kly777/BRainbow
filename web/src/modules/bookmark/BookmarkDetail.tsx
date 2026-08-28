@@ -1,12 +1,12 @@
 // ── /bookmark/:id：书签详情（全局搜索直达 + AI 标签建议） ──
 
-import { Button, Toolbar } from "@components/ui";
+import { Button, LoadingSkeleton, Toolbar } from "@components/ui";
 import { getErrorMessage } from "@shared/api";
 import { fmtLocal } from "@shared/utils";
+import { Sparkles } from "lucide-solid";
 import { type Component, For, Show } from "solid-js";
 import styles from "./BookmarkDetail.module.css";
 import TagInput from "./components/TagInput.tsx";
-import { Sparkles } from "lucide-solid";
 import {
 	type BookmarkItem,
 	useBookmarkDetail,
@@ -177,7 +177,7 @@ export default function BookmarkDetail() {
 			</Show>
 
 			<Show when={m.dataLoading}>
-				<div class={styles.loading}>加载中…</div>
+				<LoadingSkeleton />
 			</Show>
 
 			<Show when={m.data()}>

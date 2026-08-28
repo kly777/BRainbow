@@ -1,9 +1,9 @@
 // ── /bookmark 表单弹窗（新建/编辑）──
 
 import { Button, Modal } from "@components/ui";
+import { fillPath, PATHS } from "@config/paths";
 import { AlertTriangle } from "lucide-solid";
 import { Show } from "solid-js";
-import { fillPath, PATHS } from "@config/paths";
 import styles from "../BookmarkPage.module.css";
 import type { useBookmarkPage } from "../hooks/useBookmarkPage.ts";
 import TagInput from "./TagInput.tsx";

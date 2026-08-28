@@ -1,4 +1,4 @@
-import { Button, Modal } from "@components/ui";
+import { Button, FilterGroup, Modal } from "@components/ui";
 import type { Task } from "@modules/task";
 import { useTasks } from "@modules/task";
 import { fmtLocal } from "@shared/utils";
@@ -128,6 +128,7 @@ export default function TaskKanban() {
 	const { tasks, updateStatus, updateTaskE } = useTasks();
 	const [editingTask, setEditingTask] = createSignal<Task | null>(null);
 	const [editTitle, setEditTitle] = createSignal("");
+	const [activeCol, setActiveCol] = createSignal<string>("backlog");
 
 	// 按状态分组（排除 archived）
 	const grouped = createMemo(() => {
@@ -173,15 +174,31 @@ export default function TaskKanban() {
 
 	return (
 		<>
+			{/* Mobile column tabs */}
+			<div class={styles.mobileTabs}>
+				<FilterGroup
+					options={COLUMNS.map((c) => ({
+						value: c.key,
+						label: `${c.label} (${grouped()[c.key].length})`,
+					}))}
+					selected={activeCol()}
+					onChange={setActiveCol}
+				/>
+			</div>
+
 			<div class={styles.board}>
 				<For each={COLUMNS}>
 					{(col) => (
-						<Column
-							col={col}
-							tasks={grouped()[col.key]}
-							onEdit={openEdit}
-							onDrop={handleDrop}
-						/>
+						<div
+							class={`${styles.colWrap} ${activeCol() !== col.key ? styles.colHidden : ""}`}
+						>
+							<Column
+								col={col}
+								tasks={grouped()[col.key]}
+								onEdit={openEdit}
+								onDrop={handleDrop}
+							/>
+						</div>
 					)}
 				</For>
 			</div>

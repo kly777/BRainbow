@@ -7,6 +7,7 @@ import { CommandPalette } from "@modules/command-palette";
 import { useLocation } from "@solidjs/router";
 import { createEffect, type JSX, Show, untrack } from "solid-js";
 import styles from "./App.module.css";
+import NavBar from "./NavBar.tsx";
 import { RouteTitle } from "./routes.ts";
 
 export default function Layout(props: { children?: JSX.Element }) {
@@ -24,6 +25,7 @@ export default function Layout(props: { children?: JSX.Element }) {
 	return (
 		<div class={styles.shell}>
 			<RouteTitle />
+			<NavBar />
 			<main class={styles.content}>
 				<Show
 					when={isPublic()}

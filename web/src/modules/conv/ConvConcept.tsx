@@ -1,4 +1,4 @@
-import { Markdown as MarkdownRenderer } from "@components/ui";
+import { LoadingSkeleton, Markdown as MarkdownRenderer } from "@components/ui";
 import { getConvConceptE } from "@modules/conv";
 import { getErrorMessage } from "@shared/api";
 import { strParam, useUrlParams } from "@shared/utils";
@@ -24,10 +24,7 @@ export default function ConvConceptPage() {
 			<Show
 				when={data.error}
 				fallback={
-					<Show
-						when={data()}
-						fallback={<div class={styles.loading}>加载中…</div>}
-					>
+					<Show when={data()} fallback={<LoadingSkeleton />}>
 						{(d) => (
 							<>
 								<ConvTopBar

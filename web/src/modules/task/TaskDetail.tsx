@@ -1,6 +1,6 @@
 // ── /task/:id：任务详情（全局搜索直达） ──
 
-import { Button, Toolbar } from "@components/ui";
+import { Button, LoadingSkeleton, Toolbar } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
 import {
 	deleteTaskE,
@@ -152,7 +152,7 @@ export default function TaskDetail() {
 			</Show>
 
 			<Show when={detail.loading}>
-				<div class={styles.loading}>加载中…</div>
+				<LoadingSkeleton />
 			</Show>
 
 			<Show when={detail()}>

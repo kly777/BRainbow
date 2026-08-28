@@ -1,5 +1,5 @@
-import { Check, X, ArrowLeft } from "lucide-solid";
 import { PATHS } from "@config/paths";
+import { ArrowLeft, Check, X } from "lucide-solid";
 // ── v2 导入相关子组件：格式说明卡 / 预览清单 / 默认标签 / 结果页 ──
 
 import { A } from "@solidjs/router";
@@ -200,7 +200,9 @@ export function ImportResult(props: {
 }) {
 	return (
 		<div class={styles.resultCard}>
-			<div class={styles.resultMark}><Check size={14} /></div>
+			<div class={styles.resultMark}>
+				<Check size={14} />
+			</div>
 			<p class={styles.resultTitle}>已导入 {props.result.imported} 条记忆</p>
 			<Show when={(props.result.errors.length ?? 0) > 0}>
 				<p class={styles.importErrors}>错误：</p>

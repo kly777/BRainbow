@@ -2,7 +2,7 @@
 // dev 环境免登录可生成（后端 APP_ENV=dev）；prod 需登录（AuthGuard）。
 
 import { useAuth } from "@app/context/auth.tsx";
-import { Button, PageHead } from "@components/ui";
+import { Button, LoadingSkeleton, PageHead } from "@components/ui";
 import { getApiKey, getErrorMessage } from "@shared/api";
 import {
 	copyText,
@@ -198,7 +198,7 @@ export default function KeyPage() {
 						</Button>
 					</div>
 				</Show>
-				<Show when={keys()} fallback={<div class={styles.muted}>加载中…</div>}>
+				<Show when={keys()} fallback={<LoadingSkeleton rows={2} />}>
 					<For each={keys()} fallback={emptyKeys}>
 						{(k) => <KeyRow k={k} onDelete={handleDelete} />}
 					</For>

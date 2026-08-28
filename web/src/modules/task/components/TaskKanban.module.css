@@ -29,6 +29,10 @@
 	overflow-y: auto;
 }
 
+.col-wrap {
+	min-width: 0;
+}
+
 .column {
 	background: var(--t-color-surface-raised);
 	border-radius: var(--radius-lg);
@@ -180,14 +184,28 @@
 }
 
 /* ── 响应式 ── */
+
+.mobile-tabs {
+	display: none;
+}
+
 @media (width <= 1024px) {
+	.mobile-tabs {
+		display: flex;
+		margin-bottom: var(--space-sm);
+	}
+
 	.board {
 		grid-template-columns: 1fr;
 		height: auto;
 	}
 
+	.col-hidden {
+		display: none;
+	}
+
 	.column-body {
-		max-height: 18.75rem;
+		max-height: none;
 	}
 }
 

@@ -1,15 +1,15 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	getBookmarksE,
-	getBookmarkE,
 	createBookmarkE,
-	updateBookmarkE,
 	deleteBookmarkE,
+	deleteBookmarkTagE,
+	getBookmarkE,
+	getBookmarksE,
+	importBookmarksE,
 	searchBookmarksE,
 	searchBookmarkTagsE,
 	setBookmarkTagsE,
-	deleteBookmarkTagE,
-	importBookmarksE,
+	updateBookmarkE,
 } from "./api.ts";
 
 // 模拟依赖

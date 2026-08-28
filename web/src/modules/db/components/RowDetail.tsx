@@ -148,7 +148,9 @@ const RowDetailBody: Component<{
 				class={styles.copyBtn}
 				onClick={() => void props.onCopyRowJson()}
 			>
-				{props.copiedKey() === "__row" ? "已复制 <Check size={14} />" : "复制 JSON"}
+				{props.copiedKey() === "__row"
+					? "已复制 <Check size={14} />"
+					: "复制 JSON"}
 			</button>
 			<Show when={props.copyError()}>
 				<span class={styles.copyError}>{props.copyError()}</span>

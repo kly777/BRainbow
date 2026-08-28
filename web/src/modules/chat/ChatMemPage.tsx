@@ -1,8 +1,10 @@
 import { PATHS } from "@config/paths";
+
 // ── /chat/mem：对话式记忆卡片生成 ──
 // 与 /chat 是同一主页面的两个分支：共用 ChatSidebar / useChatSession，
 // 差异仅在会话 kind（mem）与右侧内容（卡片清单 / 导入）。
 
+import { ArrowLeft } from "lucide-solid";
 import { createSignal, For, onMount, Show } from "solid-js";
 import styles from "./ChatMemPage.module.css";
 import { MessageRow as ChatMemMessageRow } from "./components/ChatMemMessageRow.tsx";
@@ -10,7 +12,6 @@ import { ChatSidebar, ToggleSidebar } from "./components/ChatSidebar.tsx";
 import { Composer } from "./components/Composer.tsx";
 import { useAutoScroll } from "./hooks/useAutoScroll.ts";
 import { useChatMem } from "./hooks/useChatMem.ts";
-import { ArrowLeft } from "lucide-solid";
 
 export default function ChatMemPage() {
 	const c = useChatMem();
@@ -31,7 +32,11 @@ export default function ChatMemPage() {
 				collapsed={sidebarCollapsed()}
 				title="记忆卡片会话"
 				backHref={PATHS.memory}
-				backLabel={<><ArrowLeft size={14} /> 记忆</>}
+				backLabel={
+					<>
+						<ArrowLeft size={14} /> 记忆
+					</>
+				}
 				newLabel="＋ 新会话"
 				emptyText="还没有会话，点击“＋ 新会话”开始"
 				hint="粘贴文本 → AI 生成卡片 → 对话修订 → 勾选导入"

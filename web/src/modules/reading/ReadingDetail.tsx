@@ -136,11 +136,13 @@ export default function ReadingDetail() {
 																	}`}
 																	aria-pressed={st === "known"}
 																>
-																	{st === "known"
-																		? <Check size={14} />
-																		: st === "ignored"
-																			? "–"
-																			: <X size={14} />}
+																	{st === "known" ? (
+																		<Check size={14} />
+																	) : st === "ignored" ? (
+																		"–"
+																	) : (
+																		<X size={14} />
+																	)}
 																</button>
 															</Tooltip>
 															<span class={styles.wordName}>{w.word}</span>

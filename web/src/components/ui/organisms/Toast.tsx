@@ -1,9 +1,9 @@
+import { AlertTriangle, Check, Info, X, XCircle } from "@components/ui/icons";
 import {
 	dismissToast,
 	type ToastItem,
 	toasts,
 } from "@components/ui/organisms/toastStore.ts";
-import { X, Check, AlertTriangle, Info, XCircle } from "@components/ui/icons";
 import { type Component, For, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import styles from "./Toast.module.css";

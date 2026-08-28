@@ -1,5 +1,5 @@
 import { useAuth } from "@app/context/auth.tsx";
-import { AsyncView } from "@components/ui";
+import { AsyncView, LoadingSkeleton } from "@components/ui";
 import { MODULE_CARDS } from "@config/module-cards.ts";
 import { fillPath, PATHS } from "@config/paths";
 import type { CardData } from "@modules/card";
@@ -82,7 +82,7 @@ function TaskOverview() {
 							</p>
 						</Show>
 						<Show when={loading()}>
-							<p>加载中…</p>
+							<LoadingSkeleton rows={2} />
 						</Show>
 					</div>
 				}

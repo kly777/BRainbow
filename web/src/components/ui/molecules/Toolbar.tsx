@@ -1,5 +1,5 @@
-import styles from "@components/ui/molecules/Toolbar.module.css";
 import { ArrowLeft } from "@components/ui/icons";
+import styles from "@components/ui/molecules/Toolbar.module.css";
 import type { Component, JSX } from "solid-js";
 
 interface ToolbarProps {

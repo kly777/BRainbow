@@ -1,6 +1,6 @@
+import { AlertTriangle, Info } from "@components/ui/icons";
 import type { ConfirmVariant } from "@components/ui/organisms/confirmStore.ts";
 import { confirms } from "@components/ui/organisms/confirmStore.ts";
-import { AlertTriangle, Info } from "@components/ui/icons";
 import { createEffect, For, onCleanup, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import styles from "./ConfirmModal.module.css";

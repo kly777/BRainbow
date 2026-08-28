@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { getAdminSettingsE, updateAdminSettingsE, rotateJwtE } from "./api.ts";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getAdminSettingsE, rotateJwtE, updateAdminSettingsE } from "./api.ts";
 
 // 模拟依赖
 vi.mock("@shared/api", () => ({

@@ -38,13 +38,13 @@
 	column-gap: var(--space-xl);
 }
 
-@media (max-width: 960px) {
+@media (width <= 960px) {
 	.groups-container {
 		columns: 2;
 	}
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
 	.groups-container {
 		columns: 1;
 	}

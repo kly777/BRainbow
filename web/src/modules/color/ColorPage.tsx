@@ -56,7 +56,13 @@ function ThemeCard(props: {
 			<ThemeSwatchRow swatches={props.info.swatches} />
 			<div class={styles.cardName}>{props.info.label}</div>
 			<div class={styles.cardStatus}>
-				{props.active ? <><Check size={14} /> 当前</> : "点击切换"}
+				{props.active ? (
+					<>
+						<Check size={14} /> 当前
+					</>
+				) : (
+					"点击切换"
+				)}
 			</div>
 			<ThemePreviewBox />
 		</div>

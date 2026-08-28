@@ -25,3 +25,14 @@
 	font-size: var(--text-base);
 	line-height: var(--leading-relaxed);
 }
+
+/* ── 响应式 ── */
+@media (width <= 768px) {
+	.container {
+		padding: var(--space-md) var(--space-md) 0;
+	}
+
+	.content {
+		padding: var(--space-md);
+	}
+}

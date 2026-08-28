@@ -1,9 +1,9 @@
-import { ArrowLeft } from "lucide-solid";
 import { Button, FilterGroup, SearchInput } from "@components/ui";
 import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@shared/api";
 import { fmtLocal } from "@shared/utils";
 import { A } from "@solidjs/router";
+import { ArrowLeft } from "lucide-solid";
 import { For, Show } from "solid-js";
 import styles from "./ConvSearch.module.css";
 import { useConvSearch } from "./hooks/useConvSearch.ts";

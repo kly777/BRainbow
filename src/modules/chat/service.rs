@@ -901,16 +901,14 @@ mod tests {
         let svc = setup().await;
         let ai = FakeAi::new("标题");
 
-        let err = match svc.generate_title(1, 777, &ai).await {
-            Err(e) => e,
-            Ok(_) => panic!("树不存在应 NotFound"),
+        let Err(err) = svc.generate_title(1, 777, &ai).await else {
+            panic!("树不存在应 NotFound")
         };
         assert!(matches!(err, ServiceError::NotFound(_)));
 
         let tid = mk_tree(&svc, "").await;
-        let err = match svc.generate_title(1, tid, &ai).await {
-            Err(e) => e,
-            Ok(_) => panic!("空树应 InvalidInput"),
+        let Err(err) = svc.generate_title(1, tid, &ai).await else {
+            panic!("空树应 InvalidInput")
         };
         assert!(matches!(err, ServiceError::InvalidInput(_)));
         assert!(ai.calls().is_empty(), "拒绝路径不应调用 AI");
@@ -954,9 +952,8 @@ mod tests {
             .unwrap();
         // 树里已有节点（上面 prepare 插入了 user 节点）
         let ai = FakeAi::new("   ");
-        let err = match svc.generate_title(1, tid, &ai).await {
-            Err(e) => e,
-            Ok(_) => panic!("空白标题应被拒绝"),
+        let Err(err) = svc.generate_title(1, tid, &ai).await else {
+            panic!("空白标题应被拒绝")
         };
         assert!(matches!(err, ServiceError::InvalidInput(_)));
     }
@@ -969,9 +966,8 @@ mod tests {
             .await
             .unwrap();
         let ai = FakeAi::new("x");
-        let err = match svc.generate_title(2, tid, &ai).await {
-            Err(e) => e,
-            Ok(_) => panic!("他人树应 NotFound"),
+        let Err(err) = svc.generate_title(2, tid, &ai).await else {
+            panic!("他人树应 NotFound")
         };
         assert!(matches!(err, ServiceError::NotFound(_)));
     }

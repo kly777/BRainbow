@@ -193,7 +193,7 @@ mod tests {
         assert!(matches!(
             chat_hits[0].target,
             SearchTarget::ChatNode {
-                tree_id: t1,
+                tree_id: _t1,
                 node_id: 1
             }
         ));
@@ -445,14 +445,14 @@ mod tests {
         assert!(matches!(
             hits[0].target,
             SearchTarget::ChatNode {
-                tree_id: t,
+                tree_id: _t,
                 node_id: 2
             }
         ));
         assert!(matches!(
             hits[1].target,
             SearchTarget::ChatNode {
-                tree_id: t,
+                tree_id: _t,
                 node_id: 1
             }
         ));

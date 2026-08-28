@@ -2,6 +2,10 @@
  * Redesign: warmer hierarchy, module-color accents, refined spacing
  */
 
+@keyframes spin {
+	to { transform: rotate(360deg); }
+}
+
 /* ── Page ── */
 
 .page {

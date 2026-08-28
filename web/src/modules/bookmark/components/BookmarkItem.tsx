@@ -7,6 +7,16 @@ import { notifyError, notifySuccess, trySync } from "@shared/utils";
 import { createSignal, For, Show } from "solid-js";
 import styles from "../BookmarkPage.module.css";
 import Favicon from "./Favicon.tsx";
+import {
+	IconCheckCircle,
+	IconLink,
+	IconLoader,
+	IconPencil,
+	IconRefresh,
+	IconSparkles,
+	IconX,
+	IconXCircle,
+} from "./icons.tsx";
 
 /** 从 URL 提取域名（用于展示与标题兜底） */
 function extractDomain(url: string): string {
@@ -173,7 +183,7 @@ export function BookmarkItem(props: {
 								setSelectedSuggested(new Set<string>());
 							}}
 						>
-							✕
+							<IconX size={14} />
 						</Button>
 					</div>
 				</Show>
@@ -181,27 +191,27 @@ export function BookmarkItem(props: {
 			<div class={styles.itemActions}>
 				<Tooltip label="AI 标签">
 					<Button variant="icon" onClick={handleSuggestTags} disabled={suggesting()}>
-						{suggesting() ? "⏳" : "🤖"}
+						{suggesting() ? <IconLoader size={16} /> : <IconSparkles size={16} />}
 					</Button>
 				</Tooltip>
 				<Tooltip label="刷新标题">
 					<Button variant="icon" onClick={props.onRefreshTitle} disabled={refreshing()}>
-						{refreshing() ? "⏳" : "🔄"}
+						{refreshing() ? <IconLoader size={16} /> : <IconRefresh size={16} />}
 					</Button>
 				</Tooltip>
 				<Tooltip label="检测可访问性">
 					<Button variant="icon" onClick={handleCheckAccessibility} disabled={checking()}>
-						{checking() ? "⏳" : accessibility() === "ok" ? "✅" : accessibility() === "fail" ? "❌" : "🔗"}
+						{checking() ? <IconLoader size={16} /> : accessibility() === "ok" ? <IconCheckCircle size={16} /> : accessibility() === "fail" ? <IconXCircle size={16} /> : <IconLink size={16} />}
 					</Button>
 				</Tooltip>
 				<Tooltip label="编辑">
 					<Button variant="icon" onClick={props.onEdit}>
-						✎
+						<IconPencil size={16} />
 					</Button>
 				</Tooltip>
 				<Tooltip label="删除">
 					<Button variant="icon" onClick={props.onDelete}>
-						✕
+						<IconX size={16} />
 					</Button>
 				</Tooltip>
 			</div>

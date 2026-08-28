@@ -6,6 +6,7 @@ import { fmtLocal } from "@shared/utils";
 import { type Component, For, Show } from "solid-js";
 import styles from "./BookmarkDetail.module.css";
 import TagInput from "./components/TagInput.tsx";
+import { IconSparkles } from "./components/icons.tsx";
 import {
 	type BookmarkItem,
 	useBookmarkDetail,
@@ -98,7 +99,7 @@ const EditForm: Component<{
 				onClick={props.onSuggestTags}
 				disabled={props.suggestLoading}
 			>
-				{props.suggestLoading ? "AI 分析中..." : "🤖 AI 建议标签"}
+				{props.suggestLoading ? "AI 分析中..." : <><IconSparkles size={14} /> AI 建议标签</>}
 			</Button>
 		</div>
 		<Show when={props.suggestedTags.length > 0}>

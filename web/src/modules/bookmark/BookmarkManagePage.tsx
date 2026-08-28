@@ -8,6 +8,7 @@ import { BookmarkFormModal } from "./components/BookmarkFormModal.tsx";
 import { BookmarkItem } from "./components/BookmarkItem.tsx";
 import TagFilter from "./components/TagFilter.tsx";
 import TagManager from "./components/TagManager.tsx";
+import { IconSparkles, IconX } from "./components/icons.tsx";
 import { useBookmarkPage } from "./hooks/useBookmarkPage.ts";
 
 const BatchBar: Component<{
@@ -27,7 +28,7 @@ const BatchBar: Component<{
 						onClick={b.handleBatchAiTag}
 						disabled={b.batchTagging()}
 					>
-						{b.batchTagging() ? "AI 标签中..." : "🤖 AI 批量标签"}
+						{b.batchTagging() ? "AI 标签中..." : <><IconSparkles size={14} /> AI 批量标签</>}
 					</Button>
 					<Button variant="secondary" size="sm" onClick={b.clearSelection}>
 						取消选择
@@ -135,7 +136,7 @@ export default function BookmarkPage() {
 								title="清空搜索"
 								onClick={() => b.handleSearch("")}
 							>
-								✕
+								<IconX size={14} />
 							</Button>
 						</Show>
 						<TagFilter

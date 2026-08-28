@@ -132,6 +132,7 @@ export default defineConfig(({ command, mode }) => {
 				content: ["./src/**/*.tsx", "./src/**/*.ts", "./index.html"],
 				safelist: {
 					standard: [/^data-/, /^aria-/],
+					greedy: [/^_/],
 				},
 			}),
 		],

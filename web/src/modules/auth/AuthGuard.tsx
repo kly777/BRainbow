@@ -1,6 +1,7 @@
 import { useAuth } from "@app/context/auth.tsx";
 import { PATHS } from "@config/paths";
 import { AUTH_REQUIRED_EVENT } from "@shared/api";
+import { A } from "@solidjs/router";
 import { createEffect, type JSX, Show } from "solid-js";
 import styles from "./AuthStatus.module.css";
 
@@ -48,9 +49,9 @@ export default function AuthGuard(props: { children: JSX.Element }) {
 					>
 						登录
 					</button>
-					<a href={PATHS.home} class={styles.authRequiredLink}>
+					<A href={PATHS.home} class={styles.authRequiredLink}>
 						返回首页
-					</a>
+					</A>
 				</div>
 			}
 		>

@@ -2,6 +2,7 @@ import { Check, X, ArrowLeft } from "lucide-solid";
 import { PATHS } from "@config/paths";
 // ── v2 导入相关子组件：格式说明卡 / 预览清单 / 默认标签 / 结果页 ──
 
+import { A } from "@solidjs/router";
 import { type Component, For, Show } from "solid-js";
 import type { PreviewRow } from "../hooks/useMemAdd.ts";
 import styles from "./ImportParts.module.css";
@@ -211,9 +212,9 @@ export function ImportResult(props: {
 				<button type="button" class={styles.cancel} onClick={props.onContinue}>
 					继续导入
 				</button>
-				<a href={PATHS.memory} class={styles.submit}>
+				<A href={PATHS.memory} class={styles.submit}>
 					去复习
-				</a>
+				</A>
 			</div>
 		</div>
 	);

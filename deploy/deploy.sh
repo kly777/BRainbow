@@ -281,12 +281,12 @@ cmd_check() {
 cmd_build() {
     load_config
     echo "═══════════════════════════════════════════"
-    log_info "构建 $APP_NAME（并行模式）"
+    log_info "构建 $APP_NAME"
     echo "═══════════════════════════════════════════"
 
     # 并行构建前端和后端
-    log_info "并行构建前端 + 后端..."
-    
+    log_info "构建中..."
+
     # 前端构建（后台运行）
     (
         cd "$PROJECT_DIR/web" && \
@@ -294,7 +294,7 @@ cmd_build() {
         pnpm --silent run build
     ) &
     local frontend_pid=$!
-    
+
     # 后端构建（后台运行）
     # sqlx 编译期宏在 DATABASE_URL 存在时走在线模式；部署机路径不可用，
     # 必须 unset 让它使用已提交的 .sqlx 离线数据。
@@ -313,7 +313,7 @@ cmd_build() {
     # 等待两个任务完成
     local frontend_status=0
     local backend_status=0
-    
+
     wait $frontend_pid || frontend_status=$?
     wait $backend_pid || backend_status=$?
 

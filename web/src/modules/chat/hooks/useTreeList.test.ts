@@ -75,9 +75,9 @@ describe("useTreeList", () => {
 		const mockGetTreeE = vi.mocked(getTreeE);
 
 		const mockTree = {
-			tree: { 
-				id: 1, 
-				title: "对话1", 
+			tree: {
+				id: 1,
+				title: "对话1",
 				created_at: "2024-01-01",
 				system_prompt: "",
 				kind: "chat" as const,
@@ -85,8 +85,24 @@ describe("useTreeList", () => {
 				node_count: 2,
 			},
 			nodes: [
-				{ id: 1, tree_id: 1, parent_id: null, role: "user" as const, content: "Hello", revised_from: null, created_at: "2024-01-01" },
-				{ id: 2, tree_id: 1, parent_id: 1, role: "assistant" as const, content: "Hi", revised_from: null, created_at: "2024-01-01" },
+				{
+					id: 1,
+					tree_id: 1,
+					parent_id: null,
+					role: "user" as const,
+					content: "Hello",
+					revised_from: null,
+					created_at: "2024-01-01",
+				},
+				{
+					id: 2,
+					tree_id: 1,
+					parent_id: 1,
+					role: "assistant" as const,
+					content: "Hi",
+					revised_from: null,
+					created_at: "2024-01-01",
+				},
 			],
 		};
 

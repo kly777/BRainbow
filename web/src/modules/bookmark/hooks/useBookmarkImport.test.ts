@@ -93,7 +93,10 @@ describe("useBookmarkImport", () => {
 		const mockNotifyError = vi.mocked(notifyError);
 
 		// 模拟tryAsync返回失败结果
-		mockTryAsync.mockResolvedValueOnce({ ok: false, error: new Error("Network error") });
+		mockTryAsync.mockResolvedValueOnce({
+			ok: false,
+			error: new Error("Network error"),
+		});
 
 		await createRoot(async (dispose) => {
 			try {

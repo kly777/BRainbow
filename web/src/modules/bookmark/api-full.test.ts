@@ -278,7 +278,9 @@ describe("bookmark API", () => {
 		mockRequest.mockResolvedValueOnce(mockTagResult);
 		mockDel.mockResolvedValueOnce(mockDeleteResult);
 		// @ts-expect-error - mock type mismatch
-		mockDomains.bookmarks.invalidate.mockImplementation((promise: any) => promise);
+		mockDomains.bookmarks.invalidate.mockImplementation(
+			(promise: any) => promise,
+		);
 
 		// 调用搜索标签API
 		const tagsResult = await searchBookmarkTagsE("测试");

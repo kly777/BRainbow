@@ -175,3 +175,25 @@
 	color: var(--t-color-danger);
 	font-size: var(--text-base);
 }
+
+/* ── 响应式 ── */
+@media (width <= 768px) {
+	.top-bar {
+		padding: var(--space-md);
+		flex-direction: column;
+		gap: var(--space-xs);
+	}
+
+	.body {
+		padding: var(--space-md);
+	}
+
+	.question,
+	.answer {
+		padding: var(--space-sm);
+	}
+
+	.article-block {
+		padding: var(--space-sm);
+	}
+}

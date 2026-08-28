@@ -270,3 +270,30 @@
 	color: var(--t-color-danger);
 	font-size: var(--text-base);
 }
+
+/* ── 响应式 ── */
+@media (width <= 768px) {
+	.page {
+		max-width: 100%;
+	}
+
+	.top-bar {
+		padding: var(--space-md);
+	}
+
+	.search-box {
+		padding: var(--space-md);
+	}
+
+	.results {
+		padding: var(--space-md);
+	}
+
+	.item {
+		padding: var(--space-md);
+	}
+
+	.item-snippet {
+		-webkit-line-clamp: 2;
+	}
+}

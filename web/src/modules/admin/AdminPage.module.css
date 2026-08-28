@@ -137,3 +137,20 @@
 	box-shadow: 0 2px 8px
 		color-mix(in srgb, var(--t-color-danger) 20%, transparent);
 }
+
+/* ── 响应式 ── */
+@media (width <= 768px) {
+	.page {
+		padding: var(--space-md);
+	}
+
+	.card {
+		padding: var(--space-md);
+	}
+
+	.card-head {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--space-sm);
+	}
+}

@@ -63,7 +63,7 @@ function TagList(props: TagListProps) {
 export default function TagManager(props: Props) {
 	// 本地标签列表状态（用于乐观更新）
 	const [localTags, setLocalTags] = createSignal<BookmarkTagWithCount[]>([]);
-	
+
 	// 每次打开重新加载全部标签
 	const [tags, { refetch }] = createResource(
 		() => (props.isOpen ? "open" : null),
@@ -78,7 +78,12 @@ export default function TagManager(props: Props) {
 	const handleDelete = async (tag: BookmarkTagWithCount) => {
 		const confirmed = await showConfirm({
 			title: "删除标签",
-			message: "确定要删除标签「" + tag.name + "」吗？它将被从 " + tag.count + " 个书签中移除。",
+			message:
+				"确定要删除标签「" +
+				tag.name +
+				"」吗？它将被从 " +
+				tag.count +
+				" 个书签中移除。",
 			variant: "danger",
 		});
 		if (!confirmed) return;

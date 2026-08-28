@@ -108,8 +108,9 @@ export function useMemManageParams(): UseMemManageParamsResult {
 
 	// 保存滚动位置
 	function saveScrollPosition() {
-		const scrollContainer = document.querySelector('[data-scroll-container]') || 
-								document.documentElement;
+		const scrollContainer =
+			document.querySelector("[data-scroll-container]") ||
+			document.documentElement;
 		savedScrollTop = scrollContainer.scrollTop;
 		savedScrollLeft = scrollContainer.scrollLeft;
 	}
@@ -117,8 +118,9 @@ export function useMemManageParams(): UseMemManageParamsResult {
 	// 恢复滚动位置
 	function restoreScrollPosition() {
 		requestAnimationFrame(() => {
-			const scrollContainer = document.querySelector('[data-scroll-container]') || 
-									document.documentElement;
+			const scrollContainer =
+				document.querySelector("[data-scroll-container]") ||
+				document.documentElement;
 			scrollContainer.scrollTop = savedScrollTop;
 			scrollContainer.scrollLeft = savedScrollLeft;
 		});

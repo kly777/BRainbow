@@ -129,11 +129,7 @@ export default defineConfig(({ command, mode }) => {
 			seoAssetsPlugin(siteUrl),
 			markdownPagesPlugin(siteUrl),
 			purgecss({
-				content: [
-					"./src/**/*.tsx",
-					"./src/**/*.ts",
-					"./index.html",
-				],
+				content: ["./src/**/*.tsx", "./src/**/*.ts", "./index.html"],
 				safelist: {
 					standard: [/^data-/, /^aria-/],
 				},
@@ -230,10 +226,18 @@ export default defineConfig(({ command, mode }) => {
 							return "mem-shared";
 						}
 						// mem 模块拆分：复习页面和管理页面分离
-						if (/src\/modules\/mem\/(MemPage|components\/(ReviewCard|Sidebar|ContextBar|FilterBar|MnemonicSettingsModal))/.test(id)) {
+						if (
+							/src\/modules\/mem\/(MemPage|components\/(ReviewCard|Sidebar|ContextBar|FilterBar|MnemonicSettingsModal))/.test(
+								id,
+							)
+						) {
 							return "mem-review";
 						}
-						if (/src\/modules\/mem\/(MemManage|MemAdd|components\/(ManageTable|ManageDetail|ManageBatchBar|ImportParts|MemBatchTagModal|MemExportModal))/.test(id)) {
+						if (
+							/src\/modules\/mem\/(MemManage|MemAdd|components\/(ManageTable|ManageDetail|ManageBatchBar|ImportParts|MemBatchTagModal|MemExportModal))/.test(
+								id,
+							)
+						) {
 							return "mem-manage";
 						}
 						// task 模块拆分：不同视图分离

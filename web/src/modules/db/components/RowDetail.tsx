@@ -1,6 +1,6 @@
+import { ArrowRight, Check } from "@components/ui/icons";
 import { getErrorMessage } from "@shared/api";
 import { copyText } from "@shared/utils";
-import { ArrowRight, Check } from "lucide-solid";
 import {
 	type Component,
 	createEffect,

@@ -1,4 +1,4 @@
-import { ArrowRight } from "lucide-solid";
+import { ArrowRight } from "@components/ui/icons";
 import {
 	type Component,
 	createEffect,

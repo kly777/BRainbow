@@ -1,9 +1,6 @@
 // ── /bookmark 列表项：checkbox + favicon + 标题链接 + 域名 + 标签 + 操作 ──
 
 import { Button, Tooltip } from "@components/ui";
-import type { Bookmark } from "@modules/bookmark";
-import { setBookmarkTagsE, suggestBookmarkTagsE } from "@modules/bookmark";
-import { notifyError, notifySuccess, trySync } from "@shared/utils";
 import {
 	CheckCircle2,
 	Link,
@@ -13,7 +10,10 @@ import {
 	Sparkles,
 	X,
 	XCircle,
-} from "lucide-solid";
+} from "@components/ui/icons";
+import type { Bookmark } from "@modules/bookmark";
+import { setBookmarkTagsE, suggestBookmarkTagsE } from "@modules/bookmark";
+import { notifyError, notifySuccess, trySync } from "@shared/utils";
 import { createSignal, For, Show } from "solid-js";
 import styles from "../BookmarkPage.module.css";
 import Favicon from "./Favicon.tsx";

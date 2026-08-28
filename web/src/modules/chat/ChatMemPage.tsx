@@ -4,7 +4,7 @@ import { PATHS } from "@config/paths";
 // 与 /chat 是同一主页面的两个分支：共用 ChatSidebar / useChatSession，
 // 差异仅在会话 kind（mem）与右侧内容（卡片清单 / 导入）。
 
-import { ArrowLeft } from "lucide-solid";
+import { ArrowLeft } from "@components/ui/icons";
 import { createSignal, For, onMount, Show } from "solid-js";
 import styles from "./ChatMemPage.module.css";
 import { MessageRow as ChatMemMessageRow } from "./components/ChatMemMessageRow.tsx";

@@ -1,5 +1,5 @@
+import { ArrowLeft, Check, X } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
-import { ArrowLeft, Check, X } from "lucide-solid";
 // ── v2 导入相关子组件：格式说明卡 / 预览清单 / 默认标签 / 结果页 ──
 
 import { A } from "@solidjs/router";

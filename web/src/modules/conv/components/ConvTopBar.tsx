@@ -1,5 +1,5 @@
+import { ArrowLeft } from "@components/ui/icons";
 import { A } from "@solidjs/router";
-import { ArrowLeft } from "lucide-solid";
 import styles from "../ConvDetail.module.css";
 import { typeLabel } from "../hooks/type-labels.ts";
 

@@ -1,5 +1,5 @@
+import { X } from "@components/ui/icons";
 import { Color } from "@shared/utils";
-import { X } from "lucide-solid";
 import {
 	type Accessor,
 	createEffect,

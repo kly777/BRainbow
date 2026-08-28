@@ -1,4 +1,4 @@
-import { X } from "lucide-solid";
+import { X } from "@components/ui/icons";
 // ── v2 管理表格：档案清单 ──
 
 import { Badge } from "@components/ui";

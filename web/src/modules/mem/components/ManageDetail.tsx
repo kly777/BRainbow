@@ -1,4 +1,4 @@
-import { X } from "lucide-solid";
+import { X } from "@components/ui/icons";
 // ── v2 管理详情：档案卡 ──
 // 线索/答案用目录卡标签页，元数据等宽，操作与标签管理
 

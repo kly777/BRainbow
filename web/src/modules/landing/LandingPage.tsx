@@ -1,7 +1,7 @@
 import { useAuth } from "@app/context/auth.tsx";
+import { ArrowRight } from "@components/ui/icons";
 import { MODULE_CARDS } from "@config/module-cards.ts";
 import { A } from "@solidjs/router";
-import { ArrowRight } from "lucide-solid";
 import { For } from "solid-js";
 import styles from "./LandingPage.module.css";
 

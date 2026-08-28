@@ -1,9 +1,9 @@
 // ── /bookmark/:id：书签详情（全局搜索直达 + AI 标签建议） ──
 
 import { Button, LoadingSkeleton, Toolbar } from "@components/ui";
+import { Sparkles } from "@components/ui/icons";
 import { getErrorMessage } from "@shared/api";
 import { fmtLocal } from "@shared/utils";
-import { Sparkles } from "lucide-solid";
 import { type Component, For, Show } from "solid-js";
 import styles from "./BookmarkDetail.module.css";
 import TagInput from "./components/TagInput.tsx";

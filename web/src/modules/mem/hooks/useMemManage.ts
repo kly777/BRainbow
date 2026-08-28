@@ -97,7 +97,7 @@ export function useMemManage() {
 		ListKey
 	>(
 		() => listQuery(),
-		async (key) => {
+	async (key) => {
 			const direct = directId();
 			if (direct != null) {
 				// 直达定位：page 固定 1，传 id；后端返回实际页数据 + meta.page
@@ -116,9 +116,11 @@ export function useMemManage() {
 				if (res.meta.page !== key.page) {
 					params.setSearchParams({ page: String(res.meta.page) });
 				}
+				// 恢复滚动位置
+				params.restoreScrollPosition();
 				return res;
 			}
-			return fetchAllMems(
+			const res = await fetchAllMems(
 				key.sort as SortField,
 				key.order,
 				key.q,
@@ -127,6 +129,9 @@ export function useMemManage() {
 				key.tagMode,
 				key.page,
 			);
+			// 恢复滚动位置
+			params.restoreScrollPosition();
+			return res;
 		},
 	);
 

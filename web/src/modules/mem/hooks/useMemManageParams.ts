@@ -43,6 +43,8 @@ export interface UseMemManageParamsResult {
 	toggleSort: (field: SortField) => void;
 	/** 翻页：一次调用设置 page 并清除 id（详情随翻页失效） */
 	goToPage: (p: number) => void;
+	/** 恢复滚动位置 */
+	restoreScrollPosition: () => void;
 }
 
 export function useMemManageParams(): UseMemManageParamsResult {
@@ -100,7 +102,31 @@ export function useMemManageParams(): UseMemManageParamsResult {
 		}
 	};
 
+	// 滚动位置保持
+	let savedScrollTop = 0;
+	let savedScrollLeft = 0;
+
+	// 保存滚动位置
+	function saveScrollPosition() {
+		const scrollContainer = document.querySelector('[data-scroll-container]') || 
+								document.documentElement;
+		savedScrollTop = scrollContainer.scrollTop;
+		savedScrollLeft = scrollContainer.scrollLeft;
+	}
+
+	// 恢复滚动位置
+	function restoreScrollPosition() {
+		requestAnimationFrame(() => {
+			const scrollContainer = document.querySelector('[data-scroll-container]') || 
+									document.documentElement;
+			scrollContainer.scrollTop = savedScrollTop;
+			scrollContainer.scrollLeft = savedScrollLeft;
+		});
+	}
+
 	const goToPage = (p: number) => {
+		// 保存滚动位置
+		saveScrollPosition();
 		// 换页时详情失效：一次调用同时设置 page 并清除 id
 		params.set({ page: p, id: undefined });
 	};
@@ -121,5 +147,7 @@ export function useMemManageParams(): UseMemManageParamsResult {
 		setFilter,
 		toggleSort,
 		goToPage,
+		// 导出滚动位置恢复函数
+		restoreScrollPosition,
 	};
 }

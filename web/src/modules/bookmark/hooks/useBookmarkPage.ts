@@ -67,6 +67,8 @@ export function useBookmarkPage() {
 			setBookmarks(result.value.items);
 			setTotal(result.value.total);
 			setTotalPages(result.value.total_pages);
+			// 恢复滚动位置
+			restoreScrollPosition();
 		} else {
 			setError(result.error.message);
 		}
@@ -93,8 +95,32 @@ export function useBookmarkPage() {
 		handleTagFilter("");
 	}
 
+	// 滚动位置保持
+	let savedScrollTop = 0;
+	let savedScrollLeft = 0;
+
+	// 保存滚动位置
+	function saveScrollPosition() {
+		const scrollContainer = document.querySelector('[data-scroll-container]') || 
+								document.documentElement;
+		savedScrollTop = scrollContainer.scrollTop;
+		savedScrollLeft = scrollContainer.scrollLeft;
+	}
+
+	// 恢复滚动位置
+	function restoreScrollPosition() {
+		requestAnimationFrame(() => {
+			const scrollContainer = document.querySelector('[data-scroll-container]') || 
+									document.documentElement;
+			scrollContainer.scrollTop = savedScrollTop;
+			scrollContainer.scrollLeft = savedScrollLeft;
+		});
+	}
+
 	function goPage(n: number) {
 		if (n < 1 || n > totalPages()) return;
+		// 保存滚动位置
+		saveScrollPosition();
 		params.set({ page: n });
 	}
 

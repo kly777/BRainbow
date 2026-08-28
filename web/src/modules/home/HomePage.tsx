@@ -1,5 +1,6 @@
 import { useAuth } from "@app/context/auth.tsx";
 import { AsyncView, LoadingSkeleton } from "@components/ui";
+import { ArrowRight } from "@components/ui/icons";
 import { MODULE_CARDS } from "@config/module-cards.ts";
 import { fillPath, PATHS } from "@config/paths";
 import type { CardData } from "@modules/card";
@@ -11,7 +12,6 @@ import {
 import { TaskList, TaskProvider, useTasks } from "@modules/task";
 import { parseUtc, showConfirm, tryOrNotify } from "@shared/utils";
 import { A, useNavigate } from "@solidjs/router";
-import { ArrowRight } from "lucide-solid";
 import { createResource, Show } from "solid-js";
 import styles from "./HomePage.module.css";
 

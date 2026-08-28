@@ -1,11 +1,11 @@
 // ── /bookmark：按标签分组展示书签（默认视图） ──
 
 import { Button, LoadingSkeleton, PageHead, SearchInput } from "@components/ui";
+import { Settings, X } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@shared/api";
 import { trySync } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
-import { Settings, X } from "lucide-solid";
 import {
 	type Component,
 	createEffect,

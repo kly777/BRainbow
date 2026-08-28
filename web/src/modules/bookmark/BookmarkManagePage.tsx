@@ -1,8 +1,8 @@
 // ── /bookmark：网页书签管理（搜索 / 标签过滤 / 分页 / 导入 Firefox 书签 / 批量管理） ──
 
 import { Button, LoadingSkeleton, PageHead, SearchInput } from "@components/ui";
+import { ChevronLeft, ChevronRight, Sparkles, X } from "@components/ui/icons";
 import { getErrorMessage } from "@shared/api";
-import { ChevronLeft, ChevronRight, Sparkles, X } from "lucide-solid";
 import { type Component, For, Show } from "solid-js";
 import styles from "./BookmarkPage.module.css";
 import { BookmarkFormModal } from "./components/BookmarkFormModal.tsx";

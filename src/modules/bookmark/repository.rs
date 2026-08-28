@@ -51,7 +51,7 @@ impl BookmarkRepo {
         Self { pool }
     }
 
-    /// 全局搜索命中
+    /// 全局搜索命中（匹配标题/URL/描述/标签名）
     pub async fn search_hits(
         &self,
         user_id: i32,
@@ -64,7 +64,8 @@ impl BookmarkRepo {
                       title LIKE ?2 ESCAPE '\' AS "title_hit!: i64"
                FROM bookmark
                WHERE (user_id = ?1 OR user_id IS NULL)
-                 AND (title LIKE ?2 ESCAPE '\' OR url LIKE ?2 ESCAPE '\' OR description LIKE ?2 ESCAPE '\')
+                 AND (title LIKE ?2 ESCAPE '\' OR url LIKE ?2 ESCAPE '\' OR description LIKE ?2 ESCAPE '\'
+                      OR EXISTS (SELECT 1 FROM bookmark_tag_rel r JOIN bookmark_tag t ON t.id = r.tag_id WHERE r.bookmark_id = bookmark.id AND t.name LIKE ?2 ESCAPE '\'))
                ORDER BY (title LIKE ?2 ESCAPE '\') DESC, id DESC LIMIT ?3"#,
             user_id,
             like,
@@ -427,7 +428,7 @@ impl BookmarkRepo {
             tags_filter_clause(&mut fetch_builder, t);
         }
         fetch_builder.push(" ORDER BY (");
-        // 评分：每个关键词命中一个字段 +1
+        // 评分：每个关键词命中一个字段 +1（含标签名匹配）
         for (i, kw) in keywords.iter().enumerate() {
             if i > 0 {
                 fetch_builder.push(" + ");
@@ -438,7 +439,9 @@ impl BookmarkRepo {
             fetch_builder.push_bind(like_contains(kw));
             fetch_builder.push(" ESCAPE '\\' OR description LIKE ");
             fetch_builder.push_bind(like_contains(kw));
-            fetch_builder.push(" ESCAPE '\\' THEN 1 ELSE 0 END");
+            fetch_builder.push(" ESCAPE '\\' OR EXISTS (SELECT 1 FROM bookmark_tag_rel r JOIN bookmark_tag t ON t.id = r.tag_id WHERE r.bookmark_id = bookmark.id AND t.name LIKE ");
+            fetch_builder.push_bind(like_contains(kw));
+            fetch_builder.push(" ESCAPE '\\') THEN 1 ELSE 0 END");
         }
         fetch_builder.push(") DESC, created_at DESC LIMIT ");
         fetch_builder.push_bind(limit);
@@ -455,6 +458,7 @@ impl BookmarkRepo {
     }
 
     /// 关键词 OR 条件片段（与评分逻辑共用同一组关键词）
+    /// 匹配标题/URL/描述/标签名
     fn append_keyword_where(builder: &mut QueryBuilder<Sqlite>, keywords: &[&str]) {
         for (i, kw) in keywords.iter().enumerate() {
             if i > 0 {
@@ -466,7 +470,9 @@ impl BookmarkRepo {
             builder.push_bind(like_contains(kw));
             builder.push(" ESCAPE '\\' OR description LIKE ");
             builder.push_bind(like_contains(kw));
-            builder.push(" ESCAPE '\\')");
+            builder.push(" ESCAPE '\\' OR EXISTS (SELECT 1 FROM bookmark_tag_rel r JOIN bookmark_tag t ON t.id = r.tag_id WHERE r.bookmark_id = bookmark.id AND t.name LIKE ");
+            builder.push_bind(like_contains(kw));
+            builder.push(" ESCAPE '\\'))");
         }
     }
 

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, title, url, description,\n                      title LIKE ?2 ESCAPE '\\' AS \"title_hit!: i64\"\n               FROM bookmark\n               WHERE (user_id = ?1 OR user_id IS NULL)\n                 AND (title LIKE ?2 ESCAPE '\\' OR url LIKE ?2 ESCAPE '\\' OR description LIKE ?2 ESCAPE '\\')\n               ORDER BY (title LIKE ?2 ESCAPE '\\') DESC, id DESC LIMIT ?3",
+  "query": "SELECT id, title, url, description,\n                      title LIKE ?2 ESCAPE '\\' AS \"title_hit!: i64\"\n               FROM bookmark\n               WHERE (user_id = ?1 OR user_id IS NULL)\n                 AND (title LIKE ?2 ESCAPE '\\' OR url LIKE ?2 ESCAPE '\\' OR description LIKE ?2 ESCAPE '\\'\n                      OR EXISTS (SELECT 1 FROM bookmark_tag_rel r JOIN bookmark_tag t ON t.id = r.tag_id WHERE r.bookmark_id = bookmark.id AND t.name LIKE ?2 ESCAPE '\\'))\n               ORDER BY (title LIKE ?2 ESCAPE '\\') DESC, id DESC LIMIT ?3",
   "describe": {
     "columns": [
       {
@@ -65,5 +65,5 @@
       null
     ]
   },
-  "hash": "272977f6efbeabe6a5dfcb47c5bed42e62248d27e5f0bc5099376c65349c1e54"
+  "hash": "196d81b63033870bfd1484a0e9bc3795cde2e3cd1111cf25a62205049e8aac91"
 }

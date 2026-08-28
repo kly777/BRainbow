@@ -97,3 +97,35 @@
 	margin: var(--space-2xs) 0;
 	background: var(--t-color-border);
 }
+
+.search-wrap {
+	padding: var(--space-xs) var(--space-sm);
+	border-bottom: 1px solid var(--t-color-border);
+}
+
+.search-input {
+	width: 100%;
+	padding: var(--space-xs) var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-bg);
+	color: var(--t-color-ink);
+	font-size: var(--text-sm);
+	outline: none;
+	transition: border-color 0.15s ease;
+}
+
+.search-input:focus {
+	border-color: var(--m-bookmark);
+}
+
+.search-input::placeholder {
+	color: var(--t-color-ink-faint);
+}
+
+.empty {
+	padding: var(--space-sm) var(--space-md);
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	text-align: center;
+}

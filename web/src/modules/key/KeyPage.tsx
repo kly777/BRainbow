@@ -99,6 +99,22 @@ export default function KeyPage() {
 	const [newKey, setNewKey] = createSignal<string | null>(null);
 	const [generating, setGenerating] = createSignal(false);
 
+	// 本地 keys 状态用于乐观更新
+	const [localKeys, setLocalKeys] = createSignal<ApiKeyInfo[]>([]);
+
+	// 同步远程数据到本地状态
+	const displayKeys = () => {
+		const remoteKeys = keys();
+		if (remoteKeys !== undefined) {
+			// 如果本地状态为空，初始化为远程数据
+			if (localKeys().length === 0 && remoteKeys.length > 0) {
+				setLocalKeys(remoteKeys);
+			}
+			return localKeys();
+		}
+		return [];
+	};
+
 	const activeKey = () => getApiKey();
 
 	const handleGenerate = async () => {
@@ -107,7 +123,10 @@ export default function KeyPage() {
 		setGenerating(false);
 		if (result.ok) {
 			setNewKey(result.value.key ?? null);
-			refetch();
+			// 乐观更新：立即添加到本地列表
+			if (result.value) {
+				setLocalKeys((prev) => [result.value, ...prev]);
+			}
 			notifySuccess("已生成 API key", "复制后保存，仅显示一次");
 		} else {
 			notifyError("生成 key 失败", result.error);
@@ -139,11 +158,17 @@ export default function KeyPage() {
 			variant: "danger",
 		});
 		if (!confirmed) return;
+
+		// 乐观更新：立即从本地列表移除
+		const previousKeys = localKeys();
+		setLocalKeys((prev) => prev.filter((k) => k.id !== id));
+
 		const result = await tryAsync(() => deleteKeyE(id));
 		if (result.ok) {
-			refetch();
 			notifySuccess("已删除");
 		} else {
+			// 删除失败，回滚到之前的状态
+			setLocalKeys(previousKeys);
 			notifyError("删除失败", result.error);
 		}
 	};
@@ -198,8 +223,8 @@ export default function KeyPage() {
 						</Button>
 					</div>
 				</Show>
-				<Show when={keys()} fallback={<LoadingSkeleton rows={2} />}>
-					<For each={keys()} fallback={emptyKeys}>
+				<Show when={!keys.loading} fallback={<LoadingSkeleton rows={2} />}>
+					<For each={displayKeys()} fallback={emptyKeys}>
 						{(k) => <KeyRow k={k} onDelete={handleDelete} />}
 					</For>
 				</Show>

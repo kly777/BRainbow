@@ -2,7 +2,7 @@
 
 .page {
 	display: flex;
-	height: 100%;
+	height: 100vh;
 	background: var(--t-color-bg);
 	color: var(--t-color-ink);
 }

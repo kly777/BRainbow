@@ -118,7 +118,6 @@ describe("useChatSession", () => {
 				expect(session.streamChat).toBeDefined();
 				expect(session.stopStreaming).toBeDefined();
 				expect(session.navigate).toBeDefined();
-
 			} finally {
 				dispose();
 			}
@@ -131,7 +130,7 @@ describe("useChatSession", () => {
 		const mockUseUrlParams = vi.mocked(useUrlParams);
 		const mockGet = vi.fn(() => "");
 		const mockSet = vi.fn();
-		
+
 		mockUseUrlParams.mockReturnValueOnce({
 			get: mockGet,
 			set: mockSet,
@@ -152,7 +151,6 @@ describe("useChatSession", () => {
 				// 测试setFocusParam with null
 				session.setFocusParam(null);
 				expect(mockSet).toHaveBeenCalledWith({ node: undefined });
-
 			} finally {
 				dispose();
 			}
@@ -183,7 +181,6 @@ describe("useChatSession", () => {
 				expect(typeof session.streamChat).toBe("function");
 				expect(typeof session.stopStreaming).toBe("function");
 				expect(typeof session.navigate).toBe("function");
-
 			} finally {
 				dispose();
 			}

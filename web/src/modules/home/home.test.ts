@@ -36,14 +36,14 @@ describe("home module", () => {
 	it("模块导航功能", async () => {
 		// 测试模块导航功能
 		const { MODULE_CARDS } = await import("@config/module-cards.ts");
-		
+
 		// 验证MODULE_CARDS存在
 		expect(MODULE_CARDS).toBeDefined();
 		expect(Array.isArray(MODULE_CARDS)).toBe(true);
 		expect(MODULE_CARDS.length).toBeGreaterThan(0);
-		
+
 		// 验证每个模块卡片都有path和title
-		MODULE_CARDS.forEach(card => {
+		MODULE_CARDS.forEach((card) => {
 			expect(card.path).toBeDefined();
 			expect(card.title).toBeDefined();
 		});
@@ -52,7 +52,7 @@ describe("home module", () => {
 	it("卡片展示功能", async () => {
 		// 测试卡片展示功能
 		const { PATHS } = await import("@config/paths");
-		
+
 		// 验证PATHS存在
 		expect(PATHS).toBeDefined();
 		expect(PATHS.HOME).toBe("/");
@@ -63,11 +63,11 @@ describe("home module", () => {
 	it("认证上下文", async () => {
 		// 测试认证上下文
 		const { useAuth } = await import("@app/context/auth.tsx");
-		
+
 		// 验证useAuth函数存在
 		expect(useAuth).toBeDefined();
 		expect(typeof useAuth).toBe("function");
-		
+
 		// 验证返回值
 		const auth = useAuth();
 		expect(auth.user).toBeDefined();

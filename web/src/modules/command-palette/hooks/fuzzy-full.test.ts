@@ -10,9 +10,9 @@ describe("fuzzy 模块", () => {
 		// 测试fuzzyMatch函数
 		const query = "测试";
 		const text = "这是一个测试文本";
-		
+
 		const result = fuzzyMatch(query, text);
-		
+
 		// 验证返回结果
 		expect(result).toBeDefined();
 		expect(result.matched).toBeDefined();
@@ -25,9 +25,9 @@ describe("fuzzy 模块", () => {
 		// 测试精确匹配
 		const query = "测试";
 		const text = "测试";
-		
+
 		const result = fuzzyMatch(query, text);
-		
+
 		// 验证返回结果
 		expect(result.matched).toBe(true);
 		expect(result.score).toBeLessThan(0);
@@ -37,9 +37,9 @@ describe("fuzzy 模块", () => {
 		// 测试不匹配
 		const query = "xyz";
 		const text = "abc";
-		
+
 		const result = fuzzyMatch(query, text);
-		
+
 		// 验证返回结果
 		expect(result.matched).toBe(false);
 		expect(result.score).toBe(Number.POSITIVE_INFINITY);
@@ -53,9 +53,9 @@ describe("fuzzy 模块", () => {
 			{ id: 2, title: "测试卡片" },
 			{ id: 3, title: "完全不同的内容" },
 		];
-		
+
 		const result = fuzzyFilter(items, query, (item) => [item.title]);
-		
+
 		// 验证返回结果
 		expect(result).toBeDefined();
 		expect(Array.isArray(result)).toBe(true);
@@ -70,9 +70,9 @@ describe("fuzzy 模块", () => {
 			{ id: 2, title: "测试卡片" },
 			{ id: 3, title: "完全不同的内容" },
 		];
-		
+
 		const result = fuzzyFilter(items, query, (item) => [item.title]);
-		
+
 		// 验证返回结果
 		expect(result).toBeDefined();
 		expect(Array.isArray(result)).toBe(true);

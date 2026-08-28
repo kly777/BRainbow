@@ -15,10 +15,12 @@ pub async fn migrate(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
     .map_err(|e| migration_failed("v13 添加 bookmark.visit_count", &e))?;
 
     // 为 visit_count 建索引（按频率排序时使用）
-    sqlx::query("CREATE INDEX IF NOT EXISTS idx_bookmark_visit_count ON bookmark(visit_count DESC)")
-        .execute(&mut *conn)
-        .await
-        .map_err(|e| migration_failed("v13 创建 idx_bookmark_visit_count", &e))?;
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_bookmark_visit_count ON bookmark(visit_count DESC)",
+    )
+    .execute(&mut *conn)
+    .await
+    .map_err(|e| migration_failed("v13 创建 idx_bookmark_visit_count", &e))?;
 
     Ok(())
 }

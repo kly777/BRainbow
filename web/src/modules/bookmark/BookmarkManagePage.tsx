@@ -28,7 +28,13 @@ const BatchBar: Component<{
 						onClick={b.handleBatchAiTag}
 						disabled={b.batchTagging()}
 					>
-						{b.batchTagging() ? "AI 标签中..." : <><IconSparkles size={14} /> AI 批量标签</>}
+						{b.batchTagging() ? (
+							"AI 标签中..."
+						) : (
+							<>
+								<IconSparkles size={14} /> AI 批量标签
+							</>
+						)}
 					</Button>
 					<Button variant="secondary" size="sm" onClick={b.clearSelection}>
 						取消选择
@@ -139,10 +145,7 @@ export default function BookmarkPage() {
 								<IconX size={14} />
 							</Button>
 						</Show>
-						<TagFilter
-							value={b.tagFilter()}
-							onChange={b.handleTagFilter}
-						/>
+						<TagFilter value={b.tagFilter()} onChange={b.handleTagFilter} />
 						<Button
 							variant="secondary"
 							size="sm"

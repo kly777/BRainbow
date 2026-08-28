@@ -85,7 +85,10 @@ export function BookmarkFormModal(props: {
 						<div class={styles.urlWarning}>
 							⚠ 该 URL 已被收藏：
 							<a
-								href={fillPath(PATHS.bookmarkDetail, b.urlExistsBookmark()?.id ?? "")}
+								href={fillPath(
+									PATHS.bookmarkDetail,
+									b.urlExistsBookmark()?.id ?? "",
+								)}
 								target="_blank"
 								rel="noopener noreferrer"
 							>

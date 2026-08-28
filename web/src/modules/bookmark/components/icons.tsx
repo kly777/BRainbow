@@ -63,10 +63,7 @@ const Icon2 = (d1: string, d2: string): Component<IconProps> => {
 // ── 具体图标 ──
 
 /** ✕ 关闭 / 删除 */
-export const IconX: Component<IconProps> = Icon2(
-	"M18 6L6 18",
-	"M6 6l12 12",
-);
+export const IconX: Component<IconProps> = Icon2("M18 6L6 18", "M6 6l12 12");
 
 /** ✎ 编辑 */
 export const IconPencil: Component<IconProps> = Icon2(

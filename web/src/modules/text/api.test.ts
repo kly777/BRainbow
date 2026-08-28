@@ -21,7 +21,7 @@ describe("text API", () => {
 		// 测试加载文本数据
 		const { cachedRequest } = await import("@shared/api");
 		const mockCachedRequest = vi.mocked(cachedRequest);
-		
+
 		const mockTextResponse = {
 			tabs: [
 				{
@@ -36,17 +36,17 @@ describe("text API", () => {
 				},
 			],
 		};
-		
+
 		// 模拟cachedRequest返回成功结果
 		mockCachedRequest.mockResolvedValueOnce(mockTextResponse);
 
 		// 调用加载文本数据API
 		const result = await loadTextE();
-		
+
 		// 验证cachedRequest被调用
 		expect(mockCachedRequest).toHaveBeenCalledTimes(1);
 		expect(mockCachedRequest).toHaveBeenCalledWith("/text");
-		
+
 		// 验证返回结果
 		expect(result).toEqual(mockTextResponse);
 	});
@@ -56,9 +56,9 @@ describe("text API", () => {
 		const { put, domains } = await import("@shared/api");
 		const mockPut = vi.mocked(put);
 		const mockDomains = vi.mocked(domains);
-		
+
 		const mockResult = { ok: true };
-		
+
 		// 模拟put返回成功结果
 		mockPut.mockResolvedValueOnce(mockResult);
 		mockDomains.text.invalidate.mockImplementationOnce((promise) => promise);
@@ -68,7 +68,7 @@ describe("text API", () => {
 			{ name: "笔记1", content: "笔记内容1" },
 			{ name: "笔记2", content: "笔记内容2" },
 		]);
-		
+
 		// 验证put被调用
 		expect(mockPut).toHaveBeenCalledTimes(1);
 		expect(mockPut).toHaveBeenCalledWith("/text", {
@@ -77,7 +77,7 @@ describe("text API", () => {
 				{ name: "笔记2", content: "笔记内容2" },
 			],
 		});
-		
+
 		// 验证返回结果
 		expect(result).toEqual(mockResult);
 	});

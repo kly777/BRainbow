@@ -3,7 +3,9 @@
  */
 
 @keyframes spin {
-	to { transform: rotate(360deg); }
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 /* ── Page ── */
@@ -97,7 +99,8 @@
 	padding: var(--space-sm) var(--space-lg);
 	text-decoration: none;
 	color: var(--t-color-ink);
-	border-bottom: 1px solid color-mix(in srgb, var(--t-color-border) 50%, transparent);
+	border-bottom: 1px solid
+		color-mix(in srgb, var(--t-color-border) 50%, transparent);
 	transition: background 0.15s ease;
 	position: relative;
 }
@@ -184,7 +187,8 @@
 	padding: var(--space-md) var(--space-lg);
 	border-radius: var(--radius-md);
 	min-width: 0;
-	border-bottom: 1px solid color-mix(in srgb, var(--t-color-border) 40%, transparent);
+	border-bottom: 1px solid
+		color-mix(in srgb, var(--t-color-border) 40%, transparent);
 	transition:
 		background 0.15s ease,
 		box-shadow 0.15s ease;
@@ -426,7 +430,8 @@
 	padding: var(--space-xs) var(--space-sm);
 	border-radius: var(--radius-sm);
 	margin-top: var(--space-xs);
-	border: 1px solid color-mix(in srgb, var(--t-color-warning, #b45309) 20%, transparent);
+	border: 1px solid
+		color-mix(in srgb, var(--t-color-warning, #b45309) 20%, transparent);
 }
 
 .url-warning a {

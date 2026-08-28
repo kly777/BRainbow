@@ -27,10 +27,9 @@ describe("useBookmarkImport", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const importHook = useBookmarkImport(opts);
-				
+
 				// 验证初始状态
 				expect(importHook.importing()).toBe(false);
-				
 			} finally {
 				dispose();
 			}
@@ -43,41 +42,42 @@ describe("useBookmarkImport", () => {
 		const mockImportBookmarksE = vi.mocked(importBookmarksE);
 		const { tryAsync } = await import("@shared/utils");
 		const mockTryAsync = vi.mocked(tryAsync);
-		
+
 		const mockResult = {
 			created: 5,
 			merged: 2,
 		};
-		
+
 		// 模拟tryAsync实际调用传入的函数
 		mockTryAsync.mockImplementationOnce(async (fn) => {
 			const result = await fn();
 			return { ok: true, value: result };
 		});
-		
+
 		// 模拟importBookmarksE返回成功结果
 		mockImportBookmarksE.mockResolvedValueOnce(mockResult);
 
 		await createRoot(async (dispose) => {
 			try {
 				const importHook = useBookmarkImport(opts);
-				
+
 				// 创建模拟文件
-				const mockFile = new File(["<html>"], "bookmarks.html", { type: "text/html" });
-				
+				const mockFile = new File(["<html>"], "bookmarks.html", {
+					type: "text/html",
+				});
+
 				// 导入文件
 				await importHook.handleImportFile(mockFile);
-				
+
 				// 验证importBookmarksE被调用
 				expect(mockImportBookmarksE).toHaveBeenCalledTimes(1);
 				expect(mockImportBookmarksE).toHaveBeenCalledWith(mockFile);
-				
+
 				// 验证onImported被调用
 				expect(onImportedMock).toHaveBeenCalledTimes(1);
-				
+
 				// 验证importing状态
 				expect(importHook.importing()).toBe(false);
-				
 			} finally {
 				dispose();
 			}
@@ -90,29 +90,33 @@ describe("useBookmarkImport", () => {
 		const mockTryAsync = vi.mocked(tryAsync);
 		const { notifyError } = await import("@shared/utils");
 		const mockNotifyError = vi.mocked(notifyError);
-		
+
 		// 模拟tryAsync返回失败结果
 		mockTryAsync.mockResolvedValueOnce({ ok: false, error: "Network error" });
 
 		await createRoot(async (dispose) => {
 			try {
 				const importHook = useBookmarkImport(opts);
-				
+
 				// 创建模拟文件
-				const mockFile = new File(["<html>"], "bookmarks.html", { type: "text/html" });
-				
+				const mockFile = new File(["<html>"], "bookmarks.html", {
+					type: "text/html",
+				});
+
 				// 导入文件
 				await importHook.handleImportFile(mockFile);
-				
+
 				// 验证错误被处理
-				expect(mockNotifyError).toHaveBeenCalledWith("导入失败", "Network error");
-				
+				expect(mockNotifyError).toHaveBeenCalledWith(
+					"导入失败",
+					"Network error",
+				);
+
 				// 验证onImported没有被调用
 				expect(onImportedMock).not.toHaveBeenCalled();
-				
+
 				// 验证importing状态
 				expect(importHook.importing()).toBe(false);
-				
 			} finally {
 				dispose();
 			}
@@ -124,13 +128,12 @@ describe("useBookmarkImport", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const importHook = useBookmarkImport(opts);
-				
+
 				// 导入未选择文件
 				await importHook.handleImportFile(undefined);
-				
+
 				// 验证importing状态没有变化
 				expect(importHook.importing()).toBe(false);
-				
 			} finally {
 				dispose();
 			}

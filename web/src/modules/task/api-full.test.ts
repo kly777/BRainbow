@@ -1,15 +1,15 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { 
-	getTaskTreeE, 
-	createTaskE, 
-	updateTaskE, 
-	deleteTaskE, 
-	completeTaskE, 
-	activateTaskE, 
-	archiveTaskE, 
-	moveToBacklogE, 
-	searchTasksE, 
-	getTaskStatsE 
+import {
+	getTaskTreeE,
+	createTaskE,
+	updateTaskE,
+	deleteTaskE,
+	completeTaskE,
+	activateTaskE,
+	archiveTaskE,
+	moveToBacklogE,
+	searchTasksE,
+	getTaskStatsE,
 } from "./api.ts";
 
 // 模拟依赖
@@ -41,7 +41,7 @@ describe("task API", () => {
 		// 测试获取任务树
 		const { cachedRequest } = await import("@shared/api");
 		const mockCachedRequest = vi.mocked(cachedRequest);
-		
+
 		const mockTree = [
 			{
 				task: {
@@ -56,17 +56,17 @@ describe("task API", () => {
 				children: [],
 			},
 		];
-		
+
 		// 模拟cachedRequest返回成功结果
 		mockCachedRequest.mockResolvedValueOnce(mockTree);
 
 		// 调用获取任务树API
 		const result = await getTaskTreeE();
-		
+
 		// 验证cachedRequest被调用
 		expect(mockCachedRequest).toHaveBeenCalledTimes(1);
 		expect(mockCachedRequest).toHaveBeenCalledWith("/tasks/tree");
-		
+
 		// 验证返回结果
 		expect(result).toEqual(mockTree);
 	});
@@ -76,7 +76,7 @@ describe("task API", () => {
 		const { post, domains } = await import("@shared/api");
 		const mockPost = vi.mocked(post);
 		const mockDomains = vi.mocked(domains);
-		
+
 		const mockTask = {
 			id: 2,
 			title: "新任务",
@@ -86,18 +86,24 @@ describe("task API", () => {
 			created_at: "2024-01-02",
 			updated_at: "2024-01-02",
 		};
-		
+
 		// 模拟post返回成功结果
 		mockPost.mockResolvedValueOnce(mockTask);
 		mockDomains.tasks.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 调用创建任务API
-		const result = await createTaskE({ title: "新任务", description: "新任务描述" });
-		
+		const result = await createTaskE({
+			title: "新任务",
+			description: "新任务描述",
+		});
+
 		// 验证post被调用
 		expect(mockPost).toHaveBeenCalledTimes(1);
-		expect(mockPost).toHaveBeenCalledWith("/tasks", { title: "新任务", description: "新任务描述" });
-		
+		expect(mockPost).toHaveBeenCalledWith("/tasks", {
+			title: "新任务",
+			description: "新任务描述",
+		});
+
 		// 验证返回结果
 		expect(result).toEqual(mockTask);
 	});
@@ -107,7 +113,7 @@ describe("task API", () => {
 		const { patch, domains } = await import("@shared/api");
 		const mockPatch = vi.mocked(patch);
 		const mockDomains = vi.mocked(domains);
-		
+
 		const mockTask = {
 			id: 1,
 			title: "更新后的任务",
@@ -117,18 +123,20 @@ describe("task API", () => {
 			created_at: "2024-01-01",
 			updated_at: "2024-01-02",
 		};
-		
+
 		// 模拟patch返回成功结果
 		mockPatch.mockResolvedValueOnce(mockTask);
 		mockDomains.tasks.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 调用更新任务API
 		const result = await updateTaskE(1, { title: "更新后的任务" });
-		
+
 		// 验证patch被调用
 		expect(mockPatch).toHaveBeenCalledTimes(1);
-		expect(mockPatch).toHaveBeenCalledWith("/tasks/1", { title: "更新后的任务" });
-		
+		expect(mockPatch).toHaveBeenCalledWith("/tasks/1", {
+			title: "更新后的任务",
+		});
+
 		// 验证返回结果
 		expect(result).toEqual(mockTask);
 	});
@@ -138,20 +146,20 @@ describe("task API", () => {
 		const { request, domains } = await import("@shared/api");
 		const mockRequest = vi.mocked(request);
 		const mockDomains = vi.mocked(domains);
-		
+
 		const mockResult = { ok: true };
-		
+
 		// 模拟request返回成功结果
 		mockRequest.mockResolvedValueOnce(mockResult);
 		mockDomains.tasks.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 调用删除任务API
 		const result = await deleteTaskE(1);
-		
+
 		// 验证request被调用
 		expect(mockRequest).toHaveBeenCalledTimes(1);
 		expect(mockRequest).toHaveBeenCalledWith("/tasks/1", { method: "DELETE" });
-		
+
 		// 验证返回结果
 		expect(result).toEqual(mockResult);
 	});
@@ -161,7 +169,7 @@ describe("task API", () => {
 		const { request, domains } = await import("@shared/api");
 		const mockRequest = vi.mocked(request);
 		const mockDomains = vi.mocked(domains);
-		
+
 		const mockTask = {
 			id: 1,
 			title: "测试任务",
@@ -171,18 +179,20 @@ describe("task API", () => {
 			created_at: "2024-01-01",
 			updated_at: "2024-01-02",
 		};
-		
+
 		// 模拟request返回成功结果
 		mockRequest.mockResolvedValueOnce(mockTask);
 		mockDomains.tasks.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 调用完成任务API
 		const result = await completeTaskE(1);
-		
+
 		// 验证request被调用
 		expect(mockRequest).toHaveBeenCalledTimes(1);
-		expect(mockRequest).toHaveBeenCalledWith("/tasks/1/complete", { method: "POST" });
-		
+		expect(mockRequest).toHaveBeenCalledWith("/tasks/1/complete", {
+			method: "POST",
+		});
+
 		// 验证返回结果
 		expect(result).toEqual(mockTask);
 	});
@@ -191,7 +201,7 @@ describe("task API", () => {
 		// 测试搜索任务
 		const { cachedRequest } = await import("@shared/api");
 		const mockCachedRequest = vi.mocked(cachedRequest);
-		
+
 		const mockResponse = {
 			items: [
 				{
@@ -209,17 +219,19 @@ describe("task API", () => {
 			page_size: 20,
 			total_pages: 1,
 		};
-		
+
 		// 模拟cachedRequest返回成功结果
 		mockCachedRequest.mockResolvedValueOnce(mockResponse);
 
 		// 调用搜索任务API
 		const result = await searchTasksE("测试");
-		
+
 		// 验证cachedRequest被调用
 		expect(mockCachedRequest).toHaveBeenCalledTimes(1);
-		expect(mockCachedRequest).toHaveBeenCalledWith("/tasks/search?q=%E6%B5%8B%E8%AF%95");
-		
+		expect(mockCachedRequest).toHaveBeenCalledWith(
+			"/tasks/search?q=%E6%B5%8B%E8%AF%95",
+		);
+
 		// 验证返回结果
 		expect(result).toEqual(mockResponse);
 	});
@@ -228,24 +240,24 @@ describe("task API", () => {
 		// 测试获取任务统计
 		const { cachedRequest } = await import("@shared/api");
 		const mockCachedRequest = vi.mocked(cachedRequest);
-		
+
 		const mockStats = {
 			backlog: 5,
 			active: 3,
 			completed: 10,
 			archived: 2,
 		};
-		
+
 		// 模拟cachedRequest返回成功结果
 		mockCachedRequest.mockResolvedValueOnce(mockStats);
 
 		// 调用获取任务统计API
 		const result = await getTaskStatsE();
-		
+
 		// 验证cachedRequest被调用
 		expect(mockCachedRequest).toHaveBeenCalledTimes(1);
 		expect(mockCachedRequest).toHaveBeenCalledWith("/tasks/stats");
-		
+
 		// 验证返回结果
 		expect(result).toEqual(mockStats);
 	});

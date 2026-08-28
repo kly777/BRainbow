@@ -227,7 +227,9 @@ export function useBookmarkPage() {
 	}
 
 	// ── 检测可访问性 ──
-	async function handleCheckAccessibility(bm: Bookmark): Promise<"ok" | "fail"> {
+	async function handleCheckAccessibility(
+		bm: Bookmark,
+	): Promise<"ok" | "fail"> {
 		try {
 			const controller = new AbortController();
 			const timeout = setTimeout(() => controller.abort(), 10000);

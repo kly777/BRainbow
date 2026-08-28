@@ -29,11 +29,11 @@ describe("color module", () => {
 		const { applyTheme, getTheme } = await import("@shared/styles");
 		const mockApplyTheme = vi.mocked(applyTheme);
 		const mockGetTheme = vi.mocked(getTheme);
-		
+
 		// 验证getTheme被调用
 		expect(mockGetTheme).toBeDefined();
 		expect(typeof mockGetTheme).toBe("function");
-		
+
 		// 验证applyTheme被调用
 		expect(mockApplyTheme).toBeDefined();
 		expect(typeof mockApplyTheme).toBe("function");
@@ -42,15 +42,15 @@ describe("color module", () => {
 	it("主题预览功能", async () => {
 		// 测试主题预览功能
 		const { themes } = await import("@shared/styles");
-		
+
 		// 验证themes对象存在
 		expect(themes).toBeDefined();
 		expect(themes.paper).toBeDefined();
 		expect(themes.midnight).toBeDefined();
 		expect(themes.ocean).toBeDefined();
-		
+
 		// 验证每个主题都有swatches属性
-		Object.values(themes).forEach(theme => {
+		Object.values(themes).forEach((theme) => {
 			expect(theme.swatches).toBeDefined();
 			expect(Array.isArray(theme.swatches)).toBe(true);
 		});

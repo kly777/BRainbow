@@ -15,27 +15,27 @@ describe("auth API", () => {
 		// 测试用户登录
 		const { request } = await import("@shared/api");
 		const mockRequest = vi.mocked(request);
-		
+
 		const mockUser = {
 			id: 1,
 			name: "testuser",
 			role: "user",
 			token: "mock-token",
 		};
-		
+
 		// 模拟request返回成功结果
 		mockRequest.mockResolvedValueOnce(mockUser);
 
 		// 调用登录API
 		const result = await loginE("testuser", "password123");
-		
+
 		// 验证request被调用
 		expect(mockRequest).toHaveBeenCalledTimes(1);
 		expect(mockRequest).toHaveBeenCalledWith("/user/login", {
 			method: "POST",
 			body: JSON.stringify({ name: "testuser", password: "password123" }),
 		});
-		
+
 		// 验证返回结果
 		expect(result).toEqual(mockUser);
 	});
@@ -44,27 +44,27 @@ describe("auth API", () => {
 		// 测试用户注册
 		const { request } = await import("@shared/api");
 		const mockRequest = vi.mocked(request);
-		
+
 		const mockUser = {
 			id: 2,
 			name: "newuser",
 			role: "user",
 			token: "new-token",
 		};
-		
+
 		// 模拟request返回成功结果
 		mockRequest.mockResolvedValueOnce(mockUser);
 
 		// 调用注册API
 		const result = await registerE("newuser", "password123");
-		
+
 		// 验证request被调用
 		expect(mockRequest).toHaveBeenCalledTimes(1);
 		expect(mockRequest).toHaveBeenCalledWith("/user/register", {
 			method: "POST",
 			body: JSON.stringify({ name: "newuser", password: "password123" }),
 		});
-		
+
 		// 验证返回结果
 		expect(result).toEqual(mockUser);
 	});
@@ -73,19 +73,21 @@ describe("auth API", () => {
 		// 测试用户登出
 		const { request } = await import("@shared/api");
 		const mockRequest = vi.mocked(request);
-		
+
 		const mockResult = { ok: true };
-		
+
 		// 模拟request返回成功结果
 		mockRequest.mockResolvedValueOnce(mockResult);
 
 		// 调用登出API
 		const result = await logoutE();
-		
+
 		// 验证request被调用
 		expect(mockRequest).toHaveBeenCalledTimes(1);
-		expect(mockRequest).toHaveBeenCalledWith("/user/logout", { method: "POST" });
-		
+		expect(mockRequest).toHaveBeenCalledWith("/user/logout", {
+			method: "POST",
+		});
+
 		// 验证返回结果
 		expect(result).toEqual(mockResult);
 	});
@@ -94,15 +96,15 @@ describe("auth API", () => {
 		// 测试修改密码
 		const { request } = await import("@shared/api");
 		const mockRequest = vi.mocked(request);
-		
+
 		const mockResult = { ok: true };
-		
+
 		// 模拟request返回成功结果
 		mockRequest.mockResolvedValueOnce(mockResult);
 
 		// 调用修改密码API
 		const result = await changePasswordE("oldpassword", "newpassword");
-		
+
 		// 验证request被调用
 		expect(mockRequest).toHaveBeenCalledTimes(1);
 		expect(mockRequest).toHaveBeenCalledWith("/user/password", {
@@ -112,7 +114,7 @@ describe("auth API", () => {
 				new_password: "newpassword",
 			}),
 		});
-		
+
 		// 验证返回结果
 		expect(result).toEqual(mockResult);
 	});

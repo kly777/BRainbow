@@ -120,7 +120,7 @@ describe("useDueQueue", () => {
 		// 测试预取机制
 		const items = [item(1), item(2), item(3), item(4)];
 		fetchDueMock.mockResolvedValueOnce(response(items));
-		
+
 		await createRoot(async (dispose) => {
 			try {
 				const queue = useDueQueue({
@@ -131,11 +131,11 @@ describe("useDueQueue", () => {
 				// 初始加载
 				await queue.loadDue();
 				expect(queue.due().length).toBe(4);
-				
+
 				// 消费一张卡，剩余3张，应该触发预取
 				queue.advanceQueue();
 				expect(queue.due().length).toBe(3);
-				
+
 				// 验证fetchDue被调用两次（初始加载 + 预取）
 				expect(fetchDueMock).toHaveBeenCalledTimes(2);
 			} finally {
@@ -148,9 +148,9 @@ describe("useDueQueue", () => {
 		// 测试stale-while-revalidate机制
 		const items1 = [item(1), item(2)];
 		const items2 = [item(3), item(4)];
-		
+
 		fetchDueMock.mockResolvedValueOnce(response(items1));
-		
+
 		await createRoot(async (dispose) => {
 			try {
 				const queue = useDueQueue({
@@ -162,17 +162,20 @@ describe("useDueQueue", () => {
 				await queue.loadDue();
 				expect(queue.due().length).toBe(2);
 				expect(queue.loading()).toBe(false);
-				
+
 				// 模拟网络请求延迟
-				fetchDueMock.mockImplementationOnce(() => 
-					new Promise(resolve => setTimeout(() => resolve(response(items2)), 100))
+				fetchDueMock.mockImplementationOnce(
+					() =>
+						new Promise((resolve) =>
+							setTimeout(() => resolve(response(items2)), 100),
+						),
 				);
-				
+
 				// 再次加载，应该不清空现有卡片
 				const loadPromise = queue.loadDue();
 				expect(queue.due().length).toBe(2); // 仍然显示旧卡片
 				expect(queue.loading()).toBe(false); // 不显示加载中
-				
+
 				await loadPromise;
 				expect(queue.due().length).toBe(2); // 更新为新卡片
 			} finally {
@@ -185,7 +188,7 @@ describe("useDueQueue", () => {
 		// 测试错误处理机制
 		const items = [item(1), item(2)];
 		fetchDueMock.mockResolvedValueOnce(response(items));
-		
+
 		await createRoot(async (dispose) => {
 			try {
 				const queue = useDueQueue({
@@ -196,10 +199,10 @@ describe("useDueQueue", () => {
 				// 初始加载
 				await queue.loadDue();
 				expect(queue.due().length).toBe(2);
-				
+
 				// 模拟网络错误
 				fetchDueMock.mockRejectedValueOnce(new Error("Network error"));
-				
+
 				// 再次加载，应该保留旧卡片
 				await queue.loadDue();
 				expect(queue.due().length).toBe(2); // 保留旧卡片
@@ -213,7 +216,7 @@ describe("useDueQueue", () => {
 		// 测试预估调用行为
 		const items = [item(1), item(2)];
 		fetchDueMock.mockResolvedValue(response(items));
-		
+
 		await createRoot(async (dispose) => {
 			try {
 				const queue = useDueQueue({
@@ -224,26 +227,27 @@ describe("useDueQueue", () => {
 				// 获取mock引用
 				const { getSessionEstimateE } = await import("@modules/mem");
 				const estimateMock = vi.mocked(getSessionEstimateE);
-				
+
 				// 清除之前的调用记录
 				estimateMock.mockClear();
-				
+
 				// 第一次加载
 				await queue.loadDue();
 				const firstCallCount = estimateMock.mock.calls.length;
-				
+
 				// 第二次加载
 				await queue.loadDue();
 				const secondCallCount = estimateMock.mock.calls.length;
-				
+
 				// 验证预估被调用
 				expect(firstCallCount).toBeGreaterThan(0);
-				
+
 				// 验证预估调用次数增加
 				expect(secondCallCount).toBeGreaterThanOrEqual(firstCallCount);
-				
-				console.log(`预估调用次数: 第一次加载 ${firstCallCount} 次, 第二次加载 ${secondCallCount} 次`);
-				
+
+				console.log(
+					`预估调用次数: 第一次加载 ${firstCallCount} 次, 第二次加载 ${secondCallCount} 次`,
+				);
 			} finally {
 				dispose();
 			}
@@ -254,9 +258,9 @@ describe("useDueQueue", () => {
 		// 测试标签过滤变化时强制刷新预估
 		const items = [item(1), item(2)];
 		fetchDueMock.mockResolvedValue(response(items));
-		
+
 		let estimateParams = { tag_ids: [1, 2] };
-		
+
 		await createRoot(async (dispose) => {
 			try {
 				const queue = useDueQueue({
@@ -268,33 +272,34 @@ describe("useDueQueue", () => {
 				// 获取mock引用
 				const { getSessionEstimateE } = await import("@modules/mem");
 				const estimateMock = vi.mocked(getSessionEstimateE);
-				
+
 				// 清除之前的调用记录
 				estimateMock.mockClear();
-				
+
 				// 第一次加载
 				await queue.loadDue();
 				const firstCallCount = estimateMock.mock.calls.length;
-				
+
 				// 第二次加载，相同标签
 				await queue.loadDue();
 				const secondCallCount = estimateMock.mock.calls.length;
-				
+
 				// 验证预估调用次数相同（缓存生效）
 				expect(secondCallCount).toBe(firstCallCount);
-				
+
 				// 改变标签过滤
 				estimateParams = { tag_ids: [3, 4] };
-				
+
 				// 第三次加载，不同标签
 				await queue.loadDue();
 				const thirdCallCount = estimateMock.mock.calls.length;
-				
+
 				// 验证预估调用次数增加（缓存失效）
 				expect(thirdCallCount).toBeGreaterThan(secondCallCount);
-				
-				console.log(`标签过滤测试: 第一次 ${firstCallCount} 次, 第二次 ${secondCallCount} 次, 第三次 ${thirdCallCount} 次`);
-				
+
+				console.log(
+					`标签过滤测试: 第一次 ${firstCallCount} 次, 第二次 ${secondCallCount} 次, 第三次 ${thirdCallCount} 次`,
+				);
 			} finally {
 				dispose();
 			}

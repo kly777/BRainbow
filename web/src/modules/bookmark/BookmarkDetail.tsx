@@ -99,7 +99,13 @@ const EditForm: Component<{
 				onClick={props.onSuggestTags}
 				disabled={props.suggestLoading}
 			>
-				{props.suggestLoading ? "AI 分析中..." : <><IconSparkles size={14} /> AI 建议标签</>}
+				{props.suggestLoading ? (
+					"AI 分析中..."
+				) : (
+					<>
+						<IconSparkles size={14} /> AI 建议标签
+					</>
+				)}
 			</Button>
 		</div>
 		<Show when={props.suggestedTags.length > 0}>

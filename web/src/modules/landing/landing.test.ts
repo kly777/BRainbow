@@ -22,14 +22,14 @@ describe("landing module", () => {
 	it("落地页展示功能", async () => {
 		// 测试落地页展示功能
 		const { MODULE_CARDS } = await import("@config/module-cards.ts");
-		
+
 		// 验证MODULE_CARDS存在
 		expect(MODULE_CARDS).toBeDefined();
 		expect(Array.isArray(MODULE_CARDS)).toBe(true);
 		expect(MODULE_CARDS.length).toBeGreaterThan(0);
-		
+
 		// 验证每个模块卡片都有path、title和detail
-		MODULE_CARDS.forEach(card => {
+		MODULE_CARDS.forEach((card) => {
 			expect(card.path).toBeDefined();
 			expect(card.title).toBeDefined();
 			expect(card.detail).toBeDefined();
@@ -39,17 +39,17 @@ describe("landing module", () => {
 	it("模块目录功能", async () => {
 		// 测试模块目录功能
 		const { MODULE_CARDS } = await import("@config/module-cards.ts");
-		
+
 		// 过滤有长文案的模块
 		const modules = MODULE_CARDS.filter((m) => m.title && m.detail);
-		
+
 		// 验证过滤结果
 		expect(modules).toBeDefined();
 		expect(Array.isArray(modules)).toBe(true);
 		expect(modules.length).toBeGreaterThan(0);
-		
+
 		// 验证每个模块都有title和detail
-		modules.forEach(module => {
+		modules.forEach((module) => {
 			expect(module.title).toBeDefined();
 			expect(module.detail).toBeDefined();
 		});
@@ -63,14 +63,14 @@ describe("landing module", () => {
 			{ value: "3 主题", label: "纸张 / 暗夜 / 晴空" },
 			{ value: "⌘K", label: "全局命令面板" },
 		];
-		
+
 		// 验证facts数组
 		expect(facts).toBeDefined();
 		expect(Array.isArray(facts)).toBe(true);
 		expect(facts.length).toBe(4);
-		
+
 		// 验证每个事实条都有value和label
-		facts.forEach(fact => {
+		facts.forEach((fact) => {
 			expect(fact.value).toBeDefined();
 			expect(fact.label).toBeDefined();
 		});

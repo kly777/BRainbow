@@ -11,9 +11,9 @@ describe("command-palette hooks", () => {
 		// 测试模糊搜索功能
 		const query = "测试";
 		const text = "这是一个测试文本";
-		
+
 		const result = fuzzyMatch(query, text);
-		
+
 		// 验证返回结果
 		expect(result).toBeDefined();
 		expect(typeof result).toBe("boolean");
@@ -23,9 +23,9 @@ describe("command-palette hooks", () => {
 		// 测试模糊评分功能
 		const query = "测试";
 		const text = "这是一个测试文本";
-		
+
 		const result = fuzzyScore(query, text);
-		
+
 		// 验证返回结果
 		expect(result).toBeDefined();
 		expect(typeof result).toBe("number");
@@ -39,9 +39,9 @@ describe("command-palette hooks", () => {
 			{ id: 2, title: "测试卡片", kind: "card" },
 			{ id: 3, title: "其他内容", kind: "other" },
 		];
-		
+
 		const result = generateSuggestions(query, items);
-		
+
 		// 验证返回结果
 		expect(result).toBeDefined();
 		expect(Array.isArray(result)).toBe(true);

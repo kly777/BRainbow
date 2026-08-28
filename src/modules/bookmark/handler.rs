@@ -13,8 +13,8 @@ use super::query::BookmarkQueryService;
 use super::service::BookmarkService;
 
 use super::model::{
-    Bookmark, CheckUrlQuery, CreateBookmarkRequest, FetchUrlRequest,
-    SetBookmarkTagsRequest, UpdateBookmarkRequest,
+    Bookmark, CheckUrlQuery, CreateBookmarkRequest, FetchUrlRequest, SetBookmarkTagsRequest,
+    UpdateBookmarkRequest,
 };
 
 #[derive(Debug, Serialize)]
@@ -121,7 +121,13 @@ pub async fn get_bookmarks_handler(
         .filter(|s| !s.is_empty());
     let sort = params.sort.as_deref().unwrap_or("created_at");
     let result = query
-        .list(claims.sub, pagination.limit(), pagination.offset(), tag, sort)
+        .list(
+            claims.sub,
+            pagination.limit(),
+            pagination.offset(),
+            tag,
+            sort,
+        )
         .await
         .map(|(items, total)| {
             let items: Vec<BookmarkResponse> =

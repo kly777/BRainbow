@@ -42,26 +42,25 @@ describe("useTreeList", () => {
 		// 测试加载树列表
 		const { tryAsync } = await import("@shared/utils");
 		const mockTryAsync = vi.mocked(tryAsync);
-		
+
 		const mockTrees = [
 			{ id: 1, title: "对话1", created_at: "2024-01-01" },
 			{ id: 2, title: "对话2", created_at: "2024-01-02" },
 		];
-		
+
 		// 模拟tryAsync返回成功结果
 		mockTryAsync.mockResolvedValueOnce({ ok: true, value: mockTrees });
 
 		await createRoot(async (dispose) => {
 			try {
 				const treeList = useTreeList(opts);
-				
+
 				// 加载树列表
 				await treeList.loadTrees();
-				
+
 				// 验证树列表被加载
 				expect(treeList.trees()).toEqual(mockTrees);
 				expect(treeList.loadingTrees()).toBe(false);
-				
 			} finally {
 				dispose();
 			}
@@ -74,7 +73,7 @@ describe("useTreeList", () => {
 		const mockTryAsync = vi.mocked(tryAsync);
 		const { getTreeE } = await import("@modules/chat");
 		const mockGetTreeE = vi.mocked(getTreeE);
-		
+
 		const mockTree = {
 			tree: { id: 1, title: "对话1", created_at: "2024-01-01" },
 			nodes: [
@@ -82,10 +81,10 @@ describe("useTreeList", () => {
 				{ id: 2, parent_id: 1, role: "assistant", content: "Hi" },
 			],
 		};
-		
+
 		// 模拟getTreeE返回成功结果
 		mockGetTreeE.mockResolvedValueOnce(mockTree);
-		
+
 		// 模拟tryAsync实际调用传入的函数
 		mockTryAsync.mockImplementationOnce(async (fn) => {
 			const result = await fn();
@@ -95,16 +94,15 @@ describe("useTreeList", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const treeList = useTreeList(opts);
-				
+
 				// 清除之前的调用记录
 				mockGetTreeE.mockClear();
-				
+
 				// 加载单个树
 				await treeList.loadTree(1);
-				
+
 				// 验证getTreeE被调用
 				expect(mockGetTreeE).toHaveBeenCalledWith(1);
-				
 			} finally {
 				dispose();
 			}
@@ -115,24 +113,23 @@ describe("useTreeList", () => {
 		// 测试创建新会话
 		const { tryOrNotify } = await import("@shared/utils");
 		const mockTryOrNotify = vi.mocked(tryOrNotify);
-		
+
 		const mockResult = {
 			tree: { id: 3, title: "新对话", created_at: "2024-01-03" },
 		};
-		
+
 		// 模拟tryOrNotify返回成功结果
 		mockTryOrNotify.mockResolvedValueOnce(mockResult);
 
 		await createRoot(async (dispose) => {
 			try {
 				const treeList = useTreeList(opts);
-				
+
 				// 创建新会话
 				await treeList.createSession();
-				
+
 				// 验证tryOrNotify被调用
 				expect(mockTryOrNotify).toHaveBeenCalledTimes(1);
-				
 			} finally {
 				dispose();
 			}
@@ -145,7 +142,7 @@ describe("useTreeList", () => {
 		const mockDeleteTreeE = vi.mocked(deleteTreeE);
 		const { confirmAndRun } = await import("@shared/utils");
 		const mockConfirmAndRun = vi.mocked(confirmAndRun);
-		
+
 		// 模拟confirmAndRun返回true
 		mockConfirmAndRun.mockImplementationOnce(async (opts, fn) => {
 			await fn();
@@ -155,17 +152,16 @@ describe("useTreeList", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const treeList = useTreeList(opts);
-				
+
 				// 删除会话
 				await treeList.removeSession(1);
-				
+
 				// 验证confirmAndRun被调用
 				expect(mockConfirmAndRun).toHaveBeenCalledTimes(1);
-				
+
 				// 验证deleteTreeE被调用
 				expect(mockDeleteTreeE).toHaveBeenCalledTimes(1);
 				expect(mockDeleteTreeE).toHaveBeenCalledWith(1);
-				
 			} finally {
 				dispose();
 			}
@@ -178,7 +174,7 @@ describe("useTreeList", () => {
 		const mockUpdateTreeE = vi.mocked(updateTreeE);
 		const { tryOrNotify } = await import("@shared/utils");
 		const mockTryOrNotify = vi.mocked(tryOrNotify);
-		
+
 		// 模拟tryOrNotify返回成功
 		mockTryOrNotify.mockImplementationOnce(async (fn) => {
 			await fn();
@@ -188,14 +184,13 @@ describe("useTreeList", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const treeList = useTreeList(opts);
-				
+
 				// 重命名会话
 				await treeList.renameSession(1, "新标题");
-				
+
 				// 验证updateTreeE被调用
 				expect(mockUpdateTreeE).toHaveBeenCalledTimes(1);
 				expect(mockUpdateTreeE).toHaveBeenCalledWith(1, { title: "新标题" });
-				
 			} finally {
 				dispose();
 			}
@@ -208,12 +203,12 @@ describe("useTreeList", () => {
 		const mockTryAsync = vi.mocked(tryAsync);
 		const { generateTreeTitleE } = await import("@modules/chat");
 		const mockGenerateTreeTitleE = vi.mocked(generateTreeTitleE);
-		
+
 		const mockResult = { title: "AI生成的标题" };
-		
+
 		// 模拟generateTreeTitleE返回成功结果
 		mockGenerateTreeTitleE.mockResolvedValueOnce(mockResult);
-		
+
 		// 模拟tryAsync实际调用传入的函数
 		mockTryAsync.mockImplementationOnce(async (fn) => {
 			const result = await fn();
@@ -223,19 +218,18 @@ describe("useTreeList", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const treeList = useTreeList(opts);
-				
+
 				// 清除之前的调用记录
 				mockGenerateTreeTitleE.mockClear();
-				
+
 				// AI生成标题
 				const result = await treeList.aiTitleSession(1);
-				
+
 				// 验证结果
 				expect(result).toBe(true);
-				
+
 				// 验证generateTreeTitleE被调用
 				expect(mockGenerateTreeTitleE).toHaveBeenCalledWith(1);
-				
 			} finally {
 				dispose();
 			}
@@ -247,7 +241,7 @@ describe("useTreeList", () => {
 		const { useUrlParams } = await import("@shared/utils");
 		const mockUseUrlParams = vi.mocked(useUrlParams);
 		const mockSet = vi.fn();
-		
+
 		mockUseUrlParams.mockReturnValueOnce({
 			get: vi.fn(() => ""),
 			set: mockSet,
@@ -256,13 +250,12 @@ describe("useTreeList", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const treeList = useTreeList(opts);
-				
+
 				// 选择会话
 				treeList.selectSession(123);
-				
+
 				// 验证set被调用
 				expect(mockSet).toHaveBeenCalledWith({ tree: "123" });
-				
 			} finally {
 				dispose();
 			}

@@ -6,7 +6,12 @@ import {
 	suggestBookmarkTagsE,
 	updateBookmarkE,
 } from "@modules/bookmark";
-import { notifyError, notifySuccess, showConfirm, tryOrNotify } from "@shared/utils";
+import {
+	notifyError,
+	notifySuccess,
+	showConfirm,
+	tryOrNotify,
+} from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal } from "solid-js";
 

@@ -37,12 +37,11 @@ describe("useRainbowGenerator", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const generator = useRainbowGenerator();
-				
+
 				// 验证初始状态
 				expect(generator.colors().length).toBe(7);
 				expect(generator.angle()).toBeDefined();
 				expect(generator.shapeRender()).toBe("geometricPrecision");
-				
 			} finally {
 				dispose();
 			}
@@ -54,16 +53,15 @@ describe("useRainbowGenerator", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const generator = useRainbowGenerator();
-				
+
 				// 验证颜色生成
 				const colors = generator.colors();
 				expect(colors.length).toBe(7);
-				
+
 				// 验证每个颜色都有oklch属性
-				colors.forEach(color => {
+				colors.forEach((color) => {
 					expect(color.oklch).toBeDefined();
 				});
-				
 			} finally {
 				dispose();
 			}
@@ -75,19 +73,18 @@ describe("useRainbowGenerator", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const generator = useRainbowGenerator();
-				
+
 				// 验证初始角度
 				expect(generator.angle().radian).toBeDefined();
 				expect(generator.angle().degree).toBeDefined();
-				
+
 				// 设置新角度
 				const { Angle } = await import("@shared/utils");
 				const newAngle = new Angle(Math.PI * (90 / 360));
 				generator.setAngle(newAngle);
-				
+
 				// 验证角度更新
 				expect(generator.angle()).toBe(newAngle);
-				
 			} finally {
 				dispose();
 			}
@@ -99,12 +96,11 @@ describe("useRainbowGenerator", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const generator = useRainbowGenerator();
-				
+
 				// 验证导出函数存在
 				expect(typeof generator.exportSvg).toBe("function");
 				expect(typeof generator.exportPng).toBe("function");
 				expect(typeof generator.bindSvg).toBe("function");
-				
 			} finally {
 				dispose();
 			}

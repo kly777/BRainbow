@@ -147,9 +147,7 @@ export const importBookmarksE = async (file: File): Promise<ImportResult> => {
 
 /** 检查 URL 是否已被收藏 */
 export const checkBookmarkUrlE = (url: string): Promise<CheckUrlResponse> =>
-	cachedRequest(
-		`/bookmarks/check-url?url=${encodeURIComponent(url.trim())}`,
-	);
+	cachedRequest(`/bookmarks/check-url?url=${encodeURIComponent(url.trim())}`);
 
 /** 通过 URL 抓取网页标题 */
 export const fetchUrlTitleE = (url: string): Promise<FetchUrlResponse> =>
@@ -159,7 +157,9 @@ export const fetchUrlTitleE = (url: string): Promise<FetchUrlResponse> =>
 	});
 
 /** AI 建议标签 */
-export const suggestBookmarkTagsE = (id: number): Promise<SuggestTagsResponse> =>
+export const suggestBookmarkTagsE = (
+	id: number,
+): Promise<SuggestTagsResponse> =>
 	request<SuggestTagsResponse>(`/bookmarks/${id}/suggest-tags`, {
 		method: "POST",
 	});

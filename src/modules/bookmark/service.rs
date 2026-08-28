@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use super::model::{Bookmark, BookmarkTag, CheckUrlResponse, FetchUrlResponse, SuggestTagsResponse};
+use super::model::{
+    Bookmark, BookmarkTag, CheckUrlResponse, FetchUrlResponse, SuggestTagsResponse,
+};
 use super::repository::BookmarkRepo;
 use crate::modules::ai::model::AiProxyMessage;
 use crate::modules::ai::port::AiChatPort;
@@ -49,7 +51,11 @@ impl BookmarkService {
     ) -> Result<CheckUrlResponse, ServiceError> {
         let url = url.trim();
         validate_url(url)?;
-        let existing = self.repo.find_by_url(user_id, url).await.map_err(ServiceError::Db)?;
+        let existing = self
+            .repo
+            .find_by_url(user_id, url)
+            .await
+            .map_err(ServiceError::Db)?;
         Ok(CheckUrlResponse {
             exists: existing.is_some(),
             bookmark: existing,
@@ -92,8 +98,7 @@ impl BookmarkService {
             .filter(|t| !t.trim().is_empty())
             .unwrap_or_else(|| {
                 // 回退：使用域名
-                extract_host_from_url(url)
-                    .unwrap_or_else(|| url.to_string())
+                extract_host_from_url(url).unwrap_or_else(|| url.to_string())
             });
 
         Ok(FetchUrlResponse {
@@ -141,9 +146,7 @@ impl BookmarkService {
             content: prompt,
         }];
 
-        let (content, _model) = ai
-            .chat(user_id, &messages, Some(0.3), Some(256))
-            .await?;
+        let (content, _model) = ai.chat(user_id, &messages, Some(0.3), Some(256)).await?;
 
         // 解析 AI 返回的标签列表
         let tags: Vec<String> = content
@@ -363,7 +366,11 @@ fn decode_html_entities(s: &str) -> String {
         } else {
             // 安全：ASCII 字节直接追加，多字节 UTF-8 按 char 迭代
             out.push(s[i..].chars().next().unwrap());
-            i += s[i..].char_indices().nth(0).map(|(_, ch)| ch.len_utf8()).unwrap_or(1);
+            i += s[i..]
+                .char_indices()
+                .nth(0)
+                .map(|(_, ch)| ch.len_utf8())
+                .unwrap_or(1);
         }
     }
     out
@@ -399,7 +406,11 @@ fn extract_host_from_url(url: &str) -> Option<String> {
     let host = rest.split('/').next().unwrap_or(rest);
     let host = host.split(':').next().unwrap_or(host);
     let host = host.trim_end_matches('.');
-    if host.is_empty() { None } else { Some(host.to_string()) }
+    if host.is_empty() {
+        None
+    } else {
+        Some(host.to_string())
+    }
 }
 
 #[cfg(test)]
@@ -454,7 +465,10 @@ mod tests {
             .unwrap();
         svc.create(1, "B", "https://b.com", "", &[]).await.unwrap();
 
-        let (items, total) = qsvc.list(1, 10, 0, Some("编程"), "created_at").await.unwrap();
+        let (items, total) = qsvc
+            .list(1, 10, 0, Some("编程"), "created_at")
+            .await
+            .unwrap();
         assert_eq!(total, 1);
         assert_eq!(items[0].title, "A");
     }

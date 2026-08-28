@@ -28,7 +28,7 @@ describe("useBookmarkForm", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const form = useBookmarkForm(opts);
-				
+
 				// 验证初始状态
 				expect(form.form.open).toBe(false);
 				expect(form.form.editing).toBeNull();
@@ -38,7 +38,6 @@ describe("useBookmarkForm", () => {
 				expect(form.form.tags).toEqual([]);
 				expect(form.form.saving).toBe(false);
 				expect(form.form.error).toBeNull();
-				
 			} finally {
 				dispose();
 			}
@@ -50,10 +49,10 @@ describe("useBookmarkForm", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const form = useBookmarkForm(opts);
-				
+
 				// 打开创建模式
 				form.openCreate();
-				
+
 				// 验证状态
 				expect(form.form.open).toBe(true);
 				expect(form.form.editing).toBeNull();
@@ -62,7 +61,6 @@ describe("useBookmarkForm", () => {
 				expect(form.form.desc).toBe("");
 				expect(form.form.tags).toEqual([]);
 				expect(form.form.error).toBeNull();
-				
 			} finally {
 				dispose();
 			}
@@ -74,7 +72,7 @@ describe("useBookmarkForm", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const form = useBookmarkForm(opts);
-				
+
 				// 模拟书签数据
 				const mockBookmark = {
 					id: 1,
@@ -86,10 +84,10 @@ describe("useBookmarkForm", () => {
 					created_at: "2024-01-01",
 					updated_at: "2024-01-01",
 				};
-				
+
 				// 打开编辑模式
 				form.openEdit(mockBookmark);
-				
+
 				// 验证状态
 				expect(form.form.open).toBe(true);
 				expect(form.form.editing).toEqual(mockBookmark);
@@ -98,7 +96,6 @@ describe("useBookmarkForm", () => {
 				expect(form.form.desc).toBe("测试描述");
 				expect(form.form.tags).toEqual(["tag1", "tag2"]);
 				expect(form.form.error).toBeNull();
-				
 			} finally {
 				dispose();
 			}
@@ -110,22 +107,21 @@ describe("useBookmarkForm", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const form = useBookmarkForm(opts);
-				
+
 				// 打开创建模式
 				form.openCreate();
-				
+
 				// 测试空标题验证
 				form.setForm("title", "");
 				form.setForm("url", "https://example.com");
 				await form.handleSave();
 				expect(form.form.error).toBe("标题不能为空");
-				
+
 				// 测试无效URL验证
 				form.setForm("title", "测试标题");
 				form.setForm("url", "invalid-url");
 				await form.handleSave();
 				expect(form.form.error).toBe("URL 必须以 http:// 或 https:// 开头");
-				
 			} finally {
 				dispose();
 			}
@@ -138,7 +134,7 @@ describe("useBookmarkForm", () => {
 		const mockCreateBookmarkE = vi.mocked(createBookmarkE);
 		const { tryAsync } = await import("@shared/utils");
 		const mockTryAsync = vi.mocked(tryAsync);
-		
+
 		const mockResult = {
 			id: 1,
 			title: "测试标题",
@@ -149,38 +145,37 @@ describe("useBookmarkForm", () => {
 			created_at: "2024-01-01",
 			updated_at: "2024-01-01",
 		};
-		
+
 		// 模拟tryAsync实际调用传入的函数
 		mockTryAsync.mockImplementationOnce(async (fn) => {
 			const result = await fn();
 			return { ok: true, value: result };
 		});
-		
+
 		// 模拟createBookmarkE返回成功结果
 		mockCreateBookmarkE.mockResolvedValueOnce(mockResult);
 
 		await createRoot(async (dispose) => {
 			try {
 				const form = useBookmarkForm(opts);
-				
+
 				// 打开创建模式
 				form.openCreate();
-				
+
 				// 填写表单
 				form.setForm("title", "测试标题");
 				form.setForm("url", "https://example.com");
 				form.setForm("desc", "测试描述");
 				form.addTag("tag1");
-				
+
 				// 保存
 				await form.handleSave();
-				
+
 				// 验证createBookmarkE被调用
 				expect(mockCreateBookmarkE).toHaveBeenCalledTimes(1);
-				
+
 				// 验证onSaved被调用
 				expect(onSavedMock).toHaveBeenCalledTimes(1);
-				
 			} finally {
 				dispose();
 			}

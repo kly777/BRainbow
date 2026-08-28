@@ -37,14 +37,18 @@ export function BookmarkItem(props: {
 	onTagsChanged?: () => void;
 }) {
 	const { bm } = props;
-	const [accessibility, setAccessibility] = createSignal<"unknown" | "ok" | "fail">("unknown");
+	const [accessibility, setAccessibility] = createSignal<
+		"unknown" | "ok" | "fail"
+	>("unknown");
 	const [checking, setChecking] = createSignal(false);
 	const [refreshing, setRefreshing] = createSignal(false);
 
 	// AI 标签建议状态
 	const [suggesting, setSuggesting] = createSignal(false);
 	const [suggestedTags, setSuggestedTags] = createSignal<string[]>([]);
-	const [selectedSuggested, setSelectedSuggested] = createSignal<Set<string>>(new Set<string>());
+	const [selectedSuggested, setSelectedSuggested] = createSignal<Set<string>>(
+		new Set<string>(),
+	);
 
 	const handleCheckAccessibility = async () => {
 		setChecking(true);
@@ -68,7 +72,10 @@ export function BookmarkItem(props: {
 				notifySuccess("AI 建议的标签都已存在");
 			}
 		} catch (e: unknown) {
-			notifyError("AI 标签建议失败", e instanceof Error ? e : new Error(String(e)));
+			notifyError(
+				"AI 标签建议失败",
+				e instanceof Error ? e : new Error(String(e)),
+			);
 		}
 		setSuggesting(false);
 	};
@@ -98,7 +105,10 @@ export function BookmarkItem(props: {
 			notifySuccess(`已添加 ${toAdd.length} 个标签`);
 			props.onTagsChanged?.();
 		} catch (e: unknown) {
-			notifyError("添加标签失败", e instanceof Error ? e : new Error(String(e)));
+			notifyError(
+				"添加标签失败",
+				e instanceof Error ? e : new Error(String(e)),
+			);
 		}
 	};
 
@@ -190,18 +200,46 @@ export function BookmarkItem(props: {
 			</div>
 			<div class={styles.itemActions}>
 				<Tooltip label="AI 标签">
-					<Button variant="icon" onClick={handleSuggestTags} disabled={suggesting()}>
-						{suggesting() ? <IconLoader size={16} /> : <IconSparkles size={16} />}
+					<Button
+						variant="icon"
+						onClick={handleSuggestTags}
+						disabled={suggesting()}
+					>
+						{suggesting() ? (
+							<IconLoader size={16} />
+						) : (
+							<IconSparkles size={16} />
+						)}
 					</Button>
 				</Tooltip>
 				<Tooltip label="刷新标题">
-					<Button variant="icon" onClick={props.onRefreshTitle} disabled={refreshing()}>
-						{refreshing() ? <IconLoader size={16} /> : <IconRefresh size={16} />}
+					<Button
+						variant="icon"
+						onClick={props.onRefreshTitle}
+						disabled={refreshing()}
+					>
+						{refreshing() ? (
+							<IconLoader size={16} />
+						) : (
+							<IconRefresh size={16} />
+						)}
 					</Button>
 				</Tooltip>
 				<Tooltip label="检测可访问性">
-					<Button variant="icon" onClick={handleCheckAccessibility} disabled={checking()}>
-						{checking() ? <IconLoader size={16} /> : accessibility() === "ok" ? <IconCheckCircle size={16} /> : accessibility() === "fail" ? <IconXCircle size={16} /> : <IconLink size={16} />}
+					<Button
+						variant="icon"
+						onClick={handleCheckAccessibility}
+						disabled={checking()}
+					>
+						{checking() ? (
+							<IconLoader size={16} />
+						) : accessibility() === "ok" ? (
+							<IconCheckCircle size={16} />
+						) : accessibility() === "fail" ? (
+							<IconXCircle size={16} />
+						) : (
+							<IconLink size={16} />
+						)}
 					</Button>
 				</Tooltip>
 				<Tooltip label="编辑">

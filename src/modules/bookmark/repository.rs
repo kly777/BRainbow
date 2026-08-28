@@ -4,7 +4,9 @@ use std::sync::Arc;
 
 use crate::shared::db_query::like_contains;
 
-use super::model::{Bookmark, BookmarkRow, BookmarkTag, BookmarkTagWithCount, GroupedBookmarksResponse, TagGroup};
+use super::model::{
+    Bookmark, BookmarkRow, BookmarkTag, BookmarkTagWithCount, GroupedBookmarksResponse, TagGroup,
+};
 
 /// 书签行公共 SELECT（含聚合标签子查询，按名称排序保证与 get_bookmark_tags 一致）
 const BOOKMARK_SELECT: &str = "SELECT id, title, url, description, visit_count, created_at, updated_at, \
@@ -18,7 +20,9 @@ const BOOKMARK_SELECT: &str = "SELECT id, title, url, description, visit_count, 
 /// 特殊值 "__untagged__" 表示筛选没有标签的书签
 fn tags_filter_clause(builder: &mut QueryBuilder<Sqlite>, tag: &str) {
     if tag == "__untagged__" {
-        builder.push(" AND NOT EXISTS (SELECT 1 FROM bookmark_tag_rel WHERE bookmark_id = bookmark.id)");
+        builder.push(
+            " AND NOT EXISTS (SELECT 1 FROM bookmark_tag_rel WHERE bookmark_id = bookmark.id)",
+        );
     } else {
         builder.push(" AND EXISTS (SELECT 1 FROM bookmark_tag_rel fr JOIN bookmark_tag ft ON ft.id = fr.tag_id WHERE fr.bookmark_id = bookmark.id AND ft.name = ");
         builder.push_bind(tag);
@@ -351,10 +355,7 @@ impl BookmarkRepo {
             tags_filter_clause(&mut builder, &tag_row.name);
             builder.push(" ORDER BY visit_count DESC, created_at DESC");
 
-            let items: Vec<BookmarkRow> = builder
-                .build_query_as()
-                .fetch_all(&*self.pool)
-                .await?;
+            let items: Vec<BookmarkRow> = builder.build_query_as().fetch_all(&*self.pool).await?;
             let bookmarks = items.into_iter().map(BookmarkRow::into_bookmark).collect();
 
             groups.push(TagGroup {
@@ -369,14 +370,19 @@ impl BookmarkRepo {
         untagged_builder.push(" WHERE (user_id = ");
         untagged_builder.push_bind(user_id);
         untagged_builder.push(" OR user_id IS NULL)");
-        untagged_builder.push(" AND NOT EXISTS (SELECT 1 FROM bookmark_tag_rel WHERE bookmark_id = bookmark.id)");
+        untagged_builder.push(
+            " AND NOT EXISTS (SELECT 1 FROM bookmark_tag_rel WHERE bookmark_id = bookmark.id)",
+        );
         untagged_builder.push(" ORDER BY visit_count DESC, created_at DESC");
 
         let untagged_rows: Vec<BookmarkRow> = untagged_builder
             .build_query_as()
             .fetch_all(&*self.pool)
             .await?;
-        let untagged = untagged_rows.into_iter().map(BookmarkRow::into_bookmark).collect();
+        let untagged = untagged_rows
+            .into_iter()
+            .map(BookmarkRow::into_bookmark)
+            .collect();
 
         Ok(GroupedBookmarksResponse { groups, untagged })
     }
@@ -392,7 +398,9 @@ impl BookmarkRepo {
     ) -> Result<(Vec<Bookmark>, i64), sqlx::Error> {
         let keywords: Vec<&str> = query.split_whitespace().collect();
         if keywords.is_empty() {
-            return self.find_all_paginated(user_id, limit, offset, tag, "created_at").await;
+            return self
+                .find_all_paginated(user_id, limit, offset, tag, "created_at")
+                .await;
         }
 
         let mut count_builder =

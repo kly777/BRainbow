@@ -3,9 +3,20 @@
 import { Button, PageHead, SearchInput } from "@components/ui";
 import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@shared/api";
-import { type Component, createEffect, createResource, createSignal, For, Show } from "solid-js";
+import {
+	type Component,
+	createEffect,
+	createResource,
+	createSignal,
+	For,
+	Show,
+} from "solid-js";
 import type { Bookmark, GroupedBookmarksResponse } from "./api.ts";
-import { getGroupedBookmarksE, incrementBookmarkVisitE, searchBookmarksE } from "./api.ts";
+import {
+	getGroupedBookmarksE,
+	incrementBookmarkVisitE,
+	searchBookmarksE,
+} from "./api.ts";
 import styles from "./BookmarkPage.module.css";
 import Favicon from "./components/Favicon.tsx";
 import { IconSettings, IconX } from "./components/icons.tsx";
@@ -50,22 +61,20 @@ const TagGroupCard: Component<{
 			<span class={styles.tagGroupName}>#{props.tag}</span>
 			<span class={styles.tagGroupMeta}>
 				{props.bookmarks.length} 个书签
-				<Show when={props.totalVisits > 0}>
-					{" "}· {props.totalVisits} 次访问
-				</Show>
+				<Show when={props.totalVisits > 0}> · {props.totalVisits} 次访问</Show>
 			</span>
 		</div>
 		<div class={styles.tagGroupList}>
-			<For each={props.bookmarks}>
-				{(bm) => <BookmarkLink bm={bm} />}
-			</For>
+			<For each={props.bookmarks}>{(bm) => <BookmarkLink bm={bm} />}</For>
 		</div>
 	</div>
 );
 
 export default function BookmarkPage() {
 	const [searchQuery, setSearchQuery] = createSignal("");
-	const [searchResults, setSearchResults] = createSignal<Bookmark[] | null>(null);
+	const [searchResults, setSearchResults] = createSignal<Bookmark[] | null>(
+		null,
+	);
 	const [searching, setSearching] = createSignal(false);
 	const [searchError, setSearchError] = createSignal<string | null>(null);
 
@@ -116,7 +125,7 @@ export default function BookmarkPage() {
 						<Button
 							variant="secondary"
 							size="sm"
-							onClick={() => window.location.href = PATHS.bookmarkManage}
+							onClick={() => (window.location.href = PATHS.bookmarkManage)}
 						>
 							<IconSettings size={14} /> 管理
 						</Button>
@@ -155,7 +164,9 @@ export default function BookmarkPage() {
 				</Show>
 				<Show when={grouped.error}>
 					<div class={styles.state}>
-						<p class={styles.errorText}>加载失败：{getErrorMessage(grouped.error)}</p>
+						<p class={styles.errorText}>
+							加载失败：{getErrorMessage(grouped.error)}
+						</p>
 						<Button variant="secondary" size="sm" onClick={() => refetch()}>
 							重试
 						</Button>
@@ -180,7 +191,11 @@ export default function BookmarkPage() {
 									bookmarks={data().untagged}
 								/>
 							</Show>
-							<Show when={data().groups.length === 0 && data().untagged.length === 0}>
+							<Show
+								when={
+									data().groups.length === 0 && data().untagged.length === 0
+								}
+							>
 								<div class={styles.state}>
 									还没有书签，点击右上角"管理"按钮添加第一个吧！
 								</div>

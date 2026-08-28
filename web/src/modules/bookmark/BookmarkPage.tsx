@@ -80,12 +80,13 @@ export default function BookmarkPage() {
 
 	const [grouped, { refetch }] = createResource(() => getGroupedBookmarksE());
 
-	// 搜索模式
+	// 搜索模式（不闪烁：保留旧结果直到新结果到达）
 	let searchSeq = 0;
 	async function handleSearch(q: string) {
 		setSearchQuery(q);
 		if (!q.trim()) {
 			setSearchResults(null);
+			setSearchError(null);
 			return;
 		}
 		const seq = ++searchSeq;
@@ -111,9 +112,9 @@ export default function BookmarkPage() {
 						<SearchInput
 							value={searchQuery()}
 							onSearch={handleSearch}
-							placeholder="搜索标题 / URL / 备注…"
+							placeholder="搜索标题 / URL / 备注 / 标签…"
 						/>
-						<Show when={searchQuery().trim()}>
+						<div style={{ visibility: searchQuery().trim() ? "visible" : "hidden" }}>
 							<Button
 								variant="icon"
 								title="清空搜索"
@@ -121,7 +122,7 @@ export default function BookmarkPage() {
 							>
 								<X size={14} />
 							</Button>
-						</Show>
+						</div>
 						<Button
 							variant="secondary"
 							size="sm"
@@ -133,20 +134,20 @@ export default function BookmarkPage() {
 				}
 			/>
 
-			{/* 搜索结果 */}
+			{/* 搜索结果（无闪烁：搜索中保留旧结果，仅首次显示加载态） */}
 			<Show when={searchResults() !== null}>
-				<Show when={searching()}>
-					<div class={styles.state}>搜索中…</div>
-				</Show>
 				<Show when={searchError()}>
 					<div class={styles.state}>
 						<p class={styles.errorText}>{searchError()}</p>
 					</div>
 				</Show>
-				<Show when={!searching() && !searchError()}>
+				<Show when={!searchError()}>
 					<div class={styles.searchResults}>
 						<div class={styles.searchResultsHeader}>
 							搜索结果：{searchResults()?.length ?? 0} 条
+							<Show when={searching()}>
+								<span class={styles.searchUpdating}> 更新中…</span>
+							</Show>
 						</div>
 						<div class={styles.list}>
 							<For each={searchResults() ?? []}>

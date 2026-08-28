@@ -158,6 +158,13 @@
 	letter-spacing: 0.04em;
 }
 
+.search-updating {
+	text-transform: none;
+	letter-spacing: normal;
+	font-weight: 400;
+	opacity: 0.6;
+}
+
 /* ── Management list (/bookmark/manage) ── */
 
 .list {

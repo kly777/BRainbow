@@ -134,9 +134,9 @@ export default function BookmarkPage() {
 						<SearchInput
 							value={b.searchQuery()}
 							onSearch={b.handleSearch}
-							placeholder="搜索标题 / URL / 备注…"
+							placeholder="搜索标题 / URL / 备注 / 标签…"
 						/>
-						<Show when={b.searchQuery().trim()}>
+						<div style={{ visibility: b.searchQuery().trim() ? "visible" : "hidden" }}>
 							<Button
 								variant="icon"
 								title="清空搜索"
@@ -144,7 +144,7 @@ export default function BookmarkPage() {
 							>
 								<X size={14} />
 							</Button>
-						</Show>
+						</div>
 						<TagFilter value={b.tagFilter()} onChange={b.handleTagFilter} />
 						<Button
 							variant="secondary"

@@ -5,6 +5,7 @@ import { useAuth } from "@app/context/auth.tsx";
 import { PATHS } from "@config/paths";
 import { openAiSettings } from "@modules/ai-setting";
 import { AUTH_REQUIRED_EVENT } from "@shared/api";
+import { addRecentPage } from "@shared/utils/recent-pages.ts";
 import { useNavigate } from "@solidjs/router";
 import {
 	createEffect,
@@ -57,8 +58,14 @@ export interface Suggestion {
 }
 
 export function usePalette() {
-	const navigate = useNavigate();
+	const routerNavigate = useNavigate();
 	const { auth, logout } = useAuth();
+
+	/** 包装 navigate，自动记录最近访问页面 */
+	const navigate = (path: string) => {
+		addRecentPage(path);
+		routerNavigate(path);
+	};
 	const [value, setValue] = createSignal("");
 	const [open, setOpen] = createSignal(false);
 	const [selectedIndex, setSelectedIndex] = createSignal(0);

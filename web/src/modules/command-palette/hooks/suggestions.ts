@@ -1,10 +1,11 @@
 // ── 建议列表构建（nav / cmd / 站内搜索）：纯函数，usePalette 以 memo 组合 ──
 
-import { NAV_ROUTES } from "@config/navigation";
+import { NAV_ITEMS, NAV_ROUTES } from "@config/navigation";
 import { fillPath, PATHS } from "@config/paths";
 import type { SearchHit, SearchTarget } from "../api.ts";
 import { fuzzyFilter } from "./fuzzy.ts";
 import type { Suggestion } from "./usePalette.ts";
+import { getRecentPages } from "@shared/utils/recent-pages.ts";
 
 const BING = "https://www.bing.com/search?q=";
 const DUCK = "https://duckduckgo.com/?q=";
@@ -63,29 +64,13 @@ export function resolveTargetUrl(target: SearchTarget): string {
 	}
 }
 
-/** 路由导航建议（/ 前缀模式） */
+/** 路由导航建议（/ 前缀模式）：最近访问优先，搜索时扩展到全部页面 */
 export function buildNavItems(
 	q: string,
 	navigate: (path: string) => void,
 	close: () => void,
 ): Suggestion[] {
-	if (!q) {
-		return NAV_ROUTES.map((r) => ({
-			label: r.label,
-			desc: r.desc,
-			extra: r.path,
-			onSelect: () => {
-				navigate(r.path);
-				close();
-			},
-		}));
-	}
-	const filtered = fuzzyFilter(NAV_ROUTES, q, (r) => [
-		r.path.slice(1),
-		r.label,
-		r.desc,
-	]);
-	return filtered.map((r) => ({
+	const makeItem = (r: (typeof NAV_ITEMS)[number]) => ({
 		label: r.label,
 		desc: r.desc,
 		extra: r.path,
@@ -93,7 +78,24 @@ export function buildNavItems(
 			navigate(r.path);
 			close();
 		},
-	}));
+	});
+
+	if (!q) {
+		// 最近访问的页面排在前面
+		const recent = new Set(getRecentPages());
+		const recentItems = NAV_ROUTES.filter((r) => recent.has(r.path));
+		const otherItems = NAV_ROUTES.filter((r) => !recent.has(r.path));
+		return [...recentItems.map(makeItem), ...otherItems.map(makeItem)];
+	}
+
+	// 搜索时使用全部页面（包括详情页等非 nav 页面）
+	const filtered = fuzzyFilter(NAV_ITEMS, q, (r) => [
+		r.path.slice(1),
+		r.label,
+		r.desc,
+		r.title,
+	]);
+	return filtered.map(makeItem);
 }
 
 interface CmdEntry {

@@ -106,12 +106,21 @@ impl SearchRegistry {
 
     /// 注册一个搜索提供者
     pub fn register(&self, provider: Arc<dyn SearchPort>) {
-        self.providers.write().unwrap().push(provider);
+        // 锁中毒时仍尝试继续（前一个持有者 panic 不影响数据完整性）
+        let mut guard = match self.providers.write() {
+            Ok(g) => g,
+            Err(e) => e.into_inner(),
+        };
+        guard.push(provider);
     }
 
     /// 获取所有已注册的提供者
     pub fn providers(&self) -> Vec<Arc<dyn SearchPort>> {
-        self.providers.read().unwrap().clone()
+        let guard = match self.providers.read() {
+            Ok(g) => g,
+            Err(e) => e.into_inner(),
+        };
+        guard.clone()
     }
 }
 

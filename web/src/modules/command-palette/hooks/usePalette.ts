@@ -149,7 +149,7 @@ export function usePalette() {
 		if (items.length > 0) {
 			items[Math.min(selectedIndex(), items.length - 1)].onSelect();
 		} else if (mode() === "search" && query()) {
-			search.fallbackSearch(query());
+			navigate(`${PATHS.search}?q=${encodeURIComponent(query())}`);
 		}
 		close();
 	};

@@ -10,6 +10,7 @@ const CHAT = "/chat";
 
 export const PATHS = {
 	home: "/",
+	search: "/search",
 	task: "/task",
 	taskDetail: "/task/:id",
 	ontology: "/ontology",

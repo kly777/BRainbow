@@ -20,6 +20,13 @@ export const NAV_ITEMS: NavItem[] = [
 		nav: true,
 	},
 	{
+		path: PATHS.search,
+		label: "搜索",
+		title: "Search",
+		desc: "全局搜索结果",
+		nav: false,
+	},
+	{
 		path: PATHS.task,
 		label: "任务",
 		title: "Tasks",

@@ -1,0 +1,113 @@
+.page {
+	padding: var(--space-lg);
+	max-width: 48rem;
+	margin: 0 auto;
+}
+
+.form {
+	margin-bottom: var(--space-lg);
+}
+
+.input {
+	width: 100%;
+	padding: var(--space-sm) var(--space-md);
+	font-size: var(--text-lg);
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-md);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+}
+
+.input:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+}
+
+.filters {
+	display: flex;
+	gap: var(--space-xs);
+	flex-wrap: wrap;
+	margin-bottom: var(--space-md);
+}
+
+.filter-btn {
+	padding: var(--space-2xs) var(--space-sm);
+	font-size: var(--text-xs);
+	border-radius: var(--radius-full);
+	border: 1px solid var(--t-color-border);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	cursor: pointer;
+	transition: background var(--t-transition-fast), color var(--t-transition-fast);
+}
+
+.filter-btn:hover {
+	background: var(--t-color-surface-raised);
+}
+
+.filter-btn-active {
+	background: var(--t-color-accent);
+	color: var(--t-color-on-solid);
+	border-color: var(--t-color-accent);
+}
+
+.status {
+	text-align: center;
+	padding: var(--space-lg);
+	color: var(--t-color-ink-faint);
+}
+
+.results {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
+}
+
+.hit {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--space-md);
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: var(--t-color-surface);
+	cursor: pointer;
+	text-align: left;
+	color: inherit;
+	width: 100%;
+	transition: background var(--t-transition-fast);
+}
+
+.hit:hover {
+	background: var(--t-color-surface-raised);
+}
+
+.hit-kind {
+	font-size: var(--text-xs);
+	font-family: var(--t-font-mono);
+	color: var(--t-color-ink-faint);
+	min-width: 3.5rem;
+	text-align: right;
+}
+
+.hit-body {
+	flex: 1;
+}
+
+.hit-title {
+	font-weight: 600;
+	margin-bottom: var(--space-2xs);
+}
+
+.hit-snippet {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+}
+
+.hit-snippet mark {
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-ink);
+	border-radius: var(--radius-xs);
+	padding: 0 0.125em;
+}

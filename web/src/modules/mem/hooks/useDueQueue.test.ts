@@ -124,7 +124,9 @@ describe("useDueQueue", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const queue = useDueQueue({
+					// @ts-expect-error - mock type mismatch
 					fetchDue: fetchDueMock,
+					// @ts-expect-error - mock type mismatch
 					onItemChange: onItemChangeMock,
 				});
 
@@ -154,7 +156,9 @@ describe("useDueQueue", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const queue = useDueQueue({
+					// @ts-expect-error - mock type mismatch
 					fetchDue: fetchDueMock,
+					// @ts-expect-error - mock type mismatch
 					onItemChange: onItemChangeMock,
 				});
 
@@ -192,7 +196,9 @@ describe("useDueQueue", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const queue = useDueQueue({
+					// @ts-expect-error - mock type mismatch
 					fetchDue: fetchDueMock,
+					// @ts-expect-error - mock type mismatch
 					onItemChange: onItemChangeMock,
 				});
 
@@ -220,7 +226,9 @@ describe("useDueQueue", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const queue = useDueQueue({
+					// @ts-expect-error - mock type mismatch
 					fetchDue: fetchDueMock,
+					// @ts-expect-error - mock type mismatch
 					onItemChange: onItemChangeMock,
 				});
 
@@ -264,7 +272,9 @@ describe("useDueQueue", () => {
 		await createRoot(async (dispose) => {
 			try {
 				const queue = useDueQueue({
+					// @ts-expect-error - mock type mismatch
 					fetchDue: fetchDueMock,
+					// @ts-expect-error - mock type mismatch
 					onItemChange: onItemChangeMock,
 					estimateParams: () => estimateParams,
 				});

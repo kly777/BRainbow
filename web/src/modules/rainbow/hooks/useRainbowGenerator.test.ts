@@ -11,10 +11,10 @@ vi.mock("@shared/utils", () => ({
 		})),
 	},
 	Angle: class Angle {
-		constructor(radian) {
-			this.radian = radian;
+		constructor(public radian: number) {
 			this.degree = radian * (180 / Math.PI);
 		}
+		degree: number;
 	},
 }));
 
@@ -60,7 +60,7 @@ describe("useRainbowGenerator", () => {
 
 				// 验证每个颜色都有oklch属性
 				colors.forEach((color) => {
-					expect(color.oklch).toBeDefined();
+					expect(color.toOklch()).toBeDefined();
 				});
 			} finally {
 				dispose();

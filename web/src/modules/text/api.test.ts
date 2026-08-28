@@ -61,6 +61,7 @@ describe("text API", () => {
 
 		// 模拟put返回成功结果
 		mockPut.mockResolvedValueOnce(mockResult);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.text.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 调用保存文本数据API

@@ -119,7 +119,10 @@ describe("db API", () => {
 			headers: {
 				get: vi.fn().mockReturnValue('filename="test.csv"'),
 			},
-		};
+			ok: true,
+			status: 200,
+			statusText: "OK",
+		} as any;
 
 		// 模拟requestFile返回成功结果
 		mockRequestFile.mockResolvedValueOnce(mockResponse);

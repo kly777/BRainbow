@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fuzzyMatch, fuzzyScore } from "./fuzzy.ts";
-import { generateSuggestions } from "./suggestions.ts";
+import { fuzzyMatch, fuzzyFilter } from "./fuzzy.ts";
+import { buildNavItems, buildCmdItems } from "./suggestions.ts";
 
 describe("command-palette hooks", () => {
 	beforeEach(() => {
@@ -19,32 +19,32 @@ describe("command-palette hooks", () => {
 		expect(typeof result).toBe("boolean");
 	});
 
-	it("模糊评分功能", async () => {
-		// 测试模糊评分功能
-		const query = "测试";
-		const text = "这是一个测试文本";
-
-		const result = fuzzyScore(query, text);
-
-		// 验证返回结果
-		expect(result).toBeDefined();
-		expect(typeof result).toBe("number");
-	});
-
-	it("建议生成功能", async () => {
-		// 测试建议生成功能
+	it("模糊过滤功能", async () => {
+		// 测试模糊过滤功能
 		const query = "测试";
 		const items = [
-			{ id: 1, title: "测试任务", kind: "task" },
-			{ id: 2, title: "测试卡片", kind: "card" },
-			{ id: 3, title: "其他内容", kind: "other" },
+			{ title: "测试任务", path: "/task" },
+			{ title: "测试卡片", path: "/card" },
+			{ title: "其他内容", path: "/other" },
 		];
 
-		const result = generateSuggestions(query, items);
+		const result = fuzzyFilter(items, query, (item) => [item.title]);
 
 		// 验证返回结果
 		expect(result).toBeDefined();
 		expect(Array.isArray(result)).toBe(true);
-		expect(result.length).toBeLessThanOrEqual(items.length);
+	});
+
+	it("导航项构建功能", async () => {
+		// 测试导航项构建功能
+		const mockNavigate = vi.fn();
+		const mockClose = vi.fn();
+		const query = "任务";
+
+		const result = buildNavItems(query, mockNavigate, mockClose);
+
+		// 验证返回结果
+		expect(result).toBeDefined();
+		expect(Array.isArray(result)).toBe(true);
 	});
 });

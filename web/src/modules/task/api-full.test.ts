@@ -89,6 +89,7 @@ describe("task API", () => {
 
 		// 模拟post返回成功结果
 		mockPost.mockResolvedValueOnce(mockTask);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.tasks.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 调用创建任务API
@@ -126,6 +127,7 @@ describe("task API", () => {
 
 		// 模拟patch返回成功结果
 		mockPatch.mockResolvedValueOnce(mockTask);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.tasks.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 调用更新任务API
@@ -151,6 +153,7 @@ describe("task API", () => {
 
 		// 模拟request返回成功结果
 		mockRequest.mockResolvedValueOnce(mockResult);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.tasks.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 调用删除任务API
@@ -182,6 +185,7 @@ describe("task API", () => {
 
 		// 模拟request返回成功结果
 		mockRequest.mockResolvedValueOnce(mockTask);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.tasks.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 调用完成任务API

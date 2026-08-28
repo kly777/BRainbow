@@ -110,6 +110,7 @@ describe("card API", () => {
 
 		// 模拟post返回成功结果
 		mockPost.mockResolvedValueOnce(mockCard);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.cards.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 调用创建卡片API
@@ -138,6 +139,7 @@ describe("card API", () => {
 
 		// 模拟request返回成功结果
 		mockRequest.mockResolvedValueOnce(mockCard);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.cards.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 调用更新卡片API
@@ -164,6 +166,7 @@ describe("card API", () => {
 
 		// 模拟del返回成功结果
 		mockDel.mockResolvedValueOnce(mockResult);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.cards.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 调用删除卡片API

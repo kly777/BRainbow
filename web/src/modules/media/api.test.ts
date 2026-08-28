@@ -53,6 +53,7 @@ describe("media API", () => {
 
 		// 模拟request返回成功结果
 		mockRequest.mockResolvedValueOnce(mockMediaItem);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.media.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 创建模拟文件
@@ -172,6 +173,7 @@ describe("media API", () => {
 
 		// 模拟patch返回成功结果
 		mockPatch.mockResolvedValueOnce(mockMediaItem);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.media.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 调用重命名媒体API
@@ -197,6 +199,7 @@ describe("media API", () => {
 
 		// 模拟del返回成功结果
 		mockDel.mockResolvedValueOnce(mockResult);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.media.invalidate.mockImplementationOnce((promise) => promise);
 
 		// 调用删除媒体API

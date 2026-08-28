@@ -28,7 +28,7 @@ vi.mock("@shared/api", () => ({
 	cachedRequest: vi.fn(),
 	domains: {
 		bookmarks: {
-			invalidate: vi.fn((promise) => promise),
+			invalidate: vi.fn((promise: any) => promise),
 		},
 	},
 }));
@@ -124,8 +124,9 @@ describe("bookmark API", () => {
 
 		// 模拟post返回成功结果
 		mockPost.mockResolvedValueOnce(mockBookmark);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.bookmarks.invalidate.mockImplementationOnce(
-			(promise) => promise,
+			(promise: any) => promise,
 		);
 
 		// 调用创建书签API
@@ -167,8 +168,9 @@ describe("bookmark API", () => {
 
 		// 模拟patch返回成功结果
 		mockPatch.mockResolvedValueOnce(mockBookmark);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.bookmarks.invalidate.mockImplementationOnce(
-			(promise) => promise,
+			(promise: any) => promise,
 		);
 
 		// 调用更新书签API
@@ -194,8 +196,9 @@ describe("bookmark API", () => {
 
 		// 模拟del返回成功结果
 		mockDel.mockResolvedValueOnce(mockResult);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.bookmarks.invalidate.mockImplementationOnce(
-			(promise) => promise,
+			(promise: any) => promise,
 		);
 
 		// 调用删除书签API
@@ -274,7 +277,8 @@ describe("bookmark API", () => {
 		mockCachedRequest.mockResolvedValueOnce(mockTags);
 		mockRequest.mockResolvedValueOnce(mockTagResult);
 		mockDel.mockResolvedValueOnce(mockDeleteResult);
-		mockDomains.bookmarks.invalidate.mockImplementation((promise) => promise);
+		// @ts-expect-error - mock type mismatch
+		mockDomains.bookmarks.invalidate.mockImplementation((promise: any) => promise);
 
 		// 调用搜索标签API
 		const tagsResult = await searchBookmarkTagsE("测试");
@@ -326,8 +330,9 @@ describe("bookmark API", () => {
 
 		// 模拟request返回成功结果
 		mockRequest.mockResolvedValueOnce(mockResult);
+		// @ts-expect-error - mock type mismatch
 		mockDomains.bookmarks.invalidate.mockImplementationOnce(
-			(promise) => promise,
+			(promise: any) => promise,
 		);
 
 		// 创建模拟文件

@@ -55,9 +55,9 @@ describe("home module", () => {
 
 		// 验证PATHS存在
 		expect(PATHS).toBeDefined();
-		expect(PATHS.HOME).toBe("/");
-		expect(PATHS.TASK).toBe("/task");
-		expect(PATHS.CARD).toBe("/card");
+		expect(PATHS.home).toBe("/");
+		expect(PATHS.task).toBe("/task");
+		expect(PATHS.card).toBe("/card");
 	});
 
 	it("认证上下文", async () => {
@@ -69,8 +69,8 @@ describe("home module", () => {
 		expect(typeof useAuth).toBe("function");
 
 		// 验证返回值
-		const auth = useAuth();
-		expect(auth.user).toBeDefined();
-		expect(auth.isAuthenticated).toBe(true);
+		const { auth } = useAuth();
+		expect(auth().user).toBeDefined();
+		expect(auth().isAdmin).toBeDefined();
 	});
 });

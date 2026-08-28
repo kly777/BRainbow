@@ -134,6 +134,7 @@ describe("useChatSession", () => {
 		mockUseUrlParams.mockReturnValueOnce({
 			get: mockGet,
 			set: mockSet,
+			setSearchParams: vi.fn(),
 		});
 
 		await createRoot(async (dispose) => {

@@ -4,7 +4,6 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
-import purgecss from "vite-plugin-purgecss";
 import solid from "vite-plugin-solid";
 import { NAV_ITEMS } from "./src/config/navigation.ts";
 
@@ -128,13 +127,6 @@ export default defineConfig(({ command, mode }) => {
 			sitemapPlugin(siteUrl),
 			seoAssetsPlugin(siteUrl),
 			markdownPagesPlugin(siteUrl),
-			purgecss({
-				content: ["./src/**/*.tsx", "./src/**/*.ts", "./index.html"],
-				safelist: {
-					standard: [/^data-/, /^aria-/],
-					greedy: [/^_/],
-				},
-			}),
 		],
 		envDir,
 

@@ -178,7 +178,7 @@ export default function BookmarkPage() {
 				<Show when={grouped()}>
 					{(data) => (
 						<div class={styles.groupsContainer}>
-							<For each={data().groups}>
+							<For each={data().groups.filter((g) => g.bookmarks.length > 2)}>
 								{(group) => (
 									<TagGroupCard
 										tag={group.tag}

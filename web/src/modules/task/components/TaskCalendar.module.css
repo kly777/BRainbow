@@ -61,6 +61,68 @@
 	font-size: var(--text-sm);
 }
 
+.day-header-short {
+	display: none;
+}
+
+/* ── 响应式 ── */
+@media (width <= 768px) {
+	.calendar-view {
+		padding: var(--space-md);
+	}
+
+	.calendar-header {
+		margin-bottom: var(--space-md);
+	}
+
+	.calendar-title {
+		font-size: var(--text-base);
+	}
+
+	.nav-button {
+		padding: var(--space-xs) var(--space-sm);
+		font-size: var(--text-sm);
+	}
+
+	.calendar-grid {
+		overflow-x: auto;
+	}
+
+	.day-header {
+		padding: var(--space-xs) var(--space-2xs);
+		font-size: var(--text-xs);
+		min-width: 2.5rem;
+	}
+
+	.day-header-full {
+		display: none;
+	}
+
+	.day-header-short {
+		display: block;
+	}
+
+	.calendar-day {
+		min-height: 4rem;
+		padding: var(--space-2xs);
+		min-width: 2.5rem;
+	}
+
+	.day-number {
+		font-size: var(--text-xs);
+		margin-bottom: var(--space-2xs);
+	}
+
+	.day-task {
+		font-size: var(--text-2xs);
+		padding: 1px var(--space-2xs);
+	}
+
+	.event-time {
+		display: none;
+	}
+}
+
 .today {
 	/* 挂载点类（无样式，供 JS 引用） */
 }

@@ -337,16 +337,58 @@ fn extract_html_title(html: &str) -> Option<String> {
     let content_start = start + tag_end + 1;
     let end = lower[content_start..].find("</title>")?;
     let title = html[content_start..content_start + end].trim();
-    // 解码常见 HTML 实体
-    let title = title
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
-        .replace("&apos;", "'")
-        .replace("&nbsp;", "\u{a0}");
-    Some(title)
+    Some(decode_html_entities(title))
+}
+
+/// 解码 HTML 实体：命名实体 + 数字字符引用（&#NNN; &#xHHHH;）
+fn decode_html_entities(s: &str) -> String {
+    if !s.contains('&') {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len());
+    let bytes = s.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'&' {
+            if let Some(semi) = s[i..].find(';') {
+                let entity = &s[i + 1..i + semi];
+                if let Some(ch) = decode_entity(entity) {
+                    out.push(ch);
+                    i += semi + 1;
+                    continue;
+                }
+            }
+            out.push('&');
+            i += 1;
+        } else {
+            // 安全：ASCII 字节直接追加，多字节 UTF-8 按 char 迭代
+            out.push(s[i..].chars().next().unwrap());
+            i += s[i..].char_indices().nth(0).map(|(_, ch)| ch.len_utf8()).unwrap_or(1);
+        }
+    }
+    out
+}
+
+fn decode_entity(entity: &str) -> Option<char> {
+    match entity {
+        "amp" => Some('&'),
+        "lt" => Some('<'),
+        "gt" => Some('>'),
+        "quot" => Some('"'),
+        "apos" | "#39" => Some('\''),
+        "nbsp" => Some('\u{a0}'),
+        _ => {
+            // &#NNN; (十进制) 或 &#xHHHH; (十六进制)
+            let num = if let Some(hex) = entity.strip_prefix("#x") {
+                u32::from_str_radix(hex, 16).ok()
+            } else if let Some(dec) = entity.strip_prefix('#') {
+                dec.parse::<u32>().ok()
+            } else {
+                None
+            };
+            num.and_then(char::from_u32)
+        }
+    }
 }
 
 /// 从 URL 中提取域名（简单字符串解析，避免引入 url crate）

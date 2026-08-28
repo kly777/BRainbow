@@ -62,7 +62,7 @@ const SPECS: &[(&str, &str, &str, &[&str], &str)] = &[
 
 pub async fn migrate(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
     // 1. 删除旧触发器
-    for (_, src, _, _, prefix) in SPECS {
+    for (_, _src, _, _, prefix) in SPECS {
         for suffix in ["_ai", "_ad", "_au"] {
             let name = format!("{prefix}_fts{suffix}");
             sqlx::query(sqlx::AssertSqlSafe(format!(

@@ -188,6 +188,11 @@
 		box-shadow var(--t-transition-fast);
 }
 
+.submit-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
 .submit-btn:hover:not(:disabled) {
 	background: var(--t-color-accent-strong);
 	transform: translateY(-1px);
@@ -195,11 +200,6 @@
 
 .submit-btn:active:not(:disabled) {
 	transform: translateY(0);
-}
-
-.submit-btn:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
 }
 
 /* ── Help Text ── */

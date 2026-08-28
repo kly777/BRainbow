@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT n.id AS node_id, t.id AS tree_id, t.title, n.content\n               FROM chat_node_fts fts\n               JOIN chat_node n ON n.id = fts.rowid\n               JOIN chat_tree t ON t.id = n.tree_id\n               WHERE chat_node_fts MATCH ?2\n                 AND (t.user_id = ?1 OR t.user_id IS NULL)\n               ORDER BY rank\n               LIMIT ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "node_id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "tree_id",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_tree",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_tree",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "content",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "content"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4b0db9a6f8a89ff596a3e204be9ce448fab5b17c496a4f531d586640b83cdaff"
+}

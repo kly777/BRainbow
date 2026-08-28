@@ -106,6 +106,13 @@ pub trait MemRepository: Send + Sync {
         cap: i64,
     ) -> Result<Vec<(i64, String, String)>, ServiceError>;
 
+    async fn search_hits_fts(
+        &self,
+        user_id: i32,
+        fts_query: &str,
+        cap: i64,
+    ) -> Result<Vec<(i64, String, String)>, ServiceError>;
+
     // ── State updates（通过 id + user_id 做所有权校验） ──
 
     async fn set_state(

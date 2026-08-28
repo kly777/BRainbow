@@ -10,7 +10,7 @@ use crate::shared::batch::BatchDataResponse;
 use crate::shared::error_types::ServiceError;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 use crate::shared::search::{
-    SearchHit, SearchPort, SearchTarget, clip, merge_snippets, normalize_search,
+    SearchHit, SearchPort, SearchTarget, clip, fts_query, merge_snippets, normalize_search,
 };
 
 /// 查询侧服务——纯读取，无副作用。
@@ -282,11 +282,17 @@ impl SearchPort for MemQueryService {
         let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
-        let rows = self
-            .repo
-            .search_hits(user_id, &like, cap)
-            .await
-            .map_err(|e| ServiceError::Internal(e.to_string()))?;
+        let rows = if let Some(fts) = fts_query(q) {
+            self.repo
+                .search_hits_fts(user_id, &fts, cap)
+                .await
+                .map_err(|e| ServiceError::Internal(e.to_string()))?
+        } else {
+            self.repo
+                .search_hits(user_id, &like, cap)
+                .await
+                .map_err(|e| ServiceError::Internal(e.to_string()))?
+        };
         Ok(rows
             .into_iter()
             .map(|(id, cue, target)| SearchHit {

@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use super::model::{Bookmark, BookmarkTag, BookmarkTagWithCount, GroupedBookmarksResponse};
 use super::repository::BookmarkRepo;
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit, SearchPort, SearchTarget, normalize_search, snippet};
+use crate::shared::search::{SearchHit, SearchPort, SearchTarget, fts_query, normalize_search, snippet};
 
 /// 查询侧服务——纯读取，无副作用。
 ///
@@ -101,11 +101,17 @@ impl SearchPort for BookmarkQueryService {
         let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
-        let rows = self
-            .repo
-            .search_hits(user_id, &like, cap)
-            .await
-            .map_err(ServiceError::Db)?;
+        let rows = if let Some(fts) = fts_query(q) {
+            self.repo
+                .search_hits_fts(user_id, &fts, cap)
+                .await
+                .map_err(ServiceError::Db)?
+        } else {
+            self.repo
+                .search_hits(user_id, &like, cap)
+                .await
+                .map_err(ServiceError::Db)?
+        };
         Ok(rows
             .into_iter()
             .map(|r| SearchHit {

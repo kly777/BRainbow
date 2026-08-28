@@ -82,6 +82,33 @@ impl TextRepo {
             .map(|r| (r.id, r.name, r.content))
             .collect())
     }
+
+    pub async fn search_hits_fts(
+        &self,
+        user_id: i32,
+        fts_query: &str,
+        cap: i64,
+    ) -> Result<Vec<(i64, String, String)>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            TextSearchRow,
+            r#"SELECT t.id, t.name, t.content
+               FROM text_note_fts fts
+               JOIN text_note t ON t.id = fts.rowid
+               WHERE text_note_fts MATCH ?2
+                 AND (t.user_id = ?1 OR t.user_id IS NULL)
+               ORDER BY rank
+               LIMIT ?3"#,
+            user_id,
+            fts_query,
+            cap
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| (r.id, r.name, r.content))
+            .collect())
+    }
 }
 
 #[cfg(test)]

@@ -240,6 +240,15 @@ impl MemRepository for FakeRepo {
         Ok(vec![])
     }
 
+    async fn search_hits_fts(
+        &self,
+        _user_id: i32,
+        _fts_query: &str,
+        _cap: i64,
+    ) -> Result<Vec<(i64, String, String)>, ServiceError> {
+        Ok(vec![])
+    }
+
     async fn get_next_mem(&self, _user_id: i32) -> Result<Option<i32>, ServiceError> {
         Ok(None)
     }

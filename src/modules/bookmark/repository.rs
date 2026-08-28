@@ -76,6 +76,31 @@ impl BookmarkRepo {
         Ok(rows)
     }
 
+    pub async fn search_hits_fts(
+        &self,
+        user_id: i32,
+        fts_query: &str,
+        cap: i64,
+    ) -> Result<Vec<BookmarkHitRow>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            BookmarkHitRow,
+            r#"SELECT b.id, b.title, b.url, b.description,
+                      0 AS "title_hit!: i64"
+               FROM bookmark_fts fts
+               JOIN bookmark b ON b.id = fts.rowid
+               WHERE bookmark_fts MATCH ?2
+                 AND (b.user_id = ?1 OR b.user_id IS NULL)
+               ORDER BY rank
+               LIMIT ?3"#,
+            user_id,
+            fts_query,
+            cap
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+        Ok(rows)
+    }
+
     /// 获取所有书签（分页，可选按标签过滤，支持排序）
     pub async fn find_all_paginated(
         &self,

@@ -1,0 +1,69 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT b.id, b.title, b.url, b.description,\n                      0 AS \"title_hit!: i64\"\n               FROM bookmark_fts fts\n               JOIN bookmark b ON b.id = fts.rowid\n               WHERE bookmark_fts MATCH ?2\n                 AND (b.user_id = ?1 OR b.user_id IS NULL)\n               ORDER BY rank\n               LIMIT ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "bookmark",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "bookmark",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "url",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "bookmark",
+            "name": "url"
+          }
+        }
+      },
+      {
+        "name": "description",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "bookmark",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "name": "title_hit!: i64",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "933d8a8b10b0bfed7a46c1e62046f84b35cec53cb084575179631b6c1f40dd13"
+}

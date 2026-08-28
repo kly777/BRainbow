@@ -1,0 +1,33 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT c.id, COALESCE(c.content, '') AS \"content!: String\"\n               FROM card_fts fts\n               JOIN card c ON c.id = fts.rowid\n               WHERE card_fts MATCH ?2\n                 AND (c.user_id = ?1 OR c.user_id IS NULL)\n               ORDER BY rank\n               LIMIT ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "card",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "content!: String",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "ad5fda4a6e059f9e6344e46c24c4abb83bad5f0714391e09d5dec0d4eec798b1"
+}

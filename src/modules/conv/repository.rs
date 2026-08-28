@@ -276,6 +276,39 @@ impl ConvRepo {
             })
             .collect())
     }
+
+    pub async fn search_hits_fts(
+        &self,
+        user_id: i32,
+        fts_query: &str,
+        cap: i64,
+    ) -> Result<Vec<SearchHit>, ServiceError> {
+        let rows = sqlx::query_as!(
+            ConvHitRow,
+            r#"SELECT c.conv_id, c.title
+               FROM conv_titles_fts fts
+               JOIN conv_titles c ON c.id = fts.rowid
+               WHERE conv_titles_fts MATCH ?2
+                 AND (c.user_id = ?1 OR c.user_id IS NULL)
+               ORDER BY rank
+               LIMIT ?3"#,
+            user_id,
+            fts_query,
+            cap
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| SearchHit {
+                kind: "conv".into(),
+                id: r.conv_id,
+                title: r.title,
+                snippet: String::new(),
+                target: SearchTarget::Conv { id: r.conv_id },
+            })
+            .collect())
+    }
 }
 
 async fn compute_idf(pool: &SqlitePool, kw: &str) -> Result<f64, sqlx::Error> {

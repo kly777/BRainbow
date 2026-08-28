@@ -160,7 +160,7 @@ impl TaskRepository {
         }))
     }
 
-    /// 全局搜索命中：标题命中优先于描述命中
+    /// 全局搜索命中：标题命中优先于描述命中（LIKE 查询，用于短关键词）
     pub async fn search_hits(
         &self,
         user_id: i32,
@@ -177,6 +177,32 @@ impl TaskRepository {
                ORDER BY (title LIKE ?2 ESCAPE '\') DESC, id DESC LIMIT ?3"#,
             user_id,
             like,
+            cap
+        )
+        .fetch_all(&*self.db)
+        .await?;
+        Ok(rows)
+    }
+
+    /// 全局搜索命中：FTS5 全文索引查询（3+字符）
+    pub async fn search_hits_fts(
+        &self,
+        user_id: i32,
+        fts_query: &str,
+        cap: i64,
+    ) -> Result<Vec<TaskHitRow>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            TaskHitRow,
+            r#"SELECT t.id, t.title, t.description,
+                      0 AS "title_hit!: i64"
+               FROM task_fts fts
+               JOIN task t ON t.id = fts.rowid
+               WHERE task_fts MATCH ?2
+                 AND (t.user_id = ?1 OR t.user_id IS NULL)
+               ORDER BY rank
+               LIMIT ?3"#,
+            user_id,
+            fts_query,
             cap
         )
         .fetch_all(&*self.db)

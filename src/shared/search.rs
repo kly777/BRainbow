@@ -29,6 +29,41 @@ pub fn normalize_search(q: &str, limit: i64) -> Option<(String, &str, i64)> {
     Some((like_contains(kw), kw, clamp_search_limit(limit)))
 }
 
+/// FTS5 查询最低字符数（trigram tokenizer 需要至少 3 个字符才能匹配）。
+pub const FTS_MIN_QUERY_LEN: usize = 3;
+
+/// 转义 FTS5 特殊字符，避免查询语法错误。
+fn escape_fts_term(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '"' | '*' | '(' | ')' | ':' | '^' | '-' | '+' | '!' | '{' | '}' => {
+                out.push('"');
+                out.push(c);
+                out.push('"');
+            }
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// 生成 FTS5 trigram 查询串。短于 `FTS_MIN_QUERY_LEN` 的查询返回 None（应退化为 LIKE）。
+///
+/// trigram 按3字符滑窗，对每个词追加 `*` 启用前缀匹配。
+pub fn fts_query(q: &str) -> Option<String> {
+    let kw = q.trim();
+    if kw.chars().count() < FTS_MIN_QUERY_LEN {
+        return None;
+    }
+    let fts: String = kw
+        .split_whitespace()
+        .map(|term| format!("{}*", escape_fts_term(term)))
+        .collect::<Vec<_>>()
+        .join(" ");
+    Some(fts)
+}
+
 /// 搜索命中项的导航目标：前端根据此枚举解析为具体 URL。
 ///
 /// 使用枚举而非 URL 字符串，解耦后端模块与前端路由。

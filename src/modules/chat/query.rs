@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use sqlx::SqlitePool;
 
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit as GlobalSearchHit, SearchPort, normalize_search};
+use crate::shared::search::{SearchHit as GlobalSearchHit, SearchPort, fts_query, normalize_search};
 
 use super::model::SearchResponse;
 use super::repository::ChatRepo;
@@ -42,7 +42,11 @@ impl SearchPort for ChatQueryService {
         let Some((like, _, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
-        self.repo.search_hits(user_id, &like, cap).await
+        if let Some(fts) = fts_query(q) {
+            self.repo.search_hits_fts(user_id, &fts, cap).await
+        } else {
+            self.repo.search_hits(user_id, &like, cap).await
+        }
     }
 }
 

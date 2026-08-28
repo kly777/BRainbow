@@ -1,0 +1,57 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT t.id, t.title, t.description,\n                      0 AS \"title_hit!: i64\"\n               FROM task_fts fts\n               JOIN task t ON t.id = fts.rowid\n               WHERE task_fts MATCH ?2\n                 AND (t.user_id = ?1 OR t.user_id IS NULL)\n               ORDER BY rank\n               LIMIT ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "description",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "name": "title_hit!: i64",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "25bd0e0618da34cf6af438504d6859f528dc442765895a74a9e887bd89b2dc85"
+}

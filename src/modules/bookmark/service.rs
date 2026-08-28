@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
-use super::model::{Bookmark, BookmarkTag};
+use super::model::{Bookmark, BookmarkTag, CheckUrlResponse, FetchUrlResponse, SuggestTagsResponse};
 use super::repository::BookmarkRepo;
+use crate::modules::ai::model::AiProxyMessage;
+use crate::modules::ai::port::AiChatPort;
 use crate::shared::error_types::ServiceError;
 
 /// 命令侧服务——只暴露写操作。
@@ -37,6 +39,124 @@ impl BookmarkService {
         Self {
             repo: BookmarkRepo::new(db),
         }
+    }
+
+    /// URL 查重：检查 URL 是否已被收藏
+    pub async fn check_url(
+        &self,
+        user_id: i32,
+        url: &str,
+    ) -> Result<CheckUrlResponse, ServiceError> {
+        let url = url.trim();
+        validate_url(url)?;
+        let existing = self.repo.find_by_url(user_id, url).await.map_err(ServiceError::Db)?;
+        Ok(CheckUrlResponse {
+            exists: existing.is_some(),
+            bookmark: existing,
+        })
+    }
+
+    /// 抓取网页标题（通过 favicon 模块的 fetch 能力复用）
+    pub async fn fetch_url_title(&self, url: &str) -> Result<FetchUrlResponse, ServiceError> {
+        let url = url.trim();
+        validate_url(url)?;
+
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .connect_timeout(std::time::Duration::from_secs(5))
+            .redirect(reqwest::redirect::Policy::limited(5))
+            .user_agent("Mozilla/5.0 (compatible; Brainbow/1.0)")
+            .build()
+            .map_err(|e| ServiceError::Internal(format!("创建 HTTP 客户端失败: {e}")))?;
+
+        let resp = client
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| ServiceError::Internal(format!("抓取页面失败: {e}")))?;
+
+        if !resp.status().is_success() {
+            return Err(ServiceError::Internal(format!(
+                "页面返回状态码 {}",
+                resp.status().as_u16()
+            )));
+        }
+
+        // 限制读取 1MB（title 在 head 中，足够了）
+        let bytes = super::favicon::read_bounded(resp, 1024 * 1024)
+            .await
+            .ok_or_else(|| ServiceError::Internal("页面内容过大或读取失败".into()))?;
+
+        let html = String::from_utf8_lossy(&bytes);
+        let title = extract_html_title(&html)
+            .filter(|t| !t.trim().is_empty())
+            .unwrap_or_else(|| {
+                // 回退：使用域名
+                extract_host_from_url(url)
+                    .unwrap_or_else(|| url.to_string())
+            });
+
+        Ok(FetchUrlResponse {
+            url: url.to_string(),
+            title: title.trim().to_string(),
+        })
+    }
+
+    /// AI 建议标签：将书签信息发给 AI 模型获取标签建议
+    pub async fn suggest_tags(
+        &self,
+        user_id: i32,
+        bookmark_id: i32,
+        ai: &dyn AiChatPort,
+    ) -> Result<SuggestTagsResponse, ServiceError> {
+        let bookmark = self
+            .repo
+            .find_by_id(user_id, bookmark_id)
+            .await
+            .map_err(ServiceError::Db)?
+            .ok_or_else(|| ServiceError::NotFound("书签不存在".into()))?;
+
+        let prompt = format!(
+            r#"请根据以下网页书签信息，生成 3-8 个合适的中文标签。
+要求：
+1. 标签应简洁、准确反映网页内容和主题
+2. 优先使用中文标签，专有名词可保留英文
+3. 每个标签不超过 10 个字
+4. 只返回标签列表，用逗号分隔，不要其他内容
+
+书签标题：{}
+书签 URL：{}
+书签描述：{}"#,
+            bookmark.title,
+            bookmark.url,
+            if bookmark.description.is_empty() {
+                "无"
+            } else {
+                &bookmark.description
+            }
+        );
+
+        let messages = vec![AiProxyMessage {
+            role: "user".to_string(),
+            content: prompt,
+        }];
+
+        let (content, _model) = ai
+            .chat(user_id, &messages, Some(0.3), Some(256))
+            .await?;
+
+        // 解析 AI 返回的标签列表
+        let tags: Vec<String> = content
+            .split([',', '，', '\n', '、'])
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty() && s.len() <= 20)
+            .collect();
+
+        if tags.is_empty() {
+            return Err(ServiceError::Internal("AI 未能生成有效标签".into()));
+        }
+
+        Ok(SuggestTagsResponse { tags })
     }
 
     pub async fn create(
@@ -90,6 +210,16 @@ impl BookmarkService {
     pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, ServiceError> {
         self.repo
             .delete(user_id, id)
+            .await
+            .map_err(ServiceError::Db)
+    }
+
+    pub async fn batch_delete(&self, user_id: i32, ids: &[i32]) -> Result<u64, ServiceError> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        self.repo
+            .batch_delete(user_id, ids)
             .await
             .map_err(ServiceError::Db)
     }
@@ -190,6 +320,37 @@ pub struct ImportResult {
     pub created: u64,
     /// 已存在并合并标签
     pub merged: u64,
+}
+
+/// 从 HTML 中提取 `<title>` 标签内容
+fn extract_html_title(html: &str) -> Option<String> {
+    let lower = html.to_ascii_lowercase();
+    let start = lower.find("<title")?;
+    let tag_end = lower[start..].find('>')?;
+    let content_start = start + tag_end + 1;
+    let end = lower[content_start..].find("</title>")?;
+    let title = html[content_start..content_start + end].trim();
+    // 解码常见 HTML 实体
+    let title = title
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&apos;", "'")
+        .replace("&nbsp;", "\u{a0}");
+    Some(title)
+}
+
+/// 从 URL 中提取域名（简单字符串解析，避免引入 url crate）
+fn extract_host_from_url(url: &str) -> Option<String> {
+    let rest = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))?;
+    let host = rest.split('/').next().unwrap_or(rest);
+    let host = host.split(':').next().unwrap_or(host);
+    let host = host.trim_end_matches('.');
+    if host.is_empty() { None } else { Some(host.to_string()) }
 }
 
 #[cfg(test)]

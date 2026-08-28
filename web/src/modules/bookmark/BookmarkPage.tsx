@@ -1,4 +1,4 @@
-// ── /bookmark：网页书签管理（搜索 / 标签过滤 / 分页 / 导入 Firefox 书签） ──
+// ── /bookmark：网页书签管理（搜索 / 标签过滤 / 分页 / 导入 Firefox 书签 / 批量管理） ──
 
 import { Button, PageHead, SearchInput } from "@components/ui";
 import { getErrorMessage } from "@shared/api";
@@ -8,6 +8,29 @@ import { BookmarkFormModal } from "./components/BookmarkFormModal.tsx";
 import { BookmarkItem } from "./components/BookmarkItem.tsx";
 import TagManager from "./components/TagManager.tsx";
 import { useBookmarkPage } from "./hooks/useBookmarkPage.ts";
+
+const BatchBar: Component<{
+	b: ReturnType<typeof useBookmarkPage>;
+}> = (props) => {
+	const b = props.b;
+	const count = () => b.selectedIds().size;
+
+	return (
+		<Show when={count() > 0}>
+			<div class={styles.batchBar}>
+				<span class={styles.batchInfo}>已选 {count()} 个书签</span>
+				<div class={styles.batchActions}>
+					<Button variant="secondary" size="sm" onClick={b.clearSelection}>
+						取消选择
+					</Button>
+					<Button variant="danger" size="sm" onClick={b.handleBatchDelete}>
+						批量删除
+					</Button>
+				</div>
+			</div>
+		</Show>
+	);
+};
 
 const BookmarkMainSection: Component<{
 	b: ReturnType<typeof useBookmarkPage>;
@@ -25,14 +48,29 @@ const BookmarkMainSection: Component<{
 				</div>
 			}
 		>
+			<BatchBar b={b} />
+			<div class={styles.listHeader}>
+				<input
+					type="checkbox"
+					class={styles.itemCheckbox}
+					checked={b.isAllSelected()}
+					onChange={b.toggleSelectAll}
+					aria-label="全选/取消全选"
+				/>
+				<span class={styles.listHeaderLabel}>全选</span>
+			</div>
 			<div class={styles.list}>
 				<For each={b.bookmarks()}>
 					{(bm) => (
 						<BookmarkItem
 							bm={bm}
+							selected={b.selectedIds().has(bm.id)}
+							onToggleSelect={() => b.toggleSelect(bm.id)}
 							onEdit={() => b.openEdit(bm)}
 							onDelete={() => b.handleDelete(bm)}
 							onTagFilter={b.handleTagFilter}
+							onRefreshTitle={() => b.handleRefreshTitle(bm)}
+							onCheckAccessibility={() => b.handleCheckAccessibility(bm)}
 						/>
 					)}
 				</For>

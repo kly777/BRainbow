@@ -17,10 +17,10 @@ use sqlx::SqlitePool;
 
 pub use favicon::favicon_handler;
 pub use handler::{
-    create_bookmark_handler, create_tag_handler, delete_bookmark_handler, delete_tag_handler,
-    get_bookmark_handler, get_bookmark_tags_handler, get_bookmarks_handler,
-    import_bookmarks_handler, search_bookmarks_handler, search_tags_handler,
-    update_bookmark_handler,
+    batch_delete_handler, check_url_handler, create_bookmark_handler, create_tag_handler,
+    delete_bookmark_handler, delete_tag_handler, fetch_url_handler, get_bookmark_handler,
+    get_bookmark_tags_handler, get_bookmarks_handler, import_bookmarks_handler,
+    search_bookmarks_handler, search_tags_handler, suggest_tags_handler, update_bookmark_handler,
 };
 pub use query::BookmarkQueryService;
 pub use service::BookmarkService;
@@ -50,6 +50,7 @@ where
     S: Clone + Send + Sync + 'static,
     BookmarkService: FromRef<S>,
     BookmarkQueryService: FromRef<S>,
+    crate::modules::ai::service::AiService: FromRef<S>,
 {
     Router::new()
         // 静态路径优先于 /{id}，避免 "tags" 被当作 id 解析
@@ -61,6 +62,10 @@ where
             post(import_bookmarks_handler)
                 .layer(DefaultBodyLimit::max(IMPORT_HTML_BODY_LIMIT_BYTES)),
         )
+        // 新增接口（静态路径，优先于 /{id}）
+        .route("/check-url", get(check_url_handler))
+        .route("/fetch-url", post(fetch_url_handler))
+        .route("/batch-delete", post(batch_delete_handler))
         .route(
             "/",
             get(get_bookmarks_handler).post(create_bookmark_handler),
@@ -75,5 +80,6 @@ where
             "/{id}/tags",
             get(get_bookmark_tags_handler).put(handler::set_bookmark_tags_handler),
         )
+        .route("/{id}/suggest-tags", post(suggest_tags_handler))
         .route("/search", get(search_bookmarks_handler))
 }

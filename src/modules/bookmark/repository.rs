@@ -278,6 +278,25 @@ impl BookmarkRepo {
         Ok(result.rows_affected())
     }
 
+    /// 批量删除书签（关联标签关系由外键级联删除）
+    pub async fn batch_delete(&self, user_id: i32, ids: &[i32]) -> Result<u64, sqlx::Error> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        let mut total = 0u64;
+        for &id in ids {
+            let result = sqlx::query!(
+                "DELETE FROM bookmark WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+                id,
+                user_id
+            )
+            .execute(&*self.pool)
+            .await?;
+            total += result.rows_affected();
+        }
+        Ok(total)
+    }
+
     /// 按关键词搜索书签（匹配标题/URL/备注，命中越多得分越高；可选按标签过滤）
     pub async fn search_paginated(
         &self,

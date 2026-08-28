@@ -3,9 +3,12 @@
 
 import type { Bookmark } from "@modules/bookmark";
 import {
+	batchDeleteBookmarksE,
 	deleteBookmarkE,
+	fetchUrlTitleE,
 	getBookmarksE,
 	searchBookmarksE,
+	updateBookmarkE,
 } from "@modules/bookmark";
 import {
 	notifyError,
@@ -38,6 +41,9 @@ export function useBookmarkPage() {
 	const [loading, setLoading] = createSignal(true);
 	const [error, setError] = createSignal<string | null>(null);
 	const [tagManagerOpen, setTagManagerOpen] = createSignal(false);
+
+	// 多选状态
+	const [selectedIds, setSelectedIds] = createSignal<Set<number>>(new Set());
 
 	// 竞态守卫
 	let loadSeq = 0;
@@ -88,6 +94,104 @@ export function useBookmarkPage() {
 	function goPage(n: number) {
 		if (n < 1 || n > totalPages()) return;
 		params.set({ page: n });
+	}
+
+	// ── 多选操作 ──
+	function toggleSelect(id: number) {
+		setSelectedIds((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) {
+				next.delete(id);
+			} else {
+				next.add(id);
+			}
+			return next;
+		});
+	}
+
+	function selectAll() {
+		const allIds = bookmarks().map((b) => b.id);
+		setSelectedIds(new Set(allIds));
+	}
+
+	function clearSelection() {
+		setSelectedIds(new Set<number>());
+	}
+
+	function isAllSelected() {
+		const bks = bookmarks();
+		return bks.length > 0 && bks.every((b) => selectedIds().has(b.id));
+	}
+
+	function toggleSelectAll() {
+		if (isAllSelected()) {
+			clearSelection();
+		} else {
+			selectAll();
+		}
+	}
+
+	async function handleBatchDelete() {
+		const ids = Array.from(selectedIds());
+		if (ids.length === 0) return;
+
+		const confirmed = await showConfirm({
+			title: "批量删除书签",
+			message: `确定要删除选中的 ${ids.length} 个书签吗？此操作不可撤销。`,
+			variant: "danger",
+		});
+		if (!confirmed) return;
+
+		const result = await tryAsync(() => batchDeleteBookmarksE(ids));
+		if (result.ok) {
+			notifySuccess(`已删除 ${ids.length} 个书签`);
+			clearSelection();
+			load({ silent: true });
+		} else {
+			notifyError("批量删除失败", result.error);
+		}
+	}
+
+	// ── 刷新标题 ──
+	async function handleRefreshTitle(bm: Bookmark) {
+		const result = await tryAsync(() => fetchUrlTitleE(bm.url));
+		if (!result.ok) {
+			notifyError("获取标题失败", result.error);
+			return;
+		}
+		if (!result.value.title) {
+			notifyError("获取标题失败", new Error("未能获取标题"));
+			return;
+		}
+		const updateResult = await tryAsync(() =>
+			updateBookmarkE(bm.id, { title: result.value.title }),
+		);
+		if (updateResult.ok) {
+			notifySuccess("标题已刷新");
+			load({ silent: true });
+		} else {
+			notifyError("更新标题失败", updateResult.error);
+		}
+	}
+
+	// ── 检测可访问性 ──
+	async function handleCheckAccessibility(bm: Bookmark): Promise<"ok" | "fail"> {
+		try {
+			const controller = new AbortController();
+			const timeout = setTimeout(() => controller.abort(), 10000);
+			const resp = await fetch(bm.url, {
+				method: "HEAD",
+				mode: "no-cors",
+				signal: controller.signal,
+			});
+			clearTimeout(timeout);
+			// no-cors 模式下 status 为 0，但不报错说明可达
+			notifySuccess("该网址可访问");
+			return "ok";
+		} catch {
+			notifyError("该网址无法访问");
+			return "fail";
+		}
 	}
 
 	// ── 子 hook：表单 CRUD ──
@@ -147,6 +251,16 @@ export function useBookmarkPage() {
 		clearTagFilter,
 		goPage,
 		handleDelete,
+		// 多选
+		selectedIds,
+		toggleSelect,
+		toggleSelectAll,
+		isAllSelected,
+		clearSelection,
+		handleBatchDelete,
+		// 刷新标题 & 检测可访问性
+		handleRefreshTitle,
+		handleCheckAccessibility,
 		// 表单（from useBookmarkForm）
 		modalOpen: () => form.form.open,
 		setModalOpen: (v: boolean) => form.setForm("open", v),
@@ -165,6 +279,14 @@ export function useBookmarkPage() {
 		addFormTag: form.addTag,
 		removeFormTag: form.removeTag,
 		handleSave: form.handleSave,
+		// URL 查重
+		urlChecking: () => form.form.urlChecking,
+		urlExists: () => form.form.urlExists,
+		urlExistsBookmark: () => form.form.urlExistsBookmark,
+		checkUrl: form.checkUrl,
+		// 获取标题
+		fetchingTitle: () => form.form.fetchingTitle,
+		fetchTitle: form.fetchTitle,
 		// 导入（from useBookmarkImport）
 		importing: importHook.importing,
 		handleImportFile: importHook.handleImportFile,

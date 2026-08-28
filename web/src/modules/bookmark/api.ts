@@ -51,6 +51,20 @@ export interface ImportResult {
 	merged: number;
 }
 
+export interface CheckUrlResponse {
+	exists: boolean;
+	bookmark: Bookmark | null;
+}
+
+export interface FetchUrlResponse {
+	url: string;
+	title: string;
+}
+
+export interface SuggestTagsResponse {
+	tags: string[];
+}
+
 export const getBookmarksE = (
 	page = 1,
 	pageSize = 20,
@@ -129,3 +143,31 @@ export const importBookmarksE = async (file: File): Promise<ImportResult> => {
 		}),
 	);
 };
+
+/** 检查 URL 是否已被收藏 */
+export const checkBookmarkUrlE = (url: string): Promise<CheckUrlResponse> =>
+	cachedRequest(
+		`/bookmarks/check-url?url=${encodeURIComponent(url.trim())}`,
+	);
+
+/** 通过 URL 抓取网页标题 */
+export const fetchUrlTitleE = (url: string): Promise<FetchUrlResponse> =>
+	request<FetchUrlResponse>("/bookmarks/fetch-url", {
+		method: "POST",
+		body: JSON.stringify({ url: url.trim() }),
+	});
+
+/** AI 建议标签 */
+export const suggestBookmarkTagsE = (id: number): Promise<SuggestTagsResponse> =>
+	request<SuggestTagsResponse>(`/bookmarks/${id}/suggest-tags`, {
+		method: "POST",
+	});
+
+/** 批量删除书签 */
+export const batchDeleteBookmarksE = (ids: number[]): Promise<void> =>
+	domains.bookmarks.invalidate(
+		request<void>("/bookmarks/batch-delete", {
+			method: "POST",
+			body: JSON.stringify({ ids }),
+		}),
+	);

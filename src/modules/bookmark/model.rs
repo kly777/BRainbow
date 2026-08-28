@@ -87,3 +87,35 @@ pub struct UpdateBookmarkRequest {
 pub struct SetBookmarkTagsRequest {
     pub tags: Vec<String>,
 }
+
+/// URL 查重请求
+#[derive(Debug, Deserialize)]
+pub struct CheckUrlQuery {
+    pub url: String,
+}
+
+/// URL 查重响应
+#[derive(Debug, Serialize)]
+pub struct CheckUrlResponse {
+    pub exists: bool,
+    pub bookmark: Option<Bookmark>,
+}
+
+/// 通过 URL 抓取页面信息请求
+#[derive(Debug, Deserialize)]
+pub struct FetchUrlRequest {
+    pub url: String,
+}
+
+/// 通过 URL 抓取页面信息响应
+#[derive(Debug, Serialize)]
+pub struct FetchUrlResponse {
+    pub url: String,
+    pub title: String,
+}
+
+/// AI 标签建议响应
+#[derive(Debug, Serialize)]
+pub struct SuggestTagsResponse {
+    pub tags: Vec<String>,
+}

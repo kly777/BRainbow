@@ -4,6 +4,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::modules::ai::service::AiService;
 use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
@@ -12,7 +13,8 @@ use super::query::BookmarkQueryService;
 use super::service::BookmarkService;
 
 use super::model::{
-    Bookmark, CreateBookmarkRequest, SetBookmarkTagsRequest, UpdateBookmarkRequest,
+    Bookmark, CheckUrlQuery, CreateBookmarkRequest, FetchUrlRequest,
+    SetBookmarkTagsRequest, UpdateBookmarkRequest,
 };
 
 #[derive(Debug, Serialize)]
@@ -346,4 +348,84 @@ pub async fn set_bookmark_tags_handler(
         }
         Err(e) => e.into_response(),
     }
+}
+
+// ── 新增接口 ──
+
+/// `GET /bookmarks/check-url?url=...` 检查 URL 是否已被收藏
+pub async fn check_url_handler(
+    State(service): State<BookmarkService>,
+    Extension(claims): Extension<Claims>,
+    Query(params): Query<CheckUrlQuery>,
+) -> impl IntoResponse {
+    let url = params.url.trim();
+    if url.is_empty() {
+        return error::bad_request("URL 不能为空");
+    }
+    match service.check_url(claims.sub, url).await {
+        Ok(resp) => {
+            let response = CheckUrlResponseJson {
+                exists: resp.exists,
+                bookmark: resp.bookmark.map(BookmarkResponse::from),
+            };
+            Json(response).into_response()
+        }
+        Err(e) => e.into_response(),
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct CheckUrlResponseJson {
+    pub exists: bool,
+    pub bookmark: Option<BookmarkResponse>,
+}
+
+/// `POST /bookmarks/fetch-url` 通过 URL 抓取网页标题
+pub async fn fetch_url_handler(
+    State(service): State<BookmarkService>,
+    Json(payload): Json<FetchUrlRequest>,
+) -> impl IntoResponse {
+    if payload.url.trim().is_empty() {
+        return error::bad_request("URL 不能为空");
+    }
+    match service.fetch_url_title(&payload.url).await {
+        Ok(resp) => Json(resp).into_response(),
+        Err(e) => e.into_response(),
+    }
+}
+
+/// `POST /bookmarks/{id}/suggest-tags` AI 建议标签
+pub async fn suggest_tags_handler(
+    State(service): State<BookmarkService>,
+    State(ai): State<AiService>,
+    Extension(claims): Extension<Claims>,
+    Path(id): Path<i32>,
+) -> impl IntoResponse {
+    match service.suggest_tags(claims.sub, id, &ai).await {
+        Ok(resp) => Json(resp).into_response(),
+        Err(e) => e.into_response(),
+    }
+}
+
+/// `POST /bookmarks/batch-delete` 批量删除书签
+#[derive(Debug, Deserialize)]
+pub struct BatchDeleteRequest {
+    pub ids: Vec<i32>,
+}
+
+pub async fn batch_delete_handler(
+    State(service): State<BookmarkService>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<BatchDeleteRequest>,
+) -> impl IntoResponse {
+    if payload.ids.is_empty() {
+        return error::bad_request("请选择要删除的书签");
+    }
+    if payload.ids.len() > 100 {
+        return error::bad_request("单次最多删除 100 条");
+    }
+    error::deleted_or(
+        service.batch_delete(claims.sub, &payload.ids).await,
+        "批量删除书签",
+    )
 }

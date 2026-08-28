@@ -172,7 +172,7 @@ fn file_response(bytes: Vec<u8>, mime: &'static str) -> Response {
 
 /// 流式读取响应体，累计超过 max_bytes 立即放弃并断开连接。
 /// 防 chunked 无长度声明的恶意超大响应把内存打爆（审计 B2）。
-async fn read_bounded(mut resp: reqwest::Response, max_bytes: u64) -> Option<Vec<u8>> {
+pub(crate) async fn read_bounded(mut resp: reqwest::Response, max_bytes: u64) -> Option<Vec<u8>> {
     if resp.content_length().is_some_and(|l| l > max_bytes) {
         return None;
     }

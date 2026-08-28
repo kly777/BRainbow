@@ -3,7 +3,9 @@
 
 import type { Bookmark } from "@modules/bookmark";
 import {
+	checkBookmarkUrlE,
 	createBookmarkE,
+	fetchUrlTitleE,
 	setBookmarkTagsE,
 	updateBookmarkE,
 } from "@modules/bookmark";
@@ -26,6 +28,12 @@ export function useBookmarkForm(opts: UseBookmarkFormOpts) {
 		tags: [] as string[],
 		saving: false,
 		error: null as string | null,
+		// URL 查重状态
+		urlChecking: false,
+		urlExists: false,
+		urlExistsBookmark: null as Bookmark | null,
+		// 获取标题状态
+		fetchingTitle: false,
 	});
 
 	function openCreate() {
@@ -37,6 +45,10 @@ export function useBookmarkForm(opts: UseBookmarkFormOpts) {
 			desc: "",
 			tags: [],
 			error: null,
+			urlChecking: false,
+			urlExists: false,
+			urlExistsBookmark: null,
+			fetchingTitle: false,
 		});
 	}
 
@@ -49,6 +61,10 @@ export function useBookmarkForm(opts: UseBookmarkFormOpts) {
 			desc: bm.description,
 			tags: [...bm.tags],
 			error: null,
+			urlChecking: false,
+			urlExists: false,
+			urlExistsBookmark: null,
+			fetchingTitle: false,
 		});
 	}
 
@@ -67,6 +83,41 @@ export function useBookmarkForm(opts: UseBookmarkFormOpts) {
 		setForm("open", false);
 	}
 
+	/** 检查 URL 是否已被收藏 */
+	async function checkUrl(url: string) {
+		const clean = url.trim();
+		if (!clean || !/^https?:\/\//i.test(clean)) {
+			setForm("urlExists", false);
+			setForm("urlExistsBookmark", null);
+			return;
+		}
+		// 编辑模式下，如果 URL 没变，不检查
+		if (form.editing && form.editing.url === clean) {
+			setForm("urlExists", false);
+			setForm("urlExistsBookmark", null);
+			return;
+		}
+		setForm("urlChecking", true);
+		const result = await tryAsync(() => checkBookmarkUrlE(clean));
+		if (result.ok) {
+			setForm("urlExists", result.value.exists);
+			setForm("urlExistsBookmark", result.value.bookmark);
+		}
+		setForm("urlChecking", false);
+	}
+
+	/** 通过 URL 抓取网页标题 */
+	async function fetchTitle(url: string) {
+		const clean = url.trim();
+		if (!clean || !/^https?:\/\//i.test(clean)) return;
+		setForm("fetchingTitle", true);
+		const result = await tryAsync(() => fetchUrlTitleE(clean));
+		if (result.ok && result.value.title) {
+			setForm("title", result.value.title);
+		}
+		setForm("fetchingTitle", false);
+	}
+
 	async function handleSave() {
 		const title = form.title.trim();
 		const url = form.url.trim();
@@ -76,6 +127,11 @@ export function useBookmarkForm(opts: UseBookmarkFormOpts) {
 		}
 		if (!/^https?:\/\//i.test(url)) {
 			setForm("error", "URL 必须以 http:// 或 https:// 开头");
+			return;
+		}
+		// 创建模式下检查重复
+		if (!form.editing && form.urlExists) {
+			setForm("error", "该 URL 已被收藏，不能重复添加");
 			return;
 		}
 
@@ -110,5 +166,7 @@ export function useBookmarkForm(opts: UseBookmarkFormOpts) {
 		removeTag,
 		close,
 		handleSave,
+		checkUrl,
+		fetchTitle,
 	};
 }

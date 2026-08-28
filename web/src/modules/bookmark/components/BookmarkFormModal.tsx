@@ -1,7 +1,8 @@
-// ── /bookmark 表单弹窗（新建/编辑） ──
+// ── /bookmark 表单弹窗（新建/编辑）──
 
 import { Button, Modal } from "@components/ui";
 import { Show } from "solid-js";
+import { fillPath, PATHS } from "@config/paths";
 import styles from "../BookmarkPage.module.css";
 import type { useBookmarkPage } from "../hooks/useBookmarkPage.ts";
 import TagInput from "./TagInput.tsx";
@@ -14,6 +15,14 @@ export function BookmarkFormModal(props: {
 		e.preventDefault();
 		if (!b.saving()) b.handleSave();
 	};
+
+	const handleUrlBlur = () => {
+		const url = b.formUrl().trim();
+		if (url && /^https?:\/\//i.test(url)) {
+			b.checkUrl(url);
+		}
+	};
+
 	return (
 		<Modal
 			isOpen={b.modalOpen()}
@@ -34,7 +43,7 @@ export function BookmarkFormModal(props: {
 						variant="primary"
 						size="sm"
 						onClick={b.handleSave}
-						disabled={b.saving()}
+						disabled={b.saving() || (!b.editing() && b.urlExists())}
 					>
 						{b.saving() ? "保存中..." : "保存"}
 					</Button>
@@ -46,6 +55,46 @@ export function BookmarkFormModal(props: {
 					<div class={styles.formError}>{b.formError()}</div>
 				</Show>
 				<div class={styles.formGroup}>
+					<label class={styles.formLabel} for="bookmark-url">
+						URL
+					</label>
+					<div class={styles.urlInputRow}>
+						<input
+							id="bookmark-url"
+							class={styles.formInput}
+							value={b.formUrl()}
+							onInput={(e) => b.setFormUrl(e.currentTarget.value)}
+							onBlur={handleUrlBlur}
+							placeholder="https://example.com"
+							disabled={b.saving()}
+						/>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() => b.fetchTitle(b.formUrl())}
+							disabled={b.fetchingTitle() || !b.formUrl().trim()}
+							title="从网页抓取标题"
+						>
+							{b.fetchingTitle() ? "获取中..." : "获取标题"}
+						</Button>
+					</div>
+					<Show when={b.urlChecking()}>
+						<div class={styles.urlHint}>检查中...</div>
+					</Show>
+					<Show when={b.urlExists()}>
+						<div class={styles.urlWarning}>
+							⚠ 该 URL 已被收藏：
+							<a
+								href={fillPath(PATHS.bookmarkDetail, b.urlExistsBookmark()?.id ?? "")}
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								{b.urlExistsBookmark()?.title}
+							</a>
+						</div>
+					</Show>
+				</div>
+				<div class={styles.formGroup}>
 					<label class={styles.formLabel} for="bookmark-title">
 						标题
 					</label>
@@ -55,19 +104,6 @@ export function BookmarkFormModal(props: {
 						value={b.formTitle()}
 						onInput={(e) => b.setFormTitle(e.currentTarget.value)}
 						placeholder="书签名称"
-						disabled={b.saving()}
-					/>
-				</div>
-				<div class={styles.formGroup}>
-					<label class={styles.formLabel} for="bookmark-url">
-						URL
-					</label>
-					<input
-						id="bookmark-url"
-						class={styles.formInput}
-						value={b.formUrl()}
-						onInput={(e) => b.setFormUrl(e.currentTarget.value)}
-						placeholder="https://example.com"
 						disabled={b.saving()}
 					/>
 				</div>

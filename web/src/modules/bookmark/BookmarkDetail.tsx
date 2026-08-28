@@ -1,9 +1,9 @@
-// ── /bookmark/:id：书签详情（全局搜索直达） ──
+// ── /bookmark/:id：书签详情（全局搜索直达 + AI 标签建议） ──
 
 import { Button, Toolbar } from "@components/ui";
 import { getErrorMessage } from "@shared/api";
 import { fmtLocal } from "@shared/utils";
-import { type Component, Show } from "solid-js";
+import { type Component, For, Show } from "solid-js";
 import styles from "./BookmarkDetail.module.css";
 import TagInput from "./components/TagInput.tsx";
 import {
@@ -44,6 +44,8 @@ const EditForm: Component<{
 	tags: string[];
 	saving: boolean;
 	formError: string;
+	suggestLoading: boolean;
+	suggestedTags: string[];
 	onTitle: (value: string) => void;
 	onUrl: (value: string) => void;
 	onDescription: (value: string) => void;
@@ -51,6 +53,8 @@ const EditForm: Component<{
 	onRemoveTag: (name: string) => void;
 	onCancel: () => void;
 	onSave: () => void;
+	onSuggestTags: () => void;
+	onAcceptSuggestedTag: (tag: string) => void;
 }> = (props) => (
 	<div class={styles.form}>
 		<label class={styles.label} for="bm-title">
@@ -87,6 +91,33 @@ const EditForm: Component<{
 			onAdd={props.onAddTag}
 			onRemove={props.onRemoveTag}
 		/>
+		<div class={styles.suggestRow}>
+			<Button
+				variant="secondary"
+				size="sm"
+				onClick={props.onSuggestTags}
+				disabled={props.suggestLoading}
+			>
+				{props.suggestLoading ? "AI 分析中..." : "🤖 AI 建议标签"}
+			</Button>
+		</div>
+		<Show when={props.suggestedTags.length > 0}>
+			<div class={styles.suggestedTags}>
+				<span class={styles.suggestedLabel}>AI 建议：</span>
+				<For each={props.suggestedTags}>
+					{(tag) => (
+						<button
+							type="button"
+							class={styles.suggestedTag}
+							onClick={() => props.onAcceptSuggestedTag(tag)}
+							title={`点击添加标签「${tag}」`}
+						>
+							+ {tag}
+						</button>
+					)}
+				</For>
+			</div>
+		</Show>
 		<Show when={props.formError}>
 			<div class={styles.formError}>{props.formError}</div>
 		</Show>
@@ -153,6 +184,8 @@ export default function BookmarkDetail() {
 								tags={m.tags()}
 								saving={m.saving()}
 								formError={m.formError()}
+								suggestLoading={m.suggestLoading()}
+								suggestedTags={m.suggestedTags()}
 								onTitle={m.setTitle}
 								onUrl={m.setUrl}
 								onDescription={m.setDescription}
@@ -160,6 +193,8 @@ export default function BookmarkDetail() {
 								onRemoveTag={m.removeTag}
 								onCancel={m.cancelEdit}
 								onSave={m.save}
+								onSuggestTags={m.suggestTags}
+								onAcceptSuggestedTag={m.acceptSuggestedTag}
 							/>
 						</Show>
 					</div>

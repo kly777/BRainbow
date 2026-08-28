@@ -3,9 +3,10 @@ import {
 	deleteBookmarkE,
 	getBookmarkE,
 	setBookmarkTagsE,
+	suggestBookmarkTagsE,
 	updateBookmarkE,
 } from "@modules/bookmark";
-import { notifySuccess, showConfirm, tryOrNotify } from "@shared/utils";
+import { notifyError, notifySuccess, showConfirm, tryOrNotify } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal } from "solid-js";
 
@@ -34,6 +35,11 @@ export interface BookmarkDetailApi {
 	save: () => Promise<void>;
 	remove: () => Promise<void>;
 	handleBack: () => void;
+	// AI 标签建议
+	suggestTags: () => Promise<void>;
+	suggestLoading: () => boolean;
+	suggestedTags: () => string[];
+	acceptSuggestedTag: (tag: string) => void;
 }
 
 export function useBookmarkDetail(): BookmarkDetailApi {
@@ -53,6 +59,9 @@ export function useBookmarkDetail(): BookmarkDetailApi {
 	const [tags, setTags] = createSignal<string[]>([]);
 	const [saving, setSaving] = createSignal(false);
 	const [formError, setFormError] = createSignal("");
+	// AI 标签建议
+	const [suggestLoading, setSuggestLoading] = createSignal(false);
+	const [suggestedTags, setSuggestedTags] = createSignal<string[]>([]);
 
 	const startEdit = () => {
 		const bm = data();
@@ -62,6 +71,7 @@ export function useBookmarkDetail(): BookmarkDetailApi {
 		setDescription(bm.description);
 		setTags([...bm.tags]);
 		setFormError("");
+		setSuggestedTags([]);
 		setEditing(true);
 	};
 
@@ -111,6 +121,33 @@ export function useBookmarkDetail(): BookmarkDetailApi {
 		navigate(PATHS.bookmark);
 	};
 
+	/** AI 建议标签 */
+	const suggestTags = async () => {
+		setSuggestLoading(true);
+		setSuggestedTags([]);
+		const result = await tryOrNotify(
+			() => suggestBookmarkTagsE(id()),
+			"AI 标签建议",
+		);
+		if (result) {
+			// 过滤掉已有标签
+			const existing = new Set(tags());
+			const newTags = result.tags.filter((t) => !existing.has(t));
+			setSuggestedTags(newTags);
+			if (newTags.length === 0) {
+				notifySuccess("AI 建议的标签都已存在");
+			}
+		}
+		setSuggestLoading(false);
+	};
+
+	const acceptSuggestedTag = (tag: string) => {
+		if (!tags().includes(tag)) {
+			setTags((prev) => [...prev, tag]);
+		}
+		setSuggestedTags((prev) => prev.filter((t) => t !== tag));
+	};
+
 	return {
 		id,
 		data,
@@ -135,5 +172,9 @@ export function useBookmarkDetail(): BookmarkDetailApi {
 		save,
 		remove,
 		handleBack,
+		suggestTags,
+		suggestLoading,
+		suggestedTags,
+		acceptSuggestedTag,
 	};
 }

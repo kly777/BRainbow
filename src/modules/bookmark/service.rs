@@ -349,28 +349,23 @@ fn decode_html_entities(s: &str) -> String {
         return s.to_string();
     }
     let mut out = String::with_capacity(s.len());
-    let bytes = s.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'&' {
-            if let Some(semi) = s[i..].find(';') {
-                let entity = &s[i + 1..i + semi];
-                if let Some(ch) = decode_entity(entity) {
-                    out.push(ch);
-                    i += semi + 1;
+    let mut chars = s.char_indices().peekable();
+    while let Some((i, ch)) = chars.next() {
+        if ch == '&' {
+            if let Some(semi_offset) = s[i..].find(';') {
+                let entity = &s[i + 1..i + semi_offset];
+                if let Some(decoded) = decode_entity(entity) {
+                    out.push(decoded);
+                    // 跳过实体内的所有字符
+                    for _ in 0..semi_offset {
+                        chars.next();
+                    }
                     continue;
                 }
             }
             out.push('&');
-            i += 1;
         } else {
-            // 安全：ASCII 字节直接追加，多字节 UTF-8 按 char 迭代
-            out.push(s[i..].chars().next().unwrap());
-            i += s[i..]
-                .char_indices()
-                .nth(0)
-                .map(|(_, ch)| ch.len_utf8())
-                .unwrap_or(1);
+            out.push(ch);
         }
     }
     out

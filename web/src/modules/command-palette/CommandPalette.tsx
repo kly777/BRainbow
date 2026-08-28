@@ -16,6 +16,13 @@ function SuggestionItem(props: {
 	active: boolean;
 	onHover: () => void;
 }) {
+	if (props.item.isHeader) {
+		return (
+			<div class={styles.sugHeader} role="presentation">
+				<span class={styles.sugHeaderLabel}>{props.item.label}</span>
+			</div>
+		);
+	}
 	return (
 		<button
 			type="button"
@@ -28,7 +35,15 @@ function SuggestionItem(props: {
 			aria-selected={props.active}
 		>
 			<span class={styles.sugLabel}>{props.item.label}</span>
-			<span class={styles.sugDesc}>{props.item.desc}</span>
+			{props.item.highlightedDesc ? (
+				<span
+					class={styles.sugDesc}
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: 搜索关键词高亮，已转义HTML实体
+					innerHTML={props.item.highlightedDesc}
+				/>
+			) : (
+				<span class={styles.sugDesc}>{props.item.desc}</span>
+			)}
 			{props.item.extra && (
 				<span class={styles.sugPath}>{props.item.extra}</span>
 			)}

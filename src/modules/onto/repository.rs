@@ -44,6 +44,30 @@ impl OntoRepository {
         Ok(rows)
     }
 
+    pub async fn search_hits_fts(
+        &self,
+        user_id: i32,
+        fts_query: &str,
+        cap: i64,
+    ) -> Result<Vec<OntoHitRow>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            OntoHitRow,
+            r#"SELECT o.id, o.name, o.description
+               FROM onto_fts fts
+               JOIN onto o ON o.id = fts.rowid
+               WHERE onto_fts MATCH ?2
+                 AND (o.user_id = ?1 OR o.user_id IS NULL)
+               ORDER BY rank
+               LIMIT ?3"#,
+            user_id,
+            fts_query,
+            cap
+        )
+        .fetch_all(&*self.db)
+        .await?;
+        Ok(rows)
+    }
+
     pub async fn find_all_paginated(
         &self,
         user_id: i32,

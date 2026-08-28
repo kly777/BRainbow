@@ -1262,4 +1262,30 @@ impl MemRepository for super::super::MemRepo {
         .map_err(ServiceError::Db)?;
         Ok(rows.into_iter().map(|r| (r.id, r.cue, r.target)).collect())
     }
+
+    async fn search_hits_fts(
+        &self,
+        user_id: i32,
+        fts_query: &str,
+        cap: i64,
+    ) -> Result<Vec<(i64, String, String)>, ServiceError> {
+        let rows = sqlx::query_as!(
+            MemSearchRow,
+            r#"SELECT DISTINCT m.id, c1.content AS cue, c2.content AS target
+               FROM mem m
+               JOIN chunk c1 ON c1.id = m.cue_chunk_id
+               JOIN chunk c2 ON c2.id = m.target_chunk_id
+               WHERE (m.user_id = ?1 OR m.user_id IS NULL)
+                 AND (c1.id IN (SELECT rowid FROM chunk_fts WHERE chunk_fts MATCH ?2)
+                      OR c2.id IN (SELECT rowid FROM chunk_fts WHERE chunk_fts MATCH ?2))
+               ORDER BY m.id DESC LIMIT ?3"#,
+            user_id,
+            fts_query,
+            cap
+        )
+        .fetch_all(&*self.pool)
+        .await
+        .map_err(ServiceError::Db)?;
+        Ok(rows.into_iter().map(|r| (r.id, r.cue, r.target)).collect())
+    }
 }

@@ -550,6 +550,7 @@ impl ChatRepo {
                 id: r.id,
                 title: r.title,
                 snippet: String::new(),
+                score: 0.0,
                 target: SearchTarget::ChatTree { tree_id: r.id },
             })
             .collect();
@@ -558,6 +559,68 @@ impl ChatRepo {
             id: r.tree_id,
             title: r.title,
             snippet: snippet(&r.content, ""),
+            score: 0.0,
+            target: SearchTarget::ChatNode {
+                tree_id: r.tree_id,
+                node_id: r.node_id,
+            },
+        }));
+        Ok(hits)
+    }
+
+    pub async fn search_hits_fts(
+        &self,
+        user_id: i32,
+        fts_query: &str,
+        cap: i64,
+    ) -> Result<Vec<GlobalSearchHit>, ServiceError> {
+        let title_hits: Vec<GlobalChatTitleHitRow> = sqlx::query_as!(
+            GlobalChatTitleHitRow,
+            r#"SELECT id, title FROM chat_tree
+               WHERE (user_id = ?1 OR user_id IS NULL) AND title LIKE ?2 ESCAPE '\'
+               ORDER BY id DESC LIMIT ?3"#,
+            user_id,
+            fts_query,
+            cap
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let node_cap = cap - title_hits.len() as i64;
+        let node_hits: Vec<GlobalChatNodeHitRow> = sqlx::query_as!(
+            GlobalChatNodeHitRow,
+            r#"SELECT n.id AS node_id, t.id AS tree_id, t.title, n.content
+               FROM chat_node_fts fts
+               JOIN chat_node n ON n.id = fts.rowid
+               JOIN chat_tree t ON t.id = n.tree_id
+               WHERE chat_node_fts MATCH ?2
+                 AND (t.user_id = ?1 OR t.user_id IS NULL)
+               ORDER BY rank
+               LIMIT ?3"#,
+            user_id,
+            fts_query,
+            node_cap
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut hits: Vec<GlobalSearchHit> = title_hits
+            .into_iter()
+            .map(|r| GlobalSearchHit {
+                kind: "chat".into(),
+                id: r.id,
+                title: r.title,
+                snippet: String::new(),
+                score: 1.0,
+                target: SearchTarget::ChatTree { tree_id: r.id },
+            })
+            .collect();
+        hits.extend(node_hits.into_iter().map(|r| GlobalSearchHit {
+            kind: "chat".into(),
+            id: r.tree_id,
+            title: r.title,
+            snippet: snippet(&r.content, ""),
+            score: 1.0,
             target: SearchTarget::ChatNode {
                 tree_id: r.tree_id,
                 node_id: r.node_id,

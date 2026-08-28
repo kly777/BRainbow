@@ -7,7 +7,9 @@ use super::model::{Task, TaskStatus};
 use super::repository::TaskRepository;
 use crate::modules::time_window::TimeWindow;
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit, SearchPort, SearchTarget, normalize_search, snippet};
+use crate::shared::search::{
+    SearchHit, SearchPort, SearchTarget, fts_query, normalize_search, snippet,
+};
 
 /// 查询侧服务——纯读取，无副作用。
 ///
@@ -206,11 +208,24 @@ impl SearchPort for TaskQueryService {
         let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
-        let rows = self
-            .repo
-            .search_hits(user_id, &like, cap)
-            .await
-            .map_err(ServiceError::Db)?;
+        // 3+字符使用FTS5，短查询退化为LIKE
+        let (rows, is_fts) = if let Some(fts) = fts_query(q) {
+            (
+                self.repo
+                    .search_hits_fts(user_id, &fts, cap)
+                    .await
+                    .map_err(ServiceError::Db)?,
+                true,
+            )
+        } else {
+            (
+                self.repo
+                    .search_hits(user_id, &like, cap)
+                    .await
+                    .map_err(ServiceError::Db)?,
+                false,
+            )
+        };
         Ok(rows
             .into_iter()
             .map(|r| SearchHit {
@@ -219,6 +234,7 @@ impl SearchPort for TaskQueryService {
                 title: r.title,
                 snippet: snippet(r.description.as_deref().unwrap_or(""), kw),
                 target: SearchTarget::Task { id: r.id },
+                score: if is_fts { 1.0 } else { r.title_hit as f64 },
             })
             .collect())
     }

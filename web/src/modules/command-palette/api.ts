@@ -27,6 +27,7 @@ export interface SearchHit {
 	title: string;
 	snippet: string;
 	target: SearchTarget;
+	score: number;
 }
 
 export interface SearchResponse {

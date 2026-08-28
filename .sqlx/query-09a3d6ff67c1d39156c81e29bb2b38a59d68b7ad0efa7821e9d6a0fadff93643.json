@@ -1,0 +1,57 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT r.id, r.title, r.content,\n                      0 AS \"title_hit!: i64\"\n               FROM reading_article_fts fts\n               JOIN reading_article r ON r.id = fts.rowid\n               WHERE reading_article_fts MATCH ?2\n                 AND (r.user_id = ?1 OR r.user_id IS NULL)\n               ORDER BY rank\n               LIMIT ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "reading_article",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_article",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "content",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_article",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "name": "title_hit!: i64",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "09a3d6ff67c1d39156c81e29bb2b38a59d68b7ad0efa7821e9d6a0fadff93643"
+}

@@ -45,6 +45,30 @@ impl CardRepository {
         Ok(rows)
     }
 
+    pub async fn search_hits_fts(
+        &self,
+        user_id: i32,
+        fts_query: &str,
+        cap: i64,
+    ) -> Result<Vec<CardHitRow>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            CardHitRow,
+            r#"SELECT c.id, COALESCE(c.content, '') AS "content!: String"
+               FROM card_fts fts
+               JOIN card c ON c.id = fts.rowid
+               WHERE card_fts MATCH ?2
+                 AND (c.user_id = ?1 OR c.user_id IS NULL)
+               ORDER BY rank
+               LIMIT ?3"#,
+            user_id,
+            fts_query,
+            cap
+        )
+        .fetch_all(&*self.db)
+        .await?;
+        Ok(rows)
+    }
+
     /// 获取所有卡片（分页）
     pub async fn find_all_paginated(
         &self,

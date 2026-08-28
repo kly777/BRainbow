@@ -23,6 +23,7 @@ type PageLoader = () => Promise<{ default: Component }>;
  */
 const PAGE_LOADERS: Record<PathValue, PageLoader> = {
 	[PATHS.home]: () => import("@app/routes/HomeGuard.tsx"),
+	[PATHS.search]: () => import("@modules/search/SearchPage.tsx"),
 	[PATHS.task]: () => import("@modules/task/TaskManager.tsx"),
 	[PATHS.taskDetail]: () => import("@modules/task/TaskDetail.tsx"),
 	[PATHS.ontology]: () => import("@modules/ontology/OntologyList.tsx"),

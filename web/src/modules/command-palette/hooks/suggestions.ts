@@ -119,7 +119,26 @@ export function buildCmdItems(q: string, commands: CmdEntry[]): Suggestion[] {
 	}));
 }
 
-/** 站内搜索建议（? 前缀模式），末尾附加"网页搜索"兜底项 */
+/** 将文本中的关键词用 <mark> 标签高亮（转义 HTML 实体后替换） */
+function highlightKeywords(text: string, query: string): string {
+	if (!query || !text) return "";
+	const escaped = text
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
+	const terms = query.trim().split(/\s+/).filter(Boolean);
+	let result = escaped;
+	for (const term of terms) {
+		const re = new RegExp(
+			term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+			"gi",
+		);
+		result = result.replace(re, (m) => `<mark>${m}</mark>`);
+	}
+	return result;
+}
+
+/** 站内搜索建议（? 前缀模式），按模块分组展示，末尾附加"网页搜索"兜底项 */
 export function buildSearchItems(
 	hits: SearchHit[],
 	q: string,
@@ -127,15 +146,58 @@ export function buildSearchItems(
 	navigate: (path: string) => void,
 	close: () => void,
 ): Suggestion[] {
-	const items: Suggestion[] = hits.map((h) => ({
-		label: h.title,
-		desc: h.snippet,
-		extra: KIND_LABEL[h.kind] ?? h.kind,
-		onSelect: () => {
-			navigate(resolveTargetUrl(h.target));
-			close();
-		},
-	}));
+	if (hits.length === 0) {
+		if (q && !searching) {
+			return [
+				{
+					label: `在浏览器中搜索「${q}」`,
+					desc: "站内未命中时使用外部搜索引擎",
+					extra: "web",
+					onSelect: () => {
+						searchWeb(q);
+						close();
+					},
+				},
+			];
+		}
+		return [];
+	}
+
+	// 按 kind 分组，保持原始顺序
+	const groups = new Map<string, SearchHit[]>();
+	for (const h of hits) {
+		const arr = groups.get(h.kind);
+		if (arr) arr.push(h);
+		else groups.set(h.kind, [h]);
+	}
+
+	const items: Suggestion[] = [];
+	for (const [kind, groupHits] of groups) {
+		const label = KIND_LABEL[kind] ?? kind;
+		// 多组时添加分组标题
+		if (groups.size > 1) {
+			items.push({
+				label: `${label}（${groupHits.length}）`,
+				desc: "",
+				extra: "",
+				isHeader: true,
+				onSelect: () => {},
+			});
+		}
+		for (const h of groupHits) {
+			items.push({
+				label: h.title,
+				desc: h.snippet,
+				highlightedDesc: highlightKeywords(h.snippet, q),
+				extra: groups.size === 1 ? label : undefined,
+				onSelect: () => {
+					navigate(resolveTargetUrl(h.target));
+					close();
+				},
+			});
+		}
+	}
+
 	if (q && !searching) {
 		items.push({
 			label: `在浏览器中搜索「${q}」`,

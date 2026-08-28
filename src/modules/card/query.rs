@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use super::model::Card;
 use super::repository::CardRepository;
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit, SearchPort, SearchTarget, clip, normalize_search, snippet};
+use crate::shared::search::{SearchHit, SearchPort, SearchTarget, clip, fts_query, normalize_search, snippet};
 
 /// 查询侧服务——纯读取，无副作用。
 ///
@@ -66,20 +66,40 @@ impl SearchPort for CardQueryService {
         let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
-        let rows = self
-            .repo
-            .search_hits(user_id, &like, cap)
-            .await
-            .map_err(ServiceError::Db)?;
-        Ok(rows
-            .into_iter()
-            .map(|r| SearchHit {
-                kind: "card".into(),
-                id: r.id,
-                title: clip(&r.content, 60),
-                snippet: snippet(&r.content, kw),
-                target: SearchTarget::Card { id: r.id },
-            })
-            .collect())
+        if let Some(fts) = fts_query(q) {
+            let rows = self
+                .repo
+                .search_hits_fts(user_id, &fts, cap)
+                .await
+                .map_err(ServiceError::Db)?;
+            Ok(rows
+                .into_iter()
+                .map(|r| SearchHit {
+                    kind: "card".into(),
+                    id: r.id,
+                    title: clip(&r.content, 60),
+                    snippet: snippet(&r.content, kw),
+                    target: SearchTarget::Card { id: r.id },
+                    score: 1.0,
+                })
+                .collect())
+        } else {
+            let rows = self
+                .repo
+                .search_hits(user_id, &like, cap)
+                .await
+                .map_err(ServiceError::Db)?;
+            Ok(rows
+                .into_iter()
+                .map(|r| SearchHit {
+                    kind: "card".into(),
+                    id: r.id,
+                    title: clip(&r.content, 60),
+                    snippet: snippet(&r.content, kw),
+                    target: SearchTarget::Card { id: r.id },
+                    score: 0.0,
+                })
+                .collect())
+        }
     }
 }

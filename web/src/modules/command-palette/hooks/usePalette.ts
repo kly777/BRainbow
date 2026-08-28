@@ -48,7 +48,11 @@ const KEY_TO_PREFIX: Record<string, string> = {
 export interface Suggestion {
 	label: string;
 	desc: string;
+	/** 带关键词高亮的描述（HTML），用于搜索结果展示 */
+	highlightedDesc?: string;
 	extra?: string;
+	/** 是否为分组标题（不可选中） */
+	isHeader?: boolean;
 	onSelect: () => void;
 }
 
@@ -117,6 +121,7 @@ export function usePalette() {
 	const search = usePaletteSearch({
 		mode,
 		query,
+		setQuery: setValue,
 		navigate,
 		close,
 	});
@@ -144,7 +149,7 @@ export function usePalette() {
 		if (items.length > 0) {
 			items[Math.min(selectedIndex(), items.length - 1)].onSelect();
 		} else if (mode() === "search" && query()) {
-			search.fallbackSearch(query());
+			navigate(`${PATHS.search}?q=${encodeURIComponent(query())}`);
 		}
 		close();
 	};
@@ -177,15 +182,30 @@ export function usePalette() {
 			commit();
 			return;
 		}
-		const len = currentItems().length;
+		const items = currentItems();
+		const len = items.length;
 		if (len === 0) return;
 		if (e.key === "ArrowDown") {
 			e.preventDefault();
-			setSelectedIndex((i) => (i + 1) % len);
+			setSelectedIndex((i) => {
+				let next = (i + 1) % len;
+				// 跳过分组标题
+				while (items[next]?.isHeader && next !== i) {
+					next = (next + 1) % len;
+				}
+				return next;
+			});
 		}
 		if (e.key === "ArrowUp") {
 			e.preventDefault();
-			setSelectedIndex((i) => (i - 1 + len) % len);
+			setSelectedIndex((i) => {
+				let next = (i - 1 + len) % len;
+				// 跳过分组标题
+				while (items[next]?.isHeader && next !== i) {
+					next = (next - 1 + len) % len;
+				}
+				return next;
+			});
 		}
 	};
 

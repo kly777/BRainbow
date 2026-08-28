@@ -418,6 +418,34 @@ impl ReadingRepo {
             .map(|r| (r.id, r.title, r.content))
             .collect())
     }
+
+    pub async fn search_hits_fts(
+        &self,
+        user_id: i32,
+        fts_query: &str,
+        cap: i64,
+    ) -> Result<Vec<(i64, String, String)>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            ReadingSearchRow,
+            r#"SELECT r.id, r.title, r.content,
+                      0 AS "title_hit!: i64"
+               FROM reading_article_fts fts
+               JOIN reading_article r ON r.id = fts.rowid
+               WHERE reading_article_fts MATCH ?2
+                 AND (r.user_id = ?1 OR r.user_id IS NULL)
+               ORDER BY rank
+               LIMIT ?3"#,
+            user_id,
+            fts_query,
+            cap
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| (r.id, r.title, r.content))
+            .collect())
+    }
 }
 
 #[cfg(test)]

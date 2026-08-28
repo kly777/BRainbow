@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use super::model::{Article, ArticleDetail, ArticleSummary, UnknownWord};
 use super::repository::ReadingRepo;
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit, SearchPort, SearchTarget, normalize_search, snippet};
+use crate::shared::search::{SearchHit, SearchPort, SearchTarget, fts_query, normalize_search, snippet};
 
 /// 目标认识率：越接近该值的文章越适合作为下一篇阅读。
 pub(crate) const TARGET_KNOWN_RATIO: f64 = 0.9;
@@ -117,11 +117,23 @@ impl SearchPort for ReadingQueryService {
         let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
-        let rows = self
-            .repo
-            .search_hits(user_id, &like, cap)
-            .await
-            .map_err(ServiceError::Db)?;
+        let (rows, score) = if let Some(fts) = fts_query(q) {
+            (
+                self.repo
+                    .search_hits_fts(user_id, &fts, cap)
+                    .await
+                    .map_err(ServiceError::Db)?,
+                1.0f64,
+            )
+        } else {
+            (
+                self.repo
+                    .search_hits(user_id, &like, cap)
+                    .await
+                    .map_err(ServiceError::Db)?,
+                0.0f64,
+            )
+        };
         Ok(rows
             .into_iter()
             .map(|(id, title, content)| SearchHit {
@@ -130,6 +142,7 @@ impl SearchPort for ReadingQueryService {
                 title,
                 snippet: snippet(&content, kw),
                 target: SearchTarget::Reading { id },
+                score,
             })
             .collect())
     }

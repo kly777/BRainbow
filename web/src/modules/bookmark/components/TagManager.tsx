@@ -2,7 +2,7 @@
  * 标签管理弹窗：列出所有标签（名称 + 使用数），支持全局删除。
  */
 
-import { Button, Modal } from "@components/ui";
+import { Button, LoadingSkeleton, Modal } from "@components/ui";
 import type { BookmarkTagWithCount } from "@modules/bookmark";
 import { deleteBookmarkTagE, searchBookmarkTagsE } from "@modules/bookmark";
 import {
@@ -96,7 +96,7 @@ export default function TagManager(props: Props) {
 			}
 		>
 			<Show when={tags.loading} fallback={null}>
-				<div class={styles.state}>加载中…</div>
+				<LoadingSkeleton rows={2} />
 			</Show>
 			<Show
 				when={!tags.loading && (tags() ?? []).length > 0}

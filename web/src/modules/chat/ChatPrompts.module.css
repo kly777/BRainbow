@@ -128,3 +128,31 @@
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-faint);
 }
+
+/* ── 响应式 ── */
+@media (width <= 768px) {
+	.page {
+		padding: var(--space-md);
+	}
+
+	.head {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--space-sm);
+	}
+
+	.editor {
+		padding: var(--space-sm);
+	}
+
+	.item {
+		padding: var(--space-sm);
+	}
+
+	.item-content {
+		white-space: normal;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+	}
+}

@@ -1,3 +1,4 @@
+import { ArrowRight } from "@components/ui/icons";
 import {
 	type Component,
 	createEffect,
@@ -6,7 +7,6 @@ import {
 	Index,
 	Show,
 } from "solid-js";
-import { ArrowRight } from "lucide-solid";
 import type { ColumnInfo, FilterOpValue } from "../api";
 import {
 	type ColumnFilter,

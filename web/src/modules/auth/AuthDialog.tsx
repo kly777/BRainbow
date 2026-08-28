@@ -41,14 +41,6 @@ export default function AuthStatus() {
 		setShowForm(true);
 	};
 
-	const _openPasswordDialog = () => {
-		setDialogMode("password");
-		setError("");
-		setOldPassword("");
-		setNewPassword("");
-		setShowForm(true);
-	};
-
 	const onAuthRequired = () => {
 		logout();
 		if (showForm()) return;
@@ -98,12 +90,6 @@ export default function AuthStatus() {
 		}
 	};
 
-	const _handleLogout = async () => {
-		// 登出失败不影响本地 logout
-		await tryAsync(() => logoutE());
-		logout();
-	};
-
 	return (
 		<Modal
 			isOpen={showForm()}
@@ -117,13 +103,16 @@ export default function AuthStatus() {
 			}
 		>
 			<form onSubmit={handleSubmit} class={styles.authForm}>
-				{error() && <p class={styles.error}>{error()}</p>}
+				<Show when={error()}>
+					<p class={styles.error}>{error()}</p>
+				</Show>
 
 				<Show when={dialogMode() === "password"}>
 					<input
 						type="password"
 						placeholder="当前密码"
 						aria-label="当前密码"
+						autocomplete="current-password"
 						value={oldPassword()}
 						onInput={(e) => setOldPassword(e.currentTarget.value)}
 						class={styles.input}
@@ -133,6 +122,7 @@ export default function AuthStatus() {
 						type="password"
 						placeholder="新密码（至少4位）"
 						aria-label="新密码"
+						autocomplete="new-password"
 						value={newPassword()}
 						onInput={(e) => setNewPassword(e.currentTarget.value)}
 						class={styles.input}
@@ -153,6 +143,7 @@ export default function AuthStatus() {
 					<input
 						placeholder="用户名"
 						aria-label="用户名"
+						autocomplete="username"
 						value={name()}
 						onInput={(e) => setName(e.currentTarget.value)}
 						class={styles.input}
@@ -162,6 +153,7 @@ export default function AuthStatus() {
 						type="password"
 						placeholder="密码"
 						aria-label="密码"
+						autocomplete="current-password"
 						value={password()}
 						onInput={(e) => setPassword(e.currentTarget.value)}
 						class={styles.input}

@@ -1,8 +1,11 @@
 // ── /bookmark：按标签分组展示书签（默认视图） ──
 
-import { Button, PageHead, SearchInput } from "@components/ui";
+import { Button, LoadingSkeleton, PageHead, SearchInput } from "@components/ui";
+import { Settings, X } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@shared/api";
+import { trySync } from "@shared/utils";
+import { useNavigate } from "@solidjs/router";
 import {
 	type Component,
 	createEffect,
@@ -19,8 +22,6 @@ import {
 } from "./api.ts";
 import styles from "./BookmarkPage.module.css";
 import Favicon from "./components/Favicon.tsx";
-import { Settings, X } from "lucide-solid";
-import { trySync } from "@shared/utils";
 
 function extractDomain(url: string): string {
 	const result = trySync(() => new URL(url).hostname.replace(/^www\./, ""));
@@ -71,6 +72,7 @@ const TagGroupCard: Component<{
 );
 
 export default function BookmarkPage() {
+	const navigate = useNavigate();
 	const [searchQuery, setSearchQuery] = createSignal("");
 	const [searchResults, setSearchResults] = createSignal<Bookmark[] | null>(
 		null,
@@ -114,7 +116,7 @@ export default function BookmarkPage() {
 							onSearch={handleSearch}
 							placeholder="搜索标题 / URL / 备注 / 标签…"
 						/>
-						<div style={{ visibility: searchQuery().trim() ? "visible" : "hidden" }}>
+						<Show when={searchQuery().trim()}>
 							<Button
 								variant="icon"
 								title="清空搜索"
@@ -122,11 +124,11 @@ export default function BookmarkPage() {
 							>
 								<X size={14} />
 							</Button>
-						</div>
+						</Show>
 						<Button
 							variant="secondary"
 							size="sm"
-							onClick={() => (window.location.href = PATHS.bookmarkManage)}
+							onClick={() => navigate(PATHS.bookmarkManage)}
 						>
 							<Settings size={14} /> 管理
 						</Button>
@@ -161,7 +163,7 @@ export default function BookmarkPage() {
 			{/* 分组展示 */}
 			<Show when={searchResults() === null}>
 				<Show when={grouped.loading}>
-					<div class={styles.state}>加载中…</div>
+					<LoadingSkeleton />
 				</Show>
 				<Show when={grouped.error}>
 					<div class={styles.state}>

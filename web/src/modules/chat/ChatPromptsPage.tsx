@@ -1,6 +1,6 @@
 // ── 提示词预设管理：增删改查 ──
 
-import { Button } from "@components/ui";
+import { Button, LoadingSkeleton } from "@components/ui";
 import type { PromptPreset } from "@modules/chat";
 import {
 	createPresetE,
@@ -159,10 +159,7 @@ export default function ChatPromptsPage() {
 			</Show>
 
 			<div class={styles.list}>
-				<Show
-					when={!loading()}
-					fallback={<div class={styles.empty}>加载中…</div>}
-				>
+				<Show when={!loading()} fallback={<LoadingSkeleton />}>
 					<PromptListBody
 						presets={presets()}
 						onEdit={startEdit}

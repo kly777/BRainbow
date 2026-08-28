@@ -1,6 +1,6 @@
 // ── /ontology/:id：本体详情（全局搜索直达） ──
 
-import { Button, Toolbar } from "@components/ui";
+import { Button, LoadingSkeleton, Toolbar } from "@components/ui";
 import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@shared/api";
 import { notifySuccess, showConfirm, tryOrNotify } from "@shared/utils";
@@ -140,7 +140,7 @@ export default function OntologyDetail() {
 			</Show>
 
 			<Show when={data.loading}>
-				<div class={styles.loading}>加载中…</div>
+				<LoadingSkeleton />
 			</Show>
 
 			<Show when={data()}>

@@ -1,6 +1,6 @@
+import { ChevronLeft, ChevronRight } from "@components/ui/icons";
 import type { CalendarEvent } from "@modules/task";
 import { fmtLocal } from "@shared/utils";
-import { ChevronLeft, ChevronRight } from "lucide-solid";
 import { type Component, For, Show } from "solid-js";
 import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
 import styles from "./TaskCalendar.module.css";
@@ -84,13 +84,22 @@ export default function TaskCalendar() {
 			</div>
 
 			<div class={styles.calendarGrid}>
-				<div class={styles.dayHeader}>周日</div>
-				<div class={styles.dayHeader}>周一</div>
-				<div class={styles.dayHeader}>周二</div>
-				<div class={styles.dayHeader}>周三</div>
-				<div class={styles.dayHeader}>周四</div>
-				<div class={styles.dayHeader}>周五</div>
-				<div class={styles.dayHeader}>周六</div>
+				{/* Desktop headers */}
+				<div class={`${styles.dayHeader} ${styles.dayHeaderFull}`}>周日</div>
+				<div class={`${styles.dayHeader} ${styles.dayHeaderFull}`}>周一</div>
+				<div class={`${styles.dayHeader} ${styles.dayHeaderFull}`}>周二</div>
+				<div class={`${styles.dayHeader} ${styles.dayHeaderFull}`}>周三</div>
+				<div class={`${styles.dayHeader} ${styles.dayHeaderFull}`}>周四</div>
+				<div class={`${styles.dayHeader} ${styles.dayHeaderFull}`}>周五</div>
+				<div class={`${styles.dayHeader} ${styles.dayHeaderFull}`}>周六</div>
+				{/* Mobile abbreviated headers */}
+				<div class={`${styles.dayHeader} ${styles.dayHeaderShort}`}>日</div>
+				<div class={`${styles.dayHeader} ${styles.dayHeaderShort}`}>一</div>
+				<div class={`${styles.dayHeader} ${styles.dayHeaderShort}`}>二</div>
+				<div class={`${styles.dayHeader} ${styles.dayHeaderShort}`}>三</div>
+				<div class={`${styles.dayHeader} ${styles.dayHeaderShort}`}>四</div>
+				<div class={`${styles.dayHeader} ${styles.dayHeaderShort}`}>五</div>
+				<div class={`${styles.dayHeader} ${styles.dayHeaderShort}`}>六</div>
 
 				<For each={m.daysInMonth()}>
 					{(date) => (

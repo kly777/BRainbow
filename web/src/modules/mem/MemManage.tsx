@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-solid";
+import { ArrowLeft } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
 // ── 记忆管理 v2：档案柜 ──
 // 清单表格 = 档案索引 · 详情面板 = 档案卡

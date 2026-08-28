@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadTextE, saveTextE } from "./api.ts";
 
 // 模拟依赖

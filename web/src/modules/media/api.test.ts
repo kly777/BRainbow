@@ -1,10 +1,10 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	uploadMedia,
-	listMediaE,
-	getMediaE,
-	renameMediaE,
 	deleteMediaE,
+	getMediaE,
+	listMediaE,
+	renameMediaE,
+	uploadMedia,
 } from "./api.ts";
 
 // 模拟依赖

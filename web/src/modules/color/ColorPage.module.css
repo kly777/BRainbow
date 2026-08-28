@@ -151,6 +151,14 @@
 }
 
 @media (width <= 600px) {
+	.page {
+		padding: var(--space-md);
+	}
+
+	.grid {
+		grid-template-columns: 1fr;
+	}
+
 	.btn-ghost {
 		padding: 0 var(--space-md);
 		font-size: var(--text-xs);

@@ -1,8 +1,8 @@
 import { AsyncView, Button } from "@components/ui";
+import { ArrowLeft, Check } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
 import { listUnknownWords, markWord, type UnknownWord } from "@modules/reading";
 import { A } from "@solidjs/router";
-import { ArrowLeft, Check } from "lucide-solid";
 import { createResource, For } from "solid-js";
 import styles from "./ReadingUnknown.module.css";
 

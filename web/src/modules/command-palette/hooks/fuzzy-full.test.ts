@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { fuzzyMatch, fuzzyFilter } from "./fuzzy.ts";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fuzzyFilter, fuzzyMatch } from "./fuzzy.ts";
 
 describe("fuzzy 模块", () => {
 	beforeEach(() => {

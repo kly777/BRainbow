@@ -1,15 +1,15 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	getTaskTreeE,
-	createTaskE,
-	updateTaskE,
-	deleteTaskE,
-	completeTaskE,
 	activateTaskE,
 	archiveTaskE,
+	completeTaskE,
+	createTaskE,
+	deleteTaskE,
+	getTaskStatsE,
+	getTaskTreeE,
 	moveToBacklogE,
 	searchTasksE,
-	getTaskStatsE,
+	updateTaskE,
 } from "./api.ts";
 
 // 模拟依赖

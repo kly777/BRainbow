@@ -1,12 +1,6 @@
 // ── /bookmark 列表项：checkbox + favicon + 标题链接 + 域名 + 标签 + 操作 ──
 
 import { Button, Tooltip } from "@components/ui";
-import type { Bookmark } from "@modules/bookmark";
-import { setBookmarkTagsE, suggestBookmarkTagsE } from "@modules/bookmark";
-import { notifyError, notifySuccess, trySync } from "@shared/utils";
-import { createSignal, For, Show } from "solid-js";
-import styles from "../BookmarkPage.module.css";
-import Favicon from "./Favicon.tsx";
 import {
 	CheckCircle2,
 	Link,
@@ -16,7 +10,13 @@ import {
 	Sparkles,
 	X,
 	XCircle,
-} from "lucide-solid";
+} from "@components/ui/icons";
+import type { Bookmark } from "@modules/bookmark";
+import { setBookmarkTagsE, suggestBookmarkTagsE } from "@modules/bookmark";
+import { notifyError, notifySuccess, trySync } from "@shared/utils";
+import { createSignal, For, Show } from "solid-js";
+import styles from "../BookmarkPage.module.css";
+import Favicon from "./Favicon.tsx";
 
 /** 从 URL 提取域名（用于展示与标题兜底） */
 function extractDomain(url: string): string {
@@ -205,11 +205,7 @@ export function BookmarkItem(props: {
 						onClick={handleSuggestTags}
 						disabled={suggesting()}
 					>
-						{suggesting() ? (
-							<Loader2 size={16} />
-						) : (
-							<Sparkles size={16} />
-						)}
+						{suggesting() ? <Loader2 size={16} /> : <Sparkles size={16} />}
 					</Button>
 				</Tooltip>
 				<Tooltip label="刷新标题">
@@ -218,11 +214,7 @@ export function BookmarkItem(props: {
 						onClick={props.onRefreshTitle}
 						disabled={refreshing()}
 					>
-						{refreshing() ? (
-							<Loader2 size={16} />
-						) : (
-							<RefreshCw size={16} />
-						)}
+						{refreshing() ? <Loader2 size={16} /> : <RefreshCw size={16} />}
 					</Button>
 				</Tooltip>
 				<Tooltip label="检测可访问性">

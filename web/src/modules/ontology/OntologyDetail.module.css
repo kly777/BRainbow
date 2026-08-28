@@ -109,3 +109,32 @@
 	align-items: center;
 	gap: var(--space-md);
 }
+
+/* ── 响应式 ── */
+@media (width <= 768px) {
+	.container {
+		padding: var(--space-md) var(--space-md) var(--space-lg);
+	}
+
+	.card {
+		padding: var(--space-md);
+	}
+
+	.head {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--space-xs);
+	}
+
+	.title {
+		font-size: var(--text-lg);
+	}
+
+	.form-actions {
+		flex-direction: column;
+	}
+
+	.form-actions button {
+		width: 100%;
+	}
+}

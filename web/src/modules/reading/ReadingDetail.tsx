@@ -1,10 +1,11 @@
 import { Button, Tooltip } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
+
 // ── 阅读详情页面（薄壳视图层）──
 
+import { ArrowLeft, Check, X } from "@components/ui/icons";
 import { getErrorMessage } from "@shared/api";
 import { A } from "@solidjs/router";
-import { ArrowLeft, Check, X } from "lucide-solid";
 import { For, Show } from "solid-js";
 import ArticleContent from "./components/ArticleContent";
 import { useReadingDetail } from "./hooks/useReadingDetail.ts";
@@ -136,11 +137,13 @@ export default function ReadingDetail() {
 																	}`}
 																	aria-pressed={st === "known"}
 																>
-																	{st === "known"
-																		? <Check size={14} />
-																		: st === "ignored"
-																			? "–"
-																			: <X size={14} />}
+																	{st === "known" ? (
+																		<Check size={14} />
+																	) : st === "ignored" ? (
+																		"–"
+																	) : (
+																		<X size={14} />
+																	)}
 																</button>
 															</Tooltip>
 															<span class={styles.wordName}>{w.word}</span>

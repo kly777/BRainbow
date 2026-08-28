@@ -1,6 +1,6 @@
+import { ArrowRight, Check } from "@components/ui/icons";
 import { getErrorMessage } from "@shared/api";
 import { copyText } from "@shared/utils";
-import { ArrowRight, Check } from "lucide-solid";
 import {
 	type Component,
 	createEffect,
@@ -148,7 +148,9 @@ const RowDetailBody: Component<{
 				class={styles.copyBtn}
 				onClick={() => void props.onCopyRowJson()}
 			>
-				{props.copiedKey() === "__row" ? "已复制 <Check size={14} />" : "复制 JSON"}
+				{props.copiedKey() === "__row"
+					? "已复制 <Check size={14} />"
+					: "复制 JSON"}
 			</button>
 			<Show when={props.copyError()}>
 				<span class={styles.copyError}>{props.copyError()}</span>

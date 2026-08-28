@@ -1,4 +1,9 @@
-import { FilterGroup, PageHead, SearchInput } from "@components/ui";
+import {
+	FilterGroup,
+	LoadingSkeleton,
+	PageHead,
+	SearchInput,
+} from "@components/ui";
 import { TaskList, TaskProvider, useTasks } from "@modules/task";
 import { enumParam, strParam, useUrlParams } from "@shared/utils";
 import { createSignal, Show } from "solid-js";
@@ -112,7 +117,7 @@ function TaskPanel(props: {
 				</>
 			}
 		>
-			<div class={styles.loading}>加载中…</div>
+			<LoadingSkeleton />
 		</Show>
 	);
 }

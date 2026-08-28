@@ -1,5 +1,5 @@
-import { ArrowLeft } from "lucide-solid";
 import { Button, FilterGroup, SearchInput } from "@components/ui";
+import { ArrowLeft } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@shared/api";
 import { fmtLocal } from "@shared/utils";

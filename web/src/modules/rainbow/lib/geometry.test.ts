@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { rainbowGeometry, RAINBOW_SQUARE_SIZE } from "./geometry.ts";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { RAINBOW_SQUARE_SIZE, rainbowGeometry } from "./geometry.ts";
 
 describe("rainbow geometry", () => {
 	beforeEach(() => {

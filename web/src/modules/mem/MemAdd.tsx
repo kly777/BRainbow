@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-solid";
+import { ArrowLeft } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
 // ── 添加记忆 v2：折痕卡片 ──
 // 单条模式 = 摊开一张空白目录卡（线索/答案中间是折痕）

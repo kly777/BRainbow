@@ -2,6 +2,7 @@
  * ColorPage — 主题/配色切换页（/color）
  */
 
+import { Check } from "@components/ui/icons";
 import {
 	applyTheme,
 	getTheme,
@@ -9,7 +10,6 @@ import {
 	themeInfo,
 	themes,
 } from "@shared/styles";
-import { Check } from "lucide-solid";
 import { createSignal, For, onMount } from "solid-js";
 import styles from "./ColorPage.module.css";
 
@@ -56,7 +56,13 @@ function ThemeCard(props: {
 			<ThemeSwatchRow swatches={props.info.swatches} />
 			<div class={styles.cardName}>{props.info.label}</div>
 			<div class={styles.cardStatus}>
-				{props.active ? <><Check size={14} /> 当前</> : "点击切换"}
+				{props.active ? (
+					<>
+						<Check size={14} /> 当前
+					</>
+				) : (
+					"点击切换"
+				)}
 			</div>
 			<ThemePreviewBox />
 		</div>

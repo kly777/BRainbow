@@ -81,6 +81,19 @@ function EmptyState(props: { text: string }) {
 	);
 }
 
+function SearchingState() {
+	return (
+		<div class={styles.suggestions}>
+			<div class={styles.sugScroll}>
+				<div class={styles.searching}>
+					<div class={styles.spinner} aria-hidden="true" />
+					搜索中…
+				</div>
+			</div>
+		</div>
+	);
+}
+
 function SearchHint(props: { query: string }) {
 	return (
 		<div class={styles.suggestions}>
@@ -144,7 +157,7 @@ export default function CommandPalette() {
 						listRef={p.bindSugScroll}
 					/>
 				);
-			if (p.searching() && q) return <EmptyState text="搜索中…" />;
+			if (p.searching() && q) return <SearchingState />;
 			if (q) return <SearchHint query={q} />;
 		}
 		return null;

@@ -1,4 +1,8 @@
-import { Button, Markdown as MarkdownRenderer } from "@components/ui";
+import {
+	Button,
+	LoadingSkeleton,
+	Markdown as MarkdownRenderer,
+} from "@components/ui";
 import { getErrorMessage } from "@shared/api";
 import { fmtLocal } from "@shared/utils";
 import { For, Show } from "solid-js";
@@ -15,10 +19,7 @@ export default function ConvDetailPage() {
 			<Show
 				when={m.dataError}
 				fallback={
-					<Show
-						when={m.data()}
-						fallback={<div class={styles.loading}>加载中…</div>}
-					>
+					<Show when={m.data()} fallback={<LoadingSkeleton />}>
 						{(d) => (
 							<>
 								<ConvTopBar

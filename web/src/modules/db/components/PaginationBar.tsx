@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "lucide-solid";
+import { ChevronLeft, ChevronRight } from "@components/ui/icons";
 import { type Component, For, onCleanup, onMount, Show } from "solid-js";
 import { PAGE_SIZES } from "../tableConfig";
 import styles from "./PaginationBar.module.css";

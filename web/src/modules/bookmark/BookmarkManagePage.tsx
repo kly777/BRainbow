@@ -1,6 +1,7 @@
 // ── /bookmark：网页书签管理（搜索 / 标签过滤 / 分页 / 导入 Firefox 书签 / 批量管理） ──
 
-import { Button, PageHead, SearchInput } from "@components/ui";
+import { Button, LoadingSkeleton, PageHead, SearchInput } from "@components/ui";
+import { ChevronLeft, ChevronRight, Sparkles, X } from "@components/ui/icons";
 import { getErrorMessage } from "@shared/api";
 import { type Component, For, Show } from "solid-js";
 import styles from "./BookmarkPage.module.css";
@@ -8,7 +9,6 @@ import { BookmarkFormModal } from "./components/BookmarkFormModal.tsx";
 import { BookmarkItem } from "./components/BookmarkItem.tsx";
 import TagFilter from "./components/TagFilter.tsx";
 import TagManager from "./components/TagManager.tsx";
-import { ChevronLeft, ChevronRight, Sparkles, X } from "lucide-solid";
 import { useBookmarkPage } from "./hooks/useBookmarkPage.ts";
 
 const BatchBar: Component<{
@@ -136,7 +136,7 @@ export default function BookmarkPage() {
 							onSearch={b.handleSearch}
 							placeholder="搜索标题 / URL / 备注 / 标签…"
 						/>
-						<div style={{ visibility: b.searchQuery().trim() ? "visible" : "hidden" }}>
+						<Show when={b.searchQuery().trim()}>
 							<Button
 								variant="icon"
 								title="清空搜索"
@@ -144,7 +144,7 @@ export default function BookmarkPage() {
 							>
 								<X size={14} />
 							</Button>
-						</div>
+						</Show>
 						<TagFilter value={b.tagFilter()} onChange={b.handleTagFilter} />
 						<Button
 							variant="secondary"
@@ -181,7 +181,7 @@ export default function BookmarkPage() {
 			/>
 
 			<Show when={b.loading()}>
-				<div class={styles.state}>加载中…</div>
+				<LoadingSkeleton />
 			</Show>
 			<Show when={b.error()}>
 				<div class={styles.state}>

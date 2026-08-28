@@ -71,6 +71,7 @@ const BookmarkMainSection: Component<{
 							onTagFilter={b.handleTagFilter}
 							onRefreshTitle={() => b.handleRefreshTitle(bm)}
 							onCheckAccessibility={() => b.handleCheckAccessibility(bm)}
+							onTagsChanged={() => b.load({ silent: true })}
 						/>
 					)}
 				</For>

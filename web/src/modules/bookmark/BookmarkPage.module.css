@@ -66,6 +66,14 @@
 	accent-color: var(--t-color-accent);
 }
 
+.item-content {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
 .item-title {
 	font-size: var(--text-sm);
 	font-weight: 500;
@@ -394,4 +402,51 @@
 	color: var(--t-color-ink-muted);
 	margin-bottom: var(--space-sm);
 	padding: 0 var(--space-xs);
+}
+
+/* ── 内联 AI 建议标签 ── */
+
+.suggest-inline {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-xs);
+	margin-top: var(--space-xs);
+	padding: var(--space-2xs) var(--space-sm);
+	background: var(--t-color-accent-soft);
+	border-radius: var(--radius-sm);
+}
+
+.suggest-label {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.suggest-tag-btn {
+	display: inline-flex;
+	align-items: center;
+	border: 1px dashed var(--t-color-accent);
+	border-radius: var(--radius-full);
+	padding: 0 var(--space-sm);
+	font-size: var(--text-xs);
+	line-height: 1.375rem;
+	color: var(--t-color-accent);
+	background: transparent;
+	cursor: pointer;
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-style var(--t-transition-fast);
+}
+
+.suggest-tag-btn:hover {
+	background: var(--t-color-accent);
+	color: var(--t-color-on-solid);
+	border-style: solid;
+}
+
+.suggest-tag-selected {
+	background: var(--t-color-accent);
+	color: var(--t-color-on-solid);
+	border-style: solid;
 }

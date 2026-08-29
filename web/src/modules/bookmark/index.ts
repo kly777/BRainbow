@@ -10,4 +10,3 @@ export type {
 	TagGroup,
 } from "./api.ts";
 export * from "./api.ts";
-export { default as BookmarkPage } from "./BookmarkPage.tsx";

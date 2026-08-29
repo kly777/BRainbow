@@ -1,104 +1,17 @@
 /// <reference types="vitest" />
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import solid from "vite-plugin-solid";
-import { NAV_ITEMS } from "./src/config/navigation.ts";
+import { generateAll } from "./scripts/generate-seo.ts";
 
-// ═══════════════════════════════════════════
-// SEO/Agent 产物构建插件（数据源自 NAV_ITEMS + VITE_SITE_URL，路由变更自动同步）
-// ═══════════════════════════════════════════
-
-/** 站点地图：静态路径（排除 :id 模式），输出 dist/sitemap.xml */
-function sitemapPlugin(siteUrl: string): Plugin {
+/** 构建完成后生成 SEO/Agent 产物（sitemap / robots / llms / md pages） */
+function seoPlugin(siteUrl: string): Plugin {
 	return {
-		name: "brainbow:sitemap",
+		name: "brainbow:seo",
 		apply: "build",
 		closeBundle() {
-			const urls = NAV_ITEMS.filter((i) => !i.path.includes(":"))
-				.map((i) => `  <url><loc>${siteUrl}${i.path}</loc></url>`)
-				.join("\n");
-			const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
-</urlset>
-`;
-			mkdirSync("dist", { recursive: true });
-			writeFileSync("dist/sitemap.xml", xml);
-		},
-	};
-}
-
-/** 静态 SEO 资产：scripts/seo-assets/ 模板渲染（@@SITE_URL@@ → 站点域名） */
-function seoAssetsPlugin(siteUrl: string): Plugin {
-	// 模板文件 → dist 相对路径
-	const SEO_ASSETS = [
-		["robots.txt", "robots.txt"],
-		["llms.txt", "llms.txt"],
-		["openapi.json", "openapi.json"],
-		["api-catalog", path.join(".well-known", "api-catalog")],
-	] as const;
-
-	return {
-		name: "brainbow:seo-assets",
-		apply: "build",
-		closeBundle() {
-			for (const [src, dst] of SEO_ASSETS) {
-				const tpl = readFileSync(
-					path.join("scripts", "seo-assets", src),
-					"utf8",
-				);
-				const outFile = path.join("dist", dst);
-				mkdirSync(path.dirname(outFile), { recursive: true });
-				writeFileSync(outFile, tpl.replaceAll("@@SITE_URL@@", siteUrl));
-			}
-		},
-	};
-}
-
-/** Markdown for Agents：每路径一个 .md（dist/_md/<path>.md），模板 scripts/seo-assets/*.md */
-function markdownPagesPlugin(siteUrl: string): Plugin {
-	return {
-		name: "brainbow:markdown-pages",
-		apply: "build",
-		closeBundle() {
-			const mdDir = path.join("dist", "_md");
-			mkdirSync(mdDir, { recursive: true });
-
-			// 首页：功能列表由 NAV_ITEMS 派生
-			const features = NAV_ITEMS.filter((i) => i.nav && i.path !== "/")
-				.map((i) => `- [${i.label}](${siteUrl}${i.path}): ${i.desc}`)
-				.join("\n");
-			const homeTpl = readFileSync(
-				path.join("scripts", "seo-assets", "home.md"),
-				"utf8",
-			);
-			writeFileSync(
-				path.join(mdDir, "index.md"),
-				homeTpl.replaceAll("@@FEATURES@@", features),
-			);
-
-			// 功能页：每个静态路径一份
-			const pageTpl = readFileSync(
-				path.join("scripts", "seo-assets", "page.md"),
-				"utf8",
-			);
-			for (const item of NAV_ITEMS) {
-				if (item.path === "/" || item.path.includes(":")) continue;
-				const rel = item.path.slice(1);
-				const file = path.join(mdDir, `${rel}.md`);
-				mkdirSync(path.dirname(file), { recursive: true });
-				writeFileSync(
-					file,
-					pageTpl
-						.replaceAll("@@TITLE@@", item.title)
-						.replaceAll("@@DESC@@", item.desc || item.title)
-						.replaceAll("@@LABEL@@", item.label)
-						.replaceAll("@@SITE_URL@@", siteUrl),
-				);
-			}
+			generateAll(siteUrl);
 		},
 	};
 }
@@ -122,12 +35,7 @@ export default defineConfig(({ command, mode }) => {
 	const apiTarget = env.VITE_API_TARGET ?? "http://localhost:3000";
 
 	return {
-		plugins: [
-			solid(),
-			sitemapPlugin(siteUrl),
-			seoAssetsPlugin(siteUrl),
-			markdownPagesPlugin(siteUrl),
-		],
+		plugins: [solid(), seoPlugin(siteUrl)],
 		envDir,
 
 		css: {
@@ -192,58 +100,34 @@ export default defineConfig(({ command, mode }) => {
 			sourcemap: false,
 			rolldownOptions: {
 				output: {
-					manualChunks(id) {
-						// 富文本渲染工具链独立成包：体积大且极少变更，拆出利于长缓存
-						if (/(?:marked|highlight\.js|dompurify|marked-)/.test(id)) {
-							return "markdown-vendor";
-						}
-						// katex 独立成包：数学公式渲染，按需加载
-						if (/katex/.test(id)) {
-							return "katex";
-						}
-						if (/node_modules\/solid-js/.test(id)) {
-							return "solid-vendor";
-						}
-						// 共享模块拆分：UI 组件、工具函数、任务模块
-						if (/src\/components\/ui/.test(id)) {
-							return "shared-ui";
-						}
-						if (/src\/shared\/utils/.test(id)) {
-							return "shared-utils";
-						}
-						if (/src\/modules\/task\/(api|hooks|lib)/.test(id)) {
-							return "task-shared";
-						}
-						// mem 模块拆分：hooks 和 API 独立
-						if (/src\/modules\/mem\/(api|hooks)/.test(id)) {
-							return "mem-shared";
-						}
-						// mem 模块拆分：复习页面和管理页面分离
-						if (
-							/src\/modules\/mem\/(MemPage|components\/(ReviewCard|Sidebar|ContextBar|FilterBar|MnemonicSettingsModal))/.test(
-								id,
-							)
-						) {
-							return "mem-review";
-						}
-						if (
-							/src\/modules\/mem\/(MemManage|MemAdd|components\/(ManageTable|ManageDetail|ManageBatchBar|ImportParts|MemBatchTagModal|MemExportModal))/.test(
-								id,
-							)
-						) {
-							return "mem-manage";
-						}
-						// task 模块拆分：不同视图分离
-						if (/src\/modules\/task\/components\/TaskCalendar/.test(id)) {
-							return "task-calendar";
-						}
-						if (/src\/modules\/task\/components\/TaskKanban/.test(id)) {
-							return "task-kanban";
-						}
-						if (/src\/modules\/task\/components\/TaskDag/.test(id)) {
-							return "task-dag";
-						}
-						return undefined;
+					codeSplitting: {
+						minSize: 4096,
+						groups: [
+							// Tier 1: 大型 vendor 库，独立缓存（优先级最高）
+							{
+								name: "katex",
+								test: /node_modules[\\/]katex/,
+								priority: 20,
+							},
+							{
+								name: "markdown-vendor",
+								test: /node_modules[\\/](marked|highlight\.js|dompurify|marked-)/,
+								priority: 20,
+							},
+							// Tier 2: 业务模块，entriesAware 按路由入口自动拆分共享/独占代码
+							{
+								name: "mem",
+								test: /src[\\/]modules[\\/]mem[\\/]/,
+								priority: 10,
+								entriesAware: true,
+							},
+							{
+								name: "task",
+								test: /src[\\/]modules[\\/]task[\\/]/,
+								priority: 10,
+								entriesAware: true,
+							},
+						],
 					},
 				},
 			},

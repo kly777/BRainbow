@@ -1,4 +1,5 @@
 import type { Task } from "@modules/task";
+import { useModal } from "@shared/utils";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import EditTaskModal from "./EditTaskModal.tsx";
 import TaskItem from "./TaskItem.tsx";
@@ -62,7 +63,7 @@ function TaskStatusSection(props: TaskStatusSectionProps) {
 
 export default function TaskList(props: TaskListProps) {
 	const [editingTask, setEditingTask] = createSignal<Task | null>(null);
-	const [showEditModal, setShowEditModal] = createSignal(false);
+	const editModal = useModal();
 	// 构建父任务 -> 子任务列表的映射
 	const childrenMap = createMemo(() => {
 		const map = new Map<number, Task[]>();
@@ -120,7 +121,7 @@ export default function TaskList(props: TaskListProps) {
 				onAddSubTask={props.onAddSubTask}
 				onEdit={(task) => {
 					setEditingTask(task);
-					setShowEditModal(true);
+					editModal.open();
 				}}
 			/>
 
@@ -134,7 +135,7 @@ export default function TaskList(props: TaskListProps) {
 				onAddSubTask={props.onAddSubTask}
 				onEdit={(task) => {
 					setEditingTask(task);
-					setShowEditModal(true);
+					editModal.open();
 				}}
 			/>
 
@@ -148,7 +149,7 @@ export default function TaskList(props: TaskListProps) {
 				onAddSubTask={props.onAddSubTask}
 				onEdit={(task) => {
 					setEditingTask(task);
-					setShowEditModal(true);
+					editModal.open();
 				}}
 			/>
 
@@ -162,15 +163,15 @@ export default function TaskList(props: TaskListProps) {
 				onAddSubTask={props.onAddSubTask}
 				onEdit={(task) => {
 					setEditingTask(task);
-					setShowEditModal(true);
+					editModal.open();
 				}}
 			/>
 
 			{/* 编辑任务模态框 */}
 			<EditTaskModal
-				isOpen={showEditModal()}
+				isOpen={editModal.isOpen()}
 				onClose={() => {
-					setShowEditModal(false);
+					editModal.close();
 					setEditingTask(null);
 				}}
 				task={editingTask()}

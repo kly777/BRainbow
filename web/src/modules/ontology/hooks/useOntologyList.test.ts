@@ -12,23 +12,27 @@ vi.mock("../api", () => ({
 // 创建模拟的useUrlParams
 let mockSearchQuery = "";
 const mockSet = vi.fn();
-vi.mock("@shared/utils", () => ({
-	notifyError: vi.fn(),
-	notifySuccess: vi.fn(),
-	showConfirm: vi.fn(),
-	tryAsync: vi.fn(),
-	tryOrNotify: vi.fn(),
-	useUrlParams: vi.fn(() => ({
-		get: vi.fn((key: string) => {
-			if (key === "q") return mockSearchQuery;
-			if (key === "view") return "grid";
-			return "";
-		}),
-		set: mockSet,
-	})),
-	strParam: vi.fn((defaultVal) => ({ default: defaultVal })),
-	enumParam: vi.fn((values, defaultVal) => ({ values, default: defaultVal })),
-}));
+vi.mock("@shared/utils", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@shared/utils")>();
+	return {
+		...actual,
+		notifyError: vi.fn(),
+		notifySuccess: vi.fn(),
+		showConfirm: vi.fn(),
+		tryAsync: vi.fn(),
+		tryOrNotify: vi.fn(),
+		useUrlParams: vi.fn(() => ({
+			get: vi.fn((key: string) => {
+				if (key === "q") return mockSearchQuery;
+				if (key === "view") return "grid";
+				return "";
+			}),
+			set: mockSet,
+		})),
+		strParam: vi.fn((defaultVal) => ({ default: defaultVal })),
+		enumParam: vi.fn((values, defaultVal) => ({ values, default: defaultVal })),
+	};
+});
 
 vi.mock("@shared/api", () => ({
 	getErrorMessage: vi.fn((error) => error.message || "Unknown error"),

@@ -21,7 +21,7 @@ import {
 	type TagInfo,
 	unsuspendMemE,
 } from "@modules/mem";
-import { showConfirm, tryAsync, tryOrNotify } from "@shared/utils";
+import { showConfirm, tryAsync, tryOrNotify, useModal } from "@shared/utils";
 import {
 	createEffect,
 	createMemo,
@@ -66,8 +66,8 @@ export function useMemManage() {
 	// ── 核心状态 ──
 	const [memTags, setMemTags] = createSignal<Map<number, TagInfo[]>>(new Map());
 	const [batchIds, setBatchIds] = createSignal<Set<number>>(new Set());
-	const [showExportModal, setShowExportModal] = createSignal(false);
-	const [showBatchTagModal, setShowBatchTagModal] = createSignal(false);
+	const exportModal = useModal();
+	const batchTagModal = useModal();
 	const [batchTagMode, setBatchTagMode] = createSignal<"add" | "remove">("add");
 
 	// ── 直达标记：初始 URL 有 id 时，首次请求传 id 定位页码 ──
@@ -281,7 +281,7 @@ export function useMemManage() {
 		clearSelection: () => setBatchIds(new Set<number>()),
 		reload: () => refetch(),
 		closeDetail: () => params.setDetailId(null),
-		closeTagModal: () => setShowBatchTagModal(false),
+		closeTagModal: () => batchTagModal.close(),
 	});
 
 	return {
@@ -313,10 +313,12 @@ export function useMemManage() {
 		setEditCue: editHook.setEditCue,
 		editTarget: editHook.editTarget,
 		setEditTarget: editHook.setEditTarget,
-		showExportModal,
-		setShowExportModal,
-		showBatchTagModal,
-		setShowBatchTagModal,
+		showExportModal: exportModal.isOpen,
+		setShowExportModal: (v: boolean) =>
+			v ? exportModal.open() : exportModal.close(),
+		showBatchTagModal: batchTagModal.isOpen,
+		setShowBatchTagModal: (v: boolean) =>
+			v ? batchTagModal.open() : batchTagModal.close(),
 		batchTagMode,
 		setBatchTagMode,
 

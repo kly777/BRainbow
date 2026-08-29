@@ -15,6 +15,7 @@ import {
 	showConfirm,
 	strParam,
 	tryAsync,
+	useModal,
 	useUrlParams,
 } from "@shared/utils";
 import { createMemo, createSignal } from "solid-js";
@@ -25,7 +26,7 @@ export function useCardsList() {
 	const [totalPages, setTotalPages] = createSignal(0);
 	const [loading, setLoading] = createSignal(true);
 	const [error, setError] = createSignal<unknown>(null);
-	const [showCreateModal, setShowCreateModal] = createSignal(false);
+	const createModal = useModal();
 	const [newCardContent, setNewCardContent] = createSignal("");
 	const [isCreating, setIsCreating] = createSignal(false);
 	const [modalError, setModalError] = createSignal("");
@@ -117,7 +118,7 @@ export function useCardsList() {
 
 		if (result.ok) {
 			setNewCardContent("");
-			setShowCreateModal(false);
+			createModal.close();
 			setCards([result.value, ...cards()]);
 			notifySuccess("卡片已创建");
 		} else {
@@ -209,8 +210,9 @@ export function useCardsList() {
 		setError,
 		searchQuery,
 		isSearchMode,
-		showCreateModal,
-		setShowCreateModal,
+		showCreateModal: createModal.isOpen,
+		setShowCreateModal: (v: boolean) =>
+			v ? createModal.open() : createModal.close(),
 		newCardContent,
 		setNewCardContent,
 		isCreating,

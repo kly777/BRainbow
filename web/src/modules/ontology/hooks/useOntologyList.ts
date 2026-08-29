@@ -7,6 +7,7 @@ import {
 	strParam,
 	tryAsync,
 	tryOrNotify,
+	useModal,
 	useUrlParams,
 } from "@shared/utils";
 import { createResource, createSignal, type Setter } from "solid-js";
@@ -54,7 +55,7 @@ export function useOntologyList(): OntologyListApi {
 	const viewMode = () => params.get("view");
 	const setViewMode = (v: "grid" | "list") => params.set({ view: v });
 
-	const [showCreateModal, setShowCreateModal] = createSignal(false);
+	const createModal = useModal();
 	const [newName, setNewName] = createSignal("");
 	const [newDescription, setNewDescription] = createSignal("");
 	const [isCreating, setIsCreating] = createSignal(false);
@@ -85,7 +86,7 @@ export function useOntologyList(): OntologyListApi {
 		if (result.ok) {
 			setNewName("");
 			setNewDescription("");
-			setShowCreateModal(false);
+			createModal.close();
 			const currentData = ontologies() || [];
 			mutate([result.value, ...currentData]);
 			notifySuccess("本体创建成功");
@@ -123,11 +124,11 @@ export function useOntologyList(): OntologyListApi {
 		setNewName("");
 		setNewDescription("");
 		setCreateError("");
-		setShowCreateModal(true);
+		createModal.open();
 	};
 
 	const closeCreateModal = () => {
-		setShowCreateModal(false);
+		createModal.close();
 		setCreateError("");
 	};
 
@@ -141,7 +142,7 @@ export function useOntologyList(): OntologyListApi {
 		viewMode,
 		setViewMode,
 		filteredOntologies,
-		showCreateModal,
+		showCreateModal: createModal.isOpen,
 		newName,
 		setNewName,
 		newDescription,

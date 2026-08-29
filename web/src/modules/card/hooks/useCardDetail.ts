@@ -1,6 +1,6 @@
 import { fillPath, PATHS } from "@config/paths";
 import { deleteCardE, getCardE } from "@modules/card";
-import { showConfirm, tryOrNotify } from "@shared/utils";
+import { confirmAndDelete } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource } from "solid-js";
 import type { Card } from "../model.ts";
@@ -33,14 +33,12 @@ export function useCardDetail(): CardDetailApi {
 	});
 
 	const handleDelete = async () => {
-		const confirmed = await showConfirm({
+		await confirmAndDelete({
 			title: "删除卡片",
 			message: "确定要删除这个卡片吗？此操作不可撤销。",
-			variant: "danger",
+			deleteFn: () => deleteCardE(cardId()),
+			onSuccess: () => navigate(PATHS.card),
 		});
-		if (!confirmed) return;
-		const ok = await tryOrNotify(() => deleteCardE(cardId()), "删除卡片");
-		if (ok) navigate(PATHS.card);
 	};
 
 	const handleEdit = () => {

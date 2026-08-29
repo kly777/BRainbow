@@ -23,7 +23,7 @@
 
 import type { ConfirmOptions } from "@components/ui/organisms/confirmStore.ts";
 import { showConfirm as show } from "@components/ui/organisms/confirmStore.ts";
-import { notifyError } from "./notify.ts";
+import { notifyError, notifySuccess } from "./notify.ts";
 import { tryAsync } from "./result.ts";
 
 export {
@@ -80,4 +80,49 @@ export async function confirmAndRun<T>(
 	if (result.ok) return true;
 	notifyError(`${context}失败`, result.error);
 	return false;
+}
+
+/**
+ * 确认删除辅助：统一 confirm → delete → notify → callback 模式。
+ *
+ * 覆盖最常见的删除场景：
+ * - 简单删除（confirm → delete → navigate/refetch）
+ * - 乐观删除（调用方先移除 UI 项，再调此函数；失败时 onError 回滚）
+ *
+ * @param opts.title - 确认框标题（如 "删除卡片"）
+ * @param opts.message - 确认框消息
+ * @param opts.confirmLabel - 确认按钮文案（默认 "删除"）
+ * @param opts.deleteFn - 实际删除 API 调用
+ * @param opts.successMessage - 成功 toast 消息（可选，不传则不弹成功 toast）
+ * @param opts.onSuccess - 成功后回调（navigate / refetch / 清理状态等）
+ * @param opts.onError - 失败后回调（乐观回滚 / refetch 等；错误 toast 已自动处理）
+ * @returns true = 用户确认且删除成功；false = 取消或失败
+ */
+export async function confirmAndDelete(opts: {
+	title: string;
+	message: string;
+	confirmLabel?: string;
+	deleteFn: () => Promise<unknown>;
+	successMessage?: string;
+	onSuccess?: () => void;
+	onError?: () => void;
+}): Promise<boolean> {
+	const confirmed = await show({
+		title: opts.title,
+		message: opts.message,
+		variant: "danger",
+		confirmLabel: opts.confirmLabel ?? "删除",
+	});
+	if (!confirmed) return false;
+
+	const result = await tryAsync(opts.deleteFn);
+	if (!result.ok) {
+		notifyError(opts.title + "失败", result.error);
+		opts.onError?.();
+		return false;
+	}
+
+	if (opts.successMessage) notifySuccess(opts.successMessage);
+	opts.onSuccess?.();
+	return true;
 }

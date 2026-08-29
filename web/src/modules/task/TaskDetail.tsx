@@ -13,8 +13,8 @@ import { getErrorMessage } from "@shared/api";
 import {
 	fmtLocal,
 	notifySuccess,
-	showConfirm,
 	tryOrNotify,
+	confirmAndDelete,
 } from "@shared/utils";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import {
@@ -117,14 +117,12 @@ export default function TaskDetail() {
 
 	const remove = async () => {
 		const task = detail()?.task;
-		const confirmed = await showConfirm({
+		await confirmAndDelete({
 			title: "删除任务",
 			message: `确定删除「${task?.title ?? id()}」？子任务也会被一并删除。`,
-			variant: "danger",
+			deleteFn: () => deleteTaskE(id()),
+			onSuccess: () => navigate(PATHS.task),
 		});
-		if (!confirmed) return;
-		const ok = await tryOrNotify(() => deleteTaskE(id()), "删除任务");
-		if (ok) navigate(PATHS.task);
 	};
 
 	return (

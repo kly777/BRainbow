@@ -2,7 +2,7 @@
 
 import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
 import { PATHS } from "@config/paths";
-import { notifySuccess, showConfirm, tryOrNotify } from "@shared/utils";
+import { notifySuccess, tryOrNotify, confirmAndDelete } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal, Show } from "solid-js";
 import { deleteOntoE, getOntoE, updateOntoE } from "./api";
@@ -99,14 +99,12 @@ export default function OntologyDetail() {
 	};
 
 	const remove = async () => {
-		const confirmed = await showConfirm({
+		await confirmAndDelete({
 			title: "删除本体",
 			message: "确定删除这个本体？此操作不可撤销。",
-			variant: "danger",
+			deleteFn: () => deleteOntoE(id()),
+			onSuccess: () => navigate(PATHS.ontology),
 		});
-		if (!confirmed) return;
-		const ok = await tryOrNotify(() => deleteOntoE(id()), "删除本体");
-		if (ok) navigate(PATHS.ontology);
 	};
 
 	return (

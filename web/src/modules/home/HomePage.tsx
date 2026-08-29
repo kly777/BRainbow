@@ -10,7 +10,7 @@ import {
 	getCardsE,
 } from "@modules/card";
 import { TaskList, TaskProvider, useTasks } from "@modules/task";
-import { parseUtc, showConfirm, tryOrNotify, getGreeting } from "@shared/utils";
+import { parseUtc, confirmAndDelete, getGreeting } from "@shared/utils";
 import { A, useNavigate } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 import styles from "./HomePage.module.css";
@@ -106,15 +106,13 @@ function CardOverview() {
 	const recentCards = () => (cards() ?? []).slice(0, 4);
 
 	const handleDelete = async (id: number) => {
-		const confirmed = await showConfirm({
+		mutate((prev) => prev?.filter((c) => c.id !== id));
+		await confirmAndDelete({
 			title: "删除卡片",
 			message: "确定要删除这个卡片吗？此操作不可撤销。",
-			variant: "danger",
+			deleteFn: () => apiDeleteCard(id),
+			onError: () => refetch(),
 		});
-		if (!confirmed) return;
-		mutate((prev) => prev?.filter((c) => c.id !== id));
-		const ok = await tryOrNotify(() => apiDeleteCard(id), "删除卡片");
-		if (!ok) refetch();
 	};
 
 	return (

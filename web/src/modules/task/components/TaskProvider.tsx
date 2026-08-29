@@ -7,7 +7,7 @@ import {
 	getTasksE,
 	searchTasksE,
 } from "@modules/task";
-import { notifyError, showConfirm, tryAsync, tryOrNotify } from "@shared/utils";
+import { notifyError, tryAsync, confirmAndDelete } from "@shared/utils";
 import {
 	createContext,
 	createSignal,
@@ -120,16 +120,14 @@ export function TaskProvider(props: { children: JSX.Element }) {
 	};
 
 	const removeTask = async (id: number) => {
-		const confirmed = await showConfirm({
-			title: "删除任务",
-			message: "确定要删除这个任务吗？子任务也会被一并删除。",
-			variant: "danger",
-		});
-		if (!confirmed) return;
 		const prev = tasks();
 		setTasks(prev.filter((t) => t.id !== id));
-		const ok = await tryOrNotify(() => apiDeleteTask(id), "删除任务");
-		if (!ok) await reload();
+		await confirmAndDelete({
+			title: "删除任务",
+			message: "确定要删除这个任务吗？子任务也会被一并删除。",
+			deleteFn: () => apiDeleteTask(id),
+			onError: () => void reload(),
+		});
 	};
 
 	const updateTaskE = async (id: number, updates: Partial<Task>) => {

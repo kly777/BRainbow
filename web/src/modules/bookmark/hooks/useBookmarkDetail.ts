@@ -9,8 +9,8 @@ import {
 import {
 	notifyError,
 	notifySuccess,
-	showConfirm,
 	tryOrNotify,
+	confirmAndDelete,
 } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal } from "solid-js";
@@ -112,14 +112,12 @@ export function useBookmarkDetail(): BookmarkDetailApi {
 
 	const remove = async () => {
 		const bm = data();
-		const confirmed = await showConfirm({
+		await confirmAndDelete({
 			title: "删除书签",
 			message: `确定删除「${bm?.title ?? id()}」？此操作不可撤销。`,
-			variant: "danger",
+			deleteFn: () => deleteBookmarkE(id()),
+			onSuccess: () => navigate(PATHS.bookmark),
 		});
-		if (!confirmed) return;
-		const ok = await tryOrNotify(() => deleteBookmarkE(id()), "删除书签");
-		if (ok) navigate(PATHS.bookmark);
 	};
 
 	const handleBack = () => {

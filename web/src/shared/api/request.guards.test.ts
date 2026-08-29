@@ -3,13 +3,21 @@
 // 隔离 _authFiredAt（401 弹窗 3s 去重）与 token.ts 内存缓存等模块态。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// 全局 mock showToast 避免动态 import @components/ui 挂起
+vi.mock("@components/ui", () => ({
+	showToast: vi.fn(),
+}));
+
 async function freshRequestModule() {
 	vi.resetModules();
+	// 重新 mock 以确保每个测试用例独立
+	vi.doMock("@components/ui", () => ({ showToast: vi.fn() }));
 	return import("./request.ts");
 }
 
 async function freshStreamingModule() {
 	vi.resetModules();
+	vi.doMock("@components/ui", () => ({ showToast: vi.fn() }));
 	return import("./streaming.ts");
 }
 

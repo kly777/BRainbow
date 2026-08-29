@@ -16,7 +16,9 @@ describe("command-palette hooks", () => {
 
 		// 验证返回结果
 		expect(result).toBeDefined();
-		expect(typeof result).toBe("boolean");
+		expect(typeof result).toBe("object");
+		expect(result.matched).toBe(true);
+		expect(typeof result.score).toBe("number");
 	});
 
 	it("模糊过滤功能", async () => {

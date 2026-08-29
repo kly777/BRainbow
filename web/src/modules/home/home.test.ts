@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // 模拟依赖
 vi.mock("@app/context/auth.tsx", () => ({
 	useAuth: vi.fn(() => ({
-		user: { id: 1, name: "testuser" },
-		isAuthenticated: true,
+		auth: () => ({ user: { id: 1, name: "testuser" }, isAdmin: false, apiKey: null }),
+		login: vi.fn(),
+		logout: vi.fn(),
+		setApiKey: vi.fn(),
 	})),
 }));
 
@@ -14,17 +16,21 @@ vi.mock("@components/ui", () => ({
 
 vi.mock("@config/module-cards.ts", () => ({
 	MODULE_CARDS: [
-		{ path: "/task", title: "任务", icon: "task" },
-		{ path: "/card", title: "卡片", icon: "card" },
+		{ path: "/task", label: "任务", desc: "待办", title: "任务", icon: "task", color: "red" },
+		{ path: "/card", label: "卡片", desc: "笔记", title: "卡片", icon: "card", color: "blue" },
 	],
 }));
 
 vi.mock("@config/paths", () => ({
 	fillPath: vi.fn((path, params) => path),
 	PATHS: {
-		HOME: "/",
-		TASK: "/task",
-		CARD: "/card",
+		home: "/",
+		task: "/task",
+		taskDetail: "/task/:id",
+		card: "/card",
+		cardDetail: "/card/:id",
+		cardEdit: "/card/edit/:id",
+		cardAdd: "/card/add",
 	},
 }));
 
@@ -69,8 +75,10 @@ describe("home module", () => {
 		expect(typeof useAuth).toBe("function");
 
 		// 验证返回值
-		const { auth } = useAuth();
-		expect(auth().user).toBeDefined();
-		expect(auth().isAdmin).toBeDefined();
+		const ctx = useAuth();
+		expect(ctx.auth).toBeDefined();
+		expect(typeof ctx.auth).toBe("function");
+		expect(ctx.auth().user).toBeDefined();
+		expect(ctx.auth().user?.name).toBe("testuser");
 	});
 });

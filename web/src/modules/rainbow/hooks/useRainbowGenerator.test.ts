@@ -8,6 +8,7 @@ vi.mock("@shared/utils", () => ({
 		fromOklch: vi.fn((oklch) => ({
 			oklch,
 			toHex: () => "#000000",
+			toOklch: () => oklch,
 		})),
 	},
 	Angle: class Angle {

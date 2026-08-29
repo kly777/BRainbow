@@ -1,4 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+// mock @components/ui 避免 handleGlobalError 内动态 import 挂起
+vi.mock("@components/ui", () => ({
+	showToast: vi.fn(),
+}));
+
 import { streamChatRequest } from "./streamChatRequest.ts";
 
 function sseResponse(...chunks: string[]): Response {

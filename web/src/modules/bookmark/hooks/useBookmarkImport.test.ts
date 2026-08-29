@@ -113,7 +113,7 @@ describe("useBookmarkImport", () => {
 				// 验证错误被处理
 				expect(mockNotifyError).toHaveBeenCalledWith(
 					"导入失败",
-					"Network error",
+					expect.objectContaining({ message: "Network error" }),
 				);
 
 				// 验证onImported没有被调用

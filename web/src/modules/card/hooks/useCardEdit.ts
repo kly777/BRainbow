@@ -108,8 +108,12 @@ export function useCardEdit(): CardEditApi {
 	return {
 		cardId,
 		card,
-		cardLoading: card.loading,
-		cardError: card.error,
+		get cardLoading() {
+			return card.loading;
+		},
+		get cardError() {
+			return card.error;
+		},
 		refetch,
 		content,
 		setContent,

@@ -1,6 +1,12 @@
 # BRainbow Cargo Configuration
 # Optimized for development speed and release builds
 
+# sqlx 开发环境：直连本地数据库，编辑器不再报离线缓存错误
+# CI/生产通过 SQLX_OFFLINE=true 覆盖
+[env]
+SQLX_OFFLINE = "false"
+DATABASE_URL = "sqlite:brainbow.db"
+
 [build]
 # Use all available CPU cores for parallel compilation
 # Default is already number of CPUs, but explicit is better

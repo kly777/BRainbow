@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getAdminSettingsE, rotateJwtE, updateAdminSettingsE } from "./api.ts";
+import {
+	getAdminSettingsE,
+	getSystemInfoE,
+	rotateJwtE,
+	updateAdminSettingsE,
+} from "./api.ts";
 
 // 模拟依赖
 vi.mock("@shared/api", () => ({
@@ -64,26 +69,37 @@ describe("admin API", () => {
 		expect(result).toEqual(mockSettings);
 	});
 
-	it("轮换JWT密钥", async () => {
-		// 测试轮换JWT密钥
+	it("获取系统信息", async () => {
 		const { request } = await import("@shared/api");
 		const mockRequest = vi.mocked(request);
 
-		const mockResult = { ok: true, message: "JWT密钥已轮换" };
+		const mockSystemInfo = {
+			version: "0.1.0",
+			uptime_secs: 86400,
+			db_version: 12,
+			db_page_count: 1024,
+			db_page_size: 4096,
+			db_size_bytes: 4194304,
+			stats: {
+				users: 5,
+				tasks: 42,
+				cards: 128,
+				memories: 256,
+				bookmarks: 30,
+				articles: 12,
+				conversations: 8,
+				chat_trees: 15,
+				ontologies: 3,
+			},
+		};
 
-		// 模拟request返回成功结果
-		mockRequest.mockResolvedValueOnce(mockResult);
+		mockRequest.mockResolvedValueOnce(mockSystemInfo);
 
-		// 调用轮换JWT密钥API
-		const result = await rotateJwtE();
+		const result = await getSystemInfoE();
 
-		// 验证request被调用
-		expect(mockRequest).toHaveBeenCalledTimes(1);
-		expect(mockRequest).toHaveBeenCalledWith("/admin/settings/jwt/rotate", {
-			method: "POST",
-		});
-
-		// 验证返回结果
-		expect(result).toEqual(mockResult);
+		expect(mockRequest).toHaveBeenCalledWith("/admin/system-info", {});
+		expect(result).toEqual(mockSystemInfo);
+		expect(result.version).toBe("0.1.0");
+		expect(result.stats.tasks).toBe(42);
 	});
 });

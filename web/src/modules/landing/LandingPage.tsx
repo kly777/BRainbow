@@ -102,7 +102,10 @@ export default function LandingPage() {
 					<For each={modules}>
 						{(m) => (
 							<A href={m.path} class={styles.moduleCard}>
-								<div class={styles.moduleIconArea} style={{ "--card-accent": m.color }}>
+								<div
+									class={styles.moduleIconArea}
+									style={{ "--card-accent": m.color }}
+								>
 									<ModuleIcon d={m.icon} color={m.color} />
 								</div>
 								<div class={styles.moduleCardBody}>

@@ -113,6 +113,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 创建应用状态
     let state = AppState::new(&Arc::new(pool), &config, mem_config);
 
+    // 初始化启动时间（用于计算运行时长）
+    crate::modules::admin::handler::init_start_time();
+
     // 创建路由
     state.init_runtime_cache().await;
 

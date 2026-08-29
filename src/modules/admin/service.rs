@@ -35,6 +35,11 @@ impl SettingsService {
     pub async fn remove(&self, key: &str) -> Result<(), sqlx::Error> {
         self.repo.remove(key).await
     }
+
+    /// 获取数据库连接池（用于系统信息查询）
+    pub fn pool(&self) -> &Arc<SqlitePool> {
+        self.repo.pool()
+    }
 }
 
 /// 管理员设置服务：封装 app_settings 存取 + 运行时缓存。
@@ -56,6 +61,11 @@ impl AdminService {
             jwt_active_cache: Arc::new(std::sync::RwLock::new(None)),
             allow_register_cache: Arc::new(std::sync::RwLock::new(Some(allow_register))),
         }
+    }
+
+    /// 获取数据库连接池（用于系统信息查询）
+    pub fn pool(&self) -> &Arc<SqlitePool> {
+        self.settings.pool()
     }
 
     /// 初始化运行时缓存：DB 中有持久化密钥/开放注册则优先

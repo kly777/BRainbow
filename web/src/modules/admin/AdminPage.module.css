@@ -37,12 +37,20 @@
 	padding: var(--space-lg);
 	display: flex;
 	flex-direction: column;
-	gap: var(--space-sm);
+	gap: var(--space-md);
 	transition: box-shadow var(--t-transition-normal);
 }
 
 .card:hover {
 	box-shadow: var(--shadow-sm);
+}
+
+.card-title {
+	font-family: var(--t-font-display);
+	font-size: var(--text-lg);
+	font-weight: 600;
+	margin: 0;
+	color: var(--t-color-ink);
 }
 
 .card-head {
@@ -68,6 +76,98 @@
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-faint);
 	margin: 0;
+}
+
+/* ── 服务信息网格 ── */
+
+.info-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: var(--space-md);
+}
+
+.info-item {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+	padding: var(--space-md);
+	background: var(--t-color-surface-raised);
+	border-radius: var(--radius-md);
+}
+
+.info-label {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.info-value {
+	font-family: var(--t-font-mono);
+	font-size: var(--text-lg);
+	font-weight: 600;
+	color: var(--t-color-ink);
+	font-variant-numeric: tabular-nums;
+}
+
+/* ── 数据统计网格 ── */
+
+.stats-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: var(--space-sm);
+}
+
+.stat-item {
+	display: flex;
+	align-items: center;
+	gap: var(--space-md);
+	padding: var(--space-md);
+	background: var(--t-color-surface-raised);
+	border-radius: var(--radius-md);
+	transition: background var(--t-transition-fast);
+}
+
+.stat-item:hover {
+	background: var(--t-color-accent-soft);
+}
+
+.stat-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	border-radius: var(--radius-sm);
+	background: color-mix(in srgb, var(--t-color-accent) 10%, transparent);
+	color: var(--t-color-accent);
+	flex-shrink: 0;
+}
+
+.stat-icon svg {
+	width: 1.125rem;
+	height: 1.125rem;
+}
+
+.stat-body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+	min-width: 0;
+}
+
+.stat-value {
+	font-family: var(--t-font-mono);
+	font-size: var(--text-xl);
+	font-weight: 700;
+	color: var(--t-color-ink);
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+}
+
+.stat-label {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
 }
 
 /* ── 注册开关 ── */
@@ -152,5 +252,19 @@
 		flex-direction: column;
 		align-items: flex-start;
 		gap: var(--space-sm);
+	}
+
+	.info-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.stats-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (width <= 480px) {
+	.stats-grid {
+		grid-template-columns: 1fr;
 	}
 }

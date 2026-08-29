@@ -189,13 +189,21 @@
 	width: 2.5rem;
 	height: 2.5rem;
 	border-radius: var(--radius-md);
-	background: color-mix(in srgb, var(--card-accent, var(--t-color-accent)) 10%, transparent);
+	background: color-mix(
+		in srgb,
+		var(--card-accent, var(--t-color-accent)) 10%,
+		transparent
+	);
 	flex-shrink: 0;
 	transition: background var(--t-transition-fast);
 }
 
 .module-card:hover .module-icon-area {
-	background: color-mix(in srgb, var(--card-accent, var(--t-color-accent)) 18%, transparent);
+	background: color-mix(
+		in srgb,
+		var(--card-accent, var(--t-color-accent)) 18%,
+		transparent
+	);
 }
 
 .module-icon-area svg {

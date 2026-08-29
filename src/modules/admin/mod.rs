@@ -1,4 +1,4 @@
-// ── 管理员设置模块：开放注册开关 / JWT 密钥轮换（admin-only） ──
+// ── 管理员设置模块：开放注册开关 / JWT 密钥轮换 / 系统信息（admin-only） ──
 
 pub mod handler;
 pub mod port;
@@ -22,4 +22,5 @@ where
             get(handler::get_settings).patch(handler::update_settings),
         )
         .route("/settings/jwt/rotate", post(handler::rotate_jwt))
+        .route("/system-info", get(handler::get_system_info))
 }

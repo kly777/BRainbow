@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // 模拟依赖
 vi.mock("@app/context/auth.tsx", () => ({
 	useAuth: vi.fn(() => ({
-		auth: () => ({ user: { id: 1, name: "testuser" }, isAdmin: false, apiKey: null }),
+		auth: () => ({
+			user: { id: 1, name: "testuser" },
+			isAdmin: false,
+			apiKey: null,
+		}),
 		login: vi.fn(),
 		logout: vi.fn(),
 		setApiKey: vi.fn(),
@@ -16,8 +20,22 @@ vi.mock("@components/ui", () => ({
 
 vi.mock("@config/module-cards.ts", () => ({
 	MODULE_CARDS: [
-		{ path: "/task", label: "任务", desc: "待办", title: "任务", icon: "task", color: "red" },
-		{ path: "/card", label: "卡片", desc: "笔记", title: "卡片", icon: "card", color: "blue" },
+		{
+			path: "/task",
+			label: "任务",
+			desc: "待办",
+			title: "任务",
+			icon: "task",
+			color: "red",
+		},
+		{
+			path: "/card",
+			label: "卡片",
+			desc: "笔记",
+			title: "卡片",
+			icon: "card",
+			color: "blue",
+		},
 	],
 }));
 

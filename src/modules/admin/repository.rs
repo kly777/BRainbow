@@ -14,6 +14,11 @@ impl SettingsRepo {
         Self { pool }
     }
 
+    /// 获取数据库连接池（用于系统信息查询）
+    pub fn pool(&self) -> &Arc<SqlitePool> {
+        &self.pool
+    }
+
     pub async fn get(&self, key: &str) -> Result<Option<String>, sqlx::Error> {
         sqlx::query_scalar!("SELECT value FROM app_settings WHERE key = ?", key)
             .fetch_optional(&*self.pool)

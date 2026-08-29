@@ -1,7 +1,7 @@
 import { X } from "@components/ui/icons";
 // ── v2 管理表格：档案清单 ──
 
-import { Badge } from "@components/ui";
+import { SimplePagination, Badge } from "@components/ui";
 import { PATHS } from "@config/paths";
 import type { MemItem, TagInfo } from "@modules/mem";
 import { fmtRelative, parseUtc } from "@shared/utils";
@@ -83,11 +83,6 @@ interface MemTableProps {
 	onToggleAll: () => void;
 	onSelectRow: (id: number) => void;
 	onDelete: (id: number) => void;
-}
-
-interface PaginationProps {
-	pageMeta: PageMeta;
-	onPageChange: (page: number) => void;
 }
 
 function previewText(content: string): string {
@@ -320,37 +315,6 @@ const MemTable: Component<MemTableProps> = (props) => (
 	</div>
 );
 
-const Pagination: Component<PaginationProps> = (props) => {
-	const meta = () => props.pageMeta;
-	return (
-		<Show when={meta().total_pages > 1}>
-			<nav class={styles.pagination} aria-label="分页">
-				<button
-					type="button"
-					class={styles.pageBtn}
-					disabled={meta().page <= 1}
-					onClick={() => props.onPageChange(meta().page - 1)}
-					aria-label="上一页"
-				>
-					‹
-				</button>
-				<span class={styles.pageInfo}>
-					{meta().page} / {meta().total_pages} · 共 {meta().total} 条
-				</span>
-				<button
-					type="button"
-					class={styles.pageBtn}
-					disabled={meta().page >= meta().total_pages}
-					onClick={() => props.onPageChange(meta().page + 1)}
-					aria-label="下一页"
-				>
-					›
-				</button>
-			</nav>
-		</Show>
-	);
-};
-
 export default function ManageTable(props: Props) {
 	return (
 		<Show when={!props.loading} fallback={<LoadingSkeleton />}>
@@ -371,8 +335,13 @@ export default function ManageTable(props: Props) {
 					onDelete={props.onDelete}
 				/>
 			</div>
-			{/* 分页（pageMeta 唯一权威） */}
-			<Pagination pageMeta={props.pageMeta} onPageChange={props.onPageChange} />
+			<SimplePagination
+				page={props.pageMeta.page}
+				totalPages={props.pageMeta.total_pages}
+				total={props.pageMeta.total}
+				onPrev={() => props.onPageChange(props.pageMeta.page - 1)}
+				onNext={() => props.onPageChange(props.pageMeta.page + 1)}
+			/>
 		</Show>
 	);
 }

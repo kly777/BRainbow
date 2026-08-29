@@ -12,6 +12,7 @@ export { AsyncView } from "./molecules/AsyncView.tsx";
 export { default as ErrorRetry } from "./molecules/ErrorRetry.tsx";
 export { default as FilterGroup } from "./molecules/FilterGroup.tsx";
 export { default as PageHead } from "./molecules/PageHead.tsx";
+export { default as SimplePagination } from "./molecules/SimplePagination.tsx";
 export { default as Toolbar } from "./molecules/Toolbar.tsx";
 export { default as ConfirmModalContainer } from "./organisms/ConfirmModal.tsx";
 export * from "./organisms/confirmStore.ts";

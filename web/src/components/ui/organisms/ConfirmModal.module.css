@@ -85,8 +85,9 @@
 
 .title {
 	margin: 0;
+	font-family: var(--t-font-display);
 	font-size: var(--text-lg);
-	font-weight: 700;
+	font-weight: 600;
 	color: var(--t-color-ink);
 	line-height: var(--leading-tight);
 }
@@ -114,7 +115,7 @@
 	appearance: none;
 	-webkit-appearance: none;
 	border: 1px solid transparent;
-	border-radius: var(--radius-full);
+	border-radius: var(--radius-sm);
 	font-family: inherit;
 	font-size: var(--text-sm);
 	font-weight: 500;
@@ -146,6 +147,7 @@
 
 .btn-danger:hover {
 	background: var(--t-color-danger-strong);
+	box-shadow: var(--shadow-md);
 }
 
 .btn-warning {
@@ -156,16 +158,18 @@
 
 .btn-warning:hover {
 	background: var(--t-color-warning-strong);
+	box-shadow: var(--shadow-md);
 }
 
 .btn-primary {
-	background: var(--t-color-accent);
-	color: var(--t-color-on-solid);
+	background: var(--t-color-ink);
+	color: var(--t-color-bg);
 	box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover {
-	background: var(--t-color-accent-strong);
+	background: var(--t-color-ink-strong);
+	box-shadow: var(--shadow-md);
 }
 
 .btn:focus-visible {

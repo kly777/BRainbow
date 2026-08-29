@@ -12,7 +12,7 @@
 	appearance: none;
 	-webkit-appearance: none;
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-full);
+	border-radius: var(--radius-sm);
 	background: var(--t-color-surface);
 	color: var(--t-color-ink-muted);
 	cursor: pointer;
@@ -31,14 +31,14 @@
 }
 
 .active {
-	background: var(--t-color-accent);
-	color: var(--t-color-on-solid);
-	border-color: var(--t-color-accent);
-	box-shadow: 0 1px 3px
-		color-mix(in srgb, var(--t-color-accent) 20%, transparent);
+	background: var(--t-color-ink);
+	color: var(--t-color-bg);
+	border-color: var(--t-color-ink);
+	box-shadow: var(--shadow-sm);
 }
 
 .active:hover {
-	background: var(--t-color-accent-strong);
-	color: var(--t-color-on-solid);
+	background: var(--t-color-ink-strong);
+	color: var(--t-color-bg);
+	box-shadow: var(--shadow-md);
 }

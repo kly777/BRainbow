@@ -20,7 +20,6 @@ const facts = [
 function ModuleIcon(props: { d: string; color?: string }) {
 	return (
 		<svg
-			class={styles.tocIcon}
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke={props.color ?? "currentColor"}
@@ -93,28 +92,30 @@ export default function LandingPage() {
 				</For>
 			</ul>
 
-			{/* ── 目录式模块清单：单列行列 + hairline 分隔 ── */}
-			<section class={styles.toc}>
-				<h2 class={styles.tocTitle}>功能模块</h2>
-				<p class={styles.tocDesc}>
+			{/* ── 模块卡片网格 ── */}
+			<section class={styles.modules}>
+				<h2 class={styles.modulesTitle}>功能模块</h2>
+				<p class={styles.modulesDesc}>
 					每个模块独立又互联，围绕「知识」这一个核心组织你的数字生活
 				</p>
-				<ol class={styles.tocList}>
+				<div class={styles.moduleGrid}>
 					<For each={modules}>
 						{(m) => (
-							<li>
-								<A href={m.path} class={styles.tocRow}>
+							<A href={m.path} class={styles.moduleCard}>
+								<div class={styles.moduleIconArea} style={{ "--card-accent": m.color }}>
 									<ModuleIcon d={m.icon} color={m.color} />
-									<strong class={styles.tocName}>{m.title}</strong>
-									<span class={styles.tocDescItem}>{m.detail}</span>
-									<span class={styles.tocArrow} aria-hidden="true">
-										<ArrowRight size={16} />
-									</span>
-								</A>
-							</li>
+								</div>
+								<div class={styles.moduleCardBody}>
+									<strong class={styles.moduleCardName}>{m.title}</strong>
+									<span class={styles.moduleCardDetail}>{m.detail}</span>
+								</div>
+								<span class={styles.moduleCardArrow} aria-hidden="true">
+									<ArrowRight size={14} />
+								</span>
+							</A>
 						)}
 					</For>
-				</ol>
+				</div>
 			</section>
 
 			{/* ── 页脚快捷键提示 ── */}

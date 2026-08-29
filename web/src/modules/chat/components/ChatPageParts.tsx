@@ -2,7 +2,12 @@
 
 import { Button } from "@components/ui";
 import type { ChatNode, ChatTree } from "@modules/chat";
-import { copyTextWithToast, fmtLocal, getGreeting, tryOrNotify } from "@shared/utils";
+import {
+	copyTextWithToast,
+	fmtLocal,
+	getGreeting,
+	tryOrNotify,
+} from "@shared/utils";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { updateTreeE } from "../api.ts";
 import type { useChatPage } from "../hooks/useChatPage.ts";

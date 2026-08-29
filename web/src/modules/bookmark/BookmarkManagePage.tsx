@@ -1,6 +1,13 @@
 // ── /bookmark：网页书签管理（搜索 / 标签过滤 / 分页 / 导入 Firefox 书签 / 批量管理） ──
 
-import { Button, ErrorRetry, LoadingSkeleton, PageHead, SearchInput, SimplePagination } from "@components/ui";
+import {
+	Button,
+	ErrorRetry,
+	LoadingSkeleton,
+	PageHead,
+	SearchInput,
+	SimplePagination,
+} from "@components/ui";
 import { Sparkles, X } from "@components/ui/icons";
 import { type Component, For, Show } from "solid-js";
 import styles from "./BookmarkPage.module.css";
@@ -92,13 +99,13 @@ const BookmarkMainSection: Component<{
 				</For>
 			</div>
 
-				<SimplePagination
-					page={b.page()}
-					totalPages={b.totalPages()}
-					total={b.total()}
-					onPrev={() => b.goPage(b.page() - 1)}
-					onNext={() => b.goPage(b.page() + 1)}
-				/>
+			<SimplePagination
+				page={b.page()}
+				totalPages={b.totalPages()}
+				total={b.total()}
+				onPrev={() => b.goPage(b.page() - 1)}
+				onNext={() => b.goPage(b.page() + 1)}
+			/>
 		</Show>
 	);
 };

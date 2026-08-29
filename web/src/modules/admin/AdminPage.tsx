@@ -267,7 +267,11 @@ export default function AdminPage() {
 						</Show>
 					}
 				>
-					<ErrorRetry error={settings.error} onRetry={refetch} message="加载失败" />
+					<ErrorRetry
+						error={settings.error}
+						onRetry={refetch}
+						message="加载失败"
+					/>
 				</Show>
 			</Show>
 		</div>

@@ -2,7 +2,7 @@ import { fillPath, PATHS } from "@config/paths";
 import type { UpdateCardRequest } from "@modules/card";
 import { deleteCardE, getCardE, updateCardE } from "@modules/card";
 import { getErrorMessage } from "@shared/api";
-import { notifyError, showConfirm, tryAsync } from "@shared/utils";
+import { confirmAndDelete, tryAsync } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createEffect, createResource, createSignal } from "solid-js";
 import type { Card } from "../model.ts";
@@ -36,8 +36,7 @@ export function useCardEdit(): CardEditApi {
 		return parseInt(id, 10);
 	};
 
-	const [card, { refetch }] = createResource(async () => {
-		const id = cardId();
+	const [card, { refetch }] = createResource(cardId, async (id) => {
 		if (Number.isNaN(id)) throw new Error("无效ID");
 		return await getCardE(id);
 	});
@@ -85,20 +84,12 @@ export function useCardEdit(): CardEditApi {
 	};
 
 	const handleDelete = async () => {
-		const confirmed = await showConfirm({
+		await confirmAndDelete({
 			title: "删除卡片",
 			message: "确定要删除这个卡片吗？此操作不可撤销。",
-			variant: "danger",
+			deleteFn: () => deleteCardE(cardId()),
+			onSuccess: () => navigate(PATHS.card),
 		});
-		if (!confirmed) return;
-		// deleteCardE 返回 void：tryOrNotify 成功时也是 undefined，
-		// 不能做成败判据（会把成功当失败，删了却不跳转）。改 tryAsync。
-		const result = await tryAsync(() => deleteCardE(cardId()));
-		if (result.ok) {
-			navigate(PATHS.card);
-		} else {
-			notifyError("删除卡片失败", result.error);
-		}
 	};
 
 	const handleView = () => {

@@ -2,7 +2,7 @@
 
 import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
 import { PATHS } from "@config/paths";
-import { notifySuccess, tryOrNotify, confirmAndDelete } from "@shared/utils";
+import { confirmAndDelete, notifySuccess, tryOrNotify } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal, Show } from "solid-js";
 import { deleteOntoE, getOntoE, updateOntoE } from "./api";

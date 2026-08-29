@@ -26,8 +26,7 @@ export function useCardDetail(): CardDetailApi {
 		return parseInt(id, 10);
 	};
 
-	const [card, { refetch }] = createResource(async () => {
-		const id = cardId();
+	const [card, { refetch }] = createResource(cardId, async (id) => {
 		if (Number.isNaN(id)) throw new Error("无效ID");
 		return await getCardE(id);
 	});

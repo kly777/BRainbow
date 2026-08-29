@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import { HttpError } from "@shared/api";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@components/ui/organisms/toastStore.ts", () => ({
 	showToast: vi.fn(),

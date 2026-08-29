@@ -7,7 +7,7 @@ import {
 	getTasksE,
 	searchTasksE,
 } from "@modules/task";
-import { notifyError, tryAsync, confirmAndDelete } from "@shared/utils";
+import { confirmAndDelete, notifyError, tryAsync } from "@shared/utils";
 import {
 	createContext,
 	createSignal,

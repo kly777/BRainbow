@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { formatBytes, formatUptime, getStatValue } from "./utils.ts";
 import type { ModuleStats } from "./api.ts";
+import { formatBytes, formatUptime, getStatValue } from "./utils.ts";
 
 describe("formatUptime", () => {
 	it("秒", () => {

@@ -10,7 +10,7 @@ import {
 	getCardsE,
 } from "@modules/card";
 import { TaskList, TaskProvider, useTasks } from "@modules/task";
-import { parseUtc, confirmAndDelete, getGreeting } from "@shared/utils";
+import { confirmAndDelete, getGreeting, parseUtc } from "@shared/utils";
 import { A, useNavigate } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 import styles from "./HomePage.module.css";

@@ -1,7 +1,7 @@
 import { X } from "@components/ui/icons";
 // ── v2 管理表格：档案清单 ──
 
-import { SimplePagination, Badge } from "@components/ui";
+import { Badge, SimplePagination } from "@components/ui";
 import { PATHS } from "@config/paths";
 import type { MemItem, TagInfo } from "@modules/mem";
 import { fmtRelative, parseUtc } from "@shared/utils";

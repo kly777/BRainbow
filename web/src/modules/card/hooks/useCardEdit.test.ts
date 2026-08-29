@@ -22,7 +22,24 @@ vi.mock("@modules/card", () => ({
 const confirmResolve = vi.fn();
 vi.mock("@shared/utils", async (importOriginal) => {
 	const mod = await importOriginal<typeof import("@shared/utils")>();
-	return { ...mod, showConfirm: () => confirmResolve() };
+	return {
+		...mod,
+		confirmAndDelete: async (opts: {
+			title: string;
+			message: string;
+			confirmLabel?: string;
+			deleteFn: () => Promise<unknown>;
+			successMessage?: string;
+			onSuccess?: () => void;
+			onError?: () => void;
+		}) => {
+			const confirmed = await confirmResolve();
+			if (!confirmed) return false;
+			await opts.deleteFn();
+			opts.onSuccess?.();
+			return true;
+		},
+	};
 });
 
 const mockedGet = vi.mocked(getCardE);

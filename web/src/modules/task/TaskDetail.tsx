@@ -11,10 +11,10 @@ import {
 } from "@modules/task";
 import { getErrorMessage } from "@shared/api";
 import {
+	confirmAndDelete,
 	fmtLocal,
 	notifySuccess,
 	tryOrNotify,
-	confirmAndDelete,
 } from "@shared/utils";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import {

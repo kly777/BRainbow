@@ -1,5 +1,6 @@
 import { AsyncView, Button, FilterGroup } from "@components/ui";
 import type { MediaItem } from "@modules/media";
+import { formatBytes } from "@shared/utils";
 import { type Component, For, Show } from "solid-js";
 import { useMediaList } from "./hooks/useMediaList.ts";
 import styles from "./MediaList.module.css";
@@ -10,12 +11,6 @@ const TABS = [
 	{ value: "video", label: "视频" },
 	{ value: "audio", label: "音频" },
 ];
-
-function formatSize(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 const MediaPreview: Component<{ item: MediaItem }> = (props) => (
 	<div class={styles.preview}>
@@ -53,7 +48,7 @@ const MediaCardView: Component<{
 				{props.item.original_name}
 			</p>
 			<p class={styles.meta}>
-				{props.item.media_type} · {formatSize(props.item.size_bytes)}
+				{props.item.media_type} · {formatBytes(props.item.size_bytes)}
 			</p>
 		</div>
 		<div class={styles.actions}>
@@ -93,7 +88,7 @@ const MediaCardEdit: Component<{
 				aria-label="媒体名称"
 			/>
 			<p class={styles.meta}>
-				{props.item.media_type} · {formatSize(props.item.size_bytes)}
+				{props.item.media_type} · {formatBytes(props.item.size_bytes)}
 			</p>
 		</div>
 		<div class={styles.actions}>

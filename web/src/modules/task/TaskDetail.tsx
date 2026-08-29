@@ -1,6 +1,6 @@
 // ── /task/:id：任务详情（全局搜索直达） ──
 
-import { Button, LoadingSkeleton, Toolbar } from "@components/ui";
+import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
 import {
 	deleteTaskE,
@@ -143,12 +143,7 @@ export default function TaskDetail() {
 			</Toolbar>
 
 			<Show when={detail.error}>
-				<div class={styles.error}>
-					加载失败：{getErrorMessage(detail.error)}
-					<Button variant="primary" size="sm" onClick={refetch}>
-						重试
-					</Button>
-				</div>
+				<ErrorRetry error={detail.error} onRetry={refetch} />
 			</Show>
 
 			<Show when={detail.loading}>

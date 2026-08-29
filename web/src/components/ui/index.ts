@@ -9,6 +9,7 @@ export { default as SearchInput } from "./atoms/SearchInput.tsx";
 export { LoadingSkeleton } from "./atoms/Skeleton.tsx";
 export { default as Tooltip } from "./atoms/Tooltip.tsx";
 export { AsyncView } from "./molecules/AsyncView.tsx";
+export { default as ErrorRetry } from "./molecules/ErrorRetry.tsx";
 export { default as FilterGroup } from "./molecules/FilterGroup.tsx";
 export { default as PageHead } from "./molecules/PageHead.tsx";
 export { default as Toolbar } from "./molecules/Toolbar.tsx";

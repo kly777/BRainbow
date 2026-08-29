@@ -1,9 +1,8 @@
 // ── /bookmark：按标签分组展示书签（默认视图） ──
 
-import { Button, LoadingSkeleton, PageHead, SearchInput } from "@components/ui";
+import { Button, ErrorRetry, LoadingSkeleton, PageHead, SearchInput } from "@components/ui";
 import { Settings, X } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
-import { getErrorMessage } from "@shared/api";
 import { trySync } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
 import {
@@ -166,14 +165,7 @@ export default function BookmarkPage() {
 					<LoadingSkeleton />
 				</Show>
 				<Show when={grouped.error}>
-					<div class={styles.state}>
-						<p class={styles.errorText}>
-							加载失败：{getErrorMessage(grouped.error)}
-						</p>
-						<Button variant="secondary" size="sm" onClick={() => refetch()}>
-							重试
-						</Button>
-					</div>
+					<ErrorRetry error={grouped.error} onRetry={() => refetch()} />
 				</Show>
 				<Show when={grouped()}>
 					{(data) => (

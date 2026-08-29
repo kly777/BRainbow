@@ -2,7 +2,7 @@
 
 import { Button } from "@components/ui";
 import type { ChatNode, ChatTree } from "@modules/chat";
-import { copyTextWithToast, fmtLocal, tryOrNotify } from "@shared/utils";
+import { copyTextWithToast, fmtLocal, getGreeting, tryOrNotify } from "@shared/utils";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { updateTreeE } from "../api.ts";
 import type { useChatPage } from "../hooks/useChatPage.ts";
@@ -223,23 +223,13 @@ const SAMPLE_PROMPTS = [
 	"帮我拆解一句英语长难句的结构",
 ];
 
-function greeting() {
-	const h = new Date().getHours();
-	if (h < 5) return "凌晨好";
-	if (h < 9) return "早上好";
-	if (h < 12) return "上午好";
-	if (h < 14) return "中午好";
-	if (h < 18) return "下午好";
-	return "晚上好";
-}
-
 export function WelcomeText(props: {
 	title: string;
 	onPick: (text: string) => void;
 }) {
 	return (
 		<div class={styles.welcome}>
-			<h1 class={styles.welcomeTitle}>{greeting()}</h1>
+			<h1 class={styles.welcomeTitle}>{getGreeting()}</h1>
 			<p class={styles.welcomeContext}>{props.title}</p>
 			<div class={styles.welcomeSamples}>
 				<For each={SAMPLE_PROMPTS}>

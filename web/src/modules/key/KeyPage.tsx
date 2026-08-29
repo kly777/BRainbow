@@ -2,8 +2,8 @@
 // dev 环境免登录可生成（后端 APP_ENV=dev）；prod 需登录（AuthGuard）。
 
 import { useAuth } from "@app/context/auth.tsx";
-import { Button, LoadingSkeleton, PageHead } from "@components/ui";
-import { getApiKey, getErrorMessage } from "@shared/api";
+import { Button, ErrorRetry, LoadingSkeleton, PageHead } from "@components/ui";
+import { getApiKey } from "@shared/api";
 import {
 	copyText,
 	fmtFull,
@@ -216,12 +216,7 @@ export default function KeyPage() {
 			<div class={styles.card}>
 				<h2 class={styles.cardTitle}>服务端 key 列表</h2>
 				<Show when={keys.error}>
-					<div class={styles.error}>
-						{getErrorMessage(keys.error)}
-						<Button variant="primary" size="sm" onClick={refetch}>
-							重试
-						</Button>
-					</div>
+					<ErrorRetry error={keys.error} onRetry={refetch} />
 				</Show>
 				<Show when={!keys.loading} fallback={<LoadingSkeleton rows={2} />}>
 					<For each={displayKeys()} fallback={emptyKeys}>

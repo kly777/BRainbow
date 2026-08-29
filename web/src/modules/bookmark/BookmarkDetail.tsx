@@ -1,8 +1,7 @@
 // ── /bookmark/:id：书签详情（全局搜索直达 + AI 标签建议） ──
 
-import { Button, LoadingSkeleton, Toolbar } from "@components/ui";
+import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
 import { Sparkles } from "@components/ui/icons";
-import { getErrorMessage } from "@shared/api";
 import { fmtLocal } from "@shared/utils";
 import { type Component, For, Show } from "solid-js";
 import styles from "./BookmarkDetail.module.css";
@@ -168,12 +167,7 @@ export default function BookmarkDetail() {
 			</Toolbar>
 
 			<Show when={m.dataError}>
-				<div class={styles.error}>
-					加载失败：{getErrorMessage(m.dataError)}
-					<Button variant="primary" size="sm" onClick={m.refetch}>
-						重试
-					</Button>
-				</div>
+				<ErrorRetry error={m.dataError} onRetry={m.refetch} />
 			</Show>
 
 			<Show when={m.dataLoading}>

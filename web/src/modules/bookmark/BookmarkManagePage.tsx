@@ -1,8 +1,7 @@
 // ── /bookmark：网页书签管理（搜索 / 标签过滤 / 分页 / 导入 Firefox 书签 / 批量管理） ──
 
-import { Button, LoadingSkeleton, PageHead, SearchInput } from "@components/ui";
+import { Button, ErrorRetry, LoadingSkeleton, PageHead, SearchInput } from "@components/ui";
 import { ChevronLeft, ChevronRight, Sparkles, X } from "@components/ui/icons";
-import { getErrorMessage } from "@shared/api";
 import { type Component, For, Show } from "solid-js";
 import styles from "./BookmarkPage.module.css";
 import { BookmarkFormModal } from "./components/BookmarkFormModal.tsx";
@@ -184,12 +183,7 @@ export default function BookmarkPage() {
 				<LoadingSkeleton />
 			</Show>
 			<Show when={b.error()}>
-				<div class={styles.state}>
-					<p class={styles.errorText}>加载失败：{getErrorMessage(b.error())}</p>
-					<Button variant="secondary" size="sm" onClick={() => b.load()}>
-						重试
-					</Button>
-				</div>
+				<ErrorRetry error={b.error()} onRetry={() => b.load()} />
 			</Show>
 
 			<Show when={!b.loading() && !b.error()}>

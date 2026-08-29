@@ -2,6 +2,8 @@
 
 import type { ModuleStats } from "./api.ts";
 
+export { formatBytes } from "@shared/utils";
+
 /** 格式化运行时长 */
 export function formatUptime(secs: number): string {
 	if (secs < 60) return `${secs} 秒`;
@@ -14,15 +16,6 @@ export function formatUptime(secs: number): string {
 	const d = Math.floor(secs / 86400);
 	const h = Math.floor((secs % 86400) / 3600);
 	return `${d} 天 ${h} 小时`;
-}
-
-/** 格式化文件大小 */
-export function formatBytes(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-	if (bytes < 1024 * 1024 * 1024)
-		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-	return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 export type StatKey = keyof ModuleStats;

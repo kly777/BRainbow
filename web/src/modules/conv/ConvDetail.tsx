@@ -1,9 +1,9 @@
 import {
 	Button,
+	ErrorRetry,
 	LoadingSkeleton,
 	Markdown as MarkdownRenderer,
 } from "@components/ui";
-import { getErrorMessage } from "@shared/api";
 import { fmtLocal } from "@shared/utils";
 import { For, Show } from "solid-js";
 import styles from "./ConvDetail.module.css";
@@ -59,12 +59,7 @@ export default function ConvDetailPage() {
 					</Show>
 				}
 			>
-				<div class={styles.errorMsg}>
-					加载失败：{getErrorMessage(m.dataError)}
-					<Button variant="primary" size="sm" onClick={m.refetch}>
-						重试
-					</Button>
-				</div>
+				<ErrorRetry error={m.dataError} onRetry={m.refetch} />
 			</Show>
 		</div>
 	);

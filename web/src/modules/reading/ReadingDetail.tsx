@@ -1,10 +1,9 @@
-import { Button, Tooltip } from "@components/ui";
+import { Button, ErrorRetry, Tooltip } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
 
 // ── 阅读详情页面（薄壳视图层）──
 
 import { ArrowLeft, Check, X } from "@components/ui/icons";
-import { getErrorMessage } from "@shared/api";
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 import ArticleContent from "./components/ArticleContent";
@@ -198,12 +197,7 @@ export default function ReadingDetail() {
 					</Show>
 				}
 			>
-				<div class={styles.errorMsg} role="alert">
-					<p>加载失败：{getErrorMessage(m.detail.error)}</p>
-					<Button variant="secondary" size="sm" onClick={m.refetch}>
-						重试
-					</Button>
-				</div>
+				<ErrorRetry error={m.detail.error} onRetry={m.refetch} />
 			</Show>
 		</div>
 	);

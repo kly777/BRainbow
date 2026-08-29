@@ -1,8 +1,7 @@
 // ── /ontology/:id：本体详情（全局搜索直达） ──
 
-import { Button, LoadingSkeleton, Toolbar } from "@components/ui";
+import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
 import { PATHS } from "@config/paths";
-import { getErrorMessage } from "@shared/api";
 import { notifySuccess, showConfirm, tryOrNotify } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal, Show } from "solid-js";
@@ -131,12 +130,7 @@ export default function OntologyDetail() {
 			</Toolbar>
 
 			<Show when={data.error}>
-				<div class={styles.error}>
-					加载失败：{getErrorMessage(data.error)}
-					<Button variant="primary" size="sm" onClick={refetch}>
-						重试
-					</Button>
-				</div>
+				<ErrorRetry error={data.error} onRetry={refetch} />
 			</Show>
 
 			<Show when={data.loading}>

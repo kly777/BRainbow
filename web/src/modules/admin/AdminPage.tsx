@@ -1,7 +1,7 @@
 // ── 管理员设置页：开放注册开关 / JWT 密钥状态与轮换 / 系统信息 ──
 
 import { useAuth } from "@app/context/auth.tsx";
-import { Button, PageHead } from "@components/ui";
+import { Button, ErrorRetry, PageHead } from "@components/ui";
 import {
 	notifyError,
 	notifySuccess,
@@ -267,12 +267,7 @@ export default function AdminPage() {
 						</Show>
 					}
 				>
-					<div class={styles.loading}>
-						加载失败
-						<Button variant="primary" size="sm" onClick={refetch}>
-							重试
-						</Button>
-					</div>
+					<ErrorRetry error={settings.error} onRetry={refetch} message="加载失败" />
 				</Show>
 			</Show>
 		</div>

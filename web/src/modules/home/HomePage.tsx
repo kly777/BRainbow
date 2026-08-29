@@ -10,19 +10,10 @@ import {
 	getCardsE,
 } from "@modules/card";
 import { TaskList, TaskProvider, useTasks } from "@modules/task";
-import { parseUtc, showConfirm, tryOrNotify } from "@shared/utils";
+import { parseUtc, showConfirm, tryOrNotify, getGreeting } from "@shared/utils";
 import { A, useNavigate } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 import styles from "./HomePage.module.css";
-
-/** 获取问候语 */
-function getGreeting(): string {
-	const h = new Date().getHours();
-	if (h < 6) return "夜深了，注意休息";
-	if (h < 12) return "早上好";
-	if (h < 18) return "下午好";
-	return "晚上好";
-}
 
 function ModuleNav() {
 	return (

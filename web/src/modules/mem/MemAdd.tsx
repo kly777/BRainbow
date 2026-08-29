@@ -185,7 +185,7 @@ function PasteView(props: { m: ReturnType<typeof useMemAdd> }) {
 				</div>
 			}
 		>
-			<ImportResult result={m.importResult()!} onContinue={m.resetImport} />
+			{(r) => <ImportResult result={r()} onContinue={m.resetImport} />}
 		</Show>
 	);
 }
@@ -256,7 +256,7 @@ function FileView(props: { m: ReturnType<typeof useMemAdd> }) {
 				</div>
 			}
 		>
-			<ImportResult result={m.importResult()!} onContinue={m.resetImport} />
+			{(r) => <ImportResult result={r()} onContinue={m.resetImport} />}
 		</Show>
 	);
 }

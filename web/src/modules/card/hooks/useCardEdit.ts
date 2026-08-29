@@ -51,7 +51,7 @@ export function useCardEdit(): CardEditApi {
 		if (c) setContent(c.content);
 	});
 
-	const dirty = () => !!card() && card()!.content !== content();
+	const dirty = () => !!card() && card()?.content !== content();
 
 	const stampLabel = () => {
 		const c = card();

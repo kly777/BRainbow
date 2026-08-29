@@ -36,11 +36,13 @@ export function ChatSidebar(props: ChatSidebarProps) {
 			{props.preHead}
 			<div class={styles.sidebarHead}>
 				<span class={styles.sidebarHeadLeft}>
-					<Show when={props.backHref}>
-						<A href={props.backHref!} class={styles.sidebarBackLink}>
+				<Show when={props.backHref}>
+					{(href) => (
+						<A href={href()} class={styles.sidebarBackLink}>
 							{props.backLabel}
 						</A>
-					</Show>
+					)}
+				</Show>
 					<span class={styles.sidebarTitle}>{props.title}</span>
 				</span>
 				<button type="button" class={styles.newBtn} onClick={props.onCreate}>

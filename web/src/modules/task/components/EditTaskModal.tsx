@@ -161,13 +161,17 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 
 				{/* 时间段 Tab */}
 				<Show when={activeTab() === "time"}>
-					<TimeWindowsTab
-						task={props.task!}
-						feasibleWindows={feasibleWindows}
-						setFeasibleWindows={setFeasibleWindows}
-						plannedWindows={plannedWindows}
-						setPlannedWindows={setPlannedWindows}
-					/>
+					<Show when={props.task}>
+						{(task) => (
+							<TimeWindowsTab
+								task={task()}
+								feasibleWindows={feasibleWindows}
+								setFeasibleWindows={setFeasibleWindows}
+								plannedWindows={plannedWindows}
+								setPlannedWindows={setPlannedWindows}
+							/>
+						)}
+					</Show>
 				</Show>
 
 				{/* 依赖关系 Tab */}

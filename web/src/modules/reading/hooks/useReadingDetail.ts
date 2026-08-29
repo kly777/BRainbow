@@ -36,7 +36,7 @@ export function useReadingDetail() {
 	createEffect(() => {
 		if (detail.error) return;
 		if (detail() && !notesLoaded()) {
-			document.title = `${detail()!.article.title} · Brainbow`;
+			document.title = `${detail()?.article.title} · Brainbow`;
 			getArticleNotes(id())
 				.then((r: { notes: string }) => {
 					setNotes(r.notes);

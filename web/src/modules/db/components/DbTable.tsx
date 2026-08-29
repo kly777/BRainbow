@@ -250,10 +250,11 @@ const TableRows: Component<TableRowsProps> = (props) => (
 							{(cell, cellI) => {
 								const col = () => props.columns[cellI];
 								const text = () => String(cell());
-								const preview = () =>
-									col()?.ref_table
-										? props.previewFor(col()!.ref_table!, text())
-										: "";
+								const refTable = () => col()?.ref_table;
+								const preview = () => {
+									const rt = refTable();
+									return rt ? props.previewFor(rt, text()) : "";
+								};
 								return (
 									<RowCell
 										col={col()}

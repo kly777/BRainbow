@@ -155,7 +155,10 @@ export default function ChatPage() {
 						<Button
 							variant="primary"
 							disabled={!c.editText().trim()}
-							onClick={() => void c.revise(c.editingNode()!.id, c.editText())}
+							onClick={() => {
+								const id = c.editingNode()?.id;
+								if (id != null) void c.revise(id, c.editText());
+							}}
 						>
 							保存修订
 						</Button>

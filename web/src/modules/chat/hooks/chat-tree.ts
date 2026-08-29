@@ -22,7 +22,7 @@ export function computeActivePath(
 		cur =
 			cur.parent_id === null
 				? undefined
-				: all.find((n) => n.id === cur!.parent_id);
+				: all.find((n) => n.id === cur?.parent_id);
 	}
 	return chain;
 }

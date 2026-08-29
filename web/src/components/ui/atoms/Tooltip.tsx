@@ -103,7 +103,7 @@ export default function Tooltip(props: TooltipProps) {
 					<span
 						id={tipId}
 						class={`${styles.tip} ${POSITION_CLASS[props.position ?? "top"]}`}
-						style={{ left: `${pos()!.left}px`, top: `${pos()!.top}px` }}
+						style={{ left: `${pos()?.left}px`, top: `${pos()?.top}px` }}
 						role="tooltip"
 					>
 						{props.label}

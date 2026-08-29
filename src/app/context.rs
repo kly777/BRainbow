@@ -11,7 +11,6 @@ use crate::modules::card::CardState;
 use crate::modules::chat::query::ChatQueryService;
 use crate::modules::chat::service::ChatService;
 use crate::modules::conv::query::ConvQueryService;
-#[cfg(feature = "db-viewer")]
 use crate::modules::db_viewer::DbViewerQueryService;
 use crate::modules::media::query::MediaQueryService;
 use crate::modules::media::service::MediaService;
@@ -78,7 +77,6 @@ pub struct MemState {
     pub config: Arc<MemConfig>,
 }
 
-#[cfg(feature = "db-viewer")]
 #[derive(Clone)]
 pub struct DbViewerState {
     pub service: DbViewerQueryService,
@@ -116,7 +114,6 @@ pub struct AppState {
     pub time_window: TimeWindowState,
     pub task: TaskState,
     pub mem: MemState,
-    #[cfg(feature = "db-viewer")]
     pub db_viewer: DbViewerState,
     pub conv: ConvState,
     pub search: SearchState,
@@ -169,7 +166,6 @@ impl_from_ref! {
     mem.config => Arc<MemConfig>,
 }
 
-#[cfg(feature = "db-viewer")]
 impl FromRef<AppState> for DbViewerQueryService {
     fn from_ref(state: &AppState) -> Self {
         state.db_viewer.service.clone()
@@ -278,7 +274,6 @@ impl AppState {
                 maintenance: mem_maintenance,
                 config: Arc::new(mem_config),
             },
-            #[cfg(feature = "db-viewer")]
             db_viewer: DbViewerState {
                 service: DbViewerQueryService::new(db.clone()),
             },

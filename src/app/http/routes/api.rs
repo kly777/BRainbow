@@ -4,7 +4,6 @@ use axum::{
 };
 
 use crate::app::context::AppState;
-#[cfg(feature = "db-viewer")]
 use crate::modules::db_viewer;
 use crate::modules::{
     ai, bookmark, card, chat, conv, media, mem, onto, reading, search, sign, task, text,
@@ -65,10 +64,7 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
 
     // ── 管理员路由：auth + require_admin ──
     let mut admin = Router::new().nest("/admin", crate::modules::admin::routes::<AppState>());
-    #[cfg(feature = "db-viewer")]
-    {
-        admin = admin.nest("/db", db_viewer::routes::<AppState>());
-    }
+    admin = admin.nest("/db", db_viewer::routes::<AppState>());
     let admin = admin
         .layer(middleware::from_fn(crate::app::http::auth::require_admin))
         .layer(middleware::from_fn_with_state(

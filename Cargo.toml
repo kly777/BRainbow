@@ -3,11 +3,6 @@ name = "brainbow"
 version = "0.1.0"
 edition = "2024"
 
-# db-viewer：数据库浏览工具（生产构建用 --no-default-features 关闭）
-[features]
-default = ["db-viewer"]
-db-viewer = []
-
 [dependencies]
 async-trait = "0.1"
 axum = { version = "0.8.9", features = ["macros", "multipart"] }

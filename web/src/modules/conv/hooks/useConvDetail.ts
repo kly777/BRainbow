@@ -21,8 +21,12 @@ export function useConvDetail(): ConvDetailApi {
 
 	return {
 		data,
-		dataLoading: data.loading,
-		dataError: data.error,
+		get dataLoading() {
+			return data.loading;
+		},
+		get dataError() {
+			return data.error;
+		},
 		refetch,
 		backHref,
 	};

@@ -154,8 +154,12 @@ export function useBookmarkDetail(): BookmarkDetailApi {
 	return {
 		id,
 		data,
-		dataLoading: data.loading,
-		dataError: data.error,
+		get dataLoading() {
+			return data.loading;
+		},
+		get dataError() {
+			return data.error;
+		},
 		refetch,
 		editing,
 		title,

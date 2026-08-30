@@ -176,7 +176,9 @@ export function useMemReview(): UseMemReview {
 		saveEdit: actions.saveEdit,
 		handleCopyCard: actions.handleCopyCard,
 		mnemonic: () => mnemonicHook.mnemonicFor(item()?.id),
-		mnemonicLoading: mnemonicHook.loading,
+		get mnemonicLoading() {
+			return mnemonicHook.loading;
+		},
 		generateMnemonic: async () => {
 			const it = item();
 			if (it) await mnemonicHook.generate(it);

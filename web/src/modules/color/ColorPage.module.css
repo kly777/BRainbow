@@ -119,6 +119,71 @@
 	align-self: center;
 }
 
+/* ── 字号档位（适应性：把字号选择权交还读者） ── */
+
+.scale-section {
+	margin-top: var(--space-xl);
+}
+
+.scale-title {
+	font-family: var(--t-font-display);
+	font-size: var(--text-base);
+	font-weight: 600;
+	color: var(--t-color-ink);
+	margin: 0 0 var(--space-sm);
+}
+
+.scale-desc {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	margin: 0 0 var(--space-md);
+	line-height: var(--leading-normal);
+}
+
+.scale-options {
+	display: flex;
+	gap: var(--space-sm);
+	flex-wrap: wrap;
+}
+
+.scale-option {
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-md);
+	padding: var(--space-xs) var(--space-lg);
+	cursor: pointer;
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
+}
+
+.scale-option:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+	border-color: var(--t-color-border-strong);
+}
+
+.scale-option-active {
+	background: var(--t-color-accent);
+	color: var(--t-color-on-solid);
+	border-color: var(--t-color-accent);
+	font-weight: 600;
+}
+
+.scale-option-active:hover {
+	background: var(--t-color-accent-strong);
+	color: var(--t-color-on-solid);
+	border-color: var(--t-color-accent-strong);
+}
+
+.scale-option:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 2px;
+}
+
 .card:hover {
 	transform: translateY(-2px);
 	box-shadow: var(--shadow-lg);

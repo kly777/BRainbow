@@ -419,8 +419,8 @@
 	border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 	box-shadow: var(--shadow-lg);
 	flex-wrap: nowrap;
-	max-width: 640px;
-	min-width: 480px;
+	max-width: min(40rem, 100%);
+	min-width: min(30rem, 100%);
 }
 
 @media (width <= 600px) {

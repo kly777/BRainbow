@@ -34,17 +34,17 @@
 }
 
 .top {
-	transform: translate(-50%, calc(-100% - 8px));
+	transform: translate(-50%, calc(-100% - 0.5rem));
 }
 
 .bottom {
-	transform: translate(-50%, 8px);
+	transform: translate(-50%, 0.5rem);
 }
 
 .left {
-	transform: translate(calc(-100% - 8px), -50%);
+	transform: translate(calc(-100% - 0.5rem), -50%);
 }
 
 .right {
-	transform: translate(8px, -50%);
+	transform: translate(0.5rem, -50%);
 }

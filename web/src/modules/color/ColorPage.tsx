@@ -4,7 +4,11 @@
 
 import { Check } from "@components/ui/icons";
 import {
+	applyFontScale,
 	applyTheme,
+	type FontScaleName,
+	fontScales,
+	getFontScale,
 	getTheme,
 	type ThemeName,
 	themeInfo,
@@ -15,6 +19,8 @@ import styles from "./ColorPage.module.css";
 
 type ThemeInfo = (typeof themes)[ThemeName];
 type ThemeEntry = [ThemeName, ThemeInfo];
+type FontScaleInfo = (typeof fontScales)[FontScaleName];
+type FontScaleEntry = [FontScaleName, FontScaleInfo];
 
 function ThemeSwatchRow(props: { swatches: ThemeInfo["swatches"] }) {
 	return (
@@ -71,12 +77,20 @@ function ThemeCard(props: {
 
 export default function ColorPage() {
 	const [current, setCurrent] = createSignal<ThemeName>(getTheme());
+	const [currentFontScale, setCurrentFontScale] = createSignal<FontScaleName>(
+		getFontScale(),
+	);
 
 	onMount(() => setCurrent(getTheme()));
 
 	const select = (name: ThemeName) => {
 		applyTheme(name);
 		setCurrent(name);
+	};
+
+	const selectScale = (name: FontScaleName) => {
+		applyFontScale(name);
+		setCurrentFontScale(name);
 	};
 
 	return (
@@ -98,6 +112,26 @@ export default function ColorPage() {
 						/>
 					)}
 				</For>
+			</div>
+
+			<div class={styles.scaleSection}>
+				<h2 class={styles.scaleTitle}>字号档位</h2>
+				<p class={styles.scaleDesc}>
+					调整页面文字的整体大小。标准档位尊重浏览器默认字号；大号/特大档位适合视力偏弱或阅读距离较远的场景。
+				</p>
+				<div class={styles.scaleOptions}>
+					<For each={Object.entries(fontScales) as FontScaleEntry[]}>
+						{([name, info]) => (
+							<button
+								type="button"
+								class={`${styles.scaleOption} ${currentFontScale() === name ? styles.scaleOptionActive : ""}`}
+								onClick={() => selectScale(name)}
+							>
+								{info.label}
+							</button>
+						)}
+					</For>
+				</div>
 			</div>
 
 			<div class={styles.footer}>

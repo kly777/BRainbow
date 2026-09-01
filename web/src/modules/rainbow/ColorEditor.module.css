@@ -71,7 +71,7 @@
 	gap: var(--space-xs) var(--space-2xs);
 	align-items: center;
 	flex: 1;
-	min-width: 280px;
+	min-width: min(17.5rem, 100%);
 }
 
 /* 滑块：填满所在列（随列宽变长，与数值输入同列对齐） */

@@ -1,7 +1,7 @@
 /* features/key/KeyPage.module.css */
 
 .page {
-	max-width: 720px;
+	max-width: min(45rem, 100%);
 	margin: 0 auto;
 	padding: var(--space-lg);
 	display: flex;
@@ -174,7 +174,7 @@
 	color: var(--t-color-ink);
 	word-break: break-all;
 	flex: 1;
-	min-width: 200px;
+	min-width: min(12.5rem, 100%);
 }
 
 .row {

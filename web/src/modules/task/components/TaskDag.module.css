@@ -44,7 +44,7 @@
 	background: var(--t-color-surface);
 	outline: none;
 	cursor: pointer;
-	max-width: 200px;
+	max-width: min(12.5rem, 100%);
 }
 
 .zoom-btn {
@@ -57,7 +57,7 @@
 	font-weight: 600;
 	color: var(--t-color-ink);
 	transition: color var(--t-transition-fast);
-	min-width: 36px;
+	min-width: 2.25rem;
 	text-align: center;
 }
 

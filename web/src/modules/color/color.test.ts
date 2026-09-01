@@ -3,7 +3,14 @@ import { ColorPage } from "./index.ts";
 
 // 模拟依赖
 vi.mock("@shared/styles", () => ({
+	applyFontScale: vi.fn(),
 	applyTheme: vi.fn(),
+	fontScales: {
+		normal: { label: "标准", scale: 1 },
+		large: { label: "大号", scale: 1.125 },
+		extraLarge: { label: "特大", scale: 1.25 },
+	},
+	getFontScale: vi.fn(() => "normal"),
 	getTheme: vi.fn(() => "paper"),
 	themeInfo: vi.fn(() => ({ name: "Paper", description: "Light theme" })),
 	themes: {

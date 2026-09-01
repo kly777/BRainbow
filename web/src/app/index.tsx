@@ -1,5 +1,5 @@
 import { AuthProvider } from "@app/context/auth.tsx";
-import { initTheme } from "@shared/styles";
+import { initFontScale, initTheme } from "@shared/styles";
 import { generateIcon } from "@shared/utils";
 import { Router } from "@solidjs/router";
 import { onMount } from "solid-js";
@@ -12,8 +12,9 @@ import "@fontsource-variable/noto-serif-sc";
 import "@app/global.css";
 import "@shared/styles/tokens.css";
 
-// 应用持久化主题（在渲染前挂主题类，避免闪烁）
+// 应用持久化主题与字号档位（在渲染前挂主题/根字号，避免闪烁）
 initTheme();
+initFontScale();
 
 function App() {
 	onMount(() => generateIcon());

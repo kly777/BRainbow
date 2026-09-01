@@ -106,7 +106,7 @@
 	font-size: var(--text-xs);
 	color: var(--t-color-accent);
 	text-decoration: none;
-	max-width: 220px;
+	max-width: min(13.75rem, 100%);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -167,6 +167,6 @@
 	}
 
 	.chip {
-		max-width: 160px;
+		max-width: min(10rem, 100%);
 	}
 }

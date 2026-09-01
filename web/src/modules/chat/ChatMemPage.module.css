@@ -394,7 +394,7 @@
 	line-height: var(--leading-normal);
 	white-space: pre-wrap;
 	overflow-wrap: break-word;
-	max-height: 240px;
+	max-height: 15rem;
 	overflow-y: auto;
 }
 

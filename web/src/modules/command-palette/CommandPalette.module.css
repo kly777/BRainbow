@@ -251,7 +251,7 @@
 	font-weight: 600;
 	font-family: var(--t-font-mono);
 	color: var(--t-color-ink);
-	min-width: 60px;
+	min-width: 3.75rem;
 }
 
 .sug-desc {

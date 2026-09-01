@@ -45,3 +45,45 @@ export function initTheme() {
 export function themeInfo(name: ThemeName) {
 	return themes[name];
 }
+
+/* ════════════════════════════════════════════════════════════
+ * 字号弹性档位（adaptability: 把字号选择权交还读者）
+ *
+ * 仅通过修改 <html> 根字号实现：所有 rem 布局/字号随之等比缩放，
+ * 与浏览器放大默认字号的行为一致，不影响布局比例。
+ * ════════════════════════════════════════════════════════════ */
+
+export const fontScales = {
+	normal: { label: "标准", scale: 1 },
+	large: { label: "大号", scale: 1.125 },
+	extraLarge: { label: "特大", scale: 1.25 },
+} as const;
+
+export type FontScaleName = keyof typeof fontScales;
+
+const FONT_KEY = "brainbow_font_scale";
+const VALID_FONT = Object.keys(fontScales) as FontScaleName[];
+
+/** 读取当前字号档位（无效则回退 normal） */
+export function getFontScale(): FontScaleName {
+	const saved = localStorage.getItem(FONT_KEY) as FontScaleName | null;
+	return saved && VALID_FONT.includes(saved) ? saved : "normal";
+}
+
+/** 应用字号档位：设置 <html> 根字号，并持久化 */
+export function applyFontScale(name: FontScaleName) {
+	const { scale } = fontScales[name];
+	// 百分比系数叠加在用户浏览器默认根字号之上（normal 时清除内联样式，
+	// 尊重用户自己的默认字号）；所有 rem 随之等比缩放。
+	if (scale === 1) {
+		document.documentElement.style.fontSize = "";
+	} else {
+		document.documentElement.style.fontSize = `${scale * 100}%`;
+	}
+	localStorage.setItem(FONT_KEY, name);
+}
+
+/** 初始化：应用持久化字号档位（或默认 normal） */
+export function initFontScale() {
+	applyFontScale(getFontScale());
+}

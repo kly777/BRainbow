@@ -23,7 +23,7 @@
 	position: relative;
 	flex: 1;
 	min-width: 0;
-	max-width: 240px;
+	max-width: min(15rem, 100%);
 }
 
 .quick-add-box {

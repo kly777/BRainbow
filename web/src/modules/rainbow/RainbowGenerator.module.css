@@ -11,7 +11,7 @@
 
 .controls {
 	flex: 1 1 25rem;
-	min-width: 340px;
+	min-width: min(21.25rem, 100%);
 }
 
 .preview {

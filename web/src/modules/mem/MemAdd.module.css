@@ -134,7 +134,7 @@
 
 .card-wrap {
 	width: 100%;
-	max-width: 640px;
+	max-width: min(40rem, 100%);
 }
 
 .card {

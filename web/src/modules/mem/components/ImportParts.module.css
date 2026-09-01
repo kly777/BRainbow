@@ -190,7 +190,7 @@
 	padding: var(--space-sm) var(--space-sm);
 	border-bottom: 1px solid var(--t-color-border);
 	color: var(--t-color-ink);
-	max-width: 240px;
+	max-width: min(15rem, 100%);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -235,7 +235,7 @@
 
 .result-card {
 	width: 100%;
-	max-width: 480px;
+	max-width: min(30rem, 100%);
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border-strong);
 	border-radius: var(--radius-lg);

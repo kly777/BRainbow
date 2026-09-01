@@ -27,7 +27,7 @@
 .search-input {
 	flex: 1;
 	min-width: 0;
-	max-width: 220px;
+	max-width: min(13.75rem, 100%);
 	flex-shrink: 0;
 }
 
@@ -46,7 +46,7 @@
 	background: var(--t-color-bg);
 	color: var(--t-color-ink);
 	cursor: pointer;
-	min-width: 120px;
+	min-width: min(7.5rem, 100%);
 	outline: none;
 	transition:
 		border-color var(--t-transition-fast),

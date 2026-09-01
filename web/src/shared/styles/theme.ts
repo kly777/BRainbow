@@ -17,6 +17,10 @@ export const themes = {
 		label: "冷蓝 · 晴空",
 		swatches: ["oklch(0.99 0.003 250)", "oklch(0.55 0.18 255)"],
 	},
+	auto: {
+		label: "跟随系统",
+		swatches: ["oklch(0.99 0.004 95)", "oklch(0.21 0.014 260)"],
+	},
 } as const;
 
 export type ThemeName = keyof typeof themes;
@@ -30,15 +34,31 @@ export function getTheme(): ThemeName {
 	return saved && VALID.includes(saved) ? saved : "paper";
 }
 
-/** 应用主题：设置 <html data-theme>，并持久化 */
+/** 解析主题名 → 实际渲染主题（auto 按系统偏好解析为 paper/midnight） */
+export function resolveTheme(name: ThemeName): Exclude<ThemeName, "auto"> {
+	if (name !== "auto") return name;
+	return window.matchMedia("(prefers-color-scheme: dark)").matches
+		? "midnight"
+		: "paper";
+}
+
+/** 应用主题：设置 <html data-theme>（auto 解析为具体主题），并持久化 */
 export function applyTheme(name: ThemeName) {
-	document.documentElement.dataset.theme = name;
+	document.documentElement.dataset.theme = resolveTheme(name);
 	localStorage.setItem(KEY, name);
 }
 
-/** 初始化：应用持久化主题（或默认 paper） */
+/** 初始化：应用持久化主题（或默认 paper），并挂载系统偏好监听 */
 export function initTheme() {
-	document.documentElement.dataset.theme = getTheme();
+	applyTheme(getTheme());
+	// auto 模式下跟随系统切换
+	window
+		.matchMedia("(prefers-color-scheme: dark)")
+		.addEventListener("change", () => {
+			if (getTheme() === "auto") {
+				applyTheme("auto");
+			}
+		});
 }
 
 /** 主题名 → 显示信息 */

@@ -74,7 +74,12 @@ export default function ChatMemPage() {
 								<h2 class={styles.headerTitle}>{cur().tree.title}</h2>
 								<ImportBar c={c} />
 							</div>
-							<div class={styles.messageList} ref={listRef}>
+							<div
+								class={styles.messageList}
+								ref={listRef}
+								role="log"
+								aria-label="聊天消息"
+							>
 								<MemMessageRows c={c} />
 								<Composer
 									styles={styles}

@@ -246,6 +246,67 @@
 	--t-color-warning-strong: oklch(52% 0.14 85deg);
 }
 
+/* ════════════════════════════════════════════════════════════
+ * 适应性即无障碍：高对比度与强制颜色模式
+ * ════════════════════════════════════════════════════════════ */
+
+/* 强制颜色模式（Windows 高对比度 / 用户强制色）：全部降级为系统语义色，
+ * 阴影/软底等装饰属性由各组件在 forced-colors 下收敛。 */
+@media (forced-colors: active) {
+	:root {
+		--t-color-bg: Canvas;
+		--t-color-surface: Canvas;
+		--t-color-surface-raised: Canvas;
+		--t-color-ink: CanvasText;
+		--t-color-ink-strong: CanvasText;
+		--t-color-ink-muted: CanvasText;
+		--t-color-ink-faint: GrayText;
+		--t-color-border: CanvasText;
+		--t-color-border-strong: CanvasText;
+		--t-color-accent: Highlight;
+		--t-color-accent-strong: Highlight;
+		--t-color-accent-soft: Canvas;
+		--t-color-accent-ring: Highlight;
+		--t-color-on-solid: HighlightText;
+		--t-color-danger: CanvasText;
+		--t-color-danger-strong: CanvasText;
+		--t-color-danger-subtle: Canvas;
+		--t-color-success: CanvasText;
+		--t-color-success-subtle: Canvas;
+		--t-color-warning: CanvasText;
+		--t-color-warning-strong: CanvasText;
+		--t-color-warning-subtle: Canvas;
+		--t-color-overlay: Canvas;
+		--t-color-white: CanvasText;
+		--t-color-badge-new-bg: Canvas;
+		--t-color-badge-new-text: CanvasText;
+		--t-color-badge-learning-bg: Canvas;
+		--t-color-badge-learning-text: CanvasText;
+		--t-color-badge-review-bg: Canvas;
+		--t-color-badge-review-text: CanvasText;
+		--t-color-badge-suspended-bg: Canvas;
+		--t-color-badge-suspended-text: CanvasText;
+		--t-color-badge-relearning-bg: Canvas;
+		--t-color-badge-relearning-text: CanvasText;
+		--t-color-mark-wrong: CanvasText;
+		--t-color-mark-correct: CanvasText;
+		--t-color-mark-teal: CanvasText;
+		--t-color-mark-blue: CanvasText;
+		--t-color-mark-blue-soft: Canvas;
+		--t-color-mark-blue-border: CanvasText;
+		--t-color-mark-yellow: CanvasText;
+	}
+}
+
+/* 用户偏好更高对比度：加深弱化文字/描边，去掉低对比装饰 */
+@media (prefers-contrast: more) {
+	:root {
+		--t-color-ink-muted: var(--t-color-ink-strong);
+		--t-color-ink-faint: var(--t-color-ink-muted);
+		--t-color-border: var(--t-color-border-strong);
+	}
+}
+
 /* ===== 全局体验层（主题感知：文本选择/滚动条/焦点 ring） ===== */
 
 /* 平滑滚动统一由 global.css 在 prefers-reduced-motion 卫语句内声明 */

@@ -116,7 +116,12 @@ export default function ChatPage() {
 								onClick={() => setSidebarCollapsed(!sidebarCollapsed())}
 							/>
 							<TreeHeader c={c} tree={cur().tree} />
-							<div class={styles.messageList} ref={listRef}>
+							<div
+								class={styles.messageList}
+								ref={listRef}
+								role="log"
+								aria-label="聊天消息"
+							>
 								<ChatNodeList c={c} />
 							</div>
 							<TocNav container={() => listRef} dep={() => c.activePath()} />

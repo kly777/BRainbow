@@ -504,3 +504,113 @@ textarea {
 	white-space: nowrap;
 	border: 0;
 }
+
+/* ════════════════════════════════════════════════════════════
+ * 打印样式（适应性即无障碍：页面可能被打印/另存为 PDF）
+ * ════════════════════════════════════════════════════════════ */
+
+@media print {
+	/* 交互与导航元素一律隐藏（需覆盖组件级 display 规则） */
+	nav,
+	aside,
+	.sidebar,
+	header,
+	footer,
+	button,
+	input,
+	select,
+	textarea,
+	[role="button"],
+	.modal-overlay,
+	.overlay {
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		display: none !important;
+	}
+
+	/* 纸面化：白底黑字，去阴影/动画/背景图 */
+	html,
+	body {
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		background: #fff !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		color: #000 !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		font-size: 12pt !important;
+	}
+
+	*,
+	*::before,
+	*::after {
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		box-shadow: none !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		text-shadow: none !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		animation: none !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		transition: none !important;
+	}
+
+	/* 链接打印出目标地址（除非无 href） */
+	a[href]::after {
+		content: " (" attr(href) ")";
+		font-size: 0.8em;
+		color: #000;
+	}
+
+	a[href^="javascript:"]::after,
+	a[href^="#"]::after {
+		content: "";
+	}
+
+	/* 主内容铺满页面，避免截断 */
+	main,
+	.page,
+	.content,
+	.article-content {
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		max-width: 100% !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		width: 100% !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		margin: 0 !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		padding: 0 !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		border: none !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		background: #fff !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		color: #000 !important;
+	}
+
+	/* 代码块保留等宽，换行避免横向溢出 */
+	pre,
+	code,
+	kbd {
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		white-space: pre-wrap !important;
+
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		overflow-wrap: break-word !important;
+	}
+
+	/* 表格边框保留，方便纸面阅读 */
+	table,
+	th,
+	td {
+		/* biome-ignore lint/complexity/noImportantStyles: 打印样式需覆盖组件级规则 */
+		border-color: #000 !important;
+	}
+}

@@ -28,8 +28,20 @@ const ArticleContent: Component<ArticleContentProps> = (props) => {
 							s === "known" || s === "ignored"
 								? styles.word
 								: styles.unknownWord;
+						// 非颜色信息通道：title 悬停提示 + aria 标注（颜色非唯一载体）
+						const wordTitle =
+							s === "known"
+								? "已认识"
+								: s === "ignored"
+									? "已忽略"
+									: "不认识该单词";
 						return (
-							<span class={cls} data-word={clean}>
+							<span
+								class={cls}
+								data-word={clean}
+								title={wordTitle}
+								aria-label={wordTitle}
+							>
 								{part}
 							</span>
 						);

@@ -29,6 +29,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-md);
+	container-type: inline-size;
 }
 
 .detail-head {
@@ -137,6 +138,13 @@
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
+}
+
+/* 窄容器（抽屉收窄）时元数据降为单列，避免挤压 */
+@container (width <= 22rem) {
+	.meta {
+		grid-template-columns: 1fr;
+	}
 }
 
 .meta-item {

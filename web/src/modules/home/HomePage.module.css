@@ -8,6 +8,7 @@
 	flex: 1;
 	min-height: 0;
 	max-width: var(--page-max);
+	container-type: inline-size;
 }
 
 /* ══════════════════════════════════════════
@@ -198,24 +199,30 @@
 
 /* ══════════════════════════════════════════
  * 响应式
+ *
+ * 网格类规则用容器查询（@container）：随 .home-page 容器内宽自适应，
+ * 而非仅随视口——即使页面被放在侧栏等窄容器中也正确折叠。
+ * 非网格（内边距/头部布局）保留视口断点。
  * ══════════════════════════════════════════ */
-@media (width <= 1024px) {
+@container (width <= 900px) {
 	.main-content {
 		grid-template-columns: 1fr;
 	}
 }
 
-@media (width <= 768px) {
-	.home-page {
-		padding: var(--space-lg) var(--space-md);
-	}
-
+@container (width <= 700px) {
 	.module-nav {
 		grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
 	}
 
 	.dashboard-section {
 		padding: var(--space-lg);
+	}
+}
+
+@media (width <= 768px) {
+	.home-page {
+		padding: var(--space-lg) var(--space-md);
 	}
 
 	.section-header {

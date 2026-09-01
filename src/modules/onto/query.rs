@@ -5,7 +5,9 @@ use async_trait::async_trait;
 use super::model::Onto;
 use super::repository::OntoRepository;
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit, SearchPort, SearchTarget, fts_query, normalize_search, snippet};
+use crate::shared::search::{
+    SearchHit, SearchPort, SearchTarget, fts_query, normalize_search, snippet,
+};
 
 /// 查询侧服务——纯读取，无副作用。
 ///

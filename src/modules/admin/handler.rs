@@ -119,14 +119,9 @@ pub async fn rotate_jwt(
 }
 
 /// 获取系统信息：版本、运行时长、数据库状态、各模块数据统计
-pub async fn get_system_info(
-    State(admin): State<AdminService>,
-) -> Response {
+pub async fn get_system_info(State(admin): State<AdminService>) -> Response {
     let db = admin.pool();
-    let uptime_secs = START_TIME
-        .get()
-        .map(|t| t.elapsed().as_secs())
-        .unwrap_or(0);
+    let uptime_secs = START_TIME.get().map(|t| t.elapsed().as_secs()).unwrap_or(0);
 
     // 数据库 PRAGMA 查询
     let db_version: i64 = sqlx::query_scalar("PRAGMA user_version")

@@ -76,12 +76,10 @@ pub async fn migrate(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
 
     // 2. 删除旧 FTS5 虚拟表（含附属表 config/data/docsize/idx）
     for (fts, _, _, _, _) in SPECS {
-        sqlx::query(sqlx::AssertSqlSafe(format!(
-            "DROP TABLE IF EXISTS {fts}"
-        )))
-        .execute(&mut *conn)
-        .await
-        .map_err(|e| migration_failed(&format!("v14 删除 {fts}"), &e))?;
+        sqlx::query(sqlx::AssertSqlSafe(format!("DROP TABLE IF EXISTS {fts}")))
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| migration_failed(&format!("v14 删除 {fts}"), &e))?;
     }
 
     // 3. 以 trigram tokenizer 重建 FTS5 虚拟表

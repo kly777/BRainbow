@@ -2,7 +2,9 @@ use async_trait::async_trait;
 use sqlx::SqlitePool;
 
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit as GlobalSearchHit, SearchPort, fts_query, normalize_search};
+use crate::shared::search::{
+    SearchHit as GlobalSearchHit, SearchPort, fts_query, normalize_search,
+};
 
 use super::model::SearchResponse;
 use super::repository::ChatRepo;

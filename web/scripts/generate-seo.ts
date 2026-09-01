@@ -30,10 +30,7 @@ export function generateSeoAssets(siteUrl: string): void {
 	] as const;
 
 	for (const [src, dst] of SEO_ASSETS) {
-		const tpl = readFileSync(
-			path.join("scripts", "seo-assets", src),
-			"utf8",
-		);
+		const tpl = readFileSync(path.join("scripts", "seo-assets", src), "utf8");
 		const outFile = path.join("dist", dst);
 		mkdirSync(path.dirname(outFile), { recursive: true });
 		writeFileSync(outFile, tpl.replaceAll("@@SITE_URL@@", siteUrl));

@@ -3,7 +3,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use crate::shared::error_types::ServiceError;
-use crate::shared::search::{SearchHit, SearchPort, SearchTarget, fts_query, normalize_search, snippet};
+use crate::shared::search::{
+    SearchHit, SearchPort, SearchTarget, fts_query, normalize_search, snippet,
+};
 
 use super::repository::TextRepo;
 

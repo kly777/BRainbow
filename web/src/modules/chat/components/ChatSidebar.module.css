@@ -3,7 +3,7 @@
 /* ── 侧边栏 ── */
 
 .sidebar {
-	width: 260px;
+	width: min(16.25rem, 80vw);
 	flex: none;
 	display: flex;
 	flex-direction: column;
@@ -152,7 +152,7 @@
 
 @media (width <= 768px) {
 	.sidebar {
-		width: 200px;
+		width: min(12.5rem, 80vw);
 	}
 }
 

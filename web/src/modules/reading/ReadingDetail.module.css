@@ -1,7 +1,7 @@
 /* features/reading/ReadingDetail.css.ts — 增强版 */
 
 .page {
-	max-width: 1100px;
+	max-width: min(68.75rem, 100%);
 	margin: 0 auto;
 	padding: var(--space-lg);
 	height: 100%;

@@ -1,7 +1,7 @@
 /* features/reading/ReadingUnknown.css.ts — 由 vanilla-extract 迁移 */
 
 .page {
-	max-width: 700px;
+	max-width: min(43.75rem, 100%);
 	margin: 0 auto;
 	padding: var(--space-lg);
 }

@@ -41,7 +41,7 @@
 .empty-hint {
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-faint);
-	max-width: 400px;
+	max-width: min(25rem, 100%);
 	margin: 0;
 	line-height: var(--leading-normal);
 }
@@ -306,7 +306,7 @@
 	border: 1px solid var(--t-color-border-strong);
 	background: var(--t-color-surface);
 	color: var(--t-color-ink-muted);
-	max-width: 220px;
+	max-width: min(13.75rem, 100%);
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
@@ -456,7 +456,7 @@
 	position: relative;
 	display: flex;
 	width: 100%;
-	max-width: 640px;
+	max-width: min(40rem, 100%);
 }
 
 .input-area {
@@ -606,7 +606,7 @@
 
 @media (width <= 768px) {
 	.sidebar {
-		width: 200px;
+		width: min(12.5rem, 80vw);
 	}
 
 	.message-list {

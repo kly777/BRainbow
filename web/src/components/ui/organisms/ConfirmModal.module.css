@@ -30,7 +30,7 @@
 	border: 1px solid var(--t-color-border-strong);
 	border-radius: var(--radius-2xl);
 	box-shadow: var(--shadow-lv3);
-	max-width: 420px;
+	max-width: min(26.25rem, 90vw);
 	width: 100%;
 	padding: var(--space-xl);
 	display: flex;

@@ -28,7 +28,7 @@
 	border: 1px solid var(--t-color-border-strong);
 	background: var(--t-color-surface);
 	color: var(--t-color-ink-muted);
-	max-width: 220px;
+	max-width: min(13.75rem, 100%);
 	overflow: hidden;
 	text-overflow: ellipsis;
 }

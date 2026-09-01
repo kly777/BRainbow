@@ -27,15 +27,15 @@
 		border-color var(--t-transition-fast);
 }
 
+.btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
 .btn:hover:not(:disabled) {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
 	border-color: var(--t-color-border-strong);
-}
-
-.btn:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
 }
 
 .info {

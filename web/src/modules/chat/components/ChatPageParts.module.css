@@ -240,7 +240,7 @@
 	top: calc(100% + var(--space-xs));
 	right: var(--space-lg);
 	z-index: var(--z-dropdown);
-	width: 320px;
+	width: min(20rem, 80vw);
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border-strong);
 	border-radius: var(--radius-md);

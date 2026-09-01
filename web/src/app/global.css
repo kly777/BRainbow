@@ -506,6 +506,7 @@ textarea {
  * 打印样式（适应性即无障碍：页面可能被打印/另存为 PDF）
  * ════════════════════════════════════════════════════════════ */
 
+/* stylelint-disable declaration-no-important */
 @media print {
 	/* 交互与导航元素一律隐藏（需覆盖组件级 display 规则） */
 	nav,
@@ -611,3 +612,4 @@ textarea {
 		border-color: #000 !important;
 	}
 }
+/* stylelint-enable declaration-no-important */

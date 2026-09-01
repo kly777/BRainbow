@@ -79,6 +79,7 @@ export default function SearchPage() {
 
 	return (
 		<div class={styles.page}>
+			<h1 class="sr-only">全局搜索</h1>
 			<form onSubmit={handleSearch} class={styles.form}>
 				<input
 					name="q"

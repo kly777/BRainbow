@@ -389,6 +389,7 @@ button:not(:disabled, .no-hover-lift) {
 }
 
 /* ── 动效偏好：用户要求减少动态时收敛所有过渡/动画 ── */
+/* stylelint-disable declaration-no-important */
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,
@@ -406,3 +407,4 @@ button:not(:disabled, .no-hover-lift) {
 		scroll-behavior: auto !important;
 	}
 }
+/* stylelint-enable declaration-no-important */

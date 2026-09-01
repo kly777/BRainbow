@@ -34,6 +34,10 @@ export default {
 				ignoreKeywords: ["currentColor"],
 			},
 		],
+		// ── 门禁：禁止 !important（道之原则：样式表是建议而非控制）
+		// 已知例外写入 media 区域（打印、reduced-motion 等），
+		// 用 stylelint-disable-next-line 逐条豁免。
+		"declaration-no-important": true,
 	},
 	ignoreFiles: ["dist/**", "scripts/vendor/**"],
 };

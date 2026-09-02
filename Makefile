@@ -9,7 +9,7 @@ REMOTE_PORT ?= 22
 time := $(shell date +%y%m%d_%H%M%S)
 DEPLOY_SCRIPT := deploy/deploy.sh
 
-.PHONY: dev dev-backend dev-web fmt build build-check build-web build-backend clean deploy deploy-web deploy-backend check status info logs db-pull db-push rollback list-backups sqlx-prepare db-check db-optimize db-backup backup-prune
+.PHONY: dev dev-backend dev-backend-fast dev-web fmt lint build build-web build-backend clean clean-all deploy deploy-web deploy-backend check-deploy status info logs db-pull db-push health rollback list-backups sqlx-prepare test test-verbose udeps bloat clean-cache build-stats db-check db-optimize db-backup backup-prune check-env
 
 # 用 make 并行目标跑后端/前端：Ctrl+C 时 make 会给所有并行 job 发信号并等待清理
 # （cargo-watch 8.x 收到 SIGINT 会用进程组清理 cargo run/brainbow）
@@ -17,8 +17,18 @@ DEPLOY_SCRIPT := deploy/deploy.sh
 dev:
 	@$(MAKE) -s -j2 dev-backend dev-web
 
+# 开发后端：cargo-watch 监听源码变化自动编译+重启服务
+# --delay 1.5 防抖：避免 IDE 保存触发的连续多次编译
 dev-backend:
-	@MAKEFLAGS= cargo-watch -x run --ignore web --ignore build --ignore $(BUILD_DIR)
+	# 忽略 web（前端）、build（构建产物）、uploads（用户文件）、.sqlx（离线数据）：
+	# 这些目录的变化不应触发后端重新编译。
+	# cargo-watch 8.x 默认会读 .gitignore 过滤 target/ 与 *.db* 等，
+	# 此处显式列出不可由 gitignore 覆盖或需额外强调的路径。
+	@MAKEFLAGS= cargo-watch -x run --delay 1.5 --ignore web --ignore $(BUILD_DIR) --ignore uploads --ignore .sqlx
+
+# 快速编译验证（不启动服务）：适合多窗口开发时单独验证后端能否编译通过
+dev-backend-fast:
+	@MAKEFLAGS= cargo-watch -x check --delay 1 --ignore web --ignore $(BUILD_DIR) --ignore uploads --ignore .sqlx
 
 dev-web:
 	# -s 抑制 pnpm 的 "Already up to date"/"$ vite ..." 回显噪音
@@ -28,6 +38,11 @@ fmt:
 	cargo fmt
 	cd web && pnpm run fmt
 
+# 代码质量检查：clippy（后端）+ biome/stylelint（前端）
+lint:
+	cargo clippy --all-targets
+	cd web && pnpm run lint
+
 # SQL 编译期校验：先生成"迁移到最新版"的 fixture 库，再刷新 .sqlx offline data。
 # schema/迁移变更后必须重跑并提交 .sqlx。
 # 前置：cargo install sqlx-cli --no-default-features --features sqlite
@@ -36,7 +51,8 @@ sqlx-prepare:
 	cargo test prepare_schema_fixture -- --ignored
 	DATABASE_URL=sqlite:target/sqlx-prepare.db cargo sqlx prepare
 
-check:
+# 部署环境检查：SSH/Caddy/构建产物（原名 check，改名避免与 Rust check 惯例冲突）
+check-deploy:
 	$(DEPLOY_SCRIPT) check
 
 build:
@@ -70,10 +86,10 @@ deploy-backend: check-env
 	@[ -f "$(BUILD_DIR)/brainbow" ] || (echo "错误: 请先 make build"; exit 1)
 	$(DEPLOY_SCRIPT) deploy
 
-# 仅编译（快速迭代）
 # 仅构建后端产物（与 deploy.sh build 同口径：env -u DATABASE_URL 强制走 .sqlx 离线快照；
-# dist 缺失直接报错而非吞掉——deploy-backend 链路必须要有 build/dist）
+# 复用 web/dist，因此先检查其存在性，避免静默拷贝空目录——deploy-backend 链路必须有 build/dist）
 build-backend:
+	@[ -f web/dist/index.html ] || (echo "错误: web/dist 不存在，请先 make build-web"; exit 1)
 	env -u DATABASE_URL cargo build --release
 	rm -rf $(BUILD_DIR)
 	mkdir -p $(BUILD_DIR)/dist
@@ -83,21 +99,34 @@ build-backend:
 build-web:
 	cd web && pnpm run build
 
+# 清理构建产物：build/（组装产物）+ target/（Rust 编译缓存）
+# 保留 node_modules 以便后续构建更快
 clean:
 	rm -rf $(BUILD_DIR)/
-# 完全清理（包括 node_modules 和 target）
-clean-all: clean
-	cd web && rm -rf node_modules dist
 	cargo clean
 
-# 使用 cargo-nextest 运行测试（比 cargo test 快 2-3 倍）
+# 完全清理（clean + 前端依赖/产物）
+clean-all: clean
+	cd web && rm -rf node_modules dist
+
+# 使用 cargo-nextest 运行测试（比 cargo test 快 2-3 倍）；未安装时自动降级 cargo test
 # 安装: cargo install cargo-nextest
 test:
-	cargo nextest run
+	@if command -v cargo-nextest >/dev/null 2>&1; then \
+		cargo nextest run; \
+	else \
+		echo "cargo-nextest 未安装，降级使用 cargo test"; \
+		cargo test; \
+	fi
 
 # 使用 cargo-nextest 运行测试（带输出）
 test-verbose:
-	cargo nextest run --no-capture
+	@if command -v cargo-nextest >/dev/null 2>&1; then \
+		cargo nextest run --no-capture; \
+	else \
+		echo "cargo-nextest 未安装，降级使用 cargo test"; \
+		cargo test -- --no-capture; \
+	fi
 
 # 检查未使用的依赖
 # 安装: cargo install cargo-udeps

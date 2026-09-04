@@ -8,15 +8,15 @@ use axum::Router;
 use axum::extract::{DefaultBodyLimit, FromRef};
 use axum::routing::{get, post};
 
-use query::MediaQueryService;
-use service::MediaService;
+use query::FileQueryService;
+use service::FileService;
 use service::UPLOAD_BODY_LIMIT_BYTES;
 
 pub fn routes<S>() -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
-    MediaService: FromRef<S>,
-    MediaQueryService: FromRef<S>,
+    FileService: FromRef<S>,
+    FileQueryService: FromRef<S>,
 {
     Router::new()
         .route(
@@ -24,10 +24,11 @@ where
             post(handler::upload_handler).layer(DefaultBodyLimit::max(UPLOAD_BODY_LIMIT_BYTES)),
         )
         .route("/", get(handler::list_handler))
+        .route("/tags", get(handler::tags_handler))
         .route(
             "/{stored_id}",
             get(handler::get_handler)
-                .patch(handler::rename_handler)
+                .patch(handler::update_handler)
                 .delete(handler::delete_handler),
         )
 }
@@ -36,7 +37,10 @@ where
 pub fn public_file_route<S>() -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
-    MediaQueryService: FromRef<S>,
+    FileQueryService: FromRef<S>,
 {
-    Router::new().route("/{stored_id}/file", get(handler::file_handler))
+    Router::new().route(
+        "/{stored_id}/data/{filename}",
+        get(handler::file_handler),
+    )
 }

@@ -6,7 +6,7 @@ use axum::{
 use crate::app::context::AppState;
 use crate::modules::db_viewer;
 use crate::modules::{
-    ai, bookmark, card, chat, conv, media, mem, onto, reading, search, sign, task, text,
+    ai, bookmark, card, chat, conv, file, mem, onto, reading, search, sign, task, text,
     time_window, user,
 };
 
@@ -23,7 +23,7 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
     // 注意：text 曾误挂公开组导致匿名可读写全部文本笔记（审计 B1），已移入认证组
     let public = Router::new()
         .route("/bookmarks/favicon", get(bookmark::favicon_handler))
-        .nest("/media", media::public_file_route::<AppState>());
+        .nest("/file", file::public_file_route::<AppState>());
 
     // ── 登录/注册（含限速层）──
 
@@ -39,7 +39,7 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
             axum::routing::delete(crate::app::http::auth::delete_api_key),
         )
         .nest("/mem", mem::routes::<AppState>())
-        .nest("/media", media::routes::<AppState>())
+        .nest("/file", file::routes::<AppState>())
         .nest("/conv", conv::routes::<AppState>())
         .nest("/cards", card::routes::<AppState>())
         .nest("/onto", onto::routes::<AppState>())

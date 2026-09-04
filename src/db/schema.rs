@@ -166,21 +166,22 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
-    // 创建媒体表
+    // 创建通用文件表
     sqlx::query(
         r#"
-        CREATE TABLE IF NOT EXISTS media (
+        CREATE TABLE IF NOT EXISTS file (
             id              INTEGER PRIMARY KEY,
-            stored_id       TEXT NOT NULL UNIQUE,
-            original_name   TEXT NOT NULL,
-            media_type      TEXT NOT NULL CHECK(media_type IN ('image', 'video', 'audio')),
-            mime_type       TEXT NOT NULL,
+            stored_id       TEXT    NOT NULL UNIQUE,
+            original_name   TEXT    NOT NULL,
+            mime_type       TEXT    NOT NULL,
+            file_category   TEXT    NOT NULL DEFAULT 'other',
             size_bytes      INTEGER NOT NULL DEFAULT 0,
             width           INTEGER,
             height          INTEGER,
             duration_ms     INTEGER,
             user_id         INTEGER,
             created_at      TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+            updated_at      TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             FOREIGN KEY (user_id) REFERENCES user(id)
         )
         "#,
@@ -189,14 +190,69 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .await?;
 
     sqlx::query(
-        "CREATE INDEX IF NOT EXISTS idx_media_type_created ON media(media_type, created_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_file_created ON file(created_at DESC)",
     )
     .execute(pool)
     .await?;
 
-    sqlx::query("CREATE INDEX IF NOT EXISTS idx_media_stored_id ON media(stored_id)")
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_file_category ON file(file_category, created_at DESC)",
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_file_stored_id ON file(stored_id)")
         .execute(pool)
         .await?;
+
+    // 文件标签表
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS file_tag (
+            id      INTEGER PRIMARY KEY AUTOINCREMENT,
+            name    TEXT    NOT NULL,
+            user_id INTEGER NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES user(id),
+            UNIQUE(name, user_id)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // 文件-标签关联表
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS file_tag_rel (
+            file_id INTEGER NOT NULL,
+            tag_id  INTEGER NOT NULL,
+            PRIMARY KEY (file_id, tag_id),
+            FOREIGN KEY (file_id) REFERENCES file(id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id)  REFERENCES file_tag(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_file_tag_rel_tag ON file_tag_rel(tag_id)")
+        .execute(pool)
+        .await?;
+
+    // 文件元信息（KV 存储）
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS file_meta (
+            file_id INTEGER NOT NULL,
+            key     TEXT    NOT NULL,
+            value   TEXT    NOT NULL,
+            PRIMARY KEY (file_id, key),
+            FOREIGN KEY (file_id) REFERENCES file(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
 
     // 创建能指所指表
     sqlx::query(

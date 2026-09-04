@@ -12,8 +12,8 @@ use crate::modules::chat::query::ChatQueryService;
 use crate::modules::chat::service::ChatService;
 use crate::modules::conv::query::ConvQueryService;
 use crate::modules::db_viewer::DbViewerQueryService;
-use crate::modules::media::query::MediaQueryService;
-use crate::modules::media::service::MediaService;
+use crate::modules::file::query::FileQueryService;
+use crate::modules::file::service::FileService;
 use crate::modules::mem::MemRepo;
 use crate::modules::mem::config::MemConfig;
 use crate::modules::mem::maintenance::DbMemMaintenance;
@@ -58,12 +58,6 @@ pub struct ChatState {
 }
 
 #[derive(Clone)]
-pub struct MediaState {
-    pub service: MediaService,
-    pub query: MediaQueryService,
-}
-
-#[derive(Clone)]
 pub struct TimeWindowState {
     pub service: TimeWindowService,
     pub query: TimeWindowQueryService,
@@ -88,6 +82,12 @@ pub struct ConvState {
 }
 
 #[derive(Clone)]
+pub struct FileState {
+    pub service: FileService,
+    pub query: FileQueryService,
+}
+
+#[derive(Clone)]
 pub struct SearchState {
     pub service: SearchQueryService,
 }
@@ -109,7 +109,7 @@ pub struct AppState {
     pub sign: SignState,
     pub user: UserState,
     pub text: TextState,
-    pub media: MediaState,
+    pub file: FileState,
     pub reading: ReadingState,
     pub time_window: TimeWindowState,
     pub task: TaskState,
@@ -148,8 +148,8 @@ impl_from_ref! {
     sign.service => crate::modules::sign::SignService,
     sign.query => crate::modules::sign::SignQueryService,
     conv.service => ConvQueryService,
-    media.service => MediaService,
-    media.query => MediaQueryService,
+    file.service => FileService,
+    file.query => FileQueryService,
     reading.service => crate::modules::reading::service::ReadingService,
     reading.query => crate::modules::reading::query::ReadingQueryService,
     text.service => crate::modules::text::TextService,
@@ -228,8 +228,11 @@ impl AppState {
         let mem_query = MemQueryService::new(mem_repo_for_query, Arc::new(mem_config.clone()));
 
         let upload_dir = config.upload_dir.to_string_lossy().to_string();
-        let media = MediaService::new(db.clone(), upload_dir.clone());
-        let media_query = MediaQueryService::new(db.clone(), upload_dir);
+
+        // 文件服务
+        let file_upload_dir = format!("{}/file", upload_dir);
+        let file = FileService::new(db.clone(), file_upload_dir);
+        let file_query = FileQueryService::new(db.clone());
 
         let conv = ConvQueryService::new(db.as_ref().clone());
 
@@ -258,9 +261,9 @@ impl AppState {
             sign,
             user,
             text,
-            media: MediaState {
-                service: media,
-                query: media_query,
+            file: FileState {
+                service: file,
+                query: file_query,
             },
             reading,
             time_window: TimeWindowState {

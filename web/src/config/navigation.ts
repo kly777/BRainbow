@@ -97,6 +97,13 @@ export const NAV_ITEMS: NavItem[] = [
 		nav: true,
 	},
 	{
+		path: PATHS.file,
+		label: "文件",
+		title: "Files",
+		desc: "通用文件管理",
+		nav: true,
+	},
+	{
 		path: PATHS.db,
 		label: "数据库",
 		title: "Database",

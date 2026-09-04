@@ -17,6 +17,7 @@ export const CACHE = {
 	text: /^GET \/text/,
 	timeWindows: /^GET \/time-windows/,
 	media: /^GET \/media/,
+	files: /^GET \/files/,
 } as const;
 
 export type DomainName = keyof typeof CACHE;

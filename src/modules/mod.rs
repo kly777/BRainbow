@@ -8,7 +8,7 @@ pub mod card;
 pub mod chat;
 pub mod conv;
 pub mod db_viewer;
-pub mod media;
+pub mod file;
 pub mod mem;
 pub mod onto;
 pub mod reading;

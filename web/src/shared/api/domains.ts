@@ -56,6 +56,10 @@ export const DOMAIN_DEFS: Record<DomainName, DomainDef> = {
 	text: { reads: [/^GET \/text/] },
 	timeWindows: { reads: [/^GET \/time-windows(?:\?|$)/] },
 	media: { reads: [/^GET \/media(?:\?|$)/], singles: [/^GET \/media\/[^?]+/] },
+	files: {
+		reads: [/^GET \/file(?:\?|$)/, /^GET \/file\/tags/],
+		singles: [/^GET \/file\/[^?]+/],
+	},
 };
 
 export interface CacheResource {

@@ -17,7 +17,7 @@ pub const TIME_COLUMNS: &[(&str, &str, &[&str])] = &[
         "id",
         &["start_time", "end_time", "recurrence_until"],
     ),
-    ("media", "id", &["created_at"]),
+    // media 表已在 v15 中删除，此处移除；历史库中 v8 早已执行，不会重跑
     ("signifier_signified", "id", &["created_at"]),
     ("text_note", "id", &["created_at", "updated_at"]),
     ("chunk", "id", &["created_at", "updated_at"]),

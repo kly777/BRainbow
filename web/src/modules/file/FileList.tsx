@@ -3,8 +3,8 @@ import type { FileItem } from "@modules/file";
 import { fileUrl } from "@modules/file";
 import { formatBytes } from "@shared/utils";
 import { type Component, For, Show } from "solid-js";
-import { useFileList } from "./hooks/useFileList.ts";
 import styles from "./FileList.module.css";
+import { useFileList } from "./hooks/useFileList.ts";
 
 const CATEGORY_TABS = [
 	{ value: "", label: "全部" },

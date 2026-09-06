@@ -49,7 +49,9 @@ export const uploadFile = async (
 ): Promise<FileItem> => {
 	const formData = new FormData();
 	formData.append("file", file);
-	const params = tags?.length ? `?tags=${encodeURIComponent(JSON.stringify(tags))}` : "";
+	const params = tags?.length
+		? `?tags=${encodeURIComponent(JSON.stringify(tags))}`
+		: "";
 	return domains.files.invalidate(
 		request<FileItem>(`/file/upload${params}`, {
 			method: "POST",

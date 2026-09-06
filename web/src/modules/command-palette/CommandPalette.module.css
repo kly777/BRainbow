@@ -9,7 +9,6 @@
 	inset: 0;
 	z-index: var(--z-palette);
 	background: var(--t-color-overlay);
-	backdrop-filter: blur(0.25rem);
 	border: none;
 	padding: 0;
 	font: inherit;

@@ -14,6 +14,8 @@ import { searchE } from "../api.ts";
 import { buildSearchItems, searchWeb } from "./suggestions.ts";
 import type { Mode, Suggestion } from "./usePalette.ts";
 
+const EMPTY: Suggestion[] = [];
+
 export interface UsePaletteSearchOpts {
 	mode: Accessor<Mode>;
 	query: Accessor<string>;
@@ -28,9 +30,9 @@ export function usePaletteSearch(opts: UsePaletteSearchOpts) {
 
 	/** 搜索历史建议：在搜索模式且无输入时展示 */
 	const historyItems = (): Suggestion[] => {
-		if (opts.mode() !== "search" || opts.query().trim()) return [];
+		if (opts.mode() !== "search" || opts.query().trim()) return EMPTY;
 		const history = getSearchHistory();
-		if (history.length === 0) return [];
+		if (history.length === 0) return EMPTY;
 		const items: Suggestion[] = history.map((q) => ({
 			label: q,
 			desc: "搜索历史",
@@ -51,7 +53,7 @@ export function usePaletteSearch(opts: UsePaletteSearchOpts) {
 	};
 
 	const searchItems = (): Suggestion[] => {
-		if (opts.mode() !== "search") return [];
+		if (opts.mode() !== "search") return EMPTY;
 		const q = opts.query().trim();
 		if (!q) return historyItems();
 		return buildSearchItems(hits(), q, searching(), opts.navigate, opts.close);

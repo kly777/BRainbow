@@ -19,6 +19,8 @@ import { usePaletteSearch } from "./usePaletteSearch.ts";
 
 export type Mode = "idle" | "nav" | "search" | "cmd";
 
+const EMPTY_SUGGESTIONS: Suggestion[] = [];
+
 export const MODE_PREFIX: Record<Mode, string> = {
 	idle: "",
 	nav: "/",
@@ -73,7 +75,7 @@ export function usePalette() {
 	let inputRef!: HTMLInputElement;
 	let sugScrollRef: HTMLDivElement | undefined;
 
-	const mode = () => detectMode(value());
+	const mode = createMemo(() => detectMode(value()));
 	const query = () => value().slice(1);
 
 	const close = () => {
@@ -117,11 +119,13 @@ export function usePalette() {
 	});
 
 	const navItems = createMemo<Suggestion[]>(() =>
-		mode() === "nav" ? buildNavItems(query(), navigate, close) : [],
+		mode() === "nav"
+			? buildNavItems(query(), navigate, close)
+			: EMPTY_SUGGESTIONS,
 	);
 
 	const cmdItems = createMemo<Suggestion[]>(() =>
-		mode() === "cmd" ? buildCmdItems(query(), commands()) : [],
+		mode() === "cmd" ? buildCmdItems(query(), commands()) : EMPTY_SUGGESTIONS,
 	);
 
 	// ── 子 hook：站内搜索 ──
@@ -134,14 +138,15 @@ export function usePalette() {
 	});
 
 	/** 当前模式下的建议列表 */
-	const currentItems = () =>
+	const currentItems = createMemo<Suggestion[]>(() =>
 		mode() === "nav"
 			? navItems()
 			: mode() === "cmd"
 				? cmdItems()
 				: mode() === "search"
 					? search.searchItems()
-					: [];
+					: EMPTY_SUGGESTIONS,
+	);
 
 	// 选中项变化时滚动到可见
 	createEffect(() => {

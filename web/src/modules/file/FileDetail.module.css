@@ -1,51 +1,68 @@
-/* 文件详情 —— 与 BookmarkDetail 同风格（kebab-case + 语义令牌） */
+/* 文件详情 —— 左预览主体 + 右元信息侧栏（kebab-case + 语义令牌） */
 
 .container {
 	margin: 0 auto;
-	max-width: 48rem;
+	max-width: var(--page-max);
 	padding: var(--space-lg) var(--space-xl) var(--space-xl);
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-lg);
+
+	/* 父级 main 是固定 100dvh 滚动容器（非 flex），flex:1 无效；
+	   用 min-height 撑满视口，避免页面底部留白 */
+	box-sizing: border-box;
+	min-height: 100dvh;
+}
+
+.body {
+	display: flex;
+	gap: var(--space-lg);
+	align-items: stretch;
 	flex: 1;
 	min-height: 0;
 }
 
-.card {
+/* ── 左侧：文件展示主体 ── */
+
+.preview-pane {
+	flex: 1;
+	min-width: 0;
+	min-height: 62vh;
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-lg);
 	overflow: hidden;
 	display: flex;
-	flex-direction: column;
 }
 
-/* ── 预览区 ── */
-
-.preview {
-	background: var(--t-color-bg);
+.preview-stage {
+	flex: 1;
+	min-width: 0;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	overflow: hidden;
+	background: var(--t-color-bg);
 }
 
 .preview-link {
 	display: flex;
 	width: 100%;
+	height: 100%;
+	align-items: center;
 	justify-content: center;
 }
 
 .preview-img {
 	max-width: 100%;
-	max-height: 30rem;
+	max-height: 100%;
 	object-fit: contain;
 	display: block;
 }
 
 .preview-media {
 	max-width: 100%;
-	max-height: 30rem;
+	max-height: 100%;
 	display: block;
 }
 
@@ -53,11 +70,12 @@
 	width: 100%;
 	padding: var(--space-lg) var(--space-md);
 	box-sizing: border-box;
+	align-self: flex-end;
 }
 
 .preview-frame {
 	width: 100%;
-	height: 36rem;
+	height: 100%;
 	border: none;
 	background: var(--t-color-white);
 }
@@ -82,13 +100,26 @@
 	text-align: center;
 }
 
-/* ── 信息区 ── */
+/* ── 右侧：元信息侧栏 ── */
 
-.info-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+.side-pane {
+	flex-shrink: 0;
+	width: 18rem;
+	overflow-y: auto;
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-lg);
+	padding: var(--space-lg);
+	display: flex;
+	flex-direction: column;
 	gap: var(--space-md);
-	padding: var(--space-lg) var(--space-xl);
+	box-sizing: border-box;
+}
+
+.info-list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
 }
 
 .info-item {
@@ -114,7 +145,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-sm);
-	padding: var(--space-md) var(--space-xl);
+	padding-top: var(--space-md);
 	border-top: 1px solid var(--t-color-border);
 }
 
@@ -149,14 +180,12 @@
 
 .meta-row {
 	display: flex;
-	gap: var(--space-sm);
-	align-items: baseline;
+	flex-direction: column;
+	gap: var(--space-2xs);
 }
 
 .meta-key {
-	flex-shrink: 0;
-	min-width: 6rem;
-	font-size: var(--text-sm);
+	font-size: var(--text-xs);
 	font-weight: 500;
 	color: var(--t-color-ink-muted);
 }
@@ -168,14 +197,12 @@
 	overflow-wrap: anywhere;
 }
 
-/* ── 编辑表单 ── */
+/* ── 编辑表单（侧栏内） ── */
 
 .form {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-xs);
-	padding: var(--space-lg) var(--space-xl);
-	border-top: 1px solid var(--t-color-border);
 }
 
 .label {
@@ -217,8 +244,8 @@
 }
 
 .meta-edit-key {
-	flex: 0 0 10rem;
-	padding: var(--space-xs) var(--space-md);
+	flex: 0 0 6rem;
+	padding: var(--space-xs) var(--space-sm);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	background: var(--t-color-surface);
@@ -229,7 +256,7 @@
 
 .meta-edit-value {
 	flex: 1;
-	padding: var(--space-xs) var(--space-md);
+	padding: var(--space-xs) var(--space-sm);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	background: var(--t-color-surface);
@@ -261,24 +288,19 @@
 	margin-top: var(--space-sm);
 }
 
-/* ── 响应式 ── */
+/* ── 响应式：窄屏上下堆叠，预览在上、信息在下 ── */
 
-@media (width <= 768px) {
-	.container {
-		padding: var(--space-md) var(--space-md) var(--space-lg);
+@media (width <= 900px) {
+	.body {
+		flex-direction: column;
 	}
 
-	.info-grid {
-		padding: var(--space-md);
+	.preview-pane {
+		min-height: 40vh;
 	}
 
-	.section,
-	.form {
-		padding: var(--space-md);
-	}
-
-	.preview-frame {
-		height: 24rem;
+	.side-pane {
+		width: 100%;
 	}
 
 	.form-actions {

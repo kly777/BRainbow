@@ -1,4 +1,4 @@
-// ── /file/:id：文件详情（预览 + 标签/元信息查看与编辑） ──
+// ── /file/:id：文件详情（左：文件展示主体，右：元信息侧栏） ──
 
 import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
 import {
@@ -17,12 +17,12 @@ import TagInput from "./components/TagInput.tsx";
 import styles from "./FileDetail.module.css";
 import { type MetaEntry, useFileDetail } from "./hooks/useFileDetail.ts";
 
-// ── 预览区 ──
+// ── 预览（左侧主体） ──
 
 const Preview: Component<{ item: FileItem }> = (props) => {
 	const url = () => fileUrl(props.item.stored_id, props.item.original_name);
 	return (
-		<div class={styles.preview}>
+		<div class={styles.previewStage}>
 			<Show when={props.item.file_category === "image"}>
 				<a
 					href={url()}
@@ -59,17 +59,24 @@ const Preview: Component<{ item: FileItem }> = (props) => {
 				<div class={styles.previewFallback}>
 					<FileText size={48} class={styles.previewFallbackIcon} />
 					<p class={styles.previewFallbackName}>{props.item.original_name}</p>
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={() => window.open(url(), "_blank")}
+					>
+						<Download size={14} /> 下载
+					</Button>
 				</div>
 			</Show>
 		</div>
 	);
 };
 
-// ── 查看模式 ──
+// ── 侧栏：查看模式 ──
 
 const FileView: Component<{ item: FileItem }> = (props) => (
 	<>
-		<div class={styles.infoGrid}>
+		<div class={styles.infoList}>
 			<div class={styles.infoItem}>
 				<span class={styles.infoLabel}>类型</span>
 				<span class={styles.infoValue}>
@@ -129,7 +136,7 @@ const FileView: Component<{ item: FileItem }> = (props) => (
 	</>
 );
 
-// ── 编辑模式 ──
+// ── 侧栏：编辑模式 ──
 
 const MetaRowEditor: Component<{
 	entry: MetaEntry;
@@ -272,11 +279,15 @@ export default function FileDetail() {
 
 			<Show when={m.data()}>
 				{(item) => (
-					<div class={styles.card}>
-						<Preview item={item()} />
-						<Show when={m.editing()} fallback={<FileView item={item()} />}>
-							<EditForm m={m} />
-						</Show>
+					<div class={styles.body}>
+						<section class={styles.previewPane} aria-label="文件预览">
+							<Preview item={item()} />
+						</section>
+						<aside class={styles.sidePane} aria-label="文件信息">
+							<Show when={m.editing()} fallback={<FileView item={item()} />}>
+								<EditForm m={m} />
+							</Show>
+						</aside>
 					</div>
 				)}
 			</Show>

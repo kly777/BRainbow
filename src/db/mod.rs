@@ -77,6 +77,16 @@ mod tests {
             ("reading_user_word", "user_id"),
             ("conv_titles", "user_id"),
             ("articles", "user_id"),
+            // v15：通用文件服务四表
+            ("file", "stored_id"),
+            ("file", "file_category"),
+            ("file", "updated_at"),
+            ("file_tag", "name"),
+            ("file_tag", "user_id"),
+            ("file_tag_rel", "file_id"),
+            ("file_tag_rel", "tag_id"),
+            ("file_meta", "file_id"),
+            ("file_meta", "key"),
         ] {
             assert!(
                 column_exists(&pool, table, col).await.unwrap(),

@@ -196,3 +196,280 @@ impl FileQueryService {
             .map_err(ServiceError::Db)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use std::collections::HashMap;
+
+    use super::*;
+    use crate::modules::file::model::NewFile;
+
+    async fn setup() -> (FileQueryService, FileRepository, Arc<SqlitePool>) {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        crate::db::migrate(&pool).await.unwrap();
+        for (id, name) in [(7, "file-user"), (8, "other-user")] {
+            sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (?, ?, 'x')")
+                .bind(id)
+                .bind(name)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+        let pool = Arc::new(pool);
+        let repo = FileRepository::new(pool.clone());
+        (FileQueryService::new(pool.clone()), repo, pool)
+    }
+
+    async fn seed(repo: &FileRepository) -> i64 {
+        // 用户 7 的两个文档 + 用户 8 的一个图片
+        let f1 = repo
+            .insert(NewFile {
+                stored_id: "doc-1",
+                original_name: "季度报告.md",
+                mime_type: "text/markdown",
+                file_category: "document",
+                size_bytes: 100,
+                width: None,
+                height: None,
+                duration_ms: None,
+                user_id: Some(7),
+            })
+            .await
+            .unwrap();
+        repo.insert(NewFile {
+            stored_id: "img-1",
+            original_name: "风景.png",
+            mime_type: "image/png",
+            file_category: "image",
+            size_bytes: 200,
+            width: None,
+            height: None,
+            duration_ms: None,
+            user_id: Some(7),
+        })
+        .await
+        .unwrap();
+        repo.insert(NewFile {
+            stored_id: "other-1",
+            original_name: "别人文件.bin",
+            mime_type: "application/octet-stream",
+            file_category: "other",
+            size_bytes: 300,
+            width: None,
+            height: None,
+            duration_ms: None,
+            user_id: Some(8),
+        })
+        .await
+        .unwrap();
+        f1.id
+    }
+
+    // ── 详情聚合 ──
+
+    #[tokio::test]
+    async fn get_by_stored_id_includes_tags_and_meta() {
+        let (query, repo, _pool) = setup().await;
+        let f1 = seed(&repo).await;
+        let tag = repo.get_or_create_tag("项目", 7).await.unwrap();
+        repo.set_file_tags(f1, &[tag.id]).await.unwrap();
+        let mut meta = HashMap::new();
+        meta.insert("pages".into(), "5".into());
+        repo.set_file_meta(f1, &meta).await.unwrap();
+
+        let f = query.get_by_stored_id("doc-1").await.unwrap();
+        assert_eq!(f.original_name, "季度报告.md");
+        assert_eq!(f.file_category, FileCategory::Document);
+        assert_eq!(f.tags, vec!["项目"]);
+        assert_eq!(f.meta.get("pages").map(String::as_str), Some("5"));
+        assert_eq!(f.user_id, Some(7));
+    }
+
+    #[tokio::test]
+    async fn get_by_stored_id_missing_returns_not_found() {
+        let (query, repo, _pool) = setup().await;
+        seed(&repo).await;
+        let err = query.get_by_stored_id("no-such").await.unwrap_err();
+        assert!(matches!(err, ServiceError::NotFound(_)));
+    }
+
+    #[tokio::test]
+    async fn get_by_id_works() {
+        let (query, repo, _pool) = setup().await;
+        let f1 = seed(&repo).await;
+        let f = query.get_by_id(f1).await.unwrap();
+        assert_eq!(f.stored_id, "doc-1");
+    }
+
+    // ── 列表 ──
+
+    #[tokio::test]
+    async fn list_defaults_scoped_to_user() {
+        let (query, repo, _pool) = setup().await;
+        seed(&repo).await;
+
+        // 未登录（user_id None）应看到全部 3 条；用户 7 只看到自己的 2 条
+        let all = query
+            .list(
+                FileListQuery {
+                    page: None,
+                    page_size: None,
+                    category: None,
+                    tag: None,
+                    q: None,
+                },
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(all.total, 3);
+        let mine = query
+            .list(
+                FileListQuery {
+                    page: None,
+                    page_size: None,
+                    category: None,
+                    tag: None,
+                    q: None,
+                },
+                Some(7),
+            )
+            .await
+            .unwrap();
+        assert_eq!(mine.total, 2);
+        assert!(mine.items.iter().all(|f| f.user_id == Some(7)));
+    }
+
+    #[tokio::test]
+    async fn list_filters_by_category() {
+        let (query, repo, _pool) = setup().await;
+        seed(&repo).await;
+        let docs = query
+            .list(
+                FileListQuery {
+                    page: None,
+                    page_size: None,
+                    category: Some("document".into()),
+                    tag: None,
+                    q: None,
+                },
+                Some(7),
+            )
+            .await
+            .unwrap();
+        assert_eq!(docs.total, 1);
+        assert_eq!(docs.items[0].stored_id, "doc-1");
+    }
+
+    #[tokio::test]
+    async fn list_filters_by_tag_combined_with_q() {
+        let (query, repo, _pool) = setup().await;
+        let f1 = seed(&repo).await;
+        let tag = repo.get_or_create_tag("文档", 7).await.unwrap();
+        repo.set_file_tags(f1, &[tag.id]).await.unwrap();
+
+        // 仅 tag
+        let by_tag = query
+            .list(
+                FileListQuery {
+                    page: None,
+                    page_size: None,
+                    category: None,
+                    tag: Some("文档".into()),
+                    q: None,
+                },
+                Some(7),
+            )
+            .await
+            .unwrap();
+        assert_eq!(by_tag.total, 1);
+
+        // tag + q 组合：命中与未命中
+        let hit = query
+            .list(
+                FileListQuery {
+                    page: None,
+                    page_size: None,
+                    category: None,
+                    tag: Some("文档".into()),
+                    q: Some("报告".into()),
+                },
+                Some(7),
+            )
+            .await
+            .unwrap();
+        assert_eq!(hit.total, 1);
+        let miss = query
+            .list(
+                FileListQuery {
+                    page: None,
+                    page_size: None,
+                    category: None,
+                    tag: Some("文档".into()),
+                    q: Some("不存在的词".into()),
+                },
+                Some(7),
+            )
+            .await
+            .unwrap();
+        assert_eq!(miss.total, 0);
+        assert!(miss.items.is_empty());
+    }
+
+    #[tokio::test]
+    async fn list_search_by_q_reports_total() {
+        let (query, repo, _pool) = setup().await;
+        seed(&repo).await;
+        let r = query
+            .list(
+                FileListQuery {
+                    page: None,
+                    page_size: None,
+                    category: None,
+                    tag: None,
+                    q: Some("报告".into()),
+                },
+                Some(7),
+            )
+            .await
+            .unwrap();
+        assert_eq!(r.total, 1);
+        assert_eq!(r.items.len(), 1);
+        assert_eq!(r.items[0].stored_id, "doc-1");
+    }
+
+    #[tokio::test]
+    async fn list_pagination_clamps_page_size() {
+        let (query, repo, _pool) = setup().await;
+        seed(&repo).await;
+        // 要求 500 条/页 → clamp 到 100
+        let r = query
+            .list(
+                FileListQuery {
+                    page: Some(1),
+                    page_size: Some(500),
+                    category: None,
+                    tag: None,
+                    q: None,
+                },
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(r.page_size, 100);
+        assert_eq!(r.total, 3);
+    }
+
+    #[tokio::test]
+    async fn get_user_tags_only_returns_own() {
+        let (query, repo, _pool) = setup().await;
+        seed(&repo).await;
+        repo.get_or_create_tag("七的标签", 7).await.unwrap();
+        repo.get_or_create_tag("八的标签", 8).await.unwrap();
+
+        let tags = query.get_user_tags(7).await.unwrap();
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].name, "七的标签");
+    }
+}

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::model::{FileTag, NewFile};
+use crate::shared::db_query::like_contains;
 
 #[derive(Debug, FromRow)]
 pub struct FileRow {
@@ -37,7 +38,9 @@ impl FileRepository {
             r#"INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, width, height, duration_ms, user_id)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                RETURNING id AS "id!: i64", stored_id, original_name, mime_type, file_category,
-                         size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                         size_bytes AS "size_bytes!: i64",
+                         width AS "width?: i64", height AS "height?: i64",
+                         duration_ms AS "duration_ms?: i64", user_id AS "user_id?: i64",
                          COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                          COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
             params.stored_id,
@@ -100,7 +103,9 @@ impl FileRepository {
             FileRow,
             r#"UPDATE file SET original_name = ?, updated_at = CURRENT_TIMESTAMP WHERE stored_id = ?
                RETURNING id AS "id!: i64", stored_id, original_name, mime_type, file_category,
-                         size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                         size_bytes AS "size_bytes!: i64",
+                         width AS "width?: i64", height AS "height?: i64",
+                         duration_ms AS "duration_ms?: i64", user_id AS "user_id?: i64",
                          COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                          COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
             new_name,
@@ -244,7 +249,7 @@ impl FileRepository {
     ) -> Result<Vec<FileRow>, sqlx::Error> {
         match name_query {
             Some(q) => {
-                let pattern = format!("%{q}%");
+                let pattern = like_contains(q);
                 sqlx::query_as!(
                     FileRow,
                     r#"SELECT f.id AS "id!: i64", f.stored_id, f.original_name, f.mime_type, f.file_category,
@@ -254,7 +259,7 @@ impl FileRepository {
                        FROM file f
                        JOIN file_tag_rel ftr ON f.id = ftr.file_id
                        JOIN file_tag ft ON ftr.tag_id = ft.id
-                       WHERE ft.name = ? AND ft.user_id = ? AND f.original_name LIKE ?
+                       WHERE ft.name = ? AND ft.user_id = ? AND f.original_name LIKE ? ESCAPE '\'
                        ORDER BY f.created_at DESC LIMIT ? OFFSET ?"#,
                     tag_name,
                     user_id,
@@ -294,20 +299,18 @@ impl FileRepository {
         query: &str,
         user_id: Option<i64>,
     ) -> Result<i64, sqlx::Error> {
-        let pattern = format!("%{query}%");
+        let pattern = like_contains(query);
         match user_id {
-            Some(uid) => {
-                sqlx::query_scalar!(
-                    "SELECT COUNT(*) FROM file WHERE original_name LIKE ? AND user_id = ?",
-                    pattern,
-                    uid
-                )
-                .fetch_one(&*self.db)
-                .await
-            }
+            Some(uid) => sqlx::query_scalar!(
+                "SELECT COUNT(*) FROM file WHERE original_name LIKE ? ESCAPE '\\' AND user_id = ?",
+                pattern,
+                uid
+            )
+            .fetch_one(&*self.db)
+            .await,
             None => {
                 sqlx::query_scalar!(
-                    "SELECT COUNT(*) FROM file WHERE original_name LIKE ?",
+                    "SELECT COUNT(*) FROM file WHERE original_name LIKE ? ESCAPE '\\'",
                     pattern
                 )
                 .fetch_one(&*self.db)
@@ -324,7 +327,7 @@ impl FileRepository {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<FileRow>, sqlx::Error> {
-        let pattern = format!("%{query}%");
+        let pattern = like_contains(query);
         match user_id {
             Some(uid) => {
                 sqlx::query_as!(
@@ -333,7 +336,7 @@ impl FileRepository {
                               size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
                               COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                               COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-                       FROM file WHERE original_name LIKE ? AND user_id = ?
+                       FROM file WHERE original_name LIKE ? ESCAPE '\' AND user_id = ?
                        ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
                     pattern,
                     uid,
@@ -350,7 +353,7 @@ impl FileRepository {
                               size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
                               COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                               COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-                       FROM file WHERE original_name LIKE ?
+                       FROM file WHERE original_name LIKE ? ESCAPE '\'
                        ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
                     pattern,
                     limit,
@@ -524,12 +527,12 @@ impl FileRepository {
     ) -> Result<i64, sqlx::Error> {
         match name_query {
             Some(q) => {
-                let pattern = format!("%{q}%");
+                let pattern = like_contains(q);
                 sqlx::query_scalar!(
                     r#"SELECT COUNT(*) FROM file f
                        JOIN file_tag_rel ftr ON f.id = ftr.file_id
                        JOIN file_tag ft ON ftr.tag_id = ft.id
-                       WHERE ft.name = ? AND ft.user_id = ? AND f.original_name LIKE ?"#,
+                       WHERE ft.name = ? AND ft.user_id = ? AND f.original_name LIKE ? ESCAPE '\'"#,
                     tag_name,
                     user_id,
                     pattern
@@ -550,5 +553,421 @@ impl FileRepository {
                 .await
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+
+    async fn setup() -> FileRepository {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        crate::db::migrate(&pool).await.unwrap();
+        // file.user_id / file_tag.user_id 有外键约束，先建两个测试用户（7 与 8 用于隔离断言）
+        for (id, name) in [(7, "file-user"), (8, "other-user")] {
+            sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (?, ?, 'x')")
+                .bind(id)
+                .bind(name)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+        FileRepository::new(Arc::new(pool))
+    }
+
+    fn new_file<'a>(stored_id: &'a str, category: &'a str, user_id: Option<i64>) -> NewFile<'a> {
+        NewFile {
+            stored_id,
+            original_name: "file.bin",
+            mime_type: "application/octet-stream",
+            file_category: category,
+            size_bytes: 42,
+            width: Some(100),
+            height: Some(80),
+            duration_ms: None,
+            user_id,
+        }
+    }
+
+    fn new_file_named<'a>(
+        stored_id: &'a str,
+        original_name: &'a str,
+        category: &'a str,
+        user_id: Option<i64>,
+    ) -> NewFile<'a> {
+        NewFile {
+            stored_id,
+            original_name,
+            mime_type: "application/octet-stream",
+            file_category: category,
+            size_bytes: 42,
+            width: None,
+            height: None,
+            duration_ms: None,
+            user_id,
+        }
+    }
+
+    async fn insert(repo: &FileRepository, stored_id: &str) -> FileRow {
+        repo.insert(new_file(stored_id, "image", Some(7)))
+            .await
+            .expect("insert file")
+    }
+
+    /// 显式错开 created_at（默认同秒会导致 DESC 排序断言不稳定）
+    async fn insert_at(repo: &FileRepository, stored_id: &str, created_at: &str) -> FileRow {
+        let row = insert(repo, stored_id).await;
+        sqlx::query("UPDATE file SET created_at = ? WHERE id = ?")
+            .bind(created_at)
+            .bind(row.id)
+            .execute(&*repo.db)
+            .await
+            .unwrap();
+        row
+    }
+
+    // ── 基础 CRUD ──
+
+    #[tokio::test]
+    async fn insert_and_find_by_stored_id_round_trip() {
+        let repo = setup().await;
+        let created = insert(&repo, "abc123photo").await;
+
+        let found = repo
+            .find_by_stored_id("abc123photo")
+            .await
+            .unwrap()
+            .expect("file should exist");
+        assert_eq!(found.id, created.id);
+        assert_eq!(found.stored_id, "abc123photo");
+        assert_eq!(found.user_id, Some(7));
+        assert_eq!(found.width, Some(100));
+        assert_eq!(found.height, Some(80));
+        assert_eq!(found.size_bytes, 42);
+        assert_eq!(found.file_category, "image");
+    }
+
+    #[tokio::test]
+    async fn insert_duplicate_stored_id_rejected() {
+        let repo = setup().await;
+        insert(&repo, "dup-id").await;
+        // stored_id UNIQUE 约束：重复插入必须失败
+        let err = repo.insert(new_file("dup-id", "image", Some(7))).await;
+        assert!(err.is_err());
+    }
+
+    #[tokio::test]
+    async fn find_by_id_and_missing_queries() {
+        let repo = setup().await;
+        let created = insert(&repo, "by-id").await;
+        assert_eq!(
+            repo.find_by_id(created.id)
+                .await
+                .unwrap()
+                .unwrap()
+                .stored_id,
+            "by-id"
+        );
+        assert!(repo.find_by_id(9999).await.unwrap().is_none());
+        assert!(repo.find_by_stored_id("missing").await.unwrap().is_none());
+    }
+
+    // ── 列表 / 筛选 / 分页 ──
+
+    #[tokio::test]
+    async fn find_all_paginates_and_orders_created_desc() {
+        let repo = setup().await;
+        insert_at(&repo, "first", "2026-09-09T10:00:00+00:00").await;
+        insert_at(&repo, "second", "2026-09-09T11:00:00+00:00").await;
+        insert_at(&repo, "third", "2026-09-09T12:00:00+00:00").await;
+
+        let page1 = repo.find_all(2, 0, None, Some(7)).await.unwrap();
+        assert_eq!(page1.len(), 2);
+        // created_at DESC：后插入的在前
+        assert_eq!(page1[0].stored_id, "third");
+        assert_eq!(page1[1].stored_id, "second");
+
+        let page2 = repo.find_all(2, 2, None, Some(7)).await.unwrap();
+        assert_eq!(page2.len(), 1);
+        assert_eq!(page2[0].stored_id, "first");
+    }
+
+    #[tokio::test]
+    async fn find_all_and_count_filter_by_category_and_user() {
+        let repo = setup().await;
+        insert(&repo, "img-1").await;
+        insert(&repo, "img-2").await;
+        repo.insert(new_file("vid-1", "video", Some(7)))
+            .await
+            .unwrap();
+        // 其他用户的文件不应出现在 7 的列表
+        repo.insert(new_file("img-3", "image", Some(8)))
+            .await
+            .unwrap();
+
+        let images = repo.find_all(10, 0, Some("image"), Some(7)).await.unwrap();
+        assert_eq!(images.len(), 2);
+        assert!(images.iter().all(|f| f.stored_id.starts_with("img-")));
+
+        assert_eq!(repo.count(Some("image"), Some(7)).await.unwrap(), 2);
+        assert_eq!(repo.count(Some("video"), Some(7)).await.unwrap(), 1);
+        assert_eq!(repo.count(None, Some(7)).await.unwrap(), 3);
+        // 用户 8 只能看到自己的
+        assert_eq!(repo.count(None, Some(8)).await.unwrap(), 1);
+    }
+
+    // ── 更新 / 删除 ──
+
+    #[tokio::test]
+    async fn update_name_renames_and_missing_returns_none() {
+        let repo = setup().await;
+        insert(&repo, "ren-me").await;
+
+        let updated = repo
+            .update_name("ren-me", "renamed.png")
+            .await
+            .unwrap()
+            .expect("file should exist");
+        assert_eq!(updated.original_name, "renamed.png");
+        assert!(repo.update_name("missing", "x").await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn delete_removes_row_and_cascades_tag_rels_and_meta() {
+        let repo = setup().await;
+        let created = insert(&repo, "del-me").await;
+
+        // 挂上标签与元信息
+        let tag = repo.get_or_create_tag("笔记", 7).await.unwrap();
+        repo.set_file_tags(created.id, &[tag.id]).await.unwrap();
+        let mut meta = HashMap::new();
+        meta.insert("pages".to_string(), "10".to_string());
+        repo.set_file_meta(created.id, &meta).await.unwrap();
+
+        let deleted = repo.delete("del-me").await.unwrap().unwrap();
+        assert_eq!(deleted.id, created.id);
+        assert!(repo.find_by_stored_id("del-me").await.unwrap().is_none());
+
+        // 级联：file_tag_rel / file_meta 应被清空；file_tag 本身保留
+        let rel_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM file_tag_rel WHERE file_id = ?")
+                .bind(created.id)
+                .fetch_one(&*repo.db)
+                .await
+                .unwrap();
+        assert_eq!(rel_count, 0);
+        let meta_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM file_meta WHERE file_id = ?")
+                .bind(created.id)
+                .fetch_one(&*repo.db)
+                .await
+                .unwrap();
+        assert_eq!(meta_count, 0);
+        assert_eq!(repo.get_user_tags(7).await.unwrap().len(), 1);
+        assert!(repo.delete("del-me").await.unwrap().is_none());
+    }
+
+    // ── 标签 ──
+
+    #[tokio::test]
+    async fn get_or_create_tag_is_idempotent_and_user_scoped() {
+        let repo = setup().await;
+        let a = repo.get_or_create_tag("项目", 7).await.unwrap();
+        let b = repo.get_or_create_tag("项目", 7).await.unwrap();
+        assert_eq!(a.id, b.id);
+        // 同名不同用户 → 不同标签
+        let c = repo.get_or_create_tag("项目", 8).await.unwrap();
+        assert_ne!(a.id, c.id);
+        assert_eq!(repo.get_user_tags(7).await.unwrap().len(), 1);
+        assert_eq!(repo.get_user_tags(8).await.unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn set_file_tags_replaces_existing_and_reads_back() {
+        let repo = setup().await;
+        let created = insert(&repo, "tagged").await;
+        let t1 = repo.get_or_create_tag("a", 7).await.unwrap();
+        let t2 = repo.get_or_create_tag("b", 7).await.unwrap();
+
+        repo.set_file_tags(created.id, &[t1.id]).await.unwrap();
+        assert_eq!(repo.get_file_tags(created.id).await.unwrap().len(), 1);
+
+        // 全量替换：从 [a] 变为 [a, b]
+        repo.set_file_tags(created.id, &[t1.id, t2.id])
+            .await
+            .unwrap();
+        let names: Vec<String> = repo
+            .get_file_tags(created.id)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|t| t.name)
+            .collect();
+        assert_eq!(names.len(), 2);
+
+        // 清空：传空数组
+        repo.set_file_tags(created.id, &[]).await.unwrap();
+        assert!(repo.get_file_tags(created.id).await.unwrap().is_empty());
+    }
+
+    // ── 元信息 ──
+
+    #[tokio::test]
+    async fn set_file_meta_replaces_and_get_roundtrip() {
+        let repo = setup().await;
+        let created = insert(&repo, "meta-me").await;
+
+        let mut meta = HashMap::new();
+        meta.insert("author".to_string(), "张三".to_string());
+        repo.set_file_meta(created.id, &meta).await.unwrap();
+
+        let read = repo.get_file_meta(created.id).await.unwrap();
+        assert_eq!(read.get("author").map(String::as_str), Some("张三"));
+
+        // 全量替换：author 消失，pages 出现
+        let mut meta2 = HashMap::new();
+        meta2.insert("pages".to_string(), "3".to_string());
+        repo.set_file_meta(created.id, &meta2).await.unwrap();
+        let read2 = repo.get_file_meta(created.id).await.unwrap();
+        assert!(!read2.contains_key("author"));
+        assert_eq!(read2.get("pages").map(String::as_str), Some("3"));
+    }
+
+    // ── 内容引用统计 ──
+
+    #[tokio::test]
+    async fn count_content_references_across_content_tables() {
+        let repo = setup().await;
+        insert(&repo, "abc123photo").await;
+
+        // 同一 stored_id 出现在四张内容表中，应统计为 4 处引用
+        for sql in [
+            "INSERT INTO card (content) VALUES ('![x](/api/file/abc123photo/data/a.png)')",
+            "INSERT INTO articles (conv_id, article_type, title, content) VALUES (1, 'concept', 't', 'see abc123photo here')",
+            "INSERT INTO chunk (content) VALUES ('abc123photo')",
+            "INSERT INTO text_note (name, content) VALUES ('n', 'note abc123photo')",
+        ] {
+            sqlx::query(sql).execute(&*repo.db).await.unwrap();
+        }
+
+        assert_eq!(
+            repo.count_content_references("abc123photo").await.unwrap(),
+            4
+        );
+        assert_eq!(repo.count_content_references("other").await.unwrap(), 0);
+    }
+
+    // ── 标签筛选（含 tag+q 组合） ──
+
+    #[tokio::test]
+    async fn find_by_tag_filters_and_combines_with_name_query() {
+        let repo = setup().await;
+        let f1 = repo
+            .insert(new_file_named("rep-a", "季度报告.md", "document", Some(7)))
+            .await
+            .unwrap();
+        repo.insert(new_file_named("pho-b", "风景照.png", "image", Some(7)))
+            .await
+            .unwrap();
+        let tag = repo.get_or_create_tag("文档", 7).await.unwrap();
+        repo.set_file_tags(f1.id, &[tag.id]).await.unwrap();
+
+        // 仅按 tag
+        let hits = repo.find_by_tag("文档", 7, None, 10, 0).await.unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].stored_id, "rep-a");
+
+        // tag + 文件名 q 组合：不匹配的 q 应过滤掉
+        let no_hits = repo
+            .find_by_tag("文档", 7, Some("zzz"), 10, 0)
+            .await
+            .unwrap();
+        assert!(no_hits.is_empty());
+        let one_hit = repo
+            .find_by_tag("文档", 7, Some("报告"), 10, 0)
+            .await
+            .unwrap();
+        assert_eq!(one_hit.len(), 1);
+        assert_eq!(one_hit[0].stored_id, "rep-a");
+
+        // 其他用户的同名标签不干扰
+        repo.get_or_create_tag("文档", 8).await.unwrap();
+        assert_eq!(
+            repo.find_by_tag("文档", 8, None, 10, 0)
+                .await
+                .unwrap()
+                .len(),
+            0
+        );
+    }
+
+    #[tokio::test]
+    async fn count_by_tag_with_and_without_name_query() {
+        let repo = setup().await;
+        let f1 = repo
+            .insert(new_file_named("alp", "alpha.txt", "document", Some(7)))
+            .await
+            .unwrap();
+        let f2 = repo
+            .insert(new_file_named("bet", "beta.txt", "document", Some(7)))
+            .await
+            .unwrap();
+        let tag = repo.get_or_create_tag("杂项", 7).await.unwrap();
+        repo.set_file_tags(f1.id, &[tag.id]).await.unwrap();
+        repo.set_file_tags(f2.id, &[tag.id]).await.unwrap();
+
+        assert_eq!(repo.count_by_tag("杂项", 7, None).await.unwrap(), 2);
+        assert_eq!(repo.count_by_tag("杂项", 7, Some("alp")).await.unwrap(), 1);
+        assert_eq!(repo.count_by_tag("杂项", 7, Some("none")).await.unwrap(), 0);
+    }
+
+    // ── 文件名搜索 ──
+
+    #[tokio::test]
+    async fn search_by_name_matches_like_and_scopes_user() {
+        let repo = setup().await;
+        repo.insert(new_file_named("b1", "预算表.xlsx", "document", Some(7)))
+            .await
+            .unwrap();
+        repo.insert(new_file_named("p1", "照片.png", "image", Some(7)))
+            .await
+            .unwrap();
+        repo.insert(new_file_named("o1", "other-file.bin", "image", Some(8)))
+            .await
+            .unwrap();
+
+        let hits = repo.search_by_name("预算", Some(7), 10, 0).await.unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].stored_id, "b1");
+
+        let all = repo.search_by_name("", Some(7), 10, 0).await.unwrap();
+        assert_eq!(all.len(), 2);
+
+        assert_eq!(repo.count_by_name("预算", Some(7)).await.unwrap(), 1);
+        assert_eq!(repo.count_by_name("", Some(7)).await.unwrap(), 2);
+        // 用户隔离
+        assert_eq!(
+            repo.search_by_name("file", Some(8), 10, 0)
+                .await
+                .unwrap()
+                .len(),
+            1
+        );
+        // LIKE 通配符转义：搜索 "%" 应作为字面字符（0 命中），而非匹配全部
+        assert_eq!(
+            repo.search_by_name("%", Some(7), 10, 0)
+                .await
+                .unwrap()
+                .len(),
+            0
+        );
+        assert_eq!(
+            repo.search_by_name("_", Some(7), 10, 0)
+                .await
+                .unwrap()
+                .len(),
+            0
+        );
     }
 }

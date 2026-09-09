@@ -143,20 +143,24 @@ impl FileService {
         tags: Option<Vec<String>>,
     ) -> Result<File, ServiceError> {
         // 1. MIME 真实校验
-        let real_mime = Self::detect_mime(data)
-            .ok_or_else(|| ServiceError::InvalidInput("无法识别文件类型".into()))?;
-
-        // 对于纯文本类型，infer 可能无法识别，使用客户端声明的 MIME
-        let final_mime = if real_mime == "application/octet-stream"
-            && (client_mime.starts_with("text/") || client_mime == "application/pdf")
-        {
-            client_mime.to_string()
-        } else if real_mime != client_mime {
-            return Err(ServiceError::InvalidInput(format!(
-                "文件类型不符：声明 {client_mime}, 实际 {real_mime}"
-            )));
-        } else {
-            real_mime
+        // infer 对纯文本类（txt/md/csv/html）与部分 PDF 变体返回 None（无魔数），
+        // 此时仅信任客户端声明的文本类/PDF MIME（白名单内再复核），其余拒绝。
+        let final_mime = match Self::detect_mime(data) {
+            Some(real) if real != client_mime => {
+                return Err(ServiceError::InvalidInput(format!(
+                    "文件类型不符：声明 {client_mime}, 实际 {real}"
+                )));
+            }
+            Some(real) => real,
+            None if data.is_empty() => {
+                return Err(ServiceError::InvalidInput("空文件无法上传".into()));
+            }
+            None if client_mime.starts_with("text/") || client_mime == "application/pdf" => {
+                client_mime.to_string()
+            }
+            None => {
+                return Err(ServiceError::InvalidInput("无法识别文件类型".into()));
+            }
         };
 
         let (category_str, max_size) = find_allowed(&final_mime)
@@ -225,12 +229,11 @@ impl FileService {
                 .await;
         }
 
-        // 7. 处理标签
-        let tag_names = if let Some(t) = tags {
-            self.set_tags_for_file(file_row.id, user_id.unwrap_or(0), &t)
-                .await?
-        } else {
-            Vec::new()
+        // 7. 处理标签（匿名上传无 user_id 时无法归属标签，静默忽略；
+        // 避免 user_id.unwrap_or(0) 写入不存在的用户导致外键失败）
+        let tag_names = match (tags, user_id) {
+            (Some(t), Some(uid)) => self.set_tags_for_file(file_row.id, uid, &t).await?,
+            _ => Vec::new(),
         };
 
         Ok(File {
@@ -570,5 +573,372 @@ mod tests {
             FileCategory::from_category_str("unknown"),
             FileCategory::Other
         );
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 业务流集成测试：上传 / 更新 / 删除（内存 SQLite + 临时目录）
+    // ═══════════════════════════════════════════════════════════════
+
+    /// 1x1 透明 PNG（infer 可识别、image crate 可解析出 1x1 尺寸）
+    const PNG_1X1: &[u8] = &[
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F,
+        0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x62, 0x00,
+        0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+    ];
+
+    /// 最小 PDF 头（infer 识别 application/pdf）
+    const PDF_MIN: &[u8] = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF";
+
+    /// 最小 ZIP 头（infer 识别 application/zip，但不在白名单）
+    const ZIP_MIN: &[u8] = b"PK\x03\x04\x14\x00\x00\x00\x00\x00";
+
+    /// 自动清理的临时目录
+    struct TempDir(String);
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    /// 测试上下文：服务 + 临时目录 + 同库连接（用于直接造引用数据/断言 DB 状态）
+    struct Ctx {
+        svc: FileService,
+        dir: TempDir,
+        pool: Arc<SqlitePool>,
+    }
+
+    async fn setup_service() -> Ctx {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        crate::db::migrate(&pool).await.unwrap();
+        for (id, name) in [(7, "file-user"), (8, "other-user")] {
+            sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (?, ?, 'x')")
+                .bind(id)
+                .bind(name)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+        let dir = std::env::temp_dir().join(format!("brainbow-file-test-{}", nanoid::nanoid!(8)));
+        std::fs::create_dir_all(&dir).unwrap();
+        let svc = FileService::new(Arc::new(pool.clone()), dir.to_string_lossy().to_string());
+        Ctx {
+            svc,
+            dir: TempDir(dir.to_string_lossy().to_string()),
+            pool: Arc::new(pool),
+        }
+    }
+
+    // ── 上传 ──
+
+    #[tokio::test]
+    async fn upload_png_success_writes_file_metadata_and_tags() {
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(
+                PNG_1X1,
+                "照片.png",
+                "image/png",
+                Some(7),
+                Some(vec!["图片".into()]),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(f.original_name, "照片.png");
+        assert_eq!(f.mime_type, "image/png");
+        assert_eq!(f.file_category, FileCategory::Image);
+        assert_eq!(f.size_bytes, PNG_1X1.len() as i64);
+        assert_eq!(f.width, Some(1));
+        assert_eq!(f.height, Some(1));
+        assert_eq!(f.tags, vec!["图片"]);
+        assert_eq!(f.stored_id.len(), 12);
+
+        // 磁盘文件已原子 rename 到最终路径
+        let disk = std::path::Path::new(&ctx.dir.0).join(&f.stored_id);
+        assert!(disk.exists());
+        assert_eq!(std::fs::read(&disk).unwrap(), PNG_1X1);
+        // 无残留临时文件
+        let tmp_count = std::fs::read_dir(&ctx.dir.0)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_string_lossy().starts_with("tmp_"))
+            .count();
+        assert_eq!(tmp_count, 0);
+
+        // DB 记录与标签关联
+        let row: Option<i64> = sqlx::query_scalar("SELECT user_id FROM file WHERE stored_id = ?")
+            .bind(&f.stored_id)
+            .fetch_one(&*ctx.pool)
+            .await
+            .unwrap();
+        assert_eq!(row, Some(7));
+        let tag_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM file_tag_rel r JOIN file f ON r.file_id = f.id WHERE f.stored_id = ?",
+        )
+        .bind(&f.stored_id)
+        .fetch_one(&*ctx.pool)
+        .await
+        .unwrap();
+        assert_eq!(tag_count, 1);
+    }
+
+    #[tokio::test]
+    async fn upload_accepts_text_plain_via_client_mime() {
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(b"hello world", "note.txt", "text/plain", Some(7), None)
+            .await
+            .unwrap();
+        assert_eq!(f.mime_type, "text/plain");
+        assert_eq!(f.file_category, FileCategory::Document);
+    }
+
+    #[tokio::test]
+    async fn upload_rejects_unrecognized_binary() {
+        let ctx = setup_service().await;
+        let data = [0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01];
+        let err = ctx
+            .svc
+            .upload(&data, "x.png", "image/png", Some(7), None)
+            .await
+            .unwrap_err();
+        assert!(matches!(err, ServiceError::InvalidInput(_)));
+        assert!(err.to_string().contains("无法识别"));
+    }
+
+    #[tokio::test]
+    async fn upload_rejects_empty_file() {
+        let ctx = setup_service().await;
+        let err = ctx
+            .svc
+            .upload(b"", "empty.txt", "text/plain", Some(7), None)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("空文件"));
+    }
+
+    #[tokio::test]
+    async fn upload_rejects_mime_mismatch() {
+        let ctx = setup_service().await;
+        // 真实内容是 PNG，却声明 text/plain
+        let err = ctx
+            .svc
+            .upload(PNG_1X1, "x.txt", "text/plain", Some(7), None)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("文件类型不符"));
+    }
+
+    #[tokio::test]
+    async fn upload_rejects_unsupported_mime() {
+        let ctx = setup_service().await;
+        let err = ctx
+            .svc
+            .upload(ZIP_MIN, "x.zip", "application/zip", Some(7), None)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("不支持的文件类型"));
+    }
+
+    #[tokio::test]
+    async fn upload_rejects_oversize_image() {
+        let ctx = setup_service().await;
+        // 真实 PNG 头 + 21MB 填充 → 超过 image 20MB 上限
+        let mut big = PNG_1X1.to_vec();
+        big.extend_from_slice(&vec![0u8; 21 * 1024 * 1024]);
+        let err = ctx
+            .svc
+            .upload(&big, "big.png", "image/png", Some(7), None)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("文件过大"));
+    }
+
+    #[tokio::test]
+    async fn upload_db_failure_leaves_no_tmp_file() {
+        let ctx = setup_service().await;
+        // user_id 指向不存在的用户 → 插库外键失败 → 临时文件必须被清理
+        let err = ctx
+            .svc
+            .upload(PNG_1X1, "x.png", "image/png", Some(9999), None)
+            .await
+            .unwrap_err();
+        assert!(matches!(err, ServiceError::Db(_)));
+
+        let entries: Vec<String> = std::fs::read_dir(&ctx.dir.0)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().to_string())
+            .collect();
+        assert!(
+            entries.is_empty(),
+            "插库失败后应无残留文件，实际: {entries:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn upload_without_user_ignores_tags_instead_of_fk_failure() {
+        let ctx = setup_service().await;
+        // 匿名上传 + 标签：不允许 user_id=0 写入，应静默忽略标签而非外键炸掉
+        let f = ctx
+            .svc
+            .upload(
+                PNG_1X1,
+                "anon.png",
+                "image/png",
+                None,
+                Some(vec!["x".into()]),
+            )
+            .await
+            .unwrap();
+        assert!(f.tags.is_empty());
+        assert!(f.user_id.is_none());
+    }
+
+    #[tokio::test]
+    async fn upload_returning_decodes_null_user_id() {
+        // 回归：INSERT...RETURNING 曾把 user_id NULL 解码为 Some(0)
+        //（sqlx 宏对 RETURNING 未标注可空列的推断问题）
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(PNG_1X1, "anon2.png", "image/png", None, None)
+            .await
+            .unwrap();
+        assert!(f.user_id.is_none());
+        // SELECT 读回一致
+        let row: Option<i64> = sqlx::query_scalar("SELECT user_id FROM file WHERE stored_id = ?")
+            .bind(&f.stored_id)
+            .fetch_one(&*ctx.pool)
+            .await
+            .unwrap();
+        assert!(row.is_none());
+    }
+
+    // ── 更新 ──
+
+    #[tokio::test]
+    async fn update_replaces_name_tags_and_meta() {
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(
+                PNG_1X1,
+                "old.png",
+                "image/png",
+                Some(7),
+                Some(vec!["旧标签".into()]),
+            )
+            .await
+            .unwrap();
+
+        let updated = ctx
+            .svc
+            .update(
+                &f.stored_id,
+                UpdateFileRequest {
+                    original_name: Some("新名字.png".into()),
+                    tags: Some(vec!["新标签".into(), "第二标签".into()]),
+                    meta: Some(HashMap::from([("pages".into(), "3".into())])),
+                },
+                Some(7),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(updated.original_name, "新名字.png");
+        assert_eq!(updated.tags, vec!["新标签", "第二标签"]);
+        assert_eq!(updated.meta.get("pages").map(String::as_str), Some("3"));
+
+        // DB 侧验证标签全量替换（旧标签关联消失）
+        let tag_names: Vec<String> = sqlx::query_scalar(
+            "SELECT ft.name FROM file_tag ft JOIN file_tag_rel r ON ft.id = r.tag_id JOIN file f ON f.id = r.file_id WHERE f.stored_id = ? ORDER BY ft.name",
+        )
+        .bind(&f.stored_id)
+        .fetch_all(&*ctx.pool)
+        .await
+        .unwrap();
+        assert_eq!(tag_names, vec!["新标签", "第二标签"]);
+    }
+
+    #[tokio::test]
+    async fn update_missing_returns_not_found() {
+        let ctx = setup_service().await;
+        let err = ctx
+            .svc
+            .update(
+                "no-such-id",
+                UpdateFileRequest {
+                    original_name: Some("x".into()),
+                    tags: None,
+                    meta: None,
+                },
+                Some(7),
+            )
+            .await
+            .unwrap_err();
+        assert!(matches!(err, ServiceError::NotFound(_)));
+    }
+
+    // ── 删除 ──
+
+    #[tokio::test]
+    async fn delete_removes_db_row_and_disk_file() {
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(PDF_MIN, "报告.pdf", "application/pdf", Some(7), None)
+            .await
+            .unwrap();
+        let disk = std::path::Path::new(&ctx.dir.0).join(&f.stored_id);
+        assert!(disk.exists());
+
+        ctx.svc.delete(&f.stored_id, false).await.unwrap();
+
+        assert!(!disk.exists(), "删除后磁盘文件应被移除");
+        let row: Option<i64> = sqlx::query_scalar("SELECT id FROM file WHERE stored_id = ?")
+            .bind(&f.stored_id)
+            .fetch_optional(&*ctx.pool)
+            .await
+            .unwrap();
+        assert!(row.is_none(), "删除后 DB 记录应被移除");
+    }
+
+    #[tokio::test]
+    async fn delete_in_use_requires_force() {
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(PNG_1X1, "used.png", "image/png", Some(7), None)
+            .await
+            .unwrap();
+
+        // 在 card 内容中制造引用
+        sqlx::query("INSERT INTO card (content) VALUES (?)")
+            .bind(format!("![x](/api/file/{}/data/used.png)", f.stored_id))
+            .execute(&*ctx.pool)
+            .await
+            .unwrap();
+
+        // 无 force：InUse 拒绝，记录与文件保留
+        let err = ctx.svc.delete(&f.stored_id, false).await.unwrap_err();
+        assert!(matches!(err, ServiceError::InUse(_)));
+        let disk = std::path::Path::new(&ctx.dir.0).join(&f.stored_id);
+        assert!(disk.exists());
+
+        // force：删除成功
+        ctx.svc.delete(&f.stored_id, true).await.unwrap();
+        assert!(!disk.exists());
+    }
+
+    #[tokio::test]
+    async fn file_path_joins_upload_dir() {
+        let ctx = setup_service().await;
+        assert_eq!(ctx.svc.file_path("abc123"), format!("{}/abc123", ctx.dir.0));
     }
 }

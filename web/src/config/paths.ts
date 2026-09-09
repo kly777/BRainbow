@@ -7,6 +7,7 @@ const READING = "/reading";
 const MEMORY = "/memory";
 const CONVERSATION = "/conversation";
 const CHAT = "/chat";
+const FILE = "/file";
 
 export const PATHS = {
 	home: "/",
@@ -21,7 +22,8 @@ export const PATHS = {
 	cardAdd: `${CARD}/add`,
 	color: "/color",
 	image: "/image",
-	file: "/file",
+	file: FILE,
+	fileDetail: `${FILE}/:id`,
 	db: "/db",
 	rainbow: "/rainbow",
 	text: "/text",

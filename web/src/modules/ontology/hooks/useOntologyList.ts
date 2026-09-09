@@ -134,8 +134,14 @@ export function useOntologyList(): OntologyListApi {
 
 	return {
 		ontologies: () => ontologies() ?? [],
-		loading: ontologies.loading,
-		error: ontologies.error,
+		// getter：避免 createResource 创建瞬间 state=pending 被冻结为
+		// true 快照，导致 AsyncView 永远骨架屏（与 useFileList 同源修复）
+		get loading() {
+			return ontologies.loading;
+		},
+		get error() {
+			return ontologies.error;
+		},
 		refetch,
 		searchQuery,
 		setSearchQuery,

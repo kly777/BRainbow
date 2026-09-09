@@ -38,21 +38,13 @@ const ALLOWED_MIMES: &[(&str, &str, u64)] = &[
     ("text/html", "document", 52_428_800),
     ("text/csv", "document", 52_428_800),
     ("text/markdown", "document", 52_428_800),
-    (
-        "application/msword",
-        "document",
-        52_428_800,
-    ),
+    ("application/msword", "document", 52_428_800),
     (
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "document",
         52_428_800,
     ),
-    (
-        "application/vnd.ms-excel",
-        "document",
-        52_428_800,
-    ),
+    ("application/vnd.ms-excel", "document", 52_428_800),
     (
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "document",
@@ -90,7 +82,10 @@ fn sanitize_name(name: &str) -> String {
 
 /// 判断是否需要强制下载（防 XSS）
 fn should_force_download(mime: &str) -> bool {
-    matches!(mime, "text/html" | "image/svg+xml" | "application/xhtml+xml")
+    matches!(
+        mime,
+        "text/html" | "image/svg+xml" | "application/xhtml+xml"
+    )
 }
 
 /// 判断是否可内联预览
@@ -243,7 +238,7 @@ impl FileService {
             stored_id: file_row.stored_id,
             original_name: file_row.original_name,
             mime_type: file_row.mime_type,
-            file_category: FileCategory::from_mime(&file_row.file_category),
+            file_category: FileCategory::from_category_str(&file_row.file_category),
             size_bytes: file_row.size_bytes,
             width,
             height,
@@ -363,7 +358,7 @@ impl FileService {
             stored_id: updated_row.stored_id,
             original_name: updated_row.original_name,
             mime_type: updated_row.mime_type,
-            file_category: FileCategory::from_mime(&updated_row.file_category),
+            file_category: FileCategory::from_category_str(&updated_row.file_category),
             size_bytes: updated_row.size_bytes,
             width: updated_row.width,
             height: updated_row.height,
@@ -545,6 +540,34 @@ mod tests {
         );
         assert_eq!(
             FileCategory::from_mime("application/zip"),
+            FileCategory::Other
+        );
+    }
+
+    #[test]
+    fn file_category_from_category_str() {
+        assert_eq!(
+            FileCategory::from_category_str("image"),
+            FileCategory::Image
+        );
+        assert_eq!(
+            FileCategory::from_category_str("video"),
+            FileCategory::Video
+        );
+        assert_eq!(
+            FileCategory::from_category_str("audio"),
+            FileCategory::Audio
+        );
+        assert_eq!(
+            FileCategory::from_category_str("document"),
+            FileCategory::Document
+        );
+        assert_eq!(
+            FileCategory::from_category_str("other"),
+            FileCategory::Other
+        );
+        assert_eq!(
+            FileCategory::from_category_str("unknown"),
             FileCategory::Other
         );
     }

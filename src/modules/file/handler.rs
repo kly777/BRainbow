@@ -180,7 +180,7 @@ pub async fn file_handler(
         Err(e) => return e.into_response(),
     };
 
-    let path = format!("uploads/file/{}", stored_id);
+    let path = format!("uploads/file/{stored_id}");
 
     let Ok(f) = tokio::fs::File::open(&path).await else {
         return ServiceError::NotFound("文件不存在".into()).into_response();

@@ -42,6 +42,17 @@ impl FileCategory {
             _ => FileCategory::Other,
         }
     }
+
+    /// 从 DB 存储的类别字符串解析（区别于 from_mime：入参是类别名而非 MIME）
+    pub fn from_category_str(s: &str) -> Self {
+        match s {
+            "image" => FileCategory::Image,
+            "video" => FileCategory::Video,
+            "audio" => FileCategory::Audio,
+            "document" => FileCategory::Document,
+            _ => FileCategory::Other,
+        }
+    }
 }
 
 /// 创建文件记录所需的参数

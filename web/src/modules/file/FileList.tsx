@@ -1,8 +1,29 @@
-import { AsyncView, Button, FilterGroup } from "@components/ui";
+// ── /file：通用文件列表（类别筛选 + 标签筛选 + 文件名搜索 + 上传） ──
+
+import {
+	AsyncView,
+	Button,
+	FilterGroup,
+	PageHead,
+	SearchInput,
+} from "@components/ui";
+import {
+	Copy,
+	File as FileIcon,
+	FileText,
+	Film,
+	Image as ImageIcon,
+	Music,
+	Upload,
+	X,
+} from "@components/ui/icons";
+import { fillPath, PATHS } from "@config/paths";
 import type { FileItem } from "@modules/file";
 import { fileUrl } from "@modules/file";
-import { formatBytes } from "@shared/utils";
+import { copyTextWithToast, formatBytes } from "@shared/utils";
+import { useNavigate } from "@solidjs/router";
 import { type Component, For, Show } from "solid-js";
+import TagFilter from "./components/TagFilter.tsx";
 import styles from "./FileList.module.css";
 import { useFileList } from "./hooks/useFileList.ts";
 
@@ -15,70 +36,85 @@ const CATEGORY_TABS = [
 	{ value: "other", label: "其他" },
 ];
 
-const categoryIcon = (cat: string): string => {
-	switch (cat) {
+/** 类别图标（图标统一从 @components/ui/icons 引入，禁止 emoji） */
+const CategoryIcon: Component<{ category: string }> = (props) => {
+	const cls = styles.iconPreview;
+	switch (props.category) {
 		case "image":
-			return "🖼️";
+			return <ImageIcon size={28} class={cls} />;
 		case "video":
-			return "🎬";
+			return <Film size={28} class={cls} />;
 		case "audio":
-			return "🎵";
+			return <Music size={28} class={cls} />;
 		case "document":
-			return "📄";
+			return <FileText size={28} class={cls} />;
 		default:
-			return "📁";
+			return <FileIcon size={28} class={cls} />;
 	}
 };
 
-const FilePreview: Component<{ item: FileItem }> = (props) => (
-	<div class={styles.preview}>
+const FilePreview: Component<{ item: FileItem; onOpen: () => void }> = (
+	props,
+) => (
+	<button
+		type="button"
+		class={styles.preview}
+		onClick={props.onOpen}
+		title="查看详情"
+	>
 		<Show
 			when={props.item.file_category === "image"}
-			fallback={
-				<span class={styles.iconPreview}>
-					{categoryIcon(props.item.file_category)}
-				</span>
-			}
+			fallback={<CategoryIcon category={props.item.file_category} />}
 		>
-			<a
-				class={styles.previewLink}
-				href={fileUrl(props.item.stored_id, props.item.original_name)}
-				target="_blank"
-				rel="noopener noreferrer"
-			>
-				<img
-					src={fileUrl(props.item.stored_id, props.item.original_name)}
-					alt={props.item.original_name}
-					class={styles.thumb}
-					loading="lazy"
-				/>
-			</a>
+			<img
+				src={fileUrl(props.item.stored_id, props.item.original_name)}
+				alt={props.item.original_name}
+				class={styles.thumb}
+				loading="lazy"
+			/>
 		</Show>
-	</div>
+	</button>
 );
 
 const FileCardView: Component<{
 	item: FileItem;
+	onOpen: () => void;
 	onStartRename: (item: FileItem) => void;
 	onDelete: (stored_id: string) => void;
 }> = (props) => (
 	<>
 		<div class={styles.info}>
-			<p class={styles.name} title={props.item.original_name}>
+			<button
+				type="button"
+				class={styles.nameBtn}
+				onClick={props.onOpen}
+				title="查看详情"
+			>
 				{props.item.original_name}
-			</p>
+			</button>
 			<p class={styles.meta}>
 				{props.item.file_category} · {formatBytes(props.item.size_bytes)}
 			</p>
 			<Show when={props.item.tags.length > 0}>
 				<div class={styles.tags}>
 					<For each={props.item.tags}>
-						{(tag) => <span class={styles.tag}>{tag}</span>}
+						{(tag) => <span class={styles.tag}>#{tag}</span>}
 					</For>
 				</div>
 			</Show>
 		</div>
 		<div class={styles.actions}>
+			<Button
+				variant="icon"
+				title="复制文件 URL（可用于 Markdown 引用）"
+				onClick={() =>
+					copyTextWithToast(
+						fileUrl(props.item.stored_id, props.item.original_name),
+					)
+				}
+			>
+				<Copy size={14} />
+			</Button>
 			<Button
 				variant="secondary"
 				size="sm"
@@ -133,6 +169,7 @@ const FileCard: Component<{
 	item: FileItem;
 	editing: boolean;
 	editName: string;
+	onOpen: () => void;
 	onStartRename: (item: FileItem) => void;
 	onDelete: (stored_id: string) => void;
 	onRename: () => void;
@@ -140,12 +177,13 @@ const FileCard: Component<{
 	onCancelEdit: () => void;
 }> = (props) => (
 	<div class={styles.card}>
-		<FilePreview item={props.item} />
+		<FilePreview item={props.item} onOpen={props.onOpen} />
 		<Show
 			when={props.editing}
 			fallback={
 				<FileCardView
 					item={props.item}
+					onOpen={props.onOpen}
 					onStartRename={props.onStartRename}
 					onDelete={props.onDelete}
 				/>
@@ -164,18 +202,62 @@ const FileCard: Component<{
 
 const FileListPage: Component = () => {
 	const f = useFileList();
+	const navigate = useNavigate();
+	const openDetail = (item: FileItem) =>
+		navigate(fillPath(PATHS.fileDetail, item.stored_id));
 
 	return (
 		<div class={styles.page}>
-			<h1 class={styles.title}>文件管理</h1>
+			<PageHead
+				title="文件"
+				desc="图片、视频、音频与文档的统一存储；复制 URL 可直接嵌入 Markdown"
+				actions={
+					<>
+						<SearchInput
+							value={f.search()}
+							onSearch={f.setSearch}
+							placeholder="搜索文件名…"
+						/>
+						<Show when={f.search().trim()}>
+							<Button
+								variant="icon"
+								title="清空搜索"
+								onClick={() => f.setSearch("")}
+							>
+								<X size={14} />
+							</Button>
+						</Show>
+						<TagFilter value={f.tag()} onChange={f.setTag} />
+						<Button
+							variant="primary"
+							size="sm"
+							disabled={f.uploading()}
+							onClick={() =>
+								document.getElementById("file-upload-input")?.click()
+							}
+						>
+							<Upload size={14} />
+							{f.uploading() ? "上传中..." : "上传文件"}
+						</Button>
+					</>
+				}
+			/>
+			<input
+				id="file-upload-input"
+				type="file"
+				style={{ display: "none" }}
+				onChange={(e) => {
+					const file = e.currentTarget.files?.[0];
+					if (file) void f.handleUpload(file);
+					e.currentTarget.value = "";
+				}}
+			/>
 
-			<div class={styles.filters}>
-				<FilterGroup
-					options={CATEGORY_TABS}
-					selected={f.category()}
-					onChange={f.setCategory}
-				/>
-			</div>
+			<FilterGroup
+				options={CATEGORY_TABS}
+				selected={f.category()}
+				onChange={f.setCategory}
+			/>
 
 			<Show when={f.errorMessage()}>
 				<p class={styles.error}>{f.errorMessage()}</p>
@@ -186,7 +268,11 @@ const FileListPage: Component = () => {
 				loading={f.loading}
 				error={f.error}
 				onRetry={f.refetch}
-				emptyMessage="暂无文件"
+				emptyMessage={
+					f.category() || f.tag() || f.search()
+						? "当前筛选条件下没有匹配的文件"
+						: "暂无文件，点击右上角「上传文件」开始"
+				}
 			>
 				{(data) => (
 					<div class={styles.grid}>
@@ -196,6 +282,7 @@ const FileListPage: Component = () => {
 									item={item}
 									editing={f.editingId() === item.stored_id}
 									editName={f.editName()}
+									onOpen={() => openDetail(item)}
 									onStartRename={f.startRename}
 									onDelete={f.handleDelete}
 									onRename={f.handleRename}

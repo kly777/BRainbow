@@ -140,20 +140,14 @@ impl FileRepository {
                 .await
             }
             (Some(cat), None) => {
-                sqlx::query_scalar!(
-                    "SELECT COUNT(*) FROM file WHERE file_category = ?",
-                    cat
-                )
-                .fetch_one(&*self.db)
-                .await
+                sqlx::query_scalar!("SELECT COUNT(*) FROM file WHERE file_category = ?", cat)
+                    .fetch_one(&*self.db)
+                    .await
             }
             (None, Some(uid)) => {
-                sqlx::query_scalar!(
-                    "SELECT COUNT(*) FROM file WHERE user_id = ?",
-                    uid
-                )
-                .fetch_one(&*self.db)
-                .await
+                sqlx::query_scalar!("SELECT COUNT(*) FROM file WHERE user_id = ?", uid)
+                    .fetch_one(&*self.db)
+                    .await
             }
             (None, None) => {
                 sqlx::query_scalar!("SELECT COUNT(*) FROM file")
@@ -239,34 +233,87 @@ impl FileRepository {
         }
     }
 
-    /// 按标签筛选文件（通过标签名）
+    /// 按标签筛选文件（通过标签名），可选按文件名模糊过滤
     pub async fn find_by_tag(
         &self,
         tag_name: &str,
         user_id: i64,
+        name_query: Option<&str>,
         limit: i64,
         offset: i64,
     ) -> Result<Vec<FileRow>, sqlx::Error> {
-        let rows = sqlx::query_as!(
-            FileRow,
-            r#"SELECT f.id AS "id!: i64", f.stored_id, f.original_name, f.mime_type, f.file_category,
-                      f.size_bytes AS "size_bytes!: i64", f.width, f.height, f.duration_ms, f.user_id,
-                      COALESCE(f.created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
-                      COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-               FROM file f
-               JOIN file_tag_rel ftr ON f.id = ftr.file_id
-               JOIN file_tag ft ON ftr.tag_id = ft.id
-               WHERE ft.name = ? AND ft.user_id = ?
-               ORDER BY f.created_at DESC LIMIT ? OFFSET ?"#,
-            tag_name,
-            user_id,
-            limit,
-            offset
-        )
-        .fetch_all(&*self.db)
-        .await?;
+        match name_query {
+            Some(q) => {
+                let pattern = format!("%{q}%");
+                sqlx::query_as!(
+                    FileRow,
+                    r#"SELECT f.id AS "id!: i64", f.stored_id, f.original_name, f.mime_type, f.file_category,
+                              f.size_bytes AS "size_bytes!: i64", f.width, f.height, f.duration_ms, f.user_id,
+                              COALESCE(f.created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
+                              COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
+                       FROM file f
+                       JOIN file_tag_rel ftr ON f.id = ftr.file_id
+                       JOIN file_tag ft ON ftr.tag_id = ft.id
+                       WHERE ft.name = ? AND ft.user_id = ? AND f.original_name LIKE ?
+                       ORDER BY f.created_at DESC LIMIT ? OFFSET ?"#,
+                    tag_name,
+                    user_id,
+                    pattern,
+                    limit,
+                    offset
+                )
+                .fetch_all(&*self.db)
+                .await
+            }
+            None => {
+                sqlx::query_as!(
+                    FileRow,
+                    r#"SELECT f.id AS "id!: i64", f.stored_id, f.original_name, f.mime_type, f.file_category,
+                              f.size_bytes AS "size_bytes!: i64", f.width, f.height, f.duration_ms, f.user_id,
+                              COALESCE(f.created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
+                              COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
+                       FROM file f
+                       JOIN file_tag_rel ftr ON f.id = ftr.file_id
+                       JOIN file_tag ft ON ftr.tag_id = ft.id
+                       WHERE ft.name = ? AND ft.user_id = ?
+                       ORDER BY f.created_at DESC LIMIT ? OFFSET ?"#,
+                    tag_name,
+                    user_id,
+                    limit,
+                    offset
+                )
+                .fetch_all(&*self.db)
+                .await
+            }
+        }
+    }
 
-        Ok(rows)
+    /// 按文件名模糊统计
+    pub async fn count_by_name(
+        &self,
+        query: &str,
+        user_id: Option<i64>,
+    ) -> Result<i64, sqlx::Error> {
+        let pattern = format!("%{query}%");
+        match user_id {
+            Some(uid) => {
+                sqlx::query_scalar!(
+                    "SELECT COUNT(*) FROM file WHERE original_name LIKE ? AND user_id = ?",
+                    pattern,
+                    uid
+                )
+                .fetch_one(&*self.db)
+                .await
+            }
+            None => {
+                sqlx::query_scalar!(
+                    "SELECT COUNT(*) FROM file WHERE original_name LIKE ?",
+                    pattern
+                )
+                .fetch_one(&*self.db)
+                .await
+            }
+        }
     }
 
     /// 按文件名模糊搜索
@@ -352,11 +399,7 @@ impl FileRepository {
     }
 
     /// 设置文件标签（全量替换）
-    pub async fn set_file_tags(
-        &self,
-        file_id: i64,
-        tag_ids: &[i64],
-    ) -> Result<(), sqlx::Error> {
+    pub async fn set_file_tags(&self, file_id: i64, tag_ids: &[i64]) -> Result<(), sqlx::Error> {
         // 删除旧关联
         sqlx::query!("DELETE FROM file_tag_rel WHERE file_id = ?", file_id)
             .execute(&*self.db)
@@ -472,23 +515,40 @@ impl FileRepository {
         Ok(row.unwrap_or(0) as usize)
     }
 
-    /// 按标签统计文件数量
+    /// 按标签统计文件数量，可选按文件名模糊过滤
     pub async fn count_by_tag(
         &self,
         tag_name: &str,
         user_id: i64,
+        name_query: Option<&str>,
     ) -> Result<i64, sqlx::Error> {
-        let count = sqlx::query_scalar!(
-            r#"SELECT COUNT(*) FROM file f
-               JOIN file_tag_rel ftr ON f.id = ftr.file_id
-               JOIN file_tag ft ON ftr.tag_id = ft.id
-               WHERE ft.name = ? AND ft.user_id = ?"#,
-            tag_name,
-            user_id
-        )
-        .fetch_one(&*self.db)
-        .await?;
-
-        Ok(count)
+        match name_query {
+            Some(q) => {
+                let pattern = format!("%{q}%");
+                sqlx::query_scalar!(
+                    r#"SELECT COUNT(*) FROM file f
+                       JOIN file_tag_rel ftr ON f.id = ftr.file_id
+                       JOIN file_tag ft ON ftr.tag_id = ft.id
+                       WHERE ft.name = ? AND ft.user_id = ? AND f.original_name LIKE ?"#,
+                    tag_name,
+                    user_id,
+                    pattern
+                )
+                .fetch_one(&*self.db)
+                .await
+            }
+            None => {
+                sqlx::query_scalar!(
+                    r#"SELECT COUNT(*) FROM file f
+                       JOIN file_tag_rel ftr ON f.id = ftr.file_id
+                       JOIN file_tag ft ON ftr.tag_id = ft.id
+                       WHERE ft.name = ? AND ft.user_id = ?"#,
+                    tag_name,
+                    user_id
+                )
+                .fetch_one(&*self.db)
+                .await
+            }
+        }
     }
 }

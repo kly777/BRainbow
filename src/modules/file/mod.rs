@@ -39,8 +39,5 @@ where
     S: Clone + Send + Sync + 'static,
     FileQueryService: FromRef<S>,
 {
-    Router::new().route(
-        "/{stored_id}/data/{filename}",
-        get(handler::file_handler),
-    )
+    Router::new().route("/{stored_id}/data/{filename}", get(handler::file_handler))
 }

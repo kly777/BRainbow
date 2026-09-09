@@ -49,7 +49,7 @@ impl FileQueryService {
             stored_id: file_row.stored_id,
             original_name: file_row.original_name,
             mime_type: file_row.mime_type,
-            file_category: FileCategory::from_mime(&file_row.file_category),
+            file_category: FileCategory::from_category_str(&file_row.file_category),
             size_bytes: file_row.size_bytes,
             width: file_row.width,
             height: file_row.height,
@@ -91,7 +91,7 @@ impl FileQueryService {
             stored_id: file_row.stored_id,
             original_name: file_row.original_name,
             mime_type: file_row.mime_type,
-            file_category: FileCategory::from_mime(&file_row.file_category),
+            file_category: FileCategory::from_category_str(&file_row.file_category),
             size_bytes: file_row.size_bytes,
             width: file_row.width,
             height: file_row.height,
@@ -115,28 +115,33 @@ impl FileQueryService {
         let limit = pagination.limit();
 
         // 根据查询条件获取总数和列表
+        let name_query = query.q.as_deref().filter(|s| !s.trim().is_empty());
         let (total, rows) = if let Some(tag_name) = &query.tag {
             let uid = user_id.ok_or_else(|| ServiceError::InvalidInput("需要登录".into()))?;
             let total = self
                 .repo
-                .count_by_tag(tag_name, uid)
+                .count_by_tag(tag_name, uid, name_query)
                 .await
                 .map_err(ServiceError::Db)?;
             let rows = self
                 .repo
-                .find_by_tag(tag_name, uid, limit, offset)
+                .find_by_tag(tag_name, uid, name_query, limit, offset)
                 .await
                 .map_err(ServiceError::Db)?;
             (total, rows)
-        } else if let Some(q) = &query.q {
+        } else if let Some(q) = name_query {
             // 搜索模式：按文件名模糊匹配
+            let total = self
+                .repo
+                .count_by_name(q, user_id)
+                .await
+                .map_err(ServiceError::Db)?;
             let rows = self
                 .repo
                 .search_by_name(q, user_id, limit, offset)
                 .await
                 .map_err(ServiceError::Db)?;
-            // 搜索模式下不返回精确总数（性能考虑）
-            (0, rows)
+            (total, rows)
         } else {
             let total = self
                 .repo
@@ -168,7 +173,7 @@ impl FileQueryService {
                 stored_id: row.stored_id,
                 original_name: row.original_name,
                 mime_type: row.mime_type,
-                file_category: FileCategory::from_mime(&row.file_category),
+                file_category: FileCategory::from_category_str(&row.file_category),
                 size_bytes: row.size_bytes,
                 width: row.width,
                 height: row.height,

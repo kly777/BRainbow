@@ -78,8 +78,14 @@ export function useConvSearch(): ConvSearchApi {
 		setTab,
 		searchQuery,
 		data: () => data(),
-		loading: data.loading,
-		error: data.error,
+		// getter：快照会在 createResource 创建/刷新瞬间冻结旧值，
+		// 导致 <Show when={loading}> 加载态永不更新（与 useFileList 同源修复）
+		get loading() {
+			return data.loading;
+		},
+		get error() {
+			return data.error;
+		},
 		handleSearch,
 		itemHref,
 	};

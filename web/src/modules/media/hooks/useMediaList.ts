@@ -99,8 +99,14 @@ export function useMediaList(): MediaListApi {
 		mediaType,
 		setMediaType,
 		items: () => media() ?? [],
-		loading: media.loading,
-		error: media.error,
+		// getter：避免 createResource 创建瞬间 state=pending 的快照被冻结
+		// 为 true，导致 AsyncView 永远骨架屏（与 useFileList 同源修复）
+		get loading() {
+			return media.loading;
+		},
+		get error() {
+			return media.error;
+		},
 		refetch,
 		editingId,
 		editName,

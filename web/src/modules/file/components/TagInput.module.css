@@ -1,0 +1,99 @@
+/* 文件标签输入 —— 与 bookmark TagInput 同构（kebab-case） */
+
+.tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-sm);
+	margin-bottom: var(--space-sm);
+}
+
+.tag {
+	display: inline-flex;
+	align-items: center;
+	border-radius: var(--radius-full);
+	line-height: 1.125rem;
+	white-space: nowrap;
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
+	gap: var(--space-xs);
+	padding: var(--space-2xs) var(--space-sm);
+	font-size: var(--text-sm);
+}
+
+.tag-remove {
+	border: none;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+	font-size: var(--text-sm);
+	line-height: 1;
+	padding: 0;
+}
+
+.tag-remove:hover {
+	opacity: 0.7;
+}
+
+.tag-input {
+	position: relative;
+}
+
+.input-row {
+	/* 挂载点类（无样式，供 JS 引用） */
+}
+
+.input {
+	width: 100%;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+	padding: var(--space-xs) var(--space-md);
+	font-size: var(--text-sm);
+}
+
+.dropdown {
+	position: absolute;
+	z-index: var(--z-dropdown);
+	margin-top: var(--space-xs);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-md);
+	max-height: 12.5rem;
+	overflow-y: auto;
+}
+
+.dropdown-item {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+	width: 100%;
+	padding: var(--space-xs) var(--space-sm) var(--space-xs) var(--space-md);
+	border: none;
+	background: transparent;
+	color: var(--t-color-ink);
+	font-size: var(--text-sm);
+	text-align: left;
+	cursor: pointer;
+}
+
+.dropdown-name {
+	flex: 1;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.dropdown-item:hover {
+	background: var(--t-color-accent-soft);
+}
+
+.create-new {
+	color: var(--t-color-accent);
+	font-weight: 600;
+}

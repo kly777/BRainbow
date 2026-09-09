@@ -117,7 +117,7 @@ export async function confirmAndDelete(opts: {
 
 	const result = await tryAsync(opts.deleteFn);
 	if (!result.ok) {
-		notifyError(opts.title + "失败", result.error);
+		notifyError(`${opts.title}失败`, result.error);
 		opts.onError?.();
 		return false;
 	}

@@ -115,6 +115,32 @@ impl FileRepository {
         Ok(row)
     }
 
+    /// 文件库统计：总数、总占用、按类别分布（QueryBuilder 处理可选 user_id）
+    pub async fn stats(
+        &self,
+        user_id: Option<i64>,
+    ) -> Result<(i64, i64, Vec<(String, i64, i64)>), sqlx::Error> {
+        let mut totals = QueryBuilder::new(
+            "SELECT COUNT(*) AS count, COALESCE(SUM(f.size_bytes), 0) AS bytes FROM file f WHERE 1 = 1",
+        );
+        if let Some(uid) = user_id {
+            totals.push(" AND f.user_id = ").push_bind(uid);
+        }
+        let (total_count, total_bytes): (i64, i64) =
+            totals.build_query_as().fetch_one(&*self.db).await?;
+
+        let mut by_cat = QueryBuilder::new(
+            "SELECT f.file_category AS category, COUNT(*) AS count, COALESCE(SUM(f.size_bytes), 0) AS bytes FROM file f WHERE 1 = 1",
+        );
+        if let Some(uid) = user_id {
+            by_cat.push(" AND f.user_id = ").push_bind(uid);
+        }
+        by_cat.push(" GROUP BY f.file_category ORDER BY bytes DESC");
+        let rows: Vec<(String, i64, i64)> = by_cat.build_query_as().fetch_all(&*self.db).await?;
+
+        Ok((total_count, total_bytes, rows))
+    }
+
     /// 列出缺 content_hash 的记录（id + stored_id），供启动回填使用
     pub async fn find_without_hash(&self) -> Result<Vec<(i64, String)>, sqlx::Error> {
         let rows = sqlx::query!(
@@ -935,6 +961,48 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["img-s", "img-l"]
         );
+    }
+
+    #[tokio::test]
+    async fn stats_aggregates_totals_and_categories() {
+        let repo = setup().await;
+        repo.insert(NewFile {
+            size_bytes: 100,
+            ..new_file_named("a", "a.png", "image", Some(7))
+        })
+        .await
+        .unwrap();
+        repo.insert(NewFile {
+            size_bytes: 300,
+            ..new_file_named("b", "b.png", "image", Some(7))
+        })
+        .await
+        .unwrap();
+        repo.insert(NewFile {
+            size_bytes: 50,
+            ..new_file_named("c", "c.pdf", "document", Some(7))
+        })
+        .await
+        .unwrap();
+        // 其他用户的文件不计入
+        repo.insert(NewFile {
+            size_bytes: 999,
+            ..new_file_named("d", "d.bin", "other", Some(8))
+        })
+        .await
+        .unwrap();
+
+        let (count, bytes, rows) = repo.stats(Some(7)).await.unwrap();
+        assert_eq!(count, 3);
+        assert_eq!(bytes, 450);
+        // 按占用降序
+        assert_eq!(rows[0], ("image".to_string(), 2, 400));
+        assert_eq!(rows[1], ("document".to_string(), 1, 50));
+
+        // 不传 user_id 时统计全部
+        let (all_count, all_bytes, _) = repo.stats(None).await.unwrap();
+        assert_eq!(all_count, 4);
+        assert_eq!(all_bytes, 1449);
     }
 
     // ── 更新 / 删除 ──

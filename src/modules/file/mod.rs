@@ -25,6 +25,7 @@ where
         )
         .route("/", get(handler::list_handler))
         .route("/tags", get(handler::tags_handler))
+        .route("/stats", get(handler::stats_handler))
         .route(
             "/tags/{tag_id}",
             patch(handler::rename_tag_handler).delete(handler::delete_tag_handler),

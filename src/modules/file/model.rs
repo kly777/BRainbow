@@ -174,6 +174,22 @@ pub struct FileTagWithCount {
     pub count: i64,
 }
 
+/// 单个类别的占用统计
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryStat {
+    pub category: String,
+    pub count: i64,
+    pub bytes: i64,
+}
+
+/// 文件库统计（占用与类别分布）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileStats {
+    pub total_count: i64,
+    pub total_bytes: i64,
+    pub by_category: Vec<CategoryStat>,
+}
+
 /// 标签重命名请求
 #[derive(Debug, Deserialize)]
 pub struct RenameTagRequest {

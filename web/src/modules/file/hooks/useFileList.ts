@@ -17,7 +17,9 @@ import { createResource, createSignal, onCleanup } from "solid-js";
 import type { FileItem, SortOrder } from "../api.ts";
 import {
 	deleteFile,
+	type FileStats,
 	fileUrl,
+	getFileStats,
 	listFiles,
 	updateFile,
 	uploadFileWithProgress,
@@ -54,6 +56,7 @@ export interface FileListApi {
 	search: () => string;
 	setSearch: (q: string) => void;
 	items: () => FileItem[];
+	stats: () => FileStats | undefined;
 	sort: () => SortOrder;
 	setSort: (value: SortOrder) => void;
 	view: () => FileView;
@@ -150,6 +153,11 @@ export function useFileList(): FileListApi {
 			if (result.ok) return result.value;
 			throw result.error;
 		},
+	);
+
+	// 统计：总量与类别分布（与列表同一 files 缓存域，写操作后一并失效）
+	const [stats, { refetch: refetchStats }] = createResource<FileStats>(() =>
+		getFileStats(),
 	);
 
 	const [editingId, setEditingId] = createSignal<string | null>(null);
@@ -255,6 +263,7 @@ export function useFileList(): FileListApi {
 		if (ok > 0 || duplicated > 0) {
 			params.set({ category: "", tag: "", q: "", page: 1 });
 			refetch();
+			refetchStats();
 		}
 	};
 
@@ -278,6 +287,7 @@ export function useFileList(): FileListApi {
 			notifyError("删除文件失败", getErrorMessage(result.error));
 			return;
 		}
+		refetchStats();
 		// 当前页最后一条被删掉时回退一页，避免停在空白页
 		if ((files()?.items.length ?? 0) <= 1 && page() > 1) {
 			params.set({ page: page() - 1 });
@@ -435,6 +445,7 @@ export function useFileList(): FileListApi {
 		search,
 		setSearch,
 		items: () => files()?.items ?? [],
+		stats,
 		sort,
 		setSort,
 		view,

@@ -742,6 +742,29 @@ impl FileService {
         })
     }
 
+    /// 文件库统计（占用与类别分布）
+    pub async fn stats(
+        &self,
+        user_id: Option<i64>,
+    ) -> Result<crate::modules::file::model::FileStats, ServiceError> {
+        let (total_count, total_bytes, rows) =
+            self.repo.stats(user_id).await.map_err(ServiceError::Db)?;
+        Ok(crate::modules::file::model::FileStats {
+            total_count,
+            total_bytes,
+            by_category: rows
+                .into_iter()
+                .map(
+                    |(category, count, bytes)| crate::modules::file::model::CategoryStat {
+                        category,
+                        count,
+                        bytes,
+                    },
+                )
+                .collect(),
+        })
+    }
+
     // ── 标签管理 ──
 
     /// 校验标签归属（不存在或不属于该用户都按 NotFound 处理，避免探测他人标签）

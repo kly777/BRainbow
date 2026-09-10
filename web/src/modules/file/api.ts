@@ -50,6 +50,18 @@ export interface UploadResult extends FileItem {
 	duplicate: boolean;
 }
 
+export interface CategoryStat {
+	category: string;
+	count: number;
+	bytes: number;
+}
+
+export interface FileStats {
+	total_count: number;
+	total_bytes: number;
+	by_category: CategoryStat[];
+}
+
 export interface FileTag {
 	id: number;
 	name: string;
@@ -197,6 +209,10 @@ export const deleteFile = (stored_id: string, force = false): Promise<void> =>
 		del<void>(`/file/${stored_id}${force ? "?force=true" : ""}`),
 		{ entity: `/file/${stored_id}` },
 	);
+
+/** 文件库统计（总量与类别分布，缓存 30 秒） */
+export const getFileStats = (): Promise<FileStats> =>
+	cachedRequest("/file/stats");
 
 /** 获取用户的所有标签（含关联文件数） */
 export const listFileTags = (): Promise<FileTag[]> =>

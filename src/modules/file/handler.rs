@@ -383,6 +383,17 @@ pub async fn tags_handler(
     }
 }
 
+/// 文件库统计（列表页展示总量与类别分布）
+pub async fn stats_handler(
+    State(service): State<FileService>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    match service.stats(Some(claims.sub as i64)).await {
+        Ok(stats) => Json(stats).into_response(),
+        Err(e) => e.into_response(),
+    }
+}
+
 /// 重命名标签
 pub async fn rename_tag_handler(
     State(service): State<FileService>,

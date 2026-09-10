@@ -34,6 +34,12 @@ vi.mock("@modules/file/api.ts", async (importOriginal) => {
 			total_pages: 1,
 		}),
 		listFileTags: vi.fn().mockResolvedValue([]),
+		// 列表页还会拉统计（页头总量 + 类别数量），jsdom 下必须 mock 掉
+		getFileStats: vi.fn().mockResolvedValue({
+			total_count: 1,
+			total_bytes: 100,
+			by_category: [{ category: "image", count: 1, bytes: 100 }],
+		}),
 	};
 });
 

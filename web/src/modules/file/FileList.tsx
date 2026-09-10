@@ -612,7 +612,11 @@ const FileListPage: Component = () => {
 
 			<PageHead
 				title="文件"
-				desc="图片、视频、音频与文档的统一存储；复制 URL 可直接嵌入 Markdown"
+				desc={
+					f.stats()
+						? `共 ${f.stats()?.total_count} 个文件 · 占用 ${formatBytes(f.stats()?.total_bytes ?? 0)}`
+						: "图片、视频、音频与文档的统一存储；复制 URL 可直接嵌入 Markdown"
+				}
 				actions={
 					<>
 						<SearchInput
@@ -672,7 +676,14 @@ const FileListPage: Component = () => {
 
 			<div class={styles.filterRow}>
 				<FilterGroup
-					options={CATEGORY_TABS}
+					options={CATEGORY_TABS.map((tab) => {
+						const stat = f
+							.stats()
+							?.by_category.find((c) => c.category === tab.value);
+						return stat && stat.count > 0
+							? { ...tab, label: `${tab.label} ${stat.count}` }
+							: tab;
+					})}
 					selected={f.category()}
 					onChange={f.setCategory}
 				/>

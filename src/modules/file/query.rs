@@ -286,7 +286,9 @@ impl SearchPort for FileQueryService {
                 id: row.id,
                 title: row.original_name.clone(),
                 snippet: search_snippet(&row),
-                target: SearchTarget::File { id: row.id },
+                target: SearchTarget::File {
+                    stored_id: row.stored_id.clone(),
+                },
                 score: if row.name_hit == 0 { 1.0 } else { 0.5 },
             })
             .collect())
@@ -611,10 +613,12 @@ mod tests {
         assert_eq!(hits[0].kind, "file");
         assert_eq!(hits[0].title, "季度报告.md");
         assert_eq!(hits[0].snippet, "文档 · 100 B");
+        // 导航目标带的是 stored_id（详情页路由参数），不是数字主键
         assert!(matches!(
-            hits[0].target,
-            SearchTarget::File { id } if id == hits[0].id
+            &hits[0].target,
+            SearchTarget::File { stored_id } if stored_id == "doc-1"
         ));
+        assert_eq!(hits[0].id, _doc);
         // 仅标签命中排后，片段给标签
         assert_eq!(hits[1].title, "风景.png");
         assert_eq!(hits[1].snippet, "#报告配图");
@@ -643,6 +647,7 @@ mod tests {
     fn search_snippet_shows_tag_only_for_tag_hits() {
         let name_hit = FileSearchHit {
             id: 1,
+            stored_id: "abc123".into(),
             original_name: "设计稿.png".into(),
             file_category: "image".into(),
             size_bytes: 2048,

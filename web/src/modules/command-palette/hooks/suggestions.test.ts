@@ -5,10 +5,14 @@ import { describe, expect, it } from "vitest";
 import { KIND_LABEL, resolveTargetUrl } from "./suggestions.ts";
 
 describe("resolveTargetUrl", () => {
-	it("File 目标解析为文件详情页", () => {
-		expect(resolveTargetUrl({ type: "File", params: { id: 42 } })).toBe(
-			fillPath(PATHS.fileDetail, 42),
-		);
+	it("File 目标用 stored_id 解析为文件详情页", () => {
+		expect(
+			resolveTargetUrl({ type: "File", params: { stored_id: "abc123" } }),
+		).toBe(fillPath(PATHS.fileDetail, "abc123"));
+		// 回归：不能把数据库数字主键拼进路由（详情页参数是 stored_id）
+		expect(
+			resolveTargetUrl({ type: "File", params: { stored_id: "abc123" } }),
+		).toBe("/file/abc123");
 	});
 
 	it("既有模块解析不受影响", () => {

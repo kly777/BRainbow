@@ -61,7 +61,8 @@ export function resolveTargetUrl(target: SearchTarget): string {
 		case "Text":
 			return PATHS.text;
 		case "File":
-			return fillPath(PATHS.fileDetail, target.params.id);
+			// 详情页路由参数是 stored_id，不是数字主键
+			return fillPath(PATHS.fileDetail, target.params.stored_id);
 		default:
 			return PATHS.home;
 	}

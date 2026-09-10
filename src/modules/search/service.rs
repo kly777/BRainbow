@@ -539,8 +539,8 @@ mod tests {
         assert_eq!(file_hits[0].title, "季度财报.xlsx");
         assert_eq!(file_hits[0].snippet, "文档 · 2.0 KB");
         assert!(matches!(
-            file_hits[0].target,
-            SearchTarget::File { id } if id == file_hits[0].id
+            &file_hits[0].target,
+            SearchTarget::File { stored_id } if stored_id == "f-1"
         ));
         // 仅标签命中的排在后面，片段展示命中的标签
         assert_eq!(file_hits[1].title, "封面.png");

@@ -26,6 +26,8 @@ pub struct FileRow {
 #[derive(Debug, FromRow)]
 pub struct FileSearchHit {
     pub id: i64,
+    /// 详情页路由参数（`/file/:stored_id`）
+    pub stored_id: String,
     pub original_name: String,
     pub file_category: String,
     pub size_bytes: i64,
@@ -366,6 +368,7 @@ impl FileRepository {
         sqlx::query_as!(
             FileSearchHit,
             r#"SELECT f.id AS "id!: i64",
+                      f.stored_id,
                       f.original_name,
                       f.file_category,
                       f.size_bytes AS "size_bytes!: i64",

@@ -19,7 +19,8 @@ export type SearchTargetType =
 /** 搜索命中项的导航目标 */
 export interface SearchTarget {
 	type: SearchTargetType;
-	params: Record<string, number>;
+	/** 路由参数：多数模块是数字 id；文件用的是 stored_id（字符串） */
+	params: Record<string, number | string>;
 }
 
 export interface SearchHit {

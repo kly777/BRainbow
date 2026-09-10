@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, stored_id, original_name, media_type, mime_type, size_bytes AS \"size_bytes!: i64\", width, height, duration_ms, user_id,\n                              COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\"\n                       FROM media\n                       ORDER BY created_at DESC LIMIT ? OFFSET ?",
+  "query": "SELECT id, stored_id, original_name, mime_type, file_category,\n                              size_bytes AS \"size_bytes!: i64\", width, height, duration_ms, user_id, content_hash,\n                              COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                              COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n                       FROM file WHERE file_category = ? AND user_id = ?\n                       ORDER BY created_at DESC LIMIT ? OFFSET ?",
   "describe": {
     "columns": [
       {
@@ -9,7 +9,7 @@
         "type_info": "Integer",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "id"
           }
         }
@@ -20,7 +20,7 @@
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "stored_id"
           }
         }
@@ -31,30 +31,30 @@
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "original_name"
           }
         }
       },
       {
-        "name": "media_type",
+        "name": "mime_type",
         "ordinal": 3,
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "media",
-            "name": "media_type"
+            "table": "file",
+            "name": "mime_type"
           }
         }
       },
       {
-        "name": "mime_type",
+        "name": "file_category",
         "ordinal": 4,
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "media",
-            "name": "mime_type"
+            "table": "file",
+            "name": "file_category"
           }
         }
       },
@@ -64,7 +64,7 @@
         "type_info": "Integer",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "size_bytes"
           }
         }
@@ -75,7 +75,7 @@
         "type_info": "Integer",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "width"
           }
         }
@@ -86,7 +86,7 @@
         "type_info": "Integer",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "height"
           }
         }
@@ -97,7 +97,7 @@
         "type_info": "Integer",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "duration_ms"
           }
         }
@@ -108,20 +108,37 @@
         "type_info": "Integer",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "user_id"
           }
         }
       },
       {
-        "name": "created_at!: chrono::DateTime<chrono::Utc>",
+        "name": "content_hash",
         "ordinal": 10,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "file",
+            "name": "content_hash"
+          }
+        }
+      },
+      {
+        "name": "created_at!: chrono::DateTime<chrono::Utc>",
+        "ordinal": 11,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      },
+      {
+        "name": "updated_at!: chrono::DateTime<chrono::Utc>",
+        "ordinal": 12,
         "type_info": "Datetime",
         "origin": "Expression"
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 4
     },
     "nullable": [
       false,
@@ -134,8 +151,10 @@
       true,
       true,
       true,
+      true,
+      false,
       false
     ]
   },
-  "hash": "9dfdf888e5e931895fb5dc63bf8da71849ff18500027835f3e0105d0200432fc"
+  "hash": "c7813d9183d9f915e3c822487a25bf4f6c3257856aa64c7be93cffb45734e9f6"
 }

@@ -29,11 +29,21 @@ struct FileResponse {
     width: Option<i64>,
     height: Option<i64>,
     duration_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content_hash: Option<String>,
     tags: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     meta: Option<std::collections::HashMap<String, String>>,
     created_at: String,
     updated_at: String,
+}
+
+/// 上传响应：duplicate=true 表示命中内容去重、复用已有文件（未新建）
+#[derive(Serialize)]
+struct UploadResponse {
+    #[serde(flatten)]
+    file: FileResponse,
+    duplicate: bool,
 }
 
 fn to_response(f: &super::model::File, include_meta: bool) -> FileResponse {
@@ -48,6 +58,7 @@ fn to_response(f: &super::model::File, include_meta: bool) -> FileResponse {
         width: f.width,
         height: f.height,
         duration_ms: f.duration_ms,
+        content_hash: f.content_hash.clone(),
         tags: f.tags.clone(),
         meta: if include_meta {
             Some(f.meta.clone())
@@ -71,6 +82,7 @@ fn to_summary_response(f: &super::model::FileSummary) -> FileResponse {
         width: f.width,
         height: f.height,
         duration_ms: f.duration_ms,
+        content_hash: f.content_hash.clone(),
         tags: f.tags.clone(),
         meta: None,
         created_at: to_utc_iso(f.created_at),
@@ -83,6 +95,9 @@ fn to_summary_response(f: &super::model::FileSummary) -> FileResponse {
 #[derive(Deserialize)]
 pub struct UploadQuery {
     tags: Option<String>, // JSON 数组字符串
+    /// 跳过内容去重，强制新建副本
+    #[serde(default)]
+    force: Option<bool>,
 }
 
 pub async fn upload_handler(
@@ -121,11 +136,22 @@ pub async fn upload_handler(
                 &content_type,
                 Some(claims.sub as i64),
                 tags,
+                query.force.unwrap_or(false),
             )
             .await
         {
-            Ok(file) => {
-                return (StatusCode::CREATED, Json(to_response(&file, false))).into_response();
+            Ok(outcome) => {
+                // 命中内容去重（复用已有文件）返回 200，新建返回 201
+                let status = if outcome.duplicate {
+                    StatusCode::OK
+                } else {
+                    StatusCode::CREATED
+                };
+                let body = UploadResponse {
+                    file: to_response(&outcome.file, false),
+                    duplicate: outcome.duplicate,
+                };
+                return (status, Json(body)).into_response();
             }
             Err(e) => return e.into_response(),
         }

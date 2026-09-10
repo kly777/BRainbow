@@ -66,6 +66,8 @@ pub struct NewFile<'a> {
     pub height: Option<i64>,
     pub duration_ms: Option<i64>,
     pub user_id: Option<i64>,
+    /// 内容 SHA-256（十六进制）；存量数据可能为 None
+    pub content_hash: Option<&'a str>,
 }
 
 /// 文件主模型
@@ -81,6 +83,8 @@ pub struct File {
     pub height: Option<i64>,
     pub duration_ms: Option<i64>,
     pub user_id: Option<i64>,
+    /// 内容 SHA-256（十六进制）；存量数据可能为 None
+    pub content_hash: Option<String>,
     pub tags: Vec<String>,
     pub meta: std::collections::HashMap<String, String>,
     pub created_at: DateTime<Utc>,
@@ -100,6 +104,8 @@ pub struct FileSummary {
     pub height: Option<i64>,
     pub duration_ms: Option<i64>,
     pub user_id: Option<i64>,
+    /// 内容 SHA-256（十六进制）；存量数据可能为 None
+    pub content_hash: Option<String>,
     pub tags: Vec<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

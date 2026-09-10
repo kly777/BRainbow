@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) FROM media WHERE media_type = ?",
+  "query": "SELECT COUNT(*) FROM file WHERE original_name LIKE ? ESCAPE '\\' AND user_id = ?",
   "describe": {
     "columns": [
       {
@@ -11,11 +11,11 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false
     ]
   },
-  "hash": "5e15359ea0ef65716cb377982a30592ae60a780df745d9cf2668196dd963e082"
+  "hash": "fd98c2eee3d3d49289b4cf58cd52419609fd52a1f05d5fea3360062efc64e649"
 }

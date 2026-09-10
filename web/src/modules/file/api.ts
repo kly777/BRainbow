@@ -23,10 +23,17 @@ export interface FileItem {
 	width: number | null;
 	height: number | null;
 	duration_ms: number | null;
+	/** 内容 SHA-256（十六进制）；存量数据可能为空 */
+	content_hash?: string | null;
 	tags: string[];
 	meta?: Record<string, string>;
 	created_at: string;
 	updated_at: string;
+}
+
+/** 上传结果：duplicate=true 表示命中内容去重、复用已有文件（未新建） */
+export interface UploadResult extends FileItem {
+	duplicate: boolean;
 }
 
 export interface FileTag {
@@ -42,18 +49,20 @@ export interface UpdateFileRequest {
 
 // ── API ──
 
-/** 上传文件（支持标签） */
+/** 上传文件（支持标签）；force=true 跳过内容去重、强制新建副本 */
 export const uploadFile = async (
 	file: File,
 	tags?: string[],
-): Promise<FileItem> => {
+	force = false,
+): Promise<UploadResult> => {
 	const formData = new FormData();
 	formData.append("file", file);
-	const params = tags?.length
-		? `?tags=${encodeURIComponent(JSON.stringify(tags))}`
-		: "";
+	const query = new URLSearchParams();
+	if (tags?.length) query.set("tags", JSON.stringify(tags));
+	if (force) query.set("force", "true");
+	const qs = query.toString();
 	return domains.files.invalidate(
-		request<FileItem>(`/file/upload${params}`, {
+		request<UploadResult>(`/file/upload${qs ? `?${qs}` : ""}`, {
 			method: "POST",
 			body: formData,
 			timeout: false,

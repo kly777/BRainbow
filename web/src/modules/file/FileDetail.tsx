@@ -112,6 +112,21 @@ const FileView: Component<{ item: FileItem }> = (props) => (
 				<span class={styles.infoLabel}>更新于</span>
 				<span class={styles.infoValue}>{fmtLocal(props.item.updated_at)}</span>
 			</div>
+			<Show when={props.item.content_hash}>
+				{(hash) => (
+					<div class={styles.infoItem}>
+						<span class={styles.infoLabel}>内容 SHA-256</span>
+						<button
+							type="button"
+							class={styles.hashValue}
+							title={`${hash()}（点击复制）`}
+							onClick={() => copyTextWithToast(hash())}
+						>
+							{hash().slice(0, 16)}…
+						</button>
+					</div>
+				)}
+			</Show>
 		</div>
 
 		<Show when={props.item.tags.length > 0}>

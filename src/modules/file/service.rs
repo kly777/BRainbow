@@ -97,6 +97,21 @@ fn can_inline(mime: &str) -> bool {
 }
 
 /// 命令侧服务——上传/改名/删除/标签管理等写操作。
+/// 上传结果：`duplicate=true` 表示命中内容去重、复用已有记录（未新建文件）
+#[derive(Debug)]
+pub struct UploadOutcome {
+    pub file: File,
+    pub duplicate: bool,
+}
+
+/// 计算内容 SHA-256（十六进制小写）
+pub fn content_hash(data: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    hex::encode(hasher.finalize())
+}
+
 #[derive(Clone)]
 pub struct FileService {
     repo: FileRepository,
@@ -133,7 +148,10 @@ impl FileService {
         infer::get(data).map(|t| t.mime_type().to_string())
     }
 
-    /// 上传：校验 → 写临时文件 → 插库 → 原子 rename → 解析元数据
+    /// 上传：校验 → 查重 → 写临时文件 → 插库 → 原子 rename → 解析元数据
+    ///
+    /// `force=false` 时已有相同内容（SHA-256）的文件会直接复用（不新建、不重复占盘）；
+    /// `force=true` 跳过查重，始终新建副本。
     pub async fn upload(
         &self,
         data: &[u8],
@@ -141,7 +159,8 @@ impl FileService {
         client_mime: &str,
         user_id: Option<i64>,
         tags: Option<Vec<String>>,
-    ) -> Result<File, ServiceError> {
+        force: bool,
+    ) -> Result<UploadOutcome, ServiceError> {
         // 1. MIME 真实校验
         // infer 对纯文本类（txt/md/csv/html）与部分 PDF 变体返回 None（无魔数），
         // 此时仅信任客户端声明的文本类/PDF MIME（白名单内再复核），其余拒绝。
@@ -175,6 +194,51 @@ impl FileService {
             )));
         }
 
+        // 2.5 内容去重（全局）：已有相同 SHA-256 → 默认复用（force 跳过）
+        // 单人项目：同一内容全系统只保留一个 id，跨账号重传也不重复占盘
+        let hash = content_hash(data);
+        if !force
+            && let Some(existing) = self
+                .repo
+                .find_by_hash(&hash)
+                .await
+                .map_err(ServiceError::Db)?
+        {
+            let dup_tags = self
+                .repo
+                .get_file_tags(existing.id)
+                .await
+                .map_err(ServiceError::Db)?
+                .into_iter()
+                .map(|t| t.name)
+                .collect();
+            let dup_meta = self
+                .repo
+                .get_file_meta(existing.id)
+                .await
+                .map_err(ServiceError::Db)?;
+            return Ok(UploadOutcome {
+                file: File {
+                    id: existing.id,
+                    stored_id: existing.stored_id,
+                    original_name: existing.original_name,
+                    mime_type: existing.mime_type,
+                    file_category: FileCategory::from_category_str(&existing.file_category),
+                    size_bytes: existing.size_bytes,
+                    width: existing.width,
+                    height: existing.height,
+                    duration_ms: existing.duration_ms,
+                    user_id: existing.user_id,
+                    content_hash: existing.content_hash,
+                    tags: dup_tags,
+                    meta: dup_meta,
+                    created_at: existing.created_at,
+                    updated_at: existing.updated_at,
+                },
+                duplicate: true,
+            });
+        }
+
         let safe_name = sanitize_name(original_name);
         let stored_id = generate_stored_id();
         let tmp_path = format!("{}/tmp_{}.tmp", self.upload_dir, stored_id);
@@ -198,6 +262,7 @@ impl FileService {
                 height: None,
                 duration_ms: None,
                 user_id,
+                content_hash: Some(&hash),
             })
             .await
         {
@@ -236,21 +301,25 @@ impl FileService {
             _ => Vec::new(),
         };
 
-        Ok(File {
-            id: file_row.id,
-            stored_id: file_row.stored_id,
-            original_name: file_row.original_name,
-            mime_type: file_row.mime_type,
-            file_category: FileCategory::from_category_str(&file_row.file_category),
-            size_bytes: file_row.size_bytes,
-            width,
-            height,
-            duration_ms: None,
-            user_id: file_row.user_id,
-            tags: tag_names,
-            meta: HashMap::new(),
-            created_at: file_row.created_at,
-            updated_at: file_row.updated_at,
+        Ok(UploadOutcome {
+            file: File {
+                id: file_row.id,
+                stored_id: file_row.stored_id,
+                original_name: file_row.original_name,
+                mime_type: file_row.mime_type,
+                file_category: FileCategory::from_category_str(&file_row.file_category),
+                size_bytes: file_row.size_bytes,
+                width,
+                height,
+                duration_ms: None,
+                user_id: file_row.user_id,
+                content_hash: file_row.content_hash,
+                tags: tag_names,
+                meta: HashMap::new(),
+                created_at: file_row.created_at,
+                updated_at: file_row.updated_at,
+            },
+            duplicate: false,
         })
     }
 
@@ -367,6 +436,7 @@ impl FileService {
             height: updated_row.height,
             duration_ms: updated_row.duration_ms,
             user_id: updated_row.user_id,
+            content_hash: updated_row.content_hash,
             tags,
             meta,
             created_at: updated_row.created_at,
@@ -644,9 +714,11 @@ mod tests {
                 "image/png",
                 Some(7),
                 Some(vec!["图片".into()]),
+                false,
             )
             .await
-            .unwrap();
+            .unwrap()
+            .file;
 
         assert_eq!(f.original_name, "照片.png");
         assert_eq!(f.mime_type, "image/png");
@@ -691,9 +763,17 @@ mod tests {
         let ctx = setup_service().await;
         let f = ctx
             .svc
-            .upload(b"hello world", "note.txt", "text/plain", Some(7), None)
+            .upload(
+                b"hello world",
+                "note.txt",
+                "text/plain",
+                Some(7),
+                None,
+                false,
+            )
             .await
-            .unwrap();
+            .unwrap()
+            .file;
         assert_eq!(f.mime_type, "text/plain");
         assert_eq!(f.file_category, FileCategory::Document);
     }
@@ -704,7 +784,7 @@ mod tests {
         let data = [0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01];
         let err = ctx
             .svc
-            .upload(&data, "x.png", "image/png", Some(7), None)
+            .upload(&data, "x.png", "image/png", Some(7), None, false)
             .await
             .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
@@ -716,7 +796,7 @@ mod tests {
         let ctx = setup_service().await;
         let err = ctx
             .svc
-            .upload(b"", "empty.txt", "text/plain", Some(7), None)
+            .upload(b"", "empty.txt", "text/plain", Some(7), None, false)
             .await
             .unwrap_err();
         assert!(err.to_string().contains("空文件"));
@@ -728,7 +808,7 @@ mod tests {
         // 真实内容是 PNG，却声明 text/plain
         let err = ctx
             .svc
-            .upload(PNG_1X1, "x.txt", "text/plain", Some(7), None)
+            .upload(PNG_1X1, "x.txt", "text/plain", Some(7), None, false)
             .await
             .unwrap_err();
         assert!(err.to_string().contains("文件类型不符"));
@@ -739,7 +819,7 @@ mod tests {
         let ctx = setup_service().await;
         let err = ctx
             .svc
-            .upload(ZIP_MIN, "x.zip", "application/zip", Some(7), None)
+            .upload(ZIP_MIN, "x.zip", "application/zip", Some(7), None, false)
             .await
             .unwrap_err();
         assert!(err.to_string().contains("不支持的文件类型"));
@@ -753,7 +833,7 @@ mod tests {
         big.extend_from_slice(&vec![0u8; 21 * 1024 * 1024]);
         let err = ctx
             .svc
-            .upload(&big, "big.png", "image/png", Some(7), None)
+            .upload(&big, "big.png", "image/png", Some(7), None, false)
             .await
             .unwrap_err();
         assert!(err.to_string().contains("文件过大"));
@@ -765,7 +845,7 @@ mod tests {
         // user_id 指向不存在的用户 → 插库外键失败 → 临时文件必须被清理
         let err = ctx
             .svc
-            .upload(PNG_1X1, "x.png", "image/png", Some(9999), None)
+            .upload(PNG_1X1, "x.png", "image/png", Some(9999), None, false)
             .await
             .unwrap_err();
         assert!(matches!(err, ServiceError::Db(_)));
@@ -793,9 +873,11 @@ mod tests {
                 "image/png",
                 None,
                 Some(vec!["x".into()]),
+                false,
             )
             .await
-            .unwrap();
+            .unwrap()
+            .file;
         assert!(f.tags.is_empty());
         assert!(f.user_id.is_none());
     }
@@ -807,9 +889,10 @@ mod tests {
         let ctx = setup_service().await;
         let f = ctx
             .svc
-            .upload(PNG_1X1, "anon2.png", "image/png", None, None)
+            .upload(PNG_1X1, "anon2.png", "image/png", None, None, false)
             .await
-            .unwrap();
+            .unwrap()
+            .file;
         assert!(f.user_id.is_none());
         // SELECT 读回一致
         let row: Option<i64> = sqlx::query_scalar("SELECT user_id FROM file WHERE stored_id = ?")
@@ -818,6 +901,125 @@ mod tests {
             .await
             .unwrap();
         assert!(row.is_none());
+    }
+
+    // ── 内容去重 ──
+
+    #[test]
+    fn content_hash_is_stable_and_content_sensitive() {
+        let a = content_hash(b"hello");
+        assert_eq!(a, content_hash(b"hello"));
+        assert_ne!(a, content_hash(b"hello!"));
+        assert_eq!(a.len(), 64); // SHA-256 十六进制
+    }
+
+    #[tokio::test]
+    async fn upload_dedupes_same_content_for_same_user() {
+        let ctx = setup_service().await;
+        let first = ctx
+            .svc
+            .upload(PNG_1X1, "a.png", "image/png", Some(7), None, false)
+            .await
+            .unwrap();
+        assert!(!first.duplicate);
+        assert!(first.file.content_hash.is_some());
+
+        // 第二次相同内容 → 复用已有记录，不新建、不重复占盘
+        let second = ctx
+            .svc
+            .upload(PNG_1X1, "b.png", "image/png", Some(7), None, false)
+            .await
+            .unwrap();
+        assert!(second.duplicate);
+        assert_eq!(second.file.stored_id, first.file.stored_id);
+        assert_eq!(second.file.original_name, "a.png"); // 保留首次的文件名
+
+        // DB 只有一条记录、磁盘只有一个文件
+        let count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM file WHERE content_hash IS NOT NULL")
+                .fetch_one(&*ctx.pool)
+                .await
+                .unwrap();
+        assert_eq!(count, 1);
+        let disk_files = std::fs::read_dir(&ctx.dir.0)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| !e.file_name().to_string_lossy().starts_with("tmp_"))
+            .count();
+        assert_eq!(disk_files, 1);
+    }
+
+    #[tokio::test]
+    async fn upload_force_creates_independent_copy() {
+        let ctx = setup_service().await;
+        let first = ctx
+            .svc
+            .upload(PNG_1X1, "a.png", "image/png", Some(7), None, false)
+            .await
+            .unwrap();
+        let forced = ctx
+            .svc
+            .upload(PNG_1X1, "copy.png", "image/png", Some(7), None, true)
+            .await
+            .unwrap();
+
+        assert!(!forced.duplicate);
+        assert_ne!(forced.file.stored_id, first.file.stored_id);
+        assert_eq!(forced.file.original_name, "copy.png");
+        let disk_files = std::fs::read_dir(&ctx.dir.0)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| !e.file_name().to_string_lossy().starts_with("tmp_"))
+            .count();
+        assert_eq!(disk_files, 2);
+    }
+
+    #[tokio::test]
+    async fn upload_dedup_is_global_across_users() {
+        let ctx = setup_service().await;
+        let mine = ctx
+            .svc
+            .upload(PNG_1X1, "mine.png", "image/png", Some(7), None, false)
+            .await
+            .unwrap();
+        // 单人项目：另一账号上传相同内容 → 全局唯一，复用同一 id（不重复占盘）
+        let other = ctx
+            .svc
+            .upload(PNG_1X1, "other.png", "image/png", Some(8), None, false)
+            .await
+            .unwrap();
+
+        assert!(other.duplicate);
+        assert_eq!(other.file.stored_id, mine.file.stored_id);
+        assert_eq!(other.file.user_id, Some(7)); // 记录归属保持首次上传者
+
+        let disk_files = std::fs::read_dir(&ctx.dir.0)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| !e.file_name().to_string_lossy().starts_with("tmp_"))
+            .count();
+        assert_eq!(disk_files, 1);
+    }
+
+    #[tokio::test]
+    async fn upload_different_content_not_deduped() {
+        let ctx = setup_service().await;
+        let a = ctx
+            .svc
+            .upload(PNG_1X1, "a.png", "image/png", Some(7), None, false)
+            .await
+            .unwrap();
+        // 尾部加一个字节 → 内容不同，不应误判为重复
+        let mut other = PNG_1X1.to_vec();
+        other.push(0x00);
+        let b = ctx
+            .svc
+            .upload(&other, "b.png", "image/png", Some(7), None, false)
+            .await
+            .unwrap();
+
+        assert!(!b.duplicate);
+        assert_ne!(a.file.stored_id, b.file.stored_id);
     }
 
     // ── 更新 ──
@@ -833,9 +1035,11 @@ mod tests {
                 "image/png",
                 Some(7),
                 Some(vec!["旧标签".into()]),
+                false,
             )
             .await
-            .unwrap();
+            .unwrap()
+            .file;
 
         let updated = ctx
             .svc
@@ -892,9 +1096,10 @@ mod tests {
         let ctx = setup_service().await;
         let f = ctx
             .svc
-            .upload(PDF_MIN, "报告.pdf", "application/pdf", Some(7), None)
+            .upload(PDF_MIN, "报告.pdf", "application/pdf", Some(7), None, false)
             .await
-            .unwrap();
+            .unwrap()
+            .file;
         let disk = std::path::Path::new(&ctx.dir.0).join(&f.stored_id);
         assert!(disk.exists());
 
@@ -914,9 +1119,10 @@ mod tests {
         let ctx = setup_service().await;
         let f = ctx
             .svc
-            .upload(PNG_1X1, "used.png", "image/png", Some(7), None)
+            .upload(PNG_1X1, "used.png", "image/png", Some(7), None, false)
             .await
-            .unwrap();
+            .unwrap()
+            .file;
 
         // 在 card 内容中制造引用
         sqlx::query("INSERT INTO card (content) VALUES (?)")

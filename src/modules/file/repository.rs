@@ -17,6 +17,7 @@ pub struct FileRow {
     pub height: Option<i64>,
     pub duration_ms: Option<i64>,
     pub user_id: Option<i64>,
+    pub content_hash: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
@@ -35,12 +36,13 @@ impl FileRepository {
     pub async fn insert(&self, params: NewFile<'_>) -> Result<FileRow, sqlx::Error> {
         let row = sqlx::query_as!(
             FileRow,
-            r#"INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, width, height, duration_ms, user_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            r#"INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, width, height, duration_ms, user_id, content_hash)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                RETURNING id AS "id!: i64", stored_id, original_name, mime_type, file_category,
                          size_bytes AS "size_bytes!: i64",
                          width AS "width?: i64", height AS "height?: i64",
                          duration_ms AS "duration_ms?: i64", user_id AS "user_id?: i64",
+                         content_hash AS "content_hash?: String",
                          COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                          COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
             params.stored_id,
@@ -51,7 +53,8 @@ impl FileRepository {
             params.width,
             params.height,
             params.duration_ms,
-            params.user_id
+            params.user_id,
+            params.content_hash
         )
         .fetch_one(&*self.db)
         .await?;
@@ -64,7 +67,7 @@ impl FileRepository {
         let row = sqlx::query_as!(
             FileRow,
             r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                      size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                      size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                FROM file WHERE stored_id = ?"#,
@@ -81,11 +84,30 @@ impl FileRepository {
         let row = sqlx::query_as!(
             FileRow,
             r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                      size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                      size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                FROM file WHERE id = ?"#,
             id
+        )
+        .fetch_optional(&*self.db)
+        .await?;
+
+        Ok(row)
+    }
+
+    /// 按内容哈希全局查重（同一内容全系统唯一；NULL 哈希不参与匹配）
+    pub async fn find_by_hash(&self, content_hash: &str) -> Result<Option<FileRow>, sqlx::Error> {
+        let row = sqlx::query_as!(
+            FileRow,
+            r#"SELECT id, stored_id, original_name, mime_type, file_category,
+                      size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
+                      COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
+                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
+               FROM file
+               WHERE content_hash = ?
+               ORDER BY id ASC LIMIT 1"#,
+            content_hash
         )
         .fetch_optional(&*self.db)
         .await?;
@@ -106,6 +128,7 @@ impl FileRepository {
                          size_bytes AS "size_bytes!: i64",
                          width AS "width?: i64", height AS "height?: i64",
                          duration_ms AS "duration_ms?: i64", user_id AS "user_id?: i64",
+                         content_hash AS "content_hash?: String",
                          COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                          COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
             new_name,
@@ -175,7 +198,7 @@ impl FileRepository {
                 sqlx::query_as!(
                     FileRow,
                     r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
                               COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                               COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                        FROM file WHERE file_category = ? AND user_id = ?
@@ -192,7 +215,7 @@ impl FileRepository {
                 sqlx::query_as!(
                     FileRow,
                     r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
                               COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                               COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                        FROM file WHERE file_category = ?
@@ -208,7 +231,7 @@ impl FileRepository {
                 sqlx::query_as!(
                     FileRow,
                     r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
                               COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                               COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                        FROM file WHERE user_id = ?
@@ -224,7 +247,7 @@ impl FileRepository {
                 sqlx::query_as!(
                     FileRow,
                     r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
                               COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                               COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                        FROM file
@@ -253,7 +276,7 @@ impl FileRepository {
                 sqlx::query_as!(
                     FileRow,
                     r#"SELECT f.id AS "id!: i64", f.stored_id, f.original_name, f.mime_type, f.file_category,
-                              f.size_bytes AS "size_bytes!: i64", f.width, f.height, f.duration_ms, f.user_id,
+                              f.size_bytes AS "size_bytes!: i64", f.width, f.height, f.duration_ms, f.user_id, f.content_hash,
                               COALESCE(f.created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                               COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                        FROM file f
@@ -274,7 +297,7 @@ impl FileRepository {
                 sqlx::query_as!(
                     FileRow,
                     r#"SELECT f.id AS "id!: i64", f.stored_id, f.original_name, f.mime_type, f.file_category,
-                              f.size_bytes AS "size_bytes!: i64", f.width, f.height, f.duration_ms, f.user_id,
+                              f.size_bytes AS "size_bytes!: i64", f.width, f.height, f.duration_ms, f.user_id, f.content_hash,
                               COALESCE(f.created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                               COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                        FROM file f
@@ -333,7 +356,7 @@ impl FileRepository {
                 sqlx::query_as!(
                     FileRow,
                     r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
                               COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                               COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                        FROM file WHERE original_name LIKE ? ESCAPE '\' AND user_id = ?
@@ -350,7 +373,7 @@ impl FileRepository {
                 sqlx::query_as!(
                     FileRow,
                     r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id,
+                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
                               COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                               COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                        FROM file WHERE original_name LIKE ? ESCAPE '\'
@@ -587,6 +610,7 @@ mod tests {
             height: Some(80),
             duration_ms: None,
             user_id,
+            content_hash: None,
         }
     }
 
@@ -606,6 +630,7 @@ mod tests {
             height: None,
             duration_ms: None,
             user_id,
+            content_hash: None,
         }
     }
 
@@ -671,6 +696,41 @@ mod tests {
         );
         assert!(repo.find_by_id(9999).await.unwrap().is_none());
         assert!(repo.find_by_stored_id("missing").await.unwrap().is_none());
+    }
+
+    // ── 内容哈希查重 ──
+
+    #[tokio::test]
+    async fn find_by_hash_is_global_and_ignores_null_hash() {
+        let repo = setup().await;
+        // 用户 7 带哈希、用户 8 同哈希（跨用户也视为同一内容）、以及一条无哈希记录
+        repo.insert(NewFile {
+            content_hash: Some("hash-aaa"),
+            ..new_file("first-owner", "image", Some(7))
+        })
+        .await
+        .unwrap();
+        repo.insert(NewFile {
+            content_hash: Some("hash-aaa"),
+            ..new_file("second-owner", "image", Some(8))
+        })
+        .await
+        .unwrap();
+        insert(&repo, "no-hash").await; // content_hash: None
+
+        // 全局命中：返回最早插入的那条（不论归属）
+        let hit = repo
+            .find_by_hash("hash-aaa")
+            .await
+            .unwrap()
+            .expect("应命中");
+        assert_eq!(hit.stored_id, "first-owner");
+        assert_eq!(hit.user_id, Some(7));
+
+        // 未知哈希不命中
+        assert!(repo.find_by_hash("hash-zzz").await.unwrap().is_none());
+        // NULL 哈希不参与匹配（存量无哈希记录不会被误当作重复）
+        assert!(repo.find_by_hash("").await.unwrap().is_none());
     }
 
     // ── 列表 / 筛选 / 分页 ──

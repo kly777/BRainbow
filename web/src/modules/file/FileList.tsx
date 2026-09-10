@@ -20,7 +20,7 @@ import {
 import { fillPath, PATHS } from "@config/paths";
 import { copyTextWithToast, formatBytes } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
-import { type Component, For, Show } from "solid-js";
+import { type Component, createEffect, For, Show } from "solid-js";
 import type { FileItem } from "./api.ts";
 import { fileUrl } from "./api.ts";
 import TagFilter from "./components/TagFilter.tsx";
@@ -168,6 +168,7 @@ const FileCardEdit: Component<{
 const FileCard: Component<{
 	item: FileItem;
 	editing: boolean;
+	highlighted: boolean;
 	editName: string;
 	onOpen: () => void;
 	onStartRename: (item: FileItem) => void;
@@ -176,7 +177,11 @@ const FileCard: Component<{
 	onEditName: (value: string) => void;
 	onCancelEdit: () => void;
 }> = (props) => (
-	<div class={styles.card}>
+	<div
+		class={styles.card}
+		classList={{ [styles.cardHighlight]: props.highlighted }}
+		data-file-id={props.item.stored_id}
+	>
 		<FilePreview item={props.item} onOpen={props.onOpen} />
 		<Show
 			when={props.editing}
@@ -205,6 +210,15 @@ const FileListPage: Component = () => {
 	const navigate = useNavigate();
 	const openDetail = (item: FileItem) =>
 		navigate(fillPath(PATHS.fileDetail, item.stored_id));
+
+	// 上传命中已有文件时：列表就绪后滚动定位到它
+	createEffect(() => {
+		const id = f.highlightId();
+		if (!id) return;
+		void f.items(); // 依赖列表数据，等渲染完成再定位
+		const el = document.querySelector(`[data-file-id="${id}"]`);
+		el?.scrollIntoView({ behavior: "smooth", block: "center" });
+	});
 
 	return (
 		<div class={styles.page}>
@@ -281,6 +295,7 @@ const FileListPage: Component = () => {
 								<FileCard
 									item={item}
 									editing={f.editingId() === item.stored_id}
+									highlighted={f.highlightId() === item.stored_id}
 									editName={f.editName()}
 									onOpen={() => openDetail(item)}
 									onStartRename={f.startRename}

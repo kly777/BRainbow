@@ -32,6 +32,12 @@
 	transform: translateY(-2px);
 }
 
+/* 上传命中已有文件时的定位高亮（4s 后由 hook 清除） */
+.card-highlight {
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+}
+
 .preview {
 	aspect-ratio: 16 / 10;
 	background: var(--t-color-bg);

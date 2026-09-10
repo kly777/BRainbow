@@ -176,6 +176,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             mime_type       TEXT    NOT NULL,
             file_category   TEXT    NOT NULL DEFAULT 'other',
             size_bytes      INTEGER NOT NULL DEFAULT 0,
+            content_hash    TEXT,
             width           INTEGER,
             height          INTEGER,
             duration_ms     INTEGER,
@@ -200,6 +201,10 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .await?;
 
     sqlx::query("CREATE INDEX IF NOT EXISTS idx_file_stored_id ON file(stored_id)")
+        .execute(pool)
+        .await?;
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_file_content_hash ON file(user_id, content_hash)")
         .execute(pool)
         .await?;
 

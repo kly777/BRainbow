@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "DELETE FROM media WHERE stored_id = ?",
+  "query": "DELETE FROM file WHERE stored_id = ?",
   "describe": {
     "columns": [],
     "parameters": {
@@ -8,5 +8,5 @@
     },
     "nullable": []
   },
-  "hash": "1bbae0f12ad4c2e4a1dd7ed05770e175e8e9dd078942a4799da84939829bede4"
+  "hash": "a0d4247d297f8fec44c64dfd5e0737dfc8e435d361ded25a0a72cfe10e63d651"
 }

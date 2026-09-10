@@ -1,13 +1,14 @@
 import { getErrorMessage, HttpError } from "@shared/api";
 import {
 	notifyError,
+	notifyInfo,
 	notifySuccess,
 	showConfirm,
 	strParam,
 	tryAsync,
 	useUrlParams,
 } from "@shared/utils";
-import { createResource, createSignal } from "solid-js";
+import { createResource, createSignal, onCleanup } from "solid-js";
 import type { FileItem } from "../api.ts";
 import { deleteFile, listFiles, updateFile, uploadFile } from "../api.ts";
 
@@ -29,7 +30,9 @@ export interface FileListApi {
 	setEditName: (value: string) => void;
 	errorMessage: () => string;
 	uploading: () => boolean;
-	handleUpload: (file: File) => Promise<void>;
+	/** 刚上传时命中的已有文件 id（列表据此定位高亮） */
+	highlightId: () => string | null;
+	handleUpload: (file: File, force?: boolean) => Promise<void>;
 	handleDelete: (storedId: string) => Promise<void>;
 	startRename: (item: FileItem) => void;
 	handleRename: () => Promise<void>;
@@ -69,14 +72,28 @@ export function useFileList(): FileListApi {
 	const [editName, setEditName] = createSignal("");
 	const [errorMessage, setErrorMessage] = createSignal("");
 	const [uploading, setUploading] = createSignal(false);
+	const [highlightId, setHighlightId] = createSignal<string | null>(null);
+	let highlightTimer: ReturnType<typeof setTimeout> | undefined;
+	onCleanup(() => clearTimeout(highlightTimer));
 
-	const handleUpload = async (file: File) => {
+	const handleUpload = async (file: File, force = false) => {
 		if (!file) return;
 		setUploading(true);
-		const result = await tryAsync(() => uploadFile(file));
+		const result = await tryAsync(() => uploadFile(file, undefined, force));
 		setUploading(false);
 		if (result.ok) {
-			notifySuccess(`「${result.value.original_name}」上传成功`);
+			if (result.value.duplicate) {
+				// 命中已有文件：告知是哪个文件，并让列表定位到它
+				notifyInfo(
+					"已存在相同文件",
+					`「${result.value.original_name}」已在文件列表中`,
+				);
+				setHighlightId(result.value.stored_id);
+				clearTimeout(highlightTimer);
+				highlightTimer = setTimeout(() => setHighlightId(null), 4000);
+			} else {
+				notifySuccess(`「${result.value.original_name}」上传成功`);
+			}
 			// 重置筛选（类别/标签/搜索）：否则停留在某个筛选条件下，
 			// 新上传的文件可能被过滤掉而"看不到"（source 变化会自动 reload）
 			params.set({ category: "", tag: "", q: "" });
@@ -157,6 +174,7 @@ export function useFileList(): FileListApi {
 		setEditName,
 		errorMessage,
 		uploading,
+		highlightId,
 		handleUpload,
 		handleDelete,
 		startRename,

@@ -1,15 +1,15 @@
 {
   "db_name": "SQLite",
-  "query": "UPDATE media SET original_name = ? WHERE stored_id = ?\n               RETURNING id AS \"id!: i64\", stored_id, original_name, media_type, mime_type, size_bytes AS \"size_bytes!: i64\", width, height, duration_ms, user_id,\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\"",
+  "query": "SELECT id, stored_id, original_name, mime_type, file_category,\n                              size_bytes AS \"size_bytes!: i64\", width, height, duration_ms, user_id, content_hash,\n                              COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                              COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n                       FROM file WHERE file_category = ?\n                       ORDER BY created_at DESC LIMIT ? OFFSET ?",
   "describe": {
     "columns": [
       {
-        "name": "id!: i64",
+        "name": "id",
         "ordinal": 0,
         "type_info": "Integer",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "id"
           }
         }
@@ -20,7 +20,7 @@
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "stored_id"
           }
         }
@@ -31,30 +31,30 @@
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "original_name"
           }
         }
       },
       {
-        "name": "media_type",
+        "name": "mime_type",
         "ordinal": 3,
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "media",
-            "name": "media_type"
+            "table": "file",
+            "name": "mime_type"
           }
         }
       },
       {
-        "name": "mime_type",
+        "name": "file_category",
         "ordinal": 4,
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "media",
-            "name": "mime_type"
+            "table": "file",
+            "name": "file_category"
           }
         }
       },
@@ -64,7 +64,7 @@
         "type_info": "Integer",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "size_bytes"
           }
         }
@@ -75,7 +75,7 @@
         "type_info": "Integer",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "width"
           }
         }
@@ -86,7 +86,7 @@
         "type_info": "Integer",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "height"
           }
         }
@@ -97,7 +97,7 @@
         "type_info": "Integer",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "duration_ms"
           }
         }
@@ -108,20 +108,37 @@
         "type_info": "Integer",
         "origin": {
           "Table": {
-            "table": "media",
+            "table": "file",
             "name": "user_id"
           }
         }
       },
       {
-        "name": "created_at!: chrono::DateTime<chrono::Utc>",
+        "name": "content_hash",
         "ordinal": 10,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "file",
+            "name": "content_hash"
+          }
+        }
+      },
+      {
+        "name": "created_at!: chrono::DateTime<chrono::Utc>",
+        "ordinal": 11,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      },
+      {
+        "name": "updated_at!: chrono::DateTime<chrono::Utc>",
+        "ordinal": 12,
         "type_info": "Datetime",
         "origin": "Expression"
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 3
     },
     "nullable": [
       false,
@@ -134,8 +151,10 @@
       true,
       true,
       true,
+      true,
+      false,
       false
     ]
   },
-  "hash": "27b5606b4b45ea3092c4afd79b4afbd230d82b1335e147daf7436dc8afb05045"
+  "hash": "2531d9e70e9db99dd161488baf1ce166184b6c1f87fd304e96a30ed97084f503"
 }

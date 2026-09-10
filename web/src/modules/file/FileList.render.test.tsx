@@ -48,9 +48,9 @@ describe("FileList 渲染", () => {
 		document.body.innerHTML = "";
 	});
 
+	// 超时放宽：全量并行运行时模块加载/环境初始化可能超过默认 5s
 	it("列表数据返回后渲染出文件卡片", async () => {
 		const { default: FileList } = await import("./FileList.tsx");
-		const { listFiles } = await import("@modules/file/api.ts");
 		const host = document.createElement("div");
 		document.body.appendChild(host);
 
@@ -58,22 +58,14 @@ describe("FileList 渲染", () => {
 			render(() => <FileList />, host);
 
 			// 等待资源与微任务完成
-			for (let i = 0; i < 20; i++) {
-				await new Promise((r) => setTimeout(r, 10));
+			for (let i = 0; i < 50; i++) {
+				await new Promise((r) => setTimeout(r, 20));
 				if (host.querySelectorAll("img").length > 0) break;
 			}
-
-			console.log(
-				"listFiles is mock:",
-				typeof listFiles === "function" && "mock" in listFiles,
-				"calls:",
-				(listFiles as ReturnType<typeof vi.fn>).mock?.calls?.length,
-			);
-			console.log("page text:", host.textContent);
 
 			expect(host.textContent).toContain("test.png");
 			expect(host.querySelectorAll("img").length).toBeGreaterThan(0);
 			dispose();
 		});
-	});
+	}, 20000);
 });

@@ -55,6 +55,7 @@ impl FileQueryService {
             height: file_row.height,
             duration_ms: file_row.duration_ms,
             user_id: file_row.user_id,
+            content_hash: file_row.content_hash,
             tags,
             meta,
             created_at: file_row.created_at,
@@ -97,6 +98,7 @@ impl FileQueryService {
             height: file_row.height,
             duration_ms: file_row.duration_ms,
             user_id: file_row.user_id,
+            content_hash: file_row.content_hash,
             tags,
             meta,
             created_at: file_row.created_at,
@@ -179,6 +181,7 @@ impl FileQueryService {
                 height: row.height,
                 duration_ms: row.duration_ms,
                 user_id: row.user_id,
+                content_hash: row.content_hash,
                 tags,
                 created_at: row.created_at,
                 updated_at: row.updated_at,
@@ -234,6 +237,7 @@ mod tests {
                 height: None,
                 duration_ms: None,
                 user_id: Some(7),
+                content_hash: None,
             })
             .await
             .unwrap();
@@ -247,6 +251,7 @@ mod tests {
             height: None,
             duration_ms: None,
             user_id: Some(7),
+            content_hash: None,
         })
         .await
         .unwrap();
@@ -260,6 +265,7 @@ mod tests {
             height: None,
             duration_ms: None,
             user_id: Some(8),
+            content_hash: None,
         })
         .await
         .unwrap();

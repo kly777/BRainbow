@@ -81,6 +81,7 @@ mod tests {
             ("file", "stored_id"),
             ("file", "file_category"),
             ("file", "updated_at"),
+            ("file", "content_hash"),
             ("file_tag", "name"),
             ("file_tag", "user_id"),
             ("file_tag_rel", "file_id"),

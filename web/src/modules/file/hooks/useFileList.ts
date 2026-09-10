@@ -17,6 +17,7 @@ import { createResource, createSignal, onCleanup } from "solid-js";
 import type { FileItem, SortOrder } from "../api.ts";
 import {
 	deleteFile,
+	fileUrl,
 	listFiles,
 	updateFile,
 	uploadFileWithProgress,
@@ -57,6 +58,16 @@ export interface FileListApi {
 	setSort: (value: SortOrder) => void;
 	view: () => FileView;
 	setView: (value: FileView) => void;
+	/** 选择模式（批量操作） */
+	selectMode: () => boolean;
+	setSelectMode: (value: boolean) => void;
+	selected: () => ReadonlySet<string>;
+	toggleSelect: (storedId: string) => void;
+	selectAll: () => void;
+	clearSelection: () => void;
+	batchDelete: () => Promise<void>;
+	batchAddTag: (tag: string) => Promise<void>;
+	batchCopyLinks: () => Promise<void>;
 	total: () => number;
 	totalPages: () => number;
 	page: () => number;
@@ -275,6 +286,123 @@ export function useFileList(): FileListApi {
 		}
 	};
 
+	// ── 多选批量操作 ──
+
+	const [selectMode, setSelectModeSignal] = createSignal(false);
+	const [selected, setSelected] = createSignal<ReadonlySet<string>>(
+		new Set<string>(),
+	);
+
+	const setSelectMode = (value: boolean) => {
+		setSelectModeSignal(value);
+		if (!value) setSelected(new Set<string>());
+	};
+	const toggleSelect = (storedId: string) =>
+		setSelected((prev) => {
+			const next = new Set<string>(prev);
+			if (next.has(storedId)) next.delete(storedId);
+			else next.add(storedId);
+			return next;
+		});
+	const selectAll = () =>
+		setSelected(
+			new Set<string>((files()?.items ?? []).map((item) => item.stored_id)),
+		);
+	const clearSelection = () => setSelected(new Set<string>());
+
+	/** 批量删除：逐个执行（尊重引用保护，被引用的跳过并汇总） */
+	const batchDelete = async () => {
+		const targets = (files()?.items ?? []).filter((item) =>
+			selected().has(item.stored_id),
+		);
+		if (targets.length === 0) return;
+		const confirmed = await showConfirm({
+			title: `删除 ${targets.length} 个文件`,
+			message:
+				"被内容引用的文件会自动跳过（需单独确认强制删除）。此操作不可撤销。",
+			variant: "danger",
+		});
+		if (!confirmed) return;
+
+		let ok = 0;
+		let skipped = 0;
+		let failed = 0;
+		for (const item of targets) {
+			const result = await tryAsync(() => deleteFile(item.stored_id, false));
+			if (result.ok) {
+				ok += 1;
+			} else if (
+				result.error instanceof HttpError &&
+				result.error.status === 409
+			) {
+				skipped += 1;
+			} else {
+				failed += 1;
+			}
+		}
+
+		const parts = [`已删除 ${ok} 个`];
+		if (skipped > 0) parts.push(`被引用跳过 ${skipped} 个`);
+		if (failed > 0) parts.push(`失败 ${failed} 个`);
+		const summary = parts.join("，");
+		if (failed > 0) notifyError("批量删除完成（有失败）", summary);
+		else notifySuccess("批量删除完成", summary);
+
+		setSelectMode(false);
+		refetch();
+	};
+
+	/** 批量加标签：读现有标签后追加（update 是全量替换语义） */
+	const batchAddTag = async (tag: string) => {
+		const name = tag.trim();
+		if (!name) return;
+		const targets = (files()?.items ?? []).filter((item) =>
+			selected().has(item.stored_id),
+		);
+		if (targets.length === 0) return;
+
+		let ok = 0;
+		let failed = 0;
+		for (const item of targets) {
+			if (item.tags.includes(name)) {
+				ok += 1; // 已有该标签视为成功
+				continue;
+			}
+			const result = await tryAsync(() =>
+				updateFile(item.stored_id, { tags: [...item.tags, name] }),
+			);
+			if (result.ok) ok += 1;
+			else failed += 1;
+		}
+
+		if (failed > 0) {
+			notifyError(
+				"批量加标签完成（有失败）",
+				`成功 ${ok} 个，失败 ${failed} 个`,
+			);
+		} else {
+			notifySuccess("批量加标签完成", `已为 ${ok} 个文件加上「${name}」`);
+		}
+		setSelectMode(false);
+		refetch();
+	};
+
+	/** 批量复制链接（逐行一条，方便贴进 Markdown 或清单） */
+	const batchCopyLinks = async () => {
+		const targets = (files()?.items ?? []).filter((item) =>
+			selected().has(item.stored_id),
+		);
+		if (targets.length === 0) return;
+		const lines = targets.map((item) =>
+			fileUrl(item.stored_id, item.original_name),
+		);
+		const result = await tryAsync(() =>
+			navigator.clipboard.writeText(lines.join("\n")),
+		);
+		if (result.ok) notifySuccess("已复制链接", `${targets.length} 条`);
+		else notifyError("复制失败", result.error);
+	};
+
 	const startRename = (item: FileItem) => {
 		setEditingId(item.stored_id);
 		setEditName(item.original_name);
@@ -311,6 +439,15 @@ export function useFileList(): FileListApi {
 		setSort,
 		view,
 		setView,
+		selectMode,
+		setSelectMode,
+		selected,
+		toggleSelect,
+		selectAll,
+		clearSelection,
+		batchDelete,
+		batchAddTag,
+		batchCopyLinks,
 		total: () => files()?.total ?? 0,
 		totalPages: () => files()?.total_pages ?? 1,
 		page,

@@ -202,6 +202,9 @@ const FileCard: Component<{
 	item: FileItem;
 	editing: boolean;
 	highlighted: boolean;
+	selectMode: boolean;
+	selected: boolean;
+	onToggleSelect: (storedId: string) => void;
 	editName: string;
 	onOpen: () => void;
 	onZoom?: () => void;
@@ -213,9 +216,22 @@ const FileCard: Component<{
 }> = (props) => (
 	<div
 		class={styles.card}
-		classList={{ [styles.cardHighlight]: props.highlighted }}
+		classList={{
+			[styles.cardHighlight]: props.highlighted,
+			[styles.cardSelected]: props.selected,
+		}}
 		data-file-id={props.item.stored_id}
 	>
+		<Show when={props.selectMode}>
+			<label class={styles.selectBox}>
+				<input
+					type="checkbox"
+					checked={props.selected}
+					onChange={() => props.onToggleSelect(props.item.stored_id)}
+					aria-label={`选择 ${props.item.original_name}`}
+				/>
+			</label>
+		</Show>
 		<FilePreview
 			item={props.item}
 			onOpen={props.onOpen}
@@ -317,6 +333,9 @@ const UploadPanel: Component<{
 const FileRow: Component<{
 	item: FileItem;
 	highlighted: boolean;
+	selectMode: boolean;
+	selected: boolean;
+	onToggleSelect: (storedId: string) => void;
 	onOpen: () => void;
 	onZoom: () => void;
 	onStartRename: (item: FileItem) => void;
@@ -324,9 +343,21 @@ const FileRow: Component<{
 }> = (props) => (
 	<div
 		class={styles.row}
-		classList={{ [styles.rowHighlight]: props.highlighted }}
+		classList={{
+			[styles.rowHighlight]: props.highlighted,
+			[styles.rowSelected]: props.selected,
+		}}
 		data-file-id={props.item.stored_id}
 	>
+		<Show when={props.selectMode}>
+			<input
+				type="checkbox"
+				class={styles.rowCheck}
+				checked={props.selected}
+				onChange={() => props.onToggleSelect(props.item.stored_id)}
+				aria-label={`选择 ${props.item.original_name}`}
+			/>
+		</Show>
 		<button
 			type="button"
 			class={styles.rowThumb}
@@ -395,6 +426,74 @@ const FileRow: Component<{
 		</div>
 	</div>
 );
+
+/** 批量操作工具栏（选择模式下固定底部） */
+const BatchBar: Component<{
+	count: number;
+	total: number;
+	onSelectAll: () => void;
+	onClear: () => void;
+	onAddTag: (tag: string) => Promise<void>;
+	onCopyLinks: () => Promise<void>;
+	onDelete: () => Promise<void>;
+}> = (props) => {
+	const [tag, setTag] = createSignal("");
+	const submitTag = async () => {
+		const name = tag().trim();
+		if (!name) return;
+		await props.onAddTag(name);
+		setTag("");
+	};
+	return (
+		<Show when={props.count > 0}>
+			<div class={styles.batchBar}>
+				<span class={styles.batchCount}>
+					已选 {props.count} / {props.total}
+				</span>
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={props.onSelectAll}
+					disabled={props.count === props.total}
+				>
+					全选本页
+				</Button>
+				<Button variant="ghost" size="sm" onClick={props.onClear}>
+					取消选择
+				</Button>
+
+				<div class={styles.batchTag}>
+					<input
+						type="text"
+						class={styles.batchTagInput}
+						placeholder="加标签…"
+						value={tag()}
+						onInput={(e) => setTag(e.currentTarget.value)}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") void submitTag();
+						}}
+						aria-label="为已选文件加标签"
+					/>
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={submitTag}
+						disabled={!tag().trim()}
+					>
+						应用
+					</Button>
+				</div>
+
+				<Button variant="secondary" size="sm" onClick={props.onCopyLinks}>
+					复制链接
+				</Button>
+				<Button variant="danger" size="sm" onClick={props.onDelete}>
+					删除
+				</Button>
+			</div>
+		</Show>
+	);
+};
 
 const FileListPage: Component = () => {
 	const f = useFileList();
@@ -530,6 +629,13 @@ const FileListPage: Component = () => {
 						</Show>
 						<TagFilter value={f.tag()} onChange={f.setTag} />
 						<Button
+							variant={f.selectMode() ? "secondary" : "ghost"}
+							size="sm"
+							onClick={() => f.setSelectMode(!f.selectMode())}
+						>
+							{f.selectMode() ? "退出选择" : "选择"}
+						</Button>
+						<Button
 							variant="primary"
 							size="sm"
 							disabled={f.uploading()}
@@ -628,6 +734,9 @@ const FileListPage: Component = () => {
 										<FileRow
 											item={item}
 											highlighted={f.highlightId() === item.stored_id}
+											selectMode={f.selectMode()}
+											selected={f.selected().has(item.stored_id)}
+											onToggleSelect={f.toggleSelect}
 											onOpen={() => openDetail(item)}
 											onZoom={() => openLightbox(item)}
 											onStartRename={f.startRename}
@@ -639,6 +748,9 @@ const FileListPage: Component = () => {
 										item={item}
 										editing={f.editingId() === item.stored_id}
 										highlighted={f.highlightId() === item.stored_id}
+										selectMode={f.selectMode()}
+										selected={f.selected().has(item.stored_id)}
+										onToggleSelect={f.toggleSelect}
 										editName={f.editName()}
 										onOpen={() => openDetail(item)}
 										onZoom={() => openLightbox(item)}
@@ -664,6 +776,16 @@ const FileListPage: Component = () => {
 			/>
 
 			<UploadPanel tasks={f.uploadTasks} onClose={f.clearUploadTasks} />
+
+			<BatchBar
+				count={f.selected().size}
+				total={f.items().length}
+				onSelectAll={f.selectAll}
+				onClear={f.clearSelection}
+				onAddTag={f.batchAddTag}
+				onCopyLinks={f.batchCopyLinks}
+				onDelete={f.batchDelete}
+			/>
 
 			<Show when={lightboxIndex() >= 0}>
 				<ImageLightbox

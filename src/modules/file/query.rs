@@ -167,17 +167,17 @@ impl FileQueryService {
             (total, rows)
         };
 
-        // 批量获取标签
+        // 批量取标签（一次查询替代逐条查询的 N+1）
+        let ids: Vec<i64> = rows.iter().map(|r| r.id).collect();
+        let mut tags_by_file = self
+            .repo
+            .get_tags_for_files(&ids)
+            .await
+            .map_err(ServiceError::Db)?;
+
         let mut summaries = Vec::with_capacity(rows.len());
         for row in rows {
-            let tags = self
-                .repo
-                .get_file_tags(row.id)
-                .await
-                .map_err(ServiceError::Db)?
-                .into_iter()
-                .map(|t| t.name)
-                .collect();
+            let tags = tags_by_file.remove(&row.id).unwrap_or_default();
 
             summaries.push(FileSummary {
                 id: row.id,

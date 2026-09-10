@@ -50,7 +50,11 @@ fn to_response(f: &super::model::File, include_meta: bool) -> FileResponse {
     FileResponse {
         id: f.id,
         stored_id: f.stored_id.clone(),
-        url: format!("/api/file/{}/data/{}", f.stored_id, f.original_name),
+        url: format!(
+            "/api/file/{}/data/{}",
+            f.stored_id,
+            crate::modules::file::service::percent_encode(&f.original_name)
+        ),
         original_name: f.original_name.clone(),
         mime_type: f.mime_type.clone(),
         file_category: f.file_category.as_str().to_string(),
@@ -74,7 +78,11 @@ fn to_summary_response(f: &super::model::FileSummary) -> FileResponse {
     FileResponse {
         id: f.id,
         stored_id: f.stored_id.clone(),
-        url: format!("/api/file/{}/data/{}", f.stored_id, f.original_name),
+        url: format!(
+            "/api/file/{}/data/{}",
+            f.stored_id,
+            crate::modules::file::service::percent_encode(&f.original_name)
+        ),
         original_name: f.original_name.clone(),
         mime_type: f.mime_type.clone(),
         file_category: f.file_category.as_str().to_string(),

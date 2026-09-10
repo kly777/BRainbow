@@ -461,6 +461,34 @@ impl FileRepository {
         Ok(tags)
     }
 
+    /// 批量取多个文件的标签名（列表页用，避免逐个文件查询的 N+1）
+    pub async fn get_tags_for_files(
+        &self,
+        file_ids: &[i64],
+    ) -> Result<HashMap<i64, Vec<String>>, sqlx::Error> {
+        if file_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+        // 动态 IN：id 列表长度不定，用 QueryBuilder（不参与 sqlx 宏静态校验）
+        let mut qb = sqlx::QueryBuilder::new(
+            "SELECT r.file_id AS file_id, t.name AS name
+             FROM file_tag_rel r JOIN file_tag t ON r.tag_id = t.id
+             WHERE r.file_id IN (",
+        );
+        let mut sep = qb.separated(", ");
+        for id in file_ids {
+            sep.push_bind(*id);
+        }
+        qb.push(")");
+
+        let rows: Vec<(i64, String)> = qb.build_query_as().fetch_all(&*self.db).await?;
+        let mut map: HashMap<i64, Vec<String>> = HashMap::new();
+        for (file_id, name) in rows {
+            map.entry(file_id).or_default().push(name);
+        }
+        Ok(map)
+    }
+
     /// 获取用户的所有标签
     pub async fn get_user_tags(&self, user_id: i64) -> Result<Vec<FileTag>, sqlx::Error> {
         let tags = sqlx::query_as!(
@@ -1001,6 +1029,28 @@ mod tests {
         assert_eq!(repo.count_by_tag("杂项", 7, None).await.unwrap(), 2);
         assert_eq!(repo.count_by_tag("杂项", 7, Some("alp")).await.unwrap(), 1);
         assert_eq!(repo.count_by_tag("杂项", 7, Some("none")).await.unwrap(), 0);
+    }
+
+    #[tokio::test]
+    async fn get_tags_for_files_maps_per_file() {
+        let repo = setup().await;
+        let f1 = insert(&repo, "f1").await;
+        let f2 = insert(&repo, "f2").await;
+        let f3 = insert(&repo, "f3").await; // 无标签
+        let t1 = repo.get_or_create_tag("a", 7).await.unwrap();
+        let t2 = repo.get_or_create_tag("b", 7).await.unwrap();
+        repo.set_file_tags(f1.id, &[t1.id, t2.id]).await.unwrap();
+        repo.set_file_tags(f2.id, &[t2.id]).await.unwrap();
+
+        let map = repo
+            .get_tags_for_files(&[f1.id, f2.id, f3.id])
+            .await
+            .unwrap();
+        assert_eq!(map.get(&f1.id).map(Vec::len), Some(2));
+        assert_eq!(map.get(&f2.id).map(Vec::len), Some(1));
+        assert!(!map.contains_key(&f3.id), "无标签文件不应出现在结果中");
+        // 空输入短路（不产生非法 SQL）
+        assert!(repo.get_tags_for_files(&[]).await.unwrap().is_empty());
     }
 
     // ── 文件名搜索 ──

@@ -89,6 +89,21 @@ fn sanitize_name(name: &str) -> String {
     }
 }
 
+/// RFC 3986 百分号编码：仅保留 unreserved 字符（`A-Za-z0-9-._~`），
+/// 其余按 UTF-8 字节编码。用于 URL 路径段与 RFC 5987 的 `filename*`。
+pub fn percent_encode(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    for b in input.as_bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                out.push(*b as char);
+            }
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
+}
+
 /// 构造 `Content-Disposition` 头值：ASCII 回退名 + RFC 5987 UTF-8 编码名。
 ///
 /// 直接写 `filename="中文.xlsx"` 属 obs-text（hyper 会放行），但接收端按
@@ -106,18 +121,10 @@ pub fn content_disposition(kind: &str, filename: &str) -> String {
         })
         .collect();
 
-    // RFC 5987 编码名：仅保留 attr-char，其余按字节 percent-encode
-    let mut encoded = String::with_capacity(filename.len());
-    for b in filename.as_bytes() {
-        match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
-                encoded.push(*b as char);
-            }
-            _ => encoded.push_str(&format!("%{b:02X}")),
-        }
-    }
-
-    format!("{kind}; filename=\"{ascii}\"; filename*=UTF-8''{encoded}")
+    format!(
+        "{kind}; filename=\"{ascii}\"; filename*=UTF-8''{}",
+        percent_encode(filename)
+    )
 }
 
 /// 判断是否需要强制下载（防 XSS）
@@ -673,6 +680,19 @@ mod tests {
         assert!(can_inline("application/pdf"));
         assert!(!can_inline("text/html"));
         assert!(!can_inline("application/msword"));
+    }
+
+    // ── percent_encode ──
+
+    #[test]
+    fn percent_encode_keeps_unreserved_and_encodes_rest() {
+        assert_eq!(percent_encode("report.pdf"), "report.pdf");
+        assert_eq!(percent_encode("a-b_c.d~e"), "a-b_c.d~e");
+        assert_eq!(percent_encode("a b.txt"), "a%20b.txt");
+        assert_eq!(percent_encode("财报.xlsx"), "%E8%B4%A2%E6%8A%A5.xlsx");
+        // 路径分隔符必须编码，否则会破坏 URL 结构
+        assert_eq!(percent_encode("a/b\\c"), "a%2Fb%5Cc");
+        assert_eq!(percent_encode("q?x=1#f"), "q%3Fx%3D1%23f");
     }
 
     // ── Content-Disposition 构造 ──

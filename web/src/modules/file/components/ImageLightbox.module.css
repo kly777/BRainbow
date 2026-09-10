@@ -1,0 +1,128 @@
+/* 图片灯箱 */
+
+.overlay {
+	position: fixed;
+	inset: 0;
+	z-index: var(--z-overlay);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-md);
+	padding: var(--space-xl);
+	background: color-mix(in srgb, var(--t-color-ink-strong) 88%, transparent);
+	box-sizing: border-box;
+}
+
+.stage {
+	flex: 1;
+	min-height: 0;
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.img-wrap {
+	max-width: 100%;
+	max-height: 100%;
+	overflow: auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.img {
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+	display: block;
+	border-radius: var(--radius-sm);
+	background: var(--t-color-white);
+}
+
+.nav {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.75rem;
+	height: 2.75rem;
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: 50%;
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	cursor: pointer;
+	transition:
+		opacity var(--t-transition-fast),
+		transform var(--t-transition-fast);
+}
+
+.nav:disabled {
+	opacity: 0.3;
+	cursor: default;
+}
+
+.nav:hover:not(:disabled) {
+	transform: translateY(-50%) scale(1.06);
+}
+
+.nav-prev {
+	left: var(--space-lg);
+}
+
+.nav-next {
+	right: var(--space-lg);
+}
+
+.bar {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	max-width: 100%;
+	padding: var(--space-xs) var(--space-md);
+	border-radius: var(--radius-full);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	box-shadow: var(--shadow-lg);
+}
+
+.name {
+	max-width: 22rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: var(--text-sm);
+	font-weight: 600;
+}
+
+.meta {
+	flex-shrink: 0;
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+@media (width <= 600px) {
+	.overlay {
+		padding: var(--space-sm);
+	}
+
+	.nav {
+		width: 2.25rem;
+		height: 2.25rem;
+	}
+
+	.nav-prev {
+		left: var(--space-xs);
+	}
+
+	.nav-next {
+		right: var(--space-xs);
+	}
+
+	.name {
+		max-width: 10rem;
+	}
+}

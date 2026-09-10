@@ -22,6 +22,7 @@ import {
 } from "solid-js";
 import type { FileItem } from "./api.ts";
 import { fileUrl } from "./api.ts";
+import ImageLightbox from "./components/ImageLightbox.tsx";
 import TagFilter from "./components/TagFilter.tsx";
 import styles from "./FileList.module.css";
 import { type UploadTask, useFileList } from "./hooks/useFileList.ts";
@@ -50,14 +51,20 @@ const ExtBadge: Component<{ name: string }> = (props) => (
 	</Show>
 );
 
-const FilePreview: Component<{ item: FileItem; onOpen: () => void }> = (
-	props,
-) => (
+const FilePreview: Component<{
+	item: FileItem;
+	onOpen: () => void;
+	/** 图片点击打开灯箱（传 null 表示不可放大，退回 onOpen） */
+	onZoom?: () => void;
+}> = (props) => (
 	<button
 		type="button"
 		class={styles.preview}
-		onClick={props.onOpen}
-		title="查看详情"
+		onClick={() => {
+			if (props.item.file_category === "image" && props.onZoom) props.onZoom();
+			else props.onOpen();
+		}}
+		title={props.item.file_category === "image" ? "放大查看" : "查看详情"}
 	>
 		<Show
 			when={props.item.file_category === "image"}
@@ -176,6 +183,7 @@ const FileCard: Component<{
 	highlighted: boolean;
 	editName: string;
 	onOpen: () => void;
+	onZoom?: () => void;
 	onStartRename: (item: FileItem) => void;
 	onDelete: (stored_id: string) => void;
 	onRename: () => void;
@@ -187,7 +195,11 @@ const FileCard: Component<{
 		classList={{ [styles.cardHighlight]: props.highlighted }}
 		data-file-id={props.item.stored_id}
 	>
-		<FilePreview item={props.item} onOpen={props.onOpen} />
+		<FilePreview
+			item={props.item}
+			onOpen={props.onOpen}
+			onZoom={props.onZoom}
+		/>
 		<Show
 			when={props.editing}
 			fallback={
@@ -289,6 +301,17 @@ const FileListPage: Component = () => {
 			state: { from: location.pathname + location.search },
 		});
 	};
+
+	// ── 图片灯箱：在当前页的图片之间左右切换 ──
+	const imageItems = () =>
+		f.items().filter((item) => item.file_category === "image");
+	const [lightboxId, setLightboxId] = createSignal<string | null>(null);
+	const lightboxIndex = () => {
+		const id = lightboxId();
+		if (!id) return -1;
+		return imageItems().findIndex((item) => item.stored_id === id);
+	};
+	const openLightbox = (item: FileItem) => setLightboxId(item.stored_id);
 
 	// ── 拖拽上传（整页投放） ──
 	const [dragging, setDragging] = createSignal(false);
@@ -459,6 +482,7 @@ const FileListPage: Component = () => {
 									highlighted={f.highlightId() === item.stored_id}
 									editName={f.editName()}
 									onOpen={() => openDetail(item)}
+									onZoom={() => openLightbox(item)}
 									onStartRename={f.startRename}
 									onDelete={f.handleDelete}
 									onRename={f.handleRename}
@@ -480,6 +504,18 @@ const FileListPage: Component = () => {
 			/>
 
 			<UploadPanel tasks={f.uploadTasks} onClose={f.clearUploadTasks} />
+
+			<Show when={lightboxIndex() >= 0}>
+				<ImageLightbox
+					items={imageItems()}
+					index={lightboxIndex()}
+					onClose={() => setLightboxId(null)}
+					onNavigate={(index) => {
+						const next = imageItems()[index];
+						if (next) setLightboxId(next.stored_id);
+					}}
+				/>
+			</Show>
 		</div>
 	);
 };

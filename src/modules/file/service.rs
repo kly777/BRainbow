@@ -24,6 +24,10 @@ const ALLOWED_MIMES: &[(&str, &str, u64)] = &[
     ("image/webp", "image", 20_971_520),
     ("image/bmp", "image", 20_971_520),
     ("image/tiff", "image", 20_971_520),
+    // SVG 是 XML 文本：infer 对带 `<?xml` 声明的文件报 text/xml（下方做等价处理）。
+    // 归 image 类别以便当图片预览/嵌入；响应仍强制 attachment（见 should_force_download），
+    // 直接访问不会渲染执行脚本，而 <img> 作为子资源加载时 SVG 内脚本本就不执行。
+    ("image/svg+xml", "image", 10_485_760),
     // 视频 500MB
     ("video/mp4", "video", 524_288_000),
     ("video/webm", "video", 524_288_000),
@@ -55,6 +59,24 @@ const ALLOWED_MIMES: &[(&str, &str, u64)] = &[
         52_428_800,
     ),
 ];
+
+/// 这些类型本就没有可靠魔数（文本 / XML / PDF / SVG 都是文本或流式结构），
+/// infer 识别不出时应信任客户端声明，而不是判成「内容与声明不符」
+fn has_no_reliable_magic(mime: &str) -> bool {
+    mime.starts_with("text/") || mime == "application/pdf" || mime == "image/svg+xml"
+}
+
+/// XML 家族 MIME（SVG 本质是 XML，两种报告都常见）
+fn is_xml_like(mime: &str) -> bool {
+    matches!(mime, "text/xml" | "application/xml")
+}
+
+/// 文件头是否确实是 SVG 根元素（用于文本类 MIME 的内容确认）
+fn looks_like_svg(head: &[u8]) -> bool {
+    String::from_utf8_lossy(head)
+        .to_lowercase()
+        .contains("<svg")
+}
 
 /// MIME 别名规范化：同一格式在不同来源（infer 魔数库 / 浏览器 / 操作系统）
 /// 会给出不同 MIME 名，白名单只收标准名，这里把常见等价别名归一。
@@ -484,25 +506,37 @@ impl FileService {
         match Self::detect_mime(head) {
             // 比较前先归一别名，避免 x-wav/wav 这类等价写法被判成"类型不符"
             Some(raw) => {
-                let real = normalize_mime(&raw).to_string();
+                let real = normalize_mime(&raw);
                 let declared = normalize_mime(client_mime);
-                if real != declared {
-                    return Err(ServiceError::InvalidInput(format!(
-                        "文件类型不符：声明 {client_mime}, 实际 {raw}"
-                    )));
+                if real == declared {
+                    return Ok(real.to_string());
                 }
-                Ok(real)
+                // SVG 等价：infer 对带 `<?xml` 声明的 SVG 报 text/xml（同一种文件
+                // 两种报告），此时用文件头确认确实是 <svg> 再放行
+                if is_xml_like(real) && declared == "image/svg+xml" && looks_like_svg(head) {
+                    return Ok("image/svg+xml".to_string());
+                }
+                if real == "image/svg+xml" && is_xml_like(declared) {
+                    return Ok("image/svg+xml".to_string());
+                }
+                Err(ServiceError::InvalidInput(format!(
+                    "文件类型不符：声明 {client_mime}, 实际 {raw}"
+                )))
             }
             None if head.is_empty() => Err(ServiceError::InvalidInput("空文件无法上传".into())),
             // 白名单内的二进制类型都有魔数，识别不出说明内容与声明不符 → 拒绝
             // （文本类与 PDF 例外：本就没有可靠魔数，信任声明）
-            None if find_allowed(client_mime).is_some()
-                && !client_mime.starts_with("text/")
-                && client_mime != "application/pdf" =>
-            {
+            None if find_allowed(client_mime).is_some() && !has_no_reliable_magic(client_mime) => {
                 Err(ServiceError::InvalidInput(format!(
                     "无法识别文件类型：声明 {client_mime}"
                 )))
+            }
+            // SVG 无魔数：infer 识别不出，但文件头能确认是 <svg> 根元素，
+            // 声明为 svg 或 XML 家族时归一为 image/svg+xml（才能当图片预览/嵌入）
+            None if looks_like_svg(head)
+                && (client_mime == "image/svg+xml" || is_xml_like(client_mime)) =>
+            {
+                Ok("image/svg+xml".to_string())
             }
             // 白名单外的未知格式（3D 模型 / 设计稿 / 压缩包 …）：接受声明，
             // 归入 other 类别；响应侧对非 image/video/audio/pdf 一律 attachment，
@@ -1217,6 +1251,64 @@ mod tests {
             .await
             .unwrap();
         assert!(row.is_none());
+    }
+
+    // ── SVG（XML 文本，两种 MIME 报告） ──
+
+    #[test]
+    fn svg_with_xml_declaration_is_accepted_as_svg() {
+        // 带 <?xml 声明的 SVG：infer 报 text/xml，浏览器声明 image/svg+xml
+        let svg = b"<?xml version=\"1.0\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\"/>";
+        assert_eq!(
+            FileService::resolve_mime(svg, "image/svg+xml").unwrap(),
+            "image/svg+xml"
+        );
+    }
+
+    #[test]
+    fn plain_xml_cannot_claim_to_be_svg() {
+        // 内容是普通 XML（无 <svg>）却声明 SVG → 内容确认失败，仍拒绝
+        let xml = b"<?xml version=\"1.0\"?>\n<rss version=\"2.0\"><channel/></rss>";
+        let err = FileService::resolve_mime(xml, "image/svg+xml").unwrap_err();
+        assert!(err.to_string().contains("文件类型不符"));
+    }
+
+    #[test]
+    fn svg_declared_as_xml_mime_is_normalized_to_svg() {
+        // 反向：infer 认出 SVG，但声明是 text/xml → 归一为更具体的 svg
+        let svg = b"<svg xmlns=\"http://www.w3.org/2000/svg\"/>";
+        assert_eq!(
+            FileService::resolve_mime(svg, "text/xml").unwrap(),
+            "image/svg+xml"
+        );
+    }
+
+    #[test]
+    fn svg_has_image_category_and_forced_download() {
+        // 归 image 类别（可当图片预览/嵌入），但响应强制 attachment（防脚本执行）
+        assert_eq!(
+            FileService::category_and_limit("image/svg+xml"),
+            ("image", 10_485_760)
+        );
+        assert!(should_force_download("image/svg+xml"));
+        assert!(
+            !(can_inline("image/svg+xml") && !should_force_download("image/svg+xml")),
+            "SVG 不得走 inline 分支"
+        );
+    }
+
+    #[tokio::test]
+    async fn upload_svg_with_declaration_succeeds() {
+        let ctx = setup_service().await;
+        let svg = b"<?xml version=\"1.0\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"><rect width=\"10\" height=\"10\"/></svg>";
+        let f = ctx
+            .svc
+            .upload(svg, "icon.svg", "image/svg+xml", Some(7), None, false)
+            .await
+            .unwrap()
+            .file;
+        assert_eq!(f.mime_type, "image/svg+xml");
+        assert_eq!(f.file_category, FileCategory::Image);
     }
 
     // ── 白名单外格式兜底（3D 模型 / 设计稿 / 压缩包 …） ──

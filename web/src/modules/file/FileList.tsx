@@ -18,11 +18,11 @@ import {
 	X,
 } from "@components/ui/icons";
 import { fillPath, PATHS } from "@config/paths";
-import type { FileItem } from "@modules/file";
-import { fileUrl } from "@modules/file";
 import { copyTextWithToast, formatBytes } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
 import { type Component, For, Show } from "solid-js";
+import type { FileItem } from "./api.ts";
+import { fileUrl } from "./api.ts";
 import TagFilter from "./components/TagFilter.tsx";
 import styles from "./FileList.module.css";
 import { useFileList } from "./hooks/useFileList.ts";

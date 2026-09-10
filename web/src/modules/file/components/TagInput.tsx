@@ -5,7 +5,6 @@
  * 全局删除与远程搜索，直接对全部标签做本地过滤。
  */
 
-import { type FileTag, listFileTags } from "@modules/file";
 import { blurClose } from "@shared/utils";
 import {
 	type Component,
@@ -15,6 +14,7 @@ import {
 	For,
 	Show,
 } from "solid-js";
+import { type FileTag, listFileTags } from "../api.ts";
 import styles from "./TagInput.module.css";
 
 interface Props {

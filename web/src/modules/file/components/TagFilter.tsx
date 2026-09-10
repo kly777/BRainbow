@@ -3,8 +3,8 @@
  * 与 bookmark 的 TagFilter 同构，但 file 标签接口无计数，省略数量显示。
  */
 
-import { type FileTag, listFileTags } from "@modules/file";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
+import { type FileTag, listFileTags } from "../api.ts";
 import styles from "./TagFilter.module.css";
 
 interface Props {

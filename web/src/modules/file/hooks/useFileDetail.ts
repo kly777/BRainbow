@@ -1,8 +1,6 @@
 // ── /file/:id 详情页数据逻辑：加载/编辑（名称+标签+元信息）/删除 ──
 
 import { PATHS } from "@config/paths";
-import type { FileItem } from "@modules/file";
-import { deleteFile, getFile, updateFile } from "@modules/file";
 import { getErrorMessage, HttpError } from "@shared/api";
 import {
 	notifyError,
@@ -12,6 +10,8 @@ import {
 } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal } from "solid-js";
+import type { FileItem } from "../api.ts";
+import { deleteFile, getFile, updateFile } from "../api.ts";
 
 export interface MetaEntry {
 	key: string;

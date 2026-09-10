@@ -9,11 +9,12 @@ import {
 	Plus,
 	X,
 } from "@components/ui/icons";
-import type { FileItem } from "@modules/file";
-import { fileUrl } from "@modules/file";
 import { copyTextWithToast, fmtLocal, formatBytes } from "@shared/utils";
 import { type Component, For, Show } from "solid-js";
+import type { FileItem } from "./api.ts";
+import { fileUrl } from "./api.ts";
 import TagInput from "./components/TagInput.tsx";
+import TextPreview from "./components/TextPreview.tsx";
 import styles from "./FileDetail.module.css";
 import { type MetaEntry, useFileDetail } from "./hooks/useFileDetail.ts";
 
@@ -48,12 +49,18 @@ const Preview: Component<{ item: FileItem }> = (props) => {
 			<Show when={props.item.mime_type === "application/pdf"}>
 				<iframe src={url()} class={styles.previewFrame} title="PDF 预览" />
 			</Show>
+			<Show when={props.item.mime_type.startsWith("text/")}>
+				<div class={styles.textPaneWrap}>
+					<TextPreview item={props.item} />
+				</div>
+			</Show>
 			<Show
 				when={
 					props.item.file_category !== "image" &&
 					props.item.file_category !== "video" &&
 					props.item.file_category !== "audio" &&
-					props.item.mime_type !== "application/pdf"
+					props.item.mime_type !== "application/pdf" &&
+					!props.item.mime_type.startsWith("text/")
 				}
 			>
 				<div class={styles.previewFallback}>

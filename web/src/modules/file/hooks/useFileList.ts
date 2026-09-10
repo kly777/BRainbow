@@ -1,5 +1,3 @@
-import type { FileItem } from "@modules/file";
-import { deleteFile, listFiles, updateFile, uploadFile } from "@modules/file";
 import { getErrorMessage, HttpError } from "@shared/api";
 import {
 	notifyError,
@@ -10,6 +8,8 @@ import {
 	useUrlParams,
 } from "@shared/utils";
 import { createResource, createSignal } from "solid-js";
+import type { FileItem } from "../api.ts";
+import { deleteFile, listFiles, updateFile, uploadFile } from "../api.ts";
 
 const VALID_CATEGORIES = ["", "image", "video", "audio", "document", "other"];
 

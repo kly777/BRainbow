@@ -19,6 +19,7 @@ import TagInput from "./components/TagInput.tsx";
 import TextPreview from "./components/TextPreview.tsx";
 import styles from "./FileDetail.module.css";
 import { type MetaEntry, useFileDetail } from "./hooks/useFileDetail.ts";
+import { categoryLabel } from "./lib/category.ts";
 
 // ── 预览（左侧主体） ──
 
@@ -91,7 +92,7 @@ const FileView: Component<{ item: FileItem }> = (props) => (
 			<div class={styles.infoItem}>
 				<span class={styles.infoLabel}>类型</span>
 				<span class={styles.infoValue}>
-					{props.item.file_category} · {props.item.mime_type}
+					{categoryLabel(props.item.file_category)} · {props.item.mime_type}
 				</span>
 			</div>
 			<div class={styles.infoItem}>

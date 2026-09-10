@@ -38,6 +38,7 @@ import TagFilter from "./components/TagFilter.tsx";
 import TagManager from "./components/TagManager.tsx";
 import styles from "./FileList.module.css";
 import { type UploadTask, useFileList } from "./hooks/useFileList.ts";
+import { categoryLabel } from "./lib/category.ts";
 import { fileExt } from "./lib/filename.ts";
 
 /** 列表滚动位置的 sessionStorage 键（从详情返回时恢复） */
@@ -119,7 +120,8 @@ const FileCardView: Component<{
 				</button>
 			</Tooltip>
 			<p class={styles.meta}>
-				{props.item.file_category} · {formatBytes(props.item.size_bytes)}
+				{categoryLabel(props.item.file_category)} ·
+				{formatBytes(props.item.size_bytes)}
 			</p>
 			<Show when={props.item.tags.length > 0}>
 				<div class={styles.tags}>
@@ -177,7 +179,8 @@ const FileCardEdit: Component<{
 				aria-label="文件名称"
 			/>
 			<p class={styles.meta}>
-				{props.item.file_category} · {formatBytes(props.item.size_bytes)}
+				{categoryLabel(props.item.file_category)} ·
+				{formatBytes(props.item.size_bytes)}
 			</p>
 			{/* 编辑态保留标签行：与展示态内容结构一致，避免切换时卡片高度跳变 */}
 			<Show when={props.item.tags.length > 0}>
@@ -396,7 +399,7 @@ const FileRow: Component<{
 				</button>
 			</Tooltip>
 			<div class={styles.rowMeta}>
-				<span>{props.item.file_category}</span>
+				<span>{categoryLabel(props.item.file_category)}</span>
 				<span>·</span>
 				<span>{formatBytes(props.item.size_bytes)}</span>
 				<span>·</span>

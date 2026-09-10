@@ -15,6 +15,7 @@ import {
 } from "solid-js";
 import type { FileItem } from "../api.ts";
 import { fileUrl, listFiles } from "../api.ts";
+import { categoryLabel } from "../lib/category.ts";
 import styles from "./FilePickerModal.module.css";
 
 export interface PickedFile {
@@ -99,7 +100,8 @@ const FilePickerModal: Component<Props> = (props) => {
 										<span class={styles.info}>
 											<span class={styles.name}>{item.original_name}</span>
 											<span class={styles.meta}>
-												{item.file_category} · {formatBytes(item.size_bytes)}
+												{categoryLabel(item.file_category)} ·
+												{formatBytes(item.size_bytes)}
 											</span>
 										</span>
 									</button>

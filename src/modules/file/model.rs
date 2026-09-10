@@ -165,3 +165,23 @@ pub struct FileTag {
     pub name: String,
     pub user_id: i64,
 }
+
+/// 标签 + 关联文件数（标签管理页用）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileTagWithCount {
+    pub id: i64,
+    pub name: String,
+    pub count: i64,
+}
+
+/// 标签重命名请求
+#[derive(Debug, Deserialize)]
+pub struct RenameTagRequest {
+    pub name: String,
+}
+
+/// 标签合并请求（把 from 合并进 to）
+#[derive(Debug, Deserialize)]
+pub struct MergeTagRequest {
+    pub target_id: i64,
+}

@@ -6,7 +6,7 @@ pub mod service;
 
 use axum::Router;
 use axum::extract::{DefaultBodyLimit, FromRef};
-use axum::routing::{get, post};
+use axum::routing::{get, patch, post};
 
 use query::FileQueryService;
 use service::FileService;
@@ -25,6 +25,11 @@ where
         )
         .route("/", get(handler::list_handler))
         .route("/tags", get(handler::tags_handler))
+        .route(
+            "/tags/{tag_id}",
+            patch(handler::rename_tag_handler).delete(handler::delete_tag_handler),
+        )
+        .route("/tags/{tag_id}/merge", post(handler::merge_tag_handler))
         .route(
             "/{stored_id}",
             get(handler::get_handler)

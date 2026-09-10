@@ -31,6 +31,7 @@ import type { FileItem, SortOrder } from "./api.ts";
 import { fileUrl } from "./api.ts";
 import ImageLightbox from "./components/ImageLightbox.tsx";
 import TagFilter from "./components/TagFilter.tsx";
+import TagManager from "./components/TagManager.tsx";
 import styles from "./FileList.module.css";
 import {
 	type FileView,
@@ -509,6 +510,7 @@ const FileListPage: Component = () => {
 	const imageItems = () =>
 		f.items().filter((item) => item.file_category === "image");
 	const [lightboxId, setLightboxId] = createSignal<string | null>(null);
+	const [tagManagerOpen, setTagManagerOpen] = createSignal(false);
 	const lightboxIndex = () => {
 		const id = lightboxId();
 		if (!id) return -1;
@@ -628,6 +630,13 @@ const FileListPage: Component = () => {
 							</Button>
 						</Show>
 						<TagFilter value={f.tag()} onChange={f.setTag} />
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => setTagManagerOpen(true)}
+						>
+							标签管理
+						</Button>
 						<Button
 							variant={f.selectMode() ? "secondary" : "ghost"}
 							size="sm"
@@ -776,6 +785,12 @@ const FileListPage: Component = () => {
 			/>
 
 			<UploadPanel tasks={f.uploadTasks} onClose={f.clearUploadTasks} />
+
+			<TagManager
+				isOpen={tagManagerOpen()}
+				onClose={() => setTagManagerOpen(false)}
+				onChanged={f.refetch}
+			/>
 
 			<BatchBar
 				count={f.selected().size}

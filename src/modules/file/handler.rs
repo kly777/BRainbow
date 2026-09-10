@@ -360,23 +360,69 @@ pub async fn delete_handler(
 struct TagResponse {
     id: i64,
     name: String,
+    count: i64,
 }
 
 pub async fn tags_handler(
     State(query): State<FileQueryService>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match query.get_user_tags(claims.sub as i64).await {
+    match query.get_user_tags_with_count(claims.sub as i64).await {
         Ok(tags) => {
             let items: Vec<TagResponse> = tags
                 .into_iter()
                 .map(|t| TagResponse {
                     id: t.id,
                     name: t.name,
+                    count: t.count,
                 })
                 .collect();
             Json(items).into_response()
         }
+        Err(e) => e.into_response(),
+    }
+}
+
+/// 重命名标签
+pub async fn rename_tag_handler(
+    State(service): State<FileService>,
+    Extension(claims): Extension<Claims>,
+    Path(tag_id): Path<i64>,
+    Json(payload): Json<super::model::RenameTagRequest>,
+) -> impl IntoResponse {
+    match service
+        .rename_tag(tag_id, &payload.name, claims.sub as i64)
+        .await
+    {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => e.into_response(),
+    }
+}
+
+/// 删除标签（仅解除关联，文件保留）
+pub async fn delete_tag_handler(
+    State(service): State<FileService>,
+    Extension(claims): Extension<Claims>,
+    Path(tag_id): Path<i64>,
+) -> impl IntoResponse {
+    match service.delete_tag(tag_id, claims.sub as i64).await {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => e.into_response(),
+    }
+}
+
+/// 合并标签：把路径上的标签合并进请求体指定的目标标签
+pub async fn merge_tag_handler(
+    State(service): State<FileService>,
+    Extension(claims): Extension<Claims>,
+    Path(tag_id): Path<i64>,
+    Json(payload): Json<super::model::MergeTagRequest>,
+) -> impl IntoResponse {
+    match service
+        .merge_tags(tag_id, payload.target_id, claims.sub as i64)
+        .await
+    {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => e.into_response(),
     }
 }

@@ -1,0 +1,89 @@
+/* 标签管理弹窗 */
+
+.wrap {
+	min-width: min(28rem, 80vw);
+	max-height: 60vh;
+	overflow-y: auto;
+}
+
+.empty {
+	margin: 0;
+	padding: var(--space-lg) 0;
+	text-align: center;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-sm);
+}
+
+.list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
+}
+
+.item {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	flex-wrap: wrap;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+}
+
+.name {
+	flex: 1;
+	min-width: 6rem;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink);
+	overflow-wrap: anywhere;
+}
+
+.count {
+	flex-shrink: 0;
+	min-width: 2rem;
+	text-align: right;
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+.actions {
+	display: flex;
+	gap: var(--space-xs);
+	flex-shrink: 0;
+}
+
+.input {
+	flex: 1;
+	min-width: 8rem;
+	padding: var(--space-xs) var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	font-size: var(--text-sm);
+}
+
+.input:focus {
+	outline: none;
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+}
+
+.merge-row {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+	flex-wrap: wrap;
+	padding-top: var(--space-xs);
+	border-top: 1px dashed var(--t-color-border);
+}
+
+.merge-label {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}

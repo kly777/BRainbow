@@ -213,6 +213,17 @@ impl FileQueryService {
             .await
             .map_err(ServiceError::Db)
     }
+
+    /// 标签管理列表：标签 + 关联文件数
+    pub async fn get_user_tags_with_count(
+        &self,
+        user_id: i64,
+    ) -> Result<Vec<super::model::FileTagWithCount>, ServiceError> {
+        self.repo
+            .get_user_tags_with_count(user_id)
+            .await
+            .map_err(ServiceError::Db)
+    }
 }
 
 #[cfg(test)]

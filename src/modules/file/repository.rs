@@ -2,7 +2,7 @@ use sqlx::{FromRow, QueryBuilder, SqlitePool};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::model::{FileTag, NewFile, SortOrder};
+use super::model::{FileTag, FileTagWithCount, NewFile, SortOrder};
 use crate::shared::db_query::like_contains;
 
 #[derive(Debug, FromRow)]
@@ -424,6 +424,80 @@ impl FileRepository {
         .await?;
 
         Ok(tags)
+    }
+
+    /// 获取用户的所有标签及关联文件数（标签管理用）
+    pub async fn get_user_tags_with_count(
+        &self,
+        user_id: i64,
+    ) -> Result<Vec<FileTagWithCount>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            FileTagWithCount,
+            r#"SELECT t.id AS "id!: i64", t.name,
+                      COUNT(r.file_id) AS "count!: i64"
+               FROM file_tag t
+               LEFT JOIN file_tag_rel r ON r.tag_id = t.id
+               WHERE t.user_id = ?
+               GROUP BY t.id, t.name
+               ORDER BY t.name"#,
+            user_id
+        )
+        .fetch_all(&*self.db)
+        .await?;
+
+        Ok(rows)
+    }
+
+    /// 标签是否属于该用户（越权保护）
+    pub async fn tag_owned_by(&self, tag_id: i64, user_id: i64) -> Result<bool, sqlx::Error> {
+        let found: Option<i64> =
+            sqlx::query_scalar("SELECT id FROM file_tag WHERE id = ? AND user_id = ?")
+                .bind(tag_id)
+                .bind(user_id)
+                .fetch_optional(&*self.db)
+                .await?;
+        Ok(found.is_some())
+    }
+
+    /// 重命名标签（同用户下名称唯一，冲突由唯一约束兜底）
+    pub async fn rename_tag(&self, tag_id: i64, name: &str) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE file_tag SET name = ? WHERE id = ?")
+            .bind(name)
+            .bind(tag_id)
+            .execute(&*self.db)
+            .await?;
+        Ok(())
+    }
+
+    /// 删除标签（关联记录级联删除，文件本身不受影响）
+    pub async fn delete_tag(&self, tag_id: i64) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM file_tag WHERE id = ?")
+            .bind(tag_id)
+            .execute(&*self.db)
+            .await?;
+        Ok(())
+    }
+
+    /// 合并标签：把 from_tag 的关联移到 to_tag 后删除 from_tag（事务内完成）
+    pub async fn merge_tags(&self, from_tag: i64, to_tag: i64) -> Result<(), sqlx::Error> {
+        let mut tx = self.db.begin().await?;
+
+        // 目标标签已有该文件的关联则跳过（避免主键冲突）
+        sqlx::query(
+            "INSERT OR IGNORE INTO file_tag_rel (file_id, tag_id)
+             SELECT file_id, ? FROM file_tag_rel WHERE tag_id = ?",
+        )
+        .bind(to_tag)
+        .bind(from_tag)
+        .execute(&mut *tx)
+        .await?;
+
+        sqlx::query("DELETE FROM file_tag WHERE id = ?")
+            .bind(from_tag)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await
     }
 
     // ── 元信息操作 ──
@@ -955,6 +1029,91 @@ mod tests {
         // 清空：传空数组
         repo.set_file_tags(created.id, &[]).await.unwrap();
         assert!(repo.get_file_tags(created.id).await.unwrap().is_empty());
+    }
+
+    // ── 标签管理（重命名/删除/合并） ──
+
+    #[tokio::test]
+    async fn get_user_tags_with_count_includes_zero() {
+        let repo = setup().await;
+        let f1 = insert(&repo, "f1").await;
+        let used = repo.get_or_create_tag("在用", 7).await.unwrap();
+        repo.get_or_create_tag("未用", 7).await.unwrap();
+        repo.set_file_tags(f1.id, &[used.id]).await.unwrap();
+
+        let tags = repo.get_user_tags_with_count(7).await.unwrap();
+        assert_eq!(tags.len(), 2);
+        let by_name = |n: &str| tags.iter().find(|t| t.name == n).unwrap().count;
+        assert_eq!(by_name("在用"), 1);
+        assert_eq!(by_name("未用"), 0, "无关联文件的标签也应出现");
+    }
+
+    #[tokio::test]
+    async fn rename_and_delete_tag() {
+        let repo = setup().await;
+        let f1 = insert(&repo, "f1").await;
+        let tag = repo.get_or_create_tag("旧名", 7).await.unwrap();
+        repo.set_file_tags(f1.id, &[tag.id]).await.unwrap();
+
+        repo.rename_tag(tag.id, "新名").await.unwrap();
+        let names: Vec<String> = repo
+            .get_file_tags(f1.id)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|t| t.name)
+            .collect();
+        assert_eq!(names, vec!["新名"]);
+
+        // 重名冲突由唯一约束拒绝
+        repo.get_or_create_tag("另一个", 7).await.unwrap();
+        let other = repo.get_user_tags(7).await.unwrap();
+        let another = other.iter().find(|t| t.name == "另一个").unwrap();
+        let err = repo.rename_tag(another.id, "新名").await;
+        assert!(err.is_err(), "同用户下重名应被唯一约束拒绝");
+
+        // 删除标签：关联解除，文件保留
+        repo.delete_tag(tag.id).await.unwrap();
+        assert!(repo.get_file_tags(f1.id).await.unwrap().is_empty());
+        assert!(repo.find_by_stored_id("f1").await.unwrap().is_some());
+    }
+
+    #[tokio::test]
+    async fn merge_tags_moves_relations_and_removes_source() {
+        let repo = setup().await;
+        let f1 = insert(&repo, "f1").await;
+        let f2 = insert(&repo, "f2").await;
+        let from = repo.get_or_create_tag("来源", 7).await.unwrap();
+        let to = repo.get_or_create_tag("目标", 7).await.unwrap();
+        repo.set_file_tags(f1.id, &[from.id]).await.unwrap();
+        repo.set_file_tags(f2.id, &[to.id]).await.unwrap();
+
+        repo.merge_tags(from.id, to.id).await.unwrap();
+
+        // f1 现在带上目标标签；来源标签已删除
+        let f1_tags: Vec<String> = repo
+            .get_file_tags(f1.id)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|t| t.name)
+            .collect();
+        assert_eq!(f1_tags, vec!["目标"]);
+        assert_eq!(repo.get_user_tags(7).await.unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn merge_tags_skips_duplicate_relations() {
+        let repo = setup().await;
+        let f1 = insert(&repo, "f1").await;
+        let from = repo.get_or_create_tag("a", 7).await.unwrap();
+        let to = repo.get_or_create_tag("b", 7).await.unwrap();
+        // 同一文件同时带两个标签 → 合并后不应出现重复关联（主键冲突）
+        repo.set_file_tags(f1.id, &[from.id, to.id]).await.unwrap();
+
+        repo.merge_tags(from.id, to.id).await.unwrap();
+
+        assert_eq!(repo.get_file_tags(f1.id).await.unwrap().len(), 1);
     }
 
     // ── 元信息 ──

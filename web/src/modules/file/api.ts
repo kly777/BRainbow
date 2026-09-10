@@ -10,6 +10,7 @@ import {
 	NetworkError,
 	type PaginatedResponse,
 	patch,
+	request,
 } from "@shared/api";
 
 // ── 类型 ──
@@ -52,6 +53,8 @@ export interface UploadResult extends FileItem {
 export interface FileTag {
 	id: number;
 	name: string;
+	/** 关联文件数（标签管理用） */
+	count: number;
 }
 
 export interface UpdateFileRequest {
@@ -195,9 +198,26 @@ export const deleteFile = (stored_id: string, force = false): Promise<void> =>
 		{ entity: `/file/${stored_id}` },
 	);
 
-/** 获取用户的所有标签 */
+/** 获取用户的所有标签（含关联文件数） */
 export const listFileTags = (): Promise<FileTag[]> =>
 	cachedRequest("/file/tags");
+
+/** 重命名标签 */
+export const renameFileTag = (id: number, name: string): Promise<void> =>
+	domains.files.invalidate(patch<void>(`/file/tags/${id}`, { name }));
+
+/** 删除标签（仅解除与文件的关联，文件保留） */
+export const deleteFileTag = (id: number): Promise<void> =>
+	domains.files.invalidate(del<void>(`/file/tags/${id}`));
+
+/** 合并标签：把 fromId 合并进 targetId */
+export const mergeFileTag = (fromId: number, targetId: number): Promise<void> =>
+	domains.files.invalidate(
+		request<void>(`/file/tags/${fromId}/merge`, {
+			method: "POST",
+			body: JSON.stringify({ target_id: targetId }),
+		}),
+	);
 
 /** 获取文件下载/预览 URL */
 export const fileUrl = (stored_id: string, filename: string): string =>

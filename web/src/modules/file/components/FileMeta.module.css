@@ -1,7 +1,8 @@
 /* 卡片内的文件信息区（浅底，靠颜色层次区分主次） */
 
+/* 与上方文件名、下方时间的行距保持一致（均为 --space-xs） */
 .line {
-	margin: 0;
+	margin: 0 0 var(--space-xs) 0;
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	line-height: 1.4;

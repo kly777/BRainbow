@@ -208,6 +208,10 @@
 	grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
 	gap: var(--space-lg);
 	margin-top: var(--space-lg);
+
+	/* 卡片按自身内容高度排布：默认 stretch 会让同行卡片随最高的那张（带标签的）
+	   一起变高，多出的空间全落在信息区底部，看着像大片空白 */
+	align-items: start;
 }
 
 .card {
@@ -281,10 +285,10 @@
 	padding: var(--space-md);
 	flex: 1;
 
-	/* 固定信息区高度：重命名态（输入框 1.75rem）比展示态（文件名行）略高，
-	   若随内容伸缩会改变网格行高、把同行卡片一起拉伸；此处按最高内容留足
-	   —— 内容 ~4.3rem + 上下 padding 1.5rem */
-	min-height: 5.8rem;
+	/* 高度完全由内容决定（不做 min-height 兜底）：
+	   文件名行 1.5rem + 间距 .25 + 信息行 1.225 + 间距 .25 + 时间行 1.05 ≈ 4.28rem，
+	   加 padding 1.5rem ≈ 5.78rem。重命名态的输入框同为 1.5rem，
+	   所以展示态与编辑态自身等高，切换不跳高度 */
 }
 
 /* Tooltip 宿主：撑满卡片宽度，文件名才能保持单行截断 */
@@ -309,8 +313,9 @@
 	text-overflow: ellipsis;
 	white-space: nowrap;
 
-	/* 全局行高 1.15 不足以容纳中文字形，而这里 overflow:hidden 会裁掉下沿 */
-	line-height: 1.4;
+	/* 行高固定 1.5rem：既容得下中文字形（全局 1.15 会裁掉下沿），
+	   又与重命名态的输入框等高，切换时不跳高度 */
+	line-height: 1.5rem;
 }
 
 .name-btn:hover {
@@ -344,7 +349,7 @@
 
 .edit-input {
 	width: 100%;
-	height: 1.75rem;
+	height: 1.5rem;
 	margin-bottom: var(--space-xs);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);

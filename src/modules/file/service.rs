@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use sqlx::SqlitePool;
-use tracing::warn;
+use tokio::io::AsyncReadExt;
+use tracing::{info, warn};
 
 use super::model::{File, FileCategory, NewFile, UpdateFileRequest};
 use super::repository::FileRepository;
@@ -144,6 +145,15 @@ pub fn content_disposition(kind: &str, filename: &str) -> String {
     )
 }
 
+/// 文件名是否为 stored_id 格式（nanoid 默认字母表，12 位）：
+/// 孤儿回收据此避免误删手工放进上传目录的文件。
+fn is_stored_id(name: &str) -> bool {
+    name.len() == 12
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
 /// 判断是否需要强制下载（防 XSS）
 fn should_force_download(mime: &str) -> bool {
     matches!(
@@ -193,6 +203,85 @@ impl FileService {
         // 清理孤儿临时文件
         svc.cleanup_temp_files();
         svc
+    }
+
+    /// 启动维护（后台执行，不阻塞启动）：
+    /// 1. 回填存量文件的 content_hash（v16 之前的记录没有哈希，不参与去重）
+    /// 2. 回收孤儿文件（磁盘存在、DB 已无记录）
+    pub async fn run_startup_maintenance(&self) {
+        self.backfill_content_hashes().await;
+        self.cleanup_orphan_files().await;
+    }
+
+    /// 回填存量文件的 content_hash。
+    ///
+    /// 冲突处理：两个存量文件内容相同时，唯一索引会拒绝第二条 → 保持 NULL
+    /// （它退出去重集合，但数据与文件都保留）。
+    pub async fn backfill_content_hashes(&self) {
+        let rows = match self.repo.find_without_hash().await {
+            Ok(rows) => rows,
+            Err(e) => {
+                warn!("读取待回填文件失败: {e}");
+                return;
+            }
+        };
+        let mut filled = 0usize;
+        let mut skipped = 0usize;
+        for (id, stored_id) in rows {
+            let path = format!("{}/{}", self.upload_dir, stored_id);
+            let Some(hash) = Self::hash_file(&path).await else {
+                continue; // 文件缺失/不可读：跳过，不动数据库
+            };
+            match self.repo.set_content_hash(id, &hash).await {
+                Ok(()) => filled += 1,
+                Err(_) => skipped += 1, // 唯一索引冲突：已有同内容记录
+            }
+        }
+        if filled > 0 || skipped > 0 {
+            info!("文件内容哈希回填：成功 {filled} 条，跳过 {skipped} 条（内容重复）");
+        }
+    }
+
+    /// 流式计算文件 SHA-256（大文件不全量进内存）
+    async fn hash_file(path: &str) -> Option<String> {
+        use sha2::{Digest, Sha256};
+
+        let mut file = tokio::fs::File::open(path).await.ok()?;
+        let mut hasher = Sha256::new();
+        let mut buf = vec![0u8; 64 * 1024];
+        loop {
+            let n = file.read(&mut buf).await.ok()?;
+            if n == 0 {
+                break;
+            }
+            hasher.update(buf.get(..n)?);
+        }
+        Some(hex::encode(hasher.finalize()))
+    }
+
+    /// 回收孤儿文件：仅处理文件名符合 stored_id 格式、且 DB 已无对应记录的条目，
+    /// 避免误删手工放进目录的文件。
+    pub async fn cleanup_orphan_files(&self) {
+        let Ok(mut entries) = tokio::fs::read_dir(&self.upload_dir).await else {
+            return;
+        };
+        let mut removed = 0usize;
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if !is_stored_id(&name) {
+                continue; // 临时文件/其他文件不在此处理
+            }
+            let exists = matches!(self.repo.find_by_stored_id(&name).await, Ok(Some(_)));
+            if exists {
+                continue;
+            }
+            if tokio::fs::remove_file(entry.path()).await.is_ok() {
+                removed += 1;
+            }
+        }
+        if removed > 0 {
+            info!("清理孤儿文件 {removed} 个（DB 无对应记录）");
+        }
     }
 
     /// 清理临时文件
@@ -1210,6 +1299,127 @@ mod tests {
         assert!(
             !std::path::Path::new(&tmp).exists(),
             "命中重复时临时文件应被丢弃"
+        );
+    }
+
+    // ── 启动维护：哈希回填 + 孤儿回收 ──
+
+    #[test]
+    fn is_stored_id_accepts_nanoid_and_rejects_others() {
+        assert!(is_stored_id("aB3_-xyz0123"));
+        assert!(!is_stored_id("short"));
+        assert!(!is_stored_id("has space 12"));
+        assert!(!is_stored_id("tmp_abc.tmp"));
+        assert!(!is_stored_id("aaaaaaaaaaaaa")); // 13 位
+        assert!(!is_stored_id("中文文件名啊啊啊"));
+    }
+
+    #[tokio::test]
+    async fn backfill_fills_hash_for_legacy_records() {
+        let ctx = setup_service().await;
+        // 模拟存量记录：直接插库（无 hash）+ 磁盘放入对应文件
+        let row = ctx
+            .svc
+            .repo
+            .insert(crate::modules::file::model::NewFile {
+                stored_id: "legacy000001",
+                original_name: "old.png",
+                mime_type: "image/png",
+                file_category: "image",
+                size_bytes: PNG_1X1.len() as i64,
+                width: None,
+                height: None,
+                duration_ms: None,
+                user_id: Some(7),
+                content_hash: None,
+            })
+            .await
+            .unwrap();
+        std::fs::write(format!("{}/legacy000001", ctx.dir.0), PNG_1X1).unwrap();
+
+        ctx.svc.backfill_content_hashes().await;
+
+        let stored = ctx
+            .svc
+            .repo
+            .find_by_stored_id("legacy000001")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            stored.content_hash.as_deref(),
+            Some(content_hash(PNG_1X1).as_str())
+        );
+        assert_eq!(stored.id, row.id);
+    }
+
+    #[tokio::test]
+    async fn backfill_skips_conflicting_duplicate_content() {
+        let ctx = setup_service().await;
+        // 先有一条已带哈希的记录
+        ctx.svc
+            .upload(PNG_1X1, "new.png", "image/png", Some(7), None, false)
+            .await
+            .unwrap();
+        // 存量记录：相同内容但无哈希 → 回填会撞唯一索引，应保持 NULL 而不是崩
+        ctx.svc
+            .repo
+            .insert(crate::modules::file::model::NewFile {
+                stored_id: "legacy000002",
+                original_name: "dup.png",
+                mime_type: "image/png",
+                file_category: "image",
+                size_bytes: PNG_1X1.len() as i64,
+                width: None,
+                height: None,
+                duration_ms: None,
+                user_id: Some(7),
+                content_hash: None,
+            })
+            .await
+            .unwrap();
+        std::fs::write(format!("{}/legacy000002", ctx.dir.0), PNG_1X1).unwrap();
+
+        ctx.svc.backfill_content_hashes().await;
+
+        let stored = ctx
+            .svc
+            .repo
+            .find_by_stored_id("legacy000002")
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(stored.content_hash.is_none(), "撞唯一索引应保持 NULL");
+        // 文件未被误删
+        assert!(std::path::Path::new(&format!("{}/legacy000002", ctx.dir.0)).exists());
+    }
+
+    #[tokio::test]
+    async fn cleanup_removes_only_orphans_matching_stored_id() {
+        let ctx = setup_service().await;
+        let kept = ctx
+            .svc
+            .upload(PNG_1X1, "kept.png", "image/png", Some(7), None, false)
+            .await
+            .unwrap();
+        // 孤儿：格式合法但 DB 无记录
+        std::fs::write(format!("{}/orphanAAAAAA", ctx.dir.0), b"orphan").unwrap();
+        // 非 stored_id 格式：不应被清理
+        std::fs::write(format!("{}/manual-file.txt", ctx.dir.0), b"manual").unwrap();
+
+        ctx.svc.cleanup_orphan_files().await;
+
+        assert!(
+            !std::path::Path::new(&format!("{}/orphanAAAAAA", ctx.dir.0)).exists(),
+            "孤儿文件应被回收"
+        );
+        assert!(
+            std::path::Path::new(&format!("{}/{}", ctx.dir.0, kept.file.stored_id)).exists(),
+            "有记录的文件不应被回收"
+        );
+        assert!(
+            std::path::Path::new(&format!("{}/manual-file.txt", ctx.dir.0)).exists(),
+            "不符合 stored_id 格式的文件不应被回收"
         );
     }
 

@@ -116,6 +116,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 初始化启动时间（用于计算运行时长）
     crate::modules::admin::handler::init_start_time();
 
+    // 文件模块后台维护：回填存量内容哈希 + 回收孤儿文件（不阻塞启动）
+    tokio::spawn({
+        let file_service = state.file.service.clone();
+        async move { file_service.run_startup_maintenance().await }
+    });
+
     // 创建路由
     state.init_runtime_cache().await;
 

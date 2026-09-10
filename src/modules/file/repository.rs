@@ -115,6 +115,24 @@ impl FileRepository {
         Ok(row)
     }
 
+    /// 列出缺 content_hash 的记录（id + stored_id），供启动回填使用
+    pub async fn find_without_hash(&self) -> Result<Vec<(i64, String)>, sqlx::Error> {
+        let rows = sqlx::query!(
+            "SELECT id AS \"id!: i64\", stored_id FROM file WHERE content_hash IS NULL ORDER BY id"
+        )
+        .fetch_all(&*self.db)
+        .await?;
+        Ok(rows.into_iter().map(|r| (r.id, r.stored_id)).collect())
+    }
+
+    /// 写入 content_hash（回填用；撞唯一索引时报错由调用方跳过）
+    pub async fn set_content_hash(&self, id: i64, hash: &str) -> Result<(), sqlx::Error> {
+        sqlx::query!("UPDATE file SET content_hash = ? WHERE id = ?", hash, id)
+            .execute(&*self.db)
+            .await?;
+        Ok(())
+    }
+
     /// 更新文件名
     pub async fn update_name(
         &self,

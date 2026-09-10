@@ -9,6 +9,8 @@ interface Props<T> {
 	error?: unknown;
 	onRetry?: () => void;
 	emptyMessage?: string;
+	/** 自定义空态（传了就不显示 emptyMessage 文案） */
+	emptySlot?: JSX.Element;
 	/**
 	 * children 接收 accessor 而非快照数组：子树只在四态切换时挂载一次，
 	 * 数据刷新由调用方内部的表达式（如 <For each={data()}>）做行级 diff，
@@ -61,7 +63,9 @@ export function AsyncView<T>(props: Props<T>) {
 				<Show
 					when={(props.data?.length ?? 0) > 0}
 					fallback={
-						<div class={styles.state}>{props.emptyMessage || "暂无数据"}</div>
+						props.emptySlot ?? (
+							<div class={styles.state}>{props.emptyMessage || "暂无数据"}</div>
+						)
 					}
 				>
 					{/* untrack：children 只在此分支挂载时求值一次；

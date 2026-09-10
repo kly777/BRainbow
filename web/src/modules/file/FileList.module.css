@@ -611,3 +611,53 @@
 	border-color: var(--t-color-accent);
 	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
+
+/* ── 移动端收尾 ── */
+
+@media (width <= 600px) {
+	.page {
+		padding: var(--space-md) var(--space-sm);
+	}
+
+	.filter-row {
+		gap: var(--space-sm);
+	}
+
+	.sort-label {
+		margin-left: 0;
+	}
+
+	.upload-panel {
+		right: var(--space-sm);
+		bottom: var(--space-sm);
+		left: var(--space-sm);
+		width: auto;
+		max-height: 40vh;
+	}
+
+	.batch-bar {
+		left: var(--space-sm);
+		right: var(--space-sm);
+		bottom: var(--space-sm);
+		transform: none;
+		max-width: none;
+		border-radius: var(--radius-lg);
+		justify-content: center;
+	}
+
+	.batch-tag-input {
+		width: 100%;
+	}
+
+	.row-actions button {
+		flex: 1;
+	}
+}
+
+/* 触屏设备不显示右键菜单（无右键操作） */
+@media (hover: none) {
+	.row,
+	.card {
+		cursor: default;
+	}
+}

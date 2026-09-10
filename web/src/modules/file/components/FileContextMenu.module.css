@@ -1,0 +1,45 @@
+/* 右键菜单 */
+
+.menu {
+	position: fixed;
+	z-index: var(--z-palette);
+	min-width: 11rem;
+	padding: var(--space-2xs) 0;
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-lg);
+}
+
+.item {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+	width: 100%;
+	padding: var(--space-xs) var(--space-md);
+	border: none;
+	background: transparent;
+	color: var(--t-color-ink);
+	font-size: var(--text-sm);
+	text-align: left;
+	cursor: pointer;
+	transition: background var(--t-transition-fast);
+}
+
+.item:hover {
+	background: var(--t-color-accent-soft);
+}
+
+.danger {
+	color: var(--t-color-danger);
+}
+
+.danger:hover {
+	background: var(--t-color-danger-subtle);
+}
+
+.divider {
+	height: 1px;
+	margin: var(--space-2xs) 0;
+	background: var(--t-color-border);
+}

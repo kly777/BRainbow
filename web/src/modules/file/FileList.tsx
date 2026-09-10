@@ -29,6 +29,8 @@ import {
 } from "solid-js";
 import type { FileItem, SortOrder } from "./api.ts";
 import { fileUrl } from "./api.ts";
+import EmptyGuide from "./components/EmptyGuide.tsx";
+import FileContextMenu from "./components/FileContextMenu.tsx";
 import ImageLightbox from "./components/ImageLightbox.tsx";
 import TagFilter from "./components/TagFilter.tsx";
 import TagManager from "./components/TagManager.tsx";
@@ -209,13 +211,16 @@ const FileCard: Component<{
 	editName: string;
 	onOpen: () => void;
 	onZoom?: () => void;
+	onContextMenu: (item: FileItem, e: MouseEvent) => void;
 	onStartRename: (item: FileItem) => void;
 	onDelete: (stored_id: string) => void;
 	onRename: () => void;
 	onEditName: (value: string) => void;
 	onCancelEdit: () => void;
 }> = (props) => (
+	// biome-ignore lint/a11y/noStaticElementInteractions: 右键菜单为附加操作，键盘用户走卡片内按钮
 	<div
+		onContextMenu={(e) => props.onContextMenu(props.item, e)}
 		class={styles.card}
 		classList={{
 			[styles.cardHighlight]: props.highlighted,
@@ -339,10 +344,13 @@ const FileRow: Component<{
 	onToggleSelect: (storedId: string) => void;
 	onOpen: () => void;
 	onZoom: () => void;
+	onContextMenu: (item: FileItem, e: MouseEvent) => void;
 	onStartRename: (item: FileItem) => void;
 	onDelete: (stored_id: string) => void;
 }> = (props) => (
+	// biome-ignore lint/a11y/noStaticElementInteractions: 右键菜单为附加操作，键盘用户走行内按钮
 	<div
+		onContextMenu={(e) => props.onContextMenu(props.item, e)}
 		class={styles.row}
 		classList={{
 			[styles.rowHighlight]: props.highlighted,
@@ -511,6 +519,15 @@ const FileListPage: Component = () => {
 		f.items().filter((item) => item.file_category === "image");
 	const [lightboxId, setLightboxId] = createSignal<string | null>(null);
 	const [tagManagerOpen, setTagManagerOpen] = createSignal(false);
+	const [menu, setMenu] = createSignal<{
+		item: FileItem;
+		x: number;
+		y: number;
+	} | null>(null);
+	const openContextMenu = (item: FileItem, e: MouseEvent) => {
+		e.preventDefault();
+		setMenu({ item, x: e.clientX, y: e.clientY });
+	};
 	const lightboxIndex = () => {
 		const id = lightboxId();
 		if (!id) return -1;
@@ -733,10 +750,13 @@ const FileListPage: Component = () => {
 				loading={f.loading}
 				error={f.error}
 				onRetry={f.refetch}
-				emptyMessage={
-					f.category() || f.tag() || f.search()
-						? "当前筛选条件下没有匹配的文件"
-						: "暂无文件，点击右上角「上传文件」开始"
+				emptySlot={
+					<EmptyGuide
+						filtered={Boolean(f.category() || f.tag() || f.search())}
+						onUpload={() =>
+							document.getElementById("file-upload-input")?.click()
+						}
+					/>
 				}
 			>
 				{(data) => (
@@ -757,6 +777,7 @@ const FileListPage: Component = () => {
 											selectMode={f.selectMode()}
 											selected={f.selected().has(item.stored_id)}
 											onToggleSelect={f.toggleSelect}
+											onContextMenu={openContextMenu}
 											onOpen={() => openDetail(item)}
 											onZoom={() => openLightbox(item)}
 											onStartRename={f.startRename}
@@ -771,6 +792,7 @@ const FileListPage: Component = () => {
 										selectMode={f.selectMode()}
 										selected={f.selected().has(item.stored_id)}
 										onToggleSelect={f.toggleSelect}
+										onContextMenu={openContextMenu}
 										editName={f.editName()}
 										onOpen={() => openDetail(item)}
 										onZoom={() => openLightbox(item)}
@@ -796,6 +818,20 @@ const FileListPage: Component = () => {
 			/>
 
 			<UploadPanel tasks={f.uploadTasks} onClose={f.clearUploadTasks} />
+
+			<Show when={menu()}>
+				{(m) => (
+					<FileContextMenu
+						item={m().item}
+						x={m().x}
+						y={m().y}
+						onClose={() => setMenu(null)}
+						onOpenDetail={() => openDetail(m().item)}
+						onStartRename={f.startRename}
+						onDelete={f.handleDelete}
+					/>
+				)}
+			</Show>
 
 			<TagManager
 				isOpen={tagManagerOpen()}

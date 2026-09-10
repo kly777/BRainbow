@@ -1,8 +1,8 @@
-use sqlx::{FromRow, SqlitePool};
+use sqlx::{FromRow, QueryBuilder, SqlitePool};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::model::{FileTag, NewFile};
+use super::model::{FileTag, NewFile, SortOrder};
 use crate::shared::db_query::like_contains;
 
 #[derive(Debug, FromRow)]
@@ -210,73 +210,25 @@ impl FileRepository {
         offset: i64,
         category: Option<&str>,
         user_id: Option<i64>,
+        sort: SortOrder,
     ) -> Result<Vec<FileRow>, sqlx::Error> {
-        match (category, user_id) {
-            (Some(cat), Some(uid)) => {
-                sqlx::query_as!(
-                    FileRow,
-                    r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
-                              COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
-                              COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-                       FROM file WHERE file_category = ? AND user_id = ?
-                       ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
-                    cat,
-                    uid,
-                    limit,
-                    offset
-                )
-                .fetch_all(&*self.db)
-                .await
-            }
-            (Some(cat), None) => {
-                sqlx::query_as!(
-                    FileRow,
-                    r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
-                              COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
-                              COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-                       FROM file WHERE file_category = ?
-                       ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
-                    cat,
-                    limit,
-                    offset
-                )
-                .fetch_all(&*self.db)
-                .await
-            }
-            (None, Some(uid)) => {
-                sqlx::query_as!(
-                    FileRow,
-                    r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
-                              COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
-                              COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-                       FROM file WHERE user_id = ?
-                       ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
-                    uid,
-                    limit,
-                    offset
-                )
-                .fetch_all(&*self.db)
-                .await
-            }
-            (None, None) => {
-                sqlx::query_as!(
-                    FileRow,
-                    r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
-                              COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
-                              COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-                       FROM file
-                       ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
-                    limit,
-                    offset
-                )
-                .fetch_all(&*self.db)
-                .await
-            }
+        // 动态 WHERE + 白名单 ORDER BY：避免为「筛选 × 排序」组合写 N 个静态查询
+        let mut qb = QueryBuilder::new(
+            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f WHERE 1 = 1",
+        );
+        if let Some(cat) = category {
+            qb.push(" AND f.file_category = ").push_bind(cat);
         }
+        if let Some(uid) = user_id {
+            qb.push(" AND f.user_id = ").push_bind(uid);
+        }
+        qb.push(sort.order_by());
+        qb.push(" LIMIT ")
+            .push_bind(limit)
+            .push(" OFFSET ")
+            .push_bind(offset);
+
+        qb.build_query_as::<FileRow>().fetch_all(&*self.db).await
     }
 
     /// 按标签筛选文件（通过标签名），可选按文件名模糊过滤
@@ -287,51 +239,26 @@ impl FileRepository {
         name_query: Option<&str>,
         limit: i64,
         offset: i64,
+        sort: SortOrder,
     ) -> Result<Vec<FileRow>, sqlx::Error> {
-        match name_query {
-            Some(q) => {
-                let pattern = like_contains(q);
-                sqlx::query_as!(
-                    FileRow,
-                    r#"SELECT f.id AS "id!: i64", f.stored_id, f.original_name, f.mime_type, f.file_category,
-                              f.size_bytes AS "size_bytes!: i64", f.width, f.height, f.duration_ms, f.user_id, f.content_hash,
-                              COALESCE(f.created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
-                              COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-                       FROM file f
-                       JOIN file_tag_rel ftr ON f.id = ftr.file_id
-                       JOIN file_tag ft ON ftr.tag_id = ft.id
-                       WHERE ft.name = ? AND ft.user_id = ? AND f.original_name LIKE ? ESCAPE '\'
-                       ORDER BY f.created_at DESC LIMIT ? OFFSET ?"#,
-                    tag_name,
-                    user_id,
-                    pattern,
-                    limit,
-                    offset
-                )
-                .fetch_all(&*self.db)
-                .await
-            }
-            None => {
-                sqlx::query_as!(
-                    FileRow,
-                    r#"SELECT f.id AS "id!: i64", f.stored_id, f.original_name, f.mime_type, f.file_category,
-                              f.size_bytes AS "size_bytes!: i64", f.width, f.height, f.duration_ms, f.user_id, f.content_hash,
-                              COALESCE(f.created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
-                              COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-                       FROM file f
-                       JOIN file_tag_rel ftr ON f.id = ftr.file_id
-                       JOIN file_tag ft ON ftr.tag_id = ft.id
-                       WHERE ft.name = ? AND ft.user_id = ?
-                       ORDER BY f.created_at DESC LIMIT ? OFFSET ?"#,
-                    tag_name,
-                    user_id,
-                    limit,
-                    offset
-                )
-                .fetch_all(&*self.db)
-                .await
-            }
+        let mut qb = QueryBuilder::new(
+            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f JOIN file_tag_rel ftr ON f.id = ftr.file_id JOIN file_tag ft ON ftr.tag_id = ft.id WHERE ft.name = ",
+        );
+        qb.push_bind(tag_name)
+            .push(" AND ft.user_id = ")
+            .push_bind(user_id);
+        if let Some(q) = name_query {
+            qb.push(" AND f.original_name LIKE ")
+                .push_bind(like_contains(q))
+                .push(" ESCAPE '\\'");
         }
+        qb.push(sort.order_by());
+        qb.push(" LIMIT ")
+            .push_bind(limit)
+            .push(" OFFSET ")
+            .push_bind(offset);
+
+        qb.build_query_as::<FileRow>().fetch_all(&*self.db).await
     }
 
     /// 按文件名模糊统计
@@ -367,43 +294,22 @@ impl FileRepository {
         user_id: Option<i64>,
         limit: i64,
         offset: i64,
+        sort: SortOrder,
     ) -> Result<Vec<FileRow>, sqlx::Error> {
-        let pattern = like_contains(query);
-        match user_id {
-            Some(uid) => {
-                sqlx::query_as!(
-                    FileRow,
-                    r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
-                              COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
-                              COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-                       FROM file WHERE original_name LIKE ? ESCAPE '\' AND user_id = ?
-                       ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
-                    pattern,
-                    uid,
-                    limit,
-                    offset
-                )
-                .fetch_all(&*self.db)
-                .await
-            }
-            None => {
-                sqlx::query_as!(
-                    FileRow,
-                    r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                              size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
-                              COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
-                              COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-                       FROM file WHERE original_name LIKE ? ESCAPE '\'
-                       ORDER BY created_at DESC LIMIT ? OFFSET ?"#,
-                    pattern,
-                    limit,
-                    offset
-                )
-                .fetch_all(&*self.db)
-                .await
-            }
+        let mut qb = QueryBuilder::new(
+            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f WHERE f.original_name LIKE ",
+        );
+        qb.push_bind(like_contains(query)).push(" ESCAPE '\\'");
+        if let Some(uid) = user_id {
+            qb.push(" AND f.user_id = ").push_bind(uid);
         }
+        qb.push(sort.order_by());
+        qb.push(" LIMIT ")
+            .push_bind(limit)
+            .push(" OFFSET ")
+            .push_bind(offset);
+
+        qb.build_query_as::<FileRow>().fetch_all(&*self.db).await
     }
 
     // ── 标签操作 ──
@@ -809,13 +715,19 @@ mod tests {
         insert_at(&repo, "second", "2026-09-09T11:00:00+00:00").await;
         insert_at(&repo, "third", "2026-09-09T12:00:00+00:00").await;
 
-        let page1 = repo.find_all(2, 0, None, Some(7)).await.unwrap();
+        let page1 = repo
+            .find_all(2, 0, None, Some(7), SortOrder::default())
+            .await
+            .unwrap();
         assert_eq!(page1.len(), 2);
         // created_at DESC：后插入的在前
         assert_eq!(page1[0].stored_id, "third");
         assert_eq!(page1[1].stored_id, "second");
 
-        let page2 = repo.find_all(2, 2, None, Some(7)).await.unwrap();
+        let page2 = repo
+            .find_all(2, 2, None, Some(7), SortOrder::default())
+            .await
+            .unwrap();
         assert_eq!(page2.len(), 1);
         assert_eq!(page2[0].stored_id, "first");
     }
@@ -833,7 +745,10 @@ mod tests {
             .await
             .unwrap();
 
-        let images = repo.find_all(10, 0, Some("image"), Some(7)).await.unwrap();
+        let images = repo
+            .find_all(10, 0, Some("image"), Some(7), SortOrder::default())
+            .await
+            .unwrap();
         assert_eq!(images.len(), 2);
         assert!(images.iter().all(|f| f.stored_id.starts_with("img-")));
 
@@ -842,6 +757,110 @@ mod tests {
         assert_eq!(repo.count(None, Some(7)).await.unwrap(), 3);
         // 用户 8 只能看到自己的
         assert_eq!(repo.count(None, Some(8)).await.unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn find_all_honors_sort_orders() {
+        let repo = setup().await;
+        repo.insert(NewFile {
+            size_bytes: 300,
+            ..new_file_named("a", "banana.txt", "document", Some(7))
+        })
+        .await
+        .unwrap();
+        repo.insert(NewFile {
+            size_bytes: 100,
+            ..new_file_named("b", "apple.txt", "document", Some(7))
+        })
+        .await
+        .unwrap();
+        repo.insert(NewFile {
+            size_bytes: 200,
+            ..new_file_named("c", "cherry.txt", "document", Some(7))
+        })
+        .await
+        .unwrap();
+
+        let ids = |rows: Vec<FileRow>| rows.into_iter().map(|f| f.stored_id).collect::<Vec<_>>();
+
+        assert_eq!(
+            ids(repo
+                .find_all(10, 0, None, Some(7), SortOrder::SizeDesc)
+                .await
+                .unwrap()),
+            vec!["a", "c", "b"]
+        );
+        assert_eq!(
+            ids(repo
+                .find_all(10, 0, None, Some(7), SortOrder::SizeAsc)
+                .await
+                .unwrap()),
+            vec!["b", "c", "a"]
+        );
+        // 名称排序不区分大小写
+        assert_eq!(
+            ids(repo
+                .find_all(10, 0, None, Some(7), SortOrder::NameAsc)
+                .await
+                .unwrap()),
+            vec!["b", "a", "c"]
+        );
+        assert_eq!(
+            ids(repo
+                .find_all(10, 0, None, Some(7), SortOrder::NameDesc)
+                .await
+                .unwrap()),
+            vec!["c", "a", "b"]
+        );
+    }
+
+    #[tokio::test]
+    async fn sort_combines_with_filter_and_search() {
+        let repo = setup().await;
+        repo.insert(NewFile {
+            size_bytes: 10,
+            ..new_file_named("img-s", "small.png", "image", Some(7))
+        })
+        .await
+        .unwrap();
+        repo.insert(NewFile {
+            size_bytes: 90,
+            ..new_file_named("img-l", "large.png", "image", Some(7))
+        })
+        .await
+        .unwrap();
+        repo.insert(NewFile {
+            size_bytes: 50,
+            ..new_file_named("doc-m", "mid.pdf", "document", Some(7))
+        })
+        .await
+        .unwrap();
+
+        // 筛选 + 排序：只看图片，按大小降序
+        let images = repo
+            .find_all(10, 0, Some("image"), Some(7), SortOrder::SizeDesc)
+            .await
+            .unwrap();
+        assert_eq!(
+            images
+                .iter()
+                .map(|f| f.stored_id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["img-l", "img-s"]
+        );
+
+        // 搜索 + 排序（搜文件名后缀，命中两张图）
+        let searched = repo
+            .search_by_name(".png", Some(7), 10, 0, SortOrder::SizeAsc)
+            .await
+            .unwrap();
+        assert_eq!(
+            searched
+                .iter()
+                .map(|f| f.stored_id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["img-s", "img-l"]
+        );
     }
 
     // ── 更新 / 删除 ──
@@ -1001,18 +1020,21 @@ mod tests {
         repo.set_file_tags(f1.id, &[tag.id]).await.unwrap();
 
         // 仅按 tag
-        let hits = repo.find_by_tag("文档", 7, None, 10, 0).await.unwrap();
+        let hits = repo
+            .find_by_tag("文档", 7, None, 10, 0, SortOrder::default())
+            .await
+            .unwrap();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].stored_id, "rep-a");
 
         // tag + 文件名 q 组合：不匹配的 q 应过滤掉
         let no_hits = repo
-            .find_by_tag("文档", 7, Some("zzz"), 10, 0)
+            .find_by_tag("文档", 7, Some("zzz"), 10, 0, SortOrder::default())
             .await
             .unwrap();
         assert!(no_hits.is_empty());
         let one_hit = repo
-            .find_by_tag("文档", 7, Some("报告"), 10, 0)
+            .find_by_tag("文档", 7, Some("报告"), 10, 0, SortOrder::default())
             .await
             .unwrap();
         assert_eq!(one_hit.len(), 1);
@@ -1021,7 +1043,7 @@ mod tests {
         // 其他用户的同名标签不干扰
         repo.get_or_create_tag("文档", 8).await.unwrap();
         assert_eq!(
-            repo.find_by_tag("文档", 8, None, 10, 0)
+            repo.find_by_tag("文档", 8, None, 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .len(),
@@ -1086,18 +1108,24 @@ mod tests {
             .await
             .unwrap();
 
-        let hits = repo.search_by_name("预算", Some(7), 10, 0).await.unwrap();
+        let hits = repo
+            .search_by_name("预算", Some(7), 10, 0, SortOrder::default())
+            .await
+            .unwrap();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].stored_id, "b1");
 
-        let all = repo.search_by_name("", Some(7), 10, 0).await.unwrap();
+        let all = repo
+            .search_by_name("", Some(7), 10, 0, SortOrder::default())
+            .await
+            .unwrap();
         assert_eq!(all.len(), 2);
 
         assert_eq!(repo.count_by_name("预算", Some(7)).await.unwrap(), 1);
         assert_eq!(repo.count_by_name("", Some(7)).await.unwrap(), 2);
         // 用户隔离
         assert_eq!(
-            repo.search_by_name("file", Some(8), 10, 0)
+            repo.search_by_name("file", Some(8), 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .len(),
@@ -1105,14 +1133,14 @@ mod tests {
         );
         // LIKE 通配符转义：搜索 "%" 应作为字面字符（0 命中），而非匹配全部
         assert_eq!(
-            repo.search_by_name("%", Some(7), 10, 0)
+            repo.search_by_name("%", Some(7), 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .len(),
             0
         );
         assert_eq!(
-            repo.search_by_name("_", Some(7), 10, 0)
+            repo.search_by_name("_", Some(7), 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .len(),

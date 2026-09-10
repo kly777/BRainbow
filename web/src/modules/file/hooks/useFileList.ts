@@ -14,7 +14,7 @@ import {
 	useUrlParams,
 } from "@shared/utils";
 import { createResource, createSignal, onCleanup } from "solid-js";
-import type { FileItem } from "../api.ts";
+import type { FileItem, SortOrder } from "../api.ts";
 import {
 	deleteFile,
 	listFiles,
@@ -50,6 +50,8 @@ export interface FileListApi {
 	search: () => string;
 	setSearch: (q: string) => void;
 	items: () => FileItem[];
+	sort: () => SortOrder;
+	setSort: (value: SortOrder) => void;
 	total: () => number;
 	totalPages: () => number;
 	page: () => number;
@@ -79,6 +81,7 @@ export function useFileList(): FileListApi {
 		category: strParam(""),
 		tag: strParam(""),
 		q: strParam(""),
+		sort: strParam("created_desc"),
 		page: numParam(1, { min: 1 }),
 	});
 	const category = () =>
@@ -91,15 +94,32 @@ export function useFileList(): FileListApi {
 	const setTag = (t: string) => params.set({ tag: t, page: 1 });
 	const search = () => params.get("q") || "";
 	const page = () => params.get("page");
+	const SORT_ORDERS = [
+		"created_desc",
+		"created_asc",
+		"size_desc",
+		"size_asc",
+		"name_asc",
+		"name_desc",
+	] as const;
+	const sort = (): SortOrder => {
+		const value = params.get("sort");
+		return (SORT_ORDERS as readonly string[]).includes(value)
+			? (value as SortOrder)
+			: "created_desc";
+	};
+	/** 排序变化回到第 1 页 */
+	const setSort = (value: SortOrder) => params.set({ sort: value, page: 1 });
 	const setSearch = (q: string) => params.set({ q, page: 1 });
 
 	const [files, { refetch }] = createResource(
-		() => ({ cat: category(), t: tag(), q: search(), page: page() }),
-		async ({ cat, t, q, page }): Promise<PaginatedResponse<FileItem>> => {
+		() => ({ cat: category(), t: tag(), q: search(), s: sort(), page: page() }),
+		async ({ cat, t, q, s, page }): Promise<PaginatedResponse<FileItem>> => {
 			const result = await tryAsync(() =>
 				listFiles({
 					page,
 					page_size: PAGE_SIZE,
+					sort: s,
 					...(cat ? { category: cat } : {}),
 					...(t ? { tag: t } : {}),
 					...(q.trim() ? { q: q.trim() } : {}),
@@ -276,6 +296,8 @@ export function useFileList(): FileListApi {
 		search,
 		setSearch,
 		items: () => files()?.items ?? [],
+		sort,
+		setSort,
 		total: () => files()?.total ?? 0,
 		totalPages: () => files()?.total_pages ?? 1,
 		page,

@@ -119,6 +119,33 @@ pub struct UpdateFileRequest {
     pub meta: Option<std::collections::HashMap<String, String>>,
 }
 
+/// 列表排序方式（白名单枚举：ORDER BY 片段是常量，无注入风险）
+#[derive(Debug, Clone, Copy, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum SortOrder {
+    #[default]
+    CreatedDesc,
+    CreatedAsc,
+    SizeDesc,
+    SizeAsc,
+    NameAsc,
+    NameDesc,
+}
+
+impl SortOrder {
+    /// ORDER BY 片段（统一用表别名 f）
+    pub fn order_by(&self) -> &'static str {
+        match self {
+            SortOrder::CreatedDesc => " ORDER BY f.created_at DESC, f.id DESC",
+            SortOrder::CreatedAsc => " ORDER BY f.created_at ASC, f.id ASC",
+            SortOrder::SizeDesc => " ORDER BY f.size_bytes DESC, f.id DESC",
+            SortOrder::SizeAsc => " ORDER BY f.size_bytes ASC, f.id ASC",
+            SortOrder::NameAsc => " ORDER BY f.original_name COLLATE NOCASE ASC, f.id ASC",
+            SortOrder::NameDesc => " ORDER BY f.original_name COLLATE NOCASE DESC, f.id DESC",
+        }
+    }
+}
+
 /// 文件列表查询参数
 #[derive(Debug, Deserialize)]
 pub struct FileListQuery {
@@ -127,6 +154,8 @@ pub struct FileListQuery {
     pub category: Option<String>,
     pub tag: Option<String>,
     pub q: Option<String>,
+    #[serde(default)]
+    pub sort: SortOrder,
 }
 
 /// 标签

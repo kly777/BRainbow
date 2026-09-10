@@ -16,6 +16,15 @@ import {
 
 export type FileCategory = "image" | "video" | "audio" | "document" | "other";
 
+/** 列表排序方式（与后端 SortOrder 枚举对应） */
+export type SortOrder =
+	| "created_desc"
+	| "created_asc"
+	| "size_desc"
+	| "size_asc"
+	| "name_asc"
+	| "name_desc";
+
 export interface FileItem {
 	id: number;
 	stored_id: string;
@@ -159,6 +168,7 @@ export const listFiles = (params?: {
 	category?: string;
 	tag?: string;
 	q?: string;
+	sort?: SortOrder;
 	page?: number;
 	page_size?: number;
 }): Promise<PaginatedResponse<FileItem>> => {

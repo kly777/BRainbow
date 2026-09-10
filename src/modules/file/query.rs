@@ -136,7 +136,7 @@ impl FileQueryService {
                 .map_err(ServiceError::Db)?;
             let rows = self
                 .repo
-                .find_by_tag(tag_name, uid, name_query, limit, offset)
+                .find_by_tag(tag_name, uid, name_query, limit, offset, query.sort)
                 .await
                 .map_err(ServiceError::Db)?;
             (total, rows)
@@ -149,7 +149,7 @@ impl FileQueryService {
                 .map_err(ServiceError::Db)?;
             let rows = self
                 .repo
-                .search_by_name(q, user_id, limit, offset)
+                .search_by_name(q, user_id, limit, offset, query.sort)
                 .await
                 .map_err(ServiceError::Db)?;
             (total, rows)
@@ -161,7 +161,13 @@ impl FileQueryService {
                 .map_err(ServiceError::Db)?;
             let rows = self
                 .repo
-                .find_all(limit, offset, query.category.as_deref(), user_id)
+                .find_all(
+                    limit,
+                    offset,
+                    query.category.as_deref(),
+                    user_id,
+                    query.sort,
+                )
                 .await
                 .map_err(ServiceError::Db)?;
             (total, rows)
@@ -215,7 +221,7 @@ mod tests {
     use std::collections::HashMap;
 
     use super::*;
-    use crate::modules::file::model::NewFile;
+    use crate::modules::file::model::{NewFile, SortOrder};
 
     async fn setup() -> (FileQueryService, FileRepository, Arc<SqlitePool>) {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
@@ -347,6 +353,7 @@ mod tests {
                     category: None,
                     tag: None,
                     q: None,
+                    sort: SortOrder::default(),
                 },
                 None,
             )
@@ -361,6 +368,7 @@ mod tests {
                     category: None,
                     tag: None,
                     q: None,
+                    sort: SortOrder::default(),
                 },
                 Some(7),
             )
@@ -382,6 +390,7 @@ mod tests {
                     category: Some("document".into()),
                     tag: None,
                     q: None,
+                    sort: SortOrder::default(),
                 },
                 Some(7),
             )
@@ -407,6 +416,7 @@ mod tests {
                     category: None,
                     tag: Some("文档".into()),
                     q: None,
+                    sort: SortOrder::default(),
                 },
                 Some(7),
             )
@@ -423,6 +433,7 @@ mod tests {
                     category: None,
                     tag: Some("文档".into()),
                     q: Some("报告".into()),
+                    sort: SortOrder::default(),
                 },
                 Some(7),
             )
@@ -437,6 +448,7 @@ mod tests {
                     category: None,
                     tag: Some("文档".into()),
                     q: Some("不存在的词".into()),
+                    sort: SortOrder::default(),
                 },
                 Some(7),
             )
@@ -458,6 +470,7 @@ mod tests {
                     category: None,
                     tag: None,
                     q: Some("报告".into()),
+                    sort: SortOrder::default(),
                 },
                 Some(7),
             )
@@ -481,6 +494,7 @@ mod tests {
                     category: None,
                     tag: None,
                     q: None,
+                    sort: SortOrder::default(),
                 },
                 None,
             )

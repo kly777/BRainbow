@@ -20,7 +20,7 @@ import {
 	onCleanup,
 	Show,
 } from "solid-js";
-import type { FileItem } from "./api.ts";
+import type { FileItem, SortOrder } from "./api.ts";
 import { fileUrl } from "./api.ts";
 import ImageLightbox from "./components/ImageLightbox.tsx";
 import TagFilter from "./components/TagFilter.tsx";
@@ -39,6 +39,16 @@ const CATEGORY_TABS = [
 	{ value: "document", label: "文档" },
 	{ value: "other", label: "其他" },
 ];
+
+/** 排序选项（与后端 SortOrder 枚举一致） */
+const SORT_OPTIONS = [
+	{ value: "created_desc", label: "最新在前" },
+	{ value: "created_asc", label: "最早在前" },
+	{ value: "size_desc", label: "从大到小" },
+	{ value: "size_asc", label: "从小到大" },
+	{ value: "name_asc", label: "名称 A→Z" },
+	{ value: "name_desc", label: "名称 Z→A" },
+] as const;
 
 /** 非图片文件：用后缀名徽章替代通用文件图标，一眼看出类型；
  *  无后缀时回退到通用文件图标 */
@@ -451,11 +461,26 @@ const FileListPage: Component = () => {
 				}}
 			/>
 
-			<FilterGroup
-				options={CATEGORY_TABS}
-				selected={f.category()}
-				onChange={f.setCategory}
-			/>
+			<div class={styles.filterRow}>
+				<FilterGroup
+					options={CATEGORY_TABS}
+					selected={f.category()}
+					onChange={f.setCategory}
+				/>
+				<label class={styles.sortLabel}>
+					<span class={styles.sortText}>排序</span>
+					<select
+						class={styles.sortSelect}
+						value={f.sort()}
+						onChange={(e) => f.setSort(e.currentTarget.value as SortOrder)}
+						aria-label="排序方式"
+					>
+						<For each={SORT_OPTIONS}>
+							{(option) => <option value={option.value}>{option.label}</option>}
+						</For>
+					</select>
+				</label>
+			</div>
 
 			<Show when={f.errorMessage()}>
 				<p class={styles.error}>{f.errorMessage()}</p>

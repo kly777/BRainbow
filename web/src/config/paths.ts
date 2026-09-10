@@ -21,7 +21,6 @@ export const PATHS = {
 	cardEdit: `${CARD}/edit/:id`,
 	cardAdd: `${CARD}/add`,
 	color: "/color",
-	image: "/image",
 	file: FILE,
 	fileDetail: `${FILE}/:id`,
 	db: "/db",

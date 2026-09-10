@@ -1,11 +1,19 @@
 import { Markdown as MarkdownRenderer } from "@components/ui";
-import { uploadMedia } from "@modules/media";
+import { uploadFile } from "@modules/file/api";
 import { createSignal, Show } from "solid-js";
 import styles from "./markdown-editor.module.css";
 
 interface MarkdownEditorProps {
 	value: string;
 	onInput: (value: string) => void;
+	/**
+	 * 上传文件并返回可插入 Markdown 的 URL。
+	 * 不传时使用文件模块默认实现（components 层与业务模块的既有耦合点，
+	 * 保留为可注入接缝，便于测试或其他模块替换）。
+	 */
+	onUploadFile?: (
+		file: File,
+	) => Promise<{ url: string; name: string; mime: string }>;
 	preview?: boolean;
 	rows?: number;
 	placeholder?: string;
@@ -13,6 +21,29 @@ interface MarkdownEditorProps {
 	editorClass?: string;
 	id?: string;
 }
+
+/**
+ * 生成插入编辑器的 Markdown 引用：图片用 `![]()`，其他文件用 `[]()` 链接。
+ * 抽成纯函数便于回归测试（此前编辑器上传路径无任何测试覆盖，
+ * 调用已删除模块的 404 直到手动使用才暴露）。
+ */
+export function buildMarkdownRef(
+	mime: string,
+	url: string,
+	name: string,
+): string {
+	return mime.startsWith("image/") ? `![](${url})` : `[${name}](${url})`;
+}
+
+/** 默认上传实现：走通用文件服务（去重、白名单外的未知类型也能存） */
+const defaultUpload = async (file: File) => {
+	const uploaded = await uploadFile(file);
+	return {
+		url: uploaded.url,
+		name: uploaded.original_name,
+		mime: uploaded.mime_type,
+	};
+};
 
 export default function MarkdownEditor(props: MarkdownEditorProps) {
 	let textareaRef!: HTMLTextAreaElement;
@@ -34,25 +65,35 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 		}, 0);
 	};
 
+	// ── 上传并插入 ──
+
+	/** 上传单个文件并在光标处插入 Markdown（图片用 ![]()，其他文件用 []() 链接） */
+	const uploadAndInsert = async (file: File) => {
+		const upload = props.onUploadFile ?? defaultUpload;
+		const uploaded = await upload(file);
+		insertAtCursor(
+			`${buildMarkdownRef(uploaded.mime, uploaded.url, uploaded.name)}\n`,
+		);
+	};
+
 	// ── 粘贴增强 ──
 
 	const onPaste = async (e: ClipboardEvent) => {
 		const items = e.clipboardData?.items;
 		if (!items) return;
 
+		// 粘贴板里的文件（截图、复制的文件）：上传后插入引用
 		for (const item of items) {
-			if (item.type.startsWith("image/")) {
-				e.preventDefault();
-				const file = item.getAsFile();
-				if (!file) continue;
-				try {
-					const media = await uploadMedia(file);
-					insertAtCursor(`![](${media.url})`);
-				} catch {
-					/* 全局 toast 已处理 */
-				}
-				return;
+			if (item.kind !== "file") continue;
+			const file = item.getAsFile();
+			if (!file) continue;
+			e.preventDefault();
+			try {
+				await uploadAndInsert(file);
+			} catch {
+				/* 全局 toast 已处理 */
 			}
+			return;
 		}
 
 		const text = e.clipboardData?.getData("text/plain");
@@ -82,13 +123,10 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 		if (!files) return;
 
 		for (const file of files) {
-			if (file.type.startsWith("image/")) {
-				try {
-					const media = await uploadMedia(file);
-					insertAtCursor(`![](${media.url})\n`);
-				} catch {
-					/* 全局 toast 已处理 */
-				}
+			try {
+				await uploadAndInsert(file);
+			} catch {
+				/* 全局 toast 已处理 */
 			}
 		}
 	};

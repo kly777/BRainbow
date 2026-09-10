@@ -90,13 +90,6 @@ export const NAV_ITEMS: NavItem[] = [
 		nav: false,
 	},
 	{
-		path: PATHS.image,
-		label: "图片",
-		title: "Images",
-		desc: "图片管理",
-		nav: true,
-	},
-	{
 		path: PATHS.file,
 		label: "文件",
 		title: "Files",

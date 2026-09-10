@@ -33,7 +33,6 @@ const PAGE_LOADERS: Record<PathValue, PageLoader> = {
 	[PATHS.cardEdit]: () => import("@modules/card/CardEdit.tsx"),
 	[PATHS.color]: () => import("@modules/color/ColorPage.tsx"),
 	[PATHS.cardAdd]: () => import("@modules/card/CardAdd.tsx"),
-	[PATHS.image]: () => import("@modules/media/MediaList.tsx"),
 	[PATHS.file]: () => import("@modules/file/FileList.tsx"),
 	[PATHS.fileDetail]: () => import("@modules/file/FileDetail.tsx"),
 	[PATHS.db]: () => import("@modules/db/DbViewer.tsx"),

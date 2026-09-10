@@ -32,7 +32,7 @@ import type { FileItem, SortOrder } from "./api.ts";
 import { fileUrl } from "./api.ts";
 import EmptyGuide from "./components/EmptyGuide.tsx";
 import FileContextMenu from "./components/FileContextMenu.tsx";
-import FileInfoTip from "./components/FileInfoTip.tsx";
+import FileMeta from "./components/FileMeta.tsx";
 import ImageLightbox from "./components/ImageLightbox.tsx";
 import TagFilter from "./components/TagFilter.tsx";
 import TagManager from "./components/TagManager.tsx";
@@ -40,6 +40,7 @@ import styles from "./FileList.module.css";
 import { type UploadTask, useFileList } from "./hooks/useFileList.ts";
 import { categoryLabel } from "./lib/category.ts";
 import { fileExt } from "./lib/filename.ts";
+import { fmtDimensions, fmtDurationMs } from "./lib/meta.ts";
 
 /** 列表滚动位置的 sessionStorage 键（从详情返回时恢复） */
 const SCROLL_KEY = "file-list-scroll-top";
@@ -111,18 +112,13 @@ const FileCardView: Component<{
 }> = (props) => (
 	<>
 		<div class={styles.info}>
-			<Tooltip
-				content={<FileInfoTip item={props.item} />}
-				class={styles.nameTipHost}
-			>
+			{/* 文件名在卡片里是单行截断的，hover 补全完整名称 */}
+			<Tooltip label={props.item.original_name} class={styles.nameTipHost}>
 				<button type="button" class={styles.nameBtn} onClick={props.onOpen}>
 					{props.item.original_name}
 				</button>
 			</Tooltip>
-			<p class={styles.meta}>
-				{categoryLabel(props.item.file_category)} ·
-				{formatBytes(props.item.size_bytes)}
-			</p>
+			<FileMeta item={props.item} />
 			<Show when={props.item.tags.length > 0}>
 				<div class={styles.tags}>
 					<For each={props.item.tags}>
@@ -178,10 +174,8 @@ const FileCardEdit: Component<{
 				onKeyPress={(e) => e.key === "Enter" && props.onRename()}
 				aria-label="文件名称"
 			/>
-			<p class={styles.meta}>
-				{categoryLabel(props.item.file_category)} ·
-				{formatBytes(props.item.size_bytes)}
-			</p>
+			{/* 编辑态保留同样的信息区：与展示态结构一致，避免切换时卡片高度跳变 */}
+			<FileMeta item={props.item} />
 			{/* 编辑态保留标签行：与展示态内容结构一致，避免切换时卡片高度跳变 */}
 			<Show when={props.item.tags.length > 0}>
 				<div class={styles.tags}>
@@ -390,10 +384,7 @@ const FileRow: Component<{
 		</button>
 
 		<div class={styles.rowMain}>
-			<Tooltip
-				content={<FileInfoTip item={props.item} />}
-				class={styles.nameTipHost}
-			>
+			<Tooltip label={props.item.original_name} class={styles.nameTipHost}>
 				<button type="button" class={styles.nameBtn} onClick={props.onOpen}>
 					{props.item.original_name}
 				</button>
@@ -402,6 +393,22 @@ const FileRow: Component<{
 				<span>{categoryLabel(props.item.file_category)}</span>
 				<span>·</span>
 				<span>{formatBytes(props.item.size_bytes)}</span>
+				<Show when={fmtDimensions(props.item.width, props.item.height)}>
+					{(dims) => (
+						<>
+							<span>·</span>
+							<span>{dims()}</span>
+						</>
+					)}
+				</Show>
+				<Show when={fmtDurationMs(props.item.duration_ms)}>
+					{(duration) => (
+						<>
+							<span>·</span>
+							<span>{duration()}</span>
+						</>
+					)}
+				</Show>
 				<span>·</span>
 				<span>{fmtLocal(props.item.created_at)}</span>
 				<Show when={props.item.tags.length > 0}>

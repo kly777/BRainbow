@@ -1,0 +1,19 @@
+/* 卡片内的文件信息区（浅底，靠颜色层次区分主次） */
+
+.line {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+}
+
+.sep {
+	margin: 0 0.4em;
+	opacity: 0.6;
+}
+
+.time {
+	margin: 0;
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+	opacity: 0.75;
+}

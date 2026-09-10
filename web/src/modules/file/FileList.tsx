@@ -153,6 +153,14 @@ const FileCardEdit: Component<{
 			<p class={styles.meta}>
 				{props.item.file_category} · {formatBytes(props.item.size_bytes)}
 			</p>
+			{/* 编辑态保留标签行：与展示态内容结构一致，避免切换时卡片高度跳变 */}
+			<Show when={props.item.tags.length > 0}>
+				<div class={styles.tags}>
+					<For each={props.item.tags}>
+						{(tag) => <span class={styles.tag}>#{tag}</span>}
+					</For>
+				</div>
+			</Show>
 		</div>
 		<div class={styles.actions}>
 			<Button variant="primary" size="sm" onClick={props.onRename}>

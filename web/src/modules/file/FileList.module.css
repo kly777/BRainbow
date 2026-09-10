@@ -65,6 +65,10 @@
 .info {
 	padding: var(--space-md);
 	flex: 1;
+
+	/* 固定信息区高度：重命名态（输入框）与展示态（文件名/标签）内容高度不同，
+	   若随内容伸缩会改变网格行高、把同行卡片一起拉伸；此处按最高内容留足 */
+	min-height: 6.6rem;
 }
 
 .name-btn {
@@ -121,15 +125,16 @@
 
 .edit-input {
 	width: 100%;
+	height: 1.75rem;
 	margin-bottom: var(--space-xs);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
+	border-radius: var(--radius-sm);
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	transition:
 		border-color var(--t-transition-fast),
 		box-shadow var(--t-transition-fast);
-	padding: var(--space-xs) var(--space-md);
+	padding: 0 var(--space-sm);
 	font-size: var(--text-sm);
 	font-family: inherit;
 	outline: none;

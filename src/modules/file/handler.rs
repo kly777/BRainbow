@@ -206,9 +206,8 @@ pub async fn file_handler(
         Err(e) => return e.into_response(),
     };
 
-    let path = format!("uploads/file/{stored_id}");
-
-    let Ok(f) = tokio::fs::File::open(&path).await else {
+    // 路径取自 query service 持有的目录配置（勿在此硬编码 uploads/file）
+    let Ok(f) = tokio::fs::File::open(query.file_path(&stored_id)).await else {
         return ServiceError::NotFound("文件不存在".into()).into_response();
     };
 
@@ -221,23 +220,18 @@ pub async fn file_handler(
         .header(header::CACHE_CONTROL, "public, max-age=31536000, immutable")
         .header("X-Content-Type-Options", "nosniff");
 
-    // 强制下载（HTML/SVG 等防 XSS）
-    if FileService::should_force_download(&file.mime_type) {
-        resp = resp.header(
-            header::CONTENT_DISPOSITION,
-            format!("attachment; filename=\"{}\"", file.original_name),
-        );
-    } else if FileService::can_inline(&file.mime_type) {
-        resp = resp.header(
-            header::CONTENT_DISPOSITION,
-            format!("inline; filename=\"{}\"", file.original_name),
-        );
+    // 强制下载（HTML/SVG 等防 XSS）；其余可内联的类型给 inline
+    let disposition = if FileService::can_inline(&file.mime_type)
+        && !FileService::should_force_download(&file.mime_type)
+    {
+        "inline"
     } else {
-        resp = resp.header(
-            header::CONTENT_DISPOSITION,
-            format!("attachment; filename=\"{}\"", file.original_name),
-        );
-    }
+        "attachment"
+    };
+    resp = resp.header(
+        header::CONTENT_DISPOSITION,
+        crate::modules::file::service::content_disposition(disposition, &file.original_name),
+    );
 
     resp.body(body)
         .unwrap_or_else(|_| Response::new(Body::empty()))

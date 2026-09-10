@@ -11,13 +11,22 @@ use crate::shared::pagination::{PaginatedResponse, Pagination};
 #[derive(Clone)]
 pub struct FileQueryService {
     repo: FileRepository,
+    upload_dir: String,
 }
 
 impl FileQueryService {
-    pub fn new(db: Arc<SqlitePool>) -> Self {
+    pub fn new(db: Arc<SqlitePool>, upload_dir: String) -> Self {
         Self {
             repo: FileRepository::new(db),
+            upload_dir,
         }
+    }
+
+    /// 文件在磁盘上的路径。
+    /// 与上传写入共用同一目录配置——读路径若自行拼接会与配置脱钩
+    /// （改了 UPLOAD_DIR 就变成"上传成功、下载全 404"）。
+    pub fn file_path(&self, stored_id: &str) -> String {
+        format!("{}/{}", self.upload_dir, stored_id)
     }
 
     /// 根据 stored_id 获取文件详情（含标签和元信息）
@@ -221,7 +230,11 @@ mod tests {
         }
         let pool = Arc::new(pool);
         let repo = FileRepository::new(pool.clone());
-        (FileQueryService::new(pool.clone()), repo, pool)
+        (
+            FileQueryService::new(pool.clone(), "uploads/file".into()),
+            repo,
+            pool,
+        )
     }
 
     async fn seed(repo: &FileRepository) -> i64 {
@@ -270,6 +283,16 @@ mod tests {
         .await
         .unwrap();
         f1.id
+    }
+
+    /// 读路径必须跟随 upload_dir 配置（回归：handler 曾硬编码 uploads/file，
+    /// 改 UPLOAD_DIR 后会变成"上传成功、下载全 404"）
+    #[tokio::test]
+    async fn file_path_follows_upload_dir_config() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        crate::db::migrate(&pool).await.unwrap();
+        let svc = FileQueryService::new(Arc::new(pool), "/data/custom-files".into());
+        assert_eq!(svc.file_path("abc123"), "/data/custom-files/abc123");
     }
 
     // ── 详情聚合 ──

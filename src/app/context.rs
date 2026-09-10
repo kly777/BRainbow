@@ -231,8 +231,8 @@ impl AppState {
 
         // 文件服务
         let file_upload_dir = format!("{upload_dir}/file");
-        let file = FileService::new(db.clone(), file_upload_dir);
-        let file_query = FileQueryService::new(db.clone());
+        let file = FileService::new(db.clone(), file_upload_dir.clone());
+        let file_query = FileQueryService::new(db.clone(), file_upload_dir);
 
         let conv = ConvQueryService::new(db.as_ref().clone());
 

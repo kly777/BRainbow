@@ -65,19 +65,59 @@ fn generate_stored_id() -> String {
     nanoid::nanoid!(12)
 }
 
-/// 清理文件名
+/// 清理文件名（客户端可控输入，不得原样进响应头/展示层）：
+/// - 过滤控制字符（含 `\r\n`：进入 `Content-Disposition` 会让响应头构造失败）
+/// - 路径分隔符替换为 `_`，避免名字被误当作路径
+/// - 双引号替换为 `'`，避免破坏 `filename="..."` 的引号语义
+/// - 截断 255 字符；空名回退 "unnamed"
 fn sanitize_name(name: &str) -> String {
     let safe: String = name
         .chars()
+        .filter(|c| !c.is_control())
+        .map(|c| match c {
+            '/' | '\\' | '\u{FF0F}' | '\u{2044}' => '_',
+            '"' => '\'',
+            c => c,
+        })
         .take(255)
-        .collect::<String>()
-        .trim()
-        .to_string();
+        .collect();
+    let safe = safe.trim();
     if safe.is_empty() {
         "unnamed".into()
     } else {
-        safe
+        safe.to_string()
     }
+}
+
+/// 构造 `Content-Disposition` 头值：ASCII 回退名 + RFC 5987 UTF-8 编码名。
+///
+/// 直接写 `filename="中文.xlsx"` 属 obs-text（hyper 会放行），但接收端按
+/// latin-1 解码时文件名会乱码；加 `filename*=UTF-8''...` 让浏览器取到正确名字。
+pub fn content_disposition(kind: &str, filename: &str) -> String {
+    // ASCII 回退名：非可见 ASCII 一律替换为 `_`
+    let ascii: String = filename
+        .chars()
+        .map(|c| {
+            if c.is_ascii_graphic() && c != '"' && c != '\\' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+
+    // RFC 5987 编码名：仅保留 attr-char，其余按字节 percent-encode
+    let mut encoded = String::with_capacity(filename.len());
+    for b in filename.as_bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                encoded.push(*b as char);
+            }
+            _ => encoded.push_str(&format!("%{b:02X}")),
+        }
+    }
+
+    format!("{kind}; filename=\"{ascii}\"; filename*=UTF-8''{encoded}")
 }
 
 /// 判断是否需要强制下载（防 XSS）
@@ -476,11 +516,6 @@ impl FileService {
         Ok(())
     }
 
-    /// 文件路径
-    pub fn file_path(&self, stored_id: &str) -> String {
-        format!("{}/{}", self.upload_dir, stored_id)
-    }
-
     /// 判断是否需要强制下载
     pub fn should_force_download(mime: &str) -> bool {
         should_force_download(mime)
@@ -541,6 +576,31 @@ mod tests {
     }
 
     #[test]
+    fn sanitize_name_strips_control_chars() {
+        // \r\n 进 Content-Disposition 会让响应头构造失败；\t 等一并清理
+        assert_eq!(sanitize_name("a\r\nb.txt"), "ab.txt");
+        assert_eq!(sanitize_name("tab\there.txt"), "tabhere.txt");
+        assert_eq!(sanitize_name("null\0byte.txt"), "nullbyte.txt");
+    }
+
+    #[test]
+    fn sanitize_name_replaces_path_separators() {
+        assert_eq!(sanitize_name("../../etc/passwd"), ".._.._etc_passwd");
+        assert_eq!(sanitize_name("dir\\file.txt"), "dir_file.txt");
+    }
+
+    #[test]
+    fn sanitize_name_escapes_quotes() {
+        // 双引号会破坏 filename="..." 语义
+        assert_eq!(sanitize_name("he\"llo.txt"), "he'llo.txt");
+    }
+
+    #[test]
+    fn sanitize_name_all_control_falls_back_to_unnamed() {
+        assert_eq!(sanitize_name("\r\n\t"), "unnamed");
+    }
+
+    #[test]
     fn sanitize_name_preserves_unicode() {
         assert_eq!(sanitize_name("照片.png"), "照片.png");
     }
@@ -589,6 +649,45 @@ mod tests {
         assert!(can_inline("application/pdf"));
         assert!(!can_inline("text/html"));
         assert!(!can_inline("application/msword"));
+    }
+
+    // ── Content-Disposition 构造 ──
+
+    #[test]
+    fn content_disposition_ascii_name() {
+        assert_eq!(
+            content_disposition("attachment", "report.pdf"),
+            "attachment; filename=\"report.pdf\"; filename*=UTF-8''report.pdf"
+        );
+    }
+
+    #[test]
+    fn content_disposition_encodes_non_ascii() {
+        // 中文名：ASCII 回退名全为 _，编码名可被浏览器还原
+        let v = content_disposition("attachment", "财报.xlsx");
+        assert!(v.starts_with("attachment; filename=\"__.xlsx\"; filename*=UTF-8''"));
+        assert!(v.contains("%E8%B4%A2%E6%8A%A5.xlsx"));
+    }
+
+    #[test]
+    fn content_disposition_ascii_fallback_strips_unsafe_chars() {
+        let v = content_disposition("inline", "a b\"c\\d.txt");
+        assert!(v.contains("filename=\"a_b_c_d.txt\""));
+    }
+
+    #[test]
+    fn content_disposition_is_always_ascii() {
+        // 头值必须全 ASCII：含中文/空格/引号时也不得出现非 ASCII 字节
+        for name in [
+            "财报.xlsx",
+            "a b.txt",
+            "quote\"and\\slash.txt",
+            "emoji-🎉.png",
+        ] {
+            let v = content_disposition("attachment", name);
+            assert!(v.is_ascii(), "头值含非 ASCII: {v}");
+            assert!(!v.contains('\n') && !v.contains('\r'));
+        }
     }
 
     #[test]
@@ -1143,11 +1242,5 @@ mod tests {
         // force：删除成功
         ctx.svc.delete(&f.stored_id, true).await.unwrap();
         assert!(!disk.exists());
-    }
-
-    #[tokio::test]
-    async fn file_path_joins_upload_dir() {
-        let ctx = setup_service().await;
-        assert_eq!(ctx.svc.file_path("abc123"), format!("{}/abc123", ctx.dir.0));
     }
 }

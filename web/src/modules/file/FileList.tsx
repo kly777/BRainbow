@@ -12,13 +12,23 @@ import { Copy, File as FileIcon, Upload, X } from "@components/ui/icons";
 import { fillPath, PATHS } from "@config/paths";
 import { copyTextWithToast, formatBytes } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
-import { type Component, createEffect, For, Show } from "solid-js";
+import {
+	type Component,
+	createEffect,
+	createSignal,
+	For,
+	onCleanup,
+	Show,
+} from "solid-js";
 import type { FileItem } from "./api.ts";
 import { fileUrl } from "./api.ts";
 import TagFilter from "./components/TagFilter.tsx";
 import styles from "./FileList.module.css";
-import { useFileList } from "./hooks/useFileList.ts";
+import { type UploadTask, useFileList } from "./hooks/useFileList.ts";
 import { fileExt } from "./lib/filename.ts";
+
+/** 列表滚动位置的 sessionStorage 键（从详情返回时恢复） */
+const SCROLL_KEY = "file-list-scroll-top";
 
 const CATEGORY_TABS = [
 	{ value: "", label: "全部" },
@@ -200,11 +210,152 @@ const FileCard: Component<{
 	</div>
 );
 
+/** 上传进度面板：批量/大文件时显示每个文件的进度与结果 */
+const UploadPanel: Component<{
+	tasks: () => UploadTask[];
+	onClose: () => void;
+}> = (props) => {
+	const percent = (loaded: number, size: number) =>
+		size === 0 ? 0 : Math.min(100, Math.round((loaded / size) * 100));
+	const label = (status: string) =>
+		status === "done"
+			? "完成"
+			: status === "duplicate"
+				? "已存在"
+				: status === "error"
+					? "失败"
+					: status === "pending"
+						? "排队中"
+						: "上传中";
+
+	return (
+		<Show when={props.tasks().length > 0}>
+			<div class={styles.uploadPanel}>
+				<div class={styles.uploadPanelHead}>
+					<span>上传（{props.tasks().length}）</span>
+					<Button variant="icon" title="收起" onClick={props.onClose}>
+						<X size={14} />
+					</Button>
+				</div>
+				<ul class={styles.uploadList}>
+					<For each={props.tasks()}>
+						{(t) => (
+							<li class={styles.uploadItem}>
+								<div class={styles.uploadItemHead}>
+									<span class={styles.uploadName} title={t.name}>
+										{t.name}
+									</span>
+									<span class={styles.uploadStatus}>
+										{label(t.status)}
+										{t.status === "uploading"
+											? ` ${percent(t.loaded, t.size)}%`
+											: ""}
+									</span>
+								</div>
+								<div class={styles.uploadBar}>
+									<div
+										classList={{
+											[styles.uploadBarFill]: true,
+											[styles.uploadBarDone]: t.status === "done",
+											[styles.uploadBarDup]: t.status === "duplicate",
+											[styles.uploadBarError]: t.status === "error",
+										}}
+										style={{
+											width:
+												t.status === "done" || t.status === "duplicate"
+													? "100%"
+													: `${percent(t.loaded, t.size)}%`,
+										}}
+									/>
+								</div>
+								<Show when={t.error}>
+									<p class={styles.uploadError}>{t.error}</p>
+								</Show>
+							</li>
+						)}
+					</For>
+				</ul>
+			</div>
+		</Show>
+	);
+};
+
 const FileListPage: Component = () => {
 	const f = useFileList();
 	const navigate = useNavigate();
-	const openDetail = (item: FileItem) =>
-		navigate(fillPath(PATHS.fileDetail, item.stored_id));
+	const openDetail = (item: FileItem) => {
+		// 记录来源 URL：详情页返回时回到同一页/同一筛选（否则分页后返回总是跳第 1 页）
+		navigate(fillPath(PATHS.fileDetail, item.stored_id), {
+			state: { from: location.pathname + location.search },
+		});
+	};
+
+	// ── 拖拽上传（整页投放） ──
+	const [dragging, setDragging] = createSignal(false);
+	// dragenter/dragleave 会在子元素间反复触发，用计数避免闪烁
+	let dragDepth = 0;
+
+	const onDragEnter = (e: DragEvent) => {
+		if (!e.dataTransfer?.types.includes("Files")) return;
+		e.preventDefault();
+		dragDepth += 1;
+		setDragging(true);
+	};
+	const onDragOver = (e: DragEvent) => {
+		if (!e.dataTransfer?.types.includes("Files")) return;
+		e.preventDefault();
+		e.dataTransfer.dropEffect = "copy";
+	};
+	const onDragLeave = () => {
+		dragDepth = Math.max(0, dragDepth - 1);
+		if (dragDepth === 0) setDragging(false);
+	};
+	const onDrop = (e: DragEvent) => {
+		e.preventDefault();
+		dragDepth = 0;
+		setDragging(false);
+		const files = Array.from(e.dataTransfer?.files ?? []);
+		if (files.length > 0) void f.handleUploadFiles(files);
+	};
+
+	// ── 粘贴上传（Ctrl+V 截图/文件） ──
+	const onPaste = (e: ClipboardEvent) => {
+		const files = Array.from(e.clipboardData?.items ?? [])
+			.filter((item) => item.kind === "file")
+			.map((item) => item.getAsFile())
+			.filter((file): file is File => file !== null);
+		if (files.length === 0) return;
+		// 输入框里的粘贴交给输入框自己处理
+		const target = e.target as HTMLElement | null;
+		if (target && ["INPUT", "TEXTAREA"].includes(target.tagName)) return;
+		e.preventDefault();
+		void f.handleUploadFiles(files);
+	};
+	document.addEventListener("paste", onPaste);
+	onCleanup(() => document.removeEventListener("paste", onPaste));
+
+	// ── 滚动位置：离开时保存，从详情返回时恢复一次 ──
+	const scrollContainer = () =>
+		document.querySelector("[data-scroll-container]") ??
+		document.documentElement;
+
+	onCleanup(() => {
+		sessionStorage.setItem(SCROLL_KEY, String(scrollContainer().scrollTop));
+	});
+
+	let scrollRestored = false;
+	createEffect(() => {
+		// 等列表数据渲染完再恢复，否则高度不足会被截断
+		if (scrollRestored || f.items().length === 0) return;
+		const saved = Number(sessionStorage.getItem(SCROLL_KEY) ?? "0");
+		sessionStorage.removeItem(SCROLL_KEY); // 一次性：只在紧接的返回时生效
+		scrollRestored = true;
+		if (saved > 0) {
+			requestAnimationFrame(() => {
+				scrollContainer().scrollTop = saved;
+			});
+		}
+	});
 
 	// 上传命中已有文件时：列表就绪后滚动定位到它
 	createEffect(() => {
@@ -216,7 +367,21 @@ const FileListPage: Component = () => {
 	});
 
 	return (
-		<div class={styles.page}>
+		// biome-ignore lint/a11y/noStaticElementInteractions: 整页拖拽投放区无对应 ARIA role；键盘用户走「上传文件」按钮
+		<div
+			class={styles.page}
+			classList={{ [styles.pageDragging]: dragging() }}
+			onDragEnter={onDragEnter}
+			onDragOver={onDragOver}
+			onDragLeave={onDragLeave}
+			onDrop={onDrop}
+		>
+			<Show when={dragging()}>
+				<div class={styles.dropOverlay}>
+					<div class={styles.dropHint}>松开即上传到文件库</div>
+				</div>
+			</Show>
+
 			<PageHead
 				title="文件"
 				desc="图片、视频、音频与文档的统一存储；复制 URL 可直接嵌入 Markdown"
@@ -254,10 +419,11 @@ const FileListPage: Component = () => {
 			<input
 				id="file-upload-input"
 				type="file"
+				multiple
 				style={{ display: "none" }}
 				onChange={(e) => {
-					const file = e.currentTarget.files?.[0];
-					if (file) void f.handleUpload(file);
+					const files = Array.from(e.currentTarget.files ?? []);
+					if (files.length > 0) void f.handleUploadFiles(files);
 					e.currentTarget.value = "";
 				}}
 			/>
@@ -312,6 +478,8 @@ const FileListPage: Component = () => {
 				onPrev={() => f.goPage(f.page() - 1)}
 				onNext={() => f.goPage(f.page() + 1)}
 			/>
+
+			<UploadPanel tasks={f.uploadTasks} onClose={f.clearUploadTasks} />
 		</div>
 	);
 };

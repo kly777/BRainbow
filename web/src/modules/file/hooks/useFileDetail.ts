@@ -8,7 +8,7 @@ import {
 	showConfirm,
 	tryAsync,
 } from "@shared/utils";
-import { useNavigate, useParams } from "@solidjs/router";
+import { useLocation, useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal } from "solid-js";
 import type { FileItem } from "../api.ts";
 import { deleteFile, getFile, updateFile } from "../api.ts";
@@ -47,6 +47,7 @@ export interface FileDetailApi {
 export function useFileDetail(): FileDetailApi {
 	const params = useParams();
 	const navigate = useNavigate();
+	const location = useLocation();
 	const storedId = () => String(params.id ?? "");
 
 	const [data, { refetch }] = createResource(storedId, (id) => {
@@ -131,7 +132,9 @@ export function useFileDetail(): FileDetailApi {
 	};
 
 	const handleBack = () => {
-		navigate(PATHS.file);
+		// 回到进入详情时的列表 URL（保留页码与筛选）；直接打开详情则回列表首页
+		const state = location.state as { from?: string } | null;
+		navigate(state?.from ?? PATHS.file);
 	};
 
 	return {

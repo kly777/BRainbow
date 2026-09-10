@@ -1,11 +1,15 @@
 import {
+	API_BASE_URL,
+	AUTH_REQUIRED_EVENT,
+	buildHeaders,
 	buildQuery,
 	cachedRequest,
 	del,
 	domains,
+	HttpError,
+	NetworkError,
 	type PaginatedResponse,
 	patch,
-	request,
 } from "@shared/api";
 
 // ── 类型 ──
@@ -49,26 +53,106 @@ export interface UpdateFileRequest {
 
 // ── API ──
 
+export interface UploadProgress {
+	loaded: number;
+	total: number;
+}
+
+export interface UploadOptions {
+	tags?: string[];
+	/** 跳过内容去重，强制新建副本 */
+	force?: boolean;
+	/** 上传进度回调（大文件用） */
+	onProgress?: (progress: UploadProgress) => void;
+}
+
+/**
+ * 带进度的上传：`fetch` 无法追踪请求体上传进度（没有 upload.onprogress 等价物），
+ * 因此上传单独走 XHR；认证头、错误体解析、401 处理与 `request()` 保持一致。
+ */
+export const uploadFileWithProgress = (
+	file: File,
+	opts: UploadOptions = {},
+): Promise<UploadResult> => {
+	const promise = new Promise<UploadResult>((resolve, reject) => {
+		const query = new URLSearchParams();
+		if (opts.tags?.length) query.set("tags", JSON.stringify(opts.tags));
+		if (opts.force) query.set("force", "true");
+		const qs = query.toString();
+
+		const xhr = new XMLHttpRequest();
+		xhr.open("POST", `${API_BASE_URL}/file/upload${qs ? `?${qs}` : ""}`);
+		// buildHeaders 对 FormData 不设 Content-Type，交给浏览器带 boundary
+		for (const [key, value] of buildHeaders(undefined, new FormData())) {
+			xhr.setRequestHeader(key, value);
+		}
+
+		xhr.upload.addEventListener("progress", (e) => {
+			if (e.lengthComputable) {
+				opts.onProgress?.({ loaded: e.loaded, total: e.total });
+			}
+		});
+
+		xhr.addEventListener("load", () => {
+			if (xhr.status >= 200 && xhr.status < 300) {
+				try {
+					resolve(JSON.parse(xhr.responseText) as UploadResult);
+				} catch (cause) {
+					reject(new NetworkError({ cause }));
+				}
+				return;
+			}
+
+			// 错误体统一为 {code, message, details?}
+			let code = "HTTP_ERROR";
+			let message = `上传失败（HTTP ${xhr.status}）`;
+			let details: unknown;
+			try {
+				const body = JSON.parse(xhr.responseText) as {
+					code?: string;
+					message?: string;
+					details?: unknown;
+				};
+				code = body.code ?? code;
+				message = body.message ?? message;
+				details = body.details;
+			} catch {
+				/* 非 JSON 错误体：沿用默认文案 */
+			}
+
+			if (xhr.status === 401) {
+				// 与全局拦截保持一致：弹登录框
+				window.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT));
+			}
+			reject(new HttpError({ status: xhr.status, code, message, details }));
+		});
+
+		xhr.addEventListener("error", () => {
+			reject(
+				new NetworkError({
+					cause: new Error("network error"),
+					message: "上传失败，请检查网络",
+				}),
+			);
+		});
+		xhr.addEventListener("abort", () => {
+			reject(new NetworkError({ cause: new Error("aborted"), canceled: true }));
+		});
+
+		const formData = new FormData();
+		formData.append("file", file);
+		xhr.send(formData);
+	});
+
+	return domains.files.invalidate(promise);
+};
+
 /** 上传文件（支持标签）；force=true 跳过内容去重、强制新建副本 */
-export const uploadFile = async (
+export const uploadFile = (
 	file: File,
 	tags?: string[],
 	force = false,
-): Promise<UploadResult> => {
-	const formData = new FormData();
-	formData.append("file", file);
-	const query = new URLSearchParams();
-	if (tags?.length) query.set("tags", JSON.stringify(tags));
-	if (force) query.set("force", "true");
-	const qs = query.toString();
-	return domains.files.invalidate(
-		request<UploadResult>(`/file/upload${qs ? `?${qs}` : ""}`, {
-			method: "POST",
-			body: formData,
-			timeout: false,
-		}),
-	);
-};
+): Promise<UploadResult> => uploadFileWithProgress(file, { tags, force });
 
 /** 文件列表（缓存 30 秒） */
 export const listFiles = (params?: {

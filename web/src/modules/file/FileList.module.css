@@ -1,9 +1,136 @@
 /* 文件列表 —— 与 MediaList 同风格（kebab-case + 语义令牌） */
 
 .page {
+	position: relative;
 	max-width: var(--page-max);
 	margin: 0 auto;
 	padding: var(--space-xl) var(--space-xl);
+	min-height: 100%;
+	box-sizing: border-box;
+}
+
+/* ── 拖拽投放 ── */
+
+.page-dragging {
+	outline: 2px dashed var(--t-color-accent);
+	outline-offset: -0.5rem;
+}
+
+.drop-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: var(--z-dropdown);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: color-mix(in srgb, var(--t-color-bg) 85%, transparent);
+	pointer-events: none;
+}
+
+.drop-hint {
+	padding: var(--space-lg) var(--space-xl);
+	border: 2px dashed var(--t-color-accent);
+	border-radius: var(--radius-lg);
+	background: var(--t-color-surface);
+	color: var(--t-color-accent);
+	font-size: var(--text-base);
+	font-weight: 600;
+}
+
+/* ── 上传进度面板（右下浮层） ── */
+
+.upload-panel {
+	position: fixed;
+	right: var(--space-xl);
+	bottom: var(--space-xl);
+	z-index: var(--z-toast);
+	width: 20rem;
+	max-height: 20rem;
+	display: flex;
+	flex-direction: column;
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border-strong);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-lg);
+	overflow: hidden;
+}
+
+.upload-panel-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--space-sm) var(--space-md);
+	border-bottom: 1px solid var(--t-color-border);
+	font-size: var(--text-sm);
+	font-weight: 600;
+	color: var(--t-color-ink);
+}
+
+.upload-list {
+	margin: 0;
+	padding: var(--space-xs) var(--space-md) var(--space-md);
+	list-style: none;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-sm);
+}
+
+.upload-item {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+}
+
+.upload-item-head {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--space-sm);
+	font-size: var(--text-xs);
+}
+
+.upload-name {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--t-color-ink);
+}
+
+.upload-status {
+	flex-shrink: 0;
+	color: var(--t-color-ink-muted);
+}
+
+.upload-bar {
+	height: 0.25rem;
+	border-radius: var(--radius-full);
+	background: var(--t-color-surface-raised);
+	overflow: hidden;
+}
+
+.upload-bar-fill {
+	height: 100%;
+	background: var(--t-color-accent);
+	transition: width var(--t-transition-fast);
+}
+
+.upload-bar-done {
+	background: var(--t-color-success);
+}
+
+.upload-bar-dup {
+	background: var(--t-color-warning);
+}
+
+.upload-bar-error {
+	background: var(--t-color-danger);
+}
+
+.upload-error {
+	margin: 0;
+	font-size: var(--text-xs);
+	color: var(--t-color-danger);
 }
 
 .grid {

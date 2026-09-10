@@ -2,6 +2,8 @@
 
 import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
 import {
+	ChevronLeft,
+	ChevronRight,
 	Copy,
 	Download,
 	FileText,
@@ -10,7 +12,7 @@ import {
 	X,
 } from "@components/ui/icons";
 import { copyTextWithToast, fmtLocal, formatBytes } from "@shared/utils";
-import { type Component, For, Show } from "solid-js";
+import { type Component, For, onCleanup, Show } from "solid-js";
 import type { FileItem } from "./api.ts";
 import { fileUrl } from "./api.ts";
 import TagInput from "./components/TagInput.tsx";
@@ -253,6 +255,22 @@ const EditForm: Component<{ m: ReturnType<typeof useFileDetail> }> = (
 export default function FileDetail() {
 	const m = useFileDetail();
 
+	// ← → 在同批文件间切换；输入框/文本域聚焦时不劫持方向键
+	const onKeyDown = (e: KeyboardEvent) => {
+		const tag = (e.target as HTMLElement | null)?.tagName;
+		if (tag === "INPUT" || tag === "TEXTAREA") return;
+		if (e.key === "ArrowLeft" && m.hasPrev()) {
+			e.preventDefault();
+			m.goPrev();
+		}
+		if (e.key === "ArrowRight" && m.hasNext()) {
+			e.preventDefault();
+			m.goNext();
+		}
+	};
+	document.addEventListener("keydown", onKeyDown);
+	onCleanup(() => document.removeEventListener("keydown", onKeyDown));
+
 	return (
 		<div class={styles.container}>
 			<Toolbar
@@ -260,6 +278,27 @@ export default function FileDetail() {
 				backLabel="文件列表"
 				onBack={m.handleBack}
 			>
+				<Show when={m.siblingCount() > 1}>
+					<Button
+						variant="icon"
+						title="上一个（←）"
+						disabled={!m.hasPrev()}
+						onClick={m.goPrev}
+					>
+						<ChevronLeft size={16} />
+					</Button>
+					<span class={styles.siblingPos}>
+						{m.siblingPosition()} / {m.siblingCount()}
+					</span>
+					<Button
+						variant="icon"
+						title="下一个（→）"
+						disabled={!m.hasNext()}
+						onClick={m.goNext}
+					>
+						<ChevronRight size={16} />
+					</Button>
+				</Show>
 				<Button
 					variant="icon"
 					title="复制文件 URL（可用于 Markdown 引用）"

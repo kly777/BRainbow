@@ -1,9 +1,9 @@
 /**
- * 文件名后缀提取与「文本类」判定。
+ * 文件名后缀提取与代码高亮语言判定。
  *
- * 判定用途：浏览器对 `.rs` / `.toml` / `Dockerfile` 这类扩展名不给 MIME
- * （`File.type` 为空 → 上传声明 application/octet-stream → 归入 other 类别），
- * 详情页据此按扩展名/文件名兜底为文本预览，而不是只给一个下载按钮。
+ * 「这个文件是不是文本」由后端决定（infer 魔数 + mime_guess 扩展名兜底，
+ * 未知文本统一存为 text/plain），前端只看 mime 是否 text/*；
+ * 这里只保留两件前端独有的事：卡片后缀徽章、代码预览的高亮语言。
  */
 
 /** 后缀显示字符上限（超长后缀截断，如 "jpeg2000" → "JPEG2"） */
@@ -71,52 +71,6 @@ const EXT_TO_LANG: Record<string, string> = {
 	vue: "xml",
 	svelte: "xml",
 };
-
-/** 无高亮但仍是纯文本的后缀（配置、日志、数据文件…） */
-const PLAIN_TEXT_EXTS = new Set([
-	"txt",
-	"log",
-	"text",
-	"toml",
-	"ini",
-	"cfg",
-	"conf",
-	"config",
-	"properties",
-	"env",
-	"csv",
-	"tsv",
-	"diff",
-	"patch",
-	"lock",
-]);
-
-/** 无扩展名但按文本预览的文件名（小写比较） */
-const TEXT_FILENAMES = new Set([
-	"dockerfile",
-	"makefile",
-	"rakefile",
-	"gemfile",
-	"procfile",
-	"justfile",
-	"license",
-	"readme",
-	"changelog",
-	"authors",
-	"notice",
-	".gitignore",
-	".dockerignore",
-	".env",
-	".editorconfig",
-]);
-
-/** 该文件是否应按文本预览（扩展名或整名命中白名单） */
-export function isTextLike(name: string): boolean {
-	const lower = name.toLowerCase();
-	if (TEXT_FILENAMES.has(lower)) return true;
-	const ext = lowerExt(lower);
-	return ext !== "" && (ext in EXT_TO_LANG || PLAIN_TEXT_EXTS.has(ext));
-}
 
 /**
  * 该文件的 highlight.js 语言名；无对应语言返回空串（按纯文本展示）。

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { codeFence, codeLang, fileExt, isTextLike } from "./filename.ts";
+import { codeFence, codeLang, fileExt } from "./filename.ts";
 
 describe("fileExt", () => {
 	it("提取常见后缀并大写", () => {
@@ -22,56 +22,6 @@ describe("fileExt", () => {
 
 	it("超长后缀截断到 5 字符", () => {
 		expect(fileExt("data.jpeg2000")).toBe("JPEG2");
-	});
-});
-
-describe("isTextLike", () => {
-	it("识别代码与配置后缀", () => {
-		for (const name of [
-			"main.rs",
-			"script.py",
-			"app.ts",
-			"config.yaml",
-			"data.json",
-			"schema.sql",
-			"run.sh",
-			"Cargo.toml",
-			"notes.log",
-			"query.sql",
-		]) {
-			expect(isTextLike(name), name).toBe(true);
-		}
-	});
-
-	it("识别无扩展名的常见文本文件", () => {
-		for (const name of [
-			"Dockerfile",
-			"Makefile",
-			"LICENSE",
-			"README",
-			".gitignore",
-			".env",
-		]) {
-			expect(isTextLike(name), name).toBe(true);
-		}
-	});
-
-	it("二进制与未知类型不按文本预览", () => {
-		for (const name of [
-			"model.ply",
-			"photo.png",
-			"video.mp4",
-			"archive.zip",
-			"doc.pdf",
-			"font.ttf",
-		]) {
-			expect(isTextLike(name), name).toBe(false);
-		}
-	});
-
-	it("大小写不敏感", () => {
-		expect(isTextLike("MAIN.RS")).toBe(true);
-		expect(isTextLike("dockerfile")).toBe(true);
 	});
 });
 

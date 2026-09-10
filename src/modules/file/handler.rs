@@ -155,7 +155,7 @@ pub async fn upload_handler(
             }
         };
 
-        let final_mime = match FileService::resolve_mime(&first, &content_type) {
+        let final_mime = match FileService::resolve_mime(&first, &content_type, &original_name) {
             Ok(m) => m,
             Err(e) => {
                 let _ = tokio::fs::remove_file(&tmp_path).await;

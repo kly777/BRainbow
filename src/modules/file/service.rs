@@ -469,7 +469,7 @@ impl FileService {
         tags: Option<Vec<String>>,
         force: bool,
     ) -> Result<UploadOutcome, ServiceError> {
-        let final_mime = Self::resolve_mime(data, client_mime)?;
+        let final_mime = Self::resolve_mime(data, client_mime, original_name)?;
         let (category_str, max_size) = Self::category_and_limit(&final_mime);
         if data.len() as u64 > max_size {
             return Err(ServiceError::InvalidInput(format!(
@@ -502,7 +502,11 @@ impl FileService {
     /// MIME 真实校验（流式与内存入口共用）：
     /// infer 对纯文本类（txt/md/csv/html）与部分 PDF 变体返回 None（无魔数），
     /// 此时仅信任客户端声明的文本类/PDF MIME（白名单内再复核），其余拒绝。
-    pub fn resolve_mime(head: &[u8], client_mime: &str) -> Result<String, ServiceError> {
+    pub fn resolve_mime(
+        head: &[u8],
+        client_mime: &str,
+        filename: &str,
+    ) -> Result<String, ServiceError> {
         match Self::detect_mime(head) {
             // 比较前先归一别名，避免 x-wav/wav 这类等价写法被判成"类型不符"
             Some(raw) => {
@@ -538,11 +542,34 @@ impl FileService {
             {
                 Ok("image/svg+xml".to_string())
             }
-            // 白名单外的未知格式（3D 模型 / 设计稿 / 压缩包 …）：接受声明，
-            // 归入 other 类别；响应侧对非 image/video/audio/pdf 一律 attachment，
-            // 不存在内联渲染的 XSS 面。
-            None if client_mime.is_empty() => Ok("application/octet-stream".to_string()),
-            None => Ok(client_mime.to_string()),
+            // 兜底：先用扩展名映射表猜（客户端对 .rs/.toml/.ply 这类扩展名
+            // 只给 application/octet-stream），猜不出再接受声明并归入 other
+            // 类别；响应侧对非 image/video/audio/pdf 一律 attachment，
+            // 不存在内联渲染的 XSS 面
+            None => match Self::guess_mime_by_name(filename) {
+                Some(guessed) => Ok(guessed),
+                None if client_mime.is_empty() => Ok("application/octet-stream".to_string()),
+                None => Ok(client_mime.to_string()),
+            },
+        }
+    }
+
+    /// 按文件名扩展名猜 MIME（mime_guess 标准映射表）。
+    ///
+    /// 文本类归一到 `text/plain`（mime_guess 会给 `text/x-rust` 这类非标准名），
+    /// 但白名单内的标准文本类型（markdown/csv/html）保持原样以便前端按类型渲染。
+    /// 猜不出返回 None，由调用方回落到客户端声明。
+    pub fn guess_mime_by_name(filename: &str) -> Option<String> {
+        let guessed = mime_guess::from_path(filename).first()?;
+        let mime = guessed.essence_str();
+        if mime.starts_with("text/") {
+            if find_allowed(mime).is_some() {
+                Some(mime.to_string())
+            } else {
+                Some("text/plain".to_string())
+            }
+        } else {
+            Some(mime.to_string())
         }
     }
 
@@ -1253,6 +1280,95 @@ mod tests {
         assert!(row.is_none());
     }
 
+    // ── 扩展名兜底（mime_guess） ──
+
+    #[test]
+    fn guess_mime_by_name_maps_standard_types() {
+        assert_eq!(
+            FileService::guess_mime_by_name("photo.png").as_deref(),
+            Some("image/png")
+        );
+        assert_eq!(
+            FileService::guess_mime_by_name("report.pdf").as_deref(),
+            Some("application/pdf")
+        );
+        assert_eq!(
+            FileService::guess_mime_by_name("data.zip").as_deref(),
+            Some("application/zip")
+        );
+        // 猜不出返回 None（由调用方回落到客户端声明）
+        assert_eq!(FileService::guess_mime_by_name("noext"), None);
+    }
+
+    #[test]
+    fn guess_mime_normalizes_nonstandard_text_to_plain() {
+        // mime_guess 对源码扩展名给 text/x-rust 这类非标准名 → 归一为 text/plain
+        assert_eq!(
+            FileService::guess_mime_by_name("main.rs").as_deref(),
+            Some("text/plain")
+        );
+        // 白名单内的标准文本类型保持原样（前端据此按 markdown/csv 渲染）
+        assert_eq!(
+            FileService::guess_mime_by_name("note.md").as_deref(),
+            Some("text/markdown")
+        );
+        assert_eq!(
+            FileService::guess_mime_by_name("table.csv").as_deref(),
+            Some("text/csv")
+        );
+    }
+
+    #[test]
+    fn resolve_mime_falls_back_to_extension() {
+        // 无魔数的源码文件：声明 octet-stream，靠扩展名补出 text/plain
+        let src = b"fn main() { println!(\"hi\"); }\n";
+        assert_eq!(
+            FileService::resolve_mime(src, "application/octet-stream", "main.rs").unwrap(),
+            "text/plain"
+        );
+        // markdown 保持标准类型
+        assert_eq!(
+            FileService::resolve_mime(b"# title\n", "application/octet-stream", "note.md").unwrap(),
+            "text/markdown"
+        );
+        // 真二进制（zip）按扩展名识别，类别仍是 other
+        assert_eq!(
+            FileService::resolve_mime(b"PK\x03\x04\x14\x00", "application/zip", "a.zip").unwrap(),
+            "application/zip"
+        );
+        // 完全未知：保持客户端声明
+        assert_eq!(
+            FileService::resolve_mime(
+                b"\x00\x01\x02\x03",
+                "application/octet-stream",
+                "x.unknownext"
+            )
+            .unwrap(),
+            "application/octet-stream"
+        );
+    }
+
+    #[tokio::test]
+    async fn upload_source_file_gets_text_preview_mime() {
+        // 端到端：.rs 源码上传后 mime 为 text/plain → 前端按文本/代码预览
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(
+                b"fn main() {}\n",
+                "demo.rs",
+                "application/octet-stream",
+                Some(7),
+                None,
+                false,
+            )
+            .await
+            .unwrap()
+            .file;
+        assert_eq!(f.mime_type, "text/plain");
+        assert_eq!(f.file_category, FileCategory::Document);
+    }
+
     // ── SVG（XML 文本，两种 MIME 报告） ──
 
     #[test]
@@ -1260,7 +1376,7 @@ mod tests {
         // 带 <?xml 声明的 SVG：infer 报 text/xml，浏览器声明 image/svg+xml
         let svg = b"<?xml version=\"1.0\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\"/>";
         assert_eq!(
-            FileService::resolve_mime(svg, "image/svg+xml").unwrap(),
+            FileService::resolve_mime(svg, "image/svg+xml", "icon.svg").unwrap(),
             "image/svg+xml"
         );
     }
@@ -1269,7 +1385,7 @@ mod tests {
     fn plain_xml_cannot_claim_to_be_svg() {
         // 内容是普通 XML（无 <svg>）却声明 SVG → 内容确认失败，仍拒绝
         let xml = b"<?xml version=\"1.0\"?>\n<rss version=\"2.0\"><channel/></rss>";
-        let err = FileService::resolve_mime(xml, "image/svg+xml").unwrap_err();
+        let err = FileService::resolve_mime(xml, "image/svg+xml", "feed.xml").unwrap_err();
         assert!(err.to_string().contains("文件类型不符"));
     }
 
@@ -1278,7 +1394,7 @@ mod tests {
         // 反向：infer 认出 SVG，但声明是 text/xml → 归一为更具体的 svg
         let svg = b"<svg xmlns=\"http://www.w3.org/2000/svg\"/>";
         assert_eq!(
-            FileService::resolve_mime(svg, "text/xml").unwrap(),
+            FileService::resolve_mime(svg, "text/xml", "icon.svg").unwrap(),
             "image/svg+xml"
         );
     }
@@ -1348,16 +1464,16 @@ mod tests {
     fn resolve_mime_accepts_unknown_formats() {
         let unknown = [0x70, 0x6C, 0x79, 0x0A, 0x00, 0x01]; // 假 PLY 头（infer 不识别）
         assert_eq!(
-            FileService::resolve_mime(&unknown, "application/octet-stream").unwrap(),
+            FileService::resolve_mime(&unknown, "application/octet-stream", "model.ply").unwrap(),
             "application/octet-stream"
         );
         assert_eq!(
-            FileService::resolve_mime(&unknown, "application/x-ply").unwrap(),
+            FileService::resolve_mime(&unknown, "application/x-ply", "model.ply").unwrap(),
             "application/x-ply"
         );
         // 空声明兜底为 octet-stream
         assert_eq!(
-            FileService::resolve_mime(&unknown, "").unwrap(),
+            FileService::resolve_mime(&unknown, "", "model.ply").unwrap(),
             "application/octet-stream"
         );
     }
@@ -1366,9 +1482,9 @@ mod tests {
     fn resolve_mime_still_rejects_unrecognized_whitelisted_binary() {
         // 声明白名单内的二进制类型（都有魔数）却识别不出 → 内容可疑，仍拒绝
         let garbage = [0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01];
-        let err = FileService::resolve_mime(&garbage, "image/png").unwrap_err();
+        let err = FileService::resolve_mime(&garbage, "image/png", "x.png").unwrap_err();
         assert!(err.to_string().contains("无法识别"));
-        let err = FileService::resolve_mime(&garbage, "video/mp4").unwrap_err();
+        let err = FileService::resolve_mime(&garbage, "video/mp4", "x.mp4").unwrap_err();
         assert!(err.to_string().contains("无法识别"));
     }
 
@@ -1413,7 +1529,7 @@ mod tests {
         // infer 报 audio/x-wav，浏览器声明 audio/wav —— 等价，应通过
         let wav = b"RIFF\x24\x00\x00\x00WAVEfmt ";
         assert_eq!(
-            FileService::resolve_mime(wav, "audio/wav").unwrap(),
+            FileService::resolve_mime(wav, "audio/wav", "x.bin").unwrap(),
             "audio/wav"
         );
     }
@@ -1421,7 +1537,7 @@ mod tests {
     #[test]
     fn resolve_mime_still_rejects_genuine_mismatch() {
         // 别名归一不能掩盖真实不符：PNG 字节声明成音频
-        let err = FileService::resolve_mime(PNG_1X1, "audio/wav").unwrap_err();
+        let err = FileService::resolve_mime(PNG_1X1, "audio/wav", "x.bin").unwrap_err();
         assert!(err.to_string().contains("文件类型不符"));
     }
 

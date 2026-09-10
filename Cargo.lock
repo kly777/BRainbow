@@ -220,6 +220,7 @@ dependencies = [
  "image",
  "infer",
  "jsonwebtoken",
+ "mime_guess",
  "nanoid",
  "rand 0.10.2",
  "reqwest",

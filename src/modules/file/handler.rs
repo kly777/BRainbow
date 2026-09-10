@@ -162,11 +162,7 @@ pub async fn upload_handler(
                 return e.into_response();
             }
         };
-        let Some((category_str, max_size)) = FileService::max_size_for(&final_mime) else {
-            let _ = tokio::fs::remove_file(&tmp_path).await;
-            return ServiceError::InvalidInput(format!("不支持的文件类型: {final_mime}"))
-                .into_response();
-        };
+        let (category_str, max_size) = FileService::category_and_limit(&final_mime);
 
         let mut hasher = Sha256::new();
         let mut head: Vec<u8> = Vec::new();

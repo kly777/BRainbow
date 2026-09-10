@@ -9,6 +9,9 @@ use super::model::{File, FileCategory, NewFile, UpdateFileRequest};
 use super::repository::FileRepository;
 use crate::shared::error_types::ServiceError;
 
+/// 白名单外格式的兜底上限（3D 模型、设计稿、压缩包等）
+pub const FALLBACK_MAX_SIZE: u64 = 52_428_800;
+
 /// 请求体上限：最大允许单文件（500MB 视频）+ boundary 与字段名开销
 pub(crate) const UPLOAD_BODY_LIMIT_BYTES: usize = 510 * 1024 * 1024;
 
@@ -445,8 +448,7 @@ impl FileService {
         force: bool,
     ) -> Result<UploadOutcome, ServiceError> {
         let final_mime = Self::resolve_mime(data, client_mime)?;
-        let (category_str, max_size) = Self::max_size_for(&final_mime)
-            .ok_or_else(|| ServiceError::InvalidInput(format!("不支持的文件类型: {final_mime}")))?;
+        let (category_str, max_size) = Self::category_and_limit(&final_mime);
         if data.len() as u64 > max_size {
             return Err(ServiceError::InvalidInput(format!(
                 "文件过大: {} 字节, 最大允许 {} 字节",
@@ -492,16 +494,30 @@ impl FileService {
                 Ok(real)
             }
             None if head.is_empty() => Err(ServiceError::InvalidInput("空文件无法上传".into())),
-            None if client_mime.starts_with("text/") || client_mime == "application/pdf" => {
-                Ok(client_mime.to_string())
+            // 白名单内的二进制类型都有魔数，识别不出说明内容与声明不符 → 拒绝
+            // （文本类与 PDF 例外：本就没有可靠魔数，信任声明）
+            None if find_allowed(client_mime).is_some()
+                && !client_mime.starts_with("text/")
+                && client_mime != "application/pdf" =>
+            {
+                Err(ServiceError::InvalidInput(format!(
+                    "无法识别文件类型：声明 {client_mime}"
+                )))
             }
-            None => Err(ServiceError::InvalidInput("无法识别文件类型".into())),
+            // 白名单外的未知格式（3D 模型 / 设计稿 / 压缩包 …）：接受声明，
+            // 归入 other 类别；响应侧对非 image/video/audio/pdf 一律 attachment，
+            // 不存在内联渲染的 XSS 面。
+            None if client_mime.is_empty() => Ok("application/octet-stream".to_string()),
+            None => Ok(client_mime.to_string()),
         }
     }
 
-    /// 该 MIME 的白名单信息（类别 + 大小上限）；不在白名单返回 None
-    pub fn max_size_for(mime: &str) -> Option<(&'static str, u64)> {
-        find_allowed(mime)
+    /// 该 MIME 的类别与大小上限：
+    /// 白名单内用专项设置（图片 20MB / 视频 500MB …），
+    /// 白名单外归入 `other` 兜底——文件服务要能存 3D 模型、设计稿、压缩包等
+    /// 各式文件，未知格式一律拒绝会让模块失去通用性。
+    pub fn category_and_limit(mime: &str) -> (&'static str, u64) {
+        find_allowed(mime).unwrap_or(("other", FALLBACK_MAX_SIZE))
     }
 
     /// 由已有记录组装"命中去重"结果（含标签与元信息）
@@ -1111,14 +1127,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn upload_rejects_unsupported_mime() {
+    async fn upload_accepts_zip_as_other_category() {
+        // 白名单外格式（压缩包/3D 模型/设计稿…）归入 other 而非拒绝：
+        // 文件服务要能存「各式文件」，只收 25 种 MIME 会失去通用性
         let ctx = setup_service().await;
-        let err = ctx
+        let f = ctx
             .svc
             .upload(ZIP_MIN, "x.zip", "application/zip", Some(7), None, false)
             .await
-            .unwrap_err();
-        assert!(err.to_string().contains("不支持的文件类型"));
+            .unwrap()
+            .file;
+        assert_eq!(f.file_category, FileCategory::Other);
+        assert_eq!(f.mime_type, "application/zip");
     }
 
     #[tokio::test]
@@ -1197,6 +1217,90 @@ mod tests {
             .await
             .unwrap();
         assert!(row.is_none());
+    }
+
+    // ── 白名单外格式兜底（3D 模型 / 设计稿 / 压缩包 …） ──
+
+    #[test]
+    fn category_and_limit_falls_back_to_other_for_unknown_types() {
+        // 白名单外 → other + 兜底上限
+        for mime in [
+            "application/octet-stream",
+            "application/x-ply",
+            "application/zip",
+            "model/stl",
+            "image/vnd.adobe.photoshop",
+        ] {
+            assert_eq!(
+                FileService::category_and_limit(mime),
+                ("other", FALLBACK_MAX_SIZE),
+                "{mime} 应归入 other"
+            );
+        }
+        // 白名单内仍用专项设置
+        assert_eq!(
+            FileService::category_and_limit("image/png"),
+            ("image", 20_971_520)
+        );
+        assert_eq!(
+            FileService::category_and_limit("video/mp4"),
+            ("video", 524_288_000)
+        );
+        assert_eq!(
+            FileService::category_and_limit("text/plain"),
+            ("document", 52_428_800)
+        );
+    }
+
+    #[test]
+    fn resolve_mime_accepts_unknown_formats() {
+        let unknown = [0x70, 0x6C, 0x79, 0x0A, 0x00, 0x01]; // 假 PLY 头（infer 不识别）
+        assert_eq!(
+            FileService::resolve_mime(&unknown, "application/octet-stream").unwrap(),
+            "application/octet-stream"
+        );
+        assert_eq!(
+            FileService::resolve_mime(&unknown, "application/x-ply").unwrap(),
+            "application/x-ply"
+        );
+        // 空声明兜底为 octet-stream
+        assert_eq!(
+            FileService::resolve_mime(&unknown, "").unwrap(),
+            "application/octet-stream"
+        );
+    }
+
+    #[test]
+    fn resolve_mime_still_rejects_unrecognized_whitelisted_binary() {
+        // 声明白名单内的二进制类型（都有魔数）却识别不出 → 内容可疑，仍拒绝
+        let garbage = [0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01];
+        let err = FileService::resolve_mime(&garbage, "image/png").unwrap_err();
+        assert!(err.to_string().contains("无法识别"));
+        let err = FileService::resolve_mime(&garbage, "video/mp4").unwrap_err();
+        assert!(err.to_string().contains("无法识别"));
+    }
+
+    #[tokio::test]
+    async fn upload_accepts_ply_like_unknown_file() {
+        let ctx = setup_service().await;
+        // 模拟 .ply：无魔数、声明 octet-stream
+        let ply = b"ply\nformat ascii 1.0\nelement vertex 3\nend_header\n0 0 0\n";
+        let f = ctx
+            .svc
+            .upload(
+                ply,
+                "model.ply",
+                "application/octet-stream",
+                Some(7),
+                None,
+                false,
+            )
+            .await
+            .unwrap()
+            .file;
+        assert_eq!(f.file_category, FileCategory::Other);
+        assert_eq!(f.mime_type, "application/octet-stream");
+        assert_eq!(f.original_name, "model.ply");
     }
 
     // ── MIME 别名规范化 ──

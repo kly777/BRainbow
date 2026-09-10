@@ -140,11 +140,46 @@
 	flex-wrap: wrap;
 }
 
+.view-toggle {
+	display: inline-flex;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	overflow: hidden;
+}
+
+.view-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	border: none;
+	background: var(--t-color-surface);
+	color: var(--t-color-ink-muted);
+	cursor: pointer;
+	transition:
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
+}
+
+.view-btn + .view-btn {
+	border-left: 1px solid var(--t-color-border);
+}
+
+.view-btn-active {
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent);
+}
+
+.spacer {
+	/* 占位：把排序与视图切换推到右侧 */
+	margin-left: auto;
+}
+
 .sort-label {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--space-xs);
-	margin-left: auto;
 }
 
 .sort-text {
@@ -338,6 +373,42 @@
 		flex-wrap: wrap;
 	}
 
+	.view-toggle {
+		display: inline-flex;
+		border: 1px solid var(--t-color-border);
+		border-radius: var(--radius-md);
+		overflow: hidden;
+	}
+
+	.view-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.75rem;
+		height: 1.75rem;
+		border: none;
+		background: var(--t-color-surface);
+		color: var(--t-color-ink-muted);
+		cursor: pointer;
+		transition:
+			background var(--t-transition-fast),
+			color var(--t-transition-fast);
+	}
+
+	.view-btn + .view-btn {
+		border-left: 1px solid var(--t-color-border);
+	}
+
+	.view-btn-active {
+		background: var(--t-color-accent-soft);
+		color: var(--t-color-accent);
+	}
+
+	.spacer {
+		/* 占位：把排序与视图切换推到右侧 */
+		margin-left: auto;
+	}
+
 	.sort-label {
 		display: inline-flex;
 		align-items: center;
@@ -369,5 +440,95 @@
 	.grid {
 		grid-template-columns: repeat(2, 1fr);
 		gap: var(--space-sm);
+	}
+}
+
+/* ── 列表视图 ── */
+
+.list-view {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-xs);
+	margin-top: var(--space-lg);
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-md);
+	padding: var(--space-sm) var(--space-md);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+}
+
+.row:hover {
+	border-color: var(--t-color-border-strong);
+	box-shadow: var(--shadow-sm);
+}
+
+.row-highlight {
+	border-color: var(--t-color-accent);
+	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+}
+
+.row-thumb {
+	flex-shrink: 0;
+	width: 3rem;
+	height: 3rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-bg);
+	overflow: hidden;
+	padding: 0;
+	cursor: pointer;
+	color: var(--t-color-ink);
+}
+
+.row-thumb-img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.row-main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+}
+
+.row-meta {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+	flex-wrap: wrap;
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.row-actions {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+}
+
+@media (width <= 768px) {
+	.row {
+		flex-wrap: wrap;
+	}
+
+	.row-actions {
+		width: 100%;
+		justify-content: flex-end;
 	}
 }

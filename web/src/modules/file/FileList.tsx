@@ -8,9 +8,16 @@ import {
 	SearchInput,
 	SimplePagination,
 } from "@components/ui";
-import { Copy, File as FileIcon, Upload, X } from "@components/ui/icons";
+import {
+	Copy,
+	File as FileIcon,
+	Grid,
+	List,
+	Upload,
+	X,
+} from "@components/ui/icons";
 import { fillPath, PATHS } from "@config/paths";
-import { copyTextWithToast, formatBytes } from "@shared/utils";
+import { copyTextWithToast, fmtLocal, formatBytes } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
 import {
 	type Component,
@@ -25,7 +32,11 @@ import { fileUrl } from "./api.ts";
 import ImageLightbox from "./components/ImageLightbox.tsx";
 import TagFilter from "./components/TagFilter.tsx";
 import styles from "./FileList.module.css";
-import { type UploadTask, useFileList } from "./hooks/useFileList.ts";
+import {
+	type FileView,
+	type UploadTask,
+	useFileList,
+} from "./hooks/useFileList.ts";
 import { fileExt } from "./lib/filename.ts";
 
 /** 列表滚动位置的 sessionStorage 键（从详情返回时恢复） */
@@ -302,6 +313,89 @@ const UploadPanel: Component<{
 	);
 };
 
+/** 列表视图的一行：徽章/缩略图 + 文件名 + 元信息 + 操作 */
+const FileRow: Component<{
+	item: FileItem;
+	highlighted: boolean;
+	onOpen: () => void;
+	onZoom: () => void;
+	onStartRename: (item: FileItem) => void;
+	onDelete: (stored_id: string) => void;
+}> = (props) => (
+	<div
+		class={styles.row}
+		classList={{ [styles.rowHighlight]: props.highlighted }}
+		data-file-id={props.item.stored_id}
+	>
+		<button
+			type="button"
+			class={styles.rowThumb}
+			onClick={() =>
+				props.item.file_category === "image" ? props.onZoom() : props.onOpen()
+			}
+			title={props.item.file_category === "image" ? "放大查看" : "查看详情"}
+		>
+			<Show
+				when={props.item.file_category === "image"}
+				fallback={<ExtBadge name={props.item.original_name} />}
+			>
+				<img
+					src={fileUrl(props.item.stored_id, props.item.original_name)}
+					alt={props.item.original_name}
+					class={styles.rowThumbImg}
+					loading="lazy"
+				/>
+			</Show>
+		</button>
+
+		<div class={styles.rowMain}>
+			<button type="button" class={styles.nameBtn} onClick={props.onOpen}>
+				{props.item.original_name}
+			</button>
+			<div class={styles.rowMeta}>
+				<span>{props.item.file_category}</span>
+				<span>·</span>
+				<span>{formatBytes(props.item.size_bytes)}</span>
+				<span>·</span>
+				<span>{fmtLocal(props.item.created_at)}</span>
+				<Show when={props.item.tags.length > 0}>
+					<For each={props.item.tags}>
+						{(tag) => <span class={styles.tag}>#{tag}</span>}
+					</For>
+				</Show>
+			</div>
+		</div>
+
+		<div class={styles.rowActions}>
+			<Button
+				variant="icon"
+				title="复制文件 URL（可用于 Markdown 引用）"
+				onClick={() =>
+					copyTextWithToast(
+						fileUrl(props.item.stored_id, props.item.original_name),
+					)
+				}
+			>
+				<Copy size={14} />
+			</Button>
+			<Button
+				variant="secondary"
+				size="sm"
+				onClick={() => props.onStartRename(props.item)}
+			>
+				重命名
+			</Button>
+			<Button
+				variant="danger"
+				size="sm"
+				onClick={() => props.onDelete(props.item.stored_id)}
+			>
+				删除
+			</Button>
+		</div>
+	</div>
+);
+
 const FileListPage: Component = () => {
 	const f = useFileList();
 	const navigate = useNavigate();
@@ -467,6 +561,28 @@ const FileListPage: Component = () => {
 					selected={f.category()}
 					onChange={f.setCategory}
 				/>
+				<div class={styles.viewToggle}>
+					<button
+						type="button"
+						class={styles.viewBtn}
+						classList={{ [styles.viewBtnActive]: f.view() === "grid" }}
+						onClick={() => f.setView("grid")}
+						title="网格视图"
+						aria-pressed={f.view() === "grid"}
+					>
+						<Grid size={15} />
+					</button>
+					<button
+						type="button"
+						class={styles.viewBtn}
+						classList={{ [styles.viewBtnActive]: f.view() === "list" }}
+						onClick={() => f.setView("list")}
+						title="列表视图"
+						aria-pressed={f.view() === "list"}
+					>
+						<List size={15} />
+					</button>
+				</div>
 				<label class={styles.sortLabel}>
 					<span class={styles.sortText}>排序</span>
 					<select
@@ -498,22 +614,41 @@ const FileListPage: Component = () => {
 				}
 			>
 				{(data) => (
-					<div class={styles.grid}>
+					<div
+						classList={{
+							[styles.grid]: f.view() === "grid",
+							[styles.listView]: f.view() === "list",
+						}}
+					>
 						<For each={data()}>
 							{(item) => (
-								<FileCard
-									item={item}
-									editing={f.editingId() === item.stored_id}
-									highlighted={f.highlightId() === item.stored_id}
-									editName={f.editName()}
-									onOpen={() => openDetail(item)}
-									onZoom={() => openLightbox(item)}
-									onStartRename={f.startRename}
-									onDelete={f.handleDelete}
-									onRename={f.handleRename}
-									onEditName={f.setEditName}
-									onCancelEdit={f.cancelEdit}
-								/>
+								<Show
+									when={f.view() === "grid"}
+									fallback={
+										<FileRow
+											item={item}
+											highlighted={f.highlightId() === item.stored_id}
+											onOpen={() => openDetail(item)}
+											onZoom={() => openLightbox(item)}
+											onStartRename={f.startRename}
+											onDelete={f.handleDelete}
+										/>
+									}
+								>
+									<FileCard
+										item={item}
+										editing={f.editingId() === item.stored_id}
+										highlighted={f.highlightId() === item.stored_id}
+										editName={f.editName()}
+										onOpen={() => openDetail(item)}
+										onZoom={() => openLightbox(item)}
+										onStartRename={f.startRename}
+										onDelete={f.handleDelete}
+										onRename={f.handleRename}
+										onEditName={f.setEditName}
+										onCancelEdit={f.cancelEdit}
+									/>
+								</Show>
 							)}
 						</For>
 					</div>

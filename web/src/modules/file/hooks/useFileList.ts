@@ -30,6 +30,9 @@ const PAGE_SIZE = 24;
 /** 并发上传数（批量拖入时避免打满连接） */
 const UPLOAD_CONCURRENCY = 3;
 
+/** 列表视图模式 */
+export type FileView = "grid" | "list";
+
 /** 单个文件的上传任务状态 */
 export interface UploadTask {
 	id: number;
@@ -52,6 +55,8 @@ export interface FileListApi {
 	items: () => FileItem[];
 	sort: () => SortOrder;
 	setSort: (value: SortOrder) => void;
+	view: () => FileView;
+	setView: (value: FileView) => void;
 	total: () => number;
 	totalPages: () => number;
 	page: () => number;
@@ -82,6 +87,7 @@ export function useFileList(): FileListApi {
 		tag: strParam(""),
 		q: strParam(""),
 		sort: strParam("created_desc"),
+		view: strParam("grid"),
 		page: numParam(1, { min: 1 }),
 	});
 	const category = () =>
@@ -110,6 +116,11 @@ export function useFileList(): FileListApi {
 	};
 	/** 排序变化回到第 1 页 */
 	const setSort = (value: SortOrder) => params.set({ sort: value, page: 1 });
+
+	/** 视图模式：网格（缩略图优先）/ 列表（信息密度优先） */
+	const view = (): FileView =>
+		params.get("view") === "list" ? "list" : "grid";
+	const setView = (value: FileView) => params.set({ view: value });
 	const setSearch = (q: string) => params.set({ q, page: 1 });
 
 	const [files, { refetch }] = createResource(
@@ -298,6 +309,8 @@ export function useFileList(): FileListApi {
 		items: () => files()?.items ?? [],
 		sort,
 		setSort,
+		view,
+		setView,
 		total: () => files()?.total ?? 0,
 		totalPages: () => files()?.total_pages ?? 1,
 		page,

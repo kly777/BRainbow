@@ -1,5 +1,8 @@
 import { Markdown as MarkdownRenderer } from "@components/ui";
 import { uploadFile } from "@modules/file/api";
+import FilePickerModal, {
+	type PickedFile,
+} from "@modules/file/components/FilePickerModal.tsx";
 import { createSignal, Show } from "solid-js";
 import styles from "./markdown-editor.module.css";
 
@@ -48,6 +51,7 @@ const defaultUpload = async (file: File) => {
 export default function MarkdownEditor(props: MarkdownEditorProps) {
 	let textareaRef!: HTMLTextAreaElement;
 	const [dragover, setDragover] = createSignal(false);
+	const [pickerOpen, setPickerOpen] = createSignal(false);
 
 	// ── 光标位置辅助 ──
 
@@ -74,6 +78,11 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 		insertAtCursor(
 			`${buildMarkdownRef(uploaded.mime, uploaded.url, uploaded.name)}\n`,
 		);
+	};
+
+	/** 从文件库挑选后插入（与上传插入同一套 Markdown 格式） */
+	const onPicked = (file: PickedFile) => {
+		insertAtCursor(`${buildMarkdownRef(file.mime, file.url, file.name)}\n`);
 	};
 
 	// ── 粘贴增强 ──
@@ -159,6 +168,17 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 					: styles.editor
 			}
 		>
+			<div class={styles.toolbar}>
+				<button
+					type="button"
+					class={styles.toolBtn}
+					onClick={() => setPickerOpen(true)}
+					title="从文件库选择已有文件插入"
+				>
+					插入文件
+				</button>
+				<span class={styles.toolHint}>可直接粘贴或拖入文件</span>
+			</div>
 			<textarea
 				ref={textareaRef}
 				id={props.id}
@@ -178,6 +198,12 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 					<MarkdownRenderer content={props.value} />
 				</div>
 			</Show>
+
+			<FilePickerModal
+				isOpen={pickerOpen()}
+				onClose={() => setPickerOpen(false)}
+				onPick={onPicked}
+			/>
 		</div>
 	);
 }

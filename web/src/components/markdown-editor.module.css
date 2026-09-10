@@ -6,6 +6,36 @@
 	gap: 0;
 }
 
+.toolbar {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	margin-bottom: var(--space-xs);
+}
+
+.tool-btn {
+	padding: var(--space-2xs) var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	font-size: var(--text-xs);
+	cursor: pointer;
+	transition:
+		border-color var(--t-transition-fast),
+		color var(--t-transition-fast);
+}
+
+.tool-btn:hover {
+	border-color: var(--t-color-accent);
+	color: var(--t-color-accent);
+}
+
+.tool-hint {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+}
+
 .textarea {
 	width: 100%;
 	padding: var(--space-md);

@@ -703,34 +703,55 @@ mod tests {
     #[tokio::test]
     async fn find_by_hash_is_global_and_ignores_null_hash() {
         let repo = setup().await;
-        // 用户 7 带哈希、用户 8 同哈希（跨用户也视为同一内容）、以及一条无哈希记录
+        // 用户 7 一条带哈希、用户 8 另一哈希、以及若干无哈希记录
         repo.insert(NewFile {
             content_hash: Some("hash-aaa"),
-            ..new_file("first-owner", "image", Some(7))
+            ..new_file("owner-a", "image", Some(7))
         })
         .await
         .unwrap();
         repo.insert(NewFile {
-            content_hash: Some("hash-aaa"),
-            ..new_file("second-owner", "image", Some(8))
+            content_hash: Some("hash-bbb"),
+            ..new_file("owner-b", "image", Some(8))
         })
         .await
         .unwrap();
-        insert(&repo, "no-hash").await; // content_hash: None
+        insert(&repo, "no-hash-1").await; // content_hash: None
+        insert(&repo, "no-hash-2").await; // NULL 可并列，不受唯一索引约束
 
-        // 全局命中：返回最早插入的那条（不论归属）
+        // 全局命中：不区分归属
         let hit = repo
             .find_by_hash("hash-aaa")
             .await
             .unwrap()
             .expect("应命中");
-        assert_eq!(hit.stored_id, "first-owner");
+        assert_eq!(hit.stored_id, "owner-a");
         assert_eq!(hit.user_id, Some(7));
 
         // 未知哈希不命中
         assert!(repo.find_by_hash("hash-zzz").await.unwrap().is_none());
         // NULL 哈希不参与匹配（存量无哈希记录不会被误当作重复）
         assert!(repo.find_by_hash("").await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn duplicate_content_hash_rejected_by_unique_index() {
+        let repo = setup().await;
+        repo.insert(NewFile {
+            content_hash: Some("dup-hash"),
+            ..new_file("first", "image", Some(7))
+        })
+        .await
+        .unwrap();
+
+        // 同哈希第二条必须被唯一索引拒绝（并发去重的兜底）
+        let err = repo
+            .insert(NewFile {
+                content_hash: Some("dup-hash"),
+                ..new_file("second", "image", Some(8))
+            })
+            .await;
+        assert!(err.is_err(), "content_hash 唯一索引应拒绝重复");
     }
 
     // ── 列表 / 筛选 / 分页 ──

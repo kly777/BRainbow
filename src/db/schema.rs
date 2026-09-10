@@ -204,7 +204,10 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await?;
 
-    sqlx::query("CREATE INDEX IF NOT EXISTS idx_file_content_hash ON file(user_id, content_hash)")
+    // 内容去重：全局唯一（部分索引，NULL 不参与约束）
+    sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_file_content_hash_unique ON file(content_hash) WHERE content_hash IS NOT NULL",
+    )
         .execute(pool)
         .await?;
 

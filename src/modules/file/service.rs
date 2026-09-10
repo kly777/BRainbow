@@ -191,7 +191,8 @@ impl FileService {
     /// 上传：校验 → 查重 → 写临时文件 → 插库 → 原子 rename → 解析元数据
     ///
     /// `force=false` 时已有相同内容（SHA-256）的文件会直接复用（不新建、不重复占盘）；
-    /// `force=true` 跳过查重，始终新建副本。
+    /// `force=true` 跳过查重并新建副本，该副本不写入 content_hash（退出去重集合，
+    /// 也避免撞上 content_hash 唯一索引）。
     pub async fn upload(
         &self,
         data: &[u8],
@@ -244,39 +245,7 @@ impl FileService {
                 .await
                 .map_err(ServiceError::Db)?
         {
-            let dup_tags = self
-                .repo
-                .get_file_tags(existing.id)
-                .await
-                .map_err(ServiceError::Db)?
-                .into_iter()
-                .map(|t| t.name)
-                .collect();
-            let dup_meta = self
-                .repo
-                .get_file_meta(existing.id)
-                .await
-                .map_err(ServiceError::Db)?;
-            return Ok(UploadOutcome {
-                file: File {
-                    id: existing.id,
-                    stored_id: existing.stored_id,
-                    original_name: existing.original_name,
-                    mime_type: existing.mime_type,
-                    file_category: FileCategory::from_category_str(&existing.file_category),
-                    size_bytes: existing.size_bytes,
-                    width: existing.width,
-                    height: existing.height,
-                    duration_ms: existing.duration_ms,
-                    user_id: existing.user_id,
-                    content_hash: existing.content_hash,
-                    tags: dup_tags,
-                    meta: dup_meta,
-                    created_at: existing.created_at,
-                    updated_at: existing.updated_at,
-                },
-                duplicate: true,
-            });
+            return self.duplicate_outcome(existing).await;
         }
 
         let safe_name = sanitize_name(original_name);
@@ -302,13 +271,28 @@ impl FileService {
                 height: None,
                 duration_ms: None,
                 user_id,
-                content_hash: Some(&hash),
+                // force 副本显式不参与去重：写 NULL 退出唯一索引约束
+                content_hash: if force { None } else { Some(&hash) },
             })
             .await
         {
             Ok(f) => f,
             Err(e) => {
                 let _ = tokio::fs::remove_file(&tmp_path).await;
+                // 并发竞态：另一请求抢先插入了相同内容（content_hash 唯一索引）
+                // → 丢弃本次临时文件，复用已落库的那条记录
+                let is_unique_violation = e
+                    .as_database_error()
+                    .is_some_and(|db_err| db_err.is_unique_violation());
+                if is_unique_violation
+                    && let Some(existing) = self
+                        .repo
+                        .find_by_hash(&hash)
+                        .await
+                        .map_err(ServiceError::Db)?
+                {
+                    return self.duplicate_outcome(existing).await;
+                }
                 return Err(ServiceError::Db(e));
             }
         };
@@ -360,6 +344,46 @@ impl FileService {
                 updated_at: file_row.updated_at,
             },
             duplicate: false,
+        })
+    }
+
+    /// 由已有记录组装"命中去重"结果（含标签与元信息）
+    async fn duplicate_outcome(
+        &self,
+        row: crate::modules::file::repository::FileRow,
+    ) -> Result<UploadOutcome, ServiceError> {
+        let tags = self
+            .repo
+            .get_file_tags(row.id)
+            .await
+            .map_err(ServiceError::Db)?
+            .into_iter()
+            .map(|t| t.name)
+            .collect();
+        let meta = self
+            .repo
+            .get_file_meta(row.id)
+            .await
+            .map_err(ServiceError::Db)?;
+        Ok(UploadOutcome {
+            file: File {
+                id: row.id,
+                stored_id: row.stored_id,
+                original_name: row.original_name,
+                mime_type: row.mime_type,
+                file_category: FileCategory::from_category_str(&row.file_category),
+                size_bytes: row.size_bytes,
+                width: row.width,
+                height: row.height,
+                duration_ms: row.duration_ms,
+                user_id: row.user_id,
+                content_hash: row.content_hash,
+                tags,
+                meta,
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+            },
+            duplicate: true,
         })
     }
 
@@ -1052,6 +1076,37 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn concurrent_same_content_uploads_keep_single_record() {
+        // 并发竞态：两个请求同时上传同一内容，"先查后插"各自未命中，
+        // 靠 content_hash 唯一索引兜底 —— 最终只留一条记录、一份磁盘文件
+        let ctx = setup_service().await;
+        let (a, b) = tokio::join!(
+            ctx.svc
+                .upload(PNG_1X1, "race-a.png", "image/png", Some(7), None, false),
+            ctx.svc
+                .upload(PNG_1X1, "race-b.png", "image/png", Some(7), None, false),
+        );
+        let a = a.expect("上传 A 不应失败");
+        let b = b.expect("上传 B 不应失败");
+
+        // 一个新建、一个命中去重（顺序不定）
+        assert_ne!(a.duplicate, b.duplicate, "应恰好一个新建、一个复用");
+        assert_eq!(a.file.stored_id, b.file.stored_id);
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM file")
+            .fetch_one(&*ctx.pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 1, "并发上传后应只有一条记录");
+        let disk_files = std::fs::read_dir(&ctx.dir.0)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| !e.file_name().to_string_lossy().starts_with("tmp_"))
+            .count();
+        assert_eq!(disk_files, 1, "并发上传后应只有一份文件，且无残留临时文件");
+    }
+
+    #[tokio::test]
     async fn upload_force_creates_independent_copy() {
         let ctx = setup_service().await;
         let first = ctx
@@ -1068,6 +1123,9 @@ mod tests {
         assert!(!forced.duplicate);
         assert_ne!(forced.file.stored_id, first.file.stored_id);
         assert_eq!(forced.file.original_name, "copy.png");
+        // 副本不参与去重（content_hash 为 NULL），否则会撞唯一索引
+        assert!(forced.file.content_hash.is_none());
+        assert!(first.file.content_hash.is_some());
         let disk_files = std::fs::read_dir(&ctx.dir.0)
             .unwrap()
             .filter_map(|e| e.ok())

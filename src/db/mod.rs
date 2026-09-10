@@ -287,6 +287,76 @@ mod tests {
         assert_eq!(conv_count, 0);
     }
 
+    /// v17：清理存量重复 content_hash（保留最早一条，其余置 NULL）并建立唯一索引
+    #[tokio::test]
+    async fn v17_dedupes_existing_hash_and_enforces_unique() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        create_tables(&pool).await.unwrap();
+        // 模拟 v16 旧库：没有唯一索引（基线建的是最新 schema，先摘掉）
+        sqlx::query("DROP INDEX IF EXISTS idx_file_content_hash_unique")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA user_version = 16")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // 三条记录：两条同哈希 + 一条无哈希
+        for (sid, hash) in [
+            ("dup-1", Some("same")),
+            ("dup-2", Some("same")),
+            ("none", None),
+        ] {
+            sqlx::query(
+                "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, content_hash)
+                 VALUES (?, 'n', 'image/png', 'image', 1, ?)",
+            )
+            .bind(sid)
+            .bind(hash)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+
+        migrate(&pool).await.unwrap();
+        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+
+        // 最早一条保留哈希，重复的那条被置 NULL（数据不丢）
+        let first: Option<String> =
+            sqlx::query_scalar("SELECT content_hash FROM file WHERE stored_id = 'dup-1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        let second: Option<String> =
+            sqlx::query_scalar("SELECT content_hash FROM file WHERE stored_id = 'dup-2'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(first.as_deref(), Some("same"));
+        assert!(second.is_none(), "重复哈希应被置 NULL 而不是删除记录");
+
+        // 唯一索引已建立并生效
+        let dup_insert = sqlx::query(
+            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, content_hash)
+             VALUES ('dup-3', 'n', 'image/png', 'image', 1, 'same')",
+        )
+        .execute(&pool)
+        .await;
+        assert!(dup_insert.is_err(), "唯一索引应拒绝重复 content_hash");
+        // NULL 仍可并列
+        for sid in ["null-a", "null-b"] {
+            sqlx::query(
+                "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, content_hash)
+                 VALUES (?, 'n', 'image/png', 'image', 1, NULL)",
+            )
+            .bind(sid)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+    }
+
     #[tokio::test]
     async fn migrate_is_idempotent() {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();

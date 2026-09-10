@@ -52,6 +52,23 @@ const ALLOWED_MIMES: &[(&str, &str, u64)] = &[
     ),
 ];
 
+/// MIME 别名规范化：同一格式在不同来源（infer 魔数库 / 浏览器 / 操作系统）
+/// 会给出不同 MIME 名，白名单只收标准名，这里把常见等价别名归一。
+///
+/// 不加这层会导致「格式正确却传不上去」——例如 infer 把 WAV 报成
+/// `audio/x-wav`，与白名单的 `audio/wav` 一比就判成"文件类型不符"。
+fn normalize_mime(mime: &str) -> &str {
+    match mime {
+        "audio/x-wav" | "audio/wave" | "audio/vnd.wave" => "audio/wav",
+        "audio/x-flac" => "audio/flac",
+        "image/x-png" => "image/png",
+        "image/jpg" | "image/pjpeg" => "image/jpeg",
+        "image/x-ms-bmp" => "image/bmp",
+        "video/x-m4v" => "video/mp4",
+        _ => mime,
+    }
+}
+
 /// 查找允许的 MIME
 fn find_allowed(mime: &str) -> Option<(&'static str, u64)> {
     ALLOWED_MIMES
@@ -195,56 +212,33 @@ impl FileService {
         infer::get(data).map(|t| t.mime_type().to_string())
     }
 
-    /// 上传：校验 → 查重 → 写临时文件 → 插库 → 原子 rename → 解析元数据
+    /// 临时文件路径（流式上传先落盘到此，再由 [`Self::upload_streamed`] 接续）。
+    /// handler 不持有目录配置，路径一律经此获取。
+    pub fn tmp_path(&self) -> String {
+        format!("{}/tmp_{}.tmp", self.upload_dir, nanoid::nanoid!(12))
+    }
+
+    /// 按已落盘的临时文件完成入库：查重 → 插库 → 原子 rename → 元数据 → 标签。
     ///
-    /// `force=false` 时已有相同内容（SHA-256）的文件会直接复用（不新建、不重复占盘）；
-    /// `force=true` 跳过查重并新建副本，该副本不写入 content_hash（退出去重集合，
-    /// 也避免撞上 content_hash 唯一索引）。
-    pub async fn upload(
+    /// 调用方（handler）负责流式写盘、大小限流与 SHA-256 计算；
+    /// `head` 为文件前若干字节（图片尺寸解析只需头部）。
+    /// 出错时由本方法负责清理 `tmp_path`。
+    #[allow(clippy::too_many_arguments)]
+    pub async fn upload_streamed(
         &self,
-        data: &[u8],
+        tmp_path: &str,
+        data_size: u64,
+        hash: String,
+        head: &[u8],
         original_name: &str,
-        client_mime: &str,
+        final_mime: &str,
+        category_str: &str,
         user_id: Option<i64>,
         tags: Option<Vec<String>>,
         force: bool,
     ) -> Result<UploadOutcome, ServiceError> {
-        // 1. MIME 真实校验
-        // infer 对纯文本类（txt/md/csv/html）与部分 PDF 变体返回 None（无魔数），
-        // 此时仅信任客户端声明的文本类/PDF MIME（白名单内再复核），其余拒绝。
-        let final_mime = match Self::detect_mime(data) {
-            Some(real) if real != client_mime => {
-                return Err(ServiceError::InvalidInput(format!(
-                    "文件类型不符：声明 {client_mime}, 实际 {real}"
-                )));
-            }
-            Some(real) => real,
-            None if data.is_empty() => {
-                return Err(ServiceError::InvalidInput("空文件无法上传".into()));
-            }
-            None if client_mime.starts_with("text/") || client_mime == "application/pdf" => {
-                client_mime.to_string()
-            }
-            None => {
-                return Err(ServiceError::InvalidInput("无法识别文件类型".into()));
-            }
-        };
-
-        let (category_str, max_size) = find_allowed(&final_mime)
-            .ok_or_else(|| ServiceError::InvalidInput(format!("不支持的文件类型: {final_mime}")))?;
-
-        // 2. 大小校验
-        if data.len() as u64 > max_size {
-            return Err(ServiceError::InvalidInput(format!(
-                "文件过大: {} 字节, 最大允许 {} 字节",
-                data.len(),
-                max_size
-            )));
-        }
-
-        // 2.5 内容去重（全局）：已有相同 SHA-256 → 默认复用（force 跳过）
+        // 内容去重（全局）：已有相同 SHA-256 → 默认复用（force 跳过）
         // 单人项目：同一内容全系统只保留一个 id，跨账号重传也不重复占盘
-        let hash = content_hash(data);
         if !force
             && let Some(existing) = self
                 .repo
@@ -252,28 +246,23 @@ impl FileService {
                 .await
                 .map_err(ServiceError::Db)?
         {
+            let _ = tokio::fs::remove_file(tmp_path).await;
             return self.duplicate_outcome(existing).await;
         }
 
         let safe_name = sanitize_name(original_name);
         let stored_id = generate_stored_id();
-        let tmp_path = format!("{}/tmp_{}.tmp", self.upload_dir, stored_id);
         let final_path = format!("{}/{}", self.upload_dir, stored_id);
 
-        // 3. 写临时文件
-        tokio::fs::write(&tmp_path, data)
-            .await
-            .map_err(|e| ServiceError::Internal(format!("写入文件失败: {e}")))?;
-
-        // 4. 插库
+        // 插库
         let file_row = match self
             .repo
             .insert(NewFile {
                 stored_id: &stored_id,
                 original_name: &safe_name,
-                mime_type: &final_mime,
+                mime_type: final_mime,
                 file_category: category_str,
-                size_bytes: data.len() as i64,
+                size_bytes: data_size as i64,
                 width: None,
                 height: None,
                 duration_ms: None,
@@ -285,7 +274,7 @@ impl FileService {
         {
             Ok(f) => f,
             Err(e) => {
-                let _ = tokio::fs::remove_file(&tmp_path).await;
+                let _ = tokio::fs::remove_file(tmp_path).await;
                 // 并发竞态：另一请求抢先插入了相同内容（content_hash 唯一索引）
                 // → 丢弃本次临时文件，复用已落库的那条记录
                 let is_unique_violation = e
@@ -304,17 +293,17 @@ impl FileService {
             }
         };
 
-        // 5. 原子 rename
-        if let Err(e) = std::fs::rename(&tmp_path, &final_path) {
+        // 原子 rename
+        if let Err(e) = std::fs::rename(tmp_path, &final_path) {
             warn!("rename 失败 stored_id={}: {}", stored_id, e);
             let _ = self.repo.delete(&stored_id).await;
-            let _ = tokio::fs::remove_file(&tmp_path).await;
+            let _ = tokio::fs::remove_file(tmp_path).await;
             return Err(ServiceError::Internal(format!("保存文件失败: {e}")));
         }
 
-        // 6. 元数据解析（图片尺寸）
+        // 元数据解析（图片尺寸，仅需文件头）
         let (width, height) = if category_str == "image" {
-            Self::extract_image_dimensions(data)
+            Self::extract_image_dimensions(head)
         } else {
             (None, None)
         };
@@ -325,7 +314,7 @@ impl FileService {
                 .await;
         }
 
-        // 7. 处理标签（匿名上传无 user_id 时无法归属标签，静默忽略；
+        // 标签（匿名上传无 user_id 时无法归属标签，静默忽略；
         // 避免 user_id.unwrap_or(0) 写入不存在的用户导致外键失败）
         let tag_names = match (tags, user_id) {
             (Some(t), Some(uid)) => self.set_tags_for_file(file_row.id, uid, &t).await?,
@@ -352,6 +341,78 @@ impl FileService {
             },
             duplicate: false,
         })
+    }
+
+    /// 上传（内存切片入口）：校验 → 落盘临时文件 → 交给 [`Self::upload_streamed`]。
+    ///
+    /// HTTP 路径走流式（`handler` 边读边写盘），此入口用于内部调用与测试。
+    pub async fn upload(
+        &self,
+        data: &[u8],
+        original_name: &str,
+        client_mime: &str,
+        user_id: Option<i64>,
+        tags: Option<Vec<String>>,
+        force: bool,
+    ) -> Result<UploadOutcome, ServiceError> {
+        let final_mime = Self::resolve_mime(data, client_mime)?;
+        let (category_str, max_size) = Self::max_size_for(&final_mime)
+            .ok_or_else(|| ServiceError::InvalidInput(format!("不支持的文件类型: {final_mime}")))?;
+        if data.len() as u64 > max_size {
+            return Err(ServiceError::InvalidInput(format!(
+                "文件过大: {} 字节, 最大允许 {} 字节",
+                data.len(),
+                max_size
+            )));
+        }
+
+        let hash = content_hash(data);
+        let tmp_path = self.tmp_path();
+        tokio::fs::write(&tmp_path, data)
+            .await
+            .map_err(|e| ServiceError::Internal(format!("写入文件失败: {e}")))?;
+        self.upload_streamed(
+            &tmp_path,
+            data.len() as u64,
+            hash,
+            data,
+            original_name,
+            &final_mime,
+            category_str,
+            user_id,
+            tags,
+            force,
+        )
+        .await
+    }
+
+    /// MIME 真实校验（流式与内存入口共用）：
+    /// infer 对纯文本类（txt/md/csv/html）与部分 PDF 变体返回 None（无魔数），
+    /// 此时仅信任客户端声明的文本类/PDF MIME（白名单内再复核），其余拒绝。
+    pub fn resolve_mime(head: &[u8], client_mime: &str) -> Result<String, ServiceError> {
+        match Self::detect_mime(head) {
+            // 比较前先归一别名，避免 x-wav/wav 这类等价写法被判成"类型不符"
+            Some(raw) => {
+                let real = normalize_mime(&raw).to_string();
+                let declared = normalize_mime(client_mime);
+                if real != declared {
+                    return Err(ServiceError::InvalidInput(format!(
+                        "文件类型不符：声明 {client_mime}, 实际 {raw}"
+                    )));
+                }
+                Ok(real)
+            }
+            None if head.is_empty() => Err(ServiceError::InvalidInput("空文件无法上传".into())),
+            None if client_mime.starts_with("text/") || client_mime == "application/pdf" => {
+                Ok(client_mime.to_string())
+            }
+            None => Err(ServiceError::InvalidInput("无法识别文件类型".into())),
+        }
+    }
+
+    /// 该 MIME 的白名单信息（类别 + 大小上限）；不在白名单返回 None
+    pub fn max_size_for(mime: &str) -> Option<(&'static str, u64)> {
+        find_allowed(mime)
     }
 
     /// 由已有记录组装"命中去重"结果（含标签与元信息）
@@ -1047,6 +1108,109 @@ mod tests {
             .await
             .unwrap();
         assert!(row.is_none());
+    }
+
+    // ── MIME 别名规范化 ──
+
+    #[test]
+    fn normalize_mime_maps_equivalent_aliases() {
+        assert_eq!(normalize_mime("audio/x-wav"), "audio/wav");
+        assert_eq!(normalize_mime("audio/wave"), "audio/wav");
+        assert_eq!(normalize_mime("audio/x-flac"), "audio/flac");
+        assert_eq!(normalize_mime("image/jpg"), "image/jpeg");
+        // 非别名原样返回
+        assert_eq!(normalize_mime("image/png"), "image/png");
+        assert_eq!(normalize_mime("audio/mpeg"), "audio/mpeg");
+    }
+
+    #[test]
+    fn resolve_mime_accepts_wav_declared_with_standard_name() {
+        // infer 报 audio/x-wav，浏览器声明 audio/wav —— 等价，应通过
+        let wav = b"RIFF\x24\x00\x00\x00WAVEfmt ";
+        assert_eq!(
+            FileService::resolve_mime(wav, "audio/wav").unwrap(),
+            "audio/wav"
+        );
+    }
+
+    #[test]
+    fn resolve_mime_still_rejects_genuine_mismatch() {
+        // 别名归一不能掩盖真实不符：PNG 字节声明成音频
+        let err = FileService::resolve_mime(PNG_1X1, "audio/wav").unwrap_err();
+        assert!(err.to_string().contains("文件类型不符"));
+    }
+
+    // ── 流式上传接续（handler 边读边写盘后调用） ──
+
+    #[tokio::test]
+    async fn upload_streamed_commits_and_moves_tmp_file() {
+        let ctx = setup_service().await;
+        let tmp = format!("{}/tmp_manual.tmp", ctx.dir.0);
+        std::fs::write(&tmp, PNG_1X1).unwrap();
+
+        let outcome = ctx
+            .svc
+            .upload_streamed(
+                &tmp,
+                PNG_1X1.len() as u64,
+                content_hash(PNG_1X1),
+                PNG_1X1,
+                "写入.png",
+                "image/png",
+                "image",
+                Some(7),
+                Some(vec!["t".into()]),
+                false,
+            )
+            .await
+            .unwrap();
+
+        assert!(!outcome.duplicate);
+        assert!(
+            !std::path::Path::new(&tmp).exists(),
+            "临时文件应被 rename 走"
+        );
+        let final_path = format!("{}/{}", ctx.dir.0, outcome.file.stored_id);
+        assert!(std::path::Path::new(&final_path).exists());
+        assert_eq!(outcome.file.size_bytes, PNG_1X1.len() as i64);
+        assert_eq!(outcome.file.width, Some(1));
+        assert_eq!(outcome.file.tags, vec!["t"]);
+    }
+
+    #[tokio::test]
+    async fn upload_streamed_discards_tmp_when_duplicate() {
+        let ctx = setup_service().await;
+        let first = ctx
+            .svc
+            .upload(PNG_1X1, "a.png", "image/png", Some(7), None, false)
+            .await
+            .unwrap();
+        let tmp = format!("{}/tmp_dup.tmp", ctx.dir.0);
+        std::fs::write(&tmp, PNG_1X1).unwrap();
+
+        let outcome = ctx
+            .svc
+            .upload_streamed(
+                &tmp,
+                PNG_1X1.len() as u64,
+                content_hash(PNG_1X1),
+                PNG_1X1,
+                "b.png",
+                "image/png",
+                "image",
+                Some(7),
+                None,
+                false,
+            )
+            .await
+            .unwrap();
+
+        assert!(outcome.duplicate);
+        assert_eq!(outcome.file.stored_id, first.file.stored_id);
+        assert!(
+            !std::path::Path::new(&tmp).exists(),
+            "命中重复时临时文件应被丢弃"
+        );
     }
 
     // ── 内容去重 ──

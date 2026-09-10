@@ -5,6 +5,8 @@ use axum::{
     response::{IntoResponse, Json, Response},
 };
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use tokio::io::AsyncWriteExt;
 use tokio_util::io::ReaderStream;
 
 use super::model::{FileListQuery, UpdateFileRequest};
@@ -100,6 +102,9 @@ fn to_summary_response(f: &super::model::FileSummary) -> FileResponse {
 
 // ── 上传 ──
 
+/// 流式上传时保留的文件头字节数（MIME 检测与图片尺寸解析只需头部）
+const HEAD_BUFFER_LIMIT: usize = 512;
+
 #[derive(Deserialize)]
 pub struct UploadQuery {
     tags: Option<String>, // JSON 数组字符串
@@ -114,7 +119,7 @@ pub async fn upload_handler(
     Query(query): Query<UploadQuery>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
-    while let Ok(Some(field)) = multipart.next_field().await {
+    while let Ok(Some(mut field)) = multipart.next_field().await {
         let name = field.name().unwrap_or("").to_string();
         if name != "file" {
             continue;
@@ -126,22 +131,91 @@ pub async fn upload_handler(
             .unwrap_or("application/octet-stream")
             .to_string();
 
-        let data = match field.bytes().await {
-            Ok(d) => d,
-            Err(e) => return error::bad_request(format!("读取文件失败: {e}")),
-        };
-
         // 解析标签
         let tags = query
             .tags
             .as_deref()
             .and_then(|s| serde_json::from_str::<Vec<String>>(s).ok());
 
+        // 流式落盘：边读边写临时文件 + 增量 SHA-256，避免大文件（视频 500MB）
+        // 一次性进内存。首块用于 MIME 校验，校验通过后才知道该类型的大小上限。
+        let tmp_path = service.tmp_path();
+        let mut tmp_file = match tokio::fs::File::create(&tmp_path).await {
+            Ok(f) => f,
+            Err(e) => {
+                return ServiceError::Internal(format!("创建临时文件失败: {e}")).into_response();
+            }
+        };
+
+        let first = match field.chunk().await {
+            Ok(c) => c.unwrap_or_default(),
+            Err(e) => {
+                let _ = tokio::fs::remove_file(&tmp_path).await;
+                return error::bad_request(format!("读取文件失败: {e}"));
+            }
+        };
+
+        let final_mime = match FileService::resolve_mime(&first, &content_type) {
+            Ok(m) => m,
+            Err(e) => {
+                let _ = tokio::fs::remove_file(&tmp_path).await;
+                return e.into_response();
+            }
+        };
+        let Some((category_str, max_size)) = FileService::max_size_for(&final_mime) else {
+            let _ = tokio::fs::remove_file(&tmp_path).await;
+            return ServiceError::InvalidInput(format!("不支持的文件类型: {final_mime}"))
+                .into_response();
+        };
+
+        let mut hasher = Sha256::new();
+        let mut head: Vec<u8> = Vec::new();
+        let mut total: u64 = 0;
+        let mut next = Some(first);
+
+        while let Some(bytes) = next {
+            if !bytes.is_empty() {
+                total += bytes.len() as u64;
+                if total > max_size {
+                    let _ = tokio::fs::remove_file(&tmp_path).await;
+                    return ServiceError::InvalidInput(format!(
+                        "文件过大: {total} 字节, 最大允许 {max_size} 字节"
+                    ))
+                    .into_response();
+                }
+                hasher.update(&bytes);
+                if head.len() < HEAD_BUFFER_LIMIT {
+                    let take = (HEAD_BUFFER_LIMIT - head.len()).min(bytes.len());
+                    head.extend(bytes.iter().take(take));
+                }
+                if let Err(e) = tmp_file.write_all(&bytes).await {
+                    let _ = tokio::fs::remove_file(&tmp_path).await;
+                    return ServiceError::Internal(format!("写入文件失败: {e}")).into_response();
+                }
+            }
+            next = match field.chunk().await {
+                Ok(c) => c,
+                Err(e) => {
+                    let _ = tokio::fs::remove_file(&tmp_path).await;
+                    return error::bad_request(format!("读取文件失败: {e}"));
+                }
+            };
+        }
+        if let Err(e) = tmp_file.flush().await {
+            let _ = tokio::fs::remove_file(&tmp_path).await;
+            return ServiceError::Internal(format!("写入文件失败: {e}")).into_response();
+        }
+        drop(tmp_file);
+
         match service
-            .upload(
-                &data,
+            .upload_streamed(
+                &tmp_path,
+                total,
+                hex::encode(hasher.finalize()),
+                &head,
                 &original_name,
-                &content_type,
+                &final_mime,
+                category_str,
                 Some(claims.sub as i64),
                 tags,
                 query.force.unwrap_or(false),

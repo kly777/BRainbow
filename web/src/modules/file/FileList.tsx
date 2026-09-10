@@ -7,6 +7,7 @@ import {
 	PageHead,
 	SearchInput,
 	SimplePagination,
+	Tooltip,
 } from "@components/ui";
 import {
 	Copy,
@@ -31,15 +32,12 @@ import type { FileItem, SortOrder } from "./api.ts";
 import { fileUrl } from "./api.ts";
 import EmptyGuide from "./components/EmptyGuide.tsx";
 import FileContextMenu from "./components/FileContextMenu.tsx";
+import FileInfoTip from "./components/FileInfoTip.tsx";
 import ImageLightbox from "./components/ImageLightbox.tsx";
 import TagFilter from "./components/TagFilter.tsx";
 import TagManager from "./components/TagManager.tsx";
 import styles from "./FileList.module.css";
-import {
-	type FileView,
-	type UploadTask,
-	useFileList,
-} from "./hooks/useFileList.ts";
+import { type UploadTask, useFileList } from "./hooks/useFileList.ts";
 import { fileExt } from "./lib/filename.ts";
 
 /** 列表滚动位置的 sessionStorage 键（从详情返回时恢复） */
@@ -112,14 +110,14 @@ const FileCardView: Component<{
 }> = (props) => (
 	<>
 		<div class={styles.info}>
-			<button
-				type="button"
-				class={styles.nameBtn}
-				onClick={props.onOpen}
-				title="查看详情"
+			<Tooltip
+				content={<FileInfoTip item={props.item} />}
+				class={styles.nameTipHost}
 			>
-				{props.item.original_name}
-			</button>
+				<button type="button" class={styles.nameBtn} onClick={props.onOpen}>
+					{props.item.original_name}
+				</button>
+			</Tooltip>
 			<p class={styles.meta}>
 				{props.item.file_category} · {formatBytes(props.item.size_bytes)}
 			</p>
@@ -389,9 +387,14 @@ const FileRow: Component<{
 		</button>
 
 		<div class={styles.rowMain}>
-			<button type="button" class={styles.nameBtn} onClick={props.onOpen}>
-				{props.item.original_name}
-			</button>
+			<Tooltip
+				content={<FileInfoTip item={props.item} />}
+				class={styles.nameTipHost}
+			>
+				<button type="button" class={styles.nameBtn} onClick={props.onOpen}>
+					{props.item.original_name}
+				</button>
+			</Tooltip>
 			<div class={styles.rowMeta}>
 				<span>{props.item.file_category}</span>
 				<span>·</span>

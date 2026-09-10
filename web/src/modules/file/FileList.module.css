@@ -286,6 +286,12 @@
 	min-height: 6.6rem;
 }
 
+/* Tooltip 宿主：撑满卡片宽度，文件名才能保持单行截断 */
+.name-tip-host {
+	display: block;
+	width: 100%;
+}
+
 .name-btn {
 	border: none;
 	background: transparent;

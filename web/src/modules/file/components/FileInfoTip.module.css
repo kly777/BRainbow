@@ -1,0 +1,36 @@
+/* 文件名悬浮信息卡（作为 Tooltip 的富内容渲染在深色气泡里，层次只能用透明度表达） */
+
+.card {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.name {
+	margin: 0;
+	font-size: var(--text-sm);
+	font-weight: 600;
+	line-height: 1.35;
+	overflow-wrap: anywhere;
+}
+
+.line {
+	margin: 0;
+	opacity: 0.85;
+}
+
+.sep {
+	margin: 0 0.4em;
+	opacity: 0.6;
+}
+
+.tags {
+	margin: 0;
+	opacity: 0.9;
+	overflow-wrap: anywhere;
+}
+
+.time {
+	margin: 0;
+	opacity: 0.7;
+}

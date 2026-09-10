@@ -18,18 +18,29 @@
 	overflow-wrap: break-word;
 	pointer-events: none;
 	box-shadow: var(--shadow-md);
+
+	/* 入场动画用独立的 scale 属性：animation 里的 transform 会覆盖各方向的定位 translate */
+	scale: 1;
 	animation: tooltip-in 150ms var(--ease-out-expo) forwards;
+}
+
+/* 富内容气泡（信息卡）：宽度与 Tooltip.tsx 的 RICH_TIP_WIDTH 常量保持一致 */
+.rich {
+	width: 272px;
+	white-space: normal;
+	text-align: left;
+	padding: var(--space-sm);
 }
 
 @keyframes tooltip-in {
 	from {
 		opacity: 0;
-		transform: scale(0.95);
+		scale: 0.95;
 	}
 
 	to {
 		opacity: 1;
-		transform: scale(1);
+		scale: 1;
 	}
 }
 

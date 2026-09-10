@@ -7,16 +7,7 @@ import {
 	PageHead,
 	SearchInput,
 } from "@components/ui";
-import {
-	Copy,
-	File as FileIcon,
-	FileText,
-	Film,
-	Image as ImageIcon,
-	Music,
-	Upload,
-	X,
-} from "@components/ui/icons";
+import { Copy, File as FileIcon, Upload, X } from "@components/ui/icons";
 import { fillPath, PATHS } from "@config/paths";
 import { copyTextWithToast, formatBytes } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
@@ -26,6 +17,7 @@ import { fileUrl } from "./api.ts";
 import TagFilter from "./components/TagFilter.tsx";
 import styles from "./FileList.module.css";
 import { useFileList } from "./hooks/useFileList.ts";
+import { fileExt } from "./lib/filename.ts";
 
 const CATEGORY_TABS = [
 	{ value: "", label: "全部" },
@@ -36,22 +28,16 @@ const CATEGORY_TABS = [
 	{ value: "other", label: "其他" },
 ];
 
-/** 类别图标（图标统一从 @components/ui/icons 引入，禁止 emoji） */
-const CategoryIcon: Component<{ category: string }> = (props) => {
-	const cls = styles.iconPreview;
-	switch (props.category) {
-		case "image":
-			return <ImageIcon size={28} class={cls} />;
-		case "video":
-			return <Film size={28} class={cls} />;
-		case "audio":
-			return <Music size={28} class={cls} />;
-		case "document":
-			return <FileText size={28} class={cls} />;
-		default:
-			return <FileIcon size={28} class={cls} />;
-	}
-};
+/** 非图片文件：用后缀名徽章替代通用文件图标，一眼看出类型；
+ *  无后缀时回退到通用文件图标 */
+const ExtBadge: Component<{ name: string }> = (props) => (
+	<Show
+		when={fileExt(props.name)}
+		fallback={<FileIcon size={28} class={styles.iconPreview} />}
+	>
+		{(ext) => <span class={styles.extBadge}>{ext()}</span>}
+	</Show>
+);
 
 const FilePreview: Component<{ item: FileItem; onOpen: () => void }> = (
 	props,
@@ -64,7 +50,7 @@ const FilePreview: Component<{ item: FileItem; onOpen: () => void }> = (
 	>
 		<Show
 			when={props.item.file_category === "image"}
-			fallback={<CategoryIcon category={props.item.file_category} />}
+			fallback={<ExtBadge name={props.item.original_name} />}
 		>
 			<img
 				src={fileUrl(props.item.stored_id, props.item.original_name)}

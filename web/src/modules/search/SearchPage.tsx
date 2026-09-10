@@ -20,6 +20,7 @@ const MODULES = [
 	{ key: "reading", label: "阅读" },
 	{ key: "conv", label: "对话" },
 	{ key: "chat", label: "AI 对话" },
+	{ key: "file", label: "文件" },
 ];
 
 function highlightKeywords(text: string, query: string): string {

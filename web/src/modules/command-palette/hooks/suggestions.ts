@@ -34,6 +34,7 @@ export const KIND_LABEL: Record<string, string> = {
 	reading: "阅读",
 	conv: "对话",
 	chat: "AI 对话",
+	file: "文件",
 };
 
 /** 将 SearchTarget 解析为前端 URL */
@@ -59,6 +60,8 @@ export function resolveTargetUrl(target: SearchTarget): string {
 			return fillPath(PATHS.convDetail, target.params.id);
 		case "Text":
 			return PATHS.text;
+		case "File":
+			return fillPath(PATHS.fileDetail, target.params.id);
 		default:
 			return PATHS.home;
 	}

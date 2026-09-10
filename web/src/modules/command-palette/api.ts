@@ -13,7 +13,8 @@ export type SearchTargetType =
 	| "ChatTree"
 	| "ChatNode"
 	| "Conv"
-	| "Text";
+	| "Text"
+	| "File";
 
 /** 搜索命中项的导航目标 */
 export interface SearchTarget {
@@ -34,6 +35,6 @@ export interface SearchResponse {
 	hits: SearchHit[];
 }
 
-/** 跨模块站内搜索（记忆/卡片/任务/书签/本体/文本/阅读/对话/AI 对话） */
+/** 跨模块站内搜索（记忆/卡片/任务/书签/本体/文本/阅读/对话/AI 对话/文件） */
 export const searchE = (q: string, limit = 4): Promise<SearchResponse> =>
 	request(`/search?q=${encodeURIComponent(q)}&limit=${limit}`, {});

@@ -22,6 +22,19 @@ pub struct FileRow {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
+/// 全局搜索命中行：文件基础信息 + 命中的标签名（文件名未命中时用于片段）
+#[derive(Debug, FromRow)]
+pub struct FileSearchHit {
+    pub id: i64,
+    pub original_name: String,
+    pub file_category: String,
+    pub size_bytes: i64,
+    /// 首个命中的标签名（无命中为 NULL）
+    pub matched_tag: Option<String>,
+    /// 0 = 文件名命中，1 = 仅标签命中（排序用，也可以用来打分）
+    pub name_hit: i64,
+}
+
 #[derive(Clone)]
 pub struct FileRepository {
     pub db: Arc<SqlitePool>,
@@ -336,6 +349,46 @@ impl FileRepository {
             .push_bind(offset);
 
         qb.build_query_as::<FileRow>().fetch_all(&*self.db).await
+    }
+
+    // ── 全局搜索 ──
+
+    /// 全局搜索：文件名或标签名命中，文件名命中排在前面。
+    ///
+    /// `like` 由 `like_contains` 生成（已转义 `%` / `_` / `\`），
+    /// SQL 里用 `?1` 复用同一个模式串。
+    pub async fn search_hits(
+        &self,
+        user_id: i64,
+        like: &str,
+        limit: i64,
+    ) -> Result<Vec<FileSearchHit>, sqlx::Error> {
+        sqlx::query_as!(
+            FileSearchHit,
+            r#"SELECT f.id AS "id!: i64",
+                      f.original_name,
+                      f.file_category,
+                      f.size_bytes AS "size_bytes!: i64",
+                      (SELECT t.name FROM file_tag_rel r
+                         JOIN file_tag t ON t.id = r.tag_id
+                        WHERE r.file_id = f.id AND t.name LIKE ?1 ESCAPE '\'
+                        ORDER BY t.name LIMIT 1) AS "matched_tag?: String",
+                      CASE WHEN f.original_name LIKE ?1 ESCAPE '\' THEN 0 ELSE 1 END AS "name_hit!: i64"
+                 FROM file f
+                WHERE f.user_id = ?2
+                  AND (f.original_name LIKE ?1 ESCAPE '\'
+                       OR EXISTS (SELECT 1 FROM file_tag_rel r2
+                                    JOIN file_tag t2 ON t2.id = r2.tag_id
+                                   WHERE r2.file_id = f.id AND t2.name LIKE ?1 ESCAPE '\'))
+                ORDER BY CASE WHEN f.original_name LIKE ?1 ESCAPE '\' THEN 0 ELSE 1 END,
+                         f.created_at DESC
+                LIMIT ?3"#,
+            like,
+            user_id,
+            limit
+        )
+        .fetch_all(&*self.db)
+        .await
     }
 
     // ── 标签操作 ──

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, stored_id, original_name, mime_type, file_category,\n                              size_bytes AS \"size_bytes!: i64\", width, height, duration_ms, user_id, content_hash,\n                              COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                              COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n                       FROM file WHERE file_category = ?\n                       ORDER BY created_at DESC LIMIT ? OFFSET ?",
+  "query": "SELECT id, stored_id, original_name, mime_type, file_category,\n                      size_bytes AS \"size_bytes!: i64\", width, height, duration_ms, user_id, content_hash,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM file\n               WHERE content_hash = ?\n               ORDER BY id ASC LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -138,7 +138,7 @@
       }
     ],
     "parameters": {
-      "Right": 3
+      "Right": 1
     },
     "nullable": [
       false,
@@ -156,5 +156,5 @@
       false
     ]
   },
-  "hash": "2531d9e70e9db99dd161488baf1ce166184b6c1f87fd304e96a30ed97084f503"
+  "hash": "83660a96f808d39822f9af653682590418223a2f823e85567a63bcadbccfff7c"
 }

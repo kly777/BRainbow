@@ -1,11 +1,13 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use sqlx::SqlitePool;
 
 use super::model::{File, FileCategory, FileListQuery, FileSummary, FileTag};
-use super::repository::FileRepository;
+use super::repository::{FileRepository, FileSearchHit};
 use crate::shared::error_types::ServiceError;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
+use crate::shared::search::{SearchHit, SearchPort, SearchTarget, normalize_search};
 
 /// 查询侧服务——只读查询聚合
 #[derive(Clone)]
@@ -223,6 +225,71 @@ impl FileQueryService {
             .get_user_tags_with_count(user_id)
             .await
             .map_err(ServiceError::Db)
+    }
+}
+
+// ── 全局搜索端口 ──
+
+/// 搜索结果片段：文件名已经作为标题展示，片段给出补充信息 ——
+/// 仅标签命中时展示命中的标签，否则展示「分类 · 大小」规格。
+fn search_snippet(hit: &FileSearchHit) -> String {
+    if hit.name_hit != 0
+        && let Some(tag) = hit.matched_tag.as_deref()
+    {
+        return format!("#{tag}");
+    }
+    let category = FileCategory::from_category_str(&hit.file_category);
+    format!("{} · {}", category.label(), human_size(hit.size_bytes))
+}
+
+/// 人类可读大小（与前端 formatBytes 同口径：1024 进制）
+fn human_size(bytes: i64) -> String {
+    const KB: f64 = 1024.0;
+    const MB: f64 = KB * 1024.0;
+    const GB: f64 = MB * 1024.0;
+    let size = bytes as f64;
+    if size < KB {
+        format!("{bytes} B")
+    } else if size < MB {
+        format!("{:.1} KB", size / KB)
+    } else if size < GB {
+        format!("{:.1} MB", size / MB)
+    } else {
+        format!("{:.2} GB", size / GB)
+    }
+}
+
+#[async_trait]
+impl SearchPort for FileQueryService {
+    /// 全局搜索：文件名或标签名命中；文件名命中排在标签命中之前（打分更高）。
+    ///
+    /// 文件内容不入库，因此不搜正文 —— 但文件名通常带扩展名（搜 "pdf" 能筛出 PDF）。
+    async fn search(
+        &self,
+        user_id: i32,
+        q: &str,
+        limit: i64,
+    ) -> Result<Vec<SearchHit>, ServiceError> {
+        let Some((like, _kw, cap)) = normalize_search(q, limit) else {
+            return Ok(vec![]);
+        };
+        let rows = self
+            .repo
+            .search_hits(user_id as i64, &like, cap)
+            .await
+            .map_err(ServiceError::Db)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|row| SearchHit {
+                kind: "file".into(),
+                id: row.id,
+                title: row.original_name.clone(),
+                snippet: search_snippet(&row),
+                target: SearchTarget::File { id: row.id },
+                score: if row.name_hit == 0 { 1.0 } else { 0.5 },
+            })
+            .collect())
     }
 }
 
@@ -525,5 +592,79 @@ mod tests {
         let tags = query.get_user_tags(7).await.unwrap();
         assert_eq!(tags.len(), 1);
         assert_eq!(tags[0].name, "七的标签");
+    }
+
+    // ── 全局搜索端口 ──
+
+    #[tokio::test]
+    async fn search_port_ranks_name_hits_before_tag_hits() {
+        let (query, repo, _pool) = setup().await;
+        let _doc = seed(&repo).await;
+        // 给图片打上另一个含关键字的标签：它只应通过标签命中
+        let img = repo.find_by_stored_id("img-1").await.unwrap().unwrap();
+        let tag = repo.get_or_create_tag("报告配图", 7).await.unwrap();
+        repo.set_file_tags(img.id, &[tag.id]).await.unwrap();
+
+        let hits = query.search(7, "报告", 5).await.unwrap();
+        assert_eq!(hits.len(), 2);
+        // 文件名命中排前，片段给规格
+        assert_eq!(hits[0].kind, "file");
+        assert_eq!(hits[0].title, "季度报告.md");
+        assert_eq!(hits[0].snippet, "文档 · 100 B");
+        assert!(matches!(
+            hits[0].target,
+            SearchTarget::File { id } if id == hits[0].id
+        ));
+        // 仅标签命中排后，片段给标签
+        assert_eq!(hits[1].title, "风景.png");
+        assert_eq!(hits[1].snippet, "#报告配图");
+        assert!(hits[0].score > hits[1].score);
+    }
+
+    #[tokio::test]
+    async fn search_port_scopes_to_user_and_ignores_blank_query() {
+        let (query, repo, _pool) = setup().await;
+        seed(&repo).await;
+
+        // 用户 8 只搜到自己的文件
+        let hits = query.search(8, "文件", 5).await.unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].title, "别人文件.bin");
+
+        // 用户 7 搜不到用户 8 的文件
+        let hits = query.search(7, "别人", 5).await.unwrap();
+        assert!(hits.is_empty());
+
+        // 空 / 纯空白查询直接返回空
+        assert!(query.search(7, "   ", 5).await.unwrap().is_empty());
+    }
+
+    #[test]
+    fn search_snippet_shows_tag_only_for_tag_hits() {
+        let name_hit = FileSearchHit {
+            id: 1,
+            original_name: "设计稿.png".into(),
+            file_category: "image".into(),
+            size_bytes: 2048,
+            matched_tag: Some("设计".into()),
+            name_hit: 0,
+        };
+        // 文件名命中：给出「分类 · 大小」
+        assert_eq!(search_snippet(&name_hit), "图片 · 2.0 KB");
+        // 仅标签命中：给出命中的标签
+        let tag_hit = FileSearchHit {
+            name_hit: 1,
+            ..name_hit
+        };
+        assert_eq!(search_snippet(&tag_hit), "#设计");
+    }
+
+    #[test]
+    fn human_size_uses_binary_units() {
+        assert_eq!(human_size(0), "0 B");
+        assert_eq!(human_size(1023), "1023 B");
+        assert_eq!(human_size(2048), "2.0 KB");
+        assert_eq!(human_size(3 * 1024 * 1024), "3.0 MB");
+        assert_eq!(human_size(2 * 1024 * 1024 * 1024), "2.00 GB");
     }
 }

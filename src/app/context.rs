@@ -247,6 +247,7 @@ impl AppState {
         search_registry.register(Arc::new(reading.query.clone()));
         search_registry.register(Arc::new(conv.clone()));
         search_registry.register(Arc::new(chat_query.clone()));
+        search_registry.register(Arc::new(file_query.clone()));
         let search = SearchQueryService::new(search_registry);
 
         Self {

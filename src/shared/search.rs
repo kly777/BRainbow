@@ -91,6 +91,8 @@ pub enum SearchTarget {
     Conv { id: i64 },
     /// 文本笔记 `/text`（无 ID）
     Text,
+    /// 文件详情 `/file/:id`
+    File { id: i64 },
 }
 
 /// 全局搜索命中项：跨模块统一结构

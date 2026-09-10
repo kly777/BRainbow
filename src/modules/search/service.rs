@@ -46,6 +46,7 @@ mod tests {
     use crate::modules::card::CardQueryService;
     use crate::modules::chat::query::ChatQueryService;
     use crate::modules::conv::query::ConvQueryService;
+    use crate::modules::file::query::FileQueryService;
     use crate::modules::mem::MemRepo;
     use crate::modules::mem::query::MemQueryService;
     use crate::modules::onto::OntoQueryService;
@@ -86,6 +87,7 @@ mod tests {
         let reading_query = ReadingQueryService::new(Arc::new(pool.clone()));
         let conv_query = ConvQueryService::new(pool.clone());
         let chat_query = ChatQueryService::new(pool.clone());
+        let file_query = FileQueryService::new(Arc::new(pool.clone()), "uploads/file".into());
 
         let registry = SearchRegistry::new();
         registry.register(Arc::new(mem_query));
@@ -97,6 +99,7 @@ mod tests {
         registry.register(Arc::new(reading_query));
         registry.register(Arc::new(conv_query));
         registry.register(Arc::new(chat_query));
+        registry.register(Arc::new(file_query));
 
         TestCtx {
             svc: SearchQueryService::new(registry),
@@ -490,5 +493,92 @@ mod tests {
         let res = ctx.svc.search(1, "共享关键词", 1).await.unwrap();
         let card_hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "card").collect();
         assert_eq!(card_hits.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn file_hits_by_name_and_tag_scoped_to_user() {
+        let ctx = setup().await;
+        sqlx::query(
+            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
+             VALUES ('f-1', '季度财报.xlsx', 'application/vnd.ms-excel', 'document', 2048, 1)",
+        )
+        .execute(&ctx.pool)
+        .await
+        .unwrap();
+        let f2: i64 = sqlx::query_scalar(
+            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
+             VALUES ('f-2', '封面.png', 'image/png', 'image', 4096, 1) RETURNING id",
+        )
+        .fetch_one(&ctx.pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
+             VALUES ('f-3', '别人的财报.pdf', 'application/pdf', 'document', 100, 2)",
+        )
+        .execute(&ctx.pool)
+        .await
+        .unwrap();
+        let tag: i64 =
+            sqlx::query_scalar("INSERT INTO file_tag (name, user_id) VALUES ('财报配图', 1) RETURNING id")
+                .fetch_one(&ctx.pool)
+                .await
+                .unwrap();
+        sqlx::query("INSERT INTO file_tag_rel (file_id, tag_id) VALUES (?1, ?2)")
+            .bind(f2)
+            .bind(tag)
+            .execute(&ctx.pool)
+            .await
+            .unwrap();
+
+        let res = ctx.svc.search(1, "财报", 5).await.unwrap();
+        let file_hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "file").collect();
+        // 文件名命中 + 标签命中各一条；他人文件被 user 过滤
+        assert_eq!(file_hits.len(), 2);
+        // 文件名命中排前面，片段给出规格
+        assert_eq!(file_hits[0].title, "季度财报.xlsx");
+        assert_eq!(file_hits[0].snippet, "文档 · 2.0 KB");
+        assert!(matches!(
+            file_hits[0].target,
+            SearchTarget::File { id } if id == file_hits[0].id
+        ));
+        // 仅标签命中的排在后面，片段展示命中的标签
+        assert_eq!(file_hits[1].title, "封面.png");
+        assert_eq!(file_hits[1].snippet, "#财报配图");
+        assert_eq!(file_hits[1].id, f2);
+        assert!(file_hits[0].score > file_hits[1].score);
+
+        // 用户 2 只搜到自己的文件
+        let res = ctx.svc.search(2, "财报", 5).await.unwrap();
+        let titles: Vec<&str> = res
+            .hits
+            .iter()
+            .filter(|h| h.kind == "file")
+            .map(|h| h.title.as_str())
+            .collect();
+        assert_eq!(titles, vec!["别人的财报.pdf"]);
+    }
+
+    #[tokio::test]
+    async fn file_search_escapes_like_wildcards() {
+        let ctx = setup().await;
+        sqlx::query(
+            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
+             VALUES ('f-1', '占比100%的图.png', 'image/png', 'image', 10, 1),
+                    ('f-2', '普通图片.png', 'image/png', 'image', 10, 1)",
+        )
+        .execute(&ctx.pool)
+        .await
+        .unwrap();
+
+        // "%" 只作为字面字符匹配含它的文件名，而不是通配全部
+        let res = ctx.svc.search(1, "%", 5).await.unwrap();
+        let titles: Vec<&str> = res
+            .hits
+            .iter()
+            .filter(|h| h.kind == "file")
+            .map(|h| h.title.as_str())
+            .collect();
+        assert_eq!(titles, vec!["占比100%的图.png"]);
     }
 }

@@ -27,6 +27,17 @@ impl FileCategory {
         }
     }
 
+    /// 中文展示名：用于后端生成的用户可见文案（当前只有搜索结果片段）
+    pub fn label(&self) -> &'static str {
+        match self {
+            FileCategory::Image => "图片",
+            FileCategory::Video => "视频",
+            FileCategory::Audio => "音频",
+            FileCategory::Document => "文档",
+            FileCategory::Other => "其他",
+        }
+    }
+
     pub fn from_mime(mime: &str) -> Self {
         match mime {
             m if m.starts_with("image/") => FileCategory::Image,

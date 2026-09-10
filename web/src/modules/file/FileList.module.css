@@ -281,10 +281,10 @@
 	padding: var(--space-md);
 	flex: 1;
 
-	/* 固定信息区高度：重命名态（输入框）与展示态（文件名）内容高度不同，
+	/* 固定信息区高度：重命名态（输入框 1.75rem）比展示态（文件名行）略高，
 	   若随内容伸缩会改变网格行高、把同行卡片一起拉伸；此处按最高内容留足
-	   （文件名 + 两行信息 + 标签行） */
-	min-height: 8rem;
+	   —— 内容 ~4.3rem + 上下 padding 1.5rem */
+	min-height: 5.8rem;
 }
 
 /* Tooltip 宿主：撑满卡片宽度，文件名才能保持单行截断 */
@@ -308,6 +308,9 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+
+	/* 全局行高 1.15 不足以容纳中文字形，而这里 overflow:hidden 会裁掉下沿 */
+	line-height: 1.4;
 }
 
 .name-btn:hover {

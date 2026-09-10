@@ -96,6 +96,9 @@
 	white-space: nowrap;
 	font-size: var(--text-sm);
 	font-weight: 600;
+
+	/* 全局行高 1.15 不足以容纳中文字形，配合 overflow:hidden 会裁掉下沿 */
+	line-height: 1.4;
 }
 
 .meta {

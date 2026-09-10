@@ -4,6 +4,7 @@
 	margin: 0;
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
+	line-height: 1.4;
 }
 
 .sep {
@@ -15,5 +16,6 @@
 	margin: 0;
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
+	line-height: 1.4;
 	opacity: 0.75;
 }

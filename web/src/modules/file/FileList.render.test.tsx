@@ -68,4 +68,46 @@ describe("FileList 渲染", () => {
 			dispose();
 		});
 	}, 20000);
+
+	it("多页数据渲染出分页栏", async () => {
+		const { listFiles } = await import("@modules/file/api.ts");
+		vi.mocked(listFiles).mockResolvedValueOnce({
+			items: [
+				{
+					id: 1,
+					stored_id: "p2file",
+					url: "/api/file/p2file/data/a.pdf",
+					original_name: "a.pdf",
+					mime_type: "application/pdf",
+					file_category: "document",
+					size_bytes: 10,
+					width: null,
+					height: null,
+					duration_ms: null,
+					tags: [],
+					created_at: "2026-09-09T13:00:00+00:00",
+					updated_at: "2026-09-09T13:00:00+00:00",
+				},
+			],
+			total: 60,
+			page: 1,
+			page_size: 24,
+			total_pages: 3,
+		});
+
+		const { default: FileList } = await import("./FileList.tsx");
+		const host = document.createElement("div");
+		document.body.appendChild(host);
+
+		await createRoot(async (dispose) => {
+			render(() => <FileList />, host);
+			for (let i = 0; i < 50; i++) {
+				await new Promise((r) => setTimeout(r, 20));
+				if (host.querySelector("nav[aria-label='分页']")) break;
+			}
+			expect(host.querySelector("nav[aria-label='分页']")).toBeTruthy();
+			expect(host.textContent).toContain("第 1 / 3 页");
+			dispose();
+		});
+	}, 20000);
 });

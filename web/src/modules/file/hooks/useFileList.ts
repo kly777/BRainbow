@@ -1,8 +1,13 @@
-import { getErrorMessage, HttpError } from "@shared/api";
+import {
+	getErrorMessage,
+	HttpError,
+	type PaginatedResponse,
+} from "@shared/api";
 import {
 	notifyError,
 	notifyInfo,
 	notifySuccess,
+	numParam,
 	showConfirm,
 	strParam,
 	tryAsync,
@@ -14,6 +19,9 @@ import { deleteFile, listFiles, updateFile, uploadFile } from "../api.ts";
 
 const VALID_CATEGORIES = ["", "image", "video", "audio", "document", "other"];
 
+/** 每页条数（卡片网格，24 与常见栅格列数对齐） */
+const PAGE_SIZE = 24;
+
 export interface FileListApi {
 	category: () => string;
 	setCategory: (type: string) => void;
@@ -22,6 +30,10 @@ export interface FileListApi {
 	search: () => string;
 	setSearch: (q: string) => void;
 	items: () => FileItem[];
+	total: () => number;
+	totalPages: () => number;
+	page: () => number;
+	goPage: (page: number) => void;
 	loading: boolean;
 	error: Error | undefined;
 	refetch: () => void;
@@ -44,26 +56,33 @@ export function useFileList(): FileListApi {
 		category: strParam(""),
 		tag: strParam(""),
 		q: strParam(""),
+		page: numParam(1, { min: 1 }),
 	});
 	const category = () =>
 		VALID_CATEGORIES.includes(params.get("category"))
 			? params.get("category")
 			: "";
-	const setCategory = (t: string) => params.set({ category: t });
+	// 筛选变化一律回到第 1 页，否则可能停在一个不存在的页码上
+	const setCategory = (t: string) => params.set({ category: t, page: 1 });
 	const tag = () => params.get("tag") || "";
-	const setTag = (t: string) => params.set({ tag: t });
+	const setTag = (t: string) => params.set({ tag: t, page: 1 });
 	const search = () => params.get("q") || "";
-	const setSearch = (q: string) => params.set({ q: q });
+	const page = () => params.get("page");
+	const setSearch = (q: string) => params.set({ q, page: 1 });
 
 	const [files, { refetch }] = createResource(
-		() => ({ cat: category(), t: tag(), q: search() }),
-		async ({ cat, t, q }): Promise<FileItem[]> => {
-			const query: Record<string, string> = {};
-			if (cat) query.category = cat;
-			if (t) query.tag = t;
-			if (q.trim()) query.q = q.trim();
-			const result = await tryAsync(() => listFiles(query));
-			if (result.ok) return result.value.items;
+		() => ({ cat: category(), t: tag(), q: search(), page: page() }),
+		async ({ cat, t, q, page }): Promise<PaginatedResponse<FileItem>> => {
+			const result = await tryAsync(() =>
+				listFiles({
+					page,
+					page_size: PAGE_SIZE,
+					...(cat ? { category: cat } : {}),
+					...(t ? { tag: t } : {}),
+					...(q.trim() ? { q: q.trim() } : {}),
+				}),
+			);
+			if (result.ok) return result.value;
 			throw result.error;
 		},
 	);
@@ -94,9 +113,9 @@ export function useFileList(): FileListApi {
 			} else {
 				notifySuccess(`「${result.value.original_name}」上传成功`);
 			}
-			// 重置筛选（类别/标签/搜索）：否则停留在某个筛选条件下，
-			// 新上传的文件可能被过滤掉而"看不到"（source 变化会自动 reload）
-			params.set({ category: "", tag: "", q: "" });
+			// 重置筛选（类别/标签/搜索）+ 回到第 1 页：否则停留在筛选条件
+			// 或较后页码时，新上传的文件"看不到"（source 变化会自动 reload）
+			params.set({ category: "", tag: "", q: "", page: 1 });
 			refetch();
 		} else {
 			notifyError("上传失败", getErrorMessage(result.error));
@@ -123,7 +142,12 @@ export function useFileList(): FileListApi {
 			notifyError("删除文件失败", getErrorMessage(result.error));
 			return;
 		}
-		refetch();
+		// 当前页最后一条被删掉时回退一页，避免停在空白页
+		if ((files()?.items.length ?? 0) <= 1 && page() > 1) {
+			params.set({ page: page() - 1 });
+		} else {
+			refetch();
+		}
 	};
 
 	const startRename = (item: FileItem) => {
@@ -157,7 +181,11 @@ export function useFileList(): FileListApi {
 		setTag,
 		search,
 		setSearch,
-		items: () => files() ?? [],
+		items: () => files()?.items ?? [],
+		total: () => files()?.total ?? 0,
+		totalPages: () => files()?.total_pages ?? 1,
+		page,
+		goPage: (p: number) => params.set({ page: p }),
 		// getter：每次访问实时读取 createResource 状态。
 		// 若写成 `loading: files.loading` 快照，createResource 创建瞬间
 		// 同步触发 load（state=pending），快照被冻结为 true → AsyncView

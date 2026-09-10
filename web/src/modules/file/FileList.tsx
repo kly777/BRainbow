@@ -6,6 +6,7 @@ import {
 	FilterGroup,
 	PageHead,
 	SearchInput,
+	SimplePagination,
 } from "@components/ui";
 import { Copy, File as FileIcon, Upload, X } from "@components/ui/icons";
 import { fillPath, PATHS } from "@config/paths";
@@ -303,6 +304,14 @@ const FileListPage: Component = () => {
 					</div>
 				)}
 			</AsyncView>
+
+			<SimplePagination
+				page={f.page()}
+				totalPages={f.totalPages()}
+				total={f.total()}
+				onPrev={() => f.goPage(f.page() - 1)}
+				onNext={() => f.goPage(f.page() + 1)}
+			/>
 		</div>
 	);
 };

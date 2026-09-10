@@ -17,6 +17,7 @@ import TagInput from "./components/TagInput.tsx";
 import TextPreview from "./components/TextPreview.tsx";
 import styles from "./FileDetail.module.css";
 import { type MetaEntry, useFileDetail } from "./hooks/useFileDetail.ts";
+import { isTextLike } from "./lib/filename.ts";
 
 // ── 预览（左侧主体） ──
 
@@ -49,7 +50,14 @@ const Preview: Component<{ item: FileItem }> = (props) => {
 			<Show when={props.item.mime_type === "application/pdf"}>
 				<iframe src={url()} class={styles.previewFrame} title="PDF 预览" />
 			</Show>
-			<Show when={props.item.mime_type.startsWith("text/")}>
+			{/* 文本类预览：text/* 之外，按扩展名兜底识别代码/配置文件
+			    （.rs/.toml/Dockerfile 等浏览器不给 MIME，会落到 other 类别） */}
+			<Show
+				when={
+					props.item.mime_type.startsWith("text/") ||
+					isTextLike(props.item.original_name)
+				}
+			>
 				<div class={styles.textPaneWrap}>
 					<TextPreview item={props.item} />
 				</div>
@@ -60,7 +68,8 @@ const Preview: Component<{ item: FileItem }> = (props) => {
 					props.item.file_category !== "video" &&
 					props.item.file_category !== "audio" &&
 					props.item.mime_type !== "application/pdf" &&
-					!props.item.mime_type.startsWith("text/")
+					!props.item.mime_type.startsWith("text/") &&
+					!isTextLike(props.item.original_name)
 				}
 			>
 				<div class={styles.previewFallback}>

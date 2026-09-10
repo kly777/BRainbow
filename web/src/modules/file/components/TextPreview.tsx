@@ -15,10 +15,13 @@ import {
 import type { FileItem } from "../api.ts";
 import { fileUrl } from "../api.ts";
 import { parseCsv } from "../lib/csv.ts";
+import { codeFence, codeLang } from "../lib/filename.ts";
 import styles from "./TextPreview.module.css";
 
 /** 预览截断阈值（字符数） */
 const MAX_PREVIEW_CHARS = 2 * 1024 * 1024;
+/** 语法高亮阈值：超过此长度交给纯文本渲染，避免高亮大文件卡住主线程 */
+const MAX_HIGHLIGHT_CHARS = 100_000;
 /** 表格渲染行数上限（防超宽表卡死渲染） */
 const MAX_TABLE_ROWS = 500;
 
@@ -51,6 +54,9 @@ const CsvTable: Component<{ text: string }> = (props) => {
 const TextPreview: Component<{ item: FileItem }> = (props) => {
 	let controller: AbortController | undefined;
 	onCleanup(() => controller?.abort());
+
+	/** 代码语言（按扩展名/文件名判断；空串表示按纯文本展示） */
+	const lang = () => codeLang(props.item.original_name);
 
 	const [content] = createResource(
 		() => props.item.stored_id,
@@ -99,11 +105,30 @@ const TextPreview: Component<{ item: FileItem }> = (props) => {
 								<Markdown content={c().text} />
 							</div>
 						</Show>
+						{/* 代码/配置类：按扩展名识别（这些扩展名浏览器不给 MIME，
+						    上传后归入 other 类别），复用 Markdown 的代码块渲染拿到
+						    语法高亮与主题，无需另引高亮库 */}
 						<Show
 							when={
 								!["text/html", "text/csv", "text/markdown"].includes(
 									props.item.mime_type,
-								)
+								) && lang() !== ""
+							}
+						>
+							<div class={styles.markdown}>
+								<Show
+									when={c().text.length <= MAX_HIGHLIGHT_CHARS}
+									fallback={<pre class={styles.pre}>{c().text}</pre>}
+								>
+									<Markdown content={codeFence(c().text, lang() ?? "")} />
+								</Show>
+							</div>
+						</Show>
+						<Show
+							when={
+								!["text/html", "text/csv", "text/markdown"].includes(
+									props.item.mime_type,
+								) && lang() === ""
 							}
 						>
 							<pre class={styles.pre}>{c().text}</pre>

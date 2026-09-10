@@ -16,7 +16,6 @@
 	position: fixed;
 	inset: 0;
 	background: var(--t-color-overlay);
-	backdrop-filter: blur(0.25rem);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -36,7 +35,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-lg);
-	animation: confirm-in 250ms var(--ease-out-expo);
+	animation: confirm-in 160ms var(--ease-out-expo);
 }
 
 .header {

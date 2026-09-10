@@ -446,16 +446,18 @@ impl FileService {
 
     /// 删除文件
     pub async fn delete(&self, stored_id: &str, force: bool) -> Result<(), ServiceError> {
-        // 删除前检查引用
-        let refs = self
-            .repo
-            .count_content_references(stored_id)
-            .await
-            .map_err(ServiceError::Db)?;
-        if refs > 0 && !force {
-            return Err(ServiceError::InUse(format!(
-                "该文件仍被 {refs} 处内容引用（删除后引用处将无法显示），确认仍要删除吗？"
-            )));
+        // 引用检查：force 表示用户已在二次确认中接受后果，跳过 4 张内容表的全表 LIKE 扫描
+        if !force {
+            let refs = self
+                .repo
+                .count_content_references(stored_id)
+                .await
+                .map_err(ServiceError::Db)?;
+            if refs > 0 {
+                return Err(ServiceError::InUse(format!(
+                    "该文件仍被 {refs} 处内容引用（删除后引用处将无法显示），确认仍要删除吗？"
+                )));
+            }
         }
 
         let _file = self
@@ -466,7 +468,8 @@ impl FileService {
             .ok_or_else(|| ServiceError::NotFound("文件不存在".into()))?;
 
         let path = format!("{}/{}", self.upload_dir, stored_id);
-        if let Err(e) = std::fs::remove_file(&path) {
+        // 异步删除：避免在 tokio worker 上同步阻塞
+        if let Err(e) = tokio::fs::remove_file(&path).await {
             warn!("删除文件失败 stored_id={}: {}", stored_id, e);
         }
 

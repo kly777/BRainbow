@@ -1,18 +1,27 @@
-/* ── 布局原语（Row / Stack）──
- * 收敛全站重复的 flex 组合：display:flex 搭配 flex-direction / align-items /
- * justify-content / flex-wrap / gap —— 这几种组合在改造前散布 400 余处。
+/* ── 布局原语（正交、无隐含默认）──
+ * 供 `Row` / `Stack` 组件消费，也供新代码在语义元素上按需取用。
  *
- * 消费方的其它样式仍写在自己的 CSS Module 里，通过 class 透传合并。
+ * 设计原则：每个类只做一件事，且与 CSS 属性一一对应 ——
+ *   .flex → display:flex        .stack → display:flex + flex-direction:column
+ *   .align-* → align-items:*    .justify-* → justify-content:*
+ *   .wrap → flex-wrap:wrap      .gap-* → gap:var(--space-*)
  *
- * ⚠ 契约：原语类与消费方类特异度相同（0,1,0），因此消费方 CSS 中
- * 不得再声明 display / flex-direction / align-items / justify-content /
- * flex-wrap / gap —— 全部交给原语。否则会退化成"依赖打包顺序"的隐性覆盖。
+ * 之所以不做"自带居中的 .row"这种复合基类：类名描述方向却隐含对齐，
+ * 会让调用方以为只是声明方向，实际把 align-items 从默认的 stretch
+ * 改成了 center。本文件早期版本如此设计，批量套用时导致 79 处原本只写
+ * display:flex 的规则被静默居中。对齐默认值应放在组件里显式表达
+ * （见 Layout.tsx 的 Row：默认 align="center"，可被 align="stretch" 覆盖）。
+ *
+ * ⚠ 刻意不使用 composes 做跨文件组合（曾整体试过一次并回滚）：
+ * composes 会把一个元素的样式拆到两个文件 —— 读消费方的 CSS 只能看到
+ * `composes: stack gap-md`，必须跳到本文件才知道含义；散落到近百个文件后
+ * 维护成本高于它省下的重复声明。而且这些被"重复"的声明本就全部走令牌
+ * （gap: var(--space-md) 之类），重复的是结构而非取值，改设计时不会发散。
  *
  * 顺序敏感：基础类在前、修饰类在后，同特异度时后者生效。 */
 
-.row {
+.flex {
 	display: flex;
-	align-items: center;
 }
 
 .stack {
@@ -24,7 +33,7 @@
 	flex-wrap: wrap;
 }
 
-/* 对齐修饰：默认值已由 .row 提供，这里只用显式覆盖 */
+/* 对齐修饰 */
 .align-start {
 	align-items: flex-start;
 }

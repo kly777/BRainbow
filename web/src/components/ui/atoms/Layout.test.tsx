@@ -59,7 +59,7 @@ describe("布局原语：修饰 prop 生效", () => {
 		const full = mount(() => (
 			<Row gap="md" align="stretch" justify="between" wrap />
 		));
-		// 基础 1 个 + gap/align/justify/wrap 共 5 个
+		// flex + align + wrap + justify + gap 共 5 个
 		expect(classCount(full)).toBeGreaterThan(classCount(bare));
 		expect(classCount(full)).toBe(5);
 	});
@@ -70,13 +70,27 @@ describe("布局原语：修饰 prop 生效", () => {
 		expect(a).not.toBe(b);
 	});
 
-	it("省略修饰 prop 时不产生多余类名", () => {
-		expect(classCount(mount(() => <Row />))).toBe(1);
+	it("Row 默认居中（flex + align-center 两类），无需显式传 align", () => {
+		const bare = mount(() => <Row />).firstElementChild?.className ?? "";
+		const explicit = mount(() => <Row align="center" />).firstElementChild
+			?.className;
+		expect(bare).toBe(explicit);
+		expect(classCount(mount(() => <Row />))).toBe(2);
+	});
+
+	it("align='stretch' 覆盖默认居中（对应 CSS 的 align-items:stretch）", () => {
+		const stretch = mount(() => <Row align="stretch" />).firstElementChild
+			?.className;
+		const bare = mount(() => <Row />).firstElementChild?.className;
+		expect(stretch).not.toBe(bare);
+	});
+
+	it("Stack 不设对齐，保持 CSS 默认 stretch（不意外收紧）", () => {
 		expect(classCount(mount(() => <Stack />))).toBe(1);
 	});
 
 	it("gap='none' 仍然产出类名（显式归零 ≠ 未设置）", () => {
-		expect(classCount(mount(() => <Row gap="none" />))).toBe(2);
+		expect(classCount(mount(() => <Row gap="none" />))).toBe(3);
 	});
 });
 

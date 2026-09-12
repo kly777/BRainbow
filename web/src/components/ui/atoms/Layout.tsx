@@ -60,6 +60,9 @@ function join(...parts: (string | false | undefined)[]): string {
 
 /**
  * 水平布局原语：`display:flex` + 垂直居中（全站最高频的 flex 组合）。
+ *
+ * 居中是这个组件的显式默认值（而非某个 CSS 类名背后的隐含默认）：
+ * 需要拉伸时传 `align="stretch"`，读代码即可知语义。
  * 其余样式通过 `class` 传入，与自身 CSS Module 合并。
  */
 export function Row(props: RowProps) {
@@ -74,9 +77,9 @@ export function Row(props: RowProps) {
 		<div
 			{...rest}
 			class={join(
-				styles.row,
+				styles.flex,
+				local.align ? ALIGN[local.align] : styles.alignCenter,
 				local.wrap && styles.wrap,
-				local.align && ALIGN[local.align],
 				local.justify && JUSTIFY[local.justify],
 				local.gap && GAP[local.gap],
 				local.class,

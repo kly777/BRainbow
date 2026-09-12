@@ -50,7 +50,9 @@ impl SelfCheckReport {
         match &self.integrity {
             Some(result) if result == "ok" => info!("[2/4] 完整性 quick_check: ok"),
             Some(result) => error!("[2/4] 完整性 quick_check: {result}"),
-            None => info!("[2/4] 完整性 quick_check: 跳过（浅检查）"),
+            None => info!(
+                "[2/4] 完整性 quick_check: 未检查（启动不跑全库扫描，部署/排查时用 --check 触发）"
+            ),
         }
 
         if self.upload_dir.is_usable() {

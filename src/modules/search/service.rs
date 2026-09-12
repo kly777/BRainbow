@@ -533,8 +533,8 @@ mod tests {
 
         let res = ctx.svc.search(1, "财报", 5).await.unwrap();
         let file_hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "file").collect();
-        // 文件名命中 + 标签命中各一条；他人文件被 user 过滤
-        assert_eq!(file_hits.len(), 2);
+        // 自己的两条（文件名命中 + 标签命中）+ 别人的公开文件一条
+        assert_eq!(file_hits.len(), 3);
         // 文件名命中排前面，片段给出规格
         assert_eq!(file_hits[0].title, "季度财报.xlsx");
         assert_eq!(file_hits[0].snippet, "文档 · 2.0 KB");
@@ -542,13 +542,51 @@ mod tests {
             &file_hits[0].target,
             SearchTarget::File { stored_id } if stored_id == "f-1"
         ));
-        // 仅标签命中的排在后面，片段展示命中的标签
-        assert_eq!(file_hits[1].title, "封面.png");
-        assert_eq!(file_hits[1].snippet, "#财报配图");
-        assert_eq!(file_hits[1].id, f2);
-        assert!(file_hits[0].score > file_hits[1].score);
+        // 另一条文件名命中（别人的公开文件）也在前面，同类按插入顺序
+        assert_eq!(file_hits[1].title, "别人的财报.pdf");
+        // 仅标签命中的排最后，片段展示命中的标签
+        assert_eq!(file_hits[2].title, "封面.png");
+        assert_eq!(file_hits[2].snippet, "#财报配图");
+        assert_eq!(file_hits[2].id, f2);
+        assert!(file_hits[0].score > file_hits[2].score);
 
-        // 用户 2 只搜到自己的文件
+        // 私密文件：先把用户 1 的两条设为私密，再验证可见性
+        sqlx::query("UPDATE file SET is_private = 1 WHERE user_id = 1")
+            .execute(&ctx.pool)
+            .await
+            .unwrap();
+        let res = ctx.svc.search(1, "财报", 5).await.unwrap();
+        let mine: Vec<&str> = res
+            .hits
+            .iter()
+            .filter(|h| h.kind == "file")
+            .map(|h| h.title.as_str())
+            .collect();
+        assert_eq!(
+            mine.len(),
+            3,
+            "上传者本人可见自己的私密文件 + 别人的公开文件"
+        );
+        sqlx::query("UPDATE file SET is_private = 0 WHERE user_id = 1")
+            .execute(&ctx.pool)
+            .await
+            .unwrap();
+
+        // 公开共享：用户 2 也能搜到用户 1 的公开文件
+        let res = ctx.svc.search(2, "财报", 5).await.unwrap();
+        let titles: Vec<&str> = res
+            .hits
+            .iter()
+            .filter(|h| h.kind == "file")
+            .map(|h| h.title.as_str())
+            .collect();
+        assert_eq!(titles.len(), 3);
+
+        // 把用户 1 的两个文件设为私密 → 用户 2 只剩自己的那条
+        sqlx::query("UPDATE file SET is_private = 1 WHERE user_id = 1")
+            .execute(&ctx.pool)
+            .await
+            .unwrap();
         let res = ctx.svc.search(2, "财报", 5).await.unwrap();
         let titles: Vec<&str> = res
             .hits
@@ -557,6 +595,14 @@ mod tests {
             .map(|h| h.title.as_str())
             .collect();
         assert_eq!(titles, vec!["别人的财报.pdf"]);
+
+        // 上传者本人仍能搜到自己的私密文件
+        let res = ctx.svc.search(1, "财报", 5).await.unwrap();
+        assert_eq!(
+            res.hits.iter().filter(|h| h.kind == "file").count(),
+            3,
+            "上传者本人可见自己的私密文件 + 别人的公开文件"
+        );
     }
 
     #[tokio::test]

@@ -1,10 +1,10 @@
 {
   "db_name": "SQLite",
-  "query": "UPDATE file SET original_name = ?, updated_at = CURRENT_TIMESTAMP WHERE stored_id = ?\n               RETURNING id AS \"id!: i64\", stored_id, original_name, mime_type, file_category,\n                         size_bytes AS \"size_bytes!: i64\",\n                         width AS \"width?: i64\", height AS \"height?: i64\",\n                         duration_ms AS \"duration_ms?: i64\", user_id AS \"user_id?: i64\",\n                         content_hash AS \"content_hash?: String\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
+  "query": "SELECT id, stored_id, original_name, mime_type, file_category,\n                      size_bytes AS \"size_bytes!: i64\", width, height, duration_ms, user_id, is_private, content_hash,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM file WHERE id = ?",
   "describe": {
     "columns": [
       {
-        "name": "id!: i64",
+        "name": "id",
         "ordinal": 0,
         "type_info": "Integer",
         "origin": {
@@ -70,7 +70,7 @@
         }
       },
       {
-        "name": "width?: i64",
+        "name": "width",
         "ordinal": 6,
         "type_info": "Integer",
         "origin": {
@@ -81,7 +81,7 @@
         }
       },
       {
-        "name": "height?: i64",
+        "name": "height",
         "ordinal": 7,
         "type_info": "Integer",
         "origin": {
@@ -92,7 +92,7 @@
         }
       },
       {
-        "name": "duration_ms?: i64",
+        "name": "duration_ms",
         "ordinal": 8,
         "type_info": "Integer",
         "origin": {
@@ -103,7 +103,7 @@
         }
       },
       {
-        "name": "user_id?: i64",
+        "name": "user_id",
         "ordinal": 9,
         "type_info": "Integer",
         "origin": {
@@ -114,8 +114,19 @@
         }
       },
       {
-        "name": "content_hash?: String",
+        "name": "is_private",
         "ordinal": 10,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "file",
+            "name": "is_private"
+          }
+        }
+      },
+      {
+        "name": "content_hash",
+        "ordinal": 11,
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -126,22 +137,22 @@
       },
       {
         "name": "created_at!: chrono::DateTime<chrono::Utc>",
-        "ordinal": 11,
-        "type_info": "Null",
+        "ordinal": 12,
+        "type_info": "Datetime",
         "origin": "Expression"
       },
       {
         "name": "updated_at!: chrono::DateTime<chrono::Utc>",
-        "ordinal": 12,
-        "type_info": "Null",
+        "ordinal": 13,
+        "type_info": "Datetime",
         "origin": "Expression"
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 1
     },
     "nullable": [
-      null,
+      false,
       false,
       false,
       false,
@@ -151,10 +162,11 @@
       true,
       true,
       true,
+      false,
       true,
-      null,
-      null
+      false,
+      false
     ]
   },
-  "hash": "2617c41d3475c0382adff35c90de815bb1b3ad939f63482158ffe25268cc890c"
+  "hash": "905614fde81e532b44e6b40016f99055372606a5b4f2ce553779e40b6af4c9c0"
 }

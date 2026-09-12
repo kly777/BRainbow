@@ -70,6 +70,38 @@ pub async fn auth(
     unauthorized("请先登录")
 }
 
+/// 解析可选凭据：JWT 优先，其次 API Key；缺失或无效都返回 `None`（不报错）。
+///
+/// 用在公开路由上"带了凭据就能多看点东西"的场景 —— 目前是私密文件的内容路由：
+/// 公开文件无需凭据（`<img>` 内嵌不带 Authorization），私密文件必须带凭据且为上传者。
+pub async fn optional_claims(
+    auth_service: &AuthService,
+    headers: &axum::http::HeaderMap,
+) -> Option<Claims> {
+    let secret = auth_service.jwt_secret_active();
+
+    if let Some(token) = headers
+        .get("Authorization")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.strip_prefix("Bearer "))
+        && let Some(claims) = verify_token(token, &secret)
+    {
+        return Some(claims);
+    }
+
+    if let Some(key) = headers
+        .get("X-API-Key")
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        && let Ok(Some(claims)) = auth_service.authenticate_api_key(key).await
+    {
+        return Some(claims);
+    }
+
+    None
+}
+
 /// 拒绝请求前消费（丢弃）请求体。
 ///
 /// 若不读取 body 直接返回响应，hyper 发送响应后会重置连接，

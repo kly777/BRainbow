@@ -40,6 +40,10 @@ struct FileResponse {
     updated_at: String,
     /// 磁盘上找不到文件内容（前端据此显示"文件缺失"而不是破图）
     missing: bool,
+    /// 私密文件：仅上传者可见；内容路由需要带凭据
+    is_private: bool,
+    /// 当前请求者是否可以改名 / 改标签 / 切换可见性 / 删除
+    can_edit: bool,
 }
 
 /// 上传响应：duplicate=true 表示命中内容去重、复用已有文件（未新建）
@@ -50,7 +54,21 @@ struct UploadResponse {
     duplicate: bool,
 }
 
-fn to_response(f: &super::model::File, include_meta: bool) -> FileResponse {
+/// 当前请求者能否改动该文件：仅上传者本人；
+/// 匿名的老文件（`user_id` 为 NULL）视为公共资源，任何登录用户可整理。
+fn can_edit(file_user_id: Option<i64>, viewer: Option<i64>) -> bool {
+    match (file_user_id, viewer) {
+        (Some(owner), Some(uid)) => owner == uid,
+        (None, Some(_)) => true,
+        _ => false,
+    }
+}
+
+fn to_response(
+    f: &super::model::File,
+    include_meta: bool,
+    viewer: Option<i64>,
+) -> FileResponse {
     FileResponse {
         id: f.id,
         stored_id: f.stored_id.clone(),
@@ -76,10 +94,12 @@ fn to_response(f: &super::model::File, include_meta: bool) -> FileResponse {
         created_at: to_utc_iso(f.created_at),
         updated_at: to_utc_iso(f.updated_at),
         missing: f.missing,
+        is_private: f.is_private,
+        can_edit: can_edit(f.user_id, viewer),
     }
 }
 
-fn to_summary_response(f: &super::model::FileSummary) -> FileResponse {
+fn to_summary_response(f: &super::model::FileSummary, viewer: Option<i64>) -> FileResponse {
     FileResponse {
         id: f.id,
         stored_id: f.stored_id.clone(),
@@ -101,6 +121,8 @@ fn to_summary_response(f: &super::model::FileSummary) -> FileResponse {
         created_at: to_utc_iso(f.created_at),
         updated_at: to_utc_iso(f.updated_at),
         missing: f.missing,
+        is_private: f.is_private,
+        can_edit: can_edit(f.user_id, viewer),
     }
 }
 
@@ -230,7 +252,7 @@ pub async fn upload_handler(
                     StatusCode::CREATED
                 };
                 let body = UploadResponse {
-                    file: to_response(&outcome.file, false),
+                    file: to_response(&outcome.file, false, Some(claims.sub as i64)),
                     duplicate: outcome.duplicate,
                 };
                 return (status, Json(body)).into_response();
@@ -251,7 +273,12 @@ pub async fn list_handler(
 ) -> impl IntoResponse {
     match query_svc.list(query, Some(claims.sub as i64)).await {
         Ok(response) => {
-            let items: Vec<FileResponse> = response.items.iter().map(to_summary_response).collect();
+            let viewer = Some(claims.sub as i64);
+            let items: Vec<FileResponse> = response
+                .items
+                .iter()
+                .map(|f| to_summary_response(f, viewer))
+                .collect();
             Json(serde_json::json!({
                 "items": items,
                 "total": response.total,
@@ -269,24 +296,54 @@ pub async fn list_handler(
 
 pub async fn get_handler(
     State(query): State<FileQueryService>,
+    Extension(claims): Extension<Claims>,
     Path(stored_id): Path<String>,
 ) -> impl IntoResponse {
+    let viewer = claims.sub as i64;
     match query.get_by_stored_id(&stored_id).await {
-        Ok(file) => Json(to_response(&file, true)).into_response(),
+        Ok(file) => {
+            // 别人的私密文件按"不存在"处理，不暴露其存在
+            if !crate::modules::file::query::is_visible(&file, Some(viewer)) {
+                return ServiceError::NotFound("文件不存在".into()).into_response();
+            }
+            Json(to_response(&file, true, Some(viewer))).into_response()
+        }
         Err(e) => e.into_response(),
     }
 }
 
 // ── 文件服务（公开路由） ──
 
+/// 文件内容（公开路由）。
+///
+/// 公开文件不带任何凭据即可访问 —— Markdown 里的 `<img src>` 不会附带 Authorization，
+/// 这是内嵌图片能显示的前提。私密文件则要求携带有效凭据（JWT 或 API Key）且为上传者，
+/// 否则未认证返回 401、已认证但不是本人返回 404（不暴露文件是否存在）。
 pub async fn file_handler(
     State(query): State<FileQueryService>,
+    State(auth): State<crate::app::auth::service::AuthService>,
     Path((stored_id, _filename)): Path<(String, String)>,
+    headers: axum::http::HeaderMap,
 ) -> Response {
     let file = match query.get_by_stored_id(&stored_id).await {
         Ok(f) => f,
         Err(e) => return e.into_response(),
     };
+
+    if file.is_private {
+        let viewer = crate::app::http::auth::optional_claims(&auth, &headers)
+            .await
+            .map(|c| c.sub as i64);
+        match super::query::content_access(&file, viewer) {
+            super::query::ContentAccess::Allow => {}
+            super::query::ContentAccess::Deny => {
+                return ServiceError::NotFound("文件不存在".into()).into_response();
+            }
+            super::query::ContentAccess::NeedAuth => {
+                return crate::shared::error_types::unauthorized("该文件为私密文件，需要登录后访问");
+            }
+        }
+    }
 
     // 路径取自 query service 持有的目录配置（勿在此硬编码 uploads/file）
     let Ok(f) = tokio::fs::File::open(query.file_path(&stored_id)).await else {
@@ -296,10 +353,16 @@ pub async fn file_handler(
     let stream = ReaderStream::new(f);
     let body = Body::from_stream(stream);
 
+    // 私密文件不能进共享缓存（CDN/代理），否则等于绕过鉴权
+    let cache_control = if file.is_private {
+        "private, max-age=31536000, immutable"
+    } else {
+        "public, max-age=31536000, immutable"
+    };
     let mut resp = Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, &file.mime_type)
-        .header(header::CACHE_CONTROL, "public, max-age=31536000, immutable")
+        .header(header::CACHE_CONTROL, cache_control)
         .header("X-Content-Type-Options", "nosniff");
 
     // 强制下载（HTML/SVG 等防 XSS）；其余可内联的类型给 inline
@@ -331,7 +394,7 @@ pub async fn update_handler(
         .update(&stored_id, payload, Some(claims.sub as i64))
         .await
     {
-        Ok(file) => Json(to_response(&file, true)).into_response(),
+        Ok(file) => Json(to_response(&file, true, Some(claims.sub as i64))).into_response(),
         Err(e) => e.into_response(),
     }
 }
@@ -346,11 +409,16 @@ pub struct DeleteQuery {
 
 pub async fn delete_handler(
     State(service): State<FileService>,
+    Extension(claims): Extension<Claims>,
     Path(stored_id): Path<String>,
     Query(query): Query<DeleteQuery>,
 ) -> impl IntoResponse {
     match service
-        .delete(&stored_id, query.force.unwrap_or(false))
+        .delete(
+            &stored_id,
+            query.force.unwrap_or(false),
+            Some(claims.sub as i64),
+        )
         .await
     {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
@@ -460,6 +528,7 @@ mod tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             missing,
+            is_private: false,
         }
     }
 
@@ -480,6 +549,7 @@ mod tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             missing,
+            is_private: false,
         }
     }
 
@@ -488,19 +558,22 @@ mod tests {
     /// 前端因此永远收不到该字段（前端测试用 mock 数据，测不出来）。
     #[test]
     fn responses_carry_missing_flag() {
-        let detail = serde_json::to_value(to_response(&sample_file(true), true)).unwrap();
+        let detail = serde_json::to_value(to_response(&sample_file(true), true, Some(7))).unwrap();
         assert_eq!(detail["missing"], serde_json::json!(true));
 
-        let listed = serde_json::to_value(to_summary_response(&sample_summary(true))).unwrap();
+        let listed =
+            serde_json::to_value(to_summary_response(&sample_summary(true), Some(7))).unwrap();
         assert_eq!(listed["missing"], serde_json::json!(true));
 
-        let intact = serde_json::to_value(to_response(&sample_file(false), true)).unwrap();
+        let intact =
+            serde_json::to_value(to_response(&sample_file(false), true, Some(7))).unwrap();
         assert_eq!(intact["missing"], serde_json::json!(false));
     }
 
     #[test]
     fn response_hides_internal_fields_and_encodes_url() {
-        let detail = serde_json::to_value(to_response(&sample_file(false), true)).unwrap();
+        let detail =
+            serde_json::to_value(to_response(&sample_file(false), true, Some(7))).unwrap();
         // user_id 是内部字段，不暴露给前端
         assert!(detail.get("user_id").is_none());
         // url 由后端拼好，文件名整体百分号编码（非 ASCII 与空格都编码）
@@ -515,10 +588,12 @@ mod tests {
 
     #[test]
     fn summary_response_omits_meta_but_detail_includes_it() {
-        let detail = serde_json::to_value(to_response(&sample_file(false), true)).unwrap();
+        let detail =
+            serde_json::to_value(to_response(&sample_file(false), true, Some(7))).unwrap();
         assert_eq!(detail["meta"]["pages"], serde_json::json!("5"));
 
-        let listed = serde_json::to_value(to_summary_response(&sample_summary(false))).unwrap();
+        let listed =
+            serde_json::to_value(to_summary_response(&sample_summary(false), Some(7))).unwrap();
         assert!(listed.get("meta").is_none(), "列表不带 meta（skip_serializing_if）");
     }
 }

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE file SET is_private = ?, updated_at = CURRENT_TIMESTAMP WHERE stored_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "69579f9151c54d8daa850437404b5df23de79ff33c7ef996fc755c09e2bc84d8"
+}

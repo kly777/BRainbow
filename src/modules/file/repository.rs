@@ -1,4 +1,4 @@
-use sqlx::{FromRow, QueryBuilder, SqlitePool};
+use sqlx::{FromRow, QueryBuilder, Sqlite, SqlitePool};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -17,6 +17,8 @@ pub struct FileRow {
     pub height: Option<i64>,
     pub duration_ms: Option<i64>,
     pub user_id: Option<i64>,
+    /// 0 = 公开，1 = 私密（仅上传者可见）
+    pub is_private: i64,
     pub content_hash: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -37,6 +39,21 @@ pub struct FileSearchHit {
     pub name_hit: i64,
 }
 
+/// 向 WHERE 追加可见性条件：公开文件人人可见，私密文件仅上传者可见。
+/// `viewer` 为 `None`（未登录）时只能看到公开文件。
+fn push_visibility(qb: &mut QueryBuilder<Sqlite>, viewer: Option<i64>) {
+    match viewer {
+        Some(uid) => {
+            qb.push(" AND (f.is_private = 0 OR f.user_id = ")
+                .push_bind(uid)
+                .push(")");
+        }
+        None => {
+            qb.push(" AND f.is_private = 0");
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct FileRepository {
     pub db: Arc<SqlitePool>,
@@ -51,12 +68,13 @@ impl FileRepository {
     pub async fn insert(&self, params: NewFile<'_>) -> Result<FileRow, sqlx::Error> {
         let row = sqlx::query_as!(
             FileRow,
-            r#"INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, width, height, duration_ms, user_id, content_hash)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            r#"INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, width, height, duration_ms, user_id, content_hash, is_private)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                RETURNING id AS "id!: i64", stored_id, original_name, mime_type, file_category,
                          size_bytes AS "size_bytes!: i64",
                          width AS "width?: i64", height AS "height?: i64",
                          duration_ms AS "duration_ms?: i64", user_id AS "user_id?: i64",
+                         is_private AS "is_private!: i64",
                          content_hash AS "content_hash?: String",
                          COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                          COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
@@ -69,7 +87,8 @@ impl FileRepository {
             params.height,
             params.duration_ms,
             params.user_id,
-            params.content_hash
+            params.content_hash,
+            params.is_private as i64
         )
         .fetch_one(&*self.db)
         .await?;
@@ -82,7 +101,7 @@ impl FileRepository {
         let row = sqlx::query_as!(
             FileRow,
             r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                      size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
+                      size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, is_private, content_hash,
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                FROM file WHERE stored_id = ?"#,
@@ -99,7 +118,7 @@ impl FileRepository {
         let row = sqlx::query_as!(
             FileRow,
             r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                      size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
+                      size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, is_private, content_hash,
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                FROM file WHERE id = ?"#,
@@ -116,7 +135,7 @@ impl FileRepository {
         let row = sqlx::query_as!(
             FileRow,
             r#"SELECT id, stored_id, original_name, mime_type, file_category,
-                      size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, content_hash,
+                      size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, is_private, content_hash,
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                FROM file
@@ -138,18 +157,14 @@ impl FileRepository {
         let mut totals = QueryBuilder::new(
             "SELECT COUNT(*) AS count, COALESCE(SUM(f.size_bytes), 0) AS bytes FROM file f WHERE 1 = 1",
         );
-        if let Some(uid) = user_id {
-            totals.push(" AND f.user_id = ").push_bind(uid);
-        }
+        push_visibility(&mut totals, user_id);
         let (total_count, total_bytes): (i64, i64) =
             totals.build_query_as().fetch_one(&*self.db).await?;
 
         let mut by_cat = QueryBuilder::new(
             "SELECT f.file_category AS category, COUNT(*) AS count, COALESCE(SUM(f.size_bytes), 0) AS bytes FROM file f WHERE 1 = 1",
         );
-        if let Some(uid) = user_id {
-            by_cat.push(" AND f.user_id = ").push_bind(uid);
-        }
+        push_visibility(&mut by_cat, user_id);
         by_cat.push(" GROUP BY f.file_category ORDER BY bytes DESC");
         let rows: Vec<(String, i64, i64)> = by_cat.build_query_as().fetch_all(&*self.db).await?;
 
@@ -187,6 +202,7 @@ impl FileRepository {
                          size_bytes AS "size_bytes!: i64",
                          width AS "width?: i64", height AS "height?: i64",
                          duration_ms AS "duration_ms?: i64", user_id AS "user_id?: i64",
+                         is_private AS "is_private!: i64",
                          content_hash AS "content_hash?: String",
                          COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                          COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
@@ -197,6 +213,22 @@ impl FileRepository {
         .await?;
 
         Ok(row)
+    }
+
+    /// 切换文件公开 / 私密（权限在 service 层校验）
+    pub async fn update_visibility(
+        &self,
+        stored_id: &str,
+        is_private: bool,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "UPDATE file SET is_private = ?, updated_at = CURRENT_TIMESTAMP WHERE stored_id = ?",
+            is_private as i64,
+            stored_id
+        )
+        .execute(&*self.db)
+        .await?;
+        Ok(())
     }
 
     /// 删除文件记录
@@ -214,34 +246,14 @@ impl FileRepository {
     pub async fn count(
         &self,
         category: Option<&str>,
-        user_id: Option<i64>,
+        viewer: Option<i64>,
     ) -> Result<i64, sqlx::Error> {
-        match (category, user_id) {
-            (Some(cat), Some(uid)) => {
-                sqlx::query_scalar!(
-                    "SELECT COUNT(*) FROM file WHERE file_category = ? AND user_id = ?",
-                    cat,
-                    uid
-                )
-                .fetch_one(&*self.db)
-                .await
-            }
-            (Some(cat), None) => {
-                sqlx::query_scalar!("SELECT COUNT(*) FROM file WHERE file_category = ?", cat)
-                    .fetch_one(&*self.db)
-                    .await
-            }
-            (None, Some(uid)) => {
-                sqlx::query_scalar!("SELECT COUNT(*) FROM file WHERE user_id = ?", uid)
-                    .fetch_one(&*self.db)
-                    .await
-            }
-            (None, None) => {
-                sqlx::query_scalar!("SELECT COUNT(*) FROM file")
-                    .fetch_one(&*self.db)
-                    .await
-            }
+        let mut qb = QueryBuilder::new("SELECT COUNT(*) FROM file f WHERE 1 = 1");
+        if let Some(cat) = category {
+            qb.push(" AND f.file_category = ").push_bind(cat);
         }
+        push_visibility(&mut qb, viewer);
+        qb.build_query_scalar().fetch_one(&*self.db).await
     }
 
     /// 分页查询文件列表
@@ -255,14 +267,12 @@ impl FileRepository {
     ) -> Result<Vec<FileRow>, sqlx::Error> {
         // 动态 WHERE + 白名单 ORDER BY：避免为「筛选 × 排序」组合写 N 个静态查询
         let mut qb = QueryBuilder::new(
-            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f WHERE 1 = 1",
+            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f WHERE 1 = 1",
         );
         if let Some(cat) = category {
             qb.push(" AND f.file_category = ").push_bind(cat);
         }
-        if let Some(uid) = user_id {
-            qb.push(" AND f.user_id = ").push_bind(uid);
-        }
+        push_visibility(&mut qb, user_id);
         qb.push(sort.order_by());
         qb.push(" LIMIT ")
             .push_bind(limit)
@@ -283,7 +293,7 @@ impl FileRepository {
         sort: SortOrder,
     ) -> Result<Vec<FileRow>, sqlx::Error> {
         let mut qb = QueryBuilder::new(
-            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f JOIN file_tag_rel ftr ON f.id = ftr.file_id JOIN file_tag ft ON ftr.tag_id = ft.id WHERE ft.name = ",
+            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f JOIN file_tag_rel ftr ON f.id = ftr.file_id JOIN file_tag ft ON ftr.tag_id = ft.id WHERE ft.name = ",
         );
         qb.push_bind(tag_name)
             // 标签全局共享；可见性：公开文件人人可见，私密文件仅上传者
@@ -308,26 +318,12 @@ impl FileRepository {
     pub async fn count_by_name(
         &self,
         query: &str,
-        user_id: Option<i64>,
+        viewer: Option<i64>,
     ) -> Result<i64, sqlx::Error> {
-        let pattern = like_contains(query);
-        match user_id {
-            Some(uid) => sqlx::query_scalar!(
-                "SELECT COUNT(*) FROM file WHERE original_name LIKE ? ESCAPE '\\' AND user_id = ?",
-                pattern,
-                uid
-            )
-            .fetch_one(&*self.db)
-            .await,
-            None => {
-                sqlx::query_scalar!(
-                    "SELECT COUNT(*) FROM file WHERE original_name LIKE ? ESCAPE '\\'",
-                    pattern
-                )
-                .fetch_one(&*self.db)
-                .await
-            }
-        }
+        let mut qb = QueryBuilder::new("SELECT COUNT(*) FROM file f WHERE f.original_name LIKE ");
+        qb.push_bind(like_contains(query)).push(" ESCAPE '\\'");
+        push_visibility(&mut qb, viewer);
+        qb.build_query_scalar().fetch_one(&*self.db).await
     }
 
     /// 按文件名模糊搜索
@@ -340,12 +336,10 @@ impl FileRepository {
         sort: SortOrder,
     ) -> Result<Vec<FileRow>, sqlx::Error> {
         let mut qb = QueryBuilder::new(
-            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f WHERE f.original_name LIKE ",
+            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f WHERE f.original_name LIKE ",
         );
         qb.push_bind(like_contains(query)).push(" ESCAPE '\\'");
-        if let Some(uid) = user_id {
-            qb.push(" AND f.user_id = ").push_bind(uid);
-        }
+        push_visibility(&mut qb, user_id);
         qb.push(sort.order_by());
         qb.push(" LIMIT ")
             .push_bind(limit)
@@ -389,7 +383,7 @@ impl FileRepository {
                         ORDER BY t.name LIMIT 1) AS "matched_tag?: String",
                       CASE WHEN f.original_name LIKE ?1 ESCAPE '\' THEN 0 ELSE 1 END AS "name_hit!: i64"
                  FROM file f
-                WHERE f.user_id = ?2
+                WHERE (f.is_private = 0 OR f.user_id = ?2)
                   AND (f.original_name LIKE ?1 ESCAPE '\'
                        OR EXISTS (SELECT 1 FROM file_tag_rel r2
                                     JOIN file_tag t2 ON t2.id = r2.tag_id
@@ -731,6 +725,7 @@ mod tests {
             duration_ms: None,
             user_id,
             content_hash: None,
+            is_private: false,
         }
     }
 
@@ -751,6 +746,7 @@ mod tests {
             duration_ms: None,
             user_id,
             content_hash: None,
+            is_private: false,
         }
     }
 
@@ -901,14 +897,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn find_all_and_count_filter_by_category_and_user() {
+    async fn find_all_and_count_filter_by_category_and_visibility() {
         let repo = setup().await;
         insert(&repo, "img-1").await;
         insert(&repo, "img-2").await;
         repo.insert(new_file("vid-1", "video", Some(7)))
             .await
             .unwrap();
-        // 其他用户的文件不应出现在 7 的列表
+        // 别人（user 8）的公开文件也可见
         repo.insert(new_file("img-3", "image", Some(8)))
             .await
             .unwrap();
@@ -917,14 +913,25 @@ mod tests {
             .find_all(10, 0, Some("image"), Some(7), SortOrder::default())
             .await
             .unwrap();
-        assert_eq!(images.len(), 2);
+        assert_eq!(images.len(), 3);
         assert!(images.iter().all(|f| f.stored_id.starts_with("img-")));
 
-        assert_eq!(repo.count(Some("image"), Some(7)).await.unwrap(), 2);
+        assert_eq!(repo.count(Some("image"), Some(7)).await.unwrap(), 3);
         assert_eq!(repo.count(Some("video"), Some(7)).await.unwrap(), 1);
+        assert_eq!(repo.count(None, Some(7)).await.unwrap(), 4);
+
+        // img-3 设为私密：对 7 不可见，对上传者 8 可见
+        sqlx::query("UPDATE file SET is_private = 1 WHERE stored_id = 'img-3'")
+            .execute(&*repo.db)
+            .await
+            .unwrap();
+        assert_eq!(repo.count(Some("image"), Some(7)).await.unwrap(), 2);
         assert_eq!(repo.count(None, Some(7)).await.unwrap(), 3);
-        // 用户 8 只能看到自己的
-        assert_eq!(repo.count(None, Some(8)).await.unwrap(), 1);
+        // user 8 看到：自己的私密 1 条 + 别人的公开 2 条
+        assert_eq!(repo.count(Some("image"), Some(8)).await.unwrap(), 3);
+
+        // 未登录（None）只能看到公开文件
+        assert_eq!(repo.count(None, None).await.unwrap(), 3);
     }
 
     #[tokio::test]
@@ -1052,7 +1059,7 @@ mod tests {
         })
         .await
         .unwrap();
-        // 其他用户的文件不计入
+        // 其他用户的公开文件也计入（默认公开），私密的不计入
         repo.insert(NewFile {
             size_bytes: 999,
             ..new_file_named("d", "d.bin", "other", Some(8))
@@ -1061,16 +1068,30 @@ mod tests {
         .unwrap();
 
         let (count, bytes, rows) = repo.stats(Some(7)).await.unwrap();
+        assert_eq!(count, 4);
+        assert_eq!(bytes, 1449);
+        // 按占用降序
+        assert_eq!(rows[0], ("other".to_string(), 1, 999));
+        assert_eq!(rows[1], ("image".to_string(), 2, 400));
+        assert_eq!(rows[2], ("document".to_string(), 1, 50));
+
+        // d.bin 设为私密 → 对 7 不可见，对 8 可见
+        sqlx::query("UPDATE file SET is_private = 1 WHERE stored_id = 'd'")
+            .execute(&*repo.db)
+            .await
+            .unwrap();
+        let (count, bytes, _) = repo.stats(Some(7)).await.unwrap();
         assert_eq!(count, 3);
         assert_eq!(bytes, 450);
-        // 按占用降序
-        assert_eq!(rows[0], ("image".to_string(), 2, 400));
-        assert_eq!(rows[1], ("document".to_string(), 1, 50));
+        // user 8 看到：自己的私密 1 条 + 别人的公开 3 条
+        let (owner_count, owner_bytes, _) = repo.stats(Some(8)).await.unwrap();
+        assert_eq!(owner_count, 4);
+        assert_eq!(owner_bytes, 1449);
 
-        // 不传 user_id 时统计全部
-        let (all_count, all_bytes, _) = repo.stats(None).await.unwrap();
-        assert_eq!(all_count, 4);
-        assert_eq!(all_bytes, 1449);
+        // 未登录（None）= 游客视角，只统计公开文件（d.bin 已设为私密）
+        let (guest_count, guest_bytes, _) = repo.stats(None).await.unwrap();
+        assert_eq!(guest_count, 3);
+        assert_eq!(guest_bytes, 450);
     }
 
     // ── 更新 / 删除 ──
@@ -1431,17 +1452,37 @@ mod tests {
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].stored_id, "b1");
 
+        // 公开文件人人可见：空查询返回全部（含其他用户的公开文件）
         let all = repo
             .search_by_name("", Some(7), 10, 0, SortOrder::default())
             .await
             .unwrap();
-        assert_eq!(all.len(), 2);
+        assert_eq!(all.len(), 3);
 
         assert_eq!(repo.count_by_name("预算", Some(7)).await.unwrap(), 1);
-        assert_eq!(repo.count_by_name("", Some(7)).await.unwrap(), 2);
-        // 用户隔离
+        assert_eq!(repo.count_by_name("", Some(7)).await.unwrap(), 3);
+        // 公开共享：用户 8 能搜到别人（user 7）的公开文件
+        let shared = repo
+            .search_by_name("预算", Some(8), 10, 0, SortOrder::default())
+            .await
+            .unwrap();
+        assert_eq!(shared.len(), 1);
+        assert_eq!(shared[0].stored_id, "b1");
+
+        // 设为私密后别人搜不到，上传者本人仍能搜到
+        sqlx::query("UPDATE file SET is_private = 1 WHERE stored_id = 'b1'")
+            .execute(&*repo.db)
+            .await
+            .unwrap();
+        assert!(
+            repo.search_by_name("预算", Some(8), 10, 0, SortOrder::default())
+                .await
+                .unwrap()
+                .is_empty(),
+            "别人的私密文件不应出现在搜索结果里"
+        );
         assert_eq!(
-            repo.search_by_name("file", Some(8), 10, 0, SortOrder::default())
+            repo.search_by_name("预算", Some(7), 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .len(),

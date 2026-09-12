@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT f.id AS \"id!: i64\",\n                      f.stored_id,\n                      f.original_name,\n                      f.file_category,\n                      f.size_bytes AS \"size_bytes!: i64\",\n                      (SELECT t.name FROM file_tag_rel r\n                         JOIN file_tag t ON t.id = r.tag_id\n                        WHERE r.file_id = f.id AND t.name LIKE ?1 ESCAPE '\\'\n                        ORDER BY t.name LIMIT 1) AS \"matched_tag?: String\",\n                      CASE WHEN f.original_name LIKE ?1 ESCAPE '\\' THEN 0 ELSE 1 END AS \"name_hit!: i64\"\n                 FROM file f\n                WHERE f.user_id = ?2\n                  AND (f.original_name LIKE ?1 ESCAPE '\\'\n                       OR EXISTS (SELECT 1 FROM file_tag_rel r2\n                                    JOIN file_tag t2 ON t2.id = r2.tag_id\n                                   WHERE r2.file_id = f.id AND t2.name LIKE ?1 ESCAPE '\\'))\n                ORDER BY CASE WHEN f.original_name LIKE ?1 ESCAPE '\\' THEN 0 ELSE 1 END,\n                         f.created_at DESC\n                LIMIT ?3",
+  "query": "SELECT f.id AS \"id!: i64\",\n                      f.stored_id,\n                      f.original_name,\n                      f.file_category,\n                      f.size_bytes AS \"size_bytes!: i64\",\n                      (SELECT t.name FROM file_tag_rel r\n                         JOIN file_tag t ON t.id = r.tag_id\n                        WHERE r.file_id = f.id AND t.name LIKE ?1 ESCAPE '\\'\n                        ORDER BY t.name LIMIT 1) AS \"matched_tag?: String\",\n                      CASE WHEN f.original_name LIKE ?1 ESCAPE '\\' THEN 0 ELSE 1 END AS \"name_hit!: i64\"\n                 FROM file f\n                WHERE (f.is_private = 0 OR f.user_id = ?2)\n                  AND (f.original_name LIKE ?1 ESCAPE '\\'\n                       OR EXISTS (SELECT 1 FROM file_tag_rel r2\n                                    JOIN file_tag t2 ON t2.id = r2.tag_id\n                                   WHERE r2.file_id = f.id AND t2.name LIKE ?1 ESCAPE '\\'))\n                ORDER BY CASE WHEN f.original_name LIKE ?1 ESCAPE '\\' THEN 0 ELSE 1 END,\n                         f.created_at DESC\n                LIMIT ?3",
   "describe": {
     "columns": [
       {
@@ -89,5 +89,5 @@
       false
     ]
   },
-  "hash": "61f5d25371d5c6d48a12f1f7d3e3e6ac6c7f1c968ea38a6a5453c7631f15d638"
+  "hash": "36eacf92e6109874984d175d3545b8f92963221d11d29927386e39883a815df6"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, stored_id, original_name, mime_type, file_category,\n                      size_bytes AS \"size_bytes!: i64\", width, height, duration_ms, user_id, content_hash,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM file\n               WHERE content_hash = ?\n               ORDER BY id ASC LIMIT 1",
+  "query": "SELECT id, stored_id, original_name, mime_type, file_category,\n                      size_bytes AS \"size_bytes!: i64\", width, height, duration_ms, user_id, is_private, content_hash,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM file WHERE stored_id = ?",
   "describe": {
     "columns": [
       {
@@ -114,8 +114,19 @@
         }
       },
       {
-        "name": "content_hash",
+        "name": "is_private",
         "ordinal": 10,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "file",
+            "name": "is_private"
+          }
+        }
+      },
+      {
+        "name": "content_hash",
+        "ordinal": 11,
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -126,13 +137,13 @@
       },
       {
         "name": "created_at!: chrono::DateTime<chrono::Utc>",
-        "ordinal": 11,
+        "ordinal": 12,
         "type_info": "Datetime",
         "origin": "Expression"
       },
       {
         "name": "updated_at!: chrono::DateTime<chrono::Utc>",
-        "ordinal": 12,
+        "ordinal": 13,
         "type_info": "Datetime",
         "origin": "Expression"
       }
@@ -151,10 +162,11 @@
       true,
       true,
       true,
+      false,
       true,
       false,
       false
     ]
   },
-  "hash": "83660a96f808d39822f9af653682590418223a2f823e85567a63bcadbccfff7c"
+  "hash": "9a0e63e0b64562fcdd69190f873a4edfe9f9339ab85749f770f59e7d04f7fff2"
 }

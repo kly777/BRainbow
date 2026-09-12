@@ -323,6 +323,23 @@ impl FileService {
         check_upload_dir(&self.upload_dir)
     }
 
+    /// 改名 / 改标签 / 切换可见性 / 删除的权限：仅上传者本人。
+    ///
+    /// 匿名的老文件（`user_id` 为 NULL）没有归属人，视为公共资源，任何登录用户可整理。
+    fn ensure_can_mutate(
+        &self,
+        file: &super::repository::FileRow,
+        viewer: Option<i64>,
+    ) -> Result<(), ServiceError> {
+        match (file.user_id, viewer) {
+            (Some(owner), Some(uid)) if owner != uid => {
+                Err(ServiceError::Forbidden("只能修改自己上传的文件".into()))
+            }
+            (Some(_), None) => Err(ServiceError::Forbidden("请先登录".into())),
+            _ => Ok(()),
+        }
+    }
+
     /// 磁盘上是否缺少该文件内容（写侧返回 DTO 时用；读侧见 `FileQueryService::is_missing`）
     async fn is_missing_on_disk(&self, stored_id: &str) -> bool {
         tokio::fs::metadata(format!("{}/{}", self.upload_dir, stored_id))
@@ -545,6 +562,8 @@ impl FileService {
                 user_id,
                 // force 副本显式不参与去重：写 NULL 退出唯一索引约束
                 content_hash: if force { None } else { Some(&hash) },
+                // 上传一律公开；需要私密时由上传者在详情页切换（匿名上传无归属，不能私密）
+                is_private: false,
             })
             .await
         {
@@ -616,6 +635,7 @@ impl FileService {
                 updated_at: file_row.updated_at,
                 // 刚写入磁盘，内容必然在位
                 missing: false,
+                is_private: file_row.is_private != 0,
             },
             duplicate: false,
         })
@@ -783,6 +803,7 @@ impl FileService {
                 created_at: row.created_at,
                 updated_at: row.updated_at,
                 missing,
+                is_private: row.is_private != 0,
             },
             duplicate: true,
         })
@@ -844,6 +865,22 @@ impl FileService {
             .await
             .map_err(ServiceError::Db)?
             .ok_or_else(|| ServiceError::NotFound("文件不存在".into()))?;
+
+        // 权限：仅上传者本人（匿名的老文件无归属人，任何登录用户可整理）
+        self.ensure_can_mutate(&file_row, user_id)?;
+
+        // 切换公开 / 私密（匿名上传没有归属用户，"对应的人"不存在，因此不允许私密）
+        if let Some(private) = req.is_private {
+            if private && file_row.user_id.is_none() {
+                return Err(ServiceError::InvalidInput(
+                    "匿名上传的文件没有归属用户，无法设为私密".into(),
+                ));
+            }
+            self.repo
+                .update_visibility(stored_id, private)
+                .await
+                .map_err(ServiceError::Db)?;
+        }
 
         // 更新文件名
         if let Some(new_name) = req.original_name {
@@ -909,6 +946,7 @@ impl FileService {
             created_at: updated_row.created_at,
             updated_at: updated_row.updated_at,
             missing,
+            is_private: updated_row.is_private != 0,
         })
     }
 
@@ -971,8 +1009,21 @@ impl FileService {
             .map_err(ServiceError::Db)
     }
 
-    /// 删除文件
-    pub async fn delete(&self, stored_id: &str, force: bool) -> Result<(), ServiceError> {
+    /// 删除文件（仅上传者本人；匿名的老文件任何登录用户可删）
+    pub async fn delete(
+        &self,
+        stored_id: &str,
+        force: bool,
+        user_id: Option<i64>,
+    ) -> Result<(), ServiceError> {
+        let existing = self
+            .repo
+            .find_by_stored_id(stored_id)
+            .await
+            .map_err(ServiceError::Db)?
+            .ok_or_else(|| ServiceError::NotFound("文件不存在".into()))?;
+        self.ensure_can_mutate(&existing, user_id)?;
+
         // 引用检查：force 表示用户已在二次确认中接受后果，跳过 4 张内容表的全表 LIKE 扫描
         if !force {
             let refs = self
@@ -1873,6 +1924,7 @@ mod tests {
                 duration_ms: None,
                 user_id: Some(7),
                 content_hash: None,
+                is_private: false,
             })
             .await
             .unwrap();
@@ -1916,6 +1968,7 @@ mod tests {
                 duration_ms: None,
                 user_id: Some(7),
                 content_hash: None,
+                is_private: false,
             })
             .await
             .unwrap();
@@ -2144,7 +2197,8 @@ mod tests {
                     original_name: Some("新名字.png".into()),
                     tags: Some(vec!["新标签".into(), "第二标签".into()]),
                     meta: Some(HashMap::from([("pages".into(), "3".into())])),
-                },
+                    is_private: None,
+            },
                 Some(7),
             )
             .await
@@ -2176,7 +2230,8 @@ mod tests {
                     original_name: Some("x".into()),
                     tags: None,
                     meta: None,
-                },
+                    is_private: None,
+            },
                 Some(7),
             )
             .await
@@ -2198,7 +2253,7 @@ mod tests {
         let disk = std::path::Path::new(&ctx.dir.0).join(&f.stored_id);
         assert!(disk.exists());
 
-        ctx.svc.delete(&f.stored_id, false).await.unwrap();
+        ctx.svc.delete(&f.stored_id, false, Some(7)).await.unwrap();
 
         assert!(!disk.exists(), "删除后磁盘文件应被移除");
         let row: Option<i64> = sqlx::query_scalar("SELECT id FROM file WHERE stored_id = ?")
@@ -2227,13 +2282,13 @@ mod tests {
             .unwrap();
 
         // 无 force：InUse 拒绝，记录与文件保留
-        let err = ctx.svc.delete(&f.stored_id, false).await.unwrap_err();
+        let err = ctx.svc.delete(&f.stored_id, false, Some(7)).await.unwrap_err();
         assert!(matches!(err, ServiceError::InUse(_)));
         let disk = std::path::Path::new(&ctx.dir.0).join(&f.stored_id);
         assert!(disk.exists());
 
         // force：删除成功
-        ctx.svc.delete(&f.stored_id, true).await.unwrap();
+        ctx.svc.delete(&f.stored_id, true, Some(7)).await.unwrap();
         assert!(!disk.exists());
     }
 
@@ -2314,6 +2369,131 @@ mod tests {
         let check = ctx.svc.upload_dir_check();
         assert_eq!(check.path, ctx.dir.0);
         assert!(check.is_usable());
+    }
+
+    // ── 权限与可见性 ──
+
+    /// 别人的文件：改名/删除都拒绝（Forbidden）
+    #[tokio::test]
+    async fn cannot_mutate_other_users_file() {
+        let ctx = setup_service().await;
+        // user 8 上传的文件
+        let id = uuid::Uuid::new_v4().to_string();
+        let stored = crate::modules::file::service::generate_stored_id();
+        std::fs::write(std::path::Path::new(&ctx.dir.0).join(&stored), b"data").unwrap();
+        ctx.svc
+            .repo
+            .insert(NewFile {
+                stored_id: &stored,
+                original_name: "other.png",
+                mime_type: "image/png",
+                file_category: "image",
+                size_bytes: 4,
+                width: None,
+                height: None,
+                duration_ms: None,
+                user_id: Some(8),
+                content_hash: None,
+                is_private: false,
+            })
+            .await
+            .unwrap();
+        let _ = id;
+
+        // user 7 改名 / 删除都被拒
+        let err = ctx
+            .svc
+            .update(
+                &stored,
+                UpdateFileRequest {
+                    original_name: Some("改名.png".into()),
+                    tags: None,
+                    meta: None,
+                    is_private: None,
+                },
+                Some(7),
+            )
+            .await
+            .unwrap_err();
+        assert!(matches!(err, ServiceError::Forbidden(_)), "{err:?}");
+
+        let err = ctx.svc.delete(&stored, true, Some(7)).await.unwrap_err();
+        assert!(matches!(err, ServiceError::Forbidden(_)), "{err:?}");
+
+        // 上传者本人可以
+        ctx.svc
+            .update(
+                &stored,
+                UpdateFileRequest {
+                    original_name: Some("改名.png".into()),
+                    tags: None,
+                    meta: None,
+                    is_private: Some(true),
+                },
+                Some(8),
+            )
+            .await
+            .unwrap();
+        let f = ctx.svc.repo.find_by_stored_id(&stored).await.unwrap().unwrap();
+        assert_eq!(f.is_private, 1);
+        assert_eq!(f.original_name, "改名.png");
+    }
+
+    /// 匿名老文件（user_id 为 NULL）没有归属人：任何登录用户可整理，但不能设为私密
+    #[tokio::test]
+    async fn anonymous_file_is_public_resource_but_cannot_be_private() {
+        let ctx = setup_service().await;
+        let stored = crate::modules::file::service::generate_stored_id();
+        std::fs::write(std::path::Path::new(&ctx.dir.0).join(&stored), b"data").unwrap();
+        ctx.svc
+            .repo
+            .insert(NewFile {
+                stored_id: &stored,
+                original_name: "legacy.png",
+                mime_type: "image/png",
+                file_category: "image",
+                size_bytes: 4,
+                width: None,
+                height: None,
+                duration_ms: None,
+                user_id: None,
+                content_hash: None,
+                is_private: false,
+            })
+            .await
+            .unwrap();
+
+        // 任何登录用户都能改名
+        ctx.svc
+            .update(
+                &stored,
+                UpdateFileRequest {
+                    original_name: Some("整理.png".into()),
+                    tags: None,
+                    meta: None,
+                    is_private: None,
+                },
+                Some(7),
+            )
+            .await
+            .unwrap();
+
+        // 但不能设为私密：没有"对应的人"可授权
+        let err = ctx
+            .svc
+            .update(
+                &stored,
+                UpdateFileRequest {
+                    original_name: None,
+                    tags: None,
+                    meta: None,
+                    is_private: Some(true),
+                },
+                Some(7),
+            )
+            .await
+            .unwrap_err();
+        assert!(matches!(err, ServiceError::InvalidInput(_)), "{err:?}");
     }
 
     /// 一致性扫描能报出"DB 有记录、磁盘无文件"

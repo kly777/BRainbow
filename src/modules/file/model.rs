@@ -79,6 +79,8 @@ pub struct NewFile<'a> {
     pub user_id: Option<i64>,
     /// 内容 SHA-256（十六进制）；存量数据可能为 None
     pub content_hash: Option<&'a str>,
+    /// 私密文件：仅上传者可见（匿名上传不允许私密，见 FileService::upload）
+    pub is_private: bool,
 }
 
 /// 文件主模型
@@ -103,6 +105,8 @@ pub struct File {
     /// 磁盘上找不到对应文件（记录还在，内容已丢失）。
     /// 实时 stat 得出，不落库 —— 文件补回来后会自动恢复正常。
     pub missing: bool,
+    /// 私密文件：仅上传者可见
+    pub is_private: bool,
 }
 
 /// 文件摘要（列表用，不含 meta）
@@ -125,6 +129,8 @@ pub struct FileSummary {
     pub updated_at: DateTime<Utc>,
     /// 磁盘上找不到对应文件（见 [`File::missing`]）
     pub missing: bool,
+    /// 私密文件：仅上传者可见（见 [`File::is_private`]）
+    pub is_private: bool,
 }
 
 /// 更新文件请求
@@ -133,6 +139,8 @@ pub struct UpdateFileRequest {
     pub original_name: Option<String>,
     pub tags: Option<Vec<String>>,
     pub meta: Option<std::collections::HashMap<String, String>>,
+    /// 切换公开/私密（仅上传者本人可改）
+    pub is_private: Option<bool>,
 }
 
 /// 列表排序方式（白名单枚举：ORDER BY 片段是常量，无注入风险）

@@ -131,6 +131,7 @@ mod tests {
                 duration_ms: None,
                 user_id: Some(7),
                 content_hash: None,
+                is_private: false,
             })
             .await
             .unwrap();

@@ -10,6 +10,46 @@ use crate::shared::error_types::ServiceError;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 use crate::shared::search::{SearchHit, SearchPort, SearchTarget, normalize_search};
 
+/// 可见性判定：公开文件人人可见；私密文件仅上传者本人。
+/// `viewer` 为 `None`（未认证）时只能看到公开文件。
+///
+/// 与 SQL 层的 `push_visibility`（repository）保持同一语义，改一处要同步另一处。
+pub fn is_visible(file: &File, viewer: Option<i64>) -> bool {
+    if !file.is_private {
+        return true;
+    }
+    match (file.user_id, viewer) {
+        (Some(owner), Some(uid)) => owner == uid,
+        // 匿名上传不允许私密；万一历史数据如此，则谁也不能看
+        _ => false,
+    }
+}
+
+/// 内容路由（`/api/file/{stored_id}/data/{filename}`）的访问判定。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ContentAccess {
+    /// 放行
+    Allow,
+    /// 私密文件但没带凭据 → 401
+    NeedAuth,
+    /// 私密文件、已认证但不是上传者 → 404（不暴露存在性）
+    Deny,
+}
+
+/// 判定当前请求者能否读取文件内容。
+///
+/// 公开文件一律放行 —— Markdown 的 `<img src>` 不带 Authorization，这是内嵌能显示的前提。
+pub fn content_access(file: &File, viewer: Option<i64>) -> ContentAccess {
+    if !file.is_private {
+        return ContentAccess::Allow;
+    }
+    match (file.user_id, viewer) {
+        (Some(owner), Some(uid)) if owner == uid => ContentAccess::Allow,
+        (_, Some(_)) => ContentAccess::Deny,
+        (_, None) => ContentAccess::NeedAuth,
+    }
+}
+
 /// 查询侧服务——只读查询聚合
 #[derive(Clone)]
 pub struct FileQueryService {
@@ -86,6 +126,7 @@ impl FileQueryService {
             created_at: file_row.created_at,
             updated_at: file_row.updated_at,
             missing,
+            is_private: file_row.is_private != 0,
         })
     }
 
@@ -133,6 +174,7 @@ impl FileQueryService {
             created_at: file_row.created_at,
             updated_at: file_row.updated_at,
             missing,
+            is_private: file_row.is_private != 0,
         })
     }
 
@@ -226,6 +268,7 @@ impl FileQueryService {
                 created_at: row.created_at,
                 updated_at: row.updated_at,
                 missing: missing_flags.next().unwrap_or(false),
+                is_private: row.is_private != 0,
             });
         }
 
@@ -358,6 +401,7 @@ mod tests {
                 duration_ms: None,
                 user_id: Some(7),
                 content_hash: None,
+                is_private: false,
             })
             .await
             .unwrap();
@@ -372,6 +416,7 @@ mod tests {
             duration_ms: None,
             user_id: Some(7),
             content_hash: None,
+            is_private: false,
         })
         .await
         .unwrap();
@@ -386,6 +431,7 @@ mod tests {
             duration_ms: None,
             user_id: Some(8),
             content_hash: None,
+            is_private: false,
         })
         .await
         .unwrap();
@@ -441,8 +487,8 @@ mod tests {
     // ── 列表 ──
 
     #[tokio::test]
-    async fn list_defaults_scoped_to_user() {
-        let (query, repo, _pool) = setup().await;
+    async fn list_shows_public_and_own_private() {
+        let (query, repo, pool) = setup().await;
         seed(&repo).await;
 
         // 未登录（user_id None）应看到全部 3 条；用户 7 只看到自己的 2 条
@@ -461,7 +507,9 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(all.total, 3);
-        let mine = query
+
+        // 默认公开：用户 7 也能看到用户 8 的文件
+        let as_user = query
             .list(
                 FileListQuery {
                     page: None,
@@ -475,8 +523,45 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(mine.total, 2);
-        assert!(mine.items.iter().all(|f| f.user_id == Some(7)));
+        assert_eq!(as_user.total, 3);
+
+        // 把别人（user 8）的文件设为私密 → 对用户 7 不可见，user 8 自己仍可见
+        sqlx::query("UPDATE file SET is_private = 1 WHERE user_id = 8")
+            .execute(&*pool)
+            .await
+            .unwrap();
+        let as_user = query
+            .list(
+                FileListQuery {
+                    page: None,
+                    page_size: None,
+                    category: None,
+                    tag: None,
+                    q: None,
+                    sort: SortOrder::default(),
+                },
+                Some(7),
+            )
+            .await
+            .unwrap();
+        assert_eq!(as_user.total, 2);
+        assert!(as_user.items.iter().all(|f| f.user_id == Some(7)));
+        let as_owner = query
+            .list(
+                FileListQuery {
+                    page: None,
+                    page_size: None,
+                    category: None,
+                    tag: None,
+                    q: None,
+                    sort: SortOrder::default(),
+                },
+                Some(8),
+            )
+            .await
+            .unwrap();
+        // 上传者看到：自己的私密 1 条 + 其他人公开的 2 条
+        assert_eq!(as_owner.total, 3, "上传者仍能看到自己的私密文件");
     }
 
     #[tokio::test]
@@ -650,18 +735,24 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn search_port_scopes_to_user_and_ignores_blank_query() {
+    async fn search_port_covers_public_files_and_hides_private_ones() {
         let (query, repo, _pool) = setup().await;
         seed(&repo).await;
 
-        // 用户 8 只搜到自己的文件
+        // 公开共享：用户 8 也能搜到别人的公开文件
         let hits = query.search(8, "文件", 5).await.unwrap();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].title, "别人文件.bin");
-
-        // 用户 7 搜不到用户 8 的文件
         let hits = query.search(7, "别人", 5).await.unwrap();
-        assert!(hits.is_empty());
+        assert_eq!(hits.len(), 1, "别人的公开文件应能被搜到");
+
+        // 设为私密后：别人搜不到，上传者本人能搜到
+        sqlx::query("UPDATE file SET is_private = 1 WHERE stored_id = 'other-1'")
+            .execute(&*_pool)
+            .await
+            .unwrap();
+        assert!(query.search(7, "别人", 5).await.unwrap().is_empty());
+        assert_eq!(query.search(8, "别人", 5).await.unwrap().len(), 1);
 
         // 空 / 纯空白查询直接返回空
         assert!(query.search(7, "   ", 5).await.unwrap().is_empty());
@@ -686,6 +777,49 @@ mod tests {
             ..name_hit
         };
         assert_eq!(search_snippet(&tag_hit), "#设计");
+    }
+
+    /// 可见性判定（详情/搜索用）与访问判定（内容路由用）三态
+    #[test]
+    fn visibility_and_content_access_rules() {
+        let mut file = File {
+            id: 1,
+            stored_id: "s".into(),
+            original_name: "a.png".into(),
+            mime_type: "image/png".into(),
+            file_category: FileCategory::Image,
+            size_bytes: 1,
+            width: None,
+            height: None,
+            duration_ms: None,
+            user_id: Some(7),
+            content_hash: None,
+            tags: vec![],
+            meta: HashMap::new(),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            missing: false,
+            is_private: false,
+        };
+
+        // 公开：人人可见、无需凭据
+        assert!(is_visible(&file, None));
+        assert!(is_visible(&file, Some(8)));
+        assert_eq!(content_access(&file, None), ContentAccess::Allow);
+
+        // 私密：仅上传者
+        file.is_private = true;
+        assert!(!is_visible(&file, None));
+        assert!(!is_visible(&file, Some(8)));
+        assert!(is_visible(&file, Some(7)));
+        assert_eq!(content_access(&file, Some(7)), ContentAccess::Allow);
+        assert_eq!(content_access(&file, None), ContentAccess::NeedAuth);
+        assert_eq!(content_access(&file, Some(8)), ContentAccess::Deny);
+
+        // 无归属（匿名）的私密文件：谁也不能看（上传时已禁止，这里是防御）
+        file.user_id = None;
+        assert!(!is_visible(&file, Some(7)));
+        assert_eq!(content_access(&file, Some(7)), ContentAccess::Deny);
     }
 
     #[test]

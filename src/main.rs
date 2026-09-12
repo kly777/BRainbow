@@ -123,14 +123,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 创建数据库表（如果不存在）
     db::migrate(&pool).await?;
 
-    // 启动自检（浅检查，毫秒级）：schema 漂移 + 上传目录 + 存储一致性。
+    // 上传目录准备 + 启动自检（浅检查，毫秒级）。顺序见 app::startup 的注释：
+    // 目录必须先建出来再自检，否则首次部署会因"目录不可访问"中止启动。
     // - schema 漂移：迁移只在版本号变化时执行，表被删掉不会自动修复，只能启动即失败
     // - 上传目录不可用：文件服务整体不可用（列表能看、点开全 404、上传全失败）
-    // - 存储不一致（缺文件/孤儿）：只告警不阻断，数据问题无法靠重启解决
+    // - 存储不一致（缺文件/孤儿/大小/分类）：只告警不阻断，数据问题无法靠重启解决
     //
     // 全库扫描（PRAGMA quick_check，178MB 库数秒起）**不在启动路径**：
     // 它只在 `--check` 里跑（部署时 / 手动排查各一次），避免每次重启都扫一遍全库。
-    let self_check = app::self_check::run(&pool, &config.file_upload_dir(), false).await;
+    let self_check = app::startup::prepare_and_check(&pool, &config.file_upload_dir()).await;
     self_check.log();
     if self_check.is_fatal() {
         return Err("启动自检未通过，详见上方日志".into());

@@ -8,3 +8,4 @@ pub mod cli;
 pub mod context;
 pub mod http;
 pub mod self_check;
+pub mod startup;

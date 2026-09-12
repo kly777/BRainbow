@@ -450,7 +450,10 @@ cmd_deploy() {
     wait_for_ready
     trap - ERR
 
-    # Step 8.5: 更新 SQLite 统计信息（失败不阻断部署）
+    # Step 8.5: 后端自检（只读；失败只告警不阻断，见 backend_self_check）
+    backend_self_check || true
+
+    # Step 8.6: 更新 SQLite 统计信息（失败不阻断部署）
     db_optimize || true
 
     # Step 9: 同步 Caddy 配置并重载
@@ -522,6 +525,30 @@ wait_for_ready() {
     done
     echo ""
     log_error "服务启动超时（${max_attempts}s），请检查: make logs"
+    return 1
+}
+
+# ===================================================================
+# 部署后自检
+# ===================================================================
+
+# 直接跑已部署二进制的只读自检（数据库 schema/完整性 + 上传目录 + 存储一致性）。
+# 环境对齐 systemd：cd 到 SERVICE_DIR（unit 的 WorkingDirectory；默认 UPLOAD_DIR=uploads
+# 是相对该目录的路径，故这一步不能省），并显式传入 .env.prod 的 DATABASE_URL
+# （生产通常是绝对路径，如 sqlite:/opt/brb/data/brainbow.db）。
+# 只读诊断（不迁移、不建目录、不删文件）；失败只告警不阻断部署 ——
+# 它报告的是数据层问题，回滚代码解决不了，服务本身是好的。
+backend_self_check() {
+    log_info "后端自检（只读，含全库 quick_check，约数秒）..."
+    local out
+    if out=$(remote "cd '$SERVICE_DIR' && RUST_LOG=info DATABASE_URL='$DATABASE_URL' ./brainbow --check 2>&1"); then
+        log_done "后端自检通过"
+        echo "$out" | grep -E '\[[0-9]/4\]' | sed 's/^/    /' || true
+        return 0
+    fi
+    log_warn "后端自检未通过（服务已在运行，部署不回滚）："
+    echo "$out" | sed 's/^/    /'
+    log_info "可复跑: ssh $REMOTE_USER@$REMOTE_HOST \"cd $SERVICE_DIR && DATABASE_URL='$DATABASE_URL' ./brainbow --check\""
     return 1
 }
 

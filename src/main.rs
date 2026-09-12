@@ -28,7 +28,7 @@ use axum::http::{HeaderValue, Method};
 use sqlx::sqlite::SqlitePoolOptions;
 use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
 
 use crate::app::context::AppState;
@@ -98,13 +98,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 创建数据库表（如果不存在）
     db::migrate(&pool).await?;
 
+    // 数据库自检：版本号 / 必需表清单 / 外键一致性（毫秒级）。
+    // 迁移只在版本号变化时执行，所以"表被删掉但版本号没变"这类漂移不会自动修复，
+    // 与其带着残缺 schema 起来（运行时才开始报错），不如启动即失败。
+    let schema_check = db::verify::check_schema(&pool).await;
+    if !schema_check.is_ok() {
+        error!("数据库自检未通过: {}", schema_check.summary());
+        return Err(format!("数据库自检未通过: {}", schema_check.summary()).into());
+    }
+    info!("数据库自检通过: {}", schema_check.summary());
+
     // 加载记忆配置（FSRS 参数 + 调度配置，存储于 app_settings 表）
     let mem_config = modules::mem::config_repository::MemConfigRepo::new(pool.clone())
         .load_and_init()
         .await;
 
     // 创建应用状态
+    let check_pool = pool.clone();
     let state = AppState::new(&Arc::new(pool), &config, mem_config);
+
+    // 深度完整性检查（页级损坏 / 索引与表不一致）：178MB 库实测约 4s，
+    // 放后台跑不拖慢启动；发现问题只告警，不阻断（数据仍在，人工介入更合适）
+    tokio::spawn(async move {
+        match db::verify::quick_check(&check_pool).await {
+            Ok(result) if result == "ok" => info!("数据库完整性检查通过（quick_check）"),
+            Ok(result) => error!("数据库完整性检查未通过: {result}"),
+            Err(e) => warn!("数据库完整性检查无法执行: {e}"),
+        }
+    });
 
     // 上传目录自检：目录不可用时文件服务整体不可用（列表能看、点开全 404、上传全失败），
     // 与其带着坏目录起来，不如启动即失败 —— 日志与 systemd 都能明确指认原因

@@ -2,6 +2,7 @@
 
 import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
 import {
+	AlertTriangle,
 	ChevronLeft,
 	ChevronRight,
 	Copy,
@@ -27,58 +28,73 @@ const Preview: Component<{ item: FileItem }> = (props) => {
 	const url = () => fileUrl(props.item.stored_id, props.item.original_name);
 	return (
 		<div class={styles.previewStage}>
-			<Show when={props.item.file_category === "image"}>
-				<a
-					href={url()}
-					target="_blank"
-					rel="noopener noreferrer"
-					class={styles.previewLink}
-				>
-					<img
-						src={url()}
-						alt={props.item.original_name}
-						class={styles.previewImg}
-					/>
-				</a>
-			</Show>
-			<Show when={props.item.file_category === "video"}>
-				{/* biome-ignore lint/a11y/useMediaCaption: 文件预览无字幕源 */}
-				<video src={url()} controls class={styles.previewMedia} />
-			</Show>
-			<Show when={props.item.file_category === "audio"}>
-				{/* biome-ignore lint/a11y/useMediaCaption: 文件预览无字幕源 */}
-				<audio src={url()} controls class={styles.previewAudio} />
-			</Show>
-			<Show when={props.item.mime_type === "application/pdf"}>
-				<iframe src={url()} class={styles.previewFrame} title="PDF 预览" />
-			</Show>
-			{/* 文本类预览：后端已把可识别的文本（含按扩展名兜底的源码/配置）
-			    统一存为 text/*，前端只看 mime */}
-			<Show when={props.item.mime_type.startsWith("text/")}>
-				<div class={styles.textPaneWrap}>
-					<TextPreview item={props.item} />
-				</div>
-			</Show>
+			{/* 内容已丢失：内联预览与下载都没有意义，统一给出说明 */}
 			<Show
-				when={
-					props.item.file_category !== "image" &&
-					props.item.file_category !== "video" &&
-					props.item.file_category !== "audio" &&
-					props.item.mime_type !== "application/pdf" &&
-					!props.item.mime_type.startsWith("text/")
+				when={!props.item.missing}
+				fallback={
+					<div class={styles.previewFallback}>
+						<AlertTriangle size={48} class={styles.previewMissingIcon} />
+						<p class={styles.previewFallbackName}>文件内容已丢失</p>
+						<p class={styles.previewMissingHint}>
+							数据库里仍保留这条记录，但磁盘上找不到对应文件，无法预览或下载。
+							把文件放回上传目录后会自动恢复正常。
+						</p>
+					</div>
 				}
 			>
-				<div class={styles.previewFallback}>
-					<FileText size={48} class={styles.previewFallbackIcon} />
-					<p class={styles.previewFallbackName}>{props.item.original_name}</p>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={() => window.open(url(), "_blank")}
+				<Show when={props.item.file_category === "image"}>
+					<a
+						href={url()}
+						target="_blank"
+						rel="noopener noreferrer"
+						class={styles.previewLink}
 					>
-						<Download size={14} /> 下载
-					</Button>
-				</div>
+						<img
+							src={url()}
+							alt={props.item.original_name}
+							class={styles.previewImg}
+						/>
+					</a>
+				</Show>
+				<Show when={props.item.file_category === "video"}>
+					{/* biome-ignore lint/a11y/useMediaCaption: 文件预览无字幕源 */}
+					<video src={url()} controls class={styles.previewMedia} />
+				</Show>
+				<Show when={props.item.file_category === "audio"}>
+					{/* biome-ignore lint/a11y/useMediaCaption: 文件预览无字幕源 */}
+					<audio src={url()} controls class={styles.previewAudio} />
+				</Show>
+				<Show when={props.item.mime_type === "application/pdf"}>
+					<iframe src={url()} class={styles.previewFrame} title="PDF 预览" />
+				</Show>
+				{/* 文本类预览：后端已把可识别的文本（含按扩展名兜底的源码/配置）
+			    统一存为 text/*，前端只看 mime */}
+				<Show when={props.item.mime_type.startsWith("text/")}>
+					<div class={styles.textPaneWrap}>
+						<TextPreview item={props.item} />
+					</div>
+				</Show>
+				<Show
+					when={
+						props.item.file_category !== "image" &&
+						props.item.file_category !== "video" &&
+						props.item.file_category !== "audio" &&
+						props.item.mime_type !== "application/pdf" &&
+						!props.item.mime_type.startsWith("text/")
+					}
+				>
+					<div class={styles.previewFallback}>
+						<FileText size={48} class={styles.previewFallbackIcon} />
+						<p class={styles.previewFallbackName}>{props.item.original_name}</p>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() => window.open(url(), "_blank")}
+						>
+							<Download size={14} /> 下载
+						</Button>
+					</div>
+				</Show>
 			</Show>
 		</div>
 	);
@@ -88,6 +104,12 @@ const Preview: Component<{ item: FileItem }> = (props) => {
 
 const FileView: Component<{ item: FileItem }> = (props) => (
 	<>
+		<Show when={props.item.missing}>
+			<div class={styles.missingNotice}>
+				<AlertTriangle size={16} />
+				<span>内容已丢失：磁盘上找不到该文件，记录仍保留</span>
+			</div>
+		</Show>
 		<div class={styles.infoList}>
 			<div class={styles.infoItem}>
 				<span class={styles.infoLabel}>类型</span>

@@ -26,6 +26,7 @@ vi.mock("@modules/file/api.ts", async (importOriginal) => {
 					tags: [],
 					created_at: "2026-09-09T13:00:00+00:00",
 					updated_at: "2026-09-09T13:00:00+00:00",
+					missing: false,
 				},
 			],
 			total: 1,
@@ -93,6 +94,7 @@ describe("FileList 渲染", () => {
 					tags: [],
 					created_at: "2026-09-09T13:00:00+00:00",
 					updated_at: "2026-09-09T13:00:00+00:00",
+					missing: false,
 				},
 			],
 			total: 60,
@@ -113,6 +115,50 @@ describe("FileList 渲染", () => {
 			}
 			expect(host.querySelector("nav[aria-label='分页']")).toBeTruthy();
 			expect(host.textContent).toContain("第 1 / 3 页");
+			dispose();
+		});
+	}, 20000);
+
+	it("内容丢失的文件显示缺失标记且不渲染破图", async () => {
+		const { listFiles } = await import("@modules/file/api.ts");
+		vi.mocked(listFiles).mockResolvedValueOnce({
+			items: [
+				{
+					id: 9,
+					stored_id: "gone12345678",
+					url: "/api/file/gone12345678/data/lost.png",
+					original_name: "lost.png",
+					mime_type: "image/png",
+					file_category: "image",
+					size_bytes: 10,
+					width: 2,
+					height: 2,
+					duration_ms: null,
+					tags: [],
+					created_at: "2026-09-09T13:00:00+00:00",
+					updated_at: "2026-09-09T13:00:00+00:00",
+					missing: true,
+				},
+			],
+			total: 1,
+			page: 1,
+			page_size: 24,
+			total_pages: 1,
+		});
+
+		const { default: FileList } = await import("./FileList.tsx");
+		const host = document.createElement("div");
+		document.body.appendChild(host);
+
+		await createRoot(async (dispose) => {
+			render(() => <FileList />, host);
+			for (let i = 0; i < 50; i++) {
+				await new Promise((r) => setTimeout(r, 20));
+				if (host.textContent?.includes("文件缺失")) break;
+			}
+			expect(host.textContent).toContain("文件缺失");
+			// 缺失的图片不再渲染 <img>，避免浏览器显示破图
+			expect(host.querySelectorAll("img").length).toBe(0);
 			dispose();
 		});
 	}, 20000);

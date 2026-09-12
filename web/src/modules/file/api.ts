@@ -43,6 +43,8 @@ export interface FileItem {
 	meta?: Record<string, string>;
 	created_at: string;
 	updated_at: string;
+	/** 磁盘上找不到对应文件（记录还在，内容已丢失）；文件恢复后自动变回 false */
+	missing: boolean;
 }
 
 /** 上传结果：duplicate=true 表示命中内容去重、复用已有文件（未新建） */

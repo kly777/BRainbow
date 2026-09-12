@@ -85,21 +85,37 @@ const FilePreview: Component<{
 		type="button"
 		class={styles.preview}
 		onClick={() => {
-			if (props.item.file_category === "image" && props.onZoom) props.onZoom();
+			if (
+				!props.item.missing &&
+				props.item.file_category === "image" &&
+				props.onZoom
+			)
+				props.onZoom();
 			else props.onOpen();
 		}}
-		title={props.item.file_category === "image" ? "放大查看" : "查看详情"}
+		title={
+			props.item.missing
+				? "文件内容已丢失"
+				: props.item.file_category === "image"
+					? "放大查看"
+					: "查看详情"
+		}
 	>
 		<Show
-			when={props.item.file_category === "image"}
-			fallback={<ExtBadge name={props.item.original_name} />}
+			when={!props.item.missing}
+			fallback={<span class={styles.missingBadge}>文件缺失</span>}
 		>
-			<img
-				src={fileUrl(props.item.stored_id, props.item.original_name)}
-				alt={props.item.original_name}
-				class={styles.thumb}
-				loading="lazy"
-			/>
+			<Show
+				when={props.item.file_category === "image"}
+				fallback={<ExtBadge name={props.item.original_name} />}
+			>
+				<img
+					src={fileUrl(props.item.stored_id, props.item.original_name)}
+					alt={props.item.original_name}
+					class={styles.thumb}
+					loading="lazy"
+				/>
+			</Show>
 		</Show>
 	</button>
 );
@@ -371,15 +387,20 @@ const FileRow: Component<{
 			title={props.item.file_category === "image" ? "放大查看" : "查看详情"}
 		>
 			<Show
-				when={props.item.file_category === "image"}
-				fallback={<ExtBadge name={props.item.original_name} />}
+				when={!props.item.missing}
+				fallback={<span class={styles.missingBadge}>缺失</span>}
 			>
-				<img
-					src={fileUrl(props.item.stored_id, props.item.original_name)}
-					alt={props.item.original_name}
-					class={styles.rowThumbImg}
-					loading="lazy"
-				/>
+				<Show
+					when={props.item.file_category === "image"}
+					fallback={<ExtBadge name={props.item.original_name} />}
+				>
+					<img
+						src={fileUrl(props.item.stored_id, props.item.original_name)}
+						alt={props.item.original_name}
+						class={styles.rowThumbImg}
+						loading="lazy"
+					/>
+				</Show>
 			</Show>
 		</button>
 
@@ -390,6 +411,9 @@ const FileRow: Component<{
 				</button>
 			</Tooltip>
 			<div class={styles.rowMeta}>
+				<Show when={props.item.missing}>
+					<span class={styles.missingTag}>文件缺失</span>
+				</Show>
 				<span>{categoryLabel(props.item.file_category)}</span>
 				<span>·</span>
 				<span>{formatBytes(props.item.size_bytes)}</span>

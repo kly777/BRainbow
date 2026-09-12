@@ -291,6 +291,24 @@
 	   所以展示态与编辑态自身等高，切换不跳高度 */
 }
 
+/* 缺失文件：缩略图位置显示提示（图片缺失时不再渲染 img，避免破图） */
+.missing-badge {
+	display: inline-flex;
+	align-items: center;
+	font-size: var(--text-xs);
+	font-weight: 600;
+	color: var(--t-color-danger);
+	border: 1px dashed var(--t-color-danger);
+	border-radius: var(--radius-sm);
+	padding: var(--space-2xs) var(--space-sm);
+}
+
+/* 列表行的行内缺失标记 */
+.missing-tag {
+	color: var(--t-color-danger);
+	font-weight: 600;
+}
+
 /* Tooltip 宿主：撑满卡片宽度，文件名才能保持单行截断 */
 .name-tip-host {
 	display: block;

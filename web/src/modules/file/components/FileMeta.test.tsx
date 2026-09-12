@@ -20,6 +20,7 @@ function makeItem(overrides: Partial<FileItem> = {}): FileItem {
 		tags: [],
 		created_at: "2026-09-09T13:00:00+00:00",
 		updated_at: "2026-09-09T13:00:00+00:00",
+		missing: false,
 		...overrides,
 	};
 }

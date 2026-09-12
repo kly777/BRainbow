@@ -343,3 +343,30 @@
 		width: 100%;
 	}
 }
+
+/* 内容已丢失：侧栏警告与预览区提示 */
+.missing-notice {
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+	margin-bottom: var(--space-md);
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-danger);
+	border-radius: var(--radius-md);
+	color: var(--t-color-danger);
+	font-size: var(--text-sm);
+}
+
+.preview-missing-icon {
+	color: var(--t-color-danger);
+	opacity: 0.8;
+}
+
+.preview-missing-hint {
+	margin: 0;
+	max-width: 32rem;
+	text-align: center;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	line-height: 1.6;
+}

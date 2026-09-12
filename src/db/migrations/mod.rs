@@ -11,6 +11,7 @@ mod v15;
 mod v16;
 mod v17;
 mod v18;
+mod v19;
 mod v2;
 mod v3;
 mod v4;
@@ -26,7 +27,7 @@ use super::helpers::set_user_version;
 use super::schema::create_tables;
 
 /// 程序支持的最新 schema 版本
-pub const LATEST_USER_VERSION: i64 = 18;
+pub const LATEST_USER_VERSION: i64 = 19;
 
 /// 迁移统一入口。
 ///
@@ -74,6 +75,7 @@ async fn apply_migration(pool: &SqlitePool, target: i64) -> Result<(), sqlx::Err
         16 => v16::migrate(&mut tx).await?,
         17 => v17::migrate(&mut tx).await?,
         18 => v18::migrate(&mut tx).await?,
+        19 => v19::migrate(&mut tx).await?,
         _ => {
             return Err(sqlx::Error::Configuration(Box::new(std::io::Error::other(
                 format!("未知的迁移版本: {target}"),

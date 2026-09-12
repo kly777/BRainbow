@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, stored_id, original_name, mime_type, file_category,\n                      size_bytes AS \"size_bytes!: i64\", width, height, duration_ms, user_id, is_private, content_hash,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM file\n               WHERE content_hash = ?\n               ORDER BY id ASC LIMIT 1",
+  "query": "SELECT id, stored_id, original_name, mime_type, category AS \"file_category!: String\",\n                      size_bytes AS \"size_bytes!: i64\", width, height, duration_ms, user_id, is_private, content_hash,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM file WHERE stored_id = ?",
   "describe": {
     "columns": [
       {
@@ -48,13 +48,13 @@
         }
       },
       {
-        "name": "file_category",
+        "name": "file_category!: String",
         "ordinal": 4,
         "type_info": "Text",
         "origin": {
           "Table": {
             "table": "file",
-            "name": "file_category"
+            "name": "category"
           }
         }
       },
@@ -168,5 +168,5 @@
       false
     ]
   },
-  "hash": "ec1dd4b0f6d3c5e2e59dff019c05098b68886cd1f506f08ba1fbf90b389a93c5"
+  "hash": "18e81c4663ecf4a72fdcef031af68f6a3e8857337c7d989fb639ec72ce526d2d"
 }

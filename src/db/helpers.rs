@@ -43,6 +43,9 @@ pub async fn set_user_version(
 }
 
 /// 检查表中是否存在某列（连接级）。
+///
+/// 用 `table_xinfo` 而非 `table_info`：后者不列出 VIRTUAL 生成列
+/// （v19 把 file.category 改成了生成列，用 table_info 会误判为"列不存在"）。
 pub async fn column_exists_on(
     conn: &mut SqliteConnection,
     table: &str,
@@ -50,7 +53,7 @@ pub async fn column_exists_on(
 ) -> Result<bool, sqlx::Error> {
     let safe_table = sanitize_table_name(table)?;
     let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
-        "PRAGMA table_info({safe_table})"
+        "PRAGMA table_xinfo({safe_table})"
     )))
     .fetch_all(&mut *conn)
     .await?;

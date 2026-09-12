@@ -499,22 +499,22 @@ mod tests {
     async fn file_hits_by_name_and_tag_scoped_to_user() {
         let ctx = setup().await;
         sqlx::query(
-            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
-             VALUES ('f-1', '季度财报.xlsx', 'application/vnd.ms-excel', 'document', 2048, 1)",
+            "INSERT INTO file (stored_id, original_name, mime_type, size_bytes, user_id)
+             VALUES ('f-1', '季度财报.xlsx', 'application/vnd.ms-excel', 2048, 1)",
         )
         .execute(&ctx.pool)
         .await
         .unwrap();
         let f2: i64 = sqlx::query_scalar(
-            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
-             VALUES ('f-2', '封面.png', 'image/png', 'image', 4096, 1) RETURNING id",
+            "INSERT INTO file (stored_id, original_name, mime_type, size_bytes, user_id)
+             VALUES ('f-2', '封面.png', 'image/png', 4096, 1) RETURNING id",
         )
         .fetch_one(&ctx.pool)
         .await
         .unwrap();
         sqlx::query(
-            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
-             VALUES ('f-3', '别人的财报.pdf', 'application/pdf', 'document', 100, 2)",
+            "INSERT INTO file (stored_id, original_name, mime_type, size_bytes, user_id)
+             VALUES ('f-3', '别人的财报.pdf', 'application/pdf', 100, 2)",
         )
         .execute(&ctx.pool)
         .await
@@ -609,9 +609,9 @@ mod tests {
     async fn file_search_escapes_like_wildcards() {
         let ctx = setup().await;
         sqlx::query(
-            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
-             VALUES ('f-1', '占比100%的图.png', 'image/png', 'image', 10, 1),
-                    ('f-2', '普通图片.png', 'image/png', 'image', 10, 1)",
+            "INSERT INTO file (stored_id, original_name, mime_type, size_bytes, user_id)
+             VALUES ('f-1', '占比100%的图.png', 'image/png', 10, 1),
+                    ('f-2', '普通图片.png', 'image/png', 10, 1)",
         )
         .execute(&ctx.pool)
         .await

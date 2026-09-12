@@ -174,7 +174,19 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             stored_id       TEXT    NOT NULL UNIQUE,
             original_name   TEXT    NOT NULL,
             mime_type       TEXT    NOT NULL,
-            file_category   TEXT    NOT NULL DEFAULT 'other',
+            -- 类别由 mime 推导（生成列 = 单一真相，规则与 FileCategory::from_mime 对应）
+            category        TEXT    GENERATED ALWAYS AS (
+                CASE
+                    WHEN mime_type >= 'image/' AND mime_type < 'image0' THEN 'image'
+                    WHEN mime_type >= 'video/' AND mime_type < 'video0' THEN 'video'
+                    WHEN mime_type >= 'audio/' AND mime_type < 'audio0' THEN 'audio'
+                    WHEN mime_type >= 'text/' AND mime_type < 'text0' THEN 'document'
+                    WHEN mime_type = 'application/pdf' THEN 'document'
+                    WHEN mime_type = 'application/msword' THEN 'document'
+                    WHEN mime_type >= 'application/vnd.' AND mime_type < 'application/vnd0' THEN 'document'
+                    ELSE 'other'
+                END
+            ) VIRTUAL,
             size_bytes      INTEGER NOT NULL DEFAULT 0,
             content_hash    TEXT,
             width           INTEGER,
@@ -197,7 +209,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .await?;
 
     sqlx::query(
-        "CREATE INDEX IF NOT EXISTS idx_file_category ON file(file_category, created_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_file_category ON file(category, created_at DESC)",
     )
     .execute(pool)
     .await?;

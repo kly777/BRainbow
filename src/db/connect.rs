@@ -91,8 +91,8 @@ mod tests {
             .await
             .unwrap();
         let file_id: i64 = sqlx::query_scalar(
-            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
-             VALUES ('s1', 'a.png', 'image/png', 'image', 10, 1) RETURNING id",
+            "INSERT INTO file (stored_id, original_name, mime_type, size_bytes, user_id)
+             VALUES ('s1', 'a.png', 'image/png', 10, 1) RETURNING id",
         )
         .fetch_one(&pool)
         .await

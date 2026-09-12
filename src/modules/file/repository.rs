@@ -79,9 +79,10 @@ impl FileRepository {
     pub async fn insert(&self, params: NewFile<'_>) -> Result<FileRow, sqlx::Error> {
         let row = sqlx::query_as!(
             FileRow,
-            r#"INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, width, height, duration_ms, user_id, content_hash, is_private)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-               RETURNING id AS "id!: i64", stored_id, original_name, mime_type, file_category,
+            r#"INSERT INTO file (stored_id, original_name, mime_type, size_bytes, width, height, duration_ms, user_id, content_hash, is_private)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               RETURNING id AS "id!: i64", stored_id, original_name, mime_type,
+                         category AS "file_category!: String",
                          size_bytes AS "size_bytes!: i64",
                          width AS "width?: i64", height AS "height?: i64",
                          duration_ms AS "duration_ms?: i64", user_id AS "user_id?: i64",
@@ -92,7 +93,6 @@ impl FileRepository {
             params.stored_id,
             params.original_name,
             params.mime_type,
-            params.file_category,
             params.size_bytes,
             params.width,
             params.height,
@@ -111,7 +111,7 @@ impl FileRepository {
     pub async fn find_by_stored_id(&self, stored_id: &str) -> Result<Option<FileRow>, sqlx::Error> {
         let row = sqlx::query_as!(
             FileRow,
-            r#"SELECT id, stored_id, original_name, mime_type, file_category,
+            r#"SELECT id, stored_id, original_name, mime_type, category AS "file_category!: String",
                       size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, is_private, content_hash,
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
@@ -128,7 +128,7 @@ impl FileRepository {
     pub async fn find_by_id(&self, id: i64) -> Result<Option<FileRow>, sqlx::Error> {
         let row = sqlx::query_as!(
             FileRow,
-            r#"SELECT id, stored_id, original_name, mime_type, file_category,
+            r#"SELECT id, stored_id, original_name, mime_type, category AS "file_category!: String",
                       size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, is_private, content_hash,
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
@@ -145,7 +145,7 @@ impl FileRepository {
     pub async fn find_by_hash(&self, content_hash: &str) -> Result<Option<FileRow>, sqlx::Error> {
         let row = sqlx::query_as!(
             FileRow,
-            r#"SELECT id, stored_id, original_name, mime_type, file_category,
+            r#"SELECT id, stored_id, original_name, mime_type, category AS "file_category!: String",
                       size_bytes AS "size_bytes!: i64", width, height, duration_ms, user_id, is_private, content_hash,
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
@@ -173,10 +173,10 @@ impl FileRepository {
             totals.build_query_as().fetch_one(&*self.db).await?;
 
         let mut by_cat = QueryBuilder::new(
-            "SELECT f.file_category AS category, COUNT(*) AS count, COALESCE(SUM(f.size_bytes), 0) AS bytes FROM file f WHERE 1 = 1",
+            "SELECT f.category AS category, COUNT(*) AS count, COALESCE(SUM(f.size_bytes), 0) AS bytes FROM file f WHERE 1 = 1",
         );
         push_visibility(&mut by_cat, user_id);
-        by_cat.push(" GROUP BY f.file_category ORDER BY bytes DESC");
+        by_cat.push(" GROUP BY f.category ORDER BY bytes DESC");
         let rows: Vec<(String, i64, i64)> = by_cat.build_query_as().fetch_all(&*self.db).await?;
 
         Ok((total_count, total_bytes, rows))
@@ -209,7 +209,8 @@ impl FileRepository {
         let row = sqlx::query_as!(
             FileRow,
             r#"UPDATE file SET original_name = ?, updated_at = CURRENT_TIMESTAMP WHERE stored_id = ?
-               RETURNING id AS "id!: i64", stored_id, original_name, mime_type, file_category,
+               RETURNING id AS "id!: i64", stored_id, original_name, mime_type,
+                         category AS "file_category!: String",
                          size_bytes AS "size_bytes!: i64",
                          width AS "width?: i64", height AS "height?: i64",
                          duration_ms AS "duration_ms?: i64", user_id AS "user_id?: i64",
@@ -261,7 +262,7 @@ impl FileRepository {
     ) -> Result<i64, sqlx::Error> {
         let mut qb = QueryBuilder::new("SELECT COUNT(*) FROM file f WHERE 1 = 1");
         if let Some(cat) = category {
-            qb.push(" AND f.file_category = ").push_bind(cat);
+            qb.push(" AND f.category = ").push_bind(cat);
         }
         push_visibility(&mut qb, viewer);
         qb.build_query_scalar().fetch_one(&*self.db).await
@@ -278,10 +279,10 @@ impl FileRepository {
     ) -> Result<Vec<FileRow>, sqlx::Error> {
         // 动态 WHERE + 白名单 ORDER BY：避免为「筛选 × 排序」组合写 N 个静态查询
         let mut qb = QueryBuilder::new(
-            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f WHERE 1 = 1",
+            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.category AS file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f WHERE 1 = 1",
         );
         if let Some(cat) = category {
-            qb.push(" AND f.file_category = ").push_bind(cat);
+            qb.push(" AND f.category = ").push_bind(cat);
         }
         push_visibility(&mut qb, user_id);
         qb.push(sort.order_by());
@@ -304,7 +305,7 @@ impl FileRepository {
         sort: SortOrder,
     ) -> Result<Vec<FileRow>, sqlx::Error> {
         let mut qb = QueryBuilder::new(
-            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f JOIN file_tag_rel ftr ON f.id = ftr.file_id JOIN file_tag ft ON ftr.tag_id = ft.id WHERE ft.name = ",
+            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.category AS file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f JOIN file_tag_rel ftr ON f.id = ftr.file_id JOIN file_tag ft ON ftr.tag_id = ft.id WHERE ft.name = ",
         );
         qb.push_bind(tag_name)
             // 标签全局共享；可见性：公开文件人人可见，私密文件仅上传者
@@ -347,7 +348,7 @@ impl FileRepository {
         sort: SortOrder,
     ) -> Result<Vec<FileRow>, sqlx::Error> {
         let mut qb = QueryBuilder::new(
-            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f WHERE f.original_name LIKE ",
+            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.category AS file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f WHERE f.original_name LIKE ",
         );
         qb.push_bind(like_contains(query)).push(" ESCAPE '\\'");
         push_visibility(&mut qb, user_id);
@@ -375,7 +376,7 @@ impl FileRepository {
             ConsistencyRow,
             r#"SELECT stored_id,
                       size_bytes AS "size_bytes!: i64",
-                      file_category,
+                      category AS "file_category!: String",
                       mime_type
                  FROM file"#
         )
@@ -400,7 +401,7 @@ impl FileRepository {
             r#"SELECT f.id AS "id!: i64",
                       f.stored_id,
                       f.original_name,
-                      f.file_category,
+                      f.category AS file_category,
                       f.size_bytes AS "size_bytes!: i64",
                       (SELECT t.name FROM file_tag_rel r
                          JOIN file_tag t ON t.id = r.tag_id
@@ -743,12 +744,13 @@ mod tests {
         FileRepository::new(Arc::new(pool))
     }
 
+    /// 类别不再入库（v19 起由 mime 生成），这里保留 `category` 参数只为让调用点
+    /// 语义直观：mime 由它反推。
     fn new_file<'a>(stored_id: &'a str, category: &'a str, user_id: Option<i64>) -> NewFile<'a> {
         NewFile {
             stored_id,
             original_name: "file.bin",
-            mime_type: "application/octet-stream",
-            file_category: category,
+            mime_type: mime_for_category(category),
             size_bytes: 42,
             width: Some(100),
             height: Some(80),
@@ -756,6 +758,18 @@ mod tests {
             user_id,
             content_hash: None,
             is_private: false,
+        }
+    }
+
+    /// 由类别反推 mime：v19 起 `file.category` 是 mime 的生成列，
+    /// 测试要造出"某类别的文件"就得让 mime 落在对应前缀下。
+    fn mime_for_category(category: &str) -> &'static str {
+        match category {
+            "image" => "image/png",
+            "video" => "video/mp4",
+            "audio" => "audio/mpeg",
+            "document" => "application/pdf",
+            _ => "application/octet-stream",
         }
     }
 
@@ -768,8 +782,7 @@ mod tests {
         NewFile {
             stored_id,
             original_name,
-            mime_type: "application/octet-stream",
-            file_category: category,
+            mime_type: mime_for_category(category),
             size_bytes: 42,
             width: None,
             height: None,

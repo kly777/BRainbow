@@ -12,9 +12,9 @@
 //! 3. 建全局唯一索引 `idx_file_tag_name_unique`
 //! 4. 索引整理：新增可见性索引，删除被 UNIQUE 约束索引覆盖的 `idx_file_stored_id`
 //!
-//! 注：这里刻意不做 `file_category` 生成列。SQLite 不支持把已有列改成生成列，
-//! 只能重建整表，而重建需要关闭外键（`file_tag_rel` / `file_meta` 都引用 `file`），
-//! 事务内又不能改 `PRAGMA foreign_keys`。该一致性改由 `--check` 校验承担。
+//! 注：`file_category` 的生成列改造在 v19 完成 —— SQLite 虽不能把已有列改成生成列，
+//! 但 `ALTER TABLE ADD COLUMN` 可以添加 VIRTUAL 生成列（可建索引），因此无需重建表、
+//! 也无需关闭外键。
 
 use sqlx::SqliteConnection;
 

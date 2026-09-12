@@ -1,10 +1,10 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, width, height, duration_ms, user_id, content_hash, is_private)\n               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n               RETURNING id AS \"id!: i64\", stored_id, original_name, mime_type, file_category,\n                         size_bytes AS \"size_bytes!: i64\",\n                         width AS \"width?: i64\", height AS \"height?: i64\",\n                         duration_ms AS \"duration_ms?: i64\", user_id AS \"user_id?: i64\",\n                         is_private AS \"is_private!: i64\",\n                         content_hash AS \"content_hash?: String\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
+  "query": "SELECT id, stored_id, original_name, mime_type, category AS \"file_category!: String\",\n                      size_bytes AS \"size_bytes!: i64\", width, height, duration_ms, user_id, is_private, content_hash,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM file\n               WHERE content_hash = ?\n               ORDER BY id ASC LIMIT 1",
   "describe": {
     "columns": [
       {
-        "name": "id!: i64",
+        "name": "id",
         "ordinal": 0,
         "type_info": "Integer",
         "origin": {
@@ -48,13 +48,13 @@
         }
       },
       {
-        "name": "file_category",
+        "name": "file_category!: String",
         "ordinal": 4,
         "type_info": "Text",
         "origin": {
           "Table": {
             "table": "file",
-            "name": "file_category"
+            "name": "category"
           }
         }
       },
@@ -70,7 +70,7 @@
         }
       },
       {
-        "name": "width?: i64",
+        "name": "width",
         "ordinal": 6,
         "type_info": "Integer",
         "origin": {
@@ -81,7 +81,7 @@
         }
       },
       {
-        "name": "height?: i64",
+        "name": "height",
         "ordinal": 7,
         "type_info": "Integer",
         "origin": {
@@ -92,7 +92,7 @@
         }
       },
       {
-        "name": "duration_ms?: i64",
+        "name": "duration_ms",
         "ordinal": 8,
         "type_info": "Integer",
         "origin": {
@@ -103,7 +103,7 @@
         }
       },
       {
-        "name": "user_id?: i64",
+        "name": "user_id",
         "ordinal": 9,
         "type_info": "Integer",
         "origin": {
@@ -114,7 +114,7 @@
         }
       },
       {
-        "name": "is_private!: i64",
+        "name": "is_private",
         "ordinal": 10,
         "type_info": "Integer",
         "origin": {
@@ -125,7 +125,7 @@
         }
       },
       {
-        "name": "content_hash?: String",
+        "name": "content_hash",
         "ordinal": 11,
         "type_info": "Text",
         "origin": {
@@ -138,18 +138,18 @@
       {
         "name": "created_at!: chrono::DateTime<chrono::Utc>",
         "ordinal": 12,
-        "type_info": "Text",
+        "type_info": "Datetime",
         "origin": "Expression"
       },
       {
         "name": "updated_at!: chrono::DateTime<chrono::Utc>",
         "ordinal": 13,
-        "type_info": "Text",
+        "type_info": "Datetime",
         "origin": "Expression"
       }
     ],
     "parameters": {
-      "Right": 11
+      "Right": 1
     },
     "nullable": [
       false,
@@ -161,12 +161,12 @@
       true,
       true,
       true,
+      true,
       false,
-      false,
-      false,
+      true,
       false,
       false
     ]
   },
-  "hash": "2efc24b274df17410991a252029530259f5637d1003956e22cdb5d450ce167fc"
+  "hash": "f96dc7b73b9ddccbc375eba49d278c521c43d834f7a4ba7768b336aa83c8620d"
 }

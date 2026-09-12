@@ -554,7 +554,6 @@ impl FileService {
                 stored_id: &stored_id,
                 original_name: &safe_name,
                 mime_type: final_mime,
-                file_category: category_str,
                 size_bytes: data_size as i64,
                 width: None,
                 height: None,
@@ -1917,7 +1916,6 @@ mod tests {
                 stored_id: "legacy000001",
                 original_name: "old.png",
                 mime_type: "image/png",
-                file_category: "image",
                 size_bytes: PNG_1X1.len() as i64,
                 width: None,
                 height: None,
@@ -1961,7 +1959,6 @@ mod tests {
                 stored_id: "legacy000002",
                 original_name: "dup.png",
                 mime_type: "image/png",
-                file_category: "image",
                 size_bytes: PNG_1X1.len() as i64,
                 width: None,
                 height: None,
@@ -2387,7 +2384,6 @@ mod tests {
                 stored_id: &stored,
                 original_name: "other.png",
                 mime_type: "image/png",
-                file_category: "image",
                 size_bytes: 4,
                 width: None,
                 height: None,
@@ -2451,7 +2447,6 @@ mod tests {
                 stored_id: &stored,
                 original_name: "legacy.png",
                 mime_type: "image/png",
-                file_category: "image",
                 size_bytes: 4,
                 width: None,
                 height: None,
@@ -2501,8 +2496,8 @@ mod tests {
     async fn service_consistency_reports_missing_file() {
         let ctx = setup_service().await;
         sqlx::query(
-            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
-             VALUES ('zzzzzzzzzzzz', 'ghost.png', 'image/png', 'image', 10, 7)",
+            "INSERT INTO file (stored_id, original_name, mime_type, size_bytes, user_id)
+             VALUES ('zzzzzzzzzzzz', 'ghost.png', 'image/png', 10, 7)",
         )
         .execute(&*ctx.pool)
         .await
@@ -2520,8 +2515,8 @@ mod tests {
     /// 造一条 file 记录，并可选择在磁盘上放对应文件
     async fn seed_file(ctx: &Ctx, stored_id: &str, on_disk: bool) {
         sqlx::query(
-            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
-             VALUES (?1, 'x.png', 'image/png', 'image', 4, 7)",
+            "INSERT INTO file (stored_id, original_name, mime_type, size_bytes, user_id)
+             VALUES (?1, 'x.png', 'image/png', 4, 7)",
         )
         .bind(stored_id)
         .execute(&*ctx.pool)

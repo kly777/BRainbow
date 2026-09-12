@@ -204,8 +204,8 @@ mod tests {
             .await
             .unwrap();
         sqlx::query(
-            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
-             VALUES ('aaaaaaaaaaaa', 'ghost.png', 'image/png', 'image', 4, 7)",
+            "INSERT INTO file (stored_id, original_name, mime_type, size_bytes, user_id)
+             VALUES ('aaaaaaaaaaaa', 'ghost.png', 'image/png', 4, 7)",
         )
         .execute(&ctx.pool)
         .await

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT stored_id,\n                      size_bytes AS \"size_bytes!: i64\",\n                      file_category,\n                      mime_type\n                 FROM file",
+  "query": "SELECT stored_id,\n                      size_bytes AS \"size_bytes!: i64\",\n                      category AS \"file_category!: String\",\n                      mime_type\n                 FROM file",
   "describe": {
     "columns": [
       {
@@ -26,13 +26,13 @@
         }
       },
       {
-        "name": "file_category",
+        "name": "file_category!: String",
         "ordinal": 2,
         "type_info": "Text",
         "origin": {
           "Table": {
             "table": "file",
-            "name": "file_category"
+            "name": "category"
           }
         }
       },
@@ -58,5 +58,5 @@
       false
     ]
   },
-  "hash": "376f4bfe18b7a30bef1c849c0c28c7cd6a25faee302dc09f883ff719e1c04782"
+  "hash": "6c22a44d325fd0a9950a9484390b04e4011cd6b35453a9729411b3fa4431a8ef"
 }

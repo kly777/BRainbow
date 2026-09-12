@@ -71,7 +71,6 @@ pub struct NewFile<'a> {
     pub stored_id: &'a str,
     pub original_name: &'a str,
     pub mime_type: &'a str,
-    pub file_category: &'a str,
     pub size_bytes: i64,
     pub width: Option<i64>,
     pub height: Option<i64>,

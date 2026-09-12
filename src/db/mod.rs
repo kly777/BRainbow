@@ -83,7 +83,7 @@ mod tests {
             ("articles", "user_id"),
             // v15：通用文件服务四表
             ("file", "stored_id"),
-            ("file", "file_category"),
+            ("file", "category"),
             ("file", "updated_at"),
             ("file", "content_hash"),
             ("file_tag", "name"),
@@ -313,8 +313,8 @@ mod tests {
             ("none", None),
         ] {
             sqlx::query(
-                "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, content_hash)
-                 VALUES (?, 'n', 'image/png', 'image', 1, ?)",
+                "INSERT INTO file (stored_id, original_name, mime_type, size_bytes, content_hash)
+                 VALUES (?, 'n', 'image/png', 1, ?)",
             )
             .bind(sid)
             .bind(hash)
@@ -342,8 +342,8 @@ mod tests {
 
         // 唯一索引已建立并生效
         let dup_insert = sqlx::query(
-            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, content_hash)
-             VALUES ('dup-3', 'n', 'image/png', 'image', 1, 'same')",
+            "INSERT INTO file (stored_id, original_name, mime_type, size_bytes, content_hash)
+             VALUES ('dup-3', 'n', 'image/png', 1, 'same')",
         )
         .execute(&pool)
         .await;
@@ -351,8 +351,8 @@ mod tests {
         // NULL 仍可并列
         for sid in ["null-a", "null-b"] {
             sqlx::query(
-                "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, content_hash)
-                 VALUES (?, 'n', 'image/png', 'image', 1, NULL)",
+                "INSERT INTO file (stored_id, original_name, mime_type, size_bytes, content_hash)
+                 VALUES (?, 'n', 'image/png', 1, NULL)",
             )
             .bind(sid)
             .execute(&pool)
@@ -413,15 +413,15 @@ mod tests {
                 .unwrap();
         }
         let f1: i64 = sqlx::query_scalar(
-            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
-             VALUES ('s1', 'a.png', 'image/png', 'image', 1, 1) RETURNING id",
+            "INSERT INTO file (stored_id, original_name, mime_type, size_bytes, user_id)
+             VALUES ('s1', 'a.png', 'image/png', 1, 1) RETURNING id",
         )
         .fetch_one(&pool)
         .await
         .unwrap();
         let f2: i64 = sqlx::query_scalar(
-            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
-             VALUES ('s2', 'b.png', 'image/png', 'image', 1, 2) RETURNING id",
+            "INSERT INTO file (stored_id, original_name, mime_type, size_bytes, user_id)
+             VALUES ('s2', 'b.png', 'image/png', 1, 2) RETURNING id",
         )
         .fetch_one(&pool)
         .await

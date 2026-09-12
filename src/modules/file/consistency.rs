@@ -169,7 +169,6 @@ mod tests {
                 stored_id,
                 original_name: "a.png",
                 mime_type: "image/png",
-                file_category: "image",
                 size_bytes: 10,
                 width: None,
                 height: None,
@@ -222,25 +221,57 @@ mod tests {
         let _ = std::fs::remove_dir_all(&ctx.dir);
     }
 
-    /// file_category 是 mime 的派生快照：写歪了要能被发现
+    /// v19 起 `category` 是生成列，数据不可能再漂移；这个测试改为守住
+    /// **SQL 生成列表达式与 `FileCategory::from_mime` 的规则一致性** ——
+    /// 只改一侧（例如给 Rust 加了新前缀规则却忘了改生成列）就会在这里失败。
     #[tokio::test]
-    async fn reports_category_drift() {
+    async fn generated_category_matches_rust_rules() {
         let ctx = setup().await;
-        insert(&ctx, "aaaaaaaaaaaa").await; // category = image, mime = image/png
-        // 人为制造漂移：mime 改了但 category 没跟着改
-        sqlx::query("UPDATE file SET mime_type = 'application/pdf' WHERE stored_id = 'aaaaaaaaaaaa'")
-            .execute(&*ctx.repo.db)
-            .await
-            .unwrap();
+        let cases = [
+            ("image/png", "image"),
+            ("image/svg+xml", "image"),
+            ("video/mp4", "video"),
+            ("audio/mpeg", "audio"),
+            ("text/plain", "document"),
+            ("text/markdown", "document"),
+            ("application/pdf", "document"),
+            ("application/msword", "document"),
+            ("application/vnd.ms-excel", "document"),
+            ("application/octet-stream", "other"),
+            ("application/zip", "other"),
+            ("", "other"),
+        ];
 
+        for (i, (mime, expected)) in cases.iter().enumerate() {
+            let stored = format!("cat{i:09}");
+            ctx.repo
+                .insert(NewFile {
+                    stored_id: &stored,
+                    original_name: "a.bin",
+                    mime_type: mime,
+                    size_bytes: 1,
+                    width: None,
+                    height: None,
+                    duration_ms: None,
+                    user_id: Some(7),
+                    content_hash: None,
+                    is_private: false,
+                })
+                .await
+                .unwrap();
+
+            let row = ctx.repo.find_by_stored_id(&stored).await.unwrap().unwrap();
+            assert_eq!(row.file_category, *expected, "SQL 生成列对「{mime}」的分类");
+            assert_eq!(
+                FileCategory::from_mime(mime).as_str(),
+                *expected,
+                "Rust 规则对「{mime}」的分类"
+            );
+        }
+
+        // 生成列无法被写歪：数据侧永远一致，故不再期待 category_mismatch
         let report = scan(&ctx.repo, &ctx.dir.to_string_lossy()).await.unwrap();
-        assert_eq!(report.category_mismatch_count, 1);
-        assert!(
-            report.category_mismatch_samples[0].contains("mime 应为 document"),
-            "{:?}",
-            report.category_mismatch_samples
-        );
-        assert!(report.has_issues());
+        assert_eq!(report.category_mismatch_count, 0);
 
         let _ = std::fs::remove_dir_all(&ctx.dir);
     }

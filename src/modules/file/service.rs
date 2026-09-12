@@ -2512,7 +2512,7 @@ mod tests {
         assert_eq!(report.missing_count, 1);
         assert_eq!(report.missing_samples, vec!["zzzzzzzzzzzz".to_string()]);
         assert_eq!(report.orphan_count, 0);
-        assert!(report.summary().contains("缺失文件 1 个"));
+        assert!(report.summary().contains("缺失 1"));
     }
 
     // ── 孤儿清理护栏 ──

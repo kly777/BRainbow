@@ -75,6 +75,18 @@ impl SelfCheckReport {
                     self.storage.orphan_samples.join(", ")
                 );
             }
+            if !self.storage.size_mismatch_samples.is_empty() {
+                warn!(
+                    "        大小不符（记录与磁盘）样本: {}",
+                    self.storage.size_mismatch_samples.join(", ")
+                );
+            }
+            if !self.storage.category_mismatch_samples.is_empty() {
+                warn!(
+                    "        分类漂移（file_category 与 mime 推导不一致）样本: {}",
+                    self.storage.category_mismatch_samples.join(", ")
+                );
+            }
         } else {
             info!("[4/4] 存储一致性: {}", self.storage.summary());
         }

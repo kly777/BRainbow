@@ -54,6 +54,15 @@ fn push_visibility(qb: &mut QueryBuilder<Sqlite>, viewer: Option<i64>) {
     }
 }
 
+/// 一致性扫描用的行（磁盘与 record 的比对字段）
+#[derive(Debug, Clone)]
+pub struct ConsistencyRow {
+    pub stored_id: String,
+    pub size_bytes: i64,
+    pub file_category: String,
+    pub mime_type: String,
+}
+
 #[derive(Clone)]
 pub struct FileRepository {
     pub db: Arc<SqlitePool>,
@@ -356,6 +365,20 @@ impl FileRepository {
         sqlx::query_scalar!("SELECT stored_id FROM file")
             .fetch_all(&*self.db)
             .await
+    }
+
+    /// 一致性扫描所需的宽表：stored_id + size_bytes + file_category + mime_type
+    pub async fn all_files_for_consistency(&self) -> Result<Vec<ConsistencyRow>, sqlx::Error> {
+        sqlx::query_as!(
+            ConsistencyRow,
+            r#"SELECT stored_id,
+                      size_bytes AS "size_bytes!: i64",
+                      file_category,
+                      mime_type
+                 FROM file"#
+        )
+        .fetch_all(&*self.db)
+        .await
     }
 
     // ── 全局搜索 ──

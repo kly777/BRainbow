@@ -4,6 +4,7 @@
 //! 表现是列表里文件好好的、点开 404。这里把两个方向都算出来供启动日志与
 //! `--check` 报告，修复动作交给人工决策，避免自动删除造成不可逆损失。
 
+use super::model::FileCategory;
 use super::repository::FileRepository;
 
 /// 采样清单上限：报告只带少量样本，避免几千条日志淹没输出
@@ -22,18 +23,32 @@ pub struct ConsistencyReport {
     pub db_total: usize,
     /// 磁盘上符合 stored_id 命名的文件数
     pub disk_total: usize,
+    /// DB 记录的 size_bytes 与磁盘实际大小不符（截断、被替换）
+    pub size_mismatch_count: usize,
+    pub size_mismatch_samples: Vec<String>,
+    /// file_category 与 mime_type 推导结果不符（派生列漂移）
+    pub category_mismatch_count: usize,
+    pub category_mismatch_samples: Vec<String>,
 }
 
 impl ConsistencyReport {
     pub fn has_issues(&self) -> bool {
-        self.missing_count > 0 || self.orphan_count > 0
+        self.missing_count > 0
+            || self.orphan_count > 0
+            || self.size_mismatch_count > 0
+            || self.category_mismatch_count > 0
     }
 
     /// 一行摘要，供启动日志与 `--check` 输出
     pub fn summary(&self) -> String {
         format!(
-            "数据库 {} 条记录 / 磁盘 {} 个文件；缺失文件 {} 个，孤儿文件 {} 个",
-            self.db_total, self.disk_total, self.missing_count, self.orphan_count
+            "数据库 {} 条记录 / 磁盘 {} 个文件；缺失 {}、孤儿 {}、大小不符 {}、分类不符 {}",
+            self.db_total,
+            self.disk_total,
+            self.missing_count,
+            self.orphan_count,
+            self.size_mismatch_count,
+            self.category_mismatch_count
         )
     }
 }
@@ -53,28 +68,54 @@ pub async fn scan(
     repo: &FileRepository,
     upload_dir: &str,
 ) -> Result<ConsistencyReport, sqlx::Error> {
-    let db_ids = repo.all_stored_ids().await?;
+    let rows = repo.all_files_for_consistency().await?;
 
-    let mut disk_ids: Vec<String> = Vec::new();
+    // 磁盘扫描：stored_id → 实际大小
+    let mut disk_files: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
     if let Ok(mut entries) = tokio::fs::read_dir(upload_dir).await {
         while let Ok(Some(entry)) = entries.next_entry().await {
             let name = entry.file_name().to_string_lossy().to_string();
-            if is_stored_id(&name) {
-                disk_ids.push(name);
+            if !is_stored_id(&name) {
+                continue;
             }
+            // 取不到 metadata 时按 0 计：至少能报出"这条对不上"
+            let size = entry.metadata().await.map(|m| m.len()).unwrap_or(0);
+            disk_files.insert(name, size);
         }
     }
 
-    let db_set: std::collections::HashSet<&String> = db_ids.iter().collect();
-    let disk_set: std::collections::HashSet<&String> = disk_ids.iter().collect();
+    let mut missing: Vec<String> = Vec::new();
+    let mut size_mismatch: Vec<String> = Vec::new();
+    let mut category_mismatch: Vec<String> = Vec::new();
 
-    let missing: Vec<String> = db_ids
-        .iter()
-        .filter(|id| !disk_set.contains(id))
-        .cloned()
-        .collect();
-    let orphans: Vec<String> = disk_ids
-        .iter()
+    for row in &rows {
+        match disk_files.get(&row.stored_id) {
+            None => missing.push(row.stored_id.clone()),
+            Some(actual) => {
+                if *actual != row.size_bytes as u64 {
+                    size_mismatch.push(format!(
+                        "{}（记录 {} 字节 / 磁盘 {} 字节）",
+                        row.stored_id, row.size_bytes, actual
+                    ));
+                }
+            }
+        }
+        // file_category 是 mime_type 的派生快照：不一致说明写入路径漏了同步
+        let expected = FileCategory::from_mime(&row.mime_type);
+        if expected.as_str() != row.file_category {
+            category_mismatch.push(format!(
+                "{}（记录 {} / mime 应为 {}）",
+                row.stored_id,
+                row.file_category,
+                expected.as_str()
+            ));
+        }
+    }
+
+    let db_set: std::collections::HashSet<&String> =
+        rows.iter().map(|r| &r.stored_id).collect();
+    let orphans: Vec<String> = disk_files
+        .keys()
         .filter(|id| !db_set.contains(id))
         .cloned()
         .collect();
@@ -84,8 +125,12 @@ pub async fn scan(
         missing_samples: missing.into_iter().take(SAMPLE_LIMIT).collect(),
         orphan_count: orphans.len(),
         orphan_samples: orphans.into_iter().take(SAMPLE_LIMIT).collect(),
-        db_total: db_ids.len(),
-        disk_total: disk_ids.len(),
+        db_total: rows.len(),
+        disk_total: disk_files.len(),
+        size_mismatch_count: size_mismatch.len(),
+        size_mismatch_samples: size_mismatch.into_iter().take(SAMPLE_LIMIT).collect(),
+        category_mismatch_count: category_mismatch.len(),
+        category_mismatch_samples: category_mismatch.into_iter().take(SAMPLE_LIMIT).collect(),
     })
 }
 
@@ -156,7 +201,46 @@ mod tests {
         assert_eq!(report.orphan_count, 1);
         assert_eq!(report.orphan_samples, vec!["cccccccccccc".to_string()]);
         assert!(report.has_issues());
-        assert!(report.summary().contains("缺失文件 1 个"));
+        assert!(report.summary().contains("缺失 1"));
+
+        let _ = std::fs::remove_dir_all(&ctx.dir);
+    }
+
+    /// DB 记录的大小与磁盘不符（截断/替换）要被报出来
+    #[tokio::test]
+    async fn reports_size_mismatch() {
+        let ctx = setup().await;
+        insert(&ctx, "aaaaaaaaaaaa").await; // 记录 size_bytes = 10
+        std::fs::write(ctx.dir.join("aaaaaaaaaaaa"), b"short").unwrap(); // 实际 5 字节
+
+        let report = scan(&ctx.repo, &ctx.dir.to_string_lossy()).await.unwrap();
+        assert_eq!(report.size_mismatch_count, 1);
+        assert!(report.size_mismatch_samples[0].contains("记录 10 字节 / 磁盘 5 字节"));
+        assert!(report.has_issues());
+        assert!(report.summary().contains("大小不符 1"));
+
+        let _ = std::fs::remove_dir_all(&ctx.dir);
+    }
+
+    /// file_category 是 mime 的派生快照：写歪了要能被发现
+    #[tokio::test]
+    async fn reports_category_drift() {
+        let ctx = setup().await;
+        insert(&ctx, "aaaaaaaaaaaa").await; // category = image, mime = image/png
+        // 人为制造漂移：mime 改了但 category 没跟着改
+        sqlx::query("UPDATE file SET mime_type = 'application/pdf' WHERE stored_id = 'aaaaaaaaaaaa'")
+            .execute(&*ctx.repo.db)
+            .await
+            .unwrap();
+
+        let report = scan(&ctx.repo, &ctx.dir.to_string_lossy()).await.unwrap();
+        assert_eq!(report.category_mismatch_count, 1);
+        assert!(
+            report.category_mismatch_samples[0].contains("mime 应为 document"),
+            "{:?}",
+            report.category_mismatch_samples
+        );
+        assert!(report.has_issues());
 
         let _ = std::fs::remove_dir_all(&ctx.dir);
     }
@@ -165,7 +249,8 @@ mod tests {
     async fn clean_state_has_no_issues() {
         let ctx = setup().await;
         insert(&ctx, "aaaaaaaaaaaa").await;
-        std::fs::write(ctx.dir.join("aaaaaaaaaaaa"), b"data").unwrap();
+        // helper 写入的 size_bytes 是 10：磁盘文件也要正好 10 字节，否则算大小不符
+        std::fs::write(ctx.dir.join("aaaaaaaaaaaa"), b"0123456789").unwrap();
 
         let report = scan(&ctx.repo, &ctx.dir.to_string_lossy()).await.unwrap();
         assert!(!report.has_issues());
@@ -173,6 +258,8 @@ mod tests {
         assert_eq!(report.orphan_count, 0);
         assert_eq!(report.db_total, 1);
         assert_eq!(report.disk_total, 1);
+        assert_eq!(report.size_mismatch_count, 0);
+        assert_eq!(report.category_mismatch_count, 0);
 
         let _ = std::fs::remove_dir_all(&ctx.dir);
     }

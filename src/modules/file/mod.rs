@@ -1,3 +1,4 @@
+pub mod consistency;
 pub mod handler;
 pub mod model;
 pub mod query;

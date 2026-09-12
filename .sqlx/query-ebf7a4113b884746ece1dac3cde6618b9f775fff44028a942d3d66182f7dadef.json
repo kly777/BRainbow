@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT stored_id FROM file",
+  "describe": {
+    "columns": [
+      {
+        "name": "stored_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "file",
+            "name": "stored_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ebf7a4113b884746ece1dac3cde6618b9f775fff44028a942d3d66182f7dadef"
+}

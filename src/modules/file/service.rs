@@ -5,6 +5,7 @@ use sqlx::SqlitePool;
 use tokio::io::AsyncReadExt;
 use tracing::{error, info, warn};
 
+use super::consistency::{self, ConsistencyReport, is_stored_id};
 use super::model::{File, FileCategory, NewFile, UpdateFileRequest};
 use super::repository::FileRepository;
 use crate::shared::error_types::ServiceError;
@@ -244,15 +245,6 @@ pub fn content_disposition(kind: &str, filename: &str) -> String {
     )
 }
 
-/// 文件名是否为 stored_id 格式（nanoid 默认字母表，12 位）：
-/// 孤儿回收据此避免误删手工放进上传目录的文件。
-fn is_stored_id(name: &str) -> bool {
-    name.len() == 12
-        && name
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
-}
-
 /// 判断是否需要强制下载（防 XSS）
 fn should_force_download(mime: &str) -> bool {
     matches!(
@@ -311,11 +303,39 @@ impl FileService {
         check_upload_dir(&self.upload_dir)
     }
 
+    /// 一致性扫描（只读）：DB 有记录但磁盘缺文件 / 磁盘有文件但 DB 无记录
+    pub async fn check_consistency(&self) -> Result<ConsistencyReport, sqlx::Error> {
+        consistency::scan(&self.repo, &self.upload_dir).await
+    }
+
     /// 启动维护（后台执行，不阻塞启动）：
     /// 1. 回填存量文件的 content_hash（v16 之前的记录没有哈希，不参与去重）
-    /// 2. 回收孤儿文件（磁盘存在、DB 已无记录）
+    /// 2. 报告 DB 与上传目录的一致性（缺失文件 / 孤儿文件，只报告不删除）
+    /// 3. 回收孤儿文件（磁盘存在、DB 已无记录）
     pub async fn run_startup_maintenance(&self) {
         self.backfill_content_hashes().await;
+
+        // 清理之前先报告：否则报告里的孤儿数会因为刚被删掉而失真
+        match self.check_consistency().await {
+            Ok(report) if report.has_issues() => {
+                warn!("存储一致性异常: {}", report.summary());
+                if !report.missing_samples.is_empty() {
+                    warn!(
+                        "缺失文件（DB 有记录、磁盘无文件）: {}",
+                        report.missing_samples.join(", ")
+                    );
+                }
+                if !report.orphan_samples.is_empty() {
+                    info!(
+                        "孤儿文件（磁盘有文件、DB 无记录）: {}",
+                        report.orphan_samples.join(", ")
+                    );
+                }
+            }
+            Ok(report) => info!("存储一致性检查通过: {}", report.summary()),
+            Err(e) => warn!("存储一致性检查失败: {e}"),
+        }
+
         self.cleanup_orphan_files().await;
     }
 
@@ -2253,5 +2273,24 @@ mod tests {
         let check = ctx.svc.upload_dir_check();
         assert_eq!(check.path, ctx.dir.0);
         assert!(check.is_usable());
+    }
+
+    /// 一致性扫描能报出"DB 有记录、磁盘无文件"
+    #[tokio::test]
+    async fn service_consistency_reports_missing_file() {
+        let ctx = setup_service().await;
+        sqlx::query(
+            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
+             VALUES ('zzzzzzzzzzzz', 'ghost.png', 'image/png', 'image', 10, 7)",
+        )
+        .execute(&*ctx.pool)
+        .await
+        .unwrap();
+
+        let report = ctx.svc.check_consistency().await.unwrap();
+        assert_eq!(report.missing_count, 1);
+        assert_eq!(report.missing_samples, vec!["zzzzzzzzzzzz".to_string()]);
+        assert_eq!(report.orphan_count, 0);
+        assert!(report.summary().contains("缺失文件 1 个"));
     }
 }

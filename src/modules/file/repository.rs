@@ -353,6 +353,15 @@ impl FileRepository {
         qb.build_query_as::<FileRow>().fetch_all(&*self.db).await
     }
 
+    // ── 一致性扫描 ──
+
+    /// 全部文件的 stored_id（DB → 磁盘方向的一致性比对用）
+    pub async fn all_stored_ids(&self) -> Result<Vec<String>, sqlx::Error> {
+        sqlx::query_scalar!("SELECT stored_id FROM file")
+            .fetch_all(&*self.db)
+            .await
+    }
+
     // ── 全局搜索 ──
 
     /// 全局搜索：文件名或标签名命中，文件名命中排在前面。

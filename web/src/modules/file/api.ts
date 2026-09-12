@@ -243,6 +243,4 @@ export const mergeFileTag = (fromId: number, targetId: number): Promise<void> =>
 		}),
 	);
 
-/** 获取文件下载/预览 URL */
-export const fileUrl = (stored_id: string, filename: string): string =>
-	`/api/file/${stored_id}/data/${encodeURIComponent(filename)}`;
+/** 文件 URL 由后端在响应里给出（`FileItem.url`），前端不再自行拼接 */

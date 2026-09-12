@@ -297,10 +297,13 @@ impl FileQueryService {
 /// 搜索结果片段：文件名已经作为标题展示，片段给出补充信息 ——
 /// 仅标签命中时展示命中的标签，否则展示「分类 · 大小」规格。
 fn search_snippet(hit: &FileSearchHit) -> String {
-    if hit.name_hit != 0
-        && let Some(tag) = hit.matched_tag.as_deref()
-    {
-        return format!("#{tag}");
+    if hit.name_hit != 0 {
+        if let Some(tag) = hit.matched_tag.as_deref() {
+            return format!("#{tag}");
+        }
+        if let Some(key) = hit.matched_meta.as_deref() {
+            return format!("元信息 {key}");
+        }
     }
     let category = FileCategory::from_category_str(&hit.file_category);
     format!("{} · {}", category.label(), human_size(hit.size_bytes))
@@ -767,6 +770,7 @@ mod tests {
             file_category: "image".into(),
             size_bytes: 2048,
             matched_tag: Some("设计".into()),
+            matched_meta: None,
             name_hit: 0,
         };
         // 文件名命中：给出「分类 · 大小」
@@ -820,6 +824,24 @@ mod tests {
         file.user_id = None;
         assert!(!is_visible(&file, Some(7)));
         assert_eq!(content_access(&file, Some(7)), ContentAccess::Deny);
+    }
+
+    /// 元信息值参与搜索：命中时片段给出键名
+    #[tokio::test]
+    async fn search_port_matches_meta_values() {
+        let (query, repo, _pool) = setup().await;
+        let doc = seed(&repo).await;
+        let mut meta = HashMap::new();
+        meta.insert("author".to_string(), "费曼".to_string());
+        repo.set_file_meta(doc, &meta).await.unwrap();
+
+        let hits = query.search(7, "费曼", 5).await.unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].title, "季度报告.md");
+        assert_eq!(hits[0].snippet, "元信息 author");
+
+        // 值不匹配时不命中
+        assert!(query.search(7, "不存在的作者", 5).await.unwrap().is_empty());
     }
 
     #[test]

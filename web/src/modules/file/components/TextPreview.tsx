@@ -14,7 +14,6 @@ import {
 	Show,
 } from "solid-js";
 import type { FileItem } from "../api.ts";
-import { fileUrl } from "../api.ts";
 import { parseCsv } from "../lib/csv.ts";
 import { codeFence, codeLang } from "../lib/filename.ts";
 import styles from "./TextPreview.module.css";
@@ -61,10 +60,10 @@ const TextPreview: Component<{ item: FileItem }> = (props) => {
 
 	const [content] = createResource(
 		() => props.item.stored_id,
-		async (id): Promise<LoadedText> => {
+		async (): Promise<LoadedText> => {
 			controller = new AbortController();
-			// 私密文件的内容接口需要凭据，带上当前登录态
-			const resp = await fetch(fileUrl(id, props.item.original_name), {
+			// URL 取自接口响应（不再本地拼接）；私密文件的内容接口需要凭据
+			const resp = await fetch(props.item.url, {
 				signal: controller.signal,
 				headers: buildHeaders(),
 			});

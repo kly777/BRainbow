@@ -16,7 +16,6 @@ import { copyTextWithToast, formatBytes } from "@shared/utils";
 import { type Component, createEffect, onCleanup, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import type { FileItem } from "../api.ts";
-import { fileUrl } from "../api.ts";
 import { usePreviewUrl } from "../hooks/usePreviewUrl.ts";
 import styles from "./ImageLightbox.module.css";
 
@@ -31,7 +30,7 @@ interface Props {
 
 const ImageLightbox: Component<Props> = (props) => {
 	const current = () => props.items[props.index];
-	const url = (item: FileItem) => fileUrl(item.stored_id, item.original_name);
+	const url = (item: FileItem) => item.url;
 	// 私密图片不能直接进 <img src>（不带凭据会 401），这里换成 blob URL
 	const resolved = usePreviewUrl(
 		() => {

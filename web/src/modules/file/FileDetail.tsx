@@ -17,7 +17,6 @@ import {
 import { copyTextWithToast, fmtLocal, formatBytes } from "@shared/utils";
 import { type Component, For, type JSX, onCleanup, Show } from "solid-js";
 import type { FileItem } from "./api.ts";
-import { fileUrl } from "./api.ts";
 import TagInput from "./components/TagInput.tsx";
 import TextPreview from "./components/TextPreview.tsx";
 import styles from "./FileDetail.module.css";
@@ -52,7 +51,7 @@ const PreviewMedia: Component<{
 };
 
 const Preview: Component<{ item: FileItem }> = (props) => {
-	const url = () => fileUrl(props.item.stored_id, props.item.original_name);
+	const url = () => props.item.url;
 	return (
 		<div class={styles.previewStage}>
 			{/* 内容已丢失：内联预览与下载都没有意义，统一给出说明 */}
@@ -387,7 +386,7 @@ export default function FileDetail() {
 					title="复制文件 URL（可用于 Markdown 引用）"
 					onClick={() => {
 						const f = m.data();
-						if (f) copyTextWithToast(fileUrl(f.stored_id, f.original_name));
+						if (f) copyTextWithToast(f.url);
 					}}
 				>
 					<Copy size={14} />
@@ -397,7 +396,7 @@ export default function FileDetail() {
 					title="下载文件"
 					onClick={() => {
 						const f = m.data();
-						if (f) window.open(fileUrl(f.stored_id, f.original_name), "_blank");
+						if (f) window.open(f.url, "_blank");
 					}}
 				>
 					<Download size={14} />

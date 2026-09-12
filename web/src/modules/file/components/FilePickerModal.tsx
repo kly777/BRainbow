@@ -14,7 +14,7 @@ import {
 	Show,
 } from "solid-js";
 import type { FileItem } from "../api.ts";
-import { fileUrl, listFiles } from "../api.ts";
+import { listFiles } from "../api.ts";
 import { categoryLabel } from "../lib/category.ts";
 import styles from "./FilePickerModal.module.css";
 
@@ -50,7 +50,7 @@ const FilePickerModal: Component<Props> = (props) => {
 
 	const pick = (item: FileItem) => {
 		props.onPick({
-			url: fileUrl(item.stored_id, item.original_name),
+			url: item.url,
 			name: item.original_name,
 			mime: item.mime_type,
 		});
@@ -90,7 +90,7 @@ const FilePickerModal: Component<Props> = (props) => {
 												fallback={<span class={styles.ext}>{extOf(item)}</span>}
 											>
 												<img
-													src={fileUrl(item.stored_id, item.original_name)}
+													src={item.url}
 													alt=""
 													class={styles.thumbImg}
 													loading="lazy"

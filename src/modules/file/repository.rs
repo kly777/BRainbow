@@ -35,6 +35,8 @@ pub struct FileSearchHit {
     pub size_bytes: i64,
     /// 首个命中的标签名（无命中为 NULL）
     pub matched_tag: Option<String>,
+    /// 首个命中的元信息键（值为关键字命中；无命中为 NULL）
+    pub matched_meta: Option<String>,
     /// 0 = 文件名命中，1 = 仅标签命中（排序用，也可以用来打分）
     pub name_hit: i64,
 }
@@ -404,13 +406,18 @@ impl FileRepository {
                          JOIN file_tag t ON t.id = r.tag_id
                         WHERE r.file_id = f.id AND t.name LIKE ?1 ESCAPE '\'
                         ORDER BY t.name LIMIT 1) AS "matched_tag?: String",
+                      (SELECT m.key FROM file_meta m
+                        WHERE m.file_id = f.id AND m.value LIKE ?1 ESCAPE '\'
+                        ORDER BY m.key LIMIT 1) AS "matched_meta?: String",
                       CASE WHEN f.original_name LIKE ?1 ESCAPE '\' THEN 0 ELSE 1 END AS "name_hit!: i64"
                  FROM file f
                 WHERE (f.is_private = 0 OR f.user_id = ?2)
                   AND (f.original_name LIKE ?1 ESCAPE '\'
                        OR EXISTS (SELECT 1 FROM file_tag_rel r2
                                     JOIN file_tag t2 ON t2.id = r2.tag_id
-                                   WHERE r2.file_id = f.id AND t2.name LIKE ?1 ESCAPE '\'))
+                                   WHERE r2.file_id = f.id AND t2.name LIKE ?1 ESCAPE '\')
+                       OR EXISTS (SELECT 1 FROM file_meta m2
+                                   WHERE m2.file_id = f.id AND m2.value LIKE ?1 ESCAPE '\'))
                 ORDER BY CASE WHEN f.original_name LIKE ?1 ESCAPE '\' THEN 0 ELSE 1 END,
                          f.created_at DESC
                 LIMIT ?3"#,

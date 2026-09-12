@@ -30,7 +30,6 @@ import {
 	Show,
 } from "solid-js";
 import type { FileItem, SortOrder } from "./api.ts";
-import { fileUrl } from "./api.ts";
 import EmptyGuide from "./components/EmptyGuide.tsx";
 import FileContextMenu from "./components/FileContextMenu.tsx";
 import FileMeta from "./components/FileMeta.tsx";
@@ -120,7 +119,7 @@ const FilePreview: Component<{
 					fallback={<ExtBadge name={props.item.original_name} />}
 				>
 					<img
-						src={fileUrl(props.item.stored_id, props.item.original_name)}
+						src={props.item.url}
 						alt={props.item.original_name}
 						class={styles.thumb}
 						loading="lazy"
@@ -163,11 +162,7 @@ const FileCardView: Component<{
 			<Button
 				variant="icon"
 				title="复制文件 URL（可用于 Markdown 引用）"
-				onClick={() =>
-					copyTextWithToast(
-						fileUrl(props.item.stored_id, props.item.original_name),
-					)
-				}
+				onClick={() => copyTextWithToast(props.item.url)}
 			>
 				<Copy size={14} />
 			</Button>
@@ -421,7 +416,7 @@ const FileRow: Component<{
 						fallback={<ExtBadge name={props.item.original_name} />}
 					>
 						<img
-							src={fileUrl(props.item.stored_id, props.item.original_name)}
+							src={props.item.url}
 							alt={props.item.original_name}
 							class={styles.rowThumbImg}
 							loading="lazy"
@@ -479,11 +474,7 @@ const FileRow: Component<{
 			<Button
 				variant="icon"
 				title="复制文件 URL（可用于 Markdown 引用）"
-				onClick={() =>
-					copyTextWithToast(
-						fileUrl(props.item.stored_id, props.item.original_name),
-					)
-				}
+				onClick={() => copyTextWithToast(props.item.url)}
 			>
 				<Copy size={14} />
 			</Button>

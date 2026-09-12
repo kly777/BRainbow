@@ -8,7 +8,6 @@ import { copyTextWithToast } from "@shared/utils";
 import { type Component, onCleanup, onMount } from "solid-js";
 import { Portal } from "solid-js/web";
 import type { FileItem } from "../api.ts";
-import { fileUrl } from "../api.ts";
 import styles from "./FileContextMenu.module.css";
 
 interface Props {
@@ -23,7 +22,7 @@ interface Props {
 }
 
 const FileContextMenu: Component<Props> = (props) => {
-	const url = () => fileUrl(props.item.stored_id, props.item.original_name);
+	const url = () => props.item.url;
 
 	const onGlobalKey = (e: KeyboardEvent) => {
 		if (e.key === "Escape") props.onClose();

@@ -18,7 +18,6 @@ import type { FileItem, SortOrder } from "../api.ts";
 import {
 	deleteFile,
 	type FileStats,
-	fileUrl,
 	getFileStats,
 	listFiles,
 	updateFile,
@@ -403,9 +402,7 @@ export function useFileList(): FileListApi {
 			selected().has(item.stored_id),
 		);
 		if (targets.length === 0) return;
-		const lines = targets.map((item) =>
-			fileUrl(item.stored_id, item.original_name),
-		);
+		const lines = targets.map((item) => item.url);
 		const result = await tryAsync(() =>
 			navigator.clipboard.writeText(lines.join("\n")),
 		);

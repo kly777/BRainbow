@@ -227,10 +227,8 @@ impl AppState {
         );
         let mem_query = MemQueryService::new(mem_repo_for_query, Arc::new(mem_config.clone()));
 
-        let upload_dir = config.upload_dir.to_string_lossy().to_string();
-
-        // 文件服务
-        let file_upload_dir = format!("{upload_dir}/file");
+        // 文件服务：上传目录由 Config 派生（唯一来源，见 Config::file_upload_dir）
+        let file_upload_dir = config.file_upload_dir();
         let file = FileService::new(db.clone(), file_upload_dir.clone());
         let file_query = FileQueryService::new(db.clone(), file_upload_dir);
 

@@ -330,32 +330,12 @@ impl FileService {
 
     /// 启动维护（后台执行，不阻塞启动）：
     /// 1. 回填存量文件的 content_hash（v16 之前的记录没有哈希，不参与去重）
-    /// 2. 报告 DB 与上传目录的一致性（缺失文件 / 孤儿文件，只报告不删除）
-    /// 3. 回收孤儿文件（磁盘存在、DB 已无记录）
+    /// 2. 回收孤儿文件（磁盘存在、DB 已无记录；护栏见 [`Self::cleanup_orphan_files`]）
+    ///
+    /// 一致性**报告**由启动自检（`app::self_check`）统一输出，这里只做修复动作，
+    /// 避免同一次启动打两份报告。
     pub async fn run_startup_maintenance(&self) {
         self.backfill_content_hashes().await;
-
-        // 清理之前先报告：否则报告里的孤儿数会因为刚被删掉而失真
-        match self.check_consistency().await {
-            Ok(report) if report.has_issues() => {
-                warn!("存储一致性异常: {}", report.summary());
-                if !report.missing_samples.is_empty() {
-                    warn!(
-                        "缺失文件（DB 有记录、磁盘无文件）: {}",
-                        report.missing_samples.join(", ")
-                    );
-                }
-                if !report.orphan_samples.is_empty() {
-                    info!(
-                        "孤儿文件（磁盘有文件、DB 无记录）: {}",
-                        report.orphan_samples.join(", ")
-                    );
-                }
-            }
-            Ok(report) => info!("存储一致性检查通过: {}", report.summary()),
-            Err(e) => warn!("存储一致性检查失败: {e}"),
-        }
-
         self.cleanup_orphan_files().await;
     }
 

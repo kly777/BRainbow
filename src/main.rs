@@ -88,6 +88,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     init_logging();
 
+    // 命令行模式：无参数 = 启动服务；--check = 只读自检；--help = 用法
+    let command = match app::cli::parse_args(std::env::args().skip(1)) {
+        Ok(cmd) => cmd,
+        Err(e) => {
+            error!("{e}");
+            info!("\n{}", app::cli::USAGE);
+            return Err(e.into());
+        }
+    };
+    if command == app::cli::Command::Help {
+        info!("\n{}", app::cli::USAGE);
+        return Ok(());
+    }
+
     // 加载配置
     let config = Config::from_env();
 
@@ -95,18 +109,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = db::connect::connect_options(&config.database_url)?;
     let pool = SqlitePoolOptions::new().connect_with(options).await?;
 
+    // --check：只读自检（不迁移、不建目录、不删文件），有问题以非零码退出
+    if command == app::cli::Command::Check {
+        let report = app::self_check::run(&pool, &config.file_upload_dir(), true).await;
+        report.log();
+        if report.is_clean() {
+            info!("自检通过");
+            return Ok(());
+        }
+        return Err("自检未通过，详见上方日志".into());
+    }
+
     // 创建数据库表（如果不存在）
     db::migrate(&pool).await?;
 
-    // 数据库自检：版本号 / 必需表清单 / 外键一致性（毫秒级）。
-    // 迁移只在版本号变化时执行，所以"表被删掉但版本号没变"这类漂移不会自动修复，
-    // 与其带着残缺 schema 起来（运行时才开始报错），不如启动即失败。
-    let schema_check = db::verify::check_schema(&pool).await;
-    if !schema_check.is_ok() {
-        error!("数据库自检未通过: {}", schema_check.summary());
-        return Err(format!("数据库自检未通过: {}", schema_check.summary()).into());
+    // 启动自检（浅检查，毫秒级）：schema 漂移 + 上传目录 + 存储一致性。
+    // - schema 漂移：迁移只在版本号变化时执行，表被删掉不会自动修复，只能启动即失败
+    // - 上传目录不可用：文件服务整体不可用（列表能看、点开全 404、上传全失败）
+    // - 存储不一致（缺文件/孤儿）：只告警不阻断，数据问题无法靠重启解决
+    let self_check = app::self_check::run(&pool, &config.file_upload_dir(), false).await;
+    self_check.log();
+    if self_check.is_fatal() {
+        return Err("启动自检未通过，详见上方日志".into());
     }
-    info!("数据库自检通过: {}", schema_check.summary());
 
     // 加载记忆配置（FSRS 参数 + 调度配置，存储于 app_settings 表）
     let mem_config = modules::mem::config_repository::MemConfigRepo::new(pool.clone())
@@ -126,20 +151,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Err(e) => warn!("数据库完整性检查无法执行: {e}"),
         }
     });
-
-    // 上传目录自检：目录不可用时文件服务整体不可用（列表能看、点开全 404、上传全失败），
-    // 与其带着坏目录起来，不如启动即失败 —— 日志与 systemd 都能明确指认原因
-    let upload_check = state.file.service.upload_dir_check();
-    if !upload_check.is_usable() {
-        error!("上传目录自检未通过: {}", upload_check.summary());
-        return Err(format!(
-            "上传目录不可用: {}（{}）",
-            upload_check.path,
-            upload_check.error.as_deref().unwrap_or("未知原因")
-        )
-        .into());
-    }
-    info!("上传目录自检通过: {}", upload_check.summary());
 
     // 初始化启动时间（用于计算运行时长）
     crate::modules::admin::handler::init_start_time();

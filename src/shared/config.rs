@@ -30,8 +30,7 @@ pub struct Config {
     /// JWT 有效期（秒），默认 10 天
     pub jwt_ttl_secs: i64,
 
-    /// 上传目录（预留，当前使用 `uploads` 硬编码）
-    #[allow(dead_code)]
+    /// 上传根目录（默认 `uploads`）；文件服务用其下的 `file` 子目录，见 [`Config::file_upload_dir`]
     pub upload_dir: PathBuf,
 }
 
@@ -42,6 +41,14 @@ impl Config {
     /// `JWT_SECRET` 若未设置则自动生成随机值（启动时会打日志说明）。
     pub fn from_env() -> Self {
         Self::from_vars(|key| std::env::var(key))
+    }
+
+    /// 文件服务的上传目录（上传根目录下的 `file` 子目录）。
+    ///
+    /// 上传写入与下载读取都从这里派生，避免调用点各自拼 `{dir}/file` 导致读写路径不一致
+    /// （历史上 handler 硬编码 `uploads/file`，改了 `UPLOAD_DIR` 就变成"上传成功、下载全 404"）。
+    pub fn file_upload_dir(&self) -> String {
+        format!("{}/file", self.upload_dir.display())
     }
 
     /// 从注入的变量读取器加载配置（测试用，避免全局 env 竞态）。
@@ -141,6 +148,14 @@ mod tests {
         assert_eq!(cfg.service_port, 3000);
         assert_eq!(cfg.cors_allow_origin, vec!["http://localhost:3000"]);
         assert_eq!(cfg.upload_dir, PathBuf::from("uploads"));
+        assert_eq!(cfg.file_upload_dir(), "uploads/file");
         assert!(cfg.jwt_secret.len() >= 36); // 随机 UUID
+    }
+
+    #[test]
+    fn file_upload_dir_follows_configured_root() {
+        let vars = vars_with(&[("UPLOAD_DIR", "/data/brainbow-uploads")]);
+        let cfg = Config::from_vars(vars);
+        assert_eq!(cfg.file_upload_dir(), "/data/brainbow-uploads/file");
     }
 }

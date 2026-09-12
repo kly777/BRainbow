@@ -4,5 +4,7 @@
 //! 纯类型/无副作用工具在 `crate::shared`。
 
 pub mod auth;
+pub mod cli;
 pub mod context;
 pub mod http;
+pub mod self_check;

@@ -37,6 +37,8 @@ export interface FileDetailApi {
 	setMetaValue: (index: number, value: string) => void;
 	saving: () => boolean;
 	formError: () => string;
+	/** 切换公开 / 私密（仅 can_edit 时有效） */
+	togglePrivate: () => Promise<void>;
 	startEdit: () => void;
 	cancelEdit: () => void;
 	save: () => Promise<void>;
@@ -115,6 +117,23 @@ export function useFileDetail(): FileDetailApi {
 		);
 		setFormError("");
 		setEditing(true);
+	};
+
+	const togglePrivate = async () => {
+		const item = data();
+		if (!item?.can_edit) return;
+		setSaving(true);
+		setFormError("");
+		const result = await tryAsync(() =>
+			updateFile(item.stored_id, { is_private: !item.is_private }),
+		);
+		setSaving(false);
+		if (result.ok) {
+			refetch();
+			notifySuccess(item.is_private ? "已设为公开" : "已设为私密");
+		} else {
+			setFormError("切换可见性失败");
+		}
 	};
 
 	const save = async () => {
@@ -211,6 +230,7 @@ export function useFileDetail(): FileDetailApi {
 			),
 		saving,
 		formError,
+		togglePrivate,
 		startEdit,
 		cancelEdit: () => setEditing(false),
 		save,

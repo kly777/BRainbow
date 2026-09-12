@@ -27,6 +27,8 @@ vi.mock("@modules/file/api.ts", async (importOriginal) => {
 					created_at: "2026-09-09T13:00:00+00:00",
 					updated_at: "2026-09-09T13:00:00+00:00",
 					missing: false,
+					is_private: false,
+					can_edit: true,
 				},
 			],
 			total: 1,
@@ -95,6 +97,8 @@ describe("FileList 渲染", () => {
 					created_at: "2026-09-09T13:00:00+00:00",
 					updated_at: "2026-09-09T13:00:00+00:00",
 					missing: false,
+					is_private: false,
+					can_edit: true,
 				},
 			],
 			total: 60,
@@ -119,6 +123,98 @@ describe("FileList 渲染", () => {
 		});
 	}, 20000);
 
+	it("私密文件显示锁标记且不在列表里拉取内容", async () => {
+		const { listFiles } = await import("@modules/file/api.ts");
+		vi.mocked(listFiles).mockResolvedValueOnce({
+			items: [
+				{
+					id: 11,
+					stored_id: "secret123456",
+					url: "/api/file/secret123456/data/s.png",
+					original_name: "s.png",
+					mime_type: "image/png",
+					file_category: "image",
+					size_bytes: 10,
+					width: 2,
+					height: 2,
+					duration_ms: null,
+					tags: [],
+					created_at: "2026-09-09T13:00:00+00:00",
+					updated_at: "2026-09-09T13:00:00+00:00",
+					missing: false,
+					is_private: true,
+					can_edit: true,
+				},
+			],
+			total: 1,
+			page: 1,
+			page_size: 24,
+			total_pages: 1,
+		});
+
+		const { default: FileList } = await import("./FileList.tsx");
+		const host = document.createElement("div");
+		document.body.appendChild(host);
+
+		await createRoot(async (dispose) => {
+			render(() => <FileList />, host);
+			for (let i = 0; i < 50; i++) {
+				await new Promise((r) => setTimeout(r, 20));
+				if (host.textContent?.includes("私密")) break;
+			}
+			expect(host.textContent).toContain("私密");
+			// 私密文件的内容不在列表里加载（<img> 不带凭据会 401）
+			expect(host.querySelectorAll("img").length).toBe(0);
+			dispose();
+		});
+	}, 20000);
+
+	it("无权限的文件不显示重命名与删除按钮", async () => {
+		const { listFiles } = await import("@modules/file/api.ts");
+		vi.mocked(listFiles).mockResolvedValueOnce({
+			items: [
+				{
+					id: 12,
+					stored_id: "others123456",
+					url: "/api/file/others123456/data/o.png",
+					original_name: "o.png",
+					mime_type: "image/png",
+					file_category: "image",
+					size_bytes: 10,
+					width: 2,
+					height: 2,
+					duration_ms: null,
+					tags: [],
+					created_at: "2026-09-09T13:00:00+00:00",
+					updated_at: "2026-09-09T13:00:00+00:00",
+					missing: false,
+					is_private: false,
+					can_edit: false,
+				},
+			],
+			total: 1,
+			page: 1,
+			page_size: 24,
+			total_pages: 1,
+		});
+
+		const { default: FileList } = await import("./FileList.tsx");
+		const host = document.createElement("div");
+		document.body.appendChild(host);
+
+		await createRoot(async (dispose) => {
+			render(() => <FileList />, host);
+			for (let i = 0; i < 50; i++) {
+				await new Promise((r) => setTimeout(r, 20));
+				if (host.textContent?.includes("o.png")) break;
+			}
+			expect(host.textContent).toContain("o.png");
+			expect(host.textContent).not.toContain("重命名");
+			expect(host.textContent).not.toContain("删除");
+			dispose();
+		});
+	}, 20000);
+
 	it("内容丢失的文件显示缺失标记且不渲染破图", async () => {
 		const { listFiles } = await import("@modules/file/api.ts");
 		vi.mocked(listFiles).mockResolvedValueOnce({
@@ -138,6 +234,8 @@ describe("FileList 渲染", () => {
 					created_at: "2026-09-09T13:00:00+00:00",
 					updated_at: "2026-09-09T13:00:00+00:00",
 					missing: true,
+					is_private: false,
+					can_edit: true,
 				},
 			],
 			total: 1,

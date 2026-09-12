@@ -4,6 +4,7 @@
  */
 
 import { Markdown } from "@components/ui";
+import { buildHeaders } from "@shared/api";
 import {
 	type Component,
 	createMemo,
@@ -62,8 +63,10 @@ const TextPreview: Component<{ item: FileItem }> = (props) => {
 		() => props.item.stored_id,
 		async (id): Promise<LoadedText> => {
 			controller = new AbortController();
+			// 私密文件的内容接口需要凭据，带上当前登录态
 			const resp = await fetch(fileUrl(id, props.item.original_name), {
 				signal: controller.signal,
+				headers: buildHeaders(),
 			});
 			if (!resp.ok) {
 				throw new Error(`加载失败（HTTP ${resp.status}）`);

@@ -8,21 +8,48 @@ import {
 	Copy,
 	Download,
 	FileText,
+	Lock,
 	Pencil,
 	Plus,
+	Unlock,
 	X,
 } from "@components/ui/icons";
 import { copyTextWithToast, fmtLocal, formatBytes } from "@shared/utils";
-import { type Component, For, onCleanup, Show } from "solid-js";
+import { type Component, For, type JSX, onCleanup, Show } from "solid-js";
 import type { FileItem } from "./api.ts";
 import { fileUrl } from "./api.ts";
 import TagInput from "./components/TagInput.tsx";
 import TextPreview from "./components/TextPreview.tsx";
 import styles from "./FileDetail.module.css";
 import { type MetaEntry, useFileDetail } from "./hooks/useFileDetail.ts";
+import { usePreviewUrl } from "./hooks/usePreviewUrl.ts";
 import { categoryLabel } from "./lib/category.ts";
 
 // ── 预览（左侧主体） ──
+
+/** 统一处理"私密文件要先换 blob"的媒体渲染：加载中给出提示，避免 401 破图 */
+const PreviewMedia: Component<{
+	src: string;
+	isPrivate: boolean;
+	children: (url: string) => JSX.Element;
+}> = (props) => {
+	const resolved = usePreviewUrl(
+		() => props.src,
+		() => props.isPrivate,
+	);
+	return (
+		<Show
+			when={resolved()}
+			fallback={
+				<Show when={props.isPrivate}>
+					<p class={styles.previewLoading}>正在加载私密文件…</p>
+				</Show>
+			}
+		>
+			{(url) => props.children(url())}
+		</Show>
+	);
+};
 
 const Preview: Component<{ item: FileItem }> = (props) => {
 	const url = () => fileUrl(props.item.stored_id, props.item.original_name);
@@ -43,29 +70,49 @@ const Preview: Component<{ item: FileItem }> = (props) => {
 				}
 			>
 				<Show when={props.item.file_category === "image"}>
-					<a
-						href={url()}
-						target="_blank"
-						rel="noopener noreferrer"
-						class={styles.previewLink}
-					>
-						<img
-							src={url()}
-							alt={props.item.original_name}
-							class={styles.previewImg}
-						/>
-					</a>
+					<PreviewMedia src={url()} isPrivate={props.item.is_private}>
+						{(resolvedUrl) => (
+							<a
+								href={resolvedUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								class={styles.previewLink}
+							>
+								<img
+									src={resolvedUrl}
+									alt={props.item.original_name}
+									class={styles.previewImg}
+								/>
+							</a>
+						)}
+					</PreviewMedia>
 				</Show>
 				<Show when={props.item.file_category === "video"}>
-					{/* biome-ignore lint/a11y/useMediaCaption: 文件预览无字幕源 */}
-					<video src={url()} controls class={styles.previewMedia} />
+					<PreviewMedia src={url()} isPrivate={props.item.is_private}>
+						{(resolvedUrl) => (
+							// biome-ignore lint/a11y/useMediaCaption: 文件预览无字幕源
+							<video src={resolvedUrl} controls class={styles.previewMedia} />
+						)}
+					</PreviewMedia>
 				</Show>
 				<Show when={props.item.file_category === "audio"}>
-					{/* biome-ignore lint/a11y/useMediaCaption: 文件预览无字幕源 */}
-					<audio src={url()} controls class={styles.previewAudio} />
+					<PreviewMedia src={url()} isPrivate={props.item.is_private}>
+						{(resolvedUrl) => (
+							// biome-ignore lint/a11y/useMediaCaption: 文件预览无字幕源
+							<audio src={resolvedUrl} controls class={styles.previewAudio} />
+						)}
+					</PreviewMedia>
 				</Show>
 				<Show when={props.item.mime_type === "application/pdf"}>
-					<iframe src={url()} class={styles.previewFrame} title="PDF 预览" />
+					<PreviewMedia src={url()} isPrivate={props.item.is_private}>
+						{(resolvedUrl) => (
+							<iframe
+								src={resolvedUrl}
+								class={styles.previewFrame}
+								title="PDF 预览"
+							/>
+						)}
+					</PreviewMedia>
 				</Show>
 				{/* 文本类预览：后端已把可识别的文本（含按扩展名兜底的源码/配置）
 			    统一存为 text/*，前端只看 mime */}
@@ -111,6 +158,19 @@ const FileView: Component<{ item: FileItem }> = (props) => (
 			</div>
 		</Show>
 		<div class={styles.infoList}>
+			<div class={styles.infoItem}>
+				<span class={styles.infoLabel}>可见性</span>
+				<span class={styles.infoValue}>
+					<Show
+						when={props.item.is_private}
+						fallback={<span>公开（所有人可见）</span>}
+					>
+						<span class={styles.privateValue}>
+							<Lock size={12} /> 私密（仅自己可见）
+						</span>
+					</Show>
+				</span>
+			</div>
 			<div class={styles.infoItem}>
 				<span class={styles.infoLabel}>类型</span>
 				<span class={styles.infoValue}>
@@ -342,17 +402,33 @@ export default function FileDetail() {
 				>
 					<Download size={14} />
 				</Button>
-				<Button
-					variant="secondary"
-					size="sm"
-					onClick={m.startEdit}
-					disabled={m.editing()}
-				>
-					<Pencil size={14} /> 编辑
-				</Button>
-				<Button variant="danger" size="sm" onClick={m.remove}>
-					删除
-				</Button>
+				<Show when={m.data()?.can_edit}>
+					<Button
+						variant="icon"
+						title={m.data()?.is_private ? "设为公开" : "设为私密"}
+						disabled={m.saving()}
+						onClick={() => void m.togglePrivate()}
+					>
+						<Show when={m.data()?.is_private} fallback={<Unlock size={14} />}>
+							<Lock size={14} />
+						</Show>
+					</Button>
+				</Show>
+				<Show when={m.data()?.can_edit}>
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={m.startEdit}
+						disabled={m.editing()}
+					>
+						<Pencil size={14} /> 编辑
+					</Button>
+				</Show>
+				<Show when={m.data()?.can_edit}>
+					<Button variant="danger" size="sm" onClick={m.remove}>
+						删除
+					</Button>
+				</Show>
 			</Toolbar>
 
 			<Show when={m.dataError}>

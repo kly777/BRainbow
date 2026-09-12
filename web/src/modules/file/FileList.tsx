@@ -14,6 +14,7 @@ import {
 	File as FileIcon,
 	Grid,
 	List,
+	Lock,
 	Upload,
 	X,
 } from "@components/ui/icons";
@@ -105,16 +106,26 @@ const FilePreview: Component<{
 			when={!props.item.missing}
 			fallback={<span class={styles.missingBadge}>文件缺失</span>}
 		>
+			{/* 私密文件不在这里拉取内容（<img> 不带凭据会 401），进详情页再看 */}
 			<Show
-				when={props.item.file_category === "image"}
-				fallback={<ExtBadge name={props.item.original_name} />}
+				when={!props.item.is_private}
+				fallback={
+					<span class={styles.privateBadge}>
+						<Lock size={12} /> 私密
+					</span>
+				}
 			>
-				<img
-					src={fileUrl(props.item.stored_id, props.item.original_name)}
-					alt={props.item.original_name}
-					class={styles.thumb}
-					loading="lazy"
-				/>
+				<Show
+					when={props.item.file_category === "image"}
+					fallback={<ExtBadge name={props.item.original_name} />}
+				>
+					<img
+						src={fileUrl(props.item.stored_id, props.item.original_name)}
+						alt={props.item.original_name}
+						class={styles.thumb}
+						loading="lazy"
+					/>
+				</Show>
 			</Show>
 		</Show>
 	</button>
@@ -134,6 +145,11 @@ const FileCardView: Component<{
 					{props.item.original_name}
 				</button>
 			</Tooltip>
+			<Show when={props.item.is_private}>
+				<p class={styles.privateTag}>
+					<Lock size={11} /> 私密（仅自己可见）
+				</p>
+			</Show>
 			<FileMeta item={props.item} />
 			<Show when={props.item.tags.length > 0}>
 				<div class={styles.tags}>
@@ -155,20 +171,22 @@ const FileCardView: Component<{
 			>
 				<Copy size={14} />
 			</Button>
-			<Button
-				variant="secondary"
-				size="sm"
-				onClick={() => props.onStartRename(props.item)}
-			>
-				重命名
-			</Button>
-			<Button
-				variant="danger"
-				size="sm"
-				onClick={() => props.onDelete(props.item.stored_id)}
-			>
-				删除
-			</Button>
+			<Show when={props.item.can_edit}>
+				<Button
+					variant="secondary"
+					size="sm"
+					onClick={() => props.onStartRename(props.item)}
+				>
+					重命名
+				</Button>
+				<Button
+					variant="danger"
+					size="sm"
+					onClick={() => props.onDelete(props.item.stored_id)}
+				>
+					删除
+				</Button>
+			</Show>
 		</div>
 	</>
 );
@@ -391,15 +409,24 @@ const FileRow: Component<{
 				fallback={<span class={styles.missingBadge}>缺失</span>}
 			>
 				<Show
-					when={props.item.file_category === "image"}
-					fallback={<ExtBadge name={props.item.original_name} />}
+					when={!props.item.is_private}
+					fallback={
+						<span class={styles.privateBadge}>
+							<Lock size={12} />
+						</span>
+					}
 				>
-					<img
-						src={fileUrl(props.item.stored_id, props.item.original_name)}
-						alt={props.item.original_name}
-						class={styles.rowThumbImg}
-						loading="lazy"
-					/>
+					<Show
+						when={props.item.file_category === "image"}
+						fallback={<ExtBadge name={props.item.original_name} />}
+					>
+						<img
+							src={fileUrl(props.item.stored_id, props.item.original_name)}
+							alt={props.item.original_name}
+							class={styles.rowThumbImg}
+							loading="lazy"
+						/>
+					</Show>
 				</Show>
 			</Show>
 		</button>
@@ -413,6 +440,11 @@ const FileRow: Component<{
 			<div class={styles.rowMeta}>
 				<Show when={props.item.missing}>
 					<span class={styles.missingTag}>文件缺失</span>
+				</Show>
+				<Show when={props.item.is_private}>
+					<span class={styles.privateTagInline}>
+						<Lock size={11} /> 私密
+					</span>
 				</Show>
 				<span>{categoryLabel(props.item.file_category)}</span>
 				<span>·</span>
@@ -455,20 +487,22 @@ const FileRow: Component<{
 			>
 				<Copy size={14} />
 			</Button>
-			<Button
-				variant="secondary"
-				size="sm"
-				onClick={() => props.onStartRename(props.item)}
-			>
-				重命名
-			</Button>
-			<Button
-				variant="danger"
-				size="sm"
-				onClick={() => props.onDelete(props.item.stored_id)}
-			>
-				删除
-			</Button>
+			<Show when={props.item.can_edit}>
+				<Button
+					variant="secondary"
+					size="sm"
+					onClick={() => props.onStartRename(props.item)}
+				>
+					重命名
+				</Button>
+				<Button
+					variant="danger"
+					size="sm"
+					onClick={() => props.onDelete(props.item.stored_id)}
+				>
+					删除
+				</Button>
+			</Show>
 		</div>
 	</div>
 );

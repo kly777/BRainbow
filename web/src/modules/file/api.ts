@@ -45,6 +45,10 @@ export interface FileItem {
 	updated_at: string;
 	/** 磁盘上找不到对应文件（记录还在，内容已丢失）；文件恢复后自动变回 false */
 	missing: boolean;
+	/** 私密文件：仅上传者可见，内容接口需要带凭据 */
+	is_private: boolean;
+	/** 当前登录用户能否改名 / 改标签 / 切换可见性 / 删除（仅上传者本人） */
+	can_edit: boolean;
 }
 
 /** 上传结果：duplicate=true 表示命中内容去重、复用已有文件（未新建） */
@@ -75,6 +79,8 @@ export interface UpdateFileRequest {
 	original_name?: string;
 	tags?: string[];
 	meta?: Record<string, string>;
+	/** 切换公开 / 私密 */
+	is_private?: boolean;
 }
 
 // ── API ──

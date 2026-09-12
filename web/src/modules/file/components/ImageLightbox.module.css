@@ -129,3 +129,10 @@
 		max-width: 10rem;
 	}
 }
+
+/* 私密图片加载中（先换 blob 再显示） */
+.loading {
+	margin: 0;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-sm);
+}

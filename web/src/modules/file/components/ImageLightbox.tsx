@@ -17,6 +17,7 @@ import { type Component, createEffect, onCleanup, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import type { FileItem } from "../api.ts";
 import { fileUrl } from "../api.ts";
+import { usePreviewUrl } from "../hooks/usePreviewUrl.ts";
 import styles from "./ImageLightbox.module.css";
 
 interface Props {
@@ -31,6 +32,14 @@ interface Props {
 const ImageLightbox: Component<Props> = (props) => {
 	const current = () => props.items[props.index];
 	const url = (item: FileItem) => fileUrl(item.stored_id, item.original_name);
+	// 私密图片不能直接进 <img src>（不带凭据会 401），这里换成 blob URL
+	const resolved = usePreviewUrl(
+		() => {
+			const item = current();
+			return item ? url(item) : "";
+		},
+		() => current()?.is_private ?? false,
+	);
 
 	const go = (delta: number) => {
 		const next = props.index + delta;
@@ -85,11 +94,22 @@ const ImageLightbox: Component<Props> = (props) => {
 					<Show when={current()}>
 						{(item) => (
 							<div class={styles.imgWrap} ref={imgWrapRef}>
-								<img
-									src={url(item())}
-									alt={item().original_name}
-									class={styles.img}
-								/>
+								<Show
+									when={resolved()}
+									fallback={
+										<Show when={item().is_private}>
+											<p class={styles.loading}>正在加载私密图片…</p>
+										</Show>
+									}
+								>
+									{(src) => (
+										<img
+											src={src()}
+											alt={item().original_name}
+											class={styles.img}
+										/>
+									)}
+								</Show>
 							</div>
 						)}
 					</Show>

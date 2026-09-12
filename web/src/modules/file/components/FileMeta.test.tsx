@@ -21,6 +21,8 @@ function makeItem(overrides: Partial<FileItem> = {}): FileItem {
 		created_at: "2026-09-09T13:00:00+00:00",
 		updated_at: "2026-09-09T13:00:00+00:00",
 		missing: false,
+		is_private: false,
+		can_edit: true,
 		...overrides,
 	};
 }

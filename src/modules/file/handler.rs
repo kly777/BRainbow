@@ -38,6 +38,8 @@ struct FileResponse {
     meta: Option<std::collections::HashMap<String, String>>,
     created_at: String,
     updated_at: String,
+    /// 磁盘上找不到文件内容（前端据此显示"文件缺失"而不是破图）
+    missing: bool,
 }
 
 /// 上传响应：duplicate=true 表示命中内容去重、复用已有文件（未新建）
@@ -73,6 +75,7 @@ fn to_response(f: &super::model::File, include_meta: bool) -> FileResponse {
         },
         created_at: to_utc_iso(f.created_at),
         updated_at: to_utc_iso(f.updated_at),
+        missing: f.missing,
     }
 }
 
@@ -97,6 +100,7 @@ fn to_summary_response(f: &super::model::FileSummary) -> FileResponse {
         meta: None,
         created_at: to_utc_iso(f.created_at),
         updated_at: to_utc_iso(f.updated_at),
+        missing: f.missing,
     }
 }
 
@@ -435,5 +439,94 @@ pub async fn merge_tag_handler(
     {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => e.into_response(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use crate::modules::file::model::{File, FileCategory, FileSummary};
+    use chrono::Utc;
+    use std::collections::HashMap;
+
+    fn sample_file(missing: bool) -> File {
+        File {
+            id: 1,
+            stored_id: "abc123456789".into(),
+            original_name: "设计稿 终版.png".into(),
+            mime_type: "image/png".into(),
+            file_category: FileCategory::Image,
+            size_bytes: 2048,
+            width: Some(1920),
+            height: Some(1080),
+            duration_ms: None,
+            user_id: Some(7),
+            content_hash: Some("deadbeef".into()),
+            tags: vec!["设计".into()],
+            meta: HashMap::from([("pages".to_string(), "5".to_string())]),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            missing,
+        }
+    }
+
+    fn sample_summary(missing: bool) -> FileSummary {
+        FileSummary {
+            id: 1,
+            stored_id: "abc123456789".into(),
+            original_name: "a.pdf".into(),
+            mime_type: "application/pdf".into(),
+            file_category: FileCategory::Document,
+            size_bytes: 10,
+            width: None,
+            height: None,
+            duration_ms: None,
+            user_id: Some(7),
+            content_hash: None,
+            tags: vec![],
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            missing,
+        }
+    }
+
+    /// 层间契约：model 的字段必须真的出现在 API 响应里。
+    /// 回归背景：missing 曾只加到 model/query，忘了映射进 FileResponse，
+    /// 前端因此永远收不到该字段（前端测试用 mock 数据，测不出来）。
+    #[test]
+    fn responses_carry_missing_flag() {
+        let detail = serde_json::to_value(to_response(&sample_file(true), true)).unwrap();
+        assert_eq!(detail["missing"], serde_json::json!(true));
+
+        let listed = serde_json::to_value(to_summary_response(&sample_summary(true))).unwrap();
+        assert_eq!(listed["missing"], serde_json::json!(true));
+
+        let intact = serde_json::to_value(to_response(&sample_file(false), true)).unwrap();
+        assert_eq!(intact["missing"], serde_json::json!(false));
+    }
+
+    #[test]
+    fn response_hides_internal_fields_and_encodes_url() {
+        let detail = serde_json::to_value(to_response(&sample_file(false), true)).unwrap();
+        // user_id 是内部字段，不暴露给前端
+        assert!(detail.get("user_id").is_none());
+        // url 由后端拼好，文件名整体百分号编码（非 ASCII 与空格都编码）
+        assert_eq!(
+            detail["url"],
+            serde_json::json!(
+                "/api/file/abc123456789/data/%E8%AE%BE%E8%AE%A1%E7%A8%BF%20%E7%BB%88%E7%89%88.png"
+            )
+        );
+        assert_eq!(detail["file_category"], serde_json::json!("image"));
+    }
+
+    #[test]
+    fn summary_response_omits_meta_but_detail_includes_it() {
+        let detail = serde_json::to_value(to_response(&sample_file(false), true)).unwrap();
+        assert_eq!(detail["meta"]["pages"], serde_json::json!("5"));
+
+        let listed = serde_json::to_value(to_summary_response(&sample_summary(false))).unwrap();
+        assert!(listed.get("meta").is_none(), "列表不带 meta（skip_serializing_if）");
     }
 }

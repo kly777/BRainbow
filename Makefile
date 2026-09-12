@@ -9,7 +9,7 @@ REMOTE_PORT ?= 22
 time := $(shell date +%y%m%d_%H%M%S)
 DEPLOY_SCRIPT := deploy/deploy.sh
 
-.PHONY: dev dev-backend dev-backend-fast dev-web fmt lint build build-web build-backend clean clean-all deploy deploy-web deploy-backend check-deploy status info logs db-pull db-push health rollback list-backups sqlx-prepare test test-verbose udeps bloat clean-cache build-stats db-check db-optimize db-backup backup-prune check-env
+.PHONY: dev dev-backend dev-backend-fast dev-web fmt lint build build-web build-backend clean clean-all deploy deploy-web deploy-backend check-deploy check-backend status info logs db-pull db-push health rollback list-backups sqlx-prepare test test-verbose udeps bloat clean-cache build-stats db-check db-optimize db-backup backup-prune check-env
 
 # 用 make 并行目标跑后端/前端：Ctrl+C 时 make 会给所有并行 job 发信号并等待清理
 # （cargo-watch 8.x 收到 SIGINT 会用进程组清理 cargo run/brainbow）
@@ -54,6 +54,12 @@ sqlx-prepare:
 # 部署环境检查：SSH/Caddy/构建产物（原名 check，改名避免与 Rust check 惯例冲突）
 check-deploy:
 	$(DEPLOY_SCRIPT) check
+
+# 后端只读自检：数据库 schema/完整性 + 上传目录 + 存储一致性。
+# 不迁移、不建目录、不删文件；退出码 0 = 一切正常，非 0 = 有需要处理的问题。
+# 生产环境用已部署的二进制跑：ssh <host> '<REMOTE_DIR>/brainbow --check'
+check-backend:
+	cargo run --quiet -- --check
 
 build:
 	$(DEPLOY_SCRIPT) build

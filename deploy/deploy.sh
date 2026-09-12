@@ -553,6 +553,30 @@ backend_self_check() {
 }
 
 # ===================================================================
+# 子命令: caddy — 仅同步 Caddy 配置并重载（不停服）
+# ===================================================================
+cmd_caddy() {
+    load_config
+    echo "═══════════════════════════════════════════"
+    log_info "同步 Caddy 配置: $APP_NAME  on  $REMOTE_HOST"
+    echo "═══════════════════════════════════════════"
+
+    # sync_caddyfile 内部先渲染模板到远端临时文件并 caddy validate，校验失败不会覆盖现网配置
+    if ! sync_caddyfile; then
+        log_error "Caddy 配置校验失败，已放弃同步（现网配置未变）"
+        exit 1
+    fi
+
+    log_info "重载 Caddy..."
+    if remote "sudo systemctl reload caddy 2>/dev/null || sudo systemctl restart caddy"; then
+        log_done "Caddy 已重载"
+    else
+        log_error "Caddy 重载失败"
+        exit 1
+    fi
+}
+
+# ===================================================================
 # 子命令: health — 健康检查
 # ===================================================================
 cmd_health() {
@@ -1035,6 +1059,7 @@ main() {
         check)        cmd_check "$@" ;;
         build)        cmd_build "$@" ;;
         deploy)       cmd_deploy "$@" ;;
+        caddy)        cmd_caddy "$@" ;;
         health)       cmd_health "$@" ;;
         rollback)     cmd_rollback "$@" ;;
         list-backups) cmd_list_backups "$@" ;;

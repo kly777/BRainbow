@@ -363,7 +363,10 @@ pub async fn file_handler(
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, &file.mime_type)
         .header(header::CACHE_CONTROL, cache_control)
-        .header("X-Content-Type-Options", "nosniff");
+        .header("X-Content-Type-Options", "nosniff")
+        // 详情页的 PDF 预览是同源 <iframe>：这里显式允许同源嵌入，
+        // 不依赖反向代理（Caddy）的站点级配置，跨站嵌入仍然被拒
+        .header("X-Frame-Options", "SAMEORIGIN");
 
     // 强制下载（HTML/SVG 等防 XSS）；其余可内联的类型给 inline
     let disposition = if FileService::can_inline(&file.mime_type)

@@ -6,8 +6,10 @@
 	# ── 安全响应头（site 级，覆盖所有响应） ──
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-		# 禁止 iframe 嵌入（clickjacking，与 CSP frame-ancestors 双保险）
-		X-Frame-Options "DENY"
+		# 仅允许同源 iframe 嵌入：跨站 clickjacking 仍被拒，同时让详情页的 PDF
+		# 预览（同源 <iframe>）能正常渲染 —— DENY 会连自己人也拦，
+		# Firefox 报 "will not allow Firefox to display the page if another site has embedded it"
+		X-Frame-Options "SAMEORIGIN"
 		# 弹窗隔离（reverse tabnabbing）
 		Cross-Origin-Opener-Policy "same-origin"
 		# MIME 嗅探防护
@@ -19,7 +21,7 @@
 		# - 'unsafe-eval'：CF Rocket Loader 所需（关闭 Rocket Loader 后可移除）
 		# - static.cloudflareinsights.com：CF Web Analytics beacon
 		# - img https:：Markdown 可能引用外部图片
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
 	}
 
 	# API 反代到后端。/uploads/* 不再代理：后端无此路由（唯一文件路由是

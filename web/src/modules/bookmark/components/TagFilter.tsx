@@ -3,6 +3,7 @@
  * 用于管理页面按标签筛选书签。
  */
 
+import { Input } from "@components/ui";
 import type { BookmarkTagWithCount } from "@modules/bookmark";
 import { searchBookmarkTagsE } from "@modules/bookmark";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
@@ -52,12 +53,13 @@ export default function TagFilter(props: Props) {
 			<Show when={open()}>
 				<div class={styles.dropdown}>
 					<div class={styles.searchWrap}>
-						<input
-							type="text"
+						<Input
 							class={styles.searchInput}
 							placeholder="搜索标签…"
 							value={query()}
 							onInput={(e) => setQuery(e.currentTarget.value)}
+							aria-label="搜索标签"
+							tone="bg"
 						/>
 					</div>
 					<button

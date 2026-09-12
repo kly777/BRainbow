@@ -58,7 +58,7 @@
 	break-inside: avoid;
 	margin-bottom: var(--space-xl);
 	border-left: 3px solid var(--m-bookmark);
-	transition: box-shadow 0.2s ease;
+	transition: box-shadow var(--t-transition-normal);
 }
 
 .tag-group:hover {
@@ -101,7 +101,7 @@
 	color: var(--t-color-ink);
 	border-bottom: 1px solid
 		color-mix(in srgb, var(--t-color-border) 50%, transparent);
-	transition: background 0.15s ease;
+	transition: background var(--t-transition-fast);
 	position: relative;
 }
 
@@ -236,7 +236,7 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	transition: color 0.15s ease;
+	transition: color var(--t-transition-fast);
 	line-height: 1.5;
 }
 
@@ -269,7 +269,7 @@
 	gap: var(--space-2xs);
 	flex-shrink: 0;
 	opacity: 0;
-	transition: opacity 0.15s ease;
+	transition: opacity var(--t-transition-fast);
 }
 
 .item:hover .item-actions {

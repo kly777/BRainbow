@@ -323,6 +323,13 @@ impl FileService {
         check_upload_dir(&self.upload_dir)
     }
 
+    /// 磁盘上是否缺少该文件内容（写侧返回 DTO 时用；读侧见 `FileQueryService::is_missing`）
+    async fn is_missing_on_disk(&self, stored_id: &str) -> bool {
+        tokio::fs::metadata(format!("{}/{}", self.upload_dir, stored_id))
+            .await
+            .is_err()
+    }
+
     /// 一致性扫描（只读）：DB 有记录但磁盘缺文件 / 磁盘有文件但 DB 无记录
     pub async fn check_consistency(&self) -> Result<ConsistencyReport, sqlx::Error> {
         consistency::scan(&self.repo, &self.upload_dir).await
@@ -607,6 +614,8 @@ impl FileService {
                 meta: HashMap::new(),
                 created_at: file_row.created_at,
                 updated_at: file_row.updated_at,
+                // 刚写入磁盘，内容必然在位
+                missing: false,
             },
             duplicate: false,
         })
@@ -754,6 +763,8 @@ impl FileService {
             .get_file_meta(row.id)
             .await
             .map_err(ServiceError::Db)?;
+        // 命中的既有记录可能已经丢了文件，据实探测再返回
+        let missing = self.is_missing_on_disk(&row.stored_id).await;
         Ok(UploadOutcome {
             file: File {
                 id: row.id,
@@ -771,6 +782,7 @@ impl FileService {
                 meta,
                 created_at: row.created_at,
                 updated_at: row.updated_at,
+                missing,
             },
             duplicate: true,
         })
@@ -878,6 +890,8 @@ impl FileService {
             .map_err(ServiceError::Db)?
             .ok_or_else(|| ServiceError::NotFound("文件不存在".into()))?;
 
+        let missing = self.is_missing_on_disk(&updated_row.stored_id).await;
+
         Ok(File {
             id: updated_row.id,
             stored_id: updated_row.stored_id,
@@ -894,6 +908,7 @@ impl FileService {
             meta,
             created_at: updated_row.created_at,
             updated_at: updated_row.updated_at,
+            missing,
         })
     }
 

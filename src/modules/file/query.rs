@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use futures_util::future::join_all;
 use sqlx::SqlitePool;
 
 use super::model::{File, FileCategory, FileListQuery, FileSummary, FileTag};
@@ -31,6 +32,16 @@ impl FileQueryService {
         format!("{}/{}", self.upload_dir, stored_id)
     }
 
+    /// 磁盘上是否缺少该文件的内容。
+    ///
+    /// 实时 stat 而非落库：文件被恢复（拷回/恢复备份）后无需重新扫描即可自动复原状态。
+    /// 列表页一次 24 条、并发 stat 的成本可忽略。
+    pub async fn is_missing(&self, stored_id: &str) -> bool {
+        tokio::fs::metadata(self.file_path(stored_id))
+            .await
+            .is_err()
+    }
+
     /// 根据 stored_id 获取文件详情（含标签和元信息）
     pub async fn get_by_stored_id(&self, stored_id: &str) -> Result<File, ServiceError> {
         let file_row = self
@@ -39,6 +50,9 @@ impl FileQueryService {
             .await
             .map_err(ServiceError::Db)?
             .ok_or_else(|| ServiceError::NotFound("文件不存在".into()))?;
+
+        // 先在 move 之前探测：详情页要据此提示"内容已丢失"
+        let missing = self.is_missing(&file_row.stored_id).await;
 
         let tags = self
             .repo
@@ -71,6 +85,7 @@ impl FileQueryService {
             meta,
             created_at: file_row.created_at,
             updated_at: file_row.updated_at,
+            missing,
         })
     }
 
@@ -83,6 +98,9 @@ impl FileQueryService {
             .map_err(ServiceError::Db)?
             .ok_or_else(|| ServiceError::NotFound("文件不存在".into()))?;
 
+        // 先在 move 之前探测：详情页要据此提示"内容已丢失"
+        let missing = self.is_missing(&file_row.stored_id).await;
+
         let tags = self
             .repo
             .get_file_tags(file_row.id)
@@ -114,6 +132,7 @@ impl FileQueryService {
             meta,
             created_at: file_row.created_at,
             updated_at: file_row.updated_at,
+            missing,
         })
     }
 
@@ -183,6 +202,10 @@ impl FileQueryService {
             .await
             .map_err(ServiceError::Db)?;
 
+        // 并发探测磁盘缺失（每条一次 stat；一页 24 条的成本可忽略）
+        let missing_flags = join_all(rows.iter().map(|r| self.is_missing(&r.stored_id))).await;
+        let mut missing_flags = missing_flags.into_iter();
+
         let mut summaries = Vec::with_capacity(rows.len());
         for row in rows {
             let tags = tags_by_file.remove(&row.id).unwrap_or_default();
@@ -202,6 +225,7 @@ impl FileQueryService {
                 tags,
                 created_at: row.created_at,
                 updated_at: row.updated_at,
+                missing: missing_flags.next().unwrap_or(false),
             });
         }
 
@@ -671,5 +695,63 @@ mod tests {
         assert_eq!(human_size(2048), "2.0 KB");
         assert_eq!(human_size(3 * 1024 * 1024), "3.0 MB");
         assert_eq!(human_size(2 * 1024 * 1024 * 1024), "2.00 GB");
+    }
+
+    // ── 缺失文件标记 ──
+
+    /// 记录还在、磁盘文件没了 → missing=true；文件在位则 false。
+    /// 目录指向临时目录，避免碰到真实 uploads。
+    #[tokio::test]
+    async fn list_and_detail_report_missing_files() {
+        let (_default_query, repo, pool) = setup().await;
+        seed(&repo).await; // 只插库，不写磁盘
+
+        let dir = std::env::temp_dir().join(format!("brainbow-missing-{}", nanoid::nanoid!(8)));
+        std::fs::create_dir_all(&dir).unwrap();
+        // 只有 doc-1 的内容在磁盘上
+        std::fs::write(dir.join("doc-1"), b"data").unwrap();
+        let query = FileQueryService::new(pool.clone(), dir.to_string_lossy().to_string());
+
+        let list = query
+            .list(
+                FileListQuery {
+                    page: None,
+                    page_size: None,
+                    category: None,
+                    tag: None,
+                    q: None,
+                    sort: SortOrder::default(),
+                },
+                Some(7),
+            )
+            .await
+            .unwrap();
+        let doc = list.items.iter().find(|f| f.stored_id == "doc-1").unwrap();
+        let img = list.items.iter().find(|f| f.stored_id == "img-1").unwrap();
+        assert!(!doc.missing, "磁盘有文件不应标记为缺失");
+        assert!(img.missing, "磁盘无文件应标记为缺失");
+
+        assert!(!query.get_by_stored_id("doc-1").await.unwrap().missing);
+        assert!(query.get_by_stored_id("img-1").await.unwrap().missing);
+        assert!(query.get_by_id(img.id).await.unwrap().missing);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// 文件被恢复后标记自动消失（实时 stat，不落库）
+    #[tokio::test]
+    async fn missing_flag_clears_when_file_returns() {
+        let (_default_query, repo, pool) = setup().await;
+        seed(&repo).await;
+
+        let dir = std::env::temp_dir().join(format!("brainbow-restore-{}", nanoid::nanoid!(8)));
+        std::fs::create_dir_all(&dir).unwrap();
+        let query = FileQueryService::new(pool.clone(), dir.to_string_lossy().to_string());
+
+        assert!(query.get_by_stored_id("doc-1").await.unwrap().missing);
+        std::fs::write(dir.join("doc-1"), b"restored").unwrap();
+        assert!(!query.get_by_stored_id("doc-1").await.unwrap().missing);
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

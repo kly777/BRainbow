@@ -100,6 +100,9 @@ pub struct File {
     pub meta: std::collections::HashMap<String, String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// 磁盘上找不到对应文件（记录还在，内容已丢失）。
+    /// 实时 stat 得出，不落库 —— 文件补回来后会自动恢复正常。
+    pub missing: bool,
 }
 
 /// 文件摘要（列表用，不含 meta）
@@ -120,6 +123,8 @@ pub struct FileSummary {
     pub tags: Vec<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// 磁盘上找不到对应文件（见 [`File::missing`]）
+    pub missing: bool,
 }
 
 /// 更新文件请求

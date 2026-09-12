@@ -353,16 +353,20 @@ pub async fn file_handler(
     let stream = ReaderStream::new(f);
     let body = Body::from_stream(stream);
 
-    // 私密文件不能进共享缓存（CDN/代理），否则等于绕过鉴权
-    let cache_control = if file.is_private {
-        "private, max-age=31536000, immutable"
-    } else {
-        "public, max-age=31536000, immutable"
-    };
+    // 一律 `private`：不让任何共享缓存（CDN/反代）持有文件内容。
+    //
+    // 两个理由：
+    // 1. 私密文件进共享缓存等于绕过鉴权；
+    // 2. Cloudflare 默认按扩展名缓存（.pdf / .png 等），即使公开文件也会被 CF 缓存，
+    //    而此前的 `immutable, max-age=1年` 让响应头一旦需要变更（如放宽 X-Frame-Options
+    //    以支持 PDF 预览）就永远传不到客户端 —— 线上真的踩到了，只能靠 purge 缓存。
+    //
+    // 去掉 immutable、降到一天：浏览器仍会缓存（性能保留），但头变更最多一天内传播。
+    const CACHE_CONTROL: &str = "private, max-age=86400";
     let mut resp = Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, &file.mime_type)
-        .header(header::CACHE_CONTROL, cache_control)
+        .header(header::CACHE_CONTROL, CACHE_CONTROL)
         .header("X-Content-Type-Options", "nosniff")
         // 详情页的 PDF 预览是同源 <iframe>：这里显式允许同源嵌入，
         // 不依赖反向代理（Caddy）的站点级配置，跨站嵌入仍然被拒

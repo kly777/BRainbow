@@ -3,7 +3,7 @@
  * 删除只解除与文件的关联，文件本身保留。
  */
 
-import { Button, Modal } from "@components/ui";
+import { Button, Input, Modal } from "@components/ui";
 import {
 	deleteFileTag,
 	type FileTag,
@@ -138,8 +138,7 @@ const TagManager: Component<Props> = (props) => {
 											</>
 										}
 									>
-										<input
-											type="text"
+										<Input
 											class={styles.input}
 											value={editName()}
 											onInput={(e) => setEditName(e.currentTarget.value)}

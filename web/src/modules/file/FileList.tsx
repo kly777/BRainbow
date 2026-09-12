@@ -4,8 +4,10 @@ import {
 	AsyncView,
 	Button,
 	FilterGroup,
+	Input,
 	PageHead,
 	SearchInput,
+	Select,
 	SimplePagination,
 	Tooltip,
 } from "@components/ui";
@@ -195,8 +197,7 @@ const FileCardEdit: Component<{
 }> = (props) => (
 	<>
 		<div class={styles.info}>
-			<input
-				type="text"
+			<Input
 				value={props.editName}
 				onInput={(e) => props.onEditName(e.currentTarget.value)}
 				class={styles.editInput}
@@ -534,8 +535,7 @@ const BatchBar: Component<{
 				</Button>
 
 				<div class={styles.batchTag}>
-					<input
-						type="text"
+					<Input
 						class={styles.batchTagInput}
 						placeholder="加标签…"
 						value={tag()}
@@ -788,9 +788,10 @@ const FileListPage: Component = () => {
 						<List size={15} />
 					</button>
 				</div>
+				{/* biome-ignore lint/a11y/noLabelWithoutControl: Select 渲染的根节点就是原生 <select>，包裹式 label 已隐式关联；lint 无法跟进组件内部 */}
 				<label class={styles.sortLabel}>
 					<span class={styles.sortText}>排序</span>
-					<select
+					<Select
 						class={styles.sortSelect}
 						value={f.sort()}
 						onChange={(e) => f.setSort(e.currentTarget.value as SortOrder)}
@@ -799,7 +800,7 @@ const FileListPage: Component = () => {
 						<For each={SORT_OPTIONS}>
 							{(option) => <option value={option.value}>{option.label}</option>}
 						</For>
-					</select>
+					</Select>
 				</label>
 			</div>
 

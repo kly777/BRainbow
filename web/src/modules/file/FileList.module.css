@@ -189,12 +189,6 @@
 
 .sort-select {
 	padding: var(--space-xs) var(--space-sm);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	font-size: var(--text-sm);
-	cursor: pointer;
 }
 
 .grid {
@@ -389,21 +383,10 @@
 }
 
 .edit-input {
-	width: 100%;
 	height: 1.5rem;
 	margin-bottom: var(--space-xs);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
 	padding: 0 var(--space-sm);
-	font-size: var(--text-sm);
-	font-family: inherit;
-	outline: none;
-	box-sizing: border-box;
+	border-radius: var(--radius-sm);
 }
 
 .error {
@@ -466,16 +449,6 @@
 	.sort-text {
 		font-size: var(--text-xs);
 		color: var(--t-color-ink-muted);
-	}
-
-	.sort-select {
-		padding: var(--space-xs) var(--space-sm);
-		border: 1px solid var(--t-color-border);
-		border-radius: var(--radius-md);
-		background: var(--t-color-surface);
-		color: var(--t-color-ink);
-		font-size: var(--text-sm);
-		cursor: pointer;
 	}
 
 	.grid {
@@ -639,11 +612,6 @@
 .batch-tag-input {
 	width: 9rem;
 	padding: var(--space-xs) var(--space-sm);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	font-size: var(--text-sm);
 }
 
 /* ── 移动端收尾 ── */

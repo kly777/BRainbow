@@ -1,6 +1,13 @@
 // ── /file/:id：文件详情（左：文件展示主体，右：元信息侧栏） ──
 
-import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
+import {
+	Button,
+	ErrorRetry,
+	Field,
+	Input,
+	LoadingSkeleton,
+	Toolbar,
+} from "@components/ui";
 import {
 	AlertTriangle,
 	ChevronLeft,
@@ -254,16 +261,14 @@ const MetaRowEditor: Component<{
 	onRemove: (index: number) => void;
 }> = (props) => (
 	<div class={styles.metaEditRow}>
-		<input
-			type="text"
+		<Input
 			class={styles.metaEditKey}
 			placeholder="键"
 			value={props.entry.key}
 			onInput={(e) => props.onKey(props.index, e.currentTarget.value)}
 			aria-label={`元信息键 ${props.index + 1}`}
 		/>
-		<input
-			type="text"
+		<Input
 			class={styles.metaEditValue}
 			placeholder="值"
 			value={props.entry.value}
@@ -286,15 +291,12 @@ const EditForm: Component<{ m: ReturnType<typeof useFileDetail> }> = (
 	const m = props.m;
 	return (
 		<div class={styles.form}>
-			<label class={styles.label} for="file-name">
-				文件名
-			</label>
-			<input
-				id="file-name"
-				class={styles.input}
-				value={m.name()}
-				onInput={(e) => m.setName(e.currentTarget.value)}
-			/>
+			<Field label="文件名">
+				<Input
+					value={m.name()}
+					onInput={(e) => m.setName(e.currentTarget.value)}
+				/>
+			</Field>
 			<span class={styles.label}>标签</span>
 			<TagInput tags={m.tags()} onAdd={m.addTag} onRemove={m.removeTag} />
 			<span class={styles.label}>元信息</span>

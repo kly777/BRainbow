@@ -3,6 +3,7 @@
  * 与 bookmark 的 TagFilter 同构，但 file 标签接口无计数，省略数量显示。
  */
 
+import { Input } from "@components/ui";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { type FileTag, listFileTags } from "../api.ts";
 import styles from "./TagFilter.module.css";
@@ -45,12 +46,13 @@ export default function TagFilter(props: Props) {
 			<Show when={open()}>
 				<div class={styles.dropdown}>
 					<div class={styles.searchWrap}>
-						<input
-							type="text"
+						<Input
 							class={styles.searchInput}
 							placeholder="搜索标签…"
 							value={query()}
 							onInput={(e) => setQuery(e.currentTarget.value)}
+							aria-label="搜索标签"
+							tone="bg"
 						/>
 					</div>
 					<button

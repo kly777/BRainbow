@@ -5,6 +5,7 @@
  * 全局删除与远程搜索，直接对全部标签做本地过滤。
  */
 
+import { Input } from "@components/ui";
 import { blurClose } from "@shared/utils";
 import {
 	type Component,
@@ -95,8 +96,7 @@ export default function TagInput(props: Props) {
 				</div>
 			</Show>
 			<div class={styles.inputRow}>
-				<input
-					type="text"
+				<Input
 					class={styles.input}
 					placeholder="添加标签（Enter 确认，可创建新标签）…"
 					value={query()}
@@ -107,6 +107,7 @@ export default function TagInput(props: Props) {
 					onFocus={() => setOpen(true)}
 					onBlur={blurClose(() => setOpen(false)).schedule}
 					onKeyDown={handleKeyDown}
+					aria-label="添加标签"
 				/>
 			</div>
 			<Show when={open() && trimmed().length > 0}>

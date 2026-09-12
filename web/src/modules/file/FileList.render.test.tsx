@@ -37,6 +37,9 @@ vi.mock("@modules/file/api.ts", async (importOriginal) => {
 			total_pages: 1,
 		}),
 		listFileTags: vi.fn().mockResolvedValue([]),
+		// 删除/改名等写操作也要是 mock（否则走真实实现，无法构造乐观/回滚场景）
+		deleteFile: vi.fn().mockResolvedValue(undefined),
+		updateFile: vi.fn().mockResolvedValue(undefined),
 		// 列表页还会拉统计（页头总量 + 类别数量），jsdom 下必须 mock 掉
 		getFileStats: vi.fn().mockResolvedValue({
 			total_count: 1,
@@ -52,9 +55,24 @@ vi.mock("@solidjs/router", () => ({
 	useSearchParams: () => [{}, vi.fn()],
 }));
 
+// 删除前有确认弹窗：直接放行，聚焦"乐观更新"本身
+vi.mock("@shared/utils", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@shared/utils")>();
+	return { ...actual, showConfirm: vi.fn().mockResolvedValue(true) };
+});
+
 describe("FileList 渲染", () => {
-	beforeEach(() => {
+	beforeEach(async () => {
 		document.body.innerHTML = "";
+		// 每个用例从"写操作正常成功"的默认桩开始，避免上一个用例的桩串味
+		const { deleteFile, updateFile, listFiles } = await import(
+			"@modules/file/api.ts"
+		);
+		vi.mocked(deleteFile).mockReset().mockResolvedValue(undefined);
+		vi.mocked(updateFile)
+			.mockReset()
+			.mockResolvedValue(undefined as never);
+		vi.mocked(listFiles).mockClear();
 	});
 
 	// 超时放宽：全量并行运行时模块加载/环境初始化可能超过默认 5s
@@ -211,6 +229,99 @@ describe("FileList 渲染", () => {
 			expect(host.textContent).toContain("o.png");
 			expect(host.textContent).not.toContain("重命名");
 			expect(host.textContent).not.toContain("删除");
+			dispose();
+		});
+	}, 20000);
+
+	it("删除是乐观更新：确认后卡片立即消失，不等接口返回", async () => {
+		const { listFiles, deleteFile } = await import("@modules/file/api.ts");
+		// 接口永不 resolve —— 若还依赖 refetch，卡片就不会消失
+		vi.mocked(deleteFile).mockImplementation(
+			() => new Promise(() => {}) as Promise<void>,
+		);
+
+		const { default: FileList } = await import("./FileList.tsx");
+		const host = document.createElement("div");
+		document.body.appendChild(host);
+
+		await createRoot(async (dispose) => {
+			render(() => <FileList />, host);
+			for (let i = 0; i < 50; i++) {
+				await new Promise((r) => setTimeout(r, 20));
+				if (host.textContent?.includes("test.png")) break;
+			}
+			expect(host.textContent).toContain("test.png");
+
+			const listCallsBefore = vi.mocked(listFiles).mock.calls.length;
+			const delBtn = [...host.querySelectorAll("button")].find((b) =>
+				b.textContent?.includes("删除"),
+			);
+			expect(delBtn).toBeTruthy();
+			delBtn?.click();
+
+			// 只等微任务：卡片应已消失，且没有触发列表重取（乐观更新的关键）
+			await new Promise((r) => setTimeout(r, 50));
+			expect(host.textContent).not.toContain("test.png");
+			expect(vi.mocked(listFiles).mock.calls.length).toBe(listCallsBefore);
+
+			dispose();
+		});
+	}, 20000);
+
+	it("删除失败时回滚列表", async () => {
+		const { listFiles, deleteFile } = await import("@modules/file/api.ts");
+		vi.mocked(deleteFile).mockRejectedValue(new Error("boom"));
+		// 首次加载返回数据，refetch 也返回同样的数据（回滚后应重新出现）
+		vi.mocked(listFiles).mockResolvedValue({
+			items: [
+				{
+					id: 1,
+					stored_id: "abc123",
+					url: "/api/file/abc123/data/test.png",
+					original_name: "test.png",
+					mime_type: "image/png",
+					file_category: "image",
+					size_bytes: 100,
+					width: 2,
+					height: 2,
+					duration_ms: null,
+					tags: [],
+					created_at: "2026-09-09T13:00:00+00:00",
+					updated_at: "2026-09-09T13:00:00+00:00",
+					missing: false,
+					is_private: false,
+					can_edit: true,
+				},
+			],
+			total: 1,
+			page: 1,
+			page_size: 20,
+			total_pages: 1,
+		});
+
+		const { default: FileList } = await import("./FileList.tsx");
+		const host = document.createElement("div");
+		document.body.appendChild(host);
+
+		await createRoot(async (dispose) => {
+			render(() => <FileList />, host);
+			for (let i = 0; i < 50; i++) {
+				await new Promise((r) => setTimeout(r, 20));
+				if (host.textContent?.includes("test.png")) break;
+			}
+
+			const delBtn = [...host.querySelectorAll("button")].find((b) =>
+				b.textContent?.includes("删除"),
+			);
+			delBtn?.click();
+			// 等失败处理与回滚 refetch
+			for (let i = 0; i < 50; i++) {
+				await new Promise((r) => setTimeout(r, 20));
+				if (host.textContent?.includes("test.png")) break;
+			}
+			expect(host.textContent).toContain("test.png");
+			expect(vi.mocked(listFiles).mock.calls.length).toBeGreaterThan(1);
+
 			dispose();
 		});
 	}, 20000);

@@ -59,7 +59,7 @@ export function useFileDetail(): FileDetailApi {
 	const location = useLocation();
 	const storedId = () => String(params.id ?? "");
 
-	const [data, { refetch }] = createResource(storedId, (id) => {
+	const [data, { refetch, mutate }] = createResource(storedId, (id) => {
 		if (!id) throw new Error("无效的文件 ID");
 		return getFile(id);
 	});
@@ -122,16 +122,19 @@ export function useFileDetail(): FileDetailApi {
 	const togglePrivate = async () => {
 		const item = data();
 		if (!item?.can_edit) return;
+		const next = !item.is_private;
+		// 乐观：立刻翻转可见性（按钮与侧栏马上反映结果），失败再拉回真值
+		mutate((prev) => (prev ? { ...prev, is_private: next } : prev));
 		setSaving(true);
 		setFormError("");
 		const result = await tryAsync(() =>
-			updateFile(item.stored_id, { is_private: !item.is_private }),
+			updateFile(item.stored_id, { is_private: next }),
 		);
 		setSaving(false);
 		if (result.ok) {
-			refetch();
-			notifySuccess(item.is_private ? "已设为公开" : "已设为私密");
+			notifySuccess(next ? "已设为私密" : "已设为公开");
 		} else {
+			refetch();
 			setFormError("切换可见性失败");
 		}
 	};
@@ -150,19 +153,33 @@ export function useFileDetail(): FileDetailApi {
 		}
 		setSaving(true);
 		setFormError("");
+		const tagsSnapshot = tags();
+		// 乐观：先应用改名 / 标签 / 元信息，退出编辑态即可看到结果
+		mutate((prev) =>
+			prev
+				? {
+						...prev,
+						original_name: cleanName,
+						tags: tagsSnapshot,
+						meta,
+					}
+				: prev,
+		);
+		setEditing(false);
 		const result = await tryAsync(() =>
 			updateFile(storedId(), {
 				original_name: cleanName,
-				tags: tags(),
+				tags: tagsSnapshot,
 				meta,
 			}),
 		);
 		setSaving(false);
 		if (result.ok) {
 			notifySuccess("文件信息已更新");
-			setEditing(false);
-			refetch();
 		} else {
+			// 回滚到服务端真值，并回到编辑态保留用户输入
+			refetch();
+			setEditing(true);
 			setFormError(getErrorMessage(result.error));
 		}
 	};

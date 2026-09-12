@@ -136,7 +136,7 @@ export function useFileList(): FileListApi {
 	const setView = (value: FileView) => params.set({ view: value });
 	const setSearch = (q: string) => params.set({ q, page: 1 });
 
-	const [files, { refetch }] = createResource(
+	const [files, { refetch, mutate }] = createResource(
 		() => ({ cat: category(), t: tag(), q: search(), s: sort(), page: page() }),
 		async ({ cat, t, q, s, page }): Promise<PaginatedResponse<FileItem>> => {
 			const result = await tryAsync(() =>
@@ -158,6 +158,27 @@ export function useFileList(): FileListApi {
 	const [stats, { refetch: refetchStats }] = createResource<FileStats>(() =>
 		getFileStats(),
 	);
+
+	/**
+	 * 就地改写当前页列表（乐观更新）。
+	 *
+	 * 写操作一律"先改本地、再发请求、失败才 refetch 纠正"——此前是等接口回来再
+	 * 整表重取，而 refetch 会让 AsyncView 回到骨架屏，删除/改名都要闪一下。
+	 */
+	const patchList = (
+		update: (items: FileItem[]) => FileItem[],
+		totalDelta = 0,
+	) => {
+		mutate((prev) =>
+			prev
+				? {
+						...prev,
+						items: update(prev.items),
+						total: Math.max(0, prev.total + totalDelta),
+					}
+				: prev,
+		);
+	};
 
 	const [editingId, setEditingId] = createSignal<string | null>(null);
 	const [editName, setEditName] = createSignal("");
@@ -268,6 +289,7 @@ export function useFileList(): FileListApi {
 
 	const handleDelete = async (stored_id: string) => {
 		let force = false;
+		let removedLocally = false;
 		for (;;) {
 			const confirmed = await showConfirm({
 				title: force ? "强制删除文件" : "删除文件",
@@ -276,7 +298,18 @@ export function useFileList(): FileListApi {
 					: "确定要删除这个文件吗？此操作不可撤销。",
 				variant: "danger",
 			});
-			if (!confirmed) return;
+			if (!confirmed) {
+				if (removedLocally) refetch(); // 取消强删 → 把乐观移除的那条放回来
+				return;
+			}
+			if (!removedLocally) {
+				// 先本地移除：卡片立刻消失，不等网络往返
+				patchList(
+					(items) => items.filter((item) => item.stored_id !== stored_id),
+					-1,
+				);
+				removedLocally = true;
+			}
 			const result = await tryAsync(() => deleteFile(stored_id, force));
 			if (result.ok) break;
 			if (result.error instanceof HttpError && result.error.status === 409) {
@@ -284,14 +317,13 @@ export function useFileList(): FileListApi {
 				continue;
 			}
 			notifyError("删除文件失败", getErrorMessage(result.error));
+			refetch(); // 回滚
 			return;
 		}
 		refetchStats();
 		// 当前页最后一条被删掉时回退一页，避免停在空白页
-		if ((files()?.items.length ?? 0) <= 1 && page() > 1) {
+		if ((files()?.items.length ?? 0) === 0 && page() > 1) {
 			params.set({ page: page() - 1 });
-		} else {
-			refetch();
 		}
 	};
 
@@ -333,6 +365,13 @@ export function useFileList(): FileListApi {
 		});
 		if (!confirmed) return;
 
+		// 乐观：先把选中的都从列表移除
+		const selectedIds = new Set(targets.map((item) => item.stored_id));
+		patchList(
+			(items) => items.filter((item) => !selectedIds.has(item.stored_id)),
+			-targets.length,
+		);
+
 		let ok = 0;
 		let skipped = 0;
 		let failed = 0;
@@ -358,7 +397,9 @@ export function useFileList(): FileListApi {
 		else notifySuccess("批量删除完成", summary);
 
 		setSelectMode(false);
-		refetch();
+		// 被引用跳过或失败的条目其实没删掉，需要拉回真值；全部成功则保持乐观结果
+		if (skipped > 0 || failed > 0) refetch();
+		refetchStats();
 	};
 
 	/** 批量加标签：读现有标签后追加（update 是全量替换语义） */
@@ -369,6 +410,16 @@ export function useFileList(): FileListApi {
 			selected().has(item.stored_id),
 		);
 		if (targets.length === 0) return;
+
+		// 乐观：先给选中项加上标签
+		const selectedIds = new Set(targets.map((item) => item.stored_id));
+		patchList((items) =>
+			items.map((item) =>
+				selectedIds.has(item.stored_id) && !item.tags.includes(name)
+					? { ...item, tags: [...item.tags, name] }
+					: item,
+			),
+		);
 
 		let ok = 0;
 		let failed = 0;
@@ -393,7 +444,7 @@ export function useFileList(): FileListApi {
 			notifySuccess("批量加标签完成", `已为 ${ok} 个文件加上「${name}」`);
 		}
 		setSelectMode(false);
-		refetch();
+		if (failed > 0) refetch();
 	};
 
 	/** 批量复制链接（逐行一条，方便贴进 Markdown 或清单） */
@@ -418,14 +469,22 @@ export function useFileList(): FileListApi {
 
 	const handleRename = async () => {
 		const id = editingId();
-		if (!id || !editName().trim()) return;
-		const result = await tryAsync(() =>
-			updateFile(id, { original_name: editName().trim() }),
+		const name = editName().trim();
+		if (!id || !name) return;
+		// 乐观：立刻显示新名字并退出编辑态，失败再回到编辑态让用户修改
+		patchList((items) =>
+			items.map((item) =>
+				item.stored_id === id ? { ...item, original_name: name } : item,
+			),
 		);
-		if (result.ok) {
-			setEditingId(null);
+		setEditingId(null);
+		const result = await tryAsync(() =>
+			updateFile(id, { original_name: name }),
+		);
+		if (!result.ok) {
 			refetch();
-		} else {
+			setEditingId(id);
+			setEditName(name);
 			setErrorMessage(getErrorMessage(result.error));
 		}
 	};

@@ -1,0 +1,82 @@
+/* ── 表单控件原语（Input / Select / Textarea 共用）──
+ *
+ * 取值取自改造前全站 66 条输入类规则的主流形态（占比见括号）：
+ *   padding: var(--space-sm) var(--space-md)     (22/66)
+ *   border: 1px solid var(--t-color-border)      (39/66)
+ *   border-radius: var(--radius-md)              (27/66)
+ *   background: var(--t-color-surface)           (28/66)
+ *   color: var(--t-color-ink)                    (45/66)
+ *   font-size: var(--text-sm)                    (31/66)
+ *
+ * ⚠ 基础类包在 :where() 里 —— 特异度为 (0,0,0)，因此调用方传入的任何类
+ * （宽度、字族等覆盖）必定生效，不依赖两个 CSS Module 在产物里的先后顺序。
+ * 这正是 composes 方案栽过的地方（同特异度 + 顺序不可控，见
+ * doc/frontend-ui-architecture.md §10.1），此处用 :where() 从根上避开。
+ * 修饰类（.size-* / .tone-* / .invalid）保持正常特异度 (0,1,0)，故能覆盖基础类。
+ *
+ * 焦点态**不在本文件声明**：tokens.css 的全局 input/textarea/select:focus
+ * 规则已统一提供（accent 边框 + --t-ring-accent），见同文档 P1-4。 */
+
+:where(.control) {
+	box-sizing: border-box;
+	width: 100%;
+	min-width: 0;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	font-family: inherit;
+	font-size: var(--text-sm);
+	outline: none;
+	transition:
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+}
+
+:where(.control)::placeholder {
+	color: var(--t-color-ink-faint);
+}
+
+/* ── 尺寸档位（md 为默认，不产生类名）── */
+
+.size-sm {
+	padding: var(--space-2xs) var(--space-sm);
+	border-radius: var(--radius-sm);
+	font-size: var(--text-xs);
+}
+
+.size-lg {
+	padding: var(--space-sm) var(--space-lg);
+	font-size: var(--text-base);
+}
+
+/* ── 底色档位：控件嵌在 surface 卡片内时用 bg，避免同色糊在一起 ── */
+
+.tone-bg {
+	background: var(--t-color-bg);
+}
+
+/* ── 等宽（代码、哈希、数值等）── */
+
+.mono {
+	font-family: var(--t-font-mono);
+}
+
+/* ── 无效态：由 Field 的 error 驱动，或有独立校验时手动传 invalid ── */
+
+.invalid {
+	border-color: var(--t-color-danger);
+}
+
+/* ── Textarea / Select 的附加形态 ── */
+
+.textarea {
+	min-height: 3.75rem;
+	line-height: var(--leading-normal);
+	resize: vertical;
+}
+
+.select {
+	cursor: pointer;
+}

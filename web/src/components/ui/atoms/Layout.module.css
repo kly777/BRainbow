@@ -1,0 +1,98 @@
+/* ── 布局原语（Row / Stack）──
+ * 收敛全站重复的 flex 组合：display:flex 搭配 flex-direction / align-items /
+ * justify-content / flex-wrap / gap —— 这几种组合在改造前散布 400 余处。
+ *
+ * 消费方的其它样式仍写在自己的 CSS Module 里，通过 class 透传合并。
+ *
+ * ⚠ 契约：原语类与消费方类特异度相同（0,1,0），因此消费方 CSS 中
+ * 不得再声明 display / flex-direction / align-items / justify-content /
+ * flex-wrap / gap —— 全部交给原语。否则会退化成"依赖打包顺序"的隐性覆盖。
+ *
+ * 顺序敏感：基础类在前、修饰类在后，同特异度时后者生效。 */
+
+.row {
+	display: flex;
+	align-items: center;
+}
+
+.stack {
+	display: flex;
+	flex-direction: column;
+}
+
+.wrap {
+	flex-wrap: wrap;
+}
+
+/* 对齐修饰：默认值已由 .row 提供，这里只用显式覆盖 */
+.align-start {
+	align-items: flex-start;
+}
+
+.align-center {
+	align-items: center;
+}
+
+.align-end {
+	align-items: flex-end;
+}
+
+.align-baseline {
+	align-items: baseline;
+}
+
+.align-stretch {
+	align-items: stretch;
+}
+
+.justify-start {
+	justify-content: flex-start;
+}
+
+.justify-center {
+	justify-content: center;
+}
+
+.justify-end {
+	justify-content: flex-end;
+}
+
+.justify-between {
+	justify-content: space-between;
+}
+
+.gap-none {
+	gap: 0;
+}
+
+.gap-2xs {
+	gap: var(--space-2xs);
+}
+
+.gap-xs {
+	gap: var(--space-xs);
+}
+
+.gap-sm {
+	gap: var(--space-sm);
+}
+
+.gap-md {
+	gap: var(--space-md);
+}
+
+.gap-lg {
+	gap: var(--space-lg);
+}
+
+.gap-xl {
+	gap: var(--space-xl);
+}
+
+.gap-2xl {
+	gap: var(--space-2xl);
+}
+
+.gap-3xl {
+	gap: var(--space-3xl);
+}

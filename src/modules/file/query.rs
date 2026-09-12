@@ -232,21 +232,18 @@ impl FileQueryService {
         Ok(PaginatedResponse::new(summaries, total, &pagination))
     }
 
-    /// 获取用户的所有标签
-    pub async fn get_user_tags(&self, user_id: i64) -> Result<Vec<FileTag>, ServiceError> {
-        self.repo
-            .get_user_tags(user_id)
-            .await
-            .map_err(ServiceError::Db)
+    /// 所有标签（标签全局共享）
+    pub async fn get_all_tags(&self) -> Result<Vec<FileTag>, ServiceError> {
+        self.repo.get_all_tags().await.map_err(ServiceError::Db)
     }
 
-    /// 标签管理列表：标签 + 关联文件数
-    pub async fn get_user_tags_with_count(
+    /// 标签管理列表：标签 + 当前查看者可见的关联文件数
+    pub async fn get_tags_with_count(
         &self,
-        user_id: i64,
+        viewer_id: i64,
     ) -> Result<Vec<super::model::FileTagWithCount>, ServiceError> {
         self.repo
-            .get_user_tags_with_count(user_id)
+            .get_tags_with_count(viewer_id)
             .await
             .map_err(ServiceError::Db)
     }
@@ -609,15 +606,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn get_user_tags_only_returns_own() {
+    async fn get_all_tags_returns_global_tags() {
         let (query, repo, _pool) = setup().await;
         seed(&repo).await;
         repo.get_or_create_tag("七的标签", 7).await.unwrap();
         repo.get_or_create_tag("八的标签", 8).await.unwrap();
 
-        let tags = query.get_user_tags(7).await.unwrap();
-        assert_eq!(tags.len(), 1);
+        // 标签全局共享：不同用户创建的标签都能看到
+        let tags = query.get_all_tags().await.unwrap();
+        assert_eq!(tags.len(), 2);
+        // 按 name 升序（SQLite 二进制序）
         assert_eq!(tags[0].name, "七的标签");
+        assert_eq!(tags[1].name, "八的标签");
     }
 
     // ── 全局搜索端口 ──

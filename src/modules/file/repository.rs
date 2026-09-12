@@ -286,8 +286,10 @@ impl FileRepository {
             "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f JOIN file_tag_rel ftr ON f.id = ftr.file_id JOIN file_tag ft ON ftr.tag_id = ft.id WHERE ft.name = ",
         );
         qb.push_bind(tag_name)
-            .push(" AND ft.user_id = ")
-            .push_bind(user_id);
+            // 标签全局共享；可见性：公开文件人人可见，私密文件仅上传者
+            .push(" AND (f.is_private = 0 OR f.user_id = ")
+            .push_bind(user_id)
+            .push(")");
         if let Some(q) = name_query {
             qb.push(" AND f.original_name LIKE ")
                 .push_bind(like_contains(q))
@@ -405,28 +407,17 @@ impl FileRepository {
 
     // ── 标签操作 ──
 
-    /// 获取或创建标签
+    /// 获取或创建标签。标签全局共享（同名只有一个），`user_id` 仅记录创建者。
     pub async fn get_or_create_tag(
         &self,
         name: &str,
         user_id: i64,
     ) -> Result<FileTag, sqlx::Error> {
-        // 先尝试查找
-        let existing = sqlx::query_as!(
-            FileTag,
-            r#"SELECT id AS "id!: i64", name, user_id AS "user_id!: i64" FROM file_tag WHERE name = ? AND user_id = ?"#,
-            name,
-            user_id
-        )
-        .fetch_optional(&*self.db)
-        .await?;
-
-        if let Some(tag) = existing {
+        if let Some(tag) = self.find_tag_by_name(name).await? {
             return Ok(tag);
         }
 
-        // 不存在则创建
-        let row = sqlx::query_as!(
+        let created = sqlx::query_as!(
             FileTag,
             r#"INSERT INTO file_tag (name, user_id) VALUES (?, ?)
                RETURNING id AS "id!: i64", name, user_id AS "user_id!: i64""#,
@@ -434,9 +425,29 @@ impl FileRepository {
             user_id
         )
         .fetch_one(&*self.db)
-        .await?;
+        .await;
 
-        Ok(row)
+        match created {
+            Ok(row) => Ok(row),
+            // 并发下同名插入撞唯一索引：退化为读取已存在的那条
+            Err(e) if e.as_database_error().is_some_and(|db| db.is_unique_violation()) => {
+                self.find_tag_by_name(name)
+                    .await?
+                    .ok_or(sqlx::Error::RowNotFound)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// 按名字查找标签（标签全局唯一）
+    pub async fn find_tag_by_name(&self, name: &str) -> Result<Option<FileTag>, sqlx::Error> {
+        sqlx::query_as!(
+            FileTag,
+            r#"SELECT id AS "id!: i64", name, user_id AS "user_id!: i64" FROM file_tag WHERE name = ?"#,
+            name
+        )
+        .fetch_optional(&*self.db)
+        .await
     }
 
     /// 设置文件标签（全量替换）
@@ -504,12 +515,11 @@ impl FileRepository {
         Ok(map)
     }
 
-    /// 获取用户的所有标签
-    pub async fn get_user_tags(&self, user_id: i64) -> Result<Vec<FileTag>, sqlx::Error> {
+    /// 所有标签（标签全局共享，不按用户过滤）
+    pub async fn get_all_tags(&self) -> Result<Vec<FileTag>, sqlx::Error> {
         let tags = sqlx::query_as!(
             FileTag,
-            r#"SELECT id AS "id!: i64", name, user_id AS "user_id!: i64" FROM file_tag WHERE user_id = ? ORDER BY name"#,
-            user_id
+            r#"SELECT id AS "id!: i64", name, user_id AS "user_id!: i64" FROM file_tag ORDER BY name"#
         )
         .fetch_all(&*self.db)
         .await?;
@@ -517,37 +527,29 @@ impl FileRepository {
         Ok(tags)
     }
 
-    /// 获取用户的所有标签及关联文件数（标签管理用）
-    pub async fn get_user_tags_with_count(
+    /// 标签 + **当前查看者可见的**关联文件数（标签管理用）。
+    ///
+    /// 计数按可见性过滤：私密文件不计入别人看到的标签数。
+    pub async fn get_tags_with_count(
         &self,
-        user_id: i64,
+        viewer_id: i64,
     ) -> Result<Vec<FileTagWithCount>, sqlx::Error> {
         let rows = sqlx::query_as!(
             FileTagWithCount,
             r#"SELECT t.id AS "id!: i64", t.name,
-                      COUNT(r.file_id) AS "count!: i64"
+                      COUNT(f.id) AS "count!: i64"
                FROM file_tag t
                LEFT JOIN file_tag_rel r ON r.tag_id = t.id
-               WHERE t.user_id = ?
+               LEFT JOIN file f ON f.id = r.file_id
+                    AND (f.is_private = 0 OR f.user_id = ?)
                GROUP BY t.id, t.name
                ORDER BY t.name"#,
-            user_id
+            viewer_id
         )
         .fetch_all(&*self.db)
         .await?;
 
         Ok(rows)
-    }
-
-    /// 标签是否属于该用户（越权保护）
-    pub async fn tag_owned_by(&self, tag_id: i64, user_id: i64) -> Result<bool, sqlx::Error> {
-        let found: Option<i64> =
-            sqlx::query_scalar("SELECT id FROM file_tag WHERE id = ? AND user_id = ?")
-                .bind(tag_id)
-                .bind(user_id)
-                .fetch_optional(&*self.db)
-                .await?;
-        Ok(found.is_some())
     }
 
     /// 重命名标签（同用户下名称唯一，冲突由唯一约束兜底）
@@ -672,7 +674,8 @@ impl FileRepository {
                     r#"SELECT COUNT(*) FROM file f
                        JOIN file_tag_rel ftr ON f.id = ftr.file_id
                        JOIN file_tag ft ON ftr.tag_id = ft.id
-                       WHERE ft.name = ? AND ft.user_id = ? AND f.original_name LIKE ? ESCAPE '\'"#,
+                       WHERE ft.name = ? AND (f.is_private = 0 OR f.user_id = ?)
+                         AND f.original_name LIKE ? ESCAPE '\'"#,
                     tag_name,
                     user_id,
                     pattern
@@ -685,7 +688,7 @@ impl FileRepository {
                     r#"SELECT COUNT(*) FROM file f
                        JOIN file_tag_rel ftr ON f.id = ftr.file_id
                        JOIN file_tag ft ON ftr.tag_id = ft.id
-                       WHERE ft.name = ? AND ft.user_id = ?"#,
+                       WHERE ft.name = ? AND (f.is_private = 0 OR f.user_id = ?)"#,
                     tag_name,
                     user_id
                 )
@@ -1117,23 +1120,24 @@ mod tests {
                 .await
                 .unwrap();
         assert_eq!(meta_count, 0);
-        assert_eq!(repo.get_user_tags(7).await.unwrap().len(), 1);
+        assert_eq!(repo.get_all_tags().await.unwrap().len(), 1);
         assert!(repo.delete("del-me").await.unwrap().is_none());
     }
 
     // ── 标签 ──
 
     #[tokio::test]
-    async fn get_or_create_tag_is_idempotent_and_user_scoped() {
+    async fn get_or_create_tag_is_idempotent_and_global() {
         let repo = setup().await;
         let a = repo.get_or_create_tag("项目", 7).await.unwrap();
         let b = repo.get_or_create_tag("项目", 7).await.unwrap();
         assert_eq!(a.id, b.id);
-        // 同名不同用户 → 不同标签
+        // 标签全局共享：不同用户拿到的是同一个标签（创建者仍是 7）
         let c = repo.get_or_create_tag("项目", 8).await.unwrap();
-        assert_ne!(a.id, c.id);
-        assert_eq!(repo.get_user_tags(7).await.unwrap().len(), 1);
-        assert_eq!(repo.get_user_tags(8).await.unwrap().len(), 1);
+        assert_eq!(a.id, c.id);
+        assert_eq!(c.user_id, 7, "user_id 记录创建者，不参与唯一性");
+        assert_eq!(repo.get_all_tags().await.unwrap().len(), 1);
+        assert!(repo.find_tag_by_name("不存在").await.unwrap().is_none());
     }
 
     #[tokio::test]
@@ -1167,14 +1171,14 @@ mod tests {
     // ── 标签管理（重命名/删除/合并） ──
 
     #[tokio::test]
-    async fn get_user_tags_with_count_includes_zero() {
+    async fn get_tags_with_count_includes_zero() {
         let repo = setup().await;
         let f1 = insert(&repo, "f1").await;
         let used = repo.get_or_create_tag("在用", 7).await.unwrap();
         repo.get_or_create_tag("未用", 7).await.unwrap();
         repo.set_file_tags(f1.id, &[used.id]).await.unwrap();
 
-        let tags = repo.get_user_tags_with_count(7).await.unwrap();
+        let tags = repo.get_tags_with_count(7).await.unwrap();
         assert_eq!(tags.len(), 2);
         let by_name = |n: &str| tags.iter().find(|t| t.name == n).unwrap().count;
         assert_eq!(by_name("在用"), 1);
@@ -1200,10 +1204,10 @@ mod tests {
 
         // 重名冲突由唯一约束拒绝
         repo.get_or_create_tag("另一个", 7).await.unwrap();
-        let other = repo.get_user_tags(7).await.unwrap();
+        let other = repo.get_all_tags().await.unwrap();
         let another = other.iter().find(|t| t.name == "另一个").unwrap();
         let err = repo.rename_tag(another.id, "新名").await;
-        assert!(err.is_err(), "同用户下重名应被唯一约束拒绝");
+        assert!(err.is_err(), "标签名全局唯一，重名应被唯一约束拒绝");
 
         // 删除标签：关联解除，文件保留
         repo.delete_tag(tag.id).await.unwrap();
@@ -1232,7 +1236,7 @@ mod tests {
             .map(|t| t.name)
             .collect();
         assert_eq!(f1_tags, vec!["目标"]);
-        assert_eq!(repo.get_user_tags(7).await.unwrap().len(), 1);
+        assert_eq!(repo.get_all_tags().await.unwrap().len(), 1);
     }
 
     #[tokio::test]
@@ -1332,14 +1336,34 @@ mod tests {
         assert_eq!(one_hit.len(), 1);
         assert_eq!(one_hit[0].stored_id, "rep-a");
 
-        // 其他用户的同名标签不干扰
+        // 标签全局共享：用户 8 按同一标签查，看到的是公开文件（f1 属于 7 但默认公开）
         repo.get_or_create_tag("文档", 8).await.unwrap();
-        assert_eq!(
+        let from_other = repo
+            .find_by_tag("文档", 8, None, 10, 0, SortOrder::default())
+            .await
+            .unwrap();
+        assert_eq!(from_other.len(), 1);
+        assert_eq!(from_other[0].stored_id, "rep-a");
+
+        // 私密文件对非上传者不可见
+        sqlx::query("UPDATE file SET is_private = 1 WHERE stored_id = 'rep-a'")
+            .execute(&*repo.db)
+            .await
+            .unwrap();
+        assert!(
             repo.find_by_tag("文档", 8, None, 10, 0, SortOrder::default())
                 .await
                 .unwrap()
+                .is_empty(),
+            "别人的私密文件不应出现在标签筛选里"
+        );
+        assert_eq!(
+            repo.find_by_tag("文档", 7, None, 10, 0, SortOrder::default())
+                .await
+                .unwrap()
                 .len(),
-            0
+            1,
+            "上传者本人仍能看到自己的私密文件"
         );
     }
 

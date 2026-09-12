@@ -29,6 +29,8 @@ pub enum ServiceError {
     InUse(String),
     /// 并发修改冲突：乐观锁守卫未命中，客户端应刷新基线后重试（409）
     Conflict(String),
+    /// 已认证但无权操作该资源（403）
+    Forbidden(String),
     Internal(String),
     Db(sqlx::Error),
 }
@@ -40,6 +42,7 @@ impl ServiceError {
             Self::InvalidInput(_) => StatusCode::BAD_REQUEST,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
             Self::AlreadyExists(_) | Self::InUse(_) | Self::Conflict(_) => StatusCode::CONFLICT,
+            Self::Forbidden(_) => StatusCode::FORBIDDEN,
             Self::Internal(_) | Self::Db(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -52,6 +55,7 @@ impl ServiceError {
             Self::AlreadyExists(_) => "ALREADY_EXISTS",
             Self::InUse(_) => "RESOURCE_IN_USE",
             Self::Conflict(_) => "CONFLICT",
+            Self::Forbidden(_) => "FORBIDDEN",
             Self::Internal(_) => "INTERNAL",
             Self::Db(_) => "DB_ERROR",
         }
@@ -66,6 +70,7 @@ impl std::fmt::Display for ServiceError {
             | Self::AlreadyExists(msg)
             | Self::InUse(msg)
             | Self::Conflict(msg)
+            | Self::Forbidden(msg)
             | Self::Internal(msg) => write!(f, "{msg}"),
             Self::Db(e) => write!(f, "数据库错误: {e}"),
         }

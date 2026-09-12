@@ -380,6 +380,106 @@ mod tests {
         assert!(err.to_string().contains("高于程序支持"));
     }
 
+    /// v18：新增 is_private 列（存量文件默认公开）、同名标签合并为全局唯一
+    #[tokio::test]
+    async fn v18_adds_visibility_and_merges_duplicate_tags() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        create_tables(&pool).await.unwrap();
+        // 模拟 v17 旧库：基线已含 is_private 与标签全局唯一索引，先摘掉
+        sqlx::query("DROP INDEX IF EXISTS idx_file_tag_name_unique")
+            .execute(&pool)
+            .await
+            .unwrap();
+        // 依赖 is_private 的索引要先删，否则 SQLite 不允许删列
+        sqlx::query("DROP INDEX IF EXISTS idx_file_visibility")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("ALTER TABLE file DROP COLUMN is_private")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA user_version = 17")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        for (id, name) in [(1, "u1"), (2, "u2")] {
+            sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (?, ?, 'x')")
+                .bind(id)
+                .bind(name)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+        let f1: i64 = sqlx::query_scalar(
+            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
+             VALUES ('s1', 'a.png', 'image/png', 'image', 1, 1) RETURNING id",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        let f2: i64 = sqlx::query_scalar(
+            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
+             VALUES ('s2', 'b.png', 'image/png', 'image', 1, 2) RETURNING id",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        // 两个用户各有一个同名标签，分别关联一个文件
+        let t1: i64 =
+            sqlx::query_scalar("INSERT INTO file_tag (name, user_id) VALUES ('设计', 1) RETURNING id")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        let t2: i64 =
+            sqlx::query_scalar("INSERT INTO file_tag (name, user_id) VALUES ('设计', 2) RETURNING id")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        for (f, t) in [(f1, t1), (f2, t2)] {
+            sqlx::query("INSERT INTO file_tag_rel (file_id, tag_id) VALUES (?, ?)")
+                .bind(f)
+                .bind(t)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+
+        migrate(&pool).await.unwrap();
+        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+
+        // 存量文件保持公开（默认 0）
+        let private: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM file WHERE is_private = 0")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(private, 2);
+
+        // 同名标签合并成最早那条，两个文件的关联都还在
+        let tags: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM file_tag WHERE name = '设计'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(tags, 1, "同名标签应只保留一条");
+        let kept: i64 = sqlx::query_scalar("SELECT id FROM file_tag WHERE name = '设计'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(kept, t1, "保留最早创建的那条标签");
+        let rels: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM file_tag_rel")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(rels, 2, "两个文件的标签关联都应保留");
+
+        // 全局唯一生效：再插同名标签（另一个用户）应失败
+        let dup = sqlx::query("INSERT INTO file_tag (name, user_id) VALUES ('设计', 2)")
+            .execute(&pool)
+            .await;
+        assert!(dup.is_err(), "同名标签不应能重复创建");
+    }
+
     /// 为 `make sqlx-prepare` 生成最新 schema 的 fixture 库。
     /// 不跑迁移器而直接使用开发库生成 .sqlx 会拿到历史 schema。
     #[tokio::test]

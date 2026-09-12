@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id!: i64\", name, user_id AS \"user_id!: i64\" FROM file_tag WHERE name = ? AND user_id = ?",
+  "query": "SELECT t.id AS \"id!: i64\", t.name,\n                      COUNT(f.id) AS \"count!: i64\"\n               FROM file_tag t\n               LEFT JOIN file_tag_rel r ON r.tag_id = t.id\n               LEFT JOIN file f ON f.id = r.file_id\n                    AND (f.is_private = 0 OR f.user_id = ?)\n               GROUP BY t.id, t.name\n               ORDER BY t.name",
   "describe": {
     "columns": [
       {
@@ -26,19 +26,14 @@
         }
       },
       {
-        "name": "user_id!: i64",
+        "name": "count!: i64",
         "ordinal": 2,
         "type_info": "Integer",
-        "origin": {
-          "Table": {
-            "table": "file_tag",
-            "name": "user_id"
-          }
-        }
+        "origin": "Expression"
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 1
     },
     "nullable": [
       false,
@@ -46,5 +41,5 @@
       false
     ]
   },
-  "hash": "4e585974fa8038abfa300c4efd4c8f40248b1f661a4421f1aed6215059c571c3"
+  "hash": "773ee1ca78e1e4520c3c5f4813ff0c4d27eafd27b139aaf187c64ed991453ead"
 }

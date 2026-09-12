@@ -937,34 +937,14 @@ impl FileService {
 
     // ── 标签管理 ──
 
-    /// 校验标签归属（不存在或不属于该用户都按 NotFound 处理，避免探测他人标签）
-    async fn ensure_tag_owned(&self, tag_id: i64, user_id: i64) -> Result<(), ServiceError> {
-        if self
-            .repo
-            .tag_owned_by(tag_id, user_id)
-            .await
-            .map_err(ServiceError::Db)?
-        {
-            Ok(())
-        } else {
-            Err(ServiceError::NotFound("标签不存在".into()))
-        }
-    }
-
     /// 重命名标签
-    pub async fn rename_tag(
-        &self,
-        tag_id: i64,
-        new_name: &str,
-        user_id: i64,
-    ) -> Result<(), ServiceError> {
+    pub async fn rename_tag(&self, tag_id: i64, new_name: &str) -> Result<(), ServiceError> {
         let name = sanitize_name(new_name);
         if name == "unnamed" && new_name.trim().is_empty() {
             return Err(ServiceError::InvalidInput("标签名不能为空".into()));
         }
-        self.ensure_tag_owned(tag_id, user_id).await?;
         self.repo.rename_tag(tag_id, &name).await.map_err(|e| {
-            // (name, user_id) 唯一约束：同名标签已存在
+            // 标签名全局唯一约束：同名标签已存在
             if e.as_database_error()
                 .is_some_and(|db| db.is_unique_violation())
             {
@@ -976,23 +956,15 @@ impl FileService {
     }
 
     /// 删除标签（仅解除与文件的关联，文件本身保留）
-    pub async fn delete_tag(&self, tag_id: i64, user_id: i64) -> Result<(), ServiceError> {
-        self.ensure_tag_owned(tag_id, user_id).await?;
+    pub async fn delete_tag(&self, tag_id: i64) -> Result<(), ServiceError> {
         self.repo.delete_tag(tag_id).await.map_err(ServiceError::Db)
     }
 
     /// 合并标签：把 from 合并进 to（关联迁移后删除 from）
-    pub async fn merge_tags(
-        &self,
-        from_id: i64,
-        to_id: i64,
-        user_id: i64,
-    ) -> Result<(), ServiceError> {
+    pub async fn merge_tags(&self, from_id: i64, to_id: i64) -> Result<(), ServiceError> {
         if from_id == to_id {
             return Err(ServiceError::InvalidInput("不能合并到自身".into()));
         }
-        self.ensure_tag_owned(from_id, user_id).await?;
-        self.ensure_tag_owned(to_id, user_id).await?;
         self.repo
             .merge_tags(from_id, to_id)
             .await

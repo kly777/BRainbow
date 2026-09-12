@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) FROM file f\n                       JOIN file_tag_rel ftr ON f.id = ftr.file_id\n                       JOIN file_tag ft ON ftr.tag_id = ft.id\n                       WHERE ft.name = ? AND (f.is_private = 0 OR f.user_id = ?)",
+  "describe": {
+    "columns": [
+      {
+        "name": "COUNT(*)",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e9b6fd07748e8636e825ca80ebd85995576d8c970cc5dcfffc54854edef21f39"
+}

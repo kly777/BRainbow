@@ -181,6 +181,8 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             height          INTEGER,
             duration_ms     INTEGER,
             user_id         INTEGER,
+            -- 0 = 公开（默认，所有人可见）；1 = 私密（仅上传者可见，内容路由要求认证）
+            is_private      INTEGER NOT NULL DEFAULT 0,
             created_at      TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             updated_at      TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             FOREIGN KEY (user_id) REFERENCES user(id)
@@ -200,9 +202,13 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
-    sqlx::query("CREATE INDEX IF NOT EXISTS idx_file_stored_id ON file(stored_id)")
-        .execute(pool)
-        .await?;
+    // 可见性索引：公开列表（绝大多数查询）走它。
+    // 注：stored_id 有 UNIQUE 约束，隐含索引已足够，无需再建同名索引。
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_file_visibility ON file(is_private, created_at DESC)",
+    )
+    .execute(pool)
+    .await?;
 
     // 内容去重：全局唯一（部分索引，NULL 不参与约束）
     sqlx::query(
@@ -225,6 +231,11 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     )
     .execute(pool)
     .await?;
+
+    // 标签全局共享：同名标签只允许一条（v18 起；旧库由迁移补建）
+    sqlx::query("CREATE UNIQUE INDEX IF NOT EXISTS idx_file_tag_name_unique ON file_tag(name)")
+        .execute(pool)
+        .await?;
 
     // 文件-标签关联表
     sqlx::query(

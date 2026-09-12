@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id!: i64\", name, user_id AS \"user_id!: i64\" FROM file_tag WHERE user_id = ? ORDER BY name",
+  "query": "SELECT id AS \"id!: i64\", name, user_id AS \"user_id!: i64\" FROM file_tag WHERE name = ?",
   "describe": {
     "columns": [
       {
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "96fa29d592d7793c6dd3151bbc2c1920c3e3269c3ff479f8e1b920c72b97733c"
+  "hash": "eaf9d483a7162ecd89e235dac89ed640197e47c5e00cb7b39f39525c843de60e"
 }

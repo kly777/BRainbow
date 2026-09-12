@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT t.id AS \"id!: i64\", t.name,\n                      COUNT(r.file_id) AS \"count!: i64\"\n               FROM file_tag t\n               LEFT JOIN file_tag_rel r ON r.tag_id = t.id\n               WHERE t.user_id = ?\n               GROUP BY t.id, t.name\n               ORDER BY t.name",
+  "query": "SELECT id AS \"id!: i64\", name, user_id AS \"user_id!: i64\" FROM file_tag ORDER BY name",
   "describe": {
     "columns": [
       {
@@ -26,14 +26,19 @@
         }
       },
       {
-        "name": "count!: i64",
+        "name": "user_id!: i64",
         "ordinal": 2,
         "type_info": "Integer",
-        "origin": "Expression"
+        "origin": {
+          "Table": {
+            "table": "file_tag",
+            "name": "user_id"
+          }
+        }
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 0
     },
     "nullable": [
       false,
@@ -41,5 +46,5 @@
       false
     ]
   },
-  "hash": "99679fe7c1a69369d3bbaaebc5107e72bb1104ae3bd18cb1204381f9eacedc06"
+  "hash": "2b966abd392d0c8c039eaeee1ee54ce6a19d3db1f3f9e3d170b07094c628468d"
 }

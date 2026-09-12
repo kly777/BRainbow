@@ -1,14 +1,34 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use sqlx::SqlitePool;
 use tokio::io::AsyncReadExt;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 use super::consistency::{self, ConsistencyReport, is_stored_id};
 use super::model::{File, FileCategory, NewFile, UpdateFileRequest};
 use super::repository::FileRepository;
 use crate::shared::error_types::ServiceError;
+
+/// 孤儿清理护栏：孤儿数达到该下限、且占比超过 [`ORPHAN_GUARD_RATIO`] 时跳过清理。
+///
+/// 场景：`DATABASE_URL` 指到空库或旧备份，DB 里查不到记录而磁盘上文件齐全，
+/// 无条件清理会把整个上传目录删光（不可逆）。
+const ORPHAN_GUARD_MIN_COUNT: usize = 5;
+const ORPHAN_GUARD_RATIO: f64 = 0.5;
+
+/// 孤儿清理结果
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OrphanCleanup {
+    /// 已清理 n 个孤儿文件
+    Removed(usize),
+    /// 触发护栏，未清理
+    Skipped {
+        orphans: usize,
+        disk_total: usize,
+        reason: &'static str,
+    },
+}
 
 /// 上传目录自检结果（启动自检与 `--check` 共用）
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -387,27 +407,81 @@ impl FileService {
 
     /// 回收孤儿文件：仅处理文件名符合 stored_id 格式、且 DB 已无对应记录的条目，
     /// 避免误删手工放进目录的文件。
-    pub async fn cleanup_orphan_files(&self) {
-        let Ok(mut entries) = tokio::fs::read_dir(&self.upload_dir).await else {
-            return;
+    ///
+    /// 带护栏：数据库里一条文件记录都没有、或孤儿占比异常时**跳过清理并告警** ——
+    /// `DATABASE_URL` 指到空库/旧备份时，无条件清理会把整个上传目录删光。
+    pub async fn cleanup_orphan_files(&self) -> OrphanCleanup {
+        let db_ids = match self.repo.all_stored_ids().await {
+            Ok(ids) => ids,
+            Err(e) => {
+                warn!("读取文件记录失败，跳过孤儿清理: {e}");
+                return OrphanCleanup::Skipped {
+                    orphans: 0,
+                    disk_total: 0,
+                    reason: "读取数据库失败",
+                };
+            }
         };
+        let db_set: HashSet<&String> = db_ids.iter().collect();
+
+        let mut disk_files: Vec<(String, std::path::PathBuf)> = Vec::new();
+        if let Ok(mut entries) = tokio::fs::read_dir(&self.upload_dir).await {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if is_stored_id(&name) {
+                    disk_files.push((name, entry.path()));
+                }
+            }
+        }
+        let disk_total = disk_files.len();
+        let orphans: Vec<&(String, std::path::PathBuf)> = disk_files
+            .iter()
+            .filter(|(name, _)| !db_set.contains(name))
+            .collect();
+
+        // 护栏 1：库里没有任何文件记录，磁盘却有文件 —— 极可能连错了库
+        if db_ids.is_empty() && !orphans.is_empty() {
+            warn!(
+                "数据库无任何文件记录，跳过孤儿清理（疑似连到空库/错误库）；磁盘上有 {} 个文件",
+                orphans.len()
+            );
+            return OrphanCleanup::Skipped {
+                orphans: orphans.len(),
+                disk_total,
+                reason: "数据库无文件记录",
+            };
+        }
+        // 护栏 2：孤儿占比过高 —— 正常的删除残留不会占到这个比例
+        if orphans.len() >= ORPHAN_GUARD_MIN_COUNT
+            && (orphans.len() as f64) > (disk_total as f64) * ORPHAN_GUARD_RATIO
+        {
+            warn!(
+                "孤儿文件 {} / 磁盘 {} 个，占比超过 {:.0}%，跳过清理以免误删",
+                orphans.len(),
+                disk_total,
+                ORPHAN_GUARD_RATIO * 100.0
+            );
+            return OrphanCleanup::Skipped {
+                orphans: orphans.len(),
+                disk_total,
+                reason: "孤儿占比异常",
+            };
+        }
+
         let mut removed = 0usize;
-        while let Ok(Some(entry)) = entries.next_entry().await {
-            let name = entry.file_name().to_string_lossy().to_string();
-            if !is_stored_id(&name) {
-                continue; // 临时文件/其他文件不在此处理
-            }
-            let exists = matches!(self.repo.find_by_stored_id(&name).await, Ok(Some(_)));
-            if exists {
-                continue;
-            }
-            if tokio::fs::remove_file(entry.path()).await.is_ok() {
-                removed += 1;
+        for (name, path) in orphans {
+            match tokio::fs::remove_file(path).await {
+                Ok(()) => {
+                    removed += 1;
+                    debug!("已清理孤儿文件 {name}");
+                }
+                Err(e) => warn!("删除孤儿文件 {name} 失败: {e}"),
             }
         }
         if removed > 0 {
             info!("清理孤儿文件 {removed} 个（DB 无对应记录）");
         }
+        OrphanCleanup::Removed(removed)
     }
 
     /// 清理临时文件
@@ -2292,5 +2366,108 @@ mod tests {
         assert_eq!(report.missing_samples, vec!["zzzzzzzzzzzz".to_string()]);
         assert_eq!(report.orphan_count, 0);
         assert!(report.summary().contains("缺失文件 1 个"));
+    }
+
+    // ── 孤儿清理护栏 ──
+
+    /// 造一条 file 记录，并可选择在磁盘上放对应文件
+    async fn seed_file(ctx: &Ctx, stored_id: &str, on_disk: bool) {
+        sqlx::query(
+            "INSERT INTO file (stored_id, original_name, mime_type, file_category, size_bytes, user_id)
+             VALUES (?1, 'x.png', 'image/png', 'image', 4, 7)",
+        )
+        .bind(stored_id)
+        .execute(&*ctx.pool)
+        .await
+        .unwrap();
+        if on_disk {
+            disk_path(ctx, stored_id);
+        }
+    }
+
+    /// 在磁盘上放一个文件（无论 DB 有无记录）
+    fn disk_path(ctx: &Ctx, name: &str) {
+        std::fs::write(std::path::Path::new(&ctx.dir.0).join(name), b"data").unwrap();
+    }
+
+    fn exists_on_disk(ctx: &Ctx, name: &str) -> bool {
+        std::path::Path::new(&ctx.dir.0).join(name).exists()
+    }
+
+    /// 库里一条记录都没有：绝不能当成"全是孤儿"删光
+    #[tokio::test]
+    async fn orphan_cleanup_skips_when_database_is_empty() {
+        let ctx = setup_service().await;
+        for i in 0..3 {
+            disk_path(&ctx, &format!("o{i:011}"));
+        }
+
+        let outcome = ctx.svc.cleanup_orphan_files().await;
+        assert_eq!(
+            outcome,
+            OrphanCleanup::Skipped {
+                orphans: 3,
+                disk_total: 3,
+                reason: "数据库无文件记录"
+            }
+        );
+        assert!(exists_on_disk(&ctx, "o00000000000"), "护栏触发时不得删文件");
+    }
+
+    /// 孤儿占比过高（疑似连错库）：同样跳过
+    #[tokio::test]
+    async fn orphan_cleanup_skips_when_ratio_too_high() {
+        let ctx = setup_service().await;
+        for i in 0..2 {
+            seed_file(&ctx, &format!("f{i:011}"), true).await;
+        }
+        for i in 0..8 {
+            disk_path(&ctx, &format!("o{i:011}"));
+        }
+
+        let outcome = ctx.svc.cleanup_orphan_files().await;
+        assert_eq!(
+            outcome,
+            OrphanCleanup::Skipped {
+                orphans: 8,
+                disk_total: 10,
+                reason: "孤儿占比异常"
+            }
+        );
+        assert!(exists_on_disk(&ctx, "o00000000000"));
+    }
+
+    /// 少量孤儿属于正常残留：照常清理，且在册文件不受影响
+    #[tokio::test]
+    async fn orphan_cleanup_removes_few_orphans_only() {
+        let ctx = setup_service().await;
+        for i in 0..3 {
+            seed_file(&ctx, &format!("f{i:011}"), true).await;
+        }
+        disk_path(&ctx, "o00000000000");
+
+        let outcome = ctx.svc.cleanup_orphan_files().await;
+        assert_eq!(outcome, OrphanCleanup::Removed(1));
+        assert!(!exists_on_disk(&ctx, "o00000000000"), "孤儿应被清理");
+        for i in 0..3 {
+            assert!(
+                exists_on_disk(&ctx, &format!("f{i:011}")),
+                "在册文件不能被删"
+            );
+        }
+    }
+
+    /// 不符合 stored_id 命名的文件（临时文件、手工放入的文件）不参与清理
+    #[tokio::test]
+    async fn orphan_cleanup_leaves_foreign_files_alone() {
+        let ctx = setup_service().await;
+        seed_file(&ctx, "f00000000000", true).await;
+        disk_path(&ctx, "tmp_abc.tmp");
+        disk_path(&ctx, "手工放的文件.png");
+
+        let outcome = ctx.svc.cleanup_orphan_files().await;
+        assert_eq!(outcome, OrphanCleanup::Removed(0));
+        assert!(exists_on_disk(&ctx, "tmp_abc.tmp"));
+        assert!(exists_on_disk(&ctx, "手工放的文件.png"));
     }
 }

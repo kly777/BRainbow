@@ -71,13 +71,8 @@
 		box-shadow var(--t-transition-fast);
 }
 
-.page-size-select:hover {
+.page-size-select:hover:not(:focus) {
 	border-color: var(--t-color-border-strong);
-}
-
-.page-size-select:focus {
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .page-jump {
@@ -111,13 +106,8 @@
 	color: var(--t-color-ink-faint);
 }
 
-.page-jump-input:hover {
+.page-jump-input:hover:not(:focus) {
 	border-color: var(--t-color-border-strong);
-}
-
-.page-jump-input:focus {
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .page-jump-btn {

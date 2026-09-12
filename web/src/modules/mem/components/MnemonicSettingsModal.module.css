@@ -30,7 +30,7 @@
 .prompt:focus {
 	outline: none;
 	border-color: var(--t-color-accent);
-	box-shadow: var(--t-focus-ring);
+	box-shadow: var(--t-ring-accent);
 }
 
 .actions {

@@ -108,10 +108,6 @@
 	transition: border-color 0.15s ease;
 }
 
-.search-input:focus {
-	border-color: var(--t-color-accent);
-}
-
 .search-input::placeholder {
 	color: var(--t-color-ink-faint);
 }

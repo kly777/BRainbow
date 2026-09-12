@@ -510,7 +510,7 @@
 /* 输入区聚焦态：accent 描边 */
 .input-shell:focus-within .input-area {
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+	box-shadow: var(--t-ring-accent);
 }
 
 /* 停止生成按钮：流式中替换发送按钮（危险色） */

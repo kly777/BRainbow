@@ -89,12 +89,6 @@
 		box-shadow var(--t-transition-fast);
 }
 
-.field-input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-}
-
 .field-textarea {
 	width: 100%;
 	border: 1px solid var(--t-color-border);
@@ -109,12 +103,6 @@
 	font-size: var(--text-sm);
 	min-height: 3.75rem;
 	font-family: inherit;
-}
-
-.field-textarea:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .field-row {

@@ -259,12 +259,6 @@
 	box-sizing: border-box;
 }
 
-.input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-}
-
 .input::placeholder {
 	color: var(--t-color-ink-faint);
 }
@@ -295,13 +289,6 @@
 	color: var(--t-color-ink);
 	font-size: var(--text-sm);
 	box-sizing: border-box;
-}
-
-.meta-edit-key:focus,
-.meta-edit-value:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .form-error {

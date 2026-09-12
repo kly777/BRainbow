@@ -71,11 +71,6 @@
 	color: var(--t-color-ink-faint);
 }
 
-.sidebar-search:focus {
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-}
-
 .table-list {
 	flex: 1;
 	overflow-y: auto;

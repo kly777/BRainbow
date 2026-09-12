@@ -15,14 +15,15 @@
 		background-color var(--t-transition-fast);
 }
 
-.input:hover {
-	border-color: var(--t-color-border-strong);
+/* 焦点态：边框与环由 tokens.css 的全局 input:focus 规则提供，此处只改底色 */
+.input:focus {
+	background: var(--t-color-bg);
 }
 
-.input:focus {
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-	background: var(--t-color-bg);
+/* 悬停态排除焦点态：全局 focus 规则特异度为 (0,1,1)，
+ * 若不加 :not(:focus)，本规则 (0,3,0) 会在悬停时压掉 focus 的边框色 */
+.input:hover:not(:focus) {
+	border-color: var(--t-color-border-strong);
 }
 
 .input::placeholder {

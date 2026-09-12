@@ -38,6 +38,20 @@ export default {
 		// 已知例外写入 media 区域（打印、reduced-motion 等），
 		// 用 stylelint-disable-next-line 逐条豁免。
 		"declaration-no-important": true,
+		// ── 门禁：accent 环必须走令牌（单一来源）
+		// 背景：这条 3px 焦点/强调环曾被 34 处逐字手写，改一次视觉要动 34 个文件；
+		// 且历史上用错过令牌（把 surface 底色的 accent-soft 当环色 →
+		// 近白环贴浅底、强制颜色模式下等于拿背景色画背景，焦点完全不可见）。
+		// 唯一定义处是 tokens.css 的 --t-ring-accent，故仅豁免该文件。
+		"declaration-property-value-disallowed-list": {
+			"box-shadow": ["/0 0 0 3px var\\(--t-color-accent-ring\\)/"],
+		},
 	},
+	overrides: [
+		{
+			files: ["src/shared/styles/tokens.css"],
+			rules: { "declaration-property-value-disallowed-list": null },
+		},
+	],
 	ignoreFiles: ["dist/**", "scripts/vendor/**"],
 };

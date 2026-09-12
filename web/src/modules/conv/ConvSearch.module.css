@@ -108,11 +108,6 @@
 	outline: none;
 }
 
-.input:focus {
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-}
-
 .clear-btn {
 	position: absolute;
 	right: 0.5rem;

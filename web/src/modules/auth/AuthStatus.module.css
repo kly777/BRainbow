@@ -64,11 +64,6 @@
 		box-shadow var(--t-transition-fast);
 }
 
-.input:focus {
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-}
-
 .input::placeholder {
 	color: var(--t-color-ink-faint);
 }

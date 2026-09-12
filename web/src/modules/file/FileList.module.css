@@ -197,12 +197,6 @@
 	cursor: pointer;
 }
 
-.sort-select:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-}
-
 .grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
@@ -237,7 +231,7 @@
 /* 上传命中已有文件时的定位高亮（4s 后由 hook 清除） */
 .card-highlight {
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+	box-shadow: var(--t-ring-accent);
 }
 
 .preview {
@@ -412,12 +406,6 @@
 	box-sizing: border-box;
 }
 
-.edit-input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-}
-
 .error {
 	color: var(--t-color-danger);
 	font-size: var(--text-sm);
@@ -490,12 +478,6 @@
 		cursor: pointer;
 	}
 
-	.sort-select:focus {
-		outline: none;
-		border-color: var(--t-color-accent);
-		box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-	}
-
 	.grid {
 		grid-template-columns: repeat(2, 1fr);
 		gap: var(--space-sm);
@@ -531,7 +513,7 @@
 
 .row-highlight {
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+	box-shadow: var(--t-ring-accent);
 }
 
 .row-thumb {
@@ -662,12 +644,6 @@
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	font-size: var(--text-sm);
-}
-
-.batch-tag-input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 /* ── 移动端收尾 ── */

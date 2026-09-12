@@ -34,6 +34,11 @@
 	/* ── 通用视觉令牌（不随主题） ── */
 	--t-mask-blur: blur(2px);
 
+	/* accent 强调环：焦点态（输入类 + 包装层 focus-within）与强调高亮
+	 * （选中/定位卡片）共用的视觉。形状不随主题变，颜色走主题令牌。
+	 * 输入类的消费点是本文件的全局 input/textarea/select:focus 规则。 */
+	--t-ring-accent: 0 0 0 3px var(--t-color-accent-ring);
+
 	/* ── 主题契约：paper（暖纸 · 目录绿，默认） ── */
 	--t-color-bg: oklch(97.2% 0.004 80deg);
 	--t-color-surface: oklch(99.5% 0.002 80deg);
@@ -363,13 +368,15 @@ button {
 	outline-offset: 2px;
 }
 
-/* 输入类：点击/键盘均显示 ring（替代组件内重复的 :focus 覆盖） */
+/* 输入类：点击/键盘均显示 ring（替代组件内重复的 :focus 覆盖）
+ * 注意：本规则特异度为 (0,1,1)，模块内的 :hover 规则 (0,2,0) 会压过它，
+ * 因此模块级 hover 必须写成 :hover:not(:focus)，否则悬停会让 focus 边框失效。 */
 input:focus,
 textarea:focus,
 select:focus {
 	outline: none;
 	border-color: var(--t-color-accent);
-	box-shadow: var(--t-focus-ring);
+	box-shadow: var(--t-ring-accent);
 }
 
 /* ── 全局链接增强 ── */

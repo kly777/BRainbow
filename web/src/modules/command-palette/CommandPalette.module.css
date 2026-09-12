@@ -78,17 +78,13 @@
 /* 焦点状态：输入框聚焦时高亮边框 */
 .input-row:focus-within {
 	border-color: var(--t-color-accent);
-	box-shadow:
-		var(--shadow-lg),
-		0 0 0 3px var(--t-color-accent-ring);
+	box-shadow: var(--shadow-lg), var(--t-ring-accent);
 }
 
 /* 连体时：列表随输入框聚焦同步高亮 */
 .bar:has(.input-row:focus-within) .suggestions {
 	border-color: var(--t-color-accent);
-	box-shadow:
-		var(--shadow-lg),
-		0 0 0 3px var(--t-color-accent-ring);
+	box-shadow: var(--shadow-lg), var(--t-ring-accent);
 }
 
 /* ── Mode Tag ── */

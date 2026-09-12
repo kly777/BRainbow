@@ -174,15 +174,9 @@
 	cursor: pointer;
 }
 
-.filter-input:hover,
-.filter-op-select:hover {
+.filter-input:hover:not(:focus),
+.filter-op-select:hover:not(:focus) {
 	border-color: var(--t-color-border-strong);
-}
-
-.filter-input:focus,
-.filter-op-select:focus {
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .ref-hint {

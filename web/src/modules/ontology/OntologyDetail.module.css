@@ -80,13 +80,6 @@
 	resize: vertical;
 }
 
-.input:focus,
-.textarea:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-}
-
 .form-actions {
 	display: flex;
 	justify-content: flex-end;

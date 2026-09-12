@@ -54,9 +54,6 @@
 	--leading-normal: 1.6; /* 正文默认 */
 	--leading-relaxed: 1.8; /* 阅读长文 */
 
-	/* ── 焦点环令牌（输入框 focus ring；由 tokens.css 全局规则消费） ── */
-	--t-focus-ring: 0 0 0 var(--space-2xs) var(--t-color-accent-soft);
-
 	/* ── 动画令牌（入场统一缓动；motion-cut：无弹跳贝塞尔） ── */
 	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 	--duration-fade-in: 400ms;

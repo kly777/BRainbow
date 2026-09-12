@@ -245,12 +245,6 @@
 		box-shadow var(--t-transition-fast);
 }
 
-.notes-input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-}
-
 /* 加载骨架：display:contents 让子块直接落入页面 grid，形状对齐最终布局 */
 .skeleton-wrap {
 	display: contents;

@@ -28,7 +28,7 @@ use axum::http::{HeaderValue, Method};
 use sqlx::sqlite::SqlitePoolOptions;
 use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tracing::{error, info, warn};
+use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
 use crate::app::context::AppState;
@@ -127,6 +127,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // - schema 漂移：迁移只在版本号变化时执行，表被删掉不会自动修复，只能启动即失败
     // - 上传目录不可用：文件服务整体不可用（列表能看、点开全 404、上传全失败）
     // - 存储不一致（缺文件/孤儿）：只告警不阻断，数据问题无法靠重启解决
+    //
+    // 全库扫描（PRAGMA quick_check，178MB 库数秒起）**不在启动路径**：
+    // 它只在 `--check` 里跑（部署时 / 手动排查各一次），避免每次重启都扫一遍全库。
     let self_check = app::self_check::run(&pool, &config.file_upload_dir(), false).await;
     self_check.log();
     if self_check.is_fatal() {
@@ -139,18 +142,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await;
 
     // 创建应用状态
-    let check_pool = pool.clone();
     let state = AppState::new(&Arc::new(pool), &config, mem_config);
-
-    // 深度完整性检查（页级损坏 / 索引与表不一致）：178MB 库实测约 4s，
-    // 放后台跑不拖慢启动；发现问题只告警，不阻断（数据仍在，人工介入更合适）
-    tokio::spawn(async move {
-        match db::verify::quick_check(&check_pool).await {
-            Ok(result) if result == "ok" => info!("数据库完整性检查通过（quick_check）"),
-            Ok(result) => error!("数据库完整性检查未通过: {result}"),
-            Err(e) => warn!("数据库完整性检查无法执行: {e}"),
-        }
-    });
 
     // 初始化启动时间（用于计算运行时长）
     crate::modules::admin::handler::init_start_time();

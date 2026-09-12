@@ -28,7 +28,7 @@ use axum::http::{HeaderValue, Method};
 use sqlx::sqlite::SqlitePoolOptions;
 use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tracing::info;
+use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
 use crate::app::context::AppState;
@@ -105,6 +105,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 创建应用状态
     let state = AppState::new(&Arc::new(pool), &config, mem_config);
+
+    // 上传目录自检：目录不可用时文件服务整体不可用（列表能看、点开全 404、上传全失败），
+    // 与其带着坏目录起来，不如启动即失败 —— 日志与 systemd 都能明确指认原因
+    let upload_check = state.file.service.upload_dir_check();
+    if !upload_check.is_usable() {
+        error!("上传目录自检未通过: {}", upload_check.summary());
+        return Err(format!(
+            "上传目录不可用: {}（{}）",
+            upload_check.path,
+            upload_check.error.as_deref().unwrap_or("未知原因")
+        )
+        .into());
+    }
+    info!("上传目录自检通过: {}", upload_check.summary());
 
     // 初始化启动时间（用于计算运行时长）
     crate::modules::admin::handler::init_start_time();

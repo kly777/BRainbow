@@ -3,11 +3,85 @@ use std::sync::Arc;
 
 use sqlx::SqlitePool;
 use tokio::io::AsyncReadExt;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 use super::model::{File, FileCategory, NewFile, UpdateFileRequest};
 use super::repository::FileRepository;
 use crate::shared::error_types::ServiceError;
+
+/// 上传目录自检结果（启动自检与 `--check` 共用）
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UploadDirCheck {
+    /// 配置里的目录路径（原样，可能是相对路径）
+    pub path: String,
+    /// 规范化后的真实路径：能看出符号链接最终指向哪里（部署时 uploads 是软链）
+    pub real_path: Option<String>,
+    pub exists: bool,
+    /// 真的往目录里写一个临时文件来判定，比看权限位可靠
+    pub writable: bool,
+    /// 不可用原因（可用时为 None）
+    pub error: Option<String>,
+}
+
+impl UploadDirCheck {
+    /// 是否可用于读写文件
+    pub fn is_usable(&self) -> bool {
+        self.exists && self.writable
+    }
+
+    /// 一行摘要，便于日志与 `--check` 输出
+    pub fn summary(&self) -> String {
+        match (&self.real_path, &self.error) {
+            (_, Some(err)) => format!("{}（不可用：{err}）", self.path),
+            (Some(real), None) if real != &self.path => {
+                format!("{} -> {real}（可写）", self.path)
+            }
+            _ => format!("{}（可写）", self.path),
+        }
+    }
+}
+
+/// 上传目录自检：存在性、真实路径、可写性。
+///
+/// 只读检查，不创建目录；调用方（启动序列）据 [`UploadDirCheck::is_usable`] 决定是否继续。
+pub fn check_upload_dir(upload_dir: &str) -> UploadDirCheck {
+    let path = upload_dir.to_string();
+    let mut check = UploadDirCheck {
+        path: path.clone(),
+        real_path: None,
+        exists: false,
+        writable: false,
+        error: None,
+    };
+
+    let meta = match std::fs::metadata(&path) {
+        Ok(meta) => meta,
+        Err(e) => {
+            check.error = Some(format!("目录不可访问: {e}"));
+            return check;
+        }
+    };
+    check.exists = true;
+    check.real_path = std::fs::canonicalize(&path)
+        .ok()
+        .map(|p| p.display().to_string());
+
+    if !meta.is_dir() {
+        check.error = Some("路径存在但不是目录".into());
+        return check;
+    }
+
+    // 真实写入探测：只读挂载、权限不足、磁盘满都会在这里暴露
+    let probe = format!("{path}/tmp_check_{}.tmp", nanoid::nanoid!(8));
+    match std::fs::write(&probe, b"ok") {
+        Ok(()) => {
+            let _ = std::fs::remove_file(&probe);
+            check.writable = true;
+        }
+        Err(e) => check.error = Some(format!("目录不可写: {e}")),
+    }
+    check
+}
 
 /// 白名单外格式的兜底上限（3D 模型、设计稿、压缩包等）
 pub const FALLBACK_MAX_SIZE: u64 = 52_428_800;
@@ -219,8 +293,10 @@ pub struct FileService {
 
 impl FileService {
     pub fn new(db: Arc<SqlitePool>, upload_dir: String) -> Self {
-        // 确保上传目录存在
-        std::fs::create_dir_all(&upload_dir).ok();
+        // 确保上传目录存在：失败不再静默吞掉（只读挂载/权限不足会在这里留下痕迹）
+        if let Err(e) = std::fs::create_dir_all(&upload_dir) {
+            error!("创建上传目录失败 {upload_dir}: {e}");
+        }
         let svc = Self {
             repo: FileRepository::new(db),
             upload_dir,
@@ -228,6 +304,11 @@ impl FileService {
         // 清理孤儿临时文件
         svc.cleanup_temp_files();
         svc
+    }
+
+    /// 上传目录自检（启动序列与 `--check` 用）
+    pub fn upload_dir_check(&self) -> UploadDirCheck {
+        check_upload_dir(&self.upload_dir)
     }
 
     /// 启动维护（后台执行，不阻塞启动）：
@@ -2093,5 +2174,84 @@ mod tests {
         // force：删除成功
         ctx.svc.delete(&f.stored_id, true).await.unwrap();
         assert!(!disk.exists());
+    }
+
+    // ── 上传目录自检 ──
+
+    #[test]
+    fn upload_dir_check_reports_missing_dir() {
+        let path = std::env::temp_dir().join(format!("brainbow-missing-{}", nanoid::nanoid!(8)));
+        let check = check_upload_dir(&path.to_string_lossy());
+
+        assert!(!check.exists);
+        assert!(!check.writable);
+        assert!(!check.is_usable());
+        assert!(check.error.is_some());
+        assert!(check.summary().contains("不可用"));
+    }
+
+    #[test]
+    fn upload_dir_check_rejects_path_that_is_a_file() {
+        let dir = std::env::temp_dir().join(format!("brainbow-file-{}", nanoid::nanoid!(8)));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("not-a-dir");
+        std::fs::write(&file, b"x").unwrap();
+
+        let check = check_upload_dir(&file.to_string_lossy());
+        assert!(check.exists);
+        assert!(!check.writable);
+        assert_eq!(check.error.as_deref(), Some("路径存在但不是目录"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn upload_dir_check_passes_and_leaves_no_probe_file() {
+        let dir = std::env::temp_dir().join(format!("brainbow-ok-{}", nanoid::nanoid!(8)));
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let check = check_upload_dir(&dir.to_string_lossy());
+        assert!(check.is_usable());
+        assert!(check.error.is_none());
+        assert!(check.real_path.is_some());
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0, "自检不应留下探测文件");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// 只读目录必须被判为不可用（以 root 运行时权限位会被绕过，此时跳过断言）
+    #[cfg(unix)]
+    #[test]
+    fn upload_dir_check_detects_readonly_dir() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = std::env::temp_dir().join(format!("brainbow-ro-{}", nanoid::nanoid!(8)));
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut perms = std::fs::metadata(&dir).unwrap().permissions();
+        perms.set_mode(0o555);
+        std::fs::set_permissions(&dir, perms).unwrap();
+
+        let readonly_effective = std::fs::write(dir.join("probe"), b"x").is_err();
+        let check = check_upload_dir(&dir.to_string_lossy());
+
+        let mut perms = std::fs::metadata(&dir).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&dir, perms).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+
+        if readonly_effective {
+            assert!(!check.writable);
+            assert!(!check.is_usable());
+            assert!(check.error.as_deref().unwrap_or("").contains("不可写"));
+        }
+    }
+
+    /// 服务暴露的自检与配置里的目录一致（回归：handler 曾硬编码 uploads/file）
+    #[tokio::test]
+    async fn service_upload_dir_check_uses_configured_dir() {
+        let ctx = setup_service().await;
+        let check = ctx.svc.upload_dir_check();
+        assert_eq!(check.path, ctx.dir.0);
+        assert!(check.is_usable());
     }
 }

@@ -8,8 +8,10 @@
 //! - [`schema`] — 基线 DDL（v1 create_tables）
 //! - [`migrations`] — 版本化迁移（v2-v12，各自独立文件）
 //! - [`helpers`] — 迁移共享工具函数
+//! - [`connect`] — 连接选项与 PRAGMA 显式声明
 //! - [`query`] — 动态查询工具（sanitize_table_name 等）
 
+pub mod connect;
 pub mod helpers;
 pub mod migrations;
 pub mod query;

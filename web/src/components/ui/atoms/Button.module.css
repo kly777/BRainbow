@@ -77,6 +77,33 @@
 }
 
 /* ── Ghost ── */
+
+/* 实底语义变体：确认框的破坏性/警示动作需要与"描边 danger"区分的实心按钮。
+   此前 ConfirmModal 自写了这两套（外加一份 .btn 基类），现收进设计系统。 */
+.danger-solid {
+	background: var(--t-color-danger);
+	color: var(--t-color-on-solid);
+	border-color: transparent;
+	box-shadow: var(--shadow-sm);
+}
+
+.danger-solid:hover:not(:disabled) {
+	background: var(--t-color-danger-strong);
+	box-shadow: var(--shadow-md);
+}
+
+.warning-solid {
+	background: var(--t-color-warning);
+	color: var(--t-color-on-solid);
+	border-color: transparent;
+	box-shadow: var(--shadow-sm);
+}
+
+.warning-solid:hover:not(:disabled) {
+	background: var(--t-color-warning-strong);
+	box-shadow: var(--shadow-md);
+}
+
 .ghost {
 	background: transparent;
 	color: var(--t-color-ink-faint);

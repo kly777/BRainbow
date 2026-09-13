@@ -1,3 +1,4 @@
+import Button from "@components/ui/atoms/Button.tsx";
 import { AlertTriangle, Info } from "@components/ui/icons";
 import type { ConfirmVariant } from "@components/ui/organisms/confirmStore.ts";
 import { confirms } from "@components/ui/organisms/confirmStore.ts";
@@ -18,10 +19,15 @@ function IconForVariant(variant: ConfirmVariant) {
 	}
 }
 
-const BTN_CLASS: Record<ConfirmVariant, string> = {
-	danger: styles.btnDanger,
-	warning: styles.btnWarning,
-	info: styles.btnPrimary,
+/** 语义变体 → Button 的 variant。danger/warning 用实底变体（确认框的
+    破坏性动作用实心按钮更醒目），info 用常规 primary。 */
+const BTN_VARIANT: Record<
+	ConfirmVariant,
+	"dangerSolid" | "warningSolid" | "primary"
+> = {
+	danger: "dangerSolid",
+	warning: "warningSolid",
+	info: "primary",
 };
 
 const ICON_CLASS: Record<ConfirmVariant, string> = {
@@ -132,21 +138,19 @@ function ConfirmDialog(props: {
 				</div>
 
 				<div class={styles.actions}>
-					<button
+					<Button
 						ref={cancelBtnRef}
-						type="button"
-						class={`${styles.btn} ${styles.btnCancel}`}
+						variant="secondary"
 						onClick={() => doResolve(false)}
 					>
 						取消
-					</button>
-					<button
-						type="button"
-						class={`${styles.btn} ${BTN_CLASS[variant]}`}
+					</Button>
+					<Button
+						variant={BTN_VARIANT[variant]}
 						onClick={() => doResolve(true)}
 					>
 						{options.confirmLabel ?? DEFAULT_CONFIRM[variant]}
-					</button>
+					</Button>
 				</div>
 			</div>
 		</div>

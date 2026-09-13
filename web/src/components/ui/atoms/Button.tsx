@@ -1,13 +1,22 @@
 import styles from "@components/ui/atoms/Button.module.css";
-import type { Component, JSX } from "solid-js";
+import { type Component, type JSX, splitProps } from "solid-js";
 
-type Variant = "primary" | "secondary" | "danger" | "ghost" | "icon";
+type Variant =
+	| "primary"
+	| "secondary"
+	| "danger"
+	| "dangerSolid"
+	| "warningSolid"
+	| "ghost"
+	| "icon";
 type Size = "sm" | "md";
 
 const VARIANT_CLASS: Record<Variant, string> = {
 	primary: styles.primary,
 	secondary: styles.secondary,
 	danger: styles.danger,
+	dangerSolid: styles.dangerSolid,
+	warningSolid: styles.warningSolid,
 	ghost: styles.ghost,
 	icon: styles.icon,
 };
@@ -31,16 +40,23 @@ interface ButtonProps {
 }
 
 const Button: Component<ButtonProps> = (props) => {
+	// 其余原生属性（ref / aria-* / data-* 等）原样透传：
+	// ConfirmModal 就需要 ref 来做初始焦点，缺了它就只能自己手写 <button>
+	const [local, rest] = splitProps(props, [
+		"variant",
+		"size",
+		"class",
+		"ariaLabel",
+		"children",
+	]);
 	return (
 		<button
+			{...rest}
 			type={props.type ?? "button"}
-			class={`${styles.btn} ${VARIANT_CLASS[props.variant ?? "secondary"]} ${SIZE_CLASS[props.size ?? "md"]}${props.class ? ` ${props.class}` : ""}`}
-			disabled={props.disabled}
-			onClick={props.onClick}
-			title={props.title}
-			aria-label={props.ariaLabel}
+			class={`${styles.btn} ${VARIANT_CLASS[local.variant ?? "secondary"]} ${SIZE_CLASS[local.size ?? "md"]}${local.class ? ` ${local.class}` : ""}`}
+			aria-label={local.ariaLabel}
 		>
-			{props.children}
+			{local.children}
 		</button>
 	);
 };

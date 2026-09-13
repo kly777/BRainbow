@@ -1,7 +1,7 @@
 // ── AI 服务设置面板（配置存数据库，后端代理） ──
 // 仅管 AI 服务本身（API 地址 / Key / 模型）；助记提示词在 /m 页单独配置。
 
-import { Button, Modal } from "@components/ui";
+import { Button, Input, Modal } from "@components/ui";
 import { getAiSettingsE, updateAiSettingsE } from "@modules/ai-setting";
 import { getErrorMessage } from "@shared/api";
 import { notifyError, notifySuccess, tryAsync } from "@shared/utils";
@@ -116,13 +116,14 @@ export default function AiSettingsModal() {
 					<label class={styles.label} for="ai-endpoint">
 						API 地址
 					</label>
-					<input
+					<Input
 						id="ai-endpoint"
 						type="url"
 						class={styles.input}
 						value={endpoint()}
 						onInput={(e) => setEndpoint(e.currentTarget.value)}
 						placeholder="https://api.deepseek.com/v1/chat/completions"
+						tone="bg"
 					/>
 				</div>
 
@@ -130,13 +131,14 @@ export default function AiSettingsModal() {
 					<label class={styles.label} for="ai-key">
 						API Key
 					</label>
-					<input
+					<Input
 						id="ai-key"
 						type="password"
 						class={styles.input}
 						value={apiKey()}
 						onInput={(e) => setApiKey(e.currentTarget.value)}
 						placeholder={hasKey() ? "已配置（留空保持不变）" : "sk-..."}
+						tone="bg"
 					/>
 				</div>
 
@@ -144,13 +146,14 @@ export default function AiSettingsModal() {
 					<label class={styles.label} for="ai-model">
 						模型
 					</label>
-					<input
+					<Input
 						id="ai-model"
 						type="text"
 						class={styles.input}
 						value={model()}
 						onInput={(e) => setModel(e.currentTarget.value)}
 						placeholder="deepseek-chat"
+						tone="bg"
 					/>
 				</div>
 

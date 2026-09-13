@@ -18,20 +18,6 @@
 	color: var(--t-color-ink-muted);
 }
 
-.input {
-	width: 100%;
-	padding: var(--space-sm) var(--space-md);
-	font-size: var(--text-sm);
-	font-family: inherit;
-	color: var(--t-color-ink);
-	background: var(--t-color-bg);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-}
-
 .input::placeholder {
 	color: var(--t-color-ink-faint);
 }

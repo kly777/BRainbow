@@ -1,44 +1,10 @@
-/* components/ui/FilterGroup.css.ts — 增强版 */
+/* FilterGroup：只负责分段控件的排列。
+ * 按钮形态一律来自 <Button>（选中 = primary / 未选中 = secondary，size=sm），
+ * 设计系统内部组件不得自写 .btn —— 原来的 .btn / .active 与此处 Button 的
+ * 两套变体逐声明等价，重复定义只会随设计变更发散（见
+ * doc/frontend-ui-architecture.md §6 阶段 3d）。 */
 
 .group {
 	display: flex;
 	gap: var(--space-xs);
-}
-
-.btn {
-	height: 1.75rem;
-	padding: 0 var(--space-md);
-	font-size: var(--text-xs);
-	appearance: none;
-	-webkit-appearance: none;
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink-muted);
-	cursor: pointer;
-	font-family: inherit;
-	white-space: nowrap;
-	transition:
-		background var(--t-transition-fast),
-		border-color var(--t-transition-fast),
-		color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-}
-
-.btn:hover {
-	background: var(--t-color-surface-raised);
-	border-color: var(--t-color-border-strong);
-}
-
-.active {
-	background: var(--t-color-ink);
-	color: var(--t-color-bg);
-	border-color: var(--t-color-ink);
-	box-shadow: var(--shadow-sm);
-}
-
-.active:hover {
-	background: var(--t-color-ink-strong);
-	color: var(--t-color-bg);
-	box-shadow: var(--shadow-md);
 }

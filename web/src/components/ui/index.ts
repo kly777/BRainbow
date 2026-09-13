@@ -34,6 +34,14 @@ export { default as SimplePagination } from "./molecules/SimplePagination.tsx";
 export { default as Toolbar } from "./molecules/Toolbar.tsx";
 export { default as ConfirmModalContainer } from "./organisms/ConfirmModal.tsx";
 export * from "./organisms/confirmStore.ts";
+export {
+	type DetailPageProps,
+	default as DetailPage,
+} from "./organisms/DetailPage.tsx";
+export {
+	default as ListPage,
+	type ListPageProps,
+} from "./organisms/ListPage.tsx";
 export { default as Modal } from "./organisms/Modal.tsx";
 export { default as ToastContainer } from "./organisms/Toast.tsx";
 export * from "./organisms/toastStore.ts";

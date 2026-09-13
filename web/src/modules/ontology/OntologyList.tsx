@@ -1,10 +1,4 @@
-import {
-	AsyncView,
-	Button,
-	FilterGroup,
-	PageHead,
-	SearchInput,
-} from "@components/ui";
+import { Button, FilterGroup, ListPage, SearchInput } from "@components/ui";
 import { type Component, For, Show } from "solid-js";
 import { CreateOntoModal } from "./components/CreateOntoModal.tsx";
 import { type OntologyItem, useOntologyList } from "./hooks/useOntologyList.ts";
@@ -120,40 +114,44 @@ const OntologyListPage: Component = () => {
 	const m = useOntologyList();
 
 	return (
-		<div class={styles.container}>
-			<PageHead
+		<>
+			<ListPage
+				class={styles.container}
 				title="知识管理"
 				actions={
 					<Button variant="primary" onClick={m.openCreateModal}>
 						新建本体
 					</Button>
 				}
-			/>
-
-			<div class={styles.filters}>
-				<div class={styles.searchSection}>
-					<SearchInput
-						value={m.searchQuery()}
-						onSearch={m.setSearchQuery}
-						placeholder="搜索本体名称或描述..."
-					/>
-				</div>
-				<FilterGroup
-					options={[
-						{ value: "grid", label: "网格视图" },
-						{ value: "list", label: "列表视图" },
-					]}
-					selected={m.viewMode()}
-					onChange={(v) => m.setViewMode(v as "grid" | "list")}
-				/>
-			</div>
-
-			<AsyncView
+				filters={
+					<div class={styles.filters}>
+						<div class={styles.searchSection}>
+							<SearchInput
+								value={m.searchQuery()}
+								onSearch={m.setSearchQuery}
+								placeholder="搜索本体名称或描述..."
+							/>
+						</div>
+						<FilterGroup
+							options={[
+								{ value: "grid", label: "网格视图" },
+								{ value: "list", label: "列表视图" },
+							]}
+							selected={m.viewMode()}
+							onChange={(v) => m.setViewMode(v as "grid" | "list")}
+						/>
+					</div>
+				}
 				data={m.filteredOntologies()}
 				loading={m.loading}
 				error={m.error}
 				onRetry={m.refetch}
 				emptyMessage="没有找到匹配的本体"
+				footer={
+					<div class={styles.stats}>
+						<p>共 {m.filteredOntologies().length} 个本体</p>
+					</div>
+				}
 			>
 				{(_data) => (
 					<Show
@@ -173,11 +171,7 @@ const OntologyListPage: Component = () => {
 						/>
 					</Show>
 				)}
-			</AsyncView>
-
-			<div class={styles.stats}>
-				<p>共 {m.filteredOntologies().length} 个本体</p>
-			</div>
+			</ListPage>
 
 			<CreateOntoModal
 				open={m.showCreateModal}
@@ -190,7 +184,7 @@ const OntologyListPage: Component = () => {
 				onCreate={m.handleCreateOnto}
 				onClose={m.closeCreateModal}
 			/>
-		</div>
+		</>
 	);
 };
 

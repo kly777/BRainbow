@@ -1,0 +1,12 @@
+/* 详情页标题：比列表页页头小一档（详情页的主体是内容，标题是上下文） */
+
+.title {
+	font-family: var(--t-font-display);
+	font-size: var(--text-xl);
+	font-weight: 600;
+	line-height: var(--leading-tight);
+	letter-spacing: -0.01em;
+	color: var(--t-color-ink);
+	margin: 0 0 var(--space-md);
+	overflow-wrap: anywhere;
+}

@@ -9,7 +9,7 @@ import Textarea from "@components/ui/atoms/Textarea.tsx";
 import Field from "@components/ui/molecules/Field.tsx";
 import type { JSX } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 function mount(node: () => JSX.Element): HTMLDivElement {
 	const host = document.createElement("div");
@@ -171,19 +171,20 @@ describe("表单原语：独立使用与属性透传", () => {
 		).toBeNull();
 	});
 
-	it("value / onInput / disabled 等原生属性透传", () => {
-		let seen = "";
-		const host = mount(() => (
-			<Input
-				value="abc"
-				disabled
-				onInput={(e) => {
-					seen = e.currentTarget.value;
-				}}
-			/>
-		));
+	it("value / disabled 等原生属性透传", () => {
+		const host = mount(() => <Input value="abc" disabled />);
 		const input = host.querySelector("input") as HTMLInputElement;
 		expect(input.value).toBe("abc");
 		expect(input.disabled).toBe(true);
+	});
+
+	it("onInput 回调可用", () => {
+		// 与上条分开：disabled 的元素在 jsdom 下派发事件不会触发处理器
+		const onInput = vi.fn();
+		const host = mount(() => <Input onInput={onInput} />);
+		const input = host.querySelector("input") as HTMLInputElement;
+		input.value = "x";
+		input.dispatchEvent(new Event("input", { bubbles: true }));
+		expect(onInput).toHaveBeenCalledTimes(1);
 	});
 });

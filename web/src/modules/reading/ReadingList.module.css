@@ -47,24 +47,6 @@
 }
 
 .input,
-.textarea {
-	width: 100%;
-	padding: var(--space-sm) var(--space-md);
-	border: 1px solid var(--t-color-border);
-	font-size: var(--text-sm);
-	font-family: inherit;
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	border-radius: var(--radius-md);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-}
-
-.textarea {
-	resize: vertical;
-}
-
 .list {
 	display: flex;
 	flex-direction: column;

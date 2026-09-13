@@ -4,11 +4,10 @@ import { fillPath, PATHS } from "@config/paths";
 // 过滤栏置于 AsyncView 外：布局上与 PageHead 同级，且不受四态切换影响
 
 import {
-	AsyncView,
 	Button,
+	ListPage,
 	Markdown as MarkdownRenderer,
 	Modal,
-	PageHead,
 	Textarea,
 } from "@components/ui";
 import { useNavigate } from "@solidjs/router";
@@ -34,7 +33,8 @@ export default function CardsListPage() {
 
 	return (
 		<div class={styles.container}>
-			<PageHead
+			<ListPage
+				class={styles.container}
 				title="卡片列表"
 				actions={
 					<>
@@ -56,17 +56,15 @@ export default function CardsListPage() {
 						</Button>
 					</>
 				}
-			/>
-
-			<CardFilter
-				query={m.searchQuery()}
-				onSearch={m.handleSearch}
-				sortBy={m.sortBy()}
-				sortOrder={m.sortOrder()}
-				onSortChange={m.handleSortChange}
-			/>
-
-			<AsyncView
+				filters={
+					<CardFilter
+						query={m.searchQuery()}
+						onSearch={m.handleSearch}
+						sortBy={m.sortBy()}
+						sortOrder={m.sortOrder()}
+						onSortChange={m.handleSortChange}
+					/>
+				}
 				data={m.sortedCards()}
 				loading={m.loading()}
 				error={m.error()}
@@ -88,7 +86,7 @@ export default function CardsListPage() {
 						deletingCardId={m.deletingCardId()}
 					/>
 				)}
-			</AsyncView>
+			</ListPage>
 
 			<Modal
 				isOpen={m.showCreateModal()}

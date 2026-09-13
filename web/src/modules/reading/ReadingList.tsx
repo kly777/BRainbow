@@ -1,4 +1,4 @@
-import { AsyncView, Button, Modal, PageHead } from "@components/ui";
+import { Button, Input, ListPage, Modal, Textarea } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
 import type { ArticleSummary } from "@modules/reading";
 import { listArticles, uploadArticle } from "@modules/reading";
@@ -81,8 +81,9 @@ export default function ReadingList() {
 	};
 
 	return (
-		<div class={styles.page}>
-			<PageHead
+		<>
+			<ListPage
+				class={styles.page}
 				title="英语阅读"
 				actions={
 					<>
@@ -98,7 +99,27 @@ export default function ReadingList() {
 						</Button>
 					</>
 				}
-			/>
+				filters={
+					<p class={styles.sortHint}>
+						按推荐阅读顺序排列：认识率越接近 90% 越靠前，最该读的排在第一张。
+					</p>
+				}
+				data={articles()?.articles}
+				loading={articles.loading}
+				error={articles.error}
+				onRetry={refetch}
+				emptyMessage="还没有文章，上传第一篇吧"
+			>
+				{(items) => (
+					<div class={styles.list}>
+						<For each={items()}>
+							{(a: ArticleSummary, i) => (
+								<ArticleCard article={a} first={i() === 0} />
+							)}
+						</For>
+					</div>
+				)}
+			</ListPage>
 
 			<Modal
 				isOpen={uploadOpen()}
@@ -127,7 +148,7 @@ export default function ReadingList() {
 					<label for="reading-title" class={styles.fieldLabel}>
 						文章标题
 					</label>
-					<input
+					<Input
 						id="reading-title"
 						class={styles.input}
 						placeholder="请输入文章标题"
@@ -139,7 +160,7 @@ export default function ReadingList() {
 					<label for="reading-content" class={styles.fieldLabel}>
 						全文
 					</label>
-					<textarea
+					<Textarea
 						id="reading-content"
 						class={styles.textarea}
 						placeholder="粘贴全文…"
@@ -149,28 +170,6 @@ export default function ReadingList() {
 					/>
 				</div>
 			</Modal>
-
-			<p class={styles.sortHint}>
-				按推荐阅读顺序排列：认识率越接近 90% 越靠前，最该读的排在第一张。
-			</p>
-
-			<AsyncView
-				data={articles()?.articles}
-				loading={articles.loading}
-				error={articles.error}
-				onRetry={refetch}
-				emptyMessage="还没有文章，上传第一篇吧"
-			>
-				{(items) => (
-					<div class={styles.list}>
-						<For each={items()}>
-							{(a: ArticleSummary, i) => (
-								<ArticleCard article={a} first={i() === 0} />
-							)}
-						</For>
-					</div>
-				)}
-			</AsyncView>
-		</div>
+		</>
 	);
 }

@@ -73,40 +73,6 @@
 	border-bottom: 1px solid var(--t-color-border);
 }
 
-.qa-section {
-	margin-bottom: var(--space-xl);
-}
-
-.qa-block {
-	margin-bottom: var(--space-lg);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	overflow: hidden;
-}
-
-.question {
-	padding: var(--space-md);
-	background: var(--t-color-bg);
-	display: flex;
-	gap: var(--space-sm);
-	border-bottom: 1px solid var(--t-color-border);
-}
-
-.q-label {
-	font-size: var(--text-xs);
-	font-weight: 700;
-	color: var(--t-color-accent);
-	background: var(--t-color-accent-soft);
-	width: 1.25rem;
-	height: 1.25rem;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-	margin-top: var(--space-2xs);
-}
-
 .answer {
 	padding: var(--space-md);
 	display: flex;
@@ -188,7 +154,6 @@
 		padding: var(--space-md);
 	}
 
-	.question,
 	.answer {
 		padding: var(--space-sm);
 	}

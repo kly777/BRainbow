@@ -2,6 +2,7 @@
  * ColorPage — 主题/配色切换页（/color）
  */
 
+import { Button } from "@components/ui";
 import { Check } from "@components/ui/icons";
 import {
 	applyFontScale,
@@ -135,16 +136,16 @@ export default function ColorPage() {
 			</div>
 
 			<div class={styles.footer}>
-				<button
-					type="button"
-					class={styles.btnGhost}
+				<Button
+					variant="outline"
+					class={styles.mobileCompact}
 					onClick={() => {
 						applyTheme("paper");
 						setCurrent("paper");
 					}}
 				>
 					重置为默认
-				</button>
+				</Button>
 				<span class={styles.footerHint}>{themeInfo(current()).label}</span>
 			</div>
 		</div>

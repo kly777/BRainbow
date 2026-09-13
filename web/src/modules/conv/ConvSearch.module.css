@@ -86,13 +86,6 @@
 	font-weight: 600;
 }
 
-.input-wrap {
-	flex: 1;
-	position: relative;
-	display: flex;
-	align-items: center;
-}
-
 .input {
 	/* 基础形态来自 Control 原语；保留 flex 布局、更大的字号与内边距、以及
 	   SearchInput 不接受的 bg 底色（:where() 使其无需担心顺序） */
@@ -102,49 +95,8 @@
 	background: var(--t-color-bg);
 }
 
-.clear-btn {
-	position: absolute;
-	right: 0.5rem;
-	width: 1.375rem;
-	height: 1.375rem;
-	border: none;
-	border-radius: 50%;
-	background: var(--t-color-ink-faint);
-	color: var(--t-color-bg);
-	font-size: var(--text-sm);
-	line-height: 1;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding: 0;
-	opacity: 0.7;
-	transition: opacity var(--t-transition-fast);
-}
-
-.clear-btn:hover {
-	opacity: 1;
-}
-
-.btn {
-	padding: var(--space-md) var(--space-xl);
-	font-size: var(--text-base);
-	border: none;
-	border-radius: var(--radius-md);
-	background: var(--t-color-accent);
-	color: var(--t-color-on-solid);
-	cursor: pointer;
-	font-weight: 500;
-	transition:
-		background var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-	box-shadow: var(--shadow-sm);
-}
-
-.btn:hover {
-	opacity: 0.9;
-	background: var(--t-color-accent-strong);
-}
+/* .btn 已删除：ConvSearch.tsx 的搜索按钮现在是 <Button type="submit" variant="primary">，
+ * 这套 accent 实底规则（违反 design-tokens.md 的 accent 纪律）零引用。 */
 
 .summary {
 	padding: 0 var(--space-xl) var(--space-md);

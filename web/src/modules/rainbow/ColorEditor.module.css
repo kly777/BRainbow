@@ -105,16 +105,6 @@
 	flex-shrink: 0;
 }
 
-.hex-base {
-	padding: var(--space-xs) var(--space-sm);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
-	background: var(--t-color-bg);
-	color: var(--t-color-ink);
-	font-family: monospace;
-	font-size: var(--text-sm);
-}
-
 .hex-input {
 	width: 4.25rem;
 	padding: var(--space-xs) var(--space-sm);

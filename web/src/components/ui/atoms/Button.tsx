@@ -4,6 +4,7 @@ import { type Component, type JSX, splitProps } from "solid-js";
 type Variant =
 	| "primary"
 	| "secondary"
+	| "outline"
 	| "danger"
 	| "dangerSolid"
 	| "warningSolid"
@@ -14,6 +15,7 @@ type Size = "sm" | "md";
 const VARIANT_CLASS: Record<Variant, string> = {
 	primary: styles.primary,
 	secondary: styles.secondary,
+	outline: styles.outline,
 	danger: styles.danger,
 	dangerSolid: styles.dangerSolid,
 	warningSolid: styles.warningSolid,

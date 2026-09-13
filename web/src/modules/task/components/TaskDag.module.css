@@ -77,11 +77,6 @@
 	padding: var(--space-xl);
 }
 
-.hint-p {
-	margin: 0 0 var(--space-sm) 0;
-	font-size: var(--text-base);
-}
-
 .hint-sub {
 	font-size: var(--text-sm);
 	color: var(--t-color-border);

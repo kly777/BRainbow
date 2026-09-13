@@ -65,6 +65,30 @@
 	box-shadow: var(--shadow-sm);
 }
 
+/* ── Outline：透明底 + 深描边 + 大圆角 ──
+ *
+ * 吸收原先散在各模块里逐声明相同的自写描边按钮（key/.btn、mem 的 .btn-ghost、
+ * color/.btn-ghost）。它与 .secondary 的差别有四处：透明底、深描边（border-strong）、
+ * radius-md、**由内边距决定高度**——原形态高约 26.8px（line-height: 1.15 × 14px + 8px
+ * 内边距 + 2px 边框），系统的 sm(28px/ text-xs) 与 md(36px / text-sm) 都不吻合，
+ * 所以本变体自带 height: auto 与内边距，和 .icon 同一个手法：**同一文件内后定义的同
+ * 特异度规则覆盖前面的尺寸档**，顺序在文件内确定，不涉及 §10.1 那种跨 CSS Module 的
+ * 产物顺序问题。换上原语后 height 随基础类的 line-height(1.4) 变成约 29.6px、字重由
+ * 400 变 500、禁用态透明度由 0.35 收敛到系统的 0.5 —— 这三处是"用回原语"的必然收敛。 */
+.outline {
+	height: auto;
+	padding: var(--space-xs) var(--space-lg);
+	background: transparent;
+	color: var(--t-color-ink-muted);
+	border-color: var(--t-color-border-strong);
+	border-radius: var(--radius-md);
+}
+
+.outline:hover:not(:disabled) {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
 /* ── Danger：danger 描边 ghost，hover 染软底 ── */
 .danger {
 	background: var(--t-color-surface);

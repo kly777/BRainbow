@@ -9,14 +9,6 @@
 	gap: var(--space-lg);
 }
 
-.inline-code {
-	font-family: var(--t-font-mono);
-	font-size: var(--text-xs);
-	background: var(--t-color-bg);
-	padding: var(--space-2xs) var(--space-xs);
-	border-radius: var(--radius-xs);
-}
-
 .card {
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
@@ -31,31 +23,6 @@
 	font-size: var(--text-base);
 	color: var(--t-color-ink);
 	margin: 0;
-}
-
-.gen-btn {
-	font-size: var(--text-sm);
-	color: var(--t-color-on-solid);
-	background: var(--t-color-accent);
-	border: none;
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-lg);
-	cursor: pointer;
-	font-weight: 500;
-	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
-	width: fit-content;
-}
-
-.gen-btn:hover {
-	background: var(--t-color-accent-strong);
-}
-
-.gen-btn:disabled {
-	opacity: 0.5;
-	cursor: default;
 }
 
 .new-key-box {
@@ -86,77 +53,11 @@
 	margin-top: var(--space-xs);
 }
 
-.btn {
-	font-size: var(--text-sm);
-	color: var(--t-color-ink-muted);
-	background: transparent;
-	border: 1px solid var(--t-color-border-strong);
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-lg);
-	cursor: pointer;
-	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
-}
-
-.btn:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
-
-.btn:disabled {
-	opacity: 0.35;
-	cursor: default;
-}
-
-.btn-primary {
-	font-size: var(--text-sm);
-	color: var(--t-color-on-solid);
-	background: var(--t-color-accent);
-	border: none;
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-lg);
-	cursor: pointer;
-	font-weight: 500;
-	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
-}
-
-.btn-primary:hover {
-	background: var(--t-color-accent-strong);
-}
-
-.btn-primary:disabled {
-	opacity: 0.5;
-	cursor: default;
-}
-
-.btn-danger {
-	font-size: var(--text-sm);
-	background: transparent;
-	border: 1px solid var(--t-color-border-strong);
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-lg);
-	cursor: pointer;
-	transition:
-		background 0.15s,
-		color 0.15s,
-		border-color 0.15s;
-	color: var(--t-color-danger);
-}
-
-.btn-danger:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
-
-.btn-danger:disabled {
-	opacity: 0.35;
-	cursor: default;
-}
+/* .btn / .btn-primary / .btn-danger / .gen-btn 已删除：KeyPage.tsx 现在全部用 <Button>
+ * （variant="primary" / "secondary" / "danger"），这四套规则零引用；其中 .btn-primary 与
+ * .gen-btn 的 accent 实底还违反 doc/design-tokens.md 的 accent 纪律。
+ * 注意 .gen-btn 不在“按钮定义”度量口径里（类名不以 .btn 开头），是靠"按钮到底由谁渲染"
+ * 逐个文件核出来的 —— 再次说明按标识符计数会漏。 */
 
 .active-box {
 	display: flex;
@@ -227,19 +128,5 @@
 
 	.card {
 		padding: var(--space-md);
-	}
-
-	.gen-btn,
-	.btn,
-	.btn-primary,
-	.btn-danger {
-		padding: 0 var(--space-md);
-		font-size: var(--text-xs);
-		line-height: 1;
-		height: 2rem;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		box-sizing: border-box;
 	}
 }

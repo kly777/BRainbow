@@ -149,11 +149,6 @@
 	font-size: var(--text-sm);
 }
 
-.day-number-today {
-	color: var(--t-color-accent);
-	font-weight: 700;
-}
-
 .day-tasks {
 	display: flex;
 	flex-direction: column;

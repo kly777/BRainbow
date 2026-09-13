@@ -36,64 +36,16 @@
 	gap: var(--space-sm);
 }
 
-.btn-ghost {
-	font-size: var(--text-sm);
-	color: var(--t-color-ink-muted);
-	background: transparent;
-	border: 1px solid var(--t-color-border-strong);
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-lg);
-	cursor: pointer;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast),
-		border-color var(--t-transition-fast);
-}
-
-.btn-ghost:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
-
-.btn-ghost:disabled {
-	opacity: 0.35;
-	cursor: default;
-}
-
-.btn-primary {
-	font-size: var(--text-sm);
-	color: var(--t-color-on-solid);
-	background: var(--t-color-accent);
-	border: none;
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-lg);
-	cursor: pointer;
-	font-weight: 500;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast),
-		border-color var(--t-transition-fast);
-}
-
-.btn-primary:hover {
-	background: var(--t-color-accent-strong);
-}
-
-.btn-primary:disabled {
-	opacity: 0.5;
-	cursor: default;
-}
+/* 按钮已改用原语 <Button variant="outline" | "primary">（形态定义见 Button.module.css
+ * 的 .outline 注释）。窄屏这一档保留：按钮压成 2rem 高、text-xs、横向 12px 内边距。
+ * 覆盖规则带 .actions 容器类，特异度 (0,2,0) 稳压原语的变体/尺寸档 (0,1,0) ——
+ * 这样就不依赖两个 CSS Module 在产物里的先后顺序（§10.1 的教训）。
+ * 原规则里的 display/align-items/justify-content/box-sizing 不再需要：原语基类已提供。 */
 
 @media (width <= 600px) {
-	.btn-ghost,
-	.btn-primary {
+	.actions .mobile-compact {
+		height: 2rem;
 		padding: 0 var(--space-md);
 		font-size: var(--text-xs);
-		line-height: 1;
-		height: 2rem;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		box-sizing: border-box;
 	}
 }

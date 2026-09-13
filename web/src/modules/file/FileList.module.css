@@ -171,11 +171,6 @@
 	color: var(--t-color-accent);
 }
 
-.spacer {
-	/* 占位：把排序与视图切换推到右侧 */
-	margin-left: auto;
-}
-
 .sort-label {
 	display: inline-flex;
 	align-items: center;
@@ -432,11 +427,6 @@
 	.view-btn-active {
 		background: var(--t-color-accent-soft);
 		color: var(--t-color-accent);
-	}
-
-	.spacer {
-		/* 占位：把排序与视图切换推到右侧 */
-		margin-left: auto;
 	}
 
 	.sort-label {

@@ -66,57 +66,10 @@
 	margin-top: var(--space-sm);
 }
 
-.btn-submit {
-	padding: var(--space-md) 0;
-	border: none;
-	border-radius: var(--radius-md);
-	background: var(--t-color-accent);
-	color: var(--t-color-on-solid);
-	font-size: var(--text-base);
-	font-weight: 600;
-	cursor: pointer;
-	transition:
-		background var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-	box-shadow: var(--shadow-sm);
-}
-
-.btn-submit:hover {
-	filter: brightness(1.06);
-	background: var(--t-color-accent-strong);
-}
-
-.btn-link {
-	background: none;
-	border: none;
-	color: var(--t-color-accent);
-	font-size: var(--text-sm);
-	cursor: pointer;
-	padding: var(--space-xs);
-	transition: color var(--t-transition-fast);
-}
-
-.btn-link:hover {
-	text-decoration: underline;
-}
-
-.btn-cancel {
-	padding: var(--space-sm) 0;
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: transparent;
-	color: var(--t-color-ink-muted);
-	font-size: var(--text-sm);
-	cursor: pointer;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast);
-}
-
-.btn-cancel:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
+/* .btn-submit / .btn-link / .btn-cancel 已删除：登录对话框的三个按钮在迁移 <Button> 时
+ * 就换成了原语（AuthDialog.tsx 现在是 variant="primary" ×2 与 variant="ghost" ×1），
+ * 这三套规则此后没有任何引用 —— 留着它们不仅让"按钮定义 21 处"这类计数永远降不下来，
+ * 更会在下次改设计时被误当成有效样式去改。 */
 
 /* ── AuthGuard 未登录提示页 ── */
 

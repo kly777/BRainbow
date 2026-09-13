@@ -4,6 +4,7 @@
  * 建议下拉中可 hover 删除已存在的标签（全局删除，所有书签移除该标签）。
  */
 
+import { Input } from "@components/ui";
 import type { BookmarkTagWithCount } from "@modules/bookmark";
 import { deleteBookmarkTagE, searchBookmarkTagsE } from "@modules/bookmark";
 import {
@@ -158,8 +159,7 @@ export default function TagInput(props: Props) {
 				</div>
 			</Show>
 			<div class={styles.inputRow}>
-				<input
-					type="text"
+				<Input
 					class={styles.input}
 					placeholder="添加标签（Enter 确认，可创建新标签）…"
 					value={query()}

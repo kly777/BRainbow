@@ -1,3 +1,4 @@
+import { Input } from "@components/ui";
 import { X } from "@components/ui/icons";
 import { Color } from "@shared/utils";
 import {
@@ -148,13 +149,16 @@ function ColorRow(props: {
 			</div>
 
 			{space() === "hex" && (
-				<input
+				<Input
 					class={styles.hexInput}
 					value={hex()}
 					onInput={onHexInput}
 					onFocus={onFocus}
 					onBlur={onBlur}
 					maxLength={7}
+					mono
+					tone="bg"
+					aria-label="HEX 颜色值"
 				/>
 			)}
 			{space() === "rgb" && (

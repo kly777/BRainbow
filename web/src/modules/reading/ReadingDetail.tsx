@@ -1,9 +1,15 @@
-import { Button, ErrorRetry, Tooltip } from "@components/ui";
+import {
+	BackLink,
+	Button,
+	ErrorRetry,
+	Textarea,
+	Tooltip,
+} from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
 
 // ── 阅读详情页面（薄壳视图层）──
 
-import { ArrowLeft, Check, X } from "@components/ui/icons";
+import { Check, X } from "@components/ui/icons";
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 import ArticleContent from "./components/ArticleContent";
@@ -15,9 +21,12 @@ export default function ReadingDetail() {
 
 	return (
 		<div class={styles.page}>
-			<A href={PATHS.reading} class={styles.back}>
-				<ArrowLeft size={16} /> 文章列表
-			</A>
+			<BackLink
+				href={PATHS.reading}
+				label="文章列表"
+				size={16}
+				class={styles.back}
+			/>
 			{/* 错误时短路：detail() 在 error 存在时会 throw（Solid 1.9 语义） */}
 			<Show
 				when={m.detail.error}
@@ -170,7 +179,7 @@ export default function ReadingDetail() {
 									<div class={styles.sidebarFooter}>
 										<div class={styles.notesSection}>
 											<h3>词组笔记</h3>
-											<textarea
+											<Textarea
 												class={styles.notesInput}
 												value={m.notes()}
 												onInput={(e) => m.setNotes(e.currentTarget.value)}
@@ -180,6 +189,7 @@ export default function ReadingDetail() {
 												}
 												rows={4}
 												aria-label="词组笔记"
+												tone="bg"
 											/>
 										</div>
 										<Button

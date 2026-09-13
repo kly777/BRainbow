@@ -171,11 +171,6 @@
 	color: var(--t-color-accent);
 }
 
-.spacer {
-	/* 占位：把排序与视图切换推到右侧 */
-	margin-left: auto;
-}
-
 .sort-label {
 	display: inline-flex;
 	align-items: center;
@@ -189,18 +184,6 @@
 
 .sort-select {
 	padding: var(--space-xs) var(--space-sm);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	font-size: var(--text-sm);
-	cursor: pointer;
-}
-
-.sort-select:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .grid {
@@ -237,7 +220,7 @@
 /* 上传命中已有文件时的定位高亮（4s 后由 hook 清除） */
 .card-highlight {
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+	box-shadow: var(--t-ring-accent);
 }
 
 .preview {
@@ -395,27 +378,10 @@
 }
 
 .edit-input {
-	width: 100%;
 	height: 1.5rem;
 	margin-bottom: var(--space-xs);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
 	padding: 0 var(--space-sm);
-	font-size: var(--text-sm);
-	font-family: inherit;
-	outline: none;
-	box-sizing: border-box;
-}
-
-.edit-input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+	border-radius: var(--radius-sm);
 }
 
 .error {
@@ -463,11 +429,6 @@
 		color: var(--t-color-accent);
 	}
 
-	.spacer {
-		/* 占位：把排序与视图切换推到右侧 */
-		margin-left: auto;
-	}
-
 	.sort-label {
 		display: inline-flex;
 		align-items: center;
@@ -478,22 +439,6 @@
 	.sort-text {
 		font-size: var(--text-xs);
 		color: var(--t-color-ink-muted);
-	}
-
-	.sort-select {
-		padding: var(--space-xs) var(--space-sm);
-		border: 1px solid var(--t-color-border);
-		border-radius: var(--radius-md);
-		background: var(--t-color-surface);
-		color: var(--t-color-ink);
-		font-size: var(--text-sm);
-		cursor: pointer;
-	}
-
-	.sort-select:focus {
-		outline: none;
-		border-color: var(--t-color-accent);
-		box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 	}
 
 	.grid {
@@ -531,7 +476,7 @@
 
 .row-highlight {
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+	box-shadow: var(--t-ring-accent);
 }
 
 .row-thumb {
@@ -657,17 +602,6 @@
 .batch-tag-input {
 	width: 9rem;
 	padding: var(--space-xs) var(--space-sm);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	font-size: var(--text-sm);
-}
-
-.batch-tag-input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 /* ── 移动端收尾 ── */

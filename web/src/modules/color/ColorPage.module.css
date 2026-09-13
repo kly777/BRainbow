@@ -42,7 +42,7 @@
 
 .card-active {
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+	box-shadow: var(--t-ring-accent);
 }
 
 .swatch-row {
@@ -190,31 +190,9 @@
 	border-color: var(--t-color-accent);
 }
 
-.btn-ghost {
-	font-size: var(--text-sm);
-	color: var(--t-color-ink-muted);
-	background: transparent;
-	border: 1px solid var(--t-color-border-strong);
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-lg);
-	cursor: pointer;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast),
-		border-color var(--t-transition-fast);
-}
-
-.btn-ghost:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-	border-color: var(--t-color-border-strong);
-}
-
-.btn-ghost:disabled {
-	opacity: 0.35;
-	cursor: default;
-}
-
+/* 「重置为默认」按钮已改用原语 <Button variant="outline">（形态定义见 Button.module.css
+ * 的 .outline 注释）。窄屏这一档保留，带 .footer 容器类以拿到 (0,2,0) 特异度，
+ * 不依赖两个 CSS Module 的产物顺序。 */
 @media (width <= 600px) {
 	.page {
 		padding: var(--space-md);
@@ -224,14 +202,9 @@
 		grid-template-columns: 1fr;
 	}
 
-	.btn-ghost {
+	.footer .mobile-compact {
+		height: 2rem;
 		padding: 0 var(--space-md);
 		font-size: var(--text-xs);
-		line-height: 1;
-		height: 2rem;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		box-sizing: border-box;
 	}
 }

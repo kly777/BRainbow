@@ -214,30 +214,6 @@
 
 /* ── 轮换按钮 ── */
 
-.rotate-btn {
-	padding: var(--space-xs) var(--space-lg);
-	font-size: var(--text-sm);
-	border-radius: var(--radius-md);
-	border: 1px solid var(--t-color-danger);
-	background: transparent;
-	color: var(--t-color-danger);
-	cursor: pointer;
-	flex: none;
-	transition: all var(--t-transition-fast);
-}
-
-.rotate-btn:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
-
-.rotate-btn:hover:not(:disabled) {
-	background: var(--t-color-danger);
-	color: var(--t-color-on-solid);
-	box-shadow: 0 2px 8px
-		color-mix(in srgb, var(--t-color-danger) 20%, transparent);
-}
-
 /* ── 响应式 ── */
 @media (width <= 768px) {
 	.page {

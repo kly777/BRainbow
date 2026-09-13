@@ -1,6 +1,6 @@
 // ── 命令面板（⌘K）：导航 / 站内搜索 / 指令 / 移动端 FAB ──
 
-import { Tooltip } from "@components/ui";
+import { Input, Tooltip } from "@components/ui";
 import { For, Show } from "solid-js";
 import styles from "./CommandPalette.module.css";
 import {
@@ -197,9 +197,9 @@ export default function CommandPalette() {
 					<div class={styles.inputRow}>
 						<span class={styles.prefix}>{MODE_PREFIX[p.mode() as Mode]}</span>
 						<ModeTag mode={p.mode()} />
-						<input
+						<Input
 							ref={p.bindInput}
-							class={styles.input}
+							class={styles.field}
 							placeholder={MODE_PLACEHOLDER[p.mode() as Mode]}
 							value={p.value()}
 							onInput={(e) => {
@@ -211,6 +211,7 @@ export default function CommandPalette() {
 							aria-expanded={true}
 							aria-haspopup="listbox"
 							aria-autocomplete="list"
+							aria-label="搜索或执行命令"
 						/>
 					</div>
 					{ActionPanel()}

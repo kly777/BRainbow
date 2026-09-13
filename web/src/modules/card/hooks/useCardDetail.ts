@@ -1,15 +1,15 @@
 import { fillPath, PATHS } from "@config/paths";
 import { deleteCardE, getCardE } from "@modules/card";
-import { confirmAndDelete } from "@shared/utils";
+import { confirmAndDelete, tryAsync } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
-import { createResource } from "solid-js";
+import { createResource, createSignal } from "solid-js";
 import type { Card } from "../model.ts";
 
 export interface CardDetailApi {
 	cardId: () => number;
 	card: () => Card | undefined;
 	cardLoading: boolean;
-	cardError: Error | undefined;
+	cardError: unknown;
 	refetch: () => void;
 	handleDelete: () => Promise<void>;
 	handleEdit: () => void;
@@ -26,9 +26,24 @@ export function useCardDetail(): CardDetailApi {
 		return parseInt(id, 10);
 	};
 
+	/** 加载失败单独用信号暴露：任其逃逸会让页面既无错误态也无数据 */
+	const [loadError, setLoadError] = createSignal<unknown>(null);
+
+	const INVALID_ID_ERROR = new Error("无效ID");
+	const validId = () => !Number.isNaN(cardId());
+
 	const [card, { refetch }] = createResource(cardId, async (id) => {
-		if (Number.isNaN(id)) throw new Error("无效ID");
-		return await getCardE(id);
+		if (!validId()) {
+			setLoadError(INVALID_ID_ERROR);
+			return undefined;
+		}
+		const result = await tryAsync(() => getCardE(id));
+		if (result.ok) {
+			setLoadError(null);
+			return result.value;
+		}
+		setLoadError(result.error);
+		return undefined;
 	});
 
 	const handleDelete = async () => {
@@ -55,7 +70,7 @@ export function useCardDetail(): CardDetailApi {
 			return card.loading;
 		},
 		get cardError() {
-			return card.error;
+			return loadError() ?? undefined;
 		},
 		refetch,
 		handleDelete,

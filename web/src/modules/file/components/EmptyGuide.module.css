@@ -46,20 +46,10 @@
 	font-size: var(--text-xs);
 }
 
-.btn {
+/* 上传按钮已改用原语 <Button variant="primary">：原来的 accent 软底 + accent 描边 +
+ * accent 文字违反 doc/design-tokens.md 的 accent 纪律（"accent 只用于链接/焦点/选中态/
+ * 语义徽章；primary 按钮用墨色"），现随空态 CTA 一起收敛为墨色实底。
+ * 本模块只保留布局用的外边距。 */
+.cta {
 	margin-top: var(--space-xs);
-	padding: var(--space-xs) var(--space-md);
-	border: 1px solid var(--t-color-accent);
-	border-radius: var(--radius-md);
-	background: var(--t-color-accent-soft);
-	color: var(--t-color-accent);
-	font-size: var(--text-sm);
-	font-weight: 600;
-	cursor: pointer;
-	transition: background var(--t-transition-fast);
-}
-
-.btn:hover {
-	background: var(--t-color-accent);
-	color: var(--t-color-on-solid);
 }

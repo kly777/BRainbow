@@ -234,7 +234,8 @@ export function WelcomeText(props: {
 }) {
 	return (
 		<div class={styles.welcome}>
-			<h1 class={styles.welcomeTitle}>{getGreeting()}</h1>
+			{/* 降为 h2：页面级 h1 由 ChatPage 固定提供，避免欢迎态出现两个一级标题。样式由 .welcome-title 自带，视觉不变 */}
+			<h2 class={styles.welcomeTitle}>{getGreeting()}</h2>
 			<p class={styles.welcomeContext}>{props.title}</p>
 			<div class={styles.welcomeSamples}>
 				<For each={SAMPLE_PROMPTS}>

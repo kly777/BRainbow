@@ -24,22 +24,9 @@
 }
 
 .search-input {
-	width: 100%;
+	/* 基础形态来自 Control 原语 + SearchInput 自身；此处只覆盖形状 */
 	padding: var(--space-sm) var(--space-md);
-	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-	font-size: var(--text-sm);
-}
-
-.search-input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .search-input::placeholder {
@@ -212,7 +199,7 @@
 /* 输入区聚焦态：accent 描边 */
 .input-shell:focus-within .input-area {
 	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
+	box-shadow: var(--t-ring-accent);
 }
 
 /* 停止生成按钮：流式中替换发送按钮（危险色） */

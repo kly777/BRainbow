@@ -122,16 +122,9 @@
 
 .status-select {
 	padding: var(--space-xs) var(--space-xl) var(--space-xs) var(--space-md);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	font-size: var(--text-sm);
-	color: var(--t-color-ink);
 	background: var(--t-color-surface)
 		url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239ca3af' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")
 		no-repeat right 0.5rem center;
-	cursor: pointer;
-	outline: none;
-	transition: border-color var(--t-transition-fast);
 	appearance: none;
 }
 

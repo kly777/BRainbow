@@ -186,13 +186,6 @@
 	resize: vertical;
 }
 
-.form-input:focus,
-.form-textarea:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-}
-
 @media (width <= 768px) {
 	.container {
 		padding: var(--space-lg) var(--space-md);

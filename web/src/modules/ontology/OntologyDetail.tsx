@@ -1,8 +1,20 @@
 // ── /ontology/:id：本体详情（全局搜索直达） ──
 
-import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
+import {
+	Button,
+	ErrorRetry,
+	Input,
+	LoadingSkeleton,
+	Textarea,
+	Toolbar,
+} from "@components/ui";
 import { PATHS } from "@config/paths";
-import { confirmAndDelete, notifySuccess, tryOrNotify } from "@shared/utils";
+import {
+	confirmAndDelete,
+	notifySuccess,
+	tryAsync,
+	tryOrNotify,
+} from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal, Show } from "solid-js";
 import { deleteOntoE, getOntoE, updateOntoE } from "./api";
@@ -23,18 +35,18 @@ const EditForm = (props: EditFormProps) => (
 		<label class={styles.label} for="onto-name">
 			名称
 		</label>
-		<input
+		<Input
 			id="onto-name"
-			class={styles.input}
+			tone="bg"
 			value={props.name}
 			onInput={(e) => props.onNameInput(e.currentTarget.value)}
 		/>
 		<label class={styles.label} for="onto-desc">
 			描述
 		</label>
-		<textarea
+		<Textarea
 			id="onto-desc"
-			class={styles.textarea}
+			tone="bg"
 			value={props.description}
 			onInput={(e) => props.onDescriptionInput(e.currentTarget.value)}
 			rows={4}
@@ -60,9 +72,24 @@ export default function OntologyDetail() {
 	const navigate = useNavigate();
 	const id = () => Number(params.id);
 
-	const [data, { refetch }] = createResource(id, (v) => {
-		if (!Number.isInteger(v) || v < 1) throw new Error("无效的本体 ID");
-		return getOntoE(v);
+	const INVALID_ID_ERROR = new Error("无效的本体 ID");
+	const validId = () => Number.isInteger(id()) && id() >= 1;
+
+	const [loadError, setLoadError] = createSignal<unknown>(null);
+
+	const [data, { refetch }] = createResource(id, async (v) => {
+		if (!validId()) {
+			setLoadError(INVALID_ID_ERROR);
+			return undefined;
+		}
+		const result = await tryAsync(() => getOntoE(v));
+		if (result.ok) {
+			setLoadError(null);
+			return result.value;
+		}
+		// 取数失败也走错误信号：放任 Promise 拒绝会让页面既无错误态也无数据
+		setLoadError(result.error);
+		return undefined;
 	});
 
 	const [editing, setEditing] = createSignal(false);
@@ -127,8 +154,8 @@ export default function OntologyDetail() {
 				</Button>
 			</Toolbar>
 
-			<Show when={data.error}>
-				<ErrorRetry error={data.error} onRetry={refetch} />
+			<Show when={loadError()}>
+				<ErrorRetry error={loadError()} onRetry={refetch} />
 			</Show>
 
 			<Show when={data.loading}>

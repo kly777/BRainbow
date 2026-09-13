@@ -1,5 +1,6 @@
 // ── 颜色通道输入行（RGB / HSL / OKLCH）：数值输入 + 滑块，滑块复用 onInput 提交 ──
 
+import { Input } from "@components/ui";
 import type { Accessor } from "solid-js";
 import styles from "../ColorEditor.module.css";
 
@@ -13,7 +14,7 @@ export function RgbInputs(props: {
 }) {
 	return (
 		<span class={styles.triple}>
-			<input
+			<Input
 				class={styles.channel}
 				type="number"
 				min="0"
@@ -22,8 +23,9 @@ export function RgbInputs(props: {
 				onInput={(e) => props.onInput("r", e)}
 				onFocus={props.onFocus}
 				onBlur={props.onBlur}
+				aria-label="R 数值"
 			/>
-			<input
+			<Input
 				class={styles.channel}
 				type="number"
 				min="0"
@@ -32,8 +34,9 @@ export function RgbInputs(props: {
 				onInput={(e) => props.onInput("g", e)}
 				onFocus={props.onFocus}
 				onBlur={props.onBlur}
+				aria-label="G 数值"
 			/>
-			<input
+			<Input
 				class={styles.channel}
 				type="number"
 				min="0"
@@ -42,6 +45,7 @@ export function RgbInputs(props: {
 				onInput={(e) => props.onInput("b", e)}
 				onFocus={props.onFocus}
 				onBlur={props.onBlur}
+				aria-label="B 数值"
 			/>
 			<span class={styles.rangeHint}>0–255</span>
 			<input
@@ -94,7 +98,7 @@ export function HslInputs(props: {
 }) {
 	return (
 		<span class={styles.triple}>
-			<input
+			<Input
 				class={styles.channel}
 				type="number"
 				min="0"
@@ -103,8 +107,9 @@ export function HslInputs(props: {
 				onInput={(e) => props.onInput("h", e)}
 				onFocus={props.onFocus}
 				onBlur={props.onBlur}
+				aria-label="H 数值"
 			/>
-			<input
+			<Input
 				class={styles.channel}
 				type="number"
 				min="0"
@@ -113,8 +118,9 @@ export function HslInputs(props: {
 				onInput={(e) => props.onInput("s", e)}
 				onFocus={props.onFocus}
 				onBlur={props.onBlur}
+				aria-label="S 数值"
 			/>
-			<input
+			<Input
 				class={styles.channel}
 				type="number"
 				min="0"
@@ -123,6 +129,7 @@ export function HslInputs(props: {
 				onInput={(e) => props.onInput("l", e)}
 				onFocus={props.onFocus}
 				onBlur={props.onBlur}
+				aria-label="L 数值"
 			/>
 			<span class={styles.rangeHint}>H:0–360 S/L:0–100</span>
 			<input
@@ -175,7 +182,7 @@ export function OklchInputs(props: {
 }) {
 	return (
 		<span class={styles.triple}>
-			<input
+			<Input
 				class={styles.channel}
 				type="number"
 				min="0"
@@ -185,8 +192,9 @@ export function OklchInputs(props: {
 				onInput={(e) => props.onInput("L", e)}
 				onFocus={props.onFocus}
 				onBlur={props.onBlur}
+				aria-label="L 数值"
 			/>
-			<input
+			<Input
 				class={styles.channel}
 				type="number"
 				min="0"
@@ -195,8 +203,9 @@ export function OklchInputs(props: {
 				onInput={(e) => props.onInput("C", e)}
 				onFocus={props.onFocus}
 				onBlur={props.onBlur}
+				aria-label="C 数值"
 			/>
-			<input
+			<Input
 				class={styles.channel}
 				type="number"
 				min="0"
@@ -206,6 +215,7 @@ export function OklchInputs(props: {
 				onInput={(e) => props.onInput("h", e)}
 				onFocus={props.onFocus}
 				onBlur={props.onBlur}
+				aria-label="H 数值"
 			/>
 			<span class={styles.rangeHint}>L:0–1 C:≥0 h:0–360</span>
 			<input
@@ -242,7 +252,7 @@ export function OklchInputs(props: {
 				onInput={(e) => props.onInput("h", e)}
 				onFocus={props.onFocus}
 				onBlur={props.onBlur}
-				aria-label="h"
+				aria-label="H"
 			/>
 		</span>
 	);

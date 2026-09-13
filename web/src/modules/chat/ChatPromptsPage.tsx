@@ -1,6 +1,6 @@
 // ── 提示词预设管理：增删改查 ──
 
-import { Button, LoadingSkeleton } from "@components/ui";
+import { Button, Input, LoadingSkeleton, Textarea } from "@components/ui";
 import type { PromptPreset } from "@modules/chat";
 import {
 	createPresetE,
@@ -119,7 +119,7 @@ export default function ChatPromptsPage() {
 
 			<Show when={creating() || editing()}>
 				<div class={styles.editor}>
-					<input
+					<Input
 						type="text"
 						class={styles.input}
 						placeholder="预设名称（如：代码导师）"
@@ -127,7 +127,7 @@ export default function ChatPromptsPage() {
 						value={name()}
 						onInput={(e) => setName(e.currentTarget.value)}
 					/>
-					<textarea
+					<Textarea
 						class={styles.textarea}
 						rows={4}
 						placeholder="系统提示词内容…"

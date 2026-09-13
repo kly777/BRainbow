@@ -1,6 +1,13 @@
 // ── /file/:id：文件详情（左：文件展示主体，右：元信息侧栏） ──
 
-import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
+import {
+	Button,
+	DetailPage,
+	ErrorRetry,
+	Field,
+	Input,
+	LoadingSkeleton,
+} from "@components/ui";
 import {
 	AlertTriangle,
 	ChevronLeft,
@@ -254,16 +261,14 @@ const MetaRowEditor: Component<{
 	onRemove: (index: number) => void;
 }> = (props) => (
 	<div class={styles.metaEditRow}>
-		<input
-			type="text"
+		<Input
 			class={styles.metaEditKey}
 			placeholder="键"
 			value={props.entry.key}
 			onInput={(e) => props.onKey(props.index, e.currentTarget.value)}
 			aria-label={`元信息键 ${props.index + 1}`}
 		/>
-		<input
-			type="text"
+		<Input
 			class={styles.metaEditValue}
 			placeholder="值"
 			value={props.entry.value}
@@ -286,15 +291,12 @@ const EditForm: Component<{ m: ReturnType<typeof useFileDetail> }> = (
 	const m = props.m;
 	return (
 		<div class={styles.form}>
-			<label class={styles.label} for="file-name">
-				文件名
-			</label>
-			<input
-				id="file-name"
-				class={styles.input}
-				value={m.name()}
-				onInput={(e) => m.setName(e.currentTarget.value)}
-			/>
+			<Field label="文件名">
+				<Input
+					value={m.name()}
+					onInput={(e) => m.setName(e.currentTarget.value)}
+				/>
+			</Field>
 			<span class={styles.label}>标签</span>
 			<TagInput tags={m.tags()} onAdd={m.addTag} onRemove={m.removeTag} />
 			<span class={styles.label}>元信息</span>
@@ -354,82 +356,85 @@ export default function FileDetail() {
 	onCleanup(() => document.removeEventListener("keydown", onKeyDown));
 
 	return (
-		<div class={styles.container}>
-			<Toolbar
-				title={m.data()?.original_name}
-				backLabel="文件列表"
-				onBack={m.handleBack}
-			>
-				<Show when={m.siblingCount() > 1}>
+		<DetailPage
+			class={styles.container}
+			title={m.data()?.original_name ?? "文件详情"}
+			titleHidden
+			backLabel="文件列表"
+			onBack={m.handleBack}
+			actions={
+				<>
+					<Show when={m.siblingCount() > 1}>
+						<Button
+							variant="icon"
+							title="上一个（←）"
+							disabled={!m.hasPrev()}
+							onClick={m.goPrev}
+						>
+							<ChevronLeft size={16} />
+						</Button>
+						<span class={styles.siblingPos}>
+							{m.siblingPosition()} / {m.siblingCount()}
+						</span>
+						<Button
+							variant="icon"
+							title="下一个（→）"
+							disabled={!m.hasNext()}
+							onClick={m.goNext}
+						>
+							<ChevronRight size={16} />
+						</Button>
+					</Show>
 					<Button
 						variant="icon"
-						title="上一个（←）"
-						disabled={!m.hasPrev()}
-						onClick={m.goPrev}
+						title="复制文件 URL（可用于 Markdown 引用）"
+						onClick={() => {
+							const f = m.data();
+							if (f) copyTextWithToast(f.url);
+						}}
 					>
-						<ChevronLeft size={16} />
+						<Copy size={14} />
 					</Button>
-					<span class={styles.siblingPos}>
-						{m.siblingPosition()} / {m.siblingCount()}
-					</span>
 					<Button
 						variant="icon"
-						title="下一个（→）"
-						disabled={!m.hasNext()}
-						onClick={m.goNext}
+						title="下载文件"
+						onClick={() => {
+							const f = m.data();
+							if (f) window.open(f.url, "_blank");
+						}}
 					>
-						<ChevronRight size={16} />
+						<Download size={14} />
 					</Button>
-				</Show>
-				<Button
-					variant="icon"
-					title="复制文件 URL（可用于 Markdown 引用）"
-					onClick={() => {
-						const f = m.data();
-						if (f) copyTextWithToast(f.url);
-					}}
-				>
-					<Copy size={14} />
-				</Button>
-				<Button
-					variant="icon"
-					title="下载文件"
-					onClick={() => {
-						const f = m.data();
-						if (f) window.open(f.url, "_blank");
-					}}
-				>
-					<Download size={14} />
-				</Button>
-				<Show when={m.data()?.can_edit}>
-					<Button
-						variant="icon"
-						title={m.data()?.is_private ? "设为公开" : "设为私密"}
-						disabled={m.saving()}
-						onClick={() => void m.togglePrivate()}
-					>
-						<Show when={m.data()?.is_private} fallback={<Unlock size={14} />}>
-							<Lock size={14} />
-						</Show>
-					</Button>
-				</Show>
-				<Show when={m.data()?.can_edit}>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={m.startEdit}
-						disabled={m.editing()}
-					>
-						<Pencil size={14} /> 编辑
-					</Button>
-				</Show>
-				<Show when={m.data()?.can_edit}>
-					<Button variant="danger" size="sm" onClick={m.remove}>
-						删除
-					</Button>
-				</Show>
-			</Toolbar>
-
+					<Show when={m.data()?.can_edit}>
+						<Button
+							variant="icon"
+							title={m.data()?.is_private ? "设为公开" : "设为私密"}
+							disabled={m.saving()}
+							onClick={() => void m.togglePrivate()}
+						>
+							<Show when={m.data()?.is_private} fallback={<Unlock size={14} />}>
+								<Lock size={14} />
+							</Show>
+						</Button>
+					</Show>
+					<Show when={m.data()?.can_edit}>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={m.startEdit}
+							disabled={m.editing()}
+						>
+							<Pencil size={14} /> 编辑
+						</Button>
+					</Show>
+					<Show when={m.data()?.can_edit}>
+						<Button variant="danger" size="sm" onClick={m.remove}>
+							删除
+						</Button>
+					</Show>
+				</>
+			}
+		>
 			<Show when={m.dataError}>
 				<ErrorRetry error={m.dataError} onRetry={m.refetch} />
 			</Show>
@@ -452,6 +457,6 @@ export default function FileDetail() {
 					</div>
 				)}
 			</Show>
-		</div>
+		</DetailPage>
 	);
 }

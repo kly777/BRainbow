@@ -56,13 +56,14 @@
 	cursor: pointer;
 }
 
-.input {
+/* 角度数值框改用原语 <Input tone="bg">：原规则是整套控件声明，逐条与原语基础类对照后
+ * 只有这几条是域内差异 —— 固定窄宽度、更紧凑的内边距、小圆角、text-base、右对齐；
+ * 其余（border / 底色由 tone="bg" 表达 / 文字色 / 过渡）都来自原语。
+ * 原语基础类在 :where() 里（特异度 0），这些覆盖必定生效。 */
+.angle-input {
 	width: 6.875rem;
 	padding: var(--space-xs) var(--space-sm);
-	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
-	background: var(--t-color-bg);
-	color: var(--t-color-ink);
 	font-size: var(--text-base);
 	text-align: right;
 }

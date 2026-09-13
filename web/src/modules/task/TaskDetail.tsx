@@ -14,6 +14,7 @@ import {
 	confirmAndDelete,
 	fmtLocal,
 	notifySuccess,
+	tryAsync,
 	tryOrNotify,
 } from "@shared/utils";
 import { A, useNavigate, useParams } from "@solidjs/router";
@@ -92,9 +93,24 @@ export default function TaskDetail() {
 	const navigate = useNavigate();
 	const id = () => Number(params.id);
 
-	const [detail, { refetch }] = createResource(id, (v) => {
-		if (!Number.isInteger(v) || v < 1) throw new Error("无效的任务 ID");
-		return getTaskDetailE(v);
+	const INVALID_ID_ERROR = new Error("无效的任务 ID");
+	const validId = () => Number.isInteger(id()) && id() >= 1;
+
+	const [loadError, setLoadError] = createSignal<unknown>(null);
+
+	const [detail, { refetch }] = createResource(id, async (v) => {
+		if (!validId()) {
+			setLoadError(INVALID_ID_ERROR);
+			return undefined;
+		}
+		const result = await tryAsync(() => getTaskDetailE(v));
+		if (result.ok) {
+			setLoadError(null);
+			return result.value;
+		}
+		// 取数失败也走错误信号：放任 Promise 拒绝会让页面既无错误态也无数据
+		setLoadError(result.error);
+		return undefined;
 	});
 	const [allTasks] = createResource(async () => {
 		const result = await getAllTasksE();
@@ -140,8 +156,8 @@ export default function TaskDetail() {
 				</Button>
 			</Toolbar>
 
-			<Show when={detail.error}>
-				<ErrorRetry error={detail.error} onRetry={refetch} />
+			<Show when={loadError()}>
+				<ErrorRetry error={loadError()} onRetry={refetch} />
 			</Show>
 
 			<Show when={detail.loading}>

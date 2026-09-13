@@ -1,4 +1,4 @@
-import { Button, Modal } from "@components/ui";
+import { Button, Input, Modal } from "@components/ui";
 import {
 	changePasswordE,
 	loginE,
@@ -108,7 +108,7 @@ export default function AuthStatus() {
 				</Show>
 
 				<Show when={dialogMode() === "password"}>
-					<input
+					<Input
 						type="password"
 						placeholder="当前密码"
 						aria-label="当前密码"
@@ -117,8 +117,9 @@ export default function AuthStatus() {
 						onInput={(e) => setOldPassword(e.currentTarget.value)}
 						class={styles.input}
 						disabled={isSubmitting()}
+						tone="bg"
 					/>
-					<input
+					<Input
 						type="password"
 						placeholder="新密码（至少4位）"
 						aria-label="新密码"
@@ -127,6 +128,7 @@ export default function AuthStatus() {
 						onInput={(e) => setNewPassword(e.currentTarget.value)}
 						class={styles.input}
 						disabled={isSubmitting()}
+						tone="bg"
 					/>
 					<div class={styles.actions}>
 						<Button
@@ -140,7 +142,7 @@ export default function AuthStatus() {
 				</Show>
 
 				<Show when={dialogMode() !== "password"}>
-					<input
+					<Input
 						placeholder="用户名"
 						aria-label="用户名"
 						autocomplete="username"
@@ -148,8 +150,9 @@ export default function AuthStatus() {
 						onInput={(e) => setName(e.currentTarget.value)}
 						class={styles.input}
 						disabled={isSubmitting()}
+						tone="bg"
 					/>
-					<input
+					<Input
 						type="password"
 						placeholder="密码"
 						aria-label="密码"
@@ -158,6 +161,7 @@ export default function AuthStatus() {
 						onInput={(e) => setPassword(e.currentTarget.value)}
 						class={styles.input}
 						disabled={isSubmitting()}
+						tone="bg"
 					/>
 					<div class={styles.actions}>
 						<Button type="submit" variant="primary" disabled={!canSubmitAuth()}>

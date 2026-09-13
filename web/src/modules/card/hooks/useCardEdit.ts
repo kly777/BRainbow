@@ -11,7 +11,7 @@ export interface CardEditApi {
 	cardId: () => number;
 	card: () => Card | undefined;
 	cardLoading: boolean;
-	cardError: Error | undefined;
+	cardError: unknown;
 	refetch: () => void;
 	content: () => string;
 	setContent: (value: string) => void;
@@ -36,9 +36,24 @@ export function useCardEdit(): CardEditApi {
 		return parseInt(id, 10);
 	};
 
+	/** 加载失败单独用信号暴露：任其逃逸会让页面既无错误态也无数据 */
+	const [loadError, setLoadError] = createSignal<unknown>(null);
+
+	const INVALID_ID_ERROR = new Error("无效ID");
+	const validId = () => !Number.isNaN(cardId());
+
 	const [card, { refetch }] = createResource(cardId, async (id) => {
-		if (Number.isNaN(id)) throw new Error("无效ID");
-		return await getCardE(id);
+		if (!validId()) {
+			setLoadError(INVALID_ID_ERROR);
+			return undefined;
+		}
+		const result = await tryAsync(() => getCardE(id));
+		if (result.ok) {
+			setLoadError(null);
+			return result.value;
+		}
+		setLoadError(result.error);
+		return undefined;
 	});
 
 	const [content, setContent] = createSignal("");
@@ -112,7 +127,7 @@ export function useCardEdit(): CardEditApi {
 			return card.loading;
 		},
 		get cardError() {
-			return card.error;
+			return loadError() ?? undefined;
 		},
 		refetch,
 		content,

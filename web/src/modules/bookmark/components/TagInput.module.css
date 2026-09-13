@@ -35,16 +35,8 @@
 }
 
 .input {
-	width: 100%;
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-sm);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
 	padding: var(--space-xs) var(--space-md);
-	font-size: var(--text-sm);
+	border-radius: var(--radius-sm);
 }
 
 .dropdown {

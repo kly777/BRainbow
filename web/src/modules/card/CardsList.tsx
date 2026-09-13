@@ -4,16 +4,14 @@ import { fillPath, PATHS } from "@config/paths";
 // 过滤栏置于 AsyncView 外：布局上与 PageHead 同级，且不受四态切换影响
 
 import {
-	AsyncView,
 	Button,
+	ListPage,
 	Markdown as MarkdownRenderer,
 	Modal,
-	PageHead,
+	Textarea,
 } from "@components/ui";
-import { getCardsE, searchCardsE } from "@modules/card";
-import { tryAsync } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
-import { onMount, Show } from "solid-js";
+import { Show } from "solid-js";
 import styles from "./CardsList.module.css";
 import CardFilter from "./components/CardFilter.tsx";
 import CardMasonry from "./components/CardMasonry.tsx";
@@ -33,28 +31,10 @@ export default function CardsListPage() {
 	const navigate = useNavigate();
 	const m = useCardsList();
 
-	const loadInitial = async () => {
-		m.setLoading(true);
-		m.setError(null);
-		const q = m.searchQuery();
-		const result = await tryAsync(() =>
-			q ? searchCardsE(q, 1) : getCardsE(1),
-		);
-		if (result.ok) {
-			m.setCards(result.value.items);
-			m.setPage(result.value.page);
-			m.setTotalPages(result.value.total_pages);
-		} else {
-			m.setError(result.error);
-		}
-		m.setLoading(false);
-	};
-
-	onMount(loadInitial);
-
 	return (
 		<div class={styles.container}>
-			<PageHead
+			<ListPage
+				class={styles.container}
 				title="卡片列表"
 				actions={
 					<>
@@ -76,21 +56,19 @@ export default function CardsListPage() {
 						</Button>
 					</>
 				}
-			/>
-
-			<CardFilter
-				query={m.searchQuery()}
-				onSearch={m.handleSearch}
-				sortBy={m.sortBy()}
-				sortOrder={m.sortOrder()}
-				onSortChange={m.handleSortChange}
-			/>
-
-			<AsyncView
-				data={m.loading() ? undefined : (m.cards() ?? [])}
+				filters={
+					<CardFilter
+						query={m.searchQuery()}
+						onSearch={m.handleSearch}
+						sortBy={m.sortBy()}
+						sortOrder={m.sortOrder()}
+						onSortChange={m.handleSortChange}
+					/>
+				}
+				data={m.sortedCards()}
 				loading={m.loading()}
 				error={m.error()}
-				onRetry={loadInitial}
+				onRetry={m.refetch}
 				emptyMessage={
 					m.isSearchMode()
 						? "没有找到匹配的卡片"
@@ -108,7 +86,7 @@ export default function CardsListPage() {
 						deletingCardId={m.deletingCardId()}
 					/>
 				)}
-			</AsyncView>
+			</ListPage>
 
 			<Modal
 				isOpen={m.showCreateModal()}
@@ -142,7 +120,7 @@ export default function CardsListPage() {
 					<label for="card-content" class={styles.formLabel}>
 						内容
 					</label>
-					<textarea
+					<Textarea
 						id="card-content"
 						class={styles.formTextarea}
 						value={m.newCardContent()}

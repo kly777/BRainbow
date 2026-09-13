@@ -1,23 +1,7 @@
 /* features/task/ui/TaskKanban.css.ts — 增强版 */
 
 .edit-title-input {
-	width: 100%;
-	padding: var(--space-sm) var(--space-md);
-	font-size: var(--text-sm);
-	font-family: inherit;
-	color: var(--t-color-ink);
-	background: var(--t-color-bg);
-	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-}
-
-.edit-title-input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .board {

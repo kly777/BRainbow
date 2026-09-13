@@ -4,7 +4,7 @@
 	max-width: var(--page-text-max);
 	margin: 0 auto;
 	padding: 0;
-	animation: fade-in 0.2s ease-out;
+	animation: fade-in var(--t-transition-normal) -out;
 }
 
 .loading {
@@ -27,12 +27,11 @@
 	gap: var(--space-md);
 }
 
-.back-link {
-	font-size: var(--text-sm);
-	color: var(--t-color-accent);
-	text-decoration: none;
+/* 返回链接的形态来自 <BackLink>（共享 molecule）；这里只剩两处本页特有的布局/字重。
+ * 字重 500 与本页原有写法一致，故意保留为调用方类而不是塞进共享层 ——
+ * 另外三处用 BackLink 的页面都是常规字重。 */
+.top-bar-back {
 	font-weight: 500;
-	white-space: nowrap;
 	margin-top: var(--space-xs);
 }
 
@@ -71,40 +70,6 @@
 	margin: 0 0 var(--space-md) 0;
 	padding-bottom: var(--space-sm);
 	border-bottom: 1px solid var(--t-color-border);
-}
-
-.qa-section {
-	margin-bottom: var(--space-xl);
-}
-
-.qa-block {
-	margin-bottom: var(--space-lg);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	overflow: hidden;
-}
-
-.question {
-	padding: var(--space-md);
-	background: var(--t-color-bg);
-	display: flex;
-	gap: var(--space-sm);
-	border-bottom: 1px solid var(--t-color-border);
-}
-
-.q-label {
-	font-size: var(--text-xs);
-	font-weight: 700;
-	color: var(--t-color-accent);
-	background: var(--t-color-accent-soft);
-	width: 1.25rem;
-	height: 1.25rem;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-	margin-top: var(--space-2xs);
 }
 
 .answer {
@@ -166,10 +131,6 @@
 	color: var(--t-color-accent);
 }
 
-.back-link:hover {
-	text-decoration: underline;
-}
-
 .error-msg {
 	padding: var(--space-xl);
 	color: var(--t-color-danger);
@@ -188,7 +149,6 @@
 		padding: var(--space-md);
 	}
 
-	.question,
 	.answer {
 		padding: var(--space-sm);
 	}

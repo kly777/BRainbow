@@ -1,5 +1,4 @@
-import { ArrowLeft } from "@components/ui/icons";
-import { A } from "@solidjs/router";
+import { BackLink } from "@components/ui";
 import styles from "../ConvDetail.module.css";
 import { typeLabel } from "../hooks/type-labels.ts";
 
@@ -14,9 +13,7 @@ interface Props {
 export default function ConvTopBar(props: Props) {
 	return (
 		<div class={styles.topBar}>
-			<A href={props.backHref} class={styles.backLink}>
-				<ArrowLeft size={14} /> 搜索
-			</A>
+			<BackLink href={props.backHref} label="搜索" class={styles.topBarBack} />
 			<div class={styles.titleArea}>
 				<h1 class={styles.title}>{props.title}</h1>
 				<span class={styles.tag}>{typeLabel[props.type] || props.type}</span>

@@ -2,6 +2,7 @@
  * 文件库空态引导：首次进入或筛选无结果时，告诉用户可以怎么把文件放进来。
  */
 
+import Button from "@components/ui/atoms/Button.tsx";
 import { Upload } from "@components/ui/icons";
 import { type Component, Show } from "solid-js";
 import styles from "./EmptyGuide.module.css";
@@ -24,9 +25,9 @@ const EmptyGuide: Component<{ filtered: boolean; onUpload: () => void }> = (
 				</li>
 				<li>一次可选择多个文件批量上传</li>
 			</ul>
-			<button type="button" class={styles.btn} onClick={props.onUpload}>
+			<Button variant="primary" class={styles.cta} onClick={props.onUpload}>
 				选择文件上传
-			</button>
+			</Button>
 		</Show>
 	</div>
 );

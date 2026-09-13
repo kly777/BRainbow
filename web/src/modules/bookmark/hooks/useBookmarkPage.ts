@@ -19,9 +19,10 @@ import {
 	showConfirm,
 	strParam,
 	tryAsync,
+	useListResource,
 	useUrlParams,
 } from "@shared/utils";
-import { createEffect, createSignal } from "solid-js";
+import { createSignal } from "solid-js";
 import { useBookmarkForm } from "./useBookmarkForm.ts";
 import { useBookmarkImport } from "./useBookmarkImport.ts";
 
@@ -37,51 +38,52 @@ export function useBookmarkPage() {
 	const page = () => params.get("page");
 	const PAGE_SIZE = 500;
 
-	const [bookmarks, setBookmarks] = createSignal<Bookmark[]>([]);
-	const [total, setTotal] = createSignal(0);
-	const [totalPages, setTotalPages] = createSignal(1);
-	const [loading, setLoading] = createSignal(true);
-	const [error, setError] = createSignal<string | null>(null);
 	const [tagManagerOpen, setTagManagerOpen] = createSignal(false);
 
 	// 多选状态
 	const [selectedIds, setSelectedIds] = createSignal<Set<number>>(new Set());
 
-	// 竞态守卫
-	let loadSeq = 0;
-
-	async function load(paramsOpt?: { silent?: boolean }) {
-		const seq = ++loadSeq;
-		const q = searchQuery().trim();
-		const tag = tagFilter();
-		const pageNum = page();
-		if (!paramsOpt?.silent) setLoading(true);
-		setError(null);
-		const result = await tryAsync(() =>
-			q
-				? searchBookmarksE(q, pageNum, PAGE_SIZE, tag || undefined)
-				: getBookmarksE(pageNum, PAGE_SIZE, tag || undefined),
-		);
-		if (seq !== loadSeq) return;
-		if (result.ok) {
-			setBookmarks(result.value.items);
-			setTotal(result.value.total);
-			setTotalPages(result.value.total_pages);
+	/**
+	 * 列表数据源：改用 useListResource（createResource 范式）。
+	 * 原先手写的 bookmarks/total/totalPages/loading 信号、`loadSeq` 竞态守卫、
+	 * 以及"参数变化时重取"的 createEffect 全部由它接管 —— createResource
+	 * 自带竞态处理，不必手写守卫。
+	 *
+	 * 导出名保持不变（bookmarks/total/totalPages/loading/error/load），
+	 * 故 8 处调用点无需改动。
+	 */
+	const list = useListResource<{ q: string; tag: string }, Bookmark>({
+		key: () => ({ q: searchQuery().trim(), tag: tagFilter() }),
+		page,
+		fetcher: (k, p) =>
+			k.q
+				? searchBookmarksE(k.q, p, PAGE_SIZE, k.tag || undefined)
+				: getBookmarksE(p, PAGE_SIZE, k.tag || undefined),
+		onLoaded: () => {
 			// 恢复滚动位置
 			restoreScrollPosition();
-		} else {
-			setError(result.error.message);
-		}
-		setLoading(false);
-	}
-
-	// URL 参数变化时自动加载
-	createEffect(() => {
-		void searchQuery();
-		void tagFilter();
-		void page();
-		void load();
+		},
 	});
+
+	const bookmarks = list.items;
+	const total = list.total;
+	/** 原实现默认 1 页，保持该语义 */
+	const totalPages = () => Math.max(list.totalPages(), 1);
+	const loading = () => list.loading;
+	/**
+	 * 暴露 **Error 对象**而非消息字符串：消费方（AsyncView / ErrorRetry）用
+	 * getErrorMessage 取文案，而它不认字符串 —— 传字符串会一律显示"未知错误"，
+	 * 真实错误信息丢失（此前本页就是这样）。
+	 */
+	const error = () => list.error;
+
+	/**
+	 * 重新拉取。`silent: true` 时不经 loading 状态 —— 批量操作/标签变更后的
+	 * 静默同步，否则 AsyncView 会先闪一下骨架屏。
+	 */
+	async function load(paramsOpt?: { silent?: boolean }) {
+		await list.reload(paramsOpt);
+	}
 
 	function handleSearch(q: string) {
 		params.set({ q: q.trim(), page: 1 });
@@ -295,23 +297,19 @@ export function useBookmarkPage() {
 		});
 		if (!confirmed) return;
 
-		const prev = bookmarks();
-		const wasLastOnPage = prev.length === 1 && page() > 1;
+		const wasLastOnPage = bookmarks().length === 1 && page() > 1;
 
-		setBookmarks(prev.filter((b) => b.id !== bm.id));
-		setTotal((t) => Math.max(0, t - 1));
-
-		const result = await tryAsync(() => deleteBookmarkE(bm.id));
+		// 乐观移除：失败由 useListResource 回滚整份快照（items 与 total 一并还原）
+		const result = await list.optimistic(
+			(items) => items.filter((b) => b.id !== bm.id),
+			() => deleteBookmarkE(bm.id),
+			{ total: Math.max(0, list.total() - 1) },
+		);
 		if (result.ok) {
 			notifySuccess("书签已删除");
-			if (wasLastOnPage) {
-				const back = page() - 1;
-				params.set({ page: back });
-			}
+			if (wasLastOnPage) params.set({ page: page() - 1 });
 		} else {
 			notifyError("删除失败", result.error);
-			setBookmarks(prev);
-			setTotal((t) => t + 1);
 		}
 	}
 

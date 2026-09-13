@@ -70,6 +70,8 @@ const DB: Component = () => {
 
 	return (
 		<div class={styles.page}>
+			{/* 页面唯一的一级标题：本页标题已由界面元素 / 标签页呈现，故用 sr-only 补齐 document outline 与读屏器按标题导航 */}
+			<h1 class="sr-only">数据库浏览器</h1>
 			<nav class={styles.sidebar} aria-label="数据库表列表">
 				<div class={styles.sidebarHeader}>
 					<div class={styles.sidebarTitleRow}>

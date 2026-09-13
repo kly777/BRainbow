@@ -1,3 +1,4 @@
+import { Select } from "@components/ui";
 import type { Task } from "@modules/task";
 import { getAllTasksE, getDagE } from "@modules/task";
 import { notifyError, tryAsync } from "@shared/utils";
@@ -24,19 +25,20 @@ interface TagSelectorProps {
 
 function TagSelector(props: TagSelectorProps) {
 	return (
-		<select
+		<Select
 			class={styles.taskSelect}
 			value={props.value ?? ""}
 			onChange={(e) => {
 				const v = e.currentTarget.value;
 				props.onChange(v ? Number(v) : undefined);
 			}}
+			aria-label="依赖关系筛选"
 		>
 			<option value="">全部依赖关系</option>
 			{props.tasks.map((t) => (
 				<option value={t.id}>{t.title}</option>
 			))}
-		</select>
+		</Select>
 	);
 }
 
@@ -177,17 +179,18 @@ export default function TaskDag() {
 						value={taskFilter()}
 						onChange={setTaskFilter}
 					/>
-					<select
+					<Select
 						class={styles.taskSelect}
 						value={depth()}
 						onChange={(e) => setDepth(Number(e.currentTarget.value))}
+						aria-label="依赖层级筛选"
 					>
 						<option value={1}>深度 1</option>
 						<option value={2}>深度 2</option>
 						<option value={3}>深度 3</option>
 						<option value={5}>深度 5</option>
 						<option value={10}>深度 10</option>
-					</select>
+					</Select>
 					<button
 						type="button"
 						class={styles.zoomBtn}

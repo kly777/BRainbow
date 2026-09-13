@@ -1,0 +1,21 @@
+/* 返回链接：accent 文字 + 悬停下划线。
+ *
+ * 两条刻意的写法：
+ * 1. **不用 inline-flex + gap** —— 图标与文字之间保持一个普通空格（与改造前四处的写法一致），
+ *    换成 flex + gap 会改掉这个间距。
+ * 2. 基础类包在 `:where()` 里（特异度 0），调用方类（如 `ConvDetail` 的字重/外边距、
+ *    `ReadingDetail` 的网格跨列）必定生效，不依赖两个 CSS Module 在产物里的先后顺序 ——
+ *    与 `Control.module.css` 同一套契约（§10.1 的教训）。注意 `<A>` 自己还会追加
+ *    `inactive` / `active` 状态类，所以"调用方类排在最后"靠不住，覆盖只能靠特异度。 */
+
+:where(.back) {
+	font-size: var(--text-sm);
+	color: var(--t-color-accent);
+	text-decoration: none;
+	white-space: nowrap;
+	transition: color var(--t-transition-fast);
+}
+
+:where(.back):hover {
+	text-decoration: underline;
+}

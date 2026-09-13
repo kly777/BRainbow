@@ -88,6 +88,7 @@ function SingleCardView(props: { m: ReturnType<typeof useMemAdd> }) {
 							value={m.cue()}
 							onInput={m.setCue}
 							rows={4}
+							aria-label="线索"
 						/>
 					</div>
 				</div>
@@ -142,6 +143,7 @@ function PasteView(props: { m: ReturnType<typeof useMemAdd> }) {
 							class={styles.textarea}
 							value={m.pasteText()}
 							rows={8}
+							aria-label="粘贴导入内容"
 							placeholder={"质能方程 | E=mc²\n光速 | 299792458 m/s"}
 							onInput={(e) => {
 								m.setPasteText(e.currentTarget.value);

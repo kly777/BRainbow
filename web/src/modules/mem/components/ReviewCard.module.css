@@ -1,29 +1,5 @@
 /* features/mem/ui/ReviewCard.css.ts — 由 vanilla-extract 迁移 */
 
-.ghost-btn {
-	font-size: var(--text-sm);
-	color: var(--t-color-ink-muted);
-	background: transparent;
-	border: 1px solid var(--t-color-border-strong);
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-lg);
-	cursor: pointer;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast),
-		border-color var(--t-transition-fast);
-}
-
-.ghost-btn:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
-
-.ghost-btn:disabled {
-	opacity: 0.35;
-	cursor: default;
-}
-
 .nav-btn {
 	font-size: var(--text-lg);
 	color: var(--t-color-ink-muted);
@@ -47,30 +23,6 @@
 .nav-btn:hover:not(:disabled) {
 	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
-}
-
-.primary-btn {
-	font-size: var(--text-sm);
-	color: var(--t-color-on-solid);
-	background: var(--t-color-accent);
-	border: none;
-	border-radius: var(--radius-md);
-	padding: var(--space-xs) var(--space-lg);
-	cursor: pointer;
-	font-weight: 500;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast),
-		border-color var(--t-transition-fast);
-}
-
-.primary-btn:hover {
-	background: var(--t-color-accent-strong);
-}
-
-.primary-btn:disabled {
-	opacity: 0.5;
-	cursor: default;
 }
 
 .card-wrap {
@@ -133,7 +85,7 @@
 	display: flex;
 	flex-direction: column;
 	border-top: 1px solid var(--t-color-border);
-	animation: answerIn var(--t-transition-slow) ease;
+	animation: answerIn var(--t-transition-slow);
 	flex: 1 1 auto;
 	min-height: 0;
 	overflow: hidden;
@@ -460,18 +412,6 @@
 }
 
 @media (width <= 600px) {
-	.ghost-btn,
-	.primary-btn {
-		padding: 0 var(--space-md);
-		font-size: var(--text-xs);
-		line-height: 1;
-		height: 2rem;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		box-sizing: border-box;
-	}
-
 	.nav-btn {
 		font-size: var(--text-base);
 		padding-left: var(--space-md);

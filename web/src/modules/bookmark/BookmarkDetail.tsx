@@ -1,6 +1,13 @@
 // ── /bookmark/:id：书签详情（全局搜索直达 + AI 标签建议） ──
 
-import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
+import {
+	Button,
+	ErrorRetry,
+	Input,
+	LoadingSkeleton,
+	Textarea,
+	Toolbar,
+} from "@components/ui";
 import { Sparkles } from "@components/ui/icons";
 import { fmtLocal } from "@shared/utils";
 import { type Component, For, Show } from "solid-js";
@@ -60,7 +67,7 @@ const EditForm: Component<{
 		<label class={styles.label} for="bm-title">
 			标题
 		</label>
-		<input
+		<Input
 			id="bm-title"
 			class={styles.input}
 			value={props.title}
@@ -69,7 +76,7 @@ const EditForm: Component<{
 		<label class={styles.label} for="bm-url">
 			URL
 		</label>
-		<input
+		<Input
 			id="bm-url"
 			class={styles.input}
 			value={props.url}
@@ -78,7 +85,7 @@ const EditForm: Component<{
 		<label class={styles.label} for="bm-desc">
 			备注
 		</label>
-		<textarea
+		<Textarea
 			id="bm-desc"
 			class={styles.textarea}
 			value={props.description}

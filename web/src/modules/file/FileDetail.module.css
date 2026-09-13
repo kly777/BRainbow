@@ -245,29 +245,7 @@
 	margin-top: var(--space-xs);
 }
 
-.input {
-	width: 100%;
-	padding: var(--space-sm) var(--space-md);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	font-size: var(--text-sm);
-	transition:
-		border-color 0.15s ease,
-		box-shadow 0.15s ease;
-	box-sizing: border-box;
-}
-
-.input:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
-}
-
-.input::placeholder {
-	color: var(--t-color-ink-faint);
-}
+/* 文件名输入框：全部取值与原语默认一致，故不再保留自身样式 */
 
 .meta-edit-row {
 	display: flex;
@@ -278,30 +256,11 @@
 .meta-edit-key {
 	flex: 0 0 6rem;
 	padding: var(--space-xs) var(--space-sm);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	font-size: var(--text-sm);
-	box-sizing: border-box;
 }
 
 .meta-edit-value {
 	flex: 1;
 	padding: var(--space-xs) var(--space-sm);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	font-size: var(--text-sm);
-	box-sizing: border-box;
-}
-
-.meta-edit-key:focus,
-.meta-edit-value:focus {
-	outline: none;
-	border-color: var(--t-color-accent);
-	box-shadow: 0 0 0 3px var(--t-color-accent-ring);
 }
 
 .form-error {

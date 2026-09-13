@@ -77,6 +77,7 @@ export function Composer(props: {
 							props.onSend();
 						}
 					}}
+					aria-label="输入消息"
 				/>
 				<button
 					type="button"

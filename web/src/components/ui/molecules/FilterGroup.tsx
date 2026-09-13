@@ -1,3 +1,4 @@
+import Button from "@components/ui/atoms/Button.tsx";
 import styles from "@components/ui/molecules/FilterGroup.module.css";
 import type { Component } from "solid-js";
 import { For } from "solid-js";
@@ -19,18 +20,14 @@ const FilterGroup: Component<FilterGroupProps> = (props) => {
 		<div class={`${styles.group}${props.class ? ` ${props.class}` : ""}`}>
 			<For each={props.options}>
 				{({ value, label }) => (
-					<button
-						type="button"
-						class={
-							props.selected === value
-								? `${styles.btn} ${styles.active}`
-								: styles.btn
-						}
+					<Button
+						variant={props.selected === value ? "primary" : "secondary"}
+						size="sm"
 						onClick={() => props.onChange(value)}
 						aria-pressed={props.selected === value}
 					>
 						{label}
-					</button>
+					</Button>
 				)}
 			</For>
 		</div>

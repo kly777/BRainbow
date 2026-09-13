@@ -16,8 +16,8 @@
 	font-size: var(--text-sm);
 	cursor: pointer;
 	transition:
-		border-color 0.15s ease,
-		box-shadow 0.15s ease;
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 	white-space: nowrap;
 }
 
@@ -64,7 +64,7 @@
 	font-size: var(--text-sm);
 	text-align: left;
 	cursor: pointer;
-	transition: background 0.1s ease;
+	transition: background var(--t-transition-fast);
 }
 
 .option:hover {
@@ -104,15 +104,8 @@
 }
 
 .search-input {
-	width: 100%;
 	padding: var(--space-xs) var(--space-sm);
-	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
-	background: var(--t-color-bg);
-	color: var(--t-color-ink);
-	font-size: var(--text-sm);
-	outline: none;
-	transition: border-color 0.15s ease;
 }
 
 .search-input:focus {

@@ -87,6 +87,7 @@ const FilterHeaderCell: Component<FilterHeaderCellProps> = (props) => {
 							props.onSetFilter(props.col.name, next, val());
 						}
 					}}
+					aria-label={`筛选方式：${props.col.name}`}
 				>
 					<For each={FILTER_OPS}>
 						{(item) => <option value={item.value}>{item.label}</option>}
@@ -101,6 +102,7 @@ const FilterHeaderCell: Component<FilterHeaderCellProps> = (props) => {
 						onInput={(e) =>
 							props.onSetFilter(props.col.name, op(), e.currentTarget.value)
 						}
+						aria-label={`筛选 ${props.col.name}`}
 					/>
 				</Show>
 			</div>

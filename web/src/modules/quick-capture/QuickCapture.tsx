@@ -46,6 +46,7 @@ export default function QuickCapture() {
 						onKeyDown={qc.onInputKey}
 						placeholder="输入内容… #任务 @URL 保存为卡片"
 						autofocus
+						aria-label="快速捕获内容"
 					/>
 				</div>
 

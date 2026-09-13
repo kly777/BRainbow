@@ -24,6 +24,8 @@ export default function ChatMemPage() {
 
 	return (
 		<div class={styles.page}>
+			{/* 页面唯一的一级标题：本页标题由侧栏/欢迎语等界面元素承载，故用 sr-only 补齐 document outline 与读屏器按标题导航 */}
+			<h1 class="sr-only">记忆卡片生成</h1>
 			{/* ── 会话列表（与 /chat 共用 ChatSidebar） ── */}
 			<ChatSidebar
 				trees={c.trees}

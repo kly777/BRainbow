@@ -9,6 +9,7 @@ import {
 	type Component,
 	createMemo,
 	createResource,
+	createSignal,
 	For,
 	onCleanup,
 	Show,
@@ -58,9 +59,15 @@ const TextPreview: Component<{ item: FileItem }> = (props) => {
 	/** 代码语言（按扩展名/文件名判断；空串表示按纯文本展示） */
 	const lang = () => codeLang(props.item.original_name);
 
+	/**
+	 * 加载失败单独用信号暴露、**不从 fetcher 抛错**：抛错会中断 Solid 的
+	 * 响应式更新，loading 会一直停在 true，"加载中…"与错误提示会同时挂着。
+	 */
+	const [loadError, setLoadError] = createSignal<string | undefined>(undefined);
+
 	const [content] = createResource(
 		() => props.item.stored_id,
-		async (): Promise<LoadedText> => {
+		async (): Promise<LoadedText | undefined> => {
 			controller = new AbortController();
 			// URL 取自接口响应（不再本地拼接）；私密文件的内容接口需要凭据
 			const resp = await fetch(props.item.url, {
@@ -68,9 +75,11 @@ const TextPreview: Component<{ item: FileItem }> = (props) => {
 				headers: buildHeaders(),
 			});
 			if (!resp.ok) {
-				throw new Error(`加载失败（HTTP ${resp.status}）`);
+				setLoadError(`加载失败（HTTP ${resp.status}）`);
+				return undefined;
 			}
 			const text = await resp.text();
+			setLoadError(undefined);
 			const truncated = text.length > MAX_PREVIEW_CHARS;
 			return {
 				text: truncated ? text.slice(0, MAX_PREVIEW_CHARS) : text,
@@ -84,8 +93,8 @@ const TextPreview: Component<{ item: FileItem }> = (props) => {
 			<Show when={content.loading}>
 				<div class={styles.state}>加载中…</div>
 			</Show>
-			<Show when={content.error}>
-				<div class={styles.state}>预览失败：{content.error.message}</div>
+			<Show when={loadError()}>
+				{(msg) => <div class={styles.state}>预览失败：{msg()}</div>}
 			</Show>
 			<Show when={content()}>
 				{(c) => (

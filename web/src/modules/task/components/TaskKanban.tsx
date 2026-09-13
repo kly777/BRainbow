@@ -1,4 +1,4 @@
-import { Button, FilterGroup, Modal } from "@components/ui";
+import { Button, FilterGroup, Input, Modal } from "@components/ui";
 import type { Task } from "@modules/task";
 import { useTasks } from "@modules/task";
 import { fmtLocal } from "@shared/utils";
@@ -222,9 +222,10 @@ export default function TaskKanban() {
 					</>
 				}
 			>
-				<input
+				<Input
 					type="text"
 					class={styles.editTitleInput}
+					tone="bg"
 					value={editTitle()}
 					onInput={(e) => setEditTitle(e.currentTarget.value)}
 					onKeyDown={(e) => {

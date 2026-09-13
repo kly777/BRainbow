@@ -1,7 +1,7 @@
 // ── 助记提示词配置（挂在 /m 记忆页） ──
 // 与全局 AI 服务配置分离：这里只编辑助记生成提示词。
 
-import { Modal } from "@components/ui";
+import { Button, Modal, Textarea } from "@components/ui";
 import { getAiSettingsE, updateAiSettingsE } from "@shared/ai";
 import { tryAsync, tryOrNotify } from "@shared/utils";
 import { createEffect, createSignal } from "solid-js";
@@ -49,33 +49,38 @@ export default function MnemonicSettingsModal(props: Props) {
 						（可用 {"{cue}"}、{"{target}"} 作为占位符）
 					</span>
 				</label>
-				<textarea
+				<Textarea
 					id="mnemonic-prompt"
 					class={styles.prompt}
 					value={prompt()}
 					onInput={(e) => setPrompt(e.currentTarget.value)}
 					rows={6}
+					mono
 				/>
 				<div class={styles.actions}>
-					<button type="button" class={styles.btnGhost} onClick={handleReset}>
+					<Button
+						variant="outline"
+						class={styles.mobileCompact}
+						onClick={handleReset}
+					>
 						恢复默认
-					</button>
+					</Button>
 					<div class={styles.actionsRight}>
-						<button
-							type="button"
-							class={styles.btnGhost}
+						<Button
+							variant="outline"
+							class={styles.mobileCompact}
 							onClick={props.onClose}
 						>
 							取消
-						</button>
-						<button
-							type="button"
-							class={styles.btnPrimary}
+						</Button>
+						<Button
+							variant="primary"
+							class={styles.mobileCompact}
 							disabled={loading()}
 							onClick={() => void handleSave()}
 						>
 							{loading() ? "保存中…" : "保存"}
-						</button>
+						</Button>
 					</div>
 				</div>
 			</div>

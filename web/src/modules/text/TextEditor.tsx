@@ -7,6 +7,8 @@ export default function TextEditor() {
 
 	return (
 		<div class={styles.page}>
+			{/* 页面唯一的一级标题：本页标题已由界面元素 / 标签页呈现，故用 sr-only 补齐 document outline 与读屏器按标题导航 */}
+			<h1 class="sr-only">文本编辑</h1>
 			<div class={styles.tabs} role="tablist">
 				<For each={m.tabs()}>
 					{(tab, i) => (

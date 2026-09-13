@@ -2,11 +2,11 @@
 
 import {
 	Button,
+	DetailPage,
 	ErrorRetry,
 	Field,
 	Input,
 	LoadingSkeleton,
-	Toolbar,
 } from "@components/ui";
 import {
 	AlertTriangle,
@@ -356,82 +356,85 @@ export default function FileDetail() {
 	onCleanup(() => document.removeEventListener("keydown", onKeyDown));
 
 	return (
-		<div class={styles.container}>
-			<Toolbar
-				title={m.data()?.original_name}
-				backLabel="文件列表"
-				onBack={m.handleBack}
-			>
-				<Show when={m.siblingCount() > 1}>
+		<DetailPage
+			class={styles.container}
+			title={m.data()?.original_name ?? "文件详情"}
+			titleHidden
+			backLabel="文件列表"
+			onBack={m.handleBack}
+			actions={
+				<>
+					<Show when={m.siblingCount() > 1}>
+						<Button
+							variant="icon"
+							title="上一个（←）"
+							disabled={!m.hasPrev()}
+							onClick={m.goPrev}
+						>
+							<ChevronLeft size={16} />
+						</Button>
+						<span class={styles.siblingPos}>
+							{m.siblingPosition()} / {m.siblingCount()}
+						</span>
+						<Button
+							variant="icon"
+							title="下一个（→）"
+							disabled={!m.hasNext()}
+							onClick={m.goNext}
+						>
+							<ChevronRight size={16} />
+						</Button>
+					</Show>
 					<Button
 						variant="icon"
-						title="上一个（←）"
-						disabled={!m.hasPrev()}
-						onClick={m.goPrev}
+						title="复制文件 URL（可用于 Markdown 引用）"
+						onClick={() => {
+							const f = m.data();
+							if (f) copyTextWithToast(f.url);
+						}}
 					>
-						<ChevronLeft size={16} />
+						<Copy size={14} />
 					</Button>
-					<span class={styles.siblingPos}>
-						{m.siblingPosition()} / {m.siblingCount()}
-					</span>
 					<Button
 						variant="icon"
-						title="下一个（→）"
-						disabled={!m.hasNext()}
-						onClick={m.goNext}
+						title="下载文件"
+						onClick={() => {
+							const f = m.data();
+							if (f) window.open(f.url, "_blank");
+						}}
 					>
-						<ChevronRight size={16} />
+						<Download size={14} />
 					</Button>
-				</Show>
-				<Button
-					variant="icon"
-					title="复制文件 URL（可用于 Markdown 引用）"
-					onClick={() => {
-						const f = m.data();
-						if (f) copyTextWithToast(f.url);
-					}}
-				>
-					<Copy size={14} />
-				</Button>
-				<Button
-					variant="icon"
-					title="下载文件"
-					onClick={() => {
-						const f = m.data();
-						if (f) window.open(f.url, "_blank");
-					}}
-				>
-					<Download size={14} />
-				</Button>
-				<Show when={m.data()?.can_edit}>
-					<Button
-						variant="icon"
-						title={m.data()?.is_private ? "设为公开" : "设为私密"}
-						disabled={m.saving()}
-						onClick={() => void m.togglePrivate()}
-					>
-						<Show when={m.data()?.is_private} fallback={<Unlock size={14} />}>
-							<Lock size={14} />
-						</Show>
-					</Button>
-				</Show>
-				<Show when={m.data()?.can_edit}>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={m.startEdit}
-						disabled={m.editing()}
-					>
-						<Pencil size={14} /> 编辑
-					</Button>
-				</Show>
-				<Show when={m.data()?.can_edit}>
-					<Button variant="danger" size="sm" onClick={m.remove}>
-						删除
-					</Button>
-				</Show>
-			</Toolbar>
-
+					<Show when={m.data()?.can_edit}>
+						<Button
+							variant="icon"
+							title={m.data()?.is_private ? "设为公开" : "设为私密"}
+							disabled={m.saving()}
+							onClick={() => void m.togglePrivate()}
+						>
+							<Show when={m.data()?.is_private} fallback={<Unlock size={14} />}>
+								<Lock size={14} />
+							</Show>
+						</Button>
+					</Show>
+					<Show when={m.data()?.can_edit}>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={m.startEdit}
+							disabled={m.editing()}
+						>
+							<Pencil size={14} /> 编辑
+						</Button>
+					</Show>
+					<Show when={m.data()?.can_edit}>
+						<Button variant="danger" size="sm" onClick={m.remove}>
+							删除
+						</Button>
+					</Show>
+				</>
+			}
+		>
 			<Show when={m.dataError}>
 				<ErrorRetry error={m.dataError} onRetry={m.refetch} />
 			</Show>
@@ -454,6 +457,6 @@ export default function FileDetail() {
 					</div>
 				)}
 			</Show>
-		</div>
+		</DetailPage>
 	);
 }

@@ -58,9 +58,39 @@ const PAGE_LOADERS: Record<PathValue, PageLoader> = {
 	[PATHS.admin]: () => import("@modules/admin/AdminPage.tsx"),
 };
 
-/** 提取 Router 需要的字段 */
+/**
+ * 配了数据预取的路由（阶段 6）。这里只放路径清单，**实现按需加载**
+ * （`app/route-preloads.ts`）—— 预取代码不该进首屏 chunk。
+ */
+const PRELOADED_PATHS = new Set<string>([
+	PATHS.cardDetail,
+	PATHS.ontologyDetail,
+	PATHS.bookmarkDetail,
+	PATHS.taskDetail,
+	PATHS.convDetail,
+	PATHS.fileDetail,
+]);
+
+/**
+ * 提取 Router 需要的字段。
+ * `preload`（阶段 6）：路由器在链接悬停 / 预取意图时调用它，把详情数据提前放进
+ * shared/api/cache.ts，点击时页面直接命中缓存。是否真的取数由实现里的 intent 门控决定
+ * （导航与首屏不重复取，理由见 route-preloads.ts）。
+ */
 export function toRouteDefs(config: RouteConfig[]): RouteDefinition[] {
-	return config.map(({ path, component }) => ({ path, component }));
+	return config.map(({ path, component }) => ({
+		path,
+		component,
+		preload: PRELOADED_PATHS.has(path)
+			? async (args) => {
+					const { PAGE_PRELOADS, shouldPrefetch } = await import(
+						"@app/route-preloads.ts"
+					);
+					if (!shouldPrefetch(args.intent)) return;
+					await PAGE_PRELOADS[path as PathValue]?.(args);
+				}
+			: undefined,
+	}));
 }
 
 /** 路由定义：元数据（label/title/desc/nav）来自 navigation.ts 单一来源 */

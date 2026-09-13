@@ -11,10 +11,8 @@ import {
 	PageHead,
 	Textarea,
 } from "@components/ui";
-import { getCardsE, searchCardsE } from "@modules/card";
-import { tryAsync } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
-import { onMount, Show } from "solid-js";
+import { Show } from "solid-js";
 import styles from "./CardsList.module.css";
 import CardFilter from "./components/CardFilter.tsx";
 import CardMasonry from "./components/CardMasonry.tsx";
@@ -33,25 +31,6 @@ const CardPreview = (props: { content: string }) => (
 export default function CardsListPage() {
 	const navigate = useNavigate();
 	const m = useCardsList();
-
-	const loadInitial = async () => {
-		m.setLoading(true);
-		m.setError(null);
-		const q = m.searchQuery();
-		const result = await tryAsync(() =>
-			q ? searchCardsE(q, 1) : getCardsE(1),
-		);
-		if (result.ok) {
-			m.setCards(result.value.items);
-			m.setPage(result.value.page);
-			m.setTotalPages(result.value.total_pages);
-		} else {
-			m.setError(result.error);
-		}
-		m.setLoading(false);
-	};
-
-	onMount(loadInitial);
 
 	return (
 		<div class={styles.container}>
@@ -88,10 +67,10 @@ export default function CardsListPage() {
 			/>
 
 			<AsyncView
-				data={m.loading() ? undefined : (m.cards() ?? [])}
+				data={m.sortedCards()}
 				loading={m.loading()}
-				error={m.error()}
-				onRetry={loadInitial}
+				error={m.error}
+				onRetry={m.refetch}
 				emptyMessage={
 					m.isSearchMode()
 						? "没有找到匹配的卡片"

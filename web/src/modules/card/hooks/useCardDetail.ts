@@ -26,8 +26,12 @@ export function useCardDetail(): CardDetailApi {
 		return parseInt(id, 10);
 	};
 
+	const INVALID_ID_ERROR = new Error("无效ID");
+	const validId = () => !Number.isNaN(cardId());
+
 	const [card, { refetch }] = createResource(cardId, async (id) => {
-		if (Number.isNaN(id)) throw new Error("无效ID");
+		// 不抛错：fetcher 抛错会中断响应式更新，AsyncView 会一直显示骨架屏
+		if (!validId()) return undefined;
 		return await getCardE(id);
 	});
 
@@ -55,7 +59,8 @@ export function useCardDetail(): CardDetailApi {
 			return card.loading;
 		},
 		get cardError() {
-			return card.error;
+			if (card.error) return card.error;
+			return validId() ? undefined : INVALID_ID_ERROR;
 		},
 		refetch,
 		handleDelete,

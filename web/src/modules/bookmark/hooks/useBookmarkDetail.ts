@@ -52,8 +52,12 @@ export function useBookmarkDetail(): BookmarkDetailApi {
 	const navigate = useNavigate();
 	const id = () => Number(params.id);
 
+	const INVALID_ID_ERROR = new Error("无效的书签 ID");
+	const validId = () => Number.isInteger(id()) && id() >= 1;
+
 	const [data, { refetch }] = createResource(id, (v) => {
-		if (!Number.isInteger(v) || v < 1) throw new Error("无效的书签 ID");
+		// 不抛错：fetcher 抛错会中断响应式更新，loading 卡在 true
+		if (!validId()) return undefined;
 		return getBookmarkE(v);
 	});
 
@@ -158,7 +162,8 @@ export function useBookmarkDetail(): BookmarkDetailApi {
 			return data.loading;
 		},
 		get dataError() {
-			return data.error;
+			if (data.error) return data.error;
+			return validId() ? undefined : INVALID_ID_ERROR;
 		},
 		refetch,
 		editing,

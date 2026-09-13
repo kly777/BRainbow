@@ -59,8 +59,13 @@ export function useFileDetail(): FileDetailApi {
 	const location = useLocation();
 	const storedId = () => String(params.id ?? "");
 
+	/** 无效 id 的错误：不作为抛错路径，而是与资源错误一并暴露（见 dataError） */
+	const INVALID_ID_ERROR = new Error("无效的文件 ID");
+	const validId = () => Boolean(storedId());
+
 	const [data, { refetch, mutate }] = createResource(storedId, (id) => {
-		if (!id) throw new Error("无效的文件 ID");
+		// 不抛错：fetcher 抛错会中断 Solid 的响应式更新，loading 卡在 true
+		if (!validId()) return undefined;
 		return getFile(id);
 	});
 
@@ -223,7 +228,8 @@ export function useFileDetail(): FileDetailApi {
 			return data.loading;
 		},
 		get dataError() {
-			return data.error;
+			if (data.error) return data.error;
+			return validId() ? undefined : INVALID_ID_ERROR;
 		},
 		refetch,
 		editing,

@@ -60,10 +60,17 @@ export default function OntologyDetail() {
 	const navigate = useNavigate();
 	const id = () => Number(params.id);
 
+	const INVALID_ID_ERROR = new Error("无效的本体 ID");
+	const validId = () => Number.isInteger(id()) && id() >= 1;
+
 	const [data, { refetch }] = createResource(id, (v) => {
-		if (!Number.isInteger(v) || v < 1) throw new Error("无效的本体 ID");
+		// 不抛错：fetcher 抛错会中断响应式更新，loading 会一直停在 true
+		if (!validId()) return undefined;
 		return getOntoE(v);
 	});
+	/** 资源错误与"无效 id"合并后的加载错误 */
+	const loadError = () =>
+		data.error ?? (validId() ? undefined : INVALID_ID_ERROR);
 
 	const [editing, setEditing] = createSignal(false);
 	const [name, setName] = createSignal("");
@@ -127,8 +134,8 @@ export default function OntologyDetail() {
 				</Button>
 			</Toolbar>
 
-			<Show when={data.error}>
-				<ErrorRetry error={data.error} onRetry={refetch} />
+			<Show when={loadError()}>
+				<ErrorRetry error={loadError()} onRetry={refetch} />
 			</Show>
 
 			<Show when={data.loading}>

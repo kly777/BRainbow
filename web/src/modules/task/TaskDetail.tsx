@@ -92,10 +92,17 @@ export default function TaskDetail() {
 	const navigate = useNavigate();
 	const id = () => Number(params.id);
 
+	const INVALID_ID_ERROR = new Error("无效的任务 ID");
+	const validId = () => Number.isInteger(id()) && id() >= 1;
+
 	const [detail, { refetch }] = createResource(id, (v) => {
-		if (!Number.isInteger(v) || v < 1) throw new Error("无效的任务 ID");
+		// 不抛错：fetcher 抛错会中断响应式更新，loading 会一直停在 true
+		if (!validId()) return undefined;
 		return getTaskDetailE(v);
 	});
+	/** 资源错误与"无效 id"合并后的加载错误 */
+	const loadError = () =>
+		detail.error ?? (validId() ? undefined : INVALID_ID_ERROR);
 	const [allTasks] = createResource(async () => {
 		const result = await getAllTasksE();
 		return [...result.items];
@@ -140,8 +147,8 @@ export default function TaskDetail() {
 				</Button>
 			</Toolbar>
 
-			<Show when={detail.error}>
-				<ErrorRetry error={detail.error} onRetry={refetch} />
+			<Show when={loadError()}>
+				<ErrorRetry error={loadError()} onRetry={refetch} />
 			</Show>
 
 			<Show when={detail.loading}>

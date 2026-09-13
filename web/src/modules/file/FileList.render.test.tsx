@@ -371,4 +371,30 @@ describe("FileList 渲染", () => {
 			dispose();
 		});
 	}, 20000);
+
+	// 回归：取数失败必须走到错误态。
+	// useFileList 原先在 createResource 的 fetcher 里 throw —— 抛错会中断 Solid
+	// 的响应式更新，而应用没有 ErrorBoundary，资源停在 loading=true，
+	// 页面永远骨架屏，错误文案与重试入口都到不了。
+	it("取数失败显示错误态而不是卡在骨架屏", async () => {
+		const { listFiles } = await import("@modules/file/api.ts");
+		vi.mocked(listFiles).mockRejectedValueOnce(new Error("后端不可用"));
+
+		const { default: FileList } = await import("./FileList.tsx");
+		const host = document.createElement("div");
+		document.body.appendChild(host);
+
+		await createRoot(async (dispose) => {
+			render(() => <FileList />, host);
+			for (let i = 0; i < 50; i++) {
+				await new Promise((r) => setTimeout(r, 20));
+				if (host.textContent?.includes("加载失败")) break;
+			}
+			expect(host.textContent).toContain("加载失败");
+			expect(host.textContent).toContain("后端不可用");
+			// 骨架屏必须已经让位（否则就是本次修复前的卡死状态）
+			expect(host.querySelector('[class*="skeletonWrap"]')).toBeNull();
+			dispose();
+		});
+	}, 20000);
 });

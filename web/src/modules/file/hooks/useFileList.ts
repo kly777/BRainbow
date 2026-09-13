@@ -136,6 +136,13 @@ export function useFileList(): FileListApi {
 	const setView = (value: FileView) => params.set({ view: value });
 	const setSearch = (q: string) => params.set({ q, page: 1 });
 
+	/**
+	 * 取数失败单独用信号暴露，**不从 fetcher 抛错**。
+	 * 抛错会中断 Solid 的响应式更新，而本应用没有 ErrorBoundary ——
+	 * 结果是资源停在 loading=true，页面永远骨架屏、错误态与重试入口都到不了。
+	 */
+	const [loadError, setLoadError] = createSignal<Error | undefined>(undefined);
+
 	const [files, { refetch, mutate }] = createResource(
 		() => ({ cat: category(), t: tag(), q: search(), s: sort(), page: page() }),
 		async ({ cat, t, q, s, page }): Promise<PaginatedResponse<FileItem>> => {
@@ -149,8 +156,19 @@ export function useFileList(): FileListApi {
 					...(q.trim() ? { q: q.trim() } : {}),
 				}),
 			);
-			if (result.ok) return result.value;
-			throw result.error;
+			if (result.ok) {
+				setLoadError(undefined);
+				return result.value;
+			}
+			setLoadError(result.error);
+			// 返回空页而非抛错：让 loading 正常结束，错误经 error getter 交给 AsyncView
+			return {
+				items: [],
+				page: 1,
+				page_size: PAGE_SIZE,
+				total: 0,
+				total_pages: 0,
+			};
 		},
 	);
 
@@ -527,7 +545,7 @@ export function useFileList(): FileListApi {
 			return files.loading;
 		},
 		get error() {
-			return files.error;
+			return loadError();
 		},
 		refetch,
 		editingId,

@@ -40,10 +40,20 @@ export interface OntologyListApi {
 }
 
 export function useOntologyList(): OntologyListApi {
+	/**
+	 * 取数失败单独用信号暴露、不从 fetcher 抛错：抛错会中断 Solid 的响应式更新，
+	 * 而本应用没有 ErrorBoundary —— 资源会停在 loading=true，页面永远骨架屏。
+	 */
+	const [loadError, setLoadError] = createSignal<Error | undefined>(undefined);
+
 	const [ontologies, { mutate, refetch }] = createResource(async () => {
 		const result = await tryAsync(() => getOntosE());
-		if (result.ok) return result.value;
-		throw result.error;
+		if (result.ok) {
+			setLoadError(undefined);
+			return result.value;
+		}
+		setLoadError(result.error);
+		return [];
 	});
 
 	const params = useUrlParams({
@@ -140,7 +150,7 @@ export function useOntologyList(): OntologyListApi {
 			return ontologies.loading;
 		},
 		get error() {
-			return ontologies.error;
+			return loadError();
 		},
 		refetch,
 		searchQuery,

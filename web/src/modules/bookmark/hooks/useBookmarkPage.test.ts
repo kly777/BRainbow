@@ -115,7 +115,7 @@ describe("useBookmarkPage：数据接入", () => {
 			expect(h.total()).toBe(2);
 			expect(h.totalPages()).toBe(1);
 			expect(h.loading()).toBe(false);
-			expect(h.error()).toBeNull();
+			expect(h.error()).toBeFalsy();
 		}));
 
 	it("URL 带 q 时走 searchBookmarksE 而非 getBookmarksE", () => {

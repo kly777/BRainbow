@@ -39,8 +39,6 @@ export function useBookmarkPage() {
 	const PAGE_SIZE = 500;
 
 	const [tagManagerOpen, setTagManagerOpen] = createSignal(false);
-	/** 列表错误文案（useListResource 的 onError 写入；成功时清空） */
-	const [error, setError] = createSignal<string | null>(null);
 
 	// 多选状态
 	const [selectedIds, setSelectedIds] = createSignal<Set<number>>(new Set());
@@ -62,11 +60,9 @@ export function useBookmarkPage() {
 				? searchBookmarksE(k.q, p, PAGE_SIZE, k.tag || undefined)
 				: getBookmarksE(p, PAGE_SIZE, k.tag || undefined),
 		onLoaded: () => {
-			setError(null);
 			// 恢复滚动位置
 			restoreScrollPosition();
 		},
-		onError: (msg) => setError(msg),
 	});
 
 	const bookmarks = list.items;
@@ -74,6 +70,12 @@ export function useBookmarkPage() {
 	/** 原实现默认 1 页，保持该语义 */
 	const totalPages = () => Math.max(list.totalPages(), 1);
 	const loading = () => list.loading;
+	/**
+	 * 暴露 **Error 对象**而非消息字符串：消费方（AsyncView / ErrorRetry）用
+	 * getErrorMessage 取文案，而它不认字符串 —— 传字符串会一律显示"未知错误"，
+	 * 真实错误信息丢失（此前本页就是这样）。
+	 */
+	const error = () => list.error;
 
 	/**
 	 * 重新拉取。`silent: true` 时不经 loading 状态 —— 批量操作/标签变更后的

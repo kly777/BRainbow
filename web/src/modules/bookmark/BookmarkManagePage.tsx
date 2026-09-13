@@ -2,9 +2,7 @@
 
 import {
 	Button,
-	ErrorRetry,
-	LoadingSkeleton,
-	PageHead,
+	ListPage,
 	SearchInput,
 	SimplePagination,
 } from "@components/ui";
@@ -59,17 +57,9 @@ const BookmarkMainSection: Component<{
 }> = (props) => {
 	const b = props.b;
 
+	// 空态由 ListPage 的 emptySlot 承担，此处只渲染"有数据"时的内容
 	return (
-		<Show
-			when={b.bookmarks().length > 0}
-			fallback={
-				<div class={styles.state}>
-					{b.searchQuery().trim() || b.tagFilter()
-						? "没有找到匹配的书签"
-						: "还没有书签，点击上方按钮添加第一个吧！"}
-				</div>
-			}
-		>
+		<>
 			<BatchBar b={b} />
 			<div class={styles.listHeader}>
 				<input
@@ -106,7 +96,7 @@ const BookmarkMainSection: Component<{
 				onPrev={() => b.goPage(b.page() - 1)}
 				onNext={() => b.goPage(b.page() + 1)}
 			/>
-		</Show>
+		</>
 	);
 };
 
@@ -114,9 +104,21 @@ export default function BookmarkPage() {
 	const b = useBookmarkPage();
 
 	return (
-		<div class={styles.page}>
-			<PageHead
+		<>
+			<ListPage
+				class={styles.page}
 				title="网页书签"
+				data={b.bookmarks()}
+				loading={b.loading()}
+				error={b.error()}
+				onRetry={() => b.load()}
+				emptySlot={
+					<div class={styles.state}>
+						{b.searchQuery().trim() || b.tagFilter()
+							? "没有找到匹配的书签"
+							: "还没有书签，点击上方按钮添加第一个吧！"}
+					</div>
+				}
 				actions={
 					<>
 						<SearchInput
@@ -156,7 +158,10 @@ export default function BookmarkPage() {
 						</Button>
 					</>
 				}
-			/>
+			>
+				{() => <BookmarkMainSection b={b} />}
+			</ListPage>
+
 			<input
 				id="bookmark-import-input"
 				type="file"
@@ -168,17 +173,6 @@ export default function BookmarkPage() {
 				}}
 			/>
 
-			<Show when={b.loading()}>
-				<LoadingSkeleton />
-			</Show>
-			<Show when={b.error()}>
-				<ErrorRetry error={b.error()} onRetry={() => b.load()} />
-			</Show>
-
-			<Show when={!b.loading() && !b.error()}>
-				<BookmarkMainSection b={b} />
-			</Show>
-
 			<BookmarkFormModal b={b} />
 
 			<TagManager
@@ -186,6 +180,6 @@ export default function BookmarkPage() {
 				onClose={() => b.setTagManagerOpen(false)}
 				onDeleted={() => b.load({ silent: true })}
 			/>
-		</div>
+		</>
 	);
 }

@@ -1,30 +1,37 @@
 /* 详情页工具条：返回 + 标题 + 动作区。
  *
- * 返回按钮改用系统里的 ghost 按钮（`<Button variant="ghost">`）：
- * 原先这里自写了一个 `border-radius: var(--radius-full)` 的胶囊按钮 —— 全站按钮是
- * radius-sm / radius-md，只有它是胶囊，于是详情页顶部那个描边胶囊成了页面上最抢眼的元素；
- * 同时那份规则把 Button 的声明又抄了一遍（设计系统未自用的漏网之鱼，见
- * doc/frontend-ui-architecture.md §4 P1-3）。现在这里只保留本组件特有的调整。 */
+ * 这里**不再自带底色、下边框与内边距**。原因是它的宿主形态：7 个详情页把工具条放在
+ * `max-width` + `padding: 24px 32px` 的居中列容器里（DetailPage 把它渲染成容器的第一个
+ * 子元素），于是"surface 底 + 1px 下边框 + 自己那 16px 内边距"变成了一条**悬浮的横条** ——
+ * 边框只有列宽那么长、正文又被二次内缩，在 /file/:id（预览区占满视口）上尤其突兀。
+ * 全站真正的通栏头部（mem/MemManage、mem/MemAdd 的 .top-bar）是 `padding: 0` 的全高页面 +
+ * 自己撑满宽度，那才是这套 chrome 的正确用法。
+ *
+ * 返回入口的外观与全站返回链接 `<BackLink>` 对齐（accent 文字 + 悬停下划线、自身无内边距），
+ * 因为**同一个动作不该有两种长相**：conv / reading 四个页面用的是返回链接，详情页用的是工具条。
+ * 语义上仍保留按钮：返回目标可能依赖路由 state —— 文件详情要回到"进入详情时那个列表 URL"
+ * （含页码与筛选，见 useFileDetail 的 location.state.from），`<a href>` 表达不了。
+ * 覆盖选择器写 `.toolbar .back`（(0,2,0)），稳压 Button 的 `.ghost` / `.md`（(0,1,0)），
+ * 不依赖两个 CSS Module 在产物里的顺序。 */
 
 .toolbar {
 	display: flex;
 	align-items: center;
 	gap: var(--space-sm);
-	padding: var(--space-sm) var(--space-lg);
-	background: var(--t-color-surface);
-	border-bottom: 1px solid var(--t-color-border);
 	flex-shrink: 0;
 }
 
-/* 返回：左移一个自身内边距，让图标与工具条下方正文的左边缘对齐（只是视觉对齐，不改布局流）。
- * 配色比 ghost 的默认值重一档：ghost 的 ink-faint（60% 灰）作为导航入口偏弱。
- * 选择器写成 `.toolbar .back`（特异度 (0,2,0)）而不是单个 `.back` —— 否则与
- * Button.module.css 的 `.ghost` 同为 (0,1,0)，谁生效取决于两个 CSS Module 在产物里的顺序。 */
 .toolbar .back {
-	margin-left: calc(var(--space-md) * -1);
-	color: var(--t-color-ink-muted);
+	padding: 0;
+	color: var(--t-color-accent);
 	font-weight: 500;
 	flex: none;
+}
+
+/* 悬停只加下划线，不要 ghost 的浅底（浅底 + 无内边距会贴住文字） */
+.toolbar .back:hover:not(:disabled) {
+	background: transparent;
+	text-decoration: underline;
 }
 
 /* 标题：长标题不换行，也不把右侧动作区挤出容器 */

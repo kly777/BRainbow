@@ -12,6 +12,7 @@ import {
 	notifySuccess,
 	tryAsync,
 	tryOrNotify,
+	useDetailResource,
 } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal } from "solid-js";
@@ -22,6 +23,8 @@ export interface BookmarkDetailApi {
 	id: () => number;
 	data: () => BookmarkItem | undefined;
 	dataLoading: boolean;
+	/** 有旧数据、正在更新（后台刷新）—— 与 dataLoading 互斥 */
+	dataRefreshing: boolean;
 	dataError: unknown;
 	refetch: () => void;
 	editing: () => boolean;
@@ -53,25 +56,15 @@ export function useBookmarkDetail(): BookmarkDetailApi {
 	const navigate = useNavigate();
 	const id = () => Number(params.id);
 
-	/** 加载失败单独用信号暴露：任其逃逸会让页面既无错误态也无数据 */
-	const [loadError, setLoadError] = createSignal<unknown>(null);
-
-	const INVALID_ID_ERROR = new Error("无效的书签 ID");
-	const validId = () => Number.isInteger(id()) && id() >= 1;
-
-	const [data, { refetch }] = createResource(id, async (v) => {
-		if (!validId()) {
-			setLoadError(INVALID_ID_ERROR);
-			return undefined;
-		}
-		const result = await tryAsync(() => getBookmarkE(v));
-		if (result.ok) {
-			setLoadError(null);
-			return result.value;
-		}
-		setLoadError(result.error);
-		return undefined;
+	// 取数走 useDetailResource：错误消化 / 无效 id / 首次加载 vs 后台刷新的区分都在原语里
+	const resource = useDetailResource({
+		id,
+		validate: (v) => Number.isInteger(v) && v >= 1,
+		invalidIdError: new Error("无效的书签 ID"),
+		fetcher: (v) => getBookmarkE(v),
 	});
+	const data = resource.data;
+	const refetch = resource.refetch;
 
 	const [editing, setEditing] = createSignal(false);
 	const [title, setTitle] = createSignal("");
@@ -170,11 +163,16 @@ export function useBookmarkDetail(): BookmarkDetailApi {
 	return {
 		id,
 		data,
+		/** 只有"还没有数据"时为真（后台刷新走 dataRefreshing） */
 		get dataLoading() {
-			return data.loading;
+			return resource.loading();
+		},
+		/** 有旧数据、正在更新 */
+		get dataRefreshing() {
+			return resource.refreshing();
 		},
 		get dataError() {
-			return loadError() ?? undefined;
+			return resource.error();
 		},
 		refetch,
 		editing,

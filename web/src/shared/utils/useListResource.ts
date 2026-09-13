@@ -55,9 +55,9 @@ export interface ListResource<T> {
 	items: Accessor<T[]>;
 	total: Accessor<number>;
 	totalPages: Accessor<number>;
-	/** 用 getter：见文件头约定 1 */
-	readonly loading: boolean;
-	readonly error: unknown;
+	/** Accessor：见文件头约定 1（类型层面挡住"取值即冻结"的写法） */
+	loading: Accessor<boolean>;
+	error: Accessor<unknown>;
 	refetch: () => void;
 	/**
 	 * 重新拉取。
@@ -171,12 +171,9 @@ export function useListResource<K, T>(
 		items,
 		total,
 		totalPages,
-		get loading() {
-			return resource.loading;
-		},
-		get error() {
-			return error();
-		},
+		// Accessor（见文件头约定 1）：调用方写 list.loading()，类型层面挡住"取值即冻结"
+		loading: () => resource.loading,
+		error,
 		refetch,
 		reload,
 		patch,

@@ -173,8 +173,8 @@ export function useCardsList() {
 		totalPages: list.totalPages,
 		// 必须包成函数：直接写 `error: list.error` 会在构造返回对象时把 getter
 		// 求值一次并冻结成 null —— 与 useListResource 注释里警告的快照冻结同类
-		loading: () => list.loading,
-		error: () => list.error,
+		loading: list.loading,
+		error: list.error,
 		refetch: list.refetch,
 		searchQuery,
 		isSearchMode,

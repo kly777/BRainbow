@@ -14,6 +14,7 @@ export * from "./safe-action.ts";
 export * from "./search-query.ts";
 export * from "./speech.ts";
 export * from "./timing.ts";
+export * from "./useDetailResource.ts";
 export * from "./useListResource.ts";
 export * from "./useModal.ts";
 export * from "./useUrlParams.ts";

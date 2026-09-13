@@ -103,7 +103,7 @@ describe("useListResource：数据与分页", () => {
 	});
 });
 
-describe("useListResource：loading / error 必须是 getter", () => {
+describe("useListResource：loading / error 必须是 accessor（类型层面挡住取值即冻结）", () => {
 	it("loading 从 true 变为 false（若被冻结则恒为 true）", async () => {
 		const { api } = setup(async () => ({
 			items: [{ id: 1, name: "甲" }],
@@ -111,9 +111,9 @@ describe("useListResource：loading / error 必须是 getter", () => {
 			total: 1,
 			total_pages: 1,
 		}));
-		expect(api.loading).toBe(true); // 拉取中
+		expect(api.loading()).toBe(true); // 拉取中
 		await flush();
-		expect(api.loading).toBe(false); // 完成后必须能看到变化
+		expect(api.loading()).toBe(false); // 完成后必须能看到变化
 	});
 
 	it("error 在请求失败后可见，且 items 为空数组而非 undefined", async () => {
@@ -121,7 +121,7 @@ describe("useListResource：loading / error 必须是 getter", () => {
 			throw new Error("炸了");
 		});
 		await flush();
-		expect(api.error).toBeInstanceOf(Error);
+		expect(api.error()).toBeInstanceOf(Error);
 		expect(api.items()).toEqual([]);
 		expect(api.total()).toBe(0);
 	});

@@ -7,6 +7,7 @@ import {
 	notifySuccess,
 	showConfirm,
 	tryAsync,
+	useDetailResource,
 } from "@shared/utils";
 import { useLocation, useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal } from "solid-js";
@@ -22,6 +23,8 @@ export interface FileDetailApi {
 	storedId: () => string;
 	data: () => FileItem | undefined;
 	dataLoading: boolean;
+	/** 有旧数据、正在更新（后台刷新）—— 与 dataLoading 互斥 */
+	dataRefreshing: boolean;
 	dataError: unknown;
 	refetch: () => void;
 	editing: () => boolean;
@@ -59,29 +62,18 @@ export function useFileDetail(): FileDetailApi {
 	const location = useLocation();
 	const storedId = () => String(params.id ?? "");
 
-	/** 无效 id 的错误：不作为抛错路径，而是与资源错误一并暴露（见 dataError） */
-	const INVALID_ID_ERROR = new Error("无效的文件 ID");
-	const validId = () => Boolean(storedId());
-	/**
-	 * 加载失败单独用信号暴露。fetcher 里 throw 或放任 promise 拒绝，都会让错误
-	 * 逃逸（应用无 ErrorBoundary，资源卡在 loading），页面既到不了错误态也拿不到
-	 * 数据 —— 故在此显式消化，与 useFileList / useListResource 保持一致。
-	 */
-	const [loadError, setLoadError] = createSignal<unknown>(null);
-
-	const [data, { refetch, mutate }] = createResource(storedId, async (id) => {
-		if (!validId()) {
-			setLoadError(INVALID_ID_ERROR);
-			return undefined;
-		}
-		const result = await tryAsync(() => getFile(id));
-		if (result.ok) {
-			setLoadError(null);
-			return result.value;
-		}
-		setLoadError(result.error);
-		return undefined;
+	// 取数走 useDetailResource：错误消化、无效 id、以及"首次加载 vs 后台刷新"的区分
+	// 都在原语里（§4 P1-5 / P1-6，§11.2）。页面（与下面的 calculate/rename 等）沿用
+	// 原来的 data / refetch / mutate 名字，改动面最小。
+	const resource = useDetailResource({
+		id: storedId,
+		validate: (v) => v.length > 0,
+		invalidIdError: new Error("无效的文件 ID"),
+		fetcher: (v) => getFile(v),
 	});
+	const data = resource.data;
+	const refetch = resource.refetch;
+	const mutate = resource.mutate;
 
 	// 同批文件：从进入详情时的来源 URL 还原列表上下文（页码/类别/标签/搜索），
 	// 用它支持 ← → 与工具条上的上一个/下一个（命中 30s 缓存，几乎无额外开销）
@@ -132,7 +124,10 @@ export function useFileDetail(): FileDetailApi {
 		setName(f.original_name);
 		setTags([...f.tags]);
 		setMetaEntries(
-			Object.entries(f.meta ?? {}).map(([key, value]) => ({ key, value })),
+			Object.entries(f.meta ?? {}).map(([key, value]) => ({
+				key,
+				value: String(value),
+			})),
 		);
 		setFormError("");
 		setEditing(true);
@@ -238,11 +233,16 @@ export function useFileDetail(): FileDetailApi {
 	return {
 		storedId,
 		data,
+		/** 只有"还没有数据"时为真：骨架屏该看这个（后台刷新走 dataRefreshing） */
 		get dataLoading() {
-			return data.loading;
+			return resource.loading();
+		},
+		/** 有旧数据、正在更新：保留旧内容 + busy 提示，不要渲染骨架 */
+		get dataRefreshing() {
+			return resource.refreshing();
 		},
 		get dataError() {
-			return loadError() ?? undefined;
+			return resource.error();
 		},
 		refetch,
 		editing,

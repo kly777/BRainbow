@@ -25,6 +25,7 @@ export {
 	type TextareaProps,
 } from "./atoms/Textarea.tsx";
 export { default as Tooltip } from "./atoms/Tooltip.tsx";
+export { AsyncSection } from "./molecules/AsyncSection.tsx";
 export { AsyncView } from "./molecules/AsyncView.tsx";
 export { default as BackLink } from "./molecules/BackLink.tsx";
 export { default as ErrorRetry } from "./molecules/ErrorRetry.tsx";

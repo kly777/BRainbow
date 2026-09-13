@@ -1,13 +1,6 @@
 // ── /bookmark/:id：书签详情（全局搜索直达 + AI 标签建议） ──
 
-import {
-	Button,
-	ErrorRetry,
-	Input,
-	LoadingSkeleton,
-	Textarea,
-	Toolbar,
-} from "@components/ui";
+import { AsyncSection, Button, Input, Textarea, Toolbar } from "@components/ui";
 import { Sparkles } from "@components/ui/icons";
 import { fmtLocal } from "@shared/utils";
 import { type Component, For, Show } from "solid-js";
@@ -171,15 +164,13 @@ export default function BookmarkDetail() {
 				</Button>
 			</Toolbar>
 
-			<Show when={m.dataError}>
-				<ErrorRetry error={m.dataError} onRetry={m.refetch} />
-			</Show>
-
-			<Show when={m.dataLoading}>
-				<LoadingSkeleton />
-			</Show>
-
-			<Show when={m.data()}>
+			<AsyncSection
+				data={m.data}
+				loading={() => m.dataLoading}
+				error={() => m.dataError}
+				refreshing={() => m.dataRefreshing}
+				onRetry={m.refetch}
+			>
 				{(bm) => (
 					<div class={styles.card}>
 						<Show when={m.editing()} fallback={<BookmarkView bm={bm()} />}>
@@ -205,7 +196,7 @@ export default function BookmarkDetail() {
 						</Show>
 					</div>
 				)}
-			</Show>
+			</AsyncSection>
 		</div>
 	);
 }

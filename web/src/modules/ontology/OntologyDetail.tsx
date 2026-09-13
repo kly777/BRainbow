@@ -1,22 +1,15 @@
 // ── /ontology/:id：本体详情（全局搜索直达） ──
 
-import {
-	Button,
-	ErrorRetry,
-	Input,
-	LoadingSkeleton,
-	Textarea,
-	Toolbar,
-} from "@components/ui";
+import { AsyncSection, Button, Input, Textarea, Toolbar } from "@components/ui";
 import { PATHS } from "@config/paths";
 import {
 	confirmAndDelete,
 	notifySuccess,
-	tryAsync,
 	tryOrNotify,
+	useDetailResource,
 } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
-import { createResource, createSignal, Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import { deleteOntoE, getOntoE, updateOntoE } from "./api";
 import styles from "./OntologyDetail.module.css";
 
@@ -75,25 +68,16 @@ export default function OntologyDetail() {
 	const navigate = useNavigate();
 	const id = () => Number(params.id);
 
-	const INVALID_ID_ERROR = new Error("无效的本体 ID");
-	const validId = () => Number.isInteger(id()) && id() >= 1;
-
-	const [loadError, setLoadError] = createSignal<unknown>(null);
-
-	const [data, { refetch }] = createResource(id, async (v) => {
-		if (!validId()) {
-			setLoadError(INVALID_ID_ERROR);
-			return undefined;
-		}
-		const result = await tryAsync(() => getOntoE(v));
-		if (result.ok) {
-			setLoadError(null);
-			return result.value;
-		}
-		// 取数失败也走错误信号：放任 Promise 拒绝会让页面既无错误态也无数据
-		setLoadError(result.error);
-		return undefined;
+	// 取数走 useDetailResource：错误消化、无效 id 判定、以及"首次加载 / 后台刷新"的区分
+	// 都在原语里（§4 P1-5、P1-6；§11.2）。页面只负责渲染。
+	const m = useDetailResource({
+		id,
+		validate: (v) => Number.isInteger(v) && v >= 1,
+		invalidIdError: new Error("无效的本体 ID"),
+		fetcher: (v) => getOntoE(v),
 	});
+	const data = m.data;
+	const { refetch } = m;
 
 	const [editing, setEditing] = createSignal(false);
 	const [name, setName] = createSignal("");
@@ -153,15 +137,13 @@ export default function OntologyDetail() {
 				</Button>
 			</Toolbar>
 
-			<Show when={loadError()}>
-				<ErrorRetry error={loadError()} onRetry={refetch} />
-			</Show>
-
-			<Show when={data.loading}>
-				<LoadingSkeleton />
-			</Show>
-
-			<Show when={data()}>
+			<AsyncSection
+				data={m.data}
+				loading={m.loading}
+				error={m.error}
+				refreshing={m.refreshing}
+				onRetry={refetch}
+			>
 				{(onto) => (
 					<div class={styles.card}>
 						<Show
@@ -190,7 +172,7 @@ export default function OntologyDetail() {
 						</Show>
 					</div>
 				)}
-			</Show>
+			</AsyncSection>
 		</div>
 	);
 }

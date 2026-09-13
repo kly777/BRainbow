@@ -1,6 +1,6 @@
 // ── /task/:id：任务详情（全局搜索直达） ──
 
-import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
+import { AsyncSection, Button, Toolbar } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
 import {
 	deleteTaskE,
@@ -14,8 +14,8 @@ import {
 	confirmAndDelete,
 	fmtLocal,
 	notifySuccess,
-	tryAsync,
 	tryOrNotify,
+	useDetailResource,
 } from "@shared/utils";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import {
@@ -93,25 +93,15 @@ export default function TaskDetail() {
 	const navigate = useNavigate();
 	const id = () => Number(params.id);
 
-	const INVALID_ID_ERROR = new Error("无效的任务 ID");
-	const validId = () => Number.isInteger(id()) && id() >= 1;
-
-	const [loadError, setLoadError] = createSignal<unknown>(null);
-
-	const [detail, { refetch }] = createResource(id, async (v) => {
-		if (!validId()) {
-			setLoadError(INVALID_ID_ERROR);
-			return undefined;
-		}
-		const result = await tryAsync(() => getTaskDetailE(v));
-		if (result.ok) {
-			setLoadError(null);
-			return result.value;
-		}
-		// 取数失败也走错误信号：放任 Promise 拒绝会让页面既无错误态也无数据
-		setLoadError(result.error);
-		return undefined;
+	// 取数走 useDetailResource（错误消化 / 无效 id / 首次加载 vs 后台刷新的区分都在原语里）
+	const m = useDetailResource({
+		id,
+		validate: (v) => Number.isInteger(v) && v >= 1,
+		invalidIdError: new Error("无效的任务 ID"),
+		fetcher: (v) => getTaskDetailE(v),
 	});
+	const detail = m.data;
+	const { refetch } = m;
 	const [allTasks] = createResource(async () => {
 		const result = await getAllTasksE();
 		return [...result.items];
@@ -152,15 +142,13 @@ export default function TaskDetail() {
 				</Button>
 			</Toolbar>
 
-			<Show when={loadError()}>
-				<ErrorRetry error={loadError()} onRetry={refetch} />
-			</Show>
-
-			<Show when={detail.loading}>
-				<LoadingSkeleton />
-			</Show>
-
-			<Show when={detail()}>
+			<AsyncSection
+				data={m.data}
+				loading={m.loading}
+				error={m.error}
+				refreshing={m.refreshing}
+				onRetry={refetch}
+			>
 				{(d) => (
 					<div class={styles.card}>
 						<div class={styles.head}>
@@ -213,7 +201,7 @@ export default function TaskDetail() {
 						</Show>
 					</div>
 				)}
-			</Show>
+			</AsyncSection>
 
 			<EditTaskModal
 				isOpen={editing()}

@@ -69,13 +69,13 @@ export function useBookmarkPage() {
 	const total = list.total;
 	/** 原实现默认 1 页，保持该语义 */
 	const totalPages = () => Math.max(list.totalPages(), 1);
-	const loading = () => list.loading;
+	const loading = list.loading;
 	/**
 	 * 暴露 **Error 对象**而非消息字符串：消费方（AsyncView / ErrorRetry）用
 	 * getErrorMessage 取文案，而它不认字符串 —— 传字符串会一律显示"未知错误"，
 	 * 真实错误信息丢失（此前本页就是这样）。
 	 */
-	const error = () => list.error;
+	const error = list.error;
 
 	/**
 	 * 重新拉取。`silent: true` 时不经 loading 状态 —— 批量操作/标签变更后的

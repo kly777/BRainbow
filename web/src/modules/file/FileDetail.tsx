@@ -1,13 +1,6 @@
 // ── /file/:id：文件详情（左：文件展示主体，右：元信息侧栏） ──
 
-import {
-	Button,
-	DetailPage,
-	ErrorRetry,
-	Field,
-	Input,
-	LoadingSkeleton,
-} from "@components/ui";
+import { AsyncSection, Button, DetailPage, Field, Input } from "@components/ui";
 import {
 	AlertTriangle,
 	ChevronLeft,
@@ -440,24 +433,16 @@ export default function FileDetail() {
 				</>
 			}
 		>
-			<Show when={m.dataError}>
-				<ErrorRetry error={m.dataError} onRetry={m.refetch} />
-			</Show>
-
-			{/* 骨架屏只在"还没有任何数据"时出现。切换上一个/下一个时 createResource 会保留
-			    上一个文件的值（dataLoading 为 true 但 data() 仍有值），若此时照样渲染骨架，
-			    骨架会插在旧内容上面，把整块内容顶下去再弹回来 —— 就是"沉一下再正确渲染"。
-			    切换途中改用 aria-busy + 半透明提示，布局完全不动。 */}
-			<Show when={m.dataLoading && !m.data()}>
-				<LoadingSkeleton />
-			</Show>
-
-			<Show when={m.data()}>
+			<AsyncSection
+				data={m.data}
+				loading={() => m.dataLoading}
+				error={() => m.dataError}
+				refreshing={() => m.dataRefreshing}
+				onRetry={m.refetch}
+				class={styles.body}
+			>
 				{(item) => (
-					<div
-						class={styles.body}
-						aria-busy={m.dataLoading ? "true" : undefined}
-					>
+					<>
 						<section class={styles.previewPane} aria-label="文件预览">
 							<Preview item={item()} />
 						</section>
@@ -466,9 +451,9 @@ export default function FileDetail() {
 								<EditForm m={m} />
 							</Show>
 						</aside>
-					</div>
+					</>
 				)}
-			</Show>
+			</AsyncSection>
 		</DetailPage>
 	);
 }

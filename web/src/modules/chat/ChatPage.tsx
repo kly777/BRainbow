@@ -34,6 +34,8 @@ export default function ChatPage() {
 
 	return (
 		<div class={styles.page}>
+			{/* 页面唯一的一级标题：本页标题由侧栏/欢迎语等界面元素承载，故用 sr-only 补齐 document outline 与读屏器按标题导航 */}
+			<h1 class="sr-only">AI 对话</h1>
 			{/* ── 侧边栏：搜索 + 树列表（与 /chat/mem 共用 ChatSidebar） ── */}
 			<ChatSidebar
 				trees={c.trees}

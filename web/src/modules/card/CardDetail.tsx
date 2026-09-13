@@ -1,8 +1,8 @@
 import {
 	AsyncView,
 	Button,
+	DetailPage,
 	Markdown as MarkdownRenderer,
-	Toolbar,
 } from "@components/ui";
 import { fmtLocal } from "@shared/utils";
 import { type Component, Show } from "solid-js";
@@ -13,16 +13,23 @@ const CardDetailPage: Component = () => {
 	const m = useCardDetail();
 
 	return (
-		<div class={styles.container}>
-			<Toolbar backLabel="卡片列表" onBack={m.handleBack}>
-				<Button variant="secondary" size="sm" onClick={m.handleEdit}>
-					编辑
-				</Button>
-				<Button variant="danger" size="sm" onClick={m.handleDelete}>
-					删除
-				</Button>
-			</Toolbar>
-
+		<DetailPage
+			class={styles.container}
+			title="卡片详情"
+			titleHidden
+			backLabel="卡片列表"
+			onBack={m.handleBack}
+			actions={
+				<>
+					<Button variant="secondary" size="sm" onClick={m.handleEdit}>
+						编辑
+					</Button>
+					<Button variant="danger" size="sm" onClick={m.handleDelete}>
+						删除
+					</Button>
+				</>
+			}
+		>
 			<AsyncView
 				data={m.card() ? [m.card()] : []}
 				loading={m.cardLoading}
@@ -52,7 +59,7 @@ const CardDetailPage: Component = () => {
 					);
 				}}
 			</AsyncView>
-		</div>
+		</DetailPage>
 	);
 };
 

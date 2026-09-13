@@ -1,3 +1,4 @@
+import { Input, Select, Textarea } from "@components/ui";
 import type { Task } from "@modules/task";
 import { For } from "solid-js";
 import styles from "./EditTaskModal.module.css";
@@ -24,12 +25,11 @@ export default function BasicInfoTab(props: BasicInfoTabProps) {
 				<label class={styles.fieldLabel} for="task-title">
 					标题 *
 				</label>
-				<input
+				<Input
 					id="task-title"
 					type="text"
 					value={props.title()}
 					onInput={(e) => props.setTitle(e.currentTarget.value)}
-					class={styles.fieldInput}
 					required
 					placeholder="输入任务标题"
 				/>
@@ -39,11 +39,10 @@ export default function BasicInfoTab(props: BasicInfoTabProps) {
 				<label class={styles.fieldLabel} for="task-desc">
 					描述
 				</label>
-				<textarea
+				<Textarea
 					id="task-desc"
 					value={props.description()}
 					onInput={(e) => props.setDescription(e.currentTarget.value)}
-					class={styles.fieldTextarea}
 					placeholder="输入任务描述"
 					rows={3}
 				/>
@@ -54,24 +53,23 @@ export default function BasicInfoTab(props: BasicInfoTabProps) {
 					<label class={styles.fieldLabel} for="task-status">
 						状态
 					</label>
-					<select
+					<Select
 						id="task-status"
 						value={props.status()}
 						onChange={(e) => props.setStatus(e.currentTarget.value)}
-						class={styles.fieldInput}
 					>
 						<option value="backlog">待办</option>
 						<option value="active">进行中</option>
 						<option value="completed">已完成</option>
 						<option value="archived">归档</option>
-					</select>
+					</Select>
 				</div>
 
 				<div class={styles.field}>
 					<label class={styles.fieldLabel} for="task-effort">
 						预计工时（分钟）
 					</label>
-					<input
+					<Input
 						id="task-effort"
 						type="number"
 						value={props.effort() ?? ""}
@@ -82,7 +80,6 @@ export default function BasicInfoTab(props: BasicInfoTabProps) {
 									: undefined,
 							)
 						}
-						class={styles.fieldInput}
 						min="0"
 						placeholder="可选"
 					/>
@@ -93,7 +90,7 @@ export default function BasicInfoTab(props: BasicInfoTabProps) {
 				<label class={styles.fieldLabel} for="task-parent">
 					父任务
 				</label>
-				<select
+				<Select
 					id="task-parent"
 					value={props.parentTaskId() ?? ""}
 					onChange={(e) =>
@@ -103,7 +100,6 @@ export default function BasicInfoTab(props: BasicInfoTabProps) {
 								: undefined,
 						)
 					}
-					class={styles.fieldInput}
 				>
 					<option value="">无</option>
 					<For
@@ -111,7 +107,7 @@ export default function BasicInfoTab(props: BasicInfoTabProps) {
 					>
 						{(t) => <option value={t.id}>{t.title}</option>}
 					</For>
-				</select>
+				</Select>
 			</div>
 		</div>
 	);

@@ -75,36 +75,6 @@
 	color: var(--t-color-ink);
 }
 
-.field-input {
-	width: 100%;
-	padding: var(--space-sm) var(--space-md);
-	font-size: var(--text-sm);
-	font-family: inherit;
-	color: var(--t-color-ink);
-	background: var(--t-color-surface);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-}
-
-.field-textarea {
-	width: 100%;
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-	resize: vertical;
-	padding: var(--space-sm) var(--space-md);
-	font-size: var(--text-sm);
-	min-height: 3.75rem;
-	font-family: inherit;
-}
-
 .field-row {
 	display: flex;
 	gap: var(--space-md);

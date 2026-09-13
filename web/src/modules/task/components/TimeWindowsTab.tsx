@@ -1,3 +1,4 @@
+import { Input, Select } from "@components/ui";
 import type { CreateTimeWindowRequest, Task, TimeWindow } from "@modules/task";
 import { createTimeWindowE, deleteTimeWindowE } from "@modules/task";
 import { getErrorMessage } from "@shared/api";
@@ -26,17 +27,16 @@ const TimeWindowTypeSelect: Component<{
 	value: "feasible" | "planned";
 	onChange: (value: "feasible" | "planned") => void;
 }> = (props) => (
-	<select
+	<Select
 		id="tw-type"
 		value={props.value}
 		onChange={(e) =>
 			props.onChange(e.currentTarget.value as "feasible" | "planned")
 		}
-		class={styles.fieldInput}
 	>
 		<option value="feasible">🟢 可进行</option>
 		<option value="planned">🔵 计划</option>
-	</select>
+	</Select>
 );
 
 const TimeWindowItem: Component<{
@@ -165,24 +165,22 @@ export default function TimeWindowsTab(props: TimeWindowsTabProps) {
 						<label class={styles.fieldLabel} for="tw-start-date">
 							开始日期
 						</label>
-						<input
+						<Input
 							id="tw-start-date"
 							type="date"
 							value={newStartDate()}
 							onInput={(e) => setNewStartDate(e.currentTarget.value)}
-							class={styles.fieldInput}
 						/>
 					</div>
 					<div class={styles.field}>
 						<label class={styles.fieldLabel} for="tw-start-time">
 							开始时间
 						</label>
-						<input
+						<Input
 							id="tw-start-time"
 							type="time"
 							value={newStartTime()}
 							onInput={(e) => setNewStartTime(e.currentTarget.value)}
-							class={styles.fieldInput}
 						/>
 					</div>
 				</div>
@@ -191,24 +189,22 @@ export default function TimeWindowsTab(props: TimeWindowsTabProps) {
 						<label class={styles.fieldLabel} for="tw-end-date">
 							结束日期
 						</label>
-						<input
+						<Input
 							id="tw-end-date"
 							type="date"
 							value={newEndDate()}
 							onInput={(e) => setNewEndDate(e.currentTarget.value)}
-							class={styles.fieldInput}
 						/>
 					</div>
 					<div class={styles.field}>
 						<label class={styles.fieldLabel} for="tw-end-time">
 							结束时间
 						</label>
-						<input
+						<Input
 							id="tw-end-time"
 							type="time"
 							value={newEndTime()}
 							onInput={(e) => setNewEndTime(e.currentTarget.value)}
-							class={styles.fieldInput}
 						/>
 					</div>
 				</div>

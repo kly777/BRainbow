@@ -1,3 +1,4 @@
+import { Select } from "@components/ui";
 import type { Task } from "@modules/task";
 import {
 	addTaskDependencyE,
@@ -171,7 +172,7 @@ export default function DependenciesTab(props: DependenciesTabProps) {
 					<span class={styles.sectionTitle}>添加依赖</span>
 				</div>
 				<div class={styles.addDepRow}>
-					<select
+					<Select
 						value={newDepId() ?? ""}
 						onChange={(e) => {
 							setNewDepId(
@@ -181,12 +182,11 @@ export default function DependenciesTab(props: DependenciesTabProps) {
 							);
 							setError("");
 						}}
-						class={styles.fieldInput}
 						aria-label="选择依赖任务"
 					>
 						<option value="">选择要依赖的任务...</option>
 						<DepOptions tasks={availableDepTasks()} />
-					</select>
+					</Select>
 					<button
 						type="button"
 						onClick={handleAdd}

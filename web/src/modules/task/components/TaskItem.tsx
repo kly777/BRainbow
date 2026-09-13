@@ -1,4 +1,4 @@
-import { Icon, Tooltip } from "@components/ui";
+import { Icon, Input, Select, Tooltip } from "@components/ui";
 import type { Task } from "@modules/task";
 import { fmtFull } from "@shared/utils";
 import { type Component, createSignal, For, Show } from "solid-js";
@@ -55,7 +55,7 @@ function TaskItem(props: TaskItemProps) {
 					</div>
 				</div>
 				<div class={styles.taskActions}>
-					<select
+					<Select
 						value={props.task.status || TaskStatus.BACKLOG}
 						onChange={(e) =>
 							props.onStatusChange(props.task.id, e.currentTarget.value)
@@ -67,7 +67,7 @@ function TaskItem(props: TaskItemProps) {
 						<option value={TaskStatus.ACTIVE}>进行中</option>
 						<option value={TaskStatus.COMPLETED}>已完成</option>
 						<option value={TaskStatus.ARCHIVED}>归档</option>
-					</select>
+					</Select>
 					<Tooltip label="编辑">
 						<button
 							type="button"
@@ -100,7 +100,7 @@ function TaskItem(props: TaskItemProps) {
 			{/* 子任务输入表单 */}
 			<Show when={showSubTaskInput()}>
 				<div class={styles.subTaskForm}>
-					<input
+					<Input
 						type="text"
 						placeholder="输入子任务标题，Enter 创建..."
 						value={subTaskTitle()}

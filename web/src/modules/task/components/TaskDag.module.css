@@ -37,13 +37,6 @@
 
 .task-select {
 	padding: var(--space-xs) var(--space-md);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	font-size: var(--text-sm);
-	color: var(--t-color-ink);
-	background: var(--t-color-surface);
-	outline: none;
-	cursor: pointer;
 	max-width: min(12.5rem, 100%);
 }
 

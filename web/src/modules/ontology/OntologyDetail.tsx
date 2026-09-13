@@ -2,7 +2,12 @@
 
 import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
 import { PATHS } from "@config/paths";
-import { confirmAndDelete, notifySuccess, tryOrNotify } from "@shared/utils";
+import {
+	confirmAndDelete,
+	notifySuccess,
+	tryAsync,
+	tryOrNotify,
+} from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal, Show } from "solid-js";
 import { deleteOntoE, getOntoE, updateOntoE } from "./api";
@@ -63,14 +68,22 @@ export default function OntologyDetail() {
 	const INVALID_ID_ERROR = new Error("无效的本体 ID");
 	const validId = () => Number.isInteger(id()) && id() >= 1;
 
-	const [data, { refetch }] = createResource(id, (v) => {
-		// 不抛错：fetcher 抛错会中断响应式更新，loading 会一直停在 true
-		if (!validId()) return undefined;
-		return getOntoE(v);
+	const [loadError, setLoadError] = createSignal<unknown>(null);
+
+	const [data, { refetch }] = createResource(id, async (v) => {
+		if (!validId()) {
+			setLoadError(INVALID_ID_ERROR);
+			return undefined;
+		}
+		const result = await tryAsync(() => getOntoE(v));
+		if (result.ok) {
+			setLoadError(null);
+			return result.value;
+		}
+		// 取数失败也走错误信号：放任 Promise 拒绝会让页面既无错误态也无数据
+		setLoadError(result.error);
+		return undefined;
 	});
-	/** 资源错误与"无效 id"合并后的加载错误 */
-	const loadError = () =>
-		data.error ?? (validId() ? undefined : INVALID_ID_ERROR);
 
 	const [editing, setEditing] = createSignal(false);
 	const [name, setName] = createSignal("");

@@ -10,6 +10,7 @@ import {
 	confirmAndDelete,
 	notifyError,
 	notifySuccess,
+	tryAsync,
 	tryOrNotify,
 } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
@@ -21,7 +22,7 @@ export interface BookmarkDetailApi {
 	id: () => number;
 	data: () => BookmarkItem | undefined;
 	dataLoading: boolean;
-	dataError: Error | undefined;
+	dataError: unknown;
 	refetch: () => void;
 	editing: () => boolean;
 	title: () => string;
@@ -52,13 +53,24 @@ export function useBookmarkDetail(): BookmarkDetailApi {
 	const navigate = useNavigate();
 	const id = () => Number(params.id);
 
+	/** 加载失败单独用信号暴露：任其逃逸会让页面既无错误态也无数据 */
+	const [loadError, setLoadError] = createSignal<unknown>(null);
+
 	const INVALID_ID_ERROR = new Error("无效的书签 ID");
 	const validId = () => Number.isInteger(id()) && id() >= 1;
 
-	const [data, { refetch }] = createResource(id, (v) => {
-		// 不抛错：fetcher 抛错会中断响应式更新，loading 卡在 true
-		if (!validId()) return undefined;
-		return getBookmarkE(v);
+	const [data, { refetch }] = createResource(id, async (v) => {
+		if (!validId()) {
+			setLoadError(INVALID_ID_ERROR);
+			return undefined;
+		}
+		const result = await tryAsync(() => getBookmarkE(v));
+		if (result.ok) {
+			setLoadError(null);
+			return result.value;
+		}
+		setLoadError(result.error);
+		return undefined;
 	});
 
 	const [editing, setEditing] = createSignal(false);
@@ -162,8 +174,7 @@ export function useBookmarkDetail(): BookmarkDetailApi {
 			return data.loading;
 		},
 		get dataError() {
-			if (data.error) return data.error;
-			return validId() ? undefined : INVALID_ID_ERROR;
+			return loadError() ?? undefined;
 		},
 		refetch,
 		editing,

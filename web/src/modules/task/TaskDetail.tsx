@@ -14,6 +14,7 @@ import {
 	confirmAndDelete,
 	fmtLocal,
 	notifySuccess,
+	tryAsync,
 	tryOrNotify,
 } from "@shared/utils";
 import { A, useNavigate, useParams } from "@solidjs/router";
@@ -95,14 +96,22 @@ export default function TaskDetail() {
 	const INVALID_ID_ERROR = new Error("无效的任务 ID");
 	const validId = () => Number.isInteger(id()) && id() >= 1;
 
-	const [detail, { refetch }] = createResource(id, (v) => {
-		// 不抛错：fetcher 抛错会中断响应式更新，loading 会一直停在 true
-		if (!validId()) return undefined;
-		return getTaskDetailE(v);
+	const [loadError, setLoadError] = createSignal<unknown>(null);
+
+	const [detail, { refetch }] = createResource(id, async (v) => {
+		if (!validId()) {
+			setLoadError(INVALID_ID_ERROR);
+			return undefined;
+		}
+		const result = await tryAsync(() => getTaskDetailE(v));
+		if (result.ok) {
+			setLoadError(null);
+			return result.value;
+		}
+		// 取数失败也走错误信号：放任 Promise 拒绝会让页面既无错误态也无数据
+		setLoadError(result.error);
+		return undefined;
 	});
-	/** 资源错误与"无效 id"合并后的加载错误 */
-	const loadError = () =>
-		detail.error ?? (validId() ? undefined : INVALID_ID_ERROR);
 	const [allTasks] = createResource(async () => {
 		const result = await getAllTasksE();
 		return [...result.items];

@@ -22,7 +22,7 @@ export interface FileDetailApi {
 	storedId: () => string;
 	data: () => FileItem | undefined;
 	dataLoading: boolean;
-	dataError: Error | undefined;
+	dataError: unknown;
 	refetch: () => void;
 	editing: () => boolean;
 	name: () => string;
@@ -62,11 +62,25 @@ export function useFileDetail(): FileDetailApi {
 	/** 无效 id 的错误：不作为抛错路径，而是与资源错误一并暴露（见 dataError） */
 	const INVALID_ID_ERROR = new Error("无效的文件 ID");
 	const validId = () => Boolean(storedId());
+	/**
+	 * 加载失败单独用信号暴露。fetcher 里 throw 或放任 promise 拒绝，都会让错误
+	 * 逃逸（应用无 ErrorBoundary，资源卡在 loading），页面既到不了错误态也拿不到
+	 * 数据 —— 故在此显式消化，与 useFileList / useListResource 保持一致。
+	 */
+	const [loadError, setLoadError] = createSignal<unknown>(null);
 
-	const [data, { refetch, mutate }] = createResource(storedId, (id) => {
-		// 不抛错：fetcher 抛错会中断 Solid 的响应式更新，loading 卡在 true
-		if (!validId()) return undefined;
-		return getFile(id);
+	const [data, { refetch, mutate }] = createResource(storedId, async (id) => {
+		if (!validId()) {
+			setLoadError(INVALID_ID_ERROR);
+			return undefined;
+		}
+		const result = await tryAsync(() => getFile(id));
+		if (result.ok) {
+			setLoadError(null);
+			return result.value;
+		}
+		setLoadError(result.error);
+		return undefined;
 	});
 
 	// 同批文件：从进入详情时的来源 URL 还原列表上下文（页码/类别/标签/搜索），
@@ -228,8 +242,7 @@ export function useFileDetail(): FileDetailApi {
 			return data.loading;
 		},
 		get dataError() {
-			if (data.error) return data.error;
-			return validId() ? undefined : INVALID_ID_ERROR;
+			return loadError() ?? undefined;
 		},
 		refetch,
 		editing,

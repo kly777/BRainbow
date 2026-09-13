@@ -1,3 +1,4 @@
+import Button from "@components/ui/atoms/Button.tsx";
 import { ArrowLeft } from "@components/ui/icons";
 import styles from "@components/ui/molecules/Toolbar.module.css";
 import type { Component, JSX } from "solid-js";
@@ -12,9 +13,9 @@ interface ToolbarProps {
 const Toolbar: Component<ToolbarProps> = (props) => {
 	return (
 		<div class={styles.toolbar}>
-			<button type="button" class={styles.backBtn} onClick={props.onBack}>
+			<Button variant="ghost" class={styles.back} onClick={props.onBack}>
 				<ArrowLeft size={16} /> {props.backLabel}
-			</button>
+			</Button>
 			{props.title && <span class={styles.title}>{props.title}</span>}
 			{props.children && <div class={styles.actions}>{props.children}</div>}
 		</div>

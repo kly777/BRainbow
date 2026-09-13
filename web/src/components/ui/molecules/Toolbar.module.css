@@ -1,48 +1,49 @@
-/* components/ui/Toolbar.css.ts — 增强版 */
+/* 详情页工具条：返回 + 标题 + 动作区。
+ *
+ * 返回按钮改用系统里的 ghost 按钮（`<Button variant="ghost">`）：
+ * 原先这里自写了一个 `border-radius: var(--radius-full)` 的胶囊按钮 —— 全站按钮是
+ * radius-sm / radius-md，只有它是胶囊，于是详情页顶部那个描边胶囊成了页面上最抢眼的元素；
+ * 同时那份规则把 Button 的声明又抄了一遍（设计系统未自用的漏网之鱼，见
+ * doc/frontend-ui-architecture.md §4 P1-3）。现在这里只保留本组件特有的调整。 */
 
 .toolbar {
 	display: flex;
 	align-items: center;
-	gap: var(--space-md);
+	gap: var(--space-sm);
 	padding: var(--space-sm) var(--space-lg);
 	background: var(--t-color-surface);
 	border-bottom: 1px solid var(--t-color-border);
 	flex-shrink: 0;
 }
 
+/* 返回：左移一个自身内边距，让图标与工具条下方正文的左边缘对齐（只是视觉对齐，不改布局流）。
+ * 配色比 ghost 的默认值重一档：ghost 的 ink-faint（60% 灰）作为导航入口偏弱。
+ * 选择器写成 `.toolbar .back`（特异度 (0,2,0)）而不是单个 `.back` —— 否则与
+ * Button.module.css 的 `.ghost` 同为 (0,1,0)，谁生效取决于两个 CSS Module 在产物里的顺序。 */
+.toolbar .back {
+	margin-left: calc(var(--space-md) * -1);
+	color: var(--t-color-ink-muted);
+	font-weight: 500;
+	flex: none;
+}
+
+/* 标题：长标题不换行，也不把右侧动作区挤出容器 */
 .title {
+	flex: 0 1 auto;
+	min-width: 0;
 	font-family: var(--t-font-display);
 	font-size: var(--text-base);
 	font-weight: 600;
 	color: var(--t-color-ink);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .actions {
 	margin-left: auto;
 	display: flex;
+	align-items: center;
 	gap: var(--space-sm);
-}
-
-.back-btn {
-	height: 2rem;
-	padding: 0 var(--space-md);
-	font-size: var(--text-sm);
-	appearance: none;
-	-webkit-appearance: none;
-	background: var(--t-color-surface);
-	color: var(--t-color-ink-muted);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-full);
-	cursor: pointer;
-	font-family: inherit;
-	transition:
-		background var(--t-transition-fast),
-		border-color var(--t-transition-fast),
-		color var(--t-transition-fast);
-}
-
-.back-btn:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-	border-color: var(--t-color-border-strong);
+	flex: none;
 }

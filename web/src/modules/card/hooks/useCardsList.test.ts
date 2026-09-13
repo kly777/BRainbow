@@ -164,7 +164,7 @@ describe("handleCreateCard", () => {
 			await h.handleCreateCard();
 			// 表单校验失败只标弹窗；此前误设为列表 error，会让整个列表变错误态
 			expect(h.modalError()).toBe("内容不能为空");
-			expect(h.error).toBeUndefined();
+			expect(h.error()).toBeNull();
 			expect(mockedCreate).not.toHaveBeenCalled();
 		});
 	});

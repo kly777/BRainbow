@@ -69,7 +69,7 @@ export default function CardsListPage() {
 			<AsyncView
 				data={m.sortedCards()}
 				loading={m.loading()}
-				error={m.error}
+				error={m.error()}
 				onRetry={m.refetch}
 				emptyMessage={
 					m.isSearchMode()

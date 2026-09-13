@@ -6,7 +6,7 @@
 // 其次是乐观更新的两条路径：成功保留、失败回滚到操作前快照。
 
 import { useListResource } from "@shared/utils/useListResource.ts";
-import { createSignal, ErrorBoundary } from "solid-js";
+import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { describe, expect, it, vi } from "vitest";
 
@@ -33,26 +33,18 @@ function setup(
 	const [key, setKey] = createSignal("a");
 	const [page, setPage] = createSignal(1);
 	let api!: ReturnType<typeof useListResource<string, Row>>;
-	// 拉取失败时 fetcher 会 throw（与 useFileList 等既有用法一致，错误态交给
-	// AsyncView 呈现）。测试里用 ErrorBoundary 承接，否则 Solid 会报未捕获错误。
+	// 请求失败时 hook 内部消化异常（不 throw），故无需 ErrorBoundary
 	const host = document.createElement("div");
 	document.body.appendChild(host);
-	render(
-		() => (
-			<ErrorBoundary fallback={() => null}>
-				{(() => {
-					api = useListResource<string, Row>({
-						key,
-						page,
-						fetcher,
-						onLoaded: opts.onLoaded,
-					});
-					return null;
-				})()}
-			</ErrorBoundary>
-		),
-		host,
-	);
+	render(() => {
+		api = useListResource<string, Row>({
+			key,
+			page,
+			fetcher,
+			onLoaded: opts.onLoaded,
+		});
+		return null;
+	}, host);
 	return { api, setKey, setPage };
 }
 
@@ -138,24 +130,17 @@ describe("useListResource：loading / error 必须是 getter", () => {
 		const onError = vi.fn();
 		const host = document.createElement("div");
 		document.body.appendChild(host);
-		render(
-			() => (
-				<ErrorBoundary fallback={() => null}>
-					{(() => {
-						useListResource<string, Row>({
-							key: () => "a",
-							page: () => 1,
-							fetcher: async () => {
-								throw new Error("网络断了");
-							},
-							onError,
-						});
-						return null;
-					})()}
-				</ErrorBoundary>
-			),
-			host,
-		);
+		render(() => {
+			useListResource<string, Row>({
+				key: () => "a",
+				page: () => 1,
+				fetcher: async () => {
+					throw new Error("网络断了");
+				},
+				onError,
+			});
+			return null;
+		}, host);
 		await flush();
 		expect(onError).toHaveBeenCalled();
 		expect(String(onError.mock.calls[0][0])).toContain("网络断了");

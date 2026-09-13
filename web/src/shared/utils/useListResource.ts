@@ -22,6 +22,7 @@ import {
 	type Accessor,
 	createMemo,
 	createResource,
+	createSignal,
 	type Resource,
 } from "solid-js";
 
@@ -74,34 +75,45 @@ export interface ListResource<T> {
 export function useListResource<K, T>(
 	options: ListResourceOptions<K, T>,
 ): ListResource<T> {
-	const [resource, { refetch, mutate }] = createResource(
-		() => ({ key: options.key(), page: options.page() }),
-		async ({ key, page }) => {
-			const result = await tryAsync(() => options.fetcher(key, page));
-			if (result.ok) {
-				options.onLoaded?.(result.value);
-				return result.value;
-			}
-			// 全局错误处理已 toast；此处仅上报，便于页面自行展示
-			options.onError?.(getErrorMessage(result.error));
-			throw result.error;
-		},
-	);
-
-	const EMPTY: Paginated<T> = {
+	const EMPTY_PAGE: Paginated<T> = {
 		items: [],
 		page: 1,
 		total: 0,
 		total_pages: 0,
 	};
 
-	const items = createMemo(() => resource()?.items ?? (EMPTY.items as T[]));
+	/** 错误单独用信号暴露，而不是让 fetcher 抛出去 —— 见下方注释 */
+	const [error, setError] = createSignal<unknown>(null);
+
+	const [resource, { refetch, mutate }] = createResource(
+		() => ({ key: options.key(), page: options.page() }),
+		async ({ key, page }) => {
+			const result = await tryAsync(() => options.fetcher(key, page));
+			if (result.ok) {
+				setError(null);
+				options.onLoaded?.(result.value);
+				return result.value;
+			}
+			// ⚠ 刻意不 throw。
+			// 从 fetcher 抛错会让 Solid 的响应式更新中断，而本应用**没有任何
+			// ErrorBoundary**，结果是资源停在 loading=true —— AsyncView 永远
+			// 显示骨架屏，错误态与重试入口都到不了（实测确认）。
+			// 改为吞掉异常、返回空页，错误经 error 信号交给 AsyncView。
+			setError(result.error);
+			options.onError?.(getErrorMessage(result.error));
+			return EMPTY_PAGE as Paginated<T>;
+		},
+	);
+
+	const items = createMemo(
+		() => resource()?.items ?? (EMPTY_PAGE.items as T[]),
+	);
 	const total = createMemo(() => resource()?.total ?? 0);
 	const totalPages = createMemo(() => resource()?.total_pages ?? 0);
 
 	const patch = (updater: (items: T[]) => T[]) => {
 		mutate((prev) => {
-			const base = prev ?? EMPTY;
+			const base = prev ?? EMPTY_PAGE;
 			return { ...base, items: updater(base.items) };
 		});
 	};
@@ -123,7 +135,7 @@ export function useListResource<K, T>(
 			return resource.loading;
 		},
 		get error() {
-			return resource.error;
+			return error();
 		},
 		refetch,
 		patch,

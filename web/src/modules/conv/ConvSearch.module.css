@@ -15,17 +15,10 @@
 	border-bottom: 1px solid var(--t-color-border);
 }
 
-.back-link {
-	font-size: var(--text-sm);
-	color: var(--t-color-accent);
-	text-decoration: none;
+/* 返回链接的形态来自 <BackLink>（共享 molecule），本页只保留原有的字重强调
+ * （500，与 ConvDetail 的顶栏一致；共享层的默认字重跟 Toolbar 的返回按钮保持一致）。 */
+.back-strong {
 	font-weight: 500;
-	white-space: nowrap;
-	transition: color var(--t-transition-fast);
-}
-
-.back-link:hover {
-	text-decoration: underline;
 }
 
 .title {

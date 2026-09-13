@@ -27,12 +27,11 @@
 	gap: var(--space-md);
 }
 
-.back-link {
-	font-size: var(--text-sm);
-	color: var(--t-color-accent);
-	text-decoration: none;
+/* 返回链接的形态来自 <BackLink>（共享 molecule）；这里只剩两处本页特有的布局/字重。
+ * 字重 500 与本页原有写法一致，故意保留为调用方类而不是塞进共享层 ——
+ * 另外三处用 BackLink 的页面都是常规字重。 */
+.top-bar-back {
 	font-weight: 500;
-	white-space: nowrap;
 	margin-top: var(--space-xs);
 }
 
@@ -130,10 +129,6 @@
 	border-radius: var(--radius-sm);
 	background: var(--t-color-accent-soft);
 	color: var(--t-color-accent);
-}
-
-.back-link:hover {
-	text-decoration: underline;
 }
 
 .error-msg {

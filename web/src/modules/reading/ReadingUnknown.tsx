@@ -1,8 +1,7 @@
-import { AsyncView, Button } from "@components/ui";
-import { ArrowLeft, Check } from "@components/ui/icons";
+import { AsyncView, BackLink, Button } from "@components/ui";
+import { Check } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
 import { listUnknownWords, markWord, type UnknownWord } from "@modules/reading";
-import { A } from "@solidjs/router";
 import { createResource, For } from "solid-js";
 import styles from "./ReadingUnknown.module.css";
 
@@ -37,9 +36,7 @@ export default function ReadingUnknown() {
 
 	return (
 		<div class={styles.page}>
-			<A href={PATHS.reading} class={styles.back}>
-				<ArrowLeft size={16} /> 文章列表
-			</A>
+			<BackLink href={PATHS.reading} label="文章列表" size={16} />
 			<h1>不认识词表</h1>
 			<p class={styles.subtitle}>
 				按标记「不认识」次数降序排列。点击 <Check size={14} /> 改为认识。

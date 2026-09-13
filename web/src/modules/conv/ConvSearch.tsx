@@ -1,5 +1,4 @@
-import { Button, FilterGroup, SearchInput } from "@components/ui";
-import { ArrowLeft } from "@components/ui/icons";
+import { BackLink, Button, FilterGroup, SearchInput } from "@components/ui";
 import { PATHS } from "@config/paths";
 import { getErrorMessage } from "@shared/api";
 import { fmtLocal } from "@shared/utils";
@@ -26,9 +25,7 @@ export default function ConvSearch() {
 	return (
 		<div class={styles.page}>
 			<div class={styles.topBar}>
-				<A href={PATHS.home} class={styles.backLink}>
-					<ArrowLeft size={14} /> 主页
-				</A>
+				<BackLink href={PATHS.home} label="主页" class={styles.backStrong} />
 				<h1 class={styles.title}>知识搜索</h1>
 			</div>
 

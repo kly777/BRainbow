@@ -11,16 +11,9 @@
 	gap: var(--space-md);
 }
 
+/* 返回链接的形态来自共享 <BackLink>；这里只剩本页网格布局需要的跨列。 */
 .back {
 	grid-column: 1 / -1;
-	font-size: var(--text-sm);
-	color: var(--t-color-accent);
-	text-decoration: none;
-	transition: color var(--t-transition-fast);
-}
-
-.back:hover {
-	text-decoration: underline;
 }
 
 .main-column {

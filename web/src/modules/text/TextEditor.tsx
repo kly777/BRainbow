@@ -83,6 +83,7 @@ export default function TextEditor() {
 				onInput={(e) => m.onTextInput(e.currentTarget.value)}
 				placeholder="在这里输入…"
 				spellcheck={false}
+				aria-label="文本内容"
 			/>
 		</div>
 	);

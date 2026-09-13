@@ -88,6 +88,7 @@ export default function SearchPage() {
 					placeholder="搜索…"
 					value={query()}
 					class={styles.input}
+					aria-label="搜索"
 				/>
 			</form>
 

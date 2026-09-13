@@ -61,6 +61,7 @@ function TaskItem(props: TaskItemProps) {
 							props.onStatusChange(props.task.id, e.currentTarget.value)
 						}
 						class={styles.statusSelect}
+						aria-label={`任务状态：${props.task.title}`}
 					>
 						<option value={TaskStatus.BACKLOG}>待办</option>
 						<option value={TaskStatus.ACTIVE}>进行中</option>
@@ -121,6 +122,7 @@ function TaskItem(props: TaskItemProps) {
 						}}
 						class={styles.subTaskInput}
 						autofocus
+						aria-label="子任务标题"
 					/>
 					<button
 						type="button"

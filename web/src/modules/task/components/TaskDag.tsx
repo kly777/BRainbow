@@ -31,6 +31,7 @@ function TagSelector(props: TagSelectorProps) {
 				const v = e.currentTarget.value;
 				props.onChange(v ? Number(v) : undefined);
 			}}
+			aria-label="依赖关系筛选"
 		>
 			<option value="">全部依赖关系</option>
 			{props.tasks.map((t) => (
@@ -181,6 +182,7 @@ export default function TaskDag() {
 						class={styles.taskSelect}
 						value={depth()}
 						onChange={(e) => setDepth(Number(e.currentTarget.value))}
+						aria-label="依赖层级筛选"
 					>
 						<option value={1}>深度 1</option>
 						<option value={2}>深度 2</option>

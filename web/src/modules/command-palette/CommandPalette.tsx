@@ -211,6 +211,7 @@ export default function CommandPalette() {
 							aria-expanded={true}
 							aria-haspopup="listbox"
 							aria-autocomplete="list"
+							aria-label="搜索或执行命令"
 						/>
 					</div>
 					{ActionPanel()}

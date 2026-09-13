@@ -182,6 +182,7 @@ export default function DependenciesTab(props: DependenciesTabProps) {
 							setError("");
 						}}
 						class={styles.fieldInput}
+						aria-label="选择依赖任务"
 					>
 						<option value="">选择要依赖的任务...</option>
 						<DepOptions tasks={availableDepTasks()} />

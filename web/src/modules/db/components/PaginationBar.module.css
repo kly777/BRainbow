@@ -85,14 +85,7 @@
 	width: 3.5rem;
 	height: 1.75rem;
 	padding: 0 var(--space-xs);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	font-size: var(--text-xs);
-	font-family: var(--t-font-mono);
 	text-align: center;
-	outline: none;
 	-moz-appearance: textfield;
 }
 

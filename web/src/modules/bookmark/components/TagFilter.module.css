@@ -16,8 +16,8 @@
 	font-size: var(--text-sm);
 	cursor: pointer;
 	transition:
-		border-color 0.15s ease,
-		box-shadow 0.15s ease;
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 	white-space: nowrap;
 }
 

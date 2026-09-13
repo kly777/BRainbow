@@ -1,3 +1,4 @@
+import { Input } from "@components/ui";
 import { PATHS } from "@config/paths";
 import type { SearchHit } from "@modules/command-palette/api.ts";
 import { searchE } from "@modules/command-palette/api.ts";
@@ -82,7 +83,7 @@ export default function SearchPage() {
 		<div class={styles.page}>
 			<h1 class="sr-only">全局搜索</h1>
 			<form onSubmit={handleSearch} class={styles.form}>
-				<input
+				<Input
 					name="q"
 					type="search"
 					placeholder="搜索…"

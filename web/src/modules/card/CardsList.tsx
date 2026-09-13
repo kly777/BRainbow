@@ -9,6 +9,7 @@ import {
 	Markdown as MarkdownRenderer,
 	Modal,
 	PageHead,
+	Textarea,
 } from "@components/ui";
 import { getCardsE, searchCardsE } from "@modules/card";
 import { tryAsync } from "@shared/utils";
@@ -142,7 +143,7 @@ export default function CardsListPage() {
 					<label for="card-content" class={styles.formLabel}>
 						内容
 					</label>
-					<textarea
+					<Textarea
 						id="card-content"
 						class={styles.formTextarea}
 						value={m.newCardContent()}

@@ -96,8 +96,8 @@
 	color: var(--t-color-ink);
 	font-size: var(--text-sm);
 	transition:
-		border-color 0.15s ease,
-		box-shadow 0.15s ease;
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 }
 
 .textarea {
@@ -169,9 +169,9 @@
 	background: transparent;
 	cursor: pointer;
 	transition:
-		background 0.15s ease,
-		color 0.15s ease,
-		border-color 0.15s ease;
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 }
 
 .suggested-tag:hover {

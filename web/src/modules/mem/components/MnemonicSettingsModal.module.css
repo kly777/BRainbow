@@ -15,16 +15,8 @@
 }
 
 .prompt {
-	width: 100%;
-	padding: var(--space-sm) var(--space-md);
-	box-sizing: border-box;
-	font-size: var(--text-sm);
-	font-family: var(--t-font-mono);
 	resize: vertical;
-	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
 }
 
 .prompt:focus {

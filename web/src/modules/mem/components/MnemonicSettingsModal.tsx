@@ -1,7 +1,7 @@
 // ── 助记提示词配置（挂在 /m 记忆页） ──
 // 与全局 AI 服务配置分离：这里只编辑助记生成提示词。
 
-import { Modal } from "@components/ui";
+import { Modal, Textarea } from "@components/ui";
 import { getAiSettingsE, updateAiSettingsE } from "@shared/ai";
 import { tryAsync, tryOrNotify } from "@shared/utils";
 import { createEffect, createSignal } from "solid-js";
@@ -49,12 +49,13 @@ export default function MnemonicSettingsModal(props: Props) {
 						（可用 {"{cue}"}、{"{target}"} 作为占位符）
 					</span>
 				</label>
-				<textarea
+				<Textarea
 					id="mnemonic-prompt"
 					class={styles.prompt}
 					value={prompt()}
 					onInput={(e) => setPrompt(e.currentTarget.value)}
 					rows={6}
+					mono
 				/>
 				<div class={styles.actions}>
 					<button type="button" class={styles.btnGhost} onClick={handleReset}>

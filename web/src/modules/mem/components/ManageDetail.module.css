@@ -187,7 +187,7 @@
 		border-left: 1px solid var(--t-color-border);
 		box-shadow: var(--shadow-lg);
 		transform: translateX(105%);
-		transition: transform var(--t-transition-normal) var(--ease-out-expo);
+		transition: transform var(--t-transition-normal);
 	}
 
 	.detail-open {

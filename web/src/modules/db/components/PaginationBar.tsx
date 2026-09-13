@@ -1,3 +1,4 @@
+import { Input } from "@components/ui";
 import { ChevronLeft, ChevronRight } from "@components/ui/icons";
 import { type Component, For, onCleanup, onMount, Show } from "solid-js";
 import { PAGE_SIZES } from "../tableConfig";
@@ -89,7 +90,7 @@ const PaginationBar: Component<PaginationBarProps> = (props) => {
 							);
 						}}
 					>
-						<input
+						<Input
 							type="number"
 							class={styles.pageJumpInput}
 							min="1"
@@ -98,6 +99,7 @@ const PaginationBar: Component<PaginationBarProps> = (props) => {
 							onInput={(e) => props.onJumpInput(e.currentTarget.value)}
 							aria-label="跳转页码"
 							placeholder="页码"
+							mono
 						/>
 						<button
 							type="submit"

@@ -1,6 +1,6 @@
 // ── /bookmark 表单弹窗（新建/编辑）──
 
-import { Button, Modal } from "@components/ui";
+import { Button, Input, Modal, Textarea } from "@components/ui";
 import { AlertTriangle } from "@components/ui/icons";
 import { fillPath, PATHS } from "@config/paths";
 import { Show } from "solid-js";
@@ -60,7 +60,7 @@ export function BookmarkFormModal(props: {
 						URL
 					</label>
 					<div class={styles.urlInputRow}>
-						<input
+						<Input
 							id="bookmark-url"
 							class={styles.formInput}
 							value={b.formUrl()}
@@ -102,7 +102,7 @@ export function BookmarkFormModal(props: {
 					<label class={styles.formLabel} for="bookmark-title">
 						标题
 					</label>
-					<input
+					<Input
 						id="bookmark-title"
 						class={styles.formInput}
 						value={b.formTitle()}
@@ -115,7 +115,7 @@ export function BookmarkFormModal(props: {
 					<label class={styles.formLabel} for="bookmark-desc">
 						备注
 					</label>
-					<textarea
+					<Textarea
 						id="bookmark-desc"
 						class={styles.formTextarea}
 						value={b.formDesc()}

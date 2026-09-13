@@ -11,7 +11,7 @@
 	background: var(--t-color-accent-soft);
 	border-bottom: 1px solid transparent;
 	transition:
-		max-height var(--t-transition-normal) ease,
+		max-height var(--t-transition-normal),
 		padding var(--t-transition-normal);
 }
 

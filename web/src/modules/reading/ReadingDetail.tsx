@@ -1,4 +1,4 @@
-import { Button, ErrorRetry, Tooltip } from "@components/ui";
+import { Button, ErrorRetry, Textarea, Tooltip } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
 
 // ── 阅读详情页面（薄壳视图层）──
@@ -170,7 +170,7 @@ export default function ReadingDetail() {
 									<div class={styles.sidebarFooter}>
 										<div class={styles.notesSection}>
 											<h3>词组笔记</h3>
-											<textarea
+											<Textarea
 												class={styles.notesInput}
 												value={m.notes()}
 												onInput={(e) => m.setNotes(e.currentTarget.value)}
@@ -180,6 +180,7 @@ export default function ReadingDetail() {
 												}
 												rows={4}
 												aria-label="词组笔记"
+												tone="bg"
 											/>
 										</div>
 										<Button

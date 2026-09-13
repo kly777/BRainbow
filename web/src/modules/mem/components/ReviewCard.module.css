@@ -133,7 +133,7 @@
 	display: flex;
 	flex-direction: column;
 	border-top: 1px solid var(--t-color-border);
-	animation: answerIn var(--t-transition-slow) ease;
+	animation: answerIn var(--t-transition-slow);
 	flex: 1 1 auto;
 	min-height: 0;
 	overflow: hidden;

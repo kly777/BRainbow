@@ -197,8 +197,8 @@
 	border-bottom: 1px solid
 		color-mix(in srgb, var(--t-color-border) 40%, transparent);
 	transition:
-		background 0.15s ease,
-		box-shadow 0.15s ease;
+		background var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 }
 
 .item:hover {
@@ -300,8 +300,8 @@
 	cursor: pointer;
 	flex-shrink: 0;
 	transition:
-		background 0.15s ease,
-		color 0.15s ease;
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
 }
 
 .item-tag:hover {
@@ -392,15 +392,9 @@
 }
 
 .form-input {
-	width: 100%;
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
 	transition:
-		border-color 0.15s ease,
-		box-shadow 0.15s ease;
-	padding: var(--space-sm) var(--space-md);
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 	font-size: var(--text-base);
 }
 
@@ -448,16 +442,10 @@
 }
 
 .form-textarea {
-	width: 100%;
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
 	transition:
-		border-color 0.15s ease,
-		box-shadow 0.15s ease;
+		border-color var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
 	resize: vertical;
-	padding: var(--space-sm) var(--space-md);
 	font-size: var(--text-base);
 }
 
@@ -503,9 +491,9 @@
 	background: transparent;
 	cursor: pointer;
 	transition:
-		background 0.15s ease,
-		color 0.15s ease,
-		border-color 0.15s ease;
+		background var(--t-transition-fast),
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
 }
 
 .suggest-tag-btn:hover {

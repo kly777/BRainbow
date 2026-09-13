@@ -1,8 +1,10 @@
+import Input from "@components/ui/atoms/Input.tsx";
 import { Angle } from "@shared/utils";
 import {
 	type Accessor,
 	createEffect,
 	createSignal,
+	createUniqueId,
 	type Setter,
 } from "solid-js";
 import styles from "./AngleEditor.module.css";
@@ -61,6 +63,9 @@ function commit(raw: string, mode: AngleMode, setAngle: Setter<Angle>) {
 export default function AngleEditor(props: Props) {
 	const [mode, setMode] = createSignal<AngleMode>("deg");
 	const [local, setLocal] = createSignal(decompose(props.angle())[mode()]);
+	// 显式 label 关联：label 里包的是原语组件，静态检查看不到内部的 input，
+	// 用 createUniqueId 给出唯一 id（同一个页面可能渲染多个 AngleEditor）
+	const inputId = createUniqueId();
 	let focused = false;
 
 	// 模式切换 / 外部 angle 变化 → 失焦时同步到本地缓冲
@@ -113,16 +118,18 @@ export default function AngleEditor(props: Props) {
 				))}
 			</div>
 
-			<label class={styles.inputRow}>
-				<input
+			<label class={styles.inputRow} for={inputId}>
+				<Input
+					id={inputId}
 					type="text"
 					inputmode="decimal"
+					tone="bg"
 					value={local()}
 					onInput={onInput}
 					onFocus={onFocus}
 					onBlur={onBlur}
 					onKeyDown={onKeyDown}
-					class={styles.input}
+					class={styles.angleInput}
 				/>
 				<span class={styles.unit}>
 					{MODES.find((m) => m.key === mode())?.unit}

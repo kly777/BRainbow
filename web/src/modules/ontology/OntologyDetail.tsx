@@ -1,6 +1,13 @@
 // ── /ontology/:id：本体详情（全局搜索直达） ──
 
-import { Button, ErrorRetry, LoadingSkeleton, Toolbar } from "@components/ui";
+import {
+	Button,
+	ErrorRetry,
+	Input,
+	LoadingSkeleton,
+	Textarea,
+	Toolbar,
+} from "@components/ui";
 import { PATHS } from "@config/paths";
 import {
 	confirmAndDelete,
@@ -28,18 +35,18 @@ const EditForm = (props: EditFormProps) => (
 		<label class={styles.label} for="onto-name">
 			名称
 		</label>
-		<input
+		<Input
 			id="onto-name"
-			class={styles.input}
+			tone="bg"
 			value={props.name}
 			onInput={(e) => props.onNameInput(e.currentTarget.value)}
 		/>
 		<label class={styles.label} for="onto-desc">
 			描述
 		</label>
-		<textarea
+		<Textarea
 			id="onto-desc"
-			class={styles.textarea}
+			tone="bg"
 			value={props.description}
 			onInput={(e) => props.onDescriptionInput(e.currentTarget.value)}
 			rows={4}

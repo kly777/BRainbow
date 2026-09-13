@@ -110,26 +110,24 @@
 	text-align: center;
 }
 
-/* ── Input ── */
-.input {
+/* ── Input ──
+ * 命令面板的输入框改用原语 <Input class={styles.field}>：它有意做成"无框"——
+ * 外框与焦点环由包裹层 .input-row（含 :focus-within）负责，所以这里把原语基础类的
+ * 内边距与底色覆盖掉，并关掉控件自身的焦点环（原语基础类在 :where() 里，特异度 0，
+ * 这些覆盖必定生效）。padding 必须显式归零：原语自带 sm/md 内边距，否则输入区内缩一圈。 */
+.field {
 	flex: 1;
+	padding: 0;
 	border: none;
-	outline: none;
 	background: transparent;
 	font-size: var(--text-base);
-	color: var(--t-color-ink);
 	caret-color: var(--t-color-accent);
-	font-family: inherit;
 }
 
-.input:focus-visible {
+.field:focus-visible {
 	outline: none;
 	box-shadow: none;
 	border-color: transparent;
-}
-
-.input::placeholder {
-	color: var(--t-color-ink-faint);
 }
 
 /* ── Scroll Area ── */

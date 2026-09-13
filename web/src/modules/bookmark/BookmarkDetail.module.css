@@ -86,34 +86,17 @@
 	letter-spacing: 0.02em;
 }
 
-.input,
-.textarea {
-	width: 100%;
-	padding: var(--space-sm) var(--space-md);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	font-size: var(--text-sm);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-}
-
-.textarea {
-	resize: vertical;
-}
-
+/* 表单控件已改用原语 <Input> / <Textarea>：原 .input / .textarea 那组声明（width 100% /
+ * padding sm md / border / radius-md / surface 底 / text-sm / transition）与
+ * Control.module.css 的基础类逐声明相同，`resize: vertical` 与 `::placeholder` 也由原语提供，
+ * 故整组删除。这里只保留书签域特有的**焦点配色**：本模块输入框不用全局 accent 环，
+ * 而用书签模块色（--m-bookmark）。原语基础类包在 :where() 里（特异度 0），
+ * 所以这条 :focus 覆盖必定生效，不依赖两个 CSS Module 的产物顺序。 */
 .input:focus,
 .textarea:focus {
 	outline: none;
 	border-color: var(--m-bookmark);
 	box-shadow: 0 0 0 3px color-mix(in srgb, var(--m-bookmark) 20%, transparent);
-}
-
-.input::placeholder,
-.textarea::placeholder {
-	color: var(--t-color-ink-faint);
 }
 
 .form-error {

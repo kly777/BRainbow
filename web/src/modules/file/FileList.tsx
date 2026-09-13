@@ -4,24 +4,14 @@ import {
 	AsyncView,
 	Button,
 	FilterGroup,
-	Input,
 	PageHead,
 	SearchInput,
 	Select,
 	SimplePagination,
-	Tooltip,
 } from "@components/ui";
-import {
-	Copy,
-	File as FileIcon,
-	Grid,
-	List,
-	Lock,
-	Upload,
-	X,
-} from "@components/ui/icons";
+import { Grid, List, Upload, X } from "@components/ui/icons";
 import { fillPath, PATHS } from "@config/paths";
-import { copyTextWithToast, fmtLocal, formatBytes } from "@shared/utils";
+import { formatBytes } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
 import {
 	type Component,
@@ -32,17 +22,18 @@ import {
 	Show,
 } from "solid-js";
 import type { FileItem, SortOrder } from "./api.ts";
+import BatchBar from "./components/BatchBar.tsx";
 import EmptyGuide from "./components/EmptyGuide.tsx";
+import FileCard from "./components/FileCard.tsx";
 import FileContextMenu from "./components/FileContextMenu.tsx";
-import FileMeta from "./components/FileMeta.tsx";
+import FileRow from "./components/FileRow.tsx";
 import ImageLightbox from "./components/ImageLightbox.tsx";
 import TagFilter from "./components/TagFilter.tsx";
 import TagManager from "./components/TagManager.tsx";
+import UploadPanel from "./components/UploadPanel.tsx";
 import styles from "./FileList.module.css";
-import { type UploadTask, useFileList } from "./hooks/useFileList.ts";
-import { categoryLabel } from "./lib/category.ts";
-import { fileExt } from "./lib/filename.ts";
-import { fmtDimensions, fmtDurationMs } from "./lib/meta.ts";
+import { filesFromPaste, useFileDropZone } from "./hooks/useFileDropZone.ts";
+import { useFileList } from "./hooks/useFileList.ts";
 
 /** 列表滚动位置的 sessionStorage 键（从详情返回时恢复） */
 const SCROLL_KEY = "file-list-scroll-top";
@@ -65,506 +56,6 @@ const SORT_OPTIONS = [
 	{ value: "name_asc", label: "名称 A→Z" },
 	{ value: "name_desc", label: "名称 Z→A" },
 ] as const;
-
-/** 非图片文件：用后缀名徽章替代通用文件图标，一眼看出类型；
- *  无后缀时回退到通用文件图标 */
-const ExtBadge: Component<{ name: string }> = (props) => (
-	<Show
-		when={fileExt(props.name)}
-		fallback={<FileIcon size={28} class={styles.iconPreview} />}
-	>
-		{(ext) => <span class={styles.extBadge}>{ext()}</span>}
-	</Show>
-);
-
-const FilePreview: Component<{
-	item: FileItem;
-	onOpen: () => void;
-	/** 图片点击打开灯箱（传 null 表示不可放大，退回 onOpen） */
-	onZoom?: () => void;
-}> = (props) => (
-	<button
-		type="button"
-		class={styles.preview}
-		onClick={() => {
-			if (
-				!props.item.missing &&
-				props.item.file_category === "image" &&
-				props.onZoom
-			)
-				props.onZoom();
-			else props.onOpen();
-		}}
-		title={
-			props.item.missing
-				? "文件内容已丢失"
-				: props.item.file_category === "image"
-					? "放大查看"
-					: "查看详情"
-		}
-	>
-		<Show
-			when={!props.item.missing}
-			fallback={<span class={styles.missingBadge}>文件缺失</span>}
-		>
-			{/* 私密文件不在这里拉取内容（<img> 不带凭据会 401），进详情页再看 */}
-			<Show
-				when={!props.item.is_private}
-				fallback={
-					<span class={styles.privateBadge}>
-						<Lock size={12} /> 私密
-					</span>
-				}
-			>
-				<Show
-					when={props.item.file_category === "image"}
-					fallback={<ExtBadge name={props.item.original_name} />}
-				>
-					<img
-						src={props.item.url}
-						alt={props.item.original_name}
-						class={styles.thumb}
-						loading="lazy"
-					/>
-				</Show>
-			</Show>
-		</Show>
-	</button>
-);
-
-const FileCardView: Component<{
-	item: FileItem;
-	onOpen: () => void;
-	onStartRename: (item: FileItem) => void;
-	onDelete: (stored_id: string) => void;
-}> = (props) => (
-	<>
-		<div class={styles.info}>
-			{/* 文件名在卡片里是单行截断的，hover 补全完整名称 */}
-			<Tooltip label={props.item.original_name} class={styles.nameTipHost}>
-				<button type="button" class={styles.nameBtn} onClick={props.onOpen}>
-					{props.item.original_name}
-				</button>
-			</Tooltip>
-			<Show when={props.item.is_private}>
-				<p class={styles.privateTag}>
-					<Lock size={11} /> 私密（仅自己可见）
-				</p>
-			</Show>
-			<FileMeta item={props.item} />
-			<Show when={props.item.tags.length > 0}>
-				<div class={styles.tags}>
-					<For each={props.item.tags}>
-						{(tag) => <span class={styles.tag}>#{tag}</span>}
-					</For>
-				</div>
-			</Show>
-		</div>
-		<div class={styles.actions}>
-			<Button
-				variant="icon"
-				title="复制文件 URL（可用于 Markdown 引用）"
-				onClick={() => copyTextWithToast(props.item.url)}
-			>
-				<Copy size={14} />
-			</Button>
-			<Show when={props.item.can_edit}>
-				<Button
-					variant="secondary"
-					size="sm"
-					onClick={() => props.onStartRename(props.item)}
-				>
-					重命名
-				</Button>
-				<Button
-					variant="danger"
-					size="sm"
-					onClick={() => props.onDelete(props.item.stored_id)}
-				>
-					删除
-				</Button>
-			</Show>
-		</div>
-	</>
-);
-
-const FileCardEdit: Component<{
-	item: FileItem;
-	editName: string;
-	onEditName: (value: string) => void;
-	onRename: () => void;
-	onCancelEdit: () => void;
-}> = (props) => (
-	<>
-		<div class={styles.info}>
-			<Input
-				value={props.editName}
-				onInput={(e) => props.onEditName(e.currentTarget.value)}
-				class={styles.editInput}
-				onKeyPress={(e) => e.key === "Enter" && props.onRename()}
-				aria-label="文件名称"
-			/>
-			{/* 编辑态保留同样的信息区：与展示态结构一致，避免切换时卡片高度跳变 */}
-			<FileMeta item={props.item} />
-			{/* 编辑态保留标签行：与展示态内容结构一致，避免切换时卡片高度跳变 */}
-			<Show when={props.item.tags.length > 0}>
-				<div class={styles.tags}>
-					<For each={props.item.tags}>
-						{(tag) => <span class={styles.tag}>#{tag}</span>}
-					</For>
-				</div>
-			</Show>
-		</div>
-		<div class={styles.actions}>
-			<Button variant="primary" size="sm" onClick={props.onRename}>
-				保存
-			</Button>
-			<Button variant="secondary" size="sm" onClick={props.onCancelEdit}>
-				取消
-			</Button>
-		</div>
-	</>
-);
-
-const FileCard: Component<{
-	item: FileItem;
-	editing: boolean;
-	highlighted: boolean;
-	selectMode: boolean;
-	selected: boolean;
-	onToggleSelect: (storedId: string) => void;
-	editName: string;
-	onOpen: () => void;
-	onZoom?: () => void;
-	onContextMenu: (item: FileItem, e: MouseEvent) => void;
-	onStartRename: (item: FileItem) => void;
-	onDelete: (stored_id: string) => void;
-	onRename: () => void;
-	onEditName: (value: string) => void;
-	onCancelEdit: () => void;
-}> = (props) => (
-	// biome-ignore lint/a11y/noStaticElementInteractions: 右键菜单为附加操作，键盘用户走卡片内按钮
-	<div
-		onContextMenu={(e) => props.onContextMenu(props.item, e)}
-		class={styles.card}
-		classList={{
-			[styles.cardHighlight]: props.highlighted,
-			[styles.cardSelected]: props.selected,
-		}}
-		data-file-id={props.item.stored_id}
-	>
-		<Show when={props.selectMode}>
-			<label class={styles.selectBox}>
-				<input
-					type="checkbox"
-					checked={props.selected}
-					onChange={() => props.onToggleSelect(props.item.stored_id)}
-					aria-label={`选择 ${props.item.original_name}`}
-				/>
-			</label>
-		</Show>
-		<FilePreview
-			item={props.item}
-			onOpen={props.onOpen}
-			onZoom={props.onZoom}
-		/>
-		<Show
-			when={props.editing}
-			fallback={
-				<FileCardView
-					item={props.item}
-					onOpen={props.onOpen}
-					onStartRename={props.onStartRename}
-					onDelete={props.onDelete}
-				/>
-			}
-		>
-			<FileCardEdit
-				item={props.item}
-				editName={props.editName}
-				onEditName={props.onEditName}
-				onRename={props.onRename}
-				onCancelEdit={props.onCancelEdit}
-			/>
-		</Show>
-	</div>
-);
-
-/** 上传进度面板：批量/大文件时显示每个文件的进度与结果 */
-const UploadPanel: Component<{
-	tasks: () => UploadTask[];
-	onClose: () => void;
-}> = (props) => {
-	const percent = (loaded: number, size: number) =>
-		size === 0 ? 0 : Math.min(100, Math.round((loaded / size) * 100));
-	const label = (status: string) =>
-		status === "done"
-			? "完成"
-			: status === "duplicate"
-				? "已存在"
-				: status === "error"
-					? "失败"
-					: status === "pending"
-						? "排队中"
-						: "上传中";
-
-	return (
-		<Show when={props.tasks().length > 0}>
-			<div class={styles.uploadPanel}>
-				<div class={styles.uploadPanelHead}>
-					<span>上传（{props.tasks().length}）</span>
-					<Button variant="icon" title="收起" onClick={props.onClose}>
-						<X size={14} />
-					</Button>
-				</div>
-				<ul class={styles.uploadList}>
-					<For each={props.tasks()}>
-						{(t) => (
-							<li class={styles.uploadItem}>
-								<div class={styles.uploadItemHead}>
-									<span class={styles.uploadName} title={t.name}>
-										{t.name}
-									</span>
-									<span class={styles.uploadStatus}>
-										{label(t.status)}
-										{t.status === "uploading"
-											? ` ${percent(t.loaded, t.size)}%`
-											: ""}
-									</span>
-								</div>
-								<div class={styles.uploadBar}>
-									<div
-										classList={{
-											[styles.uploadBarFill]: true,
-											[styles.uploadBarDone]: t.status === "done",
-											[styles.uploadBarDup]: t.status === "duplicate",
-											[styles.uploadBarError]: t.status === "error",
-										}}
-										style={{
-											width:
-												t.status === "done" || t.status === "duplicate"
-													? "100%"
-													: `${percent(t.loaded, t.size)}%`,
-										}}
-									/>
-								</div>
-								<Show when={t.error}>
-									<p class={styles.uploadError}>{t.error}</p>
-								</Show>
-							</li>
-						)}
-					</For>
-				</ul>
-			</div>
-		</Show>
-	);
-};
-
-/** 列表视图的一行：徽章/缩略图 + 文件名 + 元信息 + 操作 */
-const FileRow: Component<{
-	item: FileItem;
-	highlighted: boolean;
-	selectMode: boolean;
-	selected: boolean;
-	onToggleSelect: (storedId: string) => void;
-	onOpen: () => void;
-	onZoom: () => void;
-	onContextMenu: (item: FileItem, e: MouseEvent) => void;
-	onStartRename: (item: FileItem) => void;
-	onDelete: (stored_id: string) => void;
-}> = (props) => (
-	// biome-ignore lint/a11y/noStaticElementInteractions: 右键菜单为附加操作，键盘用户走行内按钮
-	<div
-		onContextMenu={(e) => props.onContextMenu(props.item, e)}
-		class={styles.row}
-		classList={{
-			[styles.rowHighlight]: props.highlighted,
-			[styles.rowSelected]: props.selected,
-		}}
-		data-file-id={props.item.stored_id}
-	>
-		<Show when={props.selectMode}>
-			<input
-				type="checkbox"
-				class={styles.rowCheck}
-				checked={props.selected}
-				onChange={() => props.onToggleSelect(props.item.stored_id)}
-				aria-label={`选择 ${props.item.original_name}`}
-			/>
-		</Show>
-		<button
-			type="button"
-			class={styles.rowThumb}
-			onClick={() =>
-				props.item.file_category === "image" ? props.onZoom() : props.onOpen()
-			}
-			title={props.item.file_category === "image" ? "放大查看" : "查看详情"}
-		>
-			<Show
-				when={!props.item.missing}
-				fallback={<span class={styles.missingBadge}>缺失</span>}
-			>
-				<Show
-					when={!props.item.is_private}
-					fallback={
-						<span class={styles.privateBadge}>
-							<Lock size={12} />
-						</span>
-					}
-				>
-					<Show
-						when={props.item.file_category === "image"}
-						fallback={<ExtBadge name={props.item.original_name} />}
-					>
-						<img
-							src={props.item.url}
-							alt={props.item.original_name}
-							class={styles.rowThumbImg}
-							loading="lazy"
-						/>
-					</Show>
-				</Show>
-			</Show>
-		</button>
-
-		<div class={styles.rowMain}>
-			<Tooltip label={props.item.original_name} class={styles.nameTipHost}>
-				<button type="button" class={styles.nameBtn} onClick={props.onOpen}>
-					{props.item.original_name}
-				</button>
-			</Tooltip>
-			<div class={styles.rowMeta}>
-				<Show when={props.item.missing}>
-					<span class={styles.missingTag}>文件缺失</span>
-				</Show>
-				<Show when={props.item.is_private}>
-					<span class={styles.privateTagInline}>
-						<Lock size={11} /> 私密
-					</span>
-				</Show>
-				<span>{categoryLabel(props.item.file_category)}</span>
-				<span>·</span>
-				<span>{formatBytes(props.item.size_bytes)}</span>
-				<Show when={fmtDimensions(props.item.width, props.item.height)}>
-					{(dims) => (
-						<>
-							<span>·</span>
-							<span>{dims()}</span>
-						</>
-					)}
-				</Show>
-				<Show when={fmtDurationMs(props.item.duration_ms)}>
-					{(duration) => (
-						<>
-							<span>·</span>
-							<span>{duration()}</span>
-						</>
-					)}
-				</Show>
-				<span>·</span>
-				<span>{fmtLocal(props.item.created_at)}</span>
-				<Show when={props.item.tags.length > 0}>
-					<For each={props.item.tags}>
-						{(tag) => <span class={styles.tag}>#{tag}</span>}
-					</For>
-				</Show>
-			</div>
-		</div>
-
-		<div class={styles.rowActions}>
-			<Button
-				variant="icon"
-				title="复制文件 URL（可用于 Markdown 引用）"
-				onClick={() => copyTextWithToast(props.item.url)}
-			>
-				<Copy size={14} />
-			</Button>
-			<Show when={props.item.can_edit}>
-				<Button
-					variant="secondary"
-					size="sm"
-					onClick={() => props.onStartRename(props.item)}
-				>
-					重命名
-				</Button>
-				<Button
-					variant="danger"
-					size="sm"
-					onClick={() => props.onDelete(props.item.stored_id)}
-				>
-					删除
-				</Button>
-			</Show>
-		</div>
-	</div>
-);
-
-/** 批量操作工具栏（选择模式下固定底部） */
-const BatchBar: Component<{
-	count: number;
-	total: number;
-	onSelectAll: () => void;
-	onClear: () => void;
-	onAddTag: (tag: string) => Promise<void>;
-	onCopyLinks: () => Promise<void>;
-	onDelete: () => Promise<void>;
-}> = (props) => {
-	const [tag, setTag] = createSignal("");
-	const submitTag = async () => {
-		const name = tag().trim();
-		if (!name) return;
-		await props.onAddTag(name);
-		setTag("");
-	};
-	return (
-		<Show when={props.count > 0}>
-			<div class={styles.batchBar}>
-				<span class={styles.batchCount}>
-					已选 {props.count} / {props.total}
-				</span>
-				<Button
-					variant="ghost"
-					size="sm"
-					onClick={props.onSelectAll}
-					disabled={props.count === props.total}
-				>
-					全选本页
-				</Button>
-				<Button variant="ghost" size="sm" onClick={props.onClear}>
-					取消选择
-				</Button>
-
-				<div class={styles.batchTag}>
-					<Input
-						class={styles.batchTagInput}
-						placeholder="加标签…"
-						value={tag()}
-						onInput={(e) => setTag(e.currentTarget.value)}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") void submitTag();
-						}}
-						aria-label="为已选文件加标签"
-					/>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={submitTag}
-						disabled={!tag().trim()}
-					>
-						应用
-					</Button>
-				</div>
-
-				<Button variant="secondary" size="sm" onClick={props.onCopyLinks}>
-					复制链接
-				</Button>
-				<Button variant="danger" size="sm" onClick={props.onDelete}>
-					删除
-				</Button>
-			</div>
-		</Show>
-	);
-};
 
 const FileListPage: Component = () => {
 	const f = useFileList();
@@ -597,44 +88,12 @@ const FileListPage: Component = () => {
 	};
 	const openLightbox = (item: FileItem) => setLightboxId(item.stored_id);
 
-	// ── 拖拽上传（整页投放） ──
-	const [dragging, setDragging] = createSignal(false);
-	// dragenter/dragleave 会在子元素间反复触发，用计数避免闪烁
-	let dragDepth = 0;
+	// ── 整页拖放 / 粘贴上传（逻辑见 hooks/useFileDropZone.ts） ──
+	const dropZone = useFileDropZone((files) => void f.handleUploadFiles(files));
 
-	const onDragEnter = (e: DragEvent) => {
-		if (!e.dataTransfer?.types.includes("Files")) return;
-		e.preventDefault();
-		dragDepth += 1;
-		setDragging(true);
-	};
-	const onDragOver = (e: DragEvent) => {
-		if (!e.dataTransfer?.types.includes("Files")) return;
-		e.preventDefault();
-		e.dataTransfer.dropEffect = "copy";
-	};
-	const onDragLeave = () => {
-		dragDepth = Math.max(0, dragDepth - 1);
-		if (dragDepth === 0) setDragging(false);
-	};
-	const onDrop = (e: DragEvent) => {
-		e.preventDefault();
-		dragDepth = 0;
-		setDragging(false);
-		const files = Array.from(e.dataTransfer?.files ?? []);
-		if (files.length > 0) void f.handleUploadFiles(files);
-	};
-
-	// ── 粘贴上传（Ctrl+V 截图/文件） ──
 	const onPaste = (e: ClipboardEvent) => {
-		const files = Array.from(e.clipboardData?.items ?? [])
-			.filter((item) => item.kind === "file")
-			.map((item) => item.getAsFile())
-			.filter((file): file is File => file !== null);
+		const files = filesFromPaste(e);
 		if (files.length === 0) return;
-		// 输入框里的粘贴交给输入框自己处理
-		const target = e.target as HTMLElement | null;
-		if (target && ["INPUT", "TEXTAREA"].includes(target.tagName)) return;
 		e.preventDefault();
 		void f.handleUploadFiles(files);
 	};
@@ -677,13 +136,13 @@ const FileListPage: Component = () => {
 		// biome-ignore lint/a11y/noStaticElementInteractions: 整页拖拽投放区无对应 ARIA role；键盘用户走「上传文件」按钮
 		<div
 			class={styles.page}
-			classList={{ [styles.pageDragging]: dragging() }}
-			onDragEnter={onDragEnter}
-			onDragOver={onDragOver}
-			onDragLeave={onDragLeave}
-			onDrop={onDrop}
+			classList={{ [styles.pageDragging]: dropZone.dragging() }}
+			onDragEnter={dropZone.onDragEnter}
+			onDragOver={dropZone.onDragOver}
+			onDragLeave={dropZone.onDragLeave}
+			onDrop={dropZone.onDrop}
 		>
-			<Show when={dragging()}>
+			<Show when={dropZone.dragging()}>
 				<div class={styles.dropOverlay}>
 					<div class={styles.dropHint}>松开即上传到文件库</div>
 				</div>

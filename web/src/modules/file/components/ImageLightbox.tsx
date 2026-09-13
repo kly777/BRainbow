@@ -90,21 +90,25 @@ const ImageLightbox: Component<Props> = (props) => {
 				onClick={onOverlayClick}
 			>
 				<div class={styles.stage} data-lightbox-keep>
-					<Show when={current()}>
+					{/* keyed 不能省：翻页时 current() 从"一个对象换成另一个对象"，真假没变，
+					    非 keyed 的 Show 不会重建子节点，于是 <img> 的 src/alt 都停在第一张
+					    （公开图片的 resolved 还是同步替换真值，内层 Show 同理）。 */}
+					<Show when={current()} keyed>
 						{(item) => (
 							<div class={styles.imgWrap} ref={imgWrapRef}>
 								<Show
 									when={resolved()}
+									keyed
 									fallback={
-										<Show when={item().is_private}>
+										<Show when={item.is_private}>
 											<p class={styles.loading}>正在加载私密图片…</p>
 										</Show>
 									}
 								>
 									{(src) => (
 										<img
-											src={src()}
-											alt={item().original_name}
+											src={src}
+											alt={item.original_name}
 											class={styles.img}
 										/>
 									)}

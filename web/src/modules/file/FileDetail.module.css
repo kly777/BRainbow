@@ -22,6 +22,12 @@
 	min-height: 0;
 }
 
+/* 切换上一个/下一个途中：保留旧内容，只做半透明提示（不插骨架，避免布局下沉） */
+.body[aria-busy="true"] {
+	opacity: 0.55;
+	transition: opacity var(--t-transition-fast);
+}
+
 /* ── 左侧：文件展示主体 ── */
 
 .preview-pane {

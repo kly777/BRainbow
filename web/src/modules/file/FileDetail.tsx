@@ -46,13 +46,18 @@ const PreviewMedia: Component<{
 	return (
 		<Show
 			when={resolved()}
+			// keyed 不能省：切到下一个文件时 resolved 从"真值换成另一个真值"
+			// （公开文件是同步替换原 URL，私密文件是换新的 blob URL），非 keyed 的 Show
+			// 只在真假变化时重建子节点，于是 <img>/<video>/<iframe> 会一直停在首帧的 src 上
+			// —— 页面标题、元信息都换了，只有画面不动。回归测试见 FileDetail.render.test.tsx。
+			keyed
 			fallback={
 				<Show when={props.isPrivate}>
 					<p class={styles.previewLoading}>正在加载私密文件…</p>
 				</Show>
 			}
 		>
-			{(url) => props.children(url())}
+			{(url) => props.children(url)}
 		</Show>
 	);
 };
@@ -439,13 +444,20 @@ export default function FileDetail() {
 				<ErrorRetry error={m.dataError} onRetry={m.refetch} />
 			</Show>
 
-			<Show when={m.dataLoading}>
+			{/* 骨架屏只在"还没有任何数据"时出现。切换上一个/下一个时 createResource 会保留
+			    上一个文件的值（dataLoading 为 true 但 data() 仍有值），若此时照样渲染骨架，
+			    骨架会插在旧内容上面，把整块内容顶下去再弹回来 —— 就是"沉一下再正确渲染"。
+			    切换途中改用 aria-busy + 半透明提示，布局完全不动。 */}
+			<Show when={m.dataLoading && !m.data()}>
 				<LoadingSkeleton />
 			</Show>
 
 			<Show when={m.data()}>
 				{(item) => (
-					<div class={styles.body}>
+					<div
+						class={styles.body}
+						aria-busy={m.dataLoading ? "true" : undefined}
+					>
 						<section class={styles.previewPane} aria-label="文件预览">
 							<Preview item={item()} />
 						</section>

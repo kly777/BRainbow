@@ -143,11 +143,7 @@ export default function TaskDetail() {
 
 	return (
 		<div class={styles.container}>
-			<Toolbar
-				title={detail()?.task.title}
-				backLabel="任务列表"
-				onBack={() => navigate(PATHS.task)}
-			>
+			<Toolbar backLabel="任务列表" onBack={() => navigate(PATHS.task)}>
 				<Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
 					编辑
 				</Button>

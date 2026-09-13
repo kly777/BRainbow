@@ -53,20 +53,15 @@ describe("Toolbar", () => {
 		expect(onBack).toHaveBeenCalledTimes(1);
 	});
 
-	it("标题可选：给了就渲染在返回之后，标题是纯文本（h1 由外壳负责）", () => {
-		const withTitle = mount(() => (
-			<Toolbar title="本体甲" backLabel="返回" onBack={() => {}} />
-		));
-		expect(withTitle.textContent).toContain("本体甲");
-		expect(withTitle.querySelector("h1")).toBeNull();
-
-		const without = mount(() => <Toolbar backLabel="返回" onBack={() => {}} />);
-		expect(without.textContent).not.toContain("本体甲");
+	it("工具条自己不渲染标题，也不渲染 h1（标题归页面内容，避免同一个名字出现两次）", () => {
+		const host = mount(() => <Toolbar backLabel="返回" onBack={() => {}} />);
+		expect(host.querySelector("h1")).toBeNull();
+		expect(host.querySelector("span")).toBeNull();
 	});
 
-	it("动作区渲染在标题之后（并在右侧）", () => {
+	it("动作区渲染在返回之后（并在右侧）", () => {
 		const host = mount(() => (
-			<Toolbar title="详情" backLabel="返回" onBack={() => {}}>
+			<Toolbar backLabel="返回" onBack={() => {}}>
 				<Button variant="secondary" size="sm">
 					编辑
 				</Button>

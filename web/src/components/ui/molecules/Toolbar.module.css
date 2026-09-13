@@ -34,19 +34,6 @@
 	text-decoration: underline;
 }
 
-/* 标题：长标题不换行，也不把右侧动作区挤出容器 */
-.title {
-	flex: 0 1 auto;
-	min-width: 0;
-	font-family: var(--t-font-display);
-	font-size: var(--text-base);
-	font-weight: 600;
-	color: var(--t-color-ink);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
 .actions {
 	margin-left: auto;
 	display: flex;

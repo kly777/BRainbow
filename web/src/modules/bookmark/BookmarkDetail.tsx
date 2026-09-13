@@ -64,6 +64,8 @@ const EditForm: Component<{
 	onAcceptSuggestedTag: (tag: string) => void;
 }> = (props) => (
 	<div class={styles.form}>
+		{/* 编辑态替换掉了 BookmarkView 的 h1，这里补一个仅供读屏器的 h1 */}
+		<h1 class="sr-only">编辑书签</h1>
 		<label class={styles.label} for="bm-title">
 			标题
 		</label>
@@ -155,11 +157,7 @@ export default function BookmarkDetail() {
 
 	return (
 		<div class={styles.container}>
-			<Toolbar
-				title={m.data()?.title}
-				backLabel="书签列表"
-				onBack={m.handleBack}
-			>
+			<Toolbar backLabel="书签列表" onBack={m.handleBack}>
 				<Button
 					variant="secondary"
 					size="sm"

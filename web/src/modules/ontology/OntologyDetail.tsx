@@ -32,6 +32,9 @@ type EditFormProps = {
 
 const EditForm = (props: EditFormProps) => (
 	<div class={styles.form}>
+		{/* 编辑态替换掉了卡片里的视图标题，这里补一个仅供读屏器的 h1，
+		    保证任何可见状态下页面都有且只有一个一级标题（工具条不再兼作标题）。 */}
+		<h1 class="sr-only">编辑本体</h1>
 		<label class={styles.label} for="onto-name">
 			名称
 		</label>
@@ -136,11 +139,7 @@ export default function OntologyDetail() {
 
 	return (
 		<div class={styles.container}>
-			<Toolbar
-				title={data()?.name}
-				backLabel="本体列表"
-				onBack={() => navigate(PATHS.ontology)}
-			>
+			<Toolbar backLabel="本体列表" onBack={() => navigate(PATHS.ontology)}>
 				<Button
 					variant="secondary"
 					size="sm"

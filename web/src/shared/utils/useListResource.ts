@@ -59,16 +59,28 @@ export interface ListResource<T> {
 	readonly loading: boolean;
 	readonly error: unknown;
 	refetch: () => void;
-	/** 直接替换本地列表（不校验请求结果） */
-	patch: (updater: (items: T[]) => T[]) => void;
+	/**
+	 * 重新拉取。
+	 * `silent: true` 时不经过 loading 状态（直接把结果写回资源），
+	 * 用于"数据在别处被改动，静默同步"的场景 —— 否则 AsyncView 会先闪一下骨架屏。
+	 */
+	reload: (opts?: { silent?: boolean }) => Promise<void>;
+	/**
+	 * 直接改写本地列表（不校验请求结果）。
+	 * `meta` 可同时调整分页元信息 —— 例如删除一条后把 `total` 减一，
+	 * 否则分页栏会与实际条数不一致，直到下次拉取。
+	 */
+	patch: (updater: (items: T[]) => T[], meta?: Partial<Paginated<T>>) => void;
 	/**
 	 * 乐观执行写操作：
-	 * 先按 `updater` 改本地列表，再执行 `action`；失败则回滚到操作前快照。
+	 * 先按 `updater` 改本地列表，再执行 `action`；失败则回滚到操作前快照
+	 * （整份分页对象，含 items 与 total）。
 	 * 成功时不 refetch（避免骨架屏闪一下），失败时也不 refetch（快照已还原）。
 	 */
 	optimistic: <R>(
 		updater: (items: T[]) => T[],
 		action: () => Promise<R>,
+		meta?: Partial<Paginated<T>>,
 	) => Promise<{ ok: true; value: R } | { ok: false; error: Error }>;
 }
 
@@ -111,19 +123,47 @@ export function useListResource<K, T>(
 	const total = createMemo(() => resource()?.total ?? 0);
 	const totalPages = createMemo(() => resource()?.total_pages ?? 0);
 
-	const patch = (updater: (items: T[]) => T[]) => {
+	const patch = (
+		updater: (items: T[]) => T[],
+		meta?: Partial<Paginated<T>>,
+	) => {
 		mutate((prev) => {
 			const base = prev ?? EMPTY_PAGE;
-			return { ...base, items: updater(base.items) };
+			return { ...base, ...meta, items: updater(base.items) };
 		});
 	};
 
-	const optimistic: ListResource<T>["optimistic"] = async (updater, action) => {
-		const snapshot = items();
-		patch(updater);
+	const optimistic: ListResource<T>["optimistic"] = async (
+		updater,
+		action,
+		meta,
+	) => {
+		// 快照整份分页对象：回滚时 items 与 total 一并还原
+		const snapshot = resource() ?? EMPTY_PAGE;
+		patch(updater, meta);
 		const result = await tryAsync(action);
-		if (!result.ok) patch(() => snapshot);
+		if (!result.ok) mutate(() => snapshot);
 		return result;
+	};
+
+	/** 静默重载：直接写值，不切 loading */
+	const silentReload = async () => {
+		const result = await tryAsync(() =>
+			options.fetcher(options.key(), options.page()),
+		);
+		if (result.ok) {
+			setError(null);
+			mutate(result.value);
+			options.onLoaded?.(result.value);
+			return;
+		}
+		setError(result.error);
+		options.onError?.(getErrorMessage(result.error));
+	};
+
+	const reload = async (opts?: { silent?: boolean }) => {
+		if (opts?.silent) return silentReload();
+		refetch();
 	};
 
 	return {
@@ -138,6 +178,7 @@ export function useListResource<K, T>(
 			return error();
 		},
 		refetch,
+		reload,
 		patch,
 		optimistic,
 	};

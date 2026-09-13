@@ -4,7 +4,7 @@ import { X } from "@components/ui/icons";
 // ManageToolbar / FilterBar（过滤模式外观）。
 // bookmark 的 TagInput 为名字键控领域变体，刻意不并入（模块隔离）。
 
-import { Button } from "@components/ui";
+import { Button, Input } from "@components/ui";
 import { createTagE, searchTagsE, type TagInfo } from "@modules/mem";
 import { blurClose, trimmedQuery, tryAsync } from "@shared/utils";
 import { createResource, createSignal, For, Show } from "solid-js";
@@ -131,7 +131,7 @@ export default function TagPicker(props: TagPickerProps) {
 				</Button>
 			</Show>
 
-			<input
+			<Input
 				type="text"
 				class={styles.input}
 				placeholder={props.placeholder ?? "搜索或添加标签…"}

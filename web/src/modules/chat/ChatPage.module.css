@@ -24,16 +24,9 @@
 }
 
 .search-input {
-	width: 100%;
+	/* 基础形态来自 Control 原语 + SearchInput 自身；此处只覆盖形状 */
 	padding: var(--space-sm) var(--space-md);
-	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-sm);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-	font-size: var(--text-sm);
 }
 
 .search-input::placeholder {

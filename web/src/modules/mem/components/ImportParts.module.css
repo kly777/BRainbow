@@ -118,18 +118,7 @@
 	color: var(--t-color-ink-muted);
 }
 
-.text-input {
-	width: 100%;
-	border: 1px solid var(--t-color-border);
-	color: var(--t-color-ink);
-	transition:
-		border-color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast);
-	font-size: var(--text-sm);
-	background: var(--t-color-bg);
-	border-radius: var(--radius-md);
-	padding: var(--space-sm) var(--space-md);
-}
+/* .text-input 的声明已全部由 Control 原语覆盖，故删除 */
 
 .preview-card {
 	background: var(--t-color-surface);

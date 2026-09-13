@@ -1,3 +1,4 @@
+import { Input } from "@components/ui";
 import { ArrowLeft, Check, X } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
 // ── v2 导入相关子组件：格式说明卡 / 预览清单 / 默认标签 / 结果页 ──
@@ -180,13 +181,13 @@ export function ImportTagInput(props: {
 			<label for="import-default-tags" class={styles.label}>
 				默认标签（可选，所有导入条目都会加上）
 			</label>
-			<input
+			<Input
 				id="import-default-tags"
 				type="text"
-				class={styles.textInput}
 				placeholder="标签1; 标签2"
 				value={props.value}
 				onInput={(e) => props.onChange(e.currentTarget.value)}
+				tone="bg"
 			/>
 		</div>
 	);

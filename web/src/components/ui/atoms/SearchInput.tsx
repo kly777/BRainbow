@@ -1,3 +1,4 @@
+import Input from "@components/ui/atoms/Input.tsx";
 import styles from "@components/ui/atoms/SearchInput.module.css";
 import { debounce, SEARCH_DEBOUNCE_MS } from "@shared/utils";
 import type { Component } from "solid-js";
@@ -31,7 +32,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 	};
 
 	return (
-		<input
+		<Input
 			type="search"
 			class={`${styles.input}${props.class ? ` ${props.class}` : ""}`}
 			placeholder={props.placeholder ?? "搜索…"}

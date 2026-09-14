@@ -6,7 +6,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use tokio_util::io::ReaderStream;
 
 use super::model::{FileListQuery, UpdateFileRequest};
@@ -314,11 +314,77 @@ pub async fn get_handler(
 
 // ── 文件服务（公开路由） ──
 
+/// 单段 Range 的解析结果（`bytes=start-end` / `bytes=start-` / `bytes=-suffix`）
+#[derive(Debug, PartialEq, Eq)]
+pub enum RangeSpec {
+    /// 可取的一段（闭区间，已按文件大小收敛）
+    Satisfiable { start: u64, end: u64 },
+    /// 语法合法但超出文件范围 → 416
+    Unsatisfiable,
+}
+
+/// 解析 `Range` 头。返回 `None` 表示**不理会这个头、按整文件 200 回应**。
+///
+/// 按 RFC 9110 §14 的取舍：
+/// - 只支持单段（`bytes=0-1023`）。多段（含逗号）与语法错误一律忽略，
+///   服务器可以合法地忽略 Range 并返回 200 —— 不做 multipart/byteranges，
+///   那是给浏览器断点续传用的，这里没有收益却要引入边界拼接。
+/// - 单位名大小写不敏感（`bytes` 是唯一有效的单位）。
+/// - `end` 超出文件尾按文件尾收敛（规范要求），`start` 超出才是 416。
+/// - `bytes=-0` 与 `start > end` 属不可满足。
+pub fn parse_range(header_value: &str, total: u64) -> Option<RangeSpec> {
+    let (unit, spec) = header_value.split_once('=')?;
+    if !unit.trim().eq_ignore_ascii_case("bytes") {
+        return None;
+    }
+    let spec = spec.trim();
+    if spec.contains(',') {
+        return None;
+    }
+    let (start_str, end_str) = spec.split_once('-')?;
+    let start_str = start_str.trim();
+    let end_str = end_str.trim();
+
+    // bytes=-N：最后 N 个字节
+    if start_str.is_empty() {
+        let suffix: u64 = end_str.parse().ok()?;
+        if suffix == 0 || total == 0 {
+            return Some(RangeSpec::Unsatisfiable);
+        }
+        return Some(RangeSpec::Satisfiable {
+            start: total.saturating_sub(suffix),
+            end: total - 1,
+        });
+    }
+
+    let start: u64 = start_str.parse().ok()?;
+    let end: u64 = if end_str.is_empty() {
+        // bytes=N-：从 N 到文件尾
+        if total == 0 {
+            return Some(RangeSpec::Unsatisfiable);
+        }
+        total - 1
+    } else {
+        end_str.parse().ok()?
+    };
+
+    if start > end || start >= total {
+        return Some(RangeSpec::Unsatisfiable);
+    }
+    Some(RangeSpec::Satisfiable {
+        start,
+        end: end.min(total - 1),
+    })
+}
+
 /// 文件内容（公开路由）。
 ///
 /// 公开文件不带任何凭据即可访问 —— Markdown 里的 `<img src>` 不会附带 Authorization，
 /// 这是内嵌图片能显示的前提。私密文件则要求携带有效凭据（JWT 或 API Key）且为上传者，
 /// 否则未认证返回 401、已认证但不是本人返回 404（不暴露文件是否存在）。
+///
+/// 支持单段 `Range`（206 / 416）：3DGS 的 .ply 动辄几十 MB，前端先取头部几十 KB
+/// 读出顶点数与属性，再决定要不要整包下载，不必先吞下整个文件。
 pub async fn file_handler(
     State(query): State<FileQueryService>,
     State(auth): State<crate::app::auth::service::AuthService>,
@@ -346,12 +412,46 @@ pub async fn file_handler(
     }
 
     // 路径取自 query service 持有的目录配置（勿在此硬编码 uploads/file）
-    let Ok(f) = tokio::fs::File::open(query.file_path(&stored_id)).await else {
+    let Ok(mut f) = tokio::fs::File::open(query.file_path(&stored_id)).await else {
         return ServiceError::NotFound("文件不存在".into()).into_response();
     };
 
-    let stream = ReaderStream::new(f);
-    let body = Body::from_stream(stream);
+    // 长度取磁盘实况而非 DB 的 size_bytes：内容与记录不一致时（缺失/被替换）
+    // 以文件为准，否则 Range 会切出错位的内容
+    let total = match f.metadata().await {
+        Ok(m) => m.len(),
+        Err(_) => return ServiceError::NotFound("文件不存在".into()).into_response(),
+    };
+
+    let range = headers
+        .get(header::RANGE)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| parse_range(v, total));
+
+    let content_range = match range {
+        // 语法合法但超出文件范围：按规范回 `Content-Range: bytes */total`
+        Some(RangeSpec::Unsatisfiable) => {
+            return Response::builder()
+                .status(StatusCode::RANGE_NOT_SATISFIABLE)
+                .header(header::CONTENT_RANGE, format!("bytes */{total}"))
+                .header(header::ACCEPT_RANGES, "bytes")
+                .header("X-Content-Type-Options", "nosniff")
+                .body(Body::empty())
+                .unwrap_or_else(|_| Response::new(Body::empty()));
+        }
+        Some(RangeSpec::Satisfiable { start, end }) => Some((start, end)),
+        None => None,
+    };
+
+    let body = match content_range {
+        Some((start, end)) => {
+            if f.seek(std::io::SeekFrom::Start(start)).await.is_err() {
+                return ServiceError::NotFound("文件不存在".into()).into_response();
+            }
+            Body::from_stream(ReaderStream::new(f.take(end - start + 1)))
+        }
+        None => Body::from_stream(ReaderStream::new(f)),
+    };
 
     // 一律 `private`：不让任何共享缓存（CDN/反代）持有文件内容。
     //
@@ -364,13 +464,26 @@ pub async fn file_handler(
     // 去掉 immutable、降到一天：浏览器仍会缓存（性能保留），但头变更最多一天内传播。
     const CACHE_CONTROL: &str = "private, max-age=86400";
     let mut resp = Response::builder()
-        .status(StatusCode::OK)
+        .status(match content_range {
+            Some(_) => StatusCode::PARTIAL_CONTENT,
+            None => StatusCode::OK,
+        })
         .header(header::CONTENT_TYPE, &file.mime_type)
         .header(header::CACHE_CONTROL, CACHE_CONTROL)
+        // 声明可分段取：浏览器据此支持下载续传与视频拖动进度条
+        .header(header::ACCEPT_RANGES, "bytes")
         .header("X-Content-Type-Options", "nosniff")
         // 详情页的 PDF 预览是同源 <iframe>：这里显式允许同源嵌入，
         // 不依赖反向代理（Caddy）的站点级配置，跨站嵌入仍然被拒
         .header("X-Frame-Options", "SAMEORIGIN");
+
+    // 206 必须带 Content-Range 与本次响应的 Content-Length
+    // （200 仍是分块流式，与原先一致）
+    if let Some((start, end)) = content_range {
+        resp = resp
+            .header(header::CONTENT_RANGE, format!("bytes {start}-{end}/{total}"))
+            .header(header::CONTENT_LENGTH, (end - start + 1).to_string());
+    }
 
     // 强制下载（HTML/SVG 等防 XSS）；其余可内联的类型给 inline
     let disposition = if FileService::can_inline(&file.mime_type)
@@ -602,5 +715,76 @@ mod tests {
         let listed =
             serde_json::to_value(to_summary_response(&sample_summary(false), Some(7))).unwrap();
         assert!(listed.get("meta").is_none(), "列表不带 meta（skip_serializing_if）");
+    }
+
+    // ── Range 解析 ──
+    //
+    // 语义取自 RFC 9110 §14：只支持单段；语法错误与多段一律忽略（返回 200 整文件
+    // 是合法行为）；end 超出文件尾按文件尾收敛，start 超出才 416。
+
+    #[test]
+    fn parse_range_covers_the_three_single_range_forms() {
+        // bytes=start-end（闭区间）
+        assert_eq!(
+            parse_range("bytes=0-1023", 4096),
+            Some(RangeSpec::Satisfiable { start: 0, end: 1023 })
+        );
+        // bytes=start-（到文件尾）
+        assert_eq!(
+            parse_range("bytes=2048-", 4096),
+            Some(RangeSpec::Satisfiable { start: 2048, end: 4095 })
+        );
+        // bytes=-suffix（最后 N 字节）
+        assert_eq!(
+            parse_range("bytes=-100", 4096),
+            Some(RangeSpec::Satisfiable { start: 3996, end: 4095 })
+        );
+    }
+
+    #[test]
+    fn parse_range_clamps_end_to_file_size() {
+        assert_eq!(
+            parse_range("bytes=4000-9999", 4096),
+            Some(RangeSpec::Satisfiable { start: 4000, end: 4095 })
+        );
+        // 后缀比文件还长 → 整个文件
+        assert_eq!(
+            parse_range("bytes=-999999", 4096),
+            Some(RangeSpec::Satisfiable { start: 0, end: 4095 })
+        );
+    }
+
+    #[test]
+    fn parse_range_marks_unsatisfiable_ranges() {
+        assert_eq!(parse_range("bytes=5000-", 4096), Some(RangeSpec::Unsatisfiable));
+        assert_eq!(parse_range("bytes=4096-4096", 4096), Some(RangeSpec::Unsatisfiable));
+        assert_eq!(parse_range("bytes=-0", 4096), Some(RangeSpec::Unsatisfiable));
+        // start > end 属非法区间
+        assert_eq!(parse_range("bytes=100-50", 4096), Some(RangeSpec::Unsatisfiable));
+        // 空文件：任何范围都不可满足
+        assert_eq!(parse_range("bytes=0-", 0), Some(RangeSpec::Unsatisfiable));
+        // 单字节文件的合法范围
+        assert_eq!(
+            parse_range("bytes=0-0", 1),
+            Some(RangeSpec::Satisfiable { start: 0, end: 0 })
+        );
+    }
+
+    #[test]
+    fn parse_range_ignores_multi_range_and_garbage() {
+        // 多段：不做 multipart/byteranges，按"忽略 Range"处理
+        assert_eq!(parse_range("bytes=0-99,200-299", 4096), None);
+        // 非 bytes 单位
+        assert_eq!(parse_range("items=0-99", 4096), None);
+        // 语法错误
+        assert_eq!(parse_range("bytes=abc-def", 4096), None);
+        assert_eq!(parse_range("bytes=", 4096), None);
+        assert_eq!(parse_range("0-99", 4096), None);
+        assert_eq!(parse_range("bytes=1-2-3", 4096), None);
+        // 大小写与空白宽容
+        assert_eq!(
+            parse_range("BYTES= 0-9 ", 4096),
+            Some(RangeSpec::Satisfiable { start: 0, end: 9 })
+        );
     }
 }

@@ -6,15 +6,22 @@
 //
 // match 只看 mime 与文件名，不看 file_category：后者只有 5 个值
 // （image/video/audio/document/other），既区分不了同属 document 的
-// pdf/csv/docx，也表达不了"image 类别里 TIFF 浏览器渲染不了"这类事实。
+// pdf/csv/docx，也表达不了"哪些格式浏览器其实渲染不了"这类事实。
 
 import type { FileItem } from "../api.ts";
+import { codeLang } from "../lib/filename.ts";
 import { AudioViewer } from "./AudioViewer.tsx";
+import { CodeViewer } from "./CodeViewer.tsx";
+import { CsvViewer } from "./CsvViewer.tsx";
+import { HtmlViewer } from "./HtmlViewer.tsx";
 import { ImageViewer } from "./ImageViewer.tsx";
+import { MarkdownViewer } from "./MarkdownViewer.tsx";
 import { PdfViewer } from "./PdfViewer.tsx";
-import { TextViewer } from "./TextViewer.tsx";
+import { PlainTextViewer } from "./PlainTextViewer.tsx";
 import type { Viewer } from "./types.ts";
 import { VideoViewer } from "./VideoViewer.tsx";
+
+const isText = (f: FileItem) => f.mime_type.startsWith("text/");
 
 /**
  * 顺序即优先级：**取第一个命中的**。泛化规则（如 text/*）要排在具体规则之后。
@@ -40,10 +47,32 @@ export const VIEWERS: Viewer[] = [
 		match: (f) => f.mime_type === "application/pdf",
 		component: PdfViewer,
 	},
+	// ── 文本类：按 mime 精确匹配排在前，扩展名兜底（源码/配置）与纯文本排在后 ──
+	{
+		id: "markdown",
+		match: (f) => f.mime_type === "text/markdown",
+		component: MarkdownViewer,
+	},
+	{
+		id: "html",
+		match: (f) => f.mime_type === "text/html",
+		component: HtmlViewer,
+	},
+	{
+		id: "csv",
+		match: (f) => f.mime_type === "text/csv",
+		component: CsvViewer,
+	},
+	{
+		// 源码/配置：后端对 .rs/.toml 这类只给 text/plain，靠扩展名认出语言走高亮
+		id: "code",
+		match: (f) => isText(f) && codeLang(f.original_name) !== "",
+		component: CodeViewer,
+	},
 	{
 		id: "text",
-		match: (f) => f.mime_type.startsWith("text/"),
-		component: TextViewer,
+		match: isText,
+		component: PlainTextViewer,
 	},
 ];
 

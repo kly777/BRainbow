@@ -76,6 +76,16 @@
 	text-align: center;
 }
 
+/* 兜底面板的补充说明（如"这个图片格式浏览器无法预览"） */
+.preview-fallback-note {
+	margin: 0;
+	max-width: 32rem;
+	text-align: center;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	line-height: 1.6;
+}
+
 .preview-missing-icon {
 	color: var(--t-color-danger);
 	opacity: 0.8;
@@ -95,4 +105,80 @@
 	margin: 0;
 	color: var(--t-color-ink-muted);
 	font-size: var(--text-sm);
+}
+
+/* ── 文本类查看器（原 components/TextPreview.module.css，随拆分搬来） ── */
+
+.pane {
+	flex: 1;
+	width: 100%;
+	height: 100%;
+	overflow: auto;
+	text-align: left;
+	box-sizing: border-box;
+}
+
+.state {
+	padding: var(--space-xl);
+	text-align: center;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-sm);
+}
+
+.pre {
+	margin: 0;
+	padding: var(--space-lg);
+	font-family: var(--t-font-mono);
+	font-size: var(--text-sm);
+	line-height: 1.6;
+	color: var(--t-color-ink);
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+.markdown {
+	padding: var(--space-lg) var(--space-xl);
+	overflow: auto;
+}
+
+.html-frame {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border: none;
+	background: var(--t-color-white);
+}
+
+.table-wrap {
+	overflow: auto;
+	max-height: 100%;
+}
+
+.table {
+	border-collapse: collapse;
+	font-size: var(--text-sm);
+	margin: var(--space-md);
+}
+
+.table-cell {
+	border: 1px solid var(--t-color-border);
+	padding: var(--space-xs) var(--space-sm);
+	color: var(--t-color-ink);
+	white-space: nowrap;
+}
+
+.table-cell:first-child {
+	font-weight: 500;
+	color: var(--t-color-ink-muted);
+}
+
+.truncate-note {
+	position: sticky;
+	bottom: 0;
+	padding: var(--space-xs) var(--space-md);
+	background: var(--t-color-warning-subtle);
+	border-top: 1px solid var(--t-color-border);
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-xs);
+	text-align: center;
 }

@@ -13,31 +13,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { FileCategory, FileItem } from "../api.ts";
 import { pickViewer } from "./registry.ts";
+import { item as file } from "./test-fixtures.ts";
 
 // vitest 从 web/ 启动（同 shared/styles/css-modules-contract.test.ts 的路径假设）
 const SERVICE_RS = join(process.cwd(), "../src/modules/file/service.rs");
-
-const base: FileItem = {
-	id: 1,
-	stored_id: "s1",
-	url: "/api/file/s1/data/a.bin",
-	original_name: "a.bin",
-	mime_type: "application/octet-stream",
-	file_category: "other",
-	size_bytes: 1024,
-	width: null,
-	height: null,
-	duration_ms: null,
-	tags: [],
-	meta: {},
-	created_at: "2026-09-14T00:00:00+00:00",
-	updated_at: "2026-09-14T00:00:00+00:00",
-	missing: false,
-	is_private: false,
-	can_edit: true,
-};
-
-const file = (over: Partial<FileItem>): FileItem => ({ ...base, ...over });
 
 /** 按类别造一条记录（后端白名单的 category 列值就是 FileCategory 的字符串） */
 const ofCategory = (mime: string, category: string, name?: string): FileItem =>
@@ -55,21 +34,36 @@ describe("查看器注册表：命中规则", () => {
 			ofCategory("image/svg+xml", "image", "a.svg"),
 			"image",
 		],
-		["tiff", ofCategory("image/tiff", "image", "a.tiff"), "image"],
+		[
+			"tiff（浏览器多半渲染不了，由查看器的 onError 兜底）",
+			ofCategory("image/tiff", "image", "a.tiff"),
+			"image",
+		],
 		["mp4", ofCategory("video/mp4", "video", "a.mp4"), "video"],
 		[
-			"webm 音频（同扩展名两种类别，按 mime 走）",
+			"webm 音频（与 webm 视频同扩展名，按 mime 分流）",
 			ofCategory("audio/webm", "audio", "a.webm"),
 			"audio",
 		],
 		["pdf", ofCategory("application/pdf", "document", "a.pdf"), "pdf"],
-		["text/plain", ofCategory("text/plain", "document", "a.rs"), "text"],
-		["text/markdown", ofCategory("text/markdown", "document", "a.md"), "text"],
 		[
-			"源码（后端按扩展名归一成 text/plain）",
-			ofCategory("text/plain", "document", "main.rs"),
-			"text",
+			"text/markdown",
+			ofCategory("text/markdown", "document", "a.md"),
+			"markdown",
 		],
+		["text/html", ofCategory("text/html", "document", "a.html"), "html"],
+		["text/csv", ofCategory("text/csv", "document", "a.csv"), "csv"],
+		[
+			"源码（后端按扩展名归一成 text/plain，靠扩展名走高亮）",
+			ofCategory("text/plain", "document", "main.rs"),
+			"code",
+		],
+		[
+			"Dockerfile（无扩展名，按文件名认语言）",
+			ofCategory("text/plain", "document", "Dockerfile"),
+			"code",
+		],
+		["纯文本", ofCategory("text/plain", "document", "a.txt"), "text"],
 		[
 			"docx（后端白名单收了，但前端还没有查看器）",
 			ofCategory(
@@ -141,9 +135,9 @@ describe("查看器注册表：后端白名单覆盖", () => {
 		"audio/aac": "audio",
 		"application/pdf": "pdf",
 		"text/plain": "text",
-		"text/html": "text",
-		"text/csv": "text",
-		"text/markdown": "text",
+		"text/html": "html",
+		"text/csv": "csv",
+		"text/markdown": "markdown",
 		// Office 二进制文档：白名单收了但前端只给下载（查看器待补，见 doc/file-service.md）
 		"application/msword": null,
 		"application/vnd.openxmlformats-officedocument.wordprocessingml.document":

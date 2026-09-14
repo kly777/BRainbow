@@ -13,112 +13,16 @@ import {
 	parsePlyHeader,
 	SPLAT_ROW_BYTES,
 } from "./ply.ts";
-
-// ── 造 PLY 的小工具 ──
-
-type PlyType = "float" | "double" | "int" | "uint" | "uchar" | "short";
-const SIZES: Record<PlyType, number> = {
-	float: 4,
-	double: 8,
-	int: 4,
-	uint: 4,
-	uchar: 1,
-	short: 2,
-};
+import {
+	buildPly,
+	GAUSSIAN_PROPS,
+	gaussianRow,
+	type PlyType,
+	POINT_PROPS,
+	readF32,
+} from "./ply-fixtures.ts";
 
 const SH_C0 = 0.28209479177387814;
-
-/** 由属性表与数据行拼一个二进制 PLY（默认小端） */
-function buildPly(
-	props: Array<[PlyType, string]>,
-	rows: number[][],
-	format = "binary_little_endian",
-	extraElements: string[] = [],
-): Uint8Array {
-	const le = format === "binary_little_endian";
-	const rowSize = props.reduce((sum, [t]) => sum + SIZES[t], 0);
-	const header =
-		[
-			"ply",
-			`format ${format} 1.0`,
-			"comment 测试",
-			`element vertex ${rows.length}`,
-			...props.map(([t, n]) => `property ${t} ${n}`),
-			...extraElements,
-			"end_header",
-		].join("\n") + "\n";
-
-	const out = new Uint8Array(header.length + rows.length * rowSize);
-	for (let i = 0; i < header.length; i++) out[i] = header.charCodeAt(i);
-	const view = new DataView(out.buffer);
-	let at = header.length;
-	for (const row of rows) {
-		props.forEach(([type], idx) => {
-			const v = row[idx] ?? 0;
-			switch (type) {
-				case "float":
-					view.setFloat32(at, v, le);
-					break;
-				case "double":
-					view.setFloat64(at, v, le);
-					break;
-				case "int":
-					view.setInt32(at, v, le);
-					break;
-				case "uint":
-					view.setUint32(at, v, le);
-					break;
-				case "uchar":
-					view.setUint8(at, v);
-					break;
-				case "short":
-					view.setInt16(at, v, le);
-					break;
-			}
-			at += SIZES[type];
-		});
-	}
-	return out;
-}
-
-/** 3DGS 顶点：x y z + f_dc_0..2 + opacity + scale_0..2 + rot_0..3 */
-const GAUSSIAN_PROPS: Array<[PlyType, string]> = [
-	["float", "x"],
-	["float", "y"],
-	["float", "z"],
-	["float", "f_dc_0"],
-	["float", "f_dc_1"],
-	["float", "f_dc_2"],
-	["float", "opacity"],
-	["float", "scale_0"],
-	["float", "scale_1"],
-	["float", "scale_2"],
-	["float", "rot_0"],
-	["float", "rot_1"],
-	["float", "rot_2"],
-	["float", "rot_3"],
-];
-
-/** 一行 3DGS 数据；scale 用"已取 exp 前的值"便于断言 */
-function gaussianRow(
-	over: Partial<{
-		x: number;
-		y: number;
-		z: number;
-		dc: [number, number, number];
-		opacity: number;
-		scale: [number, number, number];
-		rot: [number, number, number, number];
-	}> = {},
-): number[] {
-	const { x = 0, y = 0, z = 0, dc = [0, 0, 0], opacity = 0 } = over;
-	const scale = over.scale ?? [0, 0, 0];
-	const rot = over.rot ?? [1, 0, 0, 0];
-	return [...[x, y, z], ...dc, opacity, ...scale, ...rot];
-}
-
-const f32 = (bytes: Uint8Array, offset: number) =>
-	new DataView(bytes.buffer, bytes.byteOffset).getFloat32(offset, true);
 
 describe("isPlyName", () => {
 	it("大小写与首尾空白都容忍", () => {
@@ -212,13 +116,13 @@ describe("buildSplatData：3DGS", () => {
 		expect(data.pointCloud).toBe(false);
 		expect(data.vertexCount).toBe(1);
 
-		expect(f32(data.bytes, 0)).toBeCloseTo(1.5, 5);
-		expect(f32(data.bytes, 4)).toBeCloseTo(-2, 5);
-		expect(f32(data.bytes, 8)).toBeCloseTo(3, 5);
+		expect(readF32(data.bytes, 0)).toBeCloseTo(1.5, 5);
+		expect(readF32(data.bytes, 4)).toBeCloseTo(-2, 5);
+		expect(readF32(data.bytes, 8)).toBeCloseTo(3, 5);
 		// exp([0, ln2, ln3]) = [1, 2, 3]
-		expect(f32(data.bytes, 12)).toBeCloseTo(1, 5);
-		expect(f32(data.bytes, 16)).toBeCloseTo(2, 5);
-		expect(f32(data.bytes, 20)).toBeCloseTo(3, 5);
+		expect(readF32(data.bytes, 12)).toBeCloseTo(1, 5);
+		expect(readF32(data.bytes, 16)).toBeCloseTo(2, 5);
+		expect(readF32(data.bytes, 20)).toBeCloseTo(3, 5);
 		// f_dc: 0.5 + SH_C0 * dc
 		expect(data.bytes[24]).toBe(Math.round((0.5 + SH_C0) * 255));
 		expect(data.bytes[25]).toBe(Math.round(0.5 * 255));
@@ -251,9 +155,9 @@ describe("buildSplatData：3DGS", () => {
 		]);
 		const data = buildSplatData(bytes);
 		// 排在最前的是体积最大的那个（原第 2 行，x=2）
-		expect(f32(data.bytes, 0)).toBeCloseTo(2, 5);
-		expect(f32(data.bytes, SPLAT_ROW_BYTES)).toBeCloseTo(3, 5);
-		expect(f32(data.bytes, SPLAT_ROW_BYTES * 2)).toBeCloseTo(1, 5);
+		expect(readF32(data.bytes, 0)).toBeCloseTo(2, 5);
+		expect(readF32(data.bytes, SPLAT_ROW_BYTES)).toBeCloseTo(3, 5);
+		expect(readF32(data.bytes, SPLAT_ROW_BYTES * 2)).toBeCloseTo(1, 5);
 	});
 
 	it("算出的包围盒用于自动取景", () => {
@@ -273,26 +177,17 @@ describe("buildSplatData：3DGS", () => {
 			"binary_big_endian",
 		);
 		const data = buildSplatData(bytes);
-		expect(f32(data.bytes, 0)).toBeCloseTo(7, 5);
-		expect(f32(data.bytes, 4)).toBeCloseTo(8, 5);
-		expect(f32(data.bytes, 8)).toBeCloseTo(9, 5);
+		expect(readF32(data.bytes, 0)).toBeCloseTo(7, 5);
+		expect(readF32(data.bytes, 4)).toBeCloseTo(8, 5);
+		expect(readF32(data.bytes, 8)).toBeCloseTo(9, 5);
 	});
 });
 
 describe("buildSplatData：点云与异常", () => {
-	const POINT_PROPS: Array<[PlyType, string]> = [
-		["float", "x"],
-		["float", "y"],
-		["float", "z"],
-		["uchar", "red"],
-		["uchar", "green"],
-		["uchar", "blue"],
-	];
-
 	it("没有高斯参数时按小圆点处理（尺度 0.01、单位四元数、颜色直取）", () => {
 		const data = buildSplatData(buildPly(POINT_PROPS, [[1, 2, 3, 10, 20, 30]]));
 		expect(data.pointCloud).toBe(true);
-		expect(f32(data.bytes, 12)).toBeCloseTo(0.01, 6);
+		expect(readF32(data.bytes, 12)).toBeCloseTo(0.01, 6);
 		expect(data.bytes[24]).toBe(10);
 		expect(data.bytes[25]).toBe(20);
 		expect(data.bytes[26]).toBe(30);
@@ -309,8 +204,8 @@ describe("buildSplatData：点云与异常", () => {
 				[2, 0, 0, 0, 0, 0],
 			]),
 		);
-		expect(f32(data.bytes, 0)).toBeCloseTo(1, 5);
-		expect(f32(data.bytes, SPLAT_ROW_BYTES)).toBeCloseTo(2, 5);
+		expect(readF32(data.bytes, 0)).toBeCloseTo(1, 5);
+		expect(readF32(data.bytes, SPLAT_ROW_BYTES)).toBeCloseTo(2, 5);
 	});
 
 	it("ASCII 格式给出明确提示而不是崩", () => {

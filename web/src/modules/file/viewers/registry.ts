@@ -9,10 +9,11 @@
 // pdf/csv/docx，也表达不了"哪些格式浏览器其实渲染不了"这类事实。
 
 import type { FileItem } from "../api.ts";
-import { codeLang } from "../lib/filename.ts";
+import { codeLang, isPlainTextName } from "../lib/filename.ts";
 import { AudioViewer } from "./AudioViewer.tsx";
 import { CodeViewer } from "./CodeViewer.tsx";
 import { CsvViewer } from "./CsvViewer.tsx";
+import { HexViewer } from "./HexViewer.tsx";
 import { HtmlViewer } from "./HtmlViewer.tsx";
 import { ImageViewer } from "./ImageViewer.tsx";
 import { MarkdownViewer } from "./MarkdownViewer.tsx";
@@ -73,6 +74,22 @@ export const VIEWERS: Viewer[] = [
 		id: "text",
 		match: isText,
 		component: PlainTextViewer,
+	},
+	// ── other 类别（后端白名单外的格式）不再只有"下载"按钮 ──
+	{
+		// 字幕/歌词/日志这类：MIME 是 application/x-subrip 等非标准名，
+		// 归入 other 类别，但内容就是文本 —— 按扩展名认出后照文本渲染
+		id: "plain-text-name",
+		match: (f) =>
+			f.file_category === "other" && isPlainTextName(f.original_name),
+		component: PlainTextViewer,
+	},
+	{
+		// 其余二进制（压缩包/3D 模型/设计稿/未知格式）：看文件头认类型，
+		// 至少能回答"这文件到底是什么"
+		id: "hex",
+		match: (f) => f.file_category === "other",
+		component: HexViewer,
 	},
 ];
 

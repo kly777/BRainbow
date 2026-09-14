@@ -86,6 +86,31 @@ export function codeLang(name: string): string {
 	return EXT_TO_LANG[lowerExt(lower)] ?? "";
 }
 
+/**
+ * 已知是纯文本、但 MIME 不在后端白名单里的扩展名。
+ * 后端对这些扩展名按 mime_guess 给出 `application/x-subrip` 这类非 text/* 类型，
+ * 于是归入 other 类别、拿不到文本查看器——但内容就是文本，按十六进制看没有意义。
+ * 清单刻意保守：只收"一定是文本"的格式（字幕、歌词、播放列表、日志、补丁）。
+ */
+const PLAIN_TEXT_EXTS = new Set([
+	"srt",
+	"vtt",
+	"ass",
+	"ssa",
+	"sub",
+	"lrc",
+	"m3u",
+	"m3u8",
+	"log",
+	"diff",
+	"patch",
+]);
+
+/** 文件名是否属于"已知是纯文本"的扩展名（只看名字，不看内容） */
+export function isPlainTextName(name: string): boolean {
+	return PLAIN_TEXT_EXTS.has(lowerExt(name));
+}
+
 /** 生成 Markdown 代码围栏：围栏长度取内容中最长反引号串 + 1（避免内容截断围栏） */
 export function codeFence(text: string, lang: string): string {
 	let longest = 0;

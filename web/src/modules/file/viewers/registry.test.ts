@@ -73,11 +73,21 @@ describe("查看器注册表：命中规则", () => {
 			),
 			undefined,
 		],
-		["压缩包", ofCategory("application/zip", "other", "a.zip"), undefined],
+		["压缩包", ofCategory("application/zip", "other", "a.zip"), "hex"],
 		[
-			"3D 模型",
+			"3D 模型（后端按扩展名给出 application/octet-stream）",
 			ofCategory("application/octet-stream", "other", "a.ply"),
-			undefined,
+			"hex",
+		],
+		[
+			"字幕（MIME 是 application/x-subrip，归 other 但内容是文本）",
+			ofCategory("application/x-subrip", "other", "英语听力.srt"),
+			"plain-text-name",
+		],
+		[
+			"播放列表（m3u 同理）",
+			ofCategory("application/vnd.apple.mpegurl", "other", "歌单.m3u"),
+			"plain-text-name",
 		],
 		[
 			"内容缺失的文件（照样选查看器，缺失提示由宿主渲染）",

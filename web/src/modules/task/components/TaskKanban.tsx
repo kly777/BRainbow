@@ -3,6 +3,7 @@ import type { Task } from "@modules/task";
 import { useTasks } from "@modules/task";
 import { fmtLocal } from "@shared/utils";
 import { createMemo, createSignal, For, Show } from "solid-js";
+import { statusToken } from "../lib/status-colors.ts";
 import styles from "./TaskKanban.module.css";
 
 // ==================== 状态常量 ====================
@@ -13,12 +14,8 @@ const COLUMNS = [
 	{ key: "completed", label: "已完成" },
 ] as const;
 
-const STATUS_COLORS: Record<string, string> = {
-	backlog: "var(--t-color-ink-muted)",
-	active: "var(--t-color-accent)",
-	completed: "var(--t-color-success)",
-	archived: "var(--t-color-ink-faint)",
-};
+/** 状态色取自单一来源（task/lib/status-colors.ts），包一层 var() 供 CSS 变量消费 */
+const statusColorVar = (status: string) => `var(${statusToken(status)})`;
 
 // ==================== 拖拽卡片 ====================
 
@@ -74,7 +71,7 @@ interface ColumnProps {
 }
 
 function Column(props: ColumnProps) {
-	const color = STATUS_COLORS[props.col.key];
+	const color = statusColorVar(props.col.key);
 
 	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();

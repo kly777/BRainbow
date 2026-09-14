@@ -23,7 +23,13 @@
 }
 
 .overlay:hover {
-	background: oklch(0% 0 0deg / 55%);
+	/* 悬停略加深：在遮罩令牌上叠一成墨色（合成后 alpha ≈ 0.5×0.9 + 1×0.1 = 0.55，
+	   与原先硬编码的 55% 黑一致，但随主题走且不再是内联字面量） */
+	background: color-mix(
+		in srgb,
+		var(--t-color-overlay) 90%,
+		var(--t-color-ink-strong)
+	);
 }
 
 /* ── Bar ── */

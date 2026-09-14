@@ -16,13 +16,13 @@ const facts = [
 	{ value: "⌘K", label: "全局命令面板" },
 ];
 
-/** SVG 图标（Heroicons outline 风：stroke 1.5 / round cap-join） */
-function ModuleIcon(props: { d: string; color?: string }) {
+/** SVG 图标（Heroicons outline 风：stroke 1.5 / round cap-join）
+ *  描边色由 `.module-icon-area svg` 从 --card-accent 取，不走属性传值 */
+function ModuleIcon(props: { d: string }) {
 	return (
 		<svg
 			viewBox="0 0 24 24"
 			fill="none"
-			stroke={props.color ?? "currentColor"}
 			stroke-width="1.5"
 			stroke-linecap="round"
 			stroke-linejoin="round"
@@ -93,7 +93,7 @@ export default function LandingPage() {
 			</ul>
 
 			{/* ── 模块卡片网格 ── */}
-			<section class={styles.modules}>
+			<section>
 				<h2 class={styles.modulesTitle}>功能模块</h2>
 				<p class={styles.modulesDesc}>
 					每个模块独立又互联，围绕「知识」这一个核心组织你的数字生活
@@ -106,7 +106,7 @@ export default function LandingPage() {
 									class={styles.moduleIconArea}
 									style={{ "--card-accent": m.color }}
 								>
-									<ModuleIcon d={m.icon} color={m.color} />
+									<ModuleIcon d={m.icon} />
 								</div>
 								<div class={styles.moduleCardBody}>
 									<strong class={styles.moduleCardName}>{m.title}</strong>

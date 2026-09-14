@@ -180,7 +180,7 @@ export function TreeHeader(props: {
 	return (
 		<div class={styles.treeHeader}>
 			<h2 class={styles.treeHeaderTitle}>{props.tree.title}</h2>
-			<div class={styles.treeHeaderActions}>
+			<div>
 				<button
 					type="button"
 					class={styles.promptBtn}

@@ -74,7 +74,6 @@ export default function ManageToolbar(props: Props) {
 					}
 					onClearAll={() => props.onTagFiltersChange([], "include")}
 					placeholder="添加标签过滤…"
-					class={styles.tagPicker}
 				/>
 			</div>
 

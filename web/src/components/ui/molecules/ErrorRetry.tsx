@@ -1,4 +1,5 @@
 import Button from "@components/ui/atoms/Button.tsx";
+import styles from "@components/ui/molecules/ErrorRetry.module.css";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import type { Component } from "solid-js";
 
@@ -11,19 +12,8 @@ interface ErrorRetryProps {
 /** 通用错误+重试块，用于详情页（非 AsyncView 场景）。 */
 const ErrorRetry: Component<ErrorRetryProps> = (props) => {
 	return (
-		<div
-			style={{
-				padding: "var(--space-2xl) var(--space-lg)",
-				"text-align": "center",
-			}}
-		>
-			<p
-				style={{
-					color: "var(--t-color-danger)",
-					"margin-bottom": "var(--space-md)",
-					"font-weight": "500",
-				}}
-			>
+		<div class={styles.wrap}>
+			<p class={styles.text}>
 				{props.message ?? "加载失败"}：{getErrorMessage(props.error)}
 			</p>
 			<Button variant="primary" size="sm" onClick={props.onRetry}>

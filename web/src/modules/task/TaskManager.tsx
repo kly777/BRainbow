@@ -43,7 +43,6 @@ function TaskToolbar(props: {
 					value={props.searchQuery}
 					onSearch={doSearch}
 					placeholder="搜索任务…"
-					class={styles.searchInput}
 				/>
 			</div>
 

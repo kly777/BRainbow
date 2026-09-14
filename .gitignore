@@ -20,6 +20,7 @@ logs/
 
 .pi/
 .zed/
+.zcode/
 AGENTS.md
 opencode.json
 .pnpm-store

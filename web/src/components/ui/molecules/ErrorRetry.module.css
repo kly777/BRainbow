@@ -1,0 +1,10 @@
+.wrap {
+	padding: var(--space-2xl) var(--space-lg);
+	text-align: center;
+}
+
+.text {
+	color: var(--t-color-danger);
+	margin-bottom: var(--space-md);
+	font-weight: 500;
+}

@@ -162,7 +162,6 @@ export default function ReadingList() {
 					</label>
 					<Textarea
 						id="reading-content"
-						class={styles.textarea}
 						placeholder="粘贴全文…"
 						value={content()}
 						onInput={(e) => setContent(e.currentTarget.value)}

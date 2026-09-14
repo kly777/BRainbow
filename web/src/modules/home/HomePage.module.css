@@ -75,11 +75,18 @@
 	border-radius: var(--radius-md);
 	flex-shrink: 0;
 	transition: transform var(--t-transition-fast);
+
+	/* 模块识别色由调用方以 --module-accent 传入（模板见 config/module-cards.ts）。
+	   原来的 `background: ${color}14` 是在 TS 里给令牌拼十六进制 alpha，
+	   展开成 `var(--m-task)14` 属非法值、整条声明作废（图标底色因此一直透明）；
+	   软底一律 color-mix 从实底令牌派生 —— tokens.css 头部硬规则。 */
+	background: color-mix(in srgb, var(--module-accent) 8%, transparent);
 }
 
 .module-icon {
 	width: 1.125rem;
 	height: 1.125rem;
+	stroke: var(--module-accent, currentColor);
 }
 
 .module-label {

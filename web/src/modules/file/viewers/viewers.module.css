@@ -244,6 +244,12 @@
 	flex-direction: column;
 	min-width: 0;
 	min-height: 0;
+
+	/* 圆角与外层 .preview-pane 一致（同一个令牌）：canvas 是加速图层，有的浏览器
+	   （Safari）不会把它裁进祖先的 overflow+圆角里，3D 视图的角就成了直角，
+	   与预览区其它查看器的圆角对不上。这里在画布自身也裁一次，双保险。 */
+	border-radius: var(--radius-lg);
+	overflow: hidden;
 }
 
 /* 画布容器：占满预览区，接收指针事件 */
@@ -255,6 +261,7 @@
 	touch-action: none;
 	cursor: grab;
 	overflow: hidden;
+	border-radius: inherit;
 }
 
 .splat-stage:active {
@@ -271,6 +278,7 @@
 	display: block;
 	width: 100%;
 	height: 100%;
+	border-radius: inherit;
 }
 
 .splat-overlay {

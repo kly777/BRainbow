@@ -7,7 +7,6 @@ import {
 	ChevronRight,
 	Copy,
 	Download,
-	FileText,
 	Lock,
 	Pencil,
 	Plus,
@@ -15,141 +14,13 @@ import {
 	X,
 } from "@components/ui/icons";
 import { copyTextWithToast, fmtLocal, formatBytes } from "@shared/utils";
-import { type Component, For, type JSX, onCleanup, Show } from "solid-js";
+import { type Component, For, onCleanup, Show } from "solid-js";
 import type { FileItem } from "./api.ts";
 import TagInput from "./components/TagInput.tsx";
-import TextPreview from "./components/TextPreview.tsx";
 import styles from "./FileDetail.module.css";
 import { type MetaEntry, useFileDetail } from "./hooks/useFileDetail.ts";
-import { usePreviewUrl } from "./hooks/usePreviewUrl.ts";
 import { categoryLabel } from "./lib/category.ts";
-
-// ── 预览（左侧主体） ──
-
-/** 统一处理"私密文件要先换 blob"的媒体渲染：加载中给出提示，避免 401 破图 */
-const PreviewMedia: Component<{
-	src: string;
-	isPrivate: boolean;
-	children: (url: string) => JSX.Element;
-}> = (props) => {
-	const resolved = usePreviewUrl(
-		() => props.src,
-		() => props.isPrivate,
-	);
-	return (
-		<Show
-			when={resolved()}
-			// keyed 不能省：切到下一个文件时 resolved 从"真值换成另一个真值"
-			// （公开文件是同步替换原 URL，私密文件是换新的 blob URL），非 keyed 的 Show
-			// 只在真假变化时重建子节点，于是 <img>/<video>/<iframe> 会一直停在首帧的 src 上
-			// —— 页面标题、元信息都换了，只有画面不动。回归测试见 FileDetail.render.test.tsx。
-			keyed
-			fallback={
-				<Show when={props.isPrivate}>
-					<p class={styles.previewLoading}>正在加载私密文件…</p>
-				</Show>
-			}
-		>
-			{(url) => props.children(url)}
-		</Show>
-	);
-};
-
-const Preview: Component<{ item: FileItem }> = (props) => {
-	const url = () => props.item.url;
-	return (
-		<div class={styles.previewStage}>
-			{/* 内容已丢失：内联预览与下载都没有意义，统一给出说明 */}
-			<Show
-				when={!props.item.missing}
-				fallback={
-					<div class={styles.previewFallback}>
-						<AlertTriangle size={48} class={styles.previewMissingIcon} />
-						<p class={styles.previewFallbackName}>文件内容已丢失</p>
-						<p class={styles.previewMissingHint}>
-							数据库里仍保留这条记录，但磁盘上找不到对应文件，无法预览或下载。
-							把文件放回上传目录后会自动恢复正常。
-						</p>
-					</div>
-				}
-			>
-				<Show when={props.item.file_category === "image"}>
-					<PreviewMedia src={url()} isPrivate={props.item.is_private}>
-						{(resolvedUrl) => (
-							<a
-								href={resolvedUrl}
-								target="_blank"
-								rel="noopener noreferrer"
-								class={styles.previewLink}
-							>
-								<img
-									src={resolvedUrl}
-									alt={props.item.original_name}
-									class={styles.previewImg}
-								/>
-							</a>
-						)}
-					</PreviewMedia>
-				</Show>
-				<Show when={props.item.file_category === "video"}>
-					<PreviewMedia src={url()} isPrivate={props.item.is_private}>
-						{(resolvedUrl) => (
-							// biome-ignore lint/a11y/useMediaCaption: 文件预览无字幕源
-							<video src={resolvedUrl} controls class={styles.previewMedia} />
-						)}
-					</PreviewMedia>
-				</Show>
-				<Show when={props.item.file_category === "audio"}>
-					<PreviewMedia src={url()} isPrivate={props.item.is_private}>
-						{(resolvedUrl) => (
-							// biome-ignore lint/a11y/useMediaCaption: 文件预览无字幕源
-							<audio src={resolvedUrl} controls class={styles.previewAudio} />
-						)}
-					</PreviewMedia>
-				</Show>
-				<Show when={props.item.mime_type === "application/pdf"}>
-					<PreviewMedia src={url()} isPrivate={props.item.is_private}>
-						{(resolvedUrl) => (
-							<iframe
-								src={resolvedUrl}
-								class={styles.previewFrame}
-								title="PDF 预览"
-							/>
-						)}
-					</PreviewMedia>
-				</Show>
-				{/* 文本类预览：后端已把可识别的文本（含按扩展名兜底的源码/配置）
-			    统一存为 text/*，前端只看 mime */}
-				<Show when={props.item.mime_type.startsWith("text/")}>
-					<div class={styles.textPaneWrap}>
-						<TextPreview item={props.item} />
-					</div>
-				</Show>
-				<Show
-					when={
-						props.item.file_category !== "image" &&
-						props.item.file_category !== "video" &&
-						props.item.file_category !== "audio" &&
-						props.item.mime_type !== "application/pdf" &&
-						!props.item.mime_type.startsWith("text/")
-					}
-				>
-					<div class={styles.previewFallback}>
-						<FileText size={48} class={styles.previewFallbackIcon} />
-						<p class={styles.previewFallbackName}>{props.item.original_name}</p>
-						<Button
-							variant="secondary"
-							size="sm"
-							onClick={() => window.open(url(), "_blank")}
-						>
-							<Download size={14} /> 下载
-						</Button>
-					</div>
-				</Show>
-			</Show>
-		</div>
-	);
-};
+import { PreviewStage } from "./viewers/PreviewStage.tsx";
 
 // ── 侧栏：查看模式 ──
 
@@ -444,7 +315,7 @@ export default function FileDetail() {
 				{(item) => (
 					<>
 						<section class={styles.previewPane} aria-label="文件预览">
-							<Preview item={item()} />
+							<PreviewStage item={item()} />
 						</section>
 						<aside class={styles.sidePane} aria-label="文件信息">
 							<Show when={m.editing()} fallback={<FileView item={item()} />}>

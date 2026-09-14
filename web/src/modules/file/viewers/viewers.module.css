@@ -1,0 +1,98 @@
+/* 文件预览区：stage + 各查看器 + "内容缺失"/"下载"兜底
+   （从 FileDetail.module.css 原样搬来，与页面骨架样式分开） */
+
+.preview-stage {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	background: var(--t-color-bg);
+}
+
+.preview-link {
+	display: flex;
+	width: 100%;
+	height: 100%;
+	align-items: center;
+	justify-content: center;
+}
+
+.preview-img {
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+	display: block;
+}
+
+.preview-media {
+	max-width: 100%;
+	max-height: 100%;
+	display: block;
+}
+
+.preview-audio {
+	width: 100%;
+	padding: var(--space-lg) var(--space-md);
+	box-sizing: border-box;
+	align-self: flex-end;
+}
+
+.preview-frame {
+	width: 100%;
+	height: 100%;
+	border: none;
+	background: var(--t-color-white);
+}
+
+.preview-fallback {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--space-sm);
+	padding: var(--space-2xl);
+	color: var(--t-color-ink-muted);
+}
+
+/* 文本类预览容器：撑满 stage（stage 默认 center，此处 stretch 占满） */
+.text-pane-wrap {
+	flex: 1;
+	align-self: stretch;
+	display: flex;
+	width: 100%;
+	min-width: 0;
+	min-height: 0;
+}
+
+.preview-fallback-icon {
+	opacity: 0.5;
+}
+
+.preview-fallback-name {
+	margin: 0;
+	font-size: var(--text-sm);
+	overflow-wrap: anywhere;
+	text-align: center;
+}
+
+.preview-missing-icon {
+	color: var(--t-color-danger);
+	opacity: 0.8;
+}
+
+.preview-missing-hint {
+	margin: 0;
+	max-width: 32rem;
+	text-align: center;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	line-height: 1.6;
+}
+
+/* 私密文件：换 blob 期间（base64/大文件会有感）的占位提示 */
+.preview-loading {
+	margin: 0;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-sm);
+}

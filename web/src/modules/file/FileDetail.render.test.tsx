@@ -127,6 +127,38 @@ const imageB = {
 };
 
 describe("FileDetail：切换上一个/下一个", () => {
+	it("方向键不再切文件（会与 3DGS 预览的相机移动抢事件），按钮仍然切", async () => {
+		route.set("imgA");
+		mockedGetFile.mockImplementation(
+			async (id: string) => (id === "imgA" ? imageA : imageB) as never,
+		);
+		mockedListFiles.mockResolvedValue({
+			items: [imageA, imageB],
+			page: 1,
+			page_size: 100,
+			total: 2,
+			total_pages: 1,
+		} as never);
+
+		const host = mount();
+		await settle(() => host.querySelector("img") !== null);
+		expect(host.querySelector("h1")?.textContent).toBe("a.png");
+
+		// → 不该把文件切走（曾经绑在 document 上的 ←/→ 会）
+		document.dispatchEvent(
+			new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+		);
+		await flush();
+		expect(host.querySelector("h1")?.textContent).toBe("a.png");
+
+		// 切换只能走工具栏按钮
+		Array.from(host.querySelectorAll("button"))
+			.find((b) => b.getAttribute("title")?.startsWith("下一个"))
+			?.click();
+		await settle(() => host.querySelector("h1")?.textContent === "b.png");
+		expect(host.querySelector("h1")?.textContent).toBe("b.png");
+	});
+
 	it("点「下一个」后图片 src 跟着换（曾因 <Show> 未加 keyed 而停在上一个文件）", async () => {
 		// 初始就在第一张图上（默认参数是 abc123，必须显式设置，否则会"假通过"：
 		// 取数落到 fallback 分支、下一个按钮处于禁用态，怎么断言都是绿的）

@@ -14,7 +14,7 @@ import {
 	X,
 } from "@components/ui/icons";
 import { copyTextWithToast, fmtLocal, formatBytes } from "@shared/utils";
-import { type Component, For, onCleanup, Show } from "solid-js";
+import { type Component, For, Show } from "solid-js";
 import type { FileItem } from "./api.ts";
 import TagInput from "./components/TagInput.tsx";
 import styles from "./FileDetail.module.css";
@@ -208,21 +208,8 @@ const EditForm: Component<{ m: ReturnType<typeof useFileDetail> }> = (
 export default function FileDetail() {
 	const m = useFileDetail();
 
-	// ← → 在同批文件间切换；输入框/文本域聚焦时不劫持方向键
-	const onKeyDown = (e: KeyboardEvent) => {
-		const tag = (e.target as HTMLElement | null)?.tagName;
-		if (tag === "INPUT" || tag === "TEXTAREA") return;
-		if (e.key === "ArrowLeft" && m.hasPrev()) {
-			e.preventDefault();
-			m.goPrev();
-		}
-		if (e.key === "ArrowRight" && m.hasNext()) {
-			e.preventDefault();
-			m.goNext();
-		}
-	};
-	document.addEventListener("keydown", onKeyDown);
-	onCleanup(() => document.removeEventListener("keydown", onKeyDown));
+	// 刻意**不**绑定 ←/→ 切文件：3DGS 预览用方向键移动相机（见 viewers/splat/controls.ts），
+	// 全局快捷键会和它抢事件。切换文件走工具栏的「上一个/下一个」按钮。
 
 	return (
 		<DetailPage

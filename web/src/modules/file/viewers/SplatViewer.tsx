@@ -275,7 +275,8 @@ export const SplatViewer: ViewerComponent = (props) => {
 		if (!isCameraKey(e.code)) return;
 		// 方向键与空格会滚动页面，必须拦；字母键不拦（Ctrl+A 之类留给浏览器）
 		if (e.code.startsWith("Arrow") || e.code === "Space") e.preventDefault();
-		// 别让详情页的 ←/→ 同时把文件切走
+		// 别让相机的按键冒泡到页面级的全局 keydown 监听（详情页的 ←/→ 切文件已移除，
+		// 这里保留拦截是为了以后再加全局快捷键时不会与相机操作打架）
 		e.stopPropagation();
 		activeKeys.add(e.code);
 		startFrameLoop();

@@ -84,36 +84,59 @@ describe("createSplatEngine.sort", () => {
 		expect(texF[order[3] * 8 + 2]).toBeCloseTo(0, 5);
 	});
 
-	it("视角几乎没变时返回 undefined（调用方可跳过上传索引）", () => {
+	it("视角几乎没变时也要给结果（调用方靠它清 pending，否则管线会冻住）", () => {
 		const engine = createSplatEngine();
-		// 用同时在 x 与 z 上有分布的顶点：换轴才会真的产生新的深度顺序
 		engine.load(
 			buildPly(
 				GAUSSIAN_PROPS,
 				[0, 1, 2, 3].map((i) => gaussianRow({ x: i * 4, z: i * 4 })),
 			),
 		);
-		expect(engine.sort([0, 0, 1])).toBeDefined();
-		expect(engine.sort([0, 0, 1])).toBeUndefined();
+		const first = engine.sort([0, 0, 1]);
+		expect(first).toBeDefined();
+		// 同一视角再请求：不重算，但必须回一个结果 —— 否则调用方的"排序在飞"标记
+		// 永远清不掉，之后所有相机移动都不再触发排序（表现为：转到背面还是正面的画面）
+		const again = engine.sort([0, 0, 1]);
+		expect(again).toBeDefined();
+		expect(Array.from(again ?? [])).toEqual(Array.from(first ?? []));
 		// 视角真的变了才有新结果
 		expect(engine.sort([1, 0, 0])).toBeDefined();
 	});
 
+	it("排序与坐标平移无关（UTM 那类大坐标不能排乱）", () => {
+		// 旧实现把深度存成 int32（`depth × 4096 | 0`），翻折点在 2^31 / 4096 ≈ 524288；
+		// 地理配准点云的 UTM 东坐标正好落在 20 万～80 万这一段，跨过翻折点就会排成乱序
+		// （画面表现："严重错乱/变形"）。这条断言只要求"同一场景平移后顺序不变"。
+		const rowsAt = (shift: number) =>
+			[0, 800, 1600, 2400].map((dz) => gaussianRow({ z: shift + dz }));
+		const near = createSplatEngine();
+		near.load(buildPly(GAUSSIAN_PROPS, rowsAt(0)));
+		const expected = Array.from(near.sort([0, 0, 1]));
+		expect(expected).toEqual([0, 1, 2, 3]);
+
+		const far = createSplatEngine();
+		far.load(buildPly(GAUSSIAN_PROPS, rowsAt(524_000)));
+		expect(Array.from(far.sort([0, 0, 1]))).toEqual(expected);
+	});
+
 	it("所有顶点同深度时保持原序（计数排序的分母会退化，必须守住）", () => {
 		const engine = createSplatEngine();
-		engine.load(
+		const loaded = engine.load(
 			buildPly(GAUSSIAN_PROPS, [
 				gaussianRow({ x: 1, y: 2, z: 0 }),
 				gaussianRow({ x: 3, y: 4, z: 0 }),
 			]),
 		);
-		// 沿 z 排序时两点深度相同 → 不重排（而不是算出 NaN 索引）
-		expect(engine.sort([0, 0, 1])).toBeUndefined();
+		// 沿 z 排序时两点深度相同 → 不重排，但仍要回结果（而不是算出 NaN 索引）
+		const same = engine.sort([0, 0, 1]);
+		expect(same).toBeDefined();
+		expect(Array.from(same ?? [])).toEqual(Array.from(loaded.depthIndex));
 		// 沿 x 排序时两点深度不同 → 有结果
 		expect(engine.sort([1, 0, 0])).toEqual(new Uint32Array([0, 1]));
 	});
 
-	it("还没加载数据时排序是空操作", () => {
-		expect(createSplatEngine().sort([0, 0, 1])).toBeUndefined();
+	it("还没加载数据时排序返回空索引（调用方拿到 0 个顶点，不会画出东西）", () => {
+		const empty = createSplatEngine().sort([0, 0, 1]);
+		expect(empty.length).toBe(0);
 	});
 });

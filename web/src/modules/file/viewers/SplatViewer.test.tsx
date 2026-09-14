@@ -6,7 +6,7 @@
 //  2. 渲染不了（无 WebGL2）或文件过大时给可见提示 + 下载入口，而不是白屏/卡死。
 
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildPly, GAUSSIAN_PROPS, gaussianRow } from "../lib/ply-fixtures.ts";
 import { SplatViewer } from "./SplatViewer.tsx";
 import { item } from "./test-fixtures.ts";
@@ -123,6 +123,14 @@ function mount(over = {}) {
 	return host;
 }
 
+beforeEach(() => {
+	// 每个用例前的组件不会被显式销毁（jsdom 里只清了 body），worker 实例会累积；
+	// 清掉静态列表，保证 instances[0] 就是当前用例的组件所用的那个
+	FakeWorker.instances.length = 0;
+	FakeWorker.glCallsAtLoadPost = undefined;
+	FakeWorker.glCalls = [];
+});
+
 afterEach(() => {
 	vi.unstubAllGlobals();
 	vi.restoreAllMocks();
@@ -173,6 +181,58 @@ describe("SplatViewer", () => {
 		// 纹理与绘制真的发生了
 		expect(calls).toContain("texImage2D");
 		expect(calls).toContain("drawArraysInstanced");
+	});
+
+	it("排序在飞时又移动相机：回包后必须补发一次（曾因漏清 pending 让排序永久冻住）", async () => {
+		vi.stubGlobal("Worker", FakeWorker);
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(
+				async () =>
+					new Response(syntheticPly(), {
+						status: 206,
+						headers: {
+							"content-range": `bytes 0-999/${syntheticPly().byteLength}`,
+						},
+					}),
+			),
+		);
+		const { gl } = fakeGlContext();
+		vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+			gl as never,
+		);
+		vi.stubGlobal(
+			"ResizeObserver",
+			class {
+				observe() {}
+				disconnect() {}
+			},
+		);
+
+		const host = mount();
+		await settle(() => (host.textContent ?? "").includes("高斯"));
+		const stage = host.querySelector("[role='application']") as HTMLElement;
+		const worker = FakeWorker.instances.at(-1);
+		const sortCount = () =>
+			worker?.posted.filter((t) => t === "sort").length ?? 0;
+		const before = sortCount();
+
+		// 连续两次移动：第一次发请求，第二次落在"请求在飞"期间
+		const wheel = () =>
+			stage.dispatchEvent(
+				new WheelEvent("wheel", {
+					deltaY: 120,
+					bubbles: true,
+					cancelable: true,
+				}),
+			);
+		wheel();
+		wheel();
+		await settle(() => sortCount() >= before + 2);
+
+		// 回包后补发了一次排序 → 顺序跟着最新视角走
+		// （否则界面会一直显示旧视角的遮挡关系：转到背面还是正面的画面）
+		expect(sortCount()).toBeGreaterThanOrEqual(before + 2);
 	});
 
 	it("没有 WebGL2 时给出提示与下载路径，而不是白屏", async () => {

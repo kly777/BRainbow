@@ -18,6 +18,8 @@ export interface SplatLoadResult {
 	texdata: Uint32Array;
 	texWidth: number;
 	texHeight: number;
+	/** 初始顺序（按 importance）：首帧可画，不必等第一次深度排序 */
+	depthIndex: Uint32Array;
 }
 
 export interface SplatRunHandlers {
@@ -82,6 +84,7 @@ export function createSplatRunner(
 				texdata: loaded.texdata,
 				texWidth: loaded.texWidth,
 				texHeight: loaded.texHeight,
+				depthIndex: loaded.depthIndex,
 			});
 			if (axis) {
 				const order = inline.sort(axis);
@@ -115,6 +118,7 @@ export function createSplatRunner(
 					texdata: new Uint32Array(msg.texdata),
 					texWidth: msg.texWidth,
 					texHeight: msg.texHeight,
+					depthIndex: new Uint32Array(msg.depthIndex),
 				});
 				return;
 			}

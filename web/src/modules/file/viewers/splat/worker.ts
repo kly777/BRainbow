@@ -32,6 +32,8 @@ export interface SplatLoadedResponse {
 	texdata: ArrayBuffer;
 	texWidth: number;
 	texHeight: number;
+	/** 初始顺序（按 importance）：让首帧就能画，不必等第一次深度排序回来 */
+	depthIndex: ArrayBuffer;
 }
 
 export interface SplatSortedResponse {
@@ -62,6 +64,9 @@ scope.onmessage = (e: MessageEvent<SplatRequest>) => {
 		if (msg.type === "load") {
 			const loaded = engine.load(new Uint8Array(msg.ply));
 			const texdata = loaded.texdata.buffer as ArrayBuffer;
+			// 拷一份再转移：引擎内部还要继续用 depthIndex（转移会让原 buffer 失效）
+			const initial = loaded.depthIndex.slice();
+			const depthIndex = initial.buffer as ArrayBuffer;
 			scope.postMessage(
 				{
 					type: "loaded",
@@ -71,14 +76,15 @@ scope.onmessage = (e: MessageEvent<SplatRequest>) => {
 					texdata,
 					texWidth: TEX_WIDTH,
 					texHeight: loaded.texHeight,
+					depthIndex,
 				},
-				[texdata],
+				[texdata, depthIndex],
 			);
 			return;
 		}
 		if (msg.type === "sort") {
+			// 引擎保证"有请求就有回答"：漏答会让主线程的"排序在飞"标记永远清不掉
 			const sorted = engine.sort(msg.depthAxis);
-			if (!sorted) return; // 视角没变，或数据还没加载
 			// 拷一份再转移：depthIndex 本身要继续复用
 			const copy = sorted.slice();
 			const buffer = copy.buffer as ArrayBuffer;

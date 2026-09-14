@@ -72,8 +72,13 @@ export const SplatViewer: ViewerComponent = (props) => {
 	let renderer: SplatRenderer | undefined;
 	let runner: SplatRunner | undefined;
 	let vertexCount = 0;
-	/** 已请求但还没回来的排序（相机连续变化时不必重复排队） */
+	/**
+	 * 排序请求在飞；`sortDirty` 表示"在飞期间相机又动过，回包后要再排一次"。
+	 * 两者必须成对维护：漏清 pending 会让之后**所有**相机移动都不再触发排序
+	 * （表现为转到模型背面仍显示正面的遮挡关系，远看则合成顺序错乱）。
+	 */
 	let sortPending = false;
+	let sortDirty = false;
 	// 数据侧缓存：GL 还没就绪时先存着，渲染器建好后补齐
 	let loaded: SplatLoadResult | undefined;
 	let depthIndex: Uint32Array | undefined;
@@ -123,6 +128,11 @@ export const SplatViewer: ViewerComponent = (props) => {
 
 	const requestSort = () => {
 		if (!runner || vertexCount === 0) return;
+		if (sortPending) {
+			// 已经有一个请求在飞：记下"还要再排一次"，等回包时补发（合并连读的移动）
+			sortDirty = true;
+			return;
+		}
 		// 相机前向轴 = 视图矩阵第三行（列主序里的 [2]、[6]、[10]）
 		const view = currentView();
 		sortPending = true;
@@ -131,13 +141,15 @@ export const SplatViewer: ViewerComponent = (props) => {
 
 	const cameraMoved = () => {
 		draw();
-		if (!sortPending) requestSort();
+		requestSort();
 	};
 
 	// ── 运行器回调：所有异常路径都要落到可见提示，不能停在加载态 ──
 	const onRunnerLoaded = (result: SplatLoadResult) => {
 		loaded = result;
 		textureDirty = true;
+		depthIndex = result.depthIndex;
+		indexDirty = true;
 		vertexCount = result.vertexCount;
 		// 自动取景：把包围球装进画面（相机在包围球中心前方，略微俯视）
 		const distance = Math.max(result.bounds.radius * FIT_DISTANCE_FACTOR, 1e-3);
@@ -164,6 +176,11 @@ export const SplatViewer: ViewerComponent = (props) => {
 		depthIndex = order;
 		indexDirty = true;
 		syncRenderer();
+		// 排序期间相机又动过 → 用当前视角再排一次
+		if (sortDirty) {
+			sortDirty = false;
+			requestSort();
+		}
 	};
 
 	const onRunnerFailed = (message: string) => setParseError(message);
@@ -197,6 +214,8 @@ export const SplatViewer: ViewerComponent = (props) => {
 			vertexCount = 0;
 			loaded = undefined;
 			depthIndex = undefined;
+			sortPending = false;
+			sortDirty = false;
 			if (slowTimer) clearTimeout(slowTimer);
 			setSlow(false);
 			slowTimer = setTimeout(() => setSlow(true), SLOW_HINT_MS);
@@ -258,7 +277,7 @@ export const SplatViewer: ViewerComponent = (props) => {
 		if (moved || jumpDelta > 0) {
 			if (moved) view = applyOps(view, scaleOps(ops, scale), orbitDistance);
 			draw();
-			if (!sortPending) requestSort();
+			requestSort();
 		}
 		if (activeKeys.size > 0 || jumpDelta > 0)
 			rafId = requestAnimationFrame(frame);

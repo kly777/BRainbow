@@ -51,7 +51,7 @@ const CardEditHeader: Component<{
 			</div>
 		</div>
 		<div class={styles.metaRow}>
-			<span class={styles.meta}>
+			<span>
 				{props.stampLabel} {fmtLocal(props.stamp)}
 			</span>
 			<DirtyBadge dirty={props.dirty} />

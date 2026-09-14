@@ -100,7 +100,7 @@ export default function SearchPage() {
 							<button
 								type="button"
 								onClick={() => setFilter(mod.key)}
-								class={`${styles["filter-btn"]}${filter() === mod.key ? ` ${styles["filter-btn-active"]}` : ""}`}
+								class={`${styles.filterBtn}${filter() === mod.key ? ` ${styles.filterBtnActive}` : ""}`}
 							>
 								{mod.label}
 							</button>
@@ -124,13 +124,13 @@ export default function SearchPage() {
 								onClick={() => navigate(resolveTargetUrl(hit.target))}
 								class={styles.hit}
 							>
-								<span class={styles["hit-kind"]}>
+								<span class={styles.hitKind}>
 									{KIND_LABEL[hit.kind] ?? hit.kind}
 								</span>
-								<div class={styles["hit-body"]}>
-									<div class={styles["hit-title"]}>{hit.title}</div>
+								<div class={styles.hitBody}>
+									<div class={styles.hitTitle}>{hit.title}</div>
 									<div
-										class={styles["hit-snippet"]}
+										class={styles.hitSnippet}
 										innerHTML={highlightKeywords(hit.snippet, query())}
 									/>
 								</div>

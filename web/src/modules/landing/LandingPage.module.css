@@ -209,6 +209,11 @@
 .module-icon-area svg {
 	width: 1.25rem;
 	height: 1.25rem;
+
+	/* 描边走 CSS 通道消费祖先传入的识别色。改造前是 TSX 里 `stroke={var(--m-*)}`
+	   的 SVG 表现属性写法：表现属性不按 CSS 声明解析，var() 在其中的支持跨浏览器
+	   不一致（w3c/svgwg#1031），不该依赖。 */
+	stroke: var(--card-accent, currentColor);
 }
 
 .module-card-body {

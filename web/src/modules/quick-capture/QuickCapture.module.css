@@ -22,7 +22,12 @@
 }
 
 .overlay:hover {
-	background: oklch(0% 0 0deg / 55%);
+	/* 同 CommandPalette：遮罩令牌叠一成墨色，合成后 ≈ 原先的 55% 黑 */
+	background: color-mix(
+		in srgb,
+		var(--t-color-overlay) 90%,
+		var(--t-color-ink-strong)
+	);
 }
 
 /* ── Dialog ── */

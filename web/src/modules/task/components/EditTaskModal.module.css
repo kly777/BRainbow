@@ -162,6 +162,11 @@
 	margin-bottom: var(--space-sm);
 }
 
+/* 与上一块内容拉开距离的变体（只有"计划时间段"这块用） */
+.section-header-spaced {
+	margin-top: var(--space-lg);
+}
+
 .section-title {
 	font-size: var(--text-sm);
 	font-weight: 600;

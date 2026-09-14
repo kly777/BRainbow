@@ -271,7 +271,7 @@ const TableRows: Component<TableRowsProps> = (props) => (
 					</tr>
 					<Show when={expanded()}>
 						<tr class={styles.backrefRow}>
-							<td class={styles.backrefCell} colspan={props.columns.length + 1}>
+							<td colspan={props.columns.length + 1}>
 								<BackRefs
 									table={props.tableName}
 									rowKey={primaryValue()}

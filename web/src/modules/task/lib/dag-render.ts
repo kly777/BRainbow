@@ -1,30 +1,29 @@
 // ── 依赖图 Canvas 渲染 ──
+//
+// Canvas 拿不到 CSS，只能读令牌的计算值。这里一律经 `readToken(TokenName)`
+// （@shared/styles/tokens.ts）：变量名写错是编译错误，不再像改造前那样
+// 静默取到空串、再被 Canvas 静默忽略成默认黑。
 
+import { readToken, type TokenName } from "@shared/styles";
 import type { LayoutEdge, LayoutNode } from "./dag-layout.ts";
+import { statusToken } from "./status-colors.ts";
 
-/** CSS 变量缓存 */
-const _cssCache = new Map<string, string>();
+// 画布用色：注解成 TokenName，名字错在编译期就报
+/** 边与箭头 */
+const EDGE: TokenName = "--t-color-border";
+/** hover 节点的描边与完整标题 */
+const HOVER_INK: TokenName = "--t-color-ink";
+/** 节点外圈描边：节点与画布背景的分离环，随主题（浅色主题近白 / 暗色主题深色） */
+const NODE_RING: TokenName = "--t-color-surface";
+/** 节点内文字：正值令牌就是「实底饱和色上的文字」（浅色主题白字 / 暗色主题深墨字） */
+const NODE_TEXT: TokenName = "--t-color-on-solid";
+/** 图例文字 */
+const LEGEND_TEXT: TokenName = "--t-color-ink-muted";
+/** 节点阴影环的本体色，透明度由 globalAlpha 表达（tokens.css 禁止内联 oklch/hex） */
+const SHADOW_INK: TokenName = "--t-color-ink-strong";
 
-function readCSSVar(name: string): string {
-	const cached = _cssCache.get(name);
-	if (cached !== undefined) return cached;
-	const style = getComputedStyle(document.documentElement);
-	const val = style.getPropertyValue(name).trim();
-	_cssCache.set(name, val);
-	return val;
-}
-
-const STATUS_COLORS: Record<string, string> = {
-	backlog: "var(--t-color-ink-faint))",
-	active: "var(--t-color-accent))",
-	completed: "var(--t-color-success))",
-	archived: "var(--t-color-ink-muted))",
-};
-
-function statusColor(s: string): string {
-	const v = STATUS_COLORS[s];
-	if (!v) return readCSSVar("--color-text-muted");
-	return v.startsWith("var(") ? readCSSVar(v.slice(4, -1)) : v;
+function statusColor(status: string): string {
+	return readToken(statusToken(status));
 }
 
 /** 在 Canvas 上绘制 DAG */
@@ -53,7 +52,7 @@ export function drawGraph(
 		ctx.beginPath();
 		ctx.moveTo(e.x1, e.y1);
 		ctx.lineTo(e.x2 - (dx / len) * 32, e.y2 - (dy / len) * 32);
-		ctx.strokeStyle = readCSSVar("--color-border");
+		ctx.strokeStyle = readToken(EDGE);
 		ctx.lineWidth = 2;
 		ctx.stroke();
 
@@ -73,7 +72,7 @@ export function drawGraph(
 			ay - arrowLen * Math.sin(angle + Math.PI / 6),
 		);
 		ctx.closePath();
-		ctx.fillStyle = readCSSVar("--color-border");
+		ctx.fillStyle = readToken(EDGE);
 		ctx.fill();
 	}
 
@@ -82,26 +81,26 @@ export function drawGraph(
 		const r = 28;
 		const isHovered = hoveredId === n.id;
 
-		// 阴影
+		// 阴影：令牌色 + globalAlpha 表达透明度（tokens.css 硬规则禁止内联 oklch/hex）
 		ctx.beginPath();
 		ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
-		ctx.fillStyle = isHovered ? "oklch(0 0 0 / 0.15)" : "oklch(0 0 0 / 0.08)";
+		ctx.globalAlpha = isHovered ? 0.15 : 0.08;
+		ctx.fillStyle = readToken(SHADOW_INK);
 		ctx.fill();
+		ctx.globalAlpha = 1;
 
 		// 圆
 		ctx.beginPath();
 		ctx.arc(n.x, n.y, r - 2, 0, Math.PI * 2);
 		ctx.fillStyle = statusColor(n.status);
 		ctx.fill();
-		ctx.strokeStyle = isHovered
-			? readCSSVar("--color-text")
-			: readCSSVar("--color-white");
+		ctx.strokeStyle = isHovered ? readToken(HOVER_INK) : readToken(NODE_RING);
 		ctx.lineWidth = 2;
 		ctx.stroke();
 
 		// 文字
 		const text = n.title.length > 6 ? `${n.title.slice(0, 5)}…` : n.title;
-		ctx.fillStyle = readCSSVar("--color-white");
+		ctx.fillStyle = readToken(NODE_TEXT);
 		ctx.font = `${isHovered ? "bold " : ""}0.625rem sans-serif`;
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
@@ -109,7 +108,7 @@ export function drawGraph(
 
 		// hover 时显示完整标题
 		if (isHovered) {
-			ctx.fillStyle = readCSSVar("--color-text");
+			ctx.fillStyle = readToken(HOVER_INK);
 			ctx.font = "0.75rem sans-serif";
 			ctx.fillText(n.title, n.x, n.y - r - 12);
 		}
@@ -117,7 +116,7 @@ export function drawGraph(
 
 	// 图例
 	ctx.restore();
-	ctx.fillStyle = readCSSVar("--color-text-secondary");
+	ctx.fillStyle = readToken(LEGEND_TEXT);
 	ctx.font = "0.6875rem sans-serif";
 	ctx.textAlign = "left";
 
@@ -128,7 +127,7 @@ export function drawGraph(
 	];
 	let lx = 12;
 	for (const item of legend) {
-		ctx.fillStyle = readCSSVar("--color-text-secondary");
+		ctx.fillStyle = readToken(LEGEND_TEXT);
 		ctx.fillText(item.label, lx, 20);
 		ctx.fillStyle = item.color;
 		ctx.fillText("●", lx, 20);

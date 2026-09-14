@@ -20,15 +20,16 @@ function ModuleNav() {
 		<nav class={styles.moduleNav}>
 			{MODULE_CARDS.map((m) => (
 				<A href={m.path} class={styles.moduleCard}>
+					{/* 识别色作为自定义属性交给 CSS 消费：底色的透明度与图标描边
+					    都写在 HomePage.module.css 里，TS 不拼样式值 */}
 					<div
 						class={styles.moduleIconWrap}
-						style={{ background: `${m.color}14` }}
+						style={{ "--module-accent": m.color }}
 					>
 						<svg
 							class={styles.moduleIcon}
 							viewBox="0 0 24 24"
 							fill="none"
-							stroke={m.color}
 							stroke-width="1.5"
 							stroke-linecap="round"
 							stroke-linejoin="round"

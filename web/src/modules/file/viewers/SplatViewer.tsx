@@ -9,7 +9,11 @@ import {
 	viewMatrix,
 } from "./splat/matrix.ts";
 import { createSplatRenderer, type SplatRenderer } from "./splat/renderer.ts";
-import type { SplatRequest, SplatResponse } from "./splat/worker.ts";
+import {
+	createSplatRunner,
+	type SplatLoadResult,
+	type SplatRunner,
+} from "./splat/runner.ts";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 
@@ -24,6 +28,8 @@ const MIN_DISTANCE_FACTOR = 0.15;
 const MAX_DISTANCE_FACTOR = 12;
 /** 自动取景时相机到目标的距离（半径 × 这个系数） */
 const FIT_DISTANCE_FACTOR = 2.4;
+/** 超过这个时间还没解析完就给一句"可能较慢"的提示，免得看起来像卡死 */
+const SLOW_HINT_MS = 6000;
 
 interface Camera {
 	target: Vec3;
@@ -42,20 +48,37 @@ const clamp = (value: number, min: number, max: number) =>
  *
  * 排序与渲染数学取自 antimatter15/splat（MIT License, Copyright (c) 2023 Kevin Kwok），
  * 本文件只负责接进预览页：按需重绘（不跑常驻 rAF）、自动取景、拖拽/滚轮交互与降级提示。
+ *
+ * 两条时间线必须解耦（这是"永远停在正在解析"的根因）：内容到达交给 `runner` 处理，
+ * 与画布无关；WebGL 渲染器只在画布挂载后出现。谁先到都先把结果存进 `loaded` /
+ * `depthIndex`，另一条线就绪时由 `syncRenderer()` 补齐 —— 早期版本把"把字节发给
+ * 解析方"写在依赖画布的 effect 里，而资源解析会先触发那个 effect、再渲染出画布，
+ * 于是这份字节被无声丢掉，之后再无消息，界面就一直挂着。
  */
 export const SplatViewer: ViewerComponent = (props) => {
 	const load = usePreviewPly(() => props.item);
 	const [renderError, setRenderError] = createSignal<string>();
 	const [parseError, setParseError] = createSignal<string>();
+	/** 退回主线程时的说明（拖动会略卡） */
+	const [degraded, setDegraded] = createSignal<string>();
 	const [ready, setReady] = createSignal(false);
 	const [hint, setHint] = createSignal<string>();
+	/** 解析耗时超过预期时的提示（避免看起来像卡死） */
+	const [slow, setSlow] = createSignal(false);
+	let slowTimer: ReturnType<typeof setTimeout> | undefined;
 
 	let renderer: SplatRenderer | undefined;
-	let worker: Worker | undefined;
+	let runner: SplatRunner | undefined;
 	let vertexCount = 0;
 	/** 已请求但还没回来的排序（相机连续变化时不必重复排队） */
 	let sortPending = false;
-	// 用信号承载 DOM 引用：画布只在内容就绪后才挂载，初始化 effect 要跟着它走
+	// 数据侧缓存：GL 还没就绪时先存着，渲染器建好后补齐
+	let loaded: SplatLoadResult | undefined;
+	let depthIndex: Uint32Array | undefined;
+	let textureDirty = false;
+	let indexDirty = false;
+
+	// 用信号承载 DOM 引用：画布只在内容就绪后才挂载，GL 初始化要跟着它走
 	const [canvasEl, setCanvasEl] = createSignal<HTMLCanvasElement>();
 	const [stageEl, setStageEl] = createSignal<HTMLDivElement>();
 	const camera: Camera = {
@@ -78,15 +101,31 @@ export const SplatViewer: ViewerComponent = (props) => {
 
 	const draw = () => renderer?.draw(currentView(), vertexCount);
 
+	/** 把已到手的数据补齐到渲染器上（首次挂载或新数据到达时调用） */
+	const syncRenderer = () => {
+		if (!renderer || !loaded) return;
+		if (textureDirty) {
+			renderer.setSplatTexture(
+				loaded.texdata,
+				loaded.texWidth,
+				loaded.texHeight,
+			);
+			textureDirty = false;
+		}
+		if (indexDirty && depthIndex) {
+			renderer.setDepthIndex(depthIndex);
+			indexDirty = false;
+		}
+		vertexCount = loaded.vertexCount;
+		draw();
+	};
+
 	const requestSort = () => {
-		if (!worker || vertexCount === 0) return;
+		if (!runner || vertexCount === 0) return;
 		// 相机前向轴 = 视图矩阵第三行（列主序里的 [2]、[6]、[10]）
 		const view = currentView();
 		sortPending = true;
-		worker.postMessage({
-			type: "sort",
-			depthAxis: [view[2], view[6], view[10]],
-		} satisfies SplatRequest);
+		runner.sort([view[2], view[6], view[10]]);
 	};
 
 	const cameraMoved = () => {
@@ -94,39 +133,71 @@ export const SplatViewer: ViewerComponent = (props) => {
 		if (!sortPending) requestSort();
 	};
 
-	const onWorkerMessage = (event: MessageEvent<SplatResponse>) => {
-		const msg = event.data;
-		if (msg.type === "loaded") {
-			vertexCount = msg.vertexCount;
-			renderer?.setSplatTexture(
-				new Uint32Array(msg.texdata),
-				msg.texWidth,
-				msg.texHeight,
-			);
-			camera.target = msg.bounds.center;
-			camera.radius = msg.bounds.radius;
-			camera.distance = msg.bounds.radius * FIT_DISTANCE_FACTOR;
-			camera.yaw = 0;
-			camera.pitch = 0.15;
-			setHint(
-				`${msg.vertexCount.toLocaleString()} 个${msg.pointCloud ? "点（普通点云）" : "高斯"} · 左键拖拽旋转 · 滚轮缩放 · 右键/Shift 拖拽平移`,
-			);
-			setReady(true);
-			requestSort();
-			draw();
-			return;
-		}
-		if (msg.type === "sorted") {
-			sortPending = false;
-			renderer?.setDepthIndex(new Uint32Array(msg.depthIndex));
-			draw();
-			return;
-		}
-		setParseError(msg.message);
+	// ── 运行器回调：所有异常路径都要落到可见提示，不能停在加载态 ──
+	const onRunnerLoaded = (result: SplatLoadResult) => {
+		loaded = result;
+		textureDirty = true;
+		vertexCount = result.vertexCount;
+		// 自动取景：把包围球装进画面
+		camera.target = result.bounds.center;
+		camera.radius = result.bounds.radius;
+		camera.distance = result.bounds.radius * FIT_DISTANCE_FACTOR;
+		camera.yaw = 0;
+		camera.pitch = 0.15;
+		setHint(
+			`${result.vertexCount.toLocaleString()} 个${result.pointCloud ? "点（普通点云）" : "高斯"}`,
+		);
+		if (slowTimer) clearTimeout(slowTimer);
+		setSlow(false);
+		setReady(true);
+		syncRenderer();
+		requestSort();
 	};
 
-	// ── 初始化：WebGL2 渲染器 + 排序 worker + 尺寸监听 ──
-	// 画布随内容就绪出现，renderer/worker 也随之创建（超大文件直接走下载兜底，不会建上下文）
+	const onRunnerSorted = (order: Uint32Array) => {
+		sortPending = false;
+		depthIndex = order;
+		indexDirty = true;
+		syncRenderer();
+	};
+
+	const onRunnerFailed = (message: string) => setParseError(message);
+	const onRunnerDegraded = (reason: string) => setDegraded(reason);
+
+	// ── 运行器：与画布无关，尽早建好，免得内容先到却没有接收方 ──
+	createEffect(() => {
+		runner = createSplatRunner({
+			onLoaded: onRunnerLoaded,
+			onSorted: onRunnerSorted,
+			onFailed: onRunnerFailed,
+			onDegraded: onRunnerDegraded,
+		});
+		onCleanup(() => {
+			if (slowTimer) clearTimeout(slowTimer);
+			runner?.dispose();
+			runner = undefined;
+		});
+	});
+
+	// ── 内容到达 → 交给运行器解析（无论 GL 是否就绪） ──
+	createEffect(
+		on(load, (state) => {
+			if (state?.kind !== "ready" || !runner) return;
+			setReady(false);
+			setHint(undefined);
+			setParseError(undefined);
+			setDegraded(undefined);
+			vertexCount = 0;
+			loaded = undefined;
+			depthIndex = undefined;
+			if (slowTimer) clearTimeout(slowTimer);
+			setSlow(false);
+			slowTimer = setTimeout(() => setSlow(true), SLOW_HINT_MS);
+			runner.load(state.bytes);
+		}),
+	);
+
+	// ── WebGL 渲染器：随画布挂载建立，挂载时把已到手的数据补齐 ──
 	createEffect(() => {
 		const element = canvasEl();
 		const box = stageEl();
@@ -138,17 +209,14 @@ export const SplatViewer: ViewerComponent = (props) => {
 			setRenderError(err instanceof Error ? err.message : String(err));
 			return;
 		}
-		worker = new Worker(new URL("./splat/worker.ts", import.meta.url), {
-			type: "module",
-		});
-		worker.onmessage = onWorkerMessage;
-		worker.onerror = (e) =>
-			setRenderError(`渲染线程出错：${e.message || "未知错误"}`);
+		// 新上下文里没有任何数据，把缓存重新上传一遍
+		textureDirty = true;
+		indexDirty = depthIndex !== undefined;
 
 		const fit = () => {
 			if (!renderer) return;
 			renderer.resize(box.clientWidth, box.clientHeight);
-			draw();
+			syncRenderer();
 		};
 		const observer = new ResizeObserver(fit);
 		observer.observe(box);
@@ -156,34 +224,10 @@ export const SplatViewer: ViewerComponent = (props) => {
 
 		onCleanup(() => {
 			observer.disconnect();
-			worker?.terminate();
-			worker = undefined;
 			renderer?.dispose();
 			renderer = undefined;
-			vertexCount = 0;
-			sortPending = false;
-			setReady(false);
 		});
 	});
-
-	// ── 内容到达 → 交给 worker 解析（buffer 转移，零拷贝） ──
-	createEffect(
-		on(load, (state) => {
-			if (state?.kind !== "ready" || !worker) return;
-			setReady(false);
-			setHint(undefined);
-			setParseError(undefined);
-			vertexCount = 0;
-			const { bytes } = state;
-			const buffer = bytes.buffer.slice(
-				bytes.byteOffset,
-				bytes.byteOffset + bytes.byteLength,
-			) as ArrayBuffer;
-			worker.postMessage({ type: "load", ply: buffer } satisfies SplatRequest, [
-				buffer,
-			]);
-		}),
-	);
 
 	// ── 交互：左键拖拽旋转、右键/Shift 拖拽平移、滚轮缩放 ──
 	let dragging: "orbit" | "pan" | undefined;
@@ -311,11 +355,20 @@ export const SplatViewer: ViewerComponent = (props) => {
 						<Show when={!renderError() && !parseError() && !ready()}>
 							<div class={styles.splatOverlay}>
 								<p class={styles.splatMessage}>正在解析高斯泼溅…</p>
-								<p class={styles.splatDetail}>文件越大越慢，请稍候</p>
+								<p class={styles.splatDetail}>
+									{slow()
+										? "文件较大时解析较慢；若长时间没有画面，可直接下载后本地查看"
+										: "文件越大越慢，请稍候"}
+								</p>
 							</div>
 						</Show>
 						<Show when={ready() && hint()}>
-							{(text) => <p class={styles.splatHint}>{text()}</p>}
+							{(text) => (
+								<p class={styles.splatHint}>
+									{text()}
+									{degraded() ? ` · ${degraded()}` : ""}
+								</p>
+							)}
 						</Show>
 					</div>
 				</Show>

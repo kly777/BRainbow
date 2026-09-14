@@ -15,6 +15,12 @@ const PROBE_BYTES = 64 * 1024;
 /** 客户端上限：超过就不下载（后端 other 类别本身有 50MB 上限，这里是第二道防线） */
 export const MAX_PLY_BYTES = 256 * 1024 * 1024;
 
+/**
+ * 探测 + 下载的整体超时。fetch 本身没有超时，网络卡住时预览会永远停在"加载中" ——
+ * 这是最容易被当成"功能坏了"的状态，所以宁可超时报错。
+ */
+export const PLY_LOAD_TIMEOUT_MS = 30_000;
+
 export type PlyLoad =
 	| { kind: "ready"; bytes: Uint8Array; sizeBytes: number }
 	| { kind: "too-large"; sizeBytes: number }
@@ -33,11 +39,23 @@ async function fetchPly(
 	item: FileItem,
 	maxBytes: number,
 	signal: AbortSignal,
+	timeoutMs = PLY_LOAD_TIMEOUT_MS,
 ): Promise<PlyLoad> {
+	// 两个取消来源合一：外部清理（切文件/卸载）与自身超时。
+	// 不用 AbortSignal.any：它不在项目的浏览器基线里（chrome111 / firefox114）。
+	const request = new AbortController();
+	let timedOut = false;
+	const timer = setTimeout(() => {
+		timedOut = true;
+		request.abort();
+	}, timeoutMs);
+	const onOuterAbort = () => request.abort();
+	signal.addEventListener("abort", onOuterAbort);
+
 	try {
 		// 1) 探头部与总大小
 		const probe = await fetch(item.url, {
-			signal,
+			signal: request.signal,
 			headers: { ...buildHeaders(), Range: `bytes=0-${PROBE_BYTES - 1}` },
 		});
 		if (!probe.ok)
@@ -63,18 +81,29 @@ async function fetchPly(
 			};
 
 		// 2) 整包拉取
-		const full = await fetch(item.url, { signal, headers: buildHeaders() });
+		const full = await fetch(item.url, {
+			signal: request.signal,
+			headers: buildHeaders(),
+		});
 		if (!full.ok)
 			return { kind: "failed", message: `加载失败（HTTP ${full.status}）` };
 		const bytes = new Uint8Array(await full.arrayBuffer());
 		return { kind: "ready", bytes, sizeBytes: bytes.length };
 	} catch (err) {
+		if (timedOut)
+			return {
+				kind: "failed",
+				message: `加载超时（${Math.round(timeoutMs / 1000)} 秒）`,
+			};
 		if (err instanceof DOMException && err.name === "AbortError")
 			return { kind: "failed", message: "已取消" };
 		return {
 			kind: "failed",
 			message: `加载失败：${err instanceof Error ? err.message : String(err)}`,
 		};
+	} finally {
+		clearTimeout(timer);
+		signal.removeEventListener("abort", onOuterAbort);
 	}
 }
 

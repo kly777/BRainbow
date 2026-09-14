@@ -167,8 +167,56 @@ export function parsePlyHeader(bytes: Uint8Array): PlyHeader {
 
 export interface SplatBounds {
 	center: [number, number, number];
-	/** 包围盒对角线的一半，用于自动取景 */
+	/**
+	 * **取景半径**：各顶点到中心距离的 90 分位。
+	 *
+	 * 不用包围盒对角线：3DGS 场景常有少数离群高斯（浮点噪点、远处的天空点），
+	 * 它们能把包围盒撑大一倍以上，于是自动取景把相机推得很远、内容只占屏幕中间一小块
+	 * （实测某场景：对角线/2 = 35.8，而 P90 只有 20.5）。
+	 */
 	radius: number;
+	/** 包围盒对角线的一半（含离群点），仅供诊断与测试对照 */
+	bboxRadius: number;
+}
+
+/** 距离分位用的直方图桶数（桶宽 = maxDist/1024，误差可忽略） */
+const DISTANCE_BUCKETS = 1024;
+
+/** 取距离分布的 p 分位（直方图法：避免为几十万个浮点排序） */
+/**
+ * 分位数（直方图法，`DISTANCE_BUCKETS` 个桶）。
+ *
+ * 用直方图而不是排序：几十万个浮点排一次序要几百毫秒，而且要多一份等长数组；
+ * 桶宽只有取值范围的 1/1024，对"取景"这种用途完全够。
+ * `valueAt(i)` 按需取值，于是同一份实现既能算坐标中位数、也能算距离分位。
+ */
+function histogramQuantile(
+	count: number,
+	min: number,
+	max: number,
+	p: number,
+	valueAt: (index: number) => number,
+): number {
+	if (count === 0) return max;
+	if (!(max > min)) return max;
+	const span = max - min;
+	const counts = new Uint32Array(DISTANCE_BUCKETS);
+	for (let i = 0; i < count; i++) {
+		const t = (valueAt(i) - min) / span;
+		const bucket = Math.min(
+			DISTANCE_BUCKETS - 1,
+			Math.max(0, (t * DISTANCE_BUCKETS) | 0),
+		);
+		counts[bucket]++;
+	}
+	const target = Math.ceil(count * p);
+	let seen = 0;
+	for (let i = 0; i < DISTANCE_BUCKETS; i++) {
+		seen += counts[i];
+		// 返回该桶的中心：误差只有半个桶宽，且不系统性偏大（偏大会让取景变远）
+		if (seen >= target) return min + ((i + 0.5) / DISTANCE_BUCKETS) * span;
+	}
+	return max;
 }
 
 export interface SplatData {
@@ -239,6 +287,8 @@ export function buildSplatData(
 		: undefined;
 
 	// 第一遍：位置范围 + importance（体积 × 不透明度，大的先渲染，参考实现同此）
+	// 顺便把位置存下来：取景中心与半径要按需反复取值（见下面的 histogramQuantile）
+	const positions = new Float32Array(vertexCount * 3);
 	const importance = new Float32Array(vertexCount);
 	const order = new Uint32Array(vertexCount);
 	let minX = Number.POSITIVE_INFINITY;
@@ -253,6 +303,9 @@ export function buildSplatData(
 		const x = readValue(view, base, fx, littleEndian);
 		const y = readValue(view, base, fy, littleEndian);
 		const z = readValue(view, base, fz, littleEndian);
+		positions[i * 3] = x;
+		positions[i * 3 + 1] = y;
+		positions[i * 3 + 2] = z;
 		if (x < minX) minX = x;
 		if (y < minY) minY = y;
 		if (z < minZ) minZ = z;
@@ -322,18 +375,52 @@ export function buildSplatData(
 		}
 	}
 
+	// 取景中心：三个轴各自的**中位数**。
+	// 不能用包围盒中心 —— 一个跑到远处的离群高斯就能把它拽偏，之后所有顶点都显得很远
+	// （实测：100 个点挤在半径 1 内 + 1 个点在 1000 外，用包围盒中心算出的取景半径是 500）。
 	const center: [number, number, number] = [
-		(minX + maxX) / 2,
-		(minY + maxY) / 2,
-		(minZ + maxZ) / 2,
+		histogramQuantile(vertexCount, minX, maxX, 0.5, (i) => positions[i * 3]),
+		histogramQuantile(
+			vertexCount,
+			minY,
+			maxY,
+			0.5,
+			(i) => positions[i * 3 + 1],
+		),
+		histogramQuantile(
+			vertexCount,
+			minZ,
+			maxZ,
+			0.5,
+			(i) => positions[i * 3 + 2],
+		),
 	];
+
 	const diag = Math.hypot(maxX - minX, maxY - minY, maxZ - minZ);
+	const bboxRadius = Number.isFinite(diag) && diag > 0 ? diag / 2 : 0;
+
+	// 取景半径：距中心距离的 P90（离群高斯不参与，详见 SplatBounds 的注释）
+	const distanceAt = (i: number) =>
+		Math.hypot(
+			positions[i * 3] - center[0],
+			positions[i * 3 + 1] - center[1],
+			positions[i * 3 + 2] - center[2],
+		);
+	let maxDistance = 0;
+	for (let i = 0; i < vertexCount; i++) {
+		const d = distanceAt(i);
+		if (d > maxDistance) maxDistance = d;
+	}
+	const p90 = histogramQuantile(vertexCount, 0, maxDistance, 0.9, distanceAt);
+
 	return {
 		bytes: out,
 		vertexCount,
 		bounds: {
 			center,
-			radius: Number.isFinite(diag) && diag > 0 ? diag / 2 : 1,
+			// 全顶点重合等退化情形给一个正的兜底值，免得后续除法出 0/Infinity
+			radius: p90 > 0 ? p90 : bboxRadius > 0 ? bboxRadius : 1,
+			bboxRadius,
 		},
 		pointCloud: !fields3,
 	};

@@ -19,7 +19,7 @@ const alongZ = (count: number) =>
 	);
 
 describe("createSplatEngine.load", () => {
-	it("给出顶点数、包围盒与纹理尺寸", () => {
+	it("给出顶点数、取景中心与半径、纹理尺寸", () => {
 		const engine = createSplatEngine();
 		const loaded = engine.load(buildPly(GAUSSIAN_PROPS, alongZ(5)));
 
@@ -30,9 +30,12 @@ describe("createSplatEngine.load", () => {
 		// 每顶点 2 个 texel → 10 个 texel 只占一行
 		expect(loaded.texHeight).toBe(1);
 		expect(loaded.texdata.length).toBe(TEX_WIDTH * loaded.texHeight * 4);
-		// z 从 0 到 16 → 中心 8、半径是对角线一半
-		expect(loaded.bounds.center[2]).toBeCloseTo(8, 5);
-		expect(loaded.bounds.radius).toBeCloseTo(8, 5);
+		// z 从 0 到 16 → 中心 8（三轴中位数）；取景半径是距离的 P90。
+		// 两者都由直方图给出，允许一个桶宽的误差（取值范围 / 1024）
+		expect(loaded.bounds.center[2]).toBeCloseTo(8, 1);
+		expect(loaded.bounds.radius).toBeGreaterThan(7.9);
+		expect(loaded.bounds.radius).toBeLessThan(8.2);
+		expect(loaded.bounds.bboxRadius).toBeCloseTo(8, 5);
 	});
 
 	it("普通点云标记出来（UI 要提示）", () => {

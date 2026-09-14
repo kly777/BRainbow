@@ -29,8 +29,12 @@ import styles from "./viewers.module.css";
 
 /** 世界坐标的"画面上方"：3DGS / COLMAP 的 y 轴朝下 */
 const WORLD_UP: Vec3 = [0, -1, 0];
-/** 自动取景时相机到目标的距离（半径 × 这个系数） */
-const FIT_DISTANCE_FACTOR = 2.4;
+/**
+ * 自动取景：相机距离 = 取景半径 × 这个系数。
+ * 半径是距离分布的 P90（见 ply.ts），系数按"内容占满约 85% 画面高度"定：
+ * 竖直视场角 55°、半角 27.5°，`d = r / sin(0.85 × 27.5°) ≈ 2.5 r`。
+ */
+const FIT_DISTANCE_FACTOR = 2.5;
 /** 初始俯仰（略微俯视，与参考实现的默认机位观感一致） */
 const INITIAL_PITCH = 0.15;
 /** 超过这个时间还没解析完就给一句"可能较慢"的提示，免得看起来像卡死 */

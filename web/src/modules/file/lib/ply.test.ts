@@ -161,13 +161,39 @@ describe("buildSplatData：3DGS", () => {
 	});
 
 	it("算出的包围盒用于自动取景", () => {
+		// 三个点沿对角线对称分布：中位数明确（两点时"中位数"只能取其中之一）
 		const bytes = buildPly(GAUSSIAN_PROPS, [
 			gaussianRow({ x: -1, y: -1, z: -1 }),
+			gaussianRow({ x: 0, y: 0, z: 0 }),
 			gaussianRow({ x: 1, y: 1, z: 1 }),
 		]);
 		const { bounds } = buildSplatData(bytes);
-		expect(bounds.center).toEqual([0, 0, 0]);
-		expect(bounds.radius).toBeCloseTo(Math.sqrt(12) / 2, 5);
+		// 中位数由直方图给出，允许一个桶宽（取值范围 / 1024）的误差
+		expect(bounds.center[0]).toBeCloseTo(0, 2);
+		expect(bounds.center[1]).toBeCloseTo(0, 2);
+		expect(bounds.center[2]).toBeCloseTo(0, 2);
+		// 两点都在对角线两端 → 取景半径（P90）与包围盒半径一致
+		expect(bounds.bboxRadius).toBeCloseTo(Math.sqrt(12) / 2, 5);
+		expect(bounds.radius).toBeCloseTo(bounds.bboxRadius, 1);
+	});
+
+	it("取景半径用距离的 P90：少数离群高斯不把相机推远", () => {
+		// 100 个点挤在半径 1 内 + 1 个离群点跑到 1000 外
+		const rows = Array.from({ length: 100 }, (_, i) =>
+			gaussianRow({
+				x: Math.cos(i) * 0.5,
+				y: Math.sin(i) * 0.5,
+				z: (i % 7) / 7,
+			}),
+		);
+		rows.push(gaussianRow({ x: 1000, y: 0, z: 0 }));
+		const { bounds } = buildSplatData(buildPly(GAUSSIAN_PROPS, rows));
+
+		// 包围盒被离群点撑到 500 左右
+		expect(bounds.bboxRadius).toBeGreaterThan(400);
+		// 取景半径仍在内容尺度上（约 0.5），而不是被离群点带到 500 —— 它才是相机距离的输入
+		expect(bounds.radius).toBeLessThan(2);
+		expect(bounds.radius).toBeGreaterThan(0.1);
 	});
 
 	it("支持大端序文件", () => {

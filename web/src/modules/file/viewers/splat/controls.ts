@@ -197,7 +197,7 @@ export function jumpOps(jumpDelta: number): CameraOp[] {
 /**
  * 把操作施加到视图矩阵上（世界 → 相机）。
  * 做法与参考实现一致：**在相机自身坐标系里改逆矩阵**，再取逆回来。
- * `orbitDistance` 是环绕中心到相机的距离（取景时按包围球定）。
+ * `orbitDistance` 是环绕中心到相机的距离（取景时按取景半径定）。
  */
 export function applyOps(
 	view: Mat4,

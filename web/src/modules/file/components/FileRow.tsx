@@ -6,7 +6,8 @@ import type { FileItem } from "../api.ts";
 import styles from "../FileList.module.css";
 import { categoryLabel } from "../lib/category.ts";
 import { fmtDimensions, fmtDurationMs } from "../lib/meta.ts";
-import { ExtBadge } from "./FileCard.tsx";
+import { canZoom } from "../lib/thumbnail.ts";
+import { FileThumb } from "./FileThumb.tsx";
 
 /** 列表视图的一行：徽章/缩略图 + 文件名 + 元信息 + 操作 */
 const FileRow: Component<{
@@ -43,36 +44,15 @@ const FileRow: Component<{
 		<button
 			type="button"
 			class={styles.rowThumb}
-			onClick={() =>
-				props.item.file_category === "image" ? props.onZoom() : props.onOpen()
-			}
-			title={props.item.file_category === "image" ? "放大查看" : "查看详情"}
+			onClick={() => (canZoom(props.item) ? props.onZoom() : props.onOpen())}
+			title={canZoom(props.item) ? "放大查看" : "查看详情"}
 		>
-			<Show
-				when={!props.item.missing}
-				fallback={<span class={styles.missingBadge}>缺失</span>}
-			>
-				<Show
-					when={!props.item.is_private}
-					fallback={
-						<span class={styles.privateBadge}>
-							<Lock size={12} />
-						</span>
-					}
-				>
-					<Show
-						when={props.item.file_category === "image"}
-						fallback={<ExtBadge name={props.item.original_name} />}
-					>
-						<img
-							src={props.item.url}
-							alt={props.item.original_name}
-							class={styles.rowThumbImg}
-							loading="lazy"
-						/>
-					</Show>
-				</Show>
-			</Show>
+			<FileThumb
+				item={props.item}
+				imgClass={styles.rowThumbImg}
+				missingText="缺失"
+				lockOnly
+			/>
 		</button>
 
 		<div class={styles.rowMain}>

@@ -231,3 +231,78 @@
 .hex-ascii {
 	color: var(--t-color-ink-muted);
 }
+
+/* ── 3DGS 高斯泼溅（.ply） ── */
+
+.splat-pane {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+/* 画布容器：占满预览区，接收指针事件 */
+.splat-stage {
+	position: relative;
+	flex: 1;
+	min-height: 0;
+	width: 100%;
+	touch-action: none;
+	cursor: grab;
+	overflow: hidden;
+}
+
+.splat-stage:active {
+	cursor: grabbing;
+}
+
+.splat-canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.splat-overlay {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-xs);
+	padding: var(--space-xl);
+	text-align: center;
+	pointer-events: none;
+}
+
+.splat-message {
+	margin: 0;
+	font-size: var(--text-sm);
+	font-weight: 500;
+	color: var(--t-color-ink);
+}
+
+.splat-detail {
+	margin: 0;
+	max-width: 32rem;
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+	line-height: 1.6;
+	overflow-wrap: anywhere;
+}
+
+/* 操作提示：压在画布底部，不挡视线也不吃指针事件 */
+.splat-hint {
+	position: absolute;
+	right: var(--space-md);
+	bottom: var(--space-md);
+	left: var(--space-md);
+	margin: 0;
+	padding: var(--space-2xs) var(--space-sm);
+	border-radius: var(--radius-sm);
+	background: color-mix(in srgb, var(--t-color-surface) 80%, transparent);
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-xs);
+	text-align: center;
+	pointer-events: none;
+}

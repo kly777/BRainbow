@@ -10,6 +10,7 @@
 
 import type { FileItem } from "../api.ts";
 import { codeLang, isPlainTextName } from "../lib/filename.ts";
+import { isPlyName } from "../lib/ply.ts";
 import { AudioViewer } from "./AudioViewer.tsx";
 import { CodeViewer } from "./CodeViewer.tsx";
 import { CsvViewer } from "./CsvViewer.tsx";
@@ -19,6 +20,7 @@ import { ImageViewer } from "./ImageViewer.tsx";
 import { MarkdownViewer } from "./MarkdownViewer.tsx";
 import { PdfViewer } from "./PdfViewer.tsx";
 import { PlainTextViewer } from "./PlainTextViewer.tsx";
+import { SplatViewer } from "./SplatViewer.tsx";
 import type { Viewer } from "./types.ts";
 import { VideoViewer } from "./VideoViewer.tsx";
 
@@ -85,7 +87,14 @@ export const VIEWERS: Viewer[] = [
 		component: PlainTextViewer,
 	},
 	{
-		// 其余二进制（压缩包/3D 模型/设计稿/未知格式）：看文件头认类型，
+		// 3DGS 高斯泼溅 / 点云：.ply 落在后端白名单外（other 类别），按扩展名认领。
+		// 内容不是 PLY、或解析不动时，查看器自己给提示与下载入口
+		id: "splat",
+		match: (f) => isPlyName(f.original_name),
+		component: SplatViewer,
+	},
+	{
+		// 其余二进制（压缩包/设计稿/未知格式）：看文件头认类型，
 		// 至少能回答"这文件到底是什么"
 		id: "hex",
 		match: (f) => f.file_category === "other",

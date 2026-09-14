@@ -1,0 +1,94 @@
+// ── 3DGS .ply 的内容获取：先用 Range 取头部探大小，再决定要不要整包下载 ──
+//
+// 为什么值得多一次请求：3DGS 的 .ply 动辄几十上百 MB，直接整包拉下来才发现
+// "这不是高斯文件"或"太大了"，对用户就是白等几十秒。后端支持 Range 之后，
+// 用一个 64KB 的分段请求就能拿到总大小（Content-Range 的 /total），
+// 文件小的时候这一次响应本身就是全量内容，不必再请求一次。
+
+import { buildHeaders } from "@shared/api";
+import { createResource, onCleanup } from "solid-js";
+import type { FileItem } from "../api.ts";
+
+/** 探测用分段大小：比 3DGS 的头部（几百字节～几 KB）宽裕得多 */
+const PROBE_BYTES = 64 * 1024;
+
+/** 客户端上限：超过就不下载（后端 other 类别本身有 50MB 上限，这里是第二道防线） */
+export const MAX_PLY_BYTES = 256 * 1024 * 1024;
+
+export type PlyLoad =
+	| { kind: "ready"; bytes: Uint8Array; sizeBytes: number }
+	| { kind: "too-large"; sizeBytes: number }
+	| { kind: "failed"; message: string };
+
+/** 从 `Content-Range: bytes 0-65535/12345` 里取总大小 */
+export function totalFromContentRange(
+	value: string | null,
+): number | undefined {
+	if (!value) return undefined;
+	const total = Number.parseInt(value.slice(value.lastIndexOf("/") + 1), 10);
+	return Number.isFinite(total) ? total : undefined;
+}
+
+async function fetchPly(
+	item: FileItem,
+	maxBytes: number,
+	signal: AbortSignal,
+): Promise<PlyLoad> {
+	try {
+		// 1) 探头部与总大小
+		const probe = await fetch(item.url, {
+			signal,
+			headers: { ...buildHeaders(), Range: `bytes=0-${PROBE_BYTES - 1}` },
+		});
+		if (!probe.ok)
+			return { kind: "failed", message: `加载失败（HTTP ${probe.status}）` };
+		const probeBytes = new Uint8Array(await probe.arrayBuffer());
+		const headerLength = Number.parseInt(
+			probe.headers.get("content-length") ?? "",
+			10,
+		);
+		// 没有 Content-Range 说明服务端忽略了 Range（老版本后端/中间缓存），
+		// 这时 content-length 或响应长度就是文件大小
+		const total =
+			totalFromContentRange(probe.headers.get("content-range")) ??
+			(Number.isFinite(headerLength) ? headerLength : probeBytes.length);
+
+		if (total > maxBytes) return { kind: "too-large", sizeBytes: total };
+		// 这一次响应已经拿到全部内容（文件比分段小）
+		if (probeBytes.length >= total)
+			return {
+				kind: "ready",
+				bytes: probeBytes.subarray(0, total),
+				sizeBytes: total,
+			};
+
+		// 2) 整包拉取
+		const full = await fetch(item.url, { signal, headers: buildHeaders() });
+		if (!full.ok)
+			return { kind: "failed", message: `加载失败（HTTP ${full.status}）` };
+		const bytes = new Uint8Array(await full.arrayBuffer());
+		return { kind: "ready", bytes, sizeBytes: bytes.length };
+	} catch (err) {
+		if (err instanceof DOMException && err.name === "AbortError")
+			return { kind: "failed", message: "已取消" };
+		return {
+			kind: "failed",
+			message: `加载失败：${err instanceof Error ? err.message : String(err)}`,
+		};
+	}
+}
+
+/** 拉取 .ply 内容。失败与"太大"都走返回值，不抛穿（同其他预览的约定） */
+export function usePreviewPly(item: () => FileItem, maxBytes = MAX_PLY_BYTES) {
+	const controller = new AbortController();
+	onCleanup(() => controller.abort());
+
+	const [state] = createResource(
+		() => item().stored_id,
+		() => fetchPly(item(), maxBytes, controller.signal),
+	);
+	return state;
+}
+
+/** 仅测试用：直接驱动一次加载流程 */
+export const __internal = { fetchPly, PROBE_BYTES };

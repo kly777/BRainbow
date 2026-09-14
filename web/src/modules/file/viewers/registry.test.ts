@@ -75,9 +75,19 @@ describe("查看器注册表：命中规则", () => {
 		],
 		["压缩包", ofCategory("application/zip", "other", "a.zip"), "hex"],
 		[
-			"3D 模型（后端按扩展名给出 application/octet-stream）",
-			ofCategory("application/octet-stream", "other", "a.ply"),
-			"hex",
+			"3DGS 高斯泼溅（.ply 按扩展名认领，内容由查看器解析）",
+			ofCategory("application/octet-stream", "other", "模型.ply"),
+			"splat",
+		],
+		[
+			"大写扩展名的 .PLY 同样认",
+			ofCategory("application/octet-stream", "other", "SCENE.PLY"),
+			"splat",
+		],
+		[
+			"点云 .ply 也走泼溅查看器（查看器内部按有无高斯参数分流）",
+			ofCategory("application/octet-stream", "other", "scan.ply"),
+			"splat",
 		],
 		[
 			"字幕（MIME 是 application/x-subrip，归 other 但内容是文本）",

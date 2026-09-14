@@ -236,9 +236,14 @@
 
 .splat-pane {
 	flex: 1;
-	min-width: 0;
+
+	/* 必须显式拉伸：外层 .preview-stage 是 align-items: center（给图片/媒体居中用），
+	   不写这句的话高度按内容算，里面画布会退化成 canvas 默认的 150px 高 */
+	align-self: stretch;
 	display: flex;
 	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
 }
 
 /* 画布容器：占满预览区，接收指针事件 */

@@ -2,9 +2,19 @@ import { createEffect, createSignal, on, onCleanup, Show } from "solid-js";
 import { usePreviewPly } from "../hooks/usePreviewPly.ts";
 import { DownloadPanel } from "./DownloadPanel.tsx";
 import {
+	applyOps,
+	type CameraOp,
+	dragOps,
+	isCameraKey,
+	jumpOps,
+	keyOps,
+	scaleOps,
+	wheelOps,
+} from "./splat/controls.ts";
+import {
 	add,
+	type Mat4,
 	orbitOffset,
-	scaleVec,
 	type Vec3,
 	viewMatrix,
 } from "./splat/matrix.ts";
@@ -19,29 +29,17 @@ import styles from "./viewers.module.css";
 
 /** 世界坐标的"画面上方"：3DGS / COLMAP 的 y 轴朝下 */
 const WORLD_UP: Vec3 = [0, -1, 0];
-/** 拖拽灵敏度（弧度/像素） */
-const ORBIT_SPEED = 0.008;
-/** 滚轮灵敏度（每像素的指数缩放系数） */
-const WHEEL_SPEED = 0.0015;
-/** 相机与目标距离的范围（相对包围球半径） */
-const MIN_DISTANCE_FACTOR = 0.15;
-const MAX_DISTANCE_FACTOR = 12;
 /** 自动取景时相机到目标的距离（半径 × 这个系数） */
 const FIT_DISTANCE_FACTOR = 2.4;
+/** 初始俯仰（略微俯视，与参考实现的默认机位观感一致） */
+const INITIAL_PITCH = 0.15;
 /** 超过这个时间还没解析完就给一句"可能较慢"的提示，免得看起来像卡死 */
 const SLOW_HINT_MS = 6000;
-
-interface Camera {
-	target: Vec3;
-	distance: number;
-	yaw: number;
-	pitch: number;
-	/** 包围球半径，用于取景与缩放范围 */
-	radius: number;
-}
-
-const clamp = (value: number, min: number, max: number) =>
-	Math.min(Math.max(value, min), max);
+/** 空格"跳"的每帧渐变步长（参考实现同此） */
+const JUMP_STEP = 0.05;
+/** 一帧按 1/60 秒折算；上限防止切标签页回来后跳一大步 */
+const FRAME_MS = 1000 / 60;
+const MAX_FRAME_SCALE = 3;
 
 /**
  * 3DGS 高斯泼溅预览（.ply）。
@@ -81,23 +79,22 @@ export const SplatViewer: ViewerComponent = (props) => {
 	// 用信号承载 DOM 引用：画布只在内容就绪后才挂载，GL 初始化要跟着它走
 	const [canvasEl, setCanvasEl] = createSignal<HTMLCanvasElement>();
 	const [stageEl, setStageEl] = createSignal<HTMLDivElement>();
-	const camera: Camera = {
-		target: [0, 0, 0],
-		distance: 1,
-		yaw: 0,
-		pitch: 0.15,
-		radius: 1,
-	};
+	/** 相机状态就是一个世界→相机的矩阵（自由视角，可翻滚），操作一律在相机自身坐标系里做 */
+	let view: Mat4 = new Float32Array([
+		1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
+	]);
+	/** 环绕（IJKL / 拖拽 / 滚轮）的定点距离：取景时按包围球定，之后固定 */
+	let orbitDistance = 1;
+	/** 按住的键（`KeyboardEvent.code`） */
+	const activeKeys = new Set<string>();
+	/** 空格"跳"：按住渐变到 1，松开渐变回 0（参考实现同此） */
+	let jumpDelta = 0;
+	let rafId: number | undefined;
+	let lastFrameTime = 0;
 
+	/** 当前渲染用的视图矩阵（含空格的跳） */
 	const currentView = () =>
-		viewMatrix(
-			add(
-				camera.target,
-				orbitOffset(camera.distance, camera.yaw, camera.pitch),
-			),
-			camera.target,
-			WORLD_UP,
-		);
+		jumpDelta === 0 ? view : applyOps(view, jumpOps(jumpDelta), orbitDistance);
 
 	const draw = () => renderer?.draw(currentView(), vertexCount);
 
@@ -138,12 +135,16 @@ export const SplatViewer: ViewerComponent = (props) => {
 		loaded = result;
 		textureDirty = true;
 		vertexCount = result.vertexCount;
-		// 自动取景：把包围球装进画面
-		camera.target = result.bounds.center;
-		camera.radius = result.bounds.radius;
-		camera.distance = result.bounds.radius * FIT_DISTANCE_FACTOR;
-		camera.yaw = 0;
-		camera.pitch = 0.15;
+		// 自动取景：把包围球装进画面（相机在包围球中心前方，略微俯视）
+		const distance = Math.max(result.bounds.radius * FIT_DISTANCE_FACTOR, 1e-3);
+		orbitDistance = distance;
+		view = viewMatrix(
+			add(result.bounds.center, orbitOffset(distance, 0, INITIAL_PITCH)),
+			result.bounds.center,
+			WORLD_UP,
+		);
+		jumpDelta = 0;
+		activeKeys.clear();
 		setHint(
 			`${result.vertexCount.toLocaleString()} 个${result.pointCloud ? "点（普通点云）" : "高斯"}`,
 		);
@@ -174,6 +175,8 @@ export const SplatViewer: ViewerComponent = (props) => {
 		});
 		onCleanup(() => {
 			if (slowTimer) clearTimeout(slowTimer);
+			if (rafId !== undefined) cancelAnimationFrame(rafId);
+			rafId = undefined;
 			runner?.dispose();
 			runner = undefined;
 		});
@@ -229,59 +232,140 @@ export const SplatViewer: ViewerComponent = (props) => {
 		});
 	});
 
-	// ── 交互：左键拖拽旋转、右键/Shift 拖拽平移、滚轮缩放 ──
-	let dragging: "orbit" | "pan" | undefined;
+	// ── 帧循环：只在按住相机键（或"跳"还没落回）时跑，空闲时不烧 GPU ──
+	const frame = (now: number) => {
+		rafId = undefined;
+		const scale =
+			Math.min((now - lastFrameTime) / FRAME_MS, MAX_FRAME_SCALE) || 1;
+		lastFrameTime = now;
+
+		const shiftHeld =
+			activeKeys.has("ShiftLeft") || activeKeys.has("ShiftRight");
+		const ops: CameraOp[] = [];
+		for (const code of activeKeys) {
+			const keyed = keyOps(code, shiftHeld);
+			if (keyed) ops.push(...keyed);
+		}
+		if (activeKeys.has("Space"))
+			jumpDelta = Math.min(1, jumpDelta + JUMP_STEP * scale);
+		else jumpDelta = Math.max(0, jumpDelta - JUMP_STEP * scale);
+
+		const moved = ops.length > 0;
+		if (moved || jumpDelta > 0) {
+			if (moved) view = applyOps(view, scaleOps(ops, scale), orbitDistance);
+			draw();
+			if (!sortPending) requestSort();
+		}
+		if (activeKeys.size > 0 || jumpDelta > 0)
+			rafId = requestAnimationFrame(frame);
+	};
+
+	const startFrameLoop = () => {
+		if (rafId !== undefined) return;
+		lastFrameTime = performance.now();
+		rafId = requestAnimationFrame(frame);
+	};
+
+	// ── 键盘：与参考实现同表（见 splat/controls.ts）；只在画布获得焦点时生效 ──
+	const onKeyDown = (e: KeyboardEvent) => {
+		if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
+			activeKeys.add(e.code);
+			return;
+		}
+		if (!isCameraKey(e.code)) return;
+		// 方向键与空格会滚动页面，必须拦；字母键不拦（Ctrl+A 之类留给浏览器）
+		if (e.code.startsWith("Arrow") || e.code === "Space") e.preventDefault();
+		// 别让详情页的 ←/→ 同时把文件切走
+		e.stopPropagation();
+		activeKeys.add(e.code);
+		startFrameLoop();
+	};
+
+	const onKeyUp = (e: KeyboardEvent) => {
+		if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
+			activeKeys.delete(e.code);
+			return;
+		}
+		if (!isCameraKey(e.code)) return;
+		e.stopPropagation();
+		activeKeys.delete(e.code);
+	};
+
+	/** 失焦时清空按住状态，避免"按键卡住" */
+	const onBlur = () => {
+		activeKeys.clear();
+	};
+
+	// ── 鼠标拖拽：左键环绕，右键（或 Ctrl/Cmd + 左键）前后 + 平移 ──
+	/** 正在拖拽的指针 id：多指（触屏）时只跟第一根手指，避免两指互抢 */
+	let activePointer: number | undefined;
+	let dragButton = 1;
+	let dragCtrl = false;
+	let dragMeta = false;
 	let lastX = 0;
 	let lastY = 0;
 
 	const onPointerDown = (e: PointerEvent) => {
-		dragging = e.button === 2 || e.shiftKey ? "pan" : "orbit";
+		if (activePointer !== undefined) return; // 多指时只跟第一根
+		activePointer = e.pointerId;
+		dragButton = e.button;
+		dragCtrl = e.ctrlKey;
+		dragMeta = e.metaKey;
 		lastX = e.clientX;
 		lastY = e.clientY;
 		canvasEl()?.setPointerCapture(e.pointerId);
+		stageEl()?.focus();
 		e.preventDefault();
 	};
 
 	const onPointerMove = (e: PointerEvent) => {
-		if (!dragging) return;
-		const dx = e.clientX - lastX;
-		const dy = e.clientY - lastY;
+		if (e.pointerId !== activePointer) return;
+		const box = stageEl();
+		const width = box?.clientWidth || 1;
+		const height = box?.clientHeight || 1;
+		const deltaX = e.clientX - lastX;
+		const deltaY = e.clientY - lastY;
 		lastX = e.clientX;
 		lastY = e.clientY;
-
-		if (dragging === "orbit") {
-			camera.yaw -= dx * ORBIT_SPEED;
-			// 限制俯仰：越过正上/正下时"上"向量会退化
-			camera.pitch = clamp(
-				camera.pitch + dy * ORBIT_SPEED,
-				-Math.PI / 2 + 0.05,
-				Math.PI / 2 - 0.05,
-			);
-		} else {
-			// 平移：沿相机右/上方向移动目标点，位移随距离缩放（远景拖起来同样跟手）
-			const view = currentView();
-			const right: Vec3 = [view[0], view[4], view[8]];
-			const up: Vec3 = [view[1], view[5], view[9]];
-			const k = camera.distance * 0.002;
-			camera.target = add(
-				camera.target,
-				add(scaleVec(right, -dx * k), scaleVec(up, -dy * k)),
-			);
-		}
+		view = applyOps(
+			view,
+			dragOps({
+				button: dragButton,
+				ctrlKey: dragCtrl,
+				metaKey: dragMeta,
+				deltaX,
+				deltaY,
+				width,
+				height,
+			}),
+			orbitDistance,
+		);
 		cameraMoved();
 	};
 
 	const onPointerUp = (e: PointerEvent) => {
-		dragging = undefined;
+		if (e.pointerId !== activePointer) return;
+		activePointer = undefined;
 		canvasEl()?.releasePointerCapture(e.pointerId);
 	};
 
+	// ── 滚轮：裸滚环绕、Shift 平移、Ctrl/Cmd 前后移动（与参考实现一致） ──
 	const onWheel = (e: WheelEvent) => {
 		e.preventDefault();
-		camera.distance = clamp(
-			camera.distance * Math.exp(e.deltaY * WHEEL_SPEED),
-			camera.radius * MIN_DISTANCE_FACTOR,
-			camera.radius * MAX_DISTANCE_FACTOR,
+		const box = stageEl();
+		view = applyOps(
+			view,
+			wheelOps({
+				deltaX: e.deltaX,
+				deltaY: e.deltaY,
+				deltaMode: e.deltaMode,
+				shiftKey: e.shiftKey,
+				ctrlKey: e.ctrlKey,
+				metaKey: e.metaKey,
+				width: box?.clientWidth || 1,
+				height: box?.clientHeight || 1,
+			}),
+			orbitDistance,
 		);
 		cameraMoved();
 	};
@@ -326,15 +410,21 @@ export const SplatViewer: ViewerComponent = (props) => {
 						</div>
 					}
 				>
-					{/* biome-ignore lint/a11y/noStaticElementInteractions: 3D 视图的画布交互（拖拽/滚轮），键盘用户可走下载路径 */}
 					<div
 						ref={setStageEl}
 						class={styles.splatStage}
+						// 自带键鼠操作的画布式控件：role=application 让它可被命名（aria-label 需要 role）
+						role="application"
+						tabindex="0"
+						aria-label="3D 高斯泼溅视图（点击后可用键盘操作）"
 						onPointerDown={onPointerDown}
 						onPointerMove={onPointerMove}
 						onPointerUp={onPointerUp}
 						onPointerCancel={onPointerUp}
 						onWheel={onWheel}
+						onKeyDown={onKeyDown}
+						onKeyUp={onKeyUp}
+						onBlur={onBlur}
 						onContextMenu={(e) => e.preventDefault()}
 					>
 						<canvas ref={setCanvasEl} class={styles.splatCanvas} />
@@ -365,7 +455,8 @@ export const SplatViewer: ViewerComponent = (props) => {
 						<Show when={ready() && hint()}>
 							{(text) => (
 								<p class={styles.splatHint}>
-									{text()}
+									{text()} · 拖拽环绕 · WASD 转视角 · 方向键移动 · QE 翻滚 ·
+									滚轮环绕 · Ctrl+滚轮前后
 									{degraded() ? ` · ${degraded()}` : ""}
 								</p>
 							)}

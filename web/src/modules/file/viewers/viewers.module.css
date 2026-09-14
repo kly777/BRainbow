@@ -256,6 +256,12 @@
 	cursor: grabbing;
 }
 
+/* 键盘操作需要焦点：给一个可见的焦点框（点击画面即获得） */
+.splat-stage:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: -2px;
+}
+
 .splat-canvas {
 	display: block;
 	width: 100%;

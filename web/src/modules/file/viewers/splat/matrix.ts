@@ -9,6 +9,9 @@ export type Vec3 = readonly [number, number, number];
 /** 列主序 4×4，可直接交给 gl.uniformMatrix4fv(loc, false, m) */
 export type Mat4 = Float32Array;
 
+/** 世界坐标里的"上"：3DGS / COLMAP 的 y 轴朝下，所以"上"是 -y */
+export const WORLD_UP: Vec3 = [0, -1, 0];
+
 export function sub(a: Vec3, b: Vec3): Vec3 {
 	return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 }
@@ -40,6 +43,35 @@ export function normalize(a: Vec3): Vec3 {
 
 export function length(a: Vec3): number {
 	return Math.hypot(a[0], a[1], a[2]);
+}
+
+/**
+ * 把向量投影到以 `n` 为法线的平面里，并归一化。
+ * 与法线几乎平行（或本来就是零向量）时返回 undefined，交给调用方兜底。
+ */
+export function inPlane(v: Vec3, n: Vec3): Vec3 | undefined {
+	const d = dot(v, n);
+	const p: Vec3 = [v[0] - d * n[0], v[1] - d * n[1], v[2] - d * n[2]];
+	const len = length(p);
+	if (!(len > 1e-4)) return undefined;
+	return [p[0] / len, p[1] / len, p[2] / len];
+}
+
+/** 把向量绕 `axis` 转 `rad` 弧度（罗德里格斯公式；axis 会先归一化） */
+export function rotateVec(v: Vec3, rad: number, axis: Vec3): Vec3 {
+	const [kx, ky, kz] = normalize(axis);
+	const c = Math.cos(rad);
+	const s = Math.sin(rad);
+	const cx = ky * v[2] - kz * v[1];
+	const cy = kz * v[0] - kx * v[2];
+	const cz = kx * v[1] - ky * v[0];
+	const kd = kx * v[0] + ky * v[1] + kz * v[2];
+	const t = kd * (1 - c);
+	return [
+		v[0] * c + cx * s + kx * t,
+		v[1] * c + cy * s + ky * t,
+		v[2] * c + cz * s + kz * t,
+	];
 }
 
 export interface CameraBasis {
@@ -278,4 +310,18 @@ export function translate4(a: Mat4, x: number, y: number, z: number): Mat4 {
 		a[2] * x + a[6] * y + a[10] * z + a[14],
 		a[3] * x + a[7] * y + a[11] * z + a[15],
 	]);
+}
+
+/**
+ * 沿**世界**坐标系的轴平移（水平锁定模式用）。
+ *
+ * `a` 是 camToWorld：相机位置就是它的平移列，所以"把相机在世界里挪 v" =
+ * 往平移列上加 v —— 方向不受相机姿态影响（这正是水平锁定要的）。
+ */
+export function translateWorld(a: Mat4, v: Vec3): Mat4 {
+	const out = new Float32Array(a);
+	out[12] += v[0];
+	out[13] += v[1];
+	out[14] += v[2];
+	return out;
 }

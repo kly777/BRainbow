@@ -17,7 +17,6 @@ import {
 	initialFraming,
 	ORBIT_PIVOT_RATIO,
 	SPLAT_FOV_DEG,
-	WORLD_UP,
 } from "./fit.ts";
 import {
 	focalForFov,
@@ -25,6 +24,7 @@ import {
 	transformPoint,
 	type Vec3,
 	type viewMatrix,
+	WORLD_UP,
 } from "./matrix.ts";
 
 const bounds = (

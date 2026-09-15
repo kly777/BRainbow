@@ -337,3 +337,28 @@
 	text-align: center;
 	pointer-events: none;
 }
+
+/* 移动模式开关：右上角，与操作提示同一套"视口浮层"配色（暗底浅字，与主题无关）。
+   它是画布上的控件，所以必须吃指针事件（提示那条不吃） */
+.splat-mode-toggle {
+	position: absolute;
+	top: var(--space-md);
+	right: var(--space-md);
+	padding: var(--space-2xs) var(--space-sm);
+	border: 1px solid color-mix(in srgb, var(--splat-ink-muted) 35%, transparent);
+	border-radius: var(--radius-sm);
+	background: color-mix(in srgb, var(--splat-viewport-bg) 72%, transparent);
+	color: var(--splat-ink);
+	font-family: inherit;
+	font-size: var(--text-xs);
+	cursor: pointer;
+}
+
+.splat-mode-toggle:hover {
+	background: color-mix(in srgb, var(--splat-viewport-bg) 88%, transparent);
+}
+
+.splat-mode-toggle:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 1px;
+}

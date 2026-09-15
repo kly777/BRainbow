@@ -9,6 +9,7 @@ import {
 	isCameraKey,
 	jumpOps,
 	keyOps,
+	type MoveMode,
 	scaleOps,
 	wheelOps,
 } from "./splat/controls.ts";
@@ -39,6 +40,19 @@ const JUMP_STEP = 0.05;
 const FRAME_MS = 1000 / 60;
 const MAX_FRAME_SCALE = 3;
 
+/** 两套移动模式的按钮文字（`MoveMode` 是唯一的取值来源，漏一个就编译不过） */
+const MODE_LABEL: Record<MoveMode, string> = {
+	view: "视角相对",
+	horizontal: "水平锁定",
+};
+
+/** 操作提示：跟着移动模式换一张小抄（与 controls.ts 的映射表对应） */
+const MODE_HINT: Record<MoveMode, string> = {
+	view: "拖拽环绕 · WASD 转视角 · 方向键移动 · QE 翻滚 · 滚轮环绕 · Ctrl+滚轮前后",
+	horizontal:
+		"拖拽环绕 · WASD 沿地面移动 · 空格升 / Shift 降 · QE 翻滚（地面跟着转） · 滚轮环绕",
+};
+
 /**
  * 3DGS 高斯泼溅预览（.ply）。
  *
@@ -57,6 +71,11 @@ export const SplatViewer: ViewerComponent = (props) => {
 	const [parseError, setParseError] = createSignal<string>();
 	/** 退回主线程时的说明（拖动会略卡） */
 	const [degraded, setDegraded] = createSignal<string>();
+	/**
+	 * 移动模式（见 `MoveMode`）：默认 `view` —— 与本次改动前的操作完全一致，
+	 * 换了模式只是加一种玩法，不改变既有手感。用户动过相机之后模式仍可随时切。
+	 */
+	const [moveMode, setMoveMode] = createSignal<MoveMode>("view");
 	const [ready, setReady] = createSignal(false);
 	const [hint, setHint] = createSignal<string>();
 	/** 解析耗时超过预期时的提示（避免看起来像卡死） */
@@ -317,10 +336,12 @@ export const SplatViewer: ViewerComponent = (props) => {
 			activeKeys.has("ShiftLeft") || activeKeys.has("ShiftRight");
 		const ops: CameraOp[] = [];
 		for (const code of activeKeys) {
-			const keyed = keyOps(code, shiftHeld);
+			const keyed = keyOps(code, shiftHeld, moveMode());
 			if (keyed) ops.push(...keyed);
 		}
-		if (activeKeys.has("Space"))
+		// 空格的两种身份：视角相对模式是"跳"（渐变到位，见 jumpOps），
+		// 水平锁定模式是持续上升（由 keyOps 产出 moveWorld，与朝向无关）
+		if (moveMode() === "view" && activeKeys.has("Space"))
 			jumpDelta = Math.min(1, jumpDelta + JUMP_STEP * scale);
 		else jumpDelta = Math.max(0, jumpDelta - JUMP_STEP * scale);
 
@@ -529,11 +550,32 @@ export const SplatViewer: ViewerComponent = (props) => {
 						<Show when={ready() && hint()}>
 							{(text) => (
 								<p class={styles.splatHint}>
-									{text()} · 拖拽环绕 · WASD 转视角 · 方向键移动 · QE 翻滚 ·
-									滚轮环绕 · Ctrl+滚轮前后
+									{text()} · {MODE_HINT[moveMode()]}
 									{degraded() ? ` · ${degraded()}` : ""}
 								</p>
 							)}
+						</Show>
+						{/* 移动模式开关：压在画布右上角。别让它吃掉画布的拖拽（pointerdown 拦下），
+						    点完把焦点还给画布，免得接着按 WASD 落到按钮上。
+						    只在视图真的活着时出现 —— 报错/还在解析时它没有意义 */}
+						<Show when={ready() && !renderError() && !parseError()}>
+							<button
+								type="button"
+								class={styles.splatModeToggle}
+								aria-pressed={moveMode() === "horizontal"}
+								title={
+									moveMode() === "horizontal"
+										? "水平锁定：WASD 沿地面移动，空格升 / Shift 降；视角只决定方向，QE 翻滚会把地面一起转过去"
+										: "视角相对：任何方向的移动都跟着视角（抬头前进就是往上飞）"
+								}
+								onPointerDown={(e) => e.stopPropagation()}
+								onClick={() => {
+									setMoveMode(moveMode() === "view" ? "horizontal" : "view");
+									stageEl()?.focus();
+								}}
+							>
+								移动：{MODE_LABEL[moveMode()]}
+							</button>
 						</Show>
 					</div>
 				</Show>

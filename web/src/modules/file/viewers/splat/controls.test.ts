@@ -13,7 +13,7 @@ import {
 	scaleOps,
 	wheelOps,
 } from "./controls.ts";
-import { invert4, type Mat4, viewMatrix } from "./matrix.ts";
+import { dot, invert4, type Mat4, viewMatrix } from "./matrix.ts";
 
 /** -0 与 0 数学等价但 toEqual 会区分；用 JSON 往返把它归一（-0 → 0） */
 const norm = <T>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -192,6 +192,213 @@ describe("keyOps：其它键", () => {
 	});
 });
 
+describe("keyOps：水平锁定模式", () => {
+	it("WASD 与方向键都变成在地面上移动（不再转视角）", () => {
+		expect(norm(keyOps("KeyW", false, "horizontal"))).toEqual([
+			{ kind: "planeMove", forward: STEP.forward, right: 0, up: 0 },
+		]);
+		expect(norm(keyOps("KeyS", false, "horizontal"))).toEqual([
+			{ kind: "planeMove", forward: -STEP.forward, right: 0, up: 0 },
+		]);
+		expect(norm(keyOps("KeyA", false, "horizontal"))).toEqual([
+			{ kind: "planeMove", forward: 0, right: -STEP.strafe, up: 0 },
+		]);
+		expect(norm(keyOps("KeyD", false, "horizontal"))).toEqual([
+			{ kind: "planeMove", forward: 0, right: STEP.strafe, up: 0 },
+		]);
+		// 方向键与 WASD 同义（这一模式下方向键也不转视角）
+		expect(norm(keyOps("ArrowUp", false, "horizontal"))).toEqual(
+			norm(keyOps("KeyW", false, "horizontal")),
+		);
+		expect(norm(keyOps("ArrowLeft", false, "horizontal"))).toEqual(
+			norm(keyOps("KeyA", false, "horizontal")),
+		);
+	});
+
+	it("空格升、Shift 降：沿平面的法线（不是写死的世界坐标轴）", () => {
+		expect(norm(keyOps("Space", false, "horizontal"))).toEqual([
+			{ kind: "planeMove", forward: 0, right: 0, up: STEP.vertical },
+		]);
+		expect(norm(keyOps("ShiftLeft", false, "horizontal"))).toEqual([
+			{ kind: "planeMove", forward: 0, right: 0, up: -STEP.vertical },
+		]);
+		expect(norm(keyOps("ShiftRight", false, "horizontal"))).toEqual(
+			norm(keyOps("ShiftLeft", false, "horizontal")),
+		);
+		// 视角相对模式下 Shift 只是修饰键（配合方向键升降），自身不产出操作
+		expect(keyOps("ShiftLeft", false, "view")).toBeUndefined();
+	});
+
+	it("QE 仍是翻滚、IJKL 仍是环绕（两套模式共用）", () => {
+		for (const code of ["KeyQ", "KeyE", "KeyI", "KeyJ", "KeyK", "KeyL"])
+			expect(norm(keyOps(code, false, "horizontal"))).toEqual(
+				norm(keyOps(code, false, "view")),
+			);
+	});
+
+	it("不参与相机控制的键在两种模式下都返回 undefined", () => {
+		expect(keyOps("KeyZ", false, "horizontal")).toBeUndefined();
+		expect(keyOps("Escape", false, "horizontal")).toBeUndefined();
+	});
+});
+
+/** 俯仰过的相机（抬头 0.6 rad，没有翻滚）：用来验证"地面不跟着俯仰翻" */
+const pitchedView = (): Mat4 => {
+	const view = viewMatrix([0, 0, -5], [0, 0, 0], [0, -1, 0]);
+	return applyOps(view, [{ kind: "rotate", rad: 0.6, axis: [1, 0, 0] }], 4);
+};
+
+/** 俯仰 + 翻滚过的相机：用来验证"翻滚会把地面一起转过去" */
+const rolledView = (roll: number): Mat4 => {
+	const view = viewMatrix([0, 0, -5], [0, 0, 0], [0, -1, 0]);
+	return applyOps(
+		view,
+		[
+			{ kind: "rotate", rad: 0.3, axis: [1, 0, 0] }, // 先抬头一点
+			{ kind: "rotate", rad: roll, axis: [0, 0, 1] }, // 再翻滚
+		],
+		4,
+	);
+};
+
+/** 与"世界垂直方向"的夹角（度）：升降是否还沿世界上下 */
+const angleFromVertical = (v: [number, number, number]) => {
+	const length = Math.hypot(v[0], v[1], v[2]) || 1;
+	const unit = [v[0] / length, v[1] / length, v[2] / length] as const;
+	return (Math.acos(Math.min(1, Math.abs(unit[1]))) * 180) / Math.PI;
+};
+
+describe("applyOps：水平锁定模式的移动", () => {
+	it("在地面上走：高度（世界 y）与朝向都不变", () => {
+		const before = pitchedView();
+		const [bx, by, bz] = cameraPos(before);
+		const after = applyOps(
+			before,
+			[{ kind: "planeMove", forward: 1, right: 0, up: 0 }],
+			4,
+		);
+		const [ax, ay, az] = cameraPos(after);
+		// 高度锁死 —— 这正是这一模式的全部意义
+		expect(ay).toBeCloseTo(by, 5);
+		// 位移长度为 1 且落在水平面里
+		expect(Math.hypot(ax - bx, az - bz)).toBeCloseTo(1, 5);
+		// 朝向不受影响（移动不该转视角）
+		expect(norm([...forward(after)].map((v) => Number(v.toFixed(5))))).toEqual(
+			norm([...forward(before)].map((v) => Number(v.toFixed(5)))),
+		);
+	});
+
+	it("前进方向 = 视线在地面上的投影（俯仰不参与）", () => {
+		const level = viewMatrix([0, 0, -5], [0, 0, 0], [0, -1, 0]);
+		// 低头 0.6 rad：视线里混进了垂直分量，但它不该影响"往哪走"
+		const pitched = applyOps(
+			level,
+			[{ kind: "rotate", rad: 0.6, axis: [1, 0, 0] }],
+			4,
+		);
+		const [bx, by, bz] = cameraPos(pitched);
+		const moved = applyOps(
+			pitched,
+			[{ kind: "planeMove", forward: 2, right: 0, up: 0 }],
+			4,
+		);
+		const [ax, ay, az] = cameraPos(moved);
+		// 相机原本朝 +z、俯仰只是把它压低 → 前进仍落在 +z 上，长度 2
+		expect(ax).toBeCloseTo(bx, 5);
+		expect(az - bz).toBeCloseTo(2, 5);
+		expect(ay).toBeCloseTo(by, 5);
+	});
+
+	it("侧移长度为 right，与 forward 分量互不干扰", () => {
+		const view = pitchedView();
+		const [bx, by, bz] = cameraPos(view);
+		const moved = applyOps(
+			view,
+			[{ kind: "planeMove", forward: 0, right: 3, up: 0 }],
+			4,
+		);
+		const [ax, ay, az] = cameraPos(moved);
+		expect(ay).toBeCloseTo(by, 5);
+		expect(Math.hypot(ax - bx, az - bz)).toBeCloseTo(3, 5);
+	});
+
+	it("没有翻滚时升降就是世界垂直方向（MC 那种“空格上升”）", () => {
+		// 先用俯仰验证：俯仰不该让升降轴歪掉
+		for (const view of [
+			pitchedView(),
+			viewMatrix([0, 0, -5], [0, 0, 0], [0, -1, 0]),
+		]) {
+			const [bx, by, bz] = cameraPos(view);
+			const moved = applyOps(
+				view,
+				[{ kind: "planeMove", forward: 0, right: 0, up: 1 }],
+				4,
+			);
+			const [ax, ay, az] = cameraPos(moved);
+			expect(ax).toBeCloseTo(bx, 6);
+			expect(az).toBeCloseTo(bz, 6);
+			// 世界 y 朝下 → "上"是 -y
+			expect(ay - by).toBeCloseTo(-1, 6);
+		}
+	});
+
+	it("QE 翻滚会把地面一起转过去：升降轴跟着歪、角度等于翻滚角", () => {
+		const level = viewMatrix([0, 0, -5], [0, 0, 0], [0, -1, 0]);
+		const roll = 0.5;
+		const rolled = applyOps(
+			level,
+			[{ kind: "rotate", rad: roll, axis: [0, 0, 1] }],
+			4,
+		);
+		const [bx, by, bz] = cameraPos(rolled);
+		const moved = applyOps(
+			rolled,
+			[{ kind: "planeMove", forward: 0, right: 0, up: 1 }],
+			4,
+		);
+		const [ax, ay, az] = cameraPos(moved);
+		const delta: [number, number, number] = [ax - bx, ay - by, az - bz];
+		// 位移长度仍是 1，但方向偏离世界垂直方向约等于翻滚角
+		expect(Math.hypot(...delta)).toBeCloseTo(1, 5);
+		expect(angleFromVertical(delta)).toBeCloseTo((roll * 180) / Math.PI, 1);
+		// 且仍然垂直于视线（"升降"不该改变视线方向）
+		expect(Math.abs(dot(delta, forward(rolled)))).toBeLessThan(1e-6);
+	});
+
+	it("翻滚后地面内的前后左右也跟着转（不是只歪了升降轴）", () => {
+		const rolled = rolledView(0.5);
+		const [bx, by, bz] = cameraPos(rolled);
+		const moved = applyOps(
+			rolled,
+			[{ kind: "planeMove", forward: 0, right: 1, up: 0 }],
+			4,
+		);
+		const [ax, ay, az] = cameraPos(moved);
+		// 侧移不再严格水平（地面被转过去了），但长度仍是 1、且垂直于平面法线
+		expect(Math.hypot(ax - bx, ay - by, az - bz)).toBeCloseTo(1, 5);
+		expect(angleFromVertical([ax - bx, ay - by, az - bz])).toBeGreaterThan(1);
+	});
+
+	it("正对上下看（视线的平面投影退化）时仍能移动", () => {
+		const level = viewMatrix([0, 0, -5], [0, 0, 0], [0, -1, 0]);
+		const straightUp = applyOps(
+			level,
+			[{ kind: "rotate", rad: Math.PI / 2, axis: [1, 0, 0] }],
+			4,
+		);
+		const [bx, by, bz] = cameraPos(straightUp);
+		const moved = applyOps(
+			straightUp,
+			[{ kind: "planeMove", forward: 1, right: 0, up: 0 }],
+			4,
+		);
+		const [ax, ay, az] = cameraPos(moved);
+		// 兜底：退回相机的"上"轴，总之不能变成原地不动，也不能算出 NaN
+		expect(Math.hypot(ax - bx, az - bz)).toBeCloseTo(1, 5);
+		expect(ay).toBeCloseTo(by, 5);
+	});
+});
+
 describe("scaleOps", () => {
 	it("按帧时长缩放增量（帧长 2 倍则走 2 倍距离）", () => {
 		const ops = keyOps("ArrowUp", false) ?? [];
@@ -205,6 +412,10 @@ describe("scaleOps", () => {
 		expect(orbit[0]).toEqual({ kind: "orbit", yaw: 0.5, pitch: 0 });
 		const rot = scaleOps([{ kind: "rotate", rad: 1, axis: [0, 1, 0] }], 0.25);
 		expect(rot[0]).toEqual({ kind: "rotate", rad: 0.25, axis: [0, 1, 0] });
+		// 水平锁定模式的平面移动同样要缩放（前 / 右 / 上 三个分量一起）
+		expect(
+			scaleOps([{ kind: "planeMove", forward: 2, right: -1, up: 1 }], 0.5),
+		).toEqual([{ kind: "planeMove", forward: 1, right: -0.5, up: 0.5 }]);
 	});
 });
 

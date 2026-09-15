@@ -311,6 +311,31 @@ describe("SplatViewer", () => {
 		expect(countOf(calls, "bufferData")).toBe(uploadsBefore + 1);
 	});
 
+	it("切换移动模式：按钮在两种模式间切换，操作提示跟着换", async () => {
+		loadScene();
+
+		const host = mount();
+		await settle(() => (host.textContent ?? "").includes("高斯"));
+		const toggle = host.querySelector(
+			"button[aria-pressed]",
+		) as HTMLButtonElement;
+		// 默认是"视角相对"（本次改动前的操作，不改变既有手感）
+		expect(toggle.textContent).toContain("视角相对");
+		expect(toggle.getAttribute("aria-pressed")).toBe("false");
+		expect(host.textContent).toContain("WASD 转视角");
+
+		toggle.click();
+		expect(toggle.textContent).toContain("水平锁定");
+		expect(toggle.getAttribute("aria-pressed")).toBe("true");
+		expect(host.textContent).toContain("沿地面移动");
+		expect(host.textContent).not.toContain("WASD 转视角");
+
+		// 再点回来
+		toggle.click();
+		expect(toggle.textContent).toContain("视角相对");
+		expect(host.textContent).toContain("WASD 转视角");
+	});
+
 	it("没有 WebGL2 时给出提示与下载路径，而不是白屏", async () => {
 		vi.stubGlobal(
 			"fetch",

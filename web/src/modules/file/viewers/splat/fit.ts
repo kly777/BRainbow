@@ -47,13 +47,11 @@ import {
 	orbitOffset,
 	type Vec3,
 	viewMatrix,
+	WORLD_UP,
 } from "./matrix.ts";
 
 /** 竖直视场角（度）：取景与渲染共用这一个值，两边各写一份迟早会漂移 */
 export const SPLAT_FOV_DEG = 55;
-
-/** 世界坐标的"画面上方"：3DGS / COLMAP 的 y 轴朝下 */
-export const WORLD_UP: Vec3 = [0, -1, 0];
 
 /**
  * 内容占画面"受限那一维"的比例。

@@ -18,6 +18,17 @@ const alongZ = (count: number) =>
 		gaussianRow({ z: i * 4, scale: [0, 0, 0] }),
 	);
 
+/**
+ * 断言"这次确实重排了"并取出顺序。
+ *
+ * 排序有两种合法结果：新顺序，或 `undefined`（= 视角几乎没变，复用上一次的顺序）。
+ * 直接 `Array.from(sort(...))` 会把两者混在一起，这里分清楚。
+ */
+function sorted(order: Uint32Array | undefined): number[] {
+	if (!order) throw new Error("预期这次会重排，但引擎返回了 undefined");
+	return Array.from(order);
+}
+
 describe("createSplatEngine.load", () => {
 	it("给出顶点数、取景中心与半径、纹理尺寸", () => {
 		const engine = createSplatEngine();
@@ -62,28 +73,22 @@ describe("createSplatEngine.sort", () => {
 		const engine = createSplatEngine();
 		engine.load(buildPly(GAUSSIAN_PROPS, alongZ(4)));
 		// 相机在 -z 侧朝 +z 看 → 前向轴 (0,0,1)，z 小的离相机近
-		const order = engine.sort([0, 0, 1]);
-		expect(order).toBeDefined();
-		if (!order) return;
-		expect(Array.from(order)).toEqual([0, 1, 2, 3]);
+		expect(sorted(engine.sort([0, 0, 1]))).toEqual([0, 1, 2, 3]);
 		// 初始顺序也是文件顺序，两者一致时不至于掩盖问题，故换个轴再验
-		const reversed = engine.sort([0, 0, -1]);
-		expect(reversed && Array.from(reversed)).toEqual([3, 2, 1, 0]);
+		expect(sorted(engine.sort([0, 0, -1]))).toEqual([3, 2, 1, 0]);
 	});
 
 	it("返回的索引确实指向顶点纹理里的对应顶点（着色器的 texelFetch 契约）", () => {
 		const engine = createSplatEngine();
 		const loaded = engine.load(buildPly(GAUSSIAN_PROPS, alongZ(4)));
-		const order = engine.sort([0, 0, -1]);
-		expect(order).toBeDefined();
-		if (!order) return;
+		const order = sorted(engine.sort([0, 0, -1]));
 		// 位置在纹理里是每顶点两个 texel 中的偶数那个：f32 偏移 = index * 8 + 2（z 分量）
 		const texF = new Float32Array(loaded.texdata.buffer);
 		expect(texF[order[0] * 8 + 2]).toBeCloseTo(12, 5);
 		expect(texF[order[3] * 8 + 2]).toBeCloseTo(0, 5);
 	});
 
-	it("视角几乎没变时也要给结果（调用方靠它清 pending，否则管线会冻住）", () => {
+	it("视角几乎没变时返回 undefined（不重算，也不必把索引再搬一遍）", () => {
 		const engine = createSplatEngine();
 		engine.load(
 			buildPly(
@@ -91,15 +96,29 @@ describe("createSplatEngine.sort", () => {
 				[0, 1, 2, 3].map((i) => gaussianRow({ x: i * 4, z: i * 4 })),
 			),
 		);
-		const first = engine.sort([0, 0, 1]);
-		expect(first).toBeDefined();
-		// 同一视角再请求：不重算，但必须回一个结果 —— 否则调用方的"排序在飞"标记
-		// 永远清不掉，之后所有相机移动都不再触发排序（表现为：转到背面还是正面的画面）
-		const again = engine.sort([0, 0, 1]);
-		expect(again).toBeDefined();
-		expect(Array.from(again ?? [])).toEqual(Array.from(first ?? []));
+		expect(sorted(engine.sort([0, 0, 1]))).toEqual([0, 1, 2, 3]);
+		// 同一视角再请求：不重算 → undefined。调用方据此跳过索引的上传与重绘
+		// （那份索引几十万项，来回搬是拖拽时最大的开销）。
+		// 注意"必须有答复"这件事由 worker/runner 保证：它们见到 undefined 会回一条
+		// sort-skipped，主线程的"排序在飞"标记照旧能清掉（见 runner.test.ts）
+		expect(engine.sort([0, 0, 1])).toBeUndefined();
 		// 视角真的变了才有新结果
-		expect(engine.sort([1, 0, 0])).toBeDefined();
+		expect(sorted(engine.sort([1, 0, 0])).length).toBe(4);
+	});
+
+	it("重排阈值与参考实现同一量级（约 8°，不是 2.6°）", () => {
+		const engine = createSplatEngine();
+		engine.load(buildPly(GAUSSIAN_PROPS, alongZ(4)));
+		expect(sorted(engine.sort([0, 0, 1]))).toEqual([0, 1, 2, 3]);
+		/** 前向轴在 xz 平面内转过 deg 度 */
+		const turned = (deg: number): [number, number, number] => {
+			const rad = (deg * Math.PI) / 180;
+			return [Math.sin(rad), 0, Math.cos(rad)];
+		};
+		// 5° 在阈值内 → 复用（旧实现用 0.001 ≈ 2.6°，这一步会真的重排几十万顶点）
+		expect(engine.sort(turned(5))).toBeUndefined();
+		// 10° 超阈值（0.01 → 约 8.1°）→ 真的重排
+		expect(engine.sort(turned(10))).toBeDefined();
 	});
 
 	it("排序与坐标平移无关（UTM 那类大坐标不能排乱）", () => {
@@ -110,12 +129,12 @@ describe("createSplatEngine.sort", () => {
 			[0, 800, 1600, 2400].map((dz) => gaussianRow({ z: shift + dz }));
 		const near = createSplatEngine();
 		near.load(buildPly(GAUSSIAN_PROPS, rowsAt(0)));
-		const expected = Array.from(near.sort([0, 0, 1]));
+		const expected = sorted(near.sort([0, 0, 1]));
 		expect(expected).toEqual([0, 1, 2, 3]);
 
 		const far = createSplatEngine();
 		far.load(buildPly(GAUSSIAN_PROPS, rowsAt(524_000)));
-		expect(Array.from(far.sort([0, 0, 1]))).toEqual(expected);
+		expect(sorted(far.sort([0, 0, 1]))).toEqual(expected);
 	});
 
 	it("所有顶点同深度时保持原序（计数排序的分母会退化，必须守住）", () => {
@@ -126,16 +145,15 @@ describe("createSplatEngine.sort", () => {
 				gaussianRow({ x: 3, y: 4, z: 0 }),
 			]),
 		);
-		// 沿 z 排序时两点深度相同 → 不重排，但仍要回结果（而不是算出 NaN 索引）
-		const same = engine.sort([0, 0, 1]);
-		expect(same).toBeDefined();
-		expect(Array.from(same ?? [])).toEqual(Array.from(loaded.depthIndex));
+		// 沿 z 排序时两点深度相同 → 顺序没变（手上那份就是对的），
+		// 也不能算出 NaN 索引
+		expect(engine.sort([0, 0, 1])).toBeUndefined();
+		expect(loaded.depthIndex).toEqual(new Uint32Array([0, 1]));
 		// 沿 x 排序时两点深度不同 → 有结果
-		expect(engine.sort([1, 0, 0])).toEqual(new Uint32Array([0, 1]));
+		expect(sorted(engine.sort([1, 0, 0]))).toEqual([0, 1]);
 	});
 
-	it("还没加载数据时排序返回空索引（调用方拿到 0 个顶点，不会画出东西）", () => {
-		const empty = createSplatEngine().sort([0, 0, 1]);
-		expect(empty.length).toBe(0);
+	it("还没加载数据时排序返回 undefined（没有可回的顺序）", () => {
+		expect(createSplatEngine().sort([0, 0, 1])).toBeUndefined();
 	});
 });

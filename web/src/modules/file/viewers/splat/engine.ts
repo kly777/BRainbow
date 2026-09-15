@@ -2,7 +2,8 @@
 //
 // 单独抽出来是为了可测：worker.ts 只是它的通信适配层。
 // 排序与纹理打包算法取自 antimatter15/splat（MIT License, Copyright (c) 2023 Kevin Kwok）
-// https://github.com/antimatter15/splat —— 数学与阈值未改动，数据结构换成显式类型。
+// https://github.com/antimatter15/splat —— 数学未改动（"视角没变就不重排"的阈值也在
+// 同一量级，见 SORT_SKIP_EPS），数据结构换成显式类型。
 
 import {
 	buildSplatData,
@@ -12,6 +13,18 @@ import {
 
 /** 纹理宽度：1024×2，与参考实现一致（着色器寻址常量 0x3ff 依赖它） */
 export const TEX_WIDTH = 1024 * 2;
+
+/**
+ * "视角几乎没变"的判定阈值：前后两次前向轴的点积（= cos 夹角）与 1 之差。
+ *
+ * 取 0.01 与参考实现同一个字面量，对应约 **8.1°**（`1 - cos 8.1° ≈ 0.01`）。
+ * 参考实现比的是投影后的 z 行（`viewProj` 的 2/6/10 分量），那里多带一个
+ * `(zfar/(zfar-znear))² ≈ 1.002` 的系数，所以它的实际容忍度约 8.9° —— 同一量级。
+ *
+ * 曾用 0.001（≈ 2.6°），比参考实现紧 3.5 倍：快速拖拽时几乎每一步都真的重排，
+ * 几十万顶点的场景就卡在排序上（当时注释还写着"阈值同参考实现"，是错的）。
+ */
+export const SORT_SKIP_EPS = 0.01;
 
 export interface LoadedSplat {
 	vertexCount: number;
@@ -32,11 +45,16 @@ export interface SplatEngine {
 	/** 解析一份 PLY 字节；不可解析时抛 PlyError（调用方负责转成用户可读的提示） */
 	load(bytes: Uint8Array): LoadedSplat;
 	/**
-	 * 按深度轴重排，**总是返回一个可用的索引**（视角没怎么变时复用上一次的结果，
-	 * 不重算）。必须"有请求就有回答"：调用方靠这次回答清掉"排序在飞"的标记，
-	 * 一旦漏答，之后所有相机移动都不会再触发排序（表现为转到背面还是正面的画面）。
+	 * 按深度轴重排。视角没怎么变（夹角 < SORT_SKIP_EPS）时返回 `undefined`，表示
+	 * **复用上一次的顺序**：调用方据此跳过索引的上传与重绘（那份索引在几十万顶点的
+	 * 场景里是几 MB 的拷贝 + 传输 + 上传，而它是拖拽时最高频的一条路径）。
+	 *
+	 * 注意 `undefined` **不等于可以不答复**：每个请求都必须有答复，只是答复里不再
+	 * 带索引（见 worker.ts 的 sort-skipped）。调用方靠答复清掉"排序在飞"的标记，
+	 * 一旦漏答，之后所有相机移动都不会再触发排序（表现为转到背面还是正面的画面）——
+	 * 这条踩过坑，见 commit 8be7604a。
 	 */
-	sort(axis: readonly [number, number, number]): Uint32Array;
+	sort(axis: readonly [number, number, number]): Uint32Array | undefined;
 	readonly vertexCount: number;
 }
 
@@ -71,13 +89,15 @@ export function createSplatEngine(): SplatEngine {
 	 * 16 位单遍计数排序（按深度分桶）。顶点数上到几十万时比比较排序快一个量级，
 	 * 也是参考实现唯一用的排序方式。
 	 */
-	function sort(axis: readonly [number, number, number]): Uint32Array {
-		if (!splatBytes || vertexCount === 0) return depthIndex;
+	function sort(
+		axis: readonly [number, number, number],
+	): Uint32Array | undefined {
+		if (!splatBytes || vertexCount === 0) return undefined;
 		const [ax, ay, az] = axis;
 		if (lastAxis) {
-			// 前向轴几乎没变就不重算（阈值同参考实现），但仍把当前顺序回给调用方
+			// 前向轴几乎没变就不重算，也不把索引回给调用方（它手上那份仍然有效）
 			const dot = lastAxis[0] * ax + lastAxis[1] * ay + lastAxis[2] * az;
-			if (Math.abs(dot - 1) < 0.001) return depthIndex;
+			if (Math.abs(dot - 1) < SORT_SKIP_EPS) return undefined;
 		}
 
 		// 紧凑数组每顶点 8 个 f32：位置 3 + 缩放 3 + 颜色/旋转各 1
@@ -99,10 +119,11 @@ export function createSplatEngine(): SplatEngine {
 			if (depth < minDepth) minDepth = depth;
 		}
 
-		// 全部顶点在同一深度平面（或只有一个顶点）：排序无意义，保持原序
+		// 全部顶点在同一深度平面（或只有一个顶点）：排序无意义，保持原序。
+		// 记下 lastAxis 免得每帧都重算一遍，但同样不必回索引（顺序没变）
 		if (!(maxDepth > minDepth)) {
 			lastAxis = [ax, ay, az];
-			return depthIndex;
+			return undefined;
 		}
 
 		const BUCKETS = 256 * 256;

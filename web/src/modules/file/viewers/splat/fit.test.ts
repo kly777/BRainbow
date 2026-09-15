@@ -203,7 +203,7 @@ describe("fitDistance（按包围盒角点，mass = 1）", () => {
 
 describe("fitDistance（按顶点样本，允许尾部出画）", () => {
 	it("少量远端噪点被允许出画，取景因此近得多——这就是「填满」的关键", () => {
-		// 1728 个点铺在 ±2 内 + 4 个点在 60 开外：噪点占比 0.23% < 1 - FIT_MASS
+		// 1728 个点铺在 ±2 内 + 4 个点在 60 开外：噪点占比 0.23%，远在允许的尾部之内
 		const points = coreWithFloaters(4);
 		const viewport = { width: 1280, height: 558 };
 		const boxFit = initialFraming(bounds([60, 60, 60]), viewport, 0);
@@ -213,9 +213,10 @@ describe("fitDistance（按顶点样本，允许尾部出画）", () => {
 		expect(sampleFit.distance).toBeLessThan(boxFit.distance * 0.5);
 
 		const values = ndcValues(points, viewport, sampleFit.view);
-		// 出画的比例不超过允许的尾部（这里只有那几个噪点）
+		// 出画的受限在"允许的尾部 + 实体自己探出画框的边缘"之内
+		// （原实现对自己 demo 也有 8.5% 出画），绝不是"一半点都在画外"
 		expect(values.filter((v) => v > 1).length / values.length).toBeLessThan(
-			0.01,
+			1 - FIT_MASS + 0.05,
 		);
 		// 受限的那一维确实被填满（而不是"中间一条"）
 		expect(quantileOf(values, FIT_MASS)).toBeCloseTo(FIT_FILL, 2);
@@ -316,6 +317,37 @@ describe("初始取景的方向与环绕定点", () => {
 		// 定点越远，同样拖拽幅度下相机平移得越多、越不像"原地转"
 		expect(framing.pivot).toBeLessThan(framing.distance);
 		expect(framing.pivot / framing.distance).toBeCloseTo(0.61, 2);
+	});
+});
+
+describe("取景的构图基准（照原实现自己 demo 的实测定的）", () => {
+	it("分位取 0.9、fill 取 0.85", () => {
+		// train.splat（参考实现默认机位瞄准的那个场景）用它的 defaultViewMatrix + 内参
+		// （fx=fy=1160）投出来：点的 max|ndc| 的 90 分位 = 0.83、出画 8.5% —— 这就是
+		// "作者眼里的好构图"，取景的这两个数照它定。
+		// 曾经取 0.99（"允许 1% 出画"）：那个分位被离群高斯拽着走，实体部分只占画面
+		// 的 30~57%，看着又小又远（实测四份数据见 fit.ts 文件头注释）。
+		expect(FIT_MASS).toBe(0.9);
+		expect(FIT_FILL).toBe(0.85);
+	});
+
+	it("长尾场景：实体部分要真的占满画面，不能让外壳把相机拽远", () => {
+		// 实体 512 点铺在 ±2 内，外面 60 点（约 10%）散在 ±20：外壳占比正好卡在
+		// FIT_MASS 的容忍范围内。分位取 0.99 时，相机为了把外壳也装进去而退远约 10 倍，
+		// 实体缩成画面中间的一小块 —— 这正是"又小又远"的成因
+		const core = gridPoints([2, 2, 2], 8);
+		const shell = gridPoints([20, 20, 20], 4).slice(0, 60 * 3);
+		const points = new Float32Array(core.length + shell.length);
+		points.set(core);
+		points.set(shell, core.length);
+
+		const viewport = { width: 1280, height: 558 };
+		const framing = initialFraming(bounds([20, 20, 20]), viewport, 0, points);
+		const coreValues = ndcValues(core, viewport, framing.view);
+		// 实体的 90 分位落在画框附近（0.99 分位下这里只有 0.1 上下）
+		expect(quantileOf(coreValues, 0.9)).toBeGreaterThan(FIT_FILL * 0.7);
+		// 外壳本来就允许出画，不必为了它退远
+		expect(framing.distance).toBeLessThan(15);
 	});
 });
 

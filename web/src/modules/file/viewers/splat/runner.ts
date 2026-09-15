@@ -26,8 +26,14 @@ export interface SplatLoadResult {
 
 export interface SplatRunHandlers {
 	onLoaded(result: SplatLoadResult): void;
-	/** 深度排序结果；undefined 表示这次不需要重排（视角没变） */
-	onSorted(depthIndex: Uint32Array): void;
+	/**
+	 * 排序的答复。**每个排序请求都必须走到这里一次** —— 调用方靠它清掉"排序在飞"
+	 * 的标记，漏答会让之后所有相机移动都不再触发排序（踩过坑，见 engine.ts）。
+	 * `depthIndex` 为 `undefined` 表示顺序**没变**（视角几乎没动）：只要清标记，
+	 * 不要重新上传索引 —— 那份索引在几十万顶点的场景里是几 MB，来回搬正是拖拽时
+	 * 最大的开销（参考实现在这种情况下干脆什么都不回）。
+	 */
+	onSorted(depthIndex: Uint32Array | undefined): void;
 	/** 真正的内容错误（PLY 不可解析），不再是环境问题 */
 	onFailed(message: string): void;
 	/** 从 worker 退回主线程时通知一声（UI 提示"可能会卡"） */
@@ -89,10 +95,8 @@ export function createSplatRunner(
 				texHeight: loaded.texHeight,
 				depthIndex: loaded.depthIndex,
 			});
-			if (axis) {
-				const order = inline.sort(axis);
-				if (order) handlers.onSorted(order);
-			}
+			// 有请求就必须答复（哪怕是 undefined = 顺序没变）
+			if (axis) handlers.onSorted(inline.sort(axis));
 		} catch (err) {
 			handlers.onFailed(err instanceof Error ? err.message : String(err));
 		}
@@ -128,6 +132,11 @@ export function createSplatRunner(
 			}
 			if (msg.type === "sorted") {
 				handlers.onSorted(new Uint32Array(msg.depthIndex));
+				return;
+			}
+			if (msg.type === "sort-skipped") {
+				// 顺序没变：清掉"排序在飞"的标记，但不重新上传索引、也不重绘
+				handlers.onSorted(undefined);
 				return;
 			}
 			handlers.onFailed(msg.message);
@@ -175,8 +184,8 @@ export function createSplatRunner(
 		sort(axis) {
 			lastAxis = axis;
 			if (mode === "inline") {
-				const order = inline.sort(axis);
-				if (order) handlers.onSorted(order);
+				// 同上：答复必须有，哪怕是"顺序没变"
+				handlers.onSorted(inline.sort(axis));
 				return;
 			}
 			worker?.postMessage({

@@ -21,7 +21,7 @@ function handlers() {
 	const events: string[] = [];
 	const calls = {
 		loaded: [] as Array<{ vertexCount: number }>,
-		sorted: [] as Uint32Array[],
+		sorted: [] as Array<Uint32Array | undefined>,
 		failed: [] as string[],
 		degraded: [] as string[],
 	};
@@ -105,6 +105,23 @@ describe("createSplatRunner：worker 可用", () => {
 			data: { type: "sorted", depthIndex: new Uint32Array([0]).buffer },
 		} as MessageEvent<unknown>);
 		expect(calls.sorted.length).toBe(1);
+	});
+
+	it("worker 回 sort-skipped 时照样走 onSorted（顺序没变，但答复不能少）", () => {
+		vi.stubGlobal("Worker", FakeWorker);
+		const { h, calls } = handlers();
+		// 建 runner 的同时会给 worker 装上 onmessage，下面直接喂它一条消息
+		createSplatRunner(h);
+
+		// 引擎在"视角几乎没动"时的正常路径：不回索引，只回一条 sort-skipped
+		// （用 at(-1)：同一个 describe 里的 worker 实例会累积，instances[0] 是别的用例的）
+		FakeWorker.instances.at(-1)?.onmessage?.({
+			data: { type: "sort-skipped" },
+		} as MessageEvent<unknown>);
+
+		// 关键：回调必须发生（主线程靠它清"排序在飞"的标记，漏了会让排序永久冻住），
+		// 但带着 undefined —— 调用方据此跳过索引上传与重绘
+		expect(calls.sorted).toEqual([undefined]);
 	});
 
 	it("worker 报错或长时间不响应都切主线程，并给出可见数据", () => {

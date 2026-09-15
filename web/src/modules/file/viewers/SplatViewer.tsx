@@ -23,7 +23,13 @@ import {
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 
-/** 初始俯仰（略微俯视，与参考实现的默认机位观感一致） */
+/**
+ * 初始俯仰：约 8.6°（略微俯视）。
+ *
+ * 参考实现的默认机位几乎是水平的（`defaultViewMatrix` 第二行的第三分量 ≈ 0.02，
+ * 约 1.1° 俯视），所以这里是**有意的差异**：略微从上往下看，压在地面/台面上的
+ * 重建结果更好认。自动取景把俯仰算进去了（见 fit.ts），改这个角度取景仍然合身。
+ */
 const INITIAL_PITCH = 0.15;
 /** 超过这个时间还没解析完就给一句"可能较慢"的提示，免得看起来像卡死 */
 const SLOW_HINT_MS = 6000;
@@ -101,6 +107,21 @@ export const SplatViewer: ViewerComponent = (props) => {
 
 	const draw = () => renderer?.draw(currentView(), vertexCount);
 
+	/**
+	 * 排一帧：按键增量与重绘都在那一帧里做，**已经在队列里就不重复排**。
+	 *
+	 * 所有绘制都必须走这里，不能在输入事件里直接画：pointermove / wheel 的触发率是
+	 * 设备采样率（高回报率鼠标、触控板每秒可达数百次），而一帧只呈现一次 ——
+	 * 在事件里画等于同一帧画很多次，GPU 填充率白烧、主线程还要堵在驱动的提交上。
+	 * 排序回包同理（回包频率可以远高于帧率）。参考实现也正是"事件只改相机、
+	 * 绘制只在 rAF 里做一次"。
+	 */
+	const requestFrame = () => {
+		if (rafId !== undefined) return;
+		lastFrameTime = performance.now();
+		rafId = requestAnimationFrame(frame);
+	};
+
 	/** 当前视口（CSS 像素）；画布还没挂载时是 0，取景会退回兜底宽高比 */
 	const viewportOf = () => {
 		const box = stageEl();
@@ -145,7 +166,7 @@ export const SplatViewer: ViewerComponent = (props) => {
 			indexDirty = false;
 		}
 		vertexCount = loaded.vertexCount;
-		draw();
+		requestFrame();
 	};
 
 	const requestSort = () => {
@@ -161,9 +182,10 @@ export const SplatViewer: ViewerComponent = (props) => {
 		runner.sort([view[2], view[6], view[10]]);
 	};
 
+	/** 相机变了：请求重排（在飞的请求由 sortDirty 合并）+ 排一帧重绘 */
 	const cameraMoved = () => {
-		draw();
 		requestSort();
+		requestFrame();
 	};
 
 	// ── 运行器回调：所有异常路径都要落到可见提示，不能停在加载态 ──
@@ -190,11 +212,15 @@ export const SplatViewer: ViewerComponent = (props) => {
 		requestSort();
 	};
 
-	const onRunnerSorted = (order: Uint32Array) => {
+	const onRunnerSorted = (order: Uint32Array | undefined) => {
 		sortPending = false;
-		depthIndex = order;
-		indexDirty = true;
-		syncRenderer();
+		// undefined = 顺序没变（视角几乎没动）：索引没换，就不必重新上传与重绘 ——
+		// 这份索引在几十万顶点的场景里是几 MB 的拷贝 + 传输 + 上传，是拖拽时的大头
+		if (order) {
+			depthIndex = order;
+			indexDirty = true;
+			syncRenderer();
+		}
 		// 排序期间相机又动过 → 用当前视角再排一次
 		if (sortDirty) {
 			sortDirty = false;
@@ -279,13 +305,14 @@ export const SplatViewer: ViewerComponent = (props) => {
 		});
 	});
 
-	// ── 帧循环：只在按住相机键（或"跳"还没落回）时跑，空闲时不烧 GPU ──
+	// ── 帧：键盘增量 + 重绘。按住相机键（或"跳"还没落回）时逐帧续排，空闲即停 ──
 	const frame = (now: number) => {
 		rafId = undefined;
 		const scale =
 			Math.min((now - lastFrameTime) / FRAME_MS, MAX_FRAME_SCALE) || 1;
 		lastFrameTime = now;
 
+		// 按住的方向键/WASD：按实际帧时长取增量（放在帧里算，与输入事件密度无关）
 		const shiftHeld =
 			activeKeys.has("ShiftLeft") || activeKeys.has("ShiftRight");
 		const ops: CameraOp[] = [];
@@ -297,20 +324,16 @@ export const SplatViewer: ViewerComponent = (props) => {
 			jumpDelta = Math.min(1, jumpDelta + JUMP_STEP * scale);
 		else jumpDelta = Math.max(0, jumpDelta - JUMP_STEP * scale);
 
-		const moved = ops.length > 0;
-		if (moved || jumpDelta > 0) {
-			if (moved) view = applyOps(view, scaleOps(ops, scale), orbitDistance);
-			draw();
+		if (ops.length > 0) {
+			view = applyOps(view, scaleOps(ops, scale), orbitDistance);
 			requestSort();
 		}
-		if (activeKeys.size > 0 || jumpDelta > 0)
-			rafId = requestAnimationFrame(frame);
-	};
 
-	const startFrameLoop = () => {
-		if (rafId !== undefined) return;
-		lastFrameTime = performance.now();
-		rafId = requestAnimationFrame(frame);
+		// 走到这一帧就说明有东西要画（相机动过 / 排序回包 / 跳在衰减）
+		draw();
+
+		// 按住键或"跳"未落回 → 排下一帧；否则到此为止（空闲不烧 GPU）
+		if (activeKeys.size > 0 || jumpDelta > 0) requestFrame();
 	};
 
 	// ── 键盘：与参考实现同表（见 splat/controls.ts）；只在画布获得焦点时生效 ──
@@ -327,7 +350,7 @@ export const SplatViewer: ViewerComponent = (props) => {
 		e.stopPropagation();
 		userMoved = true;
 		activeKeys.add(e.code);
-		startFrameLoop();
+		requestFrame();
 	};
 
 	const onKeyUp = (e: KeyboardEvent) => {

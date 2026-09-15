@@ -43,6 +43,18 @@ export interface SplatSortedResponse {
 	depthIndex: ArrayBuffer;
 }
 
+/**
+ * 排序请求的答复但**顺序没变**：不回索引。
+ *
+ * 为什么单独一条消息而不是回一条空的 sorted：索引在几十万顶点的场景里有几 MB，
+ * 每次回包都 `slice()` 拷一份、转移、主线程再 `bufferData` 传上 GPU —— 而拖拽时
+ * 大多数请求都是"视角只动了一点点"这种情况。**但答复本身不能省**：主线程的
+ * "排序在飞"标记只在收到答复时清（漏答会让排序永久冻住，见 engine.ts 的 sort 注释）。
+ */
+export interface SplatSortSkippedResponse {
+	type: "sort-skipped";
+}
+
 export interface SplatFailedResponse {
 	type: "failed";
 	message: string;
@@ -51,6 +63,7 @@ export interface SplatFailedResponse {
 export type SplatResponse =
 	| SplatLoadedResponse
 	| SplatSortedResponse
+	| SplatSortSkippedResponse
 	| SplatFailedResponse;
 
 const scope = self as unknown as {
@@ -88,8 +101,12 @@ scope.onmessage = (e: MessageEvent<SplatRequest>) => {
 			return;
 		}
 		if (msg.type === "sort") {
-			// 引擎保证"有请求就有回答"：漏答会让主线程的"排序在飞"标记永远清不掉
+			// 答复必须有（主线程靠它清"排序在飞"的标记），但顺序没变时不回索引
 			const sorted = engine.sort(msg.depthAxis);
+			if (!sorted) {
+				scope.postMessage({ type: "sort-skipped" });
+				return;
+			}
 			// 拷一份再转移：depthIndex 本身要继续复用
 			const copy = sorted.slice();
 			const buffer = copy.buffer as ArrayBuffer;

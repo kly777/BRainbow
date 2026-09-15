@@ -18,9 +18,11 @@ const UploadPanel: Component<{
 				? "已存在"
 				: status === "error"
 					? "失败"
-					: status === "pending"
-						? "排队中"
-						: "上传中";
+					: status === "rejected"
+						? "未上传"
+						: status === "pending"
+							? "排队中"
+							: "上传中";
 
 	return (
 		<Show when={props.tasks().length > 0}>
@@ -52,7 +54,9 @@ const UploadPanel: Component<{
 											[styles.uploadBarFill]: true,
 											[styles.uploadBarDone]: t.status === "done",
 											[styles.uploadBarDup]: t.status === "duplicate",
-											[styles.uploadBarError]: t.status === "error",
+											// 预校验拦下与上传失败的观感一致（都没成），共用红色
+											[styles.uploadBarError]:
+												t.status === "error" || t.status === "rejected",
 										}}
 										style={{
 											width:

@@ -28,17 +28,90 @@ describe("viewMatrix", () => {
 		expect(z).toBeGreaterThan(0);
 	});
 
-	it("基向量符合 COLMAP 约定：右 = +x、屏幕上方 = -y、前 = +z", () => {
+	it("三行分别是 右 / 屏幕向下 / 前（第二行是 +y，不是 -y）", () => {
 		const view = viewMatrix([0, 0, -5], [0, 0, 0], UP_DOWN_WORLD);
-		// 列主序：[0..2] 为第一列 —— 三行分别是 right / up / forward
+		// 列主序：[0]、[4]、[8] 是各行第一列
 		expect(nz([view[0], view[4], view[8]])).toEqual([1, 0, 0]);
-		expect(nz([view[1], view[5], view[9]])).toEqual([0, -1, 0]);
+		// 世界 y 朝下 → 屏幕向下就是世界 +y。第二行放 -y 会让整个画面上下颠倒
+		// （俯视看着像仰视），曾经就是错的
+		expect(nz([view[1], view[5], view[9]])).toEqual([0, 1, 0]);
 		expect(nz([view[2], view[6], view[10]])).toEqual([0, 0, 1]);
+	});
+
+	it("世界「朝上」的方向落在画面上半屏（上下颠倒过的回归）", () => {
+		const viewport = { width: 1000, height: 800 };
+		const focal = focalForFov(viewport.height, 60);
+		const proj = projectionMatrix(
+			focal,
+			focal,
+			viewport.width,
+			viewport.height,
+		);
+		const view = viewMatrix([0, 0, -5], [0, 0, 0], UP_DOWN_WORLD);
+		/** 世界点 → NDC y（> 0 = 屏幕上半） */
+		const ndcY = (world: [number, number, number]) => {
+			const cam = transformPoint(view, world);
+			const clip = transformPoint(proj, [cam[0], cam[1], cam[2]]);
+			return clip[1] / clip[3];
+		};
+		// 3DGS 的数据里 y 朝下，所以"上方"是 -y
+		expect(ndcY([0, -1, 0])).toBeGreaterThan(0);
+		expect(ndcY([0, 1, 0])).toBeLessThan(0);
 	});
 
 	it("斜看时远处的点仍然可见（z 为正）", () => {
 		const view = viewMatrix([3, 4, -6], [0, 0, 0], UP_DOWN_WORLD);
 		expect(transformPoint(view, [0, 0, 0])[2]).toBeGreaterThan(0);
+	});
+});
+
+// 参考实现 antimatter15/splat 的默认机位与内参（main.js:734 的 `defaultViewMatrix`
+// 与 cameras[0] 的 fx/fy ≈ 1160，视口用它的截图尺寸 1959×1090）。它没有任何"翻转"
+// 代码，却能把 3DGS 场景渲染正立 —— 于是它的相机基就是这套数据约定的权威答案：
+// 第二行（屏幕向下）≈ 世界 +y。本文件此前第二行放的是 -y（"屏幕上方"），画面于是
+// 上下颠倒，旧测试断言 [0, -1, 0] 反倒把这个错固化了下来。
+// 这里直接拿参考实现的数字交叉验证，防止再翻回去。
+const REFERENCE_VIEW = new Float32Array([
+	0.47, 0.04, 0.88, 0, -0.11, 0.99, 0.02, 0, -0.88, -0.11, 0.47, 0, 0.07, 0.03,
+	6.55, 1,
+]);
+const REFERENCE_FOCAL = 1160;
+const REFERENCE_VIEWPORT = { width: 1959, height: 1090 };
+
+const ndcOf = (view: Float32Array, world: [number, number, number]) => {
+	// 着色器的两个矩阵都是列主序上传的，这里同样直接当列主序用
+	const proj = projectionMatrix(
+		REFERENCE_FOCAL,
+		REFERENCE_FOCAL,
+		REFERENCE_VIEWPORT.width,
+		REFERENCE_VIEWPORT.height,
+	);
+	const cam = transformPoint(view, world);
+	const clip = transformPoint(proj, [cam[0], cam[1], cam[2]]);
+	return { camZ: cam[2], y: clip[1] / clip[3] };
+};
+
+describe("与参考实现的相机基一致", () => {
+	it("参考实现：世界 +y（数据里的「下」）落在下半屏", () => {
+		const { camZ, y } = ndcOf(REFERENCE_VIEW, [0, 1, 0]);
+		expect(camZ).toBeGreaterThan(0); // 在相机前方（可见区）
+		expect(y).toBeLessThan(0); // NDC y < 0 = 屏幕下半
+		// 第二行就是"屏幕向下"轴：它指向世界 +y，这就是"数据 y 轴朝下"的原始依据
+		const rowDown = [REFERENCE_VIEW[1], REFERENCE_VIEW[5], REFERENCE_VIEW[9]];
+		expect(rowDown[1]).toBeGreaterThan(0.9);
+	});
+
+	it("本文件的 viewMatrix 给出同一个方向", () => {
+		// 等价位姿：相机在 -z 侧看向原点、世界 -y 朝上（参考实现的默认机位也近乎水平）
+		const view = viewMatrix([0, 0, -6.55], [0, 0, 0], UP_DOWN_WORLD);
+		expect(ndcOf(view, [0, 1, 0]).y).toBeLessThan(0);
+		expect(ndcOf(view, [0, -1, 0]).y).toBeGreaterThan(0);
+	});
+
+	it("俯仰不为 0 时方向不变（初始取景就是俯视机位）", () => {
+		const view = viewMatrix([0, -1.2, -6.4], [0, 0, 0], UP_DOWN_WORLD);
+		expect(ndcOf(view, [0, 1, 0]).y).toBeLessThan(0);
+		expect(ndcOf(view, [0, -1, 0]).y).toBeGreaterThan(0);
 	});
 });
 

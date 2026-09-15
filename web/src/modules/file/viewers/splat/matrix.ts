@@ -2,6 +2,7 @@
 //
 // 相机约定与 3DGS / COLMAP 一致：**+x 右、+y 下、+z 前**，可见点的相机空间 z > 0。
 // 着色器按这个约定做投影（见 shaders.ts），所以这里不能换成 OpenGL 默认的"看向 -z"。
+// 视图矩阵的三行是 右 / **屏幕向下** / 前（不是"向上"），细节见 viewMatrix 的注释。
 
 export type Vec3 = readonly [number, number, number];
 
@@ -41,29 +42,57 @@ export function length(a: Vec3): number {
 	return Math.hypot(a[0], a[1], a[2]);
 }
 
+export interface CameraBasis {
+	/** 屏幕向右 */
+	right: Vec3;
+	/** 屏幕向下 —— 注意是"下"不是"上"，原因见 viewMatrix 的注释 */
+	down: Vec3;
+	/** 视线方向（相机空间 +z，可见点在 z > 0 一侧） */
+	forward: Vec3;
+}
+
+/**
+ * 由"看向哪里"与"世界哪一侧朝上"定出相机三轴。
+ *
+ * 取景（fit.ts）与视图矩阵共用它 —— 这套约定此前在两个文件里各推了一遍，
+ * 正是"取景算得对、画面却上下颠倒"的来源。
+ */
+export function cameraBasis(forward: Vec3, up: Vec3): CameraBasis {
+	const f = normalize(forward);
+	const right = normalize(cross(f, up));
+	// up 是"画面上方"，第二行要的却是"屏幕向下"，所以取 f × right（与 up 反号）
+	return { right, down: cross(f, right), forward: f };
+}
+
 /**
  * 世界 → 相机的视图矩阵。
+ *
  * `up` 传世界坐标里的"画面上方"（3DGS 的 y 轴朝下，所以是 (0,-1,0)）。
+ * 三行的顺序是 **右 / 下 / 前**：第二行是"屏幕向下"而不是"向上"，这由投影矩阵决定 ——
+ * 见 projectionMatrix，`clip.y = -(2fy/height)·cam.y`，即相机空间 **-y** 才画在上半屏。
+ * 所以世界 -y 要落在上半屏，就得让第二行等于世界 +y。放成 -y 的话整个画面上下颠倒
+ * （镜头在上方俯视，看着却像在下方仰视）。
+ *
+ * 参考实现的相机基同样是 (right, down, forward) 的右手系（`right = down × forward`，
+ * 用它的 `defaultViewMatrix` 验过），这里的顺序与它一致。
  */
 export function viewMatrix(eye: Vec3, target: Vec3, up: Vec3): Mat4 {
-	const forward = normalize(sub(target, eye));
-	const right = normalize(cross(forward, up));
-	const u = cross(right, forward);
+	const { right, down, forward } = cameraBasis(sub(target, eye), up);
 	return new Float32Array([
 		right[0],
-		u[0],
+		down[0],
 		forward[0],
 		0,
 		right[1],
-		u[1],
+		down[1],
 		forward[1],
 		0,
 		right[2],
-		u[2],
+		down[2],
 		forward[2],
 		0,
 		-dot(right, eye),
-		-dot(u, eye),
+		-dot(down, eye),
 		-dot(forward, eye),
 		1,
 	]);

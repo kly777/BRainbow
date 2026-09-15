@@ -86,7 +86,7 @@ export const SplatViewer: ViewerComponent = (props) => {
 	let view: Mat4 = new Float32Array([
 		1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
 	]);
-	/** 环绕（IJKL / 拖拽 / 滚轮）的定点距离：取景时按包围球定，之后固定 */
+	/** 环绕（IJKL / 拖拽 / 滚轮）的定点距离：取景时按取景距离的固定比例定，之后固定 */
 	let orbitDistance = 1;
 	/** 按住的键（`KeyboardEvent.code`） */
 	const activeKeys = new Set<string>();
@@ -124,7 +124,8 @@ export const SplatViewer: ViewerComponent = (props) => {
 			loadedSample,
 		);
 		view = framing.view;
-		orbitDistance = framing.distance;
+		// 环绕定点比取景距离近一截（比例见 fit.ts 的 ORBIT_PIVOT_RATIO，对齐参考实现的手感）
+		orbitDistance = framing.pivot;
 		jumpDelta = 0;
 	};
 

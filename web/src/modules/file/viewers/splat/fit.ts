@@ -22,10 +22,14 @@
 // 参考实现（antimatter15/splat）不做自动取景：它的相机内参与初始机位是给它自己那几个
 // demo 场景写死的（`camera.fx ≈ 1160`、`defaultViewMatrix` 平移 6.55）。用户传上来的
 // 任意 .ply 没有可用的内参，只能从内容本身推距离 —— FOV、投影、混合等仍与它一致。
+//
+// 只有一处"写死"被换成了比例：环绕定点的距离（它写死 4，见 ORBIT_PIVOT_RATIO）——
+// 那个数只对它有意义的场景尺度成立，取它的**比例**才能让任意尺度的场景手感一致。
 
 import type { SplatBounds } from "../../lib/ply.ts";
 import {
 	add,
+	cameraBasis,
 	focalForFov,
 	type Mat4,
 	orbitOffset,
@@ -45,6 +49,19 @@ export const FIT_FILL = 0.92;
 /** 取样本点时的分位：允许 1% 的离群高斯出画，换内容更满 */
 export const FIT_MASS = 0.99;
 
+/**
+ * 环绕（拖拽 / 滚轮 / IJKL）的定点距离 = 初始机位距离 × 这个系数。
+ *
+ * 系数取自参考实现：它的定点写死在相机前方 4 个单位（`let d = 4`，拖拽、滚轮、
+ * IJKL 三处都是这个值），而它的默认机位在 6.55 处（`defaultViewMatrix` 的平移分量），
+ * 于是定点落在"相机 → 内容中心"这条线的 4 / 6.55 ≈ 0.61 处。
+ *
+ * 为什么不直接写死 4：那个 4 是按它自家 demo 场景的尺度调的，照搬到别处就成了
+ * "小场景转起来没边、大场景转不动"。定点随场景等比缩放，才有一样的手感 ——
+ * 定点在相机与内容中心之间（略微进入内容），而不是正好落在内容中心上。
+ */
+export const ORBIT_PIVOT_RATIO = 4 / 6.55;
+
 /** 相机到最近内容的余量：比这更近，投影会翻到相机背后 */
 const NEAR_MARGIN = 0.05;
 
@@ -59,8 +76,10 @@ export interface Viewport {
 export interface Framing {
 	/** 初始视图矩阵（世界 → 相机） */
 	view: Mat4;
-	/** 相机到目标点的距离，也就是环绕半径 */
+	/** 相机到目标点的距离 */
 	distance: number;
+	/** 环绕定点到相机的距离（拖拽/滚轮/IJKL 用），见 ORBIT_PIVOT_RATIO */
+	pivot: number;
 }
 
 /** 包围盒 8 个角（相对中心） */
@@ -135,22 +154,15 @@ export function fitDistance(
 	const ax = (2 * focal) / width / fill;
 	const ay = (2 * focal) / height / fill;
 
-	// forward = -dir（相机朝向中心），up 由 right×forward 给出；pitch 只绕 x 轴，
-	// 所以 cam.x、cam.y 与距离无关，只有沿 forward 的分量随距离平移。
+	// forward = -dir（相机朝向中心）；pitch 只绕 x 轴，所以 cam.x、cam.y **与距离无关**，
+	// 只有沿 forward 的分量随距离平移。
+	//
+	// 三轴走 cameraBasis —— 与 viewMatrix 同一套约定（此前两个文件各推了一遍，
+	// 正是"取景算得对、画面却上下颠倒"的来源）。取景只用到沿轴分量的**绝对值**，
+	// 所以 down 的符号在这里并不影响结果。
 	const dir = orbitOffset(1, 0, pitch);
 	const forward: Vec3 = [-dir[0], -dir[1], -dir[2]];
-	const right: Vec3 = [forward[2], 0, -forward[0]];
-	const rightLen = Math.hypot(right[0], right[1], right[2]) || 1;
-	const r: Vec3 = [
-		right[0] / rightLen,
-		right[1] / rightLen,
-		right[2] / rightLen,
-	];
-	const u: Vec3 = [
-		r[1] * forward[2] - r[2] * forward[1],
-		r[2] * forward[0] - r[0] * forward[2],
-		r[0] * forward[1] - r[1] * forward[0],
-	];
+	const { right: r, down } = cameraBasis(forward, WORLD_UP);
 
 	const needed = new Float64Array(count);
 	for (let i = 0; i < count; i++) {
@@ -158,7 +170,7 @@ export function fitDistance(
 		const dy = points[i * 3 + 1] - center[1];
 		const dz = points[i * 3 + 2] - center[2];
 		const camX = dx * r[0] + dy * r[1] + dz * r[2];
-		const camY = dx * u[0] + dy * u[1] + dz * u[2];
+		const camY = dx * down[0] + dy * down[1] + dz * down[2];
 		// 纵深分量（不含距离本身），以及把该点推入画面所需的总距离
 		const camZ0 = dx * forward[0] + dy * forward[1] + dz * forward[2];
 		needed[i] =
@@ -191,5 +203,9 @@ export function initialFraming(
 				1,
 			);
 	const eye = add(bounds.center, orbitOffset(distance, 0, pitch));
-	return { view: viewMatrix(eye, bounds.center, WORLD_UP), distance };
+	return {
+		view: viewMatrix(eye, bounds.center, WORLD_UP),
+		distance,
+		pivot: distance * ORBIT_PIVOT_RATIO,
+	};
 }

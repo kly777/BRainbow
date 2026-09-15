@@ -15,6 +15,7 @@ import {
 	FIT_MASS,
 	fitDistance,
 	initialFraming,
+	ORBIT_PIVOT_RATIO,
 	SPLAT_FOV_DEG,
 	WORLD_UP,
 } from "./fit.ts";
@@ -277,6 +278,44 @@ describe("initialFraming", () => {
 			height: 600,
 		});
 		expect(framing.distance).toBeGreaterThan(10);
+	});
+});
+
+describe("初始取景的方向与环绕定点", () => {
+	// 本文件其他断言量的都是 max(|ndc.x|, |ndc.y|) —— 画面上下颠倒也照样通过，
+	// 所以"哪一侧在上"必须单独钉住。曾经 viewMatrix 的第二行放的是"屏幕上方"，
+	// 取景距离完全正确、画面却整体上下颠倒（俯视看着像仰视），就是这么漏过去的。
+	const viewport = { width: 1280, height: 558 };
+
+	/** 世界点 → NDC y（> 0 = 屏幕上半） */
+	const ndcY = (view: ReturnType<typeof viewMatrix>, world: Vec3) => {
+		const focal = focalForFov(viewport.height, SPLAT_FOV_DEG);
+		const proj = projectionMatrix(
+			focal,
+			focal,
+			viewport.width,
+			viewport.height,
+		);
+		const cam = transformPoint(view, world);
+		const clip = transformPoint(proj, [cam[0], cam[1], cam[2]]);
+		return clip[1] / clip[3];
+	};
+
+	it("世界「朝上」的方向出现在画面上半屏", () => {
+		const { view } = initialFraming(bounds([10, 6, 8]), viewport, 0.15);
+		// 3DGS 的数据 y 轴朝下：中心上方（-y）的点要在上半屏，下方（+y）在下半屏
+		expect(ndcY(view, [0, -4, 0])).toBeGreaterThan(0);
+		expect(ndcY(view, [0, 4, 0])).toBeLessThan(0);
+	});
+
+	it("环绕定点按初始距离等比缩放（对齐参考实现的 4 / 6.55）", () => {
+		const framing = initialFraming(bounds([10, 6, 8]), viewport, 0.15);
+		expect(ORBIT_PIVOT_RATIO).toBeCloseTo(4 / 6.55, 6);
+		expect(framing.pivot).toBeCloseTo(framing.distance * ORBIT_PIVOT_RATIO, 6);
+		// 定点落在相机与内容中心之间（参考实现也是 4 < 6.55），不是正好在中心上 ——
+		// 定点越远，同样拖拽幅度下相机平移得越多、越不像"原地转"
+		expect(framing.pivot).toBeLessThan(framing.distance);
+		expect(framing.pivot / framing.distance).toBeCloseTo(0.61, 2);
 	});
 });
 

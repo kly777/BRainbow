@@ -163,7 +163,7 @@ pub async fn upload_handler(
             .as_deref()
             .and_then(|s| serde_json::from_str::<Vec<String>>(s).ok());
 
-        // 流式落盘：边读边写临时文件 + 增量 SHA-256，避免大文件（视频 500MB）
+        // 流式落盘：边读边写临时文件 + 增量 SHA-256，避免大文件（视频上限 4GB）
         // 一次性进内存。首块用于 MIME 校验，校验通过后才知道该类型的大小上限。
         let tmp_path = service.tmp_path();
         let mut tmp_file = match tokio::fs::File::create(&tmp_path).await {
@@ -188,7 +188,7 @@ pub async fn upload_handler(
                 return e.into_response();
             }
         };
-        let (category_str, max_size) = FileService::category_and_limit(&final_mime);
+        let (category_str, _) = FileService::category_and_limit(&final_mime);
 
         let mut hasher = Sha256::new();
         let mut head: Vec<u8> = Vec::new();
@@ -198,12 +198,10 @@ pub async fn upload_handler(
         while let Some(bytes) = next {
             if !bytes.is_empty() {
                 total += bytes.len() as u64;
-                if total > max_size {
+                // 超限立刻停：临时文件已经吃了一部分字节，先删再报错
+                if let Err(e) = FileService::ensure_within_limit(total, &final_mime) {
                     let _ = tokio::fs::remove_file(&tmp_path).await;
-                    return ServiceError::InvalidInput(format!(
-                        "文件过大: {total} 字节, 最大允许 {max_size} 字节"
-                    ))
-                    .into_response();
+                    return e.into_response();
                 }
                 hasher.update(&bytes);
                 if head.len() < HEAD_BUFFER_LIMIT {

@@ -104,54 +104,64 @@ pub fn check_upload_dir(upload_dir: &str) -> UploadDirCheck {
     check
 }
 
-/// 白名单外格式的兜底上限（3D 模型、设计稿、压缩包等）
-pub const FALLBACK_MAX_SIZE: u64 = 52_428_800;
+/// 单文件上限分档。
+///
+/// 上传与下载全程流式（handler 边读边写临时文件、内容路由走 `ReaderStream`），
+/// 内存不随文件大小增长，所以上限只受磁盘容量约束 —— 分档不是为了省资源，
+/// 而是挡住客户端侧不合理的用法：图片要整张解码、SVG 是浏览器要解析的文本。
+const IMAGE_MAX_SIZE: u64 = 200 * 1024 * 1024;
+const SVG_MAX_SIZE: u64 = 20 * 1024 * 1024;
+const AUDIO_MAX_SIZE: u64 = 1024 * 1024 * 1024;
+const DOCUMENT_MAX_SIZE: u64 = 500 * 1024 * 1024;
 
-/// 请求体上限：最大允许单文件（500MB 视频）+ boundary 与字段名开销
-pub(crate) const UPLOAD_BODY_LIMIT_BYTES: usize = 510 * 1024 * 1024;
+/// 白名单外格式的兜底上限（3D 模型、设计稿、压缩包等），也是视频档：4 GiB
+pub const FALLBACK_MAX_SIZE: u64 = 4 * 1024 * 1024 * 1024;
+
+/// 请求体上限：最大允许单文件（4 GiB）+ boundary 与字段名开销
+pub(crate) const UPLOAD_BODY_LIMIT_BYTES: usize = 4 * 1024 * 1024 * 1024 + 64 * 1024 * 1024;
 
 /// MIME 白名单：(MIME, category, max_size_bytes)
 const ALLOWED_MIMES: &[(&str, &str, u64)] = &[
-    // 图片 20MB
-    ("image/png", "image", 20_971_520),
-    ("image/jpeg", "image", 20_971_520),
-    ("image/gif", "image", 20_971_520),
-    ("image/webp", "image", 20_971_520),
-    ("image/bmp", "image", 20_971_520),
-    ("image/tiff", "image", 20_971_520),
+    // 图片 200MB
+    ("image/png", "image", IMAGE_MAX_SIZE),
+    ("image/jpeg", "image", IMAGE_MAX_SIZE),
+    ("image/gif", "image", IMAGE_MAX_SIZE),
+    ("image/webp", "image", IMAGE_MAX_SIZE),
+    ("image/bmp", "image", IMAGE_MAX_SIZE),
+    ("image/tiff", "image", IMAGE_MAX_SIZE),
     // SVG 是 XML 文本：infer 对带 `<?xml` 声明的文件报 text/xml（下方做等价处理）。
     // 归 image 类别以便当图片预览/嵌入；响应仍强制 attachment（见 should_force_download），
     // 直接访问不会渲染执行脚本，而 <img> 作为子资源加载时 SVG 内脚本本就不执行。
-    ("image/svg+xml", "image", 10_485_760),
-    // 视频 500MB
-    ("video/mp4", "video", 524_288_000),
-    ("video/webm", "video", 524_288_000),
-    ("video/ogg", "video", 524_288_000),
-    ("video/quicktime", "video", 524_288_000),
-    // 音频 100MB
-    ("audio/mpeg", "audio", 104_857_600),
-    ("audio/ogg", "audio", 104_857_600),
-    ("audio/wav", "audio", 104_857_600),
-    ("audio/webm", "audio", 104_857_600),
-    ("audio/flac", "audio", 104_857_600),
-    ("audio/aac", "audio", 104_857_600),
-    // 文档 50MB
-    ("application/pdf", "document", 52_428_800),
-    ("text/plain", "document", 52_428_800),
-    ("text/html", "document", 52_428_800),
-    ("text/csv", "document", 52_428_800),
-    ("text/markdown", "document", 52_428_800),
-    ("application/msword", "document", 52_428_800),
+    ("image/svg+xml", "image", SVG_MAX_SIZE),
+    // 视频 4GB
+    ("video/mp4", "video", FALLBACK_MAX_SIZE),
+    ("video/webm", "video", FALLBACK_MAX_SIZE),
+    ("video/ogg", "video", FALLBACK_MAX_SIZE),
+    ("video/quicktime", "video", FALLBACK_MAX_SIZE),
+    // 音频 1GB
+    ("audio/mpeg", "audio", AUDIO_MAX_SIZE),
+    ("audio/ogg", "audio", AUDIO_MAX_SIZE),
+    ("audio/wav", "audio", AUDIO_MAX_SIZE),
+    ("audio/webm", "audio", AUDIO_MAX_SIZE),
+    ("audio/flac", "audio", AUDIO_MAX_SIZE),
+    ("audio/aac", "audio", AUDIO_MAX_SIZE),
+    // 文档 500MB
+    ("application/pdf", "document", DOCUMENT_MAX_SIZE),
+    ("text/plain", "document", DOCUMENT_MAX_SIZE),
+    ("text/html", "document", DOCUMENT_MAX_SIZE),
+    ("text/csv", "document", DOCUMENT_MAX_SIZE),
+    ("text/markdown", "document", DOCUMENT_MAX_SIZE),
+    ("application/msword", "document", DOCUMENT_MAX_SIZE),
     (
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "document",
-        52_428_800,
+        DOCUMENT_MAX_SIZE,
     ),
-    ("application/vnd.ms-excel", "document", 52_428_800),
+    ("application/vnd.ms-excel", "document", DOCUMENT_MAX_SIZE),
     (
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "document",
-        52_428_800,
+        DOCUMENT_MAX_SIZE,
     ),
 ];
 
@@ -653,14 +663,8 @@ impl FileService {
         force: bool,
     ) -> Result<UploadOutcome, ServiceError> {
         let final_mime = Self::resolve_mime(data, client_mime, original_name)?;
-        let (category_str, max_size) = Self::category_and_limit(&final_mime);
-        if data.len() as u64 > max_size {
-            return Err(ServiceError::InvalidInput(format!(
-                "文件过大: {} 字节, 最大允许 {} 字节",
-                data.len(),
-                max_size
-            )));
-        }
+        let (category_str, _) = Self::category_and_limit(&final_mime);
+        Self::ensure_within_limit(data.len() as u64, &final_mime)?;
 
         let hash = content_hash(data);
         let tmp_path = self.tmp_path();
@@ -757,11 +761,23 @@ impl FileService {
     }
 
     /// 该 MIME 的类别与大小上限：
-    /// 白名单内用专项设置（图片 20MB / 视频 500MB …），
+    /// 白名单内用专项设置（图片 200MB / 视频 4GB …），
     /// 白名单外归入 `other` 兜底——文件服务要能存 3D 模型、设计稿、压缩包等
     /// 各式文件，未知格式一律拒绝会让模块失去通用性。
     pub fn category_and_limit(mime: &str) -> (&'static str, u64) {
         find_allowed(mime).unwrap_or(("other", FALLBACK_MAX_SIZE))
+    }
+
+    /// 单文件大小闸门。抽成纯函数（而非在调用点内联比较）是为了让"超限"能被
+    /// 单测直接覆盖：上限已是数百 MB 到数 GB，测试没法真造那么大的缓冲区。
+    pub fn ensure_within_limit(size: u64, mime: &str) -> Result<(), ServiceError> {
+        let (_, max_size) = Self::category_and_limit(mime);
+        if size > max_size {
+            return Err(ServiceError::InvalidInput(format!(
+                "文件过大: {size} 字节, 最大允许 {max_size} 字节"
+            )));
+        }
+        Ok(())
     }
 
     /// 由已有记录组装"命中去重"结果（含标签与元信息）
@@ -1148,7 +1164,7 @@ mod tests {
         assert!(result.is_some());
         let (category, max_size) = result.unwrap();
         assert_eq!(category, "image");
-        assert_eq!(max_size, 20_971_520);
+        assert_eq!(max_size, IMAGE_MAX_SIZE);
     }
 
     #[test]
@@ -1157,7 +1173,7 @@ mod tests {
         assert!(result.is_some());
         let (category, max_size) = result.unwrap();
         assert_eq!(category, "document");
-        assert_eq!(max_size, 52_428_800);
+        assert_eq!(max_size, DOCUMENT_MAX_SIZE);
     }
 
     #[test]
@@ -1482,17 +1498,37 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn upload_rejects_oversize_image() {
+    async fn upload_rejects_oversize_file() {
         let ctx = setup_service().await;
-        // 真实 PNG 头 + 21MB 填充 → 超过 image 20MB 上限
-        let mut big = PNG_1X1.to_vec();
-        big.extend_from_slice(&vec![0u8; 21 * 1024 * 1024]);
+        // 端到端验证闸门挂在 upload 链路上：挑最小的一档（SVG 20MB）造越界缓冲区，
+        // 代价与改造前相当。各档的精确边界由 ensure_within_limit 的纯函数单测覆盖，
+        // 不必在这条链路里真造 4GB。
+        let mut big = b"<svg xmlns=\"http://www.w3.org/2000/svg\">".to_vec();
+        big.resize(SVG_MAX_SIZE as usize + 1, b' ');
         let err = ctx
             .svc
-            .upload(&big, "big.png", "image/png", Some(7), None, false)
+            .upload(&big, "big.svg", "image/svg+xml", Some(7), None, false)
             .await
             .unwrap_err();
         assert!(err.to_string().contains("文件过大"));
+    }
+
+    #[test]
+    fn ensure_within_limit_is_inclusive_at_the_boundary() {
+        // 恰好等于上限放行，多 1 字节拒绝
+        assert!(FileService::ensure_within_limit(IMAGE_MAX_SIZE, "image/png").is_ok());
+        assert!(FileService::ensure_within_limit(IMAGE_MAX_SIZE + 1, "image/png").is_err());
+        // 白名单外（3D 模型 / 压缩包）走 other 兜底档
+        let ply = "application/x-ply";
+        assert!(FileService::ensure_within_limit(FALLBACK_MAX_SIZE, ply).is_ok());
+        assert!(FileService::ensure_within_limit(FALLBACK_MAX_SIZE + 1, ply).is_err());
+        // 报错带上两个数字，便于前端提示与日志定位
+        let msg = FileService::ensure_within_limit(SVG_MAX_SIZE + 1, "image/svg+xml")
+            .unwrap_err()
+            .to_string();
+        assert!(msg.contains("文件过大"));
+        assert!(msg.contains(&(SVG_MAX_SIZE + 1).to_string()));
+        assert!(msg.contains(&SVG_MAX_SIZE.to_string()));
     }
 
     #[tokio::test]
@@ -1683,7 +1719,7 @@ mod tests {
         // 归 image 类别（可当图片预览/嵌入），但响应强制 attachment（防脚本执行）
         assert_eq!(
             FileService::category_and_limit("image/svg+xml"),
-            ("image", 10_485_760)
+            ("image", SVG_MAX_SIZE)
         );
         assert!(should_force_download("image/svg+xml"));
         assert!(
@@ -1727,15 +1763,15 @@ mod tests {
         // 白名单内仍用专项设置
         assert_eq!(
             FileService::category_and_limit("image/png"),
-            ("image", 20_971_520)
+            ("image", IMAGE_MAX_SIZE)
         );
         assert_eq!(
             FileService::category_and_limit("video/mp4"),
-            ("video", 524_288_000)
+            ("video", FALLBACK_MAX_SIZE)
         );
         assert_eq!(
             FileService::category_and_limit("text/plain"),
-            ("document", 52_428_800)
+            ("document", DOCUMENT_MAX_SIZE)
         );
     }
 

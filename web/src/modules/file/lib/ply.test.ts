@@ -8,6 +8,8 @@ import { describe, expect, it } from "vitest";
 import {
 	buildSplatData,
 	buildSplatTexture,
+	FIT_SAMPLE_POINTS,
+	fitSample,
 	isPlyName,
 	PlyError,
 	parsePlyHeader,
@@ -160,24 +162,25 @@ describe("buildSplatData：3DGS", () => {
 		expect(readF32(data.bytes, SPLAT_ROW_BYTES * 2)).toBeCloseTo(1, 5);
 	});
 
-	it("算出的包围盒用于自动取景", () => {
-		// 三个点沿对角线对称分布：中位数明确（两点时"中位数"只能取其中之一）
+	it("算出的鲁棒包围盒用于自动取景", () => {
+		// 三点沿对角线对称分布，1%/99% 分位正好取到两端
 		const bytes = buildPly(GAUSSIAN_PROPS, [
 			gaussianRow({ x: -1, y: -1, z: -1 }),
 			gaussianRow({ x: 0, y: 0, z: 0 }),
 			gaussianRow({ x: 1, y: 1, z: 1 }),
 		]);
 		const { bounds } = buildSplatData(bytes);
-		// 中位数由直方图给出，允许一个桶宽（取值范围 / 1024）的误差
+		// 分位由直方图给出，允许一个桶宽（取值范围 / 1024）的误差
 		expect(bounds.center[0]).toBeCloseTo(0, 2);
 		expect(bounds.center[1]).toBeCloseTo(0, 2);
 		expect(bounds.center[2]).toBeCloseTo(0, 2);
-		// 两点都在对角线两端 → 取景半径（P90）与包围盒半径一致
+		expect(bounds.half[0]).toBeCloseTo(1, 2);
+		expect(bounds.half[1]).toBeCloseTo(1, 2);
+		expect(bounds.half[2]).toBeCloseTo(1, 2);
 		expect(bounds.bboxRadius).toBeCloseTo(Math.sqrt(12) / 2, 5);
-		expect(bounds.radius).toBeCloseTo(bounds.bboxRadius, 1);
 	});
 
-	it("取景半径用距离的 P90：少数离群高斯不把相机推远", () => {
+	it("取景范围用各轴 1%/99% 分位：少数离群高斯不把相机推远", () => {
 		// 100 个点挤在半径 1 内 + 1 个离群点跑到 1000 外
 		const rows = Array.from({ length: 100 }, (_, i) =>
 			gaussianRow({
@@ -189,11 +192,12 @@ describe("buildSplatData：3DGS", () => {
 		rows.push(gaussianRow({ x: 1000, y: 0, z: 0 }));
 		const { bounds } = buildSplatData(buildPly(GAUSSIAN_PROPS, rows));
 
-		// 包围盒被离群点撑到 500 左右
+		// 完整包围盒被离群点撑到 500 左右
 		expect(bounds.bboxRadius).toBeGreaterThan(400);
-		// 取景半径仍在内容尺度上（约 0.5），而不是被离群点带到 500 —— 它才是相机距离的输入
-		expect(bounds.radius).toBeLessThan(2);
-		expect(bounds.radius).toBeGreaterThan(0.1);
+		// 取景半宽仍在内容尺度上（约 0.5），没被离群点带到 500 —— 它才是自动取景的输入。
+		// 分位是直方图近似，而此时直方图横跨 ±1000（桶宽约 2），所以放宽到 3
+		expect(bounds.half[0]).toBeLessThan(3);
+		expect(bounds.half[0]).toBeGreaterThan(0.1);
 	});
 
 	it("支持大端序文件", () => {
@@ -305,5 +309,40 @@ describe("buildSplatTexture", () => {
 		const data = buildSplatData(buildPly(GAUSSIAN_PROPS, rows));
 		// 10 个 texel ÷ 宽 4 = 3 行（向上取整）
 		expect(buildSplatTexture(data, 4).texHeight).toBe(3);
+	});
+});
+
+describe("fitSample", () => {
+	it("点数不多时逐点保留（stride = 1）", () => {
+		const positions = new Float32Array([1, 2, 3, 4, 5, 6]);
+		expect(Array.from(fitSample(positions, 2))).toEqual([1, 2, 3, 4, 5, 6]);
+	});
+
+	it("点数多时等间隔抽样，上限 FIT_SAMPLE_POINTS，且保留第一个点", () => {
+		const count = FIT_SAMPLE_POINTS * 3;
+		const positions = new Float32Array(count * 3);
+		for (let i = 0; i < count; i++) positions[i * 3] = i;
+		const sample = fitSample(positions, count);
+		const sampled = sample.length / 3;
+		expect(sampled).toBeLessThanOrEqual(FIT_SAMPLE_POINTS + 1);
+		expect(sampled).toBeGreaterThan(FIT_SAMPLE_POINTS / 2);
+		// 抽样保持原顺序（等间隔），首点必在
+		expect(sample[0]).toBe(0);
+		expect(sample[3]).toBeGreaterThan(0);
+		// 每 3 个一组，抽到的是同一个步长的点
+		const stride = sample[3] - sample[0];
+		expect(sample[6] - sample[3]).toBeCloseTo(stride, 6);
+	});
+
+	it("空点云给空样本，不炸", () => {
+		expect(fitSample(new Float32Array(0), 0).length).toBe(0);
+	});
+
+	it("buildSplatData 会带上样本（自动取景要用）", () => {
+		const rows = Array.from({ length: 4 }, (_, i) => gaussianRow({ x: i }));
+		const data = buildSplatData(buildPly(GAUSSIAN_PROPS, rows));
+		expect(data.sample.length).toBe(4 * 3);
+		expect(data.sample[0]).toBeCloseTo(0, 5);
+		expect(data.sample[3]).toBeCloseTo(1, 5);
 	});
 });

@@ -16,6 +16,8 @@ export const TEX_WIDTH = 1024 * 2;
 export interface LoadedSplat {
 	vertexCount: number;
 	bounds: SplatBounds;
+	/** 顶点位置的等间隔抽样：自动取景按点的分布定距离（见 lib/ply.ts 的 fitSample） */
+	sample: Float32Array;
 	/** 普通点云（无高斯参数） */
 	pointCloud: boolean;
 	/** 顶点纹理数据（RGBA32UI，每顶点两个 texel） */
@@ -56,6 +58,7 @@ export function createSplatEngine(): SplatEngine {
 		return {
 			vertexCount,
 			bounds: data.bounds,
+			sample: data.sample,
 			pointCloud: data.pointCloud,
 			texdata,
 			texWidth: TEX_WIDTH,

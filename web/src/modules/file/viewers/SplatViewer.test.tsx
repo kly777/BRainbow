@@ -81,8 +81,9 @@ class FakeWorker {
 					data: {
 						type: "loaded",
 						vertexCount: 3,
-						bounds: { center: [0, 0, 0], radius: 2 },
+						bounds: { center: [0, 0, 0], half: [2, 2, 2], bboxRadius: 3 },
 						pointCloud: false,
+						sample: new Float32Array([-2, -2, -2, 2, 2, 2]).buffer,
 						texdata: new ArrayBuffer(16 * 4),
 						texWidth: 8,
 						texHeight: 1,

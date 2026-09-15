@@ -166,16 +166,17 @@ export function parsePlyHeader(bytes: Uint8Array): PlyHeader {
 }
 
 export interface SplatBounds {
+	/** 鲁棒包围盒中心（各轴 1%/99% 分位的中点）：环绕与取景都以它为目标 */
 	center: [number, number, number];
 	/**
-	 * **取景半径**：各顶点到中心距离的 90 分位。
+	 * 各轴鲁棒半宽（≥0），自动取景把它装进画面（见 splat/fit.ts）。
 	 *
-	 * 不用包围盒对角线：3DGS 场景常有少数离群高斯（浮点噪点、远处的天空点），
-	 * 它们能把包围盒撑大一倍以上，于是自动取景把相机推得很远、内容只占屏幕中间一小块
-	 * （实测某场景：对角线/2 = 35.8，而 P90 只有 20.5）。
+	 * 为什么是"盒"而不是"半径"：曾经用"到中心的距离 P90"当取景半径，那个量与
+	 * 内容在屏幕上的伸展无关 —— 场景像"壳"时（径向距离小、屏幕伸展大）会算得太近
+	 * 而溢出画面，场景"扁而长"时会算得太远而只占中间一条。各轴分位如实描述盒子。
 	 */
-	radius: number;
-	/** 包围盒对角线的一半（含离群点），仅供诊断与测试对照 */
+	half: [number, number, number];
+	/** 完整包围盒对角线的一半（含离群点），仅供诊断与测试对照 */
 	bboxRadius: number;
 }
 
@@ -224,8 +225,35 @@ export interface SplatData {
 	bytes: Uint8Array;
 	vertexCount: number;
 	bounds: SplatBounds;
+	/**
+	 * 顶点位置的等间隔抽样（扁平 xyz），供自动取景按点的分布定距离。
+	 *
+	 * 为什么不只用包围盒：盒的角点常常是"空角"（那个坐标组合上没有点），对长尾场景
+	 * 会过于保守 —— 实测某场景按盒取景时点在屏幕上的 95 分位只有半幅的 0.41。
+	 */
+	sample: Float32Array;
 	/** 没有高斯参数（scale/rot）的普通点云：按小圆点渲染 */
 	pointCloud: boolean;
+}
+
+/** 取景采样的点数上限：取景只关心"点云散布成什么样"，不需要全部顶点 */
+export const FIT_SAMPLE_POINTS = 8192;
+
+/** 位置数组 → 取景采样（等间隔抽）。等间隔抽样对点的分布是无偏的 */
+export function fitSample(
+	positions: Float32Array,
+	vertexCount: number,
+): Float32Array {
+	if (vertexCount <= 0) return new Float32Array(0);
+	const stride = Math.max(1, Math.ceil(vertexCount / FIT_SAMPLE_POINTS));
+	const count = Math.ceil(vertexCount / stride);
+	const out = new Float32Array(count * 3);
+	for (let i = 0, j = 0; i < vertexCount; i += stride, j++) {
+		out[j * 3] = positions[i * 3];
+		out[j * 3 + 1] = positions[i * 3 + 1];
+		out[j * 3 + 2] = positions[i * 3 + 2];
+	}
+	return out;
 }
 
 /** 缺了这个就没法确定顶点位置 */
@@ -375,53 +403,47 @@ export function buildSplatData(
 		}
 	}
 
-	// 取景中心：三个轴各自的**中位数**。
-	// 不能用包围盒中心 —— 一个跑到远处的离群高斯就能把它拽偏，之后所有顶点都显得很远
-	// （实测：100 个点挤在半径 1 内 + 1 个点在 1000 外，用包围盒中心算出的取景半径是 500）。
+	// 取景范围：三个轴各自的 1% / 99% 分位，取中点当中心、半宽当尺寸。
+	//
+	// 为什么不用"到中心的距离分位数"（曾经的 P90 半径）：那个量与"内容在屏幕上占多大"
+	// 无关，实测两个真实场景一个溢出到 132%×241%（被裁切），一个在 2.3:1 的预览区里
+	// 只占 42.6% 的高度（上下大片空白）。原因是径向距离分不出轴向伸展：场景像"壳"
+	// （点到中心径向距离小、屏幕伸展大）或"扁而长"（y 只有 ±13 而 x/z 是 ±29/±44）时
+	// 都会偏得很离谱。各轴分位则如实描述了一个盒子，自动取景要的是它。
+	//
+	// 分位而非 min/max：1% 的尾巴（浮点噪点、天空点）不该把取景推远 ——
+	// 完整包围盒另存 bboxRadius 供诊断对照。
+	const quantile = (axis: 0 | 1 | 2, p: number, lo: number, hi: number) =>
+		histogramQuantile(vertexCount, lo, hi, p, (i) => positions[i * 3 + axis]);
+	const low: [number, number, number] = [
+		quantile(0, 0.01, minX, maxX),
+		quantile(1, 0.01, minY, maxY),
+		quantile(2, 0.01, minZ, maxZ),
+	];
+	const high: [number, number, number] = [
+		quantile(0, 0.99, minX, maxX),
+		quantile(1, 0.99, minY, maxY),
+		quantile(2, 0.99, minZ, maxZ),
+	];
 	const center: [number, number, number] = [
-		histogramQuantile(vertexCount, minX, maxX, 0.5, (i) => positions[i * 3]),
-		histogramQuantile(
-			vertexCount,
-			minY,
-			maxY,
-			0.5,
-			(i) => positions[i * 3 + 1],
-		),
-		histogramQuantile(
-			vertexCount,
-			minZ,
-			maxZ,
-			0.5,
-			(i) => positions[i * 3 + 2],
-		),
+		(low[0] + high[0]) / 2,
+		(low[1] + high[1]) / 2,
+		(low[2] + high[2]) / 2,
+	];
+	const half: [number, number, number] = [
+		(high[0] - low[0]) / 2,
+		(high[1] - low[1]) / 2,
+		(high[2] - low[2]) / 2,
 	];
 
 	const diag = Math.hypot(maxX - minX, maxY - minY, maxZ - minZ);
 	const bboxRadius = Number.isFinite(diag) && diag > 0 ? diag / 2 : 0;
 
-	// 取景半径：距中心距离的 P90（离群高斯不参与，详见 SplatBounds 的注释）
-	const distanceAt = (i: number) =>
-		Math.hypot(
-			positions[i * 3] - center[0],
-			positions[i * 3 + 1] - center[1],
-			positions[i * 3 + 2] - center[2],
-		);
-	let maxDistance = 0;
-	for (let i = 0; i < vertexCount; i++) {
-		const d = distanceAt(i);
-		if (d > maxDistance) maxDistance = d;
-	}
-	const p90 = histogramQuantile(vertexCount, 0, maxDistance, 0.9, distanceAt);
-
 	return {
 		bytes: out,
 		vertexCount,
-		bounds: {
-			center,
-			// 全顶点重合等退化情形给一个正的兜底值，免得后续除法出 0/Infinity
-			radius: p90 > 0 ? p90 : bboxRadius > 0 ? bboxRadius : 1,
-			bboxRadius,
-		},
+		bounds: { center, half, bboxRadius },
+		sample: fitSample(positions, vertexCount),
 		pointCloud: !fields3,
 	};
 }

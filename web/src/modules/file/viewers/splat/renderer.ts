@@ -4,11 +4,9 @@
 // 差异：不跑常驻 rAF 循环，改为"按需重绘"（相机变化/排序结果到达/尺寸变化才画），
 // 免得一个预览页在后台持续烧 GPU。渲染状态、混合函数、实例化绘制与参考一致。
 
+import { SPLAT_FOV_DEG } from "./fit.ts";
 import { focalForFov, type Mat4, projectionMatrix } from "./matrix.ts";
 import { SPLAT_FRAGMENT_SHADER, SPLAT_VERTEX_SHADER } from "./shaders.ts";
-
-/** 竖直视场角 */
-const FOV_DEG = 55;
 
 export interface SplatRenderer {
 	/** 视口尺寸（CSS 像素）；内部会乘 devicePixelRatio 到设备像素 */
@@ -125,7 +123,7 @@ export function createSplatRenderer(canvas: HTMLCanvasElement): SplatRenderer {
 			canvas.height = Math.round(height * dpr);
 			gl.viewport(0, 0, canvas.width, canvas.height);
 			// focal 与 viewport 用 CSS 像素：着色器按它们把椭圆尺寸换算成 NDC
-			const focal = focalForFov(height, FOV_DEG);
+			const focal = focalForFov(height, SPLAT_FOV_DEG);
 			gl.uniform2fv(uFocal, new Float32Array([focal, focal]));
 			gl.uniform2fv(uViewport, new Float32Array([width, height]));
 			gl.uniformMatrix4fv(

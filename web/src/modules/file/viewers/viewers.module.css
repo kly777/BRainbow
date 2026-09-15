@@ -237,6 +237,18 @@
 .splat-pane {
 	flex: 1;
 
+	/* 3DGS 视口底色与它上面的文字色：**与主题无关**，固定中性暗底 + 浅色文字。
+	   原因是高斯的合成方式：片元以预乘 alpha 输出、画布本身透明，累积不透明度不满
+	   的地方会被底下的页面底色补上 —— 预览区是 --t-color-bg（paper 主题近乎白色），
+	   于是画面整体发灰发飘，"显示效果很差"。参考实现（antimatter15/splat）整页就是
+	   background: black，观感正是靠这个。因此这里把它当"视口"而不是"界面"：
+	   底色与文字都独立于主题，暗底上也读得清。 */
+	--splat-viewport-bg: oklch(15% 0.008 265deg);
+	--splat-ink: oklch(95% 0.004 265deg);
+	--splat-ink-muted: oklch(74% 0.008 265deg);
+
+	background: var(--splat-viewport-bg);
+
 	/* 必须显式拉伸：外层 .preview-stage 是 align-items: center（给图片/媒体居中用），
 	   不写这句的话高度按内容算，里面画布会退化成 canvas 默认的 150px 高 */
 	align-self: stretch;
@@ -298,14 +310,14 @@
 	margin: 0;
 	font-size: var(--text-sm);
 	font-weight: 500;
-	color: var(--t-color-ink);
+	color: var(--splat-ink);
 }
 
 .splat-detail {
 	margin: 0;
 	max-width: 32rem;
 	font-size: var(--text-xs);
-	color: var(--t-color-ink-muted);
+	color: var(--splat-ink-muted);
 	line-height: 1.6;
 	overflow-wrap: anywhere;
 }
@@ -319,8 +331,8 @@
 	margin: 0;
 	padding: var(--space-2xs) var(--space-sm);
 	border-radius: var(--radius-sm);
-	background: color-mix(in srgb, var(--t-color-surface) 80%, transparent);
-	color: var(--t-color-ink-muted);
+	background: color-mix(in srgb, var(--splat-viewport-bg) 72%, transparent);
+	color: var(--splat-ink-muted);
 	font-size: var(--text-xs);
 	text-align: center;
 	pointer-events: none;

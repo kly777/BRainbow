@@ -87,8 +87,9 @@ describe("createSplatRunner：worker 可用", () => {
 			data: {
 				type: "loaded",
 				vertexCount: 1,
-				bounds: { center: [0, 0, 0], radius: 1 },
+				bounds: { center: [0, 0, 0], half: [1, 1, 1], bboxRadius: 1 },
 				pointCloud: false,
+				sample: new Float32Array([0, 0, 0]).buffer,
 				texdata: new ArrayBuffer(64),
 				texWidth: 2048,
 				texHeight: 1,

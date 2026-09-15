@@ -1,5 +1,6 @@
 import { createEffect, createSignal, on, onCleanup, Show } from "solid-js";
 import { usePreviewPly } from "../hooks/usePreviewPly.ts";
+import type { SplatBounds } from "../lib/ply.ts";
 import { DownloadPanel } from "./DownloadPanel.tsx";
 import {
 	applyOps,
@@ -11,13 +12,8 @@ import {
 	scaleOps,
 	wheelOps,
 } from "./splat/controls.ts";
-import {
-	add,
-	type Mat4,
-	orbitOffset,
-	type Vec3,
-	viewMatrix,
-} from "./splat/matrix.ts";
+import { initialFraming } from "./splat/fit.ts";
+import type { Mat4 } from "./splat/matrix.ts";
 import { createSplatRenderer, type SplatRenderer } from "./splat/renderer.ts";
 import {
 	createSplatRunner,
@@ -27,14 +23,6 @@ import {
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 
-/** 世界坐标的"画面上方"：3DGS / COLMAP 的 y 轴朝下 */
-const WORLD_UP: Vec3 = [0, -1, 0];
-/**
- * 自动取景：相机距离 = 取景半径 × 这个系数。
- * 半径是距离分布的 P90（见 ply.ts），系数按"内容占满约 85% 画面高度"定：
- * 竖直视场角 55°、半角 27.5°，`d = r / sin(0.85 × 27.5°) ≈ 2.5 r`。
- */
-const FIT_DISTANCE_FACTOR = 2.5;
 /** 初始俯仰（略微俯视，与参考实现的默认机位观感一致） */
 const INITIAL_PITCH = 0.15;
 /** 超过这个时间还没解析完就给一句"可能较慢"的提示，免得看起来像卡死 */
@@ -72,6 +60,12 @@ export const SplatViewer: ViewerComponent = (props) => {
 	let renderer: SplatRenderer | undefined;
 	let runner: SplatRunner | undefined;
 	let vertexCount = 0;
+	/** 内容范围：视口尺寸变化时按它重新取景 */
+	let loadedBounds: SplatBounds | undefined;
+	/** 顶点位置抽样：取景按点的分布定距离（比只按包围盒更满） */
+	let loadedSample: Float32Array | undefined;
+	/** 用户动过相机之后就不再自动取景（resize 也不抢镜头） */
+	let userMoved = false;
 	/**
 	 * 排序请求在飞；`sortDirty` 表示"在飞期间相机又动过，回包后要再排一次"。
 	 * 两者必须成对维护：漏清 pending 会让之后**所有**相机移动都不再触发排序
@@ -106,6 +100,33 @@ export const SplatViewer: ViewerComponent = (props) => {
 		jumpDelta === 0 ? view : applyOps(view, jumpOps(jumpDelta), orbitDistance);
 
 	const draw = () => renderer?.draw(currentView(), vertexCount);
+
+	/** 当前视口（CSS 像素）；画布还没挂载时是 0，取景会退回兜底宽高比 */
+	const viewportOf = () => {
+		const box = stageEl();
+		return { width: box?.clientWidth ?? 0, height: box?.clientHeight ?? 0 };
+	};
+
+	/**
+	 * 自动取景：把内容装进当前视口（算法见 splat/fit.ts）。
+	 *
+	 * 视口比例参与计算，所以窗口/布局变化后要重算 —— 否则同一份内容在宽扁的预览区里
+	 * 还是按旧比例取的景。只在用户没动过相机时重算：动过之后就归他控制，不该被抢镜头。
+	 *
+	 * 只改机位不改朝向（俯仰固定），排序轴是朝向的函数，所以这里不必重排。
+	 */
+	const refit = () => {
+		if (!loadedBounds || userMoved) return;
+		const framing = initialFraming(
+			loadedBounds,
+			viewportOf(),
+			INITIAL_PITCH,
+			loadedSample,
+		);
+		view = framing.view;
+		orbitDistance = framing.distance;
+		jumpDelta = 0;
+	};
 
 	/** 把已到手的数据补齐到渲染器上（首次挂载或新数据到达时调用） */
 	const syncRenderer = () => {
@@ -151,15 +172,12 @@ export const SplatViewer: ViewerComponent = (props) => {
 		depthIndex = result.depthIndex;
 		indexDirty = true;
 		vertexCount = result.vertexCount;
-		// 自动取景：把包围球装进画面（相机在包围球中心前方，略微俯视）
-		const distance = Math.max(result.bounds.radius * FIT_DISTANCE_FACTOR, 1e-3);
-		orbitDistance = distance;
-		view = viewMatrix(
-			add(result.bounds.center, orbitOffset(distance, 0, INITIAL_PITCH)),
-			result.bounds.center,
-			WORLD_UP,
-		);
-		jumpDelta = 0;
+		// 自动取景：按内容范围与当前视口定机位（画布还没挂载时先用兜底宽高比，
+		// 挂载后 ResizeObserver 那次 fit() 会用真实尺寸重算一遍）
+		loadedBounds = result.bounds;
+		loadedSample = result.sample;
+		userMoved = false;
+		refit();
 		activeKeys.clear();
 		setHint(
 			`${result.vertexCount.toLocaleString()} 个${result.pointCloud ? "点（普通点云）" : "高斯"}`,
@@ -213,6 +231,9 @@ export const SplatViewer: ViewerComponent = (props) => {
 			setDegraded(undefined);
 			vertexCount = 0;
 			loaded = undefined;
+			loadedBounds = undefined;
+			loadedSample = undefined;
+			userMoved = false;
 			depthIndex = undefined;
 			sortPending = false;
 			sortDirty = false;
@@ -242,6 +263,8 @@ export const SplatViewer: ViewerComponent = (props) => {
 		const fit = () => {
 			if (!renderer) return;
 			renderer.resize(box.clientWidth, box.clientHeight);
+			// 视口比例变了就重新取景（用户动过相机时 refit 自己会让路）
+			refit();
 			syncRenderer();
 		};
 		const observer = new ResizeObserver(fit);
@@ -301,6 +324,7 @@ export const SplatViewer: ViewerComponent = (props) => {
 		// 别让相机的按键冒泡到页面级的全局 keydown 监听（详情页的 ←/→ 切文件已移除，
 		// 这里保留拦截是为了以后再加全局快捷键时不会与相机操作打架）
 		e.stopPropagation();
+		userMoved = true;
 		activeKeys.add(e.code);
 		startFrameLoop();
 	};
@@ -344,6 +368,7 @@ export const SplatViewer: ViewerComponent = (props) => {
 
 	const onPointerMove = (e: PointerEvent) => {
 		if (e.pointerId !== activePointer) return;
+		userMoved = true;
 		const box = stageEl();
 		const width = box?.clientWidth || 1;
 		const height = box?.clientHeight || 1;
@@ -376,6 +401,7 @@ export const SplatViewer: ViewerComponent = (props) => {
 	// ── 滚轮：裸滚环绕、Shift 平移、Ctrl/Cmd 前后移动（与参考实现一致） ──
 	const onWheel = (e: WheelEvent) => {
 		e.preventDefault();
+		userMoved = true;
 		const box = stageEl();
 		view = applyOps(
 			view,

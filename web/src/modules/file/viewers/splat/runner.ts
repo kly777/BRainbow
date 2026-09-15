@@ -14,6 +14,8 @@ import type { SplatRequest, SplatResponse } from "./worker.ts";
 export interface SplatLoadResult {
 	vertexCount: number;
 	bounds: LoadedSplat["bounds"];
+	/** 顶点位置抽样：自动取景按点的分布定距离 */
+	sample: Float32Array;
 	pointCloud: boolean;
 	texdata: Uint32Array;
 	texWidth: number;
@@ -80,6 +82,7 @@ export function createSplatRunner(
 			handlers.onLoaded({
 				vertexCount: loaded.vertexCount,
 				bounds: loaded.bounds,
+				sample: loaded.sample,
 				pointCloud: loaded.pointCloud,
 				texdata: loaded.texdata,
 				texWidth: loaded.texWidth,
@@ -114,6 +117,7 @@ export function createSplatRunner(
 				handlers.onLoaded({
 					vertexCount: msg.vertexCount,
 					bounds: msg.bounds,
+					sample: new Float32Array(msg.sample),
 					pointCloud: msg.pointCloud,
 					texdata: new Uint32Array(msg.texdata),
 					texWidth: msg.texWidth,

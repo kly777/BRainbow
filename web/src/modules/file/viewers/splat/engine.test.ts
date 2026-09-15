@@ -30,11 +30,10 @@ describe("createSplatEngine.load", () => {
 		// 每顶点 2 个 texel → 10 个 texel 只占一行
 		expect(loaded.texHeight).toBe(1);
 		expect(loaded.texdata.length).toBe(TEX_WIDTH * loaded.texHeight * 4);
-		// z 从 0 到 16 → 中心 8（三轴中位数）；取景半径是距离的 P90。
-		// 两者都由直方图给出，允许一个桶宽的误差（取值范围 / 1024）
+		// z 从 0 到 16 → 鲁棒包围盒中心 8、半宽 8（1%/99% 分位；5 个点也取得到两端）。
+		// 分位由直方图给出，允许一个桶宽的误差（取值范围 / 1024）
 		expect(loaded.bounds.center[2]).toBeCloseTo(8, 1);
-		expect(loaded.bounds.radius).toBeGreaterThan(7.9);
-		expect(loaded.bounds.radius).toBeLessThan(8.2);
+		expect(loaded.bounds.half[2]).toBeCloseTo(8, 1);
 		expect(loaded.bounds.bboxRadius).toBeCloseTo(8, 5);
 	});
 

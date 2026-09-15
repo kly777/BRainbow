@@ -29,6 +29,8 @@ export interface SplatLoadedResponse {
 	vertexCount: number;
 	bounds: SplatBounds;
 	pointCloud: boolean;
+	/** 顶点位置抽样（扁平 xyz）：自动取景用，在主线程按视口宽度比例算距离 */
+	sample: ArrayBuffer;
 	texdata: ArrayBuffer;
 	texWidth: number;
 	texHeight: number;
@@ -64,6 +66,8 @@ scope.onmessage = (e: MessageEvent<SplatRequest>) => {
 		if (msg.type === "load") {
 			const loaded = engine.load(new Uint8Array(msg.ply));
 			const texdata = loaded.texdata.buffer as ArrayBuffer;
+			// 取样转移走：worker 只在主线程取景时用得到它
+			const sample = loaded.sample.buffer as ArrayBuffer;
 			// 拷一份再转移：引擎内部还要继续用 depthIndex（转移会让原 buffer 失效）
 			const initial = loaded.depthIndex.slice();
 			const depthIndex = initial.buffer as ArrayBuffer;
@@ -73,12 +77,13 @@ scope.onmessage = (e: MessageEvent<SplatRequest>) => {
 					vertexCount: loaded.vertexCount,
 					bounds: loaded.bounds,
 					pointCloud: loaded.pointCloud,
+					sample,
 					texdata,
 					texWidth: TEX_WIDTH,
 					texHeight: loaded.texHeight,
 					depthIndex,
 				},
-				[texdata, depthIndex],
+				[texdata, sample, depthIndex],
 			);
 			return;
 		}

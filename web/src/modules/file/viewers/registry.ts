@@ -15,6 +15,7 @@ import {
 	isPlainTextName,
 	isSqliteName,
 } from "../lib/filename.ts";
+import { modelFormatOf } from "../lib/model.ts";
 import { isSplatLikeName } from "../lib/ply.ts";
 import { isPointCloudName } from "../lib/pointcloud.ts";
 import { ArchiveViewer } from "./ArchiveViewer.tsx";
@@ -27,6 +28,7 @@ import { HexViewer } from "./HexViewer.tsx";
 import { HtmlViewer } from "./HtmlViewer.tsx";
 import { ImageViewer } from "./ImageViewer.tsx";
 import { MarkdownViewer } from "./MarkdownViewer.tsx";
+import { ModelViewer } from "./ModelViewer.tsx";
 import { PdfViewer } from "./PdfViewer.tsx";
 import { PlainTextViewer } from "./PlainTextViewer.tsx";
 import { PptxViewer } from "./PptxViewer.tsx";
@@ -131,6 +133,13 @@ export const VIEWERS: Viewer[] = [
 		match: (f) =>
 			isSplatLikeName(f.original_name) || isPointCloudName(f.original_name),
 		component: SplatViewer,
+	},
+	{
+		// 3D 模型（网格）：three.js 渲染，与泼溅查看器是两条不同的管线。
+		// 按扩展名认领；`.ply` 留在泼溅查看器那边（它更可能是高斯/点云）
+		id: "model",
+		match: (f) => modelFormatOf(f.original_name) !== undefined,
+		component: ModelViewer,
 	},
 	{
 		// SQLite 数据库：只读列出表与前若干行（后端只读打开 + 上限 + 超时，

@@ -61,6 +61,22 @@ describe("createSplatEngine.load", () => {
 		expect(loaded.vertexCount).toBe(2);
 	});
 
+	it("按内容分辨格式：PCD 与文本点云也认（都走普通点云渲染路径）", () => {
+		const engine = createSplatEngine();
+		const pcd = new TextEncoder().encode(
+			"# .PCD v0.7\nFIELDS x y z\nSIZE 4 4 4\nTYPE F F F\nPOINTS 2\nDATA ascii\n0 0 0\n4 0 0\n",
+		);
+		const loaded = engine.load(pcd);
+		expect(loaded.vertexCount).toBe(2);
+		// 没有高斯参数 → 引擎按小圆点渲染，UI 提示也据此区分
+		expect(loaded.pointCloud).toBe(true);
+		expect(loaded.bounds.center[0]).toBeCloseTo(2, 1);
+
+		const xyz = engine.load(new TextEncoder().encode("1 2 3\n4 5 6\n"));
+		expect(xyz.vertexCount).toBe(2);
+		expect(xyz.pointCloud).toBe(true);
+	});
+
 	it("按内容分辨格式：没有 PLY 魔数就按 .splat 读", () => {
 		const engine = createSplatEngine();
 		const loaded = engine.load(

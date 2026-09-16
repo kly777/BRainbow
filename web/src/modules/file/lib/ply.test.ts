@@ -249,9 +249,8 @@ describe("buildSplatData：点云与异常", () => {
 		expect(data.bytes[25]).toBe(20);
 		expect(data.bytes[26]).toBe(30);
 		expect(data.bytes[27]).toBe(255);
-		// 参考实现同此：(255,0,0,0) 即近似单位四元数
-		expect(data.bytes[28]).toBe(255);
-		expect(data.bytes[29]).toBe(0);
+		// 单位四元数：着色器按 (u8-128)/128 还原 → (1,0,0,0) 要写成 255/128/128/128
+		expect([...data.bytes.slice(28, 32)]).toEqual([255, 128, 128, 128]);
 	});
 
 	it("点云保持文件顺序（没有 importance 可排）", () => {

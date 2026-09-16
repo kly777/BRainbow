@@ -11,7 +11,29 @@ import {
 	buildSplatTexture,
 	isPlyBytes,
 	type SplatBounds,
+	type SplatData,
 } from "../../lib/ply.ts";
+import {
+	isPcdBytes,
+	looksLikeTextPoints,
+	parsePcd,
+	parseTextPoints,
+} from "../../lib/pointcloud.ts";
+
+/**
+ * 按**内容**挑解析器 —— 三种都各有自己的头，所以不必靠调用方传格式名
+ * （改了扩展名、或后端把 MIME 报成 octet-stream 也照样能看）：
+ *   · `ply\n` 魔数 → PLY（自带属性表）
+ *   · `# .PCD` / `FIELDS` 头 → PCD（ascii / binary）
+ *   · 整行都是数字 → 文本点云（XYZ / PTS）
+ *   · 都不是 → 按 .splat 的定长 32 字节读（它没有头，只能靠长度校验兜底）
+ */
+function parseSplatBytes(bytes: Uint8Array): SplatData {
+	if (isPlyBytes(bytes)) return buildSplatData(bytes);
+	if (isPcdBytes(bytes)) return parsePcd(bytes);
+	if (looksLikeTextPoints(bytes)) return parseTextPoints(bytes, "点云文件");
+	return buildSplatDataFromSplat(bytes);
+}
 
 /** 纹理宽度：1024×2，与参考实现一致（着色器寻址常量 0x3ff 依赖它） */
 export const TEX_WIDTH = 1024 * 2;
@@ -68,11 +90,7 @@ export function createSplatEngine(): SplatEngine {
 	let lastAxis: [number, number, number] | undefined;
 
 	function load(bytes: Uint8Array): LoadedSplat {
-		// 按内容判格式：有 PLY 魔数走 PLY，否则按 .splat（定长 32 字节）读 ——
-		// 参考实现也用同一个魔数分辨，所以改了扩展名也照样能看
-		const data = isPlyBytes(bytes)
-			? buildSplatData(bytes)
-			: buildSplatDataFromSplat(bytes);
+		const data = parseSplatBytes(bytes);
 		const { texdata, texHeight } = buildSplatTexture(data, TEX_WIDTH);
 		splatBytes = data.bytes;
 		vertexCount = data.vertexCount;

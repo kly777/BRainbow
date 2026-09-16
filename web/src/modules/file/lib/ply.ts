@@ -480,7 +480,11 @@ export function buildSplatData(
 			out[o + 25] = toByte(at(base, "green"));
 			out[o + 26] = toByte(at(base, "blue"));
 			out[o + 27] = 255;
+			// 单位四元数 (1,0,0,0)：着色器按 (u8-128)/128 还原，所以 0 写成 128
 			out[o + 28] = 255;
+			out[o + 29] = 128;
+			out[o + 30] = 128;
+			out[o + 31] = 128;
 		}
 	}
 

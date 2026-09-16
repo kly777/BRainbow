@@ -91,6 +91,21 @@ describe("查看器注册表：命中规则", () => {
 			"splat",
 		],
 		[
+			"点云 .pcd / .xyz / .pts 也走泼溅查看器（引擎按内容分流到普通点云路径）",
+			ofCategory("application/octet-stream", "other", "scan.pcd"),
+			"splat",
+		],
+		[
+			"通用点云 .xyz 同理",
+			ofCategory("application/octet-stream", "other", "cloud.xyz"),
+			"splat",
+		],
+		[
+			".las 暂不认领（LAS 的十种点位格式另需解析器，落到 hex 回答「这是什么」）",
+			ofCategory("application/octet-stream", "other", "scan.las"),
+			"hex",
+		],
+		[
 			"改名成 .bin 的泼溅文件不再被认领（只按扩展名判，内容判据在查看器内部）",
 			ofCategory("application/octet-stream", "other", "模型.bin"),
 			"hex",

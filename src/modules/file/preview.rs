@@ -113,6 +113,9 @@ pub fn kind_for_mime(mime: &str) -> Option<PreviewKind> {
         "application/vnd.openxmlformats-officedocument.presentationml.presentation" => {
             Some(PreviewKind::Slides)
         }
+        // 声明就是 epub 时直接按书解析：不依赖"mimetype 必须是首个未压缩条目"这条
+        // 规范（不合规的 epub 不少），内容判据只作为兜底（见 preview_kind_for）
+        "application/epub+zip" => Some(PreviewKind::Book),
         _ => None,
     }
 }
@@ -1365,7 +1368,9 @@ pub fn parse_epub(bytes: &[u8]) -> Result<BookPreview, String> {
             continue;
         };
         let html = xhtml_to_html(&xhtml);
-        if html.trim().is_empty() {
+        // 没有任何可见文字的章节直接跳过（只有空段落/空 div 的页很常见），
+        // 判断看的是**去掉标签之后的文字**："<p></p>" 不该占一章
+        if strip_tags(&html).trim().is_empty() {
             continue;
         }
         total += html.len();
@@ -1377,6 +1382,14 @@ pub fn parse_epub(bytes: &[u8]) -> Result<BookPreview, String> {
     }
     if chapters.is_empty() {
         return Err("这本书里没抽出可显示的正文（可能是纯图片版）".to_string());
+    }
+    // 整页插图的章节统一改名"插图 N"：它们没有正文，叫"第 N 章"会让读者以为正文丢了
+    let mut plates = 0;
+    for chapter in &mut chapters {
+        if is_plate_only(&chapter.html) {
+            plates += 1;
+            chapter.title = format!("插图 {plates}");
+        }
     }
     Ok(BookPreview {
         title: title.trim().to_string(),
@@ -1410,6 +1423,27 @@ fn first_heading_text(html: &str) -> String {
         }
     }
     String::new()
+}
+
+/// 这一章是不是只有图片占位（用来把它们和"正文丢了"区分开）
+fn is_plate_only(html: &str) -> bool {
+    let visible = strip_tags(html);
+    if !visible.contains("[图片") {
+        return false;
+    }
+    // 把占位片段全部摘掉，剩下的只有空白才算"纯插图页"
+    let mut rest = String::new();
+    let mut cursor = visible.as_str();
+    while let Some(start) = cursor.find("[图片") {
+        rest.push_str(&cursor[..start]);
+        let Some(end) = cursor[start..].find(']') else {
+            cursor = "";
+            break;
+        };
+        cursor = &cursor[start + end + 1..];
+    }
+    rest.push_str(cursor);
+    rest.trim().is_empty()
 }
 
 /// 去掉标签，只留文字（给标题用）
@@ -1553,15 +1587,26 @@ fn xhtml_to_html(xml: &str) -> String {
                 let tag = normalize_tag(tag_name(&e));
                 if BOOK_DROP.contains(&tag.as_str()) {
                     dropping += 1;
-                } else if dropping == 0 && BOOK_TAGS.contains(&tag.as_str()) {
-                    let _ = write!(out, "<{tag}>");
-                    stack.push(tag);
+                } else if dropping == 0 {
+                    if BOOK_TAGS.contains(&tag.as_str()) {
+                        let _ = write!(out, "<{tag}>");
+                        stack.push(tag);
+                    } else if matches!(tag.as_str(), "img" | "image") {
+                        out.push_str(&image_placeholder(&e));
+                    }
                 }
             }
             Ok(Event::Empty(e)) => {
                 let tag = normalize_tag(tag_name(&e));
-                if dropping == 0 && matches!(tag.as_str(), "br" | "hr") {
+                if dropping != 0 {
+                    continue;
+                }
+                if matches!(tag.as_str(), "br" | "hr") {
                     let _ = write!(out, "<{tag}/>");
+                } else if matches!(tag.as_str(), "img" | "image") {
+                    // 图片不显示（没有资源子路由），但**不能连痕迹都不留** ——
+                    // 插图书里整页都是图片，丢干净就成了一串"空白章节"
+                    out.push_str(&image_placeholder(&e));
                 }
             }
             Ok(Event::End(e)) => {
@@ -1601,6 +1646,19 @@ fn xhtml_to_html(xml: &str) -> String {
         let _ = write!(out, "</{open}>");
     }
     out
+}
+
+/// 图片的占位：优先用 alt（作者/出版社常把图注写在这儿），否则一句"[图片]"
+fn image_placeholder(e: &quick_xml::events::BytesStart<'_>) -> String {
+    let alt = attr_value(e, "alt")
+        .or_else(|| attr_value(e, "title"))
+        .unwrap_or_default();
+    let label = if alt.trim().is_empty() {
+        "[图片]".to_string()
+    } else {
+        format!("[图片：{}]", truncate_chars(alt.trim(), 60))
+    };
+    format!("<p>{}</p>", escape_html(&label))
 }
 
 /// `b` / `i` 归一成 `strong` / `em`，其余小写
@@ -1899,6 +1957,49 @@ mod tests {
         ]);
         let err = parse_epub(&bytes).expect_err("要报错");
         assert!(err.contains("没抽出可显示的正文"), "{err}");
+    }
+
+    /// MIME 明确是 epub 时按书解析，不必依赖 mimetype 条目的位置
+    #[test]
+    fn epub_mime_routes_to_book_even_if_nonconforming() {
+        assert_eq!(
+            preview_kind_for("application/epub+zip", b"anything at all"),
+            Some(PreviewKind::Book)
+        );
+    }
+
+    #[test]
+    fn epub_keeps_image_placeholder_and_skips_empty_chapters() {
+        let container = "<container><rootfiles><rootfile full-path=\"b.opf\"/></rootfiles></container>";
+        let opf = r#"<package><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>图册</dc:title></metadata>
+<manifest>
+<item id="i1" href="plate.xhtml"/><item id="i2" href="empty.xhtml"/><item id="i3" href="text.xhtml"/>
+</manifest><spine><itemref idref="i1"/><itemref idref="i2"/><itemref idref="i3"/></spine></package>"#;
+        // 整页插图的页：只有一个 img（书里成片的"空白章节"就是这么来的）
+        let plate = r#"<html><body><p><img src="images/1.jpeg"/></p><div></div></body></html>"#;
+        // 真正空的页：只有空段落
+        let empty = r#"<html><body><p></p><div></div></body></html>"#;
+        let text = r#"<html><body><h2>正文</h2><p>有字</p><p><img alt="插图一" src="2.jpeg"/></p></body></html>"#;
+        let bytes = zip_with(&[
+            ("mimetype", "application/epub+zip"),
+            ("META-INF/container.xml", container),
+            ("b.opf", opf),
+            ("plate.xhtml", plate),
+            ("empty.xhtml", empty),
+            ("text.xhtml", text),
+        ]);
+        let book = parse_epub(&bytes).expect("能解析");
+        // 空白章节被跳过，插图的页留着占位、标题也叫"插图 N"
+        assert_eq!(book.chapters.len(), 2, "{:?}", book.chapters);
+        assert_eq!(book.chapters[0].title, "插图 1");
+        assert!(book.chapters[0].html.contains("[图片]"), "{}", book.chapters[0].html);
+        // alt 有文字时用它当占位说明
+        assert!(
+            book.chapters[1].html.contains("[图片：插图一]"),
+            "{}",
+            book.chapters[1].html
+        );
+        assert!(book.chapters[1].html.contains("<h2>正文</h2>"));
     }
 
     #[test]

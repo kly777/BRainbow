@@ -218,6 +218,10 @@ fn normalize_mime(mime: &str) -> &str {
         "image/jpg" | "image/pjpeg" => "image/jpeg",
         "image/x-ms-bmp" => "image/bmp",
         "video/x-m4v" => "video/mp4",
+        // 电子书：规范名是 application/epub+zip，但浏览器/系统注册表常报 application/epub
+        // （用户上传《老人与海》时报的就是这个），归一之后两边才比得上
+        "application/epub" | "application/x-epub+zip" => "application/epub+zip",
+        "application/x-gzip" => "application/gzip",
         _ => mime,
     }
 }
@@ -1508,6 +1512,56 @@ mod tests {
     /// OOXML（docx/xlsx）的字节就是 zip：infer 报 application/zip，
     /// 客户端报 OOXML 类型 —— 两者都对，必须放行（否则白名单里的 docx 传不上来，
     /// 线上就是这么挂的）
+    /// epub 的两种写法：浏览器报 application/epub、infer 报规范的 application/epub+zip。
+    /// 归一别名之后必须放行 —— 用户上传《老人与海》时就卡在这里
+    #[tokio::test]
+    async fn upload_accepts_epub_alias() {
+        let bytes = epub_bytes();
+        // 先确认这份测试造件确实被判成 epub（而不是 zip），否则这条测试就是假绿
+        assert_eq!(
+            FileService::detect_mime(&bytes)
+                .as_deref()
+                .map(normalize_mime),
+            Some("application/epub+zip")
+        );
+
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(
+                &bytes,
+                "老人与海.epub",
+                "application/epub",
+                Some(7),
+                None,
+                false,
+            )
+            .await
+            .expect("epub 应当能上传")
+            .file;
+        assert_eq!(f.mime_type, "application/epub+zip");
+        // 白名单外 → other 档（4GB），与 .ply/.splat 那些"按扩展名认领"的格式一致
+        assert_eq!(
+            f.file_category,
+            super::super::model::FileCategory::Other
+        );
+    }
+
+    /// 造一份最小 epub：首个条目必须是未压缩的 mimetype（infer 按规范在固定偏移上认）
+    fn epub_bytes() -> Vec<u8> {
+        use std::io::Write as _;
+        let mut buf = Vec::new();
+        {
+            let mut zip = zip::ZipWriter::new(std::io::Cursor::new(&mut buf));
+            let options = zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Stored);
+            zip.start_file("mimetype", options).expect("写 epub");
+            zip.write_all(b"application/epub+zip").expect("写 epub");
+            zip.finish().expect("收尾 epub");
+        }
+        buf
+    }
+
     #[tokio::test]
     async fn upload_accepts_ooxml_containers() {
         let ctx = setup_service().await;
@@ -1933,6 +1987,9 @@ mod tests {
         assert_eq!(normalize_mime("audio/wave"), "audio/wav");
         assert_eq!(normalize_mime("audio/x-flac"), "audio/flac");
         assert_eq!(normalize_mime("image/jpg"), "image/jpeg");
+        // 电子书与 gzip 的常见别名
+        assert_eq!(normalize_mime("application/epub"), "application/epub+zip");
+        assert_eq!(normalize_mime("application/x-gzip"), "application/gzip");
         // 非别名原样返回
         assert_eq!(normalize_mime("image/png"), "image/png");
         assert_eq!(normalize_mime("audio/mpeg"), "audio/mpeg");

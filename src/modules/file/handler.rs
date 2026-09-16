@@ -455,6 +455,8 @@ pub async fn preview_handler(
             .map(super::preview::Preview::Sheet),
         super::preview::PreviewKind::Slides => super::preview::parse_pptx(&bytes)
             .map(super::preview::Preview::Slides),
+        super::preview::PreviewKind::Book => super::preview::parse_epub(&bytes)
+            .map(super::preview::Preview::Book),
         // 数据库走上面的 async 分支，这里到不了
         super::preview::PreviewKind::Database => {
             Err("内部错误：数据库预览不应走到这里".to_string())

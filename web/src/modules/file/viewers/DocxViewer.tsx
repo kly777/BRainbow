@@ -1,12 +1,11 @@
-import { type Component, createEffect, createSignal } from "solid-js";
 import { DocContent } from "./DocContent.tsx";
+import { SanitizedHtml } from "./SanitizedHtml.tsx";
 import type { ViewerComponent } from "./types.ts";
-import styles from "./viewers.module.css";
 
 /**
  * 正文 HTML 的标签白名单：与后端 docx 解析器的输出一一对应（多一个都不放行）
  */
-const ALLOWED_TAGS = [
+const DOCX_TAGS = [
 	"p",
 	"h1",
 	"h2",
@@ -23,26 +22,6 @@ const ALLOWED_TAGS = [
 	"td",
 ];
 
-/**
- * 正文渲染。
- *
- * HTML 由后端解析（只吐白名单标签、文本已转义），这里**再过一次 DOMPurify** ——
- * 这是全仓唯一一处把服务端字符串直接 innerHTML 的地方，两道防线不嫌多。
- * DOMPurify 与 markdown 工具链同属懒加载 chunk（dynamic import），
- * 不能静态 import：注册表是全量静态引入的，那会把它拉进首屏同步链。
- */
-const DocxBody: Component<{ html: string }> = (props) => {
-	const [clean, setClean] = createSignal("");
-	createEffect(() => {
-		const html = props.html;
-		void (async () => {
-			const { default: DOMPurify } = await import("dompurify");
-			setClean(DOMPurify.sanitize(html, { ALLOWED_TAGS, ALLOWED_ATTR: [] }));
-		})();
-	});
-	return <div class={styles.markdown} innerHTML={clean()} />;
-};
-
 /** .docx：服务端把正文转成受限 HTML，这里按排版渲染（要原文可下载） */
 export const DocxViewer: ViewerComponent = (props) => (
 	<DocContent
@@ -55,6 +34,10 @@ export const DocxViewer: ViewerComponent = (props) => (
 				: undefined
 		}
 	>
-		{(data) => (data.kind === "docx" ? <DocxBody html={data.html} /> : null)}
+		{(data) =>
+			data.kind === "docx" ? (
+				<SanitizedHtml html={data.html} tags={DOCX_TAGS} />
+			) : null
+		}
 	</DocContent>
 );

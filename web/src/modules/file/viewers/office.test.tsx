@@ -9,6 +9,7 @@ import { previewUrlOf } from "../hooks/usePreviewDoc.ts";
 import { ArchiveViewer } from "./ArchiveViewer.tsx";
 import { DatabaseViewer } from "./DatabaseViewer.tsx";
 import { DocxViewer } from "./DocxViewer.tsx";
+import { EpubViewer } from "./EpubViewer.tsx";
 import { PptxViewer } from "./PptxViewer.tsx";
 import { item } from "./test-fixtures.ts";
 import { XlsxViewer } from "./XlsxViewer.tsx";
@@ -322,5 +323,55 @@ describe("DatabaseViewer", () => {
 		stubPreview({ kind: "database", tables: [], truncated: false });
 		const empty = mount(DatabaseViewer);
 		await settle(() => (empty.textContent ?? "").includes("没有表"));
+	});
+});
+
+describe("EpubViewer", () => {
+	const book = {
+		kind: "book" as const,
+		title: "测试书",
+		author: "某作者",
+		chapters: [
+			{ title: "第一章", html: "<h1>第一章</h1><p>正文一</p>" },
+			{ title: "第二章", html: "<h1>第二章</h1><p>正文二</p>" },
+		],
+		truncated: false,
+	};
+
+	it("先显示第一章，翻页换章（不是页签）", async () => {
+		stubPreview(book);
+		const host = mount(EpubViewer);
+
+		await settle(() => (host.textContent ?? "").includes("正文一"));
+		// 书名 · 作者 · 章数
+		expect(host.textContent).toContain("测试书 · 某作者 · 共 2 章");
+		expect(host.textContent).not.toContain("正文二");
+
+		const next = host.querySelectorAll("button");
+		(next[1] as HTMLButtonElement).click();
+		await settle(() => (host.textContent ?? "").includes("正文二"));
+		expect(host.textContent).not.toContain("正文一");
+	});
+
+	it("第一章时「上一章」不可点，末章时「下一章」不可点", async () => {
+		stubPreview(book);
+		const host = mount(EpubViewer);
+		await settle(() => (host.textContent ?? "").includes("正文一"));
+		const [prev, next] = host.querySelectorAll("button");
+		expect((prev as HTMLButtonElement).disabled).toBe(true);
+		expect((next as HTMLButtonElement).disabled).toBe(false);
+
+		(next as HTMLButtonElement).click();
+		await settle(() => (host.textContent ?? "").includes("正文二"));
+		const [prev2, next2] = host.querySelectorAll("button");
+		expect((prev2 as HTMLButtonElement).disabled).toBe(false);
+		expect((next2 as HTMLButtonElement).disabled).toBe(true);
+	});
+
+	it("章节被截断时说明只显示了前面的章节", async () => {
+		stubPreview({ ...book, truncated: true });
+		const host = mount(EpubViewer);
+		await settle(() => (host.textContent ?? "").includes("正文一"));
+		expect(host.textContent).toContain("只显示了前面的章节");
 	});
 });

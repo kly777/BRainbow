@@ -75,6 +75,11 @@ describe("查看器注册表：命中规则", () => {
 			"archive",
 		],
 		[
+			"epub 电子书（本身也是 zip，内容判据在后端）",
+			ofCategory("application/epub+zip", "other", "一本书.epub"),
+			"epub",
+		],
+		[
 			"3D 模型（glb/stl/obj）走 three.js 查看器，与泼溅查看器是两条管线",
 			ofCategory("application/octet-stream", "other", "模型.glb"),
 			"model",

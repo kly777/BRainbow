@@ -44,6 +44,8 @@ pub enum Preview {
     Archive(ArchivePreview),
     /// SQLite 数据库：表清单 + 每张表前若干行
     Database(DatabasePreview),
+    /// `.epub`：书名 / 作者 + 按阅读顺序的章节
+    Book(BookPreview),
 }
 
 #[derive(Debug, Serialize)]
@@ -74,6 +76,8 @@ pub enum PreviewKind {
     Archive,
     /// SQLite 数据库
     Database,
+    /// `.epub` 电子书
+    Book,
 }
 
 /// 这个文件能不能预览、按哪种解析。
@@ -84,6 +88,10 @@ pub enum PreviewKind {
 pub fn preview_kind_for(mime: &str, bytes: &[u8]) -> Option<PreviewKind> {
     if let Some(kind) = kind_for_mime(mime) {
         return Some(kind);
+    }
+    // epub 也是 zip：靠"首个条目是未压缩的 mimetype"这条规范提前认出来
+    if looks_like_epub(bytes) {
+        return Some(PreviewKind::Book);
     }
     match sniff_container(bytes)? {
         Container::Zip | Container::Gzip | Container::Tar => Some(PreviewKind::Archive),
@@ -1285,6 +1293,325 @@ fn truncate_chars(text: &str, limit: usize) -> String {
     out
 }
 
+// ── .epub ──
+
+/// 一本书最多抽这么多章（预览用）
+const MAX_CHAPTERS: usize = 200;
+/// 抽出来的正文总量上限（大书只给开头，别把响应撑成几十 MB）
+const MAX_BOOK_HTML_BYTES: usize = 4 * 1024 * 1024;
+/// 允许出现在正文里的标签；**白名单外的一律只保留文字**（脚本/样式连内容一起丢）
+const BOOK_TAGS: &[&str] = &[
+    "p", "h1", "h2", "h3", "h4", "h5", "h6", "strong", "em", "blockquote", "ul", "ol",
+    "li", "br", "hr", "pre",
+];
+/// 这些标签连内容一起丢掉（只丢标签会把 CSS/JS 当正文吐出来）
+const BOOK_DROP: &[&str] = &["script", "style", "head", "title", "svg", "iframe"];
+
+#[derive(Debug, Serialize)]
+pub struct BookPreview {
+    pub title: String,
+    pub author: String,
+    /// 按 spine（阅读顺序）排列
+    pub chapters: Vec<BookChapter>,
+    /// 章数或正文总量被截断
+    pub truncated: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BookChapter {
+    pub title: String,
+    /// 受限 HTML（白名单标签 + 文本已转义）
+    pub html: String,
+}
+
+/// 是否是 EPUB：**首个 zip 条目必须是未压缩的 `mimetype`**，内容是 application/epub+zip
+/// （规范如此，所以在前 256 字节里就能认出，不必解开整个包）
+pub fn looks_like_epub(bytes: &[u8]) -> bool {
+    bytes
+        .get(0..256)
+        .is_some_and(|head| head.windows(20).any(|w| w == b"application/epub+zip"))
+}
+
+/// 解析 `.epub`：书名 / 作者 + 按阅读顺序的章节（受限 HTML）
+pub fn parse_epub(bytes: &[u8]) -> Result<BookPreview, String> {
+    let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
+        .map_err(|e| format!("不是有效的 epub（打不开压缩包）：{e}"))?;
+
+    // container.xml 指向 OPF（书的主清单），OPF 里有 metadata / manifest / spine
+    let container = read_zip_text(&mut zip, "META-INF/container.xml")
+        .ok_or_else(|| "epub 里没有 META-INF/container.xml（文件可能已损坏）".to_string())?
+        .0;
+    let opf_path = rootfile_path(&container)
+        .ok_or_else(|| "epub 的 container.xml 里没有 rootfile".to_string())?;
+    let opf = read_zip_text(&mut zip, &opf_path)
+        .ok_or_else(|| format!("epub 里找不到 {opf_path}"))?
+        .0;
+
+    let base = parent_dir(&opf_path).to_string();
+    let manifest = opf_manifest(&opf);
+    let title = element_text(&opf, "title").unwrap_or_default();
+    let author = element_text(&opf, "creator").unwrap_or_default();
+
+    let spine = opf_spine(&opf);
+    let mut truncated = spine.len() > MAX_CHAPTERS;
+    let mut chapters = Vec::new();
+    let mut total = 0_usize;
+    for idref in spine.iter().take(MAX_CHAPTERS) {
+        let Some(href) = manifest.get(idref) else {
+            continue;
+        };
+        let path = resolve_target(&base, href);
+        let Some((xhtml, _)) = read_zip_text(&mut zip, &path) else {
+            continue;
+        };
+        let html = xhtml_to_html(&xhtml);
+        if html.trim().is_empty() {
+            continue;
+        }
+        total += html.len();
+        if total > MAX_BOOK_HTML_BYTES {
+            truncated = true;
+            break;
+        }
+        chunks_push(&mut chapters, &path, html);
+    }
+    if chapters.is_empty() {
+        return Err("这本书里没抽出可显示的正文（可能是纯图片版）".to_string());
+    }
+    Ok(BookPreview {
+        title: title.trim().to_string(),
+        author: author.trim().to_string(),
+        chapters,
+        truncated,
+    })
+}
+
+/// 章节标题取文件里第一个 h1..h6 的文字；没有就用"第 N 章"
+fn chunks_push(chapters: &mut Vec<BookChapter>, path: &str, html: String) {
+    let heading = first_heading_text(&html);
+    let title = if heading.is_empty() {
+        format!("第 {} 章", chapters.len() + 1)
+    } else {
+        heading
+    };
+    let _ = path;
+    chapters.push(BookChapter { title, html });
+}
+
+/// 从受限 HTML 里取第一个标题的文字（够用：标题后面不会再有标签）
+fn first_heading_text(html: &str) -> String {
+    for level in 1..=6 {
+        let open = format!("<h{level}>");
+        if let Some(start) = html.find(&open) {
+            let rest = &html[start + open.len()..];
+            if let Some(end) = rest.find(&format!("</h{level}>")) {
+                return strip_tags(&rest[..end]).trim().to_string();
+            }
+        }
+    }
+    String::new()
+}
+
+/// 去掉标签，只留文字（给标题用）
+fn strip_tags(html: &str) -> String {
+    let mut out = String::new();
+    let mut depth = 0_usize;
+    for ch in html.chars() {
+        match ch {
+            '<' => depth += 1,
+            '>' => depth = depth.saturating_sub(1),
+            other if depth == 0 => out.push(other),
+            _ => {}
+        }
+    }
+    out
+}
+
+/// `META-INF/container.xml` 里的 rootfile 路径
+fn rootfile_path(xml: &str) -> Option<String> {
+    use quick_xml::events::Event;
+
+    let mut reader = quick_xml::Reader::from_str(xml);
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
+                if tag_name(&e) == "rootfile" {
+                    return attr_value(&e, "full-path");
+                }
+            }
+            Ok(Event::Eof) | Err(_) => break,
+            _ => {}
+        }
+    }
+    None
+}
+
+/// OPF 的 manifest：id → href
+fn opf_manifest(opf: &str) -> std::collections::HashMap<String, String> {
+    use std::collections::HashMap;
+
+    use quick_xml::events::Event;
+
+    let mut reader = quick_xml::Reader::from_str(opf);
+    let mut map = HashMap::new();
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
+                if tag_name(&e) == "item"
+                    && let (Some(id), Some(href)) =
+                        (attr_value(&e, "id"), attr_value(&e, "href"))
+                {
+                    map.insert(id, href);
+                }
+            }
+            Ok(Event::Eof) | Err(_) => break,
+            _ => {}
+        }
+    }
+    map
+}
+
+/// OPF 的 spine：按阅读顺序的 idref
+fn opf_spine(opf: &str) -> Vec<String> {
+    use quick_xml::events::Event;
+
+    let mut reader = quick_xml::Reader::from_str(opf);
+    let mut ids = Vec::new();
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
+                if tag_name(&e) == "itemref"
+                    && let Some(idref) = attr_value(&e, "idref")
+                {
+                    ids.push(idref);
+                }
+            }
+            Ok(Event::Eof) | Err(_) => break,
+            _ => {}
+        }
+    }
+    ids
+}
+
+/// 取某个元素的文字（OPF 的 dc:title / dc:creator 用；取第一个）
+fn element_text(xml: &str, name: &str) -> Option<String> {
+    use quick_xml::events::Event;
+
+    let mut reader = quick_xml::Reader::from_str(xml);
+    // 目标元素可能嵌在好几层里（`<package><metadata><dc:title>`），所以记它的**深度**
+    // 而不是要求它在顶层
+    let mut depth = 0_usize;
+    let mut target_depth: Option<usize> = None;
+    let mut out = String::new();
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e)) => {
+                depth += 1;
+                if target_depth.is_none() && tag_name(&e) == name {
+                    target_depth = Some(depth);
+                }
+            }
+            Ok(Event::End(_)) => {
+                if target_depth == Some(depth) {
+                    return Some(out);
+                }
+                depth = depth.saturating_sub(1);
+            }
+            Ok(Event::Text(t)) => {
+                if target_depth.is_some()
+                    && let Ok(text) = quick_xml::escape::unescape(&t.xml10_content())
+                {
+                    out.push_str(&text);
+                }
+            }
+            Ok(Event::GeneralRef(r)) => {
+                if target_depth.is_some()
+                    && let Some(text) = entity_text(&r.xml10_content())
+                {
+                    out.push_str(&text);
+                }
+            }
+            Ok(Event::Eof) | Err(_) => break,
+            _ => {}
+        }
+    }
+    None
+}
+
+/// XHTML → 受限 HTML：白名单标签原样重建（属性全丢），文本转义，其余标签剥掉只留内容
+fn xhtml_to_html(xml: &str) -> String {
+    use quick_xml::events::Event;
+
+    let mut reader = quick_xml::Reader::from_str(xml);
+    let mut out = String::new();
+    let mut stack: Vec<String> = Vec::new();
+    // 在白名单外的"连内容一起丢"的标签里的深度（> 0 时忽略一切）
+    let mut dropping = 0_usize;
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e)) => {
+                let tag = normalize_tag(tag_name(&e));
+                if BOOK_DROP.contains(&tag.as_str()) {
+                    dropping += 1;
+                } else if dropping == 0 && BOOK_TAGS.contains(&tag.as_str()) {
+                    let _ = write!(out, "<{tag}>");
+                    stack.push(tag);
+                }
+            }
+            Ok(Event::Empty(e)) => {
+                let tag = normalize_tag(tag_name(&e));
+                if dropping == 0 && matches!(tag.as_str(), "br" | "hr") {
+                    let _ = write!(out, "<{tag}/>");
+                }
+            }
+            Ok(Event::End(e)) => {
+                let tag = normalize_tag(end_name(&e));
+                if BOOK_DROP.contains(&tag.as_str()) {
+                    dropping = dropping.saturating_sub(1);
+                } else if dropping == 0
+                    && let Some(position) = stack.iter().rposition(|open| open == &tag)
+                {
+                    // 容忍不闭合的 XHTML：把到该标签为止的都收掉
+                    while stack.len() > position {
+                        if let Some(open) = stack.pop() {
+                            let _ = write!(out, "</{open}>");
+                        }
+                    }
+                }
+            }
+            Ok(Event::Text(t)) => {
+                if dropping == 0
+                    && let Ok(text) = quick_xml::escape::unescape(&t.xml10_content())
+                {
+                    out.push_str(&escape_html(&text));
+                }
+            }
+            Ok(Event::GeneralRef(r)) => {
+                if dropping == 0
+                    && let Some(text) = entity_text(&r.xml10_content())
+                {
+                    out.push_str(&escape_html(&text));
+                }
+            }
+            Ok(Event::Eof) | Err(_) => break,
+            _ => {}
+        }
+    }
+    while let Some(open) = stack.pop() {
+        let _ = write!(out, "</{open}>");
+    }
+    out
+}
+
+/// `b` / `i` 归一成 `strong` / `em`，其余小写
+fn normalize_tag(tag: &str) -> String {
+    match tag.to_ascii_lowercase().as_str() {
+        "b" => "strong".to_string(),
+        "i" => "em".to_string(),
+        other => other.to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1492,6 +1819,97 @@ mod tests {
             ("ppt/slides/_rels/slide1.xml.rels", slide1_rels),
             ("ppt/notesSlides/notesSlide1.xml", notes1),
         ])
+    }
+
+    /// 最小 epub：mimetype + container.xml + OPF + 两章
+    fn epub() -> Vec<u8> {
+        let container = r#"<?xml version="1.0"?>
+<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">
+<rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles>
+</container>"#;
+        let opf = r#"<?xml version="1.0"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0">
+<metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>测试书</dc:title><dc:creator>某作者</dc:creator></metadata>
+<manifest>
+<item id="c1" href="ch1.xhtml" media-type="application/xhtml+xml"/>
+<item id="c2" href="sub/ch2.xhtml" media-type="application/xhtml+xml"/>
+</manifest>
+<spine><itemref idref="c1"/><itemref idref="c2"/></spine>
+</package>"#;
+        let ch1 = r#"<?xml version="1.0"?>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>不该出现</title><style>p{color:red}</style></head>
+<body><h1>第一章</h1><p>正文一</p><p>&lt;不是标签&gt; &amp; 实体</p>
+<script>alert(1)</script><img src="x.png"/><ul><li>条目</li></ul></body></html>"#;
+        let ch2 = r#"<?xml version="1.0"?>
+<html xmlns="http://www.w3.org/1999/xhtml"><body><h2>第二章</h2><p>正文二</p></body></html>"#;
+        // mimetype 必须是**第一个**条目且不压缩（规范要求，也是我们识别 epub 的判据）
+        zip_with(&[
+            ("mimetype", "application/epub+zip"),
+            ("META-INF/container.xml", container),
+            ("OEBPS/content.opf", opf),
+            ("OEBPS/ch1.xhtml", ch1),
+            ("OEBPS/sub/ch2.xhtml", ch2),
+        ])
+    }
+
+    #[test]
+    fn epub_reads_metadata_and_spine_order() {
+        let bytes = epub();
+        assert!(looks_like_epub(&bytes));
+        assert_eq!(
+            preview_kind_for("application/octet-stream", &bytes),
+            Some(PreviewKind::Book)
+        );
+        let book = parse_epub(&bytes).expect("能解析");
+        assert_eq!(book.title, "测试书");
+        assert_eq!(book.author, "某作者");
+        assert_eq!(book.chapters.len(), 2);
+        // 章标题取正文里的第一个标题；顺序按 spine
+        assert_eq!(book.chapters[0].title, "第一章");
+        assert_eq!(book.chapters[1].title, "第二章");
+        // 章节在子目录里（相对 OPF 的路径要归一）
+        assert!(book.chapters[1].html.contains("正文二"));
+        assert!(!book.truncated);
+    }
+
+    #[test]
+    fn epub_html_is_whitelisted() {
+        let html = parse_epub(&epub()).expect("能解析").chapters[0].html.clone();
+        // 白名单标签留着
+        assert!(html.contains("<h1>第一章</h1>"));
+        assert!(html.contains("<p>正文一</p>"));
+        assert!(html.contains("<ul><li>条目</li></ul>"));
+        // 文本里的尖括号是转义后的实体，不是一个标签
+        assert!(html.contains("&lt;不是标签&gt; &amp; 实体"));
+        // 脚本连同内容一起丢，样式与 head/title 也是；img 只丢标签不留内容
+        assert!(!html.contains("alert"), "{html}");
+        assert!(!html.contains("color:red"), "{html}");
+        assert!(!html.contains("不该出现"), "{html}");
+        assert!(!html.contains("<img"), "{html}");
+        // 不闭合也不会把标签漏出去
+        assert!(!html.contains("<script"), "{html}");
+    }
+
+    #[test]
+    fn epub_without_chapters_gives_readable_error() {
+        let bytes = zip_with(&[
+            ("mimetype", "application/epub+zip"),
+            ("META-INF/container.xml", "<container><rootfiles><rootfile full-path=\"a.opf\"/></rootfiles></container>"),
+            ("a.opf", "<package><spine></spine></package>"),
+        ]);
+        let err = parse_epub(&bytes).expect_err("要报错");
+        assert!(err.contains("没抽出可显示的正文"), "{err}");
+    }
+
+    #[test]
+    fn epub_rejects_plain_zip() {
+        let bytes = zip_with(&[("a.txt", "hi")]);
+        assert!(!looks_like_epub(&bytes));
+        // 普通 zip 仍然走压缩包那一条
+        assert_eq!(
+            preview_kind_for("application/octet-stream", &bytes),
+            Some(PreviewKind::Archive)
+        );
     }
 
     #[test]

@@ -39,11 +39,24 @@ export interface DatabaseTable {
 	rows: string[][];
 }
 
+/** 电子书的一章 */
+export interface BookChapter {
+	title: string;
+	html: string;
+}
+
 /** 服务端解析结果（判别字段 `kind` 与查看器一一对应） */
 export type DocPreview =
 	| { kind: "docx"; html: string; truncated: boolean }
 	| { kind: "sheet"; sheets: SheetData[]; truncated: boolean }
 	| { kind: "slides"; slides: SlideData[]; truncated: boolean }
+	| {
+			kind: "book";
+			title: string;
+			author: string;
+			chapters: BookChapter[];
+			truncated: boolean;
+	  }
 	| {
 			kind: "database";
 			tables: DatabaseTable[];

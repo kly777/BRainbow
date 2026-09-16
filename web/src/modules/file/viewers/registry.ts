@@ -12,6 +12,7 @@ import type { FileItem } from "../api.ts";
 import {
 	codeLang,
 	isArchiveName,
+	isEpubName,
 	isPlainTextName,
 	isSqliteName,
 } from "../lib/filename.ts";
@@ -24,6 +25,7 @@ import { CodeViewer } from "./CodeViewer.tsx";
 import { CsvViewer } from "./CsvViewer.tsx";
 import { DatabaseViewer } from "./DatabaseViewer.tsx";
 import { DocxViewer } from "./DocxViewer.tsx";
+import { EpubViewer } from "./EpubViewer.tsx";
 import { HexViewer } from "./HexViewer.tsx";
 import { HtmlViewer } from "./HtmlViewer.tsx";
 import { ImageViewer } from "./ImageViewer.tsx";
@@ -133,6 +135,12 @@ export const VIEWERS: Viewer[] = [
 		match: (f) =>
 			isSplatLikeName(f.original_name) || isPointCloudName(f.original_name),
 		component: SplatViewer,
+	},
+	{
+		// 电子书：后端按 spine 抽出各章（epub 也是 zip，所以内容判据在后端）
+		id: "epub",
+		match: (f) => isEpubName(f.original_name),
+		component: EpubViewer,
 	},
 	{
 		// 3D 模型（网格）：three.js 渲染，与泼溅查看器是两条不同的管线。

@@ -375,6 +375,99 @@ pub fn parse_range(header_value: &str, total: u64) -> Option<RangeSpec> {
     })
 }
 
+/// 内容类路由的统一可见性检查：公开文件放行；私密文件要求有效凭据且为上传者。
+///
+/// 内容路由与预览路由共用这一份 —— 可见性规则一旦分叉就会漏，而漏的那一边
+/// 等于把私密文件放出来（见 doc/file-service.md 里"三处规则要同步"那条）。
+async fn check_content_access(
+    auth: &crate::app::auth::service::AuthService,
+    headers: &axum::http::HeaderMap,
+    file: &super::model::File,
+) -> Option<Response> {
+    if !file.is_private {
+        return None;
+    }
+    let viewer = crate::app::http::auth::optional_claims(auth, headers)
+        .await
+        .map(|c| c.sub as i64);
+    match super::query::content_access(file, viewer) {
+        super::query::ContentAccess::Allow => None,
+        super::query::ContentAccess::Deny => {
+            Some(ServiceError::NotFound("文件不存在".into()).into_response())
+        }
+        super::query::ContentAccess::NeedAuth => Some(
+            crate::shared::error_types::unauthorized("该文件为私密文件，需要登录后访问"),
+        ),
+    }
+}
+
+/// Office 文档预览解析（公开路由）。
+///
+/// 与内容路由同一套可见性规则：公开文件无需凭据，私密文件要求凭据且为上传者。
+/// 解析本身是纯 CPU 活（几十 MB 的表格要几百毫秒），所以丢进 `spawn_blocking` ——
+/// 别占着 async 工作线程把其他请求一起拖住。
+pub async fn preview_handler(
+    State(query): State<FileQueryService>,
+    State(auth): State<crate::app::auth::service::AuthService>,
+    Path(stored_id): Path<String>,
+    headers: axum::http::HeaderMap,
+) -> Response {
+    let file = match query.get_by_stored_id(&stored_id).await {
+        Ok(f) => f,
+        Err(e) => return e.into_response(),
+    };
+    if let Some(denied) = check_content_access(&auth, &headers, &file).await {
+        return denied;
+    }
+
+    let Some(kind) = super::preview::kind_for_mime(&file.mime_type) else {
+        return ServiceError::InvalidInput("这个文件类型没有文档预览".into()).into_response();
+    };
+
+    let path = query.file_path(&stored_id);
+    // 长度取磁盘实况（与内容路由同一原则）：记录与内容不一致时以文件为准
+    let Ok(meta) = tokio::fs::metadata(&path).await else {
+        return ServiceError::NotFound("文件不存在".into()).into_response();
+    };
+    if meta.len() > super::preview::MAX_PREVIEW_BYTES {
+        return ServiceError::InvalidInput(format!(
+            "文件超过 {}MB，不在服务端解析预览（可下载后本地查看）",
+            super::preview::MAX_PREVIEW_BYTES / (1024 * 1024)
+        ))
+        .into_response();
+    }
+    let Ok(bytes) = tokio::fs::read(&path).await else {
+        return ServiceError::NotFound("文件不存在".into()).into_response();
+    };
+
+    let parsed = tokio::task::spawn_blocking(move || match kind {
+        super::preview::PreviewKind::Docx => super::preview::parse_docx(&bytes)
+            .map(super::preview::Preview::Docx),
+        super::preview::PreviewKind::Sheet => super::preview::parse_book(&bytes)
+            .map(super::preview::Preview::Sheet),
+    })
+    .await;
+
+    match parsed {
+        Ok(Ok(preview)) => {
+            // 派生内容，与内容路由一样只允许私有缓存（共享缓存会绕过鉴权）
+            let mut resp = Json(preview).into_response();
+            resp.headers_mut().insert(
+                header::CACHE_CONTROL,
+                axum::http::HeaderValue::from_static("private, max-age=86400"),
+            );
+            resp.headers_mut().insert(
+                axum::http::HeaderName::from_static("x-content-type-options"),
+                axum::http::HeaderValue::from_static("nosniff"),
+            );
+            resp
+        }
+        // 解析失败是内容问题（不是服务器错误）：400 + 可读原因
+        Ok(Err(message)) => ServiceError::InvalidInput(message).into_response(),
+        Err(_) => ServiceError::Internal("文档解析任务异常中止".into()).into_response(),
+    }
+}
+
 /// 文件内容（公开路由）。
 ///
 /// 公开文件不带任何凭据即可访问 —— Markdown 里的 `<img src>` 不会附带 Authorization，
@@ -394,19 +487,8 @@ pub async fn file_handler(
         Err(e) => return e.into_response(),
     };
 
-    if file.is_private {
-        let viewer = crate::app::http::auth::optional_claims(&auth, &headers)
-            .await
-            .map(|c| c.sub as i64);
-        match super::query::content_access(&file, viewer) {
-            super::query::ContentAccess::Allow => {}
-            super::query::ContentAccess::Deny => {
-                return ServiceError::NotFound("文件不存在".into()).into_response();
-            }
-            super::query::ContentAccess::NeedAuth => {
-                return crate::shared::error_types::unauthorized("该文件为私密文件，需要登录后访问");
-            }
-        }
+    if let Some(denied) = check_content_access(&auth, &headers, &file).await {
+        return denied;
     }
 
     // 路径取自 query service 持有的目录配置（勿在此硬编码 uploads/file）

@@ -14,6 +14,7 @@ import { isSplatLikeName } from "../lib/ply.ts";
 import { AudioViewer } from "./AudioViewer.tsx";
 import { CodeViewer } from "./CodeViewer.tsx";
 import { CsvViewer } from "./CsvViewer.tsx";
+import { DocxViewer } from "./DocxViewer.tsx";
 import { HexViewer } from "./HexViewer.tsx";
 import { HtmlViewer } from "./HtmlViewer.tsx";
 import { ImageViewer } from "./ImageViewer.tsx";
@@ -23,6 +24,7 @@ import { PlainTextViewer } from "./PlainTextViewer.tsx";
 import { SplatViewer } from "./SplatViewer.tsx";
 import type { Viewer } from "./types.ts";
 import { VideoViewer } from "./VideoViewer.tsx";
+import { XlsxViewer } from "./XlsxViewer.tsx";
 
 const isText = (f: FileItem) => f.mime_type.startsWith("text/");
 
@@ -65,6 +67,23 @@ export const VIEWERS: Viewer[] = [
 		id: "csv",
 		match: (f) => f.mime_type === "text/csv",
 		component: CsvViewer,
+	},
+	{
+		// Office 文档：正文由**后端**解析成受限 HTML / 表格数据（前端没有可信的解析器，
+		// 见 preview.rs 的文件头注释）。.doc 是二进制 OLE，暂不收录，仍然只给下载
+		id: "docx",
+		match: (f) =>
+			f.mime_type ===
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		component: DocxViewer,
+	},
+	{
+		id: "xlsx",
+		match: (f) =>
+			f.mime_type ===
+				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+			f.mime_type === "application/vnd.ms-excel",
+		component: XlsxViewer,
 	},
 	{
 		// 源码/配置：后端对 .rs/.toml 这类只给 text/plain，靠扩展名认出语言走高亮

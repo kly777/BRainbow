@@ -1,6 +1,7 @@
 pub mod consistency;
 pub mod handler;
 pub mod model;
+pub mod preview;
 pub mod query;
 pub mod repository;
 pub mod service;
@@ -48,5 +49,8 @@ where
     // 私密文件的内容路由需要解析可选凭据，因此还要能取到 AuthService
     crate::app::auth::service::AuthService: FromRef<S>,
 {
-    Router::new().route("/{stored_id}/data/{filename}", get(handler::file_handler))
+    Router::new()
+        .route("/{stored_id}/data/{filename}", get(handler::file_handler))
+        // 文档预览：与内容路由同一套可见性（公开文件不需要凭据）
+        .route("/{stored_id}/preview", get(handler::preview_handler))
 }

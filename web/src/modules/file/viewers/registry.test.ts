@@ -65,12 +65,8 @@ describe("查看器注册表：命中规则", () => {
 		],
 		["纯文本", ofCategory("text/plain", "document", "a.txt"), "text"],
 		[
-			"docx（后端白名单收了，但前端还没有查看器）",
-			ofCategory(
-				"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-				"document",
-				"a.docx",
-			),
+			"老 .doc 没有解析器，仍然只给下载（下一条是它的新格式兄弟）",
+			ofCategory("application/msword", "document", "a.doc"),
 			undefined,
 		],
 		["压缩包", ofCategory("application/zip", "other", "a.zip"), "hex"],
@@ -98,6 +94,24 @@ describe("查看器注册表：命中规则", () => {
 			"改名成 .bin 的泼溅文件不再被认领（只按扩展名判，内容判据在查看器内部）",
 			ofCategory("application/octet-stream", "other", "模型.bin"),
 			"hex",
+		],
+		[
+			"docx（正文由后端解析成 HTML 预览）",
+			ofCategory(
+				"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+				"document",
+				"报告.docx",
+			),
+			"docx",
+		],
+		[
+			"xlsx（后端 calamine 解析成表格数据）",
+			ofCategory(
+				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+				"document",
+				"数据.xlsx",
+			),
+			"xlsx",
 		],
 		[
 			"字幕（MIME 是 application/x-subrip，归 other 但内容是文本）",
@@ -168,12 +182,13 @@ describe("查看器注册表：后端白名单覆盖", () => {
 		"text/html": "html",
 		"text/csv": "csv",
 		"text/markdown": "markdown",
-		// Office 二进制文档：白名单收了但前端只给下载（查看器待补，见 doc/file-service.md）
-		"application/msword": null,
+		// Office：docx / xlsx / xls 由后端解析后预览（见 preview.rs）；
+		// .doc（老 Word）是二进制 OLE，另需一套解析器，暂时只给下载
 		"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-			null,
-		"application/vnd.ms-excel": null,
-		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": null,
+			"docx",
+		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+		"application/vnd.ms-excel": "xlsx",
+		"application/msword": null,
 	};
 
 	it("service.rs 的 ALLOWED_MIMES 能解析出来（解析失败要吵，不能静默放过）", () => {

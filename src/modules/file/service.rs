@@ -171,6 +171,23 @@ fn has_no_reliable_magic(mime: &str) -> bool {
     mime.starts_with("text/") || mime == "application/pdf" || mime == "image/svg+xml"
 }
 
+/// 这些 MIME 底下装的是 **zip 容器**（OOXML 家族：docx / xlsx / pptx …）。
+///
+/// `infer` 只看得到的字节，对它来说这就是个 zip，于是报 `application/zip`；
+/// 客户端报的是"容器 + 里面装的是什么"。两种说法都对，不是"类型不符"。
+fn is_zip_container(mime: &str) -> bool {
+    mime.starts_with("application/vnd.openxmlformats-officedocument.")
+}
+
+/// 这些 MIME 底下装的是 **OLE 复合文档**（97-2003 那批：doc / xls / ppt），
+/// infer 同样只认得出容器（`application/x-ole-storage`）
+fn is_ole_container(mime: &str) -> bool {
+    matches!(
+        mime,
+        "application/msword" | "application/vnd.ms-excel" | "application/vnd.ms-powerpoint"
+    )
+}
+
 /// XML 家族 MIME（SVG 本质是 XML，两种报告都常见）
 fn is_xml_like(mime: &str) -> bool {
     matches!(mime, "text/xml" | "application/xml")
@@ -709,6 +726,16 @@ impl FileService {
                 }
                 if real == "image/svg+xml" && is_xml_like(declared) {
                     return Ok("image/svg+xml".to_string());
+                }
+                // 容器等价：docx/xlsx/pptx 的字节就是 zip，doc/xls/ppt 的就是 OLE 复合文档 ——
+                // infer 报的是容器，客户端报的是"容器 + 内容"。**不认这两条的话，
+                // 白名单里的 docx/xlsx/doc/xls 永远传不上来**（用户上传 docx 时的
+                // "声明 …, 实际 application/zip" 就是这么来的）。只放行白名单里
+                // 声明过的类型，别把这条路变成"任意 zip 都能冒充文档"。
+                let container_ok = (real == "application/zip" && is_zip_container(declared))
+                    || (real == "application/x-ole-storage" && is_ole_container(declared));
+                if container_ok && find_allowed(declared).is_some() {
+                    return Ok(declared.to_string());
                 }
                 Err(ServiceError::InvalidInput(format!(
                     "文件类型不符：声明 {client_mime}, 实际 {raw}"
@@ -1332,6 +1359,9 @@ mod tests {
     /// 最小 ZIP 头（infer 识别 application/zip，但不在白名单）
     const ZIP_MIN: &[u8] = b"PK\x03\x04\x14\x00\x00\x00\x00\x00";
 
+    /// OLE 复合文档魔数（doc / xls 那批的头 8 字节）
+    const OLE_MIN: &[u8] = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1\x00\x00\x00\x00";
+
     /// 自动清理的临时目录
     struct TempDir(String);
 
@@ -1468,6 +1498,69 @@ mod tests {
             .await
             .unwrap_err();
         assert!(err.to_string().contains("空文件"));
+    }
+
+    /// OOXML（docx/xlsx）的字节就是 zip：infer 报 application/zip，
+    /// 客户端报 OOXML 类型 —— 两者都对，必须放行（否则白名单里的 docx 传不上来，
+    /// 线上就是这么挂的）
+    #[tokio::test]
+    async fn upload_accepts_ooxml_containers() {
+        let ctx = setup_service().await;
+        // 两份字节要不同：内容哈希相同会被去重，第二次上传直接返回上一条记录
+        for (bytes, name, mime) in [
+            (
+                ZIP_MIN,
+                "交底书.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ),
+            (
+                b"PK\x03\x04\x14\x00\x00\x00\x00\x01",
+                "数据.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ),
+        ] {
+            let f = ctx
+                .svc
+                .upload(bytes, name, mime, Some(7), None, false)
+                .await
+                .unwrap_or_else(|e| panic!("{name} 应当能上传：{e}"))
+                .file;
+            assert_eq!(f.mime_type, mime);
+            assert_eq!(f.file_category, super::super::model::FileCategory::Document);
+        }
+    }
+
+    /// 老格式（doc/xls）是 OLE 复合文档，infer 报 application/x-ole-storage，同理放行
+    #[tokio::test]
+    async fn upload_accepts_ole_containers() {
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(OLE_MIN, "老文档.doc", "application/msword", Some(7), None, false)
+            .await
+            .unwrap()
+            .file;
+        assert_eq!(f.mime_type, "application/msword");
+        assert_eq!(f.file_category, super::super::model::FileCategory::Document);
+    }
+
+    /// 放行容器≠放行一切：白名单外的 OOXML 类型仍然拒（别让"是 zip"变成万能通行证）
+    #[tokio::test]
+    async fn upload_rejects_unlisted_ooxml_containers() {
+        let ctx = setup_service().await;
+        let err = ctx
+            .svc
+            .upload(
+                ZIP_MIN,
+                "幻灯片.pptx",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                Some(7),
+                None,
+                false,
+            )
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("文件类型不符"), "{err}");
     }
 
     #[tokio::test]

@@ -6,6 +6,7 @@
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { previewUrlOf } from "../hooks/usePreviewDoc.ts";
+import { ArchiveViewer } from "./ArchiveViewer.tsx";
 import { DocxViewer } from "./DocxViewer.tsx";
 import { PptxViewer } from "./PptxViewer.tsx";
 import { item } from "./test-fixtures.ts";
@@ -214,5 +215,55 @@ describe("PptxViewer", () => {
 		stubPreview({ kind: "slides", slides: [], truncated: false });
 		const host = mount(PptxViewer);
 		await settle(() => (host.textContent ?? "").includes("没有幻灯片"));
+	});
+});
+
+describe("ArchiveViewer", () => {
+	it("列出条目、大小与压缩后大小，并给出汇总", async () => {
+		stubPreview({
+			kind: "archive",
+			format: "zip",
+			entries: [
+				{ name: "src/main.rs", size: 2048, compressed_size: 512, dir: false },
+				{ name: "docs/", size: 0, compressed_size: 0, dir: true },
+			],
+			truncated: false,
+			total_bytes: 2048,
+		});
+		const host = mount(ArchiveViewer);
+
+		await settle(() => (host.textContent ?? "").includes("src/main.rs"));
+		expect(host.textContent).toContain("docs/");
+		// 大小走 @shared/utils 的 formatBytes（具体写法由它决定，这里只钉"有大小"）
+		expect(host.textContent).toContain("KB");
+		expect(host.textContent).toContain("压缩后");
+		// 汇总：格式 · 条目数 · 解压后大小
+		expect(host.textContent).toContain("zip · 2 项");
+		expect(host.textContent).toContain("目录");
+	});
+
+	it("超过 500 项时说明只列了前 500 项", async () => {
+		stubPreview({
+			kind: "archive",
+			format: "tar.gz",
+			entries: [{ name: "a", size: 1, compressed_size: 1, dir: false }],
+			truncated: true,
+			total_bytes: 1,
+		});
+		const host = mount(ArchiveViewer);
+		await settle(() => (host.textContent ?? "").includes("tar.gz"));
+		expect(host.textContent).toContain("只列了前 500 项");
+	});
+
+	it("空包给一句话，而不是空表格", async () => {
+		stubPreview({
+			kind: "archive",
+			format: "zip",
+			entries: [],
+			truncated: false,
+			total_bytes: 0,
+		});
+		const host = mount(ArchiveViewer);
+		await settle(() => (host.textContent ?? "").includes("没有条目"));
 	});
 });

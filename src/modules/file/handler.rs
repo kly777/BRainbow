@@ -420,10 +420,6 @@ pub async fn preview_handler(
         return denied;
     }
 
-    let Some(kind) = super::preview::kind_for_mime(&file.mime_type) else {
-        return ServiceError::InvalidInput("这个文件类型没有文档预览".into()).into_response();
-    };
-
     let path = query.file_path(&stored_id);
     // 长度取磁盘实况（与内容路由同一原则）：记录与内容不一致时以文件为准
     let Ok(meta) = tokio::fs::metadata(&path).await else {
@@ -440,6 +436,11 @@ pub async fn preview_handler(
         return ServiceError::NotFound("文件不存在".into()).into_response();
     };
 
+    // 类型判定：Office 看 MIME，压缩包/数据库这类没有稳定 MIME 的看**内容**
+    let Some(kind) = super::preview::preview_kind_for(&file.mime_type, &bytes) else {
+        return ServiceError::InvalidInput("这个文件类型没有预览解析".into()).into_response();
+    };
+
     let parsed = tokio::task::spawn_blocking(move || match kind {
         super::preview::PreviewKind::Docx => super::preview::parse_docx(&bytes)
             .map(super::preview::Preview::Docx),
@@ -447,6 +448,13 @@ pub async fn preview_handler(
             .map(super::preview::Preview::Sheet),
         super::preview::PreviewKind::Slides => super::preview::parse_pptx(&bytes)
             .map(super::preview::Preview::Slides),
+        super::preview::PreviewKind::Archive => {
+            match super::preview::sniff_container(&bytes) {
+                Some(container) => super::preview::parse_archive(&bytes, container)
+                    .map(super::preview::Preview::Archive),
+                None => Err("认不出这是哪种压缩包".to_string()),
+            }
+        }
     })
     .await;
 

@@ -40,6 +40,8 @@ pub enum Preview {
     Sheet(SheetPreview),
     /// `.pptx`：每页的标题 / 正文 / 备注
     Slides(SlidesPreview),
+    /// 压缩包：条目清单（不解压）
+    Archive(ArchivePreview),
 }
 
 #[derive(Debug, Serialize)]
@@ -66,6 +68,24 @@ pub enum PreviewKind {
     Sheet,
     /// `.pptx`（幻灯片）
     Slides,
+    /// 压缩包：条目清单
+    Archive,
+}
+
+/// 这个文件能不能预览、按哪种解析。
+///
+/// Office 看 **MIME**（白名单里的类型是确定的），压缩包与数据库看**内容** ——
+/// 它们的 MIME 不稳定（浏览器对 `.tar.gz` 可能报空、`application/gzip`、`x-tar`
+/// 各种写法），而字节里的魔数不会骗人。
+pub fn preview_kind_for(mime: &str, bytes: &[u8]) -> Option<PreviewKind> {
+    if let Some(kind) = kind_for_mime(mime) {
+        return Some(kind);
+    }
+    match sniff_container(bytes)? {
+        Container::Zip | Container::Gzip | Container::Tar => Some(PreviewKind::Archive),
+        // 数据库要等 sqlite 那一项落地；现在认得出也不处理，交给调用方的 400
+        Container::Sqlite => None,
+    }
 }
 
 /// 这个 MIME 有没有文档预览。
@@ -972,6 +992,160 @@ fn text_of(xml: &str) -> Vec<String> {
     out
 }
 
+// ── 压缩包目录 ──
+
+/// 归档最多列这么多条（预览用；一个 10 万文件的包列出来也没人看）
+const MAX_ENTRIES: usize = 500;
+/// 走 gzip 时最多解压这么多字节去读 tar 头（防 gzip bomb：tar 头是顺序的，
+/// 列前几百条只需要开头这一小段）
+const MAX_TAR_BYTES: u64 = 16 * 1024 * 1024;
+
+#[derive(Debug, Serialize)]
+pub struct ArchivePreview {
+    /// `zip` / `tar` / `tar.gz`
+    pub format: String,
+    pub entries: Vec<ArchiveEntry>,
+    /// 条目数超过 `MAX_ENTRIES`
+    pub truncated: bool,
+    /// 解出来的总字节数（gzip 那种只能数到解压上限为止）
+    pub total_bytes: u64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ArchiveEntry {
+    pub name: String,
+    pub size: u64,
+    /// 压缩后大小（zip 有；tar 本身就是未压缩的流，与 size 相同）
+    pub compressed_size: u64,
+    pub dir: bool,
+}
+
+/// 内容嗅探：这个文件是哪种容器（与 `kind_for_mime` 互补 —— 压缩包没有稳定的 MIME，
+/// 浏览器对 .tar.gz 可能报空、application/gzip、x-tar 各种写法，只能看字节）
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Container {
+    Zip,
+    Gzip,
+    Tar,
+    Sqlite,
+}
+
+/// 看文件头认容器
+pub fn sniff_container(bytes: &[u8]) -> Option<Container> {
+    if bytes.starts_with(b"PK\x03\x04") || bytes.starts_with(b"PK\x05\x06") {
+        return Some(Container::Zip);
+    }
+    if bytes.starts_with(&[0x1f, 0x8b]) {
+        return Some(Container::Gzip);
+    }
+    if bytes.starts_with(b"SQLite format 3\0") {
+        return Some(Container::Sqlite);
+    }
+    // tar：magic 在偏移 257（ustar），早期 tar 没有
+    if bytes.get(257..262).is_some_and(|magic| magic == b"ustar") {
+        return Some(Container::Tar);
+    }
+    None
+}
+
+/// 列归档内容。**不解压条目**：zip 读中央目录、tar 只读 512 字节的块头，
+/// gzip 则限制解压上限（见 `MAX_TAR_BYTES`）
+pub fn parse_archive(bytes: &[u8], container: Container) -> Result<ArchivePreview, String> {
+    match container {
+        Container::Zip => list_zip(bytes),
+        Container::Gzip => list_tar_gz(bytes),
+        Container::Tar => list_tar(bytes),
+        Container::Sqlite => Err("这是数据库文件，不是压缩包".to_string()),
+    }
+}
+
+fn list_zip(bytes: &[u8]) -> Result<ArchivePreview, String> {
+    let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
+        .map_err(|e| format!("打不开这个 zip：{e}"))?;
+    let mut entries = Vec::new();
+    let mut total_bytes = 0_u64;
+    for index in 0..zip.len() {
+        if entries.len() >= MAX_ENTRIES {
+            break;
+        }
+        let Ok(entry) = zip.by_index(index) else {
+            continue;
+        };
+        let size = entry.size();
+        total_bytes = total_bytes.saturating_add(size);
+        entries.push(ArchiveEntry {
+            // zip 里的名字是字节串，非 UTF-8 时替换字符而不是整包失败
+            name: String::from_utf8_lossy(entry.name_raw()).into_owned(),
+            size,
+            compressed_size: entry.compressed_size(),
+            dir: entry.is_dir(),
+        });
+    }
+    Ok(ArchivePreview {
+        format: "zip".to_string(),
+        truncated: zip.len() > entries.len(),
+        entries,
+        total_bytes,
+    })
+}
+
+fn list_tar(reader: impl std::io::Read) -> Result<ArchivePreview, String> {
+    let mut archive = tar::Archive::new(reader);
+    let mut entries = Vec::new();
+    let mut total_bytes = 0_u64;
+    let mut truncated = false;
+    let iter = archive
+        .entries()
+        .map_err(|e| format!("读不出这个 tar：{e}"))?;
+    for entry in iter {
+        if entries.len() >= MAX_ENTRIES {
+            truncated = true;
+            break;
+        }
+        let Ok(entry) = entry else {
+            // 单个条目坏了就到此为止：能列多少算多少，别整包失败
+            break;
+        };
+        // header() 借在 entry 上，所以趁它活着把要用的都取出来
+        let header = entry.header();
+        let size = header.size().unwrap_or(0);
+        let name = header
+            .path()
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_else(|_| "(名字无法解码)".to_string());
+        let dir = header.entry_type().is_dir();
+        total_bytes = total_bytes.saturating_add(size);
+        entries.push(ArchiveEntry {
+            name,
+            size,
+            compressed_size: size,
+            dir,
+        });
+    }
+    Ok(ArchivePreview {
+        format: "tar".to_string(),
+        entries,
+        truncated,
+        total_bytes,
+    })
+}
+
+fn list_tar_gz(bytes: &[u8]) -> Result<ArchivePreview, String> {
+    // 先解开 gzip，再当 tar 列；解压有上限，防止解出一个巨大的假 tar
+    let mut decoded = Vec::new();
+    flate2::read::GzDecoder::new(Cursor::new(bytes))
+        .take(MAX_TAR_BYTES)
+        .read_to_end(&mut decoded)
+        .map_err(|e| format!("解不开这个 gzip：{e}"))?;
+    if !decoded.get(257..262).is_some_and(|magic| magic == b"ustar") {
+        // 不是 tar.gz（可能只是单个文件被 gzip 了）
+        return Err("这是 gzip 压缩的单个文件，不是归档（tar.gz 才能列目录）".to_string());
+    }
+    let mut preview = list_tar(Cursor::new(decoded))?;
+    preview.format = "tar.gz".to_string();
+    Ok(preview)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1231,6 +1405,112 @@ mod tests {
         );
         assert_eq!(resolve_target("ppt/slides", "../notesSlides/n1.xml"), "ppt/notesSlides/n1.xml");
         assert_eq!(resolve_target("ppt", "/ppt/slides/slide1.xml"), "ppt/slides/slide1.xml");
+    }
+
+    /// 造一个 zip（复用测试里的 zip_with）
+    #[test]
+    fn archive_lists_zip_without_extracting() {
+        let bytes = zip_with(&[("a/b.txt", "hello"), ("空.txt", "")]);
+        assert_eq!(sniff_container(&bytes), Some(Container::Zip));
+        let preview = parse_archive(&bytes, Container::Zip).expect("能列");
+        assert_eq!(preview.format, "zip");
+        assert_eq!(preview.entries.len(), 2);
+        assert_eq!(preview.entries[0].name, "a/b.txt");
+        assert_eq!(preview.entries[0].size, 5);
+        assert!(!preview.entries[0].dir);
+        assert_eq!(preview.total_bytes, 5);
+        assert!(!preview.truncated);
+    }
+
+    #[test]
+    fn archive_lists_tar_and_reports_truncation() {
+        // 造一个 tar：两个文件 + 一个目录
+        let mut buf = Vec::new();
+        {
+            let mut builder = tar::Builder::new(&mut buf);
+            let mut add = |path: &str, data: &[u8]| {
+                let mut header = tar::Header::new_gnu();
+                header.set_size(data.len() as u64);
+                header.set_mode(0o644);
+                header.set_cksum();
+                builder.append_data(&mut header, path, data).expect("写 tar");
+            };
+            add("a.txt", b"hello");
+            add("dir/b.txt", b"world!");
+            builder.finish().expect("收尾 tar");
+        }
+        assert_eq!(sniff_container(&buf), Some(Container::Tar));
+        let preview = parse_archive(&buf, Container::Tar).expect("能列");
+        assert_eq!(preview.format, "tar");
+        let names: Vec<&str> = preview.entries.iter().map(|e| e.name.as_str()).collect();
+        assert_eq!(names, vec!["a.txt", "dir/b.txt"]);
+        assert_eq!(preview.total_bytes, 11);
+    }
+
+    #[test]
+    fn archive_lists_tar_gz_and_rejects_plain_gzip() {
+        // tar.gz
+        let mut tar_bytes = Vec::new();
+        {
+            let mut builder = tar::Builder::new(&mut tar_bytes);
+            let mut header = tar::Header::new_gnu();
+            header.set_size(2);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, "x.txt", &b"hi"[..])
+                .expect("写 tar");
+            builder.finish().expect("收尾");
+        }
+        let mut gz = Vec::new();
+        {
+            use std::io::Write as _;
+            let mut encoder =
+                flate2::write::GzEncoder::new(&mut gz, flate2::Compression::default());
+            encoder.write_all(&tar_bytes).expect("压缩");
+            encoder.finish().expect("收尾 gzip");
+        }
+        assert_eq!(sniff_container(&gz), Some(Container::Gzip));
+        let preview = parse_archive(&gz, Container::Gzip).expect("能列");
+        assert_eq!(preview.format, "tar.gz");
+        assert_eq!(preview.entries[0].name, "x.txt");
+
+        // 只是把单个文件 gzip 了：明确说清楚，而不是给个空列表
+        let mut plain = Vec::new();
+        {
+            use std::io::Write as _;
+            let mut encoder =
+                flate2::write::GzEncoder::new(&mut plain, flate2::Compression::default());
+            encoder.write_all(b"just some text, not a tar").expect("压缩");
+            encoder.finish().expect("收尾");
+        }
+        let err = parse_archive(&plain, Container::Gzip).expect_err("要报错");
+        assert!(err.contains("不是归档"), "{err}");
+    }
+
+    #[test]
+    fn archive_rejects_garbage_and_sqlite() {
+        assert_eq!(sniff_container(b"nothing here"), None);
+        let err = parse_archive(b"x", Container::Sqlite).expect_err("要报错");
+        assert!(err.contains("数据库"), "{err}");
+    }
+
+    /// 不支持的容器不该被认成归档（避免"什么都能当 zip 列"）
+    #[test]
+    fn preview_kind_prefers_mime_then_content() {
+        let docx_mime =
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        // MIME 认得就用 MIME（docx 的字节也是 zip，不能被当成压缩包）
+        assert_eq!(
+            preview_kind_for(docx_mime, b"PK\x03\x04xxxx"),
+            Some(PreviewKind::Docx)
+        );
+        // MIME 不认识时看内容
+        assert_eq!(
+            preview_kind_for("application/octet-stream", b"PK\x03\x04xxxx"),
+            Some(PreviewKind::Archive)
+        );
+        assert_eq!(preview_kind_for("application/octet-stream", b"hello"), None);
     }
 
     #[test]

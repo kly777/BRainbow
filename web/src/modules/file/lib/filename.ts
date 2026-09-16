@@ -106,6 +106,15 @@ const PLAIN_TEXT_EXTS = new Set([
 	"patch",
 ]);
 
+/**
+ * 是否是压缩包（注册表按扩展名认领；**内容判据在后端** —— 压缩包没有稳定的 MIME，
+ * 浏览器对 .tar.gz 可能报空、application/gzip、x-tar 各种写法）。
+ * `.tar.gz` / `.tgz` 这种双扩展名要一起认。
+ */
+export function isArchiveName(name: string): boolean {
+	return /\.(zip|tar|tgz|tar\.gz)$/i.test(name.trim());
+}
+
 /** 文件名是否属于"已知是纯文本"的扩展名（只看名字，不看内容） */
 export function isPlainTextName(name: string): boolean {
 	return PLAIN_TEXT_EXTS.has(lowerExt(name));

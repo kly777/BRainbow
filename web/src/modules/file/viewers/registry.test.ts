@@ -69,7 +69,16 @@ describe("查看器注册表：命中规则", () => {
 			ofCategory("application/msword", "document", "a.doc"),
 			undefined,
 		],
-		["压缩包", ofCategory("application/zip", "other", "a.zip"), "hex"],
+		[
+			"压缩包：列条目清单（内容判据在后端，前端按扩展名认领）",
+			ofCategory("application/zip", "other", "a.zip"),
+			"archive",
+		],
+		[
+			"tar.gz 这种双扩展名一起认",
+			ofCategory("application/gzip", "other", "备份.tar.gz"),
+			"archive",
+		],
 		[
 			"3DGS 高斯泼溅（.ply 按扩展名认领，内容由查看器解析）",
 			ofCategory("application/octet-stream", "other", "模型.ply"),

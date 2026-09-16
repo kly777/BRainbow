@@ -37,6 +37,8 @@ eventsource-stream = "0.2.3"
 zip = "8.6.0"
 quick-xml = "0.42.0"
 calamine = "0.36.1"
+tar = "0.4.46"
+flate2 = "1.1.10"
 
 [lints.clippy]
 # 自动修复类（cargo clippy --fix 一键修完）

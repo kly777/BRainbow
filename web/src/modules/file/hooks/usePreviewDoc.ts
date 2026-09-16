@@ -24,11 +24,26 @@ export interface SlideData {
 	notes: string;
 }
 
+/** 压缩包里的一个条目 */
+export interface ArchiveEntry {
+	name: string;
+	size: number;
+	compressed_size: number;
+	dir: boolean;
+}
+
 /** 服务端解析结果（判别字段 `kind` 与查看器一一对应） */
 export type DocPreview =
 	| { kind: "docx"; html: string; truncated: boolean }
 	| { kind: "sheet"; sheets: SheetData[]; truncated: boolean }
-	| { kind: "slides"; slides: SlideData[]; truncated: boolean };
+	| { kind: "slides"; slides: SlideData[]; truncated: boolean }
+	| {
+			kind: "archive";
+			format: string;
+			entries: ArchiveEntry[];
+			truncated: boolean;
+			total_bytes: number;
+	  };
 
 /**
  * 预览端点由服务端给的内容 URL 派生：`…/{stored_id}/data/{文件名}` → `…/{stored_id}/preview`。

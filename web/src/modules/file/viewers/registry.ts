@@ -9,9 +9,10 @@
 // pdf/csv/docx，也表达不了"哪些格式浏览器其实渲染不了"这类事实。
 
 import type { FileItem } from "../api.ts";
-import { codeLang, isPlainTextName } from "../lib/filename.ts";
+import { codeLang, isArchiveName, isPlainTextName } from "../lib/filename.ts";
 import { isSplatLikeName } from "../lib/ply.ts";
 import { isPointCloudName } from "../lib/pointcloud.ts";
+import { ArchiveViewer } from "./ArchiveViewer.tsx";
 import { AudioViewer } from "./AudioViewer.tsx";
 import { CodeViewer } from "./CodeViewer.tsx";
 import { CsvViewer } from "./CsvViewer.tsx";
@@ -126,7 +127,13 @@ export const VIEWERS: Viewer[] = [
 		component: SplatViewer,
 	},
 	{
-		// 其余二进制（压缩包/设计稿/未知格式）：看文件头认类型，
+		// 压缩包：只看条目清单，不解压（内容判据在后端，见 preview.rs 的 sniff_container）
+		id: "archive",
+		match: (f) => isArchiveName(f.original_name),
+		component: ArchiveViewer,
+	},
+	{
+		// 其余二进制（设计稿/未知格式）：看文件头认类型，
 		// 至少能回答"这文件到底是什么"
 		id: "hex",
 		match: (f) => f.file_category === "other",

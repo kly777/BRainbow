@@ -10,7 +10,7 @@
 
 import type { FileItem } from "../api.ts";
 import { codeLang, isPlainTextName } from "../lib/filename.ts";
-import { isPlyName } from "../lib/ply.ts";
+import { isSplatLikeName } from "../lib/ply.ts";
 import { AudioViewer } from "./AudioViewer.tsx";
 import { CodeViewer } from "./CodeViewer.tsx";
 import { CsvViewer } from "./CsvViewer.tsx";
@@ -87,10 +87,12 @@ export const VIEWERS: Viewer[] = [
 		component: PlainTextViewer,
 	},
 	{
-		// 3DGS 高斯泼溅 / 点云：.ply 落在后端白名单外（other 类别），按扩展名认领。
-		// 内容不是 PLY、或解析不动时，查看器自己给提示与下载入口
+		// 3DGS 高斯泼溅 / 点云：`.ply`（带 ASCII 头）与 `.splat`（参考实现的定长格式）
+		// 都用这个查看器。两者都在后端白名单外（other 类别），按扩展名认领；
+		// 究竟哪种由查看器按内容魔数分辨。内容不是这两种、或解析不动时，
+		// 查看器自己给提示与下载入口
 		id: "splat",
-		match: (f) => isPlyName(f.original_name),
+		match: (f) => isSplatLikeName(f.original_name),
 		component: SplatViewer,
 	},
 	{

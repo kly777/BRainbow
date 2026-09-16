@@ -1,7 +1,14 @@
-// ── PLY 解析（3DGS 高斯泼溅与普通点云） ──
+// ── 3DGS / 点云的字节解析（.ply 与 .splat） ──
 //
 // 只做"文件字节 → 渲染器要的紧凑数组"这一段，纯函数、无 DOM、无 WebGL，便于直测。
 // 渲染见 viewers/splat/（着色器与深度排序参考 antimatter15/splat，MIT）。
+//
+// 两种输入格式，输出同一份布局：
+//   · `.ply`：带 ASCII 头、属性按名字对齐（下面解析头部与属性偏移）
+//   · `.splat`：参考实现的格式，**定长 32 字节/顶点、而且顺序与我们的紧凑数组完全一致**
+//     （见 SPLAT_ROW_BYTES），所以那条路径不需要任何重排，只做校验 + 取景范围 + 采样。
+//     判据是内容：没有 PLY 魔数就按 .splat 读（参考实现同样用魔数分辨），
+//     这样改了扩展名（或后端把 MIME 认成 octet-stream）也照样能看。
 //
 // 输出沿用参考实现的 32 字节/顶点布局，顶点着色器按此 texelFetch：
 //   [0..12)  位置    xyz  (f32 × 3)
@@ -18,6 +25,27 @@ export const SPLAT_ROW_BYTES = 32;
 /** 是否是 .ply（注册表只按文件名判定，内容能不能渲染交给查看器解析后再说） */
 export function isPlyName(name: string): boolean {
 	return /\.ply$/i.test(name.trim());
+}
+
+/** 是否是 .splat（参考实现的格式，定长 32 字节/顶点） */
+export function isSplatName(name: string): boolean {
+	return /\.splat$/i.test(name.trim());
+}
+
+/** 注册表用：两种格式走同一个查看器 */
+export function isSplatLikeName(name: string): boolean {
+	return isPlyName(name) || isSplatName(name);
+}
+
+/** PLY 魔数（"ply" + 换行）；没有它就不是 PLY，按 .splat 读 */
+export function isPlyBytes(bytes: Uint8Array): boolean {
+	return (
+		bytes.length >= 4 &&
+		bytes[0] === 0x70 &&
+		bytes[1] === 0x6c &&
+		bytes[2] === 0x79 &&
+		bytes[3] === 0x0a
+	);
 }
 
 /** 球谐基函数常数（f_dc → RGB 的转换系数） */
@@ -256,6 +284,71 @@ export function fitSample(
 	return out;
 }
 
+/**
+ * 取景范围：三个轴各自的 1% / 99% 分位，取中点当中心、半宽当尺寸；另给完整包围盒
+ * 对角线半径供诊断对照。`.ply` 与 `.splat` 两条解析路径共用。
+ *
+ * 为什么不用"到中心的距离分位数"（曾经的 P90 半径）：那个量与"内容在屏幕上占多大"
+ * 无关，实测两个真实场景一个溢出到 132%×241%（被裁切），一个在 2.3:1 的预览区里
+ * 只占 42.6% 的高度（上下大片空白）。原因是径向距离分不出轴向伸展：场景像"壳"
+ * （点到中心径向距离小、屏幕伸展大）或"扁而长"（y 只有 ±13 而 x/z 是 ±29/±44）时
+ * 都会偏得很离谱。各轴分位则如实描述了一个盒子，自动取景要的是它。
+ *
+ * 分位而非 min/max：1% 的尾巴（浮点噪点、天空点）不该把取景推远 ——
+ * 完整包围盒只用来算 bboxRadius。
+ */
+export function boundsFromPositions(
+	positions: Float32Array,
+	count: number,
+): SplatBounds {
+	// 空输入给零范围：min/max 会停在 ±Infinity，分位再平均一下就是 NaN。
+	// 调用方各自也拦了"没有顶点"，但这是导出函数，自己也得站得住
+	if (count <= 0) return { center: [0, 0, 0], half: [0, 0, 0], bboxRadius: 0 };
+	let minX = Number.POSITIVE_INFINITY;
+	let minY = Number.POSITIVE_INFINITY;
+	let minZ = Number.POSITIVE_INFINITY;
+	let maxX = Number.NEGATIVE_INFINITY;
+	let maxY = Number.NEGATIVE_INFINITY;
+	let maxZ = Number.NEGATIVE_INFINITY;
+	for (let i = 0; i < count; i++) {
+		const x = positions[i * 3];
+		const y = positions[i * 3 + 1];
+		const z = positions[i * 3 + 2];
+		if (x < minX) minX = x;
+		if (y < minY) minY = y;
+		if (z < minZ) minZ = z;
+		if (x > maxX) maxX = x;
+		if (y > maxY) maxY = y;
+		if (z > maxZ) maxZ = z;
+	}
+
+	const quantile = (axis: 0 | 1 | 2, p: number, lo: number, hi: number) =>
+		histogramQuantile(count, lo, hi, p, (i) => positions[i * 3 + axis]);
+	const low: [number, number, number] = [
+		quantile(0, 0.01, minX, maxX),
+		quantile(1, 0.01, minY, maxY),
+		quantile(2, 0.01, minZ, maxZ),
+	];
+	const high: [number, number, number] = [
+		quantile(0, 0.99, minX, maxX),
+		quantile(1, 0.99, minY, maxY),
+		quantile(2, 0.99, minZ, maxZ),
+	];
+	const center: [number, number, number] = [
+		(low[0] + high[0]) / 2,
+		(low[1] + high[1]) / 2,
+		(low[2] + high[2]) / 2,
+	];
+	const half: [number, number, number] = [
+		(high[0] - low[0]) / 2,
+		(high[1] - low[1]) / 2,
+		(high[2] - low[2]) / 2,
+	];
+	const diag = Math.hypot(maxX - minX, maxY - minY, maxZ - minZ);
+	const bboxRadius = Number.isFinite(diag) && diag > 0 ? diag / 2 : 0;
+	return { center, half, bboxRadius };
+}
+
 /** 缺了这个就没法确定顶点位置 */
 const REQUIRED = ["x", "y", "z"] as const;
 
@@ -314,17 +407,11 @@ export function buildSplatData(
 			] as const)
 		: undefined;
 
-	// 第一遍：位置范围 + importance（体积 × 不透明度，大的先渲染，参考实现同此）
-	// 顺便把位置存下来：取景中心与半径要按需反复取值（见下面的 histogramQuantile）
+	// 第一遍：位置 + importance（体积 × 不透明度，大的先渲染，参考实现同此）
+	// 顺便把位置存下来：取景范围要从它算（见 boundsFromPositions）
 	const positions = new Float32Array(vertexCount * 3);
 	const importance = new Float32Array(vertexCount);
 	const order = new Uint32Array(vertexCount);
-	let minX = Number.POSITIVE_INFINITY;
-	let minY = Number.POSITIVE_INFINITY;
-	let minZ = Number.POSITIVE_INFINITY;
-	let maxX = Number.NEGATIVE_INFINITY;
-	let maxY = Number.NEGATIVE_INFINITY;
-	let maxZ = Number.NEGATIVE_INFINITY;
 
 	for (let i = 0; i < vertexCount; i++) {
 		const base = dataOffset + i * rowSize;
@@ -334,12 +421,6 @@ export function buildSplatData(
 		positions[i * 3] = x;
 		positions[i * 3 + 1] = y;
 		positions[i * 3 + 2] = z;
-		if (x < minX) minX = x;
-		if (y < minY) minY = y;
-		if (z < minZ) minZ = z;
-		if (x > maxX) maxX = x;
-		if (y > maxY) maxY = y;
-		if (z > maxZ) maxZ = z;
 		order[i] = i;
 		if (fields3) {
 			const size =
@@ -403,48 +484,53 @@ export function buildSplatData(
 		}
 	}
 
-	// 取景范围：三个轴各自的 1% / 99% 分位，取中点当中心、半宽当尺寸。
-	//
-	// 为什么不用"到中心的距离分位数"（曾经的 P90 半径）：那个量与"内容在屏幕上占多大"
-	// 无关，实测两个真实场景一个溢出到 132%×241%（被裁切），一个在 2.3:1 的预览区里
-	// 只占 42.6% 的高度（上下大片空白）。原因是径向距离分不出轴向伸展：场景像"壳"
-	// （点到中心径向距离小、屏幕伸展大）或"扁而长"（y 只有 ±13 而 x/z 是 ±29/±44）时
-	// 都会偏得很离谱。各轴分位则如实描述了一个盒子，自动取景要的是它。
-	//
-	// 分位而非 min/max：1% 的尾巴（浮点噪点、天空点）不该把取景推远 ——
-	// 完整包围盒另存 bboxRadius 供诊断对照。
-	const quantile = (axis: 0 | 1 | 2, p: number, lo: number, hi: number) =>
-		histogramQuantile(vertexCount, lo, hi, p, (i) => positions[i * 3 + axis]);
-	const low: [number, number, number] = [
-		quantile(0, 0.01, minX, maxX),
-		quantile(1, 0.01, minY, maxY),
-		quantile(2, 0.01, minZ, maxZ),
-	];
-	const high: [number, number, number] = [
-		quantile(0, 0.99, minX, maxX),
-		quantile(1, 0.99, minY, maxY),
-		quantile(2, 0.99, minZ, maxZ),
-	];
-	const center: [number, number, number] = [
-		(low[0] + high[0]) / 2,
-		(low[1] + high[1]) / 2,
-		(low[2] + high[2]) / 2,
-	];
-	const half: [number, number, number] = [
-		(high[0] - low[0]) / 2,
-		(high[1] - low[1]) / 2,
-		(high[2] - low[2]) / 2,
-	];
-
-	const diag = Math.hypot(maxX - minX, maxY - minY, maxZ - minZ);
-	const bboxRadius = Number.isFinite(diag) && diag > 0 ? diag / 2 : 0;
-
 	return {
 		bytes: out,
 		vertexCount,
-		bounds: { center, half, bboxRadius },
+		bounds: boundsFromPositions(positions, vertexCount),
 		sample: fitSample(positions, vertexCount),
 		pointCloud: !fields3,
+	};
+}
+
+/**
+ * `.splat`（参考实现的格式）→ 渲染用的紧凑数组。
+ *
+ * 与 `.ply` 路径的最大区别：**这个格式的字节布局就是我们的紧凑数组**（定长 32 字节、
+ * 位置/缩放/颜色/四元数的顺序也一致），所以不需要逐属性重排，直接原样带走，
+ * 只做三件事：校验长度、算取景范围、抽位置样本。参考实现的 `convert.py` 写的正是
+ * 这个布局，而它自己的 demo（train.splat / nike.splat）就是这种文件。
+ *
+ * 没有"点云"分支：这个格式必然带高斯参数（缩放与四元数）。
+ */
+export function buildSplatDataFromSplat(bytes: Uint8Array): SplatData {
+	if (bytes.length < SPLAT_ROW_BYTES)
+		throw new PlyError("文件太小，不像 .splat（每顶点 32 字节）");
+	if (bytes.length % SPLAT_ROW_BYTES !== 0)
+		throw new PlyError(
+			`不是 PLY，也不是 .splat：长度 ${bytes.length} 不是 ${SPLAT_ROW_BYTES} 的整数倍`,
+		);
+	const vertexCount = bytes.length / SPLAT_ROW_BYTES;
+	// Float32Array 视图要求 4 字节对齐；分段请求拿到的 subarray 可能不满足，这时复制一份
+	const aligned = bytes.byteOffset % 4 === 0 ? bytes : bytes.slice();
+	const f = new Float32Array(
+		aligned.buffer,
+		aligned.byteOffset,
+		vertexCount * 8,
+	);
+	// 位置在每行开头，取景要用：抽成紧凑数组（fitSample 的等间隔抽样对它无偏）
+	const positions = new Float32Array(vertexCount * 3);
+	for (let i = 0; i < vertexCount; i++) {
+		positions[i * 3] = f[i * 8];
+		positions[i * 3 + 1] = f[i * 8 + 1];
+		positions[i * 3 + 2] = f[i * 8 + 2];
+	}
+	return {
+		bytes: aligned,
+		vertexCount,
+		bounds: boundsFromPositions(positions, vertexCount),
+		sample: fitSample(positions, vertexCount),
+		pointCloud: false,
 	};
 }
 

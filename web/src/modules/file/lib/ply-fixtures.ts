@@ -116,3 +116,39 @@ export function gaussianRow(
 /** 紧凑数组里的 f32 读取（断言用） */
 export const readF32 = (bytes: Uint8Array, offset: number) =>
 	new DataView(bytes.buffer, bytes.byteOffset).getFloat32(offset, true);
+
+/**
+ * 造一份 `.splat`（参考实现的格式）：定长 32 字节/顶点，布局与引擎内部的紧凑数组
+ * 一致（位置 3×f32、缩放 3×f32、颜色 4×u8、四元数 4×u8）。
+ *
+ * 注意 `scale` 是**已取过 exp 的最终尺度**（.splat 不存对数尺度），与 `gaussianRow`
+ * 的语义相反；`rot` 传 0..1 的四元数（写入时按 (q/|q|)·128+128 映射到字节）。
+ */
+export function buildSplat(
+	rows: Array<{
+		pos: [number, number, number];
+		scale?: [number, number, number];
+		rgba?: [number, number, number, number];
+		rot?: [number, number, number, number];
+	}>,
+): Uint8Array {
+	const out = new Uint8Array(rows.length * 32);
+	const view = new DataView(out.buffer);
+	rows.forEach((row, i) => {
+		const o = i * 32;
+		const s = row.scale ?? [0.01, 0.01, 0.01];
+		view.setFloat32(o, row.pos[0], true);
+		view.setFloat32(o + 4, row.pos[1], true);
+		view.setFloat32(o + 8, row.pos[2], true);
+		view.setFloat32(o + 12, s[0], true);
+		view.setFloat32(o + 16, s[1], true);
+		view.setFloat32(o + 20, s[2], true);
+		const c = row.rgba ?? [255, 255, 255, 255];
+		for (let k = 0; k < 4; k++) out[o + 24 + k] = c[k];
+		const q = row.rot ?? [1, 0, 0, 0];
+		const len = Math.hypot(...q) || 1;
+		for (let k = 0; k < 4; k++)
+			out[o + 28 + k] = Math.round((q[k] / len) * 128 + 128);
+	});
+	return out;
+}

@@ -7,7 +7,9 @@
 
 import {
 	buildSplatData,
+	buildSplatDataFromSplat,
 	buildSplatTexture,
+	isPlyBytes,
 	type SplatBounds,
 } from "../../lib/ply.ts";
 
@@ -66,7 +68,11 @@ export function createSplatEngine(): SplatEngine {
 	let lastAxis: [number, number, number] | undefined;
 
 	function load(bytes: Uint8Array): LoadedSplat {
-		const data = buildSplatData(bytes);
+		// 按内容判格式：有 PLY 魔数走 PLY，否则按 .splat（定长 32 字节）读 ——
+		// 参考实现也用同一个魔数分辨，所以改了扩展名也照样能看
+		const data = isPlyBytes(bytes)
+			? buildSplatData(bytes)
+			: buildSplatDataFromSplat(bytes);
 		const { texdata, texHeight } = buildSplatTexture(data, TEX_WIDTH);
 		splatBytes = data.bytes;
 		vertexCount = data.vertexCount;

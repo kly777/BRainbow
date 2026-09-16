@@ -90,6 +90,16 @@ describe("查看器注册表：命中规则", () => {
 			"splat",
 		],
 		[
+			".splat（参考实现的定长格式，与 .ply 同一个查看器，按内容分辨）",
+			ofCategory("application/octet-stream", "other", "模型.splat"),
+			"splat",
+		],
+		[
+			"改名成 .bin 的泼溅文件不再被认领（只按扩展名判，内容判据在查看器内部）",
+			ofCategory("application/octet-stream", "other", "模型.bin"),
+			"hex",
+		],
+		[
 			"字幕（MIME 是 application/x-subrip，归 other 但内容是文本）",
 			ofCategory("application/x-subrip", "other", "英语听力.srt"),
 			"plain-text-name",

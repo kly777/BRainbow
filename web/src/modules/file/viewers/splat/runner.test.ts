@@ -5,6 +5,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	buildPly,
+	buildSplat,
 	GAUSSIAN_PROPS,
 	gaussianRow,
 } from "../../lib/ply-fixtures.ts";
@@ -162,6 +163,15 @@ describe("createSplatRunner：worker 不可用", () => {
 		expect(Array.from(calls.sorted[0] ?? [])).toEqual([2, 1, 0]);
 	});
 
+	it("主线程路径也认 .splat（没有 PLY 魔数就按它读）", () => {
+		vi.stubGlobal("Worker", undefined);
+		const { h, calls } = handlers();
+		const runner = createSplatRunner(h);
+		runner.load(buildSplat([{ pos: [0, 0, 0] }, { pos: [2, 0, 0] }]));
+		expect(calls.loaded.length).toBe(1);
+		expect(calls.loaded[0]?.vertexCount).toBe(2);
+	});
+
 	it("构造抛错（老浏览器不支持模块 worker）同样退回主线程", () => {
 		vi.stubGlobal(
 			"Worker",
@@ -184,7 +194,8 @@ describe("createSplatRunner：内容错误", () => {
 		vi.stubGlobal("Worker", undefined);
 		const { h, calls } = handlers();
 		const runner = createSplatRunner(h);
-		runner.load(new TextEncoder().encode("这不是 PLY"));
+		// 既不是 PLY（无魔数）也不是 .splat（长度不是 32 的倍数）
+		runner.load(new Uint8Array(100).fill(7));
 		expect(calls.failed.length).toBe(1);
 		expect(calls.failed[0]).toContain("不是 PLY");
 		expect(calls.loaded.length).toBe(0);

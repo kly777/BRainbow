@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	buildPly,
+	buildSplat,
 	GAUSSIAN_PROPS,
 	gaussianRow,
 	POINT_PROPS,
@@ -60,10 +61,27 @@ describe("createSplatEngine.load", () => {
 		expect(loaded.vertexCount).toBe(2);
 	});
 
+	it("按内容分辨格式：没有 PLY 魔数就按 .splat 读", () => {
+		const engine = createSplatEngine();
+		const loaded = engine.load(
+			buildSplat([{ pos: [0, 0, 0] }, { pos: [4, 0, 0] }, { pos: [0, 0, 8] }]),
+		);
+		expect(loaded.vertexCount).toBe(3);
+		expect(engine.vertexCount).toBe(3);
+		// .splat 必带高斯参数，没有"普通点云"那种情况
+		expect(loaded.pointCloud).toBe(false);
+		expect(loaded.texWidth).toBe(TEX_WIDTH);
+		expect(loaded.bounds.center[2]).toBeCloseTo(4, 1);
+		// 排序照样能跑（索引指向纹理里的对应顶点）
+		const order = engine.sort([0, 0, 1]);
+		expect(order && Array.from(order)).toEqual([0, 1, 2]);
+	});
+
 	it("不可解析的内容抛出可读错误（由调用方转成用户提示）", () => {
 		const engine = createSplatEngine();
-		expect(() => engine.load(new TextEncoder().encode("not a ply"))).toThrow(
-			/不是 PLY/,
+		// 既没有 PLY 魔数，长度也不是 32 的整数倍（.splat 的定长）→ 两种格式都排除
+		expect(() => engine.load(new Uint8Array(100).fill(7))).toThrow(
+			/不是 PLY，也不是 \.splat/,
 		);
 	});
 });

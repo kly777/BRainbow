@@ -77,6 +77,8 @@ export const MIME_TIER: Record<string, TierKey> = {
 	"application/vnd.ms-excel": "document",
 	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
 		"document",
+	"application/vnd.openxmlformats-officedocument.presentationml.presentation":
+		"document",
 };
 
 /**
@@ -108,6 +110,7 @@ export const EXT_TIER: Record<string, TierKey> = {
 	htm: "document",
 	csv: "document",
 	md: "document",
+	pptx: "document",
 	markdown: "document",
 	doc: "document",
 	docx: "document",

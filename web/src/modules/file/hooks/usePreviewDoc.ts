@@ -17,10 +17,18 @@ export interface SheetData {
 	total_cols: number;
 }
 
+/** 一页幻灯片 */
+export interface SlideData {
+	title: string;
+	lines: string[];
+	notes: string;
+}
+
 /** 服务端解析结果（判别字段 `kind` 与查看器一一对应） */
 export type DocPreview =
 	| { kind: "docx"; html: string; truncated: boolean }
-	| { kind: "sheet"; sheets: SheetData[]; truncated: boolean };
+	| { kind: "sheet"; sheets: SheetData[]; truncated: boolean }
+	| { kind: "slides"; slides: SlideData[]; truncated: boolean };
 
 /**
  * 预览端点由服务端给的内容 URL 派生：`…/{stored_id}/data/{文件名}` → `…/{stored_id}/preview`。

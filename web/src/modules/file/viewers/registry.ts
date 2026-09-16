@@ -22,6 +22,7 @@ import { ImageViewer } from "./ImageViewer.tsx";
 import { MarkdownViewer } from "./MarkdownViewer.tsx";
 import { PdfViewer } from "./PdfViewer.tsx";
 import { PlainTextViewer } from "./PlainTextViewer.tsx";
+import { PptxViewer } from "./PptxViewer.tsx";
 import { SplatViewer } from "./SplatViewer.tsx";
 import type { Viewer } from "./types.ts";
 import { VideoViewer } from "./VideoViewer.tsx";
@@ -77,6 +78,13 @@ export const VIEWERS: Viewer[] = [
 			f.mime_type ===
 			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 		component: DocxViewer,
+	},
+	{
+		id: "pptx",
+		match: (f) =>
+			f.mime_type ===
+			"application/vnd.openxmlformats-officedocument.presentationml.presentation",
+		component: PptxViewer,
 	},
 	{
 		id: "xlsx",

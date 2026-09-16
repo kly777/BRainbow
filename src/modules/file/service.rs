@@ -163,6 +163,11 @@ const ALLOWED_MIMES: &[(&str, &str, u64)] = &[
         "document",
         DOCUMENT_MAX_SIZE,
     ),
+    (
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "document",
+        DOCUMENT_MAX_SIZE,
+    ),
 ];
 
 /// 这些类型本就没有可靠魔数（文本 / XML / PDF / SVG 都是文本或流式结构），
@@ -1544,7 +1549,8 @@ mod tests {
         assert_eq!(f.file_category, super::super::model::FileCategory::Document);
     }
 
-    /// 放行容器≠放行一切：白名单外的 OOXML 类型仍然拒（别让"是 zip"变成万能通行证）
+    /// 放行容器≠放行一切：白名单外的 zip 型文档（如 ODF）仍然拒
+    /// （别让"是 zip"变成万能通行证）
     #[tokio::test]
     async fn upload_rejects_unlisted_ooxml_containers() {
         let ctx = setup_service().await;
@@ -1552,8 +1558,8 @@ mod tests {
             .svc
             .upload(
                 ZIP_MIN,
-                "幻灯片.pptx",
-                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "文档.odt",
+                "application/vnd.oasis.opendocument.text",
                 Some(7),
                 None,
                 false,

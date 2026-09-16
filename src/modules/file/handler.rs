@@ -445,6 +445,8 @@ pub async fn preview_handler(
             .map(super::preview::Preview::Docx),
         super::preview::PreviewKind::Sheet => super::preview::parse_book(&bytes)
             .map(super::preview::Preview::Sheet),
+        super::preview::PreviewKind::Slides => super::preview::parse_pptx(&bytes)
+            .map(super::preview::Preview::Slides),
     })
     .await;
 

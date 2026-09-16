@@ -200,8 +200,8 @@ describe("与后端分档一致", () => {
 
 	it("白名单 MIME 与后端表双向一致（不漏也不多）", () => {
 		const rows = backendMimeConsts();
-		// 先钉住解析器本身没解析歪：白名单现有 26 条，漏读会让下面的比对空转
-		expect(rows.length).toBe(26);
+		// 先钉住解析器本身没解析歪：白名单现有 27 条（加了 pptx），漏读会让下面的比对空转
+		expect(rows.length).toBe(27);
 		for (const { mime, constName } of rows) {
 			const tierKey = MIME_TIER[mime];
 			expect(tierKey, `前端缺 ${mime} 的档位`).toBeDefined();

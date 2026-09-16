@@ -7,6 +7,7 @@ import { render } from "solid-js/web";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { previewUrlOf } from "../hooks/usePreviewDoc.ts";
 import { DocxViewer } from "./DocxViewer.tsx";
+import { PptxViewer } from "./PptxViewer.tsx";
 import { item } from "./test-fixtures.ts";
 import { XlsxViewer } from "./XlsxViewer.tsx";
 
@@ -165,5 +166,53 @@ describe("XlsxViewer", () => {
 		const host = mount(XlsxViewer);
 		await settle(() => (host.textContent ?? "").includes("只显示了前"));
 		expect(host.textContent).toContain("共 3000 行");
+	});
+});
+
+describe("PptxViewer", () => {
+	it("每页铺成卡片：页码、标题、正文与备注都在", async () => {
+		stubPreview({
+			kind: "slides",
+			slides: [
+				{ title: "封面", lines: [], notes: "" },
+				{ title: "架构", lines: ["服务端解析", "前端只画"], notes: "讲稿一句" },
+			],
+			truncated: false,
+		});
+		const host = mount(PptxViewer);
+
+		await settle(() => (host.textContent ?? "").includes("封面"));
+		expect(host.textContent).toContain("第 1 页");
+		expect(host.textContent).toContain("第 2 页");
+		expect(host.textContent).toContain("服务端解析");
+		expect(host.textContent).toContain("备注：讲稿一句");
+	});
+
+	it("没有标题的页给个占位，不留空白", async () => {
+		stubPreview({
+			kind: "slides",
+			slides: [{ title: "", lines: ["只有正文"], notes: "" }],
+			truncated: false,
+		});
+		const host = mount(PptxViewer);
+		await settle(() => (host.textContent ?? "").includes("只有正文"));
+		expect(host.textContent).toContain("（无标题）");
+	});
+
+	it("超过上限时说明只显示了前 100 张", async () => {
+		stubPreview({
+			kind: "slides",
+			slides: [{ title: "一", lines: [], notes: "" }],
+			truncated: true,
+		});
+		const host = mount(PptxViewer);
+		await settle(() => (host.textContent ?? "").includes("一"));
+		expect(host.textContent).toContain("只显示了前 100 张");
+	});
+
+	it("空演示文稿给一句话，而不是空白面板", async () => {
+		stubPreview({ kind: "slides", slides: [], truncated: false });
+		const host = mount(PptxViewer);
+		await settle(() => (host.textContent ?? "").includes("没有幻灯片"));
 	});
 });

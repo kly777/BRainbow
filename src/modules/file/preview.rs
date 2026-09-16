@@ -38,6 +38,8 @@ pub enum Preview {
     Docx(DocxPreview),
     /// `.xlsx` / `.xls`：每张表的前若干行
     Sheet(SheetPreview),
+    /// `.pptx`：每页的标题 / 正文 / 备注
+    Slides(SlidesPreview),
 }
 
 #[derive(Debug, Serialize)]
@@ -62,6 +64,8 @@ pub enum PreviewKind {
     Docx,
     /// `.xlsx` / `.xls`（两种电子表格）
     Sheet,
+    /// `.pptx`（幻灯片）
+    Slides,
 }
 
 /// 这个 MIME 有没有文档预览。
@@ -75,6 +79,9 @@ pub fn kind_for_mime(mime: &str) -> Option<PreviewKind> {
         }
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         | "application/vnd.ms-excel" => Some(PreviewKind::Sheet),
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation" => {
+            Some(PreviewKind::Slides)
+        }
         _ => None,
     }
 }
@@ -602,6 +609,369 @@ fn cell_text(cell: &calamine::Data) -> String {
     }
 }
 
+// ── .pptx ──
+
+/// 幻灯片最多解析这么多张（预览用）
+const MAX_SLIDES: usize = 100;
+/// 一页最多收这么多行正文
+const MAX_LINES_PER_SLIDE: usize = 60;
+
+#[derive(Debug, Serialize)]
+pub struct SlidesPreview {
+    pub slides: Vec<Slide>,
+    /// 只解析了前 `MAX_SLIDES` 张
+    pub truncated: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Slide {
+    /// 标题占位符里的文字（没有就用第一段）
+    pub title: String,
+    /// 其余文本框的段落，每段一条
+    pub lines: Vec<String>,
+    /// 备注页的文字（讲稿往往比正文有用）
+    pub notes: String,
+}
+
+/// 解析 `.pptx`：按**放映顺序**给出每页的标题、正文与备注。
+///
+/// 顺序不能按 `slideN.xml` 的数字排：改过顺序的演示文稿里数字既不连续也不按序，
+/// 真正的顺序在 `ppt/presentation.xml` 的 `sldIdLst`（r:id → rels 里的实际文件）。
+/// 解析不出顺序时退回数字序，总比没有强。
+pub fn parse_pptx(bytes: &[u8]) -> Result<SlidesPreview, String> {
+    let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
+        .map_err(|e| format!("不是有效的 pptx（打不开压缩包）：{e}"))?;
+
+    let order = read_zip_text(&mut zip, "ppt/presentation.xml")
+        .map(|(xml, _)| slide_rids(&xml))
+        .unwrap_or_default();
+    let rels = read_zip_text(&mut zip, "ppt/_rels/presentation.xml.rels")
+        .map(|(xml, _)| relationship_targets(&xml))
+        .unwrap_or_default();
+    let mut paths: Vec<String> = order
+        .iter()
+        .filter_map(|rid| rels.get(rid))
+        .map(|target| resolve_target("ppt", target))
+        .collect();
+    if paths.is_empty() {
+        paths = slide_paths_by_number(&mut zip);
+    }
+
+    let truncated = paths.len() > MAX_SLIDES;
+    let mut slides = Vec::new();
+    for path in paths.iter().take(MAX_SLIDES) {
+        let Some((xml, _)) = read_zip_text(&mut zip, path) else {
+            continue;
+        };
+        let text = parse_slide_xml(&xml);
+        // 备注：slide 的 rels 里指向 notesSlide
+        let notes = slide_rels_path(path)
+            .and_then(|rels_path| read_zip_text(&mut zip, &rels_path))
+            .and_then(|(rels_xml, _)| {
+                relationship_targets(&rels_xml)
+                    .values()
+                    .find(|target| target.contains("notesSlide"))
+                    .map(|target| resolve_target(parent_dir(path), target))
+            })
+            .and_then(|notes_path| read_zip_text(&mut zip, &notes_path))
+            .map(|(notes_xml, _)| text_of(&notes_xml).join(" "))
+            .unwrap_or_default();
+
+        slides.push(Slide {
+            title: text.title,
+            lines: text.lines,
+            notes,
+        });
+    }
+    Ok(SlidesPreview { slides, truncated })
+}
+
+/// `ppt/presentation.xml` 里 `sldId` 的 r:id 顺序
+fn slide_rids(xml: &str) -> Vec<String> {
+    use quick_xml::events::Event;
+
+    let mut reader = quick_xml::Reader::from_str(xml);
+    let mut ids = Vec::new();
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
+                // `sldId` 上有两个 local_name 都是 "id" 的属性（id 与 r:id），
+                // r:id 在后，所以按出现次序取第二个
+                if tag_name(&e) == "sldId"
+                    && let Some(rid) = attribute_by_local(&e, "id", 1)
+                {
+                    ids.push(rid);
+                }
+            }
+            Ok(Event::Eof) | Err(_) => break,
+            _ => {}
+        }
+    }
+    ids
+}
+
+/// rels 文件：Id → Target
+fn relationship_targets(xml: &str) -> std::collections::HashMap<String, String> {
+    use std::collections::HashMap;
+
+    use quick_xml::events::Event;
+
+    let mut reader = quick_xml::Reader::from_str(xml);
+    let mut map = HashMap::new();
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
+                if tag_name(&e) == "Relationship"
+                    && let (Some(id), Some(target)) =
+                        (attr_value(&e, "Id"), attr_value(&e, "Target"))
+                {
+                    map.insert(id, target);
+                }
+            }
+            Ok(Event::Eof) | Err(_) => break,
+            _ => {}
+        }
+    }
+    map
+}
+
+/// 取同名属性里的第 index 个（见 `slide_rids` 的注释）
+fn attribute_by_local(
+    e: &quick_xml::events::BytesStart<'_>,
+    name: &str,
+    index: usize,
+) -> Option<String> {
+    e.attributes()
+        .flatten()
+        .filter(|a| a.key.local_name().into_inner() == name)
+        .nth(index)
+        .map(|a| a.value.into_owned())
+}
+
+/// zip 内路径的所在目录（`ppt/slides/slide1.xml` → `ppt/slides`）
+fn parent_dir(path: &str) -> &str {
+    path.rsplit_once('/').map(|(dir, _)| dir).unwrap_or("")
+}
+
+/// slide 的 rels 路径（`ppt/slides/slide1.xml` → `ppt/slides/_rels/slide1.xml.rels`）
+fn slide_rels_path(slide_path: &str) -> Option<String> {
+    let name = slide_path.rsplit('/').next()?;
+    Some(format!("{}/_rels/{name}.rels", parent_dir(slide_path)))
+}
+
+/// OPC 的相对 Target → zip 内路径（可能是 `/ppt/...` 绝对式，也可能带 `../`）
+fn resolve_target(base: &str, target: &str) -> String {
+    if let Some(absolute) = target.strip_prefix('/') {
+        return absolute.to_string();
+    }
+    let mut parts: Vec<&str> = if base.is_empty() {
+        Vec::new()
+    } else {
+        base.split('/').collect()
+    };
+    for segment in target.split('/') {
+        match segment {
+            "" | "." => {}
+            ".." => {
+                parts.pop();
+            }
+            other => parts.push(other),
+        }
+    }
+    parts.join("/")
+}
+
+/// 兜底顺序：zip 里 `ppt/slides/slideN.xml` 按数字排
+fn slide_paths_by_number(zip: &mut zip::ZipArchive<Cursor<&[u8]>>) -> Vec<String> {
+    let mut found: Vec<(u32, String)> = Vec::new();
+    for index in 0..zip.len() {
+        let Ok(entry) = zip.by_index(index) else {
+            continue;
+        };
+        let name = entry.name().to_string();
+        let Some(rest) = name.strip_prefix("ppt/slides/slide") else {
+            continue;
+        };
+        let Some(number) = rest.strip_suffix(".xml").and_then(|n| n.parse().ok()) else {
+            continue;
+        };
+        found.push((number, name));
+    }
+    found.sort_by_key(|(number, _)| *number);
+    found.into_iter().map(|(_, name)| name).collect()
+}
+
+/// 一页幻灯片的文本
+struct SlideText {
+    title: String,
+    lines: Vec<String>,
+}
+
+/// 抽一页幻灯片的文字：标题占位符当标题，其余文本框的段落按行
+fn parse_slide_xml(xml: &str) -> SlideText {
+    use quick_xml::events::Event;
+
+    /// 一个文本框：是否标题占位符 + 它的段落
+    struct Shape {
+        title: bool,
+        paragraphs: Vec<String>,
+        current: String,
+    }
+
+    fn flush(shape: &mut Shape) {
+        if !shape.current.trim().is_empty() {
+            let done = std::mem::take(&mut shape.current);
+            shape.paragraphs.push(done);
+        } else {
+            shape.current.clear();
+        }
+    }
+
+    fn mark_title(shape: &mut Shape, e: &quick_xml::events::BytesStart<'_>) {
+        let kind = attr_value(e, "type").unwrap_or_default();
+        if matches!(kind.as_str(), "title" | "ctrTitle") {
+            shape.title = true;
+        }
+    }
+
+    let mut reader = quick_xml::Reader::from_str(xml);
+    let mut shape: Option<Shape> = None;
+    let mut shapes: Vec<Shape> = Vec::new();
+    let mut in_text = false;
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e)) => match tag_name(&e) {
+                "sp" => {
+                    shape = Some(Shape {
+                        title: false,
+                        paragraphs: Vec::new(),
+                        current: String::new(),
+                    })
+                }
+                "ph" => {
+                    if let Some(shape) = shape.as_mut() {
+                        mark_title(shape, &e);
+                    }
+                }
+                "t" => in_text = true,
+                "br" => {
+                    if let Some(shape) = shape.as_mut() {
+                        shape.current.push(' ');
+                    }
+                }
+                _ => {}
+            },
+            Ok(Event::Empty(e)) => {
+                if tag_name(&e) == "ph"
+                    && let Some(shape) = shape.as_mut()
+                {
+                    mark_title(shape, &e);
+                }
+            }
+            Ok(Event::End(e)) => match end_name(&e) {
+                "t" => in_text = false,
+                "p" => {
+                    if let Some(shape) = shape.as_mut() {
+                        flush(shape);
+                    }
+                }
+                "sp" => {
+                    if let Some(mut done) = shape.take() {
+                        flush(&mut done);
+                        shapes.push(done);
+                    }
+                }
+                _ => {}
+            },
+            Ok(Event::Text(t)) => {
+                if in_text
+                    && let Some(shape) = shape.as_mut()
+                    && let Ok(text) = quick_xml::escape::unescape(&t.xml10_content())
+                {
+                    shape.current.push_str(&text);
+                }
+            }
+            Ok(Event::GeneralRef(r)) => {
+                if in_text
+                    && let Some(shape) = shape.as_mut()
+                    && let Some(text) = entity_text(&r.xml10_content())
+                {
+                    shape.current.push_str(&text);
+                }
+            }
+            Ok(Event::Eof) | Err(_) => break,
+            _ => {}
+        }
+    }
+
+    let title_index = shapes.iter().position(|shape| shape.title);
+    let title = title_index
+        .and_then(|index| shapes.get(index))
+        .or_else(|| shapes.first())
+        .map(|shape| shape.paragraphs.join(" "))
+        .unwrap_or_default();
+    let mut lines: Vec<String> = Vec::new();
+    for (index, shape) in shapes.iter().enumerate() {
+        if Some(index) == title_index {
+            continue;
+        }
+        for paragraph in &shape.paragraphs {
+            lines.push(paragraph.clone());
+        }
+    }
+    lines.truncate(MAX_LINES_PER_SLIDE);
+    SlideText {
+        title: title.trim().to_string(),
+        lines,
+    }
+}
+
+/// 一份 XML 里所有 `<a:t>` 的文本（按段落分条）—— 备注页用
+fn text_of(xml: &str) -> Vec<String> {
+    use quick_xml::events::Event;
+
+    let mut reader = quick_xml::Reader::from_str(xml);
+    let mut out = Vec::new();
+    let mut current = String::new();
+    let mut in_text = false;
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e)) => {
+                if tag_name(&e) == "t" {
+                    in_text = true;
+                }
+            }
+            Ok(Event::End(e)) => match end_name(&e) {
+                "t" => in_text = false,
+                "p" => {
+                    if !current.trim().is_empty() {
+                        out.push(current.trim().to_string());
+                    }
+                    current.clear();
+                }
+                _ => {}
+            },
+            Ok(Event::Text(t)) => {
+                if in_text
+                    && let Ok(text) = quick_xml::escape::unescape(&t.xml10_content())
+                {
+                    current.push_str(&text);
+                }
+            }
+            Ok(Event::GeneralRef(r)) => {
+                if in_text
+                    && let Some(text) = entity_text(&r.xml10_content())
+                {
+                    current.push_str(&text);
+                }
+            }
+            Ok(Event::Eof) | Err(_) => break,
+            _ => {}
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -771,6 +1141,96 @@ mod tests {
             ("xl/sharedStrings.xml", shared),
             ("xl/worksheets/sheet1.xml", sheet_xml),
         ])
+    }
+
+    /// 最小 pptx：两页 + 一页备注。**故意让数字序与放映顺序相反**，
+    /// 钉住"顺序看 presentation.xml 而不是看文件名"这条
+    fn pptx() -> Vec<u8> {
+        let presentation = r#"<?xml version="1.0" encoding="UTF-8"?>
+<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<p:sldIdLst><p:sldId id="256" r:id="rId2"/><p:sldId id="257" r:id="rId3"/></p:sldIdLst></p:presentation>"#;
+        let pres_rels = r#"<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide2.xml"/>
+<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+</Relationships>"#;
+        let slide1 = r#"<?xml version="1.0" encoding="UTF-8"?>
+<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree>
+<p:sp><p:nvSpPr><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr><p:txBody><a:p><a:r><a:t>第一页标题</a:t></a:r></a:p></p:txBody></p:sp>
+<p:sp><p:nvSpPr><p:nvPr/></p:nvSpPr><p:txBody><a:p><a:r><a:t>要点一</a:t></a:r></a:p><a:p><a:r><a:t>要点二</a:t></a:r></a:p></p:txBody></p:sp>
+</p:spTree></p:cSld></p:sld>"#;
+        let slide2 = r#"<?xml version="1.0" encoding="UTF-8"?>
+<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree>
+<p:sp><p:nvSpPr><p:nvPr><p:ph type="ctrTitle"/></p:nvPr></p:nvSpPr><p:txBody><a:p><a:r><a:t>封面</a:t></a:r></a:p></p:txBody></p:sp>
+</p:spTree></p:cSld></p:sld>"#;
+        let slide1_rels = r#"<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide1.xml"/>
+</Relationships>"#;
+        let notes1 = r#"<?xml version="1.0" encoding="UTF-8"?>
+<p:notes xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree>
+<p:sp><p:nvSpPr><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:txBody><a:p><a:r><a:t>这是讲稿</a:t></a:r></a:p></p:txBody></p:sp>
+</p:spTree></p:cSld></p:notes>"#;
+        zip_with(&[
+            ("ppt/presentation.xml", presentation),
+            ("ppt/_rels/presentation.xml.rels", pres_rels),
+            ("ppt/slides/slide1.xml", slide1),
+            ("ppt/slides/slide2.xml", slide2),
+            ("ppt/slides/_rels/slide1.xml.rels", slide1_rels),
+            ("ppt/notesSlides/notesSlide1.xml", notes1),
+        ])
+    }
+
+    #[test]
+    fn pptx_follows_presentation_order_and_reads_notes() {
+        let preview = parse_pptx(&pptx()).expect("能解析");
+        assert!(!preview.truncated);
+        // 放映顺序：先 slide2（封面）再 slide1
+        assert_eq!(preview.slides.len(), 2);
+        assert_eq!(preview.slides[0].title, "封面");
+        assert_eq!(preview.slides[1].title, "第一页标题");
+        assert_eq!(preview.slides[1].lines, vec!["要点一", "要点二"]);
+        // 备注跟着自己的那页
+        assert_eq!(preview.slides[1].notes, "这是讲稿");
+        assert_eq!(preview.slides[0].notes, "");
+    }
+
+    #[test]
+    fn pptx_without_presentation_xml_falls_back_to_number_order() {
+        // 只有 ppt/slides/*.xml（有些导出工具不写 presentation.xml）
+        let slide = |text: &str| {
+            format!(
+                r#"<p:sld xmlns:p="p" xmlns:a="a"><p:cSld><p:spTree><p:sp><p:nvSpPr><p:nvPr/></p:nvSpPr><p:txBody><a:p><a:r><a:t>{text}</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>"#
+            )
+        };
+        let bytes = zip_with(&[
+            ("ppt/slides/slide1.xml", &slide("一")),
+            ("ppt/slides/slide2.xml", &slide("二")),
+        ]);
+        let preview = parse_pptx(&bytes).expect("能解析");
+        let titles: Vec<&str> = preview
+            .slides
+            .iter()
+            .map(|s| s.title.as_str())
+            .collect();
+        assert_eq!(titles, vec!["一", "二"]);
+    }
+
+    #[test]
+    fn pptx_rejects_non_zip() {
+        let err = parse_pptx(b"not a pptx").expect_err("要报错");
+        assert!(err.contains("不是有效的 pptx"), "{err}");
+    }
+
+    /// rels 的 Target 可能是绝对式或带 `../`
+    #[test]
+    fn resolve_target_handles_relative_and_absolute() {
+        assert_eq!(
+            resolve_target("ppt", "slides/slide1.xml"),
+            "ppt/slides/slide1.xml"
+        );
+        assert_eq!(resolve_target("ppt/slides", "../notesSlides/n1.xml"), "ppt/notesSlides/n1.xml");
+        assert_eq!(resolve_target("ppt", "/ppt/slides/slide1.xml"), "ppt/slides/slide1.xml");
     }
 
     #[test]

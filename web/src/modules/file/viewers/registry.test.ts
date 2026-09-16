@@ -120,6 +120,15 @@ describe("查看器注册表：命中规则", () => {
 			"docx",
 		],
 		[
+			"pptx（后端按放映顺序抽出每页标题/正文/备注）",
+			ofCategory(
+				"application/vnd.openxmlformats-officedocument.presentationml.presentation",
+				"document",
+				"汇报.pptx",
+			),
+			"pptx",
+		],
+		[
 			"xlsx（后端 calamine 解析成表格数据）",
 			ofCategory(
 				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -203,6 +212,8 @@ describe("查看器注册表：后端白名单覆盖", () => {
 			"docx",
 		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
 		"application/vnd.ms-excel": "xlsx",
+		"application/vnd.openxmlformats-officedocument.presentationml.presentation":
+			"pptx",
 		"application/msword": null,
 	};
 

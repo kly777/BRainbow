@@ -7,6 +7,7 @@ import { render } from "solid-js/web";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { previewUrlOf } from "../hooks/usePreviewDoc.ts";
 import { ArchiveViewer } from "./ArchiveViewer.tsx";
+import { DatabaseViewer } from "./DatabaseViewer.tsx";
 import { DocxViewer } from "./DocxViewer.tsx";
 import { PptxViewer } from "./PptxViewer.tsx";
 import { item } from "./test-fixtures.ts";
@@ -265,5 +266,61 @@ describe("ArchiveViewer", () => {
 		});
 		const host = mount(ArchiveViewer);
 		await settle(() => (host.textContent ?? "").includes("没有条目"));
+	});
+});
+
+describe("DatabaseViewer", () => {
+	const table = (name: string, columns: string[], rows: string[][]) => ({
+		name,
+		columns,
+		rows,
+	});
+
+	it("表头 + 数据行都铺出来，多张表给页签", async () => {
+		stubPreview({
+			kind: "database",
+			tables: [
+				table("user", ["id", "name"], [["1", "张三"]]),
+				table("log", ["msg"], [["hello"]]),
+			],
+			truncated: false,
+		});
+		const host = mount(DatabaseViewer);
+
+		await settle(() => (host.textContent ?? "").includes("张三"));
+		expect(host.textContent).toContain("id");
+		expect(host.textContent).toContain("name");
+		expect(host.querySelectorAll("th").length).toBe(2);
+		expect(host.textContent).not.toContain("hello");
+
+		const tabs = host.querySelectorAll("[role='tab']");
+		(tabs[1] as HTMLButtonElement).click();
+		await settle(() => (host.textContent ?? "").includes("hello"));
+		expect(host.textContent).toContain("msg");
+	});
+
+	it("说明这是只读预览（每张表最多 100 行）", async () => {
+		stubPreview({
+			kind: "database",
+			tables: [table("user", ["id"], [["1"]])],
+			truncated: false,
+		});
+		const host = mount(DatabaseViewer);
+		await settle(() => (host.textContent ?? "").includes("只读预览"));
+		expect(host.textContent).toContain("每张表最多 100 行");
+	});
+
+	it("表太多时说明只显示了前 50 张；空库给一句话", async () => {
+		stubPreview({
+			kind: "database",
+			tables: [table("a", ["x"], [])],
+			truncated: true,
+		});
+		const host = mount(DatabaseViewer);
+		await settle(() => (host.textContent ?? "").includes("前 50 张"));
+
+		stubPreview({ kind: "database", tables: [], truncated: false });
+		const empty = mount(DatabaseViewer);
+		await settle(() => (empty.textContent ?? "").includes("没有表"));
 	});
 });

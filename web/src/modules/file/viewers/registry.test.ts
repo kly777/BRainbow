@@ -75,6 +75,11 @@ describe("查看器注册表：命中规则", () => {
 			"archive",
 		],
 		[
+			"SQLite 数据库按扩展名认领（内容判据在后端）",
+			ofCategory("application/octet-stream", "other", "notes.sqlite"),
+			"database",
+		],
+		[
 			"tar.gz 这种双扩展名一起认",
 			ofCategory("application/gzip", "other", "备份.tar.gz"),
 			"archive",

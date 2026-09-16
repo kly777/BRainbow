@@ -441,6 +441,13 @@ pub async fn preview_handler(
         return ServiceError::InvalidInput("这个文件类型没有预览解析".into()).into_response();
     };
 
+    // 数据库是 async 的（sqlx），单独一条路径；其余解析是纯 CPU 活，进 spawn_blocking
+    if kind == super::preview::PreviewKind::Database {
+        return match super::preview::parse_database(&path).await {
+            Ok(preview) => preview_response(super::preview::Preview::Database(preview)),
+            Err(message) => ServiceError::InvalidInput(message).into_response(),
+        };
+    }
     let parsed = tokio::task::spawn_blocking(move || match kind {
         super::preview::PreviewKind::Docx => super::preview::parse_docx(&bytes)
             .map(super::preview::Preview::Docx),
@@ -448,6 +455,10 @@ pub async fn preview_handler(
             .map(super::preview::Preview::Sheet),
         super::preview::PreviewKind::Slides => super::preview::parse_pptx(&bytes)
             .map(super::preview::Preview::Slides),
+        // 数据库走上面的 async 分支，这里到不了
+        super::preview::PreviewKind::Database => {
+            Err("内部错误：数据库预览不应走到这里".to_string())
+        }
         super::preview::PreviewKind::Archive => {
             match super::preview::sniff_container(&bytes) {
                 Some(container) => super::preview::parse_archive(&bytes, container)
@@ -459,23 +470,25 @@ pub async fn preview_handler(
     .await;
 
     match parsed {
-        Ok(Ok(preview)) => {
-            // 派生内容，与内容路由一样只允许私有缓存（共享缓存会绕过鉴权）
-            let mut resp = Json(preview).into_response();
-            resp.headers_mut().insert(
-                header::CACHE_CONTROL,
-                axum::http::HeaderValue::from_static("private, max-age=86400"),
-            );
-            resp.headers_mut().insert(
-                axum::http::HeaderName::from_static("x-content-type-options"),
-                axum::http::HeaderValue::from_static("nosniff"),
-            );
-            resp
-        }
+        Ok(Ok(preview)) => preview_response(preview),
         // 解析失败是内容问题（不是服务器错误）：400 + 可读原因
         Ok(Err(message)) => ServiceError::InvalidInput(message).into_response(),
         Err(_) => ServiceError::Internal("文档解析任务异常中止".into()).into_response(),
     }
+}
+
+/// 预览响应的统一头部：派生内容，与内容路由一样只允许私有缓存（共享缓存会绕过鉴权）
+fn preview_response(preview: super::preview::Preview) -> Response {
+    let mut resp = Json(preview).into_response();
+    resp.headers_mut().insert(
+        header::CACHE_CONTROL,
+        axum::http::HeaderValue::from_static("private, max-age=86400"),
+    );
+    resp.headers_mut().insert(
+        axum::http::HeaderName::from_static("x-content-type-options"),
+        axum::http::HeaderValue::from_static("nosniff"),
+    );
+    resp
 }
 
 /// 文件内容（公开路由）。

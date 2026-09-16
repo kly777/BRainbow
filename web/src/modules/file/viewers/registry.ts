@@ -9,13 +9,19 @@
 // pdf/csv/docx，也表达不了"哪些格式浏览器其实渲染不了"这类事实。
 
 import type { FileItem } from "../api.ts";
-import { codeLang, isArchiveName, isPlainTextName } from "../lib/filename.ts";
+import {
+	codeLang,
+	isArchiveName,
+	isPlainTextName,
+	isSqliteName,
+} from "../lib/filename.ts";
 import { isSplatLikeName } from "../lib/ply.ts";
 import { isPointCloudName } from "../lib/pointcloud.ts";
 import { ArchiveViewer } from "./ArchiveViewer.tsx";
 import { AudioViewer } from "./AudioViewer.tsx";
 import { CodeViewer } from "./CodeViewer.tsx";
 import { CsvViewer } from "./CsvViewer.tsx";
+import { DatabaseViewer } from "./DatabaseViewer.tsx";
 import { DocxViewer } from "./DocxViewer.tsx";
 import { HexViewer } from "./HexViewer.tsx";
 import { HtmlViewer } from "./HtmlViewer.tsx";
@@ -125,6 +131,13 @@ export const VIEWERS: Viewer[] = [
 		match: (f) =>
 			isSplatLikeName(f.original_name) || isPointCloudName(f.original_name),
 		component: SplatViewer,
+	},
+	{
+		// SQLite 数据库：只读列出表与前若干行（后端只读打开 + 上限 + 超时，
+		// 见 preview.rs 的 parse_database —— 这是唯一一处会"打开用户上传文件"的地方）
+		id: "database",
+		match: (f) => isSqliteName(f.original_name),
+		component: DatabaseViewer,
 	},
 	{
 		// 压缩包：只看条目清单，不解压（内容判据在后端，见 preview.rs 的 sniff_container）

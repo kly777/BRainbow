@@ -115,6 +115,11 @@ export function isArchiveName(name: string): boolean {
 	return /\.(zip|tar|tgz|tar\.gz)$/i.test(name.trim());
 }
 
+/** 是否是 SQLite 数据库（注册表按扩展名认领；内容判据在后端，见 preview.rs） */
+export function isSqliteName(name: string): boolean {
+	return /\.(sqlite|sqlite3|db)$/i.test(name.trim());
+}
+
 /** 文件名是否属于"已知是纯文本"的扩展名（只看名字，不看内容） */
 export function isPlainTextName(name: string): boolean {
 	return PLAIN_TEXT_EXTS.has(lowerExt(name));

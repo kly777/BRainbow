@@ -42,6 +42,8 @@ pub enum Preview {
     Slides(SlidesPreview),
     /// 压缩包：条目清单（不解压）
     Archive(ArchivePreview),
+    /// SQLite 数据库：表清单 + 每张表前若干行
+    Database(DatabasePreview),
 }
 
 #[derive(Debug, Serialize)]
@@ -70,6 +72,8 @@ pub enum PreviewKind {
     Slides,
     /// 压缩包：条目清单
     Archive,
+    /// SQLite 数据库
+    Database,
 }
 
 /// 这个文件能不能预览、按哪种解析。
@@ -83,8 +87,7 @@ pub fn preview_kind_for(mime: &str, bytes: &[u8]) -> Option<PreviewKind> {
     }
     match sniff_container(bytes)? {
         Container::Zip | Container::Gzip | Container::Tar => Some(PreviewKind::Archive),
-        // 数据库要等 sqlite 那一项落地；现在认得出也不处理，交给调用方的 400
-        Container::Sqlite => None,
+        Container::Sqlite => Some(PreviewKind::Database),
     }
 }
 
@@ -1146,6 +1149,142 @@ fn list_tar_gz(bytes: &[u8]) -> Result<ArchivePreview, String> {
     Ok(preview)
 }
 
+// ── .sqlite / .db ──
+
+/// 最多列这么多张表 / 每张表最多取这么多行 / 最多这么多列
+const MAX_TABLES: usize = 50;
+const MAX_DB_ROWS: usize = 100;
+const MAX_DB_COLS: usize = 50;
+/// 单元格文本上限（BLOB 只报长度）
+const MAX_CELL_CHARS: usize = 240;
+/// 整个解析的总时限：库文件可能很刁钻（坏页、超大表），别让一个请求卡住
+const DB_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+#[derive(Debug, Serialize)]
+pub struct DatabasePreview {
+    pub tables: Vec<DatabaseTable>,
+    /// 表数量超过 `MAX_TABLES`
+    pub truncated: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DatabaseTable {
+    pub name: String,
+    pub columns: Vec<String>,
+    /// 前 `MAX_DB_ROWS` 行（单元格已转成显示用文本）
+    pub rows: Vec<Vec<String>>,
+}
+
+/// 只读打开一个 SQLite 文件，列出表与每张表的前若干行。
+///
+/// **安全姿态**（这是全仓唯一一处"打开用户上传的、可能是恶意的文件"的地方）：
+/// - 只读 + `immutable`：不写日志、不做 WAL 恢复，坏文件也改不动它；
+/// - **不接受任何客户端 SQL**：表名取自 `sqlite_master` 的实际清单，再用双引号包好；
+/// - 行 / 列 / 单元格都有上限，整体带超时；
+/// - 仍然要认账的残余风险：SQLite 是 C 库，畸形文件理论上可能让它崩掉进程 ——
+///   这是"在本进程里打开不可信库"的固有代价，彻底隔离得靠子进程，不在预览这一层做。
+pub async fn parse_database(path: &str) -> Result<DatabasePreview, String> {
+    use sqlx::{Column, Connection, Row, SqliteConnection};
+
+    let options = sqlx::sqlite::SqliteConnectOptions::new()
+        .filename(path)
+        .read_only(true)
+        .immutable(true);
+    let work = async {
+        let mut conn = SqliteConnection::connect_with(&options)
+            .await
+            .map_err(|e| format!("打不开这个数据库：{e}"))?;
+        // 表名清单：只认普通表与视图，内部表（sqlite_*）不展示
+        let names: Vec<String> = sqlx::query(
+            "SELECT name FROM sqlite_master \
+             WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY name",
+        )
+        .fetch_all(&mut conn)
+        .await
+        .map_err(|e| format!("读不出表清单：{e}"))?
+        .iter()
+        .filter_map(|row| row.try_get::<String, _>(0).ok())
+        .collect();
+
+        let truncated = names.len() > MAX_TABLES;
+        let mut tables = Vec::new();
+        for name in names.iter().take(MAX_TABLES) {
+            // 表名不能当绑定参数，只能拼进 SQL —— 所以先引号转义再拼（双引号内的
+            // 双引号写成两个），并且这个 name 来自 sqlite_master，不是客户端输入
+            let quoted = name.replace('"', "\"\"");
+            let sql = format!("SELECT * FROM \"{quoted}\" LIMIT {MAX_DB_ROWS}");
+            // 表名不能当绑定参数，只能拼进 SQL：这里显式声明"已经审过"——
+            // name 来自 sqlite_master（不是客户端输入），且上面把双引号转义成了两个
+            let Ok(rows) = sqlx::query(sqlx::AssertSqlSafe(sql))
+                .fetch_all(&mut conn)
+                .await
+            else {
+                // 单张表读不了（视图依赖缺失、FTS 影子表等）就跳过，别整库失败
+                continue;
+            };
+            let columns: Vec<String> = rows
+                .first()
+                .map(|row| {
+                    row.columns()
+                        .iter()
+                        .take(MAX_DB_COLS)
+                        .map(|column| column.name().to_string())
+                        .collect()
+                })
+                .unwrap_or_default();
+            let cells: Vec<Vec<String>> = rows
+                .iter()
+                .map(|row| {
+                    (0..row.columns().len().min(MAX_DB_COLS))
+                        .map(|index| db_cell_text(row, index))
+                        .collect()
+                })
+                .collect();
+            tables.push(DatabaseTable {
+                name: name.clone(),
+                columns,
+                rows: cells,
+            });
+        }
+        Ok(DatabasePreview { tables, truncated })
+    };
+    match tokio::time::timeout(DB_TIMEOUT, work).await {
+        Ok(result) => result,
+        Err(_) => Err(format!(
+            "解析超时（超过 {} 秒）：这个库可能损坏或过大",
+            DB_TIMEOUT.as_secs()
+        )),
+    }
+}
+
+/// 单元格 → 显示用文本：按 i64 / f64 / 文本 / 二进制依次试，都不行当 NULL
+fn db_cell_text(row: &sqlx::sqlite::SqliteRow, index: usize) -> String {
+    use sqlx::Row;
+    if let Ok(Some(value)) = row.try_get::<Option<i64>, _>(index) {
+        return value.to_string();
+    }
+    if let Ok(Some(value)) = row.try_get::<Option<f64>, _>(index) {
+        return value.to_string();
+    }
+    if let Ok(Some(value)) = row.try_get::<Option<String>, _>(index) {
+        return truncate_chars(&value, MAX_CELL_CHARS);
+    }
+    if let Ok(Some(value)) = row.try_get::<Option<Vec<u8>>, _>(index) {
+        return format!("<{} 字节的二进制>", value.len());
+    }
+    String::new()
+}
+
+/// 按字符（不是字节）截断，免得把多字节字符切成半个
+fn truncate_chars(text: &str, limit: usize) -> String {
+    if text.chars().count() <= limit {
+        return text.to_string();
+    }
+    let mut out: String = text.chars().take(limit).collect();
+    out.push('…');
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1408,6 +1547,82 @@ mod tests {
     }
 
     /// 造一个 zip（复用测试里的 zip_with）
+    /// 造一个临时 SQLite 文件（用完删）
+    async fn temp_db() -> (String, std::path::PathBuf) {
+        use sqlx::Connection;
+        let path = std::env::temp_dir().join(format!("brainbow-preview-{}.db", nanoid::nanoid!(8)));
+        let url = format!("sqlite:{}?mode=rwc", path.display());
+        let mut conn = sqlx::SqliteConnection::connect(&url)
+            .await
+            .expect("建临时库");
+        for sql in [
+            "CREATE TABLE user (id INTEGER PRIMARY KEY, name TEXT, score REAL)",
+            "INSERT INTO user (name, score) VALUES ('张三', 1.5), ('李四', 2), (NULL, 0)",
+            "CREATE TABLE blob_only (data BLOB)",
+            "INSERT INTO blob_only VALUES (x'0102030405')",
+            "CREATE VIEW vip AS SELECT name FROM user WHERE score > 1",
+        ] {
+            sqlx::query(sql).execute(&mut conn).await.expect("建表");
+        }
+        (path.display().to_string(), path)
+    }
+
+    #[tokio::test]
+    async fn sqlite_lists_tables_and_rows() {
+        let (path, temp) = temp_db().await;
+        let preview = parse_database(&path).await.expect("能解析");
+        let names: Vec<&str> = preview.tables.iter().map(|t| t.name.as_str()).collect();
+        assert_eq!(names, vec!["blob_only", "user", "vip"]);
+        assert!(!preview.truncated);
+
+        let user = preview
+            .tables
+            .iter()
+            .find(|t| t.name == "user")
+            .expect("有 user 表");
+        assert_eq!(user.columns, vec!["id", "name", "score"]);
+        assert_eq!(user.rows.len(), 3);
+        assert_eq!(user.rows[0], vec!["1", "张三", "1.5"]);
+        // NULL 显示成空
+        assert_eq!(user.rows[2][1], "");
+
+        // BLOB 只报长度，不把二进制塞进 JSON
+        let blob = preview
+            .tables
+            .iter()
+            .find(|t| t.name == "blob_only")
+            .expect("有 blob_only 表");
+        assert!(blob.rows[0][0].contains("5 字节的二进制"), "{:?}", blob.rows);
+        let _ = std::fs::remove_file(temp);
+    }
+
+    #[tokio::test]
+    async fn sqlite_reports_corrupt_files() {
+        // 有 SQLite 魔数、内容是垃圾：SQLite 是"懒打开"的，connect 会成功、
+        // 查询才报 file is not a database —— 错误要能传成可读的一句话
+        let path = std::env::temp_dir().join(format!("brainbow-bad-{}.db", nanoid::nanoid!(8)));
+        let mut bytes = b"SQLite format 3\0".to_vec();
+        bytes.extend_from_slice(&[0x7f; 512]);
+        std::fs::write(&path, &bytes).expect("写文件");
+        let err = parse_database(&path.display().to_string())
+            .await
+            .expect_err("要报错");
+        assert!(err.contains("表清单"), "{err}");
+        let _ = std::fs::remove_file(path);
+
+        // 连魔数都没有的文件根本不会被认成数据库（见 preview_kind_for）
+        assert_eq!(sniff_container(b"definitely not sqlite"), None);
+    }
+
+    #[test]
+    fn cell_text_truncates_by_chars_not_bytes() {
+        // 中文名截断不能切出半个字符
+        let long: String = "汉".repeat(MAX_CELL_CHARS + 10);
+        let out = truncate_chars(&long, MAX_CELL_CHARS);
+        assert_eq!(out.chars().count(), MAX_CELL_CHARS + 1); // 末尾的省略号
+        assert!(out.ends_with('…'));
+    }
+
     #[test]
     fn archive_lists_zip_without_extracting() {
         let bytes = zip_with(&[("a/b.txt", "hello"), ("空.txt", "")]);

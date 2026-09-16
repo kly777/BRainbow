@@ -32,11 +32,23 @@ export interface ArchiveEntry {
 	dir: boolean;
 }
 
+/** 数据库里的一张表 */
+export interface DatabaseTable {
+	name: string;
+	columns: string[];
+	rows: string[][];
+}
+
 /** 服务端解析结果（判别字段 `kind` 与查看器一一对应） */
 export type DocPreview =
 	| { kind: "docx"; html: string; truncated: boolean }
 	| { kind: "sheet"; sheets: SheetData[]; truncated: boolean }
 	| { kind: "slides"; slides: SlideData[]; truncated: boolean }
+	| {
+			kind: "database";
+			tables: DatabaseTable[];
+			truncated: boolean;
+	  }
 	| {
 			kind: "archive";
 			format: string;

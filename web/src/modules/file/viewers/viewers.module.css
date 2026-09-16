@@ -175,9 +175,24 @@
 /* Office 文档预览（docx / xlsx）：正文区可滚动，表格页签贴在顶部 */
 .doc-body {
 	display: flex;
+	flex: 1;
 	flex-direction: column;
 	min-height: 0;
+	overflow: hidden;
+}
+
+/* Office / epub 这一族的外壳：**只在这里做一层滚动**（见 DocContent 的注释）。
+   .pane 的 overflow:auto 留给文本类查看器（它们是一层就到底的结构）。 */
+.doc-pane {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	width: 100%;
 	height: 100%;
+	min-height: 0;
+	box-sizing: border-box;
+	overflow: hidden;
+	text-align: left;
 }
 
 /* 表格文件的首列不做强调 —— .table-cell:first-child 那套是给 CSV 的首列标签用的
@@ -578,4 +593,18 @@
 .splat-mode-toggle:focus-visible {
 	outline: 2px solid var(--t-color-accent);
 	outline-offset: 1px;
+}
+
+/* 真正滚动的那一层：正文 / 幻灯片列表 / 表格。都取满剩余高度（flex: 1）并允许收缩
+   （min-height: 0），否则 flex 子项不会比内容矮，就永远不出现滚动条 */
+.doc-pane .markdown,
+.doc-pane .slide-list {
+	flex: 1;
+	min-height: 0;
+}
+
+.doc-pane .table-wrap {
+	flex: 1;
+	min-height: 0;
+	max-height: none;
 }

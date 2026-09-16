@@ -1,8 +1,9 @@
 // ── Office 文档查看器的公共外壳：取解析结果 + 加载中/失败/截断提示 ──
 //
-// 与 TextContent 同一个套路（各查看器只负责 `data → JSX`），区别在于要的是后端
-// 解析好的结构而不是原始文本，所以单独一层：docx / xlsx 两个查看器共用它，
-// 截断提示的文案由各自给（一个是"只显示开头"，一个是"只显示前 N 行"）。
+// 与 TextContent 同一个套路（各查看器只负责 `data → JSX`），区别有两点：要的是后端
+// 解析好的结构而不是原始文本；外壳本身**不滚动**（`.doc-pane` 是 overflow: hidden），
+// 滚动交给里面那层内容（正文 / 表格 / 幻灯片列表）——嵌两层 overflow:auto 会让浏览器
+// 每帧重算多层可滚动区域，滚动不跟手。
 
 import { type Component, type JSX, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
@@ -27,7 +28,7 @@ export const DocContent: Component<{
 	};
 
 	return (
-		<div class={styles.pane}>
+		<div class={styles.docPane}>
 			<Show when={preview.loading}>
 				<div class={styles.state}>正在解析文档…</div>
 			</Show>

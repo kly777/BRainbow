@@ -442,12 +442,12 @@ fn ooxml_of_ext(filename: &str) -> Option<&'static str> {
     }
 }
 
-/// zip 容器精炼：结构（文件头里可见的条目名）> 声明 > 扩展名 > application/zip。
+/// zip 容器精炼（**只看文件头时**）：头部可见的证据 > 声明 > 扩展名 > application/zip。
 ///
-/// 上传链路此时手里只有文件头 512 字节，读不到中央目录，所以"结构"只认两件
+/// 上传链路在这一步手里只有文件头 512 字节，读不到中央目录，所以"结构"只认两件
 /// 头部就能证明的事：epub 的规范首个条目、OOXML 的标准条目 `[Content_Types].xml`。
-/// word/ xl/ ppt/ 深藏在包里，分不出是哪种 —— 种交给声明或扩展名（族已验明是 zip，
-/// 同族内听提示不会错方向）。
+/// word/ xl/ ppt/ 深藏在包里，此时分不出是哪种 —— 先按声明/扩展名给个种，
+/// **文件落盘后由 `refine_zip_by_structure` 用中央目录的条目名覆盖掉**（那才是硬证据）。
 fn refine_zip(head: &[u8], filename: &str, declared: &str) -> String {
     // epub 规范：首个条目必须是未压缩的 mimetype，内容 application/epub+zip
     if super::preview::looks_like_epub(head) {
@@ -562,6 +562,61 @@ fn refine_family(family: FileFamily, head: &[u8], filename: &str, declared: &str
         FileFamily::Text => refine_text(head, filename),
         FileFamily::Unknown => "application/octet-stream".into(),
     }
+}
+
+/// 落盘后的**结构精炼**：zip 族真正区分种的证据在**中央目录**里 —— OOXML 的
+/// `word/` / `xl/` / `ppt/`、安卓包的 `AndroidManifest.xml`、jar 的清单、
+/// epub 的 `mimetype` 条目。上传时手里只有文件头 512 字节，读不到；文件落盘之后
+/// 再问一次，而且**结构比声明与扩展名都可信**（把 .xlsx 改名成 .docx 也认得出）。
+///
+/// 返回 None 表示给不出更具体的答案（不是 zip、不是有效的 zip、条目不认识），
+/// 由调用方沿用头部判定 + 声明/扩展名的结果。
+///
+/// 这是同步 I/O（要 seek 到文件尾读中央目录），调用方负责丢进 blocking 线程。
+fn refine_zip_by_structure(head: &[u8], path: &str) -> Option<String> {
+    if detect_family(head) != FileFamily::Zip {
+        return None;
+    }
+    let file = std::fs::File::open(path).ok()?;
+    let mut zip = zip::ZipArchive::new(file).ok()?;
+    let (mut word, mut sheet, mut slides) = (false, false, false);
+    for index in 0..zip.len() {
+        // 单个条目读不出来不该让整次判定失败（坏条目常见），继续看其余条目
+        let Ok(entry) = zip.by_index(index) else {
+            continue;
+        };
+        let name = entry.name();
+        // epub 规范：首个条目是未压缩的 mimetype
+        if name == "mimetype" {
+            return Some("application/epub+zip".into());
+        }
+        if name.starts_with("word/") {
+            word = true;
+        } else if name.starts_with("xl/") {
+            sheet = true;
+        } else if name.starts_with("ppt/") {
+            slides = true;
+        } else if name == "AndroidManifest.xml" {
+            return Some("application/vnd.android.package-archive".into());
+        } else if name == "META-INF/MANIFEST.MF" {
+            return Some("application/java-archive".into());
+        }
+    }
+    // OOXML 三兄弟：哪个目录在就是哪种（同一个包里不会有两种）
+    if word {
+        return Some(
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document".into(),
+        );
+    }
+    if sheet {
+        return Some("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".into());
+    }
+    if slides {
+        return Some(
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation".into(),
+        );
+    }
+    None
 }
 
 /// MIME 别名规范化：同一格式在不同来源（infer 魔数库 / 浏览器 / 操作系统）
@@ -903,10 +958,11 @@ impl FileService {
         format!("{}/tmp_{}.tmp", self.upload_dir, nanoid::nanoid!(12))
     }
 
-    /// 按已落盘的临时文件完成入库：查重 → 插库 → 原子 rename → 元数据 → 标签。
+    /// 按已落盘的临时文件完成入库：结构精炼 → 查重 → 插库 → 原子 rename → 元数据 → 标签。
     ///
     /// 调用方（handler）负责流式写盘、大小限流与 SHA-256 计算；
     /// `head` 为文件前若干字节（图片尺寸解析只需头部）。
+    /// 类别由 `final_mime` 现算（不接收调用方的——结构精炼会改 mime）。
     /// 出错时由本方法负责清理 `tmp_path`。
     #[allow(clippy::too_many_arguments)]
     pub async fn upload_streamed(
@@ -917,11 +973,21 @@ impl FileService {
         head: &[u8],
         original_name: &str,
         final_mime: &str,
-        category_str: &str,
         user_id: Option<i64>,
         tags: Option<Vec<String>>,
         force: bool,
     ) -> Result<UploadOutcome, ServiceError> {
+        // zip 族补一次结构精炼（读中央目录是同步 I/O，丢进 blocking 线程）
+        let (probe_path, probe_head) = (tmp_path.to_string(), head.to_vec());
+        let structural = tokio::task::spawn_blocking(move || {
+            refine_zip_by_structure(&probe_head, &probe_path)
+        })
+        .await
+        .ok()
+        .flatten();
+        let refined_mime = structural.unwrap_or_else(|| final_mime.to_string());
+        let final_mime = refined_mime.as_str();
+        let category_str = Self::category_of(final_mime).as_str();
         // 内容去重（全局）：已有相同 SHA-256 → 默认复用（force 跳过）
         // 单人项目：同一内容全系统只保留一个 id，跨账号重传也不重复占盘
         if !force
@@ -1045,7 +1111,6 @@ impl FileService {
         force: bool,
     ) -> Result<UploadOutcome, ServiceError> {
         let final_mime = Self::resolve_mime(data, client_mime, original_name)?;
-        let category_str = Self::category_of(&final_mime).as_str();
         Self::ensure_within_limit(data.len() as u64, &final_mime)?;
 
         let hash = content_hash(data);
@@ -1060,7 +1125,6 @@ impl FileService {
             data,
             original_name,
             &final_mime,
-            category_str,
             user_id,
             tags,
             force,
@@ -1915,6 +1979,116 @@ mod tests {
         buf
     }
 
+    /// 造一个 zip 到磁盘（**条目名就是结构证据**），返回路径
+    fn write_zip(dir: &str, name: &str, entries: &[(&str, &str)]) -> String {
+        use std::io::Write as _;
+        let path = format!("{dir}/{name}");
+        let file = std::fs::File::create(&path).expect("建 zip");
+        let mut zip = zip::ZipWriter::new(file);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        for (entry, content) in entries {
+            zip.start_file(*entry, options).expect("写 zip");
+            zip.write_all(content.as_bytes()).expect("写 zip");
+        }
+        zip.finish().expect("收尾 zip");
+        path
+    }
+
+    // ── zip 族的结构精炼（落盘后补的那一次） ──
+
+    #[test]
+    fn refine_zip_by_structure_identifies_office_and_packages() {
+        use std::fs;
+        let dir = std::env::temp_dir().join(format!("brainbow-zip-{}", nanoid::nanoid!(8)));
+        fs::create_dir_all(&dir).expect("建临时目录");
+        let dir = dir.to_string_lossy().to_string();
+        let zip_head = b"PK\x03\x04\x14\x00\x00\x00\x08\x00";
+
+        /// (zip 条目, 期望的种)
+        type Case = (&'static [(&'static str, &'static str)], Option<&'static str>);
+        let cases: &[Case] = &[
+            (
+                &[("[Content_Types].xml", "<Types/>"), ("word/document.xml", "x")],
+                Some(DOCX),
+            ),
+            (
+                &[("[Content_Types].xml", "<Types/>"), ("xl/workbook.xml", "x")],
+                Some(XLSX),
+            ),
+            (
+                &[("[Content_Types].xml", "<Types/>"), ("ppt/slides/slide1.xml", "x")],
+                Some(PPTX),
+            ),
+            (
+                &[("AndroidManifest.xml", "x")],
+                Some("application/vnd.android.package-archive"),
+            ),
+            (&[("META-INF/MANIFEST.MF", "x")], Some("application/java-archive")),
+            // 条目都不认识：给不出更具体的答案，由调用方沿用声明/扩展名
+            (&[("random.txt", "x")], None),
+        ];
+        for (index, (entries, expected)) in cases.iter().enumerate() {
+            let path = write_zip(&dir, &format!("z{index}.zip"), entries);
+            assert_eq!(
+                refine_zip_by_structure(zip_head, &path).as_deref(),
+                *expected,
+                "条目 {entries:?}"
+            );
+        }
+
+        // 打不开的 zip、以及头部根本不是 zip 族：都不给答案
+        let plain = format!("{dir}/plain.bin");
+        fs::write(&plain, b"PK\x03\x04 not really a zip").expect("写普通文件");
+        assert_eq!(refine_zip_by_structure(zip_head, &plain), None);
+        assert_eq!(refine_zip_by_structure(PNG_1X1, &plain), None);
+        fs::remove_dir_all(&dir).expect("清理临时目录");
+    }
+
+    #[tokio::test]
+    async fn upload_refines_zip_species_by_structure() {
+        use std::fs;
+        let ctx = setup_service().await;
+        let dir = ctx.dir.0.clone();
+
+        // 结构是电子表格，名字与声明都说是 Word：**结构说了算**（改名骗不过它）
+        let path = write_zip(
+            &dir,
+            "结构源.xlsx",
+            &[("[Content_Types].xml", "<Types/>"), ("xl/workbook.xml", "x")],
+        );
+        let sheet = fs::read(&path).expect("读回 zip");
+        let f = ctx
+            .svc
+            .upload(&sheet, "报表.docx", DOCX, Some(7), None, false)
+            .await
+            .expect("xlsx 结构应当能上传")
+            .file;
+        assert_eq!(f.mime_type, XLSX);
+
+        // 浏览器不认识扩展名（声明 octet-stream）时，同样靠结构认出 Word
+        let path = write_zip(
+            &dir,
+            "结构源2",
+            &[("[Content_Types].xml", "<Types/>"), ("word/document.xml", "x")],
+        );
+        let word = fs::read(&path).expect("读回 zip");
+        let g = ctx
+            .svc
+            .upload(
+                &word,
+                "无后缀文档",
+                "application/octet-stream",
+                Some(7),
+                None,
+                true,
+            )
+            .await
+            .expect("docx 结构应当能上传")
+            .file;
+        assert_eq!(g.mime_type, DOCX);
+    }
+
     #[tokio::test]
     async fn upload_accepts_ooxml_containers() {
         let ctx = setup_service().await;
@@ -2700,7 +2874,6 @@ mod tests {
                 PNG_1X1,
                 "写入.png",
                 "image/png",
-                "image",
                 Some(7),
                 Some(vec!["t".into()]),
                 false,
@@ -2740,7 +2913,6 @@ mod tests {
                 PNG_1X1,
                 "b.png",
                 "image/png",
-                "image",
                 Some(7),
                 None,
                 false,

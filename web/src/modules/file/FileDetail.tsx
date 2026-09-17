@@ -210,7 +210,9 @@ export default function FileDetail() {
 	const m = useFileDetail();
 
 	// 刻意**不**绑定 ←/→ 切文件：3DGS 预览用方向键移动相机（见 viewers/splat/controls.ts），
-	// 全局快捷键会和它抢事件。切换文件走工具栏的「上一个/下一个」按钮。
+	// 全局快捷键会和它抢事件。切换文件走工具栏的「上一个/下一个」按钮 ——
+	// 按钮的 title 里**不要**再写「（←）」这类键位提示，那是在承诺一个不存在的东西
+	// （回归测试断言方向键不切文件：FileDetail.render.test.tsx）。
 
 	return (
 		<DetailPage
@@ -224,7 +226,7 @@ export default function FileDetail() {
 					<Show when={m.siblingCount() > 1}>
 						<Button
 							variant="icon"
-							title="上一个（←）"
+							title="上一个"
 							disabled={!m.hasPrev()}
 							onClick={m.goPrev}
 						>
@@ -235,7 +237,7 @@ export default function FileDetail() {
 						</span>
 						<Button
 							variant="icon"
-							title="下一个（→）"
+							title="下一个"
 							disabled={!m.hasNext()}
 							onClick={m.goNext}
 						>

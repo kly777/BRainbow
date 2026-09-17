@@ -5,7 +5,7 @@
 
 import { type Component, type JSX, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
-import { usePreviewText } from "../hooks/usePreviewText.ts";
+import { MAX_PREVIEW_BYTES, usePreviewText } from "../hooks/usePreviewText.ts";
 import styles from "./viewers.module.css";
 
 export const TextContent: Component<{
@@ -28,7 +28,8 @@ export const TextContent: Component<{
 						{props.children(c().text)}
 						<Show when={c().truncated}>
 							<div class={styles.truncateNote}>
-								内容过大，仅预览前 2MB（下载可查看完整内容）
+								内容过大，仅预览前 {MAX_PREVIEW_BYTES / 1024 / 1024}
+								MB（下载可查看完整内容）
 							</div>
 						</Show>
 					</>

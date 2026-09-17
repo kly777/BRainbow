@@ -5,6 +5,7 @@
 import type { JSX } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { MAX_PREVIEW_BYTES } from "../hooks/usePreviewText.ts";
 import { TextContent } from "./TextContent.tsx";
 import { item } from "./test-fixtures.ts";
 
@@ -58,15 +59,38 @@ describe("TextContent", () => {
 		expect(host.textContent).not.toContain("正文");
 	});
 
-	it("超过 2MB 截断并给出提示", async () => {
+	it("按 Range 取头部：满一段（206）就提示只预览了前 4MB", async () => {
+		// 服务端按 Range 回满一段 = 后面还有内容 → 截断提示。
+		// 早先是"整包下载后按字符截断"（见 hooks/usePreviewText.ts 的文件头注释）
+		const segment = "x".repeat(MAX_PREVIEW_BYTES);
 		vi.stubGlobal(
 			"fetch",
-			vi.fn(async () => new Response("x".repeat(2 * 1024 * 1024 + 10))),
+			vi.fn(
+				async () =>
+					new Response(segment, {
+						status: 206,
+						headers: {
+							"content-range": `bytes 0-${MAX_PREVIEW_BYTES - 1}/${MAX_PREVIEW_BYTES * 3}`,
+						},
+					}),
+			),
 		);
 		const host = mount((text) => <p>长度 {text.length}</p>);
 
 		await settle(() => (host.textContent ?? "").includes("长度"));
-		expect(host.textContent).toContain(`长度 ${2 * 1024 * 1024}`);
-		expect(host.textContent).toContain("仅预览前 2MB");
+		expect(host.textContent).toContain(`长度 ${MAX_PREVIEW_BYTES}`);
+		expect(host.textContent).toContain("仅预览前 4MB");
+	});
+
+	it("文件比一段小（200 整包）时不提示截断", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => new Response("hello")),
+		);
+		const host = mount((text) => <p>长度 {text.length}</p>);
+
+		await settle(() => (host.textContent ?? "").includes("长度"));
+		expect(host.textContent).toContain("长度 5");
+		expect(host.textContent).not.toContain("仅预览前");
 	});
 });

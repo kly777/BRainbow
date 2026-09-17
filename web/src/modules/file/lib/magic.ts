@@ -12,8 +12,13 @@ export interface HexRow {
 /** 每行字节数（经典 xxd 排版） */
 const BYTES_PER_ROW = 16;
 
-/** 字节 → 十六进制行（末行补空格对齐 ASCII 列） */
-export function hexRows(bytes: Uint8Array): HexRow[] {
+/**
+ * 字节 → 十六进制行（末行补空格对齐 ASCII 列）。
+ *
+ * `baseOffset` 是本段在文件中的起始偏移：十六进制查看器按 4KB 分段取内容，
+ * 第二段之后的左侧偏移量必须接着文件真实位置往下数，否则每段都从 00000000 开始。
+ */
+export function hexRows(bytes: Uint8Array, baseOffset = 0): HexRow[] {
 	const rows: HexRow[] = [];
 	for (let i = 0; i < bytes.length; i += BYTES_PER_ROW) {
 		const slice = bytes.subarray(i, i + BYTES_PER_ROW);
@@ -23,7 +28,11 @@ export function hexRows(bytes: Uint8Array): HexRow[] {
 		const ascii = Array.from(slice, (b) =>
 			b >= 0x20 && b < 0x7f ? String.fromCharCode(b) : ".",
 		).join("");
-		rows.push({ offset: i.toString(16).padStart(8, "0"), hex, ascii });
+		rows.push({
+			offset: (baseOffset + i).toString(16).padStart(8, "0"),
+			hex,
+			ascii,
+		});
 	}
 	return rows;
 }

@@ -464,6 +464,19 @@
 	color: var(--t-color-ink-muted);
 }
 
+/* 分段翻页：与 .hex-dump 一起滚（不吸底），左侧偏移量随段落递增 */
+.hex-pager {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	padding: var(--space-sm) var(--space-lg) var(--space-lg);
+}
+
+.hex-pager .truncate-note {
+	margin: 0;
+	flex: 1;
+}
+
 /* ── 3DGS 高斯泼溅（.ply） ── */
 
 .splat-pane {

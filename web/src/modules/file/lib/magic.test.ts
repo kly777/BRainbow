@@ -84,4 +84,12 @@ describe("hexRows", () => {
 	it("空内容没有行", () => {
 		expect(hexRows(bytes()).length).toBe(0);
 	});
+
+	it("baseOffset 接着文件真实位置往下数（分段预览的后续段）", () => {
+		// 十六进制查看器按 4KB 分段取内容；第二段的左侧偏移量必须接下去，
+		// 否则每段都从 00000000 开始，看着像同一个位置
+		const rows = hexRows(new Uint8Array(20).fill(0x41), 0x1000);
+		expect(rows[0].offset).toBe("00001000");
+		expect(rows[1].offset).toBe("00001010");
+	});
 });

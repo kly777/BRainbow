@@ -20,6 +20,7 @@ import TagInput from "./components/TagInput.tsx";
 import styles from "./FileDetail.module.css";
 import { type MetaEntry, useFileDetail } from "./hooks/useFileDetail.ts";
 import { categoryLabel } from "./lib/category.ts";
+import { FileNavContext } from "./viewers/nav.ts";
 import { PreviewStage } from "./viewers/PreviewStage.tsx";
 
 // ── 侧栏：查看模式 ──
@@ -302,7 +303,13 @@ export default function FileDetail() {
 				{(item) => (
 					<>
 						<section class={styles.previewPane} aria-label="文件预览">
-							<PreviewStage item={item()} />
+							{/* 同批文件给查看器（灯箱翻页要用）：查看器契约仍是只收 { item }，
+							    需要的那几个自己从 context 取，见 viewers/nav.ts */}
+							<FileNavContext.Provider
+								value={{ siblings: m.siblings, goTo: m.goToFile }}
+							>
+								<PreviewStage item={item()} />
+							</FileNavContext.Provider>
 						</section>
 						<aside class={styles.sidePane} aria-label="文件信息">
 							<Show when={m.editing()} fallback={<FileView item={item()} />}>

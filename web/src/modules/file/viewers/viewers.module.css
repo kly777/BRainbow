@@ -11,12 +11,17 @@
 	background: var(--t-color-bg);
 }
 
-.preview-link {
+/* 图片：整块作为"打开灯箱"的按钮（不再是跳到新窗口的链接） */
+.preview-zoom {
 	display: flex;
 	width: 100%;
 	height: 100%;
 	align-items: center;
 	justify-content: center;
+	padding: 0;
+	border: 0;
+	background: none;
+	cursor: zoom-in;
 }
 
 .preview-img {

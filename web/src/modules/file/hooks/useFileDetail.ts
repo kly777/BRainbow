@@ -54,6 +54,10 @@ export interface FileDetailApi {
 	hasNext: () => boolean;
 	goPrev: () => void;
 	goNext: () => void;
+	/** 同批文件的完整列表（灯箱翻页用；来源不明时为空数组） */
+	siblings: () => FileItem[];
+	/** 切到同批文件里的某一条（保留 from，返回时仍回到同一列表位置） */
+	goToFile: (item: FileItem) => void;
 }
 
 export function useFileDetail(): FileDetailApi {
@@ -101,14 +105,19 @@ export function useFileDetail(): FileDetailApi {
 		return index >= 0 && index < list.length - 1;
 	};
 
-	const goSibling = (delta: number) => {
-		const list = siblings() ?? [];
-		const target = list[siblingIndex() + delta];
-		if (!target) return;
+	/** 切到同批文件里的某一条（灯箱翻页复用同一条路径，behavior 与 goSibling 一致） */
+	const goToFile = (target: FileItem) => {
 		// 保留 from，切换后返回仍回到同一列表位置
 		navigate(fillPath(PATHS.fileDetail, target.stored_id), {
 			state: location.state,
 		});
+	};
+
+	const goSibling = (delta: number) => {
+		const list = siblings() ?? [];
+		const target = list[siblingIndex() + delta];
+		if (!target) return;
+		goToFile(target);
 	};
 
 	const [editing, setEditing] = createSignal(false);
@@ -278,5 +287,7 @@ export function useFileDetail(): FileDetailApi {
 		hasNext,
 		goPrev: () => goSibling(-1),
 		goNext: () => goSibling(1),
+		siblings: () => siblings() ?? [],
+		goToFile,
 	};
 }

@@ -170,39 +170,398 @@ const ALLOWED_MIMES: &[(&str, &str, u64)] = &[
     ),
 ];
 
-/// 这些类型本就没有可靠魔数（文本 / XML / PDF / SVG 都是文本或流式结构），
-/// infer 识别不出时应信任客户端声明，而不是判成「内容与声明不符」
-fn has_no_reliable_magic(mime: &str) -> bool {
-    mime.starts_with("text/") || mime == "application/pdf" || mime == "image/svg+xml"
-}
-
-/// 这些 MIME 底下装的是 **zip 容器**（OOXML 家族：docx / xlsx / pptx …）。
-///
-/// `infer` 只看得到的字节，对它来说这就是个 zip，于是报 `application/zip`；
-/// 客户端报的是"容器 + 里面装的是什么"。两种说法都对，不是"类型不符"。
-fn is_zip_container(mime: &str) -> bool {
-    mime.starts_with("application/vnd.openxmlformats-officedocument.")
-}
-
-/// 这些 MIME 底下装的是 **OLE 复合文档**（97-2003 那批：doc / xls / ppt），
-/// infer 同样只认得出容器（`application/x-ole-storage`）
-fn is_ole_container(mime: &str) -> bool {
-    matches!(
-        mime,
-        "application/msword" | "application/vnd.ms-excel" | "application/vnd.ms-powerpoint"
-    )
-}
-
-/// XML 家族 MIME（SVG 本质是 XML，两种报告都常见）
-fn is_xml_like(mime: &str) -> bool {
-    matches!(mime, "text/xml" | "application/xml")
-}
-
 /// 文件头是否确实是 SVG 根元素（用于文本类 MIME 的内容确认）
 fn looks_like_svg(head: &[u8]) -> bool {
     String::from_utf8_lossy(head)
         .to_lowercase()
         .contains("<svg")
+}
+
+/// 非文本控制字符的容忍比例：超过 1/20（5%）就不当文本
+const TEXT_CONTROL_RATIO_INV: usize = 20;
+
+/// **"这是不是文本"由字节说了算，不由 MIME 注册表说了算。**
+///
+/// 只有 NUL 与非文本控制字符能证明"这是二进制"，扩展名与客户端声明都只是猜测。
+/// 早先的做法是拿 `mime_guess` 把扩展名映射成 MIME、再按 `text/` 前缀判文本 ——
+/// 于是 `.json`（application/json）、`.ts`（video/vnd.dlna.mpeg-tts，TypeScript 与
+/// MPEG-TS 撞名）、`.java`（application/octet-stream）、`.go`（表里没有）这类常见的
+/// 源码与配置全被判成二进制，掉进十六进制预览。
+///
+/// 判据与前端 `web/src/modules/file/lib/magic.ts` 的 `looksTextual` 同一套：
+/// 可打印 ASCII、TAB/LF/CR、以及 >= 0x80 的字节（UTF-8 与 GBK 中文）都算文本内容。
+/// 两侧改动要同步。
+///
+/// UTF-16 单独放行：它的 ASCII 字符高字节是 0x00，按上面的规则会被冤判成二进制。
+/// 带 BOM 的直接认；没带 BOM 的看 NUL 是否只落在固定一侧（交替模式）。
+pub fn looks_like_text(head: &[u8]) -> bool {
+    if head.is_empty() {
+        return false;
+    }
+    if head.starts_with(&[0xFF, 0xFE]) || head.starts_with(&[0xFE, 0xFF]) {
+        return true;
+    }
+    let nuls = head.iter().filter(|b| **b == 0).count();
+    if nuls > 0 {
+        // 宽字符文本的 NUL 至少要占 1/8，且集中在一侧；零散的 NUL 是二进制特征
+        if nuls * 8 < head.len() {
+            return false;
+        }
+        let pairs = head.len() / 2;
+        let even = head.iter().step_by(2).filter(|b| **b == 0).count();
+        let odd = head
+            .iter()
+            .skip(1)
+            .step_by(2)
+            .filter(|b| **b == 0)
+            .count();
+        return even > pairs * 3 / 4 || odd > pairs * 3 / 4;
+    }
+    // 0x09..0x0D（TAB/LF/VT/FF/CR）是文本里正常的空白，不算控制字符
+    let control = head
+        .iter()
+        .filter(|b| matches!(**b, 0x00..=0x08 | 0x0E..=0x1F | 0x7F))
+        .count();
+    control * TEXT_CONTROL_RATIO_INV <= head.len()
+}
+
+/// 小写扩展名（无扩展名返回空串）
+fn extension_of(filename: &str) -> String {
+    filename
+        .rsplit_once('.')
+        .map(|(_, ext)| ext.to_ascii_lowercase())
+        .unwrap_or_default()
+}
+
+/// 扩展名 → 具体的文本 MIME。
+///
+/// **只有"前端要按类型挑查看器"的这几种才需要具体名**（markdown / csv / html 各有
+/// 专用渲染），其余一切文本 —— 源码、配置、日志、字幕、无扩展名的 Dockerfile /
+/// LICENSE —— 一律 `text/plain`，前端再按扩展名挑高亮语言
+/// （`web/src/modules/file/lib/filename.ts` 的 `codeLang`）。
+///
+/// 刻意不用 `mime_guess` 那张通用表：它给得出 `application/json`、`video/vnd.dlna.mpeg-tts`
+/// 这种与"是不是文本"无关的答案，那正是上面那批源码文件被误判的根源。
+fn text_ext_mime(filename: &str) -> Option<&'static str> {
+    match extension_of(filename).as_str() {
+        "md" | "markdown" => Some("text/markdown"),
+        "csv" => Some("text/csv"),
+        "html" | "htm" => Some("text/html"),
+        _ => None,
+    }
+}
+
+// ── 类型识别：两阶段管道（先定族，再定种） ──
+//
+// 魔数只能可靠地回答"这是哪个**容器/家族**"，回答不了"最终是什么格式"：
+// `PK\x03\x04` 是 zip，但 docx / xlsx / pptx / epub / jar 全是 zip；RIFF 下分
+// WAV / WEBP / AVI；ISO BMFF 的 ftyp 下分 MP4 / MOV / HEIC / AVIF；文本族干脆
+// 没有魔数。所以：
+//
+//   阶段一 detect_family：内容 → FileFamily（置信度高，几乎不会错）
+//   阶段二 refine_*：族 + 结构（容器头里的标记）+ 扩展名 + 声明 → 规范 MIME
+//
+// 这个分层的价值在**误差可控**：族判对了，种就算认错也只在同族内错（把 MOV 认成
+// MP4），不会把 zip 认成图片；扩展名从"可信来源"降级成"族内消歧的提示"，伪造
+// 后缀骗不了族检测。规范化发生在各族 refine 的**输出端**——alias（audio/x-wav、
+// application/epub 之类）要么在入口被 normalize，要么根本不会从 refine 吐出来。
+//
+// 单签名格式（PNG/JPEG/GIF/PDF/MP3…）一个魔数就是一种，不存在族内歧义，
+// detect_family 直接给出它们，无需 refine。
+
+/// 内容能判定的"族"。按证据强度从上到下匹配，先容器后单签名，文本垫底
+/// （可打印字节谁都能装，必须排在所有二进制签名之后）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FileFamily {
+    /// zip 容器：zip / docx / xlsx / pptx / epub / jar / apk / odt …
+    Zip,
+    /// RIFF 容器：WAV / WEBP / AVI（偏移 8 的四字符码定种）
+    Riff,
+    /// ISO BMFF：MP4 / MOV / M4A / HEIC / AVIF（ftyp 的 brand 定种）
+    IsoBmff,
+    /// OGG 容器：Vorbis / Opus / Theora
+    Ogg,
+    /// Matroska：webm / mkv（EBML 头的 DocType 定种）
+    Matroska,
+    /// OLE 复合文档：doc / xls / ppt（97-2003 那批）
+    Ole,
+    /// gzip（含 tar.gz）
+    Gzip,
+    Jpeg,
+    Png,
+    Gif,
+    Bmp,
+    Tiff,
+    Pdf,
+    /// MP3（ID3v2 头或 MPEG 帧同步）
+    MpegAudio,
+    Flac,
+    /// AAC 的 ADTS 流
+    Aac,
+    /// SQLite 数据库文件
+    Sqlite,
+    /// 文本（见 [`looks_like_text`]）
+    Text,
+    /// 认不出来
+    Unknown,
+}
+
+/// 阶段一：内容定族。只看字节，不看声明与扩展名。
+pub fn detect_family(head: &[u8]) -> FileFamily {
+    use FileFamily::*;
+    // 容器族（同一魔数多种格式，需要阶段二精炼）
+    if head.starts_with(&[0x50, 0x4B, 0x03, 0x04])
+        || head.starts_with(&[0x50, 0x4B, 0x05, 0x06])
+        || head.starts_with(&[0x50, 0x4B, 0x07, 0x08])
+    {
+        return Zip;
+    }
+    if head.starts_with(b"RIFF") {
+        return Riff;
+    }
+    // ftyp 是标准开头；老 QuickTime 可能直接以 moov/mdat 等 box 开头
+    if matches!(
+        head.get(4..8),
+        Some(b"ftyp" | b"moov" | b"mdat" | b"free" | b"skip" | b"wide")
+    ) {
+        return IsoBmff;
+    }
+    if head.starts_with(b"OggS") {
+        return Ogg;
+    }
+    if head.starts_with(&[0x1A, 0x45, 0xDF, 0xA3]) {
+        return Matroska;
+    }
+    if head.starts_with(&[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]) {
+        return Ole;
+    }
+    if head.starts_with(&[0x1F, 0x8B]) {
+        return Gzip;
+    }
+    // 单签名族（一种魔数一种格式，无需精炼）。用切片模式匹配而不是 head[0] 索引 ——
+    // 生产代码禁越界索引（main.rs 的 clippy 门禁），切片模式天然安全
+    match head {
+        [0x89, 0x50, 0x4E, 0x47, ..] => return Png,
+        [0xFF, 0xD8, 0xFF, ..] => return Jpeg,
+        [b'G', b'I', b'F', b'8', ..] => return Gif,
+        [b'B', b'M', ..] => return Bmp,
+        [0x49, 0x49, 0x2A, 0x00, ..] | [0x4D, 0x4D, 0x00, 0x2A, ..] => return Tiff,
+        [b'%', b'P', b'D', b'F', ..] => return Pdf,
+        [b'I', b'D', b'3', ..] | [0xFF, 0xFA | 0xFB, ..] => return MpegAudio,
+        [b'f', b'L', b'a', b'C', ..] => return Flac,
+        [0xFF, 0xF1 | 0xF9, ..] => return Aac,
+        [b'S', b'Q', b'L', b'i', b't', b'e', ..] => return Sqlite,
+        _ => {}
+    }
+    // 文本垫底：可打印字节（"%PDF"、"BM"、"GIF8" 这些文本型开头已在上面认走了）
+    if looks_like_text(head) {
+        return Text;
+    }
+    Unknown
+}
+
+/// 该 MIME 属于哪个族。**只列白名单里"本有魔数"的类型**（外加 epub）——
+/// 这些声明值得用族检测去验证；None 表示这个声明没有可验证的族承诺。
+fn family_of_mime(mime: &str) -> Option<FileFamily> {
+    use FileFamily::*;
+    Some(match mime {
+        "image/png" => Png,
+        "image/jpeg" => Jpeg,
+        "image/gif" => Gif,
+        "image/webp" | "audio/wav" => Riff,
+        "image/bmp" => Bmp,
+        "image/tiff" => Tiff,
+        "video/mp4" | "video/quicktime" => IsoBmff,
+        "video/webm" => Matroska,
+        "video/ogg" | "audio/ogg" => Ogg,
+        "audio/mpeg" => MpegAudio,
+        "audio/flac" => Flac,
+        "audio/aac" => Aac,
+        "application/pdf" => Pdf,
+        "application/epub+zip" => Zip,
+        m if is_ooxml_mime(m) => Zip,
+        "application/msword" | "application/vnd.ms-excel" => Ole,
+        _ => return None,
+    })
+}
+
+fn is_ooxml_mime(mime: &str) -> bool {
+    matches!(
+        mime,
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            | "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    )
+}
+
+/// 这些声明本就没有可靠魔数可验（文本 / PDF / SVG 都是文本或流式结构）：
+/// 声明了它们、内容又认不出族，说明与承诺对不上 —— 见 `resolve_mime` 的闸门二
+fn is_textish_declaration(mime: &str) -> bool {
+    mime.starts_with("text/") || mime == "application/pdf" || mime == "image/svg+xml"
+}
+
+/// 错误信息里"内容实际是什么"的说法
+fn family_label(family: FileFamily) -> &'static str {
+    use FileFamily::*;
+    match family {
+        Zip => "zip 容器（docx/xlsx/pptx/epub…）",
+        Riff => "RIFF 容器（wav/webp/avi）",
+        IsoBmff => "ISO BMFF（mp4/mov/heic…）",
+        Ogg => "OGG 容器",
+        Matroska => "Matroska（webm/mkv）",
+        Ole => "OLE 复合文档（doc/xls/ppt）",
+        Gzip => "application/gzip",
+        Jpeg => "image/jpeg",
+        Png => "image/png",
+        Gif => "image/gif",
+        Bmp => "image/bmp",
+        Tiff => "image/tiff",
+        Pdf => "application/pdf",
+        MpegAudio => "audio/mpeg",
+        Flac => "audio/flac",
+        Aac => "audio/aac",
+        Sqlite => "SQLite 数据库",
+        Text => "文本",
+        Unknown => "无法识别的二进制",
+    }
+}
+
+/// OOXML 三兄弟的扩展名 ↔ MIME
+fn ooxml_of_ext(filename: &str) -> Option<&'static str> {
+    match extension_of(filename).as_str() {
+        "docx" => Some(
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ),
+        "xlsx" => {
+            Some("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        }
+        "pptx" => Some(
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ),
+        _ => None,
+    }
+}
+
+/// zip 容器精炼：结构（文件头里可见的条目名）> 声明 > 扩展名 > application/zip。
+///
+/// 上传链路此时手里只有文件头 512 字节，读不到中央目录，所以"结构"只认两件
+/// 头部就能证明的事：epub 的规范首个条目、OOXML 的标准条目 `[Content_Types].xml`。
+/// word/ xl/ ppt/ 深藏在包里，分不出是哪种 —— 种交给声明或扩展名（族已验明是 zip，
+/// 同族内听提示不会错方向）。
+fn refine_zip(head: &[u8], filename: &str, declared: &str) -> String {
+    // epub 规范：首个条目必须是未压缩的 mimetype，内容 application/epub+zip
+    if super::preview::looks_like_epub(head) {
+        return "application/epub+zip".into();
+    }
+    // 声明是白名单里的 OOXML 三兄弟（已在上游验明内容确实是 zip 容器）→ 采信它的种
+    if is_ooxml_mime(declared) {
+        return declared.into();
+    }
+    if let Some(mime) = ooxml_of_ext(filename) {
+        return mime.into();
+    }
+    match extension_of(filename).as_str() {
+        "epub" => "application/epub+zip".into(),
+        "jar" => "application/java-archive".into(),
+        "apk" => "application/vnd.android.package-archive".into(),
+        // 其余一律如实存 zip：ODT 这类白名单外的 Office 变体、结构认不出的 OOXML
+        // 都归到容器本身。（早先这里报"文件类型不符"直接拒收，与 §3 的
+        // "白名单外的格式不拒绝"自相矛盾）
+        _ => "application/zip".into(),
+    }
+}
+
+/// RIFF 精炼：偏移 8 的四字符码
+fn refine_riff(head: &[u8]) -> String {
+    match head.get(8..12) {
+        Some(b"WAVE") => "audio/wav".into(),
+        Some(b"WEBP") => "image/webp".into(),
+        Some(b"AVI ") => "video/x-msvideo".into(),
+        _ => "application/octet-stream".into(),
+    }
+}
+
+/// ISO BMFF 精炼：ftyp 的 major brand。认不出的 brand 默认视频 mp4
+/// （这一族 overwhelmingly 是视频容器）
+fn refine_isobmff(head: &[u8]) -> String {
+    match head.get(8..12) {
+        Some(b"qt  ") => "video/quicktime".into(),
+        Some(b"M4A ") | Some(b"M4B ") => "audio/mp4".into(),
+        Some(b"avif") => "image/avif".into(),
+        Some(b"heic") | Some(b"heix") | Some(b"hevc") | Some(b"mif1") | Some(b"msf1") => {
+            "image/heic".into()
+        }
+        _ => "video/mp4".into(),
+    }
+}
+
+/// OGG 精炼：首个 Ogg 页里带 codec 标识。音频是主流，Theora 才是视频
+fn refine_ogg(head: &[u8]) -> String {
+    let contains = |needle: &[u8]| head.windows(needle.len()).any(|w| w == needle);
+    if contains(b"theora") {
+        return "video/ogg".into();
+    }
+    "audio/ogg".into()
+}
+
+/// Matroska 精炼：EBML 头的 DocType（webm 或 matroska），在文件头几十字节内可见
+fn refine_matroska(head: &[u8]) -> String {
+    let window = head.get(..head.len().min(64)).unwrap_or(head);
+    if window.windows(4).any(|w| w == b"webm") {
+        return "video/webm".into();
+    }
+    "video/x-matroska".into()
+}
+
+/// OLE 精炼：doc / xls / ppt 的区分度太低（复合文档结构一致），声明 > 扩展名 > 容器名
+fn refine_ole(filename: &str, declared: &str) -> String {
+    match declared {
+        "application/msword" | "application/vnd.ms-excel" | "application/vnd.ms-powerpoint" => {
+            return declared.into()
+        }
+        _ => {}
+    }
+    match extension_of(filename).as_str() {
+        "doc" => "application/msword".into(),
+        "xls" => "application/vnd.ms-excel".into(),
+        "ppt" => "application/vnd.ms-powerpoint".into(),
+        _ => "application/x-ole-storage".into(),
+    }
+}
+
+/// 文本族精炼：内容是 `<svg` 就给 SVG（内容说了算），否则扩展名给具体类型，
+/// 其余一切文本都是 text/plain（高亮语言由前端按扩展名挑）
+fn refine_text(head: &[u8], filename: &str) -> String {
+    if looks_like_svg(head) {
+        return "image/svg+xml".into();
+    }
+    text_ext_mime(filename).unwrap_or("text/plain").into()
+}
+
+/// 阶段二总入口：族已定，产出规范 MIME。Unknown 的规范名就是 octet-stream
+/// （是否采纳由 [`FileService::resolve_mime`] 的声明闸门决定）
+fn refine_family(family: FileFamily, head: &[u8], filename: &str, declared: &str) -> String {
+    match family {
+        FileFamily::Zip => refine_zip(head, filename, declared),
+        FileFamily::Riff => refine_riff(head),
+        FileFamily::IsoBmff => refine_isobmff(head),
+        FileFamily::Ogg => refine_ogg(head),
+        FileFamily::Matroska => refine_matroska(head),
+        FileFamily::Ole => refine_ole(filename, declared),
+        FileFamily::Gzip => "application/gzip".into(),
+        FileFamily::Jpeg => "image/jpeg".into(),
+        FileFamily::Png => "image/png".into(),
+        FileFamily::Gif => "image/gif".into(),
+        FileFamily::Bmp => "image/bmp".into(),
+        FileFamily::Tiff => "image/tiff".into(),
+        FileFamily::Pdf => "application/pdf".into(),
+        FileFamily::MpegAudio => "audio/mpeg".into(),
+        FileFamily::Flac => "audio/flac".into(),
+        FileFamily::Aac => "audio/aac".into(),
+        FileFamily::Sqlite => "application/vnd.sqlite3".into(),
+        FileFamily::Text => refine_text(head, filename),
+        FileFamily::Unknown => "application/octet-stream".into(),
+    }
 }
 
 /// MIME 别名规范化：同一格式在不同来源（infer 魔数库 / 浏览器 / 操作系统）
@@ -214,6 +573,8 @@ fn normalize_mime(mime: &str) -> &str {
     match mime {
         "audio/x-wav" | "audio/wave" | "audio/vnd.wave" => "audio/wav",
         "audio/x-flac" => "audio/flac",
+        // opus 文件就是 ogg 容器装 Opus 流；白名单只收 audio/ogg
+        "audio/opus" | "audio/x-opus+ogg" => "audio/ogg",
         "image/x-png" => "image/png",
         "image/jpg" | "image/pjpeg" => "image/jpeg",
         "image/x-ms-bmp" => "image/bmp",
@@ -536,11 +897,6 @@ impl FileService {
         }
     }
 
-    /// 检测文件真实 MIME（读头 256 字节）
-    pub fn detect_mime(data: &[u8]) -> Option<String> {
-        infer::get(data).map(|t| t.mime_type().to_string())
-    }
-
     /// 临时文件路径（流式上传先落盘到此，再由 [`Self::upload_streamed`] 接续）。
     /// handler 不持有目录配置，路径一律经此获取。
     pub fn tmp_path(&self) -> String {
@@ -689,7 +1045,7 @@ impl FileService {
         force: bool,
     ) -> Result<UploadOutcome, ServiceError> {
         let final_mime = Self::resolve_mime(data, client_mime, original_name)?;
-        let (category_str, _) = Self::category_and_limit(&final_mime);
+        let category_str = Self::category_of(&final_mime).as_str();
         Self::ensure_within_limit(data.len() as u64, &final_mime)?;
 
         let hash = content_hash(data);
@@ -712,102 +1068,86 @@ impl FileService {
         .await
     }
 
-    /// MIME 真实校验（流式与内存入口共用）：
-    /// infer 对纯文本类（txt/md/csv/html）与部分 PDF 变体返回 None（无魔数），
-    /// 此时仅信任客户端声明的文本类/PDF MIME（白名单内再复核），其余拒绝。
+    /// 上传时确定规范 MIME（流式与内存入口共用）。
+    ///
+    /// 两阶段：`detect_family` 由**字节**定族（几乎不会错），`refine_*` 用容器内标记 /
+    /// 扩展名 / 声明在**族内**定种。声明不再单独决定类型，只在族内起消歧作用，
+    /// 而且要过两道闸门：
+    ///
+    /// - **闸门一**：声明了白名单里"本有魔数"的类型（image/png、video/mp4…）却验不出
+    ///   对应族 → 拒绝。这是"任意内容冒充图片/视频"的挡板。
+    /// - **闸门二**：内容认不出族（Unknown）却声明 text/*、pdf、svg —— 声明承诺是文本
+    ///   而内容不像，归 `application/octet-stream`（交给十六进制查看器，比按声明渲染
+    ///   一屏乱码诚实）。族认得出来时以字节为准，不因声明是文本就降级。
+    ///
+    /// 客户端**没表态**（空声明或 `application/octet-stream`）时一律以字节为准：
+    /// 浏览器对 .sqlite / .7z 这类扩展名报的就是这两种，没有可对照的说法 ——
+    /// 少了这条，凡是浏览器不认识的扩展名都会撞上"声明与内容不符"被拒。
     pub fn resolve_mime(
         head: &[u8],
         client_mime: &str,
         filename: &str,
     ) -> Result<String, ServiceError> {
-        match Self::detect_mime(head) {
-            // 比较前先归一别名，避免 x-wav/wav 这类等价写法被判成"类型不符"
-            Some(raw) => {
-                let real = normalize_mime(&raw);
-                let declared = normalize_mime(client_mime);
-                if real == declared {
-                    return Ok(real.to_string());
-                }
-                // SVG 等价：infer 对带 `<?xml` 声明的 SVG 报 text/xml（同一种文件
-                // 两种报告），此时用文件头确认确实是 <svg> 再放行
-                if is_xml_like(real) && declared == "image/svg+xml" && looks_like_svg(head) {
-                    return Ok("image/svg+xml".to_string());
-                }
-                if real == "image/svg+xml" && is_xml_like(declared) {
-                    return Ok("image/svg+xml".to_string());
-                }
-                // 容器等价：docx/xlsx/pptx 的字节就是 zip，doc/xls/ppt 的就是 OLE 复合文档 ——
-                // infer 报的是容器，客户端报的是"容器 + 内容"。**不认这两条的话，
-                // 白名单里的 docx/xlsx/doc/xls 永远传不上来**（用户上传 docx 时的
-                // "声明 …, 实际 application/zip" 就是这么来的）。只放行白名单里
-                // 声明过的类型，别把这条路变成"任意 zip 都能冒充文档"。
-                let container_ok = (real == "application/zip" && is_zip_container(declared))
-                    || (real == "application/x-ole-storage" && is_ole_container(declared));
-                if container_ok && find_allowed(declared).is_some() {
-                    return Ok(declared.to_string());
-                }
-                Err(ServiceError::InvalidInput(format!(
-                    "文件类型不符：声明 {client_mime}, 实际 {raw}"
-                )))
-            }
-            None if head.is_empty() => Err(ServiceError::InvalidInput("空文件无法上传".into())),
-            // 白名单内的二进制类型都有魔数，识别不出说明内容与声明不符 → 拒绝
-            // （文本类与 PDF 例外：本就没有可靠魔数，信任声明）
-            None if find_allowed(client_mime).is_some() && !has_no_reliable_magic(client_mime) => {
-                Err(ServiceError::InvalidInput(format!(
-                    "无法识别文件类型：声明 {client_mime}"
-                )))
-            }
-            // SVG 无魔数：infer 识别不出，但文件头能确认是 <svg> 根元素，
-            // 声明为 svg 或 XML 家族时归一为 image/svg+xml（才能当图片预览/嵌入）
-            None if looks_like_svg(head)
-                && (client_mime == "image/svg+xml" || is_xml_like(client_mime)) =>
-            {
-                Ok("image/svg+xml".to_string())
-            }
-            // 兜底：先用扩展名映射表猜（客户端对 .rs/.toml/.ply 这类扩展名
-            // 只给 application/octet-stream），猜不出再接受声明并归入 other
-            // 类别；响应侧对非 image/video/audio/pdf 一律 attachment，
-            // 不存在内联渲染的 XSS 面
-            None => match Self::guess_mime_by_name(filename) {
-                Some(guessed) => Ok(guessed),
-                None if client_mime.is_empty() => Ok("application/octet-stream".to_string()),
-                None => Ok(client_mime.to_string()),
-            },
+        if head.is_empty() {
+            return Err(ServiceError::InvalidInput("空文件无法上传".into()));
         }
-    }
+        // 比较前先归一别名，避免 x-wav/wav 这类等价写法被判成"类型不符"
+        let declared = normalize_mime(client_mime);
+        let family = detect_family(head);
+        let declared_unknown = declared.is_empty() || declared == "application/octet-stream";
 
-    /// 按文件名扩展名猜 MIME（mime_guess 标准映射表）。
-    ///
-    /// 文本类归一到 `text/plain`（mime_guess 会给 `text/x-rust` 这类非标准名），
-    /// 但白名单内的标准文本类型（markdown/csv/html）保持原样以便前端按类型渲染。
-    /// 猜不出返回 None，由调用方回落到客户端声明。
-    pub fn guess_mime_by_name(filename: &str) -> Option<String> {
-        let guessed = mime_guess::from_path(filename).first()?;
-        let mime = guessed.essence_str();
-        if mime.starts_with("text/") {
-            if find_allowed(mime).is_some() {
-                Some(mime.to_string())
+        // 闸门一：声明承诺的族必须与内容一致
+        if family_of_mime(declared).is_some_and(|expected| family != expected) {
+            return Err(ServiceError::InvalidInput(if family == FileFamily::Unknown {
+                format!("无法识别文件类型：声明 {client_mime}")
             } else {
-                Some("text/plain".to_string())
-            }
-        } else {
-            Some(mime.to_string())
+                format!(
+                    "文件类型不符：声明 {client_mime}, 实际 {}",
+                    family_label(family)
+                )
+            }));
         }
+
+        // 认不出族：客户端没表态就给 octet-stream，否则保留声明 ——
+        // 白名单外的容器类型（.ply / .glb / .splat / 压缩包…）都靠这条路
+        if family == FileFamily::Unknown {
+            if is_textish_declaration(declared) {
+                // 闸门二：声明说它是文本，内容却不像
+                return Ok("application/octet-stream".into());
+            }
+            return Ok(if declared_unknown {
+                "application/octet-stream".into()
+            } else {
+                declared.to_string()
+            });
+        }
+
+        Ok(refine_family(family, head, filename, declared))
     }
 
-    /// 该 MIME 的类别与大小上限：
-    /// 白名单内用专项设置（图片 200MB / 视频 4GB …），
-    /// 白名单外归入 `other` 兜底——文件服务要能存 3D 模型、设计稿、压缩包等
-    /// 各式文件，未知格式一律拒绝会让模块失去通用性。
-    pub fn category_and_limit(mime: &str) -> (&'static str, u64) {
-        find_allowed(mime).unwrap_or(("other", FALLBACK_MAX_SIZE))
+    /// 该 MIME 的类别。**唯一来源是 `FileCategory::from_mime`** —— 它与 DB 的生成列
+    /// （`db/schema.rs` 里 `category` 的 CASE 表达式）逐条对应，由
+    /// `consistency.rs` 的 `generated_category_matches_rust_rules` 钉住。
+    ///
+    /// 早先这里读的是白名单表里的类别列，于是白名单外的同族类型（`image/avif`
+    /// 之类）被判成 `other`，图片尺寸提取被跳过 —— 同一个问题有三套答案。
+    pub fn category_of(mime: &str) -> FileCategory {
+        FileCategory::from_mime(mime)
+    }
+
+    /// 该 MIME 的单文件大小上限：白名单内用专项分档（图片 200MB / 视频 4GB …），
+    /// 白名单外一律 `other` 档 —— 文件服务要能存 3D 模型、设计稿、压缩包等各式文件，
+    /// 未知格式一律拒绝会让模块失去通用性。
+    pub fn limit_of(mime: &str) -> u64 {
+        find_allowed(mime)
+            .map(|(_, max)| max)
+            .unwrap_or(FALLBACK_MAX_SIZE)
     }
 
     /// 单文件大小闸门。抽成纯函数（而非在调用点内联比较）是为了让"超限"能被
     /// 单测直接覆盖：上限已是数百 MB 到数 GB，测试没法真造那么大的缓冲区。
     pub fn ensure_within_limit(size: u64, mime: &str) -> Result<(), ServiceError> {
-        let (_, max_size) = Self::category_and_limit(mime);
+        let max_size = Self::limit_of(mime);
         if size > max_size {
             return Err(ServiceError::InvalidInput(format!(
                 "文件过大: {size} 字节, 最大允许 {max_size} 字节"
@@ -1518,11 +1858,10 @@ mod tests {
     async fn upload_accepts_epub_alias() {
         let bytes = epub_bytes();
         // 先确认这份测试造件确实被判成 epub（而不是 zip），否则这条测试就是假绿
-        assert_eq!(
-            FileService::detect_mime(&bytes)
-                .as_deref()
-                .map(normalize_mime),
-            Some("application/epub+zip")
+        assert_eq!(detect_family(&bytes), FileFamily::Zip);
+        assert!(
+            super::super::preview::looks_like_epub(&bytes),
+            "测试造件必须满足 epub 的内容判据"
         );
 
         let ctx = setup_service().await;
@@ -1547,7 +1886,9 @@ mod tests {
         );
     }
 
-    /// 造一份最小 epub：首个条目必须是未压缩的 mimetype（infer 按规范在固定偏移上认）
+    /// 造一份 epub：首个条目必须是未压缩的 `mimetype`，内容 application/epub+zip。
+    /// 再塞一个 container.xml 把文件撑过 256 字节 —— `preview::looks_like_epub` 只看
+    /// 前 256 字节（真实 epub 远大于此，测试造件太小会落到判据之外，成假绿）
     fn epub_bytes() -> Vec<u8> {
         use std::io::Write as _;
         let mut buf = Vec::new();
@@ -1557,6 +1898,18 @@ mod tests {
                 .compression_method(zip::CompressionMethod::Stored);
             zip.start_file("mimetype", options).expect("写 epub");
             zip.write_all(b"application/epub+zip").expect("写 epub");
+            zip.start_file("META-INF/container.xml", options)
+                .expect("写 epub");
+            zip.write_all(
+                br#"<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>
+"#,
+            )
+            .expect("写 epub");
             zip.finish().expect("收尾 epub");
         }
         buf
@@ -1606,9 +1959,12 @@ mod tests {
     /// 放行容器≠放行一切：白名单外的 zip 型文档（如 ODF）仍然拒
     /// （别让"是 zip"变成万能通行证）
     #[tokio::test]
-    async fn upload_rejects_unlisted_ooxml_containers() {
+    async fn upload_accepts_unlisted_document_container_as_zip() {
+        // ODT：白名单外的 Office 变体。族验明内容是 zip，就如实存 zip ——
+        // 早先这里报"文件类型不符"拒收，与"白名单外的格式不拒绝"自相矛盾。
+        // 前端按扩展名认领不到查看器 → 下载兜底；预览按内容给压缩包条目清单
         let ctx = setup_service().await;
-        let err = ctx
+        let f = ctx
             .svc
             .upload(
                 ZIP_MIN,
@@ -1619,20 +1975,25 @@ mod tests {
                 false,
             )
             .await
-            .unwrap_err();
-        assert!(err.to_string().contains("文件类型不符"), "{err}");
+            .expect("白名单外的容器类型应当能上传")
+            .file;
+        assert_eq!(f.mime_type, "application/zip");
+        assert_eq!(f.file_category, FileCategory::Other);
     }
 
     #[tokio::test]
-    async fn upload_rejects_mime_mismatch() {
+    async fn upload_stores_content_family_when_declaration_undersells_it() {
+        // 真实内容是 PNG，声明却是 text/plain（把图片存成 .txt 的真实场景）：
+        // 以字节为准存 image/png，让图片能正常预览
         let ctx = setup_service().await;
-        // 真实内容是 PNG，却声明 text/plain
-        let err = ctx
+        let f = ctx
             .svc
             .upload(PNG_1X1, "x.txt", "text/plain", Some(7), None, false)
             .await
-            .unwrap_err();
-        assert!(err.to_string().contains("文件类型不符"));
+            .expect("内容验明是 PNG 就按 PNG 收")
+            .file;
+        assert_eq!(f.mime_type, "image/png");
+        assert_eq!(f.file_category, FileCategory::Image);
     }
 
     #[tokio::test]
@@ -1748,71 +2109,321 @@ mod tests {
         assert!(row.is_none());
     }
 
-    // ── 扩展名兜底（mime_guess） ──
+    // ── 文本性由字节判定（looks_like_text） ──
 
     #[test]
-    fn guess_mime_by_name_maps_standard_types() {
-        assert_eq!(
-            FileService::guess_mime_by_name("photo.png").as_deref(),
-            Some("image/png")
-        );
-        assert_eq!(
-            FileService::guess_mime_by_name("report.pdf").as_deref(),
-            Some("application/pdf")
-        );
-        assert_eq!(
-            FileService::guess_mime_by_name("data.zip").as_deref(),
-            Some("application/zip")
-        );
-        // 猜不出返回 None（由调用方回落到客户端声明）
-        assert_eq!(FileService::guess_mime_by_name("noext"), None);
+    fn looks_like_text_accepts_code_and_chinese() {
+        assert!(looks_like_text(b"fn main() {\n\tprintln!(\"hi\");\n}\n"));
+        // UTF-8 中文
+        assert!(looks_like_text("你好，世界\n".as_bytes()));
+        // GBK 中文：不是合法 UTF-8，但字节全是高字节，不该被当成二进制
+        assert!(looks_like_text(&[0xC4, 0xE3, 0xBA, 0xC3, 0x0A]));
+        // 空样本不算文本（"空文件"由 resolve_mime 单独报）
+        assert!(!looks_like_text(b""));
     }
 
     #[test]
-    fn guess_mime_normalizes_nonstandard_text_to_plain() {
-        // mime_guess 对源码扩展名给 text/x-rust 这类非标准名 → 归一为 text/plain
-        assert_eq!(
-            FileService::guess_mime_by_name("main.rs").as_deref(),
-            Some("text/plain")
-        );
-        // 白名单内的标准文本类型保持原样（前端据此按 markdown/csv 渲染）
-        assert_eq!(
-            FileService::guess_mime_by_name("note.md").as_deref(),
-            Some("text/markdown")
-        );
-        assert_eq!(
-            FileService::guess_mime_by_name("table.csv").as_deref(),
-            Some("text/csv")
-        );
+    fn looks_like_text_rejects_binary() {
+        // NUL 是二进制的铁证
+        assert!(!looks_like_text(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"));
+        // 零散 NUL（不足 1/8，够不上宽字符的交替模式）同样是二进制
+        let mut scattered = vec![b'a'; 100];
+        scattered[7] = 0;
+        assert!(!looks_like_text(&scattered));
+        // 控制字符超标
+        assert!(!looks_like_text(&[0x01, 0x02, 0x03, 0x04, 0x05]));
     }
 
     #[test]
-    fn resolve_mime_falls_back_to_extension() {
-        // 无魔数的源码文件：声明 octet-stream，靠扩展名补出 text/plain
-        let src = b"fn main() { println!(\"hi\"); }\n";
-        assert_eq!(
-            FileService::resolve_mime(src, "application/octet-stream", "main.rs").unwrap(),
-            "text/plain"
-        );
-        // markdown 保持标准类型
+    fn looks_like_text_accepts_utf16() {
+        // 带 BOM 的 UTF-16LE：ASCII 字符的高字节是 NUL，本该被冤判成二进制
+        let mut with_bom = vec![0xFF, 0xFE];
+        with_bom.extend("hello".encode_utf16().flat_map(u16::to_le_bytes));
+        assert!(looks_like_text(&with_bom));
+        // 不带 BOM 的看 NUL 是否只落在奇位（小端）
+        let le: Vec<u8> = "hello world"
+            .encode_utf16()
+            .flat_map(u16::to_le_bytes)
+            .collect();
+        assert!(looks_like_text(&le));
+    }
+
+    #[test]
+    fn text_ext_mime_only_names_the_ones_with_dedicated_viewers() {
+        assert_eq!(text_ext_mime("note.md"), Some("text/markdown"));
+        assert_eq!(text_ext_mime("note.markdown"), Some("text/markdown"));
+        assert_eq!(text_ext_mime("table.csv"), Some("text/csv"));
+        assert_eq!(text_ext_mime("page.htm"), Some("text/html"));
+        // 其余一切文本都不给具体类型，由前端按扩展名挑高亮语言
+        assert_eq!(text_ext_mime("main.rs"), None);
+        assert_eq!(text_ext_mime("data.json"), None);
+        assert_eq!(text_ext_mime("Dockerfile"), None);
+        assert_eq!(text_ext_mime("a."), None);
+    }
+
+    /// 这一批是这次重做修掉的核心问题：它们的 MIME 曾经由 `mime_guess` 决定 ——
+    /// `.json` 报 application/json、`.ts` 报 video/vnd.dlna.mpeg-tts（与 MPEG-TS 撞名）、
+    /// `.sh`/`.sql`/`.php` 报 application/x-*、`.java` 报 application/octet-stream、
+    /// `.go`/`.vue`/`Dockerfile` 根本没有映射 —— 于是全都落进 `other` 类别，
+    /// 被前端的十六进制查看器吃掉。
+    #[test]
+    fn resolve_mime_gives_code_and_config_a_text_preview() {
+        for (name, head) in [
+            ("data.json", "{\"a\": 1}\n"),
+            ("app.ts", "export const a: number = 1;\n"),
+            ("main.go", "package main\n\nfunc main() {}\n"),
+            ("run.sh", "#!/bin/sh\nset -e\n"),
+            ("query.sql", "select 1;\n"),
+            ("Main.java", "class Main {}\n"),
+            ("index.vue", "<template><div/></template>\n"),
+            ("deploy.toml", "[a]\nb = 1\n"),
+            ("Dockerfile", "FROM rust:latest\n"),
+            ("LICENSE", "MIT License\n"),
+            ("noext", "plain words\n"),
+            ("subtitle.srt", "1\n00:00:01,000 --> 00:00:02,000\nhi\n"),
+        ] {
+            assert_eq!(
+                FileService::resolve_mime(head.as_bytes(), "application/octet-stream", name).unwrap(),
+                "text/plain",
+                "{name} 应当按文本预览"
+            );
+        }
+    }
+
+    #[test]
+    fn resolve_mime_keeps_specific_text_types_for_dedicated_viewers() {
+        // 有专用查看器的三种仍给具体类型（前端据此选 markdown / csv / html 渲染）
         assert_eq!(
             FileService::resolve_mime(b"# title\n", "application/octet-stream", "note.md").unwrap(),
             "text/markdown"
         );
-        // 真二进制（zip）按扩展名识别，类别仍是 other
         assert_eq!(
-            FileService::resolve_mime(b"PK\x03\x04\x14\x00", "application/zip", "a.zip").unwrap(),
+            FileService::resolve_mime(b"a,b\n1,2\n", "", "table.csv").unwrap(),
+            "text/csv"
+        );
+        assert_eq!(
+            FileService::resolve_mime(b"<html></html>\n", "", "page.html").unwrap(),
+            "text/html"
+        );
+    }
+
+    #[test]
+    fn resolve_mime_demotes_binary_content_declared_as_text() {
+        // 内容是二进制却声明成本该是文本的类型：按声明渲染只会得到一屏乱码，
+        // 归 octet-stream 交给十六进制查看器
+        let binary = b"\x00\x01\x02\x03\xFF\xFE";
+        assert_eq!(
+            FileService::resolve_mime(binary, "text/plain", "fake.txt").unwrap(),
+            "application/octet-stream"
+        );
+        assert_eq!(
+            FileService::resolve_mime(binary, "text/markdown", "fake.md").unwrap(),
+            "application/octet-stream"
+        );
+        // 白名单外的声明照旧保留（.ply / .glb / 压缩包这些没有魔数的容器类型）
+        assert_eq!(
+            FileService::resolve_mime(binary, "application/x-ply", "model.ply").unwrap(),
+            "application/x-ply"
+        );
+    }
+
+    #[test]
+    fn resolve_mime_treats_ascii_point_cloud_as_text() {
+        // ASCII 的 .ply / .obj / .xyz / .gltf 内容确实是文本 —— 存 text/plain 是诚实的，
+        // 查看器由前端按扩展名认领（registry 里那几条按名字的规则排在文本规则之前）
+        let ascii_ply = b"ply\nformat ascii 1.0\nelement vertex 3\nend_header\n0 0 0\n";
+        assert_eq!(
+            FileService::resolve_mime(ascii_ply, "application/octet-stream", "model.ply").unwrap(),
+            "text/plain"
+        );
+    }
+
+    // ── 两阶段识别：先定族（detect_family），再在族内定种（refine_*） ──
+
+    const DOCX: &str = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    const XLSX: &str = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    const PPTX: &str =
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+
+    #[test]
+    fn detect_family_recognizes_containers() {
+        use FileFamily::*;
+        for (bytes, family) in [
+            (&b"PK\x03\x04\x14\x00\x00\x00\x08\x00"[..], Zip),
+            (b"PK\x05\x06\x00\x00\x00\x00", Zip),
+            (b"RIFF\x24\x00\x00\x00WAVEfmt ", Riff),
+            (b"\x00\x00\x00\x18ftypmp42\x00\x00", IsoBmff),
+            (b"\x00\x00\x00\x14ftypqt  \x00\x00", IsoBmff),
+            (b"OggS\x00\x02\x00\x00\x00\x00", Ogg),
+            (b"\x1A\x45\xDF\xA3\x01\x00\x00\x00", Matroska),
+            (b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1", Ole),
+            (b"\x1F\x8B\x08\x00\x00\x00\x00\x00", Gzip),
+        ] {
+            assert_eq!(
+                detect_family(bytes),
+                family,
+                "内容 {}",
+                String::from_utf8_lossy(bytes)
+            );
+        }
+    }
+
+    #[test]
+    fn detect_family_recognizes_single_signature_formats() {
+        use FileFamily::*;
+        for (bytes, family) in [
+            (PNG_1X1, Png),
+            (&b"\xFF\xD8\xFF\xE0\x00\x10JFIF"[..], Jpeg),
+            (b"GIF89a\x01\x00\x01\x00", Gif),
+            (b"BM\x36\x00\x00\x00\x00", Bmp),
+            (b"II\x2A\x00\x08\x00\x00\x00", Tiff),
+            (b"MM\x00\x2A\x00\x00\x00\x08", Tiff),
+            (b"%PDF-1.4\n", Pdf),
+            (b"ID3\x04\x00\x00\x00", MpegAudio),
+            (b"\xFF\xFB\x90\x00", MpegAudio),
+            (b"fLaC\x00\x00\x00\x22", Flac),
+            (b"\xFF\xF1\x50\x80\x00", Aac),
+            (b"SQLite format 3\x00rest", Sqlite),
+        ] {
+            assert_eq!(detect_family(bytes), family);
+        }
+    }
+
+    #[test]
+    fn detect_family_falls_back_to_text_then_unknown() {
+        // 文本垫底：可打印字节谁都能装，必须排在所有二进制签名之后
+        assert_eq!(detect_family(b"fn main() {}\n"), FileFamily::Text);
+        assert_eq!(detect_family("你好，世界\n".as_bytes()), FileFamily::Text);
+        assert_eq!(
+            detect_family(&[0x00, 0x01, 0x02, 0x03]),
+            FileFamily::Unknown
+        );
+        assert_eq!(detect_family(b""), FileFamily::Unknown);
+    }
+
+    /// 族内定种：同一族的不同格式靠容器内标记 / 声明 / 扩展名分辨。
+    /// 头部只有 512 字节，读不到 zip 中央目录，所以 word/ xl/ ppt/ 分辨不出，
+    /// 种交给声明或扩展名 —— 族已经验明是 zip，同族内听提示不会错方向。
+    #[test]
+    fn refine_zip_tells_the_office_family_apart() {
+        let zip = b"PK\x03\x04\x14\x00\x00\x00\x08\x00";
+        assert_eq!(refine_zip(zip, "a.zip", "application/zip"), "application/zip");
+        assert_eq!(refine_zip(zip, "报告.docx", ""), DOCX);
+        assert_eq!(refine_zip(zip, "数据.xlsx", ""), XLSX);
+        assert_eq!(refine_zip(zip, "汇报.pptx", ""), PPTX);
+        // 声明比文件名可信：浏览器说了就采信
+        assert_eq!(refine_zip(zip, "a.bin", DOCX), DOCX);
+        // epub 有内容判据（首个条目是未压缩的 mimetype），不靠名字
+        assert_eq!(
+            refine_zip(&epub_bytes(), "书.bin", ""),
+            "application/epub+zip"
+        );
+        // 其余如实存 zip：白名单外的 ODT、结构认不出的 OOXML 都归到容器本身
+        assert_eq!(
+            refine_zip(zip, "a.odt", "application/vnd.oasis.opendocument.text"),
             "application/zip"
         );
-        // 完全未知：保持客户端声明
+    }
+
+    #[test]
+    fn refine_riff_and_isobmff_pick_the_species() {
+        let riff = |tag: &[u8; 4]| {
+            let mut v = b"RIFF\x24\x00\x00\x00".to_vec();
+            v.extend_from_slice(tag);
+            v
+        };
+        assert_eq!(refine_riff(&riff(b"WAVE")), "audio/wav");
+        assert_eq!(refine_riff(&riff(b"WEBP")), "image/webp");
+        assert_eq!(refine_riff(&riff(b"AVI ")), "video/x-msvideo");
+        assert_eq!(refine_riff(&riff(b"XXXX")), "application/octet-stream");
+
+        let bmff = |brand: &[u8; 4]| {
+            let mut v = b"\x00\x00\x00\x18ftyp".to_vec();
+            v.extend_from_slice(brand);
+            v
+        };
+        assert_eq!(refine_isobmff(&bmff(b"isom")), "video/mp4");
+        assert_eq!(refine_isobmff(&bmff(b"mp42")), "video/mp4");
+        assert_eq!(refine_isobmff(&bmff(b"qt  ")), "video/quicktime");
+        assert_eq!(refine_isobmff(&bmff(b"M4A ")), "audio/mp4");
+        assert_eq!(refine_isobmff(&bmff(b"heic")), "image/heic");
+        assert_eq!(refine_isobmff(&bmff(b"avif")), "image/avif");
+    }
+
+    #[test]
+    fn refine_ogg_and_matroska_tell_video_from_audio() {
+        let ogg = b"OggS\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00";
+        assert_eq!(refine_ogg(ogg), "audio/ogg");
+        let mut theora = ogg.to_vec();
+        theora.extend_from_slice(b"\x80theora");
+        assert_eq!(refine_ogg(&theora), "video/ogg");
+
+        let mut webm = b"\x1A\x45\xDF\xA3\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".to_vec();
+        webm.extend_from_slice(b"\x42\x82\x84webm");
+        assert_eq!(refine_matroska(&webm), "video/webm");
+        let mut mkv = b"\x1A\x45\xDF\xA3\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".to_vec();
+        mkv.extend_from_slice(b"\x42\x82\x88matroska");
+        assert_eq!(refine_matroska(&mkv), "video/x-matroska");
+    }
+
+    #[test]
+    fn refine_ole_and_text_use_the_best_available_evidence() {
+        // OLE 里 doc / xls / ppt 结构一致，区分度太低：声明 > 扩展名 > 容器名
         assert_eq!(
-            FileService::resolve_mime(
-                b"\x00\x01\x02\x03",
-                "application/octet-stream",
-                "x.unknownext"
-            )
-            .unwrap(),
-            "application/octet-stream"
+            refine_ole("a.bin", "application/msword"),
+            "application/msword"
+        );
+        assert_eq!(refine_ole("a.doc", ""), "application/msword");
+        assert_eq!(refine_ole("a.xls", ""), "application/vnd.ms-excel");
+        assert_eq!(refine_ole("a.ppt", ""), "application/vnd.ms-powerpoint");
+        assert_eq!(refine_ole("a.bin", ""), "application/x-ole-storage");
+
+        // 文本族：内容含 <svg 就按 SVG，否则扩展名给具体类型
+        assert_eq!(refine_text(b"<svg xmlns=\"...\"/>", "a.bin"), "image/svg+xml");
+        assert_eq!(refine_text(b"# title\n", "a.md"), "text/markdown");
+        assert_eq!(refine_text(b"plain\n", "a.json"), "text/plain");
+        assert_eq!(refine_text(b"plain\n", "Dockerfile"), "text/plain");
+    }
+
+    #[test]
+    fn resolve_mime_lets_content_win_over_a_wrong_declaration() {
+        // 内容验明是 PNG，声明却说 text/plain：以字节为准存 image/png
+        // （早先这里报"文件类型不符"拒收 —— 对"图片被存成 .txt"这类真实场景太苛刻）
+        assert_eq!(
+            FileService::resolve_mime(PNG_1X1, "text/plain", "x.txt").unwrap(),
+            "image/png"
+        );
+        // 浏览器不认识扩展名时报空或 octet-stream → 同样以字节为准
+        assert_eq!(
+            FileService::resolve_mime(b"SQLite format 3\x00rest", "", "notes.sqlite").unwrap(),
+            "application/vnd.sqlite3"
+        );
+        assert_eq!(
+            FileService::resolve_mime(b"SQLite format 3\x00rest", "application/octet-stream", "x.db")
+                .unwrap(),
+            "application/vnd.sqlite3"
+        );
+    }
+
+    #[test]
+    fn resolve_mime_rejects_a_declaration_that_contradicts_the_content() {
+        // 声明是白名单里"本有魔数"的类型，内容却验出另一个族 → 拒（抗冒充）
+        let err = FileService::resolve_mime(b"hello world\n", "image/png", "x.png").unwrap_err();
+        assert!(err.to_string().contains("文件类型不符"), "{err}");
+        // 内容根本认不出族 → 拒
+        let err =
+            FileService::resolve_mime(&[0xDE, 0xAD, 0x00, 0x01], "video/mp4", "x.mp4").unwrap_err();
+        assert!(err.to_string().contains("无法识别"), "{err}");
+    }
+
+    #[test]
+    fn resolve_mime_accepts_unlisted_document_containers_as_zip() {
+        // ODT 这类白名单外的 Office 变体：族验明是 zip，如实存容器本身，
+        // 而不是像早先那样报"文件类型不符"拒收（与 §3"白名单外的格式不拒绝"矛盾）
+        assert_eq!(
+            FileService::resolve_mime(ZIP_MIN, "application/vnd.oasis.opendocument.text", "a.odt")
+                .unwrap(),
+            "application/zip"
         );
     }
 
@@ -1850,10 +2461,38 @@ mod tests {
     }
 
     #[test]
-    fn plain_xml_cannot_claim_to_be_svg() {
-        // 内容是普通 XML（无 <svg>）却声明 SVG → 内容确认失败，仍拒绝
+    fn plain_xml_declared_as_svg_is_just_text() {
+        // 内容是普通 XML（无 <svg>）却声明 SVG：内容不像 SVG，就不按 SVG 收 ——
+        // 但它是**文本**，文本不存在"冒充"（声明不符只说明声明不对），
+        // 于是按文本收纳。此前这里报"文件类型不符"直接拒收
         let xml = b"<?xml version=\"1.0\"?>\n<rss version=\"2.0\"><channel/></rss>";
-        let err = FileService::resolve_mime(xml, "image/svg+xml", "feed.xml").unwrap_err();
+        assert_eq!(
+            FileService::resolve_mime(xml, "image/svg+xml", "feed.xml").unwrap(),
+            "text/plain"
+        );
+        // 换成二进制内容 + SVG 声明：内容对不上"无魔数的文本类"这个承诺 →
+        // 归 octet-stream（交给十六进制查看器），不是按声明渲染
+        assert_eq!(
+            FileService::resolve_mime(b"\x00\x01\x02\x03", "image/svg+xml", "icon.svg").unwrap(),
+            "application/octet-stream"
+        );
+    }
+
+    #[test]
+    fn text_content_is_never_treated_as_a_mismatch() {
+        // 文本只有"哪种文本"之分，不存在"冒充"：内容是文本时声明不符只说明声明不对。
+        // 此前 .txt 里放一段 HTML、或 .sh 带 shebang，都会撞上"文件类型不符"传不上来
+        assert_eq!(
+            FileService::resolve_mime(b"<div>hi</div>\n", "text/plain", "note.txt").unwrap(),
+            "text/plain"
+        );
+        // 无扩展名：具体文本类型只由扩展名给（见 text_ext_mime），给不出就是 text/plain
+        assert_eq!(
+            FileService::resolve_mime(b"<div>hi</div>\n", "", "snippet").unwrap(),
+            "text/plain"
+        );
+        // 但"声明是白名单里的二进制类型"这条不容含糊：内容必须真的是它
+        let err = FileService::resolve_mime(b"<div>hi</div>\n", "image/png", "x.png").unwrap_err();
         assert!(err.to_string().contains("文件类型不符"));
     }
 
@@ -1870,10 +2509,8 @@ mod tests {
     #[test]
     fn svg_has_image_category_and_forced_download() {
         // 归 image 类别（可当图片预览/嵌入），但响应强制 attachment（防脚本执行）
-        assert_eq!(
-            FileService::category_and_limit("image/svg+xml"),
-            ("image", SVG_MAX_SIZE)
-        );
+        assert_eq!(FileService::category_of("image/svg+xml").as_str(), "image");
+        assert_eq!(FileService::limit_of("image/svg+xml"), SVG_MAX_SIZE);
         assert!(should_force_download("image/svg+xml"));
         assert!(
             !(can_inline("image/svg+xml") && !should_force_download("image/svg+xml")),
@@ -1898,8 +2535,8 @@ mod tests {
     // ── 白名单外格式兜底（3D 模型 / 设计稿 / 压缩包 …） ──
 
     #[test]
-    fn category_and_limit_falls_back_to_other_for_unknown_types() {
-        // 白名单外 → other + 兜底上限
+    fn limit_of_falls_back_to_other_tier_for_unknown_types() {
+        // 白名单外 → 兜底上限
         for mime in [
             "application/octet-stream",
             "application/x-ply",
@@ -1908,24 +2545,39 @@ mod tests {
             "image/vnd.adobe.photoshop",
         ] {
             assert_eq!(
-                FileService::category_and_limit(mime),
-                ("other", FALLBACK_MAX_SIZE),
-                "{mime} 应归入 other"
+                FileService::limit_of(mime),
+                FALLBACK_MAX_SIZE,
+                "{mime} 应走兜底上限"
             );
         }
-        // 白名单内仍用专项设置
-        assert_eq!(
-            FileService::category_and_limit("image/png"),
-            ("image", IMAGE_MAX_SIZE)
-        );
-        assert_eq!(
-            FileService::category_and_limit("video/mp4"),
-            ("video", FALLBACK_MAX_SIZE)
-        );
-        assert_eq!(
-            FileService::category_and_limit("text/plain"),
-            ("document", DOCUMENT_MAX_SIZE)
-        );
+        // 白名单内仍用专项分档
+        assert_eq!(FileService::limit_of("image/png"), IMAGE_MAX_SIZE);
+        assert_eq!(FileService::limit_of("video/mp4"), FALLBACK_MAX_SIZE);
+        assert_eq!(FileService::limit_of("text/plain"), DOCUMENT_MAX_SIZE);
+    }
+
+    #[test]
+    fn category_of_follows_mime_family_not_the_whitelist() {
+        // **类别只看 MIME 族**（与 DB 生成列同规则）：白名单外的同族类型也要正确归类 ——
+        // 早先这里读白名单的类别列，image/avif 之类会被判成 other，图片尺寸提取被跳过
+        assert_eq!(FileService::category_of("image/avif").as_str(), "image");
+        assert_eq!(FileService::category_of("audio/opus").as_str(), "audio");
+        assert_eq!(FileService::category_of("text/x-python").as_str(), "document");
+        assert_eq!(FileService::category_of("application/x-ply").as_str(), "other");
+    }
+
+    #[test]
+    fn whitelist_category_column_agrees_with_from_mime() {
+        // 白名单的类别列是给前端镜像（uploadLimits.test.ts / registry.test.ts）读的，
+        // 与 FileCategory::from_mime（即 DB 生成列的规则）必须逐条一致；
+        // 只改一侧就会在这里失败
+        for (mime, category, _) in ALLOWED_MIMES {
+            assert_eq!(
+                *category,
+                FileService::category_of(mime).as_str(),
+                "白名单类别列与 from_mime 不一致：{mime}"
+            );
+        }
     }
 
     #[test]
@@ -1959,7 +2611,8 @@ mod tests {
     #[tokio::test]
     async fn upload_accepts_ply_like_unknown_file() {
         let ctx = setup_service().await;
-        // 模拟 .ply：无魔数、声明 octet-stream
+        // 模拟 ASCII 的 .ply：内容确实是文本 → 存 text/plain（查看器由前端按扩展名认领）。
+        // 白名单外的格式一律接收这条策略不变，变的是"是不是文本"如今看字节
         let ply = b"ply\nformat ascii 1.0\nelement vertex 3\nend_header\n0 0 0\n";
         let f = ctx
             .svc
@@ -1974,9 +2627,27 @@ mod tests {
             .await
             .unwrap()
             .file;
-        assert_eq!(f.file_category, FileCategory::Other);
-        assert_eq!(f.mime_type, "application/octet-stream");
+        assert_eq!(f.file_category, FileCategory::Document);
+        assert_eq!(f.mime_type, "text/plain");
         assert_eq!(f.original_name, "model.ply");
+
+        // 二进制内容的 .ply（含 NUL）保持 octet-stream
+        let binary = b"ply\nbinary_little_endian 1.0\n\x00\x01\x02\x03";
+        let g = ctx
+            .svc
+            .upload(
+                binary,
+                "scan.ply",
+                "application/octet-stream",
+                Some(7),
+                None,
+                false,
+            )
+            .await
+            .unwrap()
+            .file;
+        assert_eq!(g.file_category, FileCategory::Other);
+        assert_eq!(g.mime_type, "application/octet-stream");
     }
 
     // ── MIME 别名规范化 ──

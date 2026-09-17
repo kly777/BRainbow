@@ -188,7 +188,7 @@ pub async fn upload_handler(
                 return e.into_response();
             }
         };
-        let (category_str, _) = FileService::category_and_limit(&final_mime);
+        let category_str = FileService::category_of(&final_mime).as_str();
 
         let mut hasher = Sha256::new();
         let mut head: Vec<u8> = Vec::new();

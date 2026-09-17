@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { codeFence, codeLang, fileExt, isPlainTextName } from "./filename.ts";
+import { codeFence, codeLang, fileExt } from "./filename.ts";
 
 describe("fileExt", () => {
 	it("提取常见后缀并大写", () => {
@@ -37,23 +37,6 @@ describe("codeLang", () => {
 		expect(codeLang("Cargo.toml")).toBe("");
 		expect(codeLang("notes.log")).toBe("");
 		expect(codeLang("model.ply")).toBe("");
-	});
-});
-
-describe("isPlainTextName", () => {
-	it("字幕/歌词/播放列表/日志按纯文本处理", () => {
-		expect(isPlainTextName("英语听力.srt")).toBe(true);
-		expect(isPlainTextName("访谈.VTT")).toBe(true);
-		expect(isPlainTextName("歌词.lrc")).toBe(true);
-		expect(isPlainTextName("歌单.m3u")).toBe(true);
-		expect(isPlainTextName("build.log")).toBe(true);
-	});
-
-	it("二进制格式不误判", () => {
-		expect(isPlainTextName("model.ply")).toBe(false);
-		expect(isPlainTextName("设计稿.psd")).toBe(false);
-		expect(isPlainTextName("archive.zip")).toBe(false);
-		expect(isPlainTextName("无后缀")).toBe(false);
 	});
 });
 

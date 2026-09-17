@@ -41,6 +41,16 @@ describe("查看器注册表：命中规则", () => {
 		],
 		["mp4", ofCategory("video/mp4", "video", "a.mp4"), "video"],
 		[
+			"M4A 音频：ISO BMFF 族内按 ftyp brand 定出 audio/mp4（族相同、种不同）",
+			ofCategory("audio/mp4", "audio", "a.m4a"),
+			"audio",
+		],
+		[
+			"MOV：与 MP4 同族，按 brand 定出 video/quicktime",
+			ofCategory("video/quicktime", "video", "a.mov"),
+			"video",
+		],
+		[
 			"webm 音频（与 webm 视频同扩展名，按 mime 分流）",
 			ofCategory("audio/webm", "audio", "a.webm"),
 			"audio",
@@ -139,6 +149,39 @@ describe("查看器注册表：命中规则", () => {
 			ofCategory("application/octet-stream", "other", "模型.bin"),
 			"hex",
 		],
+		// ── 顺序即优先级：按扩展名认领的规则必须排在泛化的文本规则之前 ──
+		// 下面这三条的 mime 都是后端如实判出的 text/*（内容确实是文本），
+		// 若让 code/text 先命中，点云与网格会被渲染成一屏纯文本
+		[
+			"ASCII 的 .ply 内容被判成 text/plain，但仍要进泼溅查看器",
+			ofCategory("text/plain", "document", "scan.ply"),
+			"splat",
+		],
+		[
+			"ASCII 的 .stl 同理（text/plain 但进模型查看器）",
+			ofCategory("text/plain", "document", "part.stl"),
+			"model",
+		],
+		[
+			".gltf 是 JSON 文本，同样要被模型查看器认领",
+			ofCategory("text/plain", "document", "scene.gltf"),
+			"model",
+		],
+		[
+			"SQLite 的类别是 document（application/vnd.* 前缀规则），照样进数据库查看器",
+			ofCategory("application/vnd.sqlite3", "document", "notes.sqlite"),
+			"database",
+		],
+		[
+			"JSON：以前是 application/json → other → 十六进制预览，现在按文本判",
+			ofCategory("text/plain", "document", "config.json"),
+			"code",
+		],
+		[
+			"二进制内容却声明成文本 → 后端归 octet-stream，落到 hex",
+			ofCategory("application/octet-stream", "other", "fake.txt"),
+			"hex",
+		],
 		[
 			"docx（正文由后端解析成 HTML 预览）",
 			ofCategory(
@@ -167,14 +210,9 @@ describe("查看器注册表：命中规则", () => {
 			"xlsx",
 		],
 		[
-			"字幕（MIME 是 application/x-subrip，归 other 但内容是文本）",
-			ofCategory("application/x-subrip", "other", "英语听力.srt"),
-			"plain-text-name",
-		],
-		[
-			"播放列表（m3u 同理）",
-			ofCategory("application/vnd.apple.mpegurl", "other", "歌单.m3u"),
-			"plain-text-name",
+			"字幕：后端按字节判出文本 → mime 就是 text/plain（前端那张 PLAIN_TEXT_EXTS 清单已退休）",
+			ofCategory("text/plain", "document", "英语听力.srt"),
+			"text",
 		],
 		[
 			"内容缺失的文件（照样选查看器，缺失提示由宿主渲染）",

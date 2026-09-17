@@ -1,9 +1,9 @@
 /**
  * 文件名后缀提取与代码高亮语言判定。
  *
- * 「这个文件是不是文本」由后端决定（infer 魔数 + mime_guess 扩展名兜底，
- * 未知文本统一存为 text/plain），前端只看 mime 是否 text/*；
- * 这里只保留两件前端独有的事：卡片后缀徽章、代码预览的高亮语言。
+ * 「这个文件是不是文本」由后端按**字节**判定（service.rs 的 looks_like_text，
+ * 先定族再定种，见 §3），文本一律存为 text/*；前端只看 mime 是否 text/*。
+ * 高亮语言是前端独有的知识（highlight.js），所以这张表留在这里。
  */
 
 /** 后缀显示字符上限（超长后缀截断，如 "jpeg2000" → "JPEG2"） */
@@ -86,25 +86,13 @@ export function codeLang(name: string): string {
 	return EXT_TO_LANG[lowerExt(lower)] ?? "";
 }
 
-/**
- * 已知是纯文本、但 MIME 不在后端白名单里的扩展名。
- * 后端对这些扩展名按 mime_guess 给出 `application/x-subrip` 这类非 text/* 类型，
- * 于是归入 other 类别、拿不到文本查看器——但内容就是文本，按十六进制看没有意义。
- * 清单刻意保守：只收"一定是文本"的格式（字幕、歌词、播放列表、日志、补丁）。
- */
-const PLAIN_TEXT_EXTS = new Set([
-	"srt",
-	"vtt",
-	"ass",
-	"ssa",
-	"sub",
-	"lrc",
-	"m3u",
-	"m3u8",
-	"log",
-	"diff",
-	"patch",
-]);
+// 这里曾经有一份 PLAIN_TEXT_EXTS（srt / vtt / lrc / log / patch …）与配套的
+// isPlainTextName：后端当时按 mime_guess 的映射表给 MIME，字幕这类扩展名拿到的是
+// application/x-subrip（不是 text/*），前端只好再按扩展名猜一次"这其实是文本"。
+//
+// 现在"是不是文本"由**字节**判定（后端 service.rs 的 looks_like_text），这类文件
+// 上传后 mime 就是 text/*，于是这份清单连同"other 类别里按扩展名认领文本"的规则
+// 一起退休了。**别再往前端加这类表** —— 后端判得出就是判得出。
 
 /**
  * 是否是压缩包（注册表按扩展名认领；**内容判据在后端** —— 压缩包没有稳定的 MIME，
@@ -123,11 +111,6 @@ export function isSqliteName(name: string): boolean {
 /** 是否是电子书（注册表按扩展名认领；内容判据在后端 —— epub 也是 zip） */
 export function isEpubName(name: string): boolean {
 	return /\.epub$/i.test(name.trim());
-}
-
-/** 文件名是否属于"已知是纯文本"的扩展名（只看名字，不看内容） */
-export function isPlainTextName(name: string): boolean {
-	return PLAIN_TEXT_EXTS.has(lowerExt(name));
 }
 
 /** 生成 Markdown 代码围栏：围栏长度取内容中最长反引号串 + 1（避免内容截断围栏） */

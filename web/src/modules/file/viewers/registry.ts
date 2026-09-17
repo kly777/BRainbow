@@ -13,7 +13,6 @@ import {
 	codeLang,
 	isArchiveName,
 	isEpubName,
-	isPlainTextName,
 	isSqliteName,
 } from "../lib/filename.ts";
 import { modelFormatOf } from "../lib/model.ts";
@@ -105,31 +104,14 @@ export const VIEWERS: Viewer[] = [
 			f.mime_type === "application/vnd.ms-excel",
 		component: XlsxViewer,
 	},
-	{
-		// 源码/配置：后端对 .rs/.toml 这类只给 text/plain，靠扩展名认出语言走高亮
-		id: "code",
-		match: (f) => isText(f) && codeLang(f.original_name) !== "",
-		component: CodeViewer,
-	},
-	{
-		id: "text",
-		match: isText,
-		component: PlainTextViewer,
-	},
-	// ── other 类别（后端白名单外的格式）不再只有"下载"按钮 ──
-	{
-		// 字幕/歌词/日志这类：MIME 是 application/x-subrip 等非标准名，
-		// 归入 other 类别，但内容就是文本 —— 按扩展名认出后照文本渲染
-		id: "plain-text-name",
-		match: (f) =>
-			f.file_category === "other" && isPlainTextName(f.original_name),
-		component: PlainTextViewer,
-	},
+	// ── 按扩展名认领的几种格式：**必须排在下面的文本规则之前** ──
+	// 它们的内容往往就是文本（ASCII 的 .ply / .stl / .obj / .gltf、.xyz 点云、
+	// PCD 的 ascii 形态），后端会如实存成 text/plain —— 但"这是点云 / 网格 / 数据库"
+	// 只有扩展名说得出口。让泛化的文本规则先命中，它们就会被渲染成一屏纯文本。
 	{
 		// 3D/点云：`.ply`（带 ASCII 头的高斯或点云）、`.splat`（参考实现的定长格式）、
 		// `.pcd` / `.xyz` / `.pts`（PCL 与通用的点云）都走这个查看器 ——
-		// 它们全在后端白名单外（other 类别），按扩展名认领；
-		// 究竟是哪种由查看器按**内容**分辨（见 engine.ts 的 parseSplatBytes）。
+		// 按扩展名认领，究竟是哪种由查看器按**内容**分辨（见 engine.ts 的 parseSplatBytes）。
 		// 不是我认得的格式、或解析不动时，查看器自己给提示与下载入口
 		id: "splat",
 		match: (f) =>
@@ -161,6 +143,20 @@ export const VIEWERS: Viewer[] = [
 		id: "archive",
 		match: (f) => isArchiveName(f.original_name),
 		component: ArchiveViewer,
+	},
+	// ── 文本类：mime 精确匹配的排在上面，泛化规则排在这里 ──
+	{
+		// 源码/配置：后端把一切文本都存成 text/*，这里按扩展名认出语言走高亮。
+		// 顺手解决了 .json / .ts / .go / .sh / .sql / .vue / Dockerfile 这批
+		// 曾经被判成二进制、掉进十六进制预览的文件（见 service.rs 的 looks_like_text）
+		id: "code",
+		match: (f) => isText(f) && codeLang(f.original_name) !== "",
+		component: CodeViewer,
+	},
+	{
+		id: "text",
+		match: isText,
+		component: PlainTextViewer,
 	},
 	{
 		// 其余二进制（设计稿/未知格式）：看文件头认类型，

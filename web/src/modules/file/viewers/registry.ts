@@ -148,7 +148,7 @@ export const VIEWERS: Viewer[] = [
 	{
 		// 源码/配置：后端把一切文本都存成 text/*，这里按扩展名认出语言走高亮。
 		// 顺手解决了 .json / .ts / .go / .sh / .sql / .vue / Dockerfile 这批
-		// 曾经被判成二进制、掉进十六进制预览的文件（见 service.rs 的 looks_like_text）
+		// 曾经被判成二进制、掉进十六进制预览的文件（见 mime.rs 的 looks_like_text）
 		id: "code",
 		match: (f) => isText(f) && codeLang(f.original_name) !== "",
 		component: CodeViewer,

@@ -1,18 +1,26 @@
 pub mod consistency;
+pub mod content;
 pub mod handler;
+pub mod limits;
+pub mod mime;
 pub mod model;
 pub mod preview;
 pub mod query;
 pub mod repository;
 pub mod service;
 
+/// 测试夹具（内存库 + 临时目录的服务实例、最小合法样本字节）：仅测试构建编译。
+/// 放在模块根是因为 mime / limits / content / maintenance 与 service 的测试共用一份。
+#[cfg(test)]
+pub(crate) mod test_support;
+
 use axum::Router;
 use axum::extract::{DefaultBodyLimit, FromRef};
 use axum::routing::{get, patch, post};
 
+use limits::UPLOAD_BODY_LIMIT_BYTES;
 use query::FileQueryService;
 use service::FileService;
-use service::UPLOAD_BODY_LIMIT_BYTES;
 
 pub fn routes<S>() -> Router<S>
 where

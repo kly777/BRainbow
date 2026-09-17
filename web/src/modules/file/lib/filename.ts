@@ -1,7 +1,7 @@
 /**
  * 文件名后缀提取与代码高亮语言判定。
  *
- * 「这个文件是不是文本」由后端按**字节**判定（service.rs 的 looks_like_text，
+ * 「这个文件是不是文本」由后端按**字节**判定（mime.rs 的 looks_like_text，
  * 先定族再定种，见 §3），文本一律存为 text/*；前端只看 mime 是否 text/*。
  * 高亮语言是前端独有的知识（highlight.js），所以这张表留在这里。
  */
@@ -90,7 +90,7 @@ export function codeLang(name: string): string {
 // isPlainTextName：后端当时按 mime_guess 的映射表给 MIME，字幕这类扩展名拿到的是
 // application/x-subrip（不是 text/*），前端只好再按扩展名猜一次"这其实是文本"。
 //
-// 现在"是不是文本"由**字节**判定（后端 service.rs 的 looks_like_text），这类文件
+// 现在"是不是文本"由**字节**判定（后端 mime.rs 的 looks_like_text），这类文件
 // 上传后 mime 就是 text/*，于是这份清单连同"other 类别里按扩展名认领文本"的规则
 // 一起退休了。**别再往前端加这类表** —— 后端判得出就是判得出。
 

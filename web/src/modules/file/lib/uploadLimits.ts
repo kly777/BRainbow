@@ -1,6 +1,6 @@
 // ── 上传前的前端预校验：把"传了半天才被拒"变成"选完文件就知道" ──
 //
-// 唯一真相在后端 `src/modules/file/service.rs` 的分档常量（`IMAGE_MAX_SIZE` /
+// 唯一真相在后端 `src/modules/file/limits.rs` 的分档常量（`IMAGE_MAX_SIZE` /
 // `SVG_MAX_SIZE` / `AUDIO_MAX_SIZE` / `DOCUMENT_MAX_SIZE` / `FALLBACK_MAX_SIZE`、
 // 白名单 `ALLOWED_MIMES`），这里是它的**镜像**：改后端分档必须同步改这里，
 // `uploadLimits.test.ts` 会直接读后端源码比对，漏改会挂测试。

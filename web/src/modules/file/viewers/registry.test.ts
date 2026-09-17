@@ -5,7 +5,7 @@
 //     顺序即优先级，所以泛化规则（text/*）排在具体规则之后这件事也被钉住。
 //  2. **白名单覆盖**：后端 ALLOWED_MIMES 里的每个 mime 在前端都要有明确归属——要么有
 //     查看器，要么显式记在 EXPECTED 里标成 null（"这个类型就是只下载"）。为了让这份镜像
-//     不靠人工同步，第 2 条直接解析 service.rs：后端加格式 → 这条测试失败 → 逼一次
+//     不靠人工同步，第 2 条直接解析 limits.rs：后端加格式 → 这条测试失败 → 逼一次
 //     "要不要做查看器"的决定，而不是等用户上传完看到一块空白预览区。
 
 import { readFileSync } from "node:fs";
@@ -15,8 +15,9 @@ import type { FileCategory, FileItem } from "../api.ts";
 import { pickViewer } from "./registry.ts";
 import { item as file } from "./test-fixtures.ts";
 
-// vitest 从 web/ 启动（同 shared/styles/css-modules-contract.test.ts 的路径假设）
-const SERVICE_RS = join(process.cwd(), "../src/modules/file/service.rs");
+// vitest 从 web/ 启动（同 shared/styles/css-modules-contract.test.ts 的路径假设）。
+// 白名单表在后端 `limits.rs`（原在 service.rs，2026-09 拆出去了）
+const SERVICE_RS = join(process.cwd(), "../src/modules/file/limits.rs");
 
 /** 按类别造一条记录（后端白名单的 category 列值就是 FileCategory 的字符串） */
 const ofCategory = (mime: string, category: string, name?: string): FileItem =>
@@ -229,7 +230,7 @@ describe("查看器注册表：命中规则", () => {
 });
 
 describe("查看器注册表：后端白名单覆盖", () => {
-	/** 解析 service.rs 的 ALLOWED_MIMES 块，得到后端认的全部 (mime, category) */
+	/** 解析 limits.rs 的 ALLOWED_MIMES 块，得到后端认的全部 (mime, category) */
 	function backendAllowedMimes(): Array<{ mime: string; category: string }> {
 		const src = readFileSync(SERVICE_RS, "utf8");
 		const start = src.indexOf("const ALLOWED_MIMES");
@@ -284,7 +285,7 @@ describe("查看器注册表：后端白名单覆盖", () => {
 		"application/msword": null,
 	};
 
-	it("service.rs 的 ALLOWED_MIMES 能解析出来（解析失败要吵，不能静默放过）", () => {
+	it("limits.rs 的 ALLOWED_MIMES 能解析出来（解析失败要吵，不能静默放过）", () => {
 		expect(backendAllowedMimes().length).toBeGreaterThanOrEqual(20);
 	});
 

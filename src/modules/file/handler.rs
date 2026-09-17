@@ -75,7 +75,7 @@ fn to_response(
         url: format!(
             "/api/file/{}/data/{}",
             f.stored_id,
-            crate::modules::file::service::percent_encode(&f.original_name)
+            crate::modules::file::content::percent_encode(&f.original_name)
         ),
         original_name: f.original_name.clone(),
         mime_type: f.mime_type.clone(),
@@ -106,7 +106,7 @@ fn to_summary_response(f: &super::model::FileSummary, viewer: Option<i64>) -> Fi
         url: format!(
             "/api/file/{}/data/{}",
             f.stored_id,
-            crate::modules::file::service::percent_encode(&f.original_name)
+            crate::modules::file::content::percent_encode(&f.original_name)
         ),
         original_name: f.original_name.clone(),
         mime_type: f.mime_type.clone(),
@@ -181,7 +181,7 @@ pub async fn upload_handler(
             }
         };
 
-        let final_mime = match FileService::resolve_mime(&first, &content_type, &original_name) {
+        let final_mime = match super::mime::resolve_mime(&first, &content_type, &original_name) {
             Ok(m) => m,
             Err(e) => {
                 let _ = tokio::fs::remove_file(&tmp_path).await;
@@ -198,7 +198,7 @@ pub async fn upload_handler(
             if !bytes.is_empty() {
                 total += bytes.len() as u64;
                 // 超限立刻停：临时文件已经吃了一部分字节，先删再报错
-                if let Err(e) = FileService::ensure_within_limit(total, &final_mime) {
+                if let Err(e) = super::limits::ensure_within_limit(total, &final_mime) {
                     let _ = tokio::fs::remove_file(&tmp_path).await;
                     return e.into_response();
                 }
@@ -589,8 +589,8 @@ pub async fn file_handler(
     }
 
     // 强制下载（HTML/SVG 等防 XSS）；其余可内联的类型给 inline
-    let disposition = if FileService::can_inline(&file.mime_type)
-        && !FileService::should_force_download(&file.mime_type)
+    let disposition = if super::content::can_inline(&file.mime_type)
+        && !super::content::should_force_download(&file.mime_type)
     {
         "inline"
     } else {
@@ -598,7 +598,7 @@ pub async fn file_handler(
     };
     resp = resp.header(
         header::CONTENT_DISPOSITION,
-        crate::modules::file::service::content_disposition(disposition, &file.original_name),
+        super::content::content_disposition(disposition, &file.original_name),
     );
 
     resp.body(body)

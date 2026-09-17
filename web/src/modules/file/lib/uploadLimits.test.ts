@@ -1,6 +1,6 @@
 // ── 上传限额：分档判断、格式化、以及"与后端镜像一致"的交叉校验 ──
 //
-// 前端这套数字是后端 `src/modules/file/service.rs` 的镜像，两处必须同步。
+// 前端这套数字是后端 `src/modules/file/limits.rs` 的镜像，两处必须同步。
 // 最后那个 describe 直接读 Rust 源码比对，是防漂移的唯一硬保障。
 
 import { existsSync, readFileSync } from "node:fs";
@@ -129,12 +129,12 @@ describe("formatBytes", () => {
 
 // vitest 的 import.meta.url 不是 file 协议，按工作目录找（web/ 下跑或仓库根下跑都认）
 function backendSource(): string {
-	const path = ["../src/modules/file/service.rs", "src/modules/file/service.rs"]
+	const path = ["../src/modules/file/limits.rs", "src/modules/file/limits.rs"]
 		.map((p) => resolve(process.cwd(), p))
 		.find(existsSync);
 	if (!path) {
 		throw new Error(
-			`找不到后端 src/modules/file/service.rs（cwd=${process.cwd()}），镜像校验无法进行`,
+			`找不到后端 src/modules/file/limits.rs（cwd=${process.cwd()}），镜像校验无法进行`,
 		);
 	}
 	return readFileSync(path, "utf8");
@@ -150,7 +150,7 @@ function backendConst(name: string): number {
 		new RegExp(`const ${name}\\s*:\\s*\\w+\\s*=\\s*([^;]+);`),
 	);
 	if (!matched)
-		throw new Error(`后端 service.rs 里找不到常量 ${name}（改名或搬走了？）`);
+		throw new Error(`后端 limits.rs 里找不到常量 ${name}（改名或搬走了？）`);
 	const expr = matched[1].replace(/_/g, "");
 	const product = (term: string) =>
 		term
@@ -171,7 +171,7 @@ function backendMimeConsts(): Array<{ mime: string; constName: string }> {
 	const start = source.indexOf("const ALLOWED_MIMES");
 	const end = source.indexOf("];", start);
 	if (start < 0 || end < 0)
-		throw new Error("后端 service.rs 里找不到 ALLOWED_MIMES 表");
+		throw new Error("后端 limits.rs 里找不到 ALLOWED_MIMES 表");
 	const table = source.slice(start, end);
 	// 多行元组（超长 MIME）rustfmt 会在末项后留逗号，故 `,?`
 	return [

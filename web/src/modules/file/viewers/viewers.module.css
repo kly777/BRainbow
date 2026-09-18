@@ -167,6 +167,14 @@
 	gap: var(--space-sm);
 }
 
+/* 截断提示行：一句话 + 一排出口（载入更多 / 看结尾 / 回到开头） */
+.truncate-actions {
+	display: inline-flex;
+	gap: var(--space-sm);
+	margin-left: var(--space-sm);
+	vertical-align: middle;
+}
+
 .pre {
 	margin: 0;
 	padding: var(--space-lg);

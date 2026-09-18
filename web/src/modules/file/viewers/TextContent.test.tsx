@@ -93,9 +93,9 @@ describe("TextContent", () => {
 		expect(buttons.some((t) => t.includes("下载"))).toBe(true);
 	});
 
-	it("按 Range 取头部：满一段（206）就提示只预览了前 4MB", async () => {
-		// 服务端按 Range 回满一段 = 后面还有内容 → 截断提示。
-		// 早先是"整包下载后按字符截断"（见 hooks/usePreviewText.ts 的文件头注释）
+	it("满一段（206）时给出进度与两个出口（载入更多 / 看结尾）", async () => {
+		// 服务端按 Range 回满一段 = 后面还有内容 → 截断提示**必须带出口**
+		// （早先只有一句"仅预览前 2MB"，等于承认预览到此为止）
 		const segment = "x".repeat(MAX_PREVIEW_BYTES);
 		vi.stubGlobal(
 			"fetch",
@@ -113,10 +113,15 @@ describe("TextContent", () => {
 
 		await settle(() => (host.textContent ?? "").includes("长度"));
 		expect(host.textContent).toContain(`长度 ${MAX_PREVIEW_BYTES}`);
-		expect(host.textContent).toContain("仅预览前 4MB");
+		expect(host.textContent).toContain("仅预览了开头部分");
+		const buttons = Array.from(host.querySelectorAll("button")).map(
+			(b) => b.textContent ?? "",
+		);
+		expect(buttons.some((t) => t.includes("载入更多"))).toBe(true);
+		expect(buttons.some((t) => t.includes("看结尾"))).toBe(true);
 	});
 
-	it("文件比一段小（200 整包）时不提示截断", async () => {
+	it("文件比一段小（200 整包）时不给截断提示与出口", async () => {
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async () => new Response("hello")),
@@ -125,6 +130,10 @@ describe("TextContent", () => {
 
 		await settle(() => (host.textContent ?? "").includes("长度"));
 		expect(host.textContent).toContain("长度 5");
-		expect(host.textContent).not.toContain("仅预览前");
+		expect(host.textContent).not.toContain("仅预览了开头部分");
+		const buttons = Array.from(host.querySelectorAll("button")).map(
+			(b) => b.textContent ?? "",
+		);
+		expect(buttons.some((t) => t.includes("载入更多"))).toBe(false);
 	});
 });

@@ -35,7 +35,11 @@ export const HexViewer: ViewerComponent = (props) => {
 	return (
 		<div class={styles.hexPane}>
 			<Show when={content.loading}>
-				<div class={styles.state}>加载中…</div>
+				{/* 说清在读哪一段、文件多大（翻页时"加载中…"会看不出在读第几段） */}
+				<div class={styles.state}>
+					正在读取第 {Math.floor(offset() / HEX_SEGMENT_BYTES) + 1} 段 （共{" "}
+					{formatBytes(props.item.size_bytes)}）…
+				</div>
 			</Show>
 			<Show when={error()}>
 				{(info) => (

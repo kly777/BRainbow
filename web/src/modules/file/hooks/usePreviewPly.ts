@@ -40,11 +40,17 @@ export function totalFromContentRange(
 	return Number.isFinite(total) ? total : undefined;
 }
 
+/** 加载阶段：探测（只看头部几十 KB）→ 整包下载。下载几十 MB 时用户需要知道在等什么 */
+export type PlyPhase =
+	| { kind: "probing" }
+	| { kind: "downloading"; sizeBytes: number };
+
 async function fetchPly(
 	item: FileItem,
 	maxBytes: number,
 	signal: AbortSignal,
 	timeoutMs = PLY_LOAD_TIMEOUT_MS,
+	onPhase?: (phase: PlyPhase) => void,
 ): Promise<PlyLoad> {
 	// 两个取消来源合一：外部清理（切文件/卸载）与自身超时。
 	// 不用 AbortSignal.any：它不在项目的浏览器基线里（chrome111 / firefox114）。
@@ -59,6 +65,7 @@ async function fetchPly(
 
 	try {
 		// 1) 探头部与总大小
+		onPhase?.({ kind: "probing" });
 		const probe = await fetch(item.url, {
 			signal: request.signal,
 			headers: { ...buildHeaders(), Range: `bytes=0-${PROBE_BYTES - 1}` },
@@ -85,7 +92,8 @@ async function fetchPly(
 				sizeBytes: total,
 			};
 
-		// 2) 整包拉取
+		// 2) 整包拉取（几十上百 MB 的场景，把总大小报给调用方显示进度文案）
+		onPhase?.({ kind: "downloading", sizeBytes: total });
 		const full = await fetch(item.url, {
 			signal: request.signal,
 			headers: buildHeaders(),
@@ -112,14 +120,29 @@ async function fetchPly(
 	}
 }
 
-/** 拉取 .ply 内容。失败与"太大"都走返回值，不抛穿（同其他预览的约定） */
-export function usePreviewPly(item: () => FileItem, maxBytes = MAX_PLY_BYTES) {
+/** 拉取 .ply 内容。失败与"太大"都走返回值，不抛穿（同其他预览的约定）。
+ *
+ *  `onPhase` 是可选的第三方参数（现有调用点不必改）：把"正在探测"与"正在下载 N MB"
+ *  报给调用方，用来把静止的"正在解析…"换成有进展的文案。
+ */
+export function usePreviewPly(
+	item: () => FileItem,
+	maxBytes = MAX_PLY_BYTES,
+	onPhase?: (phase: PlyPhase) => void,
+) {
 	const controller = new AbortController();
 	onCleanup(() => controller.abort());
 
 	const [state] = createResource(
 		() => item().stored_id,
-		() => fetchPly(item(), maxBytes, controller.signal),
+		() =>
+			fetchPly(
+				item(),
+				maxBytes,
+				controller.signal,
+				PLY_LOAD_TIMEOUT_MS,
+				onPhase,
+			),
 	);
 	return state;
 }

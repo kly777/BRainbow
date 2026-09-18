@@ -1,5 +1,6 @@
+import { formatBytes } from "@shared/utils";
 import { createEffect, createSignal, on, onCleanup, Show } from "solid-js";
-import { usePreviewPly } from "../hooks/usePreviewPly.ts";
+import { type PlyPhase, usePreviewPly } from "../hooks/usePreviewPly.ts";
 import type { SplatBounds } from "../lib/ply.ts";
 import { DownloadPanel } from "./DownloadPanel.tsx";
 import {
@@ -66,7 +67,8 @@ const MODE_HINT: Record<MoveMode, string> = {
  * 于是这份字节被无声丢掉，之后再无消息，界面就一直挂着。
  */
 export const SplatViewer: ViewerComponent = (props) => {
-	const load = usePreviewPly(() => props.item);
+	const [phase, setPhase] = createSignal<PlyPhase>();
+	const load = usePreviewPly(() => props.item, undefined, setPhase);
 	const [renderError, setRenderError] = createSignal<string>();
 	const [parseError, setParseError] = createSignal<string>();
 	/** 退回主线程时的说明（拖动会略卡） */
@@ -539,10 +541,15 @@ export const SplatViewer: ViewerComponent = (props) => {
 						</Show>
 						<Show when={!renderError() && !parseError() && !ready()}>
 							<div class={styles.splatOverlay}>
-								<p class={styles.splatMessage}>正在解析高斯泼溅…</p>
+								<p class={styles.splatMessage}>
+									{/* 下载几十 MB 时要说清在等什么，别只给一句静止的"正在解析" */}
+									{phase()?.kind === "downloading"
+										? `正在下载模型（${formatBytes((phase() as { sizeBytes: number }).sizeBytes)}）…`
+										: "正在读取文件…"}
+								</p>
 								<p class={styles.splatDetail}>
 									{slow()
-										? "文件较大时解析较慢；若长时间没有画面，可直接下载后本地查看"
+										? "文件较大时较慢；若长时间没有画面，可直接下载后本地查看"
 										: "文件越大越慢，请稍候"}
 								</p>
 							</div>

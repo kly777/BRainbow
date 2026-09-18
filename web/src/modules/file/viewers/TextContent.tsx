@@ -33,7 +33,10 @@ export const TextContent: Component<{
 	return (
 		<div class={styles.pane}>
 			<Show when={preview.loading()}>
-				<div class={styles.state}>加载中…</div>
+				{/* 体积来自接口元数据（item.size_bytes）：首屏不必等响应头就能说清在取多大 */}
+				<div class={styles.state}>
+					正在读取预览（共 {formatBytes(props.item.size_bytes)}）…
+				</div>
 			</Show>
 			<Show when={preview.error()}>
 				{(info) => (

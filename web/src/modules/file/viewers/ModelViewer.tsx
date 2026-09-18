@@ -9,6 +9,7 @@
 // 两个已知取舍写在代码里：`.gltf` 引用了外部 .bin/贴图时单文件加载不了（提前给准确
 // 提示）；DRACO 压缩的模型需要额外解码器，暂不支持（把 loader 的原话翻成人话）。
 
+import { formatBytes } from "@shared/utils";
 import {
 	type Component,
 	createEffect,
@@ -16,7 +17,7 @@ import {
 	onCleanup,
 	Show,
 } from "solid-js";
-import { usePreviewPly } from "../hooks/usePreviewPly.ts";
+import { type PlyPhase, usePreviewPly } from "../hooks/usePreviewPly.ts";
 import {
 	gltfNeedsExternalFiles,
 	MODEL_MAX_BYTES,
@@ -204,7 +205,8 @@ async function renderModel(
  * 卸载时把渲染器/几何/材质都释放掉（three 不会自己回收）。
  */
 export const ModelViewer: ViewerComponent = (props) => {
-	const load = usePreviewPly(() => props.item, MODEL_MAX_BYTES);
+	const [phase, setPhase] = createSignal<PlyPhase>();
+	const load = usePreviewPly(() => props.item, MODEL_MAX_BYTES, setPhase);
 	const [error, setError] = createSignal<string>();
 	const [note, setNote] = createSignal<string>();
 	const [stageEl, setStageEl] = createSignal<HTMLDivElement>();
@@ -270,7 +272,11 @@ export const ModelViewer: ViewerComponent = (props) => {
 			</Show>
 			<Show when={!error() && !failure() && !note()}>
 				<div class={styles.modelOverlay}>
-					<p class={styles.modelMessage}>正在加载模型…</p>
+					<p class={styles.modelMessage}>
+						{phase()?.kind === "downloading"
+							? `正在下载模型（${formatBytes((phase() as { sizeBytes: number }).sizeBytes)}）…`
+							: "正在加载模型…"}
+					</p>
 				</div>
 			</Show>
 			<Show when={!error() && !failure() && note()}>

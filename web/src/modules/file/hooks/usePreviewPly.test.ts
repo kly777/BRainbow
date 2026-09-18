@@ -7,6 +7,7 @@ import type { FileItem } from "../api.ts";
 import {
 	__internal,
 	MAX_PLY_BYTES,
+	type PlyPhase,
 	totalFromContentRange,
 	usePreviewPly,
 } from "./usePreviewPly.ts";
@@ -98,6 +99,28 @@ describe("fetchPly", () => {
 			| undefined;
 		expect(secondHeaders?.Range).toBeUndefined();
 		if (result.kind === "ready") expect(result.bytes.length).toBe(full.length);
+	});
+
+	it("把加载阶段报给调用方（探测 → 下载 N 字节），供「正在下载…」文案用", async () => {
+		const head = new Uint8Array(PROBE_BYTES).fill(1);
+		const full = new Uint8Array(PROBE_BYTES * 3).fill(1);
+		vi.stubGlobal(
+			"fetch",
+			vi
+				.fn<(...args: FetchArgs) => Promise<Response>>()
+				.mockResolvedValueOnce(partial(head, full.length))
+				.mockResolvedValueOnce(new Response(full.buffer as ArrayBuffer)),
+		);
+
+		const phases: PlyPhase[] = [];
+		await fetchPly(item, MAX_PLY_BYTES, signal(), 30_000, (p) =>
+			phases.push(p),
+		);
+
+		expect(phases).toEqual([
+			{ kind: "probing" },
+			{ kind: "downloading", sizeBytes: full.length },
+		]);
 	});
 
 	it("超过上限时只探一次就收手（不下载整包）", async () => {

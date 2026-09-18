@@ -53,10 +53,44 @@ describe("TextContent", () => {
 		);
 		const host = mount((text) => <p>正文：{text}</p>);
 
-		await settle(() => (host.textContent ?? "").includes("预览失败"));
-		expect(host.textContent).toContain("HTTP 401");
+		await settle(() => (host.textContent ?? "").includes("没有权限"));
+		expect(host.textContent).toContain("没有权限查看这个文件");
 		expect(host.textContent).not.toContain("加载中");
 		expect(host.textContent).not.toContain("正文");
+	});
+
+	it("可重试的失败给「重试」，点了会重新请求（4xx 不给重试）", async () => {
+		const fetchSpy = vi.fn(async () => new Response("boom", { status: 503 }));
+		vi.stubGlobal("fetch", fetchSpy);
+		const host = mount((text) => <p>正文：{text}</p>);
+
+		await settle(() => (host.textContent ?? "").includes("服务暂时不可用"));
+		const retry = Array.from(host.querySelectorAll("button")).find((b) =>
+			(b.textContent ?? "").includes("重试"),
+		);
+		expect(retry).toBeDefined();
+		// 预览失败不代表文件没用：下载入口始终在
+		expect(host.textContent).toContain("下载");
+
+		fetchSpy.mockResolvedValue(new Response("hello"));
+		retry?.click();
+		await settle(() => (host.textContent ?? "").includes("正文：hello"));
+		expect(fetchSpy).toHaveBeenCalledTimes(2);
+	});
+
+	it("4xx（内容问题）不给重试按钮，只给下载", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => new Response("nope", { status: 400 })),
+		);
+		const host = mount((text) => <p>正文：{text}</p>);
+
+		await settle(() => (host.textContent ?? "").includes("无法解析预览"));
+		const buttons = Array.from(host.querySelectorAll("button")).map(
+			(b) => b.textContent ?? "",
+		);
+		expect(buttons.some((t) => t.includes("重试"))).toBe(false);
+		expect(buttons.some((t) => t.includes("下载"))).toBe(true);
 	});
 
 	it("按 Range 取头部：满一段（206）就提示只预览了前 4MB", async () => {

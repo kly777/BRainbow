@@ -31,7 +31,7 @@ export const ImageViewer: ViewerComponent = (props) => {
 				/>
 			}
 		>
-			<PreviewMedia src={props.item.url} isPrivate={props.item.is_private}>
+			<PreviewMedia item={props.item} isPrivate={props.item.is_private}>
 				{(resolvedUrl) => (
 					<button
 						type="button"

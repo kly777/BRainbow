@@ -8,6 +8,7 @@
 import { type Component, type JSX, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
 import { type DocPreview, usePreviewDoc } from "../hooks/usePreviewDoc.ts";
+import { PreviewError } from "./PreviewError.tsx";
 import styles from "./viewers.module.css";
 
 export const DocContent: Component<{
@@ -20,7 +21,7 @@ export const DocContent: Component<{
 	note: (data: DocPreview) => string | undefined;
 	children: (data: DocPreview) => JSX.Element;
 }> = (props) => {
-	const { preview, error } = usePreviewDoc(() => props.item);
+	const { preview, error, retry } = usePreviewDoc(() => props.item);
 	/** 类型对得上时的数据 */
 	const matched = () => {
 		const data = preview();
@@ -33,7 +34,9 @@ export const DocContent: Component<{
 				<div class={styles.state}>正在解析文档…</div>
 			</Show>
 			<Show when={error()}>
-				{(msg) => <div class={styles.state}>预览失败：{msg()}</div>}
+				{(info) => (
+					<PreviewError item={props.item} error={info()} onRetry={retry} />
+				)}
 			</Show>
 			<Show when={preview() !== undefined && matched() === undefined}>
 				<div class={styles.state}>{props.mismatchNote}</div>

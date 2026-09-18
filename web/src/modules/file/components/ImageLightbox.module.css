@@ -136,3 +136,19 @@
 	color: var(--t-color-ink-muted);
 	font-size: var(--text-sm);
 }
+
+/* 换 blob 失败（灯箱里是暗底，所以用浅色；不用 viewers 的 PreviewError —— 那套是
+   给面板布局的，这里在遮罩中央，样式与可读性要求不同） */
+.error {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--space-sm);
+	color: #e8e8e8;
+	font-size: var(--text-sm);
+	text-align: center;
+}
+
+.error p {
+	margin: 0;
+}

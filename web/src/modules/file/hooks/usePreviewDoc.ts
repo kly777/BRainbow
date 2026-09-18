@@ -7,6 +7,11 @@
 import { buildHeaders } from "@shared/api";
 import { createResource, createSignal, onCleanup } from "solid-js";
 import type { FileItem } from "../api.ts";
+import {
+	httpPreviewError,
+	networkPreviewError,
+	type PreviewErrorInfo,
+} from "../lib/previewError.ts";
 
 /** 一张表（服务端已把单元格转成显示用文本） */
 export interface SheetData {
@@ -86,26 +91,38 @@ export function usePreviewDoc(item: () => FileItem) {
 	let controller: AbortController | undefined;
 	onCleanup(() => controller?.abort());
 
-	const [error, setError] = createSignal<string | undefined>(undefined);
-	const [preview] = createResource<DocPreview | undefined, string>(
+	const [error, setError] = createSignal<PreviewErrorInfo | undefined>(
+		undefined,
+	);
+	const [preview, { refetch }] = createResource<DocPreview | undefined, string>(
 		() => item().stored_id,
 		async () => {
 			const url = previewUrlOf(item());
 			if (!url) {
-				setError("预览地址不可用");
+				setError({
+					message: "预览地址不可用",
+					retryable: false,
+					hint: "可下载后用本地工具打开",
+				});
 				return undefined;
 			}
 			controller = new AbortController();
-			const resp = await fetch(url, {
-				signal: controller.signal,
-				headers: buildHeaders(),
-			});
+			let resp: Response;
+			try {
+				resp = await fetch(url, {
+					signal: controller.signal,
+					headers: buildHeaders(),
+				});
+			} catch {
+				setError(networkPreviewError());
+				return undefined;
+			}
 			if (!resp.ok) {
 				// 后端把"解析不了 / 太大"的原因放在 {code, message} 里，直接给用户看
 				const body = (await resp.json().catch(() => undefined)) as
 					| { message?: string }
 					| undefined;
-				setError(body?.message ?? `加载失败（HTTP ${resp.status}）`);
+				setError(httpPreviewError(resp.status, body?.message));
 				return undefined;
 			}
 			setError(undefined);
@@ -113,5 +130,5 @@ export function usePreviewDoc(item: () => FileItem) {
 		},
 	);
 
-	return { preview, error };
+	return { preview, error, retry: () => void refetch() };
 }

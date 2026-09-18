@@ -8,6 +8,11 @@
 import { buildHeaders } from "@shared/api";
 import { createResource, createSignal, onCleanup } from "solid-js";
 import type { FileItem } from "../api.ts";
+import {
+	httpPreviewError,
+	networkPreviewError,
+	type PreviewErrorInfo,
+} from "../lib/previewError.ts";
 import { totalFromContentRange } from "./usePreviewPly.ts";
 
 /** 十六进制查看器每段展示的字节数（256 行） */
@@ -32,22 +37,33 @@ export function usePreviewBytes(item: () => FileItem, offset: () => number) {
 	let controller: AbortController | undefined;
 	onCleanup(() => controller?.abort());
 
-	const [error, setError] = createSignal<string | undefined>(undefined);
-	const [content] = createResource<PreviewBytes | undefined, string>(
+	const [error, setError] = createSignal<PreviewErrorInfo | undefined>(
+		undefined,
+	);
+	const [content, { refetch }] = createResource<
+		PreviewBytes | undefined,
+		string
+	>(
 		() => `${item().stored_id}:${offset()}`,
 		async () => {
 			const current = item();
 			const start = Math.max(0, offset());
 			controller = new AbortController();
-			const resp = await fetch(current.url, {
-				signal: controller.signal,
-				headers: {
-					...buildHeaders(),
-					Range: `bytes=${start}-${start + HEX_SEGMENT_BYTES - 1}`,
-				},
-			});
+			let resp: Response;
+			try {
+				resp = await fetch(current.url, {
+					signal: controller.signal,
+					headers: {
+						...buildHeaders(),
+						Range: `bytes=${start}-${start + HEX_SEGMENT_BYTES - 1}`,
+					},
+				});
+			} catch {
+				setError(networkPreviewError());
+				return undefined;
+			}
 			if (!resp.ok) {
-				setError(`加载失败（HTTP ${resp.status}）`);
+				setError(httpPreviewError(resp.status));
 				return undefined;
 			}
 			const body = new Uint8Array(await resp.arrayBuffer());
@@ -70,5 +86,5 @@ export function usePreviewBytes(item: () => FileItem, offset: () => number) {
 		},
 	);
 
-	return { content, error };
+	return { content, error, retry: () => void refetch() };
 }

@@ -6,13 +6,14 @@
 import { type Component, type JSX, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
 import { MAX_PREVIEW_BYTES, usePreviewText } from "../hooks/usePreviewText.ts";
+import { PreviewError } from "./PreviewError.tsx";
 import styles from "./viewers.module.css";
 
 export const TextContent: Component<{
 	item: FileItem;
 	children: (text: string) => JSX.Element;
 }> = (props) => {
-	const { content, error } = usePreviewText(() => props.item);
+	const { content, error, retry } = usePreviewText(() => props.item);
 
 	return (
 		<div class={styles.pane}>
@@ -20,7 +21,9 @@ export const TextContent: Component<{
 				<div class={styles.state}>加载中…</div>
 			</Show>
 			<Show when={error()}>
-				{(msg) => <div class={styles.state}>预览失败：{msg()}</div>}
+				{(info) => (
+					<PreviewError item={props.item} error={info()} onRetry={retry} />
+				)}
 			</Show>
 			<Show when={content()}>
 				{(c) => (

@@ -6,6 +6,7 @@ import {
 	usePreviewBytes,
 } from "../hooks/usePreviewBytes.ts";
 import { hexRows, sniffKind } from "../lib/magic.ts";
+import { PreviewError } from "./PreviewError.tsx";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 
@@ -27,7 +28,7 @@ export const HexViewer: ViewerComponent = (props) => {
 		props.item.stored_id;
 		setOffset(0);
 	});
-	const { content, error } = usePreviewBytes(() => props.item, offset);
+	const { content, error, retry } = usePreviewBytes(() => props.item, offset);
 	const step = (delta: number) =>
 		setOffset((current) => Math.max(0, current + delta * HEX_SEGMENT_BYTES));
 
@@ -37,7 +38,9 @@ export const HexViewer: ViewerComponent = (props) => {
 				<div class={styles.state}>加载中…</div>
 			</Show>
 			<Show when={error()}>
-				{(msg) => <div class={styles.state}>预览失败：{msg()}</div>}
+				{(info) => (
+					<PreviewError item={props.item} error={info()} onRetry={retry} />
+				)}
 			</Show>
 			{/* 翻页时 content() 是"真值换成另一个真值"，这里用 children 的 accessor（c()）
 			    而不是解构出来的值读它 —— 解构会把每次翻页都冻在第一次的偏移上 */}

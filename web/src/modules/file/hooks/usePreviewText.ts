@@ -3,6 +3,11 @@
 import { buildHeaders } from "@shared/api";
 import { createResource, createSignal, onCleanup } from "solid-js";
 import type { FileItem } from "../api.ts";
+import {
+	httpPreviewError,
+	networkPreviewError,
+	type PreviewErrorInfo,
+} from "../lib/previewError.ts";
 
 /**
  * 预览截断阈值（字节）：再大就只取前 4MB，并提示可下载看全文。
@@ -40,21 +45,34 @@ export function usePreviewText(item: () => FileItem) {
 	let controller: AbortController | undefined;
 	onCleanup(() => controller?.abort());
 
-	const [error, setError] = createSignal<string | undefined>(undefined);
-	const [content] = createResource<PreviewText | undefined, string>(
+	const [error, setError] = createSignal<PreviewErrorInfo | undefined>(
+		undefined,
+	);
+	const [content, { refetch }] = createResource<
+		PreviewText | undefined,
+		string
+	>(
 		() => item().stored_id,
 		async () => {
 			controller = new AbortController();
-			// URL 取自接口响应（不再本地拼接）；私密文件的内容接口需要凭据
-			const resp = await fetch(item().url, {
-				signal: controller.signal,
-				headers: {
-					...buildHeaders(),
-					Range: `bytes=0-${MAX_PREVIEW_BYTES - 1}`,
-				},
-			});
+			const current = item();
+			let resp: Response;
+			try {
+				// URL 取自接口响应（不再本地拼接）；私密文件的内容接口需要凭据
+				resp = await fetch(current.url, {
+					signal: controller.signal,
+					headers: {
+						...buildHeaders(),
+						Range: `bytes=0-${MAX_PREVIEW_BYTES - 1}`,
+					},
+				});
+			} catch {
+				// 断网/DNS 失败：这条可重试，别让它退化成一句干巴巴的"加载失败"
+				setError(networkPreviewError());
+				return undefined;
+			}
 			if (!resp.ok) {
-				setError(`加载失败（HTTP ${resp.status}）`);
+				setError(httpPreviewError(resp.status));
 				return undefined;
 			}
 			const bytes = new Uint8Array(await resp.arrayBuffer());
@@ -69,5 +87,10 @@ export function usePreviewText(item: () => FileItem) {
 		},
 	);
 
-	return { content, error };
+	return {
+		content,
+		error,
+		/** 重试（网络抖动 / 5xx 时给用户用） */
+		retry: () => void refetch(),
+	};
 }

@@ -33,6 +33,7 @@ export {
 	FiRefreshCw as RefreshCw,
 	FiSearch as Search,
 	FiSettings as Settings,
+	FiType as Type,
 	FiUnlock as Unlock,
 	FiUpload as Upload,
 	FiX as X,

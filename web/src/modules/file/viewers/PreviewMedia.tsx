@@ -20,32 +20,35 @@ export const PreviewMedia: Component<{
 		() => props.isPrivate,
 	);
 
+	// 先判失败：错误块要拿到 error 对象本身（用 Show 的 accessor 而不是 `!` 断言）
 	return (
 		<Show
-			when={!preview.error()}
+			when={preview.error()}
 			fallback={
-				<PreviewError
-					item={props.item}
-					error={preview.error()!}
-					onRetry={preview.retry}
-				/>
+				<Show
+					when={preview.url()}
+					// keyed 不能省：切文件时 url 从"真值换成另一个真值"
+					// （公开文件是同步替换原 URL，私密文件是换新的 blob URL），非 keyed 的 Show
+					// 只在真假变化时重建子节点，于是 <img>/<video>/<iframe> 会一直停在首帧的 src 上
+					// —— 页面标题、元信息都换了，只有画面不动。回归测试见 FileDetail.render.test.tsx。
+					keyed
+					fallback={
+						<Show when={props.isPrivate}>
+							<p class={styles.previewLoading}>正在加载私密文件…</p>
+						</Show>
+					}
+				>
+					{(url) => props.children(url)}
+				</Show>
 			}
 		>
-			<Show
-				when={preview.url()}
-				// keyed 不能省：切文件时 resolved 从"真值换成另一个真值"
-				// （公开文件是同步替换原 URL，私密文件是换新的 blob URL），非 keyed 的 Show
-				// 只在真假变化时重建子节点，于是 <img>/<video>/<iframe> 会一直停在首帧的 src 上
-				// —— 页面标题、元信息都换了，只有画面不动。回归测试见 FileDetail.render.test.tsx。
-				keyed
-				fallback={
-					<Show when={props.isPrivate}>
-						<p class={styles.previewLoading}>正在加载私密文件…</p>
-					</Show>
-				}
-			>
-				{(url) => props.children(url)}
-			</Show>
+			{(info) => (
+				<PreviewError
+					item={props.item}
+					error={info()}
+					onRetry={preview.retry}
+				/>
+			)}
 		</Show>
 	);
 };

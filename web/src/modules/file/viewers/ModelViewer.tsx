@@ -10,13 +10,7 @@
 // 提示）；DRACO 压缩的模型需要额外解码器，暂不支持（把 loader 的原话翻成人话）。
 
 import { formatBytes } from "@shared/utils";
-import {
-	type Component,
-	createEffect,
-	createSignal,
-	onCleanup,
-	Show,
-} from "solid-js";
+import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import { type PlyPhase, usePreviewPly } from "../hooks/usePreviewPly.ts";
 import {
 	gltfNeedsExternalFiles,
@@ -174,8 +168,12 @@ async function renderModel(
 			const mesh = child as import("three").Mesh;
 			mesh.geometry?.dispose();
 			const material = mesh.material;
-			if (Array.isArray(material)) material.forEach((m) => m.dispose());
-			else material?.dispose();
+			if (Array.isArray(material)) {
+				// 一个网格可以挂多份材质（three 的类型就是 Mesh | Mesh[]）
+				for (const m of material) m.dispose();
+			} else {
+				material?.dispose();
+			}
 		});
 		renderer.dispose();
 	};

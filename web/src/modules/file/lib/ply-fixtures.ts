@@ -23,16 +23,15 @@ export function buildPly(
 ): Uint8Array {
 	const le = format === "binary_little_endian";
 	const rowSize = props.reduce((sum, [t]) => sum + SIZES[t], 0);
-	const header =
-		[
-			"ply",
-			`format ${format} 1.0`,
-			"comment 测试",
-			`element vertex ${rows.length}`,
-			...props.map(([t, n]) => `property ${t} ${n}`),
-			...extraElements,
-			"end_header",
-		].join("\n") + "\n";
+	const header = `${[
+		"ply",
+		`format ${format} 1.0`,
+		"comment 测试",
+		`element vertex ${rows.length}`,
+		...props.map(([t, n]) => `property ${t} ${n}`),
+		...extraElements,
+		"end_header",
+	].join("\n")}\n`;
 
 	const out = new Uint8Array(header.length + rows.length * rowSize);
 	for (let i = 0; i < header.length; i++) out[i] = header.charCodeAt(i);

@@ -31,6 +31,7 @@ export {
 	FiMusic as Music,
 	FiPlus as Plus,
 	FiRefreshCw as RefreshCw,
+	FiSearch as Search,
 	FiSettings as Settings,
 	FiUnlock as Unlock,
 	FiUpload as Upload,

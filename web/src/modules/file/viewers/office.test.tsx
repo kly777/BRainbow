@@ -32,6 +32,15 @@ function mount(view: (props: { item: ReturnType<typeof item> }) => unknown) {
 	return host;
 }
 
+/** 按可见文案取按钮（不要用下标：外壳随时可能插入别的按钮） */
+function chapterButton(host: HTMLElement, label: string): HTMLButtonElement {
+	const found = Array.from(host.querySelectorAll("button")).find((b) =>
+		(b.textContent ?? "").includes(label),
+	);
+	if (!found) throw new Error(`找不到按钮「${label}」`);
+	return found as HTMLButtonElement;
+}
+
 /** 让 fetch 返回一份预览 JSON（或一个错误状态码） */
 function stubPreview(payload: unknown, status = 200) {
 	const spy = vi.fn(
@@ -347,8 +356,7 @@ describe("EpubViewer", () => {
 		expect(host.textContent).toContain("测试书 · 某作者 · 共 2 章");
 		expect(host.textContent).not.toContain("正文二");
 
-		const next = host.querySelectorAll("button");
-		(next[1] as HTMLButtonElement).click();
+		chapterButton(host, "下一章").click();
 		await settle(() => (host.textContent ?? "").includes("正文二"));
 		expect(host.textContent).not.toContain("正文一");
 	});
@@ -357,15 +365,15 @@ describe("EpubViewer", () => {
 		stubPreview(book);
 		const host = mount(EpubViewer);
 		await settle(() => (host.textContent ?? "").includes("正文一"));
-		const [prev, next] = host.querySelectorAll("button");
-		expect((prev as HTMLButtonElement).disabled).toBe(true);
-		expect((next as HTMLButtonElement).disabled).toBe(false);
+		// 按文案选按钮而不是下标：外壳还可能插入别的按钮（如查找浮层的触发按钮），
+		// 用 `querySelectorAll("button")[0]` 这种写法会被无关改动弄挂
+		expect(chapterButton(host, "上一章").disabled).toBe(true);
+		expect(chapterButton(host, "下一章").disabled).toBe(false);
 
-		(next as HTMLButtonElement).click();
+		chapterButton(host, "下一章").click();
 		await settle(() => (host.textContent ?? "").includes("正文二"));
-		const [prev2, next2] = host.querySelectorAll("button");
-		expect((prev2 as HTMLButtonElement).disabled).toBe(false);
-		expect((next2 as HTMLButtonElement).disabled).toBe(true);
+		expect(chapterButton(host, "上一章").disabled).toBe(false);
+		expect(chapterButton(host, "下一章").disabled).toBe(true);
 	});
 
 	it("章节被截断时说明只显示了前面的章节", async () => {

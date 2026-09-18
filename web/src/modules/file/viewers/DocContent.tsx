@@ -8,6 +8,7 @@
 import { type Component, type JSX, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
 import { type DocPreview, usePreviewDoc } from "../hooks/usePreviewDoc.ts";
+import { FindOverlay } from "./FindOverlay.tsx";
 import { PreviewError } from "./PreviewError.tsx";
 import styles from "./viewers.module.css";
 
@@ -27,9 +28,15 @@ export const DocContent: Component<{
 		const data = preview();
 		return data?.kind === props.kind ? data : undefined;
 	};
+	let paneRef: HTMLDivElement | undefined;
 
 	return (
-		<div class={styles.docPane}>
+		<div class={styles.docPane} ref={paneRef}>
+			{/* 查找范围是这一层：docx 正文 / 表格 / 幻灯片 / epub 章节都是它的内容 */}
+			<FindOverlay
+				container={() => paneRef}
+				resetKey={() => props.item.stored_id}
+			/>
 			<Show when={preview.loading}>
 				<div class={styles.state}>正在解析文档…</div>
 			</Show>

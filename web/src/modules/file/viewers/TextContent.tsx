@@ -12,6 +12,7 @@ import { formatBytes } from "@shared/utils";
 import { type Component, type JSX, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
 import { type PreviewText, usePreviewText } from "../hooks/usePreviewText.ts";
+import { FindOverlay } from "./FindOverlay.tsx";
 import { PreviewError } from "./PreviewError.tsx";
 import styles from "./viewers.module.css";
 
@@ -29,9 +30,15 @@ export const TextContent: Component<{
 	children: (text: string) => JSX.Element;
 }> = (props) => {
 	const preview = usePreviewText(() => props.item);
+	let paneRef: HTMLDivElement | undefined;
 
 	return (
-		<div class={styles.pane}>
+		<div class={styles.pane} ref={paneRef}>
+			{/* 查找范围就是这一层：纯文本 / 代码 / Markdown / CSV 都是它的内容 */}
+			<FindOverlay
+				container={() => paneRef}
+				resetKey={() => props.item.stored_id}
+			/>
 			<Show when={preview.loading()}>
 				{/* 体积来自接口元数据（item.size_bytes）：首屏不必等响应头就能说清在取多大 */}
 				<div class={styles.state}>

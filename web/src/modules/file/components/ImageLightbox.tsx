@@ -20,12 +20,13 @@ import { usePreviewUrl } from "../hooks/usePreviewUrl.ts";
 import styles from "./ImageLightbox.module.css";
 
 interface Props {
-	/** 可浏览的图片集合（通常是当前页的图片） */
+	/** 可浏览的图片集合（通常是当前页的图片；详情页传单张 → 不出翻页按钮） */
 	items: FileItem[];
 	/** 当前图片索引 */
 	index: number;
 	onClose: () => void;
-	onNavigate: (index: number) => void;
+	/** 切到第 index 张。单张浏览（详情页）时不传 —— 比传一个空函数诚实 */
+	onNavigate?: (index: number) => void;
 }
 
 const ImageLightbox: Component<Props> = (props) => {
@@ -43,7 +44,7 @@ const ImageLightbox: Component<Props> = (props) => {
 	const go = (delta: number) => {
 		const next = props.index + delta;
 		if (next < 0 || next >= props.items.length) return;
-		props.onNavigate(next);
+		props.onNavigate?.(next);
 	};
 
 	const onKeyDown = (e: KeyboardEvent) => {

@@ -1,13 +1,17 @@
 // ── FileDetail 渲染回归 ──
-// 本页做过两处结构性改动，这组断言就是为它们兜底：
+// 本页做过几处结构性改动，这组断言就是为它们兜底：
 //   1. 迁到 `DetailPage` 外壳 —— 返回栏由外壳提供，h1 走 `titleHidden`（sr-only，
 //      因为返回栏已展示文件名，可见标题重复没有意义）；
 //   2. 编辑表单改用 `Field` + `Input` —— label 关联与 id 由原语生成；
-//   3. 「上一个/下一个」切换时**媒体元素必须跟着换**（`<Show>` 非 keyed 会把首帧的
-//      src 冻住：usePreviewUrl 在公开文件上是"直接替换真值"，条件始终为真，
-//      Show 的子节点不会重建，于是图片停在上一个文件的 URL 上）。
+//   3. **移除了「上一个/下一个」**：详情页是文件汇集里的一条，相邻文件没有语义关系
+//      （曾经用工具栏按钮 + 方向键切，方向键那版会和 3DGS 预览抢事件）。现在只剩
+//      "路由参数变化"这一条切换路径（前进/后退、外部链接），组件不重挂只换参数 ——
+//      所以媒体元素必须跟着换（`<Show>` 非 keyed 会把首帧的 src 冻住：
+//      usePreviewUrl 在公开文件上是"直接替换真值"，条件始终为真，Show 的子节点不会
+//      重建，于是图片停在上一个文件的 URL 上）。
+//   4. 灯箱只在**当前这张**上放大，不再跨文件翻页（同一条理由）。
 
-import { getFile, listFiles } from "@modules/file/api.ts";
+import { getFile } from "@modules/file/api.ts";
 import { render } from "solid-js/web";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import FileDetailPage from "./FileDetail.tsx";
@@ -17,21 +21,14 @@ vi.mock("@modules/file/api.ts", async (importOriginal) => {
 	return {
 		...actual,
 		getFile: vi.fn(),
-		listFiles: vi.fn().mockResolvedValue({
-			items: [],
-			page: 1,
-			page_size: 20,
-			total: 0,
-			total_pages: 0,
-		}),
 		updateFile: vi.fn().mockResolvedValue(undefined),
 		deleteFile: vi.fn().mockResolvedValue(undefined),
 		listFileTags: vi.fn().mockResolvedValue([]),
 	};
 });
 
-// 路由参数要用**响应式**的替身：切换上一个/下一个时 hook 的 createResource 靠
-// params 变化重取数据，静态对象测不出这条链路（真实 router 的 params 也是信号）
+// 路由参数要用**响应式**的替身：参数变化时 hook 的 createResource 靠 params 重取数据，
+// 静态对象测不出这条链路（真实 router 的 params 也是信号）
 const route = vi.hoisted(() => ({ set: (_id: string) => {} }));
 vi.mock("@solidjs/router", async () => {
 	const { createSignal } = await import("solid-js");
@@ -51,7 +48,7 @@ vi.mock("@solidjs/router", async () => {
 			search: "",
 			hash: "",
 			query: {},
-			// 带上来源列表 URL，页面才会去取"同批文件"（← → 依赖它）
+			// 返回栏据此回到来源列表（筛选与页码还在）
 			state: { from: "/file?page=1" },
 		}),
 	};
@@ -69,7 +66,6 @@ vi.mock("@shared/utils", async (importOriginal) => {
 });
 
 const mockedGetFile = vi.mocked(getFile);
-const mockedListFiles = vi.mocked(listFiles);
 
 const file = {
 	id: 1,
@@ -126,67 +122,56 @@ const imageB = {
 	original_name: "b.png",
 };
 
-describe("FileDetail：切换上一个/下一个", () => {
-	it("方向键不再切文件（会与 3DGS 预览的相机移动抢事件），按钮仍然切", async () => {
+describe("FileDetail：单个文件，没有跨文件导航", () => {
+	it("工具条上没有上一个/下一个（详情页是文件汇集里的一条，相邻文件无语义关系）", async () => {
 		route.set("imgA");
 		mockedGetFile.mockImplementation(
 			async (id: string) => (id === "imgA" ? imageA : imageB) as never,
 		);
-		mockedListFiles.mockResolvedValue({
-			items: [imageA, imageB],
-			page: 1,
-			page_size: 100,
-			total: 2,
-			total_pages: 1,
-		} as never);
+
+		const host = mount();
+		await settle(() => host.querySelector("img") !== null);
+		const titles = Array.from(host.querySelectorAll("button")).map((b) =>
+			b.getAttribute("title"),
+		);
+		expect(titles.some((t) => t?.startsWith("上一个"))).toBe(false);
+		expect(titles.some((t) => t?.startsWith("下一个"))).toBe(false);
+	});
+
+	it("方向键也不切文件（会与 3DGS 预览的相机移动抢事件）", async () => {
+		route.set("imgA");
+		mockedGetFile.mockImplementation(
+			async (id: string) => (id === "imgA" ? imageA : imageB) as never,
+		);
 
 		const host = mount();
 		await settle(() => host.querySelector("img") !== null);
 		expect(host.querySelector("h1")?.textContent).toBe("a.png");
 
-		// → 不该把文件切走（曾经绑在 document 上的 ←/→ 会）
 		document.dispatchEvent(
 			new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
 		);
 		await flush();
 		expect(host.querySelector("h1")?.textContent).toBe("a.png");
-
-		// 切换只能走工具栏按钮
-		Array.from(host.querySelectorAll("button"))
-			.find((b) => b.getAttribute("title")?.startsWith("下一个"))
-			?.click();
-		await settle(() => host.querySelector("h1")?.textContent === "b.png");
-		expect(host.querySelector("h1")?.textContent).toBe("b.png");
 	});
+});
 
-	it("点「下一个」后图片 src 跟着换（曾因 <Show> 未加 keyed 而停在上一个文件）", async () => {
-		// 初始就在第一张图上（默认参数是 abc123，必须显式设置，否则会"假通过"：
-		// 取数落到 fallback 分支、下一个按钮处于禁用态，怎么断言都是绿的）
+// 跨文件切换虽然不再有按钮，但路由参数仍会变（浏览器前进/后退两个详情页、外部链接），
+// 这时组件**不重挂**、只换参数 —— 下面这几条钉住"参数变、内容跟着变"
+describe("FileDetail：路由参数变化时内容跟着换", () => {
+	it("图片 src 跟着换（曾因 <Show> 未加 keyed 而停在上一个文件）", async () => {
 		route.set("imgA");
 		mockedGetFile.mockImplementation(
 			async (id: string) => (id === "imgA" ? imageA : imageB) as never,
 		);
-		mockedListFiles.mockResolvedValue({
-			items: [imageA, imageB],
-			page: 1,
-			page_size: 100,
-			total: 2,
-			total_pages: 1,
-		} as never);
 
 		const host = mount();
 		await settle(
 			() => host.querySelector("img")?.getAttribute("src") === imageA.url,
 		);
-		// 先确认基线：确实停在第一张图，且"下一个"可用
 		expect(host.querySelector("img")?.getAttribute("src")).toBe(imageA.url);
-		const next = Array.from(host.querySelectorAll("button")).find((b) =>
-			b.getAttribute("title")?.startsWith("下一个"),
-		);
-		expect(next?.disabled).toBe(false);
 
-		next?.click();
-
+		route.set("imgB");
 		await settle(
 			() => host.querySelector("img")?.getAttribute("src") === imageB.url,
 		);
@@ -194,18 +179,9 @@ describe("FileDetail：切换上一个/下一个", () => {
 		// 页面其它部分本来就跟着换（证明问题只出在媒体元素上）
 		expect(host.querySelector("h1")?.textContent).toBe("b.png");
 	});
-});
 
-describe("FileDetail：切换途中不插骨架", () => {
-	it("切换时旧内容留在原位，只标 aria-busy（曾因骨架与旧内容同时渲染而下沉）", async () => {
+	it("切换途中旧内容留在原位，只标 aria-busy（曾因骨架与旧内容同时渲染而下沉）", async () => {
 		route.set("imgA");
-		mockedListFiles.mockResolvedValue({
-			items: [imageA, imageB],
-			page: 1,
-			page_size: 100,
-			total: 2,
-			total_pages: 1,
-		} as never);
 		mockedGetFile.mockImplementation(
 			async (id: string) => (id === "imgA" ? imageA : imageB) as never,
 		);
@@ -215,7 +191,7 @@ describe("FileDetail：切换途中不插骨架", () => {
 			() => host.querySelector("img")?.getAttribute("src") === imageA.url,
 		);
 
-		// 让"下一个"的取数挂起，模拟慢网络下的切换中间态
+		// 让新文件的取数挂起，模拟慢网络下的切换中间态
 		let release = () => {};
 		mockedGetFile.mockImplementation(async (id: string) => {
 			if (id === "imgA") return imageA as never;
@@ -225,9 +201,7 @@ describe("FileDetail：切换途中不插骨架", () => {
 			return imageB as never;
 		});
 
-		Array.from(host.querySelectorAll("button"))
-			.find((b) => b.getAttribute("title")?.startsWith("下一个"))
-			?.click();
+		route.set("imgB");
 		await settle(() => host.querySelector("[aria-busy='true']") !== null);
 
 		// 关键断言：骨架不在（它曾在旧内容上方多渲染一块，把整页顶下去）
@@ -241,10 +215,8 @@ describe("FileDetail：切换途中不插骨架", () => {
 		);
 		expect(host.querySelector("[aria-busy='true']")).toBeNull();
 	});
-});
 
-describe("FileDetail：切换上一个/下一个（HTML 文本预览）", () => {
-	it("切到下一个 html 文件后 iframe 的 srcdoc 跟着换", async () => {
+	it("HTML 文本预览：iframe 的 srcdoc 跟着换", async () => {
 		const htmlA = {
 			...file,
 			stored_id: "htmlA",
@@ -263,13 +235,6 @@ describe("FileDetail：切换上一个/下一个（HTML 文本预览）", () => 
 		mockedGetFile.mockImplementation(
 			async (id: string) => (id === "htmlA" ? htmlA : htmlB) as never,
 		);
-		mockedListFiles.mockResolvedValue({
-			items: [htmlA, htmlB],
-			page: 1,
-			page_size: 100,
-			total: 2,
-			total_pages: 1,
-		} as never);
 		// 文本预览自己去 fetch 内容
 		vi.stubGlobal(
 			"fetch",
@@ -287,10 +252,7 @@ describe("FileDetail：切换上一个/下一个（HTML 文本预览）", () => 
 			"<p>A</p>",
 		);
 
-		Array.from(host.querySelectorAll("button"))
-			.find((b) => b.getAttribute("title")?.startsWith("下一个"))
-			?.click();
-
+		route.set("htmlB");
 		await settle(
 			() => host.querySelector("iframe")?.getAttribute("srcdoc") === "<p>B</p>",
 		);

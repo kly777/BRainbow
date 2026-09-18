@@ -1,18 +1,16 @@
-import { createMemo, createSignal, Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import ImageLightbox from "../components/ImageLightbox.tsx";
-import { canZoom } from "../lib/thumbnail.ts";
 import { DownloadPanel } from "./DownloadPanel.tsx";
-import { useFileNav } from "./nav.ts";
 import { PreviewMedia } from "./PreviewMedia.tsx";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 
 /**
- * 图片：站内 contain 缩放，点开进灯箱放大细看（列表页用的是同一个灯箱组件）。
+ * 图片：站内 contain 缩放，点开进灯箱放大细看。
  *
- * 灯箱里能翻页：图片集合取"同批文件里的图片"（判据与列表页同一处 `canZoom`），
- * 那个列表由详情页经 `FileNavContext` 给（见 nav.ts）—— 拿不到时就只有当前这张。
- * 此前这里点一下是"新窗口打开原图"：离开应用、丢掉上下文，大图也没法滚着看细节。
+ * 灯箱只放大**当前这张**，没有翻页：详情页是"单个文件"的页面，不提供跨文件导航
+ * （理由见 hooks/useFileDetail.ts）。要在一组图片之间翻，走列表页 —— 那里的灯箱按
+ * 当前筛选结果翻页，语义成立。
  *
  * <img> 加载失败也要有交代：`image/*` 的浏览器支持度并不齐（TIFF 只有 Safari 会渲染，
  * 将来新增的格式同理），不处理就只剩一个破图图标。这里退回下载面板并说清原因；
@@ -22,21 +20,6 @@ export const ImageViewer: ViewerComponent = (props) => {
 	const [brokenId, setBrokenId] = createSignal<string>();
 	const [zoomed, setZoomed] = createSignal(false);
 	const broken = () => brokenId() === props.item.stored_id;
-	const nav = useFileNav();
-
-	/** 灯箱里的图片集合；当前这张不在同批列表里（来源不明）就退回单张 */
-	const images = createMemo(() => {
-		const list = (nav?.siblings() ?? []).filter(canZoom);
-		return list.some((f) => f.stored_id === props.item.stored_id)
-			? list
-			: [props.item];
-	});
-	const index = createMemo(() =>
-		Math.max(
-			0,
-			images().findIndex((f) => f.stored_id === props.item.stored_id),
-		),
-	);
 
 	return (
 		<Show
@@ -66,14 +49,11 @@ export const ImageViewer: ViewerComponent = (props) => {
 				)}
 			</PreviewMedia>
 			<Show when={zoomed()}>
+				{/* 单张：灯箱内部按 items.length > 1 决定要不要显示翻页按钮，这里恒为 1 张 */}
 				<ImageLightbox
-					items={images()}
-					index={index()}
+					items={[props.item]}
+					index={0}
 					onClose={() => setZoomed(false)}
-					onNavigate={(next) => {
-						const target = images()[next];
-						if (target) nav?.goTo(target);
-					}}
 				/>
 			</Show>
 		</Show>

@@ -82,12 +82,6 @@
 	overflow-wrap: anywhere;
 }
 
-.sibling-pos {
-	font-size: var(--text-xs);
-	color: var(--t-color-ink-muted);
-	font-variant-numeric: tabular-nums;
-}
-
 .hash-value {
 	border: none;
 	background: transparent;

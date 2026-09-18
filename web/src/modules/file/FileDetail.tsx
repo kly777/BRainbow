@@ -3,8 +3,6 @@
 import { AsyncSection, Button, DetailPage, Field, Input } from "@components/ui";
 import {
 	AlertTriangle,
-	ChevronLeft,
-	ChevronRight,
 	Copy,
 	Download,
 	Lock,
@@ -20,7 +18,6 @@ import TagInput from "./components/TagInput.tsx";
 import styles from "./FileDetail.module.css";
 import { type MetaEntry, useFileDetail } from "./hooks/useFileDetail.ts";
 import { categoryLabel } from "./lib/category.ts";
-import { FileNavContext } from "./viewers/nav.ts";
 import { PreviewStage } from "./viewers/PreviewStage.tsx";
 
 // ── 侧栏：查看模式 ──
@@ -209,10 +206,12 @@ const EditForm: Component<{ m: ReturnType<typeof useFileDetail> }> = (
 export default function FileDetail() {
 	const m = useFileDetail();
 
-	// 刻意**不**绑定 ←/→ 切文件：3DGS 预览用方向键移动相机（见 viewers/splat/controls.ts），
-	// 全局快捷键会和它抢事件。切换文件走工具栏的「上一个/下一个」按钮 ——
-	// 按钮的 title 里**不要**再写「（←）」这类键位提示，那是在承诺一个不存在的东西
-	// （回归测试断言方向键不切文件：FileDetail.render.test.tsx）。
+	// 详情页是**单个文件**的页面：没有"上一个/下一个"（`/file/:id` 是文件汇集里的一条，
+	// 相邻文件之间没有语义关系，给这种按钮只会让人误以为它们相关 —— 曾经有过，已移除）。
+	// 浏览一组文件回列表页，那里的灯箱翻页按当前筛选结果来，语义成立。
+	//
+	// 也刻意**不**绑定 ←/→ 切文件：3DGS 预览用方向键移动相机（见 viewers/splat/controls.ts），
+	// 全局快捷键会和它抢事件（回归测试断言方向键不切文件：FileDetail.render.test.tsx）。
 
 	return (
 		<DetailPage
@@ -223,27 +222,6 @@ export default function FileDetail() {
 			onBack={m.handleBack}
 			actions={
 				<>
-					<Show when={m.siblingCount() > 1}>
-						<Button
-							variant="icon"
-							title="上一个"
-							disabled={!m.hasPrev()}
-							onClick={m.goPrev}
-						>
-							<ChevronLeft size={16} />
-						</Button>
-						<span class={styles.siblingPos}>
-							{m.siblingPosition()} / {m.siblingCount()}
-						</span>
-						<Button
-							variant="icon"
-							title="下一个"
-							disabled={!m.hasNext()}
-							onClick={m.goNext}
-						>
-							<ChevronRight size={16} />
-						</Button>
-					</Show>
 					<Button
 						variant="icon"
 						title="复制文件 URL（可用于 Markdown 引用）"
@@ -305,13 +283,7 @@ export default function FileDetail() {
 				{(item) => (
 					<>
 						<section class={styles.previewPane} aria-label="文件预览">
-							{/* 同批文件给查看器（灯箱翻页要用）：查看器契约仍是只收 { item }，
-							    需要的那几个自己从 context 取，见 viewers/nav.ts */}
-							<FileNavContext.Provider
-								value={{ siblings: m.siblings, goTo: m.goToFile }}
-							>
-								<PreviewStage item={item()} />
-							</FileNavContext.Provider>
+							<PreviewStage item={item()} />
 						</section>
 						<aside class={styles.sidePane} aria-label="文件信息">
 							<Show when={m.editing()} fallback={<FileView item={item()} />}>

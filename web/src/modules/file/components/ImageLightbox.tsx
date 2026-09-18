@@ -11,12 +11,30 @@ import {
 	Copy,
 	Download,
 	X,
+	ZoomIn,
+	ZoomOut,
 } from "@components/ui/icons";
 import { copyTextWithToast, formatBytes } from "@shared/utils";
-import { type Component, createEffect, onCleanup, Show } from "solid-js";
+import {
+	type Component,
+	createEffect,
+	createSignal,
+	onCleanup,
+	Show,
+} from "solid-js";
 import { Portal } from "solid-js/web";
 import type { FileItem } from "../api.ts";
 import { usePreviewUrl } from "../hooks/usePreviewUrl.ts";
+import {
+	canZoomIn,
+	canZoomOut,
+	clampScale,
+	MIN_SCALE,
+	pixelPercent,
+	stepScale,
+	toggledScale,
+	zoomedScroll,
+} from "../lib/lightboxZoom.ts";
 import styles from "./ImageLightbox.module.css";
 
 interface Props {
@@ -73,11 +91,80 @@ const ImageLightbox: Component<Props> = (props) => {
 		props.onClose();
 	};
 
-	// 图片变化时重置滚动位置（大图超出视口时可滚动查看细节）
+	// 图片变化时重置滚动位置与缩放（大图超出视口时可滚动查看细节）
 	let imgWrapRef!: HTMLDivElement;
+	/** 适应窗口时的渲染尺寸：缩放以它为基准，避免"小图一放大就爆" */
+	const [baseSize, setBaseSize] = createSignal<{ w: number; h: number }>();
+	const [naturalWidth, setNaturalWidth] = createSignal(0);
+	const [scale, setScale] = createSignal(MIN_SCALE);
+
+	const imgStyle = () => {
+		const base = baseSize();
+		if (!base || scale() === MIN_SCALE) return undefined; // 适应窗口：交给 CSS
+		return {
+			width: `${base.w * scale()}px`,
+			"max-width": "none",
+			"max-height": "none",
+		};
+	};
+
+	const onImgLoad = (e: Event) => {
+		const el = e.currentTarget as HTMLImageElement;
+		// offsetWidth 是"适应窗口"下的渲染宽度（CSS 只限制不超过容器）
+		setBaseSize({ w: el.offsetWidth, h: el.offsetHeight });
+		setNaturalWidth(el.naturalWidth);
+	};
+
+	/** 双击：适应 ↔ 原始像素（1:1）。`oneToOne` 由适应尺寸与原图尺寸之比得到 */
+	const toggleFit = () => {
+		const base = baseSize();
+		const natural = naturalWidth();
+		const oneToOne = base && natural > 0 ? natural / base.w : 1;
+		setScale(toggledScale(scale(), oneToOne));
+	};
+
+	const applyZoom = (next: number, pointer?: { x: number; y: number }) => {
+		const wrap = imgWrapRef;
+		const prev = scale();
+		const clamped = clampScale(next);
+		if (clamped === prev) return;
+		const ratio = clamped / prev;
+		if (pointer) {
+			// 以指针为中心：指针下的内容留在指针处（公式见 lib/lightboxZoom.ts）
+			const box = wrap.getBoundingClientRect();
+			const nextLeft = zoomedScroll(
+				pointer.x - box.left,
+				wrap.scrollLeft,
+				ratio,
+			);
+			const nextTop = zoomedScroll(pointer.y - box.top, wrap.scrollTop, ratio);
+			setScale(clamped);
+			// 等布局把新尺寸应用上再滚动，否则滚的是旧的可滚动范围
+			queueMicrotask(() => {
+				wrap.scrollLeft = nextLeft;
+				wrap.scrollTop = nextTop;
+			});
+			return;
+		}
+		setScale(clamped);
+	};
+
+	/** 滚轮缩放（只在灯箱上生效，不滚页面） */
+	const onWheel = (e: WheelEvent) => {
+		if (e.deltaY === 0) return;
+		e.preventDefault();
+		applyZoom(stepScale(scale(), e.deltaY < 0 ? 1 : -1), {
+			x: e.clientX,
+			y: e.clientY,
+		});
+	};
+
 	createEffect(() => {
 		void props.index;
-		imgWrapRef?.scrollTo({ top: 0, left: 0 });
+		imgWrapRef.scrollTo({ top: 0, left: 0 });
+		// 换图回到适应窗口（每张图的尺寸不同，保留上一张的倍率毫无意义）
+		setScale(MIN_SCALE);
+		setBaseSize(undefined);
 	});
 
 	return (
@@ -89,6 +176,7 @@ const ImageLightbox: Component<Props> = (props) => {
 				aria-modal="true"
 				aria-label="图片预览"
 				onClick={onOverlayClick}
+				onWheel={onWheel}
 			>
 				<div class={styles.stage} data-lightbox-keep>
 					{/* keyed 不能省：翻页时 current() 从"一个对象换成另一个对象"，真假没变，
@@ -127,7 +215,10 @@ const ImageLightbox: Component<Props> = (props) => {
 											<img
 												src={src}
 												alt={item.original_name}
-												class={styles.img}
+												class={`${styles.img} ${scale() > MIN_SCALE ? styles.imgZoom : ""}`}
+												style={imgStyle()}
+												onLoad={onImgLoad}
+												onDblClick={toggleFit}
 											/>
 										)}
 									</Show>
@@ -170,6 +261,41 @@ const ImageLightbox: Component<Props> = (props) => {
 								<span class={styles.meta}>
 									{props.index + 1} / {props.items.length} ·{" "}
 									{formatBytes(item().size_bytes)}
+								</span>
+								{/* 缩放：滚轮（以指针为中心）/ 双击 / 按钮都能用。百分比按**原始像素**算，
+								    所以"适应窗口"时读到 12% 是正常的，双击到 1:1 才是 100% */}
+								<span class={styles.zoom}>
+									<Button
+										variant="icon"
+										title="缩小"
+										ariaLabel="缩小图片"
+										disabled={!canZoomOut(scale())}
+										onClick={() => applyZoom(stepScale(scale(), -1))}
+									>
+										<ZoomOut size={16} />
+									</Button>
+									<button
+										type="button"
+										class={styles.zoomValue}
+										title="回到适应窗口"
+										disabled={scale() === MIN_SCALE}
+										onClick={() => applyZoom(MIN_SCALE)}
+									>
+										{pixelPercent(
+											(baseSize()?.w ?? 0) * scale(),
+											naturalWidth(),
+										)}
+										%
+									</button>
+									<Button
+										variant="icon"
+										title="放大（双击图片可在适应窗口与原始像素间切换）"
+										ariaLabel="放大图片"
+										disabled={!canZoomIn(scale())}
+										onClick={() => applyZoom(stepScale(scale(), 1))}
+									>
+										<ZoomIn size={16} />
+									</Button>
 								</span>
 								<Button
 									variant="icon"

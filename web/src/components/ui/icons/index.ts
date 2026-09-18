@@ -38,6 +38,8 @@ export {
 	FiUpload as Upload,
 	FiX as X,
 	FiXCircle as XCircle,
+	FiZoomIn as ZoomIn,
+	FiZoomOut as ZoomOut,
 } from "solid-icons/fi";
 
 // Heroicons (Sparkles 在 Feather 中没有对应图标)

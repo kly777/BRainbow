@@ -33,6 +33,7 @@
 }
 
 .img {
+	cursor: zoom-in;
 	max-width: 100%;
 	max-height: 100%;
 	object-fit: contain;
@@ -105,6 +106,45 @@
 	flex-shrink: 0;
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
+}
+
+/* 缩放控件：百分比本身是个按钮（点它回到适应窗口） */
+.zoom {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: var(--space-3xs, 2px);
+}
+
+.zoom-value {
+	min-width: 3.5rem;
+	padding: 2px var(--space-2xs);
+	border: 0;
+	border-radius: var(--radius-sm);
+	background: none;
+	color: var(--t-color-ink-muted);
+	font: inherit;
+	font-size: var(--text-xs);
+	font-variant-numeric: tabular-nums;
+	cursor: pointer;
+}
+
+.zoom-value:disabled {
+	cursor: default;
+}
+
+.zoom-value:not(:disabled):hover {
+	color: var(--t-color-ink);
+}
+
+.zoom-value:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 1px;
+}
+
+/* 双击可在"适应窗口 ↔ 原始像素"间切换，光标如实提示当前双击的后果 */
+.img-zoom {
+	cursor: zoom-out;
 }
 
 @media (width <= 600px) {

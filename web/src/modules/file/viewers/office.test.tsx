@@ -4,7 +4,7 @@
 // 怎么画"，以及三条容易坏的路：预览地址派生、类型对不上、后端报错要说给用户听。
 
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { previewUrlOf } from "../hooks/usePreviewDoc.ts";
 import { ArchiveViewer } from "./ArchiveViewer.tsx";
 import { DatabaseViewer } from "./DatabaseViewer.tsx";
@@ -32,6 +32,16 @@ function mount(view: (props: { item: ReturnType<typeof item> }) => unknown) {
 	return host;
 }
 
+/** 按 aria-label 取按钮（图标按钮没有可读文案） */
+function chapterButtonByAria(
+	host: HTMLElement,
+	label: string,
+): HTMLButtonElement {
+	const found = host.querySelector(`button[aria-label='${label}']`);
+	if (!found) throw new Error(`找不到 aria-label 为「${label}」的按钮`);
+	return found as HTMLButtonElement;
+}
+
 /** 按可见文案取按钮（不要用下标：外壳随时可能插入别的按钮） */
 function chapterButton(host: HTMLElement, label: string): HTMLButtonElement {
 	const found = Array.from(host.querySelectorAll("button")).find((b) =>
@@ -53,6 +63,10 @@ function stubPreview(payload: unknown, status = 200) {
 	vi.stubGlobal("fetch", spy);
 	return spy;
 }
+
+beforeEach(() => {
+	localStorage.clear();
+});
 
 afterEach(() => {
 	vi.unstubAllGlobals();
@@ -381,5 +395,71 @@ describe("EpubViewer", () => {
 		const host = mount(EpubViewer);
 		await settle(() => (host.textContent ?? "").includes("正文一"));
 		expect(host.textContent).toContain("只显示了前面的章节");
+	});
+
+	it("目录下拉可直接跳章（不必点几十次下一章）", async () => {
+		stubPreview(book);
+		const host = mount(EpubViewer);
+		await settle(() => (host.textContent ?? "").includes("正文一"));
+
+		const select = host.querySelector("select");
+		expect(select).not.toBeNull();
+		// 选项就是全部章节（带序号）
+		const options = Array.from(host.querySelectorAll("option")).map(
+			(o) => o.textContent,
+		);
+		expect(options).toEqual(["1. 第一章", "2. 第二章"]);
+
+		(select as HTMLSelectElement).value = "1";
+		select?.dispatchEvent(new Event("change", { bubbles: true }));
+		await settle(() => (host.textContent ?? "").includes("正文二"));
+		expect(host.textContent).toContain("正文二");
+	});
+
+	it("打开时接着上次的章节读（存档来自 localStorage）", async () => {
+		localStorage.setItem(
+			"file:book:s1",
+			JSON.stringify({ chapter: 1, ratio: 0 }),
+		);
+		stubPreview(book);
+		const host = mount(EpubViewer);
+
+		await settle(() => (host.textContent ?? "").includes("正文二"));
+		expect(host.textContent).toContain("正文二");
+		expect(host.textContent).not.toContain("正文一");
+		// 下拉也停在第二章
+		expect((host.querySelector("select") as HTMLSelectElement).value).toBe("1");
+	});
+
+	it("越界的存档当作没有（书被换过就从头读）", async () => {
+		localStorage.setItem(
+			"file:book:s1",
+			JSON.stringify({ chapter: 99, ratio: 0 }),
+		);
+		stubPreview(book);
+		const host = mount(EpubViewer);
+
+		await settle(() => (host.textContent ?? "").includes("正文一"));
+		expect(host.textContent).toContain("正文一");
+	});
+
+	it("字号可调并记住（作用于正文容器的 font-size）", async () => {
+		stubPreview(book);
+		const host = mount(EpubViewer);
+		await settle(() => (host.textContent ?? "").includes("正文一"));
+
+		const body = host.querySelector("[class*='bookBody']") as HTMLElement;
+		const before = body.style.fontSize;
+
+		chapterButtonByAria(host, "放大正文字号").click();
+		await Promise.resolve();
+		const after = (host.querySelector("[class*='bookBody']") as HTMLElement)
+			.style.fontSize;
+		expect(after).not.toBe(before);
+		expect(Number.parseFloat(after)).toBeGreaterThan(
+			Number.parseFloat(before || "1"),
+		);
+		// 档位落盘（全局偏好，不随书）
+		expect(localStorage.getItem("file:book:font-scale")).not.toBeNull();
 	});
 });

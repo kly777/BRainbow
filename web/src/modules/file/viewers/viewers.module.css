@@ -418,16 +418,55 @@
 	border-bottom: 1px solid var(--t-color-border);
 }
 
-.book-title {
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* 章列表下拉（目录）：占据原"书名"的位置，长标题省略 */
+.book-toc {
 	flex: 1;
 	min-width: 0;
+	max-width: 100%;
+	padding: var(--space-2xs) var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-surface);
 	color: var(--t-color-ink);
+	font: inherit;
 	font-size: var(--text-sm);
-	font-weight: 500;
 	text-align: center;
-	overflow: hidden;
 	text-overflow: ellipsis;
-	white-space: nowrap;
+}
+
+.book-toc:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 1px;
+}
+
+.book-font {
+	display: inline-flex;
+	gap: var(--space-2xs);
+	flex: 0 0 auto;
+}
+
+/* 正文容器：**它**才是滚动容器（内层 .markdown 的 overflow 被关掉，
+   见下面的覆盖）——滚动位置才能在这一层读写成"章内比例" */
+.book-body {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+}
+
+.book-body .markdown {
+	overflow: visible;
 }
 
 .book-nav {

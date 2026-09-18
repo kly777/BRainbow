@@ -369,6 +369,21 @@
 	color: var(--t-color-ink);
 }
 
+/* 表头：**粘顶**（长表滚动时列名不跑掉）。`.table-wrap` 就是滚动容器 */
+.table-head-cell {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: var(--t-color-surface-raised);
+	font-weight: 600;
+	text-align: left;
+}
+
+/* 点单元格即复制：一闪而过的反馈（不弹 toast —— 连抄几个值时会叠一屏） */
+.table-cell-copied {
+	background: var(--t-color-accent-soft);
+}
+
 .sheet-tabs {
 	display: flex;
 	flex: 0 0 auto;

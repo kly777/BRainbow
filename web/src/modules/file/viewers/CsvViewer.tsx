@@ -1,11 +1,12 @@
 import { Button } from "@components/ui";
-import { type Component, createMemo, createSignal, For, Show } from "solid-js";
+import { type Component, createMemo, createSignal, Show } from "solid-js";
 import { parseCsv } from "../lib/csv.ts";
+import { DataTable } from "./DataTable.tsx";
 import { TextContent } from "./TextContent.tsx";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 
-/** 首屏渲染多少行（防超宽表卡死渲染） */
+/** 首屏渲染多少数据行（防超宽表卡死渲染） */
 const FIRST_PAGE_ROWS = 500;
 /** 每次「载入更多」追加多少行 */
 const PAGE_ROWS = 500;
@@ -18,32 +19,21 @@ const EXPAND_ALL_MAX_ROWS = 5000;
 const CsvTable: Component<{ text: string }> = (props) => {
 	const [limit, setLimit] = createSignal(FIRST_PAGE_ROWS);
 	const all = createMemo(() => parseCsv(props.text));
-	const shown = createMemo(() => all().slice(0, limit()));
-	// 夹在总行数内：换文件后行数更少时，不会显示一个假的"还有 N 行"
-	const remaining = () => Math.max(0, all().length - shown().length);
+	/** 首行当表头：CSV 绝大多数第一行就是列名（Excel / 表格软件也都这么读），
+	 *  浏览器预览里它至少该**粘住**——长表滚下去还知道每列是什么 */
+	const head = createMemo(() => all()[0] ?? []);
+	const dataRows = createMemo(() => all().slice(1));
+	const shown = createMemo(() => dataRows().slice(0, limit()));
+	const remaining = () => Math.max(0, dataRows().length - shown().length);
 
 	return (
 		<>
-			<div class={styles.tableWrap}>
-				<table class={styles.table}>
-					<tbody>
-						<For each={shown()}>
-							{(row) => (
-								<tr>
-									<For each={row}>
-										{(cell) => <td class={styles.tableCell}>{cell}</td>}
-									</For>
-								</tr>
-							)}
-						</For>
-					</tbody>
-				</table>
-			</div>
+			<DataTable head={head()} rows={shown()} variant="csv" />
 			{/* 大表不再"只给你 500 行、剩下的下载看"：数据本来就在内存里，往下放就是了 */}
 			<Show when={remaining() > 0}>
 				<div class={styles.truncateNote}>
 					<span>
-						已显示 {shown().length} / {all().length} 行
+						已显示 {shown().length} / {dataRows().length} 行
 					</span>
 					<span class={styles.truncateActions}>
 						<Button
@@ -53,11 +43,11 @@ const CsvTable: Component<{ text: string }> = (props) => {
 						>
 							载入更多
 						</Button>
-						<Show when={all().length <= EXPAND_ALL_MAX_ROWS}>
+						<Show when={dataRows().length <= EXPAND_ALL_MAX_ROWS}>
 							<Button
 								variant="secondary"
 								size="sm"
-								onClick={() => setLimit(all().length)}
+								onClick={() => setLimit(dataRows().length)}
 							>
 								全部展开
 							</Button>

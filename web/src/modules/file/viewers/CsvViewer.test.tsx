@@ -49,27 +49,30 @@ afterEach(() => {
 });
 
 describe("CsvViewer 分批载入", () => {
-	it("小表一次显示完，不给载入更多", async () => {
+	it("首行进表头（粘顶），行数只算数据行", async () => {
 		const host = mount(csvOf(10));
-		await settle(() => rowCount(host) === 10);
-		expect(rowCount(host)).toBe(10);
+		await settle(() => rowCount(host) === 9);
+		// 10 行文件 = 1 行表头 + 9 行数据
+		expect(rowCount(host)).toBe(9);
+		expect(host.querySelectorAll("thead th")).toHaveLength(2);
+		expect(host.querySelector("thead")?.textContent).toContain("r0");
 		expect(buttonWith(host, "载入更多")).toBeUndefined();
 		expect(host.textContent).not.toContain("已显示");
 	});
 
-	it("大表首屏 500 行 + 载入更多（每次追加 500）", async () => {
+	it("大表首屏 500 个数据行 + 载入更多（每次追加 500）", async () => {
 		const host = mount(csvOf(1200));
 		await settle(() => rowCount(host) === 500);
 		expect(rowCount(host)).toBe(500);
-		expect(host.textContent).toContain("已显示 500 / 1200 行");
+		expect(host.textContent).toContain("已显示 500 / 1199 行");
 
 		buttonWith(host, "载入更多")?.click();
 		await settle(() => rowCount(host) === 1000);
 		expect(rowCount(host)).toBe(1000);
-		expect(host.textContent).toContain("已显示 1000 / 1200 行");
+		expect(host.textContent).toContain("已显示 1000 / 1199 行");
 
 		buttonWith(host, "载入更多")?.click();
-		await settle(() => rowCount(host) === 1200);
+		await settle(() => rowCount(host) === 1199);
 		expect(host.textContent).not.toContain("已显示");
 	});
 
@@ -78,8 +81,8 @@ describe("CsvViewer 分批载入", () => {
 		await settle(() => rowCount(host) === 500);
 		expect(buttonWith(host, "全部展开")).toBeDefined();
 		buttonWith(host, "全部展开")?.click();
-		await settle(() => rowCount(host) === 900);
-		expect(rowCount(host)).toBe(900);
+		await settle(() => rowCount(host) === 899);
+		expect(rowCount(host)).toBe(899);
 
 		// 超过阈值的大表：只能一批批翻
 		const big = mount(csvOf(9000));

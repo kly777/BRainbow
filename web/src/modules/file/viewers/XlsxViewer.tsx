@@ -1,28 +1,17 @@
 import { type Component, createSignal, For, Show } from "solid-js";
 import type { SheetData } from "../hooks/usePreviewDoc.ts";
+import { DataTable } from "./DataTable.tsx";
 import { DocContent } from "./DocContent.tsx";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 
-/** 单元格 class：`.table-cell` 那套是给 CSV 的（首列当标签强调），表格文件不要那个强调 */
-const cellClass = `${styles.tableCell} ${styles.sheetCell}`;
-
+/** 首行当表头（电子表格绝大多数如此），于是长表滚动时列名粘在顶部 */
 const SheetTable: Component<{ sheet: SheetData }> = (props) => (
-	<div class={styles.tableWrap}>
-		<table class={styles.table}>
-			<tbody>
-				<For each={props.sheet.rows}>
-					{(row) => (
-						<tr>
-							<For each={row}>
-								{(cell) => <td class={cellClass}>{cell}</td>}
-							</For>
-						</tr>
-					)}
-				</For>
-			</tbody>
-		</table>
-	</div>
+	<DataTable
+		head={props.sheet.rows[0] ?? []}
+		rows={props.sheet.rows.slice(1)}
+		variant="sheet"
+	/>
 );
 
 /** .xlsx / .xls：每张表一个页签，表格由服务端解析好的单元格文本直接铺 */

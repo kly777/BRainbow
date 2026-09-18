@@ -1,38 +1,16 @@
 import { type Component, createSignal, For, Show } from "solid-js";
 import type { DatabaseTable } from "../hooks/usePreviewDoc.ts";
+import { DataTable } from "./DataTable.tsx";
 import { DocContent } from "./DocContent.tsx";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 
-const cellClass = `${styles.tableCell} ${styles.sheetCell}`;
-
 const TableView: Component<{ table: DatabaseTable }> = (props) => (
-	<div class={styles.tableWrap}>
-		<table class={styles.table}>
-			<thead>
-				<tr>
-					<For each={props.table.columns}>
-						{(column) => (
-							<th scope="col" class={cellClass}>
-								{column}
-							</th>
-						)}
-					</For>
-				</tr>
-			</thead>
-			<tbody>
-				<For each={props.table.rows}>
-					{(row) => (
-						<tr>
-							<For each={row}>
-								{(cell) => <td class={cellClass}>{cell}</td>}
-							</For>
-						</tr>
-					)}
-				</For>
-			</tbody>
-		</table>
-	</div>
+	<DataTable
+		head={props.table.columns}
+		rows={props.table.rows}
+		variant="sheet"
+	/>
 );
 
 /**

@@ -29,12 +29,34 @@ vi.mock("@modules/file/api.ts", async (importOriginal) => {
 
 // 路由参数要用**响应式**的替身：参数变化时 hook 的 createResource 靠 params 重取数据，
 // 静态对象测不出这条链路（真实 router 的 params 也是信号）
-const route = vi.hoisted(() => ({ set: (_id: string) => {} }));
+const route = vi.hoisted(() => ({
+	set: (_id: string) => {},
+	setQuery: (_query: Record<string, string>) => {},
+}));
 vi.mock("@solidjs/router", async () => {
 	const { createSignal } = await import("solid-js");
 	const [routeId, setRouteId] = createSignal("abc123");
+	const [query, setQuery] = createSignal<Record<string, string>>({});
 	route.set = setRouteId;
+	route.setQuery = setQuery;
 	return {
+		// 深链（?view=）走 useSearchParams：返回"响应式对象 + 写入函数"这对形状，
+		// 与 @solidjs/router 一致（读要能追踪，所以用 Proxy 把读落到信号上）
+		useSearchParams: () => [
+			new Proxy(
+				{},
+				{
+					get: (_target, key: string) => query()[key],
+				},
+			),
+			(next: Record<string, string | undefined>) => {
+				const patch: Record<string, string> = {};
+				for (const [key, value] of Object.entries(next)) {
+					if (value !== undefined) patch[key] = value;
+				}
+				setQuery((current) => ({ ...current, ...patch }));
+			},
+		],
 		// navigate("/file/imgB") → 改参数，模拟真实跳转
 		useNavigate: () => (to: string) =>
 			setRouteId(String(to).split("/").filter(Boolean).pop() ?? ""),
@@ -340,5 +362,78 @@ describe("FileDetail：两栏可拖拽调宽（P4-4）", () => {
 		await Promise.resolve();
 		expect(body.style.getPropertyValue("--side-width")).toBe("304px");
 		expect(localStorage.getItem("file:detail:side-width")).toBe("304");
+	});
+});
+
+describe("FileDetail：查看器内部状态可深链（P4-5）", () => {
+	it("`?view=hex:4096` 让十六进制预览直接从该偏移取段", async () => {
+		// 一个 .bin（other 类别 → 十六进制查看器）：内容请求应带上 Range: bytes=4096-
+		const bin = {
+			...file,
+			stored_id: "binA",
+			url: "/api/file/binA/data/a.bin",
+			original_name: "a.bin",
+			mime_type: "application/octet-stream",
+			file_category: "other" as const,
+			size_bytes: 65536,
+		};
+		route.set("binA");
+		route.setQuery({ view: "hex:4096" });
+		mockedGetFile.mockResolvedValue(bin as never);
+
+		const ranges: string[] = [];
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (_url: string, init?: RequestInit) => {
+				const range = new Headers(init?.headers).get("range");
+				if (range) ranges.push(range);
+				return new Response(new Uint8Array(16), {
+					status: 206,
+					headers: { "content-range": "bytes 4096-4111/65536" },
+				});
+			}),
+		);
+
+		const host = mount();
+		await settle(() => ranges.length > 0);
+		// 第一段就应该从 4096 起（而不是从 0 起）
+		expect(ranges[0]).toBe("bytes=4096-8191");
+		// 分页控件如实显示当前段
+		await settle(() => (host.textContent ?? "").includes("00001000"));
+		expect(host.textContent).toContain("00001000");
+		vi.unstubAllGlobals();
+	});
+
+	it("不在 URL 里的查看器不受影响（别人的状态不串台）", async () => {
+		const bin = {
+			...file,
+			stored_id: "binB",
+			url: "/api/file/binB/data/a.bin",
+			original_name: "a.bin",
+			mime_type: "application/octet-stream",
+			file_category: "other" as const,
+			size_bytes: 65536,
+		};
+		route.set("binB");
+		route.setQuery({ view: "epub:12" });
+		mockedGetFile.mockResolvedValue(bin as never);
+
+		const ranges: string[] = [];
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (_url: string, init?: RequestInit) => {
+				const range = new Headers(init?.headers).get("range");
+				if (range) ranges.push(range);
+				return new Response(new Uint8Array(16), {
+					status: 206,
+					headers: { "content-range": "bytes 0-15/65536" },
+				});
+			}),
+		);
+
+		mount();
+		await settle(() => ranges.length > 0);
+		expect(ranges[0]).toBe("bytes=0-4095");
+		vi.unstubAllGlobals();
 	});
 });

@@ -1,15 +1,17 @@
 import { Button } from "@components/ui";
 import { formatBytes } from "@shared/utils";
-import { createEffect, createSignal, For, Show } from "solid-js";
+import { createEffect, createSignal, For, on, Show } from "solid-js";
 import {
 	HEX_SEGMENT_BYTES,
 	usePreviewBytes,
 } from "../hooks/usePreviewBytes.ts";
 import { hexRows, sniffKind } from "../lib/magic.ts";
+import { parseIndexPayload } from "../lib/viewLink.ts";
 import { PreviewError } from "./PreviewError.tsx";
 import { PreviewState } from "./PreviewState.tsx";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
+import { useViewLink } from "./viewLink.ts";
 
 /** 偏移量的显示（8 位十六进制，与 hexRows 的左侧列同格式） */
 const hexOffset = (value: number) => value.toString(16).padStart(8, "0");
@@ -23,15 +25,26 @@ const hexOffset = (value: number) => value.toString(16).padStart(8, "0");
  * 骨架与文本查看器一致：内容获取交给 hook，这里只负责排版与翻页。
  */
 export const HexViewer: ViewerComponent = (props) => {
-	const [offset, setOffset] = createSignal(0);
-	// 换文件时回到第一段：资源键里带着 offset，不复位就会拿新文件的旧偏移去取
-	createEffect(() => {
-		props.item.stored_id;
-		setOffset(0);
-	});
+	const links = useViewLink();
+	// 深链：`?view=hex:4096` —— 从该偏移开始读（刷新/分享都落在同一段）
+	const linkedOffset = () => parseIndexPayload(links?.state("hex")) ?? 0;
+	const [offset, setOffset] = createSignal(linkedOffset());
+	// 换文件时回到"该文件的起始段"（有深链就是深链那一处）。
+	// `defer` 不能省：这个 effect 若在挂载时也跑，会把深链给的偏移冲回 0
+	// —— 表现为"第一次请求是对的、随后又跳回第一段"。
+	createEffect(
+		on(
+			() => props.item.stored_id,
+			() => setOffset(linkedOffset()),
+			{ defer: true },
+		),
+	);
 	const { content, error, retry } = usePreviewBytes(() => props.item, offset);
-	const step = (delta: number) =>
-		setOffset((current) => Math.max(0, current + delta * HEX_SEGMENT_BYTES));
+	const step = (delta: number) => {
+		const next = Math.max(0, offset() + delta * HEX_SEGMENT_BYTES);
+		setOffset(next);
+		links?.setState("hex", next);
+	};
 
 	return (
 		<div class={styles.hexPane}>

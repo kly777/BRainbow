@@ -1,11 +1,13 @@
 import { Button } from "@components/ui";
 import { type Component, createSignal, For, Show } from "solid-js";
 import type { SheetData } from "../hooks/usePreviewDoc.ts";
+import { parseIndexPayload } from "../lib/viewLink.ts";
 import { DataTable } from "./DataTable.tsx";
 import { DocContent } from "./DocContent.tsx";
 import { PreviewState } from "./PreviewState.tsx";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
+import { useViewLink } from "./viewLink.ts";
 
 /** 首行当表头（电子表格绝大多数如此），于是长表滚动时列名粘在顶部 */
 const SheetTable: Component<{ sheet: SheetData }> = (props) => (
@@ -18,7 +20,11 @@ const SheetTable: Component<{ sheet: SheetData }> = (props) => (
 
 /** .xlsx / .xls：每张表一个页签，表格由服务端解析好的单元格文本直接铺 */
 export const XlsxViewer: ViewerComponent = (props) => {
-	const [active, setActive] = createSignal(0);
+	const links = useViewLink();
+	// 深链：`?view=xlsx:2` —— 直接落在第 3 张表上
+	const [active, setActive] = createSignal(
+		parseIndexPayload(links?.state("xlsx")) ?? 0,
+	);
 	return (
 		<DocContent
 			item={props.item}
@@ -55,7 +61,10 @@ export const XlsxViewer: ViewerComponent = (props) => {
 											role="tab"
 											class={styles.sheetTab}
 											aria-selected={i() === index}
-											onClick={() => setActive(i())}
+											onClick={() => {
+												setActive(i());
+												links?.setState("xlsx", i());
+											}}
 										>
 											{item.name}
 										</button>

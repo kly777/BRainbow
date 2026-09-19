@@ -11,7 +11,13 @@ import {
 	Unlock,
 	X,
 } from "@components/ui/icons";
-import { copyTextWithToast, fmtLocal, formatBytes } from "@shared/utils";
+import {
+	copyTextWithToast,
+	fmtLocal,
+	formatBytes,
+	strParam,
+	useUrlParams,
+} from "@shared/utils";
 import { type Component, createSignal, For, onCleanup, Show } from "solid-js";
 import type { FileItem } from "./api.ts";
 import TagInput from "./components/TagInput.tsx";
@@ -23,7 +29,9 @@ import {
 	parseSideWidth,
 	sideWidthKey,
 } from "./lib/splitPane.ts";
+import { buildViewParam, viewStateOf } from "./lib/viewLink.ts";
 import { PreviewStage } from "./viewers/PreviewStage.tsx";
+import { ViewLinkContext } from "./viewers/viewLink.ts";
 
 // ── 侧栏：查看模式 ──
 
@@ -212,6 +220,19 @@ export default function FileDetail() {
 	const m = useFileDetail();
 
 	/**
+	 * 查看器内部状态的深链（P4-5）：`?view=<查看器id>:<状态串>`。
+	 * 读用 get、写用 set —— 用 `useUrlParams` 的默认值语义，写回 "" 即从 URL 清除。
+	 */
+	const viewParams = useUrlParams({ view: strParam("") });
+	const viewLink = {
+		state: (viewerId: string) => viewStateOf(viewParams.get("view"), viewerId),
+		setState: (viewerId: string, value: string | number | undefined) =>
+			viewParams.set({
+				view: value === undefined ? "" : buildViewParam(viewerId, value),
+			}),
+	};
+
+	/**
 	 * 两栏宽度：侧栏可拖拽调宽（看文档/大图时把空间让给预览），宽度记在本地。
 	 * 存**像素**而不是比例 —— 侧栏里是键值对文本、字号固定，"多宽能读"是绝对量。
 	 */
@@ -328,7 +349,9 @@ export default function FileDetail() {
 				{(item) => (
 					<>
 						<section class={styles.previewPane} aria-label="文件预览">
-							<PreviewStage item={item()} />
+							<ViewLinkContext.Provider value={viewLink}>
+								<PreviewStage item={item()} />
+							</ViewLinkContext.Provider>
 						</section>
 						{/* 分隔条：拖它调整两栏宽度；键盘用户可聚焦后按左右方向键微调（一次 16px）。
 						    用 <hr> 而不是 div+role：**它的隐式角色就是 separator**（ARIA 的

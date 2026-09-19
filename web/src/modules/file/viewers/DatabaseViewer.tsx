@@ -1,11 +1,13 @@
 import { Button } from "@components/ui";
 import { type Component, createSignal, For, Show } from "solid-js";
 import type { DatabaseTable } from "../hooks/usePreviewDoc.ts";
+import { parseIndexPayload } from "../lib/viewLink.ts";
 import { DataTable } from "./DataTable.tsx";
 import { DocContent } from "./DocContent.tsx";
 import { PreviewState } from "./PreviewState.tsx";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
+import { useViewLink } from "./viewLink.ts";
 
 const TableView: Component<{ table: DatabaseTable }> = (props) => (
 	<DataTable
@@ -23,7 +25,11 @@ const TableView: Component<{ table: DatabaseTable }> = (props) => (
  * 不提供编辑 —— 要改数据把库下载下来用本地工具。
  */
 export const DatabaseViewer: ViewerComponent = (props) => {
-	const [active, setActive] = createSignal(0);
+	const links = useViewLink();
+	// 深链：`?view=database:1` —— 直接落在第 2 张表上
+	const [active, setActive] = createSignal(
+		parseIndexPayload(links?.state("database")) ?? 0,
+	);
 	return (
 		<DocContent
 			item={props.item}
@@ -53,7 +59,10 @@ export const DatabaseViewer: ViewerComponent = (props) => {
 											role="tab"
 											class={styles.sheetTab}
 											aria-selected={i() === index}
-											onClick={() => setActive(i())}
+											onClick={() => {
+												setActive(i());
+												links?.setState("database", i());
+											}}
 										>
 											{item.name}
 										</button>

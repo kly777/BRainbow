@@ -11,10 +11,12 @@ import {
 	scrollRatioOf,
 	serializeBookProgress,
 } from "../lib/bookProgress.ts";
+import { parseIndexPayload } from "../lib/viewLink.ts";
 import { DocContent } from "./DocContent.tsx";
 import { SanitizedHtml } from "./SanitizedHtml.tsx";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
+import { useViewLink } from "./viewLink.ts";
 
 /** 正文章节允许的标签：与后端 `xhtml_to_html` 的白名单一一对应 */
 const BOOK_TAGS = [
@@ -72,7 +74,12 @@ function safeSet(key: string, value: string): void {
  * - **字号**：正文按 em 排版，外层设 font-size 就能整体缩放（档位全局生效）
  */
 export const EpubViewer: ViewerComponent = (props) => {
-	const [active, setActive] = createSignal(0);
+	const links = useViewLink();
+	// 深链：`?view=epub:12` —— 直接翻到第 13 章。**URL 优先于本地进度**：
+	// 别人发来的"这一页"就该落在他说的那一页，而不是我这台设备上次读到的地方
+	const [active, setActive] = createSignal(
+		parseIndexPayload(links?.state("epub")) ?? 0,
+	);
 	const [scaleIndex, setScaleIndex] = createSignal(
 		parseFontScaleIndex(safeGet(fontScaleKey)),
 	);
@@ -99,9 +106,10 @@ export const EpubViewer: ViewerComponent = (props) => {
 		if (chapter < 0 || chapter >= total || chapter === active()) return;
 		save(active()); // 记下离开时那一章的位置
 		setActive(chapter);
+		links?.setState("epub", chapter); // 深链：让 URL 跟上，刷新/分享落在同一章
 	};
 
-	// 换文件：读档（章号）
+	// 换文件：读档（章号）。URL 里明确给了章节就用它（见上面 active 的说明）
 	createEffect(() => {
 		const saved = parseBookProgress(safeGet(progressKey()));
 		restoring = true;

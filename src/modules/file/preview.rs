@@ -18,6 +18,68 @@ use calamine::Reader as _;
 
 use serde::Serialize;
 
+// ── 分页游标（不透明） ──
+//
+// 客户端不必知道每种类型怎么寻址：它只把服务端给它的 `next_cursor` 原样回传。
+// 好处有两个：① 加类型时客户端一行不用改；② 游标是自己发的，服务端可以校验
+// （kind 对不上就当没有，越界偏移一律 clamp —— 伪造游标没有任何收益）。
+//
+// 本体是 hex(JSON)：仓库已有 `hex`，不必为这个引 base64；可读、可测，
+// 长度也无所谓（它只是 URL 上的一个查询参数）。
+pub mod cursor {
+    use serde::{Deserialize, Serialize};
+
+    /// 游标格式版本（将来改含义时能识别出旧游标）
+    const CURSOR_VERSION: u8 = 1;
+
+    /// 分页单位：**哪个容器**的第几行（容器身份按类型取一个：sheet / table）
+    #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+    pub struct Cursor {
+        pub v: u8,
+        /// 类型名（与 `PreviewKind` 的 snake_case 写法一致）—— 对不上就当没有游标
+        pub kind: String,
+        /// 容器索引（表格的第几张 / 数据库的第几张表）
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub index: Option<usize>,
+        /// 从这个行偏移开始取
+        pub row: usize,
+    }
+
+    impl Cursor {
+        pub fn new(kind: &str, index: Option<usize>, row: usize) -> Self {
+            Self {
+                v: CURSOR_VERSION,
+                kind: kind.to_string(),
+                index,
+                row,
+            }
+        }
+
+        /// 这个游标能不能用在 kind 上（版本与类型都要对）
+        pub fn applies_to(&self, kind: &str) -> bool {
+            self.v == CURSOR_VERSION && self.kind == kind
+        }
+
+        /// 目标容器索引（缺省 0），并 clamp 到容器数量内
+        pub fn index_within(&self, containers: usize) -> usize {
+            self.index.unwrap_or(0).min(containers.saturating_sub(1))
+        }
+    }
+
+    /// 编码成不透明串（hex(JSON)）
+    pub fn encode(cursor: &Cursor) -> Option<String> {
+        serde_json::to_vec(cursor).ok().map(hex::encode)
+    }
+
+    /// 解码；任何不合法（不是 hex、不是 JSON、字段不全）都返回 None ——
+    /// 调用方据此**从头发**，而不是报错（游标是内部约定，用户看到错误没有意义）
+    pub fn decode(raw: &str) -> Option<Cursor> {
+        let bytes = hex::decode(raw).ok()?;
+        serde_json::from_slice::<Cursor>(&bytes).ok()
+    }
+}
+
+
 /// 服务端解析上限：超过就只给下载入口（后端 `document` 类别本身放到 500MB，
 /// 但"能存"不等于"该在服务端解压解析"）
 pub const MAX_PREVIEW_BYTES: u64 = 32 * 1024 * 1024;
@@ -61,6 +123,9 @@ pub struct SheetPreview {
     pub sheets: Vec<Sheet>,
     /// 表数量超过 `MAX_SHEETS`
     pub truncated: bool,
+    /// 游标指定的那张表还有更多行时为 Some（客户端原样回传即可取下一页）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_cursor: Option<String>,
 }
 
 /// 有服务端预览的类型
@@ -123,9 +188,10 @@ pub fn kind_for_mime(mime: &str) -> Option<PreviewKind> {
 #[derive(Debug, Serialize)]
 pub struct Sheet {
     pub name: String,
-    /// 最多 `MAX_ROWS` 行 × `MAX_COLS` 列，单元格已转成显示用文本
+    /// 每页最多 `MAX_ROWS` 行 × `MAX_COLS` 列，单元格已转成显示用文本
     pub rows: Vec<Vec<String>>,
-    /// 该表的实际规模：前端据此说"只显示了前 N 行 / M 列"
+    /// 该表的实际行数：前端据此说"只显示了前 N 行 / M 列"（与游标分页正交 ——
+    /// 表的总行数是 calamine 免费给的，而数据库那边报不出总数）
     pub total_rows: usize,
     pub total_cols: usize,
 }
@@ -607,21 +673,42 @@ fn entity_text(name: &str) -> Option<String> {
 // ── .xlsx / .xls ──
 
 /// 解析电子表格。失败给可读原因
-pub fn parse_book(bytes: &[u8]) -> Result<SheetPreview, String> {
+/// 解析表格文件。`cursor` 指定"第几张表、从第几行开始"——
+/// 不带游标就是首屏（每张表各取前 `MAX_ROWS` 行）。
+///
+/// **多取一行来判断"还有更多"**（`LIMIT n+1` 的等价做法）：这样不必先数总行数，
+/// 而 `total_rows` 是 calamine 免费给的，两者合起来前端就能说清"已显示 X / 共 Y 行、
+/// 还能继续载入"。
+pub fn parse_book(bytes: &[u8], cursor: Option<&cursor::Cursor>) -> Result<SheetPreview, String> {
     let mut book = calamine::open_workbook_auto_from_rs(Cursor::new(bytes))
         .map_err(|e| format!("无法解析这个表格文件：{e}"))?;
     let names = book.sheet_names();
+    let paged = cursor.filter(|c| c.applies_to("sheet"));
+    let target = paged.map(|c| c.index_within(names.len()));
+    let start = paged.map(|c| c.row).unwrap_or(0);
+
     let mut sheets = Vec::new();
+    let mut more_after: Option<(usize, usize)> = None;
     for (index, name) in names.iter().take(MAX_SHEETS).enumerate() {
         let Some(Ok(range)) = book.worksheet_range_at(index) else {
             continue;
         };
         let (total_rows, total_cols) = range.get_size();
-        let rows = range
+        // 只有被游标指定的那张表从偏移处取；其余表照旧从第一行开始
+        let offset = if Some(index) == target { start } else { 0 };
+        // 多取一行：拿到了就说明后面还有
+        let mut rows: Vec<Vec<String>> = range
             .rows()
-            .take(MAX_ROWS)
+            .skip(offset)
+            .take(MAX_ROWS + 1)
             .map(|row| row.iter().take(MAX_COLS).map(cell_text).collect())
             .collect();
+        if rows.len() > MAX_ROWS {
+            rows.truncate(MAX_ROWS);
+            if more_after.is_none() {
+                more_after = Some((index, offset + MAX_ROWS));
+            }
+        }
         sheets.push(Sheet {
             name: name.clone(),
             rows,
@@ -629,9 +716,12 @@ pub fn parse_book(bytes: &[u8]) -> Result<SheetPreview, String> {
             total_cols,
         });
     }
+    let next_cursor = more_after
+        .and_then(|(index, row)| cursor::encode(&cursor::Cursor::new("sheet", Some(index), row)));
     Ok(SheetPreview {
         sheets,
         truncated: names.len() > MAX_SHEETS,
+        next_cursor,
     })
 }
 
@@ -1176,13 +1266,18 @@ pub struct DatabasePreview {
     pub tables: Vec<DatabaseTable>,
     /// 表数量超过 `MAX_TABLES`
     pub truncated: bool,
+    /// 游标指定的那张表还有更多行时为 Some
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_cursor: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct DatabaseTable {
     pub name: String,
     pub columns: Vec<String>,
-    /// 前 `MAX_DB_ROWS` 行（单元格已转成显示用文本）
+    /// 本页最多 `MAX_DB_ROWS` 行（单元格已转成显示用文本）。
+    /// **不给总行数**：`COUNT(*)` 在大表上是全表扫描，与 5 秒超时的取舍不值当 ——
+    /// 用"多取一行"判断还有没有更多，前端据此说"还能继续载入"
     pub rows: Vec<Vec<String>>,
 }
 
@@ -1194,7 +1289,13 @@ pub struct DatabaseTable {
 /// - 行 / 列 / 单元格都有上限，整体带超时；
 /// - 仍然要认账的残余风险：SQLite 是 C 库，畸形文件理论上可能让它崩掉进程 ——
 ///   这是"在本进程里打开不可信库"的固有代价，彻底隔离得靠子进程，不在预览这一层做。
-pub async fn parse_database(path: &str) -> Result<DatabasePreview, String> {
+///
+/// `cursor` 指定"第几张表、从第几行开始"；不带游标就是首屏（每张表各取前
+/// `MAX_DB_ROWS` 行）。**多取一行**判断还有没有更多 —— 不数总行数（见 `DatabaseTable`）。
+pub async fn parse_database(
+    path: &str,
+    cursor: Option<&cursor::Cursor>,
+) -> Result<DatabasePreview, String> {
     use sqlx::{Column, Connection, Row, SqliteConnection};
 
     let options = sqlx::sqlite::SqliteConnectOptions::new()
@@ -1218,12 +1319,22 @@ pub async fn parse_database(path: &str) -> Result<DatabasePreview, String> {
         .collect();
 
         let truncated = names.len() > MAX_TABLES;
+        let paged = cursor.filter(|c| c.applies_to("database"));
+        let target = paged.map(|c| c.index_within(names.len()));
+        let start = paged.map(|c| c.row).unwrap_or(0);
+        let mut more_after: Option<(usize, usize)> = None;
         let mut tables = Vec::new();
-        for name in names.iter().take(MAX_TABLES) {
+        for (index, name) in names.iter().take(MAX_TABLES).enumerate() {
             // 表名不能当绑定参数，只能拼进 SQL —— 所以先引号转义再拼（双引号内的
             // 双引号写成两个），并且这个 name 来自 sqlite_master，不是客户端输入
             let quoted = name.replace('"', "\"\"");
-            let sql = format!("SELECT * FROM \"{quoted}\" LIMIT {MAX_DB_ROWS}");
+            // 只有被游标指定的那张表从偏移处取；其余表照旧从第一行开始
+            let offset = if Some(index) == target { start } else { 0 };
+            // 多取一行：拿到了就说明后面还有
+            let sql = format!(
+                "SELECT * FROM \"{quoted}\" LIMIT {} OFFSET {offset}",
+                MAX_DB_ROWS + 1
+            );
             // 表名不能当绑定参数，只能拼进 SQL：这里显式声明"已经审过"——
             // name 来自 sqlite_master（不是客户端输入），且上面把双引号转义成了两个
             let Ok(rows) = sqlx::query(sqlx::AssertSqlSafe(sql))
@@ -1251,13 +1362,26 @@ pub async fn parse_database(path: &str) -> Result<DatabasePreview, String> {
                         .collect()
                 })
                 .collect();
+            let mut rows = cells;
+            if rows.len() > MAX_DB_ROWS {
+                rows.truncate(MAX_DB_ROWS);
+                if more_after.is_none() {
+                    more_after = Some((index, offset + MAX_DB_ROWS));
+                }
+            }
             tables.push(DatabaseTable {
                 name: name.clone(),
                 columns,
-                rows: cells,
+                rows,
             });
         }
-        Ok(DatabasePreview { tables, truncated })
+        let next_cursor = more_after
+            .and_then(|(index, row)| cursor::encode(&cursor::Cursor::new("database", Some(index), row)));
+        Ok(DatabasePreview {
+            tables,
+            truncated,
+            next_cursor,
+        })
     };
     match tokio::time::timeout(DB_TIMEOUT, work).await {
         Ok(result) => result,
@@ -2087,9 +2211,54 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn sqlite_paging_takes_the_next_rows_of_the_cursor_table() {
+        // 造一张比一页大的表（MAX_DB_ROWS + 5 行）
+        use sqlx::Connection;
+        let path =
+            std::env::temp_dir().join(format!("brainbow-page-{}.db", nanoid::nanoid!(8)));
+        let url = format!("sqlite:{}?mode=rwc", path.display());
+        let mut conn = sqlx::SqliteConnection::connect(&url).await.expect("建库");
+        sqlx::query("CREATE TABLE big (id INTEGER PRIMARY KEY, note TEXT)")
+            .execute(&mut conn)
+            .await
+            .expect("建表");
+        for index in 0..(MAX_DB_ROWS + 5) {
+            sqlx::query("INSERT INTO big (note) VALUES (?)")
+                .bind(format!("第 {index} 行"))
+                .execute(&mut conn)
+                .await
+                .expect("插入");
+        }
+        drop(conn);
+
+        // 首屏：一整页 + 游标（多取一行探到"还有更多"）
+        let first = parse_database(&path.display().to_string(), None)
+            .await
+            .expect("能解析");
+        let big = &first.tables[0];
+        assert_eq!(big.rows.len(), MAX_DB_ROWS);
+        let cursor = cursor::decode(first.next_cursor.as_deref().expect("还有更多就该给游标"))
+            .expect("游标能解回来");
+        assert_eq!(cursor.row, MAX_DB_ROWS);
+
+        // 第二页：剩下的 5 行，且不再给游标
+        let second = parse_database(&path.display().to_string(), Some(&cursor))
+            .await
+            .expect("能解析");
+        let rest = &second.tables[0];
+        assert_eq!(rest.rows.len(), 5);
+        assert_eq!(rest.rows[0][1], format!("第 {MAX_DB_ROWS} 行"));
+        assert!(second.next_cursor.is_none());
+        // 列名每页都要带（分页不改变响应形状）
+        assert_eq!(rest.columns, vec!["id", "note"]);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[tokio::test]
     async fn sqlite_lists_tables_and_rows() {
         let (path, temp) = temp_db().await;
-        let preview = parse_database(&path).await.expect("能解析");
+        let preview = parse_database(&path, None).await.expect("能解析");
         let names: Vec<&str> = preview.tables.iter().map(|t| t.name.as_str()).collect();
         assert_eq!(names, vec!["blob_only", "user", "vip"]);
         assert!(!preview.truncated);
@@ -2123,7 +2292,7 @@ mod tests {
         let mut bytes = b"SQLite format 3\0".to_vec();
         bytes.extend_from_slice(&[0x7f; 512]);
         std::fs::write(&path, &bytes).expect("写文件");
-        let err = parse_database(&path.display().to_string())
+        let err = parse_database(&path.display().to_string(), None)
             .await
             .expect_err("要报错");
         assert!(err.contains("表清单"), "{err}");
@@ -2254,7 +2423,7 @@ mod tests {
 <row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row>
 <row r="2"><c r="A2"><v>42</v></c><c r="B2"><v>3.5</v></c></row>
 </sheetData></worksheet>"#;
-        let preview = parse_book(&xlsx(sheet)).expect("能解析");
+        let preview = parse_book(&xlsx(sheet), None).expect("能解析");
         assert_eq!(preview.sheets.len(), 1);
         let sheet = &preview.sheets[0];
         assert_eq!(sheet.name, "第一张");
@@ -2275,7 +2444,7 @@ mod tests {
             let _ = write!(sheet, r#"<row r="{row}"><c r="A{row}"><v>{row}</v></c></row>"#);
         }
         sheet.push_str("</sheetData></worksheet>");
-        let preview = parse_book(&xlsx(&sheet)).expect("能解析");
+        let preview = parse_book(&xlsx(&sheet), None).expect("能解析");
         let sheet = &preview.sheets[0];
         assert_eq!(sheet.rows.len(), MAX_ROWS);
         assert_eq!(sheet.total_rows, 300);
@@ -2284,8 +2453,81 @@ mod tests {
     }
 
     #[test]
+    fn cursor_round_trips_and_rejects_junk() {
+        let encoded = cursor::encode(&cursor::Cursor::new("sheet", Some(2), 400)).expect("能编码");
+        let decoded = cursor::decode(&encoded).expect("能解码");
+        assert_eq!(decoded.kind, "sheet");
+        assert_eq!(decoded.index, Some(2));
+        assert_eq!(decoded.row, 400);
+
+        // 类型/版本对不上：调用方据此从头发（而不是报错）
+        assert!(decoded.applies_to("sheet"));
+        assert!(!decoded.applies_to("database"));
+        assert!(!decoded.applies_to("docx"));
+
+        // 乱码一律 None —— 客户端可以随便传，服务端不会因此 500
+        for junk in ["", "zzzz", "not-hex!", &hex::encode(b"not json"), &hex::encode(b"{}")] {
+            assert!(cursor::decode(junk).is_none(), "{junk} 应解码失败");
+        }
+    }
+
+    #[test]
+    fn cursor_index_is_clamped_within_containers() {
+        let cursor = cursor::Cursor::new("sheet", Some(99), 0);
+        assert_eq!(cursor.index_within(3), 2);
+        // 缺省索引即 0；容器为 0 个时不炸
+        assert_eq!(cursor::Cursor::new("sheet", None, 5).index_within(3), 0);
+        assert_eq!(cursor.index_within(0), 0);
+    }
+
+    #[test]
+    fn xlsx_paging_returns_the_next_rows_with_a_cursor() {
+        // 300 行：首屏 200 行 + 游标；按游标再取，从第 200 行（0 基）开始
+        let mut sheet = String::from(
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>"#,
+        );
+        for row in 1..=300 {
+            let _ = write!(sheet, r#"<row r="{row}"><c r="A{row}"><v>{row}</v></c></row>"#);
+        }
+        sheet.push_str("</sheetData></worksheet>");
+        let bytes = xlsx(&sheet);
+
+        let first = parse_book(&bytes, None).expect("能解析");
+        let cursor = cursor::decode(first.next_cursor.as_deref().expect("还有更多就该给游标"))
+            .expect("游标能解回来");
+        assert_eq!(cursor.row, MAX_ROWS);
+
+        // 第二页：从第 200 行开始，含第 201 行（值 = 201），且不再有游标（300 行取完了）
+        let second = parse_book(&bytes, Some(&cursor)).expect("能解析");
+        let page = &second.sheets[0];
+        assert_eq!(page.rows.len(), 300 - MAX_ROWS);
+        assert_eq!(page.rows[0][0], (MAX_ROWS + 1).to_string());
+        assert_eq!(page.total_rows, 300, "总行数与分页无关，始终如实报");
+        assert!(second.next_cursor.is_none(), "取完了就不该再给游标");
+    }
+
+    #[test]
+    fn xlsx_first_page_has_no_cursor_when_it_fits() {
+        let sheet = r#"<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1"><v>1</v></c></row></sheetData></worksheet>"#;
+        let preview = parse_book(&xlsx(sheet), None).expect("能解析");
+        assert!(preview.next_cursor.is_none());
+    }
+
+    #[test]
+    fn xlsx_cursor_from_another_kind_is_ignored() {
+        // database 的游标用在 sheet 上：忽略它，照旧从头取（不报错、不跳行）
+        let sheet = r#"<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1"><v>1</v></c></row></sheetData></worksheet>"#;
+        let foreign = cursor::Cursor::new("database", Some(0), 50);
+        let preview = parse_book(&xlsx(sheet), Some(&foreign)).expect("能解析");
+        assert_eq!(preview.sheets[0].rows[0][0], "1");
+    }
+
+    #[test]
     fn xlsx_rejects_garbage() {
-        let err = parse_book(b"definitely not a sheet").expect_err("要报错");
+        let err = parse_book(b"definitely not a sheet", None).expect_err("要报错");
         assert!(err.contains("无法解析这个表格文件"), "{err}");
     }
 

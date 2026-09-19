@@ -399,6 +399,16 @@ async fn check_content_access(
     }
 }
 
+/// 预览端点的查询参数。
+///
+/// `cursor` 是不透明串（服务端上次在 `next_cursor` 里给的），客户端原样回传即可 ——
+/// 它编码了"哪个容器的第几行"（见 `preview::cursor`）。没有它就是取首屏。
+#[derive(Debug, serde::Deserialize)]
+pub struct PreviewQuery {
+    #[serde(default)]
+    pub cursor: Option<String>,
+}
+
 /// Office 文档预览解析（公开路由）。
 ///
 /// 与内容路由同一套可见性规则：公开文件无需凭据，私密文件要求凭据且为上传者。
@@ -408,6 +418,7 @@ pub async fn preview_handler(
     State(query): State<FileQueryService>,
     State(auth): State<crate::app::auth::service::AuthService>,
     Path(stored_id): Path<String>,
+    Query(params): Query<PreviewQuery>,
     headers: axum::http::HeaderMap,
 ) -> Response {
     let file = match query.get_by_stored_id(&stored_id).await {
@@ -439,9 +450,23 @@ pub async fn preview_handler(
         return ServiceError::InvalidInput("这个文件类型没有预览解析".into()).into_response();
     };
 
+    // 游标是"上次服务端发给客户端的串"，这里解出来；解不开或类型对不上就从头发
+    // （不报错：游标是内部约定，用户看到"游标无效"没有任何意义）
+    let cursor = params
+        .cursor
+        .as_deref()
+        .and_then(super::preview::cursor::decode)
+        .filter(|c| {
+            c.applies_to(match kind {
+                super::preview::PreviewKind::Sheet => "sheet",
+                super::preview::PreviewKind::Database => "database",
+                _ => "",
+            })
+        });
+
     // 数据库是 async 的（sqlx），单独一条路径；其余解析是纯 CPU 活，进 spawn_blocking
     if kind == super::preview::PreviewKind::Database {
-        return match super::preview::parse_database(&path).await {
+        return match super::preview::parse_database(&path, cursor.as_ref()).await {
             Ok(preview) => preview_response(super::preview::Preview::Database(preview)),
             Err(message) => ServiceError::InvalidInput(message).into_response(),
         };
@@ -449,7 +474,7 @@ pub async fn preview_handler(
     let parsed = tokio::task::spawn_blocking(move || match kind {
         super::preview::PreviewKind::Docx => super::preview::parse_docx(&bytes)
             .map(super::preview::Preview::Docx),
-        super::preview::PreviewKind::Sheet => super::preview::parse_book(&bytes)
+        super::preview::PreviewKind::Sheet => super::preview::parse_book(&bytes, cursor.as_ref())
             .map(super::preview::Preview::Sheet),
         super::preview::PreviewKind::Slides => super::preview::parse_pptx(&bytes)
             .map(super::preview::Preview::Slides),

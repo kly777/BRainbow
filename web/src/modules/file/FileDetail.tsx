@@ -12,12 +12,17 @@ import {
 	X,
 } from "@components/ui/icons";
 import { copyTextWithToast, fmtLocal, formatBytes } from "@shared/utils";
-import { type Component, For, Show } from "solid-js";
+import { type Component, createSignal, For, onCleanup, Show } from "solid-js";
 import type { FileItem } from "./api.ts";
 import TagInput from "./components/TagInput.tsx";
 import styles from "./FileDetail.module.css";
 import { type MetaEntry, useFileDetail } from "./hooks/useFileDetail.ts";
 import { categoryLabel } from "./lib/category.ts";
+import {
+	draggedSideWidth,
+	parseSideWidth,
+	sideWidthKey,
+} from "./lib/splitPane.ts";
 import { PreviewStage } from "./viewers/PreviewStage.tsx";
 
 // ── 侧栏：查看模式 ──
@@ -206,6 +211,45 @@ const EditForm: Component<{ m: ReturnType<typeof useFileDetail> }> = (
 export default function FileDetail() {
 	const m = useFileDetail();
 
+	/**
+	 * 两栏宽度：侧栏可拖拽调宽（看文档/大图时把空间让给预览），宽度记在本地。
+	 * 存**像素**而不是比例 —— 侧栏里是键值对文本、字号固定，"多宽能读"是绝对量。
+	 */
+	const [sideWidth, setSideWidth] = createSignal(
+		parseSideWidth(localStorage.getItem(sideWidthKey)),
+	);
+	const [dragging, setDragging] = createSignal(false);
+
+	const onDragStart = (e: PointerEvent) => {
+		e.preventDefault();
+		const startX = e.clientX;
+		const startWidth = sideWidth();
+		const target = e.currentTarget as HTMLElement;
+		// 捕获指针：拖到分隔条外面（甚至拖出窗口）也不断线
+		target.setPointerCapture(e.pointerId);
+		setDragging(true);
+
+		const onMove = (move: PointerEvent) => {
+			setSideWidth(draggedSideWidth(startWidth, startX, move.clientX));
+		};
+		const onUp = () => {
+			setDragging(false);
+			target.releasePointerCapture?.(e.pointerId);
+			try {
+				localStorage.setItem(sideWidthKey, String(sideWidth()));
+			} catch {
+				// 存不了就算了：本次拖拽仍然生效
+			}
+			target.removeEventListener("pointermove", onMove);
+			target.removeEventListener("pointerup", onUp);
+			target.removeEventListener("pointercancel", onUp);
+		};
+		target.addEventListener("pointermove", onMove);
+		target.addEventListener("pointerup", onUp);
+		target.addEventListener("pointercancel", onUp);
+		onCleanup(onUp);
+	};
+
 	// 详情页是**单个文件**的页面：没有"上一个/下一个"（`/file/:id` 是文件汇集里的一条，
 	// 相邻文件之间没有语义关系，给这种按钮只会让人误以为它们相关 —— 曾经有过，已移除）。
 	// 浏览一组文件回列表页，那里的灯箱翻页按当前筛选结果来，语义成立。
@@ -279,12 +323,38 @@ export default function FileDetail() {
 				refreshing={() => m.dataRefreshing}
 				onRetry={m.refetch}
 				class={styles.body}
+				style={`--side-width: ${sideWidth()}px`}
 			>
 				{(item) => (
 					<>
 						<section class={styles.previewPane} aria-label="文件预览">
 							<PreviewStage item={item()} />
 						</section>
+						{/* 分隔条：拖它调整两栏宽度；键盘用户可聚焦后按左右方向键微调（一次 16px）。
+						    用 <hr> 而不是 div+role：**它的隐式角色就是 separator**（ARIA 的
+						    window splitter 模式），浏览器与读屏都不必我们再去声明 */}
+						<hr
+							class={`${styles.splitter} ${dragging() ? styles.splitterActive : ""}`}
+							aria-orientation="vertical"
+							aria-label="调整预览区与信息栏宽度"
+							aria-valuenow={sideWidth()}
+							tabIndex={0}
+							onPointerDown={onDragStart}
+							onKeyDown={(e) => {
+								// 与鼠标语义一致：左方向键 = 把分隔条往左移（侧栏因此变宽）
+								const pointerDelta =
+									e.key === "ArrowLeft" ? -16 : e.key === "ArrowRight" ? 16 : 0;
+								if (pointerDelta === 0) return;
+								e.preventDefault();
+								const next = draggedSideWidth(sideWidth(), 0, pointerDelta);
+								setSideWidth(next);
+								try {
+									localStorage.setItem(sideWidthKey, String(next));
+								} catch {
+									// 存不了就算了：本次调整仍然生效
+								}
+							}}
+						/>
 						<aside class={styles.sidePane} aria-label="文件信息">
 							<Show when={m.editing()} fallback={<FileView item={item()} />}>
 								<EditForm m={m} />

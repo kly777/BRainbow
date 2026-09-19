@@ -317,3 +317,28 @@ describe("FileDetail：DetailPage 迁移后的回归", () => {
 		expect(input?.id).toBe(label?.getAttribute("for"));
 	});
 });
+
+describe("FileDetail：两栏可拖拽调宽（P4-4）", () => {
+	it("有分隔条；键盘左右方向键调整宽度并记住", async () => {
+		const host = mount();
+		await settle(() => host.textContent?.includes("报告.pdf") ?? false);
+
+		const splitter = host.querySelector<HTMLElement>("[class*='splitter']");
+		expect(splitter).not.toBeNull();
+		// 默认宽度写进自定义属性（侧栏宽度读它）
+		const body = host.querySelector("[class*='body']") as HTMLElement;
+		expect(body.style.getPropertyValue("--side-width")).toBe("288px");
+
+		// 左方向键 = 变宽（分隔条在侧栏左边缘）
+		splitter?.dispatchEvent(
+			new KeyboardEvent("keydown", {
+				key: "ArrowLeft",
+				bubbles: true,
+				cancelable: true,
+			}),
+		);
+		await Promise.resolve();
+		expect(body.style.getPropertyValue("--side-width")).toBe("304px");
+		expect(localStorage.getItem("file:detail:side-width")).toBe("304");
+	});
+});

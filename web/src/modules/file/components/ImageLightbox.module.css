@@ -133,13 +133,13 @@
 	cursor: default;
 }
 
-.zoom-value:not(:disabled):hover {
-	color: var(--t-color-ink);
-}
-
 .zoom-value:focus-visible {
 	outline: 2px solid var(--t-color-accent);
 	outline-offset: 1px;
+}
+
+.zoom-value:not(:disabled):hover {
+	color: var(--t-color-ink);
 }
 
 /* 双击可在"适应窗口 ↔ 原始像素"间切换，光标如实提示当前双击的后果 */

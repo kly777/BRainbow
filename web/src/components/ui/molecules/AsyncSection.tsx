@@ -20,6 +20,8 @@ interface Props<T> {
 	 * 所以不可能再出现"骨架与旧内容同框"（/file/:id 的"沉一下"）。
 	 */
 	class?: string;
+	/** 内联 style：详情页用它把两栏宽度写成自定义属性（--side-width） */
+	style?: string;
 	/** 内容；收 accessor 而不是快照，避免把值读死 */
 	children: (data: Accessor<T>) => JSX.Element;
 }
@@ -51,11 +53,14 @@ export function AsyncSection<T>(props: Props<T>) {
 				<Show
 					when={props.data() !== undefined && props.data() !== null}
 					fallback={
-						<div class={props.class}>{props.emptyMessage ?? "暂无数据"}</div>
+						<div class={props.class} style={props.style}>
+							{props.emptyMessage ?? "暂无数据"}
+						</div>
 					}
 				>
 					<div
 						class={props.class}
+						style={props.style}
 						aria-busy={props.refreshing?.() ? "true" : undefined}
 					>
 						{props.children(content)}

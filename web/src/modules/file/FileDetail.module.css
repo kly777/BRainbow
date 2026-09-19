@@ -41,11 +41,37 @@
 	display: flex;
 }
 
+/* 分隔条：可拖拽调宽（宽度由内联 style 给侧栏；这里只管手感与焦点） */
+.splitter {
+	flex: 0 0 auto;
+	width: var(--space-md);
+	height: auto; /* <hr> 默认有高度，这里是竖条 */
+	margin: 0; /* <hr> 默认有 margin */
+	border: 0; /* 以及默认边框 */
+	cursor: col-resize;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	touch-action: none; /* 触屏上拖它不要顺带滚动页面 */
+}
+
+.splitter:hover,
+.splitter-active {
+	background: var(--t-color-accent-soft);
+}
+
+.splitter:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: -2px;
+}
+
 /* ── 右侧：元信息侧栏 ── */
 
 .side-pane {
 	flex-shrink: 0;
-	width: 18rem;
+
+	/* 宽度由拖拽写入 --side-width（见 splitPane.ts）；窄屏那条媒体查询在后面，
+	   同特异度下靠源码顺序覆盖掉它，不需要 !important */
+	width: var(--side-width, 18rem);
 	overflow-y: auto;
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
@@ -209,6 +235,11 @@
 @media (width <= 900px) {
 	.body {
 		flex-direction: column;
+	}
+
+	/* 窄屏是上下堆叠：分隔条没有意义（宽度由下面两条接管） */
+	.splitter {
+		display: none;
 	}
 
 	.preview-pane {

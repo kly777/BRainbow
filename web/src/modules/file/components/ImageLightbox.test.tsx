@@ -206,3 +206,60 @@ describe("ImageLightbox 缩放", () => {
 		expect(wheel.defaultPrevented).toBe(true);
 	});
 });
+
+describe("ImageLightbox 焦点管理（模态的礼貌）", () => {
+	it("打开时把焦点收进对话框（否则 Tab 会跑到遮罩背后）", () => {
+		mount();
+		const close = document.querySelector<HTMLButtonElement>(
+			"button[title='关闭（Esc）']",
+		);
+		expect(document.activeElement).toBe(close);
+	});
+
+	it("关闭时把焦点还给打开它的元素（键盘用户不必重新 Tab 找回来）", () => {
+		// 模拟"从列表里的缩略图打开"：先聚焦它，再挂载灯箱
+		const trigger = document.createElement("button");
+		document.body.appendChild(trigger);
+		trigger.focus();
+		expect(document.activeElement).toBe(trigger);
+
+		mount();
+		// 焦点先被收进对话框
+		expect(document.activeElement).not.toBe(trigger);
+
+		// 关闭：组件先让父组件卸载，再把焦点还回触发元素
+		document
+			.querySelector<HTMLButtonElement>("button[title='关闭（Esc）']")
+			?.click();
+		expect(document.activeElement).toBe(trigger);
+
+		// Esc 也走同一条路（键盘用户的常规操作）
+		mount();
+		document.dispatchEvent(
+			new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+		);
+		expect(document.activeElement).toBe(trigger);
+	});
+
+	it("Tab 在对话框内回绕（末个 → 首个）", () => {
+		mount();
+		const close = document.querySelector<HTMLButtonElement>(
+			"button[title='关闭（Esc）']",
+		);
+		close?.focus();
+		const first = document.querySelector<HTMLElement>(
+			"[class*='nav'][aria-label='上一张'], [class*='nav'][aria-label='下一张']",
+		);
+		first?.focus();
+
+		const event = new KeyboardEvent("keydown", {
+			key: "Tab",
+			shiftKey: true,
+			bubbles: true,
+			cancelable: true,
+		});
+		document.dispatchEvent(event);
+		// 从首个 Shift+Tab → 回绕到最后一个（关闭按钮）
+		expect(document.activeElement).toBe(close);
+	});
+});

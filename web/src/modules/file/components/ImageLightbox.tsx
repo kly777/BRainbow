@@ -20,6 +20,7 @@ import {
 	createEffect,
 	createSignal,
 	onCleanup,
+	onMount,
 	Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
@@ -65,11 +66,68 @@ const ImageLightbox: Component<Props> = (props) => {
 		props.onNavigate?.(next);
 	};
 
+	/**
+	 * 焦点管理（模态的基本礼貌，此前完全没有）：
+	 * - 打开时把焦点收进对话框（否则 Tab 会跑到遮罩背后的页面上去，而 `aria-modal`
+	 *   已经声明了外面是惰性的）；
+	 * - 关闭时**还给打开它的那个元素**（列表里是缩略图/卡片、详情页是图片）——
+	 *   否则焦点回到 body，键盘用户要重新 Tab 一路找回来。
+	 */
+	let closeBtnRef: HTMLButtonElement | undefined;
+	let previouslyFocused: HTMLElement | null = null;
+
+	const focusables = (): HTMLElement[] =>
+		Array.from(
+			overlayRef?.querySelectorAll<HTMLElement>(
+				"button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
+			) ?? [],
+		);
+
+	onMount(() => {
+		previouslyFocused = document.activeElement as HTMLElement | null;
+		closeBtnRef?.focus();
+	});
+
+	/**
+	 * 关闭：**先让父组件卸载，再把焦点还给打开它的元素**（列表里是缩略图、详情页是图片）。
+	 *
+	 * 顺序不能反：卸载时 Solid 会移走这段 DOM，而被移走的正是当前焦点元素（关闭按钮），
+	 * 浏览器顺手把焦点丢回 body —— 先回填、后卸载的话，那一次就被盖掉了。
+	 */
+	const close = () => {
+		props.onClose();
+		previouslyFocused?.focus();
+	};
+
+	// 兜底：因别的原因被卸载（路由切换）时也尽量把焦点还回去
+	onCleanup(() => {
+		queueMicrotask(() => previouslyFocused?.focus());
+	});
+
 	const onKeyDown = (e: KeyboardEvent) => {
 		if (e.key === "Escape") {
 			e.preventDefault();
-			props.onClose();
+			close();
 			return;
+		}
+		if (e.key === "Tab") {
+			// 简单的焦点环：在首尾之间回绕，别让焦点跑到遮罩外面
+			const items = focusables();
+			if (items.length === 0) return;
+			const first = items[0];
+			const last = items[items.length - 1];
+			const active = document.activeElement;
+			if (e.shiftKey && active === first) {
+				e.preventDefault();
+				last?.focus();
+			} else if (!e.shiftKey && active === last) {
+				e.preventDefault();
+				first?.focus();
+			} else if (active && !overlayRef?.contains(active)) {
+				// 焦点在遮罩外（比如从背后元素 Tab 进来）：拉回对话框内
+				e.preventDefault();
+				first?.focus();
+			}
 		}
 		if (e.key === "ArrowLeft") {
 			e.preventDefault();
@@ -88,11 +146,12 @@ const ImageLightbox: Component<Props> = (props) => {
 	const onOverlayClick = (e: MouseEvent) => {
 		const target = e.target as HTMLElement | null;
 		if (target?.closest("[data-lightbox-keep]")) return;
-		props.onClose();
+		close();
 	};
 
 	// 图片变化时重置滚动位置与缩放（大图超出视口时可滚动查看细节）
 	let imgWrapRef!: HTMLDivElement;
+	let overlayRef: HTMLDivElement | undefined;
 	/** 适应窗口时的渲染尺寸：缩放以它为基准，避免"小图一放大就爆" */
 	const [baseSize, setBaseSize] = createSignal<{ w: number; h: number }>();
 	const [naturalWidth, setNaturalWidth] = createSignal(0);
@@ -171,6 +230,9 @@ const ImageLightbox: Component<Props> = (props) => {
 		<Portal>
 			{/* biome-ignore lint/a11y/useKeyWithClickEvents: 键盘等价操作是 Esc（见 keydown 监听） */}
 			<div
+				ref={(el) => {
+					overlayRef = el;
+				}}
 				class={styles.overlay}
 				role="dialog"
 				aria-modal="true"
@@ -314,7 +376,14 @@ const ImageLightbox: Component<Props> = (props) => {
 							</>
 						)}
 					</Show>
-					<Button variant="icon" title="关闭（Esc）" onClick={props.onClose}>
+					<Button
+						variant="icon"
+						title="关闭（Esc）"
+						ref={(el: HTMLButtonElement) => {
+							closeBtnRef = el;
+						}}
+						onClick={close}
+					>
 						<X size={16} />
 					</Button>
 				</div>

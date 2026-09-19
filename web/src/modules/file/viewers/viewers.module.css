@@ -44,6 +44,60 @@
 	align-self: flex-end;
 }
 
+/* ── 音视频：播放条（倍速 + 续播提示） ── */
+
+.media-pane {
+	display: flex;
+	flex: 1;
+	min-height: 0;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-sm);
+	width: 100%;
+}
+
+.media-bar {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.media-speed {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2xs);
+}
+
+.media-speed-btn {
+	min-width: 1.75rem;
+	padding: 2px var(--space-2xs);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	font: inherit;
+	cursor: pointer;
+}
+
+.media-speed-btn:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 1px;
+}
+
+.media-speed-value {
+	min-width: 2.5rem;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+	color: var(--t-color-ink);
+}
+
+.media-resumed {
+	color: var(--t-color-accent-strong, var(--t-color-accent));
+}
+
 .preview-frame {
 	width: 100%;
 	height: 100%;

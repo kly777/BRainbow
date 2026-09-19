@@ -12,6 +12,16 @@ import { FindOverlay } from "./FindOverlay.tsx";
 import { PreviewError } from "./PreviewError.tsx";
 import styles from "./viewers.module.css";
 
+/** 分页能力：只有 sheet / database 用得上（其余类型服务端不给游标） */
+export interface PreviewPager {
+	/** 还有更多行可载入 */
+	hasMore: () => boolean;
+	/** 正在载入下一页 */
+	paging: () => boolean;
+	/** 载入下一页：`index` 是当前活跃容器（第几张表） */
+	loadMore: (index: number) => void;
+}
+
 export const DocContent: Component<{
 	item: FileItem;
 	/** 期望的解析结果类型（与查看器对应）：对不上说明后端给的是另一种，直接说清楚 */
@@ -20,9 +30,12 @@ export const DocContent: Component<{
 	mismatchNote: string;
 	/** 截断提示（返回 undefined 表示没被截断） */
 	note: (data: DocPreview) => string | undefined;
-	children: (data: DocPreview) => JSX.Element;
+	children: (data: DocPreview, pager: PreviewPager) => JSX.Element;
 }> = (props) => {
-	const { preview, error, retry } = usePreviewDoc(() => props.item);
+	const { preview, error, retry, loadMore, paging, hasMore } = usePreviewDoc(
+		() => props.item,
+	);
+	const pager: PreviewPager = { hasMore, paging, loadMore };
 	/** 类型对得上时的数据 */
 	const matched = () => {
 		const data = preview();
@@ -51,7 +64,7 @@ export const DocContent: Component<{
 			<Show when={matched()}>
 				{(data) => (
 					<>
-						<div class={styles.docBody}>{props.children(data())}</div>
+						<div class={styles.docBody}>{props.children(data(), pager)}</div>
 						<Show when={props.note(data())}>
 							{(text) => <div class={styles.truncateNote}>{text()}</div>}
 						</Show>

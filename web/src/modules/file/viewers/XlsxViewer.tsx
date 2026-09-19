@@ -1,3 +1,4 @@
+import { Button } from "@components/ui";
 import { type Component, createSignal, For, Show } from "solid-js";
 import type { SheetData } from "../hooks/usePreviewDoc.ts";
 import { DataTable } from "./DataTable.tsx";
@@ -36,7 +37,7 @@ export const XlsxViewer: ViewerComponent = (props) => {
 				return hints.length > 0 ? hints.join(" · ") : undefined;
 			}}
 		>
-			{(data) => {
+			{(data, pager) => {
 				if (data.kind !== "sheet") return null;
 				if (data.sheets.length === 0)
 					return <p class={styles.state}>这张表里没有内容</p>;
@@ -62,6 +63,27 @@ export const XlsxViewer: ViewerComponent = (props) => {
 							</div>
 						</Show>
 						{sheet ? <SheetTable sheet={sheet} /> : null}
+						{/* 服务端每页 MAX_ROWS 行；还有更多就给出口（游标由服务端给、原样回传） */}
+						<Show when={pager.hasMore()}>
+							<div class={styles.truncateNote}>
+								<span>
+									已显示 {sheet?.rows.length ?? 0} 行
+									{sheet && sheet.rows.length < sheet.total_rows
+										? ` / 共 ${sheet.total_rows} 行`
+										: ""}
+								</span>
+								<span class={styles.truncateActions}>
+									<Button
+										variant="secondary"
+										size="sm"
+										disabled={pager.paging()}
+										onClick={() => pager.loadMore(index)}
+									>
+										{pager.paging() ? "载入中…" : "载入更多"}
+									</Button>
+								</span>
+							</div>
+						</Show>
 					</>
 				);
 			}}

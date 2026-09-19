@@ -32,6 +32,15 @@ function mount(view: (props: { item: ReturnType<typeof item> }) => unknown) {
 	return host;
 }
 
+/** 按可见文案取按钮 */
+function buttonByText(host: HTMLElement, label: string): HTMLButtonElement {
+	const found = Array.from(host.querySelectorAll("button")).find((b) =>
+		(b.textContent ?? "").includes(label),
+	);
+	if (!found) throw new Error(`找不到按钮「${label}」`);
+	return found as HTMLButtonElement;
+}
+
 /** 按 aria-label 取按钮（图标按钮没有可读文案） */
 function chapterButtonByAria(
 	host: HTMLElement,
@@ -119,6 +128,47 @@ describe("DocxViewer", () => {
 		expect(host.querySelector("script")).toBeNull();
 		expect(host.querySelector("img")).toBeNull();
 		expect(host.innerHTML).not.toContain("onerror");
+	});
+
+	it("「载入更多」带游标再请求，并把新行追加到当前表", async () => {
+		const page1 = {
+			kind: "sheet",
+			truncated: false,
+			next_cursor: "cursor-1",
+			sheets: [
+				{ name: "表一", rows: [["r1"], ["r2"]], total_rows: 4, total_cols: 1 },
+			],
+		};
+		const page2 = {
+			kind: "sheet",
+			truncated: false,
+			sheets: [
+				{ name: "表一", rows: [["r3"], ["r4"]], total_rows: 4, total_cols: 1 },
+			],
+		};
+		const spy = vi.fn(
+			async (url: string) =>
+				new Response(JSON.stringify(url.includes("cursor=") ? page2 : page1), {
+					status: 200,
+					headers: { "content-type": "application/json" },
+				}),
+		);
+		vi.stubGlobal("fetch", spy);
+
+		const host = mount(XlsxViewer);
+		await settle(() => host.textContent?.includes("r2") ?? false);
+		expect(host.textContent).toContain("已显示 2 行 / 共 4 行");
+
+		buttonByText(host, "载入更多").click();
+		await settle(() => host.textContent?.includes("r4") ?? false);
+
+		// 第二页的行追加在后面（首屏那两行没被替换掉）
+		expect(host.textContent).toContain("r1");
+		expect(host.textContent).toContain("r4");
+		// 请求确实带上了服务端给的游标
+		expect(spy.mock.calls[1]?.[0]).toContain("cursor=cursor-1");
+		// 取完（第二页没有 next_cursor）按钮就消失
+		expect(host.textContent).not.toContain("载入更多");
 	});
 
 	it("被截断时说明只显示了开头", async () => {

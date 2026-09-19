@@ -12,6 +12,11 @@ import {
 	networkPreviewError,
 	type PreviewErrorInfo,
 } from "../lib/previewError.ts";
+import {
+	hasMore,
+	mergePage,
+	previewUrlWithCursor,
+} from "../lib/previewPaging.ts";
 
 /** 一张表（服务端已把单元格转成显示用文本） */
 export interface SheetData {
@@ -51,7 +56,7 @@ export interface BookChapter {
 }
 
 /** 服务端解析结果（判别字段 `kind` 与查看器一一对应） */
-export type DocPreview =
+type DocPreviewBody =
 	| { kind: "docx"; html: string; truncated: boolean }
 	| { kind: "sheet"; sheets: SheetData[]; truncated: boolean }
 	| { kind: "slides"; slides: SlideData[]; truncated: boolean }
@@ -76,6 +81,12 @@ export type DocPreview =
 	  };
 
 /**
+ * `next_cursor` 只对**可分页的类型**（sheet / database）出现，服务端其余类型不带它。
+ * 挂在联合外层而不是各分支上：客户端读它时不必先按 kind 收窄。
+ */
+export type DocPreview = DocPreviewBody & { next_cursor?: string };
+
+/**
  * 预览端点由服务端给的内容 URL 派生：`…/{stored_id}/data/{文件名}` → `…/{stored_id}/preview`。
  *
  * 不自己拼前缀 —— URL 的形状是后端说了算（见 api.ts「前端不再自行拼接」），
@@ -94,7 +105,11 @@ export function usePreviewDoc(item: () => FileItem) {
 	const [error, setError] = createSignal<PreviewErrorInfo | undefined>(
 		undefined,
 	);
-	const [preview, { refetch }] = createResource<DocPreview | undefined, string>(
+	const [paging, setPaging] = createSignal(false);
+	const [preview, { refetch, mutate }] = createResource<
+		DocPreview | undefined,
+		string
+	>(
 		() => item().stored_id,
 		async () => {
 			const url = previewUrlOf(item());
@@ -130,5 +145,48 @@ export function usePreviewDoc(item: () => FileItem) {
 		},
 	);
 
-	return { preview, error, retry: () => void refetch() };
+	/**
+	 * 「载入更多」：把 `next_cursor` 原样回传给同一个端点，服务端会把被游标指定的
+	 * 那个容器从偏移处继续给 —— 客户端把新行**追加**到那个容器上（见 lib/previewPaging.ts）。
+	 *
+	 * `index` 是当前活跃容器的下标（第几张表），只有查看器知道，所以由它传进来。
+	 */
+	const loadMore = async (index: number) => {
+		const current = preview();
+		const cursor = (current as DocPreview | undefined)?.next_cursor;
+		if (!current || !cursor || paging()) return;
+		const url = previewUrlOf(item());
+		if (!url) return;
+		setPaging(true);
+		controller = new AbortController();
+		try {
+			const resp = await fetch(previewUrlWithCursor(url, cursor), {
+				signal: controller.signal,
+				headers: buildHeaders(),
+			});
+			if (!resp.ok) {
+				const body = (await resp.json().catch(() => undefined)) as
+					| { message?: string }
+					| undefined;
+				setError(httpPreviewError(resp.status, body?.message));
+				return;
+			}
+			const next = (await resp.json()) as DocPreview;
+			// 只追加到 index 那个容器，其余沿用已有内容（见 mergePage 的说明）
+			mutate(() => mergePage(current, next, index));
+		} catch {
+			setError(networkPreviewError());
+		} finally {
+			setPaging(false);
+		}
+	};
+
+	return {
+		preview,
+		error,
+		retry: () => void refetch(),
+		loadMore,
+		paging,
+		hasMore: () => hasMore(preview() as DocPreview | undefined),
+	};
 }

@@ -336,6 +336,26 @@ describe("SplatViewer", () => {
 		expect(host.textContent).toContain("WASD 转视角");
 	});
 
+	it("复位视角：点一下重新按内容取景（不必刷新页面）", async () => {
+		const { calls } = loadScene();
+		const host = mount();
+		await settle(() => (host.textContent ?? "").includes("高斯"));
+		runFrame();
+
+		const reset = Array.from(host.querySelectorAll("button")).find((b) =>
+			(b.textContent ?? "").includes("复位视角"),
+		);
+		expect(reset).toBeDefined();
+
+		const before = calls.filter((c) => c === "drawArraysInstanced").length;
+		reset?.click();
+		runFrame();
+		// 复位会重新取景并请求一帧 —— 于是又画了一次
+		expect(
+			calls.filter((c) => c === "drawArraysInstanced").length,
+		).toBeGreaterThan(before);
+	});
+
 	it("没有 WebGL2 时给出提示与下载路径，而不是白屏", async () => {
 		vi.stubGlobal(
 			"fetch",

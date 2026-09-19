@@ -10,13 +10,20 @@
 // 提示）；DRACO 压缩的模型需要额外解码器，暂不支持（把 loader 的原话翻成人话）。
 
 import { formatBytes } from "@shared/utils";
-import { createEffect, createSignal, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { type PlyPhase, usePreviewPly } from "../hooks/usePreviewPly.ts";
 import {
 	gltfNeedsExternalFiles,
 	MODEL_MAX_BYTES,
 	modelFormatOf,
 } from "../lib/model.ts";
+import {
+	cameraPositionFor,
+	upVectorFor,
+	VIEW_DIRECTIONS,
+	VIEW_PRESET_LABELS,
+	VIEW_PRESETS,
+} from "../lib/modelView.ts";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 
@@ -56,7 +63,12 @@ async function renderModel(
 	box: HTMLElement,
 	bytes: Uint8Array,
 	format: "glb" | "gltf" | "stl" | "obj",
-): Promise<{ dispose: () => void; note: string }> {
+): Promise<{
+	dispose: () => void;
+	note: string;
+	/** 相机控制：预设视角与复位（模型转晕了要能回到原位） */
+	view: { lookFrom: (dir: readonly number[]) => void; reset: () => void };
+}> {
 	const THREE = await import("three");
 	const { OrbitControls } = await import(
 		"three/addons/controls/OrbitControls.js"
@@ -139,6 +151,21 @@ async function renderModel(
 	controls.enableDamping = false; // 关掉阻尼 = 静止时不烧 GPU（按需重绘）
 	controls.update();
 
+	/** 把相机摆到"从某个方向看"的机位（复位也走这条：复位 = 从初始方向看） */
+	const lookFrom = (dir: readonly number[]) => {
+		const [x, y, z] = cameraPositionFor(
+			[center.x, center.y, center.z],
+			dir,
+			distance,
+		);
+		camera.position.set(x, y, z);
+		const [ux, uy, uz] = upVectorFor(dir);
+		camera.up.set(ux, uy, uz);
+		controls.target.copy(center);
+		controls.update();
+		render();
+	};
+
 	const render = () => {
 		renderer.render(scene, camera);
 	};
@@ -194,6 +221,7 @@ async function renderModel(
 	}, 0);
 	return {
 		dispose,
+		view: { lookFrom, reset: () => lookFrom(CAMERA_DIR) },
 		note: `${meshes.length} 个网格 · ${triangles.toLocaleString()} 个三角面`,
 	};
 }
@@ -240,11 +268,18 @@ export const ModelViewer: ViewerComponent = (props) => {
 				}
 				cleanup = result.dispose;
 				setNote(result.note);
+				setView(result.view);
 			} catch (err) {
 				setError(readableError(err));
 			}
 		})();
 	});
+
+	/** 相机控制（模型加载完成后才有值） */
+	const [view, setView] = createSignal<{
+		lookFrom: (dir: readonly number[]) => void;
+		reset: () => void;
+	}>();
 
 	const failure = () => {
 		const state = load();
@@ -279,6 +314,29 @@ export const ModelViewer: ViewerComponent = (props) => {
 			</Show>
 			<Show when={!error() && !failure() && note()}>
 				{(text) => <p class={styles.modelHint}>{text()}</p>}
+			</Show>
+			{/* 视角工具：只看得到、够不着的角度（正面/俯视）与"转晕了回原位" */}
+			<Show when={view()}>
+				{(control) => (
+					<div class={styles.modelViews}>
+						<For each={VIEW_PRESETS}>
+							{(preset) => (
+								<button
+									type="button"
+									class={styles.modelViewBtn}
+									title={
+										preset === "iso"
+											? "回到初始机位"
+											: `从${VIEW_PRESET_LABELS[preset]}方向看`
+									}
+									onClick={() => control().lookFrom(VIEW_DIRECTIONS[preset])}
+								>
+									{VIEW_PRESET_LABELS[preset]}
+								</button>
+							)}
+						</For>
+					</div>
+				)}
 			</Show>
 		</div>
 	);

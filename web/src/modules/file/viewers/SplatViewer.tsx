@@ -583,6 +583,23 @@ export const SplatViewer: ViewerComponent = (props) => {
 							>
 								移动：{MODE_LABEL[moveMode()]}
 							</button>
+							{/* 复位：把"用户动过相机"的标记清掉，重新按内容与视口取景 ——
+							    这是不刷新页面就能回到初始机位的唯一办法（此前只能靠重新打开） */}
+							<button
+								type="button"
+								class={styles.splatModeToggle}
+								title="回到初始机位（按内容重新取景）"
+								onPointerDown={(e) => e.stopPropagation()}
+								onClick={() => {
+									userMoved = false;
+									activeKeys.clear();
+									refit();
+									requestFrame();
+									stageEl()?.focus();
+								}}
+							>
+								复位视角
+							</button>
 						</Show>
 					</div>
 				</Show>

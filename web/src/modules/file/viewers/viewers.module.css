@@ -423,6 +423,36 @@
 	color: var(--t-color-ink);
 }
 
+/* 3D 模型的视角工具：压在画布右上角 */
+.model-views {
+	position: absolute;
+	top: var(--space-sm);
+	right: var(--space-sm);
+	z-index: 2;
+	display: flex;
+	gap: var(--space-2xs);
+}
+
+.model-view-btn {
+	padding: 2px var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+	font: inherit;
+	font-size: var(--text-xs);
+	cursor: pointer;
+}
+
+.model-view-btn:hover {
+	background: var(--t-color-accent-soft);
+}
+
+.model-view-btn:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 1px;
+}
+
 /* 表头：**粘顶**（长表滚动时列名不跑掉）。`.table-wrap` 就是滚动容器 */
 .table-head-cell {
 	position: sticky;

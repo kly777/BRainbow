@@ -5,19 +5,18 @@ import { type Component, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import type { FileItem } from "../api.ts";
 import { DownloadPanel } from "./DownloadPanel.tsx";
+import { PreviewState } from "./PreviewState.tsx";
 import { pickViewer } from "./registry.ts";
 import styles from "./viewers.module.css";
 
 /** 内容已丢失：内联预览与下载都没有意义，统一给出说明 */
 const MissingPanel: Component = () => (
-	<div class={styles.previewFallback}>
-		<AlertTriangle size={48} class={styles.previewMissingIcon} />
-		<p class={styles.previewFallbackName}>文件内容已丢失</p>
-		<p class={styles.previewMissingHint}>
-			数据库里仍保留这条记录，但磁盘上找不到对应文件，无法预览或下载。
-			把文件放回上传目录后会自动恢复正常。
-		</p>
-	</div>
+	<PreviewState
+		message="文件内容已丢失"
+		hint="数据库里仍保留这条记录，但磁盘上找不到对应文件，无法预览或下载。把文件放回上传目录后会自动恢复正常。"
+		tone="warning"
+		icon={<AlertTriangle size={32} />}
+	/>
 );
 
 export const PreviewStage: Component<{ item: FileItem }> = (props) => (

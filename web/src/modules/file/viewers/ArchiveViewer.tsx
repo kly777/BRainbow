@@ -1,6 +1,7 @@
 import { formatBytes } from "@shared/utils";
 import { For } from "solid-js";
 import { DocContent } from "./DocContent.tsx";
+import { PreviewState } from "./PreviewState.tsx";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 
@@ -31,7 +32,7 @@ export const ArchiveViewer: ViewerComponent = (props) => (
 		{(data) => {
 			if (data.kind !== "archive") return null;
 			if (data.entries.length === 0)
-				return <p class={styles.state}>这个压缩包里没有条目</p>;
+				return <PreviewState message="这个压缩包里没有条目" />;
 			return (
 				<div class={styles.tableWrap}>
 					<table class={styles.table}>

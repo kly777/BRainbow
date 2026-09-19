@@ -3,6 +3,7 @@ import { type Component, createSignal, For, Show } from "solid-js";
 import type { DatabaseTable } from "../hooks/usePreviewDoc.ts";
 import { DataTable } from "./DataTable.tsx";
 import { DocContent } from "./DocContent.tsx";
+import { PreviewState } from "./PreviewState.tsx";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 
@@ -38,7 +39,7 @@ export const DatabaseViewer: ViewerComponent = (props) => {
 			{(data, pager) => {
 				if (data.kind !== "database") return null;
 				if (data.tables.length === 0)
-					return <p class={styles.state}>这个库里没有表</p>;
+					return <PreviewState message="这个库里没有表" />;
 				const index = Math.min(active(), data.tables.length - 1);
 				const table = data.tables[index];
 				return (

@@ -3,6 +3,7 @@ import { type Component, createSignal, For, Show } from "solid-js";
 import type { SheetData } from "../hooks/usePreviewDoc.ts";
 import { DataTable } from "./DataTable.tsx";
 import { DocContent } from "./DocContent.tsx";
+import { PreviewState } from "./PreviewState.tsx";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 
@@ -40,7 +41,7 @@ export const XlsxViewer: ViewerComponent = (props) => {
 			{(data, pager) => {
 				if (data.kind !== "sheet") return null;
 				if (data.sheets.length === 0)
-					return <p class={styles.state}>这张表里没有内容</p>;
+					return <PreviewState message="这张表里没有内容" />;
 				const index = Math.min(active(), data.sheets.length - 1);
 				const sheet = data.sheets[index];
 				return (

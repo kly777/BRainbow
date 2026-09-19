@@ -4,7 +4,7 @@ import { type Component, type JSX, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
 import { usePreviewUrl } from "../hooks/usePreviewUrl.ts";
 import { PreviewError } from "./PreviewError.tsx";
-import styles from "./viewers.module.css";
+import { PreviewState } from "./PreviewState.tsx";
 
 /**
  * 统一处理"私密文件要先换 blob"的媒体渲染：加载中给出提示（避免 401 破图），
@@ -34,7 +34,7 @@ export const PreviewMedia: Component<{
 					keyed
 					fallback={
 						<Show when={props.isPrivate}>
-							<p class={styles.previewLoading}>正在加载私密文件…</p>
+							<PreviewState loading message="正在加载私密文件…" />
 						</Show>
 					}
 				>

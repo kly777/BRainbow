@@ -185,30 +185,50 @@
 	font-size: var(--text-sm);
 }
 
-/* ── 统一的失败块（预览失败：说明 + 重试 + 下载） ── */
+/* ── 状态块（加载中 / 空 / 不可用 / 出错 / 内容丢失） ──
+   一个原语三种色调：此前 `.state` / `.preview-fallback` / `.preview-error` /
+   `.preview-missing-*` 各写一遍，同一个"这一格没内容"长相不同、改一次要改五处 */
 
-.preview-error {
-	padding: var(--space-xl) var(--space-lg);
+.preview-state {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	gap: var(--space-sm);
+	padding: var(--space-xl) var(--space-lg);
 	text-align: center;
 }
 
-.preview-error-icon {
-	color: var(--t-color-warning, var(--t-color-ink-muted));
+.preview-state-icon {
+	opacity: 0.6;
 }
 
-.preview-error-message {
+/* 加载中的转子（reduced-motion 下由下面那条规则停住） */
+.preview-state-spin {
+	animation: preview-state-spin 1s linear infinite;
+}
+
+@keyframes preview-state-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.preview-state-spin {
+		animation: none;
+	}
+}
+
+.preview-state-message {
 	margin: 0;
 	max-width: 32rem;
 	color: var(--t-color-ink);
 	font-size: var(--text-sm);
 	line-height: 1.6;
+	overflow-wrap: anywhere;
 }
 
-.preview-error-hint {
+.preview-state-hint {
 	margin: 0;
 	max-width: 32rem;
 	color: var(--t-color-ink-muted);
@@ -216,10 +236,25 @@
 	line-height: 1.6;
 }
 
-.preview-error-actions {
+.preview-state-actions {
 	margin-top: var(--space-xs);
 	display: flex;
 	gap: var(--space-sm);
+}
+
+/* 色调：muted 是"还没内容"（加载/空），warning 是"内容不对"，error 是"取不到" */
+.state-muted .preview-state-message {
+	color: var(--t-color-ink-muted);
+	font-weight: 400;
+}
+
+.state-warning .preview-state-icon {
+	color: var(--t-color-danger);
+	opacity: 0.8;
+}
+
+.state-error .preview-state-icon {
+	color: var(--t-color-warning, var(--t-color-ink-muted));
 }
 
 /* 截断提示行：一句话 + 一排出口（载入更多 / 看结尾 / 回到开头） */

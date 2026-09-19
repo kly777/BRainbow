@@ -7,6 +7,7 @@ import {
 } from "../hooks/usePreviewBytes.ts";
 import { hexRows, sniffKind } from "../lib/magic.ts";
 import { PreviewError } from "./PreviewError.tsx";
+import { PreviewState } from "./PreviewState.tsx";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 
@@ -36,10 +37,10 @@ export const HexViewer: ViewerComponent = (props) => {
 		<div class={styles.hexPane}>
 			<Show when={content.loading}>
 				{/* 说清在读哪一段、文件多大（翻页时"加载中…"会看不出在读第几段） */}
-				<div class={styles.state}>
-					正在读取第 {Math.floor(offset() / HEX_SEGMENT_BYTES) + 1} 段 （共{" "}
-					{formatBytes(props.item.size_bytes)}）…
-				</div>
+				<PreviewState
+					loading
+					message={`正在读取第 ${Math.floor(offset() / HEX_SEGMENT_BYTES) + 1} 段（共 ${formatBytes(props.item.size_bytes)}）…`}
+				/>
 			</Show>
 			<Show when={error()}>
 				{(info) => (

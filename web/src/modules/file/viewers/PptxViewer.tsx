@@ -1,5 +1,6 @@
 import { For, Show } from "solid-js";
 import { DocContent } from "./DocContent.tsx";
+import { PreviewState } from "./PreviewState.tsx";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 
@@ -23,7 +24,7 @@ export const PptxViewer: ViewerComponent = (props) => (
 		{(data) => {
 			if (data.kind !== "slides") return null;
 			if (data.slides.length === 0)
-				return <p class={styles.state}>这份演示文稿里没有幻灯片</p>;
+				return <PreviewState message="这份演示文稿里没有幻灯片" />;
 			return (
 				<ol class={styles.slideList}>
 					<For each={data.slides}>

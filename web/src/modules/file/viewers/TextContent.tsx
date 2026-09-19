@@ -14,6 +14,7 @@ import type { FileItem } from "../api.ts";
 import { type PreviewText, usePreviewText } from "../hooks/usePreviewText.ts";
 import { FindOverlay } from "./FindOverlay.tsx";
 import { PreviewError } from "./PreviewError.tsx";
+import { PreviewState } from "./PreviewState.tsx";
 import styles from "./viewers.module.css";
 
 /** 截断提示的文案（三个状态：尾部 / 还能续 / 已到末尾但只是开头部分） */
@@ -41,9 +42,10 @@ export const TextContent: Component<{
 			/>
 			<Show when={preview.loading()}>
 				{/* 体积来自接口元数据（item.size_bytes）：首屏不必等响应头就能说清在取多大 */}
-				<div class={styles.state}>
-					正在读取预览（共 {formatBytes(props.item.size_bytes)}）…
-				</div>
+				<PreviewState
+					loading
+					message={`正在读取预览（共 ${formatBytes(props.item.size_bytes)}）…`}
+				/>
 			</Show>
 			<Show when={preview.error()}>
 				{(info) => (

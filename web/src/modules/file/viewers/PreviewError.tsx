@@ -10,7 +10,7 @@ import { AlertTriangle, Download, RefreshCw } from "@components/ui/icons";
 import { type Component, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
 import type { PreviewErrorInfo } from "../lib/previewError.ts";
-import styles from "./viewers.module.css";
+import { PreviewState } from "./PreviewState.tsx";
 
 export const PreviewError: Component<{
 	item: FileItem;
@@ -18,25 +18,23 @@ export const PreviewError: Component<{
 	/** 重试入口（缺省表示这一层拿不到重试能力，按钮不出） */
 	onRetry?: () => void;
 }> = (props) => (
-	<div class={styles.previewError} role="alert">
-		<AlertTriangle size={32} class={styles.previewErrorIcon} />
-		<p class={styles.previewErrorMessage}>{props.error.message}</p>
-		<Show when={props.error.hint}>
-			{(hint) => <p class={styles.previewErrorHint}>{hint()}</p>}
-		</Show>
-		<div class={styles.previewErrorActions}>
-			<Show when={props.error.retryable && props.onRetry}>
-				<Button variant="secondary" size="sm" onClick={() => props.onRetry?.()}>
-					<RefreshCw size={14} /> 重试
-				</Button>
-			</Show>
-			<Button
-				variant="secondary"
-				size="sm"
-				onClick={() => window.open(props.item.url, "_blank")}
-			>
-				<Download size={14} /> 下载
+	<PreviewState
+		message={props.error.message}
+		hint={props.error.hint}
+		tone="error"
+		icon={<AlertTriangle size={32} />}
+	>
+		<Show when={props.error.retryable && props.onRetry}>
+			<Button variant="secondary" size="sm" onClick={() => props.onRetry?.()}>
+				<RefreshCw size={14} /> 重试
 			</Button>
-		</div>
-	</div>
+		</Show>
+		<Button
+			variant="secondary"
+			size="sm"
+			onClick={() => window.open(props.item.url, "_blank")}
+		>
+			<Download size={14} /> 下载
+		</Button>
+	</PreviewState>
 );

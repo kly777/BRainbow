@@ -10,6 +10,7 @@ import type { FileItem } from "../api.ts";
 import { type DocPreview, usePreviewDoc } from "../hooks/usePreviewDoc.ts";
 import { FindOverlay } from "./FindOverlay.tsx";
 import { PreviewError } from "./PreviewError.tsx";
+import { PreviewState } from "./PreviewState.tsx";
 import styles from "./viewers.module.css";
 
 /** 分页能力：只有 sheet / database 用得上（其余类型服务端不给游标） */
@@ -51,7 +52,7 @@ export const DocContent: Component<{
 				resetKey={() => props.item.stored_id}
 			/>
 			<Show when={preview.loading}>
-				<div class={styles.state}>正在解析文档…</div>
+				<PreviewState loading message="正在解析文档…" />
 			</Show>
 			<Show when={error()}>
 				{(info) => (
@@ -59,7 +60,7 @@ export const DocContent: Component<{
 				)}
 			</Show>
 			<Show when={preview() !== undefined && matched() === undefined}>
-				<div class={styles.state}>{props.mismatchNote}</div>
+				<PreviewState message={props.mismatchNote} tone="warning" />
 			</Show>
 			<Show when={matched()}>
 				{(data) => (

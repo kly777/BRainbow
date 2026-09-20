@@ -339,6 +339,18 @@ cmd_build() {
         log_error "构建产物不存在: $bin_path"
         exit 1
     fi
+    # 静态 ffmpeg（视频海报帧用）：有就随产物走，没有就照常发 —— 后端会把它
+    # 降级成"视频只有后缀徽章"，不影响其他功能（见 thumb/video.rs 的 available()）
+    if [ -x "$PROJECT_DIR/vendor/ffmpeg/bin/ffmpeg" ]; then
+        mkdir -p "$PROJECT_DIR/build/bin"
+        cp "$PROJECT_DIR/vendor/ffmpeg/bin/ffmpeg" "$PROJECT_DIR/build/bin/ffmpeg"
+        [ -x "$PROJECT_DIR/vendor/ffmpeg/bin/ffprobe" ] && \
+            cp "$PROJECT_DIR/vendor/ffmpeg/bin/ffprobe" "$PROJECT_DIR/build/bin/ffprobe"
+        log_info "  ffmpeg: build/bin/ffmpeg ($(du -h "$PROJECT_DIR/build/bin/ffmpeg" | cut -f1))"
+    else
+        log_warn "未取 ffmpeg（make fetch-ffmpeg），视频缩略图将降级为后缀徽章"
+    fi
+
     log_done "构建产物已整理到 build/"
     log_info "  binary: build/brainbow ($(du -h "$PROJECT_DIR/build/brainbow" | cut -f1))"
     log_info "  dist:   build/dist ($(du -sh "$PROJECT_DIR/build/dist" | cut -f1))"
@@ -428,6 +440,12 @@ cmd_deploy() {
         $binary $REMOTE_USER@$REMOTE_HOST:$SERVICE_DIR/" 2>&1 | tail -3
     eval "rsync -avz --delete -e \"ssh -p $REMOTE_PORT\" \
         $dist/ $REMOTE_USER@$REMOTE_HOST:$SERVICE_DIR/dist/" 2>&1 | tail -3
+    # 静态 ffmpeg（可有可无）。不走 --delete：远端 bin/ 里若还有别的东西，
+    # 不该因为这次没带 ffmpeg 就被删掉
+    if [ -d "$PROJECT_DIR/build/bin" ]; then
+        eval "rsync -avz -e \"ssh -p $REMOTE_PORT\" \
+            $PROJECT_DIR/build/bin/ $REMOTE_USER@$REMOTE_HOST:$SERVICE_DIR/bin/" 2>&1 | tail -3
+    fi
     log_done "同步完成"
 
     # Step 5: 设置权限
@@ -435,7 +453,8 @@ cmd_deploy() {
     remote "\
         find $SERVICE_DIR -type d -exec chmod 755 {} \; 2>/dev/null; \
         find $SERVICE_DIR -type f -exec chmod 644 {} \; 2>/dev/null; \
-        chmod +x $SERVICE_DIR/brainbow 2>/dev/null"
+        chmod +x $SERVICE_DIR/brainbow 2>/dev/null; \
+        if [ -d $SERVICE_DIR/bin ]; then chmod +x $SERVICE_DIR/bin/* 2>/dev/null; fi"
     log_done "权限设置完成"
 
     # Step 6: 配置 systemd 服务

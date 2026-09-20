@@ -9,7 +9,7 @@ REMOTE_PORT ?= 22
 time := $(shell date +%y%m%d_%H%M%S)
 DEPLOY_SCRIPT := deploy/deploy.sh
 
-.PHONY: dev dev-backend dev-backend-fast dev-web fmt lint build build-web build-backend clean clean-all deploy deploy-web deploy-backend check-deploy check-backend caddy status info logs db-pull db-push health rollback list-backups sqlx-prepare test test-verbose udeps bloat clean-cache build-stats db-check db-optimize db-backup backup-prune check-env
+.PHONY: dev dev-backend dev-backend-fast dev-web fmt lint build build-web build-backend bundle-ffmpeg fetch-ffmpeg clean clean-all deploy deploy-web deploy-backend check-deploy check-backend caddy status info logs db-pull db-push health rollback list-backups sqlx-prepare test test-verbose udeps bloat clean-cache build-stats db-check db-optimize db-backup backup-prune check-env
 
 # 用 make 并行目标跑后端/前端：Ctrl+C 时 make 会给所有并行 job 发信号并等待清理
 # （cargo-watch 8.x 收到 SIGINT 会用进程组清理 cargo run/brainbow）
@@ -105,6 +105,24 @@ build-backend:
 	mkdir -p $(BUILD_DIR)/dist
 	cp -r web/dist/. $(BUILD_DIR)/dist/
 	cp target/release/brainbow $(BUILD_DIR)/brainbow
+	@$(MAKE) -s bundle-ffmpeg
+
+# 把 vendor/ffmpeg/bin（make fetch-ffmpeg 取来的静态二进制）拷进产物。
+# 没有它也照常构建：视频缩略图会永久降级为后缀徽章，其他功能不受影响
+# （降级路径见 src/modules/file/thumb/video.rs 的 available()）
+bundle-ffmpeg:
+	@if [ -x vendor/ffmpeg/bin/ffmpeg ]; then \
+		mkdir -p $(BUILD_DIR)/bin; \
+		cp vendor/ffmpeg/bin/ffmpeg $(BUILD_DIR)/bin/ffmpeg; \
+		if [ -x vendor/ffmpeg/bin/ffprobe ]; then cp vendor/ffmpeg/bin/ffprobe $(BUILD_DIR)/bin/ffprobe; fi; \
+		echo "已带上 ffmpeg: $$(du -h $(BUILD_DIR)/bin/ffmpeg | cut -f1)"; \
+	else \
+		echo "提示: 未取 ffmpeg（make fetch-ffmpeg），视频缩略图将降级为后缀徽章"; \
+	fi
+
+# 取静态 ffmpeg 到 vendor/ffmpeg/bin（版本与 sha256 见 deploy/ffmpeg.lock）
+fetch-ffmpeg:
+	@bash deploy/fetch-ffmpeg.sh
 
 build-web:
 	cd web && pnpm run build

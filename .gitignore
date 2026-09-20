@@ -24,3 +24,6 @@ logs/
 AGENTS.md
 opencode.json
 .pnpm-store
+
+# 取来的静态 ffmpeg（make fetch-ffmpeg；不进版本库）
+vendor/

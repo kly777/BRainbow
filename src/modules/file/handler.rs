@@ -148,6 +148,11 @@ pub struct UploadQuery {
     /// 跳过内容去重，强制新建副本
     #[serde(default)]
     force: Option<bool>,
+    /// 客户端在浏览器里读到的媒体时长（毫秒）。上传路径**不起子进程**做探测：
+    /// 上传前文件就在客户端手上，读一次 `loadedmetadata` 比后端引媒体探测便宜得多
+    /// （见 web/src/modules/file/lib/mediaDuration.ts）。服务端只校验类别与值域
+    #[serde(default)]
+    duration_ms: Option<i64>,
 }
 
 pub async fn upload_handler(
@@ -173,6 +178,14 @@ pub async fn upload_handler(
             .tags
             .as_deref()
             .and_then(|s| serde_json::from_str::<Vec<String>>(s).ok());
+
+        // 客户端线索（标签 / 时长 / 强制去重）收成一个结构体，别再往
+        // upload_streamed 的位置参数里塞 —— 那个签名已经长到要靠 allow 挡 lint 了
+        let hints = super::service::UploadHints {
+            tags,
+            duration_ms: query.duration_ms,
+            force: query.force.unwrap_or(false),
+        };
 
         // 流式落盘：边读边写临时文件 + 增量 SHA-256，避免大文件（视频上限 4GB）
         // 一次性进内存。首块用于 MIME 校验，校验通过后才知道该类型的大小上限。
@@ -246,8 +259,7 @@ pub async fn upload_handler(
                 &original_name,
                 &final_mime,
                 Some(claims.sub as i64),
-                tags,
-                query.force.unwrap_or(false),
+                hints,
             )
             .await
         {
@@ -724,6 +736,7 @@ fn plan_thumb(file: &super::model::File, requested_w: Option<u32>) -> ThumbPlan 
 /// 像素数超限回原图（不报错、也不硬解）。
 pub async fn thumb_handler(
     State(query): State<FileQueryService>,
+    State(service): State<FileService>,
     State(auth): State<crate::app::auth::service::AuthService>,
     Path(stored_id): Path<String>,
     Query(params): Query<ThumbQuery>,
@@ -845,12 +858,27 @@ pub async fn thumb_handler(
 
             match thumb::video::generate_poster(query.ffmpeg_path(), &src, width, &final_path).await
             {
-                Ok(()) => match tokio::fs::read(&final_path).await {
-                    Ok(bytes) => thumb_response(bytes, "image/jpeg"),
-                    Err(e) => {
-                        ServiceError::Internal(format!("读回海报帧失败: {e}")).into_response()
+                Ok(()) => {
+                    // 顺手把缺的时长补上（ffprobe 与 ffmpeg 同目录，是第二次起子进程，
+                    // 但仍在同一个闸门里）。老记录、以及浏览器读不出容器的文件都靠这一步
+                    if file.duration_ms.is_none()
+                        && let Some(ms) =
+                            thumb::video::probe_duration(query.ffmpeg_path(), &src).await
+                    {
+                        match service.backfill_duration_ms(&stored_id, ms).await {
+                            Ok(true) => info!(%stored_id, duration_ms = ms, "ffprobe 补上视频时长"),
+                            Ok(false) => {}
+                            Err(e) => warn!(%stored_id, "回填时长失败: {e:?}"),
+                        }
                     }
-                },
+
+                    match tokio::fs::read(&final_path).await {
+                        Ok(bytes) => thumb_response(bytes, "image/jpeg"),
+                        Err(e) => {
+                            ServiceError::Internal(format!("读回海报帧失败: {e}")).into_response()
+                        }
+                    }
+                }
                 Err(err) => {
                     warn!(%stored_id, "视频抽帧失败: {err}");
                     let status = match err {

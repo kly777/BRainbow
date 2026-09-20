@@ -97,6 +97,8 @@ export interface UploadOptions {
 	tags?: string[];
 	/** 跳过内容去重，强制新建副本 */
 	force?: boolean;
+	/** 客户端读到的媒体时长（毫秒，见 lib/mediaDuration.ts）；后端只对音视频采纳 */
+	durationMs?: number;
 	/** 上传进度回调（大文件用） */
 	onProgress?: (progress: UploadProgress) => void;
 }
@@ -113,6 +115,9 @@ export const uploadFileWithProgress = (
 		const query = new URLSearchParams();
 		if (opts.tags?.length) query.set("tags", JSON.stringify(opts.tags));
 		if (opts.force) query.set("force", "true");
+		// 时长（毫秒）：后端只对音视频采纳，值域外一律丢掉（见 service.rs 的 accept_duration）
+		if (opts.durationMs && opts.durationMs > 0)
+			query.set("duration_ms", String(Math.round(opts.durationMs)));
 		const qs = query.toString();
 
 		const xhr = new XMLHttpRequest();

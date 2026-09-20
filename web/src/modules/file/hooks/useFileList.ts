@@ -20,6 +20,7 @@ import {
 	updateFile,
 	uploadFileWithProgress,
 } from "../api.ts";
+import { readMediaDuration } from "../lib/mediaDuration.ts";
 import { validateUploadFile } from "../lib/uploadLimits.ts";
 
 const VALID_CATEGORIES = ["", "image", "video", "audio", "document", "other"];
@@ -266,7 +267,11 @@ export function useFileList(): FileListApi {
 					if (!next) return;
 					patchTask(next.task.id, { status: "uploading" });
 					try {
+						// 音视频先读一次时长再传：后端拿不到它（上传路径不起子进程
+						// 做媒体探测），而列表/详情页的时长角标就靠这个值
+						const durationMs = await readMediaDuration(next.file);
 						const uploaded = await uploadFileWithProgress(next.file, {
+							durationMs,
 							onProgress: ({ loaded }) => patchTask(next.task.id, { loaded }),
 						});
 						if (uploaded.duplicate) {

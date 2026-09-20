@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE file SET duration_ms = ? WHERE stored_id = ? AND duration_ms IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "25c3bbf990a3c3daa23484b474bd285d7bc1e2d49f31cc3f627841c2ccd40106"
+}

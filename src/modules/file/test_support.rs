@@ -37,6 +37,10 @@ pub const DOCX: &str = "application/vnd.openxmlformats-officedocument.wordproces
 pub const XLSX: &str = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 pub const PPTX: &str = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
+/// 最小 mp4 头：ISO BMFF 的 `ftyp` 盒 + 品牌 mp42（类型识别只需这一小段：
+/// 族由字节定、种在族内由品牌定）。**不能解码** —— 需要真视频的测试请自带样本。
+pub const MP4_MIN: &[u8] = b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom";
+
 /// 自动清理的临时目录
 pub struct TempDir(pub String);
 

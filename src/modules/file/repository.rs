@@ -200,6 +200,26 @@ impl FileRepository {
         Ok(())
     }
 
+    /// 补一个缺失的媒体时长（只在为空时写）。返回是否真的写了一行。
+    ///
+    /// **刻意不动 `updated_at`**：这是服务端回填，不是用户的动作 —— 动了就会把文件
+    /// 顶到"最近更新"排序的最前面，看着像被谁改过。也**别拿 `update_metadata` 代替**：
+    /// 它一次写宽高时长三个字段，会把已有的宽高抹成 NULL。
+    pub async fn set_duration_ms_if_null(
+        &self,
+        stored_id: &str,
+        duration_ms: i64,
+    ) -> Result<bool, sqlx::Error> {
+        let result = sqlx::query!(
+            "UPDATE file SET duration_ms = ? WHERE stored_id = ? AND duration_ms IS NULL",
+            duration_ms,
+            stored_id
+        )
+        .execute(&*self.db)
+        .await?;
+        Ok(result.rows_affected() > 0)
+    }
+
     /// 更新文件名
     pub async fn update_name(
         &self,

@@ -27,12 +27,18 @@ export function isRenderableImage(mime: string): boolean {
 }
 
 /**
- * 能否在列表里用 `<img src>` 直接当缩略图。
+ * 能否在列表里用 `<img src>` 当缩略图。
+ *
+ * 判据以**后端的 `thumb_url` 为准**（能出缩略图的位图与视频都给）：视频的海报帧
+ * 也是 `<img>`，而 SVG 这类"能直接渲染但没有服务端缩略图"的仍走原图。
+ *
  * 私密文件为 false：列表的 `<img>` 不带凭据，请求会 401（进详情页才取）。
  * 缺失文件为 false：内容都不在磁盘上，加载必然失败。
  */
 export function canThumb(item: FileItem): boolean {
-	return !item.missing && !item.is_private && isRenderableImage(item.mime_type);
+	if (item.missing || item.is_private) return false;
+	// 后端说能出缩略图 → 走它（视频海报帧也算）；否则退回"浏览器能直接渲染的位图"
+	return item.thumb_url ? true : isRenderableImage(item.mime_type);
 }
 
 /**

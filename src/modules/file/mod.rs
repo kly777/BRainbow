@@ -55,6 +55,8 @@ pub fn public_file_route<S>() -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
     FileQueryService: FromRef<S>,
+    // 缩略图那条路会在生成视频海报帧时回填时长，因此还要能取到写侧服务
+    FileService: FromRef<S>,
     // 私密文件的内容路由需要解析可选凭据，因此还要能取到 AuthService
     crate::app::auth::service::AuthService: FromRef<S>,
 {

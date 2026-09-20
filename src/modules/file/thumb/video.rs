@@ -137,6 +137,43 @@ pub async fn generate_poster(
     Ok(())
 }
 
+/// 用 ffprobe 读时长（毫秒）。读不出（ffprobe 缺失 / 容器认不出）→ None。
+///
+/// 只该在"已经在给这个视频出海报帧"时顺手调用：那是第二次起子进程，单为一个
+/// 展示字段去探更不划算。ffprobe 与 ffmpeg 同目录（静态构建一起发），所以从
+/// ffmpeg 的路径派生 —— 配置里只配一个路径，不给用户两份要同步的东西。
+pub async fn probe_duration(ffmpeg: &Path, src: &str) -> Option<i64> {
+    let ffprobe = ffmpeg.with_file_name("ffprobe");
+    let mut cmd = Command::new(&ffprobe);
+    cmd.args([
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        src,
+    ])
+    .stdin(Stdio::null())
+    .stdout(Stdio::piped())
+    .stderr(Stdio::null())
+    .kill_on_drop(true);
+
+    let out = tokio::time::timeout(PROBE_TIMEOUT, cmd.output())
+        .await
+        .ok()?
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let seconds: f64 = String::from_utf8_lossy(&out.stdout).trim().parse().ok()?;
+    // 流式 / 坏容器会给出 inf / nan / 0
+    if !seconds.is_finite() || seconds <= 0.0 {
+        return None;
+    }
+    Some((seconds * 1000.0).round() as i64)
+}
+
 /// 跑一次 ffmpeg，返回是否成功（子进程的非零退出是正常结果，不 panic）
 async fn run(ffmpeg: &Path, args: &[String]) -> Result<(), VideoError> {
     let mut cmd = Command::new(ffmpeg);
@@ -171,12 +208,16 @@ mod tests {
         crate::modules::file::test_support::TempDir,
         std::path::PathBuf,
     ) {
-        use std::os::unix::fs::PermissionsExt;
         let dir = crate::modules::file::test_support::TempDir::new();
         let path = Path::new(&dir.0).join("ffmpeg");
         std::fs::write(&path, script).unwrap();
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        set_executable(&path);
         (dir, path)
+    }
+
+    fn set_executable(path: &Path) {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
     }
 
     #[tokio::test]
@@ -189,6 +230,43 @@ mod tests {
     async fn probe_accepts_a_working_binary() {
         let (_dir, path) = fake_ffmpeg("#!/bin/sh\nexit 0\n");
         assert!(probe(&path).await);
+    }
+
+    // ── ffprobe 时长（顺带回填旧记录） ──
+
+    /// ffprobe 与 ffmpeg 同目录，脚本输出秒数 → 毫秒
+    #[tokio::test]
+    async fn probe_duration_parses_seconds_to_millis() {
+        let dir = crate::modules::file::test_support::TempDir::new();
+        let ffmpeg = Path::new(&dir.0).join("ffmpeg");
+        std::fs::write(&ffmpeg, b"").unwrap();
+        let ffprobe = Path::new(&dir.0).join("ffprobe");
+        std::fs::write(&ffprobe, "#!/bin/sh\necho 12.5\n").unwrap();
+        set_executable(&ffprobe);
+
+        assert_eq!(probe_duration(&ffmpeg, "/tmp/x.mkv").await, Some(12_500));
+    }
+
+    /// 读不出的一律 None（缺失的 ffprobe、非零退出、inf/0 这类坏值）
+    #[tokio::test]
+    async fn probe_duration_returns_none_on_bad_input() {
+        let dir = crate::modules::file::test_support::TempDir::new();
+        let ffmpeg = Path::new(&dir.0).join("ffmpeg");
+        std::fs::write(&ffmpeg, b"").unwrap();
+
+        // ffprobe 不存在（静态构建里可能没带）
+        assert_eq!(probe_duration(&ffmpeg, "/tmp/x.mkv").await, None);
+
+        for output in ["", "N/A", "inf", "0", "-3", "abc"] {
+            let ffprobe = Path::new(&dir.0).join("ffprobe");
+            std::fs::write(&ffprobe, format!("#!/bin/sh\necho '{output}'\n")).unwrap();
+            set_executable(&ffprobe);
+            assert_eq!(
+                probe_duration(&ffmpeg, "/tmp/x.mkv").await,
+                None,
+                "输出 {output:?} 应当读不出时长"
+            );
+        }
     }
 
     #[tokio::test]

@@ -16,6 +16,33 @@ use crate::shared::error_types::ServiceError;
 pub mod maintenance;
 pub use maintenance::{ThumbCacheCheck, UploadDirCheck, check_thumb_cache, check_upload_dir};
 
+/// 上传时客户端能顺带提供的线索（只影响展示，不参与任何安全判定）
+#[derive(Debug, Clone, Default)]
+pub struct UploadHints {
+    /// 标签（JSON 数组字符串由 handler 解析而来）
+    pub tags: Option<Vec<String>>,
+    /// 客户端读到的媒体时长（毫秒）。服务端只校验"配不配得上这个类别"与值域，
+    /// 见 [`accept_duration`] —— 它是展示数据，伪造了也只是自己看错
+    pub duration_ms: Option<i64>,
+    /// 跳过内容去重，强制新建副本
+    pub force: bool,
+}
+
+/// 时长上限（24 小时）：再长就不是"时长"而是坏数据/伪造值了
+const MAX_DURATION_MS: i64 = 24 * 60 * 60 * 1000;
+
+/// 客户端报的时长只对音视频有意义，且要在合理值域内。
+///
+/// 图片、文档报时长直接丢掉：列表的角标只在音视频上出现，
+/// 留着这些值只会在以后某个查询里变成"奇怪的非空值"。
+fn accept_duration(category: &str, raw: Option<i64>) -> Option<i64> {
+    let ms = raw?;
+    if category != "video" && category != "audio" {
+        return None;
+    }
+    (0 < ms && ms <= MAX_DURATION_MS).then_some(ms)
+}
+
 /// 生成存储 ID
 fn generate_stored_id() -> String {
     nanoid::nanoid!(12)
@@ -94,6 +121,9 @@ impl FileService {
     /// `head` 为文件前若干字节（图片尺寸解析只需头部）。
     /// 类别由 `final_mime` 现算（不接收调用方的——结构精炼会改 mime）。
     /// 出错时由本方法负责清理 `tmp_path`。
+    // 参数看着多，但前四个是"流式上传的物理输入"（临时文件、字节数、哈希、文件头），
+    // 后四个是归属与客户端线索（后者已收进 UploadHints）。再抽一层结构体只会把
+    // 这一条链路绕得更长 —— 入口是 upload / upload_with_hints 两个简写。
     #[allow(clippy::too_many_arguments)]
     pub async fn upload_streamed(
         &self,
@@ -104,9 +134,13 @@ impl FileService {
         original_name: &str,
         final_mime: &str,
         user_id: Option<i64>,
-        tags: Option<Vec<String>>,
-        force: bool,
+        hints: UploadHints,
     ) -> Result<UploadOutcome, ServiceError> {
+        let UploadHints {
+            tags,
+            duration_ms: hinted_duration,
+            force,
+        } = hints;
         // zip 族补一次结构精炼（读中央目录是同步 I/O，丢进 blocking 线程）
         let (probe_path, probe_head) = (tmp_path.to_string(), head.to_vec());
         let structural = tokio::task::spawn_blocking(move || {
@@ -134,6 +168,10 @@ impl FileService {
         let safe_name = sanitize_name(original_name);
         let stored_id = generate_stored_id();
         let final_path = format!("{}/{}", self.upload_dir, stored_id);
+        // 时长由客户端在上传前读出来（lib/mediaDuration.ts）：浏览器读一次
+        // `loadedmetadata` 的成本远低于后端引媒体探测，且上传路径**不该**起子进程。
+        // 这里只做"配不配得上这个类别 + 值域"的校验，见 accept_duration
+        let duration_ms = accept_duration(category_str, hinted_duration);
 
         // 插库
         let file_row = match self
@@ -145,7 +183,7 @@ impl FileService {
                 size_bytes: data_size as i64,
                 width: None,
                 height: None,
-                duration_ms: None,
+                duration_ms,
                 user_id,
                 // force 副本显式不参与去重：写 NULL 退出唯一索引约束
                 content_hash: if force { None } else { Some(&hash) },
@@ -213,7 +251,9 @@ impl FileService {
                 size_bytes: file_row.size_bytes,
                 width,
                 height,
-                duration_ms: None,
+                // 取自刚插库的那一行，别写 None：上传响应与列表响应必须是同一份数据，
+                // 否则刚传完的卡片没有时长角标、刷新一下又有了（模型层漏映射的老毛病）
+                duration_ms: file_row.duration_ms,
                 user_id: file_row.user_id,
                 content_hash: file_row.content_hash,
                 tags: tag_names,
@@ -231,6 +271,8 @@ impl FileService {
     /// 上传（内存切片入口）：校验 → 落盘临时文件 → 交给 [`Self::upload_streamed`]。
     ///
     /// HTTP 路径走流式（`handler` 边读边写盘），此入口用于内部调用与测试。
+    /// 上传的最短路径：不接客户端线索（时长/标签/强制去重）。
+    /// 测试与"只想存下来"的调用方用它；handler 走 [`Self::upload_with_hints`]。
     pub async fn upload(
         &self,
         data: &[u8],
@@ -239,6 +281,29 @@ impl FileService {
         user_id: Option<i64>,
         tags: Option<Vec<String>>,
         force: bool,
+    ) -> Result<UploadOutcome, ServiceError> {
+        self.upload_with_hints(
+            data,
+            original_name,
+            client_mime,
+            user_id,
+            UploadHints {
+                tags,
+                duration_ms: None,
+                force,
+            },
+        )
+        .await
+    }
+
+    /// 带客户端线索的上传（handler 用）
+    pub async fn upload_with_hints(
+        &self,
+        data: &[u8],
+        original_name: &str,
+        client_mime: &str,
+        user_id: Option<i64>,
+        hints: UploadHints,
     ) -> Result<UploadOutcome, ServiceError> {
         let final_mime = mime::resolve_mime(data, client_mime, original_name)?;
         limits::ensure_within_limit(data.len() as u64, &final_mime)?;
@@ -256,10 +321,23 @@ impl FileService {
             original_name,
             &final_mime,
             user_id,
-            tags,
-            force,
+            hints,
         )
         .await
+    }
+
+    /// 补一个缺失的媒体时长（视频海报帧那条顺带做的回填；只在为空时写）
+    ///
+    /// 返回是否真的写了：`false` 表示库里已经有值（别的请求先补上了）。
+    pub async fn backfill_duration_ms(
+        &self,
+        stored_id: &str,
+        duration_ms: i64,
+    ) -> Result<bool, ServiceError> {
+        self.repo
+            .set_duration_ms_if_null(stored_id, duration_ms)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     /// 由已有记录组装"命中去重"结果（含标签与元信息）
@@ -632,6 +710,133 @@ mod tests {
     // ═══════════════════════════════════════════════════════════════
 
     // ── 上传 ──
+
+    // ── 客户端报的时长只对音视频有意义 ──
+    //
+    // duration_ms 这一列此前从来没人写过（上传路径只解析图片尺寸），列表里的
+    // "时长角标"因此永远是空的；现在由客户端读出来（lib/mediaDuration.ts），
+    // 服务端只负责"配不配得上这个类别 + 值域"。
+
+    #[test]
+    fn duration_is_accepted_only_for_media_within_range() {
+        assert_eq!(accept_duration("video", Some(125_000)), Some(125_000));
+        assert_eq!(accept_duration("audio", Some(1)), Some(1));
+        assert_eq!(
+            accept_duration("video", Some(24 * 60 * 60 * 1000)),
+            Some(24 * 60 * 60 * 1000),
+            "上限本身算合法"
+        );
+
+        // 图片/文档/其他报时长一律丢掉：列表角标只在音视频上出现
+        assert_eq!(accept_duration("image", Some(125_000)), None);
+        assert_eq!(accept_duration("document", Some(125_000)), None);
+        assert_eq!(accept_duration("other", Some(125_000)), None);
+
+        // 值域：0 与负数不是"时长"，超过 24 小时当坏数据
+        assert_eq!(accept_duration("video", Some(0)), None);
+        assert_eq!(accept_duration("video", Some(-1)), None);
+        assert_eq!(accept_duration("video", Some(24 * 60 * 60 * 1000 + 1)), None);
+        assert_eq!(accept_duration("video", None), None);
+    }
+
+    /// 回填只在为空时写，且**不动 updated_at**（它不是用户动作）。
+    /// 把 updated_at 先按到一个确定的过去值：回填若动了它就会露馅
+    #[tokio::test]
+    async fn backfill_duration_fills_only_nulls_and_keeps_updated_at() {
+        let ctx = setup_service().await;
+        let clip = ctx
+            .svc
+            .upload(MP4_MIN, "片段.mp4", "video/mp4", Some(7), None, false)
+            .await
+            .unwrap()
+            .file;
+        assert_eq!(clip.duration_ms, None, "上传没带时长时留空");
+
+        sqlx::query("UPDATE file SET updated_at = '2020-01-01T00:00:00+00:00' WHERE stored_id = ?")
+            .bind(&clip.stored_id)
+            .execute(&*ctx.pool)
+            .await
+            .unwrap();
+
+        assert!(
+            ctx.svc
+                .backfill_duration_ms(&clip.stored_id, 12_500)
+                .await
+                .unwrap()
+        );
+
+        let (ms, updated): (Option<i64>, String) = sqlx::query_as(
+            "SELECT duration_ms, updated_at FROM file WHERE stored_id = ?",
+        )
+        .bind(&clip.stored_id)
+        .fetch_one(&*ctx.pool)
+        .await
+        .unwrap();
+        assert_eq!(ms, Some(12_500));
+        assert!(
+            updated.starts_with("2020-01-01"),
+            "回填不该把文件顶到最近更新：{updated}"
+        );
+
+        // 已经有值就不再覆盖（别的请求可能先补上了）
+        assert!(
+            !ctx.svc
+                .backfill_duration_ms(&clip.stored_id, 99_999)
+                .await
+                .unwrap()
+        );
+        let kept: Option<i64> =
+            sqlx::query_scalar("SELECT duration_ms FROM file WHERE stored_id = ?")
+                .bind(&clip.stored_id)
+                .fetch_one(&*ctx.pool)
+                .await
+                .unwrap();
+        assert_eq!(kept, Some(12_500));
+    }
+
+    /// 时长要真的落库，并且**不该顺手把图片尺寸覆盖掉**
+    /// （此前 update_metadata 会一次写宽高时三个字段）
+    #[tokio::test]
+    async fn upload_persists_client_duration_for_video() {
+        let ctx = setup_service().await;
+        let clip = MP4_MIN;
+        let f = ctx
+            .svc
+            .upload_with_hints(
+                clip,
+                "片段.mp4",
+                "video/mp4",
+                Some(7),
+                UploadHints {
+                    duration_ms: Some(125_000),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap()
+            .file;
+
+        assert_eq!(f.file_category, FileCategory::Video);
+        assert_eq!(f.duration_ms, Some(125_000));
+
+        // 类别对不上就丢掉（图上报时长）
+        let png = ctx
+            .svc
+            .upload_with_hints(
+                PNG_1X1,
+                "图.png",
+                "image/png",
+                Some(7),
+                UploadHints {
+                    duration_ms: Some(125_000),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap()
+            .file;
+        assert_eq!(png.duration_ms, None);
+    }
 
     #[tokio::test]
     async fn upload_png_success_writes_file_metadata_and_tags() {
@@ -1103,8 +1308,10 @@ mod tests {
                 "写入.png",
                 "image/png",
                 Some(7),
-                Some(vec!["t".into()]),
-                false,
+                UploadHints {
+                    tags: Some(vec!["t".into()]),
+                    ..Default::default()
+                },
             )
             .await
             .unwrap();
@@ -1142,8 +1349,7 @@ mod tests {
                 "b.png",
                 "image/png",
                 Some(7),
-                None,
-                false,
+                UploadHints::default(),
             )
             .await
             .unwrap();

@@ -12,14 +12,7 @@ import { Grid, List, Upload, X } from "@components/ui/icons";
 import { fillPath, PATHS } from "@config/paths";
 import { formatBytes } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
-import {
-	type Component,
-	createEffect,
-	createSignal,
-	For,
-	onCleanup,
-	Show,
-} from "solid-js";
+import { type Component, createSignal, For, Show } from "solid-js";
 import type { FileItem, SortOrder } from "./api.ts";
 import BatchBar from "./components/BatchBar.tsx";
 import EmptyGuide from "./components/EmptyGuide.tsx";
@@ -31,9 +24,10 @@ import TagFilter from "./components/TagFilter.tsx";
 import TagManager from "./components/TagManager.tsx";
 import UploadPanel from "./components/UploadPanel.tsx";
 import styles from "./FileList.module.css";
-import { filesFromPaste, useFileDropZone } from "./hooks/useFileDropZone.ts";
+import { useFileDropZone, usePasteFiles } from "./hooks/useFileDropZone.ts";
 import { useFileList } from "./hooks/useFileList.ts";
-import { canZoom } from "./lib/thumbnail.ts";
+import { useImageLightbox } from "./hooks/useImageLightbox.ts";
+import { useListScroll } from "./hooks/useListScroll.ts";
 
 /** 列表滚动位置的 sessionStorage 键（从详情返回时恢复） */
 const SCROLL_KEY = "file-list-scroll-top";
@@ -67,9 +61,8 @@ const FileListPage: Component = () => {
 		});
 	};
 
-	// ── 图片灯箱：在当前页的图片之间左右切换（可放大判定与卡片/列表行共用一处）
-	const imageItems = () => f.items().filter(canZoom);
-	const [lightboxId, setLightboxId] = createSignal<string | null>(null);
+	// ── 图片灯箱：在当前页的图片之间左右切换（可放大判定与卡片/列表行共用一处） ──
+	const lightbox = useImageLightbox(() => f.items());
 	const [tagManagerOpen, setTagManagerOpen] = createSignal(false);
 	const [menu, setMenu] = createSignal<{
 		item: FileItem;
@@ -80,56 +73,14 @@ const FileListPage: Component = () => {
 		e.preventDefault();
 		setMenu({ item, x: e.clientX, y: e.clientY });
 	};
-	const lightboxIndex = () => {
-		const id = lightboxId();
-		if (!id) return -1;
-		return imageItems().findIndex((item) => item.stored_id === id);
-	};
-	const openLightbox = (item: FileItem) => setLightboxId(item.stored_id);
 
 	// ── 整页拖放 / 粘贴上传（逻辑见 hooks/useFileDropZone.ts） ──
 	const dropZone = useFileDropZone((files) => void f.handleUploadFiles(files));
+	usePasteFiles((files) => void f.handleUploadFiles(files));
 
-	const onPaste = (e: ClipboardEvent) => {
-		const files = filesFromPaste(e);
-		if (files.length === 0) return;
-		e.preventDefault();
-		void f.handleUploadFiles(files);
-	};
-	document.addEventListener("paste", onPaste);
-	onCleanup(() => document.removeEventListener("paste", onPaste));
-
-	// ── 滚动位置：离开时保存，从详情返回时恢复一次 ──
-	const scrollContainer = () =>
-		document.querySelector("[data-scroll-container]") ??
-		document.documentElement;
-
-	onCleanup(() => {
-		sessionStorage.setItem(SCROLL_KEY, String(scrollContainer().scrollTop));
-	});
-
-	let scrollRestored = false;
-	createEffect(() => {
-		// 等列表数据渲染完再恢复，否则高度不足会被截断
-		if (scrollRestored || f.items().length === 0) return;
-		const saved = Number(sessionStorage.getItem(SCROLL_KEY) ?? "0");
-		sessionStorage.removeItem(SCROLL_KEY); // 一次性：只在紧接的返回时生效
-		scrollRestored = true;
-		if (saved > 0) {
-			requestAnimationFrame(() => {
-				scrollContainer().scrollTop = saved;
-			});
-		}
-	});
-
-	// 上传命中已有文件时：列表就绪后滚动定位到它
-	createEffect(() => {
-		const id = f.highlightId();
-		if (!id) return;
-		void f.items(); // 依赖列表数据，等渲染完成再定位
-		const el = document.querySelector(`[data-file-id="${id}"]`);
-		el?.scrollIntoView({ behavior: "smooth", block: "center" });
-	});
+	// ── 滚动位置：离开时记住、从详情返回时恢复；上传命中时定位到该文件 ──
+	const scroll = useListScroll({ items: f.items, key: SCROLL_KEY });
+	scroll.trackHighlight(f.highlightId);
 
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: 整页拖拽投放区无对应 ARIA role；键盘用户走「上传文件」按钮
@@ -304,7 +255,7 @@ const FileListPage: Component = () => {
 											onToggleSelect={f.toggleSelect}
 											onContextMenu={openContextMenu}
 											onOpen={() => openDetail(item)}
-											onZoom={() => openLightbox(item)}
+											onZoom={() => lightbox.open(item)}
 											onStartRename={f.startRename}
 											onDelete={f.handleDelete}
 										/>
@@ -320,7 +271,7 @@ const FileListPage: Component = () => {
 										onContextMenu={openContextMenu}
 										editName={f.editName()}
 										onOpen={() => openDetail(item)}
-										onZoom={() => openLightbox(item)}
+										onZoom={() => lightbox.open(item)}
 										onStartRename={f.startRename}
 										onDelete={f.handleDelete}
 										onRename={f.handleRename}
@@ -366,15 +317,12 @@ const FileListPage: Component = () => {
 				onDelete={f.batchDelete}
 			/>
 
-			<Show when={lightboxIndex() >= 0}>
+			<Show when={lightbox.index() >= 0}>
 				<ImageLightbox
-					items={imageItems()}
-					index={lightboxIndex()}
-					onClose={() => setLightboxId(null)}
-					onNavigate={(index) => {
-						const next = imageItems()[index];
-						if (next) setLightboxId(next.stored_id);
-					}}
+					items={lightbox.items()}
+					index={lightbox.index()}
+					onClose={lightbox.close}
+					onNavigate={lightbox.navigate}
 				/>
 			</Show>
 		</div>

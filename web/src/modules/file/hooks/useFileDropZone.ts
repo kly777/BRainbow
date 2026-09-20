@@ -3,7 +3,7 @@
 // 三个入口（拖入、粘贴、文件选择）最终都汇聚到同一个上传队列。
 
 import { isTypingTarget } from "@shared/utils";
-import { createSignal } from "solid-js";
+import { createSignal, onCleanup, onMount } from "solid-js";
 
 export interface FileDropZone {
 	/** 是否有文件正悬停在页面上（渲染投放高亮用） */
@@ -60,4 +60,19 @@ export function filesFromPaste(e: ClipboardEvent): File[] {
 		.filter((item) => item.kind === "file")
 		.map((item) => item.getAsFile())
 		.filter((file): file is File => file !== null);
+}
+
+/**
+ * 整页粘贴上传：监听 document 的 paste，命中文件就交给 onFiles（并阻止默认行为）。
+ * 输入框内的粘贴由 filesFromPaste 放行给输入框自己处理。
+ */
+export function usePasteFiles(onFiles: (files: File[]) => void): void {
+	const onPaste = (e: ClipboardEvent) => {
+		const files = filesFromPaste(e);
+		if (files.length === 0) return;
+		e.preventDefault();
+		onFiles(files);
+	};
+	onMount(() => document.addEventListener("paste", onPaste));
+	onCleanup(() => document.removeEventListener("paste", onPaste));
 }

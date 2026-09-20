@@ -25,6 +25,7 @@
 		"marked": "^18.0.9",
 		"marked-highlight": "^2.2.4",
 		"marked-katex-extension": "^5.1.10",
+		"pdfjs-dist": "5.7.284",
 		"solid-icons": "^1.2.0",
 		"solid-js": "^1.9.14",
 		"three": "^0.186.0"

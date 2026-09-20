@@ -12,6 +12,7 @@ import { File as FileIcon, Lock } from "@components/ui/icons";
 import { type Component, createSignal, Match, Show, Switch } from "solid-js";
 import type { FileItem } from "../api.ts";
 import styles from "../FileList.module.css";
+import { usePdfThumb } from "../hooks/usePdfThumb.ts";
 import { useThumbPreview } from "../hooks/useThumbPreview.ts";
 import { fileExt } from "../lib/filename.ts";
 import { fmtDurationMs } from "../lib/meta.ts";
@@ -70,13 +71,20 @@ export const FileThumb: Component<{
 		return thumbSrc(props.item, w[0] ?? 320) ?? props.item.url;
 	};
 	const srcset = () => thumbSrcSet(props.item, widths()) ?? undefined;
-	const backdrop = () =>
-		preferContain(props.item) ? thumbBackdrop(props.item) : undefined;
+	// PDF 首页（前端 pdf.js 渲染，进入视口才开始）；拿不到就一直显示徽章
+	const pdf = usePdfThumb(() => props.item);
+	const backdrop = () => {
+		// PDF 首页是 canvas 出的 blob URL，模糊一份不额外请求
+		const home = pdf.url();
+		if (home) return `url("${home}")`;
+		return preferContain(props.item) ? thumbBackdrop(props.item) : undefined;
+	};
 	// 内容缩略（文本片段 / office 封面）：取数是异步的，取不到就一直显示徽章
 	const content = useThumbPreview(() => props.item);
 
 	return (
 		<span
+			ref={(el) => pdf.attach(el)}
 			class={styles.thumbHost}
 			classList={{ [styles.thumbTinted]: tint() !== null }}
 			style={tint() === null ? undefined : { "--thumb-hue": `${tint()}` }}
@@ -100,6 +108,20 @@ export const FileThumb: Component<{
 						<Lock size={12} />
 						{props.lockOnly ? null : "私密"}
 					</span>
+				</Match>
+				{/* PDF 首页：就是第 1 页的那张图（竖版，所以 contain + 上面那层模糊底衬） */}
+				<Match when={pdf.url()}>
+					{(home) => (
+						<img
+							src={home()}
+							alt={props.item.original_name}
+							class={`${props.imgClass} ${styles.fadeImg} ${styles.imgContain}`}
+							classList={{ [styles.fadeImgIn]: loaded() }}
+							decoding="async"
+							onLoad={markLoaded}
+							onError={() => setBrokenId(props.item.stored_id)}
+						/>
+					)}
 				</Match>
 				{/* 文本/代码、office、电子书、压缩包、数据库：取到内容就显示内容 ——
 				    比后缀徽章好认得多。取不到（或还在取）时不匹配，落到下面的 ExtBadge */}

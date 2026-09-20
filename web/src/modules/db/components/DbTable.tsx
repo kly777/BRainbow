@@ -337,7 +337,8 @@ const DbTable: Component<DbTableProps> = (props) => {
 						showFilters={showFilters()}
 					/>
 					<tbody>
-						{props.rows.length === 0 && (
+						{/* 加载中不给空行：工具栏已经写着"加载中…"，此时再说"无数据"是把两件事混成一句 */}
+						{props.rows.length === 0 && !props.loading && (
 							<EmptyRow colSpan={props.columns.length + 1} />
 						)}
 						<TableRows

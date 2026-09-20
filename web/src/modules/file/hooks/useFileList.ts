@@ -23,6 +23,7 @@ import {
 	updateFile,
 	uploadFileWithProgress,
 } from "../api.ts";
+import { validateUploadFile } from "../lib/uploadLimits.ts";
 
 const VALID_CATEGORIES = ["", "image", "video", "audio", "document", "other"];
 
@@ -35,13 +36,13 @@ const UPLOAD_CONCURRENCY = 3;
 /** 列表视图模式 */
 export type FileView = "grid" | "list";
 
-/** 单个文件的上传任务状态 */
+/** 单个文件的上传任务状态；`rejected` = 前端预校验拦下，从未发过请求 */
 export interface UploadTask {
 	id: number;
 	name: string;
 	size: number;
 	loaded: number;
-	status: "pending" | "uploading" | "done" | "duplicate" | "error";
+	status: "pending" | "uploading" | "done" | "duplicate" | "error" | "rejected";
 	error?: string;
 }
 
@@ -214,15 +215,42 @@ export function useFileList(): FileListApi {
 		const list = files.filter(Boolean);
 		if (list.length === 0) return;
 
-		const tasks: UploadTask[] = list.map((file, index) => ({
-			id: uploadTaskSeq++,
+		// 前端先过一道：空文件与明确超限的不进队列。大文件传到一半才收到 400 意味着
+		// 用户白等一次完整上传（几百 MB 可能就是几分钟），本地拦下只需一瞬。
+		// 名字先按拖入顺序一次性定好，被拦下与否都不影响面板里的编号。
+		const named = list.map((file, index) => ({
+			file,
 			name: file.name || `未命名文件 ${index + 1}`,
-			size: file.size,
+		}));
+		const accepted: typeof named = [];
+		const rejected: UploadTask[] = [];
+		for (const item of named) {
+			const reason = validateUploadFile(item.file);
+			if (reason) {
+				rejected.push({
+					id: uploadTaskSeq++,
+					name: item.name,
+					size: item.file.size,
+					loaded: 0,
+					status: "rejected",
+					error: reason,
+				});
+			} else {
+				accepted.push(item);
+			}
+		}
+
+		const tasks: UploadTask[] = accepted.map((item) => ({
+			id: uploadTaskSeq++,
+			name: item.name,
+			size: item.file.size,
 			loaded: 0,
 			status: "pending",
 		}));
-		setUploadTasks((prev) => [...prev, ...tasks]);
-		setUploading(true);
+		// 被拦下的也进面板（否则用户拖了文件却"什么都没发生"），只是不占并发位
+		const allTasks = [...rejected, ...tasks];
+		setUploadTasks((prev) => [...prev, ...allTasks]);
+		setUploading(accepted.length > 0);
 
 		const patchTask = (id: number, patch: Partial<UploadTask>) => {
 			setUploadTasks((prev) =>
@@ -236,7 +264,10 @@ export function useFileList(): FileListApi {
 		let firstDuplicateId: string | null = null;
 
 		// 限并发上传：一次拖十几个文件时避免打满连接
-		const queue = list.map((file, i) => ({ file, task: tasks[i] }));
+		const queue = accepted.map((item, i) => ({
+			file: item.file,
+			task: tasks[i],
+		}));
 		const workers = Array.from(
 			{ length: Math.min(UPLOAD_CONCURRENCY, queue.length) },
 			async () => {
@@ -271,12 +302,14 @@ export function useFileList(): FileListApi {
 
 		// 汇总：单个文件沿用原来的成功提示，批量走一条汇总
 		if (list.length === 1) {
-			const only = tasks[0];
+			const only = allTasks[0];
 			const finished = uploadTasks().find((t) => t.id === only.id);
 			if (finished?.status === "duplicate") {
 				notifyInfo("已存在相同文件", `「${only.name}」已在文件列表中`);
 			} else if (finished?.status === "done") {
 				notifySuccess(`「${only.name}」上传成功`);
+			} else if (finished?.status === "rejected") {
+				notifyError("未上传", finished.error ?? "文件不符合上传要求");
 			} else {
 				notifyError("上传失败", finished?.error ?? "未知错误");
 			}
@@ -284,9 +317,18 @@ export function useFileList(): FileListApi {
 			const parts = [`成功 ${ok} 个`];
 			if (duplicated > 0) parts.push(`已存在 ${duplicated} 个`);
 			if (failed > 0) parts.push(`失败 ${failed} 个`);
+			if (rejected.length > 0) parts.push(`未上传 ${rejected.length} 个`);
 			const summary = parts.join("，");
-			if (failed > 0) notifyError("上传完成（有失败）", summary);
-			else notifySuccess("上传完成", summary);
+			if (failed > 0) {
+				notifyError("上传完成（有失败）", summary);
+			} else if (rejected.length > 0) {
+				// 一个都没传上去时说"上传完成"会被读成"传成功了"
+				const title =
+					ok > 0 || duplicated > 0 ? "上传完成（有未上传）" : "未上传";
+				notifyError(title, summary);
+			} else {
+				notifySuccess("上传完成", summary);
+			}
 		}
 
 		// 命中重复的文件在列表中定位高亮（只针对单个上传，批量时会跳来跳去）

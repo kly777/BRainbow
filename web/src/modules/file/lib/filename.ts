@@ -1,9 +1,9 @@
 /**
  * 文件名后缀提取与代码高亮语言判定。
  *
- * 「这个文件是不是文本」由后端决定（infer 魔数 + mime_guess 扩展名兜底，
- * 未知文本统一存为 text/plain），前端只看 mime 是否 text/*；
- * 这里只保留两件前端独有的事：卡片后缀徽章、代码预览的高亮语言。
+ * 「这个文件是不是文本」由后端按**字节**判定（mime.rs 的 looks_like_text，
+ * 先定族再定种，见 §3），文本一律存为 text/*；前端只看 mime 是否 text/*。
+ * 高亮语言是前端独有的知识（highlight.js），所以这张表留在这里。
  */
 
 /** 后缀显示字符上限（超长后缀截断，如 "jpeg2000" → "JPEG2"） */
@@ -84,6 +84,33 @@ export function codeLang(name: string): string {
 	};
 	if (byName[lower]) return byName[lower];
 	return EXT_TO_LANG[lowerExt(lower)] ?? "";
+}
+
+// 这里曾经有一份 PLAIN_TEXT_EXTS（srt / vtt / lrc / log / patch …）与配套的
+// isPlainTextName：后端当时按 mime_guess 的映射表给 MIME，字幕这类扩展名拿到的是
+// application/x-subrip（不是 text/*），前端只好再按扩展名猜一次"这其实是文本"。
+//
+// 现在"是不是文本"由**字节**判定（后端 mime.rs 的 looks_like_text），这类文件
+// 上传后 mime 就是 text/*，于是这份清单连同"other 类别里按扩展名认领文本"的规则
+// 一起退休了。**别再往前端加这类表** —— 后端判得出就是判得出。
+
+/**
+ * 是否是压缩包（注册表按扩展名认领；**内容判据在后端** —— 压缩包没有稳定的 MIME，
+ * 浏览器对 .tar.gz 可能报空、application/gzip、x-tar 各种写法）。
+ * `.tar.gz` / `.tgz` 这种双扩展名要一起认。
+ */
+export function isArchiveName(name: string): boolean {
+	return /\.(zip|tar|tgz|tar\.gz)$/i.test(name.trim());
+}
+
+/** 是否是 SQLite 数据库（注册表按扩展名认领；内容判据在后端，见 preview.rs） */
+export function isSqliteName(name: string): boolean {
+	return /\.(sqlite|sqlite3|db)$/i.test(name.trim());
+}
+
+/** 是否是电子书（注册表按扩展名认领；内容判据在后端 —— epub 也是 zip） */
+export function isEpubName(name: string): boolean {
+	return /\.epub$/i.test(name.trim());
 }
 
 /** 生成 Markdown 代码围栏：围栏长度取内容中最长反引号串 + 1（避免内容截断围栏） */

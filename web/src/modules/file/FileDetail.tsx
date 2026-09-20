@@ -3,153 +3,35 @@
 import { AsyncSection, Button, DetailPage, Field, Input } from "@components/ui";
 import {
 	AlertTriangle,
-	ChevronLeft,
-	ChevronRight,
 	Copy,
 	Download,
-	FileText,
 	Lock,
 	Pencil,
 	Plus,
 	Unlock,
 	X,
 } from "@components/ui/icons";
-import { copyTextWithToast, fmtLocal, formatBytes } from "@shared/utils";
-import { type Component, For, type JSX, onCleanup, Show } from "solid-js";
+import {
+	copyTextWithToast,
+	fmtLocal,
+	formatBytes,
+	strParam,
+	useUrlParams,
+} from "@shared/utils";
+import { type Component, createSignal, For, onCleanup, Show } from "solid-js";
 import type { FileItem } from "./api.ts";
 import TagInput from "./components/TagInput.tsx";
-import TextPreview from "./components/TextPreview.tsx";
 import styles from "./FileDetail.module.css";
 import { type MetaEntry, useFileDetail } from "./hooks/useFileDetail.ts";
-import { usePreviewUrl } from "./hooks/usePreviewUrl.ts";
 import { categoryLabel } from "./lib/category.ts";
-
-// ── 预览（左侧主体） ──
-
-/** 统一处理"私密文件要先换 blob"的媒体渲染：加载中给出提示，避免 401 破图 */
-const PreviewMedia: Component<{
-	src: string;
-	isPrivate: boolean;
-	children: (url: string) => JSX.Element;
-}> = (props) => {
-	const resolved = usePreviewUrl(
-		() => props.src,
-		() => props.isPrivate,
-	);
-	return (
-		<Show
-			when={resolved()}
-			// keyed 不能省：切到下一个文件时 resolved 从"真值换成另一个真值"
-			// （公开文件是同步替换原 URL，私密文件是换新的 blob URL），非 keyed 的 Show
-			// 只在真假变化时重建子节点，于是 <img>/<video>/<iframe> 会一直停在首帧的 src 上
-			// —— 页面标题、元信息都换了，只有画面不动。回归测试见 FileDetail.render.test.tsx。
-			keyed
-			fallback={
-				<Show when={props.isPrivate}>
-					<p class={styles.previewLoading}>正在加载私密文件…</p>
-				</Show>
-			}
-		>
-			{(url) => props.children(url)}
-		</Show>
-	);
-};
-
-const Preview: Component<{ item: FileItem }> = (props) => {
-	const url = () => props.item.url;
-	return (
-		<div class={styles.previewStage}>
-			{/* 内容已丢失：内联预览与下载都没有意义，统一给出说明 */}
-			<Show
-				when={!props.item.missing}
-				fallback={
-					<div class={styles.previewFallback}>
-						<AlertTriangle size={48} class={styles.previewMissingIcon} />
-						<p class={styles.previewFallbackName}>文件内容已丢失</p>
-						<p class={styles.previewMissingHint}>
-							数据库里仍保留这条记录，但磁盘上找不到对应文件，无法预览或下载。
-							把文件放回上传目录后会自动恢复正常。
-						</p>
-					</div>
-				}
-			>
-				<Show when={props.item.file_category === "image"}>
-					<PreviewMedia src={url()} isPrivate={props.item.is_private}>
-						{(resolvedUrl) => (
-							<a
-								href={resolvedUrl}
-								target="_blank"
-								rel="noopener noreferrer"
-								class={styles.previewLink}
-							>
-								<img
-									src={resolvedUrl}
-									alt={props.item.original_name}
-									class={styles.previewImg}
-								/>
-							</a>
-						)}
-					</PreviewMedia>
-				</Show>
-				<Show when={props.item.file_category === "video"}>
-					<PreviewMedia src={url()} isPrivate={props.item.is_private}>
-						{(resolvedUrl) => (
-							// biome-ignore lint/a11y/useMediaCaption: 文件预览无字幕源
-							<video src={resolvedUrl} controls class={styles.previewMedia} />
-						)}
-					</PreviewMedia>
-				</Show>
-				<Show when={props.item.file_category === "audio"}>
-					<PreviewMedia src={url()} isPrivate={props.item.is_private}>
-						{(resolvedUrl) => (
-							// biome-ignore lint/a11y/useMediaCaption: 文件预览无字幕源
-							<audio src={resolvedUrl} controls class={styles.previewAudio} />
-						)}
-					</PreviewMedia>
-				</Show>
-				<Show when={props.item.mime_type === "application/pdf"}>
-					<PreviewMedia src={url()} isPrivate={props.item.is_private}>
-						{(resolvedUrl) => (
-							<iframe
-								src={resolvedUrl}
-								class={styles.previewFrame}
-								title="PDF 预览"
-							/>
-						)}
-					</PreviewMedia>
-				</Show>
-				{/* 文本类预览：后端已把可识别的文本（含按扩展名兜底的源码/配置）
-			    统一存为 text/*，前端只看 mime */}
-				<Show when={props.item.mime_type.startsWith("text/")}>
-					<div class={styles.textPaneWrap}>
-						<TextPreview item={props.item} />
-					</div>
-				</Show>
-				<Show
-					when={
-						props.item.file_category !== "image" &&
-						props.item.file_category !== "video" &&
-						props.item.file_category !== "audio" &&
-						props.item.mime_type !== "application/pdf" &&
-						!props.item.mime_type.startsWith("text/")
-					}
-				>
-					<div class={styles.previewFallback}>
-						<FileText size={48} class={styles.previewFallbackIcon} />
-						<p class={styles.previewFallbackName}>{props.item.original_name}</p>
-						<Button
-							variant="secondary"
-							size="sm"
-							onClick={() => window.open(url(), "_blank")}
-						>
-							<Download size={14} /> 下载
-						</Button>
-					</div>
-				</Show>
-			</Show>
-		</div>
-	);
-};
+import {
+	draggedSideWidth,
+	parseSideWidth,
+	sideWidthKey,
+} from "./lib/splitPane.ts";
+import { buildViewParam, viewStateOf } from "./lib/viewLink.ts";
+import { PreviewStage } from "./viewers/PreviewStage.tsx";
+import { ViewLinkContext } from "./viewers/viewLink.ts";
 
 // ── 侧栏：查看模式 ──
 
@@ -337,21 +219,64 @@ const EditForm: Component<{ m: ReturnType<typeof useFileDetail> }> = (
 export default function FileDetail() {
 	const m = useFileDetail();
 
-	// ← → 在同批文件间切换；输入框/文本域聚焦时不劫持方向键
-	const onKeyDown = (e: KeyboardEvent) => {
-		const tag = (e.target as HTMLElement | null)?.tagName;
-		if (tag === "INPUT" || tag === "TEXTAREA") return;
-		if (e.key === "ArrowLeft" && m.hasPrev()) {
-			e.preventDefault();
-			m.goPrev();
-		}
-		if (e.key === "ArrowRight" && m.hasNext()) {
-			e.preventDefault();
-			m.goNext();
-		}
+	/**
+	 * 查看器内部状态的深链（P4-5）：`?view=<查看器id>:<状态串>`。
+	 * 读用 get、写用 set —— 用 `useUrlParams` 的默认值语义，写回 "" 即从 URL 清除。
+	 */
+	const viewParams = useUrlParams({ view: strParam("") });
+	const viewLink = {
+		state: (viewerId: string) => viewStateOf(viewParams.get("view"), viewerId),
+		setState: (viewerId: string, value: string | number | undefined) =>
+			viewParams.set({
+				view: value === undefined ? "" : buildViewParam(viewerId, value),
+			}),
 	};
-	document.addEventListener("keydown", onKeyDown);
-	onCleanup(() => document.removeEventListener("keydown", onKeyDown));
+
+	/**
+	 * 两栏宽度：侧栏可拖拽调宽（看文档/大图时把空间让给预览），宽度记在本地。
+	 * 存**像素**而不是比例 —— 侧栏里是键值对文本、字号固定，"多宽能读"是绝对量。
+	 */
+	const [sideWidth, setSideWidth] = createSignal(
+		parseSideWidth(localStorage.getItem(sideWidthKey)),
+	);
+	const [dragging, setDragging] = createSignal(false);
+
+	const onDragStart = (e: PointerEvent) => {
+		e.preventDefault();
+		const startX = e.clientX;
+		const startWidth = sideWidth();
+		const target = e.currentTarget as HTMLElement;
+		// 捕获指针：拖到分隔条外面（甚至拖出窗口）也不断线
+		target.setPointerCapture(e.pointerId);
+		setDragging(true);
+
+		const onMove = (move: PointerEvent) => {
+			setSideWidth(draggedSideWidth(startWidth, startX, move.clientX));
+		};
+		const onUp = () => {
+			setDragging(false);
+			target.releasePointerCapture?.(e.pointerId);
+			try {
+				localStorage.setItem(sideWidthKey, String(sideWidth()));
+			} catch {
+				// 存不了就算了：本次拖拽仍然生效
+			}
+			target.removeEventListener("pointermove", onMove);
+			target.removeEventListener("pointerup", onUp);
+			target.removeEventListener("pointercancel", onUp);
+		};
+		target.addEventListener("pointermove", onMove);
+		target.addEventListener("pointerup", onUp);
+		target.addEventListener("pointercancel", onUp);
+		onCleanup(onUp);
+	};
+
+	// 详情页是**单个文件**的页面：没有"上一个/下一个"（`/file/:id` 是文件汇集里的一条，
+	// 相邻文件之间没有语义关系，给这种按钮只会让人误以为它们相关 —— 曾经有过，已移除）。
+	// 浏览一组文件回列表页，那里的灯箱翻页按当前筛选结果来，语义成立。
+	//
+	// 也刻意**不**绑定 ←/→ 切文件：3DGS 预览用方向键移动相机（见 viewers/splat/controls.ts），
+	// 全局快捷键会和它抢事件（回归测试断言方向键不切文件：FileDetail.render.test.tsx）。
 
 	return (
 		<DetailPage
@@ -362,27 +287,6 @@ export default function FileDetail() {
 			onBack={m.handleBack}
 			actions={
 				<>
-					<Show when={m.siblingCount() > 1}>
-						<Button
-							variant="icon"
-							title="上一个（←）"
-							disabled={!m.hasPrev()}
-							onClick={m.goPrev}
-						>
-							<ChevronLeft size={16} />
-						</Button>
-						<span class={styles.siblingPos}>
-							{m.siblingPosition()} / {m.siblingCount()}
-						</span>
-						<Button
-							variant="icon"
-							title="下一个（→）"
-							disabled={!m.hasNext()}
-							onClick={m.goNext}
-						>
-							<ChevronRight size={16} />
-						</Button>
-					</Show>
 					<Button
 						variant="icon"
 						title="复制文件 URL（可用于 Markdown 引用）"
@@ -440,12 +344,40 @@ export default function FileDetail() {
 				refreshing={() => m.dataRefreshing}
 				onRetry={m.refetch}
 				class={styles.body}
+				style={`--side-width: ${sideWidth()}px`}
 			>
 				{(item) => (
 					<>
 						<section class={styles.previewPane} aria-label="文件预览">
-							<Preview item={item()} />
+							<ViewLinkContext.Provider value={viewLink}>
+								<PreviewStage item={item()} />
+							</ViewLinkContext.Provider>
 						</section>
+						{/* 分隔条：拖它调整两栏宽度；键盘用户可聚焦后按左右方向键微调（一次 16px）。
+						    用 <hr> 而不是 div+role：**它的隐式角色就是 separator**（ARIA 的
+						    window splitter 模式），浏览器与读屏都不必我们再去声明 */}
+						<hr
+							class={`${styles.splitter} ${dragging() ? styles.splitterActive : ""}`}
+							aria-orientation="vertical"
+							aria-label="调整预览区与信息栏宽度"
+							aria-valuenow={sideWidth()}
+							tabIndex={0}
+							onPointerDown={onDragStart}
+							onKeyDown={(e) => {
+								// 与鼠标语义一致：左方向键 = 把分隔条往左移（侧栏因此变宽）
+								const pointerDelta =
+									e.key === "ArrowLeft" ? -16 : e.key === "ArrowRight" ? 16 : 0;
+								if (pointerDelta === 0) return;
+								e.preventDefault();
+								const next = draggedSideWidth(sideWidth(), 0, pointerDelta);
+								setSideWidth(next);
+								try {
+									localStorage.setItem(sideWidthKey, String(next));
+								} catch {
+									// 存不了就算了：本次调整仍然生效
+								}
+							}}
+						/>
 						<aside class={styles.sidePane} aria-label="文件信息">
 							<Show when={m.editing()} fallback={<FileView item={item()} />}>
 								<EditForm m={m} />

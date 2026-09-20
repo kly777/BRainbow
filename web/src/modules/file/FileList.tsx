@@ -34,6 +34,7 @@ import UploadPanel from "./components/UploadPanel.tsx";
 import styles from "./FileList.module.css";
 import { filesFromPaste, useFileDropZone } from "./hooks/useFileDropZone.ts";
 import { useFileList } from "./hooks/useFileList.ts";
+import { canZoom } from "./lib/thumbnail.ts";
 
 /** 列表滚动位置的 sessionStorage 键（从详情返回时恢复） */
 const SCROLL_KEY = "file-list-scroll-top";
@@ -67,9 +68,8 @@ const FileListPage: Component = () => {
 		});
 	};
 
-	// ── 图片灯箱：在当前页的图片之间左右切换 ──
-	const imageItems = () =>
-		f.items().filter((item) => item.file_category === "image");
+	// ── 图片灯箱：在当前页的图片之间左右切换（可放大判定与卡片/列表行共用一处）
+	const imageItems = () => f.items().filter(canZoom);
 	const [lightboxId, setLightboxId] = createSignal<string | null>(null);
 	const [tagManagerOpen, setTagManagerOpen] = createSignal(false);
 	const [menu, setMenu] = createSignal<{

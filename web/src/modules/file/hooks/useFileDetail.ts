@@ -1,6 +1,6 @@
 // ── /file/:id 详情页数据逻辑：加载/编辑（名称+标签+元信息）/删除 ──
 
-import { fillPath, PATHS } from "@config/paths";
+import { PATHS } from "@config/paths";
 import { getErrorMessage, HttpError } from "@shared/api";
 import {
 	notifyError,
@@ -10,9 +10,9 @@ import {
 	useDetailResource,
 } from "@shared/utils";
 import { useLocation, useNavigate, useParams } from "@solidjs/router";
-import { createResource, createSignal } from "solid-js";
+import { createSignal } from "solid-js";
 import type { FileItem } from "../api.ts";
-import { deleteFile, getFile, listFiles, updateFile } from "../api.ts";
+import { deleteFile, getFile, updateFile } from "../api.ts";
 
 export interface MetaEntry {
 	key: string;
@@ -47,13 +47,6 @@ export interface FileDetailApi {
 	save: () => Promise<void>;
 	remove: () => Promise<void>;
 	handleBack: () => void;
-	/** 同批文件（来源列表的上下文），用于上/下一个浏览 */
-	siblingCount: () => number;
-	siblingPosition: () => number;
-	hasPrev: () => boolean;
-	hasNext: () => boolean;
-	goPrev: () => void;
-	goNext: () => void;
 }
 
 export function useFileDetail(): FileDetailApi {
@@ -75,41 +68,11 @@ export function useFileDetail(): FileDetailApi {
 	const refetch = resource.refetch;
 	const mutate = resource.mutate;
 
-	// 同批文件：从进入详情时的来源 URL 还原列表上下文（页码/类别/标签/搜索），
-	// 用它支持 ← → 与工具条上的上一个/下一个（命中 30s 缓存，几乎无额外开销）
-	const [siblings] = createResource(async () => {
-		const from = (location.state as { from?: string } | null)?.from;
-		if (!from?.startsWith(PATHS.file)) return [];
-		const query = from.split("?")[1] ?? "";
-		const sp = new URLSearchParams(query);
-		const result = await listFiles({
-			page: Number(sp.get("page") ?? "1") || 1,
-			page_size: 100,
-			category: sp.get("category") ?? undefined,
-			tag: sp.get("tag") ?? undefined,
-			q: sp.get("q") ?? undefined,
-		});
-		return result.items;
-	});
-
-	const siblingIndex = () =>
-		(siblings() ?? []).findIndex((item) => item.stored_id === storedId());
-	const hasPrev = () => siblingIndex() > 0;
-	const hasNext = () => {
-		const list = siblings() ?? [];
-		const index = siblingIndex();
-		return index >= 0 && index < list.length - 1;
-	};
-
-	const goSibling = (delta: number) => {
-		const list = siblings() ?? [];
-		const target = list[siblingIndex() + delta];
-		if (!target) return;
-		// 保留 from，切换后返回仍回到同一列表位置
-		navigate(fillPath(PATHS.fileDetail, target.stored_id), {
-			state: location.state,
-		});
-	};
+	// 这里曾经有"同批文件"（从来源 URL 还原列表上下文 → 工具条上的上一个/下一个，
+	// 以及图片灯箱的翻页）。已移除：`/file/:id` 是**文件汇集**里的一条，相邻文件之间
+	// 没有语义关系（不是相册、不是书），给"下一个"按钮只会让人误以为它们相关。
+	// 顺带省掉每次打开详情页都要发一次 listFiles 请求。浏览一组文件请回列表页，
+	// 那里的灯箱翻页是按当前筛选结果来的，语义成立。
 
 	const [editing, setEditing] = createSignal(false);
 	const [name, setName] = createSignal("");
@@ -272,11 +235,5 @@ export function useFileDetail(): FileDetailApi {
 		save,
 		remove,
 		handleBack,
-		siblingCount: () => (siblings() ?? []).length,
-		siblingPosition: () => siblingIndex() + 1,
-		hasPrev,
-		hasNext,
-		goPrev: () => goSibling(-1),
-		goNext: () => goSibling(1),
 	};
 }

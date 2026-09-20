@@ -97,3 +97,169 @@ describe("ImageLightbox", () => {
 		expect(navButton("下一张")?.disabled).toBe(false);
 	});
 });
+
+describe("ImageLightbox 缩放", () => {
+	/**
+	 * 让 <img> 有尺寸：jsdom 不做布局（offsetWidth 恒为 0，naturalWidth 也是 0），
+	 * 而缩放是"以适应窗口的渲染尺寸为基准"的，所以这里把两个量都补上。
+	 */
+	function fakeLoadedImage(renderedWidth = 500, natural = 2000) {
+		const el = img();
+		if (!el) throw new Error("还没有 <img>");
+		Object.defineProperty(el, "offsetWidth", {
+			value: renderedWidth,
+			configurable: true,
+		});
+		Object.defineProperty(el, "offsetHeight", {
+			value: 400,
+			configurable: true,
+		});
+		Object.defineProperty(el, "naturalWidth", {
+			value: natural,
+			configurable: true,
+		});
+		el.dispatchEvent(new Event("load"));
+		return el;
+	}
+
+	const zoomValue = () =>
+		document.querySelector<HTMLButtonElement>("[class*='zoomValue']");
+
+	it("加载后按原始像素给百分比（大图适应窗口时远小于 100%）", () => {
+		mount();
+		fakeLoadedImage(500, 2000);
+		// 500 / 2000 = 25%（这就是"适应窗口"的诚实读数）
+		expect(zoomValue()?.textContent?.trim()).toBe("25%");
+	});
+
+	it("点放大：缩放倍数上去了，百分比跟着涨", async () => {
+		mount();
+		fakeLoadedImage(500, 2000);
+		navButton("放大图片")?.click();
+		await Promise.resolve();
+		// 一档 ×1.25 → 500×1.25/2000 = 31%
+		expect(zoomValue()?.textContent?.trim()).toBe("31%");
+		// 显式像素宽度（缩放不能只靠 transform：那样滚动范围不会长出来）
+		expect(img()?.style.width).toBe("625px");
+	});
+
+	it("双击在原图比例与适应窗口之间切换", async () => {
+		mount();
+		fakeLoadedImage(500, 2000);
+
+		// 适应 → 1:1（2000/500 = 4 倍）→ 100%
+		img()?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+		await Promise.resolve();
+		expect(zoomValue()?.textContent?.trim()).toBe("100%");
+
+		// 再双击回到适应
+		img()?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+		await Promise.resolve();
+		expect(zoomValue()?.textContent?.trim()).toBe("25%");
+		expect(img()?.style.width).toBe("");
+	});
+
+	it("适应窗口时「缩小」不可用；放大后「回到适应」可点", async () => {
+		mount();
+		fakeLoadedImage(500, 2000);
+		expect(navButton("缩小图片")?.disabled).toBe(true);
+		expect(zoomValue()?.disabled).toBe(true);
+
+		navButton("放大图片")?.click();
+		await Promise.resolve();
+		expect(navButton("缩小图片")?.disabled).toBe(false);
+		expect(zoomValue()?.disabled).toBe(false);
+
+		zoomValue()?.click();
+		await Promise.resolve();
+		expect(zoomValue()?.textContent?.trim()).toBe("25%");
+	});
+
+	it("翻页后回到适应窗口（每张图尺寸不同，保留上一张的倍率没意义）", async () => {
+		mount();
+		fakeLoadedImage(500, 2000);
+		navButton("放大图片")?.click();
+		await Promise.resolve();
+		expect(zoomValue()?.textContent?.trim()).not.toBe("25%");
+
+		navButton("下一张")?.click();
+		await Promise.resolve();
+		// 新图的 onLoad 还没跑（jsdom 不会真的加载），但倍率已复位 → 不再有显式宽度
+		expect(img()?.style.width).toBe("");
+	});
+
+	it("滚轮缩放并阻止页面滚动", async () => {
+		mount();
+		fakeLoadedImage(500, 2000);
+
+		const wheel = new WheelEvent("wheel", {
+			deltaY: -100,
+			bubbles: true,
+			cancelable: true,
+		});
+		document
+			.querySelector<HTMLElement>("[class*='overlay']")
+			?.dispatchEvent(wheel);
+		await Promise.resolve();
+		// 放大了一档（且请求被 preventDefault 掉，不让底层页面跟着滚）
+		expect(zoomValue()?.textContent?.trim()).toBe("31%");
+		expect(wheel.defaultPrevented).toBe(true);
+	});
+});
+
+describe("ImageLightbox 焦点管理（模态的礼貌）", () => {
+	it("打开时把焦点收进对话框（否则 Tab 会跑到遮罩背后）", () => {
+		mount();
+		const close = document.querySelector<HTMLButtonElement>(
+			"button[title='关闭（Esc）']",
+		);
+		expect(document.activeElement).toBe(close);
+	});
+
+	it("关闭时把焦点还给打开它的元素（键盘用户不必重新 Tab 找回来）", () => {
+		// 模拟"从列表里的缩略图打开"：先聚焦它，再挂载灯箱
+		const trigger = document.createElement("button");
+		document.body.appendChild(trigger);
+		trigger.focus();
+		expect(document.activeElement).toBe(trigger);
+
+		mount();
+		// 焦点先被收进对话框
+		expect(document.activeElement).not.toBe(trigger);
+
+		// 关闭：组件先让父组件卸载，再把焦点还回触发元素
+		document
+			.querySelector<HTMLButtonElement>("button[title='关闭（Esc）']")
+			?.click();
+		expect(document.activeElement).toBe(trigger);
+
+		// Esc 也走同一条路（键盘用户的常规操作）
+		mount();
+		document.dispatchEvent(
+			new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+		);
+		expect(document.activeElement).toBe(trigger);
+	});
+
+	it("Tab 在对话框内回绕（末个 → 首个）", () => {
+		mount();
+		const close = document.querySelector<HTMLButtonElement>(
+			"button[title='关闭（Esc）']",
+		);
+		close?.focus();
+		const first = document.querySelector<HTMLElement>(
+			"[class*='nav'][aria-label='上一张'], [class*='nav'][aria-label='下一张']",
+		);
+		first?.focus();
+
+		const event = new KeyboardEvent("keydown", {
+			key: "Tab",
+			shiftKey: true,
+			bubbles: true,
+			cancelable: true,
+		});
+		document.dispatchEvent(event);
+		// 从首个 Shift+Tab → 回绕到最后一个（关闭按钮）
+		expect(document.activeElement).toBe(close);
+	});
+});

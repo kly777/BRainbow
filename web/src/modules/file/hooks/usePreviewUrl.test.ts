@@ -2,7 +2,7 @@
 
 import { createRoot } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { usePreviewUrl } from "./usePreviewUrl.ts";
+import { type PreviewUrlState, usePreviewUrl } from "./usePreviewUrl.ts";
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -37,7 +37,8 @@ describe("usePreviewUrl", () => {
 			),
 		);
 		await tick();
-		expect(read()()).toBe("/api/file/abc/data/a.png");
+		expect(read().url()).toBe("/api/file/abc/data/a.png");
+		expect(read().error()).toBeUndefined();
 		expect(fetchSpy).not.toHaveBeenCalled();
 		dispose();
 	});
@@ -54,20 +55,20 @@ describe("usePreviewUrl", () => {
 		});
 		vi.stubGlobal("fetch", fetchSpy);
 
-		let url!: () => string | undefined;
+		let state!: PreviewUrlState;
 		let dispose!: () => void;
 		createRoot((d) => {
 			dispose = d;
-			url = usePreviewUrl(
+			state = usePreviewUrl(
 				() => "/api/file/abc/data/secret.png",
 				() => true,
 			);
 		});
 
 		// 加载中：暂无可用 URL
-		expect(url()).toBeUndefined();
+		expect(state.url()).toBeUndefined();
 		await tick();
-		expect(url()).toBe("blob:fake-url");
+		expect(state.url()).toBe("blob:fake-url");
 		expect(fetchSpy).toHaveBeenCalledWith(
 			"/api/file/abc/data/secret.png",
 			expect.objectContaining({ headers: expect.anything() }),
@@ -77,7 +78,35 @@ describe("usePreviewUrl", () => {
 		expect(revokeObjectURL).toHaveBeenCalledWith("blob:fake-url");
 	});
 
-	it("私密文件加载失败时不返回 URL（不渲染破图）", async () => {
+	it("换 blob 失败时给出可重试的错误（不再永远停在『正在加载』）", async () => {
+		Object.assign(URL, { createObjectURL: vi.fn(), revokeObjectURL: vi.fn() });
+		const fetchSpy = vi
+			.fn()
+			.mockResolvedValue({ ok: false, status: 503, blob: async () => null });
+		vi.stubGlobal("fetch", fetchSpy);
+
+		const { read, dispose } = mount(() =>
+			usePreviewUrl(
+				() => "/api/file/abc/data/secret.png",
+				() => true,
+			),
+		);
+		await tick();
+		expect(read().url()).toBeUndefined();
+		// 5xx 属于"换个时刻再试会不一样"，所以可重试
+		expect(read().error()?.retryable).toBe(true);
+		expect(read().error()?.message).toContain("503");
+
+		// 重试会重新发请求；这次成功
+		fetchSpy.mockResolvedValue({ ok: true, blob: async () => new Blob(["x"]) });
+		read().retry();
+		await tick();
+		await tick();
+		expect(read().error()).toBeUndefined();
+		dispose();
+	});
+
+	it("401 这类不该重试的错误不给重试按钮", async () => {
 		Object.assign(URL, { createObjectURL: vi.fn(), revokeObjectURL: vi.fn() });
 		vi.stubGlobal(
 			"fetch",
@@ -93,7 +122,7 @@ describe("usePreviewUrl", () => {
 			),
 		);
 		await tick();
-		expect(read()()).toBeUndefined();
+		expect(read().error()?.retryable).toBe(false);
 		dispose();
 	});
 });

@@ -16,6 +16,7 @@ import {
 import type { FileItem } from "../api.ts";
 import { listFiles } from "../api.ts";
 import { categoryLabel } from "../lib/category.ts";
+import { isRenderableImage } from "../lib/thumbnail.ts";
 import styles from "./FilePickerModal.module.css";
 
 export interface PickedFile {
@@ -86,7 +87,7 @@ const FilePickerModal: Component<Props> = (props) => {
 									>
 										<span class={styles.thumb}>
 											<Show
-												when={item.file_category === "image"}
+												when={isRenderableImage(item.mime_type)}
 												fallback={<span class={styles.ext}>{extOf(item)}</span>}
 											>
 												<img

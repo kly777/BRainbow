@@ -1,1 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img">
+	<title>BRainbow</title>
+	<rect width="64" height="64" rx="14" fill="#141826" />
+	<g fill="none" stroke-width="5">
+		<path d="M10 46a22 22 0 0 1 44 0" stroke="#f87171" />
+		<path d="M15.5 46a16.5 16.5 0 0 1 33 0" stroke="#fbbf24" />
+		<path d="M21 46a11 11 0 0 1 22 0" stroke="#4ade80" />
+		<path d="M26.5 46a5.5 5.5 0 0 1 11 0" stroke="#60a5fa" />
+	</g>
+</svg>

@@ -326,7 +326,11 @@ mod tests {
     #[test]
     fn is_stored_id_matches_nanoid_shape() {
         assert!(is_stored_id("aB3_-xyz0123"));
+        // 太短、带空格、13 位、非 ASCII、临时文件名一律不认
         assert!(!is_stored_id("short"));
+        assert!(!is_stored_id("has space 12"));
+        assert!(!is_stored_id("aaaaaaaaaaaaa"));
+        assert!(!is_stored_id("中文文件名啊啊啊"));
         assert!(!is_stored_id("tmp_abc.tmp"));
     }
 }

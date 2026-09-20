@@ -1,22 +1,12 @@
 import { Button, Input, Tooltip } from "@components/ui";
-import { Copy, File as FileIcon, Lock } from "@components/ui/icons";
+import { Copy, Lock } from "@components/ui/icons";
 import { copyTextWithToast } from "@shared/utils";
 import { type Component, For, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
 import FileMeta from "../components/FileMeta.tsx";
 import styles from "../FileList.module.css";
-import { fileExt } from "../lib/filename.ts";
-
-/** 非图片文件：用后缀名徽章替代通用文件图标，一眼看出类型；
- *  无后缀时回退到通用文件图标 */
-export const ExtBadge: Component<{ name: string }> = (props) => (
-	<Show
-		when={fileExt(props.name)}
-		fallback={<FileIcon size={28} class={styles.iconPreview} />}
-	>
-		{(ext) => <span class={styles.extBadge}>{ext()}</span>}
-	</Show>
-);
+import { canZoom } from "../lib/thumbnail.ts";
+import { FileThumb } from "./FileThumb.tsx";
 
 const FilePreview: Component<{
 	item: FileItem;
@@ -28,48 +18,19 @@ const FilePreview: Component<{
 		type="button"
 		class={styles.preview}
 		onClick={() => {
-			if (
-				!props.item.missing &&
-				props.item.file_category === "image" &&
-				props.onZoom
-			)
-				props.onZoom();
+			if (canZoom(props.item) && props.onZoom) props.onZoom();
 			else props.onOpen();
 		}}
 		title={
 			props.item.missing
 				? "文件内容已丢失"
-				: props.item.file_category === "image"
+				: canZoom(props.item)
 					? "放大查看"
 					: "查看详情"
 		}
 	>
-		<Show
-			when={!props.item.missing}
-			fallback={<span class={styles.missingBadge}>文件缺失</span>}
-		>
-			{/* 私密文件不在这里拉取内容（<img> 不带凭据会 401），进详情页再看 */}
-			<Show
-				when={!props.item.is_private}
-				fallback={
-					<span class={styles.privateBadge}>
-						<Lock size={12} /> 私密
-					</span>
-				}
-			>
-				<Show
-					when={props.item.file_category === "image"}
-					fallback={<ExtBadge name={props.item.original_name} />}
-				>
-					<img
-						src={props.item.url}
-						alt={props.item.original_name}
-						class={styles.thumb}
-						loading="lazy"
-					/>
-				</Show>
-			</Show>
-		</Show>
+		{/* 私密文件不在这里拉取内容（<img> 不带凭据会 401），进详情页再看 */}
+		<FileThumb item={props.item} imgClass={styles.thumb} />
 	</button>
 );
 

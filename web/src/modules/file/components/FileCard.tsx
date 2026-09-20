@@ -29,7 +29,7 @@ const FilePreview: Component<{
 		}
 	>
 		{/* 私密文件不在这里拉取内容（<img> 不带凭据会 401），进详情页再看 */}
-		<FileThumb item={props.item} imgClass={styles.thumb} />
+		<FileThumb item={props.item} imgClass={styles.thumb} durationBadge />
 	</button>
 );
 

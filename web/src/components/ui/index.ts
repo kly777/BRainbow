@@ -35,6 +35,11 @@ export { default as Field, type FieldProps } from "./molecules/Field.tsx";
 export { default as FilterGroup } from "./molecules/FilterGroup.tsx";
 export { default as PageHead } from "./molecules/PageHead.tsx";
 export { default as SimplePagination } from "./molecules/SimplePagination.tsx";
+export { default as TagFilter } from "./molecules/TagFilter.tsx";
+export {
+	default as TagInput,
+	type TagOption,
+} from "./molecules/TagInput.tsx";
 export { default as Toolbar } from "./molecules/Toolbar.tsx";
 export { default as ConfirmModalContainer } from "./organisms/ConfirmModal.tsx";
 export * from "./organisms/confirmStore.ts";

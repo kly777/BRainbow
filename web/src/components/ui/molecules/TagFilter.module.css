@@ -1,4 +1,6 @@
-/* 文件标签筛选下拉 —— 与 bookmark TagFilter 同构，无计数 */
+/* 标签筛选下拉（共享） —— 合并自 file 与 bookmark 两份同构实现
+ * 主题色走 --tag-filter-accent：默认 accent，模块可用自己的色调覆盖
+ * （bookmark 传 --m-bookmark），因此这里不写死任何模块令牌。 */
 
 .wrapper {
 	position: relative;
@@ -15,14 +17,14 @@
 	color: var(--t-color-ink);
 	font-size: var(--text-sm);
 	cursor: pointer;
+	white-space: nowrap;
 	transition:
 		border-color var(--t-transition-fast),
 		box-shadow var(--t-transition-fast);
-	white-space: nowrap;
 }
 
 .trigger:hover {
-	border-color: var(--t-color-accent);
+	border-color: var(--tag-filter-accent, var(--t-color-accent));
 }
 
 .trigger-label {
@@ -68,13 +70,21 @@
 }
 
 .option:hover {
-	background: var(--t-color-accent-soft);
+	background: color-mix(
+		in srgb,
+		var(--tag-filter-accent, var(--t-color-accent)) 8%,
+		transparent
+	);
 }
 
 .option-active {
-	color: var(--t-color-accent);
+	color: var(--tag-filter-accent, var(--t-color-accent));
 	font-weight: 600;
-	background: color-mix(in srgb, var(--t-color-accent) 6%, transparent);
+	background: color-mix(
+		in srgb,
+		var(--tag-filter-accent, var(--t-color-accent)) 6%,
+		transparent
+	);
 }
 
 .option-name {
@@ -83,6 +93,13 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.option-count {
+	flex-shrink: 0;
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+	margin-left: var(--space-sm);
 }
 
 .divider {
@@ -99,6 +116,10 @@
 .search-input {
 	padding: var(--space-xs) var(--space-sm);
 	border-radius: var(--radius-sm);
+}
+
+.search-input:focus {
+	border-color: var(--tag-filter-accent, var(--t-color-accent));
 }
 
 .search-input::placeholder {

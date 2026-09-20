@@ -1,10 +1,9 @@
 // ── /file：通用文件列表（类别筛选 + 标签筛选 + 文件名搜索 + 上传） ──
 
 import {
-	AsyncView,
 	Button,
 	FilterGroup,
-	PageHead,
+	ListPage,
 	SearchInput,
 	Select,
 	SimplePagination,
@@ -148,7 +147,9 @@ const FileListPage: Component = () => {
 				</div>
 			</Show>
 
-			<PageHead
+			{/* 页头 / 筛选区 / 四态列表 / 分页这四段原先在页面里逐段手写（与 ListPage
+			    封装的结构完全同形），现在交给外壳；DOM 顺序与类名不变 */}
+			<ListPage
 				title="文件"
 				desc={
 					f.stats()
@@ -199,75 +200,68 @@ const FileListPage: Component = () => {
 						</Button>
 					</>
 				}
-			/>
-			<input
-				id="file-upload-input"
-				type="file"
-				multiple
-				style={{ display: "none" }}
-				onChange={(e) => {
-					const files = Array.from(e.currentTarget.files ?? []);
-					if (files.length > 0) void f.handleUploadFiles(files);
-					e.currentTarget.value = "";
-				}}
-			/>
+				filters={
+					<>
+						<div class={styles.filterRow}>
+							<FilterGroup
+								options={CATEGORY_TABS.map((tab) => {
+									const stat = f
+										.stats()
+										?.by_category.find((c) => c.category === tab.value);
+									return stat && stat.count > 0
+										? { ...tab, label: `${tab.label} ${stat.count}` }
+										: tab;
+								})}
+								selected={f.category()}
+								onChange={f.setCategory}
+							/>
+							<div class={styles.viewToggle}>
+								<button
+									type="button"
+									class={styles.viewBtn}
+									classList={{ [styles.viewBtnActive]: f.view() === "grid" }}
+									onClick={() => f.setView("grid")}
+									title="网格视图"
+									aria-pressed={f.view() === "grid"}
+								>
+									<Grid size={15} />
+								</button>
+								<button
+									type="button"
+									class={styles.viewBtn}
+									classList={{ [styles.viewBtnActive]: f.view() === "list" }}
+									onClick={() => f.setView("list")}
+									title="列表视图"
+									aria-pressed={f.view() === "list"}
+								>
+									<List size={15} />
+								</button>
+							</div>
+							{/* biome-ignore lint/a11y/noLabelWithoutControl: Select 渲染的根节点就是原生 <select>，包裹式 label 已隐式关联；lint 无法跟进组件内部 */}
+							<label class={styles.sortLabel}>
+								<span class={styles.sortText}>排序</span>
+								<Select
+									class={styles.sortSelect}
+									value={f.sort()}
+									onChange={(e) =>
+										f.setSort(e.currentTarget.value as SortOrder)
+									}
+									aria-label="排序方式"
+								>
+									<For each={SORT_OPTIONS}>
+										{(option) => (
+											<option value={option.value}>{option.label}</option>
+										)}
+									</For>
+								</Select>
+							</label>
+						</div>
 
-			<div class={styles.filterRow}>
-				<FilterGroup
-					options={CATEGORY_TABS.map((tab) => {
-						const stat = f
-							.stats()
-							?.by_category.find((c) => c.category === tab.value);
-						return stat && stat.count > 0
-							? { ...tab, label: `${tab.label} ${stat.count}` }
-							: tab;
-					})}
-					selected={f.category()}
-					onChange={f.setCategory}
-				/>
-				<div class={styles.viewToggle}>
-					<button
-						type="button"
-						class={styles.viewBtn}
-						classList={{ [styles.viewBtnActive]: f.view() === "grid" }}
-						onClick={() => f.setView("grid")}
-						title="网格视图"
-						aria-pressed={f.view() === "grid"}
-					>
-						<Grid size={15} />
-					</button>
-					<button
-						type="button"
-						class={styles.viewBtn}
-						classList={{ [styles.viewBtnActive]: f.view() === "list" }}
-						onClick={() => f.setView("list")}
-						title="列表视图"
-						aria-pressed={f.view() === "list"}
-					>
-						<List size={15} />
-					</button>
-				</div>
-				{/* biome-ignore lint/a11y/noLabelWithoutControl: Select 渲染的根节点就是原生 <select>，包裹式 label 已隐式关联；lint 无法跟进组件内部 */}
-				<label class={styles.sortLabel}>
-					<span class={styles.sortText}>排序</span>
-					<Select
-						class={styles.sortSelect}
-						value={f.sort()}
-						onChange={(e) => f.setSort(e.currentTarget.value as SortOrder)}
-						aria-label="排序方式"
-					>
-						<For each={SORT_OPTIONS}>
-							{(option) => <option value={option.value}>{option.label}</option>}
-						</For>
-					</Select>
-				</label>
-			</div>
-
-			<Show when={f.errorMessage()}>
-				<p class={styles.error}>{f.errorMessage()}</p>
-			</Show>
-
-			<AsyncView
+						<Show when={f.errorMessage()}>
+							<p class={styles.error}>{f.errorMessage()}</p>
+						</Show>
+					</>
+				}
 				data={f.items()}
 				loading={f.loading}
 				error={f.error}
@@ -278,6 +272,15 @@ const FileListPage: Component = () => {
 						onUpload={() =>
 							document.getElementById("file-upload-input")?.click()
 						}
+					/>
+				}
+				footer={
+					<SimplePagination
+						page={f.page()}
+						totalPages={f.totalPages()}
+						total={f.total()}
+						onPrev={() => f.goPage(f.page() - 1)}
+						onNext={() => f.goPage(f.page() + 1)}
 					/>
 				}
 			>
@@ -329,15 +332,7 @@ const FileListPage: Component = () => {
 						</For>
 					</div>
 				)}
-			</AsyncView>
-
-			<SimplePagination
-				page={f.page()}
-				totalPages={f.totalPages()}
-				total={f.total()}
-				onPrev={() => f.goPage(f.page() - 1)}
-				onNext={() => f.goPage(f.page() + 1)}
-			/>
+			</ListPage>
 
 			<UploadPanel tasks={f.uploadTasks} onClose={f.clearUploadTasks} />
 

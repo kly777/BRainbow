@@ -32,6 +32,11 @@ pub struct Config {
 
     /// 上传根目录（默认 `uploads`）；文件服务用其下的 `file` 子目录，见 [`Config::file_upload_dir`]
     pub upload_dir: PathBuf,
+
+    /// ffmpeg 可执行文件（来自 `FFMPEG_PATH`，可空）。
+    /// 实际用哪个路径由 [`resolve_ffmpeg`] 决定（还会看应用自带的 `bin/ffmpeg`）。
+    /// 它只用于"给视频出海报帧"，缺了就永久降级为后缀徽章，不影响其他功能。
+    pub ffmpeg_path: Option<PathBuf>,
 }
 
 impl Config {
@@ -49,6 +54,17 @@ impl Config {
     /// （历史上 handler 硬编码 `uploads/file`，改了 `UPLOAD_DIR` 就变成"上传成功、下载全 404"）。
     pub fn file_upload_dir(&self) -> String {
         format!("{}/file", self.upload_dir.display())
+    }
+
+    /// ffmpeg 的实际路径：显式配置 > 应用自带的 `bin/ffmpeg` > PATH 里的 `ffmpeg`。
+    ///
+    /// 自带的那份优先于 PATH，是为了让"随部署产物走的静态二进制"真的被用到 ——
+    /// 远端 PATH 上恰好有另一个版本时，行为不该随发行版漂移。
+    pub fn exec_ffmpeg(&self) -> PathBuf {
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.to_path_buf()));
+        resolve_ffmpeg(self.ffmpeg_path.as_deref(), exe_dir.as_deref())
     }
 
     /// 从注入的变量读取器加载配置（测试用，避免全局 env 竞态）。
@@ -98,8 +114,31 @@ impl Config {
             upload_dir: vars("UPLOAD_DIR")
                 .map(PathBuf::from)
                 .unwrap_or_else(|_| PathBuf::from("uploads")),
+
+            ffmpeg_path: vars("FFMPEG_PATH").ok().map(PathBuf::from),
         }
     }
+}
+
+/// 决定 ffmpeg 用哪个可执行文件（纯函数，便于直测）。
+///
+/// 顺序：显式配置（`FFMPEG_PATH`）> 应用同目录下的 `bin/ffmpeg` > 交给 PATH 解析的裸名。
+/// 自带的那份优先于 PATH：部署时把静态二进制随产物放在 `bin/`，就不该因为远端
+/// PATH 上恰好有另一个 ffmpeg 而换用那个（版本随发行版漂移是这类工具的经典部署陷阱）。
+pub fn resolve_ffmpeg(
+    explicit: Option<&std::path::Path>,
+    exe_dir: Option<&std::path::Path>,
+) -> PathBuf {
+    if let Some(path) = explicit {
+        return path.to_path_buf();
+    }
+    if let Some(dir) = exe_dir {
+        let bundled = dir.join("bin").join("ffmpeg");
+        if bundled.is_file() {
+            return bundled;
+        }
+    }
+    PathBuf::from("ffmpeg")
 }
 
 #[cfg(test)]
@@ -157,5 +196,65 @@ mod tests {
         let vars = vars_with(&[("UPLOAD_DIR", "/data/brainbow-uploads")]);
         let cfg = Config::from_vars(vars);
         assert_eq!(cfg.file_upload_dir(), "/data/brainbow-uploads/file");
+    }
+
+    // ── ffmpeg 路径解析 ──
+    //
+    // 顺序：显式配置 > 应用自带 bin/ffmpeg > PATH。自带的那份优先于 PATH，
+    // 是为了让"随部署产物走的静态二进制"真的被用到。
+
+    #[test]
+    fn ffmpeg_env_wins_over_everything() {
+        let explicit = PathBuf::from("/opt/ffmpeg-7.0/ffmpeg");
+        let exe_dir = std::env::temp_dir().join("brainbow-cfg-exe");
+        std::fs::create_dir_all(exe_dir.join("bin")).unwrap();
+        std::fs::write(exe_dir.join("bin").join("ffmpeg"), b"#!/bin/sh\n").unwrap();
+
+        assert_eq!(
+            resolve_ffmpeg(Some(&explicit), Some(&exe_dir)),
+            explicit,
+            "FFMPEG_PATH 明确指定时不该被别的路径抢走"
+        );
+        let _ = std::fs::remove_dir_all(&exe_dir);
+    }
+
+    #[test]
+    fn bundled_binary_beats_path_lookup() {
+        let exe_dir = std::env::temp_dir().join(format!("brainbow-cfg-{}", nanoid::nanoid!(8)));
+        std::fs::create_dir_all(exe_dir.join("bin")).unwrap();
+        let bundled = exe_dir.join("bin").join("ffmpeg");
+        std::fs::write(&bundled, b"#!/bin/sh\n").unwrap();
+
+        assert_eq!(resolve_ffmpeg(None, Some(&exe_dir)), bundled);
+
+        let _ = std::fs::remove_dir_all(&exe_dir);
+    }
+
+    #[test]
+    fn falls_back_to_path_when_nothing_is_bundled() {
+        let exe_dir = std::env::temp_dir().join(format!("brainbow-cfg-{}", nanoid::nanoid!(8)));
+        std::fs::create_dir_all(&exe_dir).unwrap();
+
+        assert_eq!(
+            resolve_ffmpeg(None, Some(&exe_dir)),
+            PathBuf::from("ffmpeg")
+        );
+        // 连可执行文件目录都拿不到时同样退回裸名（靠 PATH）
+        assert_eq!(resolve_ffmpeg(None, None), PathBuf::from("ffmpeg"));
+
+        let _ = std::fs::remove_dir_all(&exe_dir);
+    }
+
+    #[test]
+    fn config_reads_ffmpeg_path() {
+        let vars = vars_with(&[("FFMPEG_PATH", "/usr/local/bin/ffmpeg")]);
+        let cfg = Config::from_vars(vars);
+        assert_eq!(
+            cfg.ffmpeg_path,
+            Some(PathBuf::from("/usr/local/bin/ffmpeg"))
+        );
+
+        let cfg = Config::from_vars(vars_with(&[]));
+        assert_eq!(cfg.ffmpeg_path, None, "未设置时留给 resolve_ffmpeg 兜底");
     }
 }

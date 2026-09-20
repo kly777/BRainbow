@@ -685,8 +685,12 @@ fn thumb_response(bytes: Vec<u8>, mime: &'static str) -> Response {
 /// 缩略图处理方案（纯判定，便于直测）
 #[derive(Debug, PartialEq, Eq)]
 pub enum ThumbPlan {
-    /// 取缓存或生成：宽度已吸附到阶梯、缓存键已定
-    Render { width: u32, key: String },
+    /// 取缓存或生成：宽度已吸附到阶梯、缓存键已定，`source` 决定谁去生成
+    Render {
+        width: u32,
+        key: String,
+        source: super::thumb::Source,
+    },
     /// 图太大：回原图。既不报错（那会让一张正常照片在列表里变成徽章），
     /// 也不硬解（会把 cgroup 的内存吃穿，见 thumb::MAX_PIXELS）
     ServeOriginal,
@@ -694,7 +698,7 @@ pub enum ThumbPlan {
     Unsupported,
 }
 
-/// 缩略图端点的核心判定。第三个参数是请求参数名（与后端字段对齐：`?w=`）。
+/// 缩略图端点的核心判定（纯函数，便于直测；生成与 I/O 在 [`thumb_handler`]）
 fn plan_thumb(file: &super::model::File, requested_w: Option<u32>) -> ThumbPlan {
     use super::thumb;
 
@@ -709,6 +713,7 @@ fn plan_thumb(file: &super::model::File, requested_w: Option<u32>) -> ThumbPlan 
     ThumbPlan::Render {
         width: thumb::snap_width(requested_w),
         key: thumb::cache_key(file.content_hash.as_deref(), &file.stored_id),
+        source: thumb::source_of(&file.mime_type),
     }
 }
 
@@ -739,7 +744,7 @@ pub async fn thumb_handler(
         return error::not_found("文件不存在");
     }
 
-    let (width, key) = match plan_thumb(&file, params.w) {
+    let (width, key, source) = match plan_thumb(&file, params.w) {
         ThumbPlan::Unsupported => {
             return error::json_error(
                 StatusCode::UNSUPPORTED_MEDIA_TYPE,
@@ -756,7 +761,7 @@ pub async fn thumb_handler(
             );
             return serve_file_content(&query, &file, &headers).await;
         }
-        ThumbPlan::Render { width, key } => (width, key),
+        ThumbPlan::Render { width, key, source } => (width, key, source),
     };
 
     if let Some(hit) = thumb::find_cached(query.upload_dir(), &key, width).await
@@ -766,48 +771,97 @@ pub async fn thumb_handler(
     }
     // 读不出来（刚被清理）→ 落到下面重新生成
 
-    // 解码闸门：一张 24MP 图解码后约 72MB，并发上限见 thumb::MAX_CONCURRENCY
-    let Ok(_permit) = thumb::semaphore().acquire().await else {
-        return ServiceError::Internal("缩略图生成闸门不可用".into()).into_response();
-    };
-
-    // 等闸门期间可能已有别的请求生成完：再查一次，别白算
-    if let Some(hit) = thumb::find_cached(query.upload_dir(), &key, width).await
-        && let Ok(bytes) = tokio::fs::read(&hit.path).await
-    {
-        return thumb_response(bytes, hit.mime);
-    }
-
     let src = query.file_path(&stored_id);
-    let task = tokio::task::spawn_blocking(move || thumb::image::generate(&src, width));
-    let rendered = match tokio::time::timeout(thumb::GENERATE_TIMEOUT, task).await {
-        Err(_) => {
-            return error::json_error(
-                StatusCode::GATEWAY_TIMEOUT,
-                "THUMB_TIMEOUT",
-                "缩略图生成超时",
-            );
-        }
-        Ok(Err(join_err)) => {
-            return ServiceError::Internal(format!("缩略图任务失败: {join_err}")).into_response();
-        }
-        Ok(Ok(Err(err))) => {
-            warn!(%stored_id, "生成缩略图失败: {err}");
-            let status = match err {
-                thumb::image::ThumbError::Io(_) => StatusCode::INTERNAL_SERVER_ERROR,
-                thumb::image::ThumbError::Unsupported(_) => StatusCode::UNSUPPORTED_MEDIA_TYPE,
+
+    match source {
+        // 位图：同进程解码（闸门 2，见 thumb::MAX_CONCURRENCY）
+        thumb::Source::Bitmap => {
+            let Ok(_permit) = thumb::semaphore().acquire().await else {
+                return ServiceError::Internal("缩略图生成闸门不可用".into()).into_response();
             };
-            return error::json_error(status, "THUMB_FAILED", err.to_string());
+            // 等闸门期间可能已有别的请求生成完：再查一次，别白算
+            if let Some(hit) = thumb::find_cached(query.upload_dir(), &key, width).await
+                && let Ok(bytes) = tokio::fs::read(&hit.path).await
+            {
+                return thumb_response(bytes, hit.mime);
+            }
+
+            let task = tokio::task::spawn_blocking(move || thumb::image::generate(&src, width));
+            let rendered = match tokio::time::timeout(thumb::GENERATE_TIMEOUT, task).await {
+                Err(_) => {
+                    return error::json_error(
+                        StatusCode::GATEWAY_TIMEOUT,
+                        "THUMB_TIMEOUT",
+                        "缩略图生成超时",
+                    );
+                }
+                Ok(Err(join_err)) => {
+                    return ServiceError::Internal(format!("缩略图任务失败: {join_err}"))
+                        .into_response();
+                }
+                Ok(Ok(Err(err))) => {
+                    warn!(%stored_id, "生成缩略图失败: {err}");
+                    let status = match err {
+                        thumb::image::ThumbError::Io(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                        thumb::image::ThumbError::Unsupported(_) => {
+                            StatusCode::UNSUPPORTED_MEDIA_TYPE
+                        }
+                    };
+                    return error::json_error(status, "THUMB_FAILED", err.to_string());
+                }
+                Ok(Ok(Ok(rendered))) => rendered,
+            };
+
+            // 落盘缓存；失败只影响"下次还得多算一遍"，不该把已生成的图退回去
+            if let Err(e) = thumb::write_artifact(query.upload_dir(), &key, width, &rendered).await
+            {
+                warn!(%stored_id, "缩略图落盘失败（本次仍正常返回）: {e}");
+            }
+            thumb_response(rendered.bytes, thumb::mime_of(rendered.ext))
         }
-        Ok(Ok(Ok(rendered))) => rendered,
-    };
+        // 视频：起子进程抽一帧（闸门 1，见 thumb::video）
+        thumb::Source::Video => {
+            if !thumb::video::available(query.ffmpeg_path()).await {
+                // 永久降级：前端那个 <img onError> → 后缀徽章的链路会接住它
+                warn!(
+                    %stored_id,
+                    ffmpeg = %query.ffmpeg_path().display(),
+                    "ffmpeg 不可用，视频缩略图降级为后缀徽章"
+                );
+                return error::json_error(
+                    StatusCode::UNSUPPORTED_MEDIA_TYPE,
+                    "THUMB_TOOL_MISSING",
+                    "服务端未安装 ffmpeg，视频缩略图不可用",
+                );
+            }
 
-    // 落盘缓存；失败只影响"下次还得多算一遍"，不该把已生成的图退回去
-    if let Err(e) = thumb::write_artifact(query.upload_dir(), &key, width, &rendered).await {
-        warn!(%stored_id, "缩略图落盘失败（本次仍正常返回）: {e}");
+            let final_path = thumb::artifact_path(query.upload_dir(), &key, width, "jpg");
+            if let Err(e) = tokio::fs::create_dir_all(thumb::thumbs_dir(query.upload_dir())).await {
+                return ServiceError::Internal(format!("创建缩略图目录失败: {e}")).into_response();
+            }
+            let Ok(_permit) = thumb::video::semaphore().acquire().await else {
+                return ServiceError::Internal("抽帧闸门不可用".into()).into_response();
+            };
+
+            match thumb::video::generate_poster(query.ffmpeg_path(), &src, width, &final_path).await
+            {
+                Ok(()) => match tokio::fs::read(&final_path).await {
+                    Ok(bytes) => thumb_response(bytes, "image/jpeg"),
+                    Err(e) => {
+                        ServiceError::Internal(format!("读回海报帧失败: {e}")).into_response()
+                    }
+                },
+                Err(err) => {
+                    warn!(%stored_id, "视频抽帧失败: {err}");
+                    let status = match err {
+                        thumb::video::VideoError::Spawn(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                        thumb::video::VideoError::NoFrame(_) => StatusCode::UNSUPPORTED_MEDIA_TYPE,
+                    };
+                    error::json_error(status, "THUMB_FAILED", err.to_string())
+                }
+            }
+        }
     }
-
-    thumb_response(rendered.bytes, thumb::mime_of(rendered.ext))
 }
 
 // ── 更新 ──
@@ -1033,11 +1087,28 @@ mod tests {
     #[test]
     fn thumb_plan_renders_with_snapped_width_and_hash_key() {
         match plan_thumb(&sample_file(false), Some(200)) {
-            ThumbPlan::Render { width, key } => {
+            ThumbPlan::Render { width, key, source } => {
                 assert_eq!(width, 160, "200 吸附到 160 档");
                 assert_eq!(key, "deadbeef", "缓存键用 content_hash");
+                assert_eq!(source, crate::modules::file::thumb::Source::Bitmap);
             }
             other => panic!("应当可渲染，实得 {other:?}"),
+        }
+    }
+
+    /// 视频走另一条生成路径（子进程抽帧），位图走同进程解码 —— 判错就会拿
+    /// `image` crate 去解 mp4（必然失败）或反过来
+    #[test]
+    fn thumb_plan_routes_video_to_the_subprocess_path() {
+        let mut clip = sample_file(false);
+        clip.mime_type = "video/mp4".into();
+        clip.file_category = FileCategory::Video;
+
+        match plan_thumb(&clip, Some(320)) {
+            ThumbPlan::Render { source, .. } => {
+                assert_eq!(source, crate::modules::file::thumb::Source::Video);
+            }
+            other => panic!("视频应当可渲染（海报帧），实得 {other:?}"),
         }
     }
 
@@ -1046,7 +1117,7 @@ mod tests {
         let mut file = sample_file(false);
         file.content_hash = None;
         match plan_thumb(&file, None) {
-            ThumbPlan::Render { width, key } => {
+            ThumbPlan::Render { width, key, .. } => {
                 assert_eq!(width, crate::modules::file::thumb::DEFAULT_WIDTH);
                 assert_eq!(key, "abc123456789", "存量记录退回 stored_id");
             }
@@ -1077,7 +1148,8 @@ mod tests {
             ("image/svg+xml", FileCategory::Image),
             ("image/tiff", FileCategory::Image),
             ("application/pdf", FileCategory::Document),
-            ("video/mp4", FileCategory::Video),
+            ("audio/mpeg", FileCategory::Audio),
+            ("application/zip", FileCategory::Other),
         ] {
             let mut file = sample_file(false);
             file.mime_type = mime.into();

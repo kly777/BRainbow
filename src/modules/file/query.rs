@@ -55,6 +55,9 @@ pub fn content_access(file: &File, viewer: Option<i64>) -> ContentAccess {
 pub struct FileQueryService {
     repo: FileRepository,
     upload_dir: String,
+    /// ffmpeg 可执行文件（视频海报帧用）。默认按 PATH 找，
+    /// 生产由组合根注入 `Config::exec_ffmpeg()`（可能是随产物自带的 `bin/ffmpeg`）
+    ffmpeg: std::path::PathBuf,
 }
 
 impl FileQueryService {
@@ -62,7 +65,19 @@ impl FileQueryService {
         Self {
             repo: FileRepository::new(db),
             upload_dir,
+            ffmpeg: std::path::PathBuf::from("ffmpeg"),
         }
+    }
+
+    /// 注入 ffmpeg 路径（组合根用；测试不调就保持"按 PATH 找"）
+    pub fn with_ffmpeg(mut self, ffmpeg: std::path::PathBuf) -> Self {
+        self.ffmpeg = ffmpeg;
+        self
+    }
+
+    /// ffmpeg 路径（`thumb::video` 起子进程用）
+    pub fn ffmpeg_path(&self) -> &std::path::Path {
+        &self.ffmpeg
     }
 
     /// 文件在磁盘上的路径。

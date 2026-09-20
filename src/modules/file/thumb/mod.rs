@@ -12,6 +12,7 @@
 //!    内容去重，同内容只存一条记录，用哈希天然一致。
 
 pub mod image;
+pub mod video;
 
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -68,13 +69,33 @@ pub fn snap_width(w: Option<u32>) -> u32 {
 
 /// 该 MIME 能不能出缩略图。
 ///
-/// 只列 `image` crate 真能解的位图：SVG 解不了（且它本来就小，前端继续用原图），
+/// 位图只列 `image` crate 真能解的那些：SVG 解不了（且它本来就小，前端继续用原图），
 /// TIFF / AVIF / HEIC 也不列 —— 解不出，浏览器也渲染不了（列表里给的是后缀徽章）。
+///
+/// 视频列进来（ffmpeg 出海报帧）：ffmpeg 缺席时端点回 415，前端退回徽章 ——
+/// "能不能出"由后端说，但**降级路径要与位图完全一致**，这样离线部署不会出现
+/// "视频卡片一片破图"。
 pub fn can_generate(mime: &str) -> bool {
     matches!(
         mime,
         "image/png" | "image/jpeg" | "image/gif" | "image/webp" | "image/bmp"
-    )
+    ) || mime.starts_with("video/")
+}
+
+/// 出处：位图走 `image.rs`（同进程解码），视频走 `video.rs`（子进程隔离）
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Source {
+    Bitmap,
+    Video,
+}
+
+/// 该 MIME 走哪条生成路径（调用方先用 [`can_generate`] 过滤）
+pub fn source_of(mime: &str) -> Source {
+    if mime.starts_with("video/") {
+        Source::Video
+    } else {
+        Source::Bitmap
+    }
 }
 
 /// 缓存键：优先内容哈希（同一份内容共享产物），无哈希的存量记录退回 `stored_id`。
@@ -169,7 +190,7 @@ mod tests {
     }
 
     #[test]
-    fn can_generate_only_bitmaps_the_image_crate_decodes() {
+    fn can_generate_covers_bitmaps_and_video() {
         for mime in [
             "image/png",
             "image/jpeg",
@@ -178,14 +199,21 @@ mod tests {
             "image/bmp",
         ] {
             assert!(can_generate(mime), "{mime} 应当能出缩略图");
+            assert_eq!(source_of(mime), Source::Bitmap);
         }
-        // SVG 解不了（且本来小，前端用原图）；TIFF/AVIF 解不出，浏览器也渲染不了
+        // 视频走子进程抽帧（ffmpeg 缺席时端点回 415，前端退回徽章）
+        for mime in ["video/mp4", "video/webm", "video/x-matroska"] {
+            assert!(can_generate(mime), "{mime} 应当能出海报帧");
+            assert_eq!(source_of(mime), Source::Video);
+        }
+        // SVG 解不了（且本来小，前端用原图）；TIFF/AVIF 解不出，浏览器也渲染不了；
+        // 音频不出图（波形图是另一件事，没做）
         for mime in [
             "image/svg+xml",
             "image/tiff",
             "image/avif",
             "image/heic",
-            "video/mp4",
+            "audio/mpeg",
             "application/pdf",
             "text/plain",
         ] {

@@ -227,10 +227,11 @@ impl AppState {
         );
         let mem_query = MemQueryService::new(mem_repo_for_query, Arc::new(mem_config.clone()));
 
-        // 文件服务：上传目录由 Config 派生（唯一来源，见 Config::file_upload_dir）
+        // 文件服务：上传目录与 ffmpeg 路径都由 Config 派生（唯一来源）
         let file_upload_dir = config.file_upload_dir();
         let file = FileService::new(db.clone(), file_upload_dir.clone());
-        let file_query = FileQueryService::new(db.clone(), file_upload_dir);
+        let file_query =
+            FileQueryService::new(db.clone(), file_upload_dir).with_ffmpeg(config.exec_ffmpeg());
 
         let conv = ConvQueryService::new(db.as_ref().clone());
 

@@ -2,16 +2,16 @@ import { fillPath, PATHS } from "@config/paths";
 import type { UpdateCardRequest } from "@modules/card";
 import { deleteCardE, getCardE, updateCardE } from "@modules/card";
 import { getErrorMessage } from "@shared/api";
-import { confirmAndDelete, tryAsync } from "@shared/utils";
+import { confirmAndDelete, tryAsync, useDetailResource } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
-import { createEffect, createResource, createSignal } from "solid-js";
+import { type Accessor, createEffect, createSignal } from "solid-js";
 import type { Card } from "../model.ts";
 
 export interface CardEditApi {
 	cardId: () => number;
-	card: () => Card | undefined;
-	cardLoading: boolean;
-	cardError: unknown;
+	card: Accessor<Card | undefined>;
+	cardLoading: Accessor<boolean>;
+	cardError: Accessor<unknown>;
 	refetch: () => void;
 	content: () => string;
 	setContent: (value: string) => void;
@@ -26,6 +26,13 @@ export interface CardEditApi {
 	onKeyDown: (e: KeyboardEvent) => void;
 }
 
+/** 无效 id 时暴露的错误（页面据此显示文案，且不发起请求） */
+const INVALID_ID_ERROR = new Error("无效ID");
+
+/**
+ * 编辑器页的取数：与 useCardDetail 同源，都走 `useDetailResource`
+ * （原先两处各手抄了一份取数 + 错误信号，是同一规则的第二、三份定义）。
+ */
 export function useCardEdit(): CardEditApi {
 	const params = useParams();
 	const navigate = useNavigate();
@@ -36,25 +43,13 @@ export function useCardEdit(): CardEditApi {
 		return parseInt(id, 10);
 	};
 
-	/** 加载失败单独用信号暴露：任其逃逸会让页面既无错误态也无数据 */
-	const [loadError, setLoadError] = createSignal<unknown>(null);
-
-	const INVALID_ID_ERROR = new Error("无效ID");
-	const validId = () => !Number.isNaN(cardId());
-
-	const [card, { refetch }] = createResource(cardId, async (id) => {
-		if (!validId()) {
-			setLoadError(INVALID_ID_ERROR);
-			return undefined;
-		}
-		const result = await tryAsync(() => getCardE(id));
-		if (result.ok) {
-			setLoadError(null);
-			return result.value;
-		}
-		setLoadError(result.error);
-		return undefined;
+	const m = useDetailResource({
+		id: cardId,
+		validate: (id) => Number.isInteger(id) && id >= 1,
+		invalidIdError: INVALID_ID_ERROR,
+		fetcher: (id) => getCardE(id),
 	});
+	const card = m.data;
 
 	const [content, setContent] = createSignal("");
 	const [isSubmitting, setIsSubmitting] = createSignal(false);
@@ -123,13 +118,9 @@ export function useCardEdit(): CardEditApi {
 	return {
 		cardId,
 		card,
-		get cardLoading() {
-			return card.loading;
-		},
-		get cardError() {
-			return loadError() ?? undefined;
-		},
-		refetch,
+		cardLoading: m.loading,
+		cardError: m.error,
+		refetch: m.refetch,
 		content,
 		setContent,
 		isSubmitting,

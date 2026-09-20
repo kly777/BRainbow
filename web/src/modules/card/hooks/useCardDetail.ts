@@ -1,21 +1,29 @@
 import { fillPath, PATHS } from "@config/paths";
 import { deleteCardE, getCardE } from "@modules/card";
-import { confirmAndDelete, tryAsync } from "@shared/utils";
+import { confirmAndDelete, useDetailResource } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
-import { createResource, createSignal } from "solid-js";
+import type { Accessor } from "solid-js";
 import type { Card } from "../model.ts";
 
 export interface CardDetailApi {
 	cardId: () => number;
-	card: () => Card | undefined;
-	cardLoading: boolean;
-	cardError: unknown;
+	card: Accessor<Card | undefined>;
+	cardLoading: Accessor<boolean>;
+	cardError: Accessor<unknown>;
 	refetch: () => void;
 	handleDelete: () => Promise<void>;
 	handleEdit: () => void;
 	handleBack: () => void;
 }
 
+/** 无效 id 时暴露的错误（页面据此显示文案，且不发起请求） */
+const INVALID_ID_ERROR = new Error("无效ID");
+
+/**
+ * 取数走共享的 `useDetailResource`：错误消化、无效 id 判定、"首次加载 vs 后台刷新"
+ * 的区分都在原语里 —— 这里原先手抄了一份同样的实现（含自己维护的 loadError 信号），
+ * 那是这套规则的第二处定义，改一处漏一处。
+ */
 export function useCardDetail(): CardDetailApi {
 	const params = useParams();
 	const navigate = useNavigate();
@@ -26,24 +34,11 @@ export function useCardDetail(): CardDetailApi {
 		return parseInt(id, 10);
 	};
 
-	/** 加载失败单独用信号暴露：任其逃逸会让页面既无错误态也无数据 */
-	const [loadError, setLoadError] = createSignal<unknown>(null);
-
-	const INVALID_ID_ERROR = new Error("无效ID");
-	const validId = () => !Number.isNaN(cardId());
-
-	const [card, { refetch }] = createResource(cardId, async (id) => {
-		if (!validId()) {
-			setLoadError(INVALID_ID_ERROR);
-			return undefined;
-		}
-		const result = await tryAsync(() => getCardE(id));
-		if (result.ok) {
-			setLoadError(null);
-			return result.value;
-		}
-		setLoadError(result.error);
-		return undefined;
+	const m = useDetailResource({
+		id: cardId,
+		validate: (id) => Number.isInteger(id) && id >= 1,
+		invalidIdError: INVALID_ID_ERROR,
+		fetcher: (id) => getCardE(id),
 	});
 
 	const handleDelete = async () => {
@@ -65,14 +60,10 @@ export function useCardDetail(): CardDetailApi {
 
 	return {
 		cardId,
-		card,
-		get cardLoading() {
-			return card.loading;
-		},
-		get cardError() {
-			return loadError() ?? undefined;
-		},
-		refetch,
+		card: m.data,
+		cardLoading: m.loading,
+		cardError: m.error,
+		refetch: m.refetch,
 		handleDelete,
 		handleEdit,
 		handleBack,

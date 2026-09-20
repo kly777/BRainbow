@@ -1,5 +1,5 @@
 import { getUpcomingCountsE, type UpcomingCounts } from "@modules/mem";
-import { notifyError, tryAsync } from "@shared/utils";
+import { isTypingTarget, notifyError, tryAsync } from "@shared/utils";
 import {
 	type Accessor,
 	createDeferred,
@@ -54,11 +54,7 @@ export function useMemPage(): MemPageApi {
 	};
 
 	const onKey = (e: KeyboardEvent) => {
-		if (
-			e.target instanceof HTMLTextAreaElement ||
-			(e.target as HTMLElement)?.tagName === "INPUT"
-		)
-			return;
+		if (isTypingTarget(e.target)) return;
 		if (e.key === "ArrowLeft") nav(-1);
 		else if (e.key === "ArrowRight") nav(1);
 	};

@@ -5,6 +5,7 @@ import { useAuth } from "@app/context/auth.tsx";
 import { PATHS } from "@config/paths";
 import { openAiSettings } from "@modules/ai-setting";
 import { AUTH_REQUIRED_EVENT } from "@shared/api";
+import { isTypingTarget } from "@shared/utils";
 import { addRecentPage } from "@shared/utils/recent-pages.ts";
 import { useNavigate } from "@solidjs/router";
 import {
@@ -228,13 +229,13 @@ export function usePalette() {
 			else openPalette();
 			return;
 		}
-		const tag = (e.target as HTMLElement)?.tagName;
-		const inInput =
-			tag === "INPUT" ||
-			tag === "TEXTAREA" ||
-			tag === "SELECT" ||
-			(e.target as HTMLElement)?.isContentEditable;
-		if (inInput || e.altKey || e.ctrlKey || e.metaKey) return;
+		if (
+			isTypingTarget(e.target, { includeSelect: true }) ||
+			e.altKey ||
+			e.ctrlKey ||
+			e.metaKey
+		)
+			return;
 		const prefix = KEY_TO_PREFIX[e.key];
 		if (prefix) {
 			e.preventDefault();

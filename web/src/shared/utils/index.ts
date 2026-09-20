@@ -8,6 +8,7 @@ export * from "./format/delimited.ts";
 export * from "./format/time.ts";
 export * from "./greeting.ts";
 export * from "./icon.ts";
+export * from "./keyboard.ts";
 export * from "./notify.ts";
 export * from "./result.ts";
 export * from "./safe-action.ts";

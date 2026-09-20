@@ -159,3 +159,40 @@ describe("FileThumb 的时长角标", () => {
 		expect(host.textContent).not.toContain(":");
 	});
 });
+
+describe("FileThumb 用服务端缩略图", () => {
+	const THUMB = "/api/file/abcdefgh1234/thumb";
+	const thumbed = (over: Partial<FileItem> = {}) =>
+		item({ thumb_url: THUMB, stored_id: "abcdefgh1234", ...over });
+
+	it("有 thumb_url 时 src 走缩略图，并带上 srcset/sizes", () => {
+		const host = mount(thumbed({ width: 1600, height: 1000 }));
+		const img = host.querySelector("img");
+		// src 取中间档（老浏览器兜底），不是原图
+		expect(img?.getAttribute("src")).toBe(`${THUMB}?w=320`);
+		expect(img?.getAttribute("srcset")).toContain(`${THUMB}?w=640 640w`);
+		expect(img?.getAttribute("sizes")).toBe("260px");
+	});
+
+	it("没有 thumb_url 时退回原图，且不带 srcset", () => {
+		const host = mount(item());
+		const img = host.querySelector("img");
+		expect(img?.getAttribute("src")).toBe("/api/file/abc123/data/照片.png");
+		expect(img?.getAttribute("srcset")).toBeNull();
+	});
+
+	it("竖图改 contain 并亮出模糊底衬（不然是一块空框）", () => {
+		const host = mount(thumbed({ width: 3000, height: 4000 }));
+		expect(host.querySelector("img")?.className).toContain("_imgContain_");
+		const backdrop = host.querySelector<HTMLElement>(
+			'[style*="background-image"]',
+		);
+		expect(backdrop?.style.backgroundImage).toContain(`${THUMB}?w=160`);
+	});
+
+	it("接近 16:10 的图维持 cover，也不为底衬多发请求", () => {
+		const host = mount(thumbed({ width: 1600, height: 1000 }));
+		expect(host.querySelector("img")?.className).toContain("_imgCover_");
+		expect(host.querySelector('[style*="background-image"]')).toBeNull();
+	});
+});

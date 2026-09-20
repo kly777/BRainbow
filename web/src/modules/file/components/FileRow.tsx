@@ -54,6 +54,8 @@ const FileRow: Component<{
 				imgClass={styles.rowThumbImg}
 				missingText="缺失"
 				lockOnly
+				sizes="48px"
+				thumbWidths={[160, 320]}
 			/>
 		</button>
 

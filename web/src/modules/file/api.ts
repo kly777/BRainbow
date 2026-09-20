@@ -30,6 +30,9 @@ export interface FileItem {
 	id: number;
 	stored_id: string;
 	url: string;
+	/** 缩略图地址；后端只给"能出缩略图且内容还在"的位图，宽度由前端按阶梯拼 `?w=`
+	 *  （非空时可省下把原图下给 240px 卡片的那几百 MB，见 lib/thumbnail.ts） */
+	thumb_url?: string | null;
 	original_name: string;
 	mime_type: string;
 	file_category: FileCategory;

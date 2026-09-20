@@ -29,7 +29,13 @@ const FilePreview: Component<{
 		}
 	>
 		{/* 私密文件不在这里拉取内容（<img> 不带凭据会 401），进详情页再看 */}
-		<FileThumb item={props.item} imgClass={styles.thumb} durationBadge />
+		<FileThumb
+			item={props.item}
+			imgClass={styles.thumb}
+			durationBadge
+			// 网格列宽：minmax(15rem, 1fr)；≤600px 时两列（各约 45vw）
+			sizes="(max-width: 600px) 45vw, 260px"
+		/>
 	</button>
 );
 

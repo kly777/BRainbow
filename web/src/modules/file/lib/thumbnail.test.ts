@@ -2,7 +2,15 @@
 
 import { describe, expect, it } from "vitest";
 import type { FileItem } from "../api.ts";
-import { canThumb, canZoom, isRenderableImage } from "./thumbnail.ts";
+import {
+	canThumb,
+	canZoom,
+	isRenderableImage,
+	preferContain,
+	thumbBackdrop,
+	thumbSrc,
+	thumbSrcSet,
+} from "./thumbnail.ts";
 
 const item = (over: Partial<FileItem> = {}): FileItem => ({
 	id: 1,
@@ -72,5 +80,75 @@ describe("canZoom", () => {
 	it("缺失文件与 TIFF 不可放大", () => {
 		expect(canZoom(item({ missing: true }))).toBe(false);
 		expect(canZoom(item({ mime_type: "image/tiff" }))).toBe(false);
+	});
+});
+
+// ── 服务端缩略图 ──
+
+const THUMB = "/api/file/abcdefgh1234/thumb";
+const withThumb = (over: Partial<FileItem> = {}) =>
+	item({ thumb_url: THUMB, stored_id: "abcdefgh1234", ...over });
+
+describe("thumbSrc / thumbSrcSet", () => {
+	it("有缩略图时按档拼查询串", () => {
+		expect(thumbSrc(withThumb(), 320)).toBe(`${THUMB}?w=320`);
+	});
+
+	it("没有 thumb_url 时一律 null（调用方退回原图）", () => {
+		expect(thumbSrc(item(), 320)).toBeNull();
+		expect(thumbSrcSet(item())).toBeNull();
+	});
+
+	it("srcset 覆盖阶梯，别报阶梯外的值", () => {
+		const set = thumbSrcSet(withThumb());
+		expect(set).toBe(
+			`${THUMB}?w=160 160w, ${THUMB}?w=320 320w, ${THUMB}?w=640 640w, ${THUMB}?w=1280 1280w`,
+		);
+		// 列表行的 3rem 格子用不上 640/1280
+		expect(thumbSrcSet(withThumb(), [160, 320])).toBe(
+			`${THUMB}?w=160 160w, ${THUMB}?w=320 320w`,
+		);
+	});
+});
+
+describe("thumbBackdrop", () => {
+	it("用最小档做模糊底衬", () => {
+		expect(thumbBackdrop(withThumb())).toBe(`url("${THUMB}?w=160")`);
+	});
+
+	it("没有缩略图时没有底衬", () => {
+		expect(thumbBackdrop(item())).toBeUndefined();
+	});
+
+	it("地址不像后端给的那个形态就不往 style 里插（防注入）", () => {
+		for (const bad of [
+			"/api/file/abc/thumb", // 不是 12 位
+			"/api/file/abcdefgh1234/data/x.png", // 不是 thumb 路由
+			'"/api/file/abcdefgh1234/thumb', // 带引号，会破坏 CSS 字符串
+			"https://evil.example/thumb",
+			"/api/file/../../etc/passwd/thumb",
+		]) {
+			expect(thumbBackdrop(item({ thumb_url: bad }))).toBeUndefined();
+		}
+	});
+});
+
+describe("preferContain", () => {
+	const shaped = (width: number, height: number) =>
+		withThumb({ width, height });
+
+	it("竖拍（3:4）与长图（1:5）不裁切", () => {
+		expect(preferContain(shaped(3000, 4000))).toBe(true);
+		expect(preferContain(shaped(800, 4000))).toBe(true);
+	});
+
+	it("接近 16:10 的形状继续 cover（网格整齐更重要）", () => {
+		expect(preferContain(shaped(1920, 1080))).toBe(false); // 16:9
+		expect(preferContain(shaped(1600, 1000))).toBe(false); // 正好 16:10
+		expect(preferContain(shaped(1200, 900))).toBe(false); // 4:3
+	});
+
+	it("尺寸未知时不动（保持默认 cover）", () => {
+		expect(preferContain(withThumb({ width: null, height: null }))).toBe(false);
 	});
 });

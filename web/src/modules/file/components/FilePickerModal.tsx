@@ -92,6 +92,8 @@ const FilePickerModal: Component<Props> = (props) => {
 												imgClass={styles.thumbImg}
 												missingText="缺失"
 												lockOnly
+												sizes="36px"
+												thumbWidths={[160, 320]}
 											/>
 										</span>
 										<span class={styles.info}>

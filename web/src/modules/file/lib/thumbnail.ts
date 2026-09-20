@@ -42,3 +42,67 @@ export function canThumb(item: FileItem): boolean {
 export function canZoom(item: FileItem): boolean {
 	return !item.missing && isRenderableImage(item.mime_type);
 }
+
+// ── 服务端缩略图（后端 /thumb 端点） ──
+
+/**
+ * 宽度阶梯，**与后端 `src/modules/file/thumb/mod.rs` 的 WIDTH_LADDER 对齐**：
+ * 后端会把请求的 w 就近吸附到这几档，所以前端只该从这几档里挑
+ * （报别的值等于让后端替我们四舍五入，白写一次 URL）。改一处要同步另一处。
+ */
+export const THUMB_WIDTHS = [160, 320, 640, 1280] as const;
+
+/** 模糊底衬（LQIP）固定用最小档：它只是"还没看清时的形状"，几 KB 就够 */
+export const THUMB_LQIP_WIDTH = 160;
+
+/** 后端给的 thumb_url 形态（用于拼进 CSS url() 前的白名单校验，见 thumbBackdrop） */
+const THUMB_URL_RE = /^\/api\/file\/[A-Za-z0-9_-]{12}\/thumb$/;
+
+/** 某个宽度的缩略图地址；该文件没有服务端缩略图时返回 null */
+export function thumbSrc(item: FileItem, width: number): string | null {
+	if (!item.thumb_url) return null;
+	return `${item.thumb_url}?w=${width}`;
+}
+
+/** srcset（阶梯全给，由浏览器按 sizes 挑）；没有缩略图时 null */
+export function thumbSrcSet(
+	item: FileItem,
+	widths: readonly number[] = THUMB_WIDTHS,
+): string | null {
+	if (!item.thumb_url) return null;
+	return widths.map((w) => `${item.thumb_url}?w=${w} ${w}w`).join(", ");
+}
+
+/**
+ * 模糊底衬的 CSS `url(...)`。
+ *
+ * 会插进 style，所以要过白名单：只接受后端的固定形态（12 位 stored_id）。
+ * 不像预期的值一律返回 undefined —— 少一层底衬而已，不值得为它冒险。
+ */
+export function thumbBackdrop(item: FileItem): string | undefined {
+	if (!item.thumb_url || !THUMB_URL_RE.test(item.thumb_url)) return undefined;
+	const url = thumbSrc(item, THUMB_LQIP_WIDTH);
+	return url ? `url("${url}")` : undefined;
+}
+
+/** 比这更瘦（竖图）或更宽（长图）就改用 contain：裁掉的就是主体了 */
+const PORTRAIT_MAX = 0.9;
+const WIDE_MIN = 2.0;
+
+/**
+ * 前景该不该 `contain`（不裁切）。
+ *
+ * 默认 `cover`（填满、裁边）—— 网格里每张卡片一样大，看着整齐。但手机竖拍
+ * （3:4 ≈ 0.75）与长截图（1:5 那种）离 16:10 太远，`cover` 裁掉的正好是主体，
+ * 所以这两类改成 `contain`，同时亮出模糊底衬把留白补上（见 thumbBackdrop），
+ * 不然就是一块空框。尺寸未知时不动：宁可保持默认。
+ *
+ * 它同时也是"要不要请求那份额外的小图做底衬"的判据 —— 形状与框差不多时
+ * 底衬根本看不见，没必要为装饰多花 24 个请求。
+ */
+export function preferContain(item: FileItem): boolean {
+	const { width, height } = item;
+	if (!width || !height) return false;
+	const ratio = width / height;
+	return ratio < PORTRAIT_MAX || ratio > WIDE_MIN;
+}

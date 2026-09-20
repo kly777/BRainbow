@@ -14,7 +14,13 @@ import type { FileItem } from "../api.ts";
 import styles from "../FileList.module.css";
 import { fileExt } from "../lib/filename.ts";
 import { fmtDurationMs } from "../lib/meta.ts";
-import { canThumb } from "../lib/thumbnail.ts";
+import {
+	canThumb,
+	preferContain,
+	thumbBackdrop,
+	thumbSrc,
+	thumbSrcSet,
+} from "../lib/thumbnail.ts";
 import { shouldTint, tintHue } from "../lib/thumbTint.ts";
 
 /** 非图片文件：用后缀名徽章替代通用文件图标，一眼看出类型；
@@ -38,6 +44,10 @@ export const FileThumb: Component<{
 	lockOnly?: boolean;
 	/** 是否在右下角压一枚时长角标（只有卡片格子放得下；列表行的元信息里已有） */
 	durationBadge?: boolean;
+	/** sizes 属性：告诉浏览器这格实际多宽，srcset 才会挑对档（默认按卡片 260px 算） */
+	sizes?: string;
+	/** 这个格子用得上的宽度档（阶梯子集，别报阶梯外的值） */
+	thumbWidths?: readonly number[];
 }> = (props) => {
 	// 加载失败 / 已加载都按 stored_id 记录，切到别的文件自动复位
 	const [brokenId, setBrokenId] = createSignal<string>();
@@ -50,12 +60,31 @@ export const FileThumb: Component<{
 	const duration = () =>
 		props.durationBadge ? fmtDurationMs(props.item.duration_ms) : null;
 
+	const widths = () => props.thumbWidths ?? CARD_WIDTHS;
+	/** 服务端有缩略图就走它（别把原图下给 240px 的格子）；没有就退回原图。
+	 *  `src` 取最小档：srcset 由浏览器挑档，这是给不认 srcset 的客户端的保守值 */
+	const src = () => {
+		const w = widths();
+		return thumbSrc(props.item, w[0] ?? 320) ?? props.item.url;
+	};
+	const srcset = () => thumbSrcSet(props.item, widths()) ?? undefined;
+	const backdrop = () =>
+		preferContain(props.item) ? thumbBackdrop(props.item) : undefined;
+
 	return (
 		<span
 			class={styles.thumbHost}
 			classList={{ [styles.thumbTinted]: tint() !== null }}
 			style={tint() === null ? undefined : { "--thumb-hue": `${tint()}` }}
 		>
+			<Show when={backdrop()}>
+				{(bg) => (
+					<span
+						class={styles.thumbBackdrop}
+						style={{ "background-image": bg() }}
+					/>
+				)}
+			</Show>
 			<Switch fallback={<ExtBadge name={props.item.original_name} />}>
 				<Match when={props.item.missing}>
 					<span class={styles.missingBadge}>
@@ -70,9 +99,13 @@ export const FileThumb: Component<{
 				</Match>
 				<Match when={canThumb(props.item) && !broken()}>
 					<img
-						src={props.item.url}
+						src={src()}
+						srcset={srcset()}
+						sizes={srcset() ? (props.sizes ?? "260px") : undefined}
 						alt={props.item.original_name}
-						class={`${props.imgClass} ${styles.fadeImg}`}
+						class={`${props.imgClass} ${styles.fadeImg} ${
+							preferContain(props.item) ? styles.imgContain : styles.imgCover
+						}`}
 						classList={{ [styles.fadeImgIn]: loaded() }}
 						loading="lazy"
 						decoding="async"
@@ -92,3 +125,6 @@ export const FileThumb: Component<{
 		</span>
 	);
 };
+
+/** 卡片格子的宽度档：240–300 CSS px 的 1x 与 2x */
+const CARD_WIDTHS = [320, 640] as const;

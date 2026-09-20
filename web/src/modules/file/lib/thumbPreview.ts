@@ -14,11 +14,15 @@ import type { FileItem } from "../api.ts";
 import type { DocPreview } from "../hooks/usePreviewDoc.ts";
 import { previewUrlOf } from "../hooks/usePreviewDoc.ts";
 
-/** 文本缩略展示几行 */
-export const TEXT_LINES = 6;
-/** 表格缩略的行列上限（格子只有 16:10 大小，再多也看不清） */
+/** 文本缩略的渲染行数上限。
+ *
+ *  比"能看见的行数"多：卡片格子里能放下 ~9 行，列表行的 3rem 方框里只放得下 ~9 行
+ *  的一半 —— 收纳由 CSS 的容器查询裁剪，这里给足即可（数据本来就在手里：1KB 有几十行）。 */
+export const TEXT_LINES = 12;
+/** 表格缩略的行数上限（行高用 1fr 撑满，格子再小就看不清了） */
 export const SHEET_ROWS = 4;
-export const SHEET_COLS = 3;
+/** 列数上限：以数据实际列数为准（单列表格按 3 列排就是浪费宽度），但不超这个数 */
+export const SHEET_COLS_MAX = 4;
 /** 取多少字节做文本缩略：6 行 80 列的代码也就 1KB 上下 */
 export const TEXT_SNIPPET_BYTES = 1024;
 /** 超过这个体积的文本就不去取片段了（日志动辄几百 MB，取 1KB 也要握手一次） */
@@ -28,7 +32,8 @@ export const TEXT_MAX_BYTES = 8 * 1024 * 1024;
 export type ThumbPreview =
 	| { kind: "text"; lines: string[] }
 	| { kind: "cover"; lines: string[] }
-	| { kind: "sheet"; rows: string[][] };
+	/** `cols` 给 CSS 决定网格列数（按数据来，铺满宽度） */
+	| { kind: "sheet"; rows: string[][]; cols: number };
 
 /** 文本/代码：走 Range 取头部 */
 export function wantsTextThumb(item: FileItem): boolean {
@@ -139,11 +144,16 @@ export function coverOf(preview: DocPreview): ThumbPreview | undefined {
 		}
 		case "sheet": {
 			const sheet = preview.sheets[0];
-			if (!sheet) return undefined;
+			if (!sheet || sheet.rows.length === 0) return undefined;
+			// 列数按数据来（单列表格铺 3 列会浪费掉 2/3 宽度），但不超上限
+			const cols = Math.max(
+				1,
+				Math.min(SHEET_COLS_MAX, ...sheet.rows.map((row) => row.length)),
+			);
 			const rows = sheet.rows
 				.slice(0, SHEET_ROWS)
-				.map((row) => row.slice(0, SHEET_COLS).map((cell) => cell.trim()));
-			return rows.length > 0 ? { kind: "sheet", rows } : undefined;
+				.map((row) => row.slice(0, cols).map((cell) => cell.trim()));
+			return rows.length > 0 ? { kind: "sheet", rows, cols } : undefined;
 		}
 		case "slides": {
 			const lines = preview.slides

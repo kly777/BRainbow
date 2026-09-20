@@ -245,6 +245,10 @@
 	align-items: center;
 	justify-content: center;
 	overflow: hidden;
+
+	/* 组件级自适应：同一个组件要同时服务卡片（~240px）与列表行（3rem），
+	   内部字号与内边距按宿主宽度走 —— 见文件末尾的 @container */
+	container-type: inline-size;
 }
 
 /* 非图片文件的类型底色：色相由 lib/thumbTint.ts 给到 --thumb-hue，
@@ -337,10 +341,12 @@
 .thumb-text {
 	display: flex;
 	flex-direction: column;
-	gap: 0.15rem;
+	gap: 0.1rem;
 	width: 100%;
 	height: 100%;
-	padding: var(--space-sm);
+
+	/* 竖向只留一点：这一格的全部意义就是"多露几行" */
+	padding: var(--space-2xs) var(--space-sm);
 	overflow: hidden;
 
 	/* 文字压过类型底色：底色只是"这是个 PDF/代码"的提示，不该抢内容的可读性 */
@@ -350,8 +356,8 @@
 
 .thumb-line {
 	font-family: var(--t-font-mono);
-	font-size: 0.6rem;
-	line-height: 1.35;
+	font-size: 0.62rem;
+	line-height: 1.3;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -360,10 +366,23 @@
 	text-align: left;
 }
 
-/* 表格：前几格的小网格（列数由 JS 给的单元格数量决定，这里固定 3 列） */
+/* 封面是散文（docx 段落 / epub 章节名）：折行才用得满宽度 —— 代码不能折（折了看不出
+   缩进结构），散文不折就只剩一截省略号。多出来的行由 .thumb-text 的 overflow 兜住 */
+.thumb-line-prose {
+	white-space: normal;
+	overflow-wrap: anywhere;
+	text-overflow: clip;
+}
+
+/* 表格：前几格的小网格（列数由数据给，见 .thumb-sheet 的 --thumb-cols） */
 .thumb-sheet {
 	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
+
+	/* 列数按数据来：单列表格铺 3 列等于浪费 2/3 宽度 */
+	grid-template-columns: repeat(var(--thumb-cols, 3), minmax(0, 1fr));
+
+	/* 行等分并撑满高度：4 行不该只占上面一条 */
+	grid-auto-rows: 1fr;
 	gap: 1px;
 	width: 100%;
 	height: 100%;
@@ -790,5 +809,30 @@
 	.row,
 	.card {
 		cursor: default;
+	}
+}
+
+/* ── 内容缩略的窄格子形态（列表行的 3rem 方框、选择器的 2.25rem） ──
+   按宿主宽度收字号与内边距：默认那套的 8px 内边距在 48px 的方框里要吃掉三分之一高度，
+   字号不变的话只放得下两行 —— 这一格里"多露几行"比"字大"更值 */
+@container (max-width: 90px) {
+	.thumb-text {
+		gap: 0;
+		padding: 2px;
+	}
+
+	.thumb-line {
+		font-size: 0.45rem;
+		line-height: 1.15;
+	}
+
+	.thumb-sheet {
+		gap: 1px;
+		padding: 1px;
+	}
+
+	.thumb-cell {
+		font-size: 0.4rem;
+		padding: 0 1px;
 	}
 }

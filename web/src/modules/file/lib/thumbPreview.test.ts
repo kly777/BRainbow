@@ -13,6 +13,7 @@ import {
 	htmlLines,
 	isCoverKind,
 	loadThumbPreview,
+	TEXT_LINES,
 	TEXT_SNIPPET_BYTES,
 	textSnippet,
 	wantsDocThumb,
@@ -125,10 +126,12 @@ describe("textSnippet", () => {
 		expect(textSnippet("a\tb   \n")).toEqual(["a  b"]);
 	});
 
-	it("行数上限生效", () => {
-		const raw = Array.from({ length: 20 }, (_, i) => `line${i}`).join("\n");
-		expect(textSnippet(raw)).toHaveLength(6);
+	it("行数上限生效（上限比能看见的行数多，裁剪交给 CSS 的容器查询）", () => {
+		const raw = Array.from({ length: 40 }, (_, i) => `line${i}`).join("\n");
+		expect(textSnippet(raw)).toHaveLength(TEXT_LINES);
 		expect(textSnippet(raw, 2)).toEqual(["line0", "line1"]);
+		// 卡片格子放得下 ~9 行，3rem 方框放得下 ~4 行 —— 上限放宽不会让 DOM 爆掉
+		expect(TEXT_LINES).toBeGreaterThanOrEqual(9);
 	});
 });
 
@@ -157,7 +160,7 @@ describe("coverOf", () => {
 		});
 	});
 
-	it("表格：前 4 行 × 前 3 列", () => {
+	it("表格：前 4 行，列数按数据来（不浪费宽度）", () => {
 		const preview = {
 			kind: "sheet",
 			truncated: false,
@@ -176,14 +179,57 @@ describe("coverOf", () => {
 				},
 			],
 		} as DocPreview;
+		// 这份数据有 4 列 → cols=4，四列都留着（铺满宽度而不是只给 3 列）
 		expect(coverOf(preview)).toEqual({
 			kind: "sheet",
+			cols: 4,
 			rows: [
-				["a", "b", "c"],
-				["1", "2", "3"],
-				["5", "6", "7"],
-				["9", "10", "11"],
+				["a", "b", "c", "d"],
+				["1", "2", "3", "4"],
+				["5", "6", "7", "8"],
+				["9", "10", "11", "12"],
 			],
+		});
+	});
+
+	it("表格的列数上限：超宽的表格只取前 4 列", () => {
+		const preview = {
+			kind: "sheet",
+			truncated: false,
+			sheets: [
+				{
+					name: "Sheet1",
+					rows: [["a", "b", "c", "d", "e", "f"]],
+					total_rows: 1,
+					total_cols: 6,
+				},
+			],
+		} as DocPreview;
+		const cover = coverOf(preview);
+		expect(cover).toEqual({
+			kind: "sheet",
+			cols: 4,
+			rows: [["a", "b", "c", "d"]],
+		});
+	});
+
+	it("单列表格只给 1 列（铺 3 列会浪费 2/3 宽度）", () => {
+		const preview = {
+			kind: "sheet",
+			truncated: false,
+			sheets: [
+				{
+					name: "Sheet1",
+					rows: [["只有一列"], ["第二行"]],
+					total_rows: 2,
+					total_cols: 1,
+				},
+			],
+		} as DocPreview;
+		expect(coverOf(preview)).toEqual({
+			kind: "sheet",
+			cols: 1,
+			rows: [["只有一列"], ["第二行"]],
 		});
 	});
 

@@ -160,18 +160,23 @@ export const FileThumb: Component<{
 /** 卡片格子的宽度档：240–300 CSS px 的 1x 与 2x */
 const CARD_WIDTHS = [320, 640] as const;
 
-/** 内容缩略的排版：文本/封面是几行等宽小字，表格是前几格的小网格 */
+/** 内容缩略的排版：文本/代码是等宽小字（不折行），封面是散文（折行铺满），表格是前几格的小网格 */
 const PreviewContent: Component<{ content: ThumbPreview }> = (props) => (
 	<Switch>
 		<Match when={props.content.kind === "sheet" ? props.content : undefined}>
 			{(sheet) => (
-				<span class={styles.thumbSheet}>
+				<span
+					class={styles.thumbSheet}
+					// 列数按数据来：单列表格铺 3 列会浪费 2/3 宽度
+					style={{ "--thumb-cols": String(sheet().cols) }}
+				>
 					{sheet().rows.flatMap((row) =>
 						row.map((cell) => <span class={styles.thumbCell}>{cell}</span>),
 					)}
 				</span>
 			)}
 		</Match>
+		{/* 文本/代码：等宽、不折行（折了就看不出缩进结构），装不下由 CSS 裁 */}
 		<Match when={props.content.kind === "text" ? props.content : undefined}>
 			{(text) => (
 				<span class={styles.thumbText}>
@@ -181,11 +186,14 @@ const PreviewContent: Component<{ content: ThumbPreview }> = (props) => (
 				</span>
 			)}
 		</Match>
+		{/* 封面（docx 段落 / epub 章节名）：散文折行，横向才用得满 */}
 		<Match when={props.content.kind === "cover" ? props.content : undefined}>
 			{(cover) => (
 				<span class={styles.thumbText}>
 					{cover().lines.map((line) => (
-						<span class={styles.thumbLine}>{line}</span>
+						<span class={`${styles.thumbLine} ${styles.thumbLineProse}`}>
+							{line}
+						</span>
 					))}
 				</span>
 			)}

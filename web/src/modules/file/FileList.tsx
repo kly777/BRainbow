@@ -215,6 +215,7 @@ const FileListPage: Component = () => {
 				}
 				data={f.items()}
 				loading={f.loading}
+				loadingVariant={f.view()}
 				error={f.error}
 				onRetry={f.refetch}
 				emptySlot={

@@ -27,6 +27,8 @@ export interface ListPageProps<T> {
 	onRetry?: () => void;
 	emptyMessage?: string;
 	emptySlot?: JSX.Element;
+	/** 加载骨架形状（网格布局的页面传 "grid"；原样透传给 AsyncView） */
+	loadingVariant?: "list" | "grid";
 
 	/** 渲染函数接收 accessor；详见 AsyncView 的说明（避免刷新时重建子树） */
 	children: (data: () => readonly T[]) => JSX.Element;
@@ -59,6 +61,7 @@ export default function ListPage<T>(props: ListPageProps<T>) {
 				onRetry={props.onRetry}
 				emptyMessage={props.emptyMessage}
 				emptySlot={props.emptySlot}
+				loadingVariant={props.loadingVariant}
 			>
 				{props.children}
 			</AsyncView>

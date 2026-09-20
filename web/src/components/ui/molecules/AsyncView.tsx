@@ -12,6 +12,11 @@ interface Props<T> {
 	/** 自定义空态（传了就不显示 emptyMessage 文案） */
 	emptySlot?: JSX.Element;
 	/**
+	 * 加载骨架的形状，默认列表行。网格布局（卡片墙）要传 "grid" ——
+	 * 否则加载时是一列横条、加载完变成一片卡片，切换瞬间版式会跳。
+	 */
+	loadingVariant?: "list" | "grid";
+	/**
 	 * children 接收 accessor 而非快照数组：子树只在四态切换时挂载一次，
 	 * 数据刷新由调用方内部的表达式（如 <For each={data()}>）做行级 diff，
 	 * 不再整棵重建——输入框焦点/DOM 身份因此跨刷新保持。
@@ -42,9 +47,33 @@ function SkeletonLoader() {
 	);
 }
 
+/** 网格骨架：缩略图块按卡片的比例与列宽排布（列宽跟着调用方的网格走） */
+function GridSkeletonLoader() {
+	return (
+		<div class={styles.skeletonGrid} aria-hidden="true">
+			{[1, 2, 3, 4, 5, 6, 7, 8].map(() => (
+				<div class={styles.skeletonCard}>
+					<div class={`skeleton ${styles.skeletonCardThumb}`} />
+					<div class={`skeleton ${styles.skeletonCardName}`} />
+					<div class={`skeleton ${styles.skeletonCardMeta}`} />
+				</div>
+			))}
+		</div>
+	);
+}
+
 export function AsyncView<T>(props: Props<T>) {
 	return (
-		<Show when={!props.loading} fallback={<SkeletonLoader />}>
+		<Show
+			when={!props.loading}
+			fallback={
+				props.loadingVariant === "grid" ? (
+					<GridSkeletonLoader />
+				) : (
+					<SkeletonLoader />
+				)
+			}
+		>
 			<Show
 				when={!props.error}
 				fallback={

@@ -43,3 +43,33 @@
 	border-radius: var(--radius-full);
 	flex-shrink: 0;
 }
+
+/* ── 网格骨架（卡片墙：与调用方的 .grid 同列宽/同间距，加载完不跳版式） ── */
+.skeleton-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+	gap: var(--space-lg);
+	padding: var(--space-lg) 0;
+}
+
+.skeleton-card {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+}
+
+.skeleton-card-thumb {
+	aspect-ratio: 16 / 10;
+	border-radius: var(--radius-lg);
+}
+
+.skeleton-card-name {
+	height: 1rem;
+	width: 80%;
+	margin-top: var(--space-2xs);
+}
+
+.skeleton-card-meta {
+	height: 0.75rem;
+	width: 55%;
+}

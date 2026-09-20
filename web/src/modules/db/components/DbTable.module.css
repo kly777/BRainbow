@@ -280,13 +280,6 @@
 	border-bottom: none;
 }
 
-.empty-cell {
-	padding: var(--space-xl);
-	color: var(--t-color-ink-faint);
-	text-align: center;
-	font-size: var(--text-sm);
-}
-
 .row-toggle-head,
 .row-toggle-cell {
 	width: 2.25rem;

@@ -110,15 +110,6 @@
 	padding: var(--space-xl);
 }
 
-.spinner {
-	width: 1.5rem;
-	height: 1.5rem;
-	border: 3px solid var(--t-color-border);
-	border-top-color: var(--t-color-accent);
-	border-radius: 50%;
-	animation: spin 0.7s linear infinite;
-}
-
 .item {
 	padding: var(--space-md);
 	border: 1px solid var(--t-color-border);

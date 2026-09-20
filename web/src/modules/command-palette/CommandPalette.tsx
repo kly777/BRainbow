@@ -1,6 +1,6 @@
 // ── 命令面板（⌘K）：导航 / 站内搜索 / 指令 / 移动端 FAB ──
 
-import { Input, Tooltip } from "@components/ui";
+import { EmptyState, Input, Spinner, Tooltip } from "@components/ui";
 import { For, Show } from "solid-js";
 import styles from "./CommandPalette.module.css";
 import {
@@ -86,11 +86,12 @@ function SuggestionList(props: {
 	);
 }
 
-function EmptyState(props: { text: string }) {
+/** 面板内的空态：换成共享 EmptyState，只保留面板自己的滚动容器 */
+function EmptyPanel(props: { text: string }) {
 	return (
 		<div class={styles.suggestions}>
 			<div class={styles.sugScroll}>
-				<div class={styles.empty}>{props.text}</div>
+				<EmptyState title={props.text} compact />
 			</div>
 		</div>
 	);
@@ -101,7 +102,7 @@ function SearchingState() {
 		<div class={styles.suggestions}>
 			<div class={styles.sugScroll}>
 				<div class={styles.searching}>
-					<div class={styles.spinner} aria-hidden="true" />
+					<Spinner />
 					搜索中…
 				</div>
 			</div>
@@ -148,7 +149,7 @@ export default function CommandPalette() {
 						listRef={p.bindSugScroll}
 					/>
 				);
-			if (q) return <EmptyState text="未匹配" />;
+			if (q) return <EmptyPanel text="未匹配" />;
 		}
 		if (m === "cmd") {
 			if (p.cmdItems().length > 0)
@@ -160,7 +161,7 @@ export default function CommandPalette() {
 						listRef={p.bindSugScroll}
 					/>
 				);
-			if (q) return <EmptyState text={p.auth().user ? "已登录" : "未登录"} />;
+			if (q) return <EmptyPanel text={p.auth().user ? "已登录" : "未登录"} />;
 		}
 		if (m === "search") {
 			if (p.searchItems().length > 0)

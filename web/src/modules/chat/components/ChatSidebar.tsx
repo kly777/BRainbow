@@ -2,6 +2,7 @@
 // 统一提供：折叠、头部（返回链接 / 标题 / 新建）、提示文案、会话列表项。
 // 列表项的操作（重命名 / AI 取标题 / 删除、悬浮三点菜单）由 TreeListItem 统一实现。
 
+import { EmptyState } from "@components/ui";
 import type { ChatTree } from "@modules/chat";
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
@@ -74,7 +75,7 @@ export function ChatSidebar(props: ChatSidebarProps) {
 					</div>
 				</Show>
 				<Show when={props.trees().length === 0 && !props.loadingTrees()}>
-					<div class={styles.treeEmpty}>{props.emptyText}</div>
+					<EmptyState title={props.emptyText} compact />
 				</Show>
 			</div>
 		</aside>

@@ -1,3 +1,4 @@
+import { EmptyState } from "@components/ui";
 import { ArrowRight } from "@components/ui/icons";
 import {
 	type Component,
@@ -208,8 +209,8 @@ interface EmptyRowProps {
 
 const EmptyRow: Component<EmptyRowProps> = (props) => (
 	<tr>
-		<td class={styles.emptyCell} colspan={props.colSpan}>
-			无数据
+		<td colspan={props.colSpan}>
+			<EmptyState title="无数据" compact />
 		</td>
 	</tr>
 );

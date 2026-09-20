@@ -18,6 +18,8 @@ export interface ConvSearchApi {
 	error: Error | undefined;
 	handleSearch: (e: SubmitEvent) => void;
 	itemHref: (hit: ConvHit) => string;
+	/** 重新检索（错误态的重试入口用） */
+	refetch: () => void;
 }
 
 export function useConvSearch(): ConvSearchApi {
@@ -39,7 +41,7 @@ export function useConvSearch(): ConvSearchApi {
 
 	const searchQuery = () => urlParams.get("q");
 
-	const [data] = createResource(
+	const [data, { refetch }] = createResource(
 		() => (searchQuery() ? `${searchQuery()}|${tab()}` : null),
 		(key) => {
 			if (!key) return { hits: [], total: 0 };
@@ -88,5 +90,6 @@ export function useConvSearch(): ConvSearchApi {
 		},
 		handleSearch,
 		itemHref,
+		refetch,
 	};
 }

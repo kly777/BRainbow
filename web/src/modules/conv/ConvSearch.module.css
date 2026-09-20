@@ -190,12 +190,6 @@
 	font-size: var(--text-base);
 }
 
-.error-msg {
-	padding: var(--space-lg);
-	color: var(--t-color-danger);
-	font-size: var(--text-base);
-}
-
 /* ── 响应式 ── */
 @media (width <= 768px) {
 	.page {

@@ -12,6 +12,7 @@ import { File as FileIcon, Lock } from "@components/ui/icons";
 import { type Component, createSignal, Match, Show, Switch } from "solid-js";
 import type { FileItem } from "../api.ts";
 import styles from "../FileList.module.css";
+import { useThumbPreview } from "../hooks/useThumbPreview.ts";
 import { fileExt } from "../lib/filename.ts";
 import { fmtDurationMs } from "../lib/meta.ts";
 import {
@@ -21,6 +22,7 @@ import {
 	thumbSrc,
 	thumbSrcSet,
 } from "../lib/thumbnail.ts";
+import type { ThumbPreview } from "../lib/thumbPreview.ts";
 import { shouldTint, tintHue } from "../lib/thumbTint.ts";
 
 /** 非图片文件：用后缀名徽章替代通用文件图标，一眼看出类型；
@@ -70,6 +72,8 @@ export const FileThumb: Component<{
 	const srcset = () => thumbSrcSet(props.item, widths()) ?? undefined;
 	const backdrop = () =>
 		preferContain(props.item) ? thumbBackdrop(props.item) : undefined;
+	// 内容缩略（文本片段 / office 封面）：取数是异步的，取不到就一直显示徽章
+	const content = useThumbPreview(() => props.item);
 
 	return (
 		<span
@@ -96,6 +100,11 @@ export const FileThumb: Component<{
 						<Lock size={12} />
 						{props.lockOnly ? null : "私密"}
 					</span>
+				</Match>
+				{/* 文本/代码、office、电子书、压缩包、数据库：取到内容就显示内容 ——
+				    比后缀徽章好认得多。取不到（或还在取）时不匹配，落到下面的 ExtBadge */}
+				<Match when={content()}>
+					{(loaded) => <PreviewContent content={loaded()} />}
 				</Match>
 				<Match when={canThumb(props.item) && !broken()}>
 					<img
@@ -128,3 +137,36 @@ export const FileThumb: Component<{
 
 /** 卡片格子的宽度档：240–300 CSS px 的 1x 与 2x */
 const CARD_WIDTHS = [320, 640] as const;
+
+/** 内容缩略的排版：文本/封面是几行等宽小字，表格是前几格的小网格 */
+const PreviewContent: Component<{ content: ThumbPreview }> = (props) => (
+	<Switch>
+		<Match when={props.content.kind === "sheet" ? props.content : undefined}>
+			{(sheet) => (
+				<span class={styles.thumbSheet}>
+					{sheet().rows.flatMap((row) =>
+						row.map((cell) => <span class={styles.thumbCell}>{cell}</span>),
+					)}
+				</span>
+			)}
+		</Match>
+		<Match when={props.content.kind === "text" ? props.content : undefined}>
+			{(text) => (
+				<span class={styles.thumbText}>
+					{text().lines.map((line) => (
+						<span class={styles.thumbLine}>{line}</span>
+					))}
+				</span>
+			)}
+		</Match>
+		<Match when={props.content.kind === "cover" ? props.content : undefined}>
+			{(cover) => (
+				<span class={styles.thumbText}>
+					{cover().lines.map((line) => (
+						<span class={styles.thumbLine}>{line}</span>
+					))}
+				</span>
+			)}
+		</Match>
+	</Switch>
+);

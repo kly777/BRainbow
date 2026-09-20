@@ -332,6 +332,59 @@
 	pointer-events: none;
 }
 
+/* ── 非图片文件的内容缩略（文本片段 / office 封面 / 表格前几格） ──
+   取不到内容时这层不渲染，卡片继续显示后缀徽章 */
+.thumb-text {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	width: 100%;
+	height: 100%;
+	padding: var(--space-sm);
+	overflow: hidden;
+
+	/* 文字压过类型底色：底色只是"这是个 PDF/代码"的提示，不该抢内容的可读性 */
+	color: var(--t-color-ink-muted);
+	background: color-mix(in oklab, var(--t-color-bg) 82%, transparent);
+}
+
+.thumb-line {
+	font-family: var(--t-font-mono);
+	font-size: 0.6rem;
+	line-height: 1.35;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+
+	/* 单行被裁断的（Range 只取 1KB）不显示半截字符 */
+	text-align: left;
+}
+
+/* 表格：前几格的小网格（列数由 JS 给的单元格数量决定，这里固定 3 列） */
+.thumb-sheet {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 1px;
+	width: 100%;
+	height: 100%;
+	padding: var(--space-2xs);
+	overflow: hidden;
+	background: color-mix(in oklab, var(--t-color-bg) 82%, transparent);
+}
+
+.thumb-cell {
+	font-family: var(--t-font-mono);
+	font-size: 0.55rem;
+	line-height: 1.2;
+	padding: 0.1rem 0.15rem;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	color: var(--t-color-ink-muted);
+	background: var(--t-color-surface-raised);
+	border-radius: 2px;
+}
+
 .icon-preview {
 	opacity: 0.5;
 }

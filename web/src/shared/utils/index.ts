@@ -16,6 +16,7 @@ export * from "./search-query.ts";
 export * from "./speech.ts";
 export * from "./tag-combo.ts";
 export * from "./timing.ts";
+export * from "./useCopyFlash.ts";
 export * from "./useDetailResource.ts";
 export * from "./useListResource.ts";
 export * from "./useModal.ts";

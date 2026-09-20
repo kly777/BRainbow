@@ -2,7 +2,7 @@
 // /chat 与 /chat/mem 共用；样式由调用方注入（两页面 CSS 有细微差异）。
 
 import type { ChatNode } from "@modules/chat";
-import { parseUtc } from "@shared/utils";
+import { fmtHm } from "@shared/utils";
 import { type JSX, Show } from "solid-js";
 
 /** 所需样式类：messageRow/userRow/assistantRow/avatar/messageCol/messageHead/messageRole/messageActions/messageTime */
@@ -27,11 +27,7 @@ export function MessageShell(props: {
 	const { styles, node } = props;
 	const isUser = () => node.role === "user";
 
-	const timeText = () => {
-		const d = parseUtc(node.created_at);
-		if (Number.isNaN(d.getTime())) return "";
-		return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-	};
+	const timeText = () => fmtHm(node.created_at);
 
 	const rowClass = () =>
 		[

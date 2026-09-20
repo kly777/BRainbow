@@ -11,8 +11,8 @@
 // 因为 500×10 的表会变成五千个 tab 停靠点，键盘用户反而走不动。键盘的等价操作是
 // 用 Shift+方向键选中单元格文本后 Ctrl+C（文本本来就可选中）。
 
-import { copyText } from "@shared/utils";
-import { type Component, createSignal, For, Show } from "solid-js";
+import { copyText, useCopyFlash } from "@shared/utils";
+import { type Component, For, Show } from "solid-js";
 import styles from "./viewers.module.css";
 
 export interface DataTableProps {
@@ -25,7 +25,9 @@ export interface DataTableProps {
 
 export const DataTable: Component<DataTableProps> = (props) => {
 	/** 刚被复制的单元格（用于一闪而过的反馈）；键是 "行:列" */
-	const [copied, setCopied] = createSignal<string>();
+	const { copiedKey: copied, flash: flashCopied } = useCopyFlash({
+		durationMs: 800,
+	});
 
 	const cellClass = () =>
 		props.variant === "csv"
@@ -38,11 +40,7 @@ export const DataTable: Component<DataTableProps> = (props) => {
 	 */
 	const copyCell = (key: string, value: string) => {
 		copyText(value);
-		setCopied(key);
-		window.setTimeout(
-			() => setCopied((current) => (current === key ? undefined : current)),
-			800,
-		);
+		flashCopied(key);
 	};
 
 	return (

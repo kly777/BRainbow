@@ -1,11 +1,11 @@
 import { Input } from "@components/ui";
 import { PATHS } from "@config/paths";
-import type { SearchHit } from "@modules/command-palette/api.ts";
-import { searchE } from "@modules/command-palette/api.ts";
 import {
 	KIND_LABEL,
 	resolveTargetUrl,
-} from "@modules/command-palette/hooks/suggestions.ts";
+	type SearchHit,
+	searchE,
+} from "@modules/command-palette";
 import styles from "@modules/search/SearchPage.module.css";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal, For, Show } from "solid-js";

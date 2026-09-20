@@ -16,6 +16,12 @@ pub async fn prepare_and_check(pool: &SqlitePool, upload_dir: &str) -> SelfCheck
     if let Err(e) = std::fs::create_dir_all(upload_dir) {
         error!("创建上传目录失败 {upload_dir}: {e}");
     }
+    // 缩略图缓存目录同理，先建再自检：留到首访才建的话，自检里那条
+    // "缩略图缓存"在每次首次部署时都会先报"尚未创建"，看着像问题
+    let thumbs = crate::modules::file::thumb::thumbs_dir(upload_dir);
+    if let Err(e) = std::fs::create_dir_all(&thumbs) {
+        error!("创建缩略图缓存目录失败 {thumbs}: {e}");
+    }
     self_check::run(pool, upload_dir, false).await
 }
 

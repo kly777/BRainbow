@@ -14,7 +14,7 @@ use crate::shared::error_types::ServiceError;
 // 维护侧的动作（目录体检 / 哈希回填 / 孤儿回收 / 临时文件）自成一块，放子模块 ——
 // 子模块能直接访问父模块的私有字段，不必为了拆文件而放宽可见性
 pub mod maintenance;
-pub use maintenance::{UploadDirCheck, check_upload_dir};
+pub use maintenance::{ThumbCacheCheck, UploadDirCheck, check_thumb_cache, check_upload_dir};
 
 /// 生成存储 ID
 fn generate_stored_id() -> String {

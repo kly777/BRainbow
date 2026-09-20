@@ -72,6 +72,11 @@ impl FileQueryService {
         format!("{}/{}", self.upload_dir, stored_id)
     }
 
+    /// 上传目录（缩略图缓存目录由 `thumb::thumbs_dir` 从这里派生，别在此硬编码）
+    pub fn upload_dir(&self) -> &str {
+        &self.upload_dir
+    }
+
     /// 磁盘上是否缺少该文件的内容。
     ///
     /// 实时 stat 而非落库：文件被恢复（拷回/恢复备份）后无需重新扫描即可自动复原状态。

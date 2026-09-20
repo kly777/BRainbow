@@ -13,7 +13,9 @@ use tracing::{error, info, warn};
 use crate::db::verify::{self, SchemaCheck};
 use crate::modules::file::consistency::{self, ConsistencyReport};
 use crate::modules::file::repository::FileRepository;
-use crate::modules::file::service::{UploadDirCheck, check_upload_dir};
+use crate::modules::file::service::{
+    ThumbCacheCheck, UploadDirCheck, check_thumb_cache, check_upload_dir,
+};
 
 /// 自检报告
 #[derive(Debug, Clone)]
@@ -23,6 +25,8 @@ pub struct SelfCheckReport {
     pub integrity: Option<String>,
     pub upload_dir: UploadDirCheck,
     pub storage: ConsistencyReport,
+    /// 缩略图缓存（派生文件；不可写也只是"缓存不生效"，不进 is_fatal）
+    pub thumbs: ThumbCacheCheck,
 }
 
 impl SelfCheckReport {
@@ -42,27 +46,27 @@ impl SelfCheckReport {
     /// 逐项输出报告：问题用 error/warn，正常项用 info
     pub fn log(&self) {
         if self.db.is_ok() {
-            info!("[1/4] 数据库 schema: {}", self.db.summary());
+            info!("[1/5] 数据库 schema: {}", self.db.summary());
         } else {
-            error!("[1/4] 数据库 schema: {}", self.db.summary());
+            error!("[1/5] 数据库 schema: {}", self.db.summary());
         }
 
         match &self.integrity {
-            Some(result) if result == "ok" => info!("[2/4] 完整性 quick_check: ok"),
-            Some(result) => error!("[2/4] 完整性 quick_check: {result}"),
+            Some(result) if result == "ok" => info!("[2/5] 完整性 quick_check: ok"),
+            Some(result) => error!("[2/5] 完整性 quick_check: {result}"),
             None => info!(
-                "[2/4] 完整性 quick_check: 未检查（启动不跑全库扫描，部署/排查时用 --check 触发）"
+                "[2/5] 完整性 quick_check: 未检查（启动不跑全库扫描，部署/排查时用 --check 触发）"
             ),
         }
 
         if self.upload_dir.is_usable() {
-            info!("[3/4] 上传目录: {}", self.upload_dir.summary());
+            info!("[3/5] 上传目录: {}", self.upload_dir.summary());
         } else {
-            error!("[3/4] 上传目录: {}", self.upload_dir.summary());
+            error!("[3/5] 上传目录: {}", self.upload_dir.summary());
         }
 
         if self.storage.has_issues() {
-            warn!("[4/4] 存储一致性: {}", self.storage.summary());
+            warn!("[4/5] 存储一致性: {}", self.storage.summary());
             if !self.storage.missing_samples.is_empty() {
                 warn!(
                     "        缺失文件（数据库有记录、磁盘无文件）样本: {}",
@@ -88,7 +92,15 @@ impl SelfCheckReport {
                 );
             }
         } else {
-            info!("[4/4] 存储一致性: {}", self.storage.summary());
+            info!("[4/5] 存储一致性: {}", self.storage.summary());
+        }
+
+        // 派生缓存只报状态：写不进去等于"缩略图每次重算"，不影响功能，
+        // 所以不致命、也不进 is_clean（那是"能不能放心退出 0"的判据）
+        if self.thumbs.writable || !self.thumbs.exists {
+            info!("[5/5] 缩略图缓存: {}", self.thumbs.summary());
+        } else {
+            warn!("[5/5] 缩略图缓存: {}", self.thumbs.summary());
         }
     }
 }
@@ -124,6 +136,7 @@ pub async fn run(pool: &SqlitePool, upload_dir: &str, deep: bool) -> SelfCheckRe
         integrity,
         upload_dir: upload_dir_check,
         storage,
+        thumbs: check_thumb_cache(upload_dir),
     }
 }
 
@@ -175,7 +188,10 @@ mod tests {
     #[tokio::test]
     async fn schema_drift_fails_the_report() {
         let ctx = setup().await;
-        sqlx::query("DROP TABLE file_tag").execute(&ctx.pool).await.unwrap();
+        sqlx::query("DROP TABLE file_tag")
+            .execute(&ctx.pool)
+            .await
+            .unwrap();
 
         let report = run(&ctx.pool, &ctx.dir.to_string_lossy(), false).await;
         assert!(report.is_fatal());

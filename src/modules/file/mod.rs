@@ -8,6 +8,7 @@ pub mod preview;
 pub mod query;
 pub mod repository;
 pub mod service;
+pub mod thumb;
 
 /// 测试夹具（内存库 + 临时目录的服务实例、最小合法样本字节）：仅测试构建编译。
 /// 放在模块根是因为 mime / limits / content / maintenance 与 service 的测试共用一份。
@@ -61,4 +62,6 @@ where
         .route("/{stored_id}/data/{filename}", get(handler::file_handler))
         // 文档预览：与内容路由同一套可见性（公开文件不需要凭据）
         .route("/{stored_id}/preview", get(handler::preview_handler))
+        // 列表缩略图：同上，且是惰性生成 + 磁盘缓存的派生文件
+        .route("/{stored_id}/thumb", get(handler::thumb_handler))
 }

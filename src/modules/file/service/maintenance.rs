@@ -21,6 +21,12 @@ use crate::modules::file::consistency::{self, ConsistencyReport, is_stored_id};
 const ORPHAN_GUARD_MIN_COUNT: usize = 5;
 const ORPHAN_GUARD_RATIO: f64 = 0.5;
 
+/// 缩略图缓存上限：超了按 mtime 删最旧。
+/// 派生文件丢了能重算，所以（与上传内容不同）这里删起来没有心理负担；
+/// 200MB 也远小于上传目录本身，不至于和用户文件抢空间。
+const THUMB_CACHE_MAX_BYTES: u64 = 200 * 1024 * 1024;
+const THUMB_CACHE_MAX_FILES: usize = 5000;
+
 /// 孤儿清理结果
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OrphanCleanup {
@@ -108,6 +114,82 @@ pub fn check_upload_dir(upload_dir: &str) -> UploadDirCheck {
     check
 }
 
+/// 缩略图缓存自检结果。
+///
+/// **非致命**：目录写不进去只是"缓存不生效"（每次访问重算一遍），端点照样出图，
+/// 所以它不进 [`crate::app::self_check::SelfCheckReport::is_fatal`]，只报出来。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ThumbCacheCheck {
+    pub dir: String,
+    pub exists: bool,
+    pub writable: bool,
+    pub files: usize,
+    pub bytes: u64,
+}
+
+impl ThumbCacheCheck {
+    /// 一行摘要，便于日志与 `--check` 输出
+    pub fn summary(&self) -> String {
+        if !self.exists {
+            return format!("{}（尚未创建，首次访问时才建）", self.dir);
+        }
+        let state = if self.writable { "可写" } else { "不可写" };
+        format!(
+            "{} 个文件 / {}（{state}）",
+            self.files,
+            human_mb(self.bytes)
+        )
+    }
+}
+
+/// 人类可读的体积（只用于日志，够用即可）
+fn human_mb(bytes: u64) -> String {
+    let mb = bytes as f64 / (1024.0 * 1024.0);
+    if mb < 1.0 {
+        format!("{:.0} KB", bytes as f64 / 1024.0)
+    } else {
+        format!("{mb:.1} MB")
+    }
+}
+
+/// 缩略图缓存体检：存在性、可写性（真实写一个探针文件）、条目数与总体积。
+///
+/// 只读检查 + 一个立刻删掉的探针，不创建目录（与 [`check_upload_dir`] 同一尺度）。
+pub fn check_thumb_cache(upload_dir: &str) -> ThumbCacheCheck {
+    let dir = crate::modules::file::thumb::thumbs_dir(upload_dir);
+    let mut check = ThumbCacheCheck {
+        dir: dir.clone(),
+        exists: false,
+        writable: false,
+        files: 0,
+        bytes: 0,
+    };
+
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return check; // 还没建（首次访问时才建）＝正常状态
+    };
+    check.exists = true;
+
+    for entry in entries.flatten() {
+        if let Ok(meta) = entry.metadata()
+            && meta.is_file()
+        {
+            check.files += 1;
+            check.bytes += meta.len();
+        }
+    }
+
+    let probe = format!("{dir}/tmp_check_{}.tmp", nanoid::nanoid!(8));
+    match std::fs::write(&probe, b"ok") {
+        Ok(()) => {
+            let _ = std::fs::remove_file(&probe);
+            check.writable = true;
+        }
+        Err(_) => check.writable = false,
+    }
+    check
+}
+
 impl FileService {
     /// 上传目录自检（启动序列与 `--check` 用）
     pub fn upload_dir_check(&self) -> UploadDirCheck {
@@ -128,6 +210,81 @@ impl FileService {
     pub async fn run_startup_maintenance(&self) {
         self.backfill_content_hashes().await;
         self.cleanup_orphan_files().await;
+        self.prune_thumb_cache().await;
+    }
+
+    /// 缩略图缓存回收（按默认上限）。
+    ///
+    /// 派生文件不在孤儿清理的视野里（`thumbs/` 不是 12 位 stored_id，见
+    /// `thumb::thumbs_dir`），所以回收责任在这里：删掉能重算，比"上传目录被缓存吃满"划算。
+    pub async fn prune_thumb_cache(&self) -> usize {
+        self.prune_thumb_cache_with(THUMB_CACHE_MAX_BYTES, THUMB_CACHE_MAX_FILES)
+            .await
+    }
+
+    /// 带上限参数的回收（测试用小上限，不必造几千个文件）。
+    ///
+    /// 顺序：先清 `tmp_*` 残留（进程被杀留下的半成品），再按 mtime 从旧到新删到上限以下。
+    /// 留 10% 余量，免得每次启动都刚好卡在线上删一批。
+    pub async fn prune_thumb_cache_with(&self, max_bytes: u64, max_files: usize) -> usize {
+        let dir = crate::modules::file::thumb::thumbs_dir(&self.upload_dir);
+        let Ok(mut entries) = tokio::fs::read_dir(&dir).await else {
+            return 0; // 目录还没建
+        };
+
+        let mut candidates: Vec<(String, u64, std::time::SystemTime)> = Vec::new();
+        let mut total_bytes: u64 = 0;
+        let mut stale_tmp = 0usize;
+
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            let name = entry.file_name().to_string_lossy().to_string();
+            let path = entry.path().to_string_lossy().to_string();
+            if name.starts_with("tmp_") && name.ends_with(".tmp") {
+                if tokio::fs::remove_file(&path).await.is_ok() {
+                    stale_tmp += 1;
+                }
+                continue;
+            }
+            let Ok(meta) = entry.metadata().await else {
+                continue;
+            };
+            if !meta.is_file() {
+                continue;
+            }
+            let mtime = meta.modified().unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+            total_bytes += meta.len();
+            candidates.push((path, meta.len(), mtime));
+        }
+
+        let bytes_ceiling = max_bytes - max_bytes / 10;
+        let files_ceiling = max_files - max_files / 10;
+        if total_bytes <= bytes_ceiling && candidates.len() <= files_ceiling {
+            if stale_tmp > 0 {
+                info!("缩略图缓存：清理了 {stale_tmp} 个临时残留");
+            }
+            return stale_tmp;
+        }
+
+        // 旧的先删（mtime 升序）
+        candidates.sort_by_key(|(_, _, mtime)| *mtime);
+        let mut removed = 0usize;
+        let mut kept_files = candidates.len();
+        for (path, size, _) in &candidates {
+            if total_bytes <= bytes_ceiling && kept_files <= files_ceiling {
+                break;
+            }
+            if tokio::fs::remove_file(path).await.is_ok() {
+                removed += 1;
+                kept_files -= 1;
+                total_bytes = total_bytes.saturating_sub(*size);
+            }
+        }
+        info!(
+            "缩略图缓存回收：删除 {} 个（含 {stale_tmp} 个临时残留），剩余 {kept_files} 个 / {}",
+            removed + stale_tmp,
+            human_mb(total_bytes)
+        );
+        removed + stale_tmp
     }
 
     /// 回填存量文件的 content_hash。
@@ -313,7 +470,11 @@ mod tests {
         assert!(check.is_usable());
         assert!(check.error.is_none());
         assert!(check.real_path.is_some());
-        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0, "自检不应留下探测文件");
+        assert_eq!(
+            std::fs::read_dir(&dir).unwrap().count(),
+            0,
+            "自检不应留下探测文件"
+        );
 
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -588,5 +749,152 @@ mod tests {
         assert_eq!(outcome, OrphanCleanup::Removed(0));
         assert!(exists_on_disk(&ctx, "tmp_abc.tmp"));
         assert!(exists_on_disk(&ctx, "手工放的文件.png"));
+    }
+
+    // ── 缩略图缓存（派生目录：一致性扫描看不见它，回收责任在这里） ──
+
+    /// 造一个缩略图产物，`age_secs` 越大越旧（mtime 显式设置，不靠创建顺序）
+    fn thumb_file(ctx: &Ctx, name: &str, size: usize, age_secs: u64) {
+        let dir = crate::modules::file::thumb::thumbs_dir(&ctx.dir.0);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = format!("{dir}/{name}");
+        std::fs::write(&path, vec![0u8; size]).unwrap();
+        let mtime =
+            std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000 + age_secs);
+        std::fs::OpenOptions::new()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_times(std::fs::FileTimes::new().set_modified(mtime))
+            .unwrap();
+    }
+
+    /// 超上限时按 mtime 从旧到新删，留下的正是较新的那几份
+    #[tokio::test]
+    async fn prune_removes_oldest_when_over_byte_cap() {
+        let ctx = setup_service().await;
+        for i in 0..5u64 {
+            thumb_file(&ctx, &format!("k{i}-320.jpg"), 1024, i);
+        }
+
+        // 上限 3KB：删掉 3 份最旧的，剩 2 份
+        let removed = ctx.svc.prune_thumb_cache_with(3 * 1024, 100).await;
+
+        assert_eq!(removed, 3);
+        let dir = crate::modules::file::thumb::thumbs_dir(&ctx.dir.0);
+        assert!(!std::path::Path::new(&format!("{dir}/k0-320.jpg")).exists());
+        assert!(!std::path::Path::new(&format!("{dir}/k2-320.jpg")).exists());
+        assert!(
+            std::path::Path::new(&format!("{dir}/k3-320.jpg")).exists(),
+            "较新的要留下"
+        );
+        assert!(std::path::Path::new(&format!("{dir}/k4-320.jpg")).exists());
+    }
+
+    /// 条目数超上限同样触发（体积没超也不该放任涨）
+    #[tokio::test]
+    async fn prune_removes_oldest_when_over_file_cap() {
+        let ctx = setup_service().await;
+        for i in 0..5u64 {
+            thumb_file(&ctx, &format!("k{i}-320.jpg"), 16, i);
+        }
+
+        let removed = ctx.svc.prune_thumb_cache_with(1024 * 1024, 3).await;
+
+        assert_eq!(removed, 2);
+        let dir = crate::modules::file::thumb::thumbs_dir(&ctx.dir.0);
+        assert!(!std::path::Path::new(&format!("{dir}/k0-320.jpg")).exists());
+        assert!(std::path::Path::new(&format!("{dir}/k2-320.jpg")).exists());
+    }
+
+    /// 没超上限就什么都别动（别每次启动都删一批）
+    #[tokio::test]
+    async fn prune_keeps_everything_under_caps() {
+        let ctx = setup_service().await;
+        for i in 0..3u64 {
+            thumb_file(&ctx, &format!("k{i}-320.jpg"), 100, i);
+        }
+
+        assert_eq!(ctx.svc.prune_thumb_cache_with(1024 * 1024, 100).await, 0);
+        assert_eq!(
+            std::fs::read_dir(crate::modules::file::thumb::thumbs_dir(&ctx.dir.0))
+                .unwrap()
+                .count(),
+            3
+        );
+    }
+
+    /// 半成品临时文件（进程被杀留下）按前缀清掉，且不计入保留量
+    #[tokio::test]
+    async fn prune_cleans_stale_temp_files() {
+        let ctx = setup_service().await;
+        thumb_file(&ctx, "tmp_leftover.tmp", 100, 0);
+        thumb_file(&ctx, "k0-320.jpg", 100, 1);
+
+        let removed = ctx.svc.prune_thumb_cache_with(1024 * 1024, 100).await;
+
+        assert_eq!(removed, 1);
+        assert_eq!(
+            std::fs::read_dir(crate::modules::file::thumb::thumbs_dir(&ctx.dir.0))
+                .unwrap()
+                .count(),
+            1,
+            "只剩正式产物"
+        );
+    }
+
+    /// 目录还没建时不该报错（首次部署、从没用过缩略图）
+    #[tokio::test]
+    async fn prune_is_noop_without_thumbs_dir() {
+        let ctx = setup_service().await;
+        assert_eq!(ctx.svc.prune_thumb_cache().await, 0);
+    }
+
+    #[test]
+    fn thumb_cache_check_reports_uncreated_dir() {
+        let temp = crate::modules::file::test_support::TempDir::new();
+        let check = check_thumb_cache(&temp.0);
+
+        assert!(!check.exists);
+        assert!(!check.writable);
+        assert_eq!((check.files, check.bytes), (0, 0));
+        assert!(check.summary().contains("尚未创建"));
+    }
+
+    #[test]
+    fn thumb_cache_check_counts_files_and_leaves_no_probe() {
+        let temp = crate::modules::file::test_support::TempDir::new();
+        let dir = crate::modules::file::thumb::thumbs_dir(&temp.0);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(format!("{dir}/k-320.jpg"), vec![0u8; 100]).unwrap();
+
+        let check = check_thumb_cache(&temp.0);
+
+        assert!(check.exists && check.writable, "摘要: {}", check.summary());
+        assert_eq!(check.files, 1);
+        assert_eq!(check.bytes, 100);
+        assert!(check.summary().contains("可写"));
+        // 探针文件必须收干净：它落在同一个目录里，留着就是垃圾
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
+    }
+
+    /// 缩略图目录与内容目录同处一地：一致性扫描与孤儿清理都必须当它不存在，
+    /// 否则第一次启动清理就把缓存删光（目录名不是 stored_id，天然躲开 —— 钉住它）
+    #[tokio::test]
+    async fn thumbs_dir_survives_scan_and_orphan_cleanup() {
+        let ctx = setup_service().await;
+        seed_file(&ctx, "f00000000000", true).await;
+        thumb_file(&ctx, "somehash-320.jpg", 100, 0);
+
+        let outcome = ctx.svc.cleanup_orphan_files().await;
+        assert_eq!(outcome, OrphanCleanup::Removed(0), "缩略图不是孤儿");
+
+        let report = ctx.svc.check_consistency().await.unwrap();
+        assert_eq!(report.orphan_count, 0, "扫描不该把缩略图算成孤儿");
+        assert_eq!(report.disk_total, 1, "磁盘统计只数内容文件");
+        assert_eq!(report.missing_count, 0);
+
+        let dir = crate::modules::file::thumb::thumbs_dir(&ctx.dir.0);
+        assert!(std::path::Path::new(&format!("{dir}/somehash-320.jpg")).exists());
     }
 }

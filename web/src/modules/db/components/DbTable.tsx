@@ -1,3 +1,4 @@
+import { EmptyState } from "@components/ui";
 import { ArrowRight } from "@components/ui/icons";
 import {
 	type Component,
@@ -208,8 +209,8 @@ interface EmptyRowProps {
 
 const EmptyRow: Component<EmptyRowProps> = (props) => (
 	<tr>
-		<td class={styles.emptyCell} colspan={props.colSpan}>
-			无数据
+		<td colspan={props.colSpan}>
+			<EmptyState title="无数据" compact />
 		</td>
 	</tr>
 );
@@ -336,7 +337,8 @@ const DbTable: Component<DbTableProps> = (props) => {
 						showFilters={showFilters()}
 					/>
 					<tbody>
-						{props.rows.length === 0 && (
+						{/* 加载中不给空行：工具栏已经写着"加载中…"，此时再说"无数据"是把两件事混成一句 */}
+						{props.rows.length === 0 && !props.loading && (
 							<EmptyRow colSpan={props.columns.length + 1} />
 						)}
 						<TableRows

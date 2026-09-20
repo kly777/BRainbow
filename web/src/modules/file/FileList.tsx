@@ -1,10 +1,9 @@
 // ── /file：通用文件列表（类别筛选 + 标签筛选 + 文件名搜索 + 上传） ──
 
 import {
-	AsyncView,
 	Button,
 	FilterGroup,
-	PageHead,
+	ListPage,
 	SearchInput,
 	Select,
 	SimplePagination,
@@ -13,14 +12,7 @@ import { Grid, List, Upload, X } from "@components/ui/icons";
 import { fillPath, PATHS } from "@config/paths";
 import { formatBytes } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
-import {
-	type Component,
-	createEffect,
-	createSignal,
-	For,
-	onCleanup,
-	Show,
-} from "solid-js";
+import { type Component, createSignal, For, Show } from "solid-js";
 import type { FileItem, SortOrder } from "./api.ts";
 import BatchBar from "./components/BatchBar.tsx";
 import EmptyGuide from "./components/EmptyGuide.tsx";
@@ -32,9 +24,10 @@ import TagFilter from "./components/TagFilter.tsx";
 import TagManager from "./components/TagManager.tsx";
 import UploadPanel from "./components/UploadPanel.tsx";
 import styles from "./FileList.module.css";
-import { filesFromPaste, useFileDropZone } from "./hooks/useFileDropZone.ts";
+import { useFileDropZone, usePasteFiles } from "./hooks/useFileDropZone.ts";
 import { useFileList } from "./hooks/useFileList.ts";
-import { canZoom } from "./lib/thumbnail.ts";
+import { useImageLightbox } from "./hooks/useImageLightbox.ts";
+import { useListScroll } from "./hooks/useListScroll.ts";
 
 /** 列表滚动位置的 sessionStorage 键（从详情返回时恢复） */
 const SCROLL_KEY = "file-list-scroll-top";
@@ -68,9 +61,8 @@ const FileListPage: Component = () => {
 		});
 	};
 
-	// ── 图片灯箱：在当前页的图片之间左右切换（可放大判定与卡片/列表行共用一处）
-	const imageItems = () => f.items().filter(canZoom);
-	const [lightboxId, setLightboxId] = createSignal<string | null>(null);
+	// ── 图片灯箱：在当前页的图片之间左右切换（可放大判定与卡片/列表行共用一处） ──
+	const lightbox = useImageLightbox(() => f.items());
 	const [tagManagerOpen, setTagManagerOpen] = createSignal(false);
 	const [menu, setMenu] = createSignal<{
 		item: FileItem;
@@ -81,56 +73,14 @@ const FileListPage: Component = () => {
 		e.preventDefault();
 		setMenu({ item, x: e.clientX, y: e.clientY });
 	};
-	const lightboxIndex = () => {
-		const id = lightboxId();
-		if (!id) return -1;
-		return imageItems().findIndex((item) => item.stored_id === id);
-	};
-	const openLightbox = (item: FileItem) => setLightboxId(item.stored_id);
 
 	// ── 整页拖放 / 粘贴上传（逻辑见 hooks/useFileDropZone.ts） ──
 	const dropZone = useFileDropZone((files) => void f.handleUploadFiles(files));
+	usePasteFiles((files) => void f.handleUploadFiles(files));
 
-	const onPaste = (e: ClipboardEvent) => {
-		const files = filesFromPaste(e);
-		if (files.length === 0) return;
-		e.preventDefault();
-		void f.handleUploadFiles(files);
-	};
-	document.addEventListener("paste", onPaste);
-	onCleanup(() => document.removeEventListener("paste", onPaste));
-
-	// ── 滚动位置：离开时保存，从详情返回时恢复一次 ──
-	const scrollContainer = () =>
-		document.querySelector("[data-scroll-container]") ??
-		document.documentElement;
-
-	onCleanup(() => {
-		sessionStorage.setItem(SCROLL_KEY, String(scrollContainer().scrollTop));
-	});
-
-	let scrollRestored = false;
-	createEffect(() => {
-		// 等列表数据渲染完再恢复，否则高度不足会被截断
-		if (scrollRestored || f.items().length === 0) return;
-		const saved = Number(sessionStorage.getItem(SCROLL_KEY) ?? "0");
-		sessionStorage.removeItem(SCROLL_KEY); // 一次性：只在紧接的返回时生效
-		scrollRestored = true;
-		if (saved > 0) {
-			requestAnimationFrame(() => {
-				scrollContainer().scrollTop = saved;
-			});
-		}
-	});
-
-	// 上传命中已有文件时：列表就绪后滚动定位到它
-	createEffect(() => {
-		const id = f.highlightId();
-		if (!id) return;
-		void f.items(); // 依赖列表数据，等渲染完成再定位
-		const el = document.querySelector(`[data-file-id="${id}"]`);
-		el?.scrollIntoView({ behavior: "smooth", block: "center" });
-	});
+	// ── 滚动位置：离开时记住、从详情返回时恢复；上传命中时定位到该文件 ──
+	const scroll = useListScroll({ items: f.items, key: SCROLL_KEY });
+	scroll.trackHighlight(f.highlightId);
 
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: 整页拖拽投放区无对应 ARIA role；键盘用户走「上传文件」按钮
@@ -148,7 +98,9 @@ const FileListPage: Component = () => {
 				</div>
 			</Show>
 
-			<PageHead
+			{/* 页头 / 筛选区 / 四态列表 / 分页这四段原先在页面里逐段手写（与 ListPage
+			    封装的结构完全同形），现在交给外壳；DOM 顺序与类名不变 */}
+			<ListPage
 				title="文件"
 				desc={
 					f.stats()
@@ -199,75 +151,68 @@ const FileListPage: Component = () => {
 						</Button>
 					</>
 				}
-			/>
-			<input
-				id="file-upload-input"
-				type="file"
-				multiple
-				style={{ display: "none" }}
-				onChange={(e) => {
-					const files = Array.from(e.currentTarget.files ?? []);
-					if (files.length > 0) void f.handleUploadFiles(files);
-					e.currentTarget.value = "";
-				}}
-			/>
+				filters={
+					<>
+						<div class={styles.filterRow}>
+							<FilterGroup
+								options={CATEGORY_TABS.map((tab) => {
+									const stat = f
+										.stats()
+										?.by_category.find((c) => c.category === tab.value);
+									return stat && stat.count > 0
+										? { ...tab, label: `${tab.label} ${stat.count}` }
+										: tab;
+								})}
+								selected={f.category()}
+								onChange={f.setCategory}
+							/>
+							<div class={styles.viewToggle}>
+								<button
+									type="button"
+									class={styles.viewBtn}
+									classList={{ [styles.viewBtnActive]: f.view() === "grid" }}
+									onClick={() => f.setView("grid")}
+									title="网格视图"
+									aria-pressed={f.view() === "grid"}
+								>
+									<Grid size={15} />
+								</button>
+								<button
+									type="button"
+									class={styles.viewBtn}
+									classList={{ [styles.viewBtnActive]: f.view() === "list" }}
+									onClick={() => f.setView("list")}
+									title="列表视图"
+									aria-pressed={f.view() === "list"}
+								>
+									<List size={15} />
+								</button>
+							</div>
+							{/* biome-ignore lint/a11y/noLabelWithoutControl: Select 渲染的根节点就是原生 <select>，包裹式 label 已隐式关联；lint 无法跟进组件内部 */}
+							<label class={styles.sortLabel}>
+								<span class={styles.sortText}>排序</span>
+								<Select
+									class={styles.sortSelect}
+									value={f.sort()}
+									onChange={(e) =>
+										f.setSort(e.currentTarget.value as SortOrder)
+									}
+									aria-label="排序方式"
+								>
+									<For each={SORT_OPTIONS}>
+										{(option) => (
+											<option value={option.value}>{option.label}</option>
+										)}
+									</For>
+								</Select>
+							</label>
+						</div>
 
-			<div class={styles.filterRow}>
-				<FilterGroup
-					options={CATEGORY_TABS.map((tab) => {
-						const stat = f
-							.stats()
-							?.by_category.find((c) => c.category === tab.value);
-						return stat && stat.count > 0
-							? { ...tab, label: `${tab.label} ${stat.count}` }
-							: tab;
-					})}
-					selected={f.category()}
-					onChange={f.setCategory}
-				/>
-				<div class={styles.viewToggle}>
-					<button
-						type="button"
-						class={styles.viewBtn}
-						classList={{ [styles.viewBtnActive]: f.view() === "grid" }}
-						onClick={() => f.setView("grid")}
-						title="网格视图"
-						aria-pressed={f.view() === "grid"}
-					>
-						<Grid size={15} />
-					</button>
-					<button
-						type="button"
-						class={styles.viewBtn}
-						classList={{ [styles.viewBtnActive]: f.view() === "list" }}
-						onClick={() => f.setView("list")}
-						title="列表视图"
-						aria-pressed={f.view() === "list"}
-					>
-						<List size={15} />
-					</button>
-				</div>
-				{/* biome-ignore lint/a11y/noLabelWithoutControl: Select 渲染的根节点就是原生 <select>，包裹式 label 已隐式关联；lint 无法跟进组件内部 */}
-				<label class={styles.sortLabel}>
-					<span class={styles.sortText}>排序</span>
-					<Select
-						class={styles.sortSelect}
-						value={f.sort()}
-						onChange={(e) => f.setSort(e.currentTarget.value as SortOrder)}
-						aria-label="排序方式"
-					>
-						<For each={SORT_OPTIONS}>
-							{(option) => <option value={option.value}>{option.label}</option>}
-						</For>
-					</Select>
-				</label>
-			</div>
-
-			<Show when={f.errorMessage()}>
-				<p class={styles.error}>{f.errorMessage()}</p>
-			</Show>
-
-			<AsyncView
+						<Show when={f.errorMessage()}>
+							<p class={styles.error}>{f.errorMessage()}</p>
+						</Show>
+					</>
+				}
 				data={f.items()}
 				loading={f.loading}
 				error={f.error}
@@ -278,6 +223,15 @@ const FileListPage: Component = () => {
 						onUpload={() =>
 							document.getElementById("file-upload-input")?.click()
 						}
+					/>
+				}
+				footer={
+					<SimplePagination
+						page={f.page()}
+						totalPages={f.totalPages()}
+						total={f.total()}
+						onPrev={() => f.goPage(f.page() - 1)}
+						onNext={() => f.goPage(f.page() + 1)}
 					/>
 				}
 			>
@@ -301,7 +255,7 @@ const FileListPage: Component = () => {
 											onToggleSelect={f.toggleSelect}
 											onContextMenu={openContextMenu}
 											onOpen={() => openDetail(item)}
-											onZoom={() => openLightbox(item)}
+											onZoom={() => lightbox.open(item)}
 											onStartRename={f.startRename}
 											onDelete={f.handleDelete}
 										/>
@@ -317,7 +271,7 @@ const FileListPage: Component = () => {
 										onContextMenu={openContextMenu}
 										editName={f.editName()}
 										onOpen={() => openDetail(item)}
-										onZoom={() => openLightbox(item)}
+										onZoom={() => lightbox.open(item)}
 										onStartRename={f.startRename}
 										onDelete={f.handleDelete}
 										onRename={f.handleRename}
@@ -329,15 +283,7 @@ const FileListPage: Component = () => {
 						</For>
 					</div>
 				)}
-			</AsyncView>
-
-			<SimplePagination
-				page={f.page()}
-				totalPages={f.totalPages()}
-				total={f.total()}
-				onPrev={() => f.goPage(f.page() - 1)}
-				onNext={() => f.goPage(f.page() + 1)}
-			/>
+			</ListPage>
 
 			<UploadPanel tasks={f.uploadTasks} onClose={f.clearUploadTasks} />
 
@@ -371,15 +317,12 @@ const FileListPage: Component = () => {
 				onDelete={f.batchDelete}
 			/>
 
-			<Show when={lightboxIndex() >= 0}>
+			<Show when={lightbox.index() >= 0}>
 				<ImageLightbox
-					items={imageItems()}
-					index={lightboxIndex()}
-					onClose={() => setLightboxId(null)}
-					onNavigate={(index) => {
-						const next = imageItems()[index];
-						if (next) setLightboxId(next.stored_id);
-					}}
+					items={lightbox.items()}
+					index={lightbox.index()}
+					onClose={lightbox.close}
+					onNavigate={lightbox.navigate}
 				/>
 			</Show>
 		</div>

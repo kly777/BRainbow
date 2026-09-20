@@ -1,0 +1,50 @@
+/* 空态原语：内容缺失时的统一容器（文案层级 / 居中 / 可选动作） */
+
+.empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-xs);
+	padding: var(--space-2xl) var(--space-lg);
+	text-align: center;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-base);
+}
+
+/* 面板内、表格单元格里等紧凑场景：沿用它们的单行节奏 */
+.compact {
+	padding: var(--space-lg);
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-faint);
+}
+
+.icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: var(--space-xs);
+	color: var(--t-color-ink-faint);
+}
+
+.title {
+	margin: 0;
+	font-family: var(--t-font-display);
+	font-weight: 600;
+	letter-spacing: 0.05em;
+}
+
+.hint {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-faint);
+}
+
+.hint a {
+	color: var(--t-color-accent-strong);
+	font-weight: 500;
+}
+
+.action {
+	margin-top: var(--space-md);
+}

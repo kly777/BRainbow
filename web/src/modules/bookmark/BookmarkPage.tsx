@@ -11,22 +11,12 @@ import { Settings, X } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
 import { trySync } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
-import {
-	type Component,
-	createEffect,
-	createResource,
-	createSignal,
-	For,
-	Show,
-} from "solid-js";
+import { type Component, createResource, For, Show } from "solid-js";
 import type { Bookmark, GroupedBookmarksResponse } from "./api.ts";
-import {
-	getGroupedBookmarksE,
-	incrementBookmarkVisitE,
-	searchBookmarksE,
-} from "./api.ts";
+import { getGroupedBookmarksE, incrementBookmarkVisitE } from "./api.ts";
 import styles from "./BookmarkPage.module.css";
 import Favicon from "./components/Favicon.tsx";
+import { useBookmarkSearch } from "./hooks/useBookmarkSearch.ts";
 
 function extractDomain(url: string): string {
 	const result = trySync(() => new URL(url).hostname.replace(/^www\./, ""));
@@ -78,37 +68,10 @@ const TagGroupCard: Component<{
 
 export default function BookmarkPage() {
 	const navigate = useNavigate();
-	const [searchQuery, setSearchQuery] = createSignal("");
-	const [searchResults, setSearchResults] = createSignal<Bookmark[] | null>(
-		null,
-	);
-	const [searching, setSearching] = createSignal(false);
-	const [searchError, setSearchError] = createSignal<string | null>(null);
+	// 搜索态（输入文本 + 结果 + 更新中/错误）收在 hook 里，见其文件头的契约说明
+	const s = useBookmarkSearch();
 
 	const [grouped, { refetch }] = createResource(() => getGroupedBookmarksE());
-
-	// 搜索模式（不闪烁：保留旧结果直到新结果到达）
-	let searchSeq = 0;
-	async function handleSearch(q: string) {
-		setSearchQuery(q);
-		if (!q.trim()) {
-			setSearchResults(null);
-			setSearchError(null);
-			return;
-		}
-		const seq = ++searchSeq;
-		setSearching(true);
-		setSearchError(null);
-		try {
-			const res = await searchBookmarksE(q.trim(), 1, 200);
-			if (seq !== searchSeq) return;
-			setSearchResults(res.items);
-		} catch (e: unknown) {
-			if (seq !== searchSeq) return;
-			setSearchError(e instanceof Error ? e.message : "搜索失败");
-		}
-		setSearching(false);
-	}
 
 	return (
 		<div class={styles.page}>
@@ -117,15 +80,15 @@ export default function BookmarkPage() {
 				actions={
 					<>
 						<SearchInput
-							value={searchQuery()}
-							onSearch={handleSearch}
+							value={s.query()}
+							onSearch={s.setQuery}
 							placeholder="搜索标题 / URL / 备注 / 标签…"
 						/>
-						<Show when={searchQuery().trim()}>
+						<Show when={s.query().trim()}>
 							<Button
 								variant="icon"
 								title="清空搜索"
-								onClick={() => handleSearch("")}
+								onClick={() => s.setQuery("")}
 							>
 								<X size={14} />
 							</Button>
@@ -142,22 +105,22 @@ export default function BookmarkPage() {
 			/>
 
 			{/* 搜索结果（无闪烁：搜索中保留旧结果，仅首次显示加载态） */}
-			<Show when={searchResults() !== null}>
-				<Show when={searchError()}>
+			<Show when={s.results() !== null}>
+				<Show when={s.error()}>
 					<div class={styles.state}>
-						<p class={styles.errorText}>{searchError()}</p>
+						<p class={styles.errorText}>{s.error()}</p>
 					</div>
 				</Show>
-				<Show when={!searchError()}>
+				<Show when={!s.error()}>
 					<div class={styles.searchResults}>
 						<div class={styles.searchResultsHeader}>
-							搜索结果：{searchResults()?.length ?? 0} 条
-							<Show when={searching()}>
+							搜索结果：{s.results()?.length ?? 0} 条
+							<Show when={s.updating()}>
 								<span class={styles.searchUpdating}> 更新中…</span>
 							</Show>
 						</div>
 						<div class={styles.list}>
-							<For each={searchResults() ?? []}>
+							<For each={s.results() ?? []}>
 								{(bm) => <BookmarkLink bm={bm} />}
 							</For>
 						</div>
@@ -166,7 +129,7 @@ export default function BookmarkPage() {
 			</Show>
 
 			{/* 分组展示 */}
-			<Show when={searchResults() === null}>
+			<Show when={s.results() === null}>
 				<Show when={grouped.loading}>
 					<LoadingSkeleton />
 				</Show>

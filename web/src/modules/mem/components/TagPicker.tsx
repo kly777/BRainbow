@@ -2,11 +2,20 @@ import { X } from "@components/ui/icons";
 // ── 标签选择器：chips + 搜索下拉 + 可选创建/过滤模式，mem 模块统一入口 ──
 // 消费者：ManageDetail / MemExportModal / MemBatchTagModal（纯选择），
 // ManageToolbar / FilterBar（过滤模式外观）。
-// bookmark 的 TagInput 为名字键控领域变体，刻意不并入（模块隔离）。
+// mem 的标签是 **id 键控**且 chips 带包含/排除三态，与 file/bookmark 的
+// name 键控输入形态不同，故保留自己的标记；候选过滤、精确命中、Enter 落点
+// 三条判定与它们共用 shared/utils/tag-combo.ts。
 
 import { Button, Input } from "@components/ui";
 import { createTagE, searchTagsE, type TagInfo } from "@modules/mem";
-import { blurClose, trimmedQuery, tryAsync } from "@shared/utils";
+import {
+	blurClose,
+	filterTagOptions,
+	hasExactTagMatch,
+	tagEnterTarget,
+	trimmedQuery,
+	tryAsync,
+} from "@shared/utils";
 import { createResource, createSignal, For, Show } from "solid-js";
 import styles from "./TagPicker.module.css";
 
@@ -35,14 +44,11 @@ export default function TagPicker(props: TagPickerProps) {
 
 	const ownIds = () => new Set(props.selected.map((t) => t.id));
 	const suggestions = () =>
-		(query().trim()
-			? (searchResults() ?? []).filter((t) => !ownIds().has(t.id))
-			: []) as TagInfo[];
-
-	const hasExactMatch = () =>
-		(searchResults() ?? []).some(
-			(t) => t.name.toLowerCase() === query().toLowerCase().trim(),
+		filterTagOptions((searchResults() ?? []) as TagInfo[], query(), (tag) =>
+			ownIds().has(tag.id),
 		);
+
+	const hasExactMatch = () => hasExactTagMatch(searchResults() ?? [], query());
 
 	const select = (tag: TagInfo) => {
 		props.onAdd(tag);
@@ -73,9 +79,10 @@ export default function TagPicker(props: TagPickerProps) {
 	const handleKeyDown = (e: KeyboardEvent) => {
 		if (e.key === "Enter") {
 			e.preventDefault();
-			const first = suggestions()[0];
-			if (first) select(first);
-			else if (props.allowCreate && !hasExactMatch() && query().trim()) {
+			const target = tagEnterTarget(suggestions(), query());
+			if (target?.kind === "option") {
+				select(target.option);
+			} else if (props.allowCreate && !hasExactMatch() && query().trim()) {
 				void handleCreate();
 			}
 		}

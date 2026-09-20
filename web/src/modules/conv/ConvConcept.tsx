@@ -1,6 +1,9 @@
-import { LoadingSkeleton, Markdown as MarkdownRenderer } from "@components/ui";
+import {
+	ErrorRetry,
+	LoadingSkeleton,
+	Markdown as MarkdownRenderer,
+} from "@components/ui";
 import { getConvConceptE } from "@modules/conv";
-import { getErrorMessage } from "@shared/api";
 import { strParam, useUrlParams } from "@shared/utils";
 import { useParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
@@ -12,7 +15,7 @@ export default function ConvConceptPage() {
 	const params = useParams();
 	const urlParams = useUrlParams({ article: strParam("") });
 
-	const [data] = createResource(
+	const [data, { refetch }] = createResource(
 		() => ({ id: params.id, article: urlParams.get("article") }),
 		({ id, article }) => getConvConceptE(Number(id), String(article || "")),
 	);
@@ -42,7 +45,7 @@ export default function ConvConceptPage() {
 					</Show>
 				}
 			>
-				<div class={styles.errorMsg}>{getErrorMessage(data.error)}</div>
+				<ErrorRetry error={data.error} onRetry={refetch} />
 			</Show>
 		</div>
 	);

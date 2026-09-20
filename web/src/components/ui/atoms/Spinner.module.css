@@ -1,0 +1,25 @@
+/* 旋转等待指示器 —— 尺寸/粗细由调用方经 inline style 传入（见 Spinner.tsx） */
+
+.spinner {
+	display: inline-block;
+	flex-shrink: 0;
+	box-sizing: border-box;
+	border-style: solid;
+	border-color: var(--t-color-border);
+	border-top-color: var(--t-color-accent);
+	border-radius: var(--radius-full);
+	animation: spinner-rotate 0.7s linear infinite;
+}
+
+@keyframes spinner-rotate {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	/* 静音动效，但保留环本身：它是"正在等待"的唯一可见信号 */
+	.spinner {
+		animation-duration: 3s;
+	}
+}

@@ -4,7 +4,7 @@
  * 之后在写卡片时再来挑。
  */
 
-import { Button, Modal, SearchInput } from "@components/ui";
+import { Button, EmptyState, Modal, SearchInput } from "@components/ui";
 import { formatBytes } from "@shared/utils";
 import {
 	type Component,
@@ -70,9 +70,10 @@ const FilePickerModal: Component<Props> = (props) => {
 				<Show
 					when={(files() ?? []).length > 0}
 					fallback={
-						<p class={styles.empty}>
-							{files.loading ? "加载中…" : "没有匹配的文件"}
-						</p>
+						<EmptyState
+							title={files.loading ? "加载中…" : "没有匹配的文件"}
+							compact
+						/>
 					}
 				>
 					<ul class={styles.list}>

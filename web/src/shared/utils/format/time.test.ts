@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { fmtInterval, fmtRelative, nowIsoUtc, parseUtc } from "./time.ts";
+import {
+	fmtHm,
+	fmtInterval,
+	fmtRelative,
+	nowIsoUtc,
+	parseUtc,
+} from "./time.ts";
 
 describe("parseUtc", () => {
 	function ymd(d: Date): string {
@@ -125,5 +131,17 @@ describe("nowIsoUtc", () => {
 		// 与真实 UTC 一致（允许秒级进位）
 		const parsed = Date.parse(now);
 		expect(Math.abs(parsed - Date.now())).toBeLessThan(2000);
+	});
+});
+
+describe("fmtHm", () => {
+	it("按本地时刻输出 MM 位补零的 HH:MM", () => {
+		// 用本地时区构造，避免断言依赖运行环境的时区
+		const local = new Date(2026, 6, 6, 9, 5);
+		expect(fmtHm(local.toISOString())).toBe("09:05");
+	});
+
+	it("无法解析的时间给空串（而不是 Invalid Date 之类的字面量）", () => {
+		expect(fmtHm("")).toBe("");
 	});
 });

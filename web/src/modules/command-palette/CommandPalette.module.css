@@ -273,14 +273,6 @@
 	color: var(--t-color-ink-faint);
 }
 
-/* ── Empty & Search States ── */
-.empty {
-	padding: var(--space-lg);
-	text-align: center;
-	font-size: var(--text-sm);
-	color: var(--t-color-ink-faint);
-}
-
 /* ── Group Header ── */
 .sug-header {
 	padding: var(--space-xs) var(--space-md);
@@ -304,21 +296,6 @@
 	padding: var(--space-lg);
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-faint);
-}
-
-.spinner {
-	width: 1rem;
-	height: 1rem;
-	border: 2px solid var(--t-color-border);
-	border-top-color: var(--t-color-accent);
-	border-radius: 50%;
-	animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-	to {
-		transform: rotate(360deg);
-	}
 }
 
 .search-hint {

@@ -1,6 +1,12 @@
-import { BackLink, Button, FilterGroup, SearchInput } from "@components/ui";
+import {
+	BackLink,
+	Button,
+	ErrorRetry,
+	FilterGroup,
+	SearchInput,
+	Spinner,
+} from "@components/ui";
 import { PATHS } from "@config/paths";
-import { getErrorMessage } from "@shared/api";
 import { fmtLocal } from "@shared/utils";
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
@@ -64,7 +70,7 @@ export default function ConvSearch() {
 				</Show>
 				<Show when={m.loading}>
 					<div class={styles.spinnerWrap}>
-						<div class={styles.spinner} />
+						<Spinner size={24} thickness={3} />
 					</div>
 				</Show>
 				<Show
@@ -100,7 +106,7 @@ export default function ConvSearch() {
 						</>
 					}
 				>
-					<div class={styles.errorMsg}>{getErrorMessage(m.error)}</div>
+					<ErrorRetry error={m.error} onRetry={m.refetch} />
 				</Show>
 			</div>
 		</div>

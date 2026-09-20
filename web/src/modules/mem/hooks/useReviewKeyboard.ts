@@ -1,5 +1,6 @@
 // ── 复习页键盘快捷键：空格翻面，1-4 评分 ──
 
+import { isTypingTarget } from "@shared/utils";
 import { onCleanup, onMount } from "solid-js";
 
 const RATING_KEYS: Record<string, number> = {
@@ -22,11 +23,7 @@ export function useReviewKeyboard(deps: {
 	onRate: (rating: number) => void;
 }): void {
 	const onKey = (e: KeyboardEvent) => {
-		if (
-			e.target instanceof HTMLTextAreaElement ||
-			(e.target as HTMLElement)?.tagName === "INPUT"
-		)
-			return;
+		if (isTypingTarget(e.target)) return;
 		if (!deps.showAnswer() && e.key === " ") {
 			e.preventDefault();
 			deps.onShowAnswer();

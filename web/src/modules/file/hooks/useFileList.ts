@@ -1,8 +1,4 @@
-import {
-	getErrorMessage,
-	HttpError,
-	type PaginatedResponse,
-} from "@shared/api";
+import { getErrorMessage, HttpError } from "@shared/api";
 import {
 	notifyError,
 	notifyInfo,
@@ -11,6 +7,7 @@ import {
 	showConfirm,
 	strParam,
 	tryAsync,
+	useListResource,
 	useUrlParams,
 } from "@shared/utils";
 import { createResource, createSignal, onCleanup } from "solid-js";
@@ -76,7 +73,8 @@ export interface FileListApi {
 	page: () => number;
 	goPage: (page: number) => void;
 	loading: boolean;
-	error: Error | undefined;
+	/** 列表加载错误；只透传给 AsyncView（共享原语给的是 unknown） */
+	error: unknown;
 	refetch: () => void;
 	editingId: () => string | null;
 	editName: () => string;
@@ -93,6 +91,14 @@ export interface FileListApi {
 	startRename: (item: FileItem) => void;
 	handleRename: () => Promise<void>;
 	cancelEdit: () => void;
+}
+
+/** 列表请求键：任一字段变化即重取（与 URL 参数一一对应，页码单独传） */
+interface FileListKey {
+	cat: string;
+	t: string;
+	q: string;
+	s: SortOrder;
 }
 
 export function useFileList(): FileListApi {
@@ -138,40 +144,29 @@ export function useFileList(): FileListApi {
 	const setSearch = (q: string) => params.set({ q, page: 1 });
 
 	/**
-	 * 取数失败单独用信号暴露，**不从 fetcher 抛错**。
-	 * 抛错会中断 Solid 的响应式更新，而本应用没有 ErrorBoundary ——
-	 * 结果是资源停在 loading=true，页面永远骨架屏、错误态与重试入口都到不了。
+	 * 列表资源走共享原语 `useListResource`：请求键 → 重取、loading/error 语义、
+	 * 乐观 patch 与回滚都只有一处实现。
+	 *
+	 * 这里原先手写了一份逐条对应的实现（createResource + 独立的 loadError 信号 +
+	 * 空页兜底 + 自己的 patchList），文档 doc/frontend-ui-architecture.md 记过
+	 * "useFileList.patchList 与 useListResource 是同一件事尚未合并"。
+	 * 保留了本地别名 `files` / `refetch`，调用点语义不变。
 	 */
-	const [loadError, setLoadError] = createSignal<Error | undefined>(undefined);
-
-	const [files, { refetch, mutate }] = createResource(
-		() => ({ cat: category(), t: tag(), q: search(), s: sort(), page: page() }),
-		async ({ cat, t, q, s, page }): Promise<PaginatedResponse<FileItem>> => {
-			const result = await tryAsync(() =>
-				listFiles({
-					page,
-					page_size: PAGE_SIZE,
-					sort: s,
-					...(cat ? { category: cat } : {}),
-					...(t ? { tag: t } : {}),
-					...(q.trim() ? { q: q.trim() } : {}),
-				}),
-			);
-			if (result.ok) {
-				setLoadError(undefined);
-				return result.value;
-			}
-			setLoadError(result.error);
-			// 返回空页而非抛错：让 loading 正常结束，错误经 error getter 交给 AsyncView
-			return {
-				items: [],
-				page: 1,
+	const list = useListResource<FileListKey, FileItem>({
+		key: () => ({ cat: category(), t: tag(), q: search(), s: sort() }),
+		page,
+		fetcher: (key, page) =>
+			listFiles({
+				page,
 				page_size: PAGE_SIZE,
-				total: 0,
-				total_pages: 0,
-			};
-		},
-	);
+				sort: key.s,
+				...(key.cat ? { category: key.cat } : {}),
+				...(key.t ? { tag: key.t } : {}),
+				...(key.q.trim() ? { q: key.q.trim() } : {}),
+			}),
+	});
+	const files = list.resource;
+	const refetch = list.refetch;
 
 	// 统计：总量与类别分布（与列表同一 files 缓存域，写操作后一并失效）
 	const [stats, { refetch: refetchStats }] = createResource<FileStats>(() =>
@@ -188,15 +183,10 @@ export function useFileList(): FileListApi {
 		update: (items: FileItem[]) => FileItem[],
 		totalDelta = 0,
 	) => {
-		mutate((prev) =>
-			prev
-				? {
-						...prev,
-						items: update(prev.items),
-						total: Math.max(0, prev.total + totalDelta),
-					}
-				: prev,
-		);
+		const current = files();
+		// 还没有数据时不发明一页（与改动前一致：乐观更新只改已有列表）
+		if (!current) return;
+		list.patch(update, { total: Math.max(0, current.total + totalDelta) });
 	};
 
 	const [editingId, setEditingId] = createSignal<string | null>(null);
@@ -587,7 +577,7 @@ export function useFileList(): FileListApi {
 			return files.loading;
 		},
 		get error() {
-			return loadError();
+			return list.error();
 		},
 		refetch,
 		editingId,

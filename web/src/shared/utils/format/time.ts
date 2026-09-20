@@ -41,6 +41,14 @@ export function fmtFull(ts: string): string {
 	return unwrapOr(result, ts);
 }
 
+/** 格式化为本地时刻 "22:00"（消息气泡这类只需"几点几分"的场景） */
+export function fmtHm(ts: string): string {
+	const d = parseUtc(ts);
+	if (Number.isNaN(d.getTime())) return "";
+	const pad = (n: number) => String(n).padStart(2, "0");
+	return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 /** 格式化为相对时间 "3天后" / "待复习" */
 export function fmtRelative(ts: string): string {
 	const d = parseUtc(ts);

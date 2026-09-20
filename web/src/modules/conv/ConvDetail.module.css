@@ -131,12 +131,6 @@
 	color: var(--t-color-accent);
 }
 
-.error-msg {
-	padding: var(--space-xl);
-	color: var(--t-color-danger);
-	font-size: var(--text-base);
-}
-
 /* ── 响应式 ── */
 @media (width <= 768px) {
 	.top-bar {

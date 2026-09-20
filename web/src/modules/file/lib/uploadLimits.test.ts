@@ -8,7 +8,6 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
 	EXT_TIER,
-	formatBytes,
 	MIME_TIER,
 	type TierKey,
 	UPLOAD_TIERS,
@@ -110,18 +109,13 @@ describe("validateUploadFile", () => {
 	});
 });
 
-describe("formatBytes", () => {
-	it("1024 进制，整数不带小数点", () => {
-		expect(formatBytes(0)).toBe("0 B");
-		expect(formatBytes(512)).toBe("512 B");
-		expect(formatBytes(1024)).toBe("1 KB");
-		expect(formatBytes(200 * MIB)).toBe("200 MB");
-		expect(formatBytes(GIB)).toBe("1 GB");
-		expect(formatBytes(4 * GIB)).toBe("4 GB");
-	});
-
-	it("非整数保留一位小数", () => {
-		expect(formatBytes(1.5 * MIB)).toBe("1.5 MB");
+describe("上限文案里的字节数", () => {
+	// 具体口径由共享 formatBytes 的 compact 模式负责（测试在
+	// shared/utils/format/bytes.test.ts）；这里确认镜像确实取了它
+	it("上限文案读起来像「上限 200 MB」而不是「200.0 MB」", () => {
+		expect(
+			validateUploadFile(candidate("大图.png", "image/png", 201 * MIB)),
+		).toContain("上限 200 MB");
 	});
 });
 

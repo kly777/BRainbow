@@ -1,12 +1,14 @@
-import { Button, Tooltip } from "@components/ui";
-import { Copy, Lock } from "@components/ui/icons";
-import { copyTextWithToast, fmtLocal, formatBytes } from "@shared/utils";
-import { type Component, For, Show } from "solid-js";
+import { Tooltip } from "@components/ui";
+import { Lock } from "@components/ui/icons";
+import { fmtLocal, formatBytes } from "@shared/utils";
+import { type Component, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
 import styles from "../FileList.module.css";
 import { categoryLabel } from "../lib/category.ts";
 import { fmtDimensions, fmtDurationMs } from "../lib/meta.ts";
 import { canZoom } from "../lib/thumbnail.ts";
+import FileItemActions from "./FileItemActions.tsx";
+import FileTags from "./FileTags.tsx";
 import { FileThumb } from "./FileThumb.tsx";
 
 /** 列表视图的一行：徽章/缩略图 + 文件名 + 元信息 + 操作 */
@@ -92,38 +94,17 @@ const FileRow: Component<{
 				<span>·</span>
 				<span>{fmtLocal(props.item.created_at)}</span>
 				<Show when={props.item.tags.length > 0}>
-					<For each={props.item.tags}>
-						{(tag) => <span class={styles.tag}>#{tag}</span>}
-					</For>
+					<FileTags tags={props.item.tags} />
 				</Show>
 			</div>
 		</div>
 
-		<div class={styles.rowActions}>
-			<Button
-				variant="icon"
-				title="复制文件 URL（可用于 Markdown 引用）"
-				onClick={() => copyTextWithToast(props.item.url)}
-			>
-				<Copy size={14} />
-			</Button>
-			<Show when={props.item.can_edit}>
-				<Button
-					variant="secondary"
-					size="sm"
-					onClick={() => props.onStartRename(props.item)}
-				>
-					重命名
-				</Button>
-				<Button
-					variant="danger"
-					size="sm"
-					onClick={() => props.onDelete(props.item.stored_id)}
-				>
-					删除
-				</Button>
-			</Show>
-		</div>
+		<FileItemActions
+			item={props.item}
+			class={styles.rowActions}
+			onStartRename={props.onStartRename}
+			onDelete={props.onDelete}
+		/>
 	</div>
 );
 

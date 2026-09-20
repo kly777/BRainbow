@@ -8,14 +8,6 @@
 	max-height: 60vh;
 }
 
-.empty {
-	margin: 0;
-	padding: var(--space-xl) 0;
-	text-align: center;
-	color: var(--t-color-ink-muted);
-	font-size: var(--text-sm);
-}
-
 .list {
 	margin: 0;
 	padding: 0;

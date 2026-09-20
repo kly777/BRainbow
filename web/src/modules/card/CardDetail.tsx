@@ -1,5 +1,5 @@
 import {
-	AsyncView,
+	AsyncSection,
 	Button,
 	DetailPage,
 	Markdown as MarkdownRenderer,
@@ -30,35 +30,33 @@ const CardDetailPage: Component = () => {
 				</>
 			}
 		>
-			<AsyncView
-				data={m.card() ? [m.card()] : []}
+			<AsyncSection
+				data={m.card}
 				loading={m.cardLoading}
 				error={m.cardError}
 				onRetry={m.refetch}
+				class={styles.content}
 			>
-				{(data) => {
-					const c = () => data()[0];
-					return (
-						<Show when={c()} keyed>
-							{(cc) => (
-								<div class={styles.content}>
-									<div class={styles.meta}>
-										{cc.created_at === cc.updated_at ? "创建于" : "修改于"}:{" "}
-										{fmtLocal(
-											cc.created_at === cc.updated_at
-												? cc.created_at
-												: cc.updated_at,
-										)}
-									</div>
-									<div class={styles.body}>
-										<MarkdownRenderer content={cc.content} />
-									</div>
+				{(card) => (
+					<Show when={card()} keyed>
+						{(cc) => (
+							<>
+								<div class={styles.meta}>
+									{cc.created_at === cc.updated_at ? "创建于" : "修改于"}:{" "}
+									{fmtLocal(
+										cc.created_at === cc.updated_at
+											? cc.created_at
+											: cc.updated_at,
+									)}
 								</div>
-							)}
-						</Show>
-					);
-				}}
-			</AsyncView>
+								<div class={styles.body}>
+									<MarkdownRenderer content={cc.content} />
+								</div>
+							</>
+						)}
+					</Show>
+				)}
+			</AsyncSection>
 		</DetailPage>
 	);
 };

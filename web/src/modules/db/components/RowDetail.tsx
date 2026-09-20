@@ -1,6 +1,6 @@
 import { ArrowRight, Check } from "@components/ui/icons";
 import { getErrorMessage } from "@shared/api";
-import { copyText } from "@shared/utils";
+import { copyText, useCopyFlash } from "@shared/utils";
 import {
 	type Component,
 	createEffect,
@@ -55,7 +55,7 @@ const FieldName: Component<{ name: string; colType: string; isPk: boolean }> = (
 const FieldValue: Component<{
 	col: () => ColumnLike;
 	text: () => string;
-	copiedKey: () => string;
+	copiedKey: () => string | undefined;
 	onCopy: (key: string, text: string) => void;
 	onJump: RowDetailProps["onJump"];
 	previewFor: RowDetailProps["previewFor"];
@@ -104,7 +104,7 @@ const FieldValue: Component<{
 const FieldRow: Component<{
 	col: () => ColumnLike;
 	value: () => string | number | null | undefined;
-	copiedKey: () => string;
+	copiedKey: () => string | undefined;
 	onCopy: (key: string, text: string) => void;
 	onJump: RowDetailProps["onJump"];
 	previewFor: RowDetailProps["previewFor"];
@@ -132,7 +132,7 @@ const FieldRow: Component<{
 const RowDetailBody: Component<{
 	row: () => RowValue | undefined;
 	header: () => readonly ColumnLike[];
-	copiedKey: () => string;
+	copiedKey: () => string | undefined;
 	copyError: () => string;
 	onCopyRowJson: () => void;
 	onCopyField: (key: string, text: string) => void;
@@ -200,7 +200,7 @@ const RowDetail: Component<RowDetailProps> = (props) => {
 			});
 		},
 	);
-	const [copiedKey, setCopiedKey] = createSignal("");
+	const { copiedKey, flash: flashCopied } = useCopyFlash();
 	const [copyError, setCopyError] = createSignal("");
 
 	const row = () => detail()?.rows[0];
@@ -209,8 +209,7 @@ const RowDetail: Component<RowDetailProps> = (props) => {
 	const copyField = async (key: string, text: string) => {
 		setCopyError("");
 		if (await copyText(text)) {
-			setCopiedKey(key);
-			setTimeout(() => setCopiedKey(""), 1200);
+			flashCopied(key);
 		} else {
 			setCopyError("复制失败");
 		}

@@ -9,6 +9,7 @@ import { getErrorMessage } from "@shared/api";
 import { notifyError, tryAsync } from "@shared/utils";
 import {
 	createEffect,
+	createMemo,
 	createResource,
 	createSignal,
 	For,
@@ -68,7 +69,6 @@ const DepOptions = (props: { tasks: Task[] }) => (
 
 export default function DependenciesTab(props: DependenciesTabProps) {
 	const [depIds, setDepIds] = createSignal<number[]>([]);
-	const [depTasks, setDepTasks] = createSignal<Task[]>([]);
 	const [newDepId, setNewDepId] = createSignal<number | undefined>();
 	const [error, setError] = createSignal("");
 
@@ -81,18 +81,19 @@ export default function DependenciesTab(props: DependenciesTabProps) {
 		},
 	);
 
-	// 同步依赖
+	// 同步依赖 id（唯一状态源）
 	createEffect(() => {
 		const d = detail();
-		if (d) {
-			setDepIds([...d.depends_on]);
-			// 从 allTasks 查找完整 task 对象
-			const found = d.depends_on
-				.map((id) => props.allTasks.find((t) => t.id === id))
-				.filter((t): t is Task => !!t);
-			setDepTasks(found);
-		}
+		if (d) setDepIds([...d.depends_on]);
 	});
+
+	// 依赖任务对象由 allTasks × depIds 派生 —— 原先另存一份 depTasks 信号，
+	// 增删两处都要记得改，漏一处就出现"id 变了、列表没变"
+	const depTasks = createMemo(() =>
+		depIds()
+			.map((id) => props.allTasks.find((t) => t.id === id))
+			.filter((t): t is Task => !!t),
+	);
 
 	// ── 可选依赖任务列表（排除自身和已有依赖） ──
 	const availableDepTasks = () =>
@@ -112,9 +113,7 @@ export default function DependenciesTab(props: DependenciesTabProps) {
 			addTaskDependencyE(props.task.id, depId),
 		);
 		if (result.ok) {
-			const depTask = props.allTasks.find((t) => t.id === depId);
 			setDepIds([...depIds(), depId]);
-			if (depTask) setDepTasks([...depTasks(), depTask]);
 			setNewDepId(undefined);
 			props.onDependencyChange?.();
 		} else {
@@ -135,7 +134,6 @@ export default function DependenciesTab(props: DependenciesTabProps) {
 		);
 		if (result.ok) {
 			setDepIds(depIds().filter((id) => id !== depId));
-			setDepTasks(depTasks().filter((t) => t.id !== depId));
 			props.onDependencyChange?.();
 		} else {
 			notifyError("删除依赖失败", result.error);

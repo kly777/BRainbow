@@ -291,31 +291,6 @@
 
 /* ── 空态 ── */
 
-.empty {
-	padding: var(--space-3xl) var(--space-xl);
-	text-align: center;
-}
-
-.empty-title {
-	margin: 0;
-	font-family: var(--t-font-display);
-	font-size: var(--text-base);
-	font-weight: 600;
-	letter-spacing: 0.05em;
-	color: var(--t-color-ink-muted);
-}
-
-.empty-hint {
-	margin: var(--space-xs) 0 0;
-	font-size: var(--text-sm);
-	color: var(--t-color-ink-faint);
-}
-
-.empty-hint a {
-	color: var(--t-color-accent-strong);
-	font-weight: 500;
-}
-
 /* ── 分页 ── */
 
 .pagination {

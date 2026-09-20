@@ -1,6 +1,6 @@
 import { MarkdownEditor } from "@components";
 import {
-	AsyncView,
+	AsyncSection,
 	Button,
 	Markdown as MarkdownRenderer,
 } from "@components/ui";
@@ -137,20 +137,21 @@ const CardEditPage: Component = () => {
 				<div class={styles.errorMsg}>{m.error()}</div>
 			</Show>
 
-			<AsyncView
-				data={m.card() ? [m.card()] : []}
+			<AsyncSection
+				data={m.card}
 				loading={m.cardLoading}
 				error={m.cardError}
 				onRetry={m.refetch}
+				class={styles.body}
 			>
-				{() => (
+				{(card) => (
 					<CardEditWorkspace
 						content={m.content()}
 						onInput={m.setContent}
 						onKeyDown={m.onKeyDown}
 					/>
 				)}
-			</AsyncView>
+			</AsyncSection>
 		</div>
 	);
 };

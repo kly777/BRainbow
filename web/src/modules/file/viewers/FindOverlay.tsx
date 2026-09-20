@@ -10,6 +10,7 @@
 
 import { Button } from "@components/ui";
 import { ChevronLeft, ChevronRight, Search, X } from "@components/ui/icons";
+import { isTypingTarget } from "@shared/utils";
 import {
 	type Component,
 	createEffect,
@@ -110,12 +111,8 @@ export const FindOverlay: Component<{
 	});
 
 	const onKeyDown = (e: KeyboardEvent) => {
-		const target = e.target as HTMLElement | null;
-		const editing =
-			target !== inputRef &&
-			!!target &&
-			(target.isContentEditable ||
-				["INPUT", "TEXTAREA"].includes(target.tagName));
+		// 自己那个查找输入框不算"在别处输入"：Ctrl+F 在它里面也要能重新聚焦
+		const editing = e.target !== inputRef && isTypingTarget(e.target);
 		if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f" && !editing) {
 			e.preventDefault();
 			setOpen(true);

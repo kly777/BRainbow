@@ -110,12 +110,20 @@ build-backend:
 # 把 vendor/ffmpeg/bin（make fetch-ffmpeg 取来的静态二进制）拷进产物。
 # 没有它也照常构建：视频缩略图会永久降级为后缀徽章，其他功能不受影响
 # （降级路径见 src/modules/file/thumb/video.rs 的 available()）
+#
+# **ffprobe 默认不发**：它两个用途都没有 —— 出图只需要 ffmpeg，而 ffprobe 只负责
+# 给"浏览器读不出容器"的视频回填时长（mkv/avi 那批）。静态构建两个各 ~77MB，
+# 一起发等于把产物体积翻几倍。要它就 WITH_FFPROBE=1 make build。
 bundle-ffmpeg:
 	@if [ -x vendor/ffmpeg/bin/ffmpeg ]; then \
 		mkdir -p $(BUILD_DIR)/bin; \
 		cp vendor/ffmpeg/bin/ffmpeg $(BUILD_DIR)/bin/ffmpeg; \
-		if [ -x vendor/ffmpeg/bin/ffprobe ]; then cp vendor/ffmpeg/bin/ffprobe $(BUILD_DIR)/bin/ffprobe; fi; \
-		echo "已带上 ffmpeg: $$(du -h $(BUILD_DIR)/bin/ffmpeg | cut -f1)"; \
+		note=""; \
+		if [ "$(WITH_FFPROBE)" = "1" ] && [ -x vendor/ffmpeg/bin/ffprobe ]; then \
+			cp vendor/ffmpeg/bin/ffprobe $(BUILD_DIR)/bin/ffprobe; \
+			note="+ffprobe"; \
+		fi; \
+		echo "已带上 ffmpeg$$note: $$(du -sh $(BUILD_DIR)/bin | cut -f1)"; \
 	else \
 		echo "提示: 未取 ffmpeg（make fetch-ffmpeg），视频缩略图将降级为后缀徽章"; \
 	fi

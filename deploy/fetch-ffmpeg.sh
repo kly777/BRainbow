@@ -10,6 +10,12 @@
 # 首次获取请按脚本提示把 sha256 写进 deploy/ffmpeg.lock —— 不填就拒绝下载，
 # 宁可多一步人工，也不装一个来路不明的东西。
 #
+# 许可：johnvansickle 的静态构建是 **GPLv3**。这里以**子进程**方式调用（不链接
+# libav*），所以不构成对本项目的传染；但把二进制随产物发出去时，别把这句话删了。
+#
+# 体积：ffmpeg 与 ffprobe 各约 77MB。ffprobe 只用于给"浏览器读不出容器"的视频
+# 回填时长，所以**发布时默认不带它**（见 Makefile / deploy.sh 的 WITH_FFPROBE）。
+#
 # 用法：
 #   deploy/fetch-ffmpeg.sh          # 下载 + 校验 + 解出 ffmpeg/ffprobe 到 vendor/ffmpeg/bin/
 #   make fetch-ffmpeg

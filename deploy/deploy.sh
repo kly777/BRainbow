@@ -344,8 +344,12 @@ cmd_build() {
     if [ -x "$PROJECT_DIR/vendor/ffmpeg/bin/ffmpeg" ]; then
         mkdir -p "$PROJECT_DIR/build/bin"
         cp "$PROJECT_DIR/vendor/ffmpeg/bin/ffmpeg" "$PROJECT_DIR/build/bin/ffmpeg"
-        [ -x "$PROJECT_DIR/vendor/ffmpeg/bin/ffprobe" ] && \
+        # ffprobe 默认不发（各 ~77MB）：出图只需要 ffmpeg，ffprobe 只负责给
+        # "浏览器读不出容器"的视频回填时长。要它就 WITH_FFPROBE=1 make deploy
+        if [ "${WITH_FFPROBE:-0}" = "1" ] && [ -x "$PROJECT_DIR/vendor/ffmpeg/bin/ffprobe" ]; then
             cp "$PROJECT_DIR/vendor/ffmpeg/bin/ffprobe" "$PROJECT_DIR/build/bin/ffprobe"
+            log_info "  ffprobe: build/bin/ffprobe（时长回填）"
+        fi
         log_info "  ffmpeg: build/bin/ffmpeg ($(du -h "$PROJECT_DIR/build/bin/ffmpeg" | cut -f1))"
     else
         log_warn "未取 ffmpeg（make fetch-ffmpeg），视频缩略图将降级为后缀徽章"

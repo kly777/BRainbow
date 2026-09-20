@@ -82,4 +82,21 @@ describe("FilePickerModal", () => {
 		expect(host.textContent).toContain("文档.pdf");
 		expect(host.textContent).not.toContain("没有匹配的文件");
 	});
+
+	// 选择器此前自己写了一版缩略图（只看 mime 就渲染 <img>）：私密文件会 401、缺失文件是破图。
+	// 现在与列表共用 FileThumb，这条锁住回归。
+	it("私密与缺失文件不渲染 <img>", async () => {
+		mockedList.mockResolvedValue({
+			items: [
+				file(),
+				file({ id: 2, stored_id: "sec", is_private: true }),
+				file({ id: 3, stored_id: "gone", missing: true }),
+			],
+		} as never);
+		const host = mount();
+		await settle(() => (host.textContent ?? "").includes("图.png"));
+
+		expect(host.querySelectorAll("img").length).toBe(1);
+		expect(host.textContent).toContain("缺失");
+	});
 });

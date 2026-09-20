@@ -16,8 +16,8 @@ import {
 import type { FileItem } from "../api.ts";
 import { listFiles } from "../api.ts";
 import { categoryLabel } from "../lib/category.ts";
-import { isRenderableImage } from "../lib/thumbnail.ts";
 import styles from "./FilePickerModal.module.css";
+import { FileThumb } from "./FileThumb.tsx";
 
 export interface PickedFile {
 	url: string;
@@ -87,17 +87,12 @@ const FilePickerModal: Component<Props> = (props) => {
 										title={`插入「${item.original_name}」`}
 									>
 										<span class={styles.thumb}>
-											<Show
-												when={isRenderableImage(item.mime_type)}
-												fallback={<span class={styles.ext}>{extOf(item)}</span>}
-											>
-												<img
-													src={item.url}
-													alt=""
-													class={styles.thumbImg}
-													loading="lazy"
-												/>
-											</Show>
+											<FileThumb
+												item={item}
+												imgClass={styles.thumbImg}
+												missingText="缺失"
+												lockOnly
+											/>
 										</span>
 										<span class={styles.info}>
 											<span class={styles.name}>{item.original_name}</span>
@@ -122,15 +117,5 @@ const FilePickerModal: Component<Props> = (props) => {
 		</Modal>
 	);
 };
-
-/** 非图片文件显示后缀（与列表卡片一致） */
-function extOf(item: FileItem): string {
-	const dot = item.original_name.lastIndexOf(".");
-	if (dot <= 0 || dot === item.original_name.length - 1) return "FILE";
-	return item.original_name
-		.slice(dot + 1)
-		.toUpperCase()
-		.slice(0, 5);
-}
 
 export default FilePickerModal;

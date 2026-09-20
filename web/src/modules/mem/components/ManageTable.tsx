@@ -1,23 +1,22 @@
-import { X } from "@components/ui/icons";
 // ── v2 管理表格：档案清单 ──
+// 表格本体拆在 manage-table/ 下（表头 / 行 / 骨架 / 类型），这里只做容器：
+// "加载中 → 卡片（表头 + 行）→ 分页"这段组合，以及空态。
 
-import { Badge, SimplePagination } from "@components/ui";
+import { EmptyState, SimplePagination } from "@components/ui";
 import { PATHS } from "@config/paths";
 import type { MemItem, TagInfo } from "@modules/mem";
-import { fmtRelative, parseUtc } from "@shared/utils";
 import { A } from "@solidjs/router";
-import { type Component, For, Show } from "solid-js";
-import { memStateMeta } from "../lib/mem-manage-utils.ts";
+import { For, Show } from "solid-js";
 import styles from "./ManageTable.module.css";
-
-type SortField = "cue.created_at" | "difficulty" | "due_at" | "state";
-type SortDir = "asc" | "desc";
-
-interface PageMeta {
-	page: number;
-	total_pages: number;
-	total: number;
-}
+import ManageTableHead from "./manage-table/ManageTableHead.tsx";
+import ManageTableRow from "./manage-table/ManageTableRow.tsx";
+import ManageTableSkeleton from "./manage-table/ManageTableSkeleton.tsx";
+import type {
+	PageMeta,
+	RowActions,
+	SortDir,
+	SortField,
+} from "./manage-table/types.ts";
 
 interface Props {
 	mems: MemItem[];
@@ -40,300 +39,64 @@ interface Props {
 	onPageChange: (page: number) => void;
 }
 
-interface TableHeadProps {
-	allSelected: boolean;
-	sortField: SortField;
-	sortDir: SortDir;
-	onToggleSort: (field: SortField) => void;
-	onToggleAll: () => void;
-}
-
-interface TableBodyProps {
-	mems: MemItem[];
-	batchIds: Set<number>;
-	detailId: number | null;
-	memTags: Map<number, TagInfo[]>;
-	filtered: boolean;
-	onToggleBatch: (id: number) => void;
-	onSelectRow: (id: number) => void;
-	onDelete: (id: number) => void;
-}
-
-interface MemRowProps {
-	mem: MemItem;
-	batchIds: Set<number>;
-	detailId: number | null;
-	memTags: Map<number, TagInfo[]>;
-	onToggleBatch: (id: number) => void;
-	onSelectRow: (id: number) => void;
-	onDelete: (id: number) => void;
-}
-
-interface MemTableProps {
-	mems: MemItem[];
-	batchIds: Set<number>;
-	sortField: SortField;
-	sortDir: SortDir;
-	detailId: number | null;
-	memTags: Map<number, TagInfo[]>;
-	allSelected: boolean;
-	filtered: boolean;
-	onToggleSort: (field: SortField) => void;
-	onToggleBatch: (id: number) => void;
-	onToggleAll: () => void;
-	onSelectRow: (id: number) => void;
-	onDelete: (id: number) => void;
-}
-
-function previewText(content: string): string {
-	return content.slice(0, 50).replace(/\n/g, " ") || "（空）";
-}
-
-const SORT_COLUMNS: { field: SortField; label: string }[] = [
-	{ field: "state", label: "状态" },
-	{ field: "difficulty", label: "难度" },
-	{ field: "due_at", label: "复习" },
-];
-
-// 骨架屏行宽（%），模拟最终表格的行节奏
-const SKELETON_WIDTHS = [82, 64, 91, 58, 76, 68];
-
-const LoadingSkeleton: Component = () => (
-	<div class={styles.tableCard} role="status" aria-label="记忆列表加载中">
-		<div class={styles.skHead} aria-hidden="true">
-			<span class={`skeleton ${styles.skCb}`} />
-			<span class={`skeleton ${styles.skBar}`} />
-			<span class={`skeleton ${styles.skBar}`} />
-			<span class={`skeleton ${styles.skChip}`} />
-		</div>
-		<For each={SKELETON_WIDTHS}>
-			{(w) => (
-				<div class={styles.skRow} aria-hidden="true">
-					<span class={`skeleton ${styles.skCb}`} />
-					<span class={`skeleton ${styles.skBar}`} style={{ width: `${w}%` }} />
-					<span
-						class={`skeleton ${styles.skBar}`}
-						style={{ width: `${Math.max(28, w - 34)}%` }}
-					/>
-					<span class={`skeleton ${styles.skChip}`} />
-				</div>
-			)}
-		</For>
-	</div>
-);
-
-const EmptyState: Component<{ filtered: boolean }> = (props) => (
-	<tr>
-		<td colspan={8}>
-			<div class={styles.empty}>
-				<p class={styles.emptyTitle}>
-					{props.filtered ? "没有匹配的记忆" : "档案柜还是空的"}
-				</p>
-				<p class={styles.emptyHint}>
-					<Show
-						when={props.filtered}
-						fallback={<A href={PATHS.memoryAdd}>添加第一张记忆卡</A>}
-					>
-						试试放宽搜索词，或切换状态、标签筛选。
-					</Show>
-				</p>
-			</div>
-		</td>
-	</tr>
-);
-
-const TableHead: Component<TableHeadProps> = (props) => (
-	<thead>
-		<tr>
-			<th class={styles.thCb}>
-				<input
-					type="checkbox"
-					checked={props.allSelected}
-					onInput={props.onToggleAll}
-					aria-label="全选本页"
-				/>
-			</th>
-			<th class={styles.th}>线索</th>
-			<th class={styles.th}>答案</th>
-			<For each={SORT_COLUMNS}>
-				{({ field, label }) => (
-					<th
-						class={styles.thSort}
-						aria-sort={
-							props.sortField === field
-								? props.sortDir === "asc"
-									? "ascending"
-									: "descending"
-								: undefined
-						}
-					>
-						<button
-							type="button"
-							class={styles.sortBtn}
-							onClick={() => props.onToggleSort(field)}
-						>
-							{label}
-							<Show when={props.sortField === field}>
-								<span class={styles.sortIcon} aria-hidden="true">
-									{props.sortDir === "asc" ? "▲" : "▼"}
-								</span>
-							</Show>
-						</button>
-					</th>
-				)}
-			</For>
-			<th class={styles.th}>标签</th>
-			<th class={styles.th}>
-				<span class="sr-only">操作</span>
-			</th>
-		</tr>
-	</thead>
-);
-
-const TableBody: Component<TableBodyProps> = (props) => (
-	<tbody>
-		<Show
-			when={props.mems.length > 0}
-			fallback={<EmptyState filtered={props.filtered} />}
-		>
-			<For each={props.mems}>
-				{(mem) => (
-					<MemRow
-						mem={mem}
-						batchIds={props.batchIds}
-						detailId={props.detailId}
-						memTags={props.memTags}
-						onToggleBatch={props.onToggleBatch}
-						onSelectRow={props.onSelectRow}
-						onDelete={props.onDelete}
-					/>
-				)}
-			</For>
-		</Show>
-	</tbody>
-);
-
-const MemRow: Component<MemRowProps> = (props) => {
-	const tags = () => props.memTags.get(props.mem.id) ?? [];
-	const stateMeta = () => memStateMeta(props.mem.state);
-	const overdue = () => parseUtc(props.mem.due_at).getTime() < Date.now();
-	return (
-		<tr class={props.detailId === props.mem.id ? styles.rowActive : styles.row}>
-			<td class={styles.tdCb}>
-				<input
-					type="checkbox"
-					checked={props.batchIds.has(props.mem.id)}
-					onInput={() => props.onToggleBatch(props.mem.id)}
-					onClick={(e) => e.stopPropagation()}
-					aria-label={`选中：${previewText(props.mem.cue.content)}`}
-				/>
-			</td>
-			<td class={styles.td}>
-				<button
-					type="button"
-					class={styles.cellButton}
-					onClick={() => props.onSelectRow(props.mem.id)}
-				>
-					{previewText(props.mem.cue.content)}
-				</button>
-			</td>
-			<td class={styles.td}>
-				<button
-					type="button"
-					class={styles.cellButton}
-					onClick={() => props.onSelectRow(props.mem.id)}
-				>
-					{previewText(props.mem.target.content)}
-				</button>
-			</td>
-			<td class={styles.tdState}>
-				<span class={styles.stateCell}>
-					<Badge variant={stateMeta().badge}>{stateMeta().label}</Badge>
-					<Show when={props.mem.leeched}>
-						<span class={styles.leechMark} title="烂卡：多次遗忘">
-							烂卡
-						</span>
-					</Show>
-				</span>
-			</td>
-			<td class={styles.td} title="难度">
-				{props.mem.difficulty.toFixed(2)}
-			</td>
-			<td class={`${styles.tdDue} ${overdue() ? styles.tdOverdue : ""}`}>
-				{fmtRelative(props.mem.due_at)}
-			</td>
-			<td class={styles.td}>
-				<div class={styles.cellTags}>
-					<For each={tags().slice(0, 3)}>
-						{(tag) => <span class={styles.cellTag}>{tag.name}</span>}
-					</For>
-					<Show when={tags().length > 3}>
-						<span class={styles.cellTag}>+{tags().length - 3}</span>
-					</Show>
-				</div>
-			</td>
-			<td class={styles.tdAct}>
-				<button
-					type="button"
-					class={styles.delBtn}
-					onClick={(e) => {
-						e.stopPropagation();
-						props.onDelete(props.mem.id);
-					}}
-					title="删除"
-					aria-label={`删除记忆：${previewText(props.mem.cue.content)}`}
-				>
-					<X size={14} />
-				</button>
-			</td>
-		</tr>
-	);
-};
-
-const MemTable: Component<MemTableProps> = (props) => (
-	<div class={styles.tableScroll}>
-		<table class={styles.table}>
-			<caption class="sr-only">记忆清单</caption>
-			<TableHead
-				allSelected={props.allSelected}
-				onToggleAll={props.onToggleAll}
-				sortField={props.sortField}
-				sortDir={props.sortDir}
-				onToggleSort={props.onToggleSort}
-			/>
-			<TableBody
-				mems={props.mems}
-				batchIds={props.batchIds}
-				detailId={props.detailId}
-				memTags={props.memTags}
-				filtered={props.filtered}
-				onToggleBatch={props.onToggleBatch}
-				onSelectRow={props.onSelectRow}
-				onDelete={props.onDelete}
-			/>
-		</table>
-	</div>
-);
-
 export default function ManageTable(props: Props) {
+	// 行级操作收成一束：穿过"表格 → 行"两层只传这一个对象
+	const actions: RowActions = {
+		onToggleBatch: (id) => props.onToggleBatch(id),
+		onSelectRow: (id) => props.onSelectRow(id),
+		onDelete: (id) => props.onDelete(id),
+	};
+
 	return (
-		<Show when={!props.loading} fallback={<LoadingSkeleton />}>
+		<Show when={!props.loading} fallback={<ManageTableSkeleton />}>
 			<div class={styles.tableCard}>
-				<MemTable
-					mems={props.mems}
-					batchIds={props.batchIds}
-					sortField={props.sortField}
-					sortDir={props.sortDir}
-					detailId={props.detailId}
-					memTags={props.memTags}
-					allSelected={props.allSelected}
-					filtered={props.filtered}
-					onToggleSort={props.onToggleSort}
-					onToggleBatch={props.onToggleBatch}
-					onToggleAll={props.onToggleAll}
-					onSelectRow={props.onSelectRow}
-					onDelete={props.onDelete}
-				/>
+				<div class={styles.tableScroll}>
+					<table class={styles.table}>
+						<caption class="sr-only">记忆清单</caption>
+						<ManageTableHead
+							allSelected={props.allSelected}
+							sortField={props.sortField}
+							sortDir={props.sortDir}
+							onToggleSort={props.onToggleSort}
+							onToggleAll={props.onToggleAll}
+						/>
+						<tbody>
+							<Show
+								when={props.mems.length > 0}
+								fallback={
+									<tr>
+										<td colspan={8}>
+											<EmptyState
+												title={
+													props.filtered ? "没有匹配的记忆" : "档案柜还是空的"
+												}
+												hint={
+													props.filtered ? (
+														"试试放宽搜索词，或切换状态、标签筛选。"
+													) : (
+														<A href={PATHS.memoryAdd}>添加第一张记忆卡</A>
+													)
+												}
+											/>
+										</td>
+									</tr>
+								}
+							>
+								<For each={props.mems}>
+									{(mem) => (
+										<ManageTableRow
+											mem={mem}
+											selected={props.batchIds.has(mem.id)}
+											active={props.detailId === mem.id}
+											tags={props.memTags.get(mem.id) ?? []}
+											actions={actions}
+										/>
+									)}
+								</For>
+							</Show>
+						</tbody>
+					</table>
+				</div>
 			</div>
 			<SimplePagination
 				page={props.pageMeta.page}

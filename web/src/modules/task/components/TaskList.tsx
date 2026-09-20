@@ -61,9 +61,23 @@ function TaskStatusSection(props: TaskStatusSectionProps) {
 	);
 }
 
+// 四个分组的顺序与标题：原来写成四段各 13 行、只差 tasks/title 的调用块
+const SECTIONS: { status: string; title: string }[] = [
+	{ status: TaskStatus.BACKLOG, title: "待办列表" },
+	{ status: TaskStatus.ACTIVE, title: "进行中" },
+	{ status: TaskStatus.COMPLETED, title: "已完成" },
+	{ status: TaskStatus.ARCHIVED, title: "已归档" },
+];
+
 export default function TaskList(props: TaskListProps) {
 	const [editingTask, setEditingTask] = createSignal<Task | null>(null);
 	const editModal = useModal();
+
+	const openEdit = (task: Task) => {
+		setEditingTask(task);
+		editModal.open();
+	};
+
 	// 构建父任务 -> 子任务列表的映射
 	const childrenMap = createMemo(() => {
 		const map = new Map<number, Task[]>();
@@ -111,61 +125,20 @@ export default function TaskList(props: TaskListProps) {
 
 	return (
 		<div class={styles.taskListPanel}>
-			<TaskStatusSection
-				tasks={groupedTasks().backlog}
-				title="待办列表"
-				statusColorClass={getStatusColorClass(TaskStatus.BACKLOG)}
-				childrenMap={childrenMap()}
-				onStatusChange={props.onStatusChange}
-				onDelete={props.onDelete}
-				onAddSubTask={props.onAddSubTask}
-				onEdit={(task) => {
-					setEditingTask(task);
-					editModal.open();
-				}}
-			/>
-
-			<TaskStatusSection
-				tasks={groupedTasks().active}
-				title="进行中"
-				statusColorClass={getStatusColorClass(TaskStatus.ACTIVE)}
-				childrenMap={childrenMap()}
-				onStatusChange={props.onStatusChange}
-				onDelete={props.onDelete}
-				onAddSubTask={props.onAddSubTask}
-				onEdit={(task) => {
-					setEditingTask(task);
-					editModal.open();
-				}}
-			/>
-
-			<TaskStatusSection
-				tasks={groupedTasks().completed}
-				title="已完成"
-				statusColorClass={getStatusColorClass(TaskStatus.COMPLETED)}
-				childrenMap={childrenMap()}
-				onStatusChange={props.onStatusChange}
-				onDelete={props.onDelete}
-				onAddSubTask={props.onAddSubTask}
-				onEdit={(task) => {
-					setEditingTask(task);
-					editModal.open();
-				}}
-			/>
-
-			<TaskStatusSection
-				tasks={groupedTasks().archived}
-				title="已归档"
-				statusColorClass={getStatusColorClass(TaskStatus.ARCHIVED)}
-				childrenMap={childrenMap()}
-				onStatusChange={props.onStatusChange}
-				onDelete={props.onDelete}
-				onAddSubTask={props.onAddSubTask}
-				onEdit={(task) => {
-					setEditingTask(task);
-					editModal.open();
-				}}
-			/>
+			<For each={SECTIONS}>
+				{(section) => (
+					<TaskStatusSection
+						tasks={groupedTasks()[section.status]}
+						title={section.title}
+						statusColorClass={getStatusColorClass(section.status)}
+						childrenMap={childrenMap()}
+						onStatusChange={props.onStatusChange}
+						onDelete={props.onDelete}
+						onAddSubTask={props.onAddSubTask}
+						onEdit={openEdit}
+					/>
+				)}
+			</For>
 
 			{/* 编辑任务模态框 */}
 			<EditTaskModal

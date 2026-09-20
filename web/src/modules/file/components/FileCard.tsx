@@ -1,13 +1,12 @@
-import { Button, Input, Tooltip } from "@components/ui";
-import { Copy, Lock } from "@components/ui/icons";
-import { copyTextWithToast } from "@shared/utils";
-import { type Component, For, Show } from "solid-js";
+import { type Component, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
-import FileMeta from "../components/FileMeta.tsx";
 import styles from "../FileList.module.css";
 import { canZoom } from "../lib/thumbnail.ts";
+import FileCardEdit from "./FileCardEdit.tsx";
+import FileCardView from "./FileCardView.tsx";
 import { FileThumb } from "./FileThumb.tsx";
 
+/** 缩略图按钮：可放大的进灯箱，其余进详情页 */
 const FilePreview: Component<{
 	item: FileItem;
 	onOpen: () => void;
@@ -34,100 +33,10 @@ const FilePreview: Component<{
 	</button>
 );
 
-const FileCardView: Component<{
-	item: FileItem;
-	onOpen: () => void;
-	onStartRename: (item: FileItem) => void;
-	onDelete: (stored_id: string) => void;
-}> = (props) => (
-	<>
-		<div class={styles.info}>
-			{/* 文件名在卡片里是单行截断的，hover 补全完整名称 */}
-			<Tooltip label={props.item.original_name} class={styles.nameTipHost}>
-				<button type="button" class={styles.nameBtn} onClick={props.onOpen}>
-					{props.item.original_name}
-				</button>
-			</Tooltip>
-			<Show when={props.item.is_private}>
-				<p class={styles.privateTag}>
-					<Lock size={11} /> 私密（仅自己可见）
-				</p>
-			</Show>
-			<FileMeta item={props.item} />
-			<Show when={props.item.tags.length > 0}>
-				<div class={styles.tags}>
-					<For each={props.item.tags}>
-						{(tag) => <span class={styles.tag}>#{tag}</span>}
-					</For>
-				</div>
-			</Show>
-		</div>
-		<div class={styles.actions}>
-			<Button
-				variant="icon"
-				title="复制文件 URL（可用于 Markdown 引用）"
-				onClick={() => copyTextWithToast(props.item.url)}
-			>
-				<Copy size={14} />
-			</Button>
-			<Show when={props.item.can_edit}>
-				<Button
-					variant="secondary"
-					size="sm"
-					onClick={() => props.onStartRename(props.item)}
-				>
-					重命名
-				</Button>
-				<Button
-					variant="danger"
-					size="sm"
-					onClick={() => props.onDelete(props.item.stored_id)}
-				>
-					删除
-				</Button>
-			</Show>
-		</div>
-	</>
-);
-
-const FileCardEdit: Component<{
-	item: FileItem;
-	editName: string;
-	onEditName: (value: string) => void;
-	onRename: () => void;
-	onCancelEdit: () => void;
-}> = (props) => (
-	<>
-		<div class={styles.info}>
-			<Input
-				value={props.editName}
-				onInput={(e) => props.onEditName(e.currentTarget.value)}
-				class={styles.editInput}
-				onKeyPress={(e) => e.key === "Enter" && props.onRename()}
-				aria-label="文件名称"
-			/>
-			{/* 编辑态保留同样的信息区：与展示态结构一致，避免切换时卡片高度跳变 */}
-			<FileMeta item={props.item} />
-			{/* 编辑态保留标签行：与展示态内容结构一致，避免切换时卡片高度跳变 */}
-			<Show when={props.item.tags.length > 0}>
-				<div class={styles.tags}>
-					<For each={props.item.tags}>
-						{(tag) => <span class={styles.tag}>#{tag}</span>}
-					</For>
-				</div>
-			</Show>
-		</div>
-		<div class={styles.actions}>
-			<Button variant="primary" size="sm" onClick={props.onRename}>
-				保存
-			</Button>
-			<Button variant="secondary" size="sm" onClick={props.onCancelEdit}>
-				取消
-			</Button>
-		</div>
-	</>
-);
-
+/**
+ * 网格视图的文件卡片：缩略图 + 展示态/编辑态（`editing` 切换）+ 选中框。
+ * 两个模式各自实现在 FileCardView / FileCardEdit，这里只做组合与状态类。
+ */
 const FileCard: Component<{
 	item: FileItem;
 	editing: boolean;

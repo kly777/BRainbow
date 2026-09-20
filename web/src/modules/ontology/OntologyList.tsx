@@ -1,114 +1,11 @@
 import { Button, FilterGroup, ListPage, SearchInput } from "@components/ui";
-import { type Component, For, Show } from "solid-js";
+import type { Component } from "solid-js";
+import { Show } from "solid-js";
 import { CreateOntoModal } from "./components/CreateOntoModal.tsx";
-import { type OntologyItem, useOntologyList } from "./hooks/useOntologyList.ts";
+import OntologyGrid from "./components/OntologyGrid.tsx";
+import OntologyTable from "./components/OntologyTable.tsx";
+import { useOntologyList } from "./hooks/useOntologyList.ts";
 import styles from "./OntologyList.module.css";
-
-const OntologyTableRow: Component<{
-	onto: OntologyItem;
-	deletingOntoId: number | null;
-	onDelete: (id: number) => void;
-}> = (props) => (
-	<tr>
-		<td>{props.onto.id}</td>
-		<td>
-			<strong>{props.onto.name}</strong>
-		</td>
-		<td class={styles.entityDescription}>
-			{props.onto.description
-				? props.onto.description.length > 80
-					? `${props.onto.description.substring(0, 80)}...`
-					: props.onto.description
-				: "-"}
-		</td>
-		<td>
-			<div class={styles.entityActions}>
-				<Button
-					variant="danger"
-					size="sm"
-					onClick={() => props.onDelete(props.onto.id)}
-					disabled={props.deletingOntoId === props.onto.id}
-				>
-					{props.deletingOntoId === props.onto.id ? "删除中..." : "删除"}
-				</Button>
-			</div>
-		</td>
-	</tr>
-);
-
-const OntologyTable: Component<{
-	data: readonly OntologyItem[];
-	deletingOntoId: number | null;
-	onDelete: (id: number) => void;
-}> = (props) => (
-	<div class={styles.entitiesList}>
-		<table class={styles.entitiesTable}>
-			<thead>
-				<tr>
-					<th>ID</th>
-					<th>名称</th>
-					<th>描述</th>
-					<th>操作</th>
-				</tr>
-			</thead>
-			<tbody>
-				<For each={props.data}>
-					{(onto) => (
-						<OntologyTableRow
-							onto={onto}
-							deletingOntoId={props.deletingOntoId}
-							onDelete={props.onDelete}
-						/>
-					)}
-				</For>
-			</tbody>
-		</table>
-	</div>
-);
-
-const OntologyCard: Component<{
-	onto: OntologyItem;
-	deletingOntoId: number | null;
-	onDelete: (id: number) => void;
-}> = (props) => (
-	<div class={styles.entityCard}>
-		<div class={styles.entityHeader}>
-			<h3 class={styles.entityName}>{props.onto.name}</h3>
-			<span class={styles.entityType}>ID: {props.onto.id}</span>
-		</div>
-		<p class={styles.entityDescription}>
-			{props.onto.description || "暂无描述"}
-		</p>
-		<div class={styles.entityActions}>
-			<Button
-				variant="danger"
-				size="sm"
-				onClick={() => props.onDelete(props.onto.id)}
-				disabled={props.deletingOntoId === props.onto.id}
-			>
-				{props.deletingOntoId === props.onto.id ? "删除中..." : "删除"}
-			</Button>
-		</div>
-	</div>
-);
-
-const OntologyGrid: Component<{
-	data: readonly OntologyItem[];
-	deletingOntoId: number | null;
-	onDelete: (id: number) => void;
-}> = (props) => (
-	<div class={styles.entitiesGrid}>
-		<For each={props.data}>
-			{(onto) => (
-				<OntologyCard
-					onto={onto}
-					deletingOntoId={props.deletingOntoId}
-					onDelete={props.onDelete}
-				/>
-			)}
-		</For>
-	</div>
-);
 
 const OntologyListPage: Component = () => {
 	const m = useOntologyList();
@@ -153,20 +50,22 @@ const OntologyListPage: Component = () => {
 					</div>
 				}
 			>
-				{(_data) => (
+				{/* 数据走 children 给的 accessor：与 ListPage 一起保证
+				    刷新时只做行级 diff，而不是整棵重挂 */}
+				{(data) => (
 					<Show
 						when={m.viewMode() === "grid"}
 						fallback={
 							<OntologyTable
-								data={m.filteredOntologies()}
-								deletingOntoId={m.deletingOntoId()}
+								data={data()}
+								deletingId={m.deletingOntoId()}
 								onDelete={m.handleDeleteOnto}
 							/>
 						}
 					>
 						<OntologyGrid
-							data={m.filteredOntologies()}
-							deletingOntoId={m.deletingOntoId()}
+							data={data()}
+							deletingId={m.deletingOntoId()}
 							onDelete={m.handleDeleteOnto}
 						/>
 					</Show>

@@ -3,7 +3,7 @@
  * 与 file 侧的差异有三处：候选带使用计数、多一个「无标签」项、强调色用模块色。
  */
 
-import { TagFilter } from "@components/ui";
+import TagFilter from "@components/ui/molecules/TagFilter.tsx";
 import type { BookmarkTagWithCount } from "@modules/bookmark";
 import { searchBookmarkTagsE } from "@modules/bookmark";
 import { createResource } from "solid-js";

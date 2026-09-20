@@ -4,7 +4,7 @@
  * file 后端没有标签搜索接口，故走**本地过滤**模式：一次取全量，输入时本地筛选。
  */
 
-import { TagInput } from "@components/ui";
+import TagInput from "@components/ui/molecules/TagInput.tsx";
 import { createResource } from "solid-js";
 import { type FileTag, listFileTags } from "../api.ts";
 

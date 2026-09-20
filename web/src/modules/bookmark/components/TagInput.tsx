@@ -4,7 +4,9 @@
  * （全局删除，所有书签移除该标签）。
  */
 
-import { TagInput, type TagOption } from "@components/ui";
+import TagInput, {
+	type TagOption,
+} from "@components/ui/molecules/TagInput.tsx";
 import { deleteBookmarkTagE, searchBookmarkTagsE } from "@modules/bookmark";
 import {
 	notifyError,

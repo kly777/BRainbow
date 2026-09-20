@@ -3,7 +3,7 @@
  * file 的标签接口无搜索端点、返回带 count（但此处不显示计数）。
  */
 
-import { TagFilter } from "@components/ui";
+import TagFilter from "@components/ui/molecules/TagFilter.tsx";
 import { createResource } from "solid-js";
 import { type FileTag, listFileTags } from "../api.ts";
 

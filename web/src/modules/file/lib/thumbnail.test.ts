@@ -1,5 +1,7 @@
 // ── 列表侧可预览性判定（纯函数直测） ──
 
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { FileItem } from "../api.ts";
 import {
@@ -7,6 +9,7 @@ import {
 	canZoom,
 	isRenderableImage,
 	preferContain,
+	THUMB_WIDTHS,
 	thumbBackdrop,
 	thumbSrc,
 	thumbSrcSet,
@@ -150,5 +153,37 @@ describe("preferContain", () => {
 
 	it("尺寸未知时不动（保持默认 cover）", () => {
 		expect(preferContain(withThumb({ width: null, height: null }))).toBe(false);
+	});
+});
+
+// ── 与后端宽度阶梯镜像一致 ──
+//
+// 前端只该从后端认可的档位里挑（后端会把任意 w 就近吸附，报别的值等于白写一次 URL），
+// 两处常量必须同步。直接读 Rust 源码比对 —— 与 uploadLimits.test.ts 同一套做法。
+
+describe("宽度阶梯与后端一致", () => {
+	it("THUMB_WIDTHS 等于 thumb/mod.rs 的 WIDTH_LADDER", () => {
+		// vitest 的 import.meta.url 不是 file 协议，按工作目录找（web/ 下跑或仓库根下跑都认）
+		const path = [
+			"../src/modules/file/thumb/mod.rs",
+			"src/modules/file/thumb/mod.rs",
+		]
+			.map((p) => resolve(process.cwd(), p))
+			.find(existsSync);
+		if (!path) throw new Error(`找不到 thumb/mod.rs（cwd=${process.cwd()}）`);
+
+		const source = readFileSync(path, "utf8");
+		const matched = /WIDTH_LADDER:\s*\[u32;\s*\d+\]\s*=\s*\[([^\]]*)\]/.exec(
+			source,
+		);
+		if (!matched) throw new Error("没解析出 WIDTH_LADDER，比对会空转");
+
+		const backend = matched[1]
+			.split(",")
+			.map((n) => Number(n.trim()))
+			.filter((n) => !Number.isNaN(n));
+
+		expect(backend.length).toBeGreaterThan(0);
+		expect(THUMB_WIDTHS).toEqual(backend);
 	});
 });

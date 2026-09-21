@@ -146,14 +146,24 @@ pub fn run_clean(cfg: &Config, all: bool) -> Result<()> {
 /// `clean-cache`：只清应用本体的编译指纹，保留依赖的编译结果。
 ///
 /// 用来强制重新编译 brainbow、又不必把整个 `target/` 重来（依赖重编一次很贵）。
+///
+/// **产物的实际位置取决于 `BUILD_TARGET`**：本项目用 musl 交叉目标，指纹在
+/// `target/<triple>/release/` 下 —— 只清 `target/{release,debug}` 在这个配置下
+/// 等于什么都没清（老 Makefile 正是如此）。
 pub fn run_clean_cache(cfg: &Config) -> Result<()> {
+    let mut roots = vec![
+        cfg.project_dir.join("target/release"),
+        cfg.project_dir.join("target/debug"),
+    ];
+    if let Some(target) = cfg.cross_target() {
+        for profile in ["release", "debug"] {
+            roots.push(cfg.project_dir.join("target").join(target).join(profile));
+        }
+    }
+
     let mut removed = 0usize;
-    for profile in ["release", "debug"] {
-        let dir = cfg
-            .project_dir
-            .join("target")
-            .join(profile)
-            .join(".fingerprint");
+    for root in roots {
+        let dir = root.join(".fingerprint");
         let Ok(entries) = std::fs::read_dir(&dir) else {
             continue;
         };

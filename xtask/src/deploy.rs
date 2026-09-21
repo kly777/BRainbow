@@ -361,8 +361,9 @@ impl Deploy<'_> {
         let db = self.db()?;
         // dry-run 下 exists() 恒为假，所以显式让它也走备份分支（那才是要展示的流程）
         if self.remote.is_dry_run() || db.exists() {
-            // backup() 内部先 quick_check：坏库既不该备份、更不该被新版本覆盖
-            db.backup("deploy")?;
+            // backup_at 内部先 quick_check：坏库既不该备份、更不该被新版本覆盖。
+            // 传本次部署的时间戳：数据库备份与代码备份共用同一个 ts，回滚才能精确配对。
+            db.backup_at("deploy", &self.plan.timestamp)?;
         } else {
             ui::info("远端无数据库文件，跳过备份（首次部署）");
         }

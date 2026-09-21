@@ -150,10 +150,20 @@ impl<'a> Db<'a> {
     /// 两条路都会带上 `-wal`/`-shm` 兄弟文件 —— 少了它们，备份库可能丢掉
     /// 尚未 checkpoint 的事务。
     pub fn backup(&self, suffix: &str) -> Result<String> {
+        self.backup_at(suffix, &utc_stamp())
+    }
+
+    /// 同上，但用调用方给的时间戳。
+    ///
+    /// 部署路径会传自己的时间戳进来，让 `db_deploy_<ts>.db` 与
+    /// `code_<ts>.tar.gz` **共用同一个 ts** —— 回滚就是按这个 ts 配对的。
+    /// 各自取一次 `date` 的话两者会差几秒，于是 `just rollback <ts>` 只找得到
+    /// 代码、找不到数据库（只剩"取最新一份"的兜底）。
+    pub fn backup_at(&self, suffix: &str, stamp: &str) -> Result<String> {
         // 坏库不带病备份（老脚本的注释原话）
         self.quick_check()?;
 
-        let name = format!("db_{suffix}_{}.db", utc_stamp());
+        let name = format!("db_{suffix}_{stamp}.db");
         let dest = format!("{}/{}", self.cfg.backup_dir, name);
         ui::info(&format!("备份数据库 → {name}…"));
 

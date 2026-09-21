@@ -121,6 +121,11 @@ enum Command {
     },
     /// 取静态 ffmpeg 到 vendor/ffmpeg/bin（视频海报帧用）
     FetchFfmpeg,
+    /// 打印渲染结果（排障用）：unit 或 caddy
+    Render {
+        /// 渲染目标：unit 或 caddy
+        what: String,
+    },
 
     // ── 本地开发循环 ──
     /// 格式化：cargo fmt + 前端 biome format
@@ -175,6 +180,7 @@ fn run(cli: Cli) -> Result<()> {
         Command::DbPull => cmd::ops::run_db_pull(&cfg, &remote),
         Command::DbPush { source, yes } => cmd::ops::run_db_push(&cfg, &remote, source, yes),
         Command::FetchFfmpeg => fetch::run(&cfg),
+        Command::Render { what } => cmd::ops::run_render(&mut cfg, &what),
         Command::Fmt => devel::run_fmt(&cfg),
         Command::Lint => devel::run_lint(&cfg),
         Command::Test { verbose } => devel::run_test(&cfg, verbose),

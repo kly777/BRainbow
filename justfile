@@ -123,6 +123,10 @@ logs *args:
 health *args:
 	@cargo xtask health {{args}}
 
+# 打印渲染结果（排障用）：just render unit / just render caddy
+render what *args:
+	@cargo xtask render {{what}} {{args}}
+
 # 列出远端备份
 list-backups *args:
 	@cargo xtask list-backups {{args}}

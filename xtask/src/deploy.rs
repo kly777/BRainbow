@@ -1,19 +1,24 @@
 //! `deploy` —— 全量部署。
 //!
-//! 步骤与 deploy.sh 的 `cmd_deploy`（362-496）一一对应，**顺序不变**：
-//! 停服 → 体检 → 备份 → 清理 → 传文件 → 权限 → 装 unit → 起服 → 等就绪
-//! →（只读自检 / 优化 / 同步 Caddy，失败只告警）。
+//! 步骤与 deploy.sh 的 `cmd_deploy`（362-496）一一对应，只把**传文件挪到了
+//! 停服之前**（见下面的第 3 点），其余顺序不变：停服 → 备份 → 清理 → 就位
+//! → 权限 → 装 unit → 起服 → 等就绪 →（只读自检 / 优化 / 同步 Caddy，
+//! 失败只告警）。
 //!
-//! 三处刻意的改动：
+//! 四处刻意的改动：
 //! 1. **传输不用 rsync**：进程内打 tar.gz 灌进 ssh 的 stdin（本机不需要
 //!    rsync/scp/sftp，Windows 上也就没有"没有 rsync"这回事）。`ffmpeg` 有
 //!    76MB，老实现靠 rsync 的 mtime+size 跳过它，所以这里显式比 sha256 ——
 //!    一致就不带，不然每次部署白传 76MB。
 //! 2. **先传暂存目录再就位**，而不是原地覆盖。传输或解包中断不会留下半个
 //!    二进制；`dist` 换目录用 `.old` 过渡，中间那一瞬旧目录还在手边。
-//! 3. **恢复是显式的 `Result` 处理**，不是 bash 的 `ERR` trap。老写法的
+//! 3. **上传发生在停服之前**：它跟服务在不在没关系（传的是暂存目录），而它
+//!    是停机时间里的大头（4MB 的 dist，带 ffmpeg 时还有 76MB）。于是停机
+//!    窗口里只剩"与数据库有关的那几步"和"就位 + 起服"。
+//! 4. **恢复是显式的 `Result` 处理**，不是 bash 的 `ERR` trap。老写法的
 //!    trap 刻意避开"显式 exit"，于是"哪些失败会触发回滚"很难讲清楚；这里
-//!    只有关键区（停服 → 就绪）会触发恢复，服务就绪之后的事情一律只告警。
+//!    只有关键区（上传 → 停服 → 就绪）会触发恢复，服务就绪之后的事情一律
+//!    只告警。
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -73,6 +78,7 @@ pub fn run_deploy_web(cfg: &Config, remote: &Remote) -> Result<()> {
 
     let staging = format!("{}/web_{}", cfg.remote_tmp_dir(), utc_stamp());
     remote.ok(&format!("mkdir -p {}", sh_quote(&cfg.remote_tmp_dir())))?;
+    sweep_stale_staging(cfg, remote);
     remote.ok(&format!(
         "rm -rf {s} && mkdir -p {s}",
         s = sh_quote(&staging)
@@ -267,6 +273,17 @@ struct Payload<'a> {
     ship_bin: bool,
 }
 
+/// 已上传到远端暂存目录、等着就位的产物。
+///
+/// 上传与就位被拆开，是因为中间夹着"停服"：上传不需要停服（传的是暂存目录），
+/// 就位必须在停服之后。`Staged` 就是把这两步之间的状态带过去。
+struct Staged {
+    /// 远端暂存目录（`tmp/deploy_<ts>`）。
+    dir: String,
+    /// 随产物走的 `bin/` 文件 —— 就位那一步要用同一份清单。
+    bin: Vec<(PathBuf, String)>,
+}
+
 /// 把产物写进归档。
 ///
 /// 单独拎出来是为了可测：**归档里的条目名是部署契约的一部分**（远端就按
@@ -328,6 +345,23 @@ fn needs_db_restore(schema_before: Option<i64>, schema_now: Option<i64>) -> bool
     match schema_before {
         Some(before) => schema_now != Some(before),
         None => true,
+    }
+}
+
+/// 清掉 `tmp/` 里超过一天的暂存目录（`deploy_*` / `web_*` / `rollback_*`）。
+///
+/// 正常路径会自己收尾，但进程被 Ctrl-C 掉、或 ssh 断掉的时候不会 —— 那些残骸
+/// 一份几 MB 到几十 MB，不清就一直在。只认我们自己的前缀，删除只发生在这个
+/// 目录里；失败也只警告（`|| true`），打扫不该拦住部署。
+fn sweep_stale_staging(cfg: &Config, remote: &Remote) {
+    let cmd = format!(
+        "find {tmp} -mindepth 1 -maxdepth 1 -mtime +0 \
+         \\( -name 'deploy_*' -o -name 'web_*' -o -name 'rollback_*' \\) \
+         -exec rm -rf {{}} + 2>/dev/null || true",
+        tmp = sh_quote(&cfg.remote_tmp_dir())
+    );
+    if let Err(e) = remote.ok(&cmd) {
+        ui::warn(&format!("清理旧暂存目录失败（不影响部署）：{e}"));
     }
 }
 
@@ -418,9 +452,25 @@ impl Deploy<'_> {
     }
 
     fn critical_path(&self) -> Result<()> {
+        // 上传放在停服之前：它跟服务在不在没关系（传的是暂存目录），老顺序却
+        // 把它算进了停机窗口 —— 4MB 的 dist 加上可选的 76MB ffmpeg，那才是
+        // 停机时间里的大头。于是停服之后只剩"与数据库有关的那几步"和
+        // "就位 + 起服"。
+        let staged = self.stage_payload()?;
+        let result = self.after_staging(&staged);
+        if result.is_err() {
+            // 失败时把暂存目录带走：产物要么已经就位（那目录已经空了），要么
+            // 压根没就位（更没必要留着）。留着只会在 tmp/ 里积攒几十 MB。
+            let _ = self.remote.ok(&format!("rm -rf {}", sh_quote(&staged.dir)));
+        }
+        result
+    }
+
+    /// 停服之后的那几步：备份 → 就位 → 权限 → unit → 起服 → 就绪。
+    fn after_staging(&self, staged: &Staged) -> Result<()> {
         self.stop_service()?;
         self.backup()?;
-        self.stage_payload()?;
+        self.activate(staged)?;
         self.fix_permissions()?;
         self.install_unit()?;
         self.start_service()?;
@@ -505,11 +555,13 @@ impl Deploy<'_> {
         Ok(())
     }
 
-    // ── Step 3-4：传文件并就位 ────────────────────────────────────
+    // ── Step 3-4：传文件（停服前）→ 就位（停服后） ────────────────
 
-    fn stage_payload(&self) -> Result<()> {
+    /// 把产物传到远端暂存目录。**这一步服务照常在跑**（见 `critical_path`）。
+    fn stage_payload(&self) -> Result<Staged> {
         self.remote
             .ok(&format!("mkdir -p {}", sh_quote(&self.cfg.data_dir)))?;
+        sweep_stale_staging(self.cfg, self.remote);
 
         let staging = format!(
             "{}/deploy_{}",
@@ -528,7 +580,7 @@ impl Deploy<'_> {
             ui::info("bin/ 与远端一致，跳过上传");
         }
 
-        ui::info("同步前端 + 后端…");
+        ui::info("同步前端 + 后端（服务仍在运行）…");
         let build = self.cfg.build_dir();
         let payload = Payload {
             binary: build.join("brainbow"),
@@ -569,14 +621,16 @@ impl Deploy<'_> {
             }
         }
 
-        self.activate(&staging, &bin_files)?;
-        let _ = self.remote.ok(&format!("rm -rf {}", sh_quote(&staging)));
-        ui::done("同步完成");
-        Ok(())
+        ui::done("产物已上传到暂存目录");
+        Ok(Staged {
+            dir: staging,
+            bin: bin_files,
+        })
     }
 
-    /// 把暂存目录里的东西挪到运行位置。
-    fn activate(&self, staging: &str, bin_files: &[(PathBuf, String)]) -> Result<()> {
+    /// 把暂存目录里的东西挪到运行位置，然后收掉暂存目录。
+    fn activate(&self, staged: &Staged) -> Result<()> {
+        let staging = &staged.dir;
         // mv 在同一文件系统内是原子改名：不会出现"服务读到半个二进制"
         self.remote.ok(&format!(
             "mv -f {} {}",
@@ -586,7 +640,7 @@ impl Deploy<'_> {
         activate_dist(self.cfg, self.remote, staging)?;
 
         let staged_bin = path_of(staging, "bin");
-        if !bin_files.is_empty() && (self.remote.is_dry_run() || self.remote.exists(&staged_bin)) {
+        if !staged.bin.is_empty() && (self.remote.is_dry_run() || self.remote.exists(&staged_bin)) {
             let bin_dir = path_of(&self.cfg.service_dir, "bin");
             // 不带 --delete 语义：远端 bin/ 里若还有别的东西，不该被这次部署删掉
             self.remote.ok(&format!(
@@ -595,6 +649,9 @@ impl Deploy<'_> {
                 g = glob_in(&staged_bin, "*")
             ))?;
         }
+
+        let _ = self.remote.ok(&format!("rm -rf {}", sh_quote(staging)));
+        ui::done("同步完成");
         Ok(())
     }
 

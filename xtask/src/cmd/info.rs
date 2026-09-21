@@ -34,6 +34,17 @@ pub fn run(cfg: &Config, remote: &Remote) -> Result<()> {
         remote,
         &format!("ls -lh {binary} 2>/dev/null; stat -c '部署时间: %y' {binary} 2>/dev/null"),
     );
+    // 线上跑的是哪个提交 —— 内容由部署时随产物落地（`build/REVISION` →
+    // `service/REVISION`）。没有就是老产物/部署时产物里没带。
+    field(
+        remote,
+        "版本",
+        &format!(
+            "cat {} 2>/dev/null",
+            sh_quote(&path_of(&cfg.service_dir, local::REVISION_FILE))
+        ),
+        "未记录（产物里没有 REVISION）",
+    );
     show(
         remote,
         &format!(

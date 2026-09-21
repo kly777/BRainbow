@@ -315,7 +315,13 @@ fn assemble(cfg: &Config) -> Result<()> {
     local::copy_file(&binary, &build_dir.join(BIN_NAME))?;
     bundle_ffmpeg(cfg)?;
 
+    // 版本标记随产物走：部署时它跟着落地到 service/REVISION，`just info` 显示。
+    // 好让"线上跑的是哪个提交"不用靠翻部署时间反推。
+    let revision = local::git_revision(&cfg.project_dir);
+    let revision_line = local::write_revision(&build_dir, &revision)?;
+
     ui::done("构建产物已整理到 build/");
+    ui::field("版本", &revision_line);
     ui::field(
         "binary",
         &format!(

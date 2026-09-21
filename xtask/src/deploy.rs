@@ -131,7 +131,24 @@ pub fn run_deploy_web(cfg: &Config, remote: &Remote) -> Result<()> {
 /// 老 `make deploy` 是「build + deploy」一条命令，`just` 这边拆成了两个
 /// （`just build` / `just deploy`）—— 于是"改了代码忘了重新构建就部署"
 /// 变成一个安静的陷阱，这里把它说出来。
+///
+/// 两个信号，按可信度排：① 产物里的 `REVISION` 与当前 HEAD 对不上（硬证据，
+/// 是"拿旧产物部署"）；② 源码 mtime 比产物新（能抓住"改了但还没提交"）。
 fn warn_if_stale(cfg: &Config, binary: &Path) {
+    let built = local::read_revision(&cfg.build_dir());
+    let head = local::git_revision(&cfg.project_dir);
+    if let Some(built) = &built
+        && built != "unknown"
+        && head != "unknown"
+        // 构建时工作区脏不脏不影响"是哪个提交"，比的时候把后缀去掉
+        && built.trim_end_matches("-dirty") != head.trim_end_matches("-dirty")
+    {
+        ui::warn(&format!(
+            "build/ 是 {built} 构建的，当前 HEAD 是 {head}：先跑 `just build`"
+        ));
+        return;
+    }
+
     let Ok(built_at) = std::fs::metadata(binary).and_then(|meta| meta.modified()) else {
         return;
     };
@@ -271,6 +288,9 @@ struct Payload<'a> {
     bin: &'a [(PathBuf, String)],
     /// 是否带上 `bin/`（与远端一致时省掉这 76MB）。
     ship_bin: bool,
+    /// `build/REVISION` → 归档里的 `REVISION`（本次构建是哪个 git 版本）。
+    /// 老产物可能没有这个文件，所以是 `Option`。
+    revision: Option<PathBuf>,
 }
 
 /// 已上传到远端暂存目录、等着就位的产物。
@@ -305,6 +325,11 @@ fn write_payload(
                 .append_path_with_name(path, format!("bin/{name}"))
                 .map_err(|e| Error::io(format!("打包 {}", path.display()), e))?;
         }
+    }
+    if let Some(revision) = &payload.revision {
+        archive
+            .append_path_with_name(revision, local::REVISION_FILE)
+            .map_err(|e| Error::io(format!("打包 {}", revision.display()), e))?;
     }
     Ok(())
 }
@@ -395,6 +420,11 @@ pub fn run(cfg: &mut Config, remote: &Remote) -> Result<()> {
     }
 
     warn_if_stale(cfg, &binary);
+
+    // 说清楚这一版是什么：出问题时"线上跑的是哪个提交"最先被问到。
+    if let Some(revision) = local::read_revision(&cfg.build_dir()) {
+        ui::field("版本", &revision);
+    }
 
     // JWT_SECRET：只有这条路径会生成并写回 .env.prod
     let jwt_secret = cfg.require_jwt_secret(true)?;
@@ -582,11 +612,14 @@ impl Deploy<'_> {
 
         ui::info("同步前端 + 后端（服务仍在运行）…");
         let build = self.cfg.build_dir();
+        let revision = build.join(local::REVISION_FILE);
         let payload = Payload {
             binary: build.join("brainbow"),
             dist: build.join("dist"),
             bin: &bin_files,
             ship_bin,
+            // 没有就不带（老产物 / 手工塞的 build/），部署照常
+            revision: revision.is_file().then_some(revision),
         };
         self.remote.send_tar(
             &format!("tar -xzf - -C {}", sh_quote(&staging)),
@@ -647,6 +680,16 @@ impl Deploy<'_> {
                 "mkdir -p {b} && mv -f {g} {b}/",
                 b = sh_quote(&bin_dir),
                 g = glob_in(&staged_bin, "*")
+            ))?;
+        }
+
+        // 版本标记一起就位 —— `just info` 读的就是它
+        let staged_revision = path_of(staging, local::REVISION_FILE);
+        if self.remote.is_dry_run() || self.remote.exists(&staged_revision) {
+            self.remote.ok(&format!(
+                "mv -f {s} {d}",
+                s = sh_quote(&staged_revision),
+                d = sh_quote(&path_of(&self.cfg.service_dir, local::REVISION_FILE))
             ))?;
         }
 
@@ -880,6 +923,11 @@ mod tests {
         std::fs::write(build.join("dist/index.html"), b"<html>").expect("写");
         std::fs::write(build.join("dist/assets/a.js"), b"console.log(1)").expect("写");
         std::fs::write(build.join("bin/ffmpeg"), vec![0u8; 2048]).expect("写");
+        std::fs::write(
+            build.join(local::REVISION_FILE),
+            "b8dea17b-dirty 2026-09-21T15:00:00Z\n",
+        )
+        .expect("写");
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -903,6 +951,7 @@ mod tests {
             dist: build.join("dist"),
             bin: &files,
             ship_bin: true,
+            revision: Some(build.join(local::REVISION_FILE)),
         };
 
         let mut buf = Vec::new();
@@ -931,6 +980,7 @@ mod tests {
             vec![
                 // `bin/` 没有单独的目录条目：tar 解包时会自动建中间目录，
                 // 所以远端 `tar -xzf` 之后 deploy_x/bin/ 照样在
+                "REVISION",
                 "bin/ffmpeg",
                 "brainbow",
                 "dist/",
@@ -1032,6 +1082,8 @@ mod tests {
             dist: build.join("dist"),
             bin: &files,
             ship_bin: false,
+            // 老产物没有 REVISION：那一项也不该出现在归档里
+            revision: None,
         };
 
         let mut buf = Vec::new();
@@ -1057,6 +1109,10 @@ mod tests {
             names.iter().all(|name| !name.starts_with("bin")),
             "不该带 bin/：{names:?}"
         );
+        assert!(
+            !names.iter().any(|name| name == local::REVISION_FILE),
+            "没有 REVISION 时不该凭空多出一项：{names:?}"
+        );
         assert!(names.iter().any(|name| name == "brainbow"), "{names:?}");
         let _ = std::fs::remove_dir_all(&root);
     }
@@ -1073,6 +1129,7 @@ mod tests {
             dist: build.join("dist"),
             bin: &files,
             ship_bin: true,
+            revision: Some(build.join(local::REVISION_FILE)),
         };
 
         let mut buf = Vec::new();

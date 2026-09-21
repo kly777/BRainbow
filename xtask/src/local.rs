@@ -138,6 +138,60 @@ pub fn null_sink() -> &'static str {
     if cfg!(windows) { "NUL" } else { "/dev/null" }
 }
 
+/// 产物里的版本标记文件名（`build/REVISION` → 远端 `service/REVISION`）。
+pub const REVISION_FILE: &str = "REVISION";
+
+/// 在 `dir` 里跑一条 git 命令，拿 stdout（命令不在 / 非零退出 / 不是仓库都是 `None`）。
+fn git_in(dir: &Path, args: &[&str]) -> Option<String> {
+    Cmd::new("git")
+        .arg("-C")
+        .arg(dir.display().to_string())
+        .args(args)
+        .probe()
+        .filter(|out| !out.trim().is_empty())
+}
+
+/// 构建时的版本：git 短 sha，工作区有改动时带 `-dirty` 后缀。
+///
+/// 线上出问题时第一个要回答的是"跑的是哪个提交"，所以这个值要随产物一起走到
+/// 远端（`build/REVISION` → `service/REVISION`，`just info` 显示）。
+/// 拿不到（不是 git 仓库、机器上没有 git）就是 `unknown`：这个标记只用来回答
+/// 问题，缺了不该拦住构建。
+///
+/// `--untracked-files=no` 是有意的：构建自身的产物（`build/`、`web/dist`、
+/// `brainbow.db`）都该被 .gitignore 挡住，真有漏网的也不该让每次构建都标脏。
+pub fn git_revision(project_dir: &Path) -> String {
+    let Some(sha) = git_in(project_dir, &["rev-parse", "--short", "HEAD"]) else {
+        return "unknown".to_string();
+    };
+    let dirty = git_in(
+        project_dir,
+        &["status", "--porcelain", "--untracked-files=no"],
+    )
+    .is_some_and(|out| !out.trim().is_empty());
+    if dirty { format!("{sha}-dirty") } else { sha }
+}
+
+/// 写 `build/REVISION`：一行 `<版本> <构建时间>`，返回写进去的那一行。
+pub fn write_revision(build_dir: &Path, revision: &str) -> Result<String> {
+    let line = format!(
+        "{revision} {}",
+        chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ")
+    );
+    let path = build_dir.join(REVISION_FILE);
+    std::fs::write(&path, format!("{line}\n"))
+        .map_err(|e| Error::io(format!("写 {}", path.display()), e))?;
+    Ok(line)
+}
+
+/// 读 `<dir>/REVISION` 里的版本字段（第一个空白分隔的字段）。
+///
+/// 文件不在就是 `None`：老产物、或还没构建过 —— 都是正常情形。
+pub fn read_revision(dir: &Path) -> Option<String> {
+    let text = std::fs::read_to_string(dir.join(REVISION_FILE)).ok()?;
+    text.split_whitespace().next().map(str::to_string)
+}
+
 /// 递归复制目录内容到 `dst`（`src` 本身不复制进去，对应 `cp -r src/. dst`）。
 ///
 /// 自己写而不是 shell out 到 `cp`/`xcopy`：这两者在各平台的参数完全不同。
@@ -280,6 +334,37 @@ mod tests {
     #[test]
     fn null_sink_matches_platform() {
         assert_eq!(null_sink(), if cfg!(windows) { "NUL" } else { "/dev/null" });
+    }
+
+    #[test]
+    fn revision_file_round_trips() {
+        let root = std::env::temp_dir().join(format!("xtask-revision-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("建目录");
+
+        let line = write_revision(&root, "b8dea17b-dirty").expect("写 REVISION");
+        assert!(line.starts_with("b8dea17b-dirty "), "{line}");
+        // 读回来的是版本字段本身（时间戳是给人看的，不参与比较）
+        assert_eq!(read_revision(&root).as_deref(), Some("b8dea17b-dirty"));
+        // 文件不存在 → None（老产物 / 还没构建过），不该 panic 也不该报错
+        assert_eq!(read_revision(&root.join("不存在")), None);
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn git_revision_reads_this_repo_and_degrades_on_non_repos() {
+        let project = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("xtask 有上级目录");
+        let revision = git_revision(project);
+        // 本仓库就在 git 里（跑测试的机器上有 git 的话，应当拿得到短 sha）
+        if Cmd::new("git").arg("--version").probe().is_some() {
+            assert_ne!(revision, "unknown", "本仓库应当读得到版本");
+            assert!(!revision.contains(' '), "版本字段里不该有空格：{revision}");
+        }
+        // 不是仓库 / 目录不存在 → unknown，而不是报错
+        assert_eq!(git_revision(Path::new("/不存在-xtask-测试目录")), "unknown");
     }
 
     #[test]

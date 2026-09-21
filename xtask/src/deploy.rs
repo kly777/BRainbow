@@ -289,6 +289,16 @@ pub fn run(cfg: &mut Config, remote: &Remote) -> Result<()> {
         )));
     }
 
+    // 动远端之前先确认这个二进制在那台机器上跑得起来：libc 不匹配的话
+    // 服务已经停了、备份已经做了才会发现（真实踩过一次）。
+    match crate::compat::compare(remote, &binary)? {
+        crate::compat::Verdict::Ok(_) => {}
+        crate::compat::Verdict::Broken(detail) => return Err(Error::msg(detail)),
+        crate::compat::Verdict::Unknown(detail) => {
+            ui::warn(&format!("无法确认 libc 兼容性 —— {detail}"));
+        }
+    }
+
     warn_if_stale(cfg, &binary);
 
     // JWT_SECRET：只有这条路径会生成并写回 .env.prod

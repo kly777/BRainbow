@@ -14,6 +14,7 @@
 mod build;
 mod caddy;
 mod cmd;
+mod compat;
 mod config;
 mod db;
 mod deploy;

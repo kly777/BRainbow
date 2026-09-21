@@ -103,7 +103,18 @@ pub fn run(cfg: &Config, remote: &Remote) -> Result<()> {
         report.warn("build/dist/index.html 不存在（还没构建；`just build`）");
     }
 
-    // ── 8. JWT_SECRET 已配置（只告警）──
+    // ── 8. 本地产物能不能在远端跑（libc 兼容）──
+    // 这条拦的是"服务已停、备份已做，才发现二进制加载失败"那类事故。
+    match crate::compat::compare(remote, &binary) {
+        Ok(crate::compat::Verdict::Ok(detail)) => report.pass(&format!("libc 兼容：{detail}")),
+        Ok(crate::compat::Verdict::Broken(detail)) => report.fail(&detail),
+        Ok(crate::compat::Verdict::Unknown(detail)) => {
+            report.warn(&format!("无法确认 libc 兼容性 —— {detail}"));
+        }
+        Err(e) => report.warn(&format!("libc 兼容性检查跑不起来 —— {e}")),
+    }
+
+    // ── 9. JWT_SECRET 已配置（只告警）──
     // 只有渲染 systemd unit 的部署路径需要它（unit 里要写进去）。
     // 放在这里是为了让"首次部署会被自动生成并写回 .env.prod"这件事在部署前就可见，
     // 而不是等部署时才动那个文件。

@@ -40,6 +40,9 @@ pub struct Config {
     /// 数据库文件名（不含目录）。
     pub database_file: String,
 
+    /// `BUILD_TARGET`：留空或 `native` 表示本机编译。
+    pub build_target: Option<String>,
+
     /// 缺失时为 `None`。
     ///
     /// 只读命令不该因为一个跟它无关的密钥而失败，所以这里不校验；
@@ -137,8 +140,21 @@ impl Config {
             data_dir: format!("{remote_dir}/data"),
             backup_dir: format!("{remote_dir}/backup"),
             database_file: lookup(&vars, "DATABASE_FILE").unwrap_or_else(|| "brainbow.db".into()),
+            build_target: lookup(&vars, "BUILD_TARGET"),
             jwt_secret: lookup(&vars, "JWT_SECRET"),
         })
+    }
+
+    /// 交叉编译目标：`BUILD_TARGET` 非空且不是 `native` 时才算数。
+    ///
+    /// 注意这里只是把 `--target` 传给 cargo —— 真要产出可执行的二进制，
+    /// 还需要目标平台的链接器（`rustup target add <triple>` + 交叉工具链），
+    /// cargo 不代劳，缺了会在链接阶段报错。
+    pub fn cross_target(&self) -> Option<&str> {
+        match self.build_target.as_deref() {
+            Some(target) if !target.is_empty() && target != "native" => Some(target),
+            _ => None,
+        }
     }
 
     /// `user@host`，ssh/scp 的目标。
@@ -154,6 +170,11 @@ impl Config {
     /// 本地产物目录 `build/`。
     pub fn build_dir(&self) -> PathBuf {
         self.project_dir.join("build")
+    }
+
+    /// 前端目录 `web/`（vite 的产物在 `web/dist`）。
+    pub fn web_dir(&self) -> PathBuf {
+        self.project_dir.join("web")
     }
 }
 

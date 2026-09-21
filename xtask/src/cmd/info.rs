@@ -81,9 +81,8 @@ pub fn run(cfg: &Config, remote: &Remote) -> Result<()> {
     ui::section("端点探测");
     for endpoint in ["/api/health", "/", "/.well-known/api-catalog"] {
         let url = format!("https://{}{endpoint}", cfg.domain);
-        let code = local::try_run(
-            "curl",
-            &[
+        let code = local::Cmd::new("curl")
+            .args(&[
                 "-s",
                 "-o",
                 local::null_sink(),
@@ -91,10 +90,10 @@ pub fn run(cfg: &Config, remote: &Remote) -> Result<()> {
                 "5",
                 "-w",
                 "%{http_code}",
-                &url,
-            ],
-        )
-        .unwrap_or_else(|| "FAIL".to_string());
+            ])
+            .arg(url.as_str())
+            .probe()
+            .unwrap_or_else(|| "FAIL".to_string());
         println!("  {endpoint:<28} {code}");
     }
 

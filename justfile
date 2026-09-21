@@ -13,6 +13,24 @@
 default:
 	@just --list
 
+# ── 本地：构建与开发循环 ────────────────────────────────────────────
+
+# 构建前端 + 后端并组装 build/（前端 typecheck+build 与后端 release 并行）
+build *args:
+	@cargo xtask build {{args}}
+
+# 只构建前端到 web/dist
+build-web *args:
+	@cargo xtask build-web {{args}}
+
+# 只构建后端，复用现成的 web/dist（省一次 vite）
+build-backend *args:
+	@cargo xtask build-backend {{args}}
+
+# 开发模式：cargo-watch + vite 并行（Ctrl-C 一起退出）
+dev *args:
+	@cargo xtask dev {{args}}
+
 # ── 只读：查环境与状态 ──────────────────────────────────────────────
 
 # 部署前环境检查：SSH / 免密 sudo 白名单 / Caddy / 本地产物

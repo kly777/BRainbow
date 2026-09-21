@@ -11,6 +11,7 @@
 //!
 //! 用法见 `cargo xtask --help`，或走 justfile 的短命令（`just check` 等）。
 
+mod build;
 mod cmd;
 mod config;
 mod error;
@@ -51,6 +52,14 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// 构建前端 + 后端并组装 build/（前端与后端并行）
+    Build,
+    /// 只构建前端到 web/dist
+    BuildWeb,
+    /// 只构建后端，复用现成的 web/dist
+    BuildBackend,
+    /// 开发模式：cargo-watch（后端）+ vite（前端）并行，Ctrl-C 退出
+    Dev,
     /// 部署前环境检查：SSH / 免密 sudo / Caddy / 本地产物
     Check,
     /// 远端服务状态与最近日志
@@ -84,6 +93,10 @@ fn run(cli: Cli) -> Result<()> {
     let cfg = Config::load(cli.env_file.as_deref())?;
     let remote = Remote::new(&cfg, cli.dry_run);
     match cli.command {
+        Command::Build => build::run_build(&cfg),
+        Command::BuildWeb => build::run_build_web(&cfg),
+        Command::BuildBackend => build::run_build_backend(&cfg),
+        Command::Dev => build::run_dev(&cfg),
         Command::Check => cmd::check::run(&cfg, &remote),
         Command::Status => cmd::status::run_status(&cfg, &remote),
         Command::Info => cmd::info::run(&cfg, &remote),

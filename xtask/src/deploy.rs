@@ -26,6 +26,7 @@ use crate::local;
 use crate::remote::{Remote, glob_in, path_of, sh_quote};
 use crate::render;
 use crate::rollback;
+use crate::stamp;
 use crate::ui;
 
 /// 把暂存目录里的 `dist/` 换到运行位置，并修好权限。
@@ -317,6 +318,19 @@ fn chmod_bin_command(service_dir: &str) -> String {
 const READY_ATTEMPTS: u32 = 30;
 const READY_INTERVAL: Duration = Duration::from_secs(1);
 
+/// 自动恢复要不要连数据库一起回滚：**schema 版本变了就要**。
+///
+/// 单独拎出来是因为这条判断决定了"用户数据会不会被覆盖"，值得有断言盯着：
+/// - 前后都是同版本 → 只回代码（不动用户数据）；
+/// - 版本变了（这次部署跑过迁移）→ 必须连库一起回，否则旧二进制启动即失败；
+/// - 读不到（`None`：远端没有 sqlite3）→ 按"变了"处理，宁多回一份库。
+fn needs_db_restore(schema_before: Option<i64>, schema_now: Option<i64>) -> bool {
+    match schema_before {
+        Some(before) => schema_now != Some(before),
+        None => true,
+    }
+}
+
 pub fn run(cfg: &mut Config, remote: &Remote) -> Result<()> {
     ui::banner(&format!("部署 {} → {}", cfg.app_name, cfg.remote_host));
 
@@ -378,10 +392,14 @@ struct Deploy<'a> {
 
 impl Deploy<'_> {
     fn execute(&self) -> Result<()> {
+        // 停服前记一次 schema 版本：自动恢复要靠它判断"这次部署动过库没有"。
+        // 放在这里（而不是恢复的时候）是因为那一刻新二进制可能已经跑过迁移了。
+        let schema_before = self.schema_version();
+
         // 关键区：停服 → 就绪。这里任何一步失败都要走自动恢复。
         if let Err(err) = self.critical_path() {
             ui::warn("部署中途失败，尝试自动恢复…");
-            match self.recover() {
+            match self.recover(schema_before) {
                 Ok(()) => ui::warn("已自动恢复（详情见上）"),
                 Err(recover) => ui::warn(&format!("自动恢复也没成功：{recover}")),
             }
@@ -411,6 +429,11 @@ impl Deploy<'_> {
 
     fn db(&self) -> Result<Db<'_>> {
         Db::new(self.remote, self.cfg)
+    }
+
+    /// 远端库当前的 schema 版本；读不到（没有 sqlite3 等）就是 `None`。
+    fn schema_version(&self) -> Option<i64> {
+        self.db().ok().and_then(|db| db.user_version())
     }
 
     // ── Step 1：停服 ──────────────────────────────────────────────
@@ -458,7 +481,7 @@ impl Deploy<'_> {
     ///
     /// 失败只告警：数据库备份才是硬要求，代码备份缺了不该拦住部署。
     fn code_archive(&self) -> Result<()> {
-        let name = format!("code_{}.tar.gz", self.plan.timestamp);
+        let name = stamp::code_filename(&self.plan.timestamp);
         let dest = format!("{}/{}", self.cfg.backup_dir, name);
         let cmd = format!(
             "tar -czf {} -C {} brainbow dist/",
@@ -661,7 +684,10 @@ impl Deploy<'_> {
 
     /// 两层恢复，顺序与老脚本一致：先试着把现有产物拉起来（旧产物还在磁盘上时
     /// 这一层就够了），不行再回滚到本次部署前的代码备份，再不行交给人。
-    fn recover(&self) -> Result<()> {
+    ///
+    /// 回滚代码时**可能连数据库一起回**（见 `paired_db`）：迁移把库带到了新版，
+    /// 而"库版本高于程序支持版本"是拒绝启动的，所以只回代码等于没回。
+    fn recover(&self, schema_before: Option<i64>) -> Result<()> {
         let app = sh_quote(&self.cfg.app_name);
         let _ = self.remote.ok(&format!(
             "sudo systemctl restart {app} 2>/dev/null || sudo systemctl start {app}"
@@ -677,27 +703,45 @@ impl Deploy<'_> {
             return Ok(());
         }
 
-        let stem = format!("code_{}", self.plan.timestamp);
+        let code = stamp::code_stem(&self.plan.timestamp);
         if !self
             .remote
-            .exists(&format!("{}/{stem}.tar.gz", self.cfg.backup_dir))
+            .exists(&format!("{}/{}.tar.gz", self.cfg.backup_dir, code))
         {
             return Err(Error::msg(
                 "当前产物起不来，且没有本次部署前的代码备份 —— 请人工介入：`just logs` / `just rollback`",
             ));
         }
-        ui::warn(&format!("当前产物起不来，回滚到 {stem}…"));
+        let pair = rollback::Pair {
+            code: Some(code),
+            db: self.paired_db(schema_before),
+        };
+        ui::warn(&format!("当前产物起不来，回滚：{}…", pair.describe()));
         // 用 apply 而不是 restore_code：它会把服务重新拉起来
         // （只换文件不重启的话，跑的还是内存里那个坏掉的二进制）
-        rollback::apply(
-            self.cfg,
-            self.remote,
-            &rollback::Pair {
-                code: Some(stem),
-                db: None,
-            },
-        )?;
+        rollback::apply(self.cfg, self.remote, &pair)?;
         self.wait_for_ready()
+    }
+
+    /// 自动恢复时要一起还原的数据库备份（`db_deploy_<ts>`），没有就是 `None`。
+    ///
+    /// 只在**这次部署动过 schema** 时才带。道理：迁移的版本闸门是"库版本高于
+    /// 程序支持版本就拒绝启动"，而代码回滚之后恰好就是"旧代码 + 新库"——
+    /// 旧二进制必然起不来，两层恢复全废。反过来，schema 没动过时不该去覆盖
+    /// 用户数据：备份是停服后拍的（那一刻起没有写入），但恢复前服务已经跑过
+    /// 一小会儿，那期间的写入只存在于现网库里。
+    ///
+    /// 读不到 schema 版本（远端没有 sqlite3）时按"动过"处理 —— 宁可多回一份库，
+    /// 也不要留一个必然起不来的组合。
+    fn paired_db(&self, schema_before: Option<i64>) -> Option<String> {
+        if !needs_db_restore(schema_before, self.schema_version()) {
+            return None;
+        }
+        let stem = stamp::db_stem("deploy", &self.plan.timestamp);
+        // 首次部署没有库可备份 —— 那正是 `pair.db = None` 的正常情形
+        self.remote
+            .exists(&format!("{}/{}", self.cfg.backup_dir, stem))
+            .then_some(stem)
     }
 
     // ── 就绪之后的只读收尾 ────────────────────────────────────────
@@ -839,6 +883,23 @@ mod tests {
             ]
         );
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// 回滚要不要连数据库一起：判断错了两个方向都贵 —— 该带不带（旧代码 +
+    /// 新库，起不来），不该带却带（覆盖掉用户数据）。
+    #[test]
+    fn db_restore_follows_the_schema_version() {
+        // 没动过 schema：只回代码
+        assert!(!needs_db_restore(Some(19), Some(19)));
+        // 跑过迁移（19 → 20）：必须连库一起回
+        assert!(needs_db_restore(Some(19), Some(20)));
+        // 读不到现网版本：按"动过"处理
+        assert!(needs_db_restore(Some(19), None));
+        // 停服前就读不到（远端没有 sqlite3）：同样按"动过"处理
+        assert!(needs_db_restore(None, Some(19)));
+        assert!(needs_db_restore(None, None));
+        // 反向迁移（不该发生，但方向也要对）：也得连库一起回
+        assert!(needs_db_restore(Some(20), Some(19)));
     }
 
     #[test]

@@ -78,6 +78,21 @@ impl<'a> Db<'a> {
         }
     }
 
+    /// 远端库的 `PRAGMA user_version`（schema 版本）。
+    ///
+    /// 部署用它判断"这次动过 schema 没有"：动过的话，回滚代码必须连数据库一起回
+    /// —— 库版本高于程序支持版本时启动会直接失败（见 `db::migrations`），
+    /// 于是"旧代码 + 新库"这个组合必然起不来。
+    ///
+    /// 远端没有 sqlite3、或输出认不出来时返回 `None`：调用方按"动过"处理。
+    pub fn user_version(&self) -> Option<i64> {
+        if !self.has_sqlite3 {
+            return None;
+        }
+        let cmd = format!("sqlite3 {} 'PRAGMA user_version;'", sh_quote(&self.path()));
+        parse_user_version(&self.remote.capture_if_run(&cmd).ok().flatten()?)
+    }
+
     /// `PRAGMA integrity_check`：全库逐页扫描，比 quick_check 慢得多，
     /// 所以只在 `just db-check` 里显式跑，不进部署路径。
     pub fn integrity_check(&self) -> Result<()> {
@@ -163,7 +178,7 @@ impl<'a> Db<'a> {
         // 坏库不带病备份（老脚本的注释原话）
         self.quick_check()?;
 
-        let name = format!("db_{suffix}_{stamp}.db");
+        let name = stamp::db_filename(suffix, stamp);
         let dest = format!("{}/{}", self.cfg.backup_dir, name);
         ui::info(&format!("备份数据库 → {name}…"));
 
@@ -254,6 +269,14 @@ fn sqlite_dot_arg(path: &str) -> Result<String> {
         )));
     }
     Ok(path.to_string())
+}
+
+/// 解析 `PRAGMA user_version` 的输出（真实输出是 `19`，可能带换行）。
+///
+/// 认不出来就返回 `None`，**不猜**：调用方（部署的自动恢复）拿 `None` 时的
+/// 动作是"连数据库一起回滚"，猜错要比不猜贵。
+fn parse_user_version(text: &str) -> Option<i64> {
+    text.trim().parse().ok()
 }
 
 /// 判定哪些备份该删。
@@ -390,5 +413,19 @@ mod tests {
         assert_eq!(stamp.len(), 15);
         assert_eq!(stamp.as_bytes()[8], b'_');
         assert!(stamp::parse(&format!("db_deploy_{stamp}.db")).is_some());
+    }
+
+    #[test]
+    fn user_version_parses_real_output_only() {
+        assert_eq!(parse_user_version("19\n"), Some(19));
+        assert_eq!(parse_user_version("19"), Some(19));
+        assert_eq!(parse_user_version(" 0 "), Some(0));
+        // 认不出来就是 None —— 调用方按"动过 schema"处理，不能猜成 0
+        assert_eq!(parse_user_version(""), None);
+        assert_eq!(parse_user_version("19\n20"), None);
+        assert_eq!(
+            parse_user_version("Error: unable to open database file"),
+            None
+        );
     }
 }

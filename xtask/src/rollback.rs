@@ -74,7 +74,7 @@ pub fn pick(db_names: &[String], code_names: &[String], wanted: Option<&str>) ->
         Some(ts) => {
             let code = codes
                 .iter()
-                .find(|(stem, _)| stem == &format!("code_{ts}"))
+                .find(|(stem, _)| stem == &stamp::code_stem(ts))
                 .map(|(stem, _)| stem.clone());
             let db = dbs
                 .iter()

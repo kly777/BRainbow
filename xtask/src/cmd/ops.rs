@@ -78,6 +78,16 @@ pub fn run_rollback(
     let pair = rollback::pick(&db_names, &code_names, wanted.as_deref())?;
     ui::info(&format!("将恢复：{}", pair.describe()));
 
+    // 只回代码是有前提的：现网库的 schema 不能比这版代码新。对应的部署跑过
+    // 迁移时恰好就是"旧代码 + 新库"，而库版本高于程序支持版本会拒绝启动
+    // （见 src/db/migrations）—— 那样恢复完也起不来，得连数据库一起回。
+    if pair.code.is_some() && pair.db.is_none() {
+        ui::warn(
+            "只回代码：若对应的部署跑过数据库迁移，旧二进制会拒绝启动；\
+             那时请连数据库一起回（不带时间戳的 `just rollback` 会按时间戳自动配对）",
+        );
+    }
+
     if pair.db.is_some() && !assume_yes && !remote.is_dry_run() {
         // 覆盖现网数据库不可逆，所以要一次确认；非交互环境请显式加 --yes
         if !ui::confirm("这会用备份覆盖现网数据库，继续？") {

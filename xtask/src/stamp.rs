@@ -37,6 +37,29 @@ pub fn strip_backup_ext(name: &str) -> &str {
         .unwrap_or(name)
 }
 
+/// 数据库备份的 stem（`db_<用途>_<时间戳>`）。
+///
+/// 命名只在这一处拼：拍快照的（`db::backup_at`）与"事后按同一个 ts 找回那一份"
+/// 的（`deploy::recover`）必须一致 —— 各写一遍的话，改一处就会静默配不上对。
+pub fn db_stem(suffix: &str, stamp: &str) -> String {
+    format!("db_{suffix}_{stamp}")
+}
+
+/// 数据库备份的文件名（带 `.db`）。
+pub fn db_filename(suffix: &str, stamp: &str) -> String {
+    format!("{}.db", db_stem(suffix, stamp))
+}
+
+/// 代码备份的 stem（`code_<时间戳>`）—— 与数据库备份共用同一个时间戳。
+pub fn code_stem(stamp: &str) -> String {
+    format!("code_{stamp}")
+}
+
+/// 代码备份的文件名（带 `.tar.gz`）。
+pub fn code_filename(stamp: &str) -> String {
+    format!("{}.tar.gz", code_stem(stamp))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -86,5 +109,27 @@ mod tests {
         assert_eq!(strip_backup_ext("a.tar.gz"), "a");
         assert_eq!(strip_backup_ext("a.gz"), "a.gz");
         assert_eq!(strip_backup_ext("a"), "a");
+    }
+
+    /// 命名与"按同一个时间戳配对"这个约定必须对得上：回滚的 `pick` 就是拿
+    /// `code_<ts>` 去找 `db_<用途>_<ts>` 的。
+    #[test]
+    fn stems_pair_by_the_same_stamp() {
+        let ts = "20260921_193500";
+        assert_eq!(db_stem("deploy", ts), "db_deploy_20260921_193500");
+        assert_eq!(db_filename("deploy", ts), "db_deploy_20260921_193500.db");
+        assert_eq!(code_stem(ts), "code_20260921_193500");
+        assert_eq!(code_filename(ts), "code_20260921_193500.tar.gz");
+
+        // 文件名反过来要能解析回时间戳（列表、保留策略都靠它）
+        assert_eq!(parse(&db_filename("deploy", ts)), parse(&code_filename(ts)));
+        // 数据库 stem 以 `_<ts>` 收尾 —— `pick` 的配对判据
+        assert!(db_stem("deploy", ts).ends_with(&format!("_{ts}")));
+        // stem 去掉扩展名后就是它自己（strip_backup_ext 对 stem 是恒等的）
+        assert_eq!(
+            strip_backup_ext(&db_filename("deploy", ts)),
+            db_stem("deploy", ts)
+        );
+        assert_eq!(strip_backup_ext(&code_filename(ts)), code_stem(ts));
     }
 }

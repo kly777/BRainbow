@@ -285,7 +285,10 @@ pub fn parse_env(text: &str) -> BTreeMap<String, String> {
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
-        let line = line.strip_prefix("export ").map(str::trim_start).unwrap_or(line);
+        let line = line
+            .strip_prefix("export ")
+            .map(str::trim_start)
+            .unwrap_or(line);
         let Some((key, value)) = line.split_once('=') else {
             continue;
         };
@@ -318,7 +321,11 @@ fn lookup_with(
 ) -> Option<String> {
     let non_empty = |s: String| {
         let trimmed = s.trim().to_string();
-        if trimmed.is_empty() { None } else { Some(trimmed) }
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        }
     };
     vars.get(key)
         .cloned()
@@ -335,7 +342,9 @@ fn number(
     match lookup_with(vars, key, env) {
         None => Ok(default),
         Some(raw) => raw.parse::<u16>().map_err(|_| {
-            Error::msg(format!("{key} 不是合法端口号：{raw:?}（应为 1-65535 的整数）"))
+            Error::msg(format!(
+                "{key} 不是合法端口号：{raw:?}（应为 1-65535 的整数）"
+            ))
         }),
     }
 }
@@ -460,9 +469,15 @@ mod tests {
              这行没有等号\n\
              =缺键名\n",
         );
-        assert_eq!(parsed.get("DOMAIN").map(String::as_str), Some("brainbow.top"));
+        assert_eq!(
+            parsed.get("DOMAIN").map(String::as_str),
+            Some("brainbow.top")
+        );
         assert_eq!(parsed.get("SERVICE_PORT").map(String::as_str), Some("8080"));
-        assert_eq!(parsed.get("BIND_HOST").map(String::as_str), Some("127.0.0.1"));
+        assert_eq!(
+            parsed.get("BIND_HOST").map(String::as_str),
+            Some("127.0.0.1")
+        );
         assert_eq!(parsed.len(), 4);
     }
 
@@ -537,7 +552,10 @@ mod tests {
                 ("BUILD_TARGET", value),
             ])
             .expect("配置应当成立");
-            assert!(cfg.cross_target().is_none(), "BUILD_TARGET={value:?} 应视作本机");
+            assert!(
+                cfg.cross_target().is_none(),
+                "BUILD_TARGET={value:?} 应视作本机"
+            );
         }
     }
 

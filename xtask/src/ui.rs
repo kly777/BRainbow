@@ -81,6 +81,24 @@ pub fn rule() {
     println!("{}", paint(DIM, "---"));
 }
 
+/// 交互确认。非 TTY（或被重定向）时一律返回 `false` —— 调用方据此提示用 `--yes`。
+///
+/// 比老脚本的 `read -r ans; [ "$ans" != "y" ]` 宽一点：`Y` 也算同意。
+pub fn confirm(prompt: &str) -> bool {
+    use std::io::Write;
+
+    if !std::io::stdin().is_terminal() {
+        return false;
+    }
+    print!("{prompt} (y/N) ");
+    let _ = std::io::stdout().flush();
+    let mut line = String::new();
+    if std::io::stdin().read_line(&mut line).is_err() {
+        return false;
+    }
+    matches!(line.trim(), "y" | "Y")
+}
+
 /// 小节标题（对应 info 里那些 `echo "── 服务状态 ──"`）。
 pub fn section(title: &str) {
     println!();

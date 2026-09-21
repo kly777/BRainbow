@@ -33,8 +33,7 @@ impl Cmd {
     }
 
     pub fn args(mut self, args: &[&str]) -> Self {
-        self.args
-            .extend(args.iter().map(|arg| (*arg).to_string()));
+        self.args.extend(args.iter().map(|arg| (*arg).to_string()));
         self
     }
 
@@ -102,9 +101,10 @@ impl Cmd {
 
     /// 起进程、等待结束；非零退出即失败。
     pub fn run(&self) -> Result<()> {
-        let status = self.spawn()?.wait().map_err(|e| {
-            Error::io(format!("等待 `{}` 结束", self.program), e)
-        })?;
+        let status = self
+            .spawn()?
+            .wait()
+            .map_err(|e| Error::io(format!("等待 `{}` 结束", self.program), e))?;
         if !status.success() {
             return Err(Error::msg(describe_failure(
                 &format!("`{} {}`", self.program, self.args.join(" ")),
@@ -144,8 +144,8 @@ pub fn null_sink() -> &'static str {
 pub fn copy_tree(src: &Path, dst: &Path) -> Result<()> {
     std::fs::create_dir_all(dst)
         .map_err(|e| Error::io(format!("创建目录 {}", dst.display()), e))?;
-    let entries = std::fs::read_dir(src)
-        .map_err(|e| Error::io(format!("读取目录 {}", src.display()), e))?;
+    let entries =
+        std::fs::read_dir(src).map_err(|e| Error::io(format!("读取目录 {}", src.display()), e))?;
     for entry in entries {
         let entry = entry.map_err(|e| Error::io(format!("读取目录 {}", src.display()), e))?;
         let from = entry.path();
@@ -170,9 +170,8 @@ pub fn copy_tree(src: &Path, dst: &Path) -> Result<()> {
 
 /// 复制单个文件，并保留权限位（可执行位必须留住）。
 pub fn copy_file(from: &Path, to: &Path) -> Result<()> {
-    std::fs::copy(from, to).map_err(|e| {
-        Error::io(format!("复制 {} → {}", from.display(), to.display()), e)
-    })?;
+    std::fs::copy(from, to)
+        .map_err(|e| Error::io(format!("复制 {} → {}", from.display(), to.display()), e))?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -180,11 +179,26 @@ pub fn copy_file(from: &Path, to: &Path) -> Result<()> {
             .map_err(|e| Error::io(format!("读取权限 {}", from.display()), e))?
             .permissions()
             .mode();
-        std::fs::set_permissions(to, std::fs::Permissions::from_mode(mode)).map_err(|e| {
-            Error::io(format!("设置权限 {}", to.display()), e)
-        })?;
+        std::fs::set_permissions(to, std::fs::Permissions::from_mode(mode))
+            .map_err(|e| Error::io(format!("设置权限 {}", to.display()), e))?;
     }
     Ok(())
+}
+
+/// 人类可读大小（与 `du -h` 同量纲：1024 进制）。
+pub fn human_size(bytes: u64) -> String {
+    const UNITS: [&str; 5] = ["B", "K", "M", "G", "T"];
+    let mut value = bytes as f64;
+    let mut unit = 0;
+    while value >= 1024.0 && unit + 1 < UNITS.len() {
+        value /= 1024.0;
+        unit += 1;
+    }
+    if unit == 0 {
+        format!("{bytes}B")
+    } else {
+        format!("{value:.1}{}", UNITS[unit])
+    }
 }
 
 /// 目录是否存在。
@@ -199,8 +213,8 @@ pub fn dir_exists(path: &Path) -> bool {
 pub fn sha256(path: &Path) -> Result<String> {
     use sha2::{Digest, Sha256};
 
-    let file = std::fs::File::open(path)
-        .map_err(|e| Error::io(format!("打开 {}", path.display()), e))?;
+    let file =
+        std::fs::File::open(path).map_err(|e| Error::io(format!("打开 {}", path.display()), e))?;
     let mut reader = std::io::BufReader::new(file);
     let mut hasher = Sha256::new();
     std::io::copy(&mut reader, &mut hasher)

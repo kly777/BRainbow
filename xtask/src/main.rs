@@ -17,7 +17,9 @@ mod cmd;
 mod config;
 mod db;
 mod deploy;
+mod devel;
 mod error;
+mod fetch;
 mod local;
 mod remote;
 mod render;
@@ -74,16 +76,66 @@ enum Command {
     Status,
     /// 部署信息汇总（状态 / 产物 / 数据 / 资源 / 配置 / 端点 / 日志）
     Info,
-    /// 远端日志
+    /// 远端日志（默认 50 行）
     Logs {
         /// 显示多少行
-        #[arg(short = 'n', long, default_value_t = 50, value_name = "LINES")]
+        #[arg(default_value_t = 50, value_name = "LINES")]
         lines: u32,
     },
     /// 健康检查：4 项打分，任一不过退出码非零
     Health,
     /// 列出远端备份
     ListBackups,
+
+    // ── 部署与运维 ──
+    /// 仅部署前端：不停服、不动 unit、不备份数据库
+    DeployWeb,
+    /// 只同步 Caddy 配置并重载（改 deploy/Caddyfile 后用）
+    Caddy,
+    /// 回滚：[时间戳] 精确指定，缺省用最新备份；数据库那部分要确认
+    Rollback {
+        /// 备份时间戳（如 20260921_193500），缺省用最新一份
+        stamp: Option<String>,
+        /// 跳过确认（非交互环境必须显式加）
+        #[arg(long)]
+        yes: bool,
+    },
+    /// 数据库完整性检查（PRAGMA integrity_check，全库扫描）
+    DbCheck,
+    /// 更新 SQLite 统计信息（PRAGMA optimize）
+    DbOptimize,
+    /// 手动做一次数据库备份并清理过期备份
+    DbBackup,
+    /// 只清理过期备份
+    BackupPrune,
+    /// 把远端数据库拉到本地 db/
+    DbPull,
+    /// 用本地数据库覆盖远端（停服 → 备份 → 上传 → 起服）
+    DbPush {
+        /// 本地数据库文件（缺省 <仓库根>/<DATABASE_FILE>）
+        source: Option<PathBuf>,
+        /// 跳过确认（非交互环境必须显式加）
+        #[arg(long)]
+        yes: bool,
+    },
+    /// 取静态 ffmpeg 到 vendor/ffmpeg/bin（视频海报帧用）
+    FetchFfmpeg,
+
+    // ── 本地开发循环 ──
+    /// 格式化：cargo fmt + 前端 biome format
+    Fmt,
+    /// 检查：clippy（workspace）+ 前端 biome/stylelint
+    Lint,
+    /// 后端测试（装了 cargo-nextest 就用它）
+    Test {
+        /// 连带打印测试输出
+        #[arg(long)]
+        verbose: bool,
+    },
+    /// 前端测试
+    TestWeb,
+    /// 刷新 .sqlx 离线数据（SQL/schema 变更后必跑）
+    SqlxPrepare,
 }
 
 fn main() -> ExitCode {
@@ -112,6 +164,21 @@ fn run(cli: Cli) -> Result<()> {
         Command::Logs { lines } => cmd::status::run_logs(&cfg, &remote, lines),
         Command::Health => cmd::health::run(&cfg, &remote),
         Command::ListBackups => cmd::backups::run(&cfg, &remote),
+        Command::DeployWeb => deploy::run_deploy_web(&cfg, &remote),
+        Command::Caddy => cmd::ops::run_caddy(&cfg, &remote),
+        Command::Rollback { stamp, yes } => cmd::ops::run_rollback(&cfg, &remote, stamp, yes),
+        Command::DbCheck => cmd::ops::run_db_check(&cfg, &remote),
+        Command::DbOptimize => cmd::ops::run_db_optimize(&cfg, &remote),
+        Command::DbBackup => cmd::ops::run_db_backup(&cfg, &remote),
+        Command::BackupPrune => cmd::ops::run_backup_prune(&cfg, &remote),
+        Command::DbPull => cmd::ops::run_db_pull(&cfg, &remote),
+        Command::DbPush { source, yes } => cmd::ops::run_db_push(&cfg, &remote, source, yes),
+        Command::FetchFfmpeg => fetch::run(&cfg),
+        Command::Fmt => devel::run_fmt(&cfg),
+        Command::Lint => devel::run_lint(&cfg),
+        Command::Test { verbose } => devel::run_test(&cfg, verbose),
+        Command::TestWeb => devel::run_test_web(&cfg),
+        Command::SqlxPrepare => devel::run_sqlx_prepare(&cfg),
     }
 }
 

@@ -115,7 +115,8 @@ mod tests {
         // 这些正是 `sed "s|@@X@@|$X|g"` 会咬坏的值：`&` 在 sed 里表示整个匹配，
         // `|` 会破坏分隔符。这里必须原样落地。
         let value = "https://a.test/?x=1&y=2|z\\w$HOME`id`\"q\"'s'";
-        let out = render("CORS=@@CORS@@\n", "测试", &[("CORS", value.into())]).expect("渲染应当成功");
+        let out =
+            render("CORS=@@CORS@@\n", "测试", &[("CORS", value.into())]).expect("渲染应当成功");
         assert_eq!(out, format!("CORS={value}\n"));
     }
 
@@ -131,16 +132,24 @@ mod tests {
 
     #[test]
     fn rejects_placeholder_absent_from_template() {
-        let err = render("a=@@A@@", "测试", &[("A", "1".into()), ("NOPE", "x".into())])
-            .expect_err("模板里没有的占位符应当报错");
+        let err = render(
+            "a=@@A@@",
+            "测试",
+            &[("A", "1".into()), ("NOPE", "x".into())],
+        )
+        .expect_err("模板里没有的占位符应当报错");
         assert!(err.to_string().contains("@@NOPE@@"), "{err}");
     }
 
     #[test]
     fn rejects_multiline_value() {
         // 含换行的值能往 unit 里注入任意指令（比如再加一行 Environment=）。
-        let err = render("a=@@A@@\n", "systemd unit", &[("A", "1\nExecStart=/bin/sh".into())])
-            .expect_err("含换行的值应当被拒绝");
+        let err = render(
+            "a=@@A@@\n",
+            "systemd unit",
+            &[("A", "1\nExecStart=/bin/sh".into())],
+        )
+        .expect_err("含换行的值应当被拒绝");
         assert!(err.to_string().contains("注入"), "{err}");
         let err = render("a=@@A@@\n", "systemd unit", &[("A", "1\r\nX".into())])
             .expect_err("CR 同样应当被拒绝");
@@ -166,12 +175,27 @@ mod tests {
         assert!(!unit.contains("@@"), "不应有占位符残留：\n{unit}");
         assert!(unit.contains("User=kly"), "{unit}");
         assert!(unit.contains("WorkingDirectory=/opt/brb/service"), "{unit}");
-        assert!(unit.contains("ExecStart=/opt/brb/service/brainbow"), "{unit}");
-        assert!(unit.contains("Environment=\"JWT_SECRET=secret-value\""), "{unit}");
-        assert!(unit.contains("Environment=\"BIND_HOST=127.0.0.1\""), "{unit}");
+        assert!(
+            unit.contains("ExecStart=/opt/brb/service/brainbow"),
+            "{unit}"
+        );
+        assert!(
+            unit.contains("Environment=\"JWT_SECRET=secret-value\""),
+            "{unit}"
+        );
+        assert!(
+            unit.contains("Environment=\"BIND_HOST=127.0.0.1\""),
+            "{unit}"
+        );
         // 默认值（.env.prod 里没写这两项时）
-        assert!(unit.contains("Environment=\"ALLOW_REGISTER=false\""), "{unit}");
-        assert!(unit.contains("Environment=\"JWT_TTL_SECS=864000\""), "{unit}");
+        assert!(
+            unit.contains("Environment=\"ALLOW_REGISTER=false\""),
+            "{unit}"
+        );
+        assert!(
+            unit.contains("Environment=\"JWT_TTL_SECS=864000\""),
+            "{unit}"
+        );
     }
 
     #[test]

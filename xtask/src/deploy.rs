@@ -28,6 +28,139 @@ use crate::render;
 use crate::rollback;
 use crate::ui;
 
+/// 把暂存目录里的 `dist/` 换到运行位置，并修好权限。
+///
+/// `dist` 用 `.old` 过渡：中间那一瞬目录不存在，但旧目录还在手边。
+pub fn activate_dist(cfg: &Config, remote: &Remote, staging: &str) -> Result<()> {
+    let live = path_of(&cfg.service_dir, "dist");
+    let old = path_of(&cfg.service_dir, "dist.old");
+    remote.ok(&format!(
+        "rm -rf {o} && mv {l} {o}",
+        o = sh_quote(&old),
+        l = sh_quote(&live)
+    ))?;
+    remote.ok(&format!(
+        "mv {} {}",
+        sh_quote(&path_of(staging, "dist")),
+        sh_quote(&live)
+    ))?;
+    remote.ok(&format!("rm -rf {}", sh_quote(&old)))?;
+
+    // dist 由 Caddy 以另一个用户（caddy）读取：目录 755 / 文件 644。
+    // 只对 dist 做 —— 老脚本的 `find $SERVICE_DIR` 会把 uploads 里用户上传的
+    // 文件也一起改成 644。
+    remote.ok(&format!(
+        "find {d} -type d -exec chmod 755 {{}} + ; find {d} -type f -exec chmod 644 {{}} +",
+        d = sh_quote(&live)
+    ))?;
+    Ok(())
+}
+
+/// `deploy-web`：只换前端 —— 不停服、不动 unit、不备份数据库。
+///
+/// 前端是静态文件，Caddy 直接读盘，所以换完不需要 reload；最后与本地比对一次
+/// sha256，确认真的换成了（老 Makefile 的 deploy-web 用 md5 做同一件事）。
+pub fn run_deploy_web(cfg: &Config, remote: &Remote) -> Result<()> {
+    ui::banner(&format!(
+        "仅部署前端 {} → {}",
+        cfg.app_name, cfg.remote_host
+    ));
+
+    let dist = cfg.build_dir().join("dist");
+    if !dist.join("index.html").is_file() {
+        return Err(Error::msg(format!(
+            "{} 不存在：先跑 `just build`",
+            dist.join("index.html").display()
+        )));
+    }
+
+    let staging = format!("{}/web_{}", cfg.remote_tmp_dir(), utc_stamp());
+    remote.ok(&format!("mkdir -p {}", sh_quote(&cfg.remote_tmp_dir())))?;
+    remote.ok(&format!(
+        "rm -rf {s} && mkdir -p {s}",
+        s = sh_quote(&staging)
+    ))?;
+    remote.send_tar(
+        &format!("tar -xzf - -C {}", sh_quote(&staging)),
+        "前端产物",
+        |archive| {
+            archive
+                .append_dir_all("dist", &dist)
+                .map_err(|e| Error::io("打包 dist", e))
+        },
+    )?;
+
+    if !remote.is_dry_run() {
+        let staged_index = path_of(&staging, "dist/index.html");
+        if !remote.condition(&format!("[ -f {} ]", sh_quote(&staged_index))) {
+            return Err(Error::msg(
+                "上传后暂存目录里没有 dist/index.html（传输被截断？已中止，运行目录未动）",
+            ));
+        }
+    }
+    activate_dist(cfg, remote, &staging)?;
+    let _ = remote.ok(&format!("rm -rf {}", sh_quote(&staging)));
+
+    if !remote.is_dry_run() {
+        let local = local::sha256(&dist.join("index.html"))?;
+        let remote_hash = remote
+            .capture(&format!(
+                "sha256sum {}",
+                sh_quote(&path_of(&cfg.service_dir, "dist/index.html"))
+            ))?
+            .split_whitespace()
+            .next()
+            .unwrap_or_default()
+            .to_string();
+        if remote_hash != local {
+            return Err(Error::msg(format!(
+                "远端 index.html 与本地不一致（远端 {remote_hash} / 本地 {local}）—— 同步疑似失败"
+            )));
+        }
+        ui::done("校验通过：远端与本地 index.html 一致");
+    }
+    ui::done("前端部署完成（未停服）");
+    Ok(())
+}
+
+/// 等 `/api/health` 就绪（30 次 × 1 秒，与老脚本一致）。
+///
+/// dry-run 下命令没执行，直接返回（不能干等 30 秒，也不该判成失败）。
+pub fn wait_for_ready(cfg: &Config, remote: &Remote) -> Result<()> {
+    ui::info("等待服务就绪…");
+    for attempt in 1..=READY_ATTEMPTS {
+        match probe_health(cfg, remote)? {
+            None => {
+                ui::info("等待服务就绪（dry-run 未执行）");
+                return Ok(());
+            }
+            Some(true) => {
+                ui::done(&format!("服务就绪（第 {attempt} 次探测）"));
+                return Ok(());
+            }
+            Some(false) => {
+                print!(".");
+                let _ = std::io::Write::flush(&mut std::io::stdout());
+                std::thread::sleep(READY_INTERVAL);
+            }
+        }
+    }
+    println!();
+    Err(Error::msg(format!(
+        "服务在 {READY_ATTEMPTS}s 内没有就绪，看 `just logs`"
+    )))
+}
+
+/// 探一次 `/api/health`：`Some(true)` 表示 200，`None` 表示 dry-run 没执行。
+fn probe_health(cfg: &Config, remote: &Remote) -> Result<Option<bool>> {
+    let url = format!("http://localhost:{}/api/health", cfg.service_port);
+    let cmd = format!(
+        "curl -s -o /dev/null -w '%{{http_code}}' --connect-timeout 2 --max-time 5 {} 2>/dev/null || echo 000",
+        sh_quote(&url)
+    );
+    Ok(remote.capture_if_run(&cmd)?.map(|code| code == "200"))
+}
+
 /// 一次部署要上传的产物。
 struct Payload<'a> {
     /// 本地 release 二进制 → 归档里的 `brainbow`。
@@ -46,7 +179,10 @@ struct Payload<'a> {
 /// 单独拎出来是为了可测：**归档里的条目名是部署契约的一部分**（远端就按
 /// `brainbow` / `dist/…` / `bin/…` 这三个位置就位），而整条上传路径要连 ssh，
 /// 不适合在单测里跑。
-fn write_payload(archive: &mut tar::Builder<impl std::io::Write>, payload: &Payload<'_>) -> Result<()> {
+fn write_payload(
+    archive: &mut tar::Builder<impl std::io::Write>,
+    payload: &Payload<'_>,
+) -> Result<()> {
     archive
         .append_path_with_name(&payload.binary, "brainbow")
         .map_err(|e| Error::io("打包 brainbow", e))?;
@@ -212,7 +348,9 @@ impl Deploy<'_> {
                     .unwrap_or_else(|| "?".into());
                 ui::info(&format!("代码备份：{name}（{size}）"));
             }
-            Err(e) => ui::warn(&format!("代码备份失败（继续部署，但本次无法回滚代码）：{e}")),
+            Err(e) => ui::warn(&format!(
+                "代码备份失败（继续部署，但本次无法回滚代码）：{e}"
+            )),
         }
         Ok(())
     }
@@ -223,7 +361,11 @@ impl Deploy<'_> {
         self.remote
             .ok(&format!("mkdir -p {}", sh_quote(&self.cfg.data_dir)))?;
 
-        let staging = format!("{}/deploy_{}", self.cfg.remote_tmp_dir(), self.plan.timestamp);
+        let staging = format!(
+            "{}/deploy_{}",
+            self.cfg.remote_tmp_dir(),
+            self.plan.timestamp
+        );
         self.remote.ok(&format!(
             "rm -rf {s} && mkdir -p {s}",
             s = sh_quote(&staging)
@@ -259,7 +401,10 @@ impl Deploy<'_> {
             ui::info("（dry-run：跳过上传后的校验）");
         } else {
             let staged_binary = path_of(&staging, "brainbow");
-            if !self.remote.condition(&format!("[ -s {} ]", sh_quote(&staged_binary))) {
+            if !self
+                .remote
+                .condition(&format!("[ -s {} ]", sh_quote(&staged_binary)))
+            {
                 return Err(Error::msg(
                     "上传后暂存目录里没有 brainbow（传输被截断？已中止，运行目录未动）",
                 ));
@@ -282,31 +427,17 @@ impl Deploy<'_> {
 
     /// 把暂存目录里的东西挪到运行位置。
     fn activate(&self, staging: &str, bin_files: &[(PathBuf, String)]) -> Result<()> {
-        let service = &self.cfg.service_dir;
         // mv 在同一文件系统内是原子改名：不会出现"服务读到半个二进制"
         self.remote.ok(&format!(
             "mv -f {} {}",
             sh_quote(&path_of(staging, "brainbow")),
-            sh_quote(&path_of(service, "brainbow"))
+            sh_quote(&path_of(&self.cfg.service_dir, "brainbow"))
         ))?;
-
-        let live_dist = path_of(service, "dist");
-        let old_dist = path_of(service, "dist.old");
-        self.remote.ok(&format!(
-            "rm -rf {o} && mv {l} {o}",
-            o = sh_quote(&old_dist),
-            l = sh_quote(&live_dist)
-        ))?;
-        self.remote.ok(&format!(
-            "mv {} {}",
-            sh_quote(&path_of(staging, "dist")),
-            sh_quote(&live_dist)
-        ))?;
-        self.remote.ok(&format!("rm -rf {}", sh_quote(&old_dist)))?;
+        activate_dist(self.cfg, self.remote, staging)?;
 
         let staged_bin = path_of(staging, "bin");
         if !bin_files.is_empty() && (self.remote.is_dry_run() || self.remote.exists(&staged_bin)) {
-            let bin_dir = path_of(service, "bin");
+            let bin_dir = path_of(&self.cfg.service_dir, "bin");
             // 不带 --delete 语义：远端 bin/ 里若还有别的东西，不该被这次部署删掉
             self.remote.ok(&format!(
                 "mkdir -p {b} && mv -f {g} {b}/",
@@ -371,7 +502,8 @@ impl Deploy<'_> {
 
         let bin_dir = format!("{service}/bin");
         if self.remote.exists(&bin_dir) {
-            self.remote.ok(&format!("chmod 755 {}/*", glob_in(&bin_dir, "*")))?;
+            self.remote
+                .ok(&format!("chmod 755 {}/*", glob_in(&bin_dir, "*")))?;
         }
         ui::done("权限设置完成");
         Ok(())
@@ -403,42 +535,12 @@ impl Deploy<'_> {
     // ── Step 8：等就绪 ────────────────────────────────────────────
 
     fn wait_for_ready(&self) -> Result<()> {
-        ui::info("等待服务就绪…");
-        for attempt in 1..=READY_ATTEMPTS {
-            match self.probe_health()? {
-                // dry-run：命令没执行，不能干等 30 秒
-                None => {
-                    ui::info("等待服务就绪（dry-run 未执行）");
-                    return Ok(());
-                }
-                Some(true) => {
-                    ui::done(&format!("服务就绪（第 {attempt} 次探测）"));
-                    return Ok(());
-                }
-                Some(false) => {
-                    print!(".");
-                    let _ = std::io::Write::flush(&mut std::io::stdout());
-                    std::thread::sleep(READY_INTERVAL);
-                }
-            }
-        }
-        println!();
-        Err(Error::msg(format!(
-            "服务在 {READY_ATTEMPTS}s 内没有就绪，看 `just logs`"
-        )))
+        wait_for_ready(self.cfg, self.remote)
     }
 
     /// 探测一次 `/api/health`；dry-run 返回 `None`。
     fn probe_health(&self) -> Result<Option<bool>> {
-        let url = format!("http://localhost:{}/api/health", self.cfg.service_port);
-        let cmd = format!(
-            "curl -s -o /dev/null -w '%{{http_code}}' --connect-timeout 2 --max-time 5 {} 2>/dev/null || echo 000",
-            sh_quote(&url)
-        );
-        Ok(self
-            .remote
-            .capture_if_run(&cmd)?
-            .map(|code| code == "200"))
+        probe_health(self.cfg, self.remote)
     }
 
     // ── 关键区失败后的恢复 ────────────────────────────────────────
@@ -469,7 +571,16 @@ impl Deploy<'_> {
             ));
         }
         ui::warn(&format!("当前产物起不来，回滚到 {stem}…"));
-        rollback::restore_code(self.cfg, self.remote, &stem)?;
+        // 用 apply 而不是 restore_code：它会把服务重新拉起来
+        // （只换文件不重启的话，跑的还是内存里那个坏掉的二进制）
+        rollback::apply(
+            self.cfg,
+            self.remote,
+            &rollback::Pair {
+                code: Some(stem),
+                db: None,
+            },
+        )?;
         self.wait_for_ready()
     }
 

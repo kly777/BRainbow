@@ -8,6 +8,7 @@ pub mod backups;
 pub mod check;
 pub mod health;
 pub mod info;
+pub mod ops;
 pub mod status;
 
 use crate::error::{Error, Result};
@@ -56,7 +57,10 @@ impl Report {
             return Err(Error::Many(self.failures));
         }
         if !self.warnings.is_empty() {
-            ui::warn(&format!("通过，但有 {} 处告警（见上）", self.warnings.len()));
+            ui::warn(&format!(
+                "通过，但有 {} 处告警（见上）",
+                self.warnings.len()
+            ));
         }
         ui::done(ok_message);
         Ok(())

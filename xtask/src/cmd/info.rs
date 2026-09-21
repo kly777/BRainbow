@@ -46,7 +46,10 @@ pub fn run(cfg: &Config, remote: &Remote) -> Result<()> {
     field(
         remote,
         "数据库",
-        &format!("du -h {} 2>/dev/null | cut -f1", sh_quote(&cfg.database_path())),
+        &format!(
+            "du -h {} 2>/dev/null | cut -f1",
+            sh_quote(&cfg.database_path())
+        ),
         "N/A",
     );
     // 最近 3 份数据库备份：远端只列路径，名称与时间戳在本地格式化

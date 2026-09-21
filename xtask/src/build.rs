@@ -86,19 +86,9 @@ pub fn run_dev(cfg: &Config) -> Result<()> {
 
     let mut backend = Cmd::new("cargo-watch")
         .args(&[
-            "-x",
-            "run",
-            "--delay",
-            "1.5",
+            "-x", "run", "--delay", "1.5",
             // 这些目录的变化不该触发后端重编译
-            "--ignore",
-            "web",
-            "--ignore",
-            "build",
-            "--ignore",
-            "uploads",
-            "--ignore",
-            ".sqlx",
+            "--ignore", "web", "--ignore", "build", "--ignore", "uploads", "--ignore", ".sqlx",
         ])
         .cwd(&cfg.project_dir)
         .spawn()?;
@@ -240,10 +230,28 @@ fn assemble(cfg: &Config) -> Result<()> {
     bundle_ffmpeg(cfg)?;
 
     ui::done("构建产物已整理到 build/");
-    ui::field("binary", &format!("build/{BIN_NAME}（{}）", human(size_of(&build_dir.join(BIN_NAME)))));
-    ui::field("dist", &format!("build/dist（{}）", human(size_of(&build_dir.join("dist")))));
+    ui::field(
+        "binary",
+        &format!(
+            "build/{BIN_NAME}（{}）",
+            local::human_size(size_of(&build_dir.join(BIN_NAME)))
+        ),
+    );
+    ui::field(
+        "dist",
+        &format!(
+            "build/dist（{}）",
+            local::human_size(size_of(&build_dir.join("dist")))
+        ),
+    );
     if local::dir_exists(&build_dir.join("bin")) {
-        ui::field("bin", &format!("build/bin（{}）", human(size_of(&build_dir.join("bin")))));
+        ui::field(
+            "bin",
+            &format!(
+                "build/bin（{}）",
+                local::human_size(size_of(&build_dir.join("bin")))
+            ),
+        );
     }
     Ok(())
 }
@@ -263,7 +271,10 @@ fn bundle_ffmpeg(cfg: &Config) -> Result<()> {
     let bin = cfg.build_dir().join("bin");
     std::fs::create_dir_all(&bin).map_err(|e| Error::io(format!("创建 {}", bin.display()), e))?;
     local::copy_file(&ffmpeg, &bin.join("ffmpeg"))?;
-    ui::info(&format!("ffmpeg 已随产物（{}）", human(size_of(&bin.join("ffmpeg")))));
+    ui::info(&format!(
+        "ffmpeg 已随产物（{}）",
+        local::human_size(size_of(&bin.join("ffmpeg")))
+    ));
 
     // ffprobe 默认不发：各自 ~77MB，而它只负责给"浏览器读不出容器"的视频
     // 回填时长。要它就 WITH_FFPROBE=1。
@@ -312,34 +323,18 @@ fn size_of(path: &Path) -> u64 {
     entries.flatten().map(|entry| size_of(&entry.path())).sum()
 }
 
-/// 人类可读大小（与 `du -h` 同量纲：1024 进制）。
-fn human(bytes: u64) -> String {
-    const UNITS: [&str; 5] = ["B", "K", "M", "G", "T"];
-    let mut value = bytes as f64;
-    let mut unit = 0;
-    while value >= 1024.0 && unit + 1 < UNITS.len() {
-        value /= 1024.0;
-        unit += 1;
-    }
-    if unit == 0 {
-        format!("{bytes}B")
-    } else {
-        format!("{value:.1}{}", UNITS[unit])
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn human_matches_du_dimensions() {
-        assert_eq!(human(0), "0B");
-        assert_eq!(human(512), "512B");
-        assert_eq!(human(1024), "1.0K");
-        assert_eq!(human(1536), "1.5K");
-        assert_eq!(human(12 * 1024 * 1024), "12.0M");
-        assert_eq!(human(3 * 1024 * 1024 * 1024), "3.0G");
+        assert_eq!(local::human_size(0), "0B");
+        assert_eq!(local::human_size(512), "512B");
+        assert_eq!(local::human_size(1024), "1.0K");
+        assert_eq!(local::human_size(1536), "1.5K");
+        assert_eq!(local::human_size(12 * 1024 * 1024), "12.0M");
+        assert_eq!(local::human_size(3 * 1024 * 1024 * 1024), "3.0G");
     }
 
     #[test]
@@ -362,7 +357,10 @@ mod tests {
             .arg("30")
             .spawn()
             .expect("sleep 30 应当起得来");
-        let mut fast = Cmd::new("sleep").arg("0").spawn().expect("sleep 0 应当起得来");
+        let mut fast = Cmd::new("sleep")
+            .arg("0")
+            .spawn()
+            .expect("sleep 0 应当起得来");
 
         let exited = wait_any(&mut slow, &mut fast).expect("轮询不应失败");
         assert!(

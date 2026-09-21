@@ -73,7 +73,9 @@ fn service_check(remote: &Remote, report: &mut Report, cfg: &Config) {
 fn resource_info(remote: &Remote, cfg: &Config) {
     // ps 的输出是「命令 CPU% MEM%」三列 —— 老脚本用 `${line#* }` 把它重新标成
     // "CPU=..." 其实标错了列，这里原样打印，不猜。
-    if let Ok(Some(procs)) = remote.capture_if_run("ps aux | grep brainbow | grep -v grep | awk '{print $11, $3, $4}'") {
+    if let Ok(Some(procs)) =
+        remote.capture_if_run("ps aux | grep brainbow | grep -v grep | awk '{print $11, $3, $4}'")
+    {
         for line in procs.lines().filter(|l| !l.trim().is_empty()) {
             ui::info(&format!("进程资源: {line}"));
         }

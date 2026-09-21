@@ -78,6 +78,63 @@ impl<'a> Db<'a> {
         }
     }
 
+    /// `PRAGMA integrity_check`：全库逐页扫描，比 quick_check 慢得多，
+    /// 所以只在 `just db-check` 里显式跑，不进部署路径。
+    pub fn integrity_check(&self) -> Result<()> {
+        if !self.has_sqlite3 {
+            return Err(Error::msg("远端没有 sqlite3，无法做完整性检查"));
+        }
+        let cmd = format!(
+            "sqlite3 {} 'PRAGMA integrity_check;'",
+            sh_quote(&self.path())
+        );
+        match self.remote.capture_if_run(&cmd)? {
+            None => {
+                ui::info("完整性检查（dry-run 未执行）");
+                Ok(())
+            }
+            Some(out) if out.trim() == "ok" => {
+                ui::done("完整性检查通过（ok）");
+                Ok(())
+            }
+            Some(out) => Err(Error::msg(format!("完整性检查未通过：\n{out}"))),
+        }
+    }
+
+    /// 在远端做一份**一致性**快照。
+    ///
+    /// `sqlite3 .backup` 优先：它走 SQLite 的备份 API，读到的是**包含 WAL 中
+    /// 已提交事务**的一致视图，所以不需要再带 `-wal`/`-shm` 兄弟文件。
+    /// 远端没有 sqlite3 时退回 `cp`（裸拷贝），那时必须把兄弟文件一起带上。
+    pub fn snapshot(&self, dest: &str) -> Result<()> {
+        let src = self.path();
+        let src_q = sh_quote(&src);
+        let dest_q = sh_quote(dest);
+
+        let cmd = if self.has_sqlite3 {
+            // `.backup` 是 SQLite 的点命令：单引号给 shell，点命令的参数直接写
+            // 字面路径（不再引一层 —— 引了就得指望 SQLite 自己剥引号，太绕）。
+            let arg = sqlite_dot_arg(dest)?;
+            format!("rm -f {dest_q} && sqlite3 {src_q} '.backup {arg}'")
+        } else {
+            let sibling = |suffix: &str| {
+                format!(
+                    "{{ [ ! -f {s} ] || cp {s} {d}; }}",
+                    s = sh_quote(&format!("{src}{suffix}")),
+                    d = sh_quote(&format!("{dest}{suffix}")),
+                )
+            };
+            format!(
+                "rm -f {dest_q} {wal_old} {shm_old} && cp {src_q} {dest_q} && {wal} && {shm}",
+                wal_old = sh_quote(&format!("{dest}-wal")),
+                shm_old = sh_quote(&format!("{dest}-shm")),
+                wal = sibling("-wal"),
+                shm = sibling("-shm"),
+            )
+        };
+        self.remote.ok(&cmd)
+    }
+
     /// `PRAGMA optimize`：更新统计信息，让查询计划器有数可依。
     pub fn optimize(&self) -> Result<()> {
         if !self.has_sqlite3 {
@@ -100,32 +157,7 @@ impl<'a> Db<'a> {
         let dest = format!("{}/{}", self.cfg.backup_dir, name);
         ui::info(&format!("备份数据库 → {name}…"));
 
-        let siblings = {
-            let src = self.path();
-            // 兄弟文件：把后缀拼进路径**再**加引号。写成 `'path'-wal` 虽然也对
-            // （shell 会拼接相邻片段），但读起来像 bug，早晚被改坏。
-            let sibling = |suffix: &str| {
-                format!(
-                    "{{ [ ! -f {s} ] || cp {s} {d}; }}",
-                    s = sh_quote(&format!("{src}{suffix}")),
-                    d = sh_quote(&format!("{dest}{suffix}")),
-                )
-            };
-            format!("{} && {}", sibling("-wal"), sibling("-shm"))
-        };
-
-        let src_q = sh_quote(&self.path());
-        let dest_q = sh_quote(&dest);
-        let cmd = if self.has_sqlite3 {
-            // `.backup` 是 SQLite 的点命令：单引号给 shell，点命令的参数直接写
-            // 字面路径（不再引一层 —— 引了就得指望 SQLite 自己剥引号，太绕）。
-            let arg = sqlite_dot_arg(&dest)?;
-            format!("sqlite3 {src_q} '.backup {arg}' || cp {src_q} {dest_q}; {siblings}")
-        } else {
-            format!("cp {src_q} {dest_q} && {siblings}")
-        };
-
-        self.remote.ok(&cmd).map_err(|e| {
+        self.snapshot(&dest).map_err(|e| {
             Error::msg(format!("数据库备份失败（已中止，不带着坏备份往下走）：{e}"))
         })?;
 
@@ -144,7 +176,12 @@ impl<'a> Db<'a> {
         let dir = &self.cfg.backup_dir;
         let mut names = self.list(dir, "db_*.db")?;
         names.extend(self.list(dir, "code_*.tar.gz")?);
-        let doomed = stale(&names, Utc::now().naive_utc(), self.cfg.backup_retain_days, self.cfg.backup_retain_count);
+        let doomed = stale(
+            &names,
+            Utc::now().naive_utc(),
+            self.cfg.backup_retain_days,
+            self.cfg.backup_retain_count,
+        );
         if doomed.is_empty() {
             return Ok(());
         }

@@ -23,7 +23,10 @@ use crate::ui;
 const REQUIRED_SUDO: &[(&str, &str)] = &[
     ("systemctl", "stop/start/restart/enable/daemon-reload 服务"),
     ("tee /etc/systemd/system", "安装 systemd unit"),
-    ("chmod 600 /etc/systemd/system", "收紧 unit 权限（里面有 JWT 密钥）"),
+    (
+        "chmod 600 /etc/systemd/system",
+        "收紧 unit 权限（里面有 JWT 密钥）",
+    ),
     ("tee /etc/caddy/Caddyfile", "安装 Caddy 配置"),
 ];
 
@@ -129,10 +132,7 @@ fn sudo_check(remote: &Remote, report: &mut Report) {
         Ok(Some(rules)) => rules,
         Err(e) => {
             // 拿不到白名单不等于有问题（可能只是不允许 -l），所以只告警。
-            report.warn(&format!(
-                "无法列出 sudo 授权，跳过检查 —— {}",
-                brief(&e)
-            ));
+            report.warn(&format!("无法列出 sudo 授权，跳过检查 —— {}", brief(&e)));
             return;
         }
     };

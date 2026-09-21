@@ -75,8 +75,25 @@ impl Config {
             tracing::info!("JWT_SECRET 未设置，使用随机密钥（重启后现有 token 将失效）");
         }
 
+        // ── 路径按三层级联决定：显式单项 > 根目录约定 > 开发默认 ──
+        //
+        // 根目录（`BRAINBOW_ROOT`）是部署时唯一需要指定的东西，其余按约定派生：
+        // `{root}/data/<DATABASE_FILE>` 与 `{root}/data/uploads`。
+        // 单独指定 `DATABASE_URL` / `UPLOAD_DIR` 仍然优先 —— 逃生口一直在。
+        //
+        // 为什么要有根：否则"数据在哪"这件事要在 unit、.env.prod、以及任何手动
+        // 跑一次的命令行里各写一遍，改根目录时漏掉一处就会把数据写到别的地方，
+        // 而且这种错是静默的（服务照跑，文件不见了）。
+        let root = vars("BRAINBOW_ROOT").ok().map(PathBuf::from);
+        let db_file = vars("DATABASE_FILE").unwrap_or_else(|_| "brainbow.db".into());
+        let under_root = |suffix: &str| root.as_ref().map(|r| r.join(suffix));
+
         Self {
-            database_url: vars("DATABASE_URL").unwrap_or_else(|_| "sqlite:brainbow.db".into()),
+            database_url: vars("DATABASE_URL").unwrap_or_else(|_| {
+                under_root(&format!("data/{db_file}"))
+                    .map(|p| format!("sqlite:{}", p.display()))
+                    .unwrap_or_else(|| "sqlite:brainbow.db".into())
+            }),
 
             jwt_secret,
 
@@ -113,7 +130,9 @@ impl Config {
 
             upload_dir: vars("UPLOAD_DIR")
                 .map(PathBuf::from)
-                .unwrap_or_else(|_| PathBuf::from("uploads")),
+                .ok()
+                .or_else(|| under_root("data/uploads"))
+                .unwrap_or_else(|| PathBuf::from("uploads")),
 
             ffmpeg_path: vars("FFMPEG_PATH").ok().map(PathBuf::from),
         }
@@ -196,6 +215,46 @@ mod tests {
         let vars = vars_with(&[("UPLOAD_DIR", "/data/brainbow-uploads")]);
         let cfg = Config::from_vars(vars);
         assert_eq!(cfg.file_upload_dir(), "/data/brainbow-uploads/file");
+    }
+
+    // ── 路径级联：显式单项 > 根目录约定 > 开发默认 ──
+
+    #[test]
+    fn root_dir_derives_the_data_paths() {
+        // 部署时只需要给一个根：数据一律落在 `{root}/data/` 下
+        let cfg = Config::from_vars(vars_with(&[("BRAINBOW_ROOT", "/opt/brb")]));
+        assert_eq!(cfg.database_url, "sqlite:/opt/brb/data/brainbow.db");
+        assert_eq!(cfg.upload_dir, PathBuf::from("/opt/brb/data/uploads"));
+        assert_eq!(cfg.file_upload_dir(), "/opt/brb/data/uploads/file");
+    }
+
+    #[test]
+    fn root_dir_honors_database_file_name() {
+        // 文件名与部署工具共用同一个变量（改一处两边都跟着走）
+        let vars = vars_with(&[("BRAINBOW_ROOT", "/opt/brb"), ("DATABASE_FILE", "prod.db")]);
+        let cfg = Config::from_vars(vars);
+        assert_eq!(cfg.database_url, "sqlite:/opt/brb/data/prod.db");
+    }
+
+    #[test]
+    fn explicit_paths_win_over_the_root() {
+        // 逃生口：单项显式配置永远优先，根目录只是默认值的来源
+        let vars = vars_with(&[
+            ("BRAINBOW_ROOT", "/opt/brb"),
+            ("DATABASE_URL", "sqlite:/elsewhere/x.db"),
+            ("UPLOAD_DIR", "/mnt/big/uploads"),
+        ]);
+        let cfg = Config::from_vars(vars);
+        assert_eq!(cfg.database_url, "sqlite:/elsewhere/x.db");
+        assert_eq!(cfg.upload_dir, PathBuf::from("/mnt/big/uploads"));
+    }
+
+    #[test]
+    fn root_dir_does_not_leak_into_other_paths() {
+        // 根目录只管数据位置：没配的项仍然是各自的默认值
+        let cfg = Config::from_vars(vars_with(&[("BRAINBOW_ROOT", "/opt/brb")]));
+        assert_eq!(cfg.service_port, 3000);
+        assert!(cfg.ffmpeg_path.is_none(), "ffmpeg 仍走自发现");
     }
 
     // ── ffmpeg 路径解析 ──

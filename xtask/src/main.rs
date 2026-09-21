@@ -68,7 +68,11 @@ enum Command {
     /// 只构建后端，复用现成的 web/dist
     BuildBackend,
     /// 开发模式：cargo-watch（后端）+ vite（前端）并行，Ctrl-C 退出
-    Dev,
+    Dev {
+        /// all（默认）/ backend / backend-check（只编译校验）/ web
+        #[arg(default_value = "all", value_name = "MODE")]
+        mode: String,
+    },
     /// 全量部署到远端（停服 → 备份 → 同步 → 起服 → 自检 → 同步 Caddy）
     Deploy,
     /// 部署前环境检查：SSH / 免密 sudo / Caddy / 本地产物
@@ -142,6 +146,22 @@ enum Command {
     TestWeb,
     /// 刷新 .sqlx 离线数据（SQL/schema 变更后必跑）
     SqlxPrepare,
+    /// 用本地开发库跑一次只读自检（`brainbow --check`）
+    CheckBackend,
+    /// 清理：build/ + target/（--all 连前端 node_modules/dist 一起）
+    Clean {
+        /// 连前端的 node_modules/ 与 web/dist/ 一起删（下次要重新装依赖）
+        #[arg(long)]
+        all: bool,
+    },
+    /// 只清应用本体的编译指纹（保留依赖的编译结果）
+    CleanCache,
+    /// 产物与缓存目录的体积一览
+    Stats,
+    /// 检查未使用的依赖（前置：nightly + cargo-udeps）
+    Udeps,
+    /// 看二进制里谁占地方（前置：cargo-bloat）
+    Bloat,
 }
 
 fn main() -> ExitCode {
@@ -162,7 +182,7 @@ fn run(cli: Cli) -> Result<()> {
         Command::Build => build::run_build(&cfg),
         Command::BuildWeb => build::run_build_web(&cfg),
         Command::BuildBackend => build::run_build_backend(&cfg),
-        Command::Dev => build::run_dev(&cfg),
+        Command::Dev { mode } => build::run_dev(&cfg, build::DevMode::parse(Some(&mode))?),
         Command::Deploy => deploy::run(&mut cfg, &remote),
         Command::Check => cmd::check::run(&cfg, &remote),
         Command::Status => cmd::status::run_status(&cfg, &remote),
@@ -186,6 +206,12 @@ fn run(cli: Cli) -> Result<()> {
         Command::Test { verbose } => devel::run_test(&cfg, verbose),
         Command::TestWeb => devel::run_test_web(&cfg),
         Command::SqlxPrepare => devel::run_sqlx_prepare(&cfg),
+        Command::CheckBackend => devel::run_check_backend(&cfg),
+        Command::Clean { all } => devel::run_clean(&cfg, all),
+        Command::CleanCache => devel::run_clean_cache(&cfg),
+        Command::Stats => devel::run_stats(&cfg),
+        Command::Udeps => devel::run_udeps(&cfg),
+        Command::Bloat => devel::run_bloat(&cfg),
     }
 }
 

@@ -1,15 +1,18 @@
-//! 开发循环：格式化 / 检查 / 测试 / 刷新 sqlx 离线数据。
+//! 开发循环：格式化 / 检查 / 测试 / 刷新 sqlx 离线数据 / 清理与统计。
 //!
-//! 这些原本是 Makefile 里的一行配方，搬进来是为了让 justfile 的每个 recipe
-//! 都只剩一条 `cargo xtask …` 调用（不进 shell 方言，Windows 上也一样）。
+//! 这些都是 Makefile 里原来的配方，搬进来是为了让 justfile 的每个 recipe
+//! 都只剩一条 `cargo xtask …` 调用（不进 shell 方言，Windows 上也一样），
+//! 顺带让"清理哪些路径""统计哪些路径"这种信息只存在一处。
 //!
 //! `sqlx-prepare` 有点逻辑（fixture 库的清理与生成顺序），放在 Rust 里比
 //! Makefile 的 `rm -f` + `cargo test` + `DATABASE_URL=… cargo sqlx prepare`
 //! 三连更清楚。
 
+use std::path::Path;
+
 use crate::config::Config;
-use crate::error::Result;
-use crate::local::Cmd;
+use crate::error::{Error, Result};
+use crate::local::{self, Cmd};
 use crate::ui;
 
 /// `fmt`：cargo fmt + 前端 biome format。
@@ -107,4 +110,114 @@ pub fn run_sqlx_prepare(cfg: &Config) -> Result<()> {
         .run()?;
     ui::done("已刷新 .sqlx（记得把变更一起提交）");
     Ok(())
+}
+
+/// `check-backend`：用本地开发库跑一次只读自检（`brainbow --check`）。
+///
+/// 与部署后自动跑的那条只差数据库：这里连仓库根的 dev 库（debug 构建会读
+/// `.env.dev`），所以**不设** `SQLX_OFFLINE` —— 开发流程本来就要求在线。
+pub fn run_check_backend(cfg: &Config) -> Result<()> {
+    ui::info("后端只读自检（本地开发库）…");
+    Cmd::new("cargo")
+        .args(&["run", "--quiet", "--", "--check"])
+        .cwd(&cfg.project_dir)
+        .run()
+}
+
+/// `clean`：删构建产物（`build/`）与 Rust 缓存（`target/`）。
+///
+/// `--all` 连前端的 `node_modules/` 与 `web/dist/` 一起删 —— 下次要重新
+/// `pnpm install`，所以默认不删。
+pub fn run_clean(cfg: &Config, all: bool) -> Result<()> {
+    remove_dir(&cfg.build_dir())?;
+    ui::info("cargo clean…");
+    Cmd::new("cargo")
+        .args(&["clean"])
+        .cwd(&cfg.project_dir)
+        .run()?;
+    if all {
+        remove_dir(&cfg.web_dir().join("node_modules"))?;
+        remove_dir(&cfg.web_dir().join("dist"))?;
+    }
+    ui::done("清理完成");
+    Ok(())
+}
+
+/// `clean-cache`：只清应用本体的编译指纹，保留依赖的编译结果。
+///
+/// 用来强制重新编译 brainbow、又不必把整个 `target/` 重来（依赖重编一次很贵）。
+pub fn run_clean_cache(cfg: &Config) -> Result<()> {
+    let mut removed = 0usize;
+    for profile in ["release", "debug"] {
+        let dir = cfg
+            .project_dir
+            .join("target")
+            .join(profile)
+            .join(".fingerprint");
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if !name.starts_with("brainbow-") {
+                continue;
+            }
+            let path = entry.path();
+            std::fs::remove_dir_all(&path)
+                .map_err(|e| Error::io(format!("删除 {}", path.display()), e))?;
+            removed += 1;
+        }
+    }
+    ui::done(&format!("清理了 {removed} 个 brainbow 编译指纹"));
+    Ok(())
+}
+
+/// `stats`：产物与缓存目录的体积一览。
+pub fn run_stats(cfg: &Config) -> Result<()> {
+    ui::banner("构建统计");
+    let binary = match cfg.cross_target() {
+        Some(target) => cfg
+            .project_dir
+            .join("target")
+            .join(target)
+            .join("release/brainbow"),
+        None => cfg.project_dir.join("target/release/brainbow"),
+    };
+    for (label, path) in [
+        ("后端二进制", binary),
+        ("前端 dist", cfg.web_dir().join("dist")),
+        ("组装产物 build/", cfg.build_dir()),
+        ("Rust 缓存 target/", cfg.project_dir.join("target")),
+        ("node_modules", cfg.web_dir().join("node_modules")),
+    ] {
+        ui::field(label, &local::size_label(&path));
+    }
+    Ok(())
+}
+
+/// `udeps`：检查未使用的依赖（前置：nightly + `cargo install cargo-udeps`）。
+pub fn run_udeps(cfg: &Config) -> Result<()> {
+    ui::info("cargo +nightly udeps（需要 `cargo install cargo-udeps --locked`）…");
+    Cmd::new("cargo")
+        .args(&["+nightly", "udeps", "--workspace", "--all-targets"])
+        .cwd(&cfg.project_dir)
+        .run()
+}
+
+/// `bloat`：看二进制里谁占地方（前置：`cargo install cargo-bloat`）。
+pub fn run_bloat(cfg: &Config) -> Result<()> {
+    ui::info("cargo bloat --release -n 20…");
+    Cmd::new("cargo")
+        .args(&["bloat", "--release", "-n", "20"])
+        .cwd(&cfg.project_dir)
+        .run()
+}
+
+/// 删目录；不存在就当已经完成。
+fn remove_dir(path: &Path) -> Result<()> {
+    if !path.exists() {
+        return Ok(());
+    }
+    ui::info(&format!("删除 {}", path.display()));
+    std::fs::remove_dir_all(path).map_err(|e| Error::io(format!("删除 {}", path.display()), e))
 }

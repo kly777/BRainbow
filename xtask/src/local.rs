@@ -206,6 +206,29 @@ pub fn dir_exists(path: &Path) -> bool {
     path.is_dir()
 }
 
+/// 递归统计大小（目录则累加其中所有文件）；拿不到就当 0。
+pub fn size_of(path: &Path) -> u64 {
+    let Ok(meta) = std::fs::metadata(path) else {
+        return 0;
+    };
+    if meta.is_file() {
+        return meta.len();
+    }
+    let Ok(entries) = std::fs::read_dir(path) else {
+        return 0;
+    };
+    entries.flatten().map(|entry| size_of(&entry.path())).sum()
+}
+
+/// 人类可读大小；路径不存在则 `N/A`。
+pub fn size_label(path: &Path) -> String {
+    if path.exists() {
+        human_size(size_of(path))
+    } else {
+        "N/A".to_string()
+    }
+}
+
 /// 文件的 sha256（十六进制）。
 ///
 /// 流式读：76MB 的 ffmpeg 也不会整个进内存。用来判断远端的同名校验，
@@ -284,6 +307,33 @@ mod tests {
 
         // 目标是"src 的内容进 dst"，不是"把 src 放进 dst"
         assert!(!dst.join("src").exists());
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn human_size_matches_du_dimensions() {
+        assert_eq!(human_size(0), "0B");
+        assert_eq!(human_size(512), "512B");
+        assert_eq!(human_size(1024), "1.0K");
+        assert_eq!(human_size(1536), "1.5K");
+        assert_eq!(human_size(12 * 1024 * 1024), "12.0M");
+        assert_eq!(human_size(3 * 1024 * 1024 * 1024), "3.0G");
+    }
+
+    #[test]
+    fn size_of_sums_directories_and_labels_missing_paths() {
+        let root = std::env::temp_dir().join(format!("xtask-size-of-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("nested")).expect("建目录");
+        std::fs::write(root.join("a"), vec![0u8; 100]).expect("写");
+        std::fs::write(root.join("nested/b"), vec![0u8; 200]).expect("写");
+
+        assert_eq!(size_of(&root), 300);
+        assert_eq!(size_of(&root.join("missing")), 0);
+        assert_eq!(size_label(&root), "300B");
+        // 不存在的路径报 N/A，而不是 0B（"没有这个目录"与"空目录"是两件事）
+        assert_eq!(size_label(&root.join("missing")), "N/A");
 
         let _ = std::fs::remove_dir_all(&root);
     }

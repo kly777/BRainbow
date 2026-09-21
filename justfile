@@ -28,9 +28,21 @@ build-web *args:
 build-backend *args:
 	@cargo xtask build-backend {{args}}
 
-# 开发模式：cargo-watch + vite 并行（Ctrl-C 一起退出）
+# 开发模式：cargo-watch（后端）+ vite（前端）并行（Ctrl-C 一起退出）
 dev *args:
 	@cargo xtask dev {{args}}
+
+# 只跑后端 watcher（编译 + 启动服务）
+dev-backend *args:
+	@cargo xtask dev backend {{args}}
+
+# 只做后端编译校验（不启动服务，适合多窗口开发）
+dev-backend-fast *args:
+	@cargo xtask dev backend-check {{args}}
+
+# 只跑前端 vite
+dev-web *args:
+	@cargo xtask dev web {{args}}
 
 # 格式化：cargo fmt + 前端 biome format
 fmt *args:
@@ -44,9 +56,17 @@ lint *args:
 test *args:
 	@cargo xtask test {{args}}
 
+# 后端测试（带输出）
+test-verbose *args:
+	@cargo xtask test --verbose {{args}}
+
 # 前端测试
 test-web *args:
 	@cargo xtask test-web {{args}}
+
+# 用本地开发库跑一次只读自检（brainbow --check）
+check-backend *args:
+	@cargo xtask check-backend {{args}}
 
 # 刷新 .sqlx 离线数据（SQL / schema 变更后必跑，并把 .sqlx 一起提交）
 sqlx-prepare *args:
@@ -55,6 +75,32 @@ sqlx-prepare *args:
 # 取静态 ffmpeg 到 vendor/ffmpeg/bin（视频海报帧用；版本与哈希见 deploy/ffmpeg.lock）
 fetch-ffmpeg *args:
 	@cargo xtask fetch-ffmpeg {{args}}
+
+# ── 本地：清理与体积 ────────────────────────────────────────────────
+
+# 清理：build/ 与 target/（just clean --all 连前端 node_modules/dist 一起）
+clean *args:
+	@cargo xtask clean {{args}}
+
+# 只清应用本体的编译指纹（保留依赖的编译结果）
+clean-cache *args:
+	@cargo xtask clean-cache {{args}}
+
+# 产物与缓存目录的体积一览
+stats *args:
+	@cargo xtask stats {{args}}
+
+# build-stats 是 stats 的老名字，保留
+build-stats *args:
+	@cargo xtask stats {{args}}
+
+# 检查未使用的依赖（前置：nightly + cargo-udeps）
+udeps *args:
+	@cargo xtask udeps {{args}}
+
+# 看二进制里谁占地方（前置：cargo-bloat）
+bloat *args:
+	@cargo xtask bloat {{args}}
 
 # ── 远端：部署 ──────────────────────────────────────────────────────
 

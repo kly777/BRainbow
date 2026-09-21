@@ -76,20 +76,106 @@ pub fn run_build_backend(cfg: &Config) -> Result<()> {
     assemble(cfg)
 }
 
-/// `dev`：cargo-watch（后端）+ vite（前端）并排跑，Ctrl-C 一起退出。
+/// 开发时要跑哪一半（对应老 Makefile 的 dev / dev-backend / dev-backend-fast / dev-web）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DevMode {
+    /// 后端 + 前端并排跑（Ctrl-C 一起退出）
+    All,
+    /// 只跑后端 watcher（编译 + 启动服务）
+    Backend,
+    /// 只跑后端 watcher，但只做 `cargo check`（不启动服务，适合多窗口开发）
+    BackendCheck,
+    /// 只跑前端 vite
+    Web,
+}
+
+impl DevMode {
+    /// 从命令行参数解析（缺省 `all`）。
+    pub fn parse(text: Option<&str>) -> Result<Self> {
+        match text.unwrap_or("all") {
+            "all" | "both" => Ok(Self::All),
+            "backend" => Ok(Self::Backend),
+            "backend-check" | "check" => Ok(Self::BackendCheck),
+            "web" | "frontend" => Ok(Self::Web),
+            other => Err(Error::msg(format!(
+                "不认识的开发模式 {other:?}（可选 all / backend / backend-check / web）"
+            ))),
+        }
+    }
+}
+
+/// 后端 watcher 的命令行。
 ///
-/// just / make 都没有"并行跑两个 recipe"的能力（`just` 没有 `make -j` 的等价物），
-/// 所以这个并发放在这里做。
-pub fn run_dev(cfg: &Config) -> Result<()> {
+/// `--ignore` 的几项是"变化了不该触发后端重编译"的目录；cargo-watch 8.x 默认会读
+/// .gitignore 过滤 target/ 与 *.db*，这里显式列出 gitignore 覆盖不到或需强调的。
+fn cargo_watch_args(action: &str) -> Vec<String> {
+    [
+        "-x",
+        action,
+        "--delay",
+        if action == "check" { "1" } else { "1.5" },
+        "--ignore",
+        "web",
+        "--ignore",
+        "build",
+        "--ignore",
+        "uploads",
+        "--ignore",
+        ".sqlx",
+    ]
+    .iter()
+    .map(|arg| (*arg).to_string())
+    .collect()
+}
+
+/// `dev [mode]`：开发循环。
+///
+/// `just` 没有 `make -j2` 那样的"并行跑两个 recipe"，所以"后端 + 前端并排跑"
+/// 这件事只能在这里做。
+pub fn run_dev(cfg: &Config, mode: DevMode) -> Result<()> {
+    match mode {
+        DevMode::All => run_dev_all(cfg),
+        // 只跑一个进程时就交给前台，Ctrl-C 天然工作，不需要编排
+        DevMode::Backend | DevMode::BackendCheck => {
+            let action = if mode == DevMode::BackendCheck {
+                "check"
+            } else {
+                "run"
+            };
+            ui::banner(if action == "check" {
+                "开发模式：cargo-watch -x check（只验证能否编译，不启动服务）"
+            } else {
+                "开发模式：cargo-watch -x run（后端）"
+            });
+            ui::info("Ctrl-C 退出");
+            let args = cargo_watch_args(action);
+            let refs: Vec<&str> = args.iter().map(String::as_str).collect();
+            Cmd::new("cargo-watch")
+                .args(&refs)
+                .cwd(&cfg.project_dir)
+                .run()
+        }
+        DevMode::Web => {
+            ui::banner("开发模式：vite（前端）");
+            ui::info("Ctrl-C 退出");
+            // -s 抑制 pnpm 的 "Already up to date"/"$ vite …" 回显噪音
+            Cmd::new("pnpm")
+                .args(&["-s", "run", "dev"])
+                .cwd(cfg.web_dir())
+                .run()
+        }
+    }
+}
+
+/// 后端 + 前端并排跑，任一个退出就把另一个收掉。
+fn run_dev_all(cfg: &Config) -> Result<()> {
     ui::banner("开发模式：cargo-watch（后端）+ vite（前端）");
     ui::info("Ctrl-C 退出");
 
+    let args = cargo_watch_args("run");
+    let refs: Vec<&str> = args.iter().map(String::as_str).collect();
     let mut backend = Cmd::new("cargo-watch")
-        .args(&[
-            "-x", "run", "--delay", "1.5",
-            // 这些目录的变化不该触发后端重编译
-            "--ignore", "web", "--ignore", "build", "--ignore", "uploads", "--ignore", ".sqlx",
-        ])
+        .args(&refs)
         .cwd(&cfg.project_dir)
         .spawn()?;
 
@@ -234,23 +320,20 @@ fn assemble(cfg: &Config) -> Result<()> {
         "binary",
         &format!(
             "build/{BIN_NAME}（{}）",
-            local::human_size(size_of(&build_dir.join(BIN_NAME)))
+            local::size_label(&build_dir.join(BIN_NAME))
         ),
     );
     ui::field(
         "dist",
         &format!(
             "build/dist（{}）",
-            local::human_size(size_of(&build_dir.join("dist")))
+            local::size_label(&build_dir.join("dist"))
         ),
     );
     if local::dir_exists(&build_dir.join("bin")) {
         ui::field(
             "bin",
-            &format!(
-                "build/bin（{}）",
-                local::human_size(size_of(&build_dir.join("bin")))
-            ),
+            &format!("build/bin（{}）", local::size_label(&build_dir.join("bin"))),
         );
     }
     Ok(())
@@ -273,7 +356,7 @@ fn bundle_ffmpeg(cfg: &Config) -> Result<()> {
     local::copy_file(&ffmpeg, &bin.join("ffmpeg"))?;
     ui::info(&format!(
         "ffmpeg 已随产物（{}）",
-        local::human_size(size_of(&bin.join("ffmpeg")))
+        local::size_label(&bin.join("ffmpeg"))
     ));
 
     // ffprobe 默认不发：各自 ~77MB，而它只负责给"浏览器读不出容器"的视频
@@ -309,20 +392,6 @@ fn verify_dist(dist: &Path) -> Result<()> {
     Ok(())
 }
 
-/// 递归统计大小（目录则累加其中所有文件）。
-fn size_of(path: &Path) -> u64 {
-    let Ok(meta) = std::fs::metadata(path) else {
-        return 0;
-    };
-    if meta.is_file() {
-        return meta.len();
-    }
-    let Ok(entries) = std::fs::read_dir(path) else {
-        return 0;
-    };
-    entries.flatten().map(|entry| size_of(&entry.path())).sum()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -335,18 +404,6 @@ mod tests {
         assert_eq!(local::human_size(1536), "1.5K");
         assert_eq!(local::human_size(12 * 1024 * 1024), "12.0M");
         assert_eq!(local::human_size(3 * 1024 * 1024 * 1024), "3.0G");
-    }
-
-    #[test]
-    fn size_of_sums_directories() {
-        let root = std::env::temp_dir().join(format!("xtask-size-of-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&root);
-        std::fs::create_dir_all(root.join("nested")).expect("建目录");
-        std::fs::write(root.join("a"), vec![0u8; 100]).expect("写");
-        std::fs::write(root.join("nested/b"), vec![0u8; 200]).expect("写");
-        assert_eq!(size_of(&root), 300);
-        assert_eq!(size_of(&root.join("missing")), 0);
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     /// `dev` 的"任一个先退出就把另一个收掉"逻辑，用真进程走一遍。

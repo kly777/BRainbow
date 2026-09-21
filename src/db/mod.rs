@@ -480,10 +480,10 @@ mod tests {
         assert!(dup.is_err(), "同名标签不应能重复创建");
     }
 
-    /// 为 `make sqlx-prepare` 生成最新 schema 的 fixture 库。
+    /// 为 `just sqlx-prepare` 生成最新 schema 的 fixture 库。
     /// 不跑迁移器而直接使用开发库生成 .sqlx 会拿到历史 schema。
     #[tokio::test]
-    #[ignore = "only run by `make sqlx-prepare`"]
+    #[ignore = "only run by `just sqlx-prepare`"]
     async fn prepare_schema_fixture() {
         use sqlx::sqlite::SqliteConnectOptions;
         use std::str::FromStr;

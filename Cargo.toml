@@ -3,6 +3,13 @@ name = "brainbow"
 version = "0.1.0"
 edition = "2024"
 
+# xtask = 构建 / 部署工具（见 xtask/），与业务代码同一个工具链、同一份依赖缓存。
+# default-members 保持只有本包：裸 `cargo test` / `cargo clippy` 仍只作用于应用本体，
+# 不会连带编译 xtask 拖慢日常循环。要检查 xtask 就显式 `-p xtask` 或 `--workspace`。
+[workspace]
+members = ["xtask"]
+default-members = ["."]
+
 [dependencies]
 async-trait = "0.1"
 axum = { version = "0.8.9", features = ["macros", "multipart"] }

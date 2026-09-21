@@ -12,6 +12,13 @@ DATABASE_URL = "sqlite:brainbow.db"
 # Default is already number of CPUs, but explicit is better
 jobs = 16
 
+[alias]
+# `cargo xtask <子命令>` = `cargo run --package xtask -- <子命令>`
+# 构建与部署逻辑都在 xtask/ 里（跨平台，取代 deploy/deploy.sh）。
+# --quiet 只压掉 Compiling/Finished/Running 这类噪音，编译错误照常显示。
+# 注意：xtask 与业务代码是两个 crate，业务代码编译不过时 xtask 照常可用。
+xtask = "run --quiet --package xtask --"
+
 # Uncomment to use mold linker (faster linking)
 # Requires: sudo apt install mold (Ubuntu) or cargo install mold
 # [target.x86_64-unknown-linux-gnu]

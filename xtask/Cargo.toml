@@ -1,0 +1,18 @@
+[package]
+name = "xtask"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "BRainbow 的构建 / 部署 CLI（跨平台；取代 Makefile 的部署目标与 deploy/deploy.sh）"
+
+# 这是**工具** crate，不是服务：它不继承根 crate 的
+# `#![cfg_attr(not(test), deny(unwrap_used, expect_used, print_stdout, ...))]` 门禁
+# ——那条门禁写在 src/main.rs 里，只作用于服务本体。CLI 往 stdout 打进度、
+# 在明确的失败点上 unwrap 都是本职，不是把门禁放宽。
+#
+# 依赖刻意保持"纯 Rust、无 C 依赖、编译快"：
+# 不引 ssh2（要 libssh2 + OpenSSL，在 Windows 上最难装），远端执行交给系统自带的
+# ssh 客户端；文件传输用进程内 tar 灌进 ssh 的 stdin，因此不需要 rsync/scp/sftp。
+[dependencies]
+clap = { version = "4.6", features = ["derive"] }
+chrono = "0.4"

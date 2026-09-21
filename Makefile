@@ -1,15 +1,18 @@
-BUILD_DIR := build
+# ── 本地开发目标（构建/检查/测试/清理） ──
+#
+# **部署与远端操作已经全部搬到 justfile**（`just deploy` / `just check` /
+# `just rollback` / `just db-*` …），逻辑在 xtask/ 里（Rust，跨平台、可测）。
+# 原先那些转发 deploy/deploy.sh 的目标已随该脚本一并移除。
+#
+# 这里保留的只是本地开发的手感与几个 just 还没覆盖的清理/分析目标
+# （clean / udeps / bloat / build-stats …）。两边同名的目标（dev / fmt / lint /
+# test / build-web / build-backend …）效果一致，用哪个都行。
 
-# 与 deploy.sh load_config 保持一致的后备值（.env.prod 可覆盖）
-REMOTE_BASE ?= /opt
-REMOTE_PORT ?= 22
+BUILD_DIR := build
 
 -include .env.prod
 
-time := $(shell date +%y%m%d_%H%M%S)
-DEPLOY_SCRIPT := deploy/deploy.sh
-
-.PHONY: dev dev-backend dev-backend-fast dev-web fmt lint build build-web build-backend bundle-ffmpeg fetch-ffmpeg clean clean-all deploy deploy-web deploy-backend check-deploy check-backend caddy status info logs db-pull db-push health rollback list-backups sqlx-prepare test test-verbose udeps bloat clean-cache build-stats db-check db-optimize db-backup backup-prune check-env
+.PHONY: dev dev-backend dev-backend-fast dev-web fmt lint build-web build-backend bundle-ffmpeg clean clean-all check-backend sqlx-prepare test test-verbose udeps bloat clean-cache build-stats
 
 # 用 make 并行目标跑后端/前端：Ctrl+C 时 make 会给所有并行 job 发信号并等待清理
 # （cargo-watch 8.x 收到 SIGINT 会用进程组清理 cargo run/brainbow）
@@ -51,53 +54,15 @@ sqlx-prepare:
 	cargo test prepare_schema_fixture -- --ignored
 	DATABASE_URL=sqlite:target/sqlx-prepare.db cargo sqlx prepare
 
-# 部署环境检查：SSH/Caddy/构建产物（原名 check，改名避免与 Rust check 惯例冲突）
-check-deploy:
-	$(DEPLOY_SCRIPT) check
-
-# 仅同步 Caddy 配置并重载（不停服）：改 deploy/Caddyfile 后用这个
-caddy:
-	$(DEPLOY_SCRIPT) caddy
-
 # 后端只读自检：数据库 schema/完整性 + 上传目录 + 存储一致性。
 # 不迁移、不建目录、不删文件；退出码 0 = 一切正常，非 0 = 有需要处理的问题。
 # 生产环境用已部署的二进制跑：ssh <host> '<REMOTE_DIR>/brainbow --check'
 check-backend:
 	cargo run --quiet -- --check
 
-build:
-	$(DEPLOY_SCRIPT) build
-
-# 全量部署（构建 → 部署）
-deploy: build
-	$(DEPLOY_SCRIPT) deploy
-
-# 仅部署前端（假设 build/ 已存在）
-# 目标必须是 SERVICE_DIR/dist（Caddy DIST_DIR 同源），否则同步到不服务的目录造成静默失败
-deploy-web: check-env
-	@[ -d "$(BUILD_DIR)/dist" ] || (echo "错误: 请先 make build"; exit 1)
-	@if [ "$(BUILD_DIR)/dist/index.html" -ot web/dist/index.html ]; then \
-		echo "错误: build/dist 落后于 web/dist，请先 make build-web"; exit 1; fi
-	echo "=== 仅部署前端 -> $(REMOTE_BASE)/$(APP_NAME)/service/dist ==="
-	rsync -avz --delete -e "ssh -p $(REMOTE_PORT)" \
-		$(BUILD_DIR)/dist/ \
-		$(REMOTE_USER)@$(REMOTE_HOST):$(REMOTE_BASE)/$(APP_NAME)/service/dist/
-	@echo "=== 校验远端与本地 index.html 一致 ==="
-	@remote_md5=$$(ssh -p $(REMOTE_PORT) $(REMOTE_USER)@$(REMOTE_HOST) \
-		"md5sum $(REMOTE_BASE)/$(APP_NAME)/service/dist/index.html" | awk '{print $$1}'); \
-	local_md5=$$(md5sum $(BUILD_DIR)/dist/index.html | awk '{print $$1}'); \
-	if [ "$$remote_md5" = "$$local_md5" ] && [ -n "$$remote_md5" ]; then \
-		echo "校验通过：远端与本地一致"; \
-	else \
-		echo "错误: 远端前端与本地不一致，部署疑似失败"; exit 1; fi
-
-# 仅部署后端（假设 build/ 已存在）
-deploy-backend: check-env
-	@[ -f "$(BUILD_DIR)/brainbow" ] || (echo "错误: 请先 make build"; exit 1)
-	$(DEPLOY_SCRIPT) deploy
-
-# 仅构建后端产物（与 deploy.sh build 同口径：env -u DATABASE_URL 强制走 .sqlx 离线快照；
-# 复用 web/dist，因此先检查其存在性，避免静默拷贝空目录——deploy-backend 链路必须有 build/dist）
+# 仅构建后端产物，复用 web/dist（先检查存在性，避免静默拷贝空目录）。
+# 注：`just build-backend` 是同一件事，且额外把 SQLX_OFFLINE=true 与摘掉
+# DATABASE_URL 一起显式设上（只 env -u 是没用的，[env] 会把它注回去）。
 build-backend:
 	@[ -f web/dist/index.html ] || (echo "错误: web/dist 不存在，请先 make build-web"; exit 1)
 	env -u DATABASE_URL cargo build --release
@@ -107,13 +72,13 @@ build-backend:
 	cp target/release/brainbow $(BUILD_DIR)/brainbow
 	@$(MAKE) -s bundle-ffmpeg
 
-# 把 vendor/ffmpeg/bin（make fetch-ffmpeg 取来的静态二进制）拷进产物。
+# 把 vendor/ffmpeg/bin（just fetch-ffmpeg 取来的静态二进制）拷进产物。
 # 没有它也照常构建：视频缩略图会永久降级为后缀徽章，其他功能不受影响
 # （降级路径见 src/modules/file/thumb/video.rs 的 available()）
 #
 # **ffprobe 默认不发**：它两个用途都没有 —— 出图只需要 ffmpeg，而 ffprobe 只负责
 # 给"浏览器读不出容器"的视频回填时长（mkv/avi 那批）。静态构建两个各 ~77MB，
-# 一起发等于把产物体积翻几倍。要它就 WITH_FFPROBE=1 make build。
+# 一起发等于把产物体积翻几倍。要它就 WITH_FFPROBE=1 just build。
 bundle-ffmpeg:
 	@if [ -x vendor/ffmpeg/bin/ffmpeg ]; then \
 		mkdir -p $(BUILD_DIR)/bin; \
@@ -125,12 +90,8 @@ bundle-ffmpeg:
 		fi; \
 		echo "已带上 ffmpeg$$note: $$(du -sh $(BUILD_DIR)/bin | cut -f1)"; \
 	else \
-		echo "提示: 未取 ffmpeg（make fetch-ffmpeg），视频缩略图将降级为后缀徽章"; \
+		echo "提示: 未取 ffmpeg（just fetch-ffmpeg），视频缩略图将降级为后缀徽章"; \
 	fi
-
-# 取静态 ffmpeg 到 vendor/ffmpeg/bin（版本与 sha256 见 deploy/ffmpeg.lock）
-fetch-ffmpeg:
-	@bash deploy/fetch-ffmpeg.sh
 
 build-web:
 	cd web && pnpm run build
@@ -186,48 +147,16 @@ build-stats:
 	@echo "target/ 目录大小: $$(du -sh target/ 2>/dev/null | cut -f1 || echo 'N/A')"
 	@echo "node_modules 大小: $$(du -sh web/node_modules 2>/dev/null | cut -f1 || echo 'N/A')"
 
+# ── 远端/部署 ──
+# 全部在 justfile + xtask 里。下面这些名字留成"指路牌"：不加会得到
+# `make: Nothing to be done for 'deploy'`（因为 deploy/ 目录同名），
+# 比报错更让人困惑。
+.PHONY: deploy deploy-web deploy-backend check-deploy caddy status info logs \
+	db-pull db-push rollback list-backups health db-backup db-check db-optimize \
+	backup-prune fetch-ffmpeg
 
-# ── 快捷命令委托给 deploy/deploy.sh ──
-
-status:
-	$(DEPLOY_SCRIPT) status
-
-# 部署服务信息
-info:
-	$(DEPLOY_SCRIPT) info
-
-logs:
-	$(DEPLOY_SCRIPT) logs $(n)
-
-db-pull:
-	$(DEPLOY_SCRIPT) db-pull
-
-db-push:
-	$(DEPLOY_SCRIPT) db-push
-
-rollback:
-	$(DEPLOY_SCRIPT) rollback $(name)
-
-list-backups:
-	$(DEPLOY_SCRIPT) list-backups
-
-health:
-	$(DEPLOY_SCRIPT) health
-
-db-backup:
-	$(DEPLOY_SCRIPT) db-backup
-
-db-check:
-	$(DEPLOY_SCRIPT) db-check
-
-db-optimize:
-	$(DEPLOY_SCRIPT) db-optimize
-
-backup-prune:
-	$(DEPLOY_SCRIPT) backup-prune
-
-check-env:
-	@test -n "$(REMOTE_HOST)" || (echo "错误: .env.prod 未设置 REMOTE_HOST"; exit 1)
-	@test -n "$(REMOTE_USER)" || (echo "错误: .env.prod 未设置 REMOTE_USER"; exit 1)
-	@test -n "$(REMOTE_BASE)" || (echo "错误: .env.prod 未设置 REMOTE_BASE"; exit 1)
-	@test -n "$(APP_NAME)"   || (echo "错误: .env.prod 未设置 APP_NAME"; exit 1)
+deploy deploy-web deploy-backend check-deploy caddy status info logs \
+db-pull db-push rollback list-backups health db-backup db-check db-optimize \
+backup-prune fetch-ffmpeg:
+	@echo "这些已搬到 just / xtask：请用 \`just $@\`（\`just --list\` 看全部）"
+	@exit 1

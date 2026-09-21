@@ -10,7 +10,7 @@
 use crate::cmd::{Report, brief};
 use crate::config::Config;
 use crate::error::Result;
-use crate::remote::{Remote, path_in, sh_quote};
+use crate::remote::{Remote, path_of, sh_quote};
 use crate::ui;
 
 /// `curl` 只回状态码；连不上时 `|| echo 000` 兜底（deploy.sh 同款做法）。
@@ -88,7 +88,7 @@ fn resource_info(remote: &Remote, cfg: &Config) {
     };
     ui::info(&format!(
         "二进制: {}",
-        size_of(path_in(&cfg.service_dir, "brainbow"))
+        size_of(sh_quote(&path_of(&cfg.service_dir, "brainbow")))
     ));
     ui::info(&format!(
         "数据库: {}",

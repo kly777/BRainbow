@@ -192,6 +192,22 @@ pub fn dir_exists(path: &Path) -> bool {
     path.is_dir()
 }
 
+/// 文件的 sha256（十六进制）。
+///
+/// 流式读：76MB 的 ffmpeg 也不会整个进内存。用来判断远端的同名校验，
+/// 从而避免每次部署都重传它。
+pub fn sha256(path: &Path) -> Result<String> {
+    use sha2::{Digest, Sha256};
+
+    let file = std::fs::File::open(path)
+        .map_err(|e| Error::io(format!("打开 {}", path.display()), e))?;
+    let mut reader = std::io::BufReader::new(file);
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut reader, &mut hasher)
+        .map_err(|e| Error::io(format!("读取 {}", path.display()), e))?;
+    Ok(hex::encode(hasher.finalize()))
+}
+
 /// 可执行文件是否存在。
 pub fn is_executable(path: &Path) -> bool {
     let Ok(meta) = std::fs::metadata(path) else {
@@ -252,6 +268,34 @@ mod tests {
         assert_eq!(std::fs::read(dst.join("a.txt")).expect("读"), b"a");
         assert_eq!(std::fs::read(dst.join("nested/b.txt")).expect("读"), b"b");
 
+        // 目标是"src 的内容进 dst"，不是"把 src 放进 dst"
+        assert!(!dst.join("src").exists());
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn sha256_matches_known_vector() {
+        // 空串与 "abc" 的 sha256 是标准测试向量
+        let root = std::env::temp_dir().join(format!("xtask-sha256-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("建目录");
+
+        let empty = root.join("empty");
+        std::fs::write(&empty, b"").expect("写");
+        assert_eq!(
+            sha256(&empty).expect("算得出"),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+
+        let abc = root.join("abc");
+        std::fs::write(&abc, b"abc").expect("写");
+        assert_eq!(
+            sha256(&abc).expect("算得出"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+
+        assert!(sha256(&root.join("missing")).is_err(), "缺文件应当报错");
         let _ = std::fs::remove_dir_all(&root);
     }
 }

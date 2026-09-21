@@ -8,11 +8,9 @@ use std::collections::BTreeMap;
 
 use crate::config::Config;
 use crate::error::Result;
-use crate::remote::{Remote, basename, path_in, sh_quote};
+use crate::remote::{Remote, basename, glob_in, sh_quote};
+use crate::stamp;
 use crate::ui;
-
-/// 尾部时间戳 `YYYYMMDD_HHMMSS` 的长度。
-const STAMP_LEN: usize = 15;
 
 pub fn run(cfg: &Config, remote: &Remote) -> Result<()> {
     ui::banner(&format!("备份列表 ({})", cfg.backup_dir));
@@ -46,7 +44,7 @@ pub fn run(cfg: &Config, remote: &Remote) -> Result<()> {
 
 /// 远端 `ls -1t`：按修改时间从新到旧。
 fn list(remote: &Remote, dir: &str, pattern: &str) -> Result<Vec<String>> {
-    let out = remote.capture_if_run(&format!("ls -1t {} 2>/dev/null", path_in(dir, pattern)))?;
+    let out = remote.capture_if_run(&format!("ls -1t {} 2>/dev/null", glob_in(dir, pattern)))?;
     Ok(out
         .unwrap_or_default()
         .lines()
@@ -60,7 +58,8 @@ fn rows(remote: &Remote, files: &[String]) {
     let sizes = sizes(remote, files);
     for path in files {
         let name = basename(path).unwrap_or(path);
-        let label = stamp_label(name).unwrap_or_else(|| name.to_string());
+        // 时间戳解析在 stamp 里（info 的备份行也用它，两处显示一致）
+        let label = stamp::human(name).unwrap_or_else(|| name.to_string());
         let size = sizes.get(path.as_str()).map(String::as_str).unwrap_or("—");
         println!("  • {label}  ({size})");
     }
@@ -98,86 +97,9 @@ fn parse_du(out: &str) -> BTreeMap<String, String> {
         .collect()
 }
 
-/// 从备份名尾部取 `YYYYMMDD_HHMMSS` 并格式化成可读形式。
-///
-/// `db_deploy_20260921_193500.db` → `2026-09-21 19:35:00`；取不到就 `None`
-/// （调用方退回显示原始文件名）。
-///
-/// 先剥扩展名再匹配 —— 时间戳不在文件名最末尾，后面还跟着 `.db` / `.tar.gz`。
-/// 老脚本同样是 `basename "$f" .db` 之后再上正则。
-pub fn stamp_label(name: &str) -> Option<String> {
-    let stem = strip_backup_ext(name);
-    let start = stem.len().checked_sub(STAMP_LEN)?;
-    // 用 `get` 而不是切片：名字里出现多字节字符时，切片会 panic 在字符边界上。
-    let stamp = stem.get(start..)?;
-    let (date, time) = stamp.split_once('_')?;
-    let date = chrono::NaiveDate::parse_from_str(date, "%Y%m%d").ok()?;
-    let time = chrono::NaiveTime::parse_from_str(time, "%H%M%S").ok()?;
-    Some(format!("{} {}", date.format("%Y-%m-%d"), time.format("%H:%M:%S")))
-}
-
-/// 去掉备份名末尾的扩展名（`.db` / `.tar.gz`）。
-fn strip_backup_ext(name: &str) -> &str {
-    name.strip_suffix(".tar.gz")
-        .or_else(|| name.strip_suffix(".db"))
-        .unwrap_or(name)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn formats_trailing_stamp() {
-        assert_eq!(
-            stamp_label("db_deploy_20260921_193500.db").as_deref(),
-            Some("2026-09-21 19:35:00")
-        );
-        assert_eq!(
-            stamp_label("code_20260921_193500.tar.gz").as_deref(),
-            Some("2026-09-21 19:35:00")
-        );
-        // 没有扩展名的形状（老脚本里 basename 不带后缀时）
-        assert_eq!(
-            stamp_label("db_prepush_20260101_000000").as_deref(),
-            Some("2026-01-01 00:00:00")
-        );
-        // 旧格式：`brb_backup_2026_09_21` 这种没有 HHMMSS，取不到
-        assert_eq!(stamp_label("brb_backup_2026_09_21.tar.gz"), None);
-    }
-
-    #[test]
-    fn rejects_names_without_a_stamp() {
-        assert_eq!(stamp_label(""), None);
-        assert_eq!(stamp_label("短"), None);
-        assert_eq!(stamp_label("db_short.db"), None);
-        // 形状对但日期非法（13 月）也要拒绝
-        assert_eq!(stamp_label("db_x_20261321_193500.db"), None);
-        // 多字节字符不能让 `stem.get(start..)` 踩到字符边界上 panic
-        assert_eq!(stamp_label("😀😀😀😀"), None);
-        assert_eq!(stamp_label("备份备份备份备份备份备份备份备份"), None);
-    }
-
-    #[test]
-    fn strips_known_extensions() {
-        assert_eq!(strip_backup_ext("a.db"), "a");
-        assert_eq!(strip_backup_ext("a.tar.gz"), "a");
-        assert_eq!(strip_backup_ext("a.gz"), "a.gz");
-        assert_eq!(strip_backup_ext("a"), "a");
-    }
-
-    #[test]
-    fn parses_du_output() {
-        let sizes = parse_du("4.0K\t/opt/brb/backup/db_deploy_20260921_193500.db\n178M\t/opt/brb/backup/db_prepush_20260920_101010.db\n");
-        assert_eq!(
-            sizes.get("/opt/brb/backup/db_deploy_20260921_193500.db").map(String::as_str),
-            Some("4.0K")
-        );
-        assert_eq!(
-            sizes.get("/opt/brb/backup/db_prepush_20260920_101010.db").map(String::as_str),
-            Some("178M")
-        );
-    }
 
     #[test]
     fn parse_du_tolerates_noise_and_spaces() {

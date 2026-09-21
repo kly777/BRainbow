@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use crate::error::{Error, Result};
+use crate::ui;
 
 /// `.env.prod.example` 里的占位值：填了这个等于没填（deploy.sh 同样判它未设置）。
 const PLACEHOLDER_HOST: &str = "your-server-ip-or-domain.com";
@@ -30,15 +31,26 @@ pub struct Config {
     /// Caddy 站点域名。
     pub domain: String,
 
-    // ── 应用运行时 ──
+    // ── 应用运行时（渲染 systemd unit 用）──
     pub service_port: u16,
+    pub bind_host: String,
+    pub database_url: String,
+    pub cors_allow_origin: String,
+    /// 缺省 `false`（deploy.sh 用的也是这个默认值）。
+    pub allow_register: String,
+    /// 缺省 `864000`（10 天）。
+    pub jwt_ttl_secs: String,
 
     // ── 远端路径（由 REMOTE_BASE / APP_NAME 派生）──
+    pub remote_dir: String,
     pub service_dir: String,
     pub data_dir: String,
     pub backup_dir: String,
     /// 数据库文件名（不含目录）。
     pub database_file: String,
+    /// 备份保留策略：先按天数，再按份数。
+    pub backup_retain_days: u32,
+    pub backup_retain_count: usize,
 
     /// `BUILD_TARGET`：留空或 `native` 表示本机编译。
     pub build_target: Option<String>,
@@ -63,10 +75,19 @@ impl std::fmt::Debug for Config {
             .field("app_name", &self.app_name)
             .field("domain", &self.domain)
             .field("service_port", &self.service_port)
+            .field("bind_host", &self.bind_host)
+            .field("database_url", &self.database_url)
+            .field("cors_allow_origin", &self.cors_allow_origin)
+            .field("allow_register", &self.allow_register)
+            .field("jwt_ttl_secs", &self.jwt_ttl_secs)
+            .field("remote_dir", &self.remote_dir)
             .field("service_dir", &self.service_dir)
             .field("data_dir", &self.data_dir)
             .field("backup_dir", &self.backup_dir)
             .field("database_file", &self.database_file)
+            .field("backup_retain_days", &self.backup_retain_days)
+            .field("backup_retain_count", &self.backup_retain_count)
+            .field("build_target", &self.build_target)
             .field("jwt_secret", &self.jwt_secret.as_ref().map(|_| "<已设置>"))
             .finish()
     }
@@ -92,19 +113,33 @@ impl Config {
         Self::from_vars(parse_env(&text), env_file, project_dir)
     }
 
-    /// 纯函数部分，便于单测。
+    /// 纯函数部分，便于单测。进程环境用真实值兜底。
     fn from_vars(
         vars: BTreeMap<String, String>,
         env_file: PathBuf,
         project_dir: PathBuf,
     ) -> Result<Self> {
+        Self::from_vars_with(vars, env_file, project_dir, &|key| std::env::var(key).ok())
+    }
+
+    /// 与 `from_vars` 相同，但环境变量取值可注入。
+    ///
+    /// 测试必须传 `&|_| None`：cargo 会把 `.cargo/config.toml` 的 `[env]`
+    /// （含 `DATABASE_URL`）注入测试进程，不注入就等于让断言依赖跑测试的环境。
+    fn from_vars_with(
+        vars: BTreeMap<String, String>,
+        env_file: PathBuf,
+        project_dir: PathBuf,
+        env: &dyn Fn(&str) -> Option<String>,
+    ) -> Result<Self> {
+        let lookup = |key: &str| lookup_with(&vars, key, env);
         let missing = |key: &str| {
             Error::msg(format!(
                 "缺少 {key}：请在 {} 里补上（模板见 .env.prod.example）",
                 env_file.display()
             ))
         };
-        let required = |key: &str| lookup(&vars, key).ok_or_else(|| missing(key));
+        let required = |key: &str| lookup(key).ok_or_else(|| missing(key));
 
         let remote_host = required("REMOTE_HOST")?;
         if remote_host == PLACEHOLDER_HOST {
@@ -116,11 +151,12 @@ impl Config {
         let remote_user = required("REMOTE_USER")?;
         let app_name = required("APP_NAME")?;
 
-        let remote_port = number(&vars, "REMOTE_PORT", 22)?;
-        let service_port = number(&vars, "SERVICE_PORT", 8080)?;
+        let remote_port = number(&vars, "REMOTE_PORT", 22, env)?;
+        let service_port = number(&vars, "SERVICE_PORT", 8080, env)?;
 
-        let remote_base = lookup(&vars, "REMOTE_BASE").unwrap_or_else(|| "/opt".into());
+        let remote_base = lookup("REMOTE_BASE").unwrap_or_else(|| "/opt".into());
         let remote_base = remote_base.trim_end_matches('/');
+        let database_file = lookup("DATABASE_FILE").unwrap_or_else(|| "brainbow.db".into());
         let remote_dir = if remote_base.is_empty() {
             format!("/{app_name}")
         } else {
@@ -134,14 +170,25 @@ impl Config {
             remote_user,
             remote_port,
             app_name,
-            domain: lookup(&vars, "DOMAIN").unwrap_or_else(|| "brainbow.top".into()),
+            domain: lookup("DOMAIN").unwrap_or_else(|| "brainbow.top".into()),
             service_port,
+            // 默认值与 deploy.sh 的 load_config 保持一致
+            bind_host: lookup("BIND_HOST").unwrap_or_else(|| "0.0.0.0".into()),
+            cors_allow_origin: lookup("CORS_ALLOW_ORIGIN")
+                .unwrap_or_else(|| "http://localhost:3000,http://localhost:5173".into()),
+            allow_register: lookup("ALLOW_REGISTER").unwrap_or_else(|| "false".into()),
+            jwt_ttl_secs: lookup("JWT_TTL_SECS").unwrap_or_else(|| "864000".into()),
+            remote_dir: remote_dir.clone(),
             service_dir: format!("{remote_dir}/service"),
             data_dir: format!("{remote_dir}/data"),
             backup_dir: format!("{remote_dir}/backup"),
-            database_file: lookup(&vars, "DATABASE_FILE").unwrap_or_else(|| "brainbow.db".into()),
-            build_target: lookup(&vars, "BUILD_TARGET"),
-            jwt_secret: lookup(&vars, "JWT_SECRET"),
+            database_url: lookup("DATABASE_URL")
+                .unwrap_or_else(|| format!("sqlite:{remote_dir}/data/{database_file}")),
+            database_file,
+            backup_retain_days: number(&vars, "BACKUP_RETAIN_DAYS", 30, env)? as u32,
+            backup_retain_count: number(&vars, "BACKUP_RETAIN_COUNT", 20, env)? as usize,
+            build_target: lookup("BUILD_TARGET"),
+            jwt_secret: lookup("JWT_SECRET"),
         })
     }
 
@@ -175,6 +222,46 @@ impl Config {
     /// 前端目录 `web/`（vite 的产物在 `web/dist`）。
     pub fn web_dir(&self) -> PathBuf {
         self.project_dir.join("web")
+    }
+
+    /// 远端暂存目录。
+    ///
+    /// 放在 `$REMOTE_DIR` 下而不是 `$REMOTE_BASE`（即 `/opt`）下：后者是 root 的，
+    /// ssh 用户建不了 —— deploy.sh 的回滚临时目录正是建在 `/opt/brb_rollback_$$`，
+    /// 于是回滚必然失败（AGENTS.md 记的就是这一条）。
+    pub fn remote_tmp_dir(&self) -> String {
+        format!("{}/tmp", self.remote_dir)
+    }
+
+    /// 渲染 systemd unit 的路径。
+    pub fn unit_path(&self) -> String {
+        format!("/etc/systemd/system/{}.service", self.app_name)
+    }
+
+    /// 取 JWT_SECRET；`generate` 为真时缺失就现场生成并写回 `.env.prod`。
+    ///
+    /// 只有渲染 systemd unit 的路径会用到（unit 里含该密钥）。
+    /// 把"写回配置文件"限制在这里，是为了不让 `just logs` 这种只读命令
+    /// 悄悄改一个含密钥的文件 —— deploy.sh 是在 load_config 里无条件生成的，
+    /// 于是每个子命令都可能动它（`make check` 都会）。
+    pub fn require_jwt_secret(&mut self, generate: bool) -> Result<String> {
+        if let Some(secret) = &self.jwt_secret {
+            return Ok(secret.clone());
+        }
+        if !generate {
+            return Err(Error::msg(format!(
+                "缺少 JWT_SECRET：请在 {} 里补一行\n  JWT_SECRET=<openssl rand -hex 32 的输出>",
+                self.env_file.display()
+            )));
+        }
+        let secret = random_hex_32()?;
+        append_secret(&self.env_file, &secret)?;
+        ui::warn(&format!(
+            "{} 里没有 JWT_SECRET：已生成并写回（重启后会话依然有效）",
+            self.env_file.display()
+        ));
+        self.jwt_secret = Some(secret.clone());
+        Ok(secret)
     }
 }
 
@@ -224,7 +311,11 @@ fn unquote(value: &str) -> &str {
 }
 
 /// 查找一个值：文件优先，进程环境兜底；空串视为未设置。
-fn lookup(vars: &BTreeMap<String, String>, key: &str) -> Option<String> {
+fn lookup_with(
+    vars: &BTreeMap<String, String>,
+    key: &str,
+    env: &dyn Fn(&str) -> Option<String>,
+) -> Option<String> {
     let non_empty = |s: String| {
         let trimmed = s.trim().to_string();
         if trimmed.is_empty() { None } else { Some(trimmed) }
@@ -232,15 +323,99 @@ fn lookup(vars: &BTreeMap<String, String>, key: &str) -> Option<String> {
     vars.get(key)
         .cloned()
         .and_then(non_empty)
-        .or_else(|| std::env::var(key).ok().and_then(non_empty))
+        .or_else(|| env(key).and_then(non_empty))
 }
 
-fn number(vars: &BTreeMap<String, String>, key: &str, default: u16) -> Result<u16> {
-    match lookup(vars, key) {
+fn number(
+    vars: &BTreeMap<String, String>,
+    key: &str,
+    default: u16,
+    env: &dyn Fn(&str) -> Option<String>,
+) -> Result<u16> {
+    match lookup_with(vars, key, env) {
         None => Ok(default),
         Some(raw) => raw.parse::<u16>().map_err(|_| {
             Error::msg(format!("{key} 不是合法端口号：{raw:?}（应为 1-65535 的整数）"))
         }),
+    }
+}
+
+/// 32 字节随机数的十六进制表示，取代 `openssl rand -hex 32`（本机不再需要 openssl）。
+fn random_hex_32() -> Result<String> {
+    let mut buf = [0u8; 32];
+    fill_random(&mut buf)?;
+    Ok(hex::encode(buf))
+}
+
+/// 用操作系统熵源填随机字节。
+///
+/// 不引 `rand` 是为了让"部署工具"的依赖面保持最小：这里只需要一次
+/// 不可预测的读，系统熵源就是最直接的来源。
+#[cfg(unix)]
+fn fill_random(buf: &mut [u8]) -> Result<()> {
+    use std::io::Read;
+    let mut file = std::fs::File::open("/dev/urandom")
+        .map_err(|e| Error::io("打开 /dev/urandom（生成 JWT_SECRET）", e))?;
+    file.read_exact(buf)
+        .map_err(|e| Error::io("读取 /dev/urandom（生成 JWT_SECRET）", e))
+}
+
+#[cfg(windows)]
+fn fill_random(buf: &mut [u8]) -> Result<()> {
+    // Windows 没有 /dev/urandom。调用 advapi32 的 RtlGenRandom
+    // （SystemFunction036）—— 它在所有受支持的 Windows 上都可用，
+    // 且不需要额外的 crate。
+    #[link(name = "advapi32")]
+    unsafe extern "system" {
+        fn SystemFunction036(random_buffer: *mut u8, random_buffer_length: u32) -> u8;
+    }
+    // SAFETY: 传入的是本进程缓冲区及其真实长度，函数只往里写。
+    let ok = unsafe { SystemFunction036(buf.as_mut_ptr(), buf.len() as u32) };
+    if ok == 0 {
+        return Err(Error::msg(
+            "Windows 熵源 RtlGenRandom 调用失败（生成 JWT_SECRET）",
+        ));
+    }
+    Ok(())
+}
+
+/// 把新生成的密钥追加到配置文件末尾（沿用 deploy.sh 的写回行为）。
+fn append_secret(env_file: &Path, secret: &str) -> Result<()> {
+    use std::io::Write;
+    let mut file = std::fs::OpenOptions::new()
+        .append(true)
+        .open(env_file)
+        .map_err(|e| Error::io(format!("追加 JWT_SECRET 到 {}", env_file.display()), e))?;
+    writeln!(
+        file,
+        "\n# 部署时自动生成的 JWT 密钥（勿改，重启后会话保持有效）\nJWT_SECRET={secret}"
+    )
+    .map_err(|e| Error::io(format!("写入 {}", env_file.display()), e))?;
+    Ok(())
+}
+
+#[cfg(test)]
+impl Config {
+    /// 测试用的配置：读**真实仓库根**，因此渲染测试用的是真实的
+    /// `deploy/brainbow.service` / `deploy/Caddyfile` —— 模板与渲染代码
+    /// 一旦脱节就能测出来。
+    ///
+    /// 环境变量一律不参与（`&|_| None`），否则断言会随跑测试的环境变化。
+    pub(crate) fn for_test() -> Self {
+        let root = project_dir();
+        let vars = [
+            ("REMOTE_HOST", "203.0.113.7"),
+            ("REMOTE_USER", "kly"),
+            ("APP_NAME", "brb"),
+            ("DOMAIN", "example.test"),
+            ("BIND_HOST", "127.0.0.1"),
+            ("CORS_ALLOW_ORIGIN", "https://example.test"),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect();
+        Self::from_vars_with(vars, root.join(".env.prod"), root, &|_| None)
+            .expect("测试配置应当成立")
     }
 }
 
@@ -264,10 +439,12 @@ mod tests {
     }
 
     fn build(pairs: &[(&str, &str)]) -> Result<Config> {
-        Config::from_vars(
+        Config::from_vars_with(
             vars(pairs),
             PathBuf::from("/repo/.env.prod"),
             PathBuf::from("/repo"),
+            // 不读进程环境：cargo 会把 [env] 里的 DATABASE_URL 注进测试进程
+            &|_| None,
         )
     }
 
@@ -313,10 +490,92 @@ mod tests {
         assert_eq!(cfg.backup_dir, "/opt/brb/backup");
         assert_eq!(cfg.database_path(), "/opt/brb/data/brainbow.db");
         assert_eq!(cfg.target(), "kly@203.0.113.7");
+        // 暂存目录在 $REMOTE_DIR 下（不是 /opt —— 那里 ssh 用户写不了）
+        assert_eq!(cfg.remote_tmp_dir(), "/opt/brb/tmp");
+        assert_eq!(cfg.unit_path(), "/etc/systemd/system/brb.service");
+        // DATABASE_URL 没写时按远端数据目录推出来（deploy.sh 同样这么补）
+        assert_eq!(cfg.database_url, "sqlite:/opt/brb/data/brainbow.db");
         // 默认值与 deploy.sh 一致
         assert_eq!(cfg.remote_port, 22);
         assert_eq!(cfg.service_port, 8080);
         assert_eq!(cfg.domain, "brainbow.top");
+        assert_eq!(cfg.bind_host, "0.0.0.0");
+        assert_eq!(cfg.allow_register, "false");
+        assert_eq!(cfg.jwt_ttl_secs, "864000");
+        assert_eq!(cfg.backup_retain_days, 30);
+        assert_eq!(cfg.backup_retain_count, 20);
+        assert!(cfg.cross_target().is_none(), "默认应当是本机编译");
+    }
+
+    #[test]
+    fn honors_explicit_runtime_values() {
+        let cfg = build(&[
+            ("REMOTE_HOST", "203.0.113.7"),
+            ("REMOTE_USER", "kly"),
+            ("APP_NAME", "brb"),
+            ("BIND_HOST", "127.0.0.1"),
+            ("DATABASE_URL", "sqlite:/data/x.db"),
+            ("CORS_ALLOW_ORIGIN", "https://a.top"),
+            ("ALLOW_REGISTER", "true"),
+            ("JWT_TTL_SECS", "60"),
+            ("BUILD_TARGET", "x86_64-unknown-linux-gnu"),
+        ])
+        .expect("配置应当成立");
+        assert_eq!(cfg.bind_host, "127.0.0.1");
+        assert_eq!(cfg.database_url, "sqlite:/data/x.db");
+        assert_eq!(cfg.allow_register, "true");
+        assert_eq!(cfg.cross_target(), Some("x86_64-unknown-linux-gnu"));
+    }
+
+    #[test]
+    fn native_build_target_is_not_cross_compilation() {
+        for value in ["native", ""] {
+            let cfg = build(&[
+                ("REMOTE_HOST", "203.0.113.7"),
+                ("REMOTE_USER", "kly"),
+                ("APP_NAME", "brb"),
+                ("BUILD_TARGET", value),
+            ])
+            .expect("配置应当成立");
+            assert!(cfg.cross_target().is_none(), "BUILD_TARGET={value:?} 应视作本机");
+        }
+    }
+
+    #[test]
+    fn jwt_secret_error_points_at_the_file() {
+        let mut cfg = build(&[
+            ("REMOTE_HOST", "203.0.113.7"),
+            ("REMOTE_USER", "kly"),
+            ("APP_NAME", "brb"),
+        ])
+        .expect("配置应当成立");
+        let err = cfg
+            .require_jwt_secret(false)
+            .expect_err("缺失且不允许生成时应当报错");
+        let text = err.to_string();
+        assert!(text.contains("/repo/.env.prod"), "{text}");
+        assert!(text.contains("openssl rand -hex 32"), "{text}");
+    }
+
+    #[test]
+    fn existing_jwt_secret_is_returned_unchanged() {
+        let mut cfg = build(&[
+            ("REMOTE_HOST", "203.0.113.7"),
+            ("REMOTE_USER", "kly"),
+            ("APP_NAME", "brb"),
+            ("JWT_SECRET", "deadbeef"),
+        ])
+        .expect("配置应当成立");
+        assert_eq!(cfg.require_jwt_secret(false).expect("应当取到"), "deadbeef");
+    }
+
+    #[test]
+    fn random_hex_32_is_64_hex_chars_and_unique() {
+        let a = random_hex_32().expect("熵源可用");
+        let b = random_hex_32().expect("熵源可用");
+        assert_eq!(a.len(), 64);
+        assert!(a.chars().all(|c| c.is_ascii_hexdigit()));
+        assert_ne!(a, b, "两次生成不应当相同");
     }
 
     #[test]
@@ -352,13 +611,40 @@ mod tests {
     fn rejects_bad_port() {
         let mut pairs = minimal().into_iter().collect::<Vec<_>>();
         pairs.push(("SERVICE_PORT".into(), "8080x".into()));
-        let err = Config::from_vars(
+        let err = Config::from_vars_with(
             pairs.into_iter().collect(),
             PathBuf::from("/repo/.env.prod"),
             PathBuf::from("/repo"),
+            &|_| None,
         )
         .expect_err("非法端口应当报错");
         assert!(err.to_string().contains("不是合法端口号"), "{err}");
+    }
+
+    #[test]
+    fn process_env_fills_keys_missing_from_the_file() {
+        // 对应 bash 里 `source` 不会清掉环境里已有的变量：
+        // 文件没定义的键由环境兜底（`SERVICE_PORT=9090 just deploy` 这类用法）。
+        let cfg = Config::from_vars_with(
+            minimal(),
+            PathBuf::from("/repo/.env.prod"),
+            PathBuf::from("/repo"),
+            &|key| (key == "SERVICE_PORT").then(|| "9090".to_string()),
+        )
+        .expect("配置应当成立");
+        assert_eq!(cfg.service_port, 9090);
+
+        // 文件里写了就以文件为准（与 `source` 的覆盖方向一致）
+        let mut pairs = minimal().into_iter().collect::<Vec<_>>();
+        pairs.push(("SERVICE_PORT".into(), "8080".into()));
+        let cfg = Config::from_vars_with(
+            pairs.into_iter().collect(),
+            PathBuf::from("/repo/.env.prod"),
+            PathBuf::from("/repo"),
+            &|_| Some("9090".to_string()),
+        )
+        .expect("配置应当成立");
+        assert_eq!(cfg.service_port, 8080, "文件应当压过环境");
     }
 
     #[test]
@@ -366,10 +652,11 @@ mod tests {
         // JWT_SECRET= （空）应与"没写"等价，否则会渲染出一个空密钥的 unit。
         let mut pairs = minimal().into_iter().collect::<Vec<_>>();
         pairs.push(("JWT_SECRET".into(), "   ".into()));
-        let cfg = Config::from_vars(
+        let cfg = Config::from_vars_with(
             pairs.into_iter().collect(),
             PathBuf::from("/repo/.env.prod"),
             PathBuf::from("/repo"),
+            &|_| None,
         )
         .expect("配置应当成立");
         assert!(cfg.jwt_secret.is_none());

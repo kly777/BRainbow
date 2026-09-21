@@ -31,6 +31,13 @@ build-backend *args:
 dev *args:
 	@cargo xtask dev {{args}}
 
+# ── 部署 ────────────────────────────────────────────────────────────
+
+# 全量部署：停服 → 备份 → 同步 → 起服 → 自检 → 同步 Caddy
+# 先看一遍流程用 `just deploy --dry-run`（只打印将要执行的远端命令）
+deploy *args:
+	@cargo xtask deploy {{args}}
+
 # ── 只读：查环境与状态 ──────────────────────────────────────────────
 
 # 部署前环境检查：SSH / 免密 sudo 白名单 / Caddy / 本地产物

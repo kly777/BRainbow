@@ -10,14 +10,14 @@ use crate::cmd::brief;
 use crate::config::Config;
 use crate::error::Result;
 use crate::local;
-use crate::remote::{Remote, basename, path_in, sh_quote};
+use crate::remote::{Remote, basename, glob_in, path_of, sh_quote};
 use crate::ui;
 
 pub fn run(cfg: &Config, remote: &Remote) -> Result<()> {
     ui::banner(&format!("部署信息 {} → {}", cfg.app_name, cfg.remote_host));
 
     let app = sh_quote(&cfg.app_name);
-    let binary = path_in(&cfg.service_dir, "brainbow");
+    let binary = sh_quote(&path_of(&cfg.service_dir, "brainbow"));
 
     ui::section("服务状态");
     show(
@@ -38,7 +38,7 @@ pub fn run(cfg: &Config, remote: &Remote) -> Result<()> {
         remote,
         &format!(
             "ls -lh {} 2>/dev/null",
-            path_in(&cfg.service_dir, "dist/index.html")
+            sh_quote(&path_of(&cfg.service_dir, "dist/index.html"))
         ),
     );
 
@@ -50,15 +50,14 @@ pub fn run(cfg: &Config, remote: &Remote) -> Result<()> {
         "N/A",
     );
     // 最近 3 份数据库备份：远端只列路径，名称与时间戳在本地格式化
-    // （与 `list-backups` 用同一个格式化，两处显示一致）。
+    // （与 `list-backups` 用同一个解析，两处显示一致）。
     let recent = remote.capture_if_run(&format!(
         "ls -1t {} 2>/dev/null | head -3",
-        path_in(&cfg.backup_dir, "db_*.db")
+        glob_in(&cfg.backup_dir, "db_*.db")
     ))?;
     for line in recent.unwrap_or_default().lines().filter(|l| !l.is_empty()) {
         if let Some(name) = basename(line) {
-            let label = crate::cmd::backups::stamp_label(name)
-                .unwrap_or_else(|| name.to_string());
+            let label = crate::stamp::human(name).unwrap_or_else(|| name.to_string());
             ui::field("备份", &label);
         }
     }

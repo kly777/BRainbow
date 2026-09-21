@@ -16,3 +16,9 @@ description = "BRainbow 的构建 / 部署 CLI（跨平台；取代 Makefile 的
 [dependencies]
 clap = { version = "4.6", features = ["derive"] }
 chrono = "0.4"
+# 上传用进程内打包 + 灌进 ssh 的 stdin（本机因此不需要 rsync/scp/sftp）；
+# sha2 用来比对远端已装文件是否与本地一致（省掉每次重传 76MB 的 ffmpeg）。
+tar = "0.4.46"
+flate2 = "1.1.10"
+sha2 = "0.10"
+hex = "0.4"

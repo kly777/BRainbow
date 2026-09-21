@@ -188,11 +188,11 @@ mod tests {
             unit.contains("Environment=\"BIND_HOST=127.0.0.1\""),
             "{unit}"
         );
-        // 上传根必须注入：缺了它应用会退回相对的 `uploads`，把用户数据放进
-        // WorkingDirectory（= 可整体替换的 service/）里
+        // 上传根必须注入，且默认值走**部署约定**（data 下）—— 缺了它、或让它退回
+        // 后端那个相对的开发默认 `uploads`，用户数据就会落进 service/ 里
         assert!(
-            unit.contains("Environment=\"UPLOAD_DIR=uploads\""),
-            "默认值与后端一致（相对路径）: {unit}"
+            unit.contains("Environment=\"UPLOAD_DIR=/opt/brb/data/uploads\""),
+            "上传根应当按约定派生到 data 下: {unit}"
         );
         // 默认值（.env.prod 里没写这两项时）
         assert!(

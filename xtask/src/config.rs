@@ -117,26 +117,20 @@ impl Config {
         Self::from_vars(parse_env(&text), env_file, project_dir)
     }
 
-    /// 纯函数部分，便于单测。进程环境用真实值兜底。
+    /// 纯函数部分，便于单测。
+    ///
+    /// **配置只来自 `.env.prod`（加约定派生），不读进程环境。** 这条是刻意的：
+    /// `cargo xtask` 是 `cargo run`，而 `.cargo/config.toml` 的 `[env]` 会把
+    /// `DATABASE_URL=sqlite:brainbow.db` 注进 xtask 进程 —— 读环境就等于让
+    /// "开发机的构建配置"悄悄改掉"部署配置"（部署会把数据库指到开发库的相对路径，
+    /// 而 `.env.prod` 里根本没写它）。任何在 shell 里 export 过的同名变量同理。
+    /// 要覆盖某一项，就写进 `.env.prod`。
     fn from_vars(
         vars: BTreeMap<String, String>,
         env_file: PathBuf,
         project_dir: PathBuf,
     ) -> Result<Self> {
-        Self::from_vars_with(vars, env_file, project_dir, &|key| std::env::var(key).ok())
-    }
-
-    /// 与 `from_vars` 相同，但环境变量取值可注入。
-    ///
-    /// 测试必须传 `&|_| None`：cargo 会把 `.cargo/config.toml` 的 `[env]`
-    /// （含 `DATABASE_URL`）注入测试进程，不注入就等于让断言依赖跑测试的环境。
-    fn from_vars_with(
-        vars: BTreeMap<String, String>,
-        env_file: PathBuf,
-        project_dir: PathBuf,
-        env: &dyn Fn(&str) -> Option<String>,
-    ) -> Result<Self> {
-        let lookup = |key: &str| lookup_with(&vars, key, env);
+        let lookup = |key: &str| lookup(&vars, key);
         let missing = |key: &str| {
             Error::msg(format!(
                 "缺少 {key}：请在 {} 里补上（模板见 .env.prod.example）",
@@ -155,8 +149,8 @@ impl Config {
         let remote_user = required("REMOTE_USER")?;
         let app_name = required("APP_NAME")?;
 
-        let remote_port = number(&vars, "REMOTE_PORT", 22, env)?;
-        let service_port = number(&vars, "SERVICE_PORT", 8080, env)?;
+        let remote_port = number(&vars, "REMOTE_PORT", 22)?;
+        let service_port = number(&vars, "SERVICE_PORT", 8080)?;
 
         let remote_base = lookup("REMOTE_BASE").unwrap_or_else(|| "/opt".into());
         let remote_base = remote_base.trim_end_matches('/');
@@ -166,6 +160,9 @@ impl Config {
         } else {
             format!("{remote_base}/{app_name}")
         };
+        // 数据目录是"约定"的一部分：数据库与上传都在它下面。集中在这里算一次，
+        // 好让下面的派生默认值都指向同一个地方（改根目录时不会漏掉某一项）。
+        let data_dir = format!("{remote_dir}/data");
 
         Ok(Self {
             env_file,
@@ -179,20 +176,23 @@ impl Config {
             // 默认值与 deploy.sh 的 load_config 保持一致
             bind_host: lookup("BIND_HOST").unwrap_or_else(|| "0.0.0.0".into()),
             // 默认与后端一致（`src/shared/config.rs` 里 UPLOAD_DIR 缺省 `uploads`）
-            upload_dir: lookup("UPLOAD_DIR").unwrap_or_else(|| "uploads".into()),
+            // 上传根的默认值走**部署约定**（`data/uploads`），而不是后端的开发默认
+            // （相对的 `uploads`）—— 后者会让数据落进 WorkingDirectory，
+            // 也就是"随时可整体替换的" service/ 里。
+            upload_dir: lookup("UPLOAD_DIR").unwrap_or_else(|| format!("{data_dir}/uploads")),
             cors_allow_origin: lookup("CORS_ALLOW_ORIGIN")
                 .unwrap_or_else(|| "http://localhost:3000,http://localhost:5173".into()),
             allow_register: lookup("ALLOW_REGISTER").unwrap_or_else(|| "false".into()),
             jwt_ttl_secs: lookup("JWT_TTL_SECS").unwrap_or_else(|| "864000".into()),
             remote_dir: remote_dir.clone(),
             service_dir: format!("{remote_dir}/service"),
-            data_dir: format!("{remote_dir}/data"),
+            data_dir,
             backup_dir: format!("{remote_dir}/backup"),
             database_url: lookup("DATABASE_URL")
                 .unwrap_or_else(|| format!("sqlite:{remote_dir}/data/{database_file}")),
             database_file,
-            backup_retain_days: number(&vars, "BACKUP_RETAIN_DAYS", 30, env)? as u32,
-            backup_retain_count: number(&vars, "BACKUP_RETAIN_COUNT", 20, env)? as usize,
+            backup_retain_days: number(&vars, "BACKUP_RETAIN_DAYS", 30)? as u32,
+            backup_retain_count: number(&vars, "BACKUP_RETAIN_COUNT", 20)? as usize,
             build_target: lookup("BUILD_TARGET"),
             jwt_secret: lookup("JWT_SECRET"),
         })
@@ -319,12 +319,11 @@ fn unquote(value: &str) -> &str {
     value
 }
 
-/// 查找一个值：文件优先，进程环境兜底；空串视为未设置。
-fn lookup_with(
-    vars: &BTreeMap<String, String>,
-    key: &str,
-    env: &dyn Fn(&str) -> Option<String>,
-) -> Option<String> {
+/// 查找一个值：**只认文件**；空串视为未设置。
+///
+/// 刻意不回落读进程环境 —— 见 `from_vars` 的注释（cargo 的 `[env]` 会注入
+/// `DATABASE_URL`，读了它部署就会指到开发库）。
+fn lookup(vars: &BTreeMap<String, String>, key: &str) -> Option<String> {
     let non_empty = |s: String| {
         let trimmed = s.trim().to_string();
         if trimmed.is_empty() {
@@ -333,19 +332,11 @@ fn lookup_with(
             Some(trimmed)
         }
     };
-    vars.get(key)
-        .cloned()
-        .and_then(non_empty)
-        .or_else(|| env(key).and_then(non_empty))
+    vars.get(key).cloned().and_then(non_empty)
 }
 
-fn number(
-    vars: &BTreeMap<String, String>,
-    key: &str,
-    default: u16,
-    env: &dyn Fn(&str) -> Option<String>,
-) -> Result<u16> {
-    match lookup_with(vars, key, env) {
+fn number(vars: &BTreeMap<String, String>, key: &str, default: u16) -> Result<u16> {
+    match lookup(vars, key) {
         None => Ok(default),
         Some(raw) => raw.parse::<u16>().map_err(|_| {
             Error::msg(format!(
@@ -415,7 +406,7 @@ impl Config {
     /// `deploy/brainbow.service` / `deploy/Caddyfile` —— 模板与渲染代码
     /// 一旦脱节就能测出来。
     ///
-    /// 环境变量一律不参与（`&|_| None`），否则断言会随跑测试的环境变化。
+    /// 配置不读进程环境（见 `from_vars` 的注释），所以断言不会随跑测试的环境变化。
     pub(crate) fn for_test() -> Self {
         let root = project_dir();
         let vars = [
@@ -429,8 +420,7 @@ impl Config {
         .into_iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))
         .collect();
-        Self::from_vars_with(vars, root.join(".env.prod"), root, &|_| None)
-            .expect("测试配置应当成立")
+        Self::from_vars(vars, root.join(".env.prod"), root).expect("测试配置应当成立")
     }
 }
 
@@ -454,12 +444,10 @@ mod tests {
     }
 
     fn build(pairs: &[(&str, &str)]) -> Result<Config> {
-        Config::from_vars_with(
+        Config::from_vars(
             vars(pairs),
             PathBuf::from("/repo/.env.prod"),
             PathBuf::from("/repo"),
-            // 不读进程环境：cargo 会把 [env] 里的 DATABASE_URL 注进测试进程
-            &|_| None,
         )
     }
 
@@ -516,6 +504,12 @@ mod tests {
         assert_eq!(cfg.unit_path(), "/etc/systemd/system/brb.service");
         // DATABASE_URL 没写时按远端数据目录推出来（deploy.sh 同样这么补）
         assert_eq!(cfg.database_url, "sqlite:/opt/brb/data/brainbow.db");
+        // 上传根也按部署约定推出来：**不是**后端那个相对的开发默认 `uploads`
+        // （那会让数据落进 WorkingDirectory = service/）。
+        // 这几个值与后端从 `BRAINBOW_ROOT=/opt/brb` 推出来的完全一致
+        // （见 src/shared/config.rs 的 root_dir_derives_the_data_paths）——
+        // 两边的约定必须同步改，改一处漏另一处就会把数据放到别的地方。
+        assert_eq!(cfg.upload_dir, "/opt/brb/data/uploads");
         // 默认值与 deploy.sh 一致
         assert_eq!(cfg.remote_port, 22);
         assert_eq!(cfg.service_port, 8080);
@@ -635,40 +629,37 @@ mod tests {
     fn rejects_bad_port() {
         let mut pairs = minimal().into_iter().collect::<Vec<_>>();
         pairs.push(("SERVICE_PORT".into(), "8080x".into()));
-        let err = Config::from_vars_with(
+        let err = Config::from_vars(
             pairs.into_iter().collect(),
             PathBuf::from("/repo/.env.prod"),
             PathBuf::from("/repo"),
-            &|_| None,
         )
         .expect_err("非法端口应当报错");
         assert!(err.to_string().contains("不是合法端口号"), "{err}");
     }
 
     #[test]
-    fn process_env_fills_keys_missing_from_the_file() {
-        // 对应 bash 里 `source` 不会清掉环境里已有的变量：
-        // 文件没定义的键由环境兜底（`SERVICE_PORT=9090 just deploy` 这类用法）。
-        let cfg = Config::from_vars_with(
-            minimal(),
+    fn file_wins_and_missing_keys_fall_back_to_deploy_conventions() {
+        // 文件里写了就用文件里的值（不再有"进程环境兜底"这一层）
+        let mut pairs = minimal().into_iter().collect::<Vec<_>>();
+        pairs.push(("SERVICE_PORT".into(), "9090".into()));
+        let cfg = Config::from_vars(
+            pairs.into_iter().collect(),
             PathBuf::from("/repo/.env.prod"),
             PathBuf::from("/repo"),
-            &|key| (key == "SERVICE_PORT").then(|| "9090".to_string()),
         )
         .expect("配置应当成立");
         assert_eq!(cfg.service_port, 9090);
 
-        // 文件里写了就以文件为准（与 `source` 的覆盖方向一致）
-        let mut pairs = minimal().into_iter().collect::<Vec<_>>();
-        pairs.push(("SERVICE_PORT".into(), "8080".into()));
-        let cfg = Config::from_vars_with(
-            pairs.into_iter().collect(),
+        // 没写的走约定/默认值 —— 而不是"碰巧在环境里"的东西
+        let cfg = Config::from_vars(
+            minimal(),
             PathBuf::from("/repo/.env.prod"),
             PathBuf::from("/repo"),
-            &|_| Some("9090".to_string()),
         )
         .expect("配置应当成立");
-        assert_eq!(cfg.service_port, 8080, "文件应当压过环境");
+        assert_eq!(cfg.service_port, 8080, "没写就用默认端口");
+        assert_eq!(cfg.database_url, "sqlite:/opt/brb/data/brainbow.db");
     }
 
     #[test]
@@ -676,11 +667,10 @@ mod tests {
         // JWT_SECRET= （空）应与"没写"等价，否则会渲染出一个空密钥的 unit。
         let mut pairs = minimal().into_iter().collect::<Vec<_>>();
         pairs.push(("JWT_SECRET".into(), "   ".into()));
-        let cfg = Config::from_vars_with(
+        let cfg = Config::from_vars(
             pairs.into_iter().collect(),
             PathBuf::from("/repo/.env.prod"),
             PathBuf::from("/repo"),
-            &|_| None,
         )
         .expect("配置应当成立");
         assert!(cfg.jwt_secret.is_none());

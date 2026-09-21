@@ -1,0 +1,10 @@
+# 固定 Rust 工具链：WSL / Windows / macOS / CI 必须用同一个编译器，
+# 否则「本机能构建、部署机不行」这类问题查起来毫无线索。
+#
+# 升级步骤：改 channel → 让 rustup 装上（首次 cargo 调用会自动装）
+#   → cargo test && cargo clippy --workspace --all-targets → 提交。
+# 注意 edition = "2024" 要求 >= 1.85。
+[toolchain]
+channel = "1.97.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

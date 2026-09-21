@@ -704,14 +704,18 @@ impl Deploy<'_> {
 
     /// 跑已部署二进制的只读自检。
     ///
-    /// 环境对齐 systemd：`cd` 到 unit 的 `WorkingDirectory`（`UPLOAD_DIR` 默认是
-    /// 相对该目录的路径），并显式传入 `DATABASE_URL`。
+    /// 环境要对齐 systemd 的 unit：`cd` 到它的 `WorkingDirectory`，并把
+    /// **影响路径的环境变量**显式传进去 —— `DATABASE_URL` 与 `UPLOAD_DIR`。
+    /// 少传一个是真实的坑：不传 `UPLOAD_DIR` 时自检会退回默认的相对路径
+    /// `uploads`（相对 cwd = service/），于是去检查一个跟服务实际使用的目录
+    /// 无关的地方，报出假的"上传目录不可用 / 缺失 32 个文件"。
     fn self_check(&self) {
         ui::info("后端自检（只读，含全库 quick_check，约数秒）…");
         let cmd = format!(
-            "cd {} && RUST_LOG=info DATABASE_URL={} ./brainbow --check 2>&1",
+            "cd {} && RUST_LOG=info DATABASE_URL={} UPLOAD_DIR={} ./brainbow --check 2>&1",
             sh_quote(&self.cfg.service_dir),
-            sh_quote(&self.cfg.database_url)
+            sh_quote(&self.cfg.database_url),
+            sh_quote(&self.cfg.upload_dir)
         );
         match self.remote.capture_any(&cmd) {
             Ok(None) => ui::info("后端自检（dry-run 未执行）"),

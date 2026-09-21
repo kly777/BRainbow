@@ -47,12 +47,8 @@ pub fn activate_dist(cfg: &Config, remote: &Remote, staging: &str) -> Result<()>
     remote.ok(&format!("rm -rf {}", sh_quote(&old)))?;
 
     // dist 由 Caddy 以另一个用户（caddy）读取：目录 755 / 文件 644。
-    // 只对 dist 做 —— 老脚本的 `find $SERVICE_DIR` 会把 uploads 里用户上传的
-    // 文件也一起改成 644。
-    remote.ok(&format!(
-        "find {d} -type d -exec chmod 755 {{}} + ; find {d} -type f -exec chmod 644 {{}} +",
-        d = sh_quote(&live)
-    ))?;
+    // 就在换目录这一步设好 —— 只有这里知道"刚换上去的是哪个目录"。
+    remote.ok(&chmod_dist_command(&cfg.service_dir))?;
     Ok(())
 }
 
@@ -246,6 +242,28 @@ fn write_payload(
         }
     }
     Ok(())
+}
+
+/// `service/brainbow` 的可执行位。
+fn chmod_binary_command(service_dir: &str) -> String {
+    format!("chmod 755 {}", sh_quote(&path_of(service_dir, "brainbow")))
+}
+
+/// `dist/` 的权限扫描（目录 755 / 文件 644）。
+fn chmod_dist_command(service_dir: &str) -> String {
+    format!(
+        "find {d} -type d -exec chmod 755 {{}} + ; find {d} -type f -exec chmod 644 {{}} +",
+        d = sh_quote(&path_of(service_dir, "dist"))
+    )
+}
+
+/// `bin/` 下可执行文件的权限。
+///
+/// 注意 `glob_in` 已经带了 `*`，不要再往后面拼 `/*` —— 拼成 `'dir'/*/*` 时
+/// 模式什么都匹配不到，bash 会把字面量传给 chmod，于是 `chmod: cannot access`
+/// 让整步失败（真实踩过一次）。
+fn chmod_bin_command(service_dir: &str) -> String {
+    format!("chmod 755 {}", glob_in(&path_of(service_dir, "bin"), "*"))
 }
 
 /// 就绪探测次数与间隔（与老脚本一致：30 次 × 1 秒）。
@@ -534,28 +552,20 @@ impl Deploy<'_> {
 
     // ── Step 5：权限 ──────────────────────────────────────────────
 
+    /// Step 5：可执行位。
+    ///
+    /// `dist/` 的权限由 `activate_dist` 在换目录那一步设好（那里是唯一知道
+    /// "刚刚换上去的是哪个目录"的地方），这里只补 `brainbow` 与 `bin/`。
     fn fix_permissions(&self) -> Result<()> {
         ui::info("设置权限…");
         let service = &self.cfg.service_dir;
-        self.remote.ok(&format!(
-            "chmod 755 {}",
-            sh_quote(&path_of(service, "brainbow"))
-        ))?;
+        self.remote.ok(&chmod_binary_command(service))?;
 
-        // dist 由 Caddy 以另一个用户（caddy）读取，需要目录 755 / 文件 644。
-        // 只对 dist 做，不整目录 find —— 老脚本的
-        // `find $SERVICE_DIR -type f -exec chmod 644` 会把 uploads 里
-        // 用户上传的文件也一起改掉。
-        let dist = format!("{service}/dist");
-        self.remote.ok(&format!(
-            "find {d} -type d -exec chmod 755 {{}} + ; find {d} -type f -exec chmod 644 {{}} +",
-            d = sh_quote(&dist)
-        ))?;
-
-        let bin_dir = format!("{service}/bin");
-        if self.remote.exists(&bin_dir) {
-            self.remote
-                .ok(&format!("chmod 755 {}/*", glob_in(&bin_dir, "*")))?;
+        // dry-run 下 exists() 恒为假，只看它会把这条命令从预览里漏掉 ——
+        // 而"漏掉的那条恰好是错的"正是上次部署失败的经过。
+        let bin_dir = path_of(service, "bin");
+        if self.remote.is_dry_run() || self.remote.exists(&bin_dir) {
+            self.remote.ok(&chmod_bin_command(service))?;
         }
         ui::done("权限设置完成");
         Ok(())
@@ -590,11 +600,6 @@ impl Deploy<'_> {
         wait_for_ready(self.cfg, self.remote)
     }
 
-    /// 探测一次 `/api/health`；dry-run 返回 `None`。
-    fn probe_health(&self) -> Result<Option<bool>> {
-        probe_health(self.cfg, self.remote)
-    }
-
     // ── 关键区失败后的恢复 ────────────────────────────────────────
 
     /// 两层恢复，顺序与老脚本一致：先试着把现有产物拉起来（旧产物还在磁盘上时
@@ -604,13 +609,15 @@ impl Deploy<'_> {
         let _ = self.remote.ok(&format!(
             "sudo systemctl restart {app} 2>/dev/null || sudo systemctl start {app}"
         ));
-        match self.probe_health() {
-            Ok(Some(true)) => {
-                ui::warn("服务已用当前磁盘上的产物拉起（新版本可能有问题，请查日志）");
-                return Ok(());
-            }
-            Ok(None) => return Err(Error::msg("dry-run：未执行恢复")),
-            _ => {}
+        if self.remote.is_dry_run() {
+            return Err(Error::msg("dry-run：未执行恢复"));
+        }
+        // 必须给足时间：服务起来要 bind 端口、开库、跑启动自检。
+        // 早先这里只探一次，于是"只是还没起来"被误判成"起不来"，
+        // 白白回滚了一次（老脚本这一层用的是完整的 wait_for_ready）。
+        if self.wait_for_ready().is_ok() {
+            ui::warn("服务已用当前磁盘上的产物拉起（新版本可能有问题，请查日志）");
+            return Ok(());
         }
 
         let stem = format!("code_{}", self.plan.timestamp);
@@ -768,6 +775,33 @@ mod tests {
             ]
         );
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// 权限命令里不该出现重复的 glob —— `'dir'/*/*` 匹配不到任何东西，
+    /// 而 chmod 会因此报错、把整步权限设置弄失败（真实踩过一次）。
+    #[test]
+    fn permission_commands_do_not_double_the_glob() {
+        let commands = [
+            chmod_binary_command("/opt/brb/service"),
+            chmod_dist_command("/opt/brb/service"),
+            chmod_bin_command("/opt/brb/service"),
+        ];
+        for command in &commands {
+            assert!(!command.contains("*/*"), "glob 重复了：{command}");
+        }
+        assert_eq!(
+            chmod_bin_command("/opt/brb/service"),
+            "chmod 755 '/opt/brb/service/bin'/*"
+        );
+        assert_eq!(
+            chmod_binary_command("/opt/brb/service"),
+            "chmod 755 '/opt/brb/service/brainbow'"
+        );
+        // dist 的扫描只针对 dist，不能扫整个 service（那会改动 uploads 里用户上传的文件）
+        let dist = chmod_dist_command("/opt/brb/service");
+        assert!(dist.contains("'/opt/brb/service/dist'"), "{dist}");
+        assert!(!dist.contains("'/opt/brb/service' "), "{dist}");
+        assert_eq!(dist.matches("/opt/brb/service/dist").count(), 2, "{dist}");
     }
 
     #[test]

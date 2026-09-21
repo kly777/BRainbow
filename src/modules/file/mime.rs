@@ -61,12 +61,7 @@ pub fn looks_like_text(head: &[u8]) -> bool {
         }
         let pairs = head.len() / 2;
         let even = head.iter().step_by(2).filter(|b| **b == 0).count();
-        let odd = head
-            .iter()
-            .skip(1)
-            .step_by(2)
-            .filter(|b| **b == 0)
-            .count();
+        let odd = head.iter().skip(1).step_by(2).filter(|b| **b == 0).count();
         return even > pairs * 3 / 4 || odd > pairs * 3 / 4;
     }
     // 0x09..0x0D（TAB/LF/VT/FF/CR）是文本里正常的空白，不算控制字符
@@ -281,15 +276,9 @@ fn family_label(family: FileFamily) -> &'static str {
 /// OOXML 三兄弟的扩展名 ↔ MIME
 fn ooxml_of_ext(filename: &str) -> Option<&'static str> {
     match extension_of(filename).as_str() {
-        "docx" => Some(
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        ),
-        "xlsx" => {
-            Some("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        }
-        "pptx" => Some(
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        ),
+        "docx" => Some("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        "xlsx" => Some("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        "pptx" => Some("application/vnd.openxmlformats-officedocument.presentationml.presentation"),
         _ => None,
     }
 }
@@ -369,7 +358,7 @@ fn refine_matroska(head: &[u8]) -> String {
 fn refine_ole(filename: &str, declared: &str) -> String {
     match declared {
         "application/msword" | "application/vnd.ms-excel" | "application/vnd.ms-powerpoint" => {
-            return declared.into()
+            return declared.into();
         }
         _ => {}
     }
@@ -526,14 +515,16 @@ pub fn resolve_mime(
 
     // 闸门一：声明承诺的族必须与内容一致
     if family_of_mime(declared).is_some_and(|expected| family != expected) {
-        return Err(ServiceError::InvalidInput(if family == FileFamily::Unknown {
-            format!("无法识别文件类型：声明 {client_mime}")
-        } else {
-            format!(
-                "文件类型不符：声明 {client_mime}, 实际 {}",
-                family_label(family)
-            )
-        }));
+        return Err(ServiceError::InvalidInput(
+            if family == FileFamily::Unknown {
+                format!("无法识别文件类型：声明 {client_mime}")
+            } else {
+                format!(
+                    "文件类型不符：声明 {client_mime}, 实际 {}",
+                    family_label(family)
+                )
+            },
+        ));
     }
 
     // 认不出族：客户端没表态就给 octet-stream，否则保留声明 ——
@@ -568,25 +559,40 @@ mod tests {
         let zip_head = b"PK\x03\x04\x14\x00\x00\x00\x08\x00";
 
         /// (zip 条目, 期望的种)
-        type Case = (&'static [(&'static str, &'static str)], Option<&'static str>);
+        type Case = (
+            &'static [(&'static str, &'static str)],
+            Option<&'static str>,
+        );
         let cases: &[Case] = &[
             (
-                &[("[Content_Types].xml", "<Types/>"), ("word/document.xml", "x")],
+                &[
+                    ("[Content_Types].xml", "<Types/>"),
+                    ("word/document.xml", "x"),
+                ],
                 Some(DOCX),
             ),
             (
-                &[("[Content_Types].xml", "<Types/>"), ("xl/workbook.xml", "x")],
+                &[
+                    ("[Content_Types].xml", "<Types/>"),
+                    ("xl/workbook.xml", "x"),
+                ],
                 Some(XLSX),
             ),
             (
-                &[("[Content_Types].xml", "<Types/>"), ("ppt/slides/slide1.xml", "x")],
+                &[
+                    ("[Content_Types].xml", "<Types/>"),
+                    ("ppt/slides/slide1.xml", "x"),
+                ],
                 Some(PPTX),
             ),
             (
                 &[("AndroidManifest.xml", "x")],
                 Some("application/vnd.android.package-archive"),
             ),
-            (&[("META-INF/MANIFEST.MF", "x")], Some("application/java-archive")),
+            (
+                &[("META-INF/MANIFEST.MF", "x")],
+                Some("application/java-archive"),
+            ),
             // 条目都不认识：给不出更具体的答案，由调用方沿用声明/扩展名
             (&[("random.txt", "x")], None),
         ];
@@ -796,7 +802,10 @@ mod tests {
     #[test]
     fn refine_zip_tells_the_office_family_apart() {
         let zip = b"PK\x03\x04\x14\x00\x00\x00\x08\x00";
-        assert_eq!(refine_zip(zip, "a.zip", "application/zip"), "application/zip");
+        assert_eq!(
+            refine_zip(zip, "a.zip", "application/zip"),
+            "application/zip"
+        );
         assert_eq!(refine_zip(zip, "报告.docx", ""), DOCX);
         assert_eq!(refine_zip(zip, "数据.xlsx", ""), XLSX);
         assert_eq!(refine_zip(zip, "汇报.pptx", ""), PPTX);
@@ -868,7 +877,10 @@ mod tests {
         assert_eq!(refine_ole("a.bin", ""), "application/x-ole-storage");
 
         // 文本族：内容含 <svg 就按 SVG，否则扩展名给具体类型
-        assert_eq!(refine_text(b"<svg xmlns=\"...\"/>", "a.bin"), "image/svg+xml");
+        assert_eq!(
+            refine_text(b"<svg xmlns=\"...\"/>", "a.bin"),
+            "image/svg+xml"
+        );
         assert_eq!(refine_text(b"# title\n", "a.md"), "text/markdown");
         assert_eq!(refine_text(b"plain\n", "a.json"), "text/plain");
         assert_eq!(refine_text(b"plain\n", "Dockerfile"), "text/plain");
@@ -888,8 +900,12 @@ mod tests {
             "application/vnd.sqlite3"
         );
         assert_eq!(
-            resolve_mime(b"SQLite format 3\x00rest", "application/octet-stream", "x.db")
-                .unwrap(),
+            resolve_mime(
+                b"SQLite format 3\x00rest",
+                "application/octet-stream",
+                "x.db"
+            )
+            .unwrap(),
             "application/vnd.sqlite3"
         );
     }
@@ -900,8 +916,7 @@ mod tests {
         let err = resolve_mime(b"hello world\n", "image/png", "x.png").unwrap_err();
         assert!(err.to_string().contains("文件类型不符"), "{err}");
         // 内容根本认不出族 → 拒
-        let err =
-            resolve_mime(&[0xDE, 0xAD, 0x00, 0x01], "video/mp4", "x.mp4").unwrap_err();
+        let err = resolve_mime(&[0xDE, 0xAD, 0x00, 0x01], "video/mp4", "x.mp4").unwrap_err();
         assert!(err.to_string().contains("无法识别"), "{err}");
     }
 
@@ -910,8 +925,7 @@ mod tests {
         // ODT 这类白名单外的 Office 变体：族验明是 zip，如实存容器本身，
         // 而不是像早先那样报"文件类型不符"拒收（与 §3"白名单外的格式不拒绝"矛盾）
         assert_eq!(
-            resolve_mime(ZIP_MIN, "application/vnd.oasis.opendocument.text", "a.odt")
-                .unwrap(),
+            resolve_mime(ZIP_MIN, "application/vnd.oasis.opendocument.text", "a.odt").unwrap(),
             "application/zip"
         );
     }

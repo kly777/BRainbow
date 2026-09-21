@@ -62,12 +62,10 @@ pub async fn migrate(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
     }
 
     // 3. 同名索引建在生成列上（形如 `WHERE category = ? ORDER BY created_at DESC` 仍走索引）
-    sqlx::query(
-        "CREATE INDEX IF NOT EXISTS idx_file_category ON file(category, created_at DESC)",
-    )
-    .execute(&mut *conn)
-    .await
-    .map_err(|e| migration_failed("v19 重建类别索引", &e))?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_file_category ON file(category, created_at DESC)")
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| migration_failed("v19 重建类别索引", &e))?;
 
     Ok(())
 }

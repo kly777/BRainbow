@@ -475,7 +475,10 @@ impl FileRepository {
         match created {
             Ok(row) => Ok(row),
             // 并发下同名插入撞唯一索引：退化为读取已存在的那条
-            Err(e) if e.as_database_error().is_some_and(|db| db.is_unique_violation()) => {
+            Err(e)
+                if e.as_database_error()
+                    .is_some_and(|db| db.is_unique_violation()) =>
+            {
                 self.find_tag_by_name(name)
                     .await?
                     .ok_or(sqlx::Error::RowNotFound)

@@ -54,10 +54,12 @@ pub async fn migrate(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
     .await
     .map_err(|e| migration_failed("v18 清理多余标签关联", &e))?;
 
-    sqlx::query("DELETE FROM file_tag WHERE id NOT IN (SELECT MIN(id) FROM file_tag GROUP BY name)")
-        .execute(&mut *conn)
-        .await
-        .map_err(|e| migration_failed("v18 清理多余标签", &e))?;
+    sqlx::query(
+        "DELETE FROM file_tag WHERE id NOT IN (SELECT MIN(id) FROM file_tag GROUP BY name)",
+    )
+    .execute(&mut *conn)
+    .await
+    .map_err(|e| migration_failed("v18 清理多余标签", &e))?;
 
     // 3. 全局唯一：同名标签只允许一条（旧库原有的 UNIQUE(name, user_id) 保留，
     //    它是本约束的弱化版，不冲突）

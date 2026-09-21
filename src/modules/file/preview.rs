@@ -79,7 +79,6 @@ pub mod cursor {
     }
 }
 
-
 /// 服务端解析上限：超过就只给下载入口（后端 `document` 类别本身放到 500MB，
 /// 但"能存"不等于"该在服务端解压解析"）
 pub const MAX_PREVIEW_BYTES: u64 = 32 * 1024 * 1024;
@@ -479,8 +478,12 @@ impl<'a> DocParser<'a> {
             "p" => self.para = Some(Para::default()),
             "pStyle" => {
                 // 先查样式表；没有样式定义时退回"styleId 明确写成 Heading N"这一条
-                let level = attr_value(e, "val")
-                    .and_then(|id| self.styles.get(&id).copied().or_else(|| heading_from_id(&id)));
+                let level = attr_value(e, "val").and_then(|id| {
+                    self.styles
+                        .get(&id)
+                        .copied()
+                        .or_else(|| heading_from_id(&id))
+                });
                 if let Some(level) = level
                     && let Some(p) = self.para.as_mut()
                 {
@@ -539,7 +542,7 @@ impl<'a> DocParser<'a> {
         }
     }
 
-/// 段落归位：在单元格里就进单元格，否则进正文（表格骨架之间夹的段落丢掉）
+    /// 段落归位：在单元格里就进单元格，否则进正文（表格骨架之间夹的段落丢掉）
     fn push_para(&mut self, para: Para) {
         if let Some(cell) = self.cell.as_mut() {
             cell.push(para);
@@ -668,7 +671,6 @@ fn entity_text(name: &str) -> Option<String> {
     };
     Some(resolved.to_string())
 }
-
 
 // ── .xlsx / .xls ──
 
@@ -1076,16 +1078,12 @@ fn text_of(xml: &str) -> Vec<String> {
                 _ => {}
             },
             Ok(Event::Text(t)) => {
-                if in_text
-                    && let Ok(text) = quick_xml::escape::unescape(&t.xml10_content())
-                {
+                if in_text && let Ok(text) = quick_xml::escape::unescape(&t.xml10_content()) {
                     current.push_str(&text);
                 }
             }
             Ok(Event::GeneralRef(r)) => {
-                if in_text
-                    && let Some(text) = entity_text(&r.xml10_content())
-                {
+                if in_text && let Some(text) = entity_text(&r.xml10_content()) {
                     current.push_str(&text);
                 }
             }
@@ -1164,8 +1162,8 @@ pub fn parse_archive(bytes: &[u8], container: Container) -> Result<ArchivePrevie
 }
 
 fn list_zip(bytes: &[u8]) -> Result<ArchivePreview, String> {
-    let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
-        .map_err(|e| format!("打不开这个 zip：{e}"))?;
+    let mut zip =
+        zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| format!("打不开这个 zip：{e}"))?;
     let mut entries = Vec::new();
     let mut total_bytes = 0_u64;
     for index in 0..zip.len() {
@@ -1375,8 +1373,9 @@ pub async fn parse_database(
                 rows,
             });
         }
-        let next_cursor = more_after
-            .and_then(|(index, row)| cursor::encode(&cursor::Cursor::new("database", Some(index), row)));
+        let next_cursor = more_after.and_then(|(index, row)| {
+            cursor::encode(&cursor::Cursor::new("database", Some(index), row))
+        });
         Ok(DatabasePreview {
             tables,
             truncated,
@@ -1428,8 +1427,22 @@ const MAX_CHAPTERS: usize = 200;
 const MAX_BOOK_HTML_BYTES: usize = 4 * 1024 * 1024;
 /// 允许出现在正文里的标签；**白名单外的一律只保留文字**（脚本/样式连内容一起丢）
 const BOOK_TAGS: &[&str] = &[
-    "p", "h1", "h2", "h3", "h4", "h5", "h6", "strong", "em", "blockquote", "ul", "ol",
-    "li", "br", "hr", "pre",
+    "p",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "strong",
+    "em",
+    "blockquote",
+    "ul",
+    "ol",
+    "li",
+    "br",
+    "hr",
+    "pre",
 ];
 /// 这些标签连内容一起丢掉（只丢标签会把 CSS/JS 当正文吐出来）
 const BOOK_DROP: &[&str] = &["script", "style", "head", "title", "svg", "iframe"];
@@ -1616,8 +1629,7 @@ fn opf_manifest(opf: &str) -> std::collections::HashMap<String, String> {
         match reader.read_event() {
             Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
                 if tag_name(&e) == "item"
-                    && let (Some(id), Some(href)) =
-                        (attr_value(&e, "id"), attr_value(&e, "href"))
+                    && let (Some(id), Some(href)) = (attr_value(&e, "id"), attr_value(&e, "href"))
                 {
                     map.insert(id, href);
                 }
@@ -1822,10 +1834,7 @@ mod tests {
     const DOC_TAIL: &str = "</w:body></w:document>";
 
     fn docx(body: &str) -> Vec<u8> {
-        zip_with(&[(
-            "word/document.xml",
-            &format!("{DOC_HEAD}{body}{DOC_TAIL}"),
-        )])
+        zip_with(&[("word/document.xml", &format!("{DOC_HEAD}{body}{DOC_TAIL}"))])
     }
 
     #[test]
@@ -1861,7 +1870,8 @@ mod tests {
     #[test]
     fn docx_escapes_text_and_drops_control_chars() {
         // 文档里的尖括号与引号必须转义 —— 它会被前端直接 innerHTML
-        let bytes = docx("<w:p><w:r><w:t>&lt;script&gt;alert(\"x\")&lt;/script&gt;\u{7}</w:t></w:r></w:p>");
+        let bytes =
+            docx("<w:p><w:r><w:t>&lt;script&gt;alert(\"x\")&lt;/script&gt;\u{7}</w:t></w:r></w:p>");
         let html = parse_docx(&bytes).expect("能解析").html;
         assert_eq!(
             html,
@@ -1894,10 +1904,7 @@ mod tests {
 <w:p><w:pPr><w:pStyle w:val="20"/></w:pPr><w:r><w:t>一级</w:t></w:r></w:p>
 <w:p><w:pPr><w:pStyle w:val="30"/></w:pPr><w:r><w:t>继承来的一级</w:t></w:r></w:p>"#;
         let bytes = zip_with(&[
-            (
-                "word/document.xml",
-                &format!("{DOC_HEAD}{body}{DOC_TAIL}"),
-            ),
+            ("word/document.xml", &format!("{DOC_HEAD}{body}{DOC_TAIL}")),
             ("word/styles.xml", styles),
         ]);
         let html = parse_docx(&bytes).expect("能解析").html;
@@ -2056,7 +2063,9 @@ mod tests {
 
     #[test]
     fn epub_html_is_whitelisted() {
-        let html = parse_epub(&epub()).expect("能解析").chapters[0].html.clone();
+        let html = parse_epub(&epub()).expect("能解析").chapters[0]
+            .html
+            .clone();
         // 白名单标签留着
         assert!(html.contains("<h1>第一章</h1>"));
         assert!(html.contains("<p>正文一</p>"));
@@ -2076,7 +2085,10 @@ mod tests {
     fn epub_without_chapters_gives_readable_error() {
         let bytes = zip_with(&[
             ("mimetype", "application/epub+zip"),
-            ("META-INF/container.xml", "<container><rootfiles><rootfile full-path=\"a.opf\"/></rootfiles></container>"),
+            (
+                "META-INF/container.xml",
+                "<container><rootfiles><rootfile full-path=\"a.opf\"/></rootfiles></container>",
+            ),
             ("a.opf", "<package><spine></spine></package>"),
         ]);
         let err = parse_epub(&bytes).expect_err("要报错");
@@ -2094,7 +2106,8 @@ mod tests {
 
     #[test]
     fn epub_keeps_image_placeholder_and_skips_empty_chapters() {
-        let container = "<container><rootfiles><rootfile full-path=\"b.opf\"/></rootfiles></container>";
+        let container =
+            "<container><rootfiles><rootfile full-path=\"b.opf\"/></rootfiles></container>";
         let opf = r#"<package><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>图册</dc:title></metadata>
 <manifest>
 <item id="i1" href="plate.xhtml"/><item id="i2" href="empty.xhtml"/><item id="i3" href="text.xhtml"/>
@@ -2116,7 +2129,11 @@ mod tests {
         // 空白章节被跳过，插图的页留着占位、标题也叫"插图 N"
         assert_eq!(book.chapters.len(), 2, "{:?}", book.chapters);
         assert_eq!(book.chapters[0].title, "插图 1");
-        assert!(book.chapters[0].html.contains("[图片]"), "{}", book.chapters[0].html);
+        assert!(
+            book.chapters[0].html.contains("[图片]"),
+            "{}",
+            book.chapters[0].html
+        );
         // alt 有文字时用它当占位说明
         assert!(
             book.chapters[1].html.contains("[图片：插图一]"),
@@ -2164,11 +2181,7 @@ mod tests {
             ("ppt/slides/slide2.xml", &slide("二")),
         ]);
         let preview = parse_pptx(&bytes).expect("能解析");
-        let titles: Vec<&str> = preview
-            .slides
-            .iter()
-            .map(|s| s.title.as_str())
-            .collect();
+        let titles: Vec<&str> = preview.slides.iter().map(|s| s.title.as_str()).collect();
         assert_eq!(titles, vec!["一", "二"]);
     }
 
@@ -2185,8 +2198,14 @@ mod tests {
             resolve_target("ppt", "slides/slide1.xml"),
             "ppt/slides/slide1.xml"
         );
-        assert_eq!(resolve_target("ppt/slides", "../notesSlides/n1.xml"), "ppt/notesSlides/n1.xml");
-        assert_eq!(resolve_target("ppt", "/ppt/slides/slide1.xml"), "ppt/slides/slide1.xml");
+        assert_eq!(
+            resolve_target("ppt/slides", "../notesSlides/n1.xml"),
+            "ppt/notesSlides/n1.xml"
+        );
+        assert_eq!(
+            resolve_target("ppt", "/ppt/slides/slide1.xml"),
+            "ppt/slides/slide1.xml"
+        );
     }
 
     /// 造一个 zip（复用测试里的 zip_with）
@@ -2214,8 +2233,7 @@ mod tests {
     async fn sqlite_paging_takes_the_next_rows_of_the_cursor_table() {
         // 造一张比一页大的表（MAX_DB_ROWS + 5 行）
         use sqlx::Connection;
-        let path =
-            std::env::temp_dir().join(format!("brainbow-page-{}.db", nanoid::nanoid!(8)));
+        let path = std::env::temp_dir().join(format!("brainbow-page-{}.db", nanoid::nanoid!(8)));
         let url = format!("sqlite:{}?mode=rwc", path.display());
         let mut conn = sqlx::SqliteConnection::connect(&url).await.expect("建库");
         sqlx::query("CREATE TABLE big (id INTEGER PRIMARY KEY, note TEXT)")
@@ -2280,7 +2298,11 @@ mod tests {
             .iter()
             .find(|t| t.name == "blob_only")
             .expect("有 blob_only 表");
-        assert!(blob.rows[0][0].contains("5 字节的二进制"), "{:?}", blob.rows);
+        assert!(
+            blob.rows[0][0].contains("5 字节的二进制"),
+            "{:?}",
+            blob.rows
+        );
         let _ = std::fs::remove_file(temp);
     }
 
@@ -2336,7 +2358,9 @@ mod tests {
                 header.set_size(data.len() as u64);
                 header.set_mode(0o644);
                 header.set_cksum();
-                builder.append_data(&mut header, path, data).expect("写 tar");
+                builder
+                    .append_data(&mut header, path, data)
+                    .expect("写 tar");
             };
             add("a.txt", b"hello");
             add("dir/b.txt", b"world!");
@@ -2384,7 +2408,9 @@ mod tests {
             use std::io::Write as _;
             let mut encoder =
                 flate2::write::GzEncoder::new(&mut plain, flate2::Compression::default());
-            encoder.write_all(b"just some text, not a tar").expect("压缩");
+            encoder
+                .write_all(b"just some text, not a tar")
+                .expect("压缩");
             encoder.finish().expect("收尾");
         }
         let err = parse_archive(&plain, Container::Gzip).expect_err("要报错");
@@ -2401,8 +2427,7 @@ mod tests {
     /// 不支持的容器不该被认成归档（避免"什么都能当 zip 列"）
     #[test]
     fn preview_kind_prefers_mime_then_content() {
-        let docx_mime =
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        let docx_mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
         // MIME 认得就用 MIME（docx 的字节也是 zip，不能被当成压缩包）
         assert_eq!(
             preview_kind_for(docx_mime, b"PK\x03\x04xxxx"),
@@ -2441,7 +2466,10 @@ mod tests {
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>"#,
         );
         for row in 1..=300 {
-            let _ = write!(sheet, r#"<row r="{row}"><c r="A{row}"><v>{row}</v></c></row>"#);
+            let _ = write!(
+                sheet,
+                r#"<row r="{row}"><c r="A{row}"><v>{row}</v></c></row>"#
+            );
         }
         sheet.push_str("</sheetData></worksheet>");
         let preview = parse_book(&xlsx(&sheet), None).expect("能解析");
@@ -2466,7 +2494,13 @@ mod tests {
         assert!(!decoded.applies_to("docx"));
 
         // 乱码一律 None —— 客户端可以随便传，服务端不会因此 500
-        for junk in ["", "zzzz", "not-hex!", &hex::encode(b"not json"), &hex::encode(b"{}")] {
+        for junk in [
+            "",
+            "zzzz",
+            "not-hex!",
+            &hex::encode(b"not json"),
+            &hex::encode(b"{}"),
+        ] {
             assert!(cursor::decode(junk).is_none(), "{junk} 应解码失败");
         }
     }
@@ -2488,7 +2522,10 @@ mod tests {
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>"#,
         );
         for row in 1..=300 {
-            let _ = write!(sheet, r#"<row r="{row}"><c r="A{row}"><v>{row}</v></c></row>"#);
+            let _ = write!(
+                sheet,
+                r#"<row r="{row}"><c r="A{row}"><v>{row}</v></c></row>"#
+            );
         }
         sheet.push_str("</sheetData></worksheet>");
         let bytes = xlsx(&sheet);

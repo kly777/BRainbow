@@ -519,11 +519,12 @@ mod tests {
         .execute(&ctx.pool)
         .await
         .unwrap();
-        let tag: i64 =
-            sqlx::query_scalar("INSERT INTO file_tag (name, user_id) VALUES ('财报配图', 1) RETURNING id")
-                .fetch_one(&ctx.pool)
-                .await
-                .unwrap();
+        let tag: i64 = sqlx::query_scalar(
+            "INSERT INTO file_tag (name, user_id) VALUES ('财报配图', 1) RETURNING id",
+        )
+        .fetch_one(&ctx.pool)
+        .await
+        .unwrap();
         sqlx::query("INSERT INTO file_tag_rel (file_id, tag_id) VALUES (?1, ?2)")
             .bind(f2)
             .bind(tag)

@@ -112,8 +112,7 @@ pub async fn scan(
         }
     }
 
-    let db_set: std::collections::HashSet<&String> =
-        rows.iter().map(|r| &r.stored_id).collect();
+    let db_set: std::collections::HashSet<&String> = rows.iter().map(|r| &r.stored_id).collect();
     let orphans: Vec<String> = disk_files
         .keys()
         .filter(|id| !db_set.contains(id))

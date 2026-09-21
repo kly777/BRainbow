@@ -146,7 +146,10 @@ mod tests {
         );
         let cn = content_disposition("attachment", "报告.xlsx");
         assert!(cn.contains("filename=\"__.xlsx\""), "{cn}");
-        assert!(cn.contains("filename*=UTF-8''%E6%8A%A5%E5%91%8A.xlsx"), "{cn}");
+        assert!(
+            cn.contains("filename*=UTF-8''%E6%8A%A5%E5%91%8A.xlsx"),
+            "{cn}"
+        );
     }
 
     #[test]
@@ -156,7 +159,10 @@ mod tests {
         assert!(value.is_ascii(), "{value}");
         let fallback = value.split("filename=\"").nth(1).unwrap();
         let fallback = fallback.split('"').next().unwrap();
-        assert!(!fallback.contains('"') && !fallback.contains('\\'), "{value}");
+        assert!(
+            !fallback.contains('"') && !fallback.contains('\\'),
+            "{value}"
+        );
     }
 
     #[test]

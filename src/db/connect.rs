@@ -97,12 +97,11 @@ mod tests {
         .fetch_one(&pool)
         .await
         .unwrap();
-        let tag_id: i64 = sqlx::query_scalar(
-            "INSERT INTO file_tag (name, user_id) VALUES ('t', 1) RETURNING id",
-        )
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+        let tag_id: i64 =
+            sqlx::query_scalar("INSERT INTO file_tag (name, user_id) VALUES ('t', 1) RETURNING id")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         sqlx::query("INSERT INTO file_tag_rel (file_id, tag_id) VALUES (?1, ?2)")
             .bind(file_id)
             .bind(tag_id)

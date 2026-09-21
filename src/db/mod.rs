@@ -427,16 +427,18 @@ mod tests {
         .await
         .unwrap();
         // 两个用户各有一个同名标签，分别关联一个文件
-        let t1: i64 =
-            sqlx::query_scalar("INSERT INTO file_tag (name, user_id) VALUES ('设计', 1) RETURNING id")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-        let t2: i64 =
-            sqlx::query_scalar("INSERT INTO file_tag (name, user_id) VALUES ('设计', 2) RETURNING id")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let t1: i64 = sqlx::query_scalar(
+            "INSERT INTO file_tag (name, user_id) VALUES ('设计', 1) RETURNING id",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        let t2: i64 = sqlx::query_scalar(
+            "INSERT INTO file_tag (name, user_id) VALUES ('设计', 2) RETURNING id",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
         for (f, t) in [(f1, t1), (f2, t2)] {
             sqlx::query("INSERT INTO file_tag_rel (file_id, tag_id) VALUES (?, ?)")
                 .bind(f)

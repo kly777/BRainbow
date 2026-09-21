@@ -208,11 +208,9 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await?;
 
-    sqlx::query(
-        "CREATE INDEX IF NOT EXISTS idx_file_category ON file(category, created_at DESC)",
-    )
-    .execute(pool)
-    .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_file_category ON file(category, created_at DESC)")
+        .execute(pool)
+        .await?;
 
     // 可见性索引：公开列表（绝大多数查询）走它。
     // 注：stored_id 有 UNIQUE 约束，隐含索引已足够，无需再建同名索引。

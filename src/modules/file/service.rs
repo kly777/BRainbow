@@ -735,7 +735,10 @@ mod tests {
         // 值域：0 与负数不是"时长"，超过 24 小时当坏数据
         assert_eq!(accept_duration("video", Some(0)), None);
         assert_eq!(accept_duration("video", Some(-1)), None);
-        assert_eq!(accept_duration("video", Some(24 * 60 * 60 * 1000 + 1)), None);
+        assert_eq!(
+            accept_duration("video", Some(24 * 60 * 60 * 1000 + 1)),
+            None
+        );
         assert_eq!(accept_duration("video", None), None);
     }
 
@@ -765,13 +768,12 @@ mod tests {
                 .unwrap()
         );
 
-        let (ms, updated): (Option<i64>, String) = sqlx::query_as(
-            "SELECT duration_ms, updated_at FROM file WHERE stored_id = ?",
-        )
-        .bind(&clip.stored_id)
-        .fetch_one(&*ctx.pool)
-        .await
-        .unwrap();
+        let (ms, updated): (Option<i64>, String) =
+            sqlx::query_as("SELECT duration_ms, updated_at FROM file WHERE stored_id = ?")
+                .bind(&clip.stored_id)
+                .fetch_one(&*ctx.pool)
+                .await
+                .unwrap();
         assert_eq!(ms, Some(12_500));
         assert!(
             updated.starts_with("2020-01-01"),
@@ -968,15 +970,10 @@ mod tests {
             .file;
         assert_eq!(f.mime_type, "application/epub+zip");
         // 白名单外 → other 档（4GB），与 .ply/.splat 那些"按扩展名认领"的格式一致
-        assert_eq!(
-            f.file_category,
-            super::super::model::FileCategory::Other
-        );
+        assert_eq!(f.file_category, super::super::model::FileCategory::Other);
     }
 
-
     // ── zip 族的结构精炼（落盘后补的那一次） ──
-
 
     #[tokio::test]
     async fn upload_refines_zip_species_by_structure() {
@@ -988,7 +985,10 @@ mod tests {
         let path = write_zip(
             &dir,
             "结构源.xlsx",
-            &[("[Content_Types].xml", "<Types/>"), ("xl/workbook.xml", "x")],
+            &[
+                ("[Content_Types].xml", "<Types/>"),
+                ("xl/workbook.xml", "x"),
+            ],
         );
         let sheet = fs::read(&path).expect("读回 zip");
         let f = ctx
@@ -1003,7 +1003,10 @@ mod tests {
         let path = write_zip(
             &dir,
             "结构源2",
-            &[("[Content_Types].xml", "<Types/>"), ("word/document.xml", "x")],
+            &[
+                ("[Content_Types].xml", "<Types/>"),
+                ("word/document.xml", "x"),
+            ],
         );
         let word = fs::read(&path).expect("读回 zip");
         let g = ctx
@@ -1055,7 +1058,14 @@ mod tests {
         let ctx = setup_service().await;
         let f = ctx
             .svc
-            .upload(OLE_MIN, "老文档.doc", "application/msword", Some(7), None, false)
+            .upload(
+                OLE_MIN,
+                "老文档.doc",
+                "application/msword",
+                Some(7),
+                None,
+                false,
+            )
             .await
             .unwrap()
             .file;
@@ -1243,10 +1253,15 @@ mod tests {
         // 早先读白名单的类别列，image/avif 之类会被判成 other，图片尺寸提取被跳过
         assert_eq!(FileCategory::from_mime("image/avif").as_str(), "image");
         assert_eq!(FileCategory::from_mime("audio/opus").as_str(), "audio");
-        assert_eq!(FileCategory::from_mime("text/x-python").as_str(), "document");
-        assert_eq!(FileCategory::from_mime("application/x-ply").as_str(), "other");
+        assert_eq!(
+            FileCategory::from_mime("text/x-python").as_str(),
+            "document"
+        );
+        assert_eq!(
+            FileCategory::from_mime("application/x-ply").as_str(),
+            "other"
+        );
     }
-
 
     #[tokio::test]
     async fn upload_accepts_ply_like_unknown_file() {
@@ -1543,7 +1558,7 @@ mod tests {
                     tags: Some(vec!["新标签".into(), "第二标签".into()]),
                     meta: Some(HashMap::from([("pages".into(), "3".into())])),
                     is_private: None,
-            },
+                },
                 Some(7),
             )
             .await
@@ -1576,7 +1591,7 @@ mod tests {
                     tags: None,
                     meta: None,
                     is_private: None,
-            },
+                },
                 Some(7),
             )
             .await
@@ -1627,7 +1642,11 @@ mod tests {
             .unwrap();
 
         // 无 force：InUse 拒绝，记录与文件保留
-        let err = ctx.svc.delete(&f.stored_id, false, Some(7)).await.unwrap_err();
+        let err = ctx
+            .svc
+            .delete(&f.stored_id, false, Some(7))
+            .await
+            .unwrap_err();
         assert!(matches!(err, ServiceError::InUse(_)));
         let disk = std::path::Path::new(&ctx.dir.0).join(&f.stored_id);
         assert!(disk.exists());
@@ -1699,7 +1718,13 @@ mod tests {
             )
             .await
             .unwrap();
-        let f = ctx.svc.repo.find_by_stored_id(&stored).await.unwrap().unwrap();
+        let f = ctx
+            .svc
+            .repo
+            .find_by_stored_id(&stored)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(f.is_private, 1);
         assert_eq!(f.original_name, "改名.png");
     }

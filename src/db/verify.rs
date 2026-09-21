@@ -127,17 +127,18 @@ pub async fn check_schema(pool: &SqlitePool) -> SchemaCheck {
         }
     }
 
-    let existing: Vec<String> =
-        match sqlx::query_scalar::<_, String>("SELECT name FROM sqlite_master WHERE type = 'table'")
-            .fetch_all(pool)
-            .await
-        {
-            Ok(rows) => rows,
-            Err(e) => {
-                check.error = Some(format!("读取 sqlite_master 失败: {e}"));
-                return check;
-            }
-        };
+    let existing: Vec<String> = match sqlx::query_scalar::<_, String>(
+        "SELECT name FROM sqlite_master WHERE type = 'table'",
+    )
+    .fetch_all(pool)
+    .await
+    {
+        Ok(rows) => rows,
+        Err(e) => {
+            check.error = Some(format!("读取 sqlite_master 失败: {e}"));
+            return check;
+        }
+    };
     let existing: BTreeSet<String> = existing.into_iter().collect();
     check.missing_tables = REQUIRED_TABLES
         .iter()
@@ -145,7 +146,10 @@ pub async fn check_schema(pool: &SqlitePool) -> SchemaCheck {
         .map(|name| (*name).to_string())
         .collect();
 
-    match sqlx::query("PRAGMA foreign_key_check").fetch_all(pool).await {
+    match sqlx::query("PRAGMA foreign_key_check")
+        .fetch_all(pool)
+        .await
+    {
         Ok(rows) => check.foreign_key_violations = rows.len(),
         Err(e) => check.error = Some(format!("foreign_key_check 失败: {e}")),
     }
@@ -158,7 +162,9 @@ pub async fn check_schema(pool: &SqlitePool) -> SchemaCheck {
 /// 实测 178MB 库约 4s，不适合放进启动路径 —— 由 `--check` 或运维手动触发。
 /// 返回 `Ok("ok")` 表示正常。
 pub async fn quick_check(pool: &SqlitePool) -> Result<String, sqlx::Error> {
-    let rows: Vec<String> = sqlx::query_scalar("PRAGMA quick_check").fetch_all(pool).await?;
+    let rows: Vec<String> = sqlx::query_scalar("PRAGMA quick_check")
+        .fetch_all(pool)
+        .await?;
     match rows.len() {
         0 => Ok("ok".into()),
         1 => Ok(rows.first().cloned().unwrap_or_else(|| "ok".into())),
@@ -204,7 +210,10 @@ mod tests {
     #[tokio::test]
     async fn detects_dropped_table_while_version_unchanged() {
         let pool = setup().await;
-        sqlx::query("DROP TABLE file_tag").execute(&pool).await.unwrap();
+        sqlx::query("DROP TABLE file_tag")
+            .execute(&pool)
+            .await
+            .unwrap();
 
         let check = check_schema(&pool).await;
         assert!(!check.is_ok());
@@ -257,9 +266,11 @@ mod tests {
             .filter(|name| !name.starts_with("sqlite_"))
             .filter(|name| {
                 // FTS5 影子表：<fts 表名> + 后缀
-                !REQUIRED_TABLES
-                    .iter()
-                    .any(|fts| shadow_suffixes.iter().any(|s| name.as_str() == format!("{fts}{s}")))
+                !REQUIRED_TABLES.iter().any(|fts| {
+                    shadow_suffixes
+                        .iter()
+                        .any(|s| name.as_str() == format!("{fts}{s}"))
+                })
             })
             .filter(|name| !REQUIRED_TABLES.contains(&name.as_str()))
             .collect();

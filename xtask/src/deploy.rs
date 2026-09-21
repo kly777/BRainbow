@@ -15,7 +15,7 @@
 //!    trap 刻意避开"显式 exit"，于是"哪些失败会触发回滚"很难讲清楚；这里
 //!    只有关键区（停服 → 就绪）会触发恢复，服务就绪之后的事情一律只告警。
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::caddy;
@@ -123,6 +123,55 @@ pub fn run_deploy_web(cfg: &Config, remote: &Remote) -> Result<()> {
     Ok(())
 }
 
+/// 产物比源码旧时提示一句。
+///
+/// 老 `make deploy` 是「build + deploy」一条命令，`just` 这边拆成了两个
+/// （`just build` / `just deploy`）—— 于是"改了代码忘了重新构建就部署"
+/// 变成一个安静的陷阱，这里把它说出来。
+fn warn_if_stale(cfg: &Config, binary: &Path) {
+    let Ok(built_at) = std::fs::metadata(binary).and_then(|meta| meta.modified()) else {
+        return;
+    };
+    let newest = [
+        newest_source(&cfg.project_dir.join("src")),
+        newest_source(&cfg.web_dir().join("src")),
+    ]
+    .into_iter()
+    .flatten()
+    .max_by_key(|(at, _)| *at);
+
+    if let Some((source_at, path)) = newest
+        && source_at > built_at
+    {
+        ui::warn(&format!(
+            "build/ 可能已过期（{} 比产物新）：先跑 `just build`",
+            path.strip_prefix(&cfg.project_dir)
+                .unwrap_or(&path)
+                .display()
+        ));
+    }
+}
+
+/// 递归找出目录里 mtime 最新的文件。
+fn newest_source(dir: &Path) -> Option<(std::time::SystemTime, PathBuf)> {
+    let mut newest: Option<(std::time::SystemTime, PathBuf)> = None;
+    for entry in std::fs::read_dir(dir).ok()?.flatten() {
+        let path = entry.path();
+        let Ok(meta) = entry.metadata() else { continue };
+        let candidate = if meta.is_dir() {
+            newest_source(&path)
+        } else {
+            meta.modified().ok().map(|at| (at, path))
+        };
+        if let Some(candidate) = candidate
+            && newest.as_ref().is_none_or(|(at, _)| candidate.0 > *at)
+        {
+            newest = Some(candidate);
+        }
+    }
+    newest
+}
+
 /// 等 `/api/health` 就绪（30 次 × 1 秒，与老脚本一致）。
 ///
 /// dry-run 下命令没执行，直接返回（不能干等 30 秒，也不该判成失败）。
@@ -221,6 +270,8 @@ pub fn run(cfg: &mut Config, remote: &Remote) -> Result<()> {
             dist.join("index.html").display()
         )));
     }
+
+    warn_if_stale(cfg, &binary);
 
     // JWT_SECRET：只有这条路径会生成并写回 .env.prod
     let jwt_secret = cfg.require_jwt_secret(true)?;

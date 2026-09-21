@@ -25,7 +25,7 @@ use std::time::Duration;
 
 use crate::caddy;
 use crate::config::Config;
-use crate::db::{Db, utc_stamp};
+use crate::db::{self, Db, utc_stamp};
 use crate::error::{Error, Result};
 use crate::local;
 use crate::remote::{Remote, glob_in, path_of, sh_quote};
@@ -473,6 +473,7 @@ impl Deploy<'_> {
         // 服务已经就绪。下面几件事失败只告警 —— 它们报告的是数据层问题或
         // 边缘配置问题，回滚代码解决不了（老脚本的注释也是这个理由）。
         self.self_check();
+        self.verify_backup();
         self.optimize();
         self.sync_caddy();
 
@@ -893,6 +894,24 @@ impl Deploy<'_> {
         let result = self.db().and_then(|db| db.optimize());
         if let Err(e) = result {
             ui::warn(&format!("PRAGMA optimize 失败（不阻断部署）：{e}"));
+        }
+    }
+
+    /// 验一遍刚拍的那份备份。
+    ///
+    /// 非关键路径：它回答的是"这份备份能不能用"，回滚代码解决不了。但**不验**
+    /// 就等于把风险推到恢复现场 —— 那时坏备份已经换掉现网库了。
+    fn verify_backup(&self) {
+        ui::info("校验刚拍的数据库备份…");
+        let name = stamp::db_filename("deploy", &self.plan.timestamp);
+        match self.db().and_then(|db| db.verify_backup(&name)) {
+            Ok(db::Check::Good) => ui::done(&format!("{name} quick_check 通过")),
+            Ok(db::Check::Skipped) => {
+                ui::info("备份校验未执行（dry-run，或远端没有 sqlite3）");
+            }
+            Err(e) => ui::warn(&format!(
+                "{e}\n  （部署已完成，但这份备份不可信：请手动跑 `just db-backup`）"
+            )),
         }
     }
 

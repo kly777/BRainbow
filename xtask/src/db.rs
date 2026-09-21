@@ -23,6 +23,18 @@ pub struct Db<'a> {
     has_sqlite3: bool,
 }
 
+/// 备份校验的结论。
+///
+/// "没跑成"要能与"通过"分开：远端没有 sqlite3 或 dry-run 时说一句"通过"，
+/// 正好掩盖了这个检查的意义。
+#[derive(Debug, PartialEq, Eq)]
+pub enum Check {
+    /// 读出了结论：这份备份是好的。
+    Good,
+    /// 没跑成（dry-run / 远端没有 sqlite3）。
+    Skipped,
+}
+
 impl<'a> Db<'a> {
     /// 探一次远端有没有 sqlite3（没有就降级成 `cp` 备份 + 跳过体检）。
     ///
@@ -71,9 +83,30 @@ impl<'a> Db<'a> {
                 ui::info("数据库 quick_check（dry-run 未执行）");
                 Ok(())
             }
-            Some(out) if out.trim() == "ok" => Ok(()),
+            Some(out) if is_ok_output(&out) => Ok(()),
             Some(out) => Err(Error::msg(format!(
                 "数据库 quick_check 未通过，中止（可先跑 `just db-check`）：\n  {out}"
+            ))),
+        }
+    }
+
+    /// 校验一份**已经躺在备份目录里的**文件（传文件名）。
+    ///
+    /// 部署收尾用它验刚拍的那份：`backup_at` 只对**源库**做过 quick_check，
+    /// 产出的文件要到 `rollback::restore_db` 才被检查 —— 那时已经晚了，
+    /// 坏备份等于没备份。
+    pub fn verify_backup(&self, name: &str) -> Result<Check> {
+        if !self.has_sqlite3 {
+            return Ok(Check::Skipped);
+        }
+        let path = format!("{}/{}", self.cfg.backup_dir, name);
+        let cmd = format!("sqlite3 {} 'PRAGMA quick_check;'", sh_quote(&path));
+        match self.remote.capture_if_run(&cmd)? {
+            None => Ok(Check::Skipped), // dry-run
+            Some(out) if is_ok_output(&out) => Ok(Check::Good),
+            Some(out) => Err(Error::msg(format!(
+                "{name} 的 quick_check 未通过：\n{}",
+                out.trim()
             ))),
         }
     }
@@ -271,6 +304,14 @@ fn sqlite_dot_arg(path: &str) -> Result<String> {
     Ok(path.to_string())
 }
 
+/// `quick_check` / `integrity_check` 的输出是不是"库是好的"。
+///
+/// 认出问题时会列出错误行（不是 "ok"），所以只认这一个词；单独拎出来是为了
+/// 两处检查（现网库、备份文件）用同一条判据。
+fn is_ok_output(text: &str) -> bool {
+    text.trim() == "ok"
+}
+
 /// 解析 `PRAGMA user_version` 的输出（真实输出是 `19`，可能带换行）。
 ///
 /// 认不出来就返回 `None`，**不猜**：调用方（部署的自动恢复）拿 `None` 时的
@@ -427,5 +468,19 @@ mod tests {
             parse_user_version("Error: unable to open database file"),
             None
         );
+    }
+
+    /// 只有干净通过才是 `ok` —— 出错时 sqlite3 列的是错误行，
+    /// 别把"包含 ok 字样"当成通过。
+    #[test]
+    fn ok_output_is_exact() {
+        assert!(is_ok_output("ok"));
+        assert!(is_ok_output("ok\n"));
+        assert!(is_ok_output("  ok  "));
+        assert!(!is_ok_output(""));
+        assert!(!is_ok_output(
+            "*** in database main ***\nPage 3 is never used"
+        ));
+        assert!(!is_ok_output("ok\nPage 3 is never used"));
     }
 }

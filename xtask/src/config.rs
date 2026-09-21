@@ -35,6 +35,10 @@ pub struct Config {
     pub service_port: u16,
     pub bind_host: String,
     pub database_url: String,
+    /// 上传根目录（`UPLOAD_DIR`）：文件服务用其下的 `file/`、favicon 缓存用
+    /// `favicons/`。默认 `uploads`（相对 WorkingDirectory，会落在 `service/` 里）；
+    /// 生产应当指到 `data/` 下 —— 用户数据不该住在可整体替换的代码目录里。
+    pub upload_dir: String,
     pub cors_allow_origin: String,
     /// 缺省 `false`（deploy.sh 用的也是这个默认值）。
     pub allow_register: String,
@@ -174,6 +178,8 @@ impl Config {
             service_port,
             // 默认值与 deploy.sh 的 load_config 保持一致
             bind_host: lookup("BIND_HOST").unwrap_or_else(|| "0.0.0.0".into()),
+            // 默认与后端一致（`src/shared/config.rs` 里 UPLOAD_DIR 缺省 `uploads`）
+            upload_dir: lookup("UPLOAD_DIR").unwrap_or_else(|| "uploads".into()),
             cors_allow_origin: lookup("CORS_ALLOW_ORIGIN")
                 .unwrap_or_else(|| "http://localhost:3000,http://localhost:5173".into()),
             allow_register: lookup("ALLOW_REGISTER").unwrap_or_else(|| "false".into()),

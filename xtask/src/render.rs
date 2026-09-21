@@ -73,6 +73,7 @@ pub fn systemd_unit(cfg: &Config, jwt_secret: &str) -> Result<String> {
             ("SERVICE_PORT", cfg.service_port.to_string()),
             ("BIND_HOST", cfg.bind_host.clone()),
             ("DATABASE_URL", cfg.database_url.clone()),
+            ("UPLOAD_DIR", cfg.upload_dir.clone()),
             ("CORS_ALLOW_ORIGIN", cfg.cors_allow_origin.clone()),
             ("JWT_SECRET", jwt_secret.to_string()),
             ("ALLOW_REGISTER", cfg.allow_register.clone()),
@@ -186,6 +187,12 @@ mod tests {
         assert!(
             unit.contains("Environment=\"BIND_HOST=127.0.0.1\""),
             "{unit}"
+        );
+        // 上传根必须注入：缺了它应用会退回相对的 `uploads`，把用户数据放进
+        // WorkingDirectory（= 可整体替换的 service/）里
+        assert!(
+            unit.contains("Environment=\"UPLOAD_DIR=uploads\""),
+            "默认值与后端一致（相对路径）: {unit}"
         );
         // 默认值（.env.prod 里没写这两项时）
         assert!(

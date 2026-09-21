@@ -206,6 +206,53 @@ fn probe_health(cfg: &Config, remote: &Remote) -> Result<Option<bool>> {
     Ok(remote.capture_if_run(&cmd)?.map(|code| code == "200"))
 }
 
+/// 去掉 ANSI（CSI）转义序列，形如 `\u{1b}[2m`。
+///
+/// 自检输出是带颜色的（tracing 在有/没有 TTY 时都可能吐颜色码），
+/// 不剥掉的话那个 `\u{1b}[2m` 里的 `[` 会被当成小结行的方括号。
+fn strip_ansi(line: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut chars = line.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch != '\u{1b}' {
+            out.push(ch);
+            continue;
+        }
+        // 只处理 CSI（`ESC [ 参数 终止字母`）。其它 ESC 序列很少见，
+        // 那就只丢掉 ESC 本身 —— 用 peek 判断，避免把紧随其后的正常字符一起吞掉。
+        if chars.peek() == Some(&'[') {
+            chars.next();
+            for c in chars.by_ref() {
+                if c.is_ascii_alphabetic() {
+                    break;
+                }
+            }
+        }
+    }
+    out
+}
+
+/// 自检输出里的分段小结行，形如 `[1/5] 数据库 schema: …`。
+///
+/// 按**形状**判断（中括号里是 `数字/数字`），不写死段数：段数会随版本变
+/// （加"缩略图缓存"那段就从 /4 变成了 /5）。
+fn is_summary_line(line: &str) -> bool {
+    let line = strip_ansi(line);
+    let line = line.as_str();
+    let Some(open) = line.find('[') else {
+        return false;
+    };
+    let rest = &line[open + 1..];
+    let Some(close) = rest.find(']') else {
+        return false;
+    };
+    let Some((left, right)) = rest[..close].split_once('/') else {
+        return false;
+    };
+    let digits = |text: &str| !text.is_empty() && text.bytes().all(|b| b.is_ascii_digit());
+    digits(left) && digits(right)
+}
+
 /// 一次部署要上传的产物。
 struct Payload<'a> {
     /// 本地 release 二进制 → 归档里的 `brainbow`。
@@ -670,9 +717,12 @@ impl Deploy<'_> {
             Ok(None) => ui::info("后端自检（dry-run 未执行）"),
             Ok(Some((out, true))) => {
                 ui::done("后端自检通过");
-                // 只把四段小结打出来（`[1/4] …`），其余交给 --check 的原始输出
-                for line in out.lines().filter(|line| line.contains("/4]")) {
-                    ui::info(line.trim());
+                // 只把分段小结打出来（`[1/5] …`），其余交给 --check 的原始输出。
+                // 段数是会变的（加缩略图缓存检查那批就从 /4 变成了 /5），
+                // 所以按形状认，不写死数字 —— 写死过一次，结果是那几行静默地
+                // 一行都不显示，而"自检通过"照打。
+                for line in out.lines().filter(|line| is_summary_line(line)) {
+                    ui::info(strip_ansi(line).trim());
                 }
             }
             Ok(Some((out, false))) => {
@@ -785,6 +835,42 @@ mod tests {
             ]
         );
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn strips_ansi_escapes() {
+        assert_eq!(
+            strip_ansi("\u{1b}[2m2026-01-01T00:00:00Z\u{1b}[0m 正文"),
+            "2026-01-01T00:00:00Z 正文"
+        );
+        assert_eq!(
+            strip_ansi("\u{1b}[32m INFO\u{1b}[0m [1/5] x"),
+            " INFO [1/5] x"
+        );
+        // 没有转义序列时原样返回
+        assert_eq!(strip_ansi("plain"), "plain");
+        // 落单的 ESC 不该吞掉后面的字符
+        assert_eq!(strip_ansi("a\u{1b}b"), "ab");
+    }
+
+    #[test]
+    fn summary_line_matches_the_shape_not_a_hardcoded_count() {
+        // 真实输出（新版本 5 段、老版本 4 段都要认）
+        assert!(is_summary_line(
+            "2026-09-21T14:53:51.653427Z  INFO [1/5] 数据库 schema: schema 版本 19/19；表齐全"
+        ));
+        assert!(is_summary_line(
+            "\u{1b}[2m2026-09-21T13:42:33.884224Z\u{1b}[0m \u{1b}[32m INFO\u{1b}[0m [2/4] 完整性 quick_check: ok"
+        ));
+        assert!(is_summary_line("[12/12] 某段: ok"));
+        // 其它日志行不该被误认
+        assert!(!is_summary_line(
+            "2026-09-21T13:42:33Z  INFO 已从数据库加载记忆配置，FSRS 参数数: 21"
+        ));
+        assert!(!is_summary_line("INFO Listening on http://127.0.0.1:8080"));
+        assert!(!is_summary_line("schema 版本 19/19；表齐全"));
+        assert!(!is_summary_line("[abc/def] 不是数字"));
+        assert!(!is_summary_line("[1/5 少了个括号"));
     }
 
     /// 权限命令里不该出现重复的 glob —— `'dir'/*/*` 匹配不到任何东西，

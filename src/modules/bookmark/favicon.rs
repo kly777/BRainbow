@@ -1,19 +1,23 @@
 //! 网页 favicon 获取与缓存。
 //!
 //! `GET /api/bookmarks/favicon?url=…` 返回书签网站的图标：
-//! 1. 优先读磁盘缓存 `uploads/favicons/{host}.{ext}`
+//! 1. 优先读磁盘缓存 `{UPLOAD_DIR}/favicons/{host}.{ext}`
 //! 2. 未命中则抓取 `https://{host}/favicon.ico`
 //! 3. 失败则解析首页 HTML 的 `<link rel="icon">` 提取
 //!
 //! 公开接口（favicon 无敏感信息，且 `<img>` 无法携带 Authorization 头）。
 //! 安全限制：仅接受域名格式的 host（拒绝 IP/内网地址），避免 SSRF；
 //! 文件大小与抓取耗时均有上限。
+//!
+//! 缓存目录**由配置派生**（`UPLOAD_DIR` 下的 `favicons/`），与文件服务同一个根：
+//! 早先这里写死成相对路径 `uploads/favicons`，于是改了 `UPLOAD_DIR` 之后
+//! 文件服务的内容跟着搬走、favicons 却还留在原地 —— 用户数据被劈成两半。
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use axum::{
-    extract::Query,
+    extract::{Query, State},
     http::{StatusCode, header},
     response::Response,
 };
@@ -22,7 +26,24 @@ use tokio::io::AsyncWriteExt;
 
 use crate::shared::error_types as error;
 
-const FAVICON_CACHE_DIR: &str = "uploads/favicons";
+/// favicon 磁盘缓存目录，由上传根派生。
+///
+/// 做成 newtype 是为了能作为 axum 的 `State` 抽取（裸 `PathBuf` 会把不同的状态
+/// 混到同一个类型上），值本身来自 `UPLOAD_DIR`。
+#[derive(Debug, Clone)]
+pub struct FaviconCacheDir(PathBuf);
+
+impl FaviconCacheDir {
+    /// 由上传根派生：`{upload_dir}/favicons`。
+    pub fn from_upload_root(upload_dir: impl AsRef<Path>) -> Self {
+        Self(upload_dir.as_ref().join("favicons"))
+    }
+
+    fn path(&self) -> &Path {
+        &self.0
+    }
+}
+
 /// 单个 favicon 最大字节数
 const MAX_FAVICON_BYTES: u64 = 512 * 1024;
 /// 首页 HTML 最大抓取字节数（<link> 在 head 中，1MB 足够）
@@ -93,17 +114,13 @@ fn looks_like_domain(host: &str) -> bool {
     })
 }
 
-fn cache_dir() -> PathBuf {
-    PathBuf::from(FAVICON_CACHE_DIR)
+fn cache_path(cache: &FaviconCacheDir, host: &str, ext: &str) -> PathBuf {
+    cache.path().join(format!("{host}.{ext}"))
 }
 
-fn cache_path(host: &str, ext: &str) -> PathBuf {
-    cache_dir().join(format!("{host}.{ext}"))
-}
-
-fn read_cached(host: &str) -> Option<(Vec<u8>, &'static str)> {
+fn read_cached(cache: &FaviconCacheDir, host: &str) -> Option<(Vec<u8>, &'static str)> {
     for ext in ["ico", "png"] {
-        let path = cache_path(host, ext);
+        let path = cache_path(cache, host, ext);
         if let Ok(bytes) = std::fs::read(&path)
             && !bytes.is_empty()
         {
@@ -119,9 +136,9 @@ fn read_cached(host: &str) -> Option<(Vec<u8>, &'static str)> {
 }
 
 /// 缓存总量控制：文件数超限时删除最旧的一半（按修改时间）
-async fn enforce_cache_limit() {
-    let dir = cache_dir();
-    let Ok(mut entries) = std::fs::read_dir(&dir).map(|rd| {
+async fn enforce_cache_limit(cache: &FaviconCacheDir) {
+    let dir = cache.path();
+    let Ok(mut entries) = std::fs::read_dir(dir).map(|rd| {
         rd.flatten()
             .filter(|e| e.path().is_file())
             .collect::<Vec<_>>()
@@ -142,16 +159,16 @@ async fn enforce_cache_limit() {
     }
 }
 
-async fn save_cache(host: &str, bytes: &[u8]) {
-    enforce_cache_limit().await;
-    let dir = cache_dir();
-    tokio::fs::create_dir_all(&dir).await.ok();
+async fn save_cache(cache: &FaviconCacheDir, host: &str, bytes: &[u8]) {
+    enforce_cache_limit(cache).await;
+    let dir = cache.path();
+    tokio::fs::create_dir_all(dir).await.ok();
     // 用 infer 判断类型；未知则按 ico 存
     let ext = match infer::get(bytes) {
         Some(t) if t.mime_type() == "image/png" => "png",
         _ => "ico",
     };
-    let path = cache_path(host, ext);
+    let path = cache_path(cache, host, ext);
     if let Ok(mut f) = tokio::fs::File::create(&path).await {
         f.write_all(bytes).await.ok();
         f.sync_all().await.ok();
@@ -311,12 +328,15 @@ fn resolve_href(host: &str, href: &str) -> Option<String> {
     }
 }
 
-pub async fn favicon_handler(Query(q): Query<FaviconQuery>) -> Response {
+pub async fn favicon_handler(
+    State(cache): State<FaviconCacheDir>,
+    Query(q): Query<FaviconQuery>,
+) -> Response {
     let Some(host) = extract_host(&q.url) else {
         return error::bad_request("无效的 URL");
     };
 
-    if let Some((bytes, mime)) = read_cached(&host) {
+    if let Some((bytes, mime)) = read_cached(&cache, &host) {
         return file_response(bytes, mime);
     }
 
@@ -327,7 +347,7 @@ pub async fn favicon_handler(Query(q): Query<FaviconQuery>) -> Response {
 
     match fetch_favicon(&client, &host).await {
         Some((bytes, mime)) => {
-            save_cache(&host, &bytes).await;
+            save_cache(&cache, &host, &bytes).await;
             file_response(bytes, mime)
         }
         None => error::not_found("未找到该网站的图标"),
@@ -338,6 +358,24 @@ pub async fn favicon_handler(Query(q): Query<FaviconQuery>) -> Response {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+
+    #[test]
+    fn cache_dir_follows_the_configured_upload_root() {
+        // 回归：这个目录曾经写死成相对路径 "uploads/favicons"，于是改了
+        // UPLOAD_DIR 之后文件服务的内容跟着搬走、favicons 留在原地 ——
+        // 用户数据被劈成两半（同一类坑在 file 模块修过一次）。
+        let cache = FaviconCacheDir::from_upload_root("/data/brainbow-uploads");
+        assert_eq!(cache.path(), Path::new("/data/brainbow-uploads/favicons"));
+        assert_eq!(
+            cache_path(&cache, "example.com", "ico"),
+            PathBuf::from("/data/brainbow-uploads/favicons/example.com.ico")
+        );
+
+        // 没配 UPLOAD_DIR 时的默认值：相对路径 uploads 下的 favicons
+        // （与文件服务的默认 `uploads/file` 同根）
+        let default = FaviconCacheDir::from_upload_root("uploads");
+        assert_eq!(default.path(), Path::new("uploads/favicons"));
+    }
 
     #[test]
     fn extract_host_variants() {

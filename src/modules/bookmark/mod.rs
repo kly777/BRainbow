@@ -15,7 +15,7 @@ use axum::{
 };
 use sqlx::SqlitePool;
 
-pub use favicon::favicon_handler;
+pub use favicon::{FaviconCacheDir, favicon_handler};
 pub use handler::{
     batch_delete_handler, check_url_handler, create_bookmark_handler, create_tag_handler,
     delete_bookmark_handler, delete_tag_handler, fetch_url_handler, get_bookmark_handler,
@@ -35,13 +35,18 @@ pub(crate) const IMPORT_HTML_BODY_LIMIT_BYTES: usize = 64 * 1024 * 1024;
 pub struct BookmarkState {
     pub service: BookmarkService,
     pub query: BookmarkQueryService,
+    /// favicon 磁盘缓存目录：由上传根派生（见 `favicon.rs` 顶部的说明）
+    pub favicons: FaviconCacheDir,
 }
 
 impl BookmarkState {
-    pub fn new(db: Arc<SqlitePool>) -> Self {
+    /// `upload_dir` 是上传根（`Config::upload_dir`）—— favicon 缓存在它的
+    /// `favicons/` 子目录下，与文件服务共用同一个根（别再写死相对路径）。
+    pub fn new(db: Arc<SqlitePool>, upload_dir: impl AsRef<std::path::Path>) -> Self {
         Self {
             service: BookmarkService::new(db.clone()),
             query: BookmarkQueryService::new(db),
+            favicons: FaviconCacheDir::from_upload_root(upload_dir),
         }
     }
 }

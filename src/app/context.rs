@@ -141,6 +141,7 @@ impl_from_ref! {
     chat.chat_query => ChatQueryService,
     bookmark.service => crate::modules::bookmark::BookmarkService,
     bookmark.query => crate::modules::bookmark::BookmarkQueryService,
+    bookmark.favicons => crate::modules::bookmark::FaviconCacheDir,
     card.service => crate::modules::card::CardService,
     card.query => crate::modules::card::CardQueryService,
     onto.service => crate::modules::onto::OntoService,
@@ -192,7 +193,8 @@ impl AppState {
         // 使用模块构造器构建简单模块
         let task = TaskState::new(db.clone());
         let card = CardState::new(db.clone());
-        let bookmark = BookmarkState::new(db.clone());
+        // 书签的 favicon 缓存与文件服务共用上传根（别再写死相对路径）
+        let bookmark = BookmarkState::new(db.clone(), &config.upload_dir);
         let onto = OntoState::new(db.clone());
         let sign = SignState::new(db.clone());
         let user = UserState::new(db.clone(), config.jwt_ttl_secs);

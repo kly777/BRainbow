@@ -10,7 +10,7 @@ use crate::db::{Db, utc_stamp};
 use crate::deploy;
 use crate::error::{Error, Result};
 use crate::local;
-use crate::remote::{Remote, glob_in, sh_quote};
+use crate::remote::{Remote, list_files, sh_quote};
 use crate::render;
 use crate::rollback;
 use crate::ui;
@@ -230,16 +230,10 @@ fn verify_sqlite_file(path: &std::path::Path) -> Result<()> {
     Ok(())
 }
 
-/// `list` 的复用版：只列名字（不含目录）。
+/// 列备份**文件名**（不含目录）—— 回滚配对拿到的 stem 会直接用来拼路径，
+/// 所以这里必须是文件名而不是完整路径。
 fn list(remote: &Remote, dir: &str, pattern: &str) -> Result<Vec<String>> {
-    let out = remote.capture_if_run(&format!("ls -1 {} 2>/dev/null", glob_in(dir, pattern)))?;
-    Ok(out
-        .unwrap_or_default()
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .map(str::to_string)
-        .collect())
+    list_files(remote, dir, pattern)
 }
 
 #[cfg(test)]

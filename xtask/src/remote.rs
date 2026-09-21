@@ -390,6 +390,23 @@ pub fn glob_in(dir: &str, pattern: &str) -> String {
     format!("{}/{}", sh_quote(dir), pattern)
 }
 
+/// 列一个目录里匹配 `pattern` 的文件，返回**文件名**（basename，不含目录）。
+///
+/// 一致性很要紧：`ls` 给的是完整路径，而下游（保留策略要 rm、回滚要拼 stem）
+/// 都按文件名工作。早先两处各自 `ls` 后又把目录前缀拼了一次，于是 rm 的目标变成
+/// `'/dir'//'dir'/file` —— `rm -f` 对不存在的路径不报错，删除静默失效。
+pub fn list_files(remote: &Remote, dir: &str, pattern: &str) -> Result<Vec<String>> {
+    let out = remote.capture_if_run(&format!("ls -1 {} 2>/dev/null", glob_in(dir, pattern)))?;
+    Ok(out
+        .unwrap_or_default()
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .filter_map(basename)
+        .map(str::to_string)
+        .collect())
+}
+
 /// 取远端路径的最后一段。
 ///
 /// **远端路径一律用 `/` 分隔，与本机是什么系统无关** —— 所以解析远端输出时

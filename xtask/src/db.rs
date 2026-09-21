@@ -13,7 +13,7 @@ use chrono::{NaiveDateTime, Utc};
 
 use crate::config::Config;
 use crate::error::{Error, Result};
-use crate::remote::{Remote, glob_in, path_of, sh_quote};
+use crate::remote::{Remote, list_files, path_of, sh_quote};
 use crate::stamp;
 use crate::ui;
 
@@ -184,31 +184,27 @@ impl<'a> Db<'a> {
     /// 按"天数 + 份数"清理备份，连 `-wal`/`-shm` 兄弟文件一起。
     pub fn prune(&self) -> Result<()> {
         let dir = &self.cfg.backup_dir;
-        let mut names = self.list(dir, "db_*.db")?;
-        names.extend(self.list(dir, "code_*.tar.gz")?);
-        let doomed = stale(
-            &names,
-            Utc::now().naive_utc(),
-            self.cfg.backup_retain_days,
-            self.cfg.backup_retain_count,
-        );
+        // **每类各算各的**：数据库备份与代码备份各自保留最新 N 份
+        // （老脚本也是分开清的两条 `ls -1t … | tail -n +N`）。合成一个池子
+        // 会让两类互相挤占名额，等于把保留份数减半。
+        let mut doomed: Vec<String> = Vec::new();
+        for pattern in ["db_*.db", "code_*.tar.gz"] {
+            let names = self.list(dir, pattern)?;
+            doomed.extend(stale(
+                &names,
+                Utc::now().naive_utc(),
+                self.cfg.backup_retain_days,
+                self.cfg.backup_retain_count,
+            ));
+        }
         if doomed.is_empty() {
             return Ok(());
         }
 
-        // 一次 rm 删完。数据库备份连 -wal/-shm 一起点掉：glob `db_*.db` 匹配不到
-        // 它们，只删主文件会让兄弟文件越积越多（老脚本正是如此）。
-        let mut targets: Vec<String> = Vec::new();
-        for name in &doomed {
-            targets.push(sh_quote(&path_of(dir, name)));
-            if name.ends_with(".db") {
-                targets.push(sh_quote(&path_of(dir, &format!("{name}-wal"))));
-                targets.push(sh_quote(&path_of(dir, &format!("{name}-shm"))));
-            }
-        }
+        let targets = prune_targets(dir, &doomed);
         self.remote.ok(&format!("rm -f {}", targets.join(" ")))?;
         ui::info(&format!(
-            "清理了 {} 份过期备份（保留 {} 天 / 最多 {} 份）",
+            "清理了 {} 份过期备份（每类各保留 {} 天 / 最多 {} 份）",
             doomed.len(),
             self.cfg.backup_retain_days,
             self.cfg.backup_retain_count
@@ -217,17 +213,28 @@ impl<'a> Db<'a> {
     }
 
     fn list(&self, dir: &str, pattern: &str) -> Result<Vec<String>> {
-        let out = self
-            .remote
-            .capture_if_run(&format!("ls -1 {} 2>/dev/null", glob_in(dir, pattern)))?;
-        Ok(out
-            .unwrap_or_default()
-            .lines()
-            .map(str::trim)
-            .filter(|line| !line.is_empty())
-            .map(str::to_string)
-            .collect())
+        list_files(self.remote, dir, pattern)
     }
+}
+
+/// 把要删的文件名展开成 `rm -f` 的实参。
+///
+/// 数据库备份连 `-wal`/`-shm` 一起点掉：`db_*.db` 这个 glob 匹配不到兄弟文件，
+/// 只删主文件会让它们越积越多（老脚本正是如此）。
+///
+/// 传进来的必须是**文件名**（见 `remote::list_files`）；早先这里收到的是完整
+/// 路径却又拼了一次目录，于是 `rm -f` 全打在不存在的路径上、静默失效 ——
+/// 删除没生效，而日志照样报"清理了 N 份"。
+fn prune_targets(dir: &str, names: &[String]) -> Vec<String> {
+    let mut targets = Vec::new();
+    for name in names {
+        targets.push(sh_quote(&path_of(dir, name)));
+        if name.ends_with(".db") {
+            targets.push(sh_quote(&path_of(dir, &format!("{name}-wal"))));
+            targets.push(sh_quote(&path_of(dir, &format!("{name}-shm"))));
+        }
+    }
+    targets
 }
 
 /// UTC 时间戳，与老脚本的 `date -u +%Y%m%d_%H%M%S` 同格式。
@@ -347,6 +354,34 @@ mod tests {
         ]);
         let doomed = stale(&list, at("db_x_20260921_120000.db"), 30, 2);
         assert_eq!(doomed, vec!["db_deploy_20260801_100000.db".to_string()]);
+    }
+
+    #[test]
+    fn prune_targets_use_file_names_not_paths() {
+        // 回归：这里必须收到文件名。曾经收到完整路径又拼了一次目录，
+        // 结果 rm 打在 `/dir//dir/file` 上，而 `rm -f` 对不存在的路径不报错。
+        let targets = prune_targets(
+            "/opt/brb/backup",
+            &[
+                "db_deploy_20260921_100000.db".to_string(),
+                "code_20260920_100000.tar.gz".to_string(),
+            ],
+        );
+        assert_eq!(
+            targets,
+            vec![
+                "'/opt/brb/backup/db_deploy_20260921_100000.db'",
+                "'/opt/brb/backup/db_deploy_20260921_100000.db-wal'",
+                "'/opt/brb/backup/db_deploy_20260921_100000.db-shm'",
+                "'/opt/brb/backup/code_20260920_100000.tar.gz'",
+            ]
+        );
+        assert!(
+            targets
+                .iter()
+                .all(|arg| arg.matches("/opt/brb/backup").count() == 1),
+            "每个路径只应出现一次目录前缀：{targets:?}"
+        );
     }
 
     #[test]

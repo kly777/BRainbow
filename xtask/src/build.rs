@@ -223,6 +223,36 @@ fn build_web(cfg: &Config) -> Result<()> {
     verify_dist(&cfg.web_dir().join("dist"))
 }
 
+/// 交叉编译时要摘掉的 C 工具链环境变量。
+///
+/// 为什么必须摘（真实事故，2026-09-22）：`cc` crate 解析 C 编译器时**优先用
+/// `CC`/`CFLAGS`**，而开发者 shell 里那套（`~/.bashrc` 的 `export CC=gcc`）
+/// 指的是**宿主编译器**。于是 `sqlite3.c` 被 glibc 的 gcc 编译，产物里带上
+/// 只有 glibc 才有的符号（`open64` / `stat64` / `__memcpy_chk`），链接
+/// musl 时才炸在最后一步：
+///
+/// ```text
+/// sqlite3.c:(.text.posixOpen+0x7): undefined reference to `open64'
+/// ```
+///
+/// 与 `DATABASE_URL` 同一类问题：环境里的东西不该悄悄改变构建结果。
+/// 只在**交叉**构建时摘（那时环境里的 CC 一定是错的目标），native 构建保持原样。
+const CROSS_BUILD_ENV_TO_DROP: &[&str] = &[
+    "CC", "CXX", "CFLAGS", "CXXFLAGS", "AR", "ARFLAGS", "RANLIB", "LDFLAGS",
+];
+
+/// musl 目标的 C 编译器名：`x86_64-unknown-linux-musl` → `x86_64-linux-musl-gcc`
+/// （`musl-tools` 装出来的就是这个名字；`musl-gcc` 是它在 x86_64 上的别名）。
+///
+/// 显式指名的意义在于**失败得清楚**：musl 编译器不在时直接报"找不到编译器"，
+/// 而不是悄悄退回 glibc 的 gcc、把问题推到链接那一步。
+fn musl_cc(target: &str) -> String {
+    match target.split('-').next() {
+        Some(arch) if !arch.is_empty() => format!("{arch}-linux-musl-gcc"),
+        _ => "musl-gcc".to_string(),
+    }
+}
+
 /// 后端 release 构建命令。
 fn backend_cmd(cfg: &Config) -> Cmd {
     let mut cmd = Cmd::new("cargo")
@@ -233,6 +263,15 @@ fn backend_cmd(cfg: &Config) -> Cmd {
         .unset("DATABASE_URL");
     if let Some(target) = cfg.cross_target() {
         cmd = cmd.args(&["--target", target]);
+        // 见 CROSS_BUILD_ENV_TO_DROP：环境里的 C 工具链指向宿主编译器
+        cmd = CROSS_BUILD_ENV_TO_DROP
+            .iter()
+            .fold(cmd, |cmd, key| cmd.unset(key));
+        if target.contains("musl") {
+            // 目标专属变量优先于 CC，兜住"万一还有别的路径把 CC 注回来"
+            let cc = musl_cc(target);
+            cmd = cmd.env(&format!("CC_{}", target.replace('-', "_")), &cc);
+        }
     }
     cmd
 }
@@ -395,6 +434,30 @@ fn verify_dist(dist: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// musl 目标的 C 编译器按架构推导 —— 写死 `musl-gcc` 在 aarch64 上是错的。
+    #[test]
+    fn musl_cc_follows_the_target_arch() {
+        assert_eq!(
+            musl_cc("x86_64-unknown-linux-musl"),
+            "x86_64-linux-musl-gcc"
+        );
+        assert_eq!(
+            musl_cc("aarch64-unknown-linux-musl"),
+            "aarch64-linux-musl-gcc"
+        );
+        // 认不出架构时退回 musl-tools 的通用别名
+        assert_eq!(musl_cc(""), "musl-gcc");
+    }
+
+    /// 交叉构建要摘掉的环境变量里必须有 `CC` 与 `CFLAGS` —— 就是它们把
+    /// glibc 的编译器/标志带进了 musl 构建（见常量注释里的事故）。
+    #[test]
+    fn cross_build_drops_the_host_c_toolchain() {
+        for key in ["CC", "CXX", "CFLAGS", "CXXFLAGS", "AR", "LDFLAGS"] {
+            assert!(CROSS_BUILD_ENV_TO_DROP.contains(&key), "{key} 应当被摘掉");
+        }
+    }
 
     #[test]
     fn human_matches_du_dimensions() {

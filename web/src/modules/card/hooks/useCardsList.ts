@@ -49,6 +49,15 @@ export function useCardsList() {
 	const isSearchMode = () => searchQuery().trim().length > 0;
 
 	const [page, setPage] = createSignal(1);
+	/**
+	 * 无限滚动游标：已经累积到第几页。
+	 *
+	 * **刻意与 `page` 分开**（真实事故的成因）：`page` 是数据源的分页键，
+	 * 改它会让 `useListResource` 按新页号重取一次，而返回的只是那一页 ——
+	 * 加载更多刚 patch 进去的累积列表会被整份替换掉，列表于是只剩最后一页
+	 * （26 张卡片只剩 5 张，横向瀑布流不够宽也就不再滚动了）。
+	 */
+	const [loadedPage, setLoadedPage] = createSignal(1);
 	const list = useListResource<{ q: string }, Card>({
 		key: () => ({ q: searchQuery().trim() }),
 		page,
@@ -126,6 +135,7 @@ export function useCardsList() {
 		// 本地信号驱动搜索；URL 仅在清空时回写（保持 ?q= 深链接语义）。
 		setSearchQuery(query);
 		setPage(1);
+		setLoadedPage(1);
 		setHasMore(true);
 		if (!query.trim()) params.set({ q: "" });
 	};
@@ -133,15 +143,17 @@ export function useCardsList() {
 	const [loadingMore, setLoadingMore] = createSignal(false);
 	const [hasMore, setHasMore] = createSignal(true);
 
+	/** 显式翻页：整份替换列表（与无限滚动相反），游标跟着走 */
 	const handlePageChange = (newPage: number) => {
 		if (newPage < 1 || newPage > list.totalPages()) return;
 		setPage(newPage);
+		setLoadedPage(newPage);
 	};
 
 	/** 追加下一页（无限滚动）；与翻页共用同一数据源 */
 	const handleLoadMore = async () => {
 		if (loadingMore() || !hasMore()) return;
-		const nextPage = page() + 1;
+		const nextPage = loadedPage() + 1;
 		if (list.totalPages() > 0 && nextPage > list.totalPages()) {
 			setHasMore(false);
 			return;
@@ -154,7 +166,8 @@ export function useCardsList() {
 		if (result.ok) {
 			const res = result.value;
 			list.patch((items) => [...items, ...res.items]);
-			setPage(res.page);
+			// 只动游标，**不动 `page`**（见 loadedPage 的注释）
+			setLoadedPage(res.page);
 			if (res.page >= res.total_pages) setHasMore(false);
 		}
 		setLoadingMore(false);

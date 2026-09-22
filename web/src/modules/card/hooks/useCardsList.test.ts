@@ -228,6 +228,40 @@ describe("分页与加载更多", () => {
 		);
 	});
 
+	it("加载更多把新一页追加到已加载的后面（不是整份替换）", () => {
+		// 回归：真实事故是"列表只剩最后一页"。触发条件是**每一页的数据不同** ——
+		// 若加载更多顺手改了数据源的分页号，资源会按新分页号重取一次，返回的只有
+		// 那一页，于是刚 patch 进去的累积列表被整份换掉。上面那条测试两页返回同一份
+		// mock，恰好掩盖了这个差别。
+		const page1 = Array.from({ length: 20 }, (_, i) => card(100 + i));
+		const page2 = Array.from({ length: 5 }, (_, i) => card(200 + i));
+		return withHook(
+			async (h) => {
+				await settle(() => h.cards().length === 20);
+				mockedGet.mockImplementation(async (p = 1) =>
+					p === 2 ? paginated(page2, 2, 2) : paginated(page1, 1, 2),
+				);
+
+				await h.handleLoadMore();
+				await settle(() => h.cards().length === 25);
+
+				// 只应发一次请求：不能因为改了分页号再取一次那一页
+				expect(mockedGet.mock.calls.filter((c) => c[0] === 2).length).toBe(1);
+
+				expect(h.cards().length).toBe(25);
+				expect(
+					h
+						.cards()
+						.map((c) => c.id)
+						.slice(0, 20),
+				).toEqual(page1.map((c) => c.id));
+				expect(h.cards().at(-1)?.id).toBe(204);
+				expect(h.hasMore()).toBe(false);
+			},
+			{ items: page1, totalPages: 2 },
+		);
+	});
+
 	it("搜索态下翻页与加载更多走 searchCardsE", () => {
 		return withHook(async (h) => {
 			mockedSearch.mockResolvedValue(paginated([card(6)], 1, 3));

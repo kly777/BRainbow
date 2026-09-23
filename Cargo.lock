@@ -294,6 +294,7 @@ dependencies = [
  "image",
  "infer",
  "jsonwebtoken",
+ "libc",
  "nanoid",
  "quick-xml 0.42.0",
  "rand 0.10.2",

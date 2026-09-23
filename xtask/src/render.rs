@@ -74,6 +74,9 @@ pub fn systemd_unit(cfg: &Config, jwt_secret: &str) -> Result<String> {
             ("BIND_HOST", cfg.bind_host.clone()),
             ("DATABASE_URL", cfg.database_url.clone()),
             ("UPLOAD_DIR", cfg.upload_dir.clone()),
+            // 应用侧的 /admin 服务器信息要报"备份多少份、占多大"，所以把备份目录
+            // 一并注入 —— 部署工具知道它在哪，应用只读
+            ("BACKUP_DIR", cfg.backup_dir.clone()),
             ("CORS_ALLOW_ORIGIN", cfg.cors_allow_origin.clone()),
             ("JWT_SECRET", jwt_secret.to_string()),
             ("ALLOW_REGISTER", cfg.allow_register.clone()),
@@ -193,6 +196,11 @@ mod tests {
         assert!(
             unit.contains("Environment=\"UPLOAD_DIR=/opt/brb/data/uploads\""),
             "上传根应当按约定派生到 data 下: {unit}"
+        );
+        // 备份目录同理：应用靠它报"备份多少份、占多大"
+        assert!(
+            unit.contains("Environment=\"BACKUP_DIR=/opt/brb/backup\""),
+            "备份目录应当注入: {unit}"
         );
         // 默认值（.env.prod 里没写这两项时）
         assert!(

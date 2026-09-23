@@ -4,6 +4,7 @@ pub mod handler;
 pub mod port;
 mod repository;
 pub mod service;
+pub mod system;
 
 use axum::Router;
 use axum::extract::FromRef;

@@ -46,6 +46,11 @@ calamine = "0.36.1"
 tar = "0.4.46"
 flate2 = "1.1.10"
 
+# 只在 unix 上需要：/admin 的服务器信息要 `statvfs` 拿文件系统用量
+# （内存/负载走 /proc，不需要依赖；非 unix 平台这两项自然降级为"不可用"）
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [lints.clippy]
 # 自动修复类（cargo clippy --fix 一键修完）
 uninlined_format_args = "warn"

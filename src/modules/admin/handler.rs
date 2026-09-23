@@ -11,7 +11,8 @@ use std::time::Instant;
 use uuid::Uuid;
 
 use super::port::AdminServicePort;
-use super::service::AdminService;
+use super::service::{AdminService, ServerPaths};
+use super::system;
 use crate::shared::claims::Claims;
 
 /// 应用启动时间（用于计算运行时长）
@@ -46,6 +47,32 @@ pub struct SystemInfoResponse {
     pub db_size_bytes: u64,
     /// 各模块数据统计
     pub stats: ModuleStats,
+    /// 服务器侧信息（内存 / CPU / 磁盘 / 文件与备份占用）
+    pub server: ServerInfo,
+}
+
+/// 服务器侧信息。
+///
+/// 每一项都可能缺失（非 Linux 没有 `/proc`、未配置 `BACKUP_DIR` 就没有备份目录），
+/// 所以能空的字段一律 `Option` —— 前端显示"—"，而不是把"读不到"报成 0。
+#[derive(Debug, Serialize)]
+pub struct ServerInfo {
+    /// 逻辑核心数
+    pub cpu_count: usize,
+    pub load: Option<system::LoadAverage>,
+    pub memory: Option<system::MemoryInfo>,
+    /// 文件系统用量（在上传根上探测 —— 生产里数据/上传/备份同盘）
+    pub disk: Option<system::DiskUsage>,
+    /// 上传根整体占用（含缩略图与 favicon 缓存）
+    pub uploads: Option<system::DirUsage>,
+    /// 其中：缩略图缓存（可再生，不值得备份）
+    pub thumbs: Option<system::DirUsage>,
+    /// 其中：favicon 缓存（可再生）
+    pub favicons: Option<system::DirUsage>,
+    /// 备份目录占用（份数 = 文件数）
+    pub backups: Option<system::DirUsage>,
+    /// 备份目录路径；未配置时为 None
+    pub backup_dir: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -118,7 +145,7 @@ pub async fn rotate_jwt(
     }
 }
 
-/// 获取系统信息：版本、运行时长、数据库状态、各模块数据统计
+/// 获取系统信息：版本、运行时长、数据库状态、各模块数据统计、服务器侧用量
 pub async fn get_system_info(State(admin): State<AdminService>) -> Response {
     let db = admin.pool();
     let uptime_secs = START_TIME.get().map(|t| t.elapsed().as_secs()).unwrap_or(0);
@@ -205,6 +232,29 @@ pub async fn get_system_info(State(admin): State<AdminService>) -> Response {
             chat_trees,
             ontologies,
         },
+        server: collect_server_info(admin.server_paths()),
     })
     .into_response()
+}
+
+/// 采集服务器侧信息（全是尽力而为：拿不到的项就是 `None`）。
+///
+/// 目录遍历只发生在管理页手动刷新时，规模是"自己的上传与备份目录"。
+fn collect_server_info(paths: &ServerPaths) -> ServerInfo {
+    let uploads = system::dir_usage(&paths.upload_dir);
+    let disk = system::disk_usage(&paths.upload_dir)
+        // 上传根还不存在（全新部署）时退到备份目录 —— 同一个盘，答案一样
+        .or_else(|| paths.backup_dir.as_deref().and_then(system::disk_usage));
+
+    ServerInfo {
+        cpu_count: system::cpu_count(),
+        load: system::load_average(),
+        memory: system::memory(),
+        disk,
+        uploads,
+        thumbs: system::dir_usage(&paths.upload_dir.join("file/thumbs")),
+        favicons: system::dir_usage(&paths.upload_dir.join("favicons")),
+        backups: paths.backup_dir.as_deref().and_then(system::dir_usage),
+        backup_dir: paths.backup_dir.as_ref().map(|p| p.display().to_string()),
+    }
 }

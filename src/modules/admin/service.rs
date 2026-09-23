@@ -42,6 +42,17 @@ impl SettingsService {
     }
 }
 
+/// 系统信息要用的路径（由组合根从 `Config` 传进来，见 `system` 模块）。
+///
+/// 只拿"报给管理员看"需要的两个：上传根（它的占用就是"文件占用"）与备份目录
+/// （部署工具写的，开发机上通常没有 → `None`）。磁盘用量在**上传根**上探测：
+/// 生产里数据、上传、备份都在同一个根下，问它等于问"那块盘"。
+#[derive(Clone, Debug)]
+pub struct ServerPaths {
+    pub upload_dir: std::path::PathBuf,
+    pub backup_dir: Option<std::path::PathBuf>,
+}
+
 /// 管理员设置服务：封装 app_settings 存取 + 运行时缓存。
 ///
 /// 该类型是 `AdminServicePort` 的 SQLite/内存 adapter，由组合根装配。
@@ -51,11 +62,18 @@ pub struct AdminService {
     jwt_secret: Arc<String>,
     jwt_active_cache: Arc<std::sync::RwLock<Option<String>>>,
     allow_register_cache: Arc<std::sync::RwLock<Option<bool>>>,
+    paths: Arc<ServerPaths>,
 }
 
 impl AdminService {
-    pub fn new(pool: Arc<SqlitePool>, jwt_secret: String, allow_register: bool) -> Self {
+    pub fn new(
+        pool: Arc<SqlitePool>,
+        jwt_secret: String,
+        allow_register: bool,
+        paths: ServerPaths,
+    ) -> Self {
         Self {
+            paths: Arc::new(paths),
             settings: SettingsService::new(pool),
             jwt_secret: Arc::new(jwt_secret),
             jwt_active_cache: Arc::new(std::sync::RwLock::new(None)),
@@ -66,6 +84,11 @@ impl AdminService {
     /// 获取数据库连接池（用于系统信息查询）
     pub fn pool(&self) -> &Arc<SqlitePool> {
         self.settings.pool()
+    }
+
+    /// 系统信息要用的路径（服务器存储/备份统计）
+    pub fn server_paths(&self) -> &ServerPaths {
+        &self.paths
     }
 
     /// 初始化运行时缓存：DB 中有持久化密钥/开放注册则优先
@@ -173,11 +196,19 @@ mod tests {
         pool
     }
 
+    /// 系统信息用的路径：这几条用例不关心它，给个够用的默认值
+    fn test_paths() -> ServerPaths {
+        ServerPaths {
+            upload_dir: std::path::PathBuf::from("uploads"),
+            backup_dir: None,
+        }
+    }
+
     #[tokio::test]
     async fn allow_register_toggle_persists_across_instances() {
         let pool = admin_pool().await;
         // env 缺省 false
-        let svc = AdminService::new(pool.clone(), "env-secret".into(), false);
+        let svc = AdminService::new(pool.clone(), "env-secret".into(), false, test_paths());
         assert!(!svc.allow_register_active().await);
 
         // 管理员开启 → 运行时立即生效并落库
@@ -185,7 +216,7 @@ mod tests {
         assert!(svc.allow_register_active().await);
 
         // 新实例（模拟重启）：init_runtime_cache 从 DB 恢复为 true，而非 env 的 false
-        let fresh = AdminService::new(pool, "env-secret".into(), false);
+        let fresh = AdminService::new(pool, "env-secret".into(), false, test_paths());
         assert!(!fresh.allow_register_active().await);
         fresh.init_runtime_cache().await;
         assert!(fresh.allow_register_active().await);
@@ -194,7 +225,7 @@ mod tests {
     #[tokio::test]
     async fn jwt_rotation_changes_active_secret_and_survives_restart() {
         let pool = admin_pool().await;
-        let svc = AdminService::new(pool.clone(), "env-secret".into(), false);
+        let svc = AdminService::new(pool.clone(), "env-secret".into(), false, test_paths());
         assert_eq!(svc.jwt_secret_active(), "env-secret");
 
         svc.rotate_jwt_secret("rotated-secret-abc").await.unwrap();
@@ -205,7 +236,7 @@ mod tests {
         assert_eq!(len, "rotated-secret-abc".len());
 
         // 重启后 init_runtime_cache 恢复持久化密钥：旧 token 全部失效的语义成立
-        let fresh = AdminService::new(pool, "env-secret".into(), false);
+        let fresh = AdminService::new(pool, "env-secret".into(), false, test_paths());
         assert_eq!(fresh.jwt_secret_active(), "env-secret");
         fresh.init_runtime_cache().await;
         assert_eq!(fresh.jwt_secret_active(), "rotated-secret-abc");
@@ -214,7 +245,7 @@ mod tests {
     #[tokio::test]
     async fn jwt_status_unpersisted_reports_env_secret_len() {
         let pool = admin_pool().await;
-        let svc = AdminService::new(pool, "env-secret".into(), false);
+        let svc = AdminService::new(pool, "env-secret".into(), false, test_paths());
         let (persisted, len) = svc.settings_jwt_status().await;
         assert!(!persisted);
         assert_eq!(len, "env-secret".len());

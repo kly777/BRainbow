@@ -18,6 +18,8 @@ Environment="SERVICE_PORT=@@SERVICE_PORT@@"
 Environment="BIND_HOST=@@BIND_HOST@@"
 Environment="DATABASE_URL=@@DATABASE_URL@@"
 Environment="UPLOAD_DIR=@@UPLOAD_DIR@@"
+# 备份目录：部署工具往里写，应用只读它来报"备份多少份、占多大"（/admin 服务器信息）
+Environment="BACKUP_DIR=@@BACKUP_DIR@@"
 Environment="CORS_ALLOW_ORIGIN=@@CORS_ALLOW_ORIGIN@@"
 Environment="JWT_SECRET=@@JWT_SECRET@@"
 Environment="ALLOW_REGISTER=@@ALLOW_REGISTER@@"

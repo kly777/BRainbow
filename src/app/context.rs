@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use crate::app::auth::service::AuthService;
 use crate::modules::admin::port::AdminServicePort;
-use crate::modules::admin::service::AdminService;
+use crate::modules::admin::service::{AdminService, ServerPaths};
 use crate::modules::ai::service::AiService;
 use crate::modules::bookmark::BookmarkState;
 use crate::modules::card::CardState;
@@ -207,8 +207,16 @@ impl AppState {
         let mem_repo_for_query = mem_repo.clone();
         let mem_maintenance = DbMemMaintenance::new(db.clone());
 
-        // 管理员服务
-        let admin = AdminService::new(db.clone(), config.jwt_secret.clone(), config.allow_register);
+        // 管理员服务（带上系统信息要用的路径：上传根与备份目录）
+        let admin = AdminService::new(
+            db.clone(),
+            config.jwt_secret.clone(),
+            config.allow_register,
+            ServerPaths {
+                upload_dir: config.upload_dir.clone(),
+                backup_dir: config.backup_dir.clone(),
+            },
+        );
         let auth = AuthService::new(admin.clone(), db.clone());
 
         // AI/chat 服务

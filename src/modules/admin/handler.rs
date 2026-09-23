@@ -307,6 +307,52 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
     }
 
+    /// 与前端 `SystemInfo.server` 的字段名**逐字**对齐。
+    ///
+    /// 这是接口契约：Rust 侧改个名，前端不动就会静默显示"—"或空白 ——
+    /// 前端 e2e 用的是夹具数据，抓不到 Rust 侧改名，所以在这里钉住。
+    #[test]
+    fn server_info_json_keys_match_the_frontend_contract() {
+        let info = collect_server_info(&ServerPaths {
+            upload_dir: "uploads".into(),
+            backup_dir: None,
+        });
+        let json = serde_json::to_value(&info).unwrap();
+        let mut keys: Vec<String> = json
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::clone)
+            .collect();
+        keys.sort();
+        assert_eq!(
+            keys,
+            vec![
+                "backup_dir",
+                "backups",
+                "cpu_count",
+                "disk",
+                "favicons",
+                "load",
+                "memory",
+                "thumbs",
+                "uploads",
+            ]
+        );
+
+        // 目录占用与内存/磁盘的字段同样是契约（前端的 formatDirUsage 等直接读它们）
+        let dir = serde_json::to_value(system::DirUsage {
+            files: 1,
+            bytes: 2,
+            newest_modified: None,
+        })
+        .unwrap();
+        let mut dir_keys: Vec<String> =
+            dir.as_object().unwrap().keys().map(String::clone).collect();
+        dir_keys.sort();
+        assert_eq!(dir_keys, vec!["bytes", "files", "newest_modified"]);
+    }
+
     /// 没有备份目录（开发机的常态）时，那两项都是 None —— 不是 0。
     #[test]
     fn collect_server_info_without_backup_dir() {

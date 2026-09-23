@@ -96,3 +96,12 @@ export const emptyFilePage: Stub[] = [
 	},
 	{ path: "/api/file/tags", body: [] },
 ];
+
+export const article = (id: number, title: string) => ({
+	id,
+	title,
+	word_count: 120,
+	known_ratio: 0.9,
+	unknown_word_count: 3,
+	created_at: "2026-05-01T00:00:00+00:00",
+});

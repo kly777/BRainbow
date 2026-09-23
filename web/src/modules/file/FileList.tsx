@@ -82,6 +82,13 @@ const FileListPage: Component = () => {
 	const scroll = useListScroll({ items: f.items, key: SCROLL_KEY });
 	scroll.trackHighlight(f.highlightId);
 
+	// ── 上传入口：工具栏按钮与空态 CTA 都走这里，点的是隐藏的 <input type="file"> ──
+	// 用 ref 而不是 `document.getElementById("file-upload-input")?.click()`：
+	// 后者在元素被删或改了 id 之后是**静默失效**的（可选链把 null 吞掉，点下去
+	// 什么也不发生）。ListPage 迁移时漏掉了这个 input，两个入口就一起哑了。
+	let uploadInputRef: HTMLInputElement | undefined;
+	const openUploadPicker = () => uploadInputRef?.click();
+
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: 整页拖拽投放区无对应 ARIA role；键盘用户走「上传文件」按钮
 		<div
@@ -97,6 +104,20 @@ const FileListPage: Component = () => {
 					<div class={styles.dropHint}>松开即上传到文件库</div>
 				</div>
 			</Show>
+
+			{/* 隐藏的文件选择框：由 openUploadPicker 触发（整页拖放/粘贴不走它） */}
+			<input
+				ref={uploadInputRef}
+				id="file-upload-input"
+				type="file"
+				multiple
+				style={{ display: "none" }}
+				onChange={(e) => {
+					const files = Array.from(e.currentTarget.files ?? []);
+					if (files.length > 0) void f.handleUploadFiles(files);
+					e.currentTarget.value = "";
+				}}
+			/>
 
 			{/* 页头 / 筛选区 / 四态列表 / 分页这四段原先在页面里逐段手写（与 ListPage
 			    封装的结构完全同形），现在交给外壳；DOM 顺序与类名不变 */}
@@ -142,9 +163,7 @@ const FileListPage: Component = () => {
 							variant="primary"
 							size="sm"
 							disabled={f.uploading()}
-							onClick={() =>
-								document.getElementById("file-upload-input")?.click()
-							}
+							onClick={openUploadPicker}
 						>
 							<Upload size={14} />
 							{f.uploading() ? "上传中..." : "上传文件"}
@@ -221,9 +240,7 @@ const FileListPage: Component = () => {
 				emptySlot={
 					<EmptyGuide
 						filtered={Boolean(f.category() || f.tag() || f.search())}
-						onUpload={() =>
-							document.getElementById("file-upload-input")?.click()
-						}
+						onUpload={openUploadPicker}
 					/>
 				}
 				footer={

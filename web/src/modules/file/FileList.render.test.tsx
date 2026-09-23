@@ -376,6 +376,41 @@ describe("FileList 渲染", () => {
 	// useFileList 原先在 createResource 的 fetcher 里 throw —— 抛错会中断 Solid
 	// 的响应式更新，而应用没有 ErrorBoundary，资源停在 loading=true，
 	// 页面永远骨架屏，错误文案与重试入口都到不了。
+	// 回归：两个上传入口（工具栏按钮、空态 CTA）点的是隐藏的
+	// `<input type="file">`。ListPage 迁移时把那个 input 删掉了，而入口写的是
+	// `getElementById("file-upload-input")?.click()` —— 可选链把 null 吞掉，
+	// 按钮从此静默失效（拖放/粘贴照旧能用，所以更难发现）。
+	it("「上传文件」按钮触发隐藏 input（回归：input 被删后按钮静默失效）", async () => {
+		const { default: FileList } = await import("./FileList.tsx");
+		const host = document.createElement("div");
+		document.body.appendChild(host);
+
+		await createRoot(async (dispose) => {
+			render(() => <FileList />, host);
+			for (let i = 0; i < 50; i++) {
+				await new Promise((r) => setTimeout(r, 20));
+				if (host.textContent?.includes("上传文件")) break;
+			}
+
+			const input = host.querySelector<HTMLInputElement>('input[type="file"]');
+			expect(input).toBeTruthy();
+			expect(input?.multiple).toBe(true);
+			// 隐藏但不能是 disabled：程序化 click() 要能打开选择框
+			expect(input?.disabled).toBe(false);
+
+			const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click");
+			const uploadBtn = [...host.querySelectorAll("button")].find((b) =>
+				b.textContent?.includes("上传文件"),
+			);
+			expect(uploadBtn).toBeTruthy();
+			uploadBtn?.click();
+			expect(clickSpy).toHaveBeenCalledTimes(1);
+			clickSpy.mockRestore();
+
+			dispose();
+		});
+	}, 20000);
+
 	it("取数失败显示错误态而不是卡在骨架屏", async () => {
 		const { listFiles } = await import("@modules/file/api.ts");
 		vi.mocked(listFiles).mockRejectedValueOnce(new Error("后端不可用"));

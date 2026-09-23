@@ -19,6 +19,8 @@ use std::time::Duration;
 
 use tokio::sync::Semaphore;
 
+use super::kind::{self, ThumbStrategy};
+
 /// 允许的宽度阶梯（就近吸附）。四档覆盖：列表行 3rem 方图、卡片 1x/2x、详情页灯箱。
 /// 多加一档就多一份磁盘产物，别随手扩。
 pub const WIDTH_LADDER: [u32; 4] = [160, 320, 640, 1280];
@@ -76,10 +78,7 @@ pub fn snap_width(w: Option<u32>) -> u32 {
 /// "能不能出"由后端说，但**降级路径要与位图完全一致**，这样离线部署不会出现
 /// "视频卡片一片破图"。
 pub fn can_generate(mime: &str) -> bool {
-    matches!(
-        mime,
-        "image/png" | "image/jpeg" | "image/gif" | "image/webp" | "image/bmp"
-    ) || mime.starts_with("video/")
+    !matches!(kind::kind_of(mime).thumb, ThumbStrategy::None)
 }
 
 /// 出处：位图走 `image.rs`（同进程解码），视频走 `video.rs`（子进程隔离）
@@ -91,10 +90,11 @@ pub enum Source {
 
 /// 该 MIME 走哪条生成路径（调用方先用 [`can_generate`] 过滤）
 pub fn source_of(mime: &str) -> Source {
-    if mime.starts_with("video/") {
-        Source::Video
-    } else {
-        Source::Bitmap
+    match kind::kind_of(mime).thumb {
+        ThumbStrategy::Video => Source::Video,
+        // 调用点已被 `can_generate` 挡住；万一漏了，回位图路径只会报"解不出"，
+        // 与离线部署时"退到后缀徽章"的降级观感一致，不会 panic
+        ThumbStrategy::Bitmap | ThumbStrategy::None => Source::Bitmap,
     }
 }
 

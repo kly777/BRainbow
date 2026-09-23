@@ -3,10 +3,11 @@
 // 两条规则：
 //  1. **表驱动命中**：给定一条文件记录，必须命中预期的查看器 id（undefined = 走下载兜底）。
 //     顺序即优先级，所以泛化规则（text/*）排在具体规则之后这件事也被钉住。
-//  2. **白名单覆盖**：后端 ALLOWED_MIMES 里的每个 mime 在前端都要有明确归属——要么有
+//  2. **已知类型覆盖**：后端 kind.rs 的 KINDS 表里每个 mime 在前端都要有明确归属——要么有
 //     查看器，要么显式记在 EXPECTED 里标成 null（"这个类型就是只下载"）。为了让这份镜像
-//     不靠人工同步，第 2 条直接解析 limits.rs：后端加格式 → 这条测试失败 → 逼一次
+//     不靠人工同步，第 2 条直接解析 kind.rs：后端加格式 → 这条测试失败 → 逼一次
 //     "要不要做查看器"的决定，而不是等用户上传完看到一块空白预览区。
+//     （第二步计划：把已知类型从接口发出去，这里的源码解析就可以退役。）
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -16,10 +17,10 @@ import { pickViewer } from "./registry.ts";
 import { item as file } from "./test-fixtures.ts";
 
 // vitest 从 web/ 启动（同 shared/styles/css-modules-contract.test.ts 的路径假设）。
-// 白名单表在后端 `limits.rs`（原在 service.rs，2026-09 拆出去了）
-const SERVICE_RS = join(process.cwd(), "../src/modules/file/limits.rs");
+// 类型 → 能力（含上限档）的表在后端 `kind.rs`（原在 limits.rs 的 ALLOWED_MIMES）
+const KIND_RS = join(process.cwd(), "../src/modules/file/kind.rs");
 
-/** 按类别造一条记录（后端白名单的 category 列值就是 FileCategory 的字符串） */
+/** 按类别造一条记录（类别的口径在后端 `FileCategory::from_mime`） */
 const ofCategory = (mime: string, category: string, name?: string): FileItem =>
 	file({
 		mime_type: mime,
@@ -229,26 +230,46 @@ describe("查看器注册表：命中规则", () => {
 	}
 });
 
-describe("查看器注册表：后端白名单覆盖", () => {
-	/** 解析 limits.rs 的 ALLOWED_MIMES 块，得到后端认的全部 (mime, category) */
-	function backendAllowedMimes(): Array<{ mime: string; category: string }> {
-		const src = readFileSync(SERVICE_RS, "utf8");
-		const start = src.indexOf("const ALLOWED_MIMES");
+describe("查看器注册表：后端已知类型覆盖", () => {
+	/** 解析 kind.rs 的 KINDS 表，得到后端认的全部（精确行的）mime */
+	function backendKnownMimes(): string[] {
+		const src = readFileSync(KIND_RS, "utf8");
+		const start = src.indexOf("const KINDS");
 		if (start < 0)
 			throw new Error(
-				`在 ${SERVICE_RS} 里找不到 ALLOWED_MIMES——表结构变了？请同步更新本测试`,
+				`在 ${KIND_RS} 里找不到 KINDS——表结构变了？请同步更新本测试`,
 			);
 		const end = src.indexOf("];", start);
 		const block = src.slice(start, end);
-		const out: Array<{ mime: string; category: string }> = [];
-		for (const m of block.matchAll(/"([\w.+-]+\/[\w.+-]+)"\s*,\s*"(\w+)"/g)) {
-			out.push({ mime: m[1], category: m[2] });
-		}
-		return out;
+		return [...block.matchAll(/kind\(\s*"([^"]+)"\s*,/g)]
+			.map((m) => m[1])
+			.filter((mime) => !mime.endsWith("*"));
 	}
 
 	/**
-	 * 后端每个白名单 mime 在前端的归属：查看器 id，或 null = 明确只给下载。
+	 * 类别的口径与后端 `FileCategory::from_mime` 一致（前缀规则 + 一个例外）：
+	 * 这个测试关心的是"每个已知类型有没有查看器归属"，类别只是构造记录的输入。
+	 */
+	function backendCategoryOf(mime: string): string {
+		if (mime.startsWith("image/")) return "image";
+		if (mime.startsWith("video/")) return "video";
+		if (mime.startsWith("audio/")) return "audio";
+		if (mime === "application/epub+zip") return "other";
+		return "document";
+	}
+
+	/**
+	 * 构造记录时给一个**真实存在**的扩展名：查看器的规则里有些按扩展名认领
+	 * （epub 就是 —— 它的 MIME 归"其他"类别，前端靠 `.epub` 认领），
+	 * 夹具名不对会被误判成"没有归属"。
+	 */
+	function sampleName(mime: string): string {
+		if (mime === "application/epub+zip") return "a.epub";
+		return `a.${mime.split("/")[1]}`;
+	}
+
+	/**
+	 * 后端每个已知 mime 在前端的归属：查看器 id，或 null = 明确只给下载。
 	 * 新增后端格式时**必须**在这里给出一行（哪怕写 null），否则下面的测试会失败。
 	 */
 	const EXPECTED: Record<string, string | null> = {
@@ -283,26 +304,29 @@ describe("查看器注册表：后端白名单覆盖", () => {
 		"application/vnd.openxmlformats-officedocument.presentationml.presentation":
 			"pptx",
 		"application/msword": null,
+		// epub 不在文件服务的类别规则里（归"其他"），但服务端按书解析它
+		"application/epub+zip": "epub",
 	};
 
-	it("limits.rs 的 ALLOWED_MIMES 能解析出来（解析失败要吵，不能静默放过）", () => {
-		expect(backendAllowedMimes().length).toBeGreaterThanOrEqual(20);
+	it("kind.rs 的 KINDS 能解析出来（解析失败要吵，不能静默放过）", () => {
+		expect(backendKnownMimes().length).toBeGreaterThanOrEqual(20);
 	});
 
-	it("每个白名单 mime 都有明确归属（查看器或显式 null）", () => {
+	it("每个已知 mime 都有明确归属（查看器或显式 null）", () => {
 		const missing: string[] = [];
-		for (const { mime, category } of backendAllowedMimes()) {
+		for (const mime of backendKnownMimes()) {
 			if (!(mime in EXPECTED)) {
 				missing.push(mime);
 				continue;
 			}
-			expect(pickViewer(ofCategory(mime, category))?.id ?? null).toBe(
-				EXPECTED[mime],
-			);
+			expect(
+				pickViewer(ofCategory(mime, backendCategoryOf(mime), sampleName(mime)))
+					?.id ?? null,
+			).toBe(EXPECTED[mime]);
 		}
 		if (missing.length > 0)
 			throw new Error(
-				`后端白名单新增了 ${missing.length} 个格式，前端未表态：\n${missing
+				`后端新增了 ${missing.length} 个格式，前端未表态：\n${missing
 					.map((m) => `  ${m}`)
 					.join(
 						"\n",
@@ -311,8 +335,8 @@ describe("查看器注册表：后端白名单覆盖", () => {
 		expect(missing).toEqual([]);
 	});
 
-	it("EXPECTED 里没有早已从后端白名单删掉的死条目", () => {
-		const alive = new Set(backendAllowedMimes().map((m) => m.mime));
+	it("EXPECTED 里没有早已从后端表删掉的死条目", () => {
+		const alive = new Set(backendKnownMimes());
 		const stale = Object.keys(EXPECTED).filter((m) => !alive.has(m));
 		expect(stale).toEqual([]);
 	});

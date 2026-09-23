@@ -11,6 +11,8 @@
 //!    字节数等于给自己找 zip bomb。
 
 use std::fmt::Write as _;
+
+use super::kind::{self, PreviewStrategy};
 use std::io::{Cursor, Read};
 
 // Reader trait 提供 sheet_names / worksheet_range_at
@@ -165,22 +167,20 @@ pub fn preview_kind_for(mime: &str, bytes: &[u8]) -> Option<PreviewKind> {
 
 /// 这个 MIME 有没有文档预览。
 ///
-/// 只认这三种：`.doc`（老 Word）是二进制 OLE 复合文档，另需一套解析器，暂不收录 ——
+/// 只认这几种：`.doc`（老 Word）是二进制 OLE 复合文档，另需一套解析器，暂不收录 ——
 /// 它在前端也保持"只下载"（见 viewers/registry.test.ts 的 EXPECTED）。
+///
+/// 判据在 [`kind`] 表里（`preview` 列）；压缩包与数据库不在表里，它们按**内容**
+/// 嗅探，见 [`preview_kind_for`]。
 pub fn kind_for_mime(mime: &str) -> Option<PreviewKind> {
-    match mime {
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => {
-            Some(PreviewKind::Docx)
-        }
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        | "application/vnd.ms-excel" => Some(PreviewKind::Sheet),
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation" => {
-            Some(PreviewKind::Slides)
-        }
+    match kind::kind_of(mime).preview {
+        PreviewStrategy::Docx => Some(PreviewKind::Docx),
+        PreviewStrategy::Sheet => Some(PreviewKind::Sheet),
+        PreviewStrategy::Slides => Some(PreviewKind::Slides),
         // 声明就是 epub 时直接按书解析：不依赖"mimetype 必须是首个未压缩条目"这条
         // 规范（不合规的 epub 不少），内容判据只作为兜底（见 preview_kind_for）
-        "application/epub+zip" => Some(PreviewKind::Book),
-        _ => None,
+        PreviewStrategy::Book => Some(PreviewKind::Book),
+        PreviewStrategy::None => None,
     }
 }
 

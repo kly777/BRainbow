@@ -5,6 +5,7 @@ export type {
 	ControlTone,
 } from "./atoms/control.ts";
 export { default as Icon, type IconName } from "./atoms/Icon.tsx";
+export { default as InfoHint } from "./atoms/InfoHint.tsx";
 export { default as Input, type InputProps } from "./atoms/Input.tsx";
 export {
 	type LayoutAlign,

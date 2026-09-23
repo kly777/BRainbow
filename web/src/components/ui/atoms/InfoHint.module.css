@@ -1,0 +1,27 @@
+/* InfoHint: 行内的 ⓘ 触发图标（气泡本体在 Tooltip.module.css） */
+
+.trigger {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.125rem;
+	height: 1.125rem;
+	padding: 0;
+
+	/* 用 border 占位而不是 transparent 边框色：forced-colors 下仍能看出是个可点目标 */
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-full);
+	background: transparent;
+	color: var(--t-color-ink-faint);
+	cursor: help;
+	vertical-align: middle;
+	transition:
+		color var(--t-transition-fast),
+		border-color var(--t-transition-fast);
+}
+
+.trigger:hover,
+.trigger:focus-visible {
+	color: var(--t-color-ink);
+	border-color: var(--t-color-ink-faint);
+}

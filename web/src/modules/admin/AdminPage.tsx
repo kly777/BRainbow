@@ -1,7 +1,7 @@
 // ── 管理员设置页：开放注册开关 / JWT 密钥状态与轮换 / 系统信息 ──
 
 import { useAuth } from "@app/context/auth.tsx";
-import { Button, ErrorRetry, PageHead } from "@components/ui";
+import { Button, ErrorRetry, InfoHint, PageHead } from "@components/ui";
 import {
 	notifyError,
 	notifySuccess,
@@ -214,12 +214,15 @@ export default function AdminPage() {
 					{(info) => (
 						<section class={styles.card}>
 							<div class={styles.cardHead}>
-								<div>
+								<div class={styles.cardTitleRow}>
 									<h2 class={styles.cardTitle}>服务器</h2>
-									<p class={styles.desc}>
-										数据、上传与备份都在同一块盘上；"—"表示这一项读不到
-										（后端跑在非 Linux 上，或没有配置备份目录）。
-									</p>
+									<InfoHint label="关于服务器信息">
+										数据、上传与备份都在同一块盘上（所以磁盘那一格就是数据盘的用量）。
+										<br />
+										"—"表示这一项读不到：内存、负载与磁盘读的是 Linux 的 /proc
+										与
+										statvfs，后端跑在别的系统上就没有这几项；备份目录没配置时同理。
+									</InfoHint>
 								</div>
 							</div>
 							<div class={styles.infoGrid}>
@@ -265,7 +268,18 @@ export default function AdminPage() {
 									</Show>
 								</div>
 								<div class={styles.infoItem}>
-									<span class={styles.infoLabel}>备份</span>
+									<span class={styles.infoLabelRow}>
+										<span class={styles.infoLabel}>备份</span>
+										<InfoHint label="关于备份统计">
+											部署时自动往备份目录里写数据库快照与代码归档（每类各留 30
+											天 / 20 份）， 应用只读这个目录来报数。
+											<br />
+											没有配置备份目录时这里是"—"（开发机正常如此）：默认按根目录约定取{" "}
+											<code>{"{根}"}/backup</code>，也可以用{" "}
+											<code>BACKUP_DIR</code>
+											显式指定。
+										</InfoHint>
+									</span>
 									<span class={styles.infoValue}>
 										{formatBackupUsage(info().server.backups)}
 									</span>
@@ -298,14 +312,9 @@ export default function AdminPage() {
 									</span>
 								</div>
 							</div>
+							{/* 备份目录路径是"状态"，留着；怎么配、为什么是"—"收进上面的 ⓘ */}
 							<Show when={info().server.backup_dir}>
 								{(dir) => <p class={styles.hint}>备份目录：{dir()}</p>}
-							</Show>
-							<Show when={!info().server.backup_dir}>
-								<p class={styles.hint}>
-									没有配置备份目录（开发机正常如此）：设 `BACKUP_DIR`
-									或按根目录约定放在 `{"{根}"}/backup` 下即可看到备份统计。
-								</p>
 							</Show>
 						</section>
 					)}
@@ -323,11 +332,12 @@ export default function AdminPage() {
 								<div class={styles.sections}>
 									<section class={styles.card}>
 										<div class={styles.cardHead}>
-											<div>
+											<div class={styles.cardTitleRow}>
 												<h2>开放注册</h2>
-												<p class={styles.desc}>
-													控制新用户能否自行注册账号。公网部署建议保持关闭。
-												</p>
+												<InfoHint label="关于开放注册">
+													控制新用户能否自行注册账号。公网部署建议保持关闭 ——
+													这台机器只给自己用时，没有理由留着注册入口。
+												</InfoHint>
 											</div>
 											<button
 												type="button"
@@ -359,18 +369,20 @@ export default function AdminPage() {
 														: "未持久化（环境变量或随机密钥，重启后会话失效）"}
 												</p>
 											</div>
-											<Button
-												variant="danger"
-												size="sm"
-												disabled={rotating()}
-												onClick={() => void handleRotate()}
-											>
-												{rotating() ? "轮换中…" : "轮换密钥"}
-											</Button>
+											<div class={styles.cardTitleRow}>
+												<Button
+													variant="danger"
+													size="sm"
+													disabled={rotating()}
+													onClick={() => void handleRotate()}
+												>
+													{rotating() ? "轮换中…" : "轮换密钥"}
+												</Button>
+												<InfoHint label="关于轮换密钥">
+													轮换后所有现有登录会话立即失效，需要重新登录。
+												</InfoHint>
+											</div>
 										</div>
-										<p class={styles.hint}>
-											轮换后所有现有登录会话立即失效，需要重新登录。
-										</p>
 									</section>
 								</div>
 							)}

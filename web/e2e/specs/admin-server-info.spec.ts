@@ -126,6 +126,8 @@ test("读不到的项显示 —，而不是 0", async ({ page }) => {
 	// 内存与磁盘两格是"—"
 	await expect(page.getByText("—").first()).toBeVisible();
 	await expect(page.getByText("2.00 GB（20 份）")).toHaveCount(0);
-	// 提示文案要唯一到只匹配那一条（卡片说明里也有"没有配置备份目录"这几个字）
-	await expect(page.getByText(/或按根目录约定放在/)).toBeVisible();
+	// "为什么是 —、怎么配"这类说明收进了 ⓘ 气泡：悬浮才出现（键盘用户 Tab 也行）
+	await expect(page.getByRole("tooltip")).toHaveCount(0);
+	await page.getByRole("button", { name: "关于备份统计" }).hover();
+	await expect(page.getByRole("tooltip")).toContainText("BACKUP_DIR");
 });

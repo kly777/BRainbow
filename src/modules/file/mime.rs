@@ -22,11 +22,63 @@
 
 use crate::shared::error_types::ServiceError;
 
-/// 文件头是否确实是 SVG 根元素（用于文本类 MIME 的内容确认）
+/// 文件头是否**以 `<svg` 作为根元素**（用于文本类 MIME 的内容确认）。
+///
+/// 判据必须是"结构"而不是"出现过"：早先这里是 `contains("<svg")`，扫的还是上传时的
+/// 第一个 multipart 块（几 KB）—— 于是任何 HTML 只要前几 KB 里有个内联 `<svg>`
+/// 图标（现代网页的常态，SingleFile 保存的页面更是整页塞一个文件）就被判成
+/// `image/svg+xml`，连扩展名给的 `text/html` 都被它覆盖掉（真实事故：一篇保存的
+/// 博客文章在库里是 image/svg+xml，缩略图与预览全坏）。
+///
+/// 现在的规则：跳过 BOM、前导空白、XML 声明、DOCTYPE、注释与其它处理指令之后，
+/// 内容必须**以 `<svg` 开头**，且后面跟空白、`>` 或 `/`（排除 `<svgfoo>` 这类
+/// 其它语言里恰好以 svg 开头的元素名）。出现在中间的 `<svg` 一律不算。
+///
+/// 跳过的是"XML 文档允许的序言"，不是"任意前缀"：跳过之后的位置必须就是根元素，
+/// 所以只在这里出现 `<svg` 的 HTML、RSS、SVG 里嵌套的 SVG 都不会被误判。
 fn looks_like_svg(head: &[u8]) -> bool {
-    String::from_utf8_lossy(head)
-        .to_lowercase()
-        .contains("<svg")
+    let text = String::from_utf8_lossy(head);
+    let mut rest = text.as_ref();
+
+    // UTF-8 BOM
+    if let Some(stripped) = rest.strip_prefix('\u{feff}') {
+        rest = stripped;
+    }
+
+    loop {
+        rest = rest.trim_start();
+        if rest.starts_with("<?") {
+            // 处理指令（`<?xml version="1.0"?>` 等）：跳到 `?>`
+            match rest.find("?>") {
+                Some(end) => rest = &rest[end + 2..],
+                // 还没读到结尾（首块被截断）：无法确认，按"不是 SVG"处理
+                None => return false,
+            }
+        } else if rest.starts_with("<!--") {
+            // 注释：跳到 `-->`；SingleFile 保存的页面开头正好是这种注释
+            match rest.find("-->") {
+                Some(end) => rest = &rest[end + 3..],
+                None => return false,
+            }
+        } else if rest.len() >= 9 && rest[..9].eq_ignore_ascii_case("<!doctype") {
+            // DOCTYPE（SVG 也允许带）：跳到 `>`
+            match rest.find('>') {
+                Some(end) => rest = &rest[end + 1..],
+                None => return false,
+            }
+        } else {
+            break;
+        }
+    }
+
+    let lower = rest.to_ascii_lowercase();
+    match lower.strip_prefix("<svg") {
+        Some(after) => after
+            .chars()
+            .next()
+            .is_none_or(|next| next.is_whitespace() || next == '>' || next == '/'),
+        None => false,
+    }
 }
 
 /// 非文本控制字符的容忍比例：超过 1/20（5%）就不当文本
@@ -928,6 +980,83 @@ mod tests {
             resolve_mime(ZIP_MIN, "application/vnd.oasis.opendocument.text", "a.odt").unwrap(),
             "application/zip"
         );
+    }
+
+    /// 回归：HTML 里带内联 SVG（`<svg` 出现在头部中间）**不能**被判成 SVG。
+    ///
+    /// 真实事故：SingleFile 保存的博客文章（`<!DOCTYPE html>` 开头，第 5509 字节处
+    /// 一个内联图标 `<svg`）被存成 `image/svg+xml`——因为老判据是"头部里出现过
+    /// `<svg`"，扫的还是上传时的第一个 multipart 块。缩略图与预览全坏。
+    #[test]
+    fn html_with_inline_svg_stays_html() {
+        // 形状照搬那个文件：DOCTYPE → 注释（SingleFile 的保存信息）→ 一段填充 → 内联 <svg>
+        let mut head = String::from(
+            "<!DOCTYPE html> <html><!--\n Page saved with SingleFile \n--><meta charset=utf-8>\n",
+        );
+        head.push_str(&"<div>filler</div>".repeat(400)); // 约 6KB，把 <svg 推到中间
+        head.push_str("<svg xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0\"/></svg>");
+
+        assert_eq!(
+            resolve_mime(
+                head.as_bytes(),
+                "text/html",
+                "Handles are the better pointers.html"
+            )
+            .unwrap(),
+            "text/html",
+            "HTML 里的内联 <svg 不该把它变成 SVG"
+        );
+        // 没有扩展名时也不该变成 SVG（内容根元素是 <html>）
+        assert_eq!(
+            resolve_mime(head.as_bytes(), "text/html", "saved-page").unwrap(),
+            "text/plain"
+        );
+    }
+
+    /// 真正以 `<svg` 为根元素的 XML 文档（含各种合法序言）仍然认作 SVG。
+    #[test]
+    fn svg_root_element_is_detected_through_its_prolog() {
+        for (name, head) in [
+            ("icon.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"/>"),
+            (
+                "icon.svg",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\"/>",
+            ),
+            (
+                "icon.svg",
+                "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n<svg/>",
+            ),
+            ("icon.svg", "\n\n\t  <svg width=\"10\"/>"),
+            ("icon.svg", "<!-- 生成于 Illustrator -->\n<svg/>"),
+            ("icon.svg", "<SVG xmlns=\"http://www.w3.org/2000/svg\"/>"),
+            // 头被截断（XML 声明没读完）：无法确认就按"不是"处理，不冒险
+            // （这一条单独在下面断言，因为它期望 false）
+        ] {
+            assert_eq!(
+                resolve_mime(head.as_bytes(), "", name).unwrap(),
+                "image/svg+xml",
+                "应当认作 SVG：{head:?}"
+            );
+        }
+    }
+
+    /// 只是"出现过 `<svg`"的组合都不算 SVG。
+    #[test]
+    fn svg_lookalikes_are_not_svg() {
+        for head in [
+            // 元素名恰好以 svg 开头
+            "<svgfoo>text</svgfoo>",
+            // 普通文本里提到 svg
+            "some notes about <svg> tags\n",
+            // 根元素是别的，svg 在中间
+            "<rss version=\"2.0\"><item><svg/></item></rss>",
+            // XML 声明没读完（首块被截断）
+            "<?xml version=\"1.0\"",
+            // 注释没读完
+            "<!-- 还没结束 <svg/>",
+        ] {
+            assert!(!looks_like_svg(head.as_bytes()), "不该认作 SVG：{head:?}");
+        }
     }
 
     #[test]

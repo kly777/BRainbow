@@ -162,6 +162,11 @@ impl FileService {
                 .map_err(ServiceError::Db)?
         {
             let _ = tokio::fs::remove_file(tmp_path).await;
+            // 顺手纠正类型：类型判定逻辑改过之后（例如 SVG 判据从"出现过 <svg"
+            // 收紧成"根元素是 <svg"），内容没变、判定却该变 —— 而去重会让"重传
+            // 一遍"这个最自然的修法失效（只回旧记录，类型错着不动）。内容一致
+            // 是去重的前提，所以这次的判定就是这份内容该有的答案。
+            let existing = self.reconcile_mime(existing, final_mime).await?;
             return self.duplicate_outcome(existing).await;
         }
 
@@ -338,6 +343,40 @@ impl FileService {
             .set_duration_ms_if_null(stored_id, duration_ms)
             .await
             .map_err(ServiceError::Db)
+    }
+
+    /// 命中去重时按**这次**的判定纠正旧记录的类型（不同才写库）。
+    ///
+    /// 只在真的不一致时落库：绝大多数重传的类型没变，不该产生无谓的写入。
+    async fn reconcile_mime(
+        &self,
+        mut row: crate::modules::file::repository::FileRow,
+        fresh_mime: &str,
+    ) -> Result<crate::modules::file::repository::FileRow, ServiceError> {
+        if row.mime_type == fresh_mime {
+            return Ok(row);
+        }
+        tracing::info!(
+            "重传命中去重，类型按当前判定纠正：{} {} → {}",
+            row.stored_id,
+            row.mime_type,
+            fresh_mime
+        );
+        self.repo
+            .update_mime(&row.stored_id, fresh_mime)
+            .await
+            .map_err(ServiceError::Db)?;
+        // category 是生成列，重新查一次拿纠正后的值
+        let stored_id = row.stored_id.clone();
+        row.mime_type = fresh_mime.to_string();
+        row.file_category = self
+            .repo
+            .find_by_stored_id(&stored_id)
+            .await
+            .map_err(ServiceError::Db)?
+            .map(|fresh| fresh.file_category)
+            .unwrap_or(row.file_category);
+        Ok(row)
     }
 
     /// 由已有记录组装"命中去重"结果（含标签与元信息）
@@ -1378,6 +1417,69 @@ mod tests {
     }
 
     // ── 内容去重 ──
+
+    /// 重传命中内容去重时，按**当前**判定纠正旧记录的类型。
+    ///
+    /// 场景：类型判定逻辑修好之后（例如 SVG 判据从"头部出现过 `<svg`"收紧成
+    /// "根元素是 `<svg`"），旧记录还带着错的 mime；而内容去重会挡住"重传一遍"
+    /// 这个最自然的修法 —— 于是顺手纠正：内容一致是去重的前提，这次判定就是
+    /// 这份内容该有的答案。
+    #[tokio::test]
+    async fn duplicate_upload_reconciles_a_stale_mime() {
+        let ctx = setup_service().await;
+        // 一份"HTML 里带内联 svg"的内容：按当前判定是 text/html
+        let html = b"<!DOCTYPE html><html><body><svg><rect/></svg></body></html>".as_slice();
+        let first = ctx
+            .svc
+            .upload(html, "saved.html", "text/html", Some(7), None, false)
+            .await
+            .unwrap();
+        assert_eq!(first.file.mime_type, "text/html");
+
+        // 造一条"当年被误判"的记录：库里改成 image/svg+xml（生成列 category 跟着走）
+        ctx.svc
+            .repo
+            .update_mime(&first.file.stored_id, "image/svg+xml")
+            .await
+            .unwrap();
+        let stale = ctx
+            .svc
+            .repo
+            .find_by_stored_id(&first.file.stored_id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(stale.file_category, "image");
+
+        // 重传同一份内容 → 命中去重（不新建记录），但类型被纠正回来
+        let again = ctx
+            .svc
+            .upload(html, "saved.html", "text/html", Some(7), None, false)
+            .await
+            .unwrap();
+        assert!(again.duplicate);
+        assert_eq!(again.file.stored_id, first.file.stored_id);
+        assert_eq!(again.file.mime_type, "text/html");
+        assert_eq!(again.file.file_category.as_str(), "document");
+    }
+
+    /// 类型没变的重传不该产生写入（`updated_at` 不该被无谓地动）。
+    #[tokio::test]
+    async fn duplicate_upload_leaves_the_row_alone_when_mime_matches() {
+        let ctx = setup_service().await;
+        let first = ctx
+            .svc
+            .upload(PNG_1X1, "a.png", "image/png", Some(7), None, false)
+            .await
+            .unwrap();
+        let again = ctx
+            .svc
+            .upload(PNG_1X1, "a.png", "image/png", Some(7), None, false)
+            .await
+            .unwrap();
+        assert!(again.duplicate);
+        assert_eq!(again.file.updated_at, first.file.updated_at);
+    }
 
     #[test]
     fn content_hash_is_stable_and_content_sensitive() {

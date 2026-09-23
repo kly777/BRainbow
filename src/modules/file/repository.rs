@@ -247,6 +247,21 @@ impl FileRepository {
         Ok(row)
     }
 
+    /// 纠正文件的 MIME 类型（类型判定逻辑改过之后，让旧记录能跟上）。
+    ///
+    /// **不动 `updated_at`**：这是"按内容重新认定"，不是用户编辑；把它算成一次
+    /// 修改会让"最近更新"这类排序莫名其妙地跳。`category` 是生成列，跟着 mime 走。
+    pub async fn update_mime(&self, stored_id: &str, mime_type: &str) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "UPDATE file SET mime_type = ? WHERE stored_id = ?",
+            mime_type,
+            stored_id
+        )
+        .execute(&*self.db)
+        .await?;
+        Ok(())
+    }
+
     /// 切换文件公开 / 私密（权限在 service 层校验）
     pub async fn update_visibility(
         &self,

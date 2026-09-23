@@ -220,7 +220,11 @@ const ImageLightbox: Component<Props> = (props) => {
 
 	createEffect(() => {
 		void props.index;
-		imgWrapRef.scrollTo({ top: 0, left: 0 });
+		// 用 scrollTop/scrollLeft 而不是 scrollTo({ top: 0, left: 0 })：语义相同，
+		// 但 jsdom 没有 Element.scrollTo，测试里会抛 "scrollTo is not a function"
+		// 并被记成 unhandled error（同模块的 useListScroll / FindOverlay 都是这个写法）
+		imgWrapRef.scrollTop = 0;
+		imgWrapRef.scrollLeft = 0;
 		// 换图回到适应窗口（每张图的尺寸不同，保留上一张的倍率毫无意义）
 		setScale(MIN_SCALE);
 		setBaseSize(undefined);

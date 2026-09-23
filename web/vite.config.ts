@@ -51,6 +51,9 @@ export default defineConfig(({ command, mode }) => {
 
 		test: {
 			include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+			// jsdom 的缺口在 vitest.setup.ts 里集中补（见该文件顶部说明）：
+			// 不补的话那些抛错会被记成 unhandled error，让整条测试命令永远非零退出
+			setupFiles: ["./vitest.setup.ts"],
 		},
 
 		resolve: {

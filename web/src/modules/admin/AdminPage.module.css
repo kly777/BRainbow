@@ -110,6 +110,13 @@
 	font-variant-numeric: tabular-nums;
 }
 
+/* 数值下面的补充说明（可用空间、负载、最近备份时间这类） */
+.info-hint {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+	font-variant-numeric: tabular-nums;
+}
+
 /* ── 数据统计网格 ── */
 
 .stats-grid {

@@ -258,3 +258,75 @@ fn collect_server_info(paths: &ServerPaths) -> ServerInfo {
         backup_dir: paths.backup_dir.as_ref().map(|p| p.display().to_string()),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+
+    /// 用一棵真实的临时目录树把采集走一遍（真实 /proc、真实 statvfs）：
+    /// 这条盯的是"路径拼对了没有、缺目录时是 None 而不是 0"。
+    #[test]
+    fn collect_server_info_reads_real_paths() {
+        let root = std::env::temp_dir().join(format!("brb-server-info-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("uploads/file/thumbs")).unwrap();
+        std::fs::create_dir_all(root.join("uploads/favicons")).unwrap();
+        std::fs::create_dir_all(root.join("backup")).unwrap();
+        std::fs::write(root.join("uploads/file/a.txt"), vec![0u8; 100]).unwrap();
+        std::fs::write(root.join("uploads/file/thumbs/a.jpg"), vec![0u8; 40]).unwrap();
+        std::fs::write(root.join("uploads/favicons/f.ico"), vec![0u8; 10]).unwrap();
+        std::fs::write(root.join("backup/db_deploy_x.db"), vec![0u8; 500]).unwrap();
+
+        let info = collect_server_info(&ServerPaths {
+            upload_dir: root.join("uploads"),
+            backup_dir: Some(root.join("backup")),
+        });
+
+        assert!(info.cpu_count >= 1);
+        // 上传根整体含缩略图与 favicon；两个"其中"要分别对得上
+        let uploads = info.uploads.as_ref().expect("上传根存在");
+        assert_eq!(uploads.files, 3);
+        assert_eq!(uploads.bytes, 150);
+        assert_eq!(info.thumbs.as_ref().unwrap().files, 1);
+        assert_eq!(info.favicons.as_ref().unwrap().bytes, 10);
+        // 备份：一份就是一个文件
+        let backups = info.backups.as_ref().expect("备份目录存在");
+        assert_eq!(backups.files, 1);
+        assert_eq!(backups.bytes, 500);
+        let expected_dir = root.join("backup").display().to_string();
+        assert_eq!(info.backup_dir.as_deref(), Some(expected_dir.as_str()));
+
+        #[cfg(unix)]
+        {
+            assert!(info.disk.is_some(), "unix 上应当能拿到磁盘用量");
+            assert!(info.memory.is_some(), "Linux 上应当能拿到内存");
+            assert!(info.load.is_some(), "Linux 上应当能拿到负载");
+        }
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// 没有备份目录（开发机的常态）时，那两项都是 None —— 不是 0。
+    #[test]
+    fn collect_server_info_without_backup_dir() {
+        let root = std::env::temp_dir().join(format!("brb-server-nobak-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("uploads")).unwrap();
+
+        let info = collect_server_info(&ServerPaths {
+            upload_dir: root.join("uploads"),
+            backup_dir: None,
+        });
+
+        assert_eq!(info.backups, None);
+        assert_eq!(info.backup_dir, None);
+        // 上传根存在但是空的：0 个文件、0 字节（这与"读不到"不同，前端会显示 0 B）
+        assert_eq!(info.uploads.as_ref().unwrap().files, 0);
+        // 缩略图/favicon 目录不存在 → None
+        assert_eq!(info.thumbs, None);
+        assert_eq!(info.favicons, None);
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+}

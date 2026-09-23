@@ -17,7 +17,15 @@ import {
 	rotateJwtE,
 	updateAdminSettingsE,
 } from "./api.ts";
-import { formatBytes, formatUptime, getStatValue } from "./utils.ts";
+import {
+	formatBackupUsage,
+	formatBytes,
+	formatDirUsage,
+	formatIsoLocal,
+	formatUptime,
+	formatUsage,
+	getStatValue,
+} from "./utils.ts";
 
 const STAT_ITEMS: { key: keyof ModuleStats; label: string; icon: string }[] = [
 	{
@@ -197,6 +205,108 @@ export default function AdminPage() {
 									)}
 								</For>
 							</div>
+						</section>
+					)}
+				</Show>
+
+				{/* ── 服务器卡片：内存 / CPU / 磁盘 / 文件与备份占用（拿不到的显示"—"） ── */}
+				<Show when={systemInfo()}>
+					{(info) => (
+						<section class={styles.card}>
+							<div class={styles.cardHead}>
+								<div>
+									<h2 class={styles.cardTitle}>服务器</h2>
+									<p class={styles.desc}>
+										数据、上传与备份都在同一块盘上；"—"表示这一项读不到
+										（后端跑在非 Linux 上，或没有配置备份目录）。
+									</p>
+								</div>
+							</div>
+							<div class={styles.infoGrid}>
+								<div class={styles.infoItem}>
+									<span class={styles.infoLabel}>内存</span>
+									<span class={styles.infoValue}>
+										<Show when={info().server.memory} fallback="—">
+											{(mem) =>
+												formatUsage(mem().used_bytes, mem().total_bytes)
+											}
+										</Show>
+									</span>
+								</div>
+								<div class={styles.infoItem}>
+									<span class={styles.infoLabel}>CPU</span>
+									<span class={styles.infoValue}>
+										{info().server.cpu_count} 核
+									</span>
+									<span class={styles.infoHint}>
+										负载{" "}
+										<Show when={info().server.load} fallback="—">
+											{(load) =>
+												`${load().one} / ${load().five} / ${load().fifteen}`
+											}
+										</Show>
+									</span>
+								</div>
+								<div class={styles.infoItem}>
+									<span class={styles.infoLabel}>磁盘</span>
+									<span class={styles.infoValue}>
+										<Show when={info().server.disk} fallback="—">
+											{(disk) =>
+												formatUsage(disk().used_bytes, disk().total_bytes)
+											}
+										</Show>
+									</span>
+									<Show when={info().server.disk}>
+										{(disk) => (
+											<span class={styles.infoHint}>
+												可用 {formatBytes(disk().free_bytes)}
+											</span>
+										)}
+									</Show>
+								</div>
+								<div class={styles.infoItem}>
+									<span class={styles.infoLabel}>备份</span>
+									<span class={styles.infoValue}>
+										{formatBackupUsage(info().server.backups)}
+									</span>
+									<span class={styles.infoHint}>
+										最近{" "}
+										{formatIsoLocal(
+											info().server.backups?.newest_modified ?? null,
+										)}
+									</span>
+								</div>
+								<div class={styles.infoItem}>
+									<span class={styles.infoLabel}>上传文件</span>
+									<span class={styles.infoValue}>
+										{formatDirUsage(info().server.uploads)}
+									</span>
+									<span class={styles.infoHint}>
+										缩略图缓存 {formatDirUsage(info().server.thumbs)} · favicon{" "}
+										{formatDirUsage(info().server.favicons)}
+									</span>
+								</div>
+								<div class={styles.infoItem}>
+									<span class={styles.infoLabel}>数据库文件</span>
+									<span class={styles.infoValue}>
+										{formatBytes(info().db_size_bytes)}
+									</span>
+									<span class={styles.infoHint}>
+										Schema v{info().db_version} ·{" "}
+										{info().db_page_count.toLocaleString()} 页 ×{" "}
+										{info().db_page_size} B
+									</span>
+								</div>
+							</div>
+							<Show when={info().server.backup_dir}>
+								{(dir) => <p class={styles.hint}>备份目录：{dir()}</p>}
+							</Show>
+							<Show when={!info().server.backup_dir}>
+								<p class={styles.hint}>
+									没有配置备份目录（开发机正常如此）：设 `BACKUP_DIR`
+									或按根目录约定放在 `{"{根}"}/backup` 下即可看到备份统计。
+								</p>
+							</Show>
 						</section>
 					)}
 				</Show>

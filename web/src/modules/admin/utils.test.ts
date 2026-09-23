@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
-import type { ModuleStats } from "./api.ts";
-import { formatBytes, formatUptime, getStatValue } from "./utils.ts";
+import type { DirUsage, ModuleStats } from "./api.ts";
+import {
+	formatBackupUsage,
+	formatBytes,
+	formatDirUsage,
+	formatIsoLocal,
+	formatUptime,
+	formatUsage,
+	getStatValue,
+	usagePercent,
+} from "./utils.ts";
 
 describe("formatUptime", () => {
 	it("秒", () => {
@@ -74,5 +83,45 @@ describe("getStatValue", () => {
 	it("返回0值", () => {
 		const empty = { ...stats, users: 0 };
 		expect(getStatValue(empty, "users")).toBe(0);
+	});
+});
+
+describe("服务器用量文案", () => {
+	const usage: DirUsage = {
+		files: 35,
+		bytes: 1073741824,
+		newest_modified: "2026-09-23T12:45:20+00:00",
+	};
+
+	it("percentage 取整；分母非正时是 null（不是 0%）", () => {
+		expect(usagePercent(50, 100)).toBe(50);
+		expect(usagePercent(1, 3)).toBe(33);
+		expect(usagePercent(4, 4)).toBe(100);
+		expect(usagePercent(0, 0)).toBeNull();
+		expect(usagePercent(5, 0)).toBeNull();
+	});
+
+	it("内存/磁盘：分子 / 分母（百分比）", () => {
+		expect(formatUsage(1073741824, 2147483648)).toBe(
+			"1.00 GB / 2.00 GB（50%）",
+		);
+		// 总量读不到时只报绝对量，不硬凑百分比
+		expect(formatUsage(1073741824, 0)).toBe("1.00 GB / 0 B");
+	});
+
+	it("目录占用：拿不到就是 —（不是 0 B）", () => {
+		expect(formatDirUsage(usage)).toBe("1.00 GB（35 个文件）");
+		expect(formatDirUsage(null)).toBe("—");
+		expect(formatBackupUsage(usage)).toBe("1.00 GB（35 份）");
+		expect(formatBackupUsage(null)).toBe("—");
+	});
+
+	it("ISO 时间补 Z 后按本地时区显示；拿不到就是 —", () => {
+		const text = formatIsoLocal("2026-09-23T12:45:20+00:00");
+		expect(text).not.toBe("—");
+		expect(text).toContain("2026");
+		expect(formatIsoLocal(null)).toBe("—");
+		// 认不出来的原样返回，别显示 Invalid Date
+		expect(formatIsoLocal("不是时间")).toBe("不是时间");
 	});
 });

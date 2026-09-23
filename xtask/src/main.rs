@@ -144,6 +144,12 @@ enum Command {
     },
     /// 前端测试
     TestWeb,
+    /// 页面级冒烟（Playwright，真浏览器；接口在浏览器层造假，不需要后端）
+    E2e {
+        /// 透传给 `playwright test` 的参数（如 `-g 关键字`、`--ui`）
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
     /// 刷新 .sqlx 离线数据（SQL/schema 变更后必跑）
     SqlxPrepare,
     /// 用本地开发库跑一次只读自检（`brainbow --check`）
@@ -205,6 +211,7 @@ fn run(cli: Cli) -> Result<()> {
         Command::Lint => devel::run_lint(&cfg),
         Command::Test { verbose } => devel::run_test(&cfg, verbose),
         Command::TestWeb => devel::run_test_web(&cfg),
+        Command::E2e { args } => devel::run_e2e(&cfg, &args),
         Command::SqlxPrepare => devel::run_sqlx_prepare(&cfg),
         Command::CheckBackend => devel::run_check_backend(&cfg),
         Command::Clean { all } => devel::run_clean(&cfg, all),

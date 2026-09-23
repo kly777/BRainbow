@@ -25,5 +25,13 @@
 			"@config/*": ["./src/config/*"]
 		}
 	},
-	"include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts", "vite-env.d.ts"]
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.tsx",
+		"scripts/**/*.ts",
+		"e2e/**/*.ts",
+		"playwright.config.ts",
+		"vitest.setup.ts",
+		"vite-env.d.ts"
+	]
 }

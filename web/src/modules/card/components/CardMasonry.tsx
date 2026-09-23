@@ -73,6 +73,8 @@ const CardMasonry: Component<CardMasonryProps> = (props) => {
 		>
 			<div
 				ref={scrollRef}
+				// e2e 断言"能横向滚动"（scrollWidth > clientWidth）时用它定位
+				data-testid="card-masonry"
 				class={styles.cardsGrid}
 				onScroll={handleScroll}
 				onWheel={handleWheel}

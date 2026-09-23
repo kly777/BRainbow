@@ -64,6 +64,10 @@ test-verbose *args:
 test-web *args:
 	@cargo xtask test-web {{args}}
 
+# 页面级冒烟（Playwright，真浏览器）：只起前端 + 接口造假，几秒钟跑完
+e2e *args:
+	@cargo xtask e2e {{args}}
+
 # 用本地开发库跑一次只读自检（brainbow --check）
 check-backend *args:
 	@cargo xtask check-backend {{args}}

@@ -8,7 +8,7 @@
 //! Makefile 的 `rm -f` + `cargo test` + `DATABASE_URL=… cargo sqlx prepare`
 //! 三连更清楚。
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::config::Config;
 use crate::error::{Error, Result};
@@ -75,6 +75,46 @@ pub fn run_test_web(cfg: &Config) -> Result<()> {
         .args(&["run", "test"])
         .cwd(cfg.web_dir())
         .run()
+}
+
+/// `e2e`：页面级冒烟（Playwright，真浏览器）。
+///
+/// 只起前端 dev server、接口在浏览器层造假（见 `web/playwright.config.ts`）——
+/// 不依赖后端编译、不依赖库里的数据、也不往 dev 库里写东西。
+/// 它测的是"页面自己有没有坏"（元素在不在、点得动吗、条数对不对）。
+pub fn run_e2e(cfg: &Config, args: &[String]) -> Result<()> {
+    if !playwright_browser_present() {
+        ui::warn(
+            "找不到 Playwright 的浏览器缓存 —— 先跑：\
+             pnpm --dir web exec playwright install chromium",
+        );
+    }
+    let extra: Vec<&str> = args.iter().map(String::as_str).collect();
+    match Cmd::new("pnpm")
+        .args(&["exec", "playwright", "test"])
+        .args(&extra)
+        .cwd(cfg.web_dir())
+        .run()
+    {
+        Ok(()) => Ok(()),
+        Err(e) => Err(Error::msg(format!(
+            "{e}\n若上面报 \"Executable doesn't exist\"，就是浏览器没装：\n  \
+             pnpm --dir web exec playwright install chromium"
+        ))),
+    }
+}
+
+/// Playwright 的浏览器缓存目录里有没有东西。
+///
+/// 只判"有没有"，不校验 revision：版本对不上时 Playwright 自己会要求重装，
+/// 这里负责的是把"完全没装"提前说清楚，省得对着一串路径报错发愣。
+fn playwright_browser_present() -> bool {
+    let Some(home) = std::env::var_os("HOME") else {
+        return true;
+    };
+    std::fs::read_dir(PathBuf::from(home).join(".cache/ms-playwright"))
+        .map(|mut entries| entries.next().is_some())
+        .unwrap_or(false)
 }
 
 /// `sqlx-prepare`：刷新 `.sqlx/` 离线数据。

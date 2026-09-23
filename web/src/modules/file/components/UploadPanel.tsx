@@ -26,7 +26,8 @@ const UploadPanel: Component<{
 
 	return (
 		<Show when={props.tasks().length > 0}>
-			<div class={styles.uploadPanel}>
+			{/* e2e 用它把断言限定在面板内：文件名在列表里也会出现，全局找会撞上两个 */}
+			<div class={styles.uploadPanel} data-testid="upload-panel">
 				<div class={styles.uploadPanelHead}>
 					<span>上传（{props.tasks().length}）</span>
 					<Button variant="icon" title="收起" onClick={props.onClose}>

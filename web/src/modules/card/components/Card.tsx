@@ -73,6 +73,9 @@ const Card: Component<CardProps> = (props) => {
 
 	return (
 		<div
+			// e2e 用它数"列表里到底渲染了几张卡"：类名是 CSS Modules 的哈希，
+			// dev 与构建产物不一致，只有 data-testid 是跨环境稳定的锚点
+			data-testid="card"
 			classList={{ [styles.card]: true, [styles.deleting]: props.isDeleting }}
 		>
 			<div class={styles.cardContent}>

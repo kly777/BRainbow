@@ -37,6 +37,13 @@ pub struct Config {
     /// 实际用哪个路径由 [`resolve_ffmpeg`] 决定（还会看应用自带的 `bin/ffmpeg`）。
     /// 它只用于"给视频出海报帧"，缺了就永久降级为后缀徽章，不影响其他功能。
     pub ffmpeg_path: Option<PathBuf>,
+
+    /// 备份目录（`BACKUP_DIR`，默认按根目录约定取 `{root}/backup`），可空。
+    ///
+    /// 备份是**部署工具**写的（xtask 的 `backup_dir`），应用只读它来报"备份有多少份、
+    /// 占多大"（/admin 的服务器信息）。开发环境没有这个概念，所以是 `Option`：
+    /// 没有就报"未配置"，不要编一个路径出来。
+    pub backup_dir: Option<PathBuf>,
 }
 
 impl Config {
@@ -135,6 +142,13 @@ impl Config {
                 .unwrap_or_else(|| PathBuf::from("uploads")),
 
             ffmpeg_path: vars("FFMPEG_PATH").ok().map(PathBuf::from),
+
+            // 备份目录与数据/上传同一套级联（显式 > 根目录约定），但没有开发默认：
+            // 开发机上没人为你建备份，编一个 `backup` 只会指向一个不存在的地方。
+            backup_dir: vars("BACKUP_DIR")
+                .map(PathBuf::from)
+                .ok()
+                .or_else(|| under_root("backup")),
         }
     }
 }
@@ -226,6 +240,26 @@ mod tests {
         assert_eq!(cfg.database_url, "sqlite:/opt/brb/data/brainbow.db");
         assert_eq!(cfg.upload_dir, PathBuf::from("/opt/brb/data/uploads"));
         assert_eq!(cfg.file_upload_dir(), "/opt/brb/data/uploads/file");
+        // 备份在 `{root}/backup`（部署工具往那儿写，应用只读来报大小）
+        assert_eq!(cfg.backup_dir, Some(PathBuf::from("/opt/brb/backup")));
+    }
+
+    #[test]
+    fn backup_dir_has_no_dev_default() {
+        // 开发机上没有备份目录：宁可是 None（前端显示"未配置"），
+        // 也不要编一个相对路径出来 —— 那会让人以为备份真的在那儿
+        let cfg = Config::from_vars(vars_with(&[]));
+        assert_eq!(cfg.backup_dir, None);
+    }
+
+    #[test]
+    fn explicit_backup_dir_wins() {
+        let vars = vars_with(&[
+            ("BRAINBOW_ROOT", "/opt/brb"),
+            ("BACKUP_DIR", "/mnt/offsite/backup"),
+        ]);
+        let cfg = Config::from_vars(vars);
+        assert_eq!(cfg.backup_dir, Some(PathBuf::from("/mnt/offsite/backup")));
     }
 
     #[test]

@@ -5,8 +5,10 @@
 // FileService / 数据库无关，所以单列一个文件。
 //
 // 与安全策略的关系（见 doc/file-service.md §4.1）：所有响应都带 `nosniff`；
-// 内联只放行 image/* video/* audio/* 与 PDF，其余一律 attachment —— HTML 与 SVG
-// 是"能以文本形式执行脚本"的两类，必须强制下载。
+// 内联只放行图片 / 音视频 / PDF，其余一律 attachment（判据在 `kind.rs` 的 `inline`
+// 列）—— HTML 与 SVG 是"能以文本形式执行脚本"的两类，必须强制下载。
+
+use super::kind::{self, InlinePolicy};
 
 /// 清理文件名（客户端可控输入，不得原样进响应头/展示层）：
 /// - 过滤控制字符（含 `\r\n`：进入 `Content-Disposition` 会让响应头构造失败）
@@ -70,20 +72,13 @@ pub fn content_disposition(kind: &str, filename: &str) -> String {
     )
 }
 
-/// 判断是否需要强制下载（防 XSS）
-pub fn should_force_download(mime: &str) -> bool {
-    matches!(
-        mime,
-        "text/html" | "image/svg+xml" | "application/xhtml+xml"
-    )
-}
-
-/// 判断是否可内联预览
+/// 内容能不能作为子资源 / 同源 iframe 内联。
+///
+/// 判据在 [`kind`] 表里（`inline` 列）。两种"不能内联"的原因共用一个结果：
+/// 危险的（HTML / SVG / XHTML 会执行脚本）与本来就不该内联的（文本、Office、
+/// 未知格式）—— 响应都是 `attachment`，调用方不需要区分。
 pub fn can_inline(mime: &str) -> bool {
-    mime.starts_with("image/")
-        || mime.starts_with("video/")
-        || mime.starts_with("audio/")
-        || mime == "application/pdf"
+    matches!(kind::kind_of(mime).inline, InlinePolicy::Inline)
 }
 
 #[cfg(test)]
@@ -166,11 +161,11 @@ mod tests {
     }
 
     #[test]
-    fn html_and_svg_are_forced_to_download() {
-        assert!(should_force_download("text/html"));
-        assert!(should_force_download("image/svg+xml"));
-        assert!(!should_force_download("application/pdf"));
-        assert!(!should_force_download("image/png"));
+    fn html_and_svg_are_not_inlinable() {
+        assert!(!can_inline("text/html"));
+        assert!(!can_inline("image/svg+xml"));
+        assert!(can_inline("application/pdf"));
+        assert!(can_inline("image/png"));
     }
 
     #[test]
@@ -181,6 +176,9 @@ mod tests {
         assert!(can_inline("application/pdf"));
         assert!(!can_inline("text/html"));
         assert!(!can_inline("application/msword"));
+        // 白名单外的图片/音视频仍可内联（家族模式那一行）
+        assert!(can_inline("image/avif"));
+        assert!(can_inline("audio/opus"));
     }
 
     /// SVG 跨了三个地方：判定在 `mime.rs`、类别在 `model.rs`、上限在 `limits.rs`，
@@ -192,10 +190,9 @@ mod tests {
 
         assert_eq!(FileCategory::from_mime("image/svg+xml").as_str(), "image");
         assert_eq!(limits::limit_of("image/svg+xml"), limits::SVG_MAX_SIZE);
-        assert!(should_force_download("image/svg+xml"));
         assert!(
-            !(can_inline("image/svg+xml") && !should_force_download("image/svg+xml")),
-            "SVG 不得走 inline 分支"
+            !can_inline("image/svg+xml"),
+            "SVG 不得走 inline 分支（它是能执行脚本的文本）"
         );
     }
 }

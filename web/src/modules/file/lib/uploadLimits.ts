@@ -43,7 +43,7 @@ export const UPLOAD_TIERS = {
 
 export type TierKey = keyof typeof UPLOAD_TIERS;
 
-/** 白名单 MIME → 档位。表外一律 other（与后端 `find_allowed` 的兜底一致） */
+/** 已知 MIME → 档位。表外一律 other（与后端 `kind.rs` 的兜底行一致） */
 export const MIME_TIER: Record<string, TierKey> = {
 	// 图片
 	"image/png": "image",
@@ -80,6 +80,8 @@ export const MIME_TIER: Record<string, TierKey> = {
 		"document",
 	"application/vnd.openxmlformats-officedocument.presentationml.presentation":
 		"document",
+	// epub 不在文件服务的类别规则里（后端归"其他"档 = 4GB），但服务端按书解析它
+	"application/epub+zip": "other",
 };
 
 /**

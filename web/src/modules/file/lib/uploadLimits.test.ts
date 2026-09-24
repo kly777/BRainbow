@@ -159,20 +159,43 @@ function backendConst(name: string): number {
 	return expr.split("+").reduce((acc, term) => acc + product(term), 0);
 }
 
-/** 后端 ALLOWED_MIMES 表里的 (mime, 上限常量名) 对 */
+/** 后端类型 → 档的映射在 `kind.rs` 的 KINDS 表（2026-09 从 limits.rs 搬过去） */
+function kindSource(): string {
+	const path = ["../src/modules/file/kind.rs", "src/modules/file/kind.rs"]
+		.map((p) => resolve(process.cwd(), p))
+		.find(existsSync);
+	if (!path) {
+		throw new Error(
+			`找不到后端 src/modules/file/kind.rs（cwd=${process.cwd()}），镜像校验无法进行`,
+		);
+	}
+	return readFileSync(path, "utf8");
+}
+
+/** 后端上限档的枚举名 → 常量名（常量在 limits.rs，档在 kind.rs） */
+const TIER_CONST: Record<string, string> = {
+	Image: "IMAGE_MAX_SIZE",
+	Svg: "SVG_MAX_SIZE",
+	Audio: "AUDIO_MAX_SIZE",
+	Document: "DOCUMENT_MAX_SIZE",
+	Fallback: "FALLBACK_MAX_SIZE",
+};
+
+/** 后端 kind.rs 的 KINDS 表里的 (mime, 上限常量名) 对（只取精确行，家族模式不算） */
 function backendMimeConsts(): Array<{ mime: string; constName: string }> {
-	const source = backendSource();
-	const start = source.indexOf("const ALLOWED_MIMES");
+	const source = kindSource();
+	const start = source.indexOf("const KINDS");
 	const end = source.indexOf("];", start);
-	if (start < 0 || end < 0)
-		throw new Error("后端 limits.rs 里找不到 ALLOWED_MIMES 表");
+	if (start < 0 || end < 0) throw new Error("后端 kind.rs 里找不到 KINDS 表");
 	const table = source.slice(start, end);
-	// 多行元组（超长 MIME）rustfmt 会在末项后留逗号，故 `,?`
-	return [
-		...table.matchAll(
-			/\(\s*"([^"]+)"\s*,\s*"[a-z]+"\s*,\s*([A-Z_]+)\s*,?\s*\)/g,
-		),
-	].map((m) => ({ mime: m[1], constName: m[2] }));
+	return [...table.matchAll(/kind\(\s*"([^"]+)"\s*,\s*(\w+)\s*,/g)]
+		.filter((m) => !m[1].endsWith("*"))
+		.map((m) => {
+			const constName = TIER_CONST[m[2]];
+			if (!constName)
+				throw new Error(`kind.rs 里出现了没见过的上限档：${m[2]}（${m[1]}）`);
+			return { mime: m[1], constName };
+		});
 }
 
 describe("与后端分档一致", () => {
@@ -194,8 +217,10 @@ describe("与后端分档一致", () => {
 
 	it("白名单 MIME 与后端表双向一致（不漏也不多）", () => {
 		const rows = backendMimeConsts();
-		// 先钉住解析器本身没解析歪：白名单现有 27 条（加了 pptx），漏读会让下面的比对空转
-		expect(rows.length).toBe(27);
+		// 先钉住解析器本身没解析歪：后端 kind.rs 的精确行现有 28 条
+		// （文件服务白名单 27 条 + epub —— epub 只按书预览，类别归"其他"），
+		// 漏读会让下面的比对空转
+		expect(rows.length).toBe(28);
 		for (const { mime, constName } of rows) {
 			const tierKey = MIME_TIER[mime];
 			expect(tierKey, `前端缺 ${mime} 的档位`).toBeDefined();

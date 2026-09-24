@@ -655,10 +655,9 @@ async fn serve_file_content(
             .header(header::CONTENT_LENGTH, (end - start + 1).to_string());
     }
 
-    // 强制下载（HTML/SVG 等防 XSS）；其余可内联的类型给 inline
-    let disposition = if super::content::can_inline(&file.mime_type)
-        && !super::content::should_force_download(&file.mime_type)
-    {
+    // 内联还是强制下载：判据只有一处（kind 表的 inline 列）——
+    // HTML/SVG 这类"能执行脚本的文本"在里面就是 attachment
+    let disposition = if super::content::can_inline(&file.mime_type) {
         "inline"
     } else {
         "attachment"

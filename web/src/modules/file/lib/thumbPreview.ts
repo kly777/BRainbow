@@ -123,10 +123,37 @@ function decodeEntities(text: string): string {
 		.replace(/&amp;/g, "&");
 }
 
+/**
+ * 丢掉 Range 窗口截断处读不完整的东西。
+ *
+ * ① 开了没闭合的 `<style>`/`<script>`/`<title>`：正则配不到闭合标签，里面的 CSS/JS
+ *    会被当成正文读出来。真实事故：保存页里 Emotion 注入的 `<style data-emotion=…>`
+ *    横跨 4KB 窗口边界，卡片缩略上出现一长串 `@keyframes animation-xykzx5{…}`。
+ * ② 结尾那半个标签（窗口正好切在 `<meta charset="u` 中间）同样是标记，不该显示。
+ *
+ * 判据是"读不完整"：内容一直延续到窗口外，其后没有可读的文字了，从截断处整段丢掉。
+ */
+function dropTruncatedTail(html: string): string {
+	let cut = html.length;
+	for (const tag of ["style", "script", "title"] as const) {
+		const open = new RegExp(`<${tag}\\b[^>]*>`, "gi");
+		const close = new RegExp(`</${tag}\\s*>`, "i");
+		for (const m of html.matchAll(open)) {
+			const start = m.index ?? 0;
+			if (close.test(html.slice(start + m[0].length))) continue;
+			cut = Math.min(cut, start);
+			break;
+		}
+	}
+	const rest = html.slice(0, cut);
+	const lastOpen = rest.lastIndexOf("<");
+	return rest.lastIndexOf(">") < lastOpen ? rest.slice(0, lastOpen) : rest;
+}
+
 /** docx 的 `html` → 段落文字（够用就好：去掉标签与常见实体，取前几行） */
 export function htmlLines(html: string, lineCount = TEXT_LINES): string[] {
 	const text = decodeEntities(
-		html
+		dropTruncatedTail(html)
 			.replace(/<(script|style)[\s\S]*?<\/\1>/gi, "")
 			.replace(/<br\s*\/?>/gi, "\n")
 			// title/head 也断行：整页 HTML 走这条兜底时，`<title>` 里的文字不该和正文粘一起

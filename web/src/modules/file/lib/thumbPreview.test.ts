@@ -148,6 +148,16 @@ describe("htmlLines", () => {
 		const html = "<style>p{color:red}</style><p>正文</p>";
 		expect(htmlLines(html)).toEqual(["正文"]);
 	});
+
+	it("没有闭合标签的 style 尾巴整段丢掉（内容是被 Range 截断的）", () => {
+		expect(
+			htmlLines("<p>正文</p><style>a{color:red}@keyframes x{to{}}"),
+		).toEqual(["正文"]);
+	});
+
+	it("结尾的半个标签也丢掉（窗口切在标记中间）", () => {
+		expect(htmlLines('<p>正文</p><meta charset="u')).toEqual(["正文"]);
+	});
 });
 
 describe("htmlMetaLines（保存下来的网页要看得出重点）", () => {
@@ -196,6 +206,24 @@ describe("htmlMetaLines（保存下来的网页要看得出重点）", () => {
 	it("实体与换行会被收拾成一行", () => {
 		const html = "<title>甲 &amp; 乙\n   丙</title><p>x</p>";
 		expect(htmlMetaLines(html)[0]).toBe("甲 & 乙 丙");
+	});
+
+	it("窗口边界上被截断的 <style> 不出现在缩略图上（Emotion 注入的那串 @keyframes）", () => {
+		// 真实事故：4KB 的窗口正好切在 `<style data-emotion>` 中间，闭合标签在窗口外，
+		// 于是那一长串 @keyframes 被当成正文显示在卡片上
+		const truncated = `<!DOCTYPE html> <html><!--
+ Page saved with SingleFile 
+ url: https://floooh.github.io/2018/06/17/handles-vs-pointers.html 
+--><meta charset=utf-8>
+<title>Handles are the better pointers</title>
+<meta name=description content="一段描述">
+<style>body{margin:0}</style>
+<style data-emotion=css data-s>@keyframes animation-xykzx5{100%{background-position:200%center}}@keyframes animation-13a8dyy{0%,100%{opacity:1}50%{opacity:0}}@keyframes animation-1vov3o0{0%{text-shadow:rgb(255,255,255) 0px`;
+		expect(htmlMetaLines(truncated)).toEqual([
+			"Handles are the better pointers",
+			"https://floooh.github.io/2018/06/17/handles-vs-pointers.html",
+			"一段描述",
+		]);
 	});
 
 	it("isHtmlFile：认 mime，也认扩展名（浏览器对保存的页面可能报空）", () => {

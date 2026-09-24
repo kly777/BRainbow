@@ -4,6 +4,8 @@
 // 找东西只能逐个读文件名。这里给能便宜取到内容的类型做一张小预览：
 //
 // - **文本/代码**：Range 取前 1KB，渲染成等宽小字（几十毫秒、几 KB）；
+//   其中 **HTML 单开一路**：取 4KB 并优先提取元信息（标题 / 来源 URL / 描述），
+//   因为保存下来的网页开头全是标记与内联样式，按原始文本取前几行看不到重点；
 // - **office / 电子书 / 压缩包 / 数据库**：复用已有的 `/preview` JSON，
 //   取前几行段落/单元格/条目名。
 //
@@ -110,24 +112,128 @@ function stripControlChars(input: string): string {
 		.join("");
 }
 
-/** docx 的 `html` → 段落文字（够用就好：去掉标签与常见实体，取前几行） */
-export function htmlLines(html: string, lineCount = TEXT_LINES): string[] {
-	const text = html
-		.replace(/<(script|style)[\s\S]*?<\/\1>/gi, "")
-		.replace(/<br\s*\/?>/gi, "\n")
-		.replace(/<\/(p|div|h[1-6]|li|tr)>/gi, "\n")
-		.replace(/<[^>]*>/g, "")
+/** 常见实体解码（够用就好：内容缩略只需要可读） */
+function decodeEntities(text: string): string {
+	return text
 		.replace(/&nbsp;/g, " ")
 		.replace(/&lt;/g, "<")
 		.replace(/&gt;/g, ">")
 		.replace(/&quot;/g, '"')
 		.replace(/&#39;/g, "'")
 		.replace(/&amp;/g, "&");
+}
+
+/** docx 的 `html` → 段落文字（够用就好：去掉标签与常见实体，取前几行） */
+export function htmlLines(html: string, lineCount = TEXT_LINES): string[] {
+	const text = decodeEntities(
+		html
+			.replace(/<(script|style)[\s\S]*?<\/\1>/gi, "")
+			.replace(/<br\s*\/?>/gi, "\n")
+			// title/head 也断行：整页 HTML 走这条兜底时，`<title>` 里的文字不该和正文粘一起
+			.replace(/<\/(p|div|h[1-6]|li|tr|title|head|ul|ol|table)>/gi, "\n")
+			.replace(/<[^>]*>/g, ""),
+	);
 	return text
 		.split("\n")
 		.map((line) => line.trim())
 		.filter((line) => line !== "")
 		.slice(0, lineCount);
+}
+
+/** 解析标签里的属性（`name=value` / 引号包裹 / 裸值都认；只取开头这一段） */
+function parseAttrs(tag: string): Record<string, string> {
+	const out: Record<string, string> = {};
+	for (const m of tag.matchAll(
+		/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g,
+	)) {
+		out[m[1].toLowerCase()] = m[2] ?? m[3] ?? m[4] ?? "";
+	}
+	return out;
+}
+
+/** `<meta name=KEY content=…>` / `<meta property=KEY …>` 的 content（属性顺序无关） */
+function metaContent(html: string, key: string): string | undefined {
+	const wanted = key.toLowerCase();
+	for (const tag of html.matchAll(/<meta\b[^>]*>/gi)) {
+		const attrs = parseAttrs(tag[0]);
+		const name = (attrs.name ?? attrs.property ?? "").toLowerCase();
+		if (name === wanted && attrs.content) return attrs.content;
+	}
+	return undefined;
+}
+
+/** `<link rel=REL href=…>` 的 href */
+function linkHref(html: string, rel: string): string | undefined {
+	const wanted = rel.toLowerCase();
+	for (const tag of html.matchAll(/<link\b[^>]*>/gi)) {
+		const attrs = parseAttrs(tag[0]);
+		if ((attrs.rel ?? "").toLowerCase() === wanted && attrs.href) {
+			return attrs.href;
+		}
+	}
+	return undefined;
+}
+
+/** 保存工具的注释里带的来源 URL（SingleFile 会写 `url: …`） */
+function archivedSourceUrl(html: string): string | undefined {
+	return html.match(
+		/<!--[\s\S]{0,600}?SingleFile[\s\S]{0,400}?url:\s*(\S+)/i,
+	)?.[1];
+}
+
+/** 取某个标签的全部文本（内层标签一并去掉） */
+function tagTexts(html: string, tag: string, limit = 2): string[] {
+	const out: string[] = [];
+	for (const m of html.matchAll(
+		new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`, "gi"),
+	)) {
+		out.push(decodeEntities(m[1].replace(/<[^>]*>/g, "")).replace(/\s+/g, " "));
+		if (out.length >= limit) break;
+	}
+	return out;
+}
+
+/** HTML 缩略取多少字节：元信息几乎都在文档最前面，但保存下来的页面开头常带着
+ *  一段注释与若干 meta，留 4KB 比 1KB 稳（多要 3KB 的成本可以忽略） */
+export const HTML_SNIPPET_BYTES = 4096;
+
+/** 这个文件的缩略要不要走 HTML 元信息提取（而不是按原始文本取前几行） */
+export function isHtmlFile(item: FileItem): boolean {
+	return item.mime_type === "text/html" || /\.html?$/i.test(item.original_name);
+}
+
+/**
+ * HTML 文件的缩略：**优先元信息**（标题 → 来源 URL → 描述），再退回可见文字。
+ *
+ * 为什么单开一路：保存下来的网页（SingleFile 之类）开头就是一大堆标记与内联样式，
+ * 按原始文本取前几行只会看到 `<!DOCTYPE html>`、`<meta …>`、`<style>…` —— 看不到重点。
+ * 这几项元信息都在文档最前面，4KB 的窗口基本够；实在没有就退回 `htmlLines` 的正文文字。
+ */
+export function htmlMetaLines(html: string, lineCount = TEXT_LINES): string[] {
+	const lines: string[] = [];
+	const push = (value: string | undefined) => {
+		const text = value ? decodeEntities(value).replace(/\s+/g, " ").trim() : "";
+		if (text && !lines.includes(text)) lines.push(text);
+	};
+
+	push(tagTexts(html, "title", 1)[0]);
+	// 来源 URL：先是保存工具的注释，其次是 canonical / og:url（谁先有就用谁）
+	push(
+		archivedSourceUrl(html) ??
+			linkHref(html, "canonical") ??
+			metaContent(html, "og:url"),
+	);
+	push(metaContent(html, "description") ?? metaContent(html, "og:description"));
+	// 可见的小标题（窗口里能读到的）
+	for (const heading of tagTexts(html, "h1")) push(heading);
+	for (const heading of tagTexts(html, "h2")) push(heading);
+	// 还不够就退回正文文字：先去掉整个 `<head>`（标题/描述/样式那些已经单独取过了，
+	// 留着它们会让正文第一行变成"标题+正文"粘在一起）
+	if (lines.length < lineCount) {
+		const body = html.replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, "");
+		for (const line of htmlLines(body, lineCount)) push(line);
+	}
+	return lines.slice(0, lineCount);
 }
 
 /**
@@ -224,13 +330,17 @@ async function fetchTextThumb(
 	item: FileItem,
 	signal: AbortSignal,
 ): Promise<ThumbPreview | undefined> {
+	// HTML 走元信息提取（标题/来源 URL/描述），窗口也放宽一点 ——
+	// 保存下来的网页开头全是标记与内联样式，按原始文本取前几行看不到重点
+	const html = isHtmlFile(item);
+	const bytes = html ? HTML_SNIPPET_BYTES : TEXT_SNIPPET_BYTES;
 	const res = await fetch(item.url, {
-		headers: { Range: `bytes=0-${TEXT_SNIPPET_BYTES - 1}` },
+		headers: { Range: `bytes=0-${bytes - 1}` },
 		signal,
 	});
 	if (!res.ok && res.status !== 206) return undefined;
 	const text = new TextDecoder().decode(await res.arrayBuffer());
-	const lines = textSnippet(text);
+	const lines = html ? htmlMetaLines(text) : textSnippet(text);
 	return lines.length > 0 ? { kind: "text", lines } : undefined;
 }
 

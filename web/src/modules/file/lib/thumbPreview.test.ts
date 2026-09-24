@@ -10,8 +10,11 @@ import type { DocPreview } from "../hooks/usePreviewDoc.ts";
 import {
 	clearThumbPreviewCache,
 	coverOf,
+	HTML_SNIPPET_BYTES,
 	htmlLines,
+	htmlMetaLines,
 	isCoverKind,
+	isHtmlFile,
 	loadThumbPreview,
 	TEXT_LINES,
 	TEXT_SNIPPET_BYTES,
@@ -144,6 +147,67 @@ describe("htmlLines", () => {
 	it("script/style 里的内容不算正文", () => {
 		const html = "<style>p{color:red}</style><p>正文</p>";
 		expect(htmlLines(html)).toEqual(["正文"]);
+	});
+});
+
+describe("htmlMetaLines（保存下来的网页要看得出重点）", () => {
+	/** 照搬那个真实文件的开头：SingleFile 注释 + meta + 内联样式（重点全在标记里） */
+	const saved = `<!DOCTYPE html> <html><!--
+ Page saved with SingleFile 
+ url: https://floooh.github.io/2018/06/17/handles-vs-pointers.html 
+ saved date: Wed Sep 23 2026 21:34:21 GMT+0800 (Hong Kong Standard Time)
+--><meta charset=utf-8>
+<meta name=description content="Handles are better than pointers for resource management">
+<title>Handles are the better pointers</title>
+<style>body{margin:0;font-family:sans-serif}</style>
+<h1>Handles are the better pointers</h1>
+<p>正文第一段。</p>`;
+
+	it("标题、来源 URL、描述都在，且排在正文之前", () => {
+		const lines = htmlMetaLines(saved);
+		expect(lines[0]).toBe("Handles are the better pointers");
+		expect(lines[1]).toBe(
+			"https://floooh.github.io/2018/06/17/handles-vs-pointers.html",
+		);
+		expect(lines[2]).toBe(
+			"Handles are better than pointers for resource management",
+		);
+		// 标题与 h1 重复时只出现一次
+		expect(
+			lines.filter((line) => line === "Handles are the better pointers"),
+		).toHaveLength(1);
+	});
+
+	it("没有元信息时退回可见文字（h1/h2 再正文）", () => {
+		const lines = htmlMetaLines("<h1>只有标题</h1><p>正文一段</p>");
+		expect(lines).toEqual(["只有标题", "正文一段"]);
+	});
+
+	it("canonical / og:url 也能当来源（保存工具没写注释时）", () => {
+		const html =
+			'<link rel="canonical" href="https://example.com/a"><title>甲</title>';
+		expect(htmlMetaLines(html)[1]).toBe("https://example.com/a");
+		// meta 属性顺序反过来也要认
+		const swapped =
+			'<meta content="https://example.com/b" property="og:url"><title>乙</title>';
+		expect(htmlMetaLines(swapped)[1]).toBe("https://example.com/b");
+	});
+
+	it("实体与换行会被收拾成一行", () => {
+		const html = "<title>甲 &amp; 乙\n   丙</title><p>x</p>";
+		expect(htmlMetaLines(html)[0]).toBe("甲 & 乙 丙");
+	});
+
+	it("isHtmlFile：认 mime，也认扩展名（浏览器对保存的页面可能报空）", () => {
+		expect(isHtmlFile(item({ mime_type: "text/html" }))).toBe(true);
+		expect(
+			isHtmlFile(
+				item({ mime_type: "text/plain", original_name: "saved.HTML" }),
+			),
+		).toBe(true);
+		expect(
+			isHtmlFile(item({ mime_type: "text/plain", original_name: "notes.txt" })),
+		).toBe(false);
 	});
 });
 
@@ -304,6 +368,35 @@ describe("loadThumbPreview", () => {
 			? (seen.headers as Record<string, string>).Range
 			: undefined;
 		expect(range).toBe(`bytes=0-${TEXT_SNIPPET_BYTES - 1}`);
+	});
+
+	it("HTML 走元信息提取，窗口也放宽到 4KB", async () => {
+		let seen: RequestInit | undefined;
+		const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+			seen = init;
+			return new Response("<title>保存的文章</title><p>正文</p>", {
+				status: 206,
+			});
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		const got = await new Promise<unknown>((resolve) =>
+			loadThumbPreview(
+				item({
+					mime_type: "text/html",
+					original_name: "saved.html",
+					url: "/api/file/abcdefgh1234/data/saved.html",
+				}),
+				(preview) => resolve(preview),
+			),
+		);
+
+		// 原始文本会是 "<title>保存的文章</title>" 一行，元信息提取给出的是"保存的文章"
+		expect(got).toEqual({ kind: "text", lines: ["保存的文章", "正文"] });
+		const range = seen
+			? (seen.headers as Record<string, string>).Range
+			: undefined;
+		expect(range).toBe(`bytes=0-${HTML_SNIPPET_BYTES - 1}`);
 	});
 
 	it("office 走 /preview 并把 JSON 变成封面", async () => {

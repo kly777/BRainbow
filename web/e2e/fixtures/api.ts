@@ -9,6 +9,8 @@ interface Stub {
 	path: string | RegExp;
 	body: unknown;
 	status?: number;
+	/** 默认 application/json；文件内容之类的响应要显式给 */
+	contentType?: string;
 }
 
 /**
@@ -41,10 +43,12 @@ export async function mockApi(page: Page, stubs: Stub[]) {
 				});
 				return;
 			}
+			// 非 JSON 的响应（文件内容 / 文本片段）直接把 body 当字符串发出去
+			const json = (hit.contentType ?? "application/json").includes("json");
 			await route.fulfill({
 				status: hit.status ?? 200,
-				contentType: "application/json",
-				body: JSON.stringify(hit.body),
+				contentType: hit.contentType ?? "application/json",
+				body: json ? JSON.stringify(hit.body) : String(hit.body),
 			});
 		},
 	);

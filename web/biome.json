@@ -2,7 +2,14 @@
 	"$schema": "https://biomejs.dev/schemas/2.5.11/schema.json",
 	"files": {
 		"ignoreUnknown": true,
-		"includes": ["**", "!dist", "!node_modules"]
+		"includes": [
+			"**",
+			"!dist",
+			"!node_modules",
+			"!e2e/.auth",
+			"!test-results",
+			"!playwright-report"
+		]
 	},
 	"linter": {
 		"enabled": true,

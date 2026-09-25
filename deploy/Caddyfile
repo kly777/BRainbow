@@ -20,12 +20,15 @@
 		# XSS 防线：白名单管控加载来源
 		# - 'unsafe-inline'：index.html 的内联"应用初始化失败兜底"脚本（web/index.html）
 		#   + 内联 style。这条是必需的；想去掉得给那段脚本算哈希
-		# - 曾经还有 'unsafe-eval'（迁就 CF Rocket Loader）与 static.cloudflareinsights.com
-		#   （CF Web Analytics beacon）：Rocket Loader 已关闭，两者都移除 ——
-		#   关掉前它会把我们的 <script type="module"> 改写成 <script type="<hash>-module">，
-		#   并让带 integrity 的 beacon 加载失败（SRI 与它天然冲突）
+		# - static.cloudflareinsights.com（script-src）+ cloudflareinsights.com（connect-src）：
+		#   CF Web Analytics。**两条必须成对** —— beacon 的脚本在第一个域、它的 RUM 上报
+		#   打到第二个域的 /cdn-cgi/rum（从 beacon 源码里核过，不是抄文档）。只放脚本源会
+		#   变成"脚本跑起来、上报被 connect-src 挡"，控制台换一条错而已
+		# - 不再有 'unsafe-eval'：它当初只为迁就 CF Rocket Loader 而加。Rocket Loader 已关
+		#   （它会把我们的 <script type="module"> 改写成 <script type="<hash>-module">，
+		#   并让带 integrity 的 beacon 加载失败），这条放宽随之移除，别再开回来
 		# - img https:：Markdown 可能引用外部图片
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
 	}
 
 	# API 反代到后端。/uploads/* 不再代理：后端无此路由（文件内容路由是

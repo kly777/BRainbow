@@ -1,4 +1,5 @@
-import { Icon, Input, Select, Tooltip } from "@components/ui";
+import { Input, Select, Tooltip } from "@components/ui";
+import { Pencil, Trash2 } from "@components/ui/icons";
 import type { Task } from "@modules/task";
 import { fmtFull } from "@shared/utils";
 import { type Component, createSignal, For, Show } from "solid-js";
@@ -74,7 +75,7 @@ function TaskItem(props: TaskItemProps) {
 							onClick={props.onEdit}
 							class={styles.editButton}
 						>
-							<Icon name="pencil" size={14} />
+							<Pencil size={14} />
 						</button>
 					</Tooltip>
 					<Tooltip label="删除">
@@ -83,7 +84,7 @@ function TaskItem(props: TaskItemProps) {
 							onClick={() => props.onDelete(props.task.id)}
 							class={styles.deleteButton}
 						>
-							<Icon name="trash" size={14} />
+							<Trash2 size={14} />
 						</button>
 					</Tooltip>
 					<Tooltip label="添加子任务">

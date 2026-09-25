@@ -18,15 +18,18 @@
 		# 引用来源最小化
 		Referrer-Policy "strict-origin-when-cross-origin"
 		# XSS 防线：白名单管控加载来源
-		# - 'unsafe-inline'：index.html 内联错误处理脚本 + 内联 style
-		# - 'unsafe-eval'：CF Rocket Loader 所需（关闭 Rocket Loader 后可移除）
-		# - static.cloudflareinsights.com：CF Web Analytics beacon
+		# - 'unsafe-inline'：index.html 的内联"应用初始化失败兜底"脚本（web/index.html）
+		#   + 内联 style。这条是必需的；想去掉得给那段脚本算哈希
+		# - 曾经还有 'unsafe-eval'（迁就 CF Rocket Loader）与 static.cloudflareinsights.com
+		#   （CF Web Analytics beacon）：Rocket Loader 已关闭，两者都移除 ——
+		#   关掉前它会把我们的 <script type="module"> 改写成 <script type="<hash>-module">，
+		#   并让带 integrity 的 beacon 加载失败（SRI 与它天然冲突）
 		# - img https:：Markdown 可能引用外部图片
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
 	}
 
-	# API 反代到后端。/uploads/* 不再代理：后端无此路由（唯一文件路由是
-	# /api/media/{id}/file），原配置只会让 axum fallback 返回 SPA HTML 被
+	# API 反代到后端。/uploads/* 不再代理：后端无此路由（文件内容路由是
+	# /api/file/{stored_id}/data/{filename}），原配置只会让 axum fallback 返回 SPA HTML 被
 	# CF 按扩展名缓存（审计 D11）
 	@backend path /api/*
 	handle @backend {

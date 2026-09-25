@@ -9,19 +9,14 @@ import {
 } from "@components/ui";
 import { Settings, X } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
-import { trySync } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
 import { type Component, createResource, For, Show } from "solid-js";
-import type { Bookmark, GroupedBookmarksResponse } from "./api.ts";
+import type { Bookmark } from "./api.ts";
 import { getGroupedBookmarksE, incrementBookmarkVisitE } from "./api.ts";
 import styles from "./BookmarkPage.module.css";
 import Favicon from "./components/Favicon.tsx";
 import { useBookmarkSearch } from "./hooks/useBookmarkSearch.ts";
-
-function extractDomain(url: string): string {
-	const result = trySync(() => new URL(url).hostname.replace(/^www\./, ""));
-	return result.ok ? result.value : url;
-}
+import { extractDomain } from "./lib/url.ts";
 
 const BookmarkLink: Component<{ bm: Bookmark }> = (props) => {
 	const handleClick = () => {

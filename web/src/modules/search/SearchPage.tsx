@@ -9,6 +9,7 @@ import {
 import styles from "@modules/search/SearchPage.module.css";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal, For, Show } from "solid-js";
+import { highlightKeywords } from "./lib/highlight.ts";
 
 const MODULES = [
 	{ key: "all", label: "全部" },
@@ -23,21 +24,6 @@ const MODULES = [
 	{ key: "chat", label: "AI 对话" },
 	{ key: "file", label: "文件" },
 ];
-
-function highlightKeywords(text: string, query: string): string {
-	if (!query || !text) return "";
-	const escaped = text
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;");
-	const terms = query.trim().split(/\s+/).filter(Boolean);
-	let result = escaped;
-	for (const term of terms) {
-		const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
-		result = result.replace(re, (m) => `<mark>${m}</mark>`);
-	}
-	return result;
-}
 
 export default function SearchPage() {
 	const [params, setParams] = useSearchParams();

@@ -5,6 +5,7 @@ import { listArticles, uploadArticle } from "@modules/reading";
 import { fmtLocal, notifyError, tryAsync } from "@shared/utils";
 import { A } from "@solidjs/router";
 import { type Component, createResource, createSignal, For } from "solid-js";
+import { knownLevel, knownPercent } from "./lib/reading-stats.ts";
 import styles from "./ReadingList.module.css";
 
 const ArticleCard: Component<{ article: ArticleSummary; first: boolean }> = (
@@ -16,13 +17,7 @@ const ArticleCard: Component<{ article: ArticleSummary; first: boolean }> = (
 		classList={{
 			[styles.recommendedCard]: props.first,
 		}}
-		data-known={
-			props.article.known_ratio >= 0.8
-				? "high"
-				: props.article.known_ratio >= 0.5
-					? "mid"
-					: "low"
-		}
+		data-known={knownLevel(props.article.known_ratio)}
 	>
 		<div class={styles.cardTitleRow}>
 			<div class={styles.cardTitle}>{props.article.title}</div>
@@ -32,15 +27,9 @@ const ArticleCard: Component<{ article: ArticleSummary; first: boolean }> = (
 			<span>{props.article.word_count} 词</span>
 			<span
 				class={styles.ratio}
-				data-known={
-					props.article.known_ratio >= 0.8
-						? "high"
-						: props.article.known_ratio >= 0.5
-							? "mid"
-							: "low"
-				}
+				data-known={knownLevel(props.article.known_ratio)}
 			>
-				{(props.article.known_ratio * 100).toFixed(0)}% 认识
+				{knownPercent(props.article.known_ratio)}% 认识
 			</span>
 			<span class={styles.unknownCount}>
 				{props.article.unknown_word_count} 个不认识
@@ -50,7 +39,7 @@ const ArticleCard: Component<{ article: ArticleSummary; first: boolean }> = (
 		<div class={styles.barOuter}>
 			<div
 				class={styles.barInner}
-				style={{ width: `${(props.article.known_ratio * 100).toFixed(0)}%` }}
+				style={{ width: `${knownPercent(props.article.known_ratio)}%` }}
 			/>
 		</div>
 	</A>

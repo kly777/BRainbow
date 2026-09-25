@@ -13,16 +13,11 @@ import {
 } from "@components/ui/icons";
 import type { Bookmark } from "@modules/bookmark";
 import { setBookmarkTagsE, suggestBookmarkTagsE } from "@modules/bookmark";
-import { notifyError, notifySuccess, trySync } from "@shared/utils";
+import { notifyError, notifySuccess } from "@shared/utils";
 import { createSignal, For, Show } from "solid-js";
 import styles from "../BookmarkPage.module.css";
+import { extractDomain } from "../lib/url.ts";
 import Favicon from "./Favicon.tsx";
-
-/** 从 URL 提取域名（用于展示与标题兜底） */
-function extractDomain(url: string): string {
-	const result = trySync(() => new URL(url).hostname.replace(/^www\./, ""));
-	return result.ok ? result.value : url;
-}
 
 export function BookmarkItem(props: {
 	bm: Bookmark;

@@ -1,17 +1,15 @@
 import type { Task } from "@modules/task";
 import { useModal } from "@shared/utils";
 import { createMemo, createSignal, For, Show } from "solid-js";
+import type { TaskStatusKey } from "../lib/status-colors.ts";
+import {
+	buildChildrenMap,
+	groupByStatus,
+	TASK_STATUS_KEYS,
+} from "../lib/task-group.ts";
 import EditTaskModal from "./EditTaskModal.tsx";
 import TaskItem from "./TaskItem.tsx";
 import styles from "./TaskList.module.css";
-
-// 扩展TaskStatus常量 - 使用后端实际的状态
-const TaskStatus = {
-	BACKLOG: "backlog",
-	ACTIVE: "active",
-	COMPLETED: "completed",
-	ARCHIVED: "archived",
-} as const;
 
 interface TaskListProps {
 	tasks: Task[];
@@ -61,13 +59,13 @@ function TaskStatusSection(props: TaskStatusSectionProps) {
 	);
 }
 
-// 四个分组的顺序与标题：原来写成四段各 13 行、只差 tasks/title 的调用块
-const SECTIONS: { status: string; title: string }[] = [
-	{ status: TaskStatus.BACKLOG, title: "待办列表" },
-	{ status: TaskStatus.ACTIVE, title: "进行中" },
-	{ status: TaskStatus.COMPLETED, title: "已完成" },
-	{ status: TaskStatus.ARCHIVED, title: "已归档" },
-];
+// 四个分组的标题（顺序与状态名来自 lib/task-group.ts 的单一来源）
+const SECTION_TITLES: Record<TaskStatusKey, string> = {
+	backlog: "待办列表",
+	active: "进行中",
+	completed: "已完成",
+	archived: "已归档",
+};
 
 export default function TaskList(props: TaskListProps) {
 	const [editingTask, setEditingTask] = createSignal<Task | null>(null);
@@ -78,38 +76,9 @@ export default function TaskList(props: TaskListProps) {
 		editModal.open();
 	};
 
-	// 构建父任务 -> 子任务列表的映射
-	const childrenMap = createMemo(() => {
-		const map = new Map<number, Task[]>();
-		props.tasks.forEach((task) => {
-			if (task.parent_task_id) {
-				const existing = map.get(task.parent_task_id) || [];
-				existing.push(task);
-				map.set(task.parent_task_id, existing);
-			}
-		});
-		return map;
-	});
-
-	// 按状态分组任务（使用createMemo实现响应式）
-	const groupedTasks = createMemo(() => {
-		const currentTasks = props.tasks;
-		const grouped: Record<string, Task[]> = {
-			backlog: [],
-			active: [],
-			completed: [],
-			archived: [],
-		};
-
-		currentTasks.forEach((task) => {
-			const status = task.status || TaskStatus.BACKLOG;
-			if (grouped[status]) {
-				grouped[status].push(task);
-			}
-		});
-
-		return grouped;
-	});
+	// 父子映射与按状态分组：规则在 lib/（纯函数、有单测），这里只做响应式包装
+	const childrenMap = createMemo(() => buildChildrenMap(props.tasks));
+	const groupedTasks = createMemo(() => groupByStatus(props.tasks));
 
 	// 状态指示器颜色映射
 	const statusColors: Record<string, string> = {
@@ -125,12 +94,12 @@ export default function TaskList(props: TaskListProps) {
 
 	return (
 		<div class={styles.taskListPanel}>
-			<For each={SECTIONS}>
-				{(section) => (
+			<For each={TASK_STATUS_KEYS}>
+				{(status) => (
 					<TaskStatusSection
-						tasks={groupedTasks()[section.status]}
-						title={section.title}
-						statusColorClass={getStatusColorClass(section.status)}
+						tasks={groupedTasks()[status]}
+						title={SECTION_TITLES[status]}
+						statusColorClass={getStatusColorClass(status)}
 						childrenMap={childrenMap()}
 						onStatusChange={props.onStatusChange}
 						onDelete={props.onDelete}

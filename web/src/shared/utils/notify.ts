@@ -5,12 +5,31 @@ import { getErrorMessage, HttpError } from "@shared/api";
 import { showToast } from "./toastStore.ts";
 
 /**
+ * 这个错误是不是**传输层已经替我们说过了**？
+ *
+ * `request()` / `streaming` 的 handleGlobalError 对 401（弹登录框 + 一条提示）、
+ * 403（"权限不足"）、5xx（"服务器错误"）已经各弹过一次；组件再弹一条"XX失败：<同一句
+ * 原因>"就是两条几乎一样的提示。所以这几种 HttpError 在组件层静默。
+ *
+ * 两条边界要记住：
+ *  · `NetworkError` **不**在内 —— 它不经过 handleGlobalError（那个只认 HttpError），
+ *    网络断了正是最该说话的时候；
+ *  · 要保留动作语境（"删除失败"而不只是"服务器错误"）就不传 error：
+ *    `notifyError("删除失败")`，文案自己给。
+ */
+function alreadyReported(error: unknown): boolean {
+	return (
+		error instanceof HttpError &&
+		(error.status === 401 || error.status === 403 || error.status >= 500)
+	);
+}
+
+/**
  * 显示错误通知（带可选的原始 error 对象提取详情）。
- * 401 错误静默忽略 —— 登录弹窗已由 AuthStatus 统一处理。
+ * 401/403/5xx 静默 —— 见 `alreadyReported`。
  */
 export function notifyError(title: string, error?: unknown): void {
-	// 401 → 登录弹窗已显示，跳过 toast 避免冗余提示
-	if (error instanceof HttpError && error.status === 401) return;
+	if (alreadyReported(error)) return;
 
 	showToast({
 		type: "error",

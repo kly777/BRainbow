@@ -1,7 +1,5 @@
 // ==================== Error 类 · 错误工具 ====================
 
-import { showToast } from "@shared/utils/toastStore.ts";
-
 // ── Error 类 ──
 
 export class NetworkError extends Error {
@@ -78,46 +76,4 @@ export function getErrorMessage(error: unknown): string {
 		return error.message;
 	}
 	return "未知错误";
-}
-
-// ── 内部辅助 ──
-
-function errorToastType(error: unknown): "error" | "warning" {
-	if (error instanceof HttpError && error.status >= 400 && error.status < 500) {
-		return "warning";
-	}
-	return "error";
-}
-
-function errorCode(error: unknown): string | undefined {
-	if (error instanceof HttpError) return error.code;
-	if (error instanceof NetworkError) return "NETWORK";
-	if (error instanceof ValidationError) return "VALIDATION";
-	return undefined;
-}
-
-// ── 组件层 toast（仅业务错误，全局错误不重复） ──
-
-export function showErrorAlert(error: unknown, prefix?: string): void {
-	if (error instanceof HttpError) {
-		if (error.status === 401 || error.status === 403 || error.status >= 500) {
-			return;
-		}
-	}
-	if (error instanceof NetworkError || error instanceof ValidationError) {
-		return;
-	}
-
-	showToast({
-		type: errorToastType(error),
-		title: prefix || "操作失败",
-		message: getErrorMessage(error),
-		details: errorCode(error),
-		duration: 6000,
-	});
-}
-
-export function showErrorInline(error: unknown, prefix?: string): string {
-	const msg = getErrorMessage(error);
-	return prefix ? `${prefix}: ${msg}` : msg;
 }

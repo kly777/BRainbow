@@ -40,8 +40,8 @@ const OntologyListPage: Component = () => {
 					</div>
 				}
 				data={m.filteredOntologies()}
-				loading={m.loading}
-				error={m.error}
+				loading={m.loading()}
+				error={m.error()}
 				onRetry={m.refetch}
 				emptyMessage="没有找到匹配的本体"
 				footer={

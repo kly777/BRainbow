@@ -147,6 +147,95 @@ describe("useListResource：loading / error 必须是 accessor（类型层面挡
 	});
 });
 
+describe("useListResource：数组端点（不分页）", () => {
+	/** 不分页：不传 page，fetcher 只返回数组 */
+	function setupArray(
+		fetcher: (key: string, page: number) => Promise<Row[]>,
+		opts: { onLoaded?: (r: unknown) => void } = {},
+	) {
+		const [key, setKey] = createSignal("a");
+		let api!: ReturnType<typeof useListResource<string, Row>>;
+		const host = document.createElement("div");
+		document.body.appendChild(host);
+		render(() => {
+			api = useListResource<string, Row>({
+				key,
+				fetcher,
+				onLoaded: opts.onLoaded,
+			});
+			return null;
+		}, host);
+		return { api, setKey };
+	}
+
+	it("数组归一成单页：items 就是数组、total 是长度、totalPages 为 1", async () => {
+		const { api } = setupArray(async () => [
+			{ id: 1, name: "甲" },
+			{ id: 2, name: "乙" },
+		]);
+		await flush();
+		expect(api.items().map((r) => r.id)).toEqual([1, 2]);
+		expect(api.total()).toBe(2);
+		expect(api.totalPages()).toBe(1);
+		expect(api.loading()).toBe(false);
+		expect(api.error()).toBeNull();
+	});
+
+	it("空数组：total 0、totalPages 0（分页栏据此不渲染）", async () => {
+		const { api } = setupArray(async () => []);
+		await flush();
+		expect(api.items()).toEqual([]);
+		expect(api.total()).toBe(0);
+		expect(api.totalPages()).toBe(0);
+	});
+
+	it("不传 page 时 fetcher 收到第 1 页，且 key 变化仍会重取", async () => {
+		const fetcher = vi.fn(async () => [{ id: 1, name: "甲" }]);
+		const { api, setKey } = setupArray(fetcher);
+		await flush();
+		expect(fetcher).toHaveBeenCalledWith("a", 1);
+
+		const before = fetcher.mock.calls.length;
+		setKey("b");
+		await flush();
+		expect(fetcher.mock.calls.length).toBeGreaterThan(before);
+		expect(api.items()).toHaveLength(1);
+	});
+
+	it("数组端点的乐观更新与回滚照旧", async () => {
+		const { api } = setupArray(async () => [
+			{ id: 1, name: "甲" },
+			{ id: 2, name: "乙" },
+		]);
+		await flush();
+
+		await api.optimistic(
+			(list) => list.filter((r) => r.id !== 1),
+			async () => undefined,
+		);
+		expect(api.items().map((r) => r.id)).toEqual([2]);
+
+		const res = await api.optimistic(
+			(list) => list.filter((r) => r.id !== 2),
+			async () => {
+				throw new Error("拒绝");
+			},
+		);
+		expect(res.ok).toBe(false);
+		expect(api.items().map((r) => r.id)).toEqual([2]); // 回到操作前
+	});
+
+	it("数组端点失败也走 error 信号，不抛给响应式系统", async () => {
+		const { api } = setupArray(async () => {
+			throw new Error("炸了");
+		});
+		await flush();
+		expect(api.error()).toBeInstanceOf(Error);
+		expect(api.items()).toEqual([]);
+		expect(api.loading()).toBe(false);
+	});
+});
+
 describe("useListResource：乐观更新", () => {
 	const fetchTwo = async () => ({
 		items: [

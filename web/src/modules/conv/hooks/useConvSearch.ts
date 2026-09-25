@@ -1,8 +1,8 @@
 import { PATHS } from "@config/paths";
 import type { ConvHit } from "@modules/conv";
 import { searchConvE } from "@modules/conv";
-import { strParam, useUrlParams } from "@shared/utils";
-import { createResource } from "solid-js";
+import { strParam, useListResource, useUrlParams } from "@shared/utils";
+import type { Accessor } from "solid-js";
 
 const VALID_TABS = ["all", "article"] as const;
 export type ConvSearchTab = (typeof VALID_TABS)[number];
@@ -14,8 +14,9 @@ export interface ConvSearchApi {
 	setTab: (t: ConvSearchTab) => void;
 	searchQuery: () => string;
 	data: () => { hits: ConvHit[]; total: number };
-	loading: boolean;
-	error: Error | undefined;
+	/** Accessor（不是值）：见 useListResource 的约定 1 */
+	loading: Accessor<boolean>;
+	error: Accessor<unknown>;
 	handleSearch: (e: SubmitEvent) => void;
 	itemHref: (hit: ConvHit) => string;
 	/** 重新检索（错误态的重试入口用） */
@@ -41,14 +42,17 @@ export function useConvSearch(): ConvSearchApi {
 
 	const searchQuery = () => urlParams.get("q");
 
-	const [data, { refetch }] = createResource(
-		() => (searchQuery() ? `${searchQuery()}|${tab()}` : null),
-		(key) => {
-			if (!key) return { hits: [], total: 0 };
-			const [q, t] = key.split("|");
-			return searchConvE(q, t as ConvSearchTab);
+	// 检索结果走共享原语：空查询时不发请求（键为 null，fetcher 返回空页），
+	// total 用接口给的（hits 可能被 limit 截断，不能拿长度当总数）
+	const list = useListResource<{ q: string; t: ConvSearchTab } | null, ConvHit>(
+		{
+			key: () => (searchQuery() ? { q: searchQuery(), t: tab() } : null),
+			fetcher: async (key) => {
+				if (!key) return { items: [], page: 1, total: 0, total_pages: 0 };
+				const r = await searchConvE(key.q, key.t);
+				return { items: r.hits, page: 1, total: r.total, total_pages: 1 };
+			},
 		},
-		{ initialValue: { hits: [], total: 0 } },
 	);
 
 	const handleSearch = (e: SubmitEvent) => {
@@ -79,17 +83,12 @@ export function useConvSearch(): ConvSearchApi {
 		tab,
 		setTab,
 		searchQuery,
-		data: () => data(),
-		// getter：快照会在 createResource 创建/刷新瞬间冻结旧值，
-		// 导致 <Show when={loading}> 加载态永不更新（与 useFileList 同源修复）
-		get loading() {
-			return data.loading;
-		},
-		get error() {
-			return data.error;
-		},
+		data: () => ({ hits: list.items(), total: list.total() }),
+		// Accessor（不是值）：见 useListResource 的约定 1
+		loading: list.loading,
+		error: list.error,
 		handleSearch,
 		itemHref,
-		refetch,
+		refetch: list.refetch,
 	};
 }

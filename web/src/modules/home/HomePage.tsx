@@ -10,9 +10,16 @@ import {
 	getCardsE,
 } from "@modules/card";
 import { TaskList, TaskProvider, useTasks } from "@modules/task";
-import { confirmAndDelete, getGreeting, parseUtc } from "@shared/utils";
+import {
+	getGreeting,
+	notifyError,
+	notifySuccess,
+	parseUtc,
+	showConfirm,
+	useListResource,
+} from "@shared/utils";
 import { A, useNavigate } from "@solidjs/router";
-import { createResource, Show } from "solid-js";
+import { Show } from "solid-js";
 import styles from "./HomePage.module.css";
 
 function ModuleNav() {
@@ -94,26 +101,36 @@ function TaskOverview() {
 // ── 卡片概览 ──
 function CardOverview() {
 	const navigate = useNavigate();
-	const [cards, { mutate, refetch }] = createResource(
-		async (): Promise<CardData[]> => {
+	// 端点是 {items} 形状（不分页），取全量后在 fetcher 里按更新时间排序
+	const list = useListResource<null, CardData>({
+		key: () => null,
+		fetcher: async () => {
 			const r = (await getCardsE()) as { items: CardData[] };
 			return [...r.items].sort(
 				(a, b) =>
 					parseUtc(b.updated_at).getTime() - parseUtc(a.updated_at).getTime(),
 			);
 		},
-	);
+	});
 
-	const recentCards = () => (cards() ?? []).slice(0, 4);
+	const recentCards = () => list.items().slice(0, 4);
 
 	const handleDelete = async (id: number) => {
-		mutate((prev) => prev?.filter((c) => c.id !== id));
-		await confirmAndDelete({
+		const confirmed = await showConfirm({
 			title: "删除卡片",
 			message: "确定要删除这个卡片吗？此操作不可撤销。",
-			deleteFn: () => apiDeleteCard(id),
-			onError: () => refetch(),
+			variant: "danger",
+			confirmLabel: "删除",
 		});
+		if (!confirmed) return;
+		// 先本地移除、失败由原语回滚到操作前快照。
+		// 注意顺序：原实现把移除放在确认框**之前**，用户点"取消"卡片也会消失
+		const res = await list.optimistic(
+			(cards) => cards.filter((c) => c.id !== id),
+			() => apiDeleteCard(id),
+		);
+		if (res.ok) notifySuccess("卡片已删除");
+		else notifyError("删除卡片失败", res.error);
 	};
 
 	return (
@@ -131,7 +148,7 @@ function CardOverview() {
 			</div>
 			<AsyncView
 				data={recentCards()}
-				loading={cards.loading}
+				loading={list.loading()}
 				emptyMessage="暂无知识卡片"
 			>
 				{(data) => (

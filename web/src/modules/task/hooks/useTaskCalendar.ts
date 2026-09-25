@@ -1,6 +1,6 @@
 import { type CalendarEvent, getCalendarEventsE } from "@modules/task";
-import { notifyError, tryAsync } from "@shared/utils";
-import { createMemo, createResource, createSignal } from "solid-js";
+import { notifyError, useListResource } from "@shared/utils";
+import { createMemo, createSignal } from "solid-js";
 
 export interface TaskCalendarApi {
 	currentDate: () => Date;
@@ -23,13 +23,12 @@ export function useTaskCalendar(): TaskCalendarApi {
 		};
 	});
 
-	const [events] = createResource(monthRange, async (range) => {
-		const result = await tryAsync(() =>
-			getCalendarEventsE(range.start, range.end),
-		);
-		if (result.ok) return result.value;
-		notifyError("获取日历事件失败", result.error);
-		return [];
+	// 月份区间即请求键；端点给数组，交原语归一（错误经 onError 提示，
+	// 日历没有错误态槽位，只在这里 toast 一次）
+	const list = useListResource<{ start: string; end: string }, CalendarEvent>({
+		key: monthRange,
+		fetcher: (range) => getCalendarEventsE(range.start, range.end),
+		onError: () => notifyError("获取日历事件失败"),
 	});
 
 	const changeMonth = (delta: number) => {
@@ -56,7 +55,7 @@ export function useTaskCalendar(): TaskCalendarApi {
 
 	const eventsByDate = createMemo(() => {
 		const map = new Map<string, CalendarEvent[]>();
-		const evts = events();
+		const evts = list.items();
 		if (!evts) return map;
 		for (const ev of evts) {
 			const d = new Date(ev.start);

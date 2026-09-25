@@ -2,10 +2,11 @@ import { createRoot } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useTaskCalendar } from "./useTaskCalendar.ts";
 
-// 模拟依赖
-vi.mock("@shared/utils", () => ({
+// 模拟依赖：notifyError 静音；其余（useListResource 等）走原实现 ——
+// 局部 mock 会把未列出的导出变成 undefined，hook 一引就炸
+vi.mock("@shared/utils", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@shared/utils")>()),
 	notifyError: vi.fn(),
-	tryAsync: vi.fn(),
 }));
 
 vi.mock("@modules/task", () => ({

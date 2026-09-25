@@ -6,19 +6,20 @@ import {
 	showConfirm,
 	strParam,
 	tryAsync,
-	tryOrNotify,
+	useListResource,
 	useModal,
 	useUrlParams,
 } from "@shared/utils";
-import { createResource, createSignal, type Setter } from "solid-js";
+import { type Accessor, createSignal, type Setter } from "solid-js";
 import { createOntoE, deleteOntoE, getOntosE } from "../api";
 
 export type OntologyItem = Awaited<ReturnType<typeof getOntosE>>[number];
 
 export interface OntologyListApi {
-	ontologies: () => readonly OntologyItem[];
-	loading: boolean;
-	error: Error | undefined;
+	ontologies: Accessor<readonly OntologyItem[]>;
+	/** Accessor（不是值）：见 useListResource 的约定 1 */
+	loading: Accessor<boolean>;
+	error: Accessor<unknown>;
 	refetch: () => void;
 	searchQuery: () => string;
 	setSearchQuery: (q: string) => void;
@@ -41,19 +42,14 @@ export interface OntologyListApi {
 
 export function useOntologyList(): OntologyListApi {
 	/**
-	 * 取数失败单独用信号暴露、不从 fetcher 抛错：抛错会中断 Solid 的响应式更新，
-	 * 而本应用没有 ErrorBoundary —— 资源会停在 loading=true，页面永远骨架屏。
+	 * 取数走共享原语（`useListResource` 的数组端点模式）：错误信号、loading、
+	 * 乐观更新与回滚都由它负责 —— 这里此前手写了一整套（loadError 信号、
+	 * tryAsync 包一层、getter 防冻结、删除的回滚），与 `useFileList` 同源但各写一遍。
+	 * 端点无参数，故请求键恒为 null（只拉一次）。
 	 */
-	const [loadError, setLoadError] = createSignal<Error | undefined>(undefined);
-
-	const [ontologies, { mutate, refetch }] = createResource(async () => {
-		const result = await tryAsync(() => getOntosE());
-		if (result.ok) {
-			setLoadError(undefined);
-			return result.value;
-		}
-		setLoadError(result.error);
-		return [];
+	const list = useListResource<null, OntologyItem>({
+		key: () => null,
+		fetcher: () => getOntosE(),
 	});
 
 	const params = useUrlParams({
@@ -73,7 +69,7 @@ export function useOntologyList(): OntologyListApi {
 	const [deletingOntoId, setDeletingOntoId] = createSignal<number | null>(null);
 
 	const filteredOntologies = () => {
-		const data = ontologies() || [];
+		const data = list.items();
 		if (!searchQuery()) return data;
 		const query = searchQuery().toLowerCase();
 		return data.filter(
@@ -97,8 +93,7 @@ export function useOntologyList(): OntologyListApi {
 			setNewName("");
 			setNewDescription("");
 			createModal.close();
-			const currentData = ontologies() || [];
-			mutate([result.value, ...currentData]);
+			list.patch((items) => [result.value, ...items]);
 			notifySuccess("本体创建成功");
 		} else {
 			notifyError("创建本体失败", result.error);
@@ -116,17 +111,13 @@ export function useOntologyList(): OntologyListApi {
 		if (!confirmed) return;
 		if (deletingOntoId() === id) return;
 		setDeletingOntoId(id);
-		const currentData = ontologies() || [];
-		const ontoToDelete = currentData.find((onto) => onto.id === id);
-		if (ontoToDelete) {
-			mutate(currentData.filter((onto) => onto.id !== id));
-		}
-		const ok = await tryOrNotify(() => deleteOntoE(id), "删除本体");
-		if (ok) {
-			notifySuccess("本体已删除");
-		} else {
-			if (ontoToDelete) mutate([...currentData]);
-		}
+		// 先本地移除、失败自动回滚（原语负责回滚到操作前快照）
+		const res = await list.optimistic(
+			(items) => items.filter((onto) => onto.id !== id),
+			() => deleteOntoE(id),
+		);
+		if (res.ok) notifySuccess("本体已删除");
+		else notifyError("删除本体失败", res.error);
 		setDeletingOntoId(null);
 	};
 
@@ -143,16 +134,10 @@ export function useOntologyList(): OntologyListApi {
 	};
 
 	return {
-		ontologies: () => ontologies() ?? [],
-		// getter：避免 createResource 创建瞬间 state=pending 被冻结为
-		// true 快照，导致 AsyncView 永远骨架屏（与 useFileList 同源修复）
-		get loading() {
-			return ontologies.loading;
-		},
-		get error() {
-			return loadError();
-		},
-		refetch,
+		ontologies: list.items,
+		loading: list.loading,
+		error: list.error,
+		refetch: list.refetch,
 		searchQuery,
 		setSearchQuery,
 		viewMode,

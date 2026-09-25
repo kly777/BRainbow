@@ -2,9 +2,14 @@ import { Button, Input, ListPage, Modal, Textarea } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
 import type { ArticleSummary } from "@modules/reading";
 import { listArticles, uploadArticle } from "@modules/reading";
-import { fmtLocal, notifyError, tryAsync } from "@shared/utils";
+import {
+	fmtLocal,
+	notifyError,
+	tryAsync,
+	useListResource,
+} from "@shared/utils";
 import { A } from "@solidjs/router";
-import { type Component, createResource, createSignal, For } from "solid-js";
+import { type Component, createSignal, For } from "solid-js";
 import { knownLevel, knownPercent } from "./lib/reading-stats.ts";
 import styles from "./ReadingList.module.css";
 
@@ -46,7 +51,12 @@ const ArticleCard: Component<{ article: ArticleSummary; first: boolean }> = (
 );
 
 export default function ReadingList() {
-	const [articles, { refetch }] = createResource(listArticles);
+	// 端点是包装数组（{articles}），交原语归一成单页列表：四态、错误信号、乐观更新
+	// 都由它负责，页面不再自己拼 createResource + 内联四态分支
+	const list = useListResource<null, ArticleSummary>({
+		key: () => null,
+		fetcher: async () => (await listArticles()).articles,
+	});
 	const [uploadOpen, setUploadOpen] = createSignal(false);
 	const [title, setTitle] = createSignal("");
 	const [content, setContent] = createSignal("");
@@ -62,7 +72,9 @@ export default function ReadingList() {
 			setTitle("");
 			setContent("");
 			setUploadOpen(false);
-			refetch();
+			// 新文章的 known_ratio / unknown_word_count 是后端算的，前端编不出来，
+			// 所以这里重取而不是乐观插入 —— 用 silent 避免列表闪骨架
+			await list.reload({ silent: true });
 		} else {
 			notifyError("上传文章失败", result.error);
 		}
@@ -93,10 +105,10 @@ export default function ReadingList() {
 						按推荐阅读顺序排列：认识率越接近 90% 越靠前，最该读的排在第一张。
 					</p>
 				}
-				data={articles()?.articles}
-				loading={articles.loading}
-				error={articles.error}
-				onRetry={refetch}
+				data={list.items()}
+				loading={list.loading()}
+				error={list.error()}
+				onRetry={list.refetch}
 				emptyMessage="还没有文章，上传第一篇吧"
 			>
 				{(items) => (

@@ -1,6 +1,6 @@
 // ── 列表数据源：把"URL 参数 → 请求 → 分页 + 四态 + 乐观更新"收成一处 ──
 //
-// 背景（doc/frontend-ui-architecture.md P0-3）：改造前前端并存两套列表范式 ——
+// 背景（doc/plans/frontend-ui-architecture.md P0-3）：改造前前端并存两套列表范式 ——
 //   A) createResource + mutate（35 个文件，乐观更新的载体）
 //   B) 手写 createSignal 管 data/page/totalPages/loading/error + 手搓 fetch
 //      （如 useCardsList / useBookmarkPage，有的还自带 loadSeq 竞态守卫）

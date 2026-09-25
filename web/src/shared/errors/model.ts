@@ -1,6 +1,6 @@
 // ── 错误模型：错误类 + 错误 → 文案的唯一映射 ──
 //
-// 这里是错误处理的"模型层"（见 doc/error-handling.md）：三个错误类由传输层抛出，
+// 这里是错误处理的"模型层"（见 doc/guides/error-handling.md）：三个错误类由传输层抛出，
 // `getErrorMessage` 是错误文案的唯一来源（Toast、错误态槽位、日志都走它）。
 // 本文件**不依赖任何 UI**（不含 toastStore / 组件），因此谁都能引。
 

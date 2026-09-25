@@ -1,5 +1,5 @@
 // ── CardDetail 无效 id 的失败态回归 ──
-// 背景（doc/frontend-ui-architecture.md P1-5）：createResource 的 fetcher 里
+// 背景（doc/plans/frontend-ui-architecture.md P1-5）：createResource 的 fetcher 里
 // `throw` 会中断 Solid 的响应式更新，而本页用 AsyncView —— 它先判 loading，
 // 于是错误态与重试入口都到不了，页面**永远显示骨架屏**。
 // 此处的断言就是封堵这一点：无效 id 必须走到错误态。

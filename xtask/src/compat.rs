@@ -133,7 +133,7 @@ pub fn compare(remote: &Remote, binary: &Path) -> Result<Verdict> {
             "本地产物需要 glibc 2.{required}，远端只有 2.{minor} —— \
              部署上去会「加载即失败」（`version `GLIBC_2.{required}' not found`）。\
              修法：用 musl 静态构建（`BUILD_TARGET=x86_64-unknown-linux-musl`，\
-             见 doc/deployment.md），或把构建机换成与服务器同代的发行版"
+             见 doc/guides/deployment.md），或把构建机换成与服务器同代的发行版"
         )),
     })
 }

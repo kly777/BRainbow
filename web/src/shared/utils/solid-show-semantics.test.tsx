@@ -2,7 +2,7 @@
 // 这个文件不是业务测试，而是把"我们踩过的那类 bug 的框架语义"固定下来 ——
 // 框架升级/换实现时它会立刻告诉我们假设是否还成立。
 //
-// 背景（真实缺陷，见 doc/frontend-ui-architecture.md P1-6）：
+// 背景（真实缺陷，见 doc/plans/frontend-ui-architecture.md P1-6）：
 // `/file/:id` 切换上一个/下一个时图片不换。原因不是 <Show> 不更新，而是
 // **子节点里把 accessor 读了一次、再把"值"传给了下一个组件**：
 //

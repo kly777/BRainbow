@@ -1,6 +1,6 @@
 // ── 预览分页的客户端合并（纯函数） ──
 //
-// 契约（见 doc/ux/file-preview-plan.md 的 P3-1）：游标请求返回同一套 schema，只有被
+// 契约（见 doc/plans/ux/file-preview-plan.md 的 P3-1）：游标请求返回同一套 schema，只有被
 // 游标指定的那个容器从偏移处给行。所以合并规则是"**只追加到那个容器**，其余保持不动"。
 
 import { describe, expect, it } from "vitest";

@@ -1,7 +1,7 @@
 // ── 统一用户通知模块 ──
 // 封装 toastStore.showToast，提供简洁的业务层 API。
 // 住在 shared/errors/ 而不是 shared/utils/：它与"错误 → 文案 → 提示"是同一件事，
-// 见 doc/error-handling.md。
+// 见 doc/guides/error-handling.md。
 
 import { showToast } from "../utils/toastStore.ts";
 import { getErrorMessage, HttpError } from "./model.ts";

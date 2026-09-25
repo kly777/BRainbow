@@ -1,6 +1,6 @@
 // ── 详情页数据源：单个实体的取数 + 四态 + "首次加载 / 后台刷新"的区分 ──
 //
-// 背景（doc/frontend-ui-architecture.md §4 P1-5、P1-6，§11.1/§11.2）：
+// 背景（doc/plans/frontend-ui-architecture.md §4 P1-5、P1-6，§11.1/§11.2）：
 // 详情页此前各自手写 `createResource` + tryAsync + 错误信号，踩过同一类坑三次：
 //   1. fetcher 里 `throw` 或放任 promise 拒绝 → loading 永远停在 true，页面卡骨架屏；
 //   2. 错误只用一个信号、无效 id 与请求失败各写一套 → 有的页面错误态根本到不了；

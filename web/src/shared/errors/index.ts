@@ -1,4 +1,4 @@
-// ── 错误处理的唯一入口（见 doc/error-handling.md）──
+// ── 错误处理的唯一入口（见 doc/guides/error-handling.md）──
 //
 // 分三层，都从这里出：
 //   · model.ts   错误类（NetworkError / HttpError / ValidationError）+ `getErrorMessage`

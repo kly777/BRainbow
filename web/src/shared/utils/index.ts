@@ -1,5 +1,5 @@
 // 错误与提示（notify* / tryOrNotify / confirmAnd* / 错误类）已搬到 `@shared/errors`：
-// 这里再导出是为了不改动 50+ 处老调用点，新代码请从那儿引（doc/error-handling.md）
+// 这里再导出是为了不改动 50+ 处老调用点，新代码请从那儿引（doc/guides/error-handling.md）
 export * from "../errors/index.ts";
 export * from "./ai-settings.ts";
 export * from "./browser.ts";

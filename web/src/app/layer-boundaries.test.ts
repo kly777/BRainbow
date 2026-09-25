@@ -3,7 +3,7 @@
 // 为什么静态扫描而不是渲染测试：依赖方向是"源码里有没有这行 import"的性质，
 // 渲染任何组件都观察不到它——越界引用照样能渲染出正确的画面。只能读源码。
 //
-// 方向（见 AGENTS.md 的架构契约与 doc/component-design.md §1）：
+// 方向（见 AGENTS.md 的架构契约与 doc/guides/component-design.md §1）：
 //
 //     app ──→ modules ──→ components ──→ shared        config 是零依赖旁路
 //

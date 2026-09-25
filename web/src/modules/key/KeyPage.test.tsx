@@ -1,5 +1,5 @@
 // ── KeyPage 列表数据流契约 ──
-// 背景（doc/component-design.md 体检表）：本页此前是 createResource + localKeys 双轨，
+// 背景（doc/guides/component-design.md 体检表）：本页此前是 createResource + localKeys 双轨，
 // 靠一个"读 accessor 时写信号"的 getter（displayKeys）把远端灌进本地——
 // 终止条件藏在"本地非空"这个数据形状里。现在乐观更新改 resource 自己的 mutate。
 // 这里钉住四条：渲染远端、删除成功后本地移除且不 refetch、删除失败回滚、生成后插到表头。

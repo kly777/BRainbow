@@ -1,5 +1,5 @@
 // ── useDetailResource：详情页取数原语的契约 ──
-// 三条断言对应三类真实缺陷（doc/frontend-ui-architecture.md §4 P1-5 / P1-6）：
+// 三条断言对应三类真实缺陷（doc/plans/frontend-ui-architecture.md §4 P1-5 / P1-6）：
 //   ① fetcher 抛错不能让页面卡在 loading（P1-5）；
 //   ② 无效 id 不发请求、走错误态；
 //   ③ **后台刷新时 loading 必须为 false、refreshing 为 true** —— 否则页面照旧渲染骨架，

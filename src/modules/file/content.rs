@@ -4,7 +4,7 @@
 // 被正确引用（Markdown 内嵌、RFC 5987 的中文文件名）。这些是**纯函数**，与
 // FileService / 数据库无关，所以单列一个文件。
 //
-// 与安全策略的关系（见 doc/file-service.md §4.1）：所有响应都带 `nosniff`；
+// 与安全策略的关系（见 doc/design/file-service.md §4.1）：所有响应都带 `nosniff`；
 // 内联只放行图片 / 音视频 / PDF，其余一律 attachment（判据在 `kind.rs` 的 `inline`
 // 列）—— HTML 与 SVG 是"能以文本形式执行脚本"的两类，必须强制下载。
 

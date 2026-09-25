@@ -1,5 +1,5 @@
 /**
- * 安全异步操作工具（错误处理的"动作层"，见 doc/error-handling.md）
+ * 安全异步操作工具（错误处理的"动作层"，见 doc/guides/error-handling.md）
  *
  * 基于 Result<T, E> 类型的高层封装，提供：
  * - tryOrNotify: 执行异步操作，失败时自动 toast 通知用户

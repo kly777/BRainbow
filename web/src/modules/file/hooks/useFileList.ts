@@ -74,7 +74,7 @@ interface FileListKey {
 /**
  * 文件列表的组合入口：参数（URL）→ 取数 → 统计 → 单项/批量/上传三块能力。
  *
- * 拆分动机（doc/component-design.md §5 与迁移手册 T3）：原文件 602 行，
+ * 拆分动机（doc/guides/component-design.md §5 与迁移手册 T3）：原文件 602 行，
  * 四块职责各写各的（筛选参数、上传队列 140 行、批量操作 133 行、单项操作），
  * 改上传要在 600 行里找。现在各块独立成 hook，依赖（取数原语、patchList、
  * 参数）由这里显式传入 —— 子 hook 不 import 同级 hook 的内部状态。

@@ -1,7 +1,7 @@
 // ── 表数据视图：表头（排序/筛选）+ 数据行 + 行详情抽屉 ──
 //
 // 六个子件（SortHeaderCell / FilterHeaderCell / TableHead / RowCell / EmptyRow /
-// TableRows）已下钻到 `db-table/` 目录（doc/component-design.md §5 体检表：本文件
+// TableRows）已下钻到 `db-table/` 目录（doc/guides/component-design.md §5 体检表：本文件
 // 371 行里大半是内联子件）。这里只留组合：工具栏、表体、抽屉开合。
 
 import { type Component, createEffect, createSignal, Show } from "solid-js";

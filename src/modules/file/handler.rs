@@ -399,7 +399,7 @@ pub fn parse_range(header_value: &str, total: u64) -> Option<RangeSpec> {
 /// 内容类路由的统一可见性检查：公开文件放行；私密文件要求有效凭据且为上传者。
 ///
 /// 内容路由与预览路由共用这一份 —— 可见性规则一旦分叉就会漏，而漏的那一边
-/// 等于把私密文件放出来（见 doc/file-service.md 里"三处规则要同步"那条）。
+/// 等于把私密文件放出来（见 doc/design/file-service.md 里"三处规则要同步"那条）。
 async fn check_content_access(
     auth: &crate::app::auth::service::AuthService,
     headers: &axum::http::HeaderMap,

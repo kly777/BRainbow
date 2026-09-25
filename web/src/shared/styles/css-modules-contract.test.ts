@@ -10,7 +10,7 @@
 //  1. 禁止 `styles[动态索引]`——键不是字面量时既查不了存在性，也读不懂意图；
 //  2. 禁止 `styles["kebab-name"]`——vite 配了 `localsConvention: "camelCaseOnly"`，
 //     导出对象里只有 camelCase 键，kebab 索引静默求值为 undefined
-//     （/search 页的筛选条与结果样式曾因此整块失效，见 doc/frontend-ui-architecture.md）；
+//     （/search 页的筛选条与结果样式曾因此整块失效，见 doc/plans/frontend-ui-architecture.md）；
 //  3. `styles.someKey` 的 key 必须在对应 CSS 里真实存在——错别字
 //     （如 hitTitl）同样是静默 undefined。
 

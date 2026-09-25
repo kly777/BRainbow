@@ -97,7 +97,7 @@ export default function KeyPage() {
 	const { setApiKey } = useAuth();
 	// 远端数据 + mutate 就是唯一真相源：乐观更新改它自己，失败回滚快照
 	//（此前是 createResource 与 localKeys 双轨，靠一个"读时写信号"的 getter 同步，
-	//  见 doc/component-design.md 体检表的 KeyPage 一条）
+	//  见 doc/guides/component-design.md 体检表的 KeyPage 一条）
 	const [keys, { refetch, mutate }] = createResource(() => listKeysE());
 	const [newKey, setNewKey] = createSignal<string | null>(null);
 	const [generating, setGenerating] = createSignal(false);

@@ -1,80 +1,33 @@
 // ── 管理员设置页：开放注册开关 / JWT 密钥状态与轮换 / 系统信息 ──
 
 import { useAuth } from "@app/context/auth.tsx";
-import { Button, ErrorRetry, InfoHint, PageHead } from "@components/ui";
+import { ErrorRetry, PageHead } from "@components/ui";
 import {
 	notifyError,
 	notifySuccess,
 	showConfirm,
 	tryAsync,
 } from "@shared/utils";
-import { createResource, createSignal, For, Show } from "solid-js";
+import { createResource, createSignal, Show } from "solid-js";
 import styles from "./AdminPage.module.css";
 import {
 	getAdminSettingsE,
 	getSystemInfoE,
-	type ModuleStats,
 	rotateJwtE,
 	updateAdminSettingsE,
 } from "./api.ts";
-import {
-	formatBackupUsage,
-	formatBytes,
-	formatDirUsage,
-	formatIsoLocal,
-	formatUptime,
-	formatUsage,
-	getStatValue,
-} from "./utils.ts";
+import JwtCard from "./components/JwtCard.tsx";
+import RegistrationCard from "./components/RegistrationCard.tsx";
+import ServerInfoCard from "./components/ServerInfoCard.tsx";
+import ServiceInfoCard from "./components/ServiceInfoCard.tsx";
+import StatCards from "./components/StatCards.tsx";
 
-const STAT_ITEMS: { key: keyof ModuleStats; label: string; icon: string }[] = [
-	{
-		key: "users",
-		label: "用户",
-		icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
-	},
-	{
-		key: "tasks",
-		label: "任务",
-		icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4",
-	},
-	{
-		key: "cards",
-		label: "卡片",
-		icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10",
-	},
-	{
-		key: "memories",
-		label: "记忆",
-		icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",
-	},
-	{
-		key: "bookmarks",
-		label: "书签",
-		icon: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z",
-	},
-	{
-		key: "articles",
-		label: "文章",
-		icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253",
-	},
-	{
-		key: "conversations",
-		label: "对话",
-		icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
-	},
-	{
-		key: "chat_trees",
-		label: "AI 对话",
-		icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
-	},
-	{
-		key: "ontologies",
-		label: "本体",
-		icon: "M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4",
-	},
-];
-
+/**
+ * 管理员设置页：开放注册开关 / JWT 密钥状态与轮换 / 系统信息。
+ *
+ * 五张卡片都已下钻到 `components/`（体检表"内联展示组件"最后一处：本文件原 401 行，
+ * 其中 9 条内联 SVG path 与三块系统信息占了大头）。页面只留取数与两个操作。
+ */
 export default function AdminPage() {
 	const { auth } = useAuth();
 	const [settings, { mutate, refetch }] = createResource(getAdminSettingsE);
@@ -135,188 +88,14 @@ export default function AdminPage() {
 			</Show>
 
 			<Show when={isAdmin()}>
-				{/* ── 系统信息卡片 ── */}
+				{/* ── 系统信息三张卡片 ── */}
 				<Show when={systemInfo()}>
 					{(info) => (
-						<section class={styles.card}>
-							<h2 class={styles.cardTitle}>服务信息</h2>
-							<div class={styles.infoGrid}>
-								<div class={styles.infoItem}>
-									<span class={styles.infoLabel}>版本</span>
-									<span class={styles.infoValue}>v{info().version}</span>
-								</div>
-								<div class={styles.infoItem}>
-									<span class={styles.infoLabel}>运行时长</span>
-									<span class={styles.infoValue}>
-										{formatUptime(info().uptime_secs)}
-									</span>
-								</div>
-								<div class={styles.infoItem}>
-									<span class={styles.infoLabel}>数据库版本</span>
-									<span class={styles.infoValue}>
-										Schema v{info().db_version}
-									</span>
-								</div>
-								<div class={styles.infoItem}>
-									<span class={styles.infoLabel}>数据库大小</span>
-									<span class={styles.infoValue}>
-										{formatBytes(info().db_size_bytes)}
-									</span>
-								</div>
-							</div>
-						</section>
-					)}
-				</Show>
-
-				{/* ── 数据统计卡片 ── */}
-				<Show when={systemInfo()}>
-					{(info) => (
-						<section class={styles.card}>
-							<div class={styles.cardHead}>
-								<h2 class={styles.cardTitle}>数据统计</h2>
-								<Button variant="ghost" size="sm" onClick={() => refetchInfo()}>
-									刷新
-								</Button>
-							</div>
-							<div class={styles.statsGrid}>
-								<For each={STAT_ITEMS}>
-									{(item) => (
-										<div class={styles.statItem}>
-											<div class={styles.statIcon}>
-												<svg
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="1.5"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													aria-hidden="true"
-												>
-													<path d={item.icon} />
-												</svg>
-											</div>
-											<div class={styles.statBody}>
-												<span class={styles.statValue}>
-													{getStatValue(info().stats, item.key)}
-												</span>
-												<span class={styles.statLabel}>{item.label}</span>
-											</div>
-										</div>
-									)}
-								</For>
-							</div>
-						</section>
-					)}
-				</Show>
-
-				{/* ── 服务器卡片：内存 / CPU / 磁盘 / 文件与备份占用（拿不到的显示"—"） ── */}
-				<Show when={systemInfo()}>
-					{(info) => (
-						<section class={styles.card}>
-							<div class={styles.cardHead}>
-								<div class={styles.cardTitleRow}>
-									<h2 class={styles.cardTitle}>服务器</h2>
-									<InfoHint label="关于服务器信息">
-										数据、上传与备份都在同一块盘上（所以磁盘那一格就是数据盘的用量）。
-										<br />
-										"—"表示这一项读不到：内存、负载与磁盘读的是 Linux 的 /proc
-										与
-										statvfs，后端跑在别的系统上就没有这几项；备份目录没配置时同理。
-									</InfoHint>
-								</div>
-							</div>
-							<div class={styles.infoGrid}>
-								<div class={styles.infoItem}>
-									<span class={styles.infoLabel}>内存</span>
-									<span class={styles.infoValue}>
-										<Show when={info().server.memory} fallback="—">
-											{(mem) =>
-												formatUsage(mem().used_bytes, mem().total_bytes)
-											}
-										</Show>
-									</span>
-								</div>
-								<div class={styles.infoItem}>
-									<span class={styles.infoLabel}>CPU</span>
-									<span class={styles.infoValue}>
-										{info().server.cpu_count} 核
-									</span>
-									<span class={styles.infoHint}>
-										负载{" "}
-										<Show when={info().server.load} fallback="—">
-											{(load) =>
-												`${load().one} / ${load().five} / ${load().fifteen}`
-											}
-										</Show>
-									</span>
-								</div>
-								<div class={styles.infoItem}>
-									<span class={styles.infoLabel}>磁盘</span>
-									<span class={styles.infoValue}>
-										<Show when={info().server.disk} fallback="—">
-											{(disk) =>
-												formatUsage(disk().used_bytes, disk().total_bytes)
-											}
-										</Show>
-									</span>
-									<Show when={info().server.disk}>
-										{(disk) => (
-											<span class={styles.infoHint}>
-												可用 {formatBytes(disk().free_bytes)}
-											</span>
-										)}
-									</Show>
-								</div>
-								<div class={styles.infoItem}>
-									<span class={styles.infoLabelRow}>
-										<span class={styles.infoLabel}>备份</span>
-										<InfoHint label="关于备份统计">
-											部署时自动往备份目录里写数据库快照与代码归档（每类各留 30
-											天 / 20 份）， 应用只读这个目录来报数。
-											<br />
-											没有配置备份目录时这里是"—"（开发机正常如此）：默认按根目录约定取{" "}
-											<code>{"{根}"}/backup</code>，也可以用{" "}
-											<code>BACKUP_DIR</code>
-											显式指定。
-										</InfoHint>
-									</span>
-									<span class={styles.infoValue}>
-										{formatBackupUsage(info().server.backups)}
-									</span>
-									<span class={styles.infoHint}>
-										最近{" "}
-										{formatIsoLocal(
-											info().server.backups?.newest_modified ?? null,
-										)}
-									</span>
-								</div>
-								<div class={styles.infoItem}>
-									<span class={styles.infoLabel}>上传文件</span>
-									<span class={styles.infoValue}>
-										{formatDirUsage(info().server.uploads)}
-									</span>
-									<span class={styles.infoHint}>
-										缩略图缓存 {formatDirUsage(info().server.thumbs)} · favicon{" "}
-										{formatDirUsage(info().server.favicons)}
-									</span>
-								</div>
-								<div class={styles.infoItem}>
-									<span class={styles.infoLabel}>数据库文件</span>
-									<span class={styles.infoValue}>
-										{formatBytes(info().db_size_bytes)}
-									</span>
-									<span class={styles.infoHint}>
-										Schema v{info().db_version} ·{" "}
-										{info().db_page_count.toLocaleString()} 页 ×{" "}
-										{info().db_page_size} B
-									</span>
-								</div>
-							</div>
-							{/* 备份目录路径是"状态"，留着；怎么配、为什么是"—"收进上面的 ⓘ */}
-							<Show when={info().server.backup_dir}>
-								{(dir) => <p class={styles.hint}>备份目录：{dir()}</p>}
-							</Show>
-						</section>
+						<>
+							<ServiceInfoCard info={info()} />
+							<StatCards stats={info().stats} onRefresh={() => refetchInfo()} />
+							<ServerInfoCard info={info()} />
+						</>
 					)}
 				</Show>
 
@@ -330,60 +109,17 @@ export default function AdminPage() {
 						>
 							{(s) => (
 								<div class={styles.sections}>
-									<section class={styles.card}>
-										<div class={styles.cardHead}>
-											<div class={styles.cardTitleRow}>
-												<h2>开放注册</h2>
-												<InfoHint label="关于开放注册">
-													控制新用户能否自行注册账号。公网部署建议保持关闭 ——
-													这台机器只给自己用时，没有理由留着注册入口。
-												</InfoHint>
-											</div>
-											<button
-												type="button"
-												class={
-													s().allow_register
-														? styles.toggleOn
-														: styles.toggleOff
-												}
-												classList={{ [styles.disabled]: saving() }}
-												role="switch"
-												aria-checked={s().allow_register}
-												disabled={saving()}
-												onClick={() => void toggleRegister()}
-											>
-												<span class={styles.toggleKnob} />
-												{s().allow_register ? "开放" : "关闭"}
-											</button>
-										</div>
-									</section>
-
-									<section class={styles.card}>
-										<div class={styles.cardHead}>
-											<div>
-												<h2>JWT 密钥</h2>
-												<p class={styles.desc}>
-													状态：
-													{s().jwt_secret_set
-														? `已持久化（${s().jwt_secret_len} 字符）`
-														: "未持久化（环境变量或随机密钥，重启后会话失效）"}
-												</p>
-											</div>
-											<div class={styles.cardTitleRow}>
-												<Button
-													variant="danger"
-													size="sm"
-													disabled={rotating()}
-													onClick={() => void handleRotate()}
-												>
-													{rotating() ? "轮换中…" : "轮换密钥"}
-												</Button>
-												<InfoHint label="关于轮换密钥">
-													轮换后所有现有登录会话立即失效，需要重新登录。
-												</InfoHint>
-											</div>
-										</div>
-									</section>
+									<RegistrationCard
+										allowRegister={s().allow_register}
+										saving={saving()}
+										onToggle={() => void toggleRegister()}
+									/>
+									<JwtCard
+										jwtSecretSet={s().jwt_secret_set}
+										jwtSecretLen={s().jwt_secret_len}
+										rotating={rotating()}
+										onRotate={() => void handleRotate()}
+									/>
 								</div>
 							)}
 						</Show>

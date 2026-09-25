@@ -39,7 +39,7 @@ vi.mock("@shared/utils", async (importOriginal) => {
 			tryOrNotifyImpl(fn, ctx),
 	};
 });
-vi.mock("@components/ui", () => ({ showToast: vi.fn() }));
+vi.mock("@shared/utils/toastStore.ts", () => ({ showToast: vi.fn() }));
 
 const mockedCreate = vi.mocked(createCardE);
 const mockedDelete = vi.mocked(deleteCardE);

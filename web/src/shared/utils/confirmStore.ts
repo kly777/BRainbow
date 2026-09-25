@@ -4,8 +4,12 @@
  * 提供命令式 API：await showConfirm({ title, message, variant })
  * 类似 toastStore 的模式 —— 全局信号 + Container 组件渲染
  *
+ * 住在 shared/ 而不是 UI 层：shared/utils/safe-action.ts 也要用它（确认框 + 执行 + 通知），
+ * 而 shared 不得反向依赖 components（门禁见 web/src/app/layer-boundaries.test.ts）。
+ * 渲染端是 components/ui/organisms/ConfirmModal.tsx。
+ *
  * 用法：
- *   import { showConfirm } from "@components/ui/organisms/confirmStore";
+ *   import { showConfirm } from "@shared/utils/confirmStore";
  *   const ok = await showConfirm({ title: "删除", message: "确定？", variant: "danger" });
  *   if (!ok) return;
  */

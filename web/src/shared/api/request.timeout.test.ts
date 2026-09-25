@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@components/ui", () => ({ showToast: vi.fn() }));
+vi.mock("@shared/utils/toastStore.ts", () => ({ showToast: vi.fn() }));
 
 import { request } from "./request.ts";
 

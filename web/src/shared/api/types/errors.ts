@@ -1,6 +1,6 @@
 // ==================== Error 类 · 错误工具 ====================
 
-import { showToast } from "@components/ui/organisms/toastStore.ts";
+import { showToast } from "@shared/utils/toastStore.ts";
 
 // ── Error 类 ──
 

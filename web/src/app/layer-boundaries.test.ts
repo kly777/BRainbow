@@ -78,13 +78,6 @@ const ALLOWED: Record<string, string[]> = {
 		"@modules/file/api",
 		"@modules/file/components/FilePickerModal.tsx",
 	],
-	// 401/403 全局处理要弹 toast，而 toastStore 住在 UI 层——这里用动态 import
-	// 绕开静态循环。修法：store 下沉到 shared/ 后改成静态 import。
-	"shared/api/request.ts": ["@components/ui"],
-	"shared/utils/notify.ts": ["@components/ui/organisms/toastStore.ts"],
-	"shared/utils/safe-action.ts": ["@components/ui/organisms/confirmStore.ts"],
-	// 把请求错误抛成 toast 的默认路径，同样依赖 UI 层的 store（同上）。
-	"shared/api/types/errors.ts": ["@components/ui/organisms/toastStore.ts"],
 };
 
 /** 抓 `from "…"` 与动态 `import("…")` 两类引用（不含注释里的提及） */

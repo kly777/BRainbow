@@ -1,11 +1,11 @@
 // ── 全局快速记录 Hook ──
 // Shift+Tab 唤起浮窗，快速创建任务/卡片/书签，不离开当前页面
 
-import { showToast } from "@components/ui/organisms/toastStore.ts";
 import { type CreateBookmarkRequest, createBookmarkE } from "@modules/bookmark";
 import { type CreateCardRequest, createCardE } from "@modules/card";
 import { type CreateTaskRequest, createTaskE } from "@modules/task";
-import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { showToast } from "@shared/utils/toastStore.ts";
+import { createSignal, onCleanup, onMount } from "solid-js";
 
 export type QuickCaptureType = "task" | "card" | "bookmark";
 

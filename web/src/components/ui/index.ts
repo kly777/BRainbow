@@ -1,3 +1,7 @@
+// 两个全局 store 住在 shared/（`shared/utils/safe-action.ts` 等工具层要用它们，
+// 而 shared 不得反向依赖 UI）。这里按原样再导出，`@components/ui` 的消费者不受影响。
+export * from "@shared/utils/confirmStore.ts";
+export * from "@shared/utils/toastStore.ts";
 export { default as Badge } from "./atoms/Badge.tsx";
 export { default as Button } from "./atoms/Button.tsx";
 export type {
@@ -43,7 +47,6 @@ export { default as Toolbar } from "./molecules/Toolbar.tsx";
 // +12.7 KB（gzip +3.1 KB），改成让消费方按路径 import（`@components/ui/molecules/TagInput.tsx`，
 // 仓库里 EmptyGuide / ErrorRetry 也是这么引 Button 的）后回到 +1.7 KB。
 export { default as ConfirmModalContainer } from "./organisms/ConfirmModal.tsx";
-export * from "./organisms/confirmStore.ts";
 export {
 	type DetailPageProps,
 	default as DetailPage,
@@ -54,4 +57,3 @@ export {
 } from "./organisms/ListPage.tsx";
 export { default as Modal } from "./organisms/Modal.tsx";
 export { default as ToastContainer } from "./organisms/Toast.tsx";
-export * from "./organisms/toastStore.ts";

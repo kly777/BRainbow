@@ -19,6 +19,13 @@
 //
 // 前端 `web/src/modules/file/lib/magic.ts` 的 `looksTextual` 与本模块的
 // [`looks_like_text`] 是同一套判据，两侧改动要同步。
+//
+// 本模块打交道的都是**任意字节**（512 字节的头窗口，还会切在多字节字符中间），
+// 所以定长比较一律按字节来：`&str` 的下标/切片要求切点落在字符边界上，位置由
+// 内容决定的定长切片迟早会在某个中文文件上 panic。下面这道门禁就是挡这个 ——
+// 曾有过 `rest[..9]`，`# 二次型考法总结` 的第 9 字节落在"型"里，上传当场断流
+// （后端 panic → 连接被丢 → 浏览器/代理记成 502，只剩一个 0 字节 tmp 文件）。
+#![cfg_attr(not(test), deny(clippy::string_slice))]
 
 use crate::shared::error_types::ServiceError;
 
@@ -36,6 +43,9 @@ use crate::shared::error_types::ServiceError;
 ///
 /// 跳过的是"XML 文档允许的序言"，不是"任意前缀"：跳过之后的位置必须就是根元素，
 /// 所以只在这里出现 `<svg` 的 HTML、RSS、SVG 里嵌套的 SVG 都不会被误判。
+///
+/// `head` 是长度为上限 512 的窗口，既可能切在多字节字符中间，也可能切在序言
+/// 中间 —— 因此这里的比较一律按字节做，不看字符边界。
 fn looks_like_svg(head: &[u8]) -> bool {
     let text = String::from_utf8_lossy(head);
     let mut rest = text.as_ref();
@@ -47,23 +57,30 @@ fn looks_like_svg(head: &[u8]) -> bool {
 
     loop {
         rest = rest.trim_start();
-        if rest.starts_with("<?") {
+        // 三种"序言后的位置"都用 `split_once` 从分隔符切出去，不做带下标的切片：
+        // 由 `find` 加偏移量算切点的写法虽然也安全，但看代码的人得自己论证这件事，
+        // 而这条路径上出过一次切在多字节字符中间的实测事故。
+        if let Some(after) = rest.strip_prefix("<?") {
             // 处理指令（`<?xml version="1.0"?>` 等）：跳到 `?>`
-            match rest.find("?>") {
-                Some(end) => rest = &rest[end + 2..],
+            match after.split_once("?>") {
+                Some((_, tail)) => rest = tail,
                 // 还没读到结尾（首块被截断）：无法确认，按"不是 SVG"处理
                 None => return false,
             }
-        } else if rest.starts_with("<!--") {
+        } else if let Some(after) = rest.strip_prefix("<!--") {
             // 注释：跳到 `-->`；SingleFile 保存的页面开头正好是这种注释
-            match rest.find("-->") {
-                Some(end) => rest = &rest[end + 3..],
+            match after.split_once("-->") {
+                Some((_, tail)) => rest = tail,
                 None => return false,
             }
-        } else if rest.len() >= 9 && rest[..9].eq_ignore_ascii_case("<!doctype") {
+        } else if rest
+            .as_bytes()
+            .get(..9)
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case(b"<!doctype"))
+        {
             // DOCTYPE（SVG 也允许带）：跳到 `>`
-            match rest.find('>') {
-                Some(end) => rest = &rest[end + 1..],
+            match rest.split_once('>') {
+                Some((_, tail)) => rest = tail,
                 None => return false,
             }
         } else {
@@ -1057,6 +1074,46 @@ mod tests {
         ] {
             assert!(!looks_like_svg(head.as_bytes()), "不该认作 SVG：{head:?}");
         }
+    }
+
+    /// 头窗口是**任意字节**：会切在多字节字符中间，也会切在序言中间。
+    /// 这里把每个切点都走一遍 —— 任何切点都不得 panic，全长还要判对。
+    ///
+    /// 起因是一次 panic：定长判据写成 `rest[..9]`，`# 二次型考法总结` 的第 9 字节
+    /// 落在"型"（bytes 8..11）中间，上传当场断流 —— 后端任务 panic、连接被丢，
+    /// 浏览器与 vite 代理看到的是 502，磁盘上只剩一个 0 字节 tmp 文件。
+    #[test]
+    fn looks_like_svg_survives_multibyte_and_truncated_heads() {
+        for head in [
+            "# 二次型考法总结\n\n> 把它化为标准形\n",
+            "二次型考法总结",
+            "\u{feff}中文标题",
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!-- 注释 -->\n<svg/>",
+            "<!DOCTYPE svg 中文>\n<svg xmlns=\"http://www.w3.org/2000/svg\"/>",
+            "<svg>中文内容</svg>",
+            "<svgfoo>中文</svgfoo>",
+        ] {
+            for cut in 0..=head.len() {
+                let _ = looks_like_svg(&head.as_bytes()[..cut]);
+            }
+        }
+
+        // 截断只保证"不 panic"；全长仍要判对
+        assert!(!looks_like_svg("# 二次型考法总结\n".as_bytes()));
+        assert!(looks_like_svg(
+            "<!DOCTYPE svg 中文>\n<svg xmlns=\"http://www.w3.org/2000/svg\"/>".as_bytes()
+        ));
+    }
+
+    /// 真实事故回归：这份中文笔记（`# 二次型考法总结`）传不上来，
+    /// 原因是判定 SVG 时按字节切了第 9 个字节。它该按 md 收下。
+    #[test]
+    fn chinese_markdown_heading_is_still_markdown() {
+        let head = "# 二次型考法总结\n\n> 二次型：只含平方项…\n".as_bytes();
+        assert_eq!(
+            resolve_mime(head, "text/markdown", "二次型考法总结.md").unwrap(),
+            "text/markdown"
+        );
     }
 
     #[test]

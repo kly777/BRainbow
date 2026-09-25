@@ -37,4 +37,7 @@ pub fn create_router(state: AppState) -> Router {
             ServeDir::new("dist").not_found_service(ServeFile::new("dist/index.html")),
         )
         .with_state(state)
+        // 最外层兜底：handler 里 panic 时回一条能看的 500，而不是把连接丢掉
+        // （丢连接的表现是代理编出来的 502，见 app::http::panic 的注释）
+        .layer(crate::app::http::panic::layer())
 }

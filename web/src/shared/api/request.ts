@@ -42,15 +42,42 @@ function toast(opts: {
 
 // ==================== 错误体解析 ====================
 
+/**
+ * 网关类状态码的人话解释。
+ *
+ * 502/503/504 通常**不是后端给的答案**，而是中间那层（vite 开发代理、Caddy、
+ * Cloudflare）在上游没有响应时自己编的 —— 后端若还在，它会自己回带 code/message
+ * 的错误体。只说一句 `HTTP 502` 对不上任何现象：用户既不知道原因，也不知道要不要
+ * 重试。开发环境里最典型的成因是后端正在重启（cargo-watch 每次改动都会重启它），
+ * 以及后端进程 panic 后连接被丢（那种情况现已由 app/http/panic.rs 兜成 500）。
+ *
+ * 返回 null 表示"这个状态码不是网关那种情况"，调用方沿用原有文案。
+ */
+export function describeGatewayStatus(status: number): string | null {
+	switch (status) {
+		case 502:
+			return "后端没有响应（可能正在重启或已崩溃），稍后重试";
+		case 503:
+			return "后端暂时不可用，稍后重试";
+		case 504:
+			return "后端响应超时，稍后重试";
+		default:
+			return null;
+	}
+}
+
 export async function extractErrorBody(
 	response: Response,
 ): Promise<{ code: string; message: string; details?: unknown }> {
 	const text = await response.text().catch(() => "");
 
 	if (!text) {
+		// 空响应体：代理层的 502/503/504 正是这样（vite 代理只写状态码不写正文），
+		// 认得出就换成能对上现象的说明
+		const gateway = describeGatewayStatus(response.status);
 		return {
 			code: `HTTP_${response.status}`,
-			message: `HTTP ${response.status}`,
+			message: gateway ?? `HTTP ${response.status}`,
 		};
 	}
 
@@ -60,9 +87,10 @@ export async function extractErrorBody(
 		const reason =
 			response.status === 403
 				? "请求被防火墙拦截"
-				: response.status >= 500
-					? "服务器暂时不可用，请稍后重试"
-					: `服务器返回异常 (${response.status})`;
+				: (describeGatewayStatus(response.status) ??
+					(response.status >= 500
+						? "服务器暂时不可用，请稍后重试"
+						: `服务器返回异常 (${response.status})`));
 		return { code: `HTTP_${response.status}`, message: reason };
 	}
 

@@ -5,6 +5,7 @@ import {
 	buildQuery,
 	cachedRequest,
 	del,
+	describeGatewayStatus,
 	domains,
 	HttpError,
 	NetworkError,
@@ -144,8 +145,11 @@ export const uploadFileWithProgress = (
 			}
 
 			// 错误体统一为 {code, message, details?}
-			let code = "HTTP_ERROR";
-			let message = `上传失败（HTTP ${xhr.status}）`;
+			let code = `HTTP_${xhr.status}`;
+			// 502/503/504 是中间层编的（后端没响应），换成能对上现象的说明 ——
+			// 只回一句 "上传失败（HTTP 502）"既看不出原因也不知道要不要重试
+			let message =
+				describeGatewayStatus(xhr.status) ?? `上传失败（HTTP ${xhr.status}）`;
 			let details: unknown;
 			try {
 				const body = JSON.parse(xhr.responseText) as {
@@ -171,7 +175,9 @@ export const uploadFileWithProgress = (
 			reject(
 				new NetworkError({
 					cause: new Error("network error"),
-					message: "上传失败，请检查网络",
+					// 连接在传输中被断开（后端进程退出/重启、代理中断）。
+					// 说"请检查网络"会把人引到错的方向：这类失败多半在服务端。
+					message: "上传中断：连接被断开（服务端可能出错或正在重启）",
 				}),
 			);
 		});

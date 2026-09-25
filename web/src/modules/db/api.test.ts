@@ -122,7 +122,7 @@ describe("db API", () => {
 			ok: true,
 			status: 200,
 			statusText: "OK",
-		} as any;
+		} as unknown as Response;
 
 		// 模拟requestFile返回成功结果
 		mockRequestFile.mockResolvedValueOnce(mockResponse);

@@ -1,17 +1,13 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
 	getErrorMessage,
 	HttpError,
 	NetworkError,
-	showErrorInline,
 	ValidationError,
-} from "./errors.ts";
+} from "./model.ts";
 
-// showErrorAlert 会 import { showToast } from toastStore，
-// 用 vi.mock 避免 SolidJS 依赖
-vi.mock("@shared/utils/toastStore.ts", () => ({
-	showToast: vi.fn(),
-}));
+// 这里原本还测 showErrorAlert / showErrorInline —— 两个函数零调用点（只有这个测试在用），
+// 抑制规则已并进 notifyError（见 shared/errors/notify.ts 的 alreadyReported 与它的测试）。
 
 describe("getErrorMessage", () => {
 	it("extracts message from HttpError with details", () => {
@@ -67,30 +63,5 @@ describe("getErrorMessage", () => {
 		expect(getErrorMessage(undefined)).toBe("未知错误");
 		expect(getErrorMessage("string")).toBe("未知错误");
 		expect(getErrorMessage(42)).toBe("未知错误");
-	});
-});
-
-describe("showErrorInline", () => {
-	it("returns error message without prefix", () => {
-		const err = new HttpError({
-			status: 400,
-			code: "VALIDATION_ERROR",
-			message: "标题不能为空",
-		});
-		expect(showErrorInline(err)).toBe("标题不能为空");
-	});
-
-	it("returns error message with prefix", () => {
-		const err = new HttpError({
-			status: 400,
-			code: "VALIDATION_ERROR",
-			message: "标题不能为空",
-		});
-		expect(showErrorInline(err, "创建任务")).toBe("创建任务: 标题不能为空");
-	});
-
-	it("works with NetworkError", () => {
-		const err = new NetworkError({ cause: "timeout" });
-		expect(showErrorInline(err)).toBe("网络连接失败，请检查网络");
 	});
 });

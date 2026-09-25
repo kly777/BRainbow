@@ -38,7 +38,8 @@ function SuggestionItem(props: {
 			{props.item.highlightedDesc ? (
 				<span
 					class={styles.sugDesc}
-					// biome-ignore lint/security/noDangerouslySetInnerHtml: 搜索关键词高亮，已转义HTML实体
+					// 这里用 innerHTML 是刻意的：命中的关键词要加 <mark>；内容在
+					// suggestions 侧已经做过 HTML 实体转义（见 lib 的 highlight 逻辑）
 					innerHTML={props.item.highlightedDesc}
 				/>
 			) : (

@@ -1,5 +1,4 @@
 import { Input } from "@components/ui";
-import { PATHS } from "@config/paths";
 import styles from "@modules/search/SearchPage.module.css";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal, For, Show } from "solid-js";

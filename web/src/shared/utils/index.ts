@@ -1,3 +1,6 @@
+// 错误与提示（notify* / tryOrNotify / confirmAnd* / 错误类）已搬到 `@shared/errors`：
+// 这里再导出是为了不改动 50+ 处老调用点，新代码请从那儿引（doc/error-handling.md）
+export * from "../errors/index.ts";
 export * from "./ai-settings.ts";
 export * from "./browser.ts";
 export * from "./class-name.ts";
@@ -10,9 +13,7 @@ export * from "./format/time.ts";
 export * from "./greeting.ts";
 export * from "./icon.ts";
 export * from "./keyboard.ts";
-export * from "./notify.ts";
 export * from "./result.ts";
-export * from "./safe-action.ts";
 export * from "./search-query.ts";
 export * from "./speech.ts";
 export * from "./tag-combo.ts";

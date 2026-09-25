@@ -65,7 +65,7 @@ export default function TagManager(props: Props) {
 	const [localTags, setLocalTags] = createSignal<BookmarkTagWithCount[]>([]);
 
 	// 每次打开重新加载全部标签
-	const [tags, { refetch }] = createResource(
+	const [tags] = createResource(
 		() => (props.isOpen ? "open" : null),
 		async () => {
 			const result = await searchBookmarkTagsE("");

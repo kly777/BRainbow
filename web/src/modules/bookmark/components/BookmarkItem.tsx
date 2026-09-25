@@ -32,11 +32,11 @@ export function BookmarkItem(props: {
 	onTagsChanged?: () => void;
 }) {
 	const { bm } = props;
-	const [accessibility, setAccessibility] = createSignal<
+	const [accessibility, _setAccessibility] = createSignal<
 		"unknown" | "ok" | "fail"
 	>("unknown");
 	const [checking, setChecking] = createSignal(false);
-	const [refreshing, setRefreshing] = createSignal(false);
+	const [refreshing, _setRefreshing] = createSignal(false);
 
 	// AI 标签建议状态
 	const [suggesting, setSuggesting] = createSignal(false);

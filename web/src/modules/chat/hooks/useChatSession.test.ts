@@ -4,7 +4,7 @@ import { useChatSession } from "./useChatSession.ts";
 
 // 模拟依赖
 vi.mock("@shared/utils", () => ({
-	parseUrlId: vi.fn((id) => parseInt(id)),
+	parseUrlId: vi.fn((id) => parseInt(id, 10)),
 	strParam: vi.fn((defaultVal) => ({ default: defaultVal })),
 	useUrlParams: vi.fn(() => ({
 		get: vi.fn(() => ""),
@@ -58,12 +58,13 @@ vi.mock("./useStreamChat.ts", () => ({
 }));
 
 describe("useChatSession", () => {
-	let opts: any;
+	/** 被测 hook 的入参：按真实签名取（原来是 any，改完能查出漏字段） */
+	let opts: Parameters<typeof useChatSession>[0];
 
 	beforeEach(() => {
 		opts = {
 			createTitle: "新对话",
-			// 其他必要的选项
+			createLabel: "新建会话",
 		};
 	});
 

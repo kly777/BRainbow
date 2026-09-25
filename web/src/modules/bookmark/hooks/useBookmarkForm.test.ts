@@ -15,11 +15,12 @@ vi.mock("@shared/utils", () => ({
 }));
 
 describe("useBookmarkForm", () => {
-	let opts: any;
-	let onSavedMock: ReturnType<typeof vi.fn>;
+	/** 被测 hook 的入参：按真实签名取（原来是 any，改完能查出漏字段） */
+	let opts: Parameters<typeof useBookmarkForm>[0];
+	let onSavedMock: ReturnType<typeof vi.fn<() => void>>;
 
 	beforeEach(() => {
-		onSavedMock = vi.fn();
+		onSavedMock = vi.fn<() => void>();
 		opts = { onSaved: onSavedMock };
 	});
 

@@ -1,4 +1,4 @@
-import { ArrowRight, Check } from "@components/ui/icons";
+import { ArrowRight } from "@components/ui/icons";
 import { getErrorMessage } from "@shared/api";
 import { copyText, useCopyFlash } from "@shared/utils";
 import {

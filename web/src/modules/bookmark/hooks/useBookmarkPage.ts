@@ -6,8 +6,6 @@
 // 现在两块独立成 hook，依赖由这里传入；对外 API 一字未改（8 处调用点不用动）。
 
 import {
-	notifyError,
-	notifySuccess,
 	numParam,
 	strParam,
 	useListResource,

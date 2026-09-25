@@ -1,5 +1,6 @@
-import { createRoot, createSignal } from "solid-js";
+import { createRoot } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { TreeDetail } from "../api.ts";
 import { useStreamChat } from "./useStreamChat.ts";
 
 // 模拟依赖
@@ -23,22 +24,42 @@ vi.mock("./chat-tree.ts", () => ({
 }));
 
 describe("useStreamChat", () => {
-	let opts: any;
-	let setCurrentMock: ReturnType<typeof vi.fn>;
-	let loadTreeMock: ReturnType<typeof vi.fn>;
-	let aiTitleSessionMock: ReturnType<typeof vi.fn>;
-	let setFocusParamMock: ReturnType<typeof vi.fn>;
+	/** 被测 hook 的入参：按真实签名取（原来是 any，改完能查出漏字段） */
+	let opts: Parameters<typeof useStreamChat>[0];
+	/** 每个 mock 都按它要填的签名声明 —— 未标注的 vi.fn() 是 Procedure，赋不进去 */
+	let setCurrentMock: ReturnType<
+		typeof vi.fn<
+			(updater: (prev: TreeDetail | null) => TreeDetail | null) => void
+		>
+	>;
+	let loadTreeMock: ReturnType<typeof vi.fn<(id: number) => Promise<void>>>;
+	let aiTitleSessionMock: ReturnType<
+		typeof vi.fn<(id: number, silent?: boolean) => Promise<boolean>>
+	>;
+	let setFocusParamMock: ReturnType<typeof vi.fn<(id: number | null) => void>>;
 
 	beforeEach(() => {
-		setCurrentMock = vi.fn();
-		loadTreeMock = vi.fn();
-		aiTitleSessionMock = vi.fn();
-		setFocusParamMock = vi.fn();
+		setCurrentMock =
+			vi.fn<
+				(updater: (prev: TreeDetail | null) => TreeDetail | null) => void
+			>();
+		loadTreeMock = vi.fn<(id: number) => Promise<void>>();
+		aiTitleSessionMock =
+			vi.fn<(id: number, silent?: boolean) => Promise<boolean>>();
+		setFocusParamMock = vi.fn<(id: number | null) => void>();
 
 		opts = {
 			treeId: () => 1,
 			current: () => ({
-				tree: { id: 1, title: "新对话" },
+				tree: {
+					id: 1,
+					title: "新对话",
+					system_prompt: "",
+					kind: "chat",
+					created_at: "2026-09-01T00:00:00+00:00",
+					updated_at: "2026-09-01T00:00:00+00:00",
+					node_count: 0,
+				},
 				nodes: [],
 			}),
 			setCurrent: setCurrentMock,

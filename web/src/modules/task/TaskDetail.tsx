@@ -2,7 +2,6 @@
 
 import { AsyncSection, Button, Toolbar } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
-import { getErrorMessage } from "@shared/api";
 import {
 	confirmAndDelete,
 	fmtLocal,

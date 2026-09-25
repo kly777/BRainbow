@@ -1,4 +1,4 @@
-// 两个全局 store 住在 shared/（`shared/utils/safe-action.ts` 等工具层要用它们，
+// 两个全局 store 住在 shared/utils/（`shared/errors/` 的提示与动作层要用它们，
 // 而 shared 不得反向依赖 UI）。这里按原样再导出，`@components/ui` 的消费者不受影响。
 export * from "@shared/utils/confirmStore.ts";
 export * from "@shared/utils/toastStore.ts";

@@ -6,6 +6,10 @@ import { PATHS } from "@config/paths";
 // 业务逻辑复用 useMemAdd，此处只做视图层
 
 import { MarkdownEditor } from "@components";
+import {
+	MarkdownFilePicker,
+	uploadToFileService,
+} from "@modules/file/markdown-editor-support.tsx";
 import { A } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
 import {
@@ -82,6 +86,8 @@ function SingleCardView(props: { m: ReturnType<typeof useMemAdd> }) {
 					</div>
 					<div class={styles.faceBody}>
 						<MarkdownEditor
+							onUploadFile={uploadToFileService}
+							filePicker={MarkdownFilePicker}
 							id="add-cue"
 							class={styles.textarea}
 							placeholder="例如：质能方程 E=mc²"
@@ -106,6 +112,8 @@ function SingleCardView(props: { m: ReturnType<typeof useMemAdd> }) {
 					</div>
 					<div class={styles.faceBody}>
 						<MarkdownEditor
+							onUploadFile={uploadToFileService}
+							filePicker={MarkdownFilePicker}
 							id="add-target"
 							class={styles.textarea}
 							placeholder="例如：能量等于质量乘以光速的平方"

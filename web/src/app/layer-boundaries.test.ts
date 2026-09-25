@@ -11,7 +11,11 @@
 //  1. `components/**` 不得引 `@modules/**`——共享层不反向依赖业务模块；
 //  2. `shared/**` 不得引 `@components/**`——工具层与 API 层不依赖 UI
 //     （两个全局 store 迄今住在 components/ui/organisms/ 下，是历史遗留）；
-//  3. `modules/A/**` 不得深引 `modules/B/**` 的内部（B ≠ A），只许 `@modules/B` barrel；
+//  3. `modules/A/**` 不得深引 `modules/B/**` 的**子目录**（components / hooks / lib /
+//     viewers …）——那是 B 的内部实现，跨模块一律走 `@modules/B` barrel；
+//     但**根级文件是公开入口**（页面、`api.ts`、root 支撑件），可以按路径引用：
+//     路由表就是这么引页面的（`app/routes.ts` → `@modules/file/FileList.tsx`），
+//     迁移手册也要求测试 mock 叶子 `@modules/<域>/api.ts` 而不是 barrel；
 //  4. `config/**` 零依赖（不得引其余四层中的任何一个）；
 //  5. `components/**` 与 `shared/**` 不得引 `@app/**`——它们要能脱离应用外壳独立成立。
 //
@@ -68,17 +72,13 @@ function layerOf(relPath: string): Layer {
 }
 
 /**
- * 存量越界白名单：`相对 src 的路径` → 允许的目标。
- * 只能登记"当前真实存在"的越界；修掉一处就删一条（否则下面的过期检查会失败）。
+ * 存量越界白名单：`相对 src 的路径` → 允许的目标。**当前为空**——曾经的两处
+ * （store 住在 UI 层导致的 shared → components、MarkdownEditor 硬引 file 模块）
+ * 都已经在源头修掉。留着这个机制是为了让将来必须落地的例外有地方登记：
+ * 只能登记"当前真实存在"的越界，修掉一处就删一条（否则过期检查会失败），
+ * 所以它不会烂在那里变成永久豁免。
  */
-const ALLOWED: Record<string, string[]> = {
-	// 共享层的编辑器要能"上传 / 从文件库挑文件"，为此直接深入了 file 模块。
-	// 修法：改成注入的 props（onUpload / onPickFile），实现由页面侧提供。
-	"components/MarkdownEditor.tsx": [
-		"@modules/file/api",
-		"@modules/file/components/FilePickerModal.tsx",
-	],
-};
+const ALLOWED: Record<string, string[]> = {};
 
 /** 抓 `from "…"` 与动态 `import("…")` 两类引用（不含注释里的提及） */
 function specifiersOf(source: string): string[] {
@@ -124,12 +124,13 @@ function violationOf(
 	}
 
 	if (layer.kind === "modules") {
-		const m = spec.match(/^@modules\/([^/]+)(\/.*)?$/);
-		// 只认"有第二段路径"的深引；`@modules/<域>` 是 barrel，正是要鼓励的
-		if (m?.[2] && m[1] !== layer.domain) {
+		const m = spec.match(/^@modules\/([^/]+)\/(.+)$/);
+		// 目标路径里还有 "/" → 落在子目录（components/ hooks/ lib/ viewers/ …）= 内部实现；
+		// 根级文件（`FileList.tsx` / `api.ts` / `markdown-editor-support.tsx`）属公开入口
+		if (m && m[1] !== layer.domain && m[2].includes("/")) {
 			return {
 				rule: "3",
-				why: `跨模块深引内部实现，应改从 @modules/${m[1]} 导入`,
+				why: `跨模块深引内部实现，应改从 @modules/${m[1]} 导入或使用它的根级入口`,
 			};
 		}
 	}
@@ -144,7 +145,7 @@ function lineOf(source: string, index: number): number {
 }
 
 describe("分层依赖方向契约", () => {
-	it("没有越层引用（存量债见 ALLOWED 白名单）", () => {
+	it("没有越层引用（当前零例外；例外必须登记进 ALLOWED 并附理由）", () => {
 		const files = walk(SRC_ROOT).filter(
 			(f) => /\.tsx?$/.test(f) && !f.endsWith(".d.ts") && !f.includes(".test."),
 		);

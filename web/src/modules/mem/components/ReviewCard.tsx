@@ -3,6 +3,10 @@
 
 import { MarkdownEditor } from "@components";
 import { Button, Icon, Markdown as MarkdownRenderer } from "@components/ui";
+import {
+	MarkdownFilePicker,
+	uploadToFileService,
+} from "@modules/file/markdown-editor-support.tsx";
 import { copyTextWithToast, fmtInterval, fmtLocal } from "@shared/utils";
 import { Show } from "solid-js";
 import type { UseMemReview } from "../hooks/useMemReviewTypes.ts";
@@ -72,6 +76,8 @@ function EditCard(props: MemProps) {
 				<div class={styles.section}>
 					<div class={styles.sectionLabel}>线索</div>
 					<MarkdownEditor
+						onUploadFile={uploadToFileService}
+						filePicker={MarkdownFilePicker}
 						class={styles.editArea}
 						value={props.m.editCue()}
 						onInput={props.m.setEditCue}
@@ -82,6 +88,8 @@ function EditCard(props: MemProps) {
 				<div class={styles.section}>
 					<div class={styles.sectionLabel}>答案</div>
 					<MarkdownEditor
+						onUploadFile={uploadToFileService}
+						filePicker={MarkdownFilePicker}
 						class={styles.editArea}
 						value={props.m.editTarget()}
 						onInput={props.m.setEditTarget}

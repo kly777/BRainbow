@@ -4,6 +4,10 @@ import { X } from "@components/ui/icons";
 
 import { MarkdownEditor } from "@components";
 import { Button, Markdown as MarkdownRenderer } from "@components/ui";
+import {
+	MarkdownFilePicker,
+	uploadToFileService,
+} from "@modules/file/markdown-editor-support.tsx";
 import type { MemItem, TagInfo } from "@modules/mem";
 import { fmtLocal } from "@shared/utils";
 import { type Component, Show } from "solid-js";
@@ -81,6 +85,8 @@ const CueEditSection: Component<{
 	<div class={styles.detailSection}>
 		<div class={styles.detailTab}>{props.tab}</div>
 		<MarkdownEditor
+			onUploadFile={uploadToFileService}
+			filePicker={MarkdownFilePicker}
 			class={styles.editArea}
 			value={props.value}
 			onInput={props.onInput}

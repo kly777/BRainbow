@@ -103,6 +103,25 @@ describe("Markdown rendering pipeline", () => {
 			expect(html).toContain("frac-line");
 			expect(html).toContain("style=");
 		});
+
+		it("class 里空白分隔的 katex-display 也算 KaTeX 上下文（正则按意图修好）", () => {
+			const html = render(
+				'<span class="foo katex-display" style="color:red">x</span>',
+			);
+			expect(html).toContain("style=");
+		});
+
+		it("只是名字沾边的 class 不豁免（notkatex）", () => {
+			const html = render('<span class="notkatex" style="color:red">x</span>');
+			expect(html).not.toContain("style=");
+		});
+
+		it('已知局限：内容自带 class="katex" 也能保留内联 style（非本次引入）', () => {
+			// 结构判定挡不住"自己声明成 KaTeX"的内容 —— 这条测试是把这个已知边界
+			// 钉在明处：要收紧得换判据（例如只认渲染器自己打的标记），而不是改回正则
+			const html = render('<span class="katex" style="color:red">x</span>');
+			expect(html).toContain("style=");
+		});
 	});
 
 	// ========== KaTeX 公式 ==========

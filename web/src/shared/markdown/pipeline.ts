@@ -75,12 +75,13 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
 // 否则 AI/笔记内容可携带内联 CSS（background:url 外呼、position:fixed
 // 页内覆盖层钓鱼）——白名单无法按标签收敛，改用子树判定（审计 F5）
 //
-// 注意下面那个 `\\s` 是**字面反斜杠 + s**（正则里等于匹配文本 "\s"），不是空白类——
-// 即"空白分隔的 class"这一支永远不生效，靠 `closest(".katex")` 兜着。看着像手滑，
-// 但"放开它"等于放宽哪些节点能保留内联 style（正是 F5 要收紧的面），改动前先想清
-// 谁能伪造 `class="katex..."`（`class` 在白名单里，内容可以自带），别顺手机改。
+// 判定是"结构 + 类名"两级：元素自己带 `katex` / `katex-display` 类，或祖先里有 `.katex`。
+// 原先的正则写成 `\\s`（字面反斜杠 + s，匹配的是文本 "\s"），于是"空白分隔的 class"
+// 那一支永不生效 —— `class="foo katex-display"` 会被误判成非 KaTeX 而剥掉 style。
+// 已按意图改为 `\s`；**这不新增能力**：内容本来就能自带 `class="katex"` 混过判定
+// （见下面那条"已知局限"的测试），本次只是让实现与意图一致。
 const isKaTeXContext = (el: Element): boolean => {
-	if (/(^|\\s)katex(-|\\s|$)/.test(el.getAttribute("class") ?? "")) return true;
+	if (/(^|\s)katex(-|\s|$)/.test(el.getAttribute("class") ?? "")) return true;
 	return el.closest?.(".katex") != null;
 };
 DOMPurify.addHook("afterSanitizeAttributes", (node) => {

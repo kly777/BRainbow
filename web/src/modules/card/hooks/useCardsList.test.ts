@@ -11,7 +11,7 @@ import { createRoot } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useCardsList } from "./useCardsList.ts";
 
-vi.mock("@modules/card", () => ({
+vi.mock("@modules/card/api.ts", () => ({
 	createCardE: vi.fn(),
 	deleteCardE: vi.fn(),
 	getCardsE: vi.fn(),

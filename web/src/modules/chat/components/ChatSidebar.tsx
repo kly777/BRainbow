@@ -3,27 +3,32 @@
 // 列表项的操作（重命名 / AI 取标题 / 删除、悬浮三点菜单）由 TreeListItem 统一实现。
 
 import { EmptyState } from "@components/ui";
-import type { ChatTree } from "@modules/chat";
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
+import type { ChatTree } from "../api.ts";
 import { TreeListItem } from "./ChatPageParts.tsx";
 import styles from "./ChatSidebar.module.css";
 
-export interface ChatSidebarProps {
-	trees: () => ChatTree[];
-	loadingTrees: () => boolean;
-	currentTreeId: () => number | null | undefined;
-	collapsed: boolean;
+/** 侧边栏的文案（两个入口页面各写一套，故收成一束） */
+export interface SidebarCopy {
 	title: string;
 	newLabel: string;
 	emptyText: string;
 	/** 侧边栏头部下方的提示文案（可选） */
 	hint?: string;
+}
+
+/** 头部与插入内容（都是"壳"，由页面给） */
+export interface SidebarSlots {
 	/** 头部左侧的返回链接（可选，如 /chat/mem 返回记忆页） */
 	backHref?: string;
 	backLabel?: JSX.Element;
 	/** 插入在侧边栏头部之前的内容（如 /chat 的搜索框） */
 	preHead?: JSX.Element;
+}
+
+/** 会话操作收成一束（刀法 ②）：加一个操作只改这里与两个调用点 */
+export interface SidebarActions {
 	onCreate: () => void;
 	onSelect: (id: number) => void;
 	onRename: (id: number, title: string) => void;
@@ -31,27 +36,41 @@ export interface ChatSidebarProps {
 	onDelete: (id: number) => void;
 }
 
+export interface ChatSidebarProps {
+	trees: () => ChatTree[];
+	loadingTrees: () => boolean;
+	currentTreeId: () => number | null | undefined;
+	collapsed: boolean;
+	copy: SidebarCopy;
+	slots: SidebarSlots;
+	actions: SidebarActions;
+}
+
 export function ChatSidebar(props: ChatSidebarProps) {
 	return (
 		<aside class={props.collapsed ? styles.sidebarCollapsed : styles.sidebar}>
-			{props.preHead}
+			{props.slots.preHead}
 			<div class={styles.sidebarHead}>
 				<span class={styles.sidebarHeadLeft}>
-					<Show when={props.backHref}>
+					<Show when={props.slots.backHref}>
 						{(href) => (
 							<A href={href()} class={styles.sidebarBackLink}>
-								{props.backLabel}
+								{props.slots.backLabel}
 							</A>
 						)}
 					</Show>
-					<span class={styles.sidebarTitle}>{props.title}</span>
+					<span class={styles.sidebarTitle}>{props.copy.title}</span>
 				</span>
-				<button type="button" class={styles.newBtn} onClick={props.onCreate}>
-					{props.newLabel}
+				<button
+					type="button"
+					class={styles.newBtn}
+					onClick={props.actions.onCreate}
+				>
+					{props.copy.newLabel}
 				</button>
 			</div>
-			<Show when={props.hint}>
-				<div class={styles.sidebarHint}>{props.hint}</div>
+			<Show when={props.copy.hint}>
+				<div class={styles.sidebarHint}>{props.copy.hint}</div>
 			</Show>
 			<div class={styles.treeList}>
 				<For each={props.trees()}>
@@ -59,10 +78,10 @@ export function ChatSidebar(props: ChatSidebarProps) {
 						<TreeListItem
 							tree={tree}
 							active={props.currentTreeId() === tree.id}
-							onSelect={() => props.onSelect(tree.id)}
-							onRename={(title) => props.onRename(tree.id, title)}
-							onAiTitle={() => props.onAiTitle(tree.id)}
-							onDelete={() => props.onDelete(tree.id)}
+							onSelect={() => props.actions.onSelect(tree.id)}
+							onRename={(title) => props.actions.onRename(tree.id, title)}
+							onAiTitle={() => props.actions.onAiTitle(tree.id)}
+							onDelete={() => props.actions.onDelete(tree.id)}
 						/>
 					)}
 				</For>
@@ -75,7 +94,7 @@ export function ChatSidebar(props: ChatSidebarProps) {
 					</div>
 				</Show>
 				<Show when={props.trees().length === 0 && !props.loadingTrees()}>
-					<EmptyState title={props.emptyText} compact />
+					<EmptyState title={props.copy.emptyText} compact />
 				</Show>
 			</div>
 		</aside>

@@ -44,16 +44,18 @@ function cardProps(over: Partial<CardProps> = {}): CardProps {
 		highlighted: false,
 		selectMode: false,
 		selected: false,
-		onToggleSelect: noop,
 		editName: "",
-		onOpen: noop,
-		onZoom: noop,
-		onContextMenu: noop,
-		onStartRename: noop,
-		onDelete: noop,
-		onRename: noop,
-		onEditName: noop,
-		onCancelEdit: noop,
+		actions: {
+			onToggleSelect: noop,
+			onOpen: noop,
+			onZoom: noop,
+			onContextMenu: noop,
+			onStartRename: noop,
+			onDelete: noop,
+			onRename: noop,
+			onEditName: noop,
+			onCancelEdit: noop,
+		},
 		...over,
 	};
 }
@@ -97,7 +99,12 @@ describe("FileCard", () => {
 	it("选择模式下出现勾选框并回调 stored_id", () => {
 		const onToggleSelect = vi.fn();
 		const host = mount(() => (
-			<FileCard {...cardProps({ selectMode: true, onToggleSelect })} />
+			<FileCard
+				{...cardProps({
+					selectMode: true,
+					actions: { ...cardProps().actions, onToggleSelect },
+				})}
+			/>
 		));
 		const box = host.querySelector(
 			"input[type='checkbox']",
@@ -116,7 +123,11 @@ describe("FileCard", () => {
 		const onEditName = vi.fn();
 		const host = mount(() => (
 			<FileCard
-				{...cardProps({ editing: true, editName: "新名字", onEditName })}
+				{...cardProps({
+					editing: true,
+					editName: "新名字",
+					actions: { ...cardProps().actions, onEditName },
+				})}
 			/>
 		));
 		// 重命名输入框靠 aria-label 定位（它没有 type 属性）

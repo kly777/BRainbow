@@ -1,32 +1,56 @@
-import { describe, expect, it } from "vitest";
+// ── Badge 契约测试 ──
+// 此前是自我满足型：断言一个字面量数组长度是 8，与组件毫无关系。
+// 这里钉住 variant → 类名映射与默认值。
+
+import type { JSX } from "solid-js";
+import { render } from "solid-js/web";
+import { afterEach, describe, expect, it } from "vitest";
 import Badge from "./Badge.tsx";
 
+const VARIANTS = [
+	"default",
+	"new",
+	"learning",
+	"review",
+	"relearning",
+	"suspended",
+	"success",
+	"warning",
+] as const;
+
+function mount(ui: () => JSX.Element) {
+	document.body.innerHTML = "";
+	const host = document.createElement("div");
+	document.body.appendChild(host);
+	render(ui, host);
+}
+
+const badge = () => document.querySelector("span") as HTMLSpanElement;
+
+afterEach(() => {
+	document.body.innerHTML = "";
+});
+
 describe("Badge", () => {
-	it("组件可渲染", () => {
-		expect(Badge).toBeDefined();
-		expect(typeof Badge).toBe("function");
+	it("渲染成 span 并带上基础类与文案", () => {
+		mount(() => <Badge>新卡</Badge>);
+		expect(badge().tagName).toBe("SPAN");
+		expect(badge().className).toContain("_badge_");
+		expect(badge().textContent).toBe("新卡");
 	});
 
-	it("variant 默认值为 default", () => {
-		const variant = undefined;
-		const resolved = variant ?? "default";
-		expect(resolved).toBe("default");
+	it("默认 variant 是 default", () => {
+		mount(() => <Badge>x</Badge>);
+		expect(badge().className).toContain("_default_");
 	});
 
-	it("支持所有 variant 类型", () => {
-		const variants = [
-			"default",
-			"new",
-			"learning",
-			"review",
-			"relearning",
-			"suspended",
-			"success",
-			"warning",
-		];
-		for (const v of variants) {
-			expect(typeof v).toBe("string");
+	it("8 个 variant 各自映射到不同类名", () => {
+		const seen = new Set<string>();
+		for (const v of VARIANTS) {
+			mount(() => <Badge variant={v}>{v}</Badge>);
+			expect(badge().className).toContain(`_${v}_`);
+			seen.add(badge().className);
 		}
-		expect(variants).toHaveLength(8);
+		expect(seen.size).toBe(VARIANTS.length);
 	});
 });

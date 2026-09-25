@@ -13,7 +13,7 @@ import { render } from "solid-js/web";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CardsListPage from "./CardsList.tsx";
 
-vi.mock("@modules/card", () => ({
+vi.mock("@modules/card/api.ts", () => ({
 	createCardE: vi.fn(),
 	deleteCardE: vi.fn(),
 	getCardsE: vi.fn(),

@@ -1,6 +1,6 @@
 import { Input, Select, Textarea } from "@components/ui";
-import type { Task } from "@modules/task";
 import { For } from "solid-js";
+import type { Task } from "../api.ts";
 import styles from "./EditTaskModal.module.css";
 
 interface BasicInfoTabProps {

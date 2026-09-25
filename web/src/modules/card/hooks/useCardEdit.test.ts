@@ -14,7 +14,7 @@ vi.mock("@solidjs/router", () => ({
 	useParams: () => routeParams,
 	useNavigate: () => navigateMock,
 }));
-vi.mock("@modules/card", () => ({
+vi.mock("@modules/card/api.ts", () => ({
 	deleteCardE: vi.fn(),
 	getCardE: vi.fn(),
 	updateCardE: vi.fn(),

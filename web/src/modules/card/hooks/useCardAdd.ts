@@ -1,10 +1,10 @@
 import { fillPath, PATHS } from "@config/paths";
-import type { CreateCardRequest } from "@modules/card";
-import { createCardE } from "@modules/card";
 import { getErrorMessage } from "@shared/api";
 import { tryAsync } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
 import { createSignal } from "solid-js";
+import { createCardE } from "../api.ts";
+import type { CreateCardRequest } from "../model.ts";
 
 export interface CardAddApi {
 	content: () => string;

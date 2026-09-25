@@ -1,10 +1,4 @@
 import { Select } from "@components/ui";
-import type { Task } from "@modules/task";
-import {
-	addTaskDependencyE,
-	getTaskDetailE,
-	removeTaskDependencyE,
-} from "@modules/task";
 import { getErrorMessage } from "@shared/api";
 import { notifyError, tryAsync } from "@shared/utils";
 import {
@@ -15,6 +9,12 @@ import {
 	For,
 	Show,
 } from "solid-js";
+import type { Task } from "../api.ts";
+import {
+	addTaskDependencyE,
+	getTaskDetailE,
+	removeTaskDependencyE,
+} from "../api.ts";
 import styles from "./EditTaskModal.module.css";
 
 // 依赖状态类映射（vanilla-extract 不支持动态索引）

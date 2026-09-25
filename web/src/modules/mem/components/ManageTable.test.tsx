@@ -4,9 +4,9 @@
 // 每行渲染线索/答案为预览文本、行内操作带着 id 回调、空态文案随筛选态变化、
 // loading 时出骨架且不出表格。
 
-import type { MemItem } from "@modules/mem";
 import { render } from "solid-js/web";
 import { describe, expect, it, vi } from "vitest";
+import type { MemItem } from "../api.ts";
 import ManageTable from "./ManageTable.tsx";
 
 // 空态里的"添加第一张记忆卡"是路由链接，渲染它需要 Router 上下文
@@ -32,21 +32,21 @@ function mem(over: Partial<MemItem> = {}): MemItem {
 const baseProps = () => ({
 	mems: [mem()],
 	batchIds: new Set<number>(),
-	sortField: "state" as const,
-	sortDir: "asc" as const,
 	detailId: null as number | null,
 	memTags: new Map(),
 	allSelected: false,
 	loading: false,
 	pageMeta: { page: 1, total_pages: 1, total: 1 },
-	page: 1,
 	filtered: false,
-	onToggleSort: () => {},
-	onToggleBatch: () => {},
-	onToggleAll: () => {},
-	onSelectRow: () => {},
-	onDelete: () => {},
-	onPageChange: () => {},
+	sort: { field: "state" as const, dir: "asc" as const },
+	actions: {
+		onToggleSort: () => {},
+		onToggleBatch: () => {},
+		onToggleAll: () => {},
+		onSelectRow: () => {},
+		onDelete: () => {},
+		onPageChange: () => {},
+	},
 });
 
 function mount(node: () => unknown) {
@@ -69,8 +69,9 @@ describe("ManageTable", () => {
 
 	it("点线索单元格带着该行 id 回调 onSelectRow", () => {
 		const onSelectRow = vi.fn();
+		const props = baseProps();
 		const host = mount(() => (
-			<ManageTable {...baseProps()} onSelectRow={onSelectRow} />
+			<ManageTable {...props} actions={{ ...props.actions, onSelectRow }} />
 		));
 		const cell = Array.from(host.querySelectorAll("button")).find((b) =>
 			b.textContent?.includes("线索内容"),
@@ -81,8 +82,9 @@ describe("ManageTable", () => {
 
 	it("删除按钮带着该行 id 回调 onDelete", () => {
 		const onDelete = vi.fn();
+		const props = baseProps();
 		const host = mount(() => (
-			<ManageTable {...baseProps()} onDelete={onDelete} />
+			<ManageTable {...props} actions={{ ...props.actions, onDelete }} />
 		));
 		const del = host.querySelector("button[title='删除']") as HTMLButtonElement;
 		del.click();

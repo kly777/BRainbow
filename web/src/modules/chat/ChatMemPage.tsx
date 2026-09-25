@@ -32,21 +32,28 @@ export default function ChatMemPage() {
 				loadingTrees={c.loadingTrees}
 				currentTreeId={() => c.current()?.tree.id}
 				collapsed={sidebarCollapsed()}
-				title="记忆卡片会话"
-				backHref={PATHS.memory}
-				backLabel={
-					<>
-						<ArrowLeft size={14} /> 记忆
-					</>
-				}
-				newLabel="＋ 新会话"
-				emptyText="还没有会话，点击“＋ 新会话”开始"
-				hint="粘贴文本 → AI 生成卡片 → 对话修订 → 勾选导入"
-				onCreate={() => void c.createSession()}
-				onSelect={(id) => c.selectSession(id)}
-				onRename={(id, title) => void c.renameSession(id, title)}
-				onAiTitle={(id) => c.aiTitleSession(id)}
-				onDelete={(id) => c.removeSession(id)}
+				copy={{
+					title: "记忆卡片会话",
+					newLabel: "＋ 新会话",
+					emptyText: "还没有会话，点击“＋ 新会话”开始",
+					hint: "粘贴文本 → AI 生成卡片 → 对话修订 → 勾选导入",
+				}}
+				slots={{
+					backHref: PATHS.memory,
+					backLabel: (
+						<>
+							<ArrowLeft size={14} /> 记忆
+						</>
+					),
+				}}
+				actions={{
+					onCreate: () => void c.createSession(),
+					onSelect: (id: number) => c.selectSession(id),
+					onRename: (id: number, title: string) =>
+						void c.renameSession(id, title),
+					onAiTitle: (id: number) => c.aiTitleSession(id),
+					onDelete: (id: number) => c.removeSession(id),
+				}}
 			/>
 
 			{/* ── 对话区 ── */}

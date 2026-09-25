@@ -1,6 +1,4 @@
 import { Select } from "@components/ui";
-import type { Task } from "@modules/task";
-import { getAllTasksE, getDagE } from "@modules/task";
 import { notifyError, tryAsync } from "@shared/utils";
 import {
 	createEffect,
@@ -11,6 +9,8 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
+import type { Task } from "../api.ts";
+import { getAllTasksE, getDagE } from "../api.ts";
 import { layout } from "../lib/dag-layout.ts";
 import { calcAutoOffset, drawGraph, hitTestNode } from "../lib/dag-render.ts";
 import styles from "./TaskDag.module.css";

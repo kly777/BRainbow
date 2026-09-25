@@ -1,12 +1,11 @@
 import {
-	ErrorRetry,
+	AsyncSection,
 	LoadingSkeleton,
 	Markdown as MarkdownRenderer,
 } from "@components/ui";
-import { getConvConceptE } from "@modules/conv";
-import { strParam, useUrlParams } from "@shared/utils";
+import { strParam, useDetailResource, useUrlParams } from "@shared/utils";
 import { useParams } from "@solidjs/router";
-import { createResource, Show } from "solid-js";
+import { getConvConceptE } from "./api.ts";
 import styles from "./ConvDetail.module.css";
 import ConvTopBar from "./components/ConvTopBar.tsx";
 import { useBackHref } from "./hooks/useBackHref.ts";
@@ -15,38 +14,40 @@ export default function ConvConceptPage() {
 	const params = useParams();
 	const urlParams = useUrlParams({ article: strParam("") });
 
-	const [data, { refetch }] = createResource(
-		() => ({ id: params.id, article: urlParams.get("article") }),
-		({ id, article }) => getConvConceptE(Number(id), String(article || "")),
-	);
+	// 键是 (id, article) 组合：原语的 id 是泛型，直接用对象即可
+	const detail = useDetailResource<
+		Awaited<ReturnType<typeof getConvConceptE>>,
+		{ id: string | undefined; article: string }
+	>({
+		id: () => ({ id: params.id, article: urlParams.get("article") }),
+		fetcher: ({ id, article }) => getConvConceptE(Number(id), article),
+	});
 	const backHref = useBackHref();
 
 	return (
 		<div class={styles.page}>
-			{/* 错误时短路：data() 在 error 存在时会 throw（Solid 1.9 语义） */}
-			<Show
-				when={data.error}
-				fallback={
-					<Show when={data()} fallback={<LoadingSkeleton />}>
-						{(d) => (
-							<>
-								<ConvTopBar
-									title={d().title}
-									type={d().article_type}
-									backHref={backHref()}
-								/>
-								<div class={styles.body}>
-									<div class={styles.md}>
-										<MarkdownRenderer content={d().content} />
-									</div>
-								</div>
-							</>
-						)}
-					</Show>
-				}
+			<AsyncSection
+				data={detail.data}
+				loading={detail.loading}
+				error={detail.error}
+				onRetry={detail.refetch}
+				skeleton={<LoadingSkeleton />}
 			>
-				<ErrorRetry error={data.error} onRetry={refetch} />
-			</Show>
+				{(d) => (
+					<>
+						<ConvTopBar
+							title={d().title}
+							type={d().article_type}
+							backHref={backHref()}
+						/>
+						<div class={styles.body}>
+							<div class={styles.md}>
+								<MarkdownRenderer content={d().content} />
+							</div>
+						</div>
+					</>
+				)}
+			</AsyncSection>
 		</div>
 	);
 }

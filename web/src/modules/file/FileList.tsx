@@ -285,16 +285,18 @@ const FileListPage: Component = () => {
 										highlighted={f.highlightId() === item.stored_id}
 										selectMode={f.selectMode()}
 										selected={f.selected().has(item.stored_id)}
-										onToggleSelect={f.toggleSelect}
-										onContextMenu={openContextMenu}
 										editName={f.editName()}
-										onOpen={() => openDetail(item)}
-										onZoom={() => lightbox.open(item)}
-										onStartRename={f.startRename}
-										onDelete={f.handleDelete}
-										onRename={f.handleRename}
-										onEditName={f.setEditName}
-										onCancelEdit={f.cancelEdit}
+										actions={{
+											onToggleSelect: f.toggleSelect,
+											onContextMenu: openContextMenu,
+											onOpen: () => openDetail(item),
+											onZoom: () => lightbox.open(item),
+											onStartRename: f.startRename,
+											onDelete: f.handleDelete,
+											onRename: f.handleRename,
+											onEditName: f.setEditName,
+											onCancelEdit: f.cancelEdit,
+										}}
 									/>
 								</Show>
 							)}

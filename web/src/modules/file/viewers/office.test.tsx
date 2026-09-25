@@ -108,7 +108,9 @@ describe("DocxViewer", () => {
 		});
 		const host = mount(DocxViewer);
 
-		await settle(() => (host.textContent ?? "").includes("标题"));
+		// 等"h1 已带文案"而不是"文本出现过"：innerHTML 由动态 import 的 DOMPurify 写入，
+		// 两者抢跑时（并发跑全量时出现过）只等文本会在 h1 就位前通过
+		await settle(() => host.querySelector("h1")?.textContent === "标题");
 		expect(host.querySelector("h1")?.textContent).toBe("标题");
 		expect(host.querySelector("strong")?.textContent).toBe("加粗");
 		expect(host.textContent).not.toContain("正在解析");

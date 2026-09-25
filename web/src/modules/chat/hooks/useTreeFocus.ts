@@ -1,8 +1,8 @@
 // ── URL 驱动的焦点/分支导航 ──
 // 从 useChatSession 拆分：节点查找、活跃路径、分支切换、子树判断。
 
-import type { ChatNode } from "@modules/chat";
 import type { Accessor } from "solid-js";
+import type { ChatNode } from "../api.ts";
 import {
 	computeActivePath,
 	findBranchLeaf,

@@ -1,14 +1,14 @@
 import { Input } from "@components/ui";
 import { PATHS } from "@config/paths";
+import styles from "@modules/search/SearchPage.module.css";
+import { useNavigate, useSearchParams } from "@solidjs/router";
+import { createEffect, createSignal, For, Show } from "solid-js";
 import {
 	KIND_LABEL,
 	resolveTargetUrl,
 	type SearchHit,
 	searchE,
-} from "@modules/command-palette";
-import styles from "@modules/search/SearchPage.module.css";
-import { useNavigate, useSearchParams } from "@solidjs/router";
-import { createEffect, createSignal, For, Show } from "solid-js";
+} from "./api.ts";
 import { highlightKeywords } from "./lib/highlight.ts";
 
 const MODULES = [

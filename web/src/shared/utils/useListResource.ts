@@ -40,9 +40,18 @@ export interface ListResourceOptions<K, T> {
 	 * 用对象字面量即可（createResource 按引用比较，参数变化时自然重取）。
 	 */
 	key: () => K;
-	/** 当前页码，通常来自 URL 参数 */
-	page: Accessor<number>;
-	fetcher: (key: K, page: number) => Promise<Paginated<T>>;
+	/**
+	 * 当前页码，通常来自 URL 参数。**不分页的端点不要传**：
+	 * 不传时恒按第 1 页请求，也不会因为 URL 上的 page 变化而重取。
+	 */
+	page?: Accessor<number>;
+	/**
+	 * 取数函数。返回标准分页响应用 `Paginated<T>`；
+	 * 端点只返回数组（没有 total/total_pages）时直接返回 `T[]`（或只读数组），
+	 * 这里会归一成"一页装下"的分页对象（total = 长度）——四态、乐观更新、
+	 * 回滚这些机制对两种形状是同一套，别在调用点再手写一遍。
+	 */
+	fetcher: (key: K, page: number) => Promise<Paginated<T> | readonly T[]>;
 	/** 每次成功加载后回调（滚动位置恢复、统计同步等） */
 	onLoaded?: (res: Paginated<T>) => void;
 	/** 加载失败时回调（默认交给全局错误处理，无需重复 toast） */
@@ -84,6 +93,11 @@ export interface ListResource<T> {
 	) => Promise<{ ok: true; value: R } | { ok: false; error: Error }>;
 }
 
+/** 分页响应 vs 裸数组：用于归一前的判别 */
+function isPage<T>(raw: Paginated<T> | readonly T[]): raw is Paginated<T> {
+	return !Array.isArray(raw);
+}
+
 export function useListResource<K, T>(
 	options: ListResourceOptions<K, T>,
 ): ListResource<T> {
@@ -94,13 +108,32 @@ export function useListResource<K, T>(
 		total_pages: 0,
 	};
 
+	/** 不分页的端点恒按第 1 页请求（也让它不进请求键） */
+	const pageOf = () => options.page?.() ?? 1;
+
+	/**
+	 * 端点只给数组时归一成"一页装下"：total 就是长度，非空即单页。
+	 * 用类型谓词而不是 `Array.isArray` —— 后者对 `readonly T[]` 的窄化在联合类型上不可靠。
+	 */
+	const asPage = (raw: Paginated<T> | readonly T[]): Paginated<T> =>
+		isPage(raw)
+			? raw
+			: {
+					items: [...raw],
+					page: 1,
+					total: raw.length,
+					total_pages: raw.length > 0 ? 1 : 0,
+				};
+
 	/** 错误单独用信号暴露，而不是让 fetcher 抛出去 —— 见下方注释 */
 	const [error, setError] = createSignal<unknown>(null);
 
 	const [resource, { refetch, mutate }] = createResource(
-		() => ({ key: options.key(), page: options.page() }),
+		() => ({ key: options.key(), page: pageOf() }),
 		async ({ key, page }) => {
-			const result = await tryAsync(() => options.fetcher(key, page));
+			const result = await tryAsync(async () =>
+				asPage(await options.fetcher(key, page)),
+			);
 			if (result.ok) {
 				setError(null);
 				options.onLoaded?.(result.value);
@@ -148,8 +181,8 @@ export function useListResource<K, T>(
 
 	/** 静默重载：直接写值，不切 loading */
 	const silentReload = async () => {
-		const result = await tryAsync(() =>
-			options.fetcher(options.key(), options.page()),
+		const result = await tryAsync(async () =>
+			asPage(await options.fetcher(options.key(), pageOf())),
 		);
 		if (result.ok) {
 			setError(null);

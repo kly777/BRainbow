@@ -4,9 +4,9 @@
 
 import { EmptyState, SimplePagination } from "@components/ui";
 import { PATHS } from "@config/paths";
-import type { MemItem, TagInfo } from "@modules/mem";
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
+import type { MemItem, TagInfo } from "../api.ts";
 import styles from "./ManageTable.module.css";
 import ManageTableHead from "./manage-table/ManageTableHead.tsx";
 import ManageTableRow from "./manage-table/ManageTableRow.tsx";
@@ -18,19 +18,11 @@ import type {
 	SortField,
 } from "./manage-table/types.ts";
 
-interface Props {
-	mems: MemItem[];
-	batchIds: Set<number>;
-	sortField: SortField;
-	sortDir: SortDir;
-	detailId: number | null;
-	memTags: Map<number, TagInfo[]>;
-	allSelected: boolean;
-	loading: boolean;
-	pageMeta: PageMeta;
-	page: number;
-	/** 当前处于搜索/筛选状态（决定空态文案） */
-	filtered: boolean;
+/**
+ * 表格级操作收成一束（与行级的 `RowActions` 同一手法，见体检表"Props 超载"一条）：
+ * 此前 6 个回调平铺在 props 里，调用点要逐个接线、加一个操作就改两处签名。
+ */
+export interface TableActions {
 	onToggleSort: (field: SortField) => void;
 	onToggleBatch: (id: number) => void;
 	onToggleAll: () => void;
@@ -39,12 +31,27 @@ interface Props {
 	onPageChange: (page: number) => void;
 }
 
+interface Props {
+	mems: MemItem[];
+	batchIds: Set<number>;
+	detailId: number | null;
+	memTags: Map<number, TagInfo[]>;
+	allSelected: boolean;
+	loading: boolean;
+	/** 分页元信息（页码也从这里读，原先另有一个从未被使用的 `page` prop） */
+	pageMeta: PageMeta;
+	/** 当前处于搜索/筛选状态（决定空态文案） */
+	filtered: boolean;
+	sort: { field: SortField; dir: SortDir };
+	actions: TableActions;
+}
+
 export default function ManageTable(props: Props) {
-	// 行级操作收成一束：穿过"表格 → 行"两层只传这一个对象
+	// 行级操作再收窄一层：表格 → 行只传行真正用得上的那三个
 	const actions: RowActions = {
-		onToggleBatch: (id) => props.onToggleBatch(id),
-		onSelectRow: (id) => props.onSelectRow(id),
-		onDelete: (id) => props.onDelete(id),
+		onToggleBatch: (id) => props.actions.onToggleBatch(id),
+		onSelectRow: (id) => props.actions.onSelectRow(id),
+		onDelete: (id) => props.actions.onDelete(id),
 	};
 
 	return (
@@ -55,10 +62,10 @@ export default function ManageTable(props: Props) {
 						<caption class="sr-only">记忆清单</caption>
 						<ManageTableHead
 							allSelected={props.allSelected}
-							sortField={props.sortField}
-							sortDir={props.sortDir}
-							onToggleSort={props.onToggleSort}
-							onToggleAll={props.onToggleAll}
+							sortField={props.sort.field}
+							sortDir={props.sort.dir}
+							onToggleSort={props.actions.onToggleSort}
+							onToggleAll={props.actions.onToggleAll}
 						/>
 						<tbody>
 							<Show
@@ -102,8 +109,8 @@ export default function ManageTable(props: Props) {
 				page={props.pageMeta.page}
 				totalPages={props.pageMeta.total_pages}
 				total={props.pageMeta.total}
-				onPrev={() => props.onPageChange(props.pageMeta.page - 1)}
-				onNext={() => props.onPageChange(props.pageMeta.page + 1)}
+				onPrev={() => props.actions.onPageChange(props.pageMeta.page - 1)}
+				onNext={() => props.actions.onPageChange(props.pageMeta.page + 1)}
 			/>
 		</Show>
 	);

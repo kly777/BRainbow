@@ -2,13 +2,6 @@
 
 import { AsyncSection, Button, Toolbar } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
-import {
-	deleteTaskE,
-	getAllTasksE,
-	getTaskDetailE,
-	type Task,
-	updateTaskE,
-} from "@modules/task";
 import { getErrorMessage } from "@shared/api";
 import {
 	confirmAndDelete,
@@ -25,6 +18,13 @@ import {
 	For,
 	Show,
 } from "solid-js";
+import {
+	deleteTaskE,
+	getAllTasksE,
+	getTaskDetailE,
+	type Task,
+	updateTaskE,
+} from "./api.ts";
 import EditTaskModal from "./components/EditTaskModal.tsx";
 import styles from "./TaskDetail.module.css";
 

@@ -39,6 +39,19 @@ const FilePreview: Component<{
 	</button>
 );
 
+/** 卡片上的操作收成一束（刀法 ②）：此前 9 个回调平铺，加一个要改调用点与两层子件 */
+export interface FileCardActions {
+	onToggleSelect: (storedId: string) => void;
+	onOpen: () => void;
+	onZoom?: () => void;
+	onContextMenu: (item: FileItem, e: MouseEvent) => void;
+	onStartRename: (item: FileItem) => void;
+	onDelete: (storedId: string) => void;
+	onRename: () => void;
+	onEditName: (value: string) => void;
+	onCancelEdit: () => void;
+}
+
 /**
  * 网格视图的文件卡片：缩略图 + 展示态/编辑态（`editing` 切换）+ 选中框。
  * 两个模式各自实现在 FileCardView / FileCardEdit，这里只做组合与状态类。
@@ -49,20 +62,12 @@ const FileCard: Component<{
 	highlighted: boolean;
 	selectMode: boolean;
 	selected: boolean;
-	onToggleSelect: (storedId: string) => void;
 	editName: string;
-	onOpen: () => void;
-	onZoom?: () => void;
-	onContextMenu: (item: FileItem, e: MouseEvent) => void;
-	onStartRename: (item: FileItem) => void;
-	onDelete: (stored_id: string) => void;
-	onRename: () => void;
-	onEditName: (value: string) => void;
-	onCancelEdit: () => void;
+	actions: FileCardActions;
 }> = (props) => (
 	// biome-ignore lint/a11y/noStaticElementInteractions: 右键菜单为附加操作，键盘用户走卡片内按钮
 	<div
-		onContextMenu={(e) => props.onContextMenu(props.item, e)}
+		onContextMenu={(e) => props.actions.onContextMenu(props.item, e)}
 		class={styles.card}
 		classList={{
 			[styles.cardHighlight]: props.highlighted,
@@ -75,33 +80,33 @@ const FileCard: Component<{
 				<input
 					type="checkbox"
 					checked={props.selected}
-					onChange={() => props.onToggleSelect(props.item.stored_id)}
+					onChange={() => props.actions.onToggleSelect(props.item.stored_id)}
 					aria-label={`选择 ${props.item.original_name}`}
 				/>
 			</label>
 		</Show>
 		<FilePreview
 			item={props.item}
-			onOpen={props.onOpen}
-			onZoom={props.onZoom}
+			onOpen={props.actions.onOpen}
+			onZoom={props.actions.onZoom}
 		/>
 		<Show
 			when={props.editing}
 			fallback={
 				<FileCardView
 					item={props.item}
-					onOpen={props.onOpen}
-					onStartRename={props.onStartRename}
-					onDelete={props.onDelete}
+					onOpen={props.actions.onOpen}
+					onStartRename={props.actions.onStartRename}
+					onDelete={props.actions.onDelete}
 				/>
 			}
 		>
 			<FileCardEdit
 				item={props.item}
 				editName={props.editName}
-				onEditName={props.onEditName}
-				onRename={props.onRename}
-				onCancelEdit={props.onCancelEdit}
+				onEditName={props.actions.onEditName}
+				onRename={props.actions.onRename}
+				onCancelEdit={props.actions.onCancelEdit}
 			/>
 		</Show>
 	</div>

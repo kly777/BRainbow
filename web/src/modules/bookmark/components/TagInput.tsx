@@ -7,13 +7,13 @@
 import TagInput, {
 	type TagOption,
 } from "@components/ui/molecules/TagInput.tsx";
-import { deleteBookmarkTagE, searchBookmarkTagsE } from "@modules/bookmark";
 import {
 	notifyError,
 	notifySuccess,
 	showConfirm,
 	tryAsync,
 } from "@shared/utils";
+import { deleteBookmarkTagE, searchBookmarkTagsE } from "../api.ts";
 
 interface Props {
 	tags: string[];

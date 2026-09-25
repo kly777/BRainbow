@@ -1,4 +1,4 @@
-import type { MemItem, TagInfo } from "@modules/mem";
+import type { MemItem, TagInfo } from "../../api.ts";
 
 export type SortField = "cue.created_at" | "difficulty" | "due_at" | "state";
 export type SortDir = "asc" | "desc";

@@ -7,7 +7,6 @@ import { X } from "@components/ui/icons";
 // 三条判定与它们共用 shared/utils/tag-combo.ts。
 
 import { Button, Input } from "@components/ui";
-import { createTagE, searchTagsE, type TagInfo } from "@modules/mem";
 import {
 	blurClose,
 	filterTagOptions,
@@ -17,6 +16,7 @@ import {
 	tryAsync,
 } from "@shared/utils";
 import { createResource, createSignal, For, Show } from "solid-js";
+import { createTagE, searchTagsE, type TagInfo } from "../api.ts";
 import styles from "./TagPicker.module.css";
 
 export interface TagPickerProps {

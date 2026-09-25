@@ -28,13 +28,14 @@ const SIZE_CLASS: Record<Size, string> = {
 	md: styles.md,
 };
 
-interface ButtonProps {
+/**
+ * 按钮原语的 props。继承原生 button 属性是为了兑现"其余原生属性原样透传"这条契约：
+ * 此前类型里只有手写的几个，`ref` / `aria-*` / `data-*` 传不进来（运行时能透传、
+ * 类型上却报错），而 Input / Textarea / Select / Layout 都继承了各自的 HTMLAttributes。
+ */
+interface ButtonProps extends JSX.ButtonHTMLAttributes<HTMLButtonElement> {
 	variant?: Variant;
 	size?: Size;
-	disabled?: boolean;
-	onClick?: (e: MouseEvent) => void;
-	type?: "button" | "submit";
-	title?: string;
 	/** 图标按钮的无可见文案时的可访问名 */
 	ariaLabel?: string;
 	class?: string;

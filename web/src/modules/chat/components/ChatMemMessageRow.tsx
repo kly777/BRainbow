@@ -1,9 +1,9 @@
 // ── /chat/mem 单条消息：user 气泡 / assistant（可勾选卡片清单或 Markdown） ──
 
 import { Markdown as MarkdownRenderer } from "@components/ui";
-import type { ChatNode } from "@modules/chat";
 import { copyTextWithToast } from "@shared/utils";
 import { type Component, createSignal, For, Show } from "solid-js";
+import type { ChatNode } from "../api.ts";
 import styles from "../ChatMemPage.module.css";
 import type { useChatMem } from "../hooks/useChatMem.ts";
 import { BranchBar } from "./BranchBar.tsx";

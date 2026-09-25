@@ -68,13 +68,13 @@ export default function ConvSearch() {
 				<Show when={!m.searchQuery()}>
 					<div class={styles.empty}>输入关键词搜索概念或文章</div>
 				</Show>
-				<Show when={m.loading}>
+				<Show when={m.loading()}>
 					<div class={styles.spinnerWrap}>
 						<Spinner size={24} thickness={3} />
 					</div>
 				</Show>
 				<Show
-					when={m.error}
+					when={m.error()}
 					fallback={
 						<>
 							<For each={m.data().hits}>
@@ -98,7 +98,7 @@ export default function ConvSearch() {
 							</For>
 							<Show
 								when={
-									m.searchQuery() && !m.loading && m.data().hits.length === 0
+									m.searchQuery() && !m.loading() && m.data().hits.length === 0
 								}
 							>
 								<div class={styles.empty}>没有找到匹配的结果</div>
@@ -106,7 +106,7 @@ export default function ConvSearch() {
 						</>
 					}
 				>
-					<ErrorRetry error={m.error} onRetry={m.refetch} />
+					<ErrorRetry error={m.error()} onRetry={m.refetch} />
 				</Show>
 			</div>
 		</div>

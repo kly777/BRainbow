@@ -1,6 +1,6 @@
-import type { Task } from "@modules/task";
 import { useModal } from "@shared/utils";
 import { createMemo, createSignal, For, Show } from "solid-js";
+import type { Task } from "../api.ts";
 import type { TaskStatusKey } from "../lib/status-colors.ts";
 import {
 	buildChildrenMap,

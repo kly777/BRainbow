@@ -9,7 +9,7 @@ import { render } from "solid-js/web";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CardDetailPage from "./CardDetail.tsx";
 
-vi.mock("@modules/card", () => ({
+vi.mock("@modules/card/api.ts", () => ({
 	getCardE: vi.fn(),
 	deleteCardE: vi.fn(),
 }));

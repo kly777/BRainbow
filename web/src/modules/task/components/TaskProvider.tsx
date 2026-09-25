@@ -1,12 +1,3 @@
-import type { CreateTaskRequest, Task } from "@modules/task";
-import {
-	createTaskE as apiCreateTask,
-	deleteTaskE as apiDeleteTask,
-	updateTaskE as apiUpdateTask,
-	getTaskStatsE,
-	getTasksE,
-	searchTasksE,
-} from "@modules/task";
 import { confirmAndDelete, notifyError, tryAsync } from "@shared/utils";
 import {
 	createContext,
@@ -15,6 +6,15 @@ import {
 	onMount,
 	useContext,
 } from "solid-js";
+import type { CreateTaskRequest, Task } from "../api.ts";
+import {
+	createTaskE as apiCreateTask,
+	deleteTaskE as apiDeleteTask,
+	updateTaskE as apiUpdateTask,
+	getTaskStatsE,
+	getTasksE,
+	searchTasksE,
+} from "../api.ts";
 import { makeTemp, STATUS_API } from "../lib/task-provider-utils.ts";
 
 interface Stats {

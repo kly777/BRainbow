@@ -95,25 +95,12 @@ const KeyRow: Component<{
 
 export default function KeyPage() {
 	const { setApiKey } = useAuth();
-	const [keys, { refetch }] = createResource(() => listKeysE());
+	// 远端数据 + mutate 就是唯一真相源：乐观更新改它自己，失败回滚快照
+	//（此前是 createResource 与 localKeys 双轨，靠一个"读时写信号"的 getter 同步，
+	//  见 doc/component-design.md 体检表的 KeyPage 一条）
+	const [keys, { refetch, mutate }] = createResource(() => listKeysE());
 	const [newKey, setNewKey] = createSignal<string | null>(null);
 	const [generating, setGenerating] = createSignal(false);
-
-	// 本地 keys 状态用于乐观更新
-	const [localKeys, setLocalKeys] = createSignal<ApiKeyInfo[]>([]);
-
-	// 同步远程数据到本地状态
-	const displayKeys = () => {
-		const remoteKeys = keys();
-		if (remoteKeys !== undefined) {
-			// 如果本地状态为空，初始化为远程数据
-			if (localKeys().length === 0 && remoteKeys.length > 0) {
-				setLocalKeys(remoteKeys);
-			}
-			return localKeys();
-		}
-		return [];
-	};
 
 	const activeKey = () => getApiKey();
 
@@ -121,16 +108,14 @@ export default function KeyPage() {
 		setGenerating(true);
 		const result = await tryAsync(() => createKeyE());
 		setGenerating(false);
-		if (result.ok) {
-			setNewKey(result.value.key ?? null);
-			// 乐观更新：立即添加到本地列表
-			if (result.value) {
-				setLocalKeys((prev) => [result.value, ...prev]);
-			}
-			notifySuccess("已生成 API key", "复制后保存，仅显示一次");
-		} else {
+		if (!result.ok) {
 			notifyError("生成 key 失败", result.error);
+			return;
 		}
+		setNewKey(result.value.key ?? null);
+		// 乐观更新：插到列表头。服务端已落库，这次不需要回滚路径
+		mutate((prev) => [result.value, ...(prev ?? [])]);
+		notifySuccess("已生成 API key", "复制后保存，仅显示一次");
 	};
 
 	const handleCopy = async (key: string) => {
@@ -159,18 +144,16 @@ export default function KeyPage() {
 		});
 		if (!confirmed) return;
 
-		// 乐观更新：立即从本地列表移除
-		const previousKeys = localKeys();
-		setLocalKeys((prev) => prev.filter((k) => k.id !== id));
-
+		const snapshot = keys() ?? [];
+		// 乐观更新：先本地移除；失败回滚到操作前的快照（不 refetch，列表就不会闪骨架）
+		mutate((prev) => (prev ?? []).filter((k) => k.id !== id));
 		const result = await tryAsync(() => deleteKeyE(id));
 		if (result.ok) {
 			notifySuccess("已删除");
-		} else {
-			// 删除失败，回滚到之前的状态
-			setLocalKeys(previousKeys);
-			notifyError("删除失败", result.error);
+			return;
 		}
+		mutate(snapshot);
+		notifyError("删除失败", result.error);
 	};
 
 	const emptyKeys = <div class={styles.muted}>暂无 key。</div>;
@@ -219,7 +202,7 @@ export default function KeyPage() {
 					<ErrorRetry error={keys.error} onRetry={refetch} />
 				</Show>
 				<Show when={!keys.loading} fallback={<LoadingSkeleton rows={2} />}>
-					<For each={displayKeys()} fallback={emptyKeys}>
+					<For each={keys() ?? []} fallback={emptyKeys}>
 						{(k) => <KeyRow k={k} onDelete={handleDelete} />}
 					</For>
 				</Show>

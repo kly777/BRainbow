@@ -1,8 +1,9 @@
 import { AsyncView, BackLink, Button } from "@components/ui";
 import { Check } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
-import { listUnknownWords, markWord, type UnknownWord } from "@modules/reading";
-import { createResource, For } from "solid-js";
+import { useListResource } from "@shared/utils";
+import { For } from "solid-js";
+import { listUnknownWords, markWord, type UnknownWord } from "./api.ts";
 import styles from "./ReadingUnknown.module.css";
 
 const WordCard = (props: {
@@ -27,11 +28,18 @@ const WordCard = (props: {
 );
 
 export default function ReadingUnknown() {
-	const [data, { refetch }] = createResource(listUnknownWords);
+	// 端点是包装数组（{words}），交原语归一成单页列表
+	const list = useListResource<null, UnknownWord>({
+		key: () => null,
+		fetcher: async () => (await listUnknownWords()).words,
+	});
 
+	// 标成"认识"后这条就该从不认识词表里消失 —— 乐观移除，失败由原语回滚
 	const handleMarkKnown = async (word: string) => {
-		await markWord(word, "known");
-		refetch();
+		await list.optimistic(
+			(words) => words.filter((w) => w.word !== word),
+			() => markWord(word, "known"),
+		);
 	};
 
 	return (
@@ -43,10 +51,10 @@ export default function ReadingUnknown() {
 			</p>
 
 			<AsyncView
-				data={data()?.words}
-				loading={data.loading}
-				error={data.error}
-				onRetry={refetch}
+				data={list.items()}
+				loading={list.loading()}
+				error={list.error()}
+				onRetry={list.refetch}
 				emptyMessage="暂无不认识词，去读一篇文章吧"
 			>
 				{(words) => (

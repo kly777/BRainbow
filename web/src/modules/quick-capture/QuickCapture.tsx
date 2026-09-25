@@ -2,12 +2,12 @@
 // Shift+Tab 唤起，快速创建任务/卡片/书签
 
 import { Show } from "solid-js";
-import styles from "./QuickCapture.module.css";
 import {
 	getTypeEmoji,
 	getTypeHint,
 	useQuickCapture,
-} from "./useQuickCapture.ts";
+} from "./hooks/useQuickCapture.ts";
+import styles from "./QuickCapture.module.css";
 
 export default function QuickCapture() {
 	const qc = useQuickCapture();

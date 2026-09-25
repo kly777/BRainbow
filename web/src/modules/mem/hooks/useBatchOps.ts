@@ -1,6 +1,7 @@
 // ── 记忆管理页的批量操作 ──
 
 import type { ConfirmOptions } from "@components/ui";
+import { notifyError, showConfirm, tryAsync } from "@shared/utils";
 import {
 	batchAddTagToMemsE,
 	batchBuryMemE,
@@ -8,8 +9,7 @@ import {
 	batchRemoveTagFromMemsE,
 	batchResetMemE,
 	type TagInfo,
-} from "@modules/mem";
-import { notifyError, showConfirm, tryAsync } from "@shared/utils";
+} from "../api.ts";
 
 export interface UseBatchOps {
 	batchDelete: () => Promise<void>;

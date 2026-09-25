@@ -10,56 +10,11 @@ import {
 import { Settings, X } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
 import { useNavigate } from "@solidjs/router";
-import { type Component, createResource, For, Show } from "solid-js";
-import type { Bookmark } from "./api.ts";
-import { getGroupedBookmarksE, incrementBookmarkVisitE } from "./api.ts";
+import { createResource, For, Show } from "solid-js";
+import { getGroupedBookmarksE } from "./api.ts";
 import styles from "./BookmarkPage.module.css";
-import Favicon from "./components/Favicon.tsx";
+import TagGroupCard, { BookmarkLink } from "./components/TagGroupCard.tsx";
 import { useBookmarkSearch } from "./hooks/useBookmarkSearch.ts";
-import { extractDomain } from "./lib/url.ts";
-
-const BookmarkLink: Component<{ bm: Bookmark }> = (props) => {
-	const handleClick = () => {
-		// 异步记录访问，不阻塞跳转
-		void incrementBookmarkVisitE(props.bm.id);
-	};
-
-	return (
-		<a
-			class={styles.groupItem}
-			href={props.bm.url}
-			target="_blank"
-			rel="noopener noreferrer"
-			onClick={handleClick}
-			title={`${props.bm.title}\n${props.bm.url}`}
-		>
-			<Favicon url={props.bm.url} letter={extractDomain(props.bm.url)} />
-			<span class={styles.groupItemTitle}>{props.bm.title}</span>
-			<Show when={props.bm.visit_count > 0}>
-				<span class={styles.visitBadge}>{props.bm.visit_count}</span>
-			</Show>
-		</a>
-	);
-};
-
-const TagGroupCard: Component<{
-	tag: string;
-	totalVisits: number;
-	bookmarks: Bookmark[];
-}> = (props) => (
-	<div class={styles.tagGroup}>
-		<div class={styles.tagGroupHeader}>
-			<span class={styles.tagGroupName}>#{props.tag}</span>
-			<span class={styles.tagGroupMeta}>
-				{props.bookmarks.length} 个书签
-				<Show when={props.totalVisits > 0}> · {props.totalVisits} 次访问</Show>
-			</span>
-		</div>
-		<div class={styles.tagGroupList}>
-			<For each={props.bookmarks}>{(bm) => <BookmarkLink bm={bm} />}</For>
-		</div>
-	</div>
-);
 
 export default function BookmarkPage() {
 	const navigate = useNavigate();

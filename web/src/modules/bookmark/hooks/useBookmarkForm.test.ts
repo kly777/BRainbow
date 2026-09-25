@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useBookmarkForm } from "./useBookmarkForm.ts";
 
 // 模拟依赖
-vi.mock("@modules/bookmark", () => ({
+vi.mock("@modules/bookmark/api.ts", () => ({
 	createBookmarkE: vi.fn(),
 	updateBookmarkE: vi.fn(),
 	setBookmarkTagsE: vi.fn(),
@@ -130,7 +130,7 @@ describe("useBookmarkForm", () => {
 
 	it("保存书签", async () => {
 		// 测试保存书签
-		const { createBookmarkE } = await import("@modules/bookmark");
+		const { createBookmarkE } = await import("@modules/bookmark/api.ts");
 		const mockCreateBookmarkE = vi.mocked(createBookmarkE);
 		const { tryAsync } = await import("@shared/utils");
 		const mockTryAsync = vi.mocked(tryAsync);

@@ -11,10 +11,10 @@ import {
 	X,
 	XCircle,
 } from "@components/ui/icons";
-import type { Bookmark } from "@modules/bookmark";
-import { setBookmarkTagsE, suggestBookmarkTagsE } from "@modules/bookmark";
 import { notifyError, notifySuccess } from "@shared/utils";
 import { createSignal, For, Show } from "solid-js";
+import type { Bookmark } from "../api.ts";
+import { setBookmarkTagsE, suggestBookmarkTagsE } from "../api.ts";
 import styles from "../BookmarkPage.module.css";
 import { extractDomain } from "../lib/url.ts";
 import Favicon from "./Favicon.tsx";

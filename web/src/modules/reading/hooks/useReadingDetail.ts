@@ -1,42 +1,50 @@
 // ── 阅读详情页核心逻辑 ──
 
-import type { ArticleDetail } from "@modules/reading";
+import {
+	copyText,
+	notifyError,
+	tryAsync,
+	useDetailResource,
+} from "@shared/utils";
+import { useParams } from "@solidjs/router";
+import { createEffect, createMemo, createSignal } from "solid-js";
+import type { ArticleDetail } from "../api.ts";
 import {
 	getArticle,
 	getArticleNotes,
 	markWord,
 	recommendNext,
 	updateArticleNotes,
-} from "@modules/reading";
-import { copyText, notifyError, tryAsync } from "@shared/utils";
-import { useParams } from "@solidjs/router";
-import {
-	createEffect,
-	createMemo,
-	createResource,
-	createSignal,
-} from "solid-js";
+} from "../api.ts";
 
 export function useReadingDetail() {
 	const params = useParams();
 	const id = () => Number(params.id);
 
-	const [detail, { refetch }] = createResource<ArticleDetail, number>(
+	// 取数走共享详情原语：它保证"有错误时 loading 必为假"（否则页面卡骨架屏）
+	// 与"首次加载 / 后台刷新"的区分（后者保留旧内容，不插骨架）
+	const detail = useDetailResource<ArticleDetail, number>({
 		id,
-		getArticle,
-	);
-	const [recommended, { refetch: refetchRecommended }] = createResource<
+		validate: (n) => Number.isFinite(n),
+		fetcher: getArticle,
+		invalidIdError: new Error("无效的文章 ID"),
+	});
+	const recommended = useDetailResource<
 		{ recommended: { id: number; title: string; known_ratio: number } | null },
 		number
-	>(id, recommendNext);
+	>({
+		id,
+		validate: (n) => Number.isFinite(n),
+		fetcher: recommendNext,
+	});
 
 	// 笔记
 	const [notes, setNotes] = createSignal("");
 	const [notesLoaded, setNotesLoaded] = createSignal(false);
 	createEffect(() => {
-		if (detail.error) return;
-		if (detail() && !notesLoaded()) {
-			document.title = `${detail()?.article.title} · Brainbow`;
+		if (detail.error()) return;
+		if (detail.data() && !notesLoaded()) {
+			document.title = `${detail.data()?.article.title} · Brainbow`;
 			getArticleNotes(id())
 				.then((r: { notes: string }) => {
 					setNotes(r.notes);
@@ -64,8 +72,8 @@ export function useReadingDetail() {
 	>(new Map());
 	const wordStatusMap = createMemo(() => {
 		const map = new Map<string, "known" | "unknown" | "ignored">();
-		if (!detail.error) {
-			for (const w of detail()?.words ?? [])
+		if (!detail.error()) {
+			for (const w of detail.data()?.words ?? [])
 				map.set(w.word, w.status as "known" | "unknown" | "ignored");
 		}
 		for (const [word, status] of localStatus()) map.set(word, status);
@@ -73,10 +81,10 @@ export function useReadingDetail() {
 	});
 
 	const sortedWords = createMemo(() => {
-		if (detail.error) return [];
+		if (detail.error()) return [];
 		const order: Record<string, number> = { unknown: 0, ignored: 1, known: 2 };
 		const map = wordStatusMap();
-		return [...(detail()?.words ?? [])].sort(
+		return [...(detail.data()?.words ?? [])].sort(
 			(a, b) =>
 				(order[map.get(a.word) ?? "known"] ?? 2) -
 				(order[map.get(b.word) ?? "known"] ?? 2),
@@ -95,8 +103,8 @@ export function useReadingDetail() {
 			notifyError("标记单词失败", result.error);
 			return;
 		}
-		refetch();
-		refetchRecommended();
+		detail.refetch();
+		recommended.refetch();
 	};
 
 	// 单击/双击 debounce
@@ -131,7 +139,7 @@ export function useReadingDetail() {
 	const handleUploadUnknown = async () => {
 		const unknownWords: string[] = [];
 		const map = wordStatusMap();
-		for (const w of detail()?.words ?? [])
+		for (const w of detail.data()?.words ?? [])
 			if (map.get(w.word) === "unknown") unknownWords.push(w.word);
 		if (unknownWords.length === 0) return;
 		setUploadingUnknown(true);
@@ -139,8 +147,8 @@ export function useReadingDetail() {
 			Promise.all(unknownWords.map((w) => markWord(w, "unknown"))),
 		);
 		if (result.ok) {
-			refetch();
-			refetchRecommended();
+			detail.refetch();
+			recommended.refetch();
 		} else {
 			notifyError("上传不认识词失败", result.error);
 		}
@@ -150,7 +158,7 @@ export function useReadingDetail() {
 	const handleCopyUnknown = async () => {
 		const unknownWords: string[] = [];
 		const map = wordStatusMap();
-		for (const w of detail()?.words ?? [])
+		for (const w of detail.data()?.words ?? [])
 			if (map.get(w.word) === "unknown") unknownWords.push(w.word);
 		const text = [unknownWords.join("\n"), notes().trim()]
 			.filter(Boolean)
@@ -160,7 +168,6 @@ export function useReadingDetail() {
 
 	return {
 		detail,
-		refetch,
 		recommended,
 		notes,
 		setNotes,

@@ -28,14 +28,15 @@ function mount(trees: ChatTree[], loading = false) {
 				loadingTrees={() => loading}
 				currentTreeId={() => null}
 				collapsed={false}
-				title="对话"
-				newLabel="新建"
-				emptyText="还没有对话"
-				onCreate={() => {}}
-				onSelect={() => {}}
-				onRename={() => {}}
-				onAiTitle={() => {}}
-				onDelete={() => {}}
+				copy={{ title: "对话", newLabel: "新建", emptyText: "还没有对话" }}
+				slots={{}}
+				actions={{
+					onCreate: () => {},
+					onSelect: () => {},
+					onRename: () => {},
+					onAiTitle: () => {},
+					onDelete: () => {},
+				}}
 			/>
 		),
 		host,

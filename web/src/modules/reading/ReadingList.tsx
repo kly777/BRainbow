@@ -1,54 +1,12 @@
 import { Button, Input, ListPage, Modal, Textarea } from "@components/ui";
-import { fillPath, PATHS } from "@config/paths";
-import {
-	fmtLocal,
-	notifyError,
-	tryAsync,
-	useListResource,
-} from "@shared/utils";
+import { PATHS } from "@config/paths";
+import { notifyError, tryAsync, useListResource } from "@shared/utils";
 import { A } from "@solidjs/router";
-import { type Component, createSignal, For } from "solid-js";
+import { createSignal, For } from "solid-js";
 import type { ArticleSummary } from "./api.ts";
 import { listArticles, uploadArticle } from "./api.ts";
-import { knownLevel, knownPercent } from "./lib/reading-stats.ts";
+import ArticleCard from "./components/ArticleCard.tsx";
 import styles from "./ReadingList.module.css";
-
-const ArticleCard: Component<{ article: ArticleSummary; first: boolean }> = (
-	props,
-) => (
-	<A
-		href={fillPath(PATHS.readingDetail, props.article.id)}
-		class={styles.card}
-		classList={{
-			[styles.recommendedCard]: props.first,
-		}}
-		data-known={knownLevel(props.article.known_ratio)}
-	>
-		<div class={styles.cardTitleRow}>
-			<div class={styles.cardTitle}>{props.article.title}</div>
-			{props.first && <span class={styles.recommendedTag}>推荐先读</span>}
-		</div>
-		<div class={styles.cardMeta}>
-			<span>{props.article.word_count} 词</span>
-			<span
-				class={styles.ratio}
-				data-known={knownLevel(props.article.known_ratio)}
-			>
-				{knownPercent(props.article.known_ratio)}% 认识
-			</span>
-			<span class={styles.unknownCount}>
-				{props.article.unknown_word_count} 个不认识
-			</span>
-			<span class={styles.createdAt}>{fmtLocal(props.article.created_at)}</span>
-		</div>
-		<div class={styles.barOuter}>
-			<div
-				class={styles.barInner}
-				style={{ width: `${knownPercent(props.article.known_ratio)}%` }}
-			/>
-		</div>
-	</A>
-);
 
 export default function ReadingList() {
 	// 端点是包装数组（{articles}），交原语归一成单页列表：四态、错误信号、乐观更新

@@ -153,3 +153,6 @@ export function useMemManageParams(): UseMemManageParamsResult {
 		restoreScrollPosition,
 	};
 }
+
+/** 子 hook 的类型出口（迁移手册：拆分子 Hook 必须导出独立类型） */
+export type MemManageParams = ReturnType<typeof useMemManageParams>;

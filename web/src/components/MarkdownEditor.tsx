@@ -1,4 +1,5 @@
 import { Markdown as MarkdownRenderer } from "@components/ui";
+import { notifyError } from "@shared/utils";
 import { createSignal, type JSX, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import styles from "./markdown-editor.module.css";
@@ -102,8 +103,10 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 			e.preventDefault();
 			try {
 				await uploadAndInsert(file);
-			} catch {
-				/* 全局 toast 已处理 */
+			} catch (error) {
+				// 注：这条链**不经过** handleGlobalError（file 模块的上传走 XHR），
+				// 原来写"全局 toast 已处理"是错的 —— 4xx 会静默失败
+				notifyError("插入文件失败", error);
 			}
 			return;
 		}
@@ -137,8 +140,8 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 		for (const file of files) {
 			try {
 				await uploadAndInsert(file);
-			} catch {
-				/* 全局 toast 已处理 */
+			} catch (error) {
+				notifyError("插入文件失败", error);
 			}
 		}
 	};

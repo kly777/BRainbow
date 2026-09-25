@@ -1,11 +1,11 @@
 import { Button, ConfirmModalContainer, ToastContainer } from "@components/ui";
-import { dismissAllConfirms } from "@components/ui/organisms/confirmStore.ts";
 import { PATHS } from "@config/paths";
 import { AiSettingsModal } from "@modules/ai-setting";
 import { AuthDialog, AuthGuard } from "@modules/auth";
 import { CommandPalette } from "@modules/command-palette";
 import { QuickCapture } from "@modules/quick-capture";
 import { getErrorMessage } from "@shared/api";
+import { dismissAllConfirms } from "@shared/utils/confirmStore.ts";
 import { useLocation } from "@solidjs/router";
 import { createEffect, ErrorBoundary, type JSX, Show, untrack } from "solid-js";
 import styles from "./App.module.css";

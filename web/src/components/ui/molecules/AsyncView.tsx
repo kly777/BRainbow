@@ -1,4 +1,5 @@
 import Button from "@components/ui/atoms/Button.tsx";
+import { SkeletonGrid, SkeletonList } from "@components/ui/atoms/Skeleton.tsx";
 import styles from "@components/ui/molecules/AsyncView.module.css";
 import { getErrorMessage } from "@shared/api/types/index.ts";
 import { type JSX, Show, untrack } from "solid-js";
@@ -26,52 +27,12 @@ interface Props<T> {
 
 const EMPTY: readonly unknown[] = [];
 
-function SkeletonLoader() {
-	return (
-		<div class={styles.skeletonWrap} aria-hidden="true">
-			{[1, 2, 3].map((i) => (
-				<div class={styles.skeletonRow}>
-					<div class={`skeleton ${styles.skeletonAvatar}`} />
-					<div
-						class={`skeleton ${styles.skeletonBar}`}
-						style={{ width: `${70 - i * 10}%` }}
-					/>
-				</div>
-			))}
-			<div class={styles.skeletonRow}>
-				<div
-					class={`skeleton ${styles.skeletonBar} ${styles.skeletonBarShort}`}
-				/>
-			</div>
-		</div>
-	);
-}
-
-/** 网格骨架：缩略图块按卡片的比例与列宽排布（列宽跟着调用方的网格走） */
-function GridSkeletonLoader() {
-	return (
-		<div class={styles.skeletonGrid} aria-hidden="true">
-			{[1, 2, 3, 4, 5, 6, 7, 8].map(() => (
-				<div class={styles.skeletonCard}>
-					<div class={`skeleton ${styles.skeletonCardThumb}`} />
-					<div class={`skeleton ${styles.skeletonCardName}`} />
-					<div class={`skeleton ${styles.skeletonCardMeta}`} />
-				</div>
-			))}
-		</div>
-	);
-}
-
 export function AsyncView<T>(props: Props<T>) {
 	return (
 		<Show
 			when={!props.loading}
 			fallback={
-				props.loadingVariant === "grid" ? (
-					<GridSkeletonLoader />
-				) : (
-					<SkeletonLoader />
-				)
+				props.loadingVariant === "grid" ? <SkeletonGrid /> : <SkeletonList />
 			}
 		>
 			<Show

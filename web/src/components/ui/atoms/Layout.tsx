@@ -1,4 +1,5 @@
 import styles from "@components/ui/atoms/Layout.module.css";
+import { joinClass } from "@shared/utils";
 import { type JSX, splitProps } from "solid-js";
 
 /** 间距档位，对应 global.css 的 --space-* 令牌 */
@@ -54,10 +55,6 @@ interface RowProps extends LayoutProps {
 	wrap?: boolean;
 }
 
-function join(...parts: (string | false | undefined)[]): string {
-	return parts.filter(Boolean).join(" ");
-}
-
 /**
  * 水平布局原语：`display:flex` + 垂直居中（全站最高频的 flex 组合）。
  *
@@ -76,7 +73,7 @@ export function Row(props: RowProps) {
 	return (
 		<div
 			{...rest}
-			class={join(
+			class={joinClass(
 				styles.flex,
 				local.align ? ALIGN[local.align] : styles.alignCenter,
 				local.wrap && styles.wrap,
@@ -97,7 +94,7 @@ export function Stack(props: LayoutProps) {
 	return (
 		<div
 			{...rest}
-			class={join(
+			class={joinClass(
 				styles.stack,
 				local.align && ALIGN[local.align],
 				local.justify && JUSTIFY[local.justify],

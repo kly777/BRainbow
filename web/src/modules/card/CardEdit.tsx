@@ -4,6 +4,10 @@ import {
 	Button,
 	Markdown as MarkdownRenderer,
 } from "@components/ui";
+import {
+	MarkdownFilePicker,
+	uploadToFileService,
+} from "@modules/file/markdown-editor-support.tsx";
 import { fmtLocal } from "@shared/utils";
 import { type Component, Show } from "solid-js";
 import styles from "./CardEdit.module.css";
@@ -69,6 +73,8 @@ const EditorPane: Component<{
 			<span class={styles.paneHint}>Markdown · 粘贴/拖拽图片自动上传</span>
 		</div>
 		<MarkdownEditor
+			onUploadFile={uploadToFileService}
+			filePicker={MarkdownFilePicker}
 			editorClass={styles.editor}
 			class={styles.textarea}
 			value={props.value}

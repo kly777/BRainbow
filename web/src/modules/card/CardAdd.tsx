@@ -1,5 +1,9 @@
 import { MarkdownEditor } from "@components";
 import { Button, DetailPage } from "@components/ui";
+import {
+	MarkdownFilePicker,
+	uploadToFileService,
+} from "@modules/file/markdown-editor-support.tsx";
 import { type Component, Show } from "solid-js";
 import styles from "./CardAdd.module.css";
 import { useCardAdd } from "./hooks/useCardAdd.ts";
@@ -31,6 +35,8 @@ const CardAddPage: Component = () => {
 
 				<div class={styles.editorArea}>
 					<MarkdownEditor
+						onUploadFile={uploadToFileService}
+						filePicker={MarkdownFilePicker}
 						value={m.content()}
 						onInput={m.setContent}
 						preview

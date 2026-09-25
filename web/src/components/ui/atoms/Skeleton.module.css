@@ -1,3 +1,7 @@
+/* 骨架屏的三种形态都在这里（此前列表 / 网格两种写在 AsyncView 组件里）：
+   LoadingSkeleton 是通用横条；SkeletonList 给列表视图；SkeletonGrid 给卡片墙。
+   收在一处是为了不再出现"同一机制两套来源"——改配色/圆角时只改这个文件。 */
+
 .skeleton-wrap {
 	display: flex;
 	flex-direction: column;
@@ -13,4 +17,67 @@
 .skeleton-bar {
 	height: 0.875rem;
 	border-radius: var(--radius-sm);
+}
+
+/* ── 列表形态（缩略块 + 横条） ── */
+
+.skeleton-list-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
+	padding: var(--space-lg);
+}
+
+.skeleton-list-row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-md);
+}
+
+.skeleton-list-avatar {
+	width: 2rem;
+	height: 2rem;
+	border-radius: var(--radius-full);
+	flex-shrink: 0;
+}
+
+.skeleton-list-bar {
+	height: 0.875rem;
+	border-radius: var(--radius-sm);
+	flex: 1;
+}
+
+.skeleton-list-bar-short {
+	width: 40%;
+}
+
+/* ── 网格形态（卡片墙：与调用方的 .grid 同列宽/同间距，加载完不跳版式） ── */
+
+.skeleton-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+	gap: var(--space-lg);
+	padding: var(--space-lg) 0;
+}
+
+.skeleton-card {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+}
+
+.skeleton-card-thumb {
+	aspect-ratio: 16 / 10;
+	border-radius: var(--radius-lg);
+}
+
+.skeleton-card-name {
+	height: 1rem;
+	width: 80%;
+	margin-top: var(--space-2xs);
+}
+
+.skeleton-card-meta {
+	height: 0.75rem;
+	width: 55%;
 }

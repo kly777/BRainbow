@@ -1,3 +1,4 @@
+import { showToast } from "@shared/utils/toastStore.ts";
 import { withTimeout } from "./query.ts";
 import { getApiKey, getToken } from "./token.ts";
 import { HttpError, NetworkError } from "./types/index.ts";
@@ -15,12 +16,12 @@ let _authFiredAt = 0;
  * 触发登录弹窗 + 一条集中 toast（3 秒去重防并发）。
  * 组件层的 notifyError 对 401 静默，避免一人犯错全楼挨骂。
  */
-async function triggerAuthRequired(): Promise<void> {
+function triggerAuthRequired(): void {
 	const now = Date.now();
 	if (now - _authFiredAt < 3000) return;
 	_authFiredAt = now;
 	globalThis.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT));
-	await toast({
+	toast({
 		type: "warning",
 		title: "请先登录",
 		message: "登录已过期或尚未登录",
@@ -28,30 +29,15 @@ async function triggerAuthRequired(): Promise<void> {
 	});
 }
 
-/** 延迟导入避免循环依赖 */
-let _showToast:
-	| ((opts: {
-			type: "error" | "warning";
-			title: string;
-			message: string;
-			details?: string;
-			duration?: number;
-	  }) => void)
-	| null = null;
-
-async function toast(opts: {
+function toast(opts: {
 	type: "error" | "warning";
 	title: string;
 	message: string;
 	details?: string;
 	duration?: number;
-}): Promise<void> {
-	if (!_showToast) {
-		const mod = await import("@components/ui");
-		_showToast = mod.showToast as unknown as typeof _showToast;
-	}
+}): void {
 	// duration 提供默认值以匹配 showToast 的 non-optional 签名
-	_showToast?.({ ...opts, duration: opts.duration ?? 5000 });
+	showToast({ ...opts, duration: opts.duration ?? 5000 });
 }
 
 // ==================== 错误体解析 ====================
@@ -123,13 +109,13 @@ export async function handleGlobalError(
 
 	// ── 401 → 静默触发登录弹窗（AuthDialog 对话框是唯一的 UI）──
 	if (status === 401) {
-		await triggerAuthRequired();
+		triggerAuthRequired();
 		return;
 	}
 
 	// ── 403 → toast 提示 ──
 	if (status === 403) {
-		await toast({
+		toast({
 			type: "error",
 			title: "权限不足",
 			message,
@@ -141,7 +127,7 @@ export async function handleGlobalError(
 
 	// ── 5xx 服务器崩溃 → toast（组件通常只做回滚，不展示消息） ──
 	if (status >= 500) {
-		await toast({
+		toast({
 			type: "error",
 			title: "服务器错误",
 			message: message || "服务器内部错误，请稍后重试",

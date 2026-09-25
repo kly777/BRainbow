@@ -1,5 +1,6 @@
 export * from "./ai-settings.ts";
 export * from "./browser.ts";
+export * from "./class-name.ts";
 export * from "./clipboard.ts";
 export * from "./format/angle.ts";
 export * from "./format/bytes.ts";

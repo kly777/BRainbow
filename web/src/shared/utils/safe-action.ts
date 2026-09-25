@@ -21,8 +21,8 @@
  *   );
  */
 
-import type { ConfirmOptions } from "@components/ui/organisms/confirmStore.ts";
-import { showConfirm as show } from "@components/ui/organisms/confirmStore.ts";
+import type { ConfirmOptions } from "./confirmStore.ts";
+import { showConfirm as show } from "./confirmStore.ts";
 import { notifyError, notifySuccess } from "./notify.ts";
 import { tryAsync } from "./result.ts";
 

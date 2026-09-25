@@ -1,4 +1,5 @@
-import { Button, Icon } from "@components/ui";
+import { Button } from "@components/ui";
+import { LightBulb, Menu, Sparkles } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
 import { openAiSettings } from "@modules/ai-setting";
 import { A } from "@solidjs/router";
@@ -26,7 +27,7 @@ export default function MemPage() {
 						onClick={() => review.setSidebarOpen(!review.sidebarOpen())}
 						aria-label="切换侧边栏"
 					>
-						<Icon name="menu" size={18} />
+						<Menu size={18} />
 					</button>
 					<h1 class={styles.title}>记忆复习</h1>
 					<div class={styles.topRight}>
@@ -36,7 +37,7 @@ export default function MemPage() {
 							title="助记提示词设置"
 							ariaLabel="助记提示词设置"
 						>
-							<Icon name="bulb" size={16} />
+							<LightBulb size={16} />
 						</Button>
 						<Button
 							variant="icon"
@@ -44,7 +45,7 @@ export default function MemPage() {
 							title="AI 设置"
 							ariaLabel="AI 设置"
 						>
-							<Icon name="bot" size={16} />
+							<Sparkles size={16} />
 						</Button>
 						<A href={PATHS.memoryAdd} class={styles.addLink}>
 							＋ 添加

@@ -2,7 +2,19 @@
 // 线索与答案分居卡片两面，点"显示答案"实体翻转。
 
 import { MarkdownEditor } from "@components";
-import { Button, Icon, Markdown as MarkdownRenderer } from "@components/ui";
+import { Button, Markdown as MarkdownRenderer } from "@components/ui";
+import {
+	Clock,
+	Copy,
+	Layers,
+	Sparkles,
+	Stop,
+	Volume,
+} from "@components/ui/icons";
+import {
+	MarkdownFilePicker,
+	uploadToFileService,
+} from "@modules/file/markdown-editor-support.tsx";
 import { copyTextWithToast, fmtInterval, fmtLocal } from "@shared/utils";
 import { Show } from "solid-js";
 import type { UseMemReview } from "../hooks/useMemReviewTypes.ts";
@@ -72,6 +84,8 @@ function EditCard(props: MemProps) {
 				<div class={styles.section}>
 					<div class={styles.sectionLabel}>线索</div>
 					<MarkdownEditor
+						onUploadFile={uploadToFileService}
+						filePicker={MarkdownFilePicker}
 						class={styles.editArea}
 						value={props.m.editCue()}
 						onInput={props.m.setEditCue}
@@ -82,6 +96,8 @@ function EditCard(props: MemProps) {
 				<div class={styles.section}>
 					<div class={styles.sectionLabel}>答案</div>
 					<MarkdownEditor
+						onUploadFile={uploadToFileService}
+						filePicker={MarkdownFilePicker}
 						class={styles.editArea}
 						value={props.m.editTarget()}
 						onInput={props.m.setEditTarget}
@@ -116,11 +132,7 @@ function CueFace(props: CueFaceProps) {
 					onClick={() => speech.toggle(m.item()?.cue.content ?? "")}
 					disabled={!speech.supported}
 				>
-					{speech.speaking() ? (
-						<Icon name="stop" size={15} />
-					) : (
-						<Icon name="speaker" size={15} />
-					)}
+					{speech.speaking() ? <Stop size={15} /> : <Volume size={15} />}
 				</button>
 				<button
 					type="button"
@@ -128,7 +140,7 @@ function CueFace(props: CueFaceProps) {
 					title="复制线索"
 					onClick={() => void copyTextWithToast(m.item()?.cue.content ?? "")}
 				>
-					<Icon name="clipboard" size={15} />
+					<Copy size={15} />
 				</button>
 				<button
 					type="button"
@@ -136,7 +148,7 @@ function CueFace(props: CueFaceProps) {
 					title="复制整张卡片"
 					onClick={m.handleCopyCard}
 				>
-					<Icon name="stack" size={15} />
+					<Layers size={15} />
 				</button>
 				<button
 					type="button"
@@ -145,11 +157,7 @@ function CueFace(props: CueFaceProps) {
 					onClick={m.generateMnemonic}
 					disabled={m.mnemonicLoading()}
 				>
-					{m.mnemonicLoading() ? (
-						<Icon name="clock" size={15} />
-					) : (
-						<Icon name="bot" size={15} />
-					)}
+					{m.mnemonicLoading() ? <Clock size={15} /> : <Sparkles size={15} />}
 				</button>
 			</div>
 		</div>

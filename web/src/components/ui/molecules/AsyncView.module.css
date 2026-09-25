@@ -1,4 +1,5 @@
-/* components/ui/AsyncView.css.ts — 增强版 */
+/* AsyncView.css — 四态视图的状态文案与错误重试块。
+   骨架屏（列表 / 网格两种形态）住在 atoms/Skeleton.module.css。 */
 
 .state {
 	padding: var(--space-2xl) var(--space-lg);
@@ -11,65 +12,4 @@
 	color: var(--t-color-danger);
 	margin-bottom: var(--space-md);
 	font-weight: 500;
-}
-
-/* ── 骨架屏加载态 ── */
-.skeleton-wrap {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-md);
-	padding: var(--space-lg);
-}
-
-.skeleton-row {
-	display: flex;
-	align-items: center;
-	gap: var(--space-md);
-}
-
-.skeleton-bar {
-	height: 0.875rem;
-	border-radius: var(--radius-sm);
-	flex: 1;
-}
-
-.skeleton-bar-short {
-	width: 40%;
-}
-
-.skeleton-avatar {
-	width: 2rem;
-	height: 2rem;
-	border-radius: var(--radius-full);
-	flex-shrink: 0;
-}
-
-/* ── 网格骨架（卡片墙：与调用方的 .grid 同列宽/同间距，加载完不跳版式） ── */
-.skeleton-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-	gap: var(--space-lg);
-	padding: var(--space-lg) 0;
-}
-
-.skeleton-card {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-2xs);
-}
-
-.skeleton-card-thumb {
-	aspect-ratio: 16 / 10;
-	border-radius: var(--radius-lg);
-}
-
-.skeleton-card-name {
-	height: 1rem;
-	width: 80%;
-	margin-top: var(--space-2xs);
-}
-
-.skeleton-card-meta {
-	height: 0.75rem;
-	width: 55%;
 }

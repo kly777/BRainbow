@@ -1,141 +1,16 @@
 // @vitest-environment jsdom
 
-import DOMPurify from "dompurify";
-import hljs from "highlight.js";
-import { marked } from "marked";
-import { markedHighlight } from "marked-highlight";
-import markedKatex from "marked-katex-extension";
-import { beforeAll, describe, expect, it } from "vitest";
+import { renderMarkdown } from "@shared/markdown/pipeline.ts";
+import { describe, expect, it } from "vitest";
 
-// ── 配置（与 Markdown.tsx 保持一致） ──
+// 渲染直接走运行时那条管线（`@shared/markdown/pipeline.ts`），不在这里再抄一份配置。
+// 抄过的那份已与实现漂移：实现的 `ALLOWED_ATTR` 明确不放行 `"id"`（内容自带 id 会与
+// 标题锚点碰撞），拷贝里却留着 `"id"`，于是测试一直在断言一个不存在的白名单；
+// 拷贝还漏了审计 F5 的 style 剥离 hook，那半边行为从来没有测试覆盖。
 
-beforeAll(() => {
-	DOMPurify.addHook("afterSanitizeAttributes", (node) => {
-		if (node instanceof HTMLAnchorElement) {
-			node.setAttribute("target", "_blank");
-			node.setAttribute("rel", "noopener noreferrer");
-		}
-	});
-
-	marked.use(
-		markedHighlight({
-			langPrefix: "hljs language-",
-			highlight(code, lang) {
-				if (lang && hljs.getLanguage(lang)) {
-					return hljs.highlight(code, { language: lang }).value;
-				}
-				return code;
-			},
-		}),
-		markedKatex({
-			throwOnError: false,
-			nonStandard: true,
-		}),
-	);
-	marked.setOptions({ gfm: true, breaks: true });
-});
-
-const ALLOWED_TAGS = [
-	"h1",
-	"h2",
-	"h3",
-	"h4",
-	"h5",
-	"h6",
-	"p",
-	"br",
-	"hr",
-	"strong",
-	"em",
-	"b",
-	"i",
-	"u",
-	"s",
-	"blockquote",
-	"code",
-	"pre",
-	"ul",
-	"ol",
-	"li",
-	"table",
-	"thead",
-	"tbody",
-	"tr",
-	"th",
-	"td",
-	"a",
-	"img",
-	"div",
-	"span",
-	"math",
-	"semantics",
-	"mrow",
-	"mfrac",
-	"mi",
-	"mo",
-	"msup",
-	"msub",
-	"mn",
-	"mtext",
-	"mspace",
-	"msqrt",
-	"mroot",
-	"mover",
-	"munder",
-	"munderover",
-	"mtable",
-	"mtr",
-	"mtd",
-	"mpadded",
-	"mphantom",
-	"annotation",
-	"svg",
-	"path",
-];
-
-const ALLOWED_ATTR = [
-	"href",
-	"target",
-	"rel",
-	"title",
-	"src",
-	"alt",
-	"width",
-	"height",
-	"class",
-	"id",
-	"align",
-	"style",
-	"aria-hidden",
-	"encoding",
-	"xmlns",
-	"d",
-	"viewBox",
-	"fill",
-	"stroke",
-	"preserveAspectRatio",
-];
-
-// ── 渲染辅助（与 Markdown.tsx 组件逻辑一致） ──
-
+/** inline：把软换行压成空格（模拟"单行内联"用法，仅测试用） */
 function render(content: string, inline = false): string {
-	let processed = content;
-	if (inline) processed = processed.replace(/\n/g, " ");
-
-	processed = processed
-		.replace(/\\\(/g, "$")
-		.replace(/\\\)/g, "$")
-		.replace(/\\\[/g, "$$$$")
-		.replace(/\\\]/g, "$$$$");
-
-	const rawHtml = marked.parse(processed) as string;
-
-	return DOMPurify.sanitize(rawHtml, {
-		ALLOWED_TAGS,
-		ALLOWED_ATTR,
-		ALLOWED_URI_REGEXP:
-			/^(?:(?:https?|mailto|ftp|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
-	});
+	return renderMarkdown(inline ? content.replace(/\n/g, " ") : content);
 }
 
 // ── 测试 ──
@@ -211,6 +86,22 @@ describe("Markdown rendering pipeline", () => {
 			expect(html).toContain("<img");
 			expect(html).toContain('src="https://example.com/img.png"');
 			expect(html).toContain('alt="alt"');
+		});
+
+		it("strips id（内容自带 id 会与标题锚点碰撞，故白名单不放行）", () => {
+			const html = render('<div id="evil">x</div>');
+			expect(html).not.toContain("id=");
+		});
+
+		it("非 KaTeX 子树的内联 style 一律剥离（审计 F5）", () => {
+			const html = render('<span style="position:fixed;top:0">x</span>');
+			expect(html).not.toContain("style=");
+		});
+
+		it("KaTeX 子树的 style 保留（否则公式排版塌掉）", () => {
+			const html = render("$$\\frac{1}{2}$$");
+			expect(html).toContain("frac-line");
+			expect(html).toContain("style=");
 		});
 	});
 

@@ -77,6 +77,11 @@ describe("CardEdit", () => {
 		const workspace = pane?.parentElement?.parentElement as HTMLElement;
 		expect(workspace.className).toContain("_workspace_");
 		expect(workspace.parentElement?.className).toContain("_body_");
+
+		// 实时预览面板是真 Markdown（懒加载 chunk）：不等它落地，全量并行跑时
+		// 环境先被拆掉，飞在路上的 import 会以 EnvironmentTeardownError 让整轮
+		// 退出码非零（用例全过但 exit=1）
+		await vi.dynamicImportSettled();
 	});
 
 	it("无效 id 走到错误态（不卡骨架屏）", async () => {

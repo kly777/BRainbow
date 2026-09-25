@@ -5,6 +5,7 @@
 // Input / Select / Textarea（atoms）消费它，双方都只依赖本文件。
 
 import styles from "@components/ui/atoms/Control.module.css";
+import { joinClass } from "@shared/utils";
 import { type Accessor, createContext, useContext } from "solid-js";
 
 export type ControlSize = "sm" | "md" | "lg";
@@ -39,10 +40,6 @@ const TONE: Record<ControlTone, string | undefined> = {
 	surface: undefined,
 	bg: styles.toneBg,
 };
-
-export function joinClass(...parts: (string | false | undefined)[]): string {
-	return parts.filter(Boolean).join(" ");
-}
 
 export interface ControlClassOptions {
 	/** 调用方自己的 CSS Module 类，最后拼接，便于覆盖 */

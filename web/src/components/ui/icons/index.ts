@@ -15,6 +15,7 @@ export {
 	FiCheckCircle as CheckCircle2,
 	FiChevronLeft as ChevronLeft,
 	FiChevronRight as ChevronRight,
+	FiClock as Clock,
 	FiCopy as Copy,
 	FiDownload as Download,
 	FiEdit as Pencil,
@@ -24,23 +25,31 @@ export {
 	FiGrid as Grid,
 	FiImage as Image,
 	FiInfo as Info,
+	FiLayers as Layers,
 	FiLink as Link,
 	FiList as List,
 	FiLoader as Loader2,
 	FiLock as Lock,
+	FiMenu as Menu,
 	FiMusic as Music,
 	FiPlus as Plus,
 	FiRefreshCw as RefreshCw,
 	FiSearch as Search,
 	FiSettings as Settings,
+	FiSquare as Stop,
+	FiTrash2 as Trash2,
 	FiType as Type,
 	FiUnlock as Unlock,
 	FiUpload as Upload,
+	FiVolume2 as Volume,
 	FiX as X,
 	FiXCircle as XCircle,
 	FiZoomIn as ZoomIn,
 	FiZoomOut as ZoomOut,
 } from "solid-icons/fi";
 
-// Heroicons (Sparkles 在 Feather 中没有对应图标)
-export { HiOutlineSparkles as Sparkles } from "solid-icons/hi";
+// Heroicons（Feather 里没有对应图标：亮星 / 灯泡）
+export {
+	HiOutlineLightBulb as LightBulb,
+	HiOutlineSparkles as Sparkles,
+} from "solid-icons/hi";

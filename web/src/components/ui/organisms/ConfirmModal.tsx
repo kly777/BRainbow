@@ -1,7 +1,10 @@
 import Button from "@components/ui/atoms/Button.tsx";
 import { AlertTriangle, Info } from "@components/ui/icons";
-import type { ConfirmVariant } from "@components/ui/organisms/confirmStore.ts";
-import { confirms } from "@components/ui/organisms/confirmStore.ts";
+import type {
+	ConfirmOptions,
+	ConfirmVariant,
+} from "@shared/utils/confirmStore.ts";
+import { confirms } from "@shared/utils/confirmStore.ts";
 import { createEffect, For, onCleanup, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import styles from "./ConfirmModal.module.css";
@@ -57,7 +60,7 @@ export default function ConfirmModalContainer() {
 function ConfirmDialog(props: {
 	item: {
 		id: number;
-		options: import("@components/ui").ConfirmOptions;
+		options: ConfirmOptions;
 		resolve: (v: boolean) => void;
 	};
 }) {

@@ -74,5 +74,8 @@ describe("CardDetail：无效 id", () => {
 		// 不应出现错误态
 		await settle(() => true);
 		expect(host.textContent).not.toContain("无效ID");
+		// 卡片正文走 Markdown（懒加载 chunk）：不等它落地，环境拆除时会冒
+		// EnvironmentTeardownError（import 还在飞、module runner 已经关了）
+		await vi.dynamicImportSettled();
 	});
 });

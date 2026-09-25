@@ -3,7 +3,7 @@ import {
 	dismissToast,
 	type ToastItem,
 	toasts,
-} from "@components/ui/organisms/toastStore.ts";
+} from "@shared/utils/toastStore.ts";
 import { type Component, For, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import styles from "./Toast.module.css";

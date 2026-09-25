@@ -6,7 +6,7 @@ import { notifyError } from "./notify.ts";
 import { confirmAndRun, showConfirm, tryOrNotify } from "./safe-action.ts";
 
 vi.mock("./notify.ts", () => ({ notifyError: vi.fn() }));
-vi.mock("@components/ui/organisms/confirmStore.ts", () => ({
+vi.mock("./confirmStore.ts", () => ({
 	showConfirm: vi.fn(),
 }));
 

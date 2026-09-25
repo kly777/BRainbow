@@ -1,15 +1,13 @@
 import { HttpError } from "@shared/api";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@components/ui/organisms/toastStore.ts", () => ({
+vi.mock("./toastStore.ts", () => ({
 	showToast: vi.fn(),
 }));
 
 describe("notify", () => {
 	it("notifyError 401 静默（不弹 toast）", async () => {
-		const { showToast } = await import(
-			"@components/ui/organisms/toastStore.ts"
-		);
+		const { showToast } = await import("./toastStore.ts");
 		const { notifyError } = await import("./notify.ts");
 		const mockShowToast = vi.mocked(showToast);
 
@@ -24,9 +22,7 @@ describe("notify", () => {
 	});
 
 	it("notifyError 非401 弹 toast", async () => {
-		const { showToast } = await import(
-			"@components/ui/organisms/toastStore.ts"
-		);
+		const { showToast } = await import("./toastStore.ts");
 		const { notifyError } = await import("./notify.ts");
 		const mockShowToast = vi.mocked(showToast);
 		mockShowToast.mockClear();
@@ -49,9 +45,7 @@ describe("notify", () => {
 	});
 
 	it("notifyError 无 error 参数弹空消息 toast", async () => {
-		const { showToast } = await import(
-			"@components/ui/organisms/toastStore.ts"
-		);
+		const { showToast } = await import("./toastStore.ts");
 		const { notifyError } = await import("./notify.ts");
 		const mockShowToast = vi.mocked(showToast);
 		mockShowToast.mockClear();
@@ -67,9 +61,7 @@ describe("notify", () => {
 	});
 
 	it("notifySuccess 弹成功 toast", async () => {
-		const { showToast } = await import(
-			"@components/ui/organisms/toastStore.ts"
-		);
+		const { showToast } = await import("./toastStore.ts");
 		const { notifySuccess } = await import("./notify.ts");
 		const mockShowToast = vi.mocked(showToast);
 		mockShowToast.mockClear();
@@ -85,9 +77,7 @@ describe("notify", () => {
 	});
 
 	it("notifySuccess 默认空消息", async () => {
-		const { showToast } = await import(
-			"@components/ui/organisms/toastStore.ts"
-		);
+		const { showToast } = await import("./toastStore.ts");
 		const { notifySuccess } = await import("./notify.ts");
 		const mockShowToast = vi.mocked(showToast);
 		mockShowToast.mockClear();

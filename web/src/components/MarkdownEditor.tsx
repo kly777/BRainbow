@@ -1,22 +1,33 @@
 import { Markdown as MarkdownRenderer } from "@components/ui";
-import { uploadFile } from "@modules/file/api";
-import FilePickerModal, {
-	type PickedFile,
-} from "@modules/file/components/FilePickerModal.tsx";
-import { createSignal, Show } from "solid-js";
+import { createSignal, type JSX, Show } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import styles from "./markdown-editor.module.css";
+
+/** 插入编辑器所需的最小文件信息（上传结果与文件库挑选结果同一形状） */
+export interface MarkdownFileRef {
+	url: string;
+	name: string;
+	mime: string;
+}
 
 interface MarkdownEditorProps {
 	value: string;
 	onInput: (value: string) => void;
 	/**
-	 * 上传文件并返回可插入 Markdown 的 URL。
-	 * 不传时使用文件模块默认实现（components 层与业务模块的既有耦合点，
-	 * 保留为可注入接缝，便于测试或其他模块替换）。
+	 * 上传文件并返回可插入 Markdown 的引用。
+	 * 不注入则编辑器不处理粘贴/拖入的文件（工具栏也不出现相应提示）。
+	 * file 模块的实现见 `@modules/file/markdown-editor-support.tsx`。
 	 */
-	onUploadFile?: (
-		file: File,
-	) => Promise<{ url: string; name: string; mime: string }>;
+	onUploadFile?: (file: File) => Promise<MarkdownFileRef>;
+	/**
+	 * "插入文件"挑选器的渲染函数——由使用方注入 file 模块的实现。
+	 * 不注入则不显示该按钮（编辑器本身不认识任何业务模块）。
+	 */
+	filePicker?: (props: {
+		isOpen: boolean;
+		onClose: () => void;
+		onPick: (file: MarkdownFileRef) => void;
+	}) => JSX.Element;
 	preview?: boolean;
 	rows?: number;
 	placeholder?: string;
@@ -37,16 +48,6 @@ export function buildMarkdownRef(
 ): string {
 	return mime.startsWith("image/") ? `![](${url})` : `[${name}](${url})`;
 }
-
-/** 默认上传实现：走通用文件服务（去重、白名单外的未知类型也能存） */
-const defaultUpload = async (file: File) => {
-	const uploaded = await uploadFile(file);
-	return {
-		url: uploaded.url,
-		name: uploaded.original_name,
-		mime: uploaded.mime_type,
-	};
-};
 
 export default function MarkdownEditor(props: MarkdownEditorProps) {
 	let textareaRef!: HTMLTextAreaElement;
@@ -73,7 +74,8 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 
 	/** 上传单个文件并在光标处插入 Markdown（图片用 ![]()，其他文件用 []() 链接） */
 	const uploadAndInsert = async (file: File) => {
-		const upload = props.onUploadFile ?? defaultUpload;
+		const upload = props.onUploadFile;
+		if (!upload) return;
 		const uploaded = await upload(file);
 		insertAtCursor(
 			`${buildMarkdownRef(uploaded.mime, uploaded.url, uploaded.name)}\n`,
@@ -81,7 +83,7 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 	};
 
 	/** 从文件库挑选后插入（与上传插入同一套 Markdown 格式） */
-	const onPicked = (file: PickedFile) => {
+	const onPicked = (file: MarkdownFileRef) => {
 		insertAtCursor(`${buildMarkdownRef(file.mime, file.url, file.name)}\n`);
 	};
 
@@ -96,6 +98,7 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 			if (item.kind !== "file") continue;
 			const file = item.getAsFile();
 			if (!file) continue;
+			if (!props.onUploadFile) return;
 			e.preventDefault();
 			try {
 				await uploadAndInsert(file);
@@ -129,7 +132,7 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 		e.preventDefault();
 		setDragover(false);
 		const files = e.dataTransfer?.files;
-		if (!files) return;
+		if (!files || !props.onUploadFile) return;
 
 		for (const file of files) {
 			try {
@@ -168,17 +171,24 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 					: styles.editor
 			}
 		>
-			<div class={styles.toolbar}>
-				<button
-					type="button"
-					class={styles.toolBtn}
-					onClick={() => setPickerOpen(true)}
-					title="从文件库选择已有文件插入"
-				>
-					插入文件
-				</button>
-				<span class={styles.toolHint}>可直接粘贴或拖入文件</span>
-			</div>
+			{/* 工具栏只在有文件能力时出现：没注入就不承诺"插入文件/拖入文件" */}
+			<Show when={props.filePicker || props.onUploadFile}>
+				<div class={styles.toolbar}>
+					<Show when={props.filePicker}>
+						<button
+							type="button"
+							class={styles.toolBtn}
+							onClick={() => setPickerOpen(true)}
+							title="从文件库选择已有文件插入"
+						>
+							插入文件
+						</button>
+					</Show>
+					<Show when={props.onUploadFile}>
+						<span class={styles.toolHint}>可直接粘贴或拖入文件</span>
+					</Show>
+				</div>
+			</Show>
 			<textarea
 				ref={textareaRef}
 				id={props.id}
@@ -199,11 +209,15 @@ export default function MarkdownEditor(props: MarkdownEditorProps) {
 				</div>
 			</Show>
 
-			<FilePickerModal
-				isOpen={pickerOpen()}
-				onClose={() => setPickerOpen(false)}
-				onPick={onPicked}
-			/>
+			{/* 挑选器由使用方注入：Dynamic 让它的 props 跟着 pickerOpen 走 */}
+			<Show when={props.filePicker}>
+				<Dynamic
+					component={props.filePicker}
+					isOpen={pickerOpen()}
+					onClose={() => setPickerOpen(false)}
+					onPick={onPicked}
+				/>
+			</Show>
 		</div>
 	);
 }

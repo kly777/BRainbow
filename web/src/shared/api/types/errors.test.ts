@@ -9,7 +9,7 @@ import {
 
 // showErrorAlert 会 import { showToast } from toastStore，
 // 用 vi.mock 避免 SolidJS 依赖
-vi.mock("../../components/ui/toastStore.ts", () => ({
+vi.mock("@shared/utils/toastStore.ts", () => ({
 	showToast: vi.fn(),
 }));
 

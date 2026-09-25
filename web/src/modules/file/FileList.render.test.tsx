@@ -428,7 +428,7 @@ describe("FileList 渲染", () => {
 			expect(host.textContent).toContain("加载失败");
 			expect(host.textContent).toContain("后端不可用");
 			// 骨架屏必须已经让位（否则就是本次修复前的卡死状态）
-			expect(host.querySelector('[class*="skeletonWrap"]')).toBeNull();
+			expect(host.querySelector('[class*="skeletonListWrap"]')).toBeNull();
 			dispose();
 		});
 	}, 20000);

@@ -149,7 +149,7 @@ describe("BookmarkManagePage：外壳迁移后的回归", () => {
 		await settle(() => (host.textContent ?? "").includes("书签接口不可用"));
 		expect(host.textContent).toContain("书签接口不可用");
 		expect(host.querySelector("button")).toBeTruthy();
-		expect(host.querySelector('[class*="skeletonWrap"]')).toBeNull();
+		expect(host.querySelector('[class*="skeletonListWrap"]')).toBeNull();
 	});
 
 	it("页头动作区仍渲染导入/标签管理/新建按钮", async () => {

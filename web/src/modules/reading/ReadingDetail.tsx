@@ -14,6 +14,7 @@ import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 import ArticleContent from "./components/ArticleContent";
 import { useReadingDetail } from "./hooks/useReadingDetail.ts";
+import { knownPercent } from "./lib/reading-stats.ts";
 import styles from "./ReadingDetail.module.css";
 
 export default function ReadingDetail() {
@@ -74,7 +75,7 @@ export default function ReadingDetail() {
 												class={styles.recommendBanner}
 											>
 												推荐下一篇：{rec().title}（认识率{" "}
-												{(rec().known_ratio * 100).toFixed(0)}%）
+												{knownPercent(rec().known_ratio)}%）
 											</A>
 										)}
 									</Show>

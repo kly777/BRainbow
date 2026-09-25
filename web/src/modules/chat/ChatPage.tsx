@@ -42,54 +42,61 @@ export default function ChatPage() {
 				loadingTrees={c.loadingTrees}
 				currentTreeId={() => c.current()?.tree.id}
 				collapsed={sidebarCollapsed()}
-				title="对话"
-				newLabel="＋ 新建"
-				emptyText="还没有对话，点击“＋ 新建”立即开始"
-				preHead={
-					<div class={styles.searchBox}>
-						<SearchInput
-							value={c.searchQ()}
-							onSearch={(q) => c.onSearchInput(q)}
-							debounceMs={0}
-							placeholder="搜索对话 / 消息…"
-							class={styles.searchInput}
-						/>
-						<Show when={c.searchOpen()}>
-							<div class={styles.searchResults}>
-								<Show
-									when={!c.searching() && c.searchHits().length === 0}
-									fallback={
-										<For each={c.searchHits()}>
-											{(hit) => (
-												<button
-													type="button"
-													class={styles.searchHit}
-													onClick={() => c.gotoHit(hit)}
-												>
-													<span class={styles.searchHitTitle}>
-														{hit.tree_title}
-													</span>
-													<span class={styles.searchHitSnippet}>
-														{hit.snippet}
-													</span>
-												</button>
-											)}
-										</For>
-									}
-								>
-									<div class={styles.searchEmpty}>
-										{c.searching() ? "搜索中…" : "无结果"}
-									</div>
-								</Show>
-							</div>
-						</Show>
-					</div>
-				}
-				onCreate={() => void c.createSession()}
-				onSelect={(id) => c.selectSession(id)}
-				onRename={(id, title) => void c.renameSession(id, title)}
-				onAiTitle={(id) => c.aiTitleSession(id)}
-				onDelete={(id) => c.removeSession(id)}
+				copy={{
+					title: "对话",
+					newLabel: "＋ 新建",
+					emptyText: "还没有对话，点击“＋ 新建”立即开始",
+				}}
+				slots={{
+					preHead: (
+						<div class={styles.searchBox}>
+							<SearchInput
+								value={c.searchQ()}
+								onSearch={(q) => c.onSearchInput(q)}
+								debounceMs={0}
+								placeholder="搜索对话 / 消息…"
+								class={styles.searchInput}
+							/>
+							<Show when={c.searchOpen()}>
+								<div class={styles.searchResults}>
+									<Show
+										when={!c.searching() && c.searchHits().length === 0}
+										fallback={
+											<For each={c.searchHits()}>
+												{(hit) => (
+													<button
+														type="button"
+														class={styles.searchHit}
+														onClick={() => c.gotoHit(hit)}
+													>
+														<span class={styles.searchHitTitle}>
+															{hit.tree_title}
+														</span>
+														<span class={styles.searchHitSnippet}>
+															{hit.snippet}
+														</span>
+													</button>
+												)}
+											</For>
+										}
+									>
+										<div class={styles.searchEmpty}>
+											{c.searching() ? "搜索中…" : "无结果"}
+										</div>
+									</Show>
+								</div>
+							</Show>
+						</div>
+					),
+				}}
+				actions={{
+					onCreate: () => void c.createSession(),
+					onSelect: (id: number) => c.selectSession(id),
+					onRename: (id: number, title: string) =>
+						void c.renameSession(id, title),
+					onAiTitle: (id: number) => c.aiTitleSession(id),
+					onDelete: (id: number) => c.removeSession(id),
+				}}
 			/>
 
 			{/* ── 对话区 ── */}

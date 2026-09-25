@@ -1,8 +1,8 @@
 // ── 标签过滤的 URL 持久化（tag_ids 规范 schema；tag_names 旧链接兼容迁移） ──
 
-import { listTagsE, searchTagsE, type TagInfo } from "@modules/mem";
 import { tryAsync } from "@shared/utils";
 import { createSignal, onMount } from "solid-js";
+import { listTagsE, searchTagsE, type TagInfo } from "../api.ts";
 import type { TagMode } from "../lib/mem-manage-utils.ts";
 import type { UseMemManageParamsResult } from "./useMemManageParams.ts";
 

@@ -1,6 +1,6 @@
 // ── useChatSession 的公开类型 ──
 
-import type { ChatTree } from "@modules/chat";
+import type { ChatTree } from "../api.ts";
 
 export interface ChatSessionOptions {
 	/** 树列表加载器（默认列出全部 kind） */

@@ -1,10 +1,10 @@
-import type { DueResponse, MemItem } from "@modules/mem";
 import { createRoot } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { DueResponse, MemItem } from "../api.ts";
 import { useDueQueue } from "./useDueQueue.ts";
 
 // 模拟getSessionEstimateE
-vi.mock("@modules/mem", () => ({
+vi.mock("@modules/mem/api.ts", () => ({
 	getSessionEstimateE: vi.fn(async () => ({
 		total_estimate: 10,
 		avg_seconds: 12,
@@ -233,7 +233,7 @@ describe("useDueQueue", () => {
 				});
 
 				// 获取mock引用
-				const { getSessionEstimateE } = await import("@modules/mem");
+				const { getSessionEstimateE } = await import("@modules/mem/api.ts");
 				const estimateMock = vi.mocked(getSessionEstimateE);
 
 				// 清除之前的调用记录
@@ -280,7 +280,7 @@ describe("useDueQueue", () => {
 				});
 
 				// 获取mock引用
-				const { getSessionEstimateE } = await import("@modules/mem");
+				const { getSessionEstimateE } = await import("@modules/mem/api.ts");
 				const estimateMock = vi.mocked(getSessionEstimateE);
 
 				// 清除之前的调用记录

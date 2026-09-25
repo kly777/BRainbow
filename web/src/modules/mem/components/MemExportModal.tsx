@@ -1,8 +1,8 @@
 import { Button, Modal } from "@components/ui";
-import type { TagInfo } from "@modules/mem";
-import { downloadExportCsv, listTagsE } from "@modules/mem";
 import { notifyError, tryAsync } from "@shared/utils";
 import { createEffect, createSignal } from "solid-js";
+import type { TagInfo } from "../api.ts";
+import { downloadExportCsv, listTagsE } from "../api.ts";
 import styles from "./MemModalShared.module.css";
 import TagPicker from "./TagPicker.tsx";
 

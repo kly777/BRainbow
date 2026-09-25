@@ -1,8 +1,8 @@
 // ── 记忆详情编辑状态（编辑弹层：线索/答案） ──
 
-import { editMemE, type MemItem } from "@modules/mem";
 import { tryOrNotify } from "@shared/utils";
 import { createSignal } from "solid-js";
+import { editMemE, type MemItem } from "../api.ts";
 
 export function useMemEdit(deps: {
 	/** 当前详情 id（null = 无详情） */

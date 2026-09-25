@@ -17,7 +17,7 @@ vi.mock("@shared/utils", () => ({
 	tryOrNotify: vi.fn(),
 }));
 
-vi.mock("@modules/chat", () => ({
+vi.mock("@modules/chat/api.ts", () => ({
 	createTreeE: vi.fn(),
 	deleteTreeE: vi.fn(),
 	generateTreeTitleE: vi.fn(),
@@ -71,7 +71,7 @@ describe("useTreeList", () => {
 		// 测试加载单个树
 		const { tryAsync } = await import("@shared/utils");
 		const mockTryAsync = vi.mocked(tryAsync);
-		const { getTreeE } = await import("@modules/chat");
+		const { getTreeE } = await import("@modules/chat/api.ts");
 		const mockGetTreeE = vi.mocked(getTreeE);
 
 		const mockTree = {
@@ -162,7 +162,7 @@ describe("useTreeList", () => {
 
 	it("删除会话", async () => {
 		// 测试删除会话
-		const { deleteTreeE } = await import("@modules/chat");
+		const { deleteTreeE } = await import("@modules/chat/api.ts");
 		const mockDeleteTreeE = vi.mocked(deleteTreeE);
 		const { confirmAndRun } = await import("@shared/utils");
 		const mockConfirmAndRun = vi.mocked(confirmAndRun);
@@ -194,7 +194,7 @@ describe("useTreeList", () => {
 
 	it("重命名会话", async () => {
 		// 测试重命名会话
-		const { updateTreeE } = await import("@modules/chat");
+		const { updateTreeE } = await import("@modules/chat/api.ts");
 		const mockUpdateTreeE = vi.mocked(updateTreeE);
 		const { tryOrNotify } = await import("@shared/utils");
 		const mockTryOrNotify = vi.mocked(tryOrNotify);
@@ -225,7 +225,7 @@ describe("useTreeList", () => {
 		// 测试AI生成标题
 		const { tryAsync } = await import("@shared/utils");
 		const mockTryAsync = vi.mocked(tryAsync);
-		const { generateTreeTitleE } = await import("@modules/chat");
+		const { generateTreeTitleE } = await import("@modules/chat/api.ts");
 		const mockGenerateTreeTitleE = vi.mocked(generateTreeTitleE);
 
 		const mockResult = { title: "AI生成的标题" };

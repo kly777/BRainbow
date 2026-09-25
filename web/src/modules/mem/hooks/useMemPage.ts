@@ -1,4 +1,3 @@
-import { getUpcomingCountsE, type UpcomingCounts } from "@modules/mem";
 import { isTypingTarget, notifyError, tryAsync } from "@shared/utils";
 import {
 	type Accessor,
@@ -8,6 +7,7 @@ import {
 	onCleanup,
 	onMount,
 } from "solid-js";
+import { getUpcomingCountsE, type UpcomingCounts } from "../api.ts";
 import { useMemReview } from "./useMemReview.ts";
 
 const UPCOMING_TTL = 60_000;

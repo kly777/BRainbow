@@ -1,7 +1,5 @@
 import { Button, Input, ListPage, Modal, Textarea } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
-import type { ArticleSummary } from "@modules/reading";
-import { listArticles, uploadArticle } from "@modules/reading";
 import {
 	fmtLocal,
 	notifyError,
@@ -10,6 +8,8 @@ import {
 } from "@shared/utils";
 import { A } from "@solidjs/router";
 import { type Component, createSignal, For } from "solid-js";
+import type { ArticleSummary } from "./api.ts";
+import { listArticles, uploadArticle } from "./api.ts";
 import { knownLevel, knownPercent } from "./lib/reading-stats.ts";
 import styles from "./ReadingList.module.css";
 

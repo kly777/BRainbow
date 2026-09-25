@@ -1,8 +1,8 @@
 // ── 单条消息（/chat）：气泡 + 思考块 + Markdown 内容 + 分支条 ──
 
 import { Markdown as MarkdownRenderer } from "@components/ui";
-import type { ChatNode } from "@modules/chat";
 import { Show } from "solid-js";
+import type { ChatNode } from "../api.ts";
 import type { useChatPage } from "../hooks/useChatPage.ts";
 import { BranchBar } from "./BranchBar.tsx";
 import { copyNode } from "./ChatPageParts.tsx";

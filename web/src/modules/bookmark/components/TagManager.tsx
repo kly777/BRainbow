@@ -4,8 +4,6 @@
  */
 
 import { Button, LoadingSkeleton, Modal } from "@components/ui";
-import type { BookmarkTagWithCount } from "@modules/bookmark";
-import { deleteBookmarkTagE, searchBookmarkTagsE } from "@modules/bookmark";
 import {
 	notifyError,
 	notifySuccess,
@@ -13,6 +11,8 @@ import {
 	tryAsync,
 } from "@shared/utils";
 import { createResource, createSignal, For, Show } from "solid-js";
+import type { BookmarkTagWithCount } from "../api.ts";
+import { deleteBookmarkTagE, searchBookmarkTagsE } from "../api.ts";
 import styles from "./TagManager.module.css";
 
 interface Props {

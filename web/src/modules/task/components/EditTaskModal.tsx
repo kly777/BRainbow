@@ -1,8 +1,8 @@
 import { Modal } from "@components/ui";
-import type { Task, TimeWindow } from "@modules/task";
-import { getTimeWindowsE } from "@modules/task";
 import { notifyError, tryAsync } from "@shared/utils";
 import { type Component, createEffect, createSignal, Show } from "solid-js";
+import type { Task, TimeWindow } from "../api.ts";
+import { getTimeWindowsE } from "../timeWindowApi.ts";
 import BasicInfoTab from "./BasicInfoTab.tsx";
 import DependenciesTab from "./DependenciesTab.tsx";
 import styles from "./EditTaskModal.module.css";

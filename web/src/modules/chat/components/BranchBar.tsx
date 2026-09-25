@@ -1,7 +1,7 @@
 // ── 分支切换条：某节点有多个后续分支时显示 ──
 
-import type { ChatNode } from "@modules/chat";
 import { For } from "solid-js";
+import type { ChatNode } from "../api.ts";
 import pageStyles from "./BranchBar.module.css";
 import memStyles from "./BranchBarMem.module.css";
 import { PREVIEW_LEN } from "./preview.ts";

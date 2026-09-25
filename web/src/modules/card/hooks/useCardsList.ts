@@ -4,13 +4,6 @@
 // page/totalPages/loading/error 信号与 fetch —— 改造前本文件与页面各自
 // 手写了一遍取数逻辑，是"同一件事多种写法"的典型。
 
-import type { Card, CreateCardRequest } from "@modules/card";
-import {
-	createCardE,
-	deleteCardE,
-	getCardsE,
-	searchCardsE,
-} from "@modules/card";
 import { getErrorMessage } from "@shared/api";
 import {
 	notifyError,
@@ -24,6 +17,8 @@ import {
 	useUrlParams,
 } from "@shared/utils";
 import { createMemo, createSignal } from "solid-js";
+import { createCardE, deleteCardE, getCardsE, searchCardsE } from "../api.ts";
+import type { Card, CreateCardRequest } from "../model.ts";
 
 export function useCardsList() {
 	const createModal = useModal();

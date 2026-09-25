@@ -1,8 +1,8 @@
 import { Input, Select, Tooltip } from "@components/ui";
 import { Pencil, Trash2 } from "@components/ui/icons";
-import type { Task } from "@modules/task";
 import { fmtFull } from "@shared/utils";
 import { type Component, createSignal, For, Show } from "solid-js";
+import type { Task } from "../api.ts";
 import styles from "./TaskList.module.css";
 
 const TaskStatus = {

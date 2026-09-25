@@ -1,9 +1,9 @@
 import { AsyncView, BackLink, Button } from "@components/ui";
 import { Check } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
-import { listUnknownWords, markWord, type UnknownWord } from "@modules/reading";
 import { useListResource } from "@shared/utils";
 import { For } from "solid-js";
+import { listUnknownWords, markWord, type UnknownWord } from "./api.ts";
 import styles from "./ReadingUnknown.module.css";
 
 const WordCard = (props: {

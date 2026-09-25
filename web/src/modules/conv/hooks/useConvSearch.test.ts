@@ -27,7 +27,7 @@ vi.mock("@shared/utils", async (importOriginal) => {
 		}),
 	};
 });
-vi.mock("@modules/conv", () => ({
+vi.mock("@modules/conv/api.ts", () => ({
 	searchConvE: vi.fn(async () => ({ hits: [], total: 0 })),
 }));
 

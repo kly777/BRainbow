@@ -4,9 +4,9 @@
 
 import { EmptyState, SimplePagination } from "@components/ui";
 import { PATHS } from "@config/paths";
-import type { MemItem, TagInfo } from "@modules/mem";
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
+import type { MemItem, TagInfo } from "../api.ts";
 import styles from "./ManageTable.module.css";
 import ManageTableHead from "./manage-table/ManageTableHead.tsx";
 import ManageTableRow from "./manage-table/ManageTableRow.tsx";

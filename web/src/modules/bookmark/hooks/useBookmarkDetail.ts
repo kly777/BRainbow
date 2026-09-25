@@ -1,12 +1,5 @@
 import { PATHS } from "@config/paths";
 import {
-	deleteBookmarkE,
-	getBookmarkE,
-	setBookmarkTagsE,
-	suggestBookmarkTagsE,
-	updateBookmarkE,
-} from "@modules/bookmark";
-import {
 	confirmAndDelete,
 	notifyError,
 	notifySuccess,
@@ -16,6 +9,13 @@ import {
 } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createResource, createSignal } from "solid-js";
+import {
+	deleteBookmarkE,
+	getBookmarkE,
+	setBookmarkTagsE,
+	suggestBookmarkTagsE,
+	updateBookmarkE,
+} from "../api.ts";
 
 export type BookmarkItem = Awaited<ReturnType<typeof getBookmarkE>>;
 

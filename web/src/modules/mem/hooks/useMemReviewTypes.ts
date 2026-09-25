@@ -1,6 +1,6 @@
 // ── useMemReview 的公开接口类型 ──
 
-import type { MemCounts, MemItem, TagInfo } from "@modules/mem";
+import type { MemCounts, MemItem, TagInfo } from "../api.ts";
 
 export interface UseMemReview {
 	due: () => MemItem[];

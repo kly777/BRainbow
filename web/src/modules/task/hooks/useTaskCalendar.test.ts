@@ -9,7 +9,7 @@ vi.mock("@shared/utils", async (importOriginal) => ({
 	notifyError: vi.fn(),
 }));
 
-vi.mock("@modules/task", () => ({
+vi.mock("@modules/task/api.ts", () => ({
 	getCalendarEventsE: vi.fn(),
 }));
 

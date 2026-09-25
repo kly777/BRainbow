@@ -1,6 +1,5 @@
 // ── 记忆添加模块的核心业务逻辑 ──
 
-import { importJsonE } from "@modules/mem";
 import {
 	enumParam,
 	notifyError,
@@ -13,7 +12,7 @@ import {
 } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
 import { createMemo, createSignal } from "solid-js";
-import { createMemE } from "../api.ts";
+import { createMemE, importJsonE } from "../api.ts";
 
 // ── 类型 ──
 

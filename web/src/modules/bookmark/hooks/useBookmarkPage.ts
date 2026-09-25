@@ -1,17 +1,6 @@
 // ── /bookmark 数据逻辑：URL query 驱动（q/tag/page）+ 增删改导入 ──
 // 组合入口：书签列表 + 表单 + 导入。
 
-import type { Bookmark } from "@modules/bookmark";
-import {
-	batchDeleteBookmarksE,
-	deleteBookmarkE,
-	fetchUrlTitleE,
-	getBookmarksE,
-	searchBookmarksE,
-	setBookmarkTagsE,
-	suggestBookmarkTagsE,
-	updateBookmarkE,
-} from "@modules/bookmark";
 import {
 	notifyError,
 	notifySuccess,
@@ -23,6 +12,17 @@ import {
 	useUrlParams,
 } from "@shared/utils";
 import { createSignal } from "solid-js";
+import type { Bookmark } from "../api.ts";
+import {
+	batchDeleteBookmarksE,
+	deleteBookmarkE,
+	fetchUrlTitleE,
+	getBookmarksE,
+	searchBookmarksE,
+	setBookmarkTagsE,
+	suggestBookmarkTagsE,
+	updateBookmarkE,
+} from "../api.ts";
 import { useBookmarkForm } from "./useBookmarkForm.ts";
 import { useBookmarkImport } from "./useBookmarkImport.ts";
 

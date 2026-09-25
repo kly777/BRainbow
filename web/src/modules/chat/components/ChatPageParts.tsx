@@ -1,7 +1,6 @@
 // ── ChatPage 的子组件：树列表项 / 树头部（标题+提示词）/ 空会话欢迎区 / 章节导航 ──
 
 import { Button } from "@components/ui";
-import type { ChatNode, ChatTree } from "@modules/chat";
 import {
 	copyTextWithToast,
 	fmtLocal,
@@ -9,6 +8,7 @@ import {
 	tryOrNotify,
 } from "@shared/utils";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
+import type { ChatNode, ChatTree } from "../api.ts";
 import { updateTreeE } from "../api.ts";
 import type { useChatPage } from "../hooks/useChatPage.ts";
 import styles from "./ChatPageParts.module.css";

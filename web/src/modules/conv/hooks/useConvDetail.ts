@@ -1,7 +1,7 @@
-import { getConvDetailE } from "@modules/conv";
 import { useDetailResource } from "@shared/utils";
 import { useParams } from "@solidjs/router";
 import type { Accessor } from "solid-js";
+import { getConvDetailE } from "../api.ts";
 import { useBackHref } from "./useBackHref.ts";
 
 export interface ConvDetailApi {

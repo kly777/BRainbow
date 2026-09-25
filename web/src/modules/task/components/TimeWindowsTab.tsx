@@ -1,9 +1,9 @@
 import { Input, Select } from "@components/ui";
-import type { CreateTimeWindowRequest, Task, TimeWindow } from "@modules/task";
-import { createTimeWindowE, deleteTimeWindowE } from "@modules/task";
 import { getErrorMessage } from "@shared/api";
 import { fmtLocal, notifyError, tryAsync } from "@shared/utils";
 import { type Component, createSignal, For, Show } from "solid-js";
+import type { CreateTimeWindowRequest, Task, TimeWindow } from "../api.ts";
+import { createTimeWindowE, deleteTimeWindowE } from "../timeWindowApi.ts";
 import styles from "./EditTaskModal.module.css";
 
 interface TimeWindowsTabProps {

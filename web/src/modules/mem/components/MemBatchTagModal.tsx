@@ -1,5 +1,5 @@
 import { Modal } from "@components/ui";
-import type { TagInfo } from "@modules/mem";
+import type { TagInfo } from "../api.ts";
 import styles from "./MemModalShared.module.css";
 import TagPicker from "./TagPicker.tsx";
 

@@ -1,6 +1,6 @@
-import { type CalendarEvent, getCalendarEventsE } from "@modules/task";
 import { notifyError, useListResource } from "@shared/utils";
 import { createMemo, createSignal } from "solid-js";
+import { type CalendarEvent, getCalendarEventsE } from "../api.ts";
 
 export interface TaskCalendarApi {
 	currentDate: () => Date;

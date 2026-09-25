@@ -9,6 +9,13 @@
 // 4. 无模块级可变状态（initialLoadDone / skipNextLoad 已消灭）
 // 5. load 单一职责：列表 / 标签 / 直达各自独立
 
+import { showConfirm, tryAsync, tryOrNotify, useModal } from "@shared/utils";
+import {
+	createEffect,
+	createMemo,
+	createResource,
+	createSignal,
+} from "solid-js";
 import {
 	addTagToMemE,
 	batchGetMemsTagsE,
@@ -20,14 +27,7 @@ import {
 	suspendMemE,
 	type TagInfo,
 	unsuspendMemE,
-} from "@modules/mem";
-import { showConfirm, tryAsync, tryOrNotify, useModal } from "@shared/utils";
-import {
-	createEffect,
-	createMemo,
-	createResource,
-	createSignal,
-} from "solid-js";
+} from "../api.ts";
 import type {
 	PageMeta,
 	SortDir,

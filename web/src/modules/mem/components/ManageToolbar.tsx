@@ -1,7 +1,7 @@
 // ── v2 管理工具栏：搜索 / 标签过滤 / 状态筛选 / 导出 ──
 
 import { Button, FilterGroup, SearchInput } from "@components/ui";
-import type { TagInfo } from "@modules/mem";
+import type { TagInfo } from "../api.ts";
 import styles from "./ManageToolbar.module.css";
 import TagPicker from "./TagPicker.tsx";
 

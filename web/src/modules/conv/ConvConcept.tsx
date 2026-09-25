@@ -3,9 +3,9 @@ import {
 	LoadingSkeleton,
 	Markdown as MarkdownRenderer,
 } from "@components/ui";
-import { getConvConceptE } from "@modules/conv";
 import { strParam, useDetailResource, useUrlParams } from "@shared/utils";
 import { useParams } from "@solidjs/router";
+import { getConvConceptE } from "./api.ts";
 import styles from "./ConvDetail.module.css";
 import ConvTopBar from "./components/ConvTopBar.tsx";
 import { useBackHref } from "./hooks/useBackHref.ts";

@@ -1,9 +1,9 @@
 // ── 书签导入功能 ──
 // 从 useBookmarkPage 拆分：HTML 书签文件导入。
 
-import { importBookmarksE } from "@modules/bookmark";
 import { notifyError, notifySuccess, tryAsync } from "@shared/utils";
 import { createSignal } from "solid-js";
+import { importBookmarksE } from "../api.ts";
 
 export interface UseBookmarkImportOpts {
 	/** 导入成功后的回调（刷新列表） */

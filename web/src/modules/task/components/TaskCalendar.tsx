@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from "@components/ui/icons";
-import type { CalendarEvent } from "@modules/task";
 import { fmtLocal } from "@shared/utils";
 import { type Component, For, Show } from "solid-js";
+import type { CalendarEvent } from "../api.ts";
 import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
 import styles from "./TaskCalendar.module.css";
 

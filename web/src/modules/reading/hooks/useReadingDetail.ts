@@ -1,13 +1,5 @@
 // ── 阅读详情页核心逻辑 ──
 
-import type { ArticleDetail } from "@modules/reading";
-import {
-	getArticle,
-	getArticleNotes,
-	markWord,
-	recommendNext,
-	updateArticleNotes,
-} from "@modules/reading";
 import {
 	copyText,
 	notifyError,
@@ -16,6 +8,14 @@ import {
 } from "@shared/utils";
 import { useParams } from "@solidjs/router";
 import { createEffect, createMemo, createSignal } from "solid-js";
+import type { ArticleDetail } from "../api.ts";
+import {
+	getArticle,
+	getArticleNotes,
+	markWord,
+	recommendNext,
+	updateArticleNotes,
+} from "../api.ts";
 
 export function useReadingDetail() {
 	const params = useParams();

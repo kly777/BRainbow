@@ -1,15 +1,15 @@
 // ── 提示词预设管理：增删改查 ──
 
 import { Button, Input, LoadingSkeleton, Textarea } from "@components/ui";
-import type { PromptPreset } from "@modules/chat";
+import { showConfirm, tryAsync, tryOrNotify } from "@shared/utils";
+import { createSignal, For, onMount, Show } from "solid-js";
+import type { PromptPreset } from "./api.ts";
 import {
 	createPresetE,
 	deletePresetE,
 	listPresetsE,
 	updatePresetE,
-} from "@modules/chat";
-import { showConfirm, tryAsync, tryOrNotify } from "@shared/utils";
-import { createSignal, For, onMount, Show } from "solid-js";
+} from "./api.ts";
 import styles from "./ChatPrompts.module.css";
 
 const PromptListBody = (props: {

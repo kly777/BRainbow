@@ -8,9 +8,9 @@ import {
 	MarkdownFilePicker,
 	uploadToFileService,
 } from "@modules/file/markdown-editor-support.tsx";
-import type { MemItem, TagInfo } from "@modules/mem";
 import { fmtLocal } from "@shared/utils";
 import { type Component, Show } from "solid-js";
+import type { MemItem, TagInfo } from "../api.ts";
 import { memStateMeta } from "../lib/mem-manage-utils.ts";
 import styles from "./ManageDetail.module.css";
 import TagPicker from "./TagPicker.tsx";

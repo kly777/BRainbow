@@ -1,10 +1,10 @@
 // ── 记忆复习模块的核心业务逻辑（队列管理见 useDueQueue） ──
 // 组合入口：队列管理 + 复习操作（useReviewActions）。
 
-import type { MemCounts } from "@modules/mem";
-import { getDueE, getMemCountsE, previewMemE } from "@modules/mem";
 import { tryAsync } from "@shared/utils";
 import { createSignal, onMount } from "solid-js";
+import type { MemCounts } from "../api.ts";
+import { getDueE, getMemCountsE, previewMemE } from "../api.ts";
 import {
 	calcAvgCardTime,
 	calcMaxLearning,

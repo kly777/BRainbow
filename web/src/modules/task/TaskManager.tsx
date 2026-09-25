@@ -4,12 +4,13 @@ import {
 	PageHead,
 	SearchInput,
 } from "@components/ui";
-import { TaskList, TaskProvider, useTasks } from "@modules/task";
 import { enumParam, strParam, useUrlParams } from "@shared/utils";
 import { createSignal, Show } from "solid-js";
 import TaskCalendar from "./components/TaskCalendar.tsx";
 import TaskDag from "./components/TaskDag.tsx";
 import TaskKanban from "./components/TaskKanban.tsx";
+import TaskList from "./components/TaskList.tsx";
+import { TaskProvider, useTasks } from "./components/TaskProvider.tsx";
 import styles from "./TaskManager.module.css";
 
 function TaskToolbar(props: {

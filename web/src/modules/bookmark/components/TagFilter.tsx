@@ -4,9 +4,9 @@
  */
 
 import TagFilter from "@components/ui/molecules/TagFilter.tsx";
-import type { BookmarkTagWithCount } from "@modules/bookmark";
-import { searchBookmarkTagsE } from "@modules/bookmark";
 import { createResource } from "solid-js";
+import type { BookmarkTagWithCount } from "../api.ts";
+import { searchBookmarkTagsE } from "../api.ts";
 import styles from "./TagFilter.module.css";
 
 interface Props {

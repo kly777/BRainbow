@@ -1,8 +1,8 @@
 import { PATHS } from "@config/paths";
-import type { ConvHit } from "@modules/conv";
-import { searchConvE } from "@modules/conv";
 import { strParam, useListResource, useUrlParams } from "@shared/utils";
 import type { Accessor } from "solid-js";
+import type { ConvHit } from "../api.ts";
+import { searchConvE } from "../api.ts";
 
 const VALID_TABS = ["all", "article"] as const;
 export type ConvSearchTab = (typeof VALID_TABS)[number];

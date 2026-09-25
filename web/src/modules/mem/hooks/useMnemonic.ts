@@ -1,10 +1,10 @@
 // ── AI 助记：生成、加载、连续忘记自动触发 ──
 
-import type { MemItem } from "@modules/mem";
-import { getMnemonicE, setMnemonicE } from "@modules/mem";
 import { callAi, getAiSettingsE } from "@shared/ai";
 import { fillPrompt, notifyError, tryAsync } from "@shared/utils";
 import { createSignal } from "solid-js";
+import type { MemItem } from "../api.ts";
+import { getMnemonicE, setMnemonicE } from "../api.ts";
 
 /** 连续忘记 N 次后自动生成助记 */
 const AUTO_GENERATE_THRESHOLD = 3;

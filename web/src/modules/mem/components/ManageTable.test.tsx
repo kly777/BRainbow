@@ -4,9 +4,9 @@
 // 每行渲染线索/答案为预览文本、行内操作带着 id 回调、空态文案随筛选态变化、
 // loading 时出骨架且不出表格。
 
-import type { MemItem } from "@modules/mem";
 import { render } from "solid-js/web";
 import { describe, expect, it, vi } from "vitest";
+import type { MemItem } from "../api.ts";
 import ManageTable from "./ManageTable.tsx";
 
 // 空态里的"添加第一张记忆卡"是路由链接，渲染它需要 Router 上下文

@@ -1,11 +1,10 @@
 import { fillPath, PATHS } from "@config/paths";
-import type { UpdateCardRequest } from "@modules/card";
-import { deleteCardE, getCardE, updateCardE } from "@modules/card";
 import { getErrorMessage } from "@shared/api";
 import { confirmAndDelete, tryAsync, useDetailResource } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { type Accessor, createEffect, createSignal } from "solid-js";
-import type { Card } from "../model.ts";
+import { deleteCardE, getCardE, updateCardE } from "../api.ts";
+import type { Card, UpdateCardRequest } from "../model.ts";
 
 export interface CardEditApi {
 	cardId: () => number;

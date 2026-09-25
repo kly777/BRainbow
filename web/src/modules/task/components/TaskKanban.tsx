@@ -1,10 +1,10 @@
 import { Button, FilterGroup, Input, Modal } from "@components/ui";
-import type { Task } from "@modules/task";
-import { useTasks } from "@modules/task";
 import { fmtLocal } from "@shared/utils";
 import { createMemo, createSignal, For, Show } from "solid-js";
+import type { Task } from "../api.ts";
 import { statusToken } from "../lib/status-colors.ts";
 import styles from "./TaskKanban.module.css";
+import { useTasks } from "./TaskProvider.tsx";
 
 // ==================== 状态常量 ====================
 

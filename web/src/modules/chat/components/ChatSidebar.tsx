@@ -3,9 +3,9 @@
 // 列表项的操作（重命名 / AI 取标题 / 删除、悬浮三点菜单）由 TreeListItem 统一实现。
 
 import { EmptyState } from "@components/ui";
-import type { ChatTree } from "@modules/chat";
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
+import type { ChatTree } from "../api.ts";
 import { TreeListItem } from "./ChatPageParts.tsx";
 import styles from "./ChatSidebar.module.css";
 

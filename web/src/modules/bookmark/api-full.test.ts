@@ -28,7 +28,8 @@ vi.mock("@shared/api", () => ({
 	cachedRequest: vi.fn(),
 	domains: {
 		bookmarks: {
-			invalidate: vi.fn((promise: any) => promise),
+			// 签名与真实的 domains.*.invalidate 一致：泛型透传（原来是 `(promise: any)`）
+			invalidate: vi.fn(<T>(promise: Promise<T>) => promise),
 		},
 	},
 }));
@@ -124,9 +125,8 @@ describe("bookmark API", () => {
 
 		// 模拟post返回成功结果
 		mockPost.mockResolvedValueOnce(mockBookmark);
-		// @ts-expect-error - mock type mismatch
-		mockDomains.bookmarks.invalidate.mockImplementationOnce(
-			(promise: any) => promise,
+		vi.mocked(mockDomains.bookmarks.invalidate).mockImplementationOnce(
+			<T>(promise: Promise<T>) => promise,
 		);
 
 		// 调用创建书签API
@@ -168,9 +168,8 @@ describe("bookmark API", () => {
 
 		// 模拟patch返回成功结果
 		mockPatch.mockResolvedValueOnce(mockBookmark);
-		// @ts-expect-error - mock type mismatch
-		mockDomains.bookmarks.invalidate.mockImplementationOnce(
-			(promise: any) => promise,
+		vi.mocked(mockDomains.bookmarks.invalidate).mockImplementationOnce(
+			<T>(promise: Promise<T>) => promise,
 		);
 
 		// 调用更新书签API
@@ -196,9 +195,8 @@ describe("bookmark API", () => {
 
 		// 模拟del返回成功结果
 		mockDel.mockResolvedValueOnce(mockResult);
-		// @ts-expect-error - mock type mismatch
-		mockDomains.bookmarks.invalidate.mockImplementationOnce(
-			(promise: any) => promise,
+		vi.mocked(mockDomains.bookmarks.invalidate).mockImplementationOnce(
+			<T>(promise: Promise<T>) => promise,
 		);
 
 		// 调用删除书签API
@@ -277,9 +275,8 @@ describe("bookmark API", () => {
 		mockCachedRequest.mockResolvedValueOnce(mockTags);
 		mockRequest.mockResolvedValueOnce(mockTagResult);
 		mockDel.mockResolvedValueOnce(mockDeleteResult);
-		// @ts-expect-error - mock type mismatch
-		mockDomains.bookmarks.invalidate.mockImplementation(
-			(promise: any) => promise,
+		vi.mocked(mockDomains.bookmarks.invalidate).mockImplementation(
+			<T>(promise: Promise<T>) => promise,
 		);
 
 		// 调用搜索标签API
@@ -332,9 +329,8 @@ describe("bookmark API", () => {
 
 		// 模拟request返回成功结果
 		mockRequest.mockResolvedValueOnce(mockResult);
-		// @ts-expect-error - mock type mismatch
-		mockDomains.bookmarks.invalidate.mockImplementationOnce(
-			(promise: any) => promise,
+		vi.mocked(mockDomains.bookmarks.invalidate).mockImplementationOnce(
+			<T>(promise: Promise<T>) => promise,
 		);
 
 		// 创建模拟文件

@@ -14,11 +14,12 @@ vi.mock("@shared/utils", () => ({
 }));
 
 describe("useBookmarkImport", () => {
-	let opts: any;
-	let onImportedMock: ReturnType<typeof vi.fn>;
+	/** 被测 hook 的入参：按真实签名取（原来是 any，改完能查出漏字段） */
+	let opts: Parameters<typeof useBookmarkImport>[0];
+	let onImportedMock: ReturnType<typeof vi.fn<() => void>>;
 
 	beforeEach(() => {
-		onImportedMock = vi.fn();
+		onImportedMock = vi.fn<() => void>();
 		opts = { onImported: onImportedMock };
 	});
 

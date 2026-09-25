@@ -156,7 +156,7 @@ describe("CSS Module 类名引用契约", () => {
 		if (violations.length > 0) {
 			throw new Error(
 				`类名引用契约被违反 ${violations.length} 处：\n${violations
-					.map((v) => `  ${v.where.replace(SRC_ROOT + "/", "")}  ${v.reason}`)
+					.map((v) => `  ${v.where.replace(`${SRC_ROOT}/`, "")}  ${v.reason}`)
 					.join("\n")}`,
 			);
 		}

@@ -40,7 +40,7 @@ vi.mock("@config/module-cards.ts", () => ({
 }));
 
 vi.mock("@config/paths", () => ({
-	fillPath: vi.fn((path, params) => path),
+	fillPath: vi.fn((path, _params) => path),
 	PATHS: {
 		home: "/",
 		task: "/task",

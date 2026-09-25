@@ -129,7 +129,7 @@ export function useQuickCapture() {
 					showToast({
 						type: "success",
 						title: "卡片已保存",
-						message: value.length > 50 ? value.slice(0, 50) + "…" : value,
+						message: value.length > 50 ? `${value.slice(0, 50)}…` : value,
 						duration: 3000,
 					});
 					return true;

@@ -5,7 +5,6 @@
 import { describe, expect, it } from "vitest";
 import { formatBytes } from "./bytes.ts";
 
-const KIB = 1024;
 const MIB = 1024 * 1024;
 const GIB = 1024 * 1024 * 1024;
 

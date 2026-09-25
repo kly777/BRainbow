@@ -1,13 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	activateTaskE,
-	archiveTaskE,
 	completeTaskE,
 	createTaskE,
 	deleteTaskE,
 	getTaskStatsE,
 	getTaskTreeE,
-	moveToBacklogE,
 	searchTasksE,
 	updateTaskE,
 } from "./api.ts";

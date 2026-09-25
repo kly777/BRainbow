@@ -150,7 +150,7 @@ const CardEditPage: Component = () => {
 				onRetry={m.refetch}
 				class={styles.body}
 			>
-				{(card) => (
+				{(_card) => (
 					<CardEditWorkspace
 						content={m.content()}
 						onInput={m.setContent}

@@ -1,11 +1,5 @@
 import { Button, Input, Modal } from "@components/ui";
-import {
-	changePasswordE,
-	loginE,
-	logoutE,
-	registerE,
-	useAuth,
-} from "@modules/auth";
+import { changePasswordE, loginE, registerE, useAuth } from "@modules/auth";
 import { AUTH_REQUIRED_EVENT } from "@shared/api";
 import { tryAsync } from "@shared/utils";
 import { createSignal, onCleanup, Show } from "solid-js";

@@ -4,7 +4,7 @@ import { useTreeList } from "./useTreeList.ts";
 
 // 模拟依赖
 vi.mock("@shared/utils", () => ({
-	parseUrlId: vi.fn((id) => parseInt(id)),
+	parseUrlId: vi.fn((id) => parseInt(id, 10)),
 	strParam: vi.fn((defaultVal) => ({ default: defaultVal })),
 	useUrlParams: vi.fn(() => ({
 		get: vi.fn(() => ""),
@@ -27,7 +27,8 @@ vi.mock("@modules/chat/api.ts", () => ({
 }));
 
 describe("useTreeList", () => {
-	let opts: any;
+	/** 被测 hook 的入参：按真实签名取（原来是 any，改完能查出漏字段） */
+	let opts: Parameters<typeof useTreeList>[0];
 
 	beforeEach(() => {
 		opts = {
@@ -168,7 +169,7 @@ describe("useTreeList", () => {
 		const mockConfirmAndRun = vi.mocked(confirmAndRun);
 
 		// 模拟confirmAndRun返回true
-		mockConfirmAndRun.mockImplementationOnce(async (opts, fn) => {
+		mockConfirmAndRun.mockImplementationOnce(async (_opts, fn) => {
 			await fn();
 			return true;
 		});

@@ -1,5 +1,5 @@
 import { Input } from "@components/ui";
-import { ArrowLeft, Check, X } from "@components/ui/icons";
+import { Check } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
 // ── v2 导入相关子组件：格式说明卡 / 预览清单 / 默认标签 / 结果页 ──
 

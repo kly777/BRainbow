@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractErrorBody } from "./request";
+import { describeGatewayStatus, extractErrorBody } from "./request";
 
 function mockResponse(body: string, status = 400): Response {
 	return new Response(body, {
@@ -108,7 +108,39 @@ describe("extractErrorBody", () => {
 		});
 	});
 
-	// ── 边界 ──
+	// ── 网关状态码（中间层编的 502/503/504，不是后端回的） ──
+
+	describe("网关状态码", () => {
+		it("空响应体的 502 给能对上现象的说明，而不是一句 HTTP 502", async () => {
+			// vite 开发代理在后端没响应时正是这样：只写状态码、不写正文。
+			// 真实场景：后端 panic 把连接丢了，用户只看到 "上传失败（HTTP 502）"
+			const result = await extractErrorBody(mockResponse("", 502));
+			expect(result.code).toBe("HTTP_502");
+			expect(result.message).toContain("后端没有响应");
+		});
+
+		it("HTML 错误页走同一套说明", async () => {
+			const result = await extractErrorBody(
+				mockResponse("<html>503</html>", 503),
+			);
+			expect(result.message).toContain("暂时不可用");
+		});
+
+		it("后端自己回的 JSON 错误体优先于网关文案", async () => {
+			const body = JSON.stringify({
+				code: "INTERNAL",
+				message: "服务器内部错误：切点不在字符边界上",
+			});
+			const result = await extractErrorBody(mockResponse(body, 502));
+			expect(result.code).toBe("INTERNAL");
+			expect(result.message).toContain("切点不在字符边界上");
+		});
+
+		it("非网关状态码不受影响", async () => {
+			const result = await extractErrorBody(mockResponse("", 400));
+			expect(result.message).toBe("HTTP 400");
+		});
+	});
 
 	describe("边界", () => {
 		it("exactly 200 chars not truncated", async () => {
@@ -126,5 +158,17 @@ describe("extractErrorBody", () => {
 			// null is not a string → falls through
 			expect(result.code).toBe("HTTP_400");
 		});
+	});
+});
+
+describe("describeGatewayStatus", () => {
+	it("只认 502/503/504", () => {
+		expect(describeGatewayStatus(502)).toContain("后端没有响应");
+		expect(describeGatewayStatus(503)).toContain("暂时不可用");
+		expect(describeGatewayStatus(504)).toContain("超时");
+		// 其余状态码由后端/调用方给文案，这里不插手
+		expect(describeGatewayStatus(500)).toBe(null);
+		expect(describeGatewayStatus(404)).toBe(null);
+		expect(describeGatewayStatus(200)).toBe(null);
 	});
 });

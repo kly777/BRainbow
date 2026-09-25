@@ -3,5 +3,6 @@
 //! 业务模块（modules/）通过 `crate::app::http::xxx` 引用这些基础设施。
 
 pub mod auth;
+pub mod panic;
 pub mod rate_limit;
 pub mod routes;

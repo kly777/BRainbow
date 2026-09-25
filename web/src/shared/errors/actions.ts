@@ -1,5 +1,5 @@
 /**
- * 安全异步操作工具
+ * 安全异步操作工具（错误处理的"动作层"，见 doc/error-handling.md）
  *
  * 基于 Result<T, E> 类型的高层封装，提供：
  * - tryOrNotify: 执行异步操作，失败时自动 toast 通知用户
@@ -7,7 +7,7 @@
  * - showConfirm: 弹出确认对话框（re-export）
  *
  * 用法：
- *   import { tryOrNotify, confirmAndRun, showConfirm } from "@shared/utils";
+ *   import { tryOrNotify, confirmAndRun, showConfirm } from "@shared/errors";
  *
  *   // 仅通知错误，成功后拿到返回值
  *   const card = await tryOrNotify(() => createCard(req), "创建卡片");
@@ -21,10 +21,10 @@
  *   );
  */
 
-import type { ConfirmOptions } from "./confirmStore.ts";
-import { showConfirm as show } from "./confirmStore.ts";
+import type { ConfirmOptions } from "../utils/confirmStore.ts";
+import { showConfirm as show } from "../utils/confirmStore.ts";
+import { tryAsync } from "../utils/result.ts";
 import { notifyError, notifySuccess } from "./notify.ts";
-import { tryAsync } from "./result.ts";
 
 export {
 	err,
@@ -34,7 +34,7 @@ export {
 	ok,
 	tryAsync,
 	unwrapOr,
-} from "./result.ts";
+} from "../utils/result.ts";
 // Re-export 以便统一导入
 export { show as showConfirm };
 

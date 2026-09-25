@@ -4,10 +4,10 @@ import {
 	HttpError,
 	NetworkError,
 	ValidationError,
-} from "./errors.ts";
+} from "./model.ts";
 
 // 这里原本还测 showErrorAlert / showErrorInline —— 两个函数零调用点（只有这个测试在用），
-// 抑制规则已并进 notifyError（见 shared/utils/notify.ts 的 alreadyReported 与它的测试）。
+// 抑制规则已并进 notifyError（见 shared/errors/notify.ts 的 alreadyReported 与它的测试）。
 
 describe("getErrorMessage", () => {
 	it("extracts message from HttpError with details", () => {

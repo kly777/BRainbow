@@ -1,13 +1,13 @@
-import { HttpError, NetworkError } from "@shared/api";
 import { describe, expect, it, vi } from "vitest";
+import { HttpError, NetworkError } from "./model.ts";
 
-vi.mock("./toastStore.ts", () => ({
+vi.mock("../utils/toastStore.ts", () => ({
 	showToast: vi.fn(),
 }));
 
 /** 取一份干净的 mock（每个用例独立） */
 async function setup() {
-	const { showToast } = await import("./toastStore.ts");
+	const { showToast } = await import("../utils/toastStore.ts");
 	const { notifyError } = await import("./notify.ts");
 	const mockShowToast = vi.mocked(showToast);
 	mockShowToast.mockClear();
@@ -91,7 +91,7 @@ describe("notifyError 的抑制规则（已由传输层提示过的不再重复�
 
 describe("notifySuccess / notifyWarning / notifyInfo", () => {
 	it("notifySuccess 弹成功 toast", async () => {
-		const { showToast } = await import("./toastStore.ts");
+		const { showToast } = await import("../utils/toastStore.ts");
 		const { notifySuccess } = await import("./notify.ts");
 		const mockShowToast = vi.mocked(showToast);
 		mockShowToast.mockClear();
@@ -107,7 +107,7 @@ describe("notifySuccess / notifyWarning / notifyInfo", () => {
 	});
 
 	it("notifySuccess 默认空消息", async () => {
-		const { showToast } = await import("./toastStore.ts");
+		const { showToast } = await import("../utils/toastStore.ts");
 		const { notifySuccess } = await import("./notify.ts");
 		const mockShowToast = vi.mocked(showToast);
 		mockShowToast.mockClear();

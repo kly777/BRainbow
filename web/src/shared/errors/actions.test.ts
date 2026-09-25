@@ -1,12 +1,12 @@
-// ── safe-action 安全异步操作（测试覆盖扩充）──
+// ── 错误处理的"动作层"（tryOrNotify / confirmAndRun / confirmAndDelete）──
 // mock 掉 toast 与确认框，专注验证分支语义。
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { confirmAndRun, showConfirm, tryOrNotify } from "./actions.ts";
 import { notifyError } from "./notify.ts";
-import { confirmAndRun, showConfirm, tryOrNotify } from "./safe-action.ts";
 
 vi.mock("./notify.ts", () => ({ notifyError: vi.fn() }));
-vi.mock("./confirmStore.ts", () => ({
+vi.mock("../utils/confirmStore.ts", () => ({
 	showConfirm: vi.fn(),
 }));
 

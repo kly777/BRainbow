@@ -85,45 +85,45 @@ export default function MemManage() {
 					<ManageTable
 						mems={m.mems()}
 						batchIds={m.batchIds()}
-						sortField={m.sortField()}
-						sortDir={m.sortDir()}
 						detailId={m.detailId()}
 						memTags={m.memTags()}
 						allSelected={m.allSelected()}
 						loading={m.loading()}
 						pageMeta={m.pageMeta()}
-						page={m.page()}
 						filtered={filtered()}
-						onToggleSort={m.toggleSort}
-						onToggleBatch={m.toggleBatch}
-						onToggleAll={m.toggleAll}
-						onSelectRow={m.setDetailId}
-						onDelete={m.handleDelete}
-						onPageChange={(p) => m.goToPage(p)}
+						sort={{ field: m.sortField(), dir: m.sortDir() }}
+						actions={{
+							onToggleSort: m.toggleSort,
+							onToggleBatch: m.toggleBatch,
+							onToggleAll: m.toggleAll,
+							onSelectRow: (id) => m.setDetailId(id),
+							onDelete: m.handleDelete,
+							onPageChange: (p) => m.goToPage(p),
+						}}
 					/>
 				</div>
 				<ManageDetail
 					mem={m.detail()}
 					memTags={m.tagsForDetail()}
 					editing={m.editing()}
-					editCue={m.editCue()}
-					editTarget={m.editTarget()}
-					onEditCueChange={m.setEditCue}
-					onEditTargetChange={m.setEditTarget}
-					onStartEdit={m.startEdit}
-					onSaveEdit={m.saveEdit}
-					onCancelEdit={() => m.setEditing(false)}
-					onReset={m.handleReset}
-					onSuspend={async (id) => {
-						await m.suspendMemE(id);
+					draft={{
+						cue: m.editCue(),
+						target: m.editTarget(),
+						onCueChange: m.setEditCue,
+						onTargetChange: m.setEditTarget,
 					}}
-					onUnsuspend={async (id) => {
-						await m.unsuspendMemE(id);
+					actions={{
+						onStartEdit: m.startEdit,
+						onSaveEdit: m.saveEdit,
+						onCancelEdit: () => m.setEditing(false),
+						onReset: m.handleReset,
+						onSuspend: (id: number) => m.suspendMemE(id),
+						onUnsuspend: (id: number) => m.unsuspendMemE(id),
+						onDelete: m.handleDelete,
+						onAddTag: m.addTag,
+						onRemoveTag: m.removeTag,
+						onClose: () => m.setDetailId(null),
 					}}
-					onDelete={m.handleDelete}
-					onAddTag={m.addTag}
-					onRemoveTag={m.removeTag}
-					onClose={() => m.setDetailId(null)}
 				/>
 			</div>
 

@@ -15,14 +15,11 @@ import { memStateMeta } from "../lib/mem-manage-utils.ts";
 import styles from "./ManageDetail.module.css";
 import TagPicker from "./TagPicker.tsx";
 
-interface Props {
-	mem: MemItem | undefined;
-	memTags: TagInfo[];
-	editing: boolean;
-	editCue: string;
-	editTarget: string;
-	onEditCueChange: (value: string) => void;
-	onEditTargetChange: (value: string) => void;
+/**
+ * 详情面板的操作收成一束（刀法 ②，与 ManageTable 的 TableActions 同一手法）：
+ * 此前 10 个回调平铺在 props 里、再逐个转发给内部子件，加一个操作要改三处签名。
+ */
+export interface DetailActions {
 	onStartEdit: () => void;
 	onSaveEdit: () => void;
 	onCancelEdit: () => void;
@@ -33,6 +30,22 @@ interface Props {
 	onAddTag: (tag: TagInfo) => void;
 	onRemoveTag: (tagId: number) => void;
 	onClose: () => void;
+}
+
+/** 编辑草稿（值 + 两个 onChange 一起走动，故收成一束） */
+export interface DetailDraft {
+	cue: string;
+	target: string;
+	onCueChange: (value: string) => void;
+	onTargetChange: (value: string) => void;
+}
+
+interface Props {
+	mem: MemItem | undefined;
+	memTags: TagInfo[];
+	editing: boolean;
+	draft: DetailDraft;
+	actions: DetailActions;
 }
 
 const DetailHead: Component<{
@@ -99,10 +112,7 @@ const CueAnswerSection: Component<{
 	editing: boolean;
 	cueContent: string;
 	targetContent: string;
-	editCue: string;
-	editTarget: string;
-	onEditCueChange: (value: string) => void;
-	onEditTargetChange: (value: string) => void;
+	draft: DetailDraft;
 }> = (props) => (
 	<Show
 		when={props.editing}
@@ -115,13 +125,13 @@ const CueAnswerSection: Component<{
 	>
 		<CueEditSection
 			tab="线索"
-			value={props.editCue}
-			onInput={props.onEditCueChange}
+			value={props.draft.cue}
+			onInput={props.draft.onCueChange}
 		/>
 		<CueEditSection
 			tab="答案"
-			value={props.editTarget}
-			onInput={props.onEditTargetChange}
+			value={props.draft.target}
+			onInput={props.draft.onTargetChange}
 		/>
 	</Show>
 );
@@ -130,26 +140,20 @@ const ActionButtons: Component<{
 	editing: boolean;
 	state: string;
 	id: number;
-	onStartEdit: () => void;
-	onSaveEdit: () => void;
-	onCancelEdit: () => void;
-	onReset: (id: number) => void;
-	onSuspend: (id: number) => void;
-	onUnsuspend: (id: number) => void;
-	onDelete: (id: number) => void;
+	actions: DetailActions;
 }> = (props) => (
 	<div class={styles.detailActions}>
 		<Show
 			when={props.editing}
 			fallback={
 				<>
-					<Button variant="ghost" size="sm" onClick={props.onStartEdit}>
+					<Button variant="ghost" size="sm" onClick={props.actions.onStartEdit}>
 						编辑
 					</Button>
 					<Button
 						variant="ghost"
 						size="sm"
-						onClick={() => props.onReset(props.id)}
+						onClick={() => props.actions.onReset(props.id)}
 					>
 						忘却
 					</Button>
@@ -157,7 +161,7 @@ const ActionButtons: Component<{
 						<Button
 							variant="ghost"
 							size="sm"
-							onClick={() => props.onSuspend(props.id)}
+							onClick={() => props.actions.onSuspend(props.id)}
 						>
 							挂起
 						</Button>
@@ -166,7 +170,7 @@ const ActionButtons: Component<{
 						<Button
 							variant="ghost"
 							size="sm"
-							onClick={() => props.onUnsuspend(props.id)}
+							onClick={() => props.actions.onUnsuspend(props.id)}
 						>
 							恢复
 						</Button>
@@ -174,17 +178,17 @@ const ActionButtons: Component<{
 					<Button
 						variant="danger"
 						size="sm"
-						onClick={() => props.onDelete(props.id)}
+						onClick={() => props.actions.onDelete(props.id)}
 					>
 						删除
 					</Button>
 				</>
 			}
 		>
-			<Button variant="primary" size="sm" onClick={props.onSaveEdit}>
+			<Button variant="primary" size="sm" onClick={props.actions.onSaveEdit}>
 				保存
 			</Button>
-			<Button variant="ghost" size="sm" onClick={props.onCancelEdit}>
+			<Button variant="ghost" size="sm" onClick={props.actions.onCancelEdit}>
 				取消
 			</Button>
 		</Show>
@@ -208,7 +212,7 @@ export default function ManageDetail(props: Props) {
 							id={d().id}
 							state={d().state}
 							leeched={d().leeched}
-							onClose={props.onClose}
+							onClose={props.actions.onClose}
 						/>
 
 						{/* 线索 / 答案 */}
@@ -216,10 +220,7 @@ export default function ManageDetail(props: Props) {
 							editing={props.editing}
 							cueContent={d().cue.content}
 							targetContent={d().target.content}
-							editCue={props.editCue}
-							editTarget={props.editTarget}
-							onEditCueChange={props.onEditCueChange}
-							onEditTargetChange={props.onEditTargetChange}
+							draft={props.draft}
 						/>
 
 						{/* 元数据（label/value 网格，数值等宽） */}
@@ -251,8 +252,8 @@ export default function ManageDetail(props: Props) {
 							<div class={styles.detailTab}>标签</div>
 							<TagPicker
 								selected={props.memTags}
-								onAdd={props.onAddTag}
-								onRemove={props.onRemoveTag}
+								onAdd={props.actions.onAddTag}
+								onRemove={props.actions.onRemoveTag}
 								placeholder="搜索或创建标签…"
 							/>
 						</div>
@@ -262,13 +263,7 @@ export default function ManageDetail(props: Props) {
 							editing={props.editing}
 							state={d().state}
 							id={d().id}
-							onStartEdit={props.onStartEdit}
-							onSaveEdit={props.onSaveEdit}
-							onCancelEdit={props.onCancelEdit}
-							onReset={props.onReset}
-							onSuspend={props.onSuspend}
-							onUnsuspend={props.onUnsuspend}
-							onDelete={props.onDelete}
+							actions={props.actions}
 						/>
 					</div>
 				)}

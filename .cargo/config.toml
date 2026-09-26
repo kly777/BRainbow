@@ -8,9 +8,10 @@ SQLX_OFFLINE = "false"
 DATABASE_URL = "sqlite:brainbow.db"
 
 [build]
-# Use all available CPU cores for parallel compilation
-# Default is already number of CPUs, but explicit is better
-jobs = 16
+# 并发编译数刻意不拉满：本机 16 核但只有 7.6 GB 内存，rust-analyzer 常驻 ~2 GB，
+# 单个 rustc 峰值就有 1.7 GB —— 16 路并发只会在全量构建时把 2 GB swap 吃穿、越并越慢。
+# 日常增量构建用不到这么多并发，8 路足够跑满 I/O。内存更宽的机器可以调回去。
+jobs = 8
 
 [alias]
 # `cargo xtask <子命令>` = `cargo run --package xtask -- <子命令>`
@@ -19,14 +20,16 @@ jobs = 16
 # 注意：xtask 与业务代码是两个 crate，业务代码编译不过时 xtask 照常可用。
 xtask = "run --quiet --package xtask --"
 
-# Uncomment to use mold linker (faster linking)
-# Requires: sudo apt install mold (Ubuntu) or cargo install mold
+# 换链接器（mold / lld）在这里没有收益，别再折腾：2026-09-25 实测，GNU ld 重链
+# 309 MB 的 debug 产物只要 ~1.1 s（真正的耗时在 proc-macro 展开 + 类型检查 +
+# 本 crate codegen，不在链接）。当时试 `-C linker-flavor=ld.lld -C linker=<rust-lld>`
+# 还直接链接失败，要省事就别开这个头。
 # [target.x86_64-unknown-linux-gnu]
 # linker = "clang"
 # rustflags = ["-C", "link-arg=-fuse-ld=mold"]
 
-# Uncomment to use sccache for compilation caching
-# Requires: cargo install sccache
+# sccache 对本仓库收益很低：热增量构建已在 1 s 级，sccache 只对"反复从零构建同一
+# 依赖树"（换分支、clean 后重建）才划算，而那批产物体积是几十 GB。
 # [build]
 # rustc-wrapper = "sccache"
 

@@ -1,8 +1,9 @@
 // ── 登录/注册限速：固定窗口计数（内存，单实例足够） ──
-// 部署在 Cloudflare/Caddy 后时 peer 地址是反代 IP，取 X-Forwarded-For 首个 IP。
-// 安全：仅接受格式合法的 IP（IPv4/IPv6），伪造的 XFF 值不会用于限速键。
+// 部署在 Cloudflare/Caddy 后时 peer 地址是反代 IP，客户端地址取 CF-Connecting-IP。
+// 为什么不是 X-Forwarded-For：见 `client_ip` 的注释（它是追加语义，首个值可伪造）。
 
 use std::collections::HashMap;
+use std::net::IpAddr;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -23,25 +24,41 @@ pub struct RateLimiter {
     buckets: Mutex<HashMap<String, Vec<Instant>>>,
 }
 
-/// 仅接受合法 IP 字符串（IPv4 或 IPv6），防 XFF 伪造
-fn is_valid_ip(s: &str) -> bool {
-    s.parse::<std::net::IpAddr>().is_ok()
+/// 从某个头里取 IP。非法值一律不采信（返回 None），不让垃圾值影响分桶；
+/// 取到后走 `to_canonical`，同一个客户端的 `::ffff:1.2.3.4` 与 `1.2.3.4` 落进同一个桶。
+fn header_ip(req: &Request, name: &str) -> Option<String> {
+    let raw = req.headers().get(name)?.to_str().ok()?.trim();
+    let ip: IpAddr = raw.parse().ok()?;
+    Some(ip.to_canonical().to_string())
 }
 
+/// 限速键 = 客户端地址。
+///
+/// 链路是 客户端 → Cloudflare → Caddy → 本进程，**只有 `CF-Connecting-IP` 能给出真实客户端**：
+/// 它是 CF 边缘按 TCP 连接重写的单值头。`X-Forwarded-For` 不能用 —— CF 是**追加**语义
+/// （客户端自己填的值留在最前面），照"首个合法 IP"取键等于把限速键交给请求方：改一次
+/// 伪造 IP 换一个桶，限速形同虚设；而 Caddy ≥2.7 又认为它不可信、整个换成自己的对端
+/// 地址（= CF 边缘 IP），于是所有访客挤进同一个桶。两种解释下都是错的，所以这里不看首值。
+///
+/// 退路是 XFF 的**最后一个**合法 IP（最靠近本进程的那一跳：非 CF 直连部署时 Caddy 追加
+/// 的就是真实客户端），最后才是直连 peer。前提是源站只经 CF 暴露：拿源站 IP 直连的人
+/// 可以自填 CF 头换桶 —— 限速本就只是纵深防御的一层，硬边界是"源站只放行 CF"。
 fn client_ip(req: &Request) -> String {
-    // 反代（Cloudflare/Caddy）场景：取 X-Forwarded-For 首个合法 IP
-    // 若首个值非法（客户端伪造），回退直连 IP——伪造者无法绕过限速
-    if let Some(xff) = req
+    if let Some(ip) = header_ip(req, "cf-connecting-ip") {
+        return ip;
+    }
+    // XFF 里最靠右的合法 IP（最靠近本进程的那一跳）
+    let last_hop = req
         .headers()
         .get("x-forwarded-for")
         .and_then(|v| v.to_str().ok())
-    {
-        for part in xff.split(',') {
-            let ip = part.trim();
-            if is_valid_ip(ip) {
-                return ip.to_string();
-            }
-        }
+        .and_then(|xff| {
+            xff.split(',')
+                .rev()
+                .find_map(|part| part.trim().parse::<IpAddr>().ok())
+        });
+    if let Some(ip) = last_hop {
+        return ip.to_canonical().to_string();
     }
     // 直连：ConnectInfo（into_make_service_with_connect_info 注入）
     req.extensions()
@@ -97,17 +114,35 @@ mod tests {
     use axum::body::Body;
 
     #[test]
-    fn xff_only_accepts_valid_ips() {
-        assert!(is_valid_ip("203.0.113.7"));
-        assert!(is_valid_ip("2001:db8::1"));
-        assert!(!is_valid_ip("not-an-ip"));
-        assert!(!is_valid_ip(""));
+    fn header_ip_rejects_garbage_and_canonicalizes() {
+        assert_eq!(
+            header_ip(&req_with(&[("cf-connecting-ip", "203.0.113.7")]), "cf-connecting-ip"),
+            Some("203.0.113.7".into())
+        );
+        // IPv6 归一化：同一个客户端的两种写法落进同一个桶
+        assert_eq!(
+            header_ip(&req_with(&[("cf-connecting-ip", "::FFFF:1.2.3.4")]), "cf-connecting-ip"),
+            Some("1.2.3.4".into())
+        );
+        assert_eq!(
+            header_ip(&req_with(&[("cf-connecting-ip", "2001:0DB8::1")]), "cf-connecting-ip"),
+            Some("2001:db8::1".into())
+        );
+        // 非 IP（含逗号列表 / 空值）不采信
+        for bad in ["not-an-ip", "1.2.3.4, 5.6.7.8", "", " "] {
+            assert_eq!(
+                header_ip(&req_with(&[("cf-connecting-ip", bad)]), "cf-connecting-ip"),
+                None,
+                "非法值不应被采信：{bad:?}"
+            );
+        }
+        assert_eq!(header_ip(&req_with(&[]), "cf-connecting-ip"), None);
     }
 
-    fn req_with_xff(value: Option<&str>) -> Request<Body> {
+    fn req_with(headers: &[(&str, &str)]) -> Request<Body> {
         let mut b = Request::builder();
-        if let Some(v) = value {
-            b = b.header("x-forwarded-for", v);
+        for (name, value) in headers {
+            b = b.header(*name, *value);
         }
         let mut req = b.body(Body::empty()).unwrap();
         req.extensions_mut().insert(axum::extract::ConnectInfo(
@@ -117,19 +152,39 @@ mod tests {
     }
 
     #[test]
-    fn client_ip_takes_first_valid_xff_entry() {
+    fn cf_connecting_ip_wins_over_xff() {
+        // CF 边缘写的单值头是唯一可信来源，XFF 里客户端自填的值不参与
+        let req = req_with(&[
+            ("cf-connecting-ip", "203.0.113.7"),
+            ("x-forwarded-for", "1.1.1.1"),
+        ]);
+        assert_eq!(client_ip(&req), "203.0.113.7");
+    }
+
+    #[test]
+    fn xff_first_entry_cannot_be_forged() {
+        // 没有 CF 头时取最后一个合法值：客户端塞在最前面的伪造值换不掉限速桶
         assert_eq!(
-            client_ip(&req_with_xff(Some("1.2.3.4, 5.6.7.8"))),
-            "1.2.3.4"
-        );
-        // 首个非法则跳过取后续合法值：伪造者无法借垃圾值绕过限速键
-        assert_eq!(
-            client_ip(&req_with_xff(Some("garbage, 5.6.7.8"))),
+            client_ip(&req_with(&[("x-forwarded-for", "1.2.3.4, 5.6.7.8")])),
             "5.6.7.8"
         );
-        // 全部非法 / 无 XFF 回退直连地址
-        assert_eq!(client_ip(&req_with_xff(Some("a, b"))), "9.9.9.9");
-        assert_eq!(client_ip(&req_with_xff(None)), "9.9.9.9");
+        // 尾部是垃圾值则继续往前找合法值
+        assert_eq!(
+            client_ip(&req_with(&[("x-forwarded-for", "1.2.3.4, garbage")])),
+            "1.2.3.4"
+        );
+        // 全是垃圾 / 无 XFF → 直连地址
+        assert_eq!(client_ip(&req_with(&[("x-forwarded-for", "a, b")])), "9.9.9.9");
+        assert_eq!(client_ip(&req_with(&[])), "9.9.9.9");
+    }
+
+    #[test]
+    fn invalid_cf_header_falls_back_instead_of_trusting_it() {
+        let req = req_with(&[
+            ("cf-connecting-ip", "garbage"),
+            ("x-forwarded-for", "5.6.7.8"),
+        ]);
+        assert_eq!(client_ip(&req), "5.6.7.8");
     }
 
     #[test]

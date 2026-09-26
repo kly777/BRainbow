@@ -5,4 +5,5 @@
 pub mod auth;
 pub mod panic;
 pub mod rate_limit;
+pub mod rejection;
 pub mod routes;

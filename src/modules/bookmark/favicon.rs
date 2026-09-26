@@ -204,12 +204,9 @@ pub(crate) async fn read_bounded(mut resp: reqwest::Response, max_bytes: u64) ->
 }
 
 fn build_client() -> Result<reqwest::Client, Box<dyn std::error::Error + Send + Sync>> {
-    reqwest::Client::builder()
-        .timeout(FETCH_TIMEOUT)
-        .connect_timeout(CONNECT_TIMEOUT)
-        .redirect(reqwest::redirect::Policy::limited(MAX_REDIRECTS))
-        .user_agent("Mozilla/5.0 (compatible; Brainbow/1.0)")
-        .build()
+    // 装上 SSRF 防线（自定义 DNS 解析器 + 逐跳重定向校验，见 shared::outbound）：
+    // 上面的 `looks_like_domain` 只管字符串长相，挡不住"自己的域名解析到内网"
+    crate::shared::outbound::build_client(FETCH_TIMEOUT, CONNECT_TIMEOUT, MAX_REDIRECTS)
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
 }
 

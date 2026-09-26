@@ -66,20 +66,30 @@ impl BookmarkService {
     pub async fn fetch_url_title(&self, url: &str) -> Result<FetchUrlResponse, ServiceError> {
         let url = url.trim();
         validate_url(url)?;
+        // SSRF 防线：内网/保留地址的字面量在这步就拒；域名解析交给客户端装的自定义
+        // 解析器（只用公网地址，重定向逐跳校验）—— 见 shared/outbound.rs
+        let target = crate::shared::outbound::parse_guarded(url)
+            .map_err(|reason| ServiceError::InvalidInput(format!("URL 不可访问：{reason}")))?;
 
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
-            .connect_timeout(std::time::Duration::from_secs(5))
-            .redirect(reqwest::redirect::Policy::limited(5))
-            .user_agent("Mozilla/5.0 (compatible; Brainbow/1.0)")
-            .build()
-            .map_err(|e| ServiceError::Internal(format!("创建 HTTP 客户端失败: {e}")))?;
+        let client = crate::shared::outbound::build_client(
+            std::time::Duration::from_secs(10),
+            std::time::Duration::from_secs(5),
+            5,
+        )
+        .map_err(|e| ServiceError::Internal(format!("创建 HTTP 客户端失败: {e}")))?;
 
         let resp = client
-            .get(url)
+            .get(target.clone())
             .send()
             .await
-            .map_err(|e| ServiceError::Internal(format!("抓取页面失败: {e}")))?;
+            .map_err(|e| {
+                // 被 SSRF 防线拦下（域名解析到内网）≠ 对面连不上：分开报，别让人去查对面的服务
+                if crate::shared::outbound::is_blocked(&e) {
+                    ServiceError::InvalidInput("URL 不可访问：目标是内网/保留地址".into())
+                } else {
+                    ServiceError::Internal(format!("抓取页面失败: {e}"))
+                }
+            })?;
 
         if !resp.status().is_success() {
             return Err(ServiceError::Internal(format!(

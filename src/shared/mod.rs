@@ -3,6 +3,7 @@
 //! - `error_types`：ErrorBody / ServiceError（不含 axum 响应耦合）
 //! - `pagination`：分页参数与响应形状
 //! - `batch`：批量请求/响应形状
+//! - `outbound`：出网抓取的客户端与 SSRF 防线
 
 pub mod batch;
 pub mod claims;
@@ -11,6 +12,7 @@ pub mod csv;
 pub mod db_query;
 pub mod error_types;
 pub mod jwt;
+pub mod outbound;
 pub mod pagination;
 pub mod response;
 pub mod search;

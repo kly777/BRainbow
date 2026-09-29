@@ -19,12 +19,12 @@ use std::time::Duration;
 use axum::{
     extract::{Query, State},
     http::{StatusCode, header},
-    response::Response,
+    response::{IntoResponse, Response},
 };
 use serde::Deserialize;
 use tokio::io::AsyncWriteExt;
 
-use crate::shared::error_types as error;
+use crate::shared::error_types::{self as error, ServiceError};
 
 /// favicon 磁盘缓存目录，由上传根派生。
 ///
@@ -339,7 +339,9 @@ pub async fn favicon_handler(
 
     let client = match build_client() {
         Ok(c) => c,
-        Err(e) => return error::internal(e, "创建抓取客户端"),
+        Err(e) => {
+            return ServiceError::Internal(format!("创建抓取客户端失败: {e}")).into_response();
+        }
     };
 
     match fetch_favicon(&client, &host).await {

@@ -1,4 +1,10 @@
-//! 错误类型与统一错误响应（HTTP 响应桥接也在此：纯构造无 IO 副作用）
+//! 错误类型与统一错误响应（HTTP 响应桥接也在此）
+//!
+//! **500 的诊断只进日志，不进响应**：`Internal` 的载荷与 `Db` 的原始 sqlx 错误都是
+//! 服务端诊断信息（可能含表名、SQL、底层失败原因），一律由 `IntoResponse` 记一条
+//! `tracing::error!` 后回通用文案 —— 这类响应未认证也能触发，别把内部细节回给客户端。
+//! `Internal` 因此不是"想回什么就回什么"的逃生口：面向用户的原因请用 `InvalidInput` /
+//! `NotFound` / `InUse` 这些会原样回显的变体。
 
 use axum::Json;
 use axum::http::StatusCode;
@@ -85,11 +91,18 @@ impl From<sqlx::Error> for ServiceError {
 
 impl IntoResponse for ServiceError {
     fn into_response(self) -> Response {
-        // 错误码：机器可读（code()），面向用户消息不回显原始 sqlx 错误
+        // 错误码：机器可读（code()）；500 的正文只回通用文案，诊断文本进日志
         let status = self.status_code();
         let code = self.code();
         let message = match &self {
-            Self::Db(_) => "数据库操作失败".to_string(),
+            Self::Db(e) => {
+                tracing::error!(code, detail = %e, "数据库操作失败");
+                "数据库操作失败".to_string()
+            }
+            Self::Internal(detail) => {
+                tracing::error!(code, detail = %detail, "内部错误");
+                "服务器内部错误".to_string()
+            }
             other => other.to_string(),
         };
         (
@@ -151,11 +164,6 @@ pub fn not_found(message: impl Into<String>) -> Response {
     ServiceError::NotFound(message.into()).into_response()
 }
 
-/// 500（统一格式：操作失败 + 底层错误；错误码 INTERNAL）
-pub fn internal(e: impl std::fmt::Display, operation: &str) -> Response {
-    ServiceError::Internal(format!("{operation}失败: {e}")).into_response()
-}
-
 /// 201（创建成功）或 ServiceError 语义响应。
 ///
 /// 兼容层：调用方最终应改为 match + ServiceError::into_response；
@@ -207,6 +215,13 @@ mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
 
+    /// 读响应体（断言错误体形状用）
+    async fn body_of(response: Response) -> (StatusCode, ErrorBody) {
+        let status = response.status();
+        let bytes = axum::body::to_bytes(response.into_body(), 4096).await.unwrap();
+        (status, serde_json::from_slice(&bytes).unwrap())
+    }
+
     #[test]
     fn bad_request_returns_400() {
         let r = bad_request("无效参数");
@@ -226,13 +241,57 @@ mod tests {
         let body: ErrorBody = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(body.code, "NOT_FOUND");
         assert_eq!(body.message, "x");
+    }
 
-        // Db 错误不回显原始 sqlx 文本
-        let r = ServiceError::Db(sqlx::Error::Protocol("secret".into())).into_response();
-        let bytes = axum::body::to_bytes(r.into_body(), 1024).await.unwrap();
-        let body: ErrorBody = serde_json::from_slice(&bytes).unwrap();
+    #[tokio::test]
+    async fn db_error_hides_sqlx_text() {
+        let (status, body) = body_of(
+            ServiceError::Db(sqlx::Error::Protocol("no such table: secret".into())).into_response(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(body.code, "DB_ERROR");
-        assert!(!body.message.contains("secret"));
+        assert_eq!(body.message, "数据库操作失败");
+    }
+
+    /// `Internal` 的载荷是服务端诊断，不回显给客户端（只进日志）
+    #[tokio::test]
+    async fn internal_error_hides_diagnostic_payload() {
+        let (status, body) = body_of(
+            ServiceError::Internal("创建 HTTP 客户端失败: dns error".into()).into_response(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(body.code, "INTERNAL");
+        assert_eq!(body.message, "服务器内部错误");
+    }
+
+    /// 会原样回显的变体：4xx 的文案就是给用户看的
+    #[tokio::test]
+    async fn client_error_variants_echo_their_message() {
+        for (error, status, code) in [
+            (
+                ServiceError::InvalidInput("文章标题不能为空".into()),
+                StatusCode::BAD_REQUEST,
+                "INVALID_INPUT",
+            ),
+            (
+                ServiceError::Forbidden("只能删除自己的 key".into()),
+                StatusCode::FORBIDDEN,
+                "FORBIDDEN",
+            ),
+            (
+                ServiceError::InUse("仍被引用".into()),
+                StatusCode::CONFLICT,
+                "RESOURCE_IN_USE",
+            ),
+        ] {
+            let expected = error.to_string();
+            let (got_status, body) = body_of(error.into_response()).await;
+            assert_eq!(got_status, status);
+            assert_eq!(body.code, code);
+            assert_eq!(body.message, expected);
+        }
     }
 
     #[tokio::test]

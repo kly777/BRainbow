@@ -55,7 +55,7 @@ pub async fn conv_detail_handler(
     match query.detail(claims.sub, id).await {
         Ok(Some(detail)) => Json(detail).into_response(),
         Ok(None) => error::not_found("知识条目不存在"),
-        Err(e) => error::internal(e, "获取知识详情"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -72,6 +72,6 @@ pub async fn conv_concept_handler(
     match query.concept(claims.sub, id, article_title).await {
         Ok(Some(body)) => Json(body).into_response(),
         Ok(None) => error::not_found("文章不存在"),
-        Err(e) => error::internal(e, "获取文章"),
+        Err(e) => e.into_response(),
     }
 }

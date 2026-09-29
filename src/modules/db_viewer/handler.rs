@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::service::DbViewerQueryService;
 use crate::shared::db_query::sanitize_table_name;
-use crate::shared::error_types as error;
+use crate::shared::error_types::{self as error, ServiceError};
 use crate::shared::pagination::Pagination;
 
 #[derive(Debug, Serialize)]
@@ -305,7 +305,7 @@ fn build_json(data: &TableData) -> Result<String, serde_json::Error> {
 fn download_response(filename: &str, content_type: HeaderValue, body: String) -> Response {
     let disposition = match HeaderValue::from_str(&format!("attachment; filename=\"{filename}\"")) {
         Ok(v) => v,
-        Err(e) => return error::internal(e, "构造导出响应头"),
+        Err(e) => return ServiceError::Internal(format!("构造导出响应头失败: {e}")).into_response(),
     };
     let mut response = ([(header::CONTENT_TYPE, content_type)], body).into_response();
     response
@@ -340,7 +340,7 @@ pub async fn export_table_data(
         "json" => {
             let body = match build_json(&data) {
                 Ok(body) => body,
-                Err(e) => return error::internal(e, "序列化导出数据"),
+                Err(e) => return ServiceError::Internal(format!("序列化导出数据失败: {e}")).into_response(),
             };
             let filename = format!("{safe_name}.json");
             download_response(

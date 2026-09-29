@@ -7,7 +7,7 @@ use axum::{
 
 use crate::app::auth::service::{AuthService, DeleteApiKeyResult};
 use crate::shared::claims::Claims;
-use crate::shared::error_types::{forbidden, internal, json_error, not_found, unauthorized};
+use crate::shared::error_types::{ServiceError, forbidden, json_error, not_found, unauthorized};
 pub use crate::shared::jwt::{extract_api_key, extract_token, verify_token};
 use serde::Serialize;
 
@@ -151,7 +151,7 @@ pub async fn create_api_key(
             key: info.key,
         })
         .into_response(),
-        Err(e) => internal(e, "创建 key"),
+        Err(e) => ServiceError::from(e).into_response(),
     }
 }
 
@@ -173,7 +173,7 @@ pub async fn list_api_keys(
                 .collect();
             Json(items).into_response()
         }
-        Err(e) => internal(e, "查询 key"),
+        Err(e) => ServiceError::from(e).into_response(),
     }
 }
 
@@ -187,7 +187,7 @@ pub async fn delete_api_key(
         Ok(DeleteApiKeyResult::Deleted) => StatusCode::NO_CONTENT.into_response(),
         Ok(DeleteApiKeyResult::NotFound) => not_found("key 不存在"),
         Ok(DeleteApiKeyResult::Forbidden) => forbidden("只能删除自己的 key"),
-        Err(e) => internal(e, "删除 key"),
+        Err(e) => ServiceError::from(e).into_response(),
     }
 }
 

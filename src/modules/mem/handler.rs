@@ -24,9 +24,6 @@ use crate::shared::response;
 fn ok() -> axum::response::Response {
     response::ok().into_response()
 }
-fn err(e: impl std::fmt::Display, op: &str) -> axum::response::Response {
-    error::internal(e, op)
-}
 
 // ═══════════════════════════════════════════════════════════════
 //  读操作（通过 MemQueryService，无副作用）
@@ -40,7 +37,7 @@ pub async fn get_all(
     let svc = &query;
     match svc.get_all(claims.sub, &p).await {
         Ok(res) => Json(res).into_response(),
-        Err(e) => err(e, "获取全部"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -64,7 +61,7 @@ pub async fn get_session_estimate(
         .await
     {
         Ok(est) => Json(est).into_response(),
-        Err(e) => err(e, "获取学习预估"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -75,7 +72,7 @@ pub async fn get_counts(
     let svc = &query;
     match svc.get_counts(claims.sub).await {
         Ok(counts) => Json(counts).into_response(),
-        Err(e) => err(e, "获取统计"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -86,7 +83,7 @@ pub async fn list_tags(
     let svc = &query;
     match svc.list_tags(claims.sub).await {
         Ok(tags) => Json(tags).into_response(),
-        Err(e) => err(e, "列出标签"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -99,7 +96,7 @@ pub async fn search_tags(
     let svc = &query;
     match svc.search_tags(claims.sub, q).await {
         Ok(tags) => Json(tags).into_response(),
-        Err(e) => err(e, "搜索标签"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -111,7 +108,7 @@ pub async fn get_mem_tags(
     let svc = &query;
     match svc.get_mem_tags(claims.sub, id).await {
         Ok(tags) => Json(tags).into_response(),
-        Err(e) => err(e, "获取记忆标签"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -146,7 +143,7 @@ pub async fn export_csv(
             psv,
         )
             .into_response(),
-        Err(e) => err(e, "导出 PSV"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -171,7 +168,7 @@ pub async fn get_mnemonic(
     match svc.get_mnemonic(claims.sub, id).await {
         Ok(Some(content)) => Json(serde_json::json!({ "content": content })).into_response(),
         Ok(None) => Json(serde_json::json!({ "content": null })).into_response(),
-        Err(e) => err(e, "查询助记"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -182,7 +179,7 @@ pub async fn upcoming_counts(
     let svc = &query;
     match svc.upcoming_counts(claims.sub).await {
         Ok(v) => Json(v).into_response(),
-        Err(e) => err(e, "查询 upcoming 数量"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -231,7 +228,7 @@ pub async fn create_tag(
     let svc = &service;
     match svc.create_tag(payload.name.trim(), claims.sub).await {
         Ok(tag) => Json(tag).into_response(),
-        Err(e) => err(e, "创建标签"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -243,7 +240,7 @@ pub async fn delete_tag(
     let svc = &service;
     match svc.delete_tag(id).await {
         Ok(()) => ok(),
-        Err(e) => err(e, "删除标签"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -258,7 +255,7 @@ pub async fn add_mem_tag(
         .await
     {
         Ok(()) => ok(),
-        Err(e) => err(e, "添加标签"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -272,7 +269,7 @@ pub async fn remove_mem_tag(
         .await
     {
         Ok(()) => ok(),
-        Err(e) => err(e, "移除标签"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -287,7 +284,7 @@ pub async fn set_mem_tags(
         .await
     {
         Ok(()) => ok(),
-        Err(e) => err(e, "设置标签"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -365,7 +362,7 @@ pub async fn import_csv(
             "errors": errors,
         }))
         .into_response(),
-        Err(e) => err(e, "导入 CSV"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -384,7 +381,7 @@ pub async fn import_psv(
             "errors": errors,
         }))
         .into_response(),
-        Err(e) => err(e, "导入 PSV"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -410,7 +407,7 @@ pub async fn import_json(
             "errors": errors,
         }))
         .into_response(),
-        Err(e) => err(e, "导入 JSON"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -439,7 +436,7 @@ pub async fn get_due(
         .await
     {
         Ok(res) => Json(res).into_response(),
-        Err(e) => err(e, "获取待复习"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -453,7 +450,7 @@ pub async fn create_mem(
     let svc = &service;
     match svc.create(claims.sub, body).await {
         Ok(id) => response::id(id).into_response(),
-        Err(e) => err(e, "创建记忆项"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -496,7 +493,7 @@ pub async fn undo_review(
     let svc = &service;
     match svc.undo(claims.sub, id, body).await {
         Ok(()) => ok(),
-        Err(e) => err(e, "撤销"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -521,7 +518,7 @@ pub async fn bury_mem(
     let svc = &service;
     match svc.bury(claims.sub, id).await {
         Ok(()) => ok(),
-        Err(e) => err(e, "跳过"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -533,7 +530,7 @@ pub async fn unbury_mem(
     let svc = &service;
     match svc.unbury(claims.sub, id).await {
         Ok(()) => ok(),
-        Err(e) => err(e, "取消跳过"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -545,7 +542,7 @@ pub async fn suspend_mem(
     let svc = &service;
     match svc.suspend(claims.sub, id).await {
         Ok(()) => ok(),
-        Err(e) => err(e, "挂起"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -557,7 +554,7 @@ pub async fn unsuspend_mem(
     let svc = &service;
     match svc.unsuspend(claims.sub, id).await {
         Ok(()) => ok(),
-        Err(e) => err(e, "恢复"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -569,7 +566,7 @@ pub async fn reset_mem(
     let svc = &service;
     match svc.reset(claims.sub, id).await {
         Ok(()) => ok(),
-        Err(e) => err(e, "重置"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -581,7 +578,7 @@ pub async fn delete_mem(
     let svc = &service;
     match svc.delete(claims.sub, id).await {
         Ok(()) => ok(),
-        Err(e) => err(e, "删除"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -596,10 +593,10 @@ pub async fn set_mnemonic(
             let svc = &service;
             match svc.set_mnemonic(claims.sub, id, content).await {
                 Ok(()) => ok(),
-                Err(e) => err(e, "保存助记"),
+                Err(e) => e.into_response(),
             }
         }
-        None => err("缺少 content 字段", "保存助记"),
+        None => error::bad_request("缺少 content 字段"),
     }
 }
 

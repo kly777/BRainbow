@@ -23,7 +23,7 @@ pub async fn get_tree_handler(
 
     let root_tasks = match svc.tree(user_id, None).await {
         Ok(tasks) => tasks,
-        Err(e) => return error::internal(e, "获取树形结构"),
+        Err(e) => return e.into_response(),
     };
 
     let filtered = if let Some(status) = query.status {
@@ -92,7 +92,7 @@ pub async fn get_calendar_handler(
                 .collect();
             Json(events).into_response()
         }
-        Err(e) => error::internal(e, "获取日历事件"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -108,7 +108,7 @@ pub async fn get_dag_handler(
         .await
     {
         Ok(view) => Json(view).into_response(),
-        Err(e) => error::internal(e, "获取依赖图"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -125,7 +125,7 @@ pub async fn get_stats_handler(
             archived,
         })
         .into_response(),
-        Err(e) => error::internal(e, "获取统计"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -155,6 +155,6 @@ pub async fn search_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => error::internal(e, "搜索任务"),
+        Err(e) => e.into_response(),
     }
 }

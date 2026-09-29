@@ -8,7 +8,6 @@ use super::super::query::TaskQueryService;
 use super::super::response::TaskResponse;
 use super::super::service::TaskService;
 use crate::shared::claims::Claims;
-use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 
 pub async fn complete_task_handler(
@@ -73,7 +72,7 @@ pub async fn get_backlog_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => error::internal(e, "获取待办任务"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -95,7 +94,7 @@ pub async fn get_active_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => error::internal(e, "获取活跃任务"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -117,7 +116,7 @@ pub async fn get_completed_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => error::internal(e, "获取已完成任务"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -139,6 +138,6 @@ pub async fn get_archived_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => error::internal(e, "获取已归档任务"),
+        Err(e) => e.into_response(),
     }
 }

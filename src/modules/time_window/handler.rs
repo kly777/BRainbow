@@ -89,7 +89,7 @@ pub async fn get_time_window_handler(
     match query.by_id(id).await {
         Ok(Some(time_window)) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Ok(None) => error::not_found("时间窗口未找到"),
-        Err(e) => error::internal(e, "获取时间窗口"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -112,7 +112,7 @@ pub async fn get_time_windows_handler(
                     windows.into_iter().map(TimeWindowResponse::from).collect();
                 Json(PaginatedResponse::new(items, total, p)).into_response()
             }
-            Err(e) => error::internal(e, "查询时间窗口"),
+            Err(e) => e.into_response(),
         };
     }
 
@@ -151,7 +151,7 @@ pub async fn delete_time_window_handler(
                 error::not_found("时间窗口未找到")
             }
         }
-        Err(e) => error::internal(e, "删除时间窗口"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -176,7 +176,7 @@ pub async fn get_time_window_stats_handler(
             })
             .into_response()
         }
-        Err(e) => error::internal(e, "获取时间窗口统计"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -224,6 +224,6 @@ pub async fn check_time_conflict_handler(
         Ok(has_conflict) => {
             Json(serde_json::json!({ "has_conflict": has_conflict })).into_response()
         }
-        Err(e) => error::internal(e, "检查时间窗口冲突"),
+        Err(e) => e.into_response(),
     }
 }

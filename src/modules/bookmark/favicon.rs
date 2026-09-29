@@ -36,12 +36,20 @@ pub struct FaviconCacheDir(PathBuf);
 impl FaviconCacheDir {
     /// 由上传根派生：`{upload_dir}/favicons`。
     pub fn from_upload_root(upload_dir: impl AsRef<Path>) -> Self {
-        Self(upload_dir.as_ref().join("favicons"))
+        Self(favicon_dir(upload_dir))
     }
 
     fn path(&self) -> &Path {
         &self.0
     }
+}
+
+/// favicon 缓存目录（上传根下的 `favicons`）——**目录名的唯一派生点**。
+///
+/// [`FaviconCacheDir`] 与组合根（`app/context.rs` 给 admin 报目录占用）都走这里：
+/// 早先 admin 自己 `join("favicons")`，这里改了目录名就等于让管理页报另一个目录。
+pub fn favicon_dir(upload_root: impl AsRef<Path>) -> PathBuf {
+    upload_root.as_ref().join("favicons")
 }
 
 /// 单个 favicon 最大字节数

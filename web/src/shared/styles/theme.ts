@@ -44,7 +44,16 @@ export function resolveTheme(name: ThemeName): Exclude<ThemeName, "auto"> {
 
 /** 应用主题：设置 <html data-theme>（auto 解析为具体主题），并持久化 */
 export function applyTheme(name: ThemeName) {
-	document.documentElement.dataset.theme = resolveTheme(name);
+	const resolved = resolveTheme(name);
+	document.documentElement.dataset.theme = resolved;
+	// Kumo 组件（components/kumo/）按 <html data-mode="dark"> 切暗色令牌，
+	// 与本项目的 data-theme 是两个体系 —— 这里把两者对上，否则 midnight 下
+	// Kumo 的按钮/输入框仍是亮色
+	if (resolved === "midnight") {
+		document.documentElement.dataset.mode = "dark";
+	} else {
+		delete document.documentElement.dataset.mode;
+	}
 	localStorage.setItem(KEY, name);
 }
 

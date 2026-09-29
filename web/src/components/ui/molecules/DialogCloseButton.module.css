@@ -1,0 +1,6 @@
+/* Kumo 的 Dialog 面板是 fixed 定位，所以这里的 absolute 相对面板本身 */
+.close {
+	position: absolute;
+	top: var(--space-sm);
+	right: var(--space-sm);
+}

@@ -8,10 +8,11 @@ export const getTimeWindowsE = (
 	taskId: number,
 	windowType?: string,
 ): Promise<readonly TimeWindow[]> => {
-	let endpoint = `/time-windows?task_id=${taskId}`;
-	if (windowType) endpoint += `&window_type=${windowType}`;
+	const typeFilter = windowType
+		? `&window_type=${encodeURIComponent(windowType)}`
+		: "";
 	return cachedRequest<{ readonly items: readonly TimeWindow[] }>(
-		endpoint,
+		`/time-windows?task_id=${taskId}${typeFilter}`,
 	).then((r) => r.items);
 };
 

@@ -212,7 +212,7 @@ export const listFiles = (params?: {
 	return cachedRequest(`/file${buildQuery(params ?? {})}`);
 };
 
-/** 单条详情（缓存 60 秒） */
+/** 单条详情（走 files 域默认陈旧时长；写路径按 entity 清它与其子读） */
 export const getFile = (stored_id: string): Promise<FileItem> =>
 	cachedRequest(`/file/${stored_id}`);
 

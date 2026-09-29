@@ -4,6 +4,7 @@ import {
 	cacheSize,
 	clearAllCache,
 	invalidateCache,
+	invalidateCachePrefix,
 	readCache,
 	writeCache,
 } from "./cache.ts";
@@ -48,6 +49,22 @@ describe("cache", () => {
 		writeCache("GET /b", 2);
 		clearAllCache();
 		expect(cacheSize()).toBe(0);
+	});
+
+	it("invalidateCachePrefix 清实体自身、子读与查询串，不误伤前缀相似者", () => {
+		writeCache("GET /tasks/5", 1); // 实体自身
+		writeCache("GET /tasks/5/detail", 2); // 子读
+		writeCache("GET /tasks/5?with=tw", 3); // 带查询串
+		writeCache("GET /tasks/50/detail", 4); // 前缀相似的另一实体
+		writeCache("GET /tasks", 5); // 列表
+
+		invalidateCachePrefix("/tasks/5");
+
+		expect(readCache("GET /tasks/5")).toBeNull();
+		expect(readCache("GET /tasks/5/detail")).toBeNull();
+		expect(readCache("GET /tasks/5?with=tw")).toBeNull();
+		expect(readCache("GET /tasks/50/detail")).toBe(4);
+		expect(readCache("GET /tasks")).toBe(5);
 	});
 
 	it("超过 200 条时按插入顺序淘汰最旧条目", () => {

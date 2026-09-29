@@ -22,7 +22,7 @@
 
 // ── request 直接从具体文件导入（避免 index 的 re-export 循环） ──
 
-import { DEFAULT_STALE_MS, resolveStaleMs } from "./domainPatterns.ts";
+import { DEFAULT_STALE_MS, resolveStaleMs } from "./domainPolicies.ts";
 import { request } from "./request.ts";
 
 // ── 类型 ──
@@ -42,7 +42,7 @@ const inFlight = new Map<string, Promise<unknown>>();
 /** 缓存条目上限：无限分页/搜索会产生无限 key，超出后按插入顺序淘汰最旧条目 */
 const MAX_ENTRIES = 200;
 
-// ── 默认 TTL（单一来源：domainPatterns.ts） ──
+// ── 默认 TTL 与域策略（单一来源：domainPolicies.ts） ──
 
 // ── API ──
 
@@ -59,10 +59,23 @@ export function buildCacheKey(method: string, endpoint: string): string {
 }
 
 /**
- * 精确删除单个缓存键（供实体级失效使用）。
+ * 按资源路径前缀失效（实体级写入用，见 domains.ts 的 `{ entity }`）。
+ *
+ * `/tasks/5` 命中 `GET /tasks/5` 与 `GET /tasks/5/detail?x=1`，但不命中 `GET /tasks/50`：
+ * 边界按 `/`、`?` 或键结束判定。资源被写时它的详情与子读一起过时，所以要按前缀清，
+ * 只清实体本身会漏掉 `/tasks/5/detail` 这类子路径读。
  */
-export function deleteCacheKey(key: string): void {
-	store.delete(key);
+export function invalidateCachePrefix(path: string): void {
+	const root = `GET ${path}`;
+	for (const key of store.keys()) {
+		if (
+			key === root ||
+			key.startsWith(`${root}/`) ||
+			key.startsWith(`${root}?`)
+		) {
+			store.delete(key);
+		}
+	}
 }
 
 /**
@@ -224,7 +237,7 @@ export const cachedRequest = async <T>(
 	}
 
 	const key = buildCacheKey(method, endpoint);
-	// 未显式传陈旧时长 → 按端点匹配域级默认（见 domainPatterns.ts）
+	// 未显式传陈旧时长 → 按端点匹配域级默认（见 domainPolicies.ts）
 	const effectiveStaleMs = resolveStaleMs(key, staleMs);
 	const hit = lookup<T>(key, effectiveStaleMs);
 	if (hit === null) {

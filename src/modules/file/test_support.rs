@@ -70,7 +70,8 @@ pub struct Ctx {
 pub async fn setup_service() -> Ctx {
     let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
     crate::db::migrate(&pool).await.unwrap();
-    for (id, name) in [(7, "file-user"), (8, "other-user")] {
+    // 7 / 8 是普通用户，1 是 admin（`Actor::admin(1)` 对应的 user 行）
+    for (id, name) in [(1, "admin-user"), (7, "file-user"), (8, "other-user")] {
         sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (?, ?, 'x')")
             .bind(id)
             .bind(name)

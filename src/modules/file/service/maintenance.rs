@@ -431,6 +431,7 @@ mod tests {
     use super::*;
     use crate::modules::file::service::content_hash;
     use crate::modules::file::test_support::*;
+    use crate::shared::actor::Actor;
 
     // ── 上传目录自检 ──
 
@@ -561,7 +562,14 @@ mod tests {
         let ctx = setup_service().await;
         // 先有一条已带哈希的记录
         ctx.svc
-            .upload(PNG_1X1, "new.png", "image/png", Some(7), None, false)
+            .upload(
+                PNG_1X1,
+                "new.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap();
         // 存量记录：相同内容但无哈希 → 回填会撞唯一索引，应保持 NULL 而不是崩
@@ -650,7 +658,14 @@ mod tests {
         let ctx = setup_service().await;
         let kept = ctx
             .svc
-            .upload(PNG_1X1, "kept.png", "image/png", Some(7), None, false)
+            .upload(
+                PNG_1X1,
+                "kept.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap();
         // 孤儿：格式合法但 DB 无记录

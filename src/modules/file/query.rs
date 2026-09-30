@@ -6,23 +6,22 @@ use sqlx::SqlitePool;
 
 use super::model::{File, FileCategory, FileListQuery, FileSummary, FileTag};
 use super::repository::{FileRepository, FileSearchHit};
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 use crate::shared::search::{SearchHit, SearchPort, SearchTarget, normalize_search};
 
-/// 可见性判定：公开文件人人可见；私密文件仅上传者本人。
+/// 可见性判定：公开文件人人可见；私密文件仅上传者与 admin。
 /// `viewer` 为 `None`（未认证）时只能看到公开文件。
 ///
-/// 与 SQL 层的 `push_visibility`（repository）保持同一语义，改一处要同步另一处。
-pub fn is_visible(file: &File, viewer: Option<i64>) -> bool {
+/// 行级判据走 [`Actor::can_read`]（判据只在 `shared/actor.rs`，别在这里拼 user_id）。
+/// 与 SQL 层的 `push_visibility`（repository）、内容路由的 [`content_access`] 是同一套
+/// 规则的另外两处实现，改一处要同步其余两处。
+pub fn is_visible(file: &File, viewer: Option<&Actor>) -> bool {
     if !file.is_private {
         return true;
     }
-    match (file.user_id, viewer) {
-        (Some(owner), Some(uid)) => owner == uid,
-        // 匿名上传不允许私密；万一历史数据如此，则谁也不能看
-        _ => false,
-    }
+    viewer.is_some_and(|actor| actor.can_read(file.user_id))
 }
 
 /// 内容路由（`/api/file/{stored_id}/data/{filename}`）的访问判定。
@@ -32,21 +31,23 @@ pub enum ContentAccess {
     Allow,
     /// 私密文件但没带凭据 → 401
     NeedAuth,
-    /// 私密文件、已认证但不是上传者 → 404（不暴露存在性）
+    /// 私密文件、已认证但不是上传者（也不是 admin） → 404（不暴露存在性）
     Deny,
 }
 
 /// 判定当前请求者能否读取文件内容。
 ///
 /// 公开文件一律放行 —— Markdown 的 `<img src>` 不带 Authorization，这是内嵌能显示的前提。
-pub fn content_access(file: &File, viewer: Option<i64>) -> ContentAccess {
+/// 私密文件三态保留：未认证回 401（"你要登录"），登录了但不是本人回 404（"没有这东西"）——
+/// 两者的区别是刻意的：前者不是越权，后者不能泄露文件是否存在。
+pub fn content_access(file: &File, viewer: Option<&Actor>) -> ContentAccess {
     if !file.is_private {
         return ContentAccess::Allow;
     }
-    match (file.user_id, viewer) {
-        (Some(owner), Some(uid)) if owner == uid => ContentAccess::Allow,
-        (_, Some(_)) => ContentAccess::Deny,
-        (_, None) => ContentAccess::NeedAuth,
+    match viewer {
+        Some(actor) if actor.can_read(file.user_id) => ContentAccess::Allow,
+        Some(_) => ContentAccess::Deny,
+        None => ContentAccess::NeedAuth,
     }
 }
 
@@ -102,7 +103,11 @@ impl FileQueryService {
             .is_err()
     }
 
-    /// 根据 stored_id 获取文件详情（含标签和元信息）
+    /// 根据 stored_id 获取文件详情（含标签和元信息）。
+    ///
+    /// **刻意不做归属/可见性过滤**：拿到行之后由调用方套行级判据 ——
+    /// 内容路由要区分 401（未认证）与 404（不是你的），读元数据要先 `is_visible` 再回，
+    /// 只靠 SQL 过滤拿不到这个区分。可见性三处实现的清单见 [`is_visible`]。
     pub async fn get_by_stored_id(&self, stored_id: &str) -> Result<File, ServiceError> {
         let file_row = self
             .repo
@@ -150,7 +155,7 @@ impl FileQueryService {
         })
     }
 
-    /// 根据 id 获取文件详情
+    /// 根据 id 获取文件详情（同样不做归属过滤，理由见 [`Self::get_by_stored_id`]）
     pub async fn get_by_id(&self, id: i64) -> Result<File, ServiceError> {
         let file_row = self
             .repo
@@ -198,11 +203,13 @@ impl FileQueryService {
         })
     }
 
-    /// 文件列表（分页）
+    /// 文件列表（分页）。
+    ///
+    /// `viewer` 为 `None` = 未认证（只能看到公开文件）。
     pub async fn list(
         &self,
         query: FileListQuery,
-        user_id: Option<i64>,
+        viewer: Option<&Actor>,
     ) -> Result<PaginatedResponse<FileSummary>, ServiceError> {
         let pagination = Pagination::from_options(query.page, query.page_size);
         let offset = pagination.offset();
@@ -211,15 +218,16 @@ impl FileQueryService {
         // 根据查询条件获取总数和列表
         let name_query = query.q.as_deref().filter(|s| !s.trim().is_empty());
         let (total, rows) = if let Some(tag_name) = &query.tag {
-            let uid = user_id.ok_or_else(|| ServiceError::InvalidInput("需要登录".into()))?;
+            // 标签筛选只走认证端点（guest 没有这一档），因此这里要一个确定的 actor
+            let actor = viewer.ok_or_else(|| ServiceError::InvalidInput("需要登录".into()))?;
             let total = self
                 .repo
-                .count_by_tag(tag_name, uid, name_query)
+                .count_by_tag(tag_name, actor, name_query)
                 .await
                 .map_err(ServiceError::Db)?;
             let rows = self
                 .repo
-                .find_by_tag(tag_name, uid, name_query, limit, offset, query.sort)
+                .find_by_tag(tag_name, actor, name_query, limit, offset, query.sort)
                 .await
                 .map_err(ServiceError::Db)?;
             (total, rows)
@@ -227,30 +235,24 @@ impl FileQueryService {
             // 搜索模式：按文件名模糊匹配
             let total = self
                 .repo
-                .count_by_name(q, user_id)
+                .count_by_name(q, viewer)
                 .await
                 .map_err(ServiceError::Db)?;
             let rows = self
                 .repo
-                .search_by_name(q, user_id, limit, offset, query.sort)
+                .search_by_name(q, viewer, limit, offset, query.sort)
                 .await
                 .map_err(ServiceError::Db)?;
             (total, rows)
         } else {
             let total = self
                 .repo
-                .count(query.category.as_deref(), user_id)
+                .count(query.category.as_deref(), viewer)
                 .await
                 .map_err(ServiceError::Db)?;
             let rows = self
                 .repo
-                .find_all(
-                    limit,
-                    offset,
-                    query.category.as_deref(),
-                    user_id,
-                    query.sort,
-                )
+                .find_all(limit, offset, query.category.as_deref(), viewer, query.sort)
                 .await
                 .map_err(ServiceError::Db)?;
             (total, rows)
@@ -300,13 +302,13 @@ impl FileQueryService {
         self.repo.get_all_tags().await.map_err(ServiceError::Db)
     }
 
-    /// 标签管理列表：标签 + 当前查看者可见的关联文件数
+    /// 标签管理列表：标签 + 当前查看者可见的关联文件数（admin 全量计入）
     pub async fn get_tags_with_count(
         &self,
-        viewer_id: i64,
+        actor: &Actor,
     ) -> Result<Vec<super::model::FileTagWithCount>, ServiceError> {
         self.repo
-            .get_tags_with_count(viewer_id)
+            .get_tags_with_count(actor)
             .await
             .map_err(ServiceError::Db)
     }
@@ -360,9 +362,12 @@ impl SearchPort for FileQueryService {
         let Some((like, _kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
+        // 搜索层还没接 Actor（`SearchPort` 仍只传 user_id），这里按**普通用户**口径取行
+        // （公开 + 自己的）；admin 的跨用户全量搜索要等搜索层改造（届时 `SearchPort` 也收 `&Actor`）。
+        let actor = Actor::user(user_id);
         let rows = self
             .repo
-            .search_hits(user_id as i64, &like, cap)
+            .search_hits(&actor, &like, cap)
             .await
             .map_err(ServiceError::Db)?;
 
@@ -393,7 +398,8 @@ mod tests {
     async fn setup() -> (FileQueryService, FileRepository, Arc<SqlitePool>) {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         crate::db::migrate(&pool).await.unwrap();
-        for (id, name) in [(7, "file-user"), (8, "other-user")] {
+        // 7 / 8 是普通用户，1 是 admin（`Actor::admin(1)` 对应的 user 行）
+        for (id, name) in [(1, "admin-user"), (7, "file-user"), (8, "other-user")] {
             sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (?, ?, 'x')")
                 .bind(id)
                 .bind(name)
@@ -539,7 +545,7 @@ mod tests {
                     q: None,
                     sort: SortOrder::default(),
                 },
-                Some(7),
+                Some(&Actor::user(7)),
             )
             .await
             .unwrap();
@@ -560,7 +566,7 @@ mod tests {
                     q: None,
                     sort: SortOrder::default(),
                 },
-                Some(7),
+                Some(&Actor::user(7)),
             )
             .await
             .unwrap();
@@ -576,12 +582,53 @@ mod tests {
                     q: None,
                     sort: SortOrder::default(),
                 },
-                Some(8),
+                Some(&Actor::user(8)),
             )
             .await
             .unwrap();
         // 上传者看到：自己的私密 1 条 + 其他人公开的 2 条
         assert_eq!(as_owner.total, 3, "上传者仍能看到自己的私密文件");
+
+        // admin 全看：别人的私密文件也在列表里（这是两档判据给 admin 的那一档）
+        let as_admin = query
+            .list(
+                FileListQuery {
+                    page: None,
+                    page_size: None,
+                    category: None,
+                    tag: None,
+                    q: None,
+                    sort: SortOrder::default(),
+                },
+                Some(&Actor::admin(1)),
+            )
+            .await
+            .unwrap();
+        assert_eq!(as_admin.total, 3);
+        assert!(
+            as_admin
+                .items
+                .iter()
+                .any(|f| f.is_private && f.user_id == Some(8)),
+            "admin 应该看得到别人的私密文件"
+        );
+        // 未认证（None）看不到任何私密文件
+        let as_guest = query
+            .list(
+                FileListQuery {
+                    page: None,
+                    page_size: None,
+                    category: None,
+                    tag: None,
+                    q: None,
+                    sort: SortOrder::default(),
+                },
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(as_guest.total, 2);
+        assert!(as_guest.items.iter().all(|f| !f.is_private));
     }
 
     #[tokio::test]
@@ -598,7 +645,7 @@ mod tests {
                     q: None,
                     sort: SortOrder::default(),
                 },
-                Some(7),
+                Some(&Actor::user(7)),
             )
             .await
             .unwrap();
@@ -624,7 +671,7 @@ mod tests {
                     q: None,
                     sort: SortOrder::default(),
                 },
-                Some(7),
+                Some(&Actor::user(7)),
             )
             .await
             .unwrap();
@@ -641,7 +688,7 @@ mod tests {
                     q: Some("报告".into()),
                     sort: SortOrder::default(),
                 },
-                Some(7),
+                Some(&Actor::user(7)),
             )
             .await
             .unwrap();
@@ -656,7 +703,7 @@ mod tests {
                     q: Some("不存在的词".into()),
                     sort: SortOrder::default(),
                 },
-                Some(7),
+                Some(&Actor::user(7)),
             )
             .await
             .unwrap();
@@ -678,7 +725,7 @@ mod tests {
                     q: Some("报告".into()),
                     sort: SortOrder::default(),
                 },
-                Some(7),
+                Some(&Actor::user(7)),
             )
             .await
             .unwrap();
@@ -800,7 +847,11 @@ mod tests {
         assert_eq!(search_snippet(&tag_hit), "#设计");
     }
 
-    /// 可见性判定（详情/搜索用）与访问判定（内容路由用）三态
+    /// 可见性判定（详情/搜索用）与访问判定（内容路由用）：四态 × 公开/私密的矩阵。
+    ///
+    /// 上传者 / 他人 / admin / 未认证各走一遍 —— 公开那一列是 file 模块的既有口径
+    /// （匿名也能读，Markdown 内嵌图片靠它），私密那一列是本轮接上两档判据后
+    /// admin 多出来的那一档。
     #[test]
     fn visibility_and_content_access_rules() {
         let mut file = File {
@@ -822,25 +873,63 @@ mod tests {
             missing: false,
             is_private: false,
         };
+        let owner = Actor::user(7);
+        let other = Actor::user(8);
+        let admin = Actor::admin(1);
 
-        // 公开：人人可见、无需凭据
-        assert!(is_visible(&file, None));
-        assert!(is_visible(&file, Some(8)));
-        assert_eq!(content_access(&file, None), ContentAccess::Allow);
+        // 公开：四种身份都可见（含未认证），内容路由一律放行
+        for viewer in [None, Some(&owner), Some(&other), Some(&admin)] {
+            assert!(is_visible(&file, viewer), "公开文件应对所有人可见");
+            assert_eq!(content_access(&file, viewer), ContentAccess::Allow);
+        }
 
-        // 私密：仅上传者
+        // 私密：仅上传者与 admin；未认证 401、其他登录用户 404
         file.is_private = true;
-        assert!(!is_visible(&file, None));
-        assert!(!is_visible(&file, Some(8)));
-        assert!(is_visible(&file, Some(7)));
-        assert_eq!(content_access(&file, Some(7)), ContentAccess::Allow);
+        assert!(is_visible(&file, Some(&owner)));
+        assert!(is_visible(&file, Some(&admin)), "admin 全管");
+        assert!(!is_visible(&file, None), "未认证看不到私密文件");
+        assert!(!is_visible(&file, Some(&other)));
+        assert_eq!(content_access(&file, Some(&owner)), ContentAccess::Allow);
+        assert_eq!(content_access(&file, Some(&admin)), ContentAccess::Allow);
         assert_eq!(content_access(&file, None), ContentAccess::NeedAuth);
-        assert_eq!(content_access(&file, Some(8)), ContentAccess::Deny);
+        assert_eq!(content_access(&file, Some(&other)), ContentAccess::Deny);
+    }
 
-        // 无归属（匿名）的私密文件：谁也不能看（上传时已禁止，这里是防御）
-        file.user_id = None;
-        assert!(!is_visible(&file, Some(7)));
-        assert_eq!(content_access(&file, Some(7)), ContentAccess::Deny);
+    /// 无主行（`user_id IS NULL`，v20 之前的历史数据）：只有 admin 能读 ——
+    /// "任意登录用户可读共享数据"那一档已随认领取消（fail-closed）。
+    #[test]
+    fn ownerless_files_are_admin_only() {
+        let mut file = File {
+            id: 1,
+            stored_id: "s".into(),
+            original_name: "legacy.png".into(),
+            mime_type: "image/png".into(),
+            file_category: FileCategory::Image,
+            size_bytes: 1,
+            width: None,
+            height: None,
+            duration_ms: None,
+            user_id: None,
+            content_hash: None,
+            tags: vec![],
+            meta: HashMap::new(),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            missing: false,
+            is_private: false,
+        };
+        // 公开的无主行是人人都能读的历史数据（认领只管归属，不改可见性）
+        assert!(is_visible(&file, None));
+        assert!(is_visible(&file, Some(&Actor::user(7))));
+
+        // 万一它被设成了私密：只有 admin 看得见，其他登录用户按"不存在"处理
+        file.is_private = true;
+        assert!(is_visible(&file, Some(&Actor::admin(1))));
+        assert!(!is_visible(&file, Some(&Actor::user(7))));
+        assert_eq!(
+            content_access(&file, Some(&Actor::user(7))),
+            ContentAccess::Deny
+        );
     }
 
     /// 元信息值参与搜索：命中时片段给出键名
@@ -895,7 +984,7 @@ mod tests {
                     q: None,
                     sort: SortOrder::default(),
                 },
-                Some(7),
+                Some(&Actor::user(7)),
             )
             .await
             .unwrap();

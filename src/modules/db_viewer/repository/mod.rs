@@ -2,7 +2,7 @@ use serde_json::Value;
 use sqlx::{Column, QueryBuilder, Row, SqlitePool, TypeInfo, Value as SqlxValue, ValueRef as _};
 use std::sync::Arc;
 
-use super::handler::{BackRefRow, ColumnInfo, FilterOp, RefPreview};
+use super::dto::{BackRefRow, ColumnInfo, FilterOp, RefPreview};
 use super::model::TableName;
 use crate::shared::db_query::{like_contains, like_prefix, sanitize_table_name};
 

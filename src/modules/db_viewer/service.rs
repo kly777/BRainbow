@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::shared::error_types::ServiceError;
 
-use super::handler::{BackRefGroup, TableData, TableReadOptions};
+use super::dto::{BackRefGroup, TableData, TableReadOptions};
 use super::repository::DBRepo;
 
 ///

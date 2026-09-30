@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\",\n                      start_time AS \"start_time!: chrono::DateTime<chrono::Utc>\",\n                      end_time AS \"end_time!: chrono::DateTime<chrono::Utc>\",\n                      type AS \"window_type!: crate::modules::time_window::TimeWindowType\",\n                      task_id AS \"task_id: i32\",\n                      user_id AS \"user_id?: i32\",\n                      recurrence_freq AS \"recurrence_freq?: crate::modules::time_window::RecurrenceFrequency\",\n                      recurrence_interval AS \"recurrence_interval?: i32\",\n                      recurrence_until AS \"recurrence_until?: chrono::DateTime<chrono::Utc>\",\n                      recurrence_by_weekdays\n               FROM time_window WHERE id = ?",
+  "query": "SELECT id AS \"id: i32\",\n                      start_time AS \"start_time!: chrono::DateTime<chrono::Utc>\",\n                      end_time AS \"end_time!: chrono::DateTime<chrono::Utc>\",\n                      type AS \"window_type!: crate::modules::time_window::TimeWindowType\",\n                      task_id AS \"task_id: i32\",\n                      user_id AS \"user_id?: i32\",\n                      recurrence_freq AS \"recurrence_freq?: crate::modules::time_window::RecurrenceFrequency\",\n                      recurrence_interval AS \"recurrence_interval?: i32\",\n                      recurrence_until AS \"recurrence_until?: chrono::DateTime<chrono::Utc>\",\n                      recurrence_by_weekdays\n               FROM time_window\n               WHERE id = ?1\n                 AND (?2 IS NULL OR EXISTS (\n                       SELECT 1 FROM task t WHERE t.id = time_window.task_id AND t.user_id = ?2))",
   "describe": {
     "columns": [
       {
@@ -115,7 +115,7 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false,
@@ -130,5 +130,5 @@
       true
     ]
   },
-  "hash": "c988854224467e0a6c4ebbd6ea86c816893a7fddc8b6c89bd101f47b6f578319"
+  "hash": "e6cfc1e43ce4a9b6571487df0f69f415978c34156ddbb108bf9dde2606143bc0"
 }

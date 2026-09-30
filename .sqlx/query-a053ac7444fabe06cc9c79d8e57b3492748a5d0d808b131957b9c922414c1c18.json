@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT type AS \"time_type!: String\", COUNT(*) AS \"count!: i64\"\n               FROM time_window WHERE task_id = ? GROUP BY type ORDER BY type",
+  "query": "SELECT type AS \"time_type!: String\", COUNT(*) AS \"count!: i64\"\n               FROM time_window tw\n               WHERE tw.task_id = ?1\n                 AND (?2 IS NULL OR EXISTS (\n                       SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ?2))\n               GROUP BY type ORDER BY type",
   "describe": {
     "columns": [
       {
@@ -22,12 +22,12 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false,
       false
     ]
   },
-  "hash": "cadce9f6d0cc01c1c459b3a668fcd0d4d2b30e814a01f26c577324a05c9c3731"
+  "hash": "a053ac7444fabe06cc9c79d8e57b3492748a5d0d808b131957b9c922414c1c18"
 }

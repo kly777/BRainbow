@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) FROM time_window tw WHERE tw.task_id = ?1 AND tw.type = ?2\n               AND (?3 IS NULL OR EXISTS (\n                     SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ?3))",
+  "describe": {
+    "columns": [
+      {
+        "name": "COUNT(*)",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2d0153eb100ddf7a77b4598ebd38d6bc2eddd770a76ab41123c4090de1661262"
+}

@@ -87,6 +87,19 @@ impl TaskRepository {
         .await
     }
 
+    /// 只看归属：返回 `None` = 任务不存在；`Some(None)` = 无主行；`Some(Some(uid))` = 有主。
+    ///
+    /// 给"子表随父"用（time_window 的写路径要在动子行前问一句"这任务是他的吗"）：
+    /// 判据在 `Actor` 上，这里只负责把归属取出来。
+    pub async fn owner_of(&self, id: i32) -> Result<Option<Option<i64>>, sqlx::Error> {
+        let row: Option<Option<i64>> =
+            sqlx::query_scalar("SELECT user_id FROM task WHERE id = ?1")
+                .bind(id)
+                .fetch_optional(&*self.db)
+                .await?;
+        Ok(row)
+    }
+
     pub async fn create(
         &self,
         user_id: i32,

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\",\n                      start_time AS \"start_time!: chrono::DateTime<chrono::Utc>\",\n                      end_time AS \"end_time!: chrono::DateTime<chrono::Utc>\",\n                      type AS \"window_type!: crate::modules::time_window::TimeWindowType\",\n                      task_id AS \"task_id: i32\",\n                      user_id AS \"user_id?: i32\",\n                      recurrence_freq AS \"recurrence_freq?: crate::modules::time_window::RecurrenceFrequency\",\n                      recurrence_interval AS \"recurrence_interval?: i32\",\n                      recurrence_until AS \"recurrence_until?: chrono::DateTime<chrono::Utc>\",\n                      recurrence_by_weekdays\n               FROM time_window WHERE task_id = ? AND type = ? ORDER BY start_time LIMIT ? OFFSET ?",
+  "query": "SELECT id AS \"id: i32\",\n                      start_time AS \"start_time!: chrono::DateTime<chrono::Utc>\",\n                      end_time AS \"end_time!: chrono::DateTime<chrono::Utc>\",\n                      type AS \"window_type!: crate::modules::time_window::TimeWindowType\",\n                      task_id AS \"task_id: i32\",\n                      user_id AS \"user_id?: i32\",\n                      recurrence_freq AS \"recurrence_freq?: crate::modules::time_window::RecurrenceFrequency\",\n                      recurrence_interval AS \"recurrence_interval?: i32\",\n                      recurrence_until AS \"recurrence_until?: chrono::DateTime<chrono::Utc>\",\n                      recurrence_by_weekdays\n               FROM time_window tw\n               WHERE tw.task_id = ?1 AND tw.type = ?2\n                 AND (?3 IS NULL OR EXISTS (\n                       SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ?3))\n               ORDER BY start_time LIMIT ?4 OFFSET ?5",
   "describe": {
     "columns": [
       {
@@ -115,7 +115,7 @@
       }
     ],
     "parameters": {
-      "Right": 4
+      "Right": 5
     },
     "nullable": [
       false,
@@ -130,5 +130,5 @@
       true
     ]
   },
-  "hash": "7818a9adfb97c38a85ff1ad5893576cf3278f734f9b0c74a72cbbd9b75e3a19e"
+  "hash": "1e270195c38e7b0a9406cb2449781680f374c50970b18429a0494b4ca12ab44b"
 }

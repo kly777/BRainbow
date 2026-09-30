@@ -295,3 +295,76 @@ async fn sign_isolation_between_users() {
     assert!(qsvc.by_id(&admin, sig.id).await.unwrap().is_some());
     assert_eq!(svc.delete(&admin, sig.id).await.unwrap(), 1);
 }
+
+/// time_window：子表随父 —— 归属回到任务上判（窗口自己没有归属判据）
+///
+/// 这是"子表随父"这一批的模板：B 读不到/列不出/建不上/删不掉 A 的任务下的窗口，
+/// admin 全都能。见 doc/design/authorization.md §3.1。
+#[tokio::test]
+async fn time_window_follows_its_parent_task() {
+    use crate::modules::task::dto::CreateTaskRequest;
+    use crate::modules::time_window::{CreateTimeWindowRequest, TimeWindowType};
+    use crate::modules::time_window::port::TaskTimeWindowValidator;
+
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    setup(&pool).await;
+    let pool = Arc::new(pool);
+    let task_svc = crate::modules::task::TaskService::new(pool.clone());
+    let validator: Arc<dyn TaskTimeWindowValidator> = Arc::new(task_svc.clone());
+    let svc = crate::modules::time_window::TimeWindowService::new(pool.clone(), validator.clone());
+    let qsvc = crate::modules::time_window::TimeWindowQueryService::new(pool);
+
+    let a = Actor::user(1);
+    let b = Actor::user(2);
+    let admin = Actor::admin(3);
+
+    let task_a = task_svc
+        .create(
+            a.user_id,
+            CreateTaskRequest {
+                title: "A 的任务".into(),
+                description: None,
+                parent_task_id: None,
+                effort_estimate_minutes: None,
+            },
+        )
+        .await
+        .unwrap();
+
+    let now = chrono::Utc::now();
+    let mk = |start_offset: i64| CreateTimeWindowRequest {
+        start_time: now + chrono::Duration::hours(start_offset),
+        end_time: now + chrono::Duration::hours(start_offset + 1),
+        window_type: TimeWindowType::Feasible,
+        task_id: task_a.id,
+        user_id: None,
+        recurrence_rule: None,
+    };
+
+    let window_a = svc.create(&a, mk(0)).await.unwrap();
+
+    // B：读不到、列不出、建不上、删不掉
+    assert!(qsvc.by_id(&b, window_a.id).await.unwrap().is_none());
+    assert_eq!(qsvc.list_by_task(&b, task_a.id, None, 10, 0).await.unwrap().1, 0);
+    assert!(
+        svc.create(&b, mk(5)).await.is_err(),
+        "B 不该能往 A 的任务上挂窗口"
+    );
+    assert!(
+        svc.delete(&b, window_a.id).await.is_err(),
+        "B 不该删得掉（越权按不存在处理：Err(NotFound)，REST 上同为 404）"
+    );
+    assert!(
+        qsvc.by_id(&a, window_a.id).await.unwrap().is_some(),
+        "B 的删除尝试不该真的删掉 A 的窗口"
+    );
+
+    // A 自己：一切正常
+    assert!(qsvc.by_id(&a, window_a.id).await.unwrap().is_some());
+    assert_eq!(qsvc.list_by_task(&a, task_a.id, None, 10, 0).await.unwrap().1, 1);
+
+    // admin：看得见、建得上、删得掉
+    assert!(qsvc.by_id(&admin, window_a.id).await.unwrap().is_some());
+    let window_admin = svc.create(&admin, mk(10)).await.unwrap();
+    assert_eq!(svc.delete(&admin, window_admin.id).await.unwrap(), 1);
+}

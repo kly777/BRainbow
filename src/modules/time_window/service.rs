@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use crate::shared::actor::Actor;
+
 use super::model::{CreateTimeWindowRequest, TimeWindow, UpdateTimeWindowRequest};
 use super::port::TaskTimeWindowValidator;
 use super::repository::TimeWindowRepository;
@@ -20,7 +22,7 @@ impl TimeWindowService {
 
     pub async fn create(
         &self,
-        user_id: i32,
+        actor: &Actor,
         request: CreateTimeWindowRequest,
     ) -> Result<TimeWindow, ServiceError> {
         // 基础校验：开始时间必须早于结束时间
@@ -29,6 +31,9 @@ impl TimeWindowService {
                 "开始时间必须早于结束时间".into(),
             ));
         }
+
+        // 子表随父：这个任务得是调用者的（否则按不存在回）
+        self.task.ensure_task_owned(actor, request.task_id).await?;
 
         // 约束校验：C001 + C002
         let new_window = TimeWindow {
@@ -49,7 +54,7 @@ impl TimeWindowService {
         };
 
         self.task
-            .validate_time_windows(user_id, request.task_id, &[new_window], None)
+            .validate_time_windows(actor.user_id, request.task_id, &[new_window], None)
             .await
             .map_err(|e| match e {
                 crate::modules::task::service::ServiceError::InvalidInput(msg) => {
@@ -63,14 +68,20 @@ impl TimeWindowService {
 
     pub async fn update(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i32,
         request: UpdateTimeWindowRequest,
     ) -> Result<TimeWindow, ServiceError> {
-        let existing = self.repo.find_by_id(id).await.map_err(ServiceError::Db)?;
+        let existing = self
+            .repo
+            .find_by_id_unscoped(id)
+            .await
+            .map_err(ServiceError::Db)?;
         let Some(existing) = existing else {
             return Err(ServiceError::NotFound("时间窗口未找到".into()));
         };
+        // 子表随父：先过归属，再谈约束
+        self.task.ensure_task_owned(actor, existing.task_id).await?;
 
         // 如果更新了时间范围，做约束校验
         if request.start_time.is_some() || request.end_time.is_some() {
@@ -102,7 +113,7 @@ impl TimeWindowService {
             };
 
             self.task
-                .validate_time_windows(user_id, existing.task_id, &[new_window], Some(id))
+                .validate_time_windows(actor.user_id, existing.task_id, &[new_window], Some(id))
                 .await
                 .map_err(|e| match e {
                     crate::modules::task::service::ServiceError::InvalidInput(msg) => {
@@ -118,7 +129,16 @@ impl TimeWindowService {
             .map_err(ServiceError::Db)
     }
 
-    pub async fn delete(&self, id: i32) -> Result<u64, ServiceError> {
+    pub async fn delete(&self, actor: &Actor, id: i32) -> Result<u64, ServiceError> {
+        let existing = self
+            .repo
+            .find_by_id_unscoped(id)
+            .await
+            .map_err(ServiceError::Db)?;
+        let Some(existing) = existing else {
+            return Ok(0);
+        };
+        self.task.ensure_task_owned(actor, existing.task_id).await?;
         self.repo.delete(id).await.map_err(ServiceError::Db)
     }
 }

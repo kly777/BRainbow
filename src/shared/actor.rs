@@ -55,17 +55,21 @@ impl Actor {
         }
     }
 
-    /// 能不能读这行（`owner` 是行上的 `user_id`）
-    pub fn can_read(&self, owner: Option<i32>) -> bool {
-        self.is_admin || owner == Some(self.user_id)
+    /// 能不能读这行（`owner` 是行上的 `user_id`）。
+    ///
+    /// 行级判据按 **i64** 收归属：SQLite 的整数就是 i64，而各表族在 Rust 侧的类型不统一
+    /// （`file.user_id` 是 `Option<i64>`，不少表是 `Option<i32>`）。统一按 i64 收，
+    /// i32 那侧在调用点 `map(i64::from)` —— 省得为两种宽度各写一套判据。
+    pub fn can_read(&self, owner: Option<i64>) -> bool {
+        self.is_admin || owner == Some(i64::from(self.user_id))
     }
 
     /// 能不能改/删这行。
     ///
     /// 现在与 [`Actor::can_read`] 同规则，**但刻意留成两个**：将来若加"共享可读不可写"，
     /// 分叉点就该在这里，而不是散回各模块的 if 里。
-    pub fn can_write(&self, owner: Option<i32>) -> bool {
-        self.is_admin || owner == Some(self.user_id)
+    pub fn can_write(&self, owner: Option<i64>) -> bool {
+        self.is_admin || owner == Some(i64::from(self.user_id))
     }
 }
 

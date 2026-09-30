@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) FROM time_window WHERE task_id = ? AND type = ?",
+  "query": "SELECT COUNT(*) FROM time_window tw WHERE tw.task_id = ?1\n               AND (?2 IS NULL OR EXISTS (\n                     SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ?2))",
   "describe": {
     "columns": [
       {
@@ -17,5 +17,5 @@
       false
     ]
   },
-  "hash": "2661302afebea044fbfb6827b3fbed58dc2e5895e532bf4eca44648f8693f8b0"
+  "hash": "e7fa0e5a98c82bc5b20966c6a7188829044ed1925790df2455df5ae20634071b"
 }

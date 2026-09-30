@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\",\n                      start_time AS \"start_time!: chrono::DateTime<chrono::Utc>\",\n                      end_time AS \"end_time!: chrono::DateTime<chrono::Utc>\",\n                      type AS \"window_type!: crate::modules::time_window::TimeWindowType\",\n                      task_id AS \"task_id: i32\",\n                      user_id AS \"user_id?: i32\",\n                      recurrence_freq AS \"recurrence_freq?: crate::modules::time_window::RecurrenceFrequency\",\n                      recurrence_interval AS \"recurrence_interval?: i32\",\n                      recurrence_until AS \"recurrence_until?: chrono::DateTime<chrono::Utc>\",\n                      recurrence_by_weekdays\n               FROM time_window WHERE task_id = ? ORDER BY start_time LIMIT ? OFFSET ?",
+  "query": "SELECT id AS \"id: i32\",\n                      start_time AS \"start_time!: chrono::DateTime<chrono::Utc>\",\n                      end_time AS \"end_time!: chrono::DateTime<chrono::Utc>\",\n                      type AS \"window_type!: crate::modules::time_window::TimeWindowType\",\n                      task_id AS \"task_id: i32\",\n                      user_id AS \"user_id?: i32\",\n                      recurrence_freq AS \"recurrence_freq?: crate::modules::time_window::RecurrenceFrequency\",\n                      recurrence_interval AS \"recurrence_interval?: i32\",\n                      recurrence_until AS \"recurrence_until?: chrono::DateTime<chrono::Utc>\",\n                      recurrence_by_weekdays\n               FROM time_window tw WHERE tw.task_id = ?1\n                 AND (?2 IS NULL OR EXISTS (\n                       SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ?2))\n               ORDER BY start_time LIMIT ?3 OFFSET ?4",
   "describe": {
     "columns": [
       {
@@ -115,7 +115,7 @@
       }
     ],
     "parameters": {
-      "Right": 3
+      "Right": 4
     },
     "nullable": [
       false,
@@ -130,5 +130,5 @@
       true
     ]
   },
-  "hash": "8c000f1e73f2409fd9a670e3321e4ed4092b63e4e21fa94b437428b58d093ad0"
+  "hash": "f7cb74bbb508efb544ac6da4076657abb72a1a95b373752e9f5ece8b79e8baea"
 }

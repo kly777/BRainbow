@@ -8,6 +8,7 @@ use super::model::Task;
 use super::repository::TaskRepository;
 use crate::modules::time_window::port::TaskTimeWindowValidator;
 use crate::modules::time_window::{TimeWindow, TimeWindowType};
+use crate::shared::actor::Actor;
 
 /// 命令侧服务——只暴露写操作与参与命令约束的读取。
 ///
@@ -273,6 +274,15 @@ impl TaskTimeWindowValidator for TaskService {
     ) -> Result<(), ServiceError> {
         self.validate_time_windows(user_id, task_id, time_windows, exclude_id)
             .await
+    }
+
+    /// 子表随父：时间窗口的归属回到任务上判（判据在 `Actor`，这里只负责取归属）
+    async fn ensure_task_owned(&self, actor: &Actor, task_id: i32) -> Result<(), ServiceError> {
+        let owner = self.repo.owner_of(task_id).await.map_err(ServiceError::Db)?;
+        match owner {
+            Some(owner) if actor.can_read(owner) => Ok(()),
+            _ => Err(ServiceError::NotFound("任务不存在".into())),
+        }
     }
 }
 

@@ -110,20 +110,20 @@ mod tests {
     #[tokio::test]
     async fn search_across_modules_and_user_filter() {
         let ctx = setup().await;
-        // mem（单用户表，无 user 过滤）
+        // mem（归属 user 1：普通用户只搜到自己的）
         let c1: i64 = sqlx::query_scalar(
-            "INSERT INTO chunk (content) VALUES ('费曼学习法：以教促学') RETURNING id",
+            "INSERT INTO chunk (content, user_id) VALUES ('费曼学习法：以教促学', 1) RETURNING id",
         )
         .fetch_one(&ctx.pool)
         .await
         .unwrap();
         let c2: i64 = sqlx::query_scalar(
-            "INSERT INTO chunk (content) VALUES ('用自己的话教别人，暴露知识缺口') RETURNING id",
+            "INSERT INTO chunk (content, user_id) VALUES ('用自己的话教别人，暴露知识缺口', 1) RETURNING id",
         )
         .fetch_one(&ctx.pool)
         .await
         .unwrap();
-        sqlx::query("INSERT INTO mem (cue_chunk_id, target_chunk_id) VALUES (?1, ?2)")
+        sqlx::query("INSERT INTO mem (cue_chunk_id, target_chunk_id, user_id) VALUES (?1, ?2, 1)")
             .bind(c1)
             .bind(c2)
             .execute(&ctx.pool)
@@ -397,16 +397,17 @@ mod tests {
     #[tokio::test]
     async fn mem_hits_both_cue_and_target_sides() {
         let ctx = setup().await;
-        let c1: i64 =
-            sqlx::query_scalar("INSERT INTO chunk (content) VALUES ('什么是熵') RETURNING id")
-                .fetch_one(&ctx.pool)
-                .await
-                .unwrap();
+        let c1: i64 = sqlx::query_scalar(
+            "INSERT INTO chunk (content, user_id) VALUES ('什么是熵', 1) RETURNING id",
+        )
+        .fetch_one(&ctx.pool)
+        .await
+        .unwrap();
         let c2: i64 = sqlx::query_scalar(
-            "INSERT INTO chunk (content) VALUES ('系统无序程度的度量，热力学第二定律的核心概念') RETURNING id",
+            "INSERT INTO chunk (content, user_id) VALUES ('系统无序程度的度量，热力学第二定律的核心概念', 1) RETURNING id",
         )
         .fetch_one(&ctx.pool).await.unwrap();
-        sqlx::query("INSERT INTO mem (cue_chunk_id, target_chunk_id) VALUES (?1, ?2)")
+        sqlx::query("INSERT INTO mem (cue_chunk_id, target_chunk_id, user_id) VALUES (?1, ?2, 1)")
             .bind(c1)
             .bind(c2)
             .execute(&ctx.pool)

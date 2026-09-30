@@ -150,9 +150,11 @@ async fn mem_isolation_between_users() {
     );
 
     use crate::modules::mem::dto::CreateMemRequest;
+    let a = Actor::user(1);
+    let b = Actor::user(2);
     let mem_a = service
         .create(
-            1,
+            &a,
             CreateMemRequest {
                 cue_content: "A 的线索".into(),
                 target_content: "A 的答案".into(),
@@ -163,19 +165,19 @@ async fn mem_isolation_between_users() {
         .unwrap();
 
     // B 的 due 队列不包含 A 的卡
-    let due = service.get_due(2, 10, &[], &[]).await.unwrap();
+    let due = service.get_due(&b, 10, &[], &[]).await.unwrap();
     assert!(
         due.items.iter().all(|m| m.id != mem_a),
         "B 的复习队列不应包含 A 的记忆卡"
     );
     // B 预览 A 的卡返回 NotFound
-    let err = query.preview(2, mem_a).await.unwrap_err();
+    let err = query.preview(&b, mem_a).await.unwrap_err();
     assert!(matches!(
         err,
         crate::shared::error_types::ServiceError::NotFound(_)
     ));
     // A 自己可见
-    assert!(query.preview(1, mem_a).await.is_ok());
+    assert!(query.preview(&a, mem_a).await.is_ok());
 }
 
 /// 无主行（`user_id IS NULL`）：普通用户看不见、也改不动，只有 admin 能。

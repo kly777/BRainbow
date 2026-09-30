@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT t.id AS \"id: i32\", t.name,\n                      COALESCE(t.created_at, '') AS \"created_at!: String\"\n               FROM tag t\n               JOIN mem_tag mt ON mt.tag_id = t.id\n               WHERE mt.mem_id = ?1\n               ORDER BY t.name",
+  "query": "SELECT t.id AS \"id: i32\", t.name,\n                      COALESCE(t.created_at, '') AS \"created_at!: String\"\n               FROM tag t\n               WHERE (?1 IS NULL OR t.user_id = ?1)\n                 AND EXISTS (SELECT 1 FROM mem_tag WHERE tag_id = t.id)\n               ORDER BY t.name",
   "describe": {
     "columns": [
       {
@@ -41,5 +41,5 @@
       false
     ]
   },
-  "hash": "3549a9bf9c70770abb698429b1cac5b3830775e63f67044840fa2fde1de95c49"
+  "hash": "a4435ce391db8493fce4190cf542e6b020a2a3e7b930c33aaaf686f18502047b"
 }

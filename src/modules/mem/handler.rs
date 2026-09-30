@@ -5,6 +5,7 @@ use axum::{
 };
 use serde::Deserialize;
 
+use crate::shared::actor::Actor;
 use crate::shared::claims::Claims;
 use std::collections::HashMap;
 
@@ -35,7 +36,7 @@ pub async fn get_all(
     Query(p): Query<MemQuery>,
 ) -> impl IntoResponse {
     let svc = &query;
-    match svc.get_all(claims.sub, &p).await {
+    match svc.get_all(&Actor::from(&claims), &p).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => e.into_response(),
     }
@@ -57,7 +58,7 @@ pub async fn get_session_estimate(
         .unwrap_or_default();
     let svc = &query;
     match svc
-        .get_session_estimate(claims.sub, &config, &tag_ids, &exclude_tag_ids)
+        .get_session_estimate(&Actor::from(&claims), &config, &tag_ids, &exclude_tag_ids)
         .await
     {
         Ok(est) => Json(est).into_response(),
@@ -70,7 +71,7 @@ pub async fn get_counts(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &query;
-    match svc.get_counts(claims.sub).await {
+    match svc.get_counts(&Actor::from(&claims)).await {
         Ok(counts) => Json(counts).into_response(),
         Err(e) => e.into_response(),
     }
@@ -81,7 +82,7 @@ pub async fn list_tags(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &query;
-    match svc.list_tags(claims.sub).await {
+    match svc.list_tags(&Actor::from(&claims)).await {
         Ok(tags) => Json(tags).into_response(),
         Err(e) => e.into_response(),
     }
@@ -94,7 +95,7 @@ pub async fn search_tags(
 ) -> impl IntoResponse {
     let q = params.get("q").map(|s| s.as_str()).unwrap_or("");
     let svc = &query;
-    match svc.search_tags(claims.sub, q).await {
+    match svc.search_tags(&Actor::from(&claims), q).await {
         Ok(tags) => Json(tags).into_response(),
         Err(e) => e.into_response(),
     }
@@ -106,7 +107,7 @@ pub async fn get_mem_tags(
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let svc = &query;
-    match svc.get_mem_tags(claims.sub, id).await {
+    match svc.get_mem_tags(&Actor::from(&claims), id).await {
         Ok(tags) => Json(tags).into_response(),
         Err(e) => e.into_response(),
     }
@@ -121,7 +122,10 @@ pub async fn batch_get_mems_tags(
         return Json(BatchDataResponse::empty());
     }
     let svc = &query;
-    Json(svc.get_mems_tags_batch(claims.sub, &payload.items).await)
+    Json(
+        svc.get_mems_tags_batch(&Actor::from(&claims), &payload.items)
+            .await,
+    )
 }
 
 pub async fn export_csv(
@@ -134,7 +138,7 @@ pub async fn export_csv(
         .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
         .unwrap_or_default();
     let svc = &query;
-    match svc.export_csv(claims.sub, &tag_ids).await {
+    match svc.export_csv(&Actor::from(&claims), &tag_ids).await {
         Ok(psv) => (
             [
                 ("Content-Type", "text/tab-separated-values; charset=utf-8"),
@@ -153,7 +157,7 @@ pub async fn preview_mem(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &query;
-    match svc.preview(claims.sub, id).await {
+    match svc.preview(&Actor::from(&claims), id).await {
         Ok(secs) => Json(serde_json::json!({ "intervals": secs })).into_response(),
         Err(e) => e.into_response(),
     }
@@ -165,7 +169,7 @@ pub async fn get_mnemonic(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &query;
-    match svc.get_mnemonic(claims.sub, id).await {
+    match svc.get_mnemonic(&Actor::from(&claims), id).await {
         Ok(Some(content)) => Json(serde_json::json!({ "content": content })).into_response(),
         Ok(None) => Json(serde_json::json!({ "content": null })).into_response(),
         Err(e) => e.into_response(),
@@ -177,7 +181,7 @@ pub async fn upcoming_counts(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &query;
-    match svc.upcoming_counts(claims.sub).await {
+    match svc.upcoming_counts(&Actor::from(&claims)).await {
         Ok(v) => Json(v).into_response(),
         Err(e) => e.into_response(),
     }
@@ -194,7 +198,7 @@ pub async fn batch_bury(
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
     let svc = &service;
-    Json(svc.batch_bury(claims.sub, &payload.items).await)
+    Json(svc.batch_bury(&Actor::from(&claims), &payload.items).await)
 }
 
 pub async fn batch_delete(
@@ -204,7 +208,10 @@ pub async fn batch_delete(
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
     let svc = &service;
-    Json(svc.batch_delete(claims.sub, &payload.items).await)
+    Json(
+        svc.batch_delete(&Actor::from(&claims), &payload.items)
+            .await,
+    )
 }
 
 pub async fn batch_reset(
@@ -214,7 +221,7 @@ pub async fn batch_reset(
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
     let svc = &service;
-    Json(svc.batch_reset(claims.sub, &payload.items).await)
+    Json(svc.batch_reset(&Actor::from(&claims), &payload.items).await)
 }
 
 pub async fn create_tag(
@@ -226,7 +233,10 @@ pub async fn create_tag(
         return error::bad_request("标签名不能为空");
     }
     let svc = &service;
-    match svc.create_tag(payload.name.trim(), claims.sub).await {
+    match svc
+        .create_tag(&Actor::from(&claims), payload.name.trim())
+        .await
+    {
         Ok(tag) => Json(tag).into_response(),
         Err(e) => e.into_response(),
     }
@@ -234,11 +244,11 @@ pub async fn create_tag(
 
 pub async fn delete_tag(
     State(service): State<MemService>,
-    Extension(_claims): Extension<Claims>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.delete_tag(id).await {
+    match svc.delete_tag(&Actor::from(&claims), id).await {
         Ok(()) => ok(),
         Err(e) => e.into_response(),
     }
@@ -251,7 +261,7 @@ pub async fn add_mem_tag(
 ) -> impl IntoResponse {
     let svc = &service;
     match svc
-        .add_tag_to_mem(claims.sub, payload.mem_id, payload.tag_id)
+        .add_tag_to_mem(&Actor::from(&claims), payload.mem_id, payload.tag_id)
         .await
     {
         Ok(()) => ok(),
@@ -261,11 +271,12 @@ pub async fn add_mem_tag(
 
 pub async fn remove_mem_tag(
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<TagMemRequest>,
 ) -> impl IntoResponse {
     let svc = &service;
     match svc
-        .remove_tag_from_mem(payload.mem_id, payload.tag_id)
+        .remove_tag_from_mem(&Actor::from(&claims), payload.mem_id, payload.tag_id)
         .await
     {
         Ok(()) => ok(),
@@ -280,7 +291,7 @@ pub async fn set_mem_tags(
 ) -> impl IntoResponse {
     let svc = &service;
     match svc
-        .set_mem_tags(claims.sub, payload.mem_id, &payload.tag_ids)
+        .set_mem_tags(&Actor::from(&claims), payload.mem_id, &payload.tag_ids)
         .await
     {
         Ok(()) => ok(),
@@ -304,36 +315,39 @@ pub struct BatchSetTagsRequest {
 
 pub async fn batch_add_tag(
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<BatchTagRequest>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
     let svc = &service;
     Json(
-        svc.batch_add_tag_to_mems(&payload.items, payload.tag_id)
+        svc.batch_add_tag_to_mems(&Actor::from(&claims), &payload.items, payload.tag_id)
             .await,
     )
 }
 
 pub async fn batch_remove_tag(
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<BatchTagRequest>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
     let svc = &service;
     Json(
-        svc.batch_remove_tag_from_mems(&payload.items, payload.tag_id)
+        svc.batch_remove_tag_from_mems(&Actor::from(&claims), &payload.items, payload.tag_id)
             .await,
     )
 }
 
 pub async fn batch_set_tags(
     State(service): State<MemService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<BatchSetTagsRequest>,
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
     let svc = &service;
     Json(
-        svc.batch_set_tags_for_mems(&payload.items, &payload.tag_ids)
+        svc.batch_set_tags_for_mems(&Actor::from(&claims), &payload.items, &payload.tag_ids)
             .await,
     )
 }
@@ -354,7 +368,7 @@ pub async fn import_csv(
 ) -> impl IntoResponse {
     let svc = &service;
     match svc
-        .import_csv(&payload.csv, claims.sub, &payload.default_tags)
+        .import_csv(&Actor::from(&claims), &payload.csv, &payload.default_tags)
         .await
     {
         Ok((count, errors)) => Json(serde_json::json!({
@@ -373,7 +387,7 @@ pub async fn import_psv(
 ) -> impl IntoResponse {
     let svc = &service;
     match svc
-        .import_psv(&payload.csv, claims.sub, &payload.default_tags)
+        .import_psv(&Actor::from(&claims), &payload.csv, &payload.default_tags)
         .await
     {
         Ok((count, errors)) => Json(serde_json::json!({
@@ -399,7 +413,7 @@ pub async fn import_json(
 ) -> impl IntoResponse {
     let svc = &service;
     match svc
-        .import_json(&payload.mems, claims.sub, &payload.default_tags)
+        .import_json(&Actor::from(&claims), &payload.mems, &payload.default_tags)
         .await
     {
         Ok((count, errors)) => Json(serde_json::json!({
@@ -432,7 +446,7 @@ pub async fn get_due(
         .unwrap_or_default();
     let svc = &service;
     match svc
-        .get_due(claims.sub, limit, &tag_ids, &exclude_tag_ids)
+        .get_due(&Actor::from(&claims), limit, &tag_ids, &exclude_tag_ids)
         .await
     {
         Ok(res) => Json(res).into_response(),
@@ -448,7 +462,7 @@ pub async fn create_mem(
     Json(body): Json<CreateMemRequest>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.create(claims.sub, body).await {
+    match svc.create(&Actor::from(&claims), body).await {
         Ok(id) => response::id(id).into_response(),
         Err(e) => e.into_response(),
     }
@@ -476,7 +490,7 @@ pub async fn review_mem(
     }
     let svc = &service;
     match svc
-        .review(claims.sub, id, body.rating, body.duration_secs)
+        .review(&Actor::from(&claims), id, body.rating, body.duration_secs)
         .await
     {
         Ok(res) => Json(res).into_response(),
@@ -491,7 +505,7 @@ pub async fn undo_review(
     Json(body): Json<UndoRequest>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.undo(claims.sub, id, body).await {
+    match svc.undo(&Actor::from(&claims), id, body).await {
         Ok(()) => ok(),
         Err(e) => e.into_response(),
     }
@@ -504,7 +518,7 @@ pub async fn edit_mem(
     Json(body): Json<EditMemRequest>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.edit(claims.sub, id, body).await {
+    match svc.edit(&Actor::from(&claims), id, body).await {
         Ok(()) => ok(),
         Err(e) => e.into_response(),
     }
@@ -516,7 +530,7 @@ pub async fn bury_mem(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.bury(claims.sub, id).await {
+    match svc.bury(&Actor::from(&claims), id).await {
         Ok(()) => ok(),
         Err(e) => e.into_response(),
     }
@@ -528,7 +542,7 @@ pub async fn unbury_mem(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.unbury(claims.sub, id).await {
+    match svc.unbury(&Actor::from(&claims), id).await {
         Ok(()) => ok(),
         Err(e) => e.into_response(),
     }
@@ -540,7 +554,7 @@ pub async fn suspend_mem(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.suspend(claims.sub, id).await {
+    match svc.suspend(&Actor::from(&claims), id).await {
         Ok(()) => ok(),
         Err(e) => e.into_response(),
     }
@@ -552,7 +566,7 @@ pub async fn unsuspend_mem(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.unsuspend(claims.sub, id).await {
+    match svc.unsuspend(&Actor::from(&claims), id).await {
         Ok(()) => ok(),
         Err(e) => e.into_response(),
     }
@@ -564,7 +578,7 @@ pub async fn reset_mem(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.reset(claims.sub, id).await {
+    match svc.reset(&Actor::from(&claims), id).await {
         Ok(()) => ok(),
         Err(e) => e.into_response(),
     }
@@ -576,7 +590,7 @@ pub async fn delete_mem(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &service;
-    match svc.delete(claims.sub, id).await {
+    match svc.delete(&Actor::from(&claims), id).await {
         Ok(()) => ok(),
         Err(e) => e.into_response(),
     }
@@ -591,7 +605,7 @@ pub async fn set_mnemonic(
     match body.get("content").and_then(|v| v.as_str()) {
         Some(content) => {
             let svc = &service;
-            match svc.set_mnemonic(claims.sub, id, content).await {
+            match svc.set_mnemonic(&Actor::from(&claims), id, content).await {
                 Ok(()) => ok(),
                 Err(e) => e.into_response(),
             }

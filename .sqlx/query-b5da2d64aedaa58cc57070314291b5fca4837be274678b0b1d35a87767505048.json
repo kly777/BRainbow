@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT t.id AS \"id: i32\", t.name, COUNT(r.bookmark_id) AS \"count!: i64\"\n                   FROM bookmark_tag t\n                   LEFT JOIN bookmark_tag_rel r ON r.tag_id = t.id\n                   WHERE t.name LIKE ? ESCAPE '\\'\n                   GROUP BY t.id, t.name\n                   ORDER BY COUNT(r.bookmark_id) DESC, t.name",
+  "query": "SELECT t.id AS \"id: i32\", t.name, COUNT(b.id) AS \"count!: i64\"\n                   FROM bookmark_tag t\n                   LEFT JOIN bookmark_tag_rel r ON r.tag_id = t.id\n                   LEFT JOIN bookmark b ON b.id = r.bookmark_id AND (?1 IS NULL OR b.user_id = ?1)\n                   WHERE (?1 IS NULL OR t.user_id = ?1)\n                   GROUP BY t.id, t.name\n                   ORDER BY COUNT(b.id) DESC, t.name",
   "describe": {
     "columns": [
       {
@@ -41,5 +41,5 @@
       false
     ]
   },
-  "hash": "c25ce8b9a11351c737b82fa579cc450204d104fb8f27fbd8784f95d3a90d2eb9"
+  "hash": "b5da2d64aedaa58cc57070314291b5fca4837be274678b0b1d35a87767505048"
 }

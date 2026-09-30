@@ -12,8 +12,19 @@ import { Grid, List, Upload, X } from "@components/ui/icons";
 import { fillPath, PATHS } from "@config/paths";
 import { formatBytes } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
-import { type Component, createSignal, For, Show } from "solid-js";
-import type { FileItem, SortOrder } from "./api.ts";
+import {
+	type Component,
+	createResource,
+	createSignal,
+	For,
+	Show,
+} from "solid-js";
+import {
+	type FileItem,
+	type FileTag,
+	listFileTags,
+	type SortOrder,
+} from "./api.ts";
 import BatchBar from "./components/BatchBar.tsx";
 import EmptyGuide from "./components/EmptyGuide.tsx";
 import FileCard from "./components/FileCard.tsx";
@@ -59,6 +70,17 @@ const FileListPage: Component = () => {
 		navigate(fillPath(PATHS.fileDetail, item.stored_id), {
 			state: { from: location.pathname + location.search },
 		});
+	};
+
+	// ── 标签候选：页面是唯一拥有者（筛选下拉与标签管理弹窗共用同一份） ──
+	// 标签写入后由 onTagsChanged 一起刷新：早先两个组件各自 createResource，
+	// 管理里改名/删除/合并之后，筛选下拉还挂着旧标签（直到组件重建）。
+	const [tags, { refetch: refetchTags }] = createResource<FileTag[]>(() =>
+		listFileTags(),
+	);
+	const onTagsChanged = () => {
+		refetchTags();
+		f.refetch();
 	};
 
 	// ── 图片灯箱：在当前页的图片之间左右切换（可放大判定与卡片/列表行共用一处） ──
@@ -144,7 +166,11 @@ const FileListPage: Component = () => {
 								<X size={14} />
 							</Button>
 						</Show>
-						<TagFilter value={f.tag()} onChange={f.setTag} />
+						<TagFilter
+							value={f.tag()}
+							onChange={f.setTag}
+							options={tags() ?? []}
+						/>
 						<Button
 							variant="ghost"
 							size="sm"
@@ -324,7 +350,8 @@ const FileListPage: Component = () => {
 			<TagManager
 				isOpen={tagManagerOpen()}
 				onClose={() => setTagManagerOpen(false)}
-				onChanged={f.refetch}
+				tags={tags() ?? []}
+				onChanged={onTagsChanged}
 			/>
 
 			<BatchBar

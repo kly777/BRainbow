@@ -1,6 +1,7 @@
 import { Button, Field, Input } from "@components/ui";
 import { Plus, X } from "@components/ui/icons";
 import { type Component, For, Show } from "solid-js";
+import type { FileTag } from "../api.ts";
 import styles from "../FileDetail.module.css";
 import type { MetaEntry, useFileDetail } from "../hooks/useFileDetail.ts";
 import TagInput from "./TagInput.tsx";
@@ -42,9 +43,11 @@ const MetaRowEditor: Component<{
  *
  * 整个 hook 作为 prop 传进来（而不是把 20 多个字段逐个摊开）：表单字段与
  * hook 的编辑态一一对应，摊开会退化成两处都要维护的长参数表。
+ * `tagOptions` 单独给：它是"全部标签"这份候选（由页面取数），与编辑态无关。
  */
 export default function FileEditForm(props: {
 	m: ReturnType<typeof useFileDetail>;
+	tagOptions: readonly FileTag[];
 }) {
 	const m = props.m;
 	return (
@@ -56,7 +59,12 @@ export default function FileEditForm(props: {
 				/>
 			</Field>
 			<span class={styles.label}>标签</span>
-			<TagInput tags={m.tags()} onAdd={m.addTag} onRemove={m.removeTag} />
+			<TagInput
+				tags={m.tags()}
+				options={props.tagOptions}
+				onAdd={m.addTag}
+				onRemove={m.removeTag}
+			/>
 			<span class={styles.label}>元信息</span>
 			<For each={m.metaEntries()}>
 				{(entry, index) => (

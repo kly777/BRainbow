@@ -1,13 +1,16 @@
 /**
  * 标签管理弹窗：列出全部标签及关联文件数，支持重命名、合并、删除。
  * 删除只解除与文件的关联，文件本身保留。
+ *
+ * 列表**由页面传进来**（不再自己 createResource）：页面同时把同一份候选给了
+ * 筛选下拉，契约里那条 `onChanged` 让两边一起刷新（早先下拉是独立的一份取数，
+ * 改名/删除/合并之后它还挂着旧标签）。
  */
 
 import { Button, Input, Modal } from "@components/ui";
 import {
 	deleteFileTag,
 	type FileTag,
-	listFileTags,
 	mergeFileTag,
 	renameFileTag,
 } from "@modules/file/api";
@@ -18,33 +21,25 @@ import {
 	showConfirm,
 	tryAsync,
 } from "@shared/utils";
-import {
-	type Component,
-	createResource,
-	createSignal,
-	For,
-	Show,
-} from "solid-js";
+import { type Component, createSignal, For, Show } from "solid-js";
 import styles from "./TagManager.module.css";
 
 interface Props {
 	isOpen: boolean;
 	onClose: () => void;
-	/** 标签变动后通知父组件刷新列表 */
+	/** 全部标签及其关联文件数（页面持有） */
+	tags: readonly FileTag[];
+	/** 标签被写之后的统一出口：页面据此刷新标签候选与文件列表 */
 	onChanged: () => void;
 }
 
 const TagManager: Component<Props> = (props) => {
-	const [tags, { refetch }] = createResource<FileTag[]>(() =>
-		props.isOpen ? listFileTags() : Promise.resolve([]),
-	);
 	const [editingId, setEditingId] = createSignal<number | null>(null);
 	const [editName, setEditName] = createSignal("");
 	const [mergingId, setMergingId] = createSignal<number | null>(null);
 
 	const afterChange = (message: string) => {
 		notifySuccess(message);
-		refetch();
 		props.onChanged();
 	};
 
@@ -93,13 +88,13 @@ const TagManager: Component<Props> = (props) => {
 		<Modal isOpen={props.isOpen} onClose={props.onClose} title="标签管理">
 			<div class={styles.wrap}>
 				<Show
-					when={(tags() ?? []).length > 0}
+					when={props.tags.length > 0}
 					fallback={
 						<p class={styles.empty}>还没有标签，在文件详情页可以给文件加标签</p>
 					}
 				>
 					<ul class={styles.list}>
-						<For each={tags()}>
+						<For each={props.tags}>
 							{(tag) => (
 								<li class={styles.item}>
 									<Show
@@ -170,7 +165,7 @@ const TagManager: Component<Props> = (props) => {
 										<div class={styles.mergeRow}>
 											<span class={styles.mergeLabel}>合并到：</span>
 											<For
-												each={(tags() ?? []).filter((t) => t.id !== tag.id)}
+												each={props.tags.filter((t) => t.id !== tag.id)}
 												fallback={
 													<span class={styles.empty}>没有其他标签可合并</span>
 												}

@@ -5,6 +5,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::shared::actor::Actor;
 use crate::shared::claims::Claims;
 use crate::shared::error_types::{bad_request, not_found};
 use crate::shared::pagination::{PaginatedResponse, Pagination};
@@ -47,7 +48,7 @@ pub async fn create_card_handler(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateCardRequest>,
 ) -> impl IntoResponse {
-    match service.create(claims.sub, payload.content).await {
+    match service.create(&Actor::from(&claims), payload.content).await {
         Ok(card) => (StatusCode::CREATED, Json(CardResponse::from(card))).into_response(),
         Err(e) => e.into_response(),
     }
@@ -59,7 +60,7 @@ pub async fn get_cards_handler(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     match query
-        .list(claims.sub, pagination.limit(), pagination.offset())
+        .list(&Actor::from(&claims), pagination.limit(), pagination.offset())
         .await
     {
         Ok((items, total)) => {
@@ -75,7 +76,7 @@ pub async fn get_card_handler(
     Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    match query.by_id(claims.sub, id).await {
+    match query.by_id(&Actor::from(&claims), id).await {
         Ok(Some(card)) => Json(CardResponse::from(card)).into_response(),
         Ok(None) => not_found("卡片不存在").into_response(),
         Err(e) => e.into_response(),
@@ -88,7 +89,7 @@ pub async fn update_card_handler(
     Path(id): Path<i32>,
     Json(payload): Json<UpdateCardRequest>,
 ) -> impl IntoResponse {
-    match service.update(claims.sub, id, payload.content).await {
+    match service.update(&Actor::from(&claims), id, payload.content).await {
         Ok(card) => Json(CardResponse::from(card)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -99,7 +100,7 @@ pub async fn delete_card_handler(
     Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    match service.delete(claims.sub, id).await {
+    match service.delete(&Actor::from(&claims), id).await {
         Ok(n) if n > 0 => StatusCode::NO_CONTENT.into_response(),
         Ok(_) => not_found("卡片不存在").into_response(),
         Err(e) => e.into_response(),
@@ -130,7 +131,7 @@ pub async fn search_cards_handler(
     let pagination = params.pagination();
     match query
         .search(
-            claims.sub,
+            &Actor::from(&claims),
             params.q.trim(),
             pagination.limit(),
             pagination.offset(),

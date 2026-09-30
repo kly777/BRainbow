@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) FROM card WHERE user_id = ? OR user_id IS NULL",
+  "query": "SELECT COUNT(*) FROM card WHERE (?1 IS NULL OR user_id = ?1)",
   "describe": {
     "columns": [
       {
@@ -17,5 +17,5 @@
       false
     ]
   },
-  "hash": "c5668979d11ab82fc5ea8eec0c84f3045fc962d8754d20f5d2de68fdd08505e5"
+  "hash": "43d22c7cd4fcff6f8408608b52841fb71219619812364ad3cc80e261cf685855"
 }

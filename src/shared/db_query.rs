@@ -23,6 +23,8 @@
 
 use sqlx::{Database, Encode, QueryBuilder, Type};
 
+use super::actor::Actor;
+
 // ── QueryBuilder 扩展 ──
 
 /// [`QueryBuilder`] 扩展：条件式拼接 SQL 片段。
@@ -73,10 +75,28 @@ pub fn like_prefix(needle: &str) -> String {
     format!("{}%", escape_like(needle))
 }
 
-/// 追加行级可见性过滤：`( {column} = ?N OR {column} IS NULL )`。
+/// 追加行级归属过滤：`AND ( ? IS NULL OR {column} = ? )`，值取 [`Actor::owner_scope`]。
 ///
-/// 统一「用户自有行 + 全局共享行（user_id 为 NULL 的公共数据）」双语义；
-/// 占位符按追加次序自然编号。调用方负责 WHERE / AND 等连接词与后续条件。
+/// 这是**授权规则在 SQL 侧的唯一写法**（判据见 `shared/actor.rs`）：admin 绑 `NULL`
+/// 条件恒真（全量），普通用户绑自己的 id（只看/只动自己创建的行）。一条写法服务两档
+/// 角色，不用为 admin 另写一条 SQL，也就不会出现"两处条件不同步"。
+///
+/// 静态 SQL（`query!` 宏）里照抄同一形状即可：`(?1 IS NULL OR {column} = ?1)`。
+pub fn push_owner_scope(qb: &mut QueryBuilder<sqlx::Sqlite>, actor: &Actor, column: &str) {
+    qb.push(" AND (");
+    qb.push_bind(actor.owner_scope());
+    qb.push(" IS NULL OR ");
+    qb.push(column);
+    qb.push(" = ");
+    qb.push_bind(actor.owner_scope());
+    qb.push(")");
+}
+
+/// **过渡**：`( {column} = ? OR {column} IS NULL )` —— v20 认领历史数据之前的口径。
+///
+/// 与 [`push_owner_scope`] 的区别有两处：连接词（这个不带前导 `AND`，由调用方写）
+/// 与 NULL 行的可见性（这个放行）。目前只有 mem 还在用；等它接上 `Actor` 后整个删掉，
+/// 别在别处新用它（授权规则的唯一写法是 `push_owner_scope`）。
 pub fn push_user_visible(qb: &mut QueryBuilder<sqlx::Sqlite>, column: &str, user_id: i32) {
     qb.push(format!("({column} = "));
     qb.push_bind(user_id);

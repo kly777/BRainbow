@@ -4,6 +4,7 @@ use async_trait::async_trait;
 
 use super::model::Card;
 use super::repository::CardRepository;
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{
     SearchHit, SearchPort, SearchTarget, clip, fts_query, normalize_search, snippet,
@@ -26,32 +27,32 @@ impl CardQueryService {
 
     pub async fn list(
         &self,
-        user_id: i32,
+        actor: &Actor,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Card>, i64), ServiceError> {
         self.repo
-            .find_all_paginated(user_id, limit, offset)
+            .find_all_paginated(actor, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }
 
-    pub async fn by_id(&self, user_id: i32, id: i32) -> Result<Option<Card>, ServiceError> {
+    pub async fn by_id(&self, actor: &Actor, id: i32) -> Result<Option<Card>, ServiceError> {
         self.repo
-            .find_by_id(user_id, id)
+            .find_by_id(actor, id)
             .await
             .map_err(ServiceError::Db)
     }
 
     pub async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         query: &str,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Card>, i64), ServiceError> {
         self.repo
-            .search_by_content_paginated(user_id, query, limit, offset)
+            .search_by_content_paginated(actor, query, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }
@@ -65,13 +66,16 @@ impl SearchPort for CardQueryService {
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
+        // 搜索层还没接 Actor（`SearchPort` 仍只传 user_id），这里按**普通用户**口径取行；
+        // admin 的跨用户全量搜索要等搜索层改造（届时 `SearchPort` 也收 `&Actor`）。
+        let actor = Actor::user(user_id);
         let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
         if let Some(fts) = fts_query(q) {
             let rows = self
                 .repo
-                .search_hits_fts(user_id, &fts, cap)
+                .search_hits_fts(&actor, &fts, cap)
                 .await
                 .map_err(ServiceError::Db)?;
             Ok(rows
@@ -88,7 +92,7 @@ impl SearchPort for CardQueryService {
         } else {
             let rows = self
                 .repo
-                .search_hits(user_id, &like, cap)
+                .search_hits(&actor, &like, cap)
                 .await
                 .map_err(ServiceError::Db)?;
             Ok(rows

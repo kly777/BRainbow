@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT conv_id, title FROM conv_titles\n               WHERE (user_id = ?1 OR user_id IS NULL) AND title LIKE ?2 ESCAPE '\\'\n               ORDER BY conv_id DESC LIMIT ?3",
+  "query": "SELECT c.conv_id, c.title\n               FROM conv_titles_fts fts\n               JOIN conv_titles c ON c.id = fts.rowid\n               WHERE conv_titles_fts MATCH ?2\n                 AND (?1 IS NULL OR c.user_id = ?1)\n               ORDER BY rank\n               LIMIT ?3",
   "describe": {
     "columns": [
       {
@@ -34,5 +34,5 @@
       false
     ]
   },
-  "hash": "7950972a2a10b71343ed679ef89ef486465aee60e5230ccf65e454b6d1b2d679"
+  "hash": "32a817dfc9323e645f49bc112f391b1c8052e97d01c131eb8a97d636d46c7f7d"
 }

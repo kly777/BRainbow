@@ -3,6 +3,7 @@ use sqlx::SqlitePool;
 
 use super::model::{ConvDetail, SearchResponse};
 use super::repository::ConvRepo;
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{SearchHit, SearchPort, fts_query, normalize_search};
 
@@ -23,30 +24,30 @@ impl ConvQueryService {
 
     pub async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
         offset: i64,
         search_type: &str,
     ) -> Result<SearchResponse, ServiceError> {
         self.repo
-            .search(user_id, q, limit, offset, search_type)
+            .search(actor, q, limit, offset, search_type)
             .await
     }
 
     /// 知识条目详情（标题 + 文章）
-    pub async fn detail(&self, user_id: i32, id: i64) -> Result<Option<ConvDetail>, ServiceError> {
-        self.repo.detail(user_id, id).await
+    pub async fn detail(&self, actor: &Actor, id: i64) -> Result<Option<ConvDetail>, ServiceError> {
+        self.repo.detail(actor, id).await
     }
 
     /// 单篇文章
     pub async fn concept(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i64,
         article_title: &str,
     ) -> Result<Option<serde_json::Value>, ServiceError> {
-        self.repo.concept(user_id, id, article_title).await
+        self.repo.concept(actor, id, article_title).await
     }
 }
 
@@ -61,7 +62,7 @@ pub async fn search_conv(
     search_type: &str,
 ) -> Result<SearchResponse, ServiceError> {
     ConvRepo::new(pool.clone())
-        .search(user_id, q, limit, offset, search_type)
+        .search(&Actor::user(user_id), q, limit, offset, search_type)
         .await
 }
 
@@ -77,9 +78,13 @@ impl SearchPort for ConvQueryService {
             return Ok(vec![]);
         };
         if let Some(fts) = fts_query(q) {
-            self.repo.search_hits_fts(user_id, &fts, cap).await
+            self.repo
+                .search_hits_fts(&Actor::user(user_id), &fts, cap)
+                .await
         } else {
-            self.repo.search_hits(user_id, &like, cap).await
+            self.repo
+                .search_hits(&Actor::user(user_id), &like, cap)
+                .await
         }
     }
 }
@@ -99,29 +104,29 @@ mod tests {
         crate::db::migrate(&pool).await.unwrap();
 
         // conv 1: Go 相关对话
-        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (1, '如何用Go写Web程序', 'solution')")
+        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type, user_id) VALUES (1, '如何用Go写Web程序', 'solution', 1)")
             .execute(&pool).await.unwrap();
 
         // conv 2: Rust 对话（不含 go）
-        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (2, 'Rust所有权系统', 'concept')")
+        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type, user_id) VALUES (2, 'Rust所有权系统', 'concept', 1)")
             .execute(&pool).await.unwrap();
 
         // conv 3: 标题有 go
-        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (3, 'Go vs Rust对比', 'concept')")
+        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type, user_id) VALUES (3, 'Go vs Rust对比', 'concept', 1)")
             .execute(&pool).await.unwrap();
 
         // conv 4
-        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (4, '学习编程的建议', 'concept')")
+        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type, user_id) VALUES (4, '学习编程的建议', 'concept', 1)")
             .execute(&pool).await.unwrap();
 
         // conv 5: 多标题同一对话
-        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (5, 'Go如何替代Bash', 'solution')")
+        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type, user_id) VALUES (5, 'Go如何替代Bash', 'solution', 1)")
             .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (5, 'Go实现SSH部署', 'solution')")
+        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type, user_id) VALUES (5, 'Go实现SSH部署', 'solution', 1)")
             .execute(&pool).await.unwrap();
 
         // article
-        sqlx::query("INSERT INTO articles (conv_id, article_type, title, content) VALUES (1, 'summary', 'Go Web编程总结', 'Go Web编程的要点包括路由、中间件、数据库等')")
+        sqlx::query("INSERT INTO articles (conv_id, article_type, title, content, user_id) VALUES (1, 'summary', 'Go Web编程总结', 'Go Web编程的要点包括路由、中间件、数据库等', 1)")
             .execute(&pool).await.unwrap();
 
         pool
@@ -178,9 +183,9 @@ mod tests {
         let pool = setup_test_db().await;
         // 填一篇很长的文章
         let long_q = "这是很长很长的一段测试内容".repeat(20);
-        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (99, '长文本测试', 'concept')")
+        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type, user_id) VALUES (99, '长文本测试', 'concept', 1)")
             .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO articles (conv_id, article_type, title, content) VALUES (99, 'concept', '长文本文章', ?)")
+        sqlx::query("INSERT INTO articles (conv_id, article_type, title, content, user_id) VALUES (99, 'concept', '长文本文章', ?, 1)")
             .bind(&long_q)
             .execute(&pool)
             .await

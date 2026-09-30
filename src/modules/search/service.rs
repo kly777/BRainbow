@@ -157,7 +157,7 @@ mod tests {
         .await
         .unwrap();
         // conv
-        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (9, '费曼学习法讨论', 'conv')")
+        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type, user_id) VALUES (9, '费曼学习法讨论', 'conv', 1)")
             .execute(&ctx.pool).await.unwrap();
         // chat（user 1 树，user 2 树）
         let t1: i64 = sqlx::query_scalar(

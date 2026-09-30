@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT conv_id AS \"conv_id!: i64\", article_type, title,\n                              COALESCE(content, '') AS \"content!: String\",\n                              COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\"\n                       FROM articles\n                       WHERE (user_id = ?1 OR user_id IS NULL) AND (title LIKE ?2 ESCAPE '\\' OR content LIKE ?2 ESCAPE '\\') LIMIT 200",
+  "query": "SELECT conv_id AS \"conv_id!: i64\", article_type, title,\n                              COALESCE(content, '') AS \"content!: String\",\n                              COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\"\n                       FROM articles\n                       WHERE (?1 IS NULL OR user_id = ?1) AND (title LIKE ?2 ESCAPE '\\' OR content LIKE ?2 ESCAPE '\\') LIMIT 200",
   "describe": {
     "columns": [
       {
@@ -60,5 +60,5 @@
       false
     ]
   },
-  "hash": "0cecd30f1db0308c9865460f9d4071fa6b1afd389d8aedf2aed37386cafb5db4"
+  "hash": "e29b534f078d6d933a7e4f1482f6c3858a310a7dcc802d82243888327bb0131e"
 }

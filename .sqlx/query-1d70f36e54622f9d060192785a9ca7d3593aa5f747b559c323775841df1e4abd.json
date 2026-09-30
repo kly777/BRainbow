@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, name, content,\n                      COALESCE(created_at, '') AS \"created_at!: String\"\n               FROM prompt_preset WHERE user_id = ?1 ORDER BY id",
+  "query": "SELECT id, name, content,\n                      COALESCE(created_at, '') AS \"created_at!: String\"\n               FROM prompt_preset WHERE (?1 IS NULL OR user_id = ?1) ORDER BY id",
   "describe": {
     "columns": [
       {
@@ -53,5 +53,5 @@
       false
     ]
   },
-  "hash": "a3c17088fd2cbc2b05ec38405fd500c2d06d91c3512fbd50786416c5801a8a61"
+  "hash": "1d70f36e54622f9d060192785a9ca7d3593aa5f747b559c323775841df1e4abd"
 }

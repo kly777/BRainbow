@@ -1,10 +1,10 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, name, description FROM onto\n               WHERE (user_id = ?1 OR user_id IS NULL)\n                 AND (name LIKE ?2 ESCAPE '\\' OR description LIKE ?2 ESCAPE '\\')\n               ORDER BY id DESC LIMIT ?3",
+  "query": "SELECT id AS \"id: i32\", name, description FROM onto\n               WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
   "describe": {
     "columns": [
       {
-        "name": "id",
+        "name": "id: i32",
         "ordinal": 0,
         "type_info": "Integer",
         "origin": {
@@ -38,7 +38,7 @@
       }
     ],
     "parameters": {
-      "Right": 3
+      "Right": 2
     },
     "nullable": [
       false,
@@ -46,5 +46,5 @@
       true
     ]
   },
-  "hash": "c4dc68a2edd7f48d943a117c49ae44b01406d39085cbefa57da2ebeb021a8ea9"
+  "hash": "d428beaacc31f7a20307660cf4b3187a1bc70ad9ba72a7ff64e9a2c0ed4d3814"
 }

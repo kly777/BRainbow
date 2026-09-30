@@ -4,6 +4,7 @@ use async_trait::async_trait;
 
 use super::model::Onto;
 use super::repository::OntoRepository;
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{
     SearchHit, SearchPort, SearchTarget, fts_query, normalize_search, snippet,
@@ -26,19 +27,19 @@ impl OntoQueryService {
 
     pub async fn list(
         &self,
-        user_id: i32,
+        actor: &Actor,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Onto>, i64), ServiceError> {
         self.repo
-            .find_all_paginated(user_id, limit, offset)
+            .find_all_paginated(actor, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }
 
-    pub async fn by_id(&self, user_id: i32, id: i32) -> Result<Option<Onto>, ServiceError> {
+    pub async fn by_id(&self, actor: &Actor, id: i32) -> Result<Option<Onto>, ServiceError> {
         self.repo
-            .find_by_id(user_id, id)
+            .find_by_id(actor, id)
             .await
             .map_err(ServiceError::Db)
     }
@@ -58,7 +59,7 @@ impl SearchPort for OntoQueryService {
         let (rows, is_fts) = if let Some(fts) = fts_query(q) {
             (
                 self.repo
-                    .search_hits_fts(user_id, &fts, cap)
+                    .search_hits_fts(&Actor::user(user_id), &fts, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 true,
@@ -66,7 +67,7 @@ impl SearchPort for OntoQueryService {
         } else {
             (
                 self.repo
-                    .search_hits(user_id, &like, cap)
+                    .search_hits(&Actor::user(user_id), &like, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 false,

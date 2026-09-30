@@ -306,14 +306,14 @@ mod tests {
     #[tokio::test]
     async fn onto_and_text_module_hits() {
         let ctx = setup().await;
+        // 各模块已按归属过滤（admin 全量、普通用户只看自己的），所以夹具都带上 user_id ——
+        // 无主行是 admin 专属，普通用户搜不到（见 doc/design/authorization.md）
         sqlx::query(
-            "INSERT INTO onto (name, description) VALUES ('费曼学习法', '以教促学，检验理解')",
+            "INSERT INTO onto (name, description, user_id) VALUES ('费曼学习法', '以教促学，检验理解', 1)",
         )
         .execute(&ctx.pool)
         .await
         .unwrap();
-        // text 模块已按归属过滤（admin 全量、普通用户只看自己的），所以这里带上 user_id ——
-        // 无主行是 admin 专属，普通用户搜不到（见 doc/design/authorization.md）
         sqlx::query("INSERT INTO text_note (name, content, user_id) VALUES ('读书笔记', '今天读了费曼物理学讲义第一章', 1)")
             .execute(&ctx.pool).await.unwrap();
 

@@ -214,3 +214,53 @@ async fn ownerless_rows_are_admin_only() {
     );
     assert_eq!(svc.delete(&Actor::admin(3), 1).await.unwrap(), 1);
 }
+
+/// onto：A 创建 → B 不可见/不可改/不可删；admin 全都能
+#[tokio::test]
+async fn onto_isolation_between_users() {
+    use crate::shared::search::SearchPort;
+
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    setup(&pool).await;
+    let pool = Arc::new(pool);
+    let svc = crate::modules::onto::OntoService::new(pool.clone());
+    let qsvc = crate::modules::onto::OntoQueryService::new(pool);
+
+    let a = Actor::user(1);
+    let b = Actor::user(2);
+    let admin = Actor::admin(3);
+
+    let onto_a = svc
+        .create(&a, "A 的本体".into(), Some("以教促学".into()))
+        .await
+        .unwrap();
+
+    assert_eq!(qsvc.list(&b, 10, 0).await.unwrap().1, 0, "B 不应看到 A 的本体");
+    assert!(qsvc.by_id(&b, onto_a.id).await.unwrap().is_none());
+    assert!(
+        svc.update(&b, onto_a.id, Some("B 改的".into()), None)
+            .await
+            .is_err(),
+        "B 不该改得动"
+    );
+    assert_eq!(svc.delete(&b, onto_a.id).await.unwrap(), 0, "B 不该删得掉");
+    // 搜索命中同样按归属过滤（搜索层仍只传 user_id，admin 全量搜索待该层改造）
+    assert!(
+        qsvc.search(2, "以教促学", 5).await.unwrap().is_empty(),
+        "B 不该搜到 A 的本体"
+    );
+    assert_eq!(
+        qsvc.search(1, "以教促学", 5).await.unwrap().len(),
+        1,
+        "A 搜得到自己的"
+    );
+
+    // admin：看得见、改得了、删得掉
+    assert!(qsvc.by_id(&admin, onto_a.id).await.unwrap().is_some());
+    let edited = svc
+        .update(&admin, onto_a.id, Some("admin 改的".into()), None)
+        .await
+        .unwrap();
+    assert_eq!(edited.name, "admin 改的");
+    assert_eq!(svc.delete(&admin, onto_a.id).await.unwrap(), 1);
+}

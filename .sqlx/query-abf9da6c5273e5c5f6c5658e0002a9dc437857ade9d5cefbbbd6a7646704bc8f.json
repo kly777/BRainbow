@@ -1,10 +1,10 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT o.id, o.name, o.description\n               FROM onto_fts fts\n               JOIN onto o ON o.id = fts.rowid\n               WHERE onto_fts MATCH ?2\n                 AND (o.user_id = ?1 OR o.user_id IS NULL)\n               ORDER BY rank\n               LIMIT ?3",
+  "query": "SELECT id AS \"id: i32\", name, description FROM onto\n               WHERE (?1 IS NULL OR user_id = ?1) ORDER BY id LIMIT ?2 OFFSET ?3",
   "describe": {
     "columns": [
       {
-        "name": "id",
+        "name": "id: i32",
         "ordinal": 0,
         "type_info": "Integer",
         "origin": {
@@ -46,5 +46,5 @@
       true
     ]
   },
-  "hash": "56c9e4cef535a8048848478764168392c24a0d83f9aef7320f70e4e0b268eca4"
+  "hash": "abf9da6c5273e5c5f6c5658e0002a9dc437857ade9d5cefbbbd6a7646704bc8f"
 }

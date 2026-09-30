@@ -2,6 +2,7 @@ use sqlx::SqlitePool;
 use std::sync::Arc;
 
 use super::model::SignifierSignified;
+use crate::shared::actor::Actor;
 
 /// SignifierSignified 数据访问层
 #[derive(Clone)]
@@ -18,16 +19,16 @@ impl SignRepository {
     /// 根据ID获取能指所指关系
     pub async fn find_by_id(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i32,
     ) -> Result<Option<SignifierSignified>, sqlx::Error> {
         sqlx::query_as!(
             SignifierSignified,
             r#"SELECT id AS "id: i32", signifier, signified, onto_id AS "onto_id?: i32",
                       weight, relation_type, created_at AS "created_at!: chrono::DateTime<chrono::Utc>"
-               FROM signifier_signified WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+               FROM signifier_signified WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)"#,
             id,
-            user_id
+            actor.owner_scope()
         )
         .fetch_optional(&*self.db)
         .await
@@ -74,11 +75,11 @@ impl SignRepository {
     }
 
     /// 删除能指所指关系
-    pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, sqlx::Error> {
+    pub async fn delete(&self, actor: &Actor, id: i32) -> Result<u64, sqlx::Error> {
         let result = sqlx::query!(
-            "DELETE FROM signifier_signified WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+            "DELETE FROM signifier_signified WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&*self.db)
         .await?;
@@ -89,13 +90,13 @@ impl SignRepository {
     /// 获取所有能指所指关系（分页）
     pub async fn find_all_paginated(
         &self,
-        user_id: i32,
+        actor: &Actor,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<SignifierSignified>, i64), sqlx::Error> {
         let total: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM signifier_signified WHERE user_id = ? OR user_id IS NULL",
-            user_id
+            "SELECT COUNT(*) FROM signifier_signified WHERE (?1 IS NULL OR user_id = ?1)",
+            actor.owner_scope()
         )
         .fetch_one(&*self.db)
         .await?;
@@ -103,9 +104,9 @@ impl SignRepository {
             SignifierSignified,
             r#"SELECT id AS "id: i32", signifier, signified, onto_id AS "onto_id?: i32",
                       weight, relation_type, created_at AS "created_at!: chrono::DateTime<chrono::Utc>"
-               FROM signifier_signified WHERE (user_id = ?1 OR user_id IS NULL)
+               FROM signifier_signified WHERE (?1 IS NULL OR user_id = ?1)
                ORDER BY id LIMIT ?2 OFFSET ?3"#,
-            user_id,
+            actor.owner_scope(),
             limit,
             offset
         )
@@ -117,15 +118,15 @@ impl SignRepository {
     /// 根据能指查找关系（分页）
     pub async fn find_by_signifier_paginated(
         &self,
-        user_id: i32,
+        actor: &Actor,
         signifier: &str,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<SignifierSignified>, i64), sqlx::Error> {
         let total: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM signifier_signified WHERE signifier = ? AND (user_id = ? OR user_id IS NULL)",
+            "SELECT COUNT(*) FROM signifier_signified WHERE signifier = ?1 AND (?2 IS NULL OR user_id = ?2)",
             signifier,
-            user_id
+            actor.owner_scope()
         )
         .fetch_one(&*self.db)
         .await?;
@@ -133,10 +134,10 @@ impl SignRepository {
             SignifierSignified,
             r#"SELECT id AS "id: i32", signifier, signified, onto_id AS "onto_id?: i32",
                       weight, relation_type, created_at AS "created_at!: chrono::DateTime<chrono::Utc>"
-               FROM signifier_signified WHERE signifier = ?1 AND (user_id = ?2 OR user_id IS NULL)
+               FROM signifier_signified WHERE signifier = ?1 AND (?2 IS NULL OR user_id = ?2)
                ORDER BY created_at DESC LIMIT ?3 OFFSET ?4"#,
             signifier,
-            user_id,
+            actor.owner_scope(),
             limit,
             offset
         )
@@ -148,15 +149,15 @@ impl SignRepository {
     /// 根据所指查找关系（分页）
     pub async fn find_by_signified_paginated(
         &self,
-        user_id: i32,
+        actor: &Actor,
         signified: &str,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<SignifierSignified>, i64), sqlx::Error> {
         let total: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM signifier_signified WHERE signified = ? AND (user_id = ? OR user_id IS NULL)",
+            "SELECT COUNT(*) FROM signifier_signified WHERE signified = ?1 AND (?2 IS NULL OR user_id = ?2)",
             signified,
-            user_id
+            actor.owner_scope()
         )
         .fetch_one(&*self.db)
         .await?;
@@ -164,10 +165,10 @@ impl SignRepository {
             SignifierSignified,
             r#"SELECT id AS "id: i32", signifier, signified, onto_id AS "onto_id?: i32",
                       weight, relation_type, created_at AS "created_at!: chrono::DateTime<chrono::Utc>"
-               FROM signifier_signified WHERE signified = ?1 AND (user_id = ?2 OR user_id IS NULL)
+               FROM signifier_signified WHERE signified = ?1 AND (?2 IS NULL OR user_id = ?2)
                ORDER BY created_at DESC LIMIT ?3 OFFSET ?4"#,
             signified,
-            user_id,
+            actor.owner_scope(),
             limit,
             offset
         )
@@ -184,6 +185,11 @@ mod tests {
     use sqlx::SqlitePool;
 
     const TEST_USER_ID: i32 = 1;
+
+    /// 测试调用者：普通用户（owner 就是 TEST_USER_ID）
+    fn actor() -> Actor {
+        Actor::user(TEST_USER_ID)
+    }
 
     async fn setup() -> SignRepository {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
@@ -205,7 +211,7 @@ mod tests {
         assert!(s.id > 0);
         assert_eq!(s.signifier, "猫");
 
-        let found = repo.find_by_id(TEST_USER_ID, s.id).await.unwrap().unwrap();
+        let found = repo.find_by_id(&actor(), s.id).await.unwrap().unwrap();
         assert_eq!(found.signified, "cat");
     }
 
@@ -219,7 +225,7 @@ mod tests {
             .await
             .unwrap();
         let (items, total) = repo
-            .find_by_signifier_paginated(TEST_USER_ID, "狗", 10, 0)
+            .find_by_signifier_paginated(&actor(), "狗", 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 2);
@@ -233,7 +239,7 @@ mod tests {
             .await
             .unwrap();
         let (_, total) = repo
-            .find_by_signified_paginated(TEST_USER_ID, "book", 10, 0)
+            .find_by_signified_paginated(&actor(), "book", 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 1);
@@ -246,7 +252,7 @@ mod tests {
             .create(TEST_USER_ID, "x".into(), "y".into(), None, None, None)
             .await
             .unwrap();
-        assert_eq!(repo.delete(TEST_USER_ID, s.id).await.unwrap(), 1);
-        assert!(repo.find_by_id(TEST_USER_ID, s.id).await.unwrap().is_none());
+        assert_eq!(repo.delete(&actor(), s.id).await.unwrap(), 1);
+        assert!(repo.find_by_id(&actor(), s.id).await.unwrap().is_none());
     }
 }

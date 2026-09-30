@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) FROM signifier_signified WHERE signified = ? AND (user_id = ? OR user_id IS NULL)",
+  "query": "SELECT COUNT(*) FROM signifier_signified WHERE (?1 IS NULL OR user_id = ?1)",
   "describe": {
     "columns": [
       {
@@ -11,11 +11,11 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 1
     },
     "nullable": [
       false
     ]
   },
-  "hash": "02e5f1d04adf8f0ad215904a12a572116204f86a2d344da6f164928f07989433"
+  "hash": "9b9eaaf55e7e5147fd8e07eb3a30a1bf7eb72f08fd2a54ea683f77a71dfd3389"
 }

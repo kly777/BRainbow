@@ -264,3 +264,34 @@ async fn onto_isolation_between_users() {
     assert_eq!(edited.name, "admin 改的");
     assert_eq!(svc.delete(&admin, onto_a.id).await.unwrap(), 1);
 }
+
+/// sign：A 创建 → B 读不到/删不掉；admin 全都能
+#[tokio::test]
+async fn sign_isolation_between_users() {
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    setup(&pool).await;
+    let pool = Arc::new(pool);
+    let svc = crate::modules::sign::SignService::new(pool.clone());
+    let qsvc = crate::modules::sign::SignQueryService::new(pool);
+
+    let a = Actor::user(1);
+    let b = Actor::user(2);
+    let admin = Actor::admin(3);
+
+    let sig = svc
+        .create(&a, "日".into(), "sun".into(), None, None, None)
+        .await
+        .unwrap();
+
+    assert_eq!(qsvc.list(&b, 10, 0).await.unwrap().1, 0, "B 不该看到 A 的关系");
+    assert!(qsvc.by_id(&b, sig.id).await.unwrap().is_none());
+    assert_eq!(svc.delete(&b, sig.id).await.unwrap(), 0, "B 不该删得掉");
+    assert!(
+        qsvc.by_signifier(&b, "日", 10, 0).await.unwrap().0.is_empty(),
+        "B 按能指也查不到"
+    );
+
+    // admin：看得见、删得掉
+    assert!(qsvc.by_id(&admin, sig.id).await.unwrap().is_some());
+    assert_eq!(svc.delete(&admin, sig.id).await.unwrap(), 1);
+}

@@ -4,6 +4,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::shared::actor::Actor;
 use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
@@ -52,7 +53,7 @@ pub async fn create_sign_handler(
 ) -> impl IntoResponse {
     let result = service
         .create(
-            claims.sub,
+            &Actor::from(&claims),
             payload.signifier,
             payload.signified,
             payload.onto_id,
@@ -70,7 +71,7 @@ pub async fn get_signs_handler(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let result = query
-        .list(claims.sub, pagination.limit(), pagination.offset())
+        .list(&Actor::from(&claims), pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
             let items: Vec<SignResponse> = items.into_iter().map(SignResponse::from).collect();
@@ -85,7 +86,7 @@ pub async fn get_sign_handler(
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let result = query
-        .by_id(claims.sub, id)
+        .by_id(&Actor::from(&claims), id)
         .await
         .map(|opt| opt.map(SignResponse::from));
     error::found_or(result, "获取符号关系")
@@ -96,7 +97,7 @@ pub async fn delete_sign_handler(
     Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    error::deleted_or(service.delete(claims.sub, id).await, "删除符号关系")
+    error::deleted_or(service.delete(&Actor::from(&claims), id).await, "删除符号关系")
 }
 
 pub async fn get_signs_by_signifier_handler(
@@ -107,7 +108,7 @@ pub async fn get_signs_by_signifier_handler(
 ) -> impl IntoResponse {
     let result = query
         .by_signifier(
-            claims.sub,
+            &Actor::from(&claims),
             &signifier,
             pagination.limit(),
             pagination.offset(),
@@ -128,7 +129,7 @@ pub async fn get_signs_by_signified_handler(
 ) -> impl IntoResponse {
     let result = query
         .by_signified(
-            claims.sub,
+            &Actor::from(&claims),
             &signified,
             pagination.limit(),
             pagination.offset(),

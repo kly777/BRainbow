@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use super::model::SignifierSignified;
 use super::repository::SignRepository;
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 
 /// 查询侧服务——纯读取，无副作用。
@@ -21,49 +22,49 @@ impl SignQueryService {
 
     pub async fn list(
         &self,
-        user_id: i32,
+        actor: &Actor,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<SignifierSignified>, i64), ServiceError> {
         self.repo
-            .find_all_paginated(user_id, limit, offset)
+            .find_all_paginated(actor, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }
 
     pub async fn by_id(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i32,
     ) -> Result<Option<SignifierSignified>, ServiceError> {
         self.repo
-            .find_by_id(user_id, id)
+            .find_by_id(actor, id)
             .await
             .map_err(ServiceError::Db)
     }
 
     pub async fn by_signifier(
         &self,
-        user_id: i32,
+        actor: &Actor,
         signifier: &str,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<SignifierSignified>, i64), ServiceError> {
         self.repo
-            .find_by_signifier_paginated(user_id, signifier, limit, offset)
+            .find_by_signifier_paginated(actor, signifier, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }
 
     pub async fn by_signified(
         &self,
-        user_id: i32,
+        actor: &Actor,
         signified: &str,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<SignifierSignified>, i64), ServiceError> {
         self.repo
-            .find_by_signified_paginated(user_id, signified, limit, offset)
+            .find_by_signified_paginated(actor, signified, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }

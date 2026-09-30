@@ -380,6 +380,125 @@ mod tests {
         assert!(err.to_string().contains("高于程序支持"));
     }
 
+    /// 造一个"v19 旧库 + 无主数据"的场面：admin=1、普通用户=2
+    async fn legacy_db_with_orphans(pool: &SqlitePool) {
+        create_tables(pool).await.unwrap();
+        sqlx::query("PRAGMA user_version = 19")
+            .execute(pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO user (id, name, password_hash, role) VALUES (1, 'boss', 'x', 'admin')")
+            .execute(pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO user (id, name, password_hash, role) VALUES (2, 'kid', 'x', 'user')")
+            .execute(pool)
+            .await
+            .unwrap();
+        for sql in [
+            "INSERT INTO card (content) VALUES ('老卡片')",
+            "INSERT INTO task (title) VALUES ('老任务')",
+            "INSERT INTO chunk (content) VALUES ('老正文')",
+            "INSERT INTO bookmark (title, url) VALUES ('老书签', 'https://x.dev')",
+            "INSERT INTO ai_settings (user_id, endpoint, api_key, model) VALUES (NULL, 'http://x', 'k', 'm')",
+            // 有主的行（普通用户的）——认领不该动它
+            "INSERT INTO card (content, user_id) VALUES ('别人的卡片', 2)",
+            // 凭据表：NULL 是"无主 key"的既有语义，不认领
+            "INSERT INTO api_key (key_hash, role, user_id) VALUES ('h', 'user', NULL)",
+        ] {
+            sqlx::query(sql).execute(pool).await.unwrap();
+        }
+    }
+
+    async fn null_user_id_count(pool: &SqlitePool, table: &str) -> i64 {
+        sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+            "SELECT COUNT(*) FROM {table} WHERE user_id IS NULL"
+        )))
+        .fetch_one(pool)
+        .await
+        .unwrap()
+    }
+
+    /// v20：NULL（无主/历史）行认领给当前 admin；有主的行与凭据表不动
+    #[tokio::test]
+    async fn v20_claims_orphan_rows_for_the_admin() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        legacy_db_with_orphans(&pool).await;
+
+        migrate(&pool).await.unwrap();
+        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+
+        for table in [
+            "card",
+            "task",
+            "chunk",
+            "bookmark",
+            "ai_settings",
+        ] {
+            assert_eq!(null_user_id_count(&pool, table).await, 0, "{table} 应无无主行");
+        }
+        // card 里那条有主的仍属普通用户，且多了认领来的那条
+        let owners: Vec<(String, Option<i64>)> =
+            sqlx::query_as("SELECT content, user_id FROM card ORDER BY id")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            owners,
+            vec![
+                ("老卡片".to_string(), Some(1)),
+                ("别人的卡片".to_string(), Some(2))
+            ]
+        );
+        // 凭据表不认领：NULL 表示"无主 key"（校验时映射 sub=-1）
+        assert_eq!(null_user_id_count(&pool, "api_key").await, 1);
+    }
+
+    /// 幂等：再跑一次（重新出现无主行、版本退回 19）依然只认领无主行
+    #[tokio::test]
+    async fn v20_is_idempotent() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        legacy_db_with_orphans(&pool).await;
+        migrate(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO card (content) VALUES ('之后又冒出的无主卡片')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("PRAGMA user_version = 19")
+            .execute(&pool)
+            .await
+            .unwrap();
+        migrate(&pool).await.unwrap();
+
+        assert_eq!(null_user_id_count(&pool, "card").await, 0);
+        let claimed: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM card WHERE user_id = 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(claimed, 2);
+    }
+
+    /// 还没有 admin（全新库/刚建库还没人注册）：整段跳过，不报错、不改数据
+    #[tokio::test]
+    async fn v20_skips_when_no_admin_exists() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        create_tables(&pool).await.unwrap();
+        sqlx::query("PRAGMA user_version = 19")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO card (content) VALUES ('无主卡片')")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        migrate(&pool).await.unwrap();
+
+        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+        assert_eq!(null_user_id_count(&pool, "card").await, 1);
+    }
+
     /// v18：新增 is_private 列（存量文件默认公开）、同名标签合并为全局唯一
     #[tokio::test]
     async fn v18_adds_visibility_and_merges_duplicate_tags() {

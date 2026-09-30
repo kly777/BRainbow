@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, title, content,\n                      COALESCE(word_count, 0) AS \"word_count!: i64\",\n                      notes,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\"\n               FROM reading_article WHERE (user_id = ?1 OR user_id IS NULL) ORDER BY id DESC",
+  "query": "SELECT id, title, content,\n                      COALESCE(word_count, 0) AS \"word_count!: i64\",\n                      notes,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\"\n               FROM reading_article WHERE (?1 IS NULL OR user_id = ?1) ORDER BY id DESC",
   "describe": {
     "columns": [
       {
@@ -72,5 +72,5 @@
       false
     ]
   },
-  "hash": "d4c53810ef6f50ebf62f7247189fc463c7e2a45e2e01957f1e71ca6de4afcb6c"
+  "hash": "89cd3e43100ddb625fdb405bc31ce4674b24e1d1e3d78c13ce7cd4ce7c8be397"
 }

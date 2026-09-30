@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT r.id, r.title, r.content,\n                      0 AS \"title_hit!: i64\"\n               FROM reading_article_fts fts\n               JOIN reading_article r ON r.id = fts.rowid\n               WHERE reading_article_fts MATCH ?2\n                 AND (r.user_id = ?1 OR r.user_id IS NULL)\n               ORDER BY rank\n               LIMIT ?3",
+  "query": "SELECT r.id, r.title, r.content,\n                      0 AS \"title_hit!: i64\"\n               FROM reading_article_fts fts\n               JOIN reading_article r ON r.id = fts.rowid\n               WHERE reading_article_fts MATCH ?2\n                 AND (?1 IS NULL OR r.user_id = ?1)\n               ORDER BY rank\n               LIMIT ?3",
   "describe": {
     "columns": [
       {
@@ -53,5 +53,5 @@
       false
     ]
   },
-  "hash": "09a3d6ff67c1d39156c81e29bb2b38a59d68b7ad0efa7821e9d6a0fadff93643"
+  "hash": "1045f44e8c79352dd96fdb8a557af13a3a763c5f4327ab66996618b77ade34f5"
 }

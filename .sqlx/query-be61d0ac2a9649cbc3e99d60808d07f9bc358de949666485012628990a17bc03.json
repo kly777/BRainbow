@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, title, content,\n                      COALESCE(word_count, 0) AS \"word_count!: i64\",\n                      notes,\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\"\n               FROM reading_article WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)",
+  "query": "SELECT id, title, content,\n                      title LIKE ?2 ESCAPE '\\' AS \"title_hit!: i64\"\n               FROM reading_article\n               WHERE (?1 IS NULL OR user_id = ?1)\n                 AND (title LIKE ?2 ESCAPE '\\' OR content LIKE ?2 ESCAPE '\\')\n               ORDER BY (title LIKE ?2 ESCAPE '\\') DESC, id DESC LIMIT ?3",
   "describe": {
     "columns": [
       {
@@ -37,40 +37,21 @@
         }
       },
       {
-        "name": "word_count!: i64",
+        "name": "title_hit!: i64",
         "ordinal": 3,
-        "type_info": "Integer",
-        "origin": "Expression"
-      },
-      {
-        "name": "notes",
-        "ordinal": 4,
-        "type_info": "Text",
-        "origin": {
-          "Table": {
-            "table": "reading_article",
-            "name": "notes"
-          }
-        }
-      },
-      {
-        "name": "created_at!: String",
-        "ordinal": 5,
-        "type_info": "Datetime",
+        "type_info": "Null",
         "origin": "Expression"
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 3
     },
     "nullable": [
       false,
       false,
       false,
-      false,
-      false,
-      false
+      null
     ]
   },
-  "hash": "e2bdaa49d0e9d3e30b811a479a13cf9940902f7c07434da283df4180450a6186"
+  "hash": "be61d0ac2a9649cbc3e99d60808d07f9bc358de949666485012628990a17bc03"
 }

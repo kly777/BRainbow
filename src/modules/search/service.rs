@@ -151,7 +151,7 @@ mod tests {
             .execute(&ctx.pool).await.unwrap();
         // reading（reading_article 表）
         sqlx::query(
-            "INSERT INTO reading_article (title, content) VALUES ('费曼自传', '别闹了费曼先生')",
+            "INSERT INTO reading_article (title, content, user_id) VALUES ('费曼自传', '别闹了费曼先生', 1)",
         )
         .execute(&ctx.pool)
         .await
@@ -467,9 +467,9 @@ mod tests {
     #[tokio::test]
     async fn reading_title_hits_rank_before_content_hits() {
         let ctx = setup().await;
-        sqlx::query("INSERT INTO reading_article (title, content) VALUES ('无关文章', '这段文字提到了关键词XYZ的用法')")
+        sqlx::query("INSERT INTO reading_article (title, content, user_id) VALUES ('无关文章', '这段文字提到了关键词XYZ的用法', 1)")
             .execute(&ctx.pool).await.unwrap();
-        sqlx::query("INSERT INTO reading_article (title, content) VALUES ('关键词XYZ完全指南', '正文没有命中词')")
+        sqlx::query("INSERT INTO reading_article (title, content, user_id) VALUES ('关键词XYZ完全指南', '正文没有命中词', 1)")
             .execute(&ctx.pool).await.unwrap();
 
         let res = ctx.svc.search(1, "关键词XYZ", 5).await.unwrap();

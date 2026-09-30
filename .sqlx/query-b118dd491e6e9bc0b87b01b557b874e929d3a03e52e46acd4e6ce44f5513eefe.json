@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, name, content FROM text_note\n               WHERE (user_id = ?1 OR user_id IS NULL)\n                 AND (name LIKE ?2 ESCAPE '\\' OR content LIKE ?2 ESCAPE '\\')\n               ORDER BY id DESC LIMIT ?3",
+  "query": "SELECT id, name, content FROM text_note\n               WHERE (?1 IS NULL OR user_id = ?1)\n               ORDER BY id",
   "describe": {
     "columns": [
       {
@@ -38,7 +38,7 @@
       }
     ],
     "parameters": {
-      "Right": 3
+      "Right": 1
     },
     "nullable": [
       false,
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "0675977166bdaef63a5e314188f18fe9c253b8f97bb609c62e3ca609ccbfdd0b"
+  "hash": "b118dd491e6e9bc0b87b01b557b874e929d3a03e52e46acd4e6ce44f5513eefe"
 }

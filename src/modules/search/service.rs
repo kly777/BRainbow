@@ -312,7 +312,9 @@ mod tests {
         .execute(&ctx.pool)
         .await
         .unwrap();
-        sqlx::query("INSERT INTO text_note (name, content) VALUES ('读书笔记', '今天读了费曼物理学讲义第一章')")
+        // text 模块已按归属过滤（admin 全量、普通用户只看自己的），所以这里带上 user_id ——
+        // 无主行是 admin 专属，普通用户搜不到（见 doc/design/authorization.md）
+        sqlx::query("INSERT INTO text_note (name, content, user_id) VALUES ('读书笔记', '今天读了费曼物理学讲义第一章', 1)")
             .execute(&ctx.pool).await.unwrap();
 
         let res = ctx.svc.search(1, "费曼", 5).await.unwrap();

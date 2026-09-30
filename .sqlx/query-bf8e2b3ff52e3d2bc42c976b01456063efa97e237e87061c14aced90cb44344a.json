@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT t.id, t.name, t.content\n               FROM text_note_fts fts\n               JOIN text_note t ON t.id = fts.rowid\n               WHERE text_note_fts MATCH ?2\n                 AND (t.user_id = ?1 OR t.user_id IS NULL)\n               ORDER BY rank\n               LIMIT ?3",
+  "query": "SELECT t.id, t.name, t.content\n               FROM text_note_fts fts\n               JOIN text_note t ON t.id = fts.rowid\n               WHERE text_note_fts MATCH ?2\n                 AND (?1 IS NULL OR t.user_id = ?1)\n               ORDER BY rank\n               LIMIT ?3",
   "describe": {
     "columns": [
       {
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "996648bbdc27e62a56de2b578b2506ef30b508864ceb24a9b1899a4b206b8c82"
+  "hash": "bf8e2b3ff52e3d2bc42c976b01456063efa97e237e87061c14aced90cb44344a"
 }

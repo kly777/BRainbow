@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{
     SearchHit, SearchPort, SearchTarget, fts_query, normalize_search, snippet,
@@ -24,8 +25,11 @@ impl TextQueryService {
         }
     }
 
-    pub async fn load_tabs(&self) -> Result<Vec<(i64, String, String)>, ServiceError> {
-        self.repo.load_tabs().await.map_err(ServiceError::Db)
+    pub async fn load_tabs(
+        &self,
+        actor: &Actor,
+    ) -> Result<Vec<(i64, String, String)>, ServiceError> {
+        self.repo.load_tabs(actor).await.map_err(ServiceError::Db)
     }
 }
 
@@ -37,13 +41,14 @@ impl SearchPort for TextQueryService {
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
+        // 搜索层还没接 Actor（`SearchPort` 仍只传 user_id）：这里按普通用户口径取行
         let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
         let (rows, use_fts) = if let Some(fts) = fts_query(q) {
             (
                 self.repo
-                    .search_hits_fts(user_id, &fts, cap)
+                    .search_hits_fts(&Actor::user(user_id), &fts, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 true,
@@ -51,7 +56,7 @@ impl SearchPort for TextQueryService {
         } else {
             (
                 self.repo
-                    .search_hits(user_id, &like, cap)
+                    .search_hits(&Actor::user(user_id), &like, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 false,

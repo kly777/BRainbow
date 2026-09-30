@@ -13,6 +13,7 @@ use tracing::{info, warn};
 use super::model::{FileListQuery, UpdateFileRequest};
 use super::query::FileQueryService;
 use super::service::FileService;
+use crate::shared::actor::Actor;
 use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::error_types::ServiceError;
@@ -60,14 +61,13 @@ struct UploadResponse {
     duplicate: bool,
 }
 
-/// 当前请求者能否改动该文件：仅上传者本人；
-/// 匿名的老文件（`user_id` 为 NULL）视为公共资源，任何登录用户可整理。
-fn can_edit(file_user_id: Option<i64>, viewer: Option<i64>) -> bool {
-    match (file_user_id, viewer) {
-        (Some(owner), Some(uid)) => owner == uid,
-        (None, Some(_)) => true,
-        _ => false,
-    }
+/// 当前请求者能否改动该文件：上传者本人与 admin（行级判据在 `shared/actor.rs`）。
+///
+/// 公开可读 ≠ 谁都能改 —— `is_private` 只管"看不看得见"，改名/删除/切可见性一律只认归属。
+/// 无主的老文件（`user_id` 为 NULL）在 v20 已认领给 admin，"任何登录用户可整理"那一档已取消。
+/// 未认证（`None`）恒 false：写路由都在认证组内，这里只是 fail-closed。
+fn can_edit(file_user_id: Option<i64>, viewer: Option<&Actor>) -> bool {
+    viewer.is_some_and(|actor| actor.can_write(file_user_id))
 }
 
 /// 缩略图地址：只有"能出缩略图且内容还在"的位图才给（原因见 `thumb::can_generate`）。
@@ -77,7 +77,7 @@ fn thumb_url_for(stored_id: &str, mime_type: &str, missing: bool) -> Option<Stri
         .then(|| format!("/api/file/{stored_id}/thumb"))
 }
 
-fn to_response(f: &super::model::File, include_meta: bool, viewer: Option<i64>) -> FileResponse {
+fn to_response(f: &super::model::File, include_meta: bool, viewer: Option<&Actor>) -> FileResponse {
     FileResponse {
         id: f.id,
         stored_id: f.stored_id.clone(),
@@ -109,7 +109,7 @@ fn to_response(f: &super::model::File, include_meta: bool, viewer: Option<i64>) 
     }
 }
 
-fn to_summary_response(f: &super::model::FileSummary, viewer: Option<i64>) -> FileResponse {
+fn to_summary_response(f: &super::model::FileSummary, viewer: Option<&Actor>) -> FileResponse {
     FileResponse {
         id: f.id,
         stored_id: f.stored_id.clone(),
@@ -161,6 +161,7 @@ pub async fn upload_handler(
     Query(query): Query<UploadQuery>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
+    let actor = Actor::from(&claims);
     while let Ok(Some(mut field)) = multipart.next_field().await {
         let name = field.name().unwrap_or("").to_string();
         if name != "file" {
@@ -258,7 +259,7 @@ pub async fn upload_handler(
                 &head,
                 &original_name,
                 &final_mime,
-                Some(claims.sub as i64),
+                Some(&actor),
                 hints,
             )
             .await
@@ -271,7 +272,7 @@ pub async fn upload_handler(
                     StatusCode::CREATED
                 };
                 let body = UploadResponse {
-                    file: to_response(&outcome.file, false, Some(claims.sub as i64)),
+                    file: to_response(&outcome.file, false, Some(&actor)),
                     duplicate: outcome.duplicate,
                 };
                 return (status, Json(body)).into_response();
@@ -290,13 +291,13 @@ pub async fn list_handler(
     State(query_svc): State<FileQueryService>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match query_svc.list(query, Some(claims.sub as i64)).await {
+    let actor = Actor::from(&claims);
+    match query_svc.list(query, Some(&actor)).await {
         Ok(response) => {
-            let viewer = Some(claims.sub as i64);
             let items: Vec<FileResponse> = response
                 .items
                 .iter()
-                .map(|f| to_summary_response(f, viewer))
+                .map(|f| to_summary_response(f, Some(&actor)))
                 .collect();
             Json(serde_json::json!({
                 "items": items,
@@ -318,14 +319,14 @@ pub async fn get_handler(
     Extension(claims): Extension<Claims>,
     Path(stored_id): Path<String>,
 ) -> impl IntoResponse {
-    let viewer = claims.sub as i64;
+    let actor = Actor::from(&claims);
     match query.get_by_stored_id(&stored_id).await {
         Ok(file) => {
             // 别人的私密文件按"不存在"处理，不暴露其存在
-            if !crate::modules::file::query::is_visible(&file, Some(viewer)) {
+            if !crate::modules::file::query::is_visible(&file, Some(&actor)) {
                 return ServiceError::NotFound("文件不存在".into()).into_response();
             }
-            Json(to_response(&file, true, Some(viewer))).into_response()
+            Json(to_response(&file, true, Some(&actor))).into_response()
         }
         Err(e) => e.into_response(),
     }
@@ -396,9 +397,9 @@ pub fn parse_range(header_value: &str, total: u64) -> Option<RangeSpec> {
     })
 }
 
-/// 内容类路由的统一可见性检查：公开文件放行；私密文件要求有效凭据且为上传者。
+/// 内容类路由的统一可见性检查：公开文件放行；私密文件要求有效凭据且为上传者（或 admin）。
 ///
-/// 内容路由与预览路由共用这一份 —— 可见性规则一旦分叉就会漏，而漏的那一边
+/// 内容路由、预览路由与缩略图路由共用这一份 —— 可见性规则一旦分叉就会漏，而漏的那一边
 /// 等于把私密文件放出来（见 doc/design/file-service.md 里"三处规则要同步"那条）。
 async fn check_content_access(
     auth: &crate::app::auth::service::AuthService,
@@ -408,10 +409,23 @@ async fn check_content_access(
     if !file.is_private {
         return None;
     }
+    // 未认证是常态（Markdown 内嵌的 <img src> 不带 Authorization），解析失败不报错
     let viewer = crate::app::http::auth::optional_claims(auth, headers)
         .await
-        .map(|c| c.sub as i64);
-    match super::query::content_access(file, viewer) {
+        .map(|c| Actor::from(&c));
+    denial_response(super::query::content_access(file, viewer.as_ref()))
+}
+
+/// 访问判定三态 → 响应（纯映射，便于直测）。
+///
+/// 「未认证」与「已认证但越权」必须区分开：
+/// - [`ContentAccess::NeedAuth`] → **401**：没带凭据不是越权，而是"你得先登录"，前端据此弹登录框；
+/// - [`ContentAccess::Deny`] → **404**：登录了但不是上传者（也不是 admin），按"不存在"处理，
+///   不泄露"这个文件存在"。
+///
+/// 两者的差别是刻意的：把 Deny 写成 401 会让前端对别人的私密文件反复弹登录框。
+fn denial_response(access: super::query::ContentAccess) -> Option<Response> {
+    match access {
         super::query::ContentAccess::Allow => None,
         super::query::ContentAccess::Deny => {
             Some(ServiceError::NotFound("文件不存在".into()).into_response())
@@ -899,11 +913,9 @@ pub async fn update_handler(
     Path(stored_id): Path<String>,
     Json(payload): Json<UpdateFileRequest>,
 ) -> impl IntoResponse {
-    match service
-        .update(&stored_id, payload, Some(claims.sub as i64))
-        .await
-    {
-        Ok(file) => Json(to_response(&file, true, Some(claims.sub as i64))).into_response(),
+    let actor = Actor::from(&claims);
+    match service.update(&stored_id, payload, &actor).await {
+        Ok(file) => Json(to_response(&file, true, Some(&actor))).into_response(),
         Err(e) => e.into_response(),
     }
 }
@@ -926,7 +938,7 @@ pub async fn delete_handler(
         .delete(
             &stored_id,
             query.force.unwrap_or(false),
-            Some(claims.sub as i64),
+            &Actor::from(&claims),
         )
         .await
     {
@@ -948,7 +960,7 @@ pub async fn tags_handler(
     State(query): State<FileQueryService>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match query.get_tags_with_count(claims.sub as i64).await {
+    match query.get_tags_with_count(&Actor::from(&claims)).await {
         Ok(tags) => {
             let items: Vec<TagResponse> = tags
                 .into_iter()
@@ -969,13 +981,17 @@ pub async fn stats_handler(
     State(service): State<FileService>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match service.stats(Some(claims.sub as i64)).await {
+    let actor = Actor::from(&claims);
+    match service.stats(Some(&actor)).await {
         Ok(stats) => Json(stats).into_response(),
         Err(e) => e.into_response(),
     }
 }
 
-/// 重命名标签
+/// 重命名标签。
+///
+/// **刻意的授权例外**：标签全局共享，任何登录用户都可整理（路由本身在认证组内）——
+/// 见 `repository.rs` 的"标签操作"说明。
 pub async fn rename_tag_handler(
     State(service): State<FileService>,
     Path(tag_id): Path<i64>,
@@ -988,7 +1004,7 @@ pub async fn rename_tag_handler(
     }
 }
 
-/// 删除标签（仅解除关联，文件保留）
+/// 删除标签（仅解除关联，文件保留）。同为全局共享的例外。
 pub async fn delete_tag_handler(
     State(service): State<FileService>,
     Path(tag_id): Path<i64>,
@@ -999,7 +1015,7 @@ pub async fn delete_tag_handler(
     }
 }
 
-/// 合并标签：把路径上的标签合并进请求体指定的目标标签
+/// 合并标签：把路径上的标签合并进请求体指定的目标标签。同为全局共享的例外。
 pub async fn merge_tag_handler(
     State(service): State<FileService>,
     Path(tag_id): Path<i64>,
@@ -1067,20 +1083,35 @@ mod tests {
     /// 前端因此永远收不到该字段（前端测试用 mock 数据，测不出来）。
     #[test]
     fn responses_carry_missing_flag() {
-        let detail = serde_json::to_value(to_response(&sample_file(true), true, Some(7))).unwrap();
+        let detail =
+            serde_json::to_value(to_response(&sample_file(true), true, Some(&Actor::user(7))))
+                .unwrap();
         assert_eq!(detail["missing"], serde_json::json!(true));
 
-        let listed =
-            serde_json::to_value(to_summary_response(&sample_summary(true), Some(7))).unwrap();
+        let listed = serde_json::to_value(to_summary_response(
+            &sample_summary(true),
+            Some(&Actor::user(7)),
+        ))
+        .unwrap();
         assert_eq!(listed["missing"], serde_json::json!(true));
 
-        let intact = serde_json::to_value(to_response(&sample_file(false), true, Some(7))).unwrap();
+        let intact = serde_json::to_value(to_response(
+            &sample_file(false),
+            true,
+            Some(&Actor::user(7)),
+        ))
+        .unwrap();
         assert_eq!(intact["missing"], serde_json::json!(false));
     }
 
     #[test]
     fn response_hides_internal_fields_and_encodes_url() {
-        let detail = serde_json::to_value(to_response(&sample_file(false), true, Some(7))).unwrap();
+        let detail = serde_json::to_value(to_response(
+            &sample_file(false),
+            true,
+            Some(&Actor::user(7)),
+        ))
+        .unwrap();
         // user_id 是内部字段，不暴露给前端
         assert!(detail.get("user_id").is_none());
         // url 由后端拼好，文件名整体百分号编码（非 ASCII 与空格都编码）
@@ -1095,14 +1126,62 @@ mod tests {
 
     #[test]
     fn summary_response_omits_meta_but_detail_includes_it() {
-        let detail = serde_json::to_value(to_response(&sample_file(false), true, Some(7))).unwrap();
+        let detail = serde_json::to_value(to_response(
+            &sample_file(false),
+            true,
+            Some(&Actor::user(7)),
+        ))
+        .unwrap();
         assert_eq!(detail["meta"]["pages"], serde_json::json!("5"));
 
-        let listed =
-            serde_json::to_value(to_summary_response(&sample_summary(false), Some(7))).unwrap();
+        let listed = serde_json::to_value(to_summary_response(
+            &sample_summary(false),
+            Some(&Actor::user(7)),
+        ))
+        .unwrap();
         assert!(
             listed.get("meta").is_none(),
             "列表不带 meta（skip_serializing_if）"
+        );
+    }
+
+    // ── can_edit（响应里的按钮开关） ──
+    //
+    // 前端据此决定显示不显示改名/删除按钮，值错了就是"UI 上没按钮但接口其实允许"
+    // 或反过来 —— 它是行级判据 `Actor::can_write` 的透传，这里钉住四态。
+
+    #[test]
+    fn can_edit_matrix_for_owner_other_admin_and_anonymous() {
+        let owner = Actor::user(7);
+        let other = Actor::user(8);
+        let admin = Actor::admin(1);
+
+        // 有主文件：上传者与 admin 可编辑，别人与未认证不行
+        assert!(can_edit(Some(7), Some(&owner)));
+        assert!(can_edit(Some(7), Some(&admin)), "admin 全管");
+        assert!(!can_edit(Some(7), Some(&other)));
+        assert!(!can_edit(Some(7), None), "未认证不能编辑");
+
+        // 无主的老文件（v20 之前的历史数据）：只有 admin
+        assert!(can_edit(None, Some(&admin)));
+        assert!(!can_edit(None, Some(&other)));
+        assert!(!can_edit(None, None));
+    }
+
+    /// 内容路由的三态映射：未认证 401、越权 404、放行无事发生。
+    /// 这条把"401 与 404 不能混"钉在 HTTP 层（纯判定在 `query::content_access`）。
+    #[test]
+    fn content_access_denial_maps_need_auth_to_401_and_deny_to_404() {
+        use crate::modules::file::query::ContentAccess;
+
+        assert!(denial_response(ContentAccess::Allow).is_none());
+        assert_eq!(
+            denial_response(ContentAccess::Deny).unwrap().status(),
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(
+            denial_response(ContentAccess::NeedAuth).unwrap().status(),
+            StatusCode::UNAUTHORIZED
         );
     }
 
@@ -1193,7 +1272,12 @@ mod tests {
     /// 与 missing 那条同类 —— 前端测试用 mock，字段漏映射是测不出来的。
     #[test]
     fn responses_advertise_thumb_url_only_when_usable() {
-        let image = serde_json::to_value(to_response(&sample_file(false), true, Some(7))).unwrap();
+        let image = serde_json::to_value(to_response(
+            &sample_file(false),
+            true,
+            Some(&Actor::user(7)),
+        ))
+        .unwrap();
         assert_eq!(
             image["thumb_url"],
             serde_json::json!("/api/file/abc123456789/thumb")
@@ -1202,17 +1286,24 @@ mod tests {
         // SVG：image crate 解不了，前端继续用原图 → 不给 thumb_url
         let mut svg = sample_file(false);
         svg.mime_type = "image/svg+xml".into();
-        let svg_json = serde_json::to_value(to_response(&svg, true, Some(7))).unwrap();
+        let svg_json =
+            serde_json::to_value(to_response(&svg, true, Some(&Actor::user(7)))).unwrap();
         assert!(svg_json.get("thumb_url").is_none());
 
         // 内容丢了就别指路（指向一个必然 404 的地址只会多一次失败请求）
-        let gone =
-            serde_json::to_value(to_summary_response(&sample_summary(true), Some(7))).unwrap();
+        let gone = serde_json::to_value(to_summary_response(
+            &sample_summary(true),
+            Some(&Actor::user(7)),
+        ))
+        .unwrap();
         assert!(gone.get("thumb_url").is_none());
 
         // 列表里 pdf 没有缩略图（sample_summary 就是 pdf）
-        let listed =
-            serde_json::to_value(to_summary_response(&sample_summary(false), Some(7))).unwrap();
+        let listed = serde_json::to_value(to_summary_response(
+            &sample_summary(false),
+            Some(&Actor::user(7)),
+        ))
+        .unwrap();
         assert!(listed.get("thumb_url").is_none());
     }
 

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::model::{FileTag, FileTagWithCount, NewFile, SortOrder};
+use crate::shared::actor::Actor;
 use crate::shared::db_query::like_contains;
 
 #[derive(Debug, FromRow)]
@@ -41,17 +42,32 @@ pub struct FileSearchHit {
     pub name_hit: i64,
 }
 
-/// 向 WHERE 追加可见性条件：公开文件人人可见，私密文件仅上传者可见。
-/// `viewer` 为 `None`（未登录）时只能看到公开文件。
-fn push_visibility(qb: &mut QueryBuilder<Sqlite>, viewer: Option<i64>) {
+/// 向 WHERE 追加可见性条件（QueryBuilder 侧）。
+///
+/// 三档语义（**file 特有的"公开"维度，别照搬到别的模块**）：
+/// - `None`（未认证）→ 只看公开文件：Markdown 里的 `<img src>` 不带 Authorization，
+///   内容路由能对外服务的前提就在这里；
+/// - admin → 不加条件（两档判据的"全管"）；
+/// - 普通用户 → 公开 + 自己创建的（含自己的私密文件）。
+///
+/// 与 `query::is_visible` / `query::content_access` 是同一套规则的另外两处实现，
+/// 改一处必须同步其余两处（见 doc/design/authorization.md §3 的 file 行）。
+///
+/// 静态 SQL（`query!` 宏）侧照抄同一形状：`(?N IS NULL OR f.is_private = 0 OR f.user_id = ?N)`，
+/// 绑 [`Actor::owner_scope`]（admin 绑 NULL → 条件恒真）。那几处调用点都在认证组内，
+/// 不存在"未认证"这一档，所以不需要下面第一条分支。
+fn push_visibility(qb: &mut QueryBuilder<Sqlite>, viewer: Option<&Actor>) {
     match viewer {
-        Some(uid) => {
-            qb.push(" AND (f.is_private = 0 OR f.user_id = ")
-                .push_bind(uid)
-                .push(")");
-        }
         None => {
             qb.push(" AND f.is_private = 0");
+        }
+        // admin：全量，不加条件
+        Some(actor) if actor.is_admin => {}
+        Some(actor) => {
+            // 归属值一律取 owner_scope()：判据只在 shared/actor.rs，这里不拼 user_id
+            qb.push(" AND (f.is_private = 0 OR f.user_id = ")
+                .push_bind(actor.owner_scope())
+                .push(")");
         }
     }
 }
@@ -107,7 +123,12 @@ impl FileRepository {
         Ok(row)
     }
 
-    /// 根据 stored_id 查找文件
+    /// 根据 stored_id 查找文件。
+    ///
+    /// **刻意不做归属过滤**：行级判据在拿到行之后由调用方套 ——
+    /// 内容路由要区分"未认证（401）"与"不是你的（404）"（`query::content_access`），
+    /// 写路径要区分"不存在"与"越权"而两者都装 404（`service::ensure_can_mutate`），
+    /// 只靠 SQL 过滤拿不到这个区分。维护路径（一致性扫描 / 哈希回填）也走这里。
     pub async fn find_by_stored_id(&self, stored_id: &str) -> Result<Option<FileRow>, sqlx::Error> {
         let row = sqlx::query_as!(
             FileRow,
@@ -124,7 +145,7 @@ impl FileRepository {
         Ok(row)
     }
 
-    /// 根据 id 查找文件
+    /// 根据 id 查找文件（同样不做归属过滤，理由见 [`Self::find_by_stored_id`]）
     pub async fn find_by_id(&self, id: i64) -> Result<Option<FileRow>, sqlx::Error> {
         let row = sqlx::query_as!(
             FileRow,
@@ -141,7 +162,8 @@ impl FileRepository {
         Ok(row)
     }
 
-    /// 按内容哈希全局查重（同一内容全系统唯一；NULL 哈希不参与匹配）
+    /// 按内容哈希全局查重（同一内容全系统唯一；NULL 哈希不参与匹配）。
+    /// 系统级去重，不做归属过滤（命中的既有记录保持原归属）。
     pub async fn find_by_hash(&self, content_hash: &str) -> Result<Option<FileRow>, sqlx::Error> {
         let row = sqlx::query_as!(
             FileRow,
@@ -160,29 +182,30 @@ impl FileRepository {
         Ok(row)
     }
 
-    /// 文件库统计：总数、总占用、按类别分布（QueryBuilder 处理可选 user_id）
+    /// 文件库统计：总数、总占用、按类别分布（QueryBuilder 处理可选归属过滤）
     pub async fn stats(
         &self,
-        user_id: Option<i64>,
+        viewer: Option<&Actor>,
     ) -> Result<(i64, i64, Vec<(String, i64, i64)>), sqlx::Error> {
         let mut totals = QueryBuilder::new(
             "SELECT COUNT(*) AS count, COALESCE(SUM(f.size_bytes), 0) AS bytes FROM file f WHERE 1 = 1",
         );
-        push_visibility(&mut totals, user_id);
+        push_visibility(&mut totals, viewer);
         let (total_count, total_bytes): (i64, i64) =
             totals.build_query_as().fetch_one(&*self.db).await?;
 
         let mut by_cat = QueryBuilder::new(
             "SELECT f.category AS category, COUNT(*) AS count, COALESCE(SUM(f.size_bytes), 0) AS bytes FROM file f WHERE 1 = 1",
         );
-        push_visibility(&mut by_cat, user_id);
+        push_visibility(&mut by_cat, viewer);
         by_cat.push(" GROUP BY f.category ORDER BY bytes DESC");
         let rows: Vec<(String, i64, i64)> = by_cat.build_query_as().fetch_all(&*self.db).await?;
 
         Ok((total_count, total_bytes, rows))
     }
 
-    /// 列出缺 content_hash 的记录（id + stored_id），供启动回填使用
+    /// 列出缺 content_hash 的记录（id + stored_id），供启动回填使用。
+    /// 系统级维护路径：不做归属过滤（要回填的是全库的存量记录）。
     pub async fn find_without_hash(&self) -> Result<Vec<(i64, String)>, sqlx::Error> {
         let rows = sqlx::query!(
             "SELECT id AS \"id!: i64\", stored_id FROM file WHERE content_hash IS NULL ORDER BY id"
@@ -220,7 +243,8 @@ impl FileRepository {
         Ok(result.rows_affected() > 0)
     }
 
-    /// 更新文件名
+    /// 更新文件名。**调用方（service）必须先过归属判定**（`ensure_can_mutate`）：
+    /// 归属列上传后不再变动，所以"先查行、再判定、后写"不存在 TOCTOU 窗口。
     pub async fn update_name(
         &self,
         stored_id: &str,
@@ -262,7 +286,7 @@ impl FileRepository {
         Ok(())
     }
 
-    /// 切换文件公开 / 私密（权限在 service 层校验）
+    /// 切换文件公开 / 私密（**调用方 service 层先过归属判定**：改可见性同样是写操作）
     pub async fn update_visibility(
         &self,
         stored_id: &str,
@@ -278,7 +302,9 @@ impl FileRepository {
         Ok(())
     }
 
-    /// 删除文件记录
+    /// 删除文件记录（**调用方 service 层先过归属判定**）。
+    /// 这里刻意用不带归属过滤的 [`Self::find_by_stored_id`] 取行 ——
+    /// 需要它把"行内容"返回给调用方做磁盘清理，权限已由 service 判定。
     pub async fn delete(&self, stored_id: &str) -> Result<Option<FileRow>, sqlx::Error> {
         let existing = self.find_by_stored_id(stored_id).await?;
         if existing.is_some() {
@@ -293,7 +319,7 @@ impl FileRepository {
     pub async fn count(
         &self,
         category: Option<&str>,
-        viewer: Option<i64>,
+        viewer: Option<&Actor>,
     ) -> Result<i64, sqlx::Error> {
         let mut qb = QueryBuilder::new("SELECT COUNT(*) FROM file f WHERE 1 = 1");
         if let Some(cat) = category {
@@ -309,7 +335,7 @@ impl FileRepository {
         limit: i64,
         offset: i64,
         category: Option<&str>,
-        user_id: Option<i64>,
+        viewer: Option<&Actor>,
         sort: SortOrder,
     ) -> Result<Vec<FileRow>, sqlx::Error> {
         // 动态 WHERE + 白名单 ORDER BY：避免为「筛选 × 排序」组合写 N 个静态查询
@@ -319,7 +345,7 @@ impl FileRepository {
         if let Some(cat) = category {
             qb.push(" AND f.category = ").push_bind(cat);
         }
-        push_visibility(&mut qb, user_id);
+        push_visibility(&mut qb, viewer);
         qb.push(sort.order_by());
         qb.push(" LIMIT ")
             .push_bind(limit)
@@ -329,11 +355,14 @@ impl FileRepository {
         qb.build_query_as::<FileRow>().fetch_all(&*self.db).await
     }
 
-    /// 按标签筛选文件（通过标签名），可选按文件名模糊过滤
+    /// 按标签筛选文件（通过标签名），可选按文件名模糊过滤。
+    ///
+    /// `actor` 不是可选：标签筛选只走认证的列表端点（guest 没有这一档）。
+    /// 标签本身全局共享 —— 见 [`Self::get_or_create_tag`]。
     pub async fn find_by_tag(
         &self,
         tag_name: &str,
-        user_id: i64,
+        actor: &Actor,
         name_query: Option<&str>,
         limit: i64,
         offset: i64,
@@ -342,11 +371,9 @@ impl FileRepository {
         let mut qb = QueryBuilder::new(
             "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.category AS file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f JOIN file_tag_rel ftr ON f.id = ftr.file_id JOIN file_tag ft ON ftr.tag_id = ft.id WHERE ft.name = ",
         );
-        qb.push_bind(tag_name)
-            // 标签全局共享；可见性：公开文件人人可见，私密文件仅上传者
-            .push(" AND (f.is_private = 0 OR f.user_id = ")
-            .push_bind(user_id)
-            .push(")");
+        qb.push_bind(tag_name);
+        // 可见性：公开文件人人可见，私密文件仅上传者与 admin
+        push_visibility(&mut qb, Some(actor));
         if let Some(q) = name_query {
             qb.push(" AND f.original_name LIKE ")
                 .push_bind(like_contains(q))
@@ -365,7 +392,7 @@ impl FileRepository {
     pub async fn count_by_name(
         &self,
         query: &str,
-        viewer: Option<i64>,
+        viewer: Option<&Actor>,
     ) -> Result<i64, sqlx::Error> {
         let mut qb = QueryBuilder::new("SELECT COUNT(*) FROM file f WHERE f.original_name LIKE ");
         qb.push_bind(like_contains(query)).push(" ESCAPE '\\'");
@@ -377,7 +404,7 @@ impl FileRepository {
     pub async fn search_by_name(
         &self,
         query: &str,
-        user_id: Option<i64>,
+        viewer: Option<&Actor>,
         limit: i64,
         offset: i64,
         sort: SortOrder,
@@ -386,7 +413,7 @@ impl FileRepository {
             "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.category AS file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f WHERE f.original_name LIKE ",
         );
         qb.push_bind(like_contains(query)).push(" ESCAPE '\\'");
-        push_visibility(&mut qb, user_id);
+        push_visibility(&mut qb, viewer);
         qb.push(sort.order_by());
         qb.push(" LIMIT ")
             .push_bind(limit)
@@ -397,6 +424,9 @@ impl FileRepository {
     }
 
     // ── 一致性扫描 ──
+    //
+    // 这几条是**系统级维护路径**（启动自检 / 孤儿回收 / 哈希回填），刻意为全库口径：
+    // 不做归属过滤，也不要给它加 —— 扫描看见的是磁盘与数据库的整体状态。
 
     /// 全部文件的 stored_id（DB → 磁盘方向的一致性比对用）
     pub async fn all_stored_ids(&self) -> Result<Vec<String>, sqlx::Error> {
@@ -425,9 +455,13 @@ impl FileRepository {
     ///
     /// `like` 由 `like_contains` 生成（已转义 `%` / `_` / `\`），
     /// SQL 里用 `?1` 复用同一个模式串。
+    ///
+    /// 可见性用静态 SQL 的标准形状 `(?2 IS NULL OR f.is_private = 0 OR f.user_id = ?2)`：
+    /// admin 的 `owner_scope` 是 NULL → 条件恒真（全量）；普通用户 → 公开 + 自己的。
+    /// 搜索端点（`SearchPort`）只给得到 `user_id`，所以落到这里的一定是普通用户口径。
     pub async fn search_hits(
         &self,
-        user_id: i64,
+        actor: &Actor,
         like: &str,
         limit: i64,
     ) -> Result<Vec<FileSearchHit>, sqlx::Error> {
@@ -447,7 +481,7 @@ impl FileRepository {
                         ORDER BY m.key LIMIT 1) AS "matched_meta?: String",
                       CASE WHEN f.original_name LIKE ?1 ESCAPE '\' THEN 0 ELSE 1 END AS "name_hit!: i64"
                  FROM file f
-                WHERE (f.is_private = 0 OR f.user_id = ?2)
+                WHERE (?2 IS NULL OR f.is_private = 0 OR f.user_id = ?2)
                   AND (f.original_name LIKE ?1 ESCAPE '\'
                        OR EXISTS (SELECT 1 FROM file_tag_rel r2
                                     JOIN file_tag t2 ON t2.id = r2.tag_id
@@ -458,7 +492,7 @@ impl FileRepository {
                          f.created_at DESC
                 LIMIT ?3"#,
             like,
-            user_id,
+            actor.owner_scope(),
             limit
         )
         .fetch_all(&*self.db)
@@ -466,6 +500,14 @@ impl FileRepository {
     }
 
     // ── 标签操作 ──
+    //
+    // **刻意的授权例外：标签是全局共享的，不按用户隔离。**
+    //
+    // `file_tag` / `file_tag_rel` 没有"归属过滤"这一档：同名标签全库只有一个，
+    // 任何人都能看到、能重命名、能合并（`user_id` 列只记录创建者，不参与唯一性与权限）。
+    // 这是 file 模块既有的产品语义（整理一套公共的标签体系），不是漏改：
+    // 紧跟着的每个方法都**不要**加 `(? IS NULL OR user_id = ?)`。
+    // 唯一带可见性的是"标签下的文件计数"（`get_tags_with_count`），它数的是文件，不是标签。
 
     /// 获取或创建标签。标签全局共享（同名只有一个），`user_id` 仅记录创建者。
     pub async fn get_or_create_tag(
@@ -513,7 +555,8 @@ impl FileRepository {
         .await
     }
 
-    /// 设置文件标签（全量替换）
+    /// 设置文件标签（全量替换）。
+    /// 子表随父：调用方（service）先过文件的归属判定，这里不另立规则。
     pub async fn set_file_tags(&self, file_id: i64, tag_ids: &[i64]) -> Result<(), sqlx::Error> {
         // 删除旧关联
         sqlx::query!("DELETE FROM file_tag_rel WHERE file_id = ?", file_id)
@@ -534,7 +577,7 @@ impl FileRepository {
         Ok(())
     }
 
-    /// 获取文件的标签列表
+    /// 获取文件的标签列表（子表随父：可见性跟着 [`Self::find_by_stored_id`] 的行级判定走）
     pub async fn get_file_tags(&self, file_id: i64) -> Result<Vec<FileTag>, sqlx::Error> {
         let tags = sqlx::query_as!(
             FileTag,
@@ -578,7 +621,7 @@ impl FileRepository {
         Ok(map)
     }
 
-    /// 所有标签（标签全局共享，不按用户过滤）
+    /// 所有标签（标签全局共享，不按归属过滤 —— 见上面"标签操作"的说明）
     pub async fn get_all_tags(&self) -> Result<Vec<FileTag>, sqlx::Error> {
         let tags = sqlx::query_as!(
             FileTag,
@@ -592,10 +635,11 @@ impl FileRepository {
 
     /// 标签 + **当前查看者可见的**关联文件数（标签管理用）。
     ///
-    /// 计数按可见性过滤：私密文件不计入别人看到的标签数。
+    /// 计数按可见性过滤：私密文件不计入别人看到的标签数（admin 则全量计入）。
+    /// 静态 SQL 的标准形状见 [`Self::search_hits`]。
     pub async fn get_tags_with_count(
         &self,
-        viewer_id: i64,
+        actor: &Actor,
     ) -> Result<Vec<FileTagWithCount>, sqlx::Error> {
         let rows = sqlx::query_as!(
             FileTagWithCount,
@@ -604,10 +648,10 @@ impl FileRepository {
                FROM file_tag t
                LEFT JOIN file_tag_rel r ON r.tag_id = t.id
                LEFT JOIN file f ON f.id = r.file_id
-                    AND (f.is_private = 0 OR f.user_id = ?)
+                    AND (?1 IS NULL OR f.is_private = 0 OR f.user_id = ?1)
                GROUP BY t.id, t.name
                ORDER BY t.name"#,
-            viewer_id
+            actor.owner_scope()
         )
         .fetch_all(&*self.db)
         .await?;
@@ -615,7 +659,8 @@ impl FileRepository {
         Ok(rows)
     }
 
-    /// 重命名标签（同用户下名称唯一，冲突由唯一约束兜底）
+    /// 重命名标签（名称全局唯一，冲突由唯一约束兜底）。
+    /// 标签是全局共享的，任何登录用户都能整理 —— 刻意的授权例外，见上面"标签操作"。
     pub async fn rename_tag(&self, tag_id: i64, name: &str) -> Result<(), sqlx::Error> {
         sqlx::query("UPDATE file_tag SET name = ? WHERE id = ?")
             .bind(name)
@@ -625,7 +670,7 @@ impl FileRepository {
         Ok(())
     }
 
-    /// 删除标签（关联记录级联删除，文件本身不受影响）
+    /// 删除标签（关联记录级联删除，文件本身不受影响）。同样是全局共享的例外。
     pub async fn delete_tag(&self, tag_id: i64) -> Result<(), sqlx::Error> {
         sqlx::query("DELETE FROM file_tag WHERE id = ?")
             .bind(tag_id)
@@ -634,7 +679,8 @@ impl FileRepository {
         Ok(())
     }
 
-    /// 合并标签：把 from_tag 的关联移到 to_tag 后删除 from_tag（事务内完成）
+    /// 合并标签：把 from_tag 的关联移到 to_tag 后删除 from_tag（事务内完成）。
+    /// 同样是全局共享的例外（任何登录用户可整理标签体系）。
     pub async fn merge_tags(&self, from_tag: i64, to_tag: i64) -> Result<(), sqlx::Error> {
         let mut tx = self.db.begin().await?;
 
@@ -658,7 +704,8 @@ impl FileRepository {
 
     // ── 元信息操作 ──
 
-    /// 设置文件元信息（全量替换）
+    /// 设置文件元信息（全量替换）。
+    /// 子表随父：调用方（service）先过文件的归属判定，这里不另立规则。
     pub async fn set_file_meta(
         &self,
         file_id: i64,
@@ -684,7 +731,7 @@ impl FileRepository {
         Ok(())
     }
 
-    /// 获取文件的元信息
+    /// 获取文件的元信息（子表随父，见 [`Self::set_file_meta`]）
     pub async fn get_file_meta(
         &self,
         file_id: i64,
@@ -723,11 +770,12 @@ impl FileRepository {
         Ok(row.unwrap_or(0) as usize)
     }
 
-    /// 按标签统计文件数量，可选按文件名模糊过滤
+    /// 按标签统计文件数量，可选按文件名模糊过滤。
+    /// 可见性口径与 [`Self::find_by_tag`] 相同（静态 SQL 形状见 [`Self::search_hits`]）。
     pub async fn count_by_tag(
         &self,
         tag_name: &str,
-        user_id: i64,
+        actor: &Actor,
         name_query: Option<&str>,
     ) -> Result<i64, sqlx::Error> {
         match name_query {
@@ -737,10 +785,10 @@ impl FileRepository {
                     r#"SELECT COUNT(*) FROM file f
                        JOIN file_tag_rel ftr ON f.id = ftr.file_id
                        JOIN file_tag ft ON ftr.tag_id = ft.id
-                       WHERE ft.name = ? AND (f.is_private = 0 OR f.user_id = ?)
-                         AND f.original_name LIKE ? ESCAPE '\'"#,
+                       WHERE ft.name = ?1 AND (?2 IS NULL OR f.is_private = 0 OR f.user_id = ?2)
+                         AND f.original_name LIKE ?3 ESCAPE '\'"#,
                     tag_name,
-                    user_id,
+                    actor.owner_scope(),
                     pattern
                 )
                 .fetch_one(&*self.db)
@@ -751,9 +799,9 @@ impl FileRepository {
                     r#"SELECT COUNT(*) FROM file f
                        JOIN file_tag_rel ftr ON f.id = ftr.file_id
                        JOIN file_tag ft ON ftr.tag_id = ft.id
-                       WHERE ft.name = ? AND (f.is_private = 0 OR f.user_id = ?)"#,
+                       WHERE ft.name = ?1 AND (?2 IS NULL OR f.is_private = 0 OR f.user_id = ?2)"#,
                     tag_name,
-                    user_id
+                    actor.owner_scope()
                 )
                 .fetch_one(&*self.db)
                 .await
@@ -770,8 +818,9 @@ mod tests {
     async fn setup() -> FileRepository {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         crate::db::migrate(&pool).await.unwrap();
-        // file.user_id / file_tag.user_id 有外键约束，先建两个测试用户（7 与 8 用于隔离断言）
-        for (id, name) in [(7, "file-user"), (8, "other-user")] {
+        // file.user_id / file_tag.user_id 有外键约束，先建测试用户：
+        // 7 / 8 用于隔离断言，1 是 admin（`Actor::admin(1)` 要有对应的 user 行）
+        for (id, name) in [(1, "admin-user"), (7, "file-user"), (8, "other-user")] {
             sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (?, ?, 'x')")
                 .bind(id)
                 .bind(name)
@@ -780,6 +829,11 @@ mod tests {
                 .unwrap();
         }
         FileRepository::new(Arc::new(pool))
+    }
+
+    /// 管理员查看者（admin 的行级判据只认 `is_admin`，与表里的 role 列无关）
+    fn admin() -> Actor {
+        Actor::admin(1)
     }
 
     /// 类别不再入库（v19 起由 mime 生成），这里保留 `category` 参数只为让调用点
@@ -961,7 +1015,7 @@ mod tests {
         insert_at(&repo, "third", "2026-09-09T12:00:00+00:00").await;
 
         let page1 = repo
-            .find_all(2, 0, None, Some(7), SortOrder::default())
+            .find_all(2, 0, None, Some(&Actor::user(7)), SortOrder::default())
             .await
             .unwrap();
         assert_eq!(page1.len(), 2);
@@ -970,7 +1024,7 @@ mod tests {
         assert_eq!(page1[1].stored_id, "second");
 
         let page2 = repo
-            .find_all(2, 2, None, Some(7), SortOrder::default())
+            .find_all(2, 2, None, Some(&Actor::user(7)), SortOrder::default())
             .await
             .unwrap();
         assert_eq!(page2.len(), 1);
@@ -991,28 +1045,66 @@ mod tests {
             .unwrap();
 
         let images = repo
-            .find_all(10, 0, Some("image"), Some(7), SortOrder::default())
+            .find_all(
+                10,
+                0,
+                Some("image"),
+                Some(&Actor::user(7)),
+                SortOrder::default(),
+            )
             .await
             .unwrap();
         assert_eq!(images.len(), 3);
         assert!(images.iter().all(|f| f.stored_id.starts_with("img-")));
 
-        assert_eq!(repo.count(Some("image"), Some(7)).await.unwrap(), 3);
-        assert_eq!(repo.count(Some("video"), Some(7)).await.unwrap(), 1);
-        assert_eq!(repo.count(None, Some(7)).await.unwrap(), 4);
+        assert_eq!(
+            repo.count(Some("image"), Some(&Actor::user(7)))
+                .await
+                .unwrap(),
+            3
+        );
+        assert_eq!(
+            repo.count(Some("video"), Some(&Actor::user(7)))
+                .await
+                .unwrap(),
+            1
+        );
+        assert_eq!(repo.count(None, Some(&Actor::user(7))).await.unwrap(), 4);
 
         // img-3 设为私密：对 7 不可见，对上传者 8 可见
         sqlx::query("UPDATE file SET is_private = 1 WHERE stored_id = 'img-3'")
             .execute(&*repo.db)
             .await
             .unwrap();
-        assert_eq!(repo.count(Some("image"), Some(7)).await.unwrap(), 2);
-        assert_eq!(repo.count(None, Some(7)).await.unwrap(), 3);
+        assert_eq!(
+            repo.count(Some("image"), Some(&Actor::user(7)))
+                .await
+                .unwrap(),
+            2
+        );
+        assert_eq!(repo.count(None, Some(&Actor::user(7))).await.unwrap(), 3);
         // user 8 看到：自己的私密 1 条 + 别人的公开 2 条
-        assert_eq!(repo.count(Some("image"), Some(8)).await.unwrap(), 3);
+        assert_eq!(
+            repo.count(Some("image"), Some(&Actor::user(8)))
+                .await
+                .unwrap(),
+            3
+        );
 
         // 未登录（None）只能看到公开文件
         assert_eq!(repo.count(None, None).await.unwrap(), 3);
+
+        // admin 全看：别人（8）的私密文件也计入
+        assert_eq!(repo.count(Some("image"), Some(&admin())).await.unwrap(), 3);
+        assert_eq!(repo.count(None, Some(&admin())).await.unwrap(), 4);
+        let as_admin = repo
+            .find_all(10, 0, Some("image"), Some(&admin()), SortOrder::default())
+            .await
+            .unwrap();
+        assert!(
+            as_admin.iter().any(|f| f.stored_id == "img-3"),
+            "admin 应能看到别人的私密文件"
+        );
     }
 
     #[tokio::test]
@@ -1041,14 +1133,14 @@ mod tests {
 
         assert_eq!(
             ids(repo
-                .find_all(10, 0, None, Some(7), SortOrder::SizeDesc)
+                .find_all(10, 0, None, Some(&Actor::user(7)), SortOrder::SizeDesc)
                 .await
                 .unwrap()),
             vec!["a", "c", "b"]
         );
         assert_eq!(
             ids(repo
-                .find_all(10, 0, None, Some(7), SortOrder::SizeAsc)
+                .find_all(10, 0, None, Some(&Actor::user(7)), SortOrder::SizeAsc)
                 .await
                 .unwrap()),
             vec!["b", "c", "a"]
@@ -1056,14 +1148,14 @@ mod tests {
         // 名称排序不区分大小写
         assert_eq!(
             ids(repo
-                .find_all(10, 0, None, Some(7), SortOrder::NameAsc)
+                .find_all(10, 0, None, Some(&Actor::user(7)), SortOrder::NameAsc)
                 .await
                 .unwrap()),
             vec!["b", "a", "c"]
         );
         assert_eq!(
             ids(repo
-                .find_all(10, 0, None, Some(7), SortOrder::NameDesc)
+                .find_all(10, 0, None, Some(&Actor::user(7)), SortOrder::NameDesc)
                 .await
                 .unwrap()),
             vec!["c", "a", "b"]
@@ -1094,7 +1186,13 @@ mod tests {
 
         // 筛选 + 排序：只看图片，按大小降序
         let images = repo
-            .find_all(10, 0, Some("image"), Some(7), SortOrder::SizeDesc)
+            .find_all(
+                10,
+                0,
+                Some("image"),
+                Some(&Actor::user(7)),
+                SortOrder::SizeDesc,
+            )
             .await
             .unwrap();
         assert_eq!(
@@ -1107,7 +1205,7 @@ mod tests {
 
         // 搜索 + 排序（搜文件名后缀，命中两张图）
         let searched = repo
-            .search_by_name(".png", Some(7), 10, 0, SortOrder::SizeAsc)
+            .search_by_name(".png", Some(&Actor::user(7)), 10, 0, SortOrder::SizeAsc)
             .await
             .unwrap();
         assert_eq!(
@@ -1148,7 +1246,7 @@ mod tests {
         .await
         .unwrap();
 
-        let (count, bytes, rows) = repo.stats(Some(7)).await.unwrap();
+        let (count, bytes, rows) = repo.stats(Some(&Actor::user(7))).await.unwrap();
         assert_eq!(count, 4);
         assert_eq!(bytes, 1449);
         // 按占用降序
@@ -1161,11 +1259,11 @@ mod tests {
             .execute(&*repo.db)
             .await
             .unwrap();
-        let (count, bytes, _) = repo.stats(Some(7)).await.unwrap();
+        let (count, bytes, _) = repo.stats(Some(&Actor::user(7))).await.unwrap();
         assert_eq!(count, 3);
         assert_eq!(bytes, 450);
         // user 8 看到：自己的私密 1 条 + 别人的公开 3 条
-        let (owner_count, owner_bytes, _) = repo.stats(Some(8)).await.unwrap();
+        let (owner_count, owner_bytes, _) = repo.stats(Some(&Actor::user(8))).await.unwrap();
         assert_eq!(owner_count, 4);
         assert_eq!(owner_bytes, 1449);
 
@@ -1173,6 +1271,110 @@ mod tests {
         let (guest_count, guest_bytes, _) = repo.stats(None).await.unwrap();
         assert_eq!(guest_count, 3);
         assert_eq!(guest_bytes, 450);
+
+        // admin 全看：别人的私密 1 条也算进来
+        let (admin_count, admin_bytes, _) = repo.stats(Some(&admin())).await.unwrap();
+        assert_eq!(admin_count, 4);
+        assert_eq!(admin_bytes, 1449);
+    }
+
+    /// 四态 × 公开/私密 的可见性矩阵（读侧：列表 / 标签计数 / 全局搜索）。
+    ///
+    /// 上传者 / 他人 / admin / 未认证 各走一遍，公开与私密两份文件都过 ——
+    /// "公开对所有人（含未认证）可见"与"私密仅上传者与 admin"是本模块最容易漏的规则，
+    /// 而它在 SQL 侧有两处实现（`push_visibility` 的 QueryBuilder 分支 + 静态 SQL 的形状），
+    /// 这里把两处一起钉住；行级那两处（`is_visible` / `content_access`）在 query.rs 的测试里。
+    #[tokio::test]
+    async fn visibility_matrix_across_read_paths() {
+        let repo = setup().await;
+        // 7 的一份公开 + 一份私密；8 的一份公开 + 一份私密
+        repo.insert(new_file_named("pub-7", "公开七.bin", "other", Some(7)))
+            .await
+            .unwrap();
+        repo.insert(NewFile {
+            is_private: true,
+            ..new_file_named("prv-7", "私密七.bin", "other", Some(7))
+        })
+        .await
+        .unwrap();
+        repo.insert(new_file_named("pub-8", "公开八.bin", "other", Some(8)))
+            .await
+            .unwrap();
+        repo.insert(NewFile {
+            is_private: true,
+            ..new_file_named("prv-8", "私密八.bin", "other", Some(8))
+        })
+        .await
+        .unwrap();
+        // 四份都打上同一个标签：标签全局共享，但"标签下的文件计数"按可见性走
+        let tag = repo.get_or_create_tag("矩阵", 7).await.unwrap();
+        for stored_id in ["pub-7", "prv-7", "pub-8", "prv-8"] {
+            let id = repo.find_by_stored_id(stored_id).await.unwrap().unwrap().id;
+            repo.set_file_tags(id, &[tag.id]).await.unwrap();
+        }
+
+        // 排序无关的比对：把 stored_id 收成有序 Vec
+        fn sorted(mut ids: Vec<String>) -> Vec<String> {
+            ids.sort();
+            ids
+        }
+        async fn listed(repo: &FileRepository, viewer: Option<&Actor>) -> Vec<String> {
+            sorted(
+                repo.find_all(10, 0, None, viewer, SortOrder::default())
+                    .await
+                    .unwrap()
+                    .into_iter()
+                    .map(|f| f.stored_id)
+                    .collect(),
+            )
+        }
+        async fn searched(repo: &FileRepository, actor: &Actor) -> Vec<String> {
+            sorted(
+                repo.search_hits(actor, &like_contains(".bin"), 10)
+                    .await
+                    .unwrap()
+                    .into_iter()
+                    .map(|h| h.stored_id)
+                    .collect(),
+            )
+        }
+        async fn tag_count(repo: &FileRepository, actor: &Actor) -> i64 {
+            repo.get_tags_with_count(actor)
+                .await
+                .unwrap()
+                .into_iter()
+                .map(|t| t.count)
+                .sum()
+        }
+        let owner7 = Actor::user(7);
+        let other8 = Actor::user(8);
+        let adm = admin();
+
+        // 上传者 7：自己的两份 + 别人的公开
+        assert_eq!(
+            listed(&repo, Some(&owner7)).await,
+            ["prv-7", "pub-7", "pub-8"]
+        );
+        assert_eq!(searched(&repo, &owner7).await, ["prv-7", "pub-7", "pub-8"]);
+        assert_eq!(tag_count(&repo, &owner7).await, 3);
+
+        // 其他用户 8：对称的另一半
+        assert_eq!(
+            listed(&repo, Some(&other8)).await,
+            ["prv-8", "pub-7", "pub-8"]
+        );
+        assert_eq!(tag_count(&repo, &other8).await, 3);
+
+        // admin：四份全在（含别人的私密）
+        assert_eq!(
+            listed(&repo, Some(&adm)).await,
+            ["prv-7", "prv-8", "pub-7", "pub-8"]
+        );
+        assert_eq!(searched(&repo, &adm).await, listed(&repo, Some(&adm)).await);
+        assert_eq!(tag_count(&repo, &adm).await, 4);
+
+        // 未认证：只看公开
+        assert_eq!(listed(&repo, None).await, ["pub-7", "pub-8"]);
     }
 
     // ── 更新 / 删除 ──
@@ -1280,7 +1482,7 @@ mod tests {
         repo.get_or_create_tag("未用", 7).await.unwrap();
         repo.set_file_tags(f1.id, &[used.id]).await.unwrap();
 
-        let tags = repo.get_tags_with_count(7).await.unwrap();
+        let tags = repo.get_tags_with_count(&Actor::user(7)).await.unwrap();
         assert_eq!(tags.len(), 2);
         let by_name = |n: &str| tags.iter().find(|t| t.name == n).unwrap().count;
         assert_eq!(by_name("在用"), 1);
@@ -1419,7 +1621,7 @@ mod tests {
 
         // 仅按 tag
         let hits = repo
-            .find_by_tag("文档", 7, None, 10, 0, SortOrder::default())
+            .find_by_tag("文档", &Actor::user(7), None, 10, 0, SortOrder::default())
             .await
             .unwrap();
         assert_eq!(hits.len(), 1);
@@ -1427,12 +1629,26 @@ mod tests {
 
         // tag + 文件名 q 组合：不匹配的 q 应过滤掉
         let no_hits = repo
-            .find_by_tag("文档", 7, Some("zzz"), 10, 0, SortOrder::default())
+            .find_by_tag(
+                "文档",
+                &Actor::user(7),
+                Some("zzz"),
+                10,
+                0,
+                SortOrder::default(),
+            )
             .await
             .unwrap();
         assert!(no_hits.is_empty());
         let one_hit = repo
-            .find_by_tag("文档", 7, Some("报告"), 10, 0, SortOrder::default())
+            .find_by_tag(
+                "文档",
+                &Actor::user(7),
+                Some("报告"),
+                10,
+                0,
+                SortOrder::default(),
+            )
             .await
             .unwrap();
         assert_eq!(one_hit.len(), 1);
@@ -1441,7 +1657,7 @@ mod tests {
         // 标签全局共享：用户 8 按同一标签查，看到的是公开文件（f1 属于 7 但默认公开）
         repo.get_or_create_tag("文档", 8).await.unwrap();
         let from_other = repo
-            .find_by_tag("文档", 8, None, 10, 0, SortOrder::default())
+            .find_by_tag("文档", &Actor::user(8), None, 10, 0, SortOrder::default())
             .await
             .unwrap();
         assert_eq!(from_other.len(), 1);
@@ -1453,14 +1669,14 @@ mod tests {
             .await
             .unwrap();
         assert!(
-            repo.find_by_tag("文档", 8, None, 10, 0, SortOrder::default())
+            repo.find_by_tag("文档", &Actor::user(8), None, 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .is_empty(),
             "别人的私密文件不应出现在标签筛选里"
         );
         assert_eq!(
-            repo.find_by_tag("文档", 7, None, 10, 0, SortOrder::default())
+            repo.find_by_tag("文档", &Actor::user(7), None, 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .len(),
@@ -1484,9 +1700,24 @@ mod tests {
         repo.set_file_tags(f1.id, &[tag.id]).await.unwrap();
         repo.set_file_tags(f2.id, &[tag.id]).await.unwrap();
 
-        assert_eq!(repo.count_by_tag("杂项", 7, None).await.unwrap(), 2);
-        assert_eq!(repo.count_by_tag("杂项", 7, Some("alp")).await.unwrap(), 1);
-        assert_eq!(repo.count_by_tag("杂项", 7, Some("none")).await.unwrap(), 0);
+        assert_eq!(
+            repo.count_by_tag("杂项", &Actor::user(7), None)
+                .await
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            repo.count_by_tag("杂项", &Actor::user(7), Some("alp"))
+                .await
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            repo.count_by_tag("杂项", &Actor::user(7), Some("none"))
+                .await
+                .unwrap(),
+            0
+        );
     }
 
     #[tokio::test]
@@ -1527,7 +1758,7 @@ mod tests {
             .unwrap();
 
         let hits = repo
-            .search_by_name("预算", Some(7), 10, 0, SortOrder::default())
+            .search_by_name("预算", Some(&Actor::user(7)), 10, 0, SortOrder::default())
             .await
             .unwrap();
         assert_eq!(hits.len(), 1);
@@ -1535,16 +1766,24 @@ mod tests {
 
         // 公开文件人人可见：空查询返回全部（含其他用户的公开文件）
         let all = repo
-            .search_by_name("", Some(7), 10, 0, SortOrder::default())
+            .search_by_name("", Some(&Actor::user(7)), 10, 0, SortOrder::default())
             .await
             .unwrap();
         assert_eq!(all.len(), 3);
 
-        assert_eq!(repo.count_by_name("预算", Some(7)).await.unwrap(), 1);
-        assert_eq!(repo.count_by_name("", Some(7)).await.unwrap(), 3);
+        assert_eq!(
+            repo.count_by_name("预算", Some(&Actor::user(7)))
+                .await
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            repo.count_by_name("", Some(&Actor::user(7))).await.unwrap(),
+            3
+        );
         // 公开共享：用户 8 能搜到别人（user 7）的公开文件
         let shared = repo
-            .search_by_name("预算", Some(8), 10, 0, SortOrder::default())
+            .search_by_name("预算", Some(&Actor::user(8)), 10, 0, SortOrder::default())
             .await
             .unwrap();
         assert_eq!(shared.len(), 1);
@@ -1556,14 +1795,14 @@ mod tests {
             .await
             .unwrap();
         assert!(
-            repo.search_by_name("预算", Some(8), 10, 0, SortOrder::default())
+            repo.search_by_name("预算", Some(&Actor::user(8)), 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .is_empty(),
             "别人的私密文件不应出现在搜索结果里"
         );
         assert_eq!(
-            repo.search_by_name("预算", Some(7), 10, 0, SortOrder::default())
+            repo.search_by_name("预算", Some(&Actor::user(7)), 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .len(),
@@ -1571,14 +1810,14 @@ mod tests {
         );
         // LIKE 通配符转义：搜索 "%" 应作为字面字符（0 命中），而非匹配全部
         assert_eq!(
-            repo.search_by_name("%", Some(7), 10, 0, SortOrder::default())
+            repo.search_by_name("%", Some(&Actor::user(7)), 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .len(),
             0
         );
         assert_eq!(
-            repo.search_by_name("_", Some(7), 10, 0, SortOrder::default())
+            repo.search_by_name("_", Some(&Actor::user(7)), 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .len(),

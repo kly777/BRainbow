@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM mem_tag\n               WHERE mem_id = ?1 AND tag_id = ?2\n                 AND EXISTS (SELECT 1 FROM mem m WHERE m.id = mem_tag.mem_id AND (?3 IS NULL OR m.user_id = ?3))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "af00ebbaf44d657401bc830f0ea092a67f6fbb127f09f83ee6390eb2734f6e4b"
+}

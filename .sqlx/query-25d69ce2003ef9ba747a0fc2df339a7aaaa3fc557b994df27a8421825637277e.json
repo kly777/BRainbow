@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\", name,\n                      COALESCE(created_at, '') AS \"created_at!: String\"\n               FROM tag WHERE user_id = ?1 AND name LIKE ?2 ESCAPE '\\'\n               ORDER BY name LIMIT 20",
+  "query": "SELECT t.id AS \"id: i32\", t.name,\n                      COALESCE(t.created_at, '') AS \"created_at!: String\"\n               FROM tag t\n               JOIN mem_tag mt ON mt.tag_id = t.id\n               JOIN mem m ON m.id = mt.mem_id\n               WHERE mt.mem_id = ?1\n                 AND (?2 IS NULL OR m.user_id = ?2)\n                 AND (?2 IS NULL OR t.user_id = ?2)\n               ORDER BY t.name",
   "describe": {
     "columns": [
       {
@@ -41,5 +41,5 @@
       false
     ]
   },
-  "hash": "38ca4c14d10f57829b3839c456fe5e6980c0f941bbdb4a834600293a58b0df92"
+  "hash": "25d69ce2003ef9ba747a0fc2df339a7aaaa3fc557b994df27a8421825637277e"
 }

@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) FROM mem WHERE (?1 IS NULL OR user_id = ?1) AND state = 'review' AND buried = 0 AND state != 'suspended'\n               AND due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')",
+  "describe": {
+    "columns": [
+      {
+        "name": "COUNT(*)",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a662bfb6c5cfa5c29f59407e27511c080bab5454d31c97aec152cb831e9b110c"
+}

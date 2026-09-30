@@ -6,6 +6,7 @@ use crate::modules::mem::dto::*;
 use crate::modules::mem::fsrs;
 use crate::modules::mem::model::*;
 use crate::modules::mem::port::MemRepository;
+use crate::shared::actor::Actor;
 use crate::shared::batch::BatchDataResponse;
 use crate::shared::error_types::ServiceError;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
@@ -36,7 +37,7 @@ impl MemQueryService {
 
     pub async fn get_all(
         &self,
-        user_id: i32,
+        actor: &Actor,
         query: &MemQuery,
     ) -> Result<PaginatedResponse<MemWithChunks>, ServiceError> {
         let page_size = query.page_size.unwrap_or(50);
@@ -44,10 +45,7 @@ impl MemQueryService {
         // 如果有 id 参数，先找到这条记录的位置，计算页码
         let actual_page = if let Some(target_id) = query.id {
             // 查询这条记录在排序后的位置
-            let position = self
-                .repo
-                .get_mem_position(user_id, target_id, query)
-                .await?;
+            let position = self.repo.get_mem_position(actor, target_id, query).await?;
             // 计算页码（从1开始）
             (position / page_size) + 1
         } else {
@@ -67,19 +65,19 @@ impl MemQueryService {
 
         let ids = self
             .repo
-            .get_all_mems(user_id, page_size, offset, &query_without_id)
+            .get_all_mems(actor, page_size, offset, &query_without_id)
             .await?;
-        let items = self.build_items(user_id, &ids).await?;
-        let total = self.repo.count_all_mems(user_id, &query_without_id).await?;
+        let items = self.build_items(actor, &ids).await?;
+        let total = self.repo.count_all_mems(actor, &query_without_id).await?;
         let pagination_ref = &pagination;
         Ok(PaginatedResponse::new(items, total, pagination_ref))
     }
 
     // ── 统计 ──
 
-    pub async fn get_counts(&self, user_id: i32) -> Result<MemCounts, ServiceError> {
+    pub async fn get_counts(&self, actor: &Actor) -> Result<MemCounts, ServiceError> {
         let (new_count, learning_count, due_count, buried_count, suspended_count) =
-            self.repo.get_counts(user_id).await?;
+            self.repo.get_counts(actor).await?;
         Ok(MemCounts {
             new: new_count as usize,
             learning: learning_count as usize,
@@ -91,14 +89,14 @@ impl MemQueryService {
 
     pub async fn get_session_estimate(
         &self,
-        user_id: i32,
+        actor: &Actor,
         config: &crate::modules::mem::config::MemConfig,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<SessionEstimate, ServiceError> {
         let stats = self
             .repo
-            .get_session_stats(user_id, tag_ids, exclude_tag_ids)
+            .get_session_stats(actor, tag_ids, exclude_tag_ids)
             .await?;
         let p = rating_probs(&stats.rating_counts);
 
@@ -146,10 +144,10 @@ impl MemQueryService {
 
     // ── 预览 ──
 
-    pub async fn preview(&self, user_id: i32, id: i32) -> Result<[f64; 4], ServiceError> {
+    pub async fn preview(&self, actor: &Actor, id: i32) -> Result<[f64; 4], ServiceError> {
         let row = self
             .repo
-            .get_mem(user_id, id)
+            .get_mem(actor, id)
             .await?
             .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
         let state: CardState = row.state.parse().unwrap_or(CardState::New);
@@ -176,30 +174,30 @@ impl MemQueryService {
 
     // ── 标签查询 ──
 
-    pub async fn list_tags(&self, user_id: i32) -> Result<Vec<TagInfo>, ServiceError> {
-        self.repo.list_tags(user_id).await
+    pub async fn list_tags(&self, actor: &Actor) -> Result<Vec<TagInfo>, ServiceError> {
+        self.repo.list_tags(actor).await
     }
 
-    pub async fn search_tags(&self, user_id: i32, q: &str) -> Result<Vec<TagInfo>, ServiceError> {
-        self.repo.search_tags(user_id, q).await
+    pub async fn search_tags(&self, actor: &Actor, q: &str) -> Result<Vec<TagInfo>, ServiceError> {
+        self.repo.search_tags(actor, q).await
     }
 
     pub async fn get_mem_tags(
         &self,
-        user_id: i32,
+        actor: &Actor,
         mem_id: i32,
     ) -> Result<Vec<TagInfo>, ServiceError> {
-        // 先通过 get_mem 校验所有权（共享数据可见），再返回标签
-        self.repo.get_mem(user_id, mem_id).await?;
-        self.repo.get_mem_tags(mem_id).await
+        // 先通过 get_mem 判归属，再返回标签（子表随父）：读不到就是空列表
+        self.repo.get_mem(actor, mem_id).await?;
+        self.repo.get_mem_tags(actor, mem_id).await
     }
 
     pub async fn get_mems_tags_batch(
         &self,
-        user_id: i32,
+        actor: &Actor,
         mem_ids: &[i32],
     ) -> BatchDataResponse<MemTagRow> {
-        match self.repo.get_mems_tags_batch(user_id, mem_ids).await {
+        match self.repo.get_mems_tags_batch(actor, mem_ids).await {
             Ok(items) => BatchDataResponse::all_ok(items),
             Err(e) => BatchDataResponse::from_results(
                 vec![],
@@ -215,8 +213,8 @@ impl MemQueryService {
 
     // ── CSV/PSV 导出 ──
 
-    pub async fn export_csv(&self, user_id: i32, tag_ids: &[i32]) -> Result<String, ServiceError> {
-        let rows = self.repo.export_all_mems(user_id, tag_ids).await?;
+    pub async fn export_csv(&self, actor: &Actor, tag_ids: &[i32]) -> Result<String, ServiceError> {
+        let rows = self.repo.export_all_mems(actor, tag_ids).await?;
         let mut wtr = csv::WriterBuilder::new()
             .delimiter(b'|')
             .from_writer(Vec::new());
@@ -245,18 +243,19 @@ impl MemQueryService {
 
     pub async fn get_mnemonic(
         &self,
-        user_id: i32,
+        actor: &Actor,
         mem_id: i32,
     ) -> Result<Option<String>, ServiceError> {
-        self.repo.get_mem(user_id, mem_id).await?;
-        self.repo.get_mnemonic(mem_id).await
+        // 子表随父：助记随它挂着的 mem（读不到父行 = 空，不泄露存在性）
+        self.repo.get_mem(actor, mem_id).await?;
+        self.repo.get_mnemonic(actor, mem_id).await
     }
 
     // ── upcoming ──
 
-    pub async fn upcoming_counts(&self, user_id: i32) -> Result<serde_json::Value, ServiceError> {
-        let h8 = self.repo.count_upcoming_within_hours(user_id, 8).await?;
-        let h24 = self.repo.count_upcoming_within_hours(user_id, 24).await?;
+    pub async fn upcoming_counts(&self, actor: &Actor) -> Result<serde_json::Value, ServiceError> {
+        let h8 = self.repo.count_upcoming_within_hours(actor, 8).await?;
+        let h24 = self.repo.count_upcoming_within_hours(actor, 24).await?;
         Ok(serde_json::json!({"within_8h": h8, "within_24h": h24}))
     }
 
@@ -264,10 +263,10 @@ impl MemQueryService {
 
     async fn build_items(
         &self,
-        user_id: i32,
+        actor: &Actor,
         ids: &[i32],
     ) -> Result<Vec<MemWithChunks>, ServiceError> {
-        self.repo.get_mems_with_chunks(user_id, ids).await
+        self.repo.get_mems_with_chunks(actor, ids).await
     }
 }
 
@@ -279,13 +278,16 @@ impl SearchPort for MemQueryService {
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
+        // 搜索层还没接 Actor（`SearchPort` 仍只传 user_id），这里按**普通用户**口径取行；
+        // admin 的跨用户全量搜索要等搜索层改造（届时 `SearchPort` 也收 `&Actor`）。
+        let actor = Actor::user(user_id);
         let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
         if let Some(fts) = fts_query(q) {
             let rows = self
                 .repo
-                .search_hits_fts(user_id, &fts, cap)
+                .search_hits_fts(&actor, &fts, cap)
                 .await
                 .map_err(|e| ServiceError::Internal(e.to_string()))?;
             Ok(rows
@@ -302,7 +304,7 @@ impl SearchPort for MemQueryService {
         } else {
             let rows = self
                 .repo
-                .search_hits(user_id, &like, cap)
+                .search_hits(&actor, &like, cap)
                 .await
                 .map_err(|e| ServiceError::Internal(e.to_string()))?;
             Ok(rows
@@ -415,7 +417,7 @@ mod tests {
             Arc::new(FakeRepo::default()),
             Arc::new(crate::modules::mem::config::MemConfig::default()),
         );
-        let err = svc.preview(1, 1).await.unwrap_err();
+        let err = svc.preview(&Actor::user(1), 1).await.unwrap_err();
         assert!(matches!(err, ServiceError::NotFound(_)));
     }
 

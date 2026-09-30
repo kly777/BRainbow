@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO mem_prerequisite (mem_id, requires_mem_id)\n                   SELECT ?1, ?2\n                   WHERE EXISTS (SELECT 1 FROM mem m WHERE m.id = ?2 AND (?3 IS NULL OR m.user_id = ?3))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "862384d3653cf31b7c2b4dc607fc6ca545425c1dcb025d79edb07c1e8807c86d"
+}

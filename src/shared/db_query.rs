@@ -92,17 +92,6 @@ pub fn push_owner_scope(qb: &mut QueryBuilder<sqlx::Sqlite>, actor: &Actor, colu
     qb.push(")");
 }
 
-/// **过渡**：`( {column} = ? OR {column} IS NULL )` —— v20 认领历史数据之前的口径。
-///
-/// 与 [`push_owner_scope`] 的区别有两处：连接词（这个不带前导 `AND`，由调用方写）
-/// 与 NULL 行的可见性（这个放行）。目前只有 mem 还在用；等它接上 `Actor` 后整个删掉，
-/// 别在别处新用它（授权规则的唯一写法是 `push_owner_scope`）。
-pub fn push_user_visible(qb: &mut QueryBuilder<sqlx::Sqlite>, column: &str, user_id: i32) {
-    qb.push(format!("({column} = "));
-    qb.push_bind(user_id);
-    qb.push(format!(" OR {column} IS NULL)"));
-}
-
 // ── 表名家化 ──
 
 /// 校验表名只含合法字符（字母、数字、下划线）。

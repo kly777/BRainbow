@@ -1,12 +1,17 @@
 //! MemRepository trait 的唯一实现（去双签名：inherent 转发层已删除）。
 //!
 //! 所有 trait 方法集中在此文件，单一块；错误经 From<sqlx::Error> 自动转换。
+//!
+//! 归属判据（`shared/actor.rs`）：静态 SQL 写成 `(?N IS NULL OR 归属列 = ?N)`，绑
+//! `actor.owner_scope()`；QueryBuilder 走 `push_owner_scope`。子表（`revlog` /
+//! `mem_mnemonic` / `mem_prerequisite`）没有 `user_id`，读一律 `EXISTS` 父表 `mem`。
 
 use super::super::super::dto::*;
 use super::super::super::model::*;
 use super::super::super::port::MemRepository;
 use super::super::*;
-use crate::shared::db_query::push_user_visible;
+use crate::shared::actor::Actor;
+use crate::shared::db_query::{like_contains, push_owner_scope};
 use crate::shared::error_types::ServiceError;
 use async_trait::async_trait;
 
@@ -14,7 +19,7 @@ use async_trait::async_trait;
 impl MemRepository for super::super::MemRepo {
     async fn create_mem(
         &self,
-        user_id: i32,
+        actor: &Actor,
         cue_id: i32,
         target_id: i32,
         prerequisites: &[i32],
@@ -23,15 +28,20 @@ impl MemRepository for super::super::MemRepo {
             r#"INSERT INTO mem (cue_chunk_id, target_chunk_id, user_id) VALUES (?1, ?2, ?3) RETURNING id AS "id!: i32""#,
             cue_id,
             target_id,
-            user_id
+            actor.user_id
         )
         .fetch_one(&*self.pool)
         .await?;
         for &req_id in prerequisites {
+            // 子表随父：前提关系挂在刚建的 mem 上（那是调用者的），被指向的 mem 也得
+            // 是调用者的 —— 不是就整条不插（越权按不存在，不泄露对方有没有这一条）
             sqlx::query!(
-                "INSERT OR IGNORE INTO mem_prerequisite (mem_id, requires_mem_id) VALUES (?1, ?2)",
+                r#"INSERT OR IGNORE INTO mem_prerequisite (mem_id, requires_mem_id)
+                   SELECT ?1, ?2
+                   WHERE EXISTS (SELECT 1 FROM mem m WHERE m.id = ?2 AND (?3 IS NULL OR m.user_id = ?3))"#,
                 mem_id,
-                req_id
+                req_id,
+                actor.owner_scope()
             )
             .execute(&*self.pool)
             .await?;
@@ -39,7 +49,7 @@ impl MemRepository for super::super::MemRepo {
         Ok(mem_id)
     }
 
-    async fn get_mem(&self, user_id: i32, id: i32) -> Result<Option<MemRow>, ServiceError> {
+    async fn get_mem(&self, actor: &Actor, id: i32) -> Result<Option<MemRow>, ServiceError> {
         Ok(sqlx::query_as!(
             MemDbRow,
             r#"SELECT id AS "id: i32",
@@ -54,9 +64,9 @@ impl MemRepository for super::super::MemRepo {
                       leeched AS "leeched!: bool",
                       COALESCE(due_at, '') AS "due_at!: String",
                       last_review_at AS "last_review_at?: String"
-               FROM mem WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+               FROM mem WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)"#,
             id,
-            user_id
+            actor.owner_scope()
         )
         .fetch_optional(&*self.pool)
         .await?
@@ -65,7 +75,7 @@ impl MemRepository for super::super::MemRepo {
 
     async fn get_mems_with_chunks(
         &self,
-        user_id: i32,
+        actor: &Actor,
         ids: &[i32],
     ) -> Result<Vec<MemWithChunks>, ServiceError> {
         if ids.is_empty() {
@@ -80,9 +90,9 @@ impl MemRepository for super::super::MemRepo {
              LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id
              LEFT JOIN chunk ct ON m.target_chunk_id = ct.id
              LEFT JOIN mem_mnemonic mm ON mm.mem_id = m.id
-             WHERE ",
+             WHERE 1 = 1",
         );
-        push_user_visible(&mut qb, "m.user_id", user_id);
+        push_owner_scope(&mut qb, actor, "m.user_id");
         qb.push(" AND m.id IN (");
         let mut sep = qb.separated(", ");
         for &id in ids {
@@ -130,15 +140,15 @@ impl MemRepository for super::super::MemRepo {
 
     async fn get_all_mems(
         &self,
-        user_id: i32,
+        actor: &Actor,
         limit: i64,
         offset: i64,
         query: &MemQuery,
     ) -> Result<Vec<i32>, ServiceError> {
         let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
-            "SELECT m.id FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE ",
+            "SELECT m.id FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1 = 1",
         );
-        push_user_visible(&mut qb, "m.user_id", user_id);
+        push_owner_scope(&mut qb, actor, "m.user_id");
 
         if let Some(id) = query.id {
             qb.push(" AND m.id = ");
@@ -235,11 +245,11 @@ impl MemRepository for super::super::MemRepo {
             .map_err(ServiceError::Db)
     }
 
-    async fn count_all_mems(&self, user_id: i32, query: &MemQuery) -> Result<i64, ServiceError> {
+    async fn count_all_mems(&self, actor: &Actor, query: &MemQuery) -> Result<i64, ServiceError> {
         let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
-            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE ",
+            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1 = 1",
         );
-        push_user_visible(&mut qb, "m.user_id", user_id);
+        push_owner_scope(&mut qb, actor, "m.user_id");
 
         if let Some(id) = query.id {
             qb.push(" AND m.id = ");
@@ -312,7 +322,7 @@ impl MemRepository for super::super::MemRepo {
 
     async fn get_mem_position(
         &self,
-        user_id: i32,
+        actor: &Actor,
         mem_id: i64,
         query: &MemQuery,
     ) -> Result<i64, ServiceError> {
@@ -342,9 +352,9 @@ impl MemRepository for super::super::MemRepo {
         };
 
         let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
-            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE ",
+            "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1 = 1",
         );
-        push_user_visible(&mut qb, "m.user_id", user_id);
+        push_owner_scope(&mut qb, actor, "m.user_id");
 
         // 应用过滤条件（与 get_all_mems 相同，但不包括 id 过滤）
         if let Some(ref state) = query.state {
@@ -425,23 +435,24 @@ impl MemRepository for super::super::MemRepo {
         Ok(row.0)
     }
 
-    async fn delete_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+    async fn delete_mem(&self, actor: &Actor, id: i32) -> Result<(), ServiceError> {
         let mut tx = self.pool.begin().await?;
 
-        // 先查出关联的 chunk id，删除 mem 后清理孤儿 chunk（所有权校验：本人或共享）
+        // 先查出关联的 chunk id，删除 mem 后清理孤儿 chunk
+        // 归属不符（别人的 / 不存在）→ NotFound，越权按"不存在"处理
         let ids: MemChunkIdsRow = sqlx::query_as!(
             MemChunkIdsRow,
             r#"SELECT cue_chunk_id AS "cue_chunk_id: i32",
                       target_chunk_id AS "target_chunk_id: i32"
-               FROM mem WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+               FROM mem WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)"#,
             id,
-            user_id
+            actor.owner_scope()
         )
         .fetch_optional(&mut *tx)
         .await?
-        .ok_or(sqlx::Error::RowNotFound)?;
+        .ok_or_else(|| ServiceError::NotFound("记忆项不存在".into()))?;
 
-        // 级联删除关联数据
+        // 级联删除关联数据（子表随父：父行的归属上面已经判过）
         sqlx::query!("DELETE FROM revlog WHERE mem_id = ?1", id)
             .execute(&mut *tx)
             .await?;
@@ -497,36 +508,41 @@ impl MemRepository for super::super::MemRepo {
         Ok(())
     }
 
-    async fn get_next_mem(&self, user_id: i32) -> Result<Option<i32>, ServiceError> {
+    async fn get_next_mem(&self, actor: &Actor) -> Result<Option<i32>, ServiceError> {
         sqlx::query_scalar!(
             r#"SELECT m.id AS "id: i32" FROM mem m
-            WHERE (m.user_id = ?1 OR m.user_id IS NULL)
+            WHERE (?1 IS NULL OR m.user_id = ?1)
               AND m.state = 'review' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')
               AND m.buried = 0 AND m.state != 'suspended'
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')
             ORDER BY m.due_at LIMIT 1"#,
-            user_id
+            actor.owner_scope()
         )
         .fetch_optional(&*self.pool).await.map_err(ServiceError::Db)
     }
 
-    async fn create_chunk(&self, user_id: i32, content: &str) -> Result<i32, ServiceError> {
+    async fn create_chunk(&self, actor: &Actor, content: &str) -> Result<i32, ServiceError> {
         sqlx::query_scalar!(
             r#"INSERT INTO chunk (content, user_id) VALUES (?1, ?2) RETURNING id AS "id!: i32""#,
             content,
-            user_id
+            actor.user_id
         )
         .fetch_one(&*self.pool)
         .await
         .map_err(ServiceError::Db)
     }
 
-    async fn update_chunk(&self, user_id: i32, id: i32, content: &str) -> Result<(), ServiceError> {
+    async fn update_chunk(
+        &self,
+        actor: &Actor,
+        id: i32,
+        content: &str,
+    ) -> Result<(), ServiceError> {
         sqlx::query!(
-            "UPDATE chunk SET content=?1, updated_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?2 AND (user_id = ?3 OR user_id IS NULL)",
+            "UPDATE chunk SET content=?1, updated_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?2 AND (?3 IS NULL OR user_id = ?3)",
             content,
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&*self.pool)
         .await?;
@@ -535,14 +551,15 @@ impl MemRepository for super::super::MemRepo {
 
     async fn get_learning_mems(
         &self,
-        user_id: i32,
+        actor: &Actor,
         limit: i64,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<Vec<i32>, ServiceError> {
-        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(r#"SELECT m.id FROM mem m WHERE "#);
-        push_user_visible(&mut qb, "m.user_id", user_id);
-        qb.push(" AND m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended' AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')");
+        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
+            r#"SELECT m.id FROM mem m WHERE m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended' AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')"#,
+        );
+        push_owner_scope(&mut qb, actor, "m.user_id");
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         qb.push(" ORDER BY due_at LIMIT ");
@@ -555,7 +572,7 @@ impl MemRepository for super::super::MemRepo {
 
     async fn get_due_review_candidates(
         &self,
-        user_id: i32,
+        actor: &Actor,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<Vec<ReviewCandidate>, ServiceError> {
@@ -564,10 +581,9 @@ impl MemRepository for super::super::MemRepo {
                       m.lapses AS "lapses", COALESCE(m.due_at, '') AS "due_at",
                       m.last_review_at AS "last_review_at"
             FROM mem m
-            WHERE "#,
+            WHERE m.state = 'review' AND m.buried = 0 AND m.state != 'suspended' AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#,
         );
-        push_user_visible(&mut qb, "m.user_id", user_id);
-        qb.push(" AND m.state = 'review' AND m.buried = 0 AND m.state != 'suspended' AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')");
+        push_owner_scope(&mut qb, actor, "m.user_id");
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         let rows = qb.build().fetch_all(&*self.pool).await?;
@@ -587,17 +603,16 @@ impl MemRepository for super::super::MemRepo {
 
     async fn get_new_cards(
         &self,
-        user_id: i32,
+        actor: &Actor,
         limit: i64,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<Vec<i32>, ServiceError> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.id FROM mem m
-            WHERE "#,
+            WHERE m.state = 'new' AND m.buried = 0 AND m.state != 'suspended' AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#,
         );
-        push_user_visible(&mut qb, "m.user_id", user_id);
-        qb.push(" AND m.state = 'new' AND m.buried = 0 AND m.state != 'suspended' AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')");
+        push_owner_scope(&mut qb, actor, "m.user_id");
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         qb.push(" ORDER BY RANDOM() LIMIT ");
@@ -610,7 +625,7 @@ impl MemRepository for super::super::MemRepo {
 
     async fn get_upcoming_review_candidates(
         &self,
-        user_id: i32,
+        actor: &Actor,
         tag_ids: &[i32],
     ) -> Result<Vec<ReviewCandidate>, ServiceError> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
@@ -618,10 +633,9 @@ impl MemRepository for super::super::MemRepo {
                       m.lapses AS "lapses", COALESCE(m.due_at, '') AS "due_at",
                       m.last_review_at AS "last_review_at"
             FROM mem m
-            WHERE "#,
+            WHERE m.state = 'review' AND m.buried = 0 AND m.state != 'suspended' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#,
         );
-        push_user_visible(&mut qb, "m.user_id", user_id);
-        qb.push(" AND m.state = 'review' AND m.buried = 0 AND m.state != 'suspended' AND m.due_at > strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')");
+        push_owner_scope(&mut qb, actor, "m.user_id");
         Self::tag_filter_sql(&mut qb, tag_ids);
         let rows = qb.build().fetch_all(&*self.pool).await?;
         rows.into_iter()
@@ -638,61 +652,61 @@ impl MemRepository for super::super::MemRepo {
             .collect()
     }
 
-    async fn count_upcoming(&self, user_id: i32) -> Result<i64, ServiceError> {
+    async fn count_upcoming(&self, actor: &Actor) -> Result<i64, ServiceError> {
         sqlx::query_scalar!(
-            r#"SELECT COUNT(*) FROM mem WHERE (user_id = ?1 OR user_id IS NULL) AND state = 'review' AND buried = 0 AND state != 'suspended'"#,
-            user_id
+            r#"SELECT COUNT(*) FROM mem WHERE (?1 IS NULL OR user_id = ?1) AND state = 'review' AND buried = 0 AND state != 'suspended'"#,
+            actor.owner_scope()
         )
         .fetch_one(&*self.pool).await.map_err(ServiceError::Db)
     }
 
     async fn count_upcoming_within_hours(
         &self,
-        user_id: i32,
+        actor: &Actor,
         hours: i64,
     ) -> Result<i64, ServiceError> {
         sqlx::query_scalar!(
             r#"SELECT COUNT(*) FROM mem m
-            WHERE (m.user_id = ?1 OR m.user_id IS NULL)
+            WHERE (?1 IS NULL OR m.user_id = ?1)
               AND m.state IN ('review') AND m.buried = 0
               AND m.due_at > strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')
               AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now', '+' || ?2 || ' hours')
               AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id=pm.id WHERE mp.mem_id=m.id AND pm.state='new')"#,
-            user_id,
+            actor.owner_scope(),
             hours
         )
         .fetch_one(&*self.pool).await.map_err(ServiceError::Db)
     }
 
-    async fn get_counts(&self, user_id: i32) -> Result<(i64, i64, i64, i64, i64), ServiceError> {
+    async fn get_counts(&self, actor: &Actor) -> Result<(i64, i64, i64, i64, i64), ServiceError> {
         let new_count: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM mem WHERE (user_id = ?1 OR user_id IS NULL) AND state = 'new' AND buried = 0 AND state != 'suspended'",
-            user_id
+            "SELECT COUNT(*) FROM mem WHERE (?1 IS NULL OR user_id = ?1) AND state = 'new' AND buried = 0 AND state != 'suspended'",
+            actor.owner_scope()
         )
         .fetch_one(&*self.pool)
         .await?;
         let learning_count: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM mem WHERE (user_id = ?1 OR user_id IS NULL) AND state IN ('learning', 'relearning') AND buried = 0 AND state != 'suspended'",
-            user_id
+            "SELECT COUNT(*) FROM mem WHERE (?1 IS NULL OR user_id = ?1) AND state IN ('learning', 'relearning') AND buried = 0 AND state != 'suspended'",
+            actor.owner_scope()
         )
         .fetch_one(&*self.pool)
         .await?;
         let due_count: i64 = sqlx::query_scalar!(
-            r#"SELECT COUNT(*) FROM mem WHERE (user_id = ?1 OR user_id IS NULL) AND state = 'review' AND buried = 0 AND state != 'suspended'
+            r#"SELECT COUNT(*) FROM mem WHERE (?1 IS NULL OR user_id = ?1) AND state = 'review' AND buried = 0 AND state != 'suspended'
                AND due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')"#,
-            user_id
+            actor.owner_scope()
         )
         .fetch_one(&*self.pool)
         .await?;
         let buried_count: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM mem WHERE (user_id = ?1 OR user_id IS NULL) AND buried = 1",
-            user_id
+            "SELECT COUNT(*) FROM mem WHERE (?1 IS NULL OR user_id = ?1) AND buried = 1",
+            actor.owner_scope()
         )
         .fetch_one(&*self.pool)
         .await?;
         let suspended_count: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM mem WHERE (user_id = ?1 OR user_id IS NULL) AND state = 'suspended'",
-            user_id
+            "SELECT COUNT(*) FROM mem WHERE (?1 IS NULL OR user_id = ?1) AND state = 'suspended'",
+            actor.owner_scope()
         )
         .fetch_one(&*self.pool)
         .await?;
@@ -707,13 +721,13 @@ impl MemRepository for super::super::MemRepo {
 
     async fn get_session_stats(
         &self,
-        user_id: i32,
+        actor: &Actor,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<SessionStats, ServiceError> {
         let new_ready = self
             .count_session_sql(
-                user_id,
+                actor,
                 r#"m.state = 'new' AND m.buried = 0 AND m.state != 'suspended'
                    AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id = pm.id WHERE mp.mem_id = m.id AND pm.state = 'new')"#,
                 tag_ids,
@@ -722,7 +736,7 @@ impl MemRepository for super::super::MemRepo {
             .await?;
         let due_ready = self
             .count_session_sql(
-                user_id,
+                actor,
                 r#"m.state = 'review' AND m.buried = 0 AND m.state != 'suspended'
                    AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')
                    AND NOT EXISTS (SELECT 1 FROM mem_prerequisite mp JOIN mem pm ON mp.requires_mem_id = pm.id WHERE mp.mem_id = m.id AND pm.state = 'new')"#,
@@ -734,10 +748,9 @@ impl MemRepository for super::super::MemRepo {
         let mut qb = QueryBuilder::<sqlx::Sqlite>::new(
             r#"SELECT m.state, COALESCE(m.step_index, 0) AS step, COUNT(*) AS n
                FROM mem m
-               WHERE "#,
+               WHERE m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended' AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')"#,
         );
-        push_user_visible(&mut qb, "m.user_id", user_id);
-        qb.push(" AND m.state IN ('learning', 'relearning') AND m.buried = 0 AND m.state != 'suspended' AND m.due_at <= strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')");
+        push_owner_scope(&mut qb, actor, "m.user_id");
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         qb.push(" GROUP BY m.state, step");
@@ -763,12 +776,12 @@ impl MemRepository for super::super::MemRepo {
             }
         }
 
-        // 最近 200 次评分分布（rating 1..4 → 索引 0..3）；仅统计当前用户可见 mem 的 revlog
+        // 最近 200 次评分分布（rating 1..4 → 索引 0..3）；revlog 随 mem，连父表判归属
         let mut rating_counts = [0_i64; 4];
         let ratings = sqlx::query_as::<_, (i64, i64)>(
-            "SELECT rating, COUNT(*) FROM (SELECT r.rating FROM revlog r JOIN mem m ON m.id = r.mem_id WHERE (m.user_id = ?1 OR m.user_id IS NULL) ORDER BY r.review_time DESC LIMIT 200) GROUP BY rating",
+            "SELECT rating, COUNT(*) FROM (SELECT r.rating FROM revlog r JOIN mem m ON m.id = r.mem_id WHERE (?1 IS NULL OR m.user_id = ?1) ORDER BY r.review_time DESC LIMIT 200) GROUP BY rating",
         )
-        .bind(user_id)
+        .bind(actor.owner_scope())
         .fetch_all(&*self.pool)
         .await?;
         for (rating, n) in ratings {
@@ -779,9 +792,9 @@ impl MemRepository for super::super::MemRepo {
 
         // 最近 200 条有耗时上报的复习的平均单卡秒数
         let avg_duration_secs: Option<f64> = sqlx::query_scalar(
-            "SELECT AVG(duration_secs) FROM (SELECT r.duration_secs FROM revlog r JOIN mem m ON m.id = r.mem_id WHERE (m.user_id = ?1 OR m.user_id IS NULL) AND r.duration_secs > 0 ORDER BY r.review_time DESC LIMIT 200)",
+            "SELECT AVG(duration_secs) FROM (SELECT r.duration_secs FROM revlog r JOIN mem m ON m.id = r.mem_id WHERE (?1 IS NULL OR m.user_id = ?1) AND r.duration_secs > 0 ORDER BY r.review_time DESC LIMIT 200)",
         )
-        .bind(user_id)
+        .bind(actor.owner_scope())
         .fetch_one(&*self.pool)
         .await?;
 
@@ -795,23 +808,23 @@ impl MemRepository for super::super::MemRepo {
         })
     }
 
-    async fn suspend_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+    async fn suspend_mem(&self, actor: &Actor, id: i32) -> Result<(), ServiceError> {
         sqlx::query!(
-            "UPDATE mem SET state='suspended' WHERE id=?1 AND (user_id = ?2 OR user_id IS NULL)",
+            "UPDATE mem SET state='suspended' WHERE id=?1 AND (?2 IS NULL OR user_id = ?2)",
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&*self.pool)
         .await?;
         Ok(())
     }
 
-    async fn unsuspend_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+    async fn unsuspend_mem(&self, actor: &Actor, id: i32) -> Result<(), ServiceError> {
         // 恢复到新卡状态，保留内容
         sqlx::query!(
-            "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?1 AND (user_id = ?2 OR user_id IS NULL)",
+            "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?1 AND (?2 IS NULL OR user_id = ?2)",
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&*self.pool)
         .await?;
@@ -820,17 +833,17 @@ impl MemRepository for super::super::MemRepo {
 
     async fn set_state(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i32,
         state: &str,
         step_index: Option<i32>,
     ) -> Result<(), ServiceError> {
         sqlx::query!(
-            "UPDATE mem SET state=?1, step_index=?2, due_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?3 AND (user_id = ?4 OR user_id IS NULL)",
+            "UPDATE mem SET state=?1, step_index=?2, due_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?3 AND (?4 IS NULL OR user_id = ?4)",
             state,
             step_index,
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&*self.pool)
         .await?;
@@ -839,12 +852,12 @@ impl MemRepository for super::super::MemRepo {
 
     async fn update_mem_fsrs(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i32,
         params: &FsrsUpdate,
     ) -> Result<(), ServiceError> {
         sqlx::query!(
-            "UPDATE mem SET state=?1, stability=?2, difficulty=?3, step_index=?4, lapses=?5, leeched=?6, due_at=?7, last_review_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?8 AND (user_id = ?9 OR user_id IS NULL)",
+            "UPDATE mem SET state=?1, stability=?2, difficulty=?3, step_index=?4, lapses=?5, leeched=?6, due_at=?7, last_review_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?8 AND (?9 IS NULL OR user_id = ?9)",
             params.state.as_str(),
             params.stability,
             params.difficulty,
@@ -853,7 +866,7 @@ impl MemRepository for super::super::MemRepo {
             params.leeched,
             params.due_at.as_str(),
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&*self.pool)
         .await?;
@@ -862,7 +875,7 @@ impl MemRepository for super::super::MemRepo {
 
     async fn review_mem_atomic(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i32,
         params: &FsrsUpdate,
         stability_guard: f64,
@@ -873,7 +886,7 @@ impl MemRepository for super::super::MemRepo {
         // 乐观锁：stability + last_review_at 与读取基线一致才写入；
         // IS 比较（而非 =）使 NULL 基线（新卡未复习过）同样可作守卫
         let res = sqlx::query!(
-            "UPDATE mem SET state=?1, stability=?2, difficulty=?3, step_index=?4, lapses=?5, leeched=?6, due_at=?7, last_review_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?8 AND (user_id = ?9 OR user_id IS NULL) AND stability IS ?10 AND last_review_at IS ?11",
+            "UPDATE mem SET state=?1, stability=?2, difficulty=?3, step_index=?4, lapses=?5, leeched=?6, due_at=?7, last_review_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?8 AND (?9 IS NULL OR user_id = ?9) AND stability IS ?10 AND last_review_at IS ?11",
             params.state.as_str(),
             params.stability,
             params.difficulty,
@@ -882,14 +895,14 @@ impl MemRepository for super::super::MemRepo {
             params.leeched,
             params.due_at.as_str(),
             id,
-            user_id,
+            actor.owner_scope(),
             stability_guard,
             last_review_guard,
         )
         .execute(&mut *tx)
         .await?;
         if res.rows_affected() == 0 {
-            // 守卫未命中：并发已被改写，回滚并报告冲突
+            // 守卫未命中（并发已被改写 / 不是调用者的行）：回滚并报告冲突
             return Ok(false);
         }
         sqlx::query!(
@@ -912,47 +925,47 @@ impl MemRepository for super::super::MemRepo {
         Ok(true)
     }
 
-    async fn bury_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+    async fn bury_mem(&self, actor: &Actor, id: i32) -> Result<(), ServiceError> {
         sqlx::query!(
-            "UPDATE mem SET buried = 1 WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)",
+            "UPDATE mem SET buried = 1 WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&*self.pool)
         .await?;
         Ok(())
     }
 
-    async fn unbury_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+    async fn unbury_mem(&self, actor: &Actor, id: i32) -> Result<(), ServiceError> {
         sqlx::query!(
-            "UPDATE mem SET buried = 0 WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)",
+            "UPDATE mem SET buried = 0 WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&*self.pool)
         .await?;
         Ok(())
     }
 
-    async fn reset_mem(&self, user_id: i32, id: i32) -> Result<(), ServiceError> {
+    async fn reset_mem(&self, actor: &Actor, id: i32) -> Result<(), ServiceError> {
         sqlx::query!(
-            "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?1 AND (user_id = ?2 OR user_id IS NULL)",
+            "UPDATE mem SET state='new', stability=0, difficulty=0, step_index=NULL, lapses=0, leeched=0, due_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?1 AND (?2 IS NULL OR user_id = ?2)",
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&*self.pool)
         .await?;
         Ok(())
     }
 
-    async fn create_tag(&self, name: &str, user_id: i32) -> Result<TagInfo, ServiceError> {
+    async fn create_tag(&self, actor: &Actor, name: &str) -> Result<TagInfo, ServiceError> {
         let row = sqlx::query_as!(
             TagRow,
             r#"INSERT INTO tag (name, user_id) VALUES (?1, ?2)
                RETURNING id AS "id!: i32", name,
                          COALESCE(created_at, '') AS "created_at!: String""#,
             name,
-            user_id
+            actor.user_id
         )
         .fetch_one(&*self.pool)
         .await?;
@@ -963,23 +976,27 @@ impl MemRepository for super::super::MemRepo {
         })
     }
 
-    async fn delete_tag(&self, id: i32) -> Result<(), ServiceError> {
-        sqlx::query!("DELETE FROM tag WHERE id = ?1", id)
-            .execute(&*self.pool)
-            .await?;
+    async fn delete_tag(&self, actor: &Actor, id: i32) -> Result<(), ServiceError> {
+        sqlx::query!(
+            "DELETE FROM tag WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
+            id,
+            actor.owner_scope()
+        )
+        .execute(&*self.pool)
+        .await?;
         Ok(())
     }
 
-    async fn list_tags(&self, user_id: i32) -> Result<Vec<TagInfo>, ServiceError> {
+    async fn list_tags(&self, actor: &Actor) -> Result<Vec<TagInfo>, ServiceError> {
         let rows = sqlx::query_as!(
             TagRow,
             r#"SELECT t.id AS "id: i32", t.name,
                       COALESCE(t.created_at, '') AS "created_at!: String"
                FROM tag t
-               WHERE t.user_id = ?1
+               WHERE (?1 IS NULL OR t.user_id = ?1)
                  AND EXISTS (SELECT 1 FROM mem_tag WHERE tag_id = t.id)
                ORDER BY t.name"#,
-            user_id
+            actor.owner_scope()
         )
         .fetch_all(&*self.pool)
         .await?;
@@ -993,7 +1010,7 @@ impl MemRepository for super::super::MemRepo {
             .collect())
     }
 
-    async fn search_tags(&self, user_id: i32, q: &str) -> Result<Vec<TagInfo>, ServiceError> {
+    async fn search_tags(&self, actor: &Actor, q: &str) -> Result<Vec<TagInfo>, ServiceError> {
         if q.is_empty() {
             return Ok(vec![]);
         }
@@ -1001,9 +1018,9 @@ impl MemRepository for super::super::MemRepo {
             TagRow,
             r#"SELECT id AS "id: i32", name,
                       COALESCE(created_at, '') AS "created_at!: String"
-               FROM tag WHERE user_id = ?1 AND name LIKE ?2 ESCAPE '\'
+               FROM tag WHERE (?1 IS NULL OR user_id = ?1) AND name LIKE ?2 ESCAPE '\'
                ORDER BY name LIMIT 20"#,
-            user_id,
+            actor.owner_scope(),
             like_contains(q)
         )
         .fetch_all(&*self.pool)
@@ -1018,16 +1035,20 @@ impl MemRepository for super::super::MemRepo {
             .collect())
     }
 
-    async fn get_mem_tags(&self, mem_id: i32) -> Result<Vec<TagInfo>, ServiceError> {
+    async fn get_mem_tags(&self, actor: &Actor, mem_id: i32) -> Result<Vec<TagInfo>, ServiceError> {
         let rows = sqlx::query_as!(
             TagRow,
             r#"SELECT t.id AS "id: i32", t.name,
                       COALESCE(t.created_at, '') AS "created_at!: String"
                FROM tag t
                JOIN mem_tag mt ON mt.tag_id = t.id
+               JOIN mem m ON m.id = mt.mem_id
                WHERE mt.mem_id = ?1
+                 AND (?2 IS NULL OR m.user_id = ?2)
+                 AND (?2 IS NULL OR t.user_id = ?2)
                ORDER BY t.name"#,
-            mem_id
+            mem_id,
+            actor.owner_scope()
         )
         .fetch_all(&*self.pool)
         .await?;
@@ -1041,22 +1062,41 @@ impl MemRepository for super::super::MemRepo {
             .collect())
     }
 
-    async fn add_tag_to_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), ServiceError> {
+    async fn add_tag_to_mem(
+        &self,
+        actor: &Actor,
+        mem_id: i32,
+        tag_id: i32,
+    ) -> Result<(), ServiceError> {
+        // 父 mem 与 tag 都要是调用者的（越权即 0 行，不报错也不泄露）
         sqlx::query!(
-            "INSERT OR IGNORE INTO mem_tag (mem_id, tag_id) VALUES (?1, ?2)",
+            r#"INSERT OR IGNORE INTO mem_tag (mem_id, tag_id)
+               SELECT ?1, ?2
+               WHERE EXISTS (SELECT 1 FROM mem m WHERE m.id = ?1 AND (?3 IS NULL OR m.user_id = ?3))
+                 AND EXISTS (SELECT 1 FROM tag t WHERE t.id = ?2 AND (?3 IS NULL OR t.user_id = ?3))"#,
             mem_id,
-            tag_id
+            tag_id,
+            actor.owner_scope()
         )
         .execute(&*self.pool)
         .await?;
         Ok(())
     }
 
-    async fn remove_tag_from_mem(&self, mem_id: i32, tag_id: i32) -> Result<(), ServiceError> {
+    async fn remove_tag_from_mem(
+        &self,
+        actor: &Actor,
+        mem_id: i32,
+        tag_id: i32,
+    ) -> Result<(), ServiceError> {
+        // 删链接只跟父 mem 的归属有关（不改 tag 本身）
         sqlx::query!(
-            "DELETE FROM mem_tag WHERE mem_id = ?1 AND tag_id = ?2",
+            r#"DELETE FROM mem_tag
+               WHERE mem_id = ?1 AND tag_id = ?2
+                 AND EXISTS (SELECT 1 FROM mem m WHERE m.id = mem_tag.mem_id AND (?3 IS NULL OR m.user_id = ?3))"#,
             mem_id,
-            tag_id
+            tag_id,
+            actor.owner_scope()
         )
         .execute(&*self.pool)
         .await?;
@@ -1064,7 +1104,12 @@ impl MemRepository for super::super::MemRepo {
         Ok(())
     }
 
-    async fn set_mem_tags(&self, mem_id: i32, tag_ids: &[i32]) -> Result<(), ServiceError> {
+    async fn set_mem_tags(
+        &self,
+        actor: &Actor,
+        mem_id: i32,
+        tag_ids: &[i32],
+    ) -> Result<(), ServiceError> {
         let mut tx = self.pool.begin().await?;
         // 记录移除前的旧标签
         let old_tag_ids: Vec<i32> = sqlx::query_scalar!(
@@ -1073,16 +1118,26 @@ impl MemRepository for super::super::MemRepo {
         )
         .fetch_all(&mut *tx)
         .await?;
-        // 删除旧的关联
-        sqlx::query!("DELETE FROM mem_tag WHERE mem_id = ?1", mem_id)
-            .execute(&mut *tx)
-            .await?;
-        // 插入新的
+        // 删除旧的关联（只动调用者自己的 mem）
+        sqlx::query!(
+            r#"DELETE FROM mem_tag
+               WHERE mem_id = ?1
+                 AND EXISTS (SELECT 1 FROM mem m WHERE m.id = mem_tag.mem_id AND (?2 IS NULL OR m.user_id = ?2))"#,
+            mem_id,
+            actor.owner_scope()
+        )
+        .execute(&mut *tx)
+        .await?;
+        // 插入新的：父 mem 与 tag 都要是调用者的
         for &tag_id in tag_ids {
             sqlx::query!(
-                "INSERT OR IGNORE INTO mem_tag (mem_id, tag_id) VALUES (?1, ?2)",
+                r#"INSERT OR IGNORE INTO mem_tag (mem_id, tag_id)
+                   SELECT ?1, ?2
+                   WHERE EXISTS (SELECT 1 FROM mem m WHERE m.id = ?1 AND (?3 IS NULL OR m.user_id = ?3))
+                     AND EXISTS (SELECT 1 FROM tag t WHERE t.id = ?2 AND (?3 IS NULL OR t.user_id = ?3))"#,
                 mem_id,
-                tag_id
+                tag_id,
+                actor.owner_scope()
             )
             .execute(&mut *tx)
             .await?;
@@ -1099,7 +1154,7 @@ impl MemRepository for super::super::MemRepo {
 
     async fn get_mems_tags_batch(
         &self,
-        user_id: i32,
+        actor: &Actor,
         mem_ids: &[i32],
     ) -> Result<Vec<MemTagRow>, ServiceError> {
         if mem_ids.is_empty() {
@@ -1110,15 +1165,16 @@ impl MemRepository for super::super::MemRepo {
              FROM mem_tag mt
              JOIN tag t ON t.id = mt.tag_id
              JOIN mem m ON m.id = mt.mem_id
-             WHERE ",
+             WHERE mt.mem_id IN (",
         );
-        push_user_visible(&mut qb, "m.user_id", user_id);
-        qb.push(" AND mt.mem_id IN (");
         let mut separated = qb.separated(", ");
         for &id in mem_ids {
             separated.push_bind(id);
         }
         separated.push_unseparated(")");
+        // 与 get_mem_tags 同一口径：父 mem 与 tag 两边都按归属过滤
+        push_owner_scope(&mut qb, actor, "m.user_id");
+        push_owner_scope(&mut qb, actor, "t.user_id");
         // 与 get_mem_tags 保持一致：按名称排序，保证表格与详情顺序稳定一致
         qb.push(" ORDER BY mt.mem_id, t.name");
         let rows: Vec<MemTagDbRow> = qb.build_query_as().fetch_all(&*self.pool).await?;
@@ -1127,7 +1183,7 @@ impl MemRepository for super::super::MemRepo {
 
     async fn export_all_mems(
         &self,
-        user_id: i32,
+        actor: &Actor,
         tag_ids: &[i32],
     ) -> Result<Vec<(String, String, String)>, ServiceError> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new(
@@ -1136,9 +1192,9 @@ impl MemRepository for super::super::MemRepo {
              FROM mem m
              JOIN chunk cc ON cc.id = m.cue_chunk_id
              JOIN chunk ct ON ct.id = m.target_chunk_id
-             WHERE ",
+             WHERE 1 = 1",
         );
-        push_user_visible(&mut qb, "m.user_id", user_id);
+        push_owner_scope(&mut qb, actor, "m.user_id");
 
         if !tag_ids.is_empty() {
             qb.push(" AND m.id IN (SELECT mem_id FROM mem_tag WHERE tag_id IN (");
@@ -1156,13 +1212,19 @@ impl MemRepository for super::super::MemRepo {
             .map_err(ServiceError::Db)
     }
 
-    async fn insert_revlog(&self, params: &InsertRevlogParams) -> Result<(), ServiceError> {
+    async fn insert_revlog(
+        &self,
+        actor: &Actor,
+        params: &InsertRevlogParams,
+    ) -> Result<(), ServiceError> {
+        // 子表随父：revlog 挂在 mem 上，只给调用者自己的 mem 记
         sqlx::query(
             r#"
             INSERT INTO revlog (mem_id, review_time, rating, delta_t, duration_secs,
                 stability_before, difficulty_before, state_before,
                 stability_after, difficulty_after, state_after)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+            SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11
+            WHERE EXISTS (SELECT 1 FROM mem m WHERE m.id = ?1 AND (?12 IS NULL OR m.user_id = ?12))
             "#,
         )
         .bind(params.mem_id)
@@ -1176,12 +1238,14 @@ impl MemRepository for super::super::MemRepo {
         .bind(params.stability_after)
         .bind(params.difficulty_after)
         .bind(&params.state_after)
+        .bind(actor.owner_scope())
         .execute(&*self.pool)
         .await?;
         Ok(())
     }
 
     async fn count_revlogs(&self) -> Result<i64, ServiceError> {
+        // 全局维护用（FSRS 参数优化跨用户训练），不经用户归属
         sqlx::query_scalar!("SELECT COUNT(*) FROM revlog")
             .fetch_one(&*self.pool)
             .await
@@ -1216,22 +1280,41 @@ impl MemRepository for super::super::MemRepo {
         Ok(())
     }
 
-    async fn get_mnemonic(&self, mem_id: i32) -> Result<Option<String>, ServiceError> {
-        sqlx::query_scalar!("SELECT content FROM mem_mnemonic WHERE mem_id = ?1", mem_id)
-            .fetch_optional(&*self.pool)
-            .await
-            .map_err(ServiceError::Db)
+    async fn get_mnemonic(
+        &self,
+        actor: &Actor,
+        mem_id: i32,
+    ) -> Result<Option<String>, ServiceError> {
+        // 子表随父：助记随它挂着的 mem
+        sqlx::query_scalar!(
+            r#"SELECT content FROM mem_mnemonic
+               WHERE mem_id = ?1
+                 AND EXISTS (SELECT 1 FROM mem m WHERE m.id = mem_mnemonic.mem_id AND (?2 IS NULL OR m.user_id = ?2))"#,
+            mem_id,
+            actor.owner_scope()
+        )
+        .fetch_optional(&*self.pool)
+        .await
+        .map_err(ServiceError::Db)
     }
 
-    async fn upsert_mnemonic(&self, mem_id: i32, content: &str) -> Result<(), ServiceError> {
+    async fn upsert_mnemonic(
+        &self,
+        actor: &Actor,
+        mem_id: i32,
+        content: &str,
+    ) -> Result<(), ServiceError> {
+        // 子表随父：只给调用者自己的 mem 写助记（越权 0 行）
         sqlx::query!(
             r#"
             INSERT INTO mem_mnemonic (mem_id, content)
-            VALUES (?1, ?2)
+            SELECT ?1, ?2
+            WHERE EXISTS (SELECT 1 FROM mem m WHERE m.id = ?1 AND (?3 IS NULL OR m.user_id = ?3))
             ON CONFLICT(mem_id) DO UPDATE SET content = excluded.content
             "#,
             mem_id,
-            content
+            content,
+            actor.owner_scope()
         )
         .execute(&*self.pool)
         .await?;
@@ -1240,7 +1323,7 @@ impl MemRepository for super::super::MemRepo {
 
     async fn search_hits(
         &self,
-        user_id: i32,
+        actor: &Actor,
         like: &str,
         cap: i64,
     ) -> Result<Vec<(i64, String, String)>, ServiceError> {
@@ -1250,10 +1333,10 @@ impl MemRepository for super::super::MemRepo {
                FROM mem m
                JOIN chunk c1 ON c1.id = m.cue_chunk_id
                JOIN chunk c2 ON c2.id = m.target_chunk_id
-               WHERE (m.user_id = ?1 OR m.user_id IS NULL)
+               WHERE (?1 IS NULL OR m.user_id = ?1)
                  AND (c1.content LIKE ?2 ESCAPE '\' OR c2.content LIKE ?2 ESCAPE '\')
                ORDER BY (c1.content LIKE ?2 ESCAPE '\') DESC, m.id DESC LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             like,
             cap
         )
@@ -1265,7 +1348,7 @@ impl MemRepository for super::super::MemRepo {
 
     async fn search_hits_fts(
         &self,
-        user_id: i32,
+        actor: &Actor,
         fts_query: &str,
         cap: i64,
     ) -> Result<Vec<(i64, String, String)>, ServiceError> {
@@ -1275,11 +1358,11 @@ impl MemRepository for super::super::MemRepo {
                FROM mem m
                JOIN chunk c1 ON c1.id = m.cue_chunk_id
                JOIN chunk c2 ON c2.id = m.target_chunk_id
-               WHERE (m.user_id = ?1 OR m.user_id IS NULL)
+               WHERE (?1 IS NULL OR m.user_id = ?1)
                  AND (c1.id IN (SELECT rowid FROM chunk_fts WHERE chunk_fts MATCH ?2)
                       OR c2.id IN (SELECT rowid FROM chunk_fts WHERE chunk_fts MATCH ?2))
                ORDER BY m.id DESC LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             fts_query,
             cap
         )

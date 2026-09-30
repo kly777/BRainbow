@@ -19,6 +19,7 @@ import {
 } from "solid-js";
 import {
 	deleteTaskE,
+	fetchAllTasks,
 	getAllTasksE,
 	getTaskDetailE,
 	type Task,
@@ -102,8 +103,9 @@ export default function TaskDetail() {
 	const detail = m.data;
 	const { refetch } = m;
 	const [allTasks] = createResource(async () => {
-		const result = await getAllTasksE();
-		return [...result.items];
+		// 父子任务选择器要的是全量：`/tasks/all` 分页缺省 20 条，只取第一页会漏
+		const page = await fetchAllTasks(getAllTasksE);
+		return page.items;
 	});
 
 	const [editing, setEditing] = createSignal(false);

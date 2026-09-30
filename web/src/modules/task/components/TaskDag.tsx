@@ -10,7 +10,7 @@ import {
 	Show,
 } from "solid-js";
 import type { Task } from "../api.ts";
-import { getAllTasksE, getDagE } from "../api.ts";
+import { fetchAllTasks, getAllTasksE, getDagE } from "../api.ts";
 import { layout } from "../lib/dag-layout.ts";
 import { calcAutoOffset, drawGraph, hitTestNode } from "../lib/dag-render.ts";
 import styles from "./TaskDag.module.css";
@@ -59,10 +59,10 @@ export default function TaskDag() {
 		},
 	);
 
-	// 拉取所有任务（用于选择器）
+	// 拉取所有任务（用于选择器）：分页接口要逐页取全，只取第一页会漏掉第 21 条起
 	const [allTasks] = createResource(async () => {
-		const result = await tryAsync(() => getAllTasksE());
-		if (result.ok) return [...result.value.items];
+		const result = await tryAsync(() => fetchAllTasks(getAllTasksE));
+		if (result.ok) return result.value.items;
 		notifyError("获取任务列表失败", result.error);
 		return [];
 	});

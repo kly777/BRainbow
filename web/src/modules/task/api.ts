@@ -9,7 +9,7 @@ import {
 	post,
 	request,
 } from "@shared/api";
-
+import { MAX_PAGE_SIZE } from "./api-funcs.ts";
 import type {
 	CreateTaskRequest,
 	DagView,
@@ -110,8 +110,14 @@ export const updateTaskStatusE = (id: number, status: string): Promise<Task> =>
 		entity: `/tasks/${id}`,
 	});
 
-export const searchTasksE = (query: string): Promise<PaginatedResponse<Task>> =>
-	cachedRequest(`/tasks/search?q=${encodeURIComponent(query)}`);
+export const searchTasksE = (
+	query: string,
+	page = 1,
+	pageSize = MAX_PAGE_SIZE,
+): Promise<PaginatedResponse<Task>> =>
+	cachedRequest(
+		`/tasks/search?q=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}`,
+	);
 
 export const getArchivedTasksE = (): Promise<PaginatedResponse<Task>> =>
 	cachedRequest("/tasks/status/archived");
